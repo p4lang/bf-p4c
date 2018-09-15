@@ -475,7 +475,7 @@ const IR::Declaration_Instance *P4V1::StatefulAluConverter::convertExternInstanc
         LOG3("Created apply function: " << *rv);
         return rv->apply(TypeConverter(structure))->to<IR::Declaration_Instance>();
     }
-    BUG("Failed to find utype for %s", ext);
+    BUG_CHECK(errorCount() > 0, "Failed to find utype for %s", ext);
     return ExternConverter::convertExternInstance(structure, ext, name, scope);
 }
 
@@ -487,6 +487,9 @@ const IR::Statement *P4V1::StatefulAluConverter::convertExternCall(
               "Extern %s is not stateful_alu type, but %s", ext, ext->type);
     auto rtype = getSelectorProfile(structure, ext) ? IR::Type::Bits::get(1)
                                            : getRegInfo(structure, ext,  nullptr).utype;
+    if (!rtype) {
+        BUG_CHECK(errorCount() > 0, "Failed to find rtype for %s", ext);
+        return new IR::EmptyStatement(); }
     ExpressionConverter conv(structure);
     const IR::Statement *rv = nullptr;
     IR::BlockStatement *block = nullptr;

@@ -2088,7 +2088,6 @@ control Othello(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             Dougherty_0();
             Odebolt_0();
-            @defaultonly Odebolt();
         }
         key = {
             meta.Waterfall.Kerby  : exact @name("Waterfall.Kerby") ;
@@ -2099,7 +2098,7 @@ control Othello(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Everetts.Deport  : ternary @name("Everetts.Deport") ;
         }
         size = 512;
-        default_action = Odebolt();
+        default_action = Odebolt_0();
         counters = Meeker;
     }
     @name(".Opelousas") table Opelousas {
@@ -2491,13 +2490,12 @@ control Rowden(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name(".Malesus") table Malesus {
         actions = {
             Odebolt_1();
-            @defaultonly Odebolt();
         }
         key = {
             meta.Slocum.Hamburg[14:0]: exact @name("Slocum.Hamburg[14:0]") ;
         }
         size = 32768;
-        default_action = Odebolt();
+        default_action = Odebolt_1();
         counters = LakeFork;
     }
     @name(".Motley") table Motley {
@@ -2527,18 +2525,18 @@ control Rowden(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control Shickley(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Baskett") RegisterAction<bit<1>, bit<1>>(Flaxton) Baskett = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = ~value;
         }
     };
     @name(".Sunrise") RegisterAction<bit<1>, bit<1>>(Proctor) Sunrise = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = value;
         }

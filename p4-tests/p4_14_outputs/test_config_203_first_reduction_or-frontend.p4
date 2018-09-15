@@ -183,9 +183,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_5() {
     }
-    bit<8> tmp_2;
-    bit<8> tmp_3;
-    bit<8> tmp_4;
+    bit<8> tmp_5;
+    bit<8> tmp_6;
+    bit<8> tmp_7;
+    bit<8> tmp_8;
+    bit<8> tmp_9;
+    bit<8> tmp_10;
     @name(".alu_0") RegisterAction<bit<8>, bit<8>>(reg_0) alu_0 = {
         void apply(inout bit<8> value, out bit<8> rv) {
             bit<8> in_value;
@@ -208,16 +211,19 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
     };
     @name(".action_0") action action_3(bit<32> idx) {
-        tmp_2 = alu_0.execute(idx);
-        meta.meta.result_8 = tmp_2;
+        tmp_5 = alu_0.execute(idx);
+        tmp_6 = meta.meta.result_8 | tmp_5;
+        meta.meta.result_8 = tmp_6;
     }
     @name(".action_1") action action_4(bit<32> idx) {
-        tmp_3 = alu_1.execute(idx);
-        meta.meta.result_8 = tmp_3;
+        tmp_7 = alu_1.execute(idx);
+        tmp_8 = meta.meta.result_8 | tmp_7;
+        meta.meta.result_8 = tmp_8;
     }
     @name(".action_2") action action_5(bit<32> idx) {
-        tmp_4 = alu_2.execute(idx);
-        meta.meta.result_8 = tmp_4;
+        tmp_9 = alu_2.execute(idx);
+        tmp_10 = meta.meta.result_8 | tmp_9;
+        meta.meta.result_8 = tmp_10;
     }
     @name(".table_0") table table_0 {
         actions = {

@@ -1773,7 +1773,6 @@ control Gowanda(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             Cooter_0();
             Fitler_0();
-            @defaultonly Fitler();
         }
         key = {
             hdr.ig_intr_md.ingress_port[6:0]: exact @name("ig_intr_md.ingress_port[6:0]") ;
@@ -1784,7 +1783,7 @@ control Gowanda(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Westboro.Gardiner          : ternary @name("Westboro.Gardiner") ;
         }
         size = 512;
-        default_action = Fitler();
+        default_action = Fitler_0();
         counters = Poteet;
     }
     apply {
@@ -2588,18 +2587,18 @@ control Lovilia(inout headers hdr, inout metadata meta, inout standard_metadata_
 control Ludowici(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Matador") RegisterAction<bit<1>, bit<1>>(Vesuvius) Matador = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = value;
         }
     };
     @name(".Moose") RegisterAction<bit<1>, bit<1>>(Spenard) Moose = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = ~value;
         }
@@ -2877,13 +2876,12 @@ control Wattsburg(inout headers hdr, inout metadata meta, inout standard_metadat
     @stage(11) @name(".Onarga") table Onarga {
         actions = {
             Fitler_1();
-            @defaultonly Fitler();
         }
         key = {
             meta.Weyauwega.Alcoma[14:0]: exact @name("Weyauwega.Alcoma[14:0]") ;
         }
         size = 32768;
-        default_action = Fitler();
+        default_action = Fitler_1();
         counters = Henry;
     }
     apply {

@@ -1,3 +1,0 @@
-opcode_test_signed_and_saturating.p4:128:6: warning: missing terminating ' character
-     8'0;
-      ^

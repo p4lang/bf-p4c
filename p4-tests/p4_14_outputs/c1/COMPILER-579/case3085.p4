@@ -748,7 +748,6 @@ control Albany(inout headers hdr, inout metadata meta, inout standard_metadata_t
         actions = {
             Keener_0;
             Millstadt_0;
-            @defaultonly Millstadt;
         }
         key = {
             hdr.ig_intr_md.ingress_port[6:0]: exact;
@@ -759,7 +758,7 @@ control Albany(inout headers hdr, inout metadata meta, inout standard_metadata_t
             meta.Garretson.Sanford          : ternary;
         }
         size = 512;
-        default_action = Millstadt();
+        default_action = Millstadt_0();
         counters = Saragosa;
     }
     @name(".Joiner") table Joiner {
@@ -1556,13 +1555,12 @@ control Harts(inout headers hdr, inout metadata meta, inout standard_metadata_t 
     @name(".Absarokee") table Absarokee {
         actions = {
             Millstadt_1;
-            @defaultonly Millstadt;
         }
         key = {
             meta.Elkins.Chappells[14:0]: exact;
         }
         size = 32768;
-        default_action = Millstadt();
+        default_action = Millstadt_1();
         counters = Atoka;
     }
     @name(".McKamie") table McKamie {
@@ -2554,18 +2552,18 @@ control Ramapo(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control Ranchito(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Fittstown") RegisterAction<bit<1>, bit<1>>(Sagamore) Fittstown = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = value;
         }
     };
     @name(".Wheaton") RegisterAction<bit<1>, bit<1>>(Oxford) Wheaton = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = ~value;
         }

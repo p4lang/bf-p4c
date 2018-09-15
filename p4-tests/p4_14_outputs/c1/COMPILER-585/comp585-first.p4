@@ -960,18 +960,18 @@ control Biloxi(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control Bonner(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Penalosa") RegisterAction<bit<1>, bit<1>>(Traverse) Penalosa = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = ~value;
         }
     };
     @name(".Rosburg") RegisterAction<bit<1>, bit<1>>(Allen) Rosburg = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = value;
         }
@@ -1439,7 +1439,6 @@ control Dunedin(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             Maywood_0();
             Mingus_0();
-            @defaultonly Mingus();
         }
         key = {
             hdr.ig_intr_md.ingress_port[6:0]: exact @name("ig_intr_md.ingress_port[6:0]") ;
@@ -1450,7 +1449,7 @@ control Dunedin(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Pimento.McDavid            : ternary @name("Pimento.McDavid") ;
         }
         size = 512;
-        default_action = Mingus();
+        default_action = Mingus_0();
         counters = Sherrill;
     }
     @name(".Perryman") table Perryman {
@@ -1943,13 +1942,12 @@ control Lewis(inout headers hdr, inout metadata meta, inout standard_metadata_t 
     @name(".Kasigluk") table Kasigluk {
         actions = {
             Mingus_1();
-            @defaultonly Mingus();
         }
         key = {
             meta.Panacea.Hitterdal[14:0]: exact @name("Panacea.Hitterdal[14:0]") ;
         }
         size = 32768;
-        default_action = Mingus();
+        default_action = Mingus_1();
         counters = Ironside;
     }
     @name(".Pearcy") table Pearcy {

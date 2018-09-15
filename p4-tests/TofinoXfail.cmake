@@ -699,6 +699,11 @@ p4c_add_xfail_reason("tofino"
   "Could not find declaration for standard_metadata"
   testdata/p4_14_samples/issue1058.p4
   )
+# no support for parser_error
+p4c_add_xfail_reason("tofino"
+  "Could not find declaration for standard_metadata"
+  testdata/p4_16_samples/parser_error-bmv2.p4
+  )
 # Because of copy-in / copy-out, we generate a "standard_metadata_1" variable
 # that is not translated properly (same as BRIG-633?)
 p4c_add_xfail_reason("tofino"
@@ -1134,7 +1139,7 @@ p4c_add_xfail_reason("tofino"
 
 # psa translation bug
 p4c_add_xfail_reason("tofino"
-  "Interface .* does not have a method named .*"
+  "extern .* does not have method matching this call"
   testdata/p4_16_samples/psa-hash.p4
   testdata/p4_16_samples/psa-random.p4
 )

@@ -1405,13 +1405,12 @@ control Dougherty(inout headers hdr, inout metadata meta, inout standard_metadat
     @stage(11) @name(".Wakenda") table Wakenda {
         actions = {
             Comptche_0();
-            @defaultonly Comptche();
         }
         key = {
             meta.Ellinger.Ashtola[14:0]: exact @name("Ellinger.Ashtola[14:0]") ;
         }
         size = 32768;
-        default_action = Comptche();
+        default_action = Comptche_0();
         counters = Palmdale;
     }
     apply {
@@ -2025,18 +2024,18 @@ control Mosinee(inout headers hdr, inout metadata meta, inout standard_metadata_
 control Netarts(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Campton") RegisterAction<bit<1>, bit<1>>(Hibernia) Campton = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = ~value;
         }
     };
     @name(".Panaca") RegisterAction<bit<1>, bit<1>>(Frontier) Panaca = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = value;
         }
@@ -2951,7 +2950,6 @@ control Westville(inout headers hdr, inout metadata meta, inout standard_metadat
         actions = {
             Dauphin_0();
             Comptche_1();
-            @defaultonly Comptche();
         }
         key = {
             hdr.ig_intr_md.ingress_port[6:0]: exact @name("ig_intr_md.ingress_port[6:0]") ;
@@ -2962,7 +2960,7 @@ control Westville(inout headers hdr, inout metadata meta, inout standard_metadat
             meta.Godley.Kansas              : ternary @name("Godley.Kansas") ;
         }
         size = 512;
-        default_action = Comptche();
+        default_action = Comptche_1();
         counters = Ethete;
     }
     @name(".Nuremberg") table Nuremberg {

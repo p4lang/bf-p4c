@@ -1608,18 +1608,18 @@ control Millstadt(inout headers hdr, inout metadata meta, inout standard_metadat
 control Montegut(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Leoma") RegisterAction<bit<1>, bit<1>>(Helotes) Leoma = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = ~value;
         }
     };
     @name(".Rodessa") RegisterAction<bit<1>, bit<1>>(Bloomdale) Rodessa = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = value;
         }
@@ -2111,7 +2111,6 @@ control Suarez(inout headers hdr, inout metadata meta, inout standard_metadata_t
         actions = {
             Bunker_0;
             McCartys_0;
-            @defaultonly McCartys;
         }
         key = {
             meta.Ulysses.Chehalis  : exact;
@@ -2122,7 +2121,7 @@ control Suarez(inout headers hdr, inout metadata meta, inout standard_metadata_t
             meta.Horton.Clearlake  : ternary;
         }
         size = 512;
-        default_action = McCartys();
+        default_action = McCartys_0();
         counters = Garrison;
     }
     apply {

@@ -292,7 +292,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = a();
     }
-    @name(".set_metadata") table set_metadata {
+    @name(".set_metadata2") table set_metadata2 {
         actions = {
             smd();
         }
@@ -313,7 +313,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
     }
     apply {
-        set_metadata.apply();
+        set_metadata2.apply();
         exm.apply();
         tcam.apply();
         atcam.apply();

@@ -653,18 +653,18 @@ control Cataract(inout headers hdr, inout metadata meta, inout standard_metadata
 control Chunchula(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Salamatof") RegisterAction<bit<1>, bit<1>>(Midas) Salamatof = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = value;
         }
     };
     @name(".Sisters") RegisterAction<bit<1>, bit<1>>(Lucien) Sisters = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = ~value;
         }
@@ -1296,7 +1296,6 @@ control Lamona(inout headers hdr, inout metadata meta, inout standard_metadata_t
         actions = {
             McLaurin_0();
             Norland_0();
-            @defaultonly Norland();
         }
         key = {
             meta.Waseca.Castolon  : exact @name("Waseca.Castolon") ;
@@ -1307,7 +1306,7 @@ control Lamona(inout headers hdr, inout metadata meta, inout standard_metadata_t
             meta.Goodrich.Norias  : ternary @name("Goodrich.Norias") ;
         }
         size = 512;
-        default_action = Norland();
+        default_action = Norland_0();
         counters = Maltby;
     }
     @name(".Vandling") table Vandling {

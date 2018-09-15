@@ -619,18 +619,18 @@ control Abernathy(inout headers hdr, inout metadata meta, inout standard_metadat
 control Carrizozo(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Silco") RegisterAction<bit<1>, bit<1>>(Abraham) Silco = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = value;
         }
     };
     @name(".Skene") RegisterAction<bit<1>, bit<1>>(Kennedale) Skene = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = ~value;
         }

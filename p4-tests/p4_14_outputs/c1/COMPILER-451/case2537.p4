@@ -973,7 +973,6 @@ control Bicknell(inout headers hdr, inout metadata meta, inout standard_metadata
         actions = {
             Hollyhill_0;
             Whitefish_0;
-            @defaultonly Whitefish;
         }
         key = {
             meta.Harding.Honokahua  : exact;
@@ -984,7 +983,7 @@ control Bicknell(inout headers hdr, inout metadata meta, inout standard_metadata
             meta.Renton.Fragaria    : ternary;
         }
         size = 512;
-        default_action = Whitefish();
+        default_action = Whitefish_0();
         counters = Marshall;
     }
     @name(".SnowLake") table SnowLake {
@@ -1380,18 +1379,18 @@ control Gonzales(inout headers hdr, inout metadata meta, inout standard_metadata
 control Hiawassee(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Kasilof") RegisterAction<bit<1>, bit<1>>(Hobucken) Kasilof = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = value;
         }
     };
     @name(".Noyack") RegisterAction<bit<1>, bit<1>>(Tarnov) Noyack = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = ~value;
         }

@@ -212,6 +212,7 @@ struct headers {
     @name(".vlan_tag") 
     vlan_tag_t                                     vlan_tag;
 }
+#include <tofino/stateful_alu.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".parse_ethernet") state parse_ethernet {
@@ -265,16 +266,28 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 @name(".ecmp_action_profile") @mode("resilient") action_selector(HashAlgorithm.random, 32w1024, 32w64) ecmp_action_profile;
 
+@name(".indirect_action_profile") action_profile(32w1) indirect_action_profile;
+
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
     }
 }
+
+@name(".keyless_reg") register<bit<32>>(32w512) keyless_reg;
 #include <tofino/p4_14_prim.p4>
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".CounterA") counter(32w1024, CounterType.packets) CounterA;
+    @name(".keyless_cntr") counter(32w512, CounterType.packets) keyless_cntr;
     @name(".meter_1") direct_meter<bit<8>>(MeterType.bytes) meter_1;
     @meter_pre_color_aware_per_flow_enable(1) @name(".meter_2") meter(32w500, MeterType.bytes) meter_2;
+    @initial_register_lo_value(1) @name(".r_alu") RegisterAction<bit<32>, bit<32>>(keyless_reg) r_alu = {
+        void apply(inout bit<32> value) {
+            bit<32> in_value;
+            in_value = value;
+            value = in_value + 32w5;
+        }
+    };
     @name("._CounterAAction1") action _CounterAAction1(bit<32> idx) {
         CounterA.count((bit<32>)idx);
         hdr.ig_intr_md_for_tm.ucast_egress_port = 9w3;
@@ -308,6 +321,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".nhop_set") action nhop_set(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
+    @name(".set_ipv4_dst") action set_ipv4_dst(bit<32> x) {
+        hdr.ipv4.dstAddr = x;
+    }
+    @name(".keyless_counts") action keyless_counts(bit<32> stat_idx, bit<32> stful_idx) {
+        keyless_cntr.count((bit<32>)stat_idx);
+        r_alu.execute(stful_idx);
+    }
     @name(".keyless_action") action keyless_action(bit<12> value_0, bit<3> value_1, bit<8> value_2, bit<9> value_3) {
         hdr.vlan_tag.vlan_id = value_0;
         hdr.vlan_tag.pri = value_1;
@@ -325,6 +345,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".keyless_set_egr") action keyless_set_egr() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = 9w0;
+    }
+    @name(".prepare_keyless") action prepare_keyless(bit<9> egr_port) {
+        hdr.ig_intr_md_for_tm.ucast_egress_port = egr_port;
+        hdr.tcp.srcPort = 16w9006;
     }
     @name(".custom_action_2") action custom_action_2(bit<8> ttl) {
         hdr.ipv4.ttl = ttl;
@@ -378,6 +402,32 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         implementation = ecmp_action_profile;
     }
+    @name(".keyless_direct") table keyless_direct {
+        actions = {
+            set_ipv4_dst;
+            nop;
+        }
+        default_action = set_ipv4_dst(127);
+    }
+    @name(".keyless_direct_2") table keyless_direct_2 {
+        actions = {
+            set_ipv4_dst;
+            @defaultonly nop;
+        }
+        default_action = nop();
+    }
+    @name(".keyless_indirect") table keyless_indirect {
+        actions = {
+            egress_port;
+        }
+        implementation = indirect_action_profile;
+    }
+    @name(".keyless_indirect_resources") table keyless_indirect_resources {
+        actions = {
+            keyless_counts;
+        }
+        default_action = keyless_counts(1, 2);
+    }
     @name(".keyless_table") table keyless_table {
         actions = {
             keyless_action;
@@ -420,6 +470,47 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = keyless_set_egr();
     }
+    @alpm(1) @name(".set_egr_alpm") table set_egr_alpm {
+        actions = {
+            prepare_keyless;
+            nop;
+        }
+        key = {
+            hdr.ipv4.dstAddr: lpm;
+        }
+        default_action = prepare_keyless(2);
+    }
+    @clpm_prefix("ipv4.dstAddr") @clpm_prefix_length(1, 7, 512) @clpm_prefix_length(8, 1024) @clpm_prefix_length(9, 32, 512) @name(".set_egr_clpm") table set_egr_clpm {
+        actions = {
+            prepare_keyless;
+            nop;
+        }
+        key = {
+            hdr.ipv4.dstAddr: lpm;
+        }
+        size = 2048;
+        default_action = prepare_keyless(3);
+    }
+    @name(".set_egr_exm") table set_egr_exm {
+        actions = {
+            prepare_keyless;
+            nop;
+        }
+        key = {
+            hdr.ipv4.dstAddr: exact;
+        }
+        default_action = prepare_keyless();
+    }
+    @name(".set_egr_tcam") table set_egr_tcam {
+        actions = {
+            prepare_keyless;
+            nop;
+        }
+        key = {
+            hdr.ipv4.dstAddr: lpm;
+        }
+        default_action = prepare_keyless(1);
+    }
     @name(".tcam_dir") table tcam_dir {
         actions = {
             act_1;
@@ -445,19 +536,47 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         implementation = custom_action_2_profile;
     }
     apply {
-        exm_dir.apply();
-        exm_indr.apply();
-        _CounterATable.apply();
         if (hdr.tcp.srcPort == 16w9001) {
             keyless_table.apply();
+            exm_dir.apply();
+            exm_indr.apply();
+            _CounterATable.apply();
+            meter_tbl_direct.apply();
+            meter_tbl_color_aware_indirect.apply();
+            ipv4_routing_select.apply();
+            tcam_dir.apply();
+            tcam_indr.apply();
+            if (hdr.ig_intr_md_for_tm.ucast_egress_port != 9w0) {
+                pure_keyless.apply();
+            }
         }
-        meter_tbl_direct.apply();
-        meter_tbl_color_aware_indirect.apply();
-        ipv4_routing_select.apply();
-        tcam_dir.apply();
-        tcam_indr.apply();
-        if (hdr.ig_intr_md_for_tm.ucast_egress_port != 9w0) {
-            pure_keyless.apply();
+        else {
+            if (hdr.tcp.srcPort == 16w9002) {
+                set_egr_exm.apply();
+            }
+            else {
+                if (hdr.tcp.srcPort == 16w9003) {
+                    set_egr_tcam.apply();
+                }
+                else {
+                    if (hdr.tcp.srcPort == 16w9004) {
+                        set_egr_alpm.apply();
+                    }
+                    else {
+                        if (hdr.tcp.srcPort == 16w9005) {
+                            set_egr_clpm.apply();
+                        }
+                    }
+                }
+            }
+        }
+        if (hdr.tcp.srcPort == 16w9006) {
+            keyless_direct.apply();
+            keyless_direct_2.apply();
+            keyless_indirect_resources.apply();
+            if (hdr.ig_intr_md_for_tm.ucast_egress_port == 9w0) {
+                keyless_indirect.apply();
+            }
         }
     }
 }

@@ -1996,18 +1996,18 @@ control Inverness(inout headers hdr, inout metadata meta, inout standard_metadat
 control Lacona(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Masardis") RegisterAction<bit<1>, bit<1>>(Parkline) Masardis = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = value;
         }
     };
     @name(".Woodcrest") RegisterAction<bit<1>, bit<1>>(Ontonagon) Woodcrest = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = ~value;
         }
@@ -2973,7 +2973,6 @@ control Wauregan(inout headers hdr, inout metadata meta, inout standard_metadata
         actions = {
             Lignite_0();
             Sultana_0();
-            @defaultonly Sultana();
         }
         key = {
             meta.CedarKey.Norborne: exact @name("CedarKey.Norborne") ;
@@ -2984,7 +2983,7 @@ control Wauregan(inout headers hdr, inout metadata meta, inout standard_metadata
             meta.Lisle.Virden     : ternary @name("Lisle.Virden") ;
         }
         size = 512;
-        default_action = Sultana();
+        default_action = Sultana_0();
         counters = Hernandez;
     }
     @name(".Pinecrest") table Pinecrest {
@@ -3079,13 +3078,12 @@ control Zarah(inout headers hdr, inout metadata meta, inout standard_metadata_t 
     @name(".Muncie") table Muncie {
         actions = {
             Sultana_1();
-            @defaultonly Sultana();
         }
         key = {
             meta.Sagamore.RichHill[14:0]: exact @name("Sagamore.RichHill[14:0]") ;
         }
         size = 32768;
-        default_action = Sultana();
+        default_action = Sultana_1();
         counters = Boistfort;
     }
     @name(".Seaforth") table Seaforth {

@@ -195,16 +195,15 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".NoAction") action NoAction_3() {
     }
     @name(".bfd_cnt_rx_alu") RegisterAction<bit<8>, bit<8>>(bfd_cnt) bfd_cnt_rx_alu = {
-        void apply(inout bit<8> value, out bit<8> rv) {
-            rv = 8w0;
+        void apply(inout bit<8> value) {
             value = 8w0;
         }
     };
     @name(".bfd_cnt_tx_alu") RegisterAction<bit<8>, bit<8>>(bfd_cnt) bfd_cnt_tx_alu = {
         void apply(inout bit<8> value, out bit<8> rv) {
             bit<8> in_value_2;
-            in_value_2 = value;
             rv = 8w0;
+            in_value_2 = value;
             value = value + 8w1;
             if (in_value_2 > 8w3) 
                 rv = 8w1;

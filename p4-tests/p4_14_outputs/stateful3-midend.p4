@@ -50,7 +50,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".NoAction") action NoAction_0() {
     }
     @name(".sful") RegisterAction<pair32_t, bit<32>>(accum) sful = {
-        void apply(inout pair32_t value, out bit<32> rv) {
+        void apply(inout         struct pair32_t {
+            bit<32> lo;
+            bit<32> hi;
+        }
+value, out bit<32> rv) {
             pair32_t in_value;
             in_value.lo = value.lo;
             in_value.hi = value.hi;

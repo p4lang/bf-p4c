@@ -599,18 +599,18 @@ control Cassa(inout headers hdr, inout metadata meta, inout standard_metadata_t 
 control Cypress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Clermont") RegisterAction<bit<1>, bit<1>>(Ceiba) Clermont = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = value;
         }
     };
     @name(".Selah") RegisterAction<bit<1>, bit<1>>(Mentmore) Selah = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = value;
         }
@@ -1505,10 +1505,9 @@ control McKenna(inout headers hdr, inout metadata meta, inout standard_metadata_
 control Moark(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Silvertip") @min_width(16) direct_counter(CounterType.packets_and_bytes) Silvertip;
     @name(".Mabelle") RegisterAction<bit<1>, bit<1>>(Brinson) Mabelle = {
-        void apply(inout bit<1> value, out bit<1> rv) {
+        void apply(inout bit<1> value) {
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = 1w1;
         }
     };
@@ -1551,7 +1550,6 @@ control Moark(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         actions = {
             Cankton_0();
             Shauck_0();
-            @defaultonly Shauck();
         }
         key = {
             meta.Fosston.Shasta   : exact @name("Fosston.Shasta") ;
@@ -1562,7 +1560,7 @@ control Moark(inout headers hdr, inout metadata meta, inout standard_metadata_t 
             meta.Neshoba.Lumpkin  : ternary @name("Neshoba.Lumpkin") ;
         }
         size = 512;
-        default_action = Shauck();
+        default_action = Shauck_0();
         counters = Silvertip;
     }
     @name(".Lowemont") table Lowemont {

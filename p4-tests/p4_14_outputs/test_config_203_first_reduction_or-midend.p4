@@ -177,9 +177,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".reg_2") register<bit<8>>(32w1024) reg_2;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<8> tmp_2;
-    bit<8> tmp_3;
-    bit<8> tmp_4;
+    bit<8> tmp_5;
+    bit<8> tmp_7;
+    bit<8> tmp_9;
     @name(".NoAction") action NoAction_0() {
     }
     @name(".NoAction") action NoAction_4() {
@@ -205,16 +205,16 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
     };
     @name(".action_0") action action_3(bit<32> idx) {
-        tmp_2 = alu_0.execute(idx);
-        meta.meta.result_8 = tmp_2;
+        tmp_5 = alu_0.execute(idx);
+        meta.meta.result_8 = meta.meta.result_8 | tmp_5;
     }
     @name(".action_1") action action_4(bit<32> idx) {
-        tmp_3 = alu_1.execute(idx);
-        meta.meta.result_8 = tmp_3;
+        tmp_7 = alu_1.execute(idx);
+        meta.meta.result_8 = meta.meta.result_8 | tmp_7;
     }
     @name(".action_2") action action_5(bit<32> idx) {
-        tmp_4 = alu_2.execute(idx);
-        meta.meta.result_8 = tmp_4;
+        tmp_9 = alu_2.execute(idx);
+        meta.meta.result_8 = meta.meta.result_8 | tmp_9;
     }
     @name(".table_0") table table_0 {
         actions = {

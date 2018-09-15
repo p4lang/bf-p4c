@@ -11,7 +11,6 @@ struct meta_t {
     bit<64>  i2e_4;
     bit<80>  i2e_5;
     bit<96>  i2e_6;
-    bit<128> i2e_7;
     bit<8>   e2e_0;
     bit<16>  e2e_1;
     bit<32>  e2e_2;
@@ -165,7 +164,7 @@ header tcp_t {
 }
 
 struct metadata {
-    @pa_container_size("ingress", "meta.i2e_0", 8) @pa_container_size("ingress", "meta.i2e_1", 16) @pa_container_size("ingress", "meta.i2e_2", 32) @pa_container_size("ingress", "meta.i2e_3", 16, 32) @pa_container_size("ingress", "meta.i2e_4", 32, 32) @pa_container_size("ingress", "meta.i2e_5", 16, 32, 32) @pa_container_size("ingress", "meta.i2e_6", 32, 32, 32) @pa_container_size("ingress", "meta.i2e_7", 32) @pa_container_size("egress", "meta.e2e_0", 8) @pa_container_size("egress", "meta.e2e_1", 16) @pa_container_size("egress", "meta.e2e_2", 32) @pa_container_size("egress", "meta.e2e_3", 16, 32) @pa_container_size("egress", "meta.e2e_4", 32, 32) @pa_container_size("egress", "meta.e2e_5", 16, 32, 32) @pa_container_size("egress", "meta.e2e_6", 32, 32, 32) @pa_container_size("egress", "meta.e2e_7", 32) @name(".meta") 
+    @pa_container_size("ingress", "meta.i2e_0", 8) @pa_container_size("ingress", "meta.i2e_1", 16) @pa_container_size("ingress", "meta.i2e_2", 32) @pa_container_size("ingress", "meta.i2e_3", 16, 32) @pa_container_size("ingress", "meta.i2e_4", 32, 32) @pa_container_size("ingress", "meta.i2e_5", 16, 32, 32) @pa_container_size("ingress", "meta.i2e_6", 32, 32, 32) @pa_container_size("egress", "meta.e2e_0", 8) @pa_container_size("egress", "meta.e2e_1", 16) @pa_container_size("egress", "meta.e2e_2", 32) @pa_container_size("egress", "meta.e2e_3", 16, 32) @pa_container_size("egress", "meta.e2e_4", 32, 32) @pa_container_size("egress", "meta.e2e_5", 16, 32, 32) @pa_container_size("egress", "meta.e2e_6", 32, 32, 32) @pa_container_size("egress", "meta.e2e_7", 32) @name(".meta") 
     meta_t meta;
 }
 
@@ -381,10 +380,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.meta.i2e_6 = 96w6;
         clone3<tuple_6>(CloneType.I2E, 32w6, { 96w6 });
     }
-    @name(".ic7") action ic7_0() {
-        meta.meta.i2e_7 = 128w7;
-        clone3<tuple_7>(CloneType.I2E, 32w7, { 128w7 });
-    }
     @name(".it0") table it0 {
         actions = {
             set_bm_0();
@@ -406,7 +401,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             ic4_0();
             ic5_0();
             ic6_0();
-            ic7_0();
             do_nothing_6();
             @defaultonly NoAction_7();
         }

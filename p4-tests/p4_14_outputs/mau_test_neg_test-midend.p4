@@ -1119,7 +1119,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             value = 1w0;
         }
     };
-    @name(".stats_key_alu1") RegisterAction<stats_key_alu1_layout, bit<32>>(stats_key_reg) stats_key_alu1 = {
+    @initial_register_lo_value(100) @name(".stats_key_alu1") RegisterAction<stats_key_alu1_layout, bit<32>>(stats_key_reg) stats_key_alu1 = {
         void apply(inout         struct stats_key_alu1_layout {
             bit<32> lo;
             bit<32> hi;

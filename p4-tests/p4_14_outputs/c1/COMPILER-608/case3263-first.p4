@@ -1000,18 +1000,18 @@ control Blevins(inout headers hdr, inout metadata meta, inout standard_metadata_
 control Bogota(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Booth") RegisterAction<bit<1>, bit<1>>(Kapaa) Booth = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = value;
         }
     };
     @name(".Union") RegisterAction<bit<1>, bit<1>>(Pathfork) Union = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = ~value;
         }
@@ -2149,13 +2149,12 @@ control Gurdon(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name(".Stratford") table Stratford {
         actions = {
             Nanson_0();
-            @defaultonly Nanson();
         }
         key = {
             meta.Brinkman.Notus[14:0]: exact @name("Brinkman.Notus[14:0]") ;
         }
         size = 32768;
-        default_action = Nanson();
+        default_action = Nanson_0();
         counters = Hiland;
     }
     apply {
@@ -3057,7 +3056,6 @@ control Wyanet(inout headers hdr, inout metadata meta, inout standard_metadata_t
         actions = {
             Rotterdam_0();
             Nanson_1();
-            @defaultonly Nanson();
         }
         key = {
             hdr.ig_intr_md.ingress_port[6:0]: exact @name("ig_intr_md.ingress_port[6:0]") ;
@@ -3068,7 +3066,7 @@ control Wyanet(inout headers hdr, inout metadata meta, inout standard_metadata_t
             meta.Tingley.Haugen             : ternary @name("Tingley.Haugen") ;
         }
         size = 512;
-        default_action = Nanson();
+        default_action = Nanson_1();
         counters = Yorkville;
     }
     @name(".Chambers") table Chambers {

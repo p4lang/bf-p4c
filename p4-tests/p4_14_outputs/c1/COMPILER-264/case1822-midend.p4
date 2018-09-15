@@ -920,13 +920,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @min_width(16) @name(".Norborne") direct_counter(CounterType.packets_and_bytes) _Norborne_0;
     @name(".Challenge") RegisterAction<bit<1>, bit<1>>(Ashville) _Challenge_0 = {
-        void apply(inout bit<1> value, out bit<1> rv) {
-            rv = 1w0;
+        void apply(inout bit<1> value) {
             value = 1w1;
         }
     };
-    @pa_solitary("ingress", "SomesBar.Brunson") @pa_solitary("ingress", "SomesBar.Sonoita") @pa_solitary("ingress", "SomesBar.Kingman") @pa_solitary("ig_intr_md_for_tm.ucast_egress_port") @pa_solitary("ingress", "ig_intr_md_for_tm.mcast_grp_a") @name(".Dushore") action _Dushore_0() {
-    }
     @name(".Lawai") action _Lawai(bit<8> Tahuya) {
         _Challenge_0.execute();
     }
@@ -941,14 +938,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         _Norborne_0.count();
         meta.SomesBar.Ringwood = 1w1;
     }
-    @pa_solitary("ingress", "SomesBar.Brunson") @pa_solitary("ingress", "SomesBar.Sonoita") @pa_solitary("ingress", "SomesBar.Kingman") @pa_solitary("ig_intr_md_for_tm.ucast_egress_port") @pa_solitary("ingress", "ig_intr_md_for_tm.mcast_grp_a") @name(".Dushore") action _Dushore_1() {
+    @pa_solitary("ingress", "SomesBar.Brunson") @pa_solitary("ingress", "SomesBar.Sonoita") @pa_solitary("ingress", "SomesBar.Kingman") @pa_solitary("ig_intr_md_for_tm.ucast_egress_port") @pa_solitary("ingress", "ig_intr_md_for_tm.mcast_grp_a") @name(".Dushore") action _Dushore_0() {
         _Norborne_0.count();
     }
     @name(".Elihu") table _Elihu_0 {
         actions = {
             _Marie();
-            _Dushore_1();
-            @defaultonly _Dushore_0();
+            _Dushore_0();
         }
         key = {
             meta.Moylan.Monahans  : exact @name("Moylan.Monahans") ;
@@ -1006,13 +1002,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.Larue.Greenbush = 1w1;
         meta.Coalgate.Karluk = Ionia;
     }
+    @pa_solitary("ingress", "SomesBar.Brunson") @pa_solitary("ingress", "SomesBar.Sonoita") @pa_solitary("ingress", "SomesBar.Kingman") @pa_solitary("ig_intr_md_for_tm.ucast_egress_port") @pa_solitary("ingress", "ig_intr_md_for_tm.mcast_grp_a") @name(".Dushore") action _Dushore_1() {
+    }
     @pa_solitary("ingress", "SomesBar.Brunson") @pa_solitary("ingress", "SomesBar.Sonoita") @pa_solitary("ingress", "SomesBar.Kingman") @pa_solitary("ig_intr_md_for_tm.ucast_egress_port") @pa_solitary("ingress", "ig_intr_md_for_tm.mcast_grp_a") @name(".Dushore") action _Dushore_2() {
     }
     @pa_solitary("ingress", "SomesBar.Brunson") @pa_solitary("ingress", "SomesBar.Sonoita") @pa_solitary("ingress", "SomesBar.Kingman") @pa_solitary("ig_intr_md_for_tm.ucast_egress_port") @pa_solitary("ingress", "ig_intr_md_for_tm.mcast_grp_a") @name(".Dushore") action _Dushore_3() {
     }
-    @pa_solitary("ingress", "SomesBar.Brunson") @pa_solitary("ingress", "SomesBar.Sonoita") @pa_solitary("ingress", "SomesBar.Kingman") @pa_solitary("ig_intr_md_for_tm.ucast_egress_port") @pa_solitary("ingress", "ig_intr_md_for_tm.mcast_grp_a") @name(".Dushore") action _Dushore_4() {
-    }
-    @pa_solitary("ingress", "SomesBar.Brunson") @pa_solitary("ingress", "SomesBar.Sonoita") @pa_solitary("ingress", "SomesBar.Kingman") @pa_solitary("ig_intr_md_for_tm.ucast_egress_port") @pa_solitary("ingress", "ig_intr_md_for_tm.mcast_grp_a") @name(".Dushore") action _Dushore_14() {
+    @pa_solitary("ingress", "SomesBar.Brunson") @pa_solitary("ingress", "SomesBar.Sonoita") @pa_solitary("ingress", "SomesBar.Kingman") @pa_solitary("ig_intr_md_for_tm.ucast_egress_port") @pa_solitary("ingress", "ig_intr_md_for_tm.mcast_grp_a") @name(".Dushore") action _Dushore_12() {
     }
     @name(".Chaska") action _Chaska(bit<16> Upson) {
         meta.Bonduel.LaMarque = Upson;
@@ -1021,39 +1017,39 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         support_timeout = true;
         actions = {
             _Unionvale();
-            _Dushore_2();
+            _Dushore_1();
         }
         key = {
             meta.ElkPoint.Brewerton: exact @name("ElkPoint.Brewerton") ;
             meta.Weskan.Nashua     : exact @name("Weskan.Nashua") ;
         }
         size = 65536;
-        default_action = _Dushore_2();
+        default_action = _Dushore_1();
     }
     @idletime_precision(1) @name(".Calva") table _Calva_0 {
         support_timeout = true;
         actions = {
             _Unionvale_4();
-            _Dushore_3();
+            _Dushore_2();
         }
         key = {
             meta.ElkPoint.Brewerton: exact @name("ElkPoint.Brewerton") ;
             meta.Bonduel.Jones     : lpm @name("Bonduel.Jones") ;
         }
         size = 1024;
-        default_action = _Dushore_3();
+        default_action = _Dushore_2();
     }
     @atcam_partition_index("Bonduel.LaMarque") @atcam_number_partitions(16384) @name(".Rapids") table _Rapids_0 {
         actions = {
             _Unionvale_5();
-            _Dushore_4();
+            _Dushore_3();
         }
         key = {
             meta.Bonduel.LaMarque   : exact @name("Bonduel.LaMarque") ;
             meta.Bonduel.Jones[19:0]: lpm @name("Bonduel.Jones[19:0]") ;
         }
         size = 131072;
-        default_action = _Dushore_4();
+        default_action = _Dushore_3();
     }
     @name(".Ridgetop") table _Ridgetop_0 {
         actions = {
@@ -1071,14 +1067,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         support_timeout = true;
         actions = {
             _Unionvale_6();
-            _Dushore_14();
+            _Dushore_12();
         }
         key = {
             meta.ElkPoint.Brewerton: exact @name("ElkPoint.Brewerton") ;
             meta.Bonduel.Jones     : exact @name("Bonduel.Jones") ;
         }
         size = 65536;
-        default_action = _Dushore_14();
+        default_action = _Dushore_12();
     }
     @name(".Pickering") action _Pickering() {
         meta.Larue.Stillmore = meta.SomesBar.Alvwood;
@@ -1114,12 +1110,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".Olmstead") action _Olmstead() {
         hash<bit<32>, bit<32>, tuple_1, bit<64>>(meta.Anthon.Santos, HashAlgorithm.crc32, 32w0, { hdr.Charco.Lakebay, hdr.Charco.GunnCity, hdr.Charco.Amity, hdr.Charco.Silica, hdr.Charco.Browning }, 64w65536);
     }
-    @pa_solitary("ingress", "SomesBar.Brunson") @pa_solitary("ingress", "SomesBar.Sonoita") @pa_solitary("ingress", "SomesBar.Kingman") @pa_solitary("ig_intr_md_for_tm.ucast_egress_port") @pa_solitary("ingress", "ig_intr_md_for_tm.mcast_grp_a") @name(".Dushore") action _Dushore_15() {
+    @pa_solitary("ingress", "SomesBar.Brunson") @pa_solitary("ingress", "SomesBar.Sonoita") @pa_solitary("ingress", "SomesBar.Kingman") @pa_solitary("ig_intr_md_for_tm.ucast_egress_port") @pa_solitary("ingress", "ig_intr_md_for_tm.mcast_grp_a") @name(".Dushore") action _Dushore_13() {
     }
     @immediate(0) @name(".Baranof") table _Baranof_0 {
         actions = {
             _Olmstead();
-            _Dushore_15();
+            _Dushore_13();
         }
         key = {
             hdr.Ganado.isValid()   : ternary @name("Ganado.$valid$") ;
@@ -1134,7 +1130,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.Charco.isValid()   : ternary @name("Charco.$valid$") ;
         }
         size = 256;
-        default_action = _Dushore_15();
+        default_action = _Dushore_13();
     }
     @name(".Cypress") action _Cypress() {
         meta.Larue.Bevington = 1w1;
@@ -1217,12 +1213,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.Larue.Goodlett = Sunrise;
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)Sunrise;
     }
-    @pa_solitary("ingress", "SomesBar.Brunson") @pa_solitary("ingress", "SomesBar.Sonoita") @pa_solitary("ingress", "SomesBar.Kingman") @pa_solitary("ig_intr_md_for_tm.ucast_egress_port") @pa_solitary("ingress", "ig_intr_md_for_tm.mcast_grp_a") @name(".Dushore") action _Dushore_16() {
+    @pa_solitary("ingress", "SomesBar.Brunson") @pa_solitary("ingress", "SomesBar.Sonoita") @pa_solitary("ingress", "SomesBar.Kingman") @pa_solitary("ig_intr_md_for_tm.ucast_egress_port") @pa_solitary("ingress", "ig_intr_md_for_tm.mcast_grp_a") @name(".Dushore") action _Dushore_14() {
     }
     @name(".LaJoya") table _LaJoya_0 {
         actions = {
             _Valsetz();
-            _Dushore_16();
+            _Dushore_14();
             @defaultonly NoAction_32();
         }
         key = {
@@ -1303,7 +1299,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 _Manasquan_0.apply();
         }
         switch (_Elihu_0.apply().action_run) {
-            _Dushore_1: {
+            _Dushore_0: {
                 if (meta.Moylan.GlenDean == 1w0 && meta.SomesBar.Connell == 1w0) 
                     _Hammocks_0.apply();
                 _Risco_0.apply();
@@ -1313,7 +1309,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         if (meta.SomesBar.Ringwood == 1w0 && meta.ElkPoint.Gerster == 1w1) 
             if (meta.ElkPoint.Crary == 1w1 && (meta.SomesBar.Kountze == 2w0 && hdr.McQueen.isValid() || meta.SomesBar.Kountze != 2w0 && hdr.Ashley.isValid())) 
                 switch (_Visalia_0.apply().action_run) {
-                    _Dushore_14: {
+                    _Dushore_12: {
                         _Ridgetop_0.apply();
                         if (meta.Bonduel.LaMarque != 16w0) 
                             _Rapids_0.apply();

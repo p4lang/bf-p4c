@@ -156,10 +156,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".cntr") @min_width(64) counter(32w2, CounterType.packets) cntr;
     @name(".salu") RegisterAction<bit<16>, bit<16>>(log) salu = {
-        void apply(inout bit<16> value, out bit<16> rv) {
+        void apply(inout bit<16> value) {
             bit<16> in_value;
             in_value = value;
-            rv = 16w0;
             if (hdr.eg_intr_md.egress_rid_first == 1w1) 
                 value = in_value + 16w0x100;
             if (hdr.eg_intr_md.egress_rid_first != 1w1) 

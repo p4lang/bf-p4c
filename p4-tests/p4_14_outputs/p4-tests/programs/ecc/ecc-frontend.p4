@@ -199,6 +199,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
+    @name(".NoAction") action NoAction_7() {
+    }
     @name(".NoAction") action NoAction_8() {
     }
     @name(".NoAction") action NoAction_9() {
@@ -207,17 +209,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_11() {
     }
-    @name(".NoAction") action NoAction_12() {
-    }
-    @name(".NoAction") action NoAction_13() {
-    }
     @name(".cntr") @min_width(32) counter(32w16384, CounterType.packets) cntr;
     @name(".m") meter(32w1024, MeterType.packets) m;
-    @name(".r_alu") RegisterAction<bit<16>, bit<16>>(r) r_alu = {
-        void apply(inout bit<16> value, out bit<16> rv) {
+    @initial_register_lo_value(1) @name(".r_alu") RegisterAction<bit<16>, bit<16>>(r) r_alu = {
+        void apply(inout bit<16> value) {
             bit<16> in_value;
             in_value = value;
-            rv = 16w0;
             value = in_value + 16w1;
         }
     };
@@ -302,13 +299,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             pass_7();
             nop_6();
-            @defaultonly NoAction_8();
+            @defaultonly NoAction_7();
         }
         key = {
             meta.test_sel.key: ternary @name("test_sel.key") ;
         }
         size = 512;
-        default_action = NoAction_8();
+        default_action = NoAction_7();
     }
     @stage(5) @name(".mtr") table mtr {
         actions = {
@@ -320,32 +317,31 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".p0") table p0 {
         actions = {
             set_md_0();
-            @defaultonly NoAction_9();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 288;
-        default_action = NoAction_9();
+        default_action = set_md_0(1w0, 1w0, 1w0, 1w0, 1w0, 1w0, 1w0, 1w0, 1w0, 20w0);
     }
     @stage(0) @name(".prsr") table prsr {
         actions = {
             pass_8();
             nop_7();
-            @defaultonly NoAction_10();
+            @defaultonly NoAction_8();
         }
         key = {
             hdr.ethernet.isValid(): exact @name("ethernet.$valid$") ;
         }
         size = 2;
-        default_action = NoAction_10();
+        default_action = NoAction_8();
     }
     @stage(6) @name(".sel") table sel_1 {
         actions = {
             set_key_0();
             nop_8();
             pass_9();
-            @defaultonly NoAction_11();
+            @defaultonly NoAction_9();
         }
         key = {
             meta.test_sel.key[9:0]: exact @name("test_sel.key[9:0]") ;
@@ -353,7 +349,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 1024;
         implementation = ap;
-        default_action = NoAction_11();
+        default_action = NoAction_9();
     }
     @name(".set_dest") table set_dest {
         actions = {
@@ -367,26 +363,26 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             pass_10();
             nop_9();
             set_key_3();
-            @defaultonly NoAction_12();
+            @defaultonly NoAction_10();
         }
         key = {
             meta.test_sel.key[9:0]: exact @name("test_sel.key[9:0]") ;
         }
         size = 1024;
-        default_action = NoAction_12();
+        default_action = NoAction_10();
     }
     @stage(1) @name(".simple_tcam") table simple_tcam {
         actions = {
             pass_11();
             nop_10();
             set_key_4();
-            @defaultonly NoAction_13();
+            @defaultonly NoAction_11();
         }
         key = {
             meta.test_sel.key: ternary @name("test_sel.key") ;
         }
         size = 512;
-        default_action = NoAction_13();
+        default_action = NoAction_11();
     }
     @stage(3) @name(".stats") table stats {
         actions = {

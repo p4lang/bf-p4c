@@ -858,18 +858,18 @@ control DuQuoin(inout headers hdr, inout metadata meta, inout standard_metadata_
 control Halaula(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Fajardo") RegisterAction<bit<1>, bit<1>>(Onamia) Fajardo = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = value;
         }
     };
     @name(".Gastonia") RegisterAction<bit<1>, bit<1>>(Mahopac) Gastonia = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = value;
         }
@@ -1154,10 +1154,9 @@ control Oakes(inout headers hdr, inout metadata meta, inout standard_metadata_t 
 control Parshall(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Norborne") @min_width(16) direct_counter(CounterType.packets_and_bytes) Norborne;
     @name(".Challenge") RegisterAction<bit<1>, bit<1>>(Ashville) Challenge = {
-        void apply(inout bit<1> value, out bit<1> rv) {
+        void apply(inout bit<1> value) {
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = 1w1;
         }
     };
@@ -1189,7 +1188,6 @@ control Parshall(inout headers hdr, inout metadata meta, inout standard_metadata
         actions = {
             Marie_0;
             Dushore_0;
-            @defaultonly Dushore;
         }
         key = {
             meta.Moylan.Monahans  : exact;
@@ -1200,7 +1198,7 @@ control Parshall(inout headers hdr, inout metadata meta, inout standard_metadata
             meta.SomesBar.Nambe   : ternary;
         }
         size = 512;
-        default_action = Dushore();
+        default_action = Dushore_0();
         counters = Norborne;
     }
     @name(".Hammocks") table Hammocks {

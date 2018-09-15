@@ -595,18 +595,18 @@ control Arthur(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control Bagwell(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Goodwin") RegisterAction<bit<1>, bit<1>>(Noyack) Goodwin = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = value;
         }
     };
     @name(".Hulbert") RegisterAction<bit<1>, bit<1>>(Hobucken) Hulbert = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = ~value;
         }
@@ -831,7 +831,6 @@ control Etter(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         actions = {
             Pridgen_0;
             Onley_0;
-            @defaultonly Onley;
         }
         key = {
             meta.Harding.Honokahua  : exact;
@@ -842,7 +841,7 @@ control Etter(inout headers hdr, inout metadata meta, inout standard_metadata_t 
             meta.Renton.Fragaria    : ternary;
         }
         size = 512;
-        default_action = Onley();
+        default_action = Onley_0();
         counters = Lovett;
     }
     @name(".SnowLake") table SnowLake {

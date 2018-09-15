@@ -179,8 +179,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         void apply(inout bit<32> value, out bit<32> rv) {
             bit<32> alu_hi;
             bit<32> in_value;
-            in_value = value;
             rv = 32w0;
+            in_value = value;
             if (in_value == 32w10) 
                 value = 32w1;
             if (in_value != 32w10) 

@@ -2287,13 +2287,12 @@ control Ravena(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name(".Westoak") table Westoak {
         actions = {
             Rehoboth_0();
-            @defaultonly Rehoboth();
         }
         key = {
             meta.Vergennes.Jeddo[14:0]: exact @name("Vergennes.Jeddo[14:0]") ;
         }
         size = 32768;
-        default_action = Rehoboth();
+        default_action = Rehoboth_0();
         counters = Shelby;
     }
     apply {
@@ -2380,7 +2379,6 @@ control Royston(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             Beechwood_0();
             Rehoboth_1();
-            @defaultonly Rehoboth();
         }
         key = {
             meta.Lugert.Chappells : exact @name("Lugert.Chappells") ;
@@ -2391,7 +2389,7 @@ control Royston(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Wimberley.Pinto  : ternary @name("Wimberley.Pinto") ;
         }
         size = 512;
-        default_action = Rehoboth();
+        default_action = Rehoboth_1();
         counters = Penrose;
     }
     @name(".Leoma") table Leoma {
@@ -2824,18 +2822,18 @@ control Shirley(inout headers hdr, inout metadata meta, inout standard_metadata_
 control Snowflake(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".ShadeGap") RegisterAction<bit<1>, bit<1>>(Bosworth) ShadeGap = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = ~value;
         }
     };
     @name(".ShowLow") RegisterAction<bit<1>, bit<1>>(Tuttle) ShowLow = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = value;
         }

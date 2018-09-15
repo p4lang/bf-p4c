@@ -200,13 +200,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".p0") table p0 {
         actions = {
             set_md();
-            @defaultonly NoAction();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 288;
-        default_action = NoAction();
+        default_action = set_md(9w0, 1w0, 10w0, 1w0, 10w0);
     }
     apply {
         if (1w0 == hdr.ig_intr_md.resubmit_flag) 

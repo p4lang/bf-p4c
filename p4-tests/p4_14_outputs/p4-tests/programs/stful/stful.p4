@@ -334,34 +334,30 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control pgen_pass_1_ctrl_flow(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".clr_bloom_filter_alu_1") RegisterAction<bit<1>, bit<1>>(bloom_filter_1) clr_bloom_filter_alu_1 = {
-        void apply(inout bit<1> value, out bit<1> rv) {
+        void apply(inout bit<1> value) {
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = 1w0;
         }
     };
     @name(".clr_bloom_filter_alu_2") RegisterAction<bit<1>, bit<1>>(bloom_filter_2) clr_bloom_filter_alu_2 = {
-        void apply(inout bit<1> value, out bit<1> rv) {
+        void apply(inout bit<1> value) {
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = 1w0;
         }
     };
     @name(".clr_bloom_filter_alu_3") RegisterAction<bit<1>, bit<1>>(bloom_filter_3) clr_bloom_filter_alu_3 = {
-        void apply(inout bit<1> value, out bit<1> rv) {
+        void apply(inout bit<1> value) {
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = 1w0;
         }
     };
     @name(".next_hop_ecmp_alu") selector_action(next_hop_ecmp_ap) next_hop_ecmp_alu = {
-        void apply(inout bit<1> value, out bit<1> rv) {
+        void apply(inout bit<1> value) {
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = 1w0;
         }
     };
@@ -411,18 +407,21 @@ control pgen_pass_1_ctrl_flow(inout headers hdr, inout metadata meta, inout stan
             clear_bloom_filter_1;
         }
         size = 1;
+        default_action = clear_bloom_filter_1();
     }
     @stage(1) @name(".clr_bloom_filter_2") table clr_bloom_filter_2 {
         actions = {
             clear_bloom_filter_2;
         }
         size = 1;
+        default_action = clear_bloom_filter_2();
     }
     @stage(1) @name(".clr_bloom_filter_3") table clr_bloom_filter_3 {
         actions = {
             clear_bloom_filter_3;
         }
         size = 1;
+        default_action = clear_bloom_filter_3();
     }
     @stage(5) @name(".make_key_ecmp_fast_update") table make_key_ecmp_fast_update {
         actions = {
@@ -441,6 +440,7 @@ control pgen_pass_1_ctrl_flow(inout headers hdr, inout metadata meta, inout stan
             set_mbr_down;
         }
         size = 1;
+        default_action = set_mbr_down();
     }
     @stage(8) @name(".prepare_for_recirc") table prepare_for_recirc {
         actions = {
@@ -478,10 +478,9 @@ control recirc_trigger_pkt_ctrl_flow(inout headers hdr, inout metadata meta, ino
 
 control pgen_pass_2_ctrl_flow(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".lag_alu") selector_action(lag_ap) lag_alu = {
-        void apply(inout bit<1> value, out bit<1> rv) {
+        void apply(inout bit<1> value) {
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = 1w0;
         }
     };
@@ -504,6 +503,7 @@ control pgen_pass_2_ctrl_flow(inout headers hdr, inout metadata meta, inout stan
             set_lag_mbr_down;
         }
         size = 1;
+        default_action = set_lag_mbr_down();
     }
     @stage(7) @name(".egr_ifid_fast_update_make_key") table egr_ifid_fast_update_make_key {
         actions = {
@@ -551,36 +551,39 @@ struct counter_alu_layout {
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".bloom_filter_alu_1") RegisterAction<bit<1>, bit<1>>(bloom_filter_1) bloom_filter_alu_1 = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = 1w1;
             rv = ~value;
         }
     };
     @name(".bloom_filter_alu_2") RegisterAction<bit<1>, bit<1>>(bloom_filter_2) bloom_filter_alu_2 = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = 1w1;
             rv = ~value;
         }
     };
     @name(".bloom_filter_alu_3") RegisterAction<bit<1>, bit<1>>(bloom_filter_3) bloom_filter_alu_3 = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = 1w1;
             rv = ~value;
         }
     };
     @name(".counter_alu") RegisterAction<counter_alu_layout, int<32>>(port_cntr) counter_alu = {
-        void apply(inout counter_alu_layout value, out int<32> rv) {
+        void apply(inout         struct counter_alu_layout {
+            int<32> lo;
+            int<32> hi;
+        }
+value) {
             counter_alu_layout in_value;
             in_value = value;
-            rv = 32s0;
             if (in_value.lo < 32s0 && !(in_value.lo + meta.md.offset < 32s0)) 
                 value.hi = in_value.hi + 32s1;
             if (!(in_value.lo < 32s0) && in_value.lo + meta.md.offset < 32s0) 
@@ -589,36 +592,35 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
     };
     @name(".ifid_cntr_alu") RegisterAction<int<16>, int<16>>(ifid_cntr) ifid_cntr_alu = {
-        void apply(inout int<16> value, out int<16> rv) {
+        void apply(inout int<16> value) {
             int<16> in_value;
             in_value = value;
-            rv = 16s0;
             value = in_value + (int<16>)(bit<16>)hdr.ipv4.ttl;
         }
     };
     @name(".one_bit_alu_1") RegisterAction<bit<1>, bit<1>>(ob1) one_bit_alu_1 = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             rv = in_value;
         }
     };
     @name(".one_bit_alu_2") RegisterAction<bit<1>, bit<1>>(ob2) one_bit_alu_2 = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = value;
         }
     };
-    @name(".sampling_alu") RegisterAction<bit<32>, bit<32>>(sampling_cntr) sampling_alu = {
+    @initial_register_lo_value(1) @name(".sampling_alu") RegisterAction<bit<32>, bit<32>>(sampling_cntr) sampling_alu = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            rv = 32w0;
             bit<32> alu_hi;
             bit<32> in_value;
             in_value = value;
-            rv = 32w0;
             alu_hi = (bit<32>)1;
             if (in_value >= 32w10) 
                 value = (bit<32>)1;
@@ -629,50 +631,44 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
     };
     @name(".scratch_alu_add") RegisterAction<bit<16>, bit<16>>(scratch) scratch_alu_add = {
-        void apply(inout bit<16> value, out bit<16> rv) {
+        void apply(inout bit<16> value) {
             bit<16> in_value;
             in_value = value;
-            rv = 16w0;
             value = in_value + meta.md.nh_id;
         }
     };
     @name(".scratch_alu_invert") RegisterAction<bit<16>, bit<16>>(scratch) scratch_alu_invert = {
-        void apply(inout bit<16> value, out bit<16> rv) {
+        void apply(inout bit<16> value) {
             bit<16> in_value;
             in_value = value;
-            rv = 16w0;
             value = (bit<16>)~in_value;
         }
     };
     @name(".scratch_alu_sub") RegisterAction<bit<16>, bit<16>>(scratch) scratch_alu_sub = {
-        void apply(inout bit<16> value, out bit<16> rv) {
+        void apply(inout bit<16> value) {
             bit<16> in_value;
             in_value = value;
-            rv = 16w0;
             value = meta.md.nh_id - in_value;
         }
     };
     @name(".scratch_alu_zero") RegisterAction<bit<16>, bit<16>>(scratch) scratch_alu_zero = {
-        void apply(inout bit<16> value, out bit<16> rv) {
+        void apply(inout bit<16> value) {
             bit<16> in_value;
             in_value = value;
-            rv = 16w0;
             value = (bit<16>)0;
         }
     };
     @name(".two_instr_no_idx_alu_1") RegisterAction<bit<8>, bit<8>>(two_instr_no_idx_reg) two_instr_no_idx_alu_1 = {
-        void apply(inout bit<8> value, out bit<8> rv) {
+        void apply(inout bit<8> value) {
             bit<8> in_value;
             in_value = value;
-            rv = 8w0;
             value = in_value + 8w9;
         }
     };
     @name(".two_instr_no_idx_alu_2") RegisterAction<bit<8>, bit<8>>(two_instr_no_idx_reg) two_instr_no_idx_alu_2 = {
-        void apply(inout bit<8> value, out bit<8> rv) {
+        void apply(inout bit<8> value) {
             bit<8> in_value;
             in_value = value;
-            rv = 8w0;
             value = 8w17 - in_value;
         }
     };
@@ -789,24 +785,28 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             check_bloom_filter_1;
         }
         size = 1;
+        default_action = check_bloom_filter_1();
     }
     @stage(1) @name(".bloom_filter_2") table bloom_filter_2_0 {
         actions = {
             check_bloom_filter_2;
         }
         size = 1;
+        default_action = check_bloom_filter_2();
     }
     @stage(1) @name(".bloom_filter_3") table bloom_filter_3_0 {
         actions = {
             check_bloom_filter_3;
         }
         size = 1;
+        default_action = check_bloom_filter_3();
     }
     @name(".bloom_filter_sample") table bloom_filter_sample {
         actions = {
             bloom_filter_mark_sample;
         }
         size = 1;
+        default_action = bloom_filter_mark_sample();
     }
     @seletor_num_max_groups(128) @selector_max_group_size(1200) @name(".egr_ifid") table egr_ifid {
         actions = {
@@ -838,6 +838,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             set_flowlet_hash_and_ts;
         }
         size = 1;
+        default_action = set_flowlet_hash_and_ts();
     }
     @name(".ifid") table ifid {
         actions = {
@@ -857,6 +858,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ig_intr_md.ingress_port: exact;
         }
         size = 288;
+        default_action = set_ifid(0);
     }
     @name(".ipv4_route") table ipv4_route {
         actions = {
@@ -920,7 +922,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         key = {
             hdr.ipv4.sip: exact;
         }
-        size = 85000;
+        size = 1024;
     }
     @name(".two_instr_no_idx") table two_instr_no_idx {
         actions = {

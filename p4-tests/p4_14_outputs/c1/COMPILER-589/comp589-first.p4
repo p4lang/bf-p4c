@@ -808,13 +808,12 @@ control Anchorage(inout headers hdr, inout metadata meta, inout standard_metadat
     @name(".Darien") table Darien {
         actions = {
             Ewing_0();
-            @defaultonly Ewing();
         }
         key = {
             meta.Sargent.Tulsa[14:0]: exact @name("Sargent.Tulsa[14:0]") ;
         }
         size = 32768;
-        default_action = Ewing();
+        default_action = Ewing_0();
         counters = Fallis;
     }
     @name(".FifeLake") table FifeLake {
@@ -1115,18 +1114,18 @@ control Burket(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control Calabasas(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Olene") RegisterAction<bit<1>, bit<1>>(Lowes) Olene = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = value;
         }
     };
     @name(".Portal") RegisterAction<bit<1>, bit<1>>(Simla) Portal = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = ~value;
         }
@@ -2009,7 +2008,6 @@ control Henry(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         actions = {
             McCallum_0();
             Ewing_1();
-            @defaultonly Ewing();
         }
         key = {
             hdr.ig_intr_md.ingress_port[6:0]: exact @name("ig_intr_md.ingress_port[6:0]") ;
@@ -2020,7 +2018,7 @@ control Henry(inout headers hdr, inout metadata meta, inout standard_metadata_t 
             meta.Newburgh.Wellsboro         : ternary @name("Newburgh.Wellsboro") ;
         }
         size = 512;
-        default_action = Ewing();
+        default_action = Ewing_1();
         counters = Carlsbad;
     }
     @name(".Motley") table Motley {

@@ -219,7 +219,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".NoAction") action NoAction_0() {
     }
     @name(".flowlet_state_alu") RegisterAction<flowlet_state_alu_layout, bit<32>>(flowlet_state) flowlet_state_alu = {
-        void apply(inout flowlet_state_alu_layout value, out bit<32> rv) {
+        void apply(inout         struct flowlet_state_alu_layout {
+            bit<32> lo;
+            bit<32> hi;
+        }
+value, out bit<32> rv) {
             value.lo = meta.meta.tstamp;
             rv = value.hi;
         }

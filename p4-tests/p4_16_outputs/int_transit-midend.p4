@@ -110,6 +110,7 @@ struct int_metadata_t {
     bit<8>  int_hdr_word_len;
     bit<32> switch_id;
     bit<5>  ins_cnt_tmp;
+    bit<5>  ins_cnt_tmp2;
 }
 
 struct metadata_t {
@@ -141,6 +142,7 @@ parser ParserImpl(packet_in packet, out headers_t hdr, inout metadata_t meta, in
     state parse_int_header {
         packet.extract<int_header_t>(hdr.int_header);
         meta.int_metadata.ins_cnt_tmp = hdr.int_header.ins_cnt;
+        meta.int_metadata.ins_cnt_tmp2 = hdr.int_header.ins_cnt;
         transition accept;
     }
     state start {
@@ -474,7 +476,7 @@ control egress(inout headers_t hdr, inout metadata_t meta, inout standard_metada
     }
     @name("egress.int_egress.int_transit") action int_egress_int_transit(bit<32> switch_id) {
         meta.int_metadata.switch_id = switch_id;
-        meta.int_metadata.insert_byte_cnt = (bit<16>)(hdr.int_header.ins_cnt << 2);
+        meta.int_metadata.insert_byte_cnt = (bit<16>)(meta.int_metadata.ins_cnt_tmp2 << 2);
         meta.int_metadata.int_hdr_word_len = (bit<8>)meta.int_metadata.ins_cnt_tmp;
     }
     @name("egress.int_egress.int_prep") table int_egress_int_prep_0 {

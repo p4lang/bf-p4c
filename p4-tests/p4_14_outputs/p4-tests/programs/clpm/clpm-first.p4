@@ -188,11 +188,10 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 @name(".reg0") register<bit<16>>(32w512) reg0;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".salu0") RegisterAction<bit<16>, bit<16>>(reg0) salu0 = {
-        void apply(inout bit<16> value, out bit<16> rv) {
+    @initial_register_lo_value(0) @name(".salu0") RegisterAction<bit<16>, bit<16>>(reg0) salu0 = {
+        void apply(inout bit<16> value) {
             bit<16> in_value;
             in_value = value;
-            rv = 16w0;
             value = in_value + 16w1;
         }
     };

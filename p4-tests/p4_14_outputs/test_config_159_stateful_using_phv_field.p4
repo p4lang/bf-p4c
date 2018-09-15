@@ -174,10 +174,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".sampler_alu") RegisterAction<bit<32>, bit<32>>(flow_cnt) sampler_alu = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            rv = 32w0;
             bit<32> alu_hi;
             bit<32> in_value;
             in_value = value;
-            rv = 32w0;
             alu_hi = (bit<32>)(hdr.pkt.field_j_16 + 16w2);
             if (in_value == 32w10) 
                 value = (bit<32>)1;

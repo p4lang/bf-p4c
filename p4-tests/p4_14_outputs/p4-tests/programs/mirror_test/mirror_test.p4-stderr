@@ -1,6 +1,6 @@
-mirror_test.p4(55): warning: ing_mir shadows .ing_mir
+mirror_test.p4(59): warning: ing_mir shadows .ing_mir
 action set_md(dest_port, ing_mir, ing_ses, egr_mir, egr_ses) {
                          ^^^^^^^
-mirror_test.p4(63)
+mirror_test.p4(67)
 table ing_mir {
 ^

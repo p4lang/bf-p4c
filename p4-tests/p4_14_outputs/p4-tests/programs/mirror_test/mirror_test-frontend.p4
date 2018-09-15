@@ -180,8 +180,6 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".NoAction") action NoAction_0() {
-    }
     @name(".do_ing_mir") action do_ing_mir_0() {
         clone(CloneType.I2E, (bit<32>)meta.md.ing_mir_ses);
     }
@@ -202,13 +200,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".p0") table p0 {
         actions = {
             set_md_0();
-            @defaultonly NoAction_0();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 288;
-        default_action = NoAction_0();
+        default_action = set_md_0(9w0, 1w0, 10w0, 1w0, 10w0);
     }
     apply {
         if (1w0 == hdr.ig_intr_md.resubmit_flag) 

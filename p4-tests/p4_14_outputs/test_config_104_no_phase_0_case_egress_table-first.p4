@@ -186,7 +186,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         hdr.pkt.field_c_4 = param2;
         hdr.pkt.field_d_4 = 4w6;
         hdr.pkt.field_e_4 = 4w10;
-        hdr.pkt.field_f_4[3:0] = 4w8;
+        hdr.pkt.field_f_4[3:0] = 4w15;
         hdr.pkt.field_g_4 = param3;
         hdr.pkt.field_h0_1 = param4;
         hdr.pkt.field_h1_1 = 1w0;

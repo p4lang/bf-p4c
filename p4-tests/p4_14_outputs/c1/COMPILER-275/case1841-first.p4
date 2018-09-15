@@ -694,18 +694,18 @@ control Hephzibah(inout headers hdr, inout metadata meta, inout standard_metadat
 control Homeacre(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Donegal") RegisterAction<bit<1>, bit<1>>(Robinette) Donegal = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = value;
         }
     };
     @name(".Sitka") RegisterAction<bit<1>, bit<1>>(Steger) Sitka = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = value;
         }
@@ -1235,10 +1235,9 @@ control Perez(inout headers hdr, inout metadata meta, inout standard_metadata_t 
 control Puyallup(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Marquand") @min_width(16) direct_counter(CounterType.packets_and_bytes) Marquand;
     @name(".Chaumont") RegisterAction<bit<1>, bit<1>>(Grants) Chaumont = {
-        void apply(inout bit<1> value, out bit<1> rv) {
+        void apply(inout bit<1> value) {
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = 1w1;
         }
     };
@@ -1296,7 +1295,6 @@ control Puyallup(inout headers hdr, inout metadata meta, inout standard_metadata
         actions = {
             Reedsport_0();
             Isleta_0();
-            @defaultonly Isleta();
         }
         key = {
             meta.Harpster.Nettleton: exact @name("Harpster.Nettleton") ;
@@ -1307,7 +1305,7 @@ control Puyallup(inout headers hdr, inout metadata meta, inout standard_metadata
             meta.Wayne.Laplace     : ternary @name("Wayne.Laplace") ;
         }
         size = 512;
-        default_action = Isleta();
+        default_action = Isleta_0();
         counters = Marquand;
     }
     apply {

@@ -194,8 +194,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         void apply(inout bit<8> value, out bit<8> rv) {
             bit<8> alu_hi;
             bit<8> in_value;
-            in_value = value;
             rv = 8w0;
+            in_value = value;
             alu_hi = 8w1;
             if (in_value == 8w100) 
                 value = 8w0;

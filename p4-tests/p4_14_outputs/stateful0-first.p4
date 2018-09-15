@@ -28,11 +28,11 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".accum") register<bit<16>>(32w0) accum;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".sful") RegisterAction<bit<16>, bit<16>>(accum) sful = {
+    @initial_register_lo_value(1) @name(".sful") RegisterAction<bit<16>, bit<16>>(accum) sful = {
         void apply(inout bit<16> value, out bit<16> rv) {
+            rv = 16w0;
             bit<16> in_value;
             in_value = value;
-            rv = 16w0;
             rv = in_value;
             value = in_value + 16w1;
         }

@@ -452,8 +452,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".NoAction") action NoAction_49() {
     }
     @name(".abcAlu1") RegisterAction<bit<1>, bit<1>>(uVMcgg) abcAlu1 = {
-        void apply(inout bit<1> value, out bit<1> rv) {
-            rv = 1w0;
+        void apply(inout bit<1> value) {
             value = 1w1;
         }
     };

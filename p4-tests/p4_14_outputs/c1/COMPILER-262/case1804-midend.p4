@@ -885,8 +885,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_29();
     }
     @name(".Powderly") RegisterAction<bit<1>, bit<1>>(Ingleside) _Powderly_0 = {
-        void apply(inout bit<1> value, out bit<1> rv) {
-            rv = 1w0;
+        void apply(inout bit<1> value) {
             value = 1w1;
         }
     };

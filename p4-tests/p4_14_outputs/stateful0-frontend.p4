@@ -31,7 +31,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".NoAction") action NoAction_0() {
     }
     bit<16> tmp_0;
-    @name(".sful") RegisterAction<bit<16>, bit<16>>(accum) sful = {
+    @initial_register_lo_value(1) @name(".sful") RegisterAction<bit<16>, bit<16>>(accum) sful = {
         void apply(inout bit<16> value, out bit<16> rv) {
             bit<16> in_value;
             in_value = value;

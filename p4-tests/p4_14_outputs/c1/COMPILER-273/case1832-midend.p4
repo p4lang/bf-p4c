@@ -1028,15 +1028,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @min_width(16) @name(".BigBay") direct_counter(CounterType.packets_and_bytes) _BigBay_0;
     @name(".Sunrise") RegisterAction<bit<1>, bit<1>>(Pueblo) _Sunrise_0 = {
-        void apply(inout bit<1> value, out bit<1> rv) {
-            rv = 1w0;
+        void apply(inout bit<1> value) {
             value = 1w1;
         }
     };
     @name(".Reidville") action _Reidville() {
         meta.IdaGrove.Maljamar = 1w1;
-    }
-    @pa_solitary("ingress", "Wentworth.Dauphin") @pa_solitary("ingress", "Wentworth.Rocklin") @pa_solitary("ingress", "Wentworth.Bonner") @pa_solitary("egress", "Paxico.Collis") @pa_solitary("ig_intr_md_for_tm.ucast_egress_port") @pa_atomic("ingress", "Thach.Findlay") @pa_solitary("ingress", "Thach.Findlay") @pa_atomic("ingress", "Thach.Carnero") @pa_solitary("ingress", "Thach.Carnero") @name(".Roseau") action _Roseau_0() {
     }
     @name(".Traskwood") action _Traskwood(bit<8> Manilla) {
         _Sunrise_0.execute();
@@ -1062,14 +1059,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         _BigBay_0.count();
         meta.Wentworth.Spraberry = 1w1;
     }
-    @pa_solitary("ingress", "Wentworth.Dauphin") @pa_solitary("ingress", "Wentworth.Rocklin") @pa_solitary("ingress", "Wentworth.Bonner") @pa_solitary("egress", "Paxico.Collis") @pa_solitary("ig_intr_md_for_tm.ucast_egress_port") @pa_atomic("ingress", "Thach.Findlay") @pa_solitary("ingress", "Thach.Findlay") @pa_atomic("ingress", "Thach.Carnero") @pa_solitary("ingress", "Thach.Carnero") @name(".Roseau") action _Roseau_1() {
+    @pa_solitary("ingress", "Wentworth.Dauphin") @pa_solitary("ingress", "Wentworth.Rocklin") @pa_solitary("ingress", "Wentworth.Bonner") @pa_solitary("egress", "Paxico.Collis") @pa_solitary("ig_intr_md_for_tm.ucast_egress_port") @pa_atomic("ingress", "Thach.Findlay") @pa_solitary("ingress", "Thach.Findlay") @pa_atomic("ingress", "Thach.Carnero") @pa_solitary("ingress", "Thach.Carnero") @name(".Roseau") action _Roseau_0() {
         _BigBay_0.count();
     }
     @name(".Stewart") table _Stewart_0 {
         actions = {
             _Hayfork();
-            _Roseau_1();
-            @defaultonly _Roseau_0();
+            _Roseau_0();
         }
         key = {
             meta.DewyRose.Lowden    : exact @name("DewyRose.Lowden") ;
@@ -1163,21 +1159,21 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.Paxico.Raceland = 1w1;
         meta.Natalbany.Requa = Highfill;
     }
+    @pa_solitary("ingress", "Wentworth.Dauphin") @pa_solitary("ingress", "Wentworth.Rocklin") @pa_solitary("ingress", "Wentworth.Bonner") @pa_solitary("egress", "Paxico.Collis") @pa_solitary("ig_intr_md_for_tm.ucast_egress_port") @pa_atomic("ingress", "Thach.Findlay") @pa_solitary("ingress", "Thach.Findlay") @pa_atomic("ingress", "Thach.Carnero") @pa_solitary("ingress", "Thach.Carnero") @name(".Roseau") action _Roseau_1() {
+    }
     @pa_solitary("ingress", "Wentworth.Dauphin") @pa_solitary("ingress", "Wentworth.Rocklin") @pa_solitary("ingress", "Wentworth.Bonner") @pa_solitary("egress", "Paxico.Collis") @pa_solitary("ig_intr_md_for_tm.ucast_egress_port") @pa_atomic("ingress", "Thach.Findlay") @pa_solitary("ingress", "Thach.Findlay") @pa_atomic("ingress", "Thach.Carnero") @pa_solitary("ingress", "Thach.Carnero") @name(".Roseau") action _Roseau_2() {
     }
     @pa_solitary("ingress", "Wentworth.Dauphin") @pa_solitary("ingress", "Wentworth.Rocklin") @pa_solitary("ingress", "Wentworth.Bonner") @pa_solitary("egress", "Paxico.Collis") @pa_solitary("ig_intr_md_for_tm.ucast_egress_port") @pa_atomic("ingress", "Thach.Findlay") @pa_solitary("ingress", "Thach.Findlay") @pa_atomic("ingress", "Thach.Carnero") @pa_solitary("ingress", "Thach.Carnero") @name(".Roseau") action _Roseau_3() {
     }
-    @pa_solitary("ingress", "Wentworth.Dauphin") @pa_solitary("ingress", "Wentworth.Rocklin") @pa_solitary("ingress", "Wentworth.Bonner") @pa_solitary("egress", "Paxico.Collis") @pa_solitary("ig_intr_md_for_tm.ucast_egress_port") @pa_atomic("ingress", "Thach.Findlay") @pa_solitary("ingress", "Thach.Findlay") @pa_atomic("ingress", "Thach.Carnero") @pa_solitary("ingress", "Thach.Carnero") @name(".Roseau") action _Roseau_4() {
+    @pa_solitary("ingress", "Wentworth.Dauphin") @pa_solitary("ingress", "Wentworth.Rocklin") @pa_solitary("ingress", "Wentworth.Bonner") @pa_solitary("egress", "Paxico.Collis") @pa_solitary("ig_intr_md_for_tm.ucast_egress_port") @pa_atomic("ingress", "Thach.Findlay") @pa_solitary("ingress", "Thach.Findlay") @pa_atomic("ingress", "Thach.Carnero") @pa_solitary("ingress", "Thach.Carnero") @name(".Roseau") action _Roseau_16() {
+    }
+    @pa_solitary("ingress", "Wentworth.Dauphin") @pa_solitary("ingress", "Wentworth.Rocklin") @pa_solitary("ingress", "Wentworth.Bonner") @pa_solitary("egress", "Paxico.Collis") @pa_solitary("ig_intr_md_for_tm.ucast_egress_port") @pa_atomic("ingress", "Thach.Findlay") @pa_solitary("ingress", "Thach.Findlay") @pa_atomic("ingress", "Thach.Carnero") @pa_solitary("ingress", "Thach.Carnero") @name(".Roseau") action _Roseau_17() {
     }
     @pa_solitary("ingress", "Wentworth.Dauphin") @pa_solitary("ingress", "Wentworth.Rocklin") @pa_solitary("ingress", "Wentworth.Bonner") @pa_solitary("egress", "Paxico.Collis") @pa_solitary("ig_intr_md_for_tm.ucast_egress_port") @pa_atomic("ingress", "Thach.Findlay") @pa_solitary("ingress", "Thach.Findlay") @pa_atomic("ingress", "Thach.Carnero") @pa_solitary("ingress", "Thach.Carnero") @name(".Roseau") action _Roseau_18() {
     }
     @pa_solitary("ingress", "Wentworth.Dauphin") @pa_solitary("ingress", "Wentworth.Rocklin") @pa_solitary("ingress", "Wentworth.Bonner") @pa_solitary("egress", "Paxico.Collis") @pa_solitary("ig_intr_md_for_tm.ucast_egress_port") @pa_atomic("ingress", "Thach.Findlay") @pa_solitary("ingress", "Thach.Findlay") @pa_atomic("ingress", "Thach.Carnero") @pa_solitary("ingress", "Thach.Carnero") @name(".Roseau") action _Roseau_19() {
     }
     @pa_solitary("ingress", "Wentworth.Dauphin") @pa_solitary("ingress", "Wentworth.Rocklin") @pa_solitary("ingress", "Wentworth.Bonner") @pa_solitary("egress", "Paxico.Collis") @pa_solitary("ig_intr_md_for_tm.ucast_egress_port") @pa_atomic("ingress", "Thach.Findlay") @pa_solitary("ingress", "Thach.Findlay") @pa_atomic("ingress", "Thach.Carnero") @pa_solitary("ingress", "Thach.Carnero") @name(".Roseau") action _Roseau_20() {
-    }
-    @pa_solitary("ingress", "Wentworth.Dauphin") @pa_solitary("ingress", "Wentworth.Rocklin") @pa_solitary("ingress", "Wentworth.Bonner") @pa_solitary("egress", "Paxico.Collis") @pa_solitary("ig_intr_md_for_tm.ucast_egress_port") @pa_atomic("ingress", "Thach.Findlay") @pa_solitary("ingress", "Thach.Findlay") @pa_atomic("ingress", "Thach.Carnero") @pa_solitary("ingress", "Thach.Carnero") @name(".Roseau") action _Roseau_21() {
-    }
-    @pa_solitary("ingress", "Wentworth.Dauphin") @pa_solitary("ingress", "Wentworth.Rocklin") @pa_solitary("ingress", "Wentworth.Bonner") @pa_solitary("egress", "Paxico.Collis") @pa_solitary("ig_intr_md_for_tm.ucast_egress_port") @pa_atomic("ingress", "Thach.Findlay") @pa_solitary("ingress", "Thach.Findlay") @pa_atomic("ingress", "Thach.Carnero") @pa_solitary("ingress", "Thach.Carnero") @name(".Roseau") action _Roseau_22() {
     }
     @name(".Cross") action _Cross(bit<13> Nisland) {
         meta.Biscay.Coleman = Nisland;
@@ -1192,38 +1188,38 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         support_timeout = true;
         actions = {
             _Otisco();
-            _Roseau_2();
+            _Roseau_1();
         }
         key = {
             meta.IdaGrove.Maxwelton: exact @name("IdaGrove.Maxwelton") ;
             meta.Belcher.Dialville : exact @name("Belcher.Dialville") ;
         }
         size = 65536;
-        default_action = _Roseau_2();
+        default_action = _Roseau_1();
     }
     @atcam_partition_index("Biscay.Coleman") @atcam_number_partitions(8192) @name(".Goosport") table _Goosport_0 {
         actions = {
             _Otisco_8();
-            _Roseau_3();
+            _Roseau_2();
         }
         key = {
             meta.Biscay.Coleman         : exact @name("Biscay.Coleman") ;
             meta.Biscay.Rossburg[106:64]: lpm @name("Biscay.Rossburg[106:64]") ;
         }
         size = 65536;
-        default_action = _Roseau_3();
+        default_action = _Roseau_2();
     }
     @atcam_partition_index("Biscay.BigPiney") @atcam_number_partitions(2048) @name(".Hurst") table _Hurst_0 {
         actions = {
             _Otisco_9();
-            _Roseau_4();
+            _Roseau_3();
         }
         key = {
             meta.Biscay.BigPiney      : exact @name("Biscay.BigPiney") ;
             meta.Biscay.Rossburg[63:0]: lpm @name("Biscay.Rossburg[63:0]") ;
         }
         size = 16384;
-        default_action = _Roseau_4();
+        default_action = _Roseau_3();
     }
     @name(".Murdock") table _Murdock_0 {
         actions = {
@@ -1239,7 +1235,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @atcam_partition_index("Belcher.Hawthorne") @atcam_number_partitions(16384) @name(".Okarche") table _Okarche_0 {
         actions = {
             _Otisco_11();
-            _Roseau_18();
+            _Roseau_16();
             @defaultonly NoAction_42();
         }
         key = {
@@ -1252,14 +1248,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".Onley") table _Onley_0 {
         actions = {
             _Cross();
-            _Roseau_19();
+            _Roseau_17();
         }
         key = {
             meta.IdaGrove.Maxwelton     : exact @name("IdaGrove.Maxwelton") ;
             meta.Biscay.Rossburg[127:64]: lpm @name("Biscay.Rossburg[127:64]") ;
         }
         size = 8192;
-        default_action = _Roseau_19();
+        default_action = _Roseau_17();
     }
     @name(".Peebles") table _Peebles_0 {
         actions = {
@@ -1288,39 +1284,39 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         support_timeout = true;
         actions = {
             _Otisco_13();
-            _Roseau_20();
+            _Roseau_18();
         }
         key = {
             meta.IdaGrove.Maxwelton: exact @name("IdaGrove.Maxwelton") ;
             meta.Biscay.Rossburg   : exact @name("Biscay.Rossburg") ;
         }
         size = 65536;
-        default_action = _Roseau_20();
+        default_action = _Roseau_18();
     }
     @idletime_precision(1) @name(".Wells") table _Wells_0 {
         support_timeout = true;
         actions = {
             _Otisco_14();
-            _Roseau_21();
+            _Roseau_19();
         }
         key = {
             meta.IdaGrove.Maxwelton: exact @name("IdaGrove.Maxwelton") ;
             meta.Belcher.Dialville : lpm @name("Belcher.Dialville") ;
         }
         size = 1024;
-        default_action = _Roseau_21();
+        default_action = _Roseau_19();
     }
     @name(".Yakutat") table _Yakutat_0 {
         actions = {
             _Brookneal();
-            _Roseau_22();
+            _Roseau_20();
         }
         key = {
             meta.IdaGrove.Maxwelton: exact @name("IdaGrove.Maxwelton") ;
             meta.Biscay.Rossburg   : lpm @name("Biscay.Rossburg") ;
         }
         size = 2048;
-        default_action = _Roseau_22();
+        default_action = _Roseau_20();
     }
     @name(".Henderson") action _Henderson() {
         meta.Paxico.Bajandas = meta.Wentworth.Wrenshall;
@@ -1362,14 +1358,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".Manville") action _Manville() {
         meta.Thach.Findlay = meta.Alden.Graford;
     }
-    @pa_solitary("ingress", "Wentworth.Dauphin") @pa_solitary("ingress", "Wentworth.Rocklin") @pa_solitary("ingress", "Wentworth.Bonner") @pa_solitary("egress", "Paxico.Collis") @pa_solitary("ig_intr_md_for_tm.ucast_egress_port") @pa_atomic("ingress", "Thach.Findlay") @pa_solitary("ingress", "Thach.Findlay") @pa_atomic("ingress", "Thach.Carnero") @pa_solitary("ingress", "Thach.Carnero") @name(".Roseau") action _Roseau_23() {
+    @pa_solitary("ingress", "Wentworth.Dauphin") @pa_solitary("ingress", "Wentworth.Rocklin") @pa_solitary("ingress", "Wentworth.Bonner") @pa_solitary("egress", "Paxico.Collis") @pa_solitary("ig_intr_md_for_tm.ucast_egress_port") @pa_atomic("ingress", "Thach.Findlay") @pa_solitary("ingress", "Thach.Findlay") @pa_atomic("ingress", "Thach.Carnero") @pa_solitary("ingress", "Thach.Carnero") @name(".Roseau") action _Roseau_21() {
     }
     @immediate(0) @name(".Rockland") table _Rockland_0 {
         actions = {
             _Frederick();
             _Belpre();
             _Manville();
-            _Roseau_23();
+            _Roseau_21();
         }
         key = {
             hdr.Waretown.isValid() : ternary @name("Waretown.$valid$") ;
@@ -1384,7 +1380,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.Bellport.isValid() : ternary @name("Bellport.$valid$") ;
         }
         size = 256;
-        default_action = _Roseau_23();
+        default_action = _Roseau_21();
     }
     @name(".Knolls") action _Knolls() {
         meta.Paxico.Driftwood = 1w1;
@@ -1499,12 +1495,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.Paxico.Waukesha = Fontana;
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)Fontana;
     }
-    @pa_solitary("ingress", "Wentworth.Dauphin") @pa_solitary("ingress", "Wentworth.Rocklin") @pa_solitary("ingress", "Wentworth.Bonner") @pa_solitary("egress", "Paxico.Collis") @pa_solitary("ig_intr_md_for_tm.ucast_egress_port") @pa_atomic("ingress", "Thach.Findlay") @pa_solitary("ingress", "Thach.Findlay") @pa_atomic("ingress", "Thach.Carnero") @pa_solitary("ingress", "Thach.Carnero") @name(".Roseau") action _Roseau_24() {
+    @pa_solitary("ingress", "Wentworth.Dauphin") @pa_solitary("ingress", "Wentworth.Rocklin") @pa_solitary("ingress", "Wentworth.Bonner") @pa_solitary("egress", "Paxico.Collis") @pa_solitary("ig_intr_md_for_tm.ucast_egress_port") @pa_atomic("ingress", "Thach.Findlay") @pa_solitary("ingress", "Thach.Findlay") @pa_atomic("ingress", "Thach.Carnero") @pa_solitary("ingress", "Thach.Carnero") @name(".Roseau") action _Roseau_22() {
     }
     @name(".Millhaven") table _Millhaven_0 {
         actions = {
             _ElMango();
-            _Roseau_24();
+            _Roseau_22();
             @defaultonly NoAction_47();
         }
         key = {
@@ -1554,7 +1550,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         _Eddington_0.apply();
         switch (_Stewart_0.apply().action_run) {
-            _Roseau_1: {
+            _Roseau_0: {
                 if (meta.DewyRose.Seguin == 1w0 && meta.Wentworth.Chunchula == 1w0) 
                     _Westview_0.apply();
                 _Abernant_0.apply();
@@ -1571,7 +1567,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         if (meta.Wentworth.Spraberry == 1w0 && meta.IdaGrove.Maljamar == 1w1) 
             if (meta.IdaGrove.Ingraham == 1w1 && meta.Wentworth.Bernard == 1w1) 
                 switch (_Balmville_0.apply().action_run) {
-                    _Roseau_2: {
+                    _Roseau_1: {
                         _Peebles_0.apply();
                         if (meta.Belcher.Hawthorne != 16w0) 
                             _Okarche_0.apply();
@@ -1583,21 +1579,21 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             else 
                 if (meta.IdaGrove.Kinards == 1w1 && meta.Wentworth.Kiwalik == 1w1) 
                     switch (_Waimalu_0.apply().action_run) {
-                        _Roseau_20: {
+                        _Roseau_18: {
                             switch (_Yakutat_0.apply().action_run) {
                                 _Brookneal: {
                                     switch (_Hurst_0.apply().action_run) {
-                                        _Roseau_4: {
+                                        _Roseau_3: {
                                             _Murdock_0.apply();
                                         }
                                     }
 
                                 }
-                                _Roseau_22: {
+                                _Roseau_20: {
                                     switch (_Onley_0.apply().action_run) {
                                         _Cross: {
                                             switch (_Goosport_0.apply().action_run) {
-                                                _Roseau_3: {
+                                                _Roseau_2: {
                                                     _Ralls_0.apply();
                                                 }
                                             }

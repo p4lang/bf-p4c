@@ -1100,15 +1100,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @min_width(16) @name(".Silvertip") direct_counter(CounterType.packets_and_bytes) _Silvertip_0;
     @name(".Mabelle") RegisterAction<bit<1>, bit<1>>(Brinson) _Mabelle_0 = {
-        void apply(inout bit<1> value, out bit<1> rv) {
-            rv = 1w0;
+        void apply(inout bit<1> value) {
             value = 1w1;
         }
     };
     @name(".Bowlus") action _Bowlus() {
         meta.Sunset.Siloam = 1w1;
-    }
-    @name(".Shauck") action _Shauck_0() {
     }
     @name(".Perkasie") action _Perkasie(bit<8> Everett) {
         _Mabelle_0.execute();
@@ -1134,14 +1131,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         _Silvertip_0.count();
         meta.Neshoba.Saugatuck = 1w1;
     }
-    @name(".Shauck") action _Shauck_1() {
+    @name(".Shauck") action _Shauck_0() {
         _Silvertip_0.count();
     }
     @name(".DuPont") table _DuPont_0 {
         actions = {
             _Cankton();
-            _Shauck_1();
-            @defaultonly _Shauck_0();
+            _Shauck_0();
         }
         key = {
             meta.Fosston.Shasta   : exact @name("Fosston.Shasta") ;
@@ -1206,11 +1202,15 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".Micco") action _Micco(bit<13> Churchill) {
         meta.Dabney.Hughson = Churchill;
     }
+    @name(".Shauck") action _Shauck_1() {
+    }
     @name(".Shauck") action _Shauck_2() {
     }
     @name(".Shauck") action _Shauck_3() {
     }
-    @name(".Shauck") action _Shauck_4() {
+    @name(".Shauck") action _Shauck_17() {
+    }
+    @name(".Shauck") action _Shauck_18() {
     }
     @name(".Shauck") action _Shauck_19() {
     }
@@ -1219,10 +1219,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".Shauck") action _Shauck_21() {
     }
     @name(".Shauck") action _Shauck_22() {
-    }
-    @name(".Shauck") action _Shauck_23() {
-    }
-    @name(".Shauck") action _Shauck_24() {
     }
     @name(".Wyandanch") action _Wyandanch(bit<16> Plato) {
         meta.Calabasas.Hookdale = 1w1;
@@ -1269,14 +1265,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".Burwell") table _Burwell_0 {
         actions = {
             _Micco();
-            _Shauck_2();
+            _Shauck_1();
         }
         key = {
             meta.Sunset.Littleton       : exact @name("Sunset.Littleton") ;
             meta.Dabney.EastDuke[127:64]: lpm @name("Dabney.EastDuke[127:64]") ;
         }
         size = 8192;
-        default_action = _Shauck_2();
+        default_action = _Shauck_1();
     }
     @name(".Cabot") table _Cabot_0 {
         actions = {
@@ -1293,26 +1289,26 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         support_timeout = true;
         actions = {
             _Wyandanch_9();
-            _Shauck_3();
+            _Shauck_2();
         }
         key = {
             meta.Sunset.Littleton: exact @name("Sunset.Littleton") ;
             meta.Duelm.Domestic  : exact @name("Duelm.Domestic") ;
         }
         size = 65536;
-        default_action = _Shauck_3();
+        default_action = _Shauck_2();
     }
     @atcam_partition_index("Duelm.Knoke") @atcam_number_partitions(16384) @name(".ElCentro") table _ElCentro_0 {
         actions = {
             _Wyandanch_10();
-            _Shauck_4();
+            _Shauck_3();
         }
         key = {
             meta.Duelm.Knoke         : exact @name("Duelm.Knoke") ;
             meta.Duelm.Domestic[19:0]: lpm @name("Duelm.Domestic[19:0]") ;
         }
         size = 131072;
-        default_action = _Shauck_4();
+        default_action = _Shauck_3();
     }
     @name(".Guion") table _Guion_0 {
         actions = {
@@ -1328,76 +1324,76 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @atcam_partition_index("Dabney.Newhalem") @atcam_number_partitions(2048) @name(".Hannah") table _Hannah_0 {
         actions = {
             _Wyandanch_12();
-            _Shauck_19();
+            _Shauck_17();
         }
         key = {
             meta.Dabney.Newhalem      : exact @name("Dabney.Newhalem") ;
             meta.Dabney.EastDuke[63:0]: lpm @name("Dabney.EastDuke[63:0]") ;
         }
         size = 16384;
-        default_action = _Shauck_19();
+        default_action = _Shauck_17();
     }
     @idletime_precision(1) @name(".Nickerson") table _Nickerson_0 {
         support_timeout = true;
         actions = {
             _Wyandanch_13();
-            _Shauck_20();
+            _Shauck_18();
         }
         key = {
             meta.Sunset.Littleton: exact @name("Sunset.Littleton") ;
             meta.Dabney.EastDuke : exact @name("Dabney.EastDuke") ;
         }
         size = 65536;
-        default_action = _Shauck_20();
+        default_action = _Shauck_18();
     }
     @name(".Peoria") table _Peoria_0 {
         actions = {
             _Weskan();
-            _Shauck_21();
+            _Shauck_19();
         }
         key = {
             meta.Sunset.Littleton: exact @name("Sunset.Littleton") ;
             meta.Duelm.Domestic  : lpm @name("Duelm.Domestic") ;
         }
         size = 16384;
-        default_action = _Shauck_21();
+        default_action = _Shauck_19();
     }
     @name(".Powers") table _Powers_0 {
         actions = {
             _Maumee();
-            _Shauck_22();
+            _Shauck_20();
         }
         key = {
             meta.Sunset.Littleton: exact @name("Sunset.Littleton") ;
             meta.Dabney.EastDuke : lpm @name("Dabney.EastDuke") ;
         }
         size = 2048;
-        default_action = _Shauck_22();
+        default_action = _Shauck_20();
     }
     @idletime_precision(1) @name(".RowanBay") table _RowanBay_0 {
         support_timeout = true;
         actions = {
             _Wyandanch_14();
-            _Shauck_23();
+            _Shauck_21();
         }
         key = {
             meta.Sunset.Littleton: exact @name("Sunset.Littleton") ;
             meta.Duelm.Domestic  : lpm @name("Duelm.Domestic") ;
         }
         size = 1024;
-        default_action = _Shauck_23();
+        default_action = _Shauck_21();
     }
     @atcam_partition_index("Dabney.Hughson") @atcam_number_partitions(8192) @name(".Westvaco") table _Westvaco_0 {
         actions = {
             _Wyandanch_15();
-            _Shauck_24();
+            _Shauck_22();
         }
         key = {
             meta.Dabney.Hughson         : exact @name("Dabney.Hughson") ;
             meta.Dabney.EastDuke[106:64]: lpm @name("Dabney.EastDuke[106:64]") ;
         }
         size = 65536;
-        default_action = _Shauck_24();
+        default_action = _Shauck_22();
     }
     @name(".Yardley") table _Yardley_0 {
         actions = {
@@ -1450,14 +1446,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".Rawlins") action _Rawlins() {
         meta.ElPrado.Amenia = meta.Ravena.Grantfork;
     }
-    @name(".Shauck") action _Shauck_25() {
+    @name(".Shauck") action _Shauck_23() {
     }
     @immediate(0) @name(".Flasher") table _Flasher_0 {
         actions = {
             _Eldred();
             _Ridgeview();
             _Rawlins();
-            _Shauck_25();
+            _Shauck_23();
         }
         key = {
             hdr.Wyndmoor.isValid(): ternary @name("Wyndmoor.$valid$") ;
@@ -1472,7 +1468,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.Saranap.isValid() : ternary @name("Saranap.$valid$") ;
         }
         size = 256;
-        default_action = _Shauck_25();
+        default_action = _Shauck_23();
     }
     @name(".Amory") action _Amory() {
         meta.Calabasas.Ashtola = 1w1;
@@ -1621,12 +1617,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.Calabasas.Everton = Bonduel;
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)Bonduel;
     }
-    @name(".Shauck") action _Shauck_26() {
+    @name(".Shauck") action _Shauck_24() {
     }
     @name(".Brashear") table _Brashear_0 {
         actions = {
             _Excello();
-            _Shauck_26();
+            _Shauck_24();
             @defaultonly NoAction_53();
         }
         key = {
@@ -1678,7 +1674,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         _Floral_0.apply();
         _Stirrat_0.apply();
         switch (_DuPont_0.apply().action_run) {
-            _Shauck_1: {
+            _Shauck_0: {
                 if (meta.Fosston.Monahans == 1w0 && meta.Neshoba.Filley == 1w0) 
                     _Lowemont_0.apply();
                 _Chenequa_0.apply();
@@ -1695,14 +1691,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         if (meta.Neshoba.Saugatuck == 1w0 && meta.Sunset.Siloam == 1w1) 
             if (meta.Sunset.Lewistown == 1w1 && meta.Neshoba.Fittstown == 1w1) 
                 switch (_Cecilton_0.apply().action_run) {
-                    _Shauck_3: {
+                    _Shauck_2: {
                         switch (_Peoria_0.apply().action_run) {
-                            _Shauck_21: {
+                            _Shauck_19: {
                                 _RowanBay_0.apply();
                             }
                             _Weskan: {
                                 switch (_ElCentro_0.apply().action_run) {
-                                    _Shauck_4: {
+                                    _Shauck_3: {
                                         _Yardley_0.apply();
                                     }
                                 }
@@ -1716,21 +1712,21 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             else 
                 if (meta.Sunset.Yatesboro == 1w1 && meta.Neshoba.Windber == 1w1) 
                     switch (_Nickerson_0.apply().action_run) {
-                        _Shauck_20: {
+                        _Shauck_18: {
                             switch (_Powers_0.apply().action_run) {
                                 _Maumee: {
                                     switch (_Hannah_0.apply().action_run) {
-                                        _Shauck_19: {
+                                        _Shauck_17: {
                                             _Cabot_0.apply();
                                         }
                                     }
 
                                 }
-                                _Shauck_22: {
+                                _Shauck_20: {
                                     switch (_Burwell_0.apply().action_run) {
                                         _Micco: {
                                             switch (_Westvaco_0.apply().action_run) {
-                                                _Shauck_24: {
+                                                _Shauck_22: {
                                                     _Guion_0.apply();
                                                 }
                                             }

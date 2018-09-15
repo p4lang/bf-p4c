@@ -2211,7 +2211,6 @@ control Swisher(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             Hecker_0();
             Monteview_0();
-            @defaultonly Monteview();
         }
         key = {
             meta.Mentone.Aiken   : exact @name("Mentone.Aiken") ;
@@ -2222,7 +2221,7 @@ control Swisher(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Pearson.Lepanto : ternary @name("Pearson.Lepanto") ;
         }
         size = 512;
-        default_action = Monteview();
+        default_action = Monteview_0();
         counters = Hauppauge;
     }
     @name(".OakCity") table OakCity {
@@ -2571,18 +2570,18 @@ control Vanoss(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control Walcott(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Montegut") RegisterAction<bit<1>, bit<1>>(Dillsboro) Montegut = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = value;
         }
     };
     @name(".Plains") RegisterAction<bit<1>, bit<1>>(Honuapo) Plains = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = ~value;
         }

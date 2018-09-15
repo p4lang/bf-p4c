@@ -1177,13 +1177,12 @@ control ElCentro(inout headers hdr, inout metadata meta, inout standard_metadata
     @name(".Eggleston") table Eggleston {
         actions = {
             ViewPark_0();
-            @defaultonly ViewPark();
         }
         key = {
             meta.Parmalee.Livonia[14:0]: exact @name("Parmalee.Livonia[14:0]") ;
         }
         size = 32768;
-        default_action = ViewPark();
+        default_action = ViewPark_0();
         counters = Newsoms;
     }
     @name(".Statham") table Statham {
@@ -1274,18 +1273,18 @@ control Gibsland(inout headers hdr, inout metadata meta, inout standard_metadata
 control Giltner(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Bramwell") RegisterAction<bit<1>, bit<1>>(Bennet) Bramwell = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = ~value;
         }
     };
     @name(".Colonias") RegisterAction<bit<1>, bit<1>>(OldMinto) Colonias = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = value;
         }
@@ -1703,7 +1702,6 @@ control Machens(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             Lucerne_0();
             ViewPark_1();
-            @defaultonly ViewPark();
         }
         key = {
             hdr.ig_intr_md.ingress_port[6:0]: exact @name("ig_intr_md.ingress_port[6:0]") ;
@@ -1714,7 +1712,7 @@ control Machens(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Tillamook.Greendale        : ternary @name("Tillamook.Greendale") ;
         }
         size = 512;
-        default_action = ViewPark();
+        default_action = ViewPark_1();
         counters = Commack;
     }
     apply {

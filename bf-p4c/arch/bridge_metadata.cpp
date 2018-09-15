@@ -291,7 +291,7 @@ struct BridgeIngressToEgress : public Transform {
 
     const IR::P4Program* postorder(IR::P4Program *program) override {
         LOG4("Injecting declaration for bridge metadata type: " << bridgedHeaderType);
-        program->declarations.insert(program->declarations.begin(), bridgedHeaderType);
+        program->objects.insert(program->objects.begin(), bridgedHeaderType);
         return program;
     }
 
@@ -472,7 +472,7 @@ struct PsaBridgeIngressToEgress : public Transform {
 
     const IR::P4Program* postorder(IR::P4Program *program) override {
         LOG4("Injecting declaration for bridge metadata type: " << bridgedHeaderType);
-        program->declarations.insert(program->declarations.begin(), bridgedHeaderType);
+        program->objects.insert(program->objects.begin(), bridgedHeaderType);
         return program;
     }
 

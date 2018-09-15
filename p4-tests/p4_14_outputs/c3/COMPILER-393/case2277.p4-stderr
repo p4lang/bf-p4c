@@ -1,12 +1,3 @@
-case2277.p4:907:6: warning: missing terminating ' character
-     8'0;
-      ^
-case2277.p4:962:6: warning: missing terminating ' character
-     8'0;
-      ^
-case2277.p4:1230:6: warning: missing terminating ' character
-     8'0;
-      ^
 case2277.p4(2393): warning: -1: negative value with unsigned type
     add_to_field(ipv4.ttl, -1);
                             ^

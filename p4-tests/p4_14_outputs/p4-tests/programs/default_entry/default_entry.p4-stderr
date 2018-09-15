@@ -1,39 +1,39 @@
-default_entry.p4(231): warning: -1: negative value with unsigned type
+default_entry.p4(232): warning: -1: negative value with unsigned type
     add_to_field(ttl, -1);
                        ^
-default_entry.p4(230): warning: egress_port shadows .egress_port
+default_entry.p4(231): warning: egress_port shadows .egress_port
 action hop(ttl, egress_port) {
                 ^^^^^^^^^^^
-default_entry.p4(325)
+default_entry.p4(326)
 action egress_port(egress_port) {
 ^
-default_entry.p4(333): warning: egress_port shadows .egress_port
+default_entry.p4(334): warning: egress_port shadows .egress_port
 action custom_action_3(egress_port, dstAddr, dstIp)
                        ^^^^^^^^^^^
-default_entry.p4(325)
+default_entry.p4(326)
 action egress_port(egress_port) {
 ^
-default_entry.p4(325): warning: egress_port shadows .egress_port
+default_entry.p4(326): warning: egress_port shadows .egress_port
 action egress_port(egress_port) {
                    ^^^^^^^^^^^
-default_entry.p4(325)
+default_entry.p4(326)
 action egress_port(egress_port) {
 ^
-default_entry.p4(235): warning: egress_port shadows .egress_port
+default_entry.p4(236): warning: egress_port shadows .egress_port
 action next_hop_ipv4(egress_port ,srcmac, dstmac) {
                      ^^^^^^^^^^^
-default_entry.p4(325)
+default_entry.p4(326)
 action egress_port(egress_port) {
 ^
-default_entry.p4(241): warning: egress_port shadows .egress_port
+default_entry.p4(242): warning: egress_port shadows .egress_port
 action meter_action_color_aware (egress_port, srcmac, dstmac, idx) {
                                  ^^^^^^^^^^^
-default_entry.p4(325)
+default_entry.p4(326)
 action egress_port(egress_port) {
 ^
-default_entry.p4(235): warning: egress_port shadows .egress_port
+default_entry.p4(236): warning: egress_port shadows .egress_port
 action next_hop_ipv4(egress_port ,srcmac, dstmac) {
                      ^^^^^^^^^^^
-default_entry.p4(325)
+default_entry.p4(326)
 action egress_port(egress_port) {
 ^

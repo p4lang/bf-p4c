@@ -195,11 +195,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".NoAction") action NoAction_0() {
     }
     @name(".counter_alu") RegisterAction<counter_alu_layout, bit<32>>(cntr) counter_alu = {
-        void apply(inout counter_alu_layout value, out bit<32> rv) {
+        void apply(inout         struct counter_alu_layout {
+            bit<32> lo;
+            bit<32> hi;
+        }
+value) {
             counter_alu_layout in_value;
             in_value.lo = value.lo;
             in_value.hi = value.hi;
-            rv = 32w0;
             if (value.lo < 32w0 && value.lo + (bit<32>)meta.meta.encap_decap_size >= 32w0) 
                 value.hi = value.hi + 32w1;
             if (value.lo >= 32w0 && value.lo + (bit<32>)meta.meta.encap_decap_size < 32w0) 

@@ -307,13 +307,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @phase0(1) @name(".port_tbl") table port_tbl {
         actions = {
             set_md();
-            @defaultonly NoAction();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 288;
-        default_action = NoAction();
+        default_action = set_md(9w0, 5w0, 3w0, 16w0, 13w0);
     }
     @stage(1) @name(".set_eg") table set_eg {
         actions = {

@@ -161,7 +161,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".set_p") action set_p_0(bit<16> a) {
         hdr.pkt.a = a;
-        hdr.pkt.c[7:2] = 6w0x0;
+        hdr.pkt.c[7:2] = 6w0x17;
     }
     @immediate(0) @name(".t1") table t1 {
         actions = {

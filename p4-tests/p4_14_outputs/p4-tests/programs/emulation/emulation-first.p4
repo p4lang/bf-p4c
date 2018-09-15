@@ -51,7 +51,7 @@ header egress_intrinsic_metadata_from_parser_aux_t {
     bit<8>  coalesce_sample_count;
 }
 
-@diagnostic("ccgf_contiguity_failure", "warn") header ethernet_t {
+header ethernet_t {
     bit<48> dstAddr;
     bit<48> srcAddr;
     bit<16> etherType;
@@ -173,9 +173,13 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name(".qos_hit_e2e_mirror") action qos_hit_e2e_mirror(bit<32> mirror_id) {
         clone(CloneType.E2E, mirror_id);
     }
+    @name(".qos_hit_e2e_mirror_pre_dprsr") action qos_hit_e2e_mirror_pre_dprsr(bit<32> mirror_id) {
+        clone(CloneType.E2E, mirror_id);
+    }
     @name(".egress_qos") table egress_qos {
         actions = {
             qos_hit_e2e_mirror();
+            qos_hit_e2e_mirror_pre_dprsr();
             @defaultonly NoAction();
         }
         key = {
@@ -221,6 +225,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         bypass_egress();
         clone(CloneType.I2E, mirror_id);
     }
+    @name(".qos_hit_eg_bypass_i2e_mirror_post_dprsr") action qos_hit_eg_bypass_i2e_mirror_post_dprsr(bit<5> qid, bit<32> mirror_id) {
+        hdr.ig_intr_md_for_tm.ingress_cos = 3w1;
+        hdr.ig_intr_md_for_tm.qid = qid;
+        bypass_egress();
+        clone(CloneType.I2E, mirror_id);
+    }
     @name(".qos_hit_eg_bypass_no_mirror") action qos_hit_eg_bypass_no_mirror(bit<5> qid, bit<2> color) {
         hdr.ig_intr_md_for_tm.ingress_cos = 3w1;
         hdr.ig_intr_md_for_tm.qid = qid;
@@ -244,9 +254,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".deflect_on_drop_tbl") table deflect_on_drop_tbl {
         actions = {
             do_deflect_on_drop();
-            @defaultonly NoAction();
         }
-        default_action = NoAction();
+        size = 1;
+        default_action = do_deflect_on_drop();
     }
     @name(".dmac") table dmac {
         actions = {
@@ -266,6 +276,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             qos_miss();
             qos_hit_eg_bypass_i2e_mirror();
+            qos_hit_eg_bypass_i2e_mirror_post_dprsr();
             qos_hit_eg_bypass_no_mirror();
             qos_hit_no_eg_bypass_no_mirror();
             @defaultonly NoAction();
@@ -291,9 +302,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".resubmit_tbl") table resubmit_tbl {
         actions = {
             do_resubmit();
-            @defaultonly NoAction();
         }
-        default_action = NoAction();
+        size = 1;
+        default_action = do_resubmit();
     }
     apply {
         dmac.apply();

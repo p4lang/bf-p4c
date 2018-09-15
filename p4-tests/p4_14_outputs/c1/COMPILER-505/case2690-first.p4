@@ -1025,7 +1025,6 @@ control Eckman(inout headers hdr, inout metadata meta, inout standard_metadata_t
         actions = {
             Dellslow_0();
             Scherr_0();
-            @defaultonly Scherr();
         }
         key = {
             meta.Weinert.Raceland : exact @name("Weinert.Raceland") ;
@@ -1036,7 +1035,7 @@ control Eckman(inout headers hdr, inout metadata meta, inout standard_metadata_t
             meta.Deeth.Paradise   : ternary @name("Deeth.Paradise") ;
         }
         size = 512;
-        default_action = Scherr();
+        default_action = Scherr_0();
         counters = Lansdowne;
     }
     apply {
@@ -1613,18 +1612,18 @@ control Newfield(inout headers hdr, inout metadata meta, inout standard_metadata
 control Oakford(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Saluda") RegisterAction<bit<1>, bit<1>>(Gregory) Saluda = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = ~value;
         }
     };
     @name(".SomesBar") RegisterAction<bit<1>, bit<1>>(Argentine) SomesBar = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = value;
         }

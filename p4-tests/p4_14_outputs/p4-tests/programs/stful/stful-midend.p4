@@ -396,43 +396,21 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<17> _pgen_pass_2_ctrl_flow_temp_0;
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".NoAction") action NoAction_21() {
+    @name(".NoAction") action NoAction_10() {
     }
-    @name(".NoAction") action NoAction_22() {
+    @name(".NoAction") action NoAction_11() {
     }
-    @name(".NoAction") action NoAction_23() {
+    @name(".NoAction") action NoAction_12() {
     }
-    @name(".NoAction") action NoAction_24() {
+    @name(".NoAction") action NoAction_13() {
     }
-    @name(".NoAction") action NoAction_25() {
+    @name(".NoAction") action NoAction_14() {
     }
-    @name(".NoAction") action NoAction_26() {
+    @name(".NoAction") action NoAction_15() {
     }
-    @name(".NoAction") action NoAction_27() {
+    @name(".NoAction") action NoAction_16() {
     }
-    @name(".NoAction") action NoAction_28() {
-    }
-    @name(".NoAction") action NoAction_29() {
-    }
-    @name(".NoAction") action NoAction_30() {
-    }
-    @name(".NoAction") action NoAction_31() {
-    }
-    @name(".NoAction") action NoAction_32() {
-    }
-    @name(".NoAction") action NoAction_33() {
-    }
-    @name(".NoAction") action NoAction_34() {
-    }
-    @name(".NoAction") action NoAction_35() {
-    }
-    @name(".NoAction") action NoAction_36() {
-    }
-    @name(".NoAction") action NoAction_37() {
-    }
-    @name(".NoAction") action NoAction_38() {
-    }
-    @name(".NoAction") action NoAction_39() {
+    @name(".NoAction") action NoAction_17() {
     }
     @name(".bloom_filter_alu_1") RegisterAction<bit<1>, bit<1>>(bloom_filter_1) bloom_filter_alu_1 = {
         void apply(inout bit<1> value, out bit<1> rv) {
@@ -453,11 +431,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
     };
     @name(".counter_alu") RegisterAction<counter_alu_layout, int<32>>(port_cntr) counter_alu = {
-        void apply(inout counter_alu_layout value, out int<32> rv) {
+        void apply(inout         struct counter_alu_layout {
+            int<32> lo;
+            int<32> hi;
+        }
+value) {
             counter_alu_layout in_value_2;
             in_value_2.lo = value.lo;
             in_value_2.hi = value.hi;
-            rv = 32s0;
             if (value.lo < 32s0 && value.lo + meta.md.offset >= 32s0) 
                 value.hi = value.hi + 32s1;
             if (value.lo >= 32s0 && value.lo + meta.md.offset < 32s0) 
@@ -466,8 +447,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
     };
     @name(".ifid_cntr_alu") RegisterAction<int<16>, int<16>>(ifid_cntr) ifid_cntr_alu = {
-        void apply(inout int<16> value, out int<16> rv) {
-            rv = 16s0;
+        void apply(inout int<16> value) {
             value = value + (int<16>)(bit<16>)hdr.ipv4.ttl;
         }
     };
@@ -481,11 +461,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             rv = value;
         }
     };
-    @name(".sampling_alu") RegisterAction<bit<32>, bit<32>>(sampling_cntr) sampling_alu = {
+    @initial_register_lo_value(1) @name(".sampling_alu") RegisterAction<bit<32>, bit<32>>(sampling_cntr) sampling_alu = {
         void apply(inout bit<32> value, out bit<32> rv) {
             bit<32> in_value_20;
-            in_value_20 = value;
             rv = 32w0;
+            in_value_20 = value;
             if (value >= 32w10) 
                 value = 32w1;
             if (in_value_20 < 32w10) 
@@ -495,38 +475,32 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
     };
     @name(".scratch_alu_add") RegisterAction<bit<16>, bit<16>>(scratch) scratch_alu_add = {
-        void apply(inout bit<16> value, out bit<16> rv) {
-            rv = 16w0;
+        void apply(inout bit<16> value) {
             value = value + meta.md.nh_id;
         }
     };
     @name(".scratch_alu_invert") RegisterAction<bit<16>, bit<16>>(scratch) scratch_alu_invert = {
-        void apply(inout bit<16> value, out bit<16> rv) {
-            rv = 16w0;
+        void apply(inout bit<16> value) {
             value = ~value;
         }
     };
     @name(".scratch_alu_sub") RegisterAction<bit<16>, bit<16>>(scratch) scratch_alu_sub = {
-        void apply(inout bit<16> value, out bit<16> rv) {
-            rv = 16w0;
+        void apply(inout bit<16> value) {
             value = meta.md.nh_id - value;
         }
     };
     @name(".scratch_alu_zero") RegisterAction<bit<16>, bit<16>>(scratch) scratch_alu_zero = {
-        void apply(inout bit<16> value, out bit<16> rv) {
-            rv = 16w0;
+        void apply(inout bit<16> value) {
             value = 16w0;
         }
     };
     @name(".two_instr_no_idx_alu_1") RegisterAction<bit<8>, bit<8>>(two_instr_no_idx_reg) two_instr_no_idx_alu_1 = {
-        void apply(inout bit<8> value, out bit<8> rv) {
-            rv = 8w0;
+        void apply(inout bit<8> value) {
             value = value + 8w9;
         }
     };
     @name(".two_instr_no_idx_alu_2") RegisterAction<bit<8>, bit<8>>(two_instr_no_idx_reg) two_instr_no_idx_alu_2 = {
-        void apply(inout bit<8> value, out bit<8> rv) {
-            rv = 8w0;
+        void apply(inout bit<8> value) {
             value = 8w17 - value;
         }
     };
@@ -638,39 +612,35 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @stage(0) @name(".bloom_filter_1") table bloom_filter_1_0 {
         actions = {
             check_bloom_filter();
-            @defaultonly NoAction_0();
         }
         size = 1;
-        default_action = NoAction_0();
+        default_action = check_bloom_filter();
     }
     @stage(1) @name(".bloom_filter_2") table bloom_filter_2_0 {
         actions = {
             check_bloom_filter_0();
-            @defaultonly NoAction_21();
         }
         size = 1;
-        default_action = NoAction_21();
+        default_action = check_bloom_filter_0();
     }
     @stage(1) @name(".bloom_filter_3") table bloom_filter_3_0 {
         actions = {
             check_bloom_filter_4();
-            @defaultonly NoAction_22();
         }
         size = 1;
-        default_action = NoAction_22();
+        default_action = check_bloom_filter_4();
     }
     @name(".bloom_filter_sample") table bloom_filter_sample {
         actions = {
             bloom_filter_mark_sample_0();
-            @defaultonly NoAction_23();
         }
         size = 1;
-        default_action = NoAction_23();
+        default_action = bloom_filter_mark_sample_0();
     }
     @seletor_num_max_groups(128) @selector_max_group_size(1200) @name(".egr_ifid") table egr_ifid_1 {
         actions = {
             set_egr_port_0();
-            @defaultonly NoAction_24();
+            @defaultonly NoAction_0();
         }
         key = {
             meta.md.egr_ifid           : exact @name("md.egr_ifid") ;
@@ -683,61 +653,59 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 16384;
         implementation = lag_ap;
-        default_action = NoAction_24();
+        default_action = NoAction_0();
     }
     @name(".egr_port") table egr_port {
         actions = {
             set_dest_0();
-            @defaultonly NoAction_25();
+            @defaultonly NoAction_10();
         }
         key = {
             meta.md.egr_ifid: ternary @name("md.egr_ifid") ;
         }
         size = 16384;
-        default_action = NoAction_25();
+        default_action = NoAction_10();
     }
     @name(".flowlet_prepare") table flowlet_prepare {
         actions = {
             set_flowlet_hash_and_ts_0();
-            @defaultonly NoAction_26();
         }
         size = 1;
-        default_action = NoAction_26();
+        default_action = set_flowlet_hash_and_ts_0();
     }
     @name(".ifid") table ifid_1 {
         actions = {
             set_ifid_based_params_0();
             drop_it_0();
-            @defaultonly NoAction_27();
+            @defaultonly NoAction_11();
         }
         key = {
             meta.md.ifid: exact @name("md.ifid") ;
         }
         size = 25000;
-        default_action = NoAction_27();
+        default_action = NoAction_11();
     }
     @pragma("--metadata-overlay", "False") @name(".ing_port") table ing_port {
         actions = {
             set_ifid_0();
-            @defaultonly NoAction_28();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 288;
-        default_action = NoAction_28();
+        default_action = set_ifid_0(16w0);
     }
     @name(".ipv4_route") table ipv4_route {
         actions = {
             set_next_hop_0();
             set_ecmp_0();
-            @defaultonly NoAction_29();
+            @defaultonly NoAction_12();
         }
         key = {
             hdr.ipv4.dip: lpm @name("ipv4.dip") ;
         }
         size = 512;
-        default_action = NoAction_29();
+        default_action = NoAction_12();
     }
     @name(".next_hop") table next_hop {
         actions = {
@@ -747,18 +715,18 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             scratch_zero_0();
             scratch_invert_0();
             next_hop_down_0();
-            @defaultonly NoAction_30();
+            @defaultonly NoAction_13();
         }
         key = {
             meta.md.nh_id: ternary @name("md.nh_id") ;
         }
         size = 4096;
-        default_action = NoAction_30();
+        default_action = NoAction_13();
     }
     @stage(6) @selector_max_group_size(200) @name(".next_hop_ecmp") table next_hop_ecmp {
         actions = {
             set_next_hop_2();
-            @defaultonly NoAction_31();
+            @defaultonly NoAction_14();
         }
         key = {
             meta.md.nh_id             : exact @name("md.nh_id") ;
@@ -771,7 +739,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 4096;
         implementation = next_hop_ecmp_ap;
-        default_action = NoAction_31();
+        default_action = NoAction_14();
     }
     @name(".one_bit_read_1") table one_bit_read_1 {
         actions = {
@@ -791,25 +759,25 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             sample_0();
             no_sample_0();
-            @defaultonly NoAction_32();
+            @defaultonly NoAction_15();
         }
         key = {
             hdr.ipv4.sip: exact @name("ipv4.sip") ;
         }
-        size = 85000;
-        default_action = NoAction_32();
+        size = 1024;
+        default_action = NoAction_15();
     }
     @name(".two_instr_no_idx") table two_instr_no_idx {
         actions = {
             add();
             rsub();
-            @defaultonly NoAction_33();
+            @defaultonly NoAction_16();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 17;
-        default_action = NoAction_33();
+        default_action = NoAction_16();
     }
     @name(".undrop") table undrop {
         actions = {
@@ -819,26 +787,22 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = do_undrop_0();
     }
     @name(".clr_bloom_filter_alu_1") RegisterAction<bit<1>, bit<1>>(bloom_filter_1) _clr_bloom_filter_alu_2 = {
-        void apply(inout bit<1> value, out bit<1> rv) {
-            rv = 1w0;
+        void apply(inout bit<1> value) {
             value = 1w0;
         }
     };
     @name(".clr_bloom_filter_alu_2") RegisterAction<bit<1>, bit<1>>(bloom_filter_2) _clr_bloom_filter_alu_3 = {
-        void apply(inout bit<1> value, out bit<1> rv) {
-            rv = 1w0;
+        void apply(inout bit<1> value) {
             value = 1w0;
         }
     };
     @name(".clr_bloom_filter_alu_3") RegisterAction<bit<1>, bit<1>>(bloom_filter_3) _clr_bloom_filter_alu_4 = {
-        void apply(inout bit<1> value, out bit<1> rv) {
-            rv = 1w0;
+        void apply(inout bit<1> value) {
             value = 1w0;
         }
     };
     @name(".next_hop_ecmp_alu") selector_action(next_hop_ecmp_ap) _next_hop_ecmp_alu_0 = {
-        void apply(inout bit<1> value, out bit<1> rv) {
-            rv = 1w0;
+        void apply(inout bit<1> value) {
             value = 1w0;
         }
     };
@@ -874,26 +838,23 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @stage(0) @name(".clr_bloom_filter_1") table _clr_bloom_filter_2 {
         actions = {
             _clear_bloom_filter();
-            @defaultonly NoAction_34();
         }
         size = 1;
-        default_action = NoAction_34();
+        default_action = _clear_bloom_filter();
     }
     @stage(1) @name(".clr_bloom_filter_2") table _clr_bloom_filter_3 {
         actions = {
             _clear_bloom_filter_0();
-            @defaultonly NoAction_35();
         }
         size = 1;
-        default_action = NoAction_35();
+        default_action = _clear_bloom_filter_0();
     }
     @stage(1) @name(".clr_bloom_filter_3") table _clr_bloom_filter_4 {
         actions = {
             _clear_bloom_filter_1();
-            @defaultonly NoAction_36();
         }
         size = 1;
-        default_action = NoAction_36();
+        default_action = _clear_bloom_filter_1();
     }
     @stage(5) @name(".make_key_ecmp_fast_update") table _make_key_ecmp_fast_update_0 {
         actions = {
@@ -910,25 +871,23 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @stage(6) @name(".next_hop_ecmp_fast_update") table _next_hop_ecmp_fast_update_0 {
         actions = {
             _set_mbr_down();
-            @defaultonly NoAction_37();
         }
         size = 1;
-        default_action = NoAction_37();
+        default_action = _set_mbr_down();
     }
     @stage(8) @name(".prepare_for_recirc") table _prepare_for_recirc_2 {
         actions = {
             _prepare_for_recirc();
-            @defaultonly NoAction_38();
+            @defaultonly NoAction_17();
         }
         key = {
             hdr.pktgen_port_down.app_id: exact @name("pktgen_port_down.app_id") ;
         }
         size = 7;
-        default_action = NoAction_38();
+        default_action = NoAction_17();
     }
     @name(".lag_alu") selector_action(lag_ap) _lag_alu_0 = {
-        void apply(inout bit<1> value, out bit<1> rv) {
-            rv = 1w0;
+        void apply(inout bit<1> value) {
             value = 1w0;
         }
     };
@@ -946,10 +905,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @stage(8) @name(".egr_ifid_fast_update") table _egr_ifid_fast_update_0 {
         actions = {
             _set_lag_mbr_down();
-            @defaultonly NoAction_39();
         }
         size = 1;
-        default_action = NoAction_39();
+        default_action = _set_lag_mbr_down();
     }
     @stage(7) @name(".egr_ifid_fast_update_make_key") table _egr_ifid_fast_update_make_key_0 {
         actions = {

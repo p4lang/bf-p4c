@@ -513,10 +513,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control Achille(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".BigBay") @min_width(16) direct_counter(CounterType.packets_and_bytes) BigBay;
     @name(".Sunrise") RegisterAction<bit<1>, bit<1>>(Pueblo) Sunrise = {
-        void apply(inout bit<1> value, out bit<1> rv) {
+        void apply(inout bit<1> value) {
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = 1w1;
         }
     };
@@ -559,7 +558,6 @@ control Achille(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             Hayfork_0;
             Roseau_0;
-            @defaultonly Roseau;
         }
         key = {
             meta.DewyRose.Lowden    : exact;
@@ -570,7 +568,7 @@ control Achille(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Wentworth.Hooks    : ternary;
         }
         size = 512;
-        default_action = Roseau();
+        default_action = Roseau_0();
         counters = BigBay;
     }
     @name(".Westview") table Westview {
@@ -921,18 +919,18 @@ control Lapoint(inout headers hdr, inout metadata meta, inout standard_metadata_
 control Ottertail(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Flourtown") RegisterAction<bit<1>, bit<1>>(Patchogue) Flourtown = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = value;
         }
     };
     @name(".Lordstown") RegisterAction<bit<1>, bit<1>>(LaConner) Lordstown = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = value;
         }

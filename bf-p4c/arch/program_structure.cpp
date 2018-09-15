@@ -56,7 +56,7 @@ void ProgramStructure::include(cstring filename, IR::IndexedVector<IR::Node> *ve
             return;
         }
 
-        for (auto decl : code->declarations)
+        for (auto decl : code->objects)
             vector->push_back(decl);
         options.closeInput(file);
     }

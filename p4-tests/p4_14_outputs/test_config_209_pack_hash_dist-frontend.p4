@@ -181,8 +181,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     bit<17> temp;
     bit<17> temp_0;
-    bit<8> tmp_1;
-    bit<8> tmp_2;
+    bit<8> tmp_3;
+    bit<8> tmp_4;
+    bit<8> tmp_5;
+    bit<8> tmp_6;
     @name(".alu_0") RegisterAction<bit<8>, bit<8>>(reg_0) alu_0 = {
         void apply(inout bit<8> value, out bit<8> rv) {
             bit<8> in_value;
@@ -199,13 +201,15 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     };
     @name(".action_0") action action_2() {
         hash<bit<17>, bit<17>, tuple<bit<32>, bit<32>>, bit<18>>(temp, HashAlgorithm.random, 17w0, { hdr.pkt.field_a_32, hdr.pkt.field_b_32 }, 18w131072);
-        tmp_1 = alu_0.execute((bit<32>)temp);
-        meta.meta.result_8 = tmp_1;
+        tmp_3 = alu_0.execute((bit<32>)temp);
+        tmp_4 = meta.meta.result_8 | tmp_3;
+        meta.meta.result_8 = tmp_4;
     }
     @name(".action_1") action action_3() {
         hash<bit<17>, bit<17>, tuple<bit<32>, bit<32>, bit<16>>, bit<18>>(temp_0, HashAlgorithm.random, 17w0, { hdr.pkt.field_c_32, hdr.pkt.field_d_32, hdr.pkt.field_e_16 }, 18w131072);
-        tmp_2 = alu_1.execute((bit<32>)temp_0);
-        meta.meta.result_8 = tmp_2;
+        tmp_5 = alu_1.execute((bit<32>)temp_0);
+        tmp_6 = meta.meta.result_8 | tmp_5;
+        meta.meta.result_8 = tmp_6;
     }
     @name(".table_0") table table_0 {
         actions = {

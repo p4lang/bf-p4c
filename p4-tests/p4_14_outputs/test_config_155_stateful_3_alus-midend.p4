@@ -186,8 +186,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".NoAction") action NoAction_5() {
     }
     @name(".cntr_1") RegisterAction<bit<16>, bit<16>>(stateful_cntr_1) cntr_1 = {
-        void apply(inout bit<16> value, out bit<16> rv) {
-            rv = 16w0;
+        void apply(inout bit<16> value) {
             value = value + 16w1;
         }
     };
@@ -200,8 +199,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".sampler_alu") RegisterAction<bit<8>, bit<8>>(flow_cnt) sampler_alu = {
         void apply(inout bit<8> value, out bit<8> rv) {
             bit<8> in_value_4;
-            in_value_4 = value;
             rv = 8w0;
+            in_value_4 = value;
             if (value == 8w10) 
                 value = 8w1;
             if (in_value_4 != 8w10) 

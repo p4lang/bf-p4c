@@ -1,3 +1,10 @@
+@name(".$InstanceType") enum bit<32> InstanceType_0 {
+    START = 0,
+    start_e2e_mirrored = 1,
+    start_egress = 2,
+    start_i2e_mirrored = 3
+}
+
 #include <core.p4>
 #include <v1model.p4>
 
@@ -544,6 +551,14 @@ struct headers {
 #include <tofino/stateful_alu.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name(".$start") state start {
+        transition select((InstanceType_0)standard_metadata.instance_type) {
+            InstanceType_0.START: start_0;
+            InstanceType_0.start_e2e_mirrored: start_e2e_mirrored;
+            InstanceType_0.start_egress: start_egress;
+            InstanceType_0.start_i2e_mirrored: start_i2e_mirrored;
+        }
+    }
     @name(".Ackley") state Ackley {
         transition select((packet.lookahead<bit<4>>())[3:0]) {
             4w0x4: Gerlach;
@@ -771,7 +786,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
         meta.Coupland.Chavies = 3w5;
         transition accept;
     }
-    @name(".start") state start {
+    @name(".start") state start_0 {
         transition select((packet.lookahead<bit<112>>())[15:0]) {
             16w0xbf00: Wabuska;
             default: Brush;
@@ -1153,18 +1168,18 @@ control Challis(inout headers hdr, inout metadata meta, inout standard_metadata_
 control Chatcolet(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Kenmore") RegisterAction<bit<1>, bit<1>>(Norma) Kenmore = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = ~value;
         }
     };
     @name(".Spivey") RegisterAction<bit<1>, bit<1>>(Lesley) Spivey = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = value;
         }
@@ -1565,9 +1580,9 @@ control Frederika(inout headers hdr, inout metadata meta, inout standard_metadat
 control Gabbs(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Lenwood") RegisterAction<bit<1>, bit<1>>(Godley) Lenwood = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = ~value;
         }
@@ -1944,13 +1959,12 @@ control Libby(inout headers hdr, inout metadata meta, inout standard_metadata_t 
     @stage(11) @name(".Belfalls") table Belfalls {
         actions = {
             MintHill_0;
-            @defaultonly MintHill;
         }
         key = {
             meta.Gresston.Ovett[14:0]: exact;
         }
         size = 32768;
-        default_action = MintHill();
+        default_action = MintHill_0();
         counters = Bellamy;
     }
     @name(".Portales") table Portales {
@@ -2331,9 +2345,9 @@ control Nettleton(inout headers hdr, inout metadata meta, inout standard_metadat
 control Nevis(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Giltner") RegisterAction<bit<1>, bit<1>>(Pearce) Giltner = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = ~value;
         }
@@ -3641,7 +3655,6 @@ control Wisdom(inout headers hdr, inout metadata meta, inout standard_metadata_t
         actions = {
             Ripley_0;
             MintHill_1;
-            @defaultonly MintHill;
         }
         key = {
             hdr.ig_intr_md.ingress_port[6:0]                        : exact;
@@ -3655,7 +3668,7 @@ control Wisdom(inout headers hdr, inout metadata meta, inout standard_metadata_t
             meta.Bigspring.Lignite                                  : ternary;
         }
         size = 512;
-        default_action = MintHill();
+        default_action = MintHill_1();
         counters = Larue;
     }
     @name(".Hillsview") table Hillsview {
@@ -3865,7 +3878,6 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         actions = {
             Brighton_0;
             MintHill_2;
-            @defaultonly MintHill;
         }
         key = {
             hdr.eg_intr_md.egress_port[6:0]: exact;
@@ -3873,7 +3885,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             meta.Wakita.Peosta             : ternary;
         }
         size = 256;
-        default_action = MintHill();
+        default_action = MintHill_2();
         counters = Pinesdale;
     }
     @name(".Skyline") table Skyline {

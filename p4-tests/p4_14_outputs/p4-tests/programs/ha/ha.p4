@@ -312,6 +312,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ig_intr_md.ingress_port: exact;
         }
         size = 288;
+        default_action = set_md(0, 0, 0, 0, 0);
     }
     @stage(1) @name(".set_eg") table set_eg {
         actions = {

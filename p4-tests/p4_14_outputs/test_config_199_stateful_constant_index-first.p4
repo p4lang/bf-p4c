@@ -163,9 +163,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".sampling_alu") RegisterAction<bit<32>, bit<32>>(sampling_cntr) sampling_alu = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            rv = 32w0;
             bit<32> in_value;
             in_value = value;
-            rv = 32w0;
             value = in_value + 32w1;
             rv = value;
         }

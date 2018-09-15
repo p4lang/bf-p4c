@@ -1,3 +1,0 @@
-opcode_test.p4:137:6: warning: missing terminating ' character
-     8'0;
-      ^

@@ -160,6 +160,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".noop") action noop() {
     }
+    @name(".kaput") action kaput() {
+        hdr.data.f1 = 32w0xdeaddead;
+    }
     @name(".test1") table test1 {
         actions = {
             setb1;
@@ -169,9 +172,15 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.f1: exact;
         }
     }
+    @name(".test2") table test2 {
+        actions = {
+            kaput;
+        }
+    }
     apply {
-        if (hdr.ig_intr_md_from_parser_aux.ingress_parser_err & 16w0x1000 != 16w0x1000) {
-            test1.apply();
+        test1.apply();
+        if (hdr.ig_intr_md_from_parser_aux.ingress_parser_err & 16w0x1000 != 16w0x0) {
+            test2.apply();
         }
     }
 }

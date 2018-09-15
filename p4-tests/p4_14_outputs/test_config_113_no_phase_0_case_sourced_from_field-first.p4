@@ -186,7 +186,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.pkt.field_c_4 = param2;
         hdr.pkt.field_d_4 = 4w6;
         hdr.pkt.field_e_4 = 4w10;
-        hdr.pkt.field_f_4[3:0] = 4w8;
+        hdr.pkt.field_f_4[3:0] = 4w15;
         hdr.pkt.field_j_8 = hdr.pkt.field_k_8;
     }
     @name(".action_1") action action_1(bit<16> param0) {

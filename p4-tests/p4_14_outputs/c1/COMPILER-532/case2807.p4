@@ -901,18 +901,18 @@ control Arnett(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control Ashburn(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Mattapex") RegisterAction<bit<1>, bit<1>>(Willshire) Mattapex = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = value;
         }
     };
     @name(".RioPecos") RegisterAction<bit<1>, bit<1>>(Longwood) RioPecos = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = ~value;
         }
@@ -2332,7 +2332,6 @@ control Neame(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         actions = {
             Challis_0;
             Calabash_0;
-            @defaultonly Calabash;
         }
         key = {
             meta.Kaweah.Newfolden : exact;
@@ -2343,7 +2342,7 @@ control Neame(inout headers hdr, inout metadata meta, inout standard_metadata_t 
             meta.Maddock.Wollochet: ternary;
         }
         size = 512;
-        default_action = Calabash();
+        default_action = Calabash_0();
         counters = Bayne;
     }
     @name(".Norco") table Norco {

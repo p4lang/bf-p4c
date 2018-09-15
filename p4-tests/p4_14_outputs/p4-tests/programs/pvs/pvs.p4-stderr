@@ -1,0 +1,6 @@
+pvs.p4(229): warning: ing_mir shadows .ing_mir
+action set_md(ing_mir, ing_ses, egr_mir, egr_ses) {
+              ^^^^^^^
+pvs.p4(236)
+table ing_mir {
+^

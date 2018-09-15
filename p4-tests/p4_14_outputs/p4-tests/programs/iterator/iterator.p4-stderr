@@ -1,6 +1,6 @@
-iterator.p4(190): warning: d shadows .d
+iterator.p4(191): warning: d shadows .d
 action set_dmac(d) {
                 ^
-iterator.p4(88)
+iterator.p4(89)
 action d(x,y,i) {
 ^

@@ -183,8 +183,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".b_comb_pred") RegisterAction<bit<8>, bit<8>>(r_pred) b_comb_pred = {
         void apply(inout bit<8> value, out bit<8> rv) {
             bit<8> in_value;
-            in_value = value;
             rv = 8w0;
+            in_value = value;
             if (in_value > 8w0) 
                 rv = 8w1;
             value = in_value + 8w2;

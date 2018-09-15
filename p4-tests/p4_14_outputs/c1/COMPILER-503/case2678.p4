@@ -758,18 +758,18 @@ control Daguao(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control Devore(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Gerlach") RegisterAction<bit<1>, bit<1>>(Ilwaco) Gerlach = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = value;
         }
     };
     @name(".Vinita") RegisterAction<bit<1>, bit<1>>(Elmdale) Vinita = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = ~value;
         }
@@ -2192,7 +2192,6 @@ control Urbanette(inout headers hdr, inout metadata meta, inout standard_metadat
         actions = {
             Wolsey_0;
             Shoshone_0;
-            @defaultonly Shoshone;
         }
         key = {
             meta.Lowemont.Rocky   : exact;
@@ -2203,7 +2202,7 @@ control Urbanette(inout headers hdr, inout metadata meta, inout standard_metadat
             meta.Netcong.Montour  : ternary;
         }
         size = 512;
-        default_action = Shoshone();
+        default_action = Shoshone_0();
         counters = Mekoryuk;
     }
     apply {

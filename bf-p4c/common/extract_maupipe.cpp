@@ -712,7 +712,7 @@ class RewriteActionNames : public Modifier {
 
  private:
     bool preorder(IR::Path *path) {
-        if (auto *mc = findOrigCtxt<IR::MethodCallExpression>()) {
+        if (findOrigCtxt<IR::MethodCallExpression>()) {
             for (auto action : Values(mau_table->actions)) {
                 if (action->name.name == p4_action->externalName()
                         && p4_action->name.name == path->name.name) {
@@ -1056,12 +1056,18 @@ ProcessBackendPipe::ProcessBackendPipe(P4::ReferenceMap *refMap, P4::TypeMap *ty
 }
 
 cstring BackendConverter::getPipelineName(const IR::P4Program* program, int index) {
-    auto decl = program->getDeclByName("main");
+    auto mainDecls = program->getDeclsByName("main")->toVector();
+    if (mainDecls->size() == 0) {
+        ::error("No main declaration in the program");
+        return nullptr;
+    } else if (mainDecls->size() > 1) {
+        ::error("Multiple main declarations in the program");
+        return nullptr; }
+    auto decl = mainDecls->at(0);
     auto expr = decl->to<IR::Declaration_Instance>()->arguments->at(index)->expression;
     if (!expr->is<IR::PathExpression>()) {
         ::error("Anonymous instantiation of Pipeline block in 'main' is not supported");
-        return nullptr;
-    }
+        return nullptr; }
     auto path = expr->to<IR::PathExpression>();
     auto name = path->path->name;
     return name;

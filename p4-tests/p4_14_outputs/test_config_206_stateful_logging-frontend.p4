@@ -170,9 +170,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".NoAction") action NoAction_0() {
     }
     @name(".logging_alu") RegisterAction<bit<16>, bit<16>>(logging_reg) logging_alu = {
-        void apply(inout bit<16> value, out bit<16> rv) {
+        void apply(inout bit<16> value) {
             bit<16> in_value;
-            rv = 16w0;
             value = hdr.ethernet.blah;
         }
     };

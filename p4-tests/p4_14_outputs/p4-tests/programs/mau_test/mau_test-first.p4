@@ -9,7 +9,7 @@
     bit<1>  run_sel_test;
     bit<1>  run_move_reg_test;
     bit<32> stats_key;
-    bit<8>  m1_clr;
+    bit<2>  m1_clr;
     bit<32> m1_idx;
     bit<2>  count_it;
     bit<1>  do_dataplane_sel_tbl_update;
@@ -150,7 +150,7 @@ header ingress_parser_control_signals {
 }
 
 struct metadata {
-    @pa_solitary("ingress", "md.run_stats_test") @pa_solitary("ingress", "md.run_idle_notify_test") @pa_solitary("ingress", "md.run_idle_poll_test") @pa_solitary("ingress", "md.run_meter_test") @pa_solitary("ingress", "md.run_sel_test") @pa_solitary("ingress", "md.run_move_reg_test") @name(".md") 
+    @pa_solitary("ingress", "md.run_stats_test") @pa_solitary("ingress", "md.run_idle_notify_test") @pa_solitary("ingress", "md.run_idle_poll_test") @pa_solitary("ingress", "md.run_meter_test") @pa_solitary("ingress", "md.run_sel_test") @pa_solitary("ingress", "md.run_move_reg_test") @pa_container_size("ingress", "md.m1_clr", 8) @name(".md") 
     metadata_t md;
 }
 
@@ -283,8 +283,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name(".v4_cntr") direct_counter(CounterType.packets) v4_cntr;
     @name(".v5_cntr") direct_counter(CounterType.bytes) v5_cntr;
     @name(".v6_cntr") direct_counter(CounterType.packets) v6_cntr;
-    @lrt_enable(1) @lrt_scale(64) @name(".eg_cntr_1") @min_width(32) counter(32w22528, CounterType.packets_and_bytes) eg_cntr_1;
-    @lrt_enable(1) @lrt_scale(65) @name(".eg_cntr_2") @min_width(32) counter(32w10240, CounterType.packets_and_bytes) eg_cntr_2;
+    @lrt_enable(1) @lrt_scale(64) @name(".eg_cntr_1") @min_width(32) counter(32w32768, CounterType.packets_and_bytes) eg_cntr_1;
+    @lrt_enable(1) @lrt_scale(65) @name(".eg_cntr_2") @min_width(32) counter(32w4096, CounterType.packets_and_bytes) eg_cntr_2;
     @name(".eg_cntr_3") counter(32w16384, CounterType.packets_and_bytes) eg_cntr_3;
     @name(".eg_cntr_4") counter(32w2048, CounterType.packets) eg_cntr_4;
     @meter_sweep_interval(0) @name(".e3_meter") @pre_color(meta.md.mr_clr) direct_meter<bit<8>>(MeterType.bytes) e3_meter;
@@ -292,10 +292,14 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @meter_sweep_interval(0) @name(".t3_meter") @pre_color(meta.md.mr_clr) direct_meter<bit<8>>(MeterType.bytes) t3_meter;
     @meter_sweep_interval(0) @name(".t4_meter") @pre_color(meta.md.mr_clr) direct_meter<bit<8>>(MeterType.packets) t4_meter;
     @name(".e1_alu") RegisterAction<e1_alu_layout, int<32>>(e1_reg) e1_alu = {
-        void apply(inout e1_alu_layout value, out int<32> rv) {
+        void apply(inout         struct e1_alu_layout {
+            int<32> lo;
+            int<32> hi;
+        }
+value, out int<32> rv) {
+            rv = 32s0;
             e1_alu_layout in_value;
             in_value = value;
-            rv = 32s0;
             rv = in_value.hi;
             value.hi = in_value.hi + 32s1;
             if (in_value.lo != (int<32>)(bit<32>)hdr.ethernet.etherType) 
@@ -303,10 +307,13 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
     };
     @name(".e2_alu") RegisterAction<e2_alu_layout, bit<16>>(e2_reg) e2_alu = {
-        void apply(inout e2_alu_layout value, out bit<16> rv) {
+        void apply(inout         struct e2_alu_layout {
+            bit<16> lo;
+            bit<16> hi;
+        }
+value) {
             e2_alu_layout in_value;
             in_value = value;
-            rv = 16w0;
             value.hi = in_value.hi + 16w1;
             if (in_value.lo != hdr.ethernet.etherType) 
                 value.lo = 16w0;
@@ -315,10 +322,14 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name(".e5_lpf") DirectLpf<bit<32>>() e5_lpf;
     @name(".e6_lpf") DirectLpf<bit<32>>() e6_lpf;
     @name(".t1_alu") RegisterAction<t1_alu_layout, int<32>>(t1_reg) t1_alu = {
-        void apply(inout t1_alu_layout value, out int<32> rv) {
+        void apply(inout         struct t1_alu_layout {
+            int<32> lo;
+            int<32> hi;
+        }
+value, out int<32> rv) {
+            rv = 32s0;
             t1_alu_layout in_value;
             in_value = value;
-            rv = 32s0;
             rv = in_value.hi;
             value.hi = in_value.hi + 32s1;
             if (in_value.lo != (int<32>)(bit<32>)hdr.ethernet.etherType) 
@@ -326,10 +337,13 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
     };
     @name(".t2_alu") RegisterAction<t2_alu_layout, bit<16>>(t2_reg) t2_alu = {
-        void apply(inout t2_alu_layout value, out bit<16> rv) {
+        void apply(inout         struct t2_alu_layout {
+            bit<16> lo;
+            bit<16> hi;
+        }
+value) {
             t2_alu_layout in_value;
             in_value = value;
-            rv = 16w0;
             value.hi = in_value.hi + 16w1;
             if (in_value.lo != hdr.ethernet.etherType) 
                 value.lo = 16w0;
@@ -338,40 +352,52 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name(".t5_lpf") DirectLpf<bit<32>>() t5_lpf;
     @name(".t6_lpf") DirectLpf<bit<32>>() t6_lpf;
     @name(".vp5_alu") RegisterAction<vp5_alu_layout, bit<32>>(vp5_reg) vp5_alu = {
-        void apply(inout vp5_alu_layout value, out bit<32> rv) {
+        void apply(inout         struct vp5_alu_layout {
+            bit<32> lo;
+            bit<32> hi;
+        }
+value) {
             vp5_alu_layout in_value;
             in_value = value;
-            rv = 32w0;
             if (in_value.lo == 32w0xffffffff) 
                 value.hi = in_value.hi + 32w1;
             value.lo = in_value.lo + 32w1;
         }
     };
     @name(".vp6_alu") RegisterAction<vp6_alu_layout, bit<32>>(vp6_reg) vp6_alu = {
-        void apply(inout vp6_alu_layout value, out bit<32> rv) {
+        void apply(inout         struct vp6_alu_layout {
+            bit<32> lo;
+            bit<32> hi;
+        }
+value) {
             vp6_alu_layout in_value;
             in_value = value;
-            rv = 32w0;
             if (in_value.lo == 32w0xffffffff) 
                 value.hi = in_value.hi + 32w1;
             value.lo = in_value.lo + 32w1;
         }
     };
     @name(".vpp5_alu") RegisterAction<vpp5_alu_layout, bit<32>>(vpp5_reg) vpp5_alu = {
-        void apply(inout vpp5_alu_layout value, out bit<32> rv) {
+        void apply(inout         struct vpp5_alu_layout {
+            bit<32> lo;
+            bit<32> hi;
+        }
+value) {
             vpp5_alu_layout in_value;
             in_value = value;
-            rv = 32w0;
             if (in_value.lo == 32w0xffffffff) 
                 value.hi = in_value.hi + 32w1;
             value.lo = in_value.lo + 32w1;
         }
     };
     @name(".vpp6_alu") RegisterAction<vpp6_alu_layout, bit<32>>(vpp6_reg) vpp6_alu = {
-        void apply(inout vpp6_alu_layout value, out bit<32> rv) {
+        void apply(inout         struct vpp6_alu_layout {
+            bit<32> lo;
+            bit<32> hi;
+        }
+value) {
             vpp6_alu_layout in_value;
             in_value = value;
-            rv = 32w0;
             if (in_value.lo == 32w0xffffffff) 
                 value.hi = in_value.hi + 32w1;
             value.lo = in_value.lo + 32w1;
@@ -924,7 +950,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
 }
 
-@name(".sel_res_reg") register<bit<16>>(32w72) sel_res_reg;
+@name(".sel_res_reg") register<bit<16>>(32w256) sel_res_reg;
 
 struct stats_key_alu1_layout {
     bit<32> lo;
@@ -932,25 +958,34 @@ struct stats_key_alu1_layout {
 }
 
 @name(".stats_key_reg") register<stats_key_alu1_layout>(32w2048) stats_key_reg;
+#include <tofino/p4_14_prim.p4>
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @lrt_enable(1) @lrt_scale(64) @name(".ig_cntr_1") @min_width(32) counter(32w22528, CounterType.packets_and_bytes) ig_cntr_1;
-    @lrt_enable(1) @lrt_scale(65) @name(".ig_cntr_2") @min_width(32) counter(32w10240, CounterType.packets_and_bytes) ig_cntr_2;
+    @name(".ig_m1_cntr") direct_counter(CounterType.bytes) ig_m1_cntr;
+    @lrt_enable(1) @lrt_scale(64) @name(".ig_cntr_1") @min_width(32) counter(32w32768, CounterType.packets_and_bytes) ig_cntr_1;
+    @lrt_enable(1) @lrt_scale(65) @name(".ig_cntr_2") @min_width(32) counter(32w4096, CounterType.packets_and_bytes) ig_cntr_2;
     @name(".ig_cntr_3") counter(32w16384, CounterType.packets_and_bytes) ig_cntr_3;
     @name(".ig_cntr_4") counter(32w2048, CounterType.packets) ig_cntr_4;
-    @name(".sel_res_alu") RegisterAction<bit<16>, bit<16>>(sel_res_reg) sel_res_alu = {
-        void apply(inout bit<16> value, out bit<16> rv) {
+    @meter_per_flow_enable(1) @meter_pre_color_aware_per_flow_enable(1) @meter_sweep_interval(0) @name(".m1") meter(32w20480, MeterType.bytes) m1;
+    @initial_register_lo_value(512) @name(".sel_res_alu") RegisterAction<bit<16>, bit<16>>(sel_res_reg) sel_res_alu = {
+        void apply(inout bit<16> value) {
             bit<16> in_value;
             in_value = value;
-            rv = 16w0;
-            value = (bit<16>)hdr.ig_intr_md_for_tm.ucast_egress_port;
+            if (in_value == 16w512) 
+                value = (bit<16>)hdr.ig_intr_md_for_tm.ucast_egress_port;
+            if (in_value != 16w512 && in_value != (bit<16>)hdr.ig_intr_md_for_tm.ucast_egress_port) 
+                value = 16w513;
         }
     };
-    @name(".stats_key_alu1") RegisterAction<stats_key_alu1_layout, bit<32>>(stats_key_reg) stats_key_alu1 = {
-        void apply(inout stats_key_alu1_layout value, out bit<32> rv) {
+    @initial_register_lo_value(100) @name(".stats_key_alu1") RegisterAction<stats_key_alu1_layout, bit<32>>(stats_key_reg) stats_key_alu1 = {
+        void apply(inout         struct stats_key_alu1_layout {
+            bit<32> lo;
+            bit<32> hi;
+        }
+value, out bit<32> rv) {
+            rv = 32w0;
             stats_key_alu1_layout in_value;
             in_value = value;
-            rv = 32w0;
             rv = in_value.lo;
             if (in_value.hi < 32w2) 
                 value.hi = in_value.hi + 32w1;
@@ -963,10 +998,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
     };
     @name(".stats_key_alu3") RegisterAction<stats_key_alu1_layout, bit<32>>(stats_key_reg) stats_key_alu3 = {
-        void apply(inout stats_key_alu1_layout value, out bit<32> rv) {
+        void apply(inout         struct stats_key_alu1_layout {
+            bit<32> lo;
+            bit<32> hi;
+        }
+value, out bit<32> rv) {
+            rv = 32w0;
             stats_key_alu1_layout in_value;
             in_value = value;
-            rv = 32w0;
             rv = in_value.lo;
             if (in_value.hi < 32w2) 
                 value.hi = in_value.hi + 32w1;
@@ -983,8 +1022,22 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".nothing") action nothing() {
     }
+    @name(".m1") action m1_0(bit<32> index) {
+        execute_meter_with_color<meter, bit<32>, bit<2>>(m1, index, meta.md.m1_clr, meta.md.m1_clr);
+        meta.md.m1_idx = index;
+    }
+    @name(".set_m1_clr") action set_m1_clr() {
+        meta.md.m1_clr[1:0] = ((bit<2>)hdr.ethernet.etherType)[1:0];
+    }
+    @name(".do_resubmit") action do_resubmit() {
+        resubmit<tuple<bit<1>, bit<1>, bit<1>, bit<1>, bit<1>, bit<1>>>({ meta.md.run_stats_test, meta.md.run_idle_notify_test, meta.md.run_idle_poll_test, meta.md.run_meter_test, meta.md.run_sel_test, meta.md.run_move_reg_test });
+    }
     @name(".drop_now") action drop_now() {
         mark_to_drop();
+    }
+    @name(".send_pkt_out") action send_pkt_out() {
+        bypass_egress();
+        exit;
     }
     @name(".inc_ig_cntr_1") action inc_ig_cntr_1(bit<32> cntr_index) {
         ig_cntr_1.count(cntr_index);
@@ -1024,9 +1077,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".do_set_stats_key3") action do_set_stats_key3() {
         meta.md.stats_key = stats_key_alu3.execute(32w1);
-    }
-    @name(".do_resubmit") action do_resubmit() {
-        resubmit<tuple<bit<1>, bit<1>, bit<1>, bit<1>, bit<1>, bit<1>>>({ meta.md.run_stats_test, meta.md.run_idle_notify_test, meta.md.run_idle_poll_test, meta.md.run_meter_test, meta.md.run_sel_test, meta.md.run_move_reg_test });
     }
     @stage(0) @name(".dest") table dest {
         actions = {
@@ -1227,12 +1277,60 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1536;
         default_action = NoAction();
     }
-    @stage(4) @name(".ig_idle_discard") table ig_idle_discard {
+    @stage(5) @name(".ig_m1") table ig_m1 {
+        actions = {
+            m1_0();
+            nothing();
+        }
+        key = {
+            hdr.ethernet.dstAddr[47:32]: exact @name("ethernet.dstAddr[47:32]") ;
+        }
+        size = 1024;
+        default_action = nothing();
+    }
+    @name(".nothing") action nothing_4() {
+        ig_m1_cntr.count();
+    }
+    @stage(6) @name(".ig_m1_cnt") table ig_m1_cnt {
+        actions = {
+            nothing_4();
+            @defaultonly NoAction();
+        }
+        key = {
+            meta.md.m1_idx: exact @name("md.m1_idx") ;
+            meta.md.m1_clr: exact @name("md.m1_clr") ;
+        }
+        size = 1024;
+        counters = ig_m1_cntr;
+        default_action = NoAction();
+    }
+    @stage(0) @name(".ig_m1_color") table ig_m1_color {
+        actions = {
+            set_m1_clr();
+        }
+        size = 1;
+        default_action = set_m1_clr();
+    }
+    @stage(6) @name(".ig_meter_resubmit") table ig_meter_resubmit {
+        actions = {
+            do_resubmit();
+        }
+        size = 1;
+        default_action = do_resubmit();
+    }
+    @stage(6) @name(".ig_meter_test_discard") table ig_meter_test_discard {
         actions = {
             drop_now();
         }
         size = 1;
         default_action = drop_now();
+    }
+    @stage(6) @name(".ig_meter_test_forward") table ig_meter_test_forward {
+        actions = {
+            send_pkt_out();
+        }
+        size = 1;
+        default_action = send_pkt_out();
     }
     @stage(1) @name(".ig_stat_1") table ig_stat_1 {
         actions = {
@@ -1367,8 +1465,18 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 stats_resubmit.apply();
         }
         else 
-            if (meta.md.run_meter_test == 1w1) 
-                ;
+            if (meta.md.run_meter_test == 1w1) {
+                ig_m1_color.apply();
+                ig_m1.apply();
+                ig_m1_cnt.apply();
+                if (32w1 == hdr.ethernet.srcAddr & 32w1 && 1w0 == hdr.ig_intr_md.resubmit_flag) 
+                    ig_meter_resubmit.apply();
+                else 
+                    if (meta.md.m1_clr == 2w3) 
+                        ig_meter_test_discard.apply();
+                    else 
+                        ig_meter_test_forward.apply();
+            }
             else 
                 if (meta.md.run_idle_notify_test == 1w1) {
                     ig_idle_1.apply();
@@ -1387,7 +1495,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                     ig_idle_14.apply();
                     ig_idle_15.apply();
                     ig_idle_16.apply();
-                    ig_idle_discard.apply();
                 }
                 else 
                     if (meta.md.run_idle_poll_test == 1w1) 

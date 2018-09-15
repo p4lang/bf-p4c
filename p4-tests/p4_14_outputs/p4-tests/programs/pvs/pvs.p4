@@ -1,5 +1,17 @@
+@name(".$InstanceType") enum bit<32> InstanceType_0 {
+    START = 0,
+    start_i2e_mirrored = 1
+}
+
 #include <core.p4>
 #include <v1model.p4>
+
+struct metadata_t {
+    bit<1>  do_ing_mirroring;
+    bit<1>  do_egr_mirroring;
+    bit<10> ing_mir_ses;
+    bit<10> egr_mir_ses;
+}
 
 header egress_intrinsic_metadata_t {
     bit<7>  _pad0;
@@ -115,6 +127,21 @@ header ingress_parser_control_signals {
     bit<8> parser_counter;
 }
 
+header ipv4_t {
+    bit<4>  version;
+    bit<4>  ihl;
+    bit<8>  diffserv;
+    bit<16> totalLen;
+    bit<16> identification;
+    bit<3>  flags;
+    bit<13> fragOffset;
+    bit<8>  ttl;
+    bit<8>  protocol;
+    bit<16> hdrChecksum;
+    bit<32> srcAddr;
+    bit<32> dstAddr;
+}
+
 header new_tag_24t {
     bit<6>  t24_f1_6b;
     bit<12> t24_f2_12b;
@@ -144,6 +171,8 @@ header vlan_tag_t {
 }
 
 struct metadata {
+    @name(".md") 
+    metadata_t md;
 }
 
 struct headers {
@@ -169,6 +198,8 @@ struct headers {
     generator_metadata_t_0                         ig_pg_md;
     @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_prsr_ctrl") @name(".ig_prsr_ctrl") 
     ingress_parser_control_signals                 ig_prsr_ctrl;
+    @name(".ipv4") 
+    ipv4_t                                         ipv4;
     @name(".new_tag24_") 
     new_tag_24t                                    new_tag24_;
     @name(".new_tag32_") 
@@ -184,9 +215,17 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @parser_value_set_size(7) @name(".pvs2") value_set<bit<16>>(4) pvs2;
+    @parser_value_set_size(2) @name(".pvs2") value_set<bit<16>>(4) pvs2;
     @parser_value_set_size(9) @name(".pvs3") value_set<tuple<bit<6>, bit<14>>>(4) pvs3;
     @parser_value_set_size(2) @name(".pvs4") value_set<bit<32>>(4) pvs4;
+    @parser_value_set_size(5) @name(".pvs1") value_set<bit<16>>(4) pvs1;
+    @parser_value_set_size(5) @name(".pvs5") value_set<bit<16>>(4) pvs5;
+    @name(".$start") state start {
+        transition select((InstanceType_0)standard_metadata.instance_type) {
+            InstanceType_0.START: start_0;
+            InstanceType_0.start_i2e_mirrored: start_i2e_mirrored;
+        }
+    }
     @name(".parse_ethernet") state parse_ethernet {
         packet.extract(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
@@ -221,21 +260,98 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
         packet.extract(hdr.new_tag64_2_);
         transition accept;
     }
-    @name(".parse_vlan") state parse_vlan {
-        packet.extract(hdr.vlan_tag_);
+    @name(".parse_ipv4") state parse_ipv4 {
+        packet.extract(hdr.ipv4);
         transition accept;
     }
-    @name(".start") state start {
+    @name(".parse_vlan") state parse_vlan {
+        packet.extract(hdr.vlan_tag_);
+        transition select(hdr.vlan_tag_.etherType) {
+            pvs1: parse_ipv4;
+            default: accept;
+        }
+    }
+    @name(".start") state start_0 {
         transition parse_ethernet;
+    }
+    @packet_entry @name(".start_i2e_mirrored") state start_i2e_mirrored {
+        packet.extract(hdr.ethernet);
+        transition select(hdr.ethernet.etherType) {
+            pvs5: parse_vlan;
+            default: accept;
+        }
+    }
+}
+
+control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name(".mod_ttl") action mod_ttl(bit<8> val) {
+        hdr.ipv4.ttl = val;
+    }
+    @name(".mod_vid") action mod_vid(bit<12> val) {
+        hdr.vlan_tag_.vid = val;
+    }
+    @name(".noop") action noop() {
+        ;
+    }
+    @name(".read_ttl") table read_ttl {
+        actions = {
+            mod_ttl;
+        }
+        key = {
+            hdr.ipv4.ttl      : exact;
+            hdr.ipv4.isValid(): exact;
+        }
+        size = 512;
+    }
+    @name(".vlan2") table vlan2 {
+        actions = {
+            mod_vid;
+            noop;
+        }
+        key = {
+            hdr.vlan_tag_.vid      : exact;
+            hdr.vlan_tag_.isValid(): exact;
+        }
+        size = 512;
+    }
+    apply {
+        vlan2.apply();
+        read_ttl.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name(".do_ing_mir") action do_ing_mir() {
+        clone(CloneType.I2E, (bit<32>)(bit<32>)meta.md.ing_mir_ses);
+    }
+    @name(".set_md") action set_md(bit<1> ing_mir, bit<10> ing_ses, bit<1> egr_mir, bit<10> egr_ses) {
+        meta.md.do_ing_mirroring = ing_mir;
+        meta.md.do_egr_mirroring = egr_mir;
+        meta.md.ing_mir_ses = ing_ses;
+        meta.md.egr_mir_ses = egr_ses;
+    }
     @name(".vlan_miss") action vlan_miss(bit<9> egress_port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
     }
     @name(".vlan_hit") action vlan_hit(bit<9> egress_port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+    }
+    @name(".ing_mir") table ing_mir {
+        actions = {
+            do_ing_mir;
+        }
+        size = 1;
+        default_action = do_ing_mir();
+    }
+    @name(".p0") table p0 {
+        actions = {
+            set_md;
+        }
+        key = {
+            hdr.ig_intr_md.ingress_port: exact;
+        }
+        size = 288;
+        default_action = set_md(0, 0, 0, 0);
     }
     @name(".vlan") table vlan {
         actions = {
@@ -243,17 +359,19 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             vlan_hit;
         }
         key = {
-            hdr.vlan_tag_.vid: exact;
+            hdr.vlan_tag_.vid      : exact;
+            hdr.vlan_tag_.isValid(): exact;
         }
         size = 512;
     }
     apply {
+        if (1w0 == hdr.ig_intr_md.resubmit_flag) {
+            p0.apply();
+        }
+        if (1w1 == meta.md.do_ing_mirroring) {
+            ing_mir.apply();
+        }
         vlan.apply();
-    }
-}
-
-control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    apply {
     }
 }
 
@@ -261,6 +379,7 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
         packet.emit(hdr.ethernet);
         packet.emit(hdr.vlan_tag_);
+        packet.emit(hdr.ipv4);
     }
 }
 
@@ -271,6 +390,7 @@ control verifyChecksum(inout headers hdr, inout metadata meta) {
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
+        update_checksum(true, { hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.totalLen, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.fragOffset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.srcAddr, hdr.ipv4.dstAddr }, hdr.ipv4.hdrChecksum, HashAlgorithm.csum16);
     }
 }
 

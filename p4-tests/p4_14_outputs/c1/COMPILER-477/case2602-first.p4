@@ -638,7 +638,6 @@ control BlackOak(inout headers hdr, inout metadata meta, inout standard_metadata
         actions = {
             Enhaut_0();
             Wentworth_0();
-            @defaultonly Wentworth();
         }
         key = {
             meta.Owentown.Lennep    : exact @name("Owentown.Lennep") ;
@@ -649,7 +648,7 @@ control BlackOak(inout headers hdr, inout metadata meta, inout standard_metadata
             meta.Millhaven.Placedo  : ternary @name("Millhaven.Placedo") ;
         }
         size = 512;
-        default_action = Wentworth();
+        default_action = Wentworth_0();
         counters = Hallowell;
     }
     @name(".Woodridge") table Woodridge {
@@ -812,18 +811,18 @@ control Coventry(inout headers hdr, inout metadata meta, inout standard_metadata
 control Eastover(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Barney") RegisterAction<bit<1>, bit<1>>(Pierpont) Barney = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = value;
         }
     };
     @name(".Waxhaw") RegisterAction<bit<1>, bit<1>>(Correo) Waxhaw = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = ~value;
         }

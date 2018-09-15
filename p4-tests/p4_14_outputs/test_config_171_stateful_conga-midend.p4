@@ -231,13 +231,21 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".NoAction") action NoAction_3() {
     }
     @name(".conga_alu") RegisterAction<conga_state_layout, bit<8>>(conga_state) conga_alu = {
-        void apply(inout conga_state_layout value, out bit<8> rv) {
+        void apply(inout         struct conga_state_layout {
+            bit<8> next_hop;
+            bit<8> utilization;
+        }
+value, out bit<8> rv) {
             value.next_hop = value.utilization;
             rv = value.utilization;
         }
     };
     @name(".conga_update_alu") RegisterAction<conga_state_layout, bit<8>>(conga_state) conga_update_alu = {
-        void apply(inout conga_state_layout value, out bit<8> rv) {
+        void apply(inout         struct conga_state_layout {
+            bit<8> next_hop;
+            bit<8> utilization;
+        }
+value, out bit<8> rv) {
             conga_state_layout in_value_2;
             in_value_2.next_hop = value.next_hop;
             in_value_2.utilization = value.utilization;

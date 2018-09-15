@@ -136,7 +136,7 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @diagnostic("ccgf_contiguity_failure", "warn") @name(".start") state start {
+    @name(".start") state start {
         transition accept;
     }
 }
@@ -153,13 +153,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".port_tbl") table port_tbl {
         actions = {
             set_md();
-            @defaultonly NoAction();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 288;
-        default_action = NoAction();
+        default_action = set_md(9w0);
     }
     apply {
         if (1w0 == hdr.ig_intr_md.resubmit_flag) 

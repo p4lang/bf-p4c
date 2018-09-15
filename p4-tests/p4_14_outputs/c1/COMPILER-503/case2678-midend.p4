@@ -1301,8 +1301,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".Newsoms") action _Newsoms() {
         meta.Chloride.Wabbaseka = 1w1;
     }
-    @name(".Shoshone") action _Shoshone_4() {
-    }
     @name(".Caulfield") table _Caulfield_0 {
         support_timeout = true;
         actions = {
@@ -1336,14 +1334,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.Netcong.Barney = 1w1;
         mark_to_drop();
     }
-    @name(".Shoshone") action _Shoshone_5() {
+    @name(".Shoshone") action _Shoshone_4() {
         _Mekoryuk_0.count();
     }
     @name(".Johnsburg") table _Johnsburg_0 {
         actions = {
             _Wolsey();
-            _Shoshone_5();
-            @defaultonly _Shoshone_4();
+            _Shoshone_4();
         }
         key = {
             meta.Lowemont.Rocky   : exact @name("Lowemont.Rocky") ;
@@ -1437,7 +1434,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".Lisle") action _Lisle_10(bit<11> Talbert) {
         meta.Gheen.Rillton = Talbert;
     }
-    @name(".Shoshone") action _Shoshone_6() {
+    @name(".Shoshone") action _Shoshone_5() {
+    }
+    @name(".Shoshone") action _Shoshone_20() {
+    }
+    @name(".Shoshone") action _Shoshone_21() {
     }
     @name(".Shoshone") action _Shoshone_22() {
     }
@@ -1446,10 +1447,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".Shoshone") action _Shoshone_24() {
     }
     @name(".Shoshone") action _Shoshone_25() {
-    }
-    @name(".Shoshone") action _Shoshone_26() {
-    }
-    @name(".Shoshone") action _Shoshone_27() {
     }
     @name(".Copemish") action _Copemish(bit<11> Nederland, bit<16> Valentine) {
         meta.Humacao.Poneto = Nederland;
@@ -1476,33 +1473,33 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             _Weehawken();
             _Lisle();
-            _Shoshone_6();
+            _Shoshone_5();
         }
         key = {
             meta.Reinbeck.Lofgreen     : exact @name("Reinbeck.Lofgreen") ;
             meta.Reinbeck.Elsmere[19:0]: lpm @name("Reinbeck.Elsmere[19:0]") ;
         }
         size = 131072;
-        default_action = _Shoshone_6();
+        default_action = _Shoshone_5();
     }
     @idletime_precision(1) @stage(2, 28672) @stage(3) @name(".Boxelder") table _Boxelder_0 {
         support_timeout = true;
         actions = {
             _Weehawken_0();
             _Lisle_6();
-            _Shoshone_22();
+            _Shoshone_20();
         }
         key = {
             meta.Chloride.Rocheport: exact @name("Chloride.Rocheport") ;
             meta.Humacao.Hiawassee : exact @name("Humacao.Hiawassee") ;
         }
         size = 65536;
-        default_action = _Shoshone_22();
+        default_action = _Shoshone_20();
     }
     @action_default_only("Shoshone") @name(".Cross") table _Cross_0 {
         actions = {
             _Copemish();
-            _Shoshone_23();
+            _Shoshone_21();
             @defaultonly NoAction_57();
         }
         key = {
@@ -1517,14 +1514,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             _Weehawken_8();
             _Lisle_7();
-            _Shoshone_24();
+            _Shoshone_22();
         }
         key = {
             meta.Chloride.Rocheport: exact @name("Chloride.Rocheport") ;
             meta.Reinbeck.Elsmere  : exact @name("Reinbeck.Elsmere") ;
         }
         size = 65536;
-        default_action = _Shoshone_24();
+        default_action = _Shoshone_22();
     }
     @action_default_only("Maljamar") @idletime_precision(1) @name(".Idylside") table _Idylside_0 {
         support_timeout = true;
@@ -1544,7 +1541,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @action_default_only("Shoshone") @stage(2, 8192) @stage(3) @name(".Jacobs") table _Jacobs_0 {
         actions = {
             _Brohard();
-            _Shoshone_25();
+            _Shoshone_23();
             @defaultonly NoAction_59();
         }
         key = {
@@ -1558,14 +1555,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             _Weehawken_10();
             _Lisle_9();
-            _Shoshone_26();
+            _Shoshone_24();
         }
         key = {
             meta.Humacao.Fosters          : exact @name("Humacao.Fosters") ;
             meta.Humacao.Hiawassee[106:64]: lpm @name("Humacao.Hiawassee[106:64]") ;
         }
         size = 65536;
-        default_action = _Shoshone_26();
+        default_action = _Shoshone_24();
     }
     @name(".LaSal") table _LaSal_0 {
         actions = {
@@ -1578,14 +1575,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             _Weehawken_11();
             _Lisle_10();
-            _Shoshone_27();
+            _Shoshone_25();
         }
         key = {
             meta.Humacao.Poneto         : exact @name("Humacao.Poneto") ;
             meta.Humacao.Hiawassee[63:0]: lpm @name("Humacao.Hiawassee[63:0]") ;
         }
         size = 16384;
-        default_action = _Shoshone_27();
+        default_action = _Shoshone_25();
     }
     @action_default_only("Maljamar") @name(".Rexville") table _Rexville_0 {
         actions = {
@@ -1609,9 +1606,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".Henry") action _Henry() {
         meta.Funston.Ivydale = meta.Cropper.Vananda;
     }
-    @name(".Shoshone") action _Shoshone_28() {
+    @name(".Shoshone") action _Shoshone_26() {
     }
-    @name(".Shoshone") action _Shoshone_29() {
+    @name(".Shoshone") action _Shoshone_27() {
     }
     @name(".Benson") action _Benson() {
         meta.Funston.Macksburg = meta.Cropper.Vananda;
@@ -1621,7 +1618,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             _Bootjack();
             _Nahunta();
             _Henry();
-            _Shoshone_28();
+            _Shoshone_26();
             @defaultonly NoAction_61();
         }
         key = {
@@ -1642,7 +1639,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @immediate(0) @name(".Grassy") table _Grassy_0 {
         actions = {
             _Benson();
-            _Shoshone_29();
+            _Shoshone_27();
             @defaultonly NoAction_62();
         }
         key = {
@@ -2034,12 +2031,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".Cutler") action _Cutler_0(bit<9> Hollymead) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = Hollymead;
     }
-    @name(".Shoshone") action _Shoshone_30() {
+    @name(".Shoshone") action _Shoshone_28() {
     }
     @name(".Garibaldi") table _Garibaldi {
         actions = {
             _Cutler_0();
-            _Shoshone_30();
+            _Shoshone_28();
             @defaultonly NoAction_69();
         }
         key = {
@@ -2209,7 +2206,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                     _Rayville_0.apply();
             }
             switch (_Johnsburg_0.apply().action_run) {
-                _Shoshone_5: {
+                _Shoshone_4: {
                     if (meta.Lowemont.Wallace == 1w0 && meta.Netcong.Burnett == 1w0) 
                         _Caulfield_0.apply();
                     _Halley_0.apply();
@@ -2229,12 +2226,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             if (meta.Netcong.Barney == 1w0 && meta.Chloride.Wabbaseka == 1w1) 
                 if (meta.Chloride.Greenbelt == 1w1 && meta.Netcong.Trenary == 1w1) 
                     switch (_Francisco_0.apply().action_run) {
-                        _Shoshone_24: {
+                        _Shoshone_22: {
                             switch (_Jacobs_0.apply().action_run) {
                                 _Brohard: {
                                     _BigWater_0.apply();
                                 }
-                                _Shoshone_25: {
+                                _Shoshone_23: {
                                     _Idylside_0.apply();
                                 }
                             }
@@ -2245,12 +2242,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 else 
                     if (meta.Chloride.Renton == 1w1 && meta.Netcong.Seattle == 1w1) 
                         switch (_Boxelder_0.apply().action_run) {
-                            _Shoshone_22: {
+                            _Shoshone_20: {
                                 switch (_Cross_0.apply().action_run) {
                                     _Copemish: {
                                         _Leadpoint_0.apply();
                                     }
-                                    _Shoshone_23: {
+                                    _Shoshone_21: {
                                         switch (_Rexville_0.apply().action_run) {
                                             _Hanford: {
                                                 _Jerico_0.apply();

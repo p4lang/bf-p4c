@@ -1915,18 +1915,18 @@ control Hollymead(inout headers hdr, inout metadata meta, inout standard_metadat
 control Howland(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".FulksRun") RegisterAction<bit<1>, bit<1>>(Servia) FulksRun = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = ~value;
         }
     };
     @name(".Oilmont") RegisterAction<bit<1>, bit<1>>(Verdery) Oilmont = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = value;
         }
@@ -2125,7 +2125,6 @@ control Hurst(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         actions = {
             Ronneby_0;
             Rosburg_0;
-            @defaultonly Rosburg;
         }
         key = {
             meta.Acree.Leetsdale    : exact;
@@ -2136,7 +2135,7 @@ control Hurst(inout headers hdr, inout metadata meta, inout standard_metadata_t 
             meta.Gerster.Pittwood   : ternary;
         }
         size = 512;
-        default_action = Rosburg();
+        default_action = Rosburg_0();
         counters = Wyanet;
     }
     apply {
@@ -2278,13 +2277,12 @@ control Linganore(inout headers hdr, inout metadata meta, inout standard_metadat
     @name(".Ogunquit") table Ogunquit {
         actions = {
             Rosburg_1;
-            @defaultonly Rosburg;
         }
         key = {
             meta.Boyle.Darmstadt[14:0]: exact;
         }
         size = 32768;
-        default_action = Rosburg();
+        default_action = Rosburg_1();
         counters = Gypsum;
     }
     @name(".Pricedale") table Pricedale {

@@ -168,10 +168,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".b_test") RegisterAction<bit<8>, bit<8>>(r_test) b_test = {
         void apply(inout bit<8> value, out bit<8> rv) {
+            rv = 8w0;
             bit<8> alu_hi;
             bit<8> in_value;
             in_value = value;
-            rv = 8w0;
             if (in_value == 8w1) 
                 alu_hi = (bit<8>)1;
             if (in_value == 8w0x0) 

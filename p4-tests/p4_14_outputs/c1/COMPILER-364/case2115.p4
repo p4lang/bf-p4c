@@ -1422,18 +1422,18 @@ control Millstadt(inout headers hdr, inout metadata meta, inout standard_metadat
 control OjoFeliz(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".LaConner") RegisterAction<bit<1>, bit<1>>(Arnold) LaConner = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = ~value;
         }
     };
     @name(".ShowLow") RegisterAction<bit<1>, bit<1>>(Redfield) ShowLow = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = value;
         }

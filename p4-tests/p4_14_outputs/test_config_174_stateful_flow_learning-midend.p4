@@ -271,22 +271,29 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".NoAction") action NoAction_17() {
     }
     @name(".flow_cache_1_way_1_alu") RegisterAction<flow_cache_1_way_1_alu_layout, bit<32>>(flow_cache_1_way_1) flow_cache_1_way_1_alu = {
-        void apply(inout flow_cache_1_way_1_alu_layout value, out bit<32> rv) {
+        void apply(inout         struct flow_cache_1_way_1_alu_layout {
+            bit<32> lo;
+            bit<32> hi;
+        }
+value, out bit<32> rv) {
             flow_cache_1_way_1_alu_layout in_value;
+            rv = 32w0;
             in_value.lo = value.lo;
             in_value.hi = value.hi;
-            rv = 32w0;
             value.lo = 32w1;
             if (in_value.lo == hdr.ipv4.dstAddr && value.hi == hdr.ipv4.srcAddr) 
                 rv = 32w1;
         }
     };
     @name(".flow_cache_1_way_1_learn_alu") RegisterAction<flow_cache_1_way_1_alu_layout, bit<32>>(flow_cache_1_way_1) flow_cache_1_way_1_learn_alu = {
-        void apply(inout flow_cache_1_way_1_alu_layout value, out bit<32> rv) {
+        void apply(inout         struct flow_cache_1_way_1_alu_layout {
+            bit<32> lo;
+            bit<32> hi;
+        }
+value) {
             flow_cache_1_way_1_alu_layout in_value_6;
             in_value_6.lo = value.lo;
             in_value_6.hi = value.hi;
-            rv = 32w0;
             if (value.lo == 32w0 && value.hi == 32w0) 
                 value.hi = hdr.ipv4.srcAddr;
             if (value.lo == 32w0 && in_value_6.hi == 32w0) 
@@ -294,29 +301,40 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
     };
     @name(".flow_cache_1_way_2_alu") RegisterAction<flow_cache_1_way_2_alu_layout, bit<32>>(flow_cache_1_way_2) flow_cache_1_way_2_alu = {
-        void apply(inout flow_cache_1_way_2_alu_layout value, out bit<32> rv) {
+        void apply(inout         struct flow_cache_1_way_2_alu_layout {
+            bit<32> lo;
+            bit<32> hi;
+        }
+value, out bit<32> rv) {
             flow_cache_1_way_2_alu_layout in_value_7;
+            rv = 32w0;
             in_value_7.lo = value.lo;
             in_value_7.hi = value.hi;
-            rv = 32w0;
             value.lo = 32w1;
             if (in_value_7.lo == hdr.ipv4.dstAddr && value.hi == hdr.ipv4.srcAddr) 
                 rv = 32w1;
         }
     };
     @name(".flow_cache_2_way_1_alu") RegisterAction<flow_cache_2_way_1_alu_layout, bit<16>>(flow_cache_2_way_1) flow_cache_2_way_1_alu = {
-        void apply(inout flow_cache_2_way_1_alu_layout value, out bit<16> rv) {
+        void apply(inout         struct flow_cache_2_way_1_alu_layout {
+            bit<16> lo;
+            bit<16> hi;
+        }
+value, out bit<16> rv) {
             rv = 16w0;
             if (value.hi == meta.meta.port_numbers) 
                 rv = value.lo;
         }
     };
     @name(".flow_cache_2_way_1_learn_alu") RegisterAction<flow_cache_2_way_1_alu_layout, bit<16>>(flow_cache_2_way_1) flow_cache_2_way_1_learn_alu = {
-        void apply(inout flow_cache_2_way_1_alu_layout value, out bit<16> rv) {
+        void apply(inout         struct flow_cache_2_way_1_alu_layout {
+            bit<16> lo;
+            bit<16> hi;
+        }
+value) {
             flow_cache_2_way_1_alu_layout in_value_9;
             in_value_9.lo = value.lo;
             in_value_9.hi = value.hi;
-            rv = 16w0;
             if (value.lo == 16w0 && value.hi == 16w0) 
                 value.hi = meta.meta.port_numbers;
             if (value.lo == 16w0 && in_value_9.hi == 16w0) 
@@ -324,7 +342,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
     };
     @name(".flow_cache_2_way_2_alu") RegisterAction<flow_cache_2_way_2_alu_layout, bit<16>>(flow_cache_2_way_2) flow_cache_2_way_2_alu = {
-        void apply(inout flow_cache_2_way_2_alu_layout value, out bit<16> rv) {
+        void apply(inout         struct flow_cache_2_way_2_alu_layout {
+            bit<16> lo;
+            bit<16> hi;
+        }
+value, out bit<16> rv) {
             rv = 16w0;
             if (value.hi == meta.meta.port_numbers) 
                 rv = value.lo;

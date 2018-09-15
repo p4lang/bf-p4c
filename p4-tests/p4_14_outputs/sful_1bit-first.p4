@@ -34,36 +34,36 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".sful1") RegisterAction<bit<1>, bit<1>>(reg) sful1 = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             rv = in_value;
             value = 1w1;
         }
     };
     @name(".sful2") RegisterAction<bit<1>, bit<1>>(reg) sful2 = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             rv = in_value;
             value = 1w0;
         }
     };
     @name(".sful3") RegisterAction<bit<1>, bit<1>>(reg) sful3 = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             rv = in_value;
             value = in_value;
         }
     };
     @name(".sful4") RegisterAction<bit<1>, bit<1>>(reg) sful4 = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             rv = ~in_value;
             value = in_value;
         }

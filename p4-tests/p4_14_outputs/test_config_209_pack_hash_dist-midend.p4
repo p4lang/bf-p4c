@@ -188,8 +188,8 @@ struct tuple_1 {
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     bit<17> temp;
     bit<17> temp_0;
-    bit<8> tmp_1;
-    bit<8> tmp_2;
+    bit<8> tmp_3;
+    bit<8> tmp_5;
     @name(".NoAction") action NoAction_0() {
     }
     @name(".NoAction") action NoAction_3() {
@@ -208,13 +208,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     };
     @name(".action_0") action action_2() {
         hash<bit<17>, bit<17>, tuple_0, bit<18>>(temp, HashAlgorithm.random, 17w0, { hdr.pkt.field_a_32, hdr.pkt.field_b_32 }, 18w131072);
-        tmp_1 = alu_0.execute((bit<32>)temp);
-        meta.meta.result_8 = tmp_1;
+        tmp_3 = alu_0.execute((bit<32>)temp);
+        meta.meta.result_8 = meta.meta.result_8 | tmp_3;
     }
     @name(".action_1") action action_3() {
         hash<bit<17>, bit<17>, tuple_1, bit<18>>(temp_0, HashAlgorithm.random, 17w0, { hdr.pkt.field_c_32, hdr.pkt.field_d_32, hdr.pkt.field_e_16 }, 18w131072);
-        tmp_2 = alu_1.execute((bit<32>)temp_0);
-        meta.meta.result_8 = tmp_2;
+        tmp_5 = alu_1.execute((bit<32>)temp_0);
+        meta.meta.result_8 = meta.meta.result_8 | tmp_5;
     }
     @name(".table_0") table table_0 {
         actions = {

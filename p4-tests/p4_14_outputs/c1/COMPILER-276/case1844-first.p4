@@ -1238,10 +1238,9 @@ control Harvest(inout headers hdr, inout metadata meta, inout standard_metadata_
 control Hebbville(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".LaHoma") @min_width(16) direct_counter(CounterType.packets_and_bytes) LaHoma;
     @name(".Veteran") RegisterAction<bit<1>, bit<1>>(Linville) Veteran = {
-        void apply(inout bit<1> value, out bit<1> rv) {
+        void apply(inout bit<1> value) {
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = 1w1;
         }
     };
@@ -1299,7 +1298,6 @@ control Hebbville(inout headers hdr, inout metadata meta, inout standard_metadat
         actions = {
             Tununak_0();
             Yemassee_0();
-            @defaultonly Yemassee();
         }
         key = {
             meta.Orrum.Hobucken : exact @name("Orrum.Hobucken") ;
@@ -1310,7 +1308,7 @@ control Hebbville(inout headers hdr, inout metadata meta, inout standard_metadat
             meta.Waialua.Tillson: ternary @name("Waialua.Tillson") ;
         }
         size = 512;
-        default_action = Yemassee();
+        default_action = Yemassee_0();
         counters = LaHoma;
     }
     apply {
@@ -1426,18 +1424,18 @@ control McKamie(inout headers hdr, inout metadata meta, inout standard_metadata_
 control Rockville(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Tavistock") RegisterAction<bit<1>, bit<1>>(Goessel) Tavistock = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = value;
         }
     };
     @name(".Westboro") RegisterAction<bit<1>, bit<1>>(Venice) Westboro = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = value;
         }

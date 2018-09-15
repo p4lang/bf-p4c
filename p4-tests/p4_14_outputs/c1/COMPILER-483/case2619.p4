@@ -1528,7 +1528,6 @@ control Luverne(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             Ramapo_0;
             LasLomas_0;
-            @defaultonly LasLomas;
         }
         key = {
             meta.Riverwood.Renick: exact;
@@ -1539,7 +1538,7 @@ control Luverne(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Perrin.Haworth  : ternary;
         }
         size = 512;
-        default_action = LasLomas();
+        default_action = LasLomas_0();
         counters = Pathfork;
     }
     apply {
@@ -2013,18 +2012,18 @@ control Robbins(inout headers hdr, inout metadata meta, inout standard_metadata_
 control Tahuya(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Goldsmith") RegisterAction<bit<1>, bit<1>>(Alcalde) Goldsmith = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = ~value;
         }
     };
     @name(".Mizpah") RegisterAction<bit<1>, bit<1>>(NewSite) Mizpah = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = value;
         }

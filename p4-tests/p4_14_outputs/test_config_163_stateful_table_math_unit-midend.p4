@@ -203,12 +203,16 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".NoAction") action NoAction_0() {
     }
     @name(".cntr_1") RegisterAction<cntr_1_layout, bit<16>>(stateful_cntr_1) cntr_0 = {
-        void apply(inout cntr_1_layout value, out bit<16> rv) {
+        void apply(inout         struct cntr_1_layout {
+            bit<16> lo;
+            bit<16> hi;
+        }
+value, out bit<16> rv) {
             bit<16> tmp_3;
             cntr_1_layout in_value;
+            rv = 16w0;
             in_value.lo = value.lo;
             in_value.hi = value.hi;
-            rv = 16w0;
             if (hdr.pkt.field_e_16 == 16w7) 
                 value.lo = value.lo + 16w1;
             if (hdr.pkt.field_e_16 != 16w7) {

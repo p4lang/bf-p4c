@@ -463,18 +463,18 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control Alakanuk(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Cricket") RegisterAction<bit<1>, bit<1>>(Seagrove) Cricket = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = value;
         }
     };
     @name(".Jerico") RegisterAction<bit<1>, bit<1>>(Lackey) Jerico = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = value;
         }
@@ -992,10 +992,9 @@ control Neavitt(inout headers hdr, inout metadata meta, inout standard_metadata_
 control NewRoads(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Elihu") @min_width(16) direct_counter(CounterType.packets_and_bytes) Elihu;
     @name(".Fowlkes") RegisterAction<bit<1>, bit<1>>(Floyd) Fowlkes = {
-        void apply(inout bit<1> value, out bit<1> rv) {
+        void apply(inout bit<1> value) {
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = 1w1;
         }
     };
@@ -1025,7 +1024,6 @@ control NewRoads(inout headers hdr, inout metadata meta, inout standard_metadata
         actions = {
             Colonias_0();
             Kapowsin_0();
-            @defaultonly Kapowsin();
         }
         key = {
             meta.Brodnax.Columbia: exact @name("Brodnax.Columbia") ;
@@ -1036,7 +1034,7 @@ control NewRoads(inout headers hdr, inout metadata meta, inout standard_metadata
             meta.Algoa.Weslaco   : ternary @name("Algoa.Weslaco") ;
         }
         size = 512;
-        default_action = Kapowsin();
+        default_action = Kapowsin_0();
         counters = Elihu;
     }
     @name(".Talbotton") table Talbotton {

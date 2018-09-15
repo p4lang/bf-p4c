@@ -178,27 +178,26 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".cntr_1") RegisterAction<bit<16>, bit<16>>(stateful_cntr_1) cntr_1 = {
-        void apply(inout bit<16> value, out bit<16> rv) {
+        void apply(inout bit<16> value) {
             bit<16> in_value;
             in_value = value;
-            rv = 16w0;
             value = in_value + 16w1;
         }
     };
     @name(".cntr_2") RegisterAction<bit<16>, bit<16>>(stateful_cntr_2) cntr_2 = {
         void apply(inout bit<16> value, out bit<16> rv) {
+            rv = 16w0;
             bit<16> in_value;
             in_value = value;
-            rv = 16w0;
             value = in_value + 16w1;
             rv = value;
         }
     };
     @name(".sampler_alu") RegisterAction<bit<8>, bit<8>>(flow_cnt) sampler_alu = {
         void apply(inout bit<8> value, out bit<8> rv) {
+            rv = 8w0;
             bit<8> in_value;
             in_value = value;
-            rv = 8w0;
             if (in_value == 8w10) 
                 value = 8w1;
             if (in_value != 8w10) 

@@ -149,7 +149,7 @@ control SwitchEgress(inout switch_header_t hdr, inout switch_metadata_t eg_md, i
             eg_intr_md.egress_qid : exact @name("eg_intr_md.egress_qid") ;
         }
         actions = {
-            NoAction_4();
+            @defaultonly NoAction_4();
             set_wred_flag_0();
         }
         const default_action = NoAction_4();

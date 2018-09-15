@@ -47,10 +47,14 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".sful") RegisterAction<pair32_t, bit<32>>(accum) sful = {
-        void apply(inout pair32_t value, out bit<32> rv) {
+        void apply(inout         struct pair32_t {
+            bit<32> lo;
+            bit<32> hi;
+        }
+value, out bit<32> rv) {
+            rv = 32w0;
             pair32_t in_value;
             in_value = value;
-            rv = 32w0;
             rv = in_value.lo;
             value.hi = in_value.hi + 32w1;
             if (hdr.data.f2 > 32w1000 && hdr.data.f2 < 32w2000) 

@@ -51,7 +51,7 @@ header egress_intrinsic_metadata_from_parser_aux_t {
     bit<8>  coalesce_sample_count;
 }
 
-@diagnostic("ccgf_contiguity_failure", "warn") header ethernet_t {
+header ethernet_t {
     bit<48> dstAddr;
     bit<48> srcAddr;
     bit<16> etherType;
@@ -175,9 +175,13 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name(".qos_hit_e2e_mirror") action qos_hit_e2e_mirror_0(bit<32> mirror_id) {
         clone(CloneType.E2E, mirror_id);
     }
+    @name(".qos_hit_e2e_mirror_pre_dprsr") action qos_hit_e2e_mirror_pre_dprsr_0(bit<32> mirror_id) {
+        clone(CloneType.E2E, mirror_id);
+    }
     @name(".egress_qos") table egress_qos {
         actions = {
             qos_hit_e2e_mirror_0();
+            qos_hit_e2e_mirror_pre_dprsr_0();
             @defaultonly NoAction_0();
         }
         key = {
@@ -200,13 +204,9 @@ struct tuple_0 {
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_1() {
     }
-    @name(".NoAction") action NoAction_8() {
+    @name(".NoAction") action NoAction_6() {
     }
-    @name(".NoAction") action NoAction_9() {
-    }
-    @name(".NoAction") action NoAction_10() {
-    }
-    @name(".NoAction") action NoAction_11() {
+    @name(".NoAction") action NoAction_7() {
     }
     @name(".do_deflect_on_drop") action do_deflect_on_drop_0() {
         hdr.ig_intr_md_for_tm.deflect_on_drop = 1w1;
@@ -236,6 +236,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         bypass_egress();
         clone(CloneType.I2E, mirror_id);
     }
+    @name(".qos_hit_eg_bypass_i2e_mirror_post_dprsr") action qos_hit_eg_bypass_i2e_mirror_post_dprsr_0(bit<5> qid, bit<32> mirror_id) {
+        hdr.ig_intr_md_for_tm.ingress_cos = 3w1;
+        hdr.ig_intr_md_for_tm.qid = qid;
+        bypass_egress();
+        clone(CloneType.I2E, mirror_id);
+    }
     @name(".qos_hit_eg_bypass_no_mirror") action qos_hit_eg_bypass_no_mirror_0(bit<5> qid, bit<2> color) {
         hdr.ig_intr_md_for_tm.ingress_cos = 3w1;
         hdr.ig_intr_md_for_tm.qid = qid;
@@ -259,9 +265,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".deflect_on_drop_tbl") table deflect_on_drop_tbl {
         actions = {
             do_deflect_on_drop_0();
-            @defaultonly NoAction_1();
         }
-        default_action = NoAction_1();
+        size = 1;
+        default_action = do_deflect_on_drop_0();
     }
     @name(".dmac") table dmac {
         actions = {
@@ -269,46 +275,47 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             dmac_unicast_hit_0();
             dmac_multicast_hit_0();
             dmac_uc_mc_hit_0();
-            @defaultonly NoAction_8();
+            @defaultonly NoAction_1();
         }
         key = {
             hdr.ethernet.dstAddr: exact @name("ethernet.dstAddr") ;
         }
         size = 4096;
-        default_action = NoAction_8();
+        default_action = NoAction_1();
     }
     @name(".ingress_qos") table ingress_qos {
         actions = {
             qos_miss_0();
             qos_hit_eg_bypass_i2e_mirror_0();
+            qos_hit_eg_bypass_i2e_mirror_post_dprsr_0();
             qos_hit_eg_bypass_no_mirror_0();
             qos_hit_no_eg_bypass_no_mirror_0();
-            @defaultonly NoAction_9();
+            @defaultonly NoAction_6();
         }
         key = {
             hdr.vlan_tag_.isValid(): exact @name("vlan_tag_.$valid$") ;
             hdr.vlan_tag_.vid      : exact @name("vlan_tag_.vid") ;
         }
         size = 8192;
-        default_action = NoAction_9();
+        default_action = NoAction_6();
     }
     @name(".recirc_tbl") table recirc_tbl {
         actions = {
             do_recirc_0();
             noop_0();
-            @defaultonly NoAction_10();
+            @defaultonly NoAction_7();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
-        default_action = NoAction_10();
+        default_action = NoAction_7();
     }
     @name(".resubmit_tbl") table resubmit_tbl {
         actions = {
             do_resubmit_0();
-            @defaultonly NoAction_11();
         }
-        default_action = NoAction_11();
+        size = 1;
+        default_action = do_resubmit_0();
     }
     apply {
         dmac.apply();

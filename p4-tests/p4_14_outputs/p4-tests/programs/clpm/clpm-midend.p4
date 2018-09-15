@@ -198,9 +198,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_9() {
     }
-    @name(".salu0") RegisterAction<bit<16>, bit<16>>(reg0) salu0 = {
-        void apply(inout bit<16> value, out bit<16> rv) {
-            rv = 16w0;
+    @initial_register_lo_value(0) @name(".salu0") RegisterAction<bit<16>, bit<16>>(reg0) salu0 = {
+        void apply(inout bit<16> value) {
             value = value + 16w1;
         }
     };

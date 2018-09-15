@@ -267,9 +267,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".NoAction") action NoAction_4() {
-    }
-    @name(".NoAction") action NoAction_5() {
+    @name(".NoAction") action NoAction_3() {
     }
     @name(".hash_action_ha") action hash_action_ha_0(bit<12> value_0, bit<3> value_1, bit<8> value_2) {
         hdr.vlan_tag.vlan_id = value_0;
@@ -313,19 +311,18 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @phase0(1) @name(".port_tbl") table port_tbl {
         actions = {
             set_md_0();
-            @defaultonly NoAction_0();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 288;
-        default_action = NoAction_0();
+        default_action = set_md_0(9w0, 5w0, 3w0, 16w0, 13w0);
     }
     @stage(1) @name(".set_eg") table set_eg {
         actions = {
             set_egr_port_0();
             drop_packet_0();
-            @defaultonly NoAction_4();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ig_intr_md_for_tm.level2_exclusion_id: exact @name("ig_intr_md_for_tm.level2_exclusion_id") ;
@@ -335,13 +332,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ig_intr_md_for_tm.level1_mcast_hash  : exact @name("ig_intr_md_for_tm.level1_mcast_hash") ;
         }
         size = 288;
-        default_action = NoAction_4();
+        default_action = NoAction_0();
     }
     @command_line("--no-dead-code-elimination") @entries_with_ranges(1) @immediate(1) @stage(4) @name(".tcam_range") table tcam_range {
         actions = {
             tcam_range_action_0();
             nop_0();
-            @defaultonly NoAction_5();
+            @defaultonly NoAction_3();
         }
         key = {
             hdr.ipv4.dstAddr: ternary @name("ipv4.dstAddr") ;
@@ -349,7 +346,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.ttl    : range @name("ipv4.ttl") ;
         }
         size = 1024;
-        default_action = NoAction_5();
+        default_action = NoAction_3();
     }
     apply {
         if (1w0 == hdr.ig_intr_md.resubmit_flag) 

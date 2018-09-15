@@ -1696,7 +1696,6 @@ control Moapa(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         actions = {
             Neavitt_0();
             Wetumpka_0();
-            @defaultonly Wetumpka();
         }
         key = {
             meta.Harding.Honokahua  : exact @name("Harding.Honokahua") ;
@@ -1707,7 +1706,7 @@ control Moapa(inout headers hdr, inout metadata meta, inout standard_metadata_t 
             meta.Renton.Fragaria    : ternary @name("Renton.Fragaria") ;
         }
         size = 512;
-        default_action = Wetumpka();
+        default_action = Wetumpka_0();
         counters = Moody;
     }
     apply {
@@ -1918,18 +1917,18 @@ control Suamico(inout headers hdr, inout metadata meta, inout standard_metadata_
 control Tiverton(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Cedonia") RegisterAction<bit<1>, bit<1>>(Hulbert) Cedonia = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = value;
         }
     };
     @name(".Riverlea") RegisterAction<bit<1>, bit<1>>(Noyack) Riverlea = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = ~value;
         }

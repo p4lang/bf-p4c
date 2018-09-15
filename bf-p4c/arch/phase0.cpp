@@ -426,8 +426,8 @@ struct RewritePhase0IfPresent : public Transform {
         LOG4("Injecting declaration for phase 0 type: " << phase0->p4Type);
         IR::IndexedVector<IR::Node> declarations;
         declarations.push_back(phase0->p4Type);
-        program->declarations.insert(program->declarations.begin(),
-                                     declarations.begin(), declarations.end());
+        program->objects.insert(program->objects.begin(),
+                                declarations.begin(), declarations.end());
 
         return program;
     }

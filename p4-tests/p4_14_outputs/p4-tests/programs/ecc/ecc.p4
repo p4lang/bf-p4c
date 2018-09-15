@@ -200,11 +200,10 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".cntr") @min_width(32) counter(32w16384, CounterType.packets) cntr;
     @name(".m") meter(32w1024, MeterType.packets) m;
-    @name(".r_alu") RegisterAction<bit<16>, bit<16>>(r) r_alu = {
-        void apply(inout bit<16> value, out bit<16> rv) {
+    @initial_register_lo_value(1) @name(".r_alu") RegisterAction<bit<16>, bit<16>>(r) r_alu = {
+        void apply(inout bit<16> value) {
             bit<16> in_value;
             in_value = value;
-            rv = 16w0;
             value = in_value + 16w1;
         }
     };
@@ -277,6 +276,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ig_intr_md.ingress_port: exact;
         }
         size = 288;
+        default_action = set_md(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     }
     @stage(0) @name(".prsr") table prsr {
         actions = {

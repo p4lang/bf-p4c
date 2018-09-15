@@ -195,7 +195,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.meta.field_c_4 = param2;
         meta.meta.field_d_4 = 4w6;
         meta.meta.field_e_4 = 4w10;
-        meta.meta.field_f_4[3:0] = 4w8;
+        meta.meta.field_f_4[3:0] = 4w15;
         meta.meta.field_g_4 = param3;
         meta.meta.field_h0_1 = param4;
         meta.meta.field_h1_1 = 1w0;

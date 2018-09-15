@@ -177,18 +177,18 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".alu_0") RegisterAction<bit<8>, bit<8>>(reg_0) alu_0 = {
         void apply(inout bit<8> value, out bit<8> rv) {
+            rv = 8w0;
             bit<8> in_value;
             in_value = value;
-            rv = 8w0;
             value = (bit<8>)15;
             rv = value;
         }
     };
     @name(".alu_1") RegisterAction<bit<8>, bit<8>>(reg_1) alu_1 = {
         void apply(inout bit<8> value, out bit<8> rv) {
+            rv = 8w0;
             bit<8> in_value;
             in_value = value;
-            rv = 8w0;
             value = (bit<8>)0x30;
             rv = value;
         }
@@ -197,14 +197,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         {
             bit<17> temp;
             hash(temp, HashAlgorithm.random, 17w0, { hdr.pkt.field_a_32, hdr.pkt.field_b_32 }, 18w131072);
-            meta.meta.result_8 = alu_0.execute((bit<32>)temp);
+            meta.meta.result_8 = meta.meta.result_8 | alu_0.execute((bit<32>)temp);
         }
     }
     @name(".action_1") action action_1() {
         {
             bit<17> temp_0;
             hash(temp_0, HashAlgorithm.random, 17w0, { hdr.pkt.field_c_32, hdr.pkt.field_d_32, hdr.pkt.field_e_16 }, 18w131072);
-            meta.meta.result_8 = alu_1.execute((bit<32>)temp_0);
+            meta.meta.result_8 = meta.meta.result_8 | alu_1.execute((bit<32>)temp_0);
         }
     }
     @name(".table_0") table table_0 {

@@ -611,10 +611,9 @@ control Ardara(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control Devers(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Amanda") @min_width(16) direct_counter(CounterType.packets_and_bytes) Amanda;
     @name(".Warsaw") RegisterAction<bit<1>, bit<1>>(Hobson) Warsaw = {
-        void apply(inout bit<1> value, out bit<1> rv) {
+        void apply(inout bit<1> value) {
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = 1w1;
         }
     };
@@ -670,7 +669,6 @@ control Devers(inout headers hdr, inout metadata meta, inout standard_metadata_t
         actions = {
             WestEnd_0;
             Glazier_0;
-            @defaultonly Glazier;
         }
         key = {
             meta.Azusa.Mishicot   : exact;
@@ -681,7 +679,7 @@ control Devers(inout headers hdr, inout metadata meta, inout standard_metadata_t
             meta.Rhodell.Pikeville: ternary;
         }
         size = 512;
-        default_action = Glazier();
+        default_action = Glazier_0();
         counters = Amanda;
     }
     apply {
@@ -1316,18 +1314,18 @@ control Parmelee(inout headers hdr, inout metadata meta, inout standard_metadata
 control Satanta(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Ackerman") RegisterAction<bit<1>, bit<1>>(Sonora) Ackerman = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = value;
         }
     };
     @name(".Exeter") RegisterAction<bit<1>, bit<1>>(Newfane) Exeter = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             bit<1> in_value;
             in_value = value;
-            rv = 1w0;
             value = in_value;
             rv = value;
         }
