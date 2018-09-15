@@ -29,6 +29,10 @@ struct FlowGraph {
     boost::optional<gress_t> gress;
     std::map<typename Graph::vertex_descriptor, bitvec> reachableNodes;
     ordered_map<const IR::MAU::Table*, int> tableToVertexIndex;
+    // By default, emptyFlowGraph is set to true to indicate that there are no vertices in the
+    // graph. Only when the first actual table is added to the flow graph is this member set to
+    // false.
+    bool emptyFlowGraph = true;
 
     FlowGraph(void) {
         gress = boost::none;
@@ -43,6 +47,7 @@ struct FlowGraph {
         gress = boost::none;
         reachableNodes.clear();
         tableToVertexIndex.clear();
+        emptyFlowGraph = true;
     }
 
     void add_sink_vertex() {
@@ -78,6 +83,9 @@ struct FlowGraph {
         } else {
             auto v = boost::add_vertex(label, g);
             labelToVertex[label] = v;
+            // If the vertex being added corresponds to a real table (not the sink), then it no
+            // longer is empty; set the emptyFlowGraph member accordingly.
+            if (label != nullptr) emptyFlowGraph = false;
             return v;
         }
     }

@@ -571,6 +571,12 @@ class ActionPhvConstraints : public Inspector {
       */
     bool checkBridgedPackingConstraints(const ordered_set<const PHV::Field*>& packing) const;
 
+    /** @returns true if field @f is written in action @act.
+      */
+    bool written_in(const PHV::Field* f, const IR::MAU::Action* act) const {
+        return actions_writing_fields(f).count(act);
+    }
+
     /** For GTest function.
       * Checks if the field_writes_to_actions ordered_map entry is valid or not
       */

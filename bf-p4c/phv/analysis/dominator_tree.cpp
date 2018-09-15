@@ -5,19 +5,27 @@
 using namespace boost;
 
 bool BuildDominatorTree::preorder(const IR::BFN::Pipe *pipe) {
-    // Generate flow graph for each gress: ingress and egress.
-    for (size_t i = 0; i < 2 /* pipe->thread.size() */; ++i)
-        pipe->thread[i].mau->apply(FindFlowGraph(flowGraph[i]));
+    const int numThreads = (sizeof(pipe->thread) / sizeof(IR::BFN::Pipe::thread_t));
+    for (size_t i = 0; i < numThreads /* pipe->thread.size() */; ++i) {
+        flowGraph.push_back(new FlowGraph());
+        pipe->thread[i].mau->apply(FindFlowGraph(*(flowGraph[i])));
+    }
 
     // Generate dominator tree for each gress.
-    for (auto& fg : flowGraph) {
-        std::map<int, const IR::MAU::Table*> indexMap;
-        if (!fg.gress)
+    for (auto* fg : flowGraph) {
+        ordered_map<int, const IR::MAU::Table*> indexMap;
+        // If the flow graph is empty (e.g. no egress tables), no need to build the dominator map.
+        // However, we still create an ImmediateDominatorMap for the particular gress.
+        if (fg->emptyFlowGraph) {
+            iDominator.push_back(new ImmediateDominatorMap());
+            continue;
+        }
+        if (!fg->gress)
             BUG("Gress not assigned for flow graph");
-        gress_t graphGress = *(fg.gress);
-        generateIndexToTableMap(fg, indexMap);
+        gress_t graphGress = *(fg->gress);
+        generateIndexToTableMap(*fg, indexMap);
         iDominator.push_back(new ImmediateDominatorMap);
-        generateDominatorTree(fg, indexMap, *(iDominator.at(graphGress)));
+        generateDominatorTree(*fg, indexMap, *(iDominator.at(graphGress)));
     }
     if (!LOGGING(1)) return false;
     for (size_t i = 0; i < iDominator.size(); ++i) {
@@ -28,8 +36,7 @@ bool BuildDominatorTree::preorder(const IR::BFN::Pipe *pipe) {
 }
 
 Visitor::profile_t BuildDominatorTree::init_apply(const IR::Node* root) {
-    for (auto& fg : flowGraph)
-        fg.clear();
+    flowGraph.clear();
     for (auto* idom : iDominator)
         idom->clear();
     return Inspector::init_apply(root);
@@ -37,7 +44,7 @@ Visitor::profile_t BuildDominatorTree::init_apply(const IR::Node* root) {
 
 void BuildDominatorTree::generateIndexToTableMap(
         const FlowGraph& fg,
-        std::map<int, const IR::MAU::Table*>& indexMap) const {
+        ordered_map<int, const IR::MAU::Table*>& indexMap) const {
     graph_traits<G>::vertex_iterator uItr, uEnd;
     // For each vertex, create a map of the index of the vertex to the table that vertex represents.
     // This is useful for translating the results of the boost dominator algorithm (which operates
@@ -54,10 +61,10 @@ void BuildDominatorTree::generateIndexToTableMap(
 
 void BuildDominatorTree::generateDominatorTree(
         const FlowGraph& fg,
-        const std::map<int, const IR::MAU::Table*>& indexToTableMap,
+        const ordered_map<int, const IR::MAU::Table*>& indexToTableMap,
         ImmediateDominatorMap& iDom) {
     // idom is a mapping from index of a vertex to the index of its immediate dominator veretx.
-    std::map<int, int> idom;
+    ordered_map<int, int> idom;
 
     // Standard boost dominator tree analysis.
     std::vector<Vertex> domTreePredVector;
@@ -134,6 +141,9 @@ BuildDominatorTree::getNonGatewayImmediateDominator(const IR::MAU::Table* t, gre
     if (!dom) return boost::none;
     // If the table is not a gateway, then return the immediate dominator itself.
     if (!((*dom)->gateway_only())) return (*dom);
+    // If the table is the same as its dominator then we are at the source node and if the source
+    // node is a gateway, then return boost::noone.
+    if ((*dom)->gateway_only() && t == *dom) return boost::none;
     // If the table is the same as its dominator then we are at the source node, so return the
     // source node.
     if (t == *dom) return t;
@@ -170,7 +180,7 @@ BuildDominatorTree::getAllDominators(const IR::MAU::Table* t, gress_t gress) con
 }
 
 const IR::MAU::Table*
-BuildDominatorTree::getNonGatewayGroupDominator(std::set<const IR::MAU::Table*>& tables) const {
+BuildDominatorTree::getNonGatewayGroupDominator(ordered_set<const IR::MAU::Table*>& tables) const {
     // Validate that all tables are of the same gress.
     boost::optional<gress_t> gress = boost::none;
     for (const auto* t : tables) {
@@ -183,7 +193,7 @@ BuildDominatorTree::getNonGatewayGroupDominator(std::set<const IR::MAU::Table*>&
     }
 
     // Find all the nodes from the given table to the source.
-    std::map<const IR::MAU::Table*, std::vector<const IR::MAU::Table*>> pathsToSource;
+    ordered_map<const IR::MAU::Table*, std::vector<const IR::MAU::Table*>> pathsToSource;
     boost::optional<unsigned> minDepth = boost::none;
     for (const auto* t : tables) {
         pathsToSource[t] = getAllDominators(t, gress.get());

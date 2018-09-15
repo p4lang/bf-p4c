@@ -41,6 +41,15 @@ class MetadataLiveRange : public Inspector {
     /// @range2 by less than DEP_DIST stages.
     static bool overlaps(std::pair<int, int>& range1, std::pair<int, int>& range2);
 
+    /// Set of intrinsic metadata fields that must not be initialized.
+    static const ordered_set<cstring> noInitIntrinsicFields;
+
+    /// Type of access in a unit. OR these together for a Read/Write access (RW=3).
+    enum access_t { READ = 1, WRITE = 2 };
+
+    /// @returns a string representation of an access value.
+    static cstring printAccess(int access);
+
  private:
     PhvInfo                                 &phv;
     const DependencyGraph                   &dg;
@@ -62,6 +71,8 @@ class MetadataLiveRange : public Inspector {
 
     /// Map of field ID to the live range for each field.
     ordered_map<int, std::pair<int, int>>  livemap;
+    /// Map of field ID to the access type (read, write, or read/write) in the min and max stage.
+    ordered_map<int, std::pair<int, int>>  livemapUsage;
 
     /// Map of stage to the set of tables whose min_stage is the key stage.
     ordered_map<int, ordered_set<const IR::MAU::Table*>> minStages;
@@ -90,9 +101,22 @@ class MetadataLiveRange : public Inspector {
         return livemap;
     }
 
+    /// @returns the usages of the min and max stage for all metadata fields: key is field ID and
+    /// the value is the access_t pair [access in minStage, access in maxStage].
+    const ordered_map<int, std::pair<int, int>>& getMetadataLiveMapUsage() const {
+        return livemapUsage;
+    }
+
     /// @returns a map of stage to the set of tables whose min_stage is the key stage.
     const ordered_map<int, ordered_set<const IR::MAU::Table*>>& getMinStageMap() const {
         return minStages;
+    }
+
+    /// @returns the set of tables that have min_stage equal to @stage.
+    const ordered_set<const IR::MAU::Table*> getTablesInStage(int stage) const {
+        if (!minStages.count(stage))
+            BUG("Stage %1% not in the resource-insensitive tabel dependence graph", stage);
+        return minStages.at(stage);
     }
 
     /// @returns true if fields @f1 and @f2 are found to be potentially overlayable because of their

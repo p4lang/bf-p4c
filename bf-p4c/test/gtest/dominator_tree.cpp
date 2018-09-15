@@ -291,8 +291,9 @@ apply {
     )"));
     ASSERT_TRUE(test);
 
-    FlowGraph fg_ingress, fg_egress;
-    std::vector<FlowGraph> fg;
+    FlowGraph* fg_ingress = new FlowGraph();
+    FlowGraph* fg_egress = new FlowGraph();
+    std::vector<FlowGraph*> fg;
     fg.push_back(fg_ingress);
     fg.push_back(fg_egress);
     auto* dom_tree = new BuildDominatorTree(fg);
