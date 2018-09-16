@@ -591,8 +591,8 @@ if $run_pd ; then
        if [ $device == tofino2 ]; then
           switchdir="$(dirname $0)/p4_14/switch-jbay"
        else
-	  if [[ "$file" == *8.3* ]]; then
-            switchdir="$(dirname $0)/p4_14/switch-8.3"
+	  if [[ "$file" == *8.4* ]]; then
+            switchdir="$(dirname $0)/p4_14/switch-8.4"
 	  else
             switchdir="$(dirname $0)/p4_14/switch"
 	  fi
@@ -630,7 +630,15 @@ if $run_pd ; then
     # generate the conf file. FIXME: This should really be part of p4-build!!
     conf_args="--name $name --device $device --testdir $testout"
     if [ $name == switch ]; then
-        conf_args="$conf_args --switch-api switchapi"
+        if [[ "$ptftestdir" == *sai* ]]; then
+            conf_args="$conf_args --switch-api switchsai"
+            port_map_file="--port_map_file $PORT_MAP_FILE"
+            if [ ! -z "$TEST_PORT" ]; then
+                test_port="--test_port $TEST_PORT"
+            fi
+        else
+            conf_args="$conf_args --switch-api switchapi"
+        fi
     fi
     run $(dirname $0)/gen_pd_conf.py $conf_args
     PTF_RUNNER=$(findbin HARLYN_PTF_DRIVER_WRAPPER)
@@ -642,6 +650,8 @@ if $run_pd ; then
                              --top-builddir $(findcmakecache) \
                              --pdtest $testout/${name}.conf \
                              --device ${device} \
+                             $port_map_file \
+                             $test_port \
                              $PTF_EXTRA_ARGS"
         run $PTF_CMD
         ptf_test_status=$?

@@ -280,7 +280,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_311_hash_adb.p4
   switch_ent_fin_postcard
   switch_8.3_l3_heavy_int_leaf
-  switch_l3_heavy_int_leaf
   )
 
 # BRIG-102
@@ -299,10 +298,46 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error.*Power worst case estimated budget exceeded by*"
   extensions/p4_tests/p4_14/p4-tests/programs/clpm/clpm.p4
-  switch_msdc_l3
-  switch_8.3_msdc_l3
-  switch_8.3_msdc_leaf_int
   switch_msdc_leaf_int
+  switch_l3_heavy_int_leaf
+  )
+
+# switch_spine_dtel_int test failures
+p4c_add_xfail_reason("tofino"
+  "Received packet that we expected not to receive on device 0, port 0"
+  smoketest_switch_8.4_spine_dtel_int_L2FloodTest
+  smoketest_switch_8.4_spine_dtel_int_L3VIIPv4HostFloodTest
+  smoketest_switch_8.4_spine_dtel_int_L2DynamicLearnAgeTest
+  smoketest_switch_8.4_spine_dtel_int_L3VIFloodTest
+  smoketest_switch_8.4_spine_dtel_int_L2DynamicMacMoveTest
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Received packet did not match expected packet"
+  smoketest_switch_8.4_spine_dtel_int_set_2_intl45_transitTest_hop2_stateless
+  smoketest_switch_8.4_spine_dtel_int_set_2_INTL45_Transit_IngressMoDTest
+  smoketest_switch_8.4_spine_dtel_int_set_2_MirrorOnDropHostifReasonCodeTest
+  smoketest_switch_8.4_spine_dtel_int_set_2_MirrorOnDropIngressAclTest
+  smoketest_switch_8.4_spine_dtel_int_set_2_MirrorOnDropNonDefaultRuleTest
+  smoketest_switch_8.4_spine_dtel_int_set_2_QueueReport_Entropy_Test
+  smoketest_switch_8.4_spine_dtel_int_set_2_QueueReport_Quota_Test
+  smoketest_switch_8.4_spine_dtel_int_set_5_INGRESS_DROP_REPORT_Test
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Did not receive pkt on 2"
+  smoketest_switch_8.4_spine_dtel_int_set_2_INTL45_Transit_EgressMoDTest
+  smoketest_switch_8.4_spine_dtel_int_set_2_MirrorOnDropEgrNonDefaultRuleTest
+  smoketest_switch_8.4_spine_dtel_int_set_3_INTL45_Transit_DoDTest
+  smoketest_switch_8.4_spine_dtel_int_set_3_MirrorOnDropDoDTest
+  smoketest_switch_8.4_spine_dtel_int_set_3_QueueReport_DoD_Test
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Did not receive expected pkt*"
+  smoketest_switch_8.4_spine_dtel_int_set_2_QueueReport_Over_ECMP_Test
+  smoketest_switch_8.4_spine_dtel_int_set_2_QueueReport_MirrorTest
+  smoketest_switch_8.4_spine_dtel_int_set_2_QueueReport_L2_MirrorTest
   )
 
 # BRIG-113
@@ -1004,6 +1039,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Fields involved in the same MAU operations have conflicting PARDE alignment requirements"
   extensions/p4_tests/p4_14/p4smith_regression/grab_0.p4
+  switch_msdc_l3
 )
 
 # BRIG-651
@@ -1215,6 +1251,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: ALU ops cannot operate on slices"
   extensions/p4_tests/p4_14/p4smith_regression/shrubs_0.p4
+  switch_8.3_msdc_leaf_int
 )
 
 # BRIG-927

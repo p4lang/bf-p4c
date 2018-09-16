@@ -49,6 +49,10 @@ def get_parser():
                         type=str, action="store", required=False)
     parser.add_argument('--pdtest', help='Directory containing the PD conf file',
                         type=str, action="store", required=False, default=None)
+    parser.add_argument('--port_map_file', help='Directory containing the PD SAI portmap file',
+                        type=str, action="store", required=False, default=None)
+    parser.add_argument('--test_port', help='Test port number for some PD tests',
+                        type=str, action="store", required=False, default=None)
     # mutually exclusive with --pdtest
     parser.add_argument('--bfrt-test', help='Directory containing the BFRT conf file',
                         type=str, action="store", required=False, default=None)
@@ -200,7 +204,8 @@ def run_pi_ptf_tests(PTF, grpc_addr, ptfdir, p4info_path, port_map, stftest,
     return p.returncode == 0
 
 def run_pd_ptf_tests(PTF, device, p4name, config_file, ptfdir, testdir, platform, port_map,
-                     verbose_model_log, extra_args=[], installdir="/usr/local"):
+                     verbose_model_log, extra_args=[], port_map_file=None, test_port=None, 
+                     installdir="/usr/local"):
     if verbose_model_log:
         enable_verbose_model_log()
 
@@ -225,8 +230,9 @@ def run_pd_ptf_tests(PTF, device, p4name, config_file, ptfdir, testdir, platform
     os.environ['PYTHONPATH'] += ":" + res_pd_rpc
     debug('PYTHONPATH={}'.format(os.environ['PYTHONPATH']))
 
-    for iface_idx, iface_name in port_map.items():
-        ifaces.extend(['-i', '{}@{}'.format(iface_idx, iface_name)])
+    if port_map_file is None:
+        for iface_idx, iface_name in port_map.items():
+            ifaces.extend(['-i', '{}@{}'.format(iface_idx, iface_name)])
     cmd = [PTF]
     cmd.extend(['--test-dir', ptfdir])
     cmd.extend(ifaces)
@@ -238,6 +244,13 @@ def run_pd_ptf_tests(PTF, device, p4name, config_file, ptfdir, testdir, platform
     test_params += ';thrift_server=\'localhost\''
     test_params += ';use_pi=\'False\''
     test_params += ';test_seed=\'None\''
+    
+    if test_port is not None:
+        test_params += ';test_port={}'.format(test_port)
+  
+    if port_map_file is not None:
+        test_params += ';port_map_file=\'{}\''.format(port_map_file)
+
     if platform is not None:
         test_params += ';pltfm=\'{}\''.format(platform)
     cmd.append('--test-params={}'.format(test_params))
@@ -254,7 +267,8 @@ def run_pd_ptf_tests(PTF, device, p4name, config_file, ptfdir, testdir, platform
     return p.returncode == 0
 
 # model uses the context json to lookup names when logging
-def start_model(model, out=None, context_json=None, port_map_path=None, device=None):
+def start_model(model, out=None, context_json=None, port_map_path=None, 
+                device=None, extra_ptf_args=None):
     cmd = [model]
     if context_json is not None:
         cmd.extend(['-l', context_json])
@@ -264,6 +278,10 @@ def start_model(model, out=None, context_json=None, port_map_path=None, device=N
         cmd.extend(['--chip-type=4']) # default CHIPTYPE=4 for Jbay
     else:
         cmd.extend(['--chip-type=2']) # default CHIPTYPE=2 for TofinoB0
+
+    if '_dod' in extra_ptf_args or 'DoD' in extra_ptf_args:
+        cmd.extend(['--dod-test-mode'])
+
     debug("Starting model: {}".format(' '.join(cmd)))
     return subprocess.Popen(cmd, stdout=out, stderr=out)
 
@@ -493,11 +511,13 @@ def main():
         if args.pdtest:
             success = run_pd_ptf_tests(PTF, args.device, args.name, args.pdtest, args.ptfdir,
                                        args.testdir, args.platform, port_map, args.verbose_model_log,
-                                       extra_ptf_args, installdir=BFD_INSTALLDIR)
+                                       extra_ptf_args, args.port_map_file, args.test_port, 
+                                       installdir=BFD_INSTALLDIR)
         elif args.bfrt_test and not args.run_bfrt_as_pi:
             success = run_pd_ptf_tests(PTF, args.device, args.name, args.bfrt_test, args.ptfdir,
                                        args.testdir, args.platform, port_map, args.verbose_model_log,
-                                       extra_ptf_args, installdir=BFD_INSTALLDIR)
+                                       extra_ptf_args, args.port_map_file, args.test_port, 
+                                       installdir=BFD_INSTALLDIR)
         else:
             success = run_pi_ptf_tests(PTF, args.grpc_addr, args.ptfdir, p4info_path,
                                     port_map, args.stftest, args.platform, args.verbose_model_log,
@@ -546,7 +566,8 @@ def main():
             model_p = start_model(HARLYN_MODEL, out=model_out,
                                   context_json=cxt_json_path,
                                   port_map_path=port_map_path,
-                                  device=args.device)
+                                  device=args.device,
+                                  extra_ptf_args=extra_ptf_args)
             processes["model"] = model_p
 
             if args.pdtest is not None:
@@ -573,11 +594,13 @@ def main():
             if args.pdtest is not None:
                 success = run_pd_ptf_tests(PTF, args.device, args.name, args.pdtest, args.ptfdir,
                                            args.testdir, args.platform, port_map, args.verbose_model_log,
-                                           extra_ptf_args, installdir=BFD_INSTALLDIR)
+                                           extra_ptf_args, args.port_map_file, args.test_port, 
+                                           installdir=BFD_INSTALLDIR)
             elif args.bfrt_test and not args.run_bfrt_as_pi:
                 success = run_pd_ptf_tests(PTF, args.device, args.name, args.bfrt_test, args.ptfdir,
                                            args.testdir, args.platform, port_map, args.verbose_model_log,
-                                           extra_ptf_args, installdir=BFD_INSTALLDIR)
+                                           extra_ptf_args, args.port_map_file, args.test_port, 
+                                           installdir=BFD_INSTALLDIR)
             else:
                 success = update_config(args.name, args.grpc_addr,
                                     p4info_path, bin_path, cxt_json_path)

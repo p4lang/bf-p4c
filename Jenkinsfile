@@ -44,7 +44,7 @@ node {
                             ansiColor('xterm') {
                                 timestamps {
                                     sh "echo 'Running switch profiles compilation for master'"
-                                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' bf-p4c-compilers_${image_tag} ctest -R '^tofino/.*switch_' -E 'smoketest|8.3|p4_14'"
+                                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' bf-p4c-compilers_${image_tag} ctest -R '^tofino/.*switch_' -E 'smoketest|8.3|8.4|p4_14'"
                                 }
                             }
                         }
@@ -56,33 +56,34 @@ node {
                                 }
                             }
                         }
+                        // TODO: Add switch 8.4 profiles compile only (currently switch and switch-8.4 submodules are pointing to the same ref, so not added)
                     } catch (err) {
                         sh "echo 'Swith profiles compile_only failed'"
                         currentBuild.result = 'FAILED'
                         throw err
                     }
                 },
-                switch_8_3_msdc_l3_tests: {
+                switch_8_4_spine_dtel_int_tests: {
                     ansiColor('xterm') {
                         timestamps {
-                            sh "echo 'Running switch PD tests for MSDC_L3_PROFILE_BRIG'"
-                            sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' bf-p4c-compilers_${image_tag} ctest -R '^tofino/.*smoketest_switch_8.3_l3_msdc'"
+                            sh "echo 'Running switch PD tests for MSDC_SPINE_DTEL_INT_PROFILE_BRIG'"
+                            sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' bf-p4c-compilers_${image_tag} ctest -R '^tofino/.*smoketest_switch_8.4_spine_dtel_int'"
                         }
                     }
                 },
-                switch_8_3_dc_basic_tests: {
+                switch_8_4_dc_basic_tests: {
                     ansiColor('xterm') {
                         timestamps {
                             sh "echo 'Running switch PD tests for DC_BASIC_PROFILE_BRIG'"
-                            sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' bf-p4c-compilers_${image_tag} ctest -R '^tofino/.*smoketest_switch_8.3_dc_basic'"
+                            sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' bf-p4c-compilers_${image_tag} ctest -R '^tofino/.*smoketest_switch_8.4_dc_basic'"
                         }
                     }
                 },
-                switch_8_3_ent_dc_general_tests: {
+                switch_8_4_ent_dc_general_tests: {
                     ansiColor('xterm') {
                         timestamps {
                             sh "echo 'Running switch PD tests for ENT_DC_GENERAL_PROFILE_BRIG'"
-                            sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' bf-p4c-compilers_${image_tag} ctest -R '^tofino/.*smoketest_switch_8.3_ent_dc_general'"
+                            sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' bf-p4c-compilers_${image_tag} ctest -R '^tofino/.*smoketest_switch_8.4_ent_dc_general'"
                         }
                     }
                 }

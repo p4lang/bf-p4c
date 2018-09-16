@@ -77,12 +77,13 @@ def main():
     p4_info["id"] = args.testdir + ':' + args.name + '-0'
     p4_info["cpu_port"] = "veth251"
 
-    if args.switch_api is not None:
+    if args.switch_api == "switchapi":
         p4_info["switchapi"] = os.path.join(args.testdir, "lib", "libswitchapi.so")
         p4_info["agent0"] = os.path.join(args.testdir, "lib", "libpltfm_mgr.so")
-        if args.switch_api == "switchsai":
-            p4_info["switchsai"] = os.path.join(args.testdir, "lib", "libswitchsai.so")
-            p4_info["switchapi_port_add"] = False
+    if args.switch_api == "switchsai":
+        p4_info["switchapi"] = os.path.join(args.testdir, "lib", "libswitchapi.so")
+        p4_info["switchsai"] = os.path.join(args.testdir, "lib", "libswitchsai.so")
+        p4_info["agent0"] = os.path.join(args.testdir, "lib", "libpltfm_mgr.so")
 
     conf_name = os.path.join(args.testdir, args.name + '.conf')
     with open(conf_name, 'w') as fconf:

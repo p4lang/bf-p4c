@@ -41,7 +41,7 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
   # stf test fails without any error
   p4c_add_xfail_reason("tofino2"
     "jbay_test_harness FAILED"
-    extensions/p4_tests/p4_16/jbay/minmax1.p4
+    extensions/p4_tests/p4_16/jbay/hwlearn2.p4
   )
 
 endif() # HARLYN_STF

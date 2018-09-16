@@ -96,6 +96,16 @@ function(bfn_set_ptf_test_spec tag p4test ptf_test_spec)
     APPEND PROPERTY ENVIRONMENT "PTF_TEST_SPECS=${ptf_test_spec}")
 endfunction()
 
+function(bfn_set_ptf_port_map_file tag p4test port_map_file)
+  set_property(TEST "${tag}/${p4test}"
+    APPEND PROPERTY ENVIRONMENT "PORT_MAP_FILE=${port_map_file}")
+endfunction()
+
+function(bfn_set_ptf_test_port tag p4test test_port)
+  set_property(TEST "${tag}/${p4test}"
+    APPEND PROPERTY ENVIRONMENT "TEST_PORT=${test_port}")
+endfunction()
+
 # call this macro to register a PTF test with a custom PTF test directory; by
 # default the behavior is to look for a directory with the same name as the P4
 # program and a .ptf extension, which may not always be convenient when adding
