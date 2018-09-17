@@ -368,6 +368,7 @@ class Table : BFN::Unit {
         // FIXME -- the action is visited, and this will be a 'revisit'
         attached.visit_children(v);
     }
+    toString { return "table " + (match_table ? match_table->name.toString() : name); }
 #apply
 }
 

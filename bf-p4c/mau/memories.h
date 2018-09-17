@@ -410,11 +410,6 @@ struct Memories {
         }
     };
 
-    struct shared_attached {
-        const IR::MAU::BackendAttached *ba;
-        table_alloc *linked_ta;
-    };
-
     // Used for array indices in allocate_all_action
     enum RAM_side_t { LEFT = 0, RIGHT, RAM_SIDES };
     enum switchbox_t { ACTION = 0, SYNTH, OFLOW, SWBOX_TYPES };

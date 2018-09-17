@@ -170,7 +170,6 @@ struct TablePlacement::Placed {
     int                         initial_stage_split = -1;
     int                         stage_split = -1;
     StageUseEstimate            use;
-    StageUseEstimate            extra_use;
     const TableResourceAlloc    *resources;
     Placed(TablePlacement &self, const IR::MAU::Table *t)
         : self(self), id(++uid_counter), table(t) {
@@ -194,38 +193,16 @@ struct TablePlacement::Placed {
         return nullptr; }
 
     bool gateway_merge(ordered_set<const IR::MAU::Table *> &attempted_tables);
-    void set_prev(const Placed *p, bool make_new,
-                  safe_vector<TableResourceAlloc *> &prev_resources) {
-        if (!make_new) {
-            prev = p;
-            if (p) {
-                placed = p->placed;
-            }
-        } else {
-            int stage = -1;
-            int index = 0;
-            if (p) {
-               placed = p->placed;
-               stage = p->stage;
-            }
-            auto *curr_p = this;
-            auto *prev_p = p;
-            while (stage != -1) {
-                auto *new_p = new Placed(*prev_p);
-                new_p->resources = prev_resources[index];
-                index++;
-                curr_p->prev = new_p;
-                curr_p = new_p;
-                prev_p = prev_p->prev;
-                if (prev_p == nullptr || prev_p->stage != curr_p->stage) {
-                    curr_p->prev = prev_p;
-                    stage = -1;
-                }
-            }
-            BUG_CHECK(size_t(index) == prev_resources.size(), "Table Placement could not "
-                      "correctly clear a stage");
-        }
-    }
+    const Placed *update_resources(int stage, unsigned index,
+                                   safe_vector<TableResourceAlloc *> &prev_resources) const {
+        if (index >= prev_resources.size()) {
+            BUG_CHECK(stage != this->stage, "failed to update entire stage in update_resources");
+            return this; }
+        BUG_CHECK(stage == this->stage, "stage mismatch in update_resources");
+        auto *rv = new Placed(*this);
+        rv->resources = prev_resources[index];
+        rv->prev = prev ? prev->update_resources(stage, index+1, prev_resources) : nullptr;
+        return rv; }
     friend std::ostream &operator<<(std::ostream &out, const TablePlacement::Placed *pl) {
         out << pl->name;
         return out; }
@@ -235,7 +212,7 @@ struct TablePlacement::Placed {
           entries(p.entries), placed(p.placed), need_more(p.need_more),
           gw_result_tag(p.gw_result_tag), table(p.table), gw(p.gw), stage(p.stage),
           logical_id(p.logical_id), initial_stage_split(p.initial_stage_split),
-          stage_split(p.stage_split), use(p.use), extra_use(p.extra_use), resources(p.resources)
+          stage_split(p.stage_split), use(p.use), resources(p.resources)
           { traceCreation(); }
 
  private:
@@ -451,11 +428,9 @@ bool TablePlacement::try_alloc_mem(Placed *next, const Placed *done,
         TableResourceAlloc *resources, safe_vector<TableResourceAlloc *> &prev_resources) {
     Memories current_mem;
     int i = 0;
-    for (auto *p = done; p && p->stage == next->stage; p = p->prev) {
+    for (auto *p = done; p && p->stage == next->stage; p = p->prev, ++i) {
          current_mem.add_table(p->table, p->gw, prev_resources[i], p->use.preferred(),
-                               p->entries, p->stage_split);
-         i++;
-    }
+                               p->entries, p->stage_split); }
     current_mem.add_table(next->table, next->gw, resources, next->use.preferred(), next->entries,
                           next->stage_split);
     resources->memuse.clear();
@@ -584,12 +559,10 @@ static void coord_selector_xbar(const TablePlacement::Placed *curr,
         && !resource->selector_ixbar.use.empty()))
         return;
     int j = 0;
-    for (auto *p = done; p && p->stage == curr->stage; p = p->prev) {
+    for (auto *p = done; p && p->stage == curr->stage; p = p->prev, ++j) {
         const IR::MAU::Selector *p_as = nullptr;
-        if (p == curr) {
-            j++;
+        if (p == curr)
             continue;
-        }
         for (auto back_at : p->table->attached) {
             auto at = back_at->attached;
             if ((p_as = at->to<IR::MAU::Selector>()) != nullptr)
@@ -600,7 +573,6 @@ static void coord_selector_xbar(const TablePlacement::Placed *curr,
             prev_resources[j]->selector_ixbar.clear();
             break;
         }
-        j++;
     }
 }
 
@@ -616,12 +588,10 @@ static void coord_action_data_xbar(const TablePlacement::Placed *curr,
     if (!resource->action_data_xbar.empty())
         return;
     int j = 0;
-    for (auto *p = done; p && p->stage == curr->stage; p = p->prev) {
+    for (auto *p = done; p && p->stage == curr->stage; p = p->prev, ++j) {
         const IR::MAU::ActionData *p_ad = nullptr;
-        if (p == curr) {
-            j++;
+        if (p == curr)
             continue;
-        }
         for (auto back_at : p->table->attached) {
             auto at = back_at->attached;
             if ((p_ad = at->to<IR::MAU::ActionData>()) != nullptr)
@@ -632,7 +602,6 @@ static void coord_action_data_xbar(const TablePlacement::Placed *curr,
             resource->instr_mem = prev_resources[j]->instr_mem;
             break;
         }
-        j++;
     }
 }
 
@@ -733,7 +702,7 @@ safe_vector<TablePlacement::Placed *> TablePlacement::try_place_table(const IR::
     ordered_set<const IR::MAU::Table *> attempted_tables;
     safe_vector<TablePlacement::Placed *> rv_vec;
     while (true) {
-        auto *rv = (new Placed(*this, t));
+        auto *rv = new Placed(*this, t);
         bool try_allocation = rv->gateway_merge(attempted_tables);
         if (!try_allocation) break;
         rv = try_place_table(rv, t, done, current);
@@ -922,26 +891,22 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv, const IR::MA
     LOG2("try_place_table returning " << rv->entries << " of " << rv->name <<
          " in stage " << rv->stage << (rv->need_more ? " (need more)" : ""));
     int i = 0;
-    for (auto *p = done; p && p->stage == rv->stage; p = p->prev) {
+    for (auto *p = done; p && p->stage == rv->stage; p = p->prev, ++i) {
         coord_selector_xbar(p, done, prev_resources[i], prev_resources);
         coord_action_data_xbar(p, done, prev_resources[i], prev_resources);
-        i++;
     }
     coord_selector_xbar(rv, done, resources, prev_resources);
     coord_action_data_xbar(rv, done, resources, prev_resources);
-    if (done && rv->stage == done->stage) {
-        rv->set_prev(done, true, prev_resources);
-    } else {
-        rv->set_prev(done, false, prev_resources);
-    }
+    if (done) {
+        if (done->stage == rv->stage)
+            done = done->update_resources(rv->stage, 0, prev_resources);
+        rv->placed = done->placed; }
+    rv->prev = done;
 
     if (!rv->need_more) {
         rv->placed[tblInfo.at(rv->table).uid] = true;
         if (rv->gw)
             rv->placed[tblInfo.at(rv->gw).uid] = true;
-    } else {
-        int extra_entries = set_entries - rv->entries;
-        rv->extra_use = StageUseEstimate(t, extra_entries, &lc);
     }
 
     return rv;
