@@ -1612,11 +1612,11 @@ class MauAsmOutput::EmitAction : public Inspector {
         out << sep << r->name;
         sep = ", ";
         return false; }
-    bool preorder(const IR::MAU::SaluMathFunction *mf) override {
+    bool preorder(const IR::MAU::SaluFunction *fn) override {
         assert(sep);
-        out << sep << "math_table";
+        out << sep << fn->name;
         sep = "(";
-        visit(mf->expr, "expr");
+        visit(fn->expr, "expr");
         out << ")";
         sep = ", ";
         return false; }

@@ -722,9 +722,10 @@ class SaluReg : Expression {
     dbprint { out << name << (hi ? " {hi}" : ""); }
 }
 
-class SaluMathFunction : Operation_Unary {
-    stringOp = "math_unit";
-    dbprint { out << "math_unit (" << expr << ")"; }
+class SaluFunction : Operation_Unary {
+    cstring             name;
+    stringOp = "function";  // unused
+    dbprint { out << name << "(" << expr << ")"; }
 }
 
 class MultiOperand : ListExpression {

@@ -676,7 +676,8 @@ struct OutOP : public SaluInstruction {
     int predication_encode = STATEFUL_PREDICATION_ENCODE_UNCOND;
     int output_mux;
 #if HAVE_JBAY
-    bool lmatch = false, pred_disable = false;
+    bool lmatch = false;
+    int lmatch_pred = 0;
 #endif
     operand::Phv *output_operand = 0;
     FOR_ALL_TARGETS(TARGET_OVERLOAD, void decode_output_mux, value_t &op)

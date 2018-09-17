@@ -288,9 +288,13 @@ void OutOP::decode_output_mux(Target::JBay, value_t &op) {
         output_mux = -1;
 }
 int OutOP::decode_output_option(Target::JBay, value_t &op) {
-    if (op == "lmatch") lmatch = true;
-    else if (op == "pred_disable") pred_disable = true;
-    else return -1;
+    if (op == "lmatch") {
+        lmatch = true;
+        if (op.type == tCMD)
+            lmatch_pred = decode_predicate(op[1]);
+        else
+            lmatch_pred = STATEFUL_PREDICATION_ENCODE_UNCOND;
+    } else return -1;
     return 0;
 }
 
@@ -306,8 +310,8 @@ void OutOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions
     } else {
         salu.salu_output_cmpfn = STATEFUL_PREDICATION_ENCODE_UNCOND; }
     salu.salu_output_asrc = output_operand ? 2 + output_operand->phv_index(tbl) : output_mux;
-    salu.salu_lmatch_adr_bit_enable = lmatch;
-    salu.salu_pred_disable = pred_disable;
+    if ((salu.salu_lmatch_adr_bit_enable = lmatch))
+        meter_group.stateful.salu_mathtable[0] = lmatch_pred;
     if (output_mux == STATEFUL_PREDICATION_OUTPUT)
         meter_group.stateful.stateful_ctl.salu_output_pred_sel = slot - ALUOUT0;
 }

@@ -58,16 +58,6 @@ static bool is_learn(const IR::Expression *e) {
     return false;
 }
 
-static bool is_predicate(const IR::Expression *e) {
-    if (auto *r = e->to<IR::MAU::SaluReg>())
-        for (auto cmp : Device::statefulAluSpec().CmpUnits)
-            if (r->name == cmp)
-                return true;
-    if (e->is<IR::LOr>() || e->is<IR::LAnd>() || e->is<IR::LNot>())
-        return true;
-    return false;
-}
-
 /// Check a name to see if it is a reference to an argument of register_action::apply,
 /// or a reference to the local var we put in alu_hi.
 /// or a reference to a copy of an in argument
@@ -205,17 +195,11 @@ void CreateSaluInstruction::postorder(const IR::Function *func) {
         action->action.push_back(onebit);
         LOG3("  add " << *action->action.back()); }
     for (auto &kv : output_address_subword_predicate) {
-        // Weird encoding of the address subword control -- see 6.2.12.6.3 in uArch doc
-        // bascially, to set the subword bit, we use the predicate field, and then override
-        // the predicate field to be ignored for normal predication with pred_disable option
+        // JBAY-2631: we now put the predicate controlling the subword bit into salu_mathtable,
+        // but we hide that in the assembler, just specifying the predicate here as 'lmatch'
         auto &output = outputs[kv.first];
         BUG_CHECK(is_address_output(output->operands.back()), "not address output?");
-        if (is_predicate(output->operands.front()))
-            output->operands.erase(output->operands.begin());
-        if (kv.second)
-            output->operands.insert(output->operands.begin(), kv.second);
-        output->operands.push_back(new IR::MAU::SaluReg("lmatch", false));
-        output->operands.push_back(new IR::MAU::SaluReg("pred_disable", false)); }
+        output->operands.push_back(new IR::MAU::SaluFunction(kv.second, "lmatch")); }
     for (auto *instr : outputs) {
         if (instr) {
             action->action.push_back(instr);
@@ -346,7 +330,8 @@ bool CreateSaluInstruction::preorder(const IR::Primitive *prim) {
         method = p + 1;
     if (prim->name == "math_unit.execute") {
         BUG_CHECK(prim->operands.size() == 2, "typechecking failure");
-        operands.push_back(new IR::MAU::SaluMathFunction(prim->srcInfo, prim->operands.at(1)));
+        operands.push_back(new IR::MAU::SaluFunction(prim->srcInfo, prim->operands.at(1),
+                                                     "math_table"));
         LOG4("Math Unit operand: " << operands.back());
         auto gref = prim->operands.at(0)->to<IR::GlobalRef>();
         auto mu = gref ? gref->obj->to<IR::Declaration_Instance>() : nullptr;
