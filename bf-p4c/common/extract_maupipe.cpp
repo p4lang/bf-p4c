@@ -501,9 +501,10 @@ bool AttachTables::findSaluDeclarations(const IR::Declaration_Instance *ext,
     auto reg = d ? d->to<IR::Declaration_Instance>() : nullptr;
     auto regtype = reg ? reg->type->to<IR::Type_Specialized>() : nullptr;
     auto seltype = reg ? reg->type->to<IR::Type_Extern>() : nullptr;
-    if ((!regtype || regtype->baseType->toString() != "Register") &&
+    if ((!regtype || regtype->baseType->toString() != "DirectRegister") &&
+        (!regtype || regtype->baseType->toString() != "Register") &&
         (!seltype || seltype->name != "ActionSelector")) {
-        error("%s: is not a register or ActionSelector", reg_arg->srcInfo);
+        error("%s: is not a Register or ActionSelector", reg_arg->srcInfo);
         return false;
     }
     *reg_ptr = reg;
@@ -555,9 +556,9 @@ void AttachTables::InitializeStatefulAlus
             salu->selector = sel;
             // FIXME -- how are selector table sizes set?  It seems to be lost in P4_16
             salu->size = 120*1024;  // one ram?
-        } else if (auto size = reg->arguments->at(0)->expression->to<IR::Constant>()->asInt()) {
+        } else if (regtype->toString().startsWith("Register<")) {
             salu->direct = false;
-            salu->size = size;
+            salu->size = reg->arguments->at(0)->expression->to<IR::Constant>()->asInt();
         } else {
             salu->direct = true; }
         salu->width = regtype ? regtype->arguments->at(0)->width_bits() : 1;
@@ -589,6 +590,7 @@ void AttachTables::InitializeStatefulAlus::postorder(const IR::GlobalRef *gref) 
     visitAgain();
     if (auto di = gref->obj->to<IR::Declaration_Instance>()) {
         if (di->type->toString().startsWith("RegisterAction<") ||
+            di->type->toString().startsWith("DirectRegisterAction<") ||
             di->type->toString().startsWith("LearnAction<") ||
             di->type->toString() == "selector_action") {
             updateAttachedSalu(di, gref);
@@ -661,6 +663,7 @@ void AttachTables::DefineGlobalRefs::postorder(IR::GlobalRef *gref) {
             gref->obj = self.converted[di] = att;
             obj = att;
         } else if (di->type->toString().startsWith("RegisterAction<") ||
+                   di->type->toString().startsWith("DirectRegisterAction<") ||
                    di->type->toString().startsWith("LearnAction<") ||
                    di->type->toString() == "selector_action") {
             auto salu = findAttachedSalu(di);

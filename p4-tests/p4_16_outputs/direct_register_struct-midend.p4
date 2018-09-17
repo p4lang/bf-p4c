@@ -28,8 +28,8 @@ struct pair {
 control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_metadata_t ig_intr_md, in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md, inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md, inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name("IngressP.test_reg_dir") Register<pair>(32w0) test_reg_dir;
-    @name("IngressP.test_reg_dir_action") RegisterAction<pair, bit<32>>(test_reg_dir) test_reg_dir_action = {
+    @name("IngressP.test_reg_dir") DirectRegister<pair>() test_reg_dir;
+    @name("IngressP.test_reg_dir_action") DirectRegisterAction<pair, bit<32>>(test_reg_dir) test_reg_dir_action = {
         void apply(inout pair value, out bit<32> read_value) {
             read_value = value.second;
             value.first = value.first + 32w1;

@@ -38,12 +38,6 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     extensions/p4_tests/p4_14/stateful_init_regs.p4
     )
 
-  # stf test fails without any error
-  p4c_add_xfail_reason("tofino2"
-    "jbay_test_harness FAILED"
-    extensions/p4_tests/p4_16/jbay/hwlearn2.p4
-  )
-
 endif() # HARLYN_STF
 
 # BEGIN: XFAILS that match glass XFAILS
@@ -197,7 +191,7 @@ p4c_add_xfail_reason("tofino2"
   )
 
 p4c_add_xfail_reason("tofino2"
-  "Primitive .* was not correctly converted in Instruction Selection"
+  "source of modify_field invalid"
   testdata/p4_14_samples/register.p4
   )
 

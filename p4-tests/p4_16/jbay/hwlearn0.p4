@@ -58,8 +58,8 @@ control ingress(inout headers hdr, inout metadata meta,
     action set_egress_port() { ig_intr_tm_md.ucast_egress_port = 3; }
 
     /* dleft cache table -- 1 way in one stage (so no sbus) */
-    Register<pair>(4096) learn_cache;
-    RegisterAction<pair, bit<32>>(learn_cache) learn_act = {
+    Register<pair, bit<12>>(4096) learn_cache;
+    RegisterAction<pair, bit<12>, bit<32>>(learn_cache) learn_act = {
         void apply(inout pair value, out bit<32> cid, out bit<32> pred) {
             if (value.first & -31 == meta.digest) {
                 value.first = meta.digest | 31;
@@ -94,8 +94,8 @@ control ingress(inout headers hdr, inout metadata meta,
     }
 
     /* new flow fifo -- source for new flowids from the driver */
-    Register<bit<32>>(4096) fid_fifo;
-    RegisterAction<bit<32>, bit<32>>(fid_fifo) new_fid = {
+    Register<bit<32>, bit<16>>(4096) fid_fifo;
+    RegisterAction<bit<32>, bit<16>, bit<32>>(fid_fifo) new_fid = {
         void apply(inout bit<32> fid, out bit<32> rv) { rv = fid; } };
     action new_flow() {
         meta.new_flow = 1;
@@ -109,7 +109,7 @@ control ingress(inout headers hdr, inout metadata meta,
     }
 
     // only needed for stf to insert things into the input fifo
-    RegisterAction<bit<32>, bit<32>>(fid_fifo) insert_fid = {
+    RegisterAction<bit<32>, bit<16>, bit<32>>(fid_fifo) insert_fid = {
         void apply(inout bit<32> fid) { fid = (bit<32>)meta.tmp16; } };
     action insert_new_fid() { insert_fid.enqueue(); }
     @stage(5)
@@ -118,26 +118,26 @@ control ingress(inout headers hdr, inout metadata meta,
         default_action = insert_new_fid(); }
 
     /* output fifo -- outputs cache ids of new flows */
-    Register<bit<32>>(4096) output_fifo;
-    RegisterAction<bit<32>, bit<32>>(output_fifo) report_cacheid = {
+    Register<bit<32>, bit<16>>(4096) output_fifo;
+    RegisterAction<bit<32>, bit<16>, bit<32>>(output_fifo) report_cacheid = {
         void apply(inout bit<32> val) { val = (bit<32>)meta.cache_id; } };
     action do_report_cacheid() { report_cacheid.enqueue(); }
 
     /* map table -- records mapping from cache id to flow id */
-    Register<map_pair>(4096) cid2fidmap;
-    RegisterAction<map_pair, bit<16>>(cid2fidmap) register_new_flow = {
+    Register<map_pair, bit<12>>(4096) cid2fidmap;
+    RegisterAction<map_pair, bit<12>, bit<16>>(cid2fidmap) register_new_flow = {
         void apply(inout map_pair val, out bit<16> rv) {
             val.cid = (bit<16>)meta.cache_id;
             val.fid = meta.flow_id;
             rv = meta.flow_id; } };
-    RegisterAction<map_pair, bit<16>>(cid2fidmap) existing_flow = {
+    RegisterAction<map_pair, bit<12>, bit<16>>(cid2fidmap) existing_flow = {
         void apply(inout map_pair val, out bit<16> rv) {
             rv = val.fid; } };
 
     /* final flow packet counter */
     // FIXME -- jna Counter broken?  crashes on CounterType_t.PACKETS
-    Register<bit<16>>(4096) flow_counter;
-    RegisterAction<bit<16>, bit<16>>(flow_counter) inc_flow_counter = {
+    Register<bit<16>, bit<16>>(4096) flow_counter;
+    RegisterAction<bit<16>, bit<16>, bit<16>>(flow_counter) inc_flow_counter = {
         void apply(inout bit<16> val) { val = val + 1; } };
 
     apply {

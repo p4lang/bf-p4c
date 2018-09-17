@@ -26,7 +26,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     register<bit<16>>(32w0) accum;
-    RegisterAction<bit<16>, bit<16>>(accum) sful = {
+    DirectRegisterAction<bit<16>, bit<16>>(accum) sful = {
         void apply(inout bit<16> value, out bit<16> rv) {
             rv = value;
             value = value + (bit<16>)hdr.data.b1;

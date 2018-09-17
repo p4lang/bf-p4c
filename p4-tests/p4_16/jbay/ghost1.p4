@@ -4,8 +4,8 @@ struct metadata { }
 
 #include "trivial_parser.h"
 
-Register<bit<32>>(2048) ping_table;
-Register<bit<32>>(2048) pong_table;
+Register<bit<32>, bit<11>>(2048) ping_table;
+Register<bit<32>, bit<11>>(2048) pong_table;
 
 control ingress(inout headers hdr, inout metadata meta,
                 in ingress_intrinsic_metadata_t ig_intr_md,
@@ -19,9 +19,9 @@ control ingress(inout headers hdr, inout metadata meta,
         key = { hdr.data.f2 : exact; }
         actions = { noop; } }
 
-    RegisterAction<bit<32>, bit<32>>(ping_table) ping_read = {
+    RegisterAction<bit<32>, bit<11>, bit<32>>(ping_table) ping_read = {
         void apply(inout bit<32> value, out bit<32> rv) { rv = value; } };
-    RegisterAction<bit<32>, bit<32>>(pong_table) pong_read = {
+    RegisterAction<bit<32>, bit<11>, bit<32>>(pong_table) pong_read = {
         void apply(inout bit<32> value, out bit<32> rv) { rv = value; } };
 
     apply {
@@ -37,9 +37,9 @@ control ingress(inout headers hdr, inout metadata meta,
 }
 
 control ghost(in ghost_intrinsic_metadata_t md) {
-    RegisterAction<bit<32>, bit<32>>(ping_table) ping_update = {
+    RegisterAction<bit<32>, bit<11>, bit<32>>(ping_table) ping_update = {
         void apply(inout bit<32> value) { value = (bit<32>)md.qlength; } };
-    RegisterAction<bit<32>, bit<32>>(pong_table) pong_update = {
+    RegisterAction<bit<32>, bit<11>, bit<32>>(pong_table) pong_update = {
         void apply(inout bit<32> value) { value = (bit<32>)md.qlength; } };
 
     apply {

@@ -33,9 +33,8 @@ control IngressP(
         in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md,
         inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md,
         inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
-    // 0 size => direct register
-    Register<pair>(0) test_reg_dir;
-    RegisterAction<pair, bit<32>>(test_reg_dir) test_reg_dir_action = {
+    DirectRegister<pair>() test_reg_dir;
+    DirectRegisterAction<pair, bit<32>>(test_reg_dir) test_reg_dir_action = {
         void apply(inout pair value, out bit<32> read_value){
             read_value = value.second;
             value.first = value.first + 1;

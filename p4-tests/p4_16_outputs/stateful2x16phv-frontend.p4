@@ -36,13 +36,13 @@ struct pair {
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     bit<16> tmp_0;
     @name("ingress.accum") register<pair>(32w2048) accum;
-    @name("ingress.write") RegisterAction<pair, bit<16>>(accum) write_1 = {
+    @name("ingress.write") RegisterAction<pair, bit<32>, bit<16>>(accum) write_1 = {
         void apply(inout pair value) {
             value.lo = meta.a;
             value.hi = meta.b;
         }
     };
-    @name("ingress.read") RegisterAction<pair, bit<16>>(accum) read_1 = {
+    @name("ingress.read") RegisterAction<pair, bit<32>, bit<16>>(accum) read_1 = {
         void apply(inout pair value, out bit<16> rv) {
             rv = value.hi;
         }

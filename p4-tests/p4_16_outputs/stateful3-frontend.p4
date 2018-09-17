@@ -35,7 +35,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<16> tmp_1;
     bit<16> tmp_2;
     @name("ingress.accum") register<pair>(32w4096) accum;
-    @name("ingress.sful_a") RegisterAction<pair, bit<16>>(accum) sful_a = {
+    @name("ingress.sful_a") RegisterAction<pair, bit<32>, bit<16>>(accum) sful_a = {
         void apply(inout pair value, out bit<16> rv) {
             rv = value.first;
             if (hdr.data.h2 > value.first && hdr.data.h2 < value.second) 
@@ -46,7 +46,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 value.second = hdr.data.h3;
         }
     };
-    @name("ingress.sful_b") RegisterAction<pair, bit<16>>(accum) sful_b = {
+    @name("ingress.sful_b") RegisterAction<pair, bit<32>, bit<16>>(accum) sful_b = {
         void apply(inout pair value, out bit<16> rv) {
             rv = value.second;
             if (value.second <= hdr.data.h2) 

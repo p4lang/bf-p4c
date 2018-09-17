@@ -765,6 +765,8 @@ bool CreateSaluInstruction::preorder(const IR::Declaration_Variable *v) {
 
 std::map<std::pair<cstring, cstring>, std::vector<CreateSaluInstruction::param_t>>
 CreateSaluInstruction::function_param_types = {
+    {{"DirectRegisterAction", "apply"}, { param_t::VALUE, param_t::OUTPUT, param_t::OUTPUT,
+                                          param_t::OUTPUT, param_t::OUTPUT }},
     {{ "RegisterAction", "apply" },     { param_t::VALUE, param_t::OUTPUT, param_t::OUTPUT,
                                           param_t::OUTPUT, param_t::OUTPUT }},
     {{ "RegisterAction", "overflow" },  { param_t::VALUE, param_t::OUTPUT, param_t::OUTPUT,

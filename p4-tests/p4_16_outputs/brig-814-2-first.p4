@@ -73,14 +73,14 @@ parser ParserI(packet_in packet, out headers hdr, out metadata meta, out ingress
     }
 }
 
-Register<bit<1>>(32w262144) bloom_filter_1;
+Register<bit<1>, bit<32>>(32w262144) bloom_filter_1;
 
-Register<bit<1>>(32w262144) bloom_filter_2;
+Register<bit<1>, bit<32>>(32w262144) bloom_filter_2;
 
-Register<bit<1>>(32w262144) bloom_filter_3;
+Register<bit<1>, bit<32>>(32w262144) bloom_filter_3;
 
 control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_metadata_t ig_intr_md, in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md, inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md, inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
-    @name(".bloom_filter_alu_1") RegisterAction<bit<1>, bit<1>>(bloom_filter_1) bloom_filter_alu_1 = {
+    @name(".bloom_filter_alu_1") RegisterAction<bit<1>, bit<32>, bit<1>>(bloom_filter_1) bloom_filter_alu_1 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             bit<1> in_value;
@@ -89,7 +89,7 @@ control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_me
             rv = ~value;
         }
     };
-    @name(".bloom_filter_alu_2") RegisterAction<bit<1>, bit<1>>(bloom_filter_2) bloom_filter_alu_2 = {
+    @name(".bloom_filter_alu_2") RegisterAction<bit<1>, bit<32>, bit<1>>(bloom_filter_2) bloom_filter_alu_2 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             bit<1> in_value;
@@ -98,7 +98,7 @@ control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_me
             rv = ~value;
         }
     };
-    @name(".bloom_filter_alu_3") RegisterAction<bit<1>, bit<1>>(bloom_filter_3) bloom_filter_alu_3 = {
+    @name(".bloom_filter_alu_3") RegisterAction<bit<1>, bit<32>, bit<1>>(bloom_filter_3) bloom_filter_alu_3 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             bit<1> in_value;

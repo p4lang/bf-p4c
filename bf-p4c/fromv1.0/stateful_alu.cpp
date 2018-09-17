@@ -458,8 +458,15 @@ const IR::Declaration_Instance *P4V1::StatefulAluConverter::convertExternInstanc
     auto info = getRegInfo(structure, ext, structure->declarations);
     if (info.utype) {
         LOG2("Creating apply function for RegisterAction " << ext->name);
-        auto ratype = new IR::Type_Specialized(new IR::Type_Name("RegisterAction"),
-                               new IR::Vector<IR::Type>({ info.rtype, info.utype }));
+        auto ratype = new IR::Type_Specialized(
+            new IR::Type_Name("RegisterAction"),
+            new IR::Vector<IR::Type>({info.rtype, IR::Type::Bits::get(32), info.utype}));
+        if (info.reg->instance_count == -1) {
+            ratype = new IR::Type_Specialized(
+                new IR::Type_Name("DirectRegisterAction"),
+                new IR::Vector<IR::Type>({info.rtype, info.utype}));
+        }
+
         auto *ctor_args = new IR::Vector<IR::Argument>({
                 new IR::Argument(new IR::PathExpression(new IR::Path(info.reg->name))) });
         auto *math = CreateMathUnit::create(structure, ext, info.utype);

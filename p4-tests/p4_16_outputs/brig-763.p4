@@ -325,8 +325,8 @@ control SwitchIngress(inout switch_header_t hdr, inout metadata_t ig_md, in ingr
 }
 
 control SwitchEgress(inout switch_header_t hdr, inout metadata_t eg_md, in egress_intrinsic_metadata_t eg_intr_md, in egress_intrinsic_metadata_from_parser_t eg_intr_from_prsr, inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr, inout egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport) {
-    Register<bit<32>>(32w1024) port_pkts_reg;
-    RegisterAction<bit<32>, bit<1>>(port_pkts_reg) port_pkts_alu = {
+    Register<bit<32>, bit<32>>(32w1024) port_pkts_reg;
+    RegisterAction<bit<32>, bit<32>, bit<1>>(port_pkts_reg) port_pkts_alu = {
         void apply(inout bit<32> value, out bit<1> read_value) {
             if (value < eg_md.max_counter) {
                 value = value + 1;
@@ -338,8 +338,8 @@ control SwitchEgress(inout switch_header_t hdr, inout metadata_t eg_md, in egres
             }
         }
     };
-    Register<bit<8>>(32w1024) dip_choose_reg;
-    RegisterAction<bit<8>, bit<8>>(dip_choose_reg) dip_choose_alu = {
+    Register<bit<8>, bit<32>>(32w1024) dip_choose_reg;
+    RegisterAction<bit<8>, bit<32>, bit<8>>(dip_choose_reg) dip_choose_alu = {
         void apply(inout bit<8> value, out bit<8> read_value) {
             if (eg_md.pkt_counter == 1) {
                 if (value < eg_md.max_index) {

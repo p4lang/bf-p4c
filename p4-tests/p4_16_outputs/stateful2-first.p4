@@ -31,7 +31,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     register<pair>(32w0) accum;
-    RegisterAction<pair, bit<16>>(accum) sful = {
+    DirectRegisterAction<pair, bit<16>>(accum) sful = {
         void apply(inout pair value, out bit<16> rv) {
             rv = value.first;
             if (hdr.data.h2 > value.first && hdr.data.h2 < value.second) 

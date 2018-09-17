@@ -31,12 +31,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".NoAction") action NoAction_3() {
     }
     @name("ingress.accum") register<bit<16>>(32w2048) accum;
-    @name("ingress.logh1") RegisterAction<bit<16>, bit<16>>(accum) logh1 = {
+    @name("ingress.logh1") RegisterAction<bit<16>, bit<32>, bit<16>>(accum) logh1 = {
         void apply(inout bit<16> value) {
             value = hdr.data.h1;
         }
     };
-    @name("ingress.query") RegisterAction<bit<16>, bit<16>>(accum) query = {
+    @name("ingress.query") RegisterAction<bit<16>, bit<32>, bit<16>>(accum) query = {
         void apply(inout bit<16> value, out bit<16> rv) {
             rv = value;
         }

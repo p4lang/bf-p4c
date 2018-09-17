@@ -562,7 +562,7 @@ extern DirectWred<T> {
 }
 
 /// Register
-extern Register<T> {
+extern Register<T, I> {
     /// Instantiate an array of <size> registers. The initial value is
     /// undefined.
     Register(bit<32> size);
@@ -572,10 +572,27 @@ extern Register<T> {
     Register(bit<32> size, T initial_value);
 
     /// Return the value of register at specified index.
-    void read(out T result, in bit<32> index);
+    T read(in I index);
 
     /// Write value to register at specified index.
-    void write(in bit<32> index, in T value);
+    void write(in I index, in T value);
+}
+
+/// DirectRegister
+extern DirectRegister<T> {
+    /// Instantiate an array of direct registers. The initial value is
+    /// undefined.
+    DirectRegister();
+
+    /// Initialize an array of direct registers and set their value to
+    /// initial_value.
+    DirectRegister(T initial_value);
+
+    /// Return the value of the direct register.
+    T read();
+
+    /// Write value to a direct register.
+    void write(in T value);
 }
 
 extern RegisterParam<T> {
@@ -588,21 +605,46 @@ extern RegisterParam<T> {
     T read();
 }
 
-
 // This is implemented using an experimental feature in p4c and subject to
 // change. See https://github.com/p4lang/p4-spec/issues/561
-extern RegisterAction<T, U> {
-    RegisterAction(Register<T> reg);
+extern RegisterAction<T, I, U> {
+    RegisterAction(Register<T, I> reg);
+
+    // Abstract method that needs to be implemented when RegisterAction is
+    // instantiated.
+    // @param value : register value.
+    // @param rv : return value.
     abstract void apply(inout T value, @optional out U rv);
-    U execute();
-    U execute(in bit<32> index); /* {
+
+    U execute(in I index); /* {
         U rv;
         T value = reg.read(index);
         apply(value, rv);
         reg.write(index, value);
         return rv;
     } */
-    U execute_log(); /* execute at an index that increments each time */
+
+    // Apply the implemented abstract method using an index that increments each
+    // time. This method is useful for stateful logging.
+    U execute_log();
+}
+
+extern DirectRegisterAction<T, U> {
+    DirectRegisterAction(DirectRegister<T> reg);
+
+    // Abstract method that needs to be implemented when RegisterAction is
+    // instantiated.
+    // @param value : register value.
+    // @param rv : return value.
+    abstract void apply(inout T value, @optional out U rv);
+
+    U execute(); /* {
+        U rv;
+        T value = reg.read();
+        apply(value, rv);
+        reg.write(value);
+        return rv;
+    } */
 }
 
 extern ActionSelector {
@@ -613,7 +655,7 @@ extern ActionSelector {
     ActionSelector(bit<32> size,
                    Hash<_> hash,
                    SelectorMode_t mode,
-                   Register<bit<1>> reg);
+                   Register<bit<1>, _> reg);
 }
 
 extern ActionProfile {

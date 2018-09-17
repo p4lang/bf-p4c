@@ -334,8 +334,8 @@ control SwitchEgress(inout switch_header_t hdr, inout metadata_t eg_md, in egres
     }
     bit<1> tmp_7;
     bit<8> tmp_8;
-    @name("SwitchEgress.port_pkts_reg") Register<bit<32>>(32w1024) port_pkts_reg;
-    @name("SwitchEgress.port_pkts_alu") RegisterAction<bit<32>, bit<1>>(port_pkts_reg) port_pkts_alu = {
+    @name("SwitchEgress.port_pkts_reg") Register<bit<32>, bit<32>>(32w1024) port_pkts_reg;
+    @name("SwitchEgress.port_pkts_alu") RegisterAction<bit<32>, bit<32>, bit<1>>(port_pkts_reg) port_pkts_alu = {
         void apply(inout bit<32> value, out bit<1> read_value) {
             if (value < eg_md.max_counter) {
                 value = value + 32w1;
@@ -347,8 +347,8 @@ control SwitchEgress(inout switch_header_t hdr, inout metadata_t eg_md, in egres
             }
         }
     };
-    @name("SwitchEgress.dip_choose_reg") Register<bit<8>>(32w1024) dip_choose_reg;
-    @name("SwitchEgress.dip_choose_alu") RegisterAction<bit<8>, bit<8>>(dip_choose_reg) dip_choose_alu = {
+    @name("SwitchEgress.dip_choose_reg") Register<bit<8>, bit<32>>(32w1024) dip_choose_reg;
+    @name("SwitchEgress.dip_choose_alu") RegisterAction<bit<8>, bit<32>, bit<8>>(dip_choose_reg) dip_choose_alu = {
         void apply(inout bit<8> value, out bit<8> read_value) {
             if (eg_md.pkt_counter == 1w1) 
                 if (value < eg_md.max_index) 

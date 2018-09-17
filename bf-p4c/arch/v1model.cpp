@@ -1599,13 +1599,22 @@ class ConstructSymbolTable : public Inspector {
         ERROR_CHECK(type->baseType->path->name == "register",
                   "register converter cannot be applied to %1%", type->baseType->path->name);
 
-        auto args = new IR::Vector<IR::Argument>({node->arguments->at(0)});
-        type = new IR::Type_Specialized(
-            new IR::Type_Name("Register"), type->arguments);
+        auto typeArgs = new IR::Vector<IR::Type>();
+        typeArgs->push_back(type->arguments->at(0));
+        auto args = new IR::Vector<IR::Argument>();
+
+        if (node->arguments->at(0)->expression->to<IR::Constant>()->asInt()) {
+            args->push_back(node->arguments->at(0));
+            typeArgs->push_back(IR::Type::Bits::get(32));
+            type = new IR::Type_Specialized(
+                new IR::Type_Name("Register"), typeArgs);
+        } else {
+            type = new IR::Type_Specialized(
+                new IR::Type_Name("DirectRegister"), typeArgs);
+        }
 
         auto decl = new IR::Declaration_Instance(
             node->srcInfo, node->name, node->annotations, type, args);
-
         structure->_map.emplace(node, decl);
     }
 
@@ -1761,9 +1770,11 @@ class ConstructSymbolTable : public Inspector {
             } else if (name == "meter") {
                 MeterConverter cvt(structure);
                 structure->_map.emplace(node, node->apply(cvt));
+            } else if (name == "register") {
+                RegisterConverter cvt(structure);
+                structure->_map.emplace(node, node->apply(cvt));
             }
             // Counter method needs no translation
-            // TODO register
         } else if (auto ef = mi->to<P4::ExternFunction>()) {
             cstring name = ef->method->name;
             if (name == "hash") {

@@ -19,8 +19,8 @@ control ingress(inout headers hdr, inout metadata meta,
                 inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprsr_md,
                 inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
 
-    Register<bit<16>>(2048) accum;
-    RegisterAction<bit<16>, bit<16>>(accum) divmod = {
+    Register<bit<16>, bit<32>>(2048) accum;
+    RegisterAction<bit<16>, bit<32>, bit<16>>(accum) divmod = {
         void apply(inout bit<16> value, out bit<16> div, out bit<16> mod) {
             div = hdr.data.h1 / hdr.data.h2;
             mod = hdr.data.h1 % hdr.data.h2;

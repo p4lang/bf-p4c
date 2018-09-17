@@ -18,10 +18,11 @@ message P4Ids {
     LPF = 0x89;
     DIRECT_LPF = 0x8A;
     REGISTER = 0x8B;
-    REGISTER_PARAM = 0x8C;
-    DIGEST = 0x8D;
-    HASH = 0x8E;
-    PORT_METADATA = 0x8F;
+    DIRECT_REGISTER = 0x8C;
+    REGISTER_PARAM = 0x8D;
+    DIGEST = 0x8E;
+    HASH = 0x8F;
+    PORT_METADATA = 0x90;
   }
 }
 
@@ -111,6 +112,11 @@ message Register {
   p4.config.v1.P4DataTypeSpec type_spec = 1;
   int64 size = 2;
 }
+
+message DirectRegister {
+  p4.config.v1.P4DataTypeSpec type_spec = 1;
+}
+
 
 message RegisterParam {
   p4.config.v1.P4DataTypeSpec type_spec = 1;

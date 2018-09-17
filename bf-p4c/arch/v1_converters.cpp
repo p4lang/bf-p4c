@@ -711,6 +711,20 @@ const IR::Node* DirectMeterConverter::postorder(IR::MethodCallStatement* node) {
     return assign;
 }
 
+const IR::Node* RegisterConverter::postorder(IR::MethodCallStatement* node) {
+    auto orig = getOriginal<IR::MethodCallStatement>();
+    auto mce = orig->methodCall->to<IR::MethodCallExpression>();
+    auto member = mce->method->to<IR::Member>();
+
+    if (member->member != "read") return node;
+
+    auto method = new IR::Member(node->srcInfo, member->expr, "read");
+    auto args = new IR::Vector<IR::Argument>({mce->arguments->at(1)});
+    auto methodcall = new IR::MethodCallExpression(node->srcInfo, method, args);
+    auto assign = new IR::AssignmentStatement(mce->arguments->at(0)->expression, methodcall);
+
+    return assign;
+}
 //////////////////////////////////////////////////////////////////////////////////////////////
 
 const IR::Node* ParserPriorityConverter::postorder(IR::AssignmentStatement* node) {

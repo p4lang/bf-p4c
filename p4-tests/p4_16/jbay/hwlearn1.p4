@@ -51,7 +51,7 @@ control ingress(inout headers hdr, inout metadata meta,
 
     // single ram size to force it to be a single way (multiway dleft tables broken
     // due to missing action_bus alloc in compiler.)
-    Register<pair>(1024) learn_cache;
+    Register<pair, _>(1024) learn_cache;
     LearnAction<pair, bit<64>, bit<32>>(learn_cache) learn_act = {
         void apply(inout pair value, in bit<64> digest, in bool lmatch,
                    out bit<32> cid, out bit<32> pred) {
@@ -96,8 +96,8 @@ control ingress(inout headers hdr, inout metadata meta,
     }
 
     /* new flow fifo -- source for new flowids from the driver */
-    Register<bit<16>>(32767) fid_fifo;
-    RegisterAction<bit<16>, bit<16>>(fid_fifo) new_fid = {
+    Register<bit<16>, _>(32767) fid_fifo;
+    RegisterAction<bit<16>, _, bit<16>>(fid_fifo) new_fid = {
         void apply(inout bit<16> fid, out bit<16> rv) { rv = fid; } };
     action new_flow() {
         meta.new_flow_flag = 1;
@@ -112,7 +112,7 @@ control ingress(inout headers hdr, inout metadata meta,
     }
 
     // only needed for stf to insert things into the input fifo
-    RegisterAction<bit<16>, bit<16>>(fid_fifo) insert_fid = {
+    RegisterAction<bit<16>, _, bit<16>>(fid_fifo) insert_fid = {
         void apply(inout bit<16> fid) { fid = meta.flow_id; } };
     action insert_new_fid() { insert_fid.enqueue(); }
     @stage(5)
@@ -121,26 +121,26 @@ control ingress(inout headers hdr, inout metadata meta,
         default_action = insert_new_fid(); }
 
     /* output fifo -- outputs cache ids of new flows */
-    Register<bit<16>>(32768) output_fifo;
-    RegisterAction<bit<16>, bit<16>>(output_fifo) report_cacheid = {
+    Register<bit<16>, _>(32768) output_fifo;
+    RegisterAction<bit<16>, _, bit<16>>(output_fifo) report_cacheid = {
         void apply(inout bit<16> val) { val = (bit<16>)meta.cache_id; } };
     action do_report_cacheid() { report_cacheid.enqueue(); }
 
     /* map table -- records mapping from cache id to flow id */
-    Register<map_pair>(32768) cid2fidmap;
-    RegisterAction<map_pair, bit<16>>(cid2fidmap) register_new_flow = {
+    Register<map_pair, bit<15>>(32768) cid2fidmap;
+    RegisterAction<map_pair, bit<15>, bit<16>>(cid2fidmap) register_new_flow = {
         void apply(inout map_pair val, out bit<16> rv) {
             val.cid = (bit<16>)meta.cache_id;
             val.fid = meta.flow_id;
             rv = meta.flow_id; } };
-    RegisterAction<map_pair, bit<16>>(cid2fidmap) existing_flow = {
+    RegisterAction<map_pair, bit<15>, bit<16>>(cid2fidmap) existing_flow = {
         void apply(inout map_pair val, out bit<16> rv) {
             rv = val.fid; } };
 
     /* final flow packet counter */
     // FIXME -- jna Counter broken?  crashes on CounterType_t.PACKETS
-    Register<bit<16>>(4096) flow_counter;
-    RegisterAction<bit<16>, bit<16>>(flow_counter) inc_flow_counter = {
+    Register<bit<16>, bit<16>>(4096) flow_counter;
+    RegisterAction<bit<16>, bit<16>, bit<16>>(flow_counter) inc_flow_counter = {
         void apply(inout bit<16> val) { val = val + 1; } };
 
     apply {

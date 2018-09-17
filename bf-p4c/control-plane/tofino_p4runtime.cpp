@@ -128,6 +128,9 @@ class SymbolType final : public P4RuntimeSymbolType {
     static P4RuntimeSymbolType DIGEST() {
         return P4RuntimeSymbolType::make(barefoot::P4Ids::DIGEST);
     }
+    static P4RuntimeSymbolType DIRECT_REGISTER() {
+        return P4RuntimeSymbolType::make(barefoot::P4Ids::DIRECT_REGISTER);
+    }
     static P4RuntimeSymbolType REGISTER() {
         return P4RuntimeSymbolType::make(barefoot::P4Ids::REGISTER);
     }
@@ -194,8 +197,8 @@ struct Register {
         BUG_CHECK(declaration->type->is<IR::Type_Specialized>(),
                   "%1%: expected Type_Specialized", declaration->type);
         auto type = declaration->type->to<IR::Type_Specialized>();
-        BUG_CHECK(type->arguments->size() == 1,
-                  "%1%: expected one type argument", instance);
+        BUG_CHECK(type->arguments->size() == 2,
+                  "%1%: expected two type arguments", instance);
         auto typeArg = type->arguments->at(0);
         auto typeSpec = TypeSpecConverter::convert(typeMap, refMap, typeArg, p4RtTypeInfo);
         CHECK_NULL(typeSpec);
@@ -217,15 +220,6 @@ struct Register {
         CHECK_NULL(table);
         BUG_CHECK(instance.name != boost::none,
                   "Caller should've ensured we have a name");
-
-        auto size = instance.substitution.lookupByName("size")->expression;
-        // An extern constructor parameter is a compile-time value as per the P4
-        // spec. "size" is therefore a bit<32> conmpile-time value.
-        BUG_CHECK(size->is<IR::Constant>(), "Non-constant size");
-        if (size->to<IR::Constant>()->asInt() != 0) {
-            ::error("Direct register '%1%' has a non-zero size", instance.expression);
-            return boost::none;
-        }
 
         // retrieve type parameter for the register instance and convert it to P4DataTypeSpec
         if (!instance.expression->is<IR::PathExpression>()) {
@@ -413,6 +407,8 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             symbols->add(SymbolType::DIGEST(), decl);
         } else if (externBlock->type->name == "Register") {
             symbols->add(SymbolType::REGISTER(), decl);
+        } else if (externBlock->type->name == "DirectRegister") {
+            symbols->add(SymbolType::DIRECT_REGISTER(), decl);
         } else if (externBlock->type->name == "Lpf") {
             symbols->add(SymbolType::LPF(), decl);
         } else if (externBlock->type->name == "DirectLpf") {
@@ -530,8 +526,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         }
 
         if (directRegister) {
-            BUG_CHECK(directRegister->size == 0, "Direct register with non-zero size");
-            auto id = symbols.getId(SymbolType::REGISTER(), directRegister->name);
+            auto id = symbols.getId(SymbolType::DIRECT_REGISTER(), directRegister->name);
             table->add_direct_resource_ids(id);
             addRegister(symbols, p4info, *directRegister);
         }
@@ -654,8 +649,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             if (digest) addDigest(symbols, p4info, *digest);
         } else if (externBlock->type->name == "Register") {
             auto register_ = Register::from(externBlock, refMap, typeMap, p4RtTypeInfo);
-            // skip direct registers
-            if (register_ && register_->size != 0) addRegister(symbols, p4info, *register_);
+            if (register_) addRegister(symbols, p4info, *register_);
         } else if (externBlock->type->name == "Lpf") {
             auto lpf = Lpf::from(externBlock);
             if (lpf) addLpf(symbols, p4info, *lpf);
@@ -813,13 +807,22 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
     void addRegister(const P4RuntimeSymbolTableIface& symbols,
                      p4configv1::P4Info* p4Info,
                      const Register& registerInstance) {
-        ::barefoot::Register register_;
-        register_.set_size(registerInstance.size);
-        register_.mutable_type_spec()->CopyFrom(*registerInstance.typeSpec);
-        addP4InfoExternInstance(
-            symbols, SymbolType::REGISTER(), "Register",
-            registerInstance.name, registerInstance.annotations, register_,
-            p4Info);
+        if (registerInstance.size == 0) {
+            ::barefoot::DirectRegister register_;
+            register_.mutable_type_spec()->CopyFrom(*registerInstance.typeSpec);
+            addP4InfoExternInstance(
+                symbols, SymbolType::DIRECT_REGISTER(), "DirectRegister",
+                registerInstance.name, registerInstance.annotations, register_,
+                p4Info);
+        } else {
+            ::barefoot::Register register_;
+            register_.set_size(registerInstance.size);
+            register_.mutable_type_spec()->CopyFrom(*registerInstance.typeSpec);
+            addP4InfoExternInstance(
+                symbols, SymbolType::REGISTER(), "Register",
+                registerInstance.name, registerInstance.annotations, register_,
+                p4Info);
+        }
     }
 
     /// Set common fields between barefoot::Counter and barefoot::DirectCounter.

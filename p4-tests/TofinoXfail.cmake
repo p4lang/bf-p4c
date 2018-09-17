@@ -414,7 +414,7 @@ p4c_add_xfail_reason("tofino"
 
 # COMPILER-540
 p4c_add_xfail_reason("tofino"
-  "error: : direct access to indirect register"
+    "error: .* extern RegisterAction does not have method matching this call"
   extensions/p4_tests/p4_14/test_config_171_stateful_conga.p4
   extensions/p4_tests/p4_14/test_config_173_stateful_bloom_filter.p4
   extensions/p4_tests/p4_14/test_config_174_stateful_flow_learning.p4
@@ -510,11 +510,15 @@ p4c_add_xfail_reason("tofino"
 
 #
 p4c_add_xfail_reason("tofino"
-  "error: : source of modify_field invalid"
+  "source of modify_field invalid"
   testdata/p4_16_samples/arith1-bmv2.p4
   testdata/p4_16_samples/arith2-bmv2.p4
   testdata/p4_16_samples/concat-bmv2.p4
-  )
+  extensions/p4_tests/p4_14/p4smith_regression/shillings_0.p4
+  testdata/p4_16_samples/saturated-bmv2.p4
+  testdata/p4_16_samples/issue298-bmv2.p4
+  testdata/p4_14_samples/register.p4
+)
 
 p4c_add_xfail_reason("tofino"
   "error: : shift count must be a constant in"
@@ -987,12 +991,9 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "Primitive .* was not correctly converted in Instruction Selection"
-  testdata/p4_14_samples/register.p4
-  testdata/p4_16_samples/issue298-bmv2.p4
   testdata/p4_16_samples/issue1097-bmv2.p4
   testdata/p4_16_samples/issue907-bmv2.p4
   extensions/p4_tests/p4_14/p4smith_regression/utes_0.p4
-  extensions/p4_tests/p4_14/p4smith_regression/shillings_0.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1021,11 +1022,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Currently non contiguous byte allocation in table format"
   # extensions/p4_tests/p4_14/test_config_215_nondphv.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "source of modify_field invalid"
-  testdata/p4_16_samples/saturated-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1192,12 +1188,17 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-meter3.p4
 )
 
-# p4Runtime bug
+# register read/write support in TNA
 p4c_add_xfail_reason("tofino"
-  "Type Register has 1 type parameter"
+    "was not correctly converted in Instruction Selection"
   testdata/p4_16_samples/psa-register1.p4
   testdata/p4_16_samples/psa-register2.p4
   testdata/p4_16_samples/psa-register3.p4
+)
+
+# casting bit<10> psa PortId_t to bit<9> TNA PortId_t
+p4c_add_xfail_reason("tofino"
+    "Cannot unify bit<10> to bit<9>"
   testdata/p4_16_samples/psa-example-register2-bmv2.p4
 )
 

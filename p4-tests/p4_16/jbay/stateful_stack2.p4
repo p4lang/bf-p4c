@@ -9,8 +9,8 @@ control ingress(inout headers hdr, inout metadata meta,
                 in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md,
                 inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprsr_md,
                 inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
-    Register<bit<16>>(2048) accum;
-    RegisterAction<bit<16>, bit<16>>(accum) write = {
+    Register<bit<16>, bit<16>>(2048) accum;
+    RegisterAction<bit<16>, bit<16>, bit<16>>(accum) write = {
         void apply(inout bit<16> value) {
             value = hdr.data.h1;
         }
@@ -19,7 +19,7 @@ control ingress(inout headers hdr, inout metadata meta,
         }
     };
 
-    RegisterAction<bit<16>, bit<16>>(accum) read = {
+    RegisterAction<bit<16>, bit<16>, bit<16>>(accum) read = {
         void apply(inout bit<16> value, out bit<16> rv) {
             rv = value;
         }

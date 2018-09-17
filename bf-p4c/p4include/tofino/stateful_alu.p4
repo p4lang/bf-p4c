@@ -27,17 +27,17 @@ extern math_unit<T, U> {
     T execute(in T x);
 }
 
-extern RegisterAction<T, U> {
+extern RegisterAction<T, I, U> {
     RegisterAction(register<T> reg);
     abstract void apply(inout T value, @optional out U rv);
-    U execute(@optional in bit<32> index); /* {
-        U rv;
-        T value = reg.read(index);
-        apply(value, rv);
-        reg.write(index, value);
-        return rv;
-    } */
+    U execute(in bit<32> index);
     U execute_log(); /* execute at an index that increments each time */
+}
+
+extern DirectRegisterAction<T, U> {
+    DirectRegisterAction(register<T> reg);
+    abstract void apply(inout T value, @optional out U rv);
+    U execute();
 }
 
 extern selector_action {

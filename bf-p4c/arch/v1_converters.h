@@ -174,6 +174,14 @@ class DirectMeterConverter : public ExternConverter {
     const IR::Node* postorder(IR::MethodCallStatement* node) override;
 };
 
+class RegisterConverter : public ExternConverter {
+ public:
+    explicit RegisterConverter(ProgramStructure* structure)
+    : ExternConverter(structure) { CHECK_NULL(structure); }
+    const IR::Node* postorder(IR::MethodCallStatement* node) override;
+};
+
+
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
 

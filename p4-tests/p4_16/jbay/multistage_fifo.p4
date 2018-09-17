@@ -2,7 +2,7 @@
 
 typedef bit<32> b32;
 struct metadata {
-    b32 address;
+    bit<32> address;
 }
 
 struct pair {
@@ -27,17 +27,17 @@ control ingress(inout headers hdr, inout metadata meta,
     action nop() { }
 
     @chain_total_size(3072)
-    @name("fifo") Register<pair>(1024) fifo_1_of_3; // First stage
-    @name("fifo") Register<pair>(1024) fifo_2_of_3; // Second stage
-    @name("fifo") Register<pair>(1024) fifo_3_of_3; // Third stage
+    @name("fifo") Register<pair, bit<32>>(1024) fifo_1_of_3; // First stage
+    @name("fifo") Register<pair, bit<32>>(1024) fifo_2_of_3; // Second stage
+    @name("fifo") Register<pair, bit<32>>(1024) fifo_3_of_3; // Third stage
 
     @chain_address(meta.address)
-    RegisterAction<pair, b32>(fifo_1_of_3) read_1 = {
+    RegisterAction<pair, bit<32>, b32>(fifo_1_of_3) read_1 = {
         void apply(inout pair value, out b32 rv) { rv = value.lo[31:0]; } };
     @chain_address(meta.address)
-    RegisterAction<pair, b32>(fifo_2_of_3) read_2 = {
+    RegisterAction<pair, bit<32>, b32>(fifo_2_of_3) read_2 = {
         void apply(inout pair value, out b32 rv) { rv = value.lo[31:0]; } };
-    RegisterAction<pair, b32>(fifo_3_of_3) read_3 = {
+    RegisterAction<pair, bit<32>, b32>(fifo_3_of_3) read_3 = {
         void apply(inout pair value, out b32 rv) { rv = value.lo[31:0]; } };
     action multi_stage_1_dequeue() {
         ig_intr_tm_md.ucast_egress_port = 1;
@@ -64,12 +64,12 @@ control ingress(inout headers hdr, inout metadata meta,
     }
 
     @chain_address(meta.address)
-    RegisterAction<pair, b32>(fifo_1_of_3) write_1 = {
+    RegisterAction<pair, bit<32>, b32>(fifo_1_of_3) write_1 = {
         void apply(inout pair value) { value.lo[31:0] = hdr.ethernet.src_addr[31:0]; } };
     @chain_address(meta.address)
-    RegisterAction<pair, b32>(fifo_2_of_3) write_2 = {
+    RegisterAction<pair, bit<32>, b32>(fifo_2_of_3) write_2 = {
         void apply(inout pair value) { value.lo[31:0] = hdr.ethernet.src_addr[31:0]; } };
-    RegisterAction<pair, b32>(fifo_3_of_3) write_3 = {
+    RegisterAction<pair, bit<32>, b32>(fifo_3_of_3) write_3 = {
         void apply(inout pair value) { value.lo[31:0] = hdr.ethernet.src_addr[31:0]; } };
     action multi_stage_1_enqueue() {
         ig_intr_tm_md.ucast_egress_port = 2;

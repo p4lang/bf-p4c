@@ -29,7 +29,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     bit<16> tmp_0;
     @name("ingress.accum") register<bit<16>>(32w0) accum;
-    @name("ingress.sful") RegisterAction<bit<16>, bit<16>>(accum) sful = {
+    @name("ingress.sful") DirectRegisterAction<bit<16>, bit<16>>(accum) sful = {
         void apply(inout bit<16> value, out bit<16> rv) {
             rv = value;
             value = value + (bit<16>)hdr.data.b1;

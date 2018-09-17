@@ -10,13 +10,13 @@ control ingress(inout headers hdr, inout metadata meta,
                 inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprsr_md,
                 inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
 
-    Register<bit<128>>(1024) accum;
-    RegisterAction<bit<128>, bit<8>>(accum) rmax = {
+    Register<bit<128>, bit<10>>(1024) accum;
+    RegisterAction<bit<128>, bit<10>, bit<8>>(accum) rmax = {
         void apply(inout bit<128> value, out bit<8> rv) {
             rv = this.max8(value, 0xffff);
         }
     };
-    RegisterAction<bit<128>, bit<8>>(accum) load = {
+    RegisterAction<bit<128>, bit<10>, bit<8>>(accum) load = {
         void apply(inout bit<128> value) {
             value[31:0] = hdr.data.f1;
         }

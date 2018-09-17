@@ -574,7 +574,6 @@ struct BfRtSchemaGenerator::Digest {
     }
 };
 
-/// Common register / stateful representation between PSA and Tofino architectures
 struct BfRtSchemaGenerator::Register {
     std::string name;
     P4Id id;
@@ -589,6 +588,17 @@ struct BfRtSchemaGenerator::Register {
             return boost::none;
         }
         return Register{pre.name(), pre.id(), register_.size(), register_.type_spec()};
+    }
+
+    static boost::optional<Register> fromTofinoDirect(
+        const p4configv1::ExternInstance& externInstance) {
+        const auto& pre = externInstance.preamble();
+        ::barefoot::DirectRegister register_;
+        if (!externInstance.info().UnpackTo(&register_)) {
+            ::error("Extern instance %1% does not pack a Register object", pre.name());
+            return boost::none;
+        }
+        return Register{pre.name(), pre.id(), 0, register_.type_spec()};
     }
 };
 
@@ -701,14 +711,10 @@ BfRtSchemaGenerator::getDirectMeter(P4Id meterId) const {
 
 boost::optional<BfRtSchemaGenerator::Register>
 BfRtSchemaGenerator::getDirectRegister(P4Id registerId) const {
-    if (!isOfType(registerId, ::barefoot::P4Ids::REGISTER)) return boost::none;
+    if (!isOfType(registerId, ::barefoot::P4Ids::DIRECT_REGISTER)) return boost::none;
     auto* externInstance = Tofino::findExternInstance(p4info, registerId);
     if (externInstance == nullptr) return boost::none;
-    auto register_ = Register::fromTofino(*externInstance);
-    // There is no DirectRegister extern in TNA today and no DirectRegister
-    // message in P4Info; instead we rely on the size.
-    if (!register_ || register_->size != 0) return boost::none;
-    return register_;
+    return Register::fromTofinoDirect(*externInstance);
 }
 
 boost::optional<BfRtSchemaGenerator::Lpf>
@@ -1490,8 +1496,7 @@ BfRtSchemaGenerator::addTofinoExterns(Util::JsonArray* tablesJson,
         } else if (externTypeId == ::barefoot::P4Ids::REGISTER) {
             for (const auto& externInstance : externType.instances()) {
                 auto register_ = Register::fromTofino(externInstance);
-                // skip direct registers
-                if (register_ != boost::none && register_->size != 0)
+                if (register_ != boost::none)
                     addRegisterCommon(tablesJson, *register_);
             }
         } else if (externTypeId == ::barefoot::P4Ids::LPF) {

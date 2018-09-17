@@ -593,9 +593,8 @@ extern DirectWred<T> {
     bit<8> execute(in T val);
 }
 
-
 /// Register
-extern Register<T> {
+extern Register<T, I> {
     /// Instantiate an array of <size> registers. The initial value is
     /// undefined.
     Register(bit<32> size);
@@ -604,20 +603,28 @@ extern Register<T> {
     /// initial_value.
     Register(bit<32> size, T initial_value);
 
-    ///XXX(hanw): BRIG-212
-    /// following two methods are not supported in the Barefoot backend
-    /// they are present to help with the transition from v1model to tofino.p4
-    /// after the transition, these two methods should be removed
-    /// and the corresponding test cases should be marked as XFAILs.
-    void read(out T result, in bit<32> index);
-    void write(in bit<32> index, in T value);
+    /// Return the value of register at specified index.
+    T read(in I index);
+
+    /// Write value to register at specified index.
+    void write(in I index, in T value);
 }
 
-/// Direct Register
+/// DirectRegister
 extern DirectRegister<T> {
+    /// Instantiate an array of direct registers. The initial value is
+    /// undefined.
     DirectRegister();
 
+    /// Initialize an array of direct registers and set their value to
+    /// initial_value.
     DirectRegister(T initial_value);
+
+    /// Return the value of the direct register.
+    T read();
+
+    /// Write value to a direct register.
+    void write(in T value);
 }
 
 extern RegisterParam<T> {
@@ -630,21 +637,19 @@ extern RegisterParam<T> {
     T read();
 }
 
-extern RegisterAction<T, U> {
-    RegisterAction(Register<T> reg);
+extern DirectRegisterAction<T, U> {
+    DirectRegisterAction(DirectRegister<T> reg);
+    abstract void apply(inout T value, @optional out U rv);
+    U execute(@optional out U rv2, @optional out U rv3, @optional out U rv4);
+}
+
+extern RegisterAction<T, H, U> {
+    RegisterAction(Register<T, H> reg);
     abstract void apply(inout T value, @optional out U rv1, @optional out U rv2,
                                        @optional out U rv3, @optional out U rv4);
-    U execute<H>(@optional in H index, @optional out U rv2,
-                 @optional out U rv3, @optional out U rv4); /* {
-        U rv;
-        T value = reg.read(index);
-        apply(value, rv, rv2, rv3, rv4);
-        reg.write(index, value);
-        return rv;
-    } */
-    U execute_direct(@optional out U rv2, @optional out U rv3, @optional out U rv4);
+    U execute(@optional in H index, @optional out U rv2,
+              @optional out U rv3, @optional out U rv4);
 
-    /* stateful logging execute at an index that increments each time */
     U execute_log(@optional out U rv2, @optional out U rv3, @optional out U rv4);
     U enqueue(@optional out U rv2, @optional out U rv3, @optional out U rv4);  /* fifo push */
     U dequeue(@optional out U rv2, @optional out U rv3, @optional out U rv4);  /* fifo pop */
@@ -669,7 +674,7 @@ extern RegisterAction<T, U> {
 }
 
 extern LearnAction<T, D, U> {
-    LearnAction(Register<T> reg);
+    LearnAction(Register<T, _> reg);
     abstract void apply(inout T value, in D digest, in bool learn,
                         @optional out U rv1, @optional out U rv2,
                         @optional out U rv3, @optional out U rv4);
@@ -693,7 +698,7 @@ extern ActionSelector {
     ActionSelector(bit<32> size,
                    Hash<_> hash,
                    SelectorMode_t mode,
-                   Register<bit<1>> reg);
+                   Register<bit<1>, _> reg);
 }
 
 extern ActionProfile {

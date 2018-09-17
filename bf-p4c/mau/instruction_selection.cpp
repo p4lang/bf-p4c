@@ -32,8 +32,8 @@ const IR::Node *Synth2PortSetup::postorder(IR::Primitive *prim) {
     IR::MAU::MeterType meter_type = IR::MAU::MeterType::UNUSED;
 
     cstring method = dot ? cstring(dot+1) : prim->name;
-    if (objType == "RegisterAction" || objType == "LearnAction" ||
-        objType == "selector_action") {
+    if (objType == "RegisterAction" || objType == "DirectRegisterAction" ||
+        objType == "LearnAction" || objType == "selector_action") {
         bool direct_access = (prim->operands.size() == 1 && method == "execute") ||
                              method == "execute_direct";
         glob = prim->operands.at(0)->to<IR::GlobalRef>();
@@ -532,8 +532,9 @@ const IR::Type *stateful_type_for_primitive(const IR::Primitive *prim) {
         prim->name == "Lpf.execute" || prim->name == "DirectLpf.execute" ||
         prim->name == "Wred.execute" || prim->name == "DirectWred.execute")
         return IR::Type_Meter::get();
-    if (prim->name.startsWith("RegisterAction.") || prim->name.startsWith("LearnAction.") ||
-        prim->name.startsWith("selector_action."))
+    if (prim->name.startsWith("RegisterAction.") ||
+        prim->name.startsWith("DirectRegisterAction.") ||
+        prim->name.startsWith("LearnAction.") || prim->name.startsWith("selector_action."))
         return IR::Type_Register::get();
     BUG("Not a stateful primitive %s", prim);
 }
@@ -620,7 +621,8 @@ void StatefulAttachmentSetup::Scan::postorder(const IR::Primitive *prim) {
     auto dot = prim->name.find('.');
     auto objType = dot ? prim->name.before(dot) : cstring();
     cstring method = dot ? cstring(dot+1) : prim->name;
-    if (objType == "RegisterAction" || objType == "LearnAction" || objType == "selector_action") {
+    if (objType == "RegisterAction" || objType == "DirectRegisterAction" ||
+        objType == "LearnAction" || objType == "selector_action") {
         obj = prim->operands.at(0)->to<IR::GlobalRef>()->obj->to<IR::MAU::StatefulAlu>();
         BUG_CHECK(obj, "invalid object");
         if (method == "execute") {
@@ -771,10 +773,6 @@ void StatefulAttachmentSetup::Scan::postorder(const IR::MAU::Table *tbl) {
             if (index_op < 0) {
                 continue;
             }
-
-            // Because there is no term for DirectRegisterAction
-            if (synth2port->direct && synth2port->is<IR::MAU::StatefulAlu>())
-                continue;
 
             if (static_cast<int>(prim->operands.size()) > index_op)
                 setup_index_operand(prim->operands[index_op], synth2port, tbl, call);
