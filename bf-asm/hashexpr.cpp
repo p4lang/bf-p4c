@@ -38,11 +38,11 @@ void HashExpr::gen_ixbar_init(ixbar_init_t *ixbar_init, std::vector<ixbar_input_
 
     gen_ixbar_inputs(inputs, ix, hash_table);
     hash_matrix_output_t hmo;
-    hmo.hash_output_bit = logical_hash_bit;
-    hmo.galois_start_bit = 0;
+    hmo.p4_hash_output_bit = logical_hash_bit;
+    hmo.gfm_start_bit = 0;
     hmo.bit_size = 1;
     outputs.push_back(hmo);
- 
+
 
     ixbar_init->ixbar_inputs = inputs.data();
     ixbar_init->inputs_sz = inputs.size();
@@ -66,7 +66,7 @@ void HashExpr::gen_data(bitvec &data, int logical_hash_bit, InputXbar *ix, int h
     determine_hash_matrix(&ixbar_init, ixbar_init.ixbar_inputs, ixbar_init.inputs_sz,
                           &hash_algorithm, hash_matrix);
     uint64_t hash_column = hash_matrix[hash_table][0].column_value;
-    data |= hash_column; 
+    data |= hash_column;
 }
 
 class HashExpr::PhvRef : HashExpr {
@@ -100,7 +100,7 @@ class HashExpr::PhvRef : HashExpr {
     Phv::Ref* get_ghost_slice() { return &what; }
     void dbprint(std::ostream & out) const override {
         out << "HashExpr: PhvRef" << std::endl;
-        out << "hash algorithm: [ algo : " << hash_algorithm.hash_alg 
+        out << "hash algorithm: [ algo : " << hash_algorithm.hash_alg
             << ", msb : " << hash_algorithm.msb
             << ", extend : " << hash_algorithm.extend
             << ", final_xor : " << hash_algorithm.final_xor
@@ -108,7 +108,7 @@ class HashExpr::PhvRef : HashExpr {
             << ", init : " << hash_algorithm.init
             << ", reverse : " << hash_algorithm.reverse
             << std::endl;
-        if (what) out << "Phv: " << what << std::endl; 
+        if (what) out << "Phv: " << what << std::endl;
     }
 };
 
@@ -147,7 +147,7 @@ class HashExpr::Random : HashExpr {
             int hash_table) override;
     void dbprint(std::ostream & out) const override {
         out << "HashExpr: Random" << std::endl;
-        out << "hash algorithm: [ algo : " << hash_algorithm.hash_alg 
+        out << "hash algorithm: [ algo : " << hash_algorithm.hash_alg
             << ", msb : " << hash_algorithm.msb
             << ", extend : " << hash_algorithm.extend
             << ", final_xor : " << hash_algorithm.final_xor
@@ -156,7 +156,7 @@ class HashExpr::Random : HashExpr {
             << ", reverse : " << hash_algorithm.reverse
             << std::endl;
         for (auto &e : what) {
-            out << "Phv: " << e << std::endl; 
+            out << "Phv: " << e << std::endl;
         }
     }
 };
@@ -195,12 +195,12 @@ class HashExpr::Crc : HashExpr {
             if (*el != **it2++) return false;
         return true; }
     void build_algorithm() override {
-        hash_algorithm.size = poly.max().index();
+        hash_algorithm.hash_bit_width = poly.max().index();
         hash_algorithm.hash_alg = CRC_DYN;
         hash_algorithm.reverse = reverse;
         hash_algorithm.poly = poly.getrange(32, 32) << 32;
         hash_algorithm.poly |= poly.getrange(0, 32);
-        hash_algorithm.init = init.getrange(32, 32) << 32; 
+        hash_algorithm.init = init.getrange(32, 32) << 32;
         hash_algorithm.init |= init.getrange(0, 32);
         hash_algorithm.final_xor = 0ULL;
         hash_algorithm.extend = false;
@@ -290,7 +290,7 @@ class HashExpr::Stripe : HashExpr {
              e->build_algorithm();
         }
         // Does not set the extend algorithm, as the gen_data for extend does this
-        // in the source 
+        // in the source
     }
 
     void gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, InputXbar *ix,
@@ -437,8 +437,8 @@ void HashExpr::find_input(Phv::Ref what, std::vector<ixbar_input_t> &inputs, Inp
         int group_bit_position = in->lo + (what->lo - in->what->lo);
         if ((group_bit_position / 64 != (hash_table % 2)) ||
             (group_bit_position + what->size() - 1) / 64 != (hash_table % 2))
-            continue; 
-    
+            continue;
+
         ixbar_input_t input;
         input.ixbar_bit_position = group_bit_position + (hash_table / 2) * 128;
         input.bit_size = what->size();
@@ -485,12 +485,12 @@ void HashExpr::Crc::gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, InputXb
         ixbar_input_t invalid_input;
         if (previous_range_hi != entry.first) {
             invalid_input.valid = false;
-            invalid_input.bit_size = entry.first - previous_range_hi; 
+            invalid_input.bit_size = entry.first - previous_range_hi;
             inputs.push_back(invalid_input);
         }
 
         auto &ref = entry.second;
-        find_input(ref, inputs, ix, hash_table); 
+        find_input(ref, inputs, ix, hash_table);
         previous_range_hi = entry.first + ref->size();
     }
     if (previous_range_hi != input_size()) {
@@ -545,4 +545,3 @@ void HashExpr::Stripe::gen_data(bitvec &data, int bit, InputXbar *ix, int grp) {
             break; }
         bit %= total_size; }
 }
-

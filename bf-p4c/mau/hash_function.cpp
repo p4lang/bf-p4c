@@ -83,7 +83,7 @@ static bool direct_crc_string_conversion(bfn_hash_algorithm_ *hash_alg,
     } else {
         return false;
     }
-    hash_alg->size = ceil_log2(hash_alg->poly) - 1;
+    hash_alg->hash_bit_width = ceil_log2(hash_alg->poly) - 1;
 
     if ((pos = alg_name.find("not_rev_")) != std::string::npos) {
         hash_alg->reverse = false;
@@ -187,7 +187,7 @@ const IR::Expression *IR::MAU::hash_function::convertHashAlgorithmBFN(Util::Sour
     cstring mc_name = "unknown";
     bool crc_algorithm_set = false;
     bfn_hash_algorithm_t hash_alg;
-    hash_alg.size = 0;
+    hash_alg.hash_bit_width = 0;
     bool hash_error = false;
 
     // Determines the crc functions through the 3rd party library
@@ -219,11 +219,11 @@ const IR::Expression *IR::MAU::hash_function::convertHashAlgorithmBFN(Util::Sour
     if (crc_algorithm_set) {
         mpz_class poly, init, final_xor;
         mpz_import(poly.get_mpz_t(), 1, 0, sizeof(hash_alg.poly), 0, 0, &hash_alg.poly);
-        poly |= (1 << hash_alg.size);
+        poly |= (1 << hash_alg.hash_bit_width);
         mpz_import(init.get_mpz_t(), 1, 0, sizeof(hash_alg.init), 0, 0, &hash_alg.init);
         mpz_import(final_xor.get_mpz_t(), 1, 0, sizeof(hash_alg.final_xor), 0, 0,
                    &hash_alg.final_xor);
-        auto typeT = IR::Type::Bits::get(hash_alg.size + 1);
+        auto typeT = IR::Type::Bits::get(hash_alg.hash_bit_width + 1);
         args->push_back(new IR::Argument(new IR::Constant(typeT, poly)));
         args->push_back(new IR::Argument(new IR::Constant(typeT, init)));
         args->push_back(new IR::Argument(new IR::Constant(typeT, final_xor)));
@@ -453,7 +453,7 @@ void IR::MAU::hash_function::build_algorithm_t(bfn_hash_algorithm_ *alg) const {
             alg->hash_alg = IDENTITY_DYN;
     }
 
-    alg->size = size;
+    alg->hash_bit_width = size;
     alg->msb = msb;
     alg->reverse = reverse;
     alg->poly = poly;

@@ -2681,8 +2681,8 @@ bitvec IXBar::determine_final_xor(const IR::MAU::hash_function *hf,
     safe_vector<hash_matrix_output_t> hash_outputs;
     for (auto &entry : bit_starts) {
         hash_matrix_output_t hash_output;
-        hash_output.galois_start_bit = entry.first;
-        hash_output.hash_output_bit = entry.second.lo;
+        hash_output.gfm_start_bit = entry.first;
+        hash_output.p4_hash_output_bit = entry.second.lo;
         hash_output.bit_size = entry.second.size();
         hash_outputs.push_back(hash_output);
     }
