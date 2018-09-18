@@ -255,6 +255,43 @@ bitvec PhvSpec::deparserGroup(unsigned id) const {
     return range(containerType, (index / groupSize) * groupSize, groupSize);
 }
 
+Util::JsonObject *PhvSpec::toJson() const {
+    // Create the "phv_containers" node.
+    auto *phv_containers = new Util::JsonObject();
+
+    // Map the type to the available container addresses.
+    std::map<PHV::Type, Util::JsonArray*> containersByType;
+    for (auto cid : physicalContainers()) {
+        auto c = idToContainer(cid);
+        if (!containersByType[c.type()])
+            containersByType[c.type()] = new Util::JsonArray();
+        auto addr = physicalAddress(cid, MAU);
+        containersByType[c.type()]->append(new Util::JsonValue(addr)); }
+
+    auto KindName = [](PHV::Kind k) {
+        switch (k) {
+            case PHV::Kind::normal:   return "normal";
+            case PHV::Kind::tagalong: return "tagalong";
+            case PHV::Kind::mocha:    return "mocha";
+            case PHV::Kind::dark:     return "dark";
+            default:    BUG("Unknown PHV container kind"); } };
+
+    // Build PhvContainerType JSON objects for each container type.
+    for (auto kind : containerKinds()) {
+        auto bySize = new Util::JsonArray();
+        for (auto size : containerSizes()) {
+            auto* addresses = containersByType[PHV::Type(kind, size)];
+            if (!addresses || !addresses->size()) continue;
+            auto* sizeObject = new Util::JsonObject();
+            sizeObject->emplace("width", new Util::JsonValue(int(size)));
+            sizeObject->emplace("units", new Util::JsonValue(addresses->size()));
+            sizeObject->emplace("addresses", addresses);
+            bySize->push_back(sizeObject); }
+        phv_containers->emplace(KindName(kind), bySize);
+    }
+    return phv_containers;
+}
+
 TofinoPhvSpec::TofinoPhvSpec() {
     addType(PHV::Type::B);
     addType(PHV::Type::H);
@@ -340,7 +377,7 @@ const bitvec& TofinoPhvSpec::individuallyAssignedContainers() const {
     return individually_assigned_containers_i;
 }
 
-unsigned TofinoPhvSpec::physicalAddress(unsigned id) const {
+unsigned TofinoPhvSpec::physicalAddress(unsigned id, ArchBlockType_t /* interface */) const {
     const PHV::Type containerType = idToContainerType(id % numContainerTypes());
     const unsigned index = id / numContainerTypes();
     BUG_CHECK(physicalAddresses.find(containerType) != physicalAddresses.end(),
@@ -366,6 +403,10 @@ JBayPhvSpec::JBayPhvSpec() {
     addType(PHV::Type::DB);
     addType(PHV::Type::DH);
     addType(PHV::Type::DW);
+
+    auto phv_scale_factor = BFNContext::get().options().phv_scale_factor;
+    if (phv_scale_factor != 1.0)
+        P4C_UNIMPLEMENTED("phv_scale_factor not yet implemented for %1%", Device::name());
 
     std::map<PHV::Size, std::map<unsigned, std::map<PHV::Type, unsigned>>> rawMauGroupSpec = {
         { PHV::Size::b8, {{4, {{PHV::Type::B, 12}, {PHV::Type::MB, 4}, {PHV::Type::DB, 4}} }} },
@@ -426,14 +467,53 @@ const bitvec& JBayPhvSpec::individuallyAssignedContainers() const {
     return individually_assigned_containers_i;
 }
 
-unsigned JBayPhvSpec::physicalAddress(unsigned /* id */) const {
-    // XXX(cole): JBay uses a different addressing scheme for PHV containers in
-    // PARDE and MAU.  At some point, we'll need to extend the physicalAddress
-    // interface to take a pipeline section parameter.  As this is primarily
-    // used for producing visualization information, we'll also need to update
-    // p4i with that knowledge.
+unsigned JBayPhvSpec::physicalAddress(unsigned id, ArchBlockType_t interface) const {
+    struct RangeSpec { unsigned start; unsigned blocks; unsigned blockSize; unsigned incr; };
+    static std::map<PHV::Type, RangeSpec> physicalMauAddresses = {
+        {PHV::Type::W,  { .start = 0,   .blocks = 4, .blockSize = 12, .incr = 20 }},
+        {PHV::Type::MW, { .start = 12,  .blocks = 4, .blockSize = 4,  .incr = 20 }},
+        {PHV::Type::DW, { .start = 16,  .blocks = 4, .blockSize = 4,  .incr = 20 }},
+        {PHV::Type::B,  { .start = 80,  .blocks = 4, .blockSize = 12, .incr = 20 }},
+        {PHV::Type::MB, { .start = 92,  .blocks = 4, .blockSize = 4,  .incr = 20 }},
+        {PHV::Type::DB, { .start = 96,  .blocks = 4, .blockSize = 4,  .incr = 20 }},
+        {PHV::Type::H,  { .start = 160, .blocks = 6, .blockSize = 12, .incr = 20 }},
+        {PHV::Type::MH, { .start = 172, .blocks = 6, .blockSize = 4,  .incr = 20 }},
+        {PHV::Type::DH, { .start = 176, .blocks = 6, .blockSize = 4,  .incr = 20 }}
+    };
+    static std::map<PHV::Type, RangeSpec> physicalParserAddresses = {
+        {PHV::Type::W,  { .start = 0,   .blocks = 4, .blockSize = 12, .incr = 16 }},
+        {PHV::Type::MW, { .start = 12,  .blocks = 4, .blockSize = 4,  .incr = 16 }},
+        {PHV::Type::B,  { .start = 64,  .blocks = 4, .blockSize = 12, .incr = 16 }},
+        {PHV::Type::MB, { .start = 76,  .blocks = 4, .blockSize = 4,  .incr = 16 }},
+        {PHV::Type::H,  { .start = 128, .blocks = 6, .blockSize = 12, .incr = 16 }},
+        {PHV::Type::MH, { .start = 140, .blocks = 6, .blockSize = 4,  .incr = 16 }},
+    };
 
-    P4C_UNIMPLEMENTED("Physical addresses for PHV containers");
+    const PHV::Type containerType = idToContainerType(id % numContainerTypes());
+    const unsigned index = id / numContainerTypes();
+    RangeSpec physicalRange;
+    if (interface == MAU) {
+        BUG_CHECK(physicalMauAddresses.find(containerType) != physicalMauAddresses.end(),
+                  "PHV container %1% has unrecognized type %2%",
+                  idToContainer(id), containerType);
+        physicalRange = physicalMauAddresses.at(containerType);
+    } else {
+        BUG_CHECK(physicalParserAddresses.find(containerType) != physicalParserAddresses.end(),
+                  "PHV container %1% has unrecognized type %2%",
+                  idToContainer(id), containerType);
+        physicalRange = physicalParserAddresses.at(containerType);
+    }
+
+
+    auto block = index / physicalRange.blockSize;
+    auto blockOffset = index % physicalRange.blockSize;
+
+    BUG_CHECK(block < physicalRange.blocks, "No valid block for PHV container %1%",
+              idToContainer(id));
+    BUG_CHECK(blockOffset < physicalRange.blockSize,
+              "No physical address for PHV container %1%", idToContainer(id));
+
+    return physicalRange.start + block * physicalRange.incr + blockOffset;
 }
 
 #endif /* HAVE_JBAY */

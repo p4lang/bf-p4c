@@ -5,10 +5,16 @@
 #include "bf-p4c/phv/phv.h"
 #include "lib/ordered_map.h"
 #include "lib/bitvec.h"
+#include "lib/json.h"
 
 class cstring;
 
 class PhvSpec {
+ public:
+    // We should reuse the definition from arch/arch.h, however, because of circular includes
+    // (arch.h, phv_spec.h, device.h) that is not currently workable
+    enum ArchBlockType_t { PARSER, MAU, DEPARSER };
+
  protected:
     // All cache fields
     mutable bitvec physical_containers_i;
@@ -184,8 +190,12 @@ class PhvSpec {
     /// hardware - i.e., all non-overflow containers.
     const bitvec& physicalContainers() const;
 
-    /// @return the target-specific address of @container_id.
-    virtual unsigned physicalAddress(unsigned container_id) const = 0;
+    /// @return the target-specific address of @container_id, for the specified interface
+    /// in the pipeline: PARSER, MAU, DEPARSER.
+    virtual unsigned physicalAddress(unsigned container_id, ArchBlockType_t interface) const = 0;
+
+    /// @return a json representation of the phv specification
+    Util::JsonObject *toJson() const;
 };
 
 
@@ -208,8 +218,9 @@ class TofinoPhvSpec : public PhvSpec {
 
     const bitvec& individuallyAssignedContainers() const override;
 
-    /// @see PhvSpec::physicalAddress(unsigned container_id).
-    unsigned physicalAddress(unsigned container_id) const override;
+    /// @see PhvSpec::physicalAddress(unsigned container_id, BFN::ArchBlockType interface).
+    /// For Tofino, all interfaces are the same.
+    unsigned physicalAddress(unsigned container_id, ArchBlockType_t /*interface*/) const override;
 };
 
 #if HAVE_JBAY
@@ -222,8 +233,9 @@ class JBayPhvSpec : public PhvSpec {
 
     const bitvec& individuallyAssignedContainers() const override;
 
-    /// @see PhvSpec::physicalAddress(unsigned container_id).
-    unsigned physicalAddress(unsigned container_id) const override;
+    /// @see PhvSpec::physicalAddress(unsigned container_id, BFN::ArchBlockType interface).
+    /// For JBay, PARSER/DEPARSER have normal and mocha, MAU has additional darks
+    unsigned physicalAddress(unsigned container_id, ArchBlockType_t interface) const override;
 };
 #endif /* HAVE_JBAY */
 

@@ -95,46 +95,7 @@ bool Visualization::preorder(const IR::BFN::Pipe *p) {
     pipe->emplace("phase0", phase0);
 
     // Create the "phv_containers" node.
-    auto *phv_containers = new Util::JsonObject();
-
-    // Map the type to the available container addresses.
-    std::map<PHV::Type, Util::JsonArray*> containersByType;
-    const PhvSpec& phv_spec = Device::phvSpec();
-    for (auto cid : phv_spec.physicalContainers()) {
-        auto c = phv_spec.idToContainer(cid);
-        if (!containersByType[c.type()])
-            containersByType[c.type()] = new Util::JsonArray();
-#if HAVE_JBAY
-        // XXX(cole): PhvSpec::physicalAddress isn't implemented for JBay yet,
-        // because JBay uses different physical addressing schemes for PHV
-        // containers in PARDE vs. MAU.
-        auto addr = cid;
-#else
-        auto addr = phv_spec.physicalAddress(cid);
-#endif
-        containersByType[c.type()]->append(new Util::JsonValue(addr)); }
-
-    auto KindName = [](PHV::Kind k) {
-        switch (k) {
-            case PHV::Kind::normal:   return "normal";
-            case PHV::Kind::tagalong: return "tagalong";
-            case PHV::Kind::mocha:    return "mocha";
-            case PHV::Kind::dark:     return "dark";
-            default:    BUG("Unknown PHV container kind"); } };
-
-    // Build PhvContainerType JSON objects for each container type.
-    for (auto kind : Device::phvSpec().containerKinds()) {
-        auto bySize = new Util::JsonArray();
-        for (auto size : Device::phvSpec().containerSizes()) {
-            auto* addresses = containersByType[PHV::Type(kind, size)];
-            if (!addresses || !addresses->size()) continue;
-            auto* sizeObject = new Util::JsonObject();
-            sizeObject->emplace("width", new Util::JsonValue(int(size)));
-            sizeObject->emplace("units", new Util::JsonValue(addresses->size()));
-            sizeObject->emplace("addresses", addresses);
-            bySize->push_back(sizeObject); }
-        phv_containers->emplace(KindName(kind), bySize); }
-    pipe->emplace("phv_containers", phv_containers);
+    pipe->emplace("phv_containers", Device::phvSpec().toJson());
 
     return true;
 }
