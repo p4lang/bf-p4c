@@ -26,7 +26,7 @@ add_custom_target(genLogging
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/..
   ${CMAKE_CURRENT_BINARY_DIR} ${LIBRAPIDJSON_INCLUDE_DIRS})
-add_executable(test_phv_logging test_phv.cpp)
+add_executable(test_phv_logging test_phv.cpp ${BFN_P4C_SOURCE_DIR}/bf-p4c/common/run_id.cpp)
 target_link_libraries(test_phv_logging ${OPENSSL_LIBRARIES})
 add_dependencies(test_phv_logging genLogging)
 

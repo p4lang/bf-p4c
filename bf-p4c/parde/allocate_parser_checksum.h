@@ -1,10 +1,15 @@
 #ifndef EXTENSIONS_BF_P4C_PARDE_ALLOCATE_PARSER_CHECKSUM_H_
 #define EXTENSIONS_BF_P4C_PARDE_ALLOCATE_PARSER_CHECKSUM_H_
 
-// FIXME(zma) This file won't compile if unified build is turned off.
-// Need to include headers that this depends on.
+#include <map>
 
-class AllocateParserChecksumUnits : public PassManager {
+#include "ir/ir.h"
+#include "lib/cstring.h"
+#include "bf-p4c/common/parser_graph.h"
+#include "bf-p4c/logging/pass_manager.h"
+#include "parde_visitor.h"
+
+class AllocateParserChecksumUnits : public Logging::PassManager {
     struct CollectParserChecksums : public ParserInspector {
         explicit CollectParserChecksums(const CollectParserInfo& parserInfo) :
             parserInfo(parserInfo) { }
@@ -548,6 +553,7 @@ class AllocateParserChecksumUnits : public PassManager {
         std::map<cstring, std::set<const IR::BFN::ParserState*>>> declToEndStates;
 
     AllocateParserChecksumUnits() :
+        Logging::PassManager("parser", true),
         checksumInfo(parserInfo),
         computeDeadParserChecksums(parserInfo, checksumInfo) {
         addPasses({

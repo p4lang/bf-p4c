@@ -2365,7 +2365,8 @@ class ComputeBufferRequirements : public ParserModifier {
 
 }  // namespace
 
-LowerParser::LowerParser(const PhvInfo& phv, ClotInfo& clot, const FieldDefUse &defuse) {
+LowerParser::LowerParser(const PhvInfo& phv, ClotInfo& clot, const FieldDefUse &defuse) :
+    Logging::PassManager("parser", true /* append */) {
     auto* pragma_no_init = new PragmaNoInit(phv);
     addPasses({
         pragma_no_init,

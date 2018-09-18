@@ -2,6 +2,7 @@
 #define EXTENSIONS_BF_P4C_PARDE_LOWER_PARSER_H_
 
 #include "ir/ir.h"
+#include "logging/pass_manager.h"
 
 class ClotInfo;
 class PhvInfo;
@@ -28,7 +29,8 @@ class FieldDefUse;
  *
  * @post The parser and deparser IR are replaced by lowered versions.
  */
-struct LowerParser : public PassManager {
+class LowerParser : public Logging::PassManager {
+ public:
     explicit LowerParser(const PhvInfo& phv, ClotInfo& clot, const FieldDefUse &defuse);
 };
 

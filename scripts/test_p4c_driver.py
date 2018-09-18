@@ -118,9 +118,11 @@ class Test:
                             help="Treat subsequent input files as having type language.",
                             action="store", default="p4-16")
         # from the barefoot driver
-        parser.add_argument("--archive",
-                            help="Archive all outputs into a single tar.bz2 file",
-                            action="store_true", default=False)
+        parser.add_argument("--archive", nargs='?',
+                            help="Archive all outputs into a single tar.bz2 file.\n" + \
+                            "Note: it can not be the argument before source file" + \
+                            " without specifying the archive name!",
+                            const="__default__", default=None)
         parser.add_argument("--create-graphs",
                             help="Create graphs",
                             action="store_true", default=False)
@@ -130,6 +132,9 @@ class Test:
                             help="run context.json validation")
         parser.add_argument("--validate-manifest", action="store_true", default=False,
                             help="run manifest validation")
+        parser.add_argument("--verbose",
+                            action="store", default=0, type=int, choices=[0, 1, 2, 3],
+                            help="Set compiler logging verbosity level: 0=OFF, 1=SUMMARY, 2=INFO, 3=DEBUG")
         parser.add_argument ("source_file", help="P4 source file")
         self._parser = parser
         # now we can call
@@ -231,7 +236,7 @@ class Test:
         """Check that the produced archive is valid
 
         """
-        if not args.archive:
+        if args.archive is None:
             return 0
         # \TODO: write the checks
         return 0
@@ -252,6 +257,13 @@ class Test:
         try:
             if not self._keep_output and not self._dry_run:
                 shutil.rmtree(args.output_directory)
+                if args.archive is not None:
+                    archiveName, ext = os.path.splitext(os.path.basename(args.archive))
+                    if args.archive == "__default__":
+                        archiveName, ext = os.path.splitext(os.path.basename(args.source_file))
+                    archiveName += ".tar.bz2"
+                    os.remove(archiveName)
+
         except:
             # Couldn't remove the output dir
             pass

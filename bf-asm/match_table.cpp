@@ -88,8 +88,8 @@ METER_ACCESS_TYPE MatchTable::default_meter_access_type(bool for_stateful) {
             continue;
         for (auto &call : it->attached) {
             auto type = call->table_type();
-            if (!(type == Table::METER && !for_stateful ||
-                  type == Table::STATEFUL && for_stateful))
+            if (!((type == Table::METER && !for_stateful) ||
+                  (type == Table::STATEFUL && for_stateful)))
                 continue;
             // Currently the first argument is the meter type
             if (call.args[0].type == Table::Call::Arg::Const) {
@@ -222,7 +222,7 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
                 } else if (auto field = instr_call.args[0].field()) {
                     adr_mask |= (1U << field->size) - 1;
                 }
- 
+
                 if (instr_call.args[1] == "$DEFAULT") {
                     adr_default |= ACTION_INSTRUCTION_ADR_ENABLE;
                 } else if (auto field = instr_call.args[1].field()) {

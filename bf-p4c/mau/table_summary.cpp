@@ -1,5 +1,6 @@
 #include "bf-p4c/mau/table_summary.h"
 #include <numeric>
+#include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/mau/resource_estimate.h"
 #include "lib/hex.h"
 #include "lib/map.h"
@@ -8,7 +9,8 @@
 int TableSummary::numInvoked[] = {0};
 
 Visitor::profile_t TableSummary::init_apply(const IR::Node *root) {
-    tsLog = new Logging::FileLog("table_summary_" + std::to_string(pipe_id) + ".log");
+    if (BFNContext::get().options().verbose > 0)
+        tsLog = new Logging::FileLog("table_summary_pipe" + std::to_string(pipe_id) + ".log");
 
     auto rv = MauInspector::init_apply(root);
     order.clear();
@@ -110,7 +112,6 @@ void TableSummary::throwBacktrackException() {
 }
 
 void TableSummary::printTablePlacement() {
-    LOG1("Printing Table Placement");
     LOG1("Number of tables allocated: " << order.size());
     LOG1("Stage | Table Name");
     for (auto tbl : tableAlloc) {

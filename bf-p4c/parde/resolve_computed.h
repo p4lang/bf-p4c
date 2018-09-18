@@ -2,6 +2,7 @@
 #define BF_P4C_PARDE_RESOLVE_COMPUTED_H_
 
 #include "ir/ir.h"
+#include "bf-p4c/logging/pass_manager.h"
 
 /**
  * Resolve all computed parser expressions if possible. These are expressions in
@@ -24,7 +25,8 @@
  * available on the hardware) prevent us from doing so, or if we're simply
  * incapable of handling what the program is doing, errors are reported.
  */
-struct ResolveComputedParserExpressions : public PassManager {
+class ResolveComputedParserExpressions : public Logging::PassManager {
+ public:
     ResolveComputedParserExpressions();
 };
 
@@ -46,7 +48,8 @@ struct ResolveComputedParserExpressions : public PassManager {
  * unextracted headers) prevent us from doing so, or if we're simply incapable
  * of handling what the program is doing, errors are reported.
  */
-struct ResolveComputedHeaderStackExpressions : public PassManager {
+class ResolveComputedHeaderStackExpressions : public Logging::PassManager {
+ public:
     ResolveComputedHeaderStackExpressions();
 };
 

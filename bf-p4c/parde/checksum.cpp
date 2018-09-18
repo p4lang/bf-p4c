@@ -4,6 +4,8 @@
 
 #include "ir/ir.h"
 #include "lib/error.h"
+#include "bf-p4c/bf-p4c-options.h"
+#include "logging/filelog.h"
 
 namespace {
 
@@ -51,7 +53,7 @@ static bool checksumUpdateSanityCheck(const IR::AssignmentStatement* assignment)
                 destField);
         return false;
     }
-    LOG2("Would write computed checksum to field: " << destField);
+    LOG2("Will write computed checksum to field: " << destField);
 
     const IR::ListExpression* sourceList =
         (*methodCall->arguments)[0]->expression->to<IR::ListExpression>();
@@ -62,7 +64,7 @@ static bool checksumUpdateSanityCheck(const IR::AssignmentStatement* assignment)
     }
 
     for (auto* source : sourceList->components) {
-        LOG2("Checksum would include field: " << source);
+        LOG4("Checksum: is field: " << source << " valid for inclusion");
         if (auto* member = source->to<IR::Member>()) {
             if (!member->expr->is<IR::HeaderRef>()) {
                 ::error("Invalid field in the checksum calculation field list: %1%", source);
@@ -96,7 +98,7 @@ analyzeUpdateChecksumStatement(const IR::AssignmentStatement* assignment) {
     auto* sources = new IR::Vector<IR::BFN::FieldLVal>;
     for (auto* source : sourceList->components) {
         if (auto* member = source->to<IR::Member>()) {
-            LOG2("Checksum would include field: " << source);
+            LOG2("Checksum includes field: " << source);
             sources->push_back(new IR::BFN::FieldLVal(member));
         } else if (auto* constant = source->to<IR::Constant>()) {
             if (constant->asInt() != 0) {
@@ -500,7 +502,11 @@ namespace BFN {
 IR::BFN::Pipe*
 extractChecksumFromDeparser(const IR::BFN::TranslatedP4Deparser* deparser, IR::BFN::Pipe* pipe) {
     CHECK_NULL(pipe);
+
     if (!deparser) return pipe;
+
+    if (BFNContext::get().options().verbose > 0)
+        Logging::FileLog parserLog("parser.log", true /* append */);
 
     auto gress = deparser->thread;
 

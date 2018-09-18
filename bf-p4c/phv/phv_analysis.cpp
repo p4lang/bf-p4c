@@ -26,15 +26,15 @@ PHV_AnalysisPass::PHV_AnalysisPass(
         FieldDefUse &defuse,
         DependencyGraph &deps,
         MauBacktracker& alloc)
-    : table_alloc(alloc),
+    : Logging::PassManager("phv_allocation_"),
+      table_alloc(alloc),
       clustering(phv, uses, pack_conflicts),
       parser_critical_path(phv),
       critical_path_clusters(parser_critical_path),
       pack_conflicts(phv, deps, table_mutex, table_alloc, action_mutex),
       action_constraints(phv, pack_conflicts),
       pragmas(phv, options),
-      meta_live_range(phv, deps, defuse, pragmas, uses),
-      _options(options) {
+      meta_live_range(phv, deps, defuse, pragmas, uses) {
     if (options.trivial_phvalloc) {
         addPasses({
             new PHV::TrivialAlloc(phv)});

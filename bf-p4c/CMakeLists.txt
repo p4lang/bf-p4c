@@ -125,6 +125,7 @@ set (BF_P4C_BACKEND_COMMON_SRCS
   common/parser_overlay.cpp
   common/parser_critical_path.cpp
   common/path_linearizer.cpp
+  common/run_id.cpp
   common/simplify_references.cpp
   common/slice.cpp
   common/type_categories.cpp
@@ -454,6 +455,7 @@ set (BF_P4C_BACKEND_LOGGING_HDRS
   logging/filelog.h
   logging/logging.h
   logging/manifest.h
+  logging/pass_manager.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_LOGGING_HDRS}")
 

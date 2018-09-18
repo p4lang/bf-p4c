@@ -1906,7 +1906,7 @@ BruteForceAllocationStrategy::tryAllocation(
     // fail early if some clusters have unsatisfiable constraints.
     if (unsliceable.size()) {
         return AllocResult(AllocResultCode::FAIL_UNSAT,
-                           std::move(alloc.makeTransaction()),
+                           alloc.makeTransaction(),
                            std::move(unsliceable)); }
 
     // remove deparser zero superclusters.

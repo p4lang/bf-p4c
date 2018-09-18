@@ -89,7 +89,7 @@ void CounterTable::pass1() {
         else if ((l.threshold & 0xf) != 0)
             error(l.lineno, "lrt threshold must be a mulitple of 16");
         if (type & BYTES) {
-            if (l.interval > MAX_LRT_BYTE_INTERVAL)
+            if (static_cast<uint64_t>(l.interval) > MAX_LRT_BYTE_INTERVAL)
                 error(l.lineno, "lrt interval too large");
             else if ((l.interval & 0xff) != 0)
                 error(l.lineno, "lrt interval must be a mulitple of 256 when measuring bytes");
@@ -151,12 +151,12 @@ template<class REGS> void CounterTable::write_merge_regs(REGS &regs, MatchTable 
     } else if (args[0].type == Table::Call::Arg::Field) {
         auto addr = args[0].field();
         auto address_bits = addr->size;
-        adr_mask |= ((1U << address_bits) - 1) << (counter_shifts[format->groups()]); 
+        adr_mask |= ((1U << address_bits) - 1) << (counter_shifts[format->groups()]);
     }
 
-    
+
     if (args[1].type == Table::Call::Arg::Name && strcmp(args[1].name(), "$DEFAULT") == 0) {
-        adr_default = (1U << STATISTICS_PER_FLOW_ENABLE_START_BIT); 
+        adr_default = (1U << STATISTICS_PER_FLOW_ENABLE_START_BIT);
     } else if (args[1].type == Table::Call::Arg::Field) {
         if (args[0].type == Table::Call::Arg::Field) {
             per_entry_en_mux_ctl = args[1].field()->bit(0) - args[0].field()->bit(0) ;

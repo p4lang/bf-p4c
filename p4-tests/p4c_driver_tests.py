@@ -25,6 +25,8 @@ test_matrix = {
                    '-I', p4_16_path, tna_program], None),
     'p4_16_tna_debug': (['--target', 'tofino', '--arch', 'tna', '-g',
                           '-o', 'p4_16_tna_debug', '-I', p4_16_path, tna_program], None),
+    'p4_16_tna_verbose': (['--target', 'tofino', '--arch', 'tna', '--verbose', '2',
+                          '-o', 'p4_16_tna_verbose', '-I', p4_16_path, tna_program], None),
     'p4_16_tna_graphs': (['--target', 'tofino', '--arch', 'tna', '--create-graphs',
                            '-o', 'p4_16_tna_graphs', '-I', p4_16_path, tna_program], None),
     'p4_16_tna_graphs_debug': (['--target', 'tofino', '--arch', 'tna', '--create-graphs', '-g',

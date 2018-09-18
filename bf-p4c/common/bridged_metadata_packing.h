@@ -3,6 +3,7 @@
 
 #include "ir/ir.h"
 #include "lib/symbitmatrix.h"
+#include "logging/pass_manager.h"
 #include "bf-p4c/mau/action_mutex.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
 #include "bf-p4c/mau/table_mutex.h"
@@ -247,7 +248,6 @@ class ReplaceBridgedMetadataUses : public Transform {
  private:
     const PhvInfo& phv;
     const PackBridgedMetadata& pack;
-    const CollectBridgedFields& collectBridgedFields;
 
     /// Map: Bridged field name to IR::Type*.
     ordered_map<cstring, const IR::Type*> bridgedFields;
@@ -284,9 +284,8 @@ class ReplaceBridgedMetadataUses : public Transform {
  public:
     explicit ReplaceBridgedMetadataUses(
             const PhvInfo& p,
-            const PackBridgedMetadata& pm,
-            const CollectBridgedFields& f)
-        : phv(p), pack(pm), collectBridgedFields(f) { }
+            const PackBridgedMetadata& pm)
+        : phv(p), pack(pm) { }
 };
 
 /** To ensure that BridgedMetadataPacking works even when dead code elimination is disabled, we need
@@ -304,7 +303,7 @@ class RemoveUnusedExtracts : public Transform {
     explicit RemoveUnusedExtracts(const PhvInfo& p) : phv(p) { }
 };
 
-class BridgedMetadataPacking : public PassManager {
+class BridgedMetadataPacking : public Logging::PassManager {
  private:
     CollectBridgedFields&                               bridgedFields;
     PackConflicts                                       packConflicts;

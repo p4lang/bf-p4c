@@ -112,8 +112,8 @@ class BarefootBackend(BackendDriver):
                                     help="Set compiler to be backward compatible with p4c-tofino")
 
         self._argGroup.add_argument("--verbose",
-                                    action="store_true", default=False,
-                                    help="Set compiler logging to be verbose")
+                                    action="store", default=0, type=int, choices=[0, 1, 2, 3],
+                                    help="Set compiler logging verbosity level: 0=OFF, 1=SUMMARY, 2=INFO, 3=DEBUG")
 
         if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
             self._argGroup.add_argument("--validate-output", action="store_true", default=False,
@@ -182,11 +182,22 @@ class BarefootBackend(BackendDriver):
         if opts.display_power_budget:
             self.add_command_option('compiler', '--display-power-budget')
 
-        if opts.verbose:
+        if opts.verbose > 0:
             ta_logging = "table_placement:3,table_summary:1"
-            pa_logging = "allocate_phv:3,utils:3"
-            self.add_command_option('compiler', '--verbose -T{},{}'.format(ta_logging, pa_logging))
-
+            phv_verbosity = str(2 * opts.verbose - 1)
+            pa_logging = "allocate_phv:" + phv_verbosity + ",utils:3"
+            parde_verbosity = str(2 * opts.verbose - 1)
+            p2_verbosity = str(2 * opts.verbose)
+            parde_logging = "extract_parser:" + parde_verbosity + \
+                            ",checksum:" + parde_verbosity + \
+                            ",allocate_parser_checksum.h:" + p2_verbosity + \
+                            ",lower_parser:" + p2_verbosity + \
+                            ",resolve_computed:" + parde_verbosity
+            bridge_logging = "bridged_metadata_packing:1"
+            self.add_command_option('compiler', '--verbose -T{},{},{},{}'.format(ta_logging,
+                                                                                 pa_logging,
+                                                                                 parde_logging,
+                                                                                 bridge_logging))
         if opts.bf_rt_schema is not None:
             self.add_command_option('compiler', '--bf-rt-schema {}'.format(opts.bf_rt_schema))
 

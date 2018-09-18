@@ -15,7 +15,6 @@ class PhvInfo;
  *  IR node could be necessary.
  */
 class Synth2PortSetup : public MauTransform {
-    const PhvInfo &phv;
     safe_vector<const IR::Primitive *> stateful;
     std::set<UniqueAttachedId> per_flow_enables;
     std::map<UniqueAttachedId, IR::MAU::MeterType> meter_types;
@@ -33,7 +32,7 @@ class Synth2PortSetup : public MauTransform {
     }
 
  public:
-    explicit Synth2PortSetup(const PhvInfo &p) : phv(p) { }
+    explicit Synth2PortSetup(const PhvInfo &) { }
 };
 
 /** The general purpose of instruction selection is to completely transform all P4 frontend code

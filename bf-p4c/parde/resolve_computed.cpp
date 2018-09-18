@@ -1520,7 +1520,8 @@ struct InsertSaveAndSelect : public PassManager {
 
 }  // namespace
 
-ResolveComputedParserExpressions::ResolveComputedParserExpressions() {
+ResolveComputedParserExpressions::ResolveComputedParserExpressions() :
+    Logging::PassManager("parser", true /* append */) {
     auto* resolveComputedValues = new ResolveComputedValues();
     addPasses({
         new VerifyAssignedShifts,
@@ -1532,7 +1533,8 @@ ResolveComputedParserExpressions::ResolveComputedParserExpressions() {
     });
 }
 
-ResolveComputedHeaderStackExpressions::ResolveComputedHeaderStackExpressions() {
+ResolveComputedHeaderStackExpressions::ResolveComputedHeaderStackExpressions() :
+    Logging::PassManager("parser", true /* append */) {
     addPasses({
         new VerifyAssignedShifts,
         new ResolveNextAndLast,

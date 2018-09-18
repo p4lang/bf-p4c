@@ -1971,17 +1971,15 @@ class InsertParserChecksums : public Inspector {
  public:
     InsertParserChecksums(TranslateParserChecksums* translate,
                           const CollectParserChecksums* collect,
-                          const P4ParserGraphs* parserGraphs,
+                          const P4ParserGraphs*,
                           ProgramStructure *structure)
         : translate(translate),
           collect(collect),
-          parserGraphs(parserGraphs),
           structure(structure) { }
 
  private:
     TranslateParserChecksums* translate;
     const CollectParserChecksums* collect;
-    const P4ParserGraphs* parserGraphs;
     ProgramStructure *structure;
 
     std::map<const IR::MethodCallStatement*, const IR::Declaration*> verifyDeclarationMap;

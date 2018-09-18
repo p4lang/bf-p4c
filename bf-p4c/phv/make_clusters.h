@@ -252,12 +252,11 @@ class Clustering : public PassManager {
     class ValidateDeparserZeroClusters : public Inspector {
      private:
         Clustering& self;
-        PhvInfo&    phv_i;
 
         profile_t init_apply(const IR::Node* root) override;
 
      public:
-        explicit ValidateDeparserZeroClusters(Clustering& c) : self(c), phv_i(self.phv_i) { }
+        explicit ValidateDeparserZeroClusters(Clustering& c) : self(c) { }
     };
 
  public:

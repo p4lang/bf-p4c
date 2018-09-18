@@ -914,6 +914,10 @@ void ExtractParser::end_apply() {
         DumpParser dp("extract_parser");
         rv->apply(dp);
     }
+    if (parserLog != nullptr) {
+        delete parserLog;
+        parserLog = nullptr;
+    }
 }
 
 /// XXX(hanw): This pass must be applied to IR::BFN::Pipe. It modifies the
@@ -922,7 +926,8 @@ void ExtractParser::end_apply() {
 /// in the backend though. The compiler should be able to insert placeholder
 /// parser state in the midend instead, and let the backend to insert the
 /// intrinsic metadata extraction logic based on the target device (tofino/jbay).
-ProcessParde::ProcessParde(const IR::BFN::Pipe* rv, bool useTna) {
+ProcessParde::ProcessParde(const IR::BFN::Pipe* rv, bool useTna) :
+    Logging::PassManager("parser", true /* append */) {
     setName("ProcessParde");
     addPasses({
         // Attempt to resolve header stack ".next" and ".last" members.

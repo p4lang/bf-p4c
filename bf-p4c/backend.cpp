@@ -96,17 +96,15 @@ static void debug_hook(const char *, unsigned, const char *pass, const IR::Node 
     LOG4(pass << ": " << std::endl << *n << std::endl);
 }
 
-class TableAllocPass : public PassManager {
+class TableAllocPass : public Logging::PassManager {
  private:
     TablesMutuallyExclusive mutex;
     SharedIndirectAttachedAnalysis siaa;
     LayoutChoices           lc;
-    const BFN_Options &_options;
-    Logging::FileLog *taLog;
 
  public:
     TableAllocPass(const BFN_Options& options, PhvInfo& phv, DependencyGraph &deps)
-        : siaa(mutex), _options(options) {
+        : Logging::PassManager("table_placement_"), siaa(mutex) {
             addPasses({
                 new GatewayOpt(phv),   // must be before TableLayout?  or just TablePlacement?
                 new TableLayout(phv, lc),
@@ -128,23 +126,6 @@ class TableAllocPass : public PassManager {
             });
 
         setName("Table Alloc");
-    }
-
-     profile_t init_apply(const IR::Node *root) override {
-        static unsigned int iteration = 0;
-        if (_options.verbose) {
-            cstring logName("table_placement_" + std::to_string(iteration++) + ".log");
-            taLog = new Logging::FileLog(logName);
-            std::clog << "TableAllocPass seqNo: " << seqNo << std::endl;
-        }
-        return PassManager::init_apply(root);
-    }
-    void end_apply() override {
-        if (taLog != nullptr) {
-            delete taLog;
-            taLog = nullptr;
-        }
-        PassManager::end_apply();
     }
 };
 

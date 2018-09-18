@@ -270,7 +270,7 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::TypeChecking(&refMap, &typeMap, true),
         evaluator,
         new VisitFunctor([this, evaluator]() { toplevel = evaluator->getToplevelBlock(); }),
-        new NormalizeParams(&refMap, &typeMap, toplevel),
+        new NormalizeParams(),
         new P4::TypeChecking(&refMap, &typeMap, true),
         new FillFromBlockMap(&refMap, &typeMap),
         new FlattenEmitArgs(),

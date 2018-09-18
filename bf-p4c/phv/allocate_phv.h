@@ -459,7 +459,7 @@ class AllocatePHV : public Inspector {
     PHV::Pragmas& pragmas_i;
 
     // Used to create strategies, if they need
-    ActionPhvConstraints& actions_i;
+    /// Currently unused ActionPhvConstraints& actions_i;
     // Used to create strategies, if needed
     const CalcCriticalPathClusters& critical_path_clusters_i;
     FieldInterference field_interference_i;
@@ -527,7 +527,7 @@ class AllocatePHV : public Inspector {
         : core_alloc_i(phv.field_mutex, clustering, uses, defuse, clot, pragmas, phv, actions),
           phv_i(phv), uses_i(uses), clot_i(clot),
           clustering_i(clustering), mutex_i(phv.field_mutex), pragmas_i(pragmas),
-          actions_i(actions), critical_path_clusters_i(critical_cluster),
+          critical_path_clusters_i(critical_cluster),
           field_interference_i(phv.field_mutex, uses) { }
 };
 

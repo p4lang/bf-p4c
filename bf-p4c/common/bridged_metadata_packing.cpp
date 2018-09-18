@@ -789,7 +789,8 @@ BridgedMetadataPacking::BridgedMetadataPacking(
             DependencyGraph& dg,
             CollectBridgedFields& b,
             const MauBacktracker& alloc)
-    : bridgedFields(b),
+    : Logging::PassManager("bridge_metadata_"),
+      bridgedFields(b),
       packConflicts(p, dg, tMutex, alloc, aMutex),
       actionConstraints(p, packConflicts),
       packMetadata(p, b, actionConstraints, doNotPack, phase0Fields, deparserParams,
@@ -806,6 +807,6 @@ BridgedMetadataPacking::BridgedMetadataPacking(
               new GatherPhase0Fields(p, phase0Fields),
               new GatherParserExtracts(p, parserAlignedFields),
               &packMetadata,
-              new ReplaceBridgedMetadataUses(p, packMetadata, bridgedFields)
+              new ReplaceBridgedMetadataUses(p, packMetadata)
           });
 }

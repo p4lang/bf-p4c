@@ -9,11 +9,11 @@
 #include <string>
 #include <utility>
 
-#include "bf-p4c-options.h"
-#include "common/run_id.h"
+#include "bf-p4c/bf-p4c-options.h"
+#include "bf-p4c/common/run_id.h"
 #include "ir/ir.h"
 #include "lib/cstring.h"
-#include "version.h"
+#include "bf-p4c/version.h"
 
 namespace Logging {
 

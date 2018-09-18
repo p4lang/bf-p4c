@@ -80,7 +80,6 @@ class MarkDarkCandidates : public Inspector {
 class CollectDarkPrivatizationCandidates : public Inspector {
  private:
     PhvInfo&                    phv;
-    const PhvUse&               uses;
     const CollectNonDarkUses&   nonDarkUses;
     const PragmaContainerType&  pragma;
 
@@ -98,10 +97,10 @@ class CollectDarkPrivatizationCandidates : public Inspector {
  public:
     explicit CollectDarkPrivatizationCandidates(
             PhvInfo& p,
-            const PhvUse& u,
+            const PhvUse&,
             const CollectNonDarkUses& d,
             const PragmaContainerType& t)
-        : phv(p), uses(u), nonDarkUses(d), pragma(t) { }
+        : phv(p), nonDarkUses(d), pragma(t) { }
 };
 
 /** This class takes as constructor arguments, an empty map of PHV::Field* to PHV::Expression* and
@@ -158,7 +157,6 @@ class AddDarkFieldUses : public MauTransform {
   */
 class AddPrivatizedDarkTableInit : public MauTransform {
  private:
-    const PhvInfo       &phv;
     const ordered_map<const PHV::Field*, const IR::TempVar*>&       darkFields;
     const ordered_map<const PHV::Field*, const IR::Expression*>&    fieldExpressions;
 
@@ -179,10 +177,10 @@ class AddPrivatizedDarkTableInit : public MauTransform {
 
  public:
     AddPrivatizedDarkTableInit(
-            const PhvInfo& p,
+            const PhvInfo&,
             const ordered_map<const PHV::Field*, const IR::TempVar*>& d,
             const ordered_map<const PHV::Field*, const IR::Expression*>& f)
-        : phv(p), darkFields(d), fieldExpressions(f) { }
+        : darkFields(d), fieldExpressions(f) { }
 };
 
 class CollectDarkCandidates : public PassManager {
