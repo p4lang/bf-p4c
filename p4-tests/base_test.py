@@ -105,10 +105,10 @@ class P4RuntimeErrorIterator:
             if not one_error_any.Unpack(p4_error):
                 raise P4RuntimeErrorFormatException(
                     "Cannot convert Any message to p4.Error")
-            if p4_error.canonical_code == code_pb2.OK:
-                continue
             v = self.idx, p4_error
             self.idx += 1
+            if p4_error.canonical_code == code_pb2.OK:
+                continue
             return v
         raise StopIteration
 
