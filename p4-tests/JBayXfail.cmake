@@ -11,6 +11,13 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/ingress_checksum.p4
   )
 
+# Mirroring direction BOTH not supported on Tofino2 but is used by the P4Runtime
+# implementation
+p4c_add_xfail_reason("tofino2"
+  "Error when creating clone session in target"
+  extensions/p4_tests/p4_16/clone_v1model.p4
+  )
+
 # These tests compile successfuly and fail in the model when running the STF test
 # the reasons need more characterization
 if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
