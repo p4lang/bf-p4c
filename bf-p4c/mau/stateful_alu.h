@@ -160,6 +160,11 @@ class CreateSaluInstruction : public Inspector {
  */
 class CheckStatefulAlu : public MauModifier {
     bool preorder(IR::MAU::StatefulAlu *) override;
+    // FIXME -- Type_Typedef should have been resolved and removed by Typechecking in the
+    // midend?  But we're running into it here, so a helper to skip over typedefs.
+    static const IR::Type *getType(const IR::Type *t) {
+        while (auto td = t->to<IR::Type_Typedef>()) t = td->type;
+        return t; }
 };
 
 #endif /* EXTENSIONS_BF_P4C_MAU_STATEFUL_ALU_H_ */

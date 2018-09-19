@@ -67,7 +67,6 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
     assert(dest == nullptr || etype != NONE);
     IR::Expression *e = nullptr;
     int idx = 0, field_idx = 0;
-    output_index = 0;
     if (locals.count(pe->path->name.name)) {
         auto &local = locals.at(pe->path->name.name);
         if (etype == NONE)
@@ -90,10 +89,12 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
             BUG("invalide use in CreateSaluInstruction::LocalVar %s %d", local.name, local.use); }
     } else {
         if (!params) return false;
+        if (etype == NONE)
+            output_index = 0;
         for (auto p : params->parameters) {
             if (p->name == pe->path->name) {
                 break; }
-            if (param_types->at(idx) == param_t::OUTPUT)
+            if (etype == NONE && param_types->at(idx) == param_t::OUTPUT)
                 ++output_index;
             ++idx; }
         if (size_t(idx) >= params->parameters.size()) return false;
@@ -800,15 +801,12 @@ bool CheckStatefulAlu::preorder(IR::MAU::StatefulAlu *salu) {
         // selector action
         BUG_CHECK(salu->width == 1 && salu->dual == false, "wrong size for selector action");
         return false; }
-    auto regtype = salu->reg->type->to<IR::Type_Specialized>()->arguments->at(0);
-    if (auto td = regtype->to<IR::Type_Typedef>())
-        // FIXME -- Type_Typedef should have been resolved and removed by Typechecking in the midend
-        regtype = td->type;
+    auto regtype = getType(salu->reg->type->to<IR::Type_Specialized>()->arguments->at(0));
     auto bits = regtype->to<IR::Type::Bits>();
     if (auto str = regtype->to<IR::Type_Struct>()) {
         auto nfields = str->fields.size();
-        if (nfields < 1 || !(bits = str->fields.at(0)->type->to<IR::Type::Bits>()) ||
-            nfields > 2 || (nfields > 1 && bits != str->fields.at(1)->type))
+        if (nfields < 1 || !(bits = getType(str->fields.at(0)->type)->to<IR::Type::Bits>()) ||
+            nfields > 2 || (nfields > 1 && bits != getType(str->fields.at(1)->type)))
             bits = nullptr;
         if (bits) {
             salu->dual = nfields > 1;;

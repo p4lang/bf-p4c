@@ -39,6 +39,9 @@ const IR::Node *Synth2PortSetup::postorder(IR::Primitive *prim) {
         glob = prim->operands.at(0)->to<IR::GlobalRef>();
         auto salu = glob->obj->to<IR::MAU::StatefulAlu>();
         if (method == "address") {
+            if (getParent<IR::MAU::Action>()) {
+                // dead use of the address, so discard it.
+                return nullptr; }
             auto t = IR::Type::Bits::get(32);
             return new IR::Member(prim->srcInfo, t,
                                   new IR::MAU::AttachedOutput(t, salu), "address"); }
