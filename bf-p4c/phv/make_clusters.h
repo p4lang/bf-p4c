@@ -137,13 +137,37 @@ class Clustering : public PassManager {
         /// Ensure fields in each UF group share the same fine-grained slicing.
         void end_apply() override;
 
+     public:
+        explicit MakeSlices(Clustering &self) : self(self), phv_i(self.phv_i) { }
+
         /// Utility method for updating fields_to_slices_i.
         /// Splits slices for @field at @range.lo and @range.hi + 1.
         /// @returns true if any new slices were created.
         bool updateSlices(const PHV::Field* field, le_bitrange range);
+    };
+
+    MakeSlices          slice_i;
+
+    /** Ensure that fields involved in gateway comparisons are sliced in the same manner.
+      * Suppose we have two fields hdr1.f1 and hdr2.f2 that are used in the gateway expression 
+      * if (hdr1.f1 == hdr.f2). This requires hdr1.f1 and hdr2.f2 to be aligned in their respective
+      * containers. However, the Clustering passes assume that both these fields are sliced in the
+      * same manner, without actually slicing fields so. This pass looks at fields involved in
+      * gateway expressions and ensures that they are sliced in the same manner.
+      */
+    class MakeGatewaySlices : public Inspector {
+        Clustering& self;
+        MakeSlices& slices_i;
+        PhvInfo& phv_i;
+
+        bool preorder(const IR::MAU::Table*) override;
+
+        boost::optional<std::vector<le_bitrange>>
+            getIntervals(const PHV::Field* a, const PHV::Field* b) const;
 
      public:
-        explicit MakeSlices(Clustering &self) : self(self), phv_i(self.phv_i) { }
+        explicit MakeGatewaySlices(Clustering& self, MakeSlices& slices)
+            : self(self), slices_i(slices), phv_i(self.phv_i) { }
     };
 
     class MakeAlignedClusters : public Inspector {
@@ -261,11 +285,14 @@ class Clustering : public PassManager {
 
  public:
     Clustering(PhvInfo &p, PhvUse &u, const PackConflicts& c)
-    : phv_i(p), uses_i(u), conflicts_i(c) {
+    : phv_i(p), uses_i(u), conflicts_i(c), slice_i(*this) {
         addPasses({
             new ClearClusteringStructs(*this),          // clears pre-existing maps
             new FindComplexValidityBits(*this),         // populates complex_validity_bits_i
-            new MakeSlices(*this),                      // populates fields_to_slices_i
+            &slice_i,
+            // Ensure that all fields used in gateway comparison (which must be aligned with each
+            // other) also have slices at the same positions).
+            new MakeGatewaySlices(*this, slice_i),
             new MakeAlignedClusters(*this),             // populates aligned_clusters_i
             new MakeRotationalClusters(*this),          // populates rotational_clusters_i
             new MakeSuperClusters(*this),               // populates super_clusters_i

@@ -1031,10 +1031,16 @@ p4c_add_xfail_reason("tofino"
 
 # p4smith and p4testgen regression XFAILs
 
-# BRIG-647
+# real error. fails because gateway condition too complex and cannot fit in a TCAM.
 p4c_add_xfail_reason("tofino"
-  "Fields involved in the same MAU operations have conflicting PARDE alignment requirements"
+  "error.*condition too complex"
   extensions/p4_tests/p4_14/p4smith_regression/grab_0.p4
+)
+
+# Needs change to source code because of padding field with a 10-bit field that is used in an add
+# operation.
+p4c_add_xfail_reason("tofino"
+  "PHV allocation was not successful"
   switch_msdc_l3
 )
 

@@ -64,8 +64,8 @@ bool Clustering::MakeSlices::updateSlices(const PHV::Field* field, le_bitrange r
                 auto range_hi =
                     slice_it->range().resizedToBits(slice_it->range().size() - range_lo.size())
                                      .shiftedByBits(idx - slice_it->range().lo);
-                LOG5("Clustering::MakeSlices: breaking " << *slice_it <<
-                     " into " << range_lo << " / " << range_hi);
+                LOG5("Clustering::MakeSlices: breaking " << *slice_it << " into " << range_lo <<
+                     " / " << range_hi);
                 slice_it = slices.erase(slice_it);
                 slice_it = slices.emplace(slice_it, PHV::FieldSlice(field, range_lo));
                 slice_it++;
@@ -207,6 +207,111 @@ bool Clustering::MakeAlignedClusters::preorder(const IR::MAU::Instruction* inst)
             ++dst_slices_it;
             ++these_slices_it; } }
 
+    return false;
+}
+
+boost::optional<std::vector<le_bitrange>> Clustering::MakeGatewaySlices::getIntervals(
+        const PHV::Field* a,
+        const PHV::Field* b) const {
+    auto slices_a = self.slices(a, StartLen(0, a->size));
+    auto slices_b = self.slices(b, StartLen(0, b->size));
+    std::vector<le_bitrange> intervals_a, intervals_b;
+    for (auto slice_a : slices_a)
+        intervals_a.push_back(slice_a.range());
+    for (auto slice_b : slices_b)
+        intervals_b.push_back(slice_b.range());
+    std::vector<le_bitrange> rv;
+
+    // If each field only has one slice, that slice necessarily spans the entire field and so no
+    // further slicing is required.
+    if (slices_a.size() == 1 && slices_b.size() == 1)
+        return boost::none;
+    // If the fields are of different sizes, calculate a bitrange that represents the overhang that
+    // the larger field has over the smaller field.
+    bool fieldSizesEqual = (a->size == b->size);
+    int smallerFieldSize = (a->size > b->size) ? b->size : a->size;
+    int largerFieldSize = (a->size < b->size) ? b->size : a->size;
+    boost::optional<le_bitrange> overhang = boost::none;
+    if (!fieldSizesEqual)
+        overhang = StartLen(smallerFieldSize - 1, largerFieldSize - smallerFieldSize);
+
+    // Check if the intervals of slices are the same for both fields.
+    auto a_it = slices_a.begin();
+    auto b_it = slices_b.begin();
+    le_bitrange seenSlices;
+    // Loop as long as there is a slice to process.
+    for (; a_it != slices_a.end() || b_it != slices_b.end();) {
+        // If either of the fields is out of slices, then just keep adding the range for the other
+        // field's slices. Also do not include slices in the overhang parts of the larger field.
+        if (a_it == slices_a.end() && b_it != slices_b.end()) {
+            if (seenSlices.contains(b_it->range())
+                    || (overhang && overhang->contains(b_it->range()))) {
+                ++b_it;
+                continue; }
+            rv.push_back(b_it->range());
+            LOG5("Adding range " << b_it->range() << " from field " << b->name << " to intervals.");
+            ++b_it;
+            continue; }
+        if (b_it == slices_b.end() && a_it != slices_a.end()) {
+            if (seenSlices.contains(a_it->range())
+                    || (overhang && overhang->contains(a_it->range()))) {
+                ++a_it;
+                continue; }
+            rv.push_back(a_it->range());
+            LOG5("Adding range " << a_it->range() << " from field " << a->name << " to intervals.");
+            ++a_it;
+            continue; }
+        // If the ranges are in lockstep, then go to the next slice for both the fields.
+        if (a_it->range() == b_it->range()) {
+            rv.push_back(a_it->range());
+            LOG5("Both slices " << *a_it << " and " << *b_it << " represent the same range "
+                 "for their respective fields");
+            seenSlices |= a_it->range();
+            ++a_it;
+            ++b_it;
+            continue; }
+        // If field a's slice is fully contained within field b's slice (without the ranges being
+        // equal), then add field a's interval. Similarly, if field b's slice is fully contained
+        // within field a's slice, then add field b's interval.
+        if (b_it->range().contains(a_it->range())) {
+            rv.push_back(a_it->range());
+            seenSlices |= a_it->range();
+            LOG5("Adding range " << a_it->range() << " from field " << a->name << " to intervals.");
+            ++a_it;
+            continue;
+        } else if (a_it->range().contains(b_it->range())) {
+            rv.push_back(b_it->range());
+            seenSlices |= b_it->range();
+            LOG5("Adding range " << b_it->range() << " from field " << b->name << " to intervals.");
+            ++b_it;
+            continue;
+        }
+    }
+    return rv;
+}
+
+bool Clustering::MakeGatewaySlices::preorder(const IR::MAU::Table* tbl) {
+    CollectGatewayFields collect_fields(phv_i);
+    tbl->apply(collect_fields);
+    auto& info_set = collect_fields.info;
+
+    for (auto& field_info : info_set) {
+        auto* field = field_info.first;
+        auto& info = field_info.second;
+        for (auto* xor_with : info.xor_with) {
+            auto* field_a = phv_i.field(field->id);
+            auto* field_b = phv_i.field(xor_with->id);
+            auto slices_a = self.slices(field_a, StartLen(0, field_a->size));
+            auto slices_b = self.slices(field_b, StartLen(0, field_b->size));
+            // Get the most fine-grained intervals for slices for field_a and field_b.
+            auto intervals = getIntervals(field_a, field_b);
+            // If there is only one slice for both fields, and both are used directly, no further
+            // slicing is required.
+            if (!intervals) continue;
+            // Make sure that both the fields are sliced in exactly the same way.
+            for (auto& range : *intervals) {
+                slices_i.updateSlices(field_a, range);
+                slices_i.updateSlices(field_b, range); } } }
     return false;
 }
 

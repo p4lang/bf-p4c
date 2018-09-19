@@ -575,6 +575,43 @@ bitvec PHV::Field::getStartBits(PHV::Size size) const {
     return startBitsByContainerSize_i.at(size);
 }
 
+PHV::FieldSlice::FieldSlice(
+        const Field* field,
+        le_bitrange range) : field_i(field), range_i(range) {
+    BUG_CHECK(0 <= range.lo, "Trying to create field slice with negative start");
+    BUG_CHECK(range.size() <= field->size,
+            "Trying to create field slice larger than field");
+
+    // Calculate relative alignment for this field slice.
+    if (field->alignment) {
+        le_bitrange field_range = StartLen(field->alignment->littleEndian, field->size);
+        le_bitrange slice_range = field_range.shiftedByBits(range_i.lo)
+            .resizedToBits(range_i.size());
+        alignment_i = FieldAlignment(slice_range);
+        if (field->name == "ingress::mtel_least_int.start_index" ||
+                field->name == "ingress::mtel_least_int.next_index")
+            LOG4("Adjusting alignment of field " << field->name << " to " << *alignment_i <<
+                    " for slice " << range);
+    }
+
+    // The valid starting bits (by container size C) for a slice s[Y:X]
+    // equal the valid bits for the field shifted by X mod C.  For example,
+    // if a 12b field f can start at bits 0 and 8 in a 16b container, then
+    // f[11:8] can start at bits 0 and 8.
+    for (auto size : Device::phvSpec().containerSizes())
+        for (auto idx : field->getStartBits(size))
+            startBitsByContainerSize_i[size].setbit((idx + range.lo) % int(size));
+
+    // Calculate valid container range for this slice by shrinking
+    // the valid range of the field by the size of the "tail"
+    // (i.e. the least significant bits) not in this slice.
+    if (field_i->validContainerRange_i == ZeroToMax()) {
+        validContainerRange_i = ZeroToMax();
+    } else {
+        int new_size = field_i->validContainerRange_i.size() - range.lo;
+        validContainerRange_i = field_i->validContainerRange_i.resizedToBits(new_size); }
+}
+
 void PHV::FieldSlice::setStartBits(PHV::Size size, bitvec startPositions) {
     startBitsByContainerSize_i[size] = startPositions;
 }
