@@ -31,9 +31,6 @@
 [submodule "p4-tests/p4testutils"]
 	path = p4-tests/p4testutils
 	url = git@github.com:barefootnetworks/ptf-utils.git
-[submodule "p4-tests/p4_16/switch"]
-	path = p4-tests/p4_16/switch
-	url = git@github.com:barefootnetworks/switch.git
 [submodule "p4-tests/p4_14/switch"]
 	path = p4-tests/p4_14/switch
 	url = git@github.com:barefootnetworks/switch
@@ -52,3 +49,6 @@
 [submodule "p4-tests/p4_14/switch-8.4"]
 	path = p4-tests/p4_14/switch-8.4
 	url = git@github.com:barefootnetworks/switch.git
+[submodule "p4-tests/p4_16/switch_16"]
+	path = p4-tests/p4_16/switch_16
+	url = git@github.com:barefootnetworks/bf-switch.git
