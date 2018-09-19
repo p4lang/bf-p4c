@@ -24,9 +24,6 @@ $topdir/bootstrap_bfn_compilers.sh --no-ptf --build-dir $builddir \
                                    -DENABLE_P4TEST=OFF -DENABLE_P4C_GRAPHS=OFF \
                                    -DENABLE_BAREFOOT_INTERNAL=OFF
 cd $builddir
-# make tofino the default target for p4c
-sed -i -e "/os.environ\['P4C_14_INCLUDE_PATH/a os.environ['P4C_DEFAULT_TARGET'] = 'tofino'" p4c/p4c
-
 make -j $parallel_make package
 
 echo "Success!"
