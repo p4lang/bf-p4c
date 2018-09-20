@@ -406,7 +406,7 @@ JBayPhvSpec::JBayPhvSpec() {
 
     auto phv_scale_factor = BFNContext::get().options().phv_scale_factor;
     if (phv_scale_factor != 1.0)
-        P4C_UNIMPLEMENTED("phv_scale_factor not yet implemented for %1%", Device::name());
+        P4C_UNIMPLEMENTED("phv_scale_factor not yet implemented for Tofino2");
 
     std::map<PHV::Size, std::map<unsigned, std::map<PHV::Type, unsigned>>> rawMauGroupSpec = {
         { PHV::Size::b8, {{4, {{PHV::Type::B, 12}, {PHV::Type::MB, 4}, {PHV::Type::DB, 4}} }} },

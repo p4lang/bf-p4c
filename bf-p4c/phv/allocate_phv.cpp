@@ -2,6 +2,7 @@
 #include <boost/format.hpp>
 #include <boost/range/adaptor/reversed.hpp>
 #include <numeric>
+#include "bf-p4c/device.h"
 #include "lib/log.h"
 
 std::vector<const PHV::Field*>

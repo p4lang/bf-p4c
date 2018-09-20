@@ -41,12 +41,14 @@ Visualization::Visualization() : _stageResources() {
 
 /** A string built from the concatenation of strings in that node vector */
 std::string Visualization::JsonResource::total_value(node_t node) {
-    auto _values = values(node);
     std::string rv;
-    for (size_t i = 0; i < _values->size(); i++) {
-        rv += (*_values)[i];
-        if (i != _values->size() - 1)
+    bool first = true;
+    for (auto s : *values(node)) {
+        if (!first)
             rv += ", ";
+        else
+            first = false;
+        rv += s;
     }
     return rv;
 }
@@ -56,7 +58,7 @@ void Visualization::JsonResource::add(node_t node, const std::string value) {
     if (value.empty())
         return;
     // Strip the leading . from all names, as it confuses p4i
-    json_vectors[node].push_back(value.substr(value[0] == '.' ? 1 : 0));
+    json_vectors[node].insert(value.substr(value[0] == '.' ? 1 : 0));
     check_sanity(node);
 }
 
@@ -65,9 +67,9 @@ void Visualization::JsonResource::append(JsonResource *jr) {
     for (auto kv : jr->json_vectors) {
         auto node = kv.first;
         if (singular_value_nodes.count(node) && !is_empty(node))
-            BUG_CHECK(at(node, 0) == jr->at(node, 0), "Only one value allowed for a node type");
+            BUG_CHECK(at(node) == jr->at(node), "Only one value allowed for a node type");
         else
-            add(node, jr->at(node, 0));
+            add(node, jr->at(node));
     }
 }
 

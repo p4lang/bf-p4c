@@ -34,7 +34,7 @@ class Device {
 
 
     static const Device& get() {
-       BUG_CHECK(instance_ != nullptr, "No device specified");
+       BUG_CHECK(instance_ != nullptr, "Target device not initialized!");
        return *instance_;
     }
 

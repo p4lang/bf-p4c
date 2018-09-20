@@ -3,6 +3,7 @@
 
 #include <boost/range/irange.hpp>
 #include <vector>
+#include <set>
 #include "common/asm_output.h"
 #include "ir/ir.h"
 #include "lib/cstring.h"
@@ -52,8 +53,8 @@ class Visualization : public Inspector {
 
     /// Root node for resources to be output in context.json
     struct JsonResource {
-        // The values for each context JSON node
-        std::map<node_t, std::vector<std::string>> json_vectors;
+        // The values for each context JSON node. We want unique instances of each string
+        std::map<node_t, std::set<std::string>> json_vectors;
 
         std::set<node_t> singular_value_nodes;
         std::set<node_t> allowed_empty_nodes;
@@ -83,13 +84,16 @@ class Visualization : public Inspector {
             }
         }
 
-        /** The string at that position in the vector for this node */
-        std::string at(node_t node, size_t position) {
-            return json_vectors.at(node).at(position);
+        /** The first element of for this node */
+        std::string at(node_t node) {
+            if (json_vectors.at(node).size() > 0)
+                return *(json_vectors.at(node).begin());
+            else
+                return std::string("not found");
         }
 
-        /** A pointer to the vector of that node type */
-        std::vector<std::string> *values(node_t node) {
+        /** A pointer to the set of that node type */
+        std::set<std::string> *values(node_t node) {
             return &json_vectors[node];
         }
 

@@ -2,7 +2,6 @@
 #define BF_P4C_PHV_UTILS_H_
 
 #include <boost/optional.hpp>
-#include "bf-p4c/device.h"
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/ir/gress.h"
 #include "bf-p4c/phv/phv.h"

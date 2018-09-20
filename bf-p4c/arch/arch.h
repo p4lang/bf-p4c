@@ -16,7 +16,6 @@
 #include "frontends/p4/methodInstance.h"
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/ir/gress.h"
-#include "bf-p4c/device.h"
 #include "bf-p4c/arch/program_structure.h"
 
 namespace BFN {
@@ -185,4 +184,3 @@ class ParseTna : public Inspector {
 }  // namespace BFN
 
 #endif /* BF_P4C_ARCH_ARCH_H_ */
-

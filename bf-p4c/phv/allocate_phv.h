@@ -3,7 +3,6 @@
 
 #include <boost/optional.hpp>
 
-#include "bf-p4c/device.h"
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/ir/gress.h"
