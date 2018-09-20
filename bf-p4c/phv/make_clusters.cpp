@@ -530,6 +530,14 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
             // candidate.
             StartNewSliceList();
             LOG5("Starting new slice list (for deparser zero field):");
+        } else if (accumulator_bits && field->is_digest()) {
+            // Break off the existing slice list if this field is a digest
+            // TODO: This is a temporary fix to enable us to get the digests tests passing and
+            // not break fitting on any profiles. What this does is to spread out digest
+            // allocation across containers - what we really want is a constraint
+            // that spreads out digest fields AND allocate to its nearest native PHV size
+            StartNewSliceList();
+            LOG5("Starting new slice list (for digest field):");
         } else if (accumulator_bits % int(PHV::Size::b8) == 0 && break_at_next_byte_boundary) {
             StartNewSliceList();
             LOG5("Starting new slice list (at phase 0 field boundary):");

@@ -137,12 +137,15 @@ DEPARSER_INTRINSIC(JBay, INGRESS, xid, 2) {
             int id = set.first >> data.shift;                                           \
             int idx = 0;                                                                \
             bool first = true;                                                          \
+            int last = -1;                                                              \
             for (auto &reg : set.second) {                                              \
                 if (first) {                                                            \
                     first = false;                                                      \
                     IFID( REG[id].id_phv = reg->reg.deparser_id(); continue; ) }        \
+                if (last == reg->reg.deparser_id()) continue;                           \
                 for (int i = reg->reg.size/8; i > 0; i--)                               \
-                    REG[id].phvs[idx++] = reg->reg.deparser_id(); }                     \
+                    REG[id].phvs[idx++] = reg->reg.deparser_id();                       \
+                last = reg->reg.deparser_id(); }                                        \
             IFVALID( REG[id].valid = 1; )                                               \
             REG[id].len = idx; }
 

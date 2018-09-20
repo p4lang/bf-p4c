@@ -278,8 +278,8 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "In table .*, the number of bytes required to go through the immediate pathway"
   extensions/p4_tests/p4_14/test_config_311_hash_adb.p4
-  switch_ent_fin_postcard
   switch_8.3_l3_heavy_int_leaf
+  switch_l3_heavy_int_leaf
   )
 
 # BRIG-102
@@ -299,7 +299,6 @@ p4c_add_xfail_reason("tofino"
   "error.*Power worst case estimated budget exceeded by*"
   extensions/p4_tests/p4_14/p4-tests/programs/clpm/clpm.p4
   switch_msdc_leaf_int
-  switch_l3_heavy_int_leaf
   )
 
 # switch_spine_dtel_int test failures
@@ -1277,16 +1276,12 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/header-stack-ops-bmv2.p4
 )
 
-p4c_add_xfail_reason("tofino"
-  "Can't allocate space on 8-bit part of action bus for.*"
-  #switch_ent_fin_postcard
-)
-
 # BRIG-923
 p4c_add_xfail_reason("tofino"
   "error: ALU ops cannot operate on slices"
   extensions/p4_tests/p4_14/p4smith_regression/shrubs_0.p4
   switch_8.3_msdc_leaf_int
+  switch_ent_fin_postcard
 )
 
 # BRIG-927

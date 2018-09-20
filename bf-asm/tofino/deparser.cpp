@@ -71,10 +71,12 @@ HER_INTRINSIC(ecos, YES)
             int id = set.first >> data.shift;                                           \
             int idx = 0;                                                                \
             bool first = true, ok = true;                                               \
+            int last = -1;                                                              \
             for (auto &reg : set.second) {                                              \
                 if (first) {                                                            \
                     first = false;                                                      \
                     IFID( TBL[id].id_phv = reg->reg.deparser_id(); continue; ) }        \
+                if (last == reg->reg.deparser_id()) continue;                           \
                 for (int i = reg->reg.size/8; i > 0; i--) {                             \
                     if (idx > TBL[id].phvs.size()) {                                   \
                         error(data.lineno, "%s digest limited to %zd bytes",            \
@@ -82,6 +84,7 @@ HER_INTRINSIC(ecos, YES)
                         ok = false;                                                     \
                         break; }                                                        \
                     TBL[id].phvs[idx++] = reg->reg.deparser_id(); }                     \
+                last = reg->reg.deparser_id();                                          \
                 if (!ok) break; }                                                       \
             TBL[id].valid = 1;                                                          \
             TBL[id].len = idx; } }
