@@ -304,7 +304,7 @@ p4c_add_xfail_reason("tofino"
 
 # switch_spine_dtel_int test failures
 p4c_add_xfail_reason("tofino"
-  "Received packet that we expected not to receive on device 0, port 0"
+  "Received packet that we expected not to receive on device .*, port .*|A packet was received on device .*, port .*, but we expected no packets"
   smoketest_switch_8.4_spine_dtel_int_L2FloodTest
   smoketest_switch_8.4_spine_dtel_int_L3VIIPv4HostFloodTest
   smoketest_switch_8.4_spine_dtel_int_L2DynamicLearnAgeTest
@@ -1088,11 +1088,18 @@ p4c_add_xfail_reason("tofino"
 #   "SelectExpression: Cannot unify bit<.*> to int<.*>"
 # )
 
+# P4C-990
 p4c_add_xfail_reason("tofino"
   "error: verify_checksum: cannot infer type for type parameter T"
   extensions/p4_tests/p4_14/p4smith_regression/chauncey_0.p4
   extensions/p4_tests/p4_14/p4smith_regression/corroding_0.p4
   )
+
+# P4C-991
+p4c_add_xfail_reason("tofino"
+  "error: update_checksum: cannot infer type for type parameter"
+  extensions/p4_tests/p4_14/p4smith_regression/undercut_0.p4
+)
 
 # BRIG-811
 # error: Output of checksum calculation can only be stored in a 16-bit field:
@@ -1127,6 +1134,27 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Select on field from different parent branches is not supported"
   extensions/p4_tests/p4_14/p4smith_regression/traditionalists_0.p4
+)
+
+# P4C-992
+# Compiler Bug: stage should only decrease
+p4c_add_xfail_reason("tofino"
+  "stage should only decrease"
+  extensions/p4_tests/p4_14/p4smith_regression/kindlings_0.p4
+)
+
+# P4C-993
+# error: .* has more than two update conditions. The compiler currently can only support up to two conditions on each calculated field.
+p4c_add_xfail_reason("tofino"
+  "has more than two update conditions"
+  extensions/p4_tests/p4_14/p4smith_regression/cooperated_0.p4
+)
+
+# P4C-994
+# Compiler Bug: Primitive Register.write(.*); was not correctly converted in Instruction Selection
+p4c_add_xfail_reason("tofino"
+  "was not correctly converted in Instruction Selection"
+  extensions/p4_tests/p4_14/p4smith_regression/licensee_0.p4
 )
 
 # BRIG-584
