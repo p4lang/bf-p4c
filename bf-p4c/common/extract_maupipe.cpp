@@ -515,6 +515,19 @@ bool AttachTables::findSaluDeclarations(const IR::Declaration_Instance *ext,
     return true;
 }
 
+static cstring getString(const IR::Annotation* annotation) {
+    if (annotation->expr.size() != 1) {
+        ::error("%1% should contain a string", annotation);
+        return "";
+    }
+    auto str = annotation->expr[0]->to<IR::StringLiteral>();
+    if (str == nullptr) {
+        ::error("%1% should contain a string", annotation);
+        return "";
+    }
+    return str->value;
+}
+
 /** Converts the Declaration_Instance of the register action into a StatefulAlu object.  Checks
  *  to see if a stateful ALU has already been created, and will also create the SALU Instructions
  *  if the register action is new
@@ -535,7 +548,12 @@ void AttachTables::InitializeStatefulAlus
         // Stateful ALU has not been seen yet
         LOG3("Creating new StatefulAlu for " <<
              (regtype ? regtype->toString() : seltype->toString()) << " " << reg->name);
-        salu = new IR::MAU::StatefulAlu(reg->srcInfo, reg->externalName(), reg->annotations, reg);
+        auto regName = reg->externalName();
+        // @reg annotation is used in p4-14 to generate PD API for action selector.
+        auto anno = ext->annotations->getSingle("reg");
+        if (anno)
+            regName = getString(anno);
+        salu = new IR::MAU::StatefulAlu(reg->srcInfo, regName, reg->annotations, reg);
         auto annots = ext->annotations ? ext->annotations : 0;
         // Reg initialization values for lo/hi are passed as annotations. In
         // p4_14 conversion they cannot be set directly on the register For

@@ -69,3 +69,4 @@ IR::V1InstanceRef::V1InstanceRef(cstring prefix, IR::ID n, const IR::Type *t,
 }
 
 int IR::TempVar::uid = 0;
+

@@ -454,6 +454,15 @@ const IR::Declaration_Instance *P4V1::StatefulAluConverter::convertExternInstanc
             CreateSaluApplyFunction::create(annots, structure, ext, bit1, bit1) });
         auto* externalName = new IR::StringLiteral(IR::ID("." + name));
         annots->addAnnotation(IR::ID("name"), externalName);
+        // 1-bit selector alu may not need a 'fake' reg property
+        // see sful_sel1.p4
+        if (ext->properties.get<IR::Property>("reg")) {
+            auto info = getRegInfo(structure, ext, structure->declarations);
+            if (info.utype) {
+                auto* regName = new IR::StringLiteral(IR::ID(info.reg->name));
+                annots->addAnnotation(IR::ID("reg"), regName);
+            }
+        }
         auto *rv = new IR::Declaration_Instance(name, annots, satype, ctor_args, block);
         return rv->apply(TypeConverter(structure))->to<IR::Declaration_Instance>();
     }
