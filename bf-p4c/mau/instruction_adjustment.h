@@ -64,30 +64,15 @@ class Field;
  */
 class SplitInstructions : public MauTransform, TofinoWriteContext {
     const PhvInfo &phv;
-    ActionAnalysis::ContainerActionsMap container_actions_map;
-    ordered_set<const PHV::Field *> split_fields;
-    ordered_map<const PHV::Field *, IR::MAU::Instruction *> removed_instrs;
 
-    bool write_found = false;
-    bool meter_color = false;
-    ordered_set<const PHV::Field *>::iterator split_location;
-
-    const IR::MAU::Action *preorder(IR::MAU::Action *) override;
-    const IR::MAU::Instruction *preorder(IR::MAU::Instruction *) override;
-    const IR::MAU::ActionArg *preorder(IR::MAU::ActionArg *) override;
-    const IR::Expression *preorder(IR::Expression *) override;
-    const IR::Constant *preorder(IR::Constant *) override;
-    const IR::Primitive *preorder(IR::Primitive *) override;
-    const IR::MAU::Instruction *postorder(IR::MAU::Instruction *) override;
-    const IR::MAU::Action *postorder(IR::MAU::Action *) override;
+    const IR::Node *preorder(IR::MAU::Instruction *) override;
     // ignore stuff related to stateful alus
-    const IR::Node *preorder(IR::Node *) override;
-    const IR::MAU::AttachedOutput *preorder(IR::MAU::AttachedOutput *ao) override;
-    const IR::MAU::StatefulAlu *preorder(IR::MAU::StatefulAlu *salu) override;
-    const IR::MAU::HashDist *preorder(IR::MAU::HashDist *hd) override;
+    const IR::Node *preorder(IR::MAU::AttachedOutput *ao) override { prune(); return ao; }
+    const IR::Node *preorder(IR::MAU::StatefulAlu *salu) override { prune(); return salu; }
+    const IR::Node *preorder(IR::MAU::HashDist *hd) override { prune(); return hd; }
 
  public:
-    explicit SplitInstructions(const PhvInfo &p) : phv(p) { visitDagOnce = false; }
+    explicit SplitInstructions(const PhvInfo &p) : phv(p) { }
 };
 
 /** Responsible for converting IR::Constant to IR::MAU::ActionDataConstants when necessary.

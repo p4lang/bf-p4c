@@ -23,7 +23,6 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
 
   p4c_add_xfail_reason("tofino"
     "mismatch from expected(.*) at byte .*"
-    extensions/p4_tests/p4_16/cast_widening_set.p4
     # Needs stateful init regs support in simple test harness, this test passes
     # on stf2ptf
     extensions/p4_tests/p4_14/stateful_init_regs.p4

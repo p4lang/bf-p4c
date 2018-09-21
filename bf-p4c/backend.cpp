@@ -1,6 +1,7 @@
 #include "backend.h"
 #include <fstream>
 #include <set>
+#include "lib/indent.h"
 
 #include "bf-p4c/check_duplicate.h"
 #include "bf-p4c/common/alias.h"
@@ -92,8 +93,16 @@ class CheckUnimplementedFeatures : public Inspector {
 
 void force_link_dump(const IR::Node *n) { dump(n); }
 
-static void debug_hook(const char *, unsigned, const char *pass, const IR::Node *n) {
-    LOG4(pass << ": " << std::endl << *n << std::endl);
+static void debug_hook(const char *parent, unsigned idx, const char *pass, const IR::Node *n) {
+    using namespace IndentCtl;
+
+    if (LOGGING(5)) {
+        LOG5(pass << " [" << parent << " (" << idx << ")]:");
+        ::dump(std::clog, n);
+        LOG5(std::endl);
+    } else {
+        LOG4(pass << " [" << parent << " (" << idx << ")]:" << indent << endl <<
+             *n << unindent << endl); }
 }
 
 class TableAllocPass : public Logging::PassManager {
@@ -276,7 +285,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
 #endif
 
     if (LOGGING(4))
-        addDebugHook(debug_hook);
+        addDebugHook(debug_hook, true);
 }
 
 }  // namespace BFN

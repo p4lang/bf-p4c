@@ -8,148 +8,40 @@
 
 /** SplitInstructions */
 
-/** Run an action analysis to find any instructions that are marked as a split.  Mark the
- *  fields that are the writes of these instructions in order to remove these instructions
- *
- *  For example, let's say the following field, bigfield (64 bits) requires two 32 bit containers
- *  The instruction will originally look like:
- *      - set hdr.bigfield, param
- *  It will get converted to:
- *       - set hdr.bigfield.0-31, param.0-31
- *       - set hdr.bigfield.32-63, param.32-63
- *
- *  This is the purpose of SplitInstructions, to split both the PHV fields and the action
- *  data names, as the action data may not be contiguous
- */
-const IR::MAU::Action *SplitInstructions::preorder(IR::MAU::Action *act) {
-    container_actions_map.clear();
-    split_fields.clear();
-    auto tbl = findContext<IR::MAU::Table>();
-    ActionAnalysis aa(phv, true, true, tbl);
-    aa.set_container_actions_map(&container_actions_map);
-    act->apply(aa);
-    if (aa.misaligned_actiondata())
-        throw ActionFormat::failure(act->name);
+const IR::Node *SplitInstructions::preorder(IR::MAU::Instruction *inst) {
+    le_bitrange bits;
+    auto* field = phv.field(inst->operands.at(0), &bits);
+    if (!field) return inst;  // error?
 
+    std::vector<le_bitrange> slices;
+    field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice& alloc) {
+        slices.push_back(alloc.field_bits());
+    });
+    if (slices.size() == 1) return inst;  // nothing to split
 
-    for (auto &container_action_info : container_actions_map) {
-        for (auto &field_action : container_action_info.second.field_actions) {
-            if (!field_action.requires_split) continue;
-            auto *field = phv.field(field_action.write.unsliced_expr());
-            split_fields.insert(field);
-        }
-    }
-    return act;
-}
-
-/** All of these passes are Transforms with visitDagOnce = false, as certain Expressions within
- *  different Instructions use the same IR::Node (though this itself could be changed).
- *
- *  Actions appear in tables, that can themselves appear multiple times, and we only want
- *  to transform these actions once while keeping the table in position.  Thus by calling
- *  visitOnce on Nodes that don't have a preorder, the pass won't duplicate any Tables or
- *  TableSequences
- */
-const IR::Node *SplitInstructions::preorder(IR::Node *node) {
-    visitOnce();
-    return node;
-}
-
-const IR::MAU::Instruction *SplitInstructions::preorder(IR::MAU::Instruction *instr) {
-    write_found = false;
-    meter_color = false;
-    split_location = split_fields.end();
-    return instr;
-}
-
-const IR::MAU::ActionArg *SplitInstructions::preorder(IR::MAU::ActionArg *arg) {
-    return arg;
-}
-
-const IR::Constant *SplitInstructions::preorder(IR::Constant *constant) {
-    return constant;
-}
-
-const IR::Primitive *SplitInstructions::preorder(IR::Primitive *prim) {
-    prune();
-    return prim;
-}
-
-const IR::Expression *SplitInstructions::preorder(IR::Expression *expr) {
-    if (!findContext<IR::MAU::Instruction>()) {
-        prune();
-        return expr;
-    }
-
-    if (auto *field = phv.field(expr)) {
-        if (isWrite()) {
-            if (split_location != split_fields.end()) {
-                BUG("Multiple writes in a single instruction?");
-            }
-            split_location = split_fields.find(field);
-            write_found = true;
-        }
-    }
-    prune();
-    return expr;
-}
-
-const IR::MAU::AttachedOutput *SplitInstructions::preorder(IR::MAU::AttachedOutput *ao) {
-    prune();
-    auto mtr = ao->attached->to<IR::MAU::Meter>();
-    if (mtr && mtr->color_output())
-        meter_color = true;
-    return ao;
-}
-
-const IR::MAU::StatefulAlu *SplitInstructions::preorder(IR::MAU::StatefulAlu *salu) {
-    prune(); return salu;
-}
-
-const IR::MAU::HashDist *SplitInstructions::preorder(IR::MAU::HashDist *hd) {
-    prune(); return hd; }
-
-/**  If the instruction is to be split, the original instruction has to be removed
- */
-const IR::MAU::Instruction *SplitInstructions::postorder(IR::MAU::Instruction *instr) {
-    if (!write_found) {
-        BUG("No write within a split instruction");
-        return instr;
-    }
-
-    if (split_location == split_fields.end()) {
-        return instr;
-    } else {
-        if (meter_color)
-            ::error("%s: The compiler currently cannot support the splitting of instructions "
-                    "that contain meter color: %s", instr->srcInfo, *instr);
-        auto *field = *(split_location);
-        removed_instrs[field] = instr;
-        return nullptr;
-    }
-}
-
-/** Adds the removed instructions as separate split instructions
- */
-const IR::MAU::Action *SplitInstructions::postorder(IR::MAU::Action *act) {
-    for (auto &container_action : container_actions_map) {
-        auto &cont_action = container_action.second;
-        for (auto &field_action : cont_action.field_actions) {
-            if (!field_action.requires_split) continue;
-            auto *field = phv.field(field_action.write.expr);
-
-            IR::MAU::Instruction *split_instr
-                = new IR::MAU::Instruction(removed_instrs.at(field)->srcInfo, cont_action.name);
-            auto &write = field_action.write;
-            split_instr->operands.push_back(write.expr);
-
-            for (auto read : field_action.reads) {
-                split_instr->operands.push_back(read.expr);
-            }
-            act->action.push_back(split_instr);
-        }
-    }
-    return act;
+    auto split = new IR::Vector<IR::Primitive>();
+    cstring opcode = inst->name;
+    bool check_pairing = false;
+    for (auto slice : slices) {
+        auto *n = inst->clone();
+        n->name = opcode;
+        for (auto &operand : n->operands)
+            operand = MakeSlice(operand, slice.lo - bits.lo, slice.hi - bits.lo);
+        split->push_back(n);
+        // FIXME -- addc/subc only work if there are exactly 2 slices and they're in
+        // an even-odd pair of PHVs.  Check for failure to meet that constraint and
+        // give an error?
+        if (opcode == "add" || opcode == "sub") {
+            opcode += "c";
+            check_pairing = true; } }
+    if (check_pairing) {
+        BUG_CHECK(slices.size() == 2, "PHV pairing failure for wide %s", inst->name);
+        auto &s1 = field->for_bit(slices[0].lo);
+        auto &s2 = field->for_bit(slices[1].lo);
+        BUG_CHECK(s1.container.index() + 1 == s2.container.index() &&
+                  (s1.container.index() & 1) == 0,
+                  "PHV alloc failed to put wide %s into even/odd PHV pair", inst->name); }
+    return split;
 }
 
 /** ConvertConstantsToActionData */
@@ -221,8 +113,8 @@ const IR::Constant *ConstantsToActionData::preorder(IR::Constant *constant) {
     return constant;
 }
 
-void ConstantsToActionData::analyze_phv_field(IR::Expression *expr) {
-    le_bitrange bits;
+    void ConstantsToActionData::analyze_phv_field(IR::Expression *expr) {
+        le_bitrange bits;
     auto *field = phv.field(expr, &bits);
 
     if (field == nullptr)
