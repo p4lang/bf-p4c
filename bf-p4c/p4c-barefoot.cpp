@@ -233,6 +233,9 @@ int main(int ac, char **av) {
         program->apply(manifest);  // generate graph entries for parsers in manifest
     }
 
+    if (!midend.toplevel)
+        return 1;
+
     // convert midend IR to backend IR
     BFN::BackendConverter conv(&midend.refMap, &midend.typeMap, midend.toplevel);
     conv.convert(program, options);
