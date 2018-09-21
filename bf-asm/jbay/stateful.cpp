@@ -210,6 +210,9 @@ template<> void StatefulTable::write_logging_regs(Target::JBay::mau_regs &regs) 
 
 void StatefulTable::gen_tbl_cfg(Target::JBay, json::map &tbl, json::map &stage_tbl) const {
     static const char *table_type[] = { "normal", "log", "fifo", "stack", "bloom_clear" };
+    if (tbl["stateful_table_type"]) {
+        // overall table info already set in an earlier stage; don't override it
+        return; }
     tbl["stateful_table_type"] = table_type[stateful_counter_mode >> FUNCTION_SHIFT];
     bool has_push = (stateful_counter_mode & PUSHPOP_MASK) != 0;
     bool has_pop = (stateful_counter_mode & (PUSHPOP_MASK << PUSHPOP_BITS)) != 0;
