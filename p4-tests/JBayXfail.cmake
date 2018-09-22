@@ -274,3 +274,9 @@ p4c_add_xfail_reason("tofino2"
   "failed command assembler"
   extensions/p4_tests/p4_14/cond_checksum_update_2.p4
 )
+
+# P4C-1011
+p4c_add_xfail_reason("tofino2"
+  "Exiting with SIGSEGV"
+  extensions/p4_tests/p4_16/bf_p4c_samples/v1model-special-ops-bmv2.p4
+)

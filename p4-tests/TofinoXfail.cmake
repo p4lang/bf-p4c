@@ -641,6 +641,13 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue134-bmv2.p4
 )
 
+# These programs include conditional checksums, which are not supported on
+# Tofino.
+p4c_add_xfail_reason("tofino"
+  "Tofino does not support conditional checksum verification"
+  testdata/p4_16_samples/v1model-special-ops-bmv2.p4
+)
+
 # Incorrect P4_14->16 conversion for varbit extract
 p4c_add_xfail_reason("tofino"
   "Wrong number of arguments for method call: packet.extract"
@@ -1325,4 +1332,10 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: metadata field of type error not supported on tofino"
   testdata/p4_16_samples/issue1325-bmv2.p4
+  )
+
+# P4C-1011
+p4c_add_xfail_reason("tofino"
+  "Exiting with SIGSEGV"
+  extensions/p4_tests/p4_16/bf_p4c_samples/v1model-special-ops-bmv2.p4
   )

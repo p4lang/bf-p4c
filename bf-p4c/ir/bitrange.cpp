@@ -18,7 +18,7 @@ void writeRangeToStream(std::ostream& out, const char* prefix, int lo, int hi,
 }  // namespace
 
 void rangeToJSON(JSONGenerator& json, int lo, int hi) {
-    json.generate(std::make_pair(lo, hi));
+    json.toJSON(std::make_pair(lo, hi));
 }
 
 std::pair<int, int> rangeFromJSON(JSONLoader& json) {

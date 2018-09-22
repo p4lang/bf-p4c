@@ -46,6 +46,8 @@ set (TOFINO_V1_TEST_SUITES
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4smith_regression/*.p4
   # p4_14_samples
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/bf_p4c_samples/*.p4
+  # p4_16_samples
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf_p4c_samples/*.p4
   )
 p4c_add_bf_backend_tests("tofino" "tofino" "v1model" "base" "${TOFINO_V1_TEST_SUITES}")
 

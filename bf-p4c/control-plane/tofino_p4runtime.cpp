@@ -186,7 +186,6 @@ struct Register {
     static boost::optional<Register>
     from(const IR::ExternBlock* instance,
          const ReferenceMap* refMap,
-         const TypeMap* typeMap,
          p4configv1::P4TypeInfo* p4RtTypeInfo) {
         CHECK_NULL(instance);
         auto declaration = instance->node->to<IR::Declaration_Instance>();
@@ -200,7 +199,7 @@ struct Register {
         BUG_CHECK(type->arguments->size() == 2,
                   "%1%: expected two type arguments", instance);
         auto typeArg = type->arguments->at(0);
-        auto typeSpec = TypeSpecConverter::convert(typeMap, refMap, typeArg, p4RtTypeInfo);
+        auto typeSpec = TypeSpecConverter::convert(refMap, typeArg, p4RtTypeInfo);
         CHECK_NULL(typeSpec);
 
         return Register{declaration->controlPlaneName(),
@@ -215,7 +214,6 @@ struct Register {
     fromDirect(const P4::ExternInstance& instance,
                const IR::P4Table* table,
                const ReferenceMap* refMap,
-               const TypeMap* typeMap,
                p4configv1::P4TypeInfo* p4RtTypeInfo) {
         CHECK_NULL(table);
         BUG_CHECK(instance.name != boost::none,
@@ -236,7 +234,7 @@ struct Register {
         BUG_CHECK(type->arguments->size() == 1,
                   "%1%: expected one type argument", declaration);
         auto typeArg = type->arguments->at(0);
-        auto typeSpec = TypeSpecConverter::convert(typeMap, refMap, typeArg, p4RtTypeInfo);
+        auto typeSpec = TypeSpecConverter::convert(refMap, typeArg, p4RtTypeInfo);
         CHECK_NULL(typeSpec);
 
         return Register{*instance.name, typeSpec, 0, instance.annotations};
@@ -422,7 +420,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
 
     void collectExternFunction(P4RuntimeSymbolTableIface* symbols,
                                const P4::ExternFunction* externFunction) override {
-        auto portMetadata = getPortMetadataExtract(externFunction, refMap, typeMap, nullptr);
+        auto portMetadata = getPortMetadataExtract(externFunction, refMap, nullptr);
         if (portMetadata) {
             if (hasUserPortMetadata) {
                 // TODO(antonin): improve error message when extern added to TNA
@@ -584,7 +582,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             table, "registers", refMap, typeMap);
         if (!directRegisterInstance) return boost::none;
         return Register::fromDirect(
-            *directRegisterInstance, table, refMap, typeMap, p4RtTypeInfo);
+            *directRegisterInstance, table, refMap, p4RtTypeInfo);
     }
 
     /// @return the direct filter instance associated with @table, if it has
@@ -648,7 +646,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             auto digest = getDigest(decl, p4RtTypeInfo);
             if (digest) addDigest(symbols, p4info, *digest);
         } else if (externBlock->type->name == "Register") {
-            auto register_ = Register::from(externBlock, refMap, typeMap, p4RtTypeInfo);
+            auto register_ = Register::from(externBlock, refMap, p4RtTypeInfo);
             if (register_) addRegister(symbols, p4info, *register_);
         } else if (externBlock->type->name == "Lpf") {
             auto lpf = Lpf::from(externBlock);
@@ -663,7 +661,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
                            p4configv1::P4Info* p4info,
                            const P4::ExternFunction* externFunction) override {
         auto p4RtTypeInfo = p4info->mutable_type_info();
-        auto portMetadata = getPortMetadataExtract(externFunction, refMap, typeMap, p4RtTypeInfo);
+        auto portMetadata = getPortMetadataExtract(externFunction, refMap, p4RtTypeInfo);
         if (portMetadata) addPortMetadata(symbols, p4info, *portMetadata);
     }
 
@@ -672,9 +670,8 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
     static boost::optional<PortMetadata>
     getPortMetadataExtract(const P4::ExternFunction* function,
                            ReferenceMap* refMap,
-                           TypeMap* typeMap,
                            p4configv1::P4TypeInfo* p4RtTypeInfo) {
-        (void)refMap; (void)typeMap; (void)p4RtTypeInfo;
+        (void)refMap; (void)p4RtTypeInfo;
         // TODO(antonin)
         if (function->method->name != "port_metadata_extract")
             return boost::none;
@@ -704,7 +701,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         auto type = decl->type->to<IR::Type_Specialized>();
         BUG_CHECK(type->arguments->size() == 1, "%1%: expected one type argument", decl);
         auto typeArg = type->arguments->at(0);
-        auto typeSpec = TypeSpecConverter::convert(typeMap, refMap, typeArg, p4RtTypeInfo);
+        auto typeSpec = TypeSpecConverter::convert(refMap, typeArg, p4RtTypeInfo);
         BUG_CHECK(typeSpec != nullptr,
                   "P4 type %1% could not be converted to P4Info P4DataTypeSpec");
 

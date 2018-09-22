@@ -54,6 +54,8 @@ set (JBAY_V1_TEST_SUITES
   ${PTF_P4_TESTS}
 # p4_14_samples
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/bf_p4c_samples/*.p4
+# p4_16_samples
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf_p4c_samples/*.p4
   )
 
 p4c_add_bf_backend_tests("tofino2" "jbay" "v1model" "base" "${JBAY_V1_TEST_SUITES}")
