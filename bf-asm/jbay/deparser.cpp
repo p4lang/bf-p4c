@@ -592,6 +592,28 @@ template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
     for (auto &digest : digests)
         digest.type->setregs(regs, *this, digest);
 
+    /* Set learning digest mask for JBay */
+    for (auto &digest : digests) {
+        if (digest.type->name == "learning") {
+            regs.dprsrreg.inp.icr.lrnmask.enable();
+            for(auto &set : digest.layout) {
+                int id = set.first;
+                int len = regs.dprsrreg.inp.ipp.ingr.learn_tbl[id].len;
+                int index = 0;
+                assert(len > 0);
+                /* set words first */
+                for(; index < len/4; index++) {
+                    regs.dprsrreg.inp.icr.lrnmask[id].mask[index] = 0xFFFFFFFF;
+                }
+                /* now set overflow bytes */
+                for(int j = 0; j < len % 4 ; j++) {
+                    regs.dprsrreg.inp.icr.lrnmask[id].mask[index] |= (0xFF << (8*j));
+                }
+            }
+        }
+    }
+
+
 #define DISBALE_IF_NOT_SET(ISARRAY, ARRAY, REGS, DISABLE) \
     ISARRAY(for (auto &r : ARRAY)) if (!ISARRAY(r.)REGS.modified()) ISARRAY(r.)REGS.DISABLE = 1;
     JBAY_DISABLE_REGBITS(DISBALE_IF_NOT_SET)
