@@ -149,7 +149,31 @@ DEPARSER_INTRINSIC(JBay, INGRESS, xid, 2) {
             IFVALID( REG[id].valid = 1; )                                               \
             REG[id].len = idx; }
 
-JBAY_SIMPLE_DIGEST(INGRESS, learning, regs.dprsrreg.inp.ipp.ingr.learn_tbl,
+
+#define JBAY_LEARN_DIGEST(GRESS, NAME, REG, SEL, IFID, CNT)                            \
+    DEPARSER_DIGEST(JBay, GRESS, NAME, CNT, can_shift = true; ) {                       \
+        SEL.phv = data.select.val->reg.deparser_id();                                   \
+        JBAY_POV(GRESS, data.select, SEL)                                               \
+        SEL.shft = data.shift + data.select->lo;                                        \
+        SEL.disable_ = 0;                                                               \
+        for (auto &set : data.layout) {                                                 \
+            int id = set.first >> data.shift;                                           \
+            int idx = 0;                                                                \
+            bool first = true;                                                          \
+            int last = -1;                                                              \
+            for (auto &reg : set.second) {                                              \
+                if (first) {                                                            \
+                    first = false;                                                      \
+                    IFID( REG[id].id_phv = reg->reg.deparser_id(); continue; ) }        \
+                if (last == reg->reg.deparser_id()) continue;                           \
+                for (int i = reg->reg.size/8; i > 0; i--)  {                            \
+                    REG[id].phvs[47-idx] = reg->reg.deparser_id();                      \
+                    idx++; }                                                            \
+                last = reg->reg.deparser_id(); }                                        \
+            YES( REG[id].valid = 1; )                                               \
+            REG[id].len = idx; } }
+
+JBAY_LEARN_DIGEST(INGRESS, learning, regs.dprsrreg.inp.ipp.ingr.learn_tbl,
                    regs.dprsrreg.inp.ipp.ingr.m_learn_sel, NO, 8)
 JBAY_ARRAY_DIGEST(INGRESS, mirror, regs.dprsrreg.ho_i, him.mirr_hdr_tbl.entry,
                   regs.dprsrreg.inp.ipp.ingr.m_mirr_sel, YES, 16)
@@ -603,11 +627,12 @@ template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
                 assert(len > 0);
                 /* set words first */
                 for(; index < len/4; index++) {
-                    regs.dprsrreg.inp.icr.lrnmask[id].mask[index] = 0xFFFFFFFF;
+                    regs.dprsrreg.inp.icr.lrnmask[id].mask[11-index] = 0xFFFFFFFF;
                 }
                 /* now set overflow bytes */
-                for(int j = 0; j < len % 4 ; j++) {
-                    regs.dprsrreg.inp.icr.lrnmask[id].mask[index] |= (0xFF << (8*j));
+                for(int j=0; j < len%4; j++) {
+                    unsigned mask = 0xFF << 8*(3-j);
+                    regs.dprsrreg.inp.icr.lrnmask[id].mask[11-index] |= mask;
                 }
             }
         }
