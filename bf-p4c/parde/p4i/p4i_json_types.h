@@ -72,7 +72,8 @@ struct P4iParserState : ToJsonObject {
     std::vector<P4iParserMatchOn> matchesOn;  // required, List of matches in use.
     bool has_counter;    // required, True if the state uses a counter.
     cstring state_name;  // required, Name of the state in this row.
-    int next_state_id;   // required, The id of the next state following a transition.
+    int previous_state_id = 0;   // required, The id of the previous state for this transition.
+    cstring previous_state_name;  // optional
 
     Util::JsonObject* toJson() const override {
         auto* rst = new Util::JsonObject();
@@ -83,7 +84,8 @@ struct P4iParserState : ToJsonObject {
         rst->emplace("matchesOn", toJsonArray(matchesOn));
         rst->emplace("has_counter", new Util::JsonValue(has_counter));
         rst->emplace("state_name", new Util::JsonValue(state_name));
-        rst->emplace("next_state_id", new Util::JsonValue(next_state_id));
+        rst->emplace("previous_state_id", new Util::JsonValue(previous_state_id));
+        rst->emplace("previous_state_name", new Util::JsonValue(previous_state_name));
         return rst;
     }
 };

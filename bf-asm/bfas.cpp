@@ -83,7 +83,7 @@ void output_all() {
     char build_date[1024];
     strftime(build_date, 1024, "%c", localtime(&now));
     ctxtJson["build_date"] = build_date;
-    ctxtJson["schema_version"] = "1.5.7";
+    ctxtJson["schema_version"] = "1.5.8";
     ctxtJson["compiler_version"] = BF_P4C_VERSION;
     ctxtJson["program_name"] = asmfile_name;
     ctxtJson["learn_quanta"] = json::vector();

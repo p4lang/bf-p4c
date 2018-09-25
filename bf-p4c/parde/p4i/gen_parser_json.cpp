@@ -53,8 +53,9 @@ GenerateParserP4iJson::generateMatchOn(const IR::BFN::LoweredParserState* state,
         } else if (auto* pvs = match->value->to<IR::BFN::LoweredPvsMatchValue>()) {
             match_on.value_set = pvs->name;
         } else {
-            BUG("unknown pvs: %1%", match->value);
+            BUG("Unknown parser match value type: %1%", match->value);
         }
+        rst.push_back(match_on);
     }
     return rst;
 }
@@ -80,27 +81,34 @@ int GenerateParserP4iJson::getTcamId(const IR::BFN::LoweredParserMatch* match) {
 
 P4iParserState
 GenerateParserP4iJson::generateStateByMatch(
-        const IR::BFN::LoweredParserState* state_ir,
+        const IR::BFN::LoweredParserState* curr_state,
+        const IR::BFN::LoweredParserState* prev_state,
         const IR::BFN::LoweredParserMatch* match) {
     // Create a parser state out from this match.
     P4iParserState state;
-    state.state_id      = getStateId(state_ir);
+    state.state_id      = getStateId(curr_state);
     state.tcam_row      = getTcamId(match);
     state.shifts        = match->shift;
     state.extracts      = generateExtracts(match);
-    state.matchesOn     = generateMatchOn(state_ir, match);
+    state.matchesOn     = generateMatchOn(curr_state, match);
     state.has_counter   = false;  // TODO(yumin): update this when counter is supported.
-    state.state_name    = state_ir->name;
-    state.next_state_id = getStateId(match->next);
+    state.state_name    = curr_state->name;
+    if (prev_state) {
+        state.previous_state_id = getStateId(prev_state);
+        state.previous_state_name = prev_state->name;
+    }
+
     return state;
 }
 
 bool GenerateParserP4iJson::preorder(const IR::BFN::LoweredParserState* state) {
-    auto* parser_ir = findContext<IR::BFN::LoweredParser>();
+    auto parser_ir = findContext<IR::BFN::LoweredParser>();
     BUG_CHECK(parser_ir, "state does not belong to a parser? %1%", state);
+
+    auto prev_state = findContext<IR::BFN::LoweredParserState>();
     for (const auto* match : state->match) {
         parsers[parser_ir->gress].states.push_back(
-                generateStateByMatch(state, match));
+                generateStateByMatch(state, prev_state, match));
     }
     return true;
 }

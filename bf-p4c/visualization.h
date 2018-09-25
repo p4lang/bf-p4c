@@ -239,6 +239,9 @@ class Visualization : public Inspector {
     void gen_action_bus_bytes(unsigned int stageNo, Util::JsonObject *stage);
     void gen_action_slots(unsigned int stageNo, Util::JsonObject *stage);
     void gen_vliw(unsigned int stageNo, Util::JsonObject *stage);
+    void gen_exm_search_buses(unsigned int stageNo, Util::JsonObject *stage);
+    void gen_exm_result_buses(unsigned int stageNo, Util::JsonObject *stage);
+    void gen_tind_result_buses(unsigned int stageNo, Util::JsonObject *stage);
 };
 
 }  // namespace BFN

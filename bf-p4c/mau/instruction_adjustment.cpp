@@ -932,6 +932,7 @@ void GeneratePrimitiveInfo::gen_action_json(const IR::MAU::Action *act,
     LOG1("GeneratePrimitiveInfo Act: " << canon_name(act->name));
     auto _primitives = new Util::JsonArray();
     for (auto call : act->stateful_calls) {
+        // FIXME: Add info for hash_inputs, related to context.json schema 1.5.8
         auto prim = call->prim;
         auto _primitive = new Util::JsonObject();
         auto *at = prim->operands.at(0)->to<IR::GlobalRef>()

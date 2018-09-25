@@ -133,6 +133,9 @@ void Visualization::gen_stage(unsigned int stage) {
     gen_action_bus_bytes(stage, theStage);
     gen_action_slots(stage, theStage);
     gen_vliw(stage, theStage);
+    gen_exm_search_buses(stage, theStage);
+    gen_exm_result_buses(stage, theStage);
+    gen_tind_result_buses(stage, theStage);
 }
 
 void Visualization::add_xbar_bytes_usage(unsigned int stage, const IXBar::Use &alloc) {
@@ -650,9 +653,45 @@ void Visualization::gen_vliw(unsigned int stageNo, Util::JsonObject *stage) {
     stage->emplace("vliw", vliw);
 }
 
+void Visualization::gen_exm_search_buses(unsigned int stageNo, Util::JsonObject *stage) {
+    auto *exm_search_buses = new Util::JsonObject();
+    exm_search_buses->emplace("size", new Util::JsonValue(2 * Memories::SRAM_ROWS));
+    auto *ids = new Util::JsonArray();
+    exm_search_buses->emplace("ids", ids);
+
+    // FIXME(amresh): Fill me in.  Where is this information stored?
+
+
+    stage->emplace("exm_search_buses", exm_search_buses);
+}
+
+void Visualization::gen_exm_result_buses(unsigned int stageNo, Util::JsonObject *stage) {
+    auto *exm_result_buses = new Util::JsonObject();
+    exm_result_buses->emplace("size", new Util::JsonValue(2 * Memories::SRAM_ROWS));
+    auto *ids = new Util::JsonArray();
+    exm_result_buses->emplace("ids", ids);
+
+    // FIXME(amresh): Fill me in.  Where is this information stored?
+
+
+    stage->emplace("exm_result_buses", exm_result_buses);
+}
+
+void Visualization::gen_tind_result_buses(unsigned int stageNo, Util::JsonObject *stage) {
+    auto *tind_result_buses = new Util::JsonObject();
+    tind_result_buses->emplace("size", new Util::JsonValue(2 * Memories::SRAM_ROWS));
+    auto *ids = new Util::JsonArray();
+    tind_result_buses->emplace("ids", ids);
+
+    // FIXME(amresh): Fill me in.  Where is this information stored?
+
+
+    stage->emplace("tind_result_buses", tind_result_buses);
+}
+
 std::ostream &operator<<(std::ostream &out, const Visualization &vis) {
     auto res_json = new Util::JsonObject();
-    res_json->emplace("schema_version", new Util::JsonValue("1.0.0"));
+    res_json->emplace("schema_version", new Util::JsonValue("1.0.2"));
     res_json->emplace("program_name",
                       new Util::JsonValue(BFNContext::get().options().programName + ".p4"));
     res_json->emplace("run_id", new Util::JsonValue(RunId::getId()));

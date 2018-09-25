@@ -24,7 +24,8 @@ class GenerateParserP4iJson : public ParserInspector {
     std::vector<P4iParserExtract> generateExtracts(const IR::BFN::LoweredParserMatch* match);
 
     P4iParserState
-    generateStateByMatch(const IR::BFN::LoweredParserState* state_ir,
+    generateStateByMatch(const IR::BFN::LoweredParserState* curr_state,
+                         const IR::BFN::LoweredParserState* prev_state,
                          const IR::BFN::LoweredParserMatch* match);
 
     /// A parser match is a parser state.
