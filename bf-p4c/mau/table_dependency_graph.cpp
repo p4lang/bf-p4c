@@ -212,7 +212,7 @@ class FindDependencyGraph::AddDependencies : public MauInspector, TofinoWriteCon
                     }
                 }
             }
-            if (isWrite() && self.phv.alloc_done()) {
+            if (isWrite() && !isReductionOr() && self.phv.alloc_done()) {
                 field->foreach_alloc([&](const PHV::Field::alloc_slice &sl) {
                     bitvec range(sl.container_bit, sl.width);
                     cont_writes[sl.container] |= range;
