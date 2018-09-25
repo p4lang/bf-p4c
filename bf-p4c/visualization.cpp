@@ -683,9 +683,58 @@ void Visualization::gen_tind_result_buses(unsigned int stageNo, Util::JsonObject
     auto *ids = new Util::JsonArray();
     tind_result_buses->emplace("ids", ids);
 
-    // FIXME(amresh): Fill me in.  Where is this information stored?
+    // If sharing is ever supported for result buses, we would need
+    // to keep track of something like id_to_usages to avoid defining an
+    // ID multiple times.
+    for (auto &res : _stageResources[stageNo]._memoriesUsage) {
+        for (auto &use : res._use->memuse) {
+            Memories::Use memuse = use.second;
+            std::string memTypeName = typeName(memuse.type);
+            std::string ext = "";
 
-
+            switch (memuse.type) {
+            case Memories::Use::TIND:
+            {
+                auto row = memuse.row[0].row;
+                auto bus = memuse.row[0].bus;
+                auto *tind_result_usage = new Util::JsonObject();
+                tind_result_usage->emplace("id", new Util::JsonValue(2 * row + bus));
+                auto *usages = new Util::JsonArray;
+                tind_result_usage->emplace("usages", usages);
+                ids->append(tind_result_usage);
+                auto *usage = new Util::JsonObject();
+                usage->emplace("used_by", new Util::JsonValue(res._tableName));
+                usage->emplace("used_for", new Util::JsonValue(memTypeName));
+                // usage->emplace("detail", new Util::JsonValue("?"));
+                usages->append(usage);
+                break;
+            }
+            case Memories::Use::GATEWAY: {
+                auto row = memuse.row[0].row;
+                auto unit = memuse.gateway.unit;
+                // FIXME: How do we know if this is a tind bus or exm bus?
+                if (memuse.gateway.payload_bus == 0 || memuse.gateway.payload_bus == 1) {
+                    auto *tind_result_usage = new Util::JsonObject();
+                    auto result_bus_unit = 2 * memuse.gateway.payload_row;
+                    result_bus_unit += memuse.gateway.payload_bus;
+                    tind_result_usage->emplace("id", new Util::JsonValue(result_bus_unit));
+                    auto *usages = new Util::JsonArray;
+                    tind_result_usage->emplace("usages", usages);
+                    ids->append(tind_result_usage);
+                    auto *usage = new Util::JsonObject();
+                    usage->emplace("used_by", new Util::JsonValue(res._tableName));
+                    usage->emplace("used_for", new Util::JsonValue(memTypeName));
+                    // usage->emplace("detail", new Util::JsonValue("?"));
+                    usages->append(usage);
+                }
+                break;
+            }
+            default:{
+                break;
+            }
+            }
+        }
+    }
     stage->emplace("tind_result_buses", tind_result_buses);
 }
 
