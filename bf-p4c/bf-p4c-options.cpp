@@ -50,6 +50,10 @@ BFN_Options::BFN_Options() {
         [this](const char *) { no_power_check = true; return true; },
         "Turns off the MAU power budget check",
         OptionFlags::Hide);
+    registerOption("--gen-mutine-ir", nullptr,
+        [this](const char *) { only_gen_mutine_ir = true; return true; },
+        "Generate an IR for mutine (p4v, p4testgen)",
+        OptionFlags::Hide);
 #endif
     registerOption("-g", nullptr,
         [this](const char *) { debugInfo = true; return true; },

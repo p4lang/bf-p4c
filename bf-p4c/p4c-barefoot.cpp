@@ -245,6 +245,16 @@ int main(int ac, char **av) {
     if (::errorCount() > 0)
         return 1;
 
+#if BAREFOOT_INTERNAL
+    if (options.only_gen_mutine_ir) {
+        // We just want to produce an IR for mutine (p4v & friends), so running
+        // the midend is sufficient. Dump the IR to stdout and exit.
+        for (auto& pipe : conv.pipe)
+            JSONGenerator(std::cout, true) << pipe << std::endl;
+        return ::errorCount() > 0;
+    }
+#endif
+
     for (auto& pipe : conv.pipe) {
         execute_backend(pipe, options);
         std::string prefix = "";
