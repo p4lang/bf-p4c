@@ -302,29 +302,29 @@ apply {
         if (*v == fg.v_sink)
             continue;
         const IR::MAU::Table *found_table = fg.get_vertex(*v);
-        if (found_table->name == "t1_0") {
+        if (found_table->name == "t1") {
             t1 = found_table;
-        } else if (found_table->name == "t2_0") {
+        } else if (found_table->name == "t2") {
             t2 = found_table;
-        } else if (found_table->name == "t3_0") {
+        } else if (found_table->name == "t3") {
             t3 = found_table;
-        } else if (found_table->name == "t4_0") {
+        } else if (found_table->name == "t4") {
             t4 = found_table;
-        } else if (found_table->name == "t5_0") {
+        } else if (found_table->name == "t5") {
             t5 = found_table;
-        } else if (found_table->name == "t6_0") {
+        } else if (found_table->name == "t6") {
             t6 = found_table;
-        } else if (found_table->name == "t7_0") {
+        } else if (found_table->name == "t7") {
             t7 = found_table;
-        } else if (found_table->name == "t8_0") {
+        } else if (found_table->name == "t8") {
             t8 = found_table;
-        } else if (found_table->name == "t9_0") {
+        } else if (found_table->name == "t9") {
             t9 = found_table;
-        } else if (found_table->name == "t10_0") {
+        } else if (found_table->name == "t10") {
             t10 = found_table;
-        } else if (found_table->name == "t11_0") {
+        } else if (found_table->name == "t11") {
             t11 = found_table;
-        } else if (found_table->name == "t12_0") {
+        } else if (found_table->name == "t12") {
             t12 = found_table;
         }
     }

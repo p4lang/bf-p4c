@@ -487,10 +487,12 @@ void Visualization::gen_memories(unsigned int stage, Util::JsonObject *parent) {
             std::string ext = "";
 
             switch (memuse.type) {
+            case Memories::Use::ACTIONDATA:
+                ext = "$action"; break;
+#if 0
+            // Not removing since we might bring some of these annotations back.
             case Memories::Use::TIND:
                 ext = "$tind"; break;
-            case Memories::Use::ACTIONDATA:
-                ext = "$action_data"; break;
             case Memories::Use::COUNTER:
                 ext = "$stats"; break;
             case Memories::Use::METER:
@@ -503,6 +505,7 @@ void Visualization::gen_memories(unsigned int stage, Util::JsonObject *parent) {
                 ext = "$idle"; break;
             case Memories::Use::GATEWAY:
                 ext = "$gw"; break;
+#endif
             default:
                 break;
             }
@@ -537,7 +540,7 @@ void Visualization::gen_memories(unsigned int stage, Util::JsonObject *parent) {
                 for (auto &r : memuse.row) {
                     auto *item = new Util::JsonObject();
                     item->emplace("row", new Util::JsonValue(r.row));
-                    usagesToCtxJson(item, p4name(res) + "", memTypeName);
+                    usagesToCtxJson(item, p4name(res).c_str(), memTypeName);
                     if (r.row % 2 == 0) statistics_alus->append(item);
                     else                jmeter_alus->append(item);
                 }

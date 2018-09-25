@@ -299,21 +299,21 @@ apply {
     auto* dom_tree = new BuildDominatorTree(fg);
     test->pipe->apply(*dom_tree);
 
-    EXPECT_EQ(dom_tree->hasImmediateDominator(INGRESS, "SINK"), "t10_0");
-    EXPECT_EQ(dom_tree->hasImmediateDominator(EGRESS, "SINK"), "t10_1");
-    EXPECT_EQ(dom_tree->hasImmediateDominator(INGRESS, "t11_0"), "t11_0");
-    EXPECT_EQ(dom_tree->hasImmediateDominator(EGRESS, "t11_1"), "t11_1");
-    EXPECT_EQ(dom_tree->hasImmediateDominator(INGRESS, "t7_0"), "t4_0");
-    EXPECT_EQ(dom_tree->hasImmediateDominator(EGRESS, "t3_1"), "t1_1");
+    EXPECT_EQ(dom_tree->hasImmediateDominator(INGRESS, "SINK"), "t10");
+    EXPECT_EQ(dom_tree->hasImmediateDominator(EGRESS, "SINK"), "t10");
+    EXPECT_EQ(dom_tree->hasImmediateDominator(INGRESS, "t11"), "t11");
+    EXPECT_EQ(dom_tree->hasImmediateDominator(EGRESS, "t11"), "t11");
+    EXPECT_EQ(dom_tree->hasImmediateDominator(INGRESS, "t7"), "t4");
+    EXPECT_EQ(dom_tree->hasImmediateDominator(EGRESS, "t3"), "t1");
 
-    EXPECT_EQ(dom_tree->strictlyDominates("t1_0", "t2_0", INGRESS), true);
-    EXPECT_EQ(dom_tree->strictlyDominates("t11_0", "t8_0", INGRESS), true);
-    EXPECT_EQ(dom_tree->strictlyDominates("t1_0", "t1_0", INGRESS), false);
-    EXPECT_EQ(dom_tree->strictlyDominates("t7_0", "t11_0", INGRESS), false);
-    EXPECT_EQ(dom_tree->strictlyDominates("t1_0", "t10_0", INGRESS), false);
+    EXPECT_EQ(dom_tree->strictlyDominates("t1", "t2", INGRESS), true);
+    EXPECT_EQ(dom_tree->strictlyDominates("t11", "t8", INGRESS), true);
+    EXPECT_EQ(dom_tree->strictlyDominates("t1", "t1", INGRESS), false);
+    EXPECT_EQ(dom_tree->strictlyDominates("t7", "t11", INGRESS), false);
+    EXPECT_EQ(dom_tree->strictlyDominates("t1", "t10", INGRESS), false);
 
-    EXPECT_EQ(dom_tree->isDominator("t2_0", INGRESS, "t11_0"), true);
-    EXPECT_EQ(dom_tree->isDominator("t2_0", INGRESS, "t1_0"), true);
-    EXPECT_EQ(dom_tree->isDominator("t2_0", INGRESS, "t7_0"), false);
+    EXPECT_EQ(dom_tree->isDominator("t2", INGRESS, "t11"), true);
+    EXPECT_EQ(dom_tree->isDominator("t2", INGRESS, "t1"), true);
+    EXPECT_EQ(dom_tree->isDominator("t2", INGRESS, "t7"), false);
 }
 }  // namespace Test

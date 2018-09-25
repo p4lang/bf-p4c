@@ -1,3 +1,4 @@
+#include <array>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/optional.hpp>
 #include <initializer_list>
@@ -79,7 +80,10 @@ control deparse(packet_out packet, in Headers headers) {
     apply { packet.emit(headers.h1); }
 }
 
-V1Switch(parse(), verifyChecksum(), mau(), mau(),
+control my_egress(inout Headers headers, inout Metadata meta,
+    inout standard_metadata_t sm) { apply {} }
+
+V1Switch(parse(), verifyChecksum(), mau(), my_egress(),
     computeChecksum(), deparse()) main;
     )");
 
@@ -187,13 +191,13 @@ TEST_F(TableDependencyGraphTest, GraphInjectedControl) {
     const IR::MAU::Table *t1, *t2, *t3, *t4;
     t1 = t2 = t3 = t4 = nullptr;
     for (const auto& kv : dg.stage_info) {
-        if (kv.first->name == "t1_0") {
+        if (kv.first->name == "t1") {
             t1 = kv.first;
-        } else if (kv.first->name == "t2_0") {
+        } else if (kv.first->name == "t2") {
             t2 = kv.first;
-        } else if (kv.first->name == "t3_0") {
+        } else if (kv.first->name == "t3") {
             t3 = kv.first;
-        } else if (kv.first->name == "t4_0.0") {
+        } else if (kv.first->name == "t4.0") {
             t4 = kv.first;
         }
     }
@@ -344,13 +348,13 @@ TEST_F(TableDependencyGraphTest, GraphEdgeAnnotations) {
     const IR::MAU::Table *t1, *t2, *t11, *t12;
     t1 = t2 = t11 = t12 = nullptr;
     for (const auto& kv : dg.stage_info) {
-        if (kv.first->name == "t1_0") {
+        if (kv.first->name == "t1") {
             t1 = kv.first;
-        } else if (kv.first->name == "t2_0") {
+        } else if (kv.first->name == "t2") {
             t2 = kv.first;
-        } else if (kv.first->name == "t11_0") {
+        } else if (kv.first->name == "t11") {
             t11 = kv.first;
-        } else if (kv.first->name == "t12_0") {
+        } else if (kv.first->name == "t12") {
             t12 = kv.first;
         }
     }
@@ -361,11 +365,12 @@ TEST_F(TableDependencyGraphTest, GraphEdgeAnnotations) {
     EXPECT_NE(t12, nullptr);
 
     auto not_found = dg.get_data_dependency_info(t1, t2);
-    ASSERT_FALSE(not_found.is_initialized());
+    EXPECT_EQ(not_found, boost::none);
 
     auto dep_info_opt = dg.get_data_dependency_info(t11, t12);
-    ASSERT_TRUE(dep_info_opt.is_initialized());
+    EXPECT_NE(dep_info_opt, boost::none);
     auto dep_info = dep_info_opt.get();
+
     ordered_set<cstring> field_names;
     ordered_set<DependencyGraph::dependencies_t> dep_types;
     for (const auto& kv: dep_info) {
@@ -616,29 +621,29 @@ TEST_F(TableDependencyGraphTest, GraphLayeredControl) {
     const IR::MAU::Table *t1, *t2, *t3, *t4, *t5, *t6, *t7, *t8, *t9, *t10, *t11, *t12;
     t1 = t2 = t3 = t4 = t5 = t6 = t7 = t8 = t9 = t10 = t11 = t12 = nullptr;
     for (const auto& kv : dg.stage_info) {
-        if (kv.first->name == "t1_0") {
+        if (kv.first->name == "t1") {
             t1 = kv.first;
-        } else if (kv.first->name == "t2_0") {
+        } else if (kv.first->name == "t2") {
             t2 = kv.first;
-        } else if (kv.first->name == "t3_0") {
+        } else if (kv.first->name == "t3") {
             t3 = kv.first;
-        } else if (kv.first->name == "t4_0") {
+        } else if (kv.first->name == "t4") {
             t4 = kv.first;
-        } else if (kv.first->name == "t5_0") {
+        } else if (kv.first->name == "t5") {
             t5 = kv.first;
-        } else if (kv.first->name == "t6_0") {
+        } else if (kv.first->name == "t6") {
             t6 = kv.first;
-        } else if (kv.first->name == "t7_0") {
+        } else if (kv.first->name == "t7") {
             t7 = kv.first;
-        } else if (kv.first->name == "t8_0") {
+        } else if (kv.first->name == "t8") {
             t8 = kv.first;
-        } else if (kv.first->name == "t9_0") {
+        } else if (kv.first->name == "t9") {
             t9 = kv.first;
-        } else if (kv.first->name == "t10_0") {
+        } else if (kv.first->name == "t10") {
             t10 = kv.first;
-        } else if (kv.first->name == "t11_0") {
+        } else if (kv.first->name == "t11") {
             t11 = kv.first;
-        } else if (kv.first->name == "t12_0") {
+        } else if (kv.first->name == "t12") {
             t12 = kv.first;
         }
     }
@@ -685,34 +690,29 @@ TEST_F(TableDependencyGraphTest, GraphLayeredControl) {
 
 }
 
+struct Scores {
+    std::array<std::array<int, UpwardDownwardPropagation::NUM_HEURISTICS>,
+               UpwardDownwardPropagation::NUM_PROP_TYPES> data;
+    Scores(std::initializer_list<std::initializer_list<int>> l) {
+        EXPECT_EQ(l.size(), data.size());
+        int i = 0;
+        for (auto sl: l) {
+            EXPECT_EQ(sl.size(), data[i].size());
+            int j = 0;
+            for (auto s : sl) data[i][j++] = s;
+            i++;
+        }
+    }
+};
+
 void validate_scores(UpwardDownwardPropagation* upward_downward_prop,
                      const IR::MAU::Table *a_table_to_use, const IR::MAU::Table *b_table_to_use,
-                     std::initializer_list<std::initializer_list<int>>& a_score_list,
-                     std::initializer_list<std::initializer_list<int>>& b_score_list,
-                     ordered_set<const IR::MAU::Table*> placed_tables) {
+                     Scores &a_score, Scores &b_score,
+                     ordered_set<const IR::MAU::Table*> &placed_tables)
+{
     upward_downward_prop->update_placed_tables(placed_tables);
-    int num_prop_types = UpwardDownwardPropagation::NUM_PROP_TYPES;
-    int num_heuristics = UpwardDownwardPropagation::NUM_HEURISTICS;
-    int a_score[num_prop_types][num_heuristics];
-    int b_score[num_prop_types][num_heuristics];
-    int i = 0;
-    for (auto score_type : a_score_list) {
-        int j = 0;
-        for (auto score : score_type) {
-            a_score[i][j] = score;
-            j++;
-        }
-        i++;
-    }
-    i = 0;
-    for (auto score_type : b_score_list) {
-        int j = 0;
-        for (auto score : score_type) {
-            b_score[i][j] = score;
-            j++;
-        }
-        i++;
-    }
+    constexpr int num_prop_types = UpwardDownwardPropagation::NUM_PROP_TYPES;
+    constexpr int num_heuristics = UpwardDownwardPropagation::NUM_HEURISTICS;
     const auto& downward_prop_score = upward_downward_prop->get_downward_prop_unplaced_score(
         a_table_to_use, b_table_to_use);
     const auto& upward_prop_score = upward_downward_prop->get_upward_prop_unplaced_score(
@@ -734,8 +734,8 @@ void validate_scores(UpwardDownwardPropagation* upward_downward_prop,
             }
 
             int calc_a, calc_b, true_a, true_b;
-            true_a = a_score[i][j];
-            true_b = b_score[i][j];
+            true_a = a_score.data[i][j];
+            true_b = b_score.data[i][j];
             if (j == UpwardDownwardPropagation::DEPS_STAGES_CONTROL) {
                 calc_a = calc_score.first.deps_stages_control;
                 calc_b = calc_score.second.deps_stages_control;
@@ -886,31 +886,31 @@ TEST_F(TableDependencyGraphTest, UpwardDownwardProp) {
     const IR::MAU::Table *a, *b, *c, *x, *y, *x2, *y2, *z1, *z2, *z3, *alpha, *beta, *gamma;
     a = b = c = x = y = x2 = y2 = z1 = z2 = z3 = alpha = beta = gamma = nullptr;
     for (const auto& kv : dg.stage_info) {
-        if (kv.first->name == "A_0") {
+        if (kv.first->name == "A") {
             a = kv.first;
-        } else if (kv.first->name == "B_0") {
+        } else if (kv.first->name == "B") {
             b = kv.first;
-        } else if (kv.first->name == "C_0") {
+        } else if (kv.first->name == "C") {
             c = kv.first;
-        } else if (kv.first->name == "X_0") {
+        } else if (kv.first->name == "X") {
             x = kv.first;
-        } else if (kv.first->name == "Y_0") {
+        } else if (kv.first->name == "Y") {
             y = kv.first;
-        } else if (kv.first->name == "X2_0") {
+        } else if (kv.first->name == "X2") {
             x2 = kv.first;
-        } else if (kv.first->name == "Y2_0") {
+        } else if (kv.first->name == "Y2") {
             y2 = kv.first;
-        } else if (kv.first->name == "Z1_0") {
+        } else if (kv.first->name == "Z1") {
             z1 = kv.first;
-        } else if (kv.first->name == "Z2_0") {
+        } else if (kv.first->name == "Z2") {
             z2 = kv.first;
-        } else if (kv.first->name == "Z3_0") {
+        } else if (kv.first->name == "Z3") {
             z3 = kv.first;
-        } else if (kv.first->name == "alpha_0") {
+        } else if (kv.first->name == "alpha") {
             alpha = kv.first;
-        } else if (kv.first->name == "beta_0") {
+        } else if (kv.first->name == "beta") {
             beta = kv.first;
-        } else if (kv.first->name == "gamma_0") {
+        } else if (kv.first->name == "gamma") {
             gamma = kv.first;
         }
     }
@@ -938,16 +938,15 @@ TEST_F(TableDependencyGraphTest, UpwardDownwardProp) {
 
     // Scores (from left to right) are: deps_stages_control, deps_stages, total_deps
     // See definition of PlaceScore in upward_downward_prop for details
-    auto a_score = std::initializer_list<std::initializer_list<int>>(
+    Scores a_score(std::initializer_list<std::initializer_list<int>>(
                        {{0, 0, 0},   // Downward prop scores
                         {0, 0, 0},   // Upward prop scores
-                        {0, 0, 0}}); // Local score
-    auto b_score = std::initializer_list<std::initializer_list<int>>(
+                        {0, 0, 0}})); // Local score
+    Scores b_score(std::initializer_list<std::initializer_list<int>>(
                        {{3, 3, 0},   // Downward prop scores
                         {0, 0, 0},   // Upward prop scores
-                        {0, 0, 0}}); // Local score
+                        {0, 0, 0}})); // Local score
     validate_scores(upward_downward_prop, x2, y, a_score, b_score, placed_tables);
-
 
     a_score = std::initializer_list<std::initializer_list<int>>(
                   {{0, 0, 0},
@@ -1189,33 +1188,33 @@ TEST_F(TableDependencyGraphTest, GraphMinStage) {
     const IR::MAU::Table *a, *b, *c, *x, *y, *x2, *y2, *z1, *z2, *z3, *alpha, *beta, *gamma, *t2;
     a = b = c = x = y = x2 = y2 = z1 = z2 = z3 = alpha = beta = gamma = t2 = nullptr;
     for (const auto& kv : dg.stage_info) {
-        if (kv.first->name == "A_0") {
+        if (kv.first->name == "A") {
             a = kv.first;
-        } else if (kv.first->name == "B_0") {
+        } else if (kv.first->name == "B") {
             b = kv.first;
-        } else if (kv.first->name == "C_0") {
+        } else if (kv.first->name == "C") {
             c = kv.first;
-        } else if (kv.first->name == "X_0") {
+        } else if (kv.first->name == "X") {
             x = kv.first;
-        } else if (kv.first->name == "Y_0") {
+        } else if (kv.first->name == "Y") {
             y = kv.first;
-        } else if (kv.first->name == "X2_0") {
+        } else if (kv.first->name == "X2") {
             x2 = kv.first;
-        } else if (kv.first->name == "Y2_0") {
+        } else if (kv.first->name == "Y2") {
             y2 = kv.first;
-        } else if (kv.first->name == "Z1_0") {
+        } else if (kv.first->name == "Z1") {
             z1 = kv.first;
-        } else if (kv.first->name == "Z2_0") {
+        } else if (kv.first->name == "Z2") {
             z2 = kv.first;
-        } else if (kv.first->name == "Z3_0") {
+        } else if (kv.first->name == "Z3") {
             z3 = kv.first;
-        } else if (kv.first->name == "alpha_0") {
+        } else if (kv.first->name == "alpha") {
             alpha = kv.first;
-        } else if (kv.first->name == "beta_0") {
+        } else if (kv.first->name == "beta") {
             beta = kv.first;
-        } else if (kv.first->name == "gamma_0") {
+        } else if (kv.first->name == "gamma") {
             gamma = kv.first;
-        } else if (kv.first->name == "t2_0") {
+        } else if (kv.first->name == "t2") {
             t2 = kv.first;
         }
     }
@@ -1333,19 +1332,19 @@ TEST_F(TableDependencyGraphTest, GraphA) {
     test->pipe->apply(*find_dg);
 
 
-    // the _0 suffix means it's ingress
+    // the  suffix means it's ingress
     const IR::MAU::Table *a, *b, *c, *d, *e;
     a = b = c = d = e = nullptr;
     for (const auto& kv : dg.stage_info) {
-        if (kv.first->name == "node_a_0") {
+        if (kv.first->name == "node_a") {
             a = kv.first;
-        } else if (kv.first->name == "node_b_0") {
+        } else if (kv.first->name == "node_b") {
             b = kv.first;
-        } else if (kv.first->name == "node_c_0") {
+        } else if (kv.first->name == "node_c") {
             c = kv.first;
-        } else if (kv.first->name == "node_d_0") {
+        } else if (kv.first->name == "node_d") {
             d = kv.first;
-        } else if (kv.first->name == "node_e_0") {
+        } else if (kv.first->name == "node_e") {
             e = kv.first;
         }
     }

@@ -280,6 +280,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_311_hash_adb.p4
   switch_8.3_l3_heavy_int_leaf
   switch_l3_heavy_int_leaf
+  switch_ent_fin_postcard
   )
 
 # BRIG-102
@@ -1283,7 +1284,6 @@ p4c_add_xfail_reason("tofino"
   "error: ALU ops cannot operate on slices"
   extensions/p4_tests/p4_14/p4smith_regression/shrubs_0.p4
   switch_8.3_msdc_leaf_int
-  switch_ent_fin_postcard
 )
 
 # BRIG-927

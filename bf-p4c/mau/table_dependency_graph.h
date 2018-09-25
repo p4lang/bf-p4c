@@ -241,8 +241,8 @@ struct DependencyGraph {
     }
 
     boost::optional<std::map<const PHV::Field*, std::pair<ordered_set<const IR::MAU::Action*>,
-             ordered_set<const IR::MAU::Action*>>>>
-             get_data_dependency_info(typename Graph::edge_descriptor edge) {
+                                                          ordered_set<const IR::MAU::Action*>>>>
+    get_data_dependency_info(typename Graph::edge_descriptor edge) {
         if (!data_annotations.count(edge)) {
             LOG1("Data dependency edge not found");
             return boost::none;
@@ -262,8 +262,8 @@ struct DependencyGraph {
                 that particular ActionSet will be empty.
     */
     boost::optional<std::map<std::pair<const PHV::Field*, DependencyGraph::dependencies_t>,
-             std::pair<ordered_set<const IR::MAU::Action*>,
-             ordered_set<const IR::MAU::Action*>>>>
+                             std::pair<ordered_set<const IR::MAU::Action*>,
+                                       ordered_set<const IR::MAU::Action*>>>>
              get_data_dependency_info(const IR::MAU::Table* upstream,
                                       const IR::MAU::Table* downstream) {
         if (!labelToVertex.count(upstream)) {
@@ -286,7 +286,7 @@ struct DependencyGraph {
                 found_downstream = true;
                 auto edge_type = g[*out];
                 auto local_data_opt = get_data_dependency_info(*out);
-                if (!local_data_opt.is_initialized())
+                if (!local_data_opt)
                     return boost::none;
                 auto local_data = local_data_opt.get();
                 for (const auto& kv : local_data) {

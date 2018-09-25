@@ -17,33 +17,8 @@ class ActionMutexTest : public TofinoBackendTest {};
 namespace {
 
 boost::optional<TofinoPipeTestCase>
-createActionMutexTestCase(const std::string& parserSource) {
-    auto source = P4_SOURCE(P4Headers::V1MODEL, R"(
-header H1
-{
-    bit<8> f1;
-    bit<8> f2;
-    bit<8> f3;
-    bit<8> f4;
-    bit<8> f5;
-    bit<8> f6;
-}
-
-struct Headers { H1 h1; }
-struct Metadata { }
-
-parser parse(packet_in packet, out Headers headers, inout Metadata meta,
-    inout standard_metadata_t sm) {
-    state start {
-        packet.extract(headers.h1);
-        transition accept;
-    }
-}
-
-control verifyChecksum(inout Headers headers, inout Metadata meta) { apply { } }
-
-control mau(inout Headers headers, inout Metadata meta,
-    inout standard_metadata_t sm) {
+createActionMutexTestCase(const std::string& mau) {
+    auto tables = P4_SOURCE(P4Headers::NONE, R"(
     action set_f1(bit<8> f1) {
         headers.h1.f1 = f1;
     }
@@ -94,8 +69,44 @@ control mau(inout Headers headers, inout Metadata meta,
         key = { headers.h1.f1 : exact; }
     }
 
+)");
+    auto source = P4_SOURCE(P4Headers::V1MODEL, R"(
+header H1
+{
+    bit<8> f1;
+    bit<8> f2;
+    bit<8> f3;
+    bit<8> f4;
+    bit<8> f5;
+    bit<8> f6;
+}
+
+struct Headers { H1 h1; }
+struct Metadata { }
+
+parser parse(packet_in packet, out Headers headers, inout Metadata meta,
+    inout standard_metadata_t sm) {
+    state start {
+        packet.extract(headers.h1);
+        transition accept;
+    }
+}
+
+control verifyChecksum(inout Headers headers, inout Metadata meta) { apply { } }
+
+control igrs(inout Headers headers, inout Metadata meta,
+    inout standard_metadata_t sm) {
+%TABLES%
     apply {
-%MAU%
+%INGRESS%
+    }
+}
+
+control egrs(inout Headers headers, inout Metadata meta,
+    inout standard_metadata_t sm) {
+%TABLES%
+    apply {
+%EGRESS%
     }
 }
 
@@ -105,11 +116,13 @@ control deparse(packet_out packet, in Headers headers) {
     apply { packet.emit(headers.h1); }
 }
 
-V1Switch(parse(), verifyChecksum(), mau(), mau(),
+V1Switch(parse(), verifyChecksum(), igrs(), egrs(),
     computeChecksum(), deparse()) main;
     )");
 
-    boost::replace_first(source, "%MAU%", parserSource);
+    boost::replace_first(source, "%INGRESS%", mau);
+    boost::replace_first(source, "%EGRESS%", mau);
+    boost::replace_all(source, "%TABLES%", tables);
 
     auto& options = BFNContext::get().options();
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
@@ -148,46 +161,49 @@ TEST_F(ActionMutexTest, Basic) {
 
     auto& act = action_mutex.name_actions;
 
+    // debugging
+    // for (auto a : act) std::cerr << a.first << std::endl;
+
     // not mutex
-    EXPECT_EQ(action_mutex(act.at("node_a_0.mau.set_f1"), act.at("node_b_0.mau.set_f1")), false);
-    EXPECT_EQ(action_mutex(act.at("node_a_0.mau.set_f1"), act.at("node_b_0.mau.set_f2")), false);
-    EXPECT_EQ(action_mutex(act.at("node_a_0.mau.set_f1"), act.at("node_b_0.mau.set_f3")), false);
-    EXPECT_EQ(action_mutex(act.at("node_a_0.mau.set_f1"), act.at("node_b_0.mau.set_f5")), false);
-    EXPECT_EQ(action_mutex(act.at("node_a_0.mau.set_f1"), act.at("node_d_0.mau.set_f3")), false);
-    EXPECT_EQ(action_mutex(act.at("node_a_0.mau.set_f1"), act.at("node_d_0.mau.set_f2")), false);
-    EXPECT_EQ(action_mutex(act.at("node_a_0.mau.set_f1"), act.at("node_f_0.mau.set_f5")), false);
-    EXPECT_EQ(action_mutex(act.at("node_a_0.mau.set_f1"), act.at("node_c_0.mau.set_f2")), false);
-    EXPECT_EQ(action_mutex(act.at("node_a_0.mau.set_f1"), act.at("node_e_0.mau.set_f4")), false);
+    EXPECT_EQ(action_mutex(act.at("node_a.igrs.set_f1"), act.at("node_b.igrs.set_f1")), false);
+    EXPECT_EQ(action_mutex(act.at("node_a.igrs.set_f1"), act.at("node_b.igrs.set_f2")), false);
+    EXPECT_EQ(action_mutex(act.at("node_a.igrs.set_f1"), act.at("node_b.igrs.set_f3")), false);
+    EXPECT_EQ(action_mutex(act.at("node_a.igrs.set_f1"), act.at("node_b.igrs.set_f5")), false);
+    EXPECT_EQ(action_mutex(act.at("node_a.igrs.set_f1"), act.at("node_d.igrs.set_f3")), false);
+    EXPECT_EQ(action_mutex(act.at("node_a.igrs.set_f1"), act.at("node_d.igrs.set_f2")), false);
+    EXPECT_EQ(action_mutex(act.at("node_a.igrs.set_f1"), act.at("node_f.igrs.set_f5")), false);
+    EXPECT_EQ(action_mutex(act.at("node_a.igrs.set_f1"), act.at("node_c.igrs.set_f2")), false);
+    EXPECT_EQ(action_mutex(act.at("node_a.igrs.set_f1"), act.at("node_e.igrs.set_f4")), false);
 
     // ingress, egress
-    EXPECT_EQ(action_mutex(act.at("node_a_0.mau.set_f1"), act.at("node_a_1.mau.set_f1")), true);
-    EXPECT_EQ(action_mutex(act.at("node_a_0.mau.set_f1"), act.at("node_d_1.mau.set_f2")), true);
-    EXPECT_EQ(action_mutex(act.at("node_a_0.mau.set_f1"), act.at("node_e_1.mau.set_f4")), true);
+    EXPECT_EQ(action_mutex(act.at("node_a.igrs.set_f1"), act.at("node_a_2.egrs.set_f1")), true);
+    EXPECT_EQ(action_mutex(act.at("node_a.igrs.set_f1"), act.at("node_d_2.egrs.set_f2")), true);
+    EXPECT_EQ(action_mutex(act.at("node_a.igrs.set_f1"), act.at("node_e_2.egrs.set_f4")), true);
 
     // inside a table
-    EXPECT_EQ(action_mutex(act.at("node_b_0.mau.set_f1"), act.at("node_b_0.mau.set_f2")), true);
-    EXPECT_EQ(action_mutex(act.at("node_b_0.mau.set_f2"), act.at("node_b_0.mau.set_f3")), true);
-    EXPECT_EQ(action_mutex(act.at("node_b_0.mau.set_f3"), act.at("node_b_0.mau.set_f5")), true);
-    EXPECT_EQ(action_mutex(act.at("node_d_0.mau.set_f2"), act.at("node_d_0.mau.set_f3")), true);
+    EXPECT_EQ(action_mutex(act.at("node_b.igrs.set_f1"), act.at("node_b.igrs.set_f2")), true);
+    EXPECT_EQ(action_mutex(act.at("node_b.igrs.set_f2"), act.at("node_b.igrs.set_f3")), true);
+    EXPECT_EQ(action_mutex(act.at("node_b.igrs.set_f3"), act.at("node_b.igrs.set_f5")), true);
+    EXPECT_EQ(action_mutex(act.at("node_d.igrs.set_f2"), act.at("node_d.igrs.set_f3")), true);
 
     // between if and different depths
-    EXPECT_EQ(action_mutex(act.at("node_b_0.mau.set_f1"), act.at("node_d_0.mau.set_f2")), true);
-    EXPECT_EQ(action_mutex(act.at("node_b_0.mau.set_f2"), act.at("node_e_0.mau.set_f4")), true);
-    EXPECT_EQ(action_mutex(act.at("node_b_0.mau.set_f3"), act.at("node_f_0.mau.set_f5")), true);
-    EXPECT_EQ(action_mutex(act.at("node_b_0.mau.set_f5"), act.at("node_c_0.mau.set_f2")), true);
+    EXPECT_EQ(action_mutex(act.at("node_b.igrs.set_f1"), act.at("node_d.igrs.set_f2")), true);
+    EXPECT_EQ(action_mutex(act.at("node_b.igrs.set_f2"), act.at("node_e.igrs.set_f4")), true);
+    EXPECT_EQ(action_mutex(act.at("node_b.igrs.set_f3"), act.at("node_f.igrs.set_f5")), true);
+    EXPECT_EQ(action_mutex(act.at("node_b.igrs.set_f5"), act.at("node_c.igrs.set_f2")), true);
 
     // from switch action_run children
-    EXPECT_EQ(action_mutex(act.at("node_d_0.mau.set_f2"), act.at("node_e_0.mau.set_f4")), false);
-    EXPECT_EQ(action_mutex(act.at("node_d_0.mau.set_f2"), act.at("node_f_0.mau.set_f5")), true);
-    EXPECT_EQ(action_mutex(act.at("node_d_0.mau.set_f3"), act.at("node_c_0.mau.set_f2")), false);
-    EXPECT_EQ(action_mutex(act.at("node_d_0.mau.set_f3"), act.at("node_e_0.mau.set_f4")), true);
+    EXPECT_EQ(action_mutex(act.at("node_d.igrs.set_f2"), act.at("node_e.igrs.set_f4")), false);
+    EXPECT_EQ(action_mutex(act.at("node_d.igrs.set_f2"), act.at("node_f.igrs.set_f5")), true);
+    EXPECT_EQ(action_mutex(act.at("node_d.igrs.set_f3"), act.at("node_c.igrs.set_f2")), false);
+    EXPECT_EQ(action_mutex(act.at("node_d.igrs.set_f3"), act.at("node_e.igrs.set_f4")), true);
 
     // between switch action_run
-    EXPECT_EQ(action_mutex(act.at("node_e_0.mau.set_f4"), act.at("node_f_0.mau.set_f5")), true);
-    EXPECT_EQ(action_mutex(act.at("node_e_0.mau.set_f4"), act.at("node_c_0.mau.set_f2")), true);
+    EXPECT_EQ(action_mutex(act.at("node_e.igrs.set_f4"), act.at("node_f.igrs.set_f5")), true);
+    EXPECT_EQ(action_mutex(act.at("node_e.igrs.set_f4"), act.at("node_c.igrs.set_f2")), true);
 
     // from hit to children
-    EXPECT_EQ(action_mutex(act.at("node_f_0.mau.set_f5"), act.at("node_c_0.mau.set_f2")), false);
+    EXPECT_EQ(action_mutex(act.at("node_f.igrs.set_f5"), act.at("node_c.igrs.set_f2")), false);
 }
 
 }  // namespace Test
