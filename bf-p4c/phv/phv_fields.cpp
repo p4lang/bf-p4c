@@ -985,6 +985,64 @@ struct ComputeFieldAlignments : public Inspector {
 };
 
 
+/** Mark certain metadata fields as intrinsic so that we don't initilize them
+ * in the parser (see ComputeInitZeroContainers pass in lower_parser.cpp)
+ * When compiling a P4_14 program, the P4_14 spec says:
+ *
+ * "Metadata is always considered to be valid. This is further explained in
+ * Section 2.2.1. Metadata instances are initialized to 0 by default."
+ *
+ * For Tofino applications, we deviated from the spec for 4 user-accessible
+ * intrinsic metadata fields that are read at the deparser, because a valid
+ * value of 0 has undesired behavior at the deparser. The fields are:
+ * ig_intr_md_for_tm.ucast_egress_port
+ * ig_intr_md_for_tm.mcast_grp_a
+ * ig_intr_md_for_tm.mcast_grp_b
+ * eg_intr_md.egress_port
+ *
+ * Note that Glass does not expose the mirror field list type as a user-facing
+ * field, but that may also apply here. (The learning digest type may also
+ * apply here too.)
+ *
+ * All other metadata fields (intrinsic and user) should have their container
+ * valid bit set coming out of the parser for P4_14 programs.
+ *
+ * P4_16 changed the semantic to be such that uninitialized metadata has an
+ * undefined value.
+ */
+
+class AddIntrinsicConstraints : public Inspector {
+    PhvInfo& phv;
+
+    std::vector<std::pair<cstring, cstring>> invalidate_fields_from_arch() {
+        static std::vector<std::pair<cstring, cstring>> rv =
+           {{ "ig_intr_md_for_tm", "mcast_grp_a" },
+            { "ig_intr_md_for_tm", "mcast_grp_b" },
+            { "eg_intr_md", "egress_port" },
+            { "ig_intr_md_for_tm", "ucast_egress_port" }};
+        return rv;
+    }
+
+    profile_t init_apply(const IR::Node* root) override {
+        LOG1("BEGIN AddIntrinsicConstraints");
+        for (auto& f : phv) {
+            for (auto& kv : invalidate_fields_from_arch()) {
+                std::string f_name(f.name.c_str());
+                if (f_name.find(kv.first) != std::string::npos
+                    && f_name.find(kv.second) != std::string::npos) {
+                    f.set_is_intrinsic(true);
+                }
+            }
+        }
+        LOG1("END AddIntrinsicConstraints");
+        return Inspector::init_apply(root);
+    }
+
+ public:
+    explicit AddIntrinsicConstraints(PhvInfo& phv) : phv(phv) { }
+};
+
+
 /** Sets constraint properties in PHV::Field objects based on constraints
  * induced by the parser/deparser.
  */
@@ -1283,6 +1341,8 @@ CollectPhvInfo::CollectPhvInfo(PhvInfo& phv) {
         new AllocatePOVBits(phv),
         new CollectPardeConstraints(phv),
         new ComputeFieldAlignments(phv),
+        (BFNContext::get().options().langVersion == BFN_Options::FrontendVersion::P4_14) ?
+            new AddIntrinsicConstraints(phv) : nullptr,
         new MarkTimestampAndVersion(phv)
     });
 }
@@ -1333,6 +1393,7 @@ std::ostream &PHV::operator<<(std::ostream &out, const PHV::Field &field) {
         out << " ^x";
     if (field.bridged) out << " bridge";
     if (field.metadata) out << " meta";
+    if (field.intrinsic) out << " intrinsic";
     if (field.mirror_field_list.member_field)
         out << " mirror%{"
             << field.mirror_field_list.member_field->id
@@ -1424,6 +1485,7 @@ std::ostream &operator<<(std::ostream &out, const PHV::FieldSlice& fs) {
         out << " ^" << fs.validContainerRange();
     if (field.bridged) out << " bridge";
     if (field.metadata) out << " meta";
+    if (field.intrinsic) out << " intrinsic";
     if (field.mirror_field_list.member_field)
         out << " mirror%{"
             << field.mirror_field_list.member_field->id

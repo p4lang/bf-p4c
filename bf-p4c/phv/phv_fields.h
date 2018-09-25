@@ -90,6 +90,9 @@ class Field {
     /// True if this Field is metadata.
     bool            metadata;
 
+    /// True if this Field is intrinsic.
+    bool            intrinsic;
+
     /// True if this Field is metadata bridged from ingress to egress.
     bool            bridged = false;
 
@@ -270,6 +273,8 @@ class Field {
     void set_is_checksummed(bool b)                        { is_checksummed_i = b; }
     bool is_digest() const                                 { return is_digest_i; }
     void set_is_digest(bool b)                             { is_digest_i = b; }
+    bool is_intrinsic() const                              { return intrinsic; }
+    void set_is_intrinsic(bool b)                          { intrinsic = b; }
 
     // @returns the set of MAU operations on this field.
     const safe_vector<FieldOperation>& operations() const   { return  operations_i; }

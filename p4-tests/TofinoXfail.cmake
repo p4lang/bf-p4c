@@ -304,15 +304,6 @@ p4c_add_xfail_reason("tofino"
 
 # switch_spine_dtel_int test failures
 p4c_add_xfail_reason("tofino"
-  "Received packet that we expected not to receive on device .*, port .*|A packet was received on device .*, port .*, but we expected no packets"
-  smoketest_switch_8.4_spine_dtel_int_L2FloodTest
-  smoketest_switch_8.4_spine_dtel_int_L3VIIPv4HostFloodTest
-  smoketest_switch_8.4_spine_dtel_int_L2DynamicLearnAgeTest
-  smoketest_switch_8.4_spine_dtel_int_L3VIFloodTest
-  smoketest_switch_8.4_spine_dtel_int_L2DynamicMacMoveTest
-  )
-
-p4c_add_xfail_reason("tofino"
   "Received packet did not match expected packet"
   smoketest_switch_8.4_spine_dtel_int_set_2_intl45_transitTest_hop2_stateless
   smoketest_switch_8.4_spine_dtel_int_set_2_INTL45_Transit_IngressMoDTest

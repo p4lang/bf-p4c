@@ -997,32 +997,7 @@ set_tests_properties("tofino/smoketest_switch_8.4_dc_basic_MalformedPacketsTest_
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_8.4_spine_dtel_int" ${SWITCH_8.4_P4}
     "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 12000" "${SWITCH_8.4_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.4_spine_dtel_int"
-        "all ^dynhash ^tunnel ^mpls ^urpf ^racl ^ipv6 ^mcast ^warminit ^stp ^ptp
-        ^switch_tests.L2FloodTest
-        ^switch_tests.L3VIIPv4HostFloodTest
-        ^switch_tests.L2DynamicLearnAgeTest
-        ^switch_tests.L3VIFloodTest
-        ^switch_tests.L2DynamicMacMoveTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_8.4_spine_dtel_int_L2FloodTest" ${SWITCH_8.4_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 12000" "${SWITCH_8.4_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.4_spine_dtel_int_L2FloodTest"
-        "switch_tests.L2FloodTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_8.4_spine_dtel_int_L3VIIPv4HostFloodTest" ${SWITCH_8.4_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 12000" "${SWITCH_8.4_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.4_spine_dtel_int_L3VIIPv4HostFloodTest"
-        "switch_tests.L3VIIPv4HostFloodTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_8.4_spine_dtel_int_L2DynamicLearnAgeTest" ${SWITCH_8.4_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 12000" "${SWITCH_8.4_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.4_spine_dtel_int_L2DynamicLearnAgeTest"
-        "switch_tests.L2DynamicLearnAgeTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_8.4_spine_dtel_int_L3VIFloodTest" ${SWITCH_8.4_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 12000" "${SWITCH_8.4_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.4_spine_dtel_int_L3VIFloodTest"
-        "switch_tests.L3VIFloodTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_8.4_spine_dtel_int_L2DynamicMacMoveTest" ${SWITCH_8.4_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 12000" "${SWITCH_8.4_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.4_spine_dtel_int_L2DynamicMacMoveTest"
-        "switch_tests.L2DynamicMacMoveTest")
+        "all ^dynhash ^tunnel ^mpls ^urpf ^racl ^ipv6 ^mcast ^warminit ^stp ^ptp")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_8.4_spine_dtel_int_set_1" ${SWITCH_8.4_P4}
     "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 12000" "${SWITCH_8.4_PTF_DIR_MIRROR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.4_spine_dtel_int_set_1"
@@ -1150,11 +1125,6 @@ set_tests_properties("tofino/smoketest_switch_8.4_spine_dtel_int_set_3" PROPERTI
 set_tests_properties("tofino/smoketest_switch_8.4_spine_dtel_int_set_4" PROPERTIES TIMEOUT 12000)
 set_tests_properties("tofino/smoketest_switch_8.4_spine_dtel_int_set_5" PROPERTIES TIMEOUT 12000)
 set_tests_properties("tofino/smoketest_switch_8.4_spine_dtel_int_set_6" PROPERTIES TIMEOUT 12000)
-set_tests_properties("tofino/smoketest_switch_8.4_spine_dtel_int_L2FloodTest" PROPERTIES TIMEOUT 12000)
-set_tests_properties("tofino/smoketest_switch_8.4_spine_dtel_int_L3VIIPv4HostFloodTest" PROPERTIES TIMEOUT 12000)
-set_tests_properties("tofino/smoketest_switch_8.4_spine_dtel_int_L2DynamicLearnAgeTest" PROPERTIES TIMEOUT 12000)
-set_tests_properties("tofino/smoketest_switch_8.4_spine_dtel_int_L3VIFloodTest" PROPERTIES TIMEOUT 12000)
-set_tests_properties("tofino/smoketest_switch_8.4_spine_dtel_int_L2DynamicMacMoveTest" PROPERTIES TIMEOUT 12000)
 set_tests_properties("tofino/smoketest_switch_8.4_spine_dtel_int_set_2_part_2" PROPERTIES TIMEOUT 12000)
 set_tests_properties("tofino/smoketest_switch_8.4_spine_dtel_int_set_2_intl45_transitTest_hop2_stateless" PROPERTIES TIMEOUT 12000)
 set_tests_properties("tofino/smoketest_switch_8.4_spine_dtel_int_set_2_INTL45_Transit_EgressMoDTest" PROPERTIES TIMEOUT 12000)

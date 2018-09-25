@@ -2287,10 +2287,20 @@ class ComputeMultiwriteContainers : public ParserModifier {
 class ComputeInitZeroContainers : public ParserModifier {
     void postorder(IR::BFN::LoweredParser* parser) override {
         ordered_set<PHV::Container> zero_init_containers;
+        ordered_set<PHV::Container> intrinsic_containers;
         for (const auto& f : phv) {
+            if (f.gress != parser->gress) continue;
+
+            if (f.is_intrinsic()) {
+                // Track the allocated containers for intrinsic fields
+                f.foreach_alloc([&] (const PHV::Field::alloc_slice& alloc) {
+                    intrinsic_containers.insert(alloc.container);
+                });
+                continue;
+            }
+
             // XXX(yumin): fields that reads $valid should not be initialized.
             if (f.read_container_valid_bit()) continue;
-            if (f.gress != parser->gress) continue;
 
             if (defuse.hasUninitializedRead(f.id)) {
                 // If pa_no_init specified, then the field does not have to rely on parser zero
@@ -2301,8 +2311,13 @@ class ComputeInitZeroContainers : public ParserModifier {
                 }); }
         }
 
-        for (auto& c : zero_init_containers)
-            parser->initZeroContainers.push_back(new IR::BFN::ContainerRef(c));
+
+        for (auto& c : zero_init_containers) {
+            // Containers for intrinsic metadata should be left uninitialized,
+            // therefore skip zero-initialization
+            if (!intrinsic_containers.count(c))
+                parser->initZeroContainers.push_back(new IR::BFN::ContainerRef(c));
+        }
 
         // Also initialize the container validity bits for the zero-ed containers (as part of
         // deparsed zero optimization) to 1.

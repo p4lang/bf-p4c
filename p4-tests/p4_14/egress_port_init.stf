@@ -1,0 +1,20 @@
+add t1 data.m:0x0101 a1()
+add t2 data.k:0x0101 a2()
+add t3 data.k:0x0202 a3()
+
+#        m     k   p  f
+# Both a1 and a2 get executed
+expect 1 0101 0101 4001 
+packet 0 0101 0101 4001
+
+# Only a1 gets executed
+expect 1 0101 1111 4001
+packet 0 0101 1111 4001
+
+# Neither a1 not a2 get executed
+packet 0 1234 1234 4001
+
+packet 0 0100 0101 4001
+
+#expect 2 0303 0202 ****
+#packet 0 0303 0202 4001 
