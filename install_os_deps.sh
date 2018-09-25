@@ -11,6 +11,12 @@ function version_LT() {
     test "$(echo "$@" | tr " " "\n" | sort -rV | head -n 1)" != "$1";
 }
 
+# Determine the type of the Boost library we want to install
+boost_lib_type=shared
+if [ $# > 0 ] && [ $1 == '--with-boost-static' ]; then
+    boost_lib_type=static
+fi
+
 # determine the OS and OS version
 os=$(uname -s)
 case $os in
@@ -85,14 +91,14 @@ install_python_packages() {
     $SUDO pip install setuptools || die "Failed to install needed packages"
     $SUDO pip install ply || die "Failed to install needed packages"
     $SUDO pip install jsl jsonschema || die "Failed to install needed packages"
-    $SUDO pip install thrift || die "Failed to install needed packages"  # need this one instead
+    $SUDO pip install thrift==0.9.2 || die "Failed to install needed packages"  # need this one instead
     $SUDO pip install pexpect || die "Failed to install needed packages"
 }
 
 install_linux_packages() {
     if [[ $linux_distro == "Ubuntu" || $linux_distro == "Debian" ]]; then
         # please keep this list in alphabetical order
-        apt_packages="automake autopoint bison curl doxygen ethtool flex g++ git \
+        apt_packages="automake autopoint bison cmake curl doxygen ethtool flex g++ git \
                  libcli-dev libedit-dev libeditline-dev libevent-dev \
                  libgc-dev libgmp-dev libjson0 libjson0-dev libjudy-dev \
                  libmoose-perl libnl-route-3-dev libpcap0.8-dev libssl-dev \
@@ -298,19 +304,27 @@ function install_boost() {
             echo "Installed boost version is not sufficient: $installed_ver, proceeding with installing required boost: $boost_ver_trim"
         else
             echo "Installed boost version is sufficient: $installed_ver"
-            install_pkg=false
+            if [[ "$boost_lib_type" == "static" ]]; then
+                boost_static_io=`find /usr/local/ -name libboost_iostreams.a`
+                if [ ! -z $boost_static_io ]; then
+                    echo "And static library is available"
+                    install_pkg=false
+                fi
+            else
+                install_pkg=false
+            fi
         fi
     fi
-
     if [ $install_pkg = true ]; then
         cd /tmp
         wget http://downloads.sourceforge.net/project/boost/boost/${b_ver}/boost_${boost_ver}.tar.bz2 && \
             tar xvjf ./boost_${boost_ver}.tar.bz2 && \
             cd boost_${boost_ver} && \
             ./bootstrap.sh --prefix=/usr/local && \
-            ./b2 --build-type=minimal link=shared runtime-link=shared variant=release && \
+            ./b2 -j${nprocs} --build-type=minimal link=${boost_lib_type} \
+                 runtime-link=${boost_lib_type} variant=release && \
             $SUDO ./b2 install --build-type=minimal variant=release \
-            link=shared runtime-link=shared || \
+                  link=${boost_lib_type} runtime-link=${boost_lib_type} || \
             die "failed to install boost"
         cd /tmp && rm -rf boost_${boost_ver}
     fi
@@ -332,7 +346,7 @@ function install_rapidjson() {
 	fi
         build_rapidjson_from_source ${rj_ver} $install_it
 	if [[ $linux_distro == "Ubuntu" || $linux_distro == "Debian" ]]; then
-            $SUDO apt-get remove -y rapidjson-dev && \
+            $SUDO apt-get remove -y rapidjson-dev
   	    $SUDO dpkg -i /tmp/RapidJSON-dev-${rj_ver}-Linux.deb || \
             die "failed to install rapidjson"
         fi
@@ -410,11 +424,11 @@ install_macos_packages() {
 
 function install_protobuf() {
     tmpdir=$(mktemp -d)
-
+set -x
     echo "Checking for and installing protobuf"
     if ! `pkg-config protobuf` || version_LT `pkg-config --modversion protobuf` "3.0.0"; then
         if [[ $linux_distro == "Ubuntu" || $linux_distro == "Debian" ]]; then
-            rc=($SUDO apt-get install -y protobuf-dev=3.2.0 grpc-dev=1.3.2)
+            rc=$($SUDO apt-get install -y protobuf-dev=3.2.0 grpc-dev=1.3.2)
             if [ $? == 0 ]; then
                 $SUDO pip install protobuf grpcio || die "Failed to install python grpc packages"
                 return
@@ -504,7 +518,12 @@ EOF
         PI_clean_before_rebuild=true
         popd # tmpdir
     fi
-    $SUDO pip install protobuf grpcio || die "Failed to install python grpc packages"
+    gcc_version=$(gcc -v |& tail -1 | awk '{print $3;}')
+    grpcio_version=""
+    if [ $gcc_version == "4.9.2"]; then
+        grpcio_version="==1.7.0"
+    fi
+    $SUDO pip install protobuf grpcio${grpcio_version} || die "Failed to install python grpc packages"
 
     echo "Removing $tmpdir"
     rm -rf $tmpdir

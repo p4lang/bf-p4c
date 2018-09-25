@@ -9,11 +9,25 @@ endif()
 
 project (BFN_P4C)
 
+OPTION(ENABLE_STATIC_LIBS OFF)
 OPTION(ENABLE_JBAY "Enable JBay" ON)
 OPTION(ENABLE_BAREFOOT_INTERNAL "Enable Barefoot Internal" ON)
+OPTION(ENABLE_TESTING "Enable test genration" ON)
 OPTION(FIXED_LIBDYNHASH "Use future version of the Dynamic hash library" OFF)
 
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
+
+if (ENABLE_STATIC_LIBS)
+  # Look for static libraries when using find_library
+  set(CMAKE_FIND_LIBRARY_SUFFIXES .a)
+  # Force linking libstdc++ statically. Note that dependencies may bring in
+  # dynamic versions of it, so that's why we look above for .a
+  set(CMAKE_EXE_LINKER_FLAGS "-static-libgcc -static-libstdc++")
+
+  # Link Boost statically
+  set(Boost_USE_STATIC_LIBS ON)
+  set(Boost_USE_STATIC_RUNTIME ON)
+endif()
 
 set(BOOST_MIN_VERSION "1.58.0")
 find_package(Boost ${BOOST_MIN_VERSION} REQUIRED)

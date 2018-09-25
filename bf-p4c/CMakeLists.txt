@@ -10,6 +10,9 @@ set(BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE "5" CACHE STRING
     "Target unified compilation chunk size for bf-p4c (an integer or ALL)")
 
 set(OPENSSL_ROOT_DIR "/usr/local/opt/openssl")
+if(ENABLE_STATIC_LIBS)
+  set (OPENSSL_USE_STATIC_LIBS TRUE)
+endif()
 find_package (OpenSSL REQUIRED)
 find_package (Boost REQUIRED COMPONENTS graph)
 add_definitions("-DBOOST_NO_ARGUMENT_DEPENDENT_LOOKUP")
@@ -561,7 +564,8 @@ add_library(tofinobackend ${BF_P4C_SOURCES})
 add_dependencies(tofinobackend genIR genLogging bfn_p4runtime)
 
 add_executable(p4c-barefoot ${P4C_BAREFOOT_SRCS})
-target_link_libraries (p4c-barefoot tofinobackend bfn_p4runtime ${P4C_LIBRARIES} ${P4C_LIB_DEPS})
+target_link_libraries (p4c-barefoot tofinobackend bfn_p4runtime
+  ${P4C_LIBRARIES} ${P4C_LIB_DEPS} ${CMAKE_THREAD_LIBS_INIT})
 
 install (TARGETS p4c-barefoot
   RUNTIME DESTINATION ${P4C_RUNTIME_OUTPUT_DIRECTORY})
@@ -660,6 +664,8 @@ add_custom_command(OUTPUT ${P4C_BINARY_DIR}/bf-p4c
 # force the generation of the bf-p4c package
 add_custom_target(bf-p4c ALL DEPENDS ${P4C_BINARY_DIR}/bf-p4c)
 install (PROGRAMS ${P4C_BINARY_DIR}/bf-p4c DESTINATION bin)
+install (FILES ${P4C_BINARY_DIR}/p4c_src/main.py
+  DESTINATION ${P4C_ARTIFACTS_OUTPUT_DIRECTORY}/p4c_src)
 
 ################ Proto
 set (BFN_P4RUNTIME_DIR ${CMAKE_CURRENT_SOURCE_DIR}/control-plane/proto)
@@ -692,51 +698,53 @@ add_dependencies(bfn_p4runtime barefootdir controlplane)
 
 ################ Testing
 
-# # Tofino-specific GTests.
-set (GTEST_BF_P4C_SOURCES
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/action_mutex.cpp
-  # ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/action_phv.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/bitrange.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/checksum.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/critical_path_clusters.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/dominator_tree.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_alignment.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_packing.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/metadata_init.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/meta_live_range.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/mocha_dark.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/multiple_apply.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_atomic.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_mutually_exclusive_pragma.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_no_overlay.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_container_size.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_container_type.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_no_init.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_solitary.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/parser_critical_path.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_constraints.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_crush.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_field.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/path_linearizer.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_tofino.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_jbay.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/resolve_computed.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/table_dependency_graph.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/tofino_write_context.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/tofino_gtest_utils.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/trivial_alloc.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/type_categories.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/union_find.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/v1model_translate.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/vertex_weighted_coloring.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/table_flow_graph.cpp
-  ${BF_P4C_GRAPHS_SRCS}
-  )
+if (ENABLE_TESTING)
+  # # Tofino-specific GTests.
+  set (GTEST_BF_P4C_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/action_mutex.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/action_phv.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/bitrange.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/checksum.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/critical_path_clusters.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/dominator_tree.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_alignment.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_packing.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/metadata_init.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/meta_live_range.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/mocha_dark.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/multiple_apply.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_atomic.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_mutually_exclusive_pragma.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_no_overlay.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_container_size.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_container_type.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_no_init.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_solitary.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/parser_critical_path.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_constraints.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_crush.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_field.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/path_linearizer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_tofino.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_jbay.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/resolve_computed.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/table_dependency_graph.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/tofino_write_context.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/tofino_gtest_utils.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/trivial_alloc.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/type_categories.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/union_find.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/v1model_translate.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/vertex_weighted_coloring.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/table_flow_graph.cpp
+    ${BF_P4C_GRAPHS_SRCS}
+    )
 
-set (GTEST_SOURCES ${GTEST_SOURCES} ${GTEST_BF_P4C_SOURCES} PARENT_SCOPE)
-set (GTEST_LDADD ${GTEST_LDADD} "tofinobackend;${OPENSSL_LIBRARIES};${LIBDYNHASH_LIBRARY}" PARENT_SCOPE)
+  set (GTEST_SOURCES ${GTEST_SOURCES} ${GTEST_BF_P4C_SOURCES} PARENT_SCOPE)
+  set (GTEST_LDADD ${GTEST_LDADD} "tofinobackend;${OPENSSL_LIBRARIES};${LIBDYNHASH_LIBRARY}" PARENT_SCOPE)
 
-add_test(NAME test_p4c_driver
-  COMMAND ${BFN_P4C_SOURCE_DIR}/scripts/test_p4c_driver.py -j 4 --print-on-failure --compiler ${P4C_BINARY_DIR}/bf-p4c
-  WORKING_DIRECTORY ${P4C_BINARY_DIR})
-set_tests_properties(test_p4c_driver PROPERTIES LABELS lint)
+  add_test(NAME test_p4c_driver
+    COMMAND ${BFN_P4C_SOURCE_DIR}/scripts/test_p4c_driver.py -j 4 --print-on-failure --compiler ${P4C_BINARY_DIR}/bf-p4c
+    WORKING_DIRECTORY ${P4C_BINARY_DIR})
+  set_tests_properties(test_p4c_driver PROPERTIES LABELS lint)
+endif(ENABLE_TESTING)

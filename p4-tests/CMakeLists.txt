@@ -30,48 +30,49 @@ configure_file ("src/ptf_runner_wrapper.c.in"
 include(TestUtils.cmake)
 
 #include(Switch.cmake)
+if (ENABLE_TESTING)
+  # add tofino tests and xfails with reasons
+  include(TofinoTests.cmake)
 
-# add tofino tests and xfails with reasons
-include(TofinoTests.cmake)
+  if (ENABLE_JBAY)
+    # add jbay tests and xfails with reasons
+    include(JBayTests.cmake)
+  endif()
 
-if (ENABLE_JBAY)
-  # add jbay tests and xfails with reasons
-  include(JBayTests.cmake)
-endif()
+  # We have additional test inputs that are used to test the other
+  # (standard) back-ends These test input programs depend on Tofino in
+  # some way.
 
-# We have additional test inputs that are used to test the other
-# (standard) back-ends These test input programs depend on Tofino in
-# some way.
+  # Exercise v12 back-end on Tofino-specific programs
+  include (P14Tests.cmake)
 
-# Exercise v12 back-end on Tofino-specific programs
-include (P14Tests.cmake)
+  # P4_16 tests
+  include (P16Tests.cmake)
 
-# P4_16 tests
-include (P16Tests.cmake)
+  # Exercise bmv2 back-end on Tofino-specific programs
+  include (BMV2Tests.cmake)
 
-# Exercise bmv2 back-end on Tofino-specific programs
-include (BMV2Tests.cmake)
+  # Test code generation (check assembler output)
+  include (CodeGenTests.cmake)
 
-# Test code generation (check assembler output)
-include (CodeGenTests.cmake)
+  # test STF lexing and parsing by running the stf2ptf_pd generator on
+  # all existing STF files in the tree
+  set (STF2PD_CMD "${CMAKE_CURRENT_SOURCE_DIR}/tools/stf/stf2ptf_pd")
+  file (GLOB_RECURSE __stftestfiles FOLLOW_SYMLINKS
+    RELATIVE ${CMAKE_CURRENT_BINARY_DIR}
+    "${BFN_P4C_SOURCE_DIR}/*.stf")
+  foreach (__t ${__stftestfiles})
+    set (__testname "stf2pd_${__t}")
+    add_test (NAME ${__testname} COMMAND ${STF2PD_CMD} ${__t}
+      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+    set_tests_properties (${__testname} PROPERTIES LABELS "TEST_STF2PTF_GEN")
+    # and make sure we cleanup the generated files
+    string (REGEX REPLACE ".stf$" "_ptf.py" __ptffile ${__testname})
+    set_source_files_properties(${__ptffile} PROPERTIES GENERATED TRUE)
+  endforeach()
 
-# test STF lexing and parsing by running the stf2ptf_pd generator on
-# all existing STF files in the tree
-set (STF2PD_CMD "${CMAKE_CURRENT_SOURCE_DIR}/tools/stf/stf2ptf_pd")
-file (GLOB_RECURSE __stftestfiles FOLLOW_SYMLINKS
-  RELATIVE ${CMAKE_CURRENT_BINARY_DIR}
-  "${BFN_P4C_SOURCE_DIR}/*.stf")
-foreach (__t ${__stftestfiles})
-  set (__testname "stf2pd_${__t}")
-  add_test (NAME ${__testname} COMMAND ${STF2PD_CMD} ${__t}
+  add_custom_target(check-stf2ptf-gen
+    COMMAND ${CMAKE_CTEST_COMMAND} -L TEST_STF2PTF
+    COMMENT "Running tests for STF2PTF generation"
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-  set_tests_properties (${__testname} PROPERTIES LABELS "TEST_STF2PTF_GEN")
-  # and make sure we cleanup the generated files
-  string (REGEX REPLACE ".stf$" "_ptf.py" __ptffile ${__testname})
-  set_source_files_properties(${__ptffile} PROPERTIES GENERATED TRUE)
-endforeach()
-
-add_custom_target(check-stf2ptf-gen
-  COMMAND ${CMAKE_CTEST_COMMAND} -L TEST_STF2PTF
-  COMMENT "Running tests for STF2PTF generation"
-  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+endif(ENABLE_TESTING)

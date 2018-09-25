@@ -185,7 +185,10 @@ int main(int ac, char **av) {
     program->apply(P4::ApplyOptionsPragmas(optionsPragmaParser));
 
     program = P4::FrontEnd(hook).run(options, program, true);
-    if (!program)
+
+    // If there was an error in the frontend, we are likely to end up
+    // with an invalid program for serialization, so we bail out here.
+    if (!program || ::errorCount() > 0)
         return 1;
 
     // If we just want to prettyprint to p4_16, running the frontend is sufficient.
@@ -196,7 +199,7 @@ int main(int ac, char **av) {
 
     BFN::generateP4Runtime(program, options);
     if (::errorCount() > 0)
-        return 1;
+        return ::errorCount();
 
     BFN::MidEnd midend(options);
     midend.addDebugHook(hook);

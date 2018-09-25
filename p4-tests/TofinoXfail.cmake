@@ -228,7 +228,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/bf_p4c_samples/port_vlan_mapping.p4
   )
 
-# BRIG-956, parser wide match 
+# BRIG-956, parser wide match
 p4c_add_xfail_reason("tofino"
   "Ran out of parser match registers"
   testdata/p4_16_samples/issue995-bmv2.p4
@@ -1096,16 +1096,11 @@ p4c_add_xfail_reason("tofino"
 
 # P4C-990
 p4c_add_xfail_reason("tofino"
-  "error: verify_checksum: cannot infer type for type parameter T"
+  "error: .*: cannot infer bitwidth for untyped integer constant used in type parameter T"
   extensions/p4_tests/p4_14/p4smith_regression/chauncey_0.p4
   extensions/p4_tests/p4_14/p4smith_regression/corroding_0.p4
-  )
-
-# P4C-991
-p4c_add_xfail_reason("tofino"
-  "error: update_checksum: cannot infer type for type parameter"
   extensions/p4_tests/p4_14/p4smith_regression/undercut_0.p4
-)
+  )
 
 # BRIG-811
 # error: Output of checksum calculation can only be stored in a 16-bit field:
