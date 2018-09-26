@@ -187,7 +187,7 @@ class AfterWriteTables : public BFN::ControlFlowVisitor, public MauInspector, To
  */
 struct DataDependencyGraph {
     using VertexId         =  int;
-    using AdjacentVertices =  std::vector<VertexId>;
+    using AdjacentVertices =  std::set<VertexId>;
     using AdjacentList     =  std::vector<AdjacentVertices>;
 
     std::map<const IR::MAU::Table*, VertexId> table_id;
@@ -223,7 +223,7 @@ struct DataDependencyGraph {
     void addEdge(const IR::MAU::Table* from, const IR::MAU::Table* to) {
         auto from_id = getNode(from);
         auto to_id   = getNode(to);
-        adjacent_list[from_id].push_back(to_id);
+        adjacent_list[from_id].insert(to_id);
         starts.erase(to_id);
     }
 
@@ -240,15 +240,6 @@ class DataDependencyGraphSearchBase {
     using VertexId = DataDependencyGraph::VertexId;
     const DataDependencyGraph& graph;
     std::set<VertexId> vis;
-
-    class Visiting {
-        DataDependencyGraphSearchBase& self;
-        VertexId v;
-     public:
-        Visiting(DataDependencyGraphSearchBase& self, VertexId id)
-            : self(self), v(id) { self.vis.insert(v); }
-        ~Visiting() { self.vis.erase(v); }
-    };
 
     void init_vis()                        { vis.clear(); }
     bool visited(VertexId id)              { return vis.count(id); }
@@ -327,14 +318,27 @@ class GreedyMetaInit : public DataDependencyGraphSearchBase {
      * dependency.
      */
     InitTableResult greedy_allocate(VertexId v, const TableList& inited) {
+        LOG2("greedy_allocate: " << v);
+
+        if (LOGGING(4)) {
+            LOG4("visited are: ");
+            for (auto v : vis) {
+                LOG4(v); }
+
+            LOG4("next of " << v << ":");
+            for (const auto& next : graph.adjacent_list[v]) {
+                LOG4(next); } }
+
         if (visited(v)) {
             LOG1("Found a loop in data dependency table");
             return { { }, false }; }
 
-        Visiting visiting(*this, v);
+        vis.insert(v);
+
         auto* table = graph.getTable(v);
         bool on_use = usedIn(table);
         bool need_init = false;
+
         TableList init_rst;
 
         // Already in initialization plans.
@@ -476,6 +480,7 @@ class GreedyMetaInit : public DataDependencyGraphSearchBase {
         for (const auto& start : graph.starts) {
             LOG4("Start from, start = " << graph.getTable(start)->name);
             BUG_CHECK(!visited(start), "Not a valid start: %1%", start);
+
             auto rst = greedy_allocate(start, init_at_tables);
             // if the any start table need init, then,
             // no need to do initialization on this path.
