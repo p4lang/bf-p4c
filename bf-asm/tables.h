@@ -659,6 +659,13 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
         for (auto &p : p4_params_list)
             if (p.type == s) return &p;
         return nullptr; }
+    const int get_param_start_bit_in_spec(std::string &s) const {
+        remove_name_tail_range(s);
+        int start_bit = 0;
+        for (auto &p : p4_params_list) {
+            if (p.name == s) return start_bit;
+            start_bit += p.bit_width_full; }
+        return -1; }
     virtual std::string get_default_action() {
         return (!default_action.empty()) ? default_action : action ? action->default_action : ""; }
     virtual default_action_params* get_default_action_parameters() {
@@ -843,6 +850,19 @@ public:
     template<class REGS> void write_merge_regs(REGS &regs, int type, int bus) {
         attached.write_merge_regs(regs, this, type, bus); }
     FOR_ALL_TARGETS(FORWARD_VIRTUAL_TABLE_WRITE_MERGE_REGS)
+    bool is_match_bit(const std::string name, const int bit) const {
+        for (auto m : match) {
+            std::string m_name = m.name();
+            int m_lo = remove_name_tail_range(m_name) + m.lobit();
+            int m_hi = m_lo + m.size() -1;
+            if (m_name == name) {
+                if (m_lo <= bit
+                        && m_hi >= bit)
+                    return true;
+            }
+        }
+        return false;
+    }
 )
 
 DECLARE_TABLE_TYPE(ExactMatchTable, SRamMatchTable, "exact_match",
@@ -862,6 +882,8 @@ public:
             if (way.group == grp) return true;
         return false; }
     void add_hash_functions(json::map &stage_tbl) const override;
+    void gen_ghost_bits(const std::map<int, HashCol> &hash_table,
+        unsigned hash_table_id, json::map &hash_fn) const;
 )
 
 DECLARE_TABLE_TYPE(AlgTcamMatchTable, SRamMatchTable, "atcam_match",
@@ -1024,7 +1046,7 @@ public:
         if (!default_action_parameters.empty()) return &default_action_parameters;
         auto def_action_params = indirect ? indirect->get_default_action_parameters() : nullptr;
         return def_action_params; }
-   
+
 )
 
 DECLARE_TABLE_TYPE(Phase0MatchTable, MatchTable, "phase0_match",

@@ -5,8 +5,7 @@
 #include "tables.h"
 #include "phv.h"
 #include "ordered_map.h"
-
-class HashExpr;
+#include "hashexpr.h"
 
 struct HashCol {
     int                     lineno = -1;
@@ -20,7 +19,9 @@ struct HashCol {
                " lineno: " << lineno << 
                " bit: " << bit << 
                " data: " << data << 
-               " valid: " << valid; }
+               " valid: " << valid; 
+        if (fn) out << " fn: " << *fn << std::endl;
+    }
 };
 
 class InputXbar {

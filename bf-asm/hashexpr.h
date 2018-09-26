@@ -34,6 +34,8 @@ public:
     void find_input(Phv::Ref what, std::vector<ixbar_input_t> &inputs, InputXbar *ix,
         int hash_table);
     bool operator!=(const HashExpr &a) const { return !operator==(a); }
+    virtual void dbprint(std::ostream & out) const {} 
+    virtual Phv::Ref *get_ghost_slice() { return nullptr; }
 };
 
 #endif /* _hashexpr_h_ */

@@ -510,6 +510,7 @@ void MatchTable::gen_hash_bits(const std::map<int, HashCol> &hash_table,
             hash_bits.push_back(std::move(hash_bit)); }
 }
 
+
 void MatchTable::add_hash_functions(json::map &stage_tbl) const {
     json::vector &hash_functions = stage_tbl["hash_functions"] = json::vector();
     // XXX(amresh): Hash functions are not generated for ALPM atcams as the

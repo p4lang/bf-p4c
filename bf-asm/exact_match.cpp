@@ -164,8 +164,72 @@ void ExactMatchTable::add_hash_functions(json::map &stage_tbl) const {
                 for (unsigned hash_table_id: bitvec(hash_group->tables)) {
                     auto hash_table = input_xbar->get_hash_table(hash_table_id);
                     hash_function["hash_function_number"] = hash_group_no;
-                    gen_hash_bits(hash_table, hash_table_id, hash_bits, hash_group_no); }
+                    gen_hash_bits(hash_table, hash_table_id, hash_bits, hash_group_no);
+                    gen_ghost_bits(hash_table, hash_table_id, hash_function);
+                    }
             hash_functions.push_back(std::move(hash_function));
             // Mark hash group as visited
             visited_groups[hash_group_no] = 1; } } }
+}
+
+// Create json node for ghost bits - exact match only
+void ExactMatchTable::gen_ghost_bits(const std::map<int, HashCol> &hash_table,
+        unsigned hash_table_id, json::map &hash_fn) const {
+    // Return if this function is already visited
+    if (hash_fn.count("ghost_bit_to_hash_bit")
+            && hash_fn.count("ghost_bit_info")) return;
+    json::vector &ghost_bit_to_hash_bits = hash_fn["ghost_bit_to_hash_bit"] = json::vector();
+    json::vector &ghost_bit_infos = hash_fn["ghost_bit_info"] = json::vector();
+    bitvec hash_bits;
+    bitvec bit_position;
+    for (auto &col: hash_table) {
+        auto hash_bit = col.first;
+        if (hash_bits.getbit(hash_bit)) continue;
+        for (const auto &bit : col.second.data) {
+            if (auto ref = input_xbar->get_hashtable_bit(hash_table_id, bit)) {
+                std::string field_name = ref.name();
+                remove_aug_names(field_name);
+                auto field_bit = remove_name_tail_range(field_name) + ref.lobit();
+                // Ghost bits are bits not present in the match overhead
+                if (!is_match_bit(field_name, field_bit)) {
+                    auto bit_in_match_spec = get_param_start_bit_in_spec(field_name) + field_bit;
+                    auto p4_param = find_p4_param(field_name);
+                    // Generate ghost_bit_info element if not already present
+                    if (!bit_position.getbit(bit_in_match_spec)) {
+                        json::map ghost_bit_info;
+                        ghost_bit_info["bit_in_match_spec"] = bit_in_match_spec;
+                        if (p4_param && !p4_param->key_name.empty()) {
+                            field_name = p4_param->key_name;
+                        }
+                        ghost_bit_info["field_name"] = field_name;
+                        ghost_bit_infos.push_back(std::move(ghost_bit_info));
+                        bit_position.setbit(bit_in_match_spec);
+                    }
+                    // Ghost bit index in 'ghost_bit_info' &
+                    // 'ghost_bit_to_hash_bit' is same. Find index in
+                    // 'ghost_bit_info' for this ghost bit since we have already
+                    // populated it and use it to add hash bit to
+                    // 'ghost_bit_to_hash_bit' node
+                    int index = 0;
+                    for (auto &g : ghost_bit_infos) {
+                        auto &m = g->to<json::map>();
+                        if (m["bit_in_match_spec"]->to<json::number>() 
+                                    == bit_in_match_spec) break;
+                        index++;
+                    }
+                    if (ghost_bit_to_hash_bits.size() > index) {
+                        json::vector &gbhb = ghost_bit_to_hash_bits[index]->to<json::vector>();
+                        gbhb.push_back(hash_bit);
+                    } else {
+                        json::vector ghost_bit_to_hash_bit;
+                        ghost_bit_to_hash_bit.push_back(hash_bit);
+                        ghost_bit_to_hash_bits.push_back(std::move(ghost_bit_to_hash_bit));
+                    }
+
+                    hash_bits.setbit(hash_bit);
+                    break;
+                }
+            }
+        }
+    }
 }

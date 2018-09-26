@@ -159,6 +159,7 @@ public:
         const char *name() const { return name_.c_str(); }
         std::string desc() const;
         int lobit() const { return lo < 0 ? 0 : lo; }
+        int hibit() const { return hi < 0 ? (**this).size() - 1 : hi; }
         unsigned size() const {
             if (lo >= 0) return hi - lo + 1;
             if (auto *s = phv.get(gress, name_)) return s->size();

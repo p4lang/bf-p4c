@@ -97,6 +97,19 @@ class HashExpr::PhvRef : HashExpr {
 
     void gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, InputXbar *ix,
             int hash_table) override;
+    Phv::Ref* get_ghost_slice() { return &what; }
+    void dbprint(std::ostream & out) const override {
+        out << "HashExpr: PhvRef" << std::endl;
+        out << "hash algorithm: [ algo : " << hash_algorithm.hash_alg 
+            << ", msb : " << hash_algorithm.msb
+            << ", extend : " << hash_algorithm.extend
+            << ", final_xor : " << hash_algorithm.final_xor
+            << ", poly : " << hash_algorithm.poly
+            << ", init : " << hash_algorithm.init
+            << ", reverse : " << hash_algorithm.reverse
+            << std::endl;
+        if (what) out << "Phv: " << what << std::endl; 
+    }
 };
 
 class HashExpr::Random : HashExpr {
@@ -132,6 +145,20 @@ class HashExpr::Random : HashExpr {
     }
     void gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, InputXbar *ix,
             int hash_table) override;
+    void dbprint(std::ostream & out) const override {
+        out << "HashExpr: Random" << std::endl;
+        out << "hash algorithm: [ algo : " << hash_algorithm.hash_alg 
+            << ", msb : " << hash_algorithm.msb
+            << ", extend : " << hash_algorithm.extend
+            << ", final_xor : " << hash_algorithm.final_xor
+            << ", poly : " << hash_algorithm.poly
+            << ", init : " << hash_algorithm.init
+            << ", reverse : " << hash_algorithm.reverse
+            << std::endl;
+        for (auto &e : what) {
+            out << "Phv: " << e << std::endl; 
+        }
+    }
 };
 
 class HashExpr::Crc : HashExpr {
@@ -220,6 +247,18 @@ class HashExpr::Xor : HashExpr {
 
     void gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, InputXbar *ix,
             int hash_table) override { }
+    Phv::Ref* get_ghost_slice() {
+        for (auto *e : what) {
+            auto g = e->get_ghost_slice();
+            if (g) return g; }
+       return nullptr;
+    }
+    void dbprint(std::ostream & out) const override {
+        out << "HashExpr: Xor" << std::endl;
+        for (auto *e : what) {
+            e->dbprint(out);
+        }
+    }
 };
 
 class HashExpr::Stripe : HashExpr {
@@ -256,6 +295,12 @@ class HashExpr::Stripe : HashExpr {
 
     void gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, InputXbar *ix,
             int hash_table) override { }
+    void dbprint(std::ostream & out) const override {
+        out << "HashExpr: Stripe" << std::endl;
+        for (auto *e : what) {
+            e->dbprint(out);
+        }
+    }
 };
 
 class HashExpr::Slice : HashExpr {
@@ -286,6 +331,12 @@ class HashExpr::Slice : HashExpr {
     }
     void gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, InputXbar *ix,
             int hash_table) override { }
+    void dbprint(std::ostream & out) const override {
+        out << "HashExpr: Slice" << std::endl;
+        if (what) out << what << std::endl;
+        out << "start: " << start
+            << " ,width: " << _width << std::endl;
+    }
 };
 
 // The ordering for crc expression is:
@@ -494,3 +545,4 @@ void HashExpr::Stripe::gen_data(bitvec &data, int bit, InputXbar *ix, int grp) {
             break; }
         bit %= total_size; }
 }
+
