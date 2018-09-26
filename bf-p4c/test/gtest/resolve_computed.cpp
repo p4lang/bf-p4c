@@ -18,7 +18,7 @@ namespace {
 
 class VerifyRegisterAssigned : public ParserInspector {
     bool preorder(const IR::BFN::Select* select) override {
-        if (select->reg.size() == 0) {
+        if (select->reg_slices.size() == 0) {
             has_unallocated = true;
             _logs << "unallocated select: " << select << "\n"; }
         return true; }

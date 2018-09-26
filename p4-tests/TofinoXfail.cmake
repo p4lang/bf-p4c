@@ -293,6 +293,10 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Match register not allocated"
   smoketest_programs_netcache
   )
 
@@ -305,7 +309,6 @@ p4c_add_xfail_reason("tofino"
 # switch_spine_dtel_int test failures
 p4c_add_xfail_reason("tofino"
   "Received packet did not match expected packet"
-  smoketest_switch_8.4_spine_dtel_int_set_2_intl45_transitTest_hop2_stateless
   smoketest_switch_8.4_spine_dtel_int_set_2_INTL45_Transit_IngressMoDTest
   smoketest_switch_8.4_spine_dtel_int_set_2_MirrorOnDropHostifReasonCodeTest
   smoketest_switch_8.4_spine_dtel_int_set_2_MirrorOnDropIngressAclTest
@@ -329,6 +332,13 @@ p4c_add_xfail_reason("tofino"
   smoketest_switch_8.4_spine_dtel_int_set_2_QueueReport_Over_ECMP_Test
   smoketest_switch_8.4_spine_dtel_int_set_2_QueueReport_MirrorTest
   smoketest_switch_8.4_spine_dtel_int_set_2_QueueReport_L2_MirrorTest
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Expected packet was not received on device"
+  smoketest_switch_8.4_spine_dtel_int_set_2_intl45_transitTest_hop2_stateless
+  smoketest_switch_8.4_spine_dtel_int_set_2_intl45_route_dtel_reports
+  smoketest_switch_8.4_spine_dtel_int_set_2_INTL45_TransitTest_Enable
   )
 
 # BRIG-113

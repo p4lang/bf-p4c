@@ -296,6 +296,10 @@ std::ostream& operator<<(std::ostream& s, const ParserValueResolution& mapping) 
             s << def.state->name << ", " << def.rval << "\n"; } }
     return s;
 }
+
+static void print_match(match_t m) {
+    std::cout << m << std::endl;
+}
 #endif  // NDEBUG
 
 /**
@@ -781,6 +785,40 @@ class ComputeSaveAndSelect: public ParserInspector {
         std::vector<UnresolvedSelect> _members;
 
      public:
+        std::vector<std::pair<MatchRegister, nw_bitrange>>
+        calc_reg_slices_for_select(const UnresolvedSelect& unresolved,
+                const std::vector<MatchRegister>& all_regs_for_this_group) const {
+            std::vector<std::pair<MatchRegister, nw_bitrange>> reg_slices;
+
+            nw_bitrange group_range = source();
+            nw_bitrange select_range = unresolved.source();
+
+            int group_start_bit_in_regs = group_range.lo % 8;
+            int select_start_bit_in_regs = group_start_bit_in_regs +
+                                           (select_range.lo - group_range.lo);
+
+            nw_bitrange select_range_in_reg(StartLen(select_start_bit_in_regs,
+                                                     select_range.size()));
+
+            int curr_reg_start = 0;
+            for (auto& reg : all_regs_for_this_group) {
+                int reg_size_in_bit = reg.size * 8;
+
+                nw_bitrange curr_reg_range(StartLen(curr_reg_start, reg_size_in_bit));
+                auto intersect = toClosedRange(select_range_in_reg.intersectWith(curr_reg_range));
+
+                if (intersect) {
+                    nw_bitrange range_in_reg = (*intersect).shiftedByBits(-curr_reg_start);
+                    auto slice = std::make_pair(reg, range_in_reg);
+                    reg_slices.push_back(slice);
+                }
+
+                curr_reg_start += reg_size_in_bit;
+            }
+
+            return reg_slices;
+        }
+
         const std::vector<UnresolvedSelect>& members() const { return _members; }
 
         nw_bitrange source() const {
@@ -824,8 +862,7 @@ class ComputeSaveAndSelect: public ParserInspector {
         unprocessed_states.clear();
         transition_saves.clear();
         select_groups.clear();
-        select_registers.clear();
-        select_masks.clear();
+        select_reg_slices.clear();
         additional_states.clear();
         return Inspector::init_apply(root);
     }
@@ -875,11 +912,8 @@ class ComputeSaveAndSelect: public ParserInspector {
         std::sort(unresolved_selects.begin(), unresolved_selects.end(),
              [&] (const UnresolvedSelect& l, const UnresolvedSelect& r) {
                  if (select_groups.count(l.select) && select_groups.count(r.select)) {
-                     auto* select_group_l = select_groups.at(l.select);
-                     auto* select_group_r = select_groups.at(r.select);
-
-                     auto count_l = select_registers.count(select_group_l);
-                     auto count_r = select_registers.count(select_group_r);
+                     auto count_l = select_reg_slices.count(l.select);
+                     auto count_r = select_reg_slices.count(r.select);
 
                      if (count_l != count_r)
                          return count_l > count_r;
@@ -930,7 +964,7 @@ class ComputeSaveAndSelect: public ParserInspector {
 
     /// Return a vector of match registers that address the @p unresolved.
     boost::optional<std::vector<MatchRegister>>
-    allocMatchRegisterForSelect(
+    allocMatchRegisterForSelectGroup(
             const UnresolvedSelectGroup* unresolved_group,
             const std::map<nw_byterange, MatchRegister>& saved_range,
             const std::set<MatchRegister>& used_registers,
@@ -939,11 +973,12 @@ class ComputeSaveAndSelect: public ParserInspector {
             auto select = unresolved.select;
             auto select_group = select_groups.at(select);
 
-            if (select_registers.count(select_group)) {
+            if (select_group_registers.count(select_group)) {
                 // If the select has already be set by other branch,
                 // this branch need to follow it's decision.
                 // already saved in this state.
-                auto& regs = select_registers[select_group];
+                auto& regs = select_group_registers.at(select_group);
+
                 bool has_conflict =
                     std::any_of(regs.begin(), regs.end(), [&] (const MatchRegister& r) -> bool {
                         return unresolved.used_by_others.count(r); });
@@ -1097,7 +1132,7 @@ class ComputeSaveAndSelect: public ParserInspector {
             std::set<const StateSelect*> resolved_in_this_transition;
 
             for (auto unresolved_group : packed_unresolved_selects) {
-                auto reg_choice = allocMatchRegisterForSelect(
+                auto reg_choice = allocMatchRegisterForSelectGroup(
                         unresolved_group, saved_range, used_registers, used_by_other_path);
                 // Cannot find a register or the found one has been used
                 // by downstream states because of brother's decision.
@@ -1137,9 +1172,18 @@ class ComputeSaveAndSelect: public ParserInspector {
                 for (auto& unresolved : unresolved_group->members())
                     resolved_in_this_transition.insert(unresolved.select);
 
-                select_registers[unresolved_group] = *reg_choice;
-                select_masks[unresolved_group] = calcMask(unresolved_group->source(), source);
+                unsigned total_bits_in_regs = 0;
 
+                for (auto& unresolved : unresolved_group->members()) {
+                    auto reg_slices = unresolved_group->calc_reg_slices_for_select(unresolved,
+                                                                           *reg_choice);
+                    for (auto rs : reg_slices)
+                        total_bits_in_regs += rs.second.size();
+
+                    select_reg_slices[unresolved.select] = reg_slices;
+                }
+
+                select_group_registers[unresolved_group] = *reg_choice;
                 used_registers.insert((*reg_choice).begin(), (*reg_choice).end());
             }
 
@@ -1154,7 +1198,8 @@ class ComputeSaveAndSelect: public ParserInspector {
                 if (resolved_in_this_transition.count(remaining_unresolved.select)) {
                     continue; }
                 auto unresolved = remaining_unresolved;
-                unresolved.used_by_others.insert(used_registers.begin(), used_registers.end());
+                for (auto r : used_registers)
+                    unresolved.used_by_others.insert(r);
                 state_unresolved_selects[state].push_back(unresolved);
                 LOG5("Add Unresolved in `" << state->name << "` " << unresolved.select);
             }
@@ -1167,7 +1212,7 @@ class ComputeSaveAndSelect: public ParserInspector {
         for (const auto* state : unprocessed_copy) {
             auto gress = state->thread();
             BUG_CHECK(additional_states.count(gress) == 0,
-                      "More than one start states for %1%", gress);
+                      "More than one start state for init parser match word on %1%", gress);
             auto* transition = new IR::BFN::Transition(match_t(), 0, state);
             auto* init_state = new IR::BFN::ParserState(
                     createThreadName(gress, "$_save_init_state"), gress, { }, { }, { transition });
@@ -1178,11 +1223,6 @@ class ComputeSaveAndSelect: public ParserInspector {
         }
         BUG_CHECK(unprocessed_states.size() == 0,
                   "Unprocessed states remaining");
-    }
-
-    nw_bitrange calcMask(nw_bitrange match_range, nw_byterange saved_range) {
-        int loByte = saved_range.loByte();
-        return match_range.shiftedByBytes(-loByte);
     }
 
     /// @returns all unresolved select from @p next_state.
@@ -1287,9 +1327,12 @@ class ComputeSaveAndSelect: public ParserInspector {
     // select to group it belongs to
     std::map<const StateSelect*, const UnresolvedSelectGroup*> select_groups;
 
-    // The register that this select should match against.
-    std::map<const UnresolvedSelectGroup*, std::vector<MatchRegister>> select_registers;
-    std::map<const UnresolvedSelectGroup*, nw_bitrange> select_masks;
+    // The register slices that this select should match against.
+    std::map<const IR::BFN::Select*,
+             std::vector<std::pair<MatchRegister, nw_bitrange>>> select_reg_slices;
+
+    // The registers that this select group should match against.
+    std::map<const UnresolvedSelectGroup*, std::vector<MatchRegister>> select_group_registers;
 
     // The additional state that should be prepended to the start state
     // to generate save for the select on the first state.
@@ -1317,12 +1360,8 @@ struct WriteBackSaveAndSelect : public ParserModifier {
 
     void postorder(IR::BFN::Select* select) override {
         auto* original_select = getOriginal<IR::BFN::Select>();
-        if (rst.select_groups.count(original_select)) {
-            auto* select_group = rst.select_groups.at(original_select);
-            if (rst.select_registers.count(select_group)) {
-                select->reg = rst.select_registers.at(select_group);
-                select->mask = rst.select_masks.at(select_group);
-            }
+        if (rst.select_reg_slices.count(original_select)) {
+            select->reg_slices = rst.select_reg_slices.at(original_select);
         }
     }
 
@@ -1377,7 +1416,7 @@ class MatchRegisterLayout {
     }
 
  public:
-    explicit MatchRegisterLayout(std::set<MatchRegister> used_regs)
+    explicit MatchRegisterLayout(ordered_set<MatchRegister> used_regs)
         : total_size(0) {
         for (const auto& r : used_regs) {
             total_size += r.size * 8;
@@ -1385,31 +1424,31 @@ class MatchRegisterLayout {
             values[r] = match_t(0, 0); }
     }
 
-    void writeValue(const std::vector<MatchRegister> regs,
-                    nw_bitrange mask, match_t val) {
-        int total_reg_size = 0;
-        for (const auto& r : regs) {
-            total_reg_size += r.size * 8; }
+    void writeValue(const IR::BFN::Select* select, match_t val) {
+        auto& reg_slices = select->reg_slices;
 
+        int val_size = 0;
         int val_shifted = 0;
-        int reg_shifted = 0;
-        for (const auto& r : regs) {
-            nw_bitrange range_of_r(StartLen(reg_shifted, r.size * 8));
-            BUG_CHECK(toClosedRange(mask.intersectWith(range_of_r)),
-                      "Use Match register on empty range");
-            nw_bitrange value_range_of_r = *toClosedRange(mask.intersectWith(range_of_r));
-            // For the stored match value, shift right to remove all bits that is
-            // matched in the next match register. Shift right 0 when it's the last
-            // chunk.
-            match_t value_of_r = getSubValue(val, mask.size(),
-                                             val_shifted, value_range_of_r.size());
-            // Then shift left by the empty (the 'bb..b' part) to or in.
-            // LOG1("sft2: " << range_of_r.hi - value_range_of_r.hi);
-            match_t value_to_or = shiftLeft(value_of_r, range_of_r.hi - value_range_of_r.hi);
-            values[r] = orTwo(values[r], value_to_or);
-            val_shifted += value_range_of_r.size();
-            reg_shifted += r.size * 8;
+
+        for (auto rs : reg_slices)
+            val_size += rs.second.size();
+
+        for (auto& slice : reg_slices) {
+            auto& reg = slice.first;
+            auto& reg_sub_range = slice.second;
+
+            nw_bitrange reg_range(0, reg.size * 8 - 1);
+            BUG_CHECK(reg_range.contains(reg_sub_range),
+                      "range not part of parser match register?");
+
+            match_t slice_val = getSubValue(val, val_size, val_shifted, reg_sub_range.size());
+            match_t val_to_or = shiftLeft(slice_val, reg.size * 8 - reg_sub_range.hi - 1);
+
+            values[reg] = orTwo(values[reg], val_to_or);
+            val_shifted += reg_sub_range.size();
         }
+
+        BUG_CHECK(val_shifted == val_size, "value not entirely shifted?");
     }
 
     match_t getMatchValue() {
@@ -1434,19 +1473,15 @@ struct AdjustMatchValue : public ParserModifier {
         }
     }
 
-    /// Assume all registers are placed in the order of its operator<,
-    /// adjust the transition value to a match_t that:
+    /// Adjust the transition value to a match_t that:
     ///   1. match_t value's size = sum of size of all used registers.
     ///   2. values are placed into their `slot` in match_t value.
     void adjustConstValue(IR::BFN::Transition* transition) {
         auto* state = findContext<IR::BFN::ParserState>();
-        // It is important to use set here, so it use the default operator<
-        // to sort registers, because this order is also the order we enforece
-        // when we convert it to LoweredSelect and output to assembly.
-        std::set<MatchRegister> used_registers;
+        ordered_set<MatchRegister> used_registers;
         for (const auto* select : state->selects) {
-            for (const auto& r : select->reg) {
-                used_registers.insert(r); } }
+            for (const auto& rs : select->reg_slices) {
+                used_registers.insert(rs.first); } }
 
         // Pop out value for each select.
         auto const_val = transition->value->to<IR::BFN::ParserConstMatchValue>()->value;
@@ -1462,13 +1497,17 @@ struct AdjustMatchValue : public ParserModifier {
 
         std::map<const IR::BFN::Select*, match_t> select_values;
         for (const auto* select : boost::adaptors::reverse(state->selects)) {
-            int value_size = select->mask.size();
+            int value_size = 0;
+            for (auto rs : select->reg_slices) {
+                auto mask = rs.second;
+                value_size += mask.size();
+            }
             select_values[select] = shiftOut(value_size);
         }
 
         MatchRegisterLayout layout(used_registers);
         for (const auto* select : state->selects) {
-            layout.writeValue(select->reg, select->mask, select_values[select]);
+            layout.writeValue(select, select_values[select]);
         }
         transition->value = new IR::BFN::ParserConstMatchValue(layout.getMatchValue());
     }
@@ -1476,33 +1515,9 @@ struct AdjustMatchValue : public ParserModifier {
     /// Build a mapping from fieldslice to matcher slice by checking the field
     /// where the select originally matched on and the masking of the registers.
     void adjustPvsValue(IR::BFN::Transition* transition) {
-        auto* state = findContext<IR::BFN::ParserState>();
         auto* old_value = transition->value->to<IR::BFN::ParserPvsMatchValue>();
         auto* adjusted = new IR::BFN::ParserPvsMatchValue(old_value->name, old_value->size);
-        for (const auto* select : state->selects) {
-            LOG3("PVS SELECT P4source = " << select->p4Source->toString());
-            LOG3("PVS Mask = " << select->mask);
-            cstring fieldname = select->p4Source->toString();
-            nw_bitrange mask = select->mask;
-            int field_start = 0;
-            int reg_start = 0;
-            for (const auto& reg : select->reg) {
-                int n_regbits = reg.size * 8;
-                nw_bitrange reg_range(StartLen(reg_start, n_regbits));
-                BUG_CHECK(toClosedRange(reg_range & mask),
-                          "Empty intersection: %1%, %2%", reg_range, mask);
-                nw_bitrange intersect = *toClosedRange(reg_range & mask);
-
-                nw_bitrange field_slice(StartLen(field_start, intersect.size()));
-                nw_bitrange matcher_slice(StartLen(intersect.lo - reg_start, intersect.size()));
-                field_start += field_slice.size();
-                reg_start += n_regbits;
-
-                adjusted->mapping[{fieldname, field_slice}] = {reg, matcher_slice};
-                LOG3("PVS add mapping: " << fieldname << field_slice << " -> "
-                     << reg << matcher_slice);
-            }
-        }
+        // TODO(zma)
         transition->value = adjusted;
     }
 };

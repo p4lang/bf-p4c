@@ -28,8 +28,8 @@ struct CollectStateUses : public ParserInspector {
 
         // for select => match_reg use
         for (const auto* select : state->selects)
-            for (const auto& r : select->reg)
-                match_reg_use[state].insert(r);
+            for (const auto& rs : select->reg_slices)
+                match_reg_use[state].insert(rs.first);
 
         return true;
     }

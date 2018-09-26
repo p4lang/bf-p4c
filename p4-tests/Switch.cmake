@@ -1005,13 +1005,11 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.4_spine_dtel_int_set_1"
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_8.4_spine_dtel_int_set_2" ${SWITCH_8.4_P4}
     "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 12000" "${SWITCH_8.4_PTF_DIR_DTEL}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.4_spine_dtel_int_set_2"
-        "switch_int_l45_common.intl45_route_dtel_reports
-         switch_int_l45_transit_digest.intl45_transitTest_hop2_with_digest
+        "switch_int_l45_transit_digest.intl45_transitTest_hop2_with_digest
          switch_int_l45_transit.intl45_transitTest_Metadata
          switch_int_l45_transit.intl45_transitTest_hop2_latency
          switch_int_l45_transit.intl45_transitTest_hop2_port_ids
          switch_int_l45_transit.intl45_DSCP_TransitTest
-         switch_int_l45_transit.INTL45_TransitTest_Enable
          switch_int_l45_transit.intl45_transitTest_hop2_txutil_yet_supported")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_8.4_spine_dtel_int_set_2_part_2" ${SWITCH_8.4_P4}
     "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 12000" "${SWITCH_8.4_PTF_DIR_DTEL}")
@@ -1023,6 +1021,14 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.4_spine_dtel_int_set_2_part_2
          switch_int_l45_transit.INTL45_Marker_TransitTest
          switch_mirror_on_drop.MirrorOnDropEgressAclTest
          switch_queue_report.QueueReport_Change_Test")
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_8.4_spine_dtel_int_set_2_intl45_route_dtel_reports" ${SWITCH_8.4_P4}
+    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 12000" "${SWITCH_8.4_PTF_DIR_DTEL}")
+bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.4_spine_dtel_int_set_2_intl45_route_dtel_reports"
+        "switch_int_l45_common.intl45_route_dtel_reports")
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_8.4_spine_dtel_int_set_2_INTL45_TransitTest_Enable" ${SWITCH_8.4_P4}
+    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 12000" "${SWITCH_8.4_PTF_DIR_DTEL}")
+bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.4_spine_dtel_int_set_2_INTL45_TransitTest_Enable"
+        "switch_int_l45_transit.INTL45_TransitTest_Enable")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_8.4_spine_dtel_int_set_2_intl45_transitTest_hop2_stateless" ${SWITCH_8.4_P4}
     "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 12000" "${SWITCH_8.4_PTF_DIR_DTEL}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.4_spine_dtel_int_set_2_intl45_transitTest_hop2_stateless"
@@ -1126,6 +1132,8 @@ set_tests_properties("tofino/smoketest_switch_8.4_spine_dtel_int_set_4" PROPERTI
 set_tests_properties("tofino/smoketest_switch_8.4_spine_dtel_int_set_5" PROPERTIES TIMEOUT 12000)
 set_tests_properties("tofino/smoketest_switch_8.4_spine_dtel_int_set_6" PROPERTIES TIMEOUT 12000)
 set_tests_properties("tofino/smoketest_switch_8.4_spine_dtel_int_set_2_part_2" PROPERTIES TIMEOUT 12000)
+set_tests_properties("tofino/smoketest_switch_8.4_spine_dtel_int_set_2_intl45_route_dtel_reports" PROPERTIES TIMEOUT 12000)
+set_tests_properties("tofino/smoketest_switch_8.4_spine_dtel_int_set_2_INTL45_TransitTest_Enable" PROPERTIES TIMEOUT 12000)
 set_tests_properties("tofino/smoketest_switch_8.4_spine_dtel_int_set_2_intl45_transitTest_hop2_stateless" PROPERTIES TIMEOUT 12000)
 set_tests_properties("tofino/smoketest_switch_8.4_spine_dtel_int_set_2_INTL45_Transit_EgressMoDTest" PROPERTIES TIMEOUT 12000)
 set_tests_properties("tofino/smoketest_switch_8.4_spine_dtel_int_set_2_INTL45_Transit_IngressMoDTest" PROPERTIES TIMEOUT 12000)

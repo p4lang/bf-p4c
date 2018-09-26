@@ -308,9 +308,7 @@ class Select {
     ParserRVal source;
 
     /// The register match against.
-    optional std::vector<MatchRegister> reg;
-
-    optional nw_bitrange mask;
+    optional std::vector<std::pair<MatchRegister, nw_bitrange>> reg_slices;
 
 #emit
     /// The higher-level expression we were selecting against. Not visited.

@@ -1,5 +1,5 @@
 #emit
-#include <set>
+#include "lib/ordered_set.h"
 #include "bf-p4c/common/debug_info.h"
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/ir/ir_enums.h"
@@ -176,13 +176,11 @@ class LoweredSave : LoweredParserPrimitive {
 /// entries to select the next state to transition to.
 class LoweredSelect {
 #emit
-    explicit LoweredSelect(const std::set<MatchRegister>& regs)
+    explicit LoweredSelect(const ordered_set<MatchRegister>& regs)
         : regs(regs) { }
 
     /// The register match against.
-    /// XXX(yumin): The order of registers is sorted by MatchRegister::operator<.
-    /// We use this order to adjust the match value in AdjustMatchValue pass.
-    std::set<MatchRegister> regs;
+    ordered_set<MatchRegister> regs;
 
     /// Debugging information about the high-level operations that are
     /// implemented by this low-level select operation.
@@ -267,7 +265,7 @@ class LoweredParserState : Unit {
 #noconstructor
     LoweredParserState(cstring name, gress_t gress)
         : name(name), gress(gress),
-          select(new LoweredSelect(std::set<MatchRegister>())) { }
+          select(new LoweredSelect(ordered_set<MatchRegister>())) { }
     int stage() const override { return -1; }
     gress_t thread() const override { return gress; }
     toString { return name; }
