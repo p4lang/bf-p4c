@@ -362,9 +362,11 @@ Instruction *AluOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
         error(rv->lineno, "too many operands for %s instruction", op[0].s);
     else if ((!rv->srca && operands != B) || (!rv->srcb && operands != A))
         error(rv->lineno, "not enough operands for %s instruction", op[0].s);
-    if (rv->srca.to<operand::MathFn>())
+    if (auto mf = rv->srca.to<operand::MathFn>()) {
         error(rv->lineno, "Can't reference math table in %soperand of %s instruction",
               operands != A ? "first " : "", op[0].s);
+        if (!mf->of.to<operand::Phv>() && !mf->of.to<operand::Memory>())
+            error(rv->lineno, "Math table input must come from Phv or memory"); }
     if (rv->srca.to<operand::Phv>())
         error(rv->lineno, "Can't reference phv in %soperand of %s instruction",
               operands != A ? "first " : "", op[0].s);

@@ -331,8 +331,8 @@ bool CreateSaluInstruction::preorder(const IR::Primitive *prim) {
         method = p + 1;
     if (prim->name == "math_unit.execute") {
         BUG_CHECK(prim->operands.size() == 2, "typechecking failure");
-        operands.push_back(new IR::MAU::SaluFunction(prim->srcInfo, prim->operands.at(1),
-                                                     "math_table"));
+        visit(prim->operands.at(1), "math_input");
+        operands.back() = new IR::MAU::SaluFunction(prim->srcInfo, operands.back(), "math_table");
         LOG4("Math Unit operand: " << operands.back());
         auto gref = prim->operands.at(0)->to<IR::GlobalRef>();
         auto mu = gref ? gref->obj->to<IR::Declaration_Instance>() : nullptr;

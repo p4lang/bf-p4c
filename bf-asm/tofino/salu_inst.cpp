@@ -31,9 +31,11 @@ void AluOP::write_regs(Target::Tofino::mau_regs &regs, Table *tbl_, Table::Actio
             salu.salu_bsrc_phv = 1;
             salu.salu_bsrc_phv_index = f->phv_index(tbl);
         } else if (auto m = srcb.to<operand::MathFn>()) {
-            if(auto b = m->of.to<operand::Phv>()) {
-                salu_instr_common.salu_alu2_lo_bsrc_math = 1;
+            salu_instr_common.salu_alu2_lo_bsrc_math = 1;
+            if (auto b = m->of.to<operand::Phv>()) {
                 salu_instr_common.salu_alu2_lo_math_src = b->phv_index(tbl);
+            } else if (auto b = m->of.to<operand::Memory>()) {
+                salu_instr_common.salu_alu2_lo_math_src = b->field->bit(0) > 0 ? 3 : 2;
             } else assert(0);
         } else if (auto k = srcb.to<operand::Const>()) {
             salu.salu_bsrc_phv = 0;
