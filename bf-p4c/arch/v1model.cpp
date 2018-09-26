@@ -1086,12 +1086,9 @@ class ConstructSymbolTable : public Inspector {
         // i2e due to a hardware bug. Hence, valid clone ids are 1 - 7.  All
         // clone id's 0 - 7 are valid for e2e
         if ((Device::currentDevice() == Device::TOFINO) && (gress == INGRESS)) {
-                cloneId++;
+            cloneId++;
         }
-        if (cloneId > Device::maxCloneId(gress)) {
-            ::error("Too many clone() calls in %1%", control->name);
-            return;
-        }
+
         unsigned bits = static_cast<unsigned>(std::ceil(std::log2(Device::maxCloneId(gress))));
         auto *idx = new IR::Constant(IR::Type::Bits::get(bits), cloneId);
 

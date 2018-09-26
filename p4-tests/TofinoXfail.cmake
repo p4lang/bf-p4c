@@ -829,6 +829,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4-tests/programs/iterator/iterator.p4
   )
 
+# P4C-1017
 p4c_add_xfail_reason("tofino"
   "No tables placeable, but not all tables placed"
   extensions/p4_tests/p4_14/p4-tests/programs/tcam_search/tcam_search.p4

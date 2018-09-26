@@ -78,7 +78,7 @@ HER_INTRINSIC(ecos, YES)
                     IFID( TBL[id].id_phv = reg->reg.deparser_id(); continue; ) }        \
                 if (last == reg->reg.deparser_id()) continue;                           \
                 for (int i = reg->reg.size/8; i > 0; i--) {                             \
-                    if (idx > TBL[id].phvs.size()) {                                   \
+                    if (idx > TBL[id].phvs.size()) {                                    \
                         error(data.lineno, "%s digest limited to %zd bytes",            \
                               #NAME, TBL[id].phvs.size());                              \
                         ok = false;                                                     \
@@ -396,6 +396,7 @@ template<> void Deparser::write_config(Target::Tofino::deparser_regs &regs) {
 
     for (auto &intrin : intrinsics)
         intrin.type->setregs(regs, *this, intrin);
+
     if (!regs.header.hir.ingr.ingress_port.sel.modified())
         regs.header.hir.ingr.ingress_port.sel = 1;
 

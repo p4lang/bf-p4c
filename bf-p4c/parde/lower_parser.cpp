@@ -1287,24 +1287,28 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
             // Learning field lists are used to generate the format for learn
             // quanta, which are exposed to the control plane, so they have a
             // bit more metadata than other kinds of digests.
-            int idx = 0;
-            for (auto* fieldList : digest->fieldLists) {
-                if (!fieldList) { idx++; continue; }
-                IR::Vector<IR::BFN::ContainerRef> fieldListSources;
-                std::tie(fieldListSources, std::ignore) =
+            for (auto fieldList : digest->fieldLists) {
+                IR::Vector<IR::BFN::ContainerRef> phvSources;
+                std::vector<Clot> clotSources;
+
+                std::tie(phvSources, clotSources) =
                     lowerFields(phv, clotInfo, fieldList->sources);
-                IR::BFN::DigestTableEntry* entry;
+
+                BUG_CHECK(clotSources.empty(), "digest data cannot be sourced from CLOT");
+
+                IR::BFN::DigestTableEntry* entry = nullptr;
+
                 if (digest->name == "learning") {
                     auto* controlPlaneFormat =
                       computeControlPlaneFormat(phv, fieldList->sources);
-                    entry = new IR::BFN::LearningTableEntry(fieldListSources,
+                    entry = new IR::BFN::LearningTableEntry(fieldList->idx,
+                                                            phvSources,
                                                             fieldList->controlPlaneName,
-                                                            controlPlaneFormat, idx);
+                                                            controlPlaneFormat);
                 } else {
-                    entry = new IR::BFN::DigestTableEntry(fieldListSources, idx);
+                    entry = new IR::BFN::DigestTableEntry(fieldList->idx, phvSources);
                 }
                 lowered->entries.push_back(entry);
-                idx++;
             }
 
             loweredDeparser->digests.push_back(lowered);

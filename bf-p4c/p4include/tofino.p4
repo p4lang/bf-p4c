@@ -664,9 +664,9 @@ extern ActionProfile {
 }
 
 // Tofino supports mirroring both at the ingress and egress. Ingress deparser
-// create a copy of the original ingress packet and prepend the prepend the
-// mirror header. Egress deparser first construct the output packet and then
-// prepend the mirror header.
+// creates a copy of the original ingress packet and prepends the mirror header.
+// Egress deparser first constructs the output packet and then prepends the
+// mirror header.
 extern Mirror {
     /// Constructor
     Mirror();

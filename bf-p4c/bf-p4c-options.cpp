@@ -110,6 +110,9 @@ BFN_Options::BFN_Options() {
     registerOption("--always-init-metadata", nullptr,
         [this](const char *) { always_init_metadata = true; return true; },
         "Insert a table to init metadata in the beginning of pipeline");
+    registerOption("--disable-init-metadata", nullptr,
+        [this](const char *) { disable_init_metadata = true; return true; },
+        "Disable metadata initialization");
     registerOption("--bf-rt-schema", "file",
         [this](const char *arg) { bfRtSchema = arg; return true; },
         "Generate and write BF-RT JSON schema to the specified file");
@@ -237,20 +240,13 @@ BFNOptionPragmaParser::parseBrigCompilerOption(const IR::Annotation* annotation)
 boost::optional<P4::IOptionPragmaParser::CommandLineOptions>
 BFNOptionPragmaParser::parseGlassCompilerOption(const IR::Annotation* annotation) {
     // See `supported_cmd_line_pragmas` in glass/p4c_tofino/target/tofino/compile.py:205
-    static const std::unordered_set<cstring> glassCmdLinePragmas = {
-        "--no-dead-code-elimination",
-        "--force-match-dependency",
-        "--metadata-overlay",
-        "--placement",
-        "--placement-order",
-    };
-
-    // Glass command line pragmas supported in bf-p4c.
-    // \TODO: would be nice to get the list directly from the compile options ...
-    // for now, we hardcode them
-    static const std::unordered_set<cstring> glassCmdLinePragmasAvailableInBrig = {
-        // "--no-dead-code-elimination", \TODO: disabled until we fix issues with PHV
-        "--placement",
+    static const std::map<cstring, bool> cmdLinePragmas = {
+        { "--no-dead-code-elimination", false },
+        { "--force-match-dependency",   false },
+        { "--metadata-overlay",         false },
+        { "--placement",                true },
+        { "--placement-order",          false },
+        { "--disable-init-metadata",    true }
     };
 
     boost::optional<CommandLineOptions> newOptions;
@@ -264,13 +260,12 @@ BFNOptionPragmaParser::parseGlassCompilerOption(const IR::Annotation* annotation
                       annotation);
             return boost::none;
         }
-        if (first && !glassCmdLinePragmas.count(argString->value)) {
-            ::warning("@pragma command_line %1% is not supported",
-                      annotation);
+        if (first && !cmdLinePragmas.count(argString->value)) {
+            ::warning("Unknown @pragma command_line %1%", annotation);
             return boost::none;
         }
-        if (first && !glassCmdLinePragmasAvailableInBrig.count(argString->value)) {
-            ::warning("@pragma command_line %1% is not supported in this "
+        if (first && !cmdLinePragmas.at(argString->value)) {
+            ::warning("@pragma command_line %1% is disabled in this "
                       "compiler version", annotation);
             return boost::none;
         }

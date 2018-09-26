@@ -236,6 +236,7 @@ void IR::BFN::LoweredParser::dbprint(std::ostream &out) const {
 }
 
 void IR::BFN::DigestFieldList::dbprint(std::ostream &out) const {
+    out << idx << " :" << indent;
     out << "[ ";
 
     const char* sep = "";
@@ -245,15 +246,14 @@ void IR::BFN::DigestFieldList::dbprint(std::ostream &out) const {
     }
 
     out << " ]";
+    out << unindent;
 }
 
 void IR::BFN::Digest::dbprint(std::ostream &out) const {
     out << endl << name << ": " << indent << endl
                 << "select: " << *selector->field;
-    int idx = 0;
-    for (auto* fieldList : fieldLists) {
-        out << endl << name << ' ' << idx++ << ": "
-            << indent << *fieldList << unindent;
+    for (auto fieldList : fieldLists) {
+        out << endl << name << ' ' << fieldList;
     }
     out << unindent;
 }

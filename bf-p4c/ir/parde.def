@@ -397,6 +397,9 @@ class Parser : AbstractParser {
 /// A list of fields which will be written into a buffer as part of a deparser
 /// digest.
 class DigestFieldList {
+    /// Index of this field list in the digest table
+    int idx;
+
     /// The fields to be copied into the buffer.
     inline Vector<FieldLVal> sources;
 
@@ -424,8 +427,7 @@ class Digest {
     /// buffer.
     FieldLVal selector;
 
-    /// The available field lists; the index of each field list in the vector
-    /// corresponds to the selector value which chooses it.
+    /// The available field lists
     inline Vector<DigestFieldList> fieldLists;
 
     /// If present, the POV bit controlling whether the contents of the source
@@ -533,7 +535,7 @@ abstract AbstractDeparser : Unit {
 class Deparser : AbstractDeparser {
 #noconstructor
     Deparser(gress_t gr);
-    Deparser(gress_t gr, P4Control dp);
+    Deparser(gress_t gr, BFN::Pipe p, P4Control dp);
 #apply
     toString { return gress ? "egress deparser" : "ingress deparser"; }
 

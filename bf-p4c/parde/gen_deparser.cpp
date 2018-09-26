@@ -1,8 +1,6 @@
-#include <boost/range/adaptor/reversed.hpp>
-
-#include "frontends/p4/callGraph.h"
-#include "ir/ir.h"
+#include "bf-p4c/device.h"
 #include "bf-p4c/parde/gen_deparser.h"
+#include "bf-p4c/bf-p4c-options.h"
 
 namespace {
 
@@ -32,7 +30,16 @@ IR::Member *gen_fieldref(const IR::HeaderOrMetadata *hdr, cstring field) {
     return new IR::Member(ftype, new IR::ConcreteHeaderRef(hdr), field);
 }
 
+const IR::HeaderOrMetadata*
+getMetadataType(const IR::BFN::Pipe* pipe, cstring typeName) {
+    auto* meta = pipe->metadata[typeName];
+    BUG_CHECK(meta != nullptr,
+              "Couldn't find required intrinsic metadata type: %1%", typeName);
+    return meta;
+}
+
 class GenerateDeparser : public Inspector {
+    const IR::BFN::Pipe                         *pipe;
     IR::BFN::Deparser                           *dprsr;
     const IR::Expression                        *pred = nullptr;
     ordered_map<cstring, IR::BFN::Digest *>     digests;
@@ -55,9 +62,11 @@ class GenerateDeparser : public Inspector {
         if (ifstmt->ifFalse) {
             pred = new IR::LNot(ifstmt->condition);
             if (old_pred) pred = new IR::LAnd(old_pred, pred);
-            visit(ifstmt->ifFalse, "ifFalse"); }
+            visit(ifstmt->ifFalse, "ifFalse");
+        }
         pred = old_pred;
-        return false; }
+        return false;
+    }
 
     bool preorder(const IR::MethodCallExpression* mc) {
         auto method = mc->method->to<IR::Member>();
@@ -106,8 +115,53 @@ class GenerateDeparser : public Inspector {
         }
     }
 
+    void end_apply() override {
+       for (const auto& kv : digests) {
+           auto name = kv.first;
+           auto digest = kv.second;
+           for (auto fieldList : digest->fieldLists) {
+               if (fieldList->idx < 0 ||
+                   fieldList->idx > static_cast<int>(Device::maxCloneId(dprsr->gress))) {
+                   ::error("Invalid %1% index %2% in %3%", name, fieldList->idx, dprsr->gress);
+               }
+           }
+       }
+
+       // COMPILER-914: In Tofino, clone id - 0 is reserved in i2e
+       // due to a hardware bug. Hence, valid clone ids are 1 - 7.
+       // We check mirror id 0 is not used in the program, and create a dummy
+       // mirror (with id = 0) for i2e;
+       if (dprsr->gress == INGRESS && Device::currentDevice() == Device::TOFINO &&
+           BFNContext::get().options().arch == "v1model") {
+           // TODO(zma) it's not very clear to me how to handle this for TNA program
+           // in particular, the mirror id is a user defined field. So we probably
+           // need to find the field reference of mirror id in the program.
+
+           auto mirror = digests["mirror"];
+           if (mirror) {
+               for (auto fieldList : mirror->fieldLists) {
+                   if (fieldList->idx == 0)
+                       ::error("Invalid mirror index 0, valid i2e mirror indices are 1-7");
+               }
+           } else {
+               auto deparserMetadataHdr =
+                   getMetadataType(pipe, "ingress_intrinsic_metadata_for_deparser");
+               auto select = gen_fieldref(deparserMetadataHdr, "mirror_type");
+               mirror = new IR::BFN::Digest("mirror", select);
+               dprsr->digests.addUnique("mirror", mirror);
+           }
+
+           IR::Vector<IR::BFN::FieldLVal> sources;
+           auto compilerMetadataHdr = getMetadataType(pipe, "compiler_generated_meta");
+           auto mirrorId = gen_fieldref(compilerMetadataHdr, "mirror_id");
+           sources.push_back(new IR::BFN::FieldLVal(mirrorId));
+           auto dummy = new IR::BFN::DigestFieldList(0, sources, nullptr);
+           mirror->fieldLists.push_back(dummy);
+       }
+    }
+
  public:
-    explicit GenerateDeparser(IR::BFN::Deparser *d) : dprsr(d) {}
+    explicit GenerateDeparser(const IR::BFN::Pipe* p, IR::BFN::Deparser *d) : pipe(p), dprsr(d) {}
 };
 
 // FIXME -- factor this with Digests::add_to_digest in digest.h?
@@ -122,16 +176,26 @@ void GenerateDeparser::generateDigest(IR::BFN::Digest *&digest, cstring name,
         if ((k = eq->left->to<IR::Constant>()))
             select = eq->right;
         else if ((k = eq->right->to<IR::Constant>()))
-            select = eq->left; }
+            select = eq->left;
+    }
     if (!k) {
         error("%s.emit condition %s not supported", name, pred);
-        return; }
+        return;
+    }
+
     if (!digest) {
         digest = new IR::BFN::Digest(name, select);
         dprsr->digests.addUnique(name, digest);
     } else if (!equiv(select, digest->selector->field)) {
         error("Inconsistent %s selectors, %s and %s", name, select,
-              digest->selector->field); }
+              digest->selector->field);
+    }
+
+    for (auto fieldList : digest->fieldLists) {
+        if (fieldList->idx == k->asInt()) {
+            return;
+        }
+    }
 
     IR::Vector<IR::BFN::FieldLVal> sources;
     if (!expr) {
@@ -152,10 +216,8 @@ void GenerateDeparser::generateDigest(IR::BFN::Digest *&digest, cstring name,
         sources.push_back(new IR::BFN::FieldLVal(expr));
     }
 
-    auto* fieldList = new IR::BFN::DigestFieldList(sources, controlPlaneName);
-    if (int(digest->fieldLists.size()) <= k->asInt())
-        digest->fieldLists.resize(k->asInt() + 1);
-    digest->fieldLists.at(k->asInt()) = fieldList;
+    auto* fieldList = new IR::BFN::DigestFieldList(k->asInt(), sources, controlPlaneName);
+    digest->fieldLists.push_back(fieldList);
 }
 
 // FIXME -- yet another 'deep' comparison for expressions
@@ -176,13 +238,13 @@ bool GenerateDeparser::equiv(const IR::Expression *a, const IR::Expression *b) c
 
 }  // namespace
 
-IR::BFN::Deparser::Deparser(gress_t gr, const IR::P4Control* dp)
+IR::BFN::Deparser::Deparser(gress_t gr, const IR::BFN::Pipe* pipe, const IR::P4Control* dp)
         : AbstractDeparser(gr) {
     CHECK_NULL(dp);
-    dp->apply(GenerateDeparser(this));
+    dp->apply(GenerateDeparser(pipe, this));
 }
 
 void BFN::ExtractDeparser::postorder(const IR::BFN::TranslatedP4Deparser* deparser) {
     gress_t thread = deparser->thread;
-    rv->thread[thread].deparser = new IR::BFN::Deparser(thread, deparser);
+    rv->thread[thread].deparser = new IR::BFN::Deparser(thread, rv, deparser);
 }

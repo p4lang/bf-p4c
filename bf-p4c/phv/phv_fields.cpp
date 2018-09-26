@@ -1145,9 +1145,8 @@ class CollectPardeConstraints : public Inspector {
         f->set_read_container_valid_bit(true);
         f->set_is_digest(true);
 
-        for (auto* flist : digest->fieldLists) {
-            if (!flist) continue;
-            for (auto* flval : flist->sources) {
+        for (auto fieldList : digest->fieldLists) {
+            for (auto flval : fieldList->sources) {
                 f = phv.field(flval->field);
                 f->set_is_digest(true);
             }
@@ -1156,9 +1155,9 @@ class CollectPardeConstraints : public Inspector {
         if (digest->name == "resubmit") {
             LOG3("\t resubmit metadata field (" << f << ") is set to be "
                  << "exact container and is_marshaled.");
-            for (auto* fieldList : digest->fieldLists) {
+            for (auto fieldList : digest->fieldLists) {
                 LOG3("\t.....resubmit metadata field list....." << fieldList);
-                for (auto* resubmit_field_expr : fieldList->sources) {
+                for (auto resubmit_field_expr : fieldList->sources) {
                     PHV::Field* resubmit_field = phv.field(resubmit_field_expr->field);
                     if (resubmit_field) {
                         if (resubmit_field->metadata) {
@@ -1178,33 +1177,39 @@ class CollectPardeConstraints : public Inspector {
         if (digest->name == "learning") {
             // Add byte-aligned constraint to metadata field in learning field_list
             // TODO(yumin): This constraint can be relaxed to be no_pack in a same byte.
-            for (auto* fieldList : digest->fieldLists) {
-                for (auto* fieldListEntry : fieldList->sources) {
-                    auto* fieldInfo = phv.field(fieldListEntry->field);
+            for (auto fieldList : digest->fieldLists) {
+                for (auto fieldListEntry : fieldList->sources) {
+                    auto fieldInfo = phv.field(fieldListEntry->field);
                     if (fieldInfo->metadata) {
                         fieldInfo->updateAlignment(
                                 FieldAlignment(le_bitrange(StartLen(0, fieldInfo->size))));
                         LOG3(fieldInfo << " is marked to be byte_aligned "
-                             "because it's in a field_list and digested."); } } }
+                             "because it's in a field_list and digested.");
+                    }
+                }
+            }
 
             if (LOGGING(3)) {
-                for (auto* fieldList : digest->fieldLists) {
+                for (auto fieldList : digest->fieldLists) {
                     LOG3("\t.....learning field list..... ");
-                    for (auto* fieldListEntry : fieldList->sources) {
-                        auto* fieldInfo = phv.field(fieldListEntry->field);
+                    for (auto fieldListEntry : fieldList->sources) {
+                        auto fieldInfo = phv.field(fieldListEntry->field);
                         if (fieldInfo)
                             LOG3("\t\t" << fieldInfo);
                         else
-                            LOG3("\t\t" <<"-f?"); } } }
-            return; }
+                            LOG3("\t\t" <<"-f?");
+                    }
+                }
+            }
+            return;
+        }
 
         // For mirror digests, associate the mirror field with its field list,
         // which is used during constraint checks for bridge-metadata phv
         // allocation.
         LOG3(".....mirror fields in field list " << f->id << ":" << f->name);
         int fieldListIndex = 0;
-        for (auto* fieldList : digest->fieldLists) {
-            if (!fieldList) continue;
+        for (auto fieldList : digest->fieldLists) {
             LOG3("\t.....mirror metadata field list....." << fieldList);
 
             // The first two entries in the field list are both special and may
@@ -1229,7 +1234,7 @@ class CollectPardeConstraints : public Inspector {
             // compiler_generated_meta.mirror_id must go to [H] and
             // compiler_generated_meta.mirror_source must go to [B].
             // This constraint is handled in the phv allocation.
-            for (auto* mirroredField : fieldList->sources) {
+            for (auto mirroredField : fieldList->sources) {
                 PHV::Field* mirror = phv.field(mirroredField->field);
                 if (mirror) {
                     if (mirror->metadata) {

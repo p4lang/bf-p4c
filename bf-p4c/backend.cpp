@@ -215,7 +215,8 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
 #endif  // HAVE_JBAY
         &defuse,
         new FindDependencyGraph(phv, deps),
-        new MetadataInitialization(options.always_init_metadata, phv, defuse, deps),
+        (options.disable_init_metadata == false) ?
+            new MetadataInitialization(options.always_init_metadata, phv, defuse, deps) : nullptr,
         &defuse,
         (options.no_deadcode_elimination == false) ? new ElimUnused(phv, defuse) : nullptr,
 
