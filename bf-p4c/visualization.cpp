@@ -659,9 +659,77 @@ void Visualization::gen_exm_search_buses(unsigned int stageNo, Util::JsonObject 
     auto *ids = new Util::JsonArray();
     exm_search_buses->emplace("ids", ids);
 
-    // FIXME(amresh): Fill me in.  Where is this information stored?
+    // If sharing is ever supported for search buses, we would need
+    // to keep track of something like id_to_usages to avoid defining an
+    // ID multiple times.
+    for (auto &res : _stageResources[stageNo]._memoriesUsage) {
+        for (auto &use : res._use->memuse) {
+            Memories::Use memuse = use.second;
+            std::string memTypeName = typeName(memuse.type);
+            std::string ext = "";
 
+            // While there are search buses available for selectors, these
+            // are separate from exact match search buses, which is what is
+            // referred to here.
 
+            switch (memuse.type) {
+            case Memories::Use::EXACT:
+            {
+                auto row = memuse.row[0].row;
+                auto bus = memuse.row[0].bus;
+                auto *exm_search_usage = new Util::JsonObject();
+                exm_search_usage->emplace("id", new Util::JsonValue(2 * row + bus));
+                auto *usages = new Util::JsonArray;
+                exm_search_usage->emplace("usages", usages);
+                ids->append(exm_search_usage);
+                auto *usage = new Util::JsonObject();
+                auto tname = res._tableName.substr(res._tableName[0] == '.' ? 1 : 0);
+                usage->emplace("used_by", new Util::JsonValue(tname));
+                usage->emplace("used_for", new Util::JsonValue(memTypeName));
+                // usage->emplace("detail", new Util::JsonValue("?"));
+                usages->append(usage);
+                break;
+            }
+            case Memories::Use::ATCAM:
+            {
+                auto row = memuse.row[0].row;
+                auto bus = memuse.row[0].bus;
+                auto *exm_search_usage = new Util::JsonObject();
+                exm_search_usage->emplace("id", new Util::JsonValue(2 * row + bus));
+                auto *usages = new Util::JsonArray;
+                exm_search_usage->emplace("usages", usages);
+                ids->append(exm_search_usage);
+                auto *usage = new Util::JsonObject();
+                auto tname = res._tableName.substr(res._tableName[0] == '.' ? 1 : 0);
+                usage->emplace("used_by", new Util::JsonValue(tname));
+                usage->emplace("used_for", new Util::JsonValue(memTypeName));
+                // usage->emplace("detail", new Util::JsonValue("?"));
+                usages->append(usage);
+                break;
+            }
+            case Memories::Use::GATEWAY:
+            {
+                auto row = memuse.row[0].row;
+                auto bus = memuse.row[0].bus;
+                auto *exm_search_usage = new Util::JsonObject();
+                exm_search_usage->emplace("id", new Util::JsonValue(2 * row + bus));
+                auto *usages = new Util::JsonArray;
+                exm_search_usage->emplace("usages", usages);
+                ids->append(exm_search_usage);
+                auto *usage = new Util::JsonObject();
+                auto tname = res._tableName.substr(res._tableName[0] == '.' ? 1 : 0);
+                usage->emplace("used_by", new Util::JsonValue(tname));
+                usage->emplace("used_for", new Util::JsonValue(memTypeName));
+                // usage->emplace("detail", new Util::JsonValue("?"));
+                usages->append(usage);
+                break;
+            }
+            default: {
+                break;
+            }
+            }
+        }
+    }
     stage->emplace("exm_search_buses", exm_search_buses);
 }
 
@@ -671,9 +739,79 @@ void Visualization::gen_exm_result_buses(unsigned int stageNo, Util::JsonObject 
     auto *ids = new Util::JsonArray();
     exm_result_buses->emplace("ids", ids);
 
-    // FIXME(amresh): Fill me in.  Where is this information stored?
+    // If sharing is ever supported for result buses, we would need
+    // to keep track of something like id_to_usages to avoid defining an
+    // ID multiple times.
+    for (auto &res : _stageResources[stageNo]._memoriesUsage) {
+        for (auto &use : res._use->memuse) {
+            Memories::Use memuse = use.second;
+            std::string memTypeName = typeName(memuse.type);
+            std::string ext = "";
 
-
+            switch (memuse.type) {
+            case Memories::Use::EXACT:
+            {
+                auto row = memuse.row[0].row;
+                auto bus = memuse.row[0].bus;
+                auto *exm_result_usage = new Util::JsonObject();
+                exm_result_usage->emplace("id", new Util::JsonValue(2 * row + bus));
+                auto *usages = new Util::JsonArray;
+                exm_result_usage->emplace("usages", usages);
+                ids->append(exm_result_usage);
+                auto *usage = new Util::JsonObject();
+                auto tname = res._tableName.substr(res._tableName[0] == '.' ? 1 : 0);
+                usage->emplace("used_by", new Util::JsonValue(tname));
+                usage->emplace("used_for", new Util::JsonValue(memTypeName));
+                // usage->emplace("detail", new Util::JsonValue("?"));
+                usages->append(usage);
+                break;
+            }
+            case Memories::Use::ATCAM:
+            {
+                auto row = memuse.row[0].row;
+                auto bus = memuse.row[0].bus;
+                auto *exm_result_usage = new Util::JsonObject();
+                exm_result_usage->emplace("id", new Util::JsonValue(2 * row + bus));
+                auto *usages = new Util::JsonArray;
+                exm_result_usage->emplace("usages", usages);
+                ids->append(exm_result_usage);
+                auto *usage = new Util::JsonObject();
+                auto tname = res._tableName.substr(res._tableName[0] == '.' ? 1 : 0);
+                usage->emplace("used_by", new Util::JsonValue(tname));
+                usage->emplace("used_for", new Util::JsonValue(memTypeName));
+                // usage->emplace("detail", new Util::JsonValue("?"));
+                usages->append(usage);
+                break;
+            }
+            /*  // Keep this around for when figure out how to distingush bus type.
+            case Memories::Use::GATEWAY: {
+                auto row = memuse.row[0].row;
+                auto unit = memuse.gateway.unit;
+                // FIXME: How do we know if this is a tind bus or exm bus?
+                if (memuse.gateway.payload_bus == 0 || memuse.gateway.payload_bus == 1) {
+                    auto *exm_result_usage = new Util::JsonObject();
+                    auto result_bus_unit = 2 * memuse.gateway.payload_row;
+                    result_bus_unit += memuse.gateway.payload_bus;
+                    exm_result_usage->emplace("id", new Util::JsonValue(result_bus_unit));
+                    auto *usages = new Util::JsonArray;
+                    exm_result_usage->emplace("usages", usages);
+                    ids->append(exm_result_usage);
+                    auto *usage = new Util::JsonObject();
+                    auto tname = res._tableName.substr(res._tableName[0] == '.' ? 1 : 0);
+                    usage->emplace("used_by", new Util::JsonValue(tname));
+                    usage->emplace("used_for", new Util::JsonValue(memTypeName));
+                    // usage->emplace("detail", new Util::JsonValue("?"));
+                    usages->append(usage);
+                }
+                break;
+            }
+            */
+            default: {
+                break;
+            }
+            }
+        }
+    }
     stage->emplace("exm_result_buses", exm_result_buses);
 }
 
@@ -703,15 +841,16 @@ void Visualization::gen_tind_result_buses(unsigned int stageNo, Util::JsonObject
                 tind_result_usage->emplace("usages", usages);
                 ids->append(tind_result_usage);
                 auto *usage = new Util::JsonObject();
-                usage->emplace("used_by", new Util::JsonValue(res._tableName));
+                auto tname = res._tableName.substr(res._tableName[0] == '.' ? 1 : 0);
+                usage->emplace("used_by", new Util::JsonValue(tname));
                 usage->emplace("used_for", new Util::JsonValue(memTypeName));
                 // usage->emplace("detail", new Util::JsonValue("?"));
                 usages->append(usage);
                 break;
             }
             case Memories::Use::GATEWAY: {
-                auto row = memuse.row[0].row;
-                auto unit = memuse.gateway.unit;
+                // auto row = memuse.row[0].row;
+                // auto unit = memuse.gateway.unit;
                 // FIXME: How do we know if this is a tind bus or exm bus?
                 if (memuse.gateway.payload_bus == 0 || memuse.gateway.payload_bus == 1) {
                     auto *tind_result_usage = new Util::JsonObject();
@@ -722,14 +861,15 @@ void Visualization::gen_tind_result_buses(unsigned int stageNo, Util::JsonObject
                     tind_result_usage->emplace("usages", usages);
                     ids->append(tind_result_usage);
                     auto *usage = new Util::JsonObject();
-                    usage->emplace("used_by", new Util::JsonValue(res._tableName));
+                    auto tname = res._tableName.substr(res._tableName[0] == '.' ? 1 : 0);
+                    usage->emplace("used_by", new Util::JsonValue(tname));
                     usage->emplace("used_for", new Util::JsonValue(memTypeName));
                     // usage->emplace("detail", new Util::JsonValue("?"));
                     usages->append(usage);
                 }
                 break;
             }
-            default:{
+            default: {
                 break;
             }
             }
