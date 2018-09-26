@@ -1334,6 +1334,7 @@ bool PHV::SuperCluster::is_well_formed(const SuperCluster* sc) {
 PHV::SlicingIterator::SlicingIterator(const SuperCluster* sc) : sc_i(sc), done_i(false) {
     LOG5("Making SlicingIterator for SuperCluster:");
     LOG5(sc);
+    num_slicings = 0;
 
     has_slice_lists_i = sc->slice_lists().size() > 0;
     if (has_slice_lists_i) {
@@ -2070,8 +2071,19 @@ PHV::SlicingIterator PHV::SlicingIterator::operator++() {
         return *this;
 
     while (!compressed_schemas_i[sentinel_idx_i]) {
+        if (num_slicings % 10000 == 0)
+            LOG4("Tried " << num_slicings << " slicings.");
+        if (num_slicings > 0 && num_slicings > SLICING_THRESHOLD) {
+            std::stringstream ss;
+            ss << "Slicing the following supercluster is taking too long..." << std::endl;
+            ss << "Tried " << num_slicings << " slicings." << std::endl;
+            ss << sc_i;
+            BUG("%1%", ss.str());
+        }
         // Increment the bitvec...
         PHV::inc(compressed_schemas_i);
+        // Increment the counter for number of slicings.
+        ++num_slicings;
         // and set the required slices...
         compressed_schemas_i |= required_slices_i;
         // and set the least significant bits necessary to ensure that

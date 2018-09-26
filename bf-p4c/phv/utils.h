@@ -998,6 +998,11 @@ void enforce_container_sizes(
  * SuperCluster.
  */
 class SlicingIterator {
+    // Threshold for the number of different slicings tried by the slicing iterator. If more
+    // slicings than this are tried, then error out with a message about being unable to slice
+    // superclusters.
+    static constexpr uint64_t SLICING_THRESHOLD = (1 << 20);
+
     const SuperCluster* sc_i;
     bool has_slice_lists_i;
     bitvec compressed_schemas_i;
@@ -1007,6 +1012,9 @@ class SlicingIterator {
     bitvec exact_containers_i;
     int sentinel_idx_i;
     std::list<PHV::SuperCluster*> cached_i;
+
+    /// Number of different slicings tried by the slicing iterator.
+    uint64_t num_slicings;
 
     /// true when all possible slicings have been exhausted.  Two iterators
     /// with `done_i` set are always equal.
