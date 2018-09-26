@@ -43,9 +43,6 @@
 [submodule "p4-tests/p4_16/bf-onos-new"]
 	path = p4-tests/p4_16/bf-onos-new
 	url = git@github.com:barefootnetworks/bf-onos.git
-[submodule "p4-tests/p4_14/switch-8.3"]
-	path = p4-tests/p4_14/switch-8.3
-	url = git@github.com:barefootnetworks/switch.git
 [submodule "p4-tests/p4_14/switch-8.4"]
 	path = p4-tests/p4_14/switch-8.4
 	url = git@github.com:barefootnetworks/switch.git

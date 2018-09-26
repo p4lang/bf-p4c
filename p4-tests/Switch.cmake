@@ -40,47 +40,12 @@ p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
     "switch_generic_int_leaf" ${switchtest} "${testExtraArgs}" "-DGENERIC_INT_LEAF_PROFILE")
 
-# Switch On Release 8.3 (refpoint must be periodically updated)
-set  (SWITCH_8.3_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch-8.3/p4src/switch.p4)
-set  (isXFail TRUE)
-file (RELATIVE_PATH switch_8.3_test ${P4C_SOURCE_DIR} ${SWITCH_8.3_P4})
-
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_8.3_dc_basic" ${switch_8.3_test} "${testExtraArgs}" "-DDC_BASIC_PROFILE")
-
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
-    "switch_8.3_ent_fin_postcard" ${switch_8.3_test} "${testExtraArgs}" "-DENT_FIN_POSTCARD_PROFILE")
-
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_8.3_ent_dc_general" ${switch_8.3_test} "${testExtraArgs}" "-DENT_DC_GENERAL_PROFILE")
-
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_8.3_msdc" ${switch_8.3_test} "${testExtraArgs}" "-DMSDC_PROFILE -DP4_WRED_DEBUG")
-
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_8.3_msdc_ipv4" ${switch_8.3_test} "${testExtraArgs}" "-DMSDC_IPV4_PROFILE")
-
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_8.3_msdc_l3" ${switch_8.3_test} "${testExtraArgs}" "-DMSDC_L3_PROFILE")
-
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_8.3_msdc_spine_int" ${switch_8.3_test} "${testExtraArgs}" "-DMSDC_SPINE_DTEL_INT_PROFILE")
-
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_8.3_msdc_leaf_int" ${switch_8.3_test} "${testExtraArgs}" "-DMSDC_LEAF_DTEL_INT_PROFILE")
-
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_8.3_l3_heavy_int_leaf" ${switch_8.3_test} "${testExtraArgs}" "-DL3_HEAVY_INT_LEAF_PROFILE")
-
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_8.3_generic_int_leaf" ${switch_8.3_test} "${testExtraArgs}" "-DGENERIC_INT_LEAF_PROFILE")
-
 # Switch On Release 8.4 (refpoint must be periodically updated)
 set  (SWITCH_8.4_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch-8.4/p4src/switch.p4)
 set  (SWITCH_8.4_PTF_DIR ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch-8.4/ptf-tests/base/api-tests)
 set  (SWITCH_8.4_PTF_DIR_MIRROR ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch-8.4/ptf-tests/base/feature-tests)
 set  (SWITCH_8.4_PTF_DIR_SAI ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch-8.4/ptf-tests/base/sai-ocp-tests)
-set  (SWITCH_8.4_PTF_DIR_SAI_DTEL ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch-8.3/ptf-tests/dtel/sai-tests)
+set  (SWITCH_8.4_PTF_DIR_SAI_DTEL ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch-8.4/ptf-tests/dtel/sai-tests)
 set  (SWITCH_8.4_PTF_DIR_EGRESS_ACL ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch-8.4/ptf-tests/egress-acl/api-tests)
 set  (SWITCH_8.4_PTF_DIR_WRED ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch-8.4/ptf-tests/wred/api-tests)
 set  (SWITCH_8.4_PTF_DIR_DTEL ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch-8.4/ptf-tests/dtel/api-tests)

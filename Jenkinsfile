@@ -44,15 +44,15 @@ node {
                             ansiColor('xterm') {
                                 timestamps {
                                     sh "echo 'Running switch profiles compilation for master'"
-                                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' bf-p4c-compilers_${image_tag} ctest -R '^tofino/.*switch_' -E 'smoketest|8.3|8.4|p4_14'"
+                                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' bf-p4c-compilers_${image_tag} ctest -R '^tofino/.*switch_' -E 'smoketest|8.4|p4_14'"
                                 }
                             }
                         }
-                        stage ('switch_8.3_profiles') {
+                        stage ('switch_8.4_profiles') {
                             ansiColor('xterm') {
                                 timestamps {
-                                    sh "echo 'Running switch profiles compilation for rel_8_3'"
-                                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' bf-p4c-compilers_${image_tag} ctest -R '^tofino/.*switch_8.3_' -E 'smoketest'"
+                                    sh "echo 'Running switch profiles compilation for rel_8_4'"
+                                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' bf-p4c-compilers_${image_tag} ctest -R '^tofino/.*switch_8.4_' -E 'smoketest'"
                                 }
                             }
                         }

@@ -278,8 +278,8 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "In table .*, the number of bytes required to go through the immediate pathway"
   extensions/p4_tests/p4_14/test_config_311_hash_adb.p4
-  switch_8.3_l3_heavy_int_leaf
   switch_l3_heavy_int_leaf
+  switch_8.4_l3_heavy_int_leaf
   switch_ent_fin_postcard
   )
 
@@ -304,6 +304,7 @@ p4c_add_xfail_reason("tofino"
   "error.*Power worst case estimated budget exceeded by*"
   extensions/p4_tests/p4_14/p4-tests/programs/clpm/clpm.p4
   switch_msdc_leaf_int
+  switch_8.4_msdc_leaf_int
   )
 
 # switch_spine_dtel_int test failures
@@ -828,6 +829,11 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4-tests/programs/iterator/iterator.p4
   )
 
+p4c_add_xfail_reason("tofino"
+  "No tables placeable, but not all tables placed"
+  extensions/p4_tests/p4_14/p4-tests/programs/tcam_search/tcam_search.p4
+  )
+
 # XXX(cole): Temporarily override previous XFAILs with new failures related to
 # PHV allocation.
 p4c_add_xfail_reason("tofino"
@@ -1006,13 +1012,13 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
-  switch_8.3_generic_int_leaf
+  switch_8.4_generic_int_leaf
   switch_generic_int_leaf
 )
 
 p4c_add_xfail_reason("tofino"
   "action instruction slot .* in use elsewhere"
-  switch_8.3_msdc_ipv4
+  switch_8.4_msdc_ipv4
   switch_msdc_ipv4
 )
 
@@ -1050,6 +1056,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   switch_msdc_l3
+  switch_8.4_msdc_l3
 )
 
 # BRIG-651
@@ -1284,7 +1291,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: ALU ops cannot operate on slices"
   extensions/p4_tests/p4_14/p4smith_regression/shrubs_0.p4
-  switch_8.3_msdc_leaf_int
 )
 
 # BRIG-927
