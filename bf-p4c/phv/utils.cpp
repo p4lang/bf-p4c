@@ -1366,11 +1366,27 @@ PHV::SlicingIterator::SlicingIterator(const SuperCluster* sc) : sc_i(sc), done_i
         //    `required_slices_i` bitvec is a compressed schema with bits that
         //    must always be 1.
         int offset = 0;
+
+        // Map of field slice to its byte location; the value pair is [left byte, right byte] within
+        // within the slicing schema. If the field is the first field in the slice list, the left
+        // byte is set to -1; similarly, the right byte is set to -1 if the field is the last field
+        // in the slice list. The first and last field slices are special because we always
+        // pre-slice the supercluster before the first field slice and after the last field slice in
+        // that supercluster.
+        ordered_map<FieldSlice, std::pair<int, int>> sliceLocations;
+
+        // Map of field slice to the size of the slice list it is in. The field slices in this map
+        // must belong to slice lists that have an exact containers requirement.
+        ordered_map<FieldSlice, int> exactSliceListSize;
         for (auto* list : sc->slice_lists()) {
             int size = 0;
+            // set to true, if any slice in the slice list has an exact containers requirement.
             bool has_exact_containers = false;
+            boost::optional<FieldSlice> lastSlice = boost::none;
             // Always require a split at the beginning of a slice with deparsed_bottom_bits.
             for (auto& slice : *list) {
+                // Set the last seen slice.
+                lastSlice = slice;
                 if (slice.field()->exact_containers())
                     has_exact_containers = true;
                 if (slice.field()->deparsed_bottom_bits() && slice.range().lo == 0 && size > 0) {
@@ -1381,7 +1397,16 @@ PHV::SlicingIterator::SlicingIterator(const SuperCluster* sc) : sc_i(sc), done_i
                     LOG6("Required slice at " << offset + (size / 8 - 1)
                          << " for field slice " << slice);
                     required_slices_i.setbit(offset + (size / 8 - 1)); }
-                size += slice.size(); }
+                // Nearest byte aligned interval before this field slice.
+                // Detect the byte limits for each slice.
+                int left_limit = -1;
+                int right_limit = -1;
+                if (size != 0)
+                    left_limit = offset + (size / 8 - 1);
+                size += slice.size();
+                right_limit = offset + (size / 8 - (1 - bool(size % 8)));
+                sliceLocations[slice] = std::make_pair(left_limit, right_limit);
+            }
             BUG_CHECK(size > 0, "Empty slice list");
 
             // (range[list].hi + 1) * 8 is the first split position *beyond the
@@ -1389,12 +1414,29 @@ PHV::SlicingIterator::SlicingIterator(const SuperCluster* sc) : sc_i(sc), done_i
             // cannot be sliced, which is reflected in bits_needed == 0.
             int bits_needed = size / 8 - (1 - bool(size % 8));
             ranges_i[list] = StartLen(offset, bits_needed);
-            if (has_exact_containers)
+            if (has_exact_containers) {
                 exact_containers_i.setrange(offset, bits_needed);
+                // Note down the size of the slice list for each slice of slice lists with
+                // exact_containers requirement.
+                for (auto& slice : *list)
+                    exactSliceListSize[slice] = size;
+            }
             offset += bits_needed;
             boundaries_i.setbit(offset);
             LOG5("    ...slice list (" << size << "b) with compressed bitvec size "
-                 << bits_needed); }
+                 << bits_needed << " and offset " << offset);
+
+            BUG_CHECK(lastSlice != boost::none, "Were there no slices in the slice list?");
+            sliceLocations[*lastSlice].second = -1;
+        }
+        if (LOGGING(6)) {
+            LOG6("Printing slicing related information for each slice in the format " <<
+                 "SLICE : sliceListSize, left limit, right limit.");
+            for (auto kv : exactSliceListSize)
+                LOG6(kv.first << " : " << kv.second << "b, " << sliceLocations[kv.first].first <<
+                     "L, "  << sliceLocations[kv.first].second << "R");
+        }
+
 
         // TODO: Consider `no_pack` constraints in required_slices.  If a slice
         // in a slice list has `no_pack`, then the slice list needs to be
@@ -1427,6 +1469,143 @@ PHV::SlicingIterator::SlicingIterator(const SuperCluster* sc) : sc_i(sc), done_i
             for (int x : required_slices_i)
                 ss << ((x + 1) * 8) << " ";
             LOG5("    ...with fixed slices at " << ss.str()); }
+
+        // XXX(Deep): The true constraint is that slices, which are part of a rotational cluster
+        // must be sliced in the same way. This prevents searching through invalid values of the
+        // slicing iterator.
+
+        // For now, we ensure that if multiple slices in the same rotational cluster belong to
+        // different slice lists with exact container requirements, and the width of those slice
+        // lists are different, then the required slicing should necessarily be equivalent for all
+        // those multiple slices in the same rotational cluster.
+        for (auto kv : exactSliceListSize) {
+            LOG6("Considering slice " << kv.first);
+            // { kv.first } set are all slice lists that have an exact container requirement and
+            // belong to slice lists.
+            auto& rot_cluster = sc->cluster(kv.first);
+            int minSize = INT_MAX;
+            boost::optional<FieldSlice> minSlice;
+            for (auto& slice : rot_cluster.slices()) {
+                // Ignore the loop if the slice in the rotational cluster is the same as the
+                // candidate slice.
+                if (slice == kv.first) continue;
+                // If the slice in the rotational cluster does not have the exact containers
+                // requirement (it is metadata), then it does not induce any slicing requirements.
+                if (!slice.field()->exact_containers()) continue;
+                // If the slice list size for the non metadata slice is greater than the current
+                // field's slice list size, then continue. Because this slice might be the smallest
+                // slice of the rotational slices.
+                if (exactSliceListSize[kv.first] <= exactSliceListSize[slice]) continue;
+                // Determine the smallest slice with exact containers requirement that is in the
+                // same rotational cluster as this field.
+                LOG6("  Candidate slice list for required slicing: " << slice);
+                if (minSize > exactSliceListSize[slice]) {
+                    minSlice = slice;
+                    minSize = exactSliceListSize[slice];
+                }
+            }
+            if (!minSlice) continue;
+            LOG6("\tMin slice: " << *minSlice << ", min slice list size: " << minSize);
+            // XXX(Deep): We need to relax this constraint. The branch deep/full-slice-fix contains
+            // a solution for this, but unfortunately causes DC_BASIC to fail.
+            if (minSize != kv.first.size()) {
+                LOG6("\t  Ignoring slice because min slice list size and the slice width are"
+                     " different.");
+                continue;
+            }
+            // If the slices are equal in size, then slice at the boundaries of this slice.
+            int left = sliceLocations[kv.first].first;
+            int right = sliceLocations[kv.first].second;
+            bool newSliceBoundaryFound = false;
+            if (left != -1) {
+                required_slices_i.setbit(left);
+                newSliceBoundaryFound = true;
+                LOG6("\t  Slicing before slice " << kv.first);
+            }
+            if (right != -1) {
+                required_slices_i.setbit(right);
+                newSliceBoundaryFound = true;
+                LOG6("\t  Slicing after slice " << kv.first);
+            }
+            if (!newSliceBoundaryFound) continue;
+            // Update the slice list maps that help us decided the required_slices_i value. Once we
+            // decide to break a slice list at a particular boundary, we will get new slice lists;
+            // we need to update the slice list sizes and the byte boundaries for each slice, once
+            // the point for slicing is found.
+            auto& slice_lists = sc->slice_list(kv.first);
+            BUG_CHECK(slice_lists.size() == 1, "Multiple slice lists contain slice %1%?", kv.first);
+            const auto* slice_list = *(slice_lists.begin());
+            int intra_list_size = 0;
+            std::vector<FieldSlice> seenFieldSlices;
+            for (auto& slice : *slice_list) {
+                LOG6("\t\t" << slice << " : " << exactSliceListSize[slice] << "b, " <<
+                     sliceLocations[slice].first << "L, " << sliceLocations[slice].second << "R");
+                if (slice == kv.first && left != -1) {
+                    // Boundary was shifted to before this field, so change the size for the fields
+                    // seen so far.
+                    for (auto& sl : seenFieldSlices) {
+                        exactSliceListSize[sl] = intra_list_size;
+                        sliceLocations[sl].second = left;
+                        LOG6("\t\t  " << sl << " : " << exactSliceListSize[slice] << "b, " <<
+                             sliceLocations[slice].first << "L, " << sliceLocations[slice].second <<
+                             "R");
+                    }
+                    seenFieldSlices.clear();
+                    intra_list_size = 0;
+                }
+                // Add data related to the current slice whose MAU constraints are being considered.
+                intra_list_size += slice.size();
+                if (slice == kv.first) {
+                    exactSliceListSize[slice] = intra_list_size;
+                    sliceLocations[slice].first = -1;
+                    sliceLocations[slice].second = -1;
+                    LOG6("\t\t  " << slice << " : " << exactSliceListSize[slice] << "b, " <<
+                         sliceLocations[slice].first << "L, " << sliceLocations[slice].second <<
+                         "R");
+                    continue;
+                }
+                // If the right byte value of a slice is not -1, then it is not the last slice in
+                // the slice list. Therefore, this slice is at the start/middle of the slice list
+                // that will represent the slices after the slice under consideration; we need to
+                // hold off on updating the state for this slice until all the fields in the new
+                // left-over slice list are seen.
+                if (sliceLocations[slice].second != -1) {
+                    seenFieldSlices.push_back(slice);
+                    continue;
+                }
+                // There are fields that are now in a different slice list from the right of the
+                // slice in question.
+                int i = 0;
+                int left_limit = -1;
+                int new_slice_list_size = 0;
+                for (auto& sl : seenFieldSlices) {
+                    // For the first slice, set left to -1.
+                    new_slice_list_size += sl.size();
+                    if (i++ == 0) {
+                        left_limit = sliceLocations[sl].first;
+                        sliceLocations[sl].first = -1;
+                        exactSliceListSize[sl] = intra_list_size;
+                        LOG6("\t\t  " << sl << " : " << intra_list_size << exactSliceListSize[sl] <<
+                             "b, " << sliceLocations[sl].first << "L, " << sliceLocations[sl].second
+                             << "R");
+                        continue;
+                    }
+                    // Reset limits for slices that are not the first or the last slice of the
+                    // resulting slice list.
+                    int new_left_limit = left_limit + (new_slice_list_size / 8);
+                    exactSliceListSize[sl] = intra_list_size;
+                    sliceLocations[sl].first = new_left_limit;
+                    LOG6("\t\t  " << sl << " : " << exactSliceListSize[sl] << "b, " <<
+                         sliceLocations[sl].first << "L, " << sliceLocations[sl].second << "R");
+                }
+                // Reset limits for the last slice in the new resulting slice list.
+                int new_left_limit = left_limit + (new_slice_list_size / 8);
+                sliceLocations[slice].first = new_left_limit;
+                exactSliceListSize[slice] = intra_list_size;
+                LOG6("\t\t  " << slice << " : " << exactSliceListSize[slice] << "b, " <<
+                     sliceLocations[slice].first << "L, " << sliceLocations[slice].second << "R");
+            }
+        }
 
         compressed_schemas_i = required_slices_i;
         // Start with the smallest number that has sequences of exactly zero,
