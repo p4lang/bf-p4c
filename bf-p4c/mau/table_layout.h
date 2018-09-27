@@ -108,7 +108,6 @@ class TableLayout : public MauModifier, Backtrack {
     bool preorder(IR::MAU::Table *tbl) override;
     bool preorder(IR::MAU::Action *act) override;
     bool preorder(IR::MAU::InputXBarRead *read) override;
-    bool preorder(IR::MAU::Counter *cntr) override;
     void check_for_alpm(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl,
                          cstring &partition_index);
     void setup_instr_and_next(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl);
@@ -127,6 +126,16 @@ class TableLayout : public MauModifier, Backtrack {
     static void check_for_ternary(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl);
     static void check_for_atcam(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl,
                                 cstring &partition_index, const PhvInfo& phv);
+};
+
+/// Run after TablePlacement to fix up anything needed in the layout as a result
+class FinalTableLayout : public MauModifier {
+    const PhvInfo &phv;
+    LayoutChoices &lc;
+    bool preorder(IR::MAU::Counter *cntr) override;
+
+ public:
+    explicit FinalTableLayout(const PhvInfo &p, LayoutChoices &l) : phv(p), lc(l) {}
 };
 
 #endif /* BF_P4C_MAU_TABLE_LAYOUT_H_ */

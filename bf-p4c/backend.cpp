@@ -131,6 +131,7 @@ class TableAllocPass : public Logging::PassManager {
                 new TablePlacement(&deps, mutex, phv, lc, siaa, options.forced_placement),
                 new CheckTableNameDuplicate,
                 new TableFindSeqDependencies,  // not needed?
+                new FinalTableLayout(phv, lc),
                 new CheckTableNameDuplicate
             });
 

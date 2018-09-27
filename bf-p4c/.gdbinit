@@ -9,6 +9,7 @@ if $_isvoid($bpnum)
     break ErrorReporter::emit_message
     disable
     break Util::P4CExceptionBase::P4CExceptionBase<>
+    break Util::P4CExceptionBase::traceCreation
     break BaseCompileContext::getDefaultErrorDiagnosticAction
 end
 
@@ -288,12 +289,50 @@ class safe_vector_Printer:
     def children(self):
         return self._iter(self.val)
 
+def bvec_size(vec):
+    sz = int(vec_end(vec)['_M_p'] - vec_begin(vec)['_M_p'])
+    sz = sz * vec_begin(vec)['_M_p'].type.target().sizeof * 8
+    sz = sz + int(vec_end(vec)['_M_offset'] - vec_begin(vec)['_M_offset'])
+    return sz
+
+class safe_vector_bool_Printer:
+    "Print a safe_vector<bool>"
+    def __init__(self, val):
+        self.val = val
+    def to_string(self):
+        return "" if bvec_size(self.val) > 0 else "[]"
+    class _iter:
+        def __init__(self, val):
+            self.val = val
+            self.end = vec_end(val)
+            self.ptr = vec_begin(val)['_M_p']
+            self.offset = vec_begin(val)['_M_offset']
+            self.idx = 0
+        def __iter__(self):
+            return self
+        def __next__(self):
+            if self.ptr == self.end['_M_p'] and self.offset >= self.end['_M_offset']:
+                raise StopIteration
+            ptr = self.ptr
+            offset = self.offset
+            idx = self.idx
+            self.offset = offset + 1
+            self.idx = idx + 1
+            if self.offset == self.ptr.type.target().sizeof * 8:
+                self.offset = 0
+                self.ptr = self.ptr + 1
+            return ("[%d]" % idx, (self.ptr.dereference() >> self.offset) & 1);
+        def next(self): return self.__next__()
+    def children(self):
+        return self._iter(self.val)
+
 class MemoriesUsePrinter(object):
     "Print a Memories::Use object"
     def __init__(self, val):
         self.val = val
     def to_string(self):
-        types = [ 'EXACT', 'TERNARY', 'GATEWAY', 'TIND', '2PORT', 'ADATA' ]
+        types = [ 'EXACT', 'ATCAM', 'TERNARY', 'GATEWAY', 'TIND', 'IDLETIME', 'COUNTER',
+                  'METER', 'SELECTOR', 'STATEFUL', 'ACTIONDATA' ]
         t = int(self.val['type'])
         if t >= 0 and t < len(types):
             t = types[t]
@@ -426,6 +465,8 @@ class SlicePrinter(object):
 def find_pp(val):
     if str(val.type.tag).startswith('ordered_map<'):
         return ordered_map_Printer(val)
+    if str(val.type.tag).startswith('safe_vector<bool'):
+        return safe_vector_bool_Printer(val)
     if str(val.type.tag).startswith('safe_vector<'):
         return safe_vector_Printer(val)
     if val.type.tag == 'ActionFormat::Use':

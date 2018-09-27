@@ -4,6 +4,7 @@
 #include <set>
 #include "bf-p4c/mau/input_xbar.h"
 #include "bf-p4c/mau/memories.h"
+#include "bf-p4c/mau/resource.h"
 #include "bf-p4c/mau/table_format.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "lib/bitops.h"
@@ -766,7 +767,7 @@ static bool tol(double b, double maxVal, int num_counters) {
     return false;
 }
 
-void calculate_lrt_threshold_and_interval(IR::MAU::Counter *cntr) {
+void calculate_lrt_threshold_and_interval(const IR::MAU::Table *tbl, IR::MAU::Counter *cntr) {
     if (cntr->threshold != -1) return; /* calculated already? */
     auto annot = cntr->annotations;
     bool lrt_enabled = false;
@@ -807,7 +808,11 @@ void calculate_lrt_threshold_and_interval(IR::MAU::Counter *cntr) {
         return;
     }
 
-    auto num_counters = cntr->size;
+    auto &mem = tbl->resources->memuse.at(tbl->unique_id(cntr));
+    int rams;
+    for (auto &row : mem.row)
+        rams += row.col.size();
+    auto num_counters = (rams-1) * 1024 * CounterPerWord(cntr);
     auto width = CounterWidth(cntr);
     if (width == 1) return;
 
@@ -875,9 +880,7 @@ void calculate_lrt_threshold_and_interval(IR::MAU::Counter *cntr) {
 #undef roundUp
 }
 
-
-
-bool TableLayout::preorder(IR::MAU::Counter *cntr) {
-  calculate_lrt_threshold_and_interval(cntr);
-  return true;
+bool FinalTableLayout::preorder(IR::MAU::Counter *cntr) {
+    calculate_lrt_threshold_and_interval(findContext<IR::MAU::Table>(), cntr);
+    return false;
 }
