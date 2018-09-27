@@ -751,8 +751,12 @@ class AnalyzeProgram : public Inspector {
     void postorder(const IR::P4Program *) override {
         auto params = structure->toplevel->getMain()->getConstructorParameters();
         if (params->parameters.size() != 6) {
-            ::error("Expecting 6 parameters instead of %1% in the 'main' instance",
-                    params->parameters.size());
+            std::stringstream msg;
+            msg << "Expecting 6 parameters instead of " << params->parameters.size()
+                << " in the 'main' instance." << std::endl;
+            msg << "Did you specify the correct architecture using --arch?";
+
+            ::error("%1%", msg.str());
             return;
         }
         analyzeArchBlock<IR::P4Parser, IR::ParserBlock>(
