@@ -69,7 +69,7 @@ struct P4iParserState : ToJsonObject {
     int tcam_row;  // required, enum=range(0, 256), Parser TCAM row.
     int shifts;    // required, enum=range(0,33), Number of bytes shifted in the buffer.
     std::vector<P4iParserExtract> extracts;   // required, List of extractors in use.
-    std::vector<P4iParserMatchOn> matchesOn;  // required, List of matches in use.
+    std::vector<P4iParserMatchOn> matches;  // required, List of matches in use.
     bool has_counter;    // required, True if the state uses a counter.
     cstring state_name;  // required, Name of the state in this row.
     int previous_state_id = 0;   // required, The id of the previous state for this transition.
@@ -81,7 +81,7 @@ struct P4iParserState : ToJsonObject {
         rst->emplace("tcam_row", new Util::JsonValue(tcam_row));
         rst->emplace("shifts", new Util::JsonValue(shifts));
         rst->emplace("extracts", toJsonArray(extracts));
-        rst->emplace("matchesOn", toJsonArray(matchesOn));
+        rst->emplace("matchesOn", toJsonArray(matches));
         rst->emplace("has_counter", new Util::JsonValue(has_counter));
         rst->emplace("state_name", new Util::JsonValue(state_name));
         rst->emplace("previous_state_id", new Util::JsonValue(previous_state_id));

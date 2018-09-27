@@ -34,16 +34,27 @@ GenerateParserP4iJson::generateExtracts(const IR::BFN::LoweredParserMatch* match
 }
 
 std::vector<P4iParserMatchOn>
-GenerateParserP4iJson::generateMatchOn(const IR::BFN::LoweredParserState* state,
+GenerateParserP4iJson::generateMatches(const IR::BFN::LoweredParserState* prev_state,
+                                       const IR::BFN::LoweredParserState* curr_state,
                                        const IR::BFN::LoweredParserMatch* match) {
     std::vector<P4iParserMatchOn> rst;
-    auto* select = state->select;
-    for (const auto& reg : select->regs) {
+
+    for (const auto& reg : curr_state->select->regs) {
         P4iParserMatchOn match_on;
         match_on.hardware_id   = reg.id;
         match_on.bit_width     = reg.size * 8;
-        if (match->bufferRequired)
-            match_on.buffer_offset = int(match->bufferRequired.value());
+
+        // XXX(zma) This assumes the match word is saved into the match registers in the
+        // previous state. This however is not true in general -- match word can be saved
+        // and forward to any future state.
+        for (auto prev_match : prev_state->match) {
+            for (auto prev_save : prev_match->saves) {
+                if (prev_save->dest == reg) {
+                    match_on.buffer_offset = prev_save->source->extractedBytes().loByte();
+                }
+            }
+        }
+
         if (auto* const_val = match->value->to<IR::BFN::LoweredConstMatchValue>()) {
             // TODO(yumin): value can be truncated to represent values in each
             // match register, for more precise result.
@@ -90,7 +101,7 @@ GenerateParserP4iJson::generateStateByMatch(
     state.tcam_row      = getTcamId(match);
     state.shifts        = match->shift;
     state.extracts      = generateExtracts(match);
-    state.matchesOn     = generateMatchOn(curr_state, match);
+    state.matches       = generateMatches(prev_state, curr_state, match);
     state.has_counter   = false;  // TODO(yumin): update this when counter is supported.
     state.state_name    = curr_state->name;
     if (prev_state) {
