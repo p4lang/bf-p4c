@@ -1,4 +1,5 @@
 #include <openssl/sha.h>
+#include <unistd.h>
 #include <cstdio>
 #include <cstring>
 #include <ctime>
@@ -8,7 +9,10 @@
 RunId::RunId() {
     const time_t now = time(NULL);
     char input[1024];
-    strftime(input, 1024, "%c", localtime(&now));
+    auto len = strftime(input, 1024, "%c", localtime(&now));
+    input[len] = '\0';
+    // introduce more entropy: the process id
+    snprintf(input + len, 1023-len, "%d", getpid());
     unsigned char hash[SHA256_DIGEST_LENGTH];
     SHA256_CTX sha256;
     SHA256_Init(&sha256);
