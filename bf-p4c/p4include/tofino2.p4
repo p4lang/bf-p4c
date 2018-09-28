@@ -288,6 +288,8 @@ header egress_intrinsic_metadata_t {
                                         // deflected due to deflect_on_drop.
 
     bit<16> pkt_length;                 // Packet length, in bytes
+
+    bit<8> _pad9;
 }
 
 

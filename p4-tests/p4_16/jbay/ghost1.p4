@@ -52,4 +52,4 @@ control ghost(in ghost_intrinsic_metadata_t md) {
 }
 
 #define USE_GHOST ghost
-#include "common_jna_test.h"
+#include "common_t2na_test.h"

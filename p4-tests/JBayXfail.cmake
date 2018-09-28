@@ -187,8 +187,7 @@ p4c_add_xfail_reason("tofino2"
   )
 
 p4c_add_xfail_reason("tofino2"
-  "test.IPv4ChecksumUpdateTest ... FAIL"
-  # needs tna to jna translation
+  "test.IPv4ChecksumVerifyTest ... FAIL"
   extensions/p4_tests/p4_16/ipv4_checksum.p4
   )
 

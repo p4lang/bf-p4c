@@ -41,4 +41,4 @@ control ingress(inout headers hdr, inout metadata meta,
     }
 }
 
-#include "common_jna_test.h"
+#include "common_t2na_test.h"

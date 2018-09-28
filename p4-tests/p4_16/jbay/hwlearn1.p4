@@ -138,7 +138,7 @@ control ingress(inout headers hdr, inout metadata meta,
             rv = val.fid; } };
 
     /* final flow packet counter */
-    // FIXME -- jna Counter broken?  crashes on CounterType_t.PACKETS
+    // FIXME -- t2na Counter broken?  crashes on CounterType_t.PACKETS
     Register<bit<16>, bit<16>>(4096) flow_counter;
     RegisterAction<bit<16>, bit<16>, bit<16>>(flow_counter) inc_flow_counter = {
         void apply(inout bit<16> val) { val = val + 1; } };
@@ -172,4 +172,4 @@ control ingress(inout headers hdr, inout metadata meta,
     }
 }
 
-#include "common_jna_test.h"
+#include "common_t2na_test.h"

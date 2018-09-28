@@ -68,9 +68,8 @@ parser SwitchIngressParser(
     state parse_port_metadata {
 #if __TARGET_TOFINO__ == 1
         pkt.advance(64);
-#endif
-#if __TARGET_TOFINO__ == 2
-        pkt.advance(196);
+#elif __TARGET_TOFINO__ == 2
+        pkt.advance(192);
 #endif
         transition parse_ethernet;
     }
