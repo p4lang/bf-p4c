@@ -2349,6 +2349,8 @@ bool IXBar::allocHashDistAddress(int bits_required, const bitvec used_hash_dist_
     bitvec &bit_mask, std::map<int, le_bitrange> &bit_starts, cstring name) {
     bool can_allocate = false;
     int address_group = -1;
+    if (bits_required > HASH_DIST_MAX_EXPAND_BITS)
+        bits_required = HASH_DIST_MAX_EXPAND_BITS;
     for (int i = 0; i < HASH_DIST_SLICES - 1; i++) {
         bool collision = false;
         if (used_hash_dist_slices.getbit(i)) continue;
@@ -2393,7 +2395,7 @@ bool IXBar::allocHashDistAddress(int bits_required, const bitvec used_hash_dist_
                 bit_mask.setbit(index);
             }
             bit_starts[address_group * 7 + 2 * HASH_DIST_BITS]
-                = { HASH_DIST_BITS, bits_required };
+                = { HASH_DIST_BITS, bits_required - 1 };
         }
     }
     return true;
@@ -2821,10 +2823,14 @@ bool IXBar::XBarHashDist::preorder(const IR::MAU::HashDist *hd) {
     IXBar::HashDistUse hd_use(hd);
 
     int bits_required = 0;
-    if (tbl->for_dleft())
+    if (tbl->for_dleft()) {
         bits_required = TableFormat::RAM_GHOST_BITS + ceil_log2(lo->dleft_hash_sizes[0]);
-    else
+    } else {
         bits_required = hd->bit_width;
+        if ((hdt == IXBar::Use::COUNTER_ADR || hdt == IXBar::Use::METER_ADR ||
+             hdt == IXBar::Use::ACTION_ADR) && bits_required > HASH_DIST_MAX_EXPAND_BITS)
+            // non-immediates use the hash-dist 'expand' which is limited width
+            bits_required = HASH_DIST_MAX_EXPAND_BITS; }
 
     if (!self.allocHashDist(hd, hdt, phv, af, hd_use.use, false, bits_required, tbl->name) &&
         !self.allocHashDist(hd, hdt, phv, af, hd_use.use, true, bits_required, tbl->name)) {

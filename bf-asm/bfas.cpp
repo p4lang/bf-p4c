@@ -119,6 +119,7 @@ int main(int ac, char **av) {
     const char *firstsrc = 0;
     struct stat st;
     bool asmfile = false;
+    bool disable_clog = true;
     extern void register_exit_signals();
     register_exit_signals();
     program_name = av[0];
@@ -209,6 +210,7 @@ int main(int ac, char **av) {
                             << std::endl;
                         error_count++;
                         break; }
+                    disable_clog = false;
                     if (auto *tmp = new std::ofstream(av[i])) {
                         if (*tmp) {
                             /* FIXME -- tmp leaks, but if we delete it, the log
@@ -250,6 +252,7 @@ int main(int ac, char **av) {
                     options.binary = ONE_PIPE;
                     break;
                 case 'T':
+                    disable_clog = false;
                     if (*arg) {
                         Log::addDebugSpec(arg);
                         arg += strlen(arg);
@@ -267,6 +270,7 @@ int main(int ac, char **av) {
                         error_count++; }
                     break;
                 case 'v':
+                    disable_clog = false;
                     Log::increaseVerbosity();
                     break;
                 case 'W':
@@ -290,6 +294,8 @@ int main(int ac, char **av) {
         } else {
             std::cerr << "Can't read " << av[i] << ": " << strerror(errno) << std::endl;
             error_count++; } }
+    if (disable_clog)
+        std::clog.setstate(std::ios_base::failbit);
     if (!asmfile) {
         std::cerr << "No assembly file specified" << std::endl;
         error_count++; }

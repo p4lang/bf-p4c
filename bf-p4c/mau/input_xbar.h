@@ -38,6 +38,7 @@ struct IXBar {
     static constexpr int HASH_SINGLE_BITS = 12;  /* top 12 bits of hash table individually */
     static constexpr int HASH_DIST_SLICES = 3;
     static constexpr int HASH_DIST_BITS = 16;
+    static constexpr int HASH_DIST_MAX_EXPAND_BITS = 23;
     static constexpr int HASH_DIST_UNITS = 2;
     static constexpr int TOFINO_METER_ALU_BYTE_OFFSET = 8;
     static constexpr int LPF_INPUT_BYTES = 4;

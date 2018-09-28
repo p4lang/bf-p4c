@@ -63,7 +63,7 @@ template<int N> struct ubits : ubits_base {
         if (disabled_)
             ERROR("Writing disabled register value in " << this);
         if (write)
-            WARNING("Overwriting " << value << " with " << v << " in " << this);
+            ERRWARN(value != v, "Overwriting " << value << " with " << v << " in " << this);
         value = v;
         write = true;
         log("=", v);
