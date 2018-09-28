@@ -10,9 +10,9 @@ enum class MeterType { UNUSED, STFUL_INST0, COLOR_BLIND, STFUL_INST1, SELECTOR, 
                        COLOR_AWARE, STFUL_INST3, METER_TYPES };
 enum class StatefulUse { NO_USE, DIRECT, INDIRECT, LOG, STACK_PUSH, STACK_POP, FIFO_PUSH,
                          FIFO_POP, STFUL_TYPES };
-enum class AddrLocation { DIRECT, OVERHEAD, HASH, STFUL_COUNTER, NOT_SET };
-enum class PfeLocation { DEFAULT, OVERHEAD, PAYLOAD, NOT_SET };
-enum class TypeLocation { DEFAULT, OVERHEAD, NOT_SET };
+enum class AddrLocation { DIRECT, OVERHEAD, HASH, STFUL_COUNTER, GATEWAY_PAYLOAD, NOT_SET };
+enum class PfeLocation { DEFAULT, OVERHEAD, GATEWAY_PAYLOAD, NOT_SET };
+enum class TypeLocation { DEFAULT, OVERHEAD, GATEWAY_PAYLOAD, NOT_SET };
 
 }  // end namespace MAU
 

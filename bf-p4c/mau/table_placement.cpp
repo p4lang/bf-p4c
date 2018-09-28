@@ -1581,13 +1581,16 @@ IR::Node *TablePlacement::preorder(IR::MAU::BackendAttached *ba) {
     auto format = tbl->resources->table_format;
 
     if (ba->attached->is<IR::MAU::Counter>()) {
-        if (format.stats_pfe_loc == IR::MAU::PfeLocation::OVERHEAD)
+        if (format.stats_pfe_loc == IR::MAU::PfeLocation::OVERHEAD ||
+            format.stats_pfe_loc == IR::MAU::PfeLocation::GATEWAY_PAYLOAD)
             ba->pfe_location = format.stats_pfe_loc;
     } else if (ba->attached->is<IR::MAU::Meter>() || ba->attached->is<IR::MAU::StatefulAlu>() ||
-            ba->attached->is<IR::MAU::Selector>()) {
-        if (format.meter_pfe_loc == IR::MAU::PfeLocation::OVERHEAD)
+               ba->attached->is<IR::MAU::Selector>()) {
+        if (format.meter_pfe_loc == IR::MAU::PfeLocation::OVERHEAD ||
+            format.meter_pfe_loc == IR::MAU::PfeLocation::GATEWAY_PAYLOAD)
             ba->pfe_location = format.meter_pfe_loc;
-        if (format.meter_type_loc == IR::MAU::TypeLocation::OVERHEAD)
+        if (format.meter_type_loc == IR::MAU::TypeLocation::OVERHEAD ||
+            format.meter_type_loc == IR::MAU::TypeLocation::GATEWAY_PAYLOAD)
             ba->type_location = format.meter_type_loc;
     }
     return ba;

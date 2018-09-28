@@ -110,6 +110,9 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "input_xbar") {
             if (CHECKTYPE(kv.value, tMAP))
                 input_xbar = new InputXbar(this, false, kv.value.map);
+        } else if (kv.key == "format") {
+            if (CHECKTYPEPM(kv.value, tMAP, kv.value.map.size > 0, "non-empty map"))
+                format = new Format(this, kv.value.map);
         } else if (kv.key == "miss") {
             miss = Match(0, kv.value, range_match);
         } else if (kv.key == "condition") {
@@ -259,7 +262,15 @@ void GatewayTable::pass1() {
             warning(line.lineno, "Trying to match on bits not in match of gateway");
         line.val.word0 = (line.val.word0 << shift) | ignore;
         line.val.word1 = (line.val.word1 << shift) | ignore; }
+    if (format) {
+        if (format->size > 64)
+            error(format->lineno, "Gateway payload format too large (max 64 bits)");
+        if (match_table && match_table->format) {
+            // FIXME -- check for consistency
+        }
+    }
 }
+
 void GatewayTable::pass2() {
     LOG1("### Gateway table " << name() << " pass2");
     if (logical_id < 0)  {

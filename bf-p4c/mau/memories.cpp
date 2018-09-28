@@ -3001,12 +3001,12 @@ bool Memories::find_search_bus_gw(table_alloc *ta, Memories::Use &alloc, cstring
 /** Finding a result bus for the gateway.  Will save associated information, such as payload
  *  row, bus, and value, as well as link no match tables if necessary
  */
-bool Memories::find_match_bus_gw(Memories::Use &alloc, int payload, cstring name,
+bool Memories::find_match_bus_gw(Memories::Use &alloc, uint64_t payload, cstring name,
                                  table_alloc *ta_no_match, int logical_table) {
     for (int i = 0; i < SRAM_ROWS; i++) {
         for (int j = 0; j < BUS_COUNT; j++) {
             if (payload_use[i][j]) continue;
-            if (payload == 0) {
+            if (payload == 0ULL) {
                // FIXME: Add ability to handle tind outputs from payload
                if (sram_match_bus[i][j]) continue;
             } else {
@@ -3017,7 +3017,7 @@ bool Memories::find_match_bus_gw(Memories::Use &alloc, int payload, cstring name
             alloc.gateway.payload_value = payload;
             // FIXME: again allow tind busses to potentially be used
             alloc.gateway.bus_type = Use::EXACT;
-            if (payload != 0)
+            if (payload != 0ULL)
                 payload_use[i][j] = name;
             if (ta_no_match) {
                 auto no_match_id = ta_no_match->build_unique_id(nullptr, false, logical_table);
@@ -3034,6 +3034,57 @@ bool Memories::find_match_bus_gw(Memories::Use &alloc, int payload, cstring name
     return false;
 }
 
+/**
+ * Based on the information of what bits are to be pulled from the gateway payload to be
+ * used as address/per flow enable/type lookups, this will determine the value to be
+ * written into the 64 bit payload.
+ *
+ * Currently this is based off of the Tofino assumption that only one payload may possibly
+ * exist.  This will need to be expanded for JBay, as multiple payloads based on the gateway
+ * row are definitely possible, and will be required for multi-stage DLEFT hash tables.
+ */
+uint64_t Memories::determine_payload(table_alloc *ta) {
+    uint64_t rv = 0ULL;
+    auto format = ta->table_format;
+    if (format->instr_in_overhead()) {
+        bitvec instr_mask = format->match_groups[0].mask[TableFormat::ACTION];
+        BUG_CHECK(instr_mask.popcount() == 1, "An instruction is indicated to be in the payload, "
+                  "but not found");
+        rv |= 1ULL << instr_mask.min().index();
+    }
+
+    if (format->stats_pfe_loc == IR::MAU::PfeLocation::GATEWAY_PAYLOAD) {
+        bitvec stats_pfe_mask = format->match_groups[0].mask[TableFormat::COUNTER_PFE];
+        BUG_CHECK(stats_pfe_mask.popcount() == 1, "A pfe is indicated to be in the payload, "
+                  "but not found");
+        rv |= 1ULL << stats_pfe_mask.min().index();
+    }
+
+    if (format->meter_pfe_loc == IR::MAU::PfeLocation::GATEWAY_PAYLOAD) {
+        bitvec meter_pfe_mask = format->match_groups[0].mask[TableFormat::METER_PFE];
+        BUG_CHECK(meter_pfe_mask.popcount() == 1, "A pfe is indicated to be in the payload, "
+                  "but not found");
+        rv |= 1ULL << meter_pfe_mask.min().index();
+    }
+
+    if (format->meter_type_loc == IR::MAU::TypeLocation::GATEWAY_PAYLOAD) {
+        bitvec meter_type_mask = format->match_groups[0].mask[TableFormat::METER_TYPE];
+        BUG_CHECK(meter_type_mask.popcount() == 3, "A meter type is indicated to be in the "
+                  "payload, but not found");
+        for (auto act : Values(ta->table->actions)) {
+            if (act->miss_only())
+                continue;
+            bool found = false;
+            for (auto meter_type : Values(act->meter_types)) {
+                rv |= uint64_t(meter_type) << meter_type_mask.min().index();
+                found = true;
+                break;
+            }
+            if (found) break;
+        }
+    }
+    return rv;
+}
 
 /** Allocates all gateways with a payload, which is a conditional linked to a no match table.
  *  Thus it needs a payload, result bus, and search bus.
@@ -3049,7 +3100,9 @@ bool Memories::allocate_all_payload_gw() {
         auto &alloc = (*ta->memuse)[unique_id];
         alloc.type = Use::GATEWAY;
         bool search_bus_found = find_search_bus_gw(ta, alloc, unique_id.build_name());
-        bool match_bus_found = find_match_bus_gw(alloc, 1, unique_id.build_name(), ta->table_link);
+        uint64_t payload_value = determine_payload(ta->table_link);
+        bool match_bus_found = find_match_bus_gw(alloc, payload_value, unique_id.build_name(),
+                                                 ta->table_link);
         if (!(search_bus_found && match_bus_found))
             return false;
     }
@@ -3073,7 +3126,7 @@ bool Memories::allocate_all_normal_gw() {
         if (ta->table_link) {
             // FIXME: Must use table format in order to instantiate payload bus location properly.
             // However, the payload buses can be inferred from the location of the table
-            alloc.gateway.payload_value = -1;
+            alloc.gateway.payload_value = 0ULL;
             alloc.gateway.payload_bus = -1;
             alloc.gateway.payload_row = -1;
             if (ta->table_link->table->layout.ternary)
@@ -3082,7 +3135,7 @@ bool Memories::allocate_all_normal_gw() {
                 alloc.gateway.bus_type = Use::EXACT;
             match_bus_found = true;
         } else {
-            match_bus_found = find_match_bus_gw(alloc, 0, unique_id.build_name(), nullptr);
+            match_bus_found = find_match_bus_gw(alloc, 0ULL, unique_id.build_name(), nullptr);
         }
         if (!(search_bus_found && match_bus_found))
             return false;
@@ -3102,7 +3155,7 @@ bool Memories::allocate_all_no_match_gw() {
         auto &alloc = (*ta->memuse)[unique_id];
         alloc.type = Use::GATEWAY;
         bool unit_found = find_unit_gw(alloc, unique_id.build_name(), false);
-        bool match_bus_found = find_match_bus_gw(alloc, 0, unique_id.build_name(), ta);
+        bool match_bus_found = find_match_bus_gw(alloc, 0ULL, unique_id.build_name(), ta);
         if (!(unit_found && match_bus_found))
             return false;
     }
@@ -3116,7 +3169,7 @@ bool Memories::allocate_all_no_match_gw() {
             auto &alloc = (*ta->memuse)[unique_id];
             alloc.type = Use::GATEWAY;
             bool unit_found = find_unit_gw(alloc, unique_id.build_name(), false);
-            bool match_bus_found = find_match_bus_gw(alloc, 0, unique_id.build_name(), ta, lt);
+            bool match_bus_found = find_match_bus_gw(alloc, 0ULL, unique_id.build_name(), ta, lt);
             if (!(unit_found && match_bus_found))
                 return false;
         }

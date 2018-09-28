@@ -1230,10 +1230,13 @@ void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
 
 /* Emits the format portion of tind tables and for exact match tables. */
 void MauAsmOutput::emit_table_format(std::ostream &out, indent_t indent,
-          const TableFormat::Use &use, const TableMatch *tm, bool ternary) const {
+          const TableFormat::Use &use, const TableMatch *tm, bool ternary, bool gateway) const {
     fmt_state fmt;
     out << indent << "format: {";
-    int group = ternary ? -1 : 0;
+    int group = (ternary || gateway) ? -1 : 0;
+#ifdef HAVE_JBAY
+    if (Device::currentDevice() == Device::JBAY && gateway) group = 0;
+#endif
 
     for (auto match_group : use.match_groups) {
         int type;
@@ -1241,6 +1244,7 @@ void MauAsmOutput::emit_table_format(std::ostream &out, indent_t indent,
         // For table objects that are not match
         for (type = TableFormat::NEXT; type <= TableFormat::INDIRECT_ACTION; type++) {
             if (match_group.mask[type].popcount() == 0) continue;
+            if (type == TableFormat::VERS && gateway) continue;  // no v/v in gw payload
             bits.clear();
             int start = match_group.mask[type].ffs();
             while (start >= 0) {
@@ -1264,10 +1268,12 @@ void MauAsmOutput::emit_table_format(std::ostream &out, indent_t indent,
             }
         }
 
-        if (ternary) {
-            out << "}" << std::endl;
-            return;
-        }
+        if (ternary || gateway) {
+            if (group >= 0) {
+                ++group;
+                continue;
+            } else {
+                break; } }
         type = TableFormat::MATCH;
 
         bits.clear();
@@ -1300,11 +1306,9 @@ void MauAsmOutput::emit_table_format(std::ostream &out, indent_t indent,
         group++;
     }
 
-    if (ternary) {
-        out << "}" << std::endl;
-        return;
-    }
     out << (fmt.sep + 1) << "}" << std::endl;
+    if (ternary || gateway)
+        return;
 
     // Outputs the match portion
     bool first = true;
@@ -2190,7 +2194,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
                        &tbl->resources->memuse.at(unique_id), &fmt, tbl->layout.ternary);
         }
         if (!tbl->layout.ternary && !tbl->layout.no_match_data()) {
-            emit_table_format(out, indent, tbl->resources->table_format, &fmt, false);
+            emit_table_format(out, indent, tbl->resources->table_format, &fmt, false, false);
         }
 
         if (tbl->layout.ternary)
@@ -2229,8 +2233,11 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
                 out << gw_indent << "bus: " << use.row[0].bus << std::endl;
                 out << gw_indent << "unit: " << use.gateway.unit << std::endl;
                 // FIXME: This is the case for a gateway attached to a ternary or exact match
-                if (use.gateway.payload_value == 1) {
-                    out << gw_indent << "payload: " << use.gateway.payload_value << std::endl;
+                if (use.gateway.payload_value != 0ULL) {
+                    out << gw_indent << "payload: 0x" << hex(use.gateway.payload_value)
+                        << std::endl;
+                    emit_table_format(out, gw_indent, tbl->resources->table_format, nullptr,
+                                      false, true);
                     // FIXME: Assembler doesn't yet support payload bus/row for every table
                 }
                 break;
@@ -2367,7 +2374,8 @@ std::string MauAsmOutput::build_call(const IR::MAU::AttachedMemory *at_mem,
 
     if (ba->addr_location == IR::MAU::AddrLocation::DIRECT) {
         rv += "$DIRECT";
-    } else if (ba->addr_location == IR::MAU::AddrLocation::OVERHEAD) {
+    } else if (ba->addr_location == IR::MAU::AddrLocation::OVERHEAD ||
+               ba->addr_location == IR::MAU::AddrLocation::GATEWAY_PAYLOAD) {
         rv += indirect_address(at_mem);
     } else if (ba->addr_location == IR::MAU::AddrLocation::HASH) {
         BUG_CHECK(ba->hash_dist, "Hash Dist not allocated correctly");
@@ -2386,7 +2394,8 @@ std::string MauAsmOutput::build_call(const IR::MAU::AttachedMemory *at_mem,
     }
 
     rv += ", ";
-    if (ba->pfe_location == IR::MAU::PfeLocation::OVERHEAD) {
+    if (ba->pfe_location == IR::MAU::PfeLocation::OVERHEAD ||
+        ba->pfe_location == IR::MAU::PfeLocation::GATEWAY_PAYLOAD) {
         rv += indirect_pfe(at_mem);
     } else if (ba->pfe_location == IR::MAU::PfeLocation::DEFAULT) {
         rv += "$DEFAULT";
@@ -2396,7 +2405,8 @@ std::string MauAsmOutput::build_call(const IR::MAU::AttachedMemory *at_mem,
         return rv + ")";
 
     rv += ", ";
-    if (ba->type_location == IR::MAU::TypeLocation::OVERHEAD) {
+    if (ba->type_location == IR::MAU::TypeLocation::OVERHEAD ||
+        ba->type_location == IR::MAU::TypeLocation::GATEWAY_PAYLOAD) {
         rv += "meter_type";
     } else if (ba->type_location == IR::MAU::TypeLocation::DEFAULT) {
         rv += "$DEFAULT";
@@ -2662,7 +2672,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::TernaryIndirect *ti) {
     self.emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
     self.emit_ixbar(out, indent, &tbl->resources->match_ixbar, &tbl->resources->hash_dists,
                     nullptr, nullptr, false);
-    self.emit_table_format(out, indent, tbl->resources->table_format, nullptr, true);
+    self.emit_table_format(out, indent, tbl->resources->table_format, nullptr, true, false);
     self.emit_action_data_bus(out, indent, tbl, true);
     self.emit_table_indir(out, indent, tbl, ti);
     return false;

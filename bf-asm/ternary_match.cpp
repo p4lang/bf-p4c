@@ -10,21 +10,21 @@
 DEFINE_TABLE_TYPE(TernaryMatchTable)
 DEFINE_TABLE_TYPE(TernaryIndirectTable)
 
+Table::Format::Field *TernaryMatchTable::lookup_field(const std::string &n,
+         const std::string &act) const {
+    assert(!format);
+    auto *rv = gateway ? gateway->lookup_field(n, act) : nullptr;
+    if (!rv && indirect) rv = indirect->lookup_field(n, act);
+    return rv;
+}
+
 Table::Format::Field *TernaryIndirectTable::lookup_field(const std::string &n,
          const std::string &act) const {
-    if (format) {
-        auto rv = format->field(n);
-        if (rv)
-            return rv;
-    }
-
-    auto call = get_action();
-    if (call && !act.empty()) {
-        auto rv = call->lookup_field(n, act);
-        if (rv)
-            return rv;
-    }
-    return nullptr;
+    auto *rv = format ? format->field(n) : nullptr;
+    if (!rv && !act.empty()) {
+        if (auto call = get_action())
+            rv = call->lookup_field(n, act); }
+    return rv;
 }
 
 void TernaryMatchTable::vpn_params(int &width, int &depth, int &period, const char *&period_name) const {

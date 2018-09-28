@@ -82,6 +82,33 @@ void HashActionTable::write_merge_regs(REGS &regs, int type, int bus) {
     attached.write_merge_regs(regs, this, type, bus);
     /* FIXME -- factor with ExactMatch::write_merge_regs? */
     auto &merge = regs.rams.match.merge;
+    for (auto &st : attached.stats) {
+        int shiftcount = st->determine_shiftcount(st, 0, 0, 0);
+        if (type == 0)
+            merge.mau_stats_adr_exact_shiftcount[bus][0] = shiftcount;
+        else
+            merge.mau_stats_adr_tcam_shiftcount[bus] = shiftcount;
+        break;
+    }
+
+    for (auto &m : attached.meters) {
+        int shiftcount = m->determine_shiftcount(m, 0, 0, 0);
+        if (type == 0)
+            merge.mau_meter_adr_exact_shiftcount[bus][0] = shiftcount;
+        else
+            merge.mau_meter_adr_tcam_shiftcount[bus] = shiftcount;
+        break;
+    }
+
+    for (auto &s : attached.statefuls) {
+        int shiftcount = s->determine_shiftcount(s, 0, 0, 0);
+        if (type == 0)
+            merge.mau_meter_adr_exact_shiftcount[bus][0] = shiftcount;
+        else
+            merge.mau_meter_adr_tcam_shiftcount[bus] = shiftcount;
+        break;
+    }
+
     merge.exact_match_phys_result_en[bus/8U] |= 1U << (bus%8U);
     merge.exact_match_phys_result_thread[bus/8U] |= gress << (bus%8U);
     if (stage->tcam_delay(gress))

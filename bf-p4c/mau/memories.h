@@ -155,13 +155,13 @@ struct Memories {
             explicit Way(int s, unsigned sm) : size(s), select_mask(sm) {}
         };
         struct Gateway {
-            int payload_value = 0;
-            int payload_row = -1;
-            int payload_bus = -1;
-            int unit = -1;
+            uint64_t payload_value = 0ULL;
+            int      payload_row = -1;
+            int      payload_bus = -1;
+            int      unit = -1;
             type_t bus_type;
             void clear() {
-                payload_value = 0;
+                payload_value = 0ULL;
                 payload_row = -1;
                 payload_bus = -1;
                 unit = -1;
@@ -547,8 +547,9 @@ struct Memories {
     void action_bus_users_log();
     bool find_unit_gw(Memories::Use &alloc, cstring name, bool requires_search_bus);
     bool find_search_bus_gw(table_alloc *ta, Memories::Use &alloc, cstring name);
-    bool find_match_bus_gw(Memories::Use &alloc, int payload, cstring name,
+    bool find_match_bus_gw(Memories::Use &alloc, uint64_t payload, cstring name,
                            table_alloc *ta_no_match, int logical_table = -1);
+    uint64_t determine_payload(table_alloc *ta);
     bool allocate_all_gw();
     bool allocate_all_payload_gw();
     bool allocate_all_normal_gw();

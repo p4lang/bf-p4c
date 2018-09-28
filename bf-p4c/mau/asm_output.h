@@ -99,7 +99,7 @@ class MauAsmOutput : public MauInspector {
     void emit_no_match_gateway(std::ostream &out, indent_t gw_indent,
             const IR::MAU::Table *tbl) const;
     void emit_table_format(std::ostream &out, indent_t, const TableFormat::Use &use,
-            const TableMatch *tm, bool ternary) const;
+            const TableMatch *tm, bool ternary, bool no_match) const;
     void emit_table_context_json(std::ostream &out, indent_t, const IR::MAU::Table *tbl) const;
     void emit_ternary_match(std::ostream &out, indent_t, const TableFormat::Use &use) const;
     void emit_atcam_match(std::ostream &out, indent_t, const IR::MAU::Table *tbl) const;

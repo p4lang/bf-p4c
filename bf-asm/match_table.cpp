@@ -10,6 +10,12 @@
 
 #include <unordered_map>
 
+Table::Format::Field *MatchTable::lookup_field(const std::string &n, const std::string &act) const {
+    auto *rv = format ? format->field(n) : nullptr;
+    if (!rv && gateway)
+        rv = gateway->lookup_field(n, act);
+    return rv;
+}
 
 void MatchTable::common_init_setup(const VECTOR(pair_t) &data, bool ternary, P4Table::type p4type) {
     Table::common_init_setup(data, ternary, p4type);
@@ -208,29 +214,24 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
             auto instr_call = instruction_call();
             // FIXME: Workaround until a format is provided on the gateway to find the
             // action bit section.  This will be a quick add on.
-            if (this->to<HashActionTable>() && this->get_gateway()) {
-                adr_mask = 1;
-                adr_default |= ACTION_INSTRUCTION_ADR_ENABLE;
-            } else {
-                if (instr_call.args[0] == "$DEFAULT") {
-                    for (auto it = actions->begin(); it != actions->end(); it++) {
-                        if (it->code != -1) {
-                            adr_default |= it->addr;
-                            break;
-                        }
+            if (instr_call.args[0] == "$DEFAULT") {
+                for (auto it = actions->begin(); it != actions->end(); it++) {
+                    if (it->code != -1) {
+                        adr_default |= it->addr;
+                        break;
                     }
-                } else if (auto field = instr_call.args[0].field()) {
-                    adr_mask |= (1U << field->size) - 1;
                 }
+            } else if (auto field = instr_call.args[0].field()) {
+                adr_mask |= (1U << field->size) - 1;
+            }
 
-                if (instr_call.args[1] == "$DEFAULT") {
-                    adr_default |= ACTION_INSTRUCTION_ADR_ENABLE;
-                } else if (auto field = instr_call.args[1].field()) {
-                    if (auto addr_field = instr_call.args[0].field()) {
-                        adr_per_entry_en = field->bit(0) - addr_field->bit(0);
-                    } else {
-                        adr_per_entry_en = 0;
-                    }
+            if (instr_call.args[1] == "$DEFAULT") {
+                adr_default |= ACTION_INSTRUCTION_ADR_ENABLE;
+            } else if (auto field = instr_call.args[1].field()) {
+                if (auto addr_field = instr_call.args[0].field()) {
+                    adr_per_entry_en = field->bit(0) - addr_field->bit(0);
+                } else {
+                    adr_per_entry_en = 0;
                 }
             }
             shift_en.action_instruction_adr_payload_shifter_en = 1;
@@ -277,7 +278,6 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
                           && max_code < ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH;
     // FIXME: Workaround until a format is provided on the gateway to find the
     // action bit section.  This will be a quick add on.
-    use_action_map |= this->to<HashActionTable>() && this->get_gateway();
 
     if (use_action_map) {
         merge.mau_action_instruction_adr_map_en[type] |= (1U << logical_id);

@@ -307,6 +307,13 @@ bool TableFormat::find_format(Use *u) {
             return false;
         return true;
     } else if (layout_option.layout.no_match_hit_path()) {
+        overhead_groups_per_RAM.push_back(1);
+        LOG3("No match hit");
+        use->match_groups.emplace_back();
+        if (!allocate_all_instr_selection())
+            return false;
+        if (!allocate_all_indirect_ptrs())
+            return false;
         return true;
     }
 
@@ -446,6 +453,14 @@ bool TableFormat::allocate_indirect_ptr(int total, type_t type, int group, int R
 bool TableFormat::allocate_all_indirect_ptrs() {
      const IR::MAU::AttachedMemory *meter_addr_user = nullptr;
      const IR::MAU::AttachedMemory *stats_addr_user = nullptr;
+
+     IR::MAU::PfeLocation update_pfe_loc = tbl->layout.no_match_hit_path() ?
+                                           IR::MAU::PfeLocation::GATEWAY_PAYLOAD :
+                                           IR::MAU::PfeLocation::OVERHEAD;
+     IR::MAU::TypeLocation update_type_loc = tbl->layout.no_match_hit_path() ?
+                                             IR::MAU::TypeLocation::GATEWAY_PAYLOAD :
+                                             IR::MAU::TypeLocation::OVERHEAD;
+
      for (auto *ba : tbl->attached) {
          if (ba->attached->is<IR::MAU::Selector>() || ba->attached->is<IR::MAU::Meter>()
              || ba->attached->is<IR::MAU::StatefulAlu>()) {
@@ -470,7 +485,7 @@ bool TableFormat::allocate_all_indirect_ptrs() {
                  if (layout_option.layout.stats_addr.per_flow_enable || move_to_overhead) {
                      if (!allocate_indirect_ptr(1, COUNTER_PFE, group, i))
                          return false;
-                     use->stats_pfe_loc = IR::MAU::PfeLocation::OVERHEAD;
+                     use->stats_pfe_loc = update_pfe_loc;
                  }
              }
 
@@ -492,14 +507,14 @@ bool TableFormat::allocate_all_indirect_ptrs() {
                  if (layout_option.layout.meter_addr.per_flow_enable || move_to_overhead) {
                      if (!allocate_indirect_ptr(1, METER_PFE, group, i))
                          return false;
-                     use->meter_pfe_loc = IR::MAU::PfeLocation::OVERHEAD;
+                     use->meter_pfe_loc = update_pfe_loc;
                  }
 
                  if (layout_option.layout.meter_addr.meter_type_bits > 0 || move_to_overhead) {
                      total = 3;
                      if (!allocate_indirect_ptr(total, METER_TYPE, group, i))
                          return false;
-                     use->meter_type_loc = IR::MAU::TypeLocation::OVERHEAD;
+                     use->meter_type_loc = update_type_loc;
                  }
              }
 
@@ -576,10 +591,12 @@ bool TableFormat::allocate_all_instr_selection() {
     // add an extra action to a table if linked with a gateway.
 
     int instr_select = 0;
-    if (hit_actions() > 0 && hit_actions() <= IMEM_MAP_TABLE_ENTRIES)
+    if (hit_actions() == 0)
+        instr_select = 0;
+    else if (hit_actions() > 0 && hit_actions() <= IMEM_MAP_TABLE_ENTRIES)
         instr_select = ceil_log2(hit_actions());
     else
-       instr_select = FULL_IMEM_ADDRESS_BITS;
+        instr_select = FULL_IMEM_ADDRESS_BITS;
 
     // If no action instruction bit is required return unless the table is
     // ternary in which case always a ternary indirect is used to specify

@@ -749,6 +749,7 @@ public:
     Format::Field *find_address_field(const AttachedTable *tbl) const override {
         return attached.find_address_field(tbl); }
     void gen_name_lookup(json::map &out) override;
+    Format::Field *lookup_field(const std::string &n, const std::string &act = "") const override;
     bool run_at_eop() override { return attached.run_at_eop(); }
     virtual bool is_ternary() { return false; }
     void gen_idletime_tbl_cfg(json::map &stage_tbl) const;
@@ -963,9 +964,7 @@ public:
             if (m.word_group == group) {
                 dirtcam_mode = (range_match_t) ((m.dirtcam >> 2*byte) & 0x3); } }
         return dirtcam_mode; }
-    Format::Field *lookup_field(const std::string &name, const std::string &action) const override {
-        assert(!format);
-        return indirect ? indirect->lookup_field(name, action) : 0; }
+    Format::Field *lookup_field(const std::string &name, const std::string &action) const override;
     HashDistribution *find_hash_dist(int unit) override {
         return indirect ? indirect->find_hash_dist(unit) : Table::find_hash_dist(unit); }
     int find_on_actionbus(Format::Field *f, int lo, int hi, int size) override {

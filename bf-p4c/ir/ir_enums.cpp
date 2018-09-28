@@ -74,7 +74,7 @@ bool operator>>(cstring s, IR::MAU::StatefulUse &u) {
 
 
 static const char *addr_location_to_str[] = {
-    "DIRECT", "OVERHEAD", "HASH", "STFUL_COUNTER", "NOT_SET"
+    "DIRECT", "OVERHEAD", "HASH", "STFUL_COUNTER", "GATEWAY_PAYLOAD", "NOT_SET"
 };
 
 std::ostream &operator<<(std::ostream &out, const IR::MAU::AddrLocation &a) {
@@ -97,7 +97,7 @@ bool operator>>(cstring s, IR::MAU::AddrLocation &a) {
 }
 
 static const char *pfe_location_to_str[] = {
-    "DEFAULT", "OVERHEAD", "PAYLOAD", "NOT_SET"
+    "DEFAULT", "OVERHEAD", "GATEWAY_PAYLOAD", "NOT_SET"
 };
 
 std::ostream &operator<<(std::ostream &out, const IR::MAU::PfeLocation &p) {
@@ -120,7 +120,7 @@ bool operator>>(cstring s, IR::MAU::PfeLocation &p) {
 }
 
 static const char *type_location_to_str[] = {
-    "DEFAULT", "OVERHEAD", "NOT_SET"
+    "DEFAULT", "OVERHEAD", "GATEWAY_PAYLOAD", "NOT_SET"
 };
 
 std::ostream &operator<<(std::ostream &out, const IR::MAU::TypeLocation &t) {

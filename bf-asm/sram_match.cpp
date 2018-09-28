@@ -9,27 +9,17 @@
 
 Table::Format::Field *SRamMatchTable::lookup_field(const std::string &n,
         const std::string &act) const {
-    
-    if (format) {
-        auto rv = format->field(n);
-        if (rv)
-            return rv; 
-    }
-
-    auto call = get_action();
-    if (call && !act.empty()) {
-        auto rv = call->lookup_field(n, act);
-        if (rv)
-            return rv;
-    }
-
-    if (n == "immediate" && !::Phv::get(gress, n)) {
+    auto *rv = format ? format->field(n) : nullptr;
+    if (!rv && gateway)
+        rv = gateway->lookup_field(n, act);
+    if (!rv && !act.empty()) {
+        if (auto call = get_action())
+            rv = call->lookup_field(n, act); }
+    if (!rv && n == "immediate" && !::Phv::get(gress, n)) {
         static Format::Field default_immediate(nullptr, 32, Format::Field::USED_IMMED);
-        return &default_immediate; }
-    return nullptr;
+        rv = &default_immediate; }
+    return rv;
 }
-
-
 
 /* calculate the 18-bit byte/nybble mask tofino uses for matching in a 128-bit word */
 static unsigned tofino_bytemask(int lo, int hi) {
@@ -417,7 +407,7 @@ void SRamMatchTable::pass1() {
     if (actions) {
         if (instruction)
             validate_instruction(instruction);
-        else 
+        else
             error(lineno, "No instruction call provided, but actions provided");
         actions->pass1(this);
     }
@@ -728,7 +718,7 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
                         shiftcount = field->bit(0);
                     else if (auto field = instruction.args[1].field())
                         shiftcount = field->immed_bit(0);
-                    merge.mau_action_instruction_adr_exact_shiftcount[bus][word_group] = shiftcount; 
+                    merge.mau_action_instruction_adr_exact_shiftcount[bus][word_group] = shiftcount;
                 }
             }
             /* FIXME -- factor this where possible with ternary match code */
