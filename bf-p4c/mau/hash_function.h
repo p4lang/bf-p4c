@@ -38,6 +38,19 @@ struct hash_function {
             return true;
         return false;
     }
+    std::string name() const {
+        std::string algo_name = "";
+        if (type == IDENTITY) {
+            algo_name = "identity";
+        } else if (type == CRC) {
+            algo_name = "crc_" + std::to_string(size);
+        } else if (type == RANDOM) {
+            algo_name = "random";
+        } else if (type == XOR) {
+            algo_name = "xor";
+        }
+        return algo_name;
+    }
 
  private:
     const IR::MethodCallExpression *hash_to_mce(const IR::Expression *, bool *on_hash_matrix);
