@@ -1023,7 +1023,7 @@ public:
     void gen_entry_cfg(json::vector &out, std::string name, \
         unsigned lsb_offset, unsigned lsb_idx, unsigned msb_idx, \
         std::string source, unsigned start_bit, unsigned field_width,
-        unsigned index) const;
+        unsigned index, bitvec &tcam_bits) const;
     void set_partition_action_handle(unsigned handle) {
         if (p4_table) p4_table->set_partition_action_handle(handle); }
     void set_partition_field_name(std::string name) {
@@ -1032,7 +1032,7 @@ public:
         if (p4_table)
             p4_table->base_alpm_tbl_cfg(pre_classifier_tbl, size, this, P4Table::PreClassifier); }
     void gen_match_fields_pvp(json::vector &match_field_list, int word,
-        bool uses_versioning, unsigned version_word_group) const;
+        bool uses_versioning, unsigned version_word_group, bitvec &tcam_bits) const;
     unsigned get_default_action_handle() const override {
         unsigned def_act_handle = Table::get_default_action_handle();
         return def_act_handle > 0 ? def_act_handle : indirect ? indirect->get_default_action_handle() ?

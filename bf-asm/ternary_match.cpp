@@ -15,7 +15,7 @@ Table::Format::Field *TernaryIndirectTable::lookup_field(const std::string &n,
     if (format) {
         auto rv = format->field(n);
         if (rv)
-            return rv; 
+            return rv;
     }
 
     auto call = get_action();
@@ -429,7 +429,7 @@ void TernaryMatchTable::write_regs(REGS &regs) {
             /* FIXME -- factor with TernaryIndirect code below */
             if (auto adt = action->to<ActionTable>()) {
                 merge.mau_actiondata_adr_default[1][indirect_bus] = adt->determine_default(action);
-                merge.mau_actiondata_adr_mask[1][indirect_bus] = adt->determine_mask(action); 
+                merge.mau_actiondata_adr_mask[1][indirect_bus] = adt->determine_mask(action);
                 merge.mau_actiondata_adr_vpn_shiftcount[1][indirect_bus]
                     = adt->determine_vpn_shiftcount(action);
                 merge.mau_actiondata_adr_tcam_shiftcount[indirect_bus]
@@ -491,7 +491,7 @@ std::unique_ptr<json::map> TernaryMatchTable::gen_memory_resource_allocation_tbl
 void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
         unsigned lsb_offset, unsigned lsb_idx, unsigned msb_idx, \
         std::string source, unsigned start_bit, unsigned field_width, \
-        unsigned index) const {
+        unsigned index, bitvec &tcam_bits) const {
     remove_aug_names(name);
     std::string fix_name(name);
 
@@ -514,25 +514,29 @@ void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
     unsigned field_bytes = p ? (field_width + 7)/8 : 1;
     for (int i = 0; i < field_bytes; i++) {
         json::map entry;
+        unsigned entry_lo = lsb_offset;
+        unsigned entry_size = field_width;
         entry["field_name"] = fix_name;
-        entry["lsb_mem_word_offset"] = lsb_offset;
+        entry["lsb_mem_word_offset"] = entry_lo;
         entry["lsb_mem_word_idx"] = lsb_idx;
         entry["msb_mem_word_idx"] = msb_idx;
         entry["source"] = source;
         entry["start_bit"] = start_bit + slice_offset;
-        entry["field_width"] = field_width;
+        entry["field_width"] = entry_size;
         auto dirtcam_mode = (name != "--unused--") ?
             get_dirtcam_mode(index, (lsb_offset + i*8)/8) : TCAM_NORMAL;
         // If field is a range match output the 'range' node only for 4bit hi/lo
         // encodings (dirtcam = 2 (4bit lo), dirtcam = 3 (4bit hi)
         if (p && ((dirtcam_mode == DIRTCAM_4B_LO) ||
                     (dirtcam_mode == DIRTCAM_4B_HI))) {
+            entry_size = 4;
             entry["source"] = "range";
             // Shift start bit based on which nibble is used in range
             entry["start_bit"] =
                 i * 8 + start_bit + (dirtcam_mode == DIRTCAM_4B_HI) * 4 + slice_offset;
-            entry["field_width"] = 4;
-            entry["lsb_mem_word_offset"] = lsb_offset + i*8 + 4*(dirtcam_mode == DIRTCAM_4B_HI);
+            entry["field_width"] = entry_size;
+            entry_lo = lsb_offset + i*8 + 4*(dirtcam_mode == DIRTCAM_4B_HI);
+            entry["lsb_mem_word_offset"] = entry_lo;
             json::map &entry_range = entry["range"];
             entry_range["type"] = 4;
             entry_range["is_duplicate"] = false;
@@ -543,34 +547,42 @@ void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
             // nibble. But currently we see driver crash in the absence of this
             // field in some situations, hence we add it here.
             json::map entry_dup;
+            unsigned entry_lo_dup = lsb_offset + i*8 + 4*(dirtcam_mode == DIRTCAM_4B_LO);
             entry_dup["field_name"] = fix_name;
-            entry_dup["lsb_mem_word_offset"] = lsb_offset;
+            entry_dup["lsb_mem_word_offset"] = entry_lo_dup;
             entry_dup["lsb_mem_word_idx"] = lsb_idx;
             entry_dup["msb_mem_word_idx"] = msb_idx;
             entry_dup["source"] = "range";
             entry_dup["start_bit"] = i * 8 + start_bit + (dirtcam_mode == DIRTCAM_4B_HI) * 4 + slice_offset;
-            entry_dup["field_width"] = 4;
-            entry_dup["lsb_mem_word_offset"] = lsb_offset + i*8 + 4*(dirtcam_mode == DIRTCAM_4B_LO);
+            entry_dup["field_width"] = entry_size;
             json::map &entry_dup_range = entry_dup["range"];
             entry_dup_range["type"] = 4;
             entry_dup_range["is_duplicate"] = true;
+            tcam_bits.setrange(entry_lo_dup, entry_size);
             out.push_back(std::move(entry_dup));
         }
+        tcam_bits.setrange(entry_lo, entry_size);
         out.push_back(std::move(entry)); }
 
 }
 
 void TernaryMatchTable::gen_match_fields_pvp(json::vector &match_field_list, int word,
-        bool uses_versioning, unsigned version_word_group) const {
-   // Insert payload (bit 0), parity (bit 45, 46) and
-   // version bits(bits 43, 44 if specified) for new word
-   gen_entry_cfg(match_field_list, "--tcam_payload_" +
-                 std::to_string(word) + "--", 0, word, word, "payload", 0, 1, 0);
-   if (uses_versioning && (version_word_group == word)) {
-       gen_entry_cfg(match_field_list, "--version--", \
-                     43, word, word, "version", 0, 2, 0); }
-   gen_entry_cfg(match_field_list, "--tcam_parity_" +
-                 std::to_string(word) + "--", 45, word, word, "parity", 0, 2, 0);
+        bool uses_versioning, unsigned version_word_group, bitvec &tcam_bits) const {
+    // Tcam bits are arranged as follows in each tcam word
+    // LSB -------------------------------------MSB
+    // PAYLOAD BIT - TCAM BITS - [VERSION] - PARITY
+    auto start_bit = 0; // always 0 for fields not on input xbar
+    auto dirtcam_index = 0; // not relevant for fields not on input xbar
+    auto payload_name = "--tcam_payload_" + std::to_string(word) + "--";
+    auto parity_name = "--tcam_parity_" + std::to_string(word) + "--";
+    auto version_name = "--version--";
+    gen_entry_cfg(match_field_list, payload_name, TCAM_PAYLOAD_BITS_START, 
+        word, word, "payload", start_bit, TCAM_PAYLOAD_BITS, dirtcam_index, tcam_bits);
+    if (uses_versioning && (version_word_group == word)) {
+        gen_entry_cfg(match_field_list, version_name, TCAM_VERSION_BITS_START,
+             word, word, "version", start_bit, TCAM_VERSION_BITS, dirtcam_index, tcam_bits); }
+    gen_entry_cfg(match_field_list, parity_name, TCAM_PARITY_BITS_START, 
+        word, word, "parity", start_bit, TCAM_PARITY_BITS, dirtcam_index, tcam_bits);
 }
 
 void TernaryMatchTable::gen_tbl_cfg(json::vector &out) const {
@@ -603,9 +615,14 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) const {
             version_word_group = match_index - index;
             break; }
         index++; }
-    // Set pvp bits for each tcam
+    // Determine the zero padding necessary by creating a bitvector (for each
+    // word). While creating entries for pack format set bits used. The unused
+    // bits must be padded with zero field entries. 
+    std::vector<bitvec> tcam_bits;
+    tcam_bits.resize(match.size());
+    // Set pvp bits for each tcam word
     for (unsigned i = 0; i < match.size(); i++) {
-        gen_match_fields_pvp(match_field_list, i, uses_versioning, version_word_group);
+        gen_match_fields_pvp(match_field_list, i, uses_versioning, version_word_group, tcam_bits[i]);
     }
     json::map &match_attributes = tbl["match_attributes"];
     json::vector &stage_tables = match_attributes["stage_tables"];
@@ -657,16 +674,20 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) const {
                         }
                         int midbyte_word_group = match_index - match_word(m.word_group);
                         gen_entry_cfg(match_field_list, field_name,
-                            lsb_mem_word_offset, midbyte_word_group, midbyte_word_group, source,
-                            field.second.what.lobit() + start_bit, hwidth, field.first.index);
+                                lsb_mem_word_offset, midbyte_word_group,
+                                midbyte_word_group, source,
+                                field.second.what.lobit() + start_bit, hwidth,
+                                field.first.index,
+                                tcam_bits[midbyte_word_group]);
                     }
                 }
             } else {
                 lsb_mem_word_offset = 1 + field.second.lo;
                 gen_entry_cfg(match_field_list, field_name,
                               lsb_mem_word_offset, word, word, source,
-                              field.second.what.lobit(),
-                              field.second.hi - field.second.lo + 1, field.first.index); }
+                              field.second.what.lobit(), field.second.hi -
+                              field.second.lo + 1, field.first.index,
+                              tcam_bits[word]); }
             break; }
         case InputXbar::Group::BYTE:
             for (size_t word = 0; word < match.size(); word++) {
@@ -686,41 +707,39 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) const {
                         byte_lo = 0; } }
                 if (width > 4) width = 4;
                 gen_entry_cfg(match_field_list, field_name, 41 + byte_lo, match_index - word,
-                    match_index - word, source, field_lo, width, match[word].byte_group); }
+                    match_index - word, source, field_lo, width, match[word].byte_group,
+                    tcam_bits[match_index - word]); }
             break; } }
     // For keyless table, just add parity & payload bits
     if (p4_params_list.empty()) {
-        gen_match_fields_pvp(match_field_list, 0, false, -1);
+        tcam_bits.resize(1);
+        gen_match_fields_pvp(match_field_list, 0, false, -1, tcam_bits[0]);
     }
 
-    // Mark unused portion of format as a field with source 'zero'. This tells
-    // the driver to dont care this field bits.
-    //
-    // Determine the zero padding necessary by creating a bitvector that has all
-    // bits cleared, and then iterate through parameters and immediates and set the
-    // bits that are used. Create padding for the remaining bit ranges.
-    unsigned format_width = 43;
-    bitvec padbits;
-    padbits.clrrange(0, format_width-1);
-    // Payload at bit 0
-    padbits.setrange(0,1);
-    for (auto field : *input_xbar) {
-        // these dont participate in the pack_format
-        if (field.first.type == InputXbar::Group::EXACT) continue;
-        padbits.setrange(1 + field.second.lo, field.second.hi - field.second.lo + 1);
-    }
-
-    if (padbits != bitvec(0)) {
-        unsigned idx_lo = 0;
-        std::string pad_name = "--unused--";
-        for (auto p : padbits) {
-            if (p > idx_lo) {
+    // tcam_bits is a vector indexed by tcam word and has all used bits set. We
+    // loop through this bitvec for each word and add a zero padding entry for
+    // the unused bits.
+    // For ternary all unused bits must be marked as source
+    // 'zero' for correctness during entry encoding.
+    for (int word = 0; word < match.size(); word++) {
+        bitvec &pb = tcam_bits[word];
+        unsigned start_bit = 0; // always 0 for padded fields
+        int dirtcam_index = -1; // irrelevant in this context
+        if (pb != bitvec(0)) {
+            unsigned idx_lo = 0;
+            std::string pad_name = "--unused--";
+            for (auto p : pb) {
+                if (p > idx_lo) {
+                    gen_entry_cfg(match_field_list, pad_name, \
+                        idx_lo, word, word, "zero", start_bit,
+                        p - idx_lo, dirtcam_index, tcam_bits[word]); }
+                idx_lo = p + 1; }
+            auto fw = TCAM_VERSION_BITS;
+            if (idx_lo < fw) {
                 gen_entry_cfg(match_field_list, pad_name, \
-                              idx_lo, 0, 0, "zero", 0, p - idx_lo, -1); }
-            idx_lo = p + 1; }
-        if (idx_lo < format_width) {
-            gen_entry_cfg(match_field_list, pad_name, \
-                idx_lo, 0, 0, "zero", 0, format_width - (idx_lo + 1), -1); }
+                    idx_lo, word, word, "zero", start_bit,
+                    fw - idx_lo, dirtcam_index, tcam_bits[word]); }
+        }
     }
 
     pack_fmt["entries"] = json::vector {
@@ -864,7 +883,7 @@ void TernaryIndirectTable::pass1() {
 
     if (action) {
         action->validate_call(action, match_table, 2, HashDistribution::ACTION_DATA_ADDRESS,
-                              action); 
+                              action);
     }
 
     attached.pass1(match_table);
@@ -936,14 +955,14 @@ template<class REGS> void TernaryIndirectTable::write_regs(REGS &regs) {
                 shiftcount = field->bit(0);
             else if (auto field = instruction.args[1].field())
                 shiftcount = field->immed_bit(0);
-            merge.mau_action_instruction_adr_tcam_shiftcount[bus] = shiftcount; 
+            merge.mau_action_instruction_adr_tcam_shiftcount[bus] = shiftcount;
         }
         if (format->immed)
             merge.mau_immediate_data_tcam_shiftcount[bus] = format->immed->bit(0);
         if (action) {
             if (auto adt = action->to<ActionTable>()) {
                 merge.mau_actiondata_adr_default[1][bus] = adt->determine_default(action);
-                merge.mau_actiondata_adr_mask[1][bus] = adt->determine_mask(action); 
+                merge.mau_actiondata_adr_mask[1][bus] = adt->determine_mask(action);
                 merge.mau_actiondata_adr_vpn_shiftcount[1][bus]
                     = adt->determine_vpn_shiftcount(action);
                 merge.mau_actiondata_adr_tcam_shiftcount[bus]
