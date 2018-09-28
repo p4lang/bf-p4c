@@ -632,17 +632,26 @@ void MauAsmOutput::emit_ixbar_hash_exact(std::ostream &out, indent_t indent,
 void MauAsmOutput::emit_ixbar_hash_dist_ident(std::ostream &out, indent_t indent,
         safe_vector<Slice> &match_data, const IXBar::Use::HashDistHash &hdh,
         const IR::Expression *hd_expr) const {
+    if (auto le = hd_expr->to<IR::ListExpression>()) {
+        for (auto it1 = le->components.begin(); it1 != le->components.end(); ++it1) {
+            le_bitrange bits1;
+            auto field1 = phv.field(*it1, &bits1);
+            for (auto it2 = le->components.begin(); it2 != it1; ++it2) {
+                le_bitrange bits2;
+                auto field2 = phv.field(*it2, &bits2);
+                BUG_CHECK(field1 != field2 || !bits1.overlaps(bits2),
+                          "Duplicated input in identity hash: %s and %s", *it2, *it1); } } }
+
     for (auto &sl : match_data) {
         int slice_bits_seen = 0;
         if (auto le = hd_expr->to<IR::ListExpression>()) {
             for (auto expr : le->components) {
-                auto field = phv.field(expr);
-                if (field == sl.get_field()) {
-                    break;
-                }
-                slice_bits_seen += field->size;
-            }
-        }
+                le_bitrange bits;
+                auto field = phv.field(expr, &bits);
+                if (field == sl.get_field() && bits.contains(sl.get_lo())) {
+                    slice_bits_seen -= bits.lo;
+                    break; }
+                slice_bits_seen += bits.size(); } }
 
         int sl_lo = sl.get_lo() + slice_bits_seen;
         int sl_hi = sl.get_hi() + slice_bits_seen;
