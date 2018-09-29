@@ -390,8 +390,7 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_ent_dc_general"
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_ent_dc_general_set_1" ${SWITCH_P4}
         "${testExtraArgs} -DENT_DC_GENERAL_PROFILE -pd -to 12000" "${SWITCH_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_ent_dc_general_set_1"
-        "switch_tests.CpuTxTest
-        switch_tests.L2AccessToAccessVlanTest
+        "switch_tests.L2AccessToAccessVlanTest
         switch_tests.L2AccessToTrunkPriorityTaggingTest
         switch_tests.L2AccessToTrunkVlanJumboTest
         switch_tests.L2AccessToTrunkVlanTest
@@ -596,8 +595,7 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.4_ent_dc_general_set_1"
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_8.4_ent_dc_general_set_2" ${SWITCH_8.4_P4}
     "${testExtraArgs} -DENT_DC_GENERAL_PROFILE -pd -to 12000" "${SWITCH_8.4_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_8.4_ent_dc_general_set_2"
-        "switch_tests.CpuTxTest
-        switch_tests.L2AccessToAccessVlanTest
+        "switch_tests.L2AccessToAccessVlanTest
         switch_tests.L2AccessToTrunkPriorityTaggingTest
         switch_tests.L2AccessToTrunkVlanJumboTest
         switch_tests.L2AccessToTrunkVlanTest
