@@ -266,7 +266,6 @@ void output_jbay_field_dictionary(int lineno, REGS &regs, POV_FMT &pov_layout,
         if (ch >= TOTAL_CHUNKS) {
             error(lineno, "Ran out of chunks in field dictionary (%d)", TOTAL_CHUNKS);
             break; }
-        auto *phv = dynamic_cast<Deparser::FDEntry::Phv *>(ent.what);
         auto *clot = dynamic_cast<Deparser::FDEntry::Clot *>(ent.what);
         // FIXME -- why does the following give an error from gcc?
         // auto *clot = ent.what->to<Deparser::FDEntry::Clot>();
@@ -301,12 +300,13 @@ void output_jbay_field_dictionary(int lineno, REGS &regs, POV_FMT &pov_layout,
                 error(lineno, "Ran out of chunks in field dictionary (%d)", TOTAL_CHUNKS);
                 break; }
             prev = -1;
-        } else if (phv) {
+        } else {
+            // Phv, Constant, or Checksum
             byte += size;
-            if (prev_pov == *ent.pov && phv->encode() == prev && phv->size() & 6)
+            if (dynamic_cast<Deparser::FDEntry::Phv *>(ent.what) && prev_pov == *ent.pov &&
+                ent.what->encode() == prev && (size & 6))
                 error(ent.lineno, "16 and 32-bit container cannot be repeatedly deparsed");
-            prev = phv->encode();
-        } else assert(0);
+            prev = ent.what->encode(); }
         prev_pov = *ent.pov; }
     if (byte > 0) {
         regs.chunk_info[ch].chunk_vld = 1;
@@ -328,7 +328,6 @@ void output_jbay_field_dictionary_slice(CHUNKS &chunk, CLOTS &clots, POV &pov, D
     Phv::Slice prev_pov;
     for (auto &ent : dict) {
         if (ch >= TOTAL_CHUNKS) break;
-        auto *phv = dynamic_cast<Deparser::FDEntry::Phv *>(ent.what);
         auto *clot = dynamic_cast<Deparser::FDEntry::Clot *>(ent.what);
         unsigned size = ent.what->size();
         if (byte && (clot || byte + size > CHUNK_SIZE ||
@@ -368,11 +367,11 @@ void output_jbay_field_dictionary_slice(CHUNKS &chunk, CLOTS &clots, POV &pov, D
                     } else {
                         chunk[ch].byte_off.phv_offset[j] = i + j; } } }
             if (ch >= TOTAL_CHUNKS) break;
-        } else if (phv) {
+        } else {
+            // Phv, Constant, or Checksum
             while (size--) {
                 chunk[ch].is_phv |= 1 << byte;
-                chunk[ch].byte_off.phv_offset[byte++] = ent.what->encode(); }
-        } else assert(0);
+                chunk[ch].byte_off.phv_offset[byte++] = ent.what->encode(); } }
         prev_pov = *ent.pov; }
     if (byte > 0) {
         chunk[ch].cfg.seg_vld = 0;  // no CLOTs yet

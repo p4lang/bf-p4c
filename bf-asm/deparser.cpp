@@ -19,7 +19,7 @@ struct Deparser::FDEntry {
         virtual void check(bitvec &phv_use) = 0;
         virtual unsigned encode() = 0;
         virtual unsigned size() = 0;
-        template<class T> bool is() { return dynamic_cast<T*>(this) != nullptr; }
+        template<class T> bool is() const { return dynamic_cast<const T*>(this) != nullptr; }
         template<class T> T *to() { return dynamic_cast<T*>(this); }
     };
     struct Phv : Base {
