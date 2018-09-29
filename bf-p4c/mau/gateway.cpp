@@ -703,7 +703,8 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
                 if (getParent<IR::LNot>())
                     match.word1 &= ~(UINT64_C(1) << off.first >> shift);
                 else
-                    match.word0 &= ~(UINT64_C(1) << off.first >> shift); } }
+                    match.word0 &= ~(UINT64_C(1) << off.first >> shift); }
+            match_field = nullptr; }
     } else {
         LOG4("  xor_field = " << field->name << ' ' << bits);
         size_t size = std::max(bits.size(), match_field_bits.size());
@@ -737,8 +738,9 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
             LOG6("    match now " << match);
             donemask |= mask;
             if (++it == end) break; }
+        const IR::Expression *tmp;
         BUG_CHECK(mask == donemask, "failed to match all bits of %s",
-                  findContext<IR::Operation::Relation>());
+                  (tmp = findContext<IR::Operation::Relation>()) ? tmp : e);
         match_field = nullptr; }
     return false;
 }
