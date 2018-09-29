@@ -491,7 +491,7 @@ if $run_stf && [ -r ${file%.p4}.stf ]; then
         test=`pwd`/${file%.p4}.stf
     fi
 
-    obsLog=$name.p4.obs
+    #obsLog=$name.p4.obs
 
     conf_args="--name $name --device $device --testdir $testout --pipe ${pipes}"
     run ./p4c-gen-bfrt-conf $conf_args
@@ -501,7 +501,7 @@ if $run_stf && [ -r ${file%.p4}.stf ]; then
         output_dir=$output_dir/${name}.conf
     fi
 
-    run $STF -l $output_dir --observation-log $obsLog $test | \
+    run $STF -l $output_dir $test | \
         grep -v 'WARN MAU::[a-z_]* Time gone backwards!' \
         || die
 fi
