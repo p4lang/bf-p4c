@@ -809,7 +809,7 @@ void calculate_lrt_threshold_and_interval(const IR::MAU::Table *tbl, IR::MAU::Co
     }
 
     auto &mem = tbl->resources->memuse.at(tbl->unique_id(cntr));
-    int rams;
+    int rams = 0;
     for (auto &row : mem.row)
         rams += row.col.size();
     auto num_counters = (rams-1) * 1024 * CounterPerWord(cntr);
