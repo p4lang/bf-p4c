@@ -110,6 +110,9 @@ class BarefootBackend(BackendDriver):
         self._argGroup.add_argument("--backward-compatible",
                                     action="store_true", default=False,
                                     help="Set compiler to be backward compatible with p4c-tofino")
+        self._argGroup.add_argument("--skip-compilation",
+                                    action="store", help="Skip compiling pipes whose name contains one of the"
+                                                         "'pipeX' substring")
 
         self._argGroup.add_argument("--verbose",
                                     action="store", default=0, type=int, choices=[0, 1, 2, 3],
@@ -178,6 +181,11 @@ class BarefootBackend(BackendDriver):
 
         if opts.backward_compatible:
             self.add_command_option('compiler', '--backward-compatible')
+
+        self.skip_compilation = []
+        if opts.skip_compilation:
+            self.add_command_option('compiler', '--skip-compilation={}'.format(opts.skip_compilation))
+            self.skip_compilation = opts.skip_compilation.split(',')
 
         if opts.display_power_budget:
             self.add_command_option('compiler', '--display-power-budget')
@@ -279,6 +287,7 @@ class BarefootBackend(BackendDriver):
             for ctxt in prog["contexts"]:
                 self._pipes.append({})
                 pipe_id = ctxt['pipe']
+                self._pipes[pipe_id]['pipe_name'] = ctxt['pipe_name']
                 self._pipes[pipe_id]['context'] = os.path.join(self._output_directory,
                                                                ctxt['path'])
                 if p4_version == 'p4-14':
@@ -384,6 +393,8 @@ class BarefootBackend(BackendDriver):
             self._saved_assembler_params = list(self._commands['assembler'])
             unique_table_offset = 0
             for pipe in self._pipes:
+                if pipe['pipe_name'] in self.skip_compilation:
+                    continue
                 self.runAssembler(pipe['pipe_dir'], unique_table_offset)
                 # Although we the context.json schema has an optional compile_command and
                 # we could add it here, it is a potential performance penalty to re-write

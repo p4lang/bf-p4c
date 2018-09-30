@@ -29,6 +29,7 @@ class BFN_Options : public CompilerOptions {
     bool disable_power_check = false;
     std::set<cstring> disabled_pragmas;
 #if BAREFOOT_INTERNAL
+    std::set<cstring> skipped_pipes;
     bool no_power_check = false;
     bool only_gen_mutine_ir = false;
 #endif
