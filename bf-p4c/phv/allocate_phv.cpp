@@ -1709,7 +1709,7 @@ boost::optional<PHV::Transaction> CoreAllocation::tryDeparserZeroAlloc(
                           slice.field()->name);
                 candidate_slices.push_back(PHV::AllocSlice(phv_i.field(slice.field()->id),
                             zero[slice.gress()], field_slice, container_slice));
-                phv_i.addZeroContainer(zero[slice.gress()]);
+                phv_i.addZeroContainer(slice.gress(), zero[slice.gress()]);
                 slice_list_offset += alloc_slice_width; }
             for (auto& alloc_slice : candidate_slices)
                 alloc_attempt.allocate(alloc_slice); } }

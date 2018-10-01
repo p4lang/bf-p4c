@@ -33,7 +33,8 @@ void PhvInfo::clear() {
     metadata_overlay.clear();
     alloc_done_ = false;
     pov_alloc_done = false;
-    zeroContainers.clear();
+    zeroContainers[0].clear();
+    zeroContainers[1].clear();
 }
 
 void PhvInfo::add(

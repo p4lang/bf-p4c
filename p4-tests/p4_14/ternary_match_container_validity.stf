@@ -1,0 +1,19 @@
+# If a container that participates in ternary match is invalid, model(HW)
+# uses the last valid value in that container to perform the match.
+# The compiler can avoid such subtle behavior by setting the container as
+# always valid by setting the "phv_valid" register for that container in the
+# parser. This test tests compiler correctly setting the "phv_valid" to
+# avoid model matching on stale value in container.
+
+add test1 data.foo:0x01010101 set_port()
+add test1 data.foo:0x02020202 set_port()
+
+add test2 data.foo:0x01010101 set_index()
+
+add test3 100 wred_metadata.index:0x01 data.foo:0x0*0*0*0* rewrite_data()
+
+expect 2 03030303 
+packet 0 01010101
+
+expect 2 02020202
+packet 0 02020202

@@ -2327,7 +2327,7 @@ class ComputeInitZeroContainers : public ParserModifier {
 
         // Also initialize the container validity bits for the zero-ed containers (as part of
         // deparsed zero optimization) to 1.
-        for (auto& c : phv.getZeroContainers())
+        for (auto& c : phv.getZeroContainers(parser->gress))
             parser->initZeroContainers.push_back(new IR::BFN::ContainerRef(c));
     }
 

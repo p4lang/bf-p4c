@@ -722,7 +722,7 @@ class PhvInfo {
 
     /// Set of containers that must be set to 0 (and their container validity bit set
     /// unconditionally to 1) for the deparsed zero optimization.
-    std::set<PHV::Container>    zeroContainers;
+    std::set<PHV::Container>    zeroContainers[2];  // per gress
 
     void clear();
     void add(cstring fieldName, gress_t gress, int size, int offset,
@@ -858,14 +858,14 @@ class PhvInfo {
     }
 
     /// @returns the set of deparsed zero containers.
-    const std::set<PHV::Container>& getZeroContainers() const {
-        return zeroContainers;
+    const std::set<PHV::Container>& getZeroContainers(gress_t gr) const {
+        return zeroContainers[gr];
     }
 
     /// adds container @c to the set of deparsed zero containers.
-    void addZeroContainer(PHV::Container c) {
-        zeroContainers.insert(c);
-        BUG_CHECK(zeroContainers.size() <= 2,
+    void addZeroContainer(gress_t gr, PHV::Container c) {
+        zeroContainers[gr].insert(c);
+        BUG_CHECK(zeroContainers[gr].size() <= 1,
                   "Only two zero containers allowed: one for each gress");
     }
 };

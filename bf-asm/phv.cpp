@@ -101,7 +101,7 @@ void Phv::output_names(json::map &out) {
                 + " [" + join(slot.second.second, ", ") + "]";
 }
 
-Phv::Ref::Ref(gress_t g, const value_t &n) : gress(g), lo(-1), hi(-1), lineno(n.lineno) {
+Phv::Ref::Ref(gress_t g, const value_t &n) : gress_(g), lo(-1), hi(-1), lineno(n.lineno) {
     if (CHECKTYPE2M(n, tSTR, tCMD, "phv or register reference or slice")) {
         if (n.type == tSTR) {
             name_ = n.s;
@@ -119,10 +119,10 @@ Phv::Ref::Ref(gress_t g, const value_t &n) : gress(g), lo(-1), hi(-1), lineno(n.
 }
 
 Phv::Ref::Ref(const Phv::Register &r, gress_t gr, int l, int h)
-: gress(gr), name_(r.name), lo(l), hi(h < 0 ? l : h), lineno(-1) { }
+: gress_(gr), name_(r.name), lo(l), hi(h < 0 ? l : h), lineno(-1) { }
 
 bool Phv::Ref::merge(const Phv::Ref &r) {
-    if (r.name_ != name_ || r.gress != gress) return false;
+    if (r.name_ != name_ || r.gress_ != gress_) return false;
     if (lo < 0) return true;
     if (r.lo < 0) {
         lo = hi = -1;

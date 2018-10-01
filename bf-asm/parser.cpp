@@ -242,12 +242,6 @@ void Parser::process() {
     for (auto u : unreach)
         warning(all[u]->lineno, "%sgress state %s unreachable",
                 all[u]->gress ? "E" : "In", all[u]->name.c_str());
-    if (phv_use[INGRESS].intersects(phv_use[EGRESS])) {
-        bitvec tmp = phv_use[INGRESS];
-        tmp &= phv_use[EGRESS];
-        for (int reg : tmp)
-            error(lineno[0], "Phv register %s(R%d) used by both ingress and egress",
-                  Phv::reg(reg)->name, reg); }
     for (auto &reg : multi_write)
         if (reg.check()) {
             int id = reg->reg.parser_id();
@@ -258,10 +252,17 @@ void Parser::process() {
     for (auto &reg : init_zero)
         if (reg.check()) {
             int id = reg->reg.parser_id();
-            if (id >= 0)
+            if (id >= 0) {
                 phv_init_valid[id] = 1;
-            else
-                error(reg.lineno, "%s is not accessable in the parser", reg->reg.name); }
+                phv_use[reg.gress()][id] = 1;
+            } else {
+                error(reg.lineno, "%s is not accessable in the parser", reg->reg.name); } }
+    if (phv_use[INGRESS].intersects(phv_use[EGRESS])) {
+        bitvec tmp = phv_use[INGRESS];
+        tmp &= phv_use[EGRESS];
+        for (int reg : tmp)
+            error(lineno[0], "Phv register %s(R%d) used by both ingress and egress",
+                  Phv::reg(reg)->name, reg); }
     if (options.match_compiler || 1) {  /* FIXME -- need proper liveness analysis */
         Phv::setuse(INGRESS, phv_use[INGRESS]);
         Phv::setuse(EGRESS, phv_use[EGRESS]); }

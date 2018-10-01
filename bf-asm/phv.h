@@ -121,22 +121,22 @@ public:
         return get(gress, std::string(name)); }
     class Ref {
     protected:
-        gress_t         gress;
+        gress_t         gress_;
         std::string     name_;
         int             lo, hi;
     public:
         int             lineno;
-        Ref() : gress(INGRESS), lineno(-1) {}
+        Ref() : gress_(INGRESS), lineno(-1) {}
         Ref(gress_t g, const value_t &n);
         Ref(gress_t g, int line, const std::string &n, int l, int h) :
-            gress(g), name_(n), lo(l), hi(h), lineno(line) {}
-        Ref(const Ref &r, int l, int h) : gress(r.gress), name_(r.name_),
+            gress_(g), name_(n), lo(l), hi(h), lineno(line) {}
+        Ref(const Ref &r, int l, int h) : gress_(r.gress_), name_(r.name_),
             lo(r.lo < 0 ? l : r.lo + l), hi(r.lo < 0 ? h : r.lo + h),
             lineno(r.lineno) { assert(r.hi < 0 || hi <= r.hi); }
         Ref(const Register &r, gress_t gr, int lo = -1, int hi = -1);
         explicit operator bool() const { return lineno >= 0; }
         Slice operator*() const {
-            if (auto *s = phv.get(gress, name_)) {
+            if (auto *s = phv.get(gress_, name_)) {
                 if (hi >= 0) return Slice(*s, lo, hi);
                 return *s;
             } else {
@@ -148,7 +148,7 @@ public:
                 return true;
             return **this == *a; }
         bool check() const {
-            if (auto *s = phv.get(gress, name_)) {
+            if (auto *s = phv.get(gress_, name_)) {
                 if (hi >= 0 && !Slice(*s, lo, hi).valid) {
                     error(lineno, "Invalid slice of %s", name_.c_str());
                     return false; }
@@ -156,13 +156,14 @@ public:
             } else if (lineno >= 0)
                 error(lineno, "No phv record %s", name_.c_str());
             return false; }
+        gress_t gress() const { return gress_; }
         const char *name() const { return name_.c_str(); }
         std::string desc() const;
         int lobit() const { return lo < 0 ? 0 : lo; }
         int hibit() const { return hi < 0 ? (**this).size() - 1 : hi; }
         unsigned size() const {
             if (lo >= 0) return hi - lo + 1;
-            if (auto *s = phv.get(gress, name_)) return s->size();
+            if (auto *s = phv.get(gress_, name_)) return s->size();
             return 0; }
         bool merge(const Ref &r);
         void dbprint(std::ostream &out) const;
