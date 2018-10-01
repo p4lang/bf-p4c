@@ -247,9 +247,6 @@ void GatewayTable::pass1() {
     int shift = -1;
     for (auto &r : match) {
         if (range_match && r.offset >= 32) {
-            if ((r.offset-32) & ((UINT32_C(1)<<range_match) - 1))
-                error(r.val.lineno, "Upper word match of %s for range gateway not a multiple"
-                      " of %d bits", r.val.name(), 1U<<range_match);
             continue; }
         ignore ^= ((UINT64_C(1) << r.val->size()) - 1) << r.offset;
         if (shift < 0 || shift > r.offset) shift = r.offset; }

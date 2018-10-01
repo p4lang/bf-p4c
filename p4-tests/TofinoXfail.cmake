@@ -1080,13 +1080,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4smith_regression/vindemiatrixs_0.p4
 )
 
-# BRIG-683
-# error: Upper word match of tracker.medicos for range gateway not a multiple of 4 bits
-p4c_add_xfail_reason("tofino"
-  "for range gateway not a multiple of 4 bits"
-  extensions/p4_tests/p4_14/p4smith_regression/motowns_0.p4
-)
-
 # BRIG-779
 # error: SelectExpression: Cannot unify bit<8> to int<8>
 # p4c_add_xfail_reason("tofino"
