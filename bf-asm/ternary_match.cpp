@@ -318,10 +318,7 @@ void TernaryMatchTable::pass2() {
     // action. This action sets the partition index and must be specified
     // separately in the ALPM context json
     if (is_alpm()) {
-        auto *acts = get_actions();
-        if (auto a = get_action())
-            acts = a->get_actions();
-        if (acts) {
+        if (auto *acts = get_actions()) {
             if (acts->count() == 1) {
                 auto act = acts->begin();
                 set_partition_action_handle(act->handle);

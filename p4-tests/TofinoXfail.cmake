@@ -110,12 +110,8 @@ if (PTF_REQUIREMENTS_MET)
     "AttributeError: Client instance has no attribute .*"
     extensions/p4_tests/p4_14/p4-tests/programs/exm_direct_1/exm_direct_1.p4
     extensions/p4_tests/p4_14/p4-tests/programs/exm_smoke_test/exm_smoke_test.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "Timed out while waiting for switchd to be ready"
     extensions/p4_tests/p4_14/p4-tests/programs/perf_test_alpm/perf_test_alpm.p4
-  )
+    )
 
   p4c_add_xfail_reason("tofino"
     "AssertionError: Expected packet was not received on device"
