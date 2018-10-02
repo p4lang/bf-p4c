@@ -714,10 +714,13 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
                         format->immed->by_group[group]->bit(0) % 128; }
                 if (instruction) {
                     int shiftcount = 0;
-                    if (auto field = instruction.args[0].field())
-                        shiftcount = field->bit(0);
-                    else if (auto field = instruction.args[1].field())
-                        shiftcount = field->immed_bit(0);
+                    if (auto field = instruction.args[0].field()) {
+                        assert(field->by_group[group]->bit(0)/128U == word);
+                        shiftcount = field->by_group[group]->bit(0) % 128U;
+                    } else if (auto field = instruction.args[1].field()) {
+                        assert(field->by_group[group]->bit(0)/128U == word);
+                        shiftcount = field->by_group[group]->bit(0) % 128U;
+                    }
                     merge.mau_action_instruction_adr_exact_shiftcount[bus][word_group] = shiftcount;
                 }
             }
