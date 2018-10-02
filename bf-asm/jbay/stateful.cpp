@@ -82,7 +82,7 @@ bool StatefulTable::setup_jbay(const pair_t &kv) {
         if (kv.value.type == tSTR)
             watermark_level = 1;
         else if (CHECKTYPE(kv.value[1], tINT)) {
-            watermark_level = kv.value[1].i / 128; 
+            watermark_level = kv.value[1].i / 128;
         }
         if (kv.value[1].i % 128 != 0) {
             error(kv.value[1].lineno, "watermark level must be a mulitple of 128");
@@ -214,6 +214,18 @@ template<> void StatefulTable::write_logging_regs(Target::JBay::mau_regs &regs) 
         salu.salu_const_regfile_msbs[i] = (const_vals[i] >> 32) & 0x3;
     }
 
+}
+
+/// Compute the proper value for the register
+///    map_alu.meter_alu_group_data_delay_ctl[].meter_alu_right_group_delay
+/// which controls the two halves of the ixbar->meter_alu fifo, based on a bytemask of which
+/// bytes are needed in the meter_alu.  On JBay, the fifo is 128 bits wide, so each enable
+/// bit controls 64 bits
+int AttachedTable::meter_alu_fifo_enable_from_mask(Target::JBay::mau_regs &, unsigned bytemask) {
+    int rv = 0;
+    if (bytemask & 0xff) rv |= 1;
+    if (bytemask & 0xff00) rv |= 2;
+    return rv;
 }
 
 void StatefulTable::gen_tbl_cfg(Target::JBay, json::map &tbl, json::map &stage_tbl) const {

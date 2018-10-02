@@ -38,5 +38,17 @@ template<> void StatefulTable::write_logging_regs(Target::Tofino::mau_regs &regs
         salu.salu_const_regfile[i] = const_vals[i] & 0xffffffffU;
 }
 
+/// Compute the proper value for the register
+///    map_alu.meter_alu_group_data_delay_ctl[].meter_alu_right_group_delay
+/// which controls the two halves of the ixbar->meter_alu fifo, based on a bytemask of which
+/// bytes are needed in the meter_alu.  On Tofino, the fifo is 64 bits wide, so each enable
+/// bit controls 32 bits
+int AttachedTable::meter_alu_fifo_enable_from_mask(Target::Tofino::mau_regs &, unsigned bytemask) {
+    int rv = 0;
+    if (bytemask & 0xf) rv |= 1;
+    if (bytemask & 0xf0) rv |= 2;
+    return rv;
+}
+
 void StatefulTable::gen_tbl_cfg(Target::Tofino, json::map &tbl, json::map &stage_tbl) const {
 }

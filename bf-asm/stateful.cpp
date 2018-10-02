@@ -332,11 +332,12 @@ template<class REGS> void StatefulTable::write_regs(REGS &regs) {
                     auto hashdata_bytemask = bitmask2bytemask(input_xbar->hash_group_bituse());
                     if (hashdata_bytemask != 0U) {
                         vh_adr_xbar.alu_hashdata_bytemask.alu_hashdata_bytemask_right =
-                        hashdata_bytemask;
+                            hashdata_bytemask & phv_byte_mask;
                         setup_muxctl(vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[2 + side],
-                                     input_xbar->hash_group());
-                    } else {
-                        data_ctl.stateful_meter_alu_data_bytemask = phv_byte_mask;
+                                     input_xbar->hash_group()); }
+                    if (phv_byte_mask & ~hashdata_bytemask) {
+                        data_ctl.stateful_meter_alu_data_bytemask =
+                            phv_byte_mask & ~hashdata_bytemask;
                         data_ctl.stateful_meter_alu_data_xbar_ctl = 8 | input_xbar->match_group();
                     }
                 }
@@ -346,7 +347,8 @@ template<class REGS> void StatefulTable::write_regs(REGS &regs) {
                 auto &delay_ctl = map_alu.meter_alu_group_data_delay_ctl[meter_group_index];
                 delay_ctl.meter_alu_right_group_delay =
                     Target::METER_ALU_GROUP_DATA_DELAY() + row/4 + stage->tcam_delay(gress);
-                delay_ctl.meter_alu_right_group_enable = format->log2size - dual_mode >= 5 ? 3 : 1;
+                delay_ctl.meter_alu_right_group_enable =
+                    meter_alu_fifo_enable_from_mask(regs, phv_byte_mask);
                 auto &error_ctl = map_alu.meter_alu_group_error_ctl[meter_group_index];
                 error_ctl.meter_alu_group_ecc_error_enable = 1;
                 if (output_used) {

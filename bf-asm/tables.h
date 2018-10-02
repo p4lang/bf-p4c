@@ -1181,6 +1181,9 @@ public:
         return nullptr; }
     bool validate_call(Table::Call &call, MatchTable *self, size_t required_args,
                        int hash_dist_type, Table::Call &first_call) override;
+    // used by Selection and Stateful tables.
+    FOR_ALL_TARGETS(TARGET_OVERLOAD,
+        int meter_alu_fifo_enable_from_mask, (mau_regs &, unsigned bytemask))
 )
 
 DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",
