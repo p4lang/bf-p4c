@@ -682,8 +682,8 @@ struct OutOP : public SaluInstruction {
     int lmatch_pred = 0;
 #endif
     operand::Phv *output_operand = 0;
-    FOR_ALL_TARGETS(TARGET_OVERLOAD, void decode_output_mux, value_t &op)
-    FOR_ALL_TARGETS(TARGET_OVERLOAD, int decode_output_option, value_t &op)
+    FOR_ALL_TARGETS(TARGET_OVERLOAD, void decode_output_mux, (target_type, value_t &op))
+    FOR_ALL_TARGETS(TARGET_OVERLOAD, int decode_output_option, (target_type, value_t &op))
     OutOP(const Decode *op, int lineno) : SaluInstruction(lineno) {}
     std::string name() override { return "output"; };
     Instruction *pass1(Table *tbl, Table::Actions::Action *) override;

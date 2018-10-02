@@ -15,11 +15,11 @@
     M(Tofino, ##__VA_ARGS__)
 #endif // HAVE_JBAY
 
-#define INSTANTIATE_TARGET_TEMPLATE(TARGET, FUNC, ...) template FUNC(Target::TARGET::__VA_ARGS__);
-#define DECLARE_TARGET_CLASS(TARGET, ...)    class TARGET __VA_ARGS__;
-#define FRIEND_TARGET_CLASS(TARGET, ...)    friend class Target::TARGET __VA_ARGS__;
-#define TARGET_OVERLOAD(TARGET, FN, ...)    FN(Target::TARGET, ##__VA_ARGS__);
-#define CONST_TARGET_OVERLOAD(TARGET, FN, ...)    FN(Target::TARGET, ##__VA_ARGS__) const;
+#define EXPAND(...)     __VA_ARGS__
+#define INSTANTIATE_TARGET_TEMPLATE(TARGET, FUNC, ...)  template FUNC(Target::TARGET::__VA_ARGS__);
+#define DECLARE_TARGET_CLASS(TARGET, ...)       class TARGET __VA_ARGS__;
+#define FRIEND_TARGET_CLASS(TARGET, ...)        friend class Target::TARGET __VA_ARGS__;
+#define TARGET_OVERLOAD(TARGET, FN, ARGS, ...)  FN(Target::TARGET::EXPAND ARGS) __VA_ARGS__;
 
 #define PER_TARGET_CONSTANTS(M) \
     M(const char *, name) \
@@ -57,6 +57,7 @@ class Target::Tofino : public Target {
  public:
     static constexpr const char * const name = "tofino";
     static constexpr target_t tag = TOFINO;
+    typedef Target::Tofino target_type;
     class Phv;
     struct                                          top_level_regs {
         typedef ::Tofino::memories_top                  _mem_top;
@@ -133,6 +134,7 @@ class Target::JBay : public Target {
  public:
     static constexpr const char * const name = "tofino2";
     static constexpr target_t tag = JBAY;
+    typedef Target::JBay target_type;
     class Phv;
     struct                                          top_level_regs {
         typedef ::JBay::memories_top                    _mem_top;
