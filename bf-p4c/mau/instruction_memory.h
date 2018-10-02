@@ -66,7 +66,6 @@ struct InstructionMemory {
     static constexpr int ROW_ADDR_SHIFT = 1;
     static constexpr int COLOR_ADDR_SHIFT = 0;
     std::set<cstring> atcam_updates;
-    ordered_set<const IR::MAU::ActionData *> shared_action_profiles;
 
     Alloc2D<cstring, IMEM_ROWS, IMEM_COLORS> ingress_imem_use;
     Alloc2D<cstring, IMEM_ROWS, IMEM_COLORS> egress_imem_use;
@@ -108,6 +107,8 @@ struct InstructionMemory {
         }
     };
 
+    std::map<const IR::MAU::ActionData *,
+        std::map<cstring, InstructionMemory::Use::VLIW_Instruction>> shared_action_profiles;
 
     Alloc2Dbase<cstring> &imem_use(gress_t gress) {
         if (gress == INGRESS)

@@ -279,3 +279,8 @@ p4c_add_xfail_reason("tofino2"
   "Exiting with SIGSEGV"
   extensions/p4_tests/p4_16/bf_p4c_samples/v1model-special-ops-bmv2.p4
 )
+
+p4c_add_xfail_reason("tofino2"
+  "No format in action table"
+  testdata/p4_14_samples/const_default_action.p4
+)

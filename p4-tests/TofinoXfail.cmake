@@ -515,6 +515,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/saturated-bmv2.p4
   testdata/p4_16_samples/issue298-bmv2.p4
   testdata/p4_14_samples/register.p4
+  testdata/p4_16_samples/issue1520-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1324,3 +1325,18 @@ p4c_add_xfail_reason("tofino"
   "Exiting with SIGSEGV"
   extensions/p4_tests/p4_16/bf_p4c_samples/v1model-special-ops-bmv2.p4
   )
+
+p4c_add_xfail_reason("tofino"
+  "The random declaration Random.get max size must be a power of two"
+  testdata/p4_16_samples/issue1517-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "already set in .* to"
+  extensions/p4_tests/p4_16/ipv6_tlv.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "No format in action table"
+  testdata/p4_14_samples/const_default_action.p4
+)

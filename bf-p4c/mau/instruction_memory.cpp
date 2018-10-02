@@ -85,9 +85,11 @@ bool InstructionMemory::allocate_imem(const IR::MAU::Table *tbl, Use &alloc, con
         if (ad == nullptr) continue;
         if (shared_action_profiles.count(ad)) {
             LOG2("Already shared through the action profile");
+            auto cached = shared_action_profiles.at(ad);
+            alloc.all_instrs = cached;
             return true;
         }
-        shared_action_profiles.emplace(ad);
+        shared_action_profiles.emplace(ad, alloc.all_instrs);
     }
     GenerateVLIWInstructions gen_vliw(phv);
     tbl->apply(gen_vliw);
@@ -170,7 +172,7 @@ void InstructionMemory::update(cstring name, const TableResourceAlloc *alloc,
         if (ad == nullptr) continue;
         if (shared_action_profiles.count(ad))
             return;
-        shared_action_profiles.emplace(ad);
+        shared_action_profiles.emplace(ad, alloc->instr_mem.all_instrs);
     }
     update(name, alloc, tbl->gress);
 }
