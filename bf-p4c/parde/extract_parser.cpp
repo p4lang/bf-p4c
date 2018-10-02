@@ -412,9 +412,10 @@ struct RewriteParserStatements : public Transform {
                   "A non-byte-aligned header type reached the backend");
 
         // Generate an extract operation for the POV bit.
-        auto* validBit = new IR::Member(IR::Type::Bits::get(1), hdr, "$valid");
+        auto* type = IR::Type::Bits::get(1);
+        auto* validBit = new IR::Member(type, hdr, "$valid");
         rv->push_back(new IR::BFN::Extract(srcInfo, validBit,
-                        new IR::BFN::ConstantRVal(1)));
+                        new IR::BFN::ConstantRVal(type, 1)));
         return rv;
     }
 
@@ -648,8 +649,10 @@ struct RewriteParserStatements : public Transform {
         }
 
         if (rhs->is<IR::Constant>()) {
+            auto* rhsConst = rhs->to<IR::Constant>();
             return new IR::BFN::Extract(s->srcInfo, s->left,
-                     new IR::BFN::ConstantRVal(rhs->to<IR::Constant>()->value));
+                     new IR::BFN::ConstantRVal(rhsConst->type,
+                             rhsConst->value));
         }
 
         // Allow slices if we'd allow the expression being sliced.
