@@ -39,10 +39,11 @@ void AlgTcamMatchTable::setup_column_priority() {
     int no_ways = ways.size();
     int no_entries_per_way = ways[0].rams.size();
     int ram = -1;
-    // FIXME: Brig currently does not support rams 6 & 7 on both sides, once
-    // that supported is added this function should accommodate these rams in
-    // lrams and rrams and the traversal mechanism must be changed to determine
-    // column priority
+    // FIXME-P4C: Ideally RAM's 6 & 7 can be on both left and right RAM Units.
+    // Brig currently does not support this behavior and RAM 6 is always on
+    // left, while RAM 7 on right. Once this supported is added below function
+    // must be modified accordingly to accommodate these rams in lrams and rrams
+    // and the traversal mechanism must be changed to determine column priority
     std::set<int> lrams = { 2, 3, 4, 5, 6 };
     std::set<int> rrams = { 7, 8, 9, 10, 11 };
     // Check if column is on left(0) or right(1) RAMs
@@ -60,7 +61,7 @@ void AlgTcamMatchTable::setup_column_priority() {
                 error (lineno,
                     "ram %d and %d not in same column as rest", col_row, col_ram);
         } else if (lrams.find(col_ram) != lrams.end()) ram = 0;
-          else if (rrams.find(col_ram) != rrams.end())ram = 1; }
+          else if (rrams.find(col_ram) != rrams.end()) ram = 1; }
     // Use sorted ways to validate column priority on remaining columns
     int prev_ram = -1;
     int prev_way = -1;

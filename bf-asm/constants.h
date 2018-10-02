@@ -100,10 +100,6 @@ enum {
     ACTION_DATA_UPPER_HUFFMAN_BITS = 2,
     ACTION_DATA_HUFFMAN_BITS = ACTION_DATA_LOWER_HUFFMAN_BITS + ACTION_DATA_UPPER_HUFFMAN_BITS,
     ACTION_DATA_HUFFMAN_DIFFERENCE = 10,
-    // FIXME-COMPILER: Parser header length adjust values should be picked up
-    // from assembly
-    INGRESS_PARSER_HEADER_LENGTH_ADJUST = 16,
-    EGRESS_PARSER_HEADER_LENGTH_ADJUST = 2,
     MAX_PORTS = 288,
     // LRT params should per target specific?  Currently tofino and jbay look to be the same
     MAX_LRT_PACKET_INTERVAL = 0xfffffff,

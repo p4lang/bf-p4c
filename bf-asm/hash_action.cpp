@@ -24,37 +24,13 @@ void HashActionTable::setup(VECTOR(pair_t) &data) {
 
 void HashActionTable::pass1() {
     LOG1("### Hash Action " << name() << " pass1");
-    MatchTable::pass1(0);
-    if (!p4_table) p4_table = P4Table::alloc(P4Table::MatchEntry, this);
-    else p4_table->check(this);
-    check_next();
-    attached.pass1(this);
-    if (action_bus) action_bus->pass1(this);
-    if (actions) {
-        if (instruction)
-            validate_instruction(instruction);
-        else
-            error(lineno, "No instruction call provided, but actions provided");
-        actions->pass1(this);
-    }
-    if (action) {
-        action->validate_call(action, this, 2, HashDistribution::ACTION_DATA_ADDRESS, action);     
-    }
-
-    if (input_xbar)
-        input_xbar->pass1();
+    MatchTable::pass1();
     for (auto &hd : hash_dist) {
         if (hd.xbar_use == 0)
             hd.xbar_use |= HashDistribution::ACTION_DATA_ADDRESS;
         hd.pass1(this); }
-    if (gateway) {
-        gateway->logical_id = logical_id;
-        gateway->pass1();
-    } else if (!hash_dist.empty())
+    if (!gateway && !hash_dist.empty())
         warning(hash_dist[0].lineno, "No gateway in hash_action means hash_dist can't be used");
-    if (idletime) {
-        idletime->logical_id = logical_id;
-        idletime->pass1(); }
 }
 
 void HashActionTable::pass2() {

@@ -260,6 +260,7 @@ const Table::Call *AttachedTables::get_call(const Table *tbl) const {
  */
 bool AttachedTable::validate_call(Table::Call &call, MatchTable *self, size_t required_args,
         int hash_dist_type, Table::Call &first_call) {
+    if (!self) return false; 
     if (call->stage != self->stage) {
         error(call.lineno, "%s not in same stage as %s", call->name(), self->name());
         return false;

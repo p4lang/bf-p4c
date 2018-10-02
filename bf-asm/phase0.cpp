@@ -24,7 +24,7 @@ void Phase0MatchTable::setup(VECTOR(pair_t) &data) {
 
 void Phase0MatchTable::pass1() {
     LOG1("### Phase 0 match table " << name() << " pass1");
-    MatchTable::pass1(0);
+    MatchTable::pass1();
     if (actions)
         actions->pass1(this);
 }

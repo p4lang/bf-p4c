@@ -393,37 +393,16 @@ void SRamMatchTable::common_sram_checks() {
 }
 
 void SRamMatchTable::pass1() {
-    // FIXME -- factor this code with TernaryIndirectTablle::pass1 -- lots of duplication
-    MatchTable::pass1(0);
-    if (!p4_table) p4_table = P4Table::alloc(P4Table::MatchEntry, this);
-    else p4_table->check(this);
+    LOG1("### SRam match table " << name() << " pass1");
     alloc_busses(stage->sram_match_bus_use);
-    check_next();
-    attached.pass1(this);
     if (format) {
         verify_format();
         setup_ways(); }
-    if (action_bus) action_bus->pass1(this);
-    if (actions) {
-        if (instruction)
-            validate_instruction(instruction);
-        else
-            error(lineno, "No instruction call provided, but actions provided");
-        actions->pass1(this);
-    }
-
-    if (action) {
-        action->validate_call(action, this, 2, HashDistribution::ACTION_DATA_ADDRESS, action);
-    }
-
+    MatchTable::pass1();
     if (action_enable >= 0)
         if (action.args.size() < 1 || action.args[0].size() <= (unsigned)action_enable)
             error(lineno, "Action enable bit %d out of range for action selector", action_enable);
-    input_xbar->pass1();
-    alloc_vpns();
     if (gateway) {
-        gateway->logical_id = logical_id;
-        gateway->pass1();
         if (!gateway->layout.empty()) {
             for (auto &row : layout) {
                 if (row.row == gateway->layout[0].row && row.bus == gateway->layout[0].bus &&
@@ -436,9 +415,6 @@ void SRamMatchTable::pass1() {
                                   " on table %s", name());
                             break; } }
                     break; } } } }
-    if (idletime) {
-        idletime->logical_id = logical_id;
-        idletime->pass1(); }
 }
 
 void SRamMatchTable::setup_ways() {

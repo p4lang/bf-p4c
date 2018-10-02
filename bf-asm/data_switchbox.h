@@ -30,14 +30,6 @@ public:
                 tbl->table_type() == Table::METER)
             prev_row = home_row = prev_row % 2 ? prev_row : prev_row + 1;
         home_row_logical = home_row * 2 + 1; }
-    // FIXME: setup_row needs to be fixed to remove warnings in model when
-    // home_row is not in layout rows.
-    // WARN MauSramRowReg: synth2port data muxes unnecessary for stats_alu row
-    // with no rams stats_rd_r=1 stats_rd_l=0 meter_rd_r=0 meter_rd_l=0
-    // WARN MauSramRowReg: synth2port_fabric_ctl unnecessary config for middle
-    // row no rams stats_to_vbus_below=0 oflo_to_vbus_below=1
-    // oflo_to_vbus_above=1 synth2port_connect_below=1
-    // synth2port_connect_above=1 synth2port_connect_below2above=1
     void setup_row(unsigned row) {
         auto &map_alu =  regs.rams.map_alu;
         auto &swbox = regs.rams.array.switchbox.row;

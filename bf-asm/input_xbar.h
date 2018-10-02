@@ -12,8 +12,7 @@ struct HashCol {
     HashExpr                *fn = 0;
     int                     bit = 0;
     bitvec                  data;
-    unsigned                valid = 0;  // FIXME jbay valid bits are gone; should
-                    // issue an error if one tries to use them.  For now just ignored.
+    unsigned                valid = 0; // Used only in Tofino 
     void dbprint(std::ostream & out) const { 
         out << "HashCol: " << 
                " lineno: " << lineno << 

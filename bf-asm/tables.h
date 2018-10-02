@@ -449,7 +449,7 @@ public:
     std::string action_profile() const { if(p4_table) return p4_table->action_profile; return ""; }
     int table_id() const;
     virtual void pass0() {} // only match tables need pass0
-    virtual void pass1() = 0;
+    virtual void pass1();
     virtual void pass2() = 0;
     virtual void pass3() = 0;
 #define VIRTUAL_TARGET_METHODS(TARGET) \
@@ -490,8 +490,10 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     virtual int instruction_set() { return 0; /* VLIW_ALU */ }
     virtual table_type_t set_match_table(MatchTable *m, bool indirect) { assert(0); return OTHER; }
     virtual const MatchTable *get_match_table() const { assert(0); return nullptr; }
+    virtual MatchTable *get_match_table() { assert(0); return nullptr; }
     virtual std::set<MatchTable *> get_match_tables() { assert(0); return std::set<MatchTable *>(); }
     virtual const AttachedTables *get_attached() const { return 0; }
+    virtual AttachedTables *get_attached() { return 0; }
     virtual const GatewayTable *get_gateway() const { return 0; }
     virtual GatewayTable *get_table_gateway() { return 0; }
     virtual SelectionTable *get_selector() const { return 0; }
@@ -725,7 +727,6 @@ DECLARE_ABSTRACT_TABLE_TYPE(MatchTable, Table,
            GATEWAY_INHIBIT=6 }  table_counter = NONE;
 
     using Table::pass1;
-    void pass1(int type);
     using Table::write_regs;
     template<class TARGET> void write_common_regs(typename TARGET::mau_regs &, int, Table *);
     template<class REGS> void write_regs(REGS &, int type, Table *result);
@@ -735,13 +736,16 @@ DECLARE_ABSTRACT_TABLE_TYPE(MatchTable, Table,
     int get_address_mau_actiondata_adr_default(unsigned log2size, bool per_flow_enable);
 public:
     void pass0() override;
+    void pass1() override;
     bool is_alpm() const {
         if (p4_table) return p4_table->is_alpm(); return false; }
     bool is_attached(const Table *tbl) const override;
     const Table::Call *get_call(const Table *tbl) const { return get_attached()->get_call(tbl); }
     const AttachedTables *get_attached() const override { return &attached; }
+    AttachedTables *get_attached() override { return &attached; }
     const GatewayTable *get_gateway() const override { return gateway; }
     const MatchTable *get_match_table() const override { return this; }
+    MatchTable *get_match_table() override { return this; }
     std::set<MatchTable *> get_match_tables() override {
         std::set<MatchTable *> rv;
         rv.insert(this);
@@ -998,6 +1002,8 @@ public:
          indirect->action ? indirect->action->actions : 0 : 0); }
     const AttachedTables *get_attached() const override {
         return indirect ? indirect->get_attached() : &attached; }
+    AttachedTables *get_attached() override {
+        return indirect ? indirect->get_attached() : &attached; }
     SelectionTable *get_selector() const override {
         return indirect ? indirect->get_selector() : 0; }
     StatefulTable *get_stateful() const override {
@@ -1078,8 +1084,10 @@ DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
         period_name = 0; }
     Actions *get_actions() const override { return actions ? actions : (match_table ? match_table->actions : nullptr); }
     const AttachedTables *get_attached() const override { return &attached; }
+    AttachedTables *get_attached() override { return &attached; }
     const GatewayTable *get_gateway() const override { return match_table->get_gateway(); }
     const MatchTable *get_match_table() const override { return match_table; }
+    MatchTable *get_match_table() override { return match_table; }
     std::set<MatchTable *> get_match_tables() override {
         std::set<MatchTable *> rv;
         if (match_table) rv.insert(match_table);
@@ -1146,6 +1154,8 @@ protected:
     void add_alu_index(json::map &stage_tbl, std::string alu_index) const;
 public:
     const MatchTable *get_match_table() const override {
+        return match_tables.size() == 1 ? *match_tables.begin() : 0; }
+    MatchTable *get_match_table() override {
         return match_tables.size() == 1 ? *match_tables.begin() : 0; }
     std::set<MatchTable *> get_match_tables() override { return match_tables; }
     bool has_per_flow_enable() const { return per_flow_enable; }
@@ -1267,6 +1277,7 @@ private:
 public:
     table_type_t table_type() const override { return GATEWAY; }
     const MatchTable *get_match_table() const override { return match_table; }
+    MatchTable *get_match_table() override { return match_table; }
     std::set<MatchTable *> get_match_tables() override {
         std::set<MatchTable *> rv;
         if (match_table) rv.insert(match_table);

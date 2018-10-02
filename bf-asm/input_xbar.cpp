@@ -155,7 +155,8 @@ InputXbar::InputXbar(Table *t, bool tern, const VECTOR(pair_t) &data)
                     setup_hash(hash_tables[index], index, t->gress, c.value,
                                c.key.lineno, c.key.lo, c.key.hi);
                 } else if (CHECKTYPEM(c.key, tCMD, "hash column decriptor")) {
-                    if (c.key.vec.size != 2 || c.key[0] != "valid" || c.key[1].type != tINT) {
+                    if (c.key.vec.size != 2 || c.key[0] != "valid" || c.key[1].type != tINT
+                            || options.target != TOFINO) {
                         error(c.key.lineno, "Invalid hash column descriptor");
                         continue; }
                     int col = c.key[1].i;
@@ -470,7 +471,7 @@ InputXbar::Input *InputXbar::GroupSet::find(Phv::Slice sl) const {
 }
 
 std::vector<InputXbar::Input *> InputXbar::GroupSet::find_all(Phv::Slice sl) const {
-    std::vector<Input *> rv; 
+    std::vector<Input *> rv;
     for (InputXbar *i : use) {
          auto vec = i->find_all(sl, group);
          rv.insert(rv.end(), vec.begin(), vec.end());

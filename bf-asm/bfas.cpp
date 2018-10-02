@@ -32,7 +32,9 @@ option_t options = {
 #else
     .singlewrite = false,
 #endif
-    .hash_parity_enabled = false,  //FIXME: flip to true when 51st bit is reserved
+    //FIXME-P4C: Compiler currently does not reserve 51st bit for hash parity.
+    //Flip 'hash_parity_enabled' to true when 51st bit is reserved.
+    .hash_parity_enabled = false,  
     .high_availability_enabled = true
 };
 

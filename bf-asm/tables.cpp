@@ -717,6 +717,32 @@ void Table::need_bus(int lineno, Alloc1Dbase<Table *> &use, int idx, const char 
         use[idx] = this;
 }
 
+void Table::pass1() {
+    alloc_vpns();
+    check_next();
+    if (auto att = get_attached())
+        att->pass1(get_match_table());
+    if (action_bus) action_bus->pass1(this);
+
+    if (actions) {
+        if (instruction) {
+            validate_instruction(instruction);
+        } else {
+            // Phase0 has empty actions which list param order
+            if (table_type() != PHASE0) {
+                error(lineno, "No instruction call provided, but actions provided");
+            }
+        }
+        actions->pass1(this);
+    }
+
+    if (action) {
+        auto reqd_args = 2;
+        action->validate_call(action, get_match_table(), 
+            reqd_args , HashDistribution::ACTION_DATA_ADDRESS, action);
+    }
+}
+
 static void overlap_test(int lineno,
     unsigned a_bit, ordered_map<std::string, Table::Format::Field>::iterator a,
     unsigned b_bit, ordered_map<std::string, Table::Format::Field>::iterator b)

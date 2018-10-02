@@ -18,10 +18,8 @@ Parser Parser::singleton_object;
 
 Parser::Parser() : Section("parser") {
     lineno[0] = lineno[1] = 0;
-    // FIXME-COMPILER: These values are currently hardcoded but should be passed
-    // through the parser assembly code
-    hdr_len_adj[INGRESS] = INGRESS_PARSER_HEADER_LENGTH_ADJUST;
-    hdr_len_adj[EGRESS] = EGRESS_PARSER_HEADER_LENGTH_ADJUST;
+    hdr_len_adj[INGRESS] = 0;
+    hdr_len_adj[EGRESS] = 0;
     meta_opt = 0;
 }
 Parser::~Parser() {
@@ -133,6 +131,10 @@ void Parser::input(VECTOR(value_t) args, value_t data) {
                 continue; }
             define_state(gress, kv); }
 
+        if (!hdr_len_adj[gress]) { 
+            error(lineno[gress], "Parser header length adjust value not specified for %sgress", 
+                                    gress ? "e" : "in");
+        }
         // process the CLOTs immediately rather than in Parser::process() so that it
         // happens before Deparser::process()
         for (auto &vec : Values(clots[gress])) {

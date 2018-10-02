@@ -171,9 +171,7 @@ void TernaryMatchTable::pass0() {
 
 void TernaryMatchTable::pass1() {
     LOG1("### Ternary match table " << name() << " pass1");
-    MatchTable::pass1(1);
-    if (!p4_table) p4_table = P4Table::alloc(P4Table::MatchEntry, this);
-    else p4_table->check(this);
+    MatchTable::pass1();
     stage->table_use[timing_thread(gress)] |= Stage::USE_TCAM;
     /* FIXME -- unconditionally setting piped mode -- only need it for wide
      * match across a 4-row boundary */
@@ -193,7 +191,6 @@ void TernaryMatchTable::pass1() {
              TCAM_TABLES_PER_STAGE, false, stage->tcam_id_use);
     }
     // alloc_busses(stage->tcam_match_bus_use); -- now hardwired
-    input_xbar->pass1();
     if (match.empty() && input_xbar->tcam_width()) {
         match.resize(input_xbar->tcam_width());
         for (unsigned i = 0; i < match.size(); i++) {
@@ -227,9 +224,6 @@ void TernaryMatchTable::pass1() {
                     bg_use.second = mg->byte_group; } }
             if (++mg == match.end()) mg = match.begin(); } }
     if (error_count > 0) return;
-    alloc_vpns();
-    check_next();
-    if (action_bus) action_bus->pass1(this);
     for (auto &chain_rows_col : chain_rows)
         chain_rows_col = 0;
     unsigned row_use = 0;
@@ -289,13 +283,6 @@ void TernaryMatchTable::pass1() {
     if (hit_next.size() > 2 && !indirect)
         error(hit_next[0].lineno, "Ternary Match tables cannot directly specify more"
               "than 2 hit next tables");
-    if (actions) actions->pass1(this);
-    if (gateway) {
-        gateway->logical_id = logical_id;
-        gateway->pass1(); }
-    if (idletime) {
-        idletime->logical_id = logical_id;
-        idletime->pass1(); }
 }
 
 
@@ -862,28 +849,9 @@ Table::table_type_t TernaryIndirectTable::set_match_table(MatchTable *m, bool in
 }
 
 void TernaryIndirectTable::pass1() {
-    // FIXME -- factor this code with SRamMatchTable::pass1 -- lots of duplication
     LOG1("### Ternary indirect table " << name() << " pass1");
     alloc_busses(stage->tcam_indirect_bus_use);
-    alloc_vpns();
-    check_next();
-    if (action_bus) action_bus->pass1(this);
-
-    if (actions) {
-        if (instruction) {
-            validate_instruction(instruction);
-        } else {
-            error(lineno, "No instruction call provided, but actions provided");
-        }
-        actions->pass1(this);
-    }
-
-    if (action) {
-        action->validate_call(action, match_table, 2, HashDistribution::ACTION_DATA_ADDRESS,
-                              action);
-    }
-
-    attached.pass1(match_table);
+    Table::pass1();
     if (action_enable >= 0)
         if (action.args.size() < 1 || action.args[0].size() <= (unsigned)action_enable)
             error(lineno, "Action enable bit %d out of range for action selector", action_enable);

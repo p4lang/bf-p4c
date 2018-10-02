@@ -121,8 +121,10 @@ void MatchTable::pass0() {
     attached.pass0(this);
 }
 
-void MatchTable::pass1(int type) {
-    /* FIXME -- move common stuff from Exact/Ternary/HashAction here. */
+void MatchTable::pass1() {
+    Table::pass1();
+    if (!p4_table) p4_table = P4Table::alloc(P4Table::MatchEntry, this);
+    else p4_table->check(this);
     // Set up default action. This will look up action and/or tind for default
     // action if the match_table doesnt have one specified
     if (default_action.empty()) default_action = get_default_action();
@@ -140,6 +142,13 @@ void MatchTable::pass1(int type) {
             bool found = remove_aug_names(p.name);
             if (found)
                 p.is_valid = true; } }
+    if (idletime) {
+        idletime->logical_id = logical_id;
+        idletime->pass1(); }
+    if (input_xbar) input_xbar->pass1();
+    if (gateway) {
+        gateway->logical_id = logical_id;
+        gateway->pass1(); }
 }
 
 void MatchTable::gen_idletime_tbl_cfg(json::map &stage_tbl) const {
