@@ -3,12 +3,10 @@
 import os
 import sys
 
-P4C_TIMEOUT = 120
 TEST_DRIVER_TIMEOUT = 1000
 
 P4C = "/bfn/bf-p4c-compilers/build/p4c/p4c"
-P4C_ARGS = ['"-g"', '"--validate-output"', '"--std"', '"p4-14"', '"--target"', \
-    '"tofino"', '"--arch"', '"v1model"']
+P4C_ARGS = ['"-g"', '"--validate-output"']
 
 GLASS = "/usr/local/bin/p4c-tofino"
 GLASS_ARGS = ['"-g"', '" -j 16"']
@@ -51,8 +49,12 @@ class Glass(Compiler):
 
 class Test(object):
     def __init__(self):
-        self.name = ''
-        self.path = ''
+        self.p4 = ''
+        self.p4_path = ''
+        self.include_path = ''
+        self.p4_opts = ''
+        self.target = 'tofino'
+        self.std = 'p4-14'
+        self.arch = 'v1model'
+        self.skip_opt = '' # choices: '', skip_Glass, skip_P4C, skip_Glass_P4C
         self.outpath = ''
-        self.opts = ''
-        self.timeout = P4C_TIMEOUT

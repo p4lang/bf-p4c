@@ -54,6 +54,10 @@ ARG MAKEFLAGS=-j2
 
 # Use 'test' if you wish to keep the build artifacts
 ARG IMAGE_TYPE=release
+# Use 'true' if you wish to build glass for p4v or p4i
+ARG BUILD_GLASS=false
+# Use 'true' if you wish to generate ref outputs for p4i
+ARG GEN_REF_OUTPUTS=false
 
 # testing dependencies
 RUN apt-get install -y net-tools
@@ -79,6 +83,25 @@ RUN /usr/local/bin/ccache --zero-stats && \
     rm -rf bf-asm/walle/build/* && \
     find . -name '*.o' -type f -delete && \
     find . -name '*.a' -type f -delete
+
+# make and install glass if BUILD_GLASS=true
+WORKDIR /bfn/bf-p4c-compilers/glass/p4-hlir/
+RUN (test "$BUILD_GLASS" = "true" && \
+     pip install -r requirements.txt && \
+     python setup.py install) || \
+    (test "$BUILD_GLASS" = "false")
+
+WORKDIR /bfn/bf-p4c-compilers/glass
+RUN (test "$BUILD_GLASS" = "true" && \
+     python setup.py install) || \
+    (test "$BUILD_GLASS" = "false")
+
+# Generate reference outputs for p4i if GEN_REF_OUTPUTS=true
+WORKDIR /bfn/bf-p4c-compilers/scripts/gen_reference_outputs
+RUN (test "$GEN_REF_OUTPUTS" = "true" && \
+     set +e && \
+     python -u gen_ref_outputs.py) || \
+    (test "$GEN_REF_OUTPUTS" = "false")
 
 WORKDIR /bfn/
 RUN (test "$IMAGE_TYPE" = "release" && rm -rf bf-p4c-compilers) || \

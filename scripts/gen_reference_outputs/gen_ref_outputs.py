@@ -2,6 +2,7 @@
 
 import os
 import sys
+import csv
 import config
 from runner import RunCmd
 
@@ -12,37 +13,54 @@ def writeblock_to_file(filename, fileblock):
 
 def get_test_list():
     try:
-        with open(config.TEST_FILE, 'r') as fr:
-            return fr.read().split('\n')
+        tests = []
+        # p4,p4_path,include_path,p4_opts,target,language,arch,skip_opt
+        field_names=['p4', 'p4_path', 'include_path', 'p4_opts', 'target', 'language', 'arch', 'skip_opt']
+        with open('tests.csv', 'rb') as csvfile:
+            test_reader = csv.DictReader(csvfile, fieldnames=field_names)
+            for row in test_reader:
+                if '# ' not in row['p4']:
+                    mTest = config.Test()
+                    mTest.p4 = row['p4']
+                    mTest.p4_path = row['p4_path']
+                    mTest.include_path = row['include_path']
+                    mTest.p4_opts = row['p4_opts']
+                    mTest.target = row['target']
+                    mTest.language = row['language']
+                    mTest.arch = row['arch']
+                    mTest.skip_opt = row['skip_opt']
+                    tests.append(mTest)
+        return tests
     except Exception as e:
         print e
         sys.exit(1)
 
-# From the tests.csv file, extract the testname and options
-def parse_test(test):
-    mTest = config.Test()
-    test_contents = test.split(',')
-    mTest.path = os.path.dirname(test_contents[0])
-    mTest.name = os.path.basename(test_contents[0]).split('.p4')[0]
-    if len(test_contents) > 1:
-        mTest.opts = test_contents[1]
-        if len(test_contents) > 2:
-            mTest.timeout = int(test_contents[2])
-    return mTest
-
-def prep_test_line(test, p4c):
-    mTest = parse_test(test)
+def prep_test_line(mTest, p4c):
+    # Check target and arch - generate test_line for Glass only for tofino, p4-14, v1model
+    if p4c.name is 'Glass':
+        if 'tofino2' in mTest.target or 'p4-16' in mTest.language or 'tna' in mTest.arch:
+            return p4c
+    # Check skip_opt - generate test_line only if not skipped
+    if mTest.skip_opt and p4c.name in mTest.skip_opt:
+        return p4c
     # Add compiler options
-    test_line = "\t'" + mTest.name + "': ([" + ', '.join(p4c.args)
+    test_line = "\t'" + mTest.p4 + "': ([" + ', '.join(p4c.args)
     if len(p4c.args) > 0:
         test_line += ', '
     # Add test specific compiler options
-    if len(mTest.opts) > 0:
-        test_line += mTest.opts + ', '
+    if len(mTest.include_path) > 0:
+        test_line += '"-I ' + mTest.include_path + '", '
+    if len(mTest.p4_opts) > 0:
+        test_line += '"' + mTest.p4_opts + '", ' 
+    # Add P4C specific compiler options
+    if p4c.name is not 'Glass':
+        test_line += '"--target ' + mTest.target + '", '
+        test_line += '"--std ' + mTest.language + '", '
+        test_line += '"--arch ' + mTest.arch + '", '
     # Add filename and output directory 
-    extra_args = ['"' + os.path.join(mTest.path, mTest.name + '.p4') + '"', \
+    extra_args = ['"' + os.path.join(mTest.p4_path) + '"', \
         '"-o"', \
-        '"' + os.path.join(config.REF_OUTPUTS_DIR, mTest.name, p4c.name) + '"']
+        '"' + os.path.join(config.REF_OUTPUTS_DIR, mTest.p4, p4c.name) + '"']
     test_line += ', '.join(extra_args) + '], None),\n'
     p4c.testmatrix += test_line
     return p4c
@@ -52,9 +70,9 @@ def prep_test_matrix():
     mP4C = config.P4C()
 
     # For each test case, prepare a test line in the test matrix
-    test_list = get_test_list()
-    for test in test_list:
-        if len(test) > 0 and '# ' not in test:
+    test_dict = get_test_list()
+    for test in test_dict:
+        if len(test.p4) > 0:
             for p4c in [mGlass, mP4C]:
                 p4c = prep_test_line(test, p4c)
 
@@ -70,8 +88,12 @@ def run_test_matrix(p4c, test_cmd):
         p4c + '_test_error.log'), rc.err)
     writeblock_to_file(os.path.join(config.REF_OUTPUTS_DIR, \
         p4c + '_test_out.log'), rc.out)
-    print 'Test Summary:\n' + rc.out + '\n'
-    print 'Test Errors:\n' + rc.err + '\n'
+    print 'Test Summary:\n'
+    if rc.out is not None:
+        print rc.out + '\n'
+    print 'Test Errors:\n'
+    if rc.err is not None:
+        print rc.err + '\n'
     return rc.return_code
 
 # Generate and run the test matrix for Glass and P4C compilation
