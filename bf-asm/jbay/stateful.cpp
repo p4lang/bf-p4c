@@ -5,7 +5,11 @@
 enum {
     PUSHPOP_BITS = 5,
     PUSHPOP_MASK = 0xf,
-    PUSHPOP_CONTROLPLANE = 0x10,
+    PUSHPOP_ANY = 0x10,
+    PUSH_MASK = PUSHPOP_MASK,
+    PUSH_ANY = PUSHPOP_ANY,
+    POP_MASK = PUSHPOP_MASK << PUSHPOP_BITS,
+    POP_ANY = PUSHPOP_ANY << PUSHPOP_BITS,
     PUSH_MISS = 1,
     PUSH_HIT = 2,
     PUSH_GATEWAY = 3,
@@ -29,7 +33,7 @@ static const char *function_names[] = { "none", "log", "fifo", "stack", "bloom" 
 static int decode_push_pop(const value_t &v) {
     static const std::map<std::string, int> modes = {
         { "hit", PUSH_HIT }, { "miss", PUSH_MISS }, { "gateway", PUSH_GATEWAY },
-        { "active", PUSH_ALL }, { "control_plane", PUSHPOP_CONTROLPLANE } };
+        { "active", PUSH_ALL } };
     if (!CHECKTYPE(v, tSTR)) return 0;
     if (!modes.count(v.s)) {
         error(v.lineno, "Unknown push/pop mode %s", v.s);
@@ -128,14 +132,16 @@ int StatefulTable::parse_counter_mode(Target::JBay target, const value_t &v) {
 }
 
 void StatefulTable::set_counter_mode(Target::JBay target, int mode) {
-    mode &= FUNCTION_MASK;
-    assert(mode > 0 && (mode >> FUNCTION_SHIFT) <= FUNCTION_BLOOM_CLR);
-    if (stateful_counter_mode && stateful_counter_mode != mode)
+    int fnmode = mode & FUNCTION_MASK;
+    assert(fnmode > 0 && (fnmode >> FUNCTION_SHIFT) <= FUNCTION_BLOOM_CLR);
+    if (stateful_counter_mode && (stateful_counter_mode & FUNCTION_MASK) != fnmode)
         error(lineno, "Incompatible uses (%s and %s) of stateful alu counters",
               function_names[stateful_counter_mode >> FUNCTION_SHIFT],
               function_names[mode >> FUNCTION_SHIFT]);
     else
-        stateful_counter_mode = mode;
+        stateful_counter_mode |= fnmode;
+    if (mode & PUSH_MASK) stateful_counter_mode |= PUSH_ANY;
+    if (mode & POP_MASK) stateful_counter_mode |= POP_ANY;
 }
 
 // This is called write_logging_regs, but it handles all target (jbay) specific
@@ -185,9 +191,9 @@ template<> void StatefulTable::write_logging_regs(Target::JBay::mau_regs &regs) 
         auto &ctl2 = merge.mau_stateful_log_counter_ctl2[meter_group()];
         ctl2.slog_counter_function = stateful_counter_mode >> FUNCTION_SHIFT;
         ctl2.slog_instruction_width = format->log2size - 3;
-        if (stateful_counter_mode & PUSHPOP_CONTROLPLANE)
+        if ((stateful_counter_mode & PUSH_ANY) == 0)
             ctl2.slog_push_event_ctl = 1;
-        if ((stateful_counter_mode >> PUSHPOP_BITS) & PUSHPOP_CONTROLPLANE)
+        if ((stateful_counter_mode & POP_ANY) == 0)
             ctl2.slog_pop_event_ctl = 1;
         ctl2.slog_vpn_base = logvpn_min;
         ctl2.slog_vpn_limit = logvpn_max;
