@@ -204,7 +204,6 @@ void MeterTable::write_regs(REGS &regs) {
             auto &meter_ctl = meter.meter_ctl;
             auto &red_value_ctl = meter.red_value_ctl;
             meter_ctl.meter_bytecount_adjust = 0; // FIXME
-            meter_ctl.meter_rng_enable = 0; // FIXME
             auto &delay_ctl = map_alu.meter_alu_group_data_delay_ctl[meter_group_index];
             delay_ctl.meter_alu_right_group_delay = Target::METER_ALU_GROUP_DATA_DELAY() + row/4 + stage->tcam_delay(gress);
             switch (type) {
@@ -221,12 +220,13 @@ void MeterTable::write_regs(REGS &regs) {
                     break;
                 default:
                     meter_ctl.meter_enable = 1;
+                    // DRV_1143 -- rng should always be on for normal meters
+                    meter_ctl.meter_rng_enable = 1;
                     break; }
             if (count == BYTES)
                 meter_ctl.meter_byte = 1;
             if (gress == EGRESS)
                 meter_ctl.meter_alu_egress = 1;
-            meter_ctl.meter_rng_enable = 0; // TODO
             auto &error_ctl = map_alu.meter_alu_group_error_ctl[meter_group_index];
             error_ctl.meter_alu_group_ecc_error_enable = 1;
             error_ctl.meter_alu_group_thread = gress;

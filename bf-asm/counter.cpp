@@ -254,7 +254,8 @@ template<class REGS> void CounterTable::write_regs(REGS &regs) {
             dump_ctl.stats_dump_has_bytes = 1;
         if (type == PACKETS || type == BOTH)
             dump_ctl.stats_dump_has_packets = 1;
-        dump_ctl.stats_dump_size = layout_size() - 2;  // FIXME
+        dump_ctl.stats_dump_offset = minvpn;
+        dump_ctl.stats_dump_size = maxvpn;
         if (direct) {
             adrdist.movereg_ad_direct[MoveReg::STATS] |= 1U << m->logical_id;
             if (m->is_ternary())

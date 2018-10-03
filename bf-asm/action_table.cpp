@@ -125,11 +125,9 @@ void ActionTable::need_on_actionbus(Table *att, TableOutputModifier mod, int lo,
         if (match_table->is_attached(att)) {
             match_table->need_on_actionbus(att, mod, lo, hi, size);
             ++attached_count; } }
-    // FIXME -- if its attached to more than one match table (mutex match tables that
-    // share attached action table and attached other table), then it needs to be allocated
-    // to the same slot of the action bus in all of the match tables.  Not sure if we do that
-    // properly
-    assert(attached_count == 1);
+    if (attached_count > 1) {
+        error(att->lineno, "Assembler cannot allocate action bus space for table %s as it "
+              "used by mulitple tables", att->name()); }
 }
 
 void ActionTable::need_on_actionbus(HashDistribution *hd, int lo, int hi, int size) {
@@ -149,11 +147,9 @@ void ActionTable::need_on_actionbus(RandomNumberGen rng, int lo, int hi, int siz
     for (auto *match_table : match_tables) {
         match_table->need_on_actionbus(rng, lo, hi, size);
         ++attached_count; }
-    // FIXME -- if its attached to more than one match table (mutex match tables that
-    // share actions in an attached action data table, then it needs to be allocated
-    // to the same slot of the action bus in all of the match tables.  Not sure if we do that
-    // properly
-    assert(attached_count == 1);
+    if (attached_count > 1) {
+        error(-1, "Assembler cannot allocate action bus space for rng %d as it "
+              "used by mulitple tables", rng.unit); }
 }
 
 /**
@@ -516,13 +512,15 @@ void ActionTable::write_regs(REGS &regs) {
         fmt_log2size = std::max(fmt_log2size, fmt->log2size);
     unsigned width = (fmt_log2size > 7) ? 1 << (fmt_log2size - 7) : 1;
     unsigned depth = layout_size()/width;
+    bool push_on_overflow = false;  // true if we overflow from bottom to top
     unsigned idx = 0;
     int word = 0;
     Layout *home = nullptr;
     int prev_logical_row = -1;
     decltype(regs.rams.array.switchbox.row[0].ctl) *home_switch_ctl = 0,
                                                    *prev_switch_ctl = 0;
-    auto &icxbar = regs.rams.match.adrdist.adr_dist_action_data_adr_icxbar_ctl;
+    auto &adrdist = regs.rams.match.adrdist;
+    auto &icxbar = adrdist.adr_dist_action_data_adr_icxbar_ctl;
     for (Layout &logical_row : layout) {
         unsigned row = logical_row.row/2;
         unsigned side = logical_row.row&1;   /* 0 == left  1 == right */
@@ -578,6 +576,7 @@ void ActionTable::write_regs(REGS &regs) {
                 assert(home->row >= 8);
                 oflo_adr_xbar.adr_dist_oflo_adr_xbar_source_index = 0;
                 oflo_adr_xbar.adr_dist_oflo_adr_xbar_source_sel = 3;
+                push_on_overflow = true;
                 for (auto mtab : match_tables)
                     if (!icxbar[mtab->logical_id].address_distr_to_overflow)
                         icxbar[mtab->logical_id].address_distr_to_overflow = 1; }
@@ -645,9 +644,8 @@ void ActionTable::write_regs(REGS &regs) {
             if (++idx == depth) { idx = 0; home = nullptr; ++word; } }
         prev_switch_ctl = &switch_ctl;
         prev_logical_row = logical_row.row; }
-    // FIXME -- should we do this?
-    // if (push_on_overflow)
-    //    adrdist.oflo_adr_user[0] = adrdist.oflo_adr_user[1] = AdrDist::ACTION;
+    if (push_on_overflow)
+        adrdist.oflo_adr_user[0] = adrdist.oflo_adr_user[1] = AdrDist::ACTION;
     if (actions) actions->write_regs(regs, this);
 }
 

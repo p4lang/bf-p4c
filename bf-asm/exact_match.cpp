@@ -28,7 +28,16 @@ void ExactMatchTable::pass1() {
 
 void ExactMatchTable::setup_ways() {
     SRamMatchTable::setup_ways();
-    // FIXME -- check to ensure that ways that share a bus use the same hash group?
+    for (auto &row : layout) {
+        int first_way = -1;
+        for (auto col : row.cols) {
+            int way = way_map.at(std::make_pair(row.row, col)).way;
+            if (first_way < 0) {
+                first_way = way;
+            } else if (ways[way].group != ways[first_way].group) {
+                error(row.lineno, "Ways %d and %d of table %s share address bus on row %d, "
+                      "but use different hash groups", first_way, way, name(), row.row);
+                break; } } }
     //Setup unique hash_function_id for each way group
     unsigned hash_fn_id = 0;
     for (auto &w : ways) {

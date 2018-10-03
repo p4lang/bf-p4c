@@ -906,7 +906,10 @@ template<class REGS> void ActionBus::write_immed_regs(REGS &regs, Table *tbl) {
             for (unsigned b = off/8; b <= (off + size - 1)/8; b++) {
                 assert((b&3) == (slot&3));
                 adrdist.immediate_data_8b_enable[tid/8] |= 1U << ((tid&7)*4 + b);
-                // FIXME -- we write these ctl regs twice if we use both bytes in a pair
+                // we write these ctl regs twice if we use both bytes in a pair.  That will
+                // cause a WARNING in the log file if both uses are the same -- it should be
+                // impossible to get an ERROR for conflicting uses, as that should have caused
+                // an error in pass1 above, and never made it to this point.
                 setup_muxctl(adrdist.immediate_data_8b_ixbar_ctl[tid*2 + b/2], slot++/4); }
             break;
         case 16:

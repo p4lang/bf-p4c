@@ -49,7 +49,7 @@ unsigned AttachedTable::per_flow_enable_bit(MatchTable *m) const {
     } else for (auto mt : match_tables) {
         auto bit = per_flow_enable_bit(mt);
         if (bit && pfe_bit && bit != pfe_bit) {
-            // FIXME -- this should be ok, but we can't handle it currently
+            // this should be ok, but the driver can't handle it currently
             warning(lineno, "pfe_bit %s at different locations in different match tables,"
                     " which will cause driver problems", per_flow_enable_param.c_str());
         } else {
@@ -103,7 +103,7 @@ Table::Format::Field *AttachedTables::find_address_field(const AttachedTable *tb
             if (s.args.size() > 1)
                 return s.args.at(1).field();
             else if (s.args.size() > 0) {
-                // FIXME -- this special case is a hack in case we're calling this before
+                // this special case is a hack in case we're calling this before
                 // pass1 has run on the match table with these attached tables
                 auto *f = s.args.at(0).field();
                 if (f && f->size > 3) return f; } }

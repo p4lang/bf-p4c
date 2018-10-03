@@ -263,9 +263,26 @@ void GatewayTable::pass1() {
         if (format->size > 64)
             error(format->lineno, "Gateway payload format too large (max 64 bits)");
         if (match_table && match_table->format) {
-            // FIXME -- check for consistency
-        }
-    }
+            int groups = std::min(format->groups(), match_table->format->groups());
+            bool err = false;
+            for (auto &field : *format) {
+                if (auto match_field = match_table->format->field(field.first)) {
+                    for (int grp = 0; grp < groups; ++grp) {
+                        if (field.second.by_group[grp]->bits != match_field->by_group[grp]->bits) {
+                            if (!err)
+                                error(format->lineno, "Gateway format inconsistent with table %s it"
+                                      " is attached to", match_table->name());
+                            error(match_table->format->lineno, "field %s inconsistent",
+                                  field.first.c_str());
+                            err = true;
+                            break; } }
+                } else {
+                    if (!err)
+                        error(format->lineno, "Gateway format inconsistent with table %s it is "
+                              "attached to", match_table->name());
+                    error(match_table->format->lineno, "No field %s in match table format",
+                          field.first.c_str());
+                    err = true; } } } }
 }
 
 void GatewayTable::pass2() {
