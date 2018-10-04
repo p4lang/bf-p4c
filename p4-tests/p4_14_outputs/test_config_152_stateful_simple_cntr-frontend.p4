@@ -169,21 +169,21 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".NoAction") action NoAction_0() {
     }
     bit<16> tmp_0;
-    @name(".cntr") RegisterAction<bit<16>, bit<16>>(stateful_cntr) cntr = {
+    @name(".cntr") RegisterAction<bit<16>, bit<32>, bit<16>>(stateful_cntr) cntr = {
         void apply(inout bit<16> value) {
             bit<16> in_value;
             in_value = value;
             value = in_value + 16w1;
         }
     };
-    @name(".cntr2") RegisterAction<bit<16>, bit<16>>(stateful_cntr) cntr2 = {
+    @name(".cntr2") RegisterAction<bit<16>, bit<32>, bit<16>>(stateful_cntr) cntr2 = {
         void apply(inout bit<16> value) {
             bit<16> in_value_3;
             in_value_3 = value;
             value = in_value_3 + 16w255;
         }
     };
-    @name(".cntr3") RegisterAction<bit<16>, bit<16>>(stateful_cntr) cntr3 = {
+    @name(".cntr3") RegisterAction<bit<16>, bit<32>, bit<16>>(stateful_cntr) cntr3 = {
         void apply(inout bit<16> value, out bit<16> rv) {
             bit<16> in_value_4;
             in_value_4 = value;

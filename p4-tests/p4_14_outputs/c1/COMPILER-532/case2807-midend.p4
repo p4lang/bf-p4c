@@ -1415,12 +1415,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 3071;
         default_action = _Ekron();
     }
-    @name(".Mattapex") RegisterAction<bit<1>, bit<1>>(Willshire) _Mattapex_0 = {
+    @name(".Mattapex") RegisterAction<bit<1>, bit<32>, bit<1>>(Willshire) _Mattapex_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
-    @name(".RioPecos") RegisterAction<bit<1>, bit<1>>(Longwood) _RioPecos_0 = {
+    @name(".RioPecos") RegisterAction<bit<1>, bit<32>, bit<1>>(Longwood) _RioPecos_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }

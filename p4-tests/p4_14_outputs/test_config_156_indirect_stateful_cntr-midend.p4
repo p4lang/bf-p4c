@@ -177,7 +177,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    @initial_register_lo_value(1) @name(".cntr") RegisterAction<bit<16>, bit<16>>(stateful_cntr) cntr = {
+    @initial_register_lo_value(1) @name(".cntr") DirectRegisterAction<bit<16>, bit<16>>(stateful_cntr) cntr = {
         void apply(inout bit<16> value, out bit<16> rv) {
             value = value + 16w1;
             rv = value;

@@ -167,7 +167,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".logging_reg") register<bit<16>>(32w16384) logging_reg;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".logging_alu") RegisterAction<bit<16>, bit<16>>(logging_reg) logging_alu = {
+    @name(".logging_alu") RegisterAction<bit<16>, bit<32>, bit<16>>(logging_reg) logging_alu = {
         void apply(inout bit<16> value) {
             bit<16> in_value;
             in_value = value;

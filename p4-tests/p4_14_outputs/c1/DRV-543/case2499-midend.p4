@@ -1098,12 +1098,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_44();
     }
-    @name(".Salamatof") RegisterAction<bit<1>, bit<1>>(Midas) _Salamatof_0 = {
+    @name(".Salamatof") RegisterAction<bit<1>, bit<32>, bit<1>>(Midas) _Salamatof_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
-    @name(".Sisters") RegisterAction<bit<1>, bit<1>>(Lucien) _Sisters_0 = {
+    @name(".Sisters") RegisterAction<bit<1>, bit<32>, bit<1>>(Lucien) _Sisters_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }

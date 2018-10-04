@@ -185,18 +185,18 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_5() {
     }
-    @name(".cntr_1") RegisterAction<bit<16>, bit<16>>(stateful_cntr_1) cntr_1 = {
+    @name(".cntr_1") DirectRegisterAction<bit<16>, bit<16>>(stateful_cntr_1) cntr_1 = {
         void apply(inout bit<16> value) {
             value = value + 16w1;
         }
     };
-    @name(".cntr_2") RegisterAction<bit<16>, bit<16>>(stateful_cntr_2) cntr_2 = {
+    @name(".cntr_2") DirectRegisterAction<bit<16>, bit<16>>(stateful_cntr_2) cntr_2 = {
         void apply(inout bit<16> value, out bit<16> rv) {
             value = value + 16w1;
             rv = value;
         }
     };
-    @name(".sampler_alu") RegisterAction<bit<8>, bit<8>>(flow_cnt) sampler_alu = {
+    @name(".sampler_alu") DirectRegisterAction<bit<8>, bit<8>>(flow_cnt) sampler_alu = {
         void apply(inout bit<8> value, out bit<8> rv) {
             bit<8> in_value_4;
             rv = 8w0;

@@ -300,7 +300,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".keyless_cntr") counter(32w512, CounterType.packets) keyless_cntr;
     @name(".meter_1") direct_meter<bit<8>>(MeterType.bytes) meter_1;
     @meter_pre_color_aware_per_flow_enable(1) @name(".meter_2") meter(32w500, MeterType.bytes) meter_2;
-    @initial_register_lo_value(1) @name(".r_alu") RegisterAction<bit<32>, bit<32>>(keyless_reg) r_alu = {
+    @initial_register_lo_value(1) @name(".r_alu") RegisterAction<bit<32>, bit<32>, bit<32>>(keyless_reg) r_alu = {
         void apply(inout bit<32> value) {
             value = value + 32w5;
         }

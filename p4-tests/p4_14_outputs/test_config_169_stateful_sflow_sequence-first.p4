@@ -221,7 +221,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".sflow_state_seq_num") register<bit<32>>(32w0) sflow_state_seq_num;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".seq_num_gen") RegisterAction<bit<32>, bit<32>>(sflow_state_seq_num) seq_num_gen = {
+    @name(".seq_num_gen") DirectRegisterAction<bit<32>, bit<32>>(sflow_state_seq_num) seq_num_gen = {
         void apply(inout bit<32> value, out bit<32> rv) {
             rv = 32w0;
             bit<32> alu_hi;
@@ -232,7 +232,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             rv = alu_hi;
         }
     };
-    @name(".sflow_exp_seq_num") RegisterAction<bit<32>, bit<32>>(sflow_state_exp_seq_num) sflow_exp_seq_num = {
+    @name(".sflow_exp_seq_num") DirectRegisterAction<bit<32>, bit<32>>(sflow_state_exp_seq_num) sflow_exp_seq_num = {
         void apply(inout bit<32> value, out bit<32> rv) {
             rv = 32w0;
             bit<32> alu_hi;

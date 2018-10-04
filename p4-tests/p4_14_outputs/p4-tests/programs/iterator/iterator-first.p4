@@ -174,7 +174,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".ha_cntr") direct_counter(CounterType.packets) ha_cntr;
     @name(".cntr") @min_width(32) counter(32w1000, CounterType.packets_and_bytes) cntr;
-    @name(".r0_alu") RegisterAction<bit<32>, bit<32>>(r0) r0_alu = {
+    @name(".r0_alu") DirectRegisterAction<bit<32>, bit<32>>(r0) r0_alu = {
         void apply(inout bit<32> value) {
             bit<32> in_value;
             in_value = value;

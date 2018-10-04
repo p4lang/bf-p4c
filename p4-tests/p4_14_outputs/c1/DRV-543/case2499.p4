@@ -647,7 +647,7 @@ control Cataract(inout headers hdr, inout metadata meta, inout standard_metadata
 @name(".Midas") register<bit<1>>(32w262144) Midas;
 
 control Chunchula(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Salamatof") RegisterAction<bit<1>, bit<1>>(Midas) Salamatof = {
+    @name(".Salamatof") RegisterAction<bit<1>, bit<32>, bit<1>>(Midas) Salamatof = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             bit<1> in_value;
@@ -656,7 +656,7 @@ control Chunchula(inout headers hdr, inout metadata meta, inout standard_metadat
             rv = value;
         }
     };
-    @name(".Sisters") RegisterAction<bit<1>, bit<1>>(Lucien) Sisters = {
+    @name(".Sisters") RegisterAction<bit<1>, bit<32>, bit<1>>(Lucien) Sisters = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             bit<1> in_value;

@@ -12,8 +12,7 @@ CONVERT_PRIMITIVE(bypass_egress) {
 static cstring makeHashCall(ProgramStructure *structure, IR::BlockStatement *block,
                             const IR::Expression *field_list) {
     ExpressionConverter conv(structure);
-    auto pe = field_list->to<IR::PathExpression>();
-    auto flc = pe ? structure->field_list_calculations.get(pe->path->name) : nullptr;
+    auto flc = structure->getFieldListCalculation(field_list);
     if (flc == nullptr) {
         ::error("%1%: Expected a field_list_calculation", field_list);
         return cstring(); }

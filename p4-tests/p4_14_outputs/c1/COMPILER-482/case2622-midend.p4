@@ -1250,12 +1250,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_50();
     }
-    @name(".Leoma") RegisterAction<bit<1>, bit<1>>(Helotes) _Leoma_0 = {
+    @name(".Leoma") RegisterAction<bit<1>, bit<32>, bit<1>>(Helotes) _Leoma_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }
     };
-    @name(".Rodessa") RegisterAction<bit<1>, bit<1>>(Bloomdale) _Rodessa_0 = {
+    @name(".Rodessa") RegisterAction<bit<1>, bit<32>, bit<1>>(Bloomdale) _Rodessa_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }

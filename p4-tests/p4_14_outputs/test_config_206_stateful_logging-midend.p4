@@ -169,7 +169,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".logging_alu") RegisterAction<bit<16>, bit<16>>(logging_reg) logging_alu = {
+    @name(".logging_alu") RegisterAction<bit<16>, bit<32>, bit<16>>(logging_reg) logging_alu = {
         void apply(inout bit<16> value) {
             value = hdr.ethernet.blah;
         }

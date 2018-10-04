@@ -756,7 +756,7 @@ control Brothers(inout headers hdr, inout metadata meta, inout standard_metadata
 @name(".Sprout") register<bit<1>>(32w262144) Sprout;
 
 control Chamois(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Millikin") RegisterAction<bit<1>, bit<1>>(Sprout) Millikin = {
+    @name(".Millikin") RegisterAction<bit<1>, bit<32>, bit<1>>(Sprout) Millikin = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             bit<1> in_value;
@@ -765,7 +765,7 @@ control Chamois(inout headers hdr, inout metadata meta, inout standard_metadata_
             rv = value;
         }
     };
-    @name(".Pierpont") RegisterAction<bit<1>, bit<1>>(Jemison) Pierpont = {
+    @name(".Pierpont") RegisterAction<bit<1>, bit<32>, bit<1>>(Jemison) Pierpont = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             bit<1> in_value;

@@ -1378,7 +1378,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<18> _Ashburn_temp_2;
     bit<1> _Ashburn_tmp_1;
     bit<1> _Ashburn_tmp_2;
-    @name(".Mattapex") RegisterAction<bit<1>, bit<1>>(Willshire) _Mattapex_0 = {
+    @name(".Mattapex") RegisterAction<bit<1>, bit<32>, bit<1>>(Willshire) _Mattapex_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Ashburn_in_value_1;
             _Ashburn_in_value_1 = value;
@@ -1386,7 +1386,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             rv = value;
         }
     };
-    @name(".RioPecos") RegisterAction<bit<1>, bit<1>>(Longwood) _RioPecos_0 = {
+    @name(".RioPecos") RegisterAction<bit<1>, bit<32>, bit<1>>(Longwood) _RioPecos_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Ashburn_in_value_2;
             _Ashburn_in_value_2 = value;

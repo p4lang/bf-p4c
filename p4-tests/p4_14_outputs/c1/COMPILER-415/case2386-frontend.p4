@@ -1080,7 +1080,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<18> _Carrizozo_temp_2;
     bit<1> _Carrizozo_tmp_1;
     bit<1> _Carrizozo_tmp_2;
-    @name(".Silco") RegisterAction<bit<1>, bit<1>>(Abraham) _Silco_0 = {
+    @name(".Silco") RegisterAction<bit<1>, bit<32>, bit<1>>(Abraham) _Silco_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Carrizozo_in_value_1;
             _Carrizozo_in_value_1 = value;
@@ -1088,7 +1088,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             rv = value;
         }
     };
-    @name(".Skene") RegisterAction<bit<1>, bit<1>>(Kennedale) _Skene_0 = {
+    @name(".Skene") RegisterAction<bit<1>, bit<32>, bit<1>>(Kennedale) _Skene_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Carrizozo_in_value_2;
             _Carrizozo_in_value_2 = value;

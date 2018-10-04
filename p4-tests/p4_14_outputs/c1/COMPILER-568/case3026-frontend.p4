@@ -1471,7 +1471,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<18> _Lacona_temp_2;
     bit<1> _Lacona_tmp_1;
     bit<1> _Lacona_tmp_2;
-    @name(".Masardis") RegisterAction<bit<1>, bit<1>>(Parkline) _Masardis_0 = {
+    @name(".Masardis") RegisterAction<bit<1>, bit<32>, bit<1>>(Parkline) _Masardis_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Lacona_in_value_1;
             _Lacona_in_value_1 = value;
@@ -1479,7 +1479,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             rv = value;
         }
     };
-    @name(".Woodcrest") RegisterAction<bit<1>, bit<1>>(Ontonagon) _Woodcrest_0 = {
+    @name(".Woodcrest") RegisterAction<bit<1>, bit<32>, bit<1>>(Ontonagon) _Woodcrest_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Lacona_in_value_2;
             _Lacona_in_value_2 = value;

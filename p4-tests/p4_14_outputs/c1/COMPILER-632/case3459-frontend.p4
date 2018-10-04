@@ -1580,7 +1580,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<19> _Ludowici_temp_2;
     bit<1> _Ludowici_tmp_1;
     bit<1> _Ludowici_tmp_2;
-    @name(".Matador") RegisterAction<bit<1>, bit<1>>(Vesuvius) _Matador_0 = {
+    @name(".Matador") RegisterAction<bit<1>, bit<32>, bit<1>>(Vesuvius) _Matador_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Ludowici_in_value_1;
             _Ludowici_in_value_1 = value;
@@ -1588,7 +1588,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             rv = value;
         }
     };
-    @name(".Moose") RegisterAction<bit<1>, bit<1>>(Spenard) _Moose_0 = {
+    @name(".Moose") RegisterAction<bit<1>, bit<32>, bit<1>>(Spenard) _Moose_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Ludowici_in_value_2;
             _Ludowici_in_value_2 = value;

@@ -1067,7 +1067,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<18> _Hiawassee_temp_2;
     bit<1> _Hiawassee_tmp_1;
     bit<1> _Hiawassee_tmp_2;
-    @name(".Kasilof") RegisterAction<bit<1>, bit<1>>(Hobucken) _Kasilof_0 = {
+    @name(".Kasilof") RegisterAction<bit<1>, bit<32>, bit<1>>(Hobucken) _Kasilof_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Hiawassee_in_value_1;
             _Hiawassee_in_value_1 = value;
@@ -1075,7 +1075,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             rv = value;
         }
     };
-    @name(".Noyack") RegisterAction<bit<1>, bit<1>>(Tarnov) _Noyack_0 = {
+    @name(".Noyack") RegisterAction<bit<1>, bit<32>, bit<1>>(Tarnov) _Noyack_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Hiawassee_in_value_2;
             _Hiawassee_in_value_2 = value;

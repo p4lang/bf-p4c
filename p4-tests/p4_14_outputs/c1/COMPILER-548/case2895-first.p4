@@ -748,7 +748,7 @@ control Belvue(inout headers hdr, inout metadata meta, inout standard_metadata_t
 @name(".Denby") register<bit<1>>(32w262144) Denby;
 
 control Bienville(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Bogota") RegisterAction<bit<1>, bit<1>>(Denby) Bogota = {
+    @name(".Bogota") RegisterAction<bit<1>, bit<32>, bit<1>>(Denby) Bogota = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             bit<1> in_value;
@@ -757,7 +757,7 @@ control Bienville(inout headers hdr, inout metadata meta, inout standard_metadat
             rv = ~value;
         }
     };
-    @name(".McIntosh") RegisterAction<bit<1>, bit<1>>(Aniak) McIntosh = {
+    @name(".McIntosh") RegisterAction<bit<1>, bit<32>, bit<1>>(Aniak) McIntosh = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             bit<1> in_value;

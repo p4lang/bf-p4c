@@ -1093,12 +1093,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_44();
     }
-    @name(".Cedonia") RegisterAction<bit<1>, bit<1>>(Hulbert) _Cedonia_0 = {
+    @name(".Cedonia") RegisterAction<bit<1>, bit<32>, bit<1>>(Hulbert) _Cedonia_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
-    @name(".Riverlea") RegisterAction<bit<1>, bit<1>>(Noyack) _Riverlea_0 = {
+    @name(".Riverlea") RegisterAction<bit<1>, bit<32>, bit<1>>(Noyack) _Riverlea_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }

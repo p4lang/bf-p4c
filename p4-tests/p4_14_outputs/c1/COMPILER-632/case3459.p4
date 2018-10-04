@@ -2569,7 +2569,7 @@ control Lovilia(inout headers hdr, inout metadata meta, inout standard_metadata_
 @name(".Vesuvius") register<bit<1>>(32w294912) Vesuvius;
 
 control Ludowici(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Matador") RegisterAction<bit<1>, bit<1>>(Vesuvius) Matador = {
+    @name(".Matador") RegisterAction<bit<1>, bit<32>, bit<1>>(Vesuvius) Matador = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             bit<1> in_value;
@@ -2578,7 +2578,7 @@ control Ludowici(inout headers hdr, inout metadata meta, inout standard_metadata
             rv = value;
         }
     };
-    @name(".Moose") RegisterAction<bit<1>, bit<1>>(Spenard) Moose = {
+    @name(".Moose") RegisterAction<bit<1>, bit<32>, bit<1>>(Spenard) Moose = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             bit<1> in_value;

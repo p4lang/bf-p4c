@@ -1,6 +1,18 @@
 
 set (P14_XFAIL_TESTS
   extensions/p4_tests/p4_14/02-FlexCounterActionProfile.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-254/case1744.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-260/case1799_1.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-260/case1799.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-262/case1804.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-263/case1795.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-264/case1822.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-271/case1834.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-273/case1832.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-273/case1832.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-275/case1841.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-276/case1844.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-282/case1864.p4
   extensions/p4_tests/p4_14/c1/COMPILER-347/switch_bug.p4
   extensions/p4_tests/p4_14/c1/COMPILER-532/case2807.p4
   extensions/p4_tests/p4_14/c1/COMPILER-548/case2895.p4
@@ -56,6 +68,7 @@ set (P14_XFAIL_TESTS
   extensions/p4_tests/p4_14/test_config_167_stateful_flowlet_switching.p4
   extensions/p4_tests/p4_14/test_config_171_stateful_conga.p4
   extensions/p4_tests/p4_14/test_config_172_stateful_heavy_hitter.p4
+  extensions/p4_tests/p4_14/test_config_173_stateful_bloom_filter.p4
   extensions/p4_tests/p4_14/test_config_174_stateful_flow_learning.p4
   extensions/p4_tests/p4_14/test_config_191_invalidate.p4
   extensions/p4_tests/p4_14/test_config_205_modify_field_from_hash.p4

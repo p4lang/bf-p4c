@@ -1490,12 +1490,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = _Othello();
     }
-    @name(".Olene") RegisterAction<bit<1>, bit<1>>(Lowes) _Olene_0 = {
+    @name(".Olene") RegisterAction<bit<1>, bit<32>, bit<1>>(Lowes) _Olene_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
-    @name(".Portal") RegisterAction<bit<1>, bit<1>>(Simla) _Portal_0 = {
+    @name(".Portal") RegisterAction<bit<1>, bit<32>, bit<1>>(Simla) _Portal_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }

@@ -1217,7 +1217,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<18> _Montegut_temp_2;
     bit<1> _Montegut_tmp_1;
     bit<1> _Montegut_tmp_2;
-    @name(".Leoma") RegisterAction<bit<1>, bit<1>>(Helotes) _Leoma_0 = {
+    @name(".Leoma") RegisterAction<bit<1>, bit<32>, bit<1>>(Helotes) _Leoma_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Montegut_in_value_1;
             _Montegut_in_value_1 = value;
@@ -1225,7 +1225,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             rv = ~value;
         }
     };
-    @name(".Rodessa") RegisterAction<bit<1>, bit<1>>(Bloomdale) _Rodessa_0 = {
+    @name(".Rodessa") RegisterAction<bit<1>, bit<32>, bit<1>>(Bloomdale) _Rodessa_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Montegut_in_value_2;
             _Montegut_in_value_2 = value;

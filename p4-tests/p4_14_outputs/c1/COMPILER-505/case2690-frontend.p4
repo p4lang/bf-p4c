@@ -1189,7 +1189,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<18> _Oakford_temp_2;
     bit<1> _Oakford_tmp_1;
     bit<1> _Oakford_tmp_2;
-    @name(".Saluda") RegisterAction<bit<1>, bit<1>>(Gregory) _Saluda_0 = {
+    @name(".Saluda") RegisterAction<bit<1>, bit<32>, bit<1>>(Gregory) _Saluda_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Oakford_in_value_1;
             _Oakford_in_value_1 = value;
@@ -1197,7 +1197,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             rv = ~value;
         }
     };
-    @name(".SomesBar") RegisterAction<bit<1>, bit<1>>(Argentine) _SomesBar_0 = {
+    @name(".SomesBar") RegisterAction<bit<1>, bit<32>, bit<1>>(Argentine) _SomesBar_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Oakford_in_value_2;
             _Oakford_in_value_2 = value;

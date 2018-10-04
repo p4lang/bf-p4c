@@ -514,57 +514,57 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".NoAction") action NoAction_69() {
     }
     @name(".ing_mtr") meter(32w8192, MeterType.packets) ing_mtr;
-    @initial_register_lo_value(100) @name(".reg_alu_0") RegisterAction<bit<32>, bit<32>>(reg_0) reg_alu_0 = {
+    @initial_register_lo_value(100) @name(".reg_alu_0") RegisterAction<bit<32>, bit<32>, bit<32>>(reg_0) reg_alu_0 = {
         void apply(inout bit<32> value) {
             value = value + 32w1;
         }
     };
-    @initial_register_lo_value(100) @name(".reg_alu_1") RegisterAction<bit<32>, bit<32>>(reg_1) reg_alu_1 = {
+    @initial_register_lo_value(100) @name(".reg_alu_1") RegisterAction<bit<32>, bit<32>, bit<32>>(reg_1) reg_alu_1 = {
         void apply(inout bit<32> value) {
             value = value + 32w1;
         }
     };
-    @initial_register_lo_value(100) @name(".reg_alu_10") RegisterAction<bit<32>, bit<32>>(reg_10) reg_alu_2 = {
+    @initial_register_lo_value(100) @name(".reg_alu_10") RegisterAction<bit<32>, bit<32>, bit<32>>(reg_10) reg_alu_2 = {
         void apply(inout bit<32> value) {
             value = value + 32w1;
         }
     };
-    @initial_register_lo_value(100) @name(".reg_alu_2") RegisterAction<bit<32>, bit<32>>(reg_2) reg_alu_3 = {
+    @initial_register_lo_value(100) @name(".reg_alu_2") RegisterAction<bit<32>, bit<32>, bit<32>>(reg_2) reg_alu_3 = {
         void apply(inout bit<32> value) {
             value = value + 32w1;
         }
     };
-    @initial_register_lo_value(100) @name(".reg_alu_3") RegisterAction<bit<32>, bit<32>>(reg_3) reg_alu_4 = {
+    @initial_register_lo_value(100) @name(".reg_alu_3") RegisterAction<bit<32>, bit<32>, bit<32>>(reg_3) reg_alu_4 = {
         void apply(inout bit<32> value) {
             value = value + 32w1;
         }
     };
-    @initial_register_lo_value(100) @name(".reg_alu_4") RegisterAction<bit<32>, bit<32>>(reg_4) reg_alu_5 = {
+    @initial_register_lo_value(100) @name(".reg_alu_4") RegisterAction<bit<32>, bit<32>, bit<32>>(reg_4) reg_alu_5 = {
         void apply(inout bit<32> value) {
             value = value + 32w1;
         }
     };
-    @initial_register_lo_value(100) @name(".reg_alu_5") RegisterAction<bit<32>, bit<32>>(reg_5) reg_alu_6 = {
+    @initial_register_lo_value(100) @name(".reg_alu_5") RegisterAction<bit<32>, bit<32>, bit<32>>(reg_5) reg_alu_6 = {
         void apply(inout bit<32> value) {
             value = value + 32w1;
         }
     };
-    @initial_register_lo_value(100) @name(".reg_alu_6") RegisterAction<bit<32>, bit<32>>(reg_6) reg_alu_7 = {
+    @initial_register_lo_value(100) @name(".reg_alu_6") RegisterAction<bit<32>, bit<32>, bit<32>>(reg_6) reg_alu_7 = {
         void apply(inout bit<32> value) {
             value = value + 32w1;
         }
     };
-    @initial_register_lo_value(100) @name(".reg_alu_7") RegisterAction<bit<32>, bit<32>>(reg_7) reg_alu_8 = {
+    @initial_register_lo_value(100) @name(".reg_alu_7") RegisterAction<bit<32>, bit<32>, bit<32>>(reg_7) reg_alu_8 = {
         void apply(inout bit<32> value) {
             value = value + 32w1;
         }
     };
-    @initial_register_lo_value(100) @name(".reg_alu_8") RegisterAction<bit<32>, bit<32>>(reg_8) reg_alu_9 = {
+    @initial_register_lo_value(100) @name(".reg_alu_8") RegisterAction<bit<32>, bit<32>, bit<32>>(reg_8) reg_alu_9 = {
         void apply(inout bit<32> value) {
             value = value + 32w1;
         }
     };
-    @initial_register_lo_value(100) @name(".reg_alu_9") RegisterAction<bit<32>, bit<32>>(reg_9) reg_alu_10 = {
+    @initial_register_lo_value(100) @name(".reg_alu_9") RegisterAction<bit<32>, bit<32>, bit<32>>(reg_9) reg_alu_10 = {
         void apply(inout bit<32> value) {
             value = value + 32w1;
         }

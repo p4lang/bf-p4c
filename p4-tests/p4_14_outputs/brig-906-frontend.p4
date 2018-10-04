@@ -232,14 +232,14 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     bit<32> tmp_1;
     bit<32> tmp_2;
-    @name(".cross_container_copy_1") RegisterAction<bit<32>, bit<32>>(dummy_reg_1) cross_container_copy_0 = {
+    @name(".cross_container_copy_1") RegisterAction<bit<32>, bit<32>, bit<32>>(dummy_reg_1) cross_container_copy_0 = {
         void apply(inout bit<32> value, out bit<32> rv) {
             bit<32> in_value;
             value = (bit<32>)meta.md.status_cycle;
             rv = value;
         }
     };
-    @name(".global_pkt_count_incr") RegisterAction<bit<32>, bit<32>>(global_pkt_counter) global_pkt_count_incr = {
+    @name(".global_pkt_count_incr") RegisterAction<bit<32>, bit<32>, bit<32>>(global_pkt_counter) global_pkt_count_incr = {
         void apply(inout bit<32> value, out bit<32> rv) {
             bit<32> in_value_2;
             in_value_2 = value;

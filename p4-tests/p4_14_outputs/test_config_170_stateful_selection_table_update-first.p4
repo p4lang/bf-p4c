@@ -215,7 +215,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".lag_mbrs") register<bit<1>>(32w1) lag_mbrs;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".port_status_alu") selector_action(lag_action_profile) port_status_alu = {
+    @name(".port_status_alu") @reg("lag_mbrs") selector_action(lag_action_profile) port_status_alu = {
         void apply(inout bit<1> value) {
             bit<1> in_value;
             in_value = value;

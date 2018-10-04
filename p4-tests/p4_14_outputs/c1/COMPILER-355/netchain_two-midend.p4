@@ -283,21 +283,21 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_9() {
     }
-    @name(".seq_alu") RegisterAction<bit<32>, bit<32>>(seq_register) seq_alu = {
+    @name(".seq_alu") RegisterAction<bit<32>, bit<32>, bit<32>>(seq_register) seq_alu = {
         void apply(inout bit<32> value, out bit<32> rv) {
             rv = 32w1;
             if (hdr.netchain_hdr.seq > value) 
                 value = hdr.netchain_hdr.seq;
         }
     };
-    @name(".value_alu_1") RegisterAction<bit<32>, bit<32>>(value_register_1) value_alu_1 = {
+    @name(".value_alu_1") RegisterAction<bit<32>, bit<32>, bit<32>>(value_register_1) value_alu_1 = {
         void apply(inout bit<32> value, out bit<32> rv) {
             if (meta.md.write_valid == 1w1) 
                 value = hdr.netchain_value.val1;
             rv = value;
         }
     };
-    @name(".value_alu_2") RegisterAction<bit<32>, bit<32>>(value_register_2) value_alu_2 = {
+    @name(".value_alu_2") RegisterAction<bit<32>, bit<32>, bit<32>>(value_register_2) value_alu_2 = {
         void apply(inout bit<32> value, out bit<32> rv) {
             if (meta.md.write_valid == 1w1) 
                 value = hdr.netchain_value.val2;

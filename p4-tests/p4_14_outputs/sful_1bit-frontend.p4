@@ -38,7 +38,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<1> tmp_4;
     bit<1> tmp_5;
     bit<1> tmp_6;
-    @name(".sful1") RegisterAction<bit<1>, bit<1>>(reg) sful1 = {
+    @name(".sful1") RegisterAction<bit<1>, bit<32>, bit<1>>(reg) sful1 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;
             in_value = value;
@@ -46,7 +46,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             value = 1w1;
         }
     };
-    @name(".sful2") RegisterAction<bit<1>, bit<1>>(reg) sful2 = {
+    @name(".sful2") RegisterAction<bit<1>, bit<32>, bit<1>>(reg) sful2 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value_4;
             in_value_4 = value;
@@ -54,7 +54,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             value = 1w0;
         }
     };
-    @name(".sful3") RegisterAction<bit<1>, bit<1>>(reg) sful3 = {
+    @name(".sful3") RegisterAction<bit<1>, bit<32>, bit<1>>(reg) sful3 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value_5;
             in_value_5 = value;
@@ -62,7 +62,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             value = in_value_5;
         }
     };
-    @name(".sful4") RegisterAction<bit<1>, bit<1>>(reg) sful4 = {
+    @name(".sful4") RegisterAction<bit<1>, bit<32>, bit<1>>(reg) sful4 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value_6;
             in_value_6 = value;

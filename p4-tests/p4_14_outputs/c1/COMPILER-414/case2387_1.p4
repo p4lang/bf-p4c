@@ -1842,7 +1842,7 @@ control VanZandt(inout headers hdr, inout metadata meta, inout standard_metadata
 @name(".Merrill") register<bit<1>>(32w262144) Merrill;
 
 control Victoria(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Kekoskee") RegisterAction<bit<1>, bit<1>>(Merrill) Kekoskee = {
+    @name(".Kekoskee") RegisterAction<bit<1>, bit<32>, bit<1>>(Merrill) Kekoskee = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             bit<1> in_value;
@@ -1851,7 +1851,7 @@ control Victoria(inout headers hdr, inout metadata meta, inout standard_metadata
             rv = ~value;
         }
     };
-    @name(".Woodsboro") RegisterAction<bit<1>, bit<1>>(Illmo) Woodsboro = {
+    @name(".Woodsboro") RegisterAction<bit<1>, bit<32>, bit<1>>(Illmo) Woodsboro = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             bit<1> in_value;

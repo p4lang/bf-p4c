@@ -1186,7 +1186,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<18> _Devore_temp_2;
     bit<1> _Devore_tmp_1;
     bit<1> _Devore_tmp_2;
-    @name(".Gerlach") RegisterAction<bit<1>, bit<1>>(Ilwaco) _Gerlach_0 = {
+    @name(".Gerlach") RegisterAction<bit<1>, bit<32>, bit<1>>(Ilwaco) _Gerlach_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Devore_in_value_1;
             _Devore_in_value_1 = value;
@@ -1194,7 +1194,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             rv = value;
         }
     };
-    @name(".Vinita") RegisterAction<bit<1>, bit<1>>(Elmdale) _Vinita_0 = {
+    @name(".Vinita") RegisterAction<bit<1>, bit<32>, bit<1>>(Elmdale) _Vinita_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Devore_in_value_2;
             _Devore_in_value_2 = value;

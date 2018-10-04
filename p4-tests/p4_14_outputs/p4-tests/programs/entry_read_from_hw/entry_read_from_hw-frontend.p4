@@ -392,28 +392,28 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".cntr") counter(32w2048, CounterType.packets) cntr;
     @name(".cntr1") counter(32w2048, CounterType.packets) cntr1;
-    @initial_register_lo_value(1) @name(".r1_alu1") RegisterAction<bit<32>, bit<32>>(r1) r1_alu1 = {
+    @initial_register_lo_value(1) @name(".r1_alu1") RegisterAction<bit<32>, bit<32>, bit<32>>(r1) r1_alu1 = {
         void apply(inout bit<32> value) {
             bit<32> in_value;
             in_value = value;
             value = in_value + 32w1;
         }
     };
-    @initial_register_lo_value(1) @name(".r1_alu2") RegisterAction<bit<32>, bit<32>>(r1) r1_alu2 = {
+    @initial_register_lo_value(1) @name(".r1_alu2") RegisterAction<bit<32>, bit<32>, bit<32>>(r1) r1_alu2 = {
         void apply(inout bit<32> value) {
             bit<32> in_value_4;
             in_value_4 = value;
             value = in_value_4 + 32w100;
         }
     };
-    @initial_register_lo_value(1) @name(".r_alu1") RegisterAction<bit<32>, bit<32>>(r) r_alu1 = {
+    @initial_register_lo_value(1) @name(".r_alu1") RegisterAction<bit<32>, bit<32>, bit<32>>(r) r_alu1 = {
         void apply(inout bit<32> value) {
             bit<32> in_value_5;
             in_value_5 = value;
             value = in_value_5 + 32w1;
         }
     };
-    @initial_register_lo_value(1) @name(".r_alu2") RegisterAction<bit<32>, bit<32>>(r) r_alu2 = {
+    @initial_register_lo_value(1) @name(".r_alu2") RegisterAction<bit<32>, bit<32>, bit<32>>(r) r_alu2 = {
         void apply(inout bit<32> value) {
             bit<32> in_value_6;
             in_value_6 = value;

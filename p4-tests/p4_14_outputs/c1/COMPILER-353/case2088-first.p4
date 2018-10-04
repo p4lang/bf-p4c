@@ -1294,7 +1294,7 @@ control Northway(inout headers hdr, inout metadata meta, inout standard_metadata
 @name(".Skillman") register<bit<1>>(32w262144) Skillman;
 
 control Parnell(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Gonzalez") RegisterAction<bit<1>, bit<1>>(BigWells) Gonzalez = {
+    @name(".Gonzalez") RegisterAction<bit<1>, bit<32>, bit<1>>(BigWells) Gonzalez = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             bit<1> in_value;
@@ -1303,7 +1303,7 @@ control Parnell(inout headers hdr, inout metadata meta, inout standard_metadata_
             rv = value;
         }
     };
-    @name(".Tillatoba") RegisterAction<bit<1>, bit<1>>(Skillman) Tillatoba = {
+    @name(".Tillatoba") RegisterAction<bit<1>, bit<32>, bit<1>>(Skillman) Tillatoba = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             bit<1> in_value;

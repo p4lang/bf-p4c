@@ -1,3 +1,6 @@
 stateful_alu.p4(31): warning: reg shadows .reg
     RegisterAction(register<T> reg);
                                ^^^
+stateful_alu.p4(38): warning: reg shadows .reg
+    DirectRegisterAction(register<T> reg);
+                                     ^^^

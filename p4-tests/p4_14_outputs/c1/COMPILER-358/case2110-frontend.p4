@@ -977,7 +977,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<18> _Sitka_temp_2;
     bit<1> _Sitka_tmp_1;
     bit<1> _Sitka_tmp_2;
-    @name(".Klondike") RegisterAction<bit<1>, bit<1>>(Buenos) _Klondike_0 = {
+    @name(".Klondike") RegisterAction<bit<1>, bit<32>, bit<1>>(Buenos) _Klondike_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Sitka_in_value_1;
             _Sitka_in_value_1 = value;
@@ -985,7 +985,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             rv = ~value;
         }
     };
-    @name(".Theba") RegisterAction<bit<1>, bit<1>>(Tryon) _Theba_0 = {
+    @name(".Theba") RegisterAction<bit<1>, bit<32>, bit<1>>(Tryon) _Theba_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Sitka_in_value_2;
             _Sitka_in_value_2 = value;

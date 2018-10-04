@@ -230,7 +230,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 @name(".global_pkt_counter") register<bit<32>>(32w16) global_pkt_counter;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".cross_container_copy_1") RegisterAction<bit<32>, bit<32>>(dummy_reg_1) cross_container_copy_1 = {
+    @name(".cross_container_copy_1") RegisterAction<bit<32>, bit<32>, bit<32>>(dummy_reg_1) cross_container_copy_1 = {
         void apply(inout bit<32> value, out bit<32> rv) {
             rv = 32w0;
             bit<32> in_value;
@@ -240,7 +240,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             rv = value;
         }
     };
-    @name(".global_pkt_count_incr") RegisterAction<bit<32>, bit<32>>(global_pkt_counter) global_pkt_count_incr = {
+    @name(".global_pkt_count_incr") RegisterAction<bit<32>, bit<32>, bit<32>>(global_pkt_counter) global_pkt_count_incr = {
         void apply(inout bit<32> value, out bit<32> rv) {
             rv = 32w0;
             bit<32> in_value;

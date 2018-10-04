@@ -1419,7 +1419,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<19> _Giltner_temp_2;
     bit<1> _Giltner_tmp_1;
     bit<1> _Giltner_tmp_2;
-    @name(".Bramwell") RegisterAction<bit<1>, bit<1>>(Bennet) _Bramwell_0 = {
+    @name(".Bramwell") RegisterAction<bit<1>, bit<32>, bit<1>>(Bennet) _Bramwell_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Giltner_in_value_1;
             _Giltner_in_value_1 = value;
@@ -1427,7 +1427,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             rv = ~value;
         }
     };
-    @name(".Colonias") RegisterAction<bit<1>, bit<1>>(OldMinto) _Colonias_0 = {
+    @name(".Colonias") RegisterAction<bit<1>, bit<32>, bit<1>>(OldMinto) _Colonias_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Giltner_in_value_2;
             _Giltner_in_value_2 = value;

@@ -1494,12 +1494,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_71();
     }
-    @name(".ShadeGap") RegisterAction<bit<1>, bit<1>>(Bosworth) _ShadeGap_0 = {
+    @name(".ShadeGap") RegisterAction<bit<1>, bit<32>, bit<1>>(Bosworth) _ShadeGap_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }
     };
-    @name(".ShowLow") RegisterAction<bit<1>, bit<1>>(Tuttle) _ShowLow_0 = {
+    @name(".ShowLow") RegisterAction<bit<1>, bit<32>, bit<1>>(Tuttle) _ShowLow_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }

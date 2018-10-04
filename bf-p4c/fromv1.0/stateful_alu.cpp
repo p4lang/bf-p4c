@@ -520,8 +520,7 @@ const IR::Statement *P4V1::StatefulAluConverter::convertExternCall(
             args->push_back(new IR::Argument(conv.convert(prim->operands.at(1))));
     } else if (prim->name == "execute_stateful_alu_from_hash") {
         BUG_CHECK(prim->operands.size() == 2, "Wrong number of operands to %s", prim->name);
-        auto pe = prim->operands.at(1)->to<IR::PathExpression>();
-        auto flc = pe ? structure->field_list_calculations.get(pe->path->name) : nullptr;
+        auto flc = structure->getFieldListCalculation(prim->operands.at(1));
         if (!flc) {
             error("%s: Expected a field_list_calculation", prim->operands.at(1));
             return nullptr; }

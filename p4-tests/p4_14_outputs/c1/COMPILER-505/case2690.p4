@@ -1599,7 +1599,7 @@ control Newfield(inout headers hdr, inout metadata meta, inout standard_metadata
 @name(".Gregory") register<bit<1>>(32w262144) Gregory;
 
 control Oakford(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Saluda") RegisterAction<bit<1>, bit<1>>(Gregory) Saluda = {
+    @name(".Saluda") RegisterAction<bit<1>, bit<32>, bit<1>>(Gregory) Saluda = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             bit<1> in_value;
@@ -1608,7 +1608,7 @@ control Oakford(inout headers hdr, inout metadata meta, inout standard_metadata_
             rv = ~value;
         }
     };
-    @name(".SomesBar") RegisterAction<bit<1>, bit<1>>(Argentine) SomesBar = {
+    @name(".SomesBar") RegisterAction<bit<1>, bit<32>, bit<1>>(Argentine) SomesBar = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             bit<1> in_value;

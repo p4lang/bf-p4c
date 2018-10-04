@@ -176,7 +176,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".r_pred") register<bit<8>>(32w1024) r_pred;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".b_comb_pred") RegisterAction<bit<8>, bit<8>>(r_pred) b_comb_pred = {
+    @name(".b_comb_pred") RegisterAction<bit<8>, bit<32>, bit<8>>(r_pred) b_comb_pred = {
         void apply(inout bit<8> value, out bit<8> rv) {
             rv = 8w0;
             bit<8> in_value;
@@ -186,7 +186,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             value = in_value + 8w2;
         }
     };
-    @name(".b_pred") RegisterAction<bit<8>, bit<8>>(r_pred) b_pred = {
+    @name(".b_pred") RegisterAction<bit<8>, bit<32>, bit<8>>(r_pred) b_pred = {
         void apply(inout bit<8> value, out bit<8> rv) {
             rv = 8w0;
             bit<8> in_value;

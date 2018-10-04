@@ -1024,7 +1024,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<18> _Amber_temp_2;
     bit<1> _Amber_tmp_1;
     bit<1> _Amber_tmp_2;
-    @name(".Moxley") RegisterAction<bit<1>, bit<1>>(Shidler) _Moxley_0 = {
+    @name(".Moxley") RegisterAction<bit<1>, bit<32>, bit<1>>(Shidler) _Moxley_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Amber_in_value_1;
             _Amber_in_value_1 = value;
@@ -1032,7 +1032,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             rv = ~value;
         }
     };
-    @name(".Shorter") RegisterAction<bit<1>, bit<1>>(Jefferson) _Shorter_0 = {
+    @name(".Shorter") RegisterAction<bit<1>, bit<32>, bit<1>>(Jefferson) _Shorter_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Amber_in_value_2;
             _Amber_in_value_2 = value;

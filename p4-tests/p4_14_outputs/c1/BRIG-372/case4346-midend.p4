@@ -1623,7 +1623,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         size = 1;
         default_action = _HydePark();
     }
-    @name(".Lenwood") RegisterAction<bit<1>, bit<1>>(Godley) _Lenwood_0 = {
+    @name(".Lenwood") RegisterAction<bit<1>, bit<32>, bit<1>>(Godley) _Lenwood_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }
@@ -1654,7 +1654,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         size = 128;
         default_action = _Caspian(10w0);
     }
-    @name(".Giltner") RegisterAction<bit<1>, bit<1>>(Pearce) _Giltner_0 = {
+    @name(".Giltner") RegisterAction<bit<1>, bit<32>, bit<1>>(Pearce) _Giltner_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }
@@ -2143,12 +2143,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_75();
     }
-    @name(".Kenmore") RegisterAction<bit<1>, bit<1>>(Norma) _Kenmore = {
+    @name(".Kenmore") RegisterAction<bit<1>, bit<32>, bit<1>>(Norma) _Kenmore = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }
     };
-    @name(".Spivey") RegisterAction<bit<1>, bit<1>>(Lesley) _Spivey = {
+    @name(".Spivey") RegisterAction<bit<1>, bit<32>, bit<1>>(Lesley) _Spivey = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }

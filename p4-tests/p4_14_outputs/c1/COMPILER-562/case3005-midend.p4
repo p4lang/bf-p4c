@@ -1425,12 +1425,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_65();
     }
-    @name(".FulksRun") RegisterAction<bit<1>, bit<1>>(Servia) _FulksRun_0 = {
+    @name(".FulksRun") RegisterAction<bit<1>, bit<32>, bit<1>>(Servia) _FulksRun_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }
     };
-    @name(".Oilmont") RegisterAction<bit<1>, bit<1>>(Verdery) _Oilmont_0 = {
+    @name(".Oilmont") RegisterAction<bit<1>, bit<32>, bit<1>>(Verdery) _Oilmont_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }

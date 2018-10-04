@@ -166,7 +166,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".r_test") register<bit<8>>(32w0) r_test;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".b_test") RegisterAction<bit<8>, bit<8>>(r_test) b_test = {
+    @name(".b_test") DirectRegisterAction<bit<8>, bit<8>>(r_test) b_test = {
         void apply(inout bit<8> value, out bit<8> rv) {
             rv = 8w0;
             bit<8> alu_hi;

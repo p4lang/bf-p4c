@@ -172,7 +172,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @stateful_table_counter("table_hit") @name(".flow_cnt") register<bit<32>>(32w0) flow_cnt;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".sampler_alu") RegisterAction<bit<32>, bit<32>>(flow_cnt) sampler_alu = {
+    @name(".sampler_alu") DirectRegisterAction<bit<32>, bit<32>>(flow_cnt) sampler_alu = {
         void apply(inout bit<32> value, out bit<32> rv) {
             rv = 32w0;
             bit<32> alu_hi;

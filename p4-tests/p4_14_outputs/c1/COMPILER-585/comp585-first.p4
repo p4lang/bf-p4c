@@ -958,7 +958,7 @@ control Biloxi(inout headers hdr, inout metadata meta, inout standard_metadata_t
 @name(".Traverse") register<bit<1>>(32w294912) Traverse;
 
 control Bonner(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Penalosa") RegisterAction<bit<1>, bit<1>>(Traverse) Penalosa = {
+    @name(".Penalosa") RegisterAction<bit<1>, bit<32>, bit<1>>(Traverse) Penalosa = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             bit<1> in_value;
@@ -967,7 +967,7 @@ control Bonner(inout headers hdr, inout metadata meta, inout standard_metadata_t
             rv = ~value;
         }
     };
-    @name(".Rosburg") RegisterAction<bit<1>, bit<1>>(Allen) Rosburg = {
+    @name(".Rosburg") RegisterAction<bit<1>, bit<32>, bit<1>>(Allen) Rosburg = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             bit<1> in_value;

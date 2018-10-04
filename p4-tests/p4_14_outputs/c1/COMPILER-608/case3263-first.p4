@@ -998,7 +998,7 @@ control Blevins(inout headers hdr, inout metadata meta, inout standard_metadata_
 @name(".Pathfork") register<bit<1>>(32w294912) Pathfork;
 
 control Bogota(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Booth") RegisterAction<bit<1>, bit<1>>(Kapaa) Booth = {
+    @name(".Booth") RegisterAction<bit<1>, bit<32>, bit<1>>(Kapaa) Booth = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             bit<1> in_value;
@@ -1007,7 +1007,7 @@ control Bogota(inout headers hdr, inout metadata meta, inout standard_metadata_t
             rv = value;
         }
     };
-    @name(".Union") RegisterAction<bit<1>, bit<1>>(Pathfork) Union = {
+    @name(".Union") RegisterAction<bit<1>, bit<32>, bit<1>>(Pathfork) Union = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             bit<1> in_value;

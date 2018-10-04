@@ -1060,7 +1060,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<18> _Tiverton_temp_2;
     bit<1> _Tiverton_tmp_1;
     bit<1> _Tiverton_tmp_2;
-    @name(".Cedonia") RegisterAction<bit<1>, bit<1>>(Hulbert) _Cedonia_0 = {
+    @name(".Cedonia") RegisterAction<bit<1>, bit<32>, bit<1>>(Hulbert) _Cedonia_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Tiverton_in_value_1;
             _Tiverton_in_value_1 = value;
@@ -1068,7 +1068,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             rv = value;
         }
     };
-    @name(".Riverlea") RegisterAction<bit<1>, bit<1>>(Noyack) _Riverlea_0 = {
+    @name(".Riverlea") RegisterAction<bit<1>, bit<32>, bit<1>>(Noyack) _Riverlea_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Tiverton_in_value_2;
             _Tiverton_in_value_2 = value;

@@ -172,7 +172,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".NoAction") action NoAction_0() {
     }
     bit<1> tmp_0;
-    @name(".bbox_0") RegisterAction<bit<1>, bit<1>>(reg_0) bbox_0 = {
+    @name(".bbox_0") RegisterAction<bit<1>, bit<32>, bit<1>>(reg_0) bbox_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> in_value;
             in_value = value;

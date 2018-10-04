@@ -194,13 +194,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".NoAction") action NoAction_3() {
     }
     bit<8> tmp_0;
-    @name(".bfd_cnt_rx_alu") RegisterAction<bit<8>, bit<8>>(bfd_cnt) bfd_cnt_rx_alu = {
+    @name(".bfd_cnt_rx_alu") RegisterAction<bit<8>, bit<32>, bit<8>>(bfd_cnt) bfd_cnt_rx_alu = {
         void apply(inout bit<8> value) {
             bit<8> in_value;
             value = 8w0;
         }
     };
-    @name(".bfd_cnt_tx_alu") RegisterAction<bit<8>, bit<8>>(bfd_cnt) bfd_cnt_tx_alu = {
+    @name(".bfd_cnt_tx_alu") RegisterAction<bit<8>, bit<32>, bit<8>>(bfd_cnt) bfd_cnt_tx_alu = {
         void apply(inout bit<8> value, out bit<8> rv) {
             bit<8> alu_hi;
             bit<8> in_value_2;

@@ -910,7 +910,7 @@ control Arnett(inout headers hdr, inout metadata meta, inout standard_metadata_t
 @name(".Willshire") register<bit<1>>(32w262144) Willshire;
 
 control Ashburn(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Mattapex") RegisterAction<bit<1>, bit<1>>(Willshire) Mattapex = {
+    @name(".Mattapex") RegisterAction<bit<1>, bit<32>, bit<1>>(Willshire) Mattapex = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             bit<1> in_value;
@@ -919,7 +919,7 @@ control Ashburn(inout headers hdr, inout metadata meta, inout standard_metadata_
             rv = value;
         }
     };
-    @name(".RioPecos") RegisterAction<bit<1>, bit<1>>(Longwood) RioPecos = {
+    @name(".RioPecos") RegisterAction<bit<1>, bit<32>, bit<1>>(Longwood) RioPecos = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             bit<1> in_value;

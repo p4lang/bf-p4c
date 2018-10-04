@@ -1110,12 +1110,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = _Weatherby();
     }
-    @name(".Kekoskee") RegisterAction<bit<1>, bit<1>>(Merrill) _Kekoskee_0 = {
+    @name(".Kekoskee") RegisterAction<bit<1>, bit<32>, bit<1>>(Merrill) _Kekoskee_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }
     };
-    @name(".Woodsboro") RegisterAction<bit<1>, bit<1>>(Illmo) _Woodsboro_0 = {
+    @name(".Woodsboro") RegisterAction<bit<1>, bit<32>, bit<1>>(Illmo) _Woodsboro_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }

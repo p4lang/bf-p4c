@@ -1,7 +1,8 @@
 
 set (P4_XFAIL_TESTS
-  extensions/p4_tests/p4_16/test_compiler_macro_defs.p4
+  extensions/p4_tests/p4_16/ipv4_checksum.p4
   extensions/p4_tests/p4_16/net_flow.p4
+  extensions/p4_tests/p4_16/test_compiler_macro_defs.p4
   )
 
 set (P16_TEST_SUITES

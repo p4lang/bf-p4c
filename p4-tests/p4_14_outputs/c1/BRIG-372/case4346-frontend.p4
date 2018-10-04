@@ -1630,7 +1630,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     bit<19> _Gabbs_temp_0;
     bit<1> _Gabbs_tmp_0;
-    @name(".Lenwood") RegisterAction<bit<1>, bit<1>>(Godley) _Lenwood_0 = {
+    @name(".Lenwood") RegisterAction<bit<1>, bit<32>, bit<1>>(Godley) _Lenwood_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Gabbs_in_value_0;
             _Gabbs_in_value_0 = value;
@@ -1666,7 +1666,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     bit<19> _Nevis_temp_0;
     bit<1> _Nevis_tmp_0;
-    @name(".Giltner") RegisterAction<bit<1>, bit<1>>(Pearce) _Giltner_0 = {
+    @name(".Giltner") RegisterAction<bit<1>, bit<32>, bit<1>>(Pearce) _Giltner_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Nevis_in_value_0;
             _Nevis_in_value_0 = value;
@@ -2121,7 +2121,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<19> _Counce__Chatcolet_temp_2;
     bit<1> _Counce__Chatcolet_tmp_1;
     bit<1> _Counce__Chatcolet_tmp_2;
-    @name(".Kenmore") RegisterAction<bit<1>, bit<1>>(Norma) _Kenmore = {
+    @name(".Kenmore") RegisterAction<bit<1>, bit<32>, bit<1>>(Norma) _Kenmore = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Counce__Chatcolet_in_value_1;
             _Counce__Chatcolet_in_value_1 = value;
@@ -2129,7 +2129,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             rv = ~value;
         }
     };
-    @name(".Spivey") RegisterAction<bit<1>, bit<1>>(Lesley) _Spivey = {
+    @name(".Spivey") RegisterAction<bit<1>, bit<32>, bit<1>>(Lesley) _Spivey = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Counce__Chatcolet_in_value_2;
             _Counce__Chatcolet_in_value_2 = value;

@@ -1125,7 +1125,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<18> _Tahuya_temp_2;
     bit<1> _Tahuya_tmp_1;
     bit<1> _Tahuya_tmp_2;
-    @name(".Goldsmith") RegisterAction<bit<1>, bit<1>>(Alcalde) _Goldsmith_0 = {
+    @name(".Goldsmith") RegisterAction<bit<1>, bit<32>, bit<1>>(Alcalde) _Goldsmith_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Tahuya_in_value_1;
             _Tahuya_in_value_1 = value;
@@ -1133,7 +1133,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             rv = ~value;
         }
     };
-    @name(".Mizpah") RegisterAction<bit<1>, bit<1>>(NewSite) _Mizpah_0 = {
+    @name(".Mizpah") RegisterAction<bit<1>, bit<32>, bit<1>>(NewSite) _Mizpah_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Tahuya_in_value_2;
             _Tahuya_in_value_2 = value;

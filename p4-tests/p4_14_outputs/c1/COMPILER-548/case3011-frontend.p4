@@ -1450,7 +1450,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<18> _Snowflake_temp_2;
     bit<1> _Snowflake_tmp_1;
     bit<1> _Snowflake_tmp_2;
-    @name(".ShadeGap") RegisterAction<bit<1>, bit<1>>(Bosworth) _ShadeGap_0 = {
+    @name(".ShadeGap") RegisterAction<bit<1>, bit<32>, bit<1>>(Bosworth) _ShadeGap_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Snowflake_in_value_1;
             _Snowflake_in_value_1 = value;
@@ -1458,7 +1458,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             rv = ~value;
         }
     };
-    @name(".ShowLow") RegisterAction<bit<1>, bit<1>>(Tuttle) _ShowLow_0 = {
+    @name(".ShowLow") RegisterAction<bit<1>, bit<32>, bit<1>>(Tuttle) _ShowLow_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Snowflake_in_value_2;
             _Snowflake_in_value_2 = value;

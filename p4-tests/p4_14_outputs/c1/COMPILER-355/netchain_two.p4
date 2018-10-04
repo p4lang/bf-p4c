@@ -264,7 +264,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 @name(".value_register_2") register<bit<32>>(32w65536) value_register_2;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".seq_alu") RegisterAction<bit<32>, bit<32>>(seq_register) seq_alu = {
+    @name(".seq_alu") RegisterAction<bit<32>, bit<32>, bit<32>>(seq_register) seq_alu = {
         void apply(inout bit<32> value, out bit<32> rv) {
             rv = 32w0;
             bit<32> in_value;
@@ -274,7 +274,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 value = hdr.netchain_hdr.seq;
         }
     };
-    @name(".value_alu_1") RegisterAction<bit<32>, bit<32>>(value_register_1) value_alu_1 = {
+    @name(".value_alu_1") RegisterAction<bit<32>, bit<32>, bit<32>>(value_register_1) value_alu_1 = {
         void apply(inout bit<32> value, out bit<32> rv) {
             rv = 32w0;
             bit<32> in_value;
@@ -284,7 +284,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             rv = value;
         }
     };
-    @name(".value_alu_2") RegisterAction<bit<32>, bit<32>>(value_register_2) value_alu_2 = {
+    @name(".value_alu_2") RegisterAction<bit<32>, bit<32>, bit<32>>(value_register_2) value_alu_2 = {
         void apply(inout bit<32> value, out bit<32> rv) {
             rv = 32w0;
             bit<32> in_value;

@@ -756,7 +756,7 @@ control Daguao(inout headers hdr, inout metadata meta, inout standard_metadata_t
 @name(".Ilwaco") register<bit<1>>(32w262144) Ilwaco;
 
 control Devore(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Gerlach") RegisterAction<bit<1>, bit<1>>(Ilwaco) Gerlach = {
+    @name(".Gerlach") RegisterAction<bit<1>, bit<32>, bit<1>>(Ilwaco) Gerlach = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             bit<1> in_value;
@@ -765,7 +765,7 @@ control Devore(inout headers hdr, inout metadata meta, inout standard_metadata_t
             rv = value;
         }
     };
-    @name(".Vinita") RegisterAction<bit<1>, bit<1>>(Elmdale) Vinita = {
+    @name(".Vinita") RegisterAction<bit<1>, bit<32>, bit<1>>(Elmdale) Vinita = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             bit<1> in_value;

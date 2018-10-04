@@ -2820,7 +2820,7 @@ control Shirley(inout headers hdr, inout metadata meta, inout standard_metadata_
 @name(".Tuttle") register<bit<1>>(32w262144) Tuttle;
 
 control Snowflake(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".ShadeGap") RegisterAction<bit<1>, bit<1>>(Bosworth) ShadeGap = {
+    @name(".ShadeGap") RegisterAction<bit<1>, bit<32>, bit<1>>(Bosworth) ShadeGap = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             bit<1> in_value;
@@ -2829,7 +2829,7 @@ control Snowflake(inout headers hdr, inout metadata meta, inout standard_metadat
             rv = ~value;
         }
     };
-    @name(".ShowLow") RegisterAction<bit<1>, bit<1>>(Tuttle) ShowLow = {
+    @name(".ShowLow") RegisterAction<bit<1>, bit<32>, bit<1>>(Tuttle) ShowLow = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             bit<1> in_value;

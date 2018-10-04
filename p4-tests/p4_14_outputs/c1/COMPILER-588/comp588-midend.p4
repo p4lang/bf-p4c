@@ -1459,12 +1459,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_67();
     }
-    @name(".Bramwell") RegisterAction<bit<1>, bit<1>>(Bennet) _Bramwell_0 = {
+    @name(".Bramwell") RegisterAction<bit<1>, bit<32>, bit<1>>(Bennet) _Bramwell_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }
     };
-    @name(".Colonias") RegisterAction<bit<1>, bit<1>>(OldMinto) _Colonias_0 = {
+    @name(".Colonias") RegisterAction<bit<1>, bit<32>, bit<1>>(OldMinto) _Colonias_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }

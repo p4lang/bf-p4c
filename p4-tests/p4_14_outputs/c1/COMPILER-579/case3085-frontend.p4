@@ -1436,7 +1436,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<19> _Ranchito_temp_2;
     bit<1> _Ranchito_tmp_1;
     bit<1> _Ranchito_tmp_2;
-    @name(".Fittstown") RegisterAction<bit<1>, bit<1>>(Sagamore) _Fittstown_0 = {
+    @name(".Fittstown") RegisterAction<bit<1>, bit<32>, bit<1>>(Sagamore) _Fittstown_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Ranchito_in_value_1;
             _Ranchito_in_value_1 = value;
@@ -1444,7 +1444,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             rv = value;
         }
     };
-    @name(".Wheaton") RegisterAction<bit<1>, bit<1>>(Oxford) _Wheaton_0 = {
+    @name(".Wheaton") RegisterAction<bit<1>, bit<32>, bit<1>>(Oxford) _Wheaton_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             bit<1> _Ranchito_in_value_2;
             _Ranchito_in_value_2 = value;

@@ -291,7 +291,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @meter_sweep_interval(0) @name(".e4_meter") @pre_color(meta.md.mr_clr) direct_meter<bit<8>>(MeterType.packets) e4_meter;
     @meter_sweep_interval(0) @name(".t3_meter") @pre_color(meta.md.mr_clr) direct_meter<bit<8>>(MeterType.bytes) t3_meter;
     @meter_sweep_interval(0) @name(".t4_meter") @pre_color(meta.md.mr_clr) direct_meter<bit<8>>(MeterType.packets) t4_meter;
-    @name(".e1_alu") RegisterAction<e1_alu_layout, int<32>>(e1_reg) e1_alu = {
+    @name(".e1_alu") DirectRegisterAction<e1_alu_layout, int<32>>(e1_reg) e1_alu = {
         void apply(inout         struct e1_alu_layout {
             int<32> lo;
             int<32> hi;
@@ -306,7 +306,7 @@ value, out int<32> rv) {
                 value.lo = (int<32>)0;
         }
     };
-    @name(".e2_alu") RegisterAction<e2_alu_layout, bit<16>>(e2_reg) e2_alu = {
+    @name(".e2_alu") DirectRegisterAction<e2_alu_layout, bit<16>>(e2_reg) e2_alu = {
         void apply(inout         struct e2_alu_layout {
             bit<16> lo;
             bit<16> hi;
@@ -321,7 +321,7 @@ value) {
     };
     @name(".e5_lpf") DirectLpf<bit<32>>() e5_lpf;
     @name(".e6_lpf") DirectLpf<bit<32>>() e6_lpf;
-    @name(".t1_alu") RegisterAction<t1_alu_layout, int<32>>(t1_reg) t1_alu = {
+    @name(".t1_alu") DirectRegisterAction<t1_alu_layout, int<32>>(t1_reg) t1_alu = {
         void apply(inout         struct t1_alu_layout {
             int<32> lo;
             int<32> hi;
@@ -336,7 +336,7 @@ value, out int<32> rv) {
                 value.lo = (int<32>)0;
         }
     };
-    @name(".t2_alu") RegisterAction<t2_alu_layout, bit<16>>(t2_reg) t2_alu = {
+    @name(".t2_alu") DirectRegisterAction<t2_alu_layout, bit<16>>(t2_reg) t2_alu = {
         void apply(inout         struct t2_alu_layout {
             bit<16> lo;
             bit<16> hi;
@@ -351,7 +351,7 @@ value) {
     };
     @name(".t5_lpf") DirectLpf<bit<32>>() t5_lpf;
     @name(".t6_lpf") DirectLpf<bit<32>>() t6_lpf;
-    @name(".vp5_alu") RegisterAction<vp5_alu_layout, bit<32>>(vp5_reg) vp5_alu = {
+    @name(".vp5_alu") DirectRegisterAction<vp5_alu_layout, bit<32>>(vp5_reg) vp5_alu = {
         void apply(inout         struct vp5_alu_layout {
             bit<32> lo;
             bit<32> hi;
@@ -364,7 +364,7 @@ value) {
             value.lo = in_value.lo + 32w1;
         }
     };
-    @name(".vp6_alu") RegisterAction<vp6_alu_layout, bit<32>>(vp6_reg) vp6_alu = {
+    @name(".vp6_alu") DirectRegisterAction<vp6_alu_layout, bit<32>>(vp6_reg) vp6_alu = {
         void apply(inout         struct vp6_alu_layout {
             bit<32> lo;
             bit<32> hi;
@@ -377,7 +377,7 @@ value) {
             value.lo = in_value.lo + 32w1;
         }
     };
-    @name(".vpp5_alu") RegisterAction<vpp5_alu_layout, bit<32>>(vpp5_reg) vpp5_alu = {
+    @name(".vpp5_alu") DirectRegisterAction<vpp5_alu_layout, bit<32>>(vpp5_reg) vpp5_alu = {
         void apply(inout         struct vpp5_alu_layout {
             bit<32> lo;
             bit<32> hi;
@@ -390,7 +390,7 @@ value) {
             value.lo = in_value.lo + 32w1;
         }
     };
-    @name(".vpp6_alu") RegisterAction<vpp6_alu_layout, bit<32>>(vpp6_reg) vpp6_alu = {
+    @name(".vpp6_alu") DirectRegisterAction<vpp6_alu_layout, bit<32>>(vpp6_reg) vpp6_alu = {
         void apply(inout         struct vpp6_alu_layout {
             bit<32> lo;
             bit<32> hi;
@@ -915,7 +915,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".ig_cntr_3") counter(32w16384, CounterType.packets_and_bytes) ig_cntr_3;
     @name(".ig_cntr_4") counter(32w2048, CounterType.packets) ig_cntr_4;
     @meter_per_flow_enable(1) @meter_pre_color_aware_per_flow_enable(1) @meter_sweep_interval(0) @name(".m1") meter(32w20480, MeterType.bytes) m1;
-    @initial_register_lo_value(512) @name(".sel_res_alu") RegisterAction<bit<16>, bit<16>>(sel_res_reg) sel_res_alu = {
+    @initial_register_lo_value(512) @name(".sel_res_alu") RegisterAction<bit<16>, bit<32>, bit<16>>(sel_res_reg) sel_res_alu = {
         void apply(inout bit<16> value) {
             bit<16> in_value;
             in_value = value;
@@ -925,7 +925,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 value = (bit<16>)513;
         }
     };
-    @initial_register_lo_value(100) @name(".stats_key_alu1") RegisterAction<stats_key_alu1_layout, bit<32>>(stats_key_reg) stats_key_alu1 = {
+    @initial_register_lo_value(100) @name(".stats_key_alu1") RegisterAction<stats_key_alu1_layout, bit<32>, bit<32>>(stats_key_reg) stats_key_alu1 = {
         void apply(inout         struct stats_key_alu1_layout {
             bit<32> lo;
             bit<32> hi;
@@ -945,7 +945,7 @@ value, out bit<32> rv) {
                 value.lo = (bit<32>)100;
         }
     };
-    @name(".stats_key_alu3") RegisterAction<stats_key_alu1_layout, bit<32>>(stats_key_reg) stats_key_alu3 = {
+    @name(".stats_key_alu3") RegisterAction<stats_key_alu1_layout, bit<32>, bit<32>>(stats_key_reg) stats_key_alu3 = {
         void apply(inout         struct stats_key_alu1_layout {
             bit<32> lo;
             bit<32> hi;

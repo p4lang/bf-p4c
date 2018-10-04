@@ -596,7 +596,7 @@ control Algonquin(inout headers hdr, inout metadata meta, inout standard_metadat
 @name(".Shidler") register<bit<1>>(32w262144) Shidler;
 
 control Amber(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Moxley") RegisterAction<bit<1>, bit<1>>(Shidler) Moxley = {
+    @name(".Moxley") RegisterAction<bit<1>, bit<32>, bit<1>>(Shidler) Moxley = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             bit<1> in_value;
@@ -605,7 +605,7 @@ control Amber(inout headers hdr, inout metadata meta, inout standard_metadata_t 
             rv = ~value;
         }
     };
-    @name(".Shorter") RegisterAction<bit<1>, bit<1>>(Jefferson) Shorter = {
+    @name(".Shorter") RegisterAction<bit<1>, bit<32>, bit<1>>(Jefferson) Shorter = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             bit<1> in_value;

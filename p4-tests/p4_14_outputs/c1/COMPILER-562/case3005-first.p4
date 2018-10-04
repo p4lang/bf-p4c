@@ -1940,7 +1940,7 @@ control Hollymead(inout headers hdr, inout metadata meta, inout standard_metadat
 @name(".Verdery") register<bit<1>>(32w262144) Verdery;
 
 control Howland(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".FulksRun") RegisterAction<bit<1>, bit<1>>(Servia) FulksRun = {
+    @name(".FulksRun") RegisterAction<bit<1>, bit<32>, bit<1>>(Servia) FulksRun = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             bit<1> in_value;
@@ -1949,7 +1949,7 @@ control Howland(inout headers hdr, inout metadata meta, inout standard_metadata_
             rv = ~value;
         }
     };
-    @name(".Oilmont") RegisterAction<bit<1>, bit<1>>(Verdery) Oilmont = {
+    @name(".Oilmont") RegisterAction<bit<1>, bit<32>, bit<1>>(Verdery) Oilmont = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             bit<1> in_value;

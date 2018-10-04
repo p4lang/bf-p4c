@@ -185,14 +185,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<8> tmp_4;
     bit<8> tmp_5;
     bit<8> tmp_6;
-    @name(".alu_0") RegisterAction<bit<8>, bit<8>>(reg_0) alu_0 = {
+    @name(".alu_0") RegisterAction<bit<8>, bit<32>, bit<8>>(reg_0) alu_0 = {
         void apply(inout bit<8> value, out bit<8> rv) {
             bit<8> in_value;
             value = 8w15;
             rv = value;
         }
     };
-    @name(".alu_1") RegisterAction<bit<8>, bit<8>>(reg_1) alu_1 = {
+    @name(".alu_1") RegisterAction<bit<8>, bit<32>, bit<8>>(reg_1) alu_1 = {
         void apply(inout bit<8> value, out bit<8> rv) {
             bit<8> in_value_2;
             value = 8w0x30;

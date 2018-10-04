@@ -1425,12 +1425,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = _Lafourche();
     }
-    @name(".Montegut") RegisterAction<bit<1>, bit<1>>(Dillsboro) _Montegut_0 = {
+    @name(".Montegut") RegisterAction<bit<1>, bit<32>, bit<1>>(Dillsboro) _Montegut_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }
     };
-    @name(".Plains") RegisterAction<bit<1>, bit<1>>(Honuapo) _Plains_0 = {
+    @name(".Plains") RegisterAction<bit<1>, bit<32>, bit<1>>(Honuapo) _Plains_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }

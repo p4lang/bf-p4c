@@ -1158,12 +1158,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = _Diomede();
     }
-    @name(".Goldsmith") RegisterAction<bit<1>, bit<1>>(Alcalde) _Goldsmith_0 = {
+    @name(".Goldsmith") RegisterAction<bit<1>, bit<32>, bit<1>>(Alcalde) _Goldsmith_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = ~value;
         }
     };
-    @name(".Mizpah") RegisterAction<bit<1>, bit<1>>(NewSite) _Mizpah_0 = {
+    @name(".Mizpah") RegisterAction<bit<1>, bit<32>, bit<1>>(NewSite) _Mizpah_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = value;
         }

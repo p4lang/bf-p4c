@@ -1915,7 +1915,7 @@ control Suamico(inout headers hdr, inout metadata meta, inout standard_metadata_
 @name(".Noyack") register<bit<1>>(32w262144) Noyack;
 
 control Tiverton(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".Cedonia") RegisterAction<bit<1>, bit<1>>(Hulbert) Cedonia = {
+    @name(".Cedonia") RegisterAction<bit<1>, bit<32>, bit<1>>(Hulbert) Cedonia = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             bit<1> in_value;
@@ -1924,7 +1924,7 @@ control Tiverton(inout headers hdr, inout metadata meta, inout standard_metadata
             rv = value;
         }
     };
-    @name(".Riverlea") RegisterAction<bit<1>, bit<1>>(Noyack) Riverlea = {
+    @name(".Riverlea") RegisterAction<bit<1>, bit<32>, bit<1>>(Noyack) Riverlea = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             bit<1> in_value;

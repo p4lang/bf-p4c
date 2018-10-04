@@ -175,7 +175,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".NoAction") action NoAction_0() {
     }
     bit<32> tmp_0;
-    @name(".sampler_alu") RegisterAction<bit<32>, bit<32>>(flow_cnt) sampler_alu = {
+    @name(".sampler_alu") DirectRegisterAction<bit<32>, bit<32>>(flow_cnt) sampler_alu = {
         void apply(inout bit<32> value, out bit<32> rv) {
             bit<32> alu_hi;
             bit<32> in_value;

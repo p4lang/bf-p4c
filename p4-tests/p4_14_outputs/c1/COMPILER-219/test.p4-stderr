@@ -1,40 +1,40 @@
-v1model.p4(129): warning: M shadows struct M
+v1model.p4(138): warning: M shadows struct M
 extern void hash<O, T, D, M>(out O result, in HashAlgorithm algo, in T base, in D data, in M max);
                           ^
 test.p4(32)
 header_type M {
 ^
-v1model.p4(215): warning: M shadows struct M
+v1model.p4(224): warning: M shadows struct M
 parser Parser<H, M>(packet_in b,
                  ^
 test.p4(32)
 header_type M {
 ^
-v1model.p4(224): warning: M shadows struct M
+v1model.p4(233): warning: M shadows struct M
 control VerifyChecksum<H, M>(inout H hdr,
                           ^
 test.p4(32)
 header_type M {
 ^
-v1model.p4(227): warning: M shadows struct M
+v1model.p4(236): warning: M shadows struct M
 control Ingress<H, M>(inout H hdr,
                    ^
 test.p4(32)
 header_type M {
 ^
-v1model.p4(231): warning: M shadows struct M
+v1model.p4(240): warning: M shadows struct M
 control Egress<H, M>(inout H hdr,
                   ^
 test.p4(32)
 header_type M {
 ^
-v1model.p4(239): warning: M shadows struct M
+v1model.p4(248): warning: M shadows struct M
 control ComputeChecksum<H, M>(inout H hdr,
                            ^
 test.p4(32)
 header_type M {
 ^
-v1model.p4(244): warning: M shadows struct M
+v1model.p4(253): warning: M shadows struct M
 package V1Switch<H, M>(Parser<H, M> p,
                     ^
 test.p4(32)
