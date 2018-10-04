@@ -19,19 +19,19 @@ enum binary_type_t { NO_BINARY,
     PIPE3,      // binary with data just in pipe 3
 };
 extern struct option_t {
-    config_version_t    version;
-    target_t            target;
     binary_type_t       binary;
-    bool                gen_json;
-    bool                match_compiler;
     bool                condense_json;
     bool                debug_info;
-    bool                werror;
     bool                disable_power_gating;
-    bool                singlewrite;
+    bool                gen_json;
     bool                hash_parity_enabled;
     bool                high_availability_enabled;
+    bool                match_compiler;
+    bool                singlewrite;
     std::string         stage_dependency_pattern;
+    target_t            target;
+    config_version_t    version;
+    bool                werror;
 } options;
 
 extern unsigned unique_action_handle;

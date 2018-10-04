@@ -77,10 +77,12 @@ bool StatefulTable::setup_jbay(const pair_t &kv) {
             error(kv.value.lineno, "Syntax error, expecting push or pop");
         if (kv.value.type == tSTR)
             watermark_level = 1;
-        else if (CHECKTYPE(kv.value[1], tINT))
-            watermark_level = kv.value[1].i / 128;
-            if (kv.value[1].i % 128 != 0)
-                error(kv.value[1].lineno, "watermark level must be a mulitple of 128");
+        else if (CHECKTYPE(kv.value[1], tINT)) {
+            watermark_level = kv.value[1].i / 128; 
+        }
+        if (kv.value[1].i % 128 != 0) {
+            error(kv.value[1].lineno, "watermark level must be a mulitple of 128");
+        }
     } else if (kv.key == "underflow") {
         if (CHECKTYPE(kv.value, tSTR))
             underflow_action = kv.value;

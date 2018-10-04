@@ -57,7 +57,7 @@ void HashExpr::gen_ixbar_init(ixbar_init_t *ixbar_init, std::vector<ixbar_input_
  */
 void HashExpr::gen_data(bitvec &data, int logical_hash_bit, InputXbar *ix, int hash_table) {
     ixbar_init_t ixbar_init;
-    hash_column_t hash_matrix[PARITY_GROUPS_DYN][HASH_MATRIX_WIDTH_DYN] = { 0 };
+    hash_column_t hash_matrix[PARITY_GROUPS_DYN][HASH_MATRIX_WIDTH_DYN] = { 0, 0 };
     std::vector<ixbar_input_t> inputs;
     std::vector<hash_matrix_output_t> outputs;
 
@@ -436,9 +436,8 @@ void HashExpr::find_input(Phv::Ref what, std::vector<ixbar_input_t> &inputs, Inp
    for (auto *in : vec) {
         int group_bit_position = in->lo + (what->lo - in->what->lo);
         if ((group_bit_position / 64 != (hash_table % 2)) ||
-            (group_bit_position + what->size() - 1) / 64 != (hash_table % 2))
-            continue;
-
+            (int(group_bit_position + what->size() - 1) / 64 != (hash_table % 2)))
+            continue; 
         ixbar_input_t input;
         input.ixbar_bit_position = group_bit_position + (hash_table / 2) * 128;
         input.bit_size = what->size();

@@ -197,7 +197,7 @@ int parse_num(YYSTYPE *val, const char *s, int base) {
 
 int parse_match(YYSTYPE *val, const char *s, int bits_per_digit) {
     val->match.word0 = val->match.word1 = 0;
-    unsigned digit, digit_mask = (1U << bits_per_digit) - 1;
+    unsigned digit = 0, digit_mask = (1U << bits_per_digit) - 1;
     s--;
     while (*++s) {
         if (*s == '_') continue;

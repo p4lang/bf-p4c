@@ -16,7 +16,7 @@ template<> void VLIWInstruction::write_regs(Target::JBay::mau_regs &regs,
     unsigned bits = encode();
     assert(slot >= 0);
     unsigned off = slot % Phv::mau_groupsize();
-    unsigned side, group;
+    unsigned side = 0, group = 0;
     switch(slot / Phv::mau_groupsize()) {
         case 0: side = 0; group = 0; break;
         case 1: side = 0; group = 1; break;

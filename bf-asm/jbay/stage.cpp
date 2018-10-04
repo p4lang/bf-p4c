@@ -4,8 +4,8 @@
 
 template<>
 void Stage::gen_configuration_cache(Target::JBay::mau_regs &regs, json::vector &cfg_cache) {
-    static int i_pdddelay;
-    static int e_pdddelay;
+    static unsigned i_pdddelay;
+    static unsigned e_pdddelay;
     unsigned reg_width = 8;
     std::string i_reg_value_str;
     std::string e_reg_value_str;

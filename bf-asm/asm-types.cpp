@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <stdlib.h>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers" 
 void VECTOR(pair_t)::push_back(const char *s, value_t &&v) {
     pair_t entry { {tSTR, v.lineno}, v };
     entry.key.s = strdup(s);
@@ -148,6 +150,7 @@ const char *value_desc(const value_t *p) {
             return p->vec.data[0].s;
         return "<cmd>"; }
     assert(0);
+    return "";
 }
 
 void free_value(value_t *p) {
@@ -205,4 +208,6 @@ bool operator==(const struct value_t &a, const struct value_t &b) {
             if (a.map.data[i].value != b.map.data[i].value) return false; }
         return true; }
     assert(0);
+    return "";
 }
+#pragma GCC diagnostic pop 

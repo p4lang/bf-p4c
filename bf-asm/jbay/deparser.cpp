@@ -304,7 +304,7 @@ void output_jbay_field_dictionary(int lineno, REGS &regs, POV_FMT &pov_layout,
             // Phv, Constant, or Checksum
             byte += size;
             if (dynamic_cast<Deparser::FDEntry::Phv *>(ent.what) && prev_pov == *ent.pov &&
-                ent.what->encode() == prev && (size & 6))
+                int(ent.what->encode()) == prev && (size & 6))
                 error(ent.lineno, "16 and 32-bit container cannot be repeatedly deparsed");
             prev = ent.what->encode(); }
         prev_pov = *ent.pov; }
@@ -354,15 +354,15 @@ void output_jbay_field_dictionary_slice(CHUNKS &chunk, CLOTS &clots, POV &pov, D
                 chunk[ch].cfg.seg_sel = seg_tag;
                 chunk[ch].cfg.seg_slice = i/8U;
                 for (int j = 0; j < 8 && i + j < clot->length; ++j) {
-                    if (phv_repl != clot->phv_replace.end() && phv_repl->first <= i + j) {
+                    if (phv_repl != clot->phv_replace.end() && int(phv_repl->first) <= i + j) {
                         chunk[ch].is_phv |= 1 << j;
                         chunk[ch].byte_off.phv_offset[j] = phv_repl->second->reg.deparser_id();
-                        if (phv_repl->first + phv_repl->second->size()/8U <= i + j + 1)
+                        if (int(phv_repl->first + phv_repl->second->size()/8U) <= i + j + 1)
                             ++phv_repl;
-                    } else if (csum_repl != clot->csum_replace.end() && csum_repl->first <= i + j) {
+                    } else if (csum_repl != clot->csum_replace.end() && int(csum_repl->first) <= i + j) {
                         chunk[ch].is_phv |= 1 << j;
                         chunk[ch].byte_off.phv_offset[j] = csum_repl->second.encode();
-                        if (csum_repl->first + 2 <= i + j +1)
+                        if (int(csum_repl->first + 2) <= i + j + 1)
                             ++csum_repl;
                     } else {
                         chunk[ch].byte_off.phv_offset[j] = i + j; } } }

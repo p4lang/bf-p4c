@@ -103,7 +103,7 @@ struct Deparser::FDEntry {
             if (length < 0) error(lineno, "No length for clot %s", tag.c_str());
             if (Parser::clot_tag(gress, tag) < 0) error(lineno, "No tag for clot %s", tag.c_str());
             unsigned next = 0;
-            ::Phv::Ref *prev;
+            ::Phv::Ref *prev = nullptr;
             for (auto &r: phv_replace) {
                 if (r.first < next) {
                     error(r.second.lineno, "Overlapping phvs in clot");
@@ -355,7 +355,7 @@ void Deparser::process() {
         Phv::setuse(INGRESS, phv_use[INGRESS]);
         Phv::setuse(EGRESS, phv_use[EGRESS]); }
     for (gress_t gress : Range(INGRESS, EGRESS)) {
-        unsigned pov_byte = 0, pov_size = 0;
+        int pov_byte = 0, pov_size = 0;
         for (auto &ent : pov_order[gress])
             if (pov[gress].count(&ent->reg) == 0) {
                 pov[gress][&ent->reg] = pov_size;

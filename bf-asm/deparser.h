@@ -126,7 +126,7 @@ public:
     static bool add_constant(gress_t gr, int c) {
         if (!singleton_object.constants[gr].count(c)) {
             singleton_object.constants[gr].insert(c);
-            if (singleton_object.constants[gr].size() > Target::DEPARSER_CONSTANTS())
+            if (int(singleton_object.constants[gr].size()) > Target::DEPARSER_CONSTANTS())
                 return false;
         }
         return true;

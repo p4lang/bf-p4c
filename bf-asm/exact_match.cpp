@@ -210,7 +210,7 @@ void ExactMatchTable::gen_ghost_bits(const std::map<int, HashCol> &hash_table,
                     // 'ghost_bit_info' for this ghost bit since we have already
                     // populated it and use it to add hash bit to
                     // 'ghost_bit_to_hash_bit' node
-                    int index = 0;
+                    unsigned index = 0;
                     for (auto &g : ghost_bit_infos) {
                         auto &m = g->to<json::map>();
                         if (m["bit_in_match_spec"]->to<json::number>() 

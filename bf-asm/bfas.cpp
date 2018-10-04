@@ -18,26 +18,26 @@
 #define MINOR_VERSION   0
 
 option_t options = {
-    .version = CONFIG_OLD,
-    .target = TOFINO,
     .binary = PIPE0,
-    .gen_json = false,
-    .match_compiler = false,
     .condense_json = true,
     .debug_info = false,
-    .werror = false,
     .disable_power_gating = false,
+    .gen_json = false,
+    //FIXME-P4C: Compiler currently does not reserve 51st bit for hash parity.
+    //Flip 'hash_parity_enabled' to true when 51st bit is reserved.
+    .hash_parity_enabled = false,  
+    .high_availability_enabled = true,
+    .match_compiler = false,
 #if HAVE_JBAY
     .singlewrite = true,
 #else
     .singlewrite = false,
 #endif
-    //FIXME-P4C: Compiler currently does not reserve 51st bit for hash parity.
-    //Flip 'hash_parity_enabled' to true when 51st bit is reserved.
-    .hash_parity_enabled = false,  
-    .high_availability_enabled = true
+    .stage_dependency_pattern = "",
+    .target = TOFINO,
+    .version = CONFIG_OLD,
+    .werror = false
 };
-
 
 //Unique Handles
 unsigned unique_action_handle = ACTION_HANDLE_START + 2; //FIXME-JSON +2 to match glass

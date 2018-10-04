@@ -48,13 +48,14 @@ public:
             case MOCHA:    return "mocha";
             case DARK:     return "dark";
             }
+            return "";
         }
     };
     class Slice {
         static const Register invalid;
     public:
         const Register  &reg;
-        int             lo, hi;
+        int             lo = -1, hi = -1;
         bool            valid;
         Slice() : reg(invalid), valid(false) {}
         Slice(const Register &r, int l, int h) : reg(r), lo(l), hi(h) {

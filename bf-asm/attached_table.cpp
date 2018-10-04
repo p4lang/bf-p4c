@@ -121,7 +121,7 @@ unsigned AttachedTable::determine_meter_shiftcount(Table::Call &call, int group,
     if (call.args[0].name() && strcmp(call.args[0].name(), "$DIRECT") == 0) {
         return direct_shiftcount() + tcam_shift;
     } else if (auto f = call.args[0].field()) {
-        assert(f->by_group[group]->bit(0)/128U == word);
+        assert(int(f->by_group[group]->bit(0)/128U) == word);
         return f->by_group[group]->bit(0)%128U + indirect_shiftcount();
     } else if (auto f = call.args[1].field()) {
         return f->bit(0) + METER_ADDRESS_ZERO_PAD;

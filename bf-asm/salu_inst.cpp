@@ -50,7 +50,7 @@ struct operand {
         const char *kind() const override { return "phv_reg"; }
         void pass1(StatefulTable *tbl) override {
             if (!reg.check()) return;
-            int size = tbl->format->begin()->second.size/8U;
+            int size = tbl->format->begin()->second.size/8;
             if (!tbl->input_xbar) {
                 error(lineno, "No input xbar for salu instruction operand for phv");
                 return;
@@ -62,7 +62,7 @@ struct operand {
             else if (byte != base && byte != base + size)
                 error(lineno, "%s must be at %d or %d on ixbar to be used in stateful table %s",
                       reg.desc().c_str(), base*8, (base + size)*8, tbl->name());
-            else if (reg->size() > size * 8)
+            else if (int(reg->size()) > size * 8)
                 error(lineno, "%s is too big for stateful table %s",
                       reg.desc().c_str(), tbl->name());
             else
@@ -235,17 +235,17 @@ int SaluInstruction::decode_predicate(const value_t &exp) {
     if (exp == "!") return Target::STATEFUL_PRED_MASK() ^ decode_predicate(exp[1]);
     if (exp == "&") {
         auto rv = decode_predicate(exp[1]);
-        for (unsigned i = 2; i < exp.vec.size; ++i)
+        for (int i = 2; i < exp.vec.size; ++i)
             rv &= decode_predicate(exp[i]);
         return rv; }
     if (exp == "|") {
         auto rv = decode_predicate(exp[1]);
-        for (unsigned i = 2; i < exp.vec.size; ++i)
+        for (int i = 2; i < exp.vec.size; ++i)
             rv |= decode_predicate(exp[i]);
         return rv; }
     if (exp == "^") {
         auto rv = decode_predicate(exp[1]);
-        for (unsigned i = 2; i < exp.vec.size; ++i)
+        for (int i = 2; i < exp.vec.size; ++i)
             rv ^= decode_predicate(exp[i]);
         return rv; }
     if (exp.type == tINT && exp.i >=0 && exp.i <= Target::STATEFUL_PRED_MASK()) return exp.i;
@@ -508,7 +508,7 @@ Instruction *CmpOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
     if (op.size < 1 || op[1].type != tSTR) {
         error(rv->lineno, "invalid destination for %s instruction", op[0].s);
         return rv; }
-    unsigned unit, len;
+    int unit, len;
     if (op[1] == "lo") {
         rv->slot = CMPLO;
     } else if (op[1] == "hi") {
@@ -602,7 +602,7 @@ Instruction *TMatchOP::Decode::decode(Table *tbl, const Table::Actions::Action *
     if (op.size < 1 || op[1].type != tSTR) {
         error(rv->lineno, "invalid destination for %s instruction", op[0].s);
         return rv; }
-    unsigned unit, len;
+    int unit, len;
     if ((sscanf(op[1].s, "p%u%n", &unit, &len) >= 1 ||
          sscanf(op[1].s, "cmp%u%n", &unit, &len) >= 1) &&
         unit < Target::STATEFUL_TMATCH_UNITS() && op[1].s[len] == 0) {
@@ -729,7 +729,7 @@ Instruction *OutOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
 #if HAVE_JBAY
     // Check for destination
     if (idx < op.size && op[idx].startsWith("word")) {
-        unsigned unit = -1;
+        int unit = -1;
         char *end;
         if (op[idx].type == tSTR) {
             if (isdigit(op[idx].s[4])) {

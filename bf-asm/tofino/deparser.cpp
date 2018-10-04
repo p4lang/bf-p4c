@@ -69,7 +69,7 @@ HER_INTRINSIC(ecos, YES)
                   #NAME);                                                               \
         for (auto &set : data.layout) {                                                 \
             int id = set.first >> data.shift;                                           \
-            int idx = 0;                                                                \
+            unsigned idx = 0;                                                                \
             bool first = true, ok = true;                                               \
             int last = -1;                                                              \
             for (auto &reg : set.second) {                                              \
@@ -133,7 +133,7 @@ void tofino_field_dictionary(checked_array_base<fde_pov> &fde_control,
                 prev_is_checksum = false; } }
 
         if (ent.what->is<Deparser::FDEntry::Phv>() && prev_pov == pov_bit &&
-            ent.what->encode() == prev && ent.what->size() & 6)
+            int(ent.what->encode()) == prev && ent.what->size() & 6)
             error(ent.lineno, "16 and 32-bit container cannot be repeatedly deparsed");
 
         while (size--) {

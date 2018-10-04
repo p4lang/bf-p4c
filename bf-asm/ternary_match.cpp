@@ -496,7 +496,7 @@ void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
     // directly.
     auto *p = find_p4_param(name, "range");
     unsigned field_bytes = p ? (field_width + 7)/8 : 1;
-    for (int i = 0; i < field_bytes; i++) {
+    for (unsigned i = 0; i < field_bytes; i++) {
         json::map entry;
         unsigned entry_lo = lsb_offset;
         unsigned entry_size = field_width;
@@ -550,7 +550,7 @@ void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
 
 }
 
-void TernaryMatchTable::gen_match_fields_pvp(json::vector &match_field_list, int word,
+void TernaryMatchTable::gen_match_fields_pvp(json::vector &match_field_list, unsigned word,
         bool uses_versioning, unsigned version_word_group, bitvec &tcam_bits) const {
     // Tcam bits are arranged as follows in each tcam word
     // LSB -------------------------------------MSB
@@ -705,12 +705,12 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) const {
     // the unused bits.
     // For ternary all unused bits must be marked as source
     // 'zero' for correctness during entry encoding.
-    for (int word = 0; word < match.size(); word++) {
+    for (unsigned word = 0; word < match.size(); word++) {
         bitvec &pb = tcam_bits[word];
         unsigned start_bit = 0; // always 0 for padded fields
         int dirtcam_index = -1; // irrelevant in this context
         if (pb != bitvec(0)) {
-            unsigned idx_lo = 0;
+            int idx_lo = 0;
             std::string pad_name = "--unused--";
             for (auto p : pb) {
                 if (p > idx_lo) {

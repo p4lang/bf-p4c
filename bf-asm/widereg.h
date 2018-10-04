@@ -26,7 +26,7 @@ struct widereg_base {
     widereg_base(intptr_t v) : value(v), reset_value(v), read(false), write(false),
                                disabled_(false) {}
 #endif
-    widereg_base(int v) : reset_value(v), value(v), read(false), write(false), disabled_(false) {}
+    widereg_base(int v) : value(v), reset_value(v), read(false), write(false), disabled_(false) {}
     operator bitvec() const { read = true; return value; }
     bool modified() const { return write; }
     void set_modified(bool v = true) { write = v; }

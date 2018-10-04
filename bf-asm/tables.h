@@ -298,7 +298,9 @@ public:
                     case HashDist: return hd == a.hd;
                     case Counter: case Const: return val == a.val;
                     case Name: return !strcmp(str, a.str);
-                    default: assert(0); } }
+                    default: assert(0); } 
+                return false;
+            }
             bool operator!=(const Arg &a) const { return !operator==(a); }
             Format::Field *field() const { return type == Field ? fld : nullptr; }
             HashDistribution *hash_dist() const { return type == HashDist ? hd : nullptr; }
@@ -336,7 +338,7 @@ public:
         bool is_valid;
         std::string type;
         p4_param(std::string n = "", unsigned p = 0, unsigned bw = 0, unsigned bwf = 0, std::string t = "",unsigned v = 0, bool d = false, bool i = false, unsigned s = 0) :
-            name(n), position(p), bit_width(bw), bit_width_full(bwf), type(t) , default_value(v), defaulted(d), is_valid(i), start_bit(s) {}
+            name(n), start_bit(s), position(p), bit_width(bw), bit_width_full(bwf), default_value(v), defaulted(d), is_valid(i), type(t) {}
     };
     friend std::ostream &operator<<(std::ostream &, const p4_param &);
     typedef std::vector<p4_param>  p4_params;
@@ -520,7 +522,7 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     virtual bool adr_mux_select_stats() { return false; }
     virtual bool run_at_eop() { return false; }
     virtual Format* get_format() { return format; }
-    virtual unsigned determine_shiftcount(Table::Call &call, int group, int word,
+    virtual unsigned determine_shiftcount(Table::Call &call, int group, unsigned word,
            int tcam_shift) const { assert(0); return -1; }
     template<class REGS> void write_mapram_regs(REGS &regs, int row, int col, int vpn, int type);
     template<class T> T *to() { return dynamic_cast<T *>(this); }
@@ -661,7 +663,7 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
         for (auto &p : p4_params_list)
             if (p.type == s) return &p;
         return nullptr; }
-    const int get_param_start_bit_in_spec(std::string &s) const {
+    int get_param_start_bit_in_spec(std::string &s) const {
         remove_name_tail_range(s);
         int start_bit = 0;
         for (auto &p : p4_params_list) {
@@ -1036,7 +1038,7 @@ public:
     void base_alpm_pre_classifier_tbl_cfg(json::map &pre_classifier_tbl, const char *type, int size) const {
         if (p4_table)
             p4_table->base_alpm_tbl_cfg(pre_classifier_tbl, size, this, P4Table::PreClassifier); }
-    void gen_match_fields_pvp(json::vector &match_field_list, int word,
+    void gen_match_fields_pvp(json::vector &match_field_list, unsigned word,
         bool uses_versioning, unsigned version_word_group, bitvec &tcam_bits) const;
     unsigned get_default_action_handle() const override {
         unsigned def_act_handle = Table::get_default_action_handle();
@@ -1226,7 +1228,7 @@ public:
     unsigned get_log2size() const {
         unsigned size = get_size();
         return ceil_log2(size); }
-    unsigned determine_shiftcount(Table::Call &call, int group, int word,
+    unsigned determine_shiftcount(Table::Call &call, int group, unsigned word,
         int tcam_shift) const override;
     unsigned determine_default(Table::Call &call) const;
     unsigned determine_mask(Table::Call &call) const;
@@ -1323,7 +1325,7 @@ public:
     int home_row() const override { return layout.at(0).row | 3; }
     int unitram_type() override { return UnitRam::SELECTOR; }
     StatefulTable *get_stateful() const override { return bound_stateful; }
-    unsigned determine_shiftcount(Table::Call &call, int group, int word,
+    unsigned determine_shiftcount(Table::Call &call, int group, unsigned word,
         int tcam_shift) const override;
     void set_stateful(StatefulTable *s) override { bound_stateful = s; }
     unsigned per_flow_enable_bit(MatchTable *m = nullptr) const override;
@@ -1402,7 +1404,7 @@ public:
     int home_row() const override { return layout.at(0).row; }
     int direct_shiftcount() const override;
     int indirect_shiftcount() const override;
-    unsigned determine_shiftcount(Table::Call &call, int group, int word,
+    unsigned determine_shiftcount(Table::Call &call, int group, unsigned word,
         int tcam_shift) const override;
     int address_shift() const override;
     bool run_at_eop() override { return (type&BYTES) != 0; }
@@ -1436,7 +1438,7 @@ public:
     int home_row() const override { return layout.at(0).row | 3; }
     unsigned meter_group() const { return layout.at(0).row/4U; }
     bool uses_colormaprams() const override { return !color_maprams.empty(); }
-    unsigned determine_shiftcount(Table::Call &call, int group, int word,
+    unsigned determine_shiftcount(Table::Call &call, int group, unsigned word,
             int tcam_shift) const override;
     void add_cfg_reg(json::vector &cfg_cache, std::string full_name, std::string name, unsigned val, unsigned width);
     int default_pfe_adjust() const override { return color_aware ? -METER_TYPE_BITS : 0; }
@@ -1499,7 +1501,7 @@ public:
     bool is_dual_mode() { return dual_mode; }
     int home_row() const override { return layout.at(0).row | 3; }
     unsigned meter_group() const { return layout.at(0).row/4U; }
-    unsigned determine_shiftcount(Table::Call &call, int group, int word,
+    unsigned determine_shiftcount(Table::Call &call, int group, unsigned word,
             int tcam_shift) const override;
     unsigned per_flow_enable_bit(MatchTable *m = nullptr) const override;
     void set_address_used() override { address_used = true; }

@@ -133,7 +133,7 @@ unsigned SelectionTable::per_flow_enable_bit(MatchTable *match) const {
         return AttachedTable::per_flow_enable_bit(match);
 }
 
-unsigned SelectionTable::determine_shiftcount(Table::Call &call, int group, int word,
+unsigned SelectionTable::determine_shiftcount(Table::Call &call, int group, unsigned word,
         int tcam_shift) const {
     return determine_meter_shiftcount(call, group, word, tcam_shift);
 }

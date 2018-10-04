@@ -255,7 +255,7 @@ unsigned StatefulTable::per_flow_enable_bit(MatchTable *match) const {
         return AttachedTable::per_flow_enable_bit(match);
 }
 
-unsigned StatefulTable::determine_shiftcount(Table::Call &call, int group, int word,
+unsigned StatefulTable::determine_shiftcount(Table::Call &call, int group, unsigned word,
         int tcam_shift) const {
     return determine_meter_shiftcount(call, group, word, tcam_shift);
 }
@@ -477,7 +477,7 @@ void StatefulTable::gen_tbl_cfg(json::vector &out) const {
                             }
                             if (index == -1)
                                 continue;
-                            if (actions->size() < index)
+                            if (int(actions->size()) < index)
                                 continue;
                             auto it = actions->begin();
                             std::advance(it, index);

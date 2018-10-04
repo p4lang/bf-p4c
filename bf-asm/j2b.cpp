@@ -10,7 +10,7 @@ int main(int ac, char **av) {
     if (!in) {
         std::cerr << "failed to open " << av[1] << std::endl;
         return 1; }
-    json::obj *data;
+    json::obj *data = nullptr;
     if (!(in >> data)) {
         std::cerr << "failed to read json" << std::endl;
         return 1; }

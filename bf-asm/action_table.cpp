@@ -159,7 +159,7 @@ void ActionTable::need_on_actionbus(RandomNumberGen rng, int lo, int hi, int siz
 /**
  * Necessary for determining the actiondata_adr_exact/tcam_shiftcount register value.
  */
-unsigned ActionTable::determine_shiftcount(Table::Call &call, int group, int word,
+unsigned ActionTable::determine_shiftcount(Table::Call &call, int group, unsigned word,
         int tcam_shift) const {
     int lo_huffman_bits = std::min(get_log2size() - 2,
                                    static_cast<unsigned>(ACTION_ADDRESS_ZERO_PAD));
@@ -186,7 +186,7 @@ unsigned ActionTable::determine_default(Table::Call &call) const {
     unsigned huffman_mask = (1 << huffman_ones) - 1;
     // lower_huffman_mask == 0x1f, upper_huffman_mask = 0x60
     unsigned lower_huffman_mask = (1U << ACTION_DATA_LOWER_HUFFMAN_BITS) - 1;
-    unsigned upper_huffman_mask = (1U << ACTION_DATA_HUFFMAN_BITS) - 1 & ~lower_huffman_mask;
+    unsigned upper_huffman_mask = ((1U << ACTION_DATA_HUFFMAN_BITS) - 1) & ~lower_huffman_mask;
     unsigned rv = (huffman_mask & upper_huffman_mask) << ACTION_DATA_HUFFMAN_DIFFERENCE;
     rv |= huffman_mask & lower_huffman_mask;
     if (call.args[1].name() && call.args[1] == "$DEFAULT") {
@@ -333,7 +333,7 @@ void ActionTable::pass1() {
     std::sort(layout.begin(), layout.end(), [](const Layout &a, const Layout &b)->bool {
               if (a.word != b.word) return a.word < b.word;
               return a.row > b.row; });
-    unsigned width = format ? (format->size-1)/128 + 1 : 1;
+    int width = format ? (format->size-1)/128 + 1 : 1;
     for (auto &fmt : action_formats) {
 #if 0
         for (auto &fld : *fmt.second) {
@@ -351,11 +351,11 @@ void ActionTable::pass1() {
                               fmt2.first.c_str());
                         break; } } } }
 #endif
-        width = std::max(width, (fmt.second->size-1)/128 + 1); }
+        width = std::max(width, int((fmt.second->size-1)/128U + 1)); }
     unsigned depth = layout_size()/width;
     std::vector<int> slice_size(width, 0);
     unsigned idx = 0; // ram index within depth
-    unsigned word = 0;  // word within wide table;
+    int word = 0;  // word within wide table;
     int home_row = -1;
     unsigned final_home_rows = 0;
     Layout *prev = nullptr;
@@ -388,7 +388,7 @@ void ActionTable::pass1() {
                 next->cols.erase(next->cols.begin(), next->cols.begin() + split);
                 next->vpns.erase(next->vpns.begin(), next->vpns.begin() + split); }
             row->word = word;
-            if ((slice_size[word] += row->cols.size()) == depth)
+            if ((slice_size[word] += row->cols.size()) == int(depth))
                 ++word; }
         prev = &*row; }
     if (home_rows & ~final_home_rows)
@@ -397,7 +397,7 @@ void ActionTable::pass1() {
             break; }
     home_rows = final_home_rows;
     for (word = 0; word < width; ++word)
-        if (slice_size[word] != depth) {
+        if (slice_size[word] != int(depth)) {
             error(layout.front().lineno, "Incorrect size for word %u in layout of table %s",
                   word, name());
             break; }
@@ -516,7 +516,7 @@ void ActionTable::write_regs(REGS &regs) {
         fmt_log2size = std::max(fmt_log2size, fmt->log2size);
     unsigned width = (fmt_log2size > 7) ? 1 << (fmt_log2size - 7) : 1;
     unsigned depth = layout_size()/width;
-    int idx = 0;
+    unsigned idx = 0;
     int word = 0;
     Layout *home = nullptr;
     int prev_logical_row = -1;

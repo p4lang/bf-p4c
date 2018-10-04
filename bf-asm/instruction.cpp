@@ -147,7 +147,7 @@ struct operand {
             int byte = field ? table->find_on_actionbus(field, lo, hi, size)
                              : table->find_on_actionbus(name, mod, lo, hi, size);
             if (byte < 0) {
-                if (lo > 0 || (field && hi+1 < field->size))
+                if (lo > 0 || (field && hi + 1 < int(field->size)))
                     error(lineno, "%s(%d..%d) is not on the action bus", name.c_str(), lo, hi);
                 else
                     error(lineno, "%s is not on the action bus", name.c_str());
@@ -164,7 +164,7 @@ struct operand {
                 return ACTIONBUS_OPERAND + byte/size;
             return -1; }
         void pass2(int group) override {
-            unsigned bits = group_size[group];
+            int bits = group_size[group];
             unsigned bytes = bits/8U;
             if (lo < 0) lo = 0;
             if (hi < 0) hi = lo + bits - 1;
@@ -242,11 +242,11 @@ struct operand {
             auto *a = dynamic_cast<const HashDist *>(a_);
             if (!a || units != a->units || lo != a->lo || hi != a->hi) return false;
             if (table == a->table) return true;
-            int lo = this->lo < 0 ? 0 : lo;
-            int hi = this->hi < 0 ? 15 : hi;
+            int elo = this->lo < 0 ? 0 : lo;
+            int ehi = this->hi < 0 ? 15 : hi;
             for (auto unit : units) {
-                int b1 = table->find_on_actionbus(find_hash_dist(unit), lo, hi, 0);
-                int b2 = a->table->find_on_actionbus(a->find_hash_dist(unit), lo, hi, 0);
+                int b1 = table->find_on_actionbus(find_hash_dist(unit), elo, ehi, 0);
+                int b2 = a->table->find_on_actionbus(a->find_hash_dist(unit), elo, ehi, 0);
                 if (b1 != b2 || b1 < 0) return false; }
             return true; }
         HashDist *clone() override { return new HashDist(*this); }
@@ -733,11 +733,11 @@ struct CondMoveMux : VLIWInstruction {
         std::string name;
         unsigned opcode, cond_size;
         bool    src2opt;
-        Decode(const char *name, unsigned opc, bool s2opt, unsigned csize, const char *alias_name)
-        : name(name), Instruction::Decode(name), opcode(opc), cond_size(csize), src2opt(s2opt) {
+        Decode(const char *name, unsigned opc, unsigned csize, bool s2opt, const char *alias_name)
+        : Instruction::Decode(name), name(name), opcode(opc), cond_size(csize), src2opt(s2opt) {
             alias(alias_name); }
-        Decode(const char *name, target_t targ, unsigned opc, bool s2opt, unsigned csize,
-               const char *alias_name) : name(name), Instruction::Decode(name, targ),
+        Decode(const char *name, target_t targ, unsigned opc, unsigned csize, bool s2opt,
+               const char *alias_name) : Instruction::Decode(name, targ), name(name),
                opcode(opc), cond_size(csize), src2opt(s2opt) {
             alias(alias_name); }
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
@@ -921,7 +921,7 @@ bool DepositField::equiv(Instruction *a_) {
 struct Set : VLIWInstruction {
     struct Decode : Instruction::Decode {
         std::string name;
-        Decode(const char *n) : name(n), Instruction::Decode(n) {}
+        Decode(const char *n) : Instruction::Decode(n), name(n) {}
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
                             const VECTOR(value_t) &op) const override;
     };

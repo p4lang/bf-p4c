@@ -52,7 +52,7 @@ AsmStage::AsmStage() : Section("stage") {
 
 void AsmStage::start(int lineno, VECTOR(value_t) args) {
     size_t oldsize = stage.size();
-    if (stage.size() < Target::NUM_MAU_STAGES())
+    if (int(stage.size()) < Target::NUM_MAU_STAGES())
         stage.resize(Target::NUM_MAU_STAGES());
     if (args.size != 2 || args[0].type != tINT ||
         (args[1] != "ingress" && args[1] != "egress" &&
@@ -141,7 +141,7 @@ void AsmStage::process() {
         for (auto table : stage[i].tables)
             table->pass0();
     }
-    for (unsigned i = 0; i < stage.size(); i++) {
+    for (int i = 0; i < int(stage.size()); i++) {
         for (auto table : stage[i].tables)
             table->pass1();
         if (options.target == TOFINO) {
@@ -170,7 +170,7 @@ void AsmStage::output(json::map &ctxt_json) {
     for (unsigned i = 0; i < stage.size(); i++) {
         for (auto table : stage[i].tables)
             table->pass3(); }
-    if (stage.size() > Target::NUM_MAU_STAGES())
+    if (int(stage.size()) > Target::NUM_MAU_STAGES())
         error(stage.back().tables.empty() ? 0 : stage.back().tables[0]->lineno,
               "%s supports up to %d stages, using %zd", Target::name(), Target::NUM_MAU_STAGES(),
               stage.size());

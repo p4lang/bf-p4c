@@ -133,8 +133,8 @@ json::map *P4Table::base_tbl_cfg(json::vector &out, int size, const Table *table
 
 void P4Table::base_alpm_tbl_cfg(json::map &out, int size, const Table *table, P4Table::alpm_type atype) const {
     if (is_alpm()) {
-        json::map **alpm_cfg;
-        unsigned *alpm_table_handle;
+        json::map **alpm_cfg = nullptr;
+        unsigned *alpm_table_handle = nullptr;
         auto *alpm = &alpms[this];
         if (alpm) {
             if (atype == P4Table::PreClassifier) {

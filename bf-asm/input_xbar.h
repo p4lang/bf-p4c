@@ -12,13 +12,13 @@ struct HashCol {
     HashExpr                *fn = 0;
     int                     bit = 0;
     bitvec                  data;
-    unsigned                valid = 0; // Used only in Tofino 
-    void dbprint(std::ostream & out) const { 
-        out << "HashCol: " << 
-               " lineno: " << lineno << 
-               " bit: " << bit << 
-               " data: " << data << 
-               " valid: " << valid; 
+    unsigned                valid = 0; // Used only in Tofino
+    void dbprint(std::ostream & out) const {
+        out << "HashCol: " <<
+               " lineno: " << lineno <<
+               " bit: " << bit <<
+               " data: " << data <<
+               " valid: " << valid;
         if (fn) out << " fn: " << *fn << std::endl;
     }
 };
@@ -131,10 +131,10 @@ public:
     Phv::Ref get_group_bit(Group grp, unsigned bit) {
         if (groups.count(grp))
             for (auto &in : groups.at(grp))
-                if (bit >= in.lo && bit <= in.hi)
+                if (bit >= unsigned(in.lo) && bit <= unsigned(in.hi))
                     return Phv::Ref(in.what, bit-in.lo, bit-in.hi);
         return Phv::Ref(); }
-    std::string get_field_name(unsigned bit) {
+    std::string get_field_name(int bit) {
         for (auto &g: groups) {
             for (auto &p: g.second) {
                 if (bit <= p.hi && bit >= p.lo)

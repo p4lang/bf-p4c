@@ -90,6 +90,7 @@ unsigned Table::Call::Arg::size() const {
     default:
         assert(0);
     }
+    return -1;
 }
 
 static void add_row(int lineno, std::vector<Table::Layout> &layout, int row) {
@@ -370,9 +371,10 @@ void Table::setup_vpns(std::vector<Layout> &layout, VECTOR(value_t) *vpn, bool a
                         el = vpncoliter->i;
                         if (++vpncoliter == &*vpniter->vec.end()) ++vpniter;
                         continue;
-                    } else if (vpniter->type == tINT)
+                    } else if (vpniter->type == tINT) {
                         el = vpniter->i;
-                        ++vpniter;
+                    }
+                    ++vpniter;
                 }
                 // Error out if VPN's are repeated in a table. For wide words,
                 // each individual word can have the same vpn
@@ -999,9 +1001,10 @@ Table::Actions::Action::alias_t::alias_t(value_t &data) {
                 else {
                     lo = data.vec[1].lo;
                     hi = data.vec[1].hi; } }
-        } else
+        } else {
             is_constant = true;
-            value = data.i; }
+        }
+        value = data.i; }
 }
 
 Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv, int pos) {
@@ -2115,7 +2118,7 @@ void Table::add_zero_padding_fields(Table::Format *format, Table::Actions::Actio
             unsigned action_entries_per_word = std::max(1U, 128U/format->size);
             // Add a flag type to specify padding?
             Format::Field f(format, format->size, 0, Format::Field::ZERO);
-            for (int i = 0; i < action_entries_per_word; i++)
+            for (unsigned i = 0; i < action_entries_per_word; i++)
                 format->add_field(f, "--padding--");
         } else {
             error(lineno,
@@ -2146,7 +2149,7 @@ void Table::add_zero_padding_fields(Table::Format *format, Table::Actions::Actio
             field.second.set_field_bits(padbits);
     }
 
-    unsigned idx_lo = 0;
+    int idx_lo = 0;
     for (auto p : padbits) {
         if (p > idx_lo) {
             Format::Field f(format, p - idx_lo, idx_lo, Format::Field::ZERO);
@@ -2155,7 +2158,7 @@ void Table::add_zero_padding_fields(Table::Format *format, Table::Actions::Actio
             format->add_field(f, pad_name);
         }
         idx_lo = p + 1; }
-    if (idx_lo < format_width) {
+    if (idx_lo < int(format_width)) {
         Format::Field f(format, format_width - idx_lo, idx_lo, Format::Field::ZERO);
         std::string pad_name = "--padding_" + std::to_string(idx_lo)
             + "_" + std::to_string(format_width - 1) + "--";

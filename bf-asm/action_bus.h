@@ -86,7 +86,7 @@ class ActionBus {
 
     void setup_slot(int lineno, Table *tbl, const char *name, unsigned idx, Source src,
                     unsigned sz, unsigned off);
-    int find_free(Table *tbl, int min, int max, int step, int lobyte, int bytes);
+    int find_free(Table *tbl, unsigned min, unsigned max, unsigned step, unsigned lobyte, unsigned bytes);
     int find_merge(Table *tbl, int offset, int bytes, int use);
     bool check_atcam_sharing(Table *tbl1, Table *tbl2);
     bool check_slot_sharing(ActionBus::Slot &slot, bitvec &action_bus);
@@ -98,7 +98,7 @@ public:
     void pass3(Table *tbl);
     template<class REGS> void write_immed_regs(REGS &regs, Table *tbl);
     template<class REGS>
-    void write_action_regs(REGS &regs, Table *tbl, unsigned homerow, unsigned action_slice);
+    void write_action_regs(REGS &regs, Table *tbl, int homerow, unsigned action_slice);
     void do_alloc(Table *tbl, Source src, unsigned use, int lobyte, int bytes, unsigned offset);
     void alloc_field(Table *, Source src, unsigned offset, unsigned sizes_needed);
     void need_alloc(Table *tbl, Source src, unsigned lo, unsigned hi, unsigned size);

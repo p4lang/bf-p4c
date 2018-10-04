@@ -59,10 +59,10 @@ InputXbar::InputXbar(Table *t, bool tern, const VECTOR(pair_t) &data)
         Group::type_t grtype = tern ? Group::TERNARY : Group::EXACT;
         if (!CHECKTYPEM(kv.key, tCMD, "group or hash descriptor"))
             continue;
-        unsigned index = 1;
+        int index = 1;
         if (kv.key[0] != "group" && (kv.key[1] == "group" || kv.key[1] == "table"))
             ++index;
-        if (!PCHECKTYPE(kv.key.vec.size == int(index+1), kv.key[index], tINT))
+        if (!PCHECKTYPE(kv.key.vec.size == index+1, kv.key[index], tINT))
             continue;
         index = kv.key[index].i;
         bool isgroup = false;
@@ -551,7 +551,7 @@ void InputXbar::write_regs(REGS &regs) {
     for (auto &group : groups) {
         if (group.second.empty()) continue;
         LOG1("  # Input xbar group " << group.first);
-        unsigned group_base;
+        unsigned group_base = 0;
         unsigned half_byte = 0;
         unsigned bytes_used = 0;
         switch (group.first.type) {
@@ -571,7 +571,7 @@ void InputXbar::write_regs(REGS &regs) {
             assert(0); }
         for (auto &input : group.second) {
             assert(input.lo >= 0);
-            unsigned word_group, word_index, swizzle_mask;
+            unsigned word_group = 0, word_index = 0, swizzle_mask = 0;
             bool hi_enable = false;
             switch (input.what->reg.size) {
             case 8:

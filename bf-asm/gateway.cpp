@@ -11,7 +11,7 @@ DEFINE_TABLE_TYPE(GatewayTable)
 
 static struct {
     unsigned         units, bits, half_shift, mask, half_mask;
-} range_match_info[] = { { 0, 0, 0, 0 }, { 6, 4, 2, 0xf, 0x3 }, { 3, 8, 8, 0xffff, 0xff } };
+} range_match_info[] = { { 0, 0, 0, 0, 0 }, { 6, 4, 2, 0xf, 0x3 }, { 3, 8, 8, 0xffff, 0xff } };
 
 GatewayTable::Match::Match(value_t *v, value_t &data, range_match_t range_match) {
     if (range_match)

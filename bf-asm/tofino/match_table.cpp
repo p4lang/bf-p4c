@@ -7,7 +7,7 @@ template<> void MatchTable::setup_next_table_map(Target::Tofino::mau_regs &regs,
     ubits<8> *map_data[8] = { &mp[0].next_table_map_data0, &mp[0].next_table_map_data1,
         &mp[0].next_table_map_data2, &mp[0].next_table_map_data3, &mp[1].next_table_map_data0,
         &mp[1].next_table_map_data1, &mp[1].next_table_map_data2, &mp[1].next_table_map_data3 };
-    int next_bits = 0;
+    unsigned  next_bits = 0;
     std::map<std::string, unsigned> next_table_encodings;
     if (auto nf = tbl->get_format()) {
         if (auto next_field = nf->field("next")) {
@@ -15,7 +15,7 @@ template<> void MatchTable::setup_next_table_map(Target::Tofino::mau_regs &regs,
             // we dont use all 8 bits in match overhead for next tables
             assert((1U << next_field->size) <= NEXT_TABLE_SUCCESSOR_TABLE_DEPTH);
             next_bits = next_field->size; 
-            int next_bits_encoding = 0;
+            unsigned next_bits_encoding = 0;
             // Generate unique encodings for next tables
             for (auto &n : tbl->hit_next) {
                 if (n.name == "END") continue;

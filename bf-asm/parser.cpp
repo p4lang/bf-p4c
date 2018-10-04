@@ -334,7 +334,7 @@ Parser::Checksum::Checksum(gress_t gress, pair_t data) : lineno(data.key.lineno)
                     if ((hi + 1) > PARSER_INPUT_BUFFER_SIZE)
                         error(kv.value.lineno, "Parser checksum out of input buffer?");
 
-                    for (int byte = lo; byte <= hi; ++byte)
+                    for (unsigned byte = lo; byte <= hi; ++byte)
                        mask |= (1 << byte);
                 }
             }
@@ -1096,8 +1096,8 @@ void Parser::State::Match::pass1(Parser *pa, State *state) {
     //slots and can cause 'Ran out of phv slices' error. This should eventually go away
     //as ideally the compiler should not generate any phv slices
     if (!options.match_compiler) {
-        for (int i1 = 0; i1 < set.size(); ++i1) {
-            for (int i2 = i1 + 1; i2 < set.size(); ++i2) {
+        for (unsigned i1 = 0; i1 < set.size(); ++i1) {
+            for (unsigned i2 = i1 + 1; i2 < set.size(); ++i2) {
                 auto &a = set[i1];
                 auto &b = set[i2];
                 if (a == b) continue;

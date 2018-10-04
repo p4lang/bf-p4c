@@ -132,7 +132,7 @@ int MeterTable::address_shift() const {
     return 7;  // meters are always 128 bits wide
 }
 
-unsigned MeterTable::determine_shiftcount(Table::Call &call, int group, int word,
+unsigned MeterTable::determine_shiftcount(Table::Call &call, int group, unsigned word,
         int tcam_shift) const {
     return determine_meter_shiftcount(call, group, word, tcam_shift);
 }
@@ -301,7 +301,7 @@ void MeterTable::write_regs(REGS &regs) {
     auto &merge = regs.rams.match.merge;
     int color_map_color = color_maprams.empty() ? 0 : (home->row/4U) & 1;
     for (Layout &row : color_maprams) {
-        if (row.row == home->row/2U) { /* on the home row */
+        if (row.row == home->row/2) { /* on the home row */
             if (color_map_color)
                 map_alu.mapram_color_switchbox.row[row.row].ctl.r_color1_mux_select
                     .r_color1_sel_color_r_i = 1;
@@ -331,7 +331,7 @@ void MeterTable::write_regs(REGS &regs) {
         auto vpn = row.vpns.begin();
         for (int col : row.cols) {
             auto &mapram_config = map_alu_row.adrmux.mapram_config[col];
-            if (row.row == home->row/2U)
+            if (row.row == home->row/2)
                 mapram_config.mapram_color_bus_select = MapRam::ColorBus::COLOR;
             else
                 mapram_config.mapram_color_bus_select = MapRam::ColorBus::OVERFLOW;

@@ -443,11 +443,11 @@ void ActionBus::need_alloc(Table *tbl, Source src,
  * input bus starting at 'lobyte'.  'step' is an optimization to only check every step bytes
  * as we know alignment restrictions mean those are the only possible aligned spots
  */
-int ActionBus::find_free(Table *tbl, int min, int max, int step, int lobyte, int bytes) {
-    int avail;
+int ActionBus::find_free(Table *tbl, unsigned min, unsigned max, unsigned step, unsigned lobyte, unsigned bytes) {
+    unsigned avail;
     LOG4("find_free(" << min << ", " << max << ", " << step << ", " << lobyte <<
          ", " << bytes << ")");
-    for (int i = min; i + bytes - 1 <= max; i += step) {
+    for (unsigned i = min; i + bytes - 1 <= max; i += step) {
         unsigned hv_slice = i / ACTION_HV_XBAR_SLICE_SIZE;
         auto &hv_groups = action_hv_slice_byte_groups.at(hv_slice);
         int mask1 = action_hv_slice_group_align.at(hv_slice).at(lobyte % 16U) - 1;
@@ -455,7 +455,7 @@ int ActionBus::find_free(Table *tbl, int min, int max, int step, int lobyte, int
         if ((i ^ lobyte) & mask1)
             continue;  // misaligned
         bool inuse = false;
-        for (int byte = lobyte & ~mask1; byte <= ((lobyte+bytes-1) | mask2); ++byte) {
+        for (unsigned byte = lobyte & ~mask1; byte <= ((lobyte+bytes-1) | mask2); ++byte) {
             if (!byte_use[byte]) continue;
             if (action_hv_slice_use.size() <= byte/16U)
                 action_hv_slice_use.resize(byte/16U + 1);
@@ -468,7 +468,7 @@ int ActionBus::find_free(Table *tbl, int min, int max, int step, int lobyte, int
             while ((i + step)/ACTION_HV_XBAR_SLICE_SIZE == hv_slice)
                 i += step;
             continue; }
-        for (int byte = i & ~mask1; byte <= ((i + bytes - 1) | mask2); ++byte)
+        for (unsigned byte = i & ~mask1; byte <= ((i + bytes - 1) | mask2); ++byte)
             if (tbl->stage->action_bus_use[Stage::action_bus_slot_map[byte]]) {
                 LOG5("  output byte " << byte << " in use by " <<
                      tbl->stage->action_bus_use[Stage::action_bus_slot_map[byte]]->name());
@@ -662,7 +662,7 @@ int ActionBus::find(Table::Format::Field *f, int lo, int hi, int size, int *len)
     for (auto &slot : by_byte) {
         if (!slot.second.data.count(f)) continue;
         if ((int)slot.second.data[f] > lo) continue;
-        if ((int)slot.second.data[f] + slot.second.size <= hi) continue;
+        if ((int)slot.second.data[f] + (int)slot.second.size <= hi) continue;
         /* FIXME -- off < f->size check is wrong, but needed for old compiler broken asm */
         /* FIXME -- see test/action_bus1.p4 */
         if (lo < (int)f->size && lo - slot.second.data[f] >= slot.second.size) continue;
@@ -682,11 +682,12 @@ int ActionBus::find(const char *name, TableOutputModifier mod, int lo, int hi, i
         if (slot.second.name != name) continue;
         for (auto &d : slot.second.data) {
             // FIXME -- is this needed still?  or superceded by the Table call to find above?
-            if (d.first.type == Source::TableOutput || d.first.type == Source::NameRef)
+            if (d.first.type == Source::TableOutput || d.first.type == Source::NameRef) {
                 offset -= d.second;
-                break; }
-        if (size && !(size & slot_sizes[slot.first/32U])) continue;
-        if (offset >= slot.second.size) continue;
+            }
+            break; }
+        if (size && !(size & (int)slot_sizes[slot.first/32U])) continue;
+        if (offset >= (int)slot.second.size) continue;
         if (len) *len = slot.second.size;
         return slot.first + offset/8; }
     return -1;
@@ -701,7 +702,7 @@ int ActionBus::find(Source src, int lo, int hi, int size, int *len) {
         if (!slot.second.data.count(src)) continue;
         int offset = slot.second.data[src] & alignmask;
         if (offset > lo) continue;
-        if (offset + slot.second.size <= hi) continue;
+        if (offset + (int)slot.second.size <= hi) continue;
         if (size && !(size & slot_sizes[slot.first/32U])) continue;
         if (len) *len = slot.second.size;
         return slot.first + (lo - offset)/8; }
@@ -717,7 +718,7 @@ int ActionBus::find(Stage *stage, Source src, int lo, int hi, int size, int *len
 }
 
 template<class REGS> void ActionBus::write_action_regs(REGS &regs, Table *tbl,
-                                                       unsigned home_row, unsigned action_slice) {
+                                                    int home_row, unsigned action_slice) {
     LOG2("--- ActionBus write_action_regs(" << tbl->name() << ", " << home_row << ", " <<
          action_slice << ")");
     bool is_action_data = dynamic_cast<ActionTable *>(tbl) != nullptr;
@@ -743,7 +744,7 @@ template<class REGS> void ActionBus::write_action_regs(REGS &regs, Table *tbl,
             // bit location, and ignore things in other wide words, but that should be stored
             // in the Slot object?  What about wired-ors, writing two inputs to the same
             // slot -- it is possible but is it useful?
-            unsigned data_bit, data_size;
+            unsigned data_bit = 0, data_size = 0;
             if (data.first.type == Source::Field) {
                 auto f = data.first.field;
                 if ((f->bit(data.second) >> 7) != action_slice)
@@ -779,7 +780,7 @@ template<class REGS> void ActionBus::write_action_regs(REGS &regs, Table *tbl,
         switch (Stage::action_bus_slot_size[slot]) {
         case 8:
             for (unsigned sbyte = bit/8; sbyte <= (bit+size-1)/8; sbyte++, byte++, slot++) {
-                unsigned code, mask;
+                unsigned code = 0, mask = 0;
                 switch (sbyte >> 2) {
                 case 0: code = sbyte>>1; mask = 1; break;
                 case 1: code = 2; mask = 3; break;
@@ -818,7 +819,7 @@ template<class REGS> void ActionBus::write_action_regs(REGS &regs, Table *tbl,
             slot -= ACTION_DATA_8B_SLOTS;
             bytemask <<= ((bit/8) & 1);
             for (unsigned word = bit/16; word <= (bit+size-1)/16; word++, byte+=2, slot++) {
-                unsigned code, mask;
+                unsigned code = 0, mask = 0;
                 switch (word >> 1) {
                 case 0: code = 1; mask = 3; break;
                 case 1: code = 2; mask = 3; break;
@@ -879,7 +880,7 @@ template<class REGS> void ActionBus::write_action_regs(REGS &regs, Table *tbl,
     }
 }
 FOR_ALL_TARGETS(INSTANTIATE_TARGET_TEMPLATE,
-                void ActionBus::write_action_regs, mau_regs &, Table *, unsigned, unsigned)
+                void ActionBus::write_action_regs, mau_regs &, Table *, int, unsigned)
 
 template<class REGS> void ActionBus::write_immed_regs(REGS &regs, Table *tbl) {
     LOG2("--- ActionBus write_immed_regs(" << tbl->name() << ")");

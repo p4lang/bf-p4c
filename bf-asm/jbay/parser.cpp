@@ -355,12 +355,12 @@ template<> void Parser::write_config(Target::JBay::parser_regs &regs, json::map 
 
     /* multiple JBay parser mem blocks can respond to same address range to allow programming
      * the device with a single write operation. See: pardereg.pgstnreg.ibprsr4reg.prsr.mem_ctrl */
-    for (auto i = 0; i < TopLevel::regs<Target::JBay>()->mem_pipe.parde.i_prsr_mem.size();
+    for (unsigned i = 0; i < TopLevel::regs<Target::JBay>()->mem_pipe.parde.i_prsr_mem.size();
                                                         options.singlewrite ? i+=4 : i+=1) {
         TopLevel::regs<Target::JBay>()->mem_pipe.parde.i_prsr_mem[i].set("memories.parser.ingress",
             &regs.memory[INGRESS]);
     }
-    for (auto i = 0; i < TopLevel::regs<Target::JBay>()->mem_pipe.parde.e_prsr_mem.size();
+    for (unsigned i = 0; i < TopLevel::regs<Target::JBay>()->mem_pipe.parde.e_prsr_mem.size();
                                                         options.singlewrite ? i+=4 : i+=1) {
         TopLevel::regs<Target::JBay>()->mem_pipe.parde.e_prsr_mem[i].set("memories.parser.egress",
             &regs.memory[EGRESS]);

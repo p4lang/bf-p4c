@@ -11,6 +11,8 @@ static void yyerror(const char *, ...);
 static int lineno;
 static std::map<int, std::pair<std::string, int>> line_file_map;
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 /* DANGER -- The value/command functions take non-const references to
  * value_t and MOVE them, so the source should not be used or cleaned
  * up afterwards.  This matches up with how bison  actions work -- in
@@ -18,7 +20,7 @@ static std::map<int, std::pair<std::string, int>> line_file_map;
  * but rather just pops it and lets it go.  Do not try to use them
  * outside of bison action code */
 static value_t value(int v, int lineno_adj) {
-    value_t rv{tINT, lineno - lineno_adj};
+    value_t rv = {tINT, lineno - lineno_adj};
     rv.i = v;
     return rv; }
 static value_t value(VECTOR(uintptr_t) &v, int lineno_adj) {
@@ -98,6 +100,7 @@ static value_t command(char *cmd, bool merge, value_t &a1, value_t &a2, int line
 #define VAL(...)  value(__VA_ARGS__, yychar == '\n' ? 1 : 0)
 #define CMD(...)  command(__VA_ARGS__, yychar == '\n' ? 1 : 0)
 
+#pragma GCC diagnostic pop
 %}
 
 %define parse.error verbose
@@ -324,7 +327,10 @@ error_resync: /* epsilon */ | error_resync indent_elements { free_value(&$2); }
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-register"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsign-compare"
 #include "lex-yaml.c"
+#pragma GCC diagnostic pop
 #pragma GCC diagnostic pop
 
 int error_count = 0;

@@ -141,7 +141,7 @@ phv_32b_slots[] = {
     { phv_16b_0, 3U << phv_16b_0, 16, 16 },
     { phv_16b_2, 3U << phv_16b_2, 16, 16 },
     { phv_8b_0, 0xfU << phv_8b_0, 24, 8 },
-    { 0, 0 }
+    { 0, 0, 0, 0 }
 },
 phv_16b_slots[] = {
     { phv_16b_0, 1U << phv_16b_0, 0, 16 },
@@ -150,14 +150,14 @@ phv_16b_slots[] = {
     { phv_16b_3, 1U << phv_16b_3, 0, 16 },
     { phv_8b_0, 3U << phv_8b_0, 8, 8 },
     { phv_8b_2, 3U << phv_8b_2, 8, 8 },
-    { 0, 0 }
+    { 0, 0, 0, 0 }
 },
 phv_8b_slots[] = {
     { phv_8b_0, 1U << phv_8b_0, 0, 8 },
     { phv_8b_1, 1U << phv_8b_1, 0, 8 },
     { phv_8b_2, 1U << phv_8b_2, 0, 8 },
     { phv_8b_3, 1U << phv_8b_3, 0, 8 },
-    { 0, 0 }
+    { 0, 0, 0, 0 }
 };
 
 template <>
@@ -169,7 +169,7 @@ void Parser::Checksum::write_output_config(Target::Tofino::parser_regs &regs, Pa
     // see MODEL-210 for discussion.
 
     tofino_phv_output_map *map = (tofino_phv_output_map *)_map;
-    phv_use_slots *usable_slots;
+    phv_use_slots *usable_slots = nullptr;
 
          if (dest->reg.size == 8)  usable_slots = phv_8b_slots;
     else if (dest->reg.size == 16) usable_slots = phv_16b_slots;
@@ -187,7 +187,7 @@ template <>
 int Parser::State::Match::Save::write_output_config(Target::Tofino::parser_regs &regs, void *_map, unsigned &used) const
 {
     tofino_phv_output_map *map = (tofino_phv_output_map *)_map;
-    phv_use_slots *usable_slots;
+    phv_use_slots *usable_slots = nullptr;
     if (hi-lo == 3) {
         usable_slots = phv_32b_slots;
     } else if (hi-lo == 1) {
@@ -241,7 +241,7 @@ template <>
 void Parser::State::Match::Set::write_output_config(Target::Tofino::parser_regs &regs, void *_map, unsigned &used) const
 {
     tofino_phv_output_map *map = (tofino_phv_output_map *)_map;
-    phv_use_slots *usable_slots;
+    phv_use_slots *usable_slots = nullptr;
     if (where->reg.size == 32)
         usable_slots = phv_32b_slots;
     else if (where->reg.size == 16)
