@@ -856,7 +856,7 @@ void GeneratePrimitiveInfo::gen_action_json(const IR::MAU::Action *act,
         bool is_hash_dist = false;
         const IR::MAU::HashDist *hd = nullptr;
         if (auto ci = call->index) {
-            if (hd = ci->to<IR::MAU::HashDist>()) {
+            if ((hd = ci->to<IR::MAU::HashDist>()) != nullptr) {
                 is_hash_dist = true;
             }
         }

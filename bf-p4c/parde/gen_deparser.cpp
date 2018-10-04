@@ -49,12 +49,12 @@ class GenerateDeparser : public Inspector {
                         const IR::Expression *list, cstring controlPlaneName = nullptr);
     bool equiv(const IR::Expression *a, const IR::Expression *b) const;
 
-    bool preorder(const IR::Declaration_Instance *decl) {
+    bool preorder(const IR::Declaration_Instance *decl) override {
         nameMap.emplace(decl->name.name, decl->controlPlaneName());
         return false;
     }
 
-    bool preorder(const IR::IfStatement *ifstmt) {
+    bool preorder(const IR::IfStatement *ifstmt) override {
         const IR::Expression *old_pred = pred;
         pred = ifstmt->condition;
         if (old_pred) pred = new IR::LAnd(old_pred, pred);
@@ -68,7 +68,7 @@ class GenerateDeparser : public Inspector {
         return false;
     }
 
-    bool preorder(const IR::MethodCallExpression* mc) {
+    bool preorder(const IR::MethodCallExpression* mc) override {
         auto method = mc->method->to<IR::Member>();
         if (!method) return true;
         if (method->member == "emit") {

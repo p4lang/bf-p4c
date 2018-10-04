@@ -34,7 +34,15 @@ class PassManager : public ::PassManager {
             // so invocations is useless, it just ends up generating a slew of logs
             _logFile = new Logging::FileLog(_logFilePrefix + ".log", _appendToLog);
         } else {
-            _logFile = new Logging::FileLog(_logFilePrefix + std::to_string(invocation) + ".log",
+            cstring pipeId = "";
+            if (!BFNContext::get().options().isv1()) {  // only for P4-16
+                const IR::BFN::Pipe *pipe = root->to<IR::BFN::Pipe>();
+                if (pipe == nullptr)
+                    pipe = findContext<IR::BFN::Pipe>();
+                pipeId = "pipe" + std::to_string(pipe ? pipe->id : 0) + "_";
+            }
+            _logFile = new Logging::FileLog(_logFilePrefix + pipeId +
+                                            std::to_string(invocation) + ".log",
                                             _appendToLog);
             if (!_appendToLog) ++invocation;
         }

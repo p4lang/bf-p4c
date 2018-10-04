@@ -1,5 +1,8 @@
-#include "common/run_id.h"
+#include <sys/stat.h>
+#include "bf-p4c/bf-p4c-options.h"
+#include "bf-p4c/common/run_id.h"
 #include "bf-p4c/mau/characterize_power.h"
+#include "lib/path.h"
 
 Visitor::profile_t CharacterizePower::init_apply(const IR::Node *root) {
     root->apply(default_next_);  // setup default next data structure
@@ -7,32 +10,38 @@ Visitor::profile_t CharacterizePower::init_apply(const IR::Node *root) {
 }
 
 void CharacterizePower::end_apply() {
-      if (display_power_budget_) {
+    if (display_power_budget_) {
         std::ofstream myfile;
-        myfile.open("mau.power.log");
+        auto outputDir = BFNContext::get().options().outputDir;
+        auto logDir = Util::PathName(outputDir).join("logs").toString();
+        int rc = mkdir(logDir.c_str(), 0755);
+        if (rc != 0 && errno != EEXIST) {
+          std::cerr << "Failed to create directory: " << logDir << std::endl;
+        } else {
+          myfile.open(Util::PathName(logDir).join(logFileName_).toString());
+          myfile << "+-----------------------------------------------------------+";
+          myfile << std::endl;
+          myfile << "|  Compiler version: " << BF_P4C_VERSION;
+          myfile << std::endl;
 
-        myfile << "+-----------------------------------------------------------+";
-        myfile << std::endl;
-        myfile << "|  Compiler version: " << BF_P4C_VERSION;
-        myfile << std::endl;
+          const time_t now = time(NULL);
+          char build_date[1024];
+          strftime(build_date, 1024, "%c", localtime(&now));
 
-        const time_t now = time(NULL);
-        char build_date[1024];
-        strftime(build_date, 1024, "%c", localtime(&now));
+          myfile << "|  Created: " << build_date;
+          myfile << std::endl;
+          myfile << "|  Run ID: " << RunId::getId().c_str();
+          myfile << std::endl;
+          myfile << "+-----------------------------------------------------------+";
+          myfile << std::endl << std::endl;
 
-        myfile << "|  Created: " << build_date;
-        myfile << std::endl;
-        myfile << "|  Run ID: " << RunId::getId().c_str();
-        myfile << std::endl;
-        myfile << "+-----------------------------------------------------------+";
-        myfile << std::endl << std::endl;
-
-        myfile << printFeatures() << std::endl;
-        myfile << printLatency() << std::endl;
-        myfile << printWorstPower() << std::endl;
-        myfile << printNormalizedWeights() << std::endl;
-        myfile.close();
-      }
+          myfile << printFeatures() << std::endl;
+          myfile << printLatency() << std::endl;
+          myfile << printWorstPower() << std::endl;
+          myfile << printNormalizedWeights() << std::endl;
+          myfile.close();
+        }
+    }
 
       double eps = max_power_ / 104729.0;
       double total_power = ingress_worst_power_ + egress_worst_power_;
@@ -66,8 +75,9 @@ void CharacterizePower::end_apply() {
       }
 }
 
-bool CharacterizePower::preorder(const IR::BFN::Pipe *) {
-  LOG1("Working on pipe ");
+bool CharacterizePower::preorder(const IR::BFN::Pipe *p) {
+  LOG1("Working on pipe " << p->id);
+  logFileName_ = "mau.power_pipe" + std::to_string(p->id) + ".log";
   ingress_root_ = nullptr;
   egress_root_ = nullptr;
   gress_to_graph_.emplace(INGRESS, new SimpleTableGraph("ingress"));

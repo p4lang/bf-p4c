@@ -219,6 +219,7 @@ class CharacterizePower: public MauInspector {
 #endif
   bool display_power_budget_;
   bool disable_power_check_ = false;
+  std::string logFileName_;
 
   // First tables in the relevant control flow.
   const IR::MAU::Table* ingress_root_;

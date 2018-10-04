@@ -97,7 +97,7 @@ class HashExpr::PhvRef : HashExpr {
 
     void gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, InputXbar *ix,
             int hash_table) override;
-    Phv::Ref* get_ghost_slice() { return &what; }
+    Phv::Ref* get_ghost_slice() override { return &what; }
     void dbprint(std::ostream & out) const override {
         out << "HashExpr: PhvRef" << std::endl;
         out << "hash algorithm: [ algo : " << hash_algorithm.hash_alg
@@ -247,7 +247,7 @@ class HashExpr::Xor : HashExpr {
 
     void gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, InputXbar *ix,
             int hash_table) override { }
-    Phv::Ref* get_ghost_slice() {
+    Phv::Ref* get_ghost_slice() override {
         for (auto *e : what) {
             auto g = e->get_ghost_slice();
             if (g) return g; }
