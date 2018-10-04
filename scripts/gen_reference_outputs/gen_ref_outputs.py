@@ -60,7 +60,7 @@ def prep_test_line(mTest, p4c):
     # Add filename and output directory 
     extra_args = ['"' + os.path.join(mTest.p4_path) + '"', \
         '"-o"', \
-        '"' + os.path.join(config.REF_OUTPUTS_DIR, mTest.p4, p4c.name) + '"']
+        '"' + os.path.join(config.REF_OUTPUTS_DIR, mTest.p4, p4c.name, mTest.p4) + '"']
     test_line += ', '.join(extra_args) + '], None),\n'
     p4c.testmatrix += test_line
     return p4c
