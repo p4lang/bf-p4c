@@ -286,10 +286,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "Match register not allocated"
   smoketest_programs_netcache
   )
 

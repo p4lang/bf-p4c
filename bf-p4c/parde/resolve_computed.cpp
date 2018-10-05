@@ -7,6 +7,7 @@
 #include "frontends/p4/callGraph.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/parde/parde_visitor.h"
+#include "bf-p4c/common/utils.h"
 
 namespace {
 
@@ -837,8 +838,17 @@ class ComputeSaveAndSelect: public ParserInspector {
             return (srca.hi + 1) == srcb.lo;
         }
 
+        bool contains(const UnresolvedSelect& a) const {
+            for (auto& unresolved : members()) {
+                if (a.select == unresolved.select)
+                    return true;
+            }
+            return false;
+        }
+
         bool join(const UnresolvedSelect& unresolved) {
-            if (members().empty() || can_join(last(), unresolved)) {
+            if (members().empty() || contains(unresolved) ||
+                can_join(last(), unresolved)) {
                 _members.push_back(unresolved);
                 return true;
             }
@@ -887,9 +897,9 @@ class ComputeSaveAndSelect: public ParserInspector {
         calcSaves(state);
     }
 
-    /// Forall unresolved select that reashes this point, separate out selects
-    /// that should be process in this state and those shoule be process in earlier state.
-    /// unresolved selects are sorted by whether has decided register, then the size of select.
+    /// For all unresolved selects that reach this point, separate out selects
+    /// that should be processed in this state and those should be processed in an earlier state.
+    /// Unresolved selects are sorted by whether has decided register, then the size of select.
     void calcUnresolvedSelects(
             std::vector<UnresolvedSelect>& unresolved_selects,
             std::vector<UnresolvedSelect>& early_state_extracted,
@@ -1187,7 +1197,7 @@ class ComputeSaveAndSelect: public ParserInspector {
                 used_registers.insert((*reg_choice).begin(), (*reg_choice).end());
             }
 
-            // If there are remaining selects that needs to be extracted in earlier state,
+            // If there are remaining selects that need to be extracted in an earlier state,
             // update the used registers on this transition.
             // Note that, though registers used in this state will 'start to live' in the next
             // state, it should be added because those remaining_unresolved selects 'start to live'
@@ -1195,11 +1205,14 @@ class ComputeSaveAndSelect: public ParserInspector {
             for (const auto& remaining_unresolved : early_state_extracted) {
                 // If the select is resolved in this state, parent defs go over this state
                 // does not need to be saved, like the W => W => R situation.
-                if (resolved_in_this_transition.count(remaining_unresolved.select)) {
-                    continue; }
+                if (resolved_in_this_transition.count(remaining_unresolved.select))
+                    continue;
+
                 auto unresolved = remaining_unresolved;
+
                 for (auto r : used_registers)
                     unresolved.used_by_others.insert(r);
+
                 state_unresolved_selects[state].push_back(unresolved);
                 LOG5("Add Unresolved in `" << state->name << "` " << unresolved.select);
             }
@@ -1234,7 +1247,8 @@ class ComputeSaveAndSelect: public ParserInspector {
         for (const auto& s : state_unresolved_selects[next_state]) {
             UnresolvedSelect for_this_state(s);
             for_this_state.byte_shifted += shift_bytes;
-            rst.push_back(for_this_state); }
+            rst.push_back(for_this_state);
+        }
 
         // sort selects based on position in input buffer
         std::sort(rst.begin(), rst.end());
@@ -1526,6 +1540,7 @@ struct InsertSaveAndSelect : public PassManager {
     explicit InsertSaveAndSelect(const ParserValueResolution& multiDefValues) {
         auto* computeSaveAndSelect = new ComputeSaveAndSelect(multiDefValues);
         addPasses({
+            LOGGING(3) ? new DumpParser("before_parser_match_alloc") : nullptr,
             computeSaveAndSelect,
             new WriteBackSaveAndSelect(*computeSaveAndSelect),
             new AdjustMatchValue(),
