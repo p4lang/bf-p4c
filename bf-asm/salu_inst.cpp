@@ -757,7 +757,7 @@ Instruction *OutOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
     } else
         error(rv->lineno, "too few operands for %s instruction", op[0].s);
     while (idx < op.size) {
-        int err;
+        int err = 0;
         SWITCH_FOREACH_TARGET(options.target, err = rv->decode_output_option(TARGET(), op[idx]); );
         if (err < 0) break;
         ++idx; }

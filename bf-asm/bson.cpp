@@ -188,7 +188,8 @@ static std::unique_ptr<json::vector> map_is_vector(json::map &m) {
     auto rv = mkuniq<json::vector>();
     for (auto &el : m)
         rv->push_back(std::move(el.second));
-    return std::move(rv);
+    // return std::move(rv);
+    return rv;
 }
 
 std::istream &operator>>(std::istream &in, bson_wrap<std::unique_ptr<obj>> json) {

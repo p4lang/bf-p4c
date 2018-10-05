@@ -21,6 +21,7 @@ public:
         Phv::Ref   pov;
         const int &lineno = val.lineno;
         Val() {}
+        virtual ~Val() {}
         Val(gress_t gr, const value_t &v) : val(gr, v) {}
         Val(gress_t gr, const value_t &v, const value_t &p) : val(gr, v), pov(gr, p) {}
         Val(gress_t gr, int tag, const value_t &p) : tag(tag), pov(gr, p) {}

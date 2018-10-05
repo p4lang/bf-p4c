@@ -57,7 +57,7 @@ void HashExpr::gen_ixbar_init(ixbar_init_t *ixbar_init, std::vector<ixbar_input_
  */
 void HashExpr::gen_data(bitvec &data, int logical_hash_bit, InputXbar *ix, int hash_table) {
     ixbar_init_t ixbar_init;
-    hash_column_t hash_matrix[PARITY_GROUPS_DYN][HASH_MATRIX_WIDTH_DYN] = { 0, 0 };
+    hash_column_t hash_matrix[PARITY_GROUPS_DYN][HASH_MATRIX_WIDTH_DYN] = {};
     std::vector<ixbar_input_t> inputs;
     std::vector<hash_matrix_output_t> outputs;
 

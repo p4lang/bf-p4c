@@ -724,7 +724,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(MatchTable, Table,
     GatewayTable                *gateway = 0;
     IdletimeTable               *idletime = 0;
     AttachedTables              attached;
-    friend class AttachedTables;
+    friend struct AttachedTables;
     enum { NONE=0, TABLE_MISS=1, TABLE_HIT=2, DISABLED=3, GATEWAY_MISS=4, GATEWAY_HIT=5,
            GATEWAY_INHIBIT=6 }  table_counter = NONE;
 

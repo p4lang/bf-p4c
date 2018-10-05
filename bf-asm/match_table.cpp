@@ -477,23 +477,23 @@ void MatchTable::gen_hash_bits(const std::map<int, HashCol> &hash_table,
     for (auto &col: hash_table) {
         json::map hash_bit;
         bool hash_bit_added = false;
-        json::vector *bits_to_xor_prev;
+        json::vector *bits_to_xor = nullptr;
         for (auto &hb : hash_bits) {
             if (hb->to<json::map>()["hash_bit"]->to<json::number>() == json::number(col.first)) {
-                bits_to_xor_prev = &(hb->to<json::map>()["bits_to_xor"]->to<json::vector>());
+                bits_to_xor = &(hb->to<json::map>()["bits_to_xor"]->to<json::vector>());
                 hash_bit_added = true; } }
+	if (!hash_bit_added)
+	    bits_to_xor = &(hash_bit["bits_to_xor"] = json::vector());
         hash_bit["hash_bit"] = col.first;
         hash_bit["seed"] = input_xbar->get_seed_bit(hash_group_no, col.first);
-        json::vector &bits_to_xor = hash_bit["bits_to_xor"] = json::vector();
         for (const auto &bit: col.second.data) {
-            json::map field;
             if (auto ref = input_xbar->get_hashtable_bit(hash_table_id, bit)) {
                 std::string field_name = ref.name();
 
                 // FIXME -- if field_name is a raw register name, should lookup in PHV for alias?
                 // Make names compatible with PD Gen API
                 remove_aug_names(field_name);
-                field["field_bit"] = remove_name_tail_range(field_name) + ref.lobit();
+                auto field_bit = remove_name_tail_range(field_name) + ref.lobit();
 
                 // Look up this field in the param list to get a custom key
                 // name, if present.
@@ -505,16 +505,16 @@ void MatchTable::gen_hash_bits(const std::map<int, HashCol> &hash_table,
                 } else if (p && !p->key_name.empty()) {
                     key_name = p->key_name;
                     remove_aug_names(key_name); }
-
-                field["field_name"] = key_name;
-                field["hash_match_group"] = input_xbar->hash_group();
-                field["hash_match_group_bit"] = 0;
                 // FIXME: input_xbar->get_group_bit(input_xbar->get_group() col.first);
+
+                bits_to_xor->push_back(json::map{
+		    {"field_bit", json::number(field_bit)},
+		    {"field_name", json::string(key_name)},
+		    {"hash_match_group", json::number(input_xbar->hash_group())},
+		    {"hash_match_group_bit", json::number(0)}
+		    });
             }
-            if (!hash_bit_added)
-                bits_to_xor.push_back(std::move(field));
-            else
-                bits_to_xor_prev->push_back(std::move(field)); }
+        }
         if (!hash_bit_added)
             hash_bits.push_back(std::move(hash_bit)); }
 }
