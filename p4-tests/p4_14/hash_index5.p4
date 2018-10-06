@@ -30,6 +30,7 @@ table test1 {
     actions {
         countb2;
     }
+    default_action : countb2;
 }
 
 control ingress {

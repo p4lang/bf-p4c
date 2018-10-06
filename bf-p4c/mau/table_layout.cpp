@@ -483,6 +483,11 @@ void TableLayout::setup_exact_match(IR::MAU::Table *tbl, int action_data_bytes_i
 void TableLayout::setup_layout_options(IR::MAU::Table *tbl) {
     LOG2("Determining SRAM match layouts " << tbl->name);
     int index = 0;
+    bool hash_action_only = false;
+    add_hash_action_option(tbl, hash_action_only);
+    if (hash_action_only)
+        return;
+
     for (auto &use : lc.get_action_formats(tbl)) {
         setup_exact_match(tbl, use.action_data_bytes[ActionFormat::ADT],
                           use.immediate_bits(), index);
@@ -512,9 +517,6 @@ void TableLayout::setup_layout_option_no_match(IR::MAU::Table *tbl) {
     tbl->attached.apply(ghdr);
     for (auto v : Values(tbl->actions))
         v->apply(ghdr);
-    if (ghdr.is_hash_dist_needed()) {
-        tbl->layout.hash_action = true;
-    }
 
     // No match tables are required to have only one layout option in a later pass, so the
     // algorithm picks the action format that has the most immediate.  This is the option
@@ -529,6 +531,91 @@ void TableLayout::setup_layout_option_no_match(IR::MAU::Table *tbl) {
     layout.action_data_bytes_in_table = use.action_data_bytes[ActionFormat::ADT];
     layout.overhead_bits += use.immediate_bits();
     LayoutOption lo(layout, uses.size() - 1);
+    lc.total_layout_options[tbl->name].push_back(lo);
+}
+
+/**
+ * A table can be a hash action table under the following condition:
+ *     - The table has no overhead required
+ *     - The number of entries is equivalent to 2^(key bits)
+ *     - The table would initially be a standard exact match table
+ *     - The table has no idletime table (no hash dist bus for idletime)
+ *     - All side-effect tables are not addressed by an overhead field
+ *
+ * To note, direct addressed tables such as counters/meters/stateful tables can also have
+ * their address replaced, similar to action data tables.
+ */
+bool TableLayout::can_be_hash_action(IR::MAU::Table *tbl, std::string &reason) {
+    if (tbl->layout.atcam || tbl->layout.no_match_data())
+        return false;
+
+    int entries = 0;
+    if (tbl->match_table) {
+        if (auto k = tbl->match_table->getConstantProperty("size"))
+            entries = k->asInt();
+        else if (auto k = tbl->match_table->getConstantProperty("min_size"))
+            entries = k->asInt();
+    } else {
+        return false;
+    }
+
+    if (ceil_log2(entries) != tbl->layout.ixbar_width_bits) {
+        reason = "the size is not 2^(key bits)";
+        return false;
+    }
+    if (tbl->layout.overhead_bits > 0) {
+        reason = "the table requires match overhead";
+        return false;
+    }
+    if (tbl->actions.size() > 1) {
+        reason = "the table has multiple actions";
+        return false;
+    }
+
+    for (auto ba : tbl->attached) {
+        if (ba->attached->is<IR::MAU::IdleTime>()) {
+            reason = "the table has idletime requirements";
+            return false;
+        }
+    }
+    return true;
+}
+
+/**
+ * Adds the hash action layout as a potential choice for a layout for a table, if that
+ * layout is possible.
+ */
+void TableLayout::add_hash_action_option(IR::MAU::Table *tbl, bool &hash_action_only) {
+    std::string hash_action_reason = "";
+    bool possible = can_be_hash_action(tbl, hash_action_reason);
+    hash_action_only = false;
+    if (!tbl->match_table)
+        return;
+
+    auto annot = tbl->match_table->getAnnotations();
+    if (auto s = annot->getSingle("use_hash_action")) {
+        auto pragma_val = s->expr.at(0)->to<IR::Constant>();
+        ERROR_CHECK(pragma_val != nullptr, "%s: Please provide a 1 vs. 0 for the use_hash_action"
+                    "for table %s", tbl->srcInfo, tbl->name);
+        hash_action_only = pragma_val->asInt() == 1;
+    }
+
+    if (hash_action_only) {
+        ERROR_CHECK(possible, "%s: Table %s is required to be a hash action table, but cannot "
+                              "be due to %s", tbl->srcInfo, tbl->name, hash_action_reason);
+    }
+
+    if (!possible)
+        return;
+
+    auto uses = lc.get_action_formats(tbl);
+    auto &use = uses[0];
+    BUG_CHECK(use.immediate_bits() == 0, "Cannot have overhead bits in a hash action table");
+    IR::MAU::Table::Layout layout = tbl->layout;
+    layout.immediate_bits = 0;
+    layout.action_data_bytes_in_table = use.action_data_bytes[ActionFormat::ADT];
+    layout.hash_action = true;
+    LayoutOption lo(layout, 0);
     lc.total_layout_options[tbl->name].push_back(lo);
 }
 
@@ -716,6 +803,32 @@ bool TableLayout::preorder(IR::MAU::Action *act) {
 
     ERROR_CHECK(!act->init_default, "%s: Cannot specify %s as the default action, as it requires "
                 "the hash distribution unit", act->srcInfo, act->name);
+    /**
+     * This check is to validate that a keyless table that has to go through the miss path,
+     * because the driver has to potentially program the table, does not have any actions that
+     * require hash.  These actions have to go through the hit path, and thus must go through
+     * a mstch with no key table.
+     */
+    if (tbl->layout.no_match_miss_path()) {
+        std::string error_reason = "";
+        std::string solution = "";
+        if (tbl->layout.total_actions > 1) {
+            error_reason = "the table has multiple actions";
+            solution = "declare only one action on the table, and mark it as the default action";
+        } else if (tbl->layout.action_data_bytes > 0) {
+            error_reason = "the table requires programming action data";
+            solution = "remove all action data from the action";
+        } else {
+            error_reason = "the table requires overhead";
+            solution = "remove all match overhead";
+        }
+        ::error("%s: The table %s with no key cannot have the action %s.  This action requires "
+                "hash, which can only be done through the hit pathway.  However, because %s, "
+                "the driver may need to change at runtime, and the driver can only currently "
+                "program the miss pathway.  The solution may be to %s.", act->srcInfo, tbl->name,
+                act->name, error_reason, solution);
+    }
+
     ERROR_CHECK(!tbl->layout.no_match_miss_path(), "%s: This table with no key cannot have the "
                 "action %s as an action here, because it requires hash distribution, which "
                 "utilizes the hit path in Tofino, while the driver configures the miss path",

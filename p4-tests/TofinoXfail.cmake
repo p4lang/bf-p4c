@@ -468,6 +468,12 @@ p4c_add_xfail_reason("tofino"
   # extensions/p4_tests/p4_14/c1/COMPILER-282/case1864.p4
   )
 
+p4c_add_xfail_reason("tofino"
+  "This action requires hash, which can only be done through the hit pathway"
+  testdata/p4_14_samples/acl1.p4
+  testdata/p4_14_samples/hash_action_two_same.p4
+)
+
 # p4c_add_xfail_reason("tofino"
 #   "Action for .* has some unbound arguments"
 #   # requires pragma action_default_only
@@ -709,6 +715,11 @@ p4c_add_xfail_reason("tofino"
 #   extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
 #   extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
 # )
+
+p4c_add_xfail_reason("tofino"
+  "The selected pack format for table .* could not fit given the input xbar allocation"
+  extensions/p4_tests/p4_14/test_config_13_first_selection.p4 
+)
 
 p4c_add_xfail_reason("tofino"
   "Stage pragma provided to table .* has multiple parameters, while Brig currently"

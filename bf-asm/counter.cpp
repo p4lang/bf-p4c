@@ -131,7 +131,7 @@ unsigned CounterTable::determine_shiftcount(Table::Call &call, int group, unsign
     if (call.args[0].name() && strcmp(call.args[0].name(), "$DIRECT") == 0) {
         return direct_shiftcount() + tcam_shift;
     } else if (call.args[0].field()) {
-        assert(call.args[0].field()->by_group[group]->bit(0)/128 == word);
+        assert(unsigned(call.args[0].field()->by_group[group]->bit(0)/128) == word);
         return call.args[0].field()->by_group[group]->bit(0)%128 + indirect_shiftcount();
     } else if (call.args[1].field()) {
         return call.args[1].field()->bit(0) + STAT_ADDRESS_ZERO_PAD;

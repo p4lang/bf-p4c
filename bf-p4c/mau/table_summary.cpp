@@ -136,7 +136,7 @@ std::ostream &operator<<(std::ostream &out, const TableSummary &ts) {
         lc.total_action_formats[t->name] = action_formats;
 
         int entries = t->layout.entries;
-        StageUseEstimate use(t, entries, &lc, sa, true);
+        StageUseEstimate use(t, entries, &lc, false, sa, true);
         out << hex(t->logical_id, 3) << ' ' << (t->gress ? 'E' : 'I')
             << ' ' << std::setw(30) << t->name
             << ' ' << std::setw(2) << t->layout.ixbar_bytes

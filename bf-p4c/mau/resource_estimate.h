@@ -35,7 +35,7 @@ struct StageUseEstimate {
         exact_ixbar_bytes += a.exact_ixbar_bytes;
         ternary_ixbar_groups += a.ternary_ixbar_groups;
         return *this; }
-    StageUseEstimate(const IR::MAU::Table *, int &, const LayoutChoices *lc,
+    StageUseEstimate(const IR::MAU::Table *, int &, const LayoutChoices *lc, bool prev_placed,
                      StageAttached sad = StageAttached(), bool table_placement = false);
 
     StageUseEstimate operator+(const StageUseEstimate &a) const {
@@ -85,7 +85,7 @@ struct StageUseEstimate {
                                          bool table_placement);
     bool adjust_choices(const IR::MAU::Table *tbl, int &entries);
 
-    void calculate_for_leftover_srams(const IR::MAU::Table *tbl, int srams_left, int &entries);
+    bool calculate_for_leftover_srams(const IR::MAU::Table *tbl, int srams_left, int &entries);
     void calculate_for_leftover_tcams(const IR::MAU::Table *tbl, int srams_left, int tcams_left,
                                       int &entries);
     void calculate_for_leftover_atcams(const IR::MAU::Table *tbl, int srams_left, int &entries);

@@ -194,15 +194,19 @@ action run_dtel_eg_bfilter_4() {
 
 table dtel_eg_bfilter_1 {
     actions { run_dtel_eg_bfilter_1; }
+    default_action : run_dtel_eg_bfilter_1;
 }
 table dtel_eg_bfilter_2 {
     actions { run_dtel_eg_bfilter_2; }
+    default_action : run_dtel_eg_bfilter_2;
 }
 table dtel_eg_bfilter_3 {
     actions { run_dtel_eg_bfilter_3; }
+    default_action : run_dtel_eg_bfilter_3;
 }
 table dtel_eg_bfilter_4 {
     actions { run_dtel_eg_bfilter_4; }
+    default_action : run_dtel_eg_bfilter_4; 
 }
 
 parser start { return ingress; }

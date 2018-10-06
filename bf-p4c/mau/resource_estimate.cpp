@@ -292,6 +292,12 @@ void StageUseEstimate::calculate_way_sizes(const IR::MAU::Table *tbl, LayoutOpti
 /* Convert all possible layout options to the correct way sizes */
 void StageUseEstimate::options_to_ways(const IR::MAU::Table *tbl, int &entries) {
     for (auto &lo : layout_options) {
+        if (lo.layout.hash_action) {
+            lo.entries = entries;
+            lo.srams = 0;
+            continue;
+        }
+
         int per_row = lo.way.match_groups;
         int total_depth = (entries + per_row * 1024 - 1) / (per_row * 1024);
         int calculated_depth = total_depth;
@@ -499,15 +505,15 @@ void StageUseEstimate::select_best_option(const IR::MAU::Table *tbl) {
     std::sort(layout_options.begin(), layout_options.end(),
         [=](const LayoutOption &a, const LayoutOption &b) {
         int t;
-        // The first two lines are to prevent sharing a group across multiple widths,
-        // as the asm doesn't yet handle this
-        bool wide = a.way.match_groups < a.way.width;
+        bool wide = a.way.match_groups < a.way.width && b.way.match_groups < b.way.width;
+        bool skinny = a.way.match_groups >= a.way.width && b.way.match_groups >= b.way.width;
+        skinny &= !a.layout.hash_action && !b.layout.hash_action;
         int a_mod = 0;  int b_mod = 0;
 
         if (wide) {
            a_mod = a.way.width % a.way.match_groups;
            b_mod = b.way.width % b.way.match_groups;
-        } else {
+        } else if (skinny) {
            a_mod = a.way.match_groups % a.way.width;
            b_mod = b.way.match_groups % b.way.width;
         }
@@ -613,7 +619,7 @@ void StageUseEstimate::determine_initial_layout_option(const IR::MAU::Table *tbl
 
 /* Constructor to estimate the number of srams, tcams, and maprams a table will require*/
 StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries,
-                                   const LayoutChoices *lc,
+                                   const LayoutChoices *lc, bool prev_placed,
                                    ordered_set<const IR::MAU::AttachedMemory *> sa /* Defaulted */,
                                    bool table_placement)
     : shared_attached(sa) {
@@ -623,6 +629,18 @@ StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries,
     layout_options = lc->get_layout_options(tbl);
     action_formats = lc->get_action_formats(tbl);
     exact_ixbar_bytes = tbl->layout.ixbar_bytes;
+    // A hash action table currently cannot be split across stages, thus if the table has
+    // been previously been placed, the current stage table cannot be hash action
+    if (prev_placed) {
+        auto it = layout_options.begin();
+        while (it != layout_options.end()) {
+            if (it->layout.hash_action)
+                it = layout_options.erase(it);
+            else
+                it++;
+        }
+    }
+
     determine_initial_layout_option(tbl, entries, table_placement);
     // FIXME: This is a quick hack to handle tables with only a default action
 }
@@ -638,12 +656,18 @@ bool StageUseEstimate::adjust_choices(const IR::MAU::Table *tbl, int &entries) {
         return true;
     }
 
-    if (layout_options[0].previously_widened) {
+    // A hash action table cannot be split, without adding a PHV.  Thus it is just removed
+    if (layout_options[preferred_index].layout.hash_action) {
+        layout_options.erase(layout_options.begin() + preferred_index);
+        if (layout_options.size() == 0)
+            return false;
+    } else if (layout_options[preferred_index].previously_widened) {
         return false;
     } else {
-        layout_options[0].way.width++;
-        layout_options[0].previously_widened = true;
+        layout_options[preferred_index].way.width++;
+        layout_options[preferred_index].previously_widened = true;
     }
+
 
     for (auto &lo : layout_options) {
         lo.clear_mems();
@@ -660,8 +684,20 @@ int StageUseEstimate::stages_required() const {
 
 /* Given a number of available srams within a stage, calculate the maximum size
    different layout options can be while still using up to the number of srams */
-void StageUseEstimate::calculate_for_leftover_srams(const IR::MAU::Table *tbl, int srams_left,
+bool StageUseEstimate::calculate_for_leftover_srams(const IR::MAU::Table *tbl, int srams_left,
                                                     int &entries) {
+    // Remove the hash action layout option
+    auto it = layout_options.begin();
+    while (it != layout_options.end()) {
+        if (it->layout.hash_action)
+            it = layout_options.erase(it);
+        else
+            it++;
+    }
+
+    if (layout_options.size() == 0)
+        return false;
+
     for (auto &lo : layout_options) {
         lo.clear_mems();
         known_srams_needed(tbl, &lo);
@@ -669,6 +705,7 @@ void StageUseEstimate::calculate_for_leftover_srams(const IR::MAU::Table *tbl, i
     }
     srams_left_best_option(srams_left);
     fill_estimate_from_option(entries);
+    return true;
 }
 
 /* Given a number of available tcams/srams within a stage, calculate the maximum size of different
@@ -914,13 +951,16 @@ void StageUseEstimate::srams_left_best_option(int srams_left) {
     std::sort(layout_options.begin(), layout_options.end(),
         [=](const LayoutOption &a, const LayoutOption &b) {
         int t;
-        bool wide = a.way.match_groups < a.way.width;
+
+        bool wide = a.way.match_groups < a.way.width && b.way.match_groups < b.way.width;
+        bool skinny = a.way.match_groups >= a.way.width && b.way.match_groups >= b.way.width;
+        skinny &= !a.layout.hash_action && !b.layout.hash_action;
         int a_mod = 0;  int b_mod = 0;
 
         if (wide) {
            a_mod = a.way.width % a.way.match_groups;
            b_mod = b.way.width % b.way.match_groups;
-        } else {
+        } else if (skinny) {
            a_mod = a.way.match_groups % a.way.width;
            b_mod = b.way.match_groups % b.way.width;
         }

@@ -91,6 +91,7 @@ table simple_table_egress {
     actions {
         egress_action;
     }
+    default_action : egress_action;
     size : 512;
 }
 

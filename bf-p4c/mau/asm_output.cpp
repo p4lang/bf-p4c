@@ -2193,7 +2193,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
             emit_ixbar(out, indent, &tbl->resources->match_ixbar, &tbl->resources->hash_dists,
                        &tbl->resources->memuse.at(unique_id), &fmt, tbl->layout.ternary);
         }
-        if (!tbl->layout.ternary && !tbl->layout.no_match_data()) {
+        if (!tbl->layout.ternary && !tbl->layout.no_match_rams()) {
             emit_table_format(out, indent, tbl->resources->table_format, &fmt, false, false);
         }
 
@@ -2243,7 +2243,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
                 break;
             }
         }
-        if (!tbl->layout.no_match_data() || tbl->uses_gateway())
+        if (!tbl->layout.no_match_rams() || tbl->uses_gateway())
             emit_gateway(out, gw_indent, tbl, no_match_hit, next_hit, gw_miss);
         else
             emit_no_match_gateway(out, gw_indent, tbl);

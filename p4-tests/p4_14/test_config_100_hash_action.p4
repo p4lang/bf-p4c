@@ -100,6 +100,7 @@ table table_2 {
      actions {
          action_2;
      }
+     default_action : action_2;
 }
 
 table table_3 {

@@ -6,14 +6,25 @@
 
 DEFINE_TABLE_TYPE(HashActionTable)
 
+Table::Format::Field *HashActionTable::lookup_field(const std::string &n,
+        const std::string &act) const {
+    auto *rv = format ? format->field(n) : nullptr;
+    if (!rv && gateway)
+        rv = gateway->lookup_field(n, act);
+    if (!rv && !act.empty()) {
+        if (auto call = get_action()) {
+            rv = call->lookup_field(n, act);
+        }
+    }
+    return rv;
+}
+
 void HashActionTable::setup(VECTOR(pair_t) &data) {
     common_init_setup(data, false, P4Table::MatchEntry);
     for (auto &kv : MapIterChecked(data)) {
         if (!common_setup(kv, data, P4Table::MatchEntry)) {
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     value_desc(kv.key), name()); } }
-    if (action.set() && actions)
-        error(lineno, "Table %s has both action table and immediate actions", name());
     if (!action.set() && !actions)
         error(lineno, "Table %s has neither action table nor immediate actions", name());
     if (action.args.size() > 2)
@@ -125,17 +136,105 @@ void HashActionTable::write_regs(REGS &regs) {
     }
 }
 
+/**
+ * Unlike the hash functions for exact match tables, the hash action table does not require
+ * the Galois position.  On the contrary, the hash action just requires an identity matrix
+ * of what the address that is to be generated, as they simply use this address as a baseline
+ * for generating the address.
+ *
+ * Thus, the hash function that is provided starts at bit 0, and is in p4 param order.  This
+ * is under the guarantee that the compiler will allocate the hash in p4 param order as well.
+ *
+ * FIXME: Possibly this should be validated before this is the output, but currently the 
+ * compiler will set up the hash in that order 
+ */
+void HashActionTable::add_hash_functions(json::map &stage_tbl) const {
+    json::vector &hash_functions = stage_tbl["hash_functions"] = json::vector();
+    int hash_bit_index = 0;
+    json::map hash_function;
+    json::vector &hash_bits = hash_function["hash_bits"] = json::vector();
+    for (auto p4_param : p4_params_list) {
+        for (size_t i = p4_param.start_bit; i < p4_param.start_bit + p4_param.bit_width; i++) {
+            json::map hash_bit;
+            hash_bit["hash_bit"] = hash_bit_index;
+            hash_bit["seed"] = 0;
+            json::vector &bits_to_xor = hash_bit["bits_to_xor"] = json::vector();
+            json::map field;
+            field["field_bit"] = i;
+            field["field_name"] = p4_param.name;
+            field["hash_match_group"] = 0;
+            field["hash_match_group_bit"] = 0;
+            bits_to_xor.push_back(std::move(field));
+            hash_bits.push_back(std::move(hash_bit));
+            hash_bit_index++;
+        } 
+    }
+    hash_function["hash_function_number"] = 0;
+    hash_functions.push_back(std::move(hash_function));
+}
+
+/**
+ * For a hash action table, an attached table that was previously directly addressed is now
+ * addressed by hash.  However, for the driver, the driver must know which tables used to be
+ * directly addressed vs. an attached table that is addressed by a hash based index.
+ *
+ * In the call for both of these examples, the address field is a hash_dist object, as this is
+ * necessary for the set up of the address.  This call, unlike every other type table, cannot
+ * be the place where the address is determined.
+ *
+ * Instead, the attached calls in the action is how the assembler can delineate whether the
+ * reference table is direct or indirect.  If the address argument is $DIRECT, then the direct
+ * table has been converted to a hash, however if the argument is $hash_dist, then the original
+ * call was from a hash-based index, and is indirect
+ */
+void HashActionTable::add_reference_table(json::vector &table_refs, const Table::Call &c) const {
+    if (c) {
+        auto t_name = c->name();
+        if (c->p4_table)
+            t_name = c->p4_table->p4_name();
+
+        std::string how_referenced = "";
+        if (auto act = c->to<ActionTable>()) {
+            how_referenced = "direct";
+        } else {
+            auto actions = get_actions();
+            for (auto &act : *actions) {
+                bool found = false;
+                for (auto &call : act.attached) {
+                    if (call->table_type() != c->table_type())
+                        continue;
+                    auto &addr_arg = call.args[call.args.size() - 1];
+                    if (addr_arg.name() == nullptr)
+                        continue;
+                    found = true;
+                    if (addr_arg == "$DIRECT")
+                        how_referenced = "direct";
+                    else 
+                        how_referenced = "indirect";
+                    break; 
+		}
+                assert(found);
+                break;
+            }
+        }
+        json::map table_ref;
+        table_ref["name"] = t_name;
+        table_ref["handle"] = c->handle();
+        table_ref["how_referenced"] = how_referenced;
+        table_refs.push_back(std::move(table_ref));
+    }
+}
+
 void HashActionTable::gen_tbl_cfg(json::vector &out) const {
     //FIXME: Support multiple hash_dist's
     int size = hash_dist.empty() ? 1 : 1 + hash_dist[0].mask;
     json::map &tbl = *base_tbl_cfg(out, "match_entry", size);
     const char *stage_tbl_type = "match_with_no_key";
     size = 1;
-    if (auto act = this->get_action()) {
-        for (auto &arg : act.args) {
-            if (arg.hash_dist()){
-                stage_tbl_type = "hash_action";
-                size = 1 + hash_dist[0].mask; } } }
+    if (!p4_params_list.empty()) {
+        stage_tbl_type = "hash_action";
+        size = p4_size();
+    }
     json::map &match_attributes = tbl["match_attributes"];
     json::vector &stage_tables = match_attributes["stage_tables"];
     json::map &stage_tbl = *add_stage_tbl_cfg(match_attributes, stage_tbl_type, size);
@@ -153,20 +252,13 @@ void HashActionTable::gen_tbl_cfg(json::vector &out) const {
         action->actions->gen_tbl_cfg(tbl["actions"]);
         action->actions->add_action_format(this, stage_tbl); }
     common_tbl_cfg(tbl);
+    if (!p4_params_list.empty())
+        add_hash_functions(stage_tbl);
     if (idletime)
         idletime->gen_stage_tbl_cfg(stage_tbl);
     else if (options.match_compiler)
         stage_tbl["stage_idletime_table"] = nullptr;
     add_all_reference_tables(tbl);
-    //json::vector &meter_table_refs = tbl["meter_table_refs"] = json::vector();
-    //json::vector &selection_table_refs = tbl["selection_table_refs"] = json::vector();
-    //json::vector &stateful_table_refs = tbl["stateful_table_refs"] = json::vector();
-    //json::vector &action_data_table_refs = tbl["action_data_table_refs"] = json::vector();
-    //if (auto a = get_attached()) {
-    //    for (auto m : a->meters)
-    //        add_reference_table(meter_table_refs, m);
-    //    add_reference_table(selection_table_refs, a->selector); }
-    //add_reference_table(action_data_table_refs, action);
     gen_idletime_tbl_cfg(stage_tbl);
     if (context_json)
         stage_tbl.merge(*context_json);

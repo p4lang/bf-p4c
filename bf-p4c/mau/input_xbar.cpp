@@ -2709,7 +2709,8 @@ bitvec IXBar::determine_final_xor(const IR::MAU::hash_function *hf,
  *  Sets the values in the IXBar::HashDistUse struct, which describes what the individual
  *  registers are for
  */
-void IXBar::XBarHashDist::initialize_hash_dist_unit(IXBar::HashDistUse &hd_use) {
+void IXBar::XBarHashDist::initialize_hash_dist_unit(IXBar::HashDistUse &hd_use,
+        const IR::Node *rel_node) {
     auto &hdh = hd_use.use.hash_dist_hash;
     auto hdt = hd_use.use.hash_dist_type;
     for (int i = 0; i < IXBar::HASH_DIST_SLICES; i++) {
@@ -2748,8 +2749,9 @@ void IXBar::XBarHashDist::initialize_hash_dist_unit(IXBar::HashDistUse &hd_use) 
        match central, hash distribution is mask then shift, rather than shift then mask
        (of course it is) */
 
-    auto *back_at = findContext<IR::MAU::BackendAttached>();
     if (hdt == IXBar::Use::COUNTER_ADR) {
+        BUG_CHECK(rel_node, "Must provide a non-null counter");
+        auto back_at = rel_node->to<IR::MAU::BackendAttached>();
         auto *counter = back_at->attached->to<IR::MAU::Counter>();
         int per_word = CounterPerWord(counter);
         int shift = 3 - ceil_log2(per_word);
@@ -2757,6 +2759,8 @@ void IXBar::XBarHashDist::initialize_hash_dist_unit(IXBar::HashDistUse &hd_use) 
         hd_use.shifts[hd_use.slices[0]] = shift;
         hd_use.masks[hd_use.slices[0]] = mask;
     } else if (hdt == IXBar::Use::METER_ADR) {
+        BUG_CHECK(rel_node, "Must provide a non-null meter address user");
+        auto back_at = rel_node->to<IR::MAU::BackendAttached>();
         if (back_at->attached->is<IR::MAU::Meter>()) {
             int shift = 7;
             bitvec mask(0, hdh.bits_required);
@@ -2769,6 +2773,11 @@ void IXBar::XBarHashDist::initialize_hash_dist_unit(IXBar::HashDistUse &hd_use) 
             hd_use.shifts[hd_use.slices[0]] = shift;
             hd_use.masks[hd_use.slices[0]] = mask;
         }
+    } else if (hdt == IXBar::Use::ACTION_ADR) {
+        int shift = std::min(ceil_log2(lo->layout.action_data_bytes_in_table) + 1, 5);
+        bitvec mask(0, hdh.bits_required);
+        hd_use.shifts[hd_use.slices[0]] = shift;
+        hd_use.masks[hd_use.slices[0]] = mask;
     } else if (hdt == IXBar::Use::METER_ADR_AND_IMMEDIATE) {
         // don't shift here -- use meter_adr_shift instead.  This seems fragile as we don't
         // mark that anywhere; MauAsmOutput::EmitAttached::preorder(IR::MAU::StatefulAlu)
@@ -2799,6 +2808,68 @@ void IXBar::XBarHashDist::end_apply() {
         alloc.hash_dists.clear();
 }
 
+void IXBar::XBarHashDist::hash_dist_allocation(const IR::MAU::HashDist *hd,
+        IXBar::Use::hash_dist_type_t hdt, int bits_required, const IR::Node *rel_node) {
+    IXBar::HashDistUse hd_use(hd);
+
+    if (!self.allocHashDist(hd, hdt, phv, af, hd_use.use, false, bits_required, tbl->name) &&
+        !self.allocHashDist(hd, hdt, phv, af, hd_use.use, true, bits_required, tbl->name)) {
+        allocation_passed = false;
+        return;
+    }
+    hd_use.use.type = IXBar::Use::HASH_DIST;
+    hd_use.use.hash_dist_type = hdt;
+    initialize_hash_dist_unit(hd_use, rel_node);
+    BUG_CHECK(tbl->match_table, "Allocating hash distribution for a gateway table");
+    hd_use.use.used_by = tbl->match_table->externalName();
+    alloc.hash_dists.push_back(hd_use);
+}
+
+/**
+ * This is to allocate the hash distribution of a table if the table is dedicated to hash
+ * action.  The hash distribution IR node at this point does not exist, and is created
+ * by this allocation scheme.
+ */
+void IXBar::XBarHashDist::hash_action(const IR::MAU::Table *tbl) {
+    if (tbl->gateway_only())
+        return;
+    if (!lo->layout.hash_action || !allocation_passed)
+        return;
+
+    IR::Vector<IR::Expression> components;
+    IR::ListExpression *field_list = new IR::ListExpression(components);
+    int bits_required = 0;
+    for (auto read : tbl->match_key) {
+        if (read->for_match()) {
+            le_bitrange bits;
+            phv.field(read->expr, &bits);
+            bits_required += bits.size();
+            field_list->push_back(read->expr);
+        }
+    }
+
+    auto hd = new IR::MAU::HashDist(tbl->srcInfo, IR::Type::Bits::get(bits_required),
+                      field_list, IR::MAU::hash_function::identity(), nullptr);
+    for (auto ba : tbl->attached) {
+        if (!(ba->attached && ba->attached->direct))
+            continue;
+        IXBar::Use::hash_dist_type_t hdt = IXBar::Use::UNKNOWN;
+        if (ba->attached->is<IR::MAU::Counter>())
+            hdt = IXBar::Use::COUNTER_ADR;
+        else if (ba->attached->is<IR::MAU::Meter>())
+            hdt = IXBar::Use::METER_ADR;
+        else if (auto salu = ba->attached->to<IR::MAU::StatefulAlu>())
+            hdt = salu->chain_vpn ? IXBar::Use::METER_ADR_AND_IMMEDIATE : IXBar::Use::METER_ADR;
+        else
+            continue;
+        hash_dist_allocation(hd->clone(), hdt, bits_required, ba);
+    }
+
+    if (lo->layout.action_data_bytes_in_table > 0) {
+        hash_dist_allocation(hd->clone(), IXBar::Use::ACTION_ADR, bits_required, nullptr);
+    }
+}
+
 /** Passes over all hash distribution uses within the IR and determines what their
  *  needs are.  Will allocate on the xbar, and setup the match central portion.
  */
@@ -2806,9 +2877,10 @@ bool IXBar::XBarHashDist::preorder(const IR::MAU::HashDist *hd) {
     if (!allocation_passed)
         return false;
     IXBar::Use::hash_dist_type_t hdt = IXBar::Use::UNKNOWN;
-    if (findContext<IR::MAU::Instruction>()) {
+    const IR::Node *rel_node = nullptr;
+    if ((rel_node = findContext<IR::MAU::Instruction>()) != nullptr) {
         hdt = IXBar::Use::IMMEDIATE;
-    } else if (findContext<IR::MAU::Meter>()) {
+    } else if ((rel_node = findContext<IR::MAU::Meter>()) != nullptr) {
         hdt = IXBar::Use::PRECOLOR;
     } else if (auto back_at = findContext<IR::MAU::BackendAttached>()) {
         auto at_mem = back_at->attached;
@@ -2818,9 +2890,9 @@ bool IXBar::XBarHashDist::preorder(const IR::MAU::HashDist *hd) {
             hdt = IXBar::Use::METER_ADR;
         else if (auto salu = at_mem->to<IR::MAU::StatefulAlu>())
             hdt = salu->chain_vpn ? IXBar::Use::METER_ADR_AND_IMMEDIATE : IXBar::Use::METER_ADR;
+        rel_node = back_at;
     }
 
-    IXBar::HashDistUse hd_use(hd);
 
     int bits_required = 0;
     if (tbl->for_dleft()) {
@@ -2830,19 +2902,9 @@ bool IXBar::XBarHashDist::preorder(const IR::MAU::HashDist *hd) {
         if ((hdt == IXBar::Use::COUNTER_ADR || hdt == IXBar::Use::METER_ADR ||
              hdt == IXBar::Use::ACTION_ADR) && bits_required > HASH_DIST_MAX_EXPAND_BITS)
             // non-immediates use the hash-dist 'expand' which is limited width
-            bits_required = HASH_DIST_MAX_EXPAND_BITS; }
-
-    if (!self.allocHashDist(hd, hdt, phv, af, hd_use.use, false, bits_required, tbl->name) &&
-        !self.allocHashDist(hd, hdt, phv, af, hd_use.use, true, bits_required, tbl->name)) {
-        allocation_passed = false;
-        return false;
+            bits_required = HASH_DIST_MAX_EXPAND_BITS;
     }
-    hd_use.use.type = IXBar::Use::HASH_DIST;
-    hd_use.use.hash_dist_type = hdt;
-    initialize_hash_dist_unit(hd_use);
-    BUG_CHECK(tbl->match_table, "Allocating hash distribution for a gateway table");
-    hd_use.use.used_by = tbl->match_table->externalName();
-    alloc.hash_dists.push_back(hd_use);
+    hash_dist_allocation(hd, hdt, bits_required, rel_node);
     return false;
 }
 
@@ -2866,7 +2928,7 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
        for these.  Alloc All Hash Ways will required multiple groups, and may need to change  */
     LOG1("IXBar::allocTable(" << tbl->name << ")");
 
-    if (!tbl->gateway_only() && !lo->layout.no_match_data() && !lo->layout.atcam) {
+    if (!tbl->gateway_only() && !lo->layout.no_match_rams() && !lo->layout.atcam) {
         bool ternary = tbl->layout.ternary;
         safe_vector<IXBar::Use::Byte *> alloced;
         safe_vector<Use> all_tbl_allocs;
@@ -2943,6 +3005,7 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
         return false; }
 
     XBarHashDist xbar_hash_dist(*this, phv, alloc, af, lo, tbl);
+    xbar_hash_dist.hash_action(tbl);
     tbl->attached.apply(xbar_hash_dist);
     for (auto v : Values(tbl->actions))
         v->apply(xbar_hash_dist);

@@ -255,9 +255,8 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
                     merge.mau_actiondata_adr_default[type][bus]
                         = adt->determine_default(result->action);
                 }
-                if (enable_action_data_enable || !dynamic_cast<HashActionTable *>(this))
-                    /* HACK -- HashAction tables with no action data don't need this? */
-                    shift_en.actiondata_adr_payload_shifter_en = 1; }
+                shift_en.actiondata_adr_payload_shifter_en = 1;
+            }
             if (!get_attached()->stats.empty())
                 shift_en.stats_adr_payload_shifter_en = 1;
             if (!get_attached()->meters.empty() || !get_attached()->statefuls.empty())

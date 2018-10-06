@@ -603,7 +603,7 @@ public:
     virtual Call &action_call() { return action; }
     virtual Call &instruction_call() { return instruction; }
     virtual Actions *get_actions() const { return actions; }
-    void add_reference_table(json::vector &table_refs, const Table::Call& c) const;
+    virtual void add_reference_table(json::vector &table_refs, const Table::Call& c) const;
     json::map &add_pack_format(json::map &stage_tbl, int memword, int words, int entries = -1) const;
     json::map &add_pack_format(json::map &stage_tbl, Table::Format *format, bool pad_zeros = true,
                                bool print_fields = true, Table::Actions::Action *act = nullptr) const;
@@ -1064,6 +1064,10 @@ public:
     FOR_ALL_TARGETS(TARGET_OVERLOAD,
         void write_merge_regs, (mau_regs &regs, int type, int bus), override {
             write_merge_regs<decltype(regs)>(regs, type, bus); })
+    Format::Field *lookup_field(const std::string &n,
+                                        const std::string &act = "") const override;
+    void add_reference_table(json::vector &table_refs, const Table::Call& c) const override;
+    void add_hash_functions(json::map &stage_tbl) const override;
 )
 
 DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",

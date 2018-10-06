@@ -62,6 +62,7 @@ table table_a {
     actions { 
         count_it;
     }
+    default_action : count_it;
 }
 
 table table_b { 

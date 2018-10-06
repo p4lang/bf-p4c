@@ -95,6 +95,7 @@ table table_0 {
 
 table table_1 {
     actions { action_7; }
+    default_action : action_7;
 }
 
 control ingress { 

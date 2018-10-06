@@ -336,7 +336,7 @@ bool TablePlacement::pick_layout_option(TablePlacement::Placed *next,
         const TablePlacement::Placed *done, TableResourceAlloc *resources,
         StageUseEstimate::StageAttached &shared_attached) {
     bool table_format = true;
-    next->use = StageUseEstimate(next->table, next->entries, &lc, shared_attached);
+    next->use = StageUseEstimate(next->table, next->entries, &lc, false, shared_attached);
     // FIXME: This is not the appropriate way to check if a table is a single gateway
     do {
         bool ixbar_fit = try_alloc_ixbar(next, done, resources);
@@ -364,12 +364,15 @@ bool TablePlacement::shrink_estimate(Placed *next, const Placed *done,
         return false;
     }
 
-    if (t->layout.atcam)
+
+    if (t->layout.atcam) {
         next->use.calculate_for_leftover_atcams(t, srams_left, next->entries);
-    else if (!t->layout.ternary)
-        next->use.calculate_for_leftover_srams(t, srams_left, next->entries);
-    else
+    } else if (!t->layout.ternary) {
+        if (!next->use.calculate_for_leftover_srams(t, srams_left, next->entries))
+            return false;
+    } else {
         next->use.calculate_for_leftover_tcams(t, tcams_left, srams_left, next->entries);
+    }
 
     if (next->entries < min_entries) {
         ERROR("Couldn't place mininum entries within a table");
@@ -746,7 +749,6 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv, const IR::MA
     // According to the driver team, different stage tables can have different action
     // data allocations, so the algorithm doesn't have to prefer this allocation across
     // stages
-    // StageUseEstimate min_use(t, min_entries, &lc, stage_current.shared_attached);
 
     bool allocated = false;
 
@@ -754,6 +756,8 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv, const IR::MA
     min_placed->stage = rv->stage;
     min_placed->initial_stage_split = rv->initial_stage_split;
     min_placed->stage_split = rv->stage_split;
+    StageUseEstimate min_use(t, min_placed->entries, &lc, min_placed->stage_split > 0,
+                             stage_current.shared_attached);
 
     if (done && rv->stage != done->stage)
         stage_current.clear();
@@ -765,7 +769,8 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv, const IR::MA
         auto avail = StageUseEstimate::max();
         bool advance_to_next_stage = false;
         allocated = false;
-        rv->use = StageUseEstimate(t, rv->entries, &lc, stage_current.shared_attached);
+        rv->use = StageUseEstimate(t, rv->entries, &lc, rv->stage_split > 0,
+                                   stage_current.shared_attached);
         if (t->for_dleft() && set_entries > rv->entries) {
             advance_to_next_stage = true;
             LOG3("Cannot split a dleft hash table");
@@ -1593,6 +1598,27 @@ IR::Node *TablePlacement::preorder(IR::MAU::BackendAttached *ba) {
             format.meter_type_loc == IR::MAU::TypeLocation::GATEWAY_PAYLOAD)
             ba->type_location = format.meter_type_loc;
     }
+
+
+    // If the table has been converted to hash action, then the hash distribution unit has
+    // to be tied to the BackendAttached object for the assembly output
+    if (tbl->layout.hash_action) {
+        for (auto hd_use : tbl->resources->hash_dists) {
+            if (ba->attached->is<IR::MAU::Counter>()
+                && hd_use.use.hash_dist_type != IXBar::Use::COUNTER_ADR)
+                continue;
+            if ((ba->attached->is<IR::MAU::Meter>() || ba->attached->is<IR::MAU::Selector>()
+                || ba->attached->is<IR::MAU::StatefulAlu>())
+                && hd_use.use.hash_dist_type != IXBar::Use::METER_ADR)
+                continue;
+            if (ba->attached->is<IR::MAU::ActionData>()
+                && hd_use.use.hash_dist_type != IXBar::Use::ACTION_ADR)
+                continue;
+            ba->hash_dist = hd_use.original_hd;
+            ba->addr_location = IR::MAU::AddrLocation::HASH;
+        }
+    }
+
     return ba;
 }
 

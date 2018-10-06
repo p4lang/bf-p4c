@@ -96,6 +96,7 @@ action run_dtel_eg_bfilter_1() {
 
 table dtel_eg_bfilter_1 {
     actions { run_dtel_eg_bfilter_1; }
+    default_action : run_dtel_eg_bfilter_1;
 }
 
 parser start { return ingress; }

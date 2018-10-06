@@ -72,6 +72,7 @@ bool HashDistribution::compatible(HashDistribution *a) {
 }
 
 void HashDistribution::pass1(Table *tbl) {
+    LOG1("Hash dist pass1");
     this->tbl = tbl;
     bool err = false;
     for (auto *use : tbl->stage->hash_dist_use[id]) {
@@ -100,7 +101,7 @@ void HashDistribution::pass1(Table *tbl) {
         }
         if (!err) {
             for (auto *use : tbl->stage->hash_dist_use[other])
-                if (use->expand != expand - diff) {
+                if (use->expand != -1 && use->expand != expand - diff) {
                     error(lineno, "hash_dist unit %d int table %s expand not compatible with",
                           id, tbl->name());
                     warning(use->lineno, "previous use in table %s", use->tbl->name()); } } }

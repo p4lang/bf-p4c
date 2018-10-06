@@ -167,14 +167,17 @@ action bloom_filter_mark_sample() {
 
 table bloom_filter_1 {
     actions { check_bloom_filter_1; }
+    default_action : check_bloom_filter_1;
     size : 1;
 }
 table bloom_filter_2 {
     actions { check_bloom_filter_2; }
+    default_action : check_bloom_filter_2;
     size : 1;
 }
 table bloom_filter_3 {
     actions { check_bloom_filter_3; }
+    default_action : check_bloom_filter_3;
     size : 1;
 }
 

@@ -619,6 +619,7 @@ control SwitchEgress(
 
     table pkt_counter_get{
         actions={pkt_counter_get_run;}
+        default_action = pkt_counter_get_run;
     }
 
     action flow_counter_get_run(){
@@ -627,6 +628,7 @@ control SwitchEgress(
 
     table flow_counter_get{
         actions={flow_counter_get_run;}
+        default_action = flow_counter_get_run;
     }
 
     apply{

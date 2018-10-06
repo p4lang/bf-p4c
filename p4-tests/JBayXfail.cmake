@@ -99,6 +99,11 @@ p4c_add_xfail_reason("tofino2"
   #switch_ent_dc_general
 )
 
+p4c_add_xfail_reason("tofino2"
+  "This action requires hash, which can only be done through the hit pathway"
+  testdata/p4_14_samples/acl1.p4
+  testdata/p4_14_samples/hash_action_two_same.p4
+)
 
 p4c_add_xfail_reason("tofino2"
 # Fail on purpose due to indirect tables not being mutually exclusive

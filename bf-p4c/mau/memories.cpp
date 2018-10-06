@@ -249,7 +249,7 @@ class SetupAttachedTables : public MauInspector {
         profile_t rv = MauInspector::init_apply(root);
         if (ta->layout_option == nullptr) return rv;
 
-        if (!ta->layout_option->layout.no_match_data() &&
+        if (!ta->layout_option->layout.no_match_miss_path() &&
             ta->layout_option->layout.ternary_indirect_required()) {
             auto unique_id = ta->build_unique_id(nullptr, false, -1, UniqueAttachedId::TIND_PP);
             (*ta->memuse)[unique_id].type = Memories::Use::TIND;
@@ -506,11 +506,12 @@ bool Memories::analyze_tables(mem_info &mi) {
                 (*ta->memuse)[unique_id].type = Use::EXACT;
             }
             no_match_hit_tables.push_back(ta);
-        } else if (ta->layout_option->layout.no_match_data()) {
+        } else if (ta->layout_option->layout.no_match_rams()) {
             auto unique_id = ta->build_unique_id();
             if (ta->layout_option->layout.no_match_hit_path()) {
                 no_match_hit_tables.push_back(ta);
                 (*ta->memuse)[unique_id].type = Use::EXACT;
+                ta->calculated_entries = ta->provided_entries;
             } else {
                 // In order to potentially provide potential sizes for attached tables,
                 // must at least have a size of 1

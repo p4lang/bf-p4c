@@ -550,7 +550,7 @@ struct IXBar {
         bool allocation_passed = true;
         const IR::MAU::Table *tbl;
 
-        void initialize_hash_dist_unit(IXBar::HashDistUse &hd_use);
+        void initialize_hash_dist_unit(IXBar::HashDistUse &hd_use, const IR::Node *rel_node);
 
         // In the IR::MAU::Action, there are two lists.  One is a list of instructions for
         // ALU operations, another is a list of counter/meter/stateful ALU externs saved
@@ -563,7 +563,11 @@ struct IXBar {
         bool preorder(const IR::MAU::AttachedOutput *) override { return false; }
         bool preorder(const IR::MAU::TableSeq *) override { return false; }
 
+        void hash_dist_allocation(const IR::MAU::HashDist *hd, IXBar::Use::hash_dist_type_t hdt,
+                int bits_required, const IR::Node *rel_node);
+
      public:
+        void hash_action(const IR::MAU::Table *tbl);
         bool passed_allocation() { return allocation_passed; }
         XBarHashDist(IXBar &i, const PhvInfo &p, TableResourceAlloc &a, const ActionFormat::Use *u,
                      const LayoutOption *l, const IR::MAU::Table *t)

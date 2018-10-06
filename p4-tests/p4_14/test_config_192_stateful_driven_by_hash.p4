@@ -241,6 +241,7 @@ table t_no_key {
     actions {
         a_no_key;
     }
+    default_action : a_no_key;
     size : 1024;
 }
 

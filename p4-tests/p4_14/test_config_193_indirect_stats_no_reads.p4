@@ -51,6 +51,7 @@ table table_0 {
     actions {
         action_0;
     }
+    default_action : action_0;
     //size : 256;
 }
 

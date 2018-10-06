@@ -52,7 +52,7 @@ bool TableFormat::analyze_layout_option() {
 
     single_match = *(match_ixbar.match_hash()[0]);
 
-    if (per_RAM > 0) {
+    if (!is_match_entry_wide()) {
         bool rv = analyze_skinny_layout_option(per_RAM, total_info[0].all_group_info);
         if (!rv) return false;
     } else {
@@ -177,12 +177,18 @@ bool TableFormat::analyze_wide_layout_option(safe_vector<IXBar::Use::GroupInfo> 
     });
 
     bool search_bus_on_overhead = true;
+    // full_RAMs are the number of RAMs that are dedicated to a non overhead RAMs
     int full_RAMs = layout_option.way.match_groups * (sizes.size() - 1);
+    // Overhead RAMs are the number of RAMs that need to be dedicated to holding the overhead
     int overhead_RAMs = layout_option.way.width - full_RAMs;
     if (overhead_RAMs > layout_option.way.match_groups) {
         overhead_RAMs = layout_option.way.match_groups;
+    }
+
+    if (layout_option.way.width - overhead_RAMs > full_RAMs) {
         search_bus_on_overhead = false;
     }
+
     if (overhead_RAMs * MAX_SHARED_GROUPS < layout_option.way.match_groups)
         return false;
 
