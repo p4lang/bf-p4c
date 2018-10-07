@@ -148,6 +148,9 @@ void AddDeparserMetadataShims::addIngressMetadata(IR::BFN::Deparser *d) {
         addDeparserParam(d, dpMeta, "mirror_ingress_cos", "mirr_icos", true);
         addDeparserParam(d, dpMeta, "mirror_multicast_ctrl", "mirr_mc_ctrl", true);
         addDeparserParam(d, dpMeta, "mirror_copy_to_cpu_ctrl", "mirr_c2c_ctrl", true);
+        addDeparserParam(d, dpMeta, "adv_flow_ctl", "afc", true);
+        addDeparserParam(d, dpMeta, "mtu_trunc_len", "mtu_trunc_len", true);
+        addDeparserParam(d, dpMeta, "mtu_trunc_err_f", "mtu_trunc_err_f", true);
     }
 #endif
 }
@@ -171,6 +174,9 @@ void AddDeparserMetadataShims::addEgressMetadata(IR::BFN::Deparser *d) {
         addDeparserParam(d, dpMeta, "mirror_ingress_cos", "mirr_icos", true);
         addDeparserParam(d, dpMeta, "mirror_multicast_ctrl", "mirr_mc_ctrl", true);
         addDeparserParam(d, dpMeta, "mirror_copy_to_cpu_ctrl", "mirr_c2c_ctrl", true);
+        addDeparserParam(d, dpMeta, "adv_flow_ctl", "afc", true);
+        addDeparserParam(d, dpMeta, "mtu_trunc_len", "mtu_trunc_len", true);
+        addDeparserParam(d, dpMeta, "mtu_trunc_err_f", "mtu_trunc_err_f", true);
     }
 #endif
     /* egress_port is how the egress deparser knows where to push

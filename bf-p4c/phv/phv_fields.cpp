@@ -1106,7 +1106,7 @@ class CollectPardeConstraints : public Inspector {
         f->set_deparsed_to_tm(true);
         f->set_no_split(true);
 
-        BUG_CHECK(f->size < 32, "The architecture requires that field %1% not be split "
+        BUG_CHECK(f->size <= 32, "The architecture requires that field %1% not be split "
                   "across PHV containers, but the field is larger than the largest PHV container.",
                   cstring::to_cstring(f));
 

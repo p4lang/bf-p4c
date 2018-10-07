@@ -209,10 +209,9 @@ struct ingress_intrinsic_metadata_for_deparser_t {
     bit<7> mirror_qid;                  // Mirror packet qid.
     bit<8> mirror_coalesce_length;      // Mirror coalesced packet max sample
                                         // length. Unit is quad bytes.
-    // TODO:
-    // afc
-    // mtu_trunc_len;
-    // mtu_trunc_err_f
+    bit<32> adv_flow_ctl;       	// Advanced flow control for TM
+    bit<14> mtu_trunc_len;		// MTU for truncation check
+    bit<1> mtu_trunc_err_f;		// MTU truncation error flag
 }
 // -----------------------------------------------------------------------------
 // GHOST INTRINSIC METADATA
@@ -333,10 +332,9 @@ struct egress_intrinsic_metadata_for_deparser_t {
     bit<7> mirror_qid;                  // Mirror packet qid.
     bit<8> mirror_coalesce_length;      // Mirror coalesced packet max sample
                                         // length. Unit is quad bytes.
-    // TODO:
-    // afc
-    // mtu_trunc_len;
-    // mtu_trunc_err_f
+    bit<32> adv_flow_ctl;       	// Advanced flow control for TM
+    bit<14> mtu_trunc_len;		// MTU for truncation check
+    bit<1> mtu_trunc_err_f;		// MTU truncation error flag
 }
 
 @__intrinsic_metadata
