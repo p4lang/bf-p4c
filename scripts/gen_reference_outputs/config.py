@@ -6,10 +6,10 @@ import sys
 TEST_DRIVER_TIMEOUT = 1000
 
 P4C = "/bfn/bf-p4c-compilers/build/p4c/p4c"
-P4C_ARGS = ['"-g"', '"--validate-output"']
+P4C_ARGS = ['"-g"', '"--validate-output"', '"--create-graphs"']
 
 GLASS = "/usr/local/bin/p4c-tofino"
-GLASS_ARGS = ['"-g"', '" -j 16"']
+GLASS_ARGS = ['"-g"', '" -j 16"', '"--create-graphs dot"']
 
 TEST_FILE = 'tests.csv'
 P4C_TEST_MATRIX = 'test_matrix_P4C.py'

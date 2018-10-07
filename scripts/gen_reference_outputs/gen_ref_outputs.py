@@ -51,7 +51,7 @@ def prep_test_line(mTest, p4c):
     if len(mTest.include_path) > 0:
         test_line += '"-I ' + mTest.include_path + '", '
     if len(mTest.p4_opts) > 0:
-        test_line += '"' + mTest.p4_opts + '", ' 
+        test_line += '"' + mTest.p4_opts + '", '
     # Add P4C specific compiler options
     if p4c.name is not 'Glass':
         test_line += '"--target ' + mTest.target + '", '
