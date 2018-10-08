@@ -51,11 +51,13 @@ struct PsaBlockInfo {
     ParamInfo psaParams;
 };
 
+enum PSA_TYPES {
+    TYPE_IH = 0, TYPE_IM, TYPE_EH, TYPE_EM, TYPE_NM,
+    TYPE_CI2EM, TYPE_CE2EM, TYPE_RESUBM, TYPE_RECIRCM,
+    PSA_TOTAL_TYPES};
+
 struct ProgramStructure : BFN::ProgramStructure {
-    cstring type_ih;
-    cstring type_im;
-    cstring type_eh;
-    cstring type_em;
+    cstring type_params[PSA_TOTAL_TYPES];
 
     PsaModel &psa_model;
 

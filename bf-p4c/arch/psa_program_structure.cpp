@@ -45,10 +45,10 @@ void ProgramStructure::createPipeline() {
     auto typepath = new IR::Path("Pipeline");
     auto type = new IR::Type_Name(typepath);
     auto typeArgs = new IR::Vector<IR::Type>();
-    typeArgs->push_back(new IR::Type_Name(type_ih));
-    typeArgs->push_back(new IR::Type_Name(type_im));
-    typeArgs->push_back(new IR::Type_Name(type_eh));
-    typeArgs->push_back(new IR::Type_Name(type_em));
+    typeArgs->push_back(new IR::Type_Name(type_params[TYPE_IH]));
+    typeArgs->push_back(new IR::Type_Name(type_params[TYPE_IM]));
+    typeArgs->push_back(new IR::Type_Name(type_params[TYPE_EH]));
+    typeArgs->push_back(new IR::Type_Name(type_params[TYPE_EM]));
     typeArgs->push_back(new IR::Type_Name("compiler_generated_metadata_t"));
     auto typeSpecialized = new IR::Type_Specialized(type, typeArgs);
 
@@ -93,12 +93,12 @@ void ProgramStructure::createMain() {
     auto typepath = new IR::Path("Switch");
     auto type = new IR::Type_Name(typepath);
     auto typeArgs = new IR::Vector<IR::Type>();
-    typeArgs->push_back(new IR::Type_Name(type_ih));
-    typeArgs->push_back(new IR::Type_Name(type_im));
-    typeArgs->push_back(new IR::Type_Name(type_eh));
-    typeArgs->push_back(new IR::Type_Name(type_em));
+    typeArgs->push_back(new IR::Type_Name(type_params[TYPE_IH]));
+    typeArgs->push_back(new IR::Type_Name(type_params[TYPE_IM]));
+    typeArgs->push_back(new IR::Type_Name(type_params[TYPE_EH]));
+    typeArgs->push_back(new IR::Type_Name(type_params[TYPE_EM]));
     typeArgs->push_back(new IR::Type_Name("compiler_generated_metadata_t"));
-    // P4-14 only uses one pipeline, hence the other type arguments are dont_care.
+    // PSA only uses one pipeline, hence the other type arguments are dont_care.
     for (auto i=0; i < 15; i++)
         typeArgs->push_back(new IR::Type_Dontcare());
     auto typeSpecialized = new IR::Type_Specialized(type, typeArgs);

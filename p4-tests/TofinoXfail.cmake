@@ -1249,10 +1249,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-fwd-bmv2.p4
 )
 
-p4c_add_xfail_reason("tofino"
-  "Identifier with no name"
-  testdata/p4_16_samples/issue1208-1.p4
-)
 # BRIG-791
 p4c_add_xfail_reason("tofino"
   "Split cannot work on this scenario"

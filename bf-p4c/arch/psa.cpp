@@ -383,6 +383,7 @@ class TranslateProgram : public Inspector {
         CHECK_NULL(structure); setName("TranslateProgram");
     }
 
+
     void postorder(const IR::Member* node) override {
         ordered_set<cstring> toTranslateInControl = {"istd", "ostd"};
         ordered_set<cstring> toTranslateInParser = {"istd", "ostd"};
@@ -480,25 +481,43 @@ class TranslateProgram : public Inspector {
         structure->_map.emplace(node, declarations);
     }
 
+    // top level PSA_Switch could instantiate anonymous instances of
+    // IngressPipeline and EgressPipeline
+    void process_package_instance(const IR::Type_Specialized* tp) {
+        if (!tp->baseType->is<IR::Type_Name>())
+            return;
+        auto tn = tp->baseType->to<IR::Type_Name>();
+        if (tn->path->name == "IngressPipeline") {
+            structure->type_params[PSA::TYPE_IH] =
+                    tp->arguments->at(0)->to<IR::Type_Name>()->path->name;
+            structure->type_params[PSA::TYPE_IM] =
+                    tp->arguments->at(1)->to<IR::Type_Name>()->path->name;
+        } else if (tn->path->name == "EgressPipeline") {
+            structure->type_params[PSA::TYPE_EH] =
+                    tp->arguments->at(0)->to<IR::Type_Name>()->path->name;
+            structure->type_params[PSA::TYPE_EM] =
+                    tp->arguments->at(1)->to<IR::Type_Name>()->path->name;
+        }
+    }
+
     void postorder(const IR::Declaration_Instance* node) override {
         if (auto ts = node->type->to<IR::Type_Specialized>()) {
-            if (auto typeName = ts->baseType->to<IR::Type_Name>()) {
-                auto name = typeName->path->name;
-                if (name == "IngressPipeline") {
-                    ERROR_CHECK(ts->arguments->size() == 6,
-                              "expect IngressPipeline with 6 type arguments");
-                    auto type_ih = ts->arguments->at(0)->to<IR::Type_Name>();
-                    auto type_im = ts->arguments->at(1)->to<IR::Type_Name>();
-                    structure->type_ih = type_ih->path->name;
-                    structure->type_im = type_im->path->name;
-                } else if (name == "EgressPipeline") {
-                    ERROR_CHECK(ts->arguments->size() == 6,
-                              "expect IngressPipeline with 6 type arguments");
-                    auto type_eh = ts->arguments->at(0)->to<IR::Type_Name>();
-                    auto type_em = ts->arguments->at(1)->to<IR::Type_Name>();
-                    structure->type_eh = type_eh->path->name;
-                    structure->type_em = type_em->path->name;
+            if (!ts->baseType->is<IR::Type_Name>())
+                return;
+            auto name = ts->baseType->to<IR::Type_Name>();
+            if (name->path->name == "PSA_Switch") {
+                for (auto arg : *node->arguments) {
+                    if (auto ctr = arg->expression->to<IR::ConstructorCallExpression>()) {
+                        // skip PacketReplicationEngine and BufferingQueueingEngine
+                        if (!ctr->constructedType->is<IR::Type_Specialized>())
+                            continue;
+                        auto type = ctr->constructedType->to<IR::Type_Specialized>();
+                        process_package_instance(type);
+                    }
                 }
+            } else if (name->path->name == "IngressPipeline" ||
+                       name->path->name == "EgressPipeline") {
+                process_package_instance(ts);
             }
         } else if (auto typeName = node->type->to<IR::Type_Name>()) {
             auto name = typeName->path->name;
