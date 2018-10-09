@@ -101,6 +101,11 @@ function(bfn_set_ptf_port_map_file tag p4test port_map_file)
     APPEND PROPERTY ENVIRONMENT "PORT_MAP_FILE=${port_map_file}")
 endfunction()
 
+function(bfn_set_ptf_ports_json_file tag p4test ports_json_file)
+  set_property(TEST "${tag}/${p4test}"
+    APPEND PROPERTY ENVIRONMENT "PORTS_JSON_FILE=${ports_json_file}")
+endfunction()
+
 function(bfn_set_ptf_test_port tag p4test test_port)
   set_property(TEST "${tag}/${p4test}"
     APPEND PROPERTY ENVIRONMENT "TEST_PORT=${test_port}")

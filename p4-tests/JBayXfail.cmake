@@ -268,12 +268,6 @@ p4c_add_xfail_reason("tofino2"
   testdata/p4_14_samples/truncate.p4
 )
 
-# BRIG-906 test case fails on jbay for some reason
-p4c_add_xfail_reason("tofino2"
-  "AssertionError: Expected packet was not received on device 0"
-  extensions/p4_tests/p4_14/brig-906.p4
-)
-
 p4c_add_xfail_reason("tofino2"
   "failed command assembler"
   extensions/p4_tests/p4_14/cond_checksum_update_2.p4

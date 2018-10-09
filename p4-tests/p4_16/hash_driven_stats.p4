@@ -2,7 +2,12 @@
 #include <v1model.p4>
 
 #ifndef FP_PORT_2
+#if __TARGET_TOFINO__ == 2
+// Default ports for Tofino2 have offset 8
+#define FP_PORT_2 10
+#else
 #define FP_PORT_2 2
+#endif
 #endif
 
 struct metadata_t { }

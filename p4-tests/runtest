@@ -334,8 +334,13 @@ fi
 
 if $run_ptf || $run_stf2ptf; then
     P4C_ARGS="$P4C_ARGS -DCPU_PORT=320 -Xassembler='--pipe0'"
+    BASE_IF_INDEX=0
     NUM_IFACES=8
-    for ifaceIdx in $(seq 0 $(($NUM_IFACES-1))); do
+    # Default ports for Tofino2 have offset 8
+    if [ ${device} = "tofino2" ]; then
+        BASE_IF_INDEX=8
+    fi
+    for ifaceIdx in $(seq $BASE_IF_INDEX $(($BASE_IF_INDEX+$NUM_IFACES-1))); do
         PORT_NAME="FP_PORT_${ifaceIdx}"
         P4C_ARGS="$P4C_ARGS -D${PORT_NAME}=${ifaceIdx}"
     done
@@ -548,11 +553,14 @@ else
     nproc=$(nproc)
 fi
 
+# For ports.json file
+if [ ! -z $PORTS_JSON_FILE ]; then
+    ports_json_file="--port-map $PORTS_JSON_FILE"
+fi
+
 configure_p4_build() {
     echo "Configuring $name in $testout"
-    p4c=$(realpath $P4C)
     export MAKEFLAGS="-j $nproc"
-    export P4C=$p4c
     p4builddir="$(dirname $0)/p4_14/p4-tests/p4-build"
     if [ ! -r $p4builddir/configure ] ; then
         pushd $p4builddir > /dev/null
@@ -651,6 +659,7 @@ if $run_pd ; then
                              --top-builddir $(findcmakecache) \
                              --pdtest $testout/${name}.conf \
                              --device ${device} \
+                             $ports_json_file \
                              $port_map_file \
                              $test_port \
                              $PTF_EXTRA_ARGS"
@@ -677,21 +686,30 @@ if $run_ptf ; then
         pushd $testout > /dev/null
         configure_p4_build $testout
         popd > /dev/null  # $testout
+        manifest=$testdir/${name}${out_ext}.out/${device}/${name}/manifest.json
+        manifest_realpath=$( realpath $manifest)
+        if [ -f $manifest_realpath ]; then
+            pipes=$(${MANIFEST_CONFIG} --pipe ${manifest_realpath})
+        fi
+        installdiropt="--installdir $testout/$device/$name/"
     fi
 
     if [ $p4_version == "p4-16" ]; then
-        conf_args="--name $name --device $device --testdir $testout --pipe ${pipes}"
+        conf_args="--name $name --device $device --testdir $testout $installdiropt --pipe ${pipes}"
         run ./p4c-gen-bfrt-conf $conf_args
-        PTF_EXTRA_ARGS="$PTF_EXTRA_ARGS --bfrt-test $testout/${name}.conf"
         if ! $bfrt ; then
             PTF_EXTRA_ARGS="$PTF_EXTRA_ARGS --run-bfrt-as-pi ${pipes}"
+        else
+            PTF_EXTRA_ARGS="$PTF_EXTRA_ARGS --bfrt-test $testout/${name}.conf"
         fi
     fi
 
     if [ -d ${ptftestdir} ]; then
         PTF_CMD="$PTF_RUNNER --testdir $testout --name $name \
                 --ptfdir ${ptftestdir} --top-builddir $(findcmakecache) \
-                --device ${device} $PTF_EXTRA_ARGS"
+                --device ${device} \
+                $ports_json_file \
+                $PTF_EXTRA_ARGS"
     elif $run_stf2ptf && [ -r ${file%.p4}.stf ]; then
         mydir=$(dirname $0)
         export PYTHONPATH=${PYTHONPATH}:${mydir}/tools/stf

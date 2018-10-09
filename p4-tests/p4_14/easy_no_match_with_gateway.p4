@@ -1,7 +1,12 @@
 #include "tofino/intrinsic_metadata.p4"
 
 #ifndef FP_PORT_1
+#if __TARGET_TOFINO__ == 2
+// Default ports for Tofino2 have offset 8
+#define FP_PORT_1 9
+#else
 #define FP_PORT_1 1
+#endif
 #endif
 
 header_type h_t {

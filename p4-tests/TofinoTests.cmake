@@ -346,6 +346,43 @@ p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE "tor-archive"
   "-norun --create-graphs --archive --validate-manifest" "")
 p4c_add_test_label("tofino" "cpplint" "tor-archive")
 
+## P4-16 Programs
+set (P4FACTORY_P4_16_PROGRAMS
+  tna_32q_2pipe
+  tna_action_profile
+  tna_action_selector
+  tna_counter
+  tna_digest
+  tna_exact_match
+  tna_idletimeout
+  tna_lpm_match
+  tna_meter_lpf_wred
+  tna_operations
+  tna_range_match
+  tna_register
+  tna_ternary_match
+  )
+
+# No ptf, compile-only
+file(RELATIVE_PATH p4_16_programs_path ${P4C_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/p4_16_programs)
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
+  "p4_16_programs_simple_switch" ${p4_16_programs_path}/simple_switch/simple_switch.p4 "${testExtraArgs} -tofino -arch tna -I${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/p4_16_programs" "")
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
+  "p4_16_programs_tna_32q_multiprogram_a" ${p4_16_programs_path}/tna_32q_multiprogram/program_a/tna_32q_multiprogram_a.p4 "${testExtraArgs} -tofino -arch tna -I${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/p4_16_programs/tna_32q_multiprogram" "")
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
+  "p4_16_programs_tna_32q_multiprogram_b" ${p4_16_programs_path}/tna_32q_multiprogram/program_b/tna_32q_multiprogram_b.p4 "${testExtraArgs} -tofino -arch tna -I${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/p4_16_programs/tna_32q_multiprogram" "")
+
+# P4-16 Programs with PTF tests
+foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS)
+  p4c_add_ptf_test_with_ptfdir ("tofino" "p4_16_programs_${t}" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/p4_16_programs/${t}/${t}.p4"
+    "${testExtraArgs} -ptf -bfrt -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/p4_16_programs/${t}")
+  bfn_set_p4_build_flag("tofino" "p4_16_programs_${t}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/p4_16_programs")
+  set (ports_json ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/p4_16_programs/${t}/ports.json)
+  if (EXISTS ${ports_json})
+    bfn_set_ptf_ports_json_file("tofino" "p4_16_programs_${t}" ${ports_json})
+  endif()
+endforeach()
+
 include(Switch.cmake)
 
 include(Customer.cmake)

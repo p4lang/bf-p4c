@@ -274,6 +274,8 @@ def start_model(model, out=None, context_json=None, port_map_path=None,
         cmd.extend(['-l', context_json])
     if port_map_path is not None:
         cmd.extend(['-f', port_map_path])
+        if '2pipe' in port_map_path:
+            cmd.extend(['--int-port-loop=0xa'])
     if device is not None and 'tofino2' in device:
         cmd.extend(['--chip-type=4']) # default CHIPTYPE=4 for Jbay
     else:
@@ -408,9 +410,11 @@ def main():
         args.verbose_model_log = True
 
     p4info_path = os.path.join(compiler_out_dir, 'p4info.proto.txt')
-    if args.pdtest is None and not os.path.exists(p4info_path):
+    if not args.pdtest and not args.bfrt_test and not os.path.exists(p4info_path):
         error("P4Info file {} not found".format(p4info_path))
         sys.exit(1)
+    elif args.bfrt_test:
+        info("Doesn't need P4Info file")
     else:
         info("Using P4Info file {}".format(p4info_path))
 
@@ -473,19 +477,41 @@ def main():
 
     port_map = OrderedDict()
     if port_map_path is None:
-        for iface_idx in xrange(DEFAULT_NUM_IFACES):
-            port_map[iface_idx] = 'veth{}'.format(2 * iface_idx + 1)
-        # Ethernet CPU port
-        port_map[64] = "veth251"
+        veth_start_index = 0
+        base_if_index = 0
+        # Default ports for Tofino2 have offset 8
+        if 'tofino2' in args.device:
+            base_if_index = 8
+        for iface_idx in xrange(base_if_index, base_if_index + DEFAULT_NUM_IFACES):
+            port_map[iface_idx] = 'veth{}'.format(2 * veth_start_index + 1)
+            veth_start_index += 1
+        # Ethernet CPU port: 64 for Tofino and 2 for Tofino2
+        if 'tofino2' in args.device:
+            port_map[2] = "veth251"
+        else:
+            port_map[64] = "veth251"
         check_and_add_ifaces()
     else:
         import json
         with open(port_map_path) as port_map_f:
             try:
+                noOfPortToVeth = 0
+                noOfIfMap = 0
+                mapNode ='PortToVeth'
+                ifMapNode ='PortToIf'
                 jdict = json.load(port_map_f)
-                for jentry in jdict['PortToIf']:
-                    iface_idx = jentry['device_port']
-                    iface_name = jentry['if']
+                if jdict.get(mapNode):
+                    noOfPortToVeth = len(jdict[mapNode])
+                if jdict.get(ifMapNode):
+                    noOfIfMap = len(jdict[noOfIfMap])
+                for count in range(0, noOfPortToVeth):
+                    port = jdict[mapNode][count]['device_port']
+                    veth1 = jdict[mapNode][count]['veth1']
+                    veth2 = jdict[mapNode][count]['veth2']
+                    port_map[port] = "veth%d" % veth2
+                for count in range(0, noOfIfMap):
+                    iface_idx = jdict[ifMapNode][count]['device_port']
+                    iface_name = jdict[ifMapNode][count]['if']
                     port_map[iface_idx] = iface_name
             except:
                 error("Error when parsing JSON port mapping file {}".format(
@@ -572,6 +598,8 @@ def main():
 
             if args.pdtest is not None:
                 conf_path = args.pdtest
+            elif args.bfrt_test is not None:
+                conf_path = os.path.join(compiler_out_dir, args.name + '.conf')
             else:
                 conf_path = os.path.join(
                     os.path.dirname(os.path.realpath(__file__)), args.device + '.conf')
@@ -579,8 +607,11 @@ def main():
             assert(os.path.exists(conf_path))
 
             switchd_status_port = 6789
+            pi_choice = args.pdtest
+            if args.bfrt_test:
+                pi_choice = args.bfrt_test
             switchd_p = start_switchd(BF_SWITCHD, switchd_status_port,
-                                      conf_path, args.pdtest,
+                                      conf_path, pi_choice,
                                       out=switchd_out,
                                       device=args.device,
                                       installdir=BFD_INSTALLDIR)
