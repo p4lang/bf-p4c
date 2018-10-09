@@ -349,8 +349,8 @@ void Visualization::gen_hash_bits(unsigned int stageNo, Util::JsonObject *stage)
 
 void Visualization::gen_hashdist(unsigned int stageNo, Util::JsonObject *stage) {
     auto *hash_distr_res = new Util::JsonObject();
-    hash_distr_res->emplace("nHashIds", new Util::JsonValue(IXBar::HASH_DIST_SLICES));
-    hash_distr_res->emplace("nUnitIds", new Util::JsonValue(IXBar::HASH_DIST_UNITS));
+    hash_distr_res->emplace("nHashIds", new Util::JsonValue(IXBar::HASH_DIST_UNITS));
+    hash_distr_res->emplace("nUnitIds", new Util::JsonValue(IXBar::HASH_DIST_SLICES));
     auto *hash_distr = new Util::JsonArray();
     std::for_each(_stageResources[stageNo]._hashDistUsage.begin(),
                   _stageResources[stageNo]._hashDistUsage.end(),
