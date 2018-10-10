@@ -80,6 +80,7 @@ class AttachTables : public PassManager {
                               const IR::Declaration_Instance **reg_ptr,
                               const IR::Type_Specialized **regtype_ptr = nullptr,
                               const IR::Type_Extern **seltype_ptr = nullptr);
+    profile_t init_apply(const IR::Node *root) override;
 
  public:
     AttachTables(const P4::ReferenceMap *rm, DeclarationConversions &con)

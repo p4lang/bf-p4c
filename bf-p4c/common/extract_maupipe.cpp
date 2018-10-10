@@ -53,7 +53,7 @@ class ActionArgSetup : public MauTransform {
 /// CTD -- the above is not true -- this code would work fine for more complex expressions,
 /// however, earlier passes will transform the complex expressions as noted above, so we could
 /// assume that if we wanted to.
-class ConvertMethodCall : public MauTransform {
+class ConvertMethodCalls : public MauTransform {
     P4::ReferenceMap        *refMap;
     P4::TypeMap             *typeMap;
 
@@ -79,7 +79,8 @@ class ConvertMethodCall : public MauTransform {
                 recv = mem->expr;
             } else {
                 auto n = em->object->getNode();
-                recv = new IR::GlobalRef(typeMap->getType(n), n); }
+                recv = new IR::GlobalRef(mem ? mem->expr->srcInfo : mc->method->srcInfo,
+                                         typeMap->getType(n), n); }
         } else if (auto ef = mi->to<P4::ExternFunction>()) {
             name = ef->method->name;
         } else {
@@ -109,7 +110,7 @@ class ConvertMethodCall : public MauTransform {
     }
 
  public:
-    ConvertMethodCall(P4::ReferenceMap *rm, P4::TypeMap *tm) : refMap(rm), typeMap(tm) {}
+    ConvertMethodCalls(P4::ReferenceMap *rm, P4::TypeMap *tm) : refMap(rm), typeMap(tm) {}
 };
 
 /** Initial conversion of P4-16 action information to backend structures.  Converts all method
@@ -125,7 +126,6 @@ class ActionFunctionSetup : public PassManager {
     ActionFunctionSetup(P4::ReferenceMap *rm, P4::TypeMap *tm, ActionArgSetup *aas) :
     refMap(rm), typeMap(tm), action_arg_setup(aas) {
         addPasses({
-            new ConvertMethodCall(refMap, typeMap),
             action_arg_setup
         });
         stop_on_error = false;
@@ -480,6 +480,11 @@ class FixP4Table : public Inspector {
     : refMap(r), tt(tt), unique_names(u), converted(con), assoc_profiles(ap) {}
 };
 
+Visitor::profile_t AttachTables::init_apply(const IR::Node *root) {
+    LOG5("AttachTables working on:" << std::endl << root);
+    return PassManager::init_apply(root);
+}
+
 /** Determine stateful ALU Declaration_Instance underneath the register action, as well
  *  as typing information
  */
@@ -538,6 +543,8 @@ void AttachTables::InitializeStatefulAlus
     const IR::Declaration_Instance *reg = nullptr;
     const IR::Type_Specialized *regtype = nullptr;
     const IR::Type_Extern *seltype = nullptr;
+    LOG6("updateAttachedSalu(" << ext->name << "[" << ext->id << "], " <<
+         gref->srcInfo.toPositionString() << "[" << gref->id << "])");
     bool found = self.findSaluDeclarations(ext, &reg, &regtype, &seltype);
     if (!found) return;
 
@@ -596,10 +603,12 @@ void AttachTables::InitializeStatefulAlus
     }
 
     auto prim = findContext<IR::Primitive>();
+    LOG6("  - " << (prim ? prim->name : "<no primitive>"));
     if (prim && prim->name == "RegisterAction.address") {
         salu->chain_vpn = true;
         return; }
     auto act = findContext<IR::MAU::Action>();
+    LOG6("  - action " << (act ? act->name : "<no action>"));
     if (!salu->action_map.emplace(act->name.originalName, ext->name).second)
         error("%s: multiple calls to execute in action %s", gref->srcInfo, act->name);
 }
@@ -944,6 +953,14 @@ class GetBackendTables : public MauInspector {
     bool preorder(const IR::EmptyStatement *) override { return false; }
     void postorder(const IR::Statement *st) override {
         BUG("Unhandled statement %1%", st); }
+
+    void end_apply() override {
+        // FIXME -- if both ingress and egress contain method calls to the same
+        // extern object, and that object contains any method calls, this will end
+        // up duplicating that object.  Currently there are no extern objects that can
+        // both contain code and be shared between threads, so that can't happen
+        rv = rv->apply(ConvertMethodCalls(refMap, typeMap));
+    }
 };
 
 class ExtractMetadata : public Inspector {
