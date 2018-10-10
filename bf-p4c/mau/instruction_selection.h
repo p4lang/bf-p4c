@@ -3,8 +3,7 @@
 
 #include "bf-p4c/ir/tofino_write_context.h"
 #include "bf-p4c/mau/mau_visitor.h"
-
-class PhvInfo;
+#include "bf-p4c/phv/phv_fields.h"
 
 /** The purpose of this pass is to determine the types, and per flow enables of actions.
  *  Eventually a second inspector will be required, after StatefulAttachmentSetup, in order

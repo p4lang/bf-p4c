@@ -124,14 +124,23 @@ static void dump_viz(std::ostream &out, DependencyGraph &dg) {
     out << "}" << std::endl;
 }
 
-class FindDependencyGraph::AddDependencies : public MauInspector, TofinoWriteContext {
-    FindDependencyGraph                 &self;
+/**
+ * The reduction or dependencies must be tracked so that all tables that are in the same
+ * reduction or group do not have any dependencies between them, but they as a block do
+ * have dependencies with any other standard reads or writes.
+ *
+ * Thus when a reduction or is found, it is established whether or not the previous write
+ * was the same reduction or group.  If so, no data dependency is added, but if not, then
+ * this table is data dependent with this table. 
+ */
+class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWriteContext {
+    FindDataDependencyGraph                 &self;
     const IR::MAU::Table                *table;
     const ordered_set<cstring>&         ignoreDep;
     std::map<PHV::Container, bitvec>    cont_writes;
 
  public:
-    AddDependencies(FindDependencyGraph &self,
+    AddDependencies(FindDataDependencyGraph &self,
                     const IR::MAU::Table *t,
                     ordered_set<cstring>& t1) :
         self(self), table(t), ignoreDep(t1) { }
@@ -185,6 +194,10 @@ class FindDependencyGraph::AddDependencies : public MauInspector, TofinoWriteCon
             candidateFields.insert(self.phv.getAliasMap().at(originalField));
         for (const PHV::Field* field : candidateFields) {
             cstring field_name = field->name;
+            cstring red_or_key;
+            bool is_red_or = self.red_info.is_reduction_or(findContext<IR::MAU::Instruction>(),
+                                                           table, red_or_key);
+            bool non_first_write_red_or = false;
             if (self.access.count(field_name)) {
                 LOG3("add_dependency(" << field_name << ")");
                 if (isWrite()) {
@@ -192,10 +205,22 @@ class FindDependencyGraph::AddDependencies : public MauInspector, TofinoWriteCon
                     addDeps(self.access[field->name].ixbar_read, DependencyGraph::ANTI, field);
                     addDeps(self.access[field->name].action_read, DependencyGraph::ANTI, field);
                     // Write-after-write dependence.
-                    if (isReductionOr()) {
-                        addDeps(self.access[field->name].reduction_or_write,
-                                DependencyGraph::REDUCTION_OR_OUTPUT, field);
+                    if (is_red_or) {
+                        auto pos = self.red_or_use.find(field->name);
+                        // If reduction_or, and the previous write was a reduction_or
+                        if (pos != self.red_or_use.end()) {
+                            ERROR_CHECK(pos->second == red_or_key, "%s: "
+                            "The reduction_or groups collide on field %s, over group %s and "
+                            "group %s", table->srcInfo, field->name, red_or_key, pos->second);
+                            addDeps(self.access[field->name].reduction_or_write,
+                                    DependencyGraph::REDUCTION_OR_OUTPUT, field);
+                            non_first_write_red_or = true;
+                        } else {
+                            // If reduction_or and previous write was not reduction_or
+                            addDeps(self.access[field->name].write, DependencyGraph::OUTPUT, field);
+                        }
                     } else {
+                        // If normal
                         addDeps(self.access[field->name].write, DependencyGraph::OUTPUT, field);
                     }
                 } else {
@@ -203,16 +228,28 @@ class FindDependencyGraph::AddDependencies : public MauInspector, TofinoWriteCon
                     if (isIxbarRead()) {
                         addDeps(self.access[field->name].write,
                                 DependencyGraph::IXBAR_READ, field);
-                    } else if (isReductionOr()) {
-                        addDeps(self.access[field->name].reduction_or_read,
-                                DependencyGraph::REDUCTION_OR_READ, field);
+                    } else if (is_red_or) {
+                        // If reduction_or, and the previous write was a reduction_or
+                        auto pos = self.red_or_use.find(field->name);
+                        if (pos != self.red_or_use.end()) {
+                            ERROR_CHECK(pos->second == red_or_key, "%s: "
+                            "The reduction_or groups collide on field %s, over group %s and "
+                            "group %s", table->srcInfo, field->name, red_or_key, pos->second);
+                            addDeps(self.access[field->name].reduction_or_write,
+                                    DependencyGraph::REDUCTION_OR_READ, field);
+                        } else {
+                            // If reduction_or, and the previous write was normal
+                            addDeps(self.access[field->name].write, DependencyGraph::ACTION_READ,
+                                    field);
+                        }
                     } else {
+                        // If normal
                         addDeps(self.access[field->name].write,
                                 DependencyGraph::ACTION_READ, field);
                     }
                 }
             }
-            if (isWrite() && !isReductionOr() && self.phv.alloc_done()) {
+            if (isWrite() && !non_first_write_red_or && self.phv.alloc_done()) {
                 field->foreach_alloc([&](const PHV::Field::alloc_slice &sl) {
                     bitvec range(sl.container_bit, sl.width);
                     cont_writes[sl.container] |= range;
@@ -245,13 +282,13 @@ class FindDependencyGraph::AddDependencies : public MauInspector, TofinoWriteCon
     }
 };
 
-class FindDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteContext {
-    FindDependencyGraph                &self;
+class FindDataDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteContext {
+    FindDataDependencyGraph                &self;
     const IR::MAU::Table               *table;
     std::map<PHV::Container, bitvec>    cont_writes;
 
  public:
-    UpdateAccess(FindDependencyGraph &self, const IR::MAU::Table *t) : self(self), table(t) {}
+    UpdateAccess(FindDataDependencyGraph &self, const IR::MAU::Table *t) : self(self), table(t) {}
 
     profile_t init_apply(const IR::Node* root) override {
         cont_writes.clear();
@@ -283,31 +320,38 @@ class FindDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteConte
         const IR::MAU::Action *action_context = findContext<IR::MAU::Action>();
 
         for (const PHV::Field* field : candidateFields) {
+            cstring red_or_key;
+            auto &a = self.access[field->name];
             if (isWrite()) {
                 LOG3("update_access write " << field->name);
-                auto &a = self.access[field->name];
                 a.ixbar_read.clear();
                 a.action_read.clear();
                 a.reduction_or_write.clear();
                 a.reduction_or_read.clear();
                 a.write.clear();
-                if (isReductionOr()) {
-                    self.access[field->name].reduction_or_write.insert(
-                        std::make_pair(table, action_context));
-                } else {
-                    a.write.insert(std::make_pair(table, action_context));
+                bool is_red_or = self.red_info.is_reduction_or(
+                                                   findContext<IR::MAU::Instruction>(),
+                                                   table, red_or_key);
+                if (is_red_or) {
+                    a.reduction_or_write.insert(std::make_pair(table, action_context));
+                    self.red_or_use[field->name] = red_or_key;
+                } else if (self.red_or_use.count(field->name)) {
+                    self.red_or_use.erase(self.red_or_use.find(field->name));
                 }
+                a.write.insert(std::make_pair(table, action_context));
             } else {
                 LOG3("update_access read " << field->name);
                 if (isIxbarRead()) {
                     self.access[field->name].ixbar_read.insert(
                         std::make_pair(table, action_context));
-                } else if (isReductionOr()) {
-                    self.access[field->name].reduction_or_read.insert(
-                        std::make_pair(table, action_context));
                 } else {
-                    self.access[field->name].action_read.insert(
-                        std::make_pair(table, action_context));
+                    bool is_red_or = self.red_info.is_reduction_or(
+                                                       findContext<IR::MAU::Instruction>(),
+                                                       table, red_or_key);
+                    if (is_red_or) {
+                        a.reduction_or_read.insert(std::make_pair(table, action_context));
+                    }
+                    a.action_read.insert(std::make_pair(table, action_context));
                 }
             }
             if (isWrite() && self.phv.alloc_done()) {
@@ -328,7 +372,7 @@ class FindDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteConte
     }
 };
 
-bool FindDependencyGraph::preorder(const IR::MAU::TableSeq * /* seq */) {
+bool FindDataDependencyGraph::preorder(const IR::MAU::TableSeq * /* seq */) {
     const Context *ctxt = getContext();
     if (ctxt && ctxt->node->is<IR::BFN::Pipe>()) {
         access.clear();
@@ -338,13 +382,7 @@ bool FindDependencyGraph::preorder(const IR::MAU::TableSeq * /* seq */) {
     return true;
 }
 
-bool FindDependencyGraph::preorder(const IR::BFN::Pipe *pipe) {
-    pipe->apply(TableFindInjectedDependencies(dg));
-    // pipe->apply(TableFindInjectedDependencies(dg, EGRESS));
-    return true;
-}
-
-bool FindDependencyGraph::preorder(const IR::MAU::Table *t) {
+bool FindDataDependencyGraph::preorder(const IR::MAU::Table *t) {
     LOG3("FindDep table " << t->name);
 
     // Gather up the names of tables with which dependencies must be ignored, as defined by
@@ -398,13 +436,13 @@ bool FindDependencyGraph::preorder(const IR::MAU::Table *t) {
     return true;
 }
 
-bool FindDependencyGraph::preorder(const IR::MAU::InputXBarRead *read) {
+bool FindDataDependencyGraph::preorder(const IR::MAU::InputXBarRead *read) {
     auto tbl = findContext<IR::MAU::Table>();
     read->apply(UpdateAccess(*this, tbl));
     return false;
 }
 
-bool FindDependencyGraph::preorder(const IR::MAU::Action *act) {
+bool FindDataDependencyGraph::preorder(const IR::MAU::Action *act) {
     auto tbl = findContext<IR::MAU::Table>();
     act->apply(UpdateAccess(*this, tbl));
     return false;
@@ -415,13 +453,14 @@ inline std::set<T> &operator |=(std::set<T> &s, const std::set<T> &a) {
     s.insert(a.begin(), a.end());
     return s; }
 
-void FindDependencyGraph::flow_dead() {
+void FindDataDependencyGraph::flow_dead() {
     access.clear();
+    red_or_use.clear();
     cont_write.clear();
 }
 
-void FindDependencyGraph::flow_merge(Visitor &v) {
-    for (auto &a : dynamic_cast<FindDependencyGraph &>(v).access) {
+void FindDataDependencyGraph::flow_merge(Visitor &v) {
+    for (auto &a : dynamic_cast<FindDataDependencyGraph &>(v).access) {
         access[a.first].ixbar_read |= a.second.ixbar_read;
         access[a.first].action_read |= a.second.action_read;
         access[a.first].write |= a.second.write;
@@ -429,7 +468,11 @@ void FindDependencyGraph::flow_merge(Visitor &v) {
         access[a.first].reduction_or_read |= a.second.reduction_or_read;
     }
 
-    for (auto &cw : dynamic_cast<FindDependencyGraph &>(v).cont_write) {
+    for (auto &r : dynamic_cast<FindDataDependencyGraph &>(v).red_or_use) {
+        red_or_use[r.first] = r.second;
+    }
+
+    for (auto &cw : dynamic_cast<FindDataDependencyGraph &>(v).cont_write) {
         for (auto entry : cw.second) {
             cont_write[cw.first][entry.first] |= entry.second;
         }
@@ -447,7 +490,7 @@ void FindDependencyGraph::flow_merge(Visitor &v) {
  *  means that A, B could be in stage#0 and C, B could be in at least state#1.
  */
 std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>>
-FindDependencyGraph::calc_topological_stage(unsigned dep_flags) {
+FindDataDependencyGraph::calc_topological_stage(unsigned dep_flags) {
     typename DependencyGraph::Graph::vertex_iterator v, v_end;
     typename DependencyGraph::Graph::edge_iterator out, out_end;
 
@@ -524,7 +567,7 @@ FindDependencyGraph::calc_topological_stage(unsigned dep_flags) {
     return rst;
 }
 
-void FindDependencyGraph::finalize_dependence_graph(void) {
+void FindDataDependencyGraph::finalize_dependence_graph(void) {
     // Topological sort
     std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>>
         topo_rst = calc_topological_stage();
@@ -700,7 +743,7 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
     dg.finalized = true;
 }
 
-void FindDependencyGraph::verify_dependence_graph() {
+void FindDataDependencyGraph::verify_dependence_graph() {
     typename DependencyGraph::Graph::edge_iterator out, out_end;
     for (boost::tie(out, out_end) = boost::edges(dg.g);
          out != out_end;
@@ -710,4 +753,14 @@ void FindDependencyGraph::verify_dependence_graph() {
         if ((t1->gress == EGRESS && t2->gress == INGRESS)
             || (t1->gress == INGRESS && t2->gress == EGRESS))
             BUG("Ingress table '%s' depends on egress table '%s'.", t1->name, t2->name); }
+}
+
+
+FindDependencyGraph::FindDependencyGraph(const PhvInfo &phv, DependencyGraph &out)
+        : phv(phv), dg(out) {
+    addPasses({
+        new GatherReductionOrReqs(red_info),
+        new TableFindInjectedDependencies(dg),
+        new FindDataDependencyGraph(phv, dg, red_info)
+    });
 }

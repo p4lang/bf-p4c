@@ -206,6 +206,7 @@ set (BF_P4C_BACKEND_MAU_SRCS
   mau/instruction_selection.cpp
   mau/ixbar_realign.cpp
   mau/memories.cpp
+  mau/reduction_or.cpp
   mau/resource_estimate.cpp
   mau/resource.cpp
   mau/split_alpm.cpp
@@ -243,6 +244,7 @@ set (BF_P4C_BACKEND_MAU_HDRS
   mau/ixbar_realign.h
   mau/memories.h
   mau/push_pop.h
+  mau/reduction_or.h
   mau/resource_estimate.h
   mau/resource.h
   mau/split_alpm.h

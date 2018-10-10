@@ -35,6 +35,7 @@ class InjectControlDependencies : public MauInspector {
 };
 
 class DominatorAnalysis : public MauInspector {
+    Visitor::profile_t init_apply(const IR::Node *node) override;
     void postorder(const IR::MAU::TableSeq *seq) override;
     void end_apply() override;
  private:

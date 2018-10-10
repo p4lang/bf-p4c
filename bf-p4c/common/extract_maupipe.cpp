@@ -605,6 +605,20 @@ void AttachTables::InitializeStatefulAlus
                 salu->chain_total_size = k->asInt(); }
         salu_inits[reg] = salu; }
 
+    if (auto red_or = ext->annotations->getSingle("reduction_or_group")) {
+        auto pragma_val = red_or->expr.at(0)->to<IR::StringLiteral>();
+        ERROR_CHECK(pragma_val, "%s: Please provide a valid reduction_or_group for, which should "
+                    "be a string %s", salu->srcInfo, salu->name);
+        if (pragma_val) {
+            if (salu->reduction_or_group.isNull()) {
+                salu->reduction_or_group = pragma_val->value;
+            } else {
+                ERROR_CHECK(salu->reduction_or_group == pragma_val->value, "%s: Stateful ALU %s"
+                    "cannot have multiple reduction or group", salu->srcInfo, salu->name);
+            }
+        }
+    }
+
     // If the register action hasn't been seen before, this creates an SALU Instruction
     if (register_actions.count(ext) == 0) {
         LOG3("Adding " << ext->name << " to StatefulAlu " << reg->name);

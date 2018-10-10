@@ -8,6 +8,7 @@
 #include <set>
 #include "bf-p4c/ir/control_flow_visitor.h"
 #include "bf-p4c/mau/mau_visitor.h"
+#include "bf-p4c/mau/reduction_or.h"
 #include "bf-p4c/phv/phv_fields.h"
 
 namespace boost {
@@ -362,9 +363,7 @@ struct DependencyGraph {
     }
 };
 
-
-
-class FindDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
+class FindDataDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
  public:
     typedef ordered_map<const IR::MAU::Table*, bitvec> cont_write_t;
     typedef struct {
@@ -375,10 +374,13 @@ class FindDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
         ordered_set<std::pair<const IR::MAU::Table*, const IR::MAU::Action*>> reduction_or_read;
     } access_t;
 
+
  private:
     const PhvInfo&                                        phv;
     DependencyGraph&                                      dg;
+    const ReductionOrInfo&                                red_info;
     std::map<cstring, access_t>                           access;
+    std::map<cstring, cstring>                            red_or_use;
     std::map<PHV::Container, cont_write_t>                cont_write;
 
     std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>>
@@ -394,13 +396,12 @@ class FindDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
     bool preorder(const IR::MAU::Table *) override;
     bool preorder(const IR::MAU::Action *) override;
     bool preorder(const IR::MAU::InputXBarRead *) override;
-    bool preorder(const IR::BFN::Pipe *pipe) override;
 
     Visitor::profile_t init_apply(const IR::Node* node) override {
         auto rv = Inspector::init_apply(node);
-        dg.clear();
         access.clear();
         cont_write.clear();
+        red_or_use.clear();
 
         const ordered_map<const PHV::Field*, const PHV::Field*>& aliasMap = phv.getAliasMap();
         LOG1("Printing alias map");
@@ -419,17 +420,32 @@ class FindDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
     void flow_merge(Visitor &v) override;
 
     void all_bfs(boost::default_bfs_visitor* vis);
-    FindDependencyGraph *clone() const override { return new FindDependencyGraph(*this); }
+    FindDataDependencyGraph *clone() const override { return new FindDataDependencyGraph(*this); }
 
     class AddDependencies;
     class UpdateAccess;
     class UpdateAttached;
 
  public:
-    FindDependencyGraph(const PhvInfo &phv, DependencyGraph& out)
-    : phv(phv), dg(out) {
+    FindDataDependencyGraph(const PhvInfo &phv, DependencyGraph& out, const ReductionOrInfo &ri)
+    : phv(phv), dg(out), red_info(ri) {
         joinFlows = true;
     }
+};
+
+class FindDependencyGraph : public PassManager {
+    Visitor::profile_t init_apply(const IR::Node *node) override {
+        auto rv = PassManager::init_apply(node);
+        dg.clear();
+        return rv;
+    }
+
+    const PhvInfo &phv;
+    DependencyGraph &dg;
+    ReductionOrInfo red_info;
+
+ public:
+    FindDependencyGraph(const PhvInfo &phv, DependencyGraph &out);
 };
 
 #endif /* BF_P4C_MAU_TABLE_DEPENDENCY_GRAPH_H_ */

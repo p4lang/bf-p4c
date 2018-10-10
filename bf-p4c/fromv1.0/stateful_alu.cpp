@@ -442,6 +442,20 @@ const IR::Declaration_Instance *P4V1::StatefulAluConverter::convertExternInstanc
     auto *et = ext->type->to<IR::Type_Extern>();
     BUG_CHECK(et && et->name == "stateful_alu",
               "Extern %s is not stateful_alu type, but %s", ext, ext->type);
+
+    auto *annots = new IR::Annotations();
+    if (auto prop = ext->properties.get<IR::Property>("reduction_or_group")) {
+        bool understood = false;
+        if (auto ev = prop->value->to<IR::ExpressionValue>()) {
+            if (auto pe = ev->expression->to<IR::PathExpression>()) {
+                annots->addAnnotation("reduction_or_group", new IR::StringLiteral(pe->path->name));
+                understood = true;
+            }
+        }
+        ERROR_CHECK(understood, "%s: reduction_or_group provided on %s is not understood, because",
+                    "it is not a PathExpression", ext->srcInfo, name);
+    }
+
     if (auto ap = getSelectorProfile(structure, ext)) {
         LOG2("Creating apply function for selector_action " << ext->name);
         auto satype = new IR::Type_Name("selector_action");
@@ -449,7 +463,6 @@ const IR::Declaration_Instance *P4V1::StatefulAluConverter::convertExternInstanc
         auto *ctor_args = new IR::Vector<IR::Argument>({
                 new IR::Argument(new IR::PathExpression(new IR::Path(
                     structure->action_profiles.get(ap)))) });
-        auto *annots = new IR::Annotations();
         auto *block = new IR::BlockStatement({
             CreateSaluApplyFunction::create(annots, structure, ext, bit1, bit1) });
         auto* externalName = new IR::StringLiteral(IR::ID("." + name));
@@ -483,7 +496,6 @@ const IR::Declaration_Instance *P4V1::StatefulAluConverter::convertExternInstanc
         auto *math = CreateMathUnit::create(structure, ext, info.utype);
         if (math)
             structure->declarations->push_back(math);
-        auto *annots = new IR::Annotations();
         auto *block = new IR::BlockStatement({
             CreateSaluApplyFunction::create(annots, structure, ext, info.rtype, info.utype,
                                             math ? math->name.name : cstring()) });
@@ -493,6 +505,7 @@ const IR::Declaration_Instance *P4V1::StatefulAluConverter::convertExternInstanc
         LOG3("Created apply function: " << *rv);
         return rv->apply(TypeConverter(structure))->to<IR::Declaration_Instance>();
     }
+
     BUG_CHECK(errorCount() > 0, "Failed to find utype for %s", ext);
     return ExternConverter::convertExternInstance(structure, ext, name, scope);
 }
@@ -544,6 +557,7 @@ const IR::Statement *P4V1::StatefulAluConverter::convertExternCall(
         method = new IR::Member(prim->srcInfo, extref, "execute_log");
     } else {
         BUG("Unknown method %s in stateful_alu", prim->name); }
+
     auto mc = new IR::MethodCallExpression(prim->srcInfo, rtype, method, args);
     if (auto prop = ext->properties.get<IR::Property>("output_dst")) {
         if (auto ev = prop->value->to<IR::ExpressionValue>()) {

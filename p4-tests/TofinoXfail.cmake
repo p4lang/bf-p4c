@@ -292,8 +292,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error.*Power worst case estimated budget exceeded by*"
   extensions/p4_tests/p4_14/p4-tests/programs/clpm/clpm.p4
-  switch_msdc_leaf_int
-  switch_8.4_msdc_leaf_int
   switch_l3_heavy_int_leaf
   switch_8.4_l3_heavy_int_leaf
   )
@@ -354,6 +352,7 @@ p4c_add_xfail_reason("tofino"
   "error: : condition too complex"
   extensions/p4_tests/p4_14/07-MacAddrCheck.p4
   extensions/p4_tests/p4_14/08-MacAddrCheck1.p4
+  extensions/p4_tests/p4_14/p4smith_regression/kindlings_0.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -1145,7 +1144,6 @@ p4c_add_xfail_reason("tofino"
 # Compiler Bug: stage should only decrease
 p4c_add_xfail_reason("tofino"
   "stage should only decrease"
-  extensions/p4_tests/p4_14/p4smith_regression/kindlings_0.p4
 )
 
 # P4C-993
@@ -1282,6 +1280,8 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: ALU ops cannot operate on slices"
   extensions/p4_tests/p4_14/p4smith_regression/shrubs_0.p4
+  switch_msdc_leaf_int
+  switch_8.4_msdc_leaf_int
 )
 
 # BRIG-927

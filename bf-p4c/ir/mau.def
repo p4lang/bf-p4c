@@ -468,6 +468,7 @@ class StatefulAlu : Synth2Port {
     int                                                 chain_total_size = size;
     int                                                 init_reg_lo = 0;
     int                                                 init_reg_hi = 0;
+    cstring                                             reduction_or_group = {};
 
     class MathUnit {
         bool            valid = false;

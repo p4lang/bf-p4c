@@ -13,6 +13,13 @@ static std::string printSeq(const IR::MAU::TableSeq* seq) {
     return ss.str();
 }
 
+Visitor::profile_t DominatorAnalysis::init_apply(const IR::Node *node) {
+    auto rv = MauInspector::init_apply(node);
+    candidate_imm_doms.clear();
+    paths_seen.clear();
+    return rv;
+}
+
 void DominatorAnalysis::end_apply() {
     std::stringstream ss;
     ss << "Dominators are ";

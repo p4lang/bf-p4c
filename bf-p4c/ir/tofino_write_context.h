@@ -24,11 +24,6 @@ class TofinoWriteContext : public P4WriteContext {
     bool isRead(bool root_value = false);
 
     bool isIxbarRead(bool root_value = false);
-
-    /** Find pattern that matches to a reduction Or
-     *    - Field or'n with SaluAction.out_dst is a reduction or
-     */
-    bool isReductionOr(bool root_value = false);
 };
 
 #endif /* EXTENSIONS_BF_P4C_IR_TOFINO_WRITE_CONTEXT_H_ */
