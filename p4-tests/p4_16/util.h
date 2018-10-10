@@ -79,10 +79,8 @@ header udp_h {
 }
 
 // Simple ingress/egress parsers
-parser TofinoIngressParser<H, M>(
+parser TofinoIngressParser(
         packet_in pkt,
-        out H hdr,
-        out M ig_md,
         out ingress_intrinsic_metadata_t ig_intr_md) {
     state start {
         pkt.extract(ig_intr_md);
@@ -98,17 +96,33 @@ parser TofinoIngressParser<H, M>(
     }
 
     state parse_port_metadata {
+#if __TARGET_TOFINO__ == 1
         pkt.advance(64);
+#elif __TARGET_TOFINO__ == 2
+        pkt.advance(192);
+#endif
         transition accept;
     }
 }
-parser TofinoEgressParser<H, M>(
+
+parser TofinoEgressParser(
        packet_in pkt,
-       out H hdr,
-       out M eg_md,
        out egress_intrinsic_metadata_t eg_intr_md) {
     state start {
         pkt.extract(eg_intr_md);
+        transition accept;
+    }
+}
+
+parser EmptyIngressParser<H, M>(
+        packet_in pkt,
+        out H hdr,
+        out M ig_md,
+        out ingress_intrinsic_metadata_t ig_intr_md) {
+    TofinoIngressParser() tofino_parser;
+
+    state start {
+        tofino_parser.apply(pkt, ig_intr_md);
         transition accept;
     }
 }
@@ -119,7 +133,9 @@ parser EmptyEgressParser<H, M>(
         out H hdr,
         out M eg_md,
         out egress_intrinsic_metadata_t eg_intr_md) {
+    TofinoEgressParser() tofino_parser;
     state start {
+        tofino_parser.apply(pkt, eg_intr_md);
         transition accept;
     }
 }

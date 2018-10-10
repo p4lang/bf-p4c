@@ -125,10 +125,10 @@ control SwitchEgress(
     }
 }
 
-Pipeline(TofinoIngressParser<switch_header_t, switch_metadata_t>(),
-       SwitchIngress(),
-       SwitchIngressDeparser(),
-       SwitchEgressParser(),
-       SwitchEgress(),
-       SwitchEgressDeparser()) pipe0;
+Pipeline(EmptyIngressParser<switch_header_t, switch_metadata_t>(),
+         SwitchIngress(),
+         SwitchIngressDeparser(),
+         SwitchEgressParser(),
+         SwitchEgress(),
+         SwitchEgressDeparser()) pipe0;
 Switch(pipe0) main;

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
- * Copyright (c) 2015-2016 Barefoot Networks, Inc.
+ * Copyright (c) 2018-2019 Barefoot Networks, Inc.
  * All Rights Reserved.
  *
  * NOTICE: All information contained herein is, and remains the property of
@@ -17,16 +17,10 @@
  * No warranty, explicit or implicit is provided, unless granted under a
  * written agreement with Barefoot Networks, Inc.
  *
- * Milad Sharif (msharif@barefootnetworks.com)
- *
  ******************************************************************************/
 
 #include <core.p4>
-#if __TARGET_TOFINO__ == 2
-#include <t2na.p4>
-#elif __TARGET_TOFINO__ == 1
 #include <tna.p4>
-#endif
 #include "util.h"
 
 #define ETHERTYPE_IPV4 0x0800
@@ -36,6 +30,7 @@
 typedef bit<16> switch_nexthop_t;
 
 struct switch_header_t {
+    serialized_struct_t bridged_md;
     ethernet_h ethernet;
     ipv4_h ipv4;
     tcp_h tcp;
@@ -43,8 +38,11 @@ struct switch_header_t {
 }
 
 struct switch_metadata_t {
-    bool checksum_err;
+    PortId_t port;
+    bool check;
 }
+
+Serializer<switch_metadata_t>() bridged_md_serializer;
 
 // ---------------------------------------------------------------------------
 // Ingress parser
@@ -55,11 +53,11 @@ parser SwitchIngressParser(
         out switch_metadata_t ig_md,
         out ingress_intrinsic_metadata_t ig_intr_md) {
 
-    Checksum<bit<16>>(HashAlgorithm_t.CSUM16) ipv4_checksum;
     TofinoIngressParser() tofino_parser;
 
     state start {
         tofino_parser.apply(pkt, ig_intr_md);
+        ig_md.port = ig_intr_md.ingress_port;
         transition parse_ethernet;
     }
 
@@ -73,8 +71,6 @@ parser SwitchIngressParser(
 
     state parse_ipv4 {
         pkt.extract(hdr.ipv4);
-        ipv4_checksum.add(hdr.ipv4);
-        ig_md.checksum_err = ipv4_checksum.verify();
         transition select(hdr.ipv4.protocol) {
             IP_PROTOCOLS_TCP : parse_tcp;
             IP_PROTOCOLS_UDP : parse_udp;
@@ -100,21 +96,7 @@ control SwitchIngressDeparser(packet_out pkt,
                               inout switch_header_t hdr,
                               in switch_metadata_t ig_md,
                               in ingress_intrinsic_metadata_for_deparser_t ig_intr_dprsr_md) {
-    Checksum<bit<16>>(HashAlgorithm_t.CSUM16) ipv4_checksum;
-
     apply {
-        hdr.ipv4.hdr_checksum = ipv4_checksum.update(
-                {hdr.ipv4.version,
-                 hdr.ipv4.ihl,
-                 hdr.ipv4.diffserv,
-                 hdr.ipv4.total_len,
-                 hdr.ipv4.identification,
-                 hdr.ipv4.flags,
-                 hdr.ipv4.frag_offset,
-                 hdr.ipv4.ttl,
-                 hdr.ipv4.protocol,
-                 hdr.ipv4.src_addr,
-                 hdr.ipv4.dst_addr});
         pkt.emit(hdr.ethernet);
         pkt.emit(hdr.ipv4);
         pkt.emit(hdr.udp);
@@ -130,89 +112,54 @@ control SwitchIngress(
         inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprsr_md,
         inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
 
-    switch_nexthop_t nexthop_index;
-
-    action miss_() {}
-
-    action drop() {
-        ig_intr_dprsr_md.drop_ctl = 0x7;
-    }
-
-    action set_nexthop(switch_nexthop_t index) {
-        nexthop_index = index;
-    }
-
-    action set_nexthop_info(mac_addr_t dmac) {
-        hdr.ethernet.dst_addr = dmac;
-    }
-
-    action set_port(PortId_t port) {
-        ig_intr_tm_md.ucast_egress_port = port;
-        ig_intr_tm_md.bypass_egress = true; // bypass egress pipeline.
-    }
-
-    action rewrite_(mac_addr_t smac) {
-        hdr.ipv4.ttl =  hdr.ipv4.ttl - 1;
-        hdr.ethernet.src_addr = smac;
-    }
-
-    table fib {
-        key = { hdr.ipv4.dst_addr : exact; }
-        actions = {
-            miss_;
-            set_nexthop;
-        }
-
-        const default_action = miss_;
-    }
-
-    table nexthop {
-        key = { nexthop_index : exact; }
-        actions = { set_nexthop_info; }
-    }
-
-
-    table dmac {
-        key = { hdr.ethernet.dst_addr : exact; }
-        actions = {
-            set_port;
-            miss_;
-        }
-
-        const default_action = miss_;
-    }
-
-    table rewrite {
-        key = { ig_intr_tm_md.ucast_egress_port : exact; }
-        actions = { rewrite_; }
-    }
-
-    table acl {
-        key = {
-            ig_intr_prsr_md.parser_err : exact;
-            ig_md.checksum_err : exact;
-        }
-
-        actions = { set_port; }
+    action add_bridged_md() {
+        hdr.bridged_md = bridged_md_serializer.pack({ig_md.port, ig_md.check});
     }
 
     apply {
-        nexthop_index = 0;
+        ig_md.check = true;
+        add_bridged_md();
+    }
+}
 
-        fib.apply();
-        nexthop.apply();
-        dmac.apply();
-        rewrite.apply();
+parser SwitchEgressParser(
+        packet_in pkt,
+        out switch_header_t hdr,
+        out switch_metadata_t eg_md,
+        out egress_intrinsic_metadata_t eg_intr_md) {
+    TofinoEgressParser() tofino_parser;
+    state start {
+        tofino_parser.apply(pkt, eg_intr_md);
+        transition parse_bridged_md;
+    }
 
-        acl.apply();
+    state parse_bridged_md {
+        pkt.extract(hdr.bridged_md, bridged_md_serializer.header_length());
+        eg_md = bridged_md_serializer.unpack(hdr.bridged_md);
+        transition accept;
+    }
+}
+
+control SwitchEgress(
+        inout switch_header_t hdr,
+        inout switch_metadata_t eg_md,
+        in egress_intrinsic_metadata_t eg_intr_md,
+        in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr,
+        inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
+        inout egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport) {
+
+    apply {
+        if (!eg_md.check) {
+            eg_intr_md_for_dprsr.drop_ctl = 1;
+        }
     }
 }
 
 Pipeline(SwitchIngressParser(),
-       SwitchIngress(),
-       SwitchIngressDeparser(),
-       EmptyEgressParser<switch_header_t, switch_metadata_t>(),
-       EmptyEgress<switch_header_t, switch_metadata_t>(),
-       EmptyEgressDeparser<switch_header_t, switch_metadata_t>()) pipe0;
+         SwitchIngress(),
+         SwitchIngressDeparser(),
+         SwitchEgressParser(),
+         SwitchEgress(),
+         EmptyEgressDeparser<switch_header_t, switch_metadata_t>()) pipe0;
 
 Switch(pipe0) main;

@@ -371,6 +371,10 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/verify-bmv2.p4
   )
 
+p4c_add_xfail_reason("tofino"
+  "error: .* functions or methods returning structures are not supported on this target"
+  extensions/p4_tests/p4_16/serializer.p4
+  )
 
 p4c_add_xfail_reason("tofino"
   "Could not place table : "
