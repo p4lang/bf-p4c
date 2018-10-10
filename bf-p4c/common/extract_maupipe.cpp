@@ -370,6 +370,16 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
                 mtr->result = anno->expr.at(0);
             else if (anno->name == "implementation")
                 mtr->implementation = anno->expr.at(0)->as<IR::StringLiteral>();
+            else if (anno->name == "green")
+                mtr->green_value = anno->expr.at(0)->as<IR::Constant>().asInt();
+            else if (anno->name == "yellow")
+                mtr->yellow_value = anno->expr.at(0)->as<IR::Constant>().asInt();
+            else if (anno->name == "red")
+                mtr->red_value = anno->expr.at(0)->as<IR::Constant>().asInt();
+            else if (anno->name == "meter_profile")
+                mtr->profile = anno->expr.at(0)->as<IR::Constant>().asInt();
+            else if (anno->name == "meter_sweep_interval")
+                mtr->sweep_interval = anno->expr.at(0)->as<IR::Constant>().asInt();
             else
                 WARNING("unknown annotation " << anno->name << " on " << tname); }
         return mtr;

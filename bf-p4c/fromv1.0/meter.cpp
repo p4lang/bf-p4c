@@ -23,7 +23,9 @@ const IR::Declaration_Instance *P4V1::MeterConverter::convertExternInstance(
     auto* annotations = new IR::Annotations({
         new IR::Annotation(IR::ID("name"), { externalName })});
     bool direct = false;
+    LOG1("ext : " << ext);
     for (auto prop : Values(ext->properties)) {
+        LOG1("prop : " << prop->name);
         const IR::Expression *val = nullptr;
         if (auto ev = prop->value->to<IR::ExpressionValue>())
             val = conv.convert(ev->expression);
@@ -48,6 +50,16 @@ const IR::Declaration_Instance *P4V1::MeterConverter::convertExternInstance(
             annotations->addAnnotation("yellow", val);
         } else if (prop->name == "red_value") {
             annotations->addAnnotation("red", val);
+        } else if (prop->name == "meter_sweep_interval") {
+            auto ival = val->to<IR::Constant>()->asInt();
+            BUG_CHECK(ival >= 0 || ival <= 4,
+                "Meter sweep interval value is %d must be in the range [0:4] - %s", ival, ext);
+            annotations->addAnnotation("meter_sweep_interval", val);
+        } else if (prop->name == "meter_profile") {
+            auto pval = val->to<IR::Constant>()->asInt();
+            BUG_CHECK(pval >= 0 || pval <= 15,
+                "Meter profile value is %d must be in the range [0:15] - %s", pval, ext);
+            annotations->addAnnotation("meter_profile", val);
         } else {
             error("Unknown property %s on meter", prop);
             continue; }

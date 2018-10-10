@@ -64,9 +64,37 @@ void MeterTable::setup(VECTOR(pair_t) &data) {
             else if (kv.value == "packets")
                 count = PACKETS;
             else error(kv.value.lineno, "Unknown meter count %s", value_desc(kv.value));
+        } else if (kv.key == "green") {
+            if (CHECKTYPE(kv.value, tINT)) {
+                green_value = kv.value.i;
+            }
+        } else if (kv.key == "yellow") {
+            if (CHECKTYPE(kv.value, tINT)) {
+                yellow_value = kv.value.i;
+            }
+        } else if (kv.key == "red") {
+            if (CHECKTYPE(kv.value, tINT)) {
+                red_value = kv.value.i;
+            }
+        } else if (kv.key == "profile") {
+            if (CHECKTYPE(kv.value, tINT)) {
+                profile = kv.value.i;
+            }
         } else if (kv.key == "sweep_interval") {
-            if (CHECKTYPE(kv.value, tINT))
-                sweep_interval = kv.value.i;
+            if (CHECKTYPE(kv.value, tINT)) {
+                // sweep_interval value in assembly if present is from
+                // meter_sweep_interval pragma in p4 program. Allowed values for
+                // the meter_sweep_interval register are [0:20]. but [5:20] are
+                // only to be used with shifting meter time scale. We check and
+                // throw an error if value is present and not in range[0:4]
+                int intvl = kv.value.i;
+                if ( intvl >= 0 && intvl <= 4)
+                    sweep_interval = intvl;
+                else
+                    error(lineno,
+                        "Invalid meter sweep interval of %d. Allowed values are in the range[0:4]",
+                        intvl );
+            }
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     value_desc(kv.key), name()); }
@@ -113,7 +141,7 @@ void MeterTable::pass2() {
             }
         }
     }
-    
+
 }
 
 void MeterTable::pass3() {
@@ -205,7 +233,8 @@ void MeterTable::write_regs(REGS &regs) {
             auto &red_value_ctl = meter.red_value_ctl;
             meter_ctl.meter_bytecount_adjust = 0; // FIXME
             auto &delay_ctl = map_alu.meter_alu_group_data_delay_ctl[meter_group_index];
-            delay_ctl.meter_alu_right_group_delay = Target::METER_ALU_GROUP_DATA_DELAY() + row/4 + stage->tcam_delay(gress);
+            delay_ctl.meter_alu_right_group_delay = Target::METER_ALU_GROUP_DATA_DELAY()
+                                                        + row/4 + stage->tcam_delay(gress);
             switch (type) {
                 case LPF:
                     meter_ctl.lpf_enable = 1;
@@ -221,7 +250,21 @@ void MeterTable::write_regs(REGS &regs) {
                 default:
                     meter_ctl.meter_enable = 1;
                     // DRV_1143 -- rng should always be on for normal meters
+                    // RNG:
+                    // Enables random number generator for meter probabilistic charging
+                    // when green/yellow burst size exponent > 14.  This should be set
+                    // when any meter entry in the table has a burstsize exponent > 14
+                    // RNG is also enabled whenever red_enable config bit is set.
+
+                    // As Mike F. described in DRV-1443, this should always be turned on
+                    // for color-based meters, to handle an issue with large burst
+                    // sizes.  This applies to both packet-based and byte-based meters.
+                    // Mike F said, "The hardware adjusts the rate under the hood to
+                    // match the desired rate. Without enabling the RNG, the hardware
+                    // will always overcharge the buckets thereby reducing the rate."
+                    // Relate JIRA's - P4C-1024, DRV-1443
                     meter_ctl.meter_rng_enable = 1;
+                    meter_ctl.meter_time_scale = profile;
                     break; }
             if (count == BYTES)
                 meter_ctl.meter_byte = 1;
@@ -239,7 +282,7 @@ void MeterTable::write_regs(REGS &regs) {
             meter_sweep_ctl.meter_sweep_size = maxvpn;
             meter_sweep_ctl.meter_sweep_remove_hole_pos = 0; // FIXME
             meter_sweep_ctl.meter_sweep_remove_hole_en = 0; // FIXME
-            meter_sweep_ctl.meter_sweep_interval = sweep_interval;
+            meter_sweep_ctl.meter_sweep_interval = sweep_interval + profile;
             if (input_xbar) {
                 auto &vh_adr_xbar = regs.rams.array.row[row].vh_adr_xbar;
                 auto &data_ctl = regs.rams.array.row[row].vh_xbar[side].stateful_meter_alu_data_ctl;
@@ -257,7 +300,7 @@ void MeterTable::write_regs(REGS &regs) {
                     // xbar is valid for these meters.
                     bitvec bytemask = input_xbar->bytemask();
                     bytemask >>= bytemask.min().index();
-                    unsigned u_bytemask = bytemask.getrange(0, bytemask.max().index() + 1); 
+                    unsigned u_bytemask = bytemask.getrange(0, bytemask.max().index() + 1);
                     data_ctl.stateful_meter_alu_data_bytemask = u_bytemask;
                     data_ctl.stateful_meter_alu_data_xbar_ctl = 8 | input_xbar->match_group();
                 }
@@ -379,11 +422,10 @@ void MeterTable::write_regs(REGS &regs) {
         //icxbar.address_distr_to_overflow = push_on_overflow;
         //if (direct)
         //    regs.cfg_regs.mau_cfg_lt_meter_are_direct |= 1 << m->logical_id;
-        // FIXME -- color map should be programmable, rather than fixed
-        adrdist.meter_color_output_map[m->logical_id].set_subfield(0,  0, 8);  // green
-        adrdist.meter_color_output_map[m->logical_id].set_subfield(1,  8, 8);  // yellow
-        adrdist.meter_color_output_map[m->logical_id].set_subfield(1, 16, 8);  // yellow
-        adrdist.meter_color_output_map[m->logical_id].set_subfield(3, 24, 8);  // red
+        adrdist.meter_color_output_map[m->logical_id].set_subfield(green_value,  0, 8);  // green
+        adrdist.meter_color_output_map[m->logical_id].set_subfield(yellow_value,  8, 8);  // yellow
+        adrdist.meter_color_output_map[m->logical_id].set_subfield(yellow_value, 16, 8);  // yellow
+        adrdist.meter_color_output_map[m->logical_id].set_subfield(red_value, 24, 8);  // red
         adrdist.movereg_idle_ctl[m->logical_id].movereg_idle_ctl_mc = 1;
         if (type != LPF)
             adrdist.meter_enable |= 1U << m->logical_id;
@@ -459,7 +501,8 @@ void MeterTable::gen_tbl_cfg(json::vector &out) const {
     stage_tbl["color_memory_resource_allocation"] =
             gen_memory_resource_allocation_tbl_cfg("map_ram", color_maprams);
     switch (type) {
-    case STANDARD: tbl["meter_type"] = "standard"; break;
+    case STANDARD: tbl["meter_type"] = "standard";
+                   tbl["meter_profile"] = profile; break;
     case LPF: tbl["meter_type"] = "lpf"; break;
     case RED: tbl["meter_type"] = "red"; break;
     default: tbl["meter_type"] = "standard"; break; }
@@ -468,7 +511,7 @@ void MeterTable::gen_tbl_cfg(json::vector &out) const {
     case BYTES: tbl["meter_granularity"] = "bytes"; break;
     default: tbl["meter_granularity"] = "packets"; break; }
     tbl["enable_color_aware_pfe"] = color_aware_per_flow_enable;
-    /* this is not needed. but the driver asserts on existence of 
+    /* this is not needed. but the driver asserts on existence of
      * this or enable_color_aware which both seem to be redundant */
     tbl["pre_color_field_name"] = "false";
     tbl["enable_pfe"] = per_flow_enable;

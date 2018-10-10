@@ -424,6 +424,11 @@ class Counter : Synth2Port {
 class Meter : Synth2Port {
     int red_drop_value = -1;
     int red_nodrop_value = -1;
+    int green_value = -1;
+    int yellow_value = -1;
+    int red_value = -1;
+    int profile = -1;
+    int sweep_interval = -1;
     NullOK Expression  result = nullptr;     // Field which meter writes, eventually be deprecated
                                              // as it should be contained in AttachedOutput
     NullOK HashDist    pre_color = nullptr;  // Field to pre-color the meter.  Eventually

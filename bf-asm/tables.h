@@ -298,7 +298,7 @@ public:
                     case HashDist: return hd == a.hd;
                     case Counter: case Const: return val == a.val;
                     case Name: return !strcmp(str, a.str);
-                    default: assert(0); } 
+                    default: assert(0); }
                 return false;
             }
             bool operator!=(const Arg &a) const { return !operator==(a); }
@@ -1430,6 +1430,10 @@ public:
 DECLARE_TABLE_TYPE(MeterTable, Synth2Port, "meter",
     int red_nodrop_value = -1;
     int red_drop_value = -1;
+    int green_value = 0;
+    int yellow_value = 1;
+    int red_value = 3;
+    int profile = 0;
     enum { NONE=0, STANDARD=1, LPF=2, RED=3 }   type = NONE;
     enum { NONE_=0, PACKETS=1, BYTES=2 }        count = NONE_;
     std::vector<Layout>                         color_maprams;

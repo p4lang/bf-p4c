@@ -2601,7 +2601,21 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Meter *meter) {
         out << " , nodrop: " << meter->red_nodrop_value;
         out << " } " << std::endl;
     }
-
+    if (meter->green_value >= 0) {
+        out << indent << "green: " << meter->green_value << std::endl;
+    }
+    if (meter->yellow_value >= 0) {
+        out << indent << "yellow: " << meter->yellow_value << std::endl;
+    }
+    if (meter->red_value >= 0) {
+        out << indent << "red: " << meter->red_value << std::endl;
+    }
+    if (meter->profile >= 0) {
+        out << indent << "profile: " << meter->profile << std::endl;
+    }
+    if (meter->sweep_interval >= 0) {
+        out << indent << "sweep_interval: " << meter->sweep_interval << std::endl;
+    }
     if (meter->pre_color) {
         const IXBar::HashDistUse *hd_use = nullptr;
         for (auto &hash_dist_use : tbl->resources->hash_dists) {
