@@ -121,6 +121,8 @@ class BackendConverter {
     void convertTnaProgram(const IR::P4Program *program, BFN_Options &options);
     void convertV1Program(const IR::P4Program *program, BFN_Options &options);
     cstring getPipelineName(const IR::P4Program* program, int index);
+    const ProgramThreads &getThreads() const { return threads; }
+
     std::vector<const IR::BFN::Pipe*> pipe;
 };
 

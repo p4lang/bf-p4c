@@ -7,7 +7,7 @@ import os, sys
 from jsonvalidator import JSONValidator
 
 MYPATH = os.path.dirname(__file__)
-GEN_SCHEMA_PATH=os.path.join(MYPATH, "..", "bf-p4c", "logging")
+GEN_SCHEMA_PATH=os.path.join(MYPATH, "../glass/p4c_tofino/target/tofino/ctx_json")
 sys.path.append(GEN_SCHEMA_PATH)
 
 from archive_manifest import BFNCompilerArchive, get_schema_version

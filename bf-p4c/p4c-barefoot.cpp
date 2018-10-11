@@ -267,6 +267,9 @@ int main(int ac, char **av) {
         if (options.debugInfo)
             manifest.addResources(pipe->id, prefix + options.programName + ".res.json");
     }
+
+    manifest.addArchitecture(conv.getThreads());
+
     // generate the archive manifest
     manifest.serialize();
 

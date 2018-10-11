@@ -9,6 +9,7 @@
 #include <string>
 #include <utility>
 
+#include "bf-p4c/arch/arch.h"
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/common/run_id.h"
 #include "ir/ir.h"
@@ -31,6 +32,7 @@ class Manifest : public Inspector {
     std::map<cstring, std::pair<int, cstring> > _resources;
     std::map<cstring, cstring> _graphs;
     std::map<cstring, cstring> _logs;
+    BFN::ProgramThreads        _threads;
     const BFN_Options &        _options;
     std::ofstream              _manifestStream;
 
@@ -75,28 +77,19 @@ class Manifest : public Inspector {
         }
     }
 
+    using Writer = rapidjson::PrettyWriter<rapidjson::StringBuffer>;
     virtual void serialize() {
         rapidjson::StringBuffer sb;
-        using Writer = rapidjson::PrettyWriter<rapidjson::StringBuffer>;
         Writer writer(sb);
 
         writer.StartObject();  // start BFNCompilerArchive
         writer.Key("schema_version");
-        writer.String("1.3.1");
+        writer.String("1.4.0");
         writer.Key("target");
         if (_options.target)
             writer.String(_options.target.c_str());
         else
             writer.String("tofino");
-        writer.Key("architecture");
-        if (_options.arch) {
-            writer.String(_options.arch.c_str());
-        } else {
-            if (_options.isv1())
-                writer.String("v1model");
-            else
-                writer.String("PISA");
-        }
         writer.Key("build_date");
         const time_t now = time(NULL);
         char build_date[1024];
@@ -104,6 +97,7 @@ class Manifest : public Inspector {
         writer.String(build_date);
         writer.Key("compiler_version");
         writer.String(BF_P4C_VERSION);
+        serializeArchConfig(writer);
         writer.Key("programs");
         writer.StartArray();   // start programs
         writer.StartObject();  // start CompiledProgram
@@ -195,6 +189,82 @@ class Manifest : public Inspector {
     }
     void addLog(cstring log_type, cstring path) {
         _logs.emplace(path, log_type);
+    }
+    void addArchitecture(const BFN::ProgramThreads &threads) {
+        _threads.insert(threads.cbegin(), threads.cend());
+    }
+
+    void serializeArchConfig(Writer &writer) {
+        writer.Key("architecture");
+        if (_options.arch) {
+            writer.String(_options.arch.c_str());
+        } else {
+            if (_options.isv1())
+                writer.String("v1model");
+            else
+                writer.String("PISA");
+        }
+
+        if (_threads.size() == 0)
+            return;
+
+        writer.Key("architectureConfig");
+        writer.StartObject();
+        writer.Key("name");
+        auto numPorts = std::to_string(64/_threads.size()*2) + "q";
+        writer.String(numPorts.c_str());
+        writer.Key("pipes");
+        writer.StartArray();
+        std::set<int> pipes;
+        for (auto t : _threads)
+            pipes.insert(t.first.first);
+        for (auto p : pipes) {
+            writer.StartObject();
+            writer.Key("pipe");
+            writer.Int(p);
+            for (auto g : { INGRESS, EGRESS}) {
+                auto t = _threads.find(std::pair<int, gress_t>(p, g));
+                if (t != _threads.end()) {
+                    writer.Key(t->first.second == INGRESS ? "ingress" : "egress");
+                    writer.StartObject();
+                    writer.Key("pipeName");
+                    writer.String(t->second->mau->externalName().c_str());
+                    writer.Key("nextControl");
+                    writer.StartArray();
+                    switch (g) {
+                    case INGRESS:
+                        // ingress can go to any other pipe's egress
+                        for (auto np : pipes)
+                            sendTo(writer, np, EGRESS);
+                        break;
+                    case EGRESS:
+                        if (p != 0) {
+                            // pipe 0 egress always goes out
+                            // any other pipe goes to its ingress
+                            sendTo(writer, p, INGRESS);
+                        }
+                        break;
+                    default: break; }
+                    writer.EndArray();
+                    writer.EndObject();
+                }
+            }
+            writer.EndObject();
+        }
+        writer.EndArray();
+        writer.EndObject();
+    }
+
+    void sendTo(Writer &writer, int pipe, gress_t gress) {
+        auto t = _threads.find(std::pair<int, gress_t>(pipe, gress));
+        if (t != _threads.end()) {
+            writer.StartObject();
+            writer.Key("pipe");
+            writer.Int(pipe);
+            writer.Key("pipeName");
+            writer.String(t->second->mau->externalName().c_str());
+            writer.EndObject();
+        }
     }
 };
 }  // end namespace Logging
