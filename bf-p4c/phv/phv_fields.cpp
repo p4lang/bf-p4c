@@ -1352,8 +1352,8 @@ class MarkTimestampAndVersion : public Inspector {
     void end_apply() {
         for (auto& f : phv_i) {
             cstring name = f.name;
-            bool isTstamp = name.endsWith("g_intr_md_from_prsr.global_tstamp");
-            bool isVersion = name.endsWith("g_intr_md_from_prsr.global_ver");
+            bool isTstamp = name.endsWith("global_tstamp") && f.intrinsic;
+            bool isVersion = name.endsWith("global_ver") && f.intrinsic;
             if (isTstamp || isVersion) {
                 LOG2("Setting exact_containers for " << f.name);
                 f.set_exact_containers(true); } }

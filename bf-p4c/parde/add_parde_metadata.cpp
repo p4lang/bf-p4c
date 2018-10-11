@@ -37,22 +37,30 @@ bool AddParserMetadataShims::preorder(IR::BFN::Parser *parser) {
 void AddParserMetadataShims::addIngressMetadata(IR::BFN::Parser *parser) {
     // This state initializes some special metadata and serves as an entry
     // point.
-    auto* igParserMeta =
-      getMetadataType(pipe, "ingress_intrinsic_metadata_from_parser");
-    auto* alwaysDeparseBit =
-        new IR::TempVar(IR::Type::Bits::get(1), true, "$always_deparse");
-    auto* bridgedMetadataIndicator =
-      new IR::TempVar(IR::Type::Bits::get(8), false, "^bridged_metadata_indicator");
-    auto* globalTimestamp = gen_fieldref(igParserMeta, "global_tstamp");
-    auto* globalVersion = gen_fieldref(igParserMeta, "global_ver");
+    auto *igParserMeta =
+            getMetadataType(pipe, "ingress_intrinsic_metadata_from_parser");
+    auto *alwaysDeparseBit =
+            new IR::TempVar(IR::Type::Bits::get(1), true, "$always_deparse");
+    auto *bridgedMetadataIndicator =
+            new IR::TempVar(IR::Type::Bits::get(8), false, "^bridged_metadata_indicator");
+    auto *globalTimestamp = gen_fieldref(igParserMeta, "global_tstamp");
+    auto *globalVersion = gen_fieldref(igParserMeta, "global_ver");
+
+    auto prim = new IR::Vector<IR::BFN::ParserPrimitive>();
+    if (isV1) {
+        prim->push_back(new IR::BFN::Extract(alwaysDeparseBit,
+                new IR::BFN::ConstantRVal(1)));
+        prim->push_back(new IR::BFN::Extract(bridgedMetadataIndicator,
+                new IR::BFN::ConstantRVal(0)));
+    }
+    prim->push_back(new IR::BFN::Extract(globalTimestamp,
+            new IR::BFN::BufferRVal(StartLen(432, 48))));
+    prim->push_back(new IR::BFN::Extract(globalVersion,
+            new IR::BFN::BufferRVal(StartLen(480, 32))));
 
     parser->start =
       new IR::BFN::ParserState(createThreadName(parser->gress, "$entry_point"), parser->gress,
-        { new IR::BFN::Extract(alwaysDeparseBit, new IR::BFN::ConstantRVal(1)),
-          new IR::BFN::Extract(bridgedMetadataIndicator, new IR::BFN::ConstantRVal(0)),
-          new IR::BFN::Extract(globalTimestamp, new IR::BFN::BufferRVal(StartLen(432, 48))),
-          new IR::BFN::Extract(globalVersion, new IR::BFN::BufferRVal(StartLen(480, 32))),
-        }, { },
+        *prim, { },
         { new IR::BFN::Transition(match_t(), 0, parser->start) });
 }
 
@@ -65,12 +73,17 @@ void AddParserMetadataShims::addEgressMetadata(IR::BFN::Parser *parser) {
     auto* globalTimestamp = gen_fieldref(egParserMeta, "global_tstamp");
     auto* globalVersion = gen_fieldref(egParserMeta, "global_ver");
 
+    auto prim = new IR::Vector<IR::BFN::ParserPrimitive>();
+    if (isV1)
+        prim->push_back(new IR::BFN::Extract(alwaysDeparseBit, new IR::BFN::ConstantRVal(1)));
+    prim->push_back(new IR::BFN::Extract(globalTimestamp,
+            new IR::BFN::BufferRVal(StartLen(432, 48))));
+    prim->push_back(new IR::BFN::Extract(globalVersion,
+            new IR::BFN::BufferRVal(StartLen(480, 32))));
+
     parser->start =
       new IR::BFN::ParserState(createThreadName(parser->gress, "$entry_point"), parser->gress,
-        { new IR::BFN::Extract(alwaysDeparseBit, new IR::BFN::ConstantRVal(1)),
-          new IR::BFN::Extract(globalTimestamp, new IR::BFN::BufferRVal(StartLen(432, 48))),
-          new IR::BFN::Extract(globalVersion, new IR::BFN::BufferRVal(StartLen(480, 32))),
-        }, { },
+        *prim, { },
         { new IR::BFN::Transition(match_t(), 0, parser->start) });
 }
 

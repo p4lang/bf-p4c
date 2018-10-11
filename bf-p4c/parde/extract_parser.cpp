@@ -940,7 +940,7 @@ ProcessParde::ProcessParde(const IR::BFN::Pipe* rv, bool useTna) :
         // be happening at this layer anyway.
         new ResolveComputedHeaderStackExpressions(),
         // Add shims for intrinsic metadata.
-        (useTna) ? nullptr : new AddParserMetadataShims(rv),
+        new AddParserMetadataShims(rv, !useTna /* = isV1 */),
         new AddDeparserMetadataShims(rv),
     });
 }

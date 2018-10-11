@@ -12,8 +12,8 @@
 
 class AddParserMetadataShims : public ParserModifier {
  public:
-    explicit AddParserMetadataShims(const IR::BFN::Pipe* pipe)
-            : pipe(pipe) { CHECK_NULL(pipe); }
+    explicit AddParserMetadataShims(const IR::BFN::Pipe* pipe, bool isV1)
+            : pipe(pipe), isV1(isV1) { CHECK_NULL(pipe); }
 
  private:
     bool preorder(IR::BFN::Parser *) override;
@@ -22,6 +22,7 @@ class AddParserMetadataShims : public ParserModifier {
     void addEgressMetadata(IR::BFN::Parser *d);
 
     const IR::BFN::Pipe* pipe;
+    bool isV1;
 };
 
 class AddDeparserMetadataShims : public DeparserModifier {
