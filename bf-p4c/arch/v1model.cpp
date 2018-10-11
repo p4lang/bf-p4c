@@ -1397,16 +1397,31 @@ class ConstructSymbolTable : public Inspector {
         auto mce = node->methodCall->to<IR::MethodCallExpression>();
 
         auto dest = mce->arguments->at(0)->expression;
-        // ignore lower bound
-        auto hi = mce->arguments->at(2);
+        // check hi bound must be 2**W-1
+        auto max_value = mce->arguments->at(2)->expression->to<IR::Constant>()->value;
+        max_value += mpz_class(1);
+        int one_pos = mpz_scan1(max_value.get_mpz_t(), 0);
+        if ((mpz_class(1) << one_pos) != max_value)
+            error("%s: The random declaration %s max size must be a power of two",
+                  node->srcInfo, randName);
+        // check lo bound must be zero
+        auto min_value = mce->arguments->at(1)->expression->to<IR::Constant>()->value;
+        if (min_value != 0)
+            error("%s: The random declaration %s min size must be zero",
+                  node->srcInfo, node);
         auto args = new IR::Vector<IR::Argument>();
-        args->push_back(hi);
 
         auto method = new IR::PathExpression(randName);
         auto member = new IR::Member(method, "get");
         auto call = new IR::MethodCallExpression(node->srcInfo, member, args);
-        auto stmt = new IR::AssignmentStatement(dest, call);
-        structure->_map.emplace(node, stmt);
+        // insert cast
+        auto dest_size = dest->type->to<IR::Type_Bits>()->size;
+        auto dest_type = IR::Type::Bits::get(dest_size);
+        if (one_pos != dest_size)
+            structure->_map.emplace(node,
+                    new IR::AssignmentStatement(dest, new IR::Cast(dest_type, call)));
+        else
+            structure->_map.emplace(node, new IR::AssignmentStatement(dest, call));
     }
 
     void cvtRandomFunction(const IR::MethodCallStatement *node) {

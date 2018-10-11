@@ -63,10 +63,6 @@ struct ProgramStructure : BFN::ProgramStructure {
 
     ordered_map<cstring, TranslationMap> methodcalls;
 
-    // map the resub_md and recirc_md to the user-provided name and type.
-    ordered_map<cstring, cstring> psaPacketPathNames;
-    ordered_map<cstring, const IR::Type *> psaPacketPathTypes;
-
     const IR::Type* bridgedType;
 
     PacketPathInfo resubmit;

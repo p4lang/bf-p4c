@@ -51,6 +51,20 @@ class ExternConverter : public Transform {
     }
 };
 
+class HashConverter : public ExternConverter {
+ public:
+    explicit HashConverter(ProgramStructure* structure)
+            : ExternConverter(structure) { CHECK_NULL(structure); }
+    const IR::Node* postorder(IR::MethodCallExpression* node) override;
+};
+
+class RandomConverter : public ExternConverter {
+ public:
+    explicit RandomConverter(ProgramStructure* structure)
+            : ExternConverter(structure) { CHECK_NULL(structure); }
+    const IR::Node* postorder(IR::MethodCallExpression* node) override;
+};
+
 class ParserConverter : public Transform {
  protected:
     ProgramStructure* structure;
@@ -85,10 +99,17 @@ class ControlConverter : public Transform {
  protected:
     ProgramStructure* structure;
     P4::ClonePathExpressions cloner;
+    template<typename T> const IR::Node* substitute(T* s) {
+        auto* orig = getOriginal<T>();
+        if (structure->_map.count(orig)) {
+            auto result = structure->_map.at(orig);
+            return result; }
+        return s; }
 
  public:
     explicit ControlConverter(ProgramStructure* structure)
         : structure(structure) { CHECK_NULL(structure); }
+    const IR::Node* postorder(IR::MethodCallExpression* node) override;
     const IR::Node* postorder(IR::Declaration_Instance* node) override;
     const IR::Node* postorder(IR::IfStatement* node) override;
     const IR::P4Control* convert(const IR::Node* node) {

@@ -42,10 +42,16 @@ class ControlConverter : public Transform {
  protected:
     ProgramStructure* structure;
     P4::ClonePathExpressions cloner;
+    template<typename T> const IR::Node* substitute(T* s) {
+        auto* orig = getOriginal<T>();
+        if (structure->_map.count(orig)) {
+            auto result = structure->_map.at(orig);
+            return result; }
+        return s; }
 
  public:
     explicit ControlConverter(ProgramStructure* structure)
-    : structure(structure) { CHECK_NULL(structure); }
+        : structure(structure) { CHECK_NULL(structure); }
     const IR::Node* postorder(IR::MethodCallStatement* node) override;
     const IR::Node* postorder(IR::Declaration_Instance* node) override;
     const IR::Node* postorder(IR::Property* node) override;
@@ -91,6 +97,12 @@ class ParserConverter : public Transform {
  protected:
     ProgramStructure* structure;
     P4::ClonePathExpressions cloner;
+    template<typename T> const IR::Node* substitute(T* s) {
+        auto* orig = getOriginal<T>();
+        if (structure->_map.count(orig)) {
+            auto result = structure->_map.at(orig);
+            return result; }
+        return s; }
 
  public:
     explicit ParserConverter(ProgramStructure* structure)

@@ -7,22 +7,44 @@ namespace BFN {
 
 namespace PSA {
 
-const IR::Node* ControlConverter::postorder(IR::Declaration_Instance* node) {
-    auto* orig = getOriginal<IR::Declaration_Instance>();
-    if (structure->_map.count(orig)) {
-        auto result = structure->_map.at(orig);
-        return result; }
-    return node;
+const IR::Node* HashConverter::postorder(IR::MethodCallExpression* node) {
+    auto member = node->method->to<IR::Member>();
+    BUG_CHECK(member->member == "get_hash",
+              "unexpected Hash method %1%", member->member);
+    auto method = new IR::Member(node->srcInfo, member->expr, "get");
+
+    auto args = new IR::Vector<IR::Argument>();
+    auto args_size = node->arguments->size();
+        ERROR_CHECK(args_size == 1 || args_size == 3, "incorrect number of arguments"
+                                                      "to the get_hash() method");
+    if (args_size == 1) {
+        args->push_back(node->arguments->at(0));
+    } else if (args_size == 3) {
+        // tna swapped argument 0 and 1
+        args->push_back(node->arguments->at(1));
+        args->push_back(node->arguments->at(0));
+        args->push_back(node->arguments->at(2));
+    }
+    return new IR::MethodCallExpression(node->srcInfo, method, args);
 }
 
-const IR::Node* ControlConverter::postorder(IR::IfStatement* node) {
-    auto* orig = getOriginal<IR::IfStatement>();
-    if (structure->_map.count(orig)) {
-        LOG1(" delete " << orig);
-        auto result = structure->_map.at(orig);
-        return result; }
-    return node;
+const IR::Node* RandomConverter::postorder(IR::MethodCallExpression* node) {
+    auto member = node->method->to<IR::Member>();
+    BUG_CHECK(member->member == "read",
+              "unexpected Random method %1%", member->member);
+    auto method = new IR::Member(node->srcInfo, member->expr, "get");
+    auto args = new IR::Vector<IR::Argument>();
+    return new IR::MethodCallExpression(node->srcInfo, method, args);
 }
+
+const IR::Node* ControlConverter::postorder(IR::Declaration_Instance* node) {
+    return substitute<IR::Declaration_Instance>(node); }
+
+const IR::Node* ControlConverter::postorder(IR::MethodCallExpression* node) {
+    return substitute<IR::MethodCallExpression>(node); }
+
+const IR::Node* ControlConverter::postorder(IR::IfStatement* node) {
+    return substitute<IR::IfStatement>(node); }
 
 const IR::Node* IngressParserConverter::postorder(IR::P4Parser *node) {
     auto parser = node->apply(cloner);

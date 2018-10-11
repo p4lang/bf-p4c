@@ -516,14 +516,8 @@ const IR::Node *DoInstructionSelection::postorder(IR::Primitive *prim) {
         return new IR::MAU::Instruction(prim->srcInfo, "set", new IR::TempVar(next_type),
                                         new IR::Cast(next_type, hd));
     } else if (prim->name == "Random.get") {
-        auto max_value = prim->operands[1]->to<IR::Constant>()->value;
-        max_value += mpz_class(1);
-        int one_pos = mpz_scan1(max_value.get_mpz_t(), 0);
-        if ((mpz_class(1) << one_pos) != max_value)
-            error("%s: The random declaration %s max size must be a power of two",
-                  prim->srcInfo, prim);
-        auto rn = new IR::MAU::RandomNumber(prim->srcInfo, IR::Type::Bits::get(one_pos));
-        auto next_type = IR::Type::Bits::get(one_pos);
+        auto rn = new IR::MAU::RandomNumber(prim->srcInfo, prim->type);
+        auto next_type = prim->type;
         return new IR::MAU::Instruction(prim->srcInfo, "set", new IR::TempVar(next_type),
                                         new IR::Cast(next_type, rn));
     } else if (prim->name == "invalidate") {

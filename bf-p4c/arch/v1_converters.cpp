@@ -7,52 +7,20 @@ namespace BFN {
 namespace V1 {
 //////////////////////////////////////////////////////////////////////////////////////////////
 
-#define RETURN_TRANSLATED_NODE_IF_FOUND(NAME) do {                           \
-    auto it_##NAME = structure->NAME.find(orig);                    \
-    if (it_##NAME != structure->NAME.end()) {                       \
-        LOG3("Translate " << orig << " to " << it_##NAME->second);  \
-        return it_##NAME->second; }                                 \
-    } while (false)
-
 const IR::Node* ControlConverter::postorder(IR::Declaration_Instance* node) {
-    auto* orig = getOriginal<IR::Declaration_Instance>();
-    if (structure->_map.count(orig)) {
-        auto result = structure->_map.at(orig);
-        return result; }
-    return node;
-}
+    return substitute<IR::Declaration_Instance>(node); }
 
 const IR::Node* ControlConverter::postorder(IR::MethodCallStatement* node) {
-    auto* orig = getOriginal<IR::MethodCallStatement>();
-    if (structure->_map.count(orig)) {
-        auto result = structure->_map.at(orig);
-        return result; }
-    return node;
-}
+    return substitute<IR::MethodCallStatement>(node); }
 
 const IR::Node* ControlConverter::postorder(IR::Property* node) {
-    auto* orig = getOriginal<IR::Property>();
-    if (structure->_map.count(orig)) {
-        auto result = structure->_map.at(orig);
-        return result; }
-    return node;
-}
+    return substitute<IR::Property>(node); }
 
 const IR::Node* ParserConverter::postorder(IR::AssignmentStatement* node) {
-    auto* orig = getOriginal<IR::AssignmentStatement>();
-    if (structure->_map.count(orig)) {
-        auto result = structure->_map.at(orig);
-        return result; }
-    return node;
-}
+    return substitute<IR::AssignmentStatement>(node); }
 
 const IR::Node* ParserConverter::postorder(IR::Member* node) {
-    auto* orig = getOriginal<IR::Member>();
-    if (structure->_map.count(orig)) {
-        auto result = structure->_map.at(orig);
-        return result; }
-    return node;
-}
+    return substitute<IR::Member>(node); }
 
 const IR::Node* IngressControlConverter::preorder(IR::P4Control* node) {
     auto params = node->type->getApplyParameters();

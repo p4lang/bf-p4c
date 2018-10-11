@@ -939,7 +939,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "the packing is too complicated .* speciality action data combined with other action data"
   extensions/p4_tests/p4_14/test_config_96_hash_data.p4
-  extensions/p4_tests/p4_14/test_config_157_random_number_generator.p4
   extensions/p4_tests/p4_14/test_config_295_polynomial_hash.p4
   extensions/p4_tests/p4_14/test_config_205_modify_field_from_hash.p4
   extensions/p4_tests/p4_14/hash_calculation_max_size.p4
@@ -1217,14 +1216,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_170_stateful_selection_table_update.p4
 )
 
-
-# psa translation bug
-p4c_add_xfail_reason("tofino"
-  "extern .* does not have method matching this call"
-  testdata/p4_16_samples/psa-hash.p4
-  testdata/p4_16_samples/psa-random.p4
-)
-
 # psa.p4 bug, frontend failure
 p4c_add_xfail_reason("tofino"
   "Action parameter color has a type which is not bit<> or int<> or bool"
@@ -1346,7 +1337,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "The random declaration Random.get max size must be a power of two"
+  "The random declaration .* max size must be a power of two"
   testdata/p4_16_samples/issue1517-bmv2.p4
 )
 

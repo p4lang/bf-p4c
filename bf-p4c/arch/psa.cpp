@@ -9,6 +9,7 @@
 #include "bridge_metadata.h"
 #include "midend/copyStructures.h"
 #include "psa_program_structure.h"
+#include "psa_converters.h"
 
 namespace BFN {
 
@@ -481,6 +482,13 @@ class TranslateProgram : public Inspector {
         structure->_map.emplace(node, declarations);
     }
 
+    void cvtRandom(const IR::Declaration_Instance* node) {
+        // TODO: check min/max of random, can only support 0 ~ 2**w-1 on tofino
+        auto args = new IR::Vector<IR::Argument>();
+        auto inst = new IR::Declaration_Instance(node->name, node->type, args);
+        structure->_map.emplace(node, inst);
+    }
+
     // top level PSA_Switch could instantiate anonymous instances of
     // IngressPipeline and EgressPipeline
     void process_package_instance(const IR::Type_Specialized* tp) {
@@ -518,6 +526,8 @@ class TranslateProgram : public Inspector {
             } else if (name->path->name == "IngressPipeline" ||
                        name->path->name == "EgressPipeline") {
                 process_package_instance(ts);
+            } else if (name->path->name == "Random") {
+                cvtRandom(node);
             }
         } else if (auto typeName = node->type->to<IR::Type_Name>()) {
             auto name = typeName->path->name;
@@ -551,6 +561,13 @@ class TranslateProgram : public Inspector {
         auto mi = P4::MethodInstance::resolve(node, refMap, typeMap);
         if (auto em = mi->to<P4::ExternMethod>()) {
             cstring name = em->actualExternType->name;
+            if (name == "Hash") {
+                HashConverter conv(structure);
+                structure->_map.emplace(node, node->apply(conv));
+            } else if (name == "Random") {
+                RandomConverter conv(structure);
+                structure->_map.emplace(node, node->apply(conv));
+            }
             addExternMethodCall(name, node);
         } else if (mi->is<P4::ExternFunction>()) {
             WARNING("extern function translation is not supported");

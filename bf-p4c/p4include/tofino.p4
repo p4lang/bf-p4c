@@ -517,7 +517,7 @@ extern Random<W> {
 
     /// Return a random number with uniform distribution.
     /// @return : random number between 0 and 2**W - 1
-    W get(W max);
+    W get();
 }
 
 // -----------------------------------------------------------------------------
