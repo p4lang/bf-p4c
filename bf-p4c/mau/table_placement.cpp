@@ -124,7 +124,7 @@ struct TablePlacement::GroupPlace {
             if (depth <= p->depth)
                 depth = p->depth+1;
             ancestors |= p->ancestors; }
-        LOG4("new seq " << s->id << " depth=" << depth << " anc=" << ancestors);
+        LOG4("    new seq " << s->id << " depth=" << depth << " anc=" << ancestors);
         work.insert(this);
         work -= ancestors; }
     void finish(ordered_set<const GroupPlace*> &work) const {
@@ -227,12 +227,12 @@ void TablePlacement::GroupPlace::finish_if_placed(
     ordered_set<const GroupPlace*> &work, const Placed *pl
 ) const {
     if (pl->is_fully_placed(seq)) {
-        LOG4("Finished a sequence (" << seq->id << ")");
+        LOG4("    Finished a sequence (" << seq->id << ")");
         finish(work);
         for (auto p : parents)
             p->finish_if_placed(work, pl);
     } else {
-        LOG4("seq " << seq->id << " not finished"); }
+        LOG4("    seq " << seq->id << " not finished"); }
 }
 
 static StageUseEstimate get_current_stage_use(const TablePlacement::Placed *pl) {
@@ -302,7 +302,7 @@ bool TablePlacement::Placed::gateway_merge(ordered_set<const IR::MAU::Table *> &
         }
     }
     if (match) {
-        LOG2(" - making " << name << " gateway on " << match->name);
+        LOG2("  - making " << name << " gateway on " << match->name);
         name = match->name;
         gw = table;
         table = match;
@@ -383,7 +383,7 @@ bool TablePlacement::shrink_estimate(Placed *next, const Placed *done,
     else
         tcams_left--;
 
-    LOG3(" - reducing to " << next->entries << " of " << t->name << " in stage " << next->stage);
+    LOG3("  - reducing to " << next->entries << " of " << t->name << " in stage " << next->stage);
     bool ixbar_fit = try_alloc_ixbar(next, done, resources);
     if (!ixbar_fit) {
         ERROR("IXBar Allocation error after previous allocation?");
@@ -413,7 +413,7 @@ bool TablePlacement::try_alloc_ixbar(TablePlacement::Placed *next,
         resources->clear_ixbar();
         error_message = "The table " + next->table->name + " could not fit within a single "
                         "input crossbar in an MAU stage";
-        LOG3(error_message);
+        LOG3("    " << error_message);
         return false;
     }
 
@@ -444,7 +444,7 @@ bool TablePlacement::try_alloc_mem(Placed *next, const Placed *done,
         error_message = "The table " + next->table->name + " could not fit in stage " +
                         std::to_string(next->stage) + " with " + std::to_string(next->entries)
                         + " entries";
-        LOG3(error_message);
+        LOG3("    " << error_message);
         resources->memuse.clear();
         for (auto *prev_resource : prev_resources) {
             prev_resource->memuse.clear();
@@ -474,7 +474,7 @@ bool TablePlacement::try_alloc_format(TablePlacement::Placed *next, TableResourc
         resources->table_format.clear();
         error_message = "The selected pack format for table " + next->table->name + " could "
                         "not fit given the input xbar allocation";
-        LOG3(error_message);
+        LOG3("    " << error_message);
         return false;
     }
     return true;
@@ -498,7 +498,7 @@ bool TablePlacement::try_alloc_adb(Placed *next, const Placed *done,
                                            *resources)) {
         error_message = "The table " + next->table->name + " could not fit in within the "
                         "action data bus";
-        LOG3(error_message);
+        LOG3("    " << error_message);
         resources->action_data_xbar.clear();
         return false;
     }
@@ -535,7 +535,7 @@ bool TablePlacement::try_alloc_imem(Placed *next, const Placed *done,
     if (!imem.allocate_imem(next->table, resources->instr_mem, phv, gw_linked)) {
         error_message = "The table " + next->table->name + " could not fit within the "
                         "instruction memory";
-        LOG3(error_message);
+        LOG3("    " << error_message);
         resources->instr_mem.clear();
         return false;
     }
@@ -653,7 +653,7 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, const Placed *done,
             set_entries -= p->entries;
             prev_stage_tables++;
             if (p->stage == rv->stage) {
-                LOG2("Cannot place multiple sections of an individual table in the same stage");
+                LOG2("  Cannot place multiple sections of an individual table in the same stage");
                 rv->stage++;
                 continue;
             }
@@ -662,14 +662,14 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, const Placed *done,
                 continue;
             if (deps->happens_before(p->table, rv->table) && !mutex.action(p->table, rv->table)) {
                 rv->stage++;
-                LOG2(" - dependency between " << p->table->name << " and table advances stage");
+                LOG2("  - dependency between " << p->table->name << " and table advances stage");
             } else if (rv->gw && deps->happens_before(p->table, rv->gw)) {
                 rv->stage++;
-                LOG2(" - dependency between " << p->table->name << " and gateway advances stage");
+                LOG2("  - dependency between " << p->table->name << " and gateway advances stage");
             } else if (deps->container_conflict(p->table, rv->table)) {
                 if (!ignoreContainerConflicts) {
                    rv->stage++;
-                   LOG2(" - action dependency between " << p->table->name << " and table " <<
+                   LOG2("  - action dependency between " << p->table->name << " and table " <<
                         rv->table->name << " due to PHV allocation advances stage to " <<
                         rv->stage);
                 }
@@ -739,7 +739,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv, const IR::MA
     }
 
 
-    LOG3("Initial stage is " << rv->stage);
+    LOG3("  Initial stage is " << rv->stage);
 
     min_placed->entries = 1;
 
@@ -773,26 +773,26 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv, const IR::MA
                                    stage_current.shared_attached);
         if (t->for_dleft() && set_entries > rv->entries) {
             advance_to_next_stage = true;
-            LOG3("Cannot split a dleft hash table");
+            LOG3("    Cannot split a dleft hash table");
         }
 
         // FIXME: This is not the appropriate way to check if a table is a single gateway
 
         if (!pick_layout_option(min_placed, done, min_resources, stage_current.shared_attached)) {
             advance_to_next_stage = true;
-            LOG3("Min Use ixbar allocation did not fit");
+            LOG3("    Min Use ixbar allocation did not fit");
         }
 
         if (!pick_layout_option(rv, done, resources, stage_current.shared_attached)) {
             advance_to_next_stage = true;
-            LOG3("Table Use ixbar allocation did not fit");
+            LOG3("    Table Use ixbar allocation did not fit");
         }
 
         if (!advance_to_next_stage
             && (!(min_placed->use + stage_current <= avail)
                 || !try_alloc_mem(min_placed, done, min_resources, prev_resources))) {
             advance_to_next_stage = true;
-            LOG3("Min use of memory allocation did not fit");
+            LOG3("    Min use of memory allocation did not fit");
         }
 
         // FIXME: Min Use vs. Normal Use may be very different, have to fold this into
@@ -800,25 +800,25 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv, const IR::MA
         if (!advance_to_next_stage &&
             !try_alloc_adb(min_placed, done, min_resources)) {
             advance_to_next_stage = true;
-            LOG3("Min use of action data bus did not fit");
+            LOG3("    Min use of action data bus did not fit");
         }
 
         if (!advance_to_next_stage &&
             !try_alloc_adb(rv, done, resources)) {
             advance_to_next_stage = true;
-            LOG3("Normal use of action data bus did not fit");
+            LOG3("    Normal use of action data bus did not fit");
         }
 
         if (!advance_to_next_stage &&
             !try_alloc_imem(min_placed, done, min_resources)) {
             advance_to_next_stage = true;
-            LOG3("Min use of instruction memory did not fit");
+            LOG3("    Min use of instruction memory did not fit");
         }
 
         if (!advance_to_next_stage &&
             !try_alloc_imem(rv, done, resources)) {
             advance_to_next_stage = true;
-            LOG3("Normal use of instruction memory did not fit");
+            LOG3("    Normal use of instruction memory did not fit");
         }
 
         if (done && rv->stage == done->stage) {
@@ -876,7 +876,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv, const IR::MA
         resources->action_format = *format;
     }
 
-    LOG3("Selected stage: " << rv->stage << "    Furthest stage: " << furthest_stage);
+    LOG3("  Selected stage: " << rv->stage << "    Furthest stage: " << furthest_stage);
     if (rv->stage > furthest_stage) {
         if (error_message != "")
             BUG("Could not place table : %s", error_message);
@@ -893,7 +893,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv, const IR::MA
     }
 
     assert((rv->logical_id / StageUse::MAX_LOGICAL_IDS) == rv->stage);
-    LOG2("try_place_table returning " << rv->entries << " of " << rv->name <<
+    LOG2("  try_place_table returning " << rv->entries << " of " << rv->name <<
          " in stage " << rv->stage << (rv->need_more ? " (need more)" : ""));
     int i = 0;
     for (auto *p = done; p && p->stage == rv->stage; p = p->prev, ++i) {
@@ -1083,7 +1083,7 @@ std::ostream &operator<<(std::ostream &out, const DumpSeqTables &s) {
 }
 
 IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
-    LOG1("table placement starting");
+    LOG1("table placement starting " << pipe->name);
     LOG3(TableTree("ingress", pipe->thread[INGRESS].mau) <<
          TableTree("egress", pipe->thread[EGRESS].mau) <<
          TableTree("ghost", pipe->ghost_thread) );
@@ -1110,7 +1110,7 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
         safe_vector<const Placed *> trial;
         for (auto it = work.begin(); it != work.end();) {
             auto grp = *it;
-            LOG4("group " << grp->seq->id << " depth=" << grp->depth);
+            LOG4("  group " << grp->seq->id << " depth=" << grp->depth);
             if (placed && placed->placed.contains(grp->info.tables)) {
                 BUG("group %d already done?", grp->seq->id);
                 it = work.erase(it);
@@ -1122,16 +1122,16 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
             bool done = true;
             bitvec seq_placed;
             for (auto t : grp->seq->tables) {
-                LOG3("Group table: " << t->name);
+                LOG3("  Group table: " << t->name);
             }
             for (auto t : grp->seq->tables) {
                 ++idx;
                 if (placed && placed->is_placed(t)) {
                     seq_placed[idx] = true;
-                    LOG3(" - skipping " << t->name << " as its already done");
+                    LOG3("    - skipping " << t->name << " as its already done");
                     continue; }
                 if (grp->seq->deps[idx] - seq_placed) {
-                    LOG3(" - skipping " << t->name << " as its dependent on: " <<
+                    LOG3("    - skipping " << t->name << " as its dependent on: " <<
                          DumpSeqTables(grp->seq, grp->seq->deps[idx] - seq_placed));
                     done = false;
                     continue; }
@@ -1141,7 +1141,7 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                     if (deps->happens_before_control(t, grp_tbl) &&
                         (!placed || !(placed->is_placed(grp_tbl)))) {
                         should_skip = true;
-                        LOG1(" - skipping " << t->name << " due to in-sequence control" <<
+                        LOG1("  - skipping " << t->name << " due to in-sequence control" <<
                             " dependence on " << grp_tbl->name);
                         break;
                     }
@@ -1152,11 +1152,7 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                 auto pl_vec = try_place_table(t, placed, current);
                 if (pl_vec.empty())
                     BUG("Can't find a table to place");
-
-                for (auto pl : pl_vec) {
-                    LOG3("Pl vector: " << pl->name);
-                }
-
+                LOG3("    Pl vector: " << pl_vec);
                 for (auto pl : pl_vec) {
                     pl->group = grp;
                     bool defer = false;
@@ -1164,7 +1160,7 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                         if (t == pl->table)
                             continue;
                         if (!mutex(t, pl->table)) {
-                            LOG3(" - skipping " << pl->name << " as it is not mutually "
+                            LOG3("  - skipping " << pl->name << " as it is not mutually "
                                  "exclusive with partly placed " << t->name);
                             defer = true;
                             break;
@@ -1204,14 +1200,16 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
     placement = placed;
     table_placed.clear();
     for (auto p = placement; p; p = p->prev) {
-        LOG1("Table name is " << p->name << " with logical id " << p->logical_id);
+        LOG2("  Table " << p->name << " logical id 0x" << hex(p->logical_id) <<
+             " entries=" << p->entries);
         assert(p->name == p->table->name);
         assert(p->need_more || table_placed.count(p->name) == 0);
         table_placed.emplace_hint(table_placed.find(p->name), p->name, p);
         if (p->gw) {
+            LOG2("  Gateway " << p->gw->name << " is also logical id 0x" << hex(p->logical_id));
             assert(p->need_more || table_placed.count(p->gw->name) == 0);
             table_placed.emplace_hint(table_placed.find(p->gw->name), p->gw->name, p); } }
-    LOG1("Finished table placement");
+    LOG1("Finished table placement decisions " << pipe->name);
     return pipe;
 }
 
@@ -1251,7 +1249,7 @@ IR::Node *TablePlacement::postorder(IR::BFN::Pipe *pipe) {
     tblInfo.clear();
     seqInfo.clear();
     table_placed.clear();
-    LOG3("table placement completed");
+    LOG3("table placement completed " << pipe->name);
     LOG3(TableTree("ingress", pipe->thread[INGRESS].mau) <<
          TableTree("egress", pipe->thread[EGRESS].mau) <<
          TableTree("ghost", pipe->ghost_thread));
