@@ -91,7 +91,11 @@ class Field {
     bool            metadata;
 
     /// True if this Field is intrinsic.
-    bool            intrinsic;
+    bool            intrinsic_i = false;
+
+    /// True if this field needs to invalid when reaching the deparser and is not written by the
+    /// user (on Tofino).
+    bool            invalidate_from_arch_i = false;
 
     /// True if this Field is metadata bridged from ingress to egress.
     bool            bridged = false;
@@ -273,8 +277,10 @@ class Field {
     void set_is_checksummed(bool b)                        { is_checksummed_i = b; }
     bool is_digest() const                                 { return is_digest_i; }
     void set_is_digest(bool b)                             { is_digest_i = b; }
-    bool is_intrinsic() const                              { return intrinsic; }
-    void set_is_intrinsic(bool b)                          { intrinsic = b; }
+    bool is_intrinsic() const                              { return intrinsic_i; }
+    void set_intrinsic(bool b)                             { intrinsic_i = b; }
+    bool is_invalidate_from_arch() const                   { return invalidate_from_arch_i; }
+    void set_invalidate_from_arch(bool b)                  { invalidate_from_arch_i = b; }
 
     // @returns the set of MAU operations on this field.
     const safe_vector<FieldOperation>& operations() const   { return  operations_i; }

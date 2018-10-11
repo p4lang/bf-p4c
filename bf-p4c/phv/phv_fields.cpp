@@ -986,7 +986,7 @@ struct ComputeFieldAlignments : public Inspector {
 };
 
 
-/** Mark certain metadata fields as intrinsic so that we don't initilize them
+/** Mark certain intrinsic metadata fields as invalidate_from_arch so that we don't initialize them
  * in the parser (see ComputeInitZeroContainers pass in lower_parser.cpp)
  * When compiling a P4_14 program, the P4_14 spec says:
  *
@@ -1025,18 +1025,41 @@ class AddIntrinsicConstraints : public Inspector {
     }
 
     profile_t init_apply(const IR::Node* root) override {
-        LOG1("BEGIN AddIntrinsicConstraints");
         for (auto& f : phv) {
             for (auto& kv : invalidate_fields_from_arch()) {
                 std::string f_name(f.name.c_str());
                 if (f_name.find(kv.first) != std::string::npos
                     && f_name.find(kv.second) != std::string::npos) {
-                    f.set_is_intrinsic(true);
+                    f.set_intrinsic(true);
+                    f.set_invalidate_from_arch(true);
+                    LOG1("\tMarking field " << f.name << " as intrinsic");
+                    LOG1("\tMarking field " << f.name << " as invalidate from arch");
                 }
             }
         }
-        LOG1("END AddIntrinsicConstraints");
         return Inspector::init_apply(root);
+    }
+
+    bool preorder(const IR::BFN::ParserState* p) override {
+        LOG1("Parser state: " << p->name);
+        if (!p->name.endsWith("$ingress_metadata") && !p->name.endsWith("$egress_metadata") &&
+                !p->name.endsWith("$entry_point"))
+            return true;
+        for (auto stmt : p->statements) {
+            const auto* e = stmt->to<IR::BFN::Extract>();
+            if (!e) continue;
+            const auto* fieldLVal = e->dest->to<IR::BFN::FieldLVal>();
+            if (!fieldLVal) continue;
+            auto* f = phv.field(fieldLVal->field);
+            if (!f) continue;
+            if (f->name.endsWith("$always_deparse") ||
+                    f->name.endsWith("^bridged_metadata_indicator"))
+                continue;
+            if (f->pov) continue;
+            f->set_intrinsic(true);
+            LOG1("\tMarking field " << f->name << " as intrinsic");
+        }
+        return true;
     }
 
  public:
@@ -1399,7 +1422,7 @@ std::ostream &PHV::operator<<(std::ostream &out, const PHV::Field &field) {
         out << " ^x";
     if (field.bridged) out << " bridge";
     if (field.metadata) out << " meta";
-    if (field.intrinsic) out << " intrinsic";
+    if (field.is_intrinsic()) out << " intrinsic";
     if (field.mirror_field_list.member_field)
         out << " mirror%{"
             << field.mirror_field_list.member_field->id
@@ -1491,7 +1514,7 @@ std::ostream &operator<<(std::ostream &out, const PHV::FieldSlice& fs) {
         out << " ^" << fs.validContainerRange();
     if (field.bridged) out << " bridge";
     if (field.metadata) out << " meta";
-    if (field.intrinsic) out << " intrinsic";
+    if (field.is_intrinsic()) out << " intrinsic";
     if (field.mirror_field_list.member_field)
         out << " mirror%{"
             << field.mirror_field_list.member_field->id

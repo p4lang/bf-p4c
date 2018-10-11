@@ -2293,14 +2293,14 @@ class ComputeMultiwriteContainers : public ParserModifier {
 class ComputeInitZeroContainers : public ParserModifier {
     void postorder(IR::BFN::LoweredParser* parser) override {
         ordered_set<PHV::Container> zero_init_containers;
-        ordered_set<PHV::Container> intrinsic_containers;
+        ordered_set<PHV::Container> intrinsic_invalidate_containers;
         for (const auto& f : phv) {
             if (f.gress != parser->gress) continue;
 
-            if (f.is_intrinsic()) {
-                // Track the allocated containers for intrinsic fields
+            if (f.is_invalidate_from_arch()) {
+                // Track the allocated containers for fields that are invalidate_from_arch
                 f.foreach_alloc([&] (const PHV::Field::alloc_slice& alloc) {
-                    intrinsic_containers.insert(alloc.container);
+                    intrinsic_invalidate_containers.insert(alloc.container);
                 });
                 continue;
             }
@@ -2319,9 +2319,9 @@ class ComputeInitZeroContainers : public ParserModifier {
 
 
         for (auto& c : zero_init_containers) {
-            // Containers for intrinsic metadata should be left uninitialized,
+            // Containers for intrinsic invalidate_from_arch metadata should be left uninitialized,
             // therefore skip zero-initialization
-            if (!intrinsic_containers.count(c))
+            if (!intrinsic_invalidate_containers.count(c))
                 parser->initZeroContainers.push_back(new IR::BFN::ContainerRef(c));
         }
 
