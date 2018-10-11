@@ -1431,13 +1431,30 @@ void TableFormat::ternary_version(size_t &index) {
     index++;
 }
 
-/** Reservation of ternary match tables.  Allocate the group and midbyte
+/**
+ * Reservation of ternary match tables.  Allocate the group and midbyte config.
+ *
+ * There is some specific constraints on tables with multiple ranges, due to the multirange
+ * distribution described in section 6.3.9.2 Multirange distributor:
+ *     1. If a range key is allocated in multiple TCAMs, then no other range fields can
+ *        appear in that TCAM
+ *     2. If multiple TCAMs contain a single range match, then TCAMs between these
+ *        two TCAM in hardware cannot contain any range matches.
+ *
+ * The reason for this is that the multirange distribution has to happen on an individual
+ * key by key basis.  By breaking these constraints, you are breaking these restrictions on
+ * multirange distribution.
+ *
+ * The compiler currently implements a tighter set of constraints:
+ *     1. Each TCAM can at most have only one range field
+ *     2. TCAMs with split range fields are contiguous.
  */
 bool TableFormat::allocate_all_ternary_match() {
     bitvec used_groups;
     std::map<int, bitvec> dirtcam;
     bitvec used_midbytes;
     std::map<int, std::pair<bool, bool>> midbyte_lo_hi;
+    std::map<int, int> range_indexes;
 
     for (auto &byte : match_ixbar.use) {
         if (byte.loc.byte == IXBar::TERNARY_BYTES_PER_GROUP) {
@@ -1454,6 +1471,9 @@ bool TableFormat::allocate_all_ternary_match() {
         } else {
             used_groups.setbit(byte.loc.group);
             initialize_dirtcam_value(dirtcam[byte.loc.group], byte);
+            if (byte.is_range()) {
+                range_indexes[byte.loc.group] = byte.range_index;
+            }
         }
     }
 
@@ -1461,8 +1481,20 @@ bool TableFormat::allocate_all_ternary_match() {
     for (auto group : used_groups) {
         Use::TCAM_use tcam;
         tcam.set_group(group, dirtcam.at(group));
+        if (range_indexes.count(group)) {
+            tcam.range_index = range_indexes.at(group);
+        }
         use->tcam_use.push_back(tcam);
     }
+
+    // In order to maintain that split ranges are continuous
+    std::sort(use->tcam_use.begin(), use->tcam_use.end(),
+              [](const Use::TCAM_use &a, const Use::TCAM_use &b) {
+        int t;
+        if ((t == a.range_index - b.range_index) != 0)
+            return t > 0;
+        return a.group < b.group;
+    });
 
     size_t index = 0;
     bitvec done_midbytes;

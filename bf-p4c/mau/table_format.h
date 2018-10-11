@@ -95,6 +95,7 @@ struct TableFormat {
             void set_group(int _group, bitvec _dirtcam);
             void set_midbyte(int _byte_group, int _byte_config);
 
+            int range_index = -1;
             TCAM_use() {}
         };
 

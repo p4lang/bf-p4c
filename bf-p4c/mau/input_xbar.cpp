@@ -549,6 +549,10 @@ void IXBar::calculate_found(safe_vector<IXBar::Use::Byte *> &unalloced,
                 if (!ternary && violates_hash_constraints(order, hash_dist, p.group, p.byte)) {
                     continue;
                 }
+                if (need->is_range() && order[p.group].range_set()
+                    && order[p.group].range_index != need->range_index)
+                    continue;
+
                 if (!(byte_mask & (1U << p.byte)))
                     continue;
                 order[p.group].found[p.byte] = true;
@@ -619,18 +623,23 @@ void IXBar::found_bytes(grp_use *grp, safe_vector<IXBar::Use::Byte *> &unalloced
         int match_bytes_added = need.is_spec(ATCAM_DOUBLE) ? 2 : 1;
         if (match_bytes_placed + match_bytes_added > total_match_bytes)
             continue;
+        if (need.is_range() && grp->range_set() && need.range_index != grp->range_index)
+            continue;
 
         for (auto &p : Values(fields.equal_range(need.name))) {
             if (ternary && p.byte == TERNARY_BYTES_PER_GROUP)
                 continue;
+
 
             if ((grp->group == p.group) && (use[p.group][p.byte].second == need.lo)) {
                 if (!grp->found.getbit(p.byte))
                     continue;
                 if (!ternary && !grp->hash_open[p.byte / 8])
                     continue;
+
                 allocate_byte(&grp->found, unalloced, nullptr, need, p.group, p.byte, i,
-                              found_bytes, ixbar_bytes_placed, match_bytes_placed, search_bus);
+                              found_bytes, ixbar_bytes_placed, match_bytes_placed, search_bus,
+                              &grp->range_index);
                 break;
             }
         }
@@ -661,7 +670,8 @@ void IXBar::found_mid_bytes(mid_byte_use *mb_grp, safe_vector<IXBar::Use::Byte *
                 continue;
             if ((mb_grp->group == p.group/2) && (byte_group_use[p.group/2].second == need.lo)) {
                 allocate_byte(nullptr, unalloced, nullptr, need, p.group, p.byte, i,
-                               found_bytes, ixbar_bytes_placed, match_bytes_placed, search_bus);
+                              found_bytes, ixbar_bytes_placed, match_bytes_placed, search_bus,
+                              nullptr);
                 mb_grp->found = false;
                 if (need.bit_use.getslice(4, 4).popcount() == 0 ||
                     need.bit_use.getslice(0, 4).popcount() > 0)
@@ -696,6 +706,8 @@ void IXBar::free_bytes(grp_use *grp, safe_vector<IXBar::Use::Byte *> &unalloced,
         int match_bytes_added = need.is_spec(ATCAM_DOUBLE) ? 2 : 1;
         if (match_bytes_placed + match_bytes_added > total_match_bytes)
             continue;
+        if (need.is_range() && grp->range_set() && need.range_index != grp->range_index)
+            continue;
 
         int chosen_byte = -1;
         bool found = false;
@@ -705,7 +717,7 @@ void IXBar::free_bytes(grp_use *grp, safe_vector<IXBar::Use::Byte *> &unalloced,
             }
 
             allocate_byte(&grp->free, unalloced, &alloced, need, grp->group, byte, i, free_bytes,
-                          ixbar_bytes_placed, match_bytes_placed, search_bus);
+                          ixbar_bytes_placed, match_bytes_placed, search_bus, &grp->range_index);
             chosen_byte = byte;
             found = true;
             break;
@@ -747,7 +759,8 @@ void IXBar::free_mid_bytes(mid_byte_use *mb_grp, safe_vector<IXBar::Use::Byte *>
                 need.bit_use.getslice(0, 4).popcount() > 0) continue;
             if (align_flags[align & 3] & need.flags) continue;
             allocate_byte(nullptr, unalloced, &alloced, need, mb_grp->group * 2, 5, i,
-                               free_bytes, ixbar_bytes_placed, match_bytes_placed, search_bus);
+                          free_bytes, ixbar_bytes_placed, match_bytes_placed, search_bus,
+                          nullptr);
             mb_grp->free = false;
             version_placed = true;
         }
@@ -764,7 +777,7 @@ void IXBar::free_mid_bytes(mid_byte_use *mb_grp, safe_vector<IXBar::Use::Byte *>
         if (align_flags[align & 3] & need.flags) continue;
         allocate_byte(nullptr, unalloced, &alloced, need, mb_grp->group * 2,
                       bytes_per_group(true), i, free_bytes, ixbar_bytes_placed,
-                      match_bytes_placed, search_bus);
+                      match_bytes_placed, search_bus, nullptr);
         mb_grp->free = false;
         if (need.bit_use.getslice(4, 4).popcount() == 0 ||
             need.bit_use.getslice(0, 4).popcount() > 0)
@@ -781,7 +794,7 @@ void IXBar::free_mid_bytes(mid_byte_use *mb_grp, safe_vector<IXBar::Use::Byte *>
 void IXBar::allocate_byte(bitvec *bv, safe_vector<Use::Byte *> &unalloced,
                           safe_vector<Use::Byte *> *alloced, Use::Byte &need, int group, int byte,
                           size_t &index, int &avail_bytes, int &ixbar_bytes_placed,
-                          int &match_bytes_placed, int search_bus) {
+                          int &match_bytes_placed, int search_bus, int *range_index) {
     need.loc.group = group;
     need.loc.byte = byte;
     need.search_bus = search_bus;
@@ -798,6 +811,10 @@ void IXBar::allocate_byte(bitvec *bv, safe_vector<Use::Byte *> &unalloced,
         match_bytes_placed += 2;
     else
         match_bytes_placed++;
+
+    if (need.is_range() && range_index) {
+        *range_index = need.range_index;
+    }
 }
 
 /* When all bytes of the current table have been given a placement, this function fills out
@@ -847,6 +864,12 @@ void IXBar::setup_byte_vectors(safe_vector<IXBar::Use::Byte> &alloc_use, bool te
         std::sort(alloc_use.begin(), alloc_use.end(),
                   [=](const Use::Byte &a, const Use::Byte &b) {
             int t;
+            if (a.is_range() && !b.is_range())
+                return true;
+            if (!a.is_range() && b.is_range())
+                return false;
+            if ((t = a.range_index - b.range_index) != 0)
+                return t < 0;
             if ((t = static_cast<size_t>(a.flags) - static_cast<size_t>(b.flags)) != 0)
                 return t > 0;
             return a < b;
@@ -1083,7 +1106,7 @@ static void add_use(IXBar::ContByteConversion &map_alloc, const PHV::Field *fiel
                     const PhvInfo &phv, boost::optional<cstring> aliasSourceName,
                     const le_bitrange *bits = nullptr, int flags = 0,
                     IXBar::byte_type_t byte_type = IXBar::NO_BYTE_TYPE,
-                    unsigned extra_align = 0) {
+                    unsigned extra_align = 0, int range_index = 0) {
     bool ok = false;
     int index = 0;
     // FIXME: This will currently not work before PHV allocation, because the foreach_byte
@@ -1118,6 +1141,7 @@ static void add_use(IXBar::ContByteConversion &map_alloc, const PHV::Field *fiel
         }
 
         if (byte_type == IXBar::RANGE) {
+            byte.range_index = range_index;
             if ((sl.container_bit % 8) < 4) {
                 byte.set_spec(IXBar::RANGE_LO);
                 map_alloc[byte].push_back(fi);
@@ -1172,16 +1196,15 @@ IXBar::hash_matrix_reqs IXBar::match_hash_reqs(const LayoutOption *lo,
    match tables, selectors, and hash distribution */
 void IXBar::field_management(ContByteConversion &map_alloc,
         safe_vector<PHV::FieldSlice> &field_list_order, const IR::Expression *field,
-        std::map<cstring, bitvec> &fields_needed, cstring name, bool hash_dist, const PhvInfo &phv,
-        bool is_atcam, bool partition) {
+        std::map<cstring, bitvec> &fields_needed, cstring name, const PhvInfo &phv,
+        KeyInfo &ki) {
     const PHV::Field *finfo = nullptr;
     le_bitrange bits = { };
     if (auto list = field->to<IR::ListExpression>()) {
-        if (!hash_dist)
+        if (!ki.hash_dist)
             BUG("A field list is somehow contained within the reads in table %s", name);
         for (auto comp : list->components)
-             field_management(map_alloc, field_list_order, comp, fields_needed, name, hash_dist,
-                              phv, is_atcam, partition);
+             field_management(map_alloc, field_list_order, comp, fields_needed, name, phv, ki);
         return;
     }
     if (field->is<IR::Mask>())
@@ -1189,8 +1212,8 @@ void IXBar::field_management(ContByteConversion &map_alloc,
 
     byte_type_t byte_type = NO_BYTE_TYPE;
     if (auto read = field->to<IR::MAU::InputXBarRead>()) {
-        if (is_atcam) {
-            if (partition != read->partition_index)
+        if (ki.is_atcam) {
+            if (ki.partition != read->partition_index)
                 return;
             else if (read->partition_index)
                 byte_type = PARTITION_INDEX;
@@ -1217,7 +1240,10 @@ void IXBar::field_management(ContByteConversion &map_alloc,
         fields_needed[finfo->name] = field_bits;
     }
     field_list_order.emplace_back(finfo, bits);
-    add_use(map_alloc, finfo, phv, aliasSourceName, &bits, 0, byte_type);
+    add_use(map_alloc, finfo, phv, aliasSourceName, &bits, 0, byte_type, 0, ki.range_index);
+    if (byte_type == RANGE) {
+        ki.range_index++;
+    }
 }
 
 /** In order to prevent some overlay bugs by the driver, this guarantees that if a table matches
@@ -1288,11 +1314,12 @@ Visitor::profile_t IXBar::FindSaluSources::init_apply(const IR::Node *root) {
     if (!tbl->for_dleft() || tbl->match_key.empty())
         return rv;
     dleft = true;
+    KeyInfo ki;
     for (auto read : tbl->match_key) {
         if (!read->for_dleft())
             continue;
         self.field_management(map_alloc, field_list_order, read->expr, fields_needed,
-                              tbl->name, false, phv);
+                              tbl->name, phv, ki);
     }
     return rv;
 }
@@ -1309,9 +1336,9 @@ bool IXBar::FindSaluSources::preorder(const IR::MAU::SaluAction *a) {
 bool IXBar::FindSaluSources::preorder(const IR::Expression *e) {
     boost::optional<cstring> aliasSourceName = phv.get_alias_name(e);
     le_bitrange bits;
+    KeyInfo ki;
     if (auto *finfo = phv.field(e, &bits)) {
-        self.field_management(map_alloc, field_list_order, e, fields_needed, tbl->name, false,
-                              phv);
+        self.field_management(map_alloc, field_list_order, e, fields_needed, tbl->name, phv, ki);
         phv_sources.insert(std::make_pair(finfo, bits));
         return false;
     }
@@ -1332,12 +1359,13 @@ bool IXBar::allocMatch(bool ternary, const IR::MAU::Table *tbl,
     if (tbl->match_key.empty()) return true;
     ContByteConversion map_alloc;
     std::map<cstring, bitvec> fields_needed;
+    KeyInfo ki;
+    ki.is_atcam = tbl->layout.atcam;
     for (auto ixbar_read : tbl->match_key) {
         if (!ixbar_read->for_match())
             continue;
         field_management(map_alloc, alloc.field_list_order, ixbar_read, fields_needed,
-                         tbl->name, false, phv,
-                         tbl->layout.atcam);
+                         tbl->name, phv, ki);
     }
 
     create_alloc(map_alloc, alloc);
@@ -1608,11 +1636,13 @@ bool IXBar::allocPartition(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &m
         hm_reqs.select_bits = std::max(tbl->layout.partition_bits - TableFormat::RAM_GHOST_BITS, 0);
     }
 
+    KeyInfo ki;
+    ki.is_atcam = true;  ki.partition = true;
     for (auto ixbar_read : tbl->match_key) {
         if (!ixbar_read->for_match())
             continue;
         field_management(map_alloc, alloc.field_list_order, ixbar_read, fields_needed,
-                         tbl->name, false, phv, tbl->layout.atcam, true);
+                         tbl->name, phv, ki);
     }
     create_alloc(map_alloc, alloc);
     BUG_CHECK(alloc.use.size() > 0, "No partition index found for %1%", tbl);
@@ -1884,10 +1914,11 @@ bool IXBar::allocSelector(const IR::MAU::Selector *as, const IR::MAU::Table *tbl
     safe_vector<IXBar::Use::Byte *>  alloced;
     ContByteConversion map_alloc;
     std::map<cstring, bitvec>        fields_needed;
+    KeyInfo ki;
     for (auto ixbar_read : tbl->match_key) {
         if (!ixbar_read->for_selection()) continue;
         field_management(map_alloc, alloc.field_list_order, ixbar_read->expr, fields_needed,
-                         tbl->name, false, phv);
+                         tbl->name, phv, ki);
     }
     create_alloc(map_alloc, alloc);
 
@@ -2586,8 +2617,10 @@ bool IXBar::allocHashDist(const IR::MAU::HashDist *hd, IXBar::Use::hash_dist_typ
     safe_vector <IXBar::Use::Byte *> alloced;
     fields_needed.clear();
 
+    KeyInfo ki;
+    ki.hash_dist = true;
     field_management(map_alloc, alloc.field_list_order, hd->field_list, fields_needed, name,
-                     true, phv);
+                     phv, ki);
     create_alloc(map_alloc, alloc);
 
 

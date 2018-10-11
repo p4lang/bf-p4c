@@ -1364,8 +1364,11 @@ bool Memories::allocate_all_ternary() {
             if (!find_ternary_stretch(TCAMs_necessary, row, col, midbyte, split_midbyte))
                 return false;
             int word = 0;
-            if (split_midbyte)
+            bool increment = true;
+            if (split_midbyte) {
                 word = TCAMs_necessary - 1;
+                increment = false;
+            }
             for (int i = row; i < row + TCAMs_necessary; i++) {
                  tcam_use[i][col] = unique_id.build_name();
                  auto tcam = ta->table_format->tcam_use[word];
@@ -1376,8 +1379,7 @@ bool Memories::allocate_all_ternary() {
                      tcam_midbyte_use[i/2][col] = tcam.byte_group;
                  alloc.row.emplace_back(i, col, word, allocation_count);
                  alloc.row.back().col.push_back(col);
-                 word++;
-                 word %= TCAMs_necessary;
+                 word = increment ? word + 1 : word - 1;
             }
             allocation_count++;
         }

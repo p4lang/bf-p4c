@@ -242,6 +242,9 @@ struct IXBar {
             int         search_bus = -1;
             // Given a byte appearing multiple times within the match format, which one it is
             int         match_index = 0;
+            // A index given to each range index, as there are constraints on the multirange
+            // distribution that leads to some restrictions on range fields
+            int         range_index = -1;
 
             Byte(cstring n, int l) : name(n), lo(l) {}
             Byte(cstring n, int l, int g, int gb) : name(n), lo(l), loc(g, gb) {}
@@ -458,6 +461,7 @@ struct IXBar {
         bool attempted = false;
         bool hash_open[2] = { true, true };
         type_t hash_table_type[2] = { FREE, FREE };
+        int range_index = -1;
 
         bool hash_dist_avail(int ht) const {
             return hash_table_type[ht] == HASH_DIST || hash_table_type[ht] == FREE;
@@ -472,6 +476,7 @@ struct IXBar {
         }
 
         int total_avail() const { return found.popcount() + free.popcount(); }
+        bool range_set() const { return range_index != -1; }
 
         explicit grp_use(int g) : group(g) {}
     };
@@ -574,12 +579,20 @@ struct IXBar {
             : self(i), phv(p), alloc(a), af(u), lo(l), tbl(t) {}
     };
 
+    struct KeyInfo {
+        bool hash_dist = false;
+        bool is_atcam = false;
+        bool partition = false;
+        int range_index = 0;
+        KeyInfo() { }
+    };
+
 
     void clear();
     void field_management(ContByteConversion &map_alloc,
         safe_vector<PHV::FieldSlice> &field_list_order, const IR::Expression *field,
-        std::map<cstring, bitvec> &fields_needed, cstring name, bool hash_dist, const PhvInfo &phv,
-        bool is_atcam = false, bool partition = false);
+        std::map<cstring, bitvec> &fields_needed, cstring name, const PhvInfo &phv,
+        KeyInfo &ki);
     bool allocMatch(bool ternary, const IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc,
                     safe_vector<IXBar::Use::Byte *> &alloced, hash_matrix_reqs &hm_reqs);
     bool allocPartition(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc,
@@ -659,7 +672,7 @@ struct IXBar {
     void allocate_byte(bitvec *bv, safe_vector<IXBar::Use::Byte *> &unalloced,
         safe_vector<IXBar::Use::Byte *> *alloced, IXBar::Use::Byte &need, int group,
         int byte, size_t &index, int &free_bytes, int &ixbar_bytes_placed,
-        int &match_bytes_placed, int search_bus);
+        int &match_bytes_placed, int search_bus, int *range_index);
     void allocate_mid_bytes(safe_vector<Use::Byte *> &unalloced,
         safe_vector<Use::Byte *> &alloced, bool ternary, bool prefer_found,
         safe_vector<grp_use> &order, safe_vector<mid_byte_use> &mid_byte_order,
