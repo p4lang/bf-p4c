@@ -369,17 +369,12 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/union4-bmv2.p4
   testdata/p4_16_samples/verify-bmv2.p4
   )
-
+  
 p4c_add_xfail_reason("tofino"
   "error: .* functions or methods returning structures are not supported on this target"
   extensions/p4_tests/p4_16/serializer.p4
   )
-
-p4c_add_xfail_reason("tofino"
-  "Could not place table : "
-  extensions/p4_tests/p4_14/p4-tests/programs/power/power.p4
-  )
-
+  
 # p4c_add_xfail_reason("tofino"
 #   "error: No format field or table named"
 #    extensions/p4_tests/p4_14/c8/COMPILER-616/case3331.p4
@@ -829,10 +824,12 @@ p4c_add_xfail_reason("tofino"
 
 # END: XFAILs with translation
 
+# P4C-796
 p4c_add_xfail_reason("tofino"
   "error: : No size count in action"
   extensions/p4_tests/p4_14/p4-tests/programs/ecc/ecc.p4
   extensions/p4_tests/p4_14/p4-tests/programs/iterator/iterator.p4
+  extensions/p4_tests/p4_14/p4smith_regression/tofino-bug-5.p4
   )
 
 # P4C-1017
@@ -1158,6 +1155,21 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "was not correctly converted in Instruction Selection"
   extensions/p4_tests/p4_14/p4smith_regression/licensee_0.p4
+)
+
+# P4C-1059
+# Compiler Bug: Exiting with SIGSEGV
+p4c_add_xfail_reason("tofino"
+  "Exiting with SIGSEGV"
+  extensions/p4_tests/p4_14/p4smith_regression/tofino-bug-1.p4
+)
+
+# P4C-1060
+# Compiler Bug: Could not place table : The table sf could not fit within a single input crossbar in an MAU stage
+p4c_add_xfail_reason("tofino"
+  "Could not place table"
+  extensions/p4_tests/p4_14/p4-tests/programs/power/power.p4
+  extensions/p4_tests/p4_14/p4smith_regression/tofino-bug-2.p4
 )
 
 # BRIG-584
