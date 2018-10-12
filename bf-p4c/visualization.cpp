@@ -79,13 +79,16 @@ bool Visualization::preorder(const IR::BFN::Pipe *p) {
     auto pipe_id = pipesNode->size();
     pipe->emplace("pipe_id", new Util::JsonValue(pipe_id));
     auto *parser = new Util::JsonObject();
-    parser->emplace("nParsers", new Util::JsonValue(18));  // \TODO: get from device
+    parser->emplace("nParsers", new Util::JsonValue(Device::numParsersPerPipe()));
     auto* gen_parsers_json = new GenerateParserP4iJson();
     p->apply(*gen_parsers_json);
     parser->emplace("parsers", gen_parsers_json->getParsersJson());
     pipe->emplace("parser", parser);
     auto *mauStages = new Util::JsonArray();
-    pipe->emplace("mau_stages", mauStages);
+    auto *mau = new Util::JsonObject();
+    mau->emplace("nStages", new Util::JsonValue(Device::numStages()));
+    mau->emplace("mau_stages", mauStages);
+    pipe->emplace("mau", mau);
     pipe->emplace("deparser", new Util::JsonArray());
     pipesNode->append(pipe);
 
@@ -108,7 +111,8 @@ Util::JsonObject *Visualization::getStage(unsigned int stage, unsigned int pipe)
     if (p == nullptr) return nullptr;
     Util::JsonObject *thePipe = dynamic_cast<Util::JsonObject *>((*p)[pipe]);
     if (thePipe == nullptr) return nullptr;
-    Util::JsonArray *stages = dynamic_cast<Util::JsonArray *>(thePipe->get("mau_stages"));
+    Util::JsonObject *mau = dynamic_cast<Util::JsonObject *>(thePipe->get("mau"));
+    Util::JsonArray *stages = dynamic_cast<Util::JsonArray *>(mau->get("mau_stages"));
     Util::JsonObject *s = nullptr;
     if (stages->size() > stage)
         s = dynamic_cast<Util::JsonObject *>((*stages)[stage]);
@@ -880,7 +884,7 @@ void Visualization::gen_tind_result_buses(unsigned int stageNo, Util::JsonObject
 
 std::ostream &operator<<(std::ostream &out, const Visualization &vis) {
     auto res_json = new Util::JsonObject();
-    res_json->emplace("schema_version", new Util::JsonValue("1.0.2"));
+    res_json->emplace("schema_version", new Util::JsonValue("1.0.3"));
     res_json->emplace("program_name",
                       new Util::JsonValue(BFNContext::get().options().programName + ".p4"));
     res_json->emplace("run_id", new Util::JsonValue(RunId::getId()));

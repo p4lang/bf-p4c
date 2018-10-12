@@ -50,6 +50,7 @@ class Device {
     static unsigned maxCloneId(gress_t gress) { return Device::get().getMaxCloneId(gress); }
     static unsigned maxResubmitId() { return Device::get().getMaxResubmitId(); }
     static unsigned maxDigestId() { return Device::get().getMaxDigestId(); }
+    static int numParsersPerPipe() { return 18; }
 
  protected:
     explicit Device(cstring name) : name_(name) {}
