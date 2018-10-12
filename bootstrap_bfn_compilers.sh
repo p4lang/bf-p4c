@@ -42,6 +42,12 @@ if [ "$1" == "--p4c-cpp-flags" ]; then
     shift; shift;
 fi
 
+minimalConfig=false
+if [ "$1" == "--minimal-config" ]; then
+    minimalConfig=true
+    shift
+fi
+
 # Check for git version: 2.11.0 does not support virtual links
 git_version=`git --version | head -1 | awk '{ print $3; }'`
 if [[ $git_version == "2.11.0" ]]; then
@@ -69,10 +75,16 @@ if [[ -d .git && -e scripts/hooks/commit-msg && ! -e .git/hooks/commit-msg ]]; t
     popd > /dev/null
 fi
 
+ENABLED_COMPONENTS="-DENABLE_JBAY=ON -DENABLE_EBPF=OFF"
+if $minimalConfig ; then
+    ENABLED_COMPONENTS="$ENABLED_COMPONENTS -DENABLE_BMV2=OFF -DENABLE_P4TEST=OFF \
+                        -DENABLE_P4C_GRAPHS=OFF -DENABLE_TESTING=OFF -DENABLE_GTESTS=OFF"
+fi
+
 mkdir -p ${builddir}
 pushd ${builddir}
-cmake ${mydir} -DCMAKE_BUILD_TYPE=DEBUG -DENABLE_JBAY=ON \
-      -DENABLE_EBPF=OFF \
+cmake ${mydir} -DCMAKE_BUILD_TYPE=DEBUG \
+      ${ENABLED_COMPONENTS} \
       -DP4C_CPP_FLAGS="$P4C_CPP_FLAGS" $*
 if [[ `uname -s` == "Linux" ]]; then
     linux_distro=$(cat /etc/os-release | grep -e "^NAME" | cut -f 2 -d '=' | tr -d "\"")
