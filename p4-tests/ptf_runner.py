@@ -503,7 +503,7 @@ def main():
                 if jdict.get(mapNode):
                     noOfPortToVeth = len(jdict[mapNode])
                 if jdict.get(ifMapNode):
-                    noOfIfMap = len(jdict[noOfIfMap])
+                    noOfIfMap = len(jdict[ifMapNode])
                 for count in range(0, noOfPortToVeth):
                     port = jdict[mapNode][count]['device_port']
                     veth1 = jdict[mapNode][count]['veth1']
