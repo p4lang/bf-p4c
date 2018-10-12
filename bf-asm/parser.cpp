@@ -218,7 +218,7 @@ void Parser::process() {
                 LOG1("Creating new " << gress << " " << name << " state");
                 auto n = states[gress].emplace(name, State(lineno[gress], name.c_str(), gress,
                         match_t{ 0, 0 }, VECTOR(pair_t) { 0, 0, 0 }));
-                assert(n.second);
+                BUG_CHECK(n.second);
                 State *state = &n.first->second;
                 state->def = new State::Match(lineno[gress], gress, *start_state[gress][i]);
                 for (int j = 3; j >= i; j--)
@@ -1035,7 +1035,7 @@ Parser::State::State(int l, const char *n, gress_t gr, match_t sno, const VECTOR
             error(kv.key.lineno, "Syntax error");
     }
     if (default_data.size) {
-        assert(!def);
+        BUG_CHECK(!def);
         match_t m = { 0, 0 };
         def = new Match(default_data[0].key.lineno, gress, m, default_data); }
     VECTOR_fini(default_data);
@@ -1193,7 +1193,7 @@ Parser::State::OutputUse Parser::State::Match::Save::output_use() const {
     if (lo == hi) rv.b8++;
     else if (lo+1 == hi) rv.b16++;
     else if (lo+3 == hi) rv.b32++;
-    else assert(0);
+    else BUG();
     return rv;
 }
 Parser::State::OutputUse Parser::State::Match::Set::output_use() const {
@@ -1201,7 +1201,7 @@ Parser::State::OutputUse Parser::State::Match::Set::output_use() const {
     if (where->reg.size == 8) rv.b8++;
     else if (where->reg.size == 16) rv.b16++;
     else if (where->reg.size == 32) rv.b32++;
-    else assert(0);
+    else BUG();
     return rv;
 }
 Parser::State::OutputUse Parser::State::Match::output_use() const {
@@ -1403,7 +1403,7 @@ void Parser::State::Match::write_row_config(REGS &regs, Parser *pa, State *state
 
     if (buf_req < 0) {
         buf_req = max_off + 1;
-        assert(buf_req <= 32); }
+        BUG_CHECK(buf_req <= 32); }
     ea_row.buf_req = buf_req;
 }
 

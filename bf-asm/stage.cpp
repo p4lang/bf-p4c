@@ -46,8 +46,8 @@ AsmStage::AsmStage() : Section("stage") {
         Stage::action_bus_slot_map[byte++] = slot;
         Stage::action_bus_slot_map[byte++] = slot;
         Stage::action_bus_slot_size[slot++] = 32; }
-    assert(byte == ACTION_DATA_BUS_BYTES);
-    assert(slot == ACTION_DATA_BUS_SLOTS);
+    BUG_CHECK(byte == ACTION_DATA_BUS_BYTES);
+    BUG_CHECK(slot == ACTION_DATA_BUS_SLOTS);
 }
 
 void AsmStage::start(int lineno, VECTOR(value_t) args) {
@@ -70,7 +70,7 @@ void AsmStage::start(int lineno, VECTOR(value_t) args) {
 void AsmStage::input(VECTOR(value_t) args, value_t data) {
     if (!CHECKTYPE(data, tMAP)) return;
     int stageno = args[0].i;
-    assert(stageno >= 0 && (unsigned)stageno < stage.size());
+    BUG_CHECK(stageno >= 0 && (unsigned)stageno < stage.size());
     gress_t gress = args[1] == "ingress" ? INGRESS
                   : args[1] == "egress" ? EGRESS
                   : args[1] == "ghost" && options.target >= JBAY ? GHOST
@@ -253,7 +253,7 @@ int Stage::first_table(gress_t gress) {
             if (tbl->logical_id < min_logical_id)
                 min_logical_id = tbl->logical_id; }
         if (min_logical_id >= 0 && min_logical_id != INT_MAX) {
-            assert((min_logical_id & ~0xf) == 0);
+            BUG_CHECK((min_logical_id & ~0xf) == 0);
             return (st.stageno << 4) + min_logical_id; } }
     return -1;
 }
@@ -377,7 +377,7 @@ template<class TARGET> void Stage::write_common_regs(typename TARGET::mau_regs &
             merge.emm_ecc_error_ctl[gress].emm_ecc_error_ctl_delay = err_delay;
             break;
         default:
-            assert(false); } }
+            BUG(); } }
 
     /*--------------------
     * Since a stats ALU enable bit is missing from mau_cfg_stats_alu_lt, need to make sure that for

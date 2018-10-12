@@ -84,7 +84,7 @@ DEPARSER_INTRINSIC(JBay, INGRESS, egress_multicast_group, 2) {
         switch (++idx) {
         case 1: JBAY_SIMPLE_INTRINSIC(INGRESS, v, regs.dprsrreg.inp.ipp.ingr.m_mgid1, NO) break;
         case 2: JBAY_SIMPLE_INTRINSIC(INGRESS, v, regs.dprsrreg.inp.ipp.ingr.m_mgid2, NO) break;
-        default: assert(0); } } }
+        default: BUG(); } } }
 
 DEPARSER_INTRINSIC(JBay, INGRESS, hash_lag_ecmp_mcast, 2) {
     int idx = 0;
@@ -99,7 +99,7 @@ DEPARSER_INTRINSIC(JBay, INGRESS, hash_lag_ecmp_mcast, 2) {
                                  regs.dprsrreg.inp.icr.ingr_meta_pov.m_hash2, YES)
             break;
         default:
-            assert(0); } } }
+            BUG(); } } }
 DEPARSER_INTRINSIC(JBay, INGRESS, xid, 2) {
     int idx = 0;
     for (auto &v : intrin.vals) {
@@ -113,7 +113,7 @@ DEPARSER_INTRINSIC(JBay, INGRESS, xid, 2) {
                                  regs.dprsrreg.inp.icr.ingr_meta_pov.m_xid_l2, YES)
             break;
         default:
-            assert(0); } } }
+            BUG(); } } }
 
 #define JBAY_SIMPLE_DIGEST(GRESS, NAME, TBL, SEL, IFID, CNT)                            \
     DEPARSER_DIGEST(JBay, GRESS, NAME, CNT, can_shift = true; ) {                       \
@@ -387,7 +387,7 @@ static void check_jbay_ownership(bitvec phv_use[2]) {
         switch (Phv::reg(i)->size) {
         case 8: case 16: mask = 3; break;
         case 32:         mask = 1; break;
-        default: assert(0); }
+        default: BUG(); }
         group = i & ~mask;
         if (phv_use[EGRESS].getrange(group, mask+1)) {
             error(0, "%s..%s used by both ingress and egress deparser",
@@ -411,7 +411,7 @@ static void setup_jbay_ownership(bitvec phv_use, ubits_base &phv8, ubits_base &p
             phv32_grps.insert(1U << (reg->deparser_id()/2U));
             break;
         default:
-            assert(0); } }
+            BUG(); } }
 
     for (auto v : phv8_grps)  phv8 |= v;
     for (auto v : phv16_grps) phv16 |= v;
@@ -498,7 +498,7 @@ void write_jbay_checksum_config(CSUM &csum, POV &pov_cfg, ENTRIES &phv_entries, 
             if (remap[1] >= 0)
                 write_jbay_checksum_entry(phv_entries.entry[remap[1]], mask >> 2, swap >> 1, povbit,
                                                   unit, val->reg.name);
-            else assert((mask >> 2 == 0) && (swap >> 1 == 0));
+            else BUG_CHECK((mask >> 2 == 0) && (swap >> 1 == 0));
         }
     }
 
@@ -623,7 +623,7 @@ template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
                 int id = set.first;
                 int len = regs.dprsrreg.inp.ipp.ingr.learn_tbl[id].len;
                 int index = 0;
-                assert(len > 0);
+                BUG_CHECK(len > 0);
                 /* set words first */
                 for(; index < len/4; index++) {
                     regs.dprsrreg.inp.icr.lrnmask[id].mask[11-index] = 0xFFFFFFFF;

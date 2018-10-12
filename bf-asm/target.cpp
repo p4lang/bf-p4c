@@ -161,7 +161,7 @@ void declare_registers(const Target::JBay::deparser_regs *regs) {
 #define DEFINE_PER_TARGET_CONSTANT(TYPE, NAME)                          \
 TYPE Target::NAME() {                                                   \
     SWITCH_FOREACH_TARGET(options.target, return TARGET::NAME; )        \
-    assert(!"invalid target");                                          \
+    BUG_CHECK(!"invalid target");                                          \
     return 0;                                                          \
 }
 PER_TARGET_CONSTANTS(DEFINE_PER_TARGET_CONSTANT)

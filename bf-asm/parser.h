@@ -80,8 +80,8 @@ class Parser : public Section {
             Ref &operator=(const value_t &);
             Ref(value_t &v) { *this = v; }
             operator bool() const { return ptr.size() > 0; }
-            State *operator->() const { assert(ptr.size() == 1); return ptr[0]; }
-            State *operator*() const { assert(ptr.size() == 1); return ptr[0]; }
+            State *operator->() const { BUG_CHECK(ptr.size() == 1); return ptr[0]; }
+            State *operator*() const { BUG_CHECK(ptr.size() == 1); return ptr[0]; }
             bool operator==(const Ref &a) const { return name == a.name && pattern == a.pattern; }
             void check(gress_t, Parser *, State *);
             std::vector<State*>::const_iterator begin() const { return ptr.begin(); }

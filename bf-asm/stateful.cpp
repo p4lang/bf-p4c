@@ -311,7 +311,7 @@ template<class REGS> void StatefulTable::write_regs(REGS &regs) {
         for (Layout &logical_row : layout) {
             unsigned row = logical_row.row/2U;
             unsigned side = logical_row.row&1;   /* 0 == left  1 == right */
-            assert(side == 1);      /* no map rams or alus on left side anymore */
+            BUG_CHECK(side == 1);      /* no map rams or alus on left side anymore */
             auto vpn = logical_row.vpns.begin();
             auto mapram = logical_row.maprams.begin();
             auto &map_alu_row =  map_alu.row[row];

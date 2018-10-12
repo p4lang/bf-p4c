@@ -25,7 +25,7 @@ template<> void Stage::write_regs(Target::Tofino::mau_regs &regs) {
             merge.predication_ctl[gress].start_table_fifo_enable = 0;
             break;
         default:
-            assert(0); }
+            BUG(); }
         if (stageno != 0) {
             regs.dp.cur_stage_dependency_on_prev[gress] = MATCH_DEP - stage_dep[gress];
             if (stage_dep[gress] == CONCURRENT)

@@ -17,7 +17,7 @@ Table::Table(int line, std::string &&n, gress_t gr, Stage *s, int lid) :
     name_(n), stage(s), gress(gr), lineno(line), logical_id(lid)
 {
     if (lineno >= 0) {
-        assert(all.find(name_) == all.end());
+        BUG_CHECK(all.find(name_) == all.end());
         all.emplace(name_, this); }
     if (stage)
         stage->all_refs.insert(&stage);
@@ -88,7 +88,7 @@ unsigned Table::Call::Arg::size() const {
     case Name:
         return 0;
     default:
-        assert(0);
+        BUG();
     }
     return -1;
 }
@@ -920,7 +920,7 @@ void Table::Format::pass2(Table *tbl) {
             word = slot;
             break;
         default:
-            assert(0); }
+            BUG(); }
         if (err)
             error(lineno, "Immediate data misaligned for action bus byte %d", byte_slot); }
 }
@@ -1216,7 +1216,7 @@ static void find_pred_in_stage(int stageno,
 
 void Table::Actions::pass2(Table *tbl) {
     /* We do NOT call this for SALU actions, so we can assume VLIW actions here */
-    assert(tbl->table_type() != STATEFUL);
+    BUG_CHECK(tbl->table_type() != STATEFUL);
     int code = tbl->get_gateway() ? 1 : 0;  // if there's a gateway, reserve code 0 for a NOP
                                             // to run when the gateway inhibits the table
 
@@ -1324,7 +1324,7 @@ void Table::Actions::pass2(Table *tbl) {
 }
 
 void Table::Actions::stateful_pass2(Table *tbl) {
-    assert(tbl->table_type() == STATEFUL);
+    BUG_CHECK(tbl->table_type() == STATEFUL);
     for (auto &act : *this) {
         if (act.code >= 4)
             error(act.lineno, "Only 4 actions in a stateful table");
@@ -1802,12 +1802,12 @@ int Table::find_on_ixbar(Phv::Slice sl, int group) {
     if (input_xbar)
         if (auto *i = input_xbar->find_exact(sl, group)) {
             unsigned bit = (i->lo + sl.lo - i->what->lo);
-            assert(bit < 128);
+            BUG_CHECK(bit < 128);
             return bit/8; }
     for (auto *in : stage->ixbar_use[InputXbar::Group(InputXbar::Group::EXACT, group)]) {
         if (auto *i = in->find_exact(sl, group)) {
             unsigned bit = (i->lo + sl.lo - i->what->lo);
-            assert(bit < 128);
+            BUG_CHECK(bit < 128);
             return bit/8; } }
     return -1;
 }

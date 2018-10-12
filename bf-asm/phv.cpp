@@ -8,7 +8,7 @@ const Phv::Register Phv::Slice::invalid("<bad>", Phv::Register::NORMAL, 0, ~0, 0
 
 void Phv::init_phv(target_t target_type) {
     if (target) {
-        assert(target->type() == target_type);  // sanity check
+        BUG_CHECK(target->type() == target_type);  // sanity check
         return; }
     switch (target_type) {
 #define INIT_FOR_TARGET(TARGET)                                         \
@@ -17,7 +17,7 @@ void Phv::init_phv(target_t target_type) {
         break;
     FOR_ALL_TARGETS(INIT_FOR_TARGET)
     default:
-        assert(0); }
+        BUG(); }
 #undef INIT_FOR_TARGET
     target->init_regs(*this);
 }
@@ -229,7 +229,7 @@ int Phv::get_position_offset(gress_t gress, std::string name) {
     for (auto f : phv_pov_field_sizes[gress]) {
         if (f.first == name) return position_offset;
         // POV should be single bit
-        assert(f.second == 1);
+        BUG_CHECK(f.second == 1);
         position_offset += 1; }
     return 0;
 }

@@ -230,7 +230,7 @@ std::unique_ptr<json::vector> AlgTcamMatchTable::gen_memory_resource_allocation_
             if (mem_units.empty())
                 vpn_ctr = layout_get_vpn(ram.first, ram.second);
             else
-                assert(vpn_ctr == layout_get_vpn(ram.first, ram.second));
+                BUG_CHECK(vpn_ctr == layout_get_vpn(ram.first, ram.second));
             mem_units.push_back(memunit(ram.first, ram.second));
             if (mem_units.size() == fmt_width) {
                 json::map tmp;
@@ -245,7 +245,7 @@ std::unique_ptr<json::vector> AlgTcamMatchTable::gen_memory_resource_allocation_
                 vpn_ctr += format->groups();
                 tmp["vpns"] = std::move(vpns);
                 mem_units_and_vpns.push_back(std::move(tmp)); } }
-        assert(mem_units.empty());
+        BUG_CHECK(mem_units.empty());
         mras.push_back(std::move(mra));
         ++col_priority_way_revitr;
     }

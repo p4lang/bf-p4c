@@ -91,7 +91,7 @@ void SRamMatchTable::verify_format() {
              * overhead in bit 0 match group 0 in its overhead word */
             for (unsigned i = 0; i < group_info.size(); i++) {
                 if (group_info[i].overhead_bit == 0) {
-                    assert(error_count > 0 || word_info[group_info[i].overhead_word].empty());
+                    BUG_CHECK(error_count > 0 || word_info[group_info[i].overhead_word].empty());
                     group_info[i].match_group[group_info[i].overhead_word] = 0;
                     word_info[group_info[i].overhead_word].push_back(i); } } }
         for (unsigned i = 0; i < group_info.size(); i++)
@@ -229,7 +229,7 @@ void SRamMatchTable::verify_format() {
                     error(mw->second.lineno, "bit within byte misalignment matching %s in "
                           "match group %d of table %s", mw->second.name(), i, name());
                 int hi = std::min((unsigned)mw->second->size()-1, bit+piece.size()-mw->first-1);
-                assert((unsigned)piece.lo/128 < fmt_width);
+                BUG_CHECK((unsigned)piece.lo/128 < fmt_width);
                 //merge_phv_vec(match_in_word[piece.lo/128], Phv::Ref(mw->second, lo, hi));
                 append(match_in_word[piece.lo/128],
                        split_phv_bytes(Phv::Ref(mw->second, lo, hi)));
@@ -443,9 +443,9 @@ void SRamMatchTable::setup_ways() {
             unsigned size = 1U << bitcount(way.mask);
             for (unsigned i = 0; i < size; i++) {
                 for (unsigned word = 0; word < fmt_width; ++word) {
-                    assert(ridx + word < layout.size());
+                    BUG_CHECK(ridx + word < layout.size());
                     auto &row = layout[ridx + word];
-                    assert(cidx < row.cols.size());
+                    BUG_CHECK(cidx < row.cols.size());
                     way.rams.emplace_back(row.row, row.cols[cidx]); }
                 if (++cidx == layout[ridx].cols.size()) {
                     ridx += fmt_width;
@@ -572,7 +572,7 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
                     case 2: n.match_next_table2_bitpos = pos; break;
                     case 3: n.match_next_table3_bitpos = pos; break;
                     case 4: n.match_next_table4_bitpos = pos; break;
-                    default: assert(0); } } }
+                    default: BUG(); } } }
 
             ram.unit_ram_ctl.match_ram_logical_table = logical_id;
             ram.unit_ram_ctl.match_ram_write_data_mux_select = 7; /* unused */
@@ -588,7 +588,7 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
             switch (gress) {
             case INGRESS: unitram_config.unitram_ingress = 1; break;
             case EGRESS: unitram_config.unitram_egress = 1; break;
-            default: assert(0); }
+            default: BUG(); }
             unitram_config.unitram_enable = 1;
 
             int vpn = *vpn_iter++;
@@ -632,13 +632,13 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
                             bits_in_byte = piece.hi + 1 - fmt_bit;
                         auto it = --match_by_bit.upper_bound(bit);
                         Phv::Slice sl(*it->second, bit-it->first, bit-it->first+bits_in_byte-1);
-                        assert(word_ixbar_group[word] >= 0);
+                        BUG_CHECK(word_ixbar_group[word] >= 0);
                         int bus_loc = find_on_ixbar(sl, word_ixbar_group[word]);
-                        assert(bus_loc >= 0 && bus_loc < 16);
+                        BUG_CHECK(bus_loc >= 0 && bus_loc < 16);
                         for (unsigned b = 0; b < bits_in_byte; b++, fmt_bit++)
                             byteswizzle_ctl[byte][fmt_bit%8U] = 0x10 + bus_loc;
                         bit += bits_in_byte; } }
-                assert(bit == match->size); }
+                BUG_CHECK(bit == match->size); }
             if (Format::Field *version = format->field("version", i)) {
                 if (version->bit(0)/128U != word) continue;
                 // don't need to enable vh_xbar just for version/valid, but do need to enable
@@ -685,7 +685,7 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
             int group = word_info[word][word_group];
             if (group_info[group].overhead_word == (int)word) {
                 if (format->immed) {
-                    assert(format->immed->by_group[group]->bit(0)/128U == word);
+                    BUG_CHECK(format->immed->by_group[group]->bit(0)/128U == word);
                     merge.mau_immediate_data_exact_shiftcount[bus][word_group] =
                         format->immed->by_group[group]->bit(0) % 128; }
                 if (instruction) {

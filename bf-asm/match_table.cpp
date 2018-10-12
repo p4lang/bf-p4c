@@ -265,7 +265,7 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
             result->write_merge_regs(regs, type, bus); }
     } else {
         /* ternary match with no indirection table */
-        assert(type == 1);
+        BUG_CHECK(type == 1);
         result = this; }
 
     /*------------------------
@@ -462,7 +462,7 @@ void MatchTable::gen_name_lookup(json::map &out) {
 
 int MatchTable::get_address_mau_actiondata_adr_default(unsigned log2size, bool per_flow_enable) {
     int huffman_ones = log2size > 2 ? log2size - 3 : 0;
-    assert(huffman_ones < 7);
+    BUG_CHECK(huffman_ones < 7);
     int rv = (1 << huffman_ones) - 1;
     rv = ((rv << 10) & 0xf8000) | ( rv & 0x1f);
     if (!per_flow_enable)

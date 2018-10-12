@@ -94,7 +94,7 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
         value_t *name_ref = &kv.value;
         unsigned off = 0, sz = 0;
         if (kv.value.type == tCMD) {
-            assert(kv.value.vec.size > 0 && kv.value[0].type == tSTR);
+            BUG_CHECK(kv.value.vec.size > 0 && kv.value[0].type == tSTR);
             if (kv.value == "hash_dist" || kv.value == "rng") {
                 if (!PCHECKTYPE(kv.value.vec.size > 1, kv.value[1], tINT))
                     continue;
@@ -226,9 +226,9 @@ unsigned ActionBus::Slot::lo(Table *tbl) const {
         int off = src.second;
         if (src.first.type == Source::Field)
             off += src.first.field->immed_bit(0);
-        assert(rv < 0 || rv == off);
+        BUG_CHECK(rv < 0 || rv == off);
         rv = off; }
-    assert(rv >= 0);
+    BUG_CHECK(rv >= 0);
     return rv;
 }
 
@@ -276,7 +276,7 @@ void ActionBus::pass1(Table *tbl) {
                             src.table->set_address_used();
                             break;
                         default:
-                            assert(0); }
+                            BUG(); }
                         slot.data[src] = it->second;
                         ok = true;
                     } else if (tbl->actions) {
@@ -323,7 +323,7 @@ void ActionBus::pass1(Table *tbl) {
                             src.table->set_address_used();
                             break;
                         default:
-                            assert(0); }
+                            BUG(); }
                         slot.data[src] = it->second; } }
                 it = slot.data.erase(it);
             } else {
@@ -353,7 +353,7 @@ void ActionBus::pass1(Table *tbl) {
                         error(lineno, "Action bus byte %d set in table %s and table %s", byte,
                             tbl->name(), tbl->stage->action_bus_use[slotno]->name());
                 } else {
-                    assert(!slot.data.empty() && !use[slotno]->data.empty());
+                    BUG_CHECK(!slot.data.empty() && !use[slotno]->data.empty());
                     auto nsrc = slot.data.begin()->first;
                     unsigned noff = slot.data.begin()->second;
                     unsigned nstart = 8*(byte - slot.byte) + noff;
@@ -528,7 +528,7 @@ void ActionBus::do_alloc(Table *tbl, Source src, unsigned use, int lobyte,
         // Atcam tables are mutually exclusive and should be allowed to share
         // bytes on action bus
         if (slot_tbl && !Table::allow_bus_sharing(tbl, slot_tbl))
-            assert(slot_tbl == tbl || slot_tbl->action_bus->by_byte.at(use).data.count(src));
+            BUG_CHECK(slot_tbl == tbl || slot_tbl->action_bus->by_byte.at(use).data.count(src));
         tbl->stage->action_bus_use[slot] = tbl;
         Slot &sl = by_byte.emplace(use, Slot(src.name(tbl), use, bytes*8U)).first->second;
         if (sl.size < bytes*8U) sl.size = bytes*8U;
@@ -733,7 +733,7 @@ template<class REGS> void ActionBus::write_action_regs(REGS &regs, Table *tbl,
             continue; }
         LOG5("    " << el.first << ": " << el.second);
         unsigned byte = el.first;
-        assert(byte == el.second.byte);
+        BUG_CHECK(byte == el.second.byte);
         unsigned slot = Stage::action_bus_slot_map[byte];
         unsigned bit = 0, size = 0;
         std::string srcname;
@@ -761,12 +761,12 @@ template<class REGS> void ActionBus::write_action_regs(REGS &regs, Table *tbl,
                 srcname = "table " + data.first.table->name_;
             } else {
                 // HashDist and RandomGen only work in write_immed_regs
-                assert(0); }
+                BUG(); }
             LOG3("    byte " << byte << " (slot " << slot << "): " << srcname <<
                  " (" << data.second << ".." << (data.second + data_size - 1) << ")" <<
                  " [" << data_bit << ".." << (data_bit+data_size-1) << "]");
             if (size) {
-                assert(bit == data_bit);  // checked in pass1; maintained by pass3
+                BUG_CHECK(bit == data_bit);  // checked in pass1; maintained by pass3
                 size = std::max(size, data_size);
             } else {
                 bit = data_bit;
@@ -785,7 +785,7 @@ template<class REGS> void ActionBus::write_action_regs(REGS &regs, Table *tbl,
                 case 0: code = sbyte>>1; mask = 1; break;
                 case 1: code = 2; mask = 3; break;
                 case 2: case 3: code = 3; mask = 7; break;
-                default: assert(0); }
+                default: BUG(); }
                 if ((sbyte^byte) & mask) {
                     error(lineno, "Can't put field %s into byte %d on action xbar",
                           el.second.name.c_str(), byte);
@@ -824,7 +824,7 @@ template<class REGS> void ActionBus::write_action_regs(REGS &regs, Table *tbl,
                 case 0: code = 1; mask = 3; break;
                 case 1: code = 2; mask = 3; break;
                 case 2: case 3: code = 3; mask = 7; break;
-                default: assert(0); }
+                default: BUG(); }
                 if (((word << 1)^byte) & mask) {
                     error(lineno, "Can't put field %s into byte %d on action xbar",
                           el.second.name.c_str(), byte);
@@ -873,7 +873,7 @@ template<class REGS> void ActionBus::write_action_regs(REGS &regs, Table *tbl,
             bytemask >>= 4;
             break; }
         default:
-            assert(0); }
+            BUG(); }
         if (bytemask)
             WARNING(SrcInfo(lineno) << ": excess bits " << hex(bytemask) <<
                     " set in bytemask for " << el.second.name);
@@ -904,7 +904,7 @@ template<class REGS> void ActionBus::write_immed_regs(REGS &regs, Table *tbl) {
         switch(Stage::action_bus_slot_size[slot]) {
         case 8:
             for (unsigned b = off/8; b <= (off + size - 1)/8; b++) {
-                assert((b&3) == (slot&3));
+                BUG_CHECK((b&3) == (slot&3));
                 adrdist.immediate_data_8b_enable[tid/8] |= 1U << ((tid&7)*4 + b);
                 // we write these ctl regs twice if we use both bytes in a pair.  That will
                 // cause a WARNING in the log file if both uses are the same -- it should be
@@ -915,7 +915,7 @@ template<class REGS> void ActionBus::write_immed_regs(REGS &regs, Table *tbl) {
         case 16:
             slot -= ACTION_DATA_8B_SLOTS;
             for (unsigned w = off/16; w <= (off + size - 1)/16; w++) {
-                assert((w&1) == (slot&1));
+                BUG_CHECK((w&1) == (slot&1));
                 setup_muxctl(adrdist.immediate_data_16b_ixbar_ctl[tid*2 + w], slot++/2); }
             break;
         case 32:
@@ -923,7 +923,7 @@ template<class REGS> void ActionBus::write_immed_regs(REGS &regs, Table *tbl) {
             setup_muxctl(adrdist.immediate_data_32b_ixbar_ctl[tid], slot);
             break;
         default:
-            assert(0); } }
+            BUG(); } }
     if (rngmask) {
         regs.rams.match.adrdist.immediate_data_rng_enable = 1;
         regs.rams.match.adrdist.immediate_data_rng_logical_map_ctl[tbl->logical_id/4]

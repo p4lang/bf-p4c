@@ -14,7 +14,7 @@ template<> void VLIWInstruction::write_regs(Target::JBay::mau_regs &regs,
     int iaddr = act->addr/ACTION_IMEM_COLORS;
     int color = act->addr%ACTION_IMEM_COLORS;
     unsigned bits = encode();
-    assert(slot >= 0);
+    BUG_CHECK(slot >= 0);
     unsigned off = slot % Phv::mau_groupsize();
     unsigned side = 0, group = 0;
     switch(slot / Phv::mau_groupsize()) {
@@ -32,7 +32,7 @@ template<> void VLIWInstruction::write_regs(Target::JBay::mau_regs &regs,
         case 11: side = 1; group = 0; break;
         case 12: side = 1; group = 1; break;
         case 13: side = 1; group = 2; break;
-        default: assert(0); }
+        default: BUG(); }
 
     switch (Phv::reg(slot)->type) {
     case Phv::Register::NORMAL:
@@ -53,7 +53,7 @@ template<> void VLIWInstruction::write_regs(Target::JBay::mau_regs &regs,
             imem.imem_subword32[side][group][off][iaddr].imem_subword32_parity = parity(bits) ^ color;
             break;
         default:
-            assert(0); }
+            BUG(); }
         break;
     case Phv::Register::MOCHA:
         switch (Phv::reg(slot)->size) {
@@ -76,7 +76,7 @@ template<> void VLIWInstruction::write_regs(Target::JBay::mau_regs &regs,
                     parity(bits) ^ color;
             break;
         default:
-            assert(0); }
+            BUG(); }
         break;
     case Phv::Register::DARK:
         switch (Phv::reg(slot)->size) {
@@ -99,10 +99,10 @@ template<> void VLIWInstruction::write_regs(Target::JBay::mau_regs &regs,
                     parity(bits) ^ color;
             break;
         default:
-            assert(0); }
+            BUG(); }
         break;
     default:
-        assert(0); }
+        BUG(); }
 
     auto &power_ctl = regs.dp.actionmux_din_power_ctl;
     phvRead([&](const Phv::Slice &sl) {

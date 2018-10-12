@@ -193,7 +193,7 @@ int Parser::State::Match::Save::write_output_config(Target::Tofino::parser_regs 
     } else if (hi-lo == 1) {
         usable_slots = phv_16b_slots;
     } else {
-        assert(hi == lo);
+        BUG_CHECK(hi == lo);
         usable_slots = phv_8b_slots; }
     for (int i = 0; usable_slots[i].usemask; i++) {
         auto &slot = usable_slots[i];
@@ -233,7 +233,7 @@ static int encode_constant_for_slot(int slot, unsigned val) {
     case phv_8b_0: case phv_8b_1: case phv_8b_2: case phv_8b_3:
         return val & 0xff;
     default:
-        assert(0);
+        BUG();
         return -1; }
 }
 
@@ -249,7 +249,7 @@ void Parser::State::Match::Set::write_output_config(Target::Tofino::parser_regs 
     else if (where->reg.size == 8)
         usable_slots = phv_8b_slots;
     else
-        assert(0);
+        BUG();
     for (int i = 0; usable_slots[i].usemask; i++) {
         auto &slot = usable_slots[i];
         if (used & slot.usemask) continue;
@@ -315,7 +315,7 @@ template <> void Parser::mark_unused_output_map(Target::Tofino::parser_regs &reg
 
 template<> void Parser::State::Match::Clot::write_config(
         Tofino::memories_all_parser_::_po_action_row &, int) const {
-    assert(0);  // no CLOTs on tofino; should not get here
+    BUG();  // no CLOTs on tofino; should not get here
 }
 
 template<> void Parser::State::Match::write_counter_config(

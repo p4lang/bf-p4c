@@ -133,7 +133,7 @@ public:
             gress_(g), name_(n), lo(l), hi(h), lineno(line) {}
         Ref(const Ref &r, int l, int h) : gress_(r.gress_), name_(r.name_),
             lo(r.lo < 0 ? l : r.lo + l), hi(r.lo < 0 ? h : r.lo + h),
-            lineno(r.lineno) { assert(r.hi < 0 || hi <= r.hi); }
+            lineno(r.lineno) { BUG_CHECK(r.hi < 0 || hi <= r.hi); }
         Ref(const Register &r, gress_t gr, int lo = -1, int hi = -1);
         explicit operator bool() const { return lineno >= 0; }
         Slice operator*() const {
@@ -170,7 +170,7 @@ public:
         void dbprint(std::ostream &out) const;
     };
     static const Register *reg(int idx)
-        { assert(idx >= 0 && size_t(idx) < phv.regs.size()); return phv.regs[idx]; }
+        { BUG_CHECK(idx >= 0 && size_t(idx) < phv.regs.size()); return phv.regs[idx]; }
     static const bitvec &use(gress_t gress) { return phv.phv_use[gress]; }
     static void setuse(gress_t gress, const bitvec &u) { phv.phv_use[gress] |= u; }
     static void unsetuse(gress_t gress, const bitvec &u) { phv.phv_use[gress] -= u; }

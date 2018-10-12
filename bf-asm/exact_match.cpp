@@ -101,7 +101,7 @@ std::unique_ptr<json::map> ExactMatchTable::gen_memory_resource_allocation_tbl_c
         if (mem_units.empty())
             vpn_ctr = layout_get_vpn(ram.first, ram.second);
         else
-            assert(vpn_ctr == layout_get_vpn(ram.first, ram.second));
+            BUG_CHECK(vpn_ctr == layout_get_vpn(ram.first, ram.second));
         mem_units.push_back(memunit(ram.first, ram.second));
         if (mem_units.size() == fmt_width) {
             json::map tmp;
@@ -112,7 +112,7 @@ std::unique_ptr<json::map> ExactMatchTable::gen_memory_resource_allocation_tbl_c
                 vpns.push_back(vpn_ctr++);
             tmp["vpns"] = std::move(vpns);
             mem_units_and_vpns.push_back(std::move(tmp)); } }
-    assert(mem_units.empty());
+    BUG_CHECK(mem_units.empty());
     return json::mkuniq<json::map>(std::move(mra));
 }
 

@@ -201,7 +201,7 @@ void declare_registers(const Target::JBay::deparser_regs *regs);
 #define SWITCH_FOREACH_TARGET(VAR, ...)                         \
         switch(VAR) {                                           \
         FOR_ALL_TARGETS(DO_SWITCH_FOREACH_TARGET, __VA_ARGS__)  \
-        default: assert(0); }
+        default: BUG(); }
 
 #define DO_SWITCH_FOREACH_TARGET(TARGET_, ...)                  \
         case Target::TARGET_::tag: {                            \

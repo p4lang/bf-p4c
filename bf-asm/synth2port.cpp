@@ -64,9 +64,9 @@ json::map *Synth2Port::add_stage_tbl_cfg(json::map &tbl, const char *type, int s
     tbl["how_referenced"] = hr; 
     int entries = 1;
     if (format) {
-        assert(format->log2size <= 7);
+        BUG_CHECK(format->log2size <= 7);
         if (format->groups() > 1) {
-            assert(format->log2size == 7);
+            BUG_CHECK(format->log2size == 7);
             entries = format->groups();
         } else {
             entries = 128U >> format->log2size; } }

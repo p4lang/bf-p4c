@@ -36,7 +36,7 @@ void Target::JBay::Phv::init_regs(::Phv &phv) {
             }
         }
     }
-    assert(uid == phv.regs.size());
-    assert(deparser_id == 224);
-    assert(byte == 512);
+    BUG_CHECK(uid == phv.regs.size());
+    BUG_CHECK(deparser_id == 224);
+    BUG_CHECK(byte == 512);
 }

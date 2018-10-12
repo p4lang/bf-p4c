@@ -67,7 +67,7 @@ template<> void Stage::write_regs(Target::JBay::mau_regs &regs) {
                 this[-1].pipelength(gress) - this[-1].pred_cycle(gress) + pred_cycle(gress) - 3;
             merge.predication_ctl[gress].start_table_fifo_enable = 1;
         } else {
-            assert(stage_dep[gress] == ACTION_DEP);
+            BUG_CHECK(stage_dep[gress] == ACTION_DEP);
             merge.predication_ctl[gress].start_table_fifo_delay0 = 0;
             merge.predication_ctl[gress].start_table_fifo_enable = 0; }
 

@@ -19,7 +19,7 @@ public:
     template<class T> static TopLevelTarget<T> *regs();
 #define SET_MAU_STAGE(TARGET)                                                           \
     virtual void set_mau_stage(int, const char *i, Target::TARGET::mau_regs *r) {       \
-        assert(!"register mismatch"); }
+        BUG_CHECK(!"register mismatch"); }
     FOR_ALL_TARGETS(SET_MAU_STAGE)
 };
 

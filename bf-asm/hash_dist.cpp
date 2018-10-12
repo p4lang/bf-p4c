@@ -97,7 +97,7 @@ void HashDistribution::pass1(Table *tbl) {
             break;
         default:
             error(lineno, "a mod 3 check should only hit these particular cases, of 0, 1, and 2");
-            assert(0);
+            BUG();
         }
         if (!err) {
             for (auto *use : tbl->stage->hash_dist_use[other])
@@ -142,7 +142,7 @@ void HashDistribution::write_regs(REGS &regs, Table *tbl, int type, bool non_lin
         merge.mau_hash_group_config.hash_group_enable |= 1 << (id + 1);
         merge.mau_hash_group_config.hash_group_ctl.set_subfield(type, 2 * (id + 2), 2);
         break;
-    default: assert(0); }
+    default: BUG(); }
     for (int oxbar : Range(0, 4))
         if ((xbar_use >> oxbar) & 1)
             merge.mau_hash_group_xbar_ctl[oxbar][tbl->logical_id/8U].set_subfield(

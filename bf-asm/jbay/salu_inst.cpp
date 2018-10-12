@@ -114,7 +114,7 @@ void MinMax::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Action
         salu.salu_arith = 1;
         salu.salu_pred = 0xffff; }
 }
-void MinMax::write_regs(Target::Tofino::mau_regs &, Table *, Table::Actions::Action *) {assert(0);}
+void MinMax::write_regs(Target::Tofino::mau_regs &, Table *, Table::Actions::Action *) {BUG();}
 
 
 template<>
@@ -142,7 +142,7 @@ void AluOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions
             } else {
                 salu.salu_const_src = tbl->get_const(k->value);
                 salu.salu_regfile_const = 1; }
-        } else assert(0); }
+        } else BUG(); }
     if (srcb) {
         if (auto m = srcb.to<operand::Memory>()) {
             salu.salu_bsrc_input = m->field->bit(0) > 0 ? 3 : 2;
@@ -154,7 +154,7 @@ void AluOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions
                 salu_instr_common.salu_alu2_lo_math_src = b->phv_index(tbl);
             } else if (auto b = m->of.to<operand::Memory>()) {
                 salu_instr_common.salu_alu2_lo_math_src = b->field->bit(0) > 0 ? 3 : 2;
-            } else assert(0);
+            } else BUG();
         } else if (auto k = srcb.to<operand::Const>()) {
             salu.salu_bsrc_input = 4;
             if (k->value >= -8 && k->value < 8) {
@@ -163,7 +163,7 @@ void AluOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions
             } else {
                 salu.salu_const_src = tbl->get_const(k->value);
                 salu.salu_regfile_const = 1; }
-        } else assert(0); }
+        } else BUG(); }
 }
 void AluOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl, Table::Actions::Action *act) {
     write_regs<Target::JBay::mau_regs>(regs, tbl, act); }

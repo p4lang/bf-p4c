@@ -13,9 +13,9 @@ std::multimap<std::string, Instruction::Decode *>
 Instruction::Decode::Decode(const char *name, int set, bool ts) : type_suffix(ts) {
     targets = ~0U;
     for (auto d : ValuesForKey(opcode[set], name)) {
-        assert(!(d->targets & 1));
+        BUG_CHECK(!(d->targets & 1));
         targets &= ~d->targets; }
-    assert(targets > 1);
+    BUG_CHECK(targets > 1);
     opcode[set].emplace(name, this);
 }
 Instruction::Decode::Decode(const char *name, target_t target, int set, bool ts) : type_suffix(ts) {
@@ -23,7 +23,7 @@ Instruction::Decode::Decode(const char *name, target_t target, int set, bool ts)
     for (auto d : ValuesForKey(opcode[set], name)) {
         if (d->targets & 1) {
             d->targets &= ~targets;
-            assert(d->targets > 1); } }
+            BUG_CHECK(d->targets > 1); } }
     opcode[set].emplace(name, this);
 }
 
@@ -370,11 +370,11 @@ struct operand {
             } else return false; }
         Base *lookup(Base *&ref) override;
         Named *clone() override { return new Named(*this); }
-        bool check() override { assert(0); return true; }
-        int phvGroup() override { assert(0); return -1; }
-        int bits(int group) override { assert(0); return 0; }
-        unsigned bitoffset(int group) const override { assert(0); return 0; }
-        void mark_use(Table *tbl) override { assert(0); }
+        bool check() override { BUG(); return true; }
+        int phvGroup() override { BUG(); return -1; }
+        int bits(int group) override { BUG(); return 0; }
+        unsigned bitoffset(int group) const override { BUG(); return 0; }
+        void mark_use(Table *tbl) override { BUG(); }
         void dbprint(std::ostream &out) const override {
             out << name;
             if (lo >= 0) {
@@ -719,7 +719,7 @@ int LoadConst::encode() {
     else if (options.target == JBAY)
         return (src >> 11 << 16) | (0x8 << 11) | (src & 0x7ff);
 #endif
-    else { assert(0); return 0; }
+    else { BUG(); return 0; }
 }
 bool LoadConst::equiv(Instruction *a_) {
     if (auto *a = dynamic_cast<LoadConst *>(a_)) {
@@ -907,7 +907,7 @@ int DepositField::encode() {
         bits |= dest->lo << 21;
         break;
     default:
-        assert(0); }
+        BUG(); }
     if (options.target == JBAY) bits <<= 1;
     return bits | src2.bits(slot/Phv::mau_groupsize());
 }
@@ -993,7 +993,7 @@ int Set::encode() {
         rv |= 0x20;
         break;
     default:
-        assert(0); }
+        BUG(); }
     return rv;
 }
 

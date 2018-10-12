@@ -165,9 +165,9 @@ void tofino_phv_ownership(bitvec phv_use[2],
                           EG_GRP &eg_grp, EG_SPLIT &eg_split,
                           unsigned first, unsigned count)
 {
-    assert(in_grp.val.size() == eg_grp.val.size());
-    assert(in_split.val.size() == eg_split.val.size());
-    assert((in_grp.val.size() + 1) * in_split.val.size() == count);
+    BUG_CHECK(in_grp.val.size() == eg_grp.val.size());
+    BUG_CHECK(in_split.val.size() == eg_split.val.size());
+    BUG_CHECK((in_grp.val.size() + 1) * in_split.val.size() == count);
     unsigned group_size = in_split.val.size();
     // DANGER -- this only works because tofino Phv::Register uids happend to match
     // DANGER -- the deparser encoding of phv containers.
@@ -256,7 +256,7 @@ static short tofino_phv2cksum[Target::Tofino::Phv::NUM_PHV_REGS][2] = {
 
 template<typename DTYPE, typename STYPE> static
 void copy_csum_cfg_entry(DTYPE & dst_unit, STYPE & src_unit) {
-    assert(dst_unit.size() == src_unit.size());
+    BUG_CHECK(dst_unit.size() == src_unit.size());
 
     for (unsigned i = 0; i < dst_unit.size(); i++) {
         auto& src = src_unit[i];
@@ -282,7 +282,7 @@ template<typename IPO, typename HPO> static
 void tofino_checksum_units(checked_array_base<IPO> &main_csum_units,
                            checked_array_base<HPO> &tagalong_csum_units,
                            gress_t gress, std::vector<Deparser::ChecksumVal> checksum[]) {
-    assert(tofino_phv2cksum[Target::Tofino::Phv::NUM_PHV_REGS-1][0] == 143);
+    BUG_CHECK(tofino_phv2cksum[Target::Tofino::Phv::NUM_PHV_REGS-1][0] == 143);
     for (int i = 0; i < Target::Tofino::DEPARSER_CHECKSUM_UNITS; i++) {
         auto &main_unit = main_csum_units[i].csum_cfg_entry;
         auto &tagalong_unit = tagalong_csum_units[i].csum_cfg_entry;
@@ -300,17 +300,17 @@ void tofino_checksum_units(checked_array_base<IPO> &main_csum_units,
                 error(reg.pov.lineno, "No POV support in tofino checksum");
             auto cksum_idx0 = tofino_phv2cksum[idx][0];
             auto cksum_idx1 = tofino_phv2cksum[idx][1];
-            assert(cksum_idx0 >= 0);
+            BUG_CHECK(cksum_idx0 >= 0);
             if (idx >= 256) {
                 write_checksum_entry(tagalong_unit[cksum_idx0], mask & 3, swap & 1, i, reg->reg.name);
                 if (cksum_idx1 >= 0)
                     write_checksum_entry(tagalong_unit[cksum_idx1], mask >> 2, swap >> 1, i, reg->reg.name);
-                else assert((mask >> 2 == 0) && (swap >> 1 == 0));
+                else BUG_CHECK((mask >> 2 == 0) && (swap >> 1 == 0));
             } else {
                 write_checksum_entry(main_unit[cksum_idx0], mask & 3, swap & 1, i, reg->reg.name);
                 if (cksum_idx1 >= 0)
                     write_checksum_entry(main_unit[cksum_idx1], mask >> 2, swap >> 1, i, reg->reg.name);
-                else assert((mask >> 2 == 0) && (swap >> 1 == 0));
+                else BUG_CHECK((mask >> 2 == 0) && (swap >> 1 == 0));
             }
         }
         // Thread non-tagalong checksum results through the tagalong unit

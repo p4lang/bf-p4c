@@ -116,7 +116,7 @@ struct Deparser::FDEntry {
                     next = r.first + r.second->reg.size/8U;
                     prev = &r.second; } } }
         unsigned size() override { return length; }
-        unsigned encode() override { assert(0); return -1; }
+        unsigned encode() override { BUG(); return -1; }
     };
 
     int         lineno;
@@ -146,13 +146,13 @@ struct Deparser::Intrinsic::Type {
     static std::map<std::string, Type *> all[TARGET_INDEX_LIMIT][2];
 protected:
     Type(target_t t, gress_t gr, const char *n, int m) : target(t), gress(gr), name(n), max(m) {
-        assert(!all[t][gr].count(name));
+        BUG_CHECK(!all[t][gr].count(name));
         all[target][gress][name] = this; }
     ~Type() { all[target][gress].erase(name); }
 public:
 #define VIRTUAL_TARGET_METHODS(TARGET) \
     virtual void setregs(Target::TARGET::deparser_regs &regs, Deparser &deparser,       \
-                         Intrinsic &vals) { assert(!"target mismatch"); }
+                         Intrinsic &vals) { BUG_CHECK(!"target mismatch"); }
     FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
 #undef VIRTUAL_TARGET_METHODS
 };
@@ -179,13 +179,13 @@ struct Deparser::Digest::Type {
 protected:
     Type(target_t t, gress_t gr, const char *n, int cnt)
     : target(t), gress(gr), name(n), count(cnt) {
-        assert(!all[target][gress].count(name));
+        BUG_CHECK(!all[target][gress].count(name));
         all[target][gress][name] = this; }
     ~Type() { all[target][gress].erase(name); }
 public:
 #define VIRTUAL_TARGET_METHODS(TARGET)                                                  \
     virtual void setregs(Target::TARGET::deparser_regs &regs, Deparser &deparser,       \
-                         Deparser::Digest &data) { assert(!"target mismatch"); }
+                         Deparser::Digest &data) { BUG_CHECK(!"target mismatch"); }
     FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
 #undef VIRTUAL_TARGET_METHODS
 };
@@ -366,8 +366,8 @@ void Deparser::process() {
 
 template<class ENTRIES> static
 void write_checksum_entry(ENTRIES &entry, unsigned mask, int swap, int id, const char* name = "entry") {
-    assert(swap == 0 || swap == 1);
-    assert(mask == 0 || mask & 3);
+    BUG_CHECK(swap == 0 || swap == 1);
+    BUG_CHECK(mask == 0 || mask & 3);
     // XXX(zma) this should be an error; downgrading this as a warning for the time being
     // because it will cause all tests with UDP checksum to fail (UDP checksum include the
     // the length field twice). BRIG-864
@@ -423,7 +423,7 @@ template<class REGS>
 void Deparser::gen_learn_quanta(REGS &regs, json::vector &learn_quanta) {
     for (auto &digest : digests) {
         if (digest.type->name != "learning") continue;
-        assert(digest.context_json);
+        BUG_CHECK(digest.context_json);
         auto namevec = (*(digest.context_json))["name"];
         auto &names = *(namevec->as_vector());
         unsigned idx = 0;
@@ -438,7 +438,7 @@ void Deparser::gen_learn_quanta(REGS &regs, json::vector &learn_quanta) {
             json::vector &fields = quanta["fields"];
             for (auto &tup : digfields) {
                 auto &one = *(tup->as_vector());
-                assert(one.size() == 4);
+                BUG_CHECK(one.size() == 4);
                 json::map anon;
                 anon["field_name"] = (*(one[0])).clone();
                 anon["start_byte"] = (*(one[1])).clone();

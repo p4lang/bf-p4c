@@ -39,7 +39,7 @@ void set_power_ctl_reg(checked_array<2, checked_array<16, ubits<I>>> &power_ctl,
         reg = (reg % (I*4));
         break;
     default:
-        assert(0); }
+        BUG(); }
     power_ctl[side][reg/I] |= 1U << reg%I;
 }
 

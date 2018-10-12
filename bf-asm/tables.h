@@ -80,7 +80,7 @@ protected:
     void setup_maprams(value_t &);
     void setup_vpns(std::vector<Layout> &, VECTOR(value_t) *, bool allow_holes = false);
     virtual void vpn_params(int &width, int &depth, int &period, const char *&period_name) const
-    { assert(0); }
+    { BUG(); }
     virtual int get_start_vpn() { return 0; }
     void alloc_rams(bool logical, Alloc2Dbase<Table *> &use, Alloc2Dbase<Table *> *bus_use = 0);
     void alloc_busses(Alloc2Dbase<Table *> &bus_use);
@@ -121,7 +121,7 @@ public:
             if (lineno < 0) lineno = a.lineno;
             return *this; }
         Ref &operator=(const value_t &a) & {
-            assert(a.type == tSTR);
+            BUG_CHECK(a.type == tSTR);
             name = a.s;
             lineno = a.lineno;
             return *this; }
@@ -170,7 +170,7 @@ public:
                     i -= chunk.size();
                     last = chunk.hi+1; }
                 if (i == 0) return last;
-                assert(0);
+                BUG();
                 return 0; // quiet -Wreturn-type warning
             }
             /* bit(i), adjusted for the immediate shift of the match group of the field
@@ -183,7 +183,7 @@ public:
                 for (auto &chunk : bits)
                     if (bit >= chunk.lo && bit <= chunk.hi)
                         return chunk.hi;
-                assert(0);
+                BUG();
                 return 0; // quiet -Wreturn-type warning
             }
             enum flags_t { NONE=0, USED_IMMED=1, ZERO=3 };
@@ -216,7 +216,7 @@ public:
 
         unsigned groups() const { return fmt.size(); }
         Field *field(const std::string &n, int group = 0) {
-            assert(group >= 0 && (size_t)group < fmt.size());
+            BUG_CHECK(group >= 0 && (size_t)group < fmt.size());
             auto it = fmt[group].find(n);
             if (it != fmt[group].end()) return &it->second;
             return 0; }
@@ -289,7 +289,7 @@ public:
             Arg(int v) : type(Const) { val = v; }
             Arg(const char *n) : type(Name) { str = strdup(n); }
             Arg(decltype(Counter) ctr, int mode) : type(Counter) { val = mode;
-                assert(ctr == Counter); }
+                BUG_CHECK(ctr == Counter); }
             ~Arg() { if (type == Name) free(str); }
             bool operator==(const Arg &a) const {
                 if (type != a.type) return false;
@@ -298,7 +298,7 @@ public:
                     case HashDist: return hd == a.hd;
                     case Counter: case Const: return val == a.val;
                     case Name: return !strcmp(str, a.str);
-                    default: assert(0); }
+                    default: BUG(); }
                 return false;
             }
             bool operator!=(const Arg &a) const { return !operator==(a); }
@@ -486,24 +486,24 @@ public:
     virtual GatewayTable *get_table_gateway() { return 0; }
     virtual SelectionTable *get_selector() const { return 0; }
     virtual MeterTable* get_meter() const { return 0; }
-    virtual void set_stateful (StatefulTable *s) { assert(0); }
+    virtual void set_stateful (StatefulTable *s) { BUG(); }
     virtual StatefulTable *get_stateful() const { return 0; }
-    virtual void set_address_used() { assert(0); }
-    virtual void set_color_used() { assert(0); }
-    virtual void set_output_used() { assert(0); }
+    virtual void set_address_used() { BUG(); }
+    virtual void set_color_used() { BUG(); }
+    virtual void set_output_used() { BUG(); }
     virtual const Call &get_action() const { return action; }
-    virtual bool is_attached(const Table *) const { assert(0); return false; }
-    virtual Format::Field *find_address_field(const AttachedTable *) const { assert(0); return 0; }
-    virtual Format::Field *get_per_flow_enable_param(MatchTable *) const { assert(0); return 0; }
-    virtual Format::Field *get_meter_address_param(MatchTable *) const { assert(0); return 0; }
-    virtual Format::Field *get_meter_type_param(MatchTable *) const { assert(0); return 0; }
-    virtual int direct_shiftcount() const { assert(0); return -1; }
-    virtual int indirect_shiftcount() const { assert(0); return -1; }
-    virtual int address_shift() const { assert(0); return -1; }
-    virtual int home_row() const { assert(0); return -1; }
+    virtual bool is_attached(const Table *) const { BUG(); return false; }
+    virtual Format::Field *find_address_field(const AttachedTable *) const { BUG(); return 0; }
+    virtual Format::Field *get_per_flow_enable_param(MatchTable *) const { BUG(); return 0; }
+    virtual Format::Field *get_meter_address_param(MatchTable *) const { BUG(); return 0; }
+    virtual Format::Field *get_meter_type_param(MatchTable *) const { BUG(); return 0; }
+    virtual int direct_shiftcount() const { BUG(); return -1; }
+    virtual int indirect_shiftcount() const { BUG(); return -1; }
+    virtual int address_shift() const { BUG(); return -1; }
+    virtual int home_row() const { BUG(); return -1; }
     /* row,col -> mem unitno mapping -- unitnumbers used in context json */
     virtual int memunit(const int r, const int c) const { return r*12 + c; }
-    virtual int unitram_type() { assert(0); return -1; }
+    virtual int unitram_type() { BUG(); return -1; }
     virtual bool uses_colormaprams() const { return false; }
     virtual bool adr_mux_select_stats() { return false; }
     virtual bool run_at_eop() { return false; }
@@ -562,7 +562,7 @@ public:
             auto col = find(row.cols.begin(), row.cols.end(), c);
             if (col == row.cols.end()) continue;
             return row.vpns.at(col - row.cols.begin()); }
-        assert(0);
+        BUG();
         return 0; }
     void layout_vpn_bounds(int &min, int &max, bool spare = false) {
         min = 1000000; max = -1;
@@ -612,7 +612,7 @@ public:
                                           const Table::Format::Field &field,
                                           const Table::Actions::Action *act) const;
     virtual bool validate_call(Table::Call &call, MatchTable *self, size_t required_args,
-            int hash_dist_type, Table::Call &first_call) { assert(0); return false; }
+            int hash_dist_type, Table::Call &first_call) { BUG(); return false; }
     bool validate_instruction(Table::Call &call) const;
                                           // const std::vector<Actions::Action::alias_value_t *> &);
     // Generate the context json for a field into field list.
@@ -954,8 +954,8 @@ public:
     int indirect_bus;   /* indirect bus to use if there's no indirect table */
     void alloc_vpns() override;
     range_match_t get_dirtcam_mode(int group, int byte) const {
-        assert(group >= 0);
-        assert(byte >= 0);
+        BUG_CHECK(group >= 0);
+        BUG_CHECK(byte >= 0);
         range_match_t dirtcam_mode = NONE;
         for (auto &m : match) {
             if (m.word_group == group) {

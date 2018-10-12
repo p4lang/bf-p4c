@@ -7,7 +7,7 @@
 TopLevel *TopLevel::all = nullptr;
 
 TopLevel::TopLevel() {
-    assert(!all);
+    BUG_CHECK(!all);
     all = this;
 }
 

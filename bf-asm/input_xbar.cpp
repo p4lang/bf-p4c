@@ -292,7 +292,7 @@ static int tcam_swizzle_16[2][2] { { 0, -1 }, { +1, 0 } };
 
 int InputXbar::tcam_input_use(int out_byte, int phv_byte, int phv_size) {
     int rv = out_byte;
-    assert(phv_byte >= 0 && phv_byte < phv_size/8);
+    BUG_CHECK(phv_byte >= 0 && phv_byte < phv_size/8);
     switch(phv_size) {
     case 8:
         break;
@@ -303,7 +303,7 @@ int InputXbar::tcam_input_use(int out_byte, int phv_byte, int phv_size) {
         rv += tcam_swizzle_16[out_byte & 1][phv_byte];
         break;
     default:
-        assert(0); }
+        BUG(); }
     return rv;
 }
 
@@ -323,7 +323,7 @@ void InputXbar::tcam_update_use(TcamUseCache &use) {
             for (int phv_byte = input.what->lo/8; phv_byte <= input.what->hi/8;
                  phv_byte++, group_byte++)
             {
-                assert(group_byte <= 5);
+                BUG_CHECK(group_byte <= 5);
                 int out_byte = group_byte == 5 ? half_byte : group_base + group_byte;
                 int in_byte = tcam_input_use(out_byte, phv_byte, input.what->reg.size);
                 use.tcam_use.emplace(in_byte, std::pair<const Input &, int>(input, phv_byte));
@@ -346,7 +346,7 @@ void InputXbar::check_tcam_input_conflict(InputXbar::Group group, Input &input, 
         error(input.what.lineno, "%s misaligned on input_xbar", input.what.name());
         return; }
     for (int phv_byte = input.what->lo/8; phv_byte <= input.what->hi/8; phv_byte++, group_byte++) {
-        assert(group_byte <= 5);
+        BUG_CHECK(group_byte <= 5);
         int out_byte = group_byte == 5 ? half_byte : group_base + group_byte;
         int in_byte = tcam_input_use(out_byte, phv_byte, input.what->reg.size);
         if (in_byte < 0 || in_byte >= TCAM_XBAR_INPUT_BYTES) {
@@ -568,9 +568,9 @@ void InputXbar::write_regs(REGS &regs) {
             group_base = 133 + 11*group.first.index;
             break;
         default:
-            assert(0); }
+            BUG(); }
         for (auto &input : group.second) {
-            assert(input.lo >= 0);
+            BUG_CHECK(input.lo >= 0);
             unsigned word_group = 0, word_index = 0, swizzle_mask = 0;
             bool hi_enable = false;
             switch (input.what->reg.size) {
@@ -591,7 +591,7 @@ void InputXbar::write_regs(REGS &regs) {
                 swizzle_mask = 3;
                 break;
             default:
-                assert(0); }
+                BUG(); }
             word_group &= 3;
             unsigned phv_byte = input.what->lo/8U;
             unsigned phv_size = input.what->reg.size/8U;
@@ -611,7 +611,7 @@ void InputXbar::write_regs(REGS &regs) {
                         i += off;
                     } else error(input.what.lineno, "misaligned phv access on input_xbar"); }
                 if (input.what->reg.ixbar_id() < 64) {
-                    assert(input.what->reg.size == 32);
+                    BUG_CHECK(input.what->reg.size == 32);
                     xbar.match_input_xbar_32b_ctl[word_group][i]
                         .match_input_xbar_32b_ctl_address = word_index;
                     if (hi_enable)

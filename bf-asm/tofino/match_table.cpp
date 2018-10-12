@@ -13,7 +13,7 @@ template<> void MatchTable::setup_next_table_map(Target::Tofino::mau_regs &regs,
         if (auto next_field = nf->field("next")) {
             // next_table_map is indexed through "next" bits if present and if
             // we dont use all 8 bits in match overhead for next tables
-            assert((1U << next_field->size) <= NEXT_TABLE_SUCCESSOR_TABLE_DEPTH);
+            BUG_CHECK((1U << next_field->size) <= NEXT_TABLE_SUCCESSOR_TABLE_DEPTH);
             next_bits = next_field->size; 
             unsigned next_bits_encoding = 0;
             // Generate unique encodings for next tables
@@ -22,7 +22,7 @@ template<> void MatchTable::setup_next_table_map(Target::Tofino::mau_regs &regs,
                 if (next_table_encodings.count(n->name()) == 0)
                     next_table_encodings[n->name()] = next_bits_encoding++; 
             }
-            assert(next_bits_encoding <= (1U << next_bits)); } }
+            BUG_CHECK(next_bits_encoding <= (1U << next_bits)); } }
 
     // If there is only one default next table then the format may not have an
     // 'action' or 'next' field. In this case we set a default encoding to 0
@@ -58,7 +58,7 @@ template<> void MatchTable::setup_next_table_map(Target::Tofino::mau_regs &regs,
                     } else if (act.code >= 0) {
                         // If action bits are used the instruction index is used
                         // to index in both instruction map data and 
-                        assert(act.code < 8);
+                        BUG_CHECK(act.code < 8);
                         act.next_table_encode = act.code;
                         *map_data[act.next_table_encode] = n->table_id(); } } }
             hit_next_index++; } }

@@ -211,7 +211,7 @@ void MeterTable::write_regs(REGS &regs) {
     for (Layout &logical_row : layout) {
         unsigned row = logical_row.row/2U;
         unsigned side = logical_row.row&1;   /* 0 == left  1 == right */
-        assert(side == 1);      /* no map rams or alus on left side anymore */
+        BUG_CHECK(side == 1);      /* no map rams or alus on left side anymore */
         auto vpn = logical_row.vpns.begin();
         auto mapram = logical_row.maprams.begin();
         auto &map_alu_row =  map_alu.row[row];
@@ -366,7 +366,7 @@ void MeterTable::write_regs(REGS &regs) {
             map_alu.mapram_color_write_switchbox[home->row/4U].ctl.b_oflo_color_write_o_mux_select
                 .b_oflo_color_write_o_sel_r_color_write_i = 1;
             map_alu.mapram_color_write_switchbox[row.row/2U].ctl.r_oflo_color_write_o_mux_select=1;
-            assert(home->row/4U >= row.row/2U);
+            BUG_CHECK(home->row/4U >= row.row/2U);
             for (unsigned i = home->row/4U; i > row.row/2U; i--)
                 map_alu.mapram_color_write_switchbox[i].ctl.b_oflo_color_write_o_mux_select
                     .b_oflo_color_write_o_sel_t_oflo_color_write_i = 1; }

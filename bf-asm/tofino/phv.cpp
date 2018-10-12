@@ -24,7 +24,7 @@ void Target::Tofino::Phv::init_regs(::Phv &phv) {
                 strcpy(reg->name, buf);
                 phv.names[INGRESS].emplace(buf, ::Phv::Slice(*reg, 0, sizes[i].size - 1));
                 phv.names[EGRESS].emplace(buf, ::Phv::Slice(*reg, 0, sizes[i].size - 1)); } } }
-    assert(uid == phv.regs.size());
+    BUG_CHECK(uid == phv.regs.size());
 }
 
 static bitvec tagalong_group(int n) {

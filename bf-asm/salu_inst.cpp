@@ -79,7 +79,7 @@ struct operand {
         PhvRaw(gress_t gress, const value_t &v) : Phv(v.lineno) {
             if (v == "phv_lo") pi = 0;
             else if (v == "phv_hi") pi = 1;
-            else assert(0);
+            else BUG();
             if (v.type == tCMD && PCHECKTYPE(v.vec.size == 2, v[1], tRANGE)) {
                 if ((v[1].lo & 7) || ((v[1].hi + 1) & 7))
                     error(lineno, "only byte slices allowed on %s", v[0].s);

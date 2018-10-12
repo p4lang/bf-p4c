@@ -25,7 +25,7 @@ void AluOP::write_regs(Target::Tofino::mau_regs &regs, Table *tbl_, Table::Actio
             } else {
                 salu.salu_const_src = tbl->get_const(k->value);
                 salu.salu_regfile_const = 1; }
-        } else assert(0); }
+        } else BUG(); }
     if (srcb) {
         if (auto f = srcb.to<operand::Phv>()) {
             salu.salu_bsrc_phv = 1;
@@ -36,7 +36,7 @@ void AluOP::write_regs(Target::Tofino::mau_regs &regs, Table *tbl_, Table::Actio
                 salu_instr_common.salu_alu2_lo_math_src = b->phv_index(tbl);
             } else if (auto b = m->of.to<operand::Memory>()) {
                 salu_instr_common.salu_alu2_lo_math_src = b->field->bit(0) > 0 ? 3 : 2;
-            } else assert(0);
+            } else BUG();
         } else if (auto k = srcb.to<operand::Const>()) {
             salu.salu_bsrc_phv = 0;
             if (k->value >= -8 && k->value < 8) {
@@ -45,7 +45,7 @@ void AluOP::write_regs(Target::Tofino::mau_regs &regs, Table *tbl_, Table::Actio
             } else {
                 salu.salu_const_src = tbl->get_const(k->value);
                 salu.salu_regfile_const = 1; }
-        } else assert(0); }
+        } else BUG(); }
 }
 void AluOP::write_regs(Target::Tofino::mau_regs &regs, Table *tbl, Table::Actions::Action *act) {
     write_regs<Target::Tofino::mau_regs>(regs, tbl, act); }
@@ -94,7 +94,7 @@ void CmpOP::write_regs(Target::Tofino::mau_regs &regs, Table *tbl, Table::Action
 
 #if HAVE_JBAY
 void TMatchOP::write_regs(Target::Tofino::mau_regs &regs, Table *tbl, Table::Actions::Action *act) {
-    assert(0);  // should never be called
+    BUG();  // should never be called
 }
 #endif
 

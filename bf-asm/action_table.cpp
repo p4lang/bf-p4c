@@ -42,7 +42,7 @@ Table::Format::Field
         } else if (auto *rv = format ? format->field(name) : 0)
             return rv; }
     for (auto *match_table : match_tables) {
-        assert((Table *)match_table != (Table *)this);
+        BUG_CHECK((Table *)match_table != (Table *)this);
         if (auto *rv = match_table->lookup_field(name))
             return rv; }
     return 0;
@@ -67,7 +67,7 @@ int ActionTable::find_on_actionbus(Table::Format::Field *f, int lo, int hi, int 
     if (action_bus && (rv = action_bus->find(f, lo, hi, size)) >= 0)
         return rv;
     for (auto *match_table : match_tables) {
-        assert((Table *)match_table != (Table *)this);
+        BUG_CHECK((Table *)match_table != (Table *)this);
         if ((rv = match_table->find_on_actionbus(f, lo, hi, size)) >= 0)
             return rv; }
     return -1;
@@ -78,7 +78,7 @@ int ActionTable::find_on_actionbus(const char *name, TableOutputModifier mod, in
     if (action_bus && (rv = action_bus->find(name, mod, lo, hi, size, len)) >= 0)
         return rv;
     for (auto *match_table : match_tables) {
-        assert((Table *)match_table != (Table *)this);
+        BUG_CHECK((Table *)match_table != (Table *)this);
         if ((rv = match_table->find_on_actionbus(name, mod, lo, hi, size, len)) >= 0)
             return rv; }
     return -1;
@@ -112,11 +112,11 @@ void ActionTable::need_on_actionbus(Format::Field *f, int lo, int hi, int size) 
             Table::need_on_actionbus(f, lo, hi, size);
             return; } }
     for (auto *match_table : match_tables) {
-        assert((Table *)match_table != (Table *)this);
+        BUG_CHECK((Table *)match_table != (Table *)this);
         if (f->fmt == match_table->get_format()) {
             match_table->need_on_actionbus(f, lo, hi, size);
             return; } }
-    assert(!"Can't find table associated with field");
+    BUG_CHECK(!"Can't find table associated with field");
 }
 
 void ActionTable::need_on_actionbus(Table *att, TableOutputModifier mod, int lo, int hi, int size) {
@@ -139,7 +139,7 @@ void ActionTable::need_on_actionbus(HashDistribution *hd, int lo, int hi, int si
         if (match_table->find_hash_dist(hd->id) == hd) {
             match_table->need_on_actionbus(hd, lo, hi, size);
             return; } }
-    assert(!"Can't find table associated with hash_dist");
+    BUG_CHECK(!"Can't find table associated with hash_dist");
 }
 
 void ActionTable::need_on_actionbus(RandomNumberGen rng, int lo, int hi, int size) {
@@ -163,7 +163,7 @@ unsigned ActionTable::determine_shiftcount(Table::Call &call, int group, unsigne
     if (call.args[0] == "$DIRECT") {
         return 64 + extra_shift + tcam_shift;
     } else if (call.args[0].field()) {
-        assert(call.args[0].field()->by_group[group]->bit(0)/128U == word);
+        BUG_CHECK(call.args[0].field()->by_group[group]->bit(0)/128U == word);
         return call.args[0].field()->by_group[group]->bit(0)%128U + extra_shift; 
     } else if (call.args[1].field()) {
         return call.args[1].field()->bit(0) + ACTION_ADDRESS_ZERO_PAD;
@@ -178,7 +178,7 @@ unsigned ActionTable::determine_shiftcount(Table::Call &call, int group, unsigne
  */
 unsigned ActionTable::determine_default(Table::Call &call) const {
     int huffman_ones = std::max(static_cast<int>(get_log2size()) - 3, 0);
-    assert(huffman_ones <= ACTION_DATA_HUFFMAN_BITS);
+    BUG_CHECK(huffman_ones <= ACTION_DATA_HUFFMAN_BITS);
     unsigned huffman_mask = (1 << huffman_ones) - 1;
     // lower_huffman_mask == 0x1f, upper_huffman_mask = 0x60
     unsigned lower_huffman_mask = (1U << ACTION_DATA_LOWER_HUFFMAN_BITS) - 1;
@@ -442,7 +442,7 @@ void ActionTable::pass3() {
                     tbl_actions = tern->indirect->actions;
                 }
             }
-            assert(tbl_actions);
+            BUG_CHECK(tbl_actions);
             for (auto &act : *tbl_actions) {
                 if (pack_actions.count(act.name) == 0)
                     pack_actions[act.name] = &act;
@@ -465,8 +465,8 @@ void ActionTable::pass3() {
 
 template<class REGS>
 static void flow_selector_addr(REGS &regs, int from, int to) {
-    assert(from > to);
-    assert((from & 3) == 3);
+    BUG_CHECK(from > to);
+    BUG_CHECK((from & 3) == 3);
     if (from/2 == to/2) {
         /* R to L */
         regs.rams.map_alu.selector_adr_switchbox.row[from/4].ctl
@@ -540,7 +540,7 @@ void ActionTable::write_regs(REGS &regs) {
                 icxbar[mtab->logical_id].address_distr_to_logical_rows |=
                     1U << logical_row.row;
         } else {
-            assert(home);
+            BUG_CHECK(home);
             // FIXME use DataSwitchboxSetup for this somehow?
             if (&switch_ctl == home_switch_ctl) {
                 /* overflow from L to R action */
@@ -573,7 +573,7 @@ void ActionTable::write_regs(REGS &regs) {
                 oflo_adr_xbar.adr_dist_oflo_adr_xbar_source_index = home->row % 8;
                 oflo_adr_xbar.adr_dist_oflo_adr_xbar_source_sel = 0;
             } else {
-                assert(home->row >= 8);
+                BUG_CHECK(home->row >= 8);
                 oflo_adr_xbar.adr_dist_oflo_adr_xbar_source_index = 0;
                 oflo_adr_xbar.adr_dist_oflo_adr_xbar_source_sel = 3;
                 push_on_overflow = true;

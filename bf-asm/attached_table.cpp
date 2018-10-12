@@ -121,7 +121,7 @@ unsigned AttachedTable::determine_meter_shiftcount(Table::Call &call, int group,
     if (call.args[0].name() && strcmp(call.args[0].name(), "$DIRECT") == 0) {
         return direct_shiftcount() + tcam_shift;
     } else if (auto f = call.args[0].field()) {
-        assert(int(f->by_group[group]->bit(0)/128U) == word);
+        BUG_CHECK(int(f->by_group[group]->bit(0)/128U) == word);
         return f->by_group[group]->bit(0)%128U + indirect_shiftcount();
     } else if (auto f = call.args[1].field()) {
         return f->bit(0) + METER_ADDRESS_ZERO_PAD;
@@ -196,7 +196,7 @@ void AttachedTable::determine_meter_merge_regs(MatchTable *match, int type, int 
         max_ptr_bits = TCAM_VPN_BITS + TCAM_WORD_BITS;
 
     unsigned max_address = (1U << METER_ADDRESS_BITS) - 1;
-    assert(args.size() == 3);
+    BUG_CHECK(args.size() == 3);
     if (args[0].type == Table::Call::Arg::Name && strcmp(args[0].name(), "$DIRECT") == 0) {
         adr_mask |= (((1U << max_ptr_bits) - 1) << address_shift()) & max_address;
     } else if (auto addr = args[0].field()) {

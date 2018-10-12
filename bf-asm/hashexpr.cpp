@@ -8,7 +8,7 @@ static bitvec crc(bitvec poly, bitvec val) {
     if (!poly_size) return bitvec(0);
     val <<= poly_size - 1;
     for (auto i = val.max(); i.index() >= (poly_size-1); --i) {
-        assert(*i);
+        BUG_CHECK(*i);
         val ^= poly << (i.index() - (poly_size-1)); }
     return val;
 }

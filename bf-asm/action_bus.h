@@ -64,7 +64,7 @@ class ActionBus {
         unsigned lo(Table *tbl) const;  // low bit on the action data bus
         bool is_table_output() const {
             for (auto &d : data) {
-                assert(d.first.type != Source::NameRef);
+                BUG_CHECK(d.first.type != Source::NameRef);
                 if (d.first.type == Source::TableOutput)
                     return true; }
             return false; }

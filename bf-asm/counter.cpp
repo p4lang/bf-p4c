@@ -131,7 +131,7 @@ unsigned CounterTable::determine_shiftcount(Table::Call &call, int group, unsign
     if (call.args[0].name() && strcmp(call.args[0].name(), "$DIRECT") == 0) {
         return direct_shiftcount() + tcam_shift;
     } else if (call.args[0].field()) {
-        assert(unsigned(call.args[0].field()->by_group[group]->bit(0)/128) == word);
+        BUG_CHECK(unsigned(call.args[0].field()->by_group[group]->bit(0)/128) == word);
         return call.args[0].field()->by_group[group]->bit(0)%128 + indirect_shiftcount();
     } else if (call.args[1].field()) {
         return call.args[1].field()->bit(0) + STAT_ADDRESS_ZERO_PAD;
@@ -187,7 +187,7 @@ template<class REGS> void CounterTable::write_regs(REGS &regs) {
     for (Layout &logical_row : layout) {
         unsigned row = logical_row.row/2U;
         unsigned side = logical_row.row&1;   /* 0 == left  1 == right */
-        assert(side == 1);      /* no map rams or alus on left side anymore */
+        BUG_CHECK(side == 1);      /* no map rams or alus on left side anymore */
         /* FIXME factor vpn/mapram stuff with selection.cpp */
         auto vpn = logical_row.vpns.begin();
         auto mapram = logical_row.maprams.begin();

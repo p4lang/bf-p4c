@@ -415,7 +415,7 @@ void GatewayTable::write_regs(REGS &regs) {
         gw_reg.gateway_table_ctl.gateway_table_input_data0_select = 1;
         gw_reg.gateway_table_ctl.gateway_table_input_hash0_select = 1;
     } else {
-        assert(row.bus == 1);
+        BUG_CHECK(row.bus == 1);
         gw_reg.gateway_table_ctl.gateway_table_input_data1_select = 1;
         gw_reg.gateway_table_ctl.gateway_table_input_hash1_select = 1; }
     if (input_xbar && input_xbar->hash_group() >= 0)
@@ -432,7 +432,7 @@ void GatewayTable::write_regs(REGS &regs) {
     int lineno = 3;
     gw_reg.gateway_table_ctl.gateway_table_mode = range_match;
     for (auto &line : table) {
-        assert(lineno >= 0);
+        BUG_CHECK(lineno >= 0);
         /* FIXME -- hardcoding version/valid to always */
         gw_reg.gateway_table_vv_entry[lineno].gateway_table_entry_versionvalid0 = 0x3;
         gw_reg.gateway_table_vv_entry[lineno].gateway_table_entry_versionvalid1 = 0x3;
@@ -471,7 +471,7 @@ void GatewayTable::write_regs(REGS &regs) {
             for (auto &row : tbl->layout)
                 payload_write_regs(regs, row.row, tind_bus, row.bus);
         else {
-            assert(tmatch);
+            BUG_CHECK(tmatch);
             auto &xbar_ctl = merge.gateway_to_pbus_xbar_ctl[tmatch->indirect_bus];
             xbar_ctl.tind_logical_select = logical_id;
             xbar_ctl.tind_inhibit_enable = 1; }

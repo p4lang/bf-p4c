@@ -440,7 +440,7 @@ void TernaryMatchTable::write_regs(REGS &regs) {
 std::unique_ptr<json::map> TernaryMatchTable::gen_memory_resource_allocation_tbl_cfg (
         const char *type, const std::vector<Layout> & layout, bool skip_spare_bank) const {
     if (layout.size() == 0) return nullptr;
-    assert(!skip_spare_bank); // never spares in tcam
+    BUG_CHECK(!skip_spare_bank); // never spares in tcam
     json::map mra { { "memory_type", json::string(type) } };
     json::vector &mem_units_and_vpns = mra["memory_units_and_vpns"];
     json::vector mem_units;
@@ -637,11 +637,11 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) const {
                 // a field in the (mid) byte group, which is shared with the adjacent word group
                 // each word gets only 4 bits of the byte group and is placed at msb
                 // Check mid-byte field does not cross byte boundary (40-47)
-                assert(field.second.hi < 48);
+                BUG_CHECK(field.second.hi < 48);
                 // Check mid-byte field is associated with even group
                 // | == 5 == | == 1 == | == 5 == | == 5 == | == 1 == | == 5 == |
                 // | Grp 0   | Midbyte0| Grp 1   | Grp 2   | Midbyte1| Grp 3   |
-                assert((field.first.index & 1) == 0);
+                BUG_CHECK((field.first.index & 1) == 0);
                 // Find groups to place this byte nibble. Check group which has this
                 // group as the byte_group
                 for (auto &m : match) {
