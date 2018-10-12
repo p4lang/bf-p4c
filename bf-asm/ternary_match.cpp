@@ -360,7 +360,7 @@ void TernaryMatchTable::write_regs(REGS &regs) {
             auto &halfbyte_mux_ctl = tcam_vh_xbar.tcam_row_halfbyte_mux_ctl[col][row.row];
             halfbyte_mux_ctl.tcam_row_halfbyte_mux_ctl_select = match[word].byte_config;
             halfbyte_mux_ctl.tcam_row_halfbyte_mux_ctl_enable = 1;
-            halfbyte_mux_ctl.tcam_row_search_thread = gress;
+            halfbyte_mux_ctl.tcam_row_search_thread = timing_thread(gress);
             if (match[word].word_group >= 0)
                 setup_muxctl(tcam_vh_xbar.tcam_row_output_ctl[col][row.row],
                              match[word].word_group);
@@ -378,9 +378,9 @@ void TernaryMatchTable::write_regs(REGS &regs) {
     if (tcam_id >= 0) {
         if (stage->table_use[timing_thread(gress)] & Stage::USE_TCAM_PIPED)
             merge.tcam_table_prop[tcam_id].tcam_piped = 1;
-        merge.tcam_table_prop[tcam_id].thread = gress;
+        merge.tcam_table_prop[tcam_id].thread = timing_thread(gress);
         merge.tcam_table_prop[tcam_id].enabled = 1;
-        regs.tcams.tcam_output_table_thread[tcam_id] = 1 << gress;
+        regs.tcams.tcam_output_table_thread[tcam_id] = 1 << timing_thread(gress);
     }
     if (indirect_bus >= 0) {
         /* FIXME -- factor into corresponding code in MatchTable::write_regs */
@@ -401,7 +401,7 @@ void TernaryMatchTable::write_regs(REGS &regs) {
         if (!attached.meters.empty() || !attached.statefuls.empty())
             shift_en.meter_adr_payload_shifter_en = 1;
         merge.tind_bus_prop[indirect_bus].tcam_piped = 1;
-        merge.tind_bus_prop[indirect_bus].thread = gress;
+        merge.tind_bus_prop[indirect_bus].thread = timing_thread(gress);
         merge.tind_bus_prop[indirect_bus].enabled = 1;
         //if (action_bus)
         //  merge.mau_immediate_data_mask[1][indirect_bus] =
@@ -895,7 +895,7 @@ template<class REGS> void TernaryIndirectTable::write_regs(REGS &regs) {
             unitram_config.unitram_type = 6;
             unitram_config.unitram_vpn = *vpn++;
             unitram_config.unitram_logical_table = logical_id;
-            if (gress == INGRESS)
+            if (gress == INGRESS || gress == GHOST)
                 unitram_config.unitram_ingress = 1;
             else
                 unitram_config.unitram_egress = 1;
@@ -904,15 +904,15 @@ template<class REGS> void TernaryIndirectTable::write_regs(REGS &regs) {
                     .adr_dist_tind_adr_xbar_ctl[row.bus];
             if (tcam_id >= 0)
                 setup_muxctl(xbar_ctl, tcam_id);
-            if (gress)
+            if (gress == EGRESS)
                 regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row.row);
-            ram_row.tind_ecc_error_uram_ctl[gress] |= 1 << (col - 2); }
+            ram_row.tind_ecc_error_uram_ctl[timing_thread(gress)] |= 1 << (col - 2); }
         int bus = row.row*2 + row.bus;
         merge.tind_ram_data_size[bus] = format->log2size - 1;
         if (tcam_id >= 0)
             setup_muxctl(merge.tcam_match_adr_to_physical_oxbar_outputmap[bus], tcam_id);
         merge.tind_bus_prop[bus].tcam_piped = 1;
-        merge.tind_bus_prop[bus].thread = gress;
+        merge.tind_bus_prop[bus].thread = timing_thread(gress);
         merge.tind_bus_prop[bus].enabled = 1;
         if (instruction) {
             int shiftcount = 0;

@@ -318,10 +318,13 @@ bool CreateSaluInstruction::preorder(const IR::Member *e) {
 }
 bool CreateSaluInstruction::preorder(const IR::Slice *sl) {
     visit(sl->e0, "e0");
-    if (operands.back() == sl->e0)
+    if (etype == OUTPUT) {
+        if (sl->getL() != 0)
+            error("%scan only output slice at 0 from stateful alu", sl->srcInfo);
+    } else if (operands.back() == sl->e0) {
         operands.back() = sl;
-    else
-        operands.back() = new IR::Slice(sl->srcInfo, operands.back(), sl->e1, sl->e2);
+    } else {
+        operands.back() = new IR::Slice(sl->srcInfo, operands.back(), sl->e1, sl->e2); }
     return false;
 }
 
@@ -371,6 +374,7 @@ bool CreateSaluInstruction::preorder(const IR::Primitive *prim) {
             error("%s can only write to an ouput", prim);
             return false; }
         auto *saved_predicate = predicate;
+        auto saved_output_index = output_index;
         etype = VALUE;
         predicate = nullptr;
         opcode = method;
@@ -389,7 +393,9 @@ bool CreateSaluInstruction::preorder(const IR::Primitive *prim) {
             visit(prim->operands[3], "index");
             BUG_CHECK(operands.size() == 0 || ::errorCount() > 0, "recursion failure");
             operands.push_back(new IR::MAU::SaluReg(prim->type, "minmax_index", false));
-            createInstruction(); }
+            createInstruction();
+            operands.clear(); }
+        output_index = saved_output_index;
         predicate = saved_predicate;
         etype = OUTPUT;
         operands.push_back(new IR::MAU::SaluReg(prim->type, "minmax", false));

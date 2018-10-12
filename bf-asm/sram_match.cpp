@@ -586,7 +586,7 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
             unitram_config.unitram_type = 1;
             unitram_config.unitram_logical_table = logical_id;
             switch (gress) {
-            case INGRESS: unitram_config.unitram_ingress = 1; break;
+            case INGRESS: case GHOST: unitram_config.unitram_ingress = 1; break;
             case EGRESS: unitram_config.unitram_egress = 1; break;
             default: BUG(); }
             unitram_config.unitram_enable = 1;
@@ -611,9 +611,9 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
             for (; word_group < 5; word_group++) {
                 ram.match_bytemask[word_group].mask_bytes_0_to_13 = 0x3fff;
                 ram.match_bytemask[word_group].mask_nibbles_28_to_31 = 0xf; }
-            if (gress)
+            if (gress == EGRESS)
                 regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row.row);
-            rams_row.emm_ecc_error_uram_ctl[gress] |= 1U << (col - 2); }
+            rams_row.emm_ecc_error_uram_ctl[timing_thread(gress)] |= 1U << (col - 2); }
         /* setup input xbars to get data to the right places on the bus(es) */
         bool using_match = false;
         auto &byteswizzle_ctl = rams_row.exactmatch_row_vh_xbar_byteswizzle_ctl[row.bus];
@@ -658,7 +658,7 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
                 // just set the enable without actually selecting an input -- if another table
                 // is sharing the bus, it will set it, otherwise we'll get ixbar group 0
                 vh_xbar_ctl.exactmatch_row_vh_xbar_enable = 1; }
-            vh_xbar_ctl.exactmatch_row_vh_xbar_thread = gress; }
+            vh_xbar_ctl.exactmatch_row_vh_xbar_thread = timing_thread(gress); }
         /* setup match central config to extract results of the match */
         unsigned bus = row.row*2 + row.bus;
         /* FIXME -- factor this where possible with ternary match code */
@@ -741,7 +741,7 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
         //if (gress == EGRESS)
         //    merge.exact_match_delay_config.exact_match_bus_thread |= 1 << bus;
         merge.exact_match_phys_result_en[bus/8U] |= 1U << (bus%8U);
-        merge.exact_match_phys_result_thread[bus/8U] |= gress << (bus%8U);
+        merge.exact_match_phys_result_thread[bus/8U] |= timing_thread(gress) << (bus%8U);
         if (stage->tcam_delay(gress))
             merge.exact_match_phys_result_delay[bus/8U] |= 1U << (bus%8U);
     }

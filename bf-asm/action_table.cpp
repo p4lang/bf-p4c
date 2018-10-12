@@ -601,7 +601,7 @@ void ActionTable::write_regs(REGS &regs) {
             if (!no_vpns)
                 unitram_config.unitram_vpn = *vpn++;
             unitram_config.unitram_logical_table = action_id >= 0 ? action_id : logical_id;
-            if (gress == INGRESS)
+            if (gress == INGRESS || gress == GHOST)
                 unitram_config.unitram_ingress = 1;
             else
                 unitram_config.unitram_egress = 1;
@@ -638,9 +638,10 @@ void ActionTable::write_regs(REGS &regs) {
                 else {
                     adr_mux_sel = UnitRam::AdrMux::OVERFLOW;
                     ram_mux.ram_oflo_adr_mux_select_oflo = 1; } }
-            if (gress)
+            if (gress == EGRESS)
                 regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row);
-            regs.rams.array.row[row].actiondata_error_uram_ctl[gress] |= 1 << (col-2);
+            regs.rams.array.row[row].actiondata_error_uram_ctl[timing_thread(gress)]
+                |= 1 << (col-2);
             if (++idx == depth) { idx = 0; home = nullptr; ++word; } }
         prev_switch_ctl = &switch_ctl;
         prev_logical_row = logical_row.row; }
