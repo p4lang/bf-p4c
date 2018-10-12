@@ -2543,9 +2543,12 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Counter *counter) {
         return false;
     auto unique_id = tbl->unique_id(counter);
     out << indent++ << "counter " << unique_id << ":" << std::endl;
-    out << indent << "p4: { name: " << canon_name(counter->name)
-                      << ", size: " << counter->size
-                      << " }" << std::endl;
+    out << indent << "p4: { name: " << canon_name(counter->name);
+    if (!counter->direct)
+        out << ", size: " << counter->size;
+    if (counter->direct && tbl->layout.hash_action)
+        out << ", how_referenced: direct";
+    out << " }" << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
     cstring count_type;
     switch (counter->type) {
@@ -2584,6 +2587,8 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Meter *meter) {
     out << indent << "p4: { name: " << canon_name(meter->name);
     if (!meter->direct)
         out << ", size: " << meter->size;
+    if (meter->direct && tbl->layout.hash_action)
+        out << ", how_referenced: direct";
     out << " }" << std::endl;
     if (meter->input)
         self.emit_ixbar(out, indent, &tbl->resources->meter_ixbar, nullptr, nullptr, nullptr,
@@ -2702,6 +2707,8 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::ActionData *ad) {
     out << indent << "p4: { name: " << canon_name(ad->name);
     if (!ad->direct)
         out << ", size: " << ad->size;
+    if (ad->direct && tbl->layout.hash_action)
+        out << ", how_referenced: direct";
     out << " }" << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
     for (auto act : Values(tbl->actions)) {
@@ -2729,6 +2736,8 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
     out << indent << "p4: { name: " << canon_name(salu->name);
     if (!salu->direct)
         out << ", size: " << salu->size;
+    if (salu->direct && tbl->layout.hash_action)
+        out << ", how_referenced: direct";
     out << " }" << std::endl;
     if (salu->selector)
         self.emit_memory(out, indent, *self.selector_memory.at(salu->selector));

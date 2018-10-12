@@ -1903,6 +1903,33 @@ json::map *Table::add_stage_tbl_cfg(json::map &tbl, const char *type, int size) 
     return &(stage_tables.back()->to<json::map>());
 }
 
+/**
+ * One can no longer use whether the table is directly or indirectly addressed on whether
+ * a table is referenced that way.  This is due to the corner case on hash action tables
+ * For a hash action table, an attached table that was previously directly addressed is now
+ * addressed by hash.  However, for the driver, the driver must know which tables used to be
+ * directly addressed vs. an attached table that is addressed by a hash based index.
+ *
+ * Thus, for those corner cases, a how_referenced in the p4 tag of the attached table is
+ * currently provided.  Really for an attached table in hardware, it has no sense of how the
+ * table is addressed, as it only receives an address, so if somehow two tables, where one was
+ * direct while another was indirect (which is theoretically supportable if a hash action direct
+ * counter is shared), would break this parameter.
+ *
+ * However, for the moment, there are no realistic attached table not either directly or indirectly
+ * referenced
+ *
+ * If we need to change this, this was the delineation for how this was determined in match tables:
+ * 
+ * In the call for both of these examples, the address field is a hash_dist object, as this is
+ * necessary for the set up of the address.  This call, unlike every other type table, cannot
+ * be the place where the address is determined.
+ *
+ * Instead, the attached calls in the action is how the assembler can delineate whether the
+ * reference table is direct or indirect.  If the address argument is $DIRECT, then the direct
+ * table has been converted to a hash, however if the argument is $hash_dist, then the original
+ * call was from a hash-based index, and is indirect
+ */
 void Table::add_reference_table(json::vector &table_refs, const Table::Call& c) const {
     if (c) {
         auto t_name = c->name();
@@ -1913,7 +1940,10 @@ void Table::add_reference_table(json::vector &table_refs, const Table::Call& c) 
             auto tref_name = tref->to<json::map>()["name"];
             if (!strcmp(tref_name->as_string()->c_str(),t_name)) return; }
         json::map table_ref;
-        table_ref["how_referenced"] = c->to<AttachedTable>()->is_direct() ? "direct" : "indirect";
+        std::string hr = c->to<AttachedTable>()->how_referenced();
+        if (hr.empty())
+            hr = c->to<AttachedTable>()->is_direct() ? "direct" : "indirect";
+        table_ref["how_referenced"] = hr; 
         table_ref["handle"] = c->handle();
         table_ref["name"] = t_name;
         table_refs.push_back(std::move(table_ref)); }

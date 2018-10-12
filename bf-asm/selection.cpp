@@ -292,7 +292,10 @@ void SelectionTable::gen_tbl_cfg(json::vector &out) const {
     tbl["selection_type"] = resilient_hash ? "resilient" : "fair";
     tbl["selector_name"] = p4_table ? p4_table->p4_name() : "undefined";
     tbl["selection_key_name"] = "undefined"; /// FIXME!
-    tbl["how_referenced"] = indirect ? "indirect" : "direct";
+    std::string hr = how_referenced();
+    if (hr.empty())
+        hr = indirect ? "indirect" : "direct";
+    tbl["how_referenced"] = hr; 
     if (pool_sizes.size() > 0)
         tbl["max_port_pool_size"] = *std::max_element(std::begin(pool_sizes), std::end(pool_sizes));
     for (MatchTable *m : match_tables)

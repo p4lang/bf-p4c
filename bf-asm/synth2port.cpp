@@ -58,7 +58,10 @@ void Synth2Port::write_regs(REGS &) {
 
 json::map *Synth2Port::add_stage_tbl_cfg(json::map &tbl, const char *type, int size) const {
     json::map &stage_tbl = *AttachedTable::add_stage_tbl_cfg(tbl, type, size);
-    tbl["how_referenced"] = indirect ? "indirect" : "direct";
+    std::string hr = how_referenced();
+    if (hr.empty())
+        hr = indirect ? "indirect" : "direct";
+    tbl["how_referenced"] = hr; 
     int entries = 1;
     if (format) {
         assert(format->log2size <= 7);

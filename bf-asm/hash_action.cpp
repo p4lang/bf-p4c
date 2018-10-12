@@ -173,58 +173,6 @@ void HashActionTable::add_hash_functions(json::map &stage_tbl) const {
     hash_functions.push_back(std::move(hash_function));
 }
 
-/**
- * For a hash action table, an attached table that was previously directly addressed is now
- * addressed by hash.  However, for the driver, the driver must know which tables used to be
- * directly addressed vs. an attached table that is addressed by a hash based index.
- *
- * In the call for both of these examples, the address field is a hash_dist object, as this is
- * necessary for the set up of the address.  This call, unlike every other type table, cannot
- * be the place where the address is determined.
- *
- * Instead, the attached calls in the action is how the assembler can delineate whether the
- * reference table is direct or indirect.  If the address argument is $DIRECT, then the direct
- * table has been converted to a hash, however if the argument is $hash_dist, then the original
- * call was from a hash-based index, and is indirect
- */
-void HashActionTable::add_reference_table(json::vector &table_refs, const Table::Call &c) const {
-    if (c) {
-        auto t_name = c->name();
-        if (c->p4_table)
-            t_name = c->p4_table->p4_name();
-
-        std::string how_referenced = "";
-        if (auto act = c->to<ActionTable>()) {
-            how_referenced = "direct";
-        } else {
-            auto actions = get_actions();
-            for (auto &act : *actions) {
-                bool found = false;
-                for (auto &call : act.attached) {
-                    if (call->table_type() != c->table_type())
-                        continue;
-                    auto &addr_arg = call.args[call.args.size() - 1];
-                    if (addr_arg.name() == nullptr)
-                        continue;
-                    found = true;
-                    if (addr_arg == "$DIRECT")
-                        how_referenced = "direct";
-                    else 
-                        how_referenced = "indirect";
-                    break; 
-		}
-                assert(found);
-                break;
-            }
-        }
-        json::map table_ref;
-        table_ref["name"] = t_name;
-        table_ref["handle"] = c->handle();
-        table_ref["how_referenced"] = how_referenced;
-        table_refs.push_back(std::move(table_ref));
-    }
-}
-
 void HashActionTable::gen_tbl_cfg(json::vector &out) const {
     //FIXME: Support multiple hash_dist's
     int size = hash_dist.empty() ? 1 : 1 + hash_dist[0].mask;

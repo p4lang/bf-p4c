@@ -283,6 +283,7 @@ stage <constant> <thread>:
                 # table size, as table is rounded up to fill memories
             match_type: exact | ternary | lpm | ...
             action_profile: <name>
+            how_referenced: direct | indirect
         p4_param_order:
             # order of match params as seen in p4 program
             # PD generated has same order and needs to match context

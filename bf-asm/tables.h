@@ -449,6 +449,7 @@ public:
     unsigned p4_size() const { if(p4_table) return p4_table->p4_size(); return 0; }
     unsigned handle() const { if(p4_table) return p4_table->get_handle(); return -1; }
     std::string action_profile() const { if(p4_table) return p4_table->action_profile; return ""; }
+    std::string how_referenced() const { if(p4_table) return p4_table->how_referenced; return ""; }
     int table_id() const;
     virtual void pass0() {} // only match tables need pass0
     virtual void pass1();
@@ -1066,7 +1067,6 @@ public:
             write_merge_regs<decltype(regs)>(regs, type, bus); })
     Format::Field *lookup_field(const std::string &n,
                                         const std::string &act = "") const override;
-    void add_reference_table(json::vector &table_refs, const Table::Call& c) const override;
     void add_hash_functions(json::map &stage_tbl) const override;
 )
 

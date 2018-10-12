@@ -674,7 +674,10 @@ void ActionTable::gen_tbl_cfg(json::vector &out) const {
         gen_memory_resource_allocation_tbl_cfg("sram", layout);
     // FIXME: what is the check for static entries?
     tbl["static_entries"] = json::vector();
-    tbl["how_referenced"] = indirect ? "indirect" : "direct";
+    std::string hr = how_referenced();
+    if (hr.empty())
+        hr = indirect ? "indirect" : "direct";
+    tbl["how_referenced"] = hr; 
     if (context_json)
         stage_tbl.merge(*context_json);
 }
