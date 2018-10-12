@@ -114,6 +114,8 @@ class BarefootBackend(BackendDriver):
                                     action="store", help="Skip compiling pipes whose name contains one of the"
                                                          "'pipeX' substring")
 
+        self._argGroup.add_argument("--ir-to-json", default=None,
+                                    help="Dump the IR after midend to JSON in the specified file.")
         self._argGroup.add_argument("--verbose",
                                     action="store", default=0, type=int, choices=[0, 1, 2, 3],
                                     help="Set compiler logging verbosity level: 0=OFF, 1=SUMMARY, 2=INFO, 3=DEBUG")
@@ -189,6 +191,9 @@ class BarefootBackend(BackendDriver):
 
         if opts.display_power_budget:
             self.add_command_option('compiler', '--display-power-budget')
+
+        if opts.ir_to_json is not None:
+            self.add_command_option('compiler', '--toJson {}'.format(opts.ir_to_json))
 
         if opts.verbose > 0:
             ta_logging = "table_placement:3,table_summary:1"
@@ -376,7 +381,10 @@ class BarefootBackend(BackendDriver):
 
         # run the preprocessor, compiler, and verifiers (manifest, context schema, and bf-rt)
         self.disable_commands(['assembler', 'archiver', 'verifier'])
-        BackendDriver.run(self)
+        rc = BackendDriver.run(self)
+        # Error codes defined in p4c-barefoot.cpp:main
+        if rc > 1:  # Invocation or program error. Can't recover anything from this, exit
+            return rc
 
         # collect all the command line arguments that were passed to the driver
         # the reason we implement this here, is because the backend will not know
@@ -413,3 +421,6 @@ class BarefootBackend(BackendDriver):
         # run the archiver if one has been set
         if run_archiver:
             self.checkAndRunCmd('archiver')
+
+        # We've successfully reached this point, but the compilation may have failed
+        return rc

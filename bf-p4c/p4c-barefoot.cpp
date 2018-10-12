@@ -162,11 +162,23 @@ int main(int ac, char **av) {
     setup_gc_logging();
     setup_signals();
 
+    // define a set of constants to return so we can decide what to do for
+    // context,json generation, as we need to generate as much as we can
+    // for failed programs
+    constexpr unsigned SUCCESS = 0;
+    // Backend error. This can be fitting or other issues in the backend, where we may have
+    // hope to generate partial context and visualizations.
+    constexpr unsigned COMPILER_ERROR = 1;
+    // Program or programmer errors. Nothing to do until the program is fixed
+    constexpr unsigned INVOCATION_ERROR = 2;
+    constexpr unsigned PROGRAM_ERROR = 3;
+
+
     AutoCompileContext autoBFNContext(new BFNContext);
     auto& options = BFNContext::get().options();
 
     if (!options.process(ac, av) || ::errorCount() > 0)
-        return 1;
+        return INVOCATION_ERROR;
 
     options.setInputFile();
     Logging::FileLog::setOutputDir(options.outputDir);
@@ -179,7 +191,7 @@ int main(int ac, char **av) {
 
     auto program = P4::parseP4File(options);
     if (!program || ::errorCount() > 0)
-        return 1;
+        return PROGRAM_ERROR;
 
     BFNOptionPragmaParser optionsPragmaParser;
     program->apply(P4::ApplyOptionsPragmas(optionsPragmaParser));
@@ -189,24 +201,24 @@ int main(int ac, char **av) {
     // If there was an error in the frontend, we are likely to end up
     // with an invalid program for serialization, so we bail out here.
     if (!program || ::errorCount() > 0)
-        return 1;
+        return PROGRAM_ERROR;
 
     // If we just want to prettyprint to p4_16, running the frontend is sufficient.
     if (!options.prettyPrintFile.isNullOrEmpty())
-        return ::errorCount();
+        return ::errorCount() > 0 ? PROGRAM_ERROR : SUCCESS;
 
     log_dump(program, "Initial program");
 
     BFN::generateP4Runtime(program, options);
     if (::errorCount() > 0)
-        return ::errorCount();
+        return PROGRAM_ERROR;
 
     BFN::MidEnd midend(options);
     midend.addDebugHook(hook);
     // so far, everything is still under the same program for 32q, generate two separate threads
     program = program->apply(midend);
     if (!program)
-        return 1;
+        return PROGRAM_ERROR;  // still did not reach the backend for fitting issues
     log_dump(program, "After midend");
 
     // create the archive manifest
@@ -220,7 +232,7 @@ int main(int ac, char **av) {
         int rc = mkdir(graphsDir.c_str(), 0755);
         if (rc != 0 && errno != EEXIST) {
             std::cerr << "Failed to create directory: " << graphsDir << std::endl;
-            return 1;
+            return INVOCATION_ERROR;
         }
         LOG2("Generating graphs under " << graphsDir);
         auto toplevel = midend.toplevel;
@@ -237,28 +249,27 @@ int main(int ac, char **av) {
     }
 
     if (!midend.toplevel)
-        return 1;
+        return PROGRAM_ERROR;
 
     // convert midend IR to backend IR
     BFN::BackendConverter conv(&midend.refMap, &midend.typeMap, midend.toplevel);
     conv.convert(program, options);
     if (::errorCount() > 0)
-        return 1;
+        return PROGRAM_ERROR;
 
-#if BAREFOOT_INTERNAL
-    if (options.only_gen_mutine_ir) {
+    if (options.dumpJsonFile) {
         // We just want to produce an IR for mutine (p4v & friends), so running
         // the midend is sufficient. Dump the IR to stdout and exit.
+        auto &fileStr = options.dumpJsonFile != "-" ?
+            *openFile(options.dumpJsonFile, false) : std::cout;
+        LOG3("Output to " << options.dumpJsonFile);
         for (auto& pipe : conv.pipe)
-            JSONGenerator(std::cout, true) << pipe << std::endl;
-        return ::errorCount() > 0;
+            JSONGenerator(fileStr, true) << pipe << std::endl;
+        return ::errorCount() > 0 ? PROGRAM_ERROR : SUCCESS;
     }
-#endif
 
     for (auto& pipe : conv.pipe) {
-#if BAREFOOT_INTERNAL
         if (!options.skipped_pipes.count(pipe->name))
-#endif
             execute_backend(pipe, options);
         std::string prefix = "";
         if (options.langVersion == BFN_Options::FrontendVersion::P4_16)
@@ -275,5 +286,5 @@ int main(int ac, char **av) {
 
     if (Log::verbose())
         std::cout << "Done." << std::endl;
-    return ::errorCount() > 0;
+    return ::errorCount() > 0 ? COMPILER_ERROR : SUCCESS;
 }
