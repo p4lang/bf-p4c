@@ -104,7 +104,6 @@ if (PTF_REQUIREMENTS_MET)
   p4c_add_xfail_reason("tofino"
     "AssertionError: .* != .*"
     smoketest_programs_stful
-    smoketest_programs_stful_2
     )
 
   p4c_add_xfail_reason("tofino"
