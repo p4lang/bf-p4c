@@ -628,7 +628,7 @@ if $run_pd ; then
        fi
        run $p4builddir/configure --with-${device} --with-p4c=$P4C --enable-thrift \
                     --prefix=$testout LDFLAGS="-L${tools_dir}/lib" CPPFLAGS="-I${tools_dir}/include" \
-                    --bindir=$(dirname $P4C):${tools_dir}/bin P4_NAME=$name P4_PATH=$file PDFLAGS='$PDFLAGS' \
+                    --bindir=$(dirname $P4C):${tools_dir}/bin P4_NAME=$name P4_PATH=$file PDFLAGS="$PDFLAGS" \
                     > ${testout}/p4-build-conf.log || die
        if $verbose ; then
           tail -n 10 ${testout}/p4-build-conf.log

@@ -37,7 +37,8 @@ ENV P4C_RUNTIME_DEPS cpp \
                      python-setuptools \
                      python-yaml \
                      sudo \
-                     tcpdump
+                     tcpdump \
+                     libgoogle-perftools-dev
 
 RUN add-apt-repository ppa:ubuntu-toolchain-r/test && \
     apt-get update && \

@@ -103,13 +103,12 @@ if (PTF_REQUIREMENTS_MET)
 
   p4c_add_xfail_reason("tofino"
     "AssertionError: .* != .*"
-    extensions/p4_tests/p4_14/p4-tests/programs/stful/stful.p4
+    smoketest_programs_stful
+    smoketest_programs_stful_2
     )
 
   p4c_add_xfail_reason("tofino"
-    "AttributeError: Client instance has no attribute .*"
-    extensions/p4_tests/p4_14/p4-tests/programs/exm_direct_1/exm_direct_1.p4
-    extensions/p4_tests/p4_14/p4-tests/programs/exm_smoke_test/exm_smoke_test.p4
+    "AssertionError"
     extensions/p4_tests/p4_14/p4-tests/programs/perf_test_alpm/perf_test_alpm.p4
     )
 
