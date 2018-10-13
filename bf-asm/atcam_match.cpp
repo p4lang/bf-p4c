@@ -38,7 +38,6 @@ void AlgTcamMatchTable::setup(VECTOR(pair_t) &data) {
 void AlgTcamMatchTable::setup_column_priority() {
     int no_ways = ways.size();
     int no_entries_per_way = ways[0].rams.size();
-    int ram = -1;
     // FIXME-P4C: Ideally RAM's 6 & 7 can be on both left and right RAM Units.
     // Brig currently does not support this behavior and RAM 6 is always on
     // left, while RAM 7 on right. Once this supported is added below function
@@ -47,51 +46,73 @@ void AlgTcamMatchTable::setup_column_priority() {
     std::set<int> lrams = { 2, 3, 4, 5, 6 };
     std::set<int> rrams = { 7, 8, 9, 10, 11 };
     // Check if column is on left(0) or right(1) RAMs
-    // Sort ways based on column priority for first column
+
+    std::vector<std::pair<int, int>> first_entry_priority;
+    // Determine the side and which way corresponds to which column
+    int side = -1;
     for (int w = 0; w < no_ways; w++) {
-        int col_ram = ways[w].rams[0].second;
-        int col_row = ways[w].rams[0].first;
-        col_priority_way[col_ram] = w;
-        if (ram == 0) {
-            if (lrams.find(col_ram) == lrams.end())
-                error (lineno,
-                    "ram %d and %d not in same column as rest", col_row, col_ram);
-        } else if (ram == 1) {
-            if (rrams.find(col_ram) == rrams.end())
-                error (lineno,
-                    "ram %d and %d not in same column as rest", col_row, col_ram);
-        } else if (lrams.find(col_ram) != lrams.end()) ram = 0;
-          else if (rrams.find(col_ram) != rrams.end()) ram = 1; }
-    // Use sorted ways to validate column priority on remaining columns
-    int prev_ram = -1;
-    int prev_way = -1;
-    int prev_row = -1;
+        int col = ways[w].rams[0].second;
+        int row = ways[w].rams[0].first;
+        if (side == 0) {
+            if (lrams.find(col) == lrams.end()) {
+                error(lineno, "ram(%d, %d) is not on correct side compared to rest in column "
+                      "priority", row, col);
+            }
+        } else if (side == 1) {
+            if (rrams.find(col) == rrams.end()) {
+                error(lineno, "ram(%d, %d) is not on correct side compare to rest of column "
+                      "priority", row, col);
+            }
+        } else if (lrams.find(col) != lrams.end()) {
+            side = 0;
+        } else if (rrams.find(col) != rrams.end()) {
+            side = 1;
+        } else {
+            error(lineno, "ram(%d, %d) invalid for ATCAM", row, col);
+        }
+        first_entry_priority.push_back(std::make_pair(w, col));
+    }
+
+    // Sort ways based on column priority for first column
+    std::sort(first_entry_priority.begin(), first_entry_priority.end(),
+            [side](const std::pair<int, int> &a, const std::pair<int, int> &b) {
+        return side == 0 ? a.second < b.second : a.second > b.second;
+    });
+
+    int index = 0;
+    for (auto &entry : first_entry_priority) {
+        col_priority_way[index] = entry.first;
+        index++;
+    }
+
+    // Ensure that the remaining columns match up with the first column ram 
     for (int i = 1; i < no_entries_per_way; i++) {
-        auto col = col_priority_way.begin();
-        while(col != col_priority_way.end()) {
-            int col_ram = ways[col->second].rams[i].second;
-            int col_row = ways[col->second].rams[i].first;
-            int col_way = col->second;
-            if (col != col_priority_way.begin()) {
-                if (((col_ram <= prev_ram) && (rrams.find(col_ram) != rrams.end()) 
-                      && (ram == 1) && (prev_row == col_row))
-                   || ((col_ram >= prev_ram) && (rrams.find(col_ram) != rrams.end()) 
-                       && (ram == 0) && (prev_row == col_row)))
-                    error(lineno,
-                        "ram's [%d,%d] and [%d,%d] not in column priority order for ways %d and %d"
-                            ,col_row, col_ram, prev_row, prev_ram, col_way, prev_way);
-                if (((col_ram <= prev_ram) && (lrams.find(col_ram) != lrams.end()) 
-                      && (ram == 0) && (prev_row == col_row))
-                   || ((col_ram >= prev_ram) && (lrams.find(col_ram) != lrams.end()) 
-                       && (ram == 1) && (prev_row == col_row)))
-                    error(lineno,
-                        "ram's [%d,%d] and [%d,%d] not in column priority order for ways %d and %d"
-                            ,col_row, col_ram, prev_row, prev_ram, col_way, prev_way);
+        auto way_it = col_priority_way.begin();
+        side = -1;
+        int prev_col = -1;
+        int prev_row = -1;
+        while (way_it != col_priority_way.end()) {
+            int row = ways[way_it->second].rams[i].first;
+            int col = ways[way_it->second].rams[i].second;
+            if (way_it != col_priority_way.begin()) {
+                if (!((side == 0 && prev_col < col && lrams.find(col) != lrams.end()) ||
+                      (side == 1 && prev_col > col && rrams.find(col) != rrams.end()) &&
+                       prev_row == row)) {
+                    error(lineno, "ram(%d, %d) and ram(%d, %d) column priority is not "
+                                  "compatible", prev_row, prev_col, row, col);
+                }
             } 
-            prev_ram = col_ram;
-            prev_way = col_way; 
-            prev_row = col_row; 
-            col++; } }
+            way_it++;
+            prev_col = col;
+            prev_row = row;
+            if (lrams.find(col) != lrams.end())
+                side = 0;
+            else if (rrams.find(col) != rrams.end())
+                side = 1;
+            else
+                error(lineno, "ram(%d, %d) invalid for ATCAM", row, col);
+        }
+    }
 }
 
 void AlgTcamMatchTable::pass1() {
@@ -214,17 +235,14 @@ template<class REGS> void AlgTcamMatchTable::write_regs(REGS &regs) {
 std::unique_ptr<json::vector> AlgTcamMatchTable::gen_memory_resource_allocation_tbl_cfg() const {
     if (col_priority_way.size() == 0)
         error(lineno, "No column priority determined for table %s", name());
-    int col_priority = 0;
     unsigned fmt_width = format ? (format->size + 127)/128 : 0;
     json::vector mras;
-    //for (auto &col : col_priority_way) {
-    auto col_priority_way_revitr = col_priority_way.rbegin();
-    while(col_priority_way_revitr != col_priority_way.rend()) {
+    for (auto &entry : col_priority_way) {
         json::map mra;
-        mra["column_priority"] = col_priority++;
+        mra["column_priority"] = entry.first; 
         json::vector mem_units;
         json::vector &mem_units_and_vpns = mra["memory_units_and_vpns"] = json::vector();
-        auto &way = ways[col_priority_way_revitr->second];
+        auto &way = ways[entry.second];
         unsigned vpn_ctr = 0;
         for (auto &ram : way.rams) {
             if (mem_units.empty())
@@ -247,7 +265,6 @@ std::unique_ptr<json::vector> AlgTcamMatchTable::gen_memory_resource_allocation_
                 mem_units_and_vpns.push_back(std::move(tmp)); } }
         BUG_CHECK(mem_units.empty());
         mras.push_back(std::move(mra));
-        ++col_priority_way_revitr;
     }
     return json::mkuniq<json::vector>(std::move(mras));
 }

@@ -885,6 +885,7 @@ public:
 )
 
 DECLARE_TABLE_TYPE(AlgTcamMatchTable, SRamMatchTable, "atcam_match",
+    // key is column priority, value is way index
     std::map<int, int>                    col_priority_way;
     int                                   number_partitions = 0;
     int                                   max_subtrees_per_partition = 0;
