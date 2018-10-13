@@ -27,6 +27,36 @@
 
 namespace BFN {
 
+static int getConstant(const IR::Argument* arg) {
+    return arg->expression->to<IR::Constant>()->asInt();
+}
+
+static int getConstant(const IR::Annotation* annotation) {
+    if (annotation->expr.size() != 1) {
+        ::error("%1% should contain a constant", annotation);
+        return 0;
+    }
+    auto constant = annotation->expr[0]->to<IR::Constant>();
+    if (constant == nullptr) {
+        ::error("%1% should contain a constant", annotation);
+        return 0;
+    }
+    return constant->asInt();
+}
+
+static cstring getString(const IR::Annotation* annotation) {
+    if (annotation->expr.size() != 1) {
+        ::error("%1% should contain a string", annotation);
+        return "";
+    }
+    auto str = annotation->expr[0]->to<IR::StringLiteral>();
+    if (str == nullptr) {
+        ::error("%1% should contain a string", annotation);
+        return "";
+    }
+    return str->value;
+}
+
 class ActionArgSetup : public MauTransform {
     /* FIXME -- use ParameterSubstitution for this somehow? */
     std::map<cstring, const IR::Expression *>    args;
@@ -249,7 +279,7 @@ static IR::MAU::AttachedMemory *createIdleTime(cstring name, const IR::Annotatio
     auto idletime = new IR::MAU::IdleTime(name);
 
     if (auto s = annot->getSingle("idletime_precision")) {
-        idletime->precision = s->expr.at(0)->to<IR::Constant>()->asInt();
+        idletime->precision = getConstant(s);
         /* Default is 3 */
         if (idletime->precision != 1 && idletime->precision != 2 &&
             idletime->precision != 3 && idletime->precision != 6)
@@ -257,13 +287,13 @@ static IR::MAU::AttachedMemory *createIdleTime(cstring name, const IR::Annotatio
     }
 
     if (auto s = annot->getSingle("idletime_interval")) {
-        idletime->interval = s->expr.at(0)->to<IR::Constant>()->asInt();
+        idletime->interval = getConstant(s);
         if (idletime->interval < 0 || idletime->interval > 12)
             idletime->interval = 7;
     }
 
     if (auto s = annot->getSingle("idletime_two_way_notification")) {
-        int two_way_notification = s->expr.at(0)->to<IR::Constant>()->asInt();
+        int two_way_notification = getConstant(s);
         if (two_way_notification == 1)
             idletime->two_way_notification = "two_way";
         else if (two_way_notification == 0)
@@ -271,7 +301,7 @@ static IR::MAU::AttachedMemory *createIdleTime(cstring name, const IR::Annotatio
     }
 
     if (auto s = annot->getSingle("idletime_per_flow_idletime")) {
-        int per_flow_enable = s->expr.at(0)->to<IR::Constant>()->asInt();
+        int per_flow_enable = getConstant(s);
         idletime->per_flow_idletime = (per_flow_enable == 1) ? true : false;
     }
 
@@ -293,7 +323,7 @@ void setupParam(IR::MAU::Synth2Port* rv, const IR::Vector<IR::Argument>* args) {
         rv->settype(args->at(0)->expression->as<IR::Member>().member.name);
         rv->direct = true;
     } else if (args->size() == 2) {
-        rv->size = args->at(0)->expression->as<IR::Constant>().asInt();
+        rv->size = getConstant(args->at(0));
         rv->settype(args->at(1)->expression->as<IR::Member>().member.name);
     } else {
         BUG("cannot have more than %d arguments", args->size());
@@ -350,17 +380,27 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
 
         auto ap = new IR::MAU::ActionData(srcInfo, IR::ID(name));
         ap->direct = false;
-        ap->size = args->at(0)->expression->as<IR::Constant>().asInt();
+        ap->size = getConstant(args->at(0));
         // FIXME Need to reconstruct the field list from the table key?
         *created_ap = ap;
         return sel;
     } else if (tname == "ActionProfile") {
         auto ap = new IR::MAU::ActionData(srcInfo, IR::ID(name));
-        ap->size = args->at(0)->expression->as<IR::Constant>().asInt();
+        ap->size = getConstant(args->at(0));
         return ap;
     } else if (tname == "Counter" || tname == "DirectCounter") {
         auto ctr = new IR::MAU::Counter(srcInfo, name, annot);
         setupParam(ctr, args);
+        for (auto anno : annot->annotations) {
+            if (anno->name == "min_width")
+                ctr->min_width = getConstant(anno);
+            else if (anno->name == "max_width")
+                ctr->max_width = getConstant(anno);
+            else if (anno->name == "threshold")
+                ctr->threshold = getConstant(anno);
+            else if (anno->name == "interval")
+                ctr->interval = getConstant(anno);
+        }
         return ctr;
     } else if (tname == "Meter") {
         auto mtr = new IR::MAU::Meter(srcInfo, name, annot);
@@ -369,17 +409,17 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
             if (anno->name == "result")
                 mtr->result = anno->expr.at(0);
             else if (anno->name == "implementation")
-                mtr->implementation = anno->expr.at(0)->as<IR::StringLiteral>();
+                mtr->implementation = getString(anno);
             else if (anno->name == "green")
-                mtr->green_value = anno->expr.at(0)->as<IR::Constant>().asInt();
+                mtr->green_value = getConstant(anno);
             else if (anno->name == "yellow")
-                mtr->yellow_value = anno->expr.at(0)->as<IR::Constant>().asInt();
+                mtr->yellow_value = getConstant(anno);
             else if (anno->name == "red")
-                mtr->red_value = anno->expr.at(0)->as<IR::Constant>().asInt();
+                mtr->red_value = getConstant(anno);
             else if (anno->name == "meter_profile")
-                mtr->profile = anno->expr.at(0)->as<IR::Constant>().asInt();
+                mtr->profile = getConstant(anno);
             else if (anno->name == "meter_sweep_interval")
-                mtr->sweep_interval = anno->expr.at(0)->as<IR::Constant>().asInt();
+                mtr->sweep_interval = getConstant(anno);
             else
                 WARNING("unknown annotation " << anno->name << " on " << tname); }
         return mtr;
@@ -390,7 +430,7 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
     } else if (tname == "Lpf") {
         auto mtr = new IR::MAU::Meter(srcInfo, name, annot);
         mtr->implementation = IR::ID("lpf");
-        mtr->size = args->at(0)->expression->as<IR::Constant>().asInt();
+        mtr->size = getConstant(args->at(0));
         return mtr;
     } else if (tname == "DirectLpf") {
         auto mtr = new IR::MAU::Meter(srcInfo, name, annot);
@@ -400,16 +440,16 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
     } else if (tname == "Wred") {
         auto mtr = new IR::MAU::Meter(srcInfo, name, annot);
         mtr->implementation = IR::ID("wred");
-        mtr->size = args->at(0)->expression->as<IR::Constant>().asInt();
-        mtr->red_drop_value = args->at(1)->expression->as<IR::Constant>().asInt();
-        mtr->red_nodrop_value = args->at(2)->expression->as<IR::Constant>().asInt();
+        mtr->size = getConstant(args->at(0));
+        mtr->red_drop_value = getConstant(args->at(1));
+        mtr->red_nodrop_value = getConstant(args->at(2));
         return mtr;
     } else if (tname == "DirectWred") {
         auto mtr = new IR::MAU::Meter(srcInfo, name, annot);
         mtr->implementation = IR::ID("wred");
         mtr->direct = true;
-        mtr->red_drop_value = args->at(0)->expression->as<IR::Constant>().asInt();
-        mtr->red_nodrop_value = args->at(1)->expression->as<IR::Constant>().asInt();
+        mtr->red_drop_value = getConstant(args->at(0));
+        mtr->red_nodrop_value = getConstant(args->at(1));
         return mtr;
     }
 
@@ -530,19 +570,6 @@ bool AttachTables::findSaluDeclarations(const IR::Declaration_Instance *ext,
     return true;
 }
 
-static cstring getString(const IR::Annotation* annotation) {
-    if (annotation->expr.size() != 1) {
-        ::error("%1% should contain a string", annotation);
-        return "";
-    }
-    auto str = annotation->expr[0]->to<IR::StringLiteral>();
-    if (str == nullptr) {
-        ::error("%1% should contain a string", annotation);
-        return "";
-    }
-    return str->value;
-}
-
 /** Converts the Declaration_Instance of the register action into a StatefulAlu object.  Checks
  *  to see if a stateful ALU has already been created, and will also create the SALU Instructions
  *  if the register action is new
@@ -577,10 +604,10 @@ void AttachTables::InitializeStatefulAlus
         // p4_16 programs these are passed in as optional stateful params
         for (auto annot : annots->annotations) {
             if (annot->name == "initial_register_lo_value") {
-                salu->init_reg_lo = annot->expr.at(0)->to<IR::Constant>()->asInt();
+                salu->init_reg_lo = getConstant(annot);
                 LOG4("Reg initial lo value: " << salu->init_reg_lo); }
             if (annot->name == "initial_register_hi_value") {
-                salu->init_reg_hi = annot->expr.at(0)->to<IR::Constant>()->asInt();
+                salu->init_reg_hi = getConstant(annot);
                 LOG4("Reg initial hi value: " << salu->init_reg_hi); } }
         if (seltype) {
             salu->direct = false;
@@ -593,16 +620,12 @@ void AttachTables::InitializeStatefulAlus
             salu->size = 120*1024;  // one ram?
         } else if (regtype->toString().startsWith("Register<")) {
             salu->direct = false;
-            salu->size = reg->arguments->at(0)->expression->to<IR::Constant>()->asInt();
+            salu->size = getConstant(reg->arguments->at(0));
         } else {
             salu->direct = true; }
         salu->width = regtype ? regtype->arguments->at(0)->width_bits() : 1;
-        if (auto cts = reg->annotations->getSingle("chain_total_size")) {
-            const IR::Constant *k;
-            if (cts->expr.size() != 1 || !(k = cts->expr[0]->to<IR::Constant>()))
-                error("%s: chain_total_size must be a constant", cts->srcInfo);
-            else
-                salu->chain_total_size = k->asInt(); }
+        if (auto cts = reg->annotations->getSingle("chain_total_size"))
+            salu->chain_total_size = getConstant(cts);
         salu_inits[reg] = salu; }
 
     if (auto red_or = ext->annotations->getSingle("reduction_or_group")) {
