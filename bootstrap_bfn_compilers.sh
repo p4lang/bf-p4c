@@ -68,12 +68,17 @@ if [ ! -e bf-p4c ]; then ln -sf ../../bf-p4c bf-p4c; fi
 if [ ! -e p4_tests ]; then ln -sf ../../p4-tests p4_tests; fi
 popd # p4c/extensions
 
-# install the commit-msg hook if the user doesn't already have one defined
-if [[ -d .git && -e scripts/hooks/commit-msg && ! -e .git/hooks/commit-msg ]]; then
-    pushd .git/hooks > /dev/null
-    ln -sf ../../scripts/hooks/commit-msg commit-msg
-    popd > /dev/null
-fi
+# install a git hook if the user doesn't already have one defined
+function install_hook() {
+    local hook=$1
+    if [[ -d .git && -e scripts/hooks/$hook && ! -e .git/hooks/$hook ]]; then
+        pushd .git/hooks > /dev/null
+        ln -sf ../../scripts/hooks/$hook $hook
+        popd > /dev/null
+    fi
+}
+install_hook pre-commit
+install_hook commit-msg
 
 ENABLED_COMPONENTS="-DENABLE_JBAY=ON -DENABLE_EBPF=OFF"
 if $minimalConfig ; then
