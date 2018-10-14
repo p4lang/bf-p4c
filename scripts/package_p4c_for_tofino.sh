@@ -4,7 +4,14 @@ set -e
 
 topdir=$(dirname $0)/..
 builddir=build.release
-parallel_make=`cat /proc/cpuinfo | grep processor | wc -l`
+set -x
+if [[ $(uname -s) == 'Linux' ]]; then
+    parallel_make=`cat /proc/cpuinfo | grep processor | wc -l`
+    enable_static="-DENABLE_STATIC_LIBS=ON"
+else
+    parallel_make=8
+    enable_static=""
+fi
 
 install_prefix=/usr/local
 if [ "$1" == "--install-prefix" ]; then
@@ -22,7 +29,7 @@ $topdir/bootstrap_bfn_compilers.sh --no-ptf --build-dir $builddir \
                                    -DCMAKE_INSTALL_PREFIX=$install_prefix \
                                    -DENABLE_BMV2=OFF -DENABLE_EBPF=OFF \
                                    -DENABLE_P4TEST=OFF -DENABLE_P4C_GRAPHS=OFF \
-                                   -DENABLE_STATIC_LIBS=ON \
+                                   $enable_static \
                                    -DENABLE_BAREFOOT_INTERNAL=OFF \
                                    -DENABLE_TESTING=OFF -DENABLE_GTESTS=OFF
 cd $builddir

@@ -269,8 +269,12 @@ int main(int ac, char **av) {
     }
 
     for (auto& pipe : conv.pipe) {
+#if BAREFOOT_INTERNAL
         if (!options.skipped_pipes.count(pipe->name))
             execute_backend(pipe, options);
+#else
+            execute_backend(pipe, options);
+#endif
         std::string prefix = "";
         if (options.langVersion == BFN_Options::FrontendVersion::P4_16)
             prefix = pipe->name + "/";
