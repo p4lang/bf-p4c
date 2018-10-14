@@ -89,11 +89,12 @@ P4Table *P4Table::get(P4Table::type t, VECTOR(pair_t) &data) {
                 if (strncmp(kv.value.s, "true", 4) == 0)
                     rv->disable_atomic_modify = true;
         } else if (kv.key == "how_referenced") {
-            if (CHECKTYPE(kv.value, tSTR))
+            if (CHECKTYPE(kv.value, tSTR)) {
                 if (strcmp(kv.value.s, "direct") != 0 && strcmp(kv.value.s, "indirect") != 0)
                     error(kv.value.lineno, "how_referenced must be either direct or indirect");
                 else
                     rv->how_referenced = kv.value.s;
+            }
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in p4 info", value_desc(kv.key)); }
     return rv;

@@ -85,7 +85,6 @@ class CreateSaluInstruction : public Inspector {
     std::map<int, const IR::Expression  *>      output_address_subword_predicate;
     IR::MAU::StatefulAlu::MathUnit              math;
     IR::MAU::SaluFunction                       *math_function = nullptr;
-    const IR::Expression                        *math_input = nullptr;
 
     const IR::MAU::Instruction *createInstruction();
     bool applyArg(const IR::PathExpression *, cstring);

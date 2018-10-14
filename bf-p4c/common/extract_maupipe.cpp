@@ -148,13 +148,11 @@ class ConvertMethodCalls : public MauTransform {
  *  into IR::ActionArgs
  */
 class ActionFunctionSetup : public PassManager {
-    P4::ReferenceMap        *refMap;
-    P4::TypeMap             *typeMap;
     ActionArgSetup          *action_arg_setup;
 
  public:
-    ActionFunctionSetup(P4::ReferenceMap *rm, P4::TypeMap *tm, ActionArgSetup *aas) :
-    refMap(rm), typeMap(tm), action_arg_setup(aas) {
+    explicit ActionFunctionSetup(ActionArgSetup *aas) :
+        action_arg_setup(aas) {
         addPasses({
             action_arg_setup
         });
@@ -251,8 +249,8 @@ class ActionBodySetup : public Inspector {
     explicit ActionBodySetup(IR::MAU::Action *af) : af(af) {}
 };
 
-static const IR::MAU::Action *createActionFunction(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
-    const IR::P4Action *ac, const IR::Vector<IR::Argument> *args) {
+static const IR::MAU::Action *createActionFunction(const IR::P4Action *ac,
+                                                   const IR::Vector<IR::Argument> *args) {
     auto rv = new IR::MAU::Action(ac->srcInfo, ac->name, ac->annotations);
     rv->name.name = ac->externalName();
     ActionArgSetup aas;
@@ -271,7 +269,7 @@ static const IR::MAU::Action *createActionFunction(P4::ReferenceMap *refMap, P4:
     if (arg_idx != (args ? args->size(): 0))
         error("%s: Too many args for %s", args->srcInfo, ac);
     ac->body->apply(ActionBodySetup(rv));
-    ActionFunctionSetup afs(refMap, typeMap, &aas);
+    ActionFunctionSetup afs(&aas);
     return rv->apply(afs)->to<IR::MAU::Action>();
 }
 
@@ -903,7 +901,7 @@ class GetBackendTables : public MauInspector {
             // the createBuiltin pass in frontend has already converted IR::PathExpression
             // to IR::MethodCallExpression.
             auto mce = act->expression->to<IR::MethodCallExpression>();
-            auto newaction = createActionFunction(refMap, typeMap, decl, mce->arguments);
+            auto newaction = createActionFunction(decl, mce->arguments);
             DefaultActionInit dai(table, act, refMap);
             auto newaction_defact = newaction->apply(dai)->to<IR::MAU::Action>();
             if (!tt->actions.count(newaction_defact->name.originalName))

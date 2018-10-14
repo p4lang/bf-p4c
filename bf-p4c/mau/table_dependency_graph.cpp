@@ -131,7 +131,7 @@ static void dump_viz(std::ostream &out, DependencyGraph &dg) {
  *
  * Thus when a reduction or is found, it is established whether or not the previous write
  * was the same reduction or group.  If so, no data dependency is added, but if not, then
- * this table is data dependent with this table. 
+ * this table is data dependent with this table.
  */
 class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWriteContext {
     FindDataDependencyGraph                 &self;
@@ -757,7 +757,7 @@ void FindDataDependencyGraph::verify_dependence_graph() {
 
 
 FindDependencyGraph::FindDependencyGraph(const PhvInfo &phv, DependencyGraph &out)
-        : phv(phv), dg(out) {
+        : dg(out) {
     addPasses({
         new GatherReductionOrReqs(red_info),
         new TableFindInjectedDependencies(dg),

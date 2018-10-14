@@ -85,7 +85,7 @@ void AlgTcamMatchTable::setup_column_priority() {
         index++;
     }
 
-    // Ensure that the remaining columns match up with the first column ram 
+    // Ensure that the remaining columns match up with the first column ram
     for (int i = 1; i < no_entries_per_way; i++) {
         auto way_it = col_priority_way.begin();
         side = -1;
@@ -95,13 +95,13 @@ void AlgTcamMatchTable::setup_column_priority() {
             int row = ways[way_it->second].rams[i].first;
             int col = ways[way_it->second].rams[i].second;
             if (way_it != col_priority_way.begin()) {
-                if (!((side == 0 && prev_col < col && lrams.find(col) != lrams.end()) ||
-                      (side == 1 && prev_col > col && rrams.find(col) != rrams.end()) &&
+                if (!(((side == 0 && prev_col < col && lrams.find(col) != lrams.end()) ||
+                       (side == 1 && prev_col > col && rrams.find(col) != rrams.end())) &&
                        prev_row == row)) {
                     error(lineno, "ram(%d, %d) and ram(%d, %d) column priority is not "
                                   "compatible", prev_row, prev_col, row, col);
                 }
-            } 
+            }
             way_it++;
             prev_col = col;
             prev_row = row;
@@ -158,7 +158,7 @@ void AlgTcamMatchTable::find_tcam_match() {
                       match_field.desc().c_str());
             if ((sl.size() % 4U) != 0) {
                 if ((sl.size() == 1) && (match_field.desc().find("$valid") != std::string::npos)) {}
-                else 
+                else
                     warning(match_field.lineno, "tcam match field %s not a multiple of 4 bits",
                       match_field.desc().c_str()); }
             tcam.emplace(sl, std::make_pair(exact.at(sl),
@@ -239,7 +239,7 @@ std::unique_ptr<json::vector> AlgTcamMatchTable::gen_memory_resource_allocation_
     json::vector mras;
     for (auto &entry : col_priority_way) {
         json::map mra;
-        mra["column_priority"] = entry.first; 
+        mra["column_priority"] = entry.first;
         json::vector mem_units;
         json::vector &mem_units_and_vpns = mra["memory_units_and_vpns"] = json::vector();
         auto &way = ways[entry.second];

@@ -645,7 +645,7 @@ bool TableFormat::allocate_all_instr_selection() {
  * matched against.  Wide does not mean that the the RAM match is wide, rather that each
  * individual match entry requires multiple RAMs.
  *
- * This match_entry_wide leads to different strategies during allocation 
+ * This match_entry_wide leads to different strategies during allocation
  */
 bool TableFormat::is_match_entry_wide() const {
     return !(match_ixbar.search_buses_single() == 1 || layout_option.way.width == 1);
@@ -1491,7 +1491,7 @@ bool TableFormat::allocate_all_ternary_match() {
     std::sort(use->tcam_use.begin(), use->tcam_use.end(),
               [](const Use::TCAM_use &a, const Use::TCAM_use &b) {
         int t;
-        if ((t == a.range_index - b.range_index) != 0)
+        if ((t = a.range_index - b.range_index) != 0)
             return t > 0;
         return a.group < b.group;
     });

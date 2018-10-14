@@ -440,12 +440,11 @@ class FindDependencyGraph : public PassManager {
         return rv;
     }
 
-    const PhvInfo &phv;
     DependencyGraph &dg;
     ReductionOrInfo red_info;
 
  public:
-    FindDependencyGraph(const PhvInfo &phv, DependencyGraph &out);
+    FindDependencyGraph(const PhvInfo &, DependencyGraph &out);
 };
 
 #endif /* BF_P4C_MAU_TABLE_DEPENDENCY_GRAPH_H_ */

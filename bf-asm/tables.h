@@ -674,7 +674,7 @@ public:
     void pass1() override { assert(0); }
     void pass2() override { assert(0); }
     void pass3() override { assert(0); }
-    FOR_ALL_TARGETS(TARGET_OVERLOAD, virtual void write_regs, (mau_regs &), { assert(0); })
+    FOR_ALL_TARGETS(TARGET_OVERLOAD, virtual void write_regs, (mau_regs &), override { assert(0); })
     void gen_tbl_cfg(json::vector &out) const override { assert(0); }
 };
 

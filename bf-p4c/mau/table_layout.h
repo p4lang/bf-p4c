@@ -132,12 +132,10 @@ class TableLayout : public MauModifier, Backtrack {
 
 /// Run after TablePlacement to fix up anything needed in the layout as a result
 class FinalTableLayout : public MauModifier {
-    const PhvInfo &phv;
-    LayoutChoices &lc;
     bool preorder(IR::MAU::Counter *cntr) override;
 
  public:
-    explicit FinalTableLayout(const PhvInfo &p, LayoutChoices &l) : phv(p), lc(l) {}
+    explicit FinalTableLayout(const PhvInfo &, LayoutChoices &) {}
 };
 
 #endif /* BF_P4C_MAU_TABLE_LAYOUT_H_ */
