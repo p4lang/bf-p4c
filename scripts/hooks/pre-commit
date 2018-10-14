@@ -41,7 +41,7 @@ class Linter:
         if self._basedir == bfasdir:
             files = [ os.path.join(repo, f) for f in lintFiles if self._bfas.match(f) ]
         else:
-            files = [ os.path.join(repo, f) for f in lintFiles if not self._bfas.match(f) ]
+            files = [ os.path.join('extensions', f) for f in lintFiles if not self._bfas.match(f) ]
         # print 'Filtered:', files
         return files
 
