@@ -1706,9 +1706,9 @@ class ConstructSymbolTable : public Inspector {
             auto min_width = anno->expr.at(0)->as<IR::Constant>().asInt();
             typeArgs->push_back(IR::Type::Bits::get(min_width));
         } else {
-            auto min_width = IR::Type::Bits::get(32);
+            auto min_width = IR::Type::Bits::get(64);  // Do not impose LRT
             typeArgs->push_back(min_width);
-            WARNING("Could not infer min_width for counter %s, using bit<32>" << node);
+            WARNING("Could not infer min_width for counter %s, using bit<64>" << node);
         }
         // type<S>
         if (auto s = node->arguments->at(0)->expression->to<IR::Constant>()) {
