@@ -31,7 +31,7 @@ env:
     # Run all tofino smoke tests
     - TEST_SUITE="^tofino/.*programs"
       TEST_EXTRA_OPTS="-E"
-      TEST_EXTRA_OPTS2="p4_16|TestRealData"
+      TEST_EXTRA_OPTS2="p4_16|TestRealData|stful_2|_dkm|_exm_smoke_test"
       IMAGE_TAG="bf-p4c-compilers_smoke_programs"
       DOCKERFILE=Dockerfile.tofino
     # Run all jbay tests (including cpplint and gtest)
