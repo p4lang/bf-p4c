@@ -1234,22 +1234,17 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-register3.p4
 )
 
-# casting bit<10> psa PortId_t to bit<9> TNA PortId_t
+# register.read not handled
 p4c_add_xfail_reason("tofino"
-    "Cannot unify bit<10> to bit<9>"
-  testdata/p4_16_samples/psa-example-register2-bmv2.p4
-)
-
-# program error
-p4c_add_xfail_reason("tofino"
-  "Cannot unify .* to .*"
-  testdata/p4_16_samples/psa-example-counters-bmv2.p4
-  testdata/p4_16_samples/psa-example-digest-bmv2.p4
+    "source of modify_field invalid"
+    testdata/p4_16_samples/psa-example-register2-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"
   "Assignment cannot be supported in the parser"
   testdata/p4_16_samples/psa-fwd-bmv2.p4
+  testdata/p4_16_samples/psa-example-digest-bmv2.p4
+  testdata/p4_16_samples/psa-example-counters-bmv2.p4
 )
 
 # BRIG-791

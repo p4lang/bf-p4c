@@ -177,6 +177,12 @@ void GenerateDeparser::generateDigest(IR::BFN::Digest *&digest, cstring name,
             select = eq->right;
         else if ((k = eq->right->to<IR::Constant>()))
             select = eq->left;
+    } else if (auto bo = pred->to<IR::Member>()) {
+        // 'if (boolean)' is the same as 'if (boolean == 1)'
+        if (bo->type->to<IR::Type_Boolean>()) {
+            k = new IR::Constant(1);
+            select = pred;
+        }
     }
     if (!k) {
         error("%s.emit condition %s not supported", name, pred);

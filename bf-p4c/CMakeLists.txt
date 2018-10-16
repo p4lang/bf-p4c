@@ -516,6 +516,7 @@ set (p4include_HEADERS
   p4include/tofino/p4_14_prim.p4
   p4include/tofino/stateful_alu.p4
   p4include/tofino/wred.p4
+  p4include/psa.p4
   )
 
 if (ENABLE_JBAY)
