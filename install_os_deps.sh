@@ -13,7 +13,7 @@ function version_LT() {
 
 # Determine the type of the Boost library we want to install
 boost_lib_type=shared
-if [ $# > 0 ] && [ $1 == '--with-boost-static' ]; then
+if [[ $# > 0 ]] && [[ $1 == '--with-boost-static' ]]; then
     boost_lib_type=static
 fi
 
@@ -43,6 +43,11 @@ case $os in
             "Linux Mint")
                 linux_distro="Ubuntu" # Linux Mint is like Ubuntu
                 linux_version=$(lsb_release -r -s)
+                if [[ $linux_version =~ "18" ]] ; then
+                    linux_version="16.04"
+                elif [[ $linux_version =~ "19" ]]; then
+                    linux_version="18.04"
+                fi
                 linux_codename=$(lsb_release -c -s)
                 ;;
             Fedora)
@@ -100,12 +105,21 @@ install_linux_packages() {
         # please keep this list in alphabetical order
         apt_packages="automake autopoint bison cmake curl doxygen ethtool flex g++ git \
                  libcli-dev libedit-dev libeditline-dev libevent-dev \
-                 libgc-dev libgmp-dev libjson0 libjson0-dev libjudy-dev \
+                 libgc-dev libgmp-dev libjudy-dev \
                  libmoose-perl libnl-route-3-dev libpcap0.8-dev libssl-dev \
                  libtool pkg-config \
                  python2.7 python python-ipaddr python-pip \
                  python-scapy python-yaml \
-                 realpath rpm texinfo unzip"
+                 rpm texinfo unzip"
+        if [[ $linux_distro == "Ubuntu" && $linux_version =~ "18.04" ]]; then
+            apt_packages="$apt_packages libboost-all-dev libfl-dev \
+                         libjson-c-dev libjsoncpp-dev  rapidjson-dev"
+        elif [[ $linux_distro == "Debian" && $linux_version =~ "9.5" ]]; then
+            apt_packages="$apt_packages libboost-all-dev \
+                          libjson-c-dev libjson-c3 realpath"
+        else
+            apt_packages="$apt_packages libjson0 libjson0-dev realpath"
+        fi
 
         echo "Need sudo privs to install apt packages"
         $SUDO apt-get update || die "Failed to update apt"
@@ -121,9 +135,14 @@ install_linux_packages() {
         fi
 
         $SUDO apt-get remove -y python-thrift    # remove this broken package in case it was installed
-        install_cmake "3.5.2"
-        install_rapidjson "1.1.0"
-        install_boost "1.58.0"
+        if [[ ! ($linux_distro == "Ubuntu" && $linux_version =~ "18.04") && \
+              ! ($linux_distro == "Debian" && $linux_version =~ "9.5") ]]; then
+            install_cmake "3.5.2"
+            install_rapidjson "1.1.0"
+            install_boost "1.58.0"
+        elif [[ $linux_distro == "Debian" && $linux_version =~ "9.5" ]]; then
+            install_rapidjson "1.1.0"
+        fi
     fi
     if [[ $linux_distro == "Fedora" || $linux_distro == "CentOS Linux" ]]; then
         # please keep this list in alphabetical order
@@ -230,16 +249,19 @@ function install_cmake() {
     # ARG: cmake version
     cmake_ver=$1
 
-    if [[ ! ($linux_distro == "Ubuntu" || $linux_distro == "Debian") ]]; then
-	installed_ver=$(cmake --version | head -1 | cut -f 3 -d " ")
-	if version_LT $installed_ver $cmake_ver ; then
-	    cd /tmp
-	    build_cmake_from_source $cmake_ver 1
-            cd /tmp && rm -rf /tmp/cmake-${cmake_ver}*
-	else
+    if [[ ! -z $(which cmake) ]]; then
+        local installed_ver=$(cmake --version | head -1 | cut -f 3 -d " ")
+        if ! version_LT $installed_ver $cmake_ver ; then
 	    echo "Found cmake version $installed_ver"
-	fi
-	return
+            return
+        fi
+    fi
+
+    if [[ ! ($linux_distro == "Ubuntu" || $linux_distro == "Debian") ]]; then
+	cd /tmp
+	build_cmake_from_source $cmake_ver 1
+        cd /tmp && rm -rf /tmp/cmake-${cmake_ver}*
+        return
     fi
     # On Ubuntu we install a package
     $SUDO apt-get install -y cmake=${cmake_ver}
@@ -424,7 +446,6 @@ install_macos_packages() {
 
 function install_protobuf() {
     tmpdir=$(mktemp -d)
-set -x
     echo "Checking for and installing protobuf"
     if ! `pkg-config protobuf` || version_LT `pkg-config --modversion protobuf` "3.0.0"; then
         if [[ $linux_distro == "Ubuntu" || $linux_distro == "Debian" ]]; then
@@ -520,7 +541,7 @@ EOF
     fi
     gcc_version=$(gcc -v |& tail -1 | awk '{print $3;}')
     grpcio_version=""
-    if [ $gcc_version == "4.9.2"]; then
+    if [ $gcc_version == "4.9.2" ]; then
         grpcio_version="==1.7.0"
     fi
     $SUDO pip install protobuf grpcio${grpcio_version} || die "Failed to install python grpc packages"

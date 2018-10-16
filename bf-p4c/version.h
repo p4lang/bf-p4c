@@ -15,9 +15,9 @@ No warranty, explicit or implicit is provided, unless granted under a written
 agreement with Barefoot Networks, Inc.
 */
 
-#ifndef __TOFINO_VERSION__
-#define __TOFINO_VERSION__
+#ifndef EXTENSIONS_BF_P4C_VERSION_H_
+#define EXTENSIONS_BF_P4C_VERSION_H_
 
-#define BF_P4C_VERSION "8.5.0-pr.0"
+#define BF_P4C_VERSION "8.5.0-pr.1"
 
-#endif // __TOFINO_VERSION__
+#endif  // EXTENSIONS_BF_P4C_VERSION_H_
