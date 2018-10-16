@@ -66,10 +66,30 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::Operation::Relation *e) {
     // If comparing with a constant, normalize the condition.
     // However, if both terms are constant, do not swap them, otherwise the IR tree
     // will continuously change, resulting in an infinite loop for GatewayOpt::PassRepeat
-    if (e->left->is<IR::Constant>() && !e->right->is<IR::Constant>()) {
-        auto *t = e->left;
-        e->left = e->right;
-        e->right = t; }
+    // FIXME -- should have been constant folded?
+    if (e->left->is<IR::Literal>() && !e->right->is<IR::Literal>()) {
+        std::swap(e->left, e->right); }
+    if (e->right->is<IR::Operation::Relation>()) {
+        std::swap(e->left, e->right); }
+    if (e->left->is<IR::Operation::Relation>()) {
+        // comparing the result of a comparison with a boolean value
+        bool add_not = e->is<IR::Neq>();
+        if (auto k = e->right->to<IR::Constant>()) {
+            add_not ^= (k->value == 0);
+        } else if (auto k = e->right->to<IR::BoolLiteral>()) {
+            add_not ^= (k->value == 0);
+        } else {
+            // This will currently cause 'Gateway expression too complex', but we
+            // might eventually be able to handle it by splitting the expression.
+            // we could also potentially transform to (a && !b) || (!a && b) instead of a^b
+            // which might fit in one gateway without requiring added stages
+            IR::Expression *rv = new IR::BXor(e->srcInfo, e->left, e->right);
+            if (!add_not)
+                rv = new IR::LNot(e);
+            return rv; }
+        if (add_not)
+            return postorder(new IR::LNot(e->left));
+        return e->left; }
     return e;
 }
 
@@ -749,17 +769,17 @@ bool BuildGatewayMatch::preorder(const IR::Primitive *) {
     return false;
 }
 
-bool BuildGatewayMatch::preorder(const IR::Constant *c) {
+void BuildGatewayMatch::constant(uint64_t c) {
     auto ctxt = getContext();
     if (ctxt->node->is<IR::BAnd>()) {
-        andmask = c->asUint64();
+        andmask = c;
         LOG4("  andmask = 0x" << hex(andmask));
     } else if (ctxt->node->is<IR::BOr>()) {
-        ormask = c->asUint64();
+        ormask = c;
         LOG4("  ormask = 0x" << hex(ormask));
     } else if (match_field) {
         uint64_t mask = (UINT64_C(1) << match_field_bits.size()) - 1;
-        uint64_t val = (c->asUint64() ^ cmplmask) & mask;
+        uint64_t val = (c ^ cmplmask) & mask;
         if ((val & mask & ~andmask) || (~val & mask & ormask))
             BUG("masked comparison in gateway can never match");
         mask &= andmask & ~ormask;
@@ -783,7 +803,6 @@ bool BuildGatewayMatch::preorder(const IR::Constant *c) {
         match_field = nullptr;
     } else {
         BUG("Invalid context for constant in BuildGatewayMatch"); }
-    return true;
 }
 
 bool BuildGatewayMatch::preorder(const IR::Equ *) {

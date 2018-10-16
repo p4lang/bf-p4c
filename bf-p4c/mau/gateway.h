@@ -131,7 +131,9 @@ class BuildGatewayMatch : public Inspector {
     bool preorder(const IR::LNot *) override { return true; }
     bool preorder(const IR::BAnd *) override { return true; }
     bool preorder(const IR::BOr *) override { return true; }
-    bool preorder(const IR::Constant *) override;
+    void constant(uint64_t val);
+    bool preorder(const IR::Constant *c) override { constant(c->asUint64()); return true; }
+    bool preorder(const IR::BoolLiteral *c) override { constant(c->value); return true; }
     bool preorder(const IR::Equ *) override;
     bool preorder(const IR::Neq *) override;
     bool preorder(const IR::RangeMatch *) override;
@@ -140,6 +142,7 @@ class BuildGatewayMatch : public Inspector {
     le_bitrange                 match_field_bits;
     uint64_t                    andmask, ormask, cmplmask;
     int                         shift;
+
  public:
     BuildGatewayMatch(const PhvInfo &phv, CollectGatewayFields &f);
 };
