@@ -193,7 +193,9 @@ class BarefootBackend(BackendDriver):
             self.add_command_option('compiler', '--display-power-budget')
 
         if opts.ir_to_json is not None:
-            self.add_command_option('compiler', '--toJson {}'.format(opts.ir_to_json))
+            self.add_command_option('compiler', '--toJSON {}'.format(opts.ir_to_json))
+        self._ir_to_json = opts.ir_to_json
+
 
         if opts.verbose > 0:
             ta_logging = "table_placement:3,table_summary:1"
@@ -385,6 +387,10 @@ class BarefootBackend(BackendDriver):
         # Error codes defined in p4c-barefoot.cpp:main
         if rc > 1:  # Invocation or program error. Can't recover anything from this, exit
             return rc
+
+        # ir_to_json exits early, serializing only the IR
+        if self._ir_to_json is not None:
+            return 0
 
         # collect all the command line arguments that were passed to the driver
         # the reason we implement this here, is because the backend will not know

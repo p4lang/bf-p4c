@@ -1,5 +1,98 @@
 # Release Notes
 
+## Version 8.5.0-pr.0
+The **Share the Tofino P4 love** release
+
+New features
+  - Added a new extern for serializer
+  - Hash action tables
+  - Support the Advanced Flow Control For TM metadata
+
+Assembler
+  - Add a how_referenced to the assembly language
+
+MAU
+  - Format in gateway to determine payload locations
+  - Limit hash dist address allocation to 23 bits
+  - Infer stack/fifo control plane use
+  - Avoid duplicating RegisterActions used by multiple actions/tables
+  - Program meter_rng_enable for color-based meters
+  - Multiple range fields in a single TCAM table
+  - Infer @stage for gateways from dependent tables
+  - Fix for row_action_nxtable_bus_drive register
+
+Parser/Deparser
+  - Fix JBay deparser checksum
+  - Parser match byte used multiple times
+
+PHV
+
+Primitives, Pragmas and Misc
+  - `--skip-compilation` flag
+  - Architecture configuration to the manifest file
+  - Add `--ir-to-json` option to driver
+
+Notable bug fixes
+  - Fix partition action handle generation
+  - Salu min/max index output fixes
+
+
+## Version 8.4.0
+The **Grunt work** release
+
+New features
+  - Support for hash calculation library
+  - Reduction OR
+  - Support for conditional checksum update
+  - Buggy 32-bit support
+  - Add schema validation for context.json and manifest.json
+  - Generate reference outputs for p4i
+
+Assembler
+  - Additional sateful asm options
+  - Standardize assembly calls for Counters/Meters/Stateful ALUs/Selectors
+  - Add support for condition tables in context.json
+  - Generate ghost bit info in context.json
+  - Add hash primitives along with new 'hash_inputs' node in context.json
+
+MAU
+  - Explicit calculation for a wide match table
+  - Correct calculation of number of overlay bits in a transaction
+  - Support for meter blackbox
+  - Table flow graph and visualization
+  - hash_dist register setup type/enable consistency
+  - Save static entries in the backend table with modified names
+  - Add node reachability maps to table flow graph
+  - Allow sharing on the action bus between tables
+  - Build an immediate dominator map from the table flow graph
+  - TNA direct register fixes
+
+Parser/Deparser
+  - Enhance parser match register allocation to allow packing
+
+PHV
+  - Propagation of dependency chains to inner placement groups
+  - Disable metadata initialization for mirror_type, digest_type, and resubmit_type
+  - Add metadata live range pass
+  - Improvements to analyses required by speculative live range shrinking
+  - Slicing optimizations
+
+Primitives, Pragmas and Misc
+  - Add support for @dynamic_table_key_masks pragma
+  - Allow disabling of PHV allocation related pragmas using --disable-pragma
+  - Add file logging support using --verbose option
+
+Notable bug fixes
+  - Avoid looping in CanonGatewayExpression
+  - Generate correct json tree for alpm preclassifier action primitive
+  - Fix live range output for PHVs
+  - Allow mirror type check for non zero value
+  - Fix table dependency graph and live range overlay
+  - Fix hash collision
+  - Stateful ALU backend bug fixes
+  - Calculate LRT params after table placement
+  - Fix zero padding in ternary match pack format
+
 ## Version 8.3.0-beta.2
 The **Quick shadow** release
 
