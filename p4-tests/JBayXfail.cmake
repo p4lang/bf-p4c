@@ -65,12 +65,12 @@ p4c_add_xfail_reason("tofino2"
   testdata/p4_14_samples/07-FullTPHV2.p4
   testdata/p4_14_samples/08-FullTPHV3.p4
   switch_dc_basic
-  switch_msdc
+  switch_ent_dc_general
   )
 
 p4c_add_xfail_reason("tofino2"
-  "Ran out of space in POV in deparser"
-  switch_ent_dc_general
+  "Ran out of phv output slots"
+  switch_msdc
   )
 
 p4c_add_xfail_reason("tofino2"
@@ -289,3 +289,4 @@ p4c_add_xfail_reason("tofino2"
   "No format in action table"
   testdata/p4_14_samples/const_default_action.p4
 )
+

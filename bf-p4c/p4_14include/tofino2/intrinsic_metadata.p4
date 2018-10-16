@@ -139,7 +139,7 @@ header_type ingress_intrinsic_metadata_for_tm_t {
 
         // ---------------------
 
-        qid : 5;                        // egress (logical) queue id into which
+        qid : 7;                        // egress (logical) queue id into which
                                         // this packet will be deposited.
         icos_for_copy_to_cpu : 3;       // ingress cos for the copy to CPU. must
                                         // be presented to TM if copy_to_cpu ==
@@ -147,7 +147,7 @@ header_type ingress_intrinsic_metadata_for_tm_t {
 
         // ---------------------
 
-        _pad2: 3;
+        _pad2: 1;
 
         copy_to_cpu : 1;                // request for copy to cpu.
 

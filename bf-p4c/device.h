@@ -50,6 +50,9 @@ class Device {
     static unsigned maxCloneId(gress_t gress) { return Device::get().getMaxCloneId(gress); }
     static unsigned maxResubmitId() { return Device::get().getMaxResubmitId(); }
     static unsigned maxDigestId() { return Device::get().getMaxDigestId(); }
+    /* type is 'int' because width_bits() is defined as 'int' in ir/base.def */
+    static int cloneSessionIdWidth() { return Device::get().getCloneSessionIdWidth(); }
+    static int queueIdWidth() { return Device::get().getQueueIdWidth(); }
     static int numParsersPerPipe() { return 18; }
 
  protected:
@@ -66,6 +69,8 @@ class Device {
     virtual unsigned getMaxCloneId(gress_t) const = 0;
     virtual unsigned getMaxResubmitId() const = 0;
     virtual unsigned getMaxDigestId() const = 0;
+    virtual int getCloneSessionIdWidth() const = 0;
+    virtual int getQueueIdWidth() const = 0;
 
  private:
     static Device* instance_;
@@ -92,6 +97,8 @@ class TofinoDevice : public Device {
     }
     unsigned getMaxResubmitId() const override { return 8; }
     unsigned getMaxDigestId() const override { return 8; }
+    int getCloneSessionIdWidth() const override { return 10; }
+    int getQueueIdWidth() const override { return 5; }
 
     const PhvSpec& getPhvSpec() const override { return phv_; }
     const PardeSpec& getPardeSpec() const override { return parde_; }
@@ -117,6 +124,8 @@ class JBayDevice : public Device {
     unsigned getMaxCloneId(gress_t /* gress */) const override { return 16; }
     unsigned getMaxResubmitId() const override { return 8; }
     unsigned getMaxDigestId() const override { return 8; }
+    int getCloneSessionIdWidth() const override { return 8; }
+    int getQueueIdWidth() const override { return 7; }
 
     const PhvSpec& getPhvSpec() const override { return phv_; }
     const PardeSpec& getPardeSpec() const override { return parde_; }

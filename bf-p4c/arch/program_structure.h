@@ -30,17 +30,17 @@ struct MetadataField {
     // the compiler_generated_meta.
     bool isCG;
 
-    MetadataField(cstring structName, cstring fieldName, int width) :
-        structName(structName), fieldName(fieldName), width(width), offset(0), isCG(false) {}
+    MetadataField(cstring sn, cstring fn, int w) :
+        structName(sn), fieldName(fn), width(w), offset(0), isCG(false) {}
 
-    MetadataField(cstring structName, cstring fieldName, int width, int offset) :
-        structName(structName), fieldName(fieldName), width(width), offset(offset), isCG(false) {}
+    MetadataField(cstring sn, cstring fn, int w, int o) :
+        structName(sn), fieldName(fn), width(w), offset(o), isCG(false) {}
 
-    MetadataField(cstring structName, cstring fieldName, int width, bool isCG) :
-        structName(structName), fieldName(fieldName), width(width), offset(0), isCG(isCG) {}
+    MetadataField(cstring sn, cstring fn, int w, bool isCG) :
+        structName(sn), fieldName(fn), width(w), offset(0), isCG(isCG) {}
 
-    MetadataField(cstring structName, cstring fieldName, int width, int offset, bool isCG) :
-        structName(structName), fieldName(fieldName), width(width), offset(offset), isCG(isCG) {}
+    MetadataField(cstring sn, cstring fn, int w, int o, bool isCG) :
+        structName(sn), fieldName(fn), width(w), offset(o), isCG(isCG) {}
 
     bool operator<(const MetadataField &other) const {
         if (structName != other.structName)

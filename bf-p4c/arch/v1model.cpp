@@ -76,7 +76,8 @@ class LoadTargetArchitecture : public Inspector {
                                MetadataField{"eg_intr_md", "pkt_length", 16});
 
         structure->addMetadata(MetadataField{"standard_metadata", "clone_spec", 32},
-                               MetadataField{"compiler_generated_meta", "mirror_id", 10});
+                               MetadataField{"compiler_generated_meta", "mirror_id",
+                                             Device::cloneSessionIdWidth()});
 
         structure->addMetadata(INGRESS,
                                MetadataField{"standard_metadata", "drop", 1},
@@ -783,7 +784,8 @@ class AnalyzeProgram : public Inspector {
 
         // Inject new fields for mirroring.
         cgm->fields.push_back(
-            new IR::StructField("mirror_id", IR::Type::Bits::get(10)));
+            new IR::StructField("mirror_id",
+                    IR::Type::Bits::get(Device::cloneSessionIdWidth())));
         cgm->fields.push_back(
             new IR::StructField("mirror_source", IR::Type::Bits::get(8)));
         // XXX(hanw): we can probably remove these two fields.
@@ -1135,7 +1137,8 @@ class ConstructSymbolTable : public Inspector {
             auto *mirrorId = new IR::Member(compilerMetadataPath, "mirror_id");
             auto *mirrorIdValue = mce->arguments->at(1)->expression;
             /// v1model mirror_id is 32bit, cast to bit<10>
-            auto *castedMirrorIdValue = new IR::Cast(IR::Type::Bits::get(10), mirrorIdValue);
+            auto *castedMirrorIdValue = new IR::Cast(
+                    IR::Type::Bits::get(Device::cloneSessionIdWidth()), mirrorIdValue);
             block->components.push_back(new IR::AssignmentStatement(mirrorId,
                                                                     castedMirrorIdValue));
             structure->_map.emplace(node, block);

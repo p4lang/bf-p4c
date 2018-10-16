@@ -31,9 +31,9 @@
 // ----------------------------------------------------------------------------
 typedef bit<9>  PortId_t;               // Port id -- ingress or egress port
 typedef bit<16> MulticastGroupId_t;     // Multicast group id
-typedef bit<5>  QueueId_t;              // Queue id
+typedef bit<7>  QueueId_t;              // Queue id
 typedef bit<4>  CloneId_t;              // Clone id
-typedef bit<10> MirrorId_t;             // Mirror id
+typedef bit<8>  MirrorId_t;             // Mirror id
 typedef bit<16> ReplicationId_t;        // Replication id
 
 typedef error ParserError_t;
@@ -272,7 +272,7 @@ header egress_intrinsic_metadata_t {
     bit<1> egress_rid_first;            // Flag indicating the first replica for
                                         // the given multicast group.
 
-    bit<3> _pad6;
+    bit<1> _pad6;
 
     QueueId_t egress_qid;               // Egress (physical) queue id via which
                                         // this packet was served.

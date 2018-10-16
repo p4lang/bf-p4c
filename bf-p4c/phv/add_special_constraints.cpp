@@ -32,7 +32,8 @@ void AddSpecialConstraints::end_apply() {
         if (mirror_id) {
             mirror_id->set_no_split(true);
             mirror_id->set_deparsed_bottom_bits(true);
-            pragmas_i.pa_container_sizes().add_constraint(mirror_id, { PHV::Size::b16 });
+            if (Device::currentDevice() == Device::TOFINO) {
+                pragmas_i.pa_container_sizes().add_constraint(mirror_id, {PHV::Size::b16}); }
         }
         auto* mirror_src = phv_i.field(
                 cstring::to_cstring(gress) + "::" + "compiler_generated_meta.mirror_source");

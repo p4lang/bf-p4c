@@ -586,9 +586,10 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             const auto& id_alloc = phv.get_alloc(mirror_id);
             BUG_CHECK(id_alloc.size() == 1,
                       "%1% is splitted, but it should not.", mirror_id->name);
-            BUG_CHECK(id_alloc.front().container.size() == 16,
-                      "%1% must be allocated to %2% but phv allocation does not",
-                      mirror_id->name, 16);
+            if (Device::currentDevice() == Device::TOFINO) {
+                BUG_CHECK(id_alloc.front().container.size() == 16,
+                          "%1% must be allocated to %2% but phv allocation does not",
+                          mirror_id->name, 16); }
         }
 
         const auto* mirror_src = phv.field(
