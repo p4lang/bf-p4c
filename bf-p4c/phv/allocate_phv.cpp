@@ -1114,7 +1114,7 @@ std::list<PHV::ContainerGroup *> AllocatePHV::makeDeviceContainerGroups() {
             rv.emplace_back(new PHV::ContainerGroup(s, group)); } }
 
     // Build TPHV collections
-    for (auto collection : phvSpec.tagalongGroups()) {
+    for (auto collection : phvSpec.tagalongCollections()) {
         // Each PHV_MAU_Group holds containers of the same size.  Hence, TPHV
         // collections are split into three groups, by size.
         ordered_map<PHV::Type, bitvec> groups_by_type;

@@ -121,7 +121,7 @@ void CheckTofinoPhvContainerResources(int scale_factor = 1) {
     for (auto s : phvSpec.containerSizes()) {
         for (auto mau_group : phvSpec.mauGroups(s)) {
             EXPECT_NE(bitvec(), mau_group & phvSpec.physicalContainers()); } }
-    for (auto tagalong_group : phvSpec.tagalongGroups()) {
+    for (auto tagalong_group : phvSpec.tagalongCollections()) {
         EXPECT_NE(bitvec(), tagalong_group & phvSpec.physicalContainers()); }
 
     // MAU groups should have the size used to retrieve them.
@@ -133,20 +133,20 @@ void CheckTofinoPhvContainerResources(int scale_factor = 1) {
     // They should also be disjoint.
     for (auto s : phvSpec.containerSizes()) {
         for (auto mau_group : phvSpec.mauGroups(s)) {
-            for (auto tagalong_group : phvSpec.tagalongGroups()) {
+            for (auto tagalong_group : phvSpec.tagalongCollections()) {
                 EXPECT_EQ(bitvec(), mau_group & tagalong_group); } } }
 
     // There should be eight tagalong groups of 4x8b containers, 6x16b
     // containers, and 4x32b containers.
     ordered_map<PHV::Size, int> collection_sizes;
-    for (auto collection : phvSpec.tagalongGroups()) {
+    for (auto collection : phvSpec.tagalongCollections()) {
         for (auto cid : collection)
             collection_sizes[phvSpec.idToContainer(cid).type().size()]++;
         EXPECT_EQ(4 * scale_factor, collection_sizes[PHV::Size::b8]);
         EXPECT_EQ(6 * scale_factor, collection_sizes[PHV::Size::b16]);
         EXPECT_EQ(4 * scale_factor, collection_sizes[PHV::Size::b32]);
         collection_sizes.clear(); }
-    EXPECT_EQ(unsigned(8 * scale_factor), phvSpec.tagalongGroups().size());
+    EXPECT_EQ(unsigned(8 * scale_factor), phvSpec.tagalongCollections().size());
 
     // There should be 4 MAU groups of size b8, 6 of b16, and 4 of b32.
     ordered_map<PHV::Size, int> mau_group_sizes;

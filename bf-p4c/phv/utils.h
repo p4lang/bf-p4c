@@ -150,20 +150,20 @@ class Allocation {
     using ConditionalConstraint = ordered_map<PHV::FieldSlice, ConditionalConstraintData>;
     using ConditionalConstraints = ordered_map<int, ConditionalConstraint>;
 
- protected:
+ public:
     using FieldStatus = ordered_set<AllocSlice>;
 
-    /// Information about each PHV group used to generate occupancy metrics
-    struct GroupInfo {
+    /// Information about PHV containers in each MAU group used to generate occupancy metrics
+    struct MauGroupInfo {
         size_t  size;
         int     groupID;
         size_t  containersUsed;
         size_t  bitsUsed;
         size_t  totalContainers;
 
-        GroupInfo() : size(0), groupID(0), containersUsed(0), bitsUsed(0), totalContainers(0) {}
+        MauGroupInfo() : size(0), groupID(0), containersUsed(0), bitsUsed(0), totalContainers(0) {}
 
-        explicit GroupInfo(size_t sz, int i, bool cont, size_t bits, size_t total)
+        explicit MauGroupInfo(size_t sz, int i, bool cont, size_t bits, size_t total)
             : size(sz), groupID(i), bitsUsed(bits), totalContainers(total) {
             containersUsed = cont ? 1 : 0;
         }
@@ -174,6 +174,56 @@ class Allocation {
         }
     };
 
+    struct TagalongCollectionInfo {
+        std::map<PHV::Type, size_t> containersUsed;
+        std::map<PHV::Type, size_t> bitsUsed;
+        std::map<PHV::Type, size_t> totalContainers;
+
+        static std::string
+        formatPercent(int div, int den) {
+            std::stringstream ss;
+            ss << boost::format("(%=6.3g%%)") % (100.0 * div / den);
+            return ss.str();
+        }
+
+        static std::string
+        formatUsage(int used, int total) {
+            std::stringstream ss;
+            ss << used << " ";
+            ss << formatPercent(used, total);
+            return ss.str();
+        }
+
+        size_t getTotalUsedBits() {
+            size_t rv = 0;
+            for (auto kv : bitsUsed)
+                rv += kv.second;
+            return rv;
+        }
+
+        size_t getTotalAvailableBits() {
+            size_t rv = 0;
+            for (auto& kv : totalContainers)
+                rv += (size_t)kv.first.size() * kv.second;
+            return rv;
+        }
+
+        std::string printUsage(PHV::Type type) {
+            auto used = containersUsed[type];
+            auto total = totalContainers[type];
+
+            return formatUsage(used, total);
+        }
+
+        std::string printTotalUsage() {
+            auto total = getTotalAvailableBits();
+            auto used = getTotalUsedBits();
+
+            return formatUsage(used, total);
+        }
+    };
+
+ protected:
     // These are copied from parent to child on creating a transaction, and
     // from child to parent on committing.
     const SymBitMatrix* mutex_i;

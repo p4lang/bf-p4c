@@ -86,7 +86,7 @@ const bitvec& PhvSpec::physicalContainers() const {
     for (auto sg : mauGroups())
         for (auto g : sg.second)
             containers |= g;
-    for (auto g : tagalongGroups())
+    for (auto g : tagalongCollections())
         containers |= g;
     physical_containers_i = std::move(containers);
     return physical_containers_i;
@@ -173,7 +173,16 @@ const bitvec& PhvSpec::egressOnly() const {
     return egress_only_containers_i;
 }
 
-const std::vector<bitvec>& PhvSpec::tagalongGroups() const {
+unsigned PhvSpec::getTagalongCollectionId(PHV::Container c) const {
+    BUG_CHECK(c.is(PHV::Kind::tagalong), "container is not tagalong");
+
+    auto tagalongCollectionSpec = getTagalongCollectionSpec();
+    auto type_in_collection = tagalongCollectionSpec.at(c.type());
+
+    return c.index() / type_in_collection;
+}
+
+const std::vector<bitvec>& PhvSpec::tagalongCollections() const {
     if (!tagalong_collections_i.empty())
         return tagalong_collections_i;
     std::vector<bitvec> tagalong_collections;
@@ -192,7 +201,7 @@ const std::vector<bitvec>& PhvSpec::tagalongGroups() const {
     return tagalong_collections_i;
 }
 
-bitvec PhvSpec::tagalongGroup(unsigned container_id) const {
+bitvec PhvSpec::tagalongCollection(unsigned container_id) const {
     const auto containerType = idToContainerType(container_id % numContainerTypes());
     if (containerType.kind() != PHV::Kind::tagalong)
         return bitvec();
@@ -200,10 +209,10 @@ bitvec PhvSpec::tagalongGroup(unsigned container_id) const {
     const unsigned index = container_id / numContainerTypes();
     unsigned collection_num = index / tagalongCollectionSpec.at(containerType);
 
-    if (tagalongGroups().size() <= collection_num)
+    if (tagalongCollections().size() <= collection_num)
         return bitvec();
 
-    return tagalongGroups()[collection_num];
+    return tagalongCollections()[collection_num];
 }
 
 const std::vector<bitvec>& PhvSpec::mauGroups(PHV::Size sz) const {
@@ -241,7 +250,7 @@ bitvec PhvSpec::deparserGroup(unsigned id) const {
         return range(containerType, index, 1);
 
     if (containerType.kind() == PHV::Kind::tagalong)
-        return tagalongGroup(id);
+        return tagalongCollection(id);
 
     // Outside of the exceptional cases above, containers are assigned to
     // threads in groups. The grouping depends on the type of container.
@@ -351,8 +360,8 @@ TofinoPhvSpec::TofinoPhvSpec() {
 
     tagalongCollectionSpec = {
         { PHV::Type::TB, 4*phv_scale_factor },
-        { PHV::Type::TW, 4*phv_scale_factor },
-        { PHV::Type::TH, 6*phv_scale_factor }
+        { PHV::Type::TH, 6*phv_scale_factor },
+        { PHV::Type::TW, 4*phv_scale_factor }
     };
 
     numTagalongCollections = 8*phv_scale_factor;
@@ -409,7 +418,7 @@ JBayPhvSpec::JBayPhvSpec() {
         P4C_UNIMPLEMENTED("phv_scale_factor not yet implemented for Tofino2");
 
     std::map<PHV::Size, std::map<unsigned, std::map<PHV::Type, unsigned>>> rawMauGroupSpec = {
-        { PHV::Size::b8, {{4, {{PHV::Type::B, 12}, {PHV::Type::MB, 4}, {PHV::Type::DB, 4}} }} },
+        { PHV::Size::b8,  {{4, {{PHV::Type::B, 12}, {PHV::Type::MB, 4}, {PHV::Type::DB, 4}} }} },
         { PHV::Size::b16, {{6, {{PHV::Type::H, 12}, {PHV::Type::MH, 4}, {PHV::Type::DH, 4}} }} },
         { PHV::Size::b32, {{4, {{PHV::Type::W, 12}, {PHV::Type::MW, 4}, {PHV::Type::DW, 4}} }} }
     };

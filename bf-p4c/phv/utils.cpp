@@ -2,6 +2,7 @@
 #include <boost/optional/optional_io.hpp>
 #include <iostream>
 #include <numeric>
+#include "bf-p4c/common/table_printer.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/lib/union_find.hpp"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
@@ -601,11 +602,11 @@ cstring PHV::ConcreteAllocation::getSummary(const PhvUse& uses) const {
     return ss.str();
 }
 
-cstring
-PHV::ConcreteAllocation::getOccupancyMetrics(const ordered_map<PHV::Container, int>& used) const {
+static cstring
+getMauGroupsOccupancyMetrics(const ordered_map<PHV::Container, int>& used) {
     const auto& phvSpec = Device::phvSpec();
-    ordered_map<bitvec, PHV::Allocation::GroupInfo> groups;
-    std::vector<cstring> groupIDList;
+
+    ordered_map<bitvec, PHV::Allocation::MauGroupInfo> mauGroupInfos;
 
     // Extract MAU group specific information from phvSpec
     std::pair<int, int> numBytes = phvSpec.mauGroupNumAndSize(PHV::Type::B);
@@ -617,7 +618,6 @@ PHV::ConcreteAllocation::getOccupancyMetrics(const ordered_map<PHV::Container, i
         if (boost::optional<bitvec> mauGroup = phvSpec.mauGroup(cid)) {
             int groupID = -1;
             // groupID represents the unique string that identifies an MAU group
-            // It is used to index into the groupIDList vector to eventually print the group name
             size_t numContainers = 0;
             if (c.type() == PHV::Type::B) {
                 groupID = (c.index() / numBytes.second) + numWords.first;
@@ -632,10 +632,10 @@ PHV::ConcreteAllocation::getOccupancyMetrics(const ordered_map<PHV::Container, i
                 // xxx(Deep): Handle non-normal PHV containers
                 continue; }
             bool containerUsed = (used.at(c) != 0);
-            if (groups.count(mauGroup.get()))
-                groups[mauGroup.get()].update(containerUsed, used.at(c));
+            if (mauGroupInfos.count(mauGroup.get()))
+                mauGroupInfos[mauGroup.get()].update(containerUsed, used.at(c));
             else
-                groups[mauGroup.get()] = PHV::Allocation::GroupInfo(c.size(), groupID,
+                mauGroupInfos[mauGroup.get()] = PHV::Allocation::MauGroupInfo(c.size(), groupID,
                         containerUsed, used.at(c), numContainers); } }
 
     std::stringstream ss;
@@ -645,7 +645,7 @@ PHV::ConcreteAllocation::getOccupancyMetrics(const ordered_map<PHV::Container, i
     dashes << std::endl;
 
     // Set up the column headings for the groupwise occupancy metrics
-    ss << std::endl << "PHV Groups Allocation State" << std::endl;
+    ss << std::endl << "MAU Groups:" << std::endl;
     ss << dashes.str();
     ss << "|" << boost::format("%=20s") % "PHV Group"
        << "|" << boost::format("%=20s") % "Containers Used"
@@ -672,21 +672,22 @@ PHV::ConcreteAllocation::getOccupancyMetrics(const ordered_map<PHV::Container, i
                   << "|" << std::endl;
 
         for (auto mauGroup : Device::phvSpec().mauGroups(containerSize)) {
-            size = (size == 0) ? groups[mauGroup].size : size;
-            sz_containersUsed += groups[mauGroup].containersUsed;
-            sz_bitsUsed += groups[mauGroup].bitsUsed;
-            auto totalBits = groups[mauGroup].totalContainers * groups[mauGroup].size;
+            size = (size == 0) ? mauGroupInfos[mauGroup].size : size;
+            sz_containersUsed += mauGroupInfos[mauGroup].containersUsed;
+            sz_bitsUsed += mauGroupInfos[mauGroup].bitsUsed;
+            auto totalBits = mauGroupInfos[mauGroup].totalContainers * mauGroupInfos[mauGroup].size;
             sz_totalBits += totalBits;
-            sz_totalContainers += groups[mauGroup].totalContainers;
+            sz_totalContainers += mauGroupInfos[mauGroup].totalContainers;
 
             std::stringstream group, containers, bits;
             group << Device::phvSpec().idToContainer(*mauGroup.min()) << "--"
                   << Device::phvSpec().idToContainer(*mauGroup.max());
-            containers << boost::format("%2d") % groups[mauGroup].containersUsed
-                       << boost::format(" (%=6.3g%%)") % (100.0 * groups[mauGroup].containersUsed /
-                                                          groups[mauGroup].totalContainers);
-            bits << boost::format("%3d") % groups[mauGroup].bitsUsed << boost::format(" (%=6.3g%%)")
-                % (100.0 * groups[mauGroup].bitsUsed / totalBits);
+            containers << boost::format("%2d") % mauGroupInfos[mauGroup].containersUsed
+                 << boost::format(" (%=6.3g%%)") % (100.0 * mauGroupInfos[mauGroup].containersUsed /
+                                                          mauGroupInfos[mauGroup].totalContainers);
+            bits << boost::format("%3d") % mauGroupInfos[mauGroup].bitsUsed
+                 << boost::format(" (%=6.3g%%)")
+                % (100.0 * mauGroupInfos[mauGroup].bitsUsed / totalBits);
             ss << "|" << boost::format("%=20s") % group.str()
                << "|" << boost::format("%=20s") % containers.str()
                << "|" << boost::format("%=20s") % bits.str()
@@ -729,6 +730,95 @@ PHV::ConcreteAllocation::getOccupancyMetrics(const ordered_map<PHV::Container, i
        << "|" << std::endl;
 
     ss << dashes.str();
+    return ss.str();
+}
+
+static cstring
+getTagalongCollectionsOccupancyMetrics(const ordered_map<PHV::Container, int>& used) {
+    const auto& phvSpec = Device::phvSpec();
+
+    std::map<unsigned, PHV::Allocation::TagalongCollectionInfo> tagalongCollectionInfos;
+
+    auto tagalongCollectionSpec = phvSpec.getTagalongCollectionSpec();
+
+    for (unsigned i = 0; i < phvSpec.getNumTagalongCollections(); i++) {
+        auto& collectionInfo = tagalongCollectionInfos[i];
+
+        for (auto& kv : tagalongCollectionSpec) {
+            collectionInfo.totalContainers[kv.first] = kv.second;
+        }
+    }
+
+    for (auto& kv : used) {
+        auto container = kv.first;
+        auto bits_in_container = kv.second;
+
+        if (!container.is(PHV::Kind::tagalong))
+            continue;
+
+        if (kv.second == 0)
+            continue;
+
+        int collectionID = phvSpec.getTagalongCollectionId(container);
+        auto& collectionInfo = tagalongCollectionInfos[collectionID];
+
+        collectionInfo.containersUsed[container.type()]++;
+        collectionInfo.bitsUsed[container.type()] += bits_in_container;
+    }
+
+    std::stringstream ss;
+    ss << std::endl << "Tagalong Collections:" << std::endl;
+
+    TablePrinter tp(ss, {
+       "Collection", "8b Containers Used", "16b Containers Used", "32b Containers Used", "Bits Used"
+    });
+
+    std::map<PHV::Type, int> totalUsed;
+    std::map<PHV::Type, int> totalAvail;
+
+    int totalUsedBits = 0, totalAvailBits = 0;
+
+    for (auto& kv : tagalongCollectionInfos) {
+        auto& info = kv.second;
+
+        tp.addRow({std::to_string(kv.first),
+                  info.printUsage(PHV::Type::TB),
+                  info.printUsage(PHV::Type::TH),
+                  info.printUsage(PHV::Type::TW),
+                  info.printTotalUsage()});
+
+        totalUsed[PHV::Type::TB] += info.containersUsed[PHV::Type::TB];
+        totalUsed[PHV::Type::TH] += info.containersUsed[PHV::Type::TH];
+        totalUsed[PHV::Type::TW] += info.containersUsed[PHV::Type::TW];
+
+        totalAvail[PHV::Type::TB] += info.totalContainers[PHV::Type::TB];
+        totalAvail[PHV::Type::TH] += info.totalContainers[PHV::Type::TH];
+        totalAvail[PHV::Type::TW] += info.totalContainers[PHV::Type::TW];
+
+        totalUsedBits += info.getTotalUsedBits();
+        totalAvailBits += info.getTotalAvailableBits();
+    }
+
+    auto formatUsage = PHV::Allocation::TagalongCollectionInfo::formatUsage;
+
+    tp.addRow({"Total",
+               formatUsage(totalUsed[PHV::Type::TB], totalAvail[PHV::Type::TB]),
+               formatUsage(totalUsed[PHV::Type::TH], totalAvail[PHV::Type::TH]),
+               formatUsage(totalUsed[PHV::Type::TW], totalAvail[PHV::Type::TW]),
+               formatUsage(totalUsedBits, totalAvailBits)});
+
+    tp.print();
+
+    return ss.str();
+}
+
+cstring
+PHV::ConcreteAllocation::getOccupancyMetrics(const ordered_map<PHV::Container, int>& used) const {
+    std::stringstream ss;
+    ss << std::endl << "PHV Allocation State" << std::endl;
+    ss << getMauGroupsOccupancyMetrics(used);
+    ss << std::endl;
+    ss << getTagalongCollectionsOccupancyMetrics(used);
     return ss.str();
 }
 
@@ -2204,7 +2294,7 @@ std::ostream &operator<<(std::ostream &out, const PHV::Allocation& alloc) {
         for (auto group : typeAndGroup.second) {
             seen |= group;
             order.push_back(group); } }
-    for (auto tagalong : phvSpec.tagalongGroups()) {
+    for (auto tagalong : phvSpec.tagalongCollections()) {
         seen |= tagalong;
         order.push_back(tagalong); }
     order.push_back(phvSpec.physicalContainers() - seen);

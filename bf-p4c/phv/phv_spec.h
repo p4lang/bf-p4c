@@ -175,12 +175,21 @@ class PhvSpec {
     /// PHV Type @t
     const std::pair<int, int> mauGroupNumAndSize(const PHV::Type t) const;
 
-    /// @return a bitvec of available tagalong collections.
-    const std::vector<bitvec>& tagalongGroups() const;
+    /// @return the ID of tagalong collection that the container belongs to
+    unsigned getTagalongCollectionId(PHV::Container c) const;
 
-    /// @return the ids of every container in @container_id's tagalong group, or
-    /// boost::none if @container_id is not part of any MAU group.
-    bitvec tagalongGroup(unsigned container_id) const;
+    const std::map<PHV::Type, unsigned> getTagalongCollectionSpec() const {
+        return tagalongCollectionSpec;
+    }
+
+    unsigned getNumTagalongCollections() const { return numTagalongCollections; }
+
+    /// @return a bitvec of available tagalong collections.
+    const std::vector<bitvec>& tagalongCollections() const;
+
+    /// @return the ids of every container in @container_id's tagalong collection, or
+    /// boost::none if @container_id is not part of any collection.
+    bitvec tagalongCollection(unsigned container_id) const;
 
     /// @return the ids of containers that can be assigned to a thread
     /// individually.

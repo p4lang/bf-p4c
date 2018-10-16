@@ -165,6 +165,7 @@ set (BF_P4C_BACKEND_COMMON_HDRS
   common/run_id.h
   common/simplify_references.h
   common/slice.h
+  common/table_printer.h
   common/type_categories.h
   common/utils.h
   )
