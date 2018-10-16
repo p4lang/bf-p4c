@@ -147,7 +147,13 @@ class BfRtSchemaGenerator {
     void addWred(Util::JsonArray* tablesJson, const Wred& wred) const;
 
     boost::optional<bool> actProfHasSelector(P4Id actProfId) const;
-    Util::JsonArray* makeActionSpecs(const p4configv1::Table& table) const;
+    /// Generates the JSON array for table action specs. When the function
+    /// returns normally and @maxActionParamId is not NULL, @maxActionParamId is
+    /// set to the maximum assigned id for an action parameter across all
+    /// actions. This is useful if other table data fields (e.g. direct register
+    /// fields) need to receive a distinct id in the same space.
+    Util::JsonArray* makeActionSpecs(const p4configv1::Table& table,
+                                     P4Id* maxActionParamId = nullptr) const;
     boost::optional<Counter> getDirectCounter(P4Id counterId) const;
     boost::optional<Meter> getDirectMeter(P4Id meterId) const;
     boost::optional<Register> getDirectRegister(P4Id registerId) const;
@@ -158,12 +164,13 @@ class BfRtSchemaGenerator {
     /// BF-RT format. @instanceType and @instanceName are used for logging error
     /// messages. This method currenty only supports fixed-width bitstrings as
     /// well as non-nested structs and tuples. All field names are prefixed with
-    /// @prefix.
+    /// @prefix. Field ids are assigned incrementally starting at @idOffset.
     void transformTypeSpecToDataFields(Util::JsonArray* fieldsJson,
                                        const p4configv1::P4DataTypeSpec& typeSpec,
                                        cstring instanceType,
                                        cstring instanceName,
-                                       cstring prefix = "") const;
+                                       cstring prefix = "",
+                                       P4Id idOffset = 1) const;
 
     static Util::JsonObject* makeCommonDataField(P4Id id, const std::string& name,
                                                  Util::JsonObject* type, bool repeated,
@@ -182,7 +189,12 @@ class BfRtSchemaGenerator {
     static void addMeterDataFields(Util::JsonArray* dataJson, const Meter& meter);
     static void addLpfDataFields(Util::JsonArray* dataJson);
     static void addWredDataFields(Util::JsonArray* dataJson);
-    void addRegisterDataFields(Util::JsonArray* dataJson, const Register& register_) const;
+    /// Add register data fields to the JSON data array for a BFRT table. Field
+    /// ids are assigned incrementally starting at @idOffset, which is 1 by
+    /// default.
+    void addRegisterDataFields(Util::JsonArray* dataJson,
+                               const Register& register_,
+                               P4Id idOffset = 1) const;
 
     const p4configv1::P4Info& p4info;
 };
@@ -861,7 +873,8 @@ BfRtSchemaGenerator::transformTypeSpecToDataFields(Util::JsonArray* fieldsJson,
                                                    const p4configv1::P4DataTypeSpec& typeSpec,
                                                    cstring instanceType,
                                                    cstring instanceName,
-                                                   cstring prefix) const {
+                                                   cstring prefix,
+                                                   P4Id idOffset) const {
     auto addField = [&](P4Id id, const std::string& name,
                         const p4configv1::P4DataTypeSpec& fSpec) {
         if (!fSpec.has_bitstring() || !fSpec.bitstring().has_bit()) {
@@ -883,11 +896,11 @@ BfRtSchemaGenerator::transformTypeSpecToDataFields(Util::JsonArray* fieldsJson,
         auto p_it = typeInfo.structs().find(structName);
         BUG_CHECK(p_it != typeInfo.structs().end(),
                   "Struct name '%1%' not found in P4Info map", structName);
-        P4Id id = 1;
+        P4Id id = idOffset;
         for (const auto& member : p_it->second.members())
             addField(id++, member.name(), member.type_spec());
     } else if (typeSpec.has_tuple()) {
-        P4Id id = 1;
+        P4Id id = idOffset;
         for (const auto& member : typeSpec.tuple().members()) {
             // TODO(antonin): we do not really have better names for now, do we
             // need to add support for annotations of tuple members in P4Info?
@@ -896,7 +909,7 @@ BfRtSchemaGenerator::transformTypeSpecToDataFields(Util::JsonArray* fieldsJson,
         }
     } else if (typeSpec.has_bitstring()) {
         // TODO(antonin): same as above, we need a way to pass name annotations
-        addField(1, "f1", typeSpec);
+        addField(idOffset, "f1", typeSpec);
     } else {
         ::error("Error when generating BF-RT info for '%1%' '%2%': "
                 "only structs, tuples and bitstrings are currently supported for packed type",
@@ -906,10 +919,11 @@ BfRtSchemaGenerator::transformTypeSpecToDataFields(Util::JsonArray* fieldsJson,
 
 void
 BfRtSchemaGenerator::addRegisterDataFields(Util::JsonArray* dataJson,
-                                           const Register& register_) const {
+                                           const Register& register_,
+                                           P4Id idOffset) const {
     auto* fieldsJson = new Util::JsonArray();
     transformTypeSpecToDataFields(
-        fieldsJson, register_.typeSpec, "Register", register_.name, register_.name + ".");
+        fieldsJson, register_.typeSpec, "Register", register_.name, register_.name + ".", idOffset);
     for (auto* f : *fieldsJson) {
         auto* fObj = f->to<Util::JsonObject>();
         CHECK_NULL(fObj);
@@ -1275,8 +1289,9 @@ BfRtSchemaGenerator::actProfHasSelector(P4Id actProfId) const {
 }
 
 Util::JsonArray*
-BfRtSchemaGenerator::makeActionSpecs(const p4configv1::Table& table) const {
+BfRtSchemaGenerator::makeActionSpecs(const p4configv1::Table& table, P4Id* maxActionParamId) const {
     auto* specs = new Util::JsonArray();
+    P4Id maxId = 0;
     for (const auto& action_ref : table.action_refs()) {
         auto* action = Standard::findAction(p4info, action_ref.id());
         if (action == nullptr) {
@@ -1294,10 +1309,12 @@ BfRtSchemaGenerator::makeActionSpecs(const p4configv1::Table& table) const {
             addActionDataField(
                 dataJson, param.id(), param.name(), true /* mandatory */,
                 makeTypeBytes(param.bitwidth()), annotations);
+            if (param.id() > maxId) maxId = param.id();
         }
         spec->emplace("data", dataJson);
         specs->append(spec);
     }
+    if (maxActionParamId != nullptr) *maxActionParamId = maxId;
     return specs;
 }
 
@@ -1350,8 +1367,12 @@ BfRtSchemaGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
 
         auto* dataJson = new Util::JsonArray();
 
+        // will be used as an offset for other P4-dependent fields (e.g. direct
+        // register fields).
+        P4Id maxActionParamId = 0;
         if (tableType == "MatchAction_Direct") {
-            tableJson->emplace("action_specs", makeActionSpecs(table));
+            tableJson->emplace(
+                "action_specs", makeActionSpecs(table, &maxActionParamId));
         } else if (tableType == "MatchAction_Indirect") {
             auto* f = makeCommonDataField(
                 BF_RT_DATA_ACTION_MEMBER_ID, "$ACTION_MEMBER_ID",
@@ -1371,6 +1392,7 @@ BfRtSchemaGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
         } else {
             BUG("Invalid table type '%1%'", tableType);
         }
+        maxActionParamId++;
 
         auto* operationsJson = new Util::JsonArray();
         auto* attributesJson = new Util::JsonArray();
@@ -1383,7 +1405,7 @@ BfRtSchemaGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
             } else if (auto meter = getDirectMeter(directResId)) {
                 addMeterDataFields(dataJson, *meter);
             } else if (auto register_ = getDirectRegister(directResId)) {
-                addRegisterDataFields(dataJson, *register_);
+                addRegisterDataFields(dataJson, *register_, maxActionParamId);
                 operationsJson->append("SyncRegisters");
             } else if (auto lpf = getDirectLpf(directResId)) {
                 addLpfDataFields(dataJson);
