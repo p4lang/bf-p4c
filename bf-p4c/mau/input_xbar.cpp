@@ -1231,8 +1231,6 @@ void IXBar::field_management(ContByteConversion &map_alloc,
     bitvec field_bits(bits.lo, bits.hi - bits.lo + 1);
     if (fields_needed.count(finfo->name)) {
         auto &allocated_bits = fields_needed.at(finfo->name);
-        if (allocated_bits.intersects(field_bits))
-            warning("a range of field %s read twice by table %s", finfo->name, name);
         if ((allocated_bits & field_bits).popcount() == field_bits.popcount())
             return;
         fields_needed[finfo->name] |= field_bits;
