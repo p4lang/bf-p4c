@@ -171,6 +171,9 @@ struct operand {
             if (hi > lo + bits - 1) {
                 warning(lineno, "%s(%d..%d) larger than %d bit access", name.c_str(), lo, hi, bits);
                 hi = lo + bits - 1; }
+            if ((lo ^ hi) & ~(bits-1))
+                error(lineno, "%s(%d..%d) can't be accessed by %d bit PHV",
+                      name.c_str(), lo, hi, bits);
             if (field && table->find_on_actionbus(field, lo, hi, bytes) < 0) {
                 int immed_offset = 0;
                 if (table->format && table->format->immed)
@@ -258,6 +261,9 @@ struct operand {
             int size = group_size[group]/8U;
             if (lo < 0) lo = 0;
             if (hi < 0) hi = 8*size - 1;;
+            if ((lo ^ hi) & ~(8*size-1))
+                error(lineno, "hash dist slice(%d..%d) can't be accessed by %d bit PHV",
+                      lo, hi, 8*size);
             if (units.size() == 2) {
                 if (size != 4)
                     error(lineno, "Can't combine hash_dist units in %d bit operation", size*8);
@@ -325,8 +331,9 @@ struct operand {
         void pass2(int group) override {
             unsigned size = group_size[group];
             if (hi < 0) hi = lo + 8*size - 1;
-            if (lo/size != hi/size)
-                error(lineno, "invalid slice of rng %d for use with %d bit PHV", rng.unit, size);
+            if ((lo ^ hi) & ~(8*size-1))
+                error(lineno, "invalid slice(%d..%d) of rng %d for use with %d bit PHV",
+                      lo, hi, rng.unit, size);
             if (table->find_on_actionbus(rng, lo, hi, size/8U))
                 table->need_on_actionbus(rng, lo, hi, size/8U); }
         int bits(int group) override {
