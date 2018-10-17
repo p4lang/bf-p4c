@@ -1464,7 +1464,6 @@ bool ActionAnalysis::ContainerAction::verify_shift(
  */
 bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
         PHV::Container container, cstring action_name, const PhvInfo &phv) {
-    verify_speciality(container, action_name);
     error_message = "In the ALU operation over container " + container.toString() +
                     " in action " + action_name + ", ";
 
@@ -1478,6 +1477,8 @@ bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
     if (is_shift()) {
         return verify_shift(error_message, container, phv);
     }
+
+    verify_speciality(container, action_name);
 
     int actual_ad = ad_sources();
     int sources_needed = counts[ActionParam::PHV] + actual_ad;
