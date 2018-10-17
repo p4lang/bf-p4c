@@ -611,38 +611,55 @@ void Parser::State::Ref::check(gress_t gress, Parser *pa, State *state) {
                     ptr.push_back(st); } } }
 }
 
-static const char* match_key_loc_name(int loc) {
+const char* Parser::match_key_loc_name(int loc) {
     if (options.target == TOFINO) {
         if (loc == 0 || loc == 1) return "half";
+        if (loc == 2) return "byte0";
+        if (loc == 3) return "byte1";
 #if HAVE_JBAY
     } else if (options.target == JBAY) {
-        if (loc == 0) return "byte2";
-        if (loc == 1) return "byte3";
+        if (loc == 0) return "byte0";
+        if (loc == 1) return "byte1";
+        if (loc == 2) return "byte2";
+        if (loc == 3) return "byte3";
 #endif // HAVE_JBAY
     }
-    if (loc == 2) return "byte0";
-    if (loc == 3) return "byte1";
 
     error(-1, "Invalid match key loc");
     return nullptr;
 }
 
-static int match_key_loc(value_t &key, bool errchk = true) {
+int Parser::match_key_loc(value_t &key, bool errchk) {
     if (errchk && !CHECKTYPE(key, tSTR)) return -1;
+    int loc = Parser::match_key_loc(key.s);
+    if (loc < 0)
+        error(key.lineno, "Invalid matcher location %s", key.s);
+    return loc;
+}
 
+int Parser::match_key_loc(const char* key) {
     if (options.target == TOFINO) {
-        if (key == "half" || key == "half0") return 0;
+        if (!strcmp(key, "half") || !strcmp(key, "half0")) return 0;
+        if (!strcmp(key, "byte0")) return 2;
+        if (!strcmp(key, "byte1")) return 3;
 #if HAVE_JBAY
     } else if (options.target == JBAY) {
-        if (key == "byte2") return 0;
-        if (key == "byte3") return 1;
+        if (!strcmp(key, "byte0")) return 2;
+        if (!strcmp(key, "byte1")) return 3;
+        if (!strcmp(key, "byte2")) return 0;
+        if (!strcmp(key, "byte3")) return 1;
 #endif // HAVE_JBAY
     }
-    if (key == "byte0") return 2;
-    if (key == "byte1") return 3;
 
-    if (errchk)
-        error(key.lineno, "Invalid matcher location %s", key.s);
+    error(-1, "Invalid match key %s", key);
+    return -1;
+}
+
+int Parser::match_key_size(const char* key) {
+    if (!strncmp(key, "half", 4)) return 16;
+    if (!strncmp(key, "byte", 4)) return 8;
+
+    error(-1, "Invalid match key %s", key);
     return -1;
 }
 
@@ -663,7 +680,7 @@ int Parser::State::MatchKey::add_byte(int loc, int byte, bool use_saved) {
         return -1; }
     if (loc >= 0) {
         if ((specified >> loc) & 1)
-            error(lineno, "Multiple matches in %s matcher", match_key_loc_name(loc));
+            error(lineno, "Multiple matches in %s matcher", Parser::match_key_loc_name(loc));
         specified |= (1 << loc);
         if (data[loc].bit >= 0 && move_down(loc) < 0)
             return -1;
@@ -698,7 +715,7 @@ int Parser::State::MatchKey::setup_match_el(int at, value_t &spec) {
     case tMAP:
         if (at >= 0) goto error;
         for (int i = spec.map.size-1; i >= 0; i--)
-            if (setup_match_el(match_key_loc(spec.map[i].key), spec.map[i].value) < 0)
+            if (setup_match_el(Parser::match_key_loc(spec.map[i].key), spec.map[i].value) < 0)
                 return -1;
         return 0;
     case tSTR:
@@ -714,7 +731,7 @@ int Parser::State::MatchKey::setup_match_el(int at, value_t &spec) {
                 return -1; }
             ctr_neg = width++;
             return 0;
-        } else if (at < 0 && (at = match_key_loc(spec, false)) >= 0) {
+        } else if (at < 0 && (at = Parser::match_key_loc(spec, false)) >= 0) {
             if (options.target == TOFINO && at == 0 && add_byte(1, 0, true) < 0) return -1;
             return add_byte(at, 0, true); }
         /* fall through */
@@ -1181,7 +1198,7 @@ void Parser::State::MatchKey::preserve_saved(unsigned saved) {
             continue;
         if ((specified >> i) & 1)
             error(lineno, "match in %s matcher conflicts with previous state save "
-                  "action", match_key_loc_name(i));
+                  "action", Parser::match_key_loc_name(i));
         else if (move_down(i) < 0) {
             error(lineno, "Ran out of matching space due to preserved values from "
                   "previous states");
@@ -1346,6 +1363,31 @@ void Parser::State::Match::write_config(REGS &regs, Parser *pa, State *state,
         ctxt_json["tcam_rows"].to<json::vector>().push_back(row);
         write_row_config(regs, pa, state, row, def,ctxt_json);
     } while (++count < value_set_size);
+}
+
+template<class REGS>
+void Parser::State::Match::write_config(REGS &regs, json::vector &vec) {
+    for (auto f : field_mapping) {
+        json::map container_cjson;
+        container_cjson["container_width"] = Parser::match_key_size(f.container_id.c_str());
+
+        int container_hardware_id = Parser::match_key_loc(f.container_id.c_str());
+        container_cjson["container_hardware_id"] = container_hardware_id;
+
+        container_cjson["mask"] = (1 << (f.hi - f.lo + 1)) - 1;
+        json::vector field_mapping_cjson;
+        int select_statement_bit = f.where.lobit();
+        for (auto i = f.lo; i <= f.hi; i++) {
+            json::map field_map;
+            field_map["register_bit"] = i;
+            field_map["field_name"] = f.where.name();
+            field_map["start_bit"] = i;
+            field_map["select_statement_bit"] = select_statement_bit++;
+            field_mapping_cjson.push_back(field_map.clone());
+        }
+        container_cjson["field_mapping"] = field_mapping_cjson.clone();
+        vec.push_back(container_cjson.clone());
+    }
 }
 
 template <class REGS>

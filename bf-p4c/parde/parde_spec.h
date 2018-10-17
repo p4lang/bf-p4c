@@ -148,9 +148,9 @@ class TofinoPardeSpec : public PardeSpec {
     }
 
     const std::vector<MatchRegister> matchRegisters() const override {
-        return { MatchRegister("half",  2, 0),
-                 MatchRegister("byte0", 1, 2),
-                 MatchRegister("byte1", 1, 3) };
+        return { MatchRegister("half"),
+                 MatchRegister("byte0"),
+                 MatchRegister("byte1") };
     }
 };
 
@@ -184,10 +184,10 @@ class JBayPardeSpec : public PardeSpec {
     }
 
     const std::vector<MatchRegister> matchRegisters() const override {
-        return { MatchRegister("byte0", 1, 0),
-                 MatchRegister("byte1", 1, 1),
-                 MatchRegister("byte2", 1, 2),
-                 MatchRegister("byte3", 1, 3) };
+        return { MatchRegister("byte0"),
+                 MatchRegister("byte1"),
+                 MatchRegister("byte2"),
+                 MatchRegister("byte3") };
     }
 };
 #endif /* HAVE_JBAY */

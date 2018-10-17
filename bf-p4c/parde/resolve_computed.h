@@ -4,6 +4,16 @@
 #include "ir/ir.h"
 #include "bf-p4c/logging/pass_manager.h"
 
+/// Represent a ParserRval and the state where it is defined.
+struct ParserRValDef {
+    const IR::BFN::ParserState* state;
+    const IR::BFN::ParserRVal* rval;
+    ParserRValDef(const IR::BFN::ParserState* state,
+                  const IR::BFN::ParserRVal* rval)
+        : state(state), rval(rval) { }
+    ParserRValDef() : state(nullptr), rval(nullptr) { }
+};
+
 /**
  * Resolve all computed parser expressions if possible. These are expressions in
  * extracts or selects that reference outputs of the parser program or track

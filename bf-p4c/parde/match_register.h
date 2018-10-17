@@ -11,9 +11,6 @@ class MatchRegister {
  public:
     MatchRegister() { }
     explicit MatchRegister(cstring);
-    MatchRegister(cstring n, size_t s, int id)
-        : name(n), size(s), id(id) {
-    }
 
     cstring toString() const;
 
@@ -27,10 +24,14 @@ class MatchRegister {
 
     cstring name;
     size_t  size;
-    int     id;
+    int     id = 0;
 
     bool operator<(const MatchRegister& other) const {
-        return id < other.id;
+        if (size < other.size) return true;
+        if (other.size < size) return false;
+        if (id < other.id) return true;
+        if (other.id > id) return false;
+        return false;
     }
 };
 

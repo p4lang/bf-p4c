@@ -1,5 +1,6 @@
 #include "match_register.h"
 
+#include <string>
 #include <sstream>
 #include "ir/json_loader.h"
 
@@ -9,19 +10,26 @@ cstring MatchRegister::toString() const {
     return tmp.str();
 }
 
-MatchRegister::MatchRegister(cstring nm)
-    : name(nm) {
-    // This is a dummy implementation.
-    // TODO(yumin): JBAY use different name and layouts.
-    if (nm == "half") {
+MatchRegister::MatchRegister(cstring n) : name(n) {
+    std::string str(name);
+    if (str.length() < 4)
+        BUG("Invalid parser match register '%s'", name);
+
+    if (str.substr(0, 4) == "byte")
+        size = 1;
+    else if (str.substr(0, 4) == "half")
         size = 2;
-        id = 0;
-    } else if (nm == "byte0") {
-        size = 1;
-        id = 2;
-    } else if (nm == "byte1") {
-        size = 1;
-        id = 3;
+    else
+        BUG("Invalid parser match register '%s'", name);
+
+    if (str.length() > 4) {
+        char* end = nullptr;
+        auto v = std::strtol(str.substr(4).c_str(), &end, 10);
+
+        if (*end)
+            BUG("Invalid parser match register '%s'", name);
+
+        id = v;
     }
 }
 
@@ -33,7 +41,7 @@ void MatchRegister::toJSON(JSONGenerator& json) const {
 MatchRegister MatchRegister::fromJSON(JSONLoader& json) {
     if (auto* v = json.json->to<JsonString>())
         return MatchRegister(v->c_str());
-    BUG("Couldn't decode JSON value to clot");
+    BUG("Couldn't decode JSON value to parser match register");
     return MatchRegister();
 }
 

@@ -398,36 +398,3 @@ void Parser::gen_configuration_cache(Target::JBay::parser_regs &regs, json::vect
         add_cfg_reg(cfg_cache, reg_fqname, reg_name, reg_value_str);
     }
 }
-
-template <>
-void Parser::State::Match::write_config(Target::JBay::parser_regs &regs, json::vector &vec) {
-    for (auto f : field_mapping) {
-        json::map container_cjson;
-        container_cjson["container_width"] = 8;
-        if (f.container_id == "byte0") {
-            container_cjson["container_hardware_id"] = 0;
-        } else if (f.container_id == "byte1") {
-            container_cjson["container_hardware_id"] = 1;
-        } else if (f.container_id == "byte2") {
-            container_cjson["container_hardware_id"] = 2;
-        } else if (f.container_id == "byte3") {
-            container_cjson["container_hardware_id"] = 3;
-        } else {
-            error(lineno, "Syntax error");
-        }
-        container_cjson["mask"] = (1 << (f.hi - f.lo + 1)) - 1;
-        json::vector field_mapping_cjson;
-        int start_bit = f.where.lobit();
-        int select_statement_bit = 0;
-        for (auto i = f.lo; i <= f.hi; i++) {
-            json::map field_map;
-            field_map["register_bit"] = i;
-            field_map["field_name"] = f.where.name();
-            field_map["start_bit"] = start_bit++;
-            field_map["select_statement_bit"] = select_statement_bit++;
-            field_mapping_cjson.push_back(field_map.clone());
-        }
-        container_cjson["field_mapping"] = field_mapping_cjson.clone();
-        vec.push_back(container_cjson.clone());
-    }
-}

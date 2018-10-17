@@ -243,6 +243,11 @@ public:
             return singleton_object.clots[gress].at(tag)[0]->tag;
         return -1; }
 
+    static const char* match_key_loc_name(int loc);
+    static int match_key_loc(const char* key);
+    static int match_key_loc(value_t& key, bool errchk = true);
+    static int match_key_size(const char* key);
+
 private:
     template<class REGS> void *setup_phv_output_map(REGS &, gress_t, int);
     template<class REGS> void mark_unused_output_map(REGS &, void *, unsigned);
