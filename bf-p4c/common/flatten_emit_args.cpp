@@ -18,8 +18,14 @@ void FlattenEmitArgs::postorder(IR::MethodCallExpression* mc) {
     // Assume the following syntax
     //   mirror.emit(session_id, field_list);
     //   resubmit.emit(field_list);
+    //   resubmit.emit(); - resubmit without parameters
     //   digest.emit(field_list);
     int field_list_index = (type->name == "Mirror") ? 1 : 0;
+    if (mc->arguments->size() == 0) {
+        ERROR_CHECK(type->name == "Resubmit",
+            "Invalid mirror or digest call without any arguments");
+        return;
+    }
     auto* arg = mc->arguments->at(field_list_index)->expression;
     if (auto* args = arg->to<IR::ListExpression>()) {
         auto* flattened_args = new IR::Vector<IR::Argument>();

@@ -80,8 +80,8 @@ class GenerateDeparser : public Inspector {
 
             if (type->name == "packet_out") {
                 if (pred) error("Conditional emit %s not supported", mc);
-                generateEmits((*mc->arguments)[0]->expression, [&](const IR::Expression* field,
-                                                                   const IR::Expression* povBit) {
+                generateEmits((*mc->arguments)[0]->expression,
+                    [&](const IR::Expression* field, const IR::Expression* povBit) {
                     dprsr->emits.push_back(new IR::BFN::Emit(mc->srcInfo, field, povBit)); });
             } else if (type->name == "Mirror") {
                 // Convert session_id, { field_list } --> { session_id, field_list }
@@ -92,8 +92,10 @@ class GenerateDeparser : public Inspector {
                                         mc->arguments->at(0)->expression);
                 generateDigest(digests["mirror"], "mirror", expr);
             } else if (type->name == "Resubmit") {
-                generateDigest(digests["resubmit"], "resubmit",
-                               mc->arguments->at(0)->expression);
+                auto num_args = mc->arguments->size();
+                auto expr = (num_args == 0) ? new IR::ListExpression({})
+                                            : mc->arguments->at(0)->expression;
+                generateDigest(digests["resubmit"], "resubmit", expr);
             } else {
                 error("Unsupported method call %s in deparser", mc);
             }
