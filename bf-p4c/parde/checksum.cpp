@@ -214,7 +214,7 @@ struct GetChecksumPovBits : public Inspector {
         return false;
     }
 
-    bool preorder(const IR::BFN::Emit* emit) override {
+    bool preorder(const IR::BFN::EmitField* emit) override {
         auto source = emit->source->field->to<IR::Member>();
         if (checksums.count(source->toString())) {
             auto csum = checksums.at(source->toString());
@@ -252,7 +252,7 @@ struct GetChecksumPovBits : public Inspector {
     }
 };
 
-/// Substitute computed checksums into the deparser code by replacing Emits for
+/// Substitute computed checksums into the deparser code by replacing EmitFields for
 /// the destination field with EmitChecksums.
 struct SubstituteUpdateChecksums : public Transform {
     explicit SubstituteUpdateChecksums(const ChecksumUpdateInfoMap& checksums)
@@ -266,7 +266,7 @@ struct SubstituteUpdateChecksums : public Transform {
         for (auto* p : deparser->emits) {
             bool rewrite = false;
 
-            auto* emit = p->to<IR::BFN::Emit>();
+            auto* emit = p->to<IR::BFN::EmitField>();
             if (emit->source->field->is<IR::Member>()) {
                 auto* source = emit->source->field->to<IR::Member>();
                 if (checksums.find(source->toString()) != checksums.end()) {
@@ -289,7 +289,7 @@ struct SubstituteUpdateChecksums : public Transform {
     }
 
     std::vector<IR::BFN::DeparserPrimitive*>
-    rewriteEmitChecksum(const IR::BFN::Emit* emit) {
+    rewriteEmitChecksum(const IR::BFN::EmitField* emit) {
         auto* source = emit->source->field->to<IR::Member>();
         auto* csumInfo = checksums.at(source->toString());
 
@@ -302,23 +302,25 @@ struct SubstituteUpdateChecksums : public Transform {
             // pass "InsertChecksumConditions" below).
 
             for (auto uc : csumInfo->updateConditions) {
-                auto* emitUpdatedChecksum = new IR::BFN::EmitChecksum(*(csumInfo->sources),
-                                          new IR::BFN::ExternLVal(source),
-                                        new IR::BFN::FieldLVal(csumInfo->deparseUpdated.at(uc)));
+                auto* emitUpdatedChecksum = new IR::BFN::EmitChecksum(
+                                 new IR::BFN::FieldLVal(csumInfo->deparseUpdated.at(uc)),
+                                    *(csumInfo->sources),
+                                        new IR::BFN::ExternLVal(source));
 
                 emitChecksums.push_back(emitUpdatedChecksum);
             }
 
-            auto* emitOriginalChecksum = new IR::BFN::Emit(source, csumInfo->deparseOriginal);
+            auto* emitOriginalChecksum = new IR::BFN::EmitField(source, csumInfo->deparseOriginal);
 
             emitChecksums.push_back(emitOriginalChecksum);
         } else {
             // If no user specified update condition, the semantic is
             // to deparse based on the header validity bit.
 
-            emitChecksums.push_back(new IR::BFN::EmitChecksum(*(csumInfo->sources),
-                                     new IR::BFN::ExternLVal(source),
-                                       emit->povBit));
+            emitChecksums.push_back(new IR::BFN::EmitChecksum(
+                                      emit->povBit,
+                                        *(csumInfo->sources),
+                                          new IR::BFN::ExternLVal(source)));
         }
 
         // TODO(zma) if user specifies the update conditon, but never set it anywhere,

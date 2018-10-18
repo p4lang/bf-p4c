@@ -145,7 +145,7 @@ IR::Node* AddPrivatizedFieldUses::postorder(IR::BFN::ParserState* p) {
     return p;
 }
 
-IR::Node* AddPrivatizedFieldUses::preorder(IR::BFN::Emit* e) {
+IR::Node* AddPrivatizedFieldUses::preorder(IR::BFN::EmitField* e) {
     LOG5("      Emit: " << e);
     const PHV::Field* source = phv.field(e->source->field);
     if (!source) return e;
@@ -156,7 +156,7 @@ IR::Node* AddPrivatizedFieldUses::preorder(IR::BFN::Emit* e) {
         return e; }
     const IR::Expression* expr = deparsedFields.at(source)->to<IR::Expression>();
     IR::BFN::FieldLVal* dest = new IR::BFN::FieldLVal(expr);
-    IR::BFN::Emit* newEmit = new IR::BFN::Emit(dest, e->povBit);
+    IR::BFN::EmitField* newEmit = new IR::BFN::EmitField(dest, e->povBit);
     LOG5("        New emit: " << newEmit);
     return newEmit;
 }
@@ -233,7 +233,7 @@ IR::Node* UndoPrivatization::postorder(IR::BFN::ParserState* p) {
     return new IR::BFN::ParserState(p->name, p->gress, newStatements, p->selects, p->transitions);
 }
 
-IR::Node* UndoPrivatization::preorder(IR::BFN::Emit* e) {
+IR::Node* UndoPrivatization::preorder(IR::BFN::EmitField* e) {
     LOG5("      Emit: " << e);
     PHV::Field* source = phv.field(e->source->field);
     if (!source) return e;
@@ -252,7 +252,7 @@ IR::Node* UndoPrivatization::preorder(IR::BFN::Emit* e) {
               "PHV copy of field %1% not found.", nonPrivatizedSource->name);
     IR::Expression* expr = fieldToExpressionMap.at(nonPrivatizedSource);
     IR::BFN::FieldLVal* dest = new IR::BFN::FieldLVal(expr);
-    IR::BFN::Emit* newEmit = new IR::BFN::Emit(dest, e->povBit);
+    IR::BFN::EmitField* newEmit = new IR::BFN::EmitField(dest, e->povBit);
     LOG5("        New emit: " << newEmit);
     nonPrivatizedSource->set_privatizable(false);
     source->set_privatized(false);

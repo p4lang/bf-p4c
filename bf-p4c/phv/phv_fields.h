@@ -694,6 +694,10 @@ class PhvInfo {
     /// fields.
     SymBitMatrix                             metadata_overlay;
 
+    /// Stores all pairs of fields that cannot be packed in the same container
+    /// Derived from POV bits of adjacent fields in deparser
+    SymBitMatrix                             no_co_pack;
+
     const SymBitMatrix& mutex() const { return field_mutex; }
 
  private:  // class PhvInfo

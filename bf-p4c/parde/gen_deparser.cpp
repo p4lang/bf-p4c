@@ -82,7 +82,7 @@ class GenerateDeparser : public Inspector {
                 if (pred) error("Conditional emit %s not supported", mc);
                 generateEmits((*mc->arguments)[0]->expression,
                     [&](const IR::Expression* field, const IR::Expression* povBit) {
-                    dprsr->emits.push_back(new IR::BFN::Emit(mc->srcInfo, field, povBit)); });
+                    dprsr->emits.push_back(new IR::BFN::EmitField(mc->srcInfo, field, povBit)); });
             } else if (type->name == "Mirror") {
                 // Convert session_id, { field_list } --> { session_id, field_list }
                 auto list = mc->arguments->at(1)->expression->to<IR::ListExpression>();

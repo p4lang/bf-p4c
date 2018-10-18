@@ -254,12 +254,12 @@ class ReplaceBridgedMetadataUses : public Transform {
     /// Map: Bridged field name to offset within the header.
     ordered_map<cstring, unsigned> bridgedOffsets;
     /// Map: Bridged field name to new emit, reflecting the revised bridged header packing.
-    ordered_map<cstring, IR::BFN::Emit*> newEmits;
+    ordered_map<cstring, IR::BFN::EmitField*> newEmits;
 
     profile_t init_apply(const IR::Node* root) override;
     IR::Node* preorder(IR::BFN::Pipe* pipe) override;
     IR::Node* preorder(IR::BFN::Extract* e) override;
-    IR::Node* preorder(IR::BFN::Emit* e) override;
+    IR::Node* preorder(IR::BFN::EmitField* e) override;
 
     /// Add emits for the revised bridged metadata packing to the deparser.
     IR::Node* postorder(IR::BFN::Deparser* d) override;
@@ -274,7 +274,7 @@ class ReplaceBridgedMetadataUses : public Transform {
 
     /// Replaces the emit corresponding to the originally packed ingress bridged field with a new
     /// emit that reflects the packing output by PackBridgedMetadata.
-    void replaceEmit(const IR::BFN::Emit* e);
+    void replaceEmit(const IR::BFN::EmitField* e);
 
     /// Builds up a list of all bridged metadata fields, with separate entries for ingress and
     /// egress versions. Note that this list is created by walking through the fields in the

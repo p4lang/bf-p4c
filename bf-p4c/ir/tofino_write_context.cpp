@@ -99,7 +99,7 @@ bool TofinoWriteContext::isRead(bool root_value) {
 
     // An Emit reads both the emitted field and the POV bit.
     // XXX(seth): These should be represented as l-values as well.
-    if (ctxt->node->is<IR::BFN::Emit>())
+    if (ctxt->node->is<IR::BFN::EmitField>())
         return true;
 
     // An EmitChecksum reads the POV bit and all checksummed fields.

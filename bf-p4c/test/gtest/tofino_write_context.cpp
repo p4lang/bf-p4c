@@ -123,7 +123,7 @@ TEST(TofinoWriteContext, DeparserEmit) {
 
     auto* pipe = new IR::BFN::Pipe("pied");
     auto* deparser = new IR::BFN::Deparser(EGRESS, pipe, deparserControl);
-    deparser->emits.push_back(new IR::BFN::Emit(field, povBit));
+    deparser->emits.push_back(new IR::BFN::EmitField(field, povBit));
 
     struct CheckEmit : public Inspector, TofinoWriteContext {
         bool preorder(const IR::Member*) override {
@@ -147,9 +147,10 @@ TEST(TofinoWriteContext, DeparserEmitChecksum) {
 
     auto* pipe = new IR::BFN::Pipe("piper");
     auto* deparser = new IR::BFN::Deparser(EGRESS, pipe, deparserControl);
-    deparser->emits.push_back(new IR::BFN::EmitChecksum({
-        new IR::BFN::FieldLVal(field)
-    },  new IR::BFN::ExternLVal(csum), new IR::BFN::FieldLVal(povBit)));
+    deparser->emits.push_back(new IR::BFN::EmitChecksum(
+          new IR::BFN::FieldLVal(povBit),
+        { new IR::BFN::FieldLVal(field) },
+          new IR::BFN::ExternLVal(csum)));
 
     struct CheckEmitChecksum : public Inspector, TofinoWriteContext {
         bool preorder(const IR::Member*) override {

@@ -447,15 +447,25 @@ class Digest {
 /// in a deparser control.
 abstract DeparserPrimitive { }
 
+/// Common abstract base class for all deparser emit types
+abstract Emit : DeparserPrimitive {
+    Emit(Expression povBit)
+      : povBit(new FieldLVal(povBit)) { }
+    Emit(Util::SourceInfo si, Expression povBit)
+      : DeparserPrimitive(si), povBit(new FieldLVal(povBit)) { }
+
+    /// The POV bit this emit is predicated on
+    FieldLVal povBit;
+}
+
 /// A deparser emit operation, representing a copy by the deparser of the
 /// contents of some location (ultimately backed by a PHV container) to the
 /// output packet.
-class Emit : DeparserPrimitive {
-    Emit(Expression source, Expression povBit)
-      : source(new FieldLVal(source)), povBit(new FieldLVal(povBit)) { }
-    Emit(Util::SourceInfo si, Expression source, Expression povBit)
-      : DeparserPrimitive(si), source(new FieldLVal(source)),
-        povBit(new FieldLVal(povBit)) { }
+class EmitField : Emit {
+    EmitField(Expression source, Expression povBit)
+      : Emit(povBit), source(new FieldLVal(source)) { }
+    EmitField(Util::SourceInfo si, Expression source, Expression povBit)
+      : Emit(si, povBit), source(new FieldLVal(source)) { }
 
     dbprint {
         out << "emit " << source->field->toString()
@@ -464,15 +474,12 @@ class Emit : DeparserPrimitive {
 
     /// The location to be copied into the output packet.
     FieldLVal source;
-
-    /// The POV bit controlling whether the copy happens.
-    FieldLVal povBit;
 }
 
 /// A deparser emit operation, representing a copy by the deparser of the
 /// contents of some location (ultimately backed by a CLOT) to the
 /// output packet.
-class EmitClot : DeparserPrimitive {
+class EmitClot : Emit {
     dbprint {
         out << "emit clot " << clot->tag << " if " << povBit->field->toString();
     }
@@ -482,22 +489,16 @@ class EmitClot : DeparserPrimitive {
 #emit
     const Clot* clot = nullptr;
 #end
-    /// The POV bit controlling whether the copy happens.
-    FieldLVal povBit;
 }
 
 /// A deparser computed checksum operation. This instructs the deparser to
 /// compute the checksum of a group of fields and write the result into the
 /// output packet.
-class EmitChecksum : DeparserPrimitive {
+class EmitChecksum : Emit {
     /// The fields from which the checksum will be computed.
     inline Vector<FieldLVal> sources;
 
     ExternLVal dest;
-
-    /// The POV bit controlling whether the checksum is generated and copied to
-    /// the output packet.
-    FieldLVal povBit;
 }
 
 /// Configures the location from which an intrinsic deparser parameter should

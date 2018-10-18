@@ -933,7 +933,7 @@ struct RewriteEmitClot : public DeparserTransform {
 
         Clot* last = nullptr;
         for (auto e : deparser->emits) {
-           if (auto emit = e->to<IR::BFN::Emit>()) {
+           if (auto emit = e->to<IR::BFN::EmitField>()) {
                auto field = phv.field(emit->source->field);
                auto povBit = emit->povBit;
 
@@ -1140,7 +1140,7 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
             // itself. (At this point, EmitChecksum is the only thing in this
             // category, but one can imagine that future hardware may introduce
             // others.)
-            if (!prim->is<IR::BFN::Emit>()) {
+            if (!prim->is<IR::BFN::EmitField>()) {
                 if (prim->is<IR::BFN::EmitChecksum>()) {
                     LOG5(" - Placing complex emit in its own group: " << prim);
                     groupedEmits.emplace_back(1, prim);
@@ -1158,7 +1158,7 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
 
 
             // Gather the POV bit and CLOT tag associated with this emit.
-            auto* emit = prim->to<IR::BFN::Emit>();
+            auto* emit = prim->to<IR::BFN::EmitField>();
             auto* field = phv.field(emit->source->field);
             BUG_CHECK(field, "No allocation for emitted field: %1%", emit);
             le_bitrange povFieldBits;
@@ -1242,13 +1242,13 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
             // This is a group of simple emit primitives. Pull out a
             // representative; all emits in the group will have the same POV bit
             // and CLOT tag.
-            auto* emit = group.back()->to<IR::BFN::Emit>();
+            auto* emit = group.back()->to<IR::BFN::EmitField>();
             BUG_CHECK(emit, "Unexpected deparser primitive: %1%", group.back());
 
             // Gather the source fields for all of the emits.
             IR::Vector<IR::BFN::FieldLVal> sources;
             for (auto* memberEmit : group)
-                sources.push_back(memberEmit->to<IR::BFN::Emit>()->source);
+                sources.push_back(memberEmit->to<IR::BFN::EmitField>()->source);
 
             // Lower the source fields to containers and generate the new,
             // lowered emit primitives.

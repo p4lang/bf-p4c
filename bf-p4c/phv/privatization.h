@@ -111,7 +111,7 @@ class AddPrivatizedFieldUses : public Transform {
     profile_t init_apply(const IR::Node* root) override;
     IR::Node* preorder(IR::BFN::ParserState* p) override;
     IR::Node* preorder(IR::BFN::Extract* e) override;
-    IR::Node* preorder(IR::BFN::Emit* e) override;
+    IR::Node* preorder(IR::BFN::EmitField* e) override;
     IR::Node* preorder(IR::Expression* expr) override;
     IR::Node* postorder(IR::BFN::ParserState* p) override;
     IR::Node* postorder(IR::BFN::Extract* e) override;
@@ -149,7 +149,7 @@ class UndoPrivatization : public Transform {
     profile_t init_apply(const IR::Node* root) override;
     IR::Node* preorder(IR::BFN::ParserState* p) override;
     IR::Node* preorder(IR::BFN::Extract* e) override;
-    IR::Node* preorder(IR::BFN::Emit* e) override;
+    IR::Node* preorder(IR::BFN::EmitField* e) override;
     IR::Node* preorder(IR::Expression* expr) override;
     IR::Node* postorder(IR::BFN::ParserState* p) override;
 

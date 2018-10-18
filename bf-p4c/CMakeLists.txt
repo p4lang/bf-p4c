@@ -718,6 +718,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/metadata_init.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/meta_live_range.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/mocha_dark.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/no_co_pack.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/multiple_apply.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_atomic.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_mutually_exclusive_pragma.cpp

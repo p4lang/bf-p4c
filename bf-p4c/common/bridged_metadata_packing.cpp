@@ -719,7 +719,7 @@ IR::Node* ReplaceBridgedMetadataUses::preorder(IR::BFN::Extract* e) {
     return e;
 }
 
-void ReplaceBridgedMetadataUses::replaceEmit(const IR::BFN::Emit* e) {
+void ReplaceBridgedMetadataUses::replaceEmit(const IR::BFN::EmitField* e) {
     auto* source = e->source;
     auto* povBit = e->povBit;
     auto* fieldSource = phv.field(source->field);
@@ -733,12 +733,12 @@ void ReplaceBridgedMetadataUses::replaceEmit(const IR::BFN::Emit* e) {
     const IR::Type* type = bridgedFields.at(fieldSource->name);
     const IR::Member* newMember = new IR::Member(source->field->srcInfo, type, new
             IR::ConcreteHeaderRef(pack.getIngressBridgedHeader()), oldMember->member);
-    IR::BFN::Emit* newEmit = new IR::BFN::Emit(newMember, povBit->field);
+    IR::BFN::EmitField* newEmit = new IR::BFN::EmitField(newMember, povBit->field);
     newEmits[fieldSource->name] = newEmit;
     LOG3("\t  New emit: " << newEmit);
 }
 
-IR::Node* ReplaceBridgedMetadataUses::preorder(IR::BFN::Emit* e) {
+IR::Node* ReplaceBridgedMetadataUses::preorder(IR::BFN::EmitField* e) {
     const IR::Expression* source = e->source->field;
     const PHV::Field* f = phv.field(source);
     if (!f) return e;

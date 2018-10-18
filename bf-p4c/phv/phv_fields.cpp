@@ -945,7 +945,7 @@ struct ComputeFieldAlignments : public Inspector {
         for (auto* emitPrimitive : deparser->emits) {
             // XXX(seth): Right now we treat EmitChecksum as not inducing any
             // particular alignment, but we will need to revisit that.
-            auto* emit = emitPrimitive->to<IR::BFN::Emit>();
+            auto* emit = emitPrimitive->to<IR::BFN::EmitField>();
             if (!emit) continue;
 
             auto* fieldInfo = phv.field(emit->source->field);
@@ -1073,6 +1073,33 @@ class AddIntrinsicConstraints : public Inspector {
 class CollectPardeConstraints : public Inspector {
     PhvInfo& phv;
 
+    // If two adjacent fields in deparser are predicated by different POV bits,
+    // we cannot pack them in the same container (deparser can only deparse whole
+    // container, not byte in container).
+    bool preorder(const IR::BFN::Deparser* deparser) override {
+        const PHV::Field* prev_field = nullptr;
+        const PHV::Field* prev_pov_bit = nullptr;
+
+        for (auto prim : deparser->emits) {
+            if (auto ef = prim->to<IR::BFN::EmitField>()) {
+                auto curr_field = phv.field(ef->source->field);
+                auto curr_pov_bit = phv.field(ef->povBit->field);
+
+                if (prev_pov_bit && (prev_pov_bit != curr_pov_bit)) {
+                    phv.no_co_pack[prev_field->id][curr_field->id] = 1;
+
+                    LOG1("\tMarking " << prev_field->name << " and "
+                                      << curr_field->name << " as no_co_pack");
+                }
+
+                prev_field = curr_field;
+                prev_pov_bit = curr_pov_bit;
+            }
+        }
+
+        return true;
+    }
+
     void postorder(const IR::BFN::EmitChecksum* checksum) override {
         for (const auto* flval : checksum->sources) {
             PHV::Field* f = phv.field(flval->field);
@@ -1082,7 +1109,7 @@ class CollectPardeConstraints : public Inspector {
         }
     }
 
-    void postorder(const IR::BFN::Emit* emit) override {
+    void postorder(const IR::BFN::EmitField* emit) override {
         auto* src_field = phv.field(emit->source->field);
         BUG_CHECK(src_field, "Deparser Emit with a non-PHV source: %1%",
                   cstring::to_cstring(emit));
@@ -1098,6 +1125,7 @@ class CollectPardeConstraints : public Inspector {
         BUG_CHECK(pov_field, "Deparser Emit %1% without POV bit?",
                   cstring::to_cstring(emit));
 
+        // XXX(zma) remove this once no_co_pack constraint is implemented in allocation
         if (pov_field->name.endsWith("$deparse_original_csum"))
             src_field->set_no_pack(true);
 

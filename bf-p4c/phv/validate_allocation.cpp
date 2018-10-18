@@ -223,7 +223,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
                   [&](const IR::BFN::DeparserPrimitive* prim) {
         const IR::BFN::FieldLVal* povFieldSource;
 
-        if (auto* emit = prim->to<IR::BFN::Emit>()) {
+        if (auto* emit = prim->to<IR::BFN::EmitField>()) {
             auto* sourceField = phv.field(emit->source->field, nullptr);
             ERROR_CHECK(sourceField != nullptr, "No PHV allocation for field "
                         "emitted by the deparser: %1%", emit->source);

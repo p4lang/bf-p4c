@@ -136,7 +136,7 @@ class ElimUnused::Headers : public PardeTransform {
         return false;
     }
 
-    const IR::BFN::Emit* preorder(IR::BFN::Emit* emit) override {
+    const IR::BFN::EmitField* preorder(IR::BFN::EmitField* emit) override {
         prune();
 
         // The emit primitive is used if the POV bit being set somewhere.
