@@ -555,8 +555,10 @@ void MatchTable::add_all_reference_tables(json::map &tbl, Table *match_table) co
     add_reference_table(action_data_table_refs, mt->action);
     if (auto a = mt->get_attached()) {
         if (a->selector) {
-            tbl["default_selector_mask"] = 0; //FIXME-JSON
-            tbl["default_selector_value"] = 0; //FIXME-JSON
+            unsigned sel_mask = (1U << METER_TYPE_START_BIT) - 1;
+            sel_mask &= ~((1U << SELECTOR_LOWER_HUFFMAN_BITS) - 1);
+            tbl["default_selector_mask"] = sel_mask;
+            tbl["default_selector_value"] = METER_SELECTOR << METER_TYPE_START_BIT;
             add_reference_table(selection_table_refs, a->selector); }
         for (auto &m : a->meters) { add_reference_table(meter_table_refs, m); }
         for (auto &s : a->stats) { add_reference_table(statistics_table_refs, s); }
