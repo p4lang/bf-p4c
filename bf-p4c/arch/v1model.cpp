@@ -1846,8 +1846,12 @@ class ConstructSymbolTable : public Inspector {
             if (globals.find(path->name) != globals.end())
                 return;
             auto control = findContext<IR::P4Control>();
-            BUG_CHECK(control != nullptr,
-                      "unable to reference global instance from non-control block");
+            if (control == nullptr) {
+                ::error("Unable to reference global instance '%1%' from non-control block. "
+                        "Please check that '%1%' is not a reserved keyword (including in P4-16).",
+                        path->name);
+                return;
+            }
             if (control->name == structure->getBlockName(ProgramStructure::INGRESS)) {
                 structure->ingressDeclarations.push_back(it->second);
                 globals.insert(path->name);

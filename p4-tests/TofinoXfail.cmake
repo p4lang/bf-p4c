@@ -367,12 +367,12 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/union4-bmv2.p4
   testdata/p4_16_samples/verify-bmv2.p4
   )
-  
+
 p4c_add_xfail_reason("tofino"
   "error: .* functions or methods returning structures are not supported on this target"
   extensions/p4_tests/p4_16/serializer.p4
   )
-  
+
 # p4c_add_xfail_reason("tofino"
 #   "error: No format field or table named"
 #    extensions/p4_tests/p4_14/c8/COMPILER-616/case3331.p4
@@ -714,7 +714,7 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "The selected pack format for table .* could not fit given the input xbar allocation"
-  extensions/p4_tests/p4_14/test_config_13_first_selection.p4 
+  extensions/p4_tests/p4_14/test_config_13_first_selection.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1123,7 +1123,7 @@ p4c_add_xfail_reason("tofino"
 # BRIG-924
 # Compiler Bug: unable to reference global instance from non-control block
 p4c_add_xfail_reason("tofino"
-  "unable to reference global instance from non-control block"
+  "Unable to reference global instance .* from non-control block"
   extensions/p4_tests/p4_14/p4smith_regression/popularity_0.p4
 )
 
