@@ -1805,11 +1805,22 @@ BruteForceAllocationStrategy::slice_clusters(
             if (it.done()) {
                 unsatisfiable_fields = pa_container_sizes.unsatisfiable_fields(*it);
                 for (const auto* f : unsatisfiable_fields) {
-                    if (meter_color_dests.count(f))
-                        P4C_UNIMPLEMENTED("Currently the compiler only supports allocation of "
-                                          "meter color destination field %1% to a non 8-bit "
-                                          "container. However, %1% cannot be allocated to a "
-                                          "8-bit container.", f->name); }
+                    if (meter_color_dests.count(f)) {
+                        if (f->size > 8)
+                            P4C_UNIMPLEMENTED("Currently the compiler only supports allocation "
+                                    "of meter color destination field %1% to an 8-bit container. "
+                                    "However, meter color destination %1% with size %2% bits "
+                                    "must be marked as no_split, and can therefore, not be "
+                                    "allocated to an 8-bit container. Suggest using a meter color "
+                                    "destination that is less than or equal to 8b in size.",
+                                    f->name, f->size);
+                        else
+                            P4C_UNIMPLEMENTED("Currently the compiler only supports allocation of "
+                                    "meter color destination field %1% to an 8-bit container. "
+                                    "However, %1% cannot be allocated to an 8-bit container.",
+                                    f->name);
+                    }
+                }
                 ::error("No way to slice the following to satisfy @pa_container_size: \n%1%",
                         cstring::to_cstring(sc));
                 it = PHV::SlicingIterator(sc);
@@ -1822,10 +1833,22 @@ BruteForceAllocationStrategy::slice_clusters(
         } else {
             unsatisfiable_fields = pa_container_sizes.unsatisfiable_fields({ sc });
             for (const auto* f : unsatisfiable_fields) {
-                if (meter_color_dests.count(f))
-                    P4C_UNIMPLEMENTED("Currently the compiler cannot support allocation of "
-                            "meter color destination field %1% to a non 8-bit "
-                            "container.", f->name); }
+                if (meter_color_dests.count(f)) {
+                    if (f->size > 8)
+                        P4C_UNIMPLEMENTED("Currently the compiler only supports allocation "
+                                "of meter color destination field %1% to an 8-bit container. "
+                                "However, meter color destination %1% with size %2% bits "
+                                "must be marked as no_split, and can therefore, not be "
+                                "allocated to an 8-bit container. Suggest using a meter color "
+                                "destination that is less than or equal to 8b in size.",
+                                f->name, f->size);
+                    else
+                        P4C_UNIMPLEMENTED("Currently the compiler only supports allocation of "
+                                "meter color destination field %1% to an 8-bit container. "
+                                "However, %1% cannot be allocated to an 8-bit container.",
+                                f->name);
+                }
+            }
             if (unsatisfiable_fields.size() > 0)
                 ::error("No way to slice the following to satisfy @pa_container_size: \n%1%",
                         cstring::to_cstring(sc));
