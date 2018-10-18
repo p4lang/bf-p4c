@@ -435,14 +435,6 @@ public:
         size_t size() { return actions.size(); }
     };
 
-    struct static_entry {
-        int priority;
-        std::vector<int> match_key_fields_values;
-        std::string action;
-        bool is_default_entry;
-        std::vector<int> action_parameters_values;
-    };
-    typedef std::vector<static_entry>  static_entries;
 public:
     const char *name() const { return name_.c_str(); }
     const char *p4_name() const { if(p4_table) return p4_table->p4_name(); return ""; }
@@ -548,7 +540,6 @@ public:
     std::unique_ptr<json::map>  context_json;
     unsigned                    default_next_table_id = 0xFF;
     unsigned                    default_next_table_mask = 0x0;
-    static_entries              static_entries_list;
 
     static std::map<std::string, Table *>       all;
 
@@ -749,8 +740,8 @@ public:
         unsigned hash_table_id, json::vector &hash_bits, unsigned hash_group_no) const;
     virtual void add_hash_functions(json::map &stage_tbl) const;
     void add_all_reference_tables(json::map &tbl, Table *math_table=nullptr) const;
-    void add_static_entries(json::map &tbl) const;
     METER_ACCESS_TYPE default_meter_access_type(bool for_stateful);
+    bool merge_static_entries(json::map &s) const;
 )
 
 #define DECLARE_TABLE_TYPE(TYPE, PARENT, NAME, ...)                     \

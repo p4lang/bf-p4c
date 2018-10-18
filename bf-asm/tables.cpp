@@ -487,39 +487,6 @@ bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p
     } else if (kv.key == "context_json") {
         if (CHECKTYPE(kv.value, tMAP))
             context_json = toJson(kv.value.map);
-    } else if (kv.key == "static_entries") {
-        if (CHECKTYPE(kv.value, tVEC)) {
-            for (auto &v : kv.value.vec) {
-                static_entry s;
-                if (CHECKTYPE(v, tMAP)) {
-                    for (auto &m : v.map) {
-                        if (CHECKTYPE(m.key, tSTR) &&
-                            CHECKTYPE3(m.value, tINT, tSTR, tVEC)) {
-                            if (m.value.type == tINT) {
-                                if (m.key == "priority")
-                                    s.priority = m.value.i;
-                            } else if (m.value.type == tSTR) {
-                                if (m.key == "action")
-                                    s.action = m.value.s;
-                                else if (m.key == "is_default_entry")
-                                    s.is_default_entry =
-                                        (strncmp(m.value.s, "true", 4) == 0);
-                            } else if (m.value.type == tVEC) {
-                                for (auto &f : m.value.vec) {
-                                    if (CHECKTYPE(f, tINT)) {
-                                        if (m.key == "match_key_fields_values")
-                                            s.match_key_fields_values.push_back(f.i);
-                                        if (m.key == "action_parameters_values")
-                                            s.action_parameters_values.push_back(f.i);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                static_entries_list.push_back(s);
-            }
-        }
     } else
         return false;
     return true;

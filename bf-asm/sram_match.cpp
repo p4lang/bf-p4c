@@ -858,8 +858,10 @@ json::map* SRamMatchTable::add_common_sram_tbl_cfgs(json::map &tbl,
     add_action_cfgs(tbl, stage_tbl);
     add_result_physical_buses(stage_tbl);
     MatchTable::gen_idletime_tbl_cfg(stage_tbl);
-    if (context_json)
+    if (context_json) {
+        merge_static_entries(tbl);
         stage_tbl.merge(*context_json);
+    }
     add_all_reference_tables(tbl);
     return stage_tbl_ptr;
 }

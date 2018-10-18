@@ -563,42 +563,15 @@ void MatchTable::add_all_reference_tables(json::map &tbl, Table *match_table) co
         for (auto &s : a->statefuls) { add_reference_table(stateful_table_refs, s); } }
 }
 
-void MatchTable::add_static_entries(json::map &tbl) const {
-    if (static_entries_list.size() > 0) {
-        json::vector &static_entries = tbl["static_entries"];
-        for (auto &s : static_entries_list) {
-            json::map static_entry;
-            static_entry["priority"] = s.priority;
-            static_entry["is_default_entry"] = s.is_default_entry ? true : false;
-            if (auto acts = get_actions()) {
-                if (auto a = acts->action(s.action)) {
-                    static_entry["action_handle"] = a->handle;
-                    if (s.action_parameters_values.size() == a->p4_params_list.size()) {
-                        json::vector &action_parameters_values = static_entry["action_parameters_values"];
-                        int idx = 0;
-                        for (auto m : s.action_parameters_values) {
-                            json::map action_parameter;
-                            action_parameter["parameter_name"] = a->p4_params_list[idx++].name;
-                            action_parameter["value"] = m;
-                            action_parameters_values.push_back(std::move(action_parameter));
-                        }
-                    }
-                    if (s.match_key_fields_values.size() == p4_params_list.size()) {
-                        json::vector &match_key_fields_values = static_entry["match_key_fields_values"];
-                        int idx = 0;
-                        for (auto m : s.match_key_fields_values) {
-                            json::map match_key_field;
-                            match_key_field["field_name"] = p4_params_list[idx].key_name.empty() ?
-                                                            p4_params_list[idx].name :
-                                                            p4_params_list[idx].key_name;
-                            match_key_field["value"] = m;
-                            match_key_fields_values.push_back(std::move(match_key_field));
-                            idx++;
-                        }
-                    }
-                }
-            }
-            static_entries.push_back(std::move(static_entry));
+bool MatchTable::merge_static_entries(json::map &tbl) const {
+    if (context_json) {
+        if (context_json->count("static_entries")) {
+            auto static_entries_o = context_json->to<json::map>()["static_entries"];
+            json::vector &static_entries = static_entries_o->to<json::vector>();
+            tbl["static_entries"] = std::move(static_entries);
+            context_json->to<json::map>().erase("static_entries");
+            return true;
         }
     }
+    return false;
 }

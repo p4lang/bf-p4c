@@ -1997,7 +1997,7 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
                 expr = expr->to<IR::Slice>()->e0;
         // Replace any alias nodes with their original sources, in order to
         // ensure the original names are emitted.
-                auto full_size = phv.field(expr)->size;
+        auto full_size = phv.field(expr)->size;
 
         // Check for @name annotation.
         cstring name = phv.field(expr)->externalName();
@@ -2103,50 +2103,114 @@ void MauAsmOutput::emit_static_entries(std::ostream &out, indent_t indent,
         return;
 
     for (auto k : tbl->match_key) {
-        if (k->match_type.name != "exact")
-            P4C_UNIMPLEMENTED("Static entries are only supported for exact-match tables");
+        if (k->match_type.name == "lpm")
+            P4C_UNIMPLEMENTED("Static entries are not supported for lpm-match"
+                ". Needs p4 language support to specify prefix length"
+                " with the static entry.");
     }
 
-    out << indent++ << "static_entries:" << std::endl;
+    out << indent++ << "context_json:" << std::endl;
+    out << indent << "static_entries:" << std::endl;
+    int priority = 0;  // The order of entries in p4 program determine priority
     for (auto entry : tbl->entries_list->entries) {
         auto method_call = entry->action->to<IR::MethodCallExpression>();
         BUG_CHECK(method_call, "Action is not specified for a static entry");
 
-        auto path = method_call->method->to<IR::PathExpression>()->path;
+        auto method = method_call->method->to<IR::PathExpression>();
+        auto path = method->path;
         size_t key_index = 0, param_index = 0;
-        out << indent++ << "- priority: 0" << std::endl;
-        out << indent << "match_key_fields_values: [";
+        out << indent++ << "- priority: " << priority++ << std::endl;
+        out << indent << "match_key_fields_values:" << std::endl;
         for (auto key : entry->getKeys()->components) {
+            ERROR_CHECK(key_index < tbl->match_key.size(),
+              "Static entry has more keys than those specified "
+              "in match field for table %s", tbl->name);
+            auto match_key = tbl->match_key[key_index];
+            auto match_key_size = phv.field(match_key->expr)->size;
+            bitvec match_key_mask(0, match_key_size);
+            bool bignum_err = false;
+            auto match_key_name = phv.field(match_key->expr)->externalName();
+            out << indent++ << "- field_name: " << canon_name(match_key_name) << std::endl;
             if (auto b = key->to<IR::BoolLiteral>()) {
-                out << (b->value ? 1 : 0);
+                out << indent << "value: " << (b->value ? 1 : 0) << std::endl;
+                if (match_key->match_type == "ternary")
+                    out << indent << "mask: 0x1";
             } else if (key->to<IR::Constant>()) {
-                out << key;
+                out << indent << "value: " << key << std::endl;
+                if (match_key->match_type == "ternary") {
+                    if (match_key_size > 48) bignum_err = true;
+                    out << indent << "mask: 0x" << match_key_mask << std::endl;
+                }
+            } else if (auto ts = key->to<IR::Mask>()) {
+                // This error should be caught in front end as an invalid key
+                // expression
+                ERROR_CHECK(match_key->match_type == "ternary",
+                    "Invalid mask value specified in static entry for field %s a non ternary"
+                    " match type in table %s", canon_name(match_key_name), tbl->name);
+                // Ternary match with value and mask specified
+                // e.g. In p4 - "15 &&& 0xff" where 15 is value and 0xff is mask
+                if (auto val = ts->left->to<IR::Constant>())
+                    out << indent << "value: " << val << std::endl;
+                if (auto mask = ts->right->to<IR::Constant>()) {
+                    if (mask->value > ((1UL << 48) - 1)) bignum_err = true;
+                    out << indent << "mask: 0x" << hex(mask->asUint64()) << std::endl;
+                }
+            } else if (key->to<IR::DefaultExpression>()) {
+                out << indent << "value: 0" << std::endl;
+                if (match_key->match_type == "ternary") {
+                    if (match_key_size > 48) bignum_err = true;
+                    out << indent << "mask: 0x" << match_key_mask << std::endl;
+                }
+            } else if (auto r = key->to<IR::Range>()) {
+                // This error should be caught in front end as an invalid key
+                // expression
+                ERROR_CHECK(match_key->match_type == "range",
+                    "Invalid range value specified in static entry for field %s a non range"
+                    " match type in table %s", canon_name(match_key_name), tbl->name);
+                // Extract start and end values from range node
+                if (auto range_start = r->left->to<IR::Constant>())
+                    out << indent << "range_start: " << range_start << std::endl;
+                if (auto range_end = r->right->to<IR::Constant>())
+                    out << indent << "range_end: " << range_end << std::endl;
             } else {
-                P4C_UNIMPLEMENTED("Static entries are only supported for match keys with "
-                        "bit-string type");
+                P4C_UNIMPLEMENTED("Static entries are only supported for "
+                    "match keys with bit-string type");
             }
-
-            if (key_index++ < entry->getKeys()->components.size() - 1)
-                out << ", ";
+            if (bignum_err) {
+               P4C_UNIMPLEMENTED("Mask value for static entry ternary match "
+                   "field '%s' is larger than 48 bits and not supported in table '%s'",
+               canon_name(match_key_name), tbl->name);
+            }
+            key_index++;
+            indent--;
         }
-        out << "]" << std::endl;
 
         for (auto action : Values(tbl->actions)) {
             if (action->name.name == path->name) {
-                out << indent << "action: " << canon_name(action->externalName()) << std::endl;
+                out << indent << "action_handle: " << action->handle << std::endl;
                 break;
             }
         }
 
         out << indent << "is_default_entry: false" <<  std::endl;
-        if (method_call->arguments->size() > 0) {
-            out << indent << "action_parameters_values: [";
+        auto num_mc_args = method_call->arguments->size();
+        out << indent << "action_parameters_values:";
+        if (num_mc_args > 0) {
+            auto mc_type = method->type->to<IR::Type_Action>();
+            auto param_list = mc_type->parameters->parameters;
+            if (param_list.size() != num_mc_args)
+            BUG_CHECK((param_list.size() == num_mc_args),
+                "Total arguments on method call differ from those on method"
+                " parameters in table %s", tbl->name);
+            out << std::endl;
             for (auto param : *method_call->arguments) {
-                out << param;
-                if (param_index++ < method_call->arguments->size() - 1)
-                    out << ", ";
+                auto param_name = param_list.at(param_index++)->name;
+                out << indent++ << "- parameter_name: " << param_name << std::endl;
+                out << indent << "value: " << param << std::endl;
+                indent--;
             }
-            out << "]" << std::endl;
+        } else {
+            out << " []" << std::endl;
         }
         indent--;
     }
