@@ -1339,3 +1339,9 @@ p4c_add_xfail_reason("tofino"
   "No format in action table"
   testdata/p4_14_samples/const_default_action.p4
 )
+
+# test program error
+p4c_add_xfail_reason("tofino"
+  "The random declaration .* min size must be zero"
+  extensions/p4_tests/p4_14/perusal_0.p4
+)

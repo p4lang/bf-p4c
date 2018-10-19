@@ -1402,6 +1402,11 @@ class ConstructSymbolTable : public Inspector {
         auto dest = mce->arguments->at(0)->expression;
         // check hi bound must be 2**W-1
         auto max_value = mce->arguments->at(2)->expression->to<IR::Constant>()->value;
+        if (!mpz_fits_slong_p(max_value.get_mpz_t()))
+            error("%s: The random declaration %s max size %d is too large to be supported",
+                    node->srcInfo, randName, max_value);
+        if (max_value < 0)
+            max_value = mpz_get_ui(max_value.get_mpz_t());
         max_value += mpz_class(1);
         int one_pos = mpz_scan1(max_value.get_mpz_t(), 0);
         if ((mpz_class(1) << one_pos) != max_value)
@@ -1411,8 +1416,10 @@ class ConstructSymbolTable : public Inspector {
         auto min_value = mce->arguments->at(1)->expression->to<IR::Constant>()->value;
         if (min_value != 0)
             error("%s: The random declaration %s min size must be zero",
-                  node->srcInfo, node);
+                  node->srcInfo, randName);
         auto args = new IR::Vector<IR::Argument>();
+        LOG3("convert " << node->methodCall << " to " << randName <<
+             "(" << min_value << ", " << max_value << ")");
 
         auto method = new IR::PathExpression(randName);
         auto member = new IR::Member(method, "get");
