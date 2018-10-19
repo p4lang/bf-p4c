@@ -161,7 +161,7 @@ void HashActionTable::add_hash_functions(json::map &stage_tbl) const {
             json::vector &bits_to_xor = hash_bit["bits_to_xor"] = json::vector();
             json::map field;
             field["field_bit"] = i;
-            field["field_name"] = p4_param.name;
+            field["field_name"] = p4_param.key_name.empty() ? p4_param.name : p4_param.key_name;
             field["hash_match_group"] = 0;
             field["hash_match_group_bit"] = 0;
             bits_to_xor.push_back(std::move(field));
