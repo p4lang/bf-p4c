@@ -1015,8 +1015,10 @@ void DLeftSetup::postorder(IR::MAU::InputXBarRead *read) {
     auto tbl = findContext<IR::MAU::Table>();
     if (!tbl->for_dleft())
         return;
-    if (read->for_match())
-        read->match_type = IR::ID("dleft_hash");
+    if (read->for_match()) {
+        error("%s%sCan't mix dleft and non-dleft key match types in a table", tbl->srcInfo,
+              read->srcInfo);
+        read->match_type = IR::ID("dleft_hash"); }
 }
 
 const IR::MAU::Instruction *ConvertCastToSlice::preorder(IR::MAU::Instruction *instr) {

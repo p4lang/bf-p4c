@@ -196,9 +196,9 @@ int IR::MAU::Table::hit_actions() const {
 }
 
 bool IR::MAU::Table::for_dleft() const {
-    if (gateway_only())
-        return false;
-    return match_table->getAnnotations()->getSingle("dleft_learn_cache") != nullptr;
+    for (auto &k : match_key)
+        if (k->for_dleft()) return true;
+    return false;
 }
 
 cstring IR::MAU::Action::externalName() const {

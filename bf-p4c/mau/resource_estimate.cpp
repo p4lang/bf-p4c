@@ -189,9 +189,7 @@ int SelectorLengthBits(const IR::MAU::Selector *sel) {
     return SelectorModBits(sel) + SelectorLengthShiftBits(sel);
 }
 
-bool StageUseEstimate::ways_provided(const IR::MAU::Table *tbl, LayoutOption *lo,
-                                     int &calculated_depth) {
-    int way_total = -1;
+static int ways_pragma(const IR::MAU::Table *tbl, int min, int max) {
     auto annot = tbl->match_table->getAnnotations();
     if (auto s = annot->getSingle("ways")) {
         ERROR_CHECK(s->expr.size() >= 1, "%s: The ways pragma on table %s does not have a "
@@ -200,15 +198,19 @@ bool StageUseEstimate::ways_provided(const IR::MAU::Table *tbl, LayoutOption *lo
         if (pragma_val == nullptr) {
             ::error("%s: The ways pragma value on table %s is not a constant", tbl->srcInfo,
                   tbl->name);
-            return false;
-        }
-        way_total = pragma_val->asInt();
-        if (way_total < MIN_WAYS || way_total > MAX_WAYS) {
+            return -1; }
+        int rv = pragma_val->asInt();
+        if (rv < min || rv > max) {
             ::warning("%s: The ways pragma value on table %s is not between %d and %d, and "
-                      "will be ignored", tbl->srcInfo, tbl->name, MIN_WAYS, MAX_WAYS);
-            way_total = -1;
-        }
-    }
+                      "will be ignored", tbl->srcInfo, tbl->name, min, max);
+            return -1; }
+        return rv; }
+    return -1;
+}
+
+bool StageUseEstimate::ways_provided(const IR::MAU::Table *tbl, LayoutOption *lo,
+                                     int &calculated_depth) {
+    int way_total = ways_pragma(tbl, MIN_WAYS, MAX_WAYS);
     if (way_total == -1)
         return false;
 
@@ -431,22 +433,12 @@ void StageUseEstimate::options_to_dleft_entries(const IR::MAU::Table *tbl, int &
     int total_stateful_rams = (entries + per_row * Memories::SRAM_DEPTH - 1)
                                / (per_row * Memories::SRAM_DEPTH);
     int available_alus = MAX_METER_ALUS - meter_alus;
+    int needed_alus = ways_pragma(tbl, 1, MAX_METER_ALUS);
+    if (needed_alus < 0)
+            needed_alus = std::min(total_stateful_rams, available_alus);
+    int per_alu = (total_stateful_rams + needed_alus - 1) / needed_alus;
 
     for (auto &lo : layout_options) {
-        if (total_stateful_rams <= MAX_METER_ALUS) {
-            int hash_size = (1 << ceil_log2(total_stateful_rams));
-            lo.dleft_hash_sizes.push_back(hash_size);
-            lo.entries += hash_size * per_row * Memories::SRAM_DEPTH;
-            continue;
-        }
-
-        int needed_alus = available_alus + 1;
-        int per_alu = 0;
-        // Determine when the per_alu is > 4, to determine the logical number of splits
-        do {
-            needed_alus -= 1;
-            per_alu = (total_stateful_rams + needed_alus - 1) / needed_alus;
-        } while (per_alu < 4 && needed_alus > 1);
         // FIXME: The hash distribution units are all identical for each, so the sizes for
         // each of the stateful for the same, as the mask is per hash distribution unit.
         // Just currently a limit of the input xbar algorithm which will have to be opened up
@@ -455,7 +447,7 @@ void StageUseEstimate::options_to_dleft_entries(const IR::MAU::Table *tbl, int &
             lo.dleft_hash_sizes.push_back(hash_size);
             lo.entries += hash_size * per_row * Memories::SRAM_DEPTH;
         }
-        LOG3("Dleft entries per_alu: " << per_alu << " needed_alus: " << needed_alus);
+        LOG3("Dleft rams per_alu: " << per_alu << " needed_alus: " << needed_alus);
     }
 }
 

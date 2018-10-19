@@ -470,6 +470,7 @@ class StatefulAlu : Synth2Port {
     int                                                 init_reg_lo = 0;
     int                                                 init_reg_hi = 0;
     cstring                                             reduction_or_group = {};
+    bool        learn_action = false;  // if any action is a LearnAction
 
     class MathUnit {
         bool            valid = false;

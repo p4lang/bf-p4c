@@ -10,7 +10,7 @@ struct StageUseEstimate {
     static constexpr int MAX_METER_ALUS = 4;
     static constexpr int MAX_STATS_ALUS = 4;
     // FIXME: This is a quick workaround that will need to change as the tables need to expand
-    static constexpr int MAX_DLEFT_HASH_SIZE = 8;
+    static constexpr int MAX_DLEFT_HASH_SIZE = 23;
     static constexpr int COMPILER_DEFAULT_SELECTOR_POOLS = 4;
     static constexpr int SINGLE_RAMLINE_POOL_SIZE = 120;
     static constexpr int MAX_MOD = 31;

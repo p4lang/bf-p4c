@@ -14,22 +14,44 @@ if $_isvoid($bpnum)
 end
 
 define pn
-    call ::dbprint($arg0)
+    if $argc == 2
+        call ::dbprint($arg0 $arg1)
+    else
+        call ::dbprint($arg0)
+    end
 end
 document pn
         print a IR::Node pointer
 end
 define d
-    call ::dump($arg0)
+    if $argc == 2
+        call ::dump($arg0 $arg1)
+    else
+        call ::dump($arg0)
+    end
 end
 document d
         dump IR::Node tree or Visitor::Context
 end
 define dnt
-    call ::dump_notype($arg0)
+    if $argc == 2
+        call ::dump_notype($arg0 $arg1)
+    else
+        call ::dump_notype($arg0)
+    end
 end
 document dnt
         dump IR::Node tree, skipping 'type' fields
+end
+define dsrc
+    if $argc == 2
+        call ::dump_src($arg0 $arg1)
+    else
+        call ::dump_src($arg0)
+    end
+end
+document dsrc
+        dump IR::Node tree, skipping 'type' fields, and printing source info
 end
 
 python
@@ -363,6 +385,7 @@ class MemoriesUsePrinter(object):
 
 class IXBarUsePrinter(object):
     "Print an IXBar::Use object"
+    use_types = [ "Exact", "Gateway", "Selector", "Meter", "StatefulAlu", "HashDist" ]
     def __init__(self, val):
         self.val = val
     def use_array(self, arr, indent):
@@ -384,7 +407,16 @@ class IXBarUsePrinter(object):
     def to_string(self):
         rv = ""
         try:
-            rv = "Ternary" if self.val['ternary'] else "Atcam" if self.val['atcam'] else "Exact"
+            type_tag = int(self.val['type'])
+            rv = "<type %d>" % type_tag
+            if self.val['ternary']:
+                rv = "Ternary"
+                if type_tag != 0: rv += "<%d>" % type_tag
+            elif self.val['atcam']:
+                rv = "ATcam"
+                if type_tag != 0: rv += "<%d>" % type_tag
+            elif type_tag >= 0 and type_tag < len(self.use_types):
+                rv = self.use_types[type_tag]
             rv += self.use_array(self.val['use'], '   ')
             for i in range(0, 8):
                 hti = self.val['hash_table_inputs'][i]
@@ -493,6 +525,11 @@ def find_pp(val):
         return SlicePrinter(val)
     return None
 
-#gdb.pretty_printers = [ gdb.pretty_printers[0] ]  # uncomment if reloading
+try:
+    while gdb.pretty_printers[-1].__name__ == "find_pp":
+        gdb.pretty_printers = gdb.pretty_printers[:-1]
+except:
+    pass
+
 gdb.pretty_printers.append(find_pp)
 end

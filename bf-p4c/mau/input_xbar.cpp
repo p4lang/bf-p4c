@@ -2235,7 +2235,11 @@ bool IXBar::setup_stateful_hash_bus(const IR::MAU::StatefulAlu *salu, Use &alloc
     mah.group = hash_group;
     if (dleft) {
         mah.algorithm = IR::MAU::hash_function::random();
-        mah.bit_mask.setrange(0, METER_ALU_HASH_BITS);
+        mah.bit_mask.setrange(1, METER_ALU_HASH_BITS);
+        // For dleft digest, we need a fixed 1 bit to ensure the digest is nonzero
+        // as the valid bit is not contiguous with the digest in the sram field, so
+        // trying to match it would waste more hash bits.
+        alloc.hash_seed[hash_group] = bitvec(1);
     } else {
         mah.algorithm = IR::MAU::hash_function::identity();
         bool phv_src_reserved[2] = { false, false };

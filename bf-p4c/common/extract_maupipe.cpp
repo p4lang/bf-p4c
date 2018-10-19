@@ -667,11 +667,10 @@ void AttachTables::InitializeStatefulAlus
         if (anno)
             regName = getString(anno);
         salu = new IR::MAU::StatefulAlu(reg->srcInfo, regName, reg->annotations, reg);
-        auto annots = ext->annotations ? ext->annotations : 0;
         // Reg initialization values for lo/hi are passed as annotations. In
         // p4_14 conversion they cannot be set directly on the register For
         // p4_16 programs these are passed in as optional stateful params
-        for (auto annot : annots->annotations) {
+        for (auto annot : ext->annotations->annotations) {
             if (annot->name == "initial_register_lo_value") {
                 salu->init_reg_lo = getConstant(annot);
                 LOG4("Reg initial lo value: " << salu->init_reg_lo); }
@@ -697,6 +696,18 @@ void AttachTables::InitializeStatefulAlus
             salu->chain_total_size = getConstant(cts);
         salu_inits[reg] = salu; }
 
+    // copy annotations from register action
+    IR::Annotations *new_annot = nullptr;
+    for (auto annot : ext->annotations->annotations) {
+        if (annot->name == "name") continue;
+        if (auto old = salu->annotations->getSingle(annot->name)) {
+            if (old->expr.equiv(annot->expr)) continue;
+            warning("Conflicting annotations %s and %s related to stateful alu %s",
+                    annot, old, salu); }
+        if (!new_annot) new_annot = salu->annotations->clone();
+        new_annot->add(annot); }
+    if (new_annot) salu->annotations = new_annot;
+
     if (auto red_or = ext->annotations->getSingle("reduction_or_group")) {
         auto pragma_val = red_or->expr.at(0)->to<IR::StringLiteral>();
         ERROR_CHECK(pragma_val, "%s: Please provide a valid reduction_or_group for, which should "
@@ -710,13 +721,14 @@ void AttachTables::InitializeStatefulAlus
             }
         }
     }
+    if (ext->type->toString().startsWith("LearnAction<"))
+        salu->learn_action = true;
 
     // If the register action hasn't been seen before, this creates an SALU Instruction
     if (register_actions.count(ext) == 0) {
         LOG3("Adding " << ext->name << " to StatefulAlu " << reg->name);
         register_actions.insert(ext);
-        ext->apply(CreateSaluInstruction(salu));
-    }
+        ext->apply(CreateSaluInstruction(salu)); }
 
     auto prim = findContext<IR::Primitive>();
     LOG6("  - " << (prim ? prim->name : "<no primitive>"));

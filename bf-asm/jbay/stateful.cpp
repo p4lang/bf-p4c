@@ -98,6 +98,19 @@ bool StatefulTable::setup_jbay(const pair_t &kv) {
     } else if (kv.key == "address_shift") {
         if (CHECKTYPE(kv.value, tINT))
             meter_adr_shift = kv.value.i;
+    } else if (kv.key == "phv_hash_shift") {
+        if (CHECKTYPE(kv.value, tINT)) {
+            phv_hash_shift = kv.value.i / 8U;
+            if (kv.value.i % 8U != 0)
+                error(kv.value.lineno, "phv_hash_shift must be a mulitple of 8");
+            else if (phv_hash_shift < 0 || phv_hash_shift > 15)
+                error(kv.value.lineno, "phv_hash_shift %ld out of range", kv.value.i); }
+    } else if (kv.key == "phv_hash_mask") {
+        if (CHECKTYPE2(kv.value, tINT, tBIGINT)) {
+            if (kv.value.type == tINT)
+                phv_hash_mask.setraw(kv.value.i);
+            else
+                phv_hash_mask.setraw(kv.value.bigi.data, kv.value.bigi.size); }
     } else
         return false;
     return true;
@@ -208,6 +221,10 @@ template<> void StatefulTable::write_logging_regs(Target::JBay::mau_regs &regs) 
         if (overflow_action.set())
             ctl3.slog_overflow_instruction = actions->action(overflow_action.name)->code * 2 + 1;
     }
+    regs.rams.map_alu.meter_alu_group_phv_hash_shift[meter_group()] = phv_hash_shift;
+    unsigned idx = 0;
+    for (auto &slice : regs.rams.map_alu.meter_alu_group_phv_hash_mask[meter_group()])
+        slice = phv_hash_mask.getrange(32*idx++, 32);
 
     for (size_t i = 0; i < const_vals.size(); ++i) {
         salu.salu_const_regfile[i] = const_vals[i] & 0xffffffffU;

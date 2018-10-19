@@ -774,6 +774,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv, const IR::MA
         if (t->for_dleft() && set_entries > rv->entries) {
             advance_to_next_stage = true;
             LOG3("    Cannot split a dleft hash table");
+            error_message = "splitting dleft tables not supported";
         }
 
         // FIXME: This is not the appropriate way to check if a table is a single gateway
@@ -878,9 +879,9 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv, const IR::MA
 
     LOG3("  Selected stage: " << rv->stage << "    Furthest stage: " << furthest_stage);
     if (rv->stage > furthest_stage) {
-        if (error_message != "")
-            BUG("Could not place table : %s", error_message);
-        BUG("Unknown error for stage advancement?");
+        if (error_message == "")
+            error_message = "Unknown error for stage advancement?";
+        error("Could not place %s: %s", t, error_message);
     }
 
     if (done && done->stage == rv->stage) {
@@ -1261,8 +1262,10 @@ static void table_set_resources(IR::MAU::Table *tbl, const TableResourceAlloc *r
     tbl->resources = resources;
     tbl->layout.entries = entries;
     if (!tbl->ways.empty()) {
-        auto &mem = resources->memuse.at(tbl->unique_id());
-        if (!tbl->layout.atcam) {
+        BUG_CHECK(errorCount() > 0 || resources->memuse.count(tbl->unique_id()),
+                  "Missing resources for %s", tbl);
+        if (!tbl->layout.atcam && resources->memuse.count(tbl->unique_id())) {
+            auto &mem = resources->memuse.at(tbl->unique_id());
             assert(tbl->ways.size() == mem.ways.size());
             for (unsigned i = 0; i < tbl->ways.size(); ++i)
                 tbl->ways[i].entries = mem.ways[i].size * 1024 * tbl->ways[i].match_groups;

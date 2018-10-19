@@ -240,7 +240,7 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "Could not place table : The table .* could not fit"
+  "Could not place table .*: The table .* could not fit"
    extensions/p4_tests/p4_14/stateful3.p4
    testdata/p4_14_samples/counter5.p4
 )

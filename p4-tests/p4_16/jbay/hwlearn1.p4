@@ -49,16 +49,14 @@ control ingress(inout headers hdr, inout metadata meta,
         }
     }
 
-    // single ram size to force it to be a single way (multiway dleft tables broken
-    // due to missing action_bus alloc in compiler.)
-    Register<pair, _>(1024) learn_cache;
+    Register<pair, _>(16384) learn_cache;
     LearnAction<pair, bit<64>, bit<32>>(learn_cache) learn_act = {
         void apply(inout pair value, in bit<64> digest, in bool lmatch,
                    out bit<32> cid, out bit<32> pred) {
-            if (value.first & ~64w0x1e == digest) {
+            if (value.first & ~64w0x1f == digest) {
                 value.first = digest | 31;
                 cid = this.address(0);
-            } else if (value.second & ~64w0x1e == digest) {
+            } else if (value.second & ~64w0x1f == digest) {
                 value.second = digest | 31;
                 cid = this.address(1);
             } else if (!lmatch && value.first & 1 == 0) {
@@ -79,7 +77,8 @@ control ingress(inout headers hdr, inout metadata meta,
         meta.cache_id = tmp[20:6];
         meta.learn_pred = tmp2[19:4];
     }
-    @dleft_learn_cache
+
+    @ways(1)  // multiway dleft tables broken due to missing action_bus alloc in compiler.
     table learn_match {
         key = {
             hdr.ipv4.src_addr : dleft_hash;
@@ -90,9 +89,6 @@ control ingress(inout headers hdr, inout metadata meta,
         }
         actions = { do_learn_match; }
         default_action = do_learn_match;
-        // FIXME -- frontend doesn't like implementation as anything other than
-        // an action_profile, so use a pragma for now.
-        // implementation = learn_act;
     }
 
     /* new flow fifo -- source for new flowids from the driver */

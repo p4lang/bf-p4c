@@ -431,14 +431,14 @@ compress_cfg_json() {
                 true # ptf requires uncompressed binary
                 if [ ${device} = "tofino2" ]; then
                     # backwards compatibility with old model/driver
-                    ln -s tofino2.bin $testdir/$output_dir/jbay.bin
+                    ln -sf tofino2.bin $testdir/$output_dir/jbay.bin
                 fi
             elif $run_stf; then
                 # stf can run compressed binaries with recent updates
                 gzip -f $testdir/$output_dir/${device}.bin
                 if [ ${device} = "tofino2" ]; then
                     # backwards compatibility with old model/driver
-                    ln -s tofino2.bin.gz $testdir/$output_dir/jbay.bin.gz
+                    ln -sf tofino2.bin.gz $testdir/$output_dir/jbay.bin.gz
                 fi
             else
                 #binary not needed

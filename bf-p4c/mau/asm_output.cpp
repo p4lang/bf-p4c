@@ -2945,10 +2945,13 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
         auto *back_at = getParent<IR::MAU::BackendAttached>();
         // if the address comes from hash_dist, we'll have allocated it with
         // IXBar::Use::METER_ADR_AND_IMMEDIATE, so need to use meter_adr_shift
+        // to shift up the correct number of subword bits
         // see IXBar::XBarHashDist::initialize_hash_dist_unit
         if (back_at->hash_dist)
-            out << indent << "address_shift: " << ceil_log2(salu->width) << std::endl;
-    }
+            out << indent << "address_shift: " << ceil_log2(salu->width) << std::endl; }
+    if (salu->learn_action) {
+        // FIXME -- fixed 8-bit shift for LearnAction -- will we ever want anything else?
+        out << indent << "phv_hash_shift: 8" << std::endl; }
     if (salu->chain_total_size > salu->size)
         out << indent << "log_vpn: 0.." << ((salu->chain_total_size * salu->width >> 17) - 1)
             << std::endl;
