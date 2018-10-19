@@ -784,6 +784,7 @@ CoreAllocation::tryAllocSliceList(
                         LOG5(ss.str()); } } }
 
             // Find slice lists that contain slices in action_constraints.
+            can_place = true;
             for (auto kv_source : *action_constraints) {
                 boost::optional<const PHV::SuperCluster::SliceList*> slice_list = boost::none;
                 bool has_not_in_list = false;
@@ -799,7 +800,9 @@ CoreAllocation::tryAllocSliceList(
                     // XXX(cole): This is overly constrained.
                     if (slice_lists.size() > 1) {
                         LOG5("    ...but a conditional placement is in multiple slice lists");
-                        return boost::none; }
+                        can_place = false;
+                        break;
+                    }
 
                     // If another slice in these action constraints is in a
                     // different slice list, abort.
@@ -807,16 +810,23 @@ CoreAllocation::tryAllocSliceList(
                     if (slice_list && *slice_list != *slice_lists.begin()) {
                         LOG5("    ...but two conditional placements are in two different slice "
                              "lists");
-                        return boost::none; }
+                        can_place = false;
+                        break;
+                    }
 
                     slice_list = *slice_lists.begin(); }
+                // Try the next container.
+                if (!can_place) break;
 
                 // XXX(cole): Abort if the requirements a mix of slices in slice
                 // lists and those not in slice lists.  This is overly constrained.
+                // Aborting here means setting can_place to false and trying the next container.
                 if (has_not_in_list && slice_list) {
                     LOG5("    ...but action constraints include some slices in a slice list and "
                             "some that are not");
-                    return boost::none; }
+                    can_place = false;
+                    break;
+                }
 
                 if (slice_list) {
                     // Check that the positions induced by action constraints match
@@ -836,21 +846,27 @@ CoreAllocation::tryAllocSliceList(
 
                         int required_pos = kv_source.second.at(slice).bitPosition;
                         if (!absolute && required_pos < offset) {
-                            // This is the first slice with an action alignment
-                            // constraint.  Check that the constraint is >= the
-                            // bits seen so far.
+                            // This is the first slice with an action alignment constraint.  Check
+                            // that the constraint is >= the bits seen so far. If this check fails,
+                            // then set can_place to false so that we may try the next container.
                             LOG5("    ...action constraint: " << slice << " must be placed at bit "
                                  << required_pos << " but is " << offset << "b deep in a slice " <<
                                  "list");
-                            return boost::none;
+                            can_place = false;
+                            break;
                         } else if (!absolute) {
                             absolute = true;
                             offset = required_pos + slice.range().size();
                         } else if (offset != required_pos) {
+                            // If the alignment due to the conditional constraint is not the same as
+                            // the alignment inherent in the slice list structure, then this
+                            // placement is not possible. So set can_place to false so that we may
+                            // try the next container.
                             LOG5("    ...action constraint: " << slice << " must be placed at bit "
                                  << required_pos << " which conflicts with another action-induced "
                                  "constraint for another slice in the slice list");
-                            return boost::none;
+                            can_place = false;
+                            break;
                         } else {
                             offset += slice.range().size(); } }
 
@@ -872,6 +888,8 @@ CoreAllocation::tryAllocSliceList(
         } else {
             LOG5("        ...action constraint: can pack into container " << c);
             num_bitmasks = actions_i.count_bitmasked_set_instructions(candidate_slices); }
+
+        if (!can_place) continue;
 
         // Create this alloc for calculating score.
         auto this_alloc = alloc_attempt.makeTransaction();

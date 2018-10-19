@@ -763,6 +763,13 @@ bool ActionPhvConstraints::check_and_generate_constraints_for_move_with_unalloca
                     !masks_valid(state_not_written_to, action, false /*non action data only*/)) {
                     LOG5("\t\t\t\tMasks found to not be valid for packing");
                     return false; } }
+            // If the allocation is to a mocha or dark container, and there is an unallocated
+            // source, we need to make sure the source and the destination are aligned.
+            if (mocha_or_dark && sources.num_unallocated > 0) {
+                LOG5("\t\t\t\tSetting phv must be aligned for mocha/dark destination and "
+                     "unallocated source");
+                phvMustBeAligned[action] = true;
+            }
             // No Action data or constant sources and only 1 PHV container as source plus masks for
             // deposit-field found to be valid. So, the packing is valid without any other induced
             // constraints.
@@ -911,6 +918,9 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
     ordered_map<const IR::MAU::Action*, size_t> numUnallocatedContainers;
     PHV::Container c = slices.front().container();
 
+    // Is the container either a mocha or dark container.
+    bool mocha_or_dark = c.is(PHV::Kind::dark) || c.is(PHV::Kind::mocha);
+
     PHV::Allocation::MutuallyLiveSlices container_state = alloc.slicesByLiveness(c, slices);
     LOG6("\t\tExisting container state: ");
     for (auto slice : container_state)
@@ -1014,8 +1024,6 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
         if (operationType[action] == OperandInfo::BITWISE && !all_or_none_ad_constant_sources)
             return boost::none;
 
-        // Is the container either a mocha or dark container.
-        bool mocha_or_dark = c.is(PHV::Kind::dark) || c.is(PHV::Kind::mocha);
         if (mocha_or_dark && operationType[action] == OperandInfo::BITWISE) {
             // Mocha or dark containers can only be used in whole container move operations.
             LOG5("\t\t\t\tAction " << action->name << " has a bitwise operation writing to a "
@@ -1091,6 +1099,10 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
                 boost::optional<PHV::AllocSlice> source =
                     getSourcePHVSlice(alloc, slices, slice, action);
                 if (!source) {
+                    if (numUnallocatedContainers[action] == 1 && mocha_or_dark) {
+                        hasSingleUnallocatedPHVSource = true;
+                        LOG6("\t\t\t\tFound one unallocated PHV source for mocha/dark destination");
+                    }
                     // Detect case where we have an unallocated PHV source and action data/constant
                     // writing to the same container in the same action. For such a case, enforce
                     // alignment constraints for the unallocated PHV source later (guarded using
