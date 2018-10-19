@@ -59,9 +59,6 @@ bool Phv_Parde_Mau_Use::preorder(const IR::MAU::TableSeq *) {
 }
 
 bool Phv_Parde_Mau_Use::preorder(const IR::Expression *e) {
-    if (findContext<IR::BFN::ExternLVal>())
-        return false;
-
     if (auto *hr = e->to<IR::HeaderRef>()) {
         for (auto id : phv.struct_info(hr).field_ids()) {
             use_i[in_mau][thread][id] = true;
