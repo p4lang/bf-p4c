@@ -818,7 +818,8 @@ PHV::ConcreteAllocation::getOccupancyMetrics(const ordered_map<PHV::Container, i
     ss << std::endl << "PHV Allocation State" << std::endl;
     ss << getMauGroupsOccupancyMetrics(used);
     ss << std::endl;
-    ss << getTagalongCollectionsOccupancyMetrics(used);
+    if (Device::currentDevice() == Device::TOFINO)
+        ss << getTagalongCollectionsOccupancyMetrics(used);
     return ss.str();
 }
 
