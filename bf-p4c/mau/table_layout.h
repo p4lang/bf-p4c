@@ -108,6 +108,7 @@ class TableLayout : public MauModifier, Backtrack {
     bool preorder(IR::MAU::Table *tbl) override;
     bool preorder(IR::MAU::Action *act) override;
     bool preorder(IR::MAU::InputXBarRead *read) override;
+    bool preorder(IR::MAU::Selector *sel) override;
     void check_for_alpm(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl,
                          cstring &partition_index);
     void setup_instr_and_next(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl);

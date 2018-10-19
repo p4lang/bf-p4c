@@ -671,6 +671,7 @@ public:
 
 struct AttachedTables {
     Table::Call                 selector;
+    Table::Call                 selector_length;
     std::vector<Table::Call>    stats, meters, statefuls;
     SelectionTable *get_selector() const;
     MeterTable* get_meter(std::string name = "") const;
@@ -1316,7 +1317,7 @@ public:
         void write_merge_regs, (mau_regs &regs, MatchTable *match, int type,
                                 int bus, const std::vector<Call::Arg> &args), override {
             write_merge_regs<decltype(regs)>(regs, match, type, bus, args); })
-    int address_shift() const override { return 7 + ceil_log2(min_words); }
+    int address_shift() const override { return 7; }
     unsigned meter_group() const { return layout.at(0).row/4U; }
     int home_row() const override { return layout.at(0).row | 3; }
     int unitram_type() override { return UnitRam::SELECTOR; }
@@ -1326,6 +1327,10 @@ public:
     void set_stateful(StatefulTable *s) override { bound_stateful = s; }
     unsigned per_flow_enable_bit(MatchTable *m = nullptr) const override;
     int indirect_shiftcount() const override;
+    unsigned determine_length_shiftcount(const Table::Call &call, int group, int word) const;
+    unsigned determine_length_mask(const Table::Call &call) const;
+    unsigned determine_length_default(const Table::Call &call) const;
+    bool validate_length_call(const Table::Call &call);
 )
 
 class IdletimeTable : public Table {

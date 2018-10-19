@@ -46,6 +46,10 @@ bool MatchTable::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::t
     if (kv.key == "selector") {
         attached.selector.setup(kv.value, this);
         return true; }
+    if (kv.key == "selector_length") {
+        attached.selector_length.setup(kv.value, this);
+        return true;
+    }
     if (kv.key == "stats") {
         if (kv.value.type == tVEC)
             for (auto &v : kv.value.vec)

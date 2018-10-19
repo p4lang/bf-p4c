@@ -11,6 +11,12 @@ struct StageUseEstimate {
     static constexpr int MAX_STATS_ALUS = 4;
     // FIXME: This is a quick workaround that will need to change as the tables need to expand
     static constexpr int MAX_DLEFT_HASH_SIZE = 8;
+    static constexpr int COMPILER_DEFAULT_SELECTOR_POOLS = 4;
+    static constexpr int SINGLE_RAMLINE_POOL_SIZE = 120;
+    static constexpr int MAX_MOD = 31;
+    static constexpr int MAX_MOD_SHIFT = 5;
+    static constexpr int MAX_POOL_RAMLINES = MAX_MOD << MAX_MOD_SHIFT;
+    static constexpr int MOD_INPUT_BITS = 10;
 
     typedef ordered_set<const IR::MAU::AttachedMemory *> StageAttached;
     int logical_ids = 0;
@@ -124,6 +130,11 @@ int ActionDataVPNStartPosition(const IR::MAU::Table::Layout *layout);
 int ActionDataVPNIncrement(const IR::MAU::Table::Layout *layout);
 int TernaryIndirectPerWord(const IR::MAU::Table::Layout *layout, const IR::MAU::Table *tbl);
 int IdleTimePerWord(const IR::MAU::IdleTime *idletime);
+int SelectorModBits(const IR::MAU::Selector *sel);
+int SelectorShiftBits(const IR::MAU::Selector *sel);
+int SelectorHashModBits(const IR::MAU::Selector *sel);
+int SelectorLengthShiftBits(const IR::MAU::Selector *sel);
+int SelectorLengthBits(const IR::MAU::Selector *sel);
 
 class RangeEntries : public MauInspector {
     static constexpr int MULTIRANGE_DISTRIBUTION_LIMIT = 8;

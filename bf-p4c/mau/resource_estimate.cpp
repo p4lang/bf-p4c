@@ -6,6 +6,10 @@ constexpr int RangeEntries::MULTIRANGE_DISTRIBUTION_LIMIT;
 constexpr int RangeEntries::RANGE_ENTRY_PERCENTAGE;
 constexpr int StageUseEstimate::MAX_DLEFT_HASH_SIZE;
 
+constexpr int StageUseEstimate::MAX_MOD;
+constexpr int StageUseEstimate::MAX_POOL_RAMLINES;
+constexpr int StageUseEstimate::MAX_MOD_SHIFT;
+
 int CounterPerWord(const IR::MAU::Counter *ctr) {
     switch (ctr->type) {
     case IR::MAU::DataAggregation::PACKETS:
@@ -129,6 +133,60 @@ int IdleTimePerWord(const IR::MAU::IdleTime *idletime) {
         case 6:  return 1;
         default: BUG("%s: Invalid idletime precision %s", idletime->precision);
     }
+}
+
+/**
+ * Refer to the comments above the allocate_selector_length function in table_format.cpp
+ */
+int SelectorRAMLines(const IR::MAU::Selector *sel) {
+    return (sel->max_pool_size + StageUseEstimate::SINGLE_RAMLINE_POOL_SIZE - 1)
+            / StageUseEstimate::SINGLE_RAMLINE_POOL_SIZE;
+}
+
+int SelectorModBits(const IR::MAU::Selector *sel) {
+    int RAM_lines_necessary = SelectorRAMLines(sel);
+    if (RAM_lines_necessary <= StageUseEstimate::MAX_MOD) {
+        return ceil_log2(RAM_lines_necessary);
+    }
+    return ceil_log2(StageUseEstimate::MAX_MOD);
+}
+
+int SelectorShiftBits(const IR::MAU::Selector *sel) {
+    int RAM_lines_necessary = SelectorRAMLines(sel);
+    if (RAM_lines_necessary > StageUseEstimate::MAX_POOL_RAMLINES) {
+        error("%s: The max pools size %d of selector %s requires %d RAM lines, more than maximum "
+              "%d RAM lines possibly on Barefoot hardware", sel->srcInfo, sel->max_pool_size,
+              sel->name, RAM_lines_necessary, StageUseEstimate::MAX_POOL_RAMLINES);
+    }
+
+    int rv = 0;
+    if (RAM_lines_necessary <= StageUseEstimate::MAX_MOD)
+        return rv;
+
+    rv = ceil_log2(RAM_lines_necessary) - StageUseEstimate::MAX_MOD_SHIFT;
+
+    if (ceil_log2(RAM_lines_necessary) == floor_log2(RAM_lines_necessary))
+        rv += 1;
+
+    rv = std::max(StageUseEstimate::MAX_MOD_SHIFT, rv);
+    return rv;
+}
+
+int SelectorHashModBits(const IR::MAU::Selector *sel) {
+    int RAM_lines_necessary = SelectorRAMLines(sel);
+    if (RAM_lines_necessary == 1) {
+        return 0;
+    }
+    return SelectorShiftBits(sel) + StageUseEstimate::MOD_INPUT_BITS;
+}
+
+int SelectorLengthShiftBits(const IR::MAU::Selector *sel) {
+    int sel_shift = SelectorShiftBits(sel);
+    return sel_shift == 0 ? 0 : ceil_log2(sel_shift);
+}
+
+int SelectorLengthBits(const IR::MAU::Selector *sel) {
+    return SelectorModBits(sel) + SelectorLengthShiftBits(sel);
 }
 
 bool StageUseEstimate::ways_provided(const IR::MAU::Table *tbl, LayoutOption *lo,

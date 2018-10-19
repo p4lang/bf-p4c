@@ -2,6 +2,7 @@
 #define EXTENSIONS_BF_P4C_MAU_HANDLE_ASSIGN_H_
 
 #include "bf-p4c/mau/mau_visitor.h"
+#include "bf-p4c/phv/phv_fields.h"
 
 /**
  * The purpose of this pass is to assign the action handle for the context JSON node
@@ -13,6 +14,8 @@
  * same action, (at least the same action name and parameters)  
  */
 class AssignActionHandle : public PassManager {
+    const PhvInfo &phv;
+
     class ActionProfileImposedConstraints : public MauInspector {
         ordered_map<const IR::MAU::ActionData *, std::set<cstring>> profile_actions;
         bool preorder(const IR::MAU::ActionData *) override;
@@ -51,9 +54,23 @@ class AssignActionHandle : public PassManager {
         explicit AssignHandle(const AssignActionHandle &aah) : self(aah) { }
     };
 
+    class ValidateSelectors : public MauInspector {
+        ordered_map<const IR::MAU::Selector *, std::vector<PHV::FieldSlice>> selector_keys;
+        ordered_map<const IR::MAU::Selector *, const IR::MAU::Table *> initial_table;
+        const PhvInfo &phv;
+
+        profile_t init_apply(const IR::Node *root) override;
+        bool preorder(const IR::MAU::Selector *sel) override;
+
+     public:
+        explicit ValidateSelectors(const PhvInfo &phv) : phv(phv) { visitDagOnce = false; }
+    };
+
  public:
-    AssignActionHandle() {
+    explicit AssignActionHandle(const PhvInfo &phv)
+            : phv(phv) {
         addPasses({
+            new ValidateSelectors(phv),
             new ActionProfileImposedConstraints,
             new DetermineHandle(*this),
             new AssignHandle(*this)

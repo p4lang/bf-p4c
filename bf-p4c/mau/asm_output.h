@@ -128,6 +128,7 @@ class MauAsmOutput : public MauInspector {
     std::string stateful_counter_addr(IR::MAU::StatefulUse use) const;
     std::string build_call(const IR::MAU::AttachedMemory *at_mem,
         const IR::MAU::BackendAttached *ba, const IR::MAU::Table *tbl) const;
+    std::string build_sel_len_call(const IR::MAU::Selector *as) const;
     class EmitAction;
     class EmitAttached;
     class UnattachedName;

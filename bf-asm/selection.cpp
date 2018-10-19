@@ -155,6 +155,90 @@ template<class REGS> void SelectionTable::write_merge_regs(REGS &regs, MatchTabl
     merge.mau_meter_adr_per_entry_en_mux_ctl[type][bus] = per_entry_en_mux_ctl;
     merge.mau_meter_adr_type_position[type][bus] = meter_type_position;
 }
+
+/**
+ * This validates the call as the value to the selection_length key.  The call requires
+ * two arguments:
+ *
+ *     1. A selector length mod argument
+ *     2. A selector length shift argument
+ *
+ * This is formatted in the following way:
+ *     (msb_side) {shift, mod} (lsb_side)
+ *
+ * These can come from match overhead, or can come from $DEFAULT
+ *
+ * In actuality, both of these arguments are extracted by the same extractor, and they must
+ * be contiguous to each other.  The reason for the separation is that the driver requires
+ * them to be separated in the pack format.
+ */
+bool SelectionTable::validate_length_call(const Table::Call &call) {
+    if (call.args.size() != 2) {
+        error(call.lineno, "The selector length call for %s requires two arguments", name());
+        return false;
+    }
+
+    if (call.args[0].name()) {
+        if (call.args[0] != "$DEFAULT") {
+            error(call.lineno, "Index %s for %s length cannot be found", call.args[0].name(),
+                  name());
+            return false;
+        }
+    } else if (!call.args[0].field()) {
+        error(call.lineno, "Index for %s length cannot be understood", name());
+        return false;
+    }
+
+    if (call.args[1].name()) {
+        if (call.args[1] != "$DEFAULT") {
+            error(call.lineno, "Index %s for %s length cannot be found", call.args[0].name(),
+                  name());
+            return false;
+        }
+    } else if (!call.args[1].field()) {
+        error(call.lineno, "Index for %s length cannot be understood", name());
+        return false;
+    }
+
+    
+    if (call.args[0].field() && call.args[1].field()) {
+        auto mod = call.args[0].field();
+        auto shift = call.args[1].field();
+
+        if (mod->bit(0) + mod->size !=  shift->bit(0)) {
+            error(call.lineno, "Indexes for %s must be contiguous on the format", name());
+            return false;
+        }
+    }
+    return true;
+}
+
+unsigned SelectionTable::determine_length_shiftcount(const Table::Call &call, int group,
+        int word) const {
+    if (auto f = call.args[0].field()) {
+        BUG_CHECK(f->by_group[group]->bit(0)/128 == word && group == 0); 
+        BUG_CHECK(f->by_group[group]->bit(0)%128 <= 8);
+        return f->by_group[group]->bit(0)%128U; 
+    }
+    return 0;
+}
+
+unsigned SelectionTable::determine_length_mask(const Table::Call &call) const {
+    unsigned rv = 0;
+    if (auto f = call.args[0].field())
+        rv |= ((1U << f->size) - 1);
+    if (auto f = call.args[1].field())
+        rv |= ((1U << f->size) - 1) << SELECTOR_LENGTH_MOD_BITS;
+    return rv;
+}
+
+unsigned SelectionTable::determine_length_default(const Table::Call &call) const {
+    unsigned rv = 0;
+    if (call.args[0].name() && strcmp(call.args[0].name(), "$DIRECT") == 0)
+        rv = 1;
+    return rv;
+}
+
 template<> void SelectionTable::setup_physical_alu_map(Target::Tofino::mau_regs &regs,
                                                        int type, int bus, int alu) {
     auto &merge = regs.rams.match.merge;

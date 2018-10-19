@@ -5,6 +5,7 @@
 #include "bf-p4c/mau/input_xbar.h"
 #include "bf-p4c/mau/memories.h"
 #include "bf-p4c/mau/resource.h"
+#include "bf-p4c/mau/resource_estimate.h"
 #include "bf-p4c/mau/table_format.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "lib/bitops.h"
@@ -415,8 +416,16 @@ void TableLayout::setup_exact_match(IR::MAU::Table *tbl, int action_data_bytes_i
         }
     }
 
+    if (pack_val > 0 && tbl->layout.sel_len_bits > 0 && pack_val != 1) {
+        ::error("%s: Table %s has a pack %d provided, but also uses a wide selector, which "
+                "requires a pack of 1", tbl->srcInfo, tbl->name, pack_val);
+        return;
+    }
+
     for (int entry_count = MIN_PACK; entry_count <= MAX_PACK; entry_count++) {
         if (pack_val > 0 && entry_count != pack_val)
+            continue;
+        if (entry_count != 1 && tbl->layout.sel_len_bits > 0)
             continue;
 
         int single_overhead_bits = immediate_bits + tbl->layout.overhead_bits;
@@ -493,6 +502,11 @@ void TableLayout::setup_layout_options(IR::MAU::Table *tbl) {
                           use.immediate_bits(), index);
         index++;
     }
+
+    bool possible_pack_formats = lc.total_layout_options.size();
+    LOG2("Total number of layout options " << possible_pack_formats);
+    ERROR_CHECK(possible_pack_formats > 0, "The table %s cannot find a valid packing, and "
+                "cannot be placed", tbl->name);
 }
 
 /** Checks to see if the table has a hash distribution access somewhere */
@@ -716,6 +730,11 @@ class VisitAttached : public Inspector {
     }
     bool preorder(const IR::MAU::Selector *as) override {
         free_address(as, layout.meter_addr, METER);
+        int sel_len = SelectorLengthBits(as);
+        if (sel_len > 0) {
+            layout.overhead_bits += sel_len;
+            layout.sel_len_bits = sel_len;
+        }
         return false;
     }
     bool preorder(const IR::MAU::TernaryIndirect *) override {
@@ -864,6 +883,26 @@ bool TableLayout::preorder(IR::MAU::InputXBarRead *read) {
         if (readInfo && indexInfo && readInfo->name == indexInfo->name)
             read->partition_index = true;
     }
+    return false;
+}
+
+bool TableLayout::preorder(IR::MAU::Selector *sel) {
+    auto tbl = findContext<IR::MAU::Table>();
+    if (SelectorLengthBits(sel) <= 0) {
+        return false;
+    }
+
+    IR::Vector<IR::Expression> components;
+    IR::ListExpression *field_list = new IR::ListExpression(components);
+    for (auto ixbar_read : tbl->match_key) {
+        if (!ixbar_read->for_selection())
+            continue;
+        field_list->push_back(ixbar_read->expr);
+    }
+    auto *hd = new IR::MAU::HashDist(sel->srcInfo, IR::Type::Bits::get(SelectorHashModBits(sel)),
+                                     field_list, sel->algorithm, nullptr);
+    hd->bit_width = SelectorHashModBits(sel);
+    sel->hash_mod = hd;
     return false;
 }
 

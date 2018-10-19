@@ -569,7 +569,7 @@ struct IXBar {
         bool preorder(const IR::MAU::TableSeq *) override { return false; }
 
         void hash_dist_allocation(const IR::MAU::HashDist *hd, IXBar::Use::hash_dist_type_t hdt,
-                int bits_required, const IR::Node *rel_node);
+                int bits_required, int p4_hash_bit, const IR::Node *rel_node);
 
      public:
         void hash_action(const IR::MAU::Table *tbl);
@@ -585,6 +585,23 @@ struct IXBar {
         bool partition = false;
         int range_index = 0;
         KeyInfo() { }
+    };
+
+    struct HashDistAllocParams {
+        bitvec used_hash_dist_slices;
+        bitvec used_hash_dist_bits;
+
+        bitvec slice;
+        bitvec bit_mask;
+        std::map<int, le_bitrange> bit_starts;
+
+        void clear() {
+            used_hash_dist_slices.clear();
+            used_hash_dist_bits.clear();
+            slice.clear();
+            bit_mask.clear();
+            bit_starts.clear();
+        }
     };
 
 
@@ -614,7 +631,7 @@ struct IXBar {
                     Use &alloc, bool on_search_bus);
     bool allocHashDist(const IR::MAU::HashDist *hd, IXBar::Use::hash_dist_type_t hdt,
                        const PhvInfo &phv, const ActionFormat::Use *af, IXBar::Use &alloc,
-                       bool second_try, int bits_required, cstring name);
+                       bool second_try, int bits_required, int p4_hash_bit, cstring name);
     bool allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResourceAlloc &alloc,
                     const LayoutOption *lo, const ActionFormat::Use *af);
     void update(cstring name, const Use &alloc);
@@ -703,15 +720,14 @@ struct IXBar {
         unsigned &byte_mask);
     bool setup_stateful_hash_bus(const IR::MAU::StatefulAlu *salu, Use &alloc, bool dleft,
         ordered_set<std::pair<const PHV::Field *, le_bitrange>> &phv_sources);
-    bool allocHashDistAddress(int bits_required, const bitvec used_hash_dist_groups,
-        const bitvec used_hash_dist_bits, const unsigned &hash_table_input, bitvec &slice,
-        bitvec &bit_mask, std::map<int, le_bitrange> &bit_starts, cstring name);
+    bool allocHashDistAddress(int bits_required, const unsigned &hash_table_input,
+        HashDistAllocParams &hdap, cstring name);
     bool allocHashDistImmediate(const IR::MAU::HashDist *hd, const ActionFormat::Use *af,
-        const bitvec used_hash_dist_slices, const unsigned &hash_table_input, bitvec &slice,
-        bitvec &bit_mask, std::map<int, le_bitrange> &bit_starts, cstring name);
-    bool allocHashDistPreColor(const bitvec used_hash_dist_slices,
-        const bitvec used_hash_dist_bits, const unsigned &hash_table_input, bitvec &slice,
-        bitvec &bit_mask, std::map<int, le_bitrange> &bit_starts, cstring name);
+        const unsigned &hash_table_input, HashDistAllocParams &hdap, cstring name);
+    bool allocHashDistPreColor(const unsigned &hash_table_input, HashDistAllocParams &hdap,
+        cstring name);
+    bool allocHashDistSelMod(int bits_required, const unsigned &hash_table_input,
+        HashDistAllocParams &hdap, int p4_hash_bits, cstring name);
     bitvec determine_final_xor(const IR::MAU::hash_function *hf,
         std::map<int, le_bitrange> &bit_starts);
 };

@@ -1128,6 +1128,10 @@ cstring format_name(int type) {
         return "meter_type";
     if (type == TableFormat::INDIRECT_ACTION)
         return "action_addr";
+    if (type == TableFormat::SEL_LEN_MOD)
+        return "sel_len_mod";
+    if (type == TableFormat::SEL_LEN_SHIFT)
+        return "sel_len_shift";
     return "";
 }
 
@@ -1242,7 +1246,7 @@ void MauAsmOutput::emit_table_format(std::ostream &out, indent_t indent,
         int type;
         safe_vector<std::pair<int, int>> bits;
         // For table objects that are not match
-        for (type = TableFormat::NEXT; type <= TableFormat::INDIRECT_ACTION; type++) {
+        for (type = TableFormat::NEXT; type < TableFormat::ENTRY_TYPES; type++) {
             if (match_group.mask[type].popcount() == 0) continue;
             if (type == TableFormat::VERS && gateway) continue;  // no v/v in gw payload
             bits.clear();
@@ -2501,6 +2505,24 @@ std::string MauAsmOutput::build_call(const IR::MAU::AttachedMemory *at_mem,
     return rv + ")";
 }
 
+/**
+ * The call for the assembler to determine the selector length
+ */
+std::string MauAsmOutput::build_sel_len_call(const IR::MAU::Selector *sel) const {
+    std::string rv = "(";
+    if (SelectorModBits(sel) > 0)
+        rv += "sel_len_mod";
+    else
+        rv += "$DEFAULT";
+
+    rv += ", ";
+    if (SelectorLengthShiftBits(sel) > 0)
+        rv += "sel_len_shift";
+    else
+        rv += "$DEFAULT";
+    return rv + ")";
+}
+
 cstring MauAsmOutput::find_attached_name(const IR::MAU::Table *tbl,
         const IR::MAU::AttachedMemory *at) const {
     auto unique_id = tbl->unique_id();
@@ -2528,6 +2550,11 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
         out << find_attached_name(tbl, at_mem);
         out << build_call(at_mem, back_at, tbl);
         out << std::endl;
+        auto as = at_mem->to<IR::MAU::Selector>();
+        if (as != nullptr) {
+            out << indent <<  "selector_length: " << find_attached_name(tbl, at_mem);
+            out << build_sel_len_call(as) << std::endl;
+        }
     }
 
 
@@ -2767,7 +2794,19 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Selector *as) {
     // FIXME: Currently outputting default values for now, these must be brought through
     // either the tofino native definitions or pragmas
     out << indent << "non_linear: true" << std::endl;
-    out << indent << "pool_sizes: [" << as->group_size << "]" << std::endl;
+    out << indent << "pool_sizes: [" << as->max_pool_size << "]" << std::endl;
+    if (as->hash_mod) {
+        safe_vector<IXBar::HashDistUse> sel_hash_dist;
+        bool found = false;
+        for (auto hash_dist_use : tbl->resources->hash_dists) {
+            if (as->hash_mod == hash_dist_use.original_hd) {
+                sel_hash_dist.push_back(hash_dist_use);
+                found = true;
+            }
+        }
+        BUG_CHECK(found, "Could not find hash distribution unit in linkup for hash mod");
+        self.emit_hash_dist(out, indent, &sel_hash_dist);
+    }
     return false;
 }
 

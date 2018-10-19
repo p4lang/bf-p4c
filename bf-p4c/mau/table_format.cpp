@@ -358,6 +358,9 @@ bool TableFormat::allocate_overhead() {
     if (!allocate_next_table())
         return false;
     LOG3("Next Table");
+    if (!allocate_selector_length())
+        return false;
+    LOG3("Selector Length");
     if (!allocate_all_instr_selection())
         return false;
     LOG3("Instruction Selection");
@@ -435,6 +438,169 @@ bool TableFormat::allocate_next_table() {
             bitvec ptr_mask(start, next_table_bits);
             use->match_groups[group].mask[NEXT] |= ptr_mask;
             total_use |= ptr_mask;
+            group++;
+        }
+    }
+    return true;
+}
+
+/**
+ * Data-Plane selection works in the following way.
+ *
+ * Rather than a standard one-to-one mapping between match and action data, a single match entry
+ * can have many possible action data entries, and must select one of these entries at runtime.
+ * This we will refer to as a pool of action data entries.  Some entries in the pool may
+ * be valid, while other may not be.
+ *
+ * Selection is the process of picking one of these possible action data entries.  The selector
+ * holds a pool of single-bit entries, indicate whether that index of the pool is valid or invalid.
+ * The input to a selector is a hash calculated from associated PHV fields and constants
+ * and the value of this hash will indicate which of these valid entries to choose from.
+ *
+ * The action data pool has a base address at the beginning of the pool.  The valid index from the
+ * selector pool, chosen by the hash, will be the offset into the pool of action data table entries.
+ * This index from the selector is mathematically added to the base address in order to find the
+ * location in the action data pool that the selector has chosen.
+ *
+ * Tofino selectors are broken into two sections, the selector ALU and the selector RAM.  The
+ * RAM is a pool, with 120 members per RAM line.  The selector ALU takes in as input, a hash
+ * from the input xbar as well as a selector RAM line, and will return the index of that RAM line.
+ * 120 bits of pool require a 7-bit all 0 section of action data address in which the selector
+ * address will OR into.  If the pool size is smaller, say 64 possible members, the selector
+ * offset itself will only be 6-bits wide and thus require a 6-bit place to OR the offset into
+ *
+ * This works if the pool size is at most 120 entries.  If a pool size > 120 entries, then a
+ * single RAM line will not suffice.  Thus, there is a second portion that requires a RAM line
+ * select.  A second hash is used to determine an individual RAM line out of the possible
+ * multiple RAM lines, and this selected RAM line is now considered the pool of 120 entries.
+ *
+ * The RAM line select works similar to action data address.  The selector pool has a base
+ * address, and the calculated RAM line is ORed into another all 0-bit section of that
+ * base address.  The number of 0s needed depends on the size of the pool.  This selector
+ * RAM line offset also has to be ORed into the action data address as well.
+ *
+ * Because the pool size can vary by entry, a selector length can be extracted from the entry.
+ * The length of the selector is then used as a max size of RAM lines coordinated as a single
+ * pool, and a RAM line is chosen between 0 and the max size of the number of RAM lines.
+ *
+ * The relevant sections in the uArch are:
+ *    - 6.2.8.4.7 - Selector RAM Addressing - The addresses that are generated for the selector
+ *      and the action address, with the bits ORed in depending on the address
+ *    - 6.2.10 - Selector Tables - Everything the compiler needs and then some on selectors.
+ *      For wide selectors, sections 6.2.10.4 Large Selector Pools and 6.2.10.5.5 The Hash
+ *      Word Selection Block are useful
+ *   - 6.4.3.5.3 - Hash Distribution - Details the pathway for the hash mod calculation  
+ */
+
+/**
+ * The selector length is the parameter used to determine the max size of the RAM lines in the
+ * pool.  From this max size, an individual RAM line is chosen.
+ *
+ * As described in section 6.2.10.5.5 The Hash Word Selection Block, the selector length field
+ * is an 8 bit field broken into two parts:
+ *
+ *    sel_len[4:0] = number of selector words
+ *    sel_len[7:5] = selector address shift
+ *
+ * The calculation is as follows.  The number of possible words ranges from 0-31, which is used
+ * the base of a mod operation.  The return of this mod can be shifted up to 5 times, and the bits
+ * to the right of the shift are filled in by hash bits.
+ *
+ * The selector pool is calculated as:
+ *
+ * RAM_line
+ *     = ((hash_value1 % (number_of_selector_words)) << selector_address_shift) | hash_value2
+ *
+ * where hash_value1 and hash_value2 come from the hash distribution as two portions of a 15 bit
+ * hash.  hash_value1 is from bits[9:0] as an input to the mod, and the hash_value2 comes
+ * from bits[14:10].  The number of bits used depends of the address shift, i.e.
+ *
+ *     if (selector_address_shift > 0)
+ *     hash_value2 = bits[selector_address_shift-1:0];
+ *
+ * Thus, if one was to calculate the max selector pool size, it would be the following:
+ *     - the max dividend of the mod is 31, meaning the max value of the mod calculation
+ *       would be 30
+ *     - the max shift is 5, and the thus the max hash_value2 = 2^5 - 1 = 31;
+ *     - thus the (max_mod << max_shift) | max hash_value2 = (30 << 5) | 31 = 991
+ *     - The pools range from 0-991, meaning a max pool size of 992.
+ *
+ * The oddity of this comes from the mod operation not being able to return a 31.  This is
+ * doubly strange, as a mod by 0 is an impossible operation, and is a return 0 by the hardware.
+ *
+ * This structure of this calculation also leads to holes in the possible pool sizes.  A pool
+ * size of 32 cannot be done by mod value only, as the mod value can at max go to 30 bits.
+ * Thus the way this is accomplished is that a mod value of 16 is provided and shifted up one
+ * bit leading to the RAM_line_index[4:1] range from 0-15 and RAM_line_index[0:0] = 0-1.
+ *
+ * However, with this limitation, one cannot come up a way for these bits to have a maximum pool
+ * size of 33, because the shifted bits on the bottom are always possible to be 0 or 1, and by
+ * guaranteeing a maximum, this requires the lower bit to always be 0.  Thus, one needs
+ * to move to the next largest pool.
+ *
+ * The address formats for the different sizes are described in section 6.2.8.4.7.  These
+ * indicate where the hash mod bits and hash shift bits are ORed into the addresses, both
+ * for the meter_adr for the selector, and the action_adr for the selectors action data table.
+ * It is the drivers responsiblity to write the RAM line addresses with 0s to be ORed into,
+ * in order for the addresses not to collide.
+ *
+ * The 5 bit mod value, if enabled by the hash_value, is always ORed into the address.  This
+ * works only if the driver has left space in the selector address and action address of all
+ * 0s.  The upper bits of the mod value may also always be known to be zero.  Thus, by using
+ * ORs on 0s, the full 5-bit mod can always be input in.
+ */
+
+/**
+ * The selector length is done through a single extractor through the standard shift mask
+ * default pathway.  However, the context JSON requires two fields for the selector length in
+ * the pack format, broken into selector_length_shift and selector_length.
+ *
+ * The choice was to keep the context JSON by having separate fields in the format even though
+ * both are extracted by the same extractor.
+ *
+ * The selector length is at most up to 8 bits, and because the mod operation is timing critical,
+ * the length must be at bit 15 or below.  The next table for entry 0 has to go between bits 0-7,
+ * so if the table needs both next table and selector length, then the selector length must be
+ * in bits 8-15.
+ *
+ * The selector length has only one extractor per overhead, which is different than all other
+ * address types, which have an extractor per entry.  Thus, the entries per RAM line of a table
+ * using a programmable selector length is at most 1.  (Possible corner case.  If all entries in
+ * an ATCAM partition want to use the same selector length, because they're all in the same RAM
+ * row, this constraint goes away).
+ */
+bool TableFormat::allocate_selector_length() {
+    const IR::MAU::Selector *sel = nullptr;
+    for (auto ba : tbl->attached) {
+        sel = ba->attached->to<IR::MAU::Selector>();
+        if (sel != nullptr)
+            break;
+    }
+    if (sel == nullptr)
+        return true;
+    int sel_len_mod_bits = SelectorModBits(sel);
+    int sel_len_shift_bits = SelectorLengthShiftBits(sel);
+    if (sel_len_mod_bits == 0 && sel_len_shift_bits == 0)
+        return true;
+    if (sel_len_shift_bits > 0)
+        BUG_CHECK(sel_len_mod_bits == ceil_log2(StageUseEstimate::MAX_MOD),
+                  "Errors in the selection mod calculation");
+    int group = 0;
+    for (size_t i = 0; i < overhead_groups_per_RAM.size(); i++) {
+        for (int j = 0; j < overhead_groups_per_RAM[i]; j++) {
+            size_t len_mod_start = total_use.ffz(i * SINGLE_RAM_BITS);
+            if (len_mod_start + sel_len_mod_bits >= SELECTOR_LENGTH_MAX_BIT + i * SINGLE_RAM_BITS)
+                return false;
+            bitvec mask(len_mod_start, sel_len_mod_bits);
+            use->match_groups[group].mask[SEL_LEN_MOD] |= mask;
+            total_use |= mask;
+
+            size_t shift_start = mask.max().index() + 1;
+            if (shift_start + sel_len_shift_bits >= SELECTOR_LENGTH_MAX_BIT + i * SINGLE_RAM_BITS)
+                return false;
+            bitvec shift_mask(shift_start, sel_len_shift_bits);
+            use->match_groups[group].mask[SEL_LEN_SHIFT] |= shift_mask;
+            total_use |= shift_mask;
             group++;
         }
     }

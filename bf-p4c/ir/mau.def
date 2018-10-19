@@ -127,6 +127,7 @@ class Table : BFN::Unit {
         int             pre_classifer_number_entries = 0;
         int             subtrees_per_partition = 0;
         int             total_actions = 0;
+        int             sel_len_bits = 0;
         Layout() { memset(this, 0, sizeof(*this)); }
         operator== { return memcmp(this, &a, sizeof(Layout)) == 0; }
         toJSON {
@@ -500,8 +501,9 @@ class Selector : AttachedMemory {
     hash_function algorithm = {};
     const char *kind() const override { return "selector"; }
     UniqueAttachedId::type_t get_id_type() const override { return UniqueAttachedId::SELECTOR; }
-    int num_groups = 0;
-    int group_size = 0;
+    int num_pools = 0;
+    int max_pool_size = 0;
+    NullOK HashDist hash_mod = nullptr;
 #nodbprint
 }
 

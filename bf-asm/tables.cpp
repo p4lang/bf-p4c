@@ -1993,6 +1993,10 @@ void Table::get_cjson_source(const std::string &field_name, std::string &source,
         else if (get_stateful())
             source = "stful_ptr";
         start_bit = METER_TYPE_START_BIT;
+    } else if (field_name == "sel_len_mod") {
+        source = "selection_length";
+    } else if (field_name == "sel_len_shift") {
+        source = "selection_length_shift";
     }
 }
 

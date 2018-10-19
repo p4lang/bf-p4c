@@ -811,6 +811,8 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
             /* parsed in common_init_setup */
         } else if (kv.key == "selector") {
             attached.selector.setup(kv.value, this);
+        } else if (kv.key == "selector_length") {
+            attached.selector_length.setup(kv.value, this);
         } else if (kv.key == "stats") {
             if (kv.value.type == tVEC)
                 for (auto &v : kv.value.vec)
@@ -937,19 +939,15 @@ template<class REGS> void TernaryIndirectTable::write_regs(REGS &regs) {
             }
         }
         if (attached.selector) {
-            merge.mau_selectorlength_default[1][bus] = 1;
-            // if (attached.selector.args.size() == 1)
-            /*
-            Selector length not yet handled by the compiler
-            else {
-                int width = attached.selector.args[1].size();
-                if (attached.selector.args.size() == 3)
-                    width += attached.selector.args[2].size();
-                merge.mau_selectorlength_mask[1][bus] = (1 << width) - 1;
-            }
-            */
+            auto sel = get_selector();
             merge.mau_meter_adr_tcam_shiftcount[bus] =
-                get_selector()->determine_shiftcount(attached.selector, 0, 0, format->log2size - 2);
+                sel->determine_shiftcount(attached.selector, 0, 0, format->log2size - 2);
+            merge.mau_selectorlength_shiftcount[1][bus] =
+                sel->determine_length_shiftcount(attached.selector_length, 0, 0);
+            merge.mau_selectorlength_mask[1][bus] =
+                sel->determine_length_mask(attached.selector_length);
+            merge.mau_selectorlength_default[1][bus] =
+                sel->determine_length_default(attached.selector_length);
         }
         if (match_table->idletime)
             merge.mau_idletime_adr_tcam_shiftcount[bus] =

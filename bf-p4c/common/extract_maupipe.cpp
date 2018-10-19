@@ -15,6 +15,7 @@
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/mau/stateful_alu.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
+#include "bf-p4c/mau/resource_estimate.h"
 #include "bf-p4c/parde/checksum.h"
 #include "bf-p4c/parde/extract_parser.h"
 #include "bf-p4c/parde/mirror.h"
@@ -350,10 +351,47 @@ cstring getTypeName(const IR::Type* type) {
     return tname;
 }
 
+/**
+  * Checks if there is an annotation of the provided name attached to the match
+  * table.  If so, return its integer value.  Since there is no existing
+  * use case for a negative annotation value, return negative error code if it does not exist.
+  * This function should only be called when there can be a single annotation
+  * of the provided name.
+  *
+  * return codes:
+  *    -1 - table doesn't have annotation
+  *    -2 - the annotation isn't a constant
+  *    -3 - the annotation is not positive
+  */
+static int getSingleAnnotationValue(const cstring name, const IR::MAU::Table *table) {
+    if  (table->match_table) {
+        auto annot = table->match_table->getAnnotations();
+        if (auto s = annot->getSingle(name)) {
+            ERROR_CHECK(s->expr.size() >= 1, "%s: The %s pragma on table %s "
+                        "does not have a value", name, table->srcInfo, table->name);
+            auto pragma_val =  s->expr.at(0)->to<IR::Constant>();
+            if (pragma_val == nullptr) {
+                ::error("%s: The %s pragma value on table %s is not a constant",
+                        name, table->srcInfo, table->name);
+                return -2;
+            }
+            int value = pragma_val->asInt();
+            if (value < 0) {
+                ::error("%s: The %s pragma value on table %s cannot be less than zero.",
+                        name, table->srcInfo, table->name);
+                return -3;
+            }
+            return value;
+        }
+    }
+    return -1;
+}
+
 static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
         cstring name, const IR::Type *type, const IR::Vector<IR::Argument> *args,
         const IR::Annotations *annot, const P4::ReferenceMap *refMap,
-        const IR::MAU::AttachedMemory **created_ap = nullptr) {
+        const IR::MAU::AttachedMemory **created_ap = nullptr,
+        const IR::MAU::Table *match_table = nullptr) {
     auto baseType = getBaseType(type);
     auto tname = getTypeName(baseType);
 
@@ -365,9 +403,42 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
             sel->mode = IR::ID("resilient");
         }
 
-        sel->num_groups = 4;
-        sel->group_size = 120;
-        sel->size = (sel->group_size + 119) / 120 * sel->num_groups;
+        // default values
+        int num_groups = StageUseEstimate::COMPILER_DEFAULT_SELECTOR_POOLS;
+        int max_group_size = StageUseEstimate::SINGLE_RAMLINE_POOL_SIZE;
+
+        // Check match table for selector pragmas that specify selector properties.
+        // P4-14 legacy reasons put these pragmas on the match table rather than
+        // the action selector object.
+        if (match_table) {
+            // Check for max group size pragma.
+            int pragma_max_group_size = getSingleAnnotationValue("selector_max_group_size",
+                                                                 match_table);
+            if (pragma_max_group_size != -1) {
+                max_group_size = pragma_max_group_size;
+                // max ram words is 992, max members per word is 120
+                if (max_group_size < 1 || max_group_size > (992*120)) {
+                    ::error("%s: The selector_max_group_size pragma value on table %s is "
+                            "not between %d and %d.", match_table->srcInfo,
+                            match_table->name, 1, 992*120);
+                }
+            }
+            // Check for number of max groups pragma.
+            int pragma_num_max_groups = getSingleAnnotationValue("selector_num_max_groups",
+                                                                 match_table);
+            if (pragma_num_max_groups != -1) {
+                num_groups = pragma_num_max_groups;
+                if (num_groups < 1) {
+                    ::error("%s: The selector_num_max_groups pragma value on table %s is "
+                            "not greater than or equal to 1.", match_table->srcInfo,
+                             match_table->name);
+                }
+            }
+        }
+
+        sel->num_pools = num_groups;
+        sel->max_pool_size = max_group_size;
+        sel->size = (sel->max_pool_size + 119) / 120 * sel->num_pools;
         BUG_CHECK(args->size() == 3, "%s Selector does not have the correct number of arguments",
                   sel->srcInfo);
         auto path = args->at(1)->expression->to<IR::PathExpression>()->path;
@@ -483,7 +554,7 @@ class FixP4Table : public Inspector {
                 unique_names.insert(tname);
                 obj = createAttached(cc->srcInfo, prop->externalName(tname),
                                      baseType, cc->arguments, prop->annotations,
-                                     refMap, &side_obj);
+                                     refMap, &side_obj, tt);
             } else if (auto pe = pval->to<IR::PathExpression>()) {
                 auto &d = refMap->getDeclaration(pe->path, true)->as<IR::Declaration_Instance>();
                 // The algorithm saves action selectors in the large map, rather than the action
@@ -492,7 +563,7 @@ class FixP4Table : public Inspector {
                 if (converted.count(&d) == 0) {
                     LOG3("Create attached " << d.externalName());
                     obj = createAttached(d.srcInfo, d.externalName(), d.type,
-                                         d.arguments, d.annotations, refMap, &side_obj);
+                                         d.arguments, d.annotations, refMap, &side_obj, tt);
                     converted[&d] = obj;
                     if (side_obj)
                         assoc_profiles[&d] = side_obj;
@@ -730,7 +801,7 @@ void AttachTables::DefineGlobalRefs::postorder(IR::GlobalRef *gref) {
             gref->obj = obj;
         } else if (auto att = createAttached(di->srcInfo, di->externalName(),
                                              di->type, di->arguments, di->annotations,
-                                             refMap, nullptr)) {
+                                             refMap, nullptr, nullptr)) {
             LOG3("Created " << att->node_type_name() << ' ' << att->name << " (pt 3)");
             gref->obj = self.converted[di] = att;
             obj = att;

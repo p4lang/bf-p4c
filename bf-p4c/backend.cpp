@@ -117,7 +117,7 @@ class TableAllocPass : public Logging::PassManager {
             addPasses({
                 new GatewayOpt(phv),   // must be before TableLayout?  or just TablePlacement?
                 new TableLayout(phv, lc),
-                new AssignActionHandle,
+                new AssignActionHandle(phv),
                 new TableFindSeqDependencies,
                 new FindDependencyGraph(phv, deps),
                 new SpreadGatewayAcrossSeq,

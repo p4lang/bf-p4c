@@ -670,17 +670,7 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
                     = adt->determine_vpn_shiftcount(action);
             }
         }
-        if (attached.selector) {
-            merge.mau_selectorlength_default[0][bus] = 1;
-            /* FIXME: The compiler currently doesn't handle selector length
-            if (attached.selector.args.size() == 1)
-            else {
-                int width = attached.selector.args[1].size();
-                if (attached.selector.args.size() == 3)
-                    width += attached.selector.args[2].size();
-                merge.mau_selectorlength_mask[0][bus] = (1 << width) - 1; } }
-            */
-        }
+
         for (unsigned word_group = 0; format && word_group < word_info[word].size(); word_group++) {
             int group = word_info[word][word_group];
             if (group_info[group].overhead_word == (int)word) {
@@ -710,9 +700,17 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
             }
             if (attached.selector) {
                 if (group_info[group].overhead_word == (int)word) {
+                    auto sel = get_selector();
                     merge.mau_meter_adr_exact_shiftcount[bus][word_group] =
-                        get_selector()->determine_shiftcount(attached.selector, group, word, 0);
+                        sel->determine_shiftcount(attached.selector, group, word, 0);
+                    merge.mau_selectorlength_shiftcount[0][bus] =
+                        sel->determine_length_shiftcount(attached.selector_length, group, word); 
+                    merge.mau_selectorlength_mask[0][bus] =
+                        sel->determine_length_mask(attached.selector_length);
+                    merge.mau_selectorlength_default[0][bus] =
+                        sel->determine_length_default(attached.selector_length);
                 }
+               
             }
             if (idletime)
                 merge.mau_idletime_adr_exact_shiftcount[bus][word_group] =

@@ -44,9 +44,11 @@ struct TableFormat {
     static constexpr int FULL_NEXT_TABLE_BITS = 8;
     static constexpr int NEXT_MAP_TABLE_ENTRIES = 8;
     static constexpr int IMEM_MAP_TABLE_ENTRIES = 8;
+    // MSB bit of the selector length
+    static constexpr int SELECTOR_LENGTH_MAX_BIT = 16;
 
     enum type_t { MATCH, NEXT, ACTION, IMMEDIATE, VERS, COUNTER, COUNTER_PFE, METER, METER_PFE,
-                  METER_TYPE, INDIRECT_ACTION, ENTRY_TYPES };
+                  METER_TYPE, INDIRECT_ACTION, SEL_LEN_MOD, SEL_LEN_SHIFT, ENTRY_TYPES };
 
 
     struct Use {
@@ -202,6 +204,7 @@ struct TableFormat {
 
     int hit_actions();
     bool allocate_next_table();
+    bool allocate_selector_length();
     bool allocate_indirect_ptr(int total, type_t type, int group, int RAM);
 
     void find_bytes_to_allocate(int width_sect, safe_vector<ByteInfo> &unalloced);

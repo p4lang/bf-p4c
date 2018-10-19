@@ -1,4 +1,5 @@
-#include "handle_assign.h"
+#include "bf-p4c/mau/handle_assign.h"
+#include "lib/safe_vector.h"
 
 
 bool AssignActionHandle::ActionProfileImposedConstraints::preorder(const IR::MAU::ActionData *ad) {
@@ -81,5 +82,52 @@ bool AssignActionHandle::DetermineHandle::preorder(const IR::MAU::Action *act) {
 bool AssignActionHandle::AssignHandle::preorder(IR::MAU::Action *act) {
     auto orig_act = getOriginal()->to<IR::MAU::Action>();
     act->handle = self.handle_assignments.at(orig_act);
+    return false;
+}
+
+Visitor::profile_t AssignActionHandle::ValidateSelectors::init_apply(const IR::Node *root) {
+    profile_t rv = MauInspector::init_apply(root);
+    selector_keys.clear();
+    initial_table.clear();
+    return rv;
+}
+
+bool AssignActionHandle::ValidateSelectors::preorder(const IR::MAU::Selector *sel) {
+    if (findContext<IR::MAU::StatefulAlu>())
+        return false;
+    auto tbl = findContext<IR::MAU::Table>();
+    safe_vector<PHV::FieldSlice> field_slice_vec;
+
+    for (auto ixbar_read : tbl->match_key) {
+        le_bitrange field_bits = {0, 0};
+        if (!ixbar_read->for_selection())
+            continue;
+        auto *field = phv.field(ixbar_read->expr, &field_bits);
+        if (field == nullptr) {
+            ::error("%s: Can currently only handle PHV fields on selection only, and selector "
+                    "%s has a non-field key on table %s", sel->srcInfo, sel->name, tbl->name);
+            return false;
+        }
+        field_slice_vec.emplace_back(field, field_bits);
+    }
+
+    if (field_slice_vec.empty()) {
+        ::error("%s: On Table %s, the Selector %s is provided no keys", sel->srcInfo, tbl->name,
+                sel->name);
+        return false;
+    }
+
+    auto sel_entry = selector_keys.find(sel);
+    if (sel_entry == selector_keys.end()) {
+        selector_keys[sel] = field_slice_vec;
+        initial_table[sel] = tbl;
+    } else {
+        auto sel_slice_vec = sel_entry->second;
+        if (sel_slice_vec != field_slice_vec) {
+            ::error("%s: The key for selector %s on table %s does not match the key for the "
+                    "selector on table %s.  Barefoot requires the selector key to be identical "
+                    "per selector", sel->srcInfo, sel->name, tbl->name, initial_table.at(sel));
+        }
+    }
     return false;
 }

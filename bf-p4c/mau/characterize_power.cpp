@@ -227,7 +227,7 @@ bool CharacterizePower::preorder(const IR::MAU::Counter *c) {
 bool CharacterizePower::preorder(const IR::MAU::Selector *sel) {
     auto tbl = findContext<IR::MAU::Table>();
     auto uniq_id = tbl->unique_id(sel);
-    selector_group_size_.emplace(uniq_id, sel->group_size);
+    selector_group_size_.emplace(uniq_id, sel->max_pool_size);
     return true;
 }
 

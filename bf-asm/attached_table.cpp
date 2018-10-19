@@ -354,6 +354,13 @@ void AttachedTables::pass0(MatchTable *self) {
 void AttachedTables::pass1(MatchTable *self) {
     if (selector) {
         selector->validate_call(selector, self, 3, HashDistribution::METER_ADDRESS, selector);
+        if (selector_length && selector_length->name() == selector->name()) {
+            selector_length->to<SelectionTable>()->validate_length_call(selector_length);
+        } else {
+            error(selector.lineno, "Must provide selector length information when a selector "
+                                   "is called");
+        }
+        
     }
     for (auto &s : stats) {
         if (s) {
