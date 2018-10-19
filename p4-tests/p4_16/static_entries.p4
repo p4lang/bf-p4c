@@ -109,12 +109,15 @@ control SwitchIngress(
     }
 
     table forward {
-        key = { hdr.ethernet.ether_type : exact; }
+        key = { 
+            hdr.ethernet.ether_type : exact; 
+            hdr.ethernet.isValid()  : exact;
+        }
         actions = { set_port_and_smac; }
         const default_action = set_port_and_smac(32w0x1);
         const entries = {
-            ETHERTYPE_IPV4 : set_port_and_smac(32w0x2);
-            ETHERTYPE_IPV6 : set_port_and_smac(32w0x3);
+            (ETHERTYPE_IPV4, true) : set_port_and_smac(32w0x2);
+            (ETHERTYPE_IPV6, true) : set_port_and_smac(32w0x3);
         }
     }
 

@@ -2130,6 +2130,29 @@ void MauAsmOutput::emit_static_entries(std::ostream &out, indent_t indent,
             bitvec match_key_mask(0, match_key_size);
             bool bignum_err = false;
             auto match_key_name = phv.field(match_key->expr)->externalName();
+            // Use annotation names if present
+            if (auto ann = match_key->getAnnotation(IR::Annotation::nameAnnotation)) {
+                auto annName = IR::Annotation::getName(ann);
+                // Remove slicing info if present
+                std::string s(annName.c_str());
+                std::smatch sm;
+                std::regex sliceRegex(R"(\[([0-9]+):([0-9]+)\])");
+                std::regex_search(s, sm, sliceRegex);
+                if (sm.size() == 3) {
+                    annName = s.substr(0, sm.position(0));
+                }
+                match_key_name = annName;
+            }
+            // Remove trailing $valid's. These are removed from match_key_fields
+            // by the assembler and since this output goes directly in the
+            // context.json we should remove them here.
+            std::vector<cstring> trails = { ".$valid", ".$valid$" };
+            for (auto t : trails) {
+                if (match_key_name.endsWith(t)) {
+                    match_key_name = match_key_name.replace(t, "");
+                    break;
+                }
+            }
             out << indent++ << "- field_name: " << canon_name(match_key_name) << std::endl;
             if (auto b = key->to<IR::BoolLiteral>()) {
                 out << indent << "value: " << (b->value ? 1 : 0) << std::endl;
