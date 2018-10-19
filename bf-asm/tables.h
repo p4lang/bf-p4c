@@ -852,6 +852,9 @@ public:
         }
         return false;
     }
+    SelectionTable *get_selector() const override { return attached.get_selector(); }
+    StatefulTable *get_stateful() const override { return attached.get_stateful(); }
+    MeterTable* get_meter() const override { return attached.get_meter(); }
 )
 
 DECLARE_TABLE_TYPE(ExactMatchTable, SRamMatchTable, "exact_match",
@@ -859,9 +862,6 @@ DECLARE_TABLE_TYPE(ExactMatchTable, SRamMatchTable, "exact_match",
     bool dynamic_key_masks = false;
     void setup_ways() override;
 public:
-    SelectionTable *get_selector() const override { return attached.get_selector(); }
-    StatefulTable *get_stateful() const override { return attached.get_stateful(); }
-    MeterTable* get_meter() const override { return attached.get_meter(); }
     using Table::gen_memory_resource_allocation_tbl_cfg;
     std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(const Way &) const;
     int unitram_type() override { return UnitRam::MATCH; }

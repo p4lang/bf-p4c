@@ -2043,7 +2043,6 @@ void Table::add_field_to_pack_format(json::vector &field_list, int basebit, std:
     if (field.flags == Format::Field::ZERO)
         source = "zero";
 
-
     if (source != "")
         output_field_to_pack_format(field_list, basebit, name, source, start_bit, field);
 
