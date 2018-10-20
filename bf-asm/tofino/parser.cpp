@@ -160,6 +160,17 @@ phv_8b_slots[] = {
     { 0, 0, 0, 0 }
 };
 
+static phv_use_slots* get_phv_use_slots(int size) {
+    phv_use_slots *usable_slots = nullptr;
+
+         if (size == 32) usable_slots = phv_32b_slots;
+    else if (size == 16) usable_slots = phv_16b_slots;
+    else if (size == 8)  usable_slots = phv_8b_slots;
+    else BUG();
+
+    return usable_slots;
+}
+
 template <>
 void Parser::Checksum::write_output_config(Target::Tofino::parser_regs &regs, Parser *pa, void *_map, unsigned &used) const
 {
@@ -169,11 +180,8 @@ void Parser::Checksum::write_output_config(Target::Tofino::parser_regs &regs, Pa
     // see MODEL-210 for discussion.
 
     tofino_phv_output_map *map = (tofino_phv_output_map *)_map;
-    phv_use_slots *usable_slots = nullptr;
 
-         if (dest->reg.size == 8)  usable_slots = phv_8b_slots;
-    else if (dest->reg.size == 16) usable_slots = phv_16b_slots;
-    else if (dest->reg.size == 32) usable_slots = phv_32b_slots;
+    phv_use_slots *usable_slots = get_phv_use_slots(dest->reg.size);
 
     auto &slot = usable_slots[3];
     int id = dest->reg.parser_id();
@@ -187,14 +195,10 @@ template <>
 int Parser::State::Match::Save::write_output_config(Target::Tofino::parser_regs &regs, void *_map, unsigned &used) const
 {
     tofino_phv_output_map *map = (tofino_phv_output_map *)_map;
-    phv_use_slots *usable_slots = nullptr;
-    if (hi-lo == 3) {
-        usable_slots = phv_32b_slots;
-    } else if (hi-lo == 1) {
-        usable_slots = phv_16b_slots;
-    } else {
-        BUG_CHECK(hi == lo);
-        usable_slots = phv_8b_slots; }
+
+    int slot_size = (hi-lo+1)*8;
+    phv_use_slots *usable_slots = get_phv_use_slots(slot_size);
+
     for (int i = 0; usable_slots[i].usemask; i++) {
         auto &slot = usable_slots[i];
         if (used & slot.usemask) continue;
@@ -241,15 +245,9 @@ template <>
 void Parser::State::Match::Set::write_output_config(Target::Tofino::parser_regs &regs, void *_map, unsigned &used) const
 {
     tofino_phv_output_map *map = (tofino_phv_output_map *)_map;
-    phv_use_slots *usable_slots = nullptr;
-    if (where->reg.size == 32)
-        usable_slots = phv_32b_slots;
-    else if (where->reg.size == 16)
-        usable_slots = phv_16b_slots;
-    else if (where->reg.size == 8)
-        usable_slots = phv_8b_slots;
-    else
-        BUG();
+
+    phv_use_slots *usable_slots = get_phv_use_slots(where->reg.size);
+
     for (int i = 0; usable_slots[i].usemask; i++) {
         auto &slot = usable_slots[i];
         if (used & slot.usemask) continue;

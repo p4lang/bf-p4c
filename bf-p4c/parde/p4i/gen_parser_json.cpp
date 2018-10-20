@@ -47,10 +47,12 @@ GenerateParserP4iJson::generateMatches(const IR::BFN::LoweredParserState* prev_s
         // XXX(zma) This assumes the match word is saved into the match registers in the
         // previous state. This however is not true in general -- match word can be saved
         // and forward to any future state.
-        for (auto prev_match : prev_state->match) {
-            for (auto prev_save : prev_match->saves) {
-                if (prev_save->dest == reg) {
-                    match_on.buffer_offset = prev_save->source->extractedBytes().loByte();
+        if (prev_state) {
+            for (auto prev_match : prev_state->match) {
+                for (auto prev_save : prev_match->saves) {
+                    if (prev_save->dest == reg) {
+                        match_on.buffer_offset = prev_save->source->extractedBytes().loByte();
+                    }
                 }
             }
         }
