@@ -338,6 +338,55 @@ class LoweringType : public Transform {
     }
 };
 
+/* XXX(hanw): annotation is used by the backend to generate a node
+ * in context.json for driver consumption.
+ * This is a short-team solution to reuse the implementation
+ * in the backend from P4-14 phase0 support. A longer term
+ * support needs to handle the to-be-finalized phase0 extractor
+ * extern.
+ */
+class InsertPhaseZeroAnnotation : public Transform {
+ public:
+    InsertPhaseZeroAnnotation() { setName("InsertPhaseZeroAnnotation"); }
+
+ private:
+    const IR::P4Program* preorder(IR::P4Program* program) override {
+        auto* annos = new IR::Annotations();
+        auto* layoutKind = new IR::StringLiteral(IR::ID("flexible"));
+        annos->addAnnotation(IR::ID("layout"), {layoutKind});
+        auto* fields = new IR::IndexedVector<IR::StructField>();
+        fields->push_back(new IR::StructField("phase0_data", IR::Type::Bits::get(64)));
+        auto phase0_type = new IR::Type_Header("__phase0_header", annos, *fields);
+
+        // Inject an explicit declaration for the phase 0 data type into the
+        // program.
+        LOG4("Injecting declaration for phase 0 type: " << phase0_type);
+        IR::IndexedVector<IR::Node> declarations;
+        declarations.push_back(phase0_type);
+        program->objects.insert(program->objects.begin(),
+                                declarations.begin(), declarations.end());
+        return program;
+    }
+
+    const IR::Node* preorder(IR::BFN::TranslatedP4Control* control) override {
+        if (control->thread != INGRESS) {
+            prune();
+            return control;
+        }
+        LOG3("visiting ingress control");
+        auto* annotation = new IR::Annotation("phase0", {
+                new IR::StringLiteral(IR::ID("port_metadata")),
+                new IR::StringLiteral(IR::ID(".set_port_metadata")),
+                new IR::TypeNameExpression(new IR::Type_Name("__phase0_header"))
+        });
+        LOG4("Injecting @phase0 annotation onto control " << control->name << ": " << annotation);
+        auto* controlType = control->type->clone();
+        controlType->annotations = controlType->annotations->add(annotation);
+        control->type = controlType;
+        return control;
+    }
+};
+
 LowerTofinoToStratum::LowerTofinoToStratum(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
                                            BFN_Options &options) {
     setName("LowerTofinoToStratum");
@@ -354,6 +403,7 @@ LowerTofinoToStratum::LowerTofinoToStratum(P4::ReferenceMap *refMap, P4::TypeMap
         new LoweringType(),
         new P4::ClearTypeMap(typeMap),
         new P4::TypeChecking(refMap, typeMap, true),
+        new InsertPhaseZeroAnnotation,
     });
 }
 
