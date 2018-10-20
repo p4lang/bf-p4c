@@ -662,8 +662,8 @@ add_custom_command(OUTPUT ${P4C_BINARY_DIR}/bf-p4c
   # should cythonify bf-p4c
   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${P4C_BINARY_DIR}/p4c ${P4C_BINARY_DIR}/bf-p4c
   COMMAND sed -i'' -e 's/bmv2/tofino/g' ${P4C_BINARY_DIR}/p4c_src/main.py
-  COMMAND sed -i'' -e 's/v1model/tna/g' ${P4C_BINARY_DIR}/p4c_src/main.py
-  COMMENT "Set default target and architecture to tofino-tna"
+  COMMAND sed -i'' -e 's/v1model/default/g' ${P4C_BINARY_DIR}/p4c_src/main.py
+  COMMENT "Set default target and architecture to tofino-default"
   WORKING_DIRECTORY ${P4C_BINARY_DIR}
   DEPENDS p4c_driver ${P4C_BINARY_DIR}/p4c_src/main.py
   )

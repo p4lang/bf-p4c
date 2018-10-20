@@ -131,10 +131,8 @@ class BarefootBackend(BackendDriver):
         self.add_command_option('preprocessor', "-D" + targetDefine)
         self.add_command_option('preprocessor', p4c_version.macro_defs)
 
-    def config_compiler(self, target, arch, targetDefine):
+    def config_compiler(self, targetDefine):
         self.add_command_option('compiler', "--nocpp")
-        self.add_command_option('compiler', "--target " + target)
-        self.add_command_option('compiler', "--arch " + arch)
         self.add_command_option('compiler', "-D" + targetDefine)
         self.add_command_option('compiler', p4c_version.macro_defs)
 
@@ -145,7 +143,7 @@ class BarefootBackend(BackendDriver):
     def process_command_line_options(self, opts):
         BackendDriver.process_command_line_options(self, opts)
 
-        self.checkVersionTargetArch(opts.language)
+        self.checkVersionTargetArch(opts.target, opts.language, opts.arch)
 
         # process the options related to source file
         if self._output_directory == '.':
@@ -158,6 +156,8 @@ class BarefootBackend(BackendDriver):
         self.add_command_option('preprocessor', "{}.p4pp".format(basepath))
         self.add_command_option('preprocessor', self._source_filename)
 
+        self.add_command_option('compiler', "--target " + self._target)
+        self.add_command_option('compiler', "--arch " + self._arch)
         self.add_command_option('compiler', "-o")
         self.add_command_option('compiler', "{}".format(output_dir))
         self.add_command_option('compiler', "{}.p4pp".format(basepath))
@@ -181,7 +181,7 @@ class BarefootBackend(BackendDriver):
         if opts.create_graphs or opts.archive:
             self.add_command_option('compiler', '--create-graphs')
 
-        if opts.backward_compatible:
+        if opts.backward_compatible or opts.language == 'p4-14':
             self.add_command_option('compiler', '--backward-compatible')
 
         self.skip_compilation = []
@@ -367,11 +367,19 @@ class BarefootBackend(BackendDriver):
             print >> sys.stderr, "failed command {}".format(command)
             sys.exit(rc)
 
-    def checkVersionTargetArch(self, language):
-        if language == "p4-14" and self._arch != "v1model":
-                print >> sys.stderr, \
-                    "Architecture {} is not supported in p4-14, use v1model".format(self._arch)
-                sys.exit(1)
+    def checkVersionTargetArch(self, target, language, arch):
+        if language == "p4-14" and arch == 'default':
+            self._arch = "v1model"
+            self.backend = target + '-' + 'v1model'
+        elif language == "p4-16" and arch == 'default':
+            self._arch = "tna"
+            self.backend = target + '-' + 'tna'
+        elif language == "p4-14" and arch != "v1model":
+            print >> sys.stderr, \
+                    "Ignored --arch={}, v1model is the only supported architecture " \
+                    "for p4-14".format(self._arch)
+            self._arch = "v1model"
+            self.backend = target + '-' + 'v1model'
 
     def run(self):
         """
@@ -407,7 +415,7 @@ class BarefootBackend(BackendDriver):
             self._saved_assembler_params = list(self._commands['assembler'])
             unique_table_offset = 0
             for pipe in self._pipes:
-                if pipe['pipe_name'] in self.skip_compilation:
+                if 'pipe_name' in pipe and pipe['pipe_name'] in self.skip_compilation:
                     continue
                 self.runAssembler(pipe['pipe_dir'], unique_table_offset)
                 # Although we the context.json schema has an optional compile_command and
