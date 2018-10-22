@@ -80,7 +80,6 @@ struct Memories {
     Alloc1D<std::pair<cstring, int>, SRAM_ROWS - 1>    vert_overflow_bus;
     Alloc2D<cstring, SRAM_ROWS, MAPRAM_COLUMNS>        mapram_use;
     unsigned                                           mapram_inuse[SRAM_ROWS] = {0};
-    Alloc1D<cstring, SRAM_ROWS>                        stateful_bus;
     Alloc2D<cstring, 2, NUM_IDLETIME_BUS>              idletime_bus;
     bool gw_bytes_reserved[SRAM_ROWS][BUS_COUNT] = {{false}};
     Alloc1D<cstring, STATS_ALUS>                       stats_alus;

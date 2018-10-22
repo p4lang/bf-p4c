@@ -437,13 +437,17 @@ void StageUseEstimate::options_to_dleft_entries(const IR::MAU::Table *tbl, int &
     if (needed_alus < 0)
             needed_alus = std::min(total_stateful_rams, available_alus);
     int per_alu = (total_stateful_rams + needed_alus - 1) / needed_alus;
+    int max_rams_per_way = 1 << floor_log2(MAX_DLEFT_HASH_SIZE);
+    // if there are more than two ways, then two will have to share one half
+    if (needed_alus > 2)
+        max_rams_per_way /= 2;
 
     for (auto &lo : layout_options) {
         // FIXME: The hash distribution units are all identical for each, so the sizes for
         // each of the stateful for the same, as the mask is per hash distribution unit.
         // Just currently a limit of the input xbar algorithm which will have to be opened up
         for (int i = 0; i < needed_alus; i++) {
-            int hash_size = std::min(1 << ceil_log2(per_alu), MAX_DLEFT_HASH_SIZE);
+            int hash_size = std::min(1 << ceil_log2(per_alu), max_rams_per_way);
             lo.dleft_hash_sizes.push_back(hash_size);
             lo.entries += hash_size * per_row * Memories::SRAM_DEPTH;
         }

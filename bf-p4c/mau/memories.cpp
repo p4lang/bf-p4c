@@ -81,7 +81,6 @@ void Memories::clear_uses() {
     vert_overflow_bus.clear();
     mapram_use.clear();
     memset(mapram_inuse, 0, sizeof(mapram_inuse));
-    stateful_bus.clear();
     idletime_bus.clear();
     memset(gw_bytes_reserved, false, sizeof(gw_bytes_reserved));
     stats_alus.clear();
@@ -499,8 +498,8 @@ bool Memories::analyze_tables(mem_info &mi) {
         int entries = ta->provided_entries;
         if (ta->table->for_dleft()) {
             mi.logical_tables += ta->layout_option->logical_tables();
-            BUG_CHECK(ta->layout_option->layout.no_match_hit_path(), "DLeft tables can only part"
-                      "of the hit path");
+            BUG_CHECK(ta->layout_option->layout.no_match_hit_path(), "DLeft tables can only be "
+                      "part of the hit path");
             for (int lt = 0; lt < ta->layout_option->logical_tables(); lt++) {
                 auto unique_id = ta->build_unique_id(nullptr, false, lt);
                 (*ta->memuse)[unique_id].type = Use::EXACT;
@@ -1413,7 +1412,8 @@ bool Memories::allocate_all_ternary() {
 /* Breaks up the tables requiring tinds into groups that can be allocated within the
    SRAM array */
 void Memories::find_tind_groups() {
-    tind_groups.clear(); for (auto *ta : tind_tables) {
+    tind_groups.clear();
+    for (auto *ta : tind_tables) {
         int depth = (ta->calculated_entries + 2047) / 2048;
         tind_groups.push_back(new SRAM_group(ta, depth, 0, SRAM_group::TIND));
         tind_groups.back()->ppt = UniqueAttachedId::TIND_PP;
@@ -3522,7 +3522,7 @@ std::ostream &operator<<(std::ostream &out, const Memories &mem) {
                    &mem.tind_bus, &mem.action_data_bus, &mem.sram_use, &mem.mapram_use,
                    &mem.gateway_use };
     std::map<cstring, char>     tables;
-    out << "tc  eb  tib ab  srams       mapram  gw" << std::endl;
+    out << "tc  eb  tib ab  srams       mapram  gw 2p" << std::endl;
     for (int r = 0; r < Memories::TCAM_ROWS; r++) {
         for (auto arr : arrays) {
             for (int c = 0; c < arr->cols(); c++) {
@@ -3538,7 +3538,7 @@ std::ostream &operator<<(std::ostream &out, const Memories &mem) {
                         out << '.'; } } }
             out << "  "; }
         if (r < Memories::SRAM_ROWS) {
-            auto tbl = mem.stateful_bus[r];
+            auto tbl = mem.twoport_bus[r];
             if (tbl) {
                 if (!tables.count(tbl))
                     tables.emplace(tbl, 'A' + tables.size());

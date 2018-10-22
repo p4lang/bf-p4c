@@ -49,7 +49,7 @@ control ingress(inout headers hdr, inout metadata meta,
         }
     }
 
-    Register<pair, _>(16384) learn_cache;
+    DirectRegister<pair>() learn_cache;
     LearnAction<pair, bit<64>, bit<32>>(learn_cache) learn_act = {
         void apply(inout pair value, in bit<64> digest, in bool lmatch,
                    out bit<32> cid, out bit<32> pred) {
@@ -87,6 +87,7 @@ control ingress(inout headers hdr, inout metadata meta,
             meta.src_port : dleft_hash;
             meta.dst_port : dleft_hash;
         }
+        size = 16384;
         actions = { do_learn_match; }
         default_action = do_learn_match;
     }

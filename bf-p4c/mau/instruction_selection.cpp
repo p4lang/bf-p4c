@@ -527,7 +527,7 @@ const IR::Node *DoInstructionSelection::postorder(IR::Primitive *prim) {
     return prim;
 }
 
-const IR::Type *stateful_type_for_primitive(const IR::Primitive *prim) {
+static const IR::Type *stateful_type_for_primitive(const IR::Primitive *prim) {
     if (prim->name == "Counter.count" || prim->name == "DirectCounter.count")
         return IR::Type_Counter::get();
     if (prim->name == "Meter.execute" || prim->name == "DirectMeter.execute" ||
@@ -541,11 +541,11 @@ const IR::Type *stateful_type_for_primitive(const IR::Primitive *prim) {
     BUG("Not a stateful primitive %s", prim);
 }
 
-ssize_t index_operand(const IR::Primitive *prim) {
+static ssize_t index_operand(const IR::Primitive *prim) {
     if (prim->name.startsWith("Counter") || prim->name.startsWith("Meter") ||
         prim->name == "RegisterAction.execute")
         return 1;
-    else if (prim->name.startsWith("RegisterAction."))
+    else if (prim->name.startsWith("RegisterAction.") || prim->name.startsWith("LearnAction."))
         return -1;
     else if (prim->name.startsWith("Lpf") || prim->name.startsWith("Wred"))
         return 2;
@@ -554,7 +554,7 @@ ssize_t index_operand(const IR::Primitive *prim) {
     return 1;
 }
 
-size_t input_operand(const IR::Primitive *prim) {
+static size_t input_operand(const IR::Primitive *prim) {
     if (prim->name.startsWith("Lpf") || prim->name.startsWith("Wred") ||
             prim->name.startsWith("DirectLpf") || prim->name.startsWith("DirectWred"))
         return 1;
@@ -562,7 +562,7 @@ size_t input_operand(const IR::Primitive *prim) {
         return -1;
 }
 
-size_t precolor_operand(const IR::Primitive *prim) {
+static size_t precolor_operand(const IR::Primitive *prim) {
     if (prim->name.startsWith("DirectMeter"))
         return 1;
     else if (prim->name.startsWith("Meter"))
@@ -628,8 +628,10 @@ void StatefulAttachmentSetup::Scan::postorder(const IR::Primitive *prim) {
         obj = prim->operands.at(0)->to<IR::GlobalRef>()->obj->to<IR::MAU::StatefulAlu>();
         BUG_CHECK(obj, "invalid object");
         if (method == "execute") {
-            use = prim->operands.size() == 1 ? IR::MAU::StatefulUse::DIRECT
-                                             : IR::MAU::StatefulUse::INDIRECT;
+            if (objType == "DirectRegisterAction" || objType == "LearnAction")
+                use = IR::MAU::StatefulUse::DIRECT;
+            else
+                use = IR::MAU::StatefulUse::INDIRECT;
         } else if (method == "execute_log") {
             use = IR::MAU::StatefulUse::LOG;
         } else if (method == "enqueue") {
@@ -1009,16 +1011,6 @@ void DLeftSetup::postorder(IR::MAU::BackendAttached *ba) {
     }
     ba->hash_dist = new IR::MAU::HashDist(IR::Type::Bits::get(0), field_list,
                                           IR::MAU::hash_function::random(), nullptr);
-}
-
-void DLeftSetup::postorder(IR::MAU::InputXBarRead *read) {
-    auto tbl = findContext<IR::MAU::Table>();
-    if (!tbl->for_dleft())
-        return;
-    if (read->for_match()) {
-        error("%s%sCan't mix dleft and non-dleft key match types in a table", tbl->srcInfo,
-              read->srcInfo);
-        read->match_type = IR::ID("dleft_hash"); }
 }
 
 const IR::MAU::Instruction *ConvertCastToSlice::preorder(IR::MAU::Instruction *instr) {

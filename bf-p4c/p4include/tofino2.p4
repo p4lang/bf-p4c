@@ -641,6 +641,15 @@ extern DirectRegisterAction<T, U> {
     DirectRegisterAction(DirectRegister<T> reg);
     abstract void apply(inout T value, @optional out U rv);
     U execute(@optional out U rv2, @optional out U rv3, @optional out U rv4);
+
+    /* These routines can be called in apply method to get these values
+     * to assign to a return value, but generally no operations can be applied */
+    U address(@optional bit<1> subword); /* return the match address */
+    U predicate(); /* return the predicate value */
+    bit<8> min8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
+    bit<8> max8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
+    bit<16> min16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
+    bit<16> max16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
 }
 
 extern RegisterAction<T, H, U> {
@@ -674,7 +683,7 @@ extern RegisterAction<T, H, U> {
 }
 
 extern LearnAction<T, D, U> {
-    LearnAction(Register<T, _> reg);
+    LearnAction(DirectRegister<T> reg);
     abstract void apply(inout T value, in D digest, in bool learn,
                         @optional out U rv1, @optional out U rv2,
                         @optional out U rv3, @optional out U rv4);

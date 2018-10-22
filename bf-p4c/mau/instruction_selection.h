@@ -283,7 +283,6 @@ class MeterSetup : public PassManager {
 class DLeftSetup : public MauModifier, TofinoWriteContext {
     void postorder(IR::MAU::Table *tbl) override;
     void postorder(IR::MAU::BackendAttached *ba) override;
-    void postorder(IR::MAU::InputXBarRead *read) override;
 
  public:
     DLeftSetup() {}

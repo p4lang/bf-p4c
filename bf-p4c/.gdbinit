@@ -175,15 +175,15 @@ class MemoriesPrinter(object):
     def __init__(self, val):
         self.val = val
     def to_string(self):
-        rv = "\ntc  eb  gw  tib ab  srams       mapram  sb\n"
+        rv = "\ntc  eb  tib ab  srams       mapram  gw 2p\n"
         tables = {}
-        alloc_names = [ 'tcam_use', 'sram_print_match_bus', 'gateway_use', 'tind_bus',
-            'action_data_bus', 'sram_use', 'mapram_use' ]
+        alloc_names = [ 'tcam_use', 'sram_print_search_bus', 'tind_bus',
+            'action_data_bus', 'sram_use', 'mapram_use', 'gateway_use' ]
         ptrs = [ self.val[arr]['data'] for arr in alloc_names ]
         rows = [ self.val[arr]['nrows'] for arr in alloc_names ]
         cols = [ self.val[arr]['ncols'] for arr in alloc_names ]
-        ptrs.append(self.val['stateful_bus']['data'])
-        rows.append(self.val['stateful_bus']['size'])
+        ptrs.append(self.val['twoport_bus']['data'])
+        rows.append(self.val['twoport_bus']['size'])
         cols.append(1)
 
         for r in range(0, max(rows)):

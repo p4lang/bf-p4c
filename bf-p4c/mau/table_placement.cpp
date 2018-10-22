@@ -619,7 +619,10 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, const Placed *done,
             if (salu != nullptr)
                 break;
         }
-        set_entries = salu->size;
+        if (t->layout.entries)
+            set_entries = t->layout.entries;
+        else if (salu->size)
+            set_entries = salu->size;
     } else if (t->match_table) {
         if (t->layout.pre_classifier)
             set_entries = t->layout.pre_classifer_number_entries;
