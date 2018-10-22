@@ -88,7 +88,7 @@ set (P14_XFAIL_TESTS
   )
 
 # p4-tests has all the includes at the same level with the programs.
-set (BFN_EXCLUDE_PATTERNS "tofino.p4" ".*netcache.*")
+set (BFN_EXCLUDE_PATTERNS "tofino\\.p4" ".*netcache.*")
 set (BFN_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/*/*.p4")
 bfn_find_tests ("${BFN_TESTS}" BFN_TESTS_LIST EXCLUDE "${BFN_EXCLUDE_PATTERNS}")
 

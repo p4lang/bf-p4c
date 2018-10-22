@@ -8,19 +8,19 @@ packet_test_setup_check("tofino")
 set (V1_SEARCH_PATTERNS "include.*v1model.p4" "main|common_v1_test")
 set (V1_EXCLUDE_PATTERNS "package" "extern")
 # Exclude some bmv2 p4s with conditional checksum updates that are not needed for backend
-set (V1_EXCLUDE_FILES "issue461-bmv2.p4" "issue1079-bmv2.p4")
+set (V1_EXCLUDE_FILES "issue461-bmv2\\.p4" "issue1079-bmv2\\.p4")
 set (P4TESTDATA ${P4C_SOURCE_DIR}/testdata)
 set (P4TESTS_FOR_TOFINO "${P4TESTDATA}/p4_16_samples/*.p4")
 p4c_find_tests("${P4TESTS_FOR_TOFINO}" P4_16_V1_TESTS INCLUDE "${V1_SEARCH_PATTERNS}" EXCLUDE "${V1_EXCLUDE_PATTERNS}")
 bfn_find_tests("${P4_16_V1_TESTS}" v1tests EXCLUDE "${V1_EXCLUDE_FILES}")
 
 set (P16_V1_INCLUDE_PATTERNS "include.*v1model.p4" "main|common_v1_test")
-set (P16_V1_EXCLUDE_PATTERNS "tofino.h")
+set (P16_V1_EXCLUDE_PATTERNS "tofino\\.h")
 set (P16_V1MODEL_FOR_TOFINO "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/*.p4")
 p4c_find_tests("${P16_V1MODEL_FOR_TOFINO}" p16_v1tests INCLUDE "${P16_V1_INCLUDE_PATTERNS}" EXCLUDE "${P16_V1_EXCLUDE_PATTERNS}")
 
 set (P16_TNA_INCLUDE_PATTERNS "include.*(tofino|tna).p4" "main")
-set (P16_TNA_EXCLUDE_PATTERNS "tofino.h")
+set (P16_TNA_EXCLUDE_PATTERNS "tofino\\.h")
 set (P16_TNA_FOR_TOFINO "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/*.p4")
 p4c_find_tests("${P16_TNA_FOR_TOFINO}" p16_tna_tests INCLUDE "${P16_TNA_INCLUDE_PATTERNS}" EXCLUDE "${P16_TNA_EXCLUDE_PATTERNS}")
 
@@ -31,9 +31,9 @@ set (P16_PSA_FOR_TOFINO "${P4TESTDATA}/p4_16_samples/*.p4")
 p4c_find_tests("${P16_PSA_FOR_TOFINO}" p16_psa_tests INCLUDE "${PSA_SEARCH_PATTERNS}" EXCLUDE "${PSA_EXCLUDE_PATTERNS}")
 
 # Exclude some p4s with conditional checksum updates that are added separately
-set (P4_14_EXCLUDE_FILES "parser_dc_full.p4" "sai_p4.p4"
-                            "checksum_pragma.p4" "port_vlan_mapping.p4"
-                            "checksum.p4")
+set (P4_14_EXCLUDE_FILES "parser_dc_full\\.p4" "sai_p4\\.p4"
+                            "checksum_pragma\\.p4" "port_vlan_mapping\\.p4"
+                            "checksum\\.p4")
 set (P4_14_SAMPLES "${P4TESTDATA}/p4_14_samples/*.p4")
 bfn_find_tests("${P4_14_SAMPLES}" p4_14_samples EXCLUDE "${P4_14_EXCLUDE_FILES}")
 
@@ -134,10 +134,10 @@ set (P4FACTORY_REGRESSION_TESTS
 # exclude fifo_pair.p4 which is jbay specific test
 # exclude all netcache p4s and add it as a separate test
 # exclude ipv4_checksum.p4 (include it in JBay tests)
-set (BFN_EXCLUDE_PATTERNS "tofino.p4" "fifo_pair.p4" "defines.p4"
-                          "fast_update.p4" "headers.p4" "heavy_hitter.p4"
-                          "ipv4.p4" "meter.p4" "netcache.p4" "parser.p4"
-                          "slow_update.p4" "ipv4_checksum.p4" "lookup.p4")
+set (BFN_EXCLUDE_PATTERNS "tofino\\.p4" "fifo_pair\\.p4" "defines\\.p4"
+                          "fast_update\\.p4" "headers\\.p4" "heavy_hitter\\.p4"
+                          "ipv4\\.p4" "meter\\.p4" "netcache\\.p4" "parser\\.p4"
+                          "slow_update\\.p4" "ipv4_checksum\\.p4" "lookup\\.p4")
 set (BFN_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/*/*.p4")
 bfn_find_tests ("${BFN_TESTS}" ALL_BFN_TESTS EXCLUDE "${BFN_EXCLUDE_PATTERNS}")
 # make a list of all the tests that we want to run PTF on
