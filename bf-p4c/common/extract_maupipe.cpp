@@ -1276,6 +1276,7 @@ void BackendConverter::convertTnaProgram(const IR::P4Program* program, BFN_Optio
             thread = thread->apply(*simplifyReferences);
             if (auto mau = thread->mau->to<IR::BFN::TranslatedP4Control>()) {
                 mau->apply(ExtractMetadata(rv, bindings));
+                mau->apply(ExtractPhase0(rv, refMap));
                 mau->apply(GetBackendTables(refMap, typeMap, gress, rv->thread[gress].mau,
                                             converted));
             }
