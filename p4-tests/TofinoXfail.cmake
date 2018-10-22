@@ -821,8 +821,12 @@ p4c_add_xfail_reason("tofino"
   "error: : No size count in action"
   extensions/p4_tests/p4_14/p4-tests/programs/ecc/ecc.p4
   extensions/p4_tests/p4_14/p4-tests/programs/iterator/iterator.p4
-  extensions/p4_tests/p4_14/p4smith_regression/tofino-bug-5.p4
   )
+
+p4c_add_xfail_reason("tofino"
+  "Match register not allocated"
+  extensions/p4_tests/p4_14/p4smith_regression/tofino-bug-5.p4
+)
 
 # P4C-1017
 p4c_add_xfail_reason("tofino"

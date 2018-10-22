@@ -1615,8 +1615,19 @@ class ConstructSymbolTable : public Inspector {
                   "action_profile converter cannot be applied to %1%", type->path->name);
 
         type = new IR::Type_Name("ActionProfile");
+        ERROR_CHECK(node->arguments->size() == 1, "action_profile must have a size argument");
+        auto size = node->arguments->at(0)->expression->to<IR::Constant>()->value;
+        auto* args = new IR::Vector<IR::Argument>();
+        if (size == 0) {
+            WARNING("action_profile " << node->name << "is specified with size 0, "
+                                                       "default to 1024.");
+            size = 1024;  // default size is set to 1024, to be consistent with glass
+            args->push_back(new IR::Argument(new IR::Constant(IR::Type_Bits::get(32), size)));
+        } else {
+            args->push_back(node->arguments->at(0));
+        }
         auto result = new IR::Declaration_Instance(node->srcInfo, node->name, node->annotations,
-                                                   type, node->arguments);
+                                                   type, args);
         structure->_map.emplace(node, result);
     }
 
