@@ -243,8 +243,10 @@ template<class REGS> void CounterTable::write_regs(REGS &regs) {
     }
     int stats_group_index = swbox.get_home_row()/2;
     bool run_at_eop = this->run_at_eop();
-    for (MatchTable *m : match_tables)
+    for (MatchTable *m : match_tables) {
         run_at_eop = run_at_eop || m->run_at_eop();
+        adrdist.adr_dist_meter_adr_icxbar_ctl[m->logical_id] |= 1U << stats_group_index;
+        adrdist.mau_ad_meter_virt_lt[stats_group_index] |= 1U << m->logical_id; }
     auto &movereg_stats_ctl = adrdist.movereg_stats_ctl[stats_group_index];
     for (MatchTable *m : match_tables) {
         adrdist.adr_dist_stats_adr_icxbar_ctl[m->logical_id] |= 1U << stats_group_index;

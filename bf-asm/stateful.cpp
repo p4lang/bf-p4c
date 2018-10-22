@@ -377,8 +377,9 @@ template<class REGS> void StatefulTable::write_regs(REGS &regs) {
     if (actions)
         actions->write_regs(regs, this);
     unsigned meter_group = home->row/4U;
-    for (MatchTable *m : match_tables)
+    for (MatchTable *m : match_tables) {
         adrdist.mau_ad_meter_virt_lt[meter_group] |= 1U << m->logical_id;
+        adrdist.adr_dist_meter_adr_icxbar_ctl[m->logical_id] = 1 << meter_group; }
     if (!bound_selector) {
         bool first_match = true;
         for (MatchTable *m : match_tables) {
@@ -393,8 +394,9 @@ template<class REGS> void StatefulTable::write_regs(REGS &regs) {
                 adrdist.movereg_ad_direct[MoveReg::METER] |= 1U << m->logical_id; }
             first_match = false; }
         adrdist.movereg_meter_ctl[meter_group].movereg_ad_meter_shift = format->log2size;
-        if (push_on_overflow)
+        if (push_on_overflow) {
             adrdist.oflo_adr_user[0] = adrdist.oflo_adr_user[1] = AdrDist::METER;
+            adrdist.deferred_oflo_ctl = 1 << (home->row-8)/2U; }
         adrdist.packet_action_at_headertime[1][meter_group] = 1; }
     write_logging_regs(regs);
     //for (auto &hd : hash_dist)

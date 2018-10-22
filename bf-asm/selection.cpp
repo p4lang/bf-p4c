@@ -337,8 +337,9 @@ void SelectionTable::write_regs(REGS &regs) {
         setup_logical_alu_map(regs, m->logical_id, meter_group); }
     if (max_words == 1)
         adrdist.movereg_meter_ctl[meter_group].movereg_ad_meter_shift = 7;
-    if (push_on_overflow)
+    if (push_on_overflow) {
         adrdist.oflo_adr_user[0] = adrdist.oflo_adr_user[1] = AdrDist::METER;
+        adrdist.deferred_oflo_ctl = 1 << ((home->row-8)/2U); }
     adrdist.packet_action_at_headertime[1][meter_group] = 1;
     for (auto &hd : hash_dist)
         hd.write_regs(regs, this, 0, non_linear_hash);
