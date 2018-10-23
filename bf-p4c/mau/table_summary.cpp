@@ -127,7 +127,7 @@ std::ostream &operator<<(std::ostream &out, const TableSummary &ts) {
         safe_vector<ActionFormat::Use> action_formats;
         ordered_set<const IR::MAU::AttachedMemory *> sa;
         LayoutChoices lc;
-        if (t->layout.ternary || t->layout.no_match_data())
+        if (t->layout.ternary || t->layout.no_match_rams())
             lo.emplace_back(t->layout, 0);
         else
             lo.emplace_back(t->layout, t->ways[0], 0);
