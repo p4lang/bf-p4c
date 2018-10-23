@@ -573,7 +573,10 @@ bool TableLayout::can_be_hash_action(IR::MAU::Table *tbl, std::string &reason) {
         return false;
     }
 
-    if (ceil_log2(entries) != tbl->layout.ixbar_width_bits) {
+    /* this doesnt have to be a power of 2. This check is mostly
+     * to make the driver happy. Here's a JIRA for the driver to
+     * fix this constraint: https://barefootnetworks.atlassian.net/browse/DRV-2116 */
+    if (entries != pow(2, tbl->layout.ixbar_width_bits)) {
         reason = "the size is not 2^(key bits)";
         return false;
     }
