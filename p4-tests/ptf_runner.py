@@ -93,6 +93,8 @@ def get_parser():
                          type=str, action='store', required=False)
     parser.add_argument('--xml-output', action='store_true', required=False,
                         help='Generate output in JUnit XML format')
+    parser.add_argument('--enable-model-logging', action='store_true', default=False,
+                        help='Enable model logging for debug purposes')
     return parser
 
 DEFAULT_NUM_IFACES = 16
@@ -268,7 +270,7 @@ def run_pd_ptf_tests(PTF, device, p4name, config_file, ptfdir, testdir, platform
 
 # model uses the context json to lookup names when logging
 def start_model(model, out=None, context_json=None, port_map_path=None, 
-                device=None, extra_ptf_args=None):
+                device=None, extra_ptf_args=None, disable_logging=None):
     cmd = [model]
     if context_json is not None:
         cmd.extend(['-l', context_json])
@@ -283,8 +285,10 @@ def start_model(model, out=None, context_json=None, port_map_path=None,
 
     if '_dod' in extra_ptf_args or 'DoD' in extra_ptf_args:
         cmd.extend(['--dod-test-mode'])
+    if disable_logging:
+	cmd.extend(['--logs-disable'])
 
-    debug("Starting model: {}".format(' '.join(cmd)))
+    info("Starting model: {}".format(' '.join(cmd)))
     return subprocess.Popen(cmd, stdout=out, stderr=out)
 
 def start_switchd(switchd, status_port, conf_path, with_pd = None,
@@ -518,8 +522,7 @@ def main():
                     port_map_path))
                 sys.exit(1)
         if not check_ifaces(port_map.values()):
-            error("Some interfaces referenced in the port mapping file don't exist")
-            sys.exit(1)
+            warn("Some interfaces referenced in the port mapping file don't exist")
 
     PTF = findbin(top_builddir, 'PTF')
     BF_SWITCHD = findbin(top_builddir, 'BF_SWITCHD')
@@ -586,6 +589,10 @@ def main():
 
         # Ensure that there are no instances of tofino-model or bf_switchd running
         run_setup()
+ 
+        disable_model_logging = True
+        if args.enable_model_logging:
+	    disable_model_logging = False
 
         with open(model_log_path, 'w') as model_out, \
              open(switchd_log_path, 'w') as switchd_out:
@@ -593,7 +600,8 @@ def main():
                                   context_json=cxt_json_path,
                                   port_map_path=port_map_path,
                                   device=args.device,
-                                  extra_ptf_args=extra_ptf_args)
+                                  extra_ptf_args=extra_ptf_args,
+                                  disable_logging=disable_model_logging)
             processes["model"] = model_p
 
             if args.pdtest is not None:

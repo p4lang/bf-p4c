@@ -252,11 +252,11 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/ipv4_options.p4
   )
 
-p4c_add_xfail_reason("tofino"
-  "Expression for parser counter is not supported"
+#p4c_add_xfail_reason("tofino"
+#  "Expression for parser counter is not supported"
   #   extensions/p4_tests/p4_14/c1/COMPILER-384/case2240.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/pctr/pctr.p4
-  )
+  # extensions/p4_tests/p4_14/p4-tests/programs/pctr/pctr.p4 # update path when test is added
+#  )
 
 p4c_add_xfail_reason("tofino"
   "error: No format in action table"
@@ -289,12 +289,12 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "error.*Power worst case estimated budget exceeded by*"
-  extensions/p4_tests/p4_14/p4-tests/programs/clpm/clpm.p4
+  #extensions/p4_tests/p4_14/p4-tests/programs/clpm/clpm.p4 # update path when test is added
   switch_l3_heavy_int_leaf
   switch_8.4_l3_heavy_int_leaf
   )
 
-# switch_spine_dtel_int test failures
+# switch_spine_dtel_int and switch_l3_heavy_spine test failures
 p4c_add_xfail_reason("tofino"
   "Received packet did not match expected packet"
   smoketest_switch_8.4_spine_dtel_int_set_2_INTL45_Transit_IngressMoDTest
@@ -303,7 +303,35 @@ p4c_add_xfail_reason("tofino"
   smoketest_switch_8.4_spine_dtel_int_set_2_MirrorOnDropNonDefaultRuleTest
   smoketest_switch_8.4_spine_dtel_int_set_2_QueueReport_Entropy_Test
   smoketest_switch_8.4_spine_dtel_int_set_2_QueueReport_Quota_Test
+  smoketest_switch_8.4_spine_dtel_int_set_2_intl45_transitTest_hop2_stateless
   smoketest_switch_8.4_spine_dtel_int_set_5_INGRESS_DROP_REPORT_Test
+  smoketest_switch_l3_heavy_spine_dtel_QueueReport_Entropy_Test
+  smoketest_switch_l3_heavy_spine_dtel_QueueReport_Quota_Test
+  smoketest_switch_l3_heavy_spine_dtel_MirrorOnDropHostifReasonCodeTest
+  smoketest_switch_l3_heavy_spine_dtel_MirrorOnDropIngressAclTest
+  smoketest_switch_l3_heavy_spine_dtel_MirrorOnDropNonDefaultRuleTest
+  smoketest_switch_l3_heavy_spine_dtel_INTL45_Transit_IngressMoDTest
+  smoketest_switch_l3_heavy_spine_dtel_intl45_transitTest_hop2_stateless 
+  smoketest_switch_l3_heavy_spine_dtel_sai_INGRESS_DROP_REPORT_Test
+  smoketest_switch_marker_spine_dtel_intl45_transitTest_hop2_with_digest
+  smoketest_switch_marker_spine_dtel_intl45_transitTest_hop2_qdepth
+  smoketest_switch_marker_spine_dtel_intl45_transitTest_Metadata
+  smoketest_switch_marker_spine_dtel_QueueReport_Entropy_Test
+  smoketest_switch_marker_spine_dtel_QueueReport_Quota_Test
+  smoketest_switch_marker_spine_dtel_MirrorOnDropHostifReasonCodeTest
+  smoketest_switch_marker_spine_dtel_MirrorOnDropIngressAclTest
+  smoketest_switch_marker_spine_dtel_MirrorOnDropNonDefaultRuleTest
+  smoketest_switch_marker_spine_dtel_INTL45_Transit_IngressMoDTest
+  smoketest_switch_marker_spine_dtel_MirrorOnDropEgressAclTest
+  smoketest_switch_dtel_int_spine_dtel_INTL45_Transit_IngressMoDTest
+  smoketest_switch_dtel_int_spine_dtel_QueueReport_Entropy_Test
+  smoketest_switch_dtel_int_spine_dtel_QueueReport_Quota_Test
+  smoketest_switch_dtel_int_spine_dtel_MirrorOnDropHostifReasonCodeTest
+  smoketest_switch_dtel_int_spine_dtel_MirrorOnDropIngressAclTest
+  smoketest_switch_dtel_int_spine_dtel_MirrorOnDropNonDefaultRuleTest
+  smoketest_switch_dtel_int_spine_dtel_MirrorOnDropEgressAclTest
+  smoketest_switch_dtel_int_spine_dtel_intl45_transitTest_hop2_stateless
+  smoketest_switch_dtel_int_spine_dtel_sai_INGRESS_DROP_REPORT_Test
   )
 
 p4c_add_xfail_reason("tofino"
@@ -313,6 +341,20 @@ p4c_add_xfail_reason("tofino"
   smoketest_switch_8.4_spine_dtel_int_set_3_INTL45_Transit_DoDTest
   smoketest_switch_8.4_spine_dtel_int_set_3_MirrorOnDropDoDTest
   smoketest_switch_8.4_spine_dtel_int_set_3_QueueReport_DoD_Test
+  smoketest_switch_l3_heavy_spine_dtel_MirrorOnDropEgrNonDefaultRuleTest
+  smoketest_switch_l3_heavy_spine_dtel_INTL45_Transit_DoDTest
+  smoketest_switch_l3_heavy_spine_dtel_MirrorOnDropDoDTest
+  smoketest_switch_l3_heavy_spine_dtel_QueueReport_DoD_Test
+  smoketest_switch_l3_heavy_spine_dtel_MirrorOnDropEgressAclTest
+  smoketest_switch_marker_spine_dtel_MirrorOnDropEgrNonDefaultRuleTest
+  smoketest_switch_marker_spine_dtel_QueueReport_DoD_Test
+  smoketest_switch_marker_spine_dtel_MirrorOnDropDoDTest
+  smoketest_switch_marker_spine_dtel_INTL45_Transit_DoDTest
+  smoketest_switch_dtel_int_spine_dtel_INTL45_Transit_EgressMoDTest
+  smoketest_switch_dtel_int_spine_dtel_MirrorOnDropEgrNonDefaultRuleTest
+  smoketest_switch_dtel_int_spine_dtel_INTL45_Transit_DoDTest
+  smoketest_switch_dtel_int_spine_dtel_QueueReport_DoD_Test
+  smoketest_switch_dtel_int_spine_dtel_MirrorOnDropDoDTest
   )
 
 p4c_add_xfail_reason("tofino"
@@ -320,13 +362,38 @@ p4c_add_xfail_reason("tofino"
   smoketest_switch_8.4_spine_dtel_int_set_2_QueueReport_Over_ECMP_Test
   smoketest_switch_8.4_spine_dtel_int_set_2_QueueReport_MirrorTest
   smoketest_switch_8.4_spine_dtel_int_set_2_QueueReport_L2_MirrorTest
+  smoketest_switch_l3_heavy_spine_dtel_QueueReport_Over_ECMP_Test
+  smoketest_switch_l3_heavy_spine_dtel_QueueReport_MirrorTest
+  smoketest_switch_l3_heavy_spine_dtel_QueueReport_L2_MirrorTest
+  smoketest_switch_marker_spine_dtel_QueueReport_Over_ECMP_Test
+  smoketest_switch_marker_spine_dtel_QueueReport_MirrorTest
+  smoketest_switch_marker_spine_dtel_QueueReport_L2_MirrorTest
+  smoketest_switch_dtel_int_spine_dtel_QueueReport_Over_ECMP_Test
+  smoketest_switch_dtel_int_spine_dtel_QueueReport_MirrorTest
+  smoketest_switch_dtel_int_spine_dtel_QueueReport_L2_MirrorTest
   )
 
 p4c_add_xfail_reason("tofino"
   "Expected packet was not received on device"
-  smoketest_switch_8.4_spine_dtel_int_set_2_intl45_transitTest_hop2_stateless
-  smoketest_switch_8.4_spine_dtel_int_set_2_intl45_route_dtel_reports
-  smoketest_switch_8.4_spine_dtel_int_set_2_INTL45_TransitTest_Enable
+  smoketest_switch_l3_heavy_spine_dtel_intl45_transitTest_CHECKSUM
+  smoketest_switch_marker_spine_HostIfPtpTest
+  smoketest_switch_marker_spine_dtel_intl45_transitTest_Ebit
+  smoketest_switch_marker_spine_dtel_INTL45_TransitTest_Enable
+  smoketest_switch_marker_spine_dtel_intl45_transitTest_hop2_port_ids
+  smoketest_switch_marker_spine_dtel_intl45_transitTest_switchid
+  smoketest_switch_marker_spine_dtel_intl45_transitTest_CHECKSUM
+  smoketest_switch_marker_spine_dtel_intl45_transitTest_hop2_stateless
+  smoketest_switch_marker_spine_dtel_intl45_DSCP_TransitTest
+  )
+
+p4c_add_xfail_reason("tofino"
+  "A packet was received on device"
+  smoketest_switch_marker_spine_L2StpEgressBlockingTest
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Received packet that we expected not to receive on device"
+  smoketest_switch_marker_spine_L2StpTest
   )
 
 # BRIG-113

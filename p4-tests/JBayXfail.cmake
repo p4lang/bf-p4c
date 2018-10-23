@@ -252,7 +252,7 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "./p4c TIMEOUT"
+  "./p4c TIMEOUT|condition expression too complex"
   testdata/p4_14_samples/header-stack-ops-bmv2.p4
 )
 

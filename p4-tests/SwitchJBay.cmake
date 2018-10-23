@@ -19,11 +19,11 @@ p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
 p4c_add_test_label("tofino2" "18Q2Goal" "switch_msdc")
 
 p4c_add_ptf_test_with_ptfdir ("tofino2" "smoketest_switch_msdc" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_PTF_DIR}")
+    "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino2" "smoketest_switch_msdc"
         "switch_hostif.HostIfRxTxTest")
 p4c_add_ptf_test_with_ptfdir ("tofino2" "smoketest_switch_msdc_set_1" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_PTF_DIR}")
+    "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino2" "smoketest_switch_msdc_set_1"
         "switch_tests.CpuTxTest
         switch_tests.ExceptionPacketsTest
@@ -36,7 +36,7 @@ bfn_set_ptf_test_spec("tofino2" "smoketest_switch_msdc_set_1"
         switch_tests.L2AccessToTrunkVlanTest
         switch_tests.L2AgingTest")
 p4c_add_ptf_test_with_ptfdir ("tofino2" "smoketest_switch_msdc_set_2" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_PTF_DIR}")
+    "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino2" "smoketest_switch_msdc_set_2"
         "switch_tests.L2DynamicLearnAgeTest
         switch_tests.L2DynamicMacLearnTest
@@ -49,7 +49,7 @@ bfn_set_ptf_test_spec("tofino2" "smoketest_switch_msdc_set_2"
         switch_tests.L2StaticMacMoveTest
         switch_tests.L2TrunkToAccessVlanTest")
 p4c_add_ptf_test_with_ptfdir ("tofino2" "smoketest_switch_msdc_set_3" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_PTF_DIR}")
+    "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino2" "smoketest_switch_msdc_set_3"
         "switch_tests.L2TrunkToTrunkVlanTest
     switch_tests.L2VlanStatsTest
@@ -61,7 +61,7 @@ bfn_set_ptf_test_spec("tofino2" "smoketest_switch_msdc_set_3"
         switch_tests.L3IPv4LagTest
         switch_tests.L3IPv4LookupTest")
 p4c_add_ptf_test_with_ptfdir ("tofino2" "smoketest_switch_msdc_set_4" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_PTF_DIR}")
+    "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino2" "smoketest_switch_msdc_set_4"
         "switch_tests.L3IPv4LpmEcmpTest
         switch_tests.L3IPv4LpmTest
@@ -74,7 +74,7 @@ bfn_set_ptf_test_spec("tofino2" "smoketest_switch_msdc_set_4"
         switch_tests.L3IPv6LpmEcmpTest
         switch_tests.L3IPv6LpmTest")
 p4c_add_ptf_test_with_ptfdir ("tofino2" "smoketest_switch_msdc_set_5" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_PTF_DIR}")
+    "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino2" "smoketest_switch_msdc_set_5"
         "switch_tests.L3VIFloodTest
         switch_tests.L3VIIPv4HostFloodTest
@@ -87,12 +87,12 @@ bfn_set_ptf_test_spec("tofino2" "smoketest_switch_msdc_set_5"
         switch_tests.MalformedPacketsTest
         switch_tests.MalformedPacketsTest_ipv6")
 p4c_add_ptf_test_with_ptfdir ("tofino2" "smoketest_switch_msdc_set_6" ${SWITCH_P4}
-        "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_PTF_DIR_MIRROR}")
+        "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_PTF_DIR_MIRROR}")
 bfn_set_ptf_test_spec("tofino2" "smoketest_switch_msdc_set_6"
         "mirror_acl_slice_tests.IPv6MirrorAclSliceTest_i2e
         mirror_acl_slice_tests.MirrorAclSliceTest_i2e")
 p4c_add_ptf_test_with_ptfdir ("tofino2" "smoketest_switch_msdc_set_7" ${SWITCH_P4}
-        "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 12000" "${SWITCH_PTF_DIR}")
+        "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino2" "smoketest_switch_msdc_set_7"
         "switch_acl.AclLabelTest
         switch_acl.IPAclStatsTest
@@ -106,11 +106,11 @@ bfn_set_ptf_test_spec("tofino2" "smoketest_switch_msdc_set_7"
 #bfn_set_ptf_test_spec("tofino2" "smoketest_switch_msdc_Acl_i2e_ErspanRewriteTest"
 #	  "switch_acl.Acl_i2e_ErspanRewriteTest")
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
-set_tests_properties("tofino2/smoketest_switch_msdc" PROPERTIES TIMEOUT 12000)
-set_tests_properties("tofino2/smoketest_switch_msdc_set_1" PROPERTIES TIMEOUT 12000)
-set_tests_properties("tofino2/smoketest_switch_msdc_set_2" PROPERTIES TIMEOUT 12000)
-set_tests_properties("tofino2/smoketest_switch_msdc_set_3" PROPERTIES TIMEOUT 12000)
-set_tests_properties("tofino2/smoketest_switch_msdc_set_4" PROPERTIES TIMEOUT 12000)
-set_tests_properties("tofino2/smoketest_switch_msdc_set_5" PROPERTIES TIMEOUT 12000)
-set_tests_properties("tofino2/smoketest_switch_msdc_set_6" PROPERTIES TIMEOUT 12000)
-set_tests_properties("tofino2/smoketest_switch_msdc_set_7" PROPERTIES TIMEOUT 12000)
+set_tests_properties("tofino2/smoketest_switch_msdc" PROPERTIES TIMEOUT 3600)
+set_tests_properties("tofino2/smoketest_switch_msdc_set_1" PROPERTIES TIMEOUT 3600)
+set_tests_properties("tofino2/smoketest_switch_msdc_set_2" PROPERTIES TIMEOUT 3600)
+set_tests_properties("tofino2/smoketest_switch_msdc_set_3" PROPERTIES TIMEOUT 3600)
+set_tests_properties("tofino2/smoketest_switch_msdc_set_4" PROPERTIES TIMEOUT 3600)
+set_tests_properties("tofino2/smoketest_switch_msdc_set_5" PROPERTIES TIMEOUT 3600)
+set_tests_properties("tofino2/smoketest_switch_msdc_set_6" PROPERTIES TIMEOUT 3600)
+set_tests_properties("tofino2/smoketest_switch_msdc_set_7" PROPERTIES TIMEOUT 3600)
