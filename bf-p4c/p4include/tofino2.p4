@@ -682,12 +682,12 @@ extern RegisterAction<T, H, U> {
     bit<16> max16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
 }
 
-extern LearnAction<T, D, U> {
-    LearnAction(DirectRegister<T> reg);
+extern LearnAction<T, H, D, U> {
+    LearnAction(Register<T, H> reg);
     abstract void apply(inout T value, in D digest, in bool learn,
                         @optional out U rv1, @optional out U rv2,
                         @optional out U rv3, @optional out U rv4);
-    U execute(@optional out U rv2, @optional out U rv3, @optional out U rv4);
+    U execute(in H index, @optional out U rv2, @optional out U rv3, @optional out U rv4);
 
     /* These routines can be called in apply method to get these values
      * to assign to a return value, but generally no operations can be applied */

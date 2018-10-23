@@ -49,8 +49,9 @@ control ingress(inout headers hdr, inout metadata meta,
         }
     }
 
-    DirectRegister<pair>() learn_cache;
-    LearnAction<pair, bit<64>, bit<32>>(learn_cache) learn_act = {
+    Register<pair, bit<14>>(16364) learn_cache;
+    Hash<bit<14>>(HashAlgorithm_t.RANDOM) lookup_hash;
+    LearnAction<pair, bit<14>, bit<64>, bit<32>>(learn_cache) learn_act = {
         void apply(inout pair value, in bit<64> digest, in bool lmatch,
                    out bit<32> cid, out bit<32> pred) {
             if (value.first & ~64w0x1f == digest) {
@@ -73,7 +74,10 @@ control ingress(inout headers hdr, inout metadata meta,
     };
     action do_learn_match() {
         bit<32> tmp2;
-        bit<32> tmp = learn_act.execute(tmp2);
+        bit<14> addr = lookup_hash.get({ hdr.ipv4.src_addr, hdr.ipv4.dst_addr,
+                                         hdr.ipv4.protocol, meta.src_port,
+                                         meta.dst_port });
+        bit<32> tmp = learn_act.execute(addr, tmp2);
         meta.cache_id = tmp[20:6];
         meta.learn_pred = tmp2[19:4];
     }
@@ -87,7 +91,6 @@ control ingress(inout headers hdr, inout metadata meta,
             meta.src_port : dleft_hash;
             meta.dst_port : dleft_hash;
         }
-        size = 16384;
         actions = { do_learn_match; }
         default_action = do_learn_match;
     }

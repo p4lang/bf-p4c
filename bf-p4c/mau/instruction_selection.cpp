@@ -35,6 +35,7 @@ const IR::Node *Synth2PortSetup::postorder(IR::Primitive *prim) {
     if (objType == "RegisterAction" || objType == "DirectRegisterAction" ||
         objType == "LearnAction" || objType == "selector_action") {
         bool direct_access = (prim->operands.size() == 1 && method == "execute") ||
+                             objType == "DirectRegisterAction" ||
                              method == "execute_direct";
         glob = prim->operands.at(0)->to<IR::GlobalRef>();
         auto salu = glob->obj->to<IR::MAU::StatefulAlu>();
@@ -70,7 +71,7 @@ const IR::Node *Synth2PortSetup::postorder(IR::Primitive *prim) {
         if (objType == "RegisterAction" && salu->direct != direct_access)
             error("%s: %sdirect access to %sdirect register", prim->srcInfo,
                   direct_access ? "" : "in", salu->direct ? "" : "in");
-        unsigned idx = (method == "execute" && objType != "LearnAction") ? 2 : 1;
+        unsigned idx = (method == "execute" && !direct_access) ? 2 : 1;
         int output = 1;
         int output_offsets[] = { 0, 64, 32, 96 };
 
@@ -543,7 +544,7 @@ static const IR::Type *stateful_type_for_primitive(const IR::Primitive *prim) {
 
 static ssize_t index_operand(const IR::Primitive *prim) {
     if (prim->name.startsWith("Counter") || prim->name.startsWith("Meter") ||
-        prim->name == "RegisterAction.execute")
+        prim->name == "RegisterAction.execute"|| prim->name == "LearnAction.execute")
         return 1;
     else if (prim->name.startsWith("RegisterAction.") || prim->name.startsWith("LearnAction."))
         return -1;
@@ -628,7 +629,7 @@ void StatefulAttachmentSetup::Scan::postorder(const IR::Primitive *prim) {
         obj = prim->operands.at(0)->to<IR::GlobalRef>()->obj->to<IR::MAU::StatefulAlu>();
         BUG_CHECK(obj, "invalid object");
         if (method == "execute") {
-            if (objType == "DirectRegisterAction" || objType == "LearnAction")
+            if (objType == "DirectRegisterAction")
                 use = IR::MAU::StatefulUse::DIRECT;
             else
                 use = IR::MAU::StatefulUse::INDIRECT;

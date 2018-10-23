@@ -138,7 +138,8 @@ bool skipRegisterActionOutput(const Visitor::Context *ctxt, const IR::Expression
     if (!type) return true;
 
     auto name = type->baseType->to<IR::Type_Name>();
-    if (name->path->name != "RegisterAction" &&
+    if (name->path->name != "DirectRegisterAction" &&
+        name->path->name != "RegisterAction" &&
         name->path->name != "LearnAction" &&
         name->path->name != "selector_action")
         return true;
@@ -174,8 +175,10 @@ class CompileTimeOperations : public P4::CompileTimeOperations {
         // JBay supports (limited) div/mod in RegisterAction
         if (Device::currentDevice() == Device::JBAY) {
             if (auto st = di->type->to<IR::Type_Specialized>()) {
-                if (st->baseType->path->name == "RegisterAction" ||
-                    st->baseType->path->name == "LearnAction")
+                if (st->baseType->path->name == "DirectRegisterAction" ||
+                    st->baseType->path->name == "RegisterAction" ||
+                    st->baseType->path->name == "LearnAction" ||
+                    st->baseType->path->name == "selector_action")
                     return false; } }
 #endif
         return true;
