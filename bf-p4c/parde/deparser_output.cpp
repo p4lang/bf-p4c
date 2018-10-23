@@ -246,12 +246,14 @@ struct OutputDigests : public Inspector {
         outputDebugInfo(out, indent, digest->selector) << std::endl;
 
         for (auto* entry : digest->entries) {
+            out << indent << entry->idx << ":";
             if (entry->sources.size() == 0) {
                 ERROR_CHECK(digest->name == "resubmit",
                     "Invalid mirror or digest call without any arguments");
+                out << " []" << std::endl;  // output empty list for resubmit with no params
                 continue;
             }
-            out << indent << entry->idx << ":" << std::endl;
+            out << std::endl;
 
             /* learning digest is a bit special here - the driver looks at the first
              * field of the digest to resolve the digest-ID and hence must be appended
