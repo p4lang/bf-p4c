@@ -28,7 +28,8 @@ class AssignActionHandle : public PassManager {
     HandleAssignments handle_assignments;
 
     class DetermineHandle : public MauInspector {
-        static constexpr unsigned INIT_ACTION_HANDLE = (0x20 << 24) + 2;
+        // 0 - phase0 table action handle
+        static constexpr unsigned INIT_ACTION_HANDLE = (0x20 << 24) + 1;
         unsigned handle_position = 0;
 
         AssignActionHandle &self;

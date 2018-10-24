@@ -387,7 +387,6 @@ public:
             std::map<std::string, std::vector<alias_value_t *>> reverse_alias() const;
             std::string alias_lookup(int lineno, std::string name, int &lo, int &hi) const;
             bool has_rng() { return !rng_param_name.empty(); }
-            void set_action_handle(Table* tbl);
             const p4_param* has_param(std::string param) const {
                 for (auto &e : p4_params_list)
                     if (e.name == param) return &e;

@@ -41,8 +41,6 @@ option_t options = {
     .werror = false
 };
 
-//Unique Handles
-unsigned unique_action_handle = ACTION_HANDLE_START + 2; //FIXME-JSON +2 to match glass
 std::string asmfile_name;
 
 int log_error = 0;

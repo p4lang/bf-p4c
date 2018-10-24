@@ -8,8 +8,6 @@
 #include "stage.h"
 #include "tables.h"
 
-extern unsigned unique_action_handle;
-
 std::map<std::string, Table *> Table::all;
 std::map<std::string, Table::Type *> *Table::Type::all;
 
@@ -707,7 +705,7 @@ void Table::pass1() {
 
     if (action) {
         auto reqd_args = 2;
-        action->validate_call(action, get_match_table(), 
+        action->validate_call(action, get_match_table(),
             reqd_args , HashDistribution::ACTION_DATA_ADDRESS, action);
     }
 }
@@ -1062,33 +1060,13 @@ Table::Actions::Actions(Table *tbl, VECTOR(pair_t) &data) {
         actions.emplace(name, tbl, this, kv, pos++); }
 }
 
-void Table::Actions::Action::set_action_handle(Table *tbl) {
-    // For actions in tables shared across multiple stages, the action handles
-    // must be same. p4_table stores a map of actions and their handles. If
-    // action present store the same handle else assign a new one.
-    if (handle != 0)
-        return;
-
-    auto p4_table = tbl->p4_table;
-    if (auto adt = tbl->to<ActionTable>()) {
-        auto mt = adt->get_match_table();
-        if (mt) {
-            // If action table is associated with an action profile store the
-            // actions in the p4_table of that action profile and not the match
-            // table
-            if (!(p4_table &&
-                (mt->action_profile() == p4_table->p4_name())))
-                p4_table = mt->p4_table ? mt->p4_table : p4_table; } }
-    if (p4_table) {
-        if (p4_table->action_handles.count(name) > 0)
-            handle = p4_table->action_handles[name]; }
-    if (handle == 0) {
-        handle = unique_action_handle++;
-        if (p4_table) p4_table->action_handles[name] = handle; }
-}
-
 void Table::Actions::Action::pass1(Table *tbl) {
-    set_action_handle(tbl);
+    // The compiler generates all action handles which must be specified in the
+    // assembly, if not we throw an error.
+    if ((handle == 0) && (!tbl->to<Synth2Port>())){
+        error(lineno,
+            "No action handle specified for table - %s, action - %s", tbl->name(), name.c_str());
+    }
     if (tbl->get_default_action() == name) {
         if (!tbl->default_action_handle)
             tbl->default_action_handle = handle;
@@ -1193,7 +1171,7 @@ void Table::Actions::pass2(Table *tbl) {
     MatchTable *limit_match_table = nullptr;
     bool use_code_for_next = false;  // true iff a table uses the action code for next table
         // selection in addition to using it for the action instruction
-   
+
     for (auto match : tbl->get_match_tables()) {
         // action is currently a default keyword for the instruction address
         auto instruction = match->instruction_call();
@@ -1887,7 +1865,7 @@ json::map *Table::add_stage_tbl_cfg(json::map &tbl, const char *type, int size) 
  * referenced
  *
  * If we need to change this, this was the delineation for how this was determined in match tables:
- * 
+ *
  * In the call for both of these examples, the address field is a hash_dist object, as this is
  * necessary for the set up of the address.  This call, unlike every other type table, cannot
  * be the place where the address is determined.
@@ -1910,7 +1888,7 @@ void Table::add_reference_table(json::vector &table_refs, const Table::Call& c) 
         std::string hr = c->to<AttachedTable>()->how_referenced();
         if (hr.empty())
             hr = c->to<AttachedTable>()->is_direct() ? "direct" : "indirect";
-        table_ref["how_referenced"] = hr; 
+        table_ref["how_referenced"] = hr;
         table_ref["handle"] = c->handle();
         table_ref["name"] = t_name;
         table_refs.push_back(std::move(table_ref)); }

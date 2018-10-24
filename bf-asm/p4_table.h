@@ -32,7 +32,6 @@ public:
     enum type { MatchEntry=1, ActionData=2, Selection=3, Statistics=4, Meter=5, Stateful=6 };
     enum alpm_type { PreClassifier=1, Atcam=2 };
     static const char *type_name[];
-    std::map<std::string, unsigned> action_handles;
 private:
     static std::map<unsigned, P4Table *>                        by_handle;
     static std::map<type, std::map<std::string, P4Table *>>     by_name;

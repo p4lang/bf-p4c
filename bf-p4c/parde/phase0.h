@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "lib/cstring.h"
+#include "lib/hex.h"
 
 namespace IR {
 namespace BFN {

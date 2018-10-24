@@ -81,6 +81,11 @@ std::ostream& operator<<(std::ostream& out, const BFN::Phase0Info* info) {
     // uses this info.
     out << indent << "actions:" << std::endl;
     out << ++indent << canon_name(info->actionName) << ":" << std::endl;
+    // Phase0 action handle must be unique from all other action handles. While
+    // this is never used, driver expects unique handles as phase0 is
+    // represented as a table construct in context.json. We assign the starting
+    // handle to phase0, all other action handles start at (0x20 << 24) + 1
+    out <<   indent << "- handle: 0x" << hex(0x20 << 24) << std::endl;
     out <<   indent << "- p4_param_order: { ";
     wroteAtLeastOneField = false;
     for (auto& field : *info->packing) {

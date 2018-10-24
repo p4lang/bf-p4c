@@ -314,19 +314,20 @@ bfn_set_ptf_test_spec("tofino" "smoketest_programs_stful"
         test.TestDirectTcamCounter_move
         ^test.TestDirectTcamCounter_twoStage
         test.TestGetEntry
+        test.TestIndirectStateRestore
         test.TestIndirectHashSampler
         test.TestInDirectTcamCounter_entries
-        test.TestInDirectTcamCounter_rdwr
-        test.TestNoKeySymSet
-        test.TestOneBit
-        test.TestPhase0Iterator
-        test.TestResetAPIs
-        test.TestTwoInstrNoIdx")
+        test.TestInDirectTcamCounter_rdwr")
 
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_stful_2" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/stful/stful.p4"
     "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/ptf-tests/stful")
 bfn_set_ptf_test_spec("tofino" "smoketest_programs_stful_2"
         "test.TestDirectHashCounter
+        test.TestNoKeySymSet
+        test.TestOneBit
+        test.TestPhase0Iterator
+        test.TestResetAPIs
+        test.TestTwoInstrNoIdx
         test.TestPktGenClear")
 
 p4c_add_ptf_test_with_ptfdir ("tofino" "miss_clause" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/PD/miss_clause.p4

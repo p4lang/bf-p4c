@@ -7,7 +7,7 @@
 #include "target.h"
 #include "top_level.h"
 
-extern unsigned unique_action_handle;
+static unsigned unique_field_list_handle = FIELD_HANDLE_START;
 
 Deparser Deparser::singleton_object;
 
@@ -432,7 +432,7 @@ void Deparser::gen_learn_quanta(REGS &regs, json::vector &learn_quanta) {
             json::map quanta;
             quanta["name"] = (*tname).c_str();
             quanta["lq_cfg_type"] = idx;
-            quanta["handle"] = unique_action_handle++;
+            quanta["handle"] = unique_field_list_handle++;
             auto digentry = (*(digest.context_json))[idx++];
             auto &digfields = *(digentry->as_vector());
             json::vector &fields = quanta["fields"];
