@@ -149,6 +149,9 @@ class SymbolType final : public P4RuntimeSymbolType {
     static P4RuntimeSymbolType DIRECT_WRED() {
         return P4RuntimeSymbolType::make(barefoot::P4Ids::DIRECT_WRED);
     }
+    static P4RuntimeSymbolType VALUE_SET() {
+        return P4RuntimeSymbolType::make(barefoot::P4Ids::VALUE_SET);
+    }
 };
 
 /// The information about an action profile which is necessary to generate its
@@ -171,6 +174,39 @@ struct Digest {
     const p4configv1::P4DataTypeSpec* typeSpec;  // The format of the packed data.
     const IR::IAnnotated* annotations;  // If non-null, any annotations applied to this digest
                                         // declaration.
+};
+
+/// The information about a value set instance which is needed to serialize it.
+struct ValueSet {
+    const cstring name;
+    const p4configv1::P4DataTypeSpec* typeSpec;  // The format of the stored data
+    const int64_t size;  // Number of entries in the value set
+    const IR::IAnnotated* annotations;  // If non-null, any annotations applied to this value set
+                                        // declaration.
+
+    static boost::optional<ValueSet>
+    from(const IR::P4ValueSet* instance,
+         const ReferenceMap* refMap,
+         p4configv1::P4TypeInfo* p4RtTypeInfo) {
+        CHECK_NULL(instance);
+        int64_t size = 0;
+        auto sizeConstant = instance->size->to<IR::Constant>();
+        if (sizeConstant == nullptr || !sizeConstant->fitsInt()) {
+            ::error("@size should be an integer for declaration %1%", instance);
+            return boost::none;
+        }
+        if (sizeConstant->value < 0) {
+            ::error("@size should be a positive integer for declaration %1%", instance);
+            return boost::none;
+        }
+        size = sizeConstant->value.get_si();
+        auto typeSpec = TypeSpecConverter::convert(refMap, instance->elementType, p4RtTypeInfo);
+        CHECK_NULL(typeSpec);
+        return ValueSet{instance->controlPlaneName(),
+                        typeSpec,
+                        size,
+                        instance->to<IR::IAnnotated>()};
+    }
 };
 
 /// The information about a register instance which is needed to serialize it.
@@ -434,9 +470,20 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         }
     }
 
-    void postCollect(P4RuntimeSymbolTableIface* symbols) override {
-        (void)symbols;
+    static void collectParserSymbols(P4RuntimeSymbolTableIface* symbols,
+                                     const IR::ParserBlock* parserBlock) {
+        CHECK_NULL(parserBlock);
+        auto parser = parserBlock->container;
+        CHECK_NULL(parser);
 
+        for (auto s : parser->parserLocals) {
+            if (auto inst = s->to<IR::P4ValueSet>()) {
+                symbols->add(SymbolType::VALUE_SET(), inst);
+            }
+        }
+    }
+
+    void postCollect(P4RuntimeSymbolTableIface* symbols) override {
         // analyze action profiles / selectors and build a mapping from action
         // profile / selector name to the set of tables referencing them
         Helpers::forAllEvaluatedBlocks(evaluatedProgram, [&](const IR::Block* block) {
@@ -445,6 +492,13 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             auto implementation = getTableImplementationName(table, refMap);
             if (implementation)
                 actionProfilesRefs[*implementation].insert(table->controlPlaneName());
+        });
+
+        // Collect value sets. This step is required because value set support
+        // in "standard" P4Info is currently insufficient,
+        Helpers::forAllEvaluatedBlocks(evaluatedProgram, [&](const IR::Block* block) {
+            if (!block->is<IR::ParserBlock>()) return;
+            collectParserSymbols(symbols, block->to<IR::ParserBlock>());
         });
 
         // Creates a set of color-aware meters by inspecting every call to the
@@ -665,11 +719,43 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         if (portMetadata) addPortMetadata(symbols, p4info, *portMetadata);
     }
 
+    void addValueSet(const P4RuntimeSymbolTableIface& symbols,
+                     ::p4::config::v1::P4Info* p4info,
+                     const ValueSet& valueSetInstance) {
+        ::barefoot::ValueSet valueSet;
+        valueSet.set_size(valueSetInstance.size);
+        valueSet.mutable_type_spec()->CopyFrom(*valueSetInstance.typeSpec);
+        addP4InfoExternInstance(
+            symbols, SymbolType::VALUE_SET(), "ValueSet",
+            valueSetInstance.name, valueSetInstance.annotations, valueSet,
+            p4info);
+    }
+
+    void analyzeParser(const P4RuntimeSymbolTableIface& symbols,
+                       ::p4::config::v1::P4Info* p4info,
+                       const IR::ParserBlock* parserBlock) {
+        CHECK_NULL(parserBlock);
+        auto parser = parserBlock->container;
+        CHECK_NULL(parser);
+
+        for (auto s : parser->parserLocals) {
+            if (auto inst = s->to<IR::P4ValueSet>()) {
+                auto valueSet = ValueSet::from(inst, refMap, p4info->mutable_type_info());
+                if (valueSet) addValueSet(symbols, p4info, *valueSet);
+            }
+        }
+    }
+
     void postAdd(const P4RuntimeSymbolTableIface& symbols,
-            ::p4::config::v1::P4Info* p4info) override {
-        // nothing to do
-        (void)symbols;
-        (void)p4info;
+                 ::p4::config::v1::P4Info* p4info) override {
+        // Generates Tofino-specific ValueSet P4Info messages. This step is
+        // required because value set support in "standard" P4Info is currently
+        // insufficient: the standard ValueSet message restricts the element
+        // type to a simple binary string (P4Runtime v1.0 limitation).
+        Helpers::forAllEvaluatedBlocks(evaluatedProgram, [&](const IR::Block* block) {
+            if (!block->is<IR::ParserBlock>()) return;
+            analyzeParser(symbols, p4info, block->to<IR::ParserBlock>());
+        });
     }
 
     /// @return serialization information for the digest() call represented by

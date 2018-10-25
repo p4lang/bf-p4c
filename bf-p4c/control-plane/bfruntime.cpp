@@ -121,6 +121,10 @@ class BfRtSchemaGenerator {
     /// Common register representation between PSA and Tofino architectures
     struct Register;
 
+    /// Common register representation between PSA and Tofino architectures.
+    /// ValueSet is only supported for TNA programs at the moment.
+    struct ValueSet;
+
     // only for Tofino architectures
     struct Lpf;
     struct Wred;
@@ -135,6 +139,8 @@ class BfRtSchemaGenerator {
     void addTofinoExterns(Util::JsonArray* tablesJson,
                           Util::JsonArray* learnFiltersJson) const;
     void addPortMetadataExtern(Util::JsonArray* tablesJson) const;
+
+    void addValueSet(Util::JsonArray* tablesJson, const ValueSet& wred) const;
 
     void addCounterCommon(Util::JsonArray* tablesJson, const Counter& counter) const;
     void addMeterCommon(Util::JsonArray* tablesJson, const Meter& meter) const;
@@ -172,7 +178,7 @@ class BfRtSchemaGenerator {
                                        cstring prefix = "",
                                        P4Id idOffset = 1) const;
 
-    static Util::JsonObject* makeCommonDataField(P4Id id, const std::string& name,
+    static Util::JsonObject* makeCommonDataField(P4Id id, cstring name,
                                                  Util::JsonObject* type, bool repeated,
                                                  Util::JsonArray* annotations = nullptr);
 
@@ -180,7 +186,7 @@ class BfRtSchemaGenerator {
                                    bool mandatory, Util::JsonObject* type,
                                    Util::JsonArray* annotations = nullptr);
 
-    static void addKeyField(Util::JsonArray* dataJson, P4Id id, const std::string& name,
+    static void addKeyField(Util::JsonArray* dataJson, P4Id id, cstring name,
                             bool mandatory, cstring matchType, Util::JsonObject* type,
                             Util::JsonArray* annotations = nullptr);
 
@@ -378,6 +384,84 @@ static void addSingleton(Util::JsonArray* dataJson,
     dataJson->append(singletonJson);
 }
 
+/// Takes a simple P4Info P4DataTypeSpec message in its factory method and
+/// flattens it into a vector of BF-RT "fields" which can be used as key fields
+/// or data fields. The class provides iterators.
+class TypeSpecParser {
+ public:
+    struct Field {
+        cstring name;
+        P4Id id;
+        Util::JsonObject* type;
+    };
+
+    using Fields = std::vector<Field>;
+    using iterator = Fields::iterator;
+    using const_iterator = Fields::const_iterator;
+
+    static TypeSpecParser make(const p4configv1::P4Info& p4info,
+                               const p4configv1::P4DataTypeSpec& typeSpec,
+                               cstring instanceType,
+                               cstring instanceName,
+                               cstring prefix = "",
+                               P4Id idOffset = 1) {
+        Fields fields;
+        const auto& typeInfo = p4info.type_info();
+
+        auto addField = [&](P4Id id, const std::string& name,
+                            const p4configv1::P4DataTypeSpec& fSpec) {
+            if (!fSpec.has_bitstring() || !fSpec.bitstring().has_bit()) {
+                ::error("Error when generating BF-RT info for '%1%' '%2%': "
+                        "packed type is too complex",
+                        instanceType, instanceName);
+                return;
+            }
+            auto* type = makeTypeBytes(fSpec.bitstring().bit().bitwidth());
+            fields.push_back({prefix + name, id, type});
+        };
+
+        if (typeSpec.has_struct_()) {
+            auto structName = typeSpec.struct_().name();
+            auto p_it = typeInfo.structs().find(structName);
+            BUG_CHECK(p_it != typeInfo.structs().end(),
+                      "Struct name '%1%' not found in P4Info map", structName);
+            P4Id id = idOffset;
+            for (const auto& member : p_it->second.members())
+                addField(id++, member.name(), member.type_spec());
+        } else if (typeSpec.has_tuple()) {
+            P4Id id = idOffset;
+            for (const auto& member : typeSpec.tuple().members()) {
+                // TODO(antonin): we do not really have better names for now, do
+                // we need to add support for annotations of tuple members in
+                // P4Info?
+                std::string fName("f" + std::to_string(id));
+                addField(id++, fName, member);
+            }
+        } else if (typeSpec.has_bitstring()) {
+            // TODO(antonin): same as above, we need a way to pass name
+            // annotations
+            addField(idOffset, "f1", typeSpec);
+        } else {
+            ::error("Error when generating BF-RT info for '%1%' '%2%': "
+                    "only structs, tuples and bitstrings are currently supported for packed type",
+                    instanceType, instanceName);
+        }
+
+        return TypeSpecParser(std::move(fields));
+    }
+
+    iterator begin() { return fields.begin(); }
+    const_iterator cbegin() { return fields.cbegin(); }
+    iterator end() { return fields.end(); }
+    const_iterator cend() { return fields.cend(); }
+
+ private:
+    explicit TypeSpecParser(Fields&& fields)
+        : fields(std::move(fields)) { }
+
+    Fields fields;
+};
+
 /// Common counter representation between PSA and Tofino architectures
 struct BfRtSchemaGenerator::Counter {
     enum Unit { UNSPECIFIED = 0, BYTES = 1, PACKETS = 2, BOTH = 3 };
@@ -445,7 +529,13 @@ struct BfRtSchemaGenerator::Meter {
         // Meter::Unit and for MeterSpec::Unit, but this may not be very
         // future-proof.
         auto unit = static_cast<Meter::Unit>(meterInstance.spec().unit());
-        // auto type = static_cast<Meter::Type>(meterInstance.spec().type());
+        // TODO(antonin): the standard Meter message in P4Info doesn't have the
+        // notion of color-awareness any more since according to PSA it is a
+        // property of the "execute" method and not of the extern instance
+        // itself. This means it may be tricky to support color-aware meters for
+        // PSA programs on Tofino. However, we don't have this issue for TNA
+        // programs, since the TNA Meter message does include color-awareness
+        // information.
         auto type = Type::COLOR_UNAWARE;
         return Meter{pre.name(), id, meterInstance.size(), unit, type};
     }
@@ -454,7 +544,6 @@ struct BfRtSchemaGenerator::Meter {
         const auto& pre = meterInstance.preamble();
         auto id = makeBfRtId(pre.id(), ::barefoot::P4Ids::DIRECT_METER);
         auto unit = static_cast<Meter::Unit>(meterInstance.spec().unit());
-        // auto type = static_cast<Meter::Type>(meterInstance.spec().type());
         auto type = Type::COLOR_UNAWARE;
         return Meter{pre.name(), id, 0, unit, type};
     }
@@ -695,6 +784,26 @@ struct BfRtSchemaGenerator::Wred {
     }
 };
 
+/// This struct is meant to be used as a common representation of ValueSet
+/// objects for both PSA & TNA programs. However, at the moment we only support
+/// TNA ValueSet objects.
+struct BfRtSchemaGenerator::ValueSet {
+    std::string name;
+    P4Id id;
+    p4configv1::P4DataTypeSpec typeSpec;
+    const int64_t size;
+
+    static boost::optional<ValueSet> fromTofino(const p4configv1::ExternInstance& externInstance) {
+        const auto& pre = externInstance.preamble();
+        ::barefoot::ValueSet valueSet;
+        if (!externInstance.info().UnpackTo(&valueSet)) {
+            ::error("Extern instance %1% does not pack a value set object", pre.name());
+            return boost::none;
+        }
+        return ValueSet{pre.name(), pre.id(), valueSet.type_spec(), valueSet.size()};
+    }
+};
+
 boost::optional<BfRtSchemaGenerator::Counter>
 BfRtSchemaGenerator::getDirectCounter(P4Id counterId) const {
     if (isOfType(counterId, p4configv1::P4Ids::DIRECT_COUNTER)) {
@@ -752,7 +861,7 @@ BfRtSchemaGenerator::getDirectWred(P4Id wredId) const {
 }
 
 Util::JsonObject*
-BfRtSchemaGenerator::makeCommonDataField(P4Id id, const std::string& name,
+BfRtSchemaGenerator::makeCommonDataField(P4Id id, cstring name,
                                          Util::JsonObject* type, bool repeated,
                                          Util::JsonArray* annotations) {
     auto* dataField = new Util::JsonObject();
@@ -785,7 +894,7 @@ BfRtSchemaGenerator::addActionDataField(Util::JsonArray* dataJson, P4Id id, cons
 }
 
 void
-BfRtSchemaGenerator::addKeyField(Util::JsonArray* dataJson, P4Id id, const std::string& name,
+BfRtSchemaGenerator::addKeyField(Util::JsonArray* dataJson, P4Id id, cstring name,
                                  bool mandatory, cstring matchType, Util::JsonObject* type,
                                  Util::JsonArray* annotations) {
     auto* dataField = new Util::JsonObject();
@@ -800,6 +909,29 @@ BfRtSchemaGenerator::addKeyField(Util::JsonArray* dataJson, P4Id id, const std::
     dataField->emplace("match_type", matchType);
     dataField->emplace("type", type);
     dataJson->append(dataField);
+}
+
+void
+BfRtSchemaGenerator::addValueSet(Util::JsonArray* tablesJson,
+                                 const ValueSet& valueSet) const {
+    auto* tableJson = new Util::JsonObject();
+
+    tableJson->emplace("name", valueSet.name);
+    tableJson->emplace("id", valueSet.id);
+    tableJson->emplace("table_type", "ParserValueSet");
+    tableJson->emplace("size", valueSet.size);
+
+    auto* keyJson = new Util::JsonArray();
+    auto parser = TypeSpecParser::make(p4info, valueSet.typeSpec, "ValueSet", valueSet.name);
+    for (const auto &f : parser)
+        addKeyField(keyJson, f.id, f.name, true /* mandatory */, "Ternary", f.type);
+    tableJson->emplace("key", keyJson);
+
+    tableJson->emplace("data", new Util::JsonArray());
+    tableJson->emplace("supported_operations", new Util::JsonArray());
+    tableJson->emplace("attributes", new Util::JsonArray());
+
+    tablesJson->append(tableJson);
 }
 
 void
@@ -877,45 +1009,11 @@ BfRtSchemaGenerator::transformTypeSpecToDataFields(Util::JsonArray* fieldsJson,
                                                    cstring instanceName,
                                                    cstring prefix,
                                                    P4Id idOffset) const {
-    auto addField = [&](P4Id id, const std::string& name,
-                        const p4configv1::P4DataTypeSpec& fSpec) {
-        if (!fSpec.has_bitstring() || !fSpec.bitstring().has_bit()) {
-            ::error("Error when generating BF-RT info for '%1%' '%2%': "
-                    "packed type is too complex",
-                    instanceType, instanceName);
-            return;
-        }
-        auto* f = makeCommonDataField(
-            id, prefix + name,
-            makeTypeBytes(fSpec.bitstring().bit().bitwidth()), false /* repeated */);
-        fieldsJson->append(f);
-    };
-
-    const auto& typeInfo = p4info.type_info();
-
-    if (typeSpec.has_struct_()) {
-        auto structName = typeSpec.struct_().name();
-        auto p_it = typeInfo.structs().find(structName);
-        BUG_CHECK(p_it != typeInfo.structs().end(),
-                  "Struct name '%1%' not found in P4Info map", structName);
-        P4Id id = idOffset;
-        for (const auto& member : p_it->second.members())
-            addField(id++, member.name(), member.type_spec());
-    } else if (typeSpec.has_tuple()) {
-        P4Id id = idOffset;
-        for (const auto& member : typeSpec.tuple().members()) {
-            // TODO(antonin): we do not really have better names for now, do we
-            // need to add support for annotations of tuple members in P4Info?
-            std::string fName("f" + std::to_string(id));
-            addField(id++, fName, member);
-        }
-    } else if (typeSpec.has_bitstring()) {
-        // TODO(antonin): same as above, we need a way to pass name annotations
-        addField(idOffset, "f1", typeSpec);
-    } else {
-        ::error("Error when generating BF-RT info for '%1%' '%2%': "
-                "only structs, tuples and bitstrings are currently supported for packed type",
-                instanceType, instanceName);
+    auto parser = TypeSpecParser::make(
+        p4info, typeSpec, instanceType, instanceName, prefix, idOffset);
+    for (const auto &f : parser) {
+        auto* fJson = makeCommonDataField(f.id, f.name, f.type, false /* repeated */);
+        fieldsJson->append(fJson);
     }
 }
 
@@ -1532,6 +1630,11 @@ BfRtSchemaGenerator::addTofinoExterns(Util::JsonArray* tablesJson,
             for (const auto& externInstance : externType.instances()) {
                 auto wred = Wred::fromTofino(externInstance);
                 if (wred != boost::none) addWred(tablesJson, *wred);
+            }
+        } else if (externTypeId == ::barefoot::P4Ids::VALUE_SET) {
+            for (const auto& externInstance : externType.instances()) {
+                auto valueSet = ValueSet::fromTofino(externInstance);
+                if (valueSet != boost::none) addValueSet(tablesJson, *valueSet);
             }
         }
     }
