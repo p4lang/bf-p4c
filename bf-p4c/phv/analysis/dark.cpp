@@ -9,9 +9,8 @@ Visitor::profile_t CollectNonDarkUses::init_apply(const IR::Node* root) {
 
 bool CollectNonDarkUses::preorder(const IR::MAU::Action* act) {
     for (auto* call : act->stateful_calls) {
-        auto prim = call->prim;
-        for (auto* operand : prim->operands) {
-            const PHV::Field* f = phv.field(operand);
+        if (call->index) {
+            const PHV::Field* f = phv.field(call->index);
             if (!f) continue;
             LOG5("    Input crossbar read, stateful primitive: " << f);
             nonDarkMauUses[f->id] = true; } }

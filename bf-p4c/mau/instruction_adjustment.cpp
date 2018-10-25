@@ -860,29 +860,26 @@ void GeneratePrimitiveInfo::gen_action_json(const IR::MAU::Action *act,
                 is_hash_dist = true;
             }
         }
-        auto prim = call->prim;
         auto _primitive = new Util::JsonObject();
-        auto *at = prim->operands.at(0)->to<IR::GlobalRef>()
-                       ->obj->to<IR::MAU::AttachedMemory>();
+        auto *at = call->attached_caller;
         auto *salu = at->to<IR::MAU::StatefulAlu>();
         if (salu) {
-            if (is_hash_dist) {
-                add_hash_dist_json(_primitive, "ExecuteStatefulAluFromHashPrimitive",
-                    "stateful", cstr(at->name), nullptr, hd);
-            } else {
-                _primitive->emplace("name", "ExecuteStatefulAluPrimitive");
-                add_op_json(_primitive, "dst", "stateful", cstr(at->name));
-                for (size_t i = 1; i < prim->operands.size(); ++i) {
-                    if (auto *k = prim->operands.at(i)->to<IR::Constant>()) {
+            if (auto ci = call->index) {
+                if (auto hd = ci->to<IR::MAU::HashDist>()) {
+                    add_hash_dist_json(_primitive, "ExecuteStatefulAluFromHashPrimitive",
+                        "stateful", cstr(at->name), nullptr, hd);
+                } else {
+                    _primitive->emplace("name", "ExecuteStatefulAluPrimitive");
+                    add_op_json(_primitive, "dst", "stateful", cstr(salu->name));
+                    if (auto *k = ci->to<IR::Constant>()) {
                         add_op_json(_primitive, "idx", "immediate", k->toString());
-                    } else if (auto *a = prim->operands.at(i)->to<IR::MAU::ActionArg>()) {
+                    } else if (auto *a = ci->to<IR::MAU::ActionArg>()) {
                         add_op_json(_primitive, "idx", "action_param", a->name.toString());
-                    } else if (auto *c = prim->operands.at(i)->to<IR::Cast>()) {
-                        if (auto *a = c->expr->to<IR::MAU::ActionArg>()) {
-                            add_op_json(_primitive, "idx", "action_param", a->name.toString());
-                        }
                     }
                 }
+            } else {
+                _primitive->emplace("name", "ExecuteStatefulAluPrimitive");
+                add_op_json(_primitive, "dst", "stateful", cstr(salu->name));
             }
             auto *salu_details = new Util::JsonObject();
             auto single_bit_mode = salu->source_width() == 1 ? true : false;

@@ -1371,9 +1371,7 @@ class MauAsmOutput::EmitAction : public Inspector {
     }
     bool preorder(const IR::MAU::Action *act) override {
         for (auto call : act->stateful_calls) {
-            auto prim = call->prim;
-            auto *at = prim->operands.at(0)->to<IR::GlobalRef>()->obj
-                       ->to<IR::MAU::AttachedMemory>();
+            auto *at = call->attached_caller;
             if (call->index == nullptr) continue;
             if (auto aa = call->index->to<IR::MAU::ActionArg>()) {
                 alias[aa->name] = self.indirect_address(at);
@@ -1404,9 +1402,7 @@ class MauAsmOutput::EmitAction : public Inspector {
         // the meter type is dumped first, followed by the address location.  This is
         // required to generate override_full_.*_addr information
         for (auto call : act->stateful_calls) {
-            auto prim = call->prim;
-            auto *at = prim->operands.at(0)->to<IR::GlobalRef>()
-                           ->obj->to<IR::MAU::AttachedMemory>();
+            auto *at = call->attached_caller;
             out << indent << "- " << self.find_attached_name(table, at) << '(';
             sep = "";
             // Currently dumps meter type as number, because the color aware stuff does not

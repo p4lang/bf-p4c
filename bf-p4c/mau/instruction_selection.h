@@ -149,6 +149,13 @@ class StatefulAttachmentSetup : public PassManager {
         addPasses({ new Scan(*this), new Update(*this) }); }
 };
 
+class NullifyAllStatefulCallPrim : public MauModifier {
+    bool preorder(IR::MAU::StatefulCall *sc) override;
+
+ public:
+    NullifyAllStatefulCallPrim() { }
+};
+
 /** Local copy propagates any writes in set operations to later reads in other operations.
  *  Marks these fields as copy propagated.
  */
@@ -164,7 +171,9 @@ class BackendCopyPropagation : public MauTransform, TofinoWriteContext {
 
     const IR::Node *preorder(IR::Node *n) override { visitOnce(); return n; }
     const IR::MAU::Instruction *preorder(IR::MAU::Instruction *i) override;
-    const IR::Primitive *preorder(IR::Primitive *p) override { prune(); return p; }
+    const IR::MAU::StatefulCall *preorder(IR::MAU::StatefulCall *sc) override {
+        prune(); return sc;
+    }
     const IR::MAU::BackendAttached *preorder(IR::MAU::BackendAttached *ba) override {
         prune(); return ba;
     }
@@ -187,7 +196,7 @@ class VerifyParallelWritesAndReads : public MauInspector, TofinoWriteContext {
 
     bool preorder(const IR::MAU::Action *) override;
     bool preorder(const IR::MAU::Instruction *) override;
-    bool preorder(const IR::Primitive *) override { return false; }
+    bool preorder(const IR::MAU::StatefulCall *) override { return false; }
     bool preorder(const IR::MAU::BackendAttached *) override { return false; }
     bool is_parallel(const IR::Expression *e, bool is_write);
 
@@ -212,7 +221,7 @@ class EliminateAllButLastWrite : public PassManager {
 
         bool preorder(const IR::MAU::Action *) override;
         bool preorder(const IR::MAU::Instruction *) override;
-        bool preorder(const IR::Primitive *) override { return false; }
+        bool preorder(const IR::MAU::StatefulCall *) override { return false; }
         bool preorder(const IR::MAU::BackendAttached *) override { return false; }
         void postorder(const IR::MAU::Action *) override;
 
@@ -225,7 +234,9 @@ class EliminateAllButLastWrite : public PassManager {
         const IR::MAU::Action *current_af = nullptr;
         const IR::MAU::Action *preorder(IR::MAU::Action *) override;
         const IR::MAU::Instruction *preorder(IR::MAU::Instruction *) override;
-        const IR::Primitive *preorder(IR::Primitive *p) override { prune(); return p; }
+        const IR::MAU::StatefulCall *preorder(IR::MAU::StatefulCall *sc) override {
+            prune(); return sc;
+        }
         const IR::MAU::BackendAttached *preorder(IR::MAU::BackendAttached *ba) override {
             prune(); return ba;
         }

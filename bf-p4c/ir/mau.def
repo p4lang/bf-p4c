@@ -622,7 +622,10 @@ class StatefulCounter : Expression {
 
 class StatefulCall {
 #nodbprint
-    Primitive prim;
+    // This will always be null after InstructionSelection is complete.  Everything
+    // currently used for DefUse analysis is saved within the rest of the call
+    NullOK Primitive prim;
+    AttachedMemory  attached_caller;
     NullOK Expression index = nullptr;
 }
 

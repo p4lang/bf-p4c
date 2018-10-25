@@ -147,7 +147,11 @@ const IR::Node *Synth2PortSetup::postorder(IR::Primitive *prim) {
 
 const IR::MAU::Action *Synth2PortSetup::postorder(IR::MAU::Action *act) {
     for (auto stateful_prim : stateful) {
-        act->stateful_calls.emplace_back(stateful_prim->srcInfo, stateful_prim);
+        auto at_mem = stateful_prim->operands.at(0)->to<IR::GlobalRef>()
+                                   ->obj->to<IR::MAU::AttachedMemory>();
+        BUG_CHECK(at_mem, "%s: Stateful Call %s doesn't have a stateful object",
+                          stateful_prim->srcInfo, stateful_prim);
+        act->stateful_calls.emplace_back(stateful_prim->srcInfo, stateful_prim, at_mem);
     }
 
     // act->stateful.append(stateful);
@@ -618,6 +622,8 @@ bool StatefulAttachmentSetup::Scan::preorder(const IR::MAU::HashDist *hd) {
 }
 
 void StatefulAttachmentSetup::Scan::postorder(const IR::MAU::Instruction *instr) {
+    auto tbl = findContext<IR::MAU::Table>();
+    auto act = findContext<IR::MAU::Action>();
     if (self.saved_tempvar && self.saved_hashdist) {
         self.stateful_alu_from_hash_dists[self.saved_tempvar->name] = self.saved_hashdist;
         self.remove_instr.insert(instr); }
@@ -1376,6 +1382,23 @@ bool SetupAttachedAddressing::UpdateAttached::preorder(IR::MAU::BackendAttached 
     return false;
 }
 
+/**
+ * By the time this pass is run, all relevant information about the different stateful
+ * calls has been moved to other parts of the IR.
+ *
+ * The primitive, however, will potentially keep information around that could potentially
+ * be erroneously used by PHV, i.e. temporary variables that were converted to hash
+ * distribution IR nodes.  In order to not have PHV allocation make space for these Temporary
+ * variables, these primitives must be discarded.
+ *
+ * If other information is potentially relevant, it must be saved in other IR nodes
+ * before this pass 
+ */
+bool NullifyAllStatefulCallPrim::preorder(IR::MAU::StatefulCall *sc) {
+    sc->prim = nullptr;
+    return false;
+}
+
 
 /** The purpose of BackendCopyPropagation is to propagate reads written in previous sets.
  *  This will only work for set operations, i.e. the following action:
@@ -1747,6 +1770,7 @@ InstructionSelection::InstructionSelection(PhvInfo &phv) : PassManager {
     new MeterSetup(phv),
     new DLeftSetup,
     new SetupAttachedAddressing,
+    new NullifyAllStatefulCallPrim,
     new CollectPhvInfo(phv),
     new BackendCopyPropagation(phv),
     new VerifyParallelWritesAndReads(phv),
