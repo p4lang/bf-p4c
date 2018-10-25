@@ -2583,7 +2583,9 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
             out << indent++ << "default_action_parameters:" << std::endl;
             int index = 0;
             for (auto param : act->default_params) {
-                out << indent << act->args[index++]->name << ": " << param << std::endl;
+                auto pval = param->expression;
+                if (pval->is<IR::Constant>())
+                    out << indent << act->args[index++]->name << ": " << pval << std::endl;
             }
             indent--;
             break;

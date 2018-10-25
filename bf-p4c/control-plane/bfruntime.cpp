@@ -445,7 +445,8 @@ struct BfRtSchemaGenerator::Meter {
         // Meter::Unit and for MeterSpec::Unit, but this may not be very
         // future-proof.
         auto unit = static_cast<Meter::Unit>(meterInstance.spec().unit());
-        auto type = static_cast<Meter::Type>(meterInstance.spec().type());
+        // auto type = static_cast<Meter::Type>(meterInstance.spec().type());
+        auto type = Type::COLOR_UNAWARE;
         return Meter{pre.name(), id, meterInstance.size(), unit, type};
     }
 
@@ -453,7 +454,8 @@ struct BfRtSchemaGenerator::Meter {
         const auto& pre = meterInstance.preamble();
         auto id = makeBfRtId(pre.id(), ::barefoot::P4Ids::DIRECT_METER);
         auto unit = static_cast<Meter::Unit>(meterInstance.spec().unit());
-        auto type = static_cast<Meter::Type>(meterInstance.spec().type());
+        // auto type = static_cast<Meter::Type>(meterInstance.spec().type());
+        auto type = Type::COLOR_UNAWARE;
         return Meter{pre.name(), id, 0, unit, type};
     }
 

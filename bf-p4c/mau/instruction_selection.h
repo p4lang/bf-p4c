@@ -60,7 +60,9 @@ class DoInstructionSelection : public MauTransform, TofinoWriteContext {
     const IR::MAU::Action *preorder(IR::MAU::Action *) override;
     const IR::MAU::SaluAction *preorder(IR::MAU::SaluAction *a) override { prune(); return a; }
     const IR::Expression *postorder(IR::Add *) override;
+    const IR::Expression *postorder(IR::AddSat *) override;
     const IR::Expression *postorder(IR::Sub *) override;
+    const IR::Expression *postorder(IR::SubSat *) override;
     const IR::Expression *postorder(IR::Neg *) override;
     const IR::Expression *postorder(IR::Shr *) override;
     const IR::Expression *postorder(IR::Shl *) override;

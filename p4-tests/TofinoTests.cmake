@@ -101,6 +101,10 @@ p4c_add_ptf_test_with_ptfdir_and_spec (
 # subset of p4factory tests that we want to run as part of regressions
 # One # means it fails badly but should get it to run soon
 # Two # means it is not required for switch, but we should still try to compile
+# Remove opcode tests to avoid timeout, these are run as part of nightly
+# opcode_test_signed
+# opcode_test_saturating
+# opcode_test_signed_and_saturating
 set (P4FACTORY_REGRESSION_TESTS
   basic_switching
   # # # bf-diags
@@ -117,9 +121,6 @@ set (P4FACTORY_REGRESSION_TESTS
   multicast_test
   # # multi-device
   opcode_test
-  # opcode_test_signed
-  # opcode_test_saturating
-  # opcode_test_signed_and_saturating
   pcie_pkt_test
   # # pctr
   pgrs

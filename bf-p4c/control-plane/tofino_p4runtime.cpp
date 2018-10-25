@@ -434,7 +434,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         }
     }
 
-    void postCollect(const P4RuntimeSymbolTableIface& symbols) override {
+    void postCollect(P4RuntimeSymbolTableIface* symbols) override {
         (void)symbols;
 
         // analyze action profiles / selectors and build a mapping from action
@@ -663,6 +663,13 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         auto p4RtTypeInfo = p4info->mutable_type_info();
         auto portMetadata = getPortMetadataExtract(externFunction, refMap, p4RtTypeInfo);
         if (portMetadata) addPortMetadata(symbols, p4info, *portMetadata);
+    }
+
+    void postAdd(const P4RuntimeSymbolTableIface& symbols,
+            ::p4::config::v1::P4Info* p4info) override {
+        // nothing to do
+        (void)symbols;
+        (void)p4info;
     }
 
     /// @return serialization information for the digest() call represented by

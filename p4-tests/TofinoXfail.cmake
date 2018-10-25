@@ -37,6 +37,7 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     testdata/p4_14_samples/gateway4.p4
     testdata/p4_16_samples/issue774-4-bmv2.p4
     testdata/p4_16_samples/issue1000-bmv2.p4
+    testdata/p4_16_samples/saturated-bmv2.p4
     )
 
 endif() # HARLYN_STF_tofino
@@ -413,6 +414,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/07-MacAddrCheck.p4
   extensions/p4_tests/p4_14/08-MacAddrCheck1.p4
   extensions/p4_tests/p4_14/p4smith_regression/kindlings_0.p4
+  testdata/p4_16_samples/issue1544-bmv2.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -560,6 +562,26 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/checksum1-bmv2.p4
   )
 
+p4c_add_xfail_reason("tofino"
+  "expected a method call"
+  testdata/p4_16_samples/issue1538.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Static entries are not supported for lpm-match"
+  testdata/p4_16_samples/table-entries-lpm-bmv2.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "error: : An attached table can only be executed once per action"
+  testdata/p4_16_samples/issue1566-bmv2.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "error: constant value .* out of range for immediate"
+  extensions/p4_tests/p4_14/p4smith_regression/blatz_0.p4
+  )
+
 # Specifically to save the error message
 p4c_add_xfail_reason("tofino"
   "(throwing|uncaught exception).*Backtrack::trigger"
@@ -572,7 +594,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/arith2-bmv2.p4
   testdata/p4_16_samples/concat-bmv2.p4
   extensions/p4_tests/p4_14/p4smith_regression/shillings_0.p4
-  testdata/p4_16_samples/saturated-bmv2.p4
   testdata/p4_16_samples/issue298-bmv2.p4
   testdata/p4_14_samples/register.p4
   testdata/p4_16_samples/issue1520-bmv2.p4
@@ -676,27 +697,7 @@ p4c_add_xfail_reason("tofino"
 # Glass's Tofino backend rejects these programs as well; they're really designed
 # for BMV2.
 p4c_add_xfail_reason("tofino"
-  "Encountered invalid code in computed checksum control"
-  testdata/p4_16_samples/issue134-bmv2.p4
-)
-
-# These programs include non-byte-aligned headers, which are not supported on
-# Tofino.
-# XXX(seth): We're obviously losing some test coverage here; perhaps we should
-# adjust some of these tests to not trigger this error?
-p4c_add_xfail_reason("tofino"
-  "header .* is not byte-aligned"
-  testdata/p4_14_samples/14-SplitEthernetVlan.p4
-  testdata/p4_14_samples/02-BadSizeField.p4
-  testdata/p4_14_samples/14-GatewayGreaterThan.p4
-  testdata/p4_16_samples/table-entries-priority-bmv2.p4
-  testdata/p4_16_samples/table-entries-valid-bmv2.p4
-  testdata/p4_16_samples/inline-stack-bmv2.p4
-  testdata/p4_16_samples/table-entries-range-bmv2.p4
-  testdata/p4_16_samples/table-entries-lpm-bmv2.p4
-  testdata/p4_16_samples/table-entries-exact-bmv2.p4
-  testdata/p4_16_samples/table-entries-ternary-bmv2.p4
-  testdata/p4_16_samples/table-entries-exact-ternary-bmv2.p4
+  "Tofino only supports 1-bit checksum update condition in the deparser"
   testdata/p4_16_samples/issue134-bmv2.p4
 )
 
@@ -867,6 +868,7 @@ p4c_add_xfail_reason("tofino"
   "condition expression too complex"
   extensions/p4_tests/p4_14/test_config_294_parser_loop.p4
   )
+
 p4c_add_xfail_reason("tofino"
   "does not have a PHV allocation though it is used in an action"
   )
@@ -958,17 +960,6 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "invalid key expression"
-  # This test attempts to match on a field of `error` type.
-  testdata/p4_16_samples/issue1062-bmv2.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "header hdr is not byte-aligned"
-  testdata/p4_16_samples/issue1062-1-bmv2.p4
-  )
-
-p4c_add_xfail_reason("tofino"
   "Currently the field .* in action .* is assigned in a way too complex for the compiler"
   testdata/p4_16_samples/slice-def-use1.p4
   )
@@ -992,6 +983,20 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Cannot properly set up the hash function on the hash matrix"
   testdata/p4_14_samples/issue894.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "address too large for table"
+  testdata/p4_14_samples/saturated-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Malformed packet data"
+  testdata/p4_16_samples/table-entries-range-bmv2.p4
+  testdata/p4_16_samples/table-entries-ternary-bmv2.p4
+  testdata/p4_16_samples/table-entries-exact-bmv2.p4
+  testdata/p4_16_samples/table-entries-exact-ternary-bmv2.p4
+  testdata/p4_16_samples/table-entries-priority-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1104,6 +1109,8 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error.*condition too complex"
   extensions/p4_tests/p4_14/p4smith_regression/grab_0.p4
+  testdata/p4_16_samples/issue1544-1-bmv2.p4
+  testdata/p4_16_samples/issue1544-2-bmv2.p4
 )
 
 # Needs change to source code because of padding field with a 10-bit field that is used in an add
@@ -1366,6 +1373,17 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: metadata field of type error not supported on tofino"
   testdata/p4_16_samples/issue1325-bmv2.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "error: error.NoError invalid key expression"
+  testdata/p4_16_samples/issue1062-bmv2.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "error: metadata field of type error not supported on tofino"
+  # This test attempts to match on a field of `error` type.
+  testdata/p4_16_samples/issue1062-1-bmv2.p4
   )
 
 # P4C-1011

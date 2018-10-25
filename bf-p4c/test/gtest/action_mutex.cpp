@@ -165,45 +165,45 @@ TEST_F(ActionMutexTest, Basic) {
     // for (auto a : act) std::cerr << a.first << std::endl;
 
     // not mutex
-    EXPECT_EQ(action_mutex(act.at("node_a.igrs.set_f1"), act.at("node_b.igrs.set_f1")), false);
-    EXPECT_EQ(action_mutex(act.at("node_a.igrs.set_f1"), act.at("node_b.igrs.set_f2")), false);
-    EXPECT_EQ(action_mutex(act.at("node_a.igrs.set_f1"), act.at("node_b.igrs.set_f3")), false);
-    EXPECT_EQ(action_mutex(act.at("node_a.igrs.set_f1"), act.at("node_b.igrs.set_f5")), false);
-    EXPECT_EQ(action_mutex(act.at("node_a.igrs.set_f1"), act.at("node_d.igrs.set_f3")), false);
-    EXPECT_EQ(action_mutex(act.at("node_a.igrs.set_f1"), act.at("node_d.igrs.set_f2")), false);
-    EXPECT_EQ(action_mutex(act.at("node_a.igrs.set_f1"), act.at("node_f.igrs.set_f5")), false);
-    EXPECT_EQ(action_mutex(act.at("node_a.igrs.set_f1"), act.at("node_c.igrs.set_f2")), false);
-    EXPECT_EQ(action_mutex(act.at("node_a.igrs.set_f1"), act.at("node_e.igrs.set_f4")), false);
+    EXPECT_EQ(action_mutex(act.at("node_a_0.igrs.set_f1"), act.at("node_b_0.igrs.set_f1")), false);
+    EXPECT_EQ(action_mutex(act.at("node_a_0.igrs.set_f1"), act.at("node_b_0.igrs.set_f2")), false);
+    EXPECT_EQ(action_mutex(act.at("node_a_0.igrs.set_f1"), act.at("node_b_0.igrs.set_f3")), false);
+    EXPECT_EQ(action_mutex(act.at("node_a_0.igrs.set_f1"), act.at("node_b_0.igrs.set_f5")), false);
+    EXPECT_EQ(action_mutex(act.at("node_a_0.igrs.set_f1"), act.at("node_d_0.igrs.set_f3")), false);
+    EXPECT_EQ(action_mutex(act.at("node_a_0.igrs.set_f1"), act.at("node_d_0.igrs.set_f2")), false);
+    EXPECT_EQ(action_mutex(act.at("node_a_0.igrs.set_f1"), act.at("node_f_0.igrs.set_f5")), false);
+    EXPECT_EQ(action_mutex(act.at("node_a_0.igrs.set_f1"), act.at("node_c_0.igrs.set_f2")), false);
+    EXPECT_EQ(action_mutex(act.at("node_a_0.igrs.set_f1"), act.at("node_e_0.igrs.set_f4")), false);
 
     // ingress, egress
-    EXPECT_EQ(action_mutex(act.at("node_a.igrs.set_f1"), act.at("node_a_2.egrs.set_f1")), true);
-    EXPECT_EQ(action_mutex(act.at("node_a.igrs.set_f1"), act.at("node_d_2.egrs.set_f2")), true);
-    EXPECT_EQ(action_mutex(act.at("node_a.igrs.set_f1"), act.at("node_e_2.egrs.set_f4")), true);
+    EXPECT_EQ(action_mutex(act.at("node_a_0.igrs.set_f1"), act.at("node_a_1.egrs.set_f1")), true);
+    EXPECT_EQ(action_mutex(act.at("node_a_0.igrs.set_f1"), act.at("node_d_1.egrs.set_f2")), true);
+    EXPECT_EQ(action_mutex(act.at("node_a_0.igrs.set_f1"), act.at("node_e_1.egrs.set_f4")), true);
 
     // inside a table
-    EXPECT_EQ(action_mutex(act.at("node_b.igrs.set_f1"), act.at("node_b.igrs.set_f2")), true);
-    EXPECT_EQ(action_mutex(act.at("node_b.igrs.set_f2"), act.at("node_b.igrs.set_f3")), true);
-    EXPECT_EQ(action_mutex(act.at("node_b.igrs.set_f3"), act.at("node_b.igrs.set_f5")), true);
-    EXPECT_EQ(action_mutex(act.at("node_d.igrs.set_f2"), act.at("node_d.igrs.set_f3")), true);
+    EXPECT_EQ(action_mutex(act.at("node_b_0.igrs.set_f1"), act.at("node_b_0.igrs.set_f2")), true);
+    EXPECT_EQ(action_mutex(act.at("node_b_0.igrs.set_f2"), act.at("node_b_0.igrs.set_f3")), true);
+    EXPECT_EQ(action_mutex(act.at("node_b_0.igrs.set_f3"), act.at("node_b_0.igrs.set_f5")), true);
+    EXPECT_EQ(action_mutex(act.at("node_d_0.igrs.set_f2"), act.at("node_d_0.igrs.set_f3")), true);
 
     // between if and different depths
-    EXPECT_EQ(action_mutex(act.at("node_b.igrs.set_f1"), act.at("node_d.igrs.set_f2")), true);
-    EXPECT_EQ(action_mutex(act.at("node_b.igrs.set_f2"), act.at("node_e.igrs.set_f4")), true);
-    EXPECT_EQ(action_mutex(act.at("node_b.igrs.set_f3"), act.at("node_f.igrs.set_f5")), true);
-    EXPECT_EQ(action_mutex(act.at("node_b.igrs.set_f5"), act.at("node_c.igrs.set_f2")), true);
+    EXPECT_EQ(action_mutex(act.at("node_b_0.igrs.set_f1"), act.at("node_d_0.igrs.set_f2")), true);
+    EXPECT_EQ(action_mutex(act.at("node_b_0.igrs.set_f2"), act.at("node_e_0.igrs.set_f4")), true);
+    EXPECT_EQ(action_mutex(act.at("node_b_0.igrs.set_f3"), act.at("node_f_0.igrs.set_f5")), true);
+    EXPECT_EQ(action_mutex(act.at("node_b_0.igrs.set_f5"), act.at("node_c_0.igrs.set_f2")), true);
 
     // from switch action_run children
-    EXPECT_EQ(action_mutex(act.at("node_d.igrs.set_f2"), act.at("node_e.igrs.set_f4")), false);
-    EXPECT_EQ(action_mutex(act.at("node_d.igrs.set_f2"), act.at("node_f.igrs.set_f5")), true);
-    EXPECT_EQ(action_mutex(act.at("node_d.igrs.set_f3"), act.at("node_c.igrs.set_f2")), false);
-    EXPECT_EQ(action_mutex(act.at("node_d.igrs.set_f3"), act.at("node_e.igrs.set_f4")), true);
+    EXPECT_EQ(action_mutex(act.at("node_d_0.igrs.set_f2"), act.at("node_e_0.igrs.set_f4")), false);
+    EXPECT_EQ(action_mutex(act.at("node_d_0.igrs.set_f2"), act.at("node_f_0.igrs.set_f5")), true);
+    EXPECT_EQ(action_mutex(act.at("node_d_0.igrs.set_f3"), act.at("node_c_0.igrs.set_f2")), false);
+    EXPECT_EQ(action_mutex(act.at("node_d_0.igrs.set_f3"), act.at("node_e_0.igrs.set_f4")), true);
 
     // between switch action_run
-    EXPECT_EQ(action_mutex(act.at("node_e.igrs.set_f4"), act.at("node_f.igrs.set_f5")), true);
-    EXPECT_EQ(action_mutex(act.at("node_e.igrs.set_f4"), act.at("node_c.igrs.set_f2")), true);
+    EXPECT_EQ(action_mutex(act.at("node_e_0.igrs.set_f4"), act.at("node_f_0.igrs.set_f5")), true);
+    EXPECT_EQ(action_mutex(act.at("node_e_0.igrs.set_f4"), act.at("node_c_0.igrs.set_f2")), true);
 
     // from hit to children
-    EXPECT_EQ(action_mutex(act.at("node_f.igrs.set_f5"), act.at("node_c.igrs.set_f2")), false);
+    EXPECT_EQ(action_mutex(act.at("node_f_0.igrs.set_f5"), act.at("node_c_0.igrs.set_f2")), false);
 }
 
 }  // namespace Test

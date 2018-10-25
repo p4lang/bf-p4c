@@ -54,6 +54,11 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
 endif() # ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET
 
 p4c_add_xfail_reason("tofino2"
+  "address too large for table"
+  testdata/p4_14_samples/saturated-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino2"
   "Ran out of tcam space in .* parser"
   testdata/p4_14_samples/issue583.p4
   )
@@ -71,13 +76,6 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "Ran out of phv output slots"
   switch_msdc
-  )
-
-p4c_add_xfail_reason("tofino2"
-  "Tofino2 requires byte-aligned headers, but header .* is not byte-aligned"
-  testdata/p4_14_samples/02-BadSizeField.p4
-  testdata/p4_14_samples/14-SplitEthernetVlan.p4
-  testdata/p4_14_samples/14-GatewayGreaterThan.p4
   )
 
 p4c_add_xfail_reason("tofino2"

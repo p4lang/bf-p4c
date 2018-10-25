@@ -690,7 +690,7 @@ add_custom_command(
   OUTPUT ${BFN_P4RUNTIME_INFO_GEN_SRCS} ${BFN_P4RUNTIME_INFO_GEN_HDRS}
   COMMAND ${PROTOBUF_PROTOC_EXECUTABLE}
           --proto_path ${BFN_P4RUNTIME_DIR}
-          --proto_path ${P4C_SOURCE_DIR}/control-plane/PI/proto
+          --proto_path ${P4C_SOURCE_DIR}/control-plane/p4runtime/proto
           --cpp_out ${P4C_BINARY_DIR}/control-plane
           --python_out ${P4C_BINARY_DIR}/control-plane
           ${BFN_P4RUNTIME_INFO_PROTO}

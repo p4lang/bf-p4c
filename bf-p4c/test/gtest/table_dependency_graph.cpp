@@ -1,8 +1,3 @@
-#include <array>
-#include <boost/algorithm/string/replace.hpp>
-#include <boost/optional.hpp>
-#include <initializer_list>
-
 #include "gtest/gtest.h"
 
 #include "ir/ir.h"
@@ -18,6 +13,13 @@
 #include "bf-p4c/common/multiple_apply.h"
 #include "bf-p4c/test/gtest/tofino_gtest_utils.h"
 #include "bf-p4c/mau/upward_downward_prop.h"
+
+#include <boost/algorithm/string/replace.hpp>
+#include <boost/optional.hpp>
+
+#include <array>
+#include <initializer_list>
+
 
 namespace Test {
 
@@ -191,13 +193,13 @@ TEST_F(TableDependencyGraphTest, GraphInjectedControl) {
     const IR::MAU::Table *t1, *t2, *t3, *t4;
     t1 = t2 = t3 = t4 = nullptr;
     for (const auto& kv : dg.stage_info) {
-        if (kv.first->name == "t1") {
+        if (kv.first->name == "t1_0") {
             t1 = kv.first;
-        } else if (kv.first->name == "t2") {
+        } else if (kv.first->name == "t2_0") {
             t2 = kv.first;
-        } else if (kv.first->name == "t3") {
+        } else if (kv.first->name == "t3_0") {
             t3 = kv.first;
-        } else if (kv.first->name == "t4.0") {
+        } else if (kv.first->name == "t4_0.0") {
             t4 = kv.first;
         }
     }
@@ -348,13 +350,13 @@ TEST_F(TableDependencyGraphTest, GraphEdgeAnnotations) {
     const IR::MAU::Table *t1, *t2, *t11, *t12;
     t1 = t2 = t11 = t12 = nullptr;
     for (const auto& kv : dg.stage_info) {
-        if (kv.first->name == "t1") {
+        if (kv.first->name == "t1_0") {
             t1 = kv.first;
-        } else if (kv.first->name == "t2") {
+        } else if (kv.first->name == "t2_0") {
             t2 = kv.first;
-        } else if (kv.first->name == "t11") {
+        } else if (kv.first->name == "t11_0") {
             t11 = kv.first;
-        } else if (kv.first->name == "t12") {
+        } else if (kv.first->name == "t12_0") {
             t12 = kv.first;
         }
     }
@@ -621,29 +623,29 @@ TEST_F(TableDependencyGraphTest, GraphLayeredControl) {
     const IR::MAU::Table *t1, *t2, *t3, *t4, *t5, *t6, *t7, *t8, *t9, *t10, *t11, *t12;
     t1 = t2 = t3 = t4 = t5 = t6 = t7 = t8 = t9 = t10 = t11 = t12 = nullptr;
     for (const auto& kv : dg.stage_info) {
-        if (kv.first->name == "t1") {
+        if (kv.first->name == "t1_0") {
             t1 = kv.first;
-        } else if (kv.first->name == "t2") {
+        } else if (kv.first->name == "t2_0") {
             t2 = kv.first;
-        } else if (kv.first->name == "t3") {
+        } else if (kv.first->name == "t3_0") {
             t3 = kv.first;
-        } else if (kv.first->name == "t4") {
+        } else if (kv.first->name == "t4_0") {
             t4 = kv.first;
-        } else if (kv.first->name == "t5") {
+        } else if (kv.first->name == "t5_0") {
             t5 = kv.first;
-        } else if (kv.first->name == "t6") {
+        } else if (kv.first->name == "t6_0") {
             t6 = kv.first;
-        } else if (kv.first->name == "t7") {
+        } else if (kv.first->name == "t7_0") {
             t7 = kv.first;
-        } else if (kv.first->name == "t8") {
+        } else if (kv.first->name == "t8_0") {
             t8 = kv.first;
-        } else if (kv.first->name == "t9") {
+        } else if (kv.first->name == "t9_0") {
             t9 = kv.first;
-        } else if (kv.first->name == "t10") {
+        } else if (kv.first->name == "t10_0") {
             t10 = kv.first;
-        } else if (kv.first->name == "t11") {
+        } else if (kv.first->name == "t11_0") {
             t11 = kv.first;
-        } else if (kv.first->name == "t12") {
+        } else if (kv.first->name == "t12_0") {
             t12 = kv.first;
         }
     }
@@ -886,31 +888,31 @@ TEST_F(TableDependencyGraphTest, UpwardDownwardProp) {
     const IR::MAU::Table *a, *b, *c, *x, *y, *x2, *y2, *z1, *z2, *z3, *alpha, *beta, *gamma;
     a = b = c = x = y = x2 = y2 = z1 = z2 = z3 = alpha = beta = gamma = nullptr;
     for (const auto& kv : dg.stage_info) {
-        if (kv.first->name == "A") {
+        if (kv.first->name == "A_0") {
             a = kv.first;
-        } else if (kv.first->name == "B") {
+        } else if (kv.first->name == "B_0") {
             b = kv.first;
-        } else if (kv.first->name == "C") {
+        } else if (kv.first->name == "C_0") {
             c = kv.first;
-        } else if (kv.first->name == "X") {
+        } else if (kv.first->name == "X_0") {
             x = kv.first;
-        } else if (kv.first->name == "Y") {
+        } else if (kv.first->name == "Y_0") {
             y = kv.first;
-        } else if (kv.first->name == "X2") {
+        } else if (kv.first->name == "X2_0") {
             x2 = kv.first;
-        } else if (kv.first->name == "Y2") {
+        } else if (kv.first->name == "Y2_0") {
             y2 = kv.first;
-        } else if (kv.first->name == "Z1") {
+        } else if (kv.first->name == "Z1_0") {
             z1 = kv.first;
-        } else if (kv.first->name == "Z2") {
+        } else if (kv.first->name == "Z2_0") {
             z2 = kv.first;
-        } else if (kv.first->name == "Z3") {
+        } else if (kv.first->name == "Z3_0") {
             z3 = kv.first;
-        } else if (kv.first->name == "alpha") {
+        } else if (kv.first->name == "alpha_0") {
             alpha = kv.first;
-        } else if (kv.first->name == "beta") {
+        } else if (kv.first->name == "beta_0") {
             beta = kv.first;
-        } else if (kv.first->name == "gamma") {
+        } else if (kv.first->name == "gamma_0") {
             gamma = kv.first;
         }
     }
@@ -1188,33 +1190,33 @@ TEST_F(TableDependencyGraphTest, GraphMinStage) {
     const IR::MAU::Table *a, *b, *c, *x, *y, *x2, *y2, *z1, *z2, *z3, *alpha, *beta, *gamma, *t2;
     a = b = c = x = y = x2 = y2 = z1 = z2 = z3 = alpha = beta = gamma = t2 = nullptr;
     for (const auto& kv : dg.stage_info) {
-        if (kv.first->name == "A") {
+        if (kv.first->name == "A_0") {
             a = kv.first;
-        } else if (kv.first->name == "B") {
+        } else if (kv.first->name == "B_0") {
             b = kv.first;
-        } else if (kv.first->name == "C") {
+        } else if (kv.first->name == "C_0") {
             c = kv.first;
-        } else if (kv.first->name == "X") {
+        } else if (kv.first->name == "X_0") {
             x = kv.first;
-        } else if (kv.first->name == "Y") {
+        } else if (kv.first->name == "Y_0") {
             y = kv.first;
-        } else if (kv.first->name == "X2") {
+        } else if (kv.first->name == "X2_0") {
             x2 = kv.first;
-        } else if (kv.first->name == "Y2") {
+        } else if (kv.first->name == "Y2_0") {
             y2 = kv.first;
-        } else if (kv.first->name == "Z1") {
+        } else if (kv.first->name == "Z1_0") {
             z1 = kv.first;
-        } else if (kv.first->name == "Z2") {
+        } else if (kv.first->name == "Z2_0") {
             z2 = kv.first;
-        } else if (kv.first->name == "Z3") {
+        } else if (kv.first->name == "Z3_0") {
             z3 = kv.first;
-        } else if (kv.first->name == "alpha") {
+        } else if (kv.first->name == "alpha_0") {
             alpha = kv.first;
-        } else if (kv.first->name == "beta") {
+        } else if (kv.first->name == "beta_0") {
             beta = kv.first;
-        } else if (kv.first->name == "gamma") {
+        } else if (kv.first->name == "gamma_0") {
             gamma = kv.first;
-        } else if (kv.first->name == "t2") {
+        } else if (kv.first->name == "t2_0") {
             t2 = kv.first;
         }
     }
@@ -1336,15 +1338,15 @@ TEST_F(TableDependencyGraphTest, GraphA) {
     const IR::MAU::Table *a, *b, *c, *d, *e;
     a = b = c = d = e = nullptr;
     for (const auto& kv : dg.stage_info) {
-        if (kv.first->name == "node_a") {
+        if (kv.first->name == "node_a_0") {
             a = kv.first;
-        } else if (kv.first->name == "node_b") {
+        } else if (kv.first->name == "node_b_0") {
             b = kv.first;
-        } else if (kv.first->name == "node_c") {
+        } else if (kv.first->name == "node_c_0") {
             c = kv.first;
-        } else if (kv.first->name == "node_d") {
+        } else if (kv.first->name == "node_d_0") {
             d = kv.first;
-        } else if (kv.first->name == "node_e") {
+        } else if (kv.first->name == "node_e_0") {
             e = kv.first;
         }
     }

@@ -236,6 +236,7 @@ bool DoInstructionSelection::checkPHV(const IR::Expression *e) {
 }
 
 bool DoInstructionSelection::checkSrc1(const IR::Expression *e) {
+    LOG3("Checking src1 : " << e);
     if (auto *c = e->to<IR::Cast>())
         return checkSrc1(c->expr);
     if (auto slice = e->to<IR::Slice>())
@@ -357,6 +358,38 @@ const IR::Expression *DoInstructionSelection::postorder(IR::Add *e) {
     return new IR::MAU::Instruction(e->srcInfo, "add", new IR::TempVar(e->type), e->left, e->right);
 }
 
+const IR::Expression *DoInstructionSelection::postorder(IR::AddSat *e) {
+    if (!af) return e;
+    auto opName = "saddu";
+    if (e->type->is<IR::Type_Bits>() && e->type->to<IR::Type_Bits>()->isSigned)
+        opName = "sadds";
+    return new IR::MAU::Instruction(e->srcInfo, opName,
+                                        new IR::TempVar(e->type), e->left, e->right);
+}
+
+const IR::Expression *DoInstructionSelection::postorder(IR::SubSat *e) {
+    if (!af) return e;
+    auto opName = "ssubu";
+    auto eLeft = e->left;
+    auto eRight = e->right;
+    auto bits = e->type->to<IR::Type_Bits>();
+    if (bits && bits->isSigned) {
+        opName = "ssubs";
+        if (auto *k = eRight->to<IR::Constant>()) {
+            // Dont convert to an add when constant is equal to maximum negative
+            // value as the value will overflow upon negation.
+            // e.g. For an 8 bit subtraction
+            // ssubs b, a, -128 => sadds b, a, 128 (but 128 in 8 bits overflows and becomes -128).
+            if (k->asLong() != -(1LL << (bits->width_bits() - 1))) {
+                opName = "sadds";
+                eLeft = (-*k).clone();
+                eRight = e->left;
+            }
+        }
+    }
+    return new IR::MAU::Instruction(e->srcInfo, opName, new IR::TempVar(e->type), eLeft, eRight);
+}
+
 const IR::Expression *DoInstructionSelection::postorder(IR::Sub *e) {
     if (!af) return e;
     if (auto *k = e->right->to<IR::Constant>())
@@ -452,6 +485,7 @@ static const IR::Primitive *makeDepositField(IR::Primitive *prim, long) {
 const IR::Node *DoInstructionSelection::postorder(IR::Primitive *prim) {
     if (!af) return prim;
     const IR::Expression *dest = prim->operands.size() > 0 ? prim->operands[0] : nullptr;
+    LOG4("DoInstructionSelection::postorder on primitive " << prim->name);
     if (prim->name == "modify_field") {
         long mask;
         if ((prim->operands.size() | 1) != 3) {
