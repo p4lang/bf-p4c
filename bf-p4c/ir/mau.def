@@ -458,8 +458,10 @@ class StatefulAlu : Synth2Port {
         // this means that ALU width can be calculated as `width >> dual`
     // The possible stateful_alu externs executed in this table
     inline NameMap<SaluAction, ordered_map>             instruction = {};
-    // The stateful_alu externs executed for each action in the match table
-    ordered_map<cstring, cstring>                       action_map = {};
+    // The stateful_alu externs executed for each table-action pair string in
+    // the match table We make table-action pairs to distinguish action calls
+    // from same vs different tables
+    ordered_map<cstring, cstring>  action_map = {};
     // overflow and underflow actions, if any
     cstring                                             overflow = {};
     cstring                                             underflow = {};

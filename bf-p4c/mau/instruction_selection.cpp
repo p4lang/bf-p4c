@@ -23,6 +23,10 @@ const IR::Node *Synth2PortSetup::postorder(IR::Primitive *prim) {
     if (act == nullptr)
         return prim;
 
+    auto tbl = findContext<IR::MAU::Table>();
+    if (tbl == nullptr)
+        return prim;
+
     auto dot = prim->name.find('.');
     auto objType = dot ? prim->name.before(dot) : cstring();
     IR::Node *rv = prim;
@@ -46,9 +50,10 @@ const IR::Node *Synth2PortSetup::postorder(IR::Primitive *prim) {
             auto t = IR::Type::Bits::get(32);
             return new IR::Member(prim->srcInfo, t,
                                   new IR::MAU::AttachedOutput(t, salu), "address"); }
-        BUG_CHECK(salu->action_map.count(act->name.originalName), "%s: Stateful Alu %s does not "
+        auto ta_pair = tbl->name + "-" + act->name.originalName;
+        BUG_CHECK(salu->action_map.count(ta_pair), "%s: Stateful Alu %s does not "
                   "have an action in it's action map", prim->srcInfo, salu->name);
-        auto salu_action_name = salu->action_map.at(act->name.originalName);
+        auto salu_action_name = salu->action_map.at(ta_pair);
         auto pos = salu->instruction.find(salu_action_name);
         int salu_index = std::distance(salu->instruction.begin(), pos);
         switch (salu_index) {

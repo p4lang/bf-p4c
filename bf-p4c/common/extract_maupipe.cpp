@@ -735,9 +735,12 @@ void AttachTables::InitializeStatefulAlus
     if (prim && prim->name == "RegisterAction.address") {
         salu->chain_vpn = true;
         return; }
+    auto tbl = findContext<IR::MAU::Table>();
+    LOG6("  - table " << (tbl ? tbl->name : "<no table>"));
     auto act = findContext<IR::MAU::Action>();
     LOG6("  - action " << (act ? act->name : "<no action>"));
-    if (!salu->action_map.emplace(act->name.originalName, ext->name).second)
+    auto ta_pair = tbl->name + "-" + act->name.originalName;
+    if (!salu->action_map.emplace(ta_pair, ext->name).second)
         error("%s: multiple calls to execute in action %s", gref->srcInfo, act->name);
 }
 

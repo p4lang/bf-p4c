@@ -1362,17 +1362,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_checksum.p4  #zma needs deparser checksum engine overlay
 )
 
-# BRIG-933
-# This is expected to fail, however, we need to improve the error message.
-# Here is the message issued by Glass:
-# ERROR: statistics resource 'c2' cannot be addressed in multiple ways by match table 'e2'.
-# Too many addressing modes required: idx, param
-p4c_add_xfail_reason("tofino"
-  "error: : multiple calls to execute in action.*"
-  extensions/p4_tests/p4_14/p4-tests/programs/pgrs/pgrs.p4
-  extensions/p4_tests/p4_14/test_config_313_neg_test_addr_modes.p4
-  )
-
 # BRIG-934
 p4c_add_xfail_reason("tofino"
   "error: metadata field of type error not supported on tofino"

@@ -122,7 +122,7 @@ set (P4FACTORY_REGRESSION_TESTS
   # opcode_test_signed_and_saturating
   pcie_pkt_test
   # # pctr
-  # # pgrs
+  pgrs
   perf_test_alpm   # (a.k.a alpm-pd-perf)
   # # pvs
   resubmit
@@ -220,6 +220,15 @@ bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/mirror_test/mirror_te
    test.TestBatching")
 bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/hash_test/hash_test.p4"
     "test.TestCrc16")
+
+bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/pgrs/pgrs.p4"
+    "test.TestTxn
+     test.TestAddrOverride
+     test.TestTimerAllPipe
+     test.TestRecircAll
+     test.TestTimerOneShot
+     test.TestPattern
+     test.TestBatch")
 
 # add netcache test
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_netcache" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/netcache/netcache.p4"

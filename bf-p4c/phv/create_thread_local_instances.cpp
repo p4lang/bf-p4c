@@ -21,8 +21,12 @@ class FindSharedStateful : public MauInspector {
         visitAgain();
         gress_t thread = VisitingThread(this);
         all_salus[salu].threads.insert(thread);
-        if (auto *act = findContext<IR::MAU::Action>())
-            all_salus.at(salu).action_thread[salu->action_map.at(act->name.originalName)] = thread;
+        if (auto *tbl = findContext<IR::MAU::Table>()) {
+            if (auto *act = findContext<IR::MAU::Action>()) {
+                auto ta_pair = tbl->name + "-" + act->name.originalName;
+                all_salus.at(salu).action_thread[salu->action_map.at(ta_pair)] = thread;
+            }
+        }
         return false; }
     bool preorder(const IR::GlobalRef *) { visitAgain(); return true; }
 
