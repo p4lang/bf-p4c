@@ -3438,7 +3438,7 @@ bool Memories::allocate_all_idletime() {
 }
 
 void Memories::Use::visit(Memories &mem, std::function<void(cstring &)> fn) const {
-    Alloc2Dbase<cstring> *use = 0, *mapuse = 0, *bus = 0;
+    Alloc2Dbase<cstring> *use = 0, *mapuse = 0, *bus = 0, *gw_use = 0;
     switch (type) {
     case EXACT:
     case ATCAM:
@@ -3449,7 +3449,7 @@ void Memories::Use::visit(Memories &mem, std::function<void(cstring &)> fn) cons
         use = &mem.tcam_use;
         break;
     case GATEWAY:
-        use = &mem.gateway_use;
+        gw_use = &mem.gateway_use;
         //  bus = &mem.sram_print_match_bus;
         break;
     case TIND:
@@ -3477,12 +3477,18 @@ void Memories::Use::visit(Memories &mem, std::function<void(cstring &)> fn) cons
             fn((*bus)[r.row][r.bus]); }
         /*if (type == TWOPORT)
             fn(mem.stateful_bus[r.row]);*/
-        if (use)
+        if (use) {
             for (auto col : r.col) {
                 fn((*use)[r.row][col]); }
+        }
         if (mapuse) {
             for (auto col : r.mapcol) {
-                fn((*mapuse)[r.row][col]); } } }
+                fn((*mapuse)[r.row][col]); }
+        }
+        if (gw_use) {
+            fn((*gw_use)[r.row][gateway.unit]);
+        }
+    }
     if (mapuse) {
         for (auto &r : color_mapram) {
              for (auto col : r.col) {
