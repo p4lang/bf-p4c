@@ -90,17 +90,17 @@ void ClotInfo::dbprint(std::ostream &out) const {
 
 */
 class NaiveClotAlloc : public Visitor {
-    static const unsigned MAX_CLOTS_PER_STATE = 2;  // TODO(zma) move to pardeSpec
-    static const unsigned MAX_BYTES_PER_CLOT = 64;
-    static const unsigned TOTAL_CLOTS_AVAIL = 64;
-    static const unsigned MAX_CLOTS_LIVE = 16;
-    static const unsigned INTER_CLOTS_BYTE_GAP = 3;
+    static const int MAX_CLOTS_PER_STATE = 2;  // TODO(zma) move to pardeSpec
+    static const int MAX_BYTES_PER_CLOT = 64;
+    static const int TOTAL_CLOTS_AVAIL = 64;
+    static const int MAX_CLOTS_LIVE = 16;
+    static const int INTER_CLOTS_BYTE_GAP = 3;
 
     ClotInfo& clotInfo;
     const CollectParserInfo& parserInfo;
 
-    std::map<const IR::BFN::ParserState*, unsigned> tail_gap_credit_map;
-    std::map<const IR::BFN::ParserState*, unsigned> head_gap_credit_map;
+    std::map<const IR::BFN::ParserState*, int> tail_gap_credit_map;
+    std::map<const IR::BFN::ParserState*, int> head_gap_credit_map;
 
     std::map<const IR::BFN::ParserState*,
              std::map<const PHV::Field*, std::set<unsigned>>> field_to_byte_idx;
@@ -230,19 +230,20 @@ class NaiveClotAlloc : public Visitor {
 
     unsigned calculate_gap_needed(const IR::BFN::ParserState* state, bool head_or_tail) {
         const IR::BFN::Parser* parser = parserInfo.parser(state);
-        auto& preds_or_succs = head_or_tail ? parserInfo.graph(parser).predecessors() :
-                                              parserInfo.graph(parser).successors();
 
-        auto& credit_map = head_or_tail ? tail_gap_credit_map : head_gap_credit_map;
+        auto& preds_or_succs = head_or_tail ? parserInfo.graph(parser).predecessors()
+                                            : parserInfo.graph(parser).successors();
 
-        unsigned gap_needed = 0;
+        auto& credit_map = head_or_tail ? tail_gap_credit_map
+                                        : head_gap_credit_map;
+
+        int gap_needed = 0;
 
         if (preds_or_succs.count(state)) {
             for (auto s : preds_or_succs.at(state)) {
-                unsigned gap_needed_for_s = 0;
+                int gap_needed_for_s = 0;
                 auto& state_clots = clotInfo.parser_state_to_clots();
 
-                // XXX(zma) needs to optimize this ...
                 if (state_clots.count(s->name) && state_clots.at(s->name).size() > 0) {
                     int credit = 0;
 
@@ -251,14 +252,29 @@ class NaiveClotAlloc : public Visitor {
                     else  // s hasn't been allocated
                         credit = INTER_CLOTS_BYTE_GAP * 8;
 
-                    gap_needed_for_s = std::max(int(INTER_CLOTS_BYTE_GAP * 8) - credit, 0);
+                    gap_needed_for_s = std::max(INTER_CLOTS_BYTE_GAP * 8 - credit, 0);
+                } else {
+                    auto& fields_in_state = clotInfo.parser_state_to_fields_[s];
+
+                    int bits_in_s = 0;
+                    for (auto f : fields_in_state)
+                        bits_in_s += f->size;
+
+                    // P4C-965 if s is small (less than 3 bytes), we need to check its
+                    // preds/succs, as their gap requirement may spill into current state.
+                    if (bits_in_s < INTER_CLOTS_BYTE_GAP * 8) {
+                        int head_or_tail_gap_for_s = calculate_gap_needed(s, head_or_tail);
+                        gap_needed_for_s = head_or_tail_gap_for_s - bits_in_s;
+                    }
                 }
 
                 gap_needed = std::max(gap_needed, gap_needed_for_s);
             }
         }
 
-        return gap_needed;
+        BUG_CHECK(gap_needed >= 0, "negative gap needed?");
+
+        return (unsigned)gap_needed;
     }
 
     bool allocate(const ClotAlloc& ca) {
@@ -267,8 +283,8 @@ class NaiveClotAlloc : public Visitor {
         if (ca.unused_bits == 0)
             return false;
 
-        unsigned head_gap_needed = calculate_gap_needed(ca.state, true  /* head */);
-        unsigned tail_gap_needed = calculate_gap_needed(ca.state, false /* tail */);
+        auto head_gap_needed = calculate_gap_needed(ca.state, true  /* head */);
+        auto tail_gap_needed = calculate_gap_needed(ca.state, false /* tail */);
 
         LOG3(head_gap_needed << " bits of head gap needed");
         LOG3(tail_gap_needed << " bits of tail gap needed");

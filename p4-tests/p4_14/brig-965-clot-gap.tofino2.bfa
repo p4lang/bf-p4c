@@ -1,0 +1,283 @@
+version:
+  version: 1.0.1
+  run_id: "c04e5ac0b2b2f66a"
+phv ingress:
+  bridged_metadata.bridged_metadata_indicator: MB0
+  vlan_tag_.pcp: H4(13..15)
+  vlan_tag_.cfi: H4(12)
+  vlan_tag_.vid: H4(0..11)
+  vlan_tag_.etherType: MH0
+  d0.foo: MH1
+  d1.foo: MH2
+  bridged_metadata.$valid: H5(0)
+  d0.$valid: H5(1)
+  d1.$valid: H5(2)
+  ethernet.$valid: H5(3)
+  vlan_tag_.$valid: H5(4)
+phv egress:
+  eg_intr_md.egress_port: H0(0..8)
+  eg_intr_md.egress_port.$valid: H2(0)
+  vlan_tag_.pcp: H1(13..15)
+  vlan_tag_.cfi: H1(12)
+  vlan_tag_.vid: H1(0..11)
+  vlan_tag_.etherType: MH4
+  d0.foo: MH5
+  d1.foo: MH6
+  d0.$valid: H2(1)
+  d1.$valid: H2(2)
+  ethernet.$valid: H2(3)
+  vlan_tag_.$valid: H2(4)
+parser ingress:
+  start: $entry_point.$ingress_tna_entry_point.$ingress_metadata
+  multi_write: [ MH0, MH1, H4, H5 ]
+  hdr_len_adj: 32
+  states:
+    $entry_point.$ingress_tna_entry_point.$ingress_metadata:  # from state $entry_point.$ingress_tna_entry_point.$ingress_metadata
+      0:
+        MB0: 0  # value 0 -> MB0 L[0..7]b: ingress::^bridged_metadata.^bridged_metadata_indicator
+        H5: 1  # value 1 -> H5 L[0]b: ingress::^bridged_metadata.$valid
+        save: { byte0 : 0 }
+        shift: 8
+        buf_req: 8
+        next: $check_resubmit
+    $check_resubmit:  # from state ingress::$check_resubmit
+      match: [ byte0 ]
+      # - match N[-8]B: cast
+      0b0*******:
+        buf_req: 0
+        next: $phase0
+      0b1*******:
+        buf_req: 0
+        next: $resubmit
+    $phase0:  # from state ingress::$phase0
+      0:
+        shift: 16
+        buf_req: 16
+        next: $skip_to_packet.start
+    $skip_to_packet.start:  # from state $skip_to_packet.start
+      0:
+        save: { byte0 : 20, byte1 : 21 }
+        shift: 8
+        buf_req: 22
+        next: parse_ethernet
+    parse_ethernet:  # from state ingress::parse_ethernet
+      match: [ byte0, byte1 ]
+      # - match N[12..13]B: ethernet.etherType
+      0x8100:
+        H5: 8  # value 1 -> H5 L[3]b: ingress::ethernet.$valid
+        clot 0 :
+          start: 0
+          length: 14
+        save: { byte0 : 16, byte1 : 17 }
+        shift: 14
+        buf_req: 18
+        next: parse_vlan
+      0x8abc:
+        H5: 8  # value 1 -> H5 L[3]b: ingress::ethernet.$valid
+        clot 0 :
+          start: 0
+          length: 14
+        save: { byte0 : 16 }
+        shift: 14
+        buf_req: 17
+        next: long_parse_0
+      0x****:
+        H5: 8  # value 1 -> H5 L[3]b: ingress::ethernet.$valid
+        clot 0 :
+          start: 0
+          length: 14
+        shift: 14
+        buf_req: 14
+        next: end
+    parse_vlan:  # from state ingress::parse_vlan
+      match: [ byte0, byte1 ]
+      # - match N[2..3]B: vlan_tag_.etherType
+      0x8abc:
+        0..1: H4
+            # - N[0..2]b -> H4 L[13..15]b: ingress::vlan_tag_.pcp
+            # - N[3]b -> H4 L[12]b: ingress::vlan_tag_.cfi
+            # - N[4..15]b -> H4 L[0..11]b: ingress::vlan_tag_.vid
+        2..3: MH0  # ingress::vlan_tag_.etherType
+        H5: 16  # value 1 -> H5 L[4]b: ingress::vlan_tag_.$valid
+        save: { byte0 : 6 }
+        shift: 4
+        buf_req: 7
+        next: long_parse_0
+      0x****:
+        0..1: H4
+            # - N[0..2]b -> H4 L[13..15]b: ingress::vlan_tag_.pcp
+            # - N[3]b -> H4 L[12]b: ingress::vlan_tag_.cfi
+            # - N[4..15]b -> H4 L[0..11]b: ingress::vlan_tag_.vid
+        2..3: MH0  # ingress::vlan_tag_.etherType
+        H5: 16  # value 1 -> H5 L[4]b: ingress::vlan_tag_.$valid
+        shift: 4
+        buf_req: 4
+        next: end
+    long_parse_0:  # from state ingress::long_parse_0
+      match: [ byte0 ]
+      # - match N[2]B: packet.lookahead
+      0xcc:
+        0..1: MH1  # ingress::d0.foo
+        H5: 2  # value 1 -> H5 L[1]b: ingress::d0.$valid
+        shift: 2
+        buf_req: 2
+        next: long_parse_1
+      0x**:
+        0..1: MH1  # ingress::d0.foo
+        H5: 2  # value 1 -> H5 L[1]b: ingress::d0.$valid
+        shift: 2
+        buf_req: 2
+        next: end
+    long_parse_1:  # from state ingress::long_parse_1
+      0:
+        0..1: MH2  # ingress::d1.foo
+        H5: 4  # value 1 -> H5 L[2]b: ingress::d1.$valid
+        shift: 2
+        buf_req: 2
+        next: end
+    $resubmit:  # from state $resubmit
+      0:
+        shift: 16
+        buf_req: 16
+        next: $skip_to_packet.start
+deparser ingress:
+  dictionary:
+    MB0: H5(0)  # ingress::^bridged_metadata.^bridged_metadata_indicator if ingress::^bridged_metadata.$valid
+    clot 0:
+      pov: ethernet.$valid
+    H4: H5(4)
+        # - L[13..15]b: ingress::vlan_tag_.pcp if ingress::vlan_tag_.$valid
+        # - L[12]b: ingress::vlan_tag_.cfi if ingress::vlan_tag_.$valid
+        # - L[0..11]b: ingress::vlan_tag_.vid if ingress::vlan_tag_.$valid
+    MH0: H5(4)  # ingress::vlan_tag_.etherType if ingress::vlan_tag_.$valid
+    MH1: H5(1)  # ingress::d0.foo if ingress::d0.$valid
+    MH2: H5(2)  # ingress::d1.foo if ingress::d1.$valid
+parser egress:
+  start: $entry_point.$egress_tna_entry_point.$egress_metadata
+  multi_write: [ MH4, MH5, H1, H2 ]
+  hdr_len_adj: 28
+  meta_opt: 8191
+  states:
+    $entry_point.$egress_tna_entry_point.$egress_metadata:  # from state $entry_point.$egress_tna_entry_point.$egress_metadata
+      0:
+        0..1: H0  # N[7..15]b -> H0 L[0..8]b: egress::eg_intr_md.egress_port
+        H2: 1  # value 1 -> H2 L[0]b: egress::eg_intr_md.egress_port.$valid
+        save: { byte0 : 28 }
+        shift: 28
+        buf_req: 29
+        next: $check_mirrored
+    $check_mirrored:  # from state egress::$check_mirrored
+      match: [ byte0 ]
+      # - match N[0]B: packet.lookahead
+      0b****0***:
+        buf_req: 0
+        next: $bridged_metadata
+      0b****1***:
+        save: { byte0 : 0 }
+        buf_req: 1
+        next: $mirrored
+    $bridged_metadata:  # from state egress::$bridged_metadata
+      0:
+        shift: 1
+        buf_req: 1
+        next: start
+    start:  # from state egress::start
+      0:
+        save: { byte0 : 12, byte1 : 13 }
+        buf_req: 14
+        next: parse_ethernet
+    parse_ethernet:  # from state egress::parse_ethernet
+      match: [ byte0, byte1 ]
+      # - match N[12..13]B: ethernet.etherType
+      0x8100:
+        H2: 8  # value 1 -> H2 L[3]b: egress::ethernet.$valid
+        clot 1 :
+          start: 0
+          length: 14
+        save: { byte0 : 16, byte1 : 17 }
+        shift: 14
+        buf_req: 18
+        next: parse_vlan
+      0x8abc:
+        H2: 8  # value 1 -> H2 L[3]b: egress::ethernet.$valid
+        clot 1 :
+          start: 0
+          length: 14
+        save: { byte0 : 16 }
+        shift: 14
+        buf_req: 17
+        next: long_parse_0
+      0x****:
+        H2: 8  # value 1 -> H2 L[3]b: egress::ethernet.$valid
+        clot 1 :
+          start: 0
+          length: 14
+        shift: 14
+        buf_req: 14
+        next: end
+    parse_vlan:  # from state egress::parse_vlan
+      match: [ byte0, byte1 ]
+      # - match N[2..3]B: vlan_tag_.etherType
+      0x8abc:
+        0..1: H1
+            # - N[0..2]b -> H1 L[13..15]b: egress::vlan_tag_.pcp
+            # - N[3]b -> H1 L[12]b: egress::vlan_tag_.cfi
+            # - N[4..15]b -> H1 L[0..11]b: egress::vlan_tag_.vid
+        2..3: MH4  # egress::vlan_tag_.etherType
+        H2: 16  # value 1 -> H2 L[4]b: egress::vlan_tag_.$valid
+        save: { byte0 : 6 }
+        shift: 4
+        buf_req: 7
+        next: long_parse_0
+      0x****:
+        0..1: H1
+            # - N[0..2]b -> H1 L[13..15]b: egress::vlan_tag_.pcp
+            # - N[3]b -> H1 L[12]b: egress::vlan_tag_.cfi
+            # - N[4..15]b -> H1 L[0..11]b: egress::vlan_tag_.vid
+        2..3: MH4  # egress::vlan_tag_.etherType
+        H2: 16  # value 1 -> H2 L[4]b: egress::vlan_tag_.$valid
+        shift: 4
+        buf_req: 4
+        next: end
+    long_parse_0:  # from state egress::long_parse_0
+      match: [ byte0 ]
+      # - match N[2]B: packet.lookahead
+      0xcc:
+        0..1: MH5  # egress::d0.foo
+        H2: 2  # value 1 -> H2 L[1]b: egress::d0.$valid
+        shift: 2
+        buf_req: 2
+        next: long_parse_1
+      0x**:
+        0..1: MH5  # egress::d0.foo
+        H2: 2  # value 1 -> H2 L[1]b: egress::d0.$valid
+        shift: 2
+        buf_req: 2
+        next: end
+    long_parse_1:  # from state egress::long_parse_1
+      0:
+        0..1: MH6  # egress::d1.foo
+        H2: 4  # value 1 -> H2 L[2]b: egress::d1.$valid
+        shift: 2
+        buf_req: 2
+        next: end
+    $mirrored:  # from state egress::$mirrored
+      match: [ byte0 ]
+      # - match N[0]B: (buffer)
+      0x**:
+        shift: 1
+        buf_req: 1
+        next: start
+deparser egress:
+  dictionary:
+    clot 1:
+      pov: ethernet.$valid
+    H1: H2(4)
+        # - L[13..15]b: egress::vlan_tag_.pcp if egress::vlan_tag_.$valid
+        # - L[12]b: egress::vlan_tag_.cfi if egress::vlan_tag_.$valid
+        # - L[0..11]b: egress::vlan_tag_.vid if egress::vlan_tag_.$valid
+    MH4: H2(4)  # egress::vlan_tag_.etherType if egress::vlan_tag_.$valid
+    MH5: H2(1)  # egress::d0.foo if egress::d0.$valid
+    MH6: H2(2)  # egress::d1.foo if egress::d1.$valid
+  egress_unicast_port: { H0(0..8): H2(0) }  # L[0..8]b: egress::eg_intr_md.egress_port if egress::eg_intr_md.egress_port.$valid
+primitives: "fix/p4c_965_clot_gap.prim.json"
