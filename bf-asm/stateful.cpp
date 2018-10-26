@@ -411,6 +411,12 @@ template<class REGS> void StatefulTable::write_regs(REGS &regs) {
     salu.stateful_ctl.salu_enable = 1;
     salu.stateful_ctl.salu_output_pred_shift = pred_shift / 4;
     salu.stateful_ctl.salu_output_pred_comb_shift = pred_comb_shift;
+    // The reset value for the CMP opcode is enabled by default -- we want to disable
+    // any unused cmp units
+    for (auto &inst : salu.salu_instr_cmp_alu) {
+        for (auto &alu : inst) {
+            if (!alu.salu_cmp_opcode.modified()) {
+                alu.salu_cmp_opcode = 2; } } }
     if (gress == EGRESS) {
         regs.rams.map_alu.meter_group[meter_group].meter.meter_ctl.meter_alu_egress = 1;
     }
