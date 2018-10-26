@@ -110,9 +110,6 @@ set (P4FACTORY_REGRESSION_TESTS
   # # # bf-diags
   # # clpm
   emulation
-  exm_direct
-  exm_direct_1
-  exm_indirect_1
   fast_reconfig
   hash_test
   # meters -- timeout on a single test!!
@@ -152,56 +149,10 @@ bfn_add_p4factory_tests("tofino" "smoketest_programs" P4F_PTF_TESTS)
 set (P4FACTORY_PROGRAMS_PATH "extensions/p4_tests/p4_14/p4-tests/programs")
 # Add extra build flags for PD gen
 
-bfn_set_pd_build_flag("tofino" "${P4FACTORY_PROGRAMS_PATH}/exm_direct/exm_direct.p4"
-  "\"--gen-exm-test-pd\"")
-bfn_set_pd_build_flag("tofino" "${P4FACTORY_PROGRAMS_PATH}/exm_direct_1/exm_direct_1.p4"
-  "\"--gen-exm-test-pd\"")
-bfn_set_pd_build_flag("tofino" "${P4FACTORY_PROGRAMS_PATH}/exm_indirect_1/exm_indirect_1.p4"
-  "\"--gen-exm-test-pd\"")
 bfn_set_pd_build_flag("tofino" "${P4FACTORY_PROGRAMS_PATH}/perf_test_alpm/perf_test_alpm.p4"
   "\"--gen-perf-test-pd\"")
 
 # Pick a set of tests for the tests that are timing out:
-bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/exm_direct/exm_direct.p4"
-  "^test.TestIdleTimeTCAM
-   test.TestExm4way8Entries
-   ^test.TestIdleTimeStateRestore
-   test.TestExm5way5Entries
-   test.TestExmMoveReg
-   test.TestExm4way6Entries
-   ^test.TestIdleTimeMovereg
-   ^test.TestIdleTimeEXM
-   test.TestExm6way5Entries
-   test.TestExm6way6Entries
-   test.TestExm3way7Entries")
-bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/exm_direct_1/exm_direct_1.p4"
-  "^test.TestExm5way8Entries
-   ^test.TestExmdeep64k
-   test.TestExm4way2Entries
-   test.TestExm6way2Entries
-   test.TestExm5way7Entries
-   test.TestExm3way2Entries
-   ^test.TestExmdeep32k
-   ^test.TestExm6way8Entries
-   test.TestExm4way1Entries
-   test.TestExm6way1Entries
-   ^test.TestExmwidekey
-   test.TestExm3way1Entries
-   test.TestExm5way2Entries
-   test.TestExm6way7Entries
-   test.TestExm5way1Entries
-   test.TestExm5way7EntriesDefaultEntry")
-bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/exm_indirect_1/exm_indirect_1.p4"
-  "test.TestActSelIterators
-   test.TestDirectStats
-   test.TestDirectStatsPkts28Bytes36
-   test.TestDirectStatsPkts32bits
-   test.TestIndirectStatPkt64bits
-   test.TestIndirectStatsPkts32bits
-   test.TestSelector
-   test.TestSelectorScopes
-   test.TestExmHashAction2
-   test.TestExm4way6Entries")
 bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/multicast_test/multicast_test.p4"
   "test.TestBasic
    ^test.TestYid
@@ -297,24 +248,103 @@ bfn_set_ptf_test_spec("tofino" "smoketest_programs_basic_ipv4_2"
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_dkm" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/dkm/dkm.p4"
     "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/ptf-tests/dkm")
 
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_exm_direct" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/exm_direct/exm_direct.p4"
+    "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/ptf-tests/exm_direct")
+bfn_set_pd_build_flag("tofino" "smoketest_programs_exm_direct"
+    "\"--gen-exm-test-pd\"")
+bfn_set_ptf_test_spec("tofino" "smoketest_programs_exm_direct"
+        "^test.TestIdleTimeTCAM
+        test.TestExm4way8Entries")
+
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_exm_direct_2" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/exm_direct/exm_direct.p4"
+    "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/ptf-tests/exm_direct")
+bfn_set_pd_build_flag("tofino" "smoketest_programs_exm_direct_2"
+    "\"--gen-exm-test-pd\"")
+bfn_set_ptf_test_spec("tofino" "smoketest_programs_exm_direct_2"
+        "^test.TestIdleTimeStateRestore
+        test.TestExm5way5Entries
+        test.TestExmMoveReg
+        test.TestExm4way6Entries
+        ^test.TestIdleTimeMovereg
+        ^test.TestIdleTimeEXM
+        test.TestExm6way5Entries
+        test.TestExm6way6Entries
+        test.TestExm3way7Entries")
+
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_exm_direct_1" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/exm_direct_1/exm_direct_1.p4"
+    "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/ptf-tests/exm_direct_1")
+bfn_set_pd_build_flag("tofino" "smoketest_programs_exm_direct_1"
+    "\"--gen-exm-test-pd\"")
+bfn_set_ptf_test_spec("tofino" "smoketest_programs_exm_direct_1"
+        "^test.TestExm5way8Entries
+        ^test.TestExmdeep64k
+        test.TestExm4way2Entries")
+
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_exm_direct_1_2" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/exm_direct_1/exm_direct_1.p4"
+    "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/ptf-tests/exm_direct_1")
+bfn_set_pd_build_flag("tofino" "smoketest_programs_exm_direct_1_2"
+    "\"--gen-exm-test-pd\"")
+bfn_set_ptf_test_spec("tofino" "smoketest_programs_exm_direct_1_2"
+        "test.TestExm6way2Entries
+        test.TestExm5way7Entries
+        test.TestExm3way2Entries
+        ^test.TestExmdeep32k
+        ^test.TestExm6way8Entries
+        test.TestExm4way1Entries
+        test.TestExm6way1Entries
+        ^test.TestExmwidekey
+        test.TestExm3way1Entries
+        test.TestExm5way2Entries
+        test.TestExm6way7Entries
+        test.TestExm5way1Entries
+        test.TestExm5way7EntriesDefaultEntry")
+
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_exm_indirect_1" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/exm_indirect_1/exm_indirect_1.p4"
+    "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/ptf-tests/exm_indirect_1")
+bfn_set_pd_build_flag("tofino" "smoketest_programs_exm_indirect_1"
+        "\"--gen-exm-test-pd\"")
+bfn_set_ptf_test_spec("tofino" "smoketest_programs_exm_indirect_1"
+        "test.TestActSelIterators
+        test.TestDirectStats")
+
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_exm_indirect_1_2" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/exm_indirect_1/exm_indirect_1.p4"
+    "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/ptf-tests/exm_indirect_1")
+bfn_set_pd_build_flag("tofino" "smoketest_programs_exm_indirect_1_2"
+        "\"--gen-exm-test-pd\"")
+bfn_set_ptf_test_spec("tofino" "smoketest_programs_exm_indirect_1_2"
+        "test.TestDirectStatsPkts28Bytes36
+        test.TestDirectStatsPkts32bits
+        test.TestIndirectStatPkt64bits
+        test.TestIndirectStatsPkts32bits
+        test.TestSelector
+        test.TestSelectorScopes
+        test.TestExmHashAction2
+        test.TestExm4way6Entries")
+
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_exm_smoke_test" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/exm_smoke_test/exm_smoke_test.p4"
     "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/ptf-tests/exm_smoke_test")
 bfn_set_pd_build_flag("tofino" "smoketest_programs_exm_smoke_test"
-  "\"--gen-exm-test-pd\"")
+        "\"--gen-exm-test-pd\"")
 bfn_set_ptf_test_spec("tofino" "smoketest_programs_exm_smoke_test"
-  "^test.TestExmdeep64k
-   test.TestExm4way2Entries
-   test.TestExm6way2Entries
-   test.TestExm3way2Entries
-   ^test.TestExmdeep32k
-   test.TestExm6way8Entries
-   test.TestExm4way1Entries
-   test.TestExm6way1Entries
-   ^test.TestExmwidekey
-   test.TestExm3way1Entries
-   test.TestExm5way2Entries
-   test.TestExm6way7Entries
-   test.TestExm5way1Entries")
+        "^test.TestExmdeep64k
+        test.TestExm4way2Entries")
+
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_exm_smoke_test_2" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/exm_smoke_test/exm_smoke_test.p4"
+    "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/ptf-tests/exm_smoke_test")
+bfn_set_pd_build_flag("tofino" "smoketest_programs_exm_smoke_test_2"
+        "\"--gen-exm-test-pd\"")
+bfn_set_ptf_test_spec("tofino" "smoketest_programs_exm_smoke_test_2"
+        "test.TestExm6way2Entries
+        test.TestExm3way2Entries
+        ^test.TestExmdeep32k
+        test.TestExm6way8Entries
+        test.TestExm4way1Entries
+        test.TestExm6way1Entries
+        ^test.TestExmwidekey
+        test.TestExm3way1Entries
+        test.TestExm5way2Entries
+        test.TestExm6way7Entries
+        test.TestExm5way1Entries")
 
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_stful" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/stful/stful.p4"
     "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/ptf-tests/stful")
