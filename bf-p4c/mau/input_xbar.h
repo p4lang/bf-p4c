@@ -536,6 +536,9 @@ struct IXBar {
         bool preorder(const IR::MAU::SaluAction *) override;
         bool preorder(const IR::Expression *e) override;
         bool preorder(const IR::MAU::HashDist *) override;
+        ///> In order to prevent any annotations, i.e. chain_vpn, and determining this as a source
+        bool preorder(const IR::Annotation *) override { return false; }
+        bool preorder(const IR::Declaration_Instance *) override { return false; }
 
      public:
         FindSaluSources(IXBar &self, const PhvInfo &phv, ContByteConversion &ma,
