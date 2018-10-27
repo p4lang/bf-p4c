@@ -170,8 +170,9 @@ p4c_add_xfail_reason("tofino2"
   )
 
 p4c_add_xfail_reason("tofino2"
-  "Cannot properly set up the hash function on the hash matrix"
+  "The method call of read and write on a Register is currently not supported in p4c"
   testdata/p4_14_samples/issue894.p4
+  testdata/p4_14_samples/register.p4
   )
 
 p4c_add_xfail_reason("tofino2"
@@ -201,10 +202,6 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/int_transit.p4
   )
 
-p4c_add_xfail_reason("tofino2"
-  "source of modify_field invalid"
-  testdata/p4_14_samples/register.p4
-  )
 
 # These tests fail at runtime with the driver
 if (PTF_REQUIREMENTS_MET)

@@ -5,6 +5,18 @@
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/phv/phv_fields.h"
 
+/**
+ * Until the Register.read and Register.write functions have a separate Instruction
+ * Selection to convert these to RegisterActions, Brig does not support these read/write
+ * calls.  Eventually someone has to write a pass to do this conversion.
+ */
+class UnimplementedRegisterMethodCalls : public MauInspector {
+    bool preorder(const IR::Primitive *prim) override;
+
+ public:
+    UnimplementedRegisterMethodCalls() {}
+};
+
 /** The purpose of this pass is to determine the types, and per flow enables of actions.
  *  Eventually a second inspector will be required, after StatefulAttachmentSetup, in order
  *  to verify that the way that these synth2port tables are being used is correct.

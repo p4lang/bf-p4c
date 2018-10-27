@@ -593,10 +593,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/arith1-bmv2.p4
   testdata/p4_16_samples/arith2-bmv2.p4
   testdata/p4_16_samples/concat-bmv2.p4
-  extensions/p4_tests/p4_14/p4smith_regression/shillings_0.p4
-  testdata/p4_16_samples/issue298-bmv2.p4
-  testdata/p4_14_samples/register.p4
-  testdata/p4_16_samples/issue1520-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -959,11 +955,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/arith-bmv2.p4
   )
 
-p4c_add_xfail_reason("tofino"
-  "Currently the field .* in action .* is assigned in a way too complex for the compiler"
-  testdata/p4_16_samples/slice-def-use1.p4
-  )
-
 
 p4c_add_xfail_reason("tofino"
   "The action .* manipulates field .* that requires multiple stages from an action"
@@ -980,10 +971,6 @@ p4c_add_xfail_reason("tofino"
   p4testgen_faecess_0
   )
 
-p4c_add_xfail_reason("tofino"
-  "Cannot properly set up the hash function on the hash matrix"
-  testdata/p4_14_samples/issue894.p4
-)
 
 p4c_add_xfail_reason("tofino"
   "address too large for table"
@@ -1070,10 +1057,21 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "Primitive .* was not correctly converted in Instruction Selection"
+  "The method call of read and write on a Register is currently not supported in p4c"
   testdata/p4_16_samples/issue1097-bmv2.p4
   testdata/p4_16_samples/issue907-bmv2.p4
   extensions/p4_tests/p4_14/p4smith_regression/utes_0.p4
+  extensions/p4_tests/p4_14/p4smith_regression/licensee_0.p4
+  testdata/p4_16_samples/psa-register1.p4
+  testdata/p4_16_samples/psa-register2.p4
+  testdata/p4_16_samples/psa-register3.p4
+  testdata/p4_16_samples/psa-example-register2-bmv2.p4
+  testdata/p4_14_samples/issue894.p4
+  extensions/p4_tests/p4_14/p4smith_regression/shillings_0.p4
+  testdata/p4_16_samples/issue298-bmv2.p4
+  testdata/p4_14_samples/register.p4
+  testdata/p4_16_samples/issue1520-bmv2.p4
+  testdata/p4_16_samples/slice-def-use1.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1214,13 +1212,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4smith_regression/cooperated_0.p4
 )
 
-# P4C-994
-# Compiler Bug: Primitive Register.write(.*); was not correctly converted in Instruction Selection
-p4c_add_xfail_reason("tofino"
-  "was not correctly converted in Instruction Selection"
-  extensions/p4_tests/p4_14/p4smith_regression/licensee_0.p4
-)
-
 # P4C-1059
 # Compiler Bug: Exiting with SIGSEGV
 p4c_add_xfail_reason("tofino"
@@ -1291,20 +1282,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "==: not defined on bit<8> and MeterColor_t"
   testdata/p4_16_samples/psa-meter3.p4
-)
-
-# register read/write support in TNA
-p4c_add_xfail_reason("tofino"
-    "was not correctly converted in Instruction Selection"
-  testdata/p4_16_samples/psa-register1.p4
-  testdata/p4_16_samples/psa-register2.p4
-  testdata/p4_16_samples/psa-register3.p4
-)
-
-# register.read not handled
-p4c_add_xfail_reason("tofino"
-    "source of modify_field invalid"
-    testdata/p4_16_samples/psa-example-register2-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"

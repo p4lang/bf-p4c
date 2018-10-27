@@ -7,6 +7,21 @@
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/validate_allocation.h"
 
+
+bool UnimplementedRegisterMethodCalls::preorder(const IR::Primitive *prim) {
+    auto dot = prim->name.find('.');
+    auto objType = dot ? prim->name.before(dot) : cstring();
+    cstring method = dot ? cstring(dot+1) : prim->name;
+    LOG1("Prim " << prim << " " << objType << " " << method);
+
+    if (objType == "Register" && (method == "read" || method == "write")) {
+        P4C_UNIMPLEMENTED("%s: The method call of read and write on a Register is currently not "
+                          "supported in p4c.  Please use RegisterAction to describe any register "
+                          "programming.", prim->srcInfo);
+    }
+    return true;
+}
+
 const IR::MAU::Action *Synth2PortSetup::preorder(IR::MAU::Action *act) {
     clear_action();
     return act;
@@ -1797,6 +1812,7 @@ const IR::MAU::Instruction *
  */
 InstructionSelection::InstructionSelection(PhvInfo &phv) : PassManager {
     new ValidateInvalidatePrimitive(phv),
+    new UnimplementedRegisterMethodCalls,
     new Synth2PortSetup(phv),
     new DoInstructionSelection(phv),
     new ConvertCastToSlice,
