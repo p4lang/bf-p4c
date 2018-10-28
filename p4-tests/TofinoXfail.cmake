@@ -887,12 +887,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4smith_regression/tofino-bug-5.p4
 )
 
-# P4C-1017
-p4c_add_xfail_reason("tofino"
-  "No tables placeable, but not all tables placed"
-  extensions/p4_tests/p4_14/p4-tests/programs/tcam_search/tcam_search.p4
-  )
-
 # XXX(cole): Temporarily override previous XFAILs with new failures related to
 # PHV allocation.
 p4c_add_xfail_reason("tofino"
