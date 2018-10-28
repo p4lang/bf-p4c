@@ -37,7 +37,6 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     testdata/p4_14_samples/gateway4.p4
     testdata/p4_16_samples/issue774-4-bmv2.p4
     testdata/p4_16_samples/issue1000-bmv2.p4
-    testdata/p4_16_samples/saturated-bmv2.p4
     )
 
 endif() # HARLYN_STF_tofino
@@ -300,6 +299,8 @@ p4c_add_xfail_reason("tofino"
   smoketest_switch_8.4_spine_dtel_int_set_2_QueueReport_Entropy_Test
   smoketest_switch_8.4_spine_dtel_int_set_2_QueueReport_Quota_Test
   smoketest_switch_8.4_spine_dtel_int_set_2_intl45_transitTest_hop2_stateless
+  smoketest_switch_8.4_spine_dtel_int_set_2_INTL45_Transit_EgressMoDTest
+  smoketest_switch_8.4_spine_dtel_int_set_2_MirrorOnDropEgrNonDefaultRuleTest
   smoketest_switch_8.4_spine_dtel_int_set_5_INGRESS_DROP_REPORT_Test
   smoketest_switch_l3_heavy_spine_dtel_QueueReport_Entropy_Test
   smoketest_switch_l3_heavy_spine_dtel_QueueReport_Quota_Test
@@ -308,6 +309,7 @@ p4c_add_xfail_reason("tofino"
   smoketest_switch_l3_heavy_spine_dtel_MirrorOnDropNonDefaultRuleTest
   smoketest_switch_l3_heavy_spine_dtel_INTL45_Transit_IngressMoDTest
   smoketest_switch_l3_heavy_spine_dtel_intl45_transitTest_hop2_stateless 
+  smoketest_switch_l3_heavy_spine_dtel_MirrorOnDropEgrNonDefaultRuleTest
   smoketest_switch_l3_heavy_spine_dtel_sai_INGRESS_DROP_REPORT_Test
   smoketest_switch_marker_spine_dtel_intl45_transitTest_hop2_with_digest
   smoketest_switch_marker_spine_dtel_intl45_transitTest_hop2_qdepth
@@ -319,6 +321,7 @@ p4c_add_xfail_reason("tofino"
   smoketest_switch_marker_spine_dtel_MirrorOnDropNonDefaultRuleTest
   smoketest_switch_marker_spine_dtel_INTL45_Transit_IngressMoDTest
   smoketest_switch_marker_spine_dtel_MirrorOnDropEgressAclTest
+  smoketest_switch_marker_spine_dtel_MirrorOnDropEgrNonDefaultRuleTest
   smoketest_switch_dtel_int_spine_dtel_INTL45_Transit_IngressMoDTest
   smoketest_switch_dtel_int_spine_dtel_QueueReport_Entropy_Test
   smoketest_switch_dtel_int_spine_dtel_QueueReport_Quota_Test
@@ -327,27 +330,23 @@ p4c_add_xfail_reason("tofino"
   smoketest_switch_dtel_int_spine_dtel_MirrorOnDropNonDefaultRuleTest
   smoketest_switch_dtel_int_spine_dtel_MirrorOnDropEgressAclTest
   smoketest_switch_dtel_int_spine_dtel_intl45_transitTest_hop2_stateless
+  smoketest_switch_dtel_int_spine_dtel_INTL45_Transit_EgressMoDTest
+  smoketest_switch_dtel_int_spine_dtel_MirrorOnDropEgrNonDefaultRuleTest
   smoketest_switch_dtel_int_spine_dtel_sai_INGRESS_DROP_REPORT_Test
   )
 
 p4c_add_xfail_reason("tofino"
   "Did not receive pkt on 2"
-  smoketest_switch_8.4_spine_dtel_int_set_2_INTL45_Transit_EgressMoDTest
-  smoketest_switch_8.4_spine_dtel_int_set_2_MirrorOnDropEgrNonDefaultRuleTest
   smoketest_switch_8.4_spine_dtel_int_set_3_INTL45_Transit_DoDTest
   smoketest_switch_8.4_spine_dtel_int_set_3_MirrorOnDropDoDTest
   smoketest_switch_8.4_spine_dtel_int_set_3_QueueReport_DoD_Test
-  smoketest_switch_l3_heavy_spine_dtel_MirrorOnDropEgrNonDefaultRuleTest
   smoketest_switch_l3_heavy_spine_dtel_INTL45_Transit_DoDTest
   smoketest_switch_l3_heavy_spine_dtel_MirrorOnDropDoDTest
   smoketest_switch_l3_heavy_spine_dtel_QueueReport_DoD_Test
   smoketest_switch_l3_heavy_spine_dtel_MirrorOnDropEgressAclTest
-  smoketest_switch_marker_spine_dtel_MirrorOnDropEgrNonDefaultRuleTest
   smoketest_switch_marker_spine_dtel_QueueReport_DoD_Test
   smoketest_switch_marker_spine_dtel_MirrorOnDropDoDTest
   smoketest_switch_marker_spine_dtel_INTL45_Transit_DoDTest
-  smoketest_switch_dtel_int_spine_dtel_INTL45_Transit_EgressMoDTest
-  smoketest_switch_dtel_int_spine_dtel_MirrorOnDropEgrNonDefaultRuleTest
   smoketest_switch_dtel_int_spine_dtel_INTL45_Transit_DoDTest
   smoketest_switch_dtel_int_spine_dtel_QueueReport_DoD_Test
   smoketest_switch_dtel_int_spine_dtel_MirrorOnDropDoDTest
@@ -1388,4 +1387,10 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "The random declaration .* min size must be zero"
   extensions/p4_tests/p4_14/perusal_0.p4
+)
+
+# DRV-2129
+p4c_add_xfail_reason("tofino"
+  "Rendezvous of RPC that terminated with"
+   p4_16_programs_tna_idletimeout
 )
