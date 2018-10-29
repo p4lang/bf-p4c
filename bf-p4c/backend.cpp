@@ -16,6 +16,7 @@
 #include "bf-p4c/common/metadata_init.h"
 #include "bf-p4c/common/multiple_apply.h"
 #include "bf-p4c/common/parser_overlay.h"
+#include "bf-p4c/common/utils.h"
 #include "bf-p4c/logging/filelog.h"
 #include "bf-p4c/mau/characterize_power.h"
 #include "bf-p4c/mau/empty_controls.h"

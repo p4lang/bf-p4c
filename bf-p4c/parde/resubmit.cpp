@@ -206,7 +206,7 @@ class AddResubmitParser : public ParserModifier {
       IR::Vector<IR::BFN::ParserPrimitive> extracts;
       if (packings->size()) {
           auto select = new IR::BFN::Select(
-              new IR::BFN::BufferRVal(StartLen(0, Device::pardeSpec().bitResubmitTagSize())));
+              new IR::BFN::MetadataRVal(StartLen(0, Device::pardeSpec().bitResubmitTagSize())));
           return new IR::BFN::ParserState("$resubmit", INGRESS, extracts, { select }, transitions);
       } else {
           transitions.push_back(

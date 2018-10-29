@@ -5,7 +5,8 @@
 
 #include "ir/ir.h"
 #include "lib/cstring.h"
-#include "bf-p4c/common/parser_graph.h"
+#include "bf-p4c/parde/parde_utils.h"
+#include "bf-p4c/parde/parser_graph.h"
 #include "bf-p4c/logging/pass_manager.h"
 #include "parde_visitor.h"
 
@@ -557,6 +558,7 @@ class AllocateParserChecksumUnits : public Logging::PassManager {
         checksumInfo(parserInfo),
         computeDeadParserChecksums(parserInfo, checksumInfo) {
         addPasses({
+            LOGGING(3) ? new DumpParser("before_parser_csum_alloc", false) : nullptr,
             &parserInfo,
             &checksumInfo,
             &computeDeadParserChecksums,

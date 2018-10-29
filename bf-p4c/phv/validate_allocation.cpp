@@ -532,7 +532,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
 
     // Check that the allocation respects parser alignment limitations.
     forAllMatching<IR::BFN::Extract>(pipe, [&](const IR::BFN::Extract* extract) {
-        auto* bufferSource = extract->source->to<IR::BFN::BufferlikeRVal>();
+        auto* bufferSource = extract->source->to<IR::BFN::InputBufferRVal>();
         if (!bufferSource) return;
 
         int requiredAlignment = bufferSource->range().lo % 8;

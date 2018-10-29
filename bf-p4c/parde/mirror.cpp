@@ -267,7 +267,7 @@ struct AddMirroredFieldListParser : public Transform {
       transitions.push_back(
           new IR::BFN::Transition(match_t(), 1, finalState));
 
-      auto *select = new IR::BFN::Select(new IR::BFN::BufferRVal(StartLen(0, 8)));
+      auto *select = new IR::BFN::Select(new IR::BFN::MetadataRVal(StartLen(0, 8)));
       return new IR::BFN::ParserState(createThreadName(EGRESS, "$mirrored"), EGRESS, {},
                                       {select}, transitions);
   }

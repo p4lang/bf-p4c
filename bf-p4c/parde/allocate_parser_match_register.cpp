@@ -1,7 +1,7 @@
 #include <boost/range/adaptors.hpp>
 
 #include "bf-p4c/parde/allocate_parser_match_register.h"
-#include "bf-p4c/common/utils.h"
+#include "bf-p4c/parde/parde_utils.h"
 
 /// A mapping from a computed r-value to the r-values we evaluated it to.
 /// For one computedRVal, it can have multiple definition parserRVal.
@@ -47,11 +47,11 @@ class ComputeSaveAndSelect: public ParserInspector {
         // The absolute offset that this select match on for current state's
         // input buffer.
         nw_bitrange source() const {
-            const IR::BFN::BufferlikeRVal* buf = nullptr;
+            const IR::BFN::InputBufferRVal* buf = nullptr;
             if (preferred_source) {
-                buf = (*preferred_source).rval->to<IR::BFN::BufferlikeRVal>();
+                buf = (*preferred_source).rval->to<IR::BFN::InputBufferRVal>();
             } else {
-                buf = select->source->to<IR::BFN::BufferlikeRVal>();
+                buf = select->source->to<IR::BFN::InputBufferRVal>();
             }
 
             if (buf) {
@@ -856,5 +856,6 @@ AllocateParserMatchRegisters::AllocateParserMatchRegisters(
         computeSaveAndSelect,
         new WriteBackSaveAndSelect(*computeSaveAndSelect),
         new AdjustMatchValue(),
+        LOGGING(3) ? new DumpParser("after_parser_match_alloc") : nullptr,
     });
 }

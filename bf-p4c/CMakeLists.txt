@@ -158,7 +158,6 @@ set (BF_P4C_BACKEND_COMMON_HDRS
   common/multiple_apply.h
   common/normalize_params.h
   common/param_binding.h
-  common/parser_graph.h
   common/parser_overlay.h
   common/parser_critical_path.h
   common/path_linearizer.h
@@ -314,6 +313,8 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/resolve_computed.h
   parde/resubmit.h
   parde/unroll_parser_counter.h
+  parde/parde_utils.h
+  parde/parser_graph.h
   parde/p4i/gen_parser_json.h
   parde/p4i/p4i_json_types.h
   )

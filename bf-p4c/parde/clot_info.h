@@ -5,7 +5,7 @@
 
 #include "clot.h"
 #include "lib/ordered_map.h"
-#include "bf-p4c/common/utils.h"
+#include "bf-p4c/parde/parde_utils.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/parde/parde_visitor.h"

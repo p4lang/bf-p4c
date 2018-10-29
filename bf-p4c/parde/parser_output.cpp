@@ -169,7 +169,7 @@ struct ParserAsmSerializer : public ParserInspector {
         const char* sep = "save: { ";
         out << indent;
         for (const auto* save : saves) {
-            if (auto* source = save->source->to<IR::BFN::LoweredBufferlikeRVal>()) {
+            if (auto* source = save->source->to<IR::BFN::LoweredInputBufferRVal>()) {
                 auto bytes = source->extractedBytes();
                 out << sep << save->dest << " : " << Range(bytes.lo, bytes.hi);
                 sep = ", "; }
@@ -182,7 +182,7 @@ struct ParserAsmSerializer : public ParserInspector {
             return;
 
         // Generate the assembly that actually implements the extract.
-        if (auto* source = extract->source->to<IR::BFN::LoweredBufferlikeRVal>()) {
+        if (auto* source = extract->source->to<IR::BFN::LoweredInputBufferRVal>()) {
             auto bytes = source->extractedBytes();
             out << indent << Range(bytes.lo, bytes.hi) << ": " << extract->dest;
         } else if (auto* source = extract->source->to<IR::BFN::LoweredConstantRVal>()) {

@@ -1,5 +1,5 @@
-#ifndef EXTENSIONS_BF_P4C_COMMON_PARSER_GRAPH_H_
-#define EXTENSIONS_BF_P4C_COMMON_PARSER_GRAPH_H_
+#ifndef EXTENSIONS_BF_P4C_PARDE_PARSER_GRAPH_H_
+#define EXTENSIONS_BF_P4C_PARDE_PARSER_GRAPH_H_
 
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/copy.hpp>
@@ -54,6 +54,16 @@ class DirectedGraph {
 template <typename T>
 static void merge(std::set<T> &my, const std::set<T> &other) {
     my.insert(other.begin(), other.end());
+}
+
+template <typename K, typename V>
+static void merge(std::map<K, V> &my, const std::map<K, V> &other) {
+    for (auto &kv : other) {
+        if (my.count(kv.first) == 0)
+            my[kv.first] = kv.second;
+        else
+            BUG_CHECK(my[kv.first] == kv.second, "cannot merge two map");
+    }
 }
 
 template <typename T>
@@ -111,7 +121,24 @@ class ParserGraph : public DirectedGraph {
 
     const ParserStateMap& predecessors() const { return _preds; }
 
-    const std::set<const IR::BFN::ParserState*>& to_pipe() const { return _to_pipe; }
+    const std::map<const IR::BFN::ParserState*,
+                   const IR::BFN::Transition*>& to_pipe() const { return _to_pipe; }
+
+    const IR::BFN::Transition*
+    transition(const IR::BFN::ParserState* src,
+               const IR::BFN::ParserState* dst) const {
+        if (_transitions.count({src, dst}))
+            return _transitions.at({src, dst});
+
+        return nullptr;
+    }
+
+    const IR::BFN::Transition* to_pipe(const IR::BFN::ParserState* src) const {
+        if (_to_pipe.count(src))
+            return _to_pipe.at(src);
+
+        return nullptr;
+    }
 
     /// Is "src" an ancestor of "dst"?
     bool is_ancestor(const IR::BFN::ParserState* src, const IR::BFN::ParserState* dst) const {
@@ -167,16 +194,17 @@ class ParserGraph : public DirectedGraph {
         _states.insert(s);
     }
 
-    void add_transition(const IR::BFN::ParserState* src, const IR::BFN::ParserState* dst) {
-        add_state(src);
-        add_state(dst);
-        _succs[src].insert(dst);
-        _preds[dst].insert(src);
-    }
-
-    void add_transition_to_pipe(const IR::BFN::ParserState* src) {
-       add_state(src);
-       _to_pipe.insert(src);
+    void add_transition(const IR::BFN::ParserState* state, const IR::BFN::Transition* t) {
+        if (t->next) {
+            add_state(state);
+            add_state(t->next);
+            _succs[state].insert(t->next);
+            _preds[t->next].insert(state);
+            _transitions[{state, t->next}] = t;
+        } else {
+            add_state(state);
+            _to_pipe[state] = t;
+        }
     }
 
     void merge_with(const ParserGraph& other) {
@@ -211,9 +239,14 @@ class ParserGraph : public DirectedGraph {
 
  private:
     std::set<const IR::BFN::ParserState*> _states;
-    ParserStateMap _succs;
-    ParserStateMap _preds;
-    std::set<const IR::BFN::ParserState*> _to_pipe;
+
+    ParserStateMap _succs, _preds;
+
+    std::map<std::pair<const IR::BFN::ParserState*, const IR::BFN::ParserState*>,
+             const IR::BFN::Transition*> _transitions;
+
+    std::map<const IR::BFN::ParserState*,
+             const IR::BFN::Transition*> _to_pipe;
 
     std::map<const IR::BFN::ParserState*, int> _state_to_id;
     std::map<int, const IR::BFN::ParserState*> _id_to_state;
@@ -279,10 +312,7 @@ class CollectParserInfo : public BFN::ControlFlowVisitor, public PardeInspector 
         g->add_state(state);
 
         for (auto t : state->transitions)
-            if (t->next)
-                g->add_transition(state, t->next);
-            else
-                g->add_transition_to_pipe(state);
+            g->add_transition(state, t);
 
         auto& mutex = _mutex.at(parser);
         add_mutex(mutex, state);
@@ -342,4 +372,4 @@ class CollectParserInfo : public BFN::ControlFlowVisitor, public PardeInspector 
     std::map<const IR::BFN::ParserState*, const IR::BFN::Parser*> _state_to_parser;
 };
 
-#endif  /* EXTENSIONS_BF_P4C_COMMON_PARSER_GRAPH_H_ */
+#endif  /* EXTENSIONS_BF_P4C_PARDE_PARSER_GRAPH_H_ */

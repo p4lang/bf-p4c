@@ -387,7 +387,7 @@ struct CopyPropagateParserValues : public ParserInspector {
         auto* resolvedValue = rvalRef.rval->clone();
 
         if (size_cast_to) {
-            auto* buf = resolvedValue->to<IR::BFN::BufferlikeRVal>();
+            auto* buf = resolvedValue->to<IR::BFN::InputBufferRVal>();
             auto casted_range = buf->range().resizedToBits(*size_cast_to);
             resolvedValue = new IR::BFN::PacketRVal(casted_range);
         }
@@ -397,7 +397,7 @@ struct CopyPropagateParserValues : public ParserInspector {
         // soon. For now, this gets us very basic slice support.
         if (outerSlice) {
             auto* bufferlikeValue =
-                dynamic_cast<IR::BFN::BufferlikeRVal*>(resolvedValue);
+                dynamic_cast<IR::BFN::InputBufferRVal*>(resolvedValue);
             if (!bufferlikeValue) {
                 // We can't simplify slices of other kinds of r-values for now.
                 if (!resolvedValues.count(value))
@@ -618,7 +618,7 @@ class CheckResolvedParserExpressions : public ParserTransform {
                 // Ignore computedRval as definition of a use,
                 // because it means resolution failed to find a defintion
                 // for this select on some path.
-                if (def.rval->is<IR::BFN::BufferlikeRVal>()) {
+                if (def.rval->is<IR::BFN::InputBufferRVal>()) {
                     updatedDefValues[newComputed].push_back(def); } }
 
         if (LOGGING(4)) {

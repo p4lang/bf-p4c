@@ -21,8 +21,8 @@ abstract LoweredParserRVal { }
 /// An r-value that represents a read from a range of input buffer bytes (rather
 /// than bits, as in the high-level parser IR) in the input buffer. The
 /// coordinate system used will depend on the specific type of
-/// `LoweredBufferlikeRVal`.
-abstract LoweredBufferlikeRVal : LoweredParserRVal {
+/// `LoweredInputBufferRVal`.
+abstract LoweredInputBufferRVal : LoweredParserRVal {
     validate {
         BUG_CHECK(range.lo >= 0,
                   "Extracting from offset before the start of the input buffer");
@@ -34,7 +34,7 @@ abstract LoweredBufferlikeRVal : LoweredParserRVal {
     /// @return this buffer range as a closed range of bytes in network order.
     nw_byterange extractedBytes() const { return range; }
 
-    /// The region represented by this `LoweredBufferlikeRVal`, expressed as a
+    /// The region represented by this `LoweredInputBufferRVal`, expressed as a
     /// range of bytes in network order.
     nw_byterange range;
 }
@@ -42,7 +42,7 @@ abstract LoweredBufferlikeRVal : LoweredParserRVal {
 // An r-value originating from the input packet. Represented as a range of bytes
 // in the coordinate system of some parser state. @see PacketRVal for more
 // details about the coordinate system.
-class LoweredPacketRVal : LoweredBufferlikeRVal {
+class LoweredPacketRVal : LoweredInputBufferRVal {
     dbprint {
         out << "packet bytes " << byteInterval() << "(" << range.size() << "B)";
     }
@@ -51,7 +51,7 @@ class LoweredPacketRVal : LoweredBufferlikeRVal {
 /// An r-value representing a range of bits from the region of the input buffer
 /// that's mapped onto special metadata, rather than data from the input packet.
 /// @see BufferRVal for more details about the coordinate system.
-class LoweredBufferRVal : LoweredBufferlikeRVal {
+class LoweredMetadataRVal : LoweredInputBufferRVal {
     dbprint {
         out << "buffer bytes " << byteInterval() << "(" << range.size() << "B)";
     }
@@ -150,15 +150,15 @@ class LoweredParserChecksum : LoweredParserPrimitive {
 /// A lowered save operation, representing save a bits from input buffer to matchRegisters.
 class LoweredSave : LoweredParserPrimitive {
     /// Convenience constructors for accepting a raw source
-    LoweredSave(const MatchRegister& reg, const LoweredBufferlikeRVal* source)
+    LoweredSave(const MatchRegister& reg, const LoweredInputBufferRVal* source)
       : source(source), dest(reg) { }
     LoweredSave(const MatchRegister& reg, nw_byterange source)
-      : source(new LoweredBufferRVal(source)), dest(reg) { }
+      : source(new LoweredMetadataRVal(source)), dest(reg) { }
 
     dbprint { out << "save " << source << " to " << dest.name; }
 
     /// The location that will be read from.
-    LoweredBufferlikeRVal source;
+    LoweredInputBufferRVal source;
 
     /// The register this save writes to.
     MatchRegister dest;

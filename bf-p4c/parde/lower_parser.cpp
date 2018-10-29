@@ -100,7 +100,7 @@ cstring debugInfoFor(const IR::BFN::Extract* extract,
         if (slice.container.size() != size_t(bufferRange.size()))
             info << bufferRange << " -> " << slice.container << " "
                  << slice.container_bits() << ": ";
-    } else if (extract->source->is<IR::BFN::BufferRVal>()) {
+    } else if (extract->source->is<IR::BFN::MetadataRVal>()) {
         info << "buffer mapped I/O: " << bufferRange << " -> "
              << slice.container << " " << slice.container_bits() << ": ";
     }
@@ -201,7 +201,7 @@ struct ExtractSimplifier {
             BUG_CHECK(bool(slice.container),
                       "Parser extracts into invalid PHV container: %1%", extract);
 
-        if (auto* bufferSource = extract->source->to<IR::BFN::BufferlikeRVal>()) {
+        if (auto* bufferSource = extract->source->to<IR::BFN::InputBufferRVal>()) {
             for (const auto& slice : slices) {
                 // Shift the slice to its proper place in the input buffer.
                 auto bitOffset = bufferSource->range().lo;
@@ -247,7 +247,7 @@ struct ExtractSimplifier {
                 if (bufferSource->is<IR::BFN::PacketRVal>())
                     newSource = new IR::BFN::LoweredPacketRVal(byteFinalBufferRange);
                 else
-                    newSource = new IR::BFN::LoweredBufferRVal(byteFinalBufferRange);
+                    newSource = new IR::BFN::LoweredMetadataRVal(byteFinalBufferRange);
 
                 auto* newExtract = new IR::BFN::LoweredExtractPhv(slice.container, newSource);
                 newExtract->debug.info.push_back(debugInfoFor(extract, slice,
@@ -302,7 +302,7 @@ struct ExtractSimplifier {
         }
     }
 
-    template <typename BufferlikeRValType>
+    template <typename InputBufferRValType>
     static const IR::BFN::LoweredExtractPhv*
     mergeExtractsFor(PHV::Container container, const ExtractSequence& extracts) {
         BUG_CHECK(!extracts.empty(), "Trying merge an empty sequence of extracts?");
@@ -314,10 +314,10 @@ struct ExtractSimplifier {
         // we want to know about it.
         nw_byteinterval bufferRange;
         for (auto* extract : extracts) {
-            auto* bufferSource = extract->source->to<BufferlikeRValType>();
+            auto* bufferSource = extract->source->to<InputBufferRValType>();
             BUG_CHECK(bufferSource, "Unexpected non-buffer source");
 
-            if (std::is_same<BufferlikeRValType, IR::BFN::LoweredBufferRVal>::value)
+            if (std::is_same<InputBufferRValType, IR::BFN::LoweredMetadataRVal>::value)
                 BUG_CHECK(toHalfOpenRange(Device::pardeSpec().byteMappedInputBufferRange())
                             .contains(bufferSource->byteInterval()),
                           "Buffer mapped I/O range is outside of the mapped input "
@@ -342,7 +342,7 @@ struct ExtractSimplifier {
         // bytes of the input buffer - they're in some sense "the same".
         // We only need to merge their debug info.
         const auto* finalBufferValue =
-          new BufferlikeRValType(*toClosedRange(bufferRange));
+          new InputBufferRValType(*toClosedRange(bufferRange));
         auto* mergedExtract = new IR::BFN::LoweredExtractPhv(container, finalBufferValue);
         for (auto* extract : extracts)
             mergedExtract->debug.mergeWith(extract->debug);
@@ -366,7 +366,7 @@ struct ExtractSimplifier {
         for (auto& item : extractFromBufferByContainer) {
             auto container = item.first;
             auto& extracts = item.second;
-            auto* merged = mergeExtractsFor<IR::BFN::LoweredBufferRVal>(container, extracts);
+            auto* merged = mergeExtractsFor<IR::BFN::LoweredMetadataRVal>(container, extracts);
             loweredExtracts.push_back(merged);
         }
 
@@ -721,7 +721,7 @@ struct ComputeLoweredParserIR : public ParserInspector {
 
         for (auto stmt : loweredStatements) {
             if (auto extract = stmt->to<IR::BFN::LoweredExtractPhv>()) {
-                if (auto* source = extract->source->to<IR::BFN::LoweredBufferlikeRVal>()) {
+                if (auto* source = extract->source->to<IR::BFN::LoweredInputBufferRVal>()) {
                     auto bytes = source->extractedBytes();
                     auto container = extract->dest->container;
                     clotInfo.container_range()[state->name][container] = bytes;
@@ -738,7 +738,7 @@ struct ComputeLoweredParserIR : public ParserInspector {
             for (auto rs : select->reg_slices)
                 loweredSelect->regs.insert(rs.first);
 
-            if (auto* bufferSource = select->source->to<IR::BFN::BufferlikeRVal>()) {
+            if (auto* bufferSource = select->source->to<IR::BFN::InputBufferRVal>()) {
                 const auto bufferRange =
                     bufferSource->range().toUnit<RangeUnit::Byte>();
                 loweredSelect->debug.info.push_back(debugInfoFor(select, bufferRange)); }
@@ -1613,7 +1613,7 @@ class ExtractorAllocator {
                 extractor_size = extract->dest->container.size();
                 n_extractor_used = 1;
                 byteInterval = source->byteInterval();
-            } else if (extract->source->is<IR::BFN::LoweredBufferRVal>()) {
+            } else if (extract->source->is<IR::BFN::LoweredMetadataRVal>()) {
                 extractor_size = extract->dest->container.size();
                 n_extractor_used = 1;
             } else if (auto* cons = extract->source->to<IR::BFN::LoweredConstantRVal>()) {

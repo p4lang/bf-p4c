@@ -872,7 +872,7 @@ struct ComputeFieldAlignments : public Inspector {
  private:
     bool preorder(const IR::BFN::Extract* extract) override {
         // Only extracts from the input buffer introduce alignment constraints.
-        auto* bufferSource = extract->source->to<IR::BFN::BufferlikeRVal>();
+        auto* bufferSource = extract->source->to<IR::BFN::InputBufferRVal>();
         if (!bufferSource) return false;
 
         auto lval = extract->dest->to<IR::BFN::FieldLVal>();

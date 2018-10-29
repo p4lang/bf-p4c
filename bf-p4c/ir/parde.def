@@ -58,41 +58,30 @@ abstract ParserRVal { }
 
 /// An r-value that represents a read from a range of bits in the input buffer.
 /// The coordinate system used will depend on the specific type of
-/// `BufferlikeRVal`.
-abstract BufferlikeRVal : ParserRVal {
+/// `InputBufferRVal`.
+abstract InputBufferRVal : ParserRVal {
     /// @return this buffer range as a half-open range of bits in network order.
     nw_bitinterval interval() const { return toHalfOpenRange(range_); }
 
     /// @return this buffer range as a closed range of bits in network order.
     nw_bitrange range() const { return range_; }
 
-    /// The region represented by this `BufferlikeRVal`, expressed as a range of
+    /// The region represented by this `InputBufferRVal`, expressed as a range of
     /// bits in network order.
     nw_bitrange range_;
 }
 
-/// An r-value originating from the input packet. Represented as a range of bits
-/// in the coordinate system of some parser state or, to describe the same thing
-/// in a different way, relative to some (possibly unknown) offset within the
-/// input packet. Mapping this to a location in the input *buffer* - that is, the
-/// address space into which the input packet gets mapped by the hardware -
-/// requires knowing which parser state it belongs to and which hardware it will
-/// be used on.
-class PacketRVal : BufferlikeRVal {
+/// location in the packet data section of the input buffer
+class PacketRVal : InputBufferRVal {
     dbprint {
         out << "packet bits " << interval() << "(" << range().size() << "b)";
     }
 }
 
-/// An r-value representing a range of bits from the region of the input buffer
-/// that's mapped onto special metadata, rather than data from the input packet.
-/// This is analogous to memory-mapped I/O. The range of bits is specified in the
-/// space of the input *buffer*, rather than the input *packet*, and thus the
-/// coordinate system is independent of any parser state, although it's still
-/// hardware-specific.
-class BufferRVal : BufferlikeRVal {
+/// location in the metadata secion of the input buffer
+class MetadataRVal : InputBufferRVal {
     dbprint {
-        out << "buffer bits " << interval() << "(" << range().size() << "b)";
+        out << "metadata bits " << interval() << "(" << range().size() << "b)";
     }
 }
 
@@ -124,15 +113,8 @@ class ComputedRVal : ParserRVal {
     Expression source;
 }
 
-/// A value that can *conceptually* be written to in the parser. This is a
-/// superset of the values that can actually be written to on the hardware.
-abstract ParserLVal { }
-
-/// A field or "field-like" value. This is something which will ultimately be
-/// backed by a PHV container. It may be an `IR::Member`, an `IR::TempVar`, or
-/// an `IR::Slice` wrapping either of those things.
-class FieldLVal : ParserLVal {
-    dbprint { out << field; }
+/// Common base class for parser write destination
+abstract ParserLVal {
     toString { return field->toString(); }
 
     int size() const { return field->type->width_bits(); }
@@ -144,25 +126,17 @@ class FieldLVal : ParserLVal {
                   "FieldLVal contains unexpected value: %1%", field);
     }
 
-    /// A reference to a "field-like" value backed by a PHV container.
     Expression field;
 }
 
-class ExternLVal : ParserLVal {
+/// Parser write dest that will ultimately be backed by a PHV container.
+class FieldLVal : ParserLVal {
     dbprint { out << field; }
-    toString { return field->toString(); }
+} 
 
-    int size() const { return field->type->width_bits(); }
-
-    validate {
-        CHECK_NULL(field);
-        BUG_CHECK(field->is<IR::Member>() || field->is<IR::TempVar>() ||
-                  field->is<IR::Slice>(),
-                  "FieldLVal contains unexpected value: %1%", field);
-    }
-
-    /// A reference to a "field-like" value.
-    Expression field;
+/// Parser write dest that will be backed by non-PHV container.
+class ExternLVal : ParserLVal {
+    dbprint { out << "extern lval " << field; }
 }
 
 /// Supertype for all parser primitives - i.e., actions that can be executed in
@@ -190,7 +164,7 @@ class Extract : ParserPrimitive {
 }
 
 /// Save data from input buffer to a match register.
-class SaveToRegister {
+class SaveToRegister : ParserPrimitive {
 #emit
     SaveToRegister(const MatchRegister& reg, nw_byterange source)
       : source(new PacketRVal(source.toUnit<RangeUnit::Bit>())), dest(reg) { }
@@ -198,58 +172,43 @@ class SaveToRegister {
     dbprint { out << "save " << source << " to " << dest.name; }
 
     /// The location that will be read from.
-    BufferlikeRVal source;
+    InputBufferRVal source;
 
     /// The register this save writes to.
     MatchRegister dest;
 };
 
 class ParserPrioritySet : ParserPrimitive {
-
     dbprint { out << "priority set " << val; }
-
     unsigned val;
-
 }
 
 abstract ParserChecksumPrimitive : ParserPrimitive {
-
     cstring declName;
-
 }
 
 class ChecksumVerify : ParserChecksumPrimitive {
-
     dbprint { out << "verify checksum"; }
-
     optional NullOK FieldLVal dest;
 }
 
 class ChecksumUpdate : ParserChecksumPrimitive {
-
     dbprint { out << "update checksum"; }
-
     FieldLVal dest;
 }
 
 class ChecksumGet : ParserChecksumPrimitive {
-
     dbprint { out << "get checksum"; }
-
     FieldLVal dest;
 }
 
 class ChecksumAdd : ParserChecksumPrimitive {
-
     dbprint { out << "add " << source << " to checksum"; }
-
     PacketRVal source;
 }
 
 class ChecksumSubtract : ParserChecksumPrimitive {
-
     dbprint { out << "subtract " << source << " from checksum"; }
-
     PacketRVal source;
 }
 

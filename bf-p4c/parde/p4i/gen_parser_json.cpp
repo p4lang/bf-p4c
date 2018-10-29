@@ -20,7 +20,7 @@ GenerateParserP4iJson::generateExtracts(const IR::BFN::LoweredParserMatch* match
             extract.bit_width = container_sz;
             extract.dest_container =
                 Device::phvSpec().containerToId(extract_ir->dest->container);
-            if (auto* buffer = extract_ir->source->to<IR::BFN::LoweredBufferlikeRVal>()) {
+            if (auto* buffer = extract_ir->source->to<IR::BFN::LoweredInputBufferRVal>()) {
                 extract.buffer_offset = buffer->extractedBytes().loByte();
             } else if (auto* const_val = extract_ir->source->to<IR::BFN::LoweredConstantRVal>()) {
                 extract.constant_value = const_val->constant;

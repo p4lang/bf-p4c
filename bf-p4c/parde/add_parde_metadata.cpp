@@ -54,9 +54,9 @@ void AddParserMetadataShims::addIngressMetadata(IR::BFN::Parser *parser) {
                 new IR::BFN::ConstantRVal(0)));
     }
     prim->push_back(new IR::BFN::Extract(globalTimestamp,
-            new IR::BFN::BufferRVal(StartLen(432, 48))));
+            new IR::BFN::MetadataRVal(StartLen(432, 48))));
     prim->push_back(new IR::BFN::Extract(globalVersion,
-            new IR::BFN::BufferRVal(StartLen(480, 32))));
+            new IR::BFN::MetadataRVal(StartLen(480, 32))));
 
     parser->start =
       new IR::BFN::ParserState(createThreadName(parser->gress, "$entry_point"), parser->gress,
@@ -77,9 +77,9 @@ void AddParserMetadataShims::addEgressMetadata(IR::BFN::Parser *parser) {
     if (isV1)
         prim->push_back(new IR::BFN::Extract(alwaysDeparseBit, new IR::BFN::ConstantRVal(1)));
     prim->push_back(new IR::BFN::Extract(globalTimestamp,
-            new IR::BFN::BufferRVal(StartLen(432, 48))));
+            new IR::BFN::MetadataRVal(StartLen(432, 48))));
     prim->push_back(new IR::BFN::Extract(globalVersion,
-            new IR::BFN::BufferRVal(StartLen(480, 32))));
+            new IR::BFN::MetadataRVal(StartLen(480, 32))));
 
     parser->start =
       new IR::BFN::ParserState(createThreadName(parser->gress, "$entry_point"), parser->gress,
