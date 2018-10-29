@@ -39,10 +39,15 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     extensions/p4_tests/p4_14/action_chain_limits.p4
     # clot-phv interaction bug?
     testdata/p4_14_samples/bridge1.p4
+    # conditional checksum: JBay needs different treatment
     extensions/p4_tests/p4_14/cond_checksum_update.p4
     # Needs stateful init regs support in simple test harness, this test passes
     # on stf2ptf
     extensions/p4_tests/p4_14/stateful_init_regs.p4
+    # decaf: needs to work with CLOT allocation
+    extensions/p4_tests/p4_14/deparser_copy_opt_1.p4
+    extensions/p4_tests/p4_14/deparser_copy_opt_2.p4
+    extensions/p4_tests/p4_14/deparser_copy_opt_3.p4
     )
 
 endif() # HARLYN_STF

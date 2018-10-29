@@ -1,6 +1,7 @@
 
 
 #emit
+#include <boost/optional.hpp>
 struct TableResourceAlloc;
 #include "bf-p4c/mau/hash_function.h"
 #end
@@ -567,6 +568,14 @@ class TableSeq {
         if (b) tables.push_back(b); }
     bool empty() const { return tables.empty(); }
     Table front() const { return tables.empty() ? nullptr : tables.front(); }
+    validate {
+        bool first = true;
+        gress_t gress;
+        for (auto t : tables) {
+            if (first) { gress = t->gress; first = false; }
+            else if (t->gress != gress) BUG("TableSeq consists of tables of different gress?"); }
+    }
+
 #apply
 }
 

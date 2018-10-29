@@ -270,6 +270,7 @@ set (BF_P4C_BACKEND_PARDE_SRCS
   parde/allocate_parser_match_register.cpp
   parde/checksum.cpp
   parde/clot_info.cpp
+  parde/decaf.cpp
   parde/deparser_output.cpp
   parde/extract_parser.cpp
   parde/field_packing.cpp
@@ -297,6 +298,7 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/asm_output.h
   parde/checksum.h
   parde/clot_info.h
+  parde/decaf.h
   parde/epb_config.h
   parde/extract_parser.h
   parde/field_packing.h

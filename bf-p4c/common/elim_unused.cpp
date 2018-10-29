@@ -126,8 +126,6 @@ class ElimUnused::Headers : public PardeTransform {
     }
 
     bool hasDefs(const IR::Expression* fieldRef) const {
-        // XXX(seth): We should really be checking if any reaching definition
-        // could be setting it to something other than zero.
         auto* field = self.phv.field(fieldRef);
         if (!field) return true;
         for (const auto& def : self.defuse.getAllDefs(field->id)) {

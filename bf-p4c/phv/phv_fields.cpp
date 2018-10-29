@@ -540,9 +540,13 @@ bool PHV::Field::is_tphv_candidate(const PhvUse& uses) const {
     if (alwaysPackable) return false;  // __pad_ fields are not considered as tphv.
     // TODO(zma) derive these rather than hard-coding the name
     std::string f_name(name.c_str());
-    if (f_name.find("compiler_generated_meta") != std::string::npos
-     && f_name.find("residual_checksum_") != std::string::npos) {
-        return true; }
+    if (f_name.find("compiler_generated_meta") != std::string::npos &&
+        f_name.find("residual_checksum_") != std::string::npos) {
+        return true;
+    }
+    // XXX(zma) somehow phv allocation can't derive this one
+    if (f_name.find("$constant") != std::string::npos)
+        return true;
     return !uses.is_used_mau(this) && !pov && !metadata && !deparsed_to_tm_i;
 }
 
@@ -1048,14 +1052,23 @@ class AddIntrinsicConstraints : public Inspector {
         for (auto stmt : p->statements) {
             const auto* e = stmt->to<IR::BFN::Extract>();
             if (!e) continue;
+
             const auto* fieldLVal = e->dest->to<IR::BFN::FieldLVal>();
             if (!fieldLVal) continue;
+
             auto* f = phv.field(fieldLVal->field);
             if (!f) continue;
+
             if (f->name.endsWith("$always_deparse") ||
-                    f->name.endsWith("^bridged_metadata_indicator"))
+                f->name.endsWith("^bridged_metadata_indicator"))
                 continue;
+
             if (f->pov) continue;
+
+            std::string f_name(f->name.c_str());
+            if (f_name.find("$constant_") != std::string::npos)
+                continue;
+
             f->set_intrinsic(true);
             LOG1("\tMarking field " << f->name << " as intrinsic");
         }

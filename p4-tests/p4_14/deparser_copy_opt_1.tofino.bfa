@@ -1,0 +1,584 @@
+version:
+  version: 1.0.1
+  run_id: "cbfd75519f7856bd"
+phv ingress:
+  $constant_1: TB0
+  $constant_0: TB1
+  $constant_2: TB2
+  bridged_metadata.bridged_metadata_indicator: TB3
+  ig_intr_md_for_tm.ucast_egress_port: H0(0..8)
+  data.m: H2(8..15)
+  data.k: H2(0..7)
+  data.a.0-7: TB4
+  data.a.8-15: TB5
+  data.b.0-7: TB8
+  data.b.8-15: TB9
+  data.c.0-7: TB6
+  data.c.8-15: TB7
+  a1.$ctl: B1(6)
+  a2.$ctl: B1(7)
+  a3.$ctl: B2(0)
+  a4.$ctl: B2(1)
+  a5.$ctl: B2(2)
+  data.a_v1.$valid: H1(10)
+  data.b_v3.$valid: H1(11)
+  data.b_v2.$valid: H1(12)
+  data.b_v0.$valid: H1(13)
+  data.a_v2.$valid: H1(14)
+  data.b_v4.$valid: H1(15)
+  data.a_v3.$valid: B1(0)
+  data.b_v5.$valid: B1(1)
+  data.a_v0.$valid: B1(2)
+  data.b_v1.$valid: B1(3)
+  ig_intr_md_for_dprsr.mirror_type: B0(0..2)
+  compiler_generated_meta.mirror_id: H1(0..9)
+  bridged_metadata.$valid: B1(4)
+  data.$valid: B1(5)
+phv egress:
+  eg_intr_md.egress_port: H16(0..8)
+  data.m: TW12(24..31)
+  data.k: TW12(16..23)
+  data.a: TW12(0..15)
+  data.b: TW13(16..31)
+  data.c: TW13(0..15)
+  data.$valid: B16(0)
+parser ingress:
+  start: $_init_consts.$entry_point.$ingress_tna_entry_point.$ingress_metadata.$common
+  init_zero: [ H1, B1 ]
+  multi_write: [ B1 ]
+  hdr_len_adj: 16
+  states:
+    $_init_consts.$entry_point.$ingress_tna_entry_point.$ingress_metadata.$common:
+      0:
+        TB0: 8
+            # - value 8 -> TB0 L[0..7]b: $constant_1
+            # - value 8 -> TB0 L[0..7]b: $constant_1
+        TB1: 0  # value 0 -> TB1 L[0..7]b: $constant_0
+        TB2: 102  # value 102 -> TB2 L[0..7]b: $constant_2
+        TB3: 0  # value 0 -> TB3 L[0..7]b: ingress::^bridged_metadata.^bridged_metadata_indicator
+        save: { byte0 : 0 }
+        shift: 1
+        buf_req: 1
+        next: $_init_consts.$entry_point.$ingress_tna_entry_point.$ingress_metadata
+    $_init_consts.$entry_point.$ingress_tna_entry_point.$ingress_metadata:  # from state $_init_consts.$entry_point.$ingress_tna_entry_point.$ingress_metadata
+      0:
+        B1: 16  # value 1 -> B1 L[4]b: ingress::^bridged_metadata.$valid
+        shift: 7
+        buf_req: 7
+        next: $check_resubmit
+    $check_resubmit:  # from state ingress::$check_resubmit
+      match: [ byte0 ]
+      # - match N[-8]B: cast
+      0b0*******:
+        buf_req: 0
+        next: $phase0
+      0b1*******:
+        buf_req: 0
+        next: $resubmit
+    $phase0:  # from state ingress::$phase0
+      0:
+        shift: 8
+        buf_req: 8
+        next: $skip_to_packet.start.$common
+    $skip_to_packet.start.$common:
+      0:
+        0..1: H2
+            # - N[0..7]b -> H2 L[8..15]b: ingress::data.m
+            # - N[8..15]b -> H2 L[0..7]b: ingress::data.k
+        2: TB5  # ingress::data.a.8-15
+        3: TB4  # ingress::data.a.0-7
+        4: TB9  # ingress::data.b.8-15
+        5: TB8  # ingress::data.b.0-7
+        H0: 2  # value 2 -> H0 L[0..8]b: ingress::ig_intr_md_for_tm.ucast_egress_port
+        shift: 6
+        buf_req: 6
+        next: $skip_to_packet.start
+    $skip_to_packet.start:  # from state $skip_to_packet.start
+      0:
+        0: TB7  # ingress::data.c.8-15
+        1: TB6  # ingress::data.c.0-7
+        B1: 32  # value 1 -> B1 L[5]b: ingress::data.$valid
+        shift: 2
+        buf_req: 2
+        next: end
+    $resubmit:  # from state $resubmit
+      0:
+        shift: 8
+        buf_req: 8
+        next: $skip_to_packet.start.$common
+deparser ingress:
+  dictionary:
+    TB3: B1(4)  # ingress::^bridged_metadata.^bridged_metadata_indicator if ingress::^bridged_metadata.$valid
+    H2: B1(5)
+        # - L[8..15]b: ingress::data.m if ingress::data.$valid
+        # - L[0..7]b: ingress::data.k if ingress::data.$valid
+    TB9: H1(10)  # ingress::data.b.8-15 if ingress::data.a_v1.$valid
+    TB8: H1(10)  # ingress::data.b.0-7 if ingress::data.a_v1.$valid
+    TB0: H1(14)  # $constant_1 if ingress::data.a_v2.$valid
+    TB1: H1(14)  # $constant_0 if ingress::data.a_v2.$valid
+    TB7: B1(0)  # ingress::data.c.8-15 if ingress::data.a_v3.$valid
+    TB6: B1(0)  # ingress::data.c.0-7 if ingress::data.a_v3.$valid
+    TB5: B1(2)  # ingress::data.a.8-15 if ingress::data.a_v0.$valid
+    TB4: B1(2)  # ingress::data.a.0-7 if ingress::data.a_v0.$valid
+    TB5: B1(3)  # ingress::data.a.8-15 if ingress::data.b_v1.$valid
+    TB4: B1(3)  # ingress::data.a.0-7 if ingress::data.b_v1.$valid
+    TB0: H1(12)  # $constant_1 if ingress::data.b_v2.$valid
+    TB2: H1(12)  # $constant_2 if ingress::data.b_v2.$valid
+    TB9: H1(11)  # ingress::data.b.8-15 if ingress::data.b_v3.$valid
+    TB8: H1(11)  # ingress::data.b.0-7 if ingress::data.b_v3.$valid
+    TB0: H1(15)  # $constant_1 if ingress::data.b_v4.$valid
+    TB1: H1(15)  # $constant_0 if ingress::data.b_v4.$valid
+    TB7: B1(1)  # ingress::data.c.8-15 if ingress::data.b_v5.$valid
+    TB6: B1(1)  # ingress::data.c.0-7 if ingress::data.b_v5.$valid
+    TB9: H1(13)  # ingress::data.b.8-15 if ingress::data.b_v0.$valid
+    TB8: H1(13)  # ingress::data.b.0-7 if ingress::data.b_v0.$valid
+    TB7: B1(5)  # ingress::data.c.8-15 if ingress::data.$valid
+    TB6: B1(5)  # ingress::data.c.0-7 if ingress::data.$valid
+  egress_unicast_port: H0(0..8)  # L[0..8]b: ingress::ig_intr_md_for_tm.ucast_egress_port
+  mirror:
+    select: B0(0..2)  # L[0..2]b: ingress::ig_intr_md_for_dprsr.mirror_type
+    0:
+      - H1(0..9)  # L[0..9]b: ingress::compiler_generated_meta.mirror_id
+parser egress:
+  start: $entry_point.$egress_tna_entry_point.$egress_metadata
+  multi_write: [ H16 ]
+  hdr_len_adj: 27
+  meta_opt: 8191
+  states:
+    $entry_point.$egress_tna_entry_point.$egress_metadata:  # from state $entry_point.$egress_tna_entry_point.$egress_metadata
+      0:
+        0..1: H16  # N[7..15]b -> H16 L[0..8]b: egress::eg_intr_md.egress_port
+        save: { byte0 : 27 }
+        shift: 27
+        buf_req: 28
+        next: $check_mirrored
+    $check_mirrored:  # from state egress::$check_mirrored
+      match: [ byte0 ]
+      # - match N[0]B: packet.lookahead
+      0b****0***:
+        buf_req: 0
+        next: $bridged_metadata
+      0b****1***:
+        save: { byte0 : 0 }
+        buf_req: 1
+        next: $mirrored
+    $bridged_metadata:  # from state egress::$bridged_metadata
+      0:
+        shift: 1
+        buf_req: 1
+        next: start
+    start:  # from state egress::start
+      0:
+        0..3: TW12
+            # - N[0..7]b -> TW12 L[24..31]b: egress::data.m
+            # - N[8..15]b -> TW12 L[16..23]b: egress::data.k
+            # - N[16..31]b -> TW12 L[0..15]b: egress::data.a
+        4..7: TW13
+            # - N[32..47]b -> TW13 L[16..31]b: egress::data.b
+            # - N[48..63]b -> TW13 L[0..15]b: egress::data.c
+        B16: 1  # value 1 -> B16 L[0]b: egress::data.$valid
+        H16: 2  # value 2 -> H16 L[0..8]b: egress::eg_intr_md.egress_port
+        shift: 8
+        buf_req: 8
+        next: end
+    $mirrored:  # from state egress::$mirrored
+      match: [ byte0 ]
+      # - match N[0]B: (buffer)
+      0x**:
+        shift: 1
+        buf_req: 1
+        next: start
+deparser egress:
+  dictionary:
+    TW12: B16(0)
+        # - L[24..31]b: egress::data.m if egress::data.$valid
+        # - L[16..23]b: egress::data.k if egress::data.$valid
+        # - L[0..15]b: egress::data.a if egress::data.$valid
+    TW13: B16(0)
+        # - L[16..31]b: egress::data.b if egress::data.$valid
+        # - L[0..15]b: egress::data.c if egress::data.$valid
+  egress_unicast_port: H16(0..8)  # L[0..8]b: egress::eg_intr_md.egress_port
+stage 0 ingress:
+  exact_match t2 0:
+    p4: { name: t2 }
+    p4_param_order: 
+      data.k: { type: exact, size: 8, full_size: 8, key_name: "data.k" }
+    row: 7
+    bus: 0
+    column: 2
+    ways:
+      - [0, 0, 0x0, [7, 2]]
+    input_xbar:
+      exact group 0: { 0: data.k }
+      hash 0:
+        0..7: data.k
+      hash group 0:
+        table: [0]
+        seed: 0x0
+    format: { action(0): 0..0, version(0): 112..115 }
+    next: t1
+    instruction: t2(action, $DEFAULT)
+    actions:
+      a4(0, 1):
+      - default_action: { allowed: true }
+      - handle: 0x20000006
+      - set B2(1..2), 1
+      a5(1, 2):
+      - default_action: { allowed: true }
+      - handle: 0x20000007
+      - set B2(1..2), 2
+      NoAction(-1, 4):
+      - default_only_action: { allowed: true }
+      - handle: 0x20000008
+      - set B2(1..2), 0
+    default_only_action: NoAction
+stage 1 ingress:
+  exact_match t1 0:
+    p4: { name: t1 }
+    p4_param_order: 
+      data.m: { type: exact, size: 8, full_size: 8, key_name: "data.m" }
+    row: 7
+    bus: 0
+    column: 2
+    ways:
+      - [0, 0, 0x0, [7, 2]]
+    input_xbar:
+      exact group 0: { 8: data.m }
+      hash 0:
+        0..7: data.m
+      hash group 0:
+        table: [0]
+        seed: 0x0
+    format: { action(0): 0..1, version(0): 112..115 }
+    next: _decaf_pov_encoder_0
+    instruction: t1(action, $DEFAULT)
+    actions:
+      a1(0, 1):
+      - default_action: { allowed: true }
+      - handle: 0x20000002
+      - set a3.$ctl, 0
+      - set B1(6..7), 1
+      a2(1, 2):
+      - default_action: { allowed: true }
+      - handle: 0x20000003
+      - set a3.$ctl, 0
+      - set B1(6..7), 2
+      a3(2, 4):
+      - default_action: { allowed: true }
+      - handle: 0x20000004
+      - set a3.$ctl, 1
+      - set B1(6..7), 0
+      NoAction(-1, 6):
+      - default_only_action: { allowed: true }
+      - handle: 0x20000005
+      - set a3.$ctl, 0
+      - set B1(6..7), 0
+    default_only_action: NoAction
+stage 2 ingress:
+  exact_match _decaf_pov_encoder_0 0:
+    p4: { name: _decaf_pov_encoder_0_ingress }
+    p4_param_order: 
+      data.$valid: { type: exact, size: 1, full_size: 1 }
+      a5.$ctl: { type: exact, size: 1, full_size: 1 }
+      a4.$ctl: { type: exact, size: 1, full_size: 1 }
+      a3.$ctl: { type: exact, size: 1, full_size: 1 }
+      a2.$ctl: { type: exact, size: 1, full_size: 1 }
+      a1.$ctl: { type: exact, size: 1, full_size: 1 }
+    row: 7
+    bus: 0
+    column: 2
+    ways:
+      - [0, 0, 0x0, [7, 2]]
+    input_xbar:
+      exact group 0: { 5: data.$valid, 6: a1.$ctl, 7: a2.$ctl, 8: a3.$ctl, 9: a4.$ctl, 10: a5.$ctl }
+      hash 0:
+        0: data.$valid
+        1: a1.$ctl
+        2: a2.$ctl
+        3: a3.$ctl
+        4: a4.$ctl
+        5: a5.$ctl
+      hash group 0:
+        table: [0]
+        seed: 0x0
+    format: { action(0): 0..5, immediate(0): 6..36, version(0): 112..115 }
+    next: END
+    context_json:
+      static_entries:
+      - priority: 0
+        match_key_fields_values:
+        - field_name: data
+          value: 1
+        - field_name: a5.$ctl
+          value: 0
+        - field_name: a4.$ctl
+          value: 1
+        - field_name: a3.$ctl
+          value: 0
+        - field_name: a2.$ctl
+          value: 0
+        - field_name: a1.$ctl
+          value: 1
+        action_handle: 536870921
+        is_default_entry: false
+        action_parameters_values: []
+      - priority: 1
+        match_key_fields_values:
+        - field_name: data
+          value: 1
+        - field_name: a5.$ctl
+          value: 1
+        - field_name: a4.$ctl
+          value: 0
+        - field_name: a3.$ctl
+          value: 0
+        - field_name: a2.$ctl
+          value: 0
+        - field_name: a1.$ctl
+          value: 1
+        action_handle: 536870922
+        is_default_entry: false
+        action_parameters_values: []
+      - priority: 2
+        match_key_fields_values:
+        - field_name: data
+          value: 1
+        - field_name: a5.$ctl
+          value: 0
+        - field_name: a4.$ctl
+          value: 0
+        - field_name: a3.$ctl
+          value: 0
+        - field_name: a2.$ctl
+          value: 0
+        - field_name: a1.$ctl
+          value: 1
+        action_handle: 536870923
+        is_default_entry: false
+        action_parameters_values: []
+      - priority: 3
+        match_key_fields_values:
+        - field_name: data
+          value: 1
+        - field_name: a5.$ctl
+          value: 0
+        - field_name: a4.$ctl
+          value: 1
+        - field_name: a3.$ctl
+          value: 0
+        - field_name: a2.$ctl
+          value: 1
+        - field_name: a1.$ctl
+          value: 0
+        action_handle: 536870924
+        is_default_entry: false
+        action_parameters_values: []
+      - priority: 4
+        match_key_fields_values:
+        - field_name: data
+          value: 1
+        - field_name: a5.$ctl
+          value: 1
+        - field_name: a4.$ctl
+          value: 0
+        - field_name: a3.$ctl
+          value: 0
+        - field_name: a2.$ctl
+          value: 1
+        - field_name: a1.$ctl
+          value: 0
+        action_handle: 536870925
+        is_default_entry: false
+        action_parameters_values: []
+      - priority: 5
+        match_key_fields_values:
+        - field_name: data
+          value: 1
+        - field_name: a5.$ctl
+          value: 0
+        - field_name: a4.$ctl
+          value: 0
+        - field_name: a3.$ctl
+          value: 0
+        - field_name: a2.$ctl
+          value: 1
+        - field_name: a1.$ctl
+          value: 0
+        action_handle: 536870926
+        is_default_entry: false
+        action_parameters_values: []
+      - priority: 6
+        match_key_fields_values:
+        - field_name: data
+          value: 1
+        - field_name: a5.$ctl
+          value: 0
+        - field_name: a4.$ctl
+          value: 1
+        - field_name: a3.$ctl
+          value: 1
+        - field_name: a2.$ctl
+          value: 0
+        - field_name: a1.$ctl
+          value: 0
+        action_handle: 536870927
+        is_default_entry: false
+        action_parameters_values: []
+      - priority: 7
+        match_key_fields_values:
+        - field_name: data
+          value: 1
+        - field_name: a5.$ctl
+          value: 1
+        - field_name: a4.$ctl
+          value: 0
+        - field_name: a3.$ctl
+          value: 1
+        - field_name: a2.$ctl
+          value: 0
+        - field_name: a1.$ctl
+          value: 0
+        action_handle: 536870928
+        is_default_entry: false
+        action_parameters_values: []
+      - priority: 8
+        match_key_fields_values:
+        - field_name: data
+          value: 1
+        - field_name: a5.$ctl
+          value: 0
+        - field_name: a4.$ctl
+          value: 0
+        - field_name: a3.$ctl
+          value: 1
+        - field_name: a2.$ctl
+          value: 0
+        - field_name: a1.$ctl
+          value: 0
+        action_handle: 536870929
+        is_default_entry: false
+        action_parameters_values: []
+      - priority: 9
+        match_key_fields_values:
+        - field_name: data
+          value: 1
+        - field_name: a5.$ctl
+          value: 0
+        - field_name: a4.$ctl
+          value: 0
+        - field_name: a3.$ctl
+          value: 0
+        - field_name: a2.$ctl
+          value: 0
+        - field_name: a1.$ctl
+          value: 0
+        action_handle: 536870930
+        is_default_entry: false
+        action_parameters_values: []
+      - priority: 10
+        match_key_fields_values:
+        - field_name: data
+          value: 1
+        - field_name: a5.$ctl
+          value: 0
+        - field_name: a4.$ctl
+          value: 1
+        - field_name: a3.$ctl
+          value: 0
+        - field_name: a2.$ctl
+          value: 0
+        - field_name: a1.$ctl
+          value: 0
+        action_handle: 536870931
+        is_default_entry: false
+        action_parameters_values: []
+      - priority: 11
+        match_key_fields_values:
+        - field_name: data
+          value: 1
+        - field_name: a5.$ctl
+          value: 1
+        - field_name: a4.$ctl
+          value: 0
+        - field_name: a3.$ctl
+          value: 0
+        - field_name: a2.$ctl
+          value: 0
+        - field_name: a1.$ctl
+          value: 0
+        action_handle: 536870932
+        is_default_entry: false
+        action_parameters_values: []
+    action_bus: { 64..65 : immediate(0..15), 66..67 : immediate(16..30) }
+    instruction: _decaf_pov_encoder_0(action, $DEFAULT)
+    actions:
+      __act_0(1, 1):
+      - default_action: { allowed: false, reason: none }
+      - handle: 0x20000009
+      - {  }
+      - set H1(10..11), 3
+      __act_1(2, 2):
+      - default_action: { allowed: false, reason: none }
+      - handle: 0x2000000a
+      - { $data0: immediate(0..15), $constant0: $data0(10..10), $constant0: 1, $constant1: $data0(12..12), $constant1: 1, $mask0: immediate(16..30), $mask0: 0x1400 }
+      - bitmasked-set H1, $data0(10..12), H1
+      __act_2(4, 4):
+      - default_action: { allowed: false, reason: none }
+      - handle: 0x2000000b
+      - { $data0: immediate(0..15), $constant0: $data0(10..10), $constant0: 1, $constant1: $data0(13..13), $constant1: 1, $mask0: immediate(16..30), $mask0: 0x2400 }
+      - bitmasked-set H1, $data0(10..13), H1
+      __act_3(6, 6):
+      - default_action: { allowed: false, reason: none }
+      - handle: 0x2000000c
+      - {  }
+      - set H1(14..15), 3
+      __act_4(8, 8):
+      - default_action: { allowed: false, reason: none }
+      - handle: 0x2000000d
+      - { $data0: immediate(0..15), $constant0: $data0(14..14), $constant0: 1, $constant1: $data0(12..12), $constant1: 1, $mask0: immediate(16..30), $mask0: 0x5000 }
+      - bitmasked-set H1, $data0(12..14), H1
+      __act_5(10, 10):
+      - default_action: { allowed: false, reason: none }
+      - handle: 0x2000000e
+      - {  }
+      - set H1(13..14), 3
+      __act_6(3, 3):
+      - default_action: { allowed: false, reason: none }
+      - handle: 0x2000000f
+      - {  }
+      - set B1(0..1), 3
+      __act_7(12, 12):
+      - default_action: { allowed: false, reason: none }
+      - handle: 0x20000010
+      - {  }
+      - set data.a_v3.$valid, 1
+      - set data.b_v2.$valid, 1
+      __act_8(14, 14):
+      - default_action: { allowed: false, reason: none }
+      - handle: 0x20000011
+      - {  }
+      - set data.a_v3.$valid, 1
+      - set data.b_v0.$valid, 1
+      __act_9(16, 16):
+      - default_action: { allowed: false, reason: none }
+      - handle: 0x20000012
+      - {  }
+      - set data.a_v0.$valid, 1
+      - set data.b_v0.$valid, 1
+      __act_10(5, 5):
+      - default_action: { allowed: false, reason: none }
+      - handle: 0x20000013
+      - {  }
+      - set B1(2..3), 3
+      __act_11(18, 18):
+      - default_action: { allowed: false, reason: none }
+      - handle: 0x20000014
+      - {  }
+      - set data.b_v2.$valid, 1
+      - set data.a_v0.$valid, 1
+      __nop_(0, 0):
+      - default_action: { allowed: true }
+      - handle: 0x20000015
+      - {  }
+    default_action: __nop_
+primitives: "deparser_copy_opt_1.tofino/deparser_copy_opt_1.prim.json"

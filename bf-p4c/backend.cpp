@@ -36,6 +36,7 @@
 #include "bf-p4c/mau/table_injected_deps.h"
 #include "bf-p4c/parde/add_jbay_pov.h"
 #include "bf-p4c/parde/adjust_extract.h"
+#include "bf-p4c/parde/decaf.h"
 #include "bf-p4c/parde/lower_parser.h"
 #include "bf-p4c/parde/merge_parser_state.h"
 #include "bf-p4c/parde/resolve_computed.h"
@@ -174,6 +175,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new CollectPhvInfo(phv),
         &defuse,
         new FindDependencyGraph(phv, deps),
+        options.decaf ? new DeparserCopyOpt(phv, uses, deps) : nullptr,
         options.privatization ? new Privatization(phv, deps, doNotPrivatize, defuse) : nullptr,
                                   // For read-only fields, generate private TPHV and PHV copies.
 

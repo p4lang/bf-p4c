@@ -22,6 +22,7 @@ class BFN_Options : public CompilerOptions {
     float phv_scale_factor = 1;
     bool create_graphs = false;
     bool privatization = false;
+    bool decaf = false;
     bool always_init_metadata = false;
     bool disable_init_metadata = false;
     bool backward_compatible = false;
@@ -67,9 +68,8 @@ class BFNContext final : public P4CContext {
  *
  * In addition to the pragmas supported by P4COptionPragmaParser,
  * BFNOptionPragmaParser recognizes:
- *  - `pragma bf_p4c_compiler_option [command line arguments]`
- *  - `@bf_p4c_compiler_option([command line arguments])`
- *  - `pragma command_line [command line arguments]` (for Glass compatibility)
+ *  - p4-14: @pragma command_line [command line arguments]
+ *  - p4-16: @command_line([command line arguments])
  */
 class BFNOptionPragmaParser : public P4::P4COptionPragmaParser {
  public:
@@ -78,10 +78,7 @@ class BFNOptionPragmaParser : public P4::P4COptionPragmaParser {
 
  private:
     boost::optional<CommandLineOptions>
-    parseBrigCompilerOption(const IR::Annotation* annotation);
-
-    boost::optional<CommandLineOptions>
-    parseGlassCompilerOption(const IR::Annotation* annotation);
+    parseCompilerOption(const IR::Annotation* annotation);
 };
 
 #endif /* EXTENSIONS_BF_P4C_BF_P4C_OPTIONS_H_ */

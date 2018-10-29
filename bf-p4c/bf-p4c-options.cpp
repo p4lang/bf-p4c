@@ -117,6 +117,9 @@ BFN_Options::BFN_Options() {
     registerOption("--disable-init-metadata", nullptr,
         [this](const char *) { disable_init_metadata = true; return true; },
         "Disable metadata initialization");
+    registerOption("--decaf", nullptr,
+        [this](const char *) { decaf = true; return true; },
+        "Apply decaf optimization");
     registerOption("--bf-rt-schema", "file",
         [this](const char *arg) { bfRtSchema = arg; return true; },
         "Generate and write BF-RT JSON schema to the specified file");
@@ -213,36 +216,13 @@ bool BFNContext::isRecognizedDiagnostic(cstring diagnostic) {
 boost::optional<P4::IOptionPragmaParser::CommandLineOptions>
 BFNOptionPragmaParser::tryToParse(const IR::Annotation* annotation) {
     auto pragmaName = annotation->name.name;
-    if (pragmaName == "bf_p4c_compiler_option")
-        return parseBrigCompilerOption(annotation);
     if (pragmaName == "command_line")
-        return parseGlassCompilerOption(annotation);
+        return parseCompilerOption(annotation);
     return P4COptionPragmaParser::tryToParse(annotation);
 }
 
 boost::optional<P4::IOptionPragmaParser::CommandLineOptions>
-BFNOptionPragmaParser::parseBrigCompilerOption(const IR::Annotation* annotation) {
-    boost::optional<CommandLineOptions> newOptions;
-    newOptions.emplace();
-
-    // XXX(seth): It'd be nice to have some mechanism for whitelisting
-    // options so a P4 program from an untrusted source can't overwrite
-    // your files or launch the missiles.
-    for (auto* arg : annotation->expr) {
-        auto* argString = arg->to<IR::StringLiteral>();
-        if (!argString) {
-            ::warning("@bf_p4c_compiler_option arguments must be strings: %1%",
-                      annotation);
-            return boost::none;
-        }
-        newOptions->push_back(argString->value.c_str());
-    }
-
-    return newOptions;
-}
-
-boost::optional<P4::IOptionPragmaParser::CommandLineOptions>
-BFNOptionPragmaParser::parseGlassCompilerOption(const IR::Annotation* annotation) {
+BFNOptionPragmaParser::parseCompilerOption(const IR::Annotation* annotation) {
     // See `supported_cmd_line_pragmas` in glass/p4c_tofino/target/tofino/compile.py:205
     static const std::map<cstring, bool> cmdLinePragmas = {
         { "--no-dead-code-elimination", false },
@@ -250,7 +230,8 @@ BFNOptionPragmaParser::parseGlassCompilerOption(const IR::Annotation* annotation
         { "--metadata-overlay",         false },
         { "--placement",                true },
         { "--placement-order",          false },
-        { "--disable-init-metadata",    true }
+        { "--disable-init-metadata",    true },  // brig only
+        { "--decaf",                    true }   // brig only
     };
 
     boost::optional<CommandLineOptions> newOptions;

@@ -535,7 +535,7 @@ class DeparserParameter {
 /// The supertype for all BFN IR deparsers.
 abstract AbstractDeparser : Unit {
 #apply
-    int stage() const override { return -1; }
+    int stage() const override { return std::numeric_limits<int>::max(); }
     gress_t thread() const override { return gress; }
 
     gress_t gress;
