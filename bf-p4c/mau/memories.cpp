@@ -475,6 +475,20 @@ class SetupAttachedTables : public MauInspector {
          Memories::mem_info &i) : mem(m), ta(t), entries(e), mi(i) {}
 };
 
+void Memories::set_logical_memuse_type(table_alloc *ta, Use::type_t type) {
+    if (ta->table->for_dleft()) {
+        for (int lt = 0; lt < ta->layout_option->logical_tables(); lt++) {
+            auto unique_id = ta->build_unique_id(nullptr, false, lt);
+            (*ta->memuse)[unique_id].type = type; }
+    } else if (type == Use::ATCAM) {
+        for (int lt = 0; lt < ta->layout_option->partition_sizes.size(); lt++) {
+            auto unique_id = ta->build_unique_id(nullptr, false, lt);
+            (*ta->memuse)[unique_id].type = type; }
+    } else {
+        auto unique_id = ta->build_unique_id();
+        (*ta->memuse)[unique_id].type = type; }
+}
+
 /* Run a quick analysis on all tables added by the table placement algorithm,
    and add the tables to their corresponding lists */
 bool Memories::analyze_tables(mem_info &mi) {
@@ -496,63 +510,47 @@ bool Memories::analyze_tables(mem_info &mi) {
         }
         auto table = ta->table;
         int entries = ta->provided_entries;
-        if (ta->table->for_dleft()) {
+        if (ta->layout_option->layout.no_match_rams()) {
             mi.logical_tables += ta->layout_option->logical_tables();
-            BUG_CHECK(ta->layout_option->layout.no_match_hit_path(), "DLeft tables can only be "
-                      "part of the hit path");
-            for (int lt = 0; lt < ta->layout_option->logical_tables(); lt++) {
-                auto unique_id = ta->build_unique_id(nullptr, false, lt);
-                (*ta->memuse)[unique_id].type = Use::EXACT;
-            }
-            no_match_hit_tables.push_back(ta);
-        } else if (ta->layout_option->layout.no_match_rams()) {
-            auto unique_id = ta->build_unique_id();
             if (ta->layout_option->layout.no_match_hit_path()) {
                 no_match_hit_tables.push_back(ta);
-                (*ta->memuse)[unique_id].type = Use::EXACT;
+                set_logical_memuse_type(ta, Use::EXACT);
                 ta->calculated_entries = ta->provided_entries;
             } else {
+                BUG_CHECK(!ta->table->for_dleft(), "DLeft tables can only be "
+                          "part of the hit path");
+                set_logical_memuse_type(ta, Use::TERNARY);
                 // In order to potentially provide potential sizes for attached tables,
                 // must at least have a size of 1
-                (*ta->memuse)[unique_id].type = Use::TERNARY;
                 ta->calculated_entries = 1;
                 no_match_miss_tables.push_back(ta);
             }
             mi.no_match_tables++;
-            mi.logical_tables++;
         } else if (table->layout.atcam) {
             atcam_tables.push_back(ta);
             mi.atcam_tables++;
             mi.logical_tables += ta->layout_option->logical_tables();
             int width = ta->layout_option->way.width;
             int groups = ta->layout_option->way.match_groups;
-            for (size_t i = 0; i < ta->layout_option->partition_sizes.size(); i++) {
-                int logical_table = static_cast<int>(i);
-                auto unique_id = ta->build_unique_id(nullptr, false, logical_table);
-                (*ta->memuse)[unique_id].type = Use::ATCAM;
-            }
+            set_logical_memuse_type(ta, Use::ATCAM);
             int depth = mems_needed(entries, SRAM_DEPTH, groups, false);
             mi.match_RAMs += depth * width;
             mi.match_bus_min += ta->layout_option->logical_tables();
         } else if (!table->layout.ternary) {
-            auto unique_id = ta->build_unique_id();
-            LOG4("Exact match table " << unique_id.build_name());
-            (*ta->memuse)[unique_id].type = Use::EXACT;
+            set_logical_memuse_type(ta, Use::EXACT);
             exact_tables.push_back(ta);
-            mi.match_tables++;
-            mi.logical_tables++;
+            mi.match_tables += ta->layout_option->logical_tables();
+            mi.logical_tables += ta->layout_option->logical_tables();
             int width = ta->layout_option->way.width;
             int groups = ta->layout_option->way.match_groups;
             int depth = mems_needed(entries, SRAM_DEPTH, groups, false);
             mi.match_bus_min += width;
             mi.match_RAMs += depth;
         } else {
-           auto unique_id = ta->build_unique_id();
-           LOG4("Ternary match table " << unique_id.build_name());
-           (*ta->memuse)[unique_id].type = Use::TERNARY;
+           set_logical_memuse_type(ta, Use::TERNARY);
            ternary_tables.push_back(ta);
-           mi.logical_tables++;
-           mi.ternary_tables++;
+           mi.ternary_tables += ta->layout_option->logical_tables();
+           mi.logical_tables += ta->layout_option->logical_tables();
            int bytes = table->layout.match_bytes;
            int TCAMs_needed = 0;
            while (bytes > 11) {

@@ -158,7 +158,26 @@ class CreateSaluInstruction : public Inspector {
 /** Check all IR::MAU::StatefulAlu objects to make sure they're implementable
  */
 class CheckStatefulAlu : public MauModifier {
+    // There's a nasty problem outputting the address on jbay -- we have a way of
+    // specifying an extra bit via lmatch on the output, but it is shared across
+    // all the instructions in the salu.  So we have to ensure all instructions that
+    // use lmatch have identical lmatch usage, possibly modifying them.
+    struct AddressLmatchUsage : public Inspector {
+        static unsigned regmasks[];
+        void clear();
+        unsigned eval_cmp(const IR::Expression *);
+        bool preorder(const IR::MAU::SaluAction *) override;
+        bool preorder(const IR::MAU::SaluFunction *) override;
+        bool preorder(const IR::MAU::SaluCmpReg *) override;
+        bool safe_merge(const IR::Expression *a, const IR::Expression *b, unsigned inuse);
+        const IR::MAU::StatefulAlu      *salu;
+        unsigned                inuse_mask;      // cmp registers used in this action
+        const IR::Expression    *lmatch_operand;
+        unsigned                lmatch_inuse_mask;
+    } lmatch_usage;
+
     bool preorder(IR::MAU::StatefulAlu *) override;
+    bool preorder(IR::MAU::SaluFunction *) override;
     // FIXME -- Type_Typedef should have been resolved and removed by Typechecking in the
     // midend?  But we're running into it here, so a helper to skip over typedefs.
     static const IR::Type *getType(const IR::Type *t) {

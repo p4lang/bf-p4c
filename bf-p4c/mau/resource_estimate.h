@@ -70,7 +70,7 @@ struct StageUseEstimate {
     void options_to_ternary_entries(const IR::MAU::Table *tbl, int entries);
     void select_best_option_ternary();
     void options_to_atcam_entries(const IR::MAU::Table *tbl, int entries);
-    void options_to_dleft_entries(const IR::MAU::Table *tbl, int entries);
+    void options_to_dleft_entries(const IR::MAU::Table *tbl, const attached_entries_t &att_entries);
     void calculate_attached_rams(const IR::MAU::Table *tbl, const attached_entries_t &att_entries,
                                  LayoutOption *lo, bool table_placement);
     void fill_estimate_from_option(int &entries);

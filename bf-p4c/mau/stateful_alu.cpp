@@ -436,13 +436,12 @@ const IR::Expression *CreateSaluInstruction::reuseCmp(const IR::MAU::Instruction
     for (unsigned i = 0; i < operands.size(); ++i)
         if (!equiv(operands.at(i), cmp->operands.at(i+1)))
             return nullptr;
-    auto bit1 = IR::Type::Bits::get(1);
     auto name = Device::statefulAluSpec().cmpUnit(idx);
     if (!name.startsWith("cmp")) name = "cmp" + name;
     if (opcode == cmp->name)
-        return new IR::MAU::SaluReg(bit1, name, idx & 1);
+        return new IR::MAU::SaluCmpReg(name, idx);
     if (negate_op.at(opcode) == cmp->name)
-        return new IR::LNot(new IR::MAU::SaluReg(bit1, name, idx & 0));
+        return new IR::LNot(new IR::MAU::SaluCmpReg(name, idx));
     return nullptr;
 }
 
@@ -472,12 +471,11 @@ bool CreateSaluInstruction::preorder(const IR::Operation::Relation *rel, cstring
                 pred_operands.push_back(inst);
                 operands.clear();
                 return false; } }
-        auto bit1 = IR::Type::Bits::get(1);
         cstring name = Device::statefulAluSpec().cmpUnit(idx);
-        operands.insert(operands.begin(), new IR::MAU::SaluReg(bit1, name, idx & 1));
+        operands.insert(operands.begin(), new IR::MAU::SaluCmpReg(name, idx));
         cmp_instr.push_back(createInstruction());
         if (!name.startsWith("cmp")) name = "cmp" + name;
-        pred_operands.push_back(new IR::MAU::SaluReg(bit1, name, idx & 1));
+        pred_operands.push_back(new IR::MAU::SaluCmpReg(name, idx));
         LOG4("Relation pred_operand: " << pred_operands.back());
         operands.clear();
     } else {
@@ -871,7 +869,70 @@ bool CheckStatefulAlu::preorder(IR::MAU::StatefulAlu *salu) {
             first = salu_action;
         }
     }
+    lmatch_usage.clear();
+    lmatch_usage.salu = salu;
+    salu->apply(lmatch_usage);
+    return true;
+}
 
+void CheckStatefulAlu::AddressLmatchUsage::clear() {
+    lmatch_operand = nullptr;
+    inuse_mask = lmatch_inuse_mask = 0;
+}
+
+unsigned CheckStatefulAlu::AddressLmatchUsage::regmasks[] = { 0xaaaa, 0xcccc, 0xf0f0, 0xff00 };
+unsigned CheckStatefulAlu::AddressLmatchUsage::eval_cmp(const IR::Expression *e) {
+    if (auto *cmp = e->to<IR::MAU::SaluCmpReg>()) {
+        return regmasks[cmp->index];
+    } else if (auto *And = e->to<IR::LAnd>()) {
+        return eval_cmp(And->left) & eval_cmp(And->right);
+    } else if (auto *Or = e->to<IR::LOr>()) {
+        return eval_cmp(Or->left) | eval_cmp(Or->right);
+    } else if (auto *Not = e->to<IR::LNot>()) {
+        return ~eval_cmp(Not->expr);
+    } else {
+        BUG("Invalid predicate");
+    }
+}
+
+bool CheckStatefulAlu::AddressLmatchUsage::preorder(const IR::MAU::SaluAction *inst) {
+    inuse_mask = 0;
+    return true;
+}
+bool CheckStatefulAlu::AddressLmatchUsage::preorder(const IR::MAU::SaluCmpReg *cmp) {
+    inuse_mask |= regmasks[cmp->index];
+    return true;
+}
+
+/* Check to see if its safe to replace the lmatch expression 'b' with 'a', given the set
+ * of registers in use for the action 'b' -- that is will 'a' evaluate to the same value
+ * as 'b' if every register NOT in reguse is false. */
+bool CheckStatefulAlu::AddressLmatchUsage::safe_merge(
+    const IR::Expression *a, const IR::Expression *b, unsigned inuse
+) {
+    return (eval_cmp(a) & inuse) == (eval_cmp(b) & inuse);
+}
+
+
+bool CheckStatefulAlu::AddressLmatchUsage::preorder(const IR::MAU::SaluFunction *fn) {
+    if (fn->name != "lmatch") return false;
+    if (lmatch_operand) {
+        if (safe_merge(lmatch_operand, fn->expr, inuse_mask)) {
+            return false;
+        } else if (safe_merge(fn->expr, lmatch_operand, lmatch_inuse_mask)) {
+            lmatch_operand = fn->expr;
+            lmatch_inuse_mask = inuse_mask;
+        } else {
+            error("Conflicting address calls in register actions on %s", salu->reg);
+        }
+    } else {
+        lmatch_operand = fn->expr;
+        lmatch_inuse_mask = inuse_mask; }
+    return false;
+}
+bool CheckStatefulAlu::preorder(IR::MAU::SaluFunction *fn) {
+    if (fn->name != "lmatch") return false;
+    fn->expr = lmatch_usage.lmatch_operand;
     return false;
 }
 

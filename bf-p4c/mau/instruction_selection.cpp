@@ -1046,6 +1046,7 @@ bool MeterSetup::Update::preorder(IR::MAU::Action *act) {
     return true;
 }
 
+#if 0
 void DLeftSetup::postorder(IR::MAU::Table *tbl) {
     if (tbl->for_dleft()) {
         ERROR_CHECK(Device::currentDevice() != Device::TOFINO,
@@ -1073,6 +1074,7 @@ void DLeftSetup::postorder(IR::MAU::BackendAttached *ba) {
     ba->hash_dist = new IR::MAU::HashDist(IR::Type::Bits::get(0), field_list,
                                           IR::MAU::hash_function::random(), nullptr);
 }
+#endif
 
 const IR::MAU::Instruction *ConvertCastToSlice::preorder(IR::MAU::Instruction *instr) {
     BUG_CHECK(findContext<IR::MAU::Instruction>() == nullptr, "nested instructions");
@@ -1818,7 +1820,7 @@ InstructionSelection::InstructionSelection(PhvInfo &phv) : PassManager {
     new ConvertCastToSlice,
     new StatefulAttachmentSetup(phv),
     new MeterSetup(phv),
-    new DLeftSetup,
+    // new DLeftSetup,
     new SetupAttachedAddressing,
     new NullifyAllStatefulCallPrim,
     new CollectPhvInfo(phv),

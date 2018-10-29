@@ -775,6 +775,13 @@ Instruction *OutOP::pass1(Table *tbl_, Table::Actions::Action *) {
         if (tbl->pred_comb_sel >= 0 && tbl->pred_comb_sel != slot - ALUOUT0)
             error(lineno, "Only one output of predication allowed");
         tbl->pred_comb_sel = slot - ALUOUT0; }
+    if (lmatch) {
+        if (tbl->output_lmatch) {
+            auto *other = dynamic_cast<OutOP *>(tbl->output_lmatch);
+            if (lmatch_pred != other->lmatch_pred) {
+                error(lineno, "Conflict lmatch output use in stateful %s", tbl->name());
+                error(other->lineno, "conflicting use here"); } }
+        tbl->output_lmatch = this; }
     return this; }
 
 #include "tofino/salu_inst.cpp"

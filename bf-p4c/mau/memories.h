@@ -449,6 +449,7 @@ struct Memories {
     void clear_table_vectors();
     void clear_uses();
     void clear_allocation();
+    void set_logical_memuse_type(table_alloc *ta, Use::type_t type);
     bool analyze_tables(mem_info &mi);
     void calculate_column_balance(const mem_info &mi, unsigned &row, bool &column_balance_init);
     bool single_allocation_balance(mem_info &mi, unsigned row);

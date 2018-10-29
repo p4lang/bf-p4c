@@ -626,18 +626,7 @@ bool TablePlacement::can_duplicate(const IR::MAU::AttachedMemory *att) {
 bool TablePlacement::initial_stage_and_entries(Placed *rv, const Placed *done,
         int &set_entries, int &furthest_stage) {
     auto *t = rv->table;
-    if (t->for_dleft()) {
-        const IR::MAU::StatefulAlu *salu = nullptr;
-        for (auto *back_at : t->attached) {
-            salu = back_at->attached->to<IR::MAU::StatefulAlu>();
-            if (salu != nullptr)
-                break;
-        }
-        if (t->layout.entries)
-            set_entries = t->layout.entries;
-        else if (salu->size)
-            set_entries = salu->size;
-    } else if (t->match_table) {
+    if (t->match_table) {
         if (t->layout.pre_classifier)
             set_entries = t->layout.pre_classifer_number_entries;
         else if (auto k = t->match_table->getConstantProperty("size"))
@@ -792,6 +781,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv, const IR::MA
     min_placed->stage = rv->stage;
     min_placed->initial_stage_split = rv->initial_stage_split;
     min_placed->stage_split = rv->stage_split;
+    min_placed->attached_entries = rv->attached_entries;
     StageUseEstimate min_use(t, min_placed->entries, min_placed->attached_entries,
                              &lc, min_placed->stage_split > 0);
 

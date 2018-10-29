@@ -738,6 +738,11 @@ class SaluReg : Expression {
     dbprint { out << name << (hi ? " {hi}" : ""); }
     toString { return name; }
 }
+class SaluCmpReg : SaluReg {
+    int         index;
+    SaluCmpReg(cstring name, int idx) : SaluReg(Type::Bits::get(1), name, idx & 1), index(idx) {}
+    #nodbprint
+}
 
 class SaluFunction : Operation_Unary {
     cstring             name;

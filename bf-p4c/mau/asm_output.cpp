@@ -2126,6 +2126,9 @@ void MauAsmOutput::emit_static_entries(std::ostream &out, indent_t indent,
               "Static entry has more keys than those specified "
               "in match field for table %s", tbl->name);
             auto match_key = tbl->match_key[key_index];
+            if (match_key->match_type == "selector" || match_key->match_type == "dleft_hash") {
+                key_index++;
+                continue; }
             auto match_key_size = phv.field(match_key->expr)->size;
             bitvec match_key_mask(0, match_key_size);
             bool bignum_err = false;

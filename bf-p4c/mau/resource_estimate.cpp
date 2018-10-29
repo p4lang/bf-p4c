@@ -421,14 +421,19 @@ void StageUseEstimate::options_to_atcam_entries(const IR::MAU::Table *tbl, int e
  *  to calculate a RAM size exactly, according to Mike Ferrera, so that the addresses
  *  don't have to be a power of two.
  */
-void StageUseEstimate::options_to_dleft_entries(const IR::MAU::Table *tbl, int entries) {
+void StageUseEstimate::options_to_dleft_entries(const IR::MAU::Table *tbl,
+                                                const attached_entries_t &attached_entries) {
     const IR::MAU::StatefulAlu *salu = nullptr;
     for (auto back_at : tbl->attached) {
         salu = back_at->attached->to<IR::MAU::StatefulAlu>();
         if (salu != nullptr)
             break;
     }
+    auto entries = attached_entries.at(salu);
 
+    /* Figure out how many dleft ways can/should be used for the specified number
+     * of entries -- currently ways must be the same size and must be a power of two size.
+     * Ways must fit within one half of an MAU stage (max 23 rams/maprams + 1 spare bank) */
     int per_row = RegisterPerWord(salu);
     int total_stateful_rams = (entries + per_row * Memories::SRAM_DEPTH - 1)
                                / (per_row * Memories::SRAM_DEPTH);
@@ -446,12 +451,14 @@ void StageUseEstimate::options_to_dleft_entries(const IR::MAU::Table *tbl, int e
         // FIXME: The hash distribution units are all identical for each, so the sizes for
         // each of the stateful for the same, as the mask is per hash distribution unit.
         // Just currently a limit of the input xbar algorithm which will have to be opened up
+        int dleft_entries = 0;
         for (int i = 0; i < needed_alus; i++) {
             int hash_size = std::min(1 << ceil_log2(per_alu), max_rams_per_way);
             lo.dleft_hash_sizes.push_back(hash_size);
-            lo.entries += hash_size * per_row * Memories::SRAM_DEPTH;
+            dleft_entries += hash_size * per_row * Memories::SRAM_DEPTH;
         }
-        LOG3("Dleft rams per_alu: " << per_alu << " needed_alus: " << needed_alus);
+        LOG3("Dleft rams per_alu: " << per_alu << " needed_alus: " << needed_alus <<
+             " entries: " << dleft_entries);
     }
 }
 
@@ -479,8 +486,6 @@ void StageUseEstimate::calculate_attached_rams(const IR::MAU::Table *tbl,
             need_maprams = true;
         } else if (auto *reg = at->to<IR::MAU::StatefulAlu>()) {
             per_word = RegisterPerWord(reg);
-            if (!reg->direct && tbl->for_dleft())
-                attached_entries = lo->entries;  // FIXME -- not needed?
             need_maprams = true;
         } else if (auto *ad = at->to<IR::MAU::ActionData>()) {
             // FIXME: in theory, the table should not have an action data table,
@@ -637,11 +642,8 @@ void StageUseEstimate::determine_initial_layout_option(const IR::MAU::Table *tbl
     if (tbl->for_dleft()) {
         BUG_CHECK(layout_options.size() == 1, "Should only be one layout option for dleft "
                   "hash tables");
-        options_to_dleft_entries(tbl, entries);
-        options_to_rams(tbl, attached_entries, table_placement);
-        preferred_index = 0;
-        fill_estimate_from_option(entries);
-    } else if (layout_options.size() == 1 && layout_options[0].layout.no_match_data()) {
+        options_to_dleft_entries(tbl, attached_entries); }
+    if (layout_options.size() == 1 && layout_options[0].layout.no_match_data()) {
         entries = 512;
         preferred_index = 0;
     } else if (tbl->layout.atcam) {
