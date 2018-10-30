@@ -337,6 +337,7 @@ void MeterTable::write_regs(REGS &regs) {
                 adr_ctl.adr_dist_oflo_adr_xbar_source_index = 0;
                 adr_ctl.adr_dist_oflo_adr_xbar_source_sel = AdrDist::OVERFLOW;
                 push_on_overflow = true;
+                BUG_CHECK(options.target == TOFINO);
             } else {
                 adr_ctl.adr_dist_oflo_adr_xbar_source_index = home->row % 8;
                 adr_ctl.adr_dist_oflo_adr_xbar_source_sel = AdrDist::METER; }

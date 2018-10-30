@@ -370,6 +370,7 @@ template<class REGS> void StatefulTable::write_regs(REGS &regs) {
                     adr_ctl.adr_dist_oflo_adr_xbar_source_index = 0;
                     adr_ctl.adr_dist_oflo_adr_xbar_source_sel = AdrDist::OVERFLOW;
                     push_on_overflow = true;
+                    BUG_CHECK(options.target == TOFINO);
                 } else {
                     adr_ctl.adr_dist_oflo_adr_xbar_source_index = home->row % 8;
                     adr_ctl.adr_dist_oflo_adr_xbar_source_sel = AdrDist::METER; }
@@ -379,7 +380,7 @@ template<class REGS> void StatefulTable::write_regs(REGS &regs) {
     unsigned meter_group = home->row/4U;
     for (MatchTable *m : match_tables) {
         adrdist.mau_ad_meter_virt_lt[meter_group] |= 1U << m->logical_id;
-        adrdist.adr_dist_meter_adr_icxbar_ctl[m->logical_id] = 1 << meter_group; }
+        adrdist.adr_dist_meter_adr_icxbar_ctl[m->logical_id] |= 1 << meter_group; }
     if (!bound_selector) {
         bool first_match = true;
         for (MatchTable *m : match_tables) {

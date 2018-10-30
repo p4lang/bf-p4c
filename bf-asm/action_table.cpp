@@ -574,6 +574,7 @@ void ActionTable::write_regs(REGS &regs) {
                 oflo_adr_xbar.adr_dist_oflo_adr_xbar_source_sel = 0;
             } else {
                 BUG_CHECK(home->row >= 8);
+                BUG_CHECK(options.target == TOFINO);
                 oflo_adr_xbar.adr_dist_oflo_adr_xbar_source_index = 0;
                 oflo_adr_xbar.adr_dist_oflo_adr_xbar_source_sel = 3;
                 push_on_overflow = true;

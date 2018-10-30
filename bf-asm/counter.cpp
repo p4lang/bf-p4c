@@ -235,6 +235,7 @@ template<class REGS> void CounterTable::write_regs(REGS &regs) {
                 adr_ctl.adr_dist_oflo_adr_xbar_source_index = 0;
                 adr_ctl.adr_dist_oflo_adr_xbar_source_sel = AdrDist::OVERFLOW;
                 push_on_overflow = true;
+                BUG_CHECK(options.target == TOFINO);
             } else {
                 adr_ctl.adr_dist_oflo_adr_xbar_source_index = swbox.get_home_row_logical() % 8;
                 adr_ctl.adr_dist_oflo_adr_xbar_source_sel = AdrDist::STATISTICS; }
