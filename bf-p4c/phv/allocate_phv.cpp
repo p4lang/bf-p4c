@@ -171,18 +171,18 @@ bool AllocScore::operator>(const AllocScore& other) const {
     // of stages available on the device.
     if (n_num_bitmasked_set != other.n_num_bitmasked_set)
         return n_num_bitmasked_set < other.n_num_bitmasked_set;
-    if (delta_packing_bits != 0) {
-        // This score has more packing bits.
-        return delta_packing_bits > 0; }
     if (delta_inc_containers != 0) {
         // This score requires more new containers.
         return delta_inc_containers < 0; }
-    if (delta_wasted_bits != 0) {
-        // This score has fewer wasted bits.
-        return delta_wasted_bits < 0; }
     if (delta_overlay_bits != 0) {
         // This score has more overlay bits.
         return delta_overlay_bits > 0; }
+    if (delta_wasted_bits != 0) {
+        // This score has fewer wasted bits.
+        return delta_wasted_bits < 0; }
+    if (delta_packing_bits != 0) {
+        // This score has more packing bits.
+        return delta_packing_bits > 0; }
     if (delta_packing_priority != 0) {
         // This score is better if it make a more prioritized packing.
         return delta_packing_priority < 0; }
@@ -510,7 +510,8 @@ bool CoreAllocation::satisfies_constraints(std::vector<PHV::AllocSlice> slices) 
 // `can_pack` on slice lists.
 bool CoreAllocation::satisfies_constraints(
         const PHV::Allocation& alloc,
-        PHV::AllocSlice slice) const {
+        PHV::AllocSlice slice,
+        ordered_set<PHV::AllocSlice>& initFields) const {
     const PHV::Field* f = slice.field();
     PHV::Container c = slice.container();
 
@@ -551,9 +552,12 @@ bool CoreAllocation::satisfies_constraints(
             return false; } }
 
     // pov bits are parser initialized as well.
+    // discount slices that are going to be initialized through metadata initialization from being
+    // considered uninitialized reads.
     bool hasUninitializedRead = std::any_of(
             slices.begin(), slices.end(), [&] (const PHV::AllocSlice& s) {
-        return s.field()->pov || defuse_i.hasUninitializedRead(s.field()->id);
+        return s.field()->pov
+            || (defuse_i.hasUninitializedRead(s.field()->id) && !initFields.count(s));
     });
 
     bool hasExtracted = std::any_of(slices.begin(), slices.end(), [&] (const PHV::AllocSlice& s) {
@@ -562,7 +566,7 @@ bool CoreAllocation::satisfies_constraints(
 
     bool isThisSliceExtracted = !slice.field()->pov && uses_i.is_extracted(slice.field());
     bool isThisSliceUninitialized = (slice.field()->pov
-                                     || defuse_i.hasUninitializedRead(slice.field()->id));
+            || (defuse_i.hasUninitializedRead(slice.field()->id) && !initFields.count(slice)));
 
     if (hasExtracted && (isThisSliceUninitialized || isThisSliceExtracted)) {
         LOG5("        constraint: container already contains extracted slices, "
@@ -570,6 +574,8 @@ bool CoreAllocation::satisfies_constraints(
              << (isThisSliceExtracted ? "extracted" : "uninitialized"));
         return false; }
 
+    // Account for metadata initialization and ensure that initialized fields are not considered
+    // uninitialized any more.
     if (isThisSliceExtracted && (hasUninitializedRead || hasExtracted)) {
         LOG5("        constraint: this slice is extracted, "
              "can not be packed, because allocated fields has "
@@ -737,6 +743,13 @@ CoreAllocation::tryAllocSliceList(
 
         // Check that there's space.
         bool can_place = true;
+        // Results of metadata initialization. This is a map of field to the initialization actions
+        // determined by FindInitializationNode methods.
+        boost::optional<PHV::Allocation::LiveRangeShrinkingMap> initNodes = boost::none;
+        boost::optional<ordered_set<PHV::AllocSlice>> allocedSlices = boost::none;
+        // The metadata slices that require initialization after live range shrinking.
+        ordered_set<PHV::AllocSlice> metaInitSlices;
+        // Check that the placement can be done through metadata initialization.
         for (auto& slice : candidate_slices) {
             if (!uses_i.is_referenced(slice.field()) && !slice.field()->isGhostField())
                 continue;
@@ -749,10 +762,46 @@ CoreAllocation::tryAllocSliceList(
             if (alloced_slices.size() > 0 && can_overlay(mutex_i, slice.field(), alloced_slices)) {
                 LOG5("    ...and can overlay " << slice.field() << " on " << alloced_slices);
             } else if (alloced_slices.size() > 0) {
-                LOG5("    ...but " << c << " already contains slices at this position");
-                can_place = false;
-                break; } }
+                // If there are slices already allocated for these container bits, then check if
+                // overlay is enabled by live shrinking is possible. If yes, then note down
+                // information about the initialization required and allocated slices for later
+                // constraint verification.
+                if (can_overlay(phv_i.metadata_overlay, slice.field(), alloced_slices)) {
+                    LOG5("    ...and can overlay " << slice.field() << " on " << alloced_slices <<
+                         " with metadata initialization.");
+                    initNodes = meta_init_i.findInitializationNodes(alloced_slices, slice,
+                            alloc_attempt);
+                    if (!initNodes) {
+                        LOG5("       ...but cannot find initialization points.");
+                        can_place = false;
+                        break;
+                    } else {
+                        can_place = true;
+                        allocedSlices = alloced_slices;
+                        LOG5("       ...found the following initialization points:");
+                        LOG5(meta_init_i.printLiveRangeShrinkingMap(*initNodes, "\t\t"));
+                        // For the initialization plan returned, note the fields that would need to
+                        // be initialized in the MAU.
+                        for (auto kv : *initNodes) {
+                            if (kv.first == slice.field()) {
+                                LOG5("\t\tA. Inserting " << slice << " into metaInitSlices");
+                                metaInitSlices.insert(slice);
+                                continue; }
+                            for (const auto& sl : alloced_slices) {
+                                if (kv.first == sl.field()) {
+                                    LOG5("\t\tB. Inserting " << sl << " into metaInitSlices");
+                                    metaInitSlices.insert(sl);
+                                    continue; } } } }
+                } else {
+                    LOG5("    ...but " << c << " already contains slices at this position");
+                    can_place = false;
+                    break; } } }
         if (!can_place) continue;  // try next container
+
+        if (LOGGING(5) && metaInitSlices.size() > 0) {
+            LOG5("\t  Printing all fields for whom metadata has been initialized");
+            for (const auto& sl : metaInitSlices)
+                LOG5("\t\t" << sl); }
 
         // Check that each field slice satisfies slice<-->container
         // constraints, skipping slices that have already been allocated.
@@ -762,9 +811,12 @@ CoreAllocation::tryAllocSliceList(
                     PHV::FieldSlice fs(slice.field(), slice.field_slice());
                     bool alloced = previous_allocations.find(PHV::FieldSlice(fs)) !=
                                    previous_allocations.end();
-                    return alloced ? true : satisfies_constraints(alloc_attempt, slice); });
-        if (!constraints_ok)
-            continue;
+                    return alloced ? true : satisfies_constraints(alloc_attempt, slice,
+                            metaInitSlices); });
+        if (!constraints_ok) {
+            initNodes = boost::none;
+            allocedSlices = boost::none;
+            continue; }
 
         // Check whether the candidate slice allocations respect action-induced constraints.
         auto action_constraints = actions_i.can_pack(alloc_attempt, candidate_slices);
@@ -899,9 +951,27 @@ CoreAllocation::tryAllocSliceList(
                 previous_allocations.find(PHV::FieldSlice(slice.field(), slice.field_slice()))
                     != previous_allocations.end();
             if ((is_referenced || slice.field()->isGhostField()) && !is_allocated) {
-                this_alloc.allocate(slice);
+                if (initNodes && initNodes->count(slice.field())) {
+                    // For overlay enabled by live range shrinking, we also need to store
+                    // initialization information as a member of the allocated slice.
+                    this_alloc.allocate(slice, initNodes);
+                    LOG5("\t\tFound initialization point for metadata field " <<
+                            slice.field()->name);
+                } else {
+                    this_alloc.allocate(slice); }
             } else if (!is_referenced && !slice.field()->isGhostField()) {
                 LOG5("NOT ALLOCATING unreferenced field: " << slice); } }
+
+        // Add metadata initialization information for previous allocated slices. As more and more
+        // slices get allocated, the initialization actions for already allocated slices in the
+        // container may change. So, update the initialization information in these already
+        // allocated slices based on the latest initialization plan.
+        if (initNodes && allocedSlices) {
+            for (auto& slice : *allocedSlices) {
+                if (initNodes->count(slice.field())) {
+                    LOG5("        Initialization noted corresponding to already allocated slice: "
+                            << slice);
+                    this_alloc.addMetadataInitialization(slice, *initNodes); } } }
 
         // Recursively try to allocate slices according to conditional
         // constraints induced by actions.  NB: By allocating the current slice
@@ -1161,12 +1231,19 @@ void AllocatePHV::bindSlices(const PHV::ConcreteAllocation& alloc, PhvInfo& phv)
     for (auto container_and_slices : alloc) {
         for (PHV::AllocSlice slice : container_and_slices.second.slices) {
             auto* f = slice.field();
+            auto init_points = alloc.getInitPoints(slice);
             f->add_alloc(
-                slice.field(),
-                slice.container(),
-                slice.field_slice().lo,
-                slice.container_slice().lo,
-                slice.field_slice().size());
+                    slice.field(),
+                    slice.container(),
+                    slice.field_slice().lo,
+                    slice.container_slice().lo,
+                    slice.field_slice().size(),
+                    init_points);
+            if (init_points.size() > 0) {
+                LOG4("Adding initialization points for field slice: " << slice.field()->name << " "
+                        << slice);
+                for (const auto* a : init_points)
+                    LOG4("    Action: " << a->name); }
             phv.add_container_to_field_entry(slice.container(), f); } }
 
     // later passes assume that phv alloc info is sorted in field bit order,
@@ -1190,11 +1267,19 @@ void AllocatePHV::bindSlices(const PHV::ConcreteAllocation& alloc, PhvInfo& phv)
                     && last->field_bits().lo == slice.field_bits().hi + 1
                     && last->container_bits().lo == slice.container_bits().hi + 1) {
                 int new_width = last->width + slice.width;
+                ordered_set<const IR::MAU::Action*> new_init_points;
+                if (last->init_points.size() > 0)
+                    new_init_points.insert(last->init_points.begin(), last->init_points.end());
+                if (slice.init_points.size() > 0)
+                    new_init_points.insert(slice.init_points.begin(), slice.init_points.end());
+                if (new_init_points.size() > 0)
+                    LOG5("Merged slice contains " << new_init_points.size() << " initialization "
+                         "points.");
                 PHV::Field::alloc_slice new_slice(slice.field,
                                                   slice.container,
                                                   slice.field_bit,
                                                   slice.container_bit,
-                                                  new_width);
+                                                  new_width, new_init_points);
                 BUG_CHECK(new_slice.field_bits().contains(last->field_bits()),
                           "Merged alloc slice %1% does not contain hi slice %2%",
                           cstring::to_cstring(new_slice), cstring::to_cstring(*last));

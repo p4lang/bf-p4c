@@ -13,7 +13,6 @@
 #include "bf-p4c/common/elim_unused.h"
 #include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/common/live_range_overlay.h"
-#include "bf-p4c/common/metadata_init.h"
 #include "bf-p4c/common/multiple_apply.h"
 #include "bf-p4c/common/parser_overlay.h"
 #include "bf-p4c/common/utils.h"
@@ -229,10 +228,6 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
             new AllocateClot(clot, phv, uses) : nullptr,
 #endif  // HAVE_JBAY
         &defuse,
-        new FindDependencyGraph(phv, deps),
-        (options.disable_init_metadata == false) ?
-            new MetadataInitialization(options.always_init_metadata, phv, defuse, deps) : nullptr,
-        &defuse,
         (options.no_deadcode_elimination == false) ? new ElimUnused(phv, defuse) : nullptr,
 
         // Do PHV allocation.  Cannot run CollectPhvInfo afterwards, as that
@@ -240,7 +235,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new DumpPipe("Before phv_analysis"),
         new PHV_AnalysisPass(options, phv, uses, clot, defuse, deps, table_alloc),
         // Validate results of PHV allocation.
-        new PHV::ValidateAllocation(phv, clot, phv.field_mutex, doNotPrivatize),
+        new PHV::ValidateAllocation(phv, clot, doNotPrivatize),
 
         options.privatization ? new UndoPrivatization(phv, doNotPrivatize) : nullptr,
                                 // Undo results of privatization for the doNotPrivatize fields

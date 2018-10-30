@@ -35,6 +35,8 @@ void PhvInfo::clear() {
     pov_alloc_done = false;
     zeroContainers[0].clear();
     zeroContainers[1].clear();
+    reverseMetadataDeps.clear();
+    metadataDeps.clear();
 }
 
 void PhvInfo::add(
@@ -293,6 +295,18 @@ PhvInfo::fields_in_container(const PHV::Container c) const {
     if (container_to_fields.count(c))
         return container_to_fields.at(c);
     return empty_list;
+}
+
+const std::vector<PHV::Field::alloc_slice>
+PhvInfo::get_slices_in_container(const PHV::Container c) const {
+    std::vector<PHV::Field::alloc_slice> rv;
+    for (auto* field : fields_in_container(c)) {
+        field->foreach_alloc([&](const PHV::Field::alloc_slice &alloc) {
+            if (alloc.container != c) return;
+            rv.push_back(alloc);
+        });
+    }
+    return rv;
 }
 
 bitvec PhvInfo::bits_allocated(const PHV::Container c) const {

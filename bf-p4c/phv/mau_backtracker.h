@@ -28,6 +28,9 @@ class MauBacktracker : public Inspector, Backtrack {
     /// Store the number of stages required by table allocation
     int maxStage = -1;
 
+    /// @true if metadata initialization must be disabled.
+    bool metaInitDisable = false;
+
     profile_t init_apply(const IR::Node *root) override;
     void end_apply() override;
 
@@ -49,6 +52,9 @@ class MauBacktracker : public Inspector, Backtrack {
 
     /// @returns the stages in which table @t was placed
     ordered_set<int> stage(const IR::MAU::Table* t) const;
+
+    /// @returns metaInitDisable.
+    bool disableMetadataInitialization() const { return metaInitDisable; }
 
     /// @returns true if the associated field with @name is in the noPackFields set.
     bool isNoPackField(cstring name) const {

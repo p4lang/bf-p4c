@@ -47,7 +47,7 @@ bool TableSummary::preorder(const IR::MAU::Table *t) {
     BUG_CHECK(order.count(t->logical_id) == 0, "Encountering table multiple times in IR traversal");
     assert(order.count(t->logical_id) == 0);
     order[t->logical_id] = t;
-    LOG1("Table " << t->name);
+    LOG3("Table " << t->name);
     tableNames[t->name] = getTableName(t);
     if (t->gateway_name) {
         mergedGateways[t->name] = t->gateway_name;
@@ -108,7 +108,17 @@ void TableSummary::throwBacktrackException() {
     // constraints between fields written in the same stage.
     if ((numInvoked[pipe_id] == 2 || numInvoked[pipe_id] == 4) && maxStage <= Device::numStages()) {
         LOG1("Invoking reallocation of PHVs");
-        throw PHVTrigger::failure(tableAlloc); }
+        throw PHVTrigger::failure(tableAlloc, false /* metaInitDisable */); }
+
+    // Metadata initialization might increase the dependency chain length, which might cause us to
+    // produce a > Device::numStages() placement without container conflicts. Until we solve the
+    // issue, we keep this extra check and reinvoke PHV allocation without using metadata
+    // initialization.
+    // XXX(Deep): Replace this when we have a better mechanism of detecting lengthening of
+    // dependence chains due to metadata initialization.
+    if ((numInvoked[pipe_id] == 2 || numInvoked[pipe_id] == 4) && maxStage > Device::numStages()) {
+        LOG1("Invoking reallocation of PHVs without metadata initialization");
+        throw PHVTrigger::failure(tableAlloc, true /* metaInitDisable */); }
 }
 
 void TableSummary::printTablePlacement() {

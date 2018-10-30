@@ -38,6 +38,11 @@ class TablePlacement : public MauTransform, public Backtrack {
 
  private:
     ordered_set<const IR::MAU::Table *> placed_tables;
+
+    // Names of all tables that have been placed so far in the TablePlacement pass. Note that this
+    // is a global set of tables.
+    ordered_set<cstring> placed_table_names;
+
     struct TableInfo;
     UpwardDownwardPropagation *upward_downward_prop;
     void log_choice(const Placed *t, const Placed *best, choice_t choice);
@@ -68,6 +73,12 @@ class TablePlacement : public MauTransform, public Backtrack {
     IR::Vector<IR::MAU::Table> *break_up_dleft(IR::MAU::Table *tbl, const Placed *placed,
         int stage_table = -1);
     const Placed *placement;
+
+    /// @returns true if all the metadata initialization induced dependencies for table @t are
+    /// satisfied, i.e. all the tables that must be placed before table t (due to ordering imposed
+    /// by the live range shrinking pass) have been placed. @returns false otherwise.
+    bool are_metadata_deps_satisfied(const IR::MAU::Table* t) const;
+
     bool is_better(const Placed *a, const Placed *b, choice_t& choice);
     safe_vector<Placed *> try_place_table(const IR::MAU::Table *t, const Placed *done,
         const StageUseEstimate &current);

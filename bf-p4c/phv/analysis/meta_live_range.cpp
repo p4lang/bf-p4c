@@ -212,6 +212,10 @@ void MetadataLiveRange::setPaddingFieldLiveMap(const PHV::Field* f) {
 }
 
 void MetadataLiveRange::end_apply() {
+    // If this pass is supposed to run without metadata initialization, then do not run this
+    // analysis.
+    if (alloc.disableMetadataInitialization()) return;
+
     // Set of fields whose live ranges must be calculated.
     ordered_set<const PHV::Field*> fieldsConsidered;
     for (const PHV::Field& f : phv) {
@@ -224,7 +228,7 @@ void MetadataLiveRange::end_apply() {
         if (noInitIntrinsicFields.count(f.name)) continue;
         // Ignore header fields or fields that do not have associated live range affecting pragmas.
         if (!f.bridged && !f.metadata && !f.alwaysPackable && !f.privatizable() && !isNotParsed &&
-                !isNotDeparsed) {
+                !isNotDeparsed && f.is_deparser_zero_candidate()) {
             // XXX(Deep): Is there a better way of including these intrinsic metadata fields than by
             // string comparison?
             if (!f.name.startsWith("ingress::ig_intr_md") &&
