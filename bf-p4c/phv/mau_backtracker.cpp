@@ -14,7 +14,6 @@ bool MauBacktracker::backtrack(trigger &trig) {
             for (int st : entry.second)
                 maxStage = (maxStage < st) ? st : maxStage; }
         LOG4("Inserted tables size: " << tables.size());
-        metaInitDisable = t->metaInitDisable;
         return true;
     } else if (trig.is<BridgedPackingTrigger::failure>()) {
         auto t = dynamic_cast<BridgedPackingTrigger::failure *>(&trig);
@@ -27,7 +26,6 @@ bool MauBacktracker::backtrack(trigger &trig) {
 
 Visitor::profile_t MauBacktracker::init_apply(const IR::Node* root) {
     LOG1("MauBacktracker called " << numInvoked << " time(s)");
-    LOG1("  Is metadata initialization disabled? " << (metaInitDisable ? "YES" : "NO"));
     ++numInvoked;
     overlay.clear();
     profile_t rv = Inspector::init_apply(root);

@@ -13,7 +13,6 @@
 #include "bf-p4c/common/elim_unused.h"
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/common/header_stack.h"
-#include "bf-p4c/phv/mau_backtracker.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
 #include "bf-p4c/mau/instruction_selection.h"
@@ -93,7 +92,6 @@ const IR::BFN::Pipe* runMockPasses(
         DependencyGraph& deps,
         PhvUse& uses,
         PHV::Pragmas& pragmas,
-        MauBacktracker& entry,
         MetadataLiveRange& metaLiveRange) {
     PassManager quick_backend = {
         new CollectHeaderStackInfo,
@@ -103,7 +101,6 @@ const IR::BFN::Pipe* runMockPasses(
         new ElimUnused(phv, defuse),
         new ElimUnusedHeaderStackInfo,
         new CollectPhvInfo(phv),
-        &entry,
         &uses,
         &pragmas,
         new FindDependencyGraph(phv, deps),
@@ -190,10 +187,9 @@ TEST_F(MetadataLiveRangeTest, BasicControlFlow) {
     FieldDefUse defuse(phv);
     PhvUse uses(phv);
     PHV::Pragmas pragmas(phv);
-    MauBacktracker entry(mutex);
-    MetadataLiveRange metaLive(phv, deps, defuse, pragmas, uses, entry);
+    MetadataLiveRange metaLive(phv, deps, defuse, pragmas, uses);
 
-    auto* pipe = runMockPasses(test->pipe, phv, defuse, deps, uses, pragmas, entry, metaLive);
+    auto* pipe = runMockPasses(test->pipe, phv, defuse, deps, uses, pragmas, metaLive);
     ASSERT_TRUE(pipe);
 
     EXPECT_EQ(defuse.hasUninitializedRead(phv.field("ingress::meta.f1")->id), true);

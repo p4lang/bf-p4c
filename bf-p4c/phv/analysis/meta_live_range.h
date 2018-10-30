@@ -6,7 +6,6 @@
 #include "lib/symbitmatrix.h"
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
-#include "bf-p4c/phv/mau_backtracker.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
@@ -24,7 +23,7 @@ class MetadataLiveRange : public Inspector {
  public:
     // XXX(Deep): Should we expose a way of changing the DEP_DIST using a command line flag, as
     // glass does?
-    static constexpr int DEP_DIST = 3;
+    static constexpr int DEP_DIST = 1;
     /// Name of the ingress parser state, where the compiler adds all the implicit initializations
     /// for fields with uninitialized reads.
     static constexpr char const *INGRESS_PARSER_ENTRY =
@@ -57,8 +56,6 @@ class MetadataLiveRange : public Inspector {
     FieldDefUse                             &defuse;
     const PragmaNoOverlay                   &noOverlay;
     const PhvUse                            &uses;
-    const MauBacktracker                    &alloc;
-
     /// List of fields that are marked as pa_no_init, which means that we assume the live range of
     /// these fields is from the first use of it to the last use.
     const ordered_set<const PHV::Field*>    &noInitFields;
@@ -133,14 +130,12 @@ class MetadataLiveRange : public Inspector {
             const DependencyGraph& g,
             FieldDefUse& f,
             const PHV::Pragmas& pragmas,
-            const PhvUse& u,
-            const MauBacktracker& a)
+            const PhvUse& u)
         : phv(p),
           dg(g),
           defuse(f),
           noOverlay(pragmas.pa_no_overlay()),
           uses(u),
-          alloc(a),
           noInitFields(pragmas.pa_no_init().getFields()),
           notParsedFields(pragmas.pa_deparser_zero().getNotParsedFields()),
           notDeparsedFields(pragmas.pa_deparser_zero().getNotDeparsedFields()),

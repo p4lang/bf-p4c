@@ -63,10 +63,6 @@ class BuildDominatorTree : public Inspector {
     boost::optional<const IR::MAU::Table*>
         getNonGatewayImmediateDominator(const IR::MAU::Table* t, gress_t gress) const;
 
-    /** @returns true if the unit @u1 strictly dominates unit @u2.
-      */
-    bool strictlyDominates(const IR::BFN::Unit* u1, const IR::BFN::Unit* u2) const;
-
     /** @returns true if the table @t1 strictly dominates table @t2.
       */
     bool strictlyDominates(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const;

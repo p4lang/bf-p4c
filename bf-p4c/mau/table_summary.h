@@ -11,10 +11,8 @@
 struct PHVTrigger {
     struct failure : public Backtrack::trigger {
         ordered_map<cstring, ordered_set<int>> tableAlloc;
-        bool metaInitDisable;
-        explicit failure(ordered_map<cstring, ordered_set<int>> tables, bool meta)
-            : trigger(OTHER), tableAlloc(tables), metaInitDisable(meta) {
-        }
+        explicit failure(ordered_map<cstring, ordered_set<int>> tables)
+            : trigger(OTHER), tableAlloc(tables) {}
     };
 };
 

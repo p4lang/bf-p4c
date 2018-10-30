@@ -13,9 +13,6 @@
 
 namespace PHV {
 
-
-    static ordered_set<const IR::MAU::Action*> emptyInitSet = {};
-
 /// A group of fields that should be allocated contiguously. Offers a
 /// std::vector-like interface.
 struct FieldGroup final {
@@ -91,8 +88,7 @@ void TrivialAlloc::do_alloc(const FieldGroup& group, Regs *use, Regs *skip) {
         while (size > rtype.size - 8 || (size > 16 && i->metadata)) {
             int abits = rtype.size;
             while (isize < abits && merge_follow) {
-                auto slice = PHV::Field::alloc_slice(i, use->*rtype.alloc, 0, abits-isize, isize,
-                        emptyInitSet);
+                auto slice = PHV::Field::alloc_slice(i, use->*rtype.alloc, 0, abits-isize, isize);
                 i->add_alloc(slice);
                 LOG3("   allocated " << slice << " for " << i->gress);
                 abits -= isize;
@@ -102,7 +98,7 @@ void TrivialAlloc::do_alloc(const FieldGroup& group, Regs *use, Regs *skip) {
             if ((isize -= abits) < 0) {
                 abits += isize;
                 isize = 0; }
-            i->add_alloc(i, (use->*rtype.alloc)++, isize, 0, abits, emptyInitSet);
+            i->add_alloc(i, (use->*rtype.alloc)++, isize, 0, abits);
             if (skip && use->*rtype.alloc == skip[0].*rtype.alloc)
                 use->*rtype.alloc = skip[1].*rtype.alloc;
             size -= rtype.size; } }
@@ -331,7 +327,7 @@ void ManualAlloc::allocateFieldGroup(const FieldGroup& group,
             remainingBits -= width;
             BUG_CHECK(remainingBits >= 0, "Overflowed field group");
 
-            field->add_alloc(field, container, fieldBit, containerBit, width, emptyInitSet);
+            field->add_alloc(field, container, fieldBit, containerBit, width);
             phv.add_container_to_field_entry(container, field);
         }
 
@@ -375,7 +371,7 @@ bool ManualAlloc::preorder(const IR::BFN::Pipe *pipe) {
         for (auto& slice : slices) {
             alloc.allocate(field->gress, slice.container, manualAllocationSource);
             field->add_alloc(field, slice.container, slice.field_bit,
-                             slice.container_bit, slice.width, emptyInitSet);
+                             slice.container_bit, slice.width);
             phv.add_container_to_field_entry(slice.container, field);
         }
     }

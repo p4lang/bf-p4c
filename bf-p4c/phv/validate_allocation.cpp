@@ -25,19 +25,6 @@
 
 namespace PHV {
 
-Visitor::profile_t ValidateAllocation::init_apply(const IR::Node* root) {
-    mutually_exclusive_field_ids.clear();
-    // Combine the parser overlay and metadata overlay into a single matrix.
-    for (auto& f1 : phv) {
-        for (auto& f2 : phv) {
-            if (f1.id == f2.id) continue;
-            if (phv.field_mutex(f1.id, f2.id) || phv.metadata_overlay(f1.id, f2.id))
-                mutually_exclusive_field_ids(f1.id, f2.id) = true;
-        }
-    }
-    return Inspector::init_apply(root);
-}
-
 bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
     BUG_CHECK(phv.alloc_done(),
               "Calling ValidateAllocation without performing PHV allocation");
@@ -411,10 +398,13 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
                         doNotPrivatize.insert(nonDeparsed->name);
                         throwPrivatizeException = true;
                         ::warning("Deparsed container %1% mixes deparsed header field %2% with "
-                                "non-deparsed field %3%", container,
-                                cstring::to_cstring(deparsed), cstring::to_cstring(nonDeparsed));
-                    }
-                }
+                                  "non-deparsed field %3%", container,
+                                  cstring::to_cstring(deparsed), cstring::to_cstring(nonDeparsed));
+                    } else {
+                        ERROR_CHECK(mutually_exclusive_field_ids(deparsed->id, nonDeparsed->id),
+                                "Deparsed container %1% mixes deparsed header field %2% with "
+                                "non-deparsed field %3%", container, cstring::to_cstring(deparsed),
+                                cstring::to_cstring(nonDeparsed)); } }
         }
 
         // Verify that the allocations for each field don't overlap. (Note that

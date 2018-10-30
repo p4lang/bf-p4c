@@ -267,6 +267,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "In table .*, the number of bytes required to go through the immediate pathway"
   extensions/p4_tests/p4_14/test_config_311_hash_adb.p4
+  switch_ent_fin_postcard
   )
 
 # BRIG-102
@@ -276,31 +277,17 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4-tests/programs/opcode_test/opcode_test.p4
   )
 
-# P4C-1041
-p4c_add_xfail_reason("tofino"
-  "Compiler Bug.*Slicing the following supercluster is taking too long"
-  switch_generic_int_leaf
-  switch_8.4_generic_int_leaf
-  switch_l3_heavy_int_leaf
-  switch_8.4_l3_heavy_int_leaf
-  switch_msdc_leaf_int
-  switch_8.4_msdc_leaf_int
-  switch_ent_fin_postcard
-  switch_msdc_spine_int
-  switch_8.4_msdc_spine_int
-  )
-
 p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
   smoketest_programs_netcache
-  switch_msdc_ipv4
-  switch_8.4_msdc_ipv4
   )
 
 p4c_add_xfail_reason("tofino"
   "error.*Power worst case estimated budget exceeded by*"
   #extensions/p4_tests/p4_14/p4-tests/programs/clpm/clpm.p4 # update path when test is added
+  switch_l3_heavy_int_leaf
+  switch_8.4_l3_heavy_int_leaf
   )
 
 # switch_spine_dtel_int and switch_l3_heavy_spine test failures
@@ -1078,6 +1065,12 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
+  "PHV allocation was not successful"
+  switch_8.4_generic_int_leaf
+  switch_generic_int_leaf
+)
+
+p4c_add_xfail_reason("tofino"
   "The attached table .* is addressed by both hash and index in table"
   extensions/p4_tests/p4_14/test_config_313_neg_test_addr_modes.p4
 )
@@ -1317,6 +1310,8 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: ALU ops cannot operate on slices"
   extensions/p4_tests/p4_14/p4smith_regression/shrubs_0.p4
+  switch_msdc_leaf_int
+  switch_8.4_msdc_leaf_int
 )
 
 # BRIG-927

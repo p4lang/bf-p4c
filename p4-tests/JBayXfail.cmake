@@ -43,9 +43,11 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     extensions/p4_tests/p4_14/cond_checksum_update.p4
     # Needs stateful init regs support in simple test harness, this test passes
     # on stf2ptf
-    # decaf: needs to work with CLOT allocation
     extensions/p4_tests/p4_14/stateful_init_regs.p4
+    # decaf: needs to work with CLOT allocation
+    extensions/p4_tests/p4_14/deparser_copy_opt_1.p4
     extensions/p4_tests/p4_14/deparser_copy_opt_2.p4
+    extensions/p4_tests/p4_14/deparser_copy_opt_3.p4
     )
 
 endif() # HARLYN_STF
@@ -59,13 +61,6 @@ endif() # ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET
 p4c_add_xfail_reason("tofino2"
   "address too large for table"
   testdata/p4_14_samples/saturated-bmv2.p4
-)
-
-p4c_add_xfail_reason("tofino2"
-  "error.*Ran out of constant output slots"
-  # decaf: needs to work with CLOT allocation
-  extensions/p4_tests/p4_14/deparser_copy_opt_1.p4
-  extensions/p4_tests/p4_14/deparser_copy_opt_3.p4
 )
 
 p4c_add_xfail_reason("tofino2"
@@ -291,7 +286,3 @@ p4c_add_xfail_reason("tofino2"
   testdata/p4_14_samples/const_default_action.p4
 )
 
-p4c_add_xfail_reason("tofino2"
-  "Compiler Bug.*Converting a bitvec to a bitrange"
-  switch_msdc
-)

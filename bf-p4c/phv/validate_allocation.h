@@ -25,8 +25,11 @@ namespace PHV {
  */
 class ValidateAllocation final : public Inspector {
  public:
-    ValidateAllocation(PhvInfo& phv, const ClotInfo& clot, ordered_set<cstring>& f)
-        : phv(phv), clot(clot), doNotPrivatize(f) { }
+    ValidateAllocation(PhvInfo& phv, const ClotInfo& clot,
+                       const SymBitMatrix& mutually_exclusive_field_ids,
+                       ordered_set<cstring>& f)
+        : phv(phv), clot(clot), mutually_exclusive_field_ids(mutually_exclusive_field_ids),
+          doNotPrivatize(f) { }
 
  private:
     using Slice = PHV::Field::alloc_slice;
@@ -34,8 +37,7 @@ class ValidateAllocation final : public Inspector {
     PhvInfo& phv;
     const ClotInfo& clot;
 
-    SymBitMatrix mutually_exclusive_field_ids;
-    profile_t init_apply(const IR::Node* root) override;
+    const SymBitMatrix& mutually_exclusive_field_ids;
     bool preorder(const IR::BFN::Pipe* pipe) override;
 
     /// List of all privatized fields that cause PHV allocation to fail; grows monotonically every

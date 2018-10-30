@@ -125,14 +125,8 @@ class Field {
         const Field*           field;
         PHV::Container         container;
         int field_bit, container_bit, width;
-        // Set of actions where this slice may need to be initialized. Set is empty if
-        // initialization is not required for this slice.
-        ordered_set<const IR::MAU::Action*> init_points;
         alloc_slice(const Field* f, PHV::Container c, int fb, int cb, int w)
             : field(f), container(c), field_bit(fb), container_bit(cb), width(w) {}
-        alloc_slice(const Field* f, PHV::Container c, int fb, int cb, int w,
-                ordered_set<const IR::MAU::Action*> a)
-            : field(f), container(c), field_bit(fb), container_bit(cb), width(w), init_points(a) {}
         le_bitrange field_bits() const       { return { field_bit, field_bit+width-1 }; }
         le_bitrange container_bits() const   { return { container_bit, container_bit+width-1 }; }
         int field_hi() const              { return field_bit + width - 1; }
@@ -390,9 +384,8 @@ class Field {
     void clear_alloc() { alloc_i.clear(); }
 
     /// Allocate a slice of this field.
-    void add_alloc(const Field* f, PHV::Container c, int fb, int cb, int w,
-            ordered_set<const IR::MAU::Action*> a) {
-        alloc_i.emplace_back(f, c, fb, cb, w, a);
+    void add_alloc(const Field* f, PHV::Container c, int fb, int cb, int w) {
+        alloc_i.emplace_back(f, c, fb, cb, w);
     }
 
     /// Allocate a slice of this field.
@@ -741,16 +734,6 @@ class PhvInfo {
     /// unconditionally to 1) for the deparsed zero optimization.
     std::set<PHV::Container>    zeroContainers[2];  // per gress
 
-    /// metadataDeps[t1] = { t_n }, means that live range shrinking and metadata initialization
-    /// induce new dependencies from t1 to each member t_n. Note: This is currently not used but
-    /// will be necessary once we model these new induced dependencies using the table dependency
-    /// graph (instead of adding checks in table placement algorithm).
-    ordered_map<cstring, ordered_set<cstring>> metadataDeps;
-
-    // reverseMetadataDeps[t1] = { t_n }, means that all tables in t_n must be placed before we
-    // place table t1.
-    ordered_map<cstring, ordered_set<cstring>> reverseMetadataDeps;
-
     void clear();
     void add(cstring fieldName, gress_t gress, int size, int offset,
              bool isMetadata, bool isPOV, bool bridged = false, bool isPad = false);
@@ -851,10 +834,6 @@ class PhvInfo {
     /// @returns the set of fields assigned (partially or entirely) to @c
     const ordered_set<const PHV::Field *>& fields_in_container(const PHV::Container c) const;
 
-    /// @returns the set of alloc slices assigned to a container @c.
-    const std::vector<PHV::Field::alloc_slice>
-        get_slices_in_container(const PHV::Container c) const;
-
     /** @returns a bitvec showing all potentially allocated bits within a container
      */
     bitvec bits_allocated(const PHV::Container) const;
@@ -898,31 +877,6 @@ class PhvInfo {
         zeroContainers[gr].insert(c);
         BUG_CHECK(zeroContainers[gr].size() <= 1,
                   "Only two zero containers allowed: one for each gress");
-    }
-
-    /// notes down a required dependence from table t1 to table t2, induced by metadata
-    /// initialization to enable live range shrinking. Updates both the metadataDeps and
-    /// reverseMetadataDeps members.
-    void addMetadataDependency(const IR::MAU::Table* t1, const IR::MAU::Table* t2) {
-        metadataDeps[t1->name].insert(t2->name);
-        reverseMetadataDeps[t2->name].insert(t1->name);
-    }
-
-    /// @returns the set of tables which must be placed before table @t.
-    const ordered_set<cstring> getReverseMetadataDeps(const IR::MAU::Table* t) const {
-        static ordered_set<cstring> emptySet;
-        if (!reverseMetadataDeps.count(t->name)) return emptySet;
-        return reverseMetadataDeps.at(t->name);
-    }
-
-    /// @returns a reference to metadataDeps.
-    const ordered_map<cstring, ordered_set<cstring>>& getMetadataDeps() const {
-        return metadataDeps;
-    }
-
-    /// @returns a reference to reverseMetadataDeps.
-    const ordered_map<cstring, ordered_set<cstring>>& getReverseMetadataDeps() const {
-        return reverseMetadataDeps;
     }
 };
 

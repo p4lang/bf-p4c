@@ -50,7 +50,6 @@ bool IdentifyDeparserZeroCandidates::preorder(const IR::MAU::Action* act) {
                 PHV::Field* read = phv.field(readSrc.expr);
                 if (!read) continue;
                 mauReadFields[read->id] = true;
-                mauWrittenToNonZeroFields[write->id] = true;
                 LOG4("\t\tField " << read->name << " read in " << act->name);
             } else if (readSrc.type == ActionAnalysis::ActionParam::ACTIONDATA) {
                 // Assume that any write from action data could be a nonzero write.

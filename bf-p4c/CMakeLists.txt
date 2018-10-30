@@ -122,7 +122,7 @@ set (BF_P4C_BACKEND_COMMON_SRCS
   common/header_stack.cpp
   common/ir_utils.cpp
   common/live_range_overlay.cpp
-  common/map_tables_to_actions.cpp
+  common/metadata_init.cpp
   common/multiple_apply.cpp
   common/normalize_params.cpp
   common/param_binding.cpp
@@ -156,7 +156,7 @@ set (BF_P4C_BACKEND_COMMON_HDRS
   common/header_stack.h
   common/ir_utils.h
   common/live_range_overlay.h
-  common/map_tables_to_actions.h
+  common/metadata_init.h
   common/multiple_apply.h
   common/normalize_params.h
   common/param_binding.h
@@ -348,7 +348,6 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/analysis/dominator_tree.cpp
   phv/analysis/field_interference.cpp
   phv/analysis/meta_live_range.cpp
-  phv/analysis/live_range_shrinking.cpp
   phv/analysis/pack_conflicts.cpp
   phv/pragma/pa_alias.cpp
   phv/pragma/pa_atomic.cpp
@@ -397,7 +396,6 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/analysis/dominator_tree.h
   phv/analysis/field_interference.h
   phv/analysis/meta_live_range.h
-  phv/analysis/live_range_shrinking.h
   phv/analysis/pack_conflicts.h
   phv/pragma/pa_alias.h
   phv/pragma/pa_atomic.h
@@ -723,6 +721,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/dominator_tree.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_alignment.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_packing.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/metadata_init.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/meta_live_range.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/mocha_dark.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/no_co_pack.cpp
@@ -732,6 +731,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_no_overlay.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_container_size.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_container_type.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_no_init.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_solitary.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/parser_critical_path.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_constraints.cpp
