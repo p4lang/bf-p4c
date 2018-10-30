@@ -348,29 +348,11 @@ void ActionBus::pass1(Table *tbl) {
                 break; }
             if (auto tbl_in_slot = tbl->stage->action_bus_use[slotno]) {
                 if (tbl_in_slot != tbl) {
-                    if (!(check_atcam_sharing(tbl, tbl_in_slot)
-                            || check_slot_sharing(slot, tbl->stage->action_bus_use_bit_mask)))
-                        error(lineno, "Action bus byte %d set in table %s and table %s", byte,
+                    if (!(check_atcam_sharing(tbl, tbl_in_slot) ||
+                          check_slot_sharing(slot, tbl->stage->action_bus_use_bit_mask)))
+                        warning(lineno, "Action bus byte %d set in table %s and table %s", byte,
                             tbl->name(), tbl->stage->action_bus_use[slotno]->name());
-                } else {
-                    BUG_CHECK(!slot.data.empty() && !use[slotno]->data.empty());
-                    auto nsrc = slot.data.begin()->first;
-                    unsigned noff = slot.data.begin()->second;
-                    unsigned nstart = 8*(byte - slot.byte) + noff;
-                    if (nsrc.type == Source::Field)
-                        nstart = nsrc.field->immed_bit(nstart);
-                    auto osrc = use[slotno]->data.begin()->first;
-                    unsigned ooff = use[slotno]->data.begin()->second;
-                    unsigned ostart = 8*(byte - use[slotno]->byte) + ooff;
-                    if (osrc.type == Source::Field) {
-                        if (ostart < osrc.field->size)
-                            ostart = osrc.field->immed_bit(ostart);
-                        else
-                            ostart += osrc.field->immed_bit(0); }
-                    if (ostart != nstart)
-                        error(lineno, "Action bus byte %d used inconsistently for fields %s and "
-                              "%s in table %s", byte, use[slotno]->name.c_str(),
-                              slot.name.c_str(), tbl->name()); }
+                }
             } else {
                 tbl->stage->action_bus_use[slotno] = tbl;
                 // Set a per-byte mask on the action bus bytes to indicate which
@@ -381,7 +363,27 @@ void ActionBus::pass1(Table *tbl) {
                 // event, the mask must be set accordingly. This will require
                 // additional logic to determine which bits in the byte are used
                 // or additional syntax in the action bus assembly output.
-                tbl->stage->action_bus_use_bit_mask.setrange(slot.byte * 8U, slot.size);
+                tbl->stage->action_bus_use_bit_mask.setrange(slot.byte * 8U, slot.size); }
+            if (use[slotno]) {
+                BUG_CHECK(!slot.data.empty() && !use[slotno]->data.empty());
+                auto nsrc = slot.data.begin()->first;
+                unsigned noff = slot.data.begin()->second;
+                unsigned nstart = 8*(byte - slot.byte) + noff;
+                if (nsrc.type == Source::Field)
+                    nstart = nsrc.field->immed_bit(nstart);
+                auto osrc = use[slotno]->data.begin()->first;
+                unsigned ooff = use[slotno]->data.begin()->second;
+                unsigned ostart = 8*(byte - use[slotno]->byte) + ooff;
+                if (osrc.type == Source::Field) {
+                    if (ostart < osrc.field->size)
+                        ostart = osrc.field->immed_bit(ostart);
+                    else
+                        ostart += osrc.field->immed_bit(0); }
+                if (ostart != nstart)
+                    error(lineno, "Action bus byte %d used inconsistently for fields %s and "
+                          "%s in table %s", byte, use[slotno]->name.c_str(),
+                          slot.name.c_str(), tbl->name());
+            } else {
                 use[slotno] = &slot; }
             unsigned hi = slot.lo(tbl) + slot.size - 1;
             if (action_hv_slice_use.size() <= hi/128U)
