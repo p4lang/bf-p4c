@@ -929,7 +929,9 @@ BfRtSchemaGenerator::addValueSet(Util::JsonArray* tablesJson,
 
     tableJson->emplace("data", new Util::JsonArray());
     tableJson->emplace("supported_operations", new Util::JsonArray());
-    tableJson->emplace("attributes", new Util::JsonArray());
+    auto* attributesJson =  new Util::JsonArray();
+    attributesJson->append("EntryScope");
+    tableJson->emplace("attributes", attributesJson);
 
     tablesJson->append(tableJson);
 }
