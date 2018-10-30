@@ -31,14 +31,18 @@ bool InstructionMemory::is_noop_slot(int row, int color) {
     return row == NOOP_ROW && color == NOOP_COLOR;
 }
 
-bool InstructionMemory::find_row_and_color(bitvec current_bv, gress_t gress, int &row, int &color) {
+bool InstructionMemory::find_row_and_color(bitvec current_bv, gress_t gress,
+                                                int &row, int &color, bool &first_noop) {
     auto &use = imem_use(gress);
     auto &slot_in_use = imem_slot_inuse(gress);
 
-    // Reserve all noops for the first line
-    if (current_bv.empty()) {
+    // Always reserve one noop on the first line. Subsequent noops will be
+    // reserved on different lines to allow driver to associate each with a
+    // different action handle during entry reads from hardware.
+    if (current_bv.empty() && first_noop) {
         row = NOOP_ROW;
         color = NOOP_COLOR;
+        first_noop = false;
         return true;
     }
 
@@ -104,12 +108,13 @@ bool InstructionMemory::allocate_imem(const IR::MAU::Table *tbl, Use &alloc, con
     bool can_use_hitmap = hit_actions <= TableFormat::IMEM_MAP_TABLE_ENTRIES;
 
     int hit_action_index = gw_linked ? 1 : 0;
+    bool first_noop = true;
     for (auto action : Values(tbl->actions)) {
         LOG2("Allocating action " << action->name);
         auto current_bv = gen_vliw.get_instr(action);
         int row = -1;
         int color = -1;
-        if (!find_row_and_color(current_bv, tbl->gress, row, color))
+        if (!find_row_and_color(current_bv, tbl->gress, row, color, first_noop))
             return false;
         LOG2("Row and color " << row << " " << color);
         Use::VLIW_Instruction single_instr(current_bv, row, color);

@@ -122,7 +122,8 @@ struct InstructionMemory {
         return egress_imem_slot_inuse;
     }
     bool is_noop_slot(int row, int color);
-    bool find_row_and_color(bitvec current_bv, gress_t gress, int &row, int &color);
+    bool find_row_and_color(bitvec current_bv, gress_t gress,
+                                int &row, int &color, bool &first_noop);
 
  public:
     bool allocate_imem(const IR::MAU::Table *tbl, Use &alloc, const PhvInfo &phv, bool gw_linked);
