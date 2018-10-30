@@ -6,10 +6,13 @@
 
 class ElimUnused::Instructions : public Transform {
     ElimUnused &self;
+
+    std::set<cstring> eliminated;
+
     const IR::MAU::StatefulAlu *preorder(IR::MAU::StatefulAlu *salu) override {
         prune();
-        return salu; }
-
+        return salu;
+    }
 
     bool elim_extract(const IR::BFN::Unit* unit, const IR::Expression* field) {
         if (!self.defuse.getUses(unit, field).empty())
@@ -34,17 +37,25 @@ class ElimUnused::Instructions : public Transform {
 
         if (auto lval = extract->dest->to<IR::BFN::FieldLVal>()) {
             if (elim_extract(unit, lval->field)) {
-                LOG1("ELIM UNUSED " << extract << " IN UNIT " << DBPrint::Brief << unit);
-                return nullptr;
-            }
-        } else if (auto lval = extract->dest->to<IR::BFN::ExternLVal>()) {
-            if (elim_extract(unit, lval->field)) {
+                eliminated.insert(lval->toString());
                 LOG1("ELIM UNUSED " << extract << " IN UNIT " << DBPrint::Brief << unit);
                 return nullptr;
             }
         }
 
         return extract;
+    }
+
+    const IR::BFN::FieldLVal* preorder(IR::BFN::FieldLVal* lval) override {
+        auto tcs = findOrigCtxt<IR::BFN::TotalContainerSize>();
+        if (!tcs) return lval;
+
+        if (eliminated.count(lval->toString())) {
+            LOG1("ELIM UNUSED " << lval << " IN UNIT " << DBPrint::Brief << tcs);
+            return nullptr;
+        }
+
+        return lval;
     }
 
     const IR::BFN::ChecksumVerify* preorder(IR::BFN::ChecksumVerify* verify) override {

@@ -135,8 +135,17 @@ class FieldLVal : ParserLVal {
 } 
 
 /// Parser write dest that will be backed by non-PHV container.
-class ExternLVal : ParserLVal {
-    dbprint { out << "extern lval " << field; }
+class ChecksumLVal : FieldLVal {
+    dbprint { out << "checksummed " << field; }
+}
+
+// Total container size (in byte) for a given set of fields.
+// This is useful if we need PHV allocation to derive the size.
+class TotalContainerSize : ParserRVal {
+    dbprint { out << toString(); }
+    toString { return "total size of containers for fields"; }
+
+    inline Vector<FieldLVal> fields;
 }
 
 /// Supertype for all parser primitives - i.e., actions that can be executed in
@@ -457,7 +466,7 @@ class EmitChecksum : Emit {
     /// The fields from which the checksum will be computed.
     inline Vector<FieldLVal> sources;
 
-    ExternLVal dest;
+    ChecksumLVal dest;
 }
 
 /// Configures the location from which an intrinsic deparser parameter should

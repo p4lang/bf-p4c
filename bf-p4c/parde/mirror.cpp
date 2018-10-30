@@ -1,6 +1,7 @@
 #include "bf-p4c/parde/mirror.h"
 
 #include <algorithm>
+#include "bf-p4c/common/ir_utils.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/parde/field_packing.h"
 #include "frontends/p4/coreLibrary.h"
@@ -178,27 +179,6 @@ FieldPacking* packMirroredFieldList(gress_t from_gress, const MirroredFieldList*
     }
 
     return packing;
-}
-
-// XXX(seth): We have code like this duplicated in several places. We should
-// centralize it.
-IR::Member *gen_fieldref(const IR::HeaderOrMetadata *hdr, cstring field) {
-    const IR::Type *ftype = nullptr;
-    auto f = hdr->type->getField(field);
-    if (f != nullptr)
-        ftype = f->type;
-    else
-        BUG("Couldn't find intrinsic metadata field %s in %s", field, hdr->name);
-    return new IR::Member(ftype, new IR::ConcreteHeaderRef(hdr), field);
-}
-
-// XXX(seth): This is widely duplicated too.
-const IR::HeaderOrMetadata*
-getMetadataType(const IR::BFN::Pipe* pipe, cstring typeName) {
-    auto* meta = pipe->metadata[typeName];
-    BUG_CHECK(meta != nullptr,
-              "Couldn't find required intrinsic metadata type: %1%", typeName);
-    return meta;
 }
 
 struct AddMirroredFieldListParser : public Transform {

@@ -28,6 +28,7 @@ class BFN_Options : public CompilerOptions {
     bool backward_compatible = false;
     bool display_power_budget = false;
     bool disable_power_check = false;
+    bool adjust_egress_packet_length = false;
     std::set<cstring> disabled_pragmas;
 #if BAREFOOT_INTERNAL
     std::set<cstring> skipped_pipes;

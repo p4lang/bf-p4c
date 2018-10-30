@@ -1,7 +1,6 @@
 
 
 #emit
-#include <boost/optional.hpp>
 struct TableResourceAlloc;
 #include "bf-p4c/mau/hash_function.h"
 #end

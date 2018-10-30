@@ -129,6 +129,9 @@ BFN_Options::BFN_Options() {
     registerOption("--verbose", nullptr,
         [this](const char *) { verbose = true; return true; },
         "Set compiler verbosity logging");
+    registerOption("--disable-egress-packet-length-adjust", nullptr,
+        [this](const char *) { adjust_egress_packet_length = false; return true; },
+        "Do not adjust egress packet length");
 }
 
 using Target = std::pair<cstring, cstring>;

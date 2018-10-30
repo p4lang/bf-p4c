@@ -38,6 +38,7 @@
 #include "bf-p4c/parde/add_jbay_pov.h"
 #include "bf-p4c/parde/adjust_extract.h"
 #include "bf-p4c/parde/decaf.h"
+#include "bf-p4c/parde/egress_packet_length.h"
 #include "bf-p4c/parde/lower_parser.h"
 #include "bf-p4c/parde/merge_parser_state.h"
 #include "bf-p4c/parde/resolve_computed.h"
@@ -169,6 +170,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new StackPushShims,
         new CollectPhvInfo(phv),    // Needs to be rerun after CreateThreadLocalInstances.
         new HeaderPushPop,
+        options.adjust_egress_packet_length ? new AdjustEgressPacketLength(phv, defuse) : nullptr,
         new CollectPhvInfo(phv),
         new InstructionSelection(phv),
         new DumpPipe("After InstructionSelection"),

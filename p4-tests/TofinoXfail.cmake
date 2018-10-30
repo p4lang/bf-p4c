@@ -134,11 +134,12 @@ if (PTF_REQUIREMENTS_MET)
     fabric-DWITH_SPGW-DWITH_INT_TRANSIT
     )
 
-  # fails also with Glass.
+  # needs to adjust egress packet length
   p4c_add_xfail_reason("tofino"
-    "Expected packet was not received on device 0, port 64"
-    11-simple_l3_mirror
+    "Expected packet was not received on device"
+    11-simple_l3_mirror 
     )
+
   # broken test: https://github.com/barefootnetworks/p4examples/issues/5
   p4c_add_xfail_reason("tofino"
     "SyntaxError: invalid syntax"
@@ -882,10 +883,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4-tests/programs/iterator/iterator.p4
   )
 
-p4c_add_xfail_reason("tofino"
-  "Match register not allocated"
-  extensions/p4_tests/p4_14/p4smith_regression/tofino-bug-5.p4
-)
 
 # XXX(cole): Temporarily override previous XFAILs with new failures related to
 # PHV allocation.
@@ -1322,7 +1319,7 @@ p4c_add_xfail_reason("tofino"
   "the alignment of fields within the container renders the action impossible"
 )
 
-# BRIG-879
+# BRIG-879, needs to adjust egress packet length
 p4c_add_xfail_reason("tofino"
   "AssertionError: Expected packet was not received on device"
   brig_569

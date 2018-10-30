@@ -1,5 +1,6 @@
 #include "bf-p4c/phv/create_thread_local_instances.h"
 
+#include "bf-p4c/ir/gress.h"
 #include "bf-p4c/ir/thread_visitor.h"
 #include "bf-p4c/mau/mau_visitor.h"
 
@@ -74,7 +75,7 @@ struct CreateLocalInstances : public Transform {
             rv = localMetadata[thread][orig];
         } else {
             if (rv == header)
-                header->name = IR::ID(cstring::to_cstring(thread) + "::" + header->name);
+                header->name = IR::ID(createThreadName(thread, header->name));
             localMetadata[thread][orig] = rv; }
         prune();
         return rv;
@@ -86,7 +87,7 @@ struct CreateLocalInstances : public Transform {
         gress_t thread = VisitingThread(this);
         if (localTempVars[thread].count(orig)) {
             return localTempVars[thread][orig]; }
-        var->name = cstring::to_cstring(thread) + "::" + var->name;
+        var->name = createThreadName(thread, var->name);
         localTempVars[thread][orig] = var;
         return var;
     }
@@ -122,8 +123,8 @@ struct CreateThreadLocalMetadata : public Modifier {
         for (auto& item : pipe->metadata) {
             cstring name = item.first;
             auto* metadata = item.second;
-            for (auto gress : { INGRESS, GHOST }) {
-                auto gressName = cstring::to_cstring(gress) + "::" + name;
+            for (auto gress : { INGRESS, EGRESS, GHOST }) {
+                auto gressName = createThreadName(gress, name);
                 auto& gressMetadata = localMetadata[gress];
                 if (gressMetadata.find(metadata) != gressMetadata.end()) {
                     instancedMetadata.addUnique(gressName, gressMetadata.at(metadata));

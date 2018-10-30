@@ -1,4 +1,5 @@
 #include "bf-p4c/device.h"
+#include "bf-p4c/common/ir_utils.h"
 #include "bf-p4c/parde/gen_deparser.h"
 #include "bf-p4c/bf-p4c-options.h"
 
@@ -18,24 +19,6 @@ void generateEmits(const IR::Expression* expression, Func func) {
         IR::Expression* fieldRef = new IR::Member(field->type, header, field->name);
         func(fieldRef, povBit);
     }
-}
-
-IR::Member *gen_fieldref(const IR::HeaderOrMetadata *hdr, cstring field) {
-    const IR::Type *ftype = nullptr;
-    auto f = hdr->type->getField(field);
-    if (f != nullptr)
-        ftype = f->type;
-    else
-        BUG("Couldn't find metadata field %s in %s", field, hdr->name);
-    return new IR::Member(ftype, new IR::ConcreteHeaderRef(hdr), field);
-}
-
-const IR::HeaderOrMetadata*
-getMetadataType(const IR::BFN::Pipe* pipe, cstring typeName) {
-    auto* meta = pipe->metadata[typeName];
-    BUG_CHECK(meta != nullptr,
-              "Couldn't find required intrinsic metadata type: %1%", typeName);
-    return meta;
 }
 
 class GenerateDeparser : public Inspector {

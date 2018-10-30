@@ -150,7 +150,7 @@ TEST(TofinoWriteContext, DeparserEmitChecksum) {
     deparser->emits.push_back(new IR::BFN::EmitChecksum(
           new IR::BFN::FieldLVal(povBit),
         { new IR::BFN::FieldLVal(field) },
-          new IR::BFN::ExternLVal(csum)));
+          new IR::BFN::ChecksumLVal(csum)));
 
     struct CheckEmitChecksum : public Inspector, TofinoWriteContext {
         bool preorder(const IR::Member*) override {

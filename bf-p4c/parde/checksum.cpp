@@ -305,7 +305,7 @@ struct SubstituteUpdateChecksums : public Transform {
                 auto* emitUpdatedChecksum = new IR::BFN::EmitChecksum(
                                  new IR::BFN::FieldLVal(csumInfo->deparseUpdated.at(uc)),
                                     *(csumInfo->sources),
-                                        new IR::BFN::ExternLVal(source));
+                                        new IR::BFN::ChecksumLVal(source));
 
                 emitChecksums.push_back(emitUpdatedChecksum);
             }
@@ -320,7 +320,7 @@ struct SubstituteUpdateChecksums : public Transform {
             emitChecksums.push_back(new IR::BFN::EmitChecksum(
                                       emit->povBit,
                                         *(csumInfo->sources),
-                                          new IR::BFN::ExternLVal(source)));
+                                          new IR::BFN::ChecksumLVal(source)));
         }
 
         // TODO(zma) if user specifies the update conditon, but never set it anywhere,
@@ -337,11 +337,11 @@ struct SubstituteUpdateChecksums : public Transform {
 /// If checksum update is unconditional, we don't need to allocate PHV space to store
 /// the original header checksum field, nor do we need to extract the header checksum
 /// field (since we will deparse the checksum from the computed value in the deparser).
-/// This pass replaces the unconditional checksum field with the "ExternLVal" so that
+/// This pass replaces the unconditional checksum field with the "ChecksumLVal" so that
 /// PHV allocation doesn't allocate container for it.
 /// FIXME(zma) check if checksum is used in MAU
-struct SubstituteExternLVal : public Transform {
-    explicit SubstituteExternLVal(const ChecksumUpdateInfoMap& checksums)
+struct SubstituteChecksumLVal : public Transform {
+    explicit SubstituteChecksumLVal(const ChecksumUpdateInfoMap& checksums)
         : checksums(checksums) { }
 
     IR::BFN::ParserPrimitive* preorder(IR::BFN::Extract* extract) override {
@@ -352,7 +352,7 @@ struct SubstituteExternLVal : public Transform {
             if (csumInfo->updateConditions.empty()) {
                 if (auto lval = extract->dest->to<IR::BFN::FieldLVal>()) {
                     return new IR::BFN::Extract(
-                        new IR::BFN::ExternLVal(lval->field),
+                        new IR::BFN::ChecksumLVal(lval->field),
                         extract->source);
                 }
             }
@@ -523,12 +523,12 @@ extractChecksumFromDeparser(const IR::BFN::TranslatedP4Deparser* deparser, IR::B
     pipe->thread[gress].deparser->apply(getChecksumPovBits);
 
     SubstituteUpdateChecksums substituteChecksums(checksums);
-    SubstituteExternLVal substituteExternLVal(checksums);
+    SubstituteChecksumLVal substituteChecksumLVal(checksums);
     InsertChecksumConditions insertChecksumConditions(checksums, gress);
 
     pipe->thread[gress].mau = pipe->thread[gress].mau->apply(insertChecksumConditions);
     pipe->thread[gress].deparser = pipe->thread[gress].deparser->apply(substituteChecksums);
-    pipe->thread[gress].parser = pipe->thread[gress].parser->apply(substituteExternLVal);
+    pipe->thread[gress].parser = pipe->thread[gress].parser->apply(substituteChecksumLVal);
 
     return pipe;
 }

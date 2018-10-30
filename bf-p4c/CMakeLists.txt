@@ -120,6 +120,7 @@ set (BF_P4C_BACKEND_COMMON_SRCS
   common/field_defuse.cpp
   common/flatten_emit_args.cpp
   common/header_stack.cpp
+  common/ir_utils.cpp
   common/live_range_overlay.cpp
   common/metadata_init.cpp
   common/multiple_apply.cpp
@@ -153,6 +154,7 @@ set (BF_P4C_BACKEND_COMMON_HDRS
   common/field_defuse.h
   common/flatten_emit_args.h
   common/header_stack.h
+  common/ir_utils.h
   common/live_range_overlay.h
   common/metadata_init.h
   common/multiple_apply.h
@@ -299,6 +301,7 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/clot_info.h
   parde/decaf.h
   parde/epb_config.h
+  parde/egress_packet_length.h
   parde/extract_parser.h
   parde/field_packing.h
   parde/gen_deparser.h

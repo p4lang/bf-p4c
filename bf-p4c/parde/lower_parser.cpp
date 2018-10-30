@@ -174,11 +174,11 @@ struct ExtractSimplifier {
         LOG4("[ExtractSimplifier] adding: " << extract);
 
         auto lval = extract->dest->to<IR::BFN::FieldLVal>();
-        auto extern_lval = extract->dest->to<IR::BFN::ExternLVal>();
+        auto checksum_lval = extract->dest->to<IR::BFN::ChecksumLVal>();
 
         const PHV::Field *field = nullptr;
         if (lval) field = phv.field(lval->field);
-        else if (extern_lval) field = phv.field(extern_lval->field);
+        else if (checksum_lval) field = phv.field(checksum_lval->field);
 
         if (field) {
             if (auto c = clot.clot(field)) {
@@ -442,13 +442,12 @@ lowerFields(const PhvInfo& phv, const ClotInfo& clotInfo,
     // reference.
     for (auto* fieldRef : fields) {
         auto field = phv.field(fieldRef->field);
+
         if (auto* clot = clotInfo.allocated(field)) {
             if (clots.empty() || clots.back().tag != clot->tag)
                 clots.push_back(*clot);
             continue;
         }
-
-        auto phvField = phv.field(fieldRef->field);
 
         std::vector<alloc_slice> slices = phv.get_alloc(fieldRef->field);
 
@@ -498,14 +497,14 @@ lowerFields(const PhvInfo& phv, const ClotInfo& clotInfo,
 
             bool isResidualChecksum = false;
 
-            std::string f_name(phvField->name.c_str());
+            std::string f_name(field->name.c_str());
             if (f_name.find("compiler_generated_meta") != std::string::npos
              && f_name.find("residual_checksum_") != std::string::npos)
                 isResidualChecksum = true;
 
             if (!isResidualChecksum &&
                 slice.container_bits().hi % 16 !=
-                (phvField->offset + slice.field_bits().hi) % 16)
+                (field->offset + slice.field_bits().hi) % 16)
                 last->swap = (1 << slice.container_bits().hi/16U) |
                              (1 << slice.container_bits().lo/16U);
         }
@@ -834,6 +833,53 @@ struct ReplaceParserIR : public Transform {
     const ComputeLoweredParserIR& computed;
 };
 
+class ResolveParserConstants : public ParserTransform {
+    const PhvInfo& phv;
+    const ClotInfo& clotInfo;
+
+    IR::BFN::ConstantRVal* preorder(IR::BFN::TotalContainerSize* tcs) override {
+        IR::Vector<IR::BFN::ContainerRef> containers;
+        std::vector<Clot> clots;
+
+        std::tie(containers, clots) = lowerFields(phv, clotInfo, tcs->fields);
+
+        BUG_CHECK(clots.empty(), "Fields allocated to CLOT?");
+
+        std::map<PHV::Container, std::set<unsigned>> containerBytes;
+
+        for (auto cr : containers) {
+            unsigned loByte = 0, hiByte = cr->container.size() / 8;
+
+            if (cr->range) {
+                auto range = *(cr->range);
+                loByte = range.lo / 8;
+                hiByte = range.hi / 8;
+            }
+
+            for (unsigned i = loByte; i <= hiByte; i++) {
+                containerBytes[cr->container].insert(i);
+            }
+        }
+
+        unsigned totalBytes = 0;
+
+        for (auto cb : containerBytes)
+            totalBytes += cb.second.size();
+
+        auto state = findContext<IR::BFN::ParserState>();
+        if (state && state->name.startsWith("$mirror_field_list_")) {
+            totalBytes += 4;  // offset 4 bytes of CRC added by HW for mirrored packet
+        }
+
+        auto rv = new IR::BFN::ConstantRVal(totalBytes);
+        return rv;
+    }
+
+ public:
+    ResolveParserConstants(const PhvInfo& phv, const ClotInfo& clotInfo) :
+        phv(phv), clotInfo(clotInfo) { }
+};
+
 /// Generate a lowered version of the parser IR in this program and swap it in
 /// for the existing representation.
 struct LowerParserIR : public PassManager {
@@ -843,6 +889,7 @@ struct LowerParserIR : public PassManager {
                                                                   *checksumAllocation);
         addPasses({
             checksumAllocation,
+            new ResolveParserConstants(phv, clotInfo),
             computeLoweredParserIR,
             new ReplaceParserIR(*computeLoweredParserIR)
         });

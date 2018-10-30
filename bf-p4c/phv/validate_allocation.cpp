@@ -49,7 +49,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
     // collect information that we'll use to check container properties.
     for (auto& field : phv) {
         if (!uses.is_referenced(&field)) {
-            // FIXME(zma) ExternLVal field can be allocated to clot, e.g. csum
+            // FIXME(zma) ChecksumLVal field can be allocated to clot, e.g. csum
             WARN_CHECK(field.is_unallocated() /*&& !clot.clot(&field)*/ ,
                         "PHV allocation for unreferenced %1%field %2% (width %3%)",
                         field.bridged ? "bridged " : "",
