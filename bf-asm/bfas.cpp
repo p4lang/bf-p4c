@@ -23,6 +23,7 @@ option_t options = {
     .binary = PIPE0,
     .condense_json = true,
     .debug_info = false,
+    .disable_egress_latency_padding = false,
     .disable_power_gating = false,
     .gen_json = false,
     //FIXME-P4C: Compiler currently does not reserve 51st bit for hash parity.
@@ -139,21 +140,29 @@ int main(int ac, char **av) {
             asm_parse_file("<stdin>", stdin);
         } else if (!strcmp(av[i], "--allpipes")) {
             options.binary = FOUR_PIPE;
+        } else if (!strcmp(av[i], "--disable-egress-latency-padding")) {
+            options.disable_egress_latency_padding = true;
         } else if (!strcmp(av[i], "--gen_json")) {
             options.gen_json = true;
             options.binary = NO_BINARY;
-        } else if (!strcmp(av[i], "--no-condense")) {
-            options.condense_json = false;
-        } else if (!strcmp(av[i], "--no-bin")) {
-            options.binary = NO_BINARY;
-        } else if (!strcmp(av[i], "--singlepipe")) {
-            options.binary = ONE_PIPE;
-        } else if (!strcmp(av[i], "--singlewrite")) {
-            options.singlewrite = true;
         } else if (!strcmp(av[i], "--hash_parity_disabled")) {
             options.hash_parity_enabled = false;
         } else if (!strcmp(av[i], "--high_availability_disabled")) {
             options.high_availability_enabled = false;
+        } else if (!strcmp(av[i], "--no-condense")) {
+            options.condense_json = false;
+        } else if (!strcmp(av[i], "--no-bin")) {
+            options.binary = NO_BINARY;
+        } else if (!strcmp(av[i], "--old_json")) {
+            std::cerr << "Old context json is no longer supported" << std::endl;
+            error_count++;
+        } else if (sscanf(av[i], "--pipe%d%n", &val, &len) > 0 && !av[i][len] &&
+                   val >= 0 && val < 4) {
+            options.binary = static_cast<binary_type_t>(PIPE0 + val);
+        } else if (!strcmp(av[i], "--singlepipe")) {
+            options.binary = ONE_PIPE;
+        } else if (!strcmp(av[i], "--singlewrite")) {
+            options.singlewrite = true;
         } else if (!strcmp(av[i], "--stage_dependency_pattern")) {
           ++i;
           if (!av[i]) {
@@ -162,9 +171,6 @@ int main(int ac, char **av) {
             break;
           }
           options.stage_dependency_pattern = av[i];
-        } else if (sscanf(av[i], "--pipe%d%n", &val, &len) > 0 && !av[i][len] &&
-                   val >= 0 && val < 4) {
-            options.binary = static_cast<binary_type_t>(PIPE0 + val);
         } else if (sscanf(av[i], "--table-handle-offset%d", &val) > 0 && val >= 0 && val < 4) {
             unique_table_offset = val;
         } else if (!strcmp(av[i], "--target")) {
@@ -177,9 +183,6 @@ int main(int ac, char **av) {
                 std::cerr << "Unknown target " << av[i] << std::endl;
                 error_count++;
                 std::cerr << "Supported targets:" FOR_ALL_TARGETS(OUTPUT_TARGET) << std::endl; }
-        } else if (!strcmp(av[i], "--old_json")) {
-            std::cerr << "Old context json is no longer supported" << std::endl;
-            error_count++;
         } else if (av[i][0] == '-' && av[i][1] == '-') {
             FOR_ALL_TARGETS(MATCH_TARGET_OPTION, av[i]+2) {
                 std::cerr << "Unrecognized option " << av[i] << std::endl;

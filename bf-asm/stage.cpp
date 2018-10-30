@@ -22,6 +22,7 @@ class AsmStage : public Section {
     void input(VECTOR(value_t) args, value_t data);
     void process();
     void output(json::map &);
+    unsigned compute_latency(gress_t gress); 
     AsmStage();
     ~AsmStage() {}
     std::vector<Stage>  stage;
@@ -224,10 +225,57 @@ void AsmStage::output(json::map &ctxt_json) {
             if (stage[i].stage_dep[gress] != Stage::MATCH_DEP)
                 stage[i-1].group_table_use[gress] |= stage[i].group_table_use[gress]; }
 
+    // In Tofino, add match-dependent stages if latency is not the minimum
+    // egress latency. There is no such requirement for JBAY - COMPILER-757
+    if (options.target == TOFINO) {
+        // Compute Egress Latency
+        auto total_cycles = compute_latency(EGRESS);
+        if (!options.disable_egress_latency_padding) {
+            // Get non match dependent stages
+            bitvec non_match_dep;
+            for (unsigned i = 1; i < stage.size(); i++) {
+                auto stage_dep = stage[i].stage_dep[EGRESS];
+                if (stage_dep != Stage::MATCH_DEP) 
+                    non_match_dep.setbit(i);
+            }
+            // Add match-dependent stages and re-evaluate latency
+            while (total_cycles < Target::Tofino::MINIMUM_REQUIRED_EGRESS_PIPELINE_LATENCY) {
+                if (non_match_dep == bitvec(0)) break;
+                auto non_match_dep_stage = non_match_dep.min().index();
+                stage[non_match_dep_stage].stage_dep[EGRESS] = Stage::MATCH_DEP;
+                LOG3("Converting egress stage " << non_match_dep_stage <<
+                    " to match dependent to meet minimum egress pipeline latency requirement");
+                non_match_dep.clrbit(non_match_dep_stage);
+                total_cycles = compute_latency(EGRESS);
+            }
+        } else {
+            if (total_cycles < Target::Tofino::MINIMUM_REQUIRED_EGRESS_PIPELINE_LATENCY) {
+                warning(0, "User disabled adding latency to the egress MAU pipeline "
+                           "to meet its minimum requirements. This may result in under "
+                           "run in certain port speed configurations.");
+            }
+        }
+    }
+
     for (unsigned i = 0; i < stage.size(); i++)
         SWITCH_FOREACH_TARGET(options.target, stage[i].output<TARGET>(ctxt_json);)
+}
 
-
+unsigned AsmStage::compute_latency(gress_t gress) {
+    auto total_cycles = 4; // There are 4 extra cycles between stages 5 & 6 of the MAU
+    for (unsigned i = 1; i < stage.size(); i++) {
+        auto stage_dep = stage[i].stage_dep[gress];
+        auto contribute = 0;
+        if (stage_dep == Stage::MATCH_DEP) {
+            contribute = stage[i].pipelength(gress);
+        } else if(stage_dep == Stage::ACTION_DEP) {
+            contribute = 2;
+        } else if (stage_dep == Stage::CONCURRENT) {
+            contribute = 1;
+        }
+        total_cycles += contribute;
+    }
+    return total_cycles;
 }
 
 static FakeTable invalid_rams("RAMS NOT PRESENT");

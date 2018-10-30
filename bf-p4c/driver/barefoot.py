@@ -113,6 +113,10 @@ class BarefootBackend(BackendDriver):
         self._argGroup.add_argument("--skip-compilation",
                                     action="store", help="Skip compiling pipes whose name contains one of the"
                                                          "'pipeX' substring")
+        self._argGroup.add_argument("--disable-egress-latency-padding",
+                                    action="store_true", help="Disables adding match"
+                                    " dependent stages to the egress pipeline to "
+                                    " achieve minimum required latency")
 
         self._argGroup.add_argument("--ir-to-json", default=None,
                                     help="Dump the IR after midend to JSON in the specified file.")
@@ -196,6 +200,8 @@ class BarefootBackend(BackendDriver):
             self.add_command_option('compiler', '--toJSON {}'.format(opts.ir_to_json))
         self._ir_to_json = opts.ir_to_json
 
+        if opts.disable_egress_latency_padding:
+            self.add_command_option('assembler', '--disable-egress-latency-padding')
 
         if opts.verbose > 0:
             ta_logging = "table_placement:3,table_summary:1"

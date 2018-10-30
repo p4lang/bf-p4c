@@ -101,6 +101,8 @@ class Target::Tofino : public Target {
         MAU_BASE_DELAY = 20,
         MAU_BASE_PREDICATION_DELAY = 11,
         METER_ALU_GROUP_DATA_DELAY = 13,
+        // To avoid under run scenarios, there is a minimum egress pipeline latency required
+        MINIMUM_REQUIRED_EGRESS_PIPELINE_LATENCY = 160,
         STATEFUL_CMP_UNITS = 2,
         STATEFUL_TMATCH_UNITS = 0,
         STATEFUL_OUTPUT_UNITS = 1,
