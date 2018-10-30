@@ -20,7 +20,8 @@ struct TableResourceAlloc {
     TableFormat::Use                    table_format;
     std::map<UniqueId, Memories::Use>   memuse;
     ActionFormat::Use                   action_format;
-    ActionDataBus::Use                  action_data_xbar;
+    MeterFormat::Use                    meter_format;
+    ActionDataBus::Use                  action_data_xbar, meter_xbar;
     InstructionMemory::Use              instr_mem;
     TableResourceAlloc *clone_ixbar() const {
         TableResourceAlloc *rv = new TableResourceAlloc;
@@ -34,7 +35,9 @@ struct TableResourceAlloc {
         rv->action_format = action_format;
         rv->hash_dists = hash_dists;
         rv->action_data_xbar = action_data_xbar;
+        rv->meter_format = meter_format;
         rv->instr_mem = instr_mem;
+        rv->meter_xbar = meter_xbar;
         return rv; }
     TableResourceAlloc *clone_rename(const IR::MAU::Table *tbl, int stage_table = -1,
                                      int logical_table = -1) const;
@@ -53,6 +56,8 @@ struct TableResourceAlloc {
         action_format.clear();
         action_data_xbar.clear();
         instr_mem.clear();
+        meter_format.clear();
+        meter_xbar.clear();
     }
     void toJSON(JSONGenerator &json) const { json << "null"; }
     static TableResourceAlloc *fromJSON(JSONLoader &) { return nullptr; }

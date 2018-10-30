@@ -61,6 +61,8 @@ struct ActionDataBus {
     safe_vector<std::pair<int, int>> immed_starts;
     std::set<cstring> atcam_updates;
     std::set<const IR::MAU::ActionData *> shared_action_profiles;
+    // track shared meters and salus, used by action data bus allocation
+    std::set<const IR::MAU::AttachedMemory *> shared_meters;
     bool reserved_immed[3] = {false, false, false};
 
     struct ADB_CSR {
@@ -103,11 +105,11 @@ struct ActionDataBus {
         struct ReservedSpace {
             Loc location;
             int byte_offset = -1;  ///> Bytes from the lsb of the Action Data Format
-            bool immediate = false;  ///> Is in action immediate or not
+            ActionFormat::ad_source_t source = ActionFormat::LOCATIONS;  ///> Is IMMED, ADT or METER
             ReservedSpace(Loc l, int bo)
                 : location(l), byte_offset(bo) {}
-            ReservedSpace(Loc l, int bo, bool im)
-                : location(l), byte_offset(bo), immediate(im) {}
+            ReservedSpace(Loc l, int bo, ActionFormat::ad_source_t src)
+                : location(l), byte_offset(bo), source(src) {}
         };
         // Locations of action data where the ALUs will pull action data
         safe_vector<ReservedSpace> action_data_locs;
@@ -144,11 +146,13 @@ struct ActionDataBus {
     int output_to_byte(int output, ActionFormat::cont_type_t type);
     int find_byte_sz(ActionFormat::cont_type_t);
     int csr_index(int start_byte, ActionFormat::cont_type_t type);
-    bool is_csr_reserved(int start_byte, bitvec adjacent, int byte_offset, bool immed);
+    bool is_csr_reserved(int start_byte, bitvec adjacent, int byte_offset,
+                         ActionFormat::ad_source_t source);
     bool is_adf_csr_reserved(int start_byte, bitvec adjacent, int byte_offset);
     bool is_immed_csr_reserved(int start_byte);
 
-    void reserve_csr(int start_byte, bitvec adjacent, int byte_offset, bool immed);
+    void reserve_csr(int start_byte, bitvec adjacent, int byte_offset,
+                     ActionFormat::ad_source_t source);
     void reserve_adf_csr(int start_byte, bitvec adjacent, int byte_offset);
     void reserve_immed_csr(int start_byte);
     bitvec combined(const bitvec bv[ActionFormat::CONTAINER_TYPES]);
@@ -156,34 +160,38 @@ struct ActionDataBus {
     void initialize_action_ixbar();
 
     bool find_location(bitvec combined_adjacent, int diff, ActionFormat::cont_type_t init_type,
-                       loc_alg_t loc_alg, bool immed, int byte_offset, int &start_byte);
+                       loc_alg_t loc_alg, ActionFormat::ad_source_t source, int byte_offset,
+                       int &start_byte);
     bool find_location(bitvec combined_adjacent, int diff, int initial_adb_byte,
                        int final_adb_byte, bool reset, ActionFormat::cont_type_t type,
-                       bool immed, int byte_offset, int &start_byte);
+                       ActionFormat::ad_source_t source, int byte_offset, int &start_byte);
 
     void analyze_full_share(Use &use, bitvec layouts[ActionFormat::CONTAINER_TYPES],
                             FullShare &full_share, int init_byte_offset,
-                            int add_byte_offset, bool immed);
+                            int add_byte_offset, ActionFormat::ad_source_t source);
     void analyze_full_shares(Use &use, bitvec layouts[ActionFormat::CONTAINER_TYPES],
                              bitvec full_bitmasked, FullShare full_shares[4],
-                             int init_byte_offset);
+                             int init_byte_offset, ActionFormat::ad_source_t source);
     void reserve_space(Use &use, ActionFormat::cont_type_t type, bitvec adjacent,
                        bitvec combined_adjacent, int start_byte, int byte_offset,
-                       bool immed, cstring name);
+                       ActionFormat::ad_source_t source, cstring name);
     bool fit_adf_section(Use &use, bitvec adjacent, bitvec combined_adjacent,
                          ActionFormat::cont_type_t type, loc_alg_t loc_alg,
-                         int init_byte_offset, int sec_begin, int size, cstring name);
+                         int init_byte_offset, int sec_begin, int size, cstring name,
+                         ActionFormat::ad_source_t source);
     bool alloc_bytes(Use &use, bitvec layout, bitvec combined_layout, int init_byte_offset,
-                     cstring name);
+                     cstring name, ActionFormat::ad_source_t source);
     bool alloc_halves(Use &use, bitvec layout, bitvec combined_layout, int init_byte_offset,
-                      cstring name);
+                      cstring name, ActionFormat::ad_source_t source);
     bool alloc_fulls(Use &use, bitvec layouts[ActionFormat::CONTAINER_TYPES],
-                     bitvec full_bitmasked, int init_byte_offset, cstring name);
+                     bitvec full_bitmasked, int init_byte_offset, cstring name,
+                     ActionFormat::ad_source_t source);
     bool alloc_full_sect(Use &use, FullShare full_shares[4], bitvec combined_layout, int begin,
-                         int init_byte_offset, cstring name, bitvec full_bitmasked);
-    bool alloc_ad_table(const bitvec total_layouts[ActionFormat::CONTAINER_TYPES],
-                        const bitvec full_layout_bitmasked,
+                         int init_byte_offset, cstring name, bitvec full_bitmasked,
+                         ActionFormat::ad_source_t source);
+    bool alloc_ad_table(const bitvec *total_layouts, const bitvec full_layout_bitmasked,
                         Use &use, cstring name);
+    bool alloc_meter_output(const bitvec *total_layouts, Use &use, cstring name);
 
     bitvec paired_immediate(bitvec layout, ActionFormat::cont_type_t type);
     bool fit_immed_sect(Use &use, bitvec layout, bitvec combined_layout,
@@ -199,12 +207,16 @@ struct ActionDataBus {
  public:
     bool alloc_action_data_bus(const IR::MAU::Table *tbl, const ActionFormat::Use *use,
                                TableResourceAlloc &alloc);
+    bool alloc_action_data_bus(const IR::MAU::Table *tbl, const MeterFormat::Use *use,
+                               TableResourceAlloc &alloc);
     void update(cstring name, const Use &alloc);
-    void update(cstring name, const TableResourceAlloc *alloc, const IR::MAU::Table *tbl);
-    void update(cstring name, const TableResourceAlloc *alloc);
     void update(cstring name, const Use::ReservedSpace &rs);
     void update(cstring name, const Use::RandomNumberGenerator &rng);
     void update(const IR::MAU::Table *tbl);
+    void update(cstring name, const TableResourceAlloc *alloc, const IR::MAU::Table *tbl);
+    void update_action_data(cstring name, const TableResourceAlloc *alloc,
+            const IR::MAU::Table *tbl);
+    void update_meter(cstring name, const TableResourceAlloc *alloc, const IR::MAU::Table *tbl);
 };
 
 #endif /* BF_P4C_MAU_ACTION_DATA_BUS_H_*/

@@ -495,6 +495,7 @@ bool TablePlacement::try_alloc_adb(Placed *next, const Placed *done,
 
     ActionDataBus current_adb;
     resources->action_data_xbar.clear();
+    resources->meter_xbar.clear();
 
     for (auto *p = done; p && p->stage == next->stage; p = p->prev) {
         current_adb.update(p->name, p->resources, p->table);
@@ -505,6 +506,18 @@ bool TablePlacement::try_alloc_adb(Placed *next, const Placed *done,
                         "action data bus";
         LOG3("    " << error_message);
         resources->action_data_xbar.clear();
+        return false;
+    }
+
+    /**
+     * allocate meter output on adb
+     */
+    if (!current_adb.alloc_action_data_bus(next->table,
+            next->use.preferred_meter_format(), *resources)) {
+        error_message = "The table " + next->table->name + " could not fit its meter "
+                        " output in within the action data bus";
+        LOG3(error_message);
+        resources->meter_xbar.clear();
         return false;
     }
 
@@ -608,6 +621,36 @@ static void coord_action_data_xbar(const TablePlacement::Placed *curr,
         if (p_ad == ad && !p->resources->action_data_xbar.empty()) {
             resource->action_data_xbar = prev_resources[j]->action_data_xbar;
             resource->instr_mem = prev_resources[j]->instr_mem;
+            break;
+        }
+    }
+}
+
+static void coord_meter_xbar(const TablePlacement::Placed *curr,
+                             const TablePlacement::Placed *done,
+                             TableResourceAlloc *resource,
+                             safe_vector<TableResourceAlloc *> &prev_resources) {
+    const IR::MAU::AttachedMemory *am = nullptr;
+    for (auto at : curr->table->attached) {
+        if ((am = at->attached->to<IR::MAU::AttachedMemory>()) != nullptr) break;
+    }
+    if (am == nullptr) return;
+    if (!resource->meter_xbar.empty())
+        return;
+    int j = 0;
+    for (auto *p = done; p && p->stage == curr->stage; p = p->prev, ++j) {
+        const IR::MAU::AttachedMemory *p_am = nullptr;
+        if (p == curr)
+            continue;
+        for (auto back_at : p->table->attached) {
+            auto at = back_at->attached;
+            if ((p_am = at->to<IR::MAU::AttachedMemory>()) != nullptr)
+                break;
+        }
+        if (p_am == am && !p->resources->meter_xbar.empty()) {
+            resource->meter_xbar = prev_resources[j]->meter_xbar;
+            LOG1("previous resource " << prev_resources[j]);
+            LOG1("meter xbar alloc " << resource->meter_xbar.action_data_locs.size());
             break;
         }
     }
@@ -902,10 +945,15 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv, const IR::MA
 
 
     if (!t->gateway_only()) {
-        auto format = rv->use.preferred_action_format();
-        BUG_CHECK(format != nullptr, "Action format could not be found for a particular layout "
-                  "option.");
-        resources->action_format = *format;
+        auto action_format = rv->use.preferred_action_format();
+        BUG_CHECK(action_format != nullptr, "Action format could not be found for a "
+                                            "particular layout option.");
+        resources->action_format = *action_format;
+        auto meter_format = rv->use.preferred_meter_format();
+        BUG_CHECK(meter_format != nullptr, "Meter format could not be found for a "
+                                           "particular layout option.");
+        resources->meter_format = *meter_format;
+        LOG1("**meter format size " << meter_format->action_data_format.size());
     }
 
     LOG3("  Selected stage: " << rv->stage << "    Furthest stage: " << furthest_stage);
@@ -931,9 +979,11 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv, const IR::MA
     for (auto *p = done; p && p->stage == rv->stage; p = p->prev, ++i) {
         coord_selector_xbar(p, done, prev_resources[i], prev_resources);
         coord_action_data_xbar(p, done, prev_resources[i], prev_resources);
+        coord_meter_xbar(p, done, prev_resources[i], prev_resources);
     }
     coord_selector_xbar(rv, done, resources, prev_resources);
     coord_action_data_xbar(rv, done, resources, prev_resources);
+    coord_meter_xbar(rv, done, resources, prev_resources);
     if (done) {
         if (done->stage == rv->stage)
             done = done->update_resources(rv->stage, 0, prev_resources);

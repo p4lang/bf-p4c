@@ -18,6 +18,7 @@
 #include "bf-p4c/common/parser_overlay.h"
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/logging/filelog.h"
+#include "bf-p4c/mau/attached_output.h"
 #include "bf-p4c/mau/characterize_power.h"
 #include "bf-p4c/mau/empty_controls.h"
 #include "bf-p4c/mau/gateway.h"
@@ -121,6 +122,7 @@ class TableAllocPass : public Logging::PassManager {
                 new GatewayOpt(phv),   // must be before TableLayout?  or just TablePlacement?
                 new TableLayout(phv, lc),
                 new AssignActionHandle(phv),
+                new MeterOutputSetup(phv, lc),  // after TableLayout to be part of backtrack
                 new TableFindSeqDependencies,
                 new FindDependencyGraph(phv, deps),
                 new SpreadGatewayAcrossSeq,

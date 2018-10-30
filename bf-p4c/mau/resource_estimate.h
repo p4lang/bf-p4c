@@ -30,6 +30,7 @@ struct StageUseEstimate {
 
     safe_vector<LayoutOption> layout_options;
     safe_vector<ActionFormat::Use> action_formats;
+    MeterFormat::Use meter_format;
     size_t preferred_index;
     StageUseEstimate() {}
     StageUseEstimate &operator+=(const StageUseEstimate &a) {
@@ -85,6 +86,10 @@ struct StageUseEstimate {
         if (option == nullptr)
             return nullptr;
         return &action_formats[option->action_format_index];
+    }
+
+    const MeterFormat::Use *preferred_meter_format() const {
+        return &meter_format;
     }
 
     void determine_initial_layout_option(const IR::MAU::Table *tbl, int &entries,

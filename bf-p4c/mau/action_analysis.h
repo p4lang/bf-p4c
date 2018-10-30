@@ -43,7 +43,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
     struct ActionParam {
         enum type_t { PHV, ACTIONDATA, CONSTANT, TOTAL_TYPES } type;
         const IR::Expression *expr;
-        enum speciality_t { NO_SPECIAL, HASH_DIST, METER_COLOR, RANDOM, METER_ALU }
+        enum speciality_t { NO_SPECIAL, HASH_DIST, METER_COLOR, RANDOM, METER_ALU, STFUL_COUNTER }
              speciality = NO_SPECIAL;
 
         ActionParam() : expr(nullptr) {}
@@ -326,7 +326,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
                 error_code |= CONSTANT_MISMATCH;
         }
 
-        bool action_data_isolated() {
+        bool action_data_isolated() const {
             return name != "set";
         }
 
@@ -404,6 +404,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
     bool preorder(const IR::MAU::StatefulAlu *) override;
     bool preorder(const IR::MAU::Instruction *) override;
     bool preorder(const IR::MAU::StatefulCall *) override;
+    bool preorder(const IR::MAU::StatefulCounter *sc) override;
     bool preorder(const IR::Primitive *) override;
     void postorder(const IR::MAU::Instruction *) override;
     void postorder(const IR::MAU::Action *) override;

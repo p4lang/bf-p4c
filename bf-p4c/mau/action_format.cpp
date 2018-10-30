@@ -5,17 +5,6 @@
 
 constexpr int ActionFormat::CONTAINER_SIZES[];
 
-/*
-void ActionFormat::ActionContainerInfo::maximize(ActionContainerInfo &a) {
-    for (int i = 0; i < LOCATIONS; i++) {
-        for (int j = 0; j < CONTAINER_TYPES; j++) {
-            if (a.counts[i][j] > counts[i][j])
-                counts[i][j] = a.counts[i][j];
-        }
-    }
-}
-*/
-
 void ActionFormat::ActionContainerInfo::reset() {
     order = NOT_SET;
     maximum = -1;
@@ -24,7 +13,6 @@ void ActionFormat::ActionContainerInfo::reset() {
             counts[i][j] = 0;
             layouts[i][j].clear();
             bitmasked_sets[i][j] = 0;
-            minmaxes[i][j] = CONTAINER_SIZES[i] + 1;
         }
     }
 
@@ -67,12 +55,12 @@ int ActionFormat::ActionContainerInfo::find_maximum_immed(bool meter_color, int 
     return maximum;
 }
 
-int ActionFormat::ActionContainerInfo::total(location_t loc, bitmasked_t bm,
+int ActionFormat::ActionContainerInfo::total(ad_source_t source, bitmasked_t bm,
         cont_type_t type) const {
     if (bm == BITMASKED)
-        return bitmasked_sets[loc][type];
+        return bitmasked_sets[source][type];
     else
-        return counts[loc][type] - bitmasked_sets[loc][type] * 2;
+        return counts[source][type] - bitmasked_sets[source][type] * 2;
 }
 
 bool ActionFormat::ActionDataForSingleALU::ArgLoc::operator==(
@@ -473,11 +461,11 @@ void ActionFormat::allocate_format(safe_vector<Use> &uses, bool immediate_allowe
  *  The information provided are what arguments are in what action data slot, and the
  *  necessary sizes of the action data slots.
  */
-void ActionFormat::create_placement_non_phv(ActionAnalysis::FieldActionsMap &field_actions_map,
+void ActionFormat::create_placement_non_phv(const ActionAnalysis::FieldActionsMap &field_actions,
                                             cstring action_name) {
     // FIXME: Verification on some argument limitations still required
     safe_vector<ActionDataForSingleALU> adp_vector;
-    for (auto &field_action_info : field_actions_map) {
+    for (auto &field_action_info : field_actions) {
         auto &field_action = field_action_info.second;
         for (auto &read : field_action.reads) {
             if (read.type != ActionAnalysis::ActionParam::ACTIONDATA) continue;
@@ -589,11 +577,12 @@ void ActionFormat::create_from_constant(ActionDataForSingleALU &adp,
  *  determine what types of action data slots are needed as well as where action data is stored
  *  within the slots.  This will be saved in a vector of ActionDataPlacement
  */
-void ActionFormat::create_placement_phv(ActionAnalysis::ContainerActionsMap &container_actions_map,
-                                        cstring action_name) {
+void ActionFormat::create_placement_phv(
+        const ActionAnalysis::ContainerActionsMap &container_actions,
+        cstring action_name) {
     safe_vector<ActionDataForSingleALU> adp_vector;
     int constant_to_ad_count = 0;
-    for (auto &container_action_info : container_actions_map) {
+    for (auto &container_action_info : container_actions) {
         auto container = container_action_info.first;
         auto &cont_action = container_action_info.second;
         ActionDataForSingleALU adp;
@@ -1044,7 +1033,7 @@ void ActionFormat::setup_use(safe_vector<Use> &uses) {
     use->action_data_bytes[IMMED] = action_bytes[IMMED];
     use->phv_alloc = alloc_done;
     LOG2("Action data bytes IMMED: " << use->action_data_bytes[IMMED] << " ADT: "
-         << use->action_data_bytes[ADT]);
+         << use->action_data_bytes[ADT] << " in table " << tbl->name);
     calculate_maximum();
 }
 
@@ -1497,6 +1486,7 @@ void ActionFormat::space_all_immediate_containers(int start_byte) {
                   "possibly allocate");
     }
 
+    // XXX(hanw): used where?
     std::sort(action_counts.begin(), action_counts.end(),
             [](const ActionContainerInfo &a, const ActionContainerInfo &b) {
         int t;
@@ -1592,7 +1582,8 @@ void ActionFormat::reserve_meter_color(SingleActionSlotPlacement &placement_vec,
  *  in pairs.
  */
 void ActionFormat::align_section(SingleActionSlotPlacement &placement_vec,
-        SingleActionSlotPlacement &output_vec, ActionContainerInfo &aci, location_t loc,
+        SingleActionSlotPlacement &output_vec, ActionContainerInfo &aci,
+        ActionFormat::ad_source_t source,
         bitmasked_t bm, bitvec layouts_placed[CONTAINER_TYPES],
         int placed[BITMASKED_TYPES][CONTAINER_TYPES]) {
     int multiplier = static_cast<int>(bm) + 1;
@@ -1605,7 +1596,7 @@ void ActionFormat::align_section(SingleActionSlotPlacement &placement_vec,
         }
         auto index = it->gen_index();
 
-        if (placed[bm][index] >= aci.total(loc, bm, static_cast<cont_type_t>(index))) {
+        if (placed[bm][index] >= aci.total(source, bm, static_cast<cont_type_t>(index))) {
             it++;
             continue;
         }
@@ -1613,17 +1604,18 @@ void ActionFormat::align_section(SingleActionSlotPlacement &placement_vec,
         int byte_sz = CONTAINER_SIZES[index] / 8;
         int lookup = 0;
         int init_byte = 0;
-        int max = aci.layouts[loc][index].max().index() + 1;
+        int max = aci.layouts[source][index].max().index() + 1;
         bool found = false;
 
         // Find the location of a placement, given an action's placement within actions
         do {
             found = true;
-            init_byte = aci.layouts[loc][index].ffs(lookup);
+            init_byte = aci.layouts[source][index].ffs(lookup);
             lookup = init_byte + byte_sz;
             if (layouts_placed[index].getrange(init_byte, byte_sz * multiplier) != 0) {
                 found = false;
-            } else if (aci.layouts[loc][index].getslice(init_byte, byte_sz * multiplier).popcount()
+            } else if (aci.layouts[source][index].getslice(
+                    init_byte, byte_sz * multiplier).popcount()
                 != byte_sz * multiplier) {
                 found = false;
             } else if ((init_byte % (byte_sz * multiplier)) != 0) {
@@ -1633,7 +1625,7 @@ void ActionFormat::align_section(SingleActionSlotPlacement &placement_vec,
         BUG_CHECK(found, "Could not match up action data allocation byte");
 
         it->byte_start = init_byte;
-        it->immediate = loc == IMMED ? true : false;
+        it->immediate = (source == IMMED) ? true : false;
         layouts_placed[index].setrange(init_byte, byte_sz * multiplier);
         placed[bm][index]++;
 
@@ -1711,7 +1703,7 @@ void ActionFormat::align_action_data_layouts() {
         SingleActionSlotPlacement output_vec;
         for (int i = IMMED; i >= ADT; i--) {
             int placed[BITMASKED_TYPES][CONTAINER_TYPES] = {{0, 0, 0}, {0, 0, 0}};
-            auto loc = static_cast<location_t>(i);
+            auto loc = static_cast<ad_source_t>(i);
             bitvec layouts_placed[CONTAINER_TYPES];
             if (i == IMMED) {
                 for (int i = 0; i < CONTAINER_TYPES; i++) {
@@ -1863,3 +1855,4 @@ void ActionFormat::calculate_immed_mask() {
 
     LOG2("Immediate mask " << use->immediate_mask);
 }
+

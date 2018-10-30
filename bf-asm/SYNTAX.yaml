@@ -231,6 +231,7 @@ stage <constant> <thread>:
             # Specifies list of params and values
         action_bus: { <int> : <name> | <int>..<int> : <name>, ... }
             # immediate actions data
+            # meter output data
         actions:
             # defines actions that can be used in the table
             <name> [<index>]:

@@ -10,6 +10,7 @@ class GenerateVLIWInstructions : public MauInspector, TofinoWriteContext {
     bool preorder(const IR::MAU::TableSeq *) override { return false; }
     bool preorder(const IR::MAU::BackendAttached *) override { return false; }
     bool preorder(const IR::MAU::AttachedOutput *) override { return false; }
+    bool preorder(const IR::MAU::StatefulCounter *) override { return false; }
     bool preorder(const IR::MAU::Action *) override;
     // Do not visit the stateful primitives
     bool preorder(const IR::MAU::StatefulCall *) override { return false; }

@@ -1135,23 +1135,48 @@ cstring format_name(int type) {
     return "";
 }
 
+// This function is used to generate action_data_bus info for TernaryIndirect,
+// ActionData and MAU::Table The 'source' field is used to control which action
+// data bus slot to emit for each type of caller. 'source' is the OR-ed result
+// of (1 << ActionFormat::ad_source_t)
 void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
-        const IR::MAU::Table *tbl, bool immediate) const {
+        const IR::MAU::Table *tbl, bitvec source) const {
     auto &action_data_xbar = tbl->resources->action_data_xbar;
-    auto &use = tbl->resources->action_format;
+    auto &action_data_use = tbl->resources->action_format;
+    auto &meter_xbar = tbl->resources->meter_xbar;
+    auto &meter_use = tbl->resources->meter_format;
     size_t max_total = 0;
+
     for (auto &rs : action_data_xbar.action_data_locs) {
-        if (rs.immediate == immediate)
+        if (source.getbit(ActionFormat::IMMED) && (rs.source == ActionFormat::IMMED))
             max_total++;
-    }
+        if (source.getbit(ActionFormat::ADT) && (rs.source == ActionFormat::ADT))
+            max_total++; }
+
+    using ActionDataBusSlot = std::pair<int /* type */, int /* byte_offset */>;
+    using HomeRowBusSlot = std::pair<int /* field_lo */, int /* field_hi */>;
+    using SlotToField = std::map<ActionDataBusSlot, std::set<HomeRowBusSlot>>;
+    SlotToField adb_to_hr;
+
+    for (auto &action : tbl->actions)
+        meter_use.setup_slot_to_field_bit_mapping(adb_to_hr, action.second->externalName());
+
+    for (auto &rs : meter_xbar.action_data_locs) {
+        ActionDataBusSlot slot = std::make_pair(rs.location.type, rs.byte_offset);
+        if (source.getbit(ActionFormat::METER) && rs.source == ActionFormat::METER &&
+            adb_to_hr.count(slot)) {
+            max_total++; } }
+
     if (max_total == 0)
         return;
-
 
     out << indent << "action_bus: { ";
     size_t total_index = 0;
     for (auto &rs : action_data_xbar.action_data_locs) {
-        if (immediate != rs.immediate) continue;
+        auto emit_immed = source.getbit(ActionFormat::IMMED) && (rs.source == ActionFormat::IMMED);
+        auto emit_adt = source.getbit(ActionFormat::ADT) && (rs.source == ActionFormat::ADT);
+        if (!emit_immed && !emit_adt) continue;
+        auto immed = (rs.source == ActionFormat::IMMED);
         bitvec total_range(0, ActionFormat::CONTAINER_SIZES[rs.location.type]);
         int byte_sz = ActionFormat::CONTAINER_SIZES[rs.location.type] / 8;
         out << rs.location.byte;
@@ -1165,7 +1190,7 @@ void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
         // For emitting hash distribution sections on the action_bus directly.  Must find
         // which slices of hash distribution are to go to which bytes, requiring coordination
         // from the input xbar and action format allocation
-        if (immediate && use.is_hash_dist(rs.byte_offset, &hd, lo, hi)) {
+        if (emit_immed && action_data_use.is_hash_dist(rs.byte_offset, &hd, lo, hi)) {
             const IXBar::HashDistUse *hd_use = nullptr;
             auto &hash_dist_uses = tbl->resources->hash_dists;
             for (auto &hash_dist_use : hash_dist_uses) {
@@ -1182,8 +1207,8 @@ void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
             le_bitrange field_range = { lo, hi };
             le_bitrange hd_range = { 0, 0 };
             int section = -1;
-            safe_vector<int> unit_indexes = use.find_hash_dist(hd, field_range, false, hd_range,
-                                                               section);
+            safe_vector<int> unit_indexes =
+                    action_data_use.find_hash_dist(hd, field_range, false, hd_range, section);
             for (auto unit_index : unit_indexes)
                 units.push_back(hd_use->slices[unit_index]);
 
@@ -1205,13 +1230,13 @@ void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
                 out << ", " << lo_hi;
             }
             out << ")";
-        } else if (immediate && use.is_rand_num(rs.byte_offset, &rn)) {
+        } else if (emit_immed && action_data_use.is_rand_num(rs.byte_offset, &rn)) {
             auto rng_use = action_data_xbar.rng_locs.at(rn);
             out << "rng(" << rng_use.unit << ", ";
             int lo = (rs.location.byte * 8) % 8;
             int hi = lo + byte_sz * 8 - 1;
             out << lo << ".." << hi << ")";
-        } else if (use.is_meter_color(rs.byte_offset, rs.immediate)) {
+        } else if (action_data_use.is_meter_color(rs.byte_offset, immed)) {
             for (auto back_at : tbl->attached) {
                 auto at = back_at->attached;
                 auto *mtr = at->to<IR::MAU::Meter>();
@@ -1220,7 +1245,7 @@ void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
                 break;
             }
         } else {
-            out << use.get_format_name(rs.byte_offset, rs.location.type, rs.immediate,
+            out << action_data_use.get_format_name(rs.byte_offset, rs.location.type, immed,
                                                 total_range, false);
         }
         if (total_index != max_total - 1)
@@ -1229,6 +1254,33 @@ void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
             out << " ";
         total_index++;
     }
+
+    bool emit_meter_action_data = source.getbit(ActionFormat::METER);
+    for (auto &rs : meter_xbar.action_data_locs) {
+        if (!emit_meter_action_data) continue;
+        BUG_CHECK(meter_use.attached != nullptr, "meter cannot be null");
+        cstring ret_name = find_attached_name(tbl, meter_use.attached);
+        ActionDataBusSlot slot = std::make_pair(rs.location.type, rs.byte_offset);
+        if (!adb_to_hr.count(slot))
+            continue;
+        auto field_bits = adb_to_hr.at(slot);
+        for (auto &s : field_bits) {
+            bitvec total_range(0, ActionFormat::CONTAINER_SIZES[rs.location.type]);
+            int byte_sz = ActionFormat::CONTAINER_SIZES[rs.location.type] / 8;
+            out << rs.location.byte;
+            if (byte_sz > 1)
+                out << ".." << (rs.location.byte + byte_sz - 1);
+            out << " : ";
+            out << ret_name;
+            out << "(" << s.first << ".." << s.second << ")";
+            if (total_index != max_total - 1)
+                out << ", ";
+            else
+                out << " ";
+        }
+        total_index++;
+    }
+
     out << "}" << std::endl;
 }
 
@@ -1649,6 +1701,12 @@ class MauAsmOutput::EmitAction : public Inspector {
             return false;
         } else {
             return preorder(static_cast<const IR::Expression *>(m)); } }
+    bool preorder(const IR::MAU::StatefulCounter *sc) override {
+        assert(sep);
+        out << sep << self.find_attached_name(table, sc->attached);
+        out << " address";
+        sep = ", ";
+        return false; }
     bool preorder(const IR::MAU::HashDist *hd) override {
         handle_hash_dist(hd);
         return false; }
@@ -2368,8 +2426,11 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
 
     emit_static_entries(out, indent, tbl);
 
+    bitvec source;
+    source.setbit(ActionFormat::IMMED);
+    source.setbit(ActionFormat::METER);
     if (!tbl->layout.ternary && !tbl->layout.no_match_miss_path())
-        emit_action_data_bus(out, indent, tbl, true);
+        emit_action_data_bus(out, indent, tbl, source);
 
     /* FIXME -- this is a mess and needs to be rewritten to be sane */
     bool have_action = false, have_indirect = false;
@@ -2819,7 +2880,9 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::TernaryIndirect *ti) {
     self.emit_ixbar(out, indent, &tbl->resources->match_ixbar, &tbl->resources->hash_dists,
                     nullptr, nullptr, false);
     self.emit_table_format(out, indent, tbl->resources->table_format, nullptr, true, false);
-    self.emit_action_data_bus(out, indent, tbl, true);
+    bitvec source;
+    source.setbit(ActionFormat::IMMED);
+    self.emit_action_data_bus(out, indent, tbl, source);
     self.emit_table_indir(out, indent, tbl, ti);
     return false;
 }
@@ -2842,7 +2905,9 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::ActionData *ad) {
         // if (act->args.empty()) continue;
         self.emit_action_data_format(out, indent, tbl, act);
     }
-    self.emit_action_data_bus(out, indent, tbl, false);
+    bitvec source;
+    source.setbit(ActionFormat::ADT);
+    self.emit_action_data_bus(out, indent, tbl, source);
     /*
     if (!tbl->actions.empty()) {
         out << indent++ << "actions:" << std::endl;

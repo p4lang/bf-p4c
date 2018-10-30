@@ -63,8 +63,7 @@ const IR::Node *Synth2PortSetup::postorder(IR::Primitive *prim) {
                 // dead use of the address, so discard it.
                 return nullptr; }
             auto t = IR::Type::Bits::get(32);
-            return new IR::Member(prim->srcInfo, t,
-                                  new IR::MAU::AttachedOutput(t, salu), "address"); }
+            return new IR::MAU::StatefulCounter(prim->srcInfo, t, salu); }
         auto ta_pair = tbl->name + "-" + act->name.originalName;
         BUG_CHECK(salu->action_map.count(ta_pair), "%s: Stateful Alu %s does not "
                   "have an action in it's action map", prim->srcInfo, salu->name);
@@ -262,6 +261,7 @@ bool DoInstructionSelection::checkSrc1(const IR::Expression *e) {
     if (e->is<IR::MAU::HashDist>()) return true;
     if (e->is<IR::MAU::RandomNumber>()) return true;
     if (e->is<IR::MAU::AttachedOutput>()) return true;
+    if (e->is<IR::MAU::StatefulCounter>()) return true;
     if (auto m = e->to<IR::Member>())
         if (m->expr->is<IR::MAU::AttachedOutput>())
             return true;
@@ -864,15 +864,15 @@ const IR::MAU::StatefulCall *
     auto prim = call->prim;
     BUG_CHECK(prim->operands.size() >= 1, "Invalid primitive %s", prim);
     auto gref = prim->operands[0]->to<IR::GlobalRef>();
-    auto synth2port = gref->obj->to<IR::MAU::Synth2Port>();
+    auto attached = gref->obj->to<IR::MAU::AttachedMemory>();
     auto act = findOrigCtxt<IR::MAU::Action>();
-    use_t use = self.action_use[act][synth2port];
+    use_t use = self.action_use[act][attached];
     if (!(use == IR::MAU::StatefulUse::NO_USE ||
           use == IR::MAU::StatefulUse::DIRECT ||
           use == IR::MAU::StatefulUse::INDIRECT)) {
         BUG_CHECK(call->index == nullptr, "%s: Primitive cannot both have index and use "
                   "counter index: %s", prim->srcInfo, prim);
-        call->index = new IR::MAU::StatefulCounter(prim->srcInfo, prim->type);
+        call->index = new IR::MAU::StatefulCounter(prim->srcInfo, prim->type, attached);
     }
 
     prune();

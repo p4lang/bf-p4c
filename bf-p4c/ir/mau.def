@@ -625,6 +625,7 @@ class ActionArg : Expression {
 }
 
 class StatefulCounter : Expression {
+    AttachedMemory     attached;
     dbprint { out << "stful_cnt(" << type << ")"; }
 }
 

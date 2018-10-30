@@ -81,6 +81,8 @@ void ActionAnalysis::initialize_action_data(const IR::Expression *expr) {
         field_action.reads.back().speciality = classify_attached_output(ao);
     if (field_action.reads.back().unsliced_expr()->is<IR::MAU::HashDist>())
         field_action.reads.back().speciality = ActionParam::HASH_DIST;
+    if (field_action.reads.back().unsliced_expr()->is<IR::MAU::StatefulCounter>())
+        field_action.reads.back().speciality = ActionParam::STFUL_COUNTER;
 }
 
 ActionAnalysis::ActionParam::speciality_t
@@ -117,11 +119,12 @@ const IR::Expression *ActionAnalysis::isActionParam(const IR::Expression *e,
     }
     if (e->is<IR::MAU::ActionArg>() || e->is<IR::MAU::ActionDataConstant>()
         || e->is<IR::MAU::AttachedOutput>() || e->is<IR::MAU::HashDist>()
-        || e->is<IR::MAU::RandomNumber>()) {
+        || e->is<IR::MAU::RandomNumber>() || e->is<IR::MAU::StatefulCounter>()) {
         if (bits_out)
             *bits_out = bits;
         if ((e->is<IR::MAU::ActionArg>() || e->is<IR::MAU::AttachedOutput>()
-            || e->is<IR::MAU::HashDist>() || e->is<IR::MAU::RandomNumber>()) && type)
+            || e->is<IR::MAU::HashDist>() || e->is<IR::MAU::RandomNumber>()
+            || e->is<IR::MAU::StatefulCounter>()) && type)
             *type = ActionParam::ACTIONDATA;
         if (e->is<IR::MAU::ActionDataConstant>() && type)
             *type = ActionParam::CONSTANT;
@@ -225,6 +228,11 @@ bool ActionAnalysis::preorder(const IR::MAU::StatefulAlu *) {
 }
 
 bool ActionAnalysis::preorder(const IR::MAU::StatefulCall *) {
+    return false;
+}
+
+bool ActionAnalysis::preorder(const IR::MAU::StatefulCounter *sc) {
+    initialize_action_data(sc);
     return false;
 }
 
