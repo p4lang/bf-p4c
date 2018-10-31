@@ -483,6 +483,21 @@ class StatefulAlu : Synth2Port {
         MathUnit() { memset(this, 0, sizeof(*this)); }
         operator== { return memcmp(this, &a, sizeof(*this)) == 0; }
         dbprint { out << valid; }
+        toJSON {
+            json << json.indent << "\"valid\" : " << valid << ",\n"
+                 << json.indent << "\"exp_invert\" : " << exp_invert << ",\n"
+                 << json.indent << "\"exp_shift\" : " << exp_shift << ",\n"
+                 << json.indent << "\"scale\" : " << scale << ",\n"
+                 << json.indent << "\"table\" : " << table; }
+        fromJSON {
+            if (!json.json) return nullptr;
+            MathUnit* mu = new MathUnit();
+            json.load("valid", mu->valid);
+            json.load("exp_invert", mu->exp_invert);
+            json.load("exp_shift", mu->exp_shift);
+            json.load("scale", mu->scale);
+            json.load("table", mu->table);
+            return mu; }
     }
     MathUnit            math = MathUnit();
 

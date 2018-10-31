@@ -438,7 +438,7 @@ void IR::MAU::hash_function::toJSON(JSONGenerator &json) const {
          << json.indent << "\"reverse\": " << reverse << ",\n"
          << json.indent << "\"poly\": " << poly << ",\n"
          << json.indent << "\"init\": " << init << ",\n"
-         << json.indent << "\"xor\": " << final_xor << ",\n";
+         << json.indent << "\"xor\": " << final_xor;
 }
 
 void IR::MAU::hash_function::build_algorithm_t(bfn_hash_algorithm_ *alg) const {
