@@ -208,14 +208,15 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue297-bmv2.p4
   )
 
-# BRIG-108
 p4c_add_xfail_reason("tofino"
-  "No format in action table"
+  "Action profile .* does not have any action data"
   testdata/p4_14_samples/selector0.p4
-  #testdata/p4_16_samples/action_profile-bmv2.p4
-  #testdata/p4_16_samples/issue297-bmv2.p4
   extensions/p4_tests/p4_14/bf_p4c_samples/port_vlan_mapping.p4
+  extensions/p4_tests/p4_14/02-FlexCounterActionProfile.p4
+  testdata/p4_14_samples/const_default_action.p4
+  extensions/p4_tests/p4_14/p4smith_regression/tofino-bug-2.p4
   )
+
 
 # BRIG-956, parser wide match
 p4c_add_xfail_reason("tofino"
@@ -254,10 +255,6 @@ p4c_add_xfail_reason("tofino"
   # extensions/p4_tests/p4_14/p4-tests/programs/pctr/pctr.p4 # update path when test is added
 #  )
 
-p4c_add_xfail_reason("tofino"
-  "error: No format in action table"
-  extensions/p4_tests/p4_14/02-FlexCounterActionProfile.p4
-  )
 
 p4c_add_xfail_reason("tofino"
   "PHV allocation creates a container action impossible within a Tofino ALU"
@@ -404,8 +401,8 @@ p4c_add_xfail_reason("tofino"
   "Tables .* and .* are not mutually exclusive"
   extensions/p4_tests/p4_14/action_profile_not_shared.p4
   extensions/p4_tests/p4_14/action_profile_next_stage.p4
-  testdata/p4_16_samples/action_selector_shared-bmv2.p4
 #   extensions/p4_tests/p4_14/c1/COMPILER-235/vag1662.p4
+  testdata/p4_16_samples/action_selector_shared-bmv2.p4
   testdata/p4_14_samples/12-Counters.p4
   testdata/p4_14_samples/13-Counters1and2.p4
   )
@@ -1215,7 +1212,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Could not place table"
   extensions/p4_tests/p4_14/p4-tests/programs/power/power.p4
-  extensions/p4_tests/p4_14/p4smith_regression/tofino-bug-2.p4
 )
 
 # BRIG-584
@@ -1368,11 +1364,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "already set in .* to"
   extensions/p4_tests/p4_16/ipv6_tlv.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "No format in action table"
-  testdata/p4_14_samples/const_default_action.p4
 )
 
 # test program error

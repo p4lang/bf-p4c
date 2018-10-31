@@ -1,5 +1,6 @@
 #include "bf-p4c/mau/handle_assign.h"
 #include "lib/safe_vector.h"
+#include "bf-p4c/mau/resource_estimate.h"
 
 
 bool AssignActionHandle::ActionProfileImposedConstraints::preorder(const IR::MAU::ActionData *ad) {
@@ -118,6 +119,20 @@ bool AssignActionHandle::ValidateSelectors::preorder(const IR::MAU::Selector *se
     }
 
     auto sel_entry = selector_keys.find(sel);
+    if (sel_entry != selector_keys.end() &&
+        sel->max_pool_size > StageUseEstimate::SINGLE_RAMLINE_POOL_SIZE) {
+        /**
+         * Due to the register rams.match.merge.mau_meter_alu_to_logical_map being an OXBar,
+         * one can only assign a single logical table to a wide hash mod.  Thus, a selector
+         * that requires a hash mod cannot be shared
+         */
+        ::error("%s: The selector %s cannot be shared between tables %s and %s, because "
+                "it requires a max pool size of %d.  In order to share a selector on Barefoot "
+                "HW, the max pool size must be %d", sel->srcInfo, sel->name, tbl->name,
+                initial_table.at(sel), sel->max_pool_size,
+                StageUseEstimate::SINGLE_RAMLINE_POOL_SIZE);
+    }
+
     if (sel_entry == selector_keys.end()) {
         selector_keys[sel] = field_slice_vec;
         initial_table[sel] = tbl;

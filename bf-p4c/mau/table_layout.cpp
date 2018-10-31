@@ -11,13 +11,12 @@
 #include "lib/bitops.h"
 #include "lib/log.h"
 
-Visitor::profile_t TableLayout::init_apply(const IR::Node *root) {
+Visitor::profile_t DoTableLayout::init_apply(const IR::Node *root) {
     alloc_done = phv.alloc_done();
-    lc.clear();
     return MauModifier::init_apply(root);
 }
 
-bool TableLayout::backtrack(trigger &trig) {
+bool DoTableLayout::backtrack(trigger &trig) {
     return (trig.is<IXBar::failure>() || trig.is<ActionFormat::failure>()) && !alloc_done;
 }
 
@@ -56,7 +55,7 @@ bool TableLayout::backtrack(trigger &trig) {
  *  If no number of partitions is specified, then the number of partitions is:
  *      2 ^ (partition index bits)
  */
-void TableLayout::check_for_atcam(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl,
+void DoTableLayout::check_for_atcam(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl,
                                   cstring &partition_index, const PhvInfo& phv) {
     auto annot = tbl->match_table->getAnnotations();
     bool index_found = false;
@@ -112,7 +111,7 @@ void TableLayout::check_for_atcam(IR::MAU::Table::Layout &layout, const IR::MAU:
         layout.partition_count = partition_count;
 }
 
-void TableLayout::check_for_alpm(IR::MAU::Table::Layout &, const IR::MAU::Table *tbl,
+void DoTableLayout::check_for_alpm(IR::MAU::Table::Layout &, const IR::MAU::Table *tbl,
                                   cstring &partition_index) {
     auto hdr_instance_name = tbl->name + "__metadata";
     auto pidx_field_name = tbl->name + "_partition_index";
@@ -122,7 +121,7 @@ void TableLayout::check_for_alpm(IR::MAU::Table::Layout &, const IR::MAU::Table 
 }
 
 
-void TableLayout::check_for_ternary(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl) {
+void DoTableLayout::check_for_ternary(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl) {
     auto annot = tbl->match_table->getAnnotations();
     if (auto s = annot->getSingle("ternary")) {
         if (s->expr.size() <= 0) {
@@ -153,7 +152,7 @@ void TableLayout::check_for_ternary(IR::MAU::Table::Layout &layout, const IR::MA
     }
 }
 
-void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl) {
+void DoTableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl) {
     if (tbl->layout.pre_classifier)
         layout.entries = tbl->layout.pre_classifer_number_entries;
     else if (auto k = tbl->match_table->getConstantProperty("size"))
@@ -316,7 +315,7 @@ class GatewayLayout : public MauInspector {
     explicit GatewayLayout(IR::MAU::Table::Layout &l) : layout(l) {}
 };
 
-void TableLayout::setup_gateway_layout(IR::MAU::Table::Layout &layout, IR::MAU::Table *tbl) {
+void DoTableLayout::setup_gateway_layout(IR::MAU::Table::Layout &layout, IR::MAU::Table *tbl) {
     for (auto &gw : tbl->gateway_rows)
         gw.first->apply(GatewayLayout(layout));
     // should count gw tcam width and depth to support gw splitting when needed
@@ -325,7 +324,7 @@ void TableLayout::setup_gateway_layout(IR::MAU::Table::Layout &layout, IR::MAU::
 /** Initializes the list of action formats that are possible for the table, with different
  *  layouts in both action data tables as well as immediate
  */
-void TableLayout::setup_action_layout(IR::MAU::Table *tbl) {
+void DoTableLayout::setup_action_layout(IR::MAU::Table *tbl) {
     tbl->layout.action_data_bytes = 0;
     safe_vector<ActionFormat::Use> uses;
     ActionFormat af(tbl, phv, alloc_done);
@@ -345,7 +344,7 @@ void TableLayout::setup_action_layout(IR::MAU::Table *tbl) {
 
 /* Setting up the potential layouts for ternary, either with or without immediate
    data if immediate is possible */
-void TableLayout::setup_ternary_layout_options(IR::MAU::Table *tbl) {
+void DoTableLayout::setup_ternary_layout_options(IR::MAU::Table *tbl) {
     LOG2("Setup TCAM match layouts " << tbl->name);
     if (tbl->hit_actions() == 1)
         tbl->layout.overhead_bits++;
@@ -377,7 +376,7 @@ void TableLayout::setup_ternary_layout_options(IR::MAU::Table *tbl) {
  * Lastly, the width <= 8, as that is the maximal width of the RAM array on which to
  * perform a wide match.
  */
-void TableLayout::setup_exact_match(IR::MAU::Table *tbl, int action_data_bytes_in_table,
+void DoTableLayout::setup_exact_match(IR::MAU::Table *tbl, int action_data_bytes_in_table,
                                     int immediate_bits, int index) {
     auto annot = tbl->match_table->getAnnotations();
     int pack_val = 0;
@@ -489,7 +488,7 @@ void TableLayout::setup_exact_match(IR::MAU::Table *tbl, int action_data_bytes_i
 
 /* Setting up the potential layouts for exact match, with different numbers of entries per row,
    different ram widths, and immediate data on and off */
-void TableLayout::setup_layout_options(IR::MAU::Table *tbl) {
+void DoTableLayout::setup_layout_options(IR::MAU::Table *tbl) {
     LOG2("Determining SRAM match layouts " << tbl->name);
     int index = 0;
     bool hash_action_only = false;
@@ -525,7 +524,7 @@ class GetHashDistReqs : public MauInspector {
 /* FIXME: This function is for the setup of a table with no match data.  This is currently hacked
    together in order to pass many of the test cases.  This needs to have some standardization
    within the assembly so that all tables that do not require match can possibly work */
-void TableLayout::setup_layout_option_no_match(IR::MAU::Table *tbl) {
+void DoTableLayout::setup_layout_option_no_match(IR::MAU::Table *tbl) {
     LOG2("Determining no match table layouts " << tbl->name);
     GetHashDistReqs ghdr;
     tbl->attached.apply(ghdr);
@@ -559,7 +558,7 @@ void TableLayout::setup_layout_option_no_match(IR::MAU::Table *tbl) {
  * To note, direct addressed tables such as counters/meters/stateful tables can also have
  * their address replaced, similar to action data tables.
  */
-bool TableLayout::can_be_hash_action(IR::MAU::Table *tbl, std::string &reason) {
+bool DoTableLayout::can_be_hash_action(IR::MAU::Table *tbl, std::string &reason) {
     if (tbl->layout.atcam || tbl->layout.no_match_data())
         return false;
 
@@ -602,7 +601,7 @@ bool TableLayout::can_be_hash_action(IR::MAU::Table *tbl, std::string &reason) {
  * Adds the hash action layout as a potential choice for a layout for a table, if that
  * layout is possible.
  */
-void TableLayout::add_hash_action_option(IR::MAU::Table *tbl, bool &hash_action_only) {
+void DoTableLayout::add_hash_action_option(IR::MAU::Table *tbl, bool &hash_action_only) {
     std::string hash_action_reason = "";
     bool possible = can_be_hash_action(tbl, hash_action_reason);
     hash_action_only = false;
@@ -767,7 +766,8 @@ class VisitAttached : public Inspector {
 };
 }  // namespace
 
-void TableLayout::setup_instr_and_next(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl) {
+void DoTableLayout::setup_instr_and_next(IR::MAU::Table::Layout &layout,
+         const IR::MAU::Table *tbl) {
     layout.total_actions = tbl->actions.size();
     int hit_actions = tbl->hit_actions();
     if (hit_actions > 0) {
@@ -789,7 +789,7 @@ void TableLayout::setup_instr_and_next(IR::MAU::Table::Layout &layout, const IR:
     }
 }
 
-bool TableLayout::preorder(IR::MAU::Table *tbl) {
+bool DoTableLayout::preorder(IR::MAU::Table *tbl) {
     LOG1("## layout table " << tbl->name);
     tbl->layout.ixbar_bytes = tbl->layout.match_bytes = tbl->layout.match_width_bits =
     tbl->layout.action_data_bytes = tbl->layout.overhead_bits = 0;
@@ -814,7 +814,7 @@ bool TableLayout::preorder(IR::MAU::Table *tbl) {
 }
 
 
-bool TableLayout::preorder(IR::MAU::Action *act) {
+bool DoTableLayout::preorder(IR::MAU::Action *act) {
     auto tbl = findContext<IR::MAU::Table>();
     if (tbl->layout.no_match_hit_path())
         return false;
@@ -861,7 +861,7 @@ bool TableLayout::preorder(IR::MAU::Action *act) {
     return false;
 }
 
-bool TableLayout::preorder(IR::MAU::InputXBarRead *read) {
+bool DoTableLayout::preorder(IR::MAU::InputXBarRead *read) {
     auto tbl = findContext<IR::MAU::Table>();
     if (tbl->layout.atcam) {
         cstring partition_index;
@@ -889,7 +889,7 @@ bool TableLayout::preorder(IR::MAU::InputXBarRead *read) {
     return false;
 }
 
-bool TableLayout::preorder(IR::MAU::Selector *sel) {
+bool DoTableLayout::preorder(IR::MAU::Selector *sel) {
     auto tbl = findContext<IR::MAU::Table>();
     if (SelectorLengthBits(sel) <= 0) {
         return false;
@@ -1038,4 +1038,56 @@ void calculate_lrt_threshold_and_interval(const IR::MAU::Table *tbl, IR::MAU::Co
 bool FinalTableLayout::preorder(IR::MAU::Counter *cntr) {
     calculate_lrt_threshold_and_interval(findContext<IR::MAU::Table>(), cntr);
     return false;
+}
+
+/**
+ * An action profile requires action data to be saved somewhere in RAM space.  If the action
+ * profile does not require action data, then the profile is pointless, and is currently not
+ * allowed in Brig, as the driver needs some RAM space in order to figure out where to save
+ * entries
+ */
+bool ValidateActionProfileFormat::preorder(const IR::MAU::ActionData *ad) {
+    auto tbl = findContext<IR::MAU::Table>();
+    auto formats = lc.get_action_formats(tbl);
+    BUG_CHECK(formats.size() == 1, "%s: Compiler generated multiple formats for action profile "
+              "%s on table %s", ad->srcInfo, ad->name, tbl->name);
+    if (formats.size() > 0)
+        ERROR_CHECK(formats[0].action_data_bytes[ActionFormat::ADT] > 0, "%s: Action profile "
+                    "%s on table %s does not have any action data (either because no action data "
+                    "has been provided, or the action data has been dead code eliminated.  "
+                    "An action data free action profile is not supported", ad->srcInfo, ad->name,
+                    tbl->name);
+    return false;
+}
+/**
+ * This constraint code is copied from handle_assign.cpp, where this is validated
+ *
+ * Due to the register rams.match.merge.mau_meter_alu_to_logical_map being an OXBar,
+ * one can only assign a single logical table to a wide hash mod.  Thus, a selector
+ * that requires a hash mod cannot be shared
+ */
+bool ProhibitAtcamWideSelectors::preorder(const IR::MAU::Selector *as) {
+    auto tbl = findContext<IR::MAU::Table>();
+    if (as->max_pool_size > StageUseEstimate::SINGLE_RAMLINE_POOL_SIZE && tbl->layout.atcam) {
+        ::error("%s: ATCAM table %s cannot have selector %s.  An ATCAM table may require "
+                "multiple logical tables, and a selector that has a max pool size greater "
+                "than %d, (in this instance %d), the selector can only belong to a single "
+                "logical table", as->srcInfo, tbl->name, as->name,
+                 StageUseEstimate::SINGLE_RAMLINE_POOL_SIZE, as->max_pool_size);
+    }
+    return false;
+}
+
+Visitor::profile_t TableLayout::init_apply(const IR::Node *node) {
+    auto rv = PassManager::init_apply(node);
+    lc.clear();
+    return rv;
+}
+
+TableLayout::TableLayout(const PhvInfo &p, LayoutChoices &l) : phv(p), lc(l) {
+    addPasses({
+        new DoTableLayout(p, lc),
+        new ValidateActionProfileFormat(lc),
+        new ProhibitAtcamWideSelectors
+    });
 }

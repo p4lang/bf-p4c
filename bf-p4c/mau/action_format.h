@@ -448,7 +448,7 @@ struct ActionFormat {
         HashDistALUFormat hash_dist_placement;
         RandNumALUFormat rand_num_placement;
 
-        int action_data_bytes[LOCATIONS];
+        int action_data_bytes[LOCATIONS] = { 0, 0 };
 
         bitvec immediate_mask;
         bitvec total_layouts[LOCATIONS][CONTAINER_TYPES];

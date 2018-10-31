@@ -19,9 +19,10 @@ class AssignActionHandle : public PassManager {
     class ActionProfileImposedConstraints : public MauInspector {
         ordered_map<const IR::MAU::ActionData *, std::set<cstring>> profile_actions;
         bool preorder(const IR::MAU::ActionData *) override;
+        bool preorder(const IR::MAU::Table *) override { visitOnce(); return true; }
 
      public:
-        ActionProfileImposedConstraints() {}
+        ActionProfileImposedConstraints() { visitDagOnce = false; }
     };
 
     typedef ordered_map<const IR::MAU::Action *, unsigned> HandleAssignments;
@@ -62,6 +63,7 @@ class AssignActionHandle : public PassManager {
 
         profile_t init_apply(const IR::Node *root) override;
         bool preorder(const IR::MAU::Selector *sel) override;
+        bool preorder(const IR::MAU::Table *) override { visitOnce(); return true; }
 
      public:
         explicit ValidateSelectors(const PhvInfo &phv) : phv(phv) { visitDagOnce = false; }

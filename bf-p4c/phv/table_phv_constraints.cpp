@@ -21,14 +21,14 @@ void TablePhvConstraints::end_apply() {
 bool TablePhvConstraints::isATCAM(IR::MAU::Table *tbl) const {
     cstring partition_index;
     IR::MAU::Table::Layout layout;
-    TableLayout::check_for_atcam(layout, tbl, partition_index, phv);
+    DoTableLayout::check_for_atcam(layout, tbl, partition_index, phv);
     return layout.atcam;
 }
 
 bool TablePhvConstraints::isTernary(IR::MAU::Table *tbl) const {
     if (!tbl->match_table) return false;
     IR::MAU::Table::Layout layout;
-    TableLayout::check_for_ternary(layout, tbl);
+    DoTableLayout::check_for_ternary(layout, tbl);
     return layout.ternary;
 }
 

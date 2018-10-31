@@ -84,7 +84,7 @@ class LayoutChoices {
     }
 };
 
-class TableLayout : public MauModifier, Backtrack {
+class DoTableLayout : public MauModifier, Backtrack {
     // In order to know how many field sections can be packed together into the same byte
     struct MatchByteKey {
         cstring name;
@@ -137,10 +137,35 @@ class TableLayout : public MauModifier, Backtrack {
     void add_hash_action_option(IR::MAU::Table *tbl, bool &hash_action_only);
 
  public:
-    explicit TableLayout(const PhvInfo &p, LayoutChoices &l) : phv(p), lc(l) {}
+    explicit DoTableLayout(const PhvInfo &p, LayoutChoices &l) : phv(p), lc(l) {}
     static void check_for_ternary(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl);
     static void check_for_atcam(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl,
                                 cstring &partition_index, const PhvInfo& phv);
+};
+
+class ValidateActionProfileFormat : public MauInspector {
+    const LayoutChoices &lc;
+
+    bool preorder(const IR::MAU::ActionData *) override;
+
+ public:
+    explicit ValidateActionProfileFormat(const LayoutChoices &l) : lc(l) { visitDagOnce = false; }
+};
+
+class ProhibitAtcamWideSelectors : public MauInspector {
+    bool preorder(const IR::MAU::Table *) override { visitOnce(); return true; }
+    bool preorder(const IR::MAU::Selector *) override;
+ public:
+     ProhibitAtcamWideSelectors() { visitDagOnce = false; }
+};
+
+class TableLayout : public PassManager {
+    const PhvInfo &phv;
+    LayoutChoices &lc;
+
+    profile_t init_apply(const IR::Node *root) override;
+ public:
+    TableLayout(const PhvInfo &p, LayoutChoices &l);
 };
 
 /// Run after TablePlacement to fix up anything needed in the layout as a result
