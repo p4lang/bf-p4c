@@ -154,8 +154,18 @@ int IR::MAU::Table::action_next_paths() const {
 }
 
 int IR::MAU::Table::get_provided_stage() const {
-    if (gateway_only())
-        return -1;
+    if (gateway_only()) {
+        int min_stage = -1;
+        for (auto *seq : Values(next)) {
+            int i = -1;
+            for (auto *tbl : seq->tables) {
+                if (seq->deps[++i]) continue;  // ignore tables dependent on earlier tables in seq
+                int stage = tbl->get_provided_stage();
+                if (stage < 0) return -1;  // no minimum stage
+                if (stage < min_stage || min_stage == -1)
+                    min_stage = stage; } }
+        return min_stage; }
+    if (!match_table) return -1;
     auto annot = match_table->annotations->getSingle("stage");
     if (annot == nullptr)
         return -1;

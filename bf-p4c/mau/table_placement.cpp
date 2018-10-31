@@ -1095,12 +1095,15 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choic
     if (a->stage > b->stage) return false;
 
     choice = PROV_STAGE;
+    bool provided_stage = false;
     int a_provided_stage = a->table->get_provided_stage();
     int b_provided_stage = b->table->get_provided_stage();
 
     if (a_provided_stage >= 0 && b_provided_stage >= 0) {
         if (a_provided_stage != b_provided_stage)
             return a_provided_stage < b_provided_stage;
+        // Both tables need to be in THIS stage...
+        provided_stage = true;
     } else if (a_provided_stage >= 0 && b_provided_stage < 0) {
         return true;
     } else if (b_provided_stage >= 0 && a_provided_stage < 0) {
@@ -1116,8 +1119,11 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choic
     int b_deps_stages_control = downward_prop_score.second.deps_stages_control;
 
     choice = DOWNWARD_PROP_DSC;
-    if (a_deps_stages_control > b_deps_stages_control) return true;
-    if (a_deps_stages_control < b_deps_stages_control) return false;
+    // if the tables need to be in THIS stage, we reverse the sense of this test, as
+    // the longer downward prop is likely to have tables that will force advancing to next
+    // stage before placing them, which will then fail the provided stage.
+    if (a_deps_stages_control > b_deps_stages_control) return !provided_stage;
+    if (a_deps_stages_control < b_deps_stages_control) return provided_stage;
 
     int a_stages_upward_prop = upward_prop_score.first.deps_stages_control;
     int b_stages_upward_prop = upward_prop_score.second.deps_stages_control;
@@ -1301,6 +1307,25 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
             LOG2("  Gateway " << p->gw->name << " is also logical id 0x" << hex(p->logical_id));
             assert(p->need_more || table_placed.count(p->gw->name) == 0);
             table_placed.emplace_hint(table_placed.find(p->gw->name), p->gw->name, p); } }
+    for (auto &el : attached_to) {
+        auto *at = el.first;
+        if (at->direct || can_duplicate(at)) continue;
+        int first_stage = 99999, last_stage = -1;
+        for (auto *t : el.second) {
+            int count_stages = 0;
+            for (auto *p : ValuesForKey(table_placed, t->name)) {
+                if (p->stage < first_stage) first_stage = p->stage;
+                if (p->stage > last_stage) last_stage = p->stage;
+                count_stages++; }
+            if (count_stages > 1)
+                error("Can't split %s with indirect attached %s across stages -- "
+                      "try making it smaller", t, at); }
+        if (first_stage != last_stage && el.second.size() > 1) {
+            error("Failed to place tables that %s is attached to in the same stage, try "
+                  "using @stage (%d) on tables", at, last_stage);
+            for (auto *t : el.second)
+                error("-- placed table %s in stage %d", t->name,
+                      table_placed.find(t->name)->second->stage); } }
     LOG1("Finished table placement decisions " << pipe->name);
     return pipe;
 }

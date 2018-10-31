@@ -284,7 +284,8 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "error.*Power worst case estimated budget exceeded by*"
+  "error: Failed to place tables .* in the same stage"
+  #"error.*Power worst case estimated budget exceeded by*"
   #extensions/p4_tests/p4_14/p4-tests/programs/clpm/clpm.p4 # update path when test is added
   switch_l3_heavy_int_leaf
   switch_8.4_l3_heavy_int_leaf
