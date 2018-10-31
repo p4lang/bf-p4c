@@ -77,17 +77,19 @@ static void merge(std::map<T, std::set<T>> &my,
     }
 }
 
-using ParserStateMap = std::map<const IR::BFN::ParserState*,
-                                std::set<const IR::BFN::ParserState*>>;
+template <class State>
+struct ParserStateMap : public std::map<const State*, std::set<const State*>> { };
 
+template <class Parser, class State, class Transition>
 struct ParserStateMutex {
-    std::set<const IR::BFN::ParserState*> _states_encountered;
-    ParserStateMap _mutually_inclusive;
-    ParserStateMap _mutually_exclusive;
+    std::set<const State*> _states_encountered;
 
-    const ParserStateMap& mutex_state_map() const { return _mutually_exclusive; }
+    ParserStateMap<State> _mutually_inclusive;
+    ParserStateMap<State> _mutually_exclusive;
 
-    bool mutex(const IR::BFN::ParserState* a, const IR::BFN::ParserState* b) const {
+    const ParserStateMap<State>& mutex_state_map() const { return _mutually_exclusive; }
+
+    bool mutex(const State* a, const State* b) const {
         if (_mutually_exclusive.count(a) > 0)
             if (_mutually_exclusive.at(a).count(b) > 0)
                 return true;
@@ -109,31 +111,33 @@ static void print(const ParserStateMap& psm) {
 }
 */
 
-class ParserGraph : public DirectedGraph {
+template <class Parser, class State, class Transition>
+class ParserGraphImpl : public DirectedGraph {
  public:
-    friend class CollectParserInfo;
+    template <class P, class S, class T>
+    friend class CollectParserInfoImpl;
 
-    ParserGraph() {}
+    ParserGraphImpl() {}
 
-    const std::set<const IR::BFN::ParserState*>& states() const { return _states; }
+    const std::set<const State*>& states() const { return _states; }
 
-    const ParserStateMap& successors() const { return _succs; }
+    const ParserStateMap<State>& successors() const { return _succs; }
 
-    const ParserStateMap& predecessors() const { return _preds; }
+    const ParserStateMap<State>& predecessors() const { return _preds; }
 
-    const std::map<const IR::BFN::ParserState*,
-                   const IR::BFN::Transition*>& to_pipe() const { return _to_pipe; }
+    const std::map<const State*,
+                   const Transition*>& to_pipe() const { return _to_pipe; }
 
-    const IR::BFN::Transition*
-    transition(const IR::BFN::ParserState* src,
-               const IR::BFN::ParserState* dst) const {
+    const Transition*
+    transition(const State* src,
+               const State* dst) const {
         if (_transitions.count({src, dst}))
             return _transitions.at({src, dst});
 
         return nullptr;
     }
 
-    const IR::BFN::Transition* to_pipe(const IR::BFN::ParserState* src) const {
+    const Transition* to_pipe(const State* src) const {
         if (_to_pipe.count(src))
             return _to_pipe.at(src);
 
@@ -141,7 +145,7 @@ class ParserGraph : public DirectedGraph {
     }
 
     /// Is "src" an ancestor of "dst"?
-    bool is_ancestor(const IR::BFN::ParserState* src, const IR::BFN::ParserState* dst) const {
+    bool is_ancestor(const State* src, const State* dst) const {
         if (src == dst)
             return false;
 
@@ -159,28 +163,28 @@ class ParserGraph : public DirectedGraph {
         return false;
     }
 
-    bool is_descendant(const IR::BFN::ParserState* src, const IR::BFN::ParserState* dst) const {
+    bool is_descendant(const State* src, const State* dst) const {
         return is_ancestor(dst, src);
     }
 
-    std::set<const IR::BFN::ParserState*>
-    get_all_descendants(const IR::BFN::ParserState* src) const {
-        std::set<const IR::BFN::ParserState*> rv;
+    std::set<const State*>
+    get_all_descendants(const State* src) const {
+        std::set<const State*> rv;
         get_all_descendants_impl(src, rv);
         return rv;
     }
 
-    std::vector<const IR::BFN::ParserState*> topological_sort() const {
+    std::vector<const State*> topological_sort() const {
         std::vector<int> result = DirectedGraph::topological_sort();
-        std::vector<const IR::BFN::ParserState*> mapped_result;
+        std::vector<const State*> mapped_result;
         for (auto id : result)
             mapped_result.push_back(get_state(id));
         return mapped_result;
     }
 
  private:
-    void get_all_descendants_impl(const IR::BFN::ParserState* src,
-                                  std::set<const IR::BFN::ParserState*>& rv) const {
+    void get_all_descendants_impl(const State* src,
+                                  std::set<const State*>& rv) const {
         if (!successors().count(src))
             return;
 
@@ -190,11 +194,11 @@ class ParserGraph : public DirectedGraph {
         }
     }
 
-    void add_state(const IR::BFN::ParserState* s) {
+    void add_state(const State* s) {
         _states.insert(s);
     }
 
-    void add_transition(const IR::BFN::ParserState* state, const IR::BFN::Transition* t) {
+    void add_transition(const State* state, const Transition* t) {
         if (t->next) {
             add_state(state);
             add_state(t->next);
@@ -207,7 +211,7 @@ class ParserGraph : public DirectedGraph {
         }
     }
 
-    void merge_with(const ParserGraph& other) {
+    void merge_with(const ParserGraphImpl& other) {
         _states.insert(other.states().begin(), other.states().end());
 
         merge(_succs, other.successors());
@@ -227,43 +231,61 @@ class ParserGraph : public DirectedGraph {
                 DirectedGraph::add_edge(get_id(t.first), get_id(dst));
     }
 
-    int get_id(const IR::BFN::ParserState* s) {
+    int get_id(const State* s) {
         if (_state_to_id.count(s) == 0)
             add_state(s);
         return _state_to_id.at(s);
     }
 
-    const IR::BFN::ParserState* get_state(int id) const {
+    const State* get_state(int id) const {
         return _id_to_state.at(id);
     }
 
  private:
-    std::set<const IR::BFN::ParserState*> _states;
+    std::set<const State*> _states;
 
-    ParserStateMap _succs, _preds;
+    ParserStateMap<State> _succs, _preds;
 
-    std::map<std::pair<const IR::BFN::ParserState*, const IR::BFN::ParserState*>,
-             const IR::BFN::Transition*> _transitions;
+    std::map<std::pair<const State*, const State*>,
+             const Transition*> _transitions;
 
-    std::map<const IR::BFN::ParserState*,
-             const IR::BFN::Transition*> _to_pipe;
+    std::map<const State*,
+             const Transition*> _to_pipe;
 
-    std::map<const IR::BFN::ParserState*, int> _state_to_id;
-    std::map<int, const IR::BFN::ParserState*> _id_to_state;
+    std::map<const State*, int> _state_to_id;
+    std::map<int, const State*> _id_to_state;
 };
 
-class CollectParserInfo : public BFN::ControlFlowVisitor, public PardeInspector {
+namespace IR {
+namespace BFN {
+
+using ParserGraph = ParserGraphImpl<IR::BFN::Parser,
+                                    IR::BFN::ParserState,
+                                    IR::BFN::Transition>;
+
+using LoweredParserGraph = ParserGraphImpl<IR::BFN::LoweredParser,
+                                           IR::BFN::LoweredParserState,
+                                           IR::BFN::LoweredParserMatch>;
+}  // namespace BFN
+}  // namespace IR
+
+template <class Parser, class State, class Transition>
+class CollectParserInfoImpl : public BFN::ControlFlowVisitor,
+                              public PardeInspector {
+    using StateMutexType = ParserStateMutex<Parser, State, Transition>;
+    using GraphType = ParserGraphImpl<Parser, State, Transition>;
+
  public:
-    CollectParserInfo() {
+    CollectParserInfoImpl() {
         joinFlows = true;
         visitDagOnce = false;
     }
 
-    const std::map<const IR::BFN::Parser*, ParserGraph*>& graphs() const { return _graphs; }
-    const ParserGraph& graph(const IR::BFN::Parser* p) const { return *(_graphs.at(p)); }
-    const ParserStateMutex& mutex(const IR::BFN::Parser* p) const { return _mutex.at(p); }
+    const std::map<const Parser*, GraphType*>& graphs() const { return _graphs; }
+    const GraphType& graph(const Parser* p) const { return *(_graphs.at(p)); }
+    const StateMutexType & mutex(const Parser* p) const { return _mutex.at(p); }
 
-    const IR::BFN::Parser* parser(const IR::BFN::ParserState* state) const {
+    const Parser* parser(const State* state) const {
         return _state_to_parser.at(state);
     }
 
@@ -281,7 +303,7 @@ class CollectParserInfo : public BFN::ControlFlowVisitor, public PardeInspector 
     bool filter_join_point(const IR::Node*) override { return true; }
 
     void flow_merge(Visitor &other_) override {
-       CollectParserInfo &other = dynamic_cast<CollectParserInfo &>(other_);
+       CollectParserInfoImpl &other = dynamic_cast<CollectParserInfoImpl &>(other_);
 
         for (auto g : _graphs)
             g.second->merge_with(*(other._graphs.at(g.first)));
@@ -293,18 +315,18 @@ class CollectParserInfo : public BFN::ControlFlowVisitor, public PardeInspector 
                                 other._state_to_parser.end());
     }
 
-    CollectParserInfo* clone() const override {
-        return new CollectParserInfo(*this);
+    CollectParserInfoImpl* clone() const override {
+        return new CollectParserInfoImpl(*this);
     }
 
-    bool preorder(const IR::BFN::Parser* parser) override {
-        _graphs[parser] = new ParserGraph;
-        _mutex[parser] = ParserStateMutex();
+    bool preorder(const Parser* parser) override {
+        _graphs[parser] = new GraphType;
+        _mutex[parser] = StateMutexType();
         return true;
     }
 
-    bool preorder(const IR::BFN::ParserState* state) override {
-        auto parser = findContext<IR::BFN::Parser>();
+    bool preorder(const State* state) override {
+        auto parser = findContext<Parser>();
         _state_to_parser[state] = parser;
 
         auto g = _graphs.at(parser);
@@ -320,24 +342,24 @@ class CollectParserInfo : public BFN::ControlFlowVisitor, public PardeInspector 
         return true;
     }
 
-    void clear_mutex(ParserStateMutex& mutex) {
+    void clear_mutex(StateMutexType & mutex) {
         mutex._mutually_inclusive.clear();
         mutex._states_encountered.clear();
     }
 
-    void add_mutex(ParserStateMutex& mutex, const IR::BFN::ParserState* state) {
+    void add_mutex(StateMutexType& mutex, const State* state) {
         if (mutex._states_encountered.count(state) == 0) {
             mutex._states_encountered.insert(state);
             merge(mutex._mutually_inclusive[state], mutex._states_encountered);
         }
     }
 
-    void merge_mutex(ParserStateMutex& my, const ParserStateMutex& other) {
+    void merge_mutex(StateMutexType& my, const StateMutexType& other) {
         merge(my._states_encountered, other._states_encountered);
         merge(my._mutually_inclusive, other._mutually_inclusive);
     }
 
-    void calculate_mutex(ParserStateMutex& mutex) {
+    void calculate_mutex(StateMutexType& mutex) {
         LOG4("mutually exclusive states:");
         for (auto it1 = mutex._states_encountered.begin();
                   it1 != mutex._states_encountered.end(); ++it1 ) {
@@ -367,9 +389,17 @@ class CollectParserInfo : public BFN::ControlFlowVisitor, public PardeInspector 
             calculate_mutex(m.second);
     }
 
-    std::map<const IR::BFN::Parser*, ParserGraph*> _graphs;
-    std::map<const IR::BFN::Parser*, ParserStateMutex> _mutex;
-    std::map<const IR::BFN::ParserState*, const IR::BFN::Parser*> _state_to_parser;
+    std::map<const Parser*, GraphType*> _graphs;
+    std::map<const Parser*, StateMutexType> _mutex;
+    std::map<const State*, const Parser*> _state_to_parser;
 };
+
+using CollectParserInfo = CollectParserInfoImpl<IR::BFN::Parser,
+                                                IR::BFN::ParserState,
+                                                IR::BFN::Transition>;
+
+using CollectLoweredParserInfo = CollectParserInfoImpl<IR::BFN::LoweredParser,
+                                                       IR::BFN::LoweredParserState,
+                                                       IR::BFN::LoweredParserMatch>;
 
 #endif  /* EXTENSIONS_BF_P4C_PARDE_PARSER_GRAPH_H_ */

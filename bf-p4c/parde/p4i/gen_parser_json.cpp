@@ -48,7 +48,7 @@ GenerateParserP4iJson::generateMatches(const IR::BFN::LoweredParserState* prev_s
         // previous state. This however is not true in general -- match word can be saved
         // and forward to any future state.
         if (prev_state) {
-            for (auto prev_match : prev_state->match) {
+            for (auto prev_match : prev_state->transitions) {
                 for (auto prev_save : prev_match->saves) {
                     if (prev_save->dest == reg) {
                         match_on.buffer_offset = prev_save->source->extractedBytes().loByte();
@@ -119,7 +119,7 @@ bool GenerateParserP4iJson::preorder(const IR::BFN::LoweredParserState* state) {
     BUG_CHECK(parser_ir, "state does not belong to a parser? %1%", state);
 
     auto prev_state = findContext<IR::BFN::LoweredParserState>();
-    for (const auto* match : state->match) {
+    for (const auto* match : state->transitions) {
         parsers[parser_ir->gress].states.push_back(
                 generateStateByMatch(state, prev_state, match));
     }

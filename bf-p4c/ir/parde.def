@@ -295,33 +295,9 @@ class Select {
 /// A high-level parser state. Contains primitives which operate on fields and
 /// field-like objects.
 class ParserState : Unit {
-#noconstructor
     ParserState(IR::ParserState p4State, cstring name, gress_t gr)
         : p4State(p4State), name(name), gress(gr) { }
-    ParserState(cstring n, gress_t gr,
-                std::initializer_list<ParserPrimitive> statements,
-                std::initializer_list<Select> selects,
-                std::initializer_list<Transition> transitions)
-        : name(n), gress(gr), statements(statements), selects(selects),
-          transitions(transitions) { }
-    ParserState(cstring n, gress_t gr,
-                const Vector<ParserPrimitive>& statements,
-                std::initializer_list<Select> selects,
-                std::initializer_list<Transition> transitions)
-        : name(n), gress(gr), statements(statements), selects(selects),
-          transitions(transitions) { }
-     ParserState(cstring n, gress_t gr,
-                const Vector<ParserPrimitive>& statements,
-                std::initializer_list<Select> selects,
-                const Vector<Transition>& transitions)
-        : name(n), gress(gr), statements(statements), selects(selects),
-          transitions(transitions) { }
-     ParserState(cstring n, gress_t gr,
-                const Vector<ParserPrimitive>& statements,
-                const Vector<Select>& selects,
-                const Vector<Transition>& transitions)
-        : name(n), gress(gr), statements(statements), selects(selects),
-          transitions(transitions) { }
+
     int stage() const override { return -1; }
     gress_t thread() const override { return gress; }
     toString { return name; }
@@ -361,9 +337,6 @@ abstract AbstractParser : Unit {
 /// field-like objects; some operands may be expressions that can't yet be
 /// evaluated.
 class Parser : AbstractParser {
-#noconstructor
-    Parser(gress_t gress, ParserState start)
-        : AbstractParser(gress), start(start) {}
 #apply
     toString { return gress ? "egress parser" : "ingress parser"; }
 

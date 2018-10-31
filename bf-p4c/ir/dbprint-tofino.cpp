@@ -216,7 +216,7 @@ void IR::BFN::LoweredParserState::dbprint(std::ostream &out) const {
     out << *select;
     out << ")" << setprec(0);
 
-    for (auto *m : match)
+    for (auto *m : transitions)
         out << endl << *m;
     out << unindent;
 }

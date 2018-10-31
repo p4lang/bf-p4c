@@ -98,7 +98,7 @@ struct ParserAsmSerializer : public ParserInspector {
                 out << "      # - " << info << std::endl;
         }
 
-        for (auto* match : state->match)
+        for (auto* match : state->transitions)
             outputMatch(match);
 
         return true;

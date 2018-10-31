@@ -147,7 +147,7 @@ class LoweredParserChecksum : LoweredParserPrimitive {
     optional NullOK BFN::ContainerRef phv_dest;
 }
 
-/// A lowered save operation, representing save a bits from input buffer to matchRegisters.
+/// A lowered save operation; represents saving bits from input buffer to match register
 class LoweredSave : LoweredParserPrimitive {
     /// Convenience constructors for accepting a raw source
     LoweredSave(const MatchRegister& reg, const LoweredInputBufferRVal* source)
@@ -170,8 +170,8 @@ class LoweredSave : LoweredParserPrimitive {
 #end
 }
 
-/// A lowered parser selection operation. These represent a vector of
-/// registers that have data loaded from input buffer in previous states
+/// A lowered parser selection operation; represents a vector of
+/// registers that have data loaded from input buffer in an earlier state
 /// which will be compared against in the state's LoweredParserMatch
 /// entries to select the next state to transition to.
 class LoweredSelect {
@@ -188,18 +188,16 @@ class LoweredSelect {
 #end
 }
 
-/// The root class for values that a state match against.
+/// base class for value types that a state can match against.
 abstract LoweredMatchValue { }
 
-/// A static value that is defined in the p4, i.e. not PVS.
+/// A constant value that is defined in the P4 program
 class LoweredConstMatchValue : LoweredMatchValue {
     dbprint { out << "const: " << value; }
     match_t value;
 }
 
-/// Parser value set(PVS) value.
-/// The value_set which will be populated at runtime and matched against
-/// the value in the select expression.
+/// Parser value set(PVS) value; populated at runtime by the driver
 class LoweredPvsMatchValue : LoweredMatchValue {
 #emit
     using FieldSlice = std::pair<cstring, nw_bitrange>;
@@ -271,7 +269,7 @@ class LoweredParserState : Unit {
     toString { return name; }
     visit_children {
         v.visit(select);
-        match.parallel_visit_children(v); }
+        transitions.parallel_visit_children(v); }
 
     /// The name of this state. This does not necessarily correspond to any
     /// state name in the P4 program.
@@ -285,7 +283,7 @@ class LoweredParserState : Unit {
     LoweredSelect select;
 
     /// The possible transitions out of this state.
-    inline Vector<LoweredParserMatch> match;
+    inline Vector<LoweredParserMatch> transitions;
 
 #emit
     /// Debugging information about the high-level parser states that were used
@@ -314,12 +312,10 @@ class LoweredParser : AbstractParser {
     /// parser error
     optional NullOK BFN::ContainerRef parserError;
 
-    /// The set of PHV containers which may legally be written more than once by
-    /// this parser.
+    /// The set of PHV containers that are allowed to be written more than once
     inline Vector<BFN::ContainerRef> multiwriteContainers;
 
-    /// The set of PHV containers which has uninitialized metadata field so that
-    /// set $validity bits is required in this parser.
+    /// The set of PHV containers that are zero initialized 
     inline Vector<BFN::ContainerRef> initZeroContainers;
 
     /// The amount of data, in bytes, which this parser program expects to be
@@ -336,16 +332,15 @@ class LoweredParser : AbstractParser {
 #end
 }
 
-/// Supertype for all lowered deparser emit primitives - i.e., actions that
-/// write data to the output packet.
-abstract LoweredEmit {}
+/// Common base type for all emit types -- write data to output packet
+abstract LoweredEmit { }
 
 /// A primitive that writes the contents of a PHV container to the output
 /// packet.
 class LoweredEmitPhv : LoweredEmit {
     dbprint { out << "emit " << source << " if " << povBit; }
 
-    /// The POV bit controlling whether the data is written.
+    /// The POV bit the emit is predicated on
     BFN::ContainerBitRef povBit;
 
     /// The container whose contents will be written to the packet.
@@ -356,7 +351,7 @@ class LoweredEmitPhv : LoweredEmit {
 class LoweredEmitChecksum : LoweredEmit {
     dbprint { out << "emit checksum " << unit << " if " << povBit; }
 
-    /// The POV bit controlling whether the data is written.
+    /// The POV bit the emit is predicated on
     BFN::ContainerBitRef povBit;
 
     /// The checksum unit whose result will be written to the packet.

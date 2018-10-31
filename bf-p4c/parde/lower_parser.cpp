@@ -18,6 +18,7 @@
 #include "bf-p4c/parde/allocate_parser_checksum.h"
 #include "bf-p4c/parde/clot_info.h"
 #include "bf-p4c/parde/parde_visitor.h"
+#include "bf-p4c/parde/parde_utils.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/pragma/pa_no_init.h"
 #include "lib/stringref.h"
@@ -776,7 +777,7 @@ struct ComputeLoweredParserIR : public ParserInspector {
                     loweredChecksums,
                     priority,
                     loweredStates[transition->next]);
-            loweredState->match.push_back(loweredMatch);
+            loweredState->transitions.push_back(loweredMatch);
         }
 
         // Now that we've constructed a lowered version of this state, save it
@@ -888,10 +889,12 @@ struct LowerParserIR : public PassManager {
         auto* computeLoweredParserIR = new ComputeLoweredParserIR(phv, clotInfo,
                                                                   *checksumAllocation);
         addPasses({
+            LOGGING(3) ? new DumpParser("before_parser_lowering") : nullptr,
             checksumAllocation,
             new ResolveParserConstants(phv, clotInfo),
             computeLoweredParserIR,
-            new ReplaceParserIR(*computeLoweredParserIR)
+            new ReplaceParserIR(*computeLoweredParserIR),
+            LOGGING(3) ? new DumpParser("after_parser_lowering") : nullptr
         });
     }
 };
@@ -1946,7 +1949,7 @@ class SplitBigStates : public ParserModifier {
     boost::optional<int> needSplitState(const IR::BFN::LoweredParserState* state) {
         bool allNeedSplitState = true;
         int firstStateShift = (std::numeric_limits<int>::max)();
-        for (const auto* match : state->match) {
+        for (const auto* match : state->transitions) {
             ExtractorAllocator allocator(state->name, match);
             auto rst = allocator.allocateOneState();
             firstStateShift = std::min(rst.shift, firstStateShift);
@@ -1970,7 +1973,7 @@ class SplitBigStates : public ParserModifier {
 
         unsigned earliest_conflict = (std::numeric_limits<unsigned>::max)();
         // Since we assume all extractions are the same, we just need to check saves.
-        for (const auto* match : state->match) {
+        for (const auto* match : state->transitions) {
             for (const auto* save : match->saves) {
                 auto range = save->source->extractedBytes();
                 for (int i = range.loByte(); i <= range.hiByte(); ++i) {
@@ -1979,17 +1982,17 @@ class SplitBigStates : public ParserModifier {
 
         // Find the first location that not all matches save to the same register.
         for (const auto& kv : save_map) {
-            if (kv.second.size() != state->match.size()) {
+            if (kv.second.size() != state->transitions.size()) {
                 earliest_conflict = std::min(earliest_conflict, kv.first.first);
             } }
 
         // Also the first shift, though they are likely to be the same.
         // This will catch the case when these is no save at all.
-        for (const auto* match : state->match) {
+        for (const auto* match : state->transitions) {
             earliest_conflict = std::min(earliest_conflict, match->shift); }
 
         // Also the first save that might overwrite the match register used in this stage.
-        for (const auto* match : state->match) {
+        for (const auto* match : state->transitions) {
             for (const auto* save : match->saves) {
                 if (state->select->regs.count(save->dest)) {
                     auto range = save->source->extractedBytes();
@@ -2007,7 +2010,7 @@ class SplitBigStates : public ParserModifier {
     addTailStatePrimitives(IR::BFN::LoweredParserState* tailState, int until) {
         IR::Vector<IR::BFN::LoweredParserMatch> matches;
         const auto& used_regs = tailState->select->regs;
-        for (const auto* match : tailState->match) {
+        for (const auto* match : tailState->transitions) {
             std::vector<ExtractorAllocator::MatchPrimitives> tailStatePrimitives;
             std::vector<const IR::BFN::LoweredSave*> common_state_allocated_saves;
             int shifted = 0;  // shifted before tail state.
@@ -2081,7 +2084,7 @@ class SplitBigStates : public ParserModifier {
             }
             matches.push_back(truncatedMatch);
         }
-        tailState->match = matches;
+        tailState->transitions = matches;
     }
 
     /// Set primitives in @p common, as its the only match of the common state.
@@ -2089,7 +2092,7 @@ class SplitBigStates : public ParserModifier {
     addCommonStatePrimitives(IR::BFN::LoweredParserMatch* common,
                              const IR::BFN::LoweredParserState* sampleState,
                              int until) {
-        const IR::BFN::LoweredParserMatch* sampleMatch = *(sampleState->match.begin());
+        const IR::BFN::LoweredParserMatch* sampleMatch = *(sampleState->transitions.begin());
         ExtractorAllocator allocator(sampleState->name + "$SplitCommonState", sampleMatch);
         const auto& used_reg = sampleState->select->regs;
         int shifted = 0;
@@ -2179,7 +2182,7 @@ class SplitBigStates : public ParserModifier {
             new IR::BFN::LoweredParserState(state_name, state->gress);
         auto* only_match =
             new IR::BFN::LoweredParserMatch(match_t(), 0, state);
-        common_state->match.push_back(only_match);
+        common_state->transitions.push_back(only_match);
 
         // Add extra saves to this match.
         for (auto* save : extra_saves) {
@@ -2264,6 +2267,8 @@ class SplitBigStates : public ParserModifier {
             newState->debug = state->debug;
             currentMatch->next = newState;
 
+            LOG3("Created new split state " << newState->name);
+
             // Create a new match node and place as many primitives in it as we can.
             auto primitives = allocator.allocateOneState();
             auto* newMatch =
@@ -2273,7 +2278,7 @@ class SplitBigStates : public ParserModifier {
             newMatch->checksums  = primitives.checksums;
             newMatch->saves      = primitives.saves;
             newMatch->shift      = primitives.shift;
-            newState->match.push_back(newMatch);
+            newState->transitions.push_back(newMatch);
 
             // If there's more, we'll append the next state to the new match node.
             currentMatch = newMatch;
@@ -2441,6 +2446,7 @@ LowerParser::LowerParser(const PhvInfo& phv, ClotInfo& clot, const FieldDefUse &
         new LowerParserIR(phv, clot),
         new LowerDeparserIR(phv, clot),
         new SplitBigStates,
+        LOGGING(3) ? new DumpParser("after_split_big_states") : nullptr,
         new ComputeInitZeroContainers(phv, defuse, pragma_no_init->getFields()),
         new ComputeMultiwriteContainers,  // Must run after ComputeInitZeroContainers.
         new ComputeBufferRequirements,
