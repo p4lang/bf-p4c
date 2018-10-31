@@ -26,8 +26,9 @@ import time
 import Queue
 
 import ptf
-from ptf.base_tests import BaseTest
 from ptf import config
+from ptf.base_tests import BaseTest
+from ptf.dataplane import match_exp_pkt
 import ptf.testutils as testutils
 
 import grpc
@@ -251,6 +252,19 @@ class P4RuntimeTest(BaseTest):
         else:
             return msg.packet
 
+    def verify_packet_in(self, exp_pkt, exp_in_port, timeout=2):
+        pkt_in_msg = self.get_packet_in(timeout=timeout)
+        in_port_ = stringify(exp_in_port, 2)
+        rx_in_port_ = pkt_in_msg.metadata[0].value
+        if in_port_ != rx_in_port_:
+            rx_inport = struct.unpack("!h", rx_in_port_)[0]
+            self.fail("Wrong packet-in ingress port, expected {} but was {}"
+                      .format(exp_in_port, rx_inport))
+        rx_pkt = Ether(pkt_in_msg.payload)
+        if not match_exp_pkt(exp_pkt, rx_pkt):
+            self.fail("Received packet-in is not the expected one\n" +
+        format_pkt_match(rx_pkt, exp_pkt))
+
     def get_stream_packet(self, type_, timeout=1):
         start = time.time()
         try:
@@ -446,6 +460,14 @@ class P4RuntimeTest(BaseTest):
     # Convenience functions to build and send P4Runtime write requests
     #
 
+    def get_new_write_request(self):
+        req = p4runtime_pb2.WriteRequest()
+        req.device_id = self.device_id
+        # election_id = req.election_id
+        # election_id.high = 0
+        # election_id.low = 1
+        return req
+
     def _push_update_member(self, req, ap_name, mbr_id, a_name, params,
                             update_type):
         update = req.updates.add()
@@ -460,8 +482,7 @@ class P4RuntimeTest(BaseTest):
                                  p4runtime_pb2.Update.INSERT)
 
     def send_request_add_member(self, ap_name, mbr_id, a_name, params):
-        req = p4runtime_pb2.WriteRequest()
-        req.device_id = self.device_id
+        req = self.get_new_write_request()
         self.push_update_add_member(req, ap_name, mbr_id, a_name, params)
         return req, self.write_request(req)
 
@@ -470,8 +491,7 @@ class P4RuntimeTest(BaseTest):
                                  p4runtime_pb2.Update.MODIFY)
 
     def send_request_modify_member(self, ap_name, mbr_id, a_name, params):
-        req = p4runtime_pb2.WriteRequest()
-        req.device_id = self.device_id
+        req = self.get_new_write_request()
         self.push_update_modify_member(req, ap_name, mbr_id, a_name, params)
         return req, self.write_request(req, store=False)
 
@@ -488,8 +508,7 @@ class P4RuntimeTest(BaseTest):
             member.member_id = mbr_id
 
     def send_request_add_group(self, ap_name, grp_id, grp_size=32, mbr_ids=[]):
-        req = p4runtime_pb2.WriteRequest()
-        req.device_id = self.device_id
+        req = self.get_new_write_request()
         self.push_update_add_group(req, ap_name, grp_id, grp_size, mbr_ids)
         return req, self.write_request(req)
 
@@ -505,8 +524,7 @@ class P4RuntimeTest(BaseTest):
             member.member_id = mbr_id
 
     def send_request_set_group_membership(self, ap_name, grp_id, mbr_ids=[]):
-        req = p4runtime_pb2.WriteRequest()
-        req.device_id = self.device_id
+        req = self.get_new_write_request()
         self.push_update_set_group_membership(req, ap_name, grp_id, mbr_ids)
         return req, self.write_request(req, store=False)
 
@@ -533,8 +551,7 @@ class P4RuntimeTest(BaseTest):
 
     def send_request_add_entry_to_action(self, t_name, mk, a_name, params,
                                          priority=None):
-        req = p4runtime_pb2.WriteRequest()
-        req.device_id = self.device_id
+        req = self.get_new_write_request()
         self.push_update_add_entry_to_action(
             req, t_name, mk, a_name, params, priority)
         return req, self.write_request(req, store=(mk is not None))
@@ -553,8 +570,7 @@ class P4RuntimeTest(BaseTest):
 
     def send_request_add_entry_to_member(self, t_name, mk, mbr_id,
                                          priority=None):
-        req = p4runtime_pb2.WriteRequest()
-        req.device_id = self.device_id
+        req = self.get_new_write_request()
         self.push_update_add_entry_to_member(req, t_name, mk, mbr_id, priority)
         return req, self.write_request(req, store=(mk is not None))
 
@@ -572,8 +588,7 @@ class P4RuntimeTest(BaseTest):
 
     def send_request_add_entry_to_group(self, t_name, mk, grp_id,
                                         priority=None):
-        req = p4runtime_pb2.WriteRequest()
-        req.device_id = self.device_id
+        req = self.get_new_write_request()
         self.push_update_add_entry_to_group(req, t_name, mk, grp_id, priority)
         return req, self.write_request(req, store=(mk is not None))
 
@@ -586,8 +601,7 @@ class P4RuntimeTest(BaseTest):
             for update in reversed(req.updates):
                 if update.type == p4runtime_pb2.Update.INSERT:
                     updates.append(update)
-        new_req = p4runtime_pb2.WriteRequest()
-        new_req.device_id = self.device_id
+        new_req = req = self.get_new_write_request()
         for update in updates:
             update.type = p4runtime_pb2.Update.DELETE
             new_req.updates.add().CopyFrom(update)

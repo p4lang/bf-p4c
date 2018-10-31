@@ -134,6 +134,11 @@ if (PTF_REQUIREMENTS_MET)
     fabric-DWITH_SPGW-DWITH_INT_TRANSIT
     )
 
+  p4c_add_xfail_reason("tofino"
+    "tofino supports up to 12 stages, using 13"
+    fabric-new-DWITH_SPGW
+    )
+
   # needs to adjust egress packet length
   p4c_add_xfail_reason("tofino"
     "Expected packet was not received on device"
