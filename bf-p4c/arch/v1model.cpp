@@ -12,6 +12,8 @@
 #include "frontends/p4/strengthReduction.h"
 #include "frontends/p4/uselessCasts.h"
 #include "frontends/p4/typeChecking/typeChecker.h"
+#include "midend/local_copyprop.h"
+#include "bf-p4c/midend.h"
 #include "bf-p4c/arch/bridge_metadata.h"
 #include "bf-p4c/arch/intrinsic_metadata.h"
 #include "bf-p4c/arch/phase0.h"
@@ -2473,6 +2475,38 @@ class InsertChecksumError : public PassManager {
     const V1::TranslateParserChecksums* translate;
 };
 
+template <class T> inline const T *findContext(const Visitor::Context *c) {
+    while ((c = c->parent))
+        if (auto *rv = dynamic_cast<const T *>(c->node)) return rv;
+    return nullptr; }
+
+// Run copy propagation before translate v1model program to tna to eliminate
+// the following code pattern
+// standard_metadata_1 = standard_metadata;
+// ....
+// standard_metadata = standard_metadata_1;
+// However, we do not wish to copy propagate field reference in the clone3(),
+// recirculate(), etc, as the translation will need to convert them to
+// appropriate metadata in tna.
+bool skipMethodCallStatement(const Visitor::Context *ctxt, const IR::Expression * expr) {
+    auto c = findContext<IR::MethodCallStatement>(ctxt);
+    if (!c) return true;
+
+    auto name = c->methodCall->method->to<IR::PathExpression>();
+    if (!name) return true;
+
+    if (name->path->name == "clone3" || name->path->name == "resubmit" ||
+        name->path->name == "digest" || name->path->name == "hash" ||
+        name->path->name == "recirculate")
+        return false;
+
+    return true;
+}
+
+bool skipCond(const Visitor::Context *ctxt, const IR::Expression *expr) {
+    return skipMethodCallStatement(ctxt, expr) && BFN::skipRegisterActionOutput(ctxt, expr);
+}
+
 }  // namespace V1
 
 /// The general work flow of architecture translation consists of the following steps:
@@ -2491,6 +2525,7 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
         structure->backward_compatible = true;
     auto parserChecksums = new V1::TranslateParserChecksums(structure, refMap, typeMap);
     addPasses({
+        new P4::LocalCopyPropagation(refMap, typeMap, V1::skipCond),
         new P4::TypeChecking(refMap, typeMap, true),
         new RemoveExternMethodCallsExcludedByAnnotation,
         new V1::NormalizeProgram(),

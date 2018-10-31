@@ -781,7 +781,7 @@ void BuildGatewayMatch::constant(uint64_t c) {
         uint64_t mask = (UINT64_C(1) << match_field_bits.size()) - 1;
         uint64_t val = (c ^ cmplmask) & mask;
         if ((val & mask & ~andmask) || (~val & mask & ormask))
-            BUG("masked comparison in gateway can never match");
+            warning("%smasked comparison in gateway can never match", ctxt->node->srcInfo);
         mask &= andmask & ~ormask;
         mask <<= match_field_bits.lo;
         val <<= match_field_bits.lo;

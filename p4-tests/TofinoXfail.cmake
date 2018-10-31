@@ -1377,3 +1377,10 @@ p4c_add_xfail_reason("tofino"
   "Rendezvous of RPC that terminated with"
    p4_16_programs_tna_idletimeout
 )
+
+# P4C-305
+p4c_add_xfail_reason("tofino"
+  "No casts should ever reach this point in the Tofino backend"
+  extensions/p4_tests/p4_14/p4smith_regression/clue_0.p4
+)
+
