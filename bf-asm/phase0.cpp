@@ -58,13 +58,17 @@ void Phase0MatchTable::gen_tbl_cfg(json::vector &out) const {
     stage_tbl.erase("default_next_table");
     stage_tbl.erase("has_attached_gateway");
     auto &mra = stage_tbl["memory_resource_allocation"] = json::map();
-    mra["spare_bank_memory_unit"] = 0;
     mra["memory_type"] = "ingress_buffer";
     json::map tmp;
     (tmp["vpns"] = json::vector()).push_back(0L);
     (tmp["memory_units"] = json::vector()).push_back(0L);
     (mra["memory_units_and_vpns"] = json::vector()).push_back(std::move(tmp));
-    add_pack_format(stage_tbl, format, false, true); // is this used by driver?
+    // Driver looks at the pack format to determine the fields and their
+    // positions. Since phase0 is only mimicking a table, the driver expects to
+    // have a single entry within the pack format.
+    bool pad_zeros = false;
+    bool print_fields = true;
+    add_pack_format(stage_tbl, format, pad_zeros, print_fields);
     if (actions)
         actions->gen_tbl_cfg(tbl["actions"]);
     if (context_json)

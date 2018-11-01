@@ -245,6 +245,8 @@ public:
         bool is_wide_format() const {
             return (log2size >= 7 || groups() > 1) ? true : false; }
         int get_entries_per_table_word() const {
+            // A phase0 table can only have 1 entry
+            if (tbl->table_type() == PHASE0) return 1;
             if (is_wide_format()) return groups();
             return log2size ? (1U << (ceil_log2(MEM_WORD_WIDTH) - log2size)) : 0; }
         int get_mem_units_per_table_word() const {

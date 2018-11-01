@@ -2152,8 +2152,11 @@ json::map &Table::add_pack_format(json::map &stage_tbl, Table::Format *format,
         add_zero_padding_fields(format, act,
                 format ? format->get_padding_format_width() : -1);
     json::map pack_fmt;
-    pack_fmt["memory_word_width"] = MEM_WORD_WIDTH;
-    pack_fmt["table_word_width"] = format ? format->get_table_word_width() : MEM_WORD_WIDTH;
+    auto mem_word_width = table_type() == PHASE0 ? Target::PHASE0_FORMAT_WIDTH() : MEM_WORD_WIDTH;
+    pack_fmt["memory_word_width"] = mem_word_width;
+    auto table_word_width = table_type() == PHASE0 ? 
+        Target::PHASE0_FORMAT_WIDTH() : format ? format->get_table_word_width() : MEM_WORD_WIDTH;
+    pack_fmt["table_word_width"] = table_word_width; 
     pack_fmt["entries_per_table_word"] = format ? format->get_entries_per_table_word() : 1;
     pack_fmt["number_memory_units_per_table_word"] = format ? format->get_mem_units_per_table_word() : 1;
 
@@ -2167,7 +2170,7 @@ json::map &Table::add_pack_format(json::map &stage_tbl, Table::Format *format,
      * JSON is reversed.
      */
     if (print_fields) {
-        int basebit = std::max(0, MEM_WORD_WIDTH - (1 << format->log2size));
+        int basebit = std::max(0, mem_word_width - (1 << format->log2size));
         json::vector &entry_list = pack_fmt["entries"];
         if (format->is_wide_format()) {
             for (int i = format->groups()-1; i >= 0; --i) {

@@ -28,6 +28,7 @@
     M(int, DEPARSER_CONSTANTS) \
     M(int, MAU_BASE_DELAY) M(int, MAU_BASE_PREDICATION_DELAY) \
     M(int, NUM_MAU_STAGES) M(int, END_OF_PIPE) \
+    M(int, PHASE0_FORMAT_WIDTH) \
     M(int, STATEFUL_CMP_UNITS) M(int, STATEFUL_OUTPUT_UNITS) M(int, STATEFUL_PRED_MASK) \
     M(int, STATEFUL_TMATCH_UNITS) \
     M(int, METER_ALU_GROUP_DATA_DELAY)
@@ -103,6 +104,7 @@ class Target::Tofino : public Target {
         METER_ALU_GROUP_DATA_DELAY = 13,
         // To avoid under run scenarios, there is a minimum egress pipeline latency required
         MINIMUM_REQUIRED_EGRESS_PIPELINE_LATENCY = 160,
+        PHASE0_FORMAT_WIDTH = 64,
         STATEFUL_CMP_UNITS = 2,
         STATEFUL_TMATCH_UNITS = 0,
         STATEFUL_OUTPUT_UNITS = 1,
@@ -184,6 +186,7 @@ class Target::JBay : public Target {
         MAU_BASE_DELAY = 23,
         MAU_BASE_PREDICATION_DELAY = 13,
         METER_ALU_GROUP_DATA_DELAY = 15,
+        PHASE0_FORMAT_WIDTH = 128,
         STATEFUL_CMP_UNITS = 4,
         STATEFUL_TMATCH_UNITS = 2,
         STATEFUL_OUTPUT_UNITS = 4,
