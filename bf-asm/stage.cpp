@@ -171,11 +171,19 @@ void AsmStage::output(json::map &ctxt_json) {
     for (unsigned i = 0; i < stage.size(); i++) {
         for (auto table : stage[i].tables)
             table->pass3(); }
-    if (int(stage.size()) > Target::NUM_MAU_STAGES())
-        error(stage.back().tables.empty() ? 0 : stage.back().tables[0]->lineno,
+    if (int(stage.size()) > Target::NUM_MAU_STAGES()) {
+        auto lineno = stage.back().tables.empty() ? 0 : stage.back().tables[0]->lineno;
+        error(lineno,
               "%s supports up to %d stages, using %zd", Target::name(), Target::NUM_MAU_STAGES(),
               stage.size());
-    if (error_count > 0) return;
+    }
+    // If we encounter errors, no binary is generated, however we still proceed
+    // to generate the context.json with whatever info is provided in the .bfa.
+    // This can be inspected in p4i for debugging.
+    if (error_count > 0) {
+        options.binary = NO_BINARY;
+        error(0, "Due to errors, no binary will be generated");
+    }
     if (stage.empty()) return;
 
 #if HAVE_JBAY
