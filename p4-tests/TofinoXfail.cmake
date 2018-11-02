@@ -282,7 +282,14 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "error: The stage specified for .* could not place it until stage"
   smoketest_programs_netcache
+  switch_msdc_leaf_int
+  switch_8.4_msdc_leaf_int
+  extensions/p4_tests/p4_14/p4-tests/programs/mau_test/mau_test.p4  #P4C-1123
   )
 
 p4c_add_xfail_reason("tofino"
@@ -1312,8 +1319,8 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: ALU ops cannot operate on slices"
   extensions/p4_tests/p4_14/p4smith_regression/shrubs_0.p4
-  switch_msdc_leaf_int
-  switch_8.4_msdc_leaf_int
+  #switch_msdc_leaf_int
+  #switch_8.4_msdc_leaf_int
 )
 
 # BRIG-927

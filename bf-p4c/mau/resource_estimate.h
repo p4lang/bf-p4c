@@ -165,4 +165,6 @@ class RangeEntries : public MauInspector {
     RangeEntries(const PhvInfo &p, int te) : phv(p), table_entries(te) {}
 };
 
+std::ostream &operator<<(std::ostream &, const StageUseEstimate &);
+
 #endif /* BF_P4C_MAU_RESOURCE_ESTIMATE_H_ */

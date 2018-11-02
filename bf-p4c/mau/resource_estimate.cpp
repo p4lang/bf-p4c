@@ -1193,3 +1193,11 @@ void RangeEntries::postorder(const IR::MAU::Table *tbl) {
     }
     total_TCAM_lines = range_entries * max_entry_TCAM_lines + (table_entries - range_entries);
 }
+
+std::ostream &operator<<(std::ostream &out, const StageUseEstimate &sue) {
+    out << "{ id=" << sue.logical_ids << " ram=" << sue.srams << " tcam=" << sue.tcams
+        << " mram=" << sue.maprams << " eixb=" << sue.exact_ixbar_bytes
+        << " tixb=" << sue.ternary_ixbar_groups << " malu=" << sue.meter_alus
+        << " salu=" << sue.stats_alus << " }";
+    return out;
+}

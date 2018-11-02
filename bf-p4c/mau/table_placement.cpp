@@ -953,7 +953,6 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv, const IR::MA
         BUG_CHECK(meter_format != nullptr, "Meter format could not be found for a "
                                            "particular layout option.");
         resources->meter_format = *meter_format;
-        LOG1("**meter format size " << meter_format->action_data_format.size());
     }
 
     LOG3("  Selected stage: " << rv->stage << "    Furthest stage: " << furthest_stage);
@@ -1009,10 +1008,9 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed *
          (pl->gw ? pl->gw->name : "") << (pl->gw ? ")" : "") << " in stage " <<
          pl->stage << (pl->need_more ? " (need more)" : ""));
 
-    if (pl->table->get_provided_stage() >= 0 && pl->table->get_provided_stage() != pl->stage)
-        ::warning("%s: The stage specified for the table %s is %d, but the stage actually "
-                  "allocated %d are not the same", pl->table->srcInfo, pl->table->name,
-                  pl->table->get_provided_stage(), pl->stage);
+    int stage_pragma = pl->table->get_provided_stage();
+    if (stage_pragma >= 0 && stage_pragma != pl->stage)
+        LOG1("  placing in stage " << pl->stage << " dsespite @stage(" << stage_pragma << ")");
 
     if (!pl->need_more) {
         placed_tables.insert(pl->table);
@@ -1080,12 +1078,12 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choic
         a_table_to_use, b_table_to_use);
 
 
-    LOG4("        Stage A is " << a->name << " with calculated stage " << a->stage <<
+    LOG5("        Stage A is " << a->name << " with calculated stage " << a->stage <<
          ", provided stage " << a->table->get_provided_stage() << ", downward prop score " <<
          downward_prop_score.first << ", upward prop score " <<
          upward_prop_score.first << ", and local score " << local_score.first);
 
-    LOG4("        Stage B is " << b->name << " with calculated stage " << b->stage <<
+    LOG5("        Stage B is " << b->name << " with calculated stage " << b->stage <<
          ", provided stage " << b->table->get_provided_stage() << ", downward prop score " <<
          downward_prop_score.second << ", upward prop score " <<
          upward_prop_score.second << ", and local score " << local_score.second);
@@ -1202,9 +1200,10 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
 
     ordered_set<const IR::MAU::Table *> partly_placed;
     while (!work.empty()) {
-        LOG3("stage " << (placed ? placed->stage : 0) << ", work: " << work <<
-             ", partly placed " << partly_placed.size() << ", placed " << count(placed));
         StageUseEstimate current = get_current_stage_use(placed);
+        LOG3("stage " << (placed ? placed->stage : 0) << ", work: " << work <<
+             ", partly placed " << partly_placed.size() << ", placed " << count(placed) <<
+             "\n    " << current);
         safe_vector<const Placed *> trial;
         for (auto it = work.begin(); it != work.end();) {
             auto grp = *it;
@@ -1583,6 +1582,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
         LOG3("folding gateway " << tbl->name << " onto " << match->name);
         tbl->gateway_name = tbl->name;
         tbl->name = match->name;
+        tbl->srcInfo = match->srcInfo;
         for (auto &gw : tbl->gateway_rows)
             if (gw.second == it->second->gw_result_tag)
                 gw.second = cstring();

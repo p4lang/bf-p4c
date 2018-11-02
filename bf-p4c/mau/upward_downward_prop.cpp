@@ -8,9 +8,11 @@
 
 std::ostream &operator<<(std::ostream &out,
     const UpwardDownwardPropagation::PlaceScore &score) {
-    out << "Score: [DSC=" << score.deps_stages_control <<
-    ", DS=" << score.deps_stages << ", TD=" << score.total_deps <<
-    ", IS_ZERO=" << score.is_zero << "]";
+    if (DBPrint::dbgetflags(out) & DBPrint::Brief) {
+        out << score.deps_stages_control << "/" << score.deps_stages << "/" << score.total_deps;
+    } else {
+        out << "Score: [DSC=" << score.deps_stages_control << ", DS=" << score.deps_stages
+            << ", TD=" << score.total_deps << ", IS_ZERO=" << score.is_zero << "]"; }
     return out;
 }
 
@@ -68,8 +70,23 @@ nodes that accounts for both control and data dependencies)
 void UpwardDownwardPropagation::calculate_scores(
     const std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>>& rst) {
     vertex_rst = rst;
+    if (LOGGING(3)) {
+        LOG3("UpDownProp vertex_rst:");
+        int idx = 0;
+        for (auto &s : vertex_rst) {
+            std::stringstream tmp;
+            const char *sep = "";
+            for (auto v : s) {
+                tmp << sep << dg.get_vertex(v)->name;
+                sep = ", "; }
+            LOG3("    " << idx++ << " {" << tmp.str() << "}"); } }
     build_vertex_local_maps();
     build_upward_prop_map();
+    if (LOGGING(3)) {
+        for (auto &lscore : local_score) {
+            auto *tbl = lscore.first;
+            LOG3(DBPrint::Brief << "  " << tbl->name << ": local " << lscore.second <<
+                 " up " << upward_prop.at(tbl)); } }
 }
 
 /* Called by is_better to recalculate the placement dependent upward propagation info */
@@ -80,7 +97,7 @@ void UpwardDownwardPropagation::update_placed_tables(
 }
 
 /* Packs all heuristics that can be tied to a table into a single PlaceScore
-   object. Does not include stage, provided_stage, or needs_more heuristics,
+   object. Does not include stage, or needs_more heuristics,
    since those are associated with Placed objects, not tables, and are
    either guided by user pragmas or by table placement, not by program structure
 */
@@ -89,6 +106,15 @@ UpwardDownwardPropagation::PlaceScore UpwardDownwardPropagation::calculate_local
     PlaceScore score;
     score.deps_stages_control = dg.dependence_tail_size_control(t);
     score.deps_stages = dg.dependence_tail_size(t);
+    int provided_stage = t->get_provided_stage();
+    if (provided_stage >= 0) {
+        // If there's a stage pragma, treat the table as having at least as many
+        // stage dependencies as there are stages after the @pragma stage.
+        int after_stages = Device::numStages() - provided_stage;
+        if (score.deps_stages_control < after_stages)
+            score.deps_stages_control = after_stages;
+        if (score.deps_stages < after_stages)
+            score.deps_stages = after_stages; }
     score.total_deps = dg.happens_before_dependences(t).size();
     score.tables.insert(t);
     score.is_zero = false;

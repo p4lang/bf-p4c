@@ -488,6 +488,11 @@ void FindDataDependencyGraph::flow_merge(Visitor &v) {
  *  rst[0] = {A, B}
  *  rst[1] = {C, D}
  *  means that A, B could be in stage#0 and C, B could be in at least state#1.
+ *
+ * FIXME -- the above comment appears to be completely wrong -- the indexes have
+ * nothing to do with the possible stages tables can be placed in.  Instead, the
+ * indexes appear to be the depth of the table in the table dependency graph.  The
+ * resulting vector is generally used to do a breadth-first traversal of the tables
  */
 std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>>
 FindDataDependencyGraph::calc_topological_stage(unsigned dep_flags) {

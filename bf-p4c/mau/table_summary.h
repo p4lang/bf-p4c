@@ -33,6 +33,8 @@ class TableSummary: public MauInspector {
     /// Booleans indicating whether traversal over ingress and egress pipes has happened
     bool ingressDone;
     bool egressDone;
+    /// Flag if we've found a placement problem that will require retrying
+    bool placementFailure;
 
     int pipe_id;
 
