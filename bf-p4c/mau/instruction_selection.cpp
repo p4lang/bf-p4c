@@ -548,7 +548,7 @@ const IR::Node *DoInstructionSelection::postorder(IR::Primitive *prim) {
         auto glob = prim->operands.at(0)->to<IR::GlobalRef>();
         auto decl = glob->obj->to<IR::Declaration_Instance>();
         auto type = decl->type->to<IR::Type_Specialized>()->arguments->at(0);
-        unsigned size = type->to<IR::Type_Bits>()->size;
+        unsigned size = type->width_bits();
 
         int op_size = prim->operands.size();
         if (op_size > 3) {
