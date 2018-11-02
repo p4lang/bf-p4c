@@ -107,11 +107,11 @@ if [ "$RUN_BOOTSTRAP_PTF" == "yes" ]; then
 fi
 
 mkdir -p ${builddir}/p4c/extensions/bf-p4c
-ln -sf ${mydir}/bf-p4c/.gdbinit ${builddir}/p4c/extensions/bf-p4c/p4c-barefoot-gdb.gdb
+ln -sf $(realpath --relative-to ${builddir}/p4c/extensions/bf-p4c ${mydir}/bf-p4c/.gdbinit) ${builddir}/p4c/extensions/bf-p4c/p4c-barefoot-gdb.gdb
 mkdir -p ${builddir}/p4c/backends/bmv2/
-ln -sf ${mydir}/bf-p4c/.gdbinit ${builddir}/p4c/backends/bmv2/p4c-bm2-ss-gdb.gdb
+ln -sf $(realpath --relative-to ${builddir}/p4c/backends/bmv2 ${mydir}/bf-p4c/.gdbinit) ${builddir}/p4c/backends/bmv2/p4c-bm2-ss-gdb.gdb
 mkdir -p ${builddir}/p4c/backends/p4test
-ln -sf ${mydir}/bf-p4c/.gdbinit ${builddir}/p4c/backends/p4test/p4test-gdb.gdb
+ln -sf $(realpath --relative-to ${builddir}/p4c/backends/p4test ${mydir}/bf-p4c/.gdbinit) ${builddir}/p4c/backends/p4test/p4test-gdb.gdb
 
 echo "Configured for build in ${builddir}"
 popd > /dev/null # $mydir

@@ -76,13 +76,10 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
             // if this becomes a real instruction (not an elided copy), this
             // local will become alu_hi, so fall through
         case LocalVar::ALUHI:
-            field_idx = 1;
-            break;
         case LocalVar::MEMHI:
             field_idx = 1;
+            break;
         case LocalVar::MEMLO:
-            if (etype == NONE)
-                error("%s: %s too complex", pe->srcInfo, action_type_name);
         case LocalVar::MEMALL:
             break;
         default:
@@ -248,7 +245,7 @@ bool CreateSaluInstruction::preorder(const IR::AssignmentStatement *as) {
             } else {
                 use = LocalVar::ALUHI; }
             if (use == LocalVar::NONE || (dest->use != LocalVar::NONE && dest->use != use))
-                error("%s: %s too complex", as->srcInfo, action_type_name);
+                error("%s: %s %s too complex", as->srcInfo, action_type_name, reg_action->name);
             dest->use = use;
             LOG3("local " << dest->name << " use " << dest->use); }
         if (!dest || dest->use == LocalVar::ALUHI)
