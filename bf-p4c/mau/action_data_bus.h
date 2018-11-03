@@ -51,7 +51,7 @@ struct ActionDataBus {
 
  private:
     Alloc2D<cstring, ActionFormat::CONTAINER_TYPES, OUTPUTS> cont_use;
-    Alloc1D<cstring, ADB_BYTES> total_use;
+    Alloc1D<cstring /* table name */, ADB_BYTES> total_use;
     Alloc2D<cstring, RANDOM_NUMBER_GENERATORS, IMMED_SECT> rng_use;
 
     bitvec cont_in_use[ActionFormat::CONTAINER_TYPES];
@@ -63,6 +63,12 @@ struct ActionDataBus {
     std::set<const IR::MAU::ActionData *> shared_action_profiles;
     // track shared meters and salus, used by action data bus allocation
     std::set<const IR::MAU::AttachedMemory *> shared_meters;
+    // track allocation for reduction or group, if one of the members
+    // has been allocated for this reduction or group, the name of the
+    // reduction or group is inserted and subsequent allocation reuse
+    // existing allocation.
+    std::set<cstring> reduction_or_groups;
+
     bool reserved_immed[3] = {false, false, false};
 
     struct ADB_CSR {

@@ -626,6 +626,7 @@ static void coord_action_data_xbar(const TablePlacement::Placed *curr,
     }
 }
 
+// handle sharing the same meters across multiple tables
 static void coord_meter_xbar(const TablePlacement::Placed *curr,
                              const TablePlacement::Placed *done,
                              TableResourceAlloc *resource,
@@ -649,8 +650,38 @@ static void coord_meter_xbar(const TablePlacement::Placed *curr,
         }
         if (p_am == am && !p->resources->meter_xbar.empty()) {
             resource->meter_xbar = prev_resources[j]->meter_xbar;
-            LOG1("previous resource " << prev_resources[j]);
-            LOG1("meter xbar alloc " << resource->meter_xbar.action_data_locs.size());
+            break;
+        }
+    }
+}
+
+// handle reduction or group for multiple stateful alus
+static void coord_reduction_or_group(const TablePlacement::Placed *curr,
+        const TablePlacement::Placed *done,
+        TableResourceAlloc *resource,
+        safe_vector<TableResourceAlloc *> &prev_resources) {
+    const IR::MAU::StatefulAlu *am = nullptr;
+    for (auto at : curr->table->attached) {
+        if ((am = at->attached->to<IR::MAU::StatefulAlu>()) != nullptr) break;
+    }
+    if (am == nullptr) return;
+    if (!resource->meter_xbar.empty())
+        return;
+    int j = 0;
+    for (auto *p = done; p && p->stage == curr->stage; p = p->prev, ++j) {
+        const IR::MAU::StatefulAlu *p_am = nullptr;
+        if (p == curr)
+            continue;
+        for (auto back_at : p->table->attached) {
+            auto at = back_at->attached;
+            if ((p_am = at->to<IR::MAU::StatefulAlu>()) != nullptr)
+                break;
+        }
+        if (p_am == nullptr)
+            continue;
+        if (p_am->reduction_or_group == am->reduction_or_group &&
+            !p->resources->meter_xbar.empty()) {
+            resource->meter_xbar = prev_resources[j]->meter_xbar;
             break;
         }
     }
@@ -979,10 +1010,12 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv, const IR::MA
         coord_selector_xbar(p, done, prev_resources[i], prev_resources);
         coord_action_data_xbar(p, done, prev_resources[i], prev_resources);
         coord_meter_xbar(p, done, prev_resources[i], prev_resources);
+        coord_reduction_or_group(p, done, prev_resources[i], prev_resources);
     }
     coord_selector_xbar(rv, done, resources, prev_resources);
     coord_action_data_xbar(rv, done, resources, prev_resources);
     coord_meter_xbar(rv, done, resources, prev_resources);
+    coord_reduction_or_group(rv, done, resources, prev_resources);
     if (done) {
         if (done->stage == rv->stage)
             done = done->update_resources(rv->stage, 0, prev_resources);

@@ -1043,6 +1043,15 @@ bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl, const Meter
     else
         return true;
 
+    if (auto salu = am->to<IR::MAU::StatefulAlu>()) {
+        LOG1("existing reduction or group " << reduction_or_groups.size());
+        if (!reduction_or_groups.count(salu->reduction_or_group)) {
+            LOG1("added to reduction or group " << salu->reduction_or_group);
+            reduction_or_groups.emplace(salu->reduction_or_group);
+        } else {
+            return true; }
+    }
+
     LOG2("Allocating action data bus for " << tbl->name << " for meter output");
 
     LOG2("Initial Action Data Bus");
@@ -1128,6 +1137,12 @@ void ActionDataBus::update_meter(cstring name, const TableResourceAlloc *alloc,
         if (shared_meters.count(am))
             return;
         shared_meters.emplace(am);
+
+        if (auto salu = am->to<IR::MAU::StatefulAlu>()) {
+            if (reduction_or_groups.count(salu->reduction_or_group))
+                return;
+            reduction_or_groups.emplace(salu->reduction_or_group);
+        }
     }
     if (has_meter) {
         update(name, alloc->meter_xbar);

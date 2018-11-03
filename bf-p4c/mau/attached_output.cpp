@@ -352,4 +352,3 @@ bool AllocMeterOutput::preorder(const IR::MAU::Table* tbl) {
  *  table t2 { actions = { act_2; } }
  *  table t3 { actions = { act_3; } }
  */
-
