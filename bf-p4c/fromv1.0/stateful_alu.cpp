@@ -516,8 +516,14 @@ const IR::Statement *P4V1::StatefulAluConverter::convertExternCall(
     auto *et = ext->type->to<IR::Type_Extern>();
     BUG_CHECK(et && et->name == "stateful_alu",
               "Extern %s is not stateful_alu type, but %s", ext, ext->type);
-    auto rtype = getSelectorProfile(structure, ext) ? IR::Type::Bits::get(1)
-                                           : getRegInfo(structure, ext,  nullptr).utype;
+    const IR::Attached *target = getSelectorProfile(structure, ext);
+    auto rtype = IR::Type::Bits::get(1);
+    bool direct = false;
+    if (!target) {
+        auto info = getRegInfo(structure, ext, structure->declarations);
+        rtype = info.utype;
+        target = info.reg;
+        direct = info.reg->instance_count < 0; }
     if (!rtype) {
         BUG_CHECK(errorCount() > 0, "Failed to find rtype for %s", ext);
         return new IR::EmptyStatement(); }
@@ -529,8 +535,12 @@ const IR::Statement *P4V1::StatefulAluConverter::convertExternCall(
     auto args = new IR::Vector<IR::Argument>();
     if (prim->name == "execute_stateful_alu") {
         BUG_CHECK(prim->operands.size() <= 2, "Wrong number of operands to %s", prim->name);
-        if (prim->operands.size() == 2)
+        if (prim->operands.size() == 2) {
             args->push_back(new IR::Argument(conv.convert(prim->operands.at(1))));
+            if (direct)
+                error("%scalling direct %s with an index", prim->srcInfo, target);
+        } else if (!direct) {
+            error("%scalling indirect %s with no index", prim->srcInfo, target); }
     } else if (prim->name == "execute_stateful_alu_from_hash") {
         BUG_CHECK(prim->operands.size() == 2, "Wrong number of operands to %s", prim->name);
         auto flc = structure->getFieldListCalculation(prim->operands.at(1));

@@ -477,7 +477,9 @@ p4c_add_xfail_reason("tofino"
 
 # COMPILER-540
 p4c_add_xfail_reason("tofino"
-    "error: .* extern RegisterAction does not have method matching this call"
+  "error: calling indirect .* with no index"
+  extensions/p4_tests/p4_14/test_config_160_stateful_single_bit_mode.p4
+  extensions/p4_tests/p4_14/test_config_170_stateful_selection_table_update.p4
   extensions/p4_tests/p4_14/test_config_171_stateful_conga.p4
   extensions/p4_tests/p4_14/test_config_173_stateful_bloom_filter.p4
   extensions/p4_tests/p4_14/test_config_174_stateful_flow_learning.p4
@@ -1264,11 +1266,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Attached object .* requires multiple different types of meter addressing"
   extensions/p4_tests/p4_14/test_config_142_stateful_bfd.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "Indirect attached object .* requires an index to address, as it isn't directly addressed"
-  extensions/p4_tests/p4_14/test_config_170_stateful_selection_table_update.p4
 )
 
 # psa.p4 bug, frontend failure
