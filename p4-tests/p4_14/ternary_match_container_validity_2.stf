@@ -1,0 +1,10 @@
+add test1 eth.foo:0x01010101 set_port()
+
+add test2 100 v4.foo:0xdeadbabe v6.foo:0x******** rewrite_eth()
+add test2 200 v4.foo:0x******** v6.foo:0xfaceb00c rewrite_eth()
+
+expect 2 8080 03030303 ******** ********
+packet 0 8080 01010101 deadbabe 02020202 
+
+expect 2 5050 03030303 ******** ********
+packet 0 5050 01010101 faceb00c 02310234 

@@ -21,6 +21,8 @@
 #include "bf-p4c/parde/parde_utils.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/pragma/pa_no_init.h"
+#include "bf-p4c/mau/mau_visitor.h"
+#include "bf-p4c/mau/resource.h"
 #include "lib/stringref.h"
 
 namespace {
@@ -2340,19 +2342,87 @@ class ComputeMultiwriteContainers : public ParserModifier {
     std::map<PHV::Container, unsigned> writes;
 };
 
-/// Compute containers that have fields relying on parser zero initialization. Those containers
-/// $validity bits should be set to 1 by parser to avoid a TCAM match issue.
+// If a container that participates in ternary match is invalid, model(HW)
+// uses the last valid value in that container to perform the match.
+// To help user avoid matching on stale value in container, we issue warning
+// message so that user doesn't fall through this trapdoor.
+class WarnTernaryMatchFields : public MauInspector {
+    const PhvInfo& phv;
+    ordered_map<const IR::MAU::Table*, ordered_set<const PHV::Field*>> ternary_match_fields;
+
+ public:
+    explicit WarnTernaryMatchFields(const PhvInfo& phv) : phv(phv) { }
+
+    bool preorder(const IR::MAU::Table* tbl) override {
+        if (!tbl->layout.ternary)
+            return false;
+
+        auto& ixbar_use = tbl->resources->match_ixbar;
+
+        for (auto& b : ixbar_use.use) {
+            for (auto &fi : b.field_bytes) {
+                auto f = phv.field(fi.field);
+                ternary_match_fields[tbl].insert(f);
+            }
+        }
+
+        // TODO(zma) check if user has already included the header validity bits
+        // and if ternary match table is predicated by a header validty gateway
+        // table so that we don't spew too many spurious warnings.
+
+        return false;
+    }
+
+    void end_apply() override {
+        for (auto &tf : ternary_match_fields) {
+            for (auto f : tf.second) {
+                if (!f->is_invalidate_from_arch()) continue;
+
+                std::stringstream ss;
+
+                ss << "Matching on " << f->name << " in table " << tf.first->name << " (implemented"
+                   << " with ternary resources) before it has been assigned can result in "
+                   << "non-deterministic lookup behavior."
+                   << "\nConsider including in the match key an additional metadata"
+                   << " field that indicates whether the field has been assigned.";
+
+                ::warning("%1%", ss.str());
+            }
+        }
+    }
+};
+
+/// Compute containers that have fields relying on parser zero initialization.
 class ComputeInitZeroContainers : public ParserModifier {
     void postorder(IR::BFN::LoweredParser* parser) override {
         ordered_set<PHV::Container> zero_init_containers;
         ordered_set<PHV::Container> intrinsic_invalidate_containers;
+
         for (const auto& f : phv) {
             if (f.gress != parser->gress) continue;
+
+            // POV bits are treated as metadata
+            if (f.pov || f.metadata) {
+                f.foreach_alloc([&] (const PHV::Field::alloc_slice& alloc) {
+                    bool hasHeaderField = false;
+
+                    for (auto fc : phv.fields_in_container(alloc.container)) {
+                        if (!fc->metadata && !fc->pov) {
+                            hasHeaderField = true;
+                            break;
+                        }
+                    }
+
+                    if (!hasHeaderField)
+                        zero_init_containers.insert(alloc.container);
+                });
+            }
 
             if (f.is_invalidate_from_arch()) {
                 // Track the allocated containers for fields that are invalidate_from_arch
                 f.foreach_alloc([&] (const PHV::Field::alloc_slice& alloc) {
                     intrinsic_invalidate_containers.insert(alloc.container);
+                    LOG3(alloc.container << " contains intrinsic invalidate fields");
                 });
                 continue;
             }
@@ -2366,29 +2436,35 @@ class ComputeInitZeroContainers : public ParserModifier {
                 if (no_init_fields.count(&f)) continue;
                 f.foreach_alloc([&] (const PHV::Field::alloc_slice& alloc) {
                     zero_init_containers.insert(alloc.container);
-                }); }
+                });
+            }
         }
 
-
         for (auto& c : zero_init_containers) {
-            // Containers for intrinsic invalidate_from_arch metadata should be left uninitialized,
-            // therefore skip zero-initialization
-            if (!intrinsic_invalidate_containers.count(c))
+            // Containers for intrinsic invalidate_from_arch metadata should be left
+            // uninitialized, therefore skip zero-initialization
+            if (!intrinsic_invalidate_containers.count(c)) {
                 parser->initZeroContainers.push_back(new IR::BFN::ContainerRef(c));
+                LOG3("parser init " << c);
+            }
         }
 
         // Also initialize the container validity bits for the zero-ed containers (as part of
         // deparsed zero optimization) to 1.
-        for (auto& c : phv.getZeroContainers(parser->gress))
+        for (auto& c : phv.getZeroContainers(parser->gress)) {
+            if (intrinsic_invalidate_containers.count(c))
+                BUG("%1% used for both init-zero and intrinsic invalidate field?", c);
+
             parser->initZeroContainers.push_back(new IR::BFN::ContainerRef(c));
+        }
     }
 
  public:
     ComputeInitZeroContainers(
             const PhvInfo& phv,
             const FieldDefUse& defuse,
-            const ordered_set<const PHV::Field*>& f)
-        : phv(phv), defuse(defuse), no_init_fields(f) { }
+            const ordered_set<const PHV::Field*>& no_init)
+        : phv(phv), defuse(defuse), no_init_fields(no_init) {}
 
     const PhvInfo& phv;
     const FieldDefUse& defuse;
@@ -2447,6 +2523,7 @@ LowerParser::LowerParser(const PhvInfo& phv, ClotInfo& clot, const FieldDefUse &
         new LowerDeparserIR(phv, clot),
         new SplitBigStates,
         LOGGING(3) ? new DumpParser("after_split_big_states") : nullptr,
+        new WarnTernaryMatchFields(phv),
         new ComputeInitZeroContainers(phv, defuse, pragma_no_init->getFields()),
         new ComputeMultiwriteContainers,  // Must run after ComputeInitZeroContainers.
         new ComputeBufferRequirements,

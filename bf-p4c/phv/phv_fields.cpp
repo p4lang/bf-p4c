@@ -990,27 +990,23 @@ struct ComputeFieldAlignments : public Inspector {
 };
 
 
-/** Mark certain intrinsic metadata fields as invalidate_from_arch so that we don't initialize them
- * in the parser (see ComputeInitZeroContainers pass in lower_parser.cpp)
- * When compiling a P4_14 program, the P4_14 spec says:
+/** Mark certain intrinsic metadata fields as invalidate_from_arch so that
+ * we don't initialize them in the parser (see ComputeInitZeroContainers pass
+ * in lower_parser.cpp)
  *
  * "Metadata is always considered to be valid. This is further explained in
  * Section 2.2.1. Metadata instances are initialized to 0 by default."
  *
- * For Tofino applications, we deviated from the spec for 4 user-accessible
+ * For Tofino applications, we deviated from the spec for a few user-accessible
  * intrinsic metadata fields that are read at the deparser, because a valid
- * value of 0 has undesired behavior at the deparser. The fields are:
- * ig_intr_md_for_tm.ucast_egress_port
- * ig_intr_md_for_tm.mcast_grp_a
- * ig_intr_md_for_tm.mcast_grp_b
- * eg_intr_md.egress_port
+ * value of 0 has undesired behavior at the deparser (see field list below).
  *
  * Note that Glass does not expose the mirror field list type as a user-facing
  * field, but that may also apply here. (The learning digest type may also
  * apply here too.)
  *
  * All other metadata fields (intrinsic and user) should have their container
- * valid bit set coming out of the parser for P4_14 programs.
+ * valid bit set coming out of the parser.
  *
  * P4_16 changed the semantic to be such that uninitialized metadata has an
  * undefined value.
@@ -1024,7 +1020,12 @@ class AddIntrinsicConstraints : public Inspector {
            {{ "ig_intr_md_for_tm", "mcast_grp_a" },
             { "ig_intr_md_for_tm", "mcast_grp_b" },
             { "eg_intr_md", "egress_port" },
-            { "ig_intr_md_for_tm", "ucast_egress_port" }};
+            { "ig_intr_md_for_tm", "ucast_egress_port" },
+            { "ig_intr_md_for_dprsr", "resubmit_type" },
+            { "ig_intr_md_for_dprsr", "digest_type" },
+            { "g_intr_md_for_dprsr", "mirror_type"}
+           };
+
         return rv;
     }
 
@@ -1411,8 +1412,7 @@ CollectPhvInfo::CollectPhvInfo(PhvInfo& phv) {
         new AllocatePOVBits(phv),
         new CollectPardeConstraints(phv),
         new ComputeFieldAlignments(phv),
-        (BFNContext::get().options().langVersion == BFN_Options::FrontendVersion::P4_14) ?
-            new AddIntrinsicConstraints(phv) : nullptr,
+        new AddIntrinsicConstraints(phv),
         new MarkTimestampAndVersion(phv)
     });
 }
