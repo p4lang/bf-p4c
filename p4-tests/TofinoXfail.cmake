@@ -220,6 +220,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/02-FlexCounterActionProfile.p4
   testdata/p4_14_samples/const_default_action.p4
   extensions/p4_tests/p4_14/p4smith_regression/tofino-bug-2.p4
+  testdata/p4_16_samples/action_selector_shared-bmv2.p4
   )
 
 
@@ -269,7 +270,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "In table .*, the number of bytes required to go through the immediate pathway"
   extensions/p4_tests/p4_14/test_config_311_hash_adb.p4
-  switch_ent_fin_postcard
   )
 
 # BRIG-102
@@ -279,25 +279,36 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4-tests/programs/opcode_test/opcode_test.p4
   )
 
+# P4C-1041
+p4c_add_xfail_reason("tofino"
+  "Compiler Bug.*Slicing the following supercluster is taking too long"
+  switch_generic_int_leaf
+  switch_8.4_generic_int_leaf
+  switch_l3_heavy_int_leaf
+  switch_8.4_l3_heavy_int_leaf
+  switch_msdc_leaf_int
+  switch_8.4_msdc_leaf_int
+  switch_ent_fin_postcard
+  switch_msdc_spine_int
+  switch_8.4_msdc_spine_int
+  )
+
 p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
+  switch_msdc_ipv4
+  switch_8.4_msdc_ipv4
   )
 
 p4c_add_xfail_reason("tofino"
   "error: The stage specified for .* could not place it until stage"
   smoketest_programs_netcache
-  switch_msdc_leaf_int
-  switch_8.4_msdc_leaf_int
   extensions/p4_tests/p4_14/p4-tests/programs/mau_test/mau_test.p4  #P4C-1123
   )
 
 p4c_add_xfail_reason("tofino"
-  "error: Failed to place tables .* in the same stage"
-  #"error.*Power worst case estimated budget exceeded by*"
+  "error.*Power worst case estimated budget exceeded by*"
   #extensions/p4_tests/p4_14/p4-tests/programs/clpm/clpm.p4 # update path when test is added
-  switch_l3_heavy_int_leaf
-  switch_8.4_l3_heavy_int_leaf
   )
 
 # switch_spine_dtel_int and switch_l3_heavy_spine test failures
@@ -414,7 +425,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/action_profile_not_shared.p4
   extensions/p4_tests/p4_14/action_profile_next_stage.p4
 #   extensions/p4_tests/p4_14/c1/COMPILER-235/vag1662.p4
-  testdata/p4_16_samples/action_selector_shared-bmv2.p4
   testdata/p4_14_samples/12-Counters.p4
   testdata/p4_14_samples/13-Counters1and2.p4
   )
@@ -1077,12 +1087,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "PHV allocation was not successful"
-  switch_8.4_generic_int_leaf
-  switch_generic_int_leaf
-)
-
-p4c_add_xfail_reason("tofino"
   "The attached table .* is addressed by both hash and index in table"
   extensions/p4_tests/p4_14/test_config_313_neg_test_addr_modes.p4
 )
@@ -1316,8 +1320,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: ALU ops cannot operate on slices"
   extensions/p4_tests/p4_14/p4smith_regression/shrubs_0.p4
-  #switch_msdc_leaf_int
-  #switch_8.4_msdc_leaf_int
 )
 
 # BRIG-927

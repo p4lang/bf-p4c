@@ -150,6 +150,18 @@ BuildDominatorTree::getNonGatewayImmediateDominator(const IR::MAU::Table* t, gre
     return getNonGatewayImmediateDominator(*dom, gress);
 }
 
+bool BuildDominatorTree::strictlyDominates(const IR::BFN::Unit* u1, const IR::BFN::Unit* u2) const {
+    if (u1 == u2) return false;
+    bool isParser1 = u1->is<IR::BFN::Parser>() || u1->is<IR::BFN::ParserState>();
+    if (isParser1) return true;
+    bool isParser2 = u2->is<IR::BFN::Parser>() || u2->is<IR::BFN::ParserState>();
+    // Parser can never be dominated by a table or deparser.
+    if (isParser2) return false;
+    const auto* t1 = u1->to<IR::MAU::Table>();
+    const auto* t2 = u2->to<IR::MAU::Table>();
+    return strictlyDominates(t1, t2);
+}
+
 bool
 BuildDominatorTree::strictlyDominates(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const {
     if (t1 == t2) return false;

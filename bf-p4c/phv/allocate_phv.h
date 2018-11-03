@@ -10,6 +10,7 @@
 #include "bf-p4c/phv/action_phv_constraints.h"
 #include "bf-p4c/phv/analysis/critical_path_clusters.h"
 #include "bf-p4c/phv/analysis/field_interference.h"
+#include "bf-p4c/phv/analysis/live_range_shrinking.h"
 #include "bf-p4c/phv/make_clusters.h"
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
 #include "bf-p4c/phv/phv.h"
@@ -160,6 +161,9 @@ class CoreAllocation {
     ActionPhvConstraints& actions_i;
     PHV::Pragmas& pragmas_i;  // Some might not be satisfied.
 
+    // Metadata initialization possibilities.
+    LiveRangeShrinking& meta_init_i;
+
     // Alignment failure fields. Right now, this will only contain bridged metadata fields if PHV
     // allocation fails due to alignment reasons. Used to backtrack to bridged metadata packing.
     ordered_set<const PHV::Field*> fieldsWithAlignmentConflicts;
@@ -172,9 +176,10 @@ class CoreAllocation {
                    const ClotInfo& clot,
                    PHV::Pragmas& pragmas,
                    PhvInfo& phv,
-                   ActionPhvConstraints& actions)
+                   ActionPhvConstraints& actions,
+                   LiveRangeShrinking& meta)
         : mutex_i(mutex), /* clustering_i(clustering), */ uses_i(uses), defuse_i(defuse),
-          clot_i(clot), phv_i(phv), actions_i(actions), pragmas_i(pragmas) { }
+          clot_i(clot), phv_i(phv), actions_i(actions), pragmas_i(pragmas), meta_init_i(meta) { }
 
     /// @returns true if @f can overlay all fields in @slices.
     static bool can_overlay(
@@ -202,8 +207,12 @@ class CoreAllocation {
         const PHV::FieldSlice& slice) const;
 
     /// @returns true if @slice is a valid allocation move given the allocation
-    /// statis in @alloc.
-    bool satisfies_constraints(const PHV::Allocation& alloc, PHV::AllocSlice slice) const;
+    /// status in @alloc. @initFields contains a list of fields in this container that will be
+    /// initialized via metadata initialization.
+    bool satisfies_constraints(
+            const PHV::Allocation& alloc,
+            PHV::AllocSlice slice,
+            ordered_set<PHV::AllocSlice>& initFields) const;
 
     /// @returns true if @container_group and @cluster_group satisfy constraints.
     /// XXX(cole): figure out what, if any, constraints should go here.
@@ -461,6 +470,8 @@ class AllocatePHV : public Inspector {
     /// Currently unused ActionPhvConstraints& actions_i;
     // Used to create strategies, if needed
     const CalcCriticalPathClusters& critical_path_clusters_i;
+    // Used to find metadata initialization possibilities.
+    LiveRangeShrinking& meta_init_i;
     FieldInterference field_interference_i;
 
     // Set of bridged metadata fields that were found to have alignment conflicts during PHV
@@ -522,11 +533,13 @@ class AllocatePHV : public Inspector {
                 PHV::Pragmas& pragmas,
                 PhvInfo& phv,
                 ActionPhvConstraints& actions,
-                const CalcCriticalPathClusters& critical_cluster)
-        : core_alloc_i(phv.field_mutex, clustering, uses, defuse, clot, pragmas, phv, actions),
+                const CalcCriticalPathClusters& critical_cluster,
+                LiveRangeShrinking& meta_init)
+        : core_alloc_i(phv.field_mutex, clustering, uses, defuse, clot, pragmas, phv, actions,
+                meta_init),
           phv_i(phv), uses_i(uses), clot_i(clot),
           clustering_i(clustering), mutex_i(phv.field_mutex), pragmas_i(pragmas),
-          critical_path_clusters_i(critical_cluster),
+          critical_path_clusters_i(critical_cluster), meta_init_i(meta_init),
           field_interference_i(phv.field_mutex, uses) { }
 };
 

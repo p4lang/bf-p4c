@@ -1,5 +1,4 @@
 #include "phv_analysis.h"
-#include "bf-p4c/common/live_range_overlay.h"
 #include "bf-p4c/common/parser_overlay.h"
 #include "bf-p4c/phv/cluster_phv_operations.h"
 #include "bf-p4c/phv/mau_backtracker.h"
@@ -34,7 +33,8 @@ PHV_AnalysisPass::PHV_AnalysisPass(
       pack_conflicts(phv, deps, table_mutex, table_alloc, action_mutex),
       action_constraints(phv, pack_conflicts),
       pragmas(phv, options),
-      meta_live_range(phv, deps, defuse, pragmas, uses) {
+      meta_live_range(phv, deps, defuse, pragmas, uses, table_alloc),
+      meta_init(phv, defuse, deps, pragmas.pa_no_init(), meta_live_range, action_constraints) {
     if (options.trivial_phvalloc) {
         addPasses({
             new PHV::TrivialAlloc(phv)});
@@ -59,9 +59,6 @@ PHV_AnalysisPass::PHV_AnalysisPass(
                                    // refresh dependency graph for live range
                                    // analysis
             &defuse,               // refresh defuse
-            new LiveRangeOverlay(phv, deps, defuse, pragmas),
-                                   // produce pairs of fields that are never live
-                                   // in the same stage
             new PHV_Field_Operations(phv),  // PHV field operations analysis
             &table_mutex,          // Table mutual exclusion information
             &action_mutex,         // Mutually exclusive action information
@@ -80,6 +77,9 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             // Determine `ideal` live ranges for metadata fields in preparation for live range
             // shrinking that will be effected during and post AllocatePHV.
             &meta_live_range,
+            // Metadata initialization pass should be run after the metadata live range is
+            // calculated.
+            &meta_init,
 
 #if HAVE_JBAY
             options.jbay_analysis ? new JbayPhvAnalysis(phv, uses, deps, defuse, action_constraints)
@@ -90,7 +90,9 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             &clustering,           // cluster analysis
             new PhvInfo::DumpPhvFields(phv, uses),
             new AllocatePHV(clustering, uses, defuse, clot, pragmas, phv, action_constraints,
-                    critical_path_clusters)
+                    critical_path_clusters, meta_init),
+            new AddMetadataInitialization(phv, defuse, meta_live_range),
+            &defuse
         }); }
 
     setName("PHV Analysis");

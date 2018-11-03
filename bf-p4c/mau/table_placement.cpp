@@ -44,6 +44,7 @@ bool TablePlacement::backtrack(trigger &trig) {
 
 Visitor::profile_t TablePlacement::init_apply(const IR::Node *root) {
     alloc_done = phv.alloc_done();
+    placed_table_names.clear();
     LOG1("Table Placement ignores container conflicts? " << ignoreContainerConflicts);
     upward_downward_prop = new UpwardDownwardPropagation(*deps);
     return MauTransform::init_apply(root);
@@ -1045,6 +1046,13 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed *
     if (stage_pragma >= 0 && stage_pragma != pl->stage)
         LOG1("  placing in stage " << pl->stage << " dsespite @stage(" << stage_pragma << ")");
 
+    placed_table_names.insert(pl->name);
+    LOG2("  inserting " << pl->name << " into placed_table_names");
+    if (pl->gw) {
+        placed_table_names.insert(pl->gw->name);
+        LOG2("  inserting " << pl->gw->name << " into placed_table_names");
+    }
+
     if (!pl->need_more) {
         placed_tables.insert(pl->table);
         if (pl->gw) placed_tables.insert(pl->gw);
@@ -1097,6 +1105,18 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed *
     return pl;
 }
 
+bool TablePlacement::are_metadata_deps_satisfied(const IR::MAU::Table* t) const {
+    // If there are no reverse metadata deps for this table, return true.
+    LOG4("Checking table " << t->name << " for metadata dependencies");
+    const ordered_set<cstring> set_of_tables = phv.getReverseMetadataDeps(t);
+    for (auto tbl : set_of_tables) {
+        if (!placed_table_names.count(tbl)) {
+            LOG4("    Table " << tbl << " needs to be placed before table " << t->name);
+            return false;
+        }
+    }
+    return true;
+}
 
 bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choice) {
     const IR::MAU::Table *a_table_to_use = a->gw ? a->gw : a->table;
@@ -1276,6 +1296,11 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                         break;
                     }
                 }
+                if (!are_metadata_deps_satisfied(t)) {
+                    LOG3("  - skipping " << t->name << " because metadata deps not satisfied");
+                    should_skip = true;
+                }
+
                 if (should_skip)
                     continue;
 

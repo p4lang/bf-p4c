@@ -161,6 +161,8 @@ class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWrit
                 continue;
             }
             auto edge_pair = self.dg.add_edge(upstream_t, table, dep);
+            LOG3("Add " << dep_types(dep) << " dependency from " << upstream_t->name << " to " <<
+                 table->name << " because of field " << field->name);
             const IR::MAU::Action *action_use_context = findContext<IR::MAU::Action>();
             self.dg.data_annotations[edge_pair.first][field].first.insert(upstream_t_pair.second);
             self.dg.data_annotations[edge_pair.first][field].second.insert(action_use_context);
@@ -178,8 +180,8 @@ class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWrit
                             upstream_t.first->name, container.toString());
                 continue;
             }
-            LOG3("Adding container conflict between table " << upstream_t.first->name << " and "
-                 << "table " << table->name << " because of container " << container);
+            LOG3("Add container conflict between table " << upstream_t.first->name << " and table "
+                 << table->name << " because of container " << container);
             self.dg.container_conflicts[upstream_t.first].insert(table);
             self.dg.container_conflicts[table].insert(upstream_t.first);
         }
@@ -537,7 +539,7 @@ FindDataDependencyGraph::calc_topological_stage(unsigned dep_flags) {
         for (auto& kv : n_depending_on) {
             if (!processed.count(kv.first) && kv.second == 0)
                 this_generation.insert(kv.first); }
-        // There are remaining vertices, so it must be a loop.
+        // There are no remaining vertices, so it must be a loop.
         if (this_generation.size() == 0) {
             LOG2(dg);
             ::error("There is a loop in the table dependency graph.");
@@ -631,15 +633,15 @@ void FindDataDependencyGraph::finalize_dependence_graph(void) {
                         && dg.dep_type_map.at(table).at(later) !=
                            DependencyGraph::REDUCTION_OR_OUTPUT) {
                             if (dg.dep_type_map.at(table).at(later) == DependencyGraph::ANTI) {
-                                LOG3("Adding stage from anti");
+                                LOG4("Adding stage from anti");
                             }
                             stage_addition = 1;
                     }
                     return std::max(sz, dg.stage_info[later].dep_stages_control + stage_addition);
             });
-            LOG3("Dep stages of " << dg.stage_info[table].dep_stages <<
+            LOG4("Dep stages of " << dg.stage_info[table].dep_stages <<
                 " for table " << table->name);
-            LOG3("Dep stages control of " << dg.stage_info[table].dep_stages_control <<
+            LOG4("Dep stages control of " << dg.stage_info[table].dep_stages_control <<
                 " for table " << table->name);
         }
     }
@@ -690,7 +692,7 @@ void FindDataDependencyGraph::finalize_dependence_graph(void) {
         auto* table = kv.first;
         for (const auto* prev : kv.second) {
             dg.happens_before_control_map[prev].insert(table); } }
-    if (LOGGING(3)) {
+    if (LOGGING(4)) {
         std::stringstream ss;
         for (auto& kv : dg.happens_before_control_map) {
             ss << "Table " << kv.first->name << " has priors of ";
@@ -698,14 +700,14 @@ void FindDataDependencyGraph::finalize_dependence_graph(void) {
                 ss << tbl->name << ", ";
             }
             ss << "\n";
-            LOG3(ss.str());
+            LOG4(ss.str());
         }
         for (auto& kv_outer : dg.dep_type_map) {
             for (auto& kv_inner : kv_outer.second) {
                 auto* initial_table = kv_outer.first;
                 auto* later_table = kv_inner.first;
                 auto value = kv_inner.second;
-                LOG3("Initial table " << initial_table->name << " with later table "
+                LOG4("Initial table " << initial_table->name << " with later table "
                     << later_table->name << " and value " << value);
             }
         }
@@ -714,27 +716,27 @@ void FindDataDependencyGraph::finalize_dependence_graph(void) {
     // Calculate dg.happens_before_control_anti_map
     std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>> topo_rst_control_anti =
         calc_topological_stage(DependencyGraph::CONTROL | DependencyGraph::ANTI);
-    if (LOGGING(3)) {
-        LOG3("Printing results of topological sorting with control and anti dependences included");
+    if (LOGGING(4)) {
+        LOG4("Printing results of topological sorting with control and anti dependences included");
         for (size_t i = 0; i < topo_rst_control_anti.size(); ++i) {
-            LOG3(">>> Stage#" << i << ":");
+            LOG4(">>> Stage#" << i << ":");
             for (const auto& vertex : topo_rst_control_anti[i]) {
                 const auto* t = dg.get_vertex(vertex);
-                LOG3("Table: " << vertex << ", " << t->name);
+                LOG4("Table: " << vertex << ", " << t->name);
             }
         }
     }
     for (const auto& kv : dg.happens_before_map)
         dg.happens_before_control_anti_map[kv.first].insert(kv.second.begin(), kv.second.end());
 
-    if (LOGGING(3)) {
+    if (LOGGING(4)) {
         std::stringstream ss;
         for (auto& kv : dg.happens_before_control_anti_map) {
             ss << "Table " << kv.first->name << " has priors of ";
             for (auto& tbl : kv.second)
                 ss << tbl->name << ", ";
             ss << std::endl;
-            LOG3(ss.str());
+            LOG4(ss.str());
         }
     }
     dg.vertex_rst = topo_rst_control;

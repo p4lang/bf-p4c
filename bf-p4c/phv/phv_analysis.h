@@ -15,6 +15,7 @@
 #include "bf-p4c/phv/mau_backtracker.h"
 #include "bf-p4c/phv/analysis/critical_path_clusters.h"
 #include "bf-p4c/phv/analysis/field_interference.h"
+#include "bf-p4c/phv/analysis/live_range_shrinking.h"
 #include "bf-p4c/phv/analysis/meta_live_range.h"
 #include "bf-p4c/phv/analysis/pack_conflicts.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
@@ -44,6 +45,8 @@ class PHV_AnalysisPass : public Logging::PassManager {
     PHV::Pragmas pragmas;
     /// Metadata live range overlay potential information based on table dependency graph.
     MetadataLiveRange meta_live_range;
+    /// Metadata initialization related pass.
+    LiveRangeShrinking meta_init;
     /// Fields that are going to be deparsed to zero.
     ordered_set<const PHV::Field*> deparser_zero_fields;
 

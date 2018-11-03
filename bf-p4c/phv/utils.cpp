@@ -103,7 +103,15 @@ void PHV::Allocation::addStatus(PHV::Container c, const ContainerStatus& status)
         field_status_i[slice.field()].insert(slice);
 }
 
-void PHV::Allocation::addSlice(PHV::Container c, AllocSlice slice) {
+void PHV::Allocation::addMetaInitPoints(
+        PHV::AllocSlice slice,
+        ordered_set<const IR::MAU::Action*> actions) {
+    meta_init_points_i[slice] = actions;
+    for (const IR::MAU::Action* act : actions)
+        init_writes_i[act].insert(slice.field());
+}
+
+void PHV::Allocation::addSlice(PHV::Container c, PHV::AllocSlice slice) {
     // Get the current status in container_status_i, or its ancestors, if any.
     ContainerStatus status = this->getStatus(c).get_value_or(ContainerStatus());
     status.slices.insert(slice);
@@ -134,6 +142,18 @@ void PHV::Allocation::addSlice(PHV::Container c, AllocSlice slice) {
         if (old_status != container_status_i[c].alloc_status) {
             --count_by_status_i[c.type().size()][old_status];
             ++count_by_status_i[c.type().size()][container_status_i[c].alloc_status]; } }
+}
+
+void PHV::Allocation::addMetadataInitialization(
+        PHV::AllocSlice slice,
+        LiveRangeShrinkingMap initNodes) {
+    // If no initialization required for the slice, return.
+    if (!initNodes.count(slice.field()))
+        // Initialization is on a different AllocSlice.
+        return;
+
+    // If initialization required for the slice, then add it.
+    this->addMetaInitPoints(slice, initNodes.at(slice.field()));
 }
 
 void PHV::Allocation::setGress(PHV::Container c, GressAssignment gress) {
@@ -246,7 +266,9 @@ int PHV::Allocation::empty_containers(PHV::Size size) const {
  * the container and its MAU group if necessary.  Fails if the gress of
  * @slice.field does not match any gress in the MAU group.
  */
-void PHV::Allocation::allocate(PHV::AllocSlice slice) {
+void PHV::Allocation::allocate(
+        PHV::AllocSlice slice,
+        boost::optional<LiveRangeShrinkingMap> initNodes) {
     auto& phvSpec = Device::phvSpec();
     unsigned slice_cid = phvSpec.containerToId(slice.container());
     auto containerGress = this->gress(slice.container());
@@ -300,6 +322,10 @@ void PHV::Allocation::allocate(PHV::AllocSlice slice) {
 
     // Update allocation.
     this->addSlice(slice.container(), slice);
+
+    // Remember the initialization points for metadata.
+    if (initNodes)
+        this->addMetadataInitialization(slice, *initNodes);
 }
 
 void PHV::Allocation::commit(Transaction& view) {
@@ -309,6 +335,15 @@ void PHV::Allocation::commit(Transaction& view) {
     // Merge the status from the view.
     for (auto kv : view.getTransactionStatus())
         this->addStatus(kv.first, kv.second);
+
+    // Merge the metadata initialization points from the view.
+    for (auto kv : view.getMetaInitPoints())
+        this->addMetaInitPoints(kv.first, kv.second);
+
+    // Print the initialization information for this transaction.
+    if (view.getInitWrites().size() != 0)
+        for (auto kv : view.getInitWrites())
+            this->init_writes_i[kv.first].insert(kv.second.begin(), kv.second.end());
 
     // Clear the view.
     view.clearTransactionStatus();
@@ -321,6 +356,13 @@ PHV::Transaction PHV::Allocation::makeTransaction() const {
 /// @returns a pretty-printed representation of this Allocation.
 cstring PHV::Allocation::toString() const {
     return cstring::to_cstring(*this);
+}
+
+const ordered_set<const PHV::Field*>
+PHV::Allocation::getMetadataInits(const IR::MAU::Action* act) const {
+    ordered_set<const PHV::Field*> emptySet;
+    if (!init_writes_i.count(act)) return emptySet;
+    return init_writes_i.at(act);
 }
 
 /* static */ bool
@@ -404,6 +446,13 @@ PHV::ConcreteAllocation::ConcreteAllocation(const SymBitMatrix& mutex, const Phv
 /// @returns true if this allocation owns @c.
 bool PHV::ConcreteAllocation::contains(PHV::Container c) const {
     return container_status_i.find(c) != container_status_i.end();
+}
+
+ordered_set<const IR::MAU::Action*>
+PHV::ConcreteAllocation::getInitPoints(PHV::AllocSlice slice) const {
+    static ordered_set<const IR::MAU::Action*> emptySet;
+    if (!meta_init_points_i.count(slice)) return emptySet;
+    return meta_init_points_i.at(slice);
 }
 
 boost::optional<PHV::Allocation::ContainerStatus>
