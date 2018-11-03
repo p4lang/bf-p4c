@@ -421,6 +421,7 @@ add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_PHV_HDRS}")
 set (BF_P4C_BACKEND_ARCH_SRCS
   arch/arch.cpp
   arch/bridge_metadata.cpp
+  arch/check_extern_invocation.cpp
   arch/internal/collect_bridged_fields.cpp
   arch/phase0.cpp
   arch/program_structure.cpp
@@ -446,6 +447,7 @@ set (BF_P4C_BACKEND_ARCH_HDRS
   arch/arch.h
   arch/intrinsic_metadata.h
   arch/bridge_metadata.h
+  arch/check_extern_invocation.h
   arch/internal/collect_bridged_fields.h
   arch/parser_graph.h
   arch/phase0.h

@@ -5,6 +5,7 @@
 #include "bf-p4c/arch/tna.h"
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/arch/arch.h"
+#include "bf-p4c/arch/check_extern_invocation.h"
 
 namespace BFN {
 
@@ -112,20 +113,6 @@ struct RestoreOptionalParams : public Transform {
             tnaParams.emplace("ig_intr_md_for_dprsr", param->name);
             paramList->push_back(param);
         }
-/*
-        if (params->size() <= 7) {
-            // add compiler_generated_metadata
-            auto* path = new IR::Path("compiler_generated_metadata_t");
-            auto* type = new IR::Type_Name(path);
-            auto* param = new IR::Parameter("compiler_generated_meta", IR::Direction::InOut, type);
-            tnaParams.emplace("compiler_generated_meta", param->name);
-            paramList->push_back(param);
-        } else {
-            auto* param = params->parameters.at(7);
-            tnaParams.emplace("compiler_generated_meta", param->name);
-            paramList->push_back(param);
-        }
-*/
         auto* controlType = new IR::Type_Control(control->type->name, paramList);
 
         auto* result = new IR::BFN::TranslatedP4Control(control->srcInfo, control->name,
@@ -229,20 +216,6 @@ struct RestoreOptionalParams : public Transform {
             tnaParams.emplace("ig_intr_md_for_tm", param->name);
             paramList->push_back(param);
         }
-/*
-        if (params->size() <= 9) {
-            // add compiler_generated_metadata
-            auto* path = new IR::Path("compiler_generated_metadata_t");
-            auto* type = new IR::Type_Name(path);
-            auto* param = new IR::Parameter("compiler_generated_meta", IR::Direction::InOut, type);
-            tnaParams.emplace("compiler_generated_meta", param->name);
-            paramList->push_back(param);
-        } else {
-            auto* param = params->parameters.at(9);
-            tnaParams.emplace("compiler_generated_meta", param->name);
-            paramList->push_back(param);
-        }
-*/
         auto* controlType = new IR::Type_Control(control->type->name, paramList);
 
         return new IR::BFN::TranslatedP4Control(control->srcInfo, control->name, controlType,
@@ -387,19 +360,41 @@ class InsertPhaseZeroAnnotation : public Transform {
     }
 };
 
-LowerTofinoToStratum::LowerTofinoToStratum(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
-                                           BFN_Options &options) {
-    setName("LowerTofinoToStratum");
+TnaArchTranslation::TnaArchTranslation(P4::ReferenceMap *refMap,
+        P4::TypeMap *typeMap, BFN_Options &options) {
+    setName("TnaArchTranslation");
     addDebugHook(options.getDebugHook());
     auto* evaluator = new P4::EvaluatorPass(refMap, typeMap);
     auto* parseTna = new ParseTna(&threads /* not used */);
     addPasses({
         evaluator,
         new VisitFunctor([evaluator, parseTna]() {
-            auto toplevel = evaluator->getToplevelBlock();
+        auto toplevel = evaluator->getToplevelBlock();
             toplevel->getMain()->apply(*parseTna);
         }),
         new RewriteControlAndParserBlocks(&parseTna->toBlockInfo),
+        new CheckTNAExternInvocation(refMap, typeMap),
+        new LoweringType(),
+        new P4::ClearTypeMap(typeMap),
+        new P4::TypeChecking(refMap, typeMap, true),
+        new InsertPhaseZeroAnnotation,
+    });
+}
+
+T2naArchTranslation::T2naArchTranslation(P4::ReferenceMap *refMap,
+        P4::TypeMap *typeMap, BFN_Options &options) {
+    setName("T2naArchTranslation");
+    addDebugHook(options.getDebugHook());
+    auto* evaluator = new P4::EvaluatorPass(refMap, typeMap);
+    auto* parseTna = new ParseTna(&threads /* not used */);
+    addPasses({
+        evaluator,
+        new VisitFunctor([evaluator, parseTna]() {
+        auto toplevel = evaluator->getToplevelBlock();
+            toplevel->getMain()->apply(*parseTna);
+        }),
+        new RewriteControlAndParserBlocks(&parseTna->toBlockInfo),
+        new CheckT2NAExternInvocation(refMap, typeMap),
         new LoweringType(),
         new P4::ClearTypeMap(typeMap),
         new P4::TypeChecking(refMap, typeMap, true),

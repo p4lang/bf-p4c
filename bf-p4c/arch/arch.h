@@ -20,6 +20,8 @@
 
 namespace BFN {
 
+enum class ARCH { TNA, T2NA, PSA, V1MODEL };
+
 /// Find and remove extern method calls that the P4 programmer has requested by
 /// excluded from translation using the `@dont_translate_extern_method` pragma.
 /// Currently this pragma is only supported on actions; it takes as an argument
@@ -83,9 +85,10 @@ class ArchTranslation : public PassManager {
 };
 
 enum ArchBlockType {
-    PARSER,
+    PARSER = 0,
     MAU,
     DEPARSER,
+    BLOCK_TYPE
 };
 
 struct BlockInfo {

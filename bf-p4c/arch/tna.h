@@ -37,10 +37,18 @@ struct NormalizeNativeProgram : public PassManager {
                            BFN_Options& options);
 };
 
-struct LowerTofinoToStratum : public PassManager {
-    LowerTofinoToStratum(P4::ReferenceMap* refMap,
-                         P4::TypeMap* typeMap,
-                         BFN_Options& options);
+struct TnaArchTranslation : public PassManager {
+    TnaArchTranslation(P4::ReferenceMap* refMap,
+                       P4::TypeMap* typeMap,
+                       BFN_Options& options);
+
+    ProgramThreads threads;
+};
+
+struct T2naArchTranslation : public PassManager {
+    T2naArchTranslation(P4::ReferenceMap* refMap,
+                        P4::TypeMap* typeMap,
+                        BFN_Options& options);
 
     ProgramThreads threads;
 };
