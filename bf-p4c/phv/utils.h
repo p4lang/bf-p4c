@@ -1127,6 +1127,11 @@ class SlicingIterator {
     /// @return a slicing based on the current value of compressed_schemas_i.
     boost::optional<std::list<PHV::SuperCluster*>> get_slices() const;
 
+    /// @returns a representation of limits for slicing in a format suitable for pretty printing.
+    cstring get_slice_coordinates(
+            const int slice_list_size,
+            const std::pair<int, int>& slice_location) const;
+
  public:
     explicit SlicingIterator(const SuperCluster* sc);
 

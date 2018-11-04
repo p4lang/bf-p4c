@@ -301,6 +301,20 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
+  "Compiler Bug.*Slicing the following supercluster is taking too long"
+  switch_ent_fin_postcard
+  switch_generic_int_leaf
+  switch_l3_heavy_int_leaf
+  switch_msdc_leaf_int
+  switch_msdc_spine_int
+  switch_8.4_l3_heavy_int_leaf
+  switch_8.4_msdc_leaf_int
+  switch_8.4_ent_fin_postcard
+  switch_8.4_generic_int_leaf
+  switch_8.4_msdc_spine_int
+  )
+
+p4c_add_xfail_reason("tofino"
   "error: The stage specified for .* could not place it until stage"
   smoketest_programs_netcache
   extensions/p4_tests/p4_14/p4-tests/programs/mau_test/mau_test.p4  #P4C-1123
