@@ -3,6 +3,7 @@
 #include "hex.h"
 #include "input_xbar.h"
 #include "instruction.h"
+#include "mask_counter.h"
 #include "misc.h"
 #include "stage.h"
 #include "tables.h"
@@ -704,13 +705,13 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
                     merge.mau_meter_adr_exact_shiftcount[bus][word_group] =
                         sel->determine_shiftcount(attached.selector, group, word, 0);
                     merge.mau_selectorlength_shiftcount[0][bus] =
-                        sel->determine_length_shiftcount(attached.selector_length, group, word); 
+                        sel->determine_length_shiftcount(attached.selector_length, group, word);
                     merge.mau_selectorlength_mask[0][bus] =
                         sel->determine_length_mask(attached.selector_length);
                     merge.mau_selectorlength_default[0][bus] =
                         sel->determine_length_default(attached.selector_length);
                 }
-               
+
             }
             if (idletime)
                 merge.mau_idletime_adr_exact_shiftcount[bus][word_group] =

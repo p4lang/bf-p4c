@@ -23,9 +23,9 @@ struct operand {
         virtual void pass1(StatefulTable *) { }
     } *op;
     struct Const : public Base {
-        long value;
+        int64_t value;
         Const *clone() const override { return new Const(*this); }
-        Const(int line, long v) : Base(line), value(v) {}
+        Const(int line, int64_t v) : Base(line), value(v) {}
         void dbprint(std::ostream &out) const override { out << value; }
         bool equiv(const Base *a_) const override {
             if (auto *a = dynamic_cast<const Const *>(a_)) {
@@ -775,6 +775,7 @@ Instruction *OutOP::pass1(Table *tbl_, Table::Actions::Action *) {
         if (tbl->pred_comb_sel >= 0 && tbl->pred_comb_sel != slot - ALUOUT0)
             error(lineno, "Only one output of predication allowed");
         tbl->pred_comb_sel = slot - ALUOUT0; }
+#if HAVE_JBAY
     if (lmatch) {
         if (tbl->output_lmatch) {
             auto *other = dynamic_cast<OutOP *>(tbl->output_lmatch);
@@ -782,6 +783,7 @@ Instruction *OutOP::pass1(Table *tbl_, Table::Actions::Action *) {
                 error(lineno, "Conflict lmatch output use in stateful %s", tbl->name());
                 error(other->lineno, "conflicting use here"); } }
         tbl->output_lmatch = this; }
+#endif // HAVE_JBAY
     return this; }
 
 #include "tofino/salu_inst.cpp"

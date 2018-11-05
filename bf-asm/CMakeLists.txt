@@ -36,9 +36,10 @@ include (CheckIncludeFile)
 check_include_file (execinfo.h HAVE_EXECINFO_H)
 check_include_file (ucontext.h HAVE_UCONTEXT_H)
 
+set(BFASM_CXX_FLAGS "")
 include(P4CUtils)
-add_cxx_compiler_option ("-Wall")
-add_cxx_compiler_option ("-Wextra")
+# add_cxx_compiler_option ("-Wall")
+# add_cxx_compiler_option ("-Wextra")
 # Disabling -Werror checks until all issues are fixed on all platforms
 # add_cxx_compiler_option ("-Werror")
 # add_cxx_compiler_option ("-Wno-unused")
@@ -47,6 +48,10 @@ add_cxx_compiler_option ("-Wextra")
 # add_cxx_compiler_option ("-Wno-unknown-pragmas")
 add_cxx_compiler_option ("-Wno-overloaded-virtual")
 add_cxx_compiler_option ("-Wno-deprecated")
+if (${CMAKE_SYSTEM_PROCESSOR} MATCHES i386|i586|i686)
+  # on 32-bit platforms we get a lot of warnings when using the error macros
+  add_cxx_compiler_option("-Wno-write-strings")
+endif()
 
 set (BFN_P4C_LIB_DIR ${BFN_P4C_SOURCE_DIR}/p4c/lib)
 include_directories(${BFASM_SOURCE_DIR} ${BFASM_BINARY_DIR} ${BFN_P4C_LIB_DIR})
@@ -56,10 +61,6 @@ if (ASAN_ENABLED)
   # force this set of flags only
   set (CMAKE_CXX_FLAGS "-fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer -fno-optimize-sibling-calls -g -O1")
 endif()
-
-# set (CMAKE_CXX_FLAGS         "${CMAKE_CXX_FLAGS} ${P4C_CXX_FLAGS}")
-# set (CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG} ${P4C_CXX_FLAGS}")
-# set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${P4C_CXX_FLAGS}")
 
 set (CMAKE_CXX_STANDARD 11)
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -155,6 +156,7 @@ SET (BFAS_COMMON_HEADERS
   input_xbar.h
   instruction.h
   json.h
+  mask_counter.h
   misc.h
   p4_table.h
   parser.h
@@ -174,7 +176,6 @@ SET (BFAS_COMMON_HEADERS
 
 # \TODO: use the headers from p4c/lib for utilities
 set (BFAS_UTIL_HEADERS
-  bitops.h
   indent.h
   map.h
   vector.h
@@ -237,6 +238,7 @@ set_source_files_properties (${BFAS_GEN_SOURCES} ${BFASM_BINARY_DIR}/lex-yaml.c
   PROPERTIES GENERATED TRUE)
 set (BFAS_SOURCES ${BFAS_COMMON_SOURCES} ${BFAS_GEN_SOURCES})
 build_unified(BFAS_SOURCES ${BF_ASM_UNIFIED_SOURCE_CHUNK_SIZE})
+set_source_files_properties(${BFAS_SOURCES} PROPERTIES COMPILE_FLAGS ${BFASM_CXX_FLAGS})
 add_executable (bfas ${BFAS_SOURCES})
 target_link_libraries (bfas ${BFASM_LIBS} ${BFASM_LIB_DEPS})
 

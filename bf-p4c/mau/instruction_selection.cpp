@@ -1450,7 +1450,7 @@ bool SetupAttachedAddressing::UpdateAttached::preorder(IR::MAU::BackendAttached 
  * variables, these primitives must be discarded.
  *
  * If other information is potentially relevant, it must be saved in other IR nodes
- * before this pass 
+ * before this pass
  */
 bool NullifyAllStatefulCallPrim::preorder(IR::MAU::StatefulCall *sc) {
     sc->prim = nullptr;

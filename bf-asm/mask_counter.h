@@ -29,27 +29,4 @@ public:
     MaskCounter &overflow(bool v = true) { oflo = v; return *this; }
 };
 
-static inline unsigned bitcount(unsigned v) {
-    unsigned rv = 0;
-    while (v) { v &= v-1; ++rv; }
-    return rv; }
-static inline int ceil_log2(unsigned v) {
-    if (!v) return -1;
-    for (int rv = 0; rv < (int)(CHAR_BIT*sizeof(unsigned)); rv++)
-        if ((1U << rv) >= v) return rv;
-    return CHAR_BIT*sizeof(unsigned); }
-static inline int floor_log2(unsigned v) {
-    int rv = -1;
-    while (v) { rv++; v >>= 1; }
-    return rv; }
-
-static inline unsigned bitmask2bytemask(const bitvec &a) {
-    int max = a.max().index();
-    if (max < 0) return 0;
-    unsigned rv = 0;
-    for (unsigned i = 0; i <= max/8U; i++)
-        if (a.getrange(i*8, 8))
-            rv |= 1 << i;
-    return rv; }
-
 #endif /* _bitops_h_ */

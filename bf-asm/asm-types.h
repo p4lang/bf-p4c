@@ -7,8 +7,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sstream>
-#include "vector.h"
+#include <bitops.h>
+#include <bitvec.h>
 #include "json.h"
+#include "mask_counter.h"
+#include "vector.h"
 #include "bfas.h"
 
 enum gress_t { INGRESS, EGRESS, GHOST, NONE };
@@ -58,7 +61,7 @@ struct value_t {
     enum value_type             type;
     int                         lineno;
     union {
-        long                    i;
+        int64_t                 i;
         VECTOR(uintptr_t)       bigi;
         struct {
             int                 lo;
@@ -198,7 +201,7 @@ template<class T> inline void parse_vector(std::vector<T> &vec, const VECTOR(val
     for (auto &v : data) vec.emplace_back(v); }
 template<> inline void parse_vector(std::vector<int> &vec, const VECTOR(value_t) &data) {
     for (auto &v : data) if (CHECKTYPE(v, tINT)) vec.push_back(v.i); }
-template<> inline void parse_vector(std::vector<long> &vec, const VECTOR(value_t) &data) {
+template<> inline void parse_vector(std::vector<int64_t> &vec, const VECTOR(value_t) &data) {
     for (auto &v : data) if (CHECKTYPE(v, tINT)) vec.push_back(v.i); }
 template<> inline void parse_vector(std::vector<std::string> &vec, const VECTOR(value_t) &data) {
     for (auto &v : data) if (CHECKTYPE(v, tSTR)) vec.emplace_back(v.s); }
@@ -209,7 +212,7 @@ template<> inline void parse_vector(std::vector<int> &vec, const value_t &data) 
     if (CHECKTYPE2(data, tINT, tVEC)) {
         if (data.type == tVEC) parse_vector(vec, data.vec);
         else vec.push_back(data.i); } }
-template<> inline void parse_vector(std::vector<long> &vec, const value_t &data) {
+template<> inline void parse_vector(std::vector<int64_t> &vec, const value_t &data) {
     if (CHECKTYPE2(data, tINT, tVEC)) {
         if (data.type == tVEC) parse_vector(vec, data.vec);
         else vec.push_back(data.i); } }
@@ -222,7 +225,6 @@ template<> inline void parse_vector(std::vector<std::string> &vec, const value_t
 #include <iostream>
 #include "map.h"
 #include "bfas.h"
-#include "bitops.h"
 
 std::ostream &operator<<(std::ostream &out, match_t m);
 void print_match(FILE *fp, match_t m);

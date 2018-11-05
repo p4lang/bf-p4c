@@ -60,8 +60,8 @@ void Phase0MatchTable::gen_tbl_cfg(json::vector &out) const {
     auto &mra = stage_tbl["memory_resource_allocation"] = json::map();
     mra["memory_type"] = "ingress_buffer";
     json::map tmp;
-    (tmp["vpns"] = json::vector()).push_back(0L);
-    (tmp["memory_units"] = json::vector()).push_back(0L);
+    (tmp["vpns"] = json::vector()).push_back(INT64_C(0));
+    (tmp["memory_units"] = json::vector()).push_back(INT64_C(0));
     (mra["memory_units_and_vpns"] = json::vector()).push_back(std::move(tmp));
     // Driver looks at the pack format to determine the fields and their
     // positions. Since phase0 is only mimicking a table, the driver expects to

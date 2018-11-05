@@ -10,8 +10,8 @@ static bool show_addition = true;
 static bool sort_map = true;
 static std::vector<const char *> list_map_keys;
 static std::set<std::string> ignore_keys;
-static std::map<std::string, std::set<long>>    ignore_key_indexes;
-static std::vector<std::pair<long, long>>       ignore_intkeys;
+static std::map<std::string, std::set<int64_t>>    ignore_key_indexes;
+static std::vector<std::pair<int64_t, int64_t>>       ignore_intkeys;
 
 bool is_list_map(json::vector *v, const char *key) {
     if (!key) return false;
@@ -27,15 +27,15 @@ void add_ignore(const char *a) {
     while (isspace(*a)) a++;
     if (*a == '#' || *a == 0) return;
     if (*a == '&' || *a == '=' || *a == '|' || isdigit(*a)) {
-        long mask, val;
+        int64_t mask, val;
         int end = 0;
-        if (sscanf(a, "%li %n", &val, &end) >= 1)
+        if (sscanf(a, "%" PRIi64 " %n", &val, &end) >= 1)
             ignore_intkeys.emplace_back(-1, val);
-        else if (sscanf(a, "== %li %n", &val, &end) >= 1)
+        else if (sscanf(a, "== %" PRIi64 " %n", &val, &end) >= 1)
             ignore_intkeys.emplace_back(-1, val);
-        else if (sscanf(a, "& %li == %li %n", &mask, &val, &end) >= 2)
+        else if (sscanf(a, "& %" PRIi64 " == %" PRIi64 " %n", &mask, &val, &end) >= 2)
             ignore_intkeys.emplace_back(mask, val);
-        else if (sscanf(a, "| %li == %li %n", &mask, &val, &end) >= 2)
+        else if (sscanf(a, "| %" PRIi64 " == %" PRIi64 " %n", &mask, &val, &end) >= 2)
             ignore_intkeys.emplace_back(~mask, val^mask);
         else {
             std::cerr << "Unknown ignore expression " << a << std::endl;
@@ -44,9 +44,9 @@ void add_ignore(const char *a) {
             std::cerr << "extra text after ignore " << (a+end) << std::endl;
         return; }
     if (auto *idx = strchr(a, '[')) {
-        long val;
+        int64_t val;
         int end = 0;
-        if (sscanf(idx, "[%li ] %n", &val, &end) >= 1 && end > 0) {
+        if (sscanf(idx, "[%" PRIi64 " ] %n", &val, &end) >= 1 && end > 0) {
             end += idx - a;
             while (idx > a && isspace(idx[-1])) --idx;
             std::string key(a, idx - a);
@@ -69,10 +69,10 @@ bool ignore(json::obj *o) {
 }
 bool ignore(std::unique_ptr<json::obj> &o) { return ignore(o.get()); }
 
-const std::set<long> &ignore_indexes_for_key(json::obj *key) {
+const std::set<int64_t> &ignore_indexes_for_key(json::obj *key) {
     if (key && key->as_string() && ignore_key_indexes.count(*key->as_string()))
         return ignore_key_indexes.at(*key->as_string());
-    static std::set<long> empty;
+    static std::set<int64_t> empty;
     return empty;
 }
 
@@ -216,7 +216,7 @@ void list_map_print_diff(json::vector *a, json::vector *b, int indent, const cha
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wpotentially-evaluated-expression"
-bool equiv(json::vector *a, json::vector *b, const std::set<long> &ignore_idx) {
+bool equiv(json::vector *a, json::vector *b, const std::set<int64_t> &ignore_idx) {
     for (auto key : list_map_keys)
         if (is_list_map(a, key) && is_list_map(b, key))
             return list_map_equiv(a, b, key);
@@ -244,7 +244,7 @@ bool equiv(json::vector *a, json::vector *b, const std::set<long> &ignore_idx) {
     if (p2 != b->end() && show_addition) return false;
     return true;
 }
-void print_diff(json::vector *a, json::vector *b, const std::set<long> &ignore_idx, int indent) {
+void print_diff(json::vector *a, json::vector *b, const std::set<int64_t> &ignore_idx, int indent) {
     for (auto key : list_map_keys)
         if (is_list_map(a, key) && is_list_map(b, key)) {
             list_map_print_diff(a, b, indent, key);

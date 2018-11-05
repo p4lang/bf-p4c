@@ -148,15 +148,29 @@ void bigint_add(VECTOR(uintptr_t) &val, unsigned a) {
     VECTOR_add(val, a);
 }
 
+void bigint_init(VECTOR(uintptr_t) &val, int64_t v) {
+    if (sizeof(int64_t)/sizeof(uintptr_t) > 1) {
+        VECTOR_init(val, sizeof(int64_t)/sizeof(uintptr_t));
+        do {
+            val.data[val.size++] = v;
+            v >>= CHAR_BIT * sizeof(uintptr_t);
+        } while (v > 0);
+    } else {
+        VECTOR_init1(val, v);
+    }
+}
+
 int parse_num(YYSTYPE *val, const char *s, int base) {
     int rv = INT;
     val->i = 0;
     s--;
     while (*++s) {
         if (*s == '_') continue;
+        /* The comparison is intentionally against LONG_MAX, so that we put values larger than
+           uintptr_t size in big ints.
+        */
         if (rv == INT && val->i > INT64_MAX/base) {
-            int v = val->i;
-            VECTOR_init1(val->bigi, v);
+            bigint_init(val->bigi, val->i);
             rv = BIGINT; }
         if (rv == INT)
             val->i *= base;
@@ -185,12 +199,10 @@ int parse_num(YYSTYPE *val, const char *s, int base) {
         default:
             assert(0); }
         if (rv == INT && val->i > 0xffffffff) {
-            // We limit INT tokens to what will fit in 32 bits (unsigned) even though
-            // we use a long (generally 64 bits) to hold them, as most parts of the
-            // compiler can't deal with larger constants.  The few places that can
-            // deal with >32bit values handle BIGINTs
-            long v = val->i;
-            VECTOR_init1(val->bigi, v);
+            // we use a int64_t to hold them, as most parts of the compiler can't deal
+            // with larger constants.  The few places that can deal with >32bit values
+            // handle BIGINTs
+            bigint_init(val->bigi, val->i);
             rv = BIGINT; } }
     return rv;
 }

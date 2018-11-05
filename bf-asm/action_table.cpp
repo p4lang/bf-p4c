@@ -164,7 +164,7 @@ unsigned ActionTable::determine_shiftcount(Table::Call &call, int group, unsigne
         return 64 + extra_shift + tcam_shift;
     } else if (call.args[0].field()) {
         BUG_CHECK(call.args[0].field()->by_group[group]->bit(0)/128U == word);
-        return call.args[0].field()->by_group[group]->bit(0)%128U + extra_shift; 
+        return call.args[0].field()->by_group[group]->bit(0)%128U + extra_shift;
     } else if (call.args[1].field()) {
         return call.args[1].field()->bit(0) + ACTION_ADDRESS_ZERO_PAD;
     }
@@ -214,7 +214,7 @@ unsigned ActionTable::determine_mask(Table::Call &call) const {
  */
 unsigned ActionTable::determine_vpn_shiftcount(Table::Call &call) const {
     if (call.args[0].name() && call.args[0] == "$DIRECT") {
-        return std::max(0, (int)(get_log2size()) - 2 - ACTION_DATA_LOWER_HUFFMAN_BITS); 
+        return std::max(0, (int)(get_log2size()) - 2 - ACTION_DATA_LOWER_HUFFMAN_BITS);
     }
     return 0;
 }
@@ -300,13 +300,13 @@ void ActionTable::setup(VECTOR(pair_t) &data) {
                     if (kv.value.i >= 0 || kv.value.i < LOGICAL_SRAM_ROWS)
                         home_rows |= 1 << kv.value.i;
                     else
-                        error(kv.value.lineno, "Invalid home row %ld", kv.value.i);
+                        error(kv.value.lineno, "Invalid home row %" PRId64 "", kv.value.i);
                 } else for (auto &v : kv.value.vec) {
                     if (CHECKTYPE(v, tINT)) {
                         if (v.i >= 0 || v.i < LOGICAL_SRAM_ROWS)
                             home_rows |= 1 << v.i;
                         else
-                            error(v.lineno, "Invalid home row %ld", v.i); } } }
+                            error(v.lineno, "Invalid home row %" PRId64 "", v.i); } } }
         } else if (kv.key == "p4") {
             if (CHECKTYPE(kv.value, tMAP))
                 p4_table = P4Table::get(P4Table::ActionData, kv.value.map);
@@ -426,7 +426,7 @@ void ActionTable::pass2() {
  * actions, which at the moment, they are.  We will need to change this functionality when
  * actions could potentially be different across action profiles, either by gathering a union
  * of the aliases across actions with the same action handle, or perhaps de-alias the pack
- * formats before context JSON generation 
+ * formats before context JSON generation
  */
 void ActionTable::pass3() {
     LOG1("### Action table " << name() << " pass3");
@@ -679,7 +679,7 @@ void ActionTable::gen_tbl_cfg(json::vector &out) const {
     std::string hr = how_referenced();
     if (hr.empty())
         hr = indirect ? "indirect" : "direct";
-    tbl["how_referenced"] = hr; 
+    tbl["how_referenced"] = hr;
     if (context_json)
         stage_tbl.merge(*context_json);
 }

@@ -113,7 +113,7 @@ static value_t command(char *cmd, bool merge, value_t &a1, value_t &a2, int line
 %nonassoc UNARY
 
 %union {
-    long                i;
+    int64_t             i;
     VECTOR(uintptr_t)   bigi;
     char                *str;
     match_t             match;
@@ -143,7 +143,7 @@ static value_t command(char *cmd, bool merge, value_t &a1, value_t &a2, int line
 %destructor   { free_pair(&$$); } <pair>
 %destructor   { VECTOR_foreach($$, free_pair); VECTOR_fini($$); } <map>
 
-%printer  { fprintf(yyoutput, "%ld", $$); } <i>
+%printer  { fprintf(yyoutput, "%" PRId64, $$); } <i>
 %printer  { fprintf(yyoutput, "0x%" PRIuPTR, $$.data[$$.size-1]);
             for (int i = $$.size-2; i >= 0; i--)
                 fprintf(yyoutput, "%016" PRIuPTR, $$.data[i]); } <bigi>

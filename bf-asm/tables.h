@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <bitops.h>
 #include "algorithm.h"
 #include "alloc.h"
 #include "asm-types.h"
@@ -1407,9 +1408,9 @@ DECLARE_TABLE_TYPE(CounterTable, Synth2Port, "counter",
             write_merge_regs<decltype(regs)>(regs, match, type, bus, args); })
     struct lrt_params {   // largest recent with threshold paramters
         int     lineno;
-        long    threshold;
+        int64_t threshold;
         int     interval;
-        lrt_params(int l, long t, int i) : lineno(l), threshold(t), interval(i) {}
+        lrt_params(int l, int64_t t, int i) : lineno(l), threshold(t), interval(i) {}
         lrt_params(const value_t &);
     };
     std::vector<lrt_params>     lrt;
@@ -1490,7 +1491,7 @@ DECLARE_TABLE_TYPE(StatefulTable, Synth2Port, "stateful",
         void write_merge_regs, (mau_regs &regs, MatchTable *match, int type,
                                 int bus, const std::vector<Call::Arg> &args), override {
             write_merge_regs<decltype(regs)>(regs, match, type, bus, args); })
-    std::vector<long>   const_vals;
+    std::vector<int64_t>   const_vals;
     struct MathTable {
         int                     lineno = -1;
         std::vector<int>        data;
@@ -1525,7 +1526,7 @@ public:
     int indirect_shiftcount() const override;
     int address_shift() const override;
     int unitram_type() override { return UnitRam::STATEFUL; }
-    int get_const(long v);
+    int get_const(int64_t v);
     bool is_dual_mode() { return dual_mode; }
     int home_row() const override { return layout.at(0).row | 3; }
     unsigned meter_group() const { return layout.at(0).row/4U; }

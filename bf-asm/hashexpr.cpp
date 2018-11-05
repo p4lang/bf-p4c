@@ -383,7 +383,8 @@ HashExpr *HashExpr::create(gress_t gress, const value_t &what) {
                 for (auto &kv : what[i].map) {
                     if (CHECKTYPE(kv.key, tINT)) {
                         if (rv->what.count(kv.key.i))
-                            error(kv.value.lineno, "Duplicate field at offset %ld", kv.value.i);
+                            error(kv.value.lineno, "Duplicate field at offset %" PRId64 "",
+                                  kv.value.i);
                         else
                             rv->what.emplace(kv.key.i, Phv::Ref(gress, kv.value)); } }
             } else {
@@ -437,7 +438,7 @@ void HashExpr::find_input(Phv::Ref what, std::vector<ixbar_input_t> &inputs, Inp
         int group_bit_position = in->lo + (what->lo - in->what->lo);
         if ((group_bit_position / 64 != (hash_table % 2)) ||
             (int(group_bit_position + what->size() - 1) / 64 != (hash_table % 2)))
-            continue; 
+            continue;
         ixbar_input_t input;
         input.ixbar_bit_position = group_bit_position + (hash_table / 2) * 128;
         input.bit_size = what->size();

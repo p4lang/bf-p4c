@@ -17,7 +17,7 @@ std::istream &operator>>(std::istream &in, std::unique_ptr<obj> &json) {
             /* fall through */
         case '0': case '1': case '2': case '3': case '4':
         case '5': case '6': case '7': case '8': case '9': {
-            long long l = 0;
+            int64_t l = 0;
             while (in && isdigit(ch)) {
                 /* FIXME -- deal with overflow ... and hex? */
                 l = l * 10 + ch - '0';

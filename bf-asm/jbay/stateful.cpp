@@ -104,7 +104,7 @@ bool StatefulTable::setup_jbay(const pair_t &kv) {
             if (kv.value.i % 8U != 0)
                 error(kv.value.lineno, "phv_hash_shift must be a mulitple of 8");
             else if (phv_hash_shift < 0 || phv_hash_shift > 15)
-                error(kv.value.lineno, "phv_hash_shift %ld out of range", kv.value.i); }
+                error(kv.value.lineno, "phv_hash_shift %" PRId64 " out of range", kv.value.i); }
     } else if (kv.key == "phv_hash_mask") {
         if (CHECKTYPE2(kv.value, tINT, tBIGINT)) {
             if (kv.value.type == tINT)

@@ -2236,7 +2236,7 @@ void MauAsmOutput::emit_static_entries(std::ostream &out, indent_t indent,
                 if (auto val = ts->left->to<IR::Constant>())
                     out << indent << "value: " << val << std::endl;
                 if (auto mask = ts->right->to<IR::Constant>()) {
-                    if (mask->value > ((1UL << 48) - 1)) bignum_err = true;
+                    if (mask->asUint64() > ((UINT64_C(1) << 48) - 1)) bignum_err = true;
                     out << indent << "mask: 0x" << hex(mask->asUint64()) << std::endl;
                 }
             } else if (key->to<IR::DefaultExpression>()) {
@@ -2598,14 +2598,10 @@ cstring MauAsmOutput::find_attached_name(const IR::MAU::Table *tbl,
 
 void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
         const IR::MAU::Table *tbl, const IR::MAU::TernaryIndirect *ti) const {
-    bool have_action = false;
     for (auto back_at : tbl->attached) {
         auto at_mem = back_at->attached;
         if (at_mem->is<IR::MAU::TernaryIndirect>()) continue;
         if (at_mem->is<IR::MAU::IdleTime>()) continue;  // XXX(zma) idletime is inlined
-        if (at_mem->is<IR::MAU::ActionData>()) {
-            have_action = true;
-        }
         out << indent << at_mem->kind() << ": ";
         out << find_attached_name(tbl, at_mem);
         out << build_call(at_mem, back_at, tbl);

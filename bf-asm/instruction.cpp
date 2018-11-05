@@ -63,8 +63,8 @@ struct operand {
         virtual void pass2(int) {}
     } *op;
     struct Const : Base {
-        long            value;
-        Const(int line, long v) : Base(line), value(v) {}
+        int64_t value;
+        Const(int line, int64_t v) : Base(line), value(v) {}
         bool equiv(const Base *a_) const override {
             if (auto *a = dynamic_cast<const Const *>(a_)) {
                 return value == a->value;
@@ -77,7 +77,7 @@ struct operand {
             int minconst = (options.target == JBAY) ? -4 : -8;
             if (val >= minconst && val < 8)
                 return val+24;
-            error(lineno, "constant value %ld out of range for immediate", value);
+            error(lineno, "constant value %" PRId64 " out of range for immediate", value);
             return -1; }
         void dbprint(std::ostream &out) const override { out << value; }
     };

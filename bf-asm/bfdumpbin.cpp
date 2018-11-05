@@ -107,8 +107,8 @@ int dump_bin (std::istream &in) {
         } else {
             fprintf(stderr, "\n");
             fprintf(stderr, "Parse error: atom_typ=%x (%c)\n", atom_typ, atom_typ >> 24 );
-            fprintf(stderr, "fpos=%lu <%lxh>\n",
-                    (unsigned long)in.tellg(), (unsigned long)in.tellg());
+            fprintf(stderr, "fpos=%" PRIu64 " <%" PRIx64 "h>\n",
+                    (uint64_t)in.tellg(), (uint64_t)in.tellg());
             fprintf(stderr, "\n");
 
             return -1;

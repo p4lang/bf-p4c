@@ -294,11 +294,11 @@ void CounterTable::gen_tbl_cfg(json::vector &out) const {
     if (auto *f = lookup_field("bytes"))
         tbl["byte_counter_resolution"] = f->size;
     else
-        tbl["byte_counter_resolution"] = 0L;
+        tbl["byte_counter_resolution"] = INT64_C(0);
     if (auto *f = lookup_field("packets"))
         tbl["packet_counter_resolution"] = f->size;
     else
-        tbl["packet_counter_resolution"] = 0L;
+        tbl["packet_counter_resolution"] = INT64_C(0);
     switch (type) {
     case PACKETS: tbl["statistics_type"] = "packets"; break;
     case BYTES: tbl["statistics_type"] = "bytes"; break;

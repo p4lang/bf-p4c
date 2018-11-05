@@ -481,7 +481,7 @@ void StageUseEstimate::calculate_attached_rams(const IR::MAU::Table *tbl,
         if (auto *ctr = at->to<IR::MAU::Counter>()) {
             per_word = CounterPerWord(ctr);
             need_maprams = true;
-        } else if (auto *mtr = at->to<IR::MAU::Meter>()) {
+        } else if (at->is<IR::MAU::Meter>()) {
             per_word = 1;
             need_maprams = true;
         } else if (auto *reg = at->to<IR::MAU::StatefulAlu>()) {
@@ -799,13 +799,13 @@ void StageUseEstimate::known_srams_needed(const IR::MAU::Table *tbl,
          if (auto *ctr = at->to<IR::MAU::Counter>()) {
             per_word = CounterPerWord(ctr);
             need_maprams = true;
-        } else if (auto *mtr = at->to<IR::MAU::Meter>()) {
+        } else if (at->is<IR::MAU::Meter>()) {
             per_word = 1;
             need_maprams = true;
         } else if (auto *reg = at->to<IR::MAU::StatefulAlu>()) {
             per_word = RegisterPerWord(reg);
             need_maprams = true;
-        } else if (auto *ad = at->to<IR::MAU::ActionData>()) {
+        } else if (at->is<IR::MAU::ActionData>()) {
             // Because this is called before and after table placement
             per_word = ActionDataPerWord(&lo->layout, &width);
         } else if (at->is<IR::MAU::Selector>()) {
@@ -844,7 +844,7 @@ void StageUseEstimate::calculate_per_row_vector(safe_vector<RAM_counter> &per_wo
          if (auto *ctr = at->to<IR::MAU::Counter>()) {
              per_word = CounterPerWord(ctr);
              need_maprams = true;;
-         } else if (auto *mtr = at->to<IR::MAU::Meter>()) {
+         } else if (at->is<IR::MAU::Meter>()) {
              per_word = 1;
              need_maprams = true;
          } else if (auto *reg = at->to<IR::MAU::StatefulAlu>()) {

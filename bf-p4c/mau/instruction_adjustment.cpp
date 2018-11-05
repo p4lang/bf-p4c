@@ -898,7 +898,7 @@ void GeneratePrimitiveInfo::gen_action_json(const IR::MAU::Action *act,
                             if (auto *k = src->to<IR::Constant>()) {
                                 sact_update->emplace("operand_1_type", "immediate");
                                 sact_update->emplace("operand_1_value", k->toString());
-                            } else if (auto phv_field = phv.field(src_string)) {
+                            } else if (phv.field(src_string)) {
                                 sact_update->emplace("operand_1_type", "phv");
                                 sact_update->emplace("operand_1_value", src_string);
                             }

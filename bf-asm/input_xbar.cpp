@@ -31,7 +31,7 @@ void InputXbar::setup_hash(std::map<int, HashCol> &hash_table, int id,
         error(what.lineno, "hash expression width mismatch (%d != %d)", width, abs(hi-lo)+1);
     int bit = 0;
     int errlo = -1;
-    for (int col : Range(lo, hi))
+    for (int col : Range(lo, hi)) {
         if (hash_table[col].data || hash_table[col].fn) {
             if (errlo < 0) errlo = col;
         } else {
@@ -44,6 +44,7 @@ void InputXbar::setup_hash(std::map<int, HashCol> &hash_table, int id,
             hash_table[col].lineno = what.lineno;
             hash_table[col].fn = fn;
             hash_table[col].bit = bit++; }
+    }
     if (errlo >= 0)
         error(lineno, "Hash table %d column %d..%d duplicated", id, errlo, hi);
 }
@@ -120,9 +121,22 @@ InputXbar::InputXbar(Table *t, bool tern, const VECTOR(pair_t) &data)
                         if (el.key == "seed") {
                             if (!CHECKTYPE2(el.value, tINT, tBIGINT)) continue;
                             if (el.value.type == tBIGINT) {
+#if WORDSIZE == 64
                                 hash_groups[index].seed = el.value.bigi.data[0];
-                            } else
+#else
+                                if (el.value.bigi.size == 2)
+                                    hash_groups[index].seed =
+                                        static_cast<uint64_t>(el.value.bigi.data[1]) << 32 |
+                                        el.value.bigi.data[0];
+                                else if (el.value.bigi.size == 1)
+                                    hash_groups[index].seed = el.value.bigi.data[0];
+                                else
+                                    error(kv.key.lineno, "Invalid seed size %d",
+                                          el.value.bigi.size);
+#endif
+                            } else {
                                 hash_groups[index].seed = el.value.i & 0xFFFFFFFF;
+                            }
                         } else if (el.key == "table") {
                             if (el.value.type == tINT) {
                                 if (el.value.i < 0 || el.value.i >= HASH_TABLES)
@@ -535,8 +549,9 @@ void InputXbar::pass2() {
     }
     for (auto &hash : hash_tables)
         for (auto &col : hash.second)
-            if (!col.second.data && col.second.fn)
+            if (!col.second.data && col.second.fn) {
                 col.second.fn->gen_data(col.second.data, col.second.bit, this, hash.first);
+            }
 }
 
 #include <tofino/input_xbar.cpp>        // tofino template specializations
@@ -653,7 +668,7 @@ void InputXbar::write_regs(REGS &regs) {
         if (hg.second.seed) {
             for (int bit = 0; bit < 52; ++bit)
                 if ((hg.second.seed >> bit) & 1)
-                    hash.hash_seed[bit] |= 1U << grp; }
+                    hash.hash_seed[bit] |= UINT64_C(1) << grp; }
         if (gress == INGRESS)
             regs.dp.hashout_ctl.hash_group_ingress_enable |= 1 << grp;
         else

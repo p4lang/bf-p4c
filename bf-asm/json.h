@@ -1,6 +1,7 @@
 #ifndef _json_h_
 #define _json_h_
 
+#include <cinttypes>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -45,8 +46,8 @@ public:
     virtual bool operator ==(const std::string &str) const { return false; }
     virtual bool operator ==(const string &str) const { return false; }
     bool operator !=(const char *str) const { return !(*this == str); }
-    virtual bool operator ==(long long val) const { return false; }
-    bool operator !=(long long val) const { return !(*this == val); }
+    virtual bool operator ==(int64_t val) const { return false; }
+    bool operator !=(int64_t val) const { return !(*this == val); }
     struct ptrless {
         bool operator()(const obj *a, const obj *b) const
             { return b ? a ? *a < *b : true : false; }
@@ -98,8 +99,8 @@ class False : public obj {
 
 class number : public obj {
 public:
-    long long	val;
-    number(long long l) : val(l) {}
+    int64_t	val;
+    number(int64_t l) : val(l) {}
     ~number() {}
     bool operator <(const obj &a) const override {
         if (auto *b = dynamic_cast<const number *>(&a)) return val < b->val;
@@ -107,11 +108,14 @@ public:
     bool operator ==(const obj &a) const override {
         if (auto *b = dynamic_cast<const number *>(&a)) return val == b->val;
         return false; }
-    bool operator==(long long v) const override { return val == v; }
+    bool operator==(int64_t v) const override { return val == v; }
     void print_on(std::ostream &out, int indent=0, int width=80, const char *pfx="") const override {
         out << val; }
-    bool test_width(int &limit) const override
-        { char buf[32]; limit -= sprintf(buf, "%lld", val); return limit >= 0; }
+    bool test_width(int &limit) const override {
+        char buf[32];
+        limit -= sprintf(buf, "%" PRId64, val);
+        return limit >= 0;
+    }
     number *as_number() override { return this; }
     const number *as_number() const override { return this; }
     std::unique_ptr<obj> copy() && override { return mkuniq<number>(std::move(*this)); }
@@ -207,12 +211,10 @@ public:
     void push_back(bool t) {
         if (t) push_back(mkuniq<True>(True()));
         else push_back(mkuniq<False>(False())); }
-    void push_back(long n) { push_back(mkuniq<number>(number((long long)n))); }
-    void push_back(long long n) { push_back(mkuniq<number>(number(n))); }
-    void push_back(int n) { push_back((long long)n); }
-    void push_back(unsigned int n) { push_back((long long)n); }
-    void push_back(unsigned long n) { push_back((long long)n); }
-    void push_back(unsigned long long n) { push_back((long long)n); }
+    void push_back(int64_t n) { push_back(mkuniq<number>(number(n))); }
+    void push_back(int n) { push_back((int64_t)n); }
+    void push_back(unsigned int n) { push_back((int64_t)n); }
+    void push_back(uint64_t n) { push_back((int64_t)n); }
     void push_back(const char *s) { push_back(mkuniq<string>(string(s))); }
     void push_back(vector &&v) { push_back(mkuniq<vector>(std::move(v))); }
     void push_back(json::map &&);
@@ -277,7 +279,7 @@ public:
     map_base::size_type count(std::string &str) const {
         string tmp(str);
         return count(&tmp); }
-    map_base::size_type count(long long n) const {
+    map_base::size_type count(int64_t n) const {
         number tmp(n);
         return count(&tmp); }
     //using map_base::operator[];
@@ -295,7 +297,7 @@ public:
         auto rv = find(&tmp);
         if (rv != end()) return rv->second.get();
         return 0; }
-    obj *operator[](long long n) const {
+    obj *operator[](int64_t n) const {
         number tmp(n);
         auto rv = find(&tmp);
         if (rv != end()) return rv->second.get();
@@ -311,7 +313,7 @@ private:
             iter = self.find(&tmp);
             if (iter == self.end())
                 key.reset(new string(std::move(tmp))); }
-        element_ref(map &s, long long k) : self(s) {
+        element_ref(map &s, int64_t k) : self(s) {
             number tmp(k);
             iter = self.find(&tmp);
             if (iter == self.end())
@@ -344,11 +346,11 @@ private:
             return *iter->second == str; }
         bool operator!=(const std::string &str) {
             return !(*this == str); }
-        bool operator==(long long v) {
+        bool operator==(int64_t v) {
             if (key) return false;
             assert(iter != self.end());
             return *iter->second == v; }
-        bool operator!=(long long v) {
+        bool operator!=(int64_t v) {
             return !(*this == v); }
         const char *operator=(const char *v) {
             if (key)
@@ -362,17 +364,20 @@ private:
             else { assert(iter != self.end());
                 iter->second.reset(new string(v)); }
             return v; }
-        long long operator=(long long v) {
+        int64_t operator=(int64_t v) {
             if (key)
                 iter = self.emplace(key.release(), std::unique_ptr<obj>(new number(v))).first;
             else { assert(iter != self.end());
                 iter->second.reset(new number(v)); }
             return v; }
-        int operator=(int v) { return (int)(*this = (long long)v); }
-        long operator=(long v) { return (long)(*this = (long long)v); }
-        unsigned int operator=(unsigned int v) { return (unsigned int)(*this = (long long)v); }
-        unsigned long operator=(unsigned long v) { return (unsigned long)(*this = (long long)v); }
-        unsigned long long operator=(unsigned long long v) { return (unsigned long long)(*this = (long long)v); }
+        int operator=(int v) { return (int)(*this = (int64_t)v); }
+        unsigned int operator=(unsigned int v) { return (unsigned int)(*this = (int64_t)v); }
+#ifdef __clang__
+        // Clang ang gcc can't agree whether size_t overloads uint64_t or unsigned long
+        // or the overload is not defined!
+        size_t operator=(size_t v) { return (size_t)(*this = (int64_t)v); }
+#endif
+        uint64_t operator=(uint64_t v) { return (uint64_t)(*this = (int64_t)v); }
         vector &operator=(vector &&v) {
             if (key)
                 iter = self.emplace(key.release(), mkuniq<vector>(std::move(v))).first;
@@ -412,7 +417,7 @@ private:
             map *m = dynamic_cast<map *>(iter->second.get());
             if (!m) throw std::runtime_error("lookup in non-map json object");
             return element_ref(*m, str.c_str()); }
-        element_ref operator[](long long n) {
+        element_ref operator[](int64_t n) {
             if (key) iter = self.emplace(key.release(), mkuniq<map>()).first;
             map *m = dynamic_cast<map *>(iter->second.get());
             if (!m) throw std::runtime_error("lookup in non-map json object");
@@ -430,13 +435,13 @@ private:
 public:
     element_ref operator[](const char *str) { return element_ref(*this, str); }
     element_ref operator[](const std::string &str) { return element_ref(*this, str.c_str()); }
-    element_ref operator[](long long n) { return element_ref(*this, n); }
+    element_ref operator[](int64_t n) { return element_ref(*this, n); }
     element_ref operator[](std::unique_ptr<obj> &&i) { return element_ref(*this, std::move(i)); }
     using map_base::erase;
     map_base::size_type erase(const char *str) {
         string tmp(str);
         return map_base::erase(&tmp); }
-    map_base::size_type erase(long long n) {
+    map_base::size_type erase(int64_t n) {
         number tmp(n);
         return map_base::erase(&tmp); }
     map *as_map() override { return this; }

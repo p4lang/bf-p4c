@@ -464,7 +464,7 @@ void IR::MAU::hash_function::build_algorithm_t(bfn_hash_algorithm_ *alg) const {
 IR::MAU::hash_function *IR::MAU::hash_function::fromJSON(JSONLoader &json) {
     if (!json.json) return nullptr;
     auto *rv = new hash_function;
-    int type;
+    int type = 0;
     json.load("type", type);
     rv->type = static_cast<decltype(rv->type)>(type);
     json.load("size", rv->size);

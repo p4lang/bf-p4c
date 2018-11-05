@@ -47,7 +47,7 @@ static bool test_sanity(json::obj *data, std::string name, bool sizes=true) {
             if (!test_sanity(a.second.get(), name+child, sizes)) return false; }
         return true; }
     if (json::number *n = dynamic_cast<json::number *>(data)) {
-        if (sizes && size_t(n->val) > CHAR_BIT * sizeof(unsigned long))
+        if (sizes && size_t(n->val) > CHAR_BIT * sizeof(uint64_t))
             widereg = true;
         if (!sizes || (n->val >= 0 && n->val <= 1024))
             // FIXME -- arbitrary cutoff for 'reasonable' widereg
@@ -146,14 +146,14 @@ static void gen_emit_method(std::ostream &out, json::map *m, indent_t indent,
         out << indent << "out << indent << \"\\\"" << *name << "\\\": \";" << std::endl;
         std::vector<int> indexes;
         json::obj *type = get_indexes(a.second.get(), indexes);
-        if (*type == +0L && !expand_disabled_vector) {
+        if (*type == +INT64_C(0) && !expand_disabled_vector) {
             out << indent << "out << \"0\";" << std::endl;
             continue; }
         int index_num = 0;
         std::string field_name = *name;
         if (reserved.count(field_name)) field_name += '_';
         for (int idx : indexes) {
-            if (enable_disable && checked_array && *type != +0L) {
+            if (enable_disable && checked_array && *type != +INT64_C(0)) {
                 out << indent++ << "if (" << field_name;
                 for (int i = 0; i < index_num; i++)
                     out << "[i" << i << ']';
@@ -178,7 +178,7 @@ static void gen_emit_method(std::ostream &out, json::map *m, indent_t indent,
             for (int i = 0; i < index_num; i++)
                 out << "[i" << i << ']';
             out << ".emit_json(out, indent+1);" << std::endl;
-        } else if (*type == +0L) {
+        } else if (*type == +INT64_C(0)) {
             out << indent << "out << 0;" << std::endl;
         } else {
             out << indent << "out << " << field_name;
@@ -188,7 +188,7 @@ static void gen_emit_method(std::ostream &out, json::map *m, indent_t indent,
         while (--index_num >= 0) {
             out << --indent << "}" << std::endl;
             out << indent << "out << '\\n' << --indent << ']';" << std::endl;
-            if (enable_disable && checked_array && *type != +0L)
+            if (enable_disable && checked_array && *type != +INT64_C(0))
                 out << --indent << "}" << std::endl; }
         first = false; }
     out << indent << "out << '\\n' << indent-1 << \"}\";" << std::endl;
@@ -213,7 +213,7 @@ static void gen_fieldname_method(std::ostream &out, json::map *m, indent_t inden
         json::string *name = dynamic_cast<json::string *>(it->first);
         if ((*name)[0] == '_') continue;
         json::obj *type = get_indexes(it->second.get(), indexes);
-        if (*type == +0L) continue;
+        if (*type == +INT64_C(0)) continue;
         std::string field_name = *name;
         if (reserved.count(field_name)) field_name += '_';
         out << indent;
@@ -267,7 +267,7 @@ static void gen_unpack_method(std::ostream &out, json::map *m, indent_t indent,
         json::string *name = dynamic_cast<json::string *>(a.first);
         if ((*name)[0] == '_') continue;
         json::obj *type = get_indexes(a.second.get(), indexes);
-        if (*type == +0L) continue;
+        if (*type == +INT64_C(0)) continue;
         int index_num = 0;
         for (int idx : indexes) {
             out << indent++ << "if (json::vector *v" << index_num
@@ -353,7 +353,7 @@ static void gen_dump_unread_method(std::ostream &out, json::map *m,
         if ((*name)[0] == '_') continue;
         json::obj *type = get_indexes(a.second.get(), indexes);
         json::obj *single = singleton_obj(type, name);
-        if (*type == +0L) continue;
+        if (*type == +INT64_C(0)) continue;
         std::string field_name = *name;
         if (reserved.count(field_name)) field_name += '_';
         if (dynamic_cast<json::map *>(single)) {
@@ -393,7 +393,7 @@ static void gen_modified_method(std::ostream &out, json::map *m, indent_t indent
         if ((*name)[0] == '_') continue;
         std::vector<int> indexes;
         auto *type = get_indexes(a.second.get(), indexes);
-        if (*type == +0L) continue;
+        if (*type == +INT64_C(0)) continue;
         std::string field_name = *name;
         if (reserved.count(field_name)) field_name += '_';
         if (!checked_array) {
@@ -435,7 +435,7 @@ static void gen_disable_method(std::ostream &out, json::map *m, indent_t indent,
         if ((*name)[0] == '_') continue;
         std::vector<int> indexes;
         auto type = get_indexes(a.second.get(), indexes);
-        if (*type == +0L) continue;
+        if (*type == +INT64_C(0)) continue;
         std::string field_name = *name;
         if (reserved.count(field_name)) field_name += '_';
         if (!checked_array) {
@@ -473,7 +473,7 @@ static void gen_disable_if_zero_method(std::ostream &out, json::map *m, indent_t
         if ((*name)[0] == '_') continue;
         std::vector<int> indexes;
         auto type = get_indexes(a.second.get(), indexes);
-        if (*type == +0L) continue;
+        if (*type == +INT64_C(0)) continue;
         std::string field_name = *name;
         if (reserved.count(field_name)) field_name += '_';
         if (!checked_array) {
@@ -515,7 +515,7 @@ static void gen_enable_method(std::ostream &out, json::map *m, indent_t indent,
         if ((*name)[0] == '_') continue;
         std::vector<int> indexes;
         auto type = get_indexes(a.second.get(), indexes);
-        if (*type == +0L) continue;
+        if (*type == +INT64_C(0)) continue;
         std::string field_name = *name;
         if (reserved.count(field_name)) field_name += '_';
         if (!checked_array) {
@@ -591,7 +591,7 @@ static void gen_type(std::ostream &out, const std::string &parent,
                     if (islong) c++;
                     switch (*c) {
                     case 'd': case 'i': case 'u': case 'x':
-                        nameargs.push_back(islong ? "long " : "int ");
+                        nameargs.push_back(islong ? "int64_t " : "int ");
                         break;
                     case 'e': case 'f': case 'g':
                         nameargs.push_back(islong ? "double " : "float ");
@@ -623,7 +623,7 @@ static void gen_type(std::ostream &out, const std::string &parent,
             init = m_init ? m_init->at(name).get() : 0;
             json::obj *type = get_indexes(a.second.get(), indexes);
             type = singleton_obj(type, name);
-            if (*type == +0L) continue;
+            if (*type == +INT64_C(0)) continue;
             init = singleton_obj(skip_indexes(init), name);
             bool notclass = !dynamic_cast<json::map *>(type);
             bool isglobal = global_types.count(*name) > 0;
@@ -672,7 +672,7 @@ static void gen_type(std::ostream &out, const std::string &parent,
         //if (n_init && n_init->val)
         //    std::clog << "init value " << n_init->val << std::endl;
         if (gen_definitions != DEFN_ONLY) {
-            if (size_t(n->val) > CHAR_BIT * sizeof(unsigned long))
+            if (size_t(n->val) > CHAR_BIT * sizeof(uint64_t))
                 out << "widereg<" << n->val << ">";
             else
                 out << "ubits<" << n->val << ">"; }
@@ -695,7 +695,7 @@ static int gen_global_types(std::ostream &out, json::obj *t, const json::obj *in
             init = m_init ? m_init->at(name).get() : 0;
             json::obj *type = get_indexes(a.second.get(), indexes);
             type = singleton_obj(type, name);
-            if (*type == +0L) continue;
+            if (*type == +INT64_C(0)) continue;
             init = singleton_obj(skip_indexes(init), name);
             if (json::map *cl = dynamic_cast<json::map *>(type)) {
                 rv |= gen_global_types(out, type, init);
@@ -768,10 +768,10 @@ int main(int ac, char **av) {
         reserved.insert({
             "asm", "auto", "break", "case", "catch", "char", "class", "const", "continue",
             "default", "delete", "do", "double", "else", "enum", "extern", "float", "for",
-            "friend", "goto", "if", "inline", "int", "long", "new", "operator", "private",
+            "friend", "goto", "if", "inline", "int", "int64_t", "long", "new", "operator", "private",
             "protected", "public", "register", "return", "short", "signed", "sizeof",
             "static", "struct", "switch", "template", "this", "throw", "try", "typedef",
-            "union", "unsigned", "virtual", "void", "volatile", "while" });
+            "uint64_t", "union", "unsigned", "virtual", "void", "volatile", "while" });
         if (enable_disable) {
             reserved.insert("disable");
             reserved.insert("disable_if_zero");

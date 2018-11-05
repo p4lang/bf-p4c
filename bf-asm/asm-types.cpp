@@ -4,7 +4,7 @@
 #include <stdlib.h>
 
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmissing-field-initializers" 
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 void VECTOR(pair_t)::push_back(const char *s, value_t &&v) {
     pair_t entry { {tSTR, v.lineno}, v };
     entry.key.s = strdup(s);
@@ -95,7 +95,7 @@ bool get_bool(const value_t &v) {
 }
 
 static int chkmask(const match_t &m, int maskbits) {
-    unsigned long mask = (1U << maskbits) - 1;
+    uint64_t mask = (UINT64_C(1) << maskbits) - 1;
     int shift = 0;
     while (mask && ((m.word0|m.word1) >> shift)) {
         if ((mask & m.word0 & m.word1) && (mask & m.word0 & m.word1) != mask)
@@ -115,7 +115,7 @@ std::ostream &operator<<(std::ostream &out, match_t m) {
         out << "0b";
     else
         assert(0);
-    unsigned long mask = ((1U << bits) - 1) << shift;
+    uint64_t mask = ((UINT64_C(1) << bits) - 1) << shift;
     for (; mask; shift -= bits, mask >>= bits)
         if (mask & m.word0 & m.word1)
             out << '*';
@@ -138,7 +138,7 @@ const char *value_type_desc[] = {
 const char *value_desc(const value_t *p) {
     static char buffer[32];
     switch(p->type) {
-    case tINT: sprintf(buffer, "%ld", p->i); return buffer;
+    case tINT: sprintf(buffer, "%" PRId64 "", p->i); return buffer;
     case tBIGINT: return "<bigint>";
     case tRANGE: sprintf(buffer, "%d..%d", p->lo, p->hi); return buffer;
     case tMATCH: return "<pattern>";
@@ -210,4 +210,4 @@ bool operator==(const struct value_t &a, const struct value_t &b) {
     assert(0);
     return "";
 }
-#pragma GCC diagnostic pop 
+#pragma GCC diagnostic pop

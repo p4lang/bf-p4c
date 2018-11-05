@@ -28,7 +28,7 @@ option_t options = {
     .gen_json = false,
     //FIXME-P4C: Compiler currently does not reserve 51st bit for hash parity.
     //Flip 'hash_parity_enabled' to true when 51st bit is reserved.
-    .hash_parity_enabled = false,  
+    .hash_parity_enabled = false,
     .high_availability_enabled = true,
     .match_compiler = false,
 #if HAVE_JBAY
@@ -378,11 +378,11 @@ class Version : public Section {
     void parse_version(value_t data) {
         if (data.type == tINT) {
             if (data.i != MAJOR_VERSION)
-                error(data.lineno, "Version %ld not supported", data.i);
+                error(data.lineno, "Version %" PRId64 " not supported", data.i);
         } else if (data.vec.size >= 2) {
             if (CHECKTYPE(data[0], tINT) && CHECKTYPE(data[1], tINT) &&
                 (data[0].i != MAJOR_VERSION || data[1].i > MINOR_VERSION))
-                error(data.lineno, "Version %ld.%ld not supported",
+                error(data.lineno, "Version %" PRId64 ".%" PRId64 " not supported",
                       data[0].i, data[1].i);
         } else
             error(data.lineno, "Version not understood");

@@ -30,11 +30,11 @@ GatewayTable::Match::Match(value_t *v, value_t &data, range_match_t range_match)
                     range[i] = (*v)[last-i-1].i; }
             v = &(*v)[last]; }
         if (v->type == tINT) {
-            val.word0 = ~(val.word1 = (unsigned long)v->i);
+            val.word0 = ~(val.word1 = (uint64_t)v->i);
         } else if (v->type == tBIGINT) {
             if (v->bigi.size > 1)
                 error(lineno, "Gateway key too large");
-            val.word0 = ~(val.word1 = (unsigned long)v->bigi.data[0]);
+            val.word0 = ~(val.word1 = (uint64_t)v->bigi.data[0]);
         } else if (v->type == tMATCH) {
             val = v->m; } }
     if (data == "run_table")
@@ -67,7 +67,7 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
         if (CHECKTYPE(*v, tINT)) {
             if (v->i == 2) range_match = DC_2BIT;
             if (v->i == 4) range_match = DC_4BIT;
-            else error(v->lineno, "Unknown range match size %ld bits", v->i); } }
+            else error(v->lineno, "Unknown range match size %" PRId64 " bits", v->i); } }
     for (auto &kv : MapIterChecked(data, true)) {
         if (kv.key == "name") {
             if (CHECKTYPE(kv.value, tSTR))
@@ -75,14 +75,14 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "row") {
             if (!CHECKTYPE(kv.value, tINT)) continue;
             if (kv.value.i < 0 || kv.value.i > 7)
-                error(kv.value.lineno, "row %ld out of range", kv.value.i);
+                error(kv.value.lineno, "row %" PRId64 " out of range", kv.value.i);
             if (layout.empty()) layout.resize(1);
             layout[0].row = kv.value.i;
             layout[0].lineno = kv.value.lineno;
         } else if (kv.key == "bus") {
             if (!CHECKTYPE(kv.value, tINT)) continue;
             if (kv.value.i < 0 || kv.value.i > 1)
-                error(kv.value.lineno, "bus %ld out of range", kv.value.i);
+                error(kv.value.lineno, "bus %" PRId64 " out of range", kv.value.i);
             if (layout.empty()) layout.resize(1);
             layout[0].bus = kv.value.i;
             if (layout[0].lineno < 0)
@@ -90,14 +90,14 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "payload_row") {
             if (!CHECKTYPE(kv.value, tINT)) continue;
             if (kv.value.i < 0 || kv.value.i > 7)
-                error(kv.value.lineno, "row %ld out of range", kv.value.i);
+                error(kv.value.lineno, "row %" PRId64 " out of range", kv.value.i);
             if (layout.size() < 2) layout.resize(2);
             layout[1].row = kv.value.i;
             layout[1].lineno = kv.value.lineno;
         } else if (kv.key == "payload_bus") {
             if (!CHECKTYPE(kv.value, tINT)) continue;
             if (kv.value.i < 0 || kv.value.i > 1)
-                error(kv.value.lineno, "bus %ld out of range", kv.value.i);
+                error(kv.value.lineno, "bus %" PRId64 " out of range", kv.value.i);
             if (layout.size() < 2) layout.resize(2);
             layout[1].bus = kv.value.i;
             if (layout[1].lineno < 0)
@@ -105,7 +105,7 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "gateway_unit" || kv.key == "unit") {
             if (!CHECKTYPE(kv.value, tINT)) continue;
             if (kv.value.i < 0 || kv.value.i > 1)
-                error(kv.value.lineno, "gateway unit %ld out of range", kv.value.i);
+                error(kv.value.lineno, "gateway unit %" PRId64 " out of range", kv.value.i);
             gw_unit = kv.value.i;
         } else if (kv.key == "input_xbar") {
             if (CHECKTYPE(kv.value, tMAP))
@@ -119,7 +119,7 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
             if (CHECKTYPE(kv.value, tMAP)) {
                 for (auto &v : kv.value.map) {
                     if ((v.key == "expression") && CHECKTYPE(v.value, tSTR))
-                        gateway_cond = v.value.s; 
+                        gateway_cond = v.value.s;
                     else if ((v.key == "true") && CHECKTYPE(v.value, tSTR))
                         cond_true = Match(0, v.value, range_match);
                     else if ((v.key == "false") && CHECKTYPE(v.value, tSTR))
@@ -515,7 +515,7 @@ void GatewayTable::gen_tbl_cfg(json::vector &out) const {
     next_tables["true"] = cond_true.next_logical_id();
     gStageTable["next_tables"] = std::move(next_tables);
     json::map mra;
-    mra["memory_unit"] = layout[0].row * 2 + gw_unit; 
+    mra["memory_unit"] = layout[0].row * 2 + gw_unit;
     mra["memory_type"] = "gateway";
     mra["payload_buses"] = json::vector();
     gStageTable["memory_resource_allocation"] = std::move(mra);
@@ -526,17 +526,17 @@ void GatewayTable::gen_tbl_cfg(json::vector &out) const {
     next_table_names["true"] = cond_true.next_table_name();
     gStageTable["next_table_names"] = std::move(next_table_names);
     gStageTable["logical_table_id"] = logical_id;
-    gStageTable["stage_number"] = stage->stageno; 
-    gStageTable["stage_table_type"] = "gateway"; 
+    gStageTable["stage_number"] = stage->stageno;
+    gStageTable["stage_table_type"] = "gateway";
     gStageTable["size"] = 0;
     gStageTables.push_back(std::move(gStageTable));
 
     json::vector condition_fields;
     for (auto m : match) {
         json::map condition_field;
-        condition_field["name"] = m.val.name(); 
-        condition_field["start_bit"] = m.offset; 
-        condition_field["bit_width"] = m.val.size(); 
+        condition_field["name"] = m.val.name();
+        condition_field["start_bit"] = m.offset;
+        condition_field["bit_width"] = m.val.size();
         condition_fields.push_back(std::move(condition_field));
     }
 

@@ -65,10 +65,10 @@ TernaryMatchTable::Match::Match(const value_t &v) : lineno(v.lineno) {
             return; }
         if (!CHECKTYPE(v[0], tINT) || !CHECKTYPE(v[v.vec.size-1], tINT)) return;
         if ((word_group = v[0].i) < 0 || v[0].i >= TCAM_XBAR_GROUPS)
-            error(v[0].lineno, "Invalid input xbar group %ld", v[0].i);
+            error(v[0].lineno, "Invalid input xbar group %" PRId64, v[0].i);
         if (v.vec.size == 3 && CHECKTYPE(v[1], tINT)) {
             if ((byte_group = v[1].i) < 0 || v[1].i >= TCAM_XBAR_GROUPS/2)
-                error(v[1].lineno, "Invalid input xbar group %ld", v[1].i);
+                error(v[1].lineno, "Invalid input xbar group %" PRId64, v[1].i);
         } else
             byte_group = -1;
         if ((byte_config = v[v.vec.size-1].i) < 0 || byte_config >= 4)
@@ -560,12 +560,12 @@ void TernaryMatchTable::gen_match_fields_pvp(json::vector &match_field_list, uns
     auto payload_name = "--tcam_payload_" + std::to_string(word) + "--";
     auto parity_name = "--tcam_parity_" + std::to_string(word) + "--";
     auto version_name = "--version--";
-    gen_entry_cfg(match_field_list, payload_name, TCAM_PAYLOAD_BITS_START, 
+    gen_entry_cfg(match_field_list, payload_name, TCAM_PAYLOAD_BITS_START,
         word, word, "payload", start_bit, TCAM_PAYLOAD_BITS, dirtcam_index, tcam_bits);
     if (uses_versioning && (version_word_group == word)) {
         gen_entry_cfg(match_field_list, version_name, TCAM_VERSION_BITS_START,
              word, word, "version", start_bit, TCAM_VERSION_BITS, dirtcam_index, tcam_bits); }
-    gen_entry_cfg(match_field_list, parity_name, TCAM_PARITY_BITS_START, 
+    gen_entry_cfg(match_field_list, parity_name, TCAM_PARITY_BITS_START,
         word, word, "parity", start_bit, TCAM_PARITY_BITS, dirtcam_index, tcam_bits);
 }
 
@@ -601,7 +601,7 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) const {
         index++; }
     // Determine the zero padding necessary by creating a bitvector (for each
     // word). While creating entries for pack format set bits used. The unused
-    // bits must be padded with zero field entries. 
+    // bits must be padded with zero field entries.
     std::vector<bitvec> tcam_bits;
     tcam_bits.resize(match.size());
     // Set pvp bits for each tcam word

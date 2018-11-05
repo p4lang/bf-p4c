@@ -136,7 +136,7 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
                 if (auto hd = tbl->find_hash_dist(kv.value[1].i))
                     src = Source(hd);
                 else {
-                    error(kv.value.lineno, "No hash_dist %ld in table %s", kv.value[1].i,
+                    error(kv.value.lineno, "No hash_dist %" PRId64 " in table %s", kv.value[1].i,
                           tbl->name());
                     continue; }
                 sz = 16;

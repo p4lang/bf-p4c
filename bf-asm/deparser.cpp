@@ -40,7 +40,7 @@ struct Deparser::FDEntry {
         Checksum(gress_t gr, const value_t &v) : gress(gr) {
             if (CHECKTYPE(v, tINT)) {
                 if ((unit = v.i) < 0 || v.i >= Target::DEPARSER_CHECKSUM_UNITS())
-                    error(v.lineno, "Invalid deparser checksum unit %ld", v.i); } }
+                    error(v.lineno, "Invalid deparser checksum unit %" PRId64 "", v.i); } }
         void check(bitvec &phv_use) override { }
         template<class TARGET> unsigned encode();
         unsigned encode() override;
@@ -53,11 +53,12 @@ struct Deparser::FDEntry {
         Constant(gress_t g, const value_t &v) : gress(g), val(v.i) {
             lineno = v.lineno;
             if (v.i < 0 || v.i >> 8)
-                error(lineno, "Invalid deparser constant %ld, valid constant range is 0-255", v.i);
+                error(lineno, "Invalid deparser constant %" PRId64
+                      ", valid constant range is 0-255", v.i);
             bool ok = Deparser::add_constant(gress, val);
             if (!ok)
                 error(lineno, "Ran out of deparser constants");
-        } 
+        }
         void check(bitvec &phv_use) override { }
         template<class TARGET> unsigned encode();
         unsigned encode() override;
@@ -85,12 +86,15 @@ struct Deparser::FDEntry {
                     } else if (kv.key == "max_length" || kv.key == "length") {
                         if (length >= 0)
                             error(kv.value.lineno, "Duplicate length");
-                        if (CHECKTYPE(kv.value, tINT) && ((length = kv.value.i) < 0 || length > 64))
+                        if (CHECKTYPE(kv.value, tINT) &&
+                            ((length = kv.value.i) < 0 || length > 64))
                             error(kv.value.lineno, "Invalid clot length");
                     } else if (kv.key.type == tINT) {
                         if (phv_replace.count(kv.key.i) || csum_replace.count(kv.key.i))
-                            error(kv.value.lineno, "Duplicate value at offset %ld", kv.key.i);
-                        if (kv.value.type == tCMD && kv.value.vec.size == 2 && kv.value == "checksum")
+                            error(kv.value.lineno, "Duplicate value at offset %" PRId64 "",
+                                  kv.key.i);
+                        if (kv.value.type == tCMD && kv.value.vec.size == 2 &&
+                            kv.value == "checksum")
                             csum_replace.emplace(kv.key.i, Checksum(gress, kv.value.vec[1]));
                         else
                             phv_replace.emplace(kv.key.i, ::Phv::Ref(gress, kv.value));
@@ -207,7 +211,7 @@ Deparser::Digest::Digest(Deparser::Digest::Type *t, int l, VECTOR(pair_t) &data)
         } else if (!CHECKTYPE(l.key, tINT))
             continue;
         else if (l.key.i < 0 || l.key.i >= t->count)
-            error(l.key.lineno, "%s index %ld out of range", t->name.c_str(), l.key.i);
+            error(l.key.lineno, "%s index %" PRId64 " out of range", t->name.c_str(), l.key.i);
         else if (l.value.type != tVEC)
             layout[l.key.i].emplace_back(t->gress, l.value);
         else {
@@ -270,7 +274,7 @@ void Deparser::input(VECTOR(value_t) args, value_t data) {
                     for (auto &ent : kv.value.map) {
                         if (ent.key == "clot")
                             checksum[gress][unit].emplace_back(gress, ent.key[1].i, ent.value);
-                        else 
+                        else
                             checksum[gress][unit].emplace_back(gress, ent.key, ent.value);
                     }
                 }

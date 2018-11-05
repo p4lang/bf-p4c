@@ -210,7 +210,7 @@ void StatefulTable::pass1() {
               overflow_action.name.c_str(), name());
 }
 
-int StatefulTable::get_const(long v) {
+int StatefulTable::get_const(int64_t v) {
     size_t rv = std::find(const_vals.begin(), const_vals.end(), v) - const_vals.begin();
     if (rv == const_vals.size())
         const_vals.push_back(v);
