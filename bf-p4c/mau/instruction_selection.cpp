@@ -524,7 +524,16 @@ const IR::Node *DoInstructionSelection::postorder(IR::Primitive *prim) {
             return makeDepositField(prim, mask);
         } else {
             return new IR::MAU::Instruction(prim->srcInfo, "bitmasked-set", &prim->operands); }
-    } else if (prim->name == "recirculate_raw") {
+        return prim; }
+
+    // get rid of introduced tempvars
+    for (auto &op : prim->operands) {
+        if (auto *inst = op->to<IR::MAU::Instruction>()) {
+            if (inst->name == "set" && inst->operands.at(0)->is<IR::TempVar>()) {
+               BUG_CHECK(inst->operands.size() == 2, "invalid set");
+               op = inst->operands.at(1); } } }
+
+    if (prim->name == "recirculate_raw") {
         if (prim->operands.size() != 1) {
             error("%s: wrong number of operands to %s", prim->srcInfo, prim->name);
         } else {
@@ -671,8 +680,6 @@ bool StatefulAttachmentSetup::Scan::preorder(const IR::MAU::HashDist *hd) {
 }
 
 void StatefulAttachmentSetup::Scan::postorder(const IR::MAU::Instruction *instr) {
-    auto tbl = findContext<IR::MAU::Table>();
-    auto act = findContext<IR::MAU::Action>();
     if (self.saved_tempvar && self.saved_hashdist) {
         self.stateful_alu_from_hash_dists[self.saved_tempvar->name] = self.saved_hashdist;
         self.remove_instr.insert(instr); }

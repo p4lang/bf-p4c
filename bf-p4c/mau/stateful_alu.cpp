@@ -1,4 +1,5 @@
 #include "stateful_alu.h"
+#include "bf-p4c/common/ir_utils.h"
 #include "ir/pattern.h"
 
 const Device::StatefulAluSpec &TofinoDevice::getStatefulAluSpec() const {
@@ -528,6 +529,15 @@ bool CreateSaluInstruction::preorder(const IR::Add *e) {
         error("%s: expression too complex for stateful alu", e->srcInfo);
         return false; }
 }
+bool CreateSaluInstruction::preorder(const IR::AddSat *e) {
+    if (etype == VALUE) {
+        opcode = isSigned(e->type) ? "sadds" : "saddu";
+        return true;
+    } else {
+        error("%s: expression too complex for stateful alu", e->srcInfo);
+        return false; }
+}
+
 bool CreateSaluInstruction::preorder(const IR::Sub *e) {
     switch (etype) {
     case IF:
@@ -543,6 +553,15 @@ bool CreateSaluInstruction::preorder(const IR::Sub *e) {
         error("%s: expression too complex for stateful alu", e->srcInfo);
         return false; }
 }
+bool CreateSaluInstruction::preorder(const IR::SubSat *e) {
+    if (etype == VALUE) {
+        opcode = isSigned(e->type) ? "ssubs" : "ssubu";
+        return true;
+    } else {
+        error("%s: expression too complex for stateful alu", e->srcInfo);
+        return false; }
+}
+
 bool CreateSaluInstruction::preorder(const IR::BAnd *e) {
     if (etype == VALUE) {
         if (e->left->is<IR::Cmpl>())

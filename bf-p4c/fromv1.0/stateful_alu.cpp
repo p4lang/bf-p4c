@@ -31,6 +31,8 @@ class CreateSaluApplyFunction : public Inspector {
     const IR::Statement *output = nullptr;
     const Util::SourceInfo *applyLoc;
     enum expr_index_t { LO1, LO2, HI1, HI2, OUT } expr_index;
+    bool saturating = false;
+    bool convert_to_saturating = false;
     bool have_output = false;
     bool defer_out = false;
     bool cmpl_out = false;
@@ -60,6 +62,14 @@ class CreateSaluApplyFunction : public Inspector {
             // If we fix P4_14 typechecking to understand externs, need for this goes away
             c->type = new IR::Type_InfInt;
             return c; }
+        const IR::Expression *postorder(IR::Add *e) override {
+            if (self.convert_to_saturating)
+                return new IR::AddSat(e->srcInfo, e->type, e->left, e->right);
+            return e; }
+        const IR::Expression *postorder(IR::Sub *e) override {
+            if (self.convert_to_saturating)
+                return new IR::SubSat(e->srcInfo, e->type, e->left, e->right);
+            return e; }
         const IR::Expression *postorder(IR::AttribLocal *attr) override {
             int idx = 0;
             IR::Path *var = nullptr;
@@ -191,7 +201,9 @@ class CreateSaluApplyFunction : public Inspector {
         } else {
             return false; }
         applyLoc = &prop->value->srcInfo;
+        convert_to_saturating = saturating && !predicate;
         auto e = prop->value->to<IR::ExpressionValue>()->expression->apply(rewrite);
+        convert_to_saturating = false;
         if (!e) return false;
         if (predicate) {
             if (e->type != IR::Type::Boolean::get())
@@ -215,10 +227,11 @@ class CreateSaluApplyFunction : public Inspector {
         return false; }
 
  public:
-    CreateSaluApplyFunction(IR::Annotations *annots,
-            P4V1::ProgramStructure *s, const IR::Type *rtype,
-                            const IR::Type::Bits *utype, cstring mu)
+    CreateSaluApplyFunction(IR::Annotations *annots, P4V1::ProgramStructure *s,
+                            const IR::Type *rtype, const IR::Type::Bits *utype, cstring mu,
+                            bool saturating)
         : annots(annots), structure(s), rtype(rtype), utype(utype), math_unit_name(mu),
+          saturating(saturating),
           rewrite({ new RewriteExpr(*this), new TypeCheck }) {
         body = new IR::BlockStatement({
             new IR::Declaration_Variable("in_value", rtype),
@@ -244,11 +257,12 @@ class CreateSaluApplyFunction : public Inspector {
                                  new IR::Type_Method(IR::Type_Void::get(), apply_params), body);
         if (output && defer_out)
             body->push_back(output); }
-    static const IR::Function *create(IR::Annotations *annots,
-                P4V1::ProgramStructure *structure,
+    static const IR::Function *create(IR::Annotations *annots, P4V1::ProgramStructure *structure,
                 const IR::Declaration_Instance *ext, const IR::Type *rtype,
-                const IR::Type::Bits *utype, cstring math_unit_name = cstring()) {
-        CreateSaluApplyFunction create_apply(annots, structure, rtype, utype, math_unit_name);
+                const IR::Type::Bits *utype, cstring math_unit_name = cstring(),
+                bool saturating = false) {
+        CreateSaluApplyFunction create_apply(annots, structure, rtype, utype,
+                                             math_unit_name, saturating);
         // need a separate traversal here as "update" will be visited after "output"
         forAllMatching<IR::AttribLocal>(&ext->properties, [&](const IR::AttribLocal *attr) {
             if (attr->name.name.endsWith("_bitc")) { create_apply.cmpl_out = true; } });
@@ -498,7 +512,8 @@ const IR::Declaration_Instance *P4V1::StatefulAluConverter::convertExternInstanc
             structure->declarations->push_back(math);
         auto *block = new IR::BlockStatement({
             CreateSaluApplyFunction::create(annots, structure, ext, info.rtype, info.utype,
-                                            math ? math->name.name : cstring()) });
+                                            math ? math->name.name : cstring(),
+                                            info.reg->saturating) });
         auto* externalName = new IR::StringLiteral(IR::ID("." + name));
         annots->addAnnotation(IR::ID("name"), externalName);
         auto *rv = new IR::Declaration_Instance(name, annots, ratype, ctor_args, block);

@@ -1,6 +1,7 @@
 #include "gateway.h"
 #include <deque>
 #include "split_gateways.h"
+#include "bf-p4c/common/ir_utils.h"
 #include "bf-p4c/common/slice.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/mau/asm_output.h"
@@ -21,13 +22,6 @@ class CanonGatewayExpr::NeedNegate : public Inspector {
             if (rv) break; } }
     explicit operator bool() const { return rv; }
 };
-
-/* FIXME -- should be a global function somewhere */
-static bool isSigned(const IR::Type *t) {
-    if (auto b = t->to<IR::Type::Bits>())
-        return b->isSigned;
-    return false;
-}
 
 static mpz_class SliceReduce(IR::Operation::Relation *rel, mpz_class val) {
     int slice = 0;

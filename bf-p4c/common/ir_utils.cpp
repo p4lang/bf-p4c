@@ -17,3 +17,9 @@ getMetadataType(const IR::BFN::Pipe* pipe, cstring typeName) {
               "Couldn't find required intrinsic metadata type: %1%", typeName);
     return meta;
 }
+
+bool isSigned(const IR::Type *t) {
+    if (auto b = t->to<IR::Type::Bits>())
+        return b->isSigned;
+    return false;
+}
