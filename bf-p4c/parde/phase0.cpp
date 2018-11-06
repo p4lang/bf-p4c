@@ -28,9 +28,13 @@ std::ostream& operator<<(std::ostream& out, const BFN::Phase0Info* info) {
     out << --indent << "size: 288" << std::endl;
 
     // Write out the p4 parameter, which (for phase0) is always
-    // 'ig_intr_md.ingress_port'
+    // For P4-14 = 'ig_intr_md.ingress_port'
+    // For P4-16 = '$PORT' - consistent with bf-rt.json
     out <<   indent << "p4_param_order:" << std::endl;
-    out << ++indent << "ig_intr_md.ingress_port: ";
+    if (info->keyName.isNullOrEmpty())
+        out << ++indent << "ig_intr_md.ingress_port:";
+    else
+        out << ++indent << "$PORT:";
     out << "{ type: exact, size: 9 }" << std::endl;
 
     // Write out the field packing format. We have to convert into the LSB-first
@@ -118,16 +122,24 @@ struct FindPhase0Annotation : public Inspector {
             return false;
         }
 
-        if (annotation->expr.size() != 3 ||
-            !annotation->expr[0]->is<IR::StringLiteral>() ||
-            !annotation->expr[1]->is<IR::StringLiteral>() ||
-            !annotation->expr[2]->is<IR::TypeNameExpression>()) {
+        auto phase0_warn = false;
+        auto num_annots = annotation->expr.size();
+        if (num_annots == 3 || num_annots == 4) {
+            if (!annotation->expr[0]->is<IR::StringLiteral>() ||
+                !annotation->expr[1]->is<IR::StringLiteral>() ||
+                !annotation->expr[2]->is<IR::TypeNameExpression>())
+                phase0_warn = true;
+            // From TNA we get an additional (compiler generated) annotation for
+            // keyName which is used in bf-rt.json.
+            if (num_annots == 4 && !annotation->expr[3]->is<IR::StringLiteral>())
+                phase0_warn = true;
+        }
+        if (phase0_warn) {
             DIAGNOSE_WARN("phase0_annotation", "Invalid @phase0 annotation: %1%",
                           annotation);
             showUsage();
             return false;
         }
-
 
         cstring tableName = annotation->expr[0]->to<IR::StringLiteral>()->value;
         cstring actionName = annotation->expr[1]->to<IR::StringLiteral>()->value;
@@ -147,6 +159,10 @@ struct FindPhase0Annotation : public Inspector {
             showUsage();
             return false;
         }
+
+        cstring keyName = "";
+        if (num_annots == 4)
+            keyName = annotation->expr[3]->to<IR::StringLiteral>()->value;
 
         // The phase 0 type defines the format of the phase 0 data (the static
         // per-port metadata, in other words). The driver exposes a table-like
@@ -181,7 +197,9 @@ struct FindPhase0Annotation : public Inspector {
             return false;
         }
 
-        phase0Info = new Phase0Info{tableName, actionName, packing};
+        phase0Info = new Phase0Info{tableName, actionName, keyName, packing};
+        LOG3("Setting phase0 info to { " << tableName << ", " << actionName << ", "
+                << keyName << ", " << packing << " } ");
         return false;
     }
 

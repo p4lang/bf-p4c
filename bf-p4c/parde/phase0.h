@@ -26,8 +26,9 @@ struct FieldPacking;
 
 /// Phase 0 metadata; used to generate phase 0 assembly.
 struct Phase0Info {
-    const cstring tableName;      /// The phase 0 table.
+    const cstring tableName;      /// The phase 0 table name.
     const cstring actionName;     /// The phase 0 action name.
+    const cstring keyName;        /// The phase 0 key name.
     const FieldPacking* packing;  /// How the phase 0 fields should be packed.
 };
 

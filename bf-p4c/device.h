@@ -53,6 +53,7 @@ class Device {
     /* type is 'int' because width_bits() is defined as 'int' in ir/base.def */
     static int cloneSessionIdWidth() { return Device::get().getCloneSessionIdWidth(); }
     static int queueIdWidth() { return Device::get().getQueueIdWidth(); }
+    static int portBitWidth() { return Device::get().getPortBitWidth(); }
     static int numParsersPerPipe() { return 18; }
 
  protected:
@@ -71,6 +72,7 @@ class Device {
     virtual unsigned getMaxDigestId() const = 0;
     virtual int getCloneSessionIdWidth() const = 0;
     virtual int getQueueIdWidth() const = 0;
+    virtual int getPortBitWidth() const = 0;
 
  private:
     static Device* instance_;
@@ -99,6 +101,7 @@ class TofinoDevice : public Device {
     unsigned getMaxDigestId() const override { return 8; }
     int getCloneSessionIdWidth() const override { return 10; }
     int getQueueIdWidth() const override { return 5; }
+    int getPortBitWidth() const override { return 9; }
 
     const PhvSpec& getPhvSpec() const override { return phv_; }
     const PardeSpec& getPardeSpec() const override { return parde_; }
@@ -126,6 +129,7 @@ class JBayDevice : public Device {
     unsigned getMaxDigestId() const override { return 8; }
     int getCloneSessionIdWidth() const override { return 8; }
     int getQueueIdWidth() const override { return 7; }
+    int getPortBitWidth() const override { return 9; }
 
     const PhvSpec& getPhvSpec() const override { return phv_; }
     const PardeSpec& getPardeSpec() const override { return parde_; }

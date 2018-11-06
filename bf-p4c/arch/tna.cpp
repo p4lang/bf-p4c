@@ -348,9 +348,10 @@ class InsertPhaseZeroAnnotation : public Transform {
         }
         LOG3("visiting ingress control");
         auto* annotation = new IR::Annotation("phase0", {
-                new IR::StringLiteral(IR::ID("port_metadata")),
+                new IR::StringLiteral(IR::ID("$PORT_METADATA")),
                 new IR::StringLiteral(IR::ID(".set_port_metadata")),
-                new IR::TypeNameExpression(new IR::Type_Name("__phase0_header"))
+                new IR::TypeNameExpression(new IR::Type_Name("__phase0_header")),
+                new IR::StringLiteral(IR::ID("$PORT"))
         });
         LOG4("Injecting @phase0 annotation onto control " << control->name << ": " << annotation);
         auto* controlType = control->type->clone();

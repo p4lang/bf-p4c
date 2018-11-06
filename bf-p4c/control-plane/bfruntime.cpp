@@ -10,6 +10,7 @@
 
 #include "barefoot/p4info.pb.h"
 #include "control-plane/p4RuntimeSerializer.h"
+#include "bf-p4c/device.h"
 #include "lib/exceptions.h"
 #include "lib/gmputil.h"
 #include "lib/json.h"
@@ -1237,7 +1238,7 @@ BfRtSchemaGenerator::addPortMetadata(Util::JsonArray* tablesJson,
 
     auto* keyJson = new Util::JsonArray();
     addKeyField(keyJson, BF_RT_DATA_PORT_METADATA_PORT, "$PORT",
-                true /* mandatory */, "Exact", makeTypeInt("uint32"));
+                true /* mandatory */, "Exact", makeTypeBytes(Device::portBitWidth()));
     tableJson->emplace("key", keyJson);
 
     auto* dataJson = new Util::JsonArray();
