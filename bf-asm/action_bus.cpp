@@ -682,12 +682,6 @@ int ActionBus::find(const char *name, TableOutputModifier mod, int lo, int hi, i
     for (auto &slot : by_byte) {
         int offset = lo;
         if (slot.second.name != name) continue;
-        for (auto &d : slot.second.data) {
-            // FIXME -- is this needed still?  or superceded by the Table call to find above?
-            if (d.first.type == Source::TableOutput || d.first.type == Source::NameRef) {
-                offset -= d.second;
-            }
-            break; }
         if (size && !(size & (int)slot_sizes[slot.first/32U])) continue;
         if (offset >= (int)slot.second.size) continue;
         if (len) *len = slot.second.size;
@@ -696,13 +690,15 @@ int ActionBus::find(const char *name, TableOutputModifier mod, int lo, int hi, i
 }
 
 int ActionBus::find(Source src, int lo, int hi, int size, int *len) {
-    int alignmask = 127;  // default align to 128 bits
-    if (size && (size & (size-1)) == 0)
-        alignmask = size * 8 - 1;
-    if (lo > alignmask) alignmask = 127;
     for (auto &slot : by_byte) {
         if (!slot.second.data.count(src)) continue;
-        int offset = slot.second.data[src] & alignmask;
+        int offset = slot.second.data[src];
+        // FIXME -- HashDist is 16 bits in either half of the 32-bit immediate path; we call
+        // the high half (16..31), but we address it directly (as if it was 16 bits) for
+        // non-32 bit accesses. So we ignore the top bit of the offset bit index when
+        // accessing it for 8- or 16- bit slots.
+        // There should be a better way of doing this.
+        if (src.type == Source::HashDist && size < 4) offset &= 15;
         if (offset > lo) continue;
         if (offset + (int)slot.second.size <= hi) continue;
         if (size && !(size & slot_sizes[slot.first/32U])) continue;
