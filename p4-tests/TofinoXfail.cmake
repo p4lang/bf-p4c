@@ -139,12 +139,6 @@ if (PTF_REQUIREMENTS_MET)
     fabric-new-DWITH_SPGW
     )
 
-  # needs to adjust egress packet length
-  p4c_add_xfail_reason("tofino"
-    "Expected packet was not received on device"
-    11-simple_l3_mirror 
-    )
-
   # broken test: https://github.com/barefootnetworks/p4examples/issues/5
   p4c_add_xfail_reason("tofino"
     "SyntaxError: invalid syntax"
@@ -296,8 +290,12 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
-  switch_msdc_ipv4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "No tables placeable, but not all tables placed?"
   switch_8.4_msdc_ipv4
+  switch_msdc_ipv4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -1339,12 +1337,6 @@ p4c_add_xfail_reason("tofino"
 # BRIG-927
 p4c_add_xfail_reason("tofino"
   "the alignment of fields within the container renders the action impossible"
-)
-
-# BRIG-879, needs to adjust egress packet length
-p4c_add_xfail_reason("tofino"
-  "AssertionError: Expected packet was not received on device"
-  brig_569
 )
 
 # BRIG-920 need bridged metadata overlay
