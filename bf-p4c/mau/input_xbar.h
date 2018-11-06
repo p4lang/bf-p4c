@@ -200,6 +200,8 @@ struct IXBar {
         int             gw_search_bus_bytes = 0;
         bool            gw_hash_group = false;
 
+        bool search_data() const { return gw_search_bus || gw_hash_group; }
+
         // FIXME: Could be better created initialized through a constructor
         enum type_t { MATCH, GATEWAY, SELECTOR, METER, STATEFUL_ALU, HASH_DIST, TYPES }
             type = TYPES;

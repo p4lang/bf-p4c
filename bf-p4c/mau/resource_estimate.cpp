@@ -675,9 +675,11 @@ StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries,
     // Because the table is const, the layout options must be copied into the Object
     logical_ids = 1;
     layout_options.clear();
-    layout_options = lc->get_layout_options(tbl);
-    action_formats = lc->get_action_formats(tbl);
-    meter_format = lc->get_attached_formats(tbl);
+    if (!tbl->created_during_tp) {
+        layout_options = lc->get_layout_options(tbl);
+        action_formats = lc->get_action_formats(tbl);
+        meter_format = lc->get_attached_formats(tbl);
+    }
     exact_ixbar_bytes = tbl->layout.ixbar_bytes;
     // A hash action table currently cannot be split across stages, thus if the table has
     // been previously been placed, the current stage table cannot be hash action

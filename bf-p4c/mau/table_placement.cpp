@@ -227,6 +227,12 @@ struct TablePlacement::Placed {
           stage_split(p.stage_split), use(p.use), resources(p.resources)
           { traceCreation(); }
 
+    const Placed *diff_prev(const Placed *new_prev) const {
+        auto rv = new Placed(*this);
+        rv->prev = new_prev;
+        return rv;
+    }
+
  private:
     Placed(Placed &&) = delete;
     void traceCreation() { }
@@ -436,16 +442,40 @@ bool TablePlacement::try_alloc_ixbar(TablePlacement::Placed *next,
 bool TablePlacement::try_alloc_mem(Placed *next, const Placed *done,
         TableResourceAlloc *resources, safe_vector<TableResourceAlloc *> &prev_resources) {
     Memories current_mem;
+    // This is to guarantee for Tofino to have at least a table per gress within a stage, as
+    // a path is required from the parser
+    std::array<bool, 2> gress_in_stage = { { false, false} };
+    bool shrink_lt = false;
+    if (Device::currentDevice() == Device::TOFINO) {
+        if (next->stage == 0) {
+            for (auto *p = done; p && p->stage == next->stage; p = p->prev) {
+                gress_in_stage[p->table->gress] = true;
+            }
+        }
+
+        gress_in_stage[next->table->gress] = true;
+        for (int gress_i = 0; gress_i < 2; gress_i++) {
+            if (table_in_gress[gress_i] && !gress_in_stage[gress_i])
+                shrink_lt = true;
+        }
+    }
+
+    if (shrink_lt)
+        current_mem.shrink_allowed_lts();
+
     int i = 0;
     for (auto *p = done; p && p->stage == next->stage; p = p->prev, ++i) {
          current_mem.add_table(p->table, p->gw, prev_resources[i], p->use.preferred(),
-                               p->entries, p->stage_split); }
+                               p->entries, p->stage_split);
+    }
     current_mem.add_table(next->table, next->gw, resources, next->use.preferred(), next->entries,
                           next->stage_split);
     resources->memuse.clear();
     for (auto *prev_resource : prev_resources) {
         prev_resource->memuse.clear();
     }
+
+
     if (!current_mem.allocate_all()) {
         error_message = "The table " + next->table->name + " could not fit in stage " +
                         std::to_string(next->stage) + " with " + std::to_string(next->entries)
@@ -459,6 +489,8 @@ bool TablePlacement::try_alloc_mem(Placed *next, const Placed *done,
     }
 
     Memories verify_mem;
+    if (shrink_lt)
+        verify_mem.shrink_allowed_lts();
     for (auto prev_resource : prev_resources)
         verify_mem.update(prev_resource->memuse);
     verify_mem.update(resources->memuse);
@@ -843,7 +875,10 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv, const IR::MA
 
     min_placed->entries = 1;
 
-    assert(!rv->placed[tblInfo.at(rv->table).uid]);
+    if (!rv->table->created_during_tp) {
+        assert(!rv->placed[tblInfo.at(rv->table).uid]);
+    }
+
     const safe_vector<LayoutOption> layout_options = lc.get_layout_options(t);
     StageUseEstimate stage_current = current;
     // According to the driver team, different stage tables can have different action
@@ -1024,17 +1059,74 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv, const IR::MA
         rv->match_placed = done->match_placed; }
     rv->prev = done;
 
-    if (rv->entries >= set_entries)
-        rv->match_placed[tblInfo.at(rv->table).uid] = true;
 
-    if (!rv->need_more) {
-        rv->placed[tblInfo.at(rv->table).uid] = true;
-        if (rv->gw)
-            rv->placed[tblInfo.at(rv->gw).uid] = true;
+    if (!rv->table->created_during_tp) {
+        if (rv->entries >= set_entries)
+            rv->match_placed[tblInfo.at(rv->table).uid] = true;
+        if (!rv->need_more) {
+            rv->placed[tblInfo.at(rv->table).uid] = true;
+            if (rv->gw)
+                rv->placed[tblInfo.at(rv->gw).uid] = true;
+        }
     }
 
     return rv;
 }
+
+/**
+ * In Tofino specifically, if a table is in ingress or egress, then a table for that pipeline
+ * must be placed within stage 0.  The parser requires a pathway into the first stage.
+ *
+ * Thus, this checks if no table can longer be placed in stage 0, and if a table from a
+ * particular gress has not yet been placed, the create a starting table for that pipe in
+ * stage 0.
+ */
+const TablePlacement::Placed *
+         TablePlacement::add_starter_pistols(const Placed *done,
+                                             safe_vector<const Placed *> &trial,
+                                             const StageUseEstimate &current) {
+    if (Device::currentDevice() != Device::TOFINO)
+        return done;
+    if (done != nullptr && done->stage > 0)
+        return done;
+    for (auto p : trial) {
+        if (p->stage == 0)
+            return done;
+    }
+
+    // Determine if a table has been placed yet within this gress
+    std::array<bool, 2> placed_gress = { { false, false } };
+    for (auto *p = done; p && p->stage == 0; p = p->prev) {
+        placed_gress[p->table->gress] = true;
+    }
+
+    const Placed *last_placed = done;
+    for (int i = 0; i < 2; i++) {
+        gress_t current_gress = static_cast<gress_t>(i);
+        if (!placed_gress[i] && table_in_gress[i]) {
+            cstring t_name = "$" + toString(current_gress) + "_starter_pistol";
+            auto t = new IR::MAU::Table(t_name, current_gress);
+            t->created_during_tp = true;
+            auto *rv = new Placed(*this, t);
+            rv = try_place_table(rv, t, last_placed, current);
+            if (rv->stage != 0) {
+                ::error("No table in %s could be placed in stage 0, a requirement for Tofino",
+                        toString(current_gress));
+                return last_placed;
+            }
+            last_placed = rv;
+            starter_pistol[i] = t;
+        }
+    }
+
+    // place_table cannot be called on these tables, as they don't appear in the initial IR.
+    // Adding them to the placed linked list is sufficient for them to be placed
+    for (size_t i = 0; i < trial.size(); i++) {
+        trial[i] = trial[i]->diff_prev(last_placed);
+    }
+    return last_placed;
+}
+
 
 const TablePlacement::Placed *
 TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed *pl) {
@@ -1239,10 +1331,15 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
      * set and placed list, which are const pointers, so we can backtrack
      * by just saving a snapshot of a work set and corresponding placed
      * list and restoring that point */
-    for (auto th : pipe->thread)
+    size_t gress_index = 0;
+    for (auto th : pipe->thread) {
         if (th.mau && th.mau->tables.size() > 0) {
             th.mau->apply(SetupInfo(*this));
-            new GroupPlace(*this, work, {}, th.mau); }
+            new GroupPlace(*this, work, {}, th.mau);
+            table_in_gress[gress_index] = true;
+        }
+        gress_index++;
+    }
     if (pipe->ghost_thread && pipe->ghost_thread->tables.size() > 0) {
         pipe->ghost_thread->apply(SetupInfo(*this));
         new GroupPlace(*this, work, {}, pipe->ghost_thread); }
@@ -1337,6 +1434,8 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
             BUG("No tables placeable, but not all tables placed?");
         LOG2("found " << trial.size() << " tables that could be placed: " << trial);
         const Placed *best = 0;
+        placed = add_starter_pistols(placed, trial, current);
+
         choice_t choice = DEFAULT;
         for (auto t : trial) {
             if (!best || is_better(t, best, choice)) {
@@ -1798,6 +1897,16 @@ IR::Node *TablePlacement::preorder(IR::MAU::BackendAttached *ba) {
 }
 
 IR::Node *TablePlacement::preorder(IR::MAU::TableSeq *seq) {
+    // Inserting the starter pistol tables
+    if (findContext<IR::MAU::Table>() == nullptr && seq->tables.size() > 0) {
+        if (Device::currentDevice() == Device::TOFINO) {
+            auto gress = seq->front()->gress;
+            if (starter_pistol[gress] != nullptr) {
+                seq->tables.push_back(starter_pistol[gress]);
+            }
+        }
+    }
+
     if (seq->tables.size() > 1) {
         std::sort(seq->tables.begin(), seq->tables.end(),
             [this](const IR::MAU::Table *a, const IR::MAU::Table *b) -> bool {

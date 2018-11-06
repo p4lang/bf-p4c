@@ -66,6 +66,7 @@ class Table : BFN::Unit {
     int                                         random_seed = -1;
     bool                                        dynamic_key_masks = false;
     NullOK EntriesList                          entries_list;
+    bool                                        created_during_tp = false;
 
     class IndirectAddress {
         bool shifter_enabled = false;
@@ -173,7 +174,7 @@ class Table : BFN::Unit {
         bool no_match_hit_path() const {
             return no_match_rams() &&
                    ((no_match_data() && overhead_bits == 0 && action_data_bytes == 0
-                                    && total_actions == 1)
+                                    && total_actions <= 1)
                    || hash_action);
         }
         /** Any keyless table that has parameters that can be adjusted during runtime, such
@@ -267,7 +268,7 @@ class Table : BFN::Unit {
             else if (gw.first)
                 gw_next.emplace(cstring());
             gw_next.emplace(gw.second); }
-        if (gateway_only() && !uses_gateway())
+        if (gateway_only() && !uses_gateway() && !created_during_tp)
             BUG("table with no gateway or match table");
         if (gateway_only() && gw_next.count(cstring()))
             BUG("gateway with no match table wants to run match table");

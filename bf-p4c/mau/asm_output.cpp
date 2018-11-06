@@ -2325,6 +2325,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
     const char *tbl_type = "gateway";
     indent_t    indent(1);
     bool no_match_hit = tbl->layout.no_match_hit_path() && !tbl->gateway_only();
+    LOG1("No match hit " << no_match_hit);
     if (!tbl->gateway_only())
         tbl_type = tbl->layout.ternary || tbl->layout.no_match_miss_path()
                    ? "ternary_match" : "exact_match";
@@ -2369,7 +2370,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
     }
 
 
-    if (tbl->uses_gateway() || (tbl->layout.no_match_hit_path())) {
+    if (tbl->uses_gateway() || tbl->layout.no_match_hit_path() || tbl->gateway_only()) {
         indent_t gw_indent = indent;
         if (!tbl->gateway_only())
             out << gw_indent++ << "gateway:" << std::endl;

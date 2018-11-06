@@ -123,7 +123,7 @@ struct Memories {
                                              + stateful_RAMs; }
         int non_SRAM_RAMs() const { return left_side_RAMs() + right_side_RAMs() + action_RAMs; }
         int columns(int RAMs) const { return (RAMs + SRAM_COLUMNS - 1) / SRAM_COLUMNS; }
-        bool constraint_check() const;
+        bool constraint_check(int lt_allowed) const;
     };
 
     friend class SetupAttachedTables;
@@ -233,6 +233,8 @@ struct Memories {
              bool is_gw = false, int logical_table = -1,
              UniqueAttachedId::pre_placed_type_t ppt = UniqueAttachedId::NO_PP) const;
     };
+    int logical_tables_allowed = LOGICAL_TABLES;
+
     friend std::ostream & operator<<(std::ostream &out, const Memories::table_alloc &ta);
 
     /** Information on a particular table that is to be allocated in the RAM array */
@@ -551,8 +553,8 @@ struct Memories {
                            table_alloc *ta_no_match, int logical_table = -1);
     uint64_t determine_payload(table_alloc *ta);
     bool allocate_all_gw();
-    bool allocate_all_payload_gw();
-    bool allocate_all_normal_gw();
+    bool allocate_all_payload_gw(bool alloc_search_bus);
+    bool allocate_all_normal_gw(bool alloc_search_bus);
     bool allocate_all_no_match_gw();
     table_alloc *find_corresponding_exact_match(cstring name);
     bool gw_search_bus_fit(table_alloc *ta, table_alloc *exact_ta, int row, int col);
@@ -575,6 +577,7 @@ struct Memories {
     void add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
                    TableResourceAlloc *resources, const LayoutOption *lo, int entries,
                    int stage_table);
+    void shrink_allowed_lts() { logical_tables_allowed--; }
     friend std::ostream &operator<<(std::ostream &, const Memories &);
 };
 

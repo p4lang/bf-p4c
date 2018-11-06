@@ -52,6 +52,8 @@ class TablePlacement : public MauTransform, public Backtrack {
     struct TableSeqInfo;
     std::map<const IR::MAU::TableSeq *, struct TableSeqInfo> seqInfo;
     std::map<const IR::MAU::AttachedMemory *, std::set<const IR::MAU::Table *>> attached_to;
+    std::array<bool, 3> table_in_gress = { { false, false, false } };
+    std::array<IR::MAU::Table *, 2> starter_pistol = { { nullptr, nullptr } };
     class SetupInfo;
     const DependencyGraph* deps;
     const TablesMutuallyExclusive &mutex;
@@ -97,7 +99,10 @@ class TablePlacement : public MauTransform, public Backtrack {
     bool can_duplicate(const IR::MAU::AttachedMemory *);
     bool initial_stage_and_entries(Placed *rv, const Placed *done, int &set_entries,
         int &furthest_stage);
+    IR::MAU::Table *create_starter_table(gress_t gress);
     const Placed *place_table(ordered_set<const GroupPlace *>&work, const Placed *pl);
+    const Placed *add_starter_pistols(const Placed *done, safe_vector<const Placed *> &trial,
+        const StageUseEstimate &current);
     std::multimap<cstring, const Placed *> table_placed;
     std::multimap<cstring, const Placed *>::const_iterator find_placed(cstring name) const;
 };

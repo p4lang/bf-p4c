@@ -572,10 +572,10 @@ bool Memories::analyze_tables(mem_info &mi) {
         SetupAttachedTables setup(*this, ta, entries, mi);
         ta->table->apply(setup);
     }
-    return mi.constraint_check();
+    return mi.constraint_check(logical_tables_allowed);
 }
 
-bool Memories::mem_info::constraint_check() const {
+bool Memories::mem_info::constraint_check(int lt_allowed) const {
     if (match_tables + no_match_tables + ternary_tables + independent_gw_tables >
            Memories::TABLES_MAX
         || match_bus_min > Memories::SRAM_ROWS * Memories::BUS_COUNT
@@ -589,7 +589,7 @@ bool Memories::mem_info::constraint_check() const {
         || meter_tables + stateful_tables + selector_tables > Memories::METER_ALUS
         || meter_RAMs + stats_RAMs + stateful_RAMs + selector_RAMs + idletime_RAMs >
            Memories::MAPRAM_COLUMNS * Memories::SRAM_ROWS
-        || logical_tables > Memories::LOGICAL_TABLES) {
+        || logical_tables > lt_allowed) {
         return false;
     }
     return true;
@@ -3090,7 +3090,7 @@ uint64_t Memories::determine_payload(table_alloc *ta) {
 /** Allocates all gateways with a payload, which is a conditional linked to a no match table.
  *  Thus it needs a payload, result bus, and search bus.
  */
-bool Memories::allocate_all_payload_gw() {
+bool Memories::allocate_all_payload_gw(bool alloc_search_bus) {
     for (auto *ta : payload_gws) {
         UniqueId unique_id;
         if (ta->table_link) {
@@ -3100,11 +3100,19 @@ bool Memories::allocate_all_payload_gw() {
         }
         auto &alloc = (*ta->memuse)[unique_id];
         alloc.type = Use::GATEWAY;
-        bool search_bus_found = find_search_bus_gw(ta, alloc, unique_id.build_name());
+        if (alloc_search_bus != ta->match_ixbar->search_data())
+            continue;
+
+        bool gw_found = false;
+        if (alloc_search_bus)
+            gw_found = find_search_bus_gw(ta, alloc, unique_id.build_name());
+        else
+            gw_found = find_unit_gw(alloc, unique_id.build_name(), false);
+
         uint64_t payload_value = determine_payload(ta->table_link);
         bool match_bus_found = find_match_bus_gw(alloc, payload_value, unique_id.build_name(),
                                                  ta->table_link);
-        if (!(search_bus_found && match_bus_found))
+        if (!(gw_found && match_bus_found))
             return false;
     }
     return true;
@@ -3114,7 +3122,7 @@ bool Memories::allocate_all_payload_gw() {
  * Conditional gateways require a search bus and result bus.  If the table is linked to another
  * table, then the result bus will be the same as the result bus of the linked table.
  */
-bool Memories::allocate_all_normal_gw() {
+bool Memories::allocate_all_normal_gw(bool alloc_search_bus) {
     for (auto *ta : normal_gws) {
         // auto name = ta->table->get_use_name(nullptr, true);
         UniqueId unique_id = ta->build_unique_id(nullptr, true);
@@ -3122,23 +3130,18 @@ bool Memories::allocate_all_normal_gw() {
             unique_id = ta->table_link->build_unique_id(nullptr, true);
         auto &alloc = (*ta->memuse)[unique_id];
         alloc.type = Use::GATEWAY;
-        bool search_bus_found = find_search_bus_gw(ta, alloc, unique_id.build_name());
-        bool match_bus_found;
-        if (ta->table_link) {
-            // FIXME: Must use table format in order to instantiate payload bus location properly.
-            // However, the payload buses can be inferred from the location of the table
-            alloc.gateway.payload_value = 0ULL;
-            alloc.gateway.payload_bus = -1;
-            alloc.gateway.payload_row = -1;
-            if (ta->table_link->table->layout.ternary)
-                alloc.gateway.bus_type = Use::TERNARY;
-            else
-                alloc.gateway.bus_type = Use::EXACT;
-            match_bus_found = true;
-        } else {
-            match_bus_found = find_match_bus_gw(alloc, 0ULL, unique_id.build_name(), nullptr);
-        }
-        if (!(search_bus_found && match_bus_found))
+        if (alloc_search_bus != ta->match_ixbar->search_data())
+            continue;
+
+        bool gw_found = false;
+        if (alloc_search_bus)
+            gw_found = find_search_bus_gw(ta, alloc, unique_id.build_name());
+        else
+            gw_found = find_unit_gw(alloc, unique_id.build_name(), false);
+        alloc.gateway.payload_value = 0ULL;
+        alloc.gateway.payload_bus = -1;
+        alloc.gateway.payload_row = -1;
+        if (!gw_found)
             return false;
     }
 
@@ -3208,14 +3211,17 @@ bool Memories::allocate_all_no_match_gw() {
  *  1. Gateways that require payloads, which are conditionals linked to no match hit path tables.
  *     In this case, a payload is required be resereved.
  *  2. Gateways that are conditionals.  These conditionals can be paired with a match table or
- *     exist by themselves.
+ *     exist by themselves.  (If the conditionals don't require search, then the search bus
+ *     is not necessary)
  *  3. Gateways that are no match tables alone.  Due to the nature of the hit path, the gateway
  *     is an always true gateway that always hits, and does not need to search
  *
  *  This list goes from least to most complex, specifically:
  *  1.  Reserve gateway unit, search bus, result bus, payload
- *  2.  Reserve gateway unit, search bus, result bus
- *  3.  Reserve gateway unit, result bus
+ *  2.  Reserve gateway unit, search bus 
+ *  3.  Reserve gateway unit, result bus, payload (if the gateway has no search data)
+ *  4.  Reserve gateway unit, result bus
+ *  3.  Reserve gateway unit (if the gateway has no search data)
  */
 bool Memories::allocate_all_gw() {
     payload_gws.clear();
@@ -3257,9 +3263,11 @@ bool Memories::allocate_all_gw() {
         }
     }
 
-    if (!allocate_all_payload_gw()) return false;
-    if (!allocate_all_normal_gw()) return false;
+    if (!allocate_all_payload_gw(true)) return false;
+    if (!allocate_all_normal_gw(true)) return false;
+    if (!allocate_all_payload_gw(false)) return false;
     if (!allocate_all_no_match_gw()) return false;
+    if (!allocate_all_normal_gw(false)) return false;
     return true;
 }
 
