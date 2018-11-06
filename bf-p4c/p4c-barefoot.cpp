@@ -284,6 +284,7 @@ int main(int ac, char **av) {
     }
 
     manifest.addArchitecture(conv.getThreads());
+    manifest.setSuccess(::errorCount() == 0);
 
     // generate the archive manifest
     manifest.serialize();

@@ -7,10 +7,10 @@ import os, sys
 from jsonvalidator import JSONValidator
 
 MYPATH = os.path.dirname(__file__)
-GEN_SCHEMA_PATH=os.path.join(MYPATH, "../glass/p4c_tofino/target/tofino/ctx_json")
+GEN_SCHEMA_PATH=os.path.join(MYPATH, "../compiler_interfaces")
 sys.path.append(GEN_SCHEMA_PATH)
 
-from archive_manifest import BFNCompilerArchive, get_schema_version
+from schemas.manifest_schema import BFNCompilerArchive, get_schema_version
 
 v = JSONValidator()
 if not v.validate('manifest.json', BFNCompilerArchive, get_schema_version()):

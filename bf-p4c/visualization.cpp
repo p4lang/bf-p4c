@@ -102,6 +102,9 @@ bool Visualization::preorder(const IR::BFN::Pipe *p) {
     // Create the "phv_containers" node.
     pipe->emplace("phv_containers", Device::phvSpec().toJson());
 
+    // FIXME: Populate clots for Tofino2
+    // pipe->emplace("clots", ???);
+
     return true;
 }
 
@@ -884,7 +887,7 @@ void Visualization::gen_tind_result_buses(unsigned int stageNo, Util::JsonObject
 
 std::ostream &operator<<(std::ostream &out, const Visualization &vis) {
     auto res_json = new Util::JsonObject();
-    res_json->emplace("schema_version", new Util::JsonValue("1.0.3"));
+    res_json->emplace("schema_version", new Util::JsonValue("1.0.4"));
     res_json->emplace("program_name",
                       new Util::JsonValue(BFNContext::get().options().programName + ".p4"));
     res_json->emplace("run_id", new Util::JsonValue(RunId::getId()));

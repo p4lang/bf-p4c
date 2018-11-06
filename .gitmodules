@@ -49,3 +49,6 @@
 [submodule "p4-tests/p4_16/switch_16"]
 	path = p4-tests/p4_16/switch_16
 	url = git@github.com:barefootnetworks/bf-switch.git
+[submodule "compiler_interfaces"]
+	path = compiler_interfaces
+	url = git@github.com:barefootnetworks/compiler-interfaces.git

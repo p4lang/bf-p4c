@@ -35,6 +35,7 @@ class Manifest : public Inspector {
     BFN::ProgramThreads        _threads;
     const BFN_Options &        _options;
     std::ofstream              _manifestStream;
+    bool _success = false;
 
  public:
     /// Return the singleton object
@@ -84,7 +85,7 @@ class Manifest : public Inspector {
 
         writer.StartObject();  // start BFNCompilerArchive
         writer.Key("schema_version");
-        writer.String("1.4.0");
+        writer.String("1.5.0");
         writer.Key("target");
         if (_options.target)
             writer.String(_options.target.c_str());
@@ -97,6 +98,8 @@ class Manifest : public Inspector {
         writer.String(build_date);
         writer.Key("compiler_version");
         writer.String(BF_P4C_VERSION);
+        writer.Key("compilation_succeeded");
+        writer.Bool(_success);
         serializeArchConfig(writer);
         writer.Key("programs");
         writer.StartArray();   // start programs
@@ -176,6 +179,9 @@ class Manifest : public Inspector {
         _manifestStream << sb.GetString();
         _manifestStream.flush();
         _manifestStream.close();
+    }
+    void setSuccess(bool success) {
+        _success = success;
     }
 
     void addContext(int pipe, cstring pipe_name, cstring path) {

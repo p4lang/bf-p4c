@@ -13,10 +13,10 @@ import os, sys
 from jsonvalidator import JSONValidator
 
 MYPATH = os.path.dirname(__file__)
-GEN_SCHEMA_PATH=os.path.join(MYPATH, "../glass/p4c_tofino/target/tofino")
+GEN_SCHEMA_PATH=os.path.join(MYPATH, "../compiler_interfaces")
 sys.path.append(GEN_SCHEMA_PATH)
 
-from ctx_json.resources_schema import ResourcesJSONSchema, get_schema_version
+from schemas.resources_schema import ResourcesJSONSchema, get_schema_version
 
 v = JSONValidator()
 rc = v.validate('resources.json', ResourcesJSONSchema, get_schema_version())

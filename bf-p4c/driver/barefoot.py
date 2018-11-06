@@ -273,13 +273,13 @@ class BarefootBackend(BackendDriver):
             try:
                 self._manifest = json.load(json_file)
             except:
-                print >> sys.stderr, "ERROR: Input file '" + manifest_filename + \
+                error_msg = "ERROR: Input file '" + manifest_filename + \
                     "' could not be decoded as JSON.\n"
-                sys.exit(1)
+                self.exitWithError(error_msg)
             if (type(self._manifest) is not dict or "programs" not in self._manifest):
-                print >> sys.stderr, "ERROR: Input file '" + manifest_filename + \
+                error_msg = "ERROR: Input file '" + manifest_filename + \
                     "' does not appear to be valid manifest JSON.\n"
-                sys.exit(1)
+                self.exitWithError(error_msg)
 
         self._pipes = []
         schema_version = self._manifest['schema_version']
@@ -288,15 +288,14 @@ class BarefootBackend(BackendDriver):
 
         programs = self._manifest['programs']
         if len(programs) > 1:
-            print >> sys.stderr, \
-                "{} currently supports a single program".format(self._targetName.title())
-            sys.exit(1)
+            error_msg = "{} currently supports a single program".format(self._targetName.title())
+            self.exitWithError(error_msg)
         for prog in programs:
             p4_version = prog['p4_version']
             if (type(prog) is not dict or "contexts" not in prog):
-                sys.stderr.write("ERROR: Input file '" + manifest_filename + \
-                                 "' does not contain valid program contexts.\n")
-                sys.exit(1)
+                error_msg = "ERROR: Input file '" + manifest_filename + \
+                                 "' does not contain valid program contexts.\n"
+                self.exitWithError(error_msg)
             for ctxt in prog["contexts"]:
                 self._pipes.append({})
                 pipe_id = ctxt['pipe']
@@ -326,13 +325,32 @@ class BarefootBackend(BackendDriver):
                 jsonTree = json.load(json_file)
                 jsonTree['compile_command'] = ' '.join(sys.argv)
             except:
-                print >> sys.stderr, "ERROR: Input file '" + jsonTree + \
+                error_msg = "ERROR: Input file '" + jsonTree + \
                     "' could not be decoded as JSON.\n"
-                sys.exit(1)
+                self.exitWithError(error_msg)
 
         if jsonTree is not None:
             with open(jsonFile, "w") as new_file:
                 json.dump(jsonTree, new_file, indent=2, separators=(',', ': '))
+
+    def exitWithError(self, error_msg):
+        """
+        Function to be called when compilation ends in error.
+        """
+        try:
+            manifest_json = os.path.join(self._output_directory, 'manifest.json')
+            jsonTree = None
+            with open(manifest_json, 'r') as json_file:
+                jsonTree = json.load(json_file)
+                jsonTree['compilation_succeeded'] = False
+            if jsonTree is not None:
+                with open(jsonFile, "w") as new_file:
+                    json.dump(jsonTree, new_file, indent=2, separators=(',', ': '))
+        except:
+            pass
+        finally:
+            print >> sys.stderr, str(error_msg)
+            sys.exit(1)
 
     def runAssembler(self, dirname, unique_table_offset):
         """
@@ -362,16 +380,17 @@ class BarefootBackend(BackendDriver):
         # run
         self.checkAndRunCmd('assembler')
 
+
     # this should be in the parent class!!
     def checkAndRunCmd(self, command):
         cmd = self._commands[command]
         if cmd[0].find('/') != 0 and (find_bin(cmd[0]) == None):
-            print >> sys.stderr, "{}: command not found".format(cmd[0])
-            sys.exit(1)
+            error_msg = "{}: command not found".format(cmd[0])
+            self.exitWithError(error_msg)
         rc = self.runCmd(command, cmd)
         if rc != 0:
-            print >> sys.stderr, "failed command {}".format(command)
-            sys.exit(rc)
+            error_msg = "failed command {}".format(command)
+            self.exitWithError(error_msg)
 
     def checkVersionTargetArch(self, target, language, arch):
         if language == "p4-14" and arch == 'default':
