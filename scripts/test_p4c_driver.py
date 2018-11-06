@@ -38,6 +38,13 @@ import shlex, shutil
 import subprocess
 import traceback
 
+class TestError(Exception):
+    def __init__(self, info=""):
+        self.info = info
+
+    def __str__(self):
+        return self.info
+
 class Test:
     """A stateless class to run and check the output of a compiler run.
 
@@ -104,6 +111,9 @@ class Test:
         parser.add_argument("--arch", dest="arch",
                             help="specify target architecture",
                             action="store", default="tna")
+        parser.add_argument("-E", dest="preprocessor_only",
+                            help="run preprocessor only",
+                            action="store_true", default=False)
         parser.add_argument("-I", dest="arch",
                             help="include path",
                             action="store", default=None)
@@ -146,15 +156,14 @@ class Test:
         the manifest exists
 
         """
-        rc = 0
         if self._verbose: print("Source file:", args.source_file)
 
         if args.output_directory is None:
             file_name, ext = os.path.splitext(os.path.basename(args.source_file))
             outdir = file_name + "." + args.target
             if not os.path.isdir(outdir):
-                print("Can not find the output directory:", outdir)
-                rc = 1
+                raise TestError(
+                    "Can not find the output directory: '{}'".format(outdir))
             args.output_directory = outdir
 
         if args.output_directory and os.path.isdir(args.output_directory):
@@ -163,83 +172,79 @@ class Test:
                 for dirname, dirnames, filenames in os.walk(args.output_directory):
                     for f in filenames:
                         print(dirname + "/" + f)
-            if not os.path.isfile(os.path.join(args.output_directory, "manifest.json")):
-                print("Can not find the manifest file")
-                rc = 1
-        return rc
+            if not args.preprocessor_only and not os.path.isfile(os.path.join(args.output_directory, "manifest.json")):
+                raise TestError("Can not find the manifest file")
 
     def checkManifest(self, args):
         """Check that the right output directory has been produced and that
         the manifest exists
 
         """
-        rc = 0
-        if self._verbose:  print("check manifest in", args.output_directory)
+        if args.preprocessor_only:
+            return
+        if self._verbose:
+            print("check manifest in", args.output_directory)
 
         manifest_file = os.path.join(args.output_directory, "manifest.json")
 
         with open(manifest_file, 'r') as json_file:
             manifest = json.load(json_file)
-            if (type(manifest) is not dict or "programs" not in manifest):
-                print("ERROR: Input file '" + manifest_file + \
-                      "' does not have a 'programs' key", file=sys.stderr)
-                return 1
+            if type(manifest) is not dict or "programs" not in manifest:
+                raise TestError(
+                    "ERROR: Input file '{}' does not have a 'programs' key",
+                    manifest_file)
 
             schema_version = manifest['schema_version'];
             program = manifest['programs'][0]
             p4_version = program['p4_version']
 
             if not (p4_version == "p4-14" or p4_version == "p4-16"):
-                    print("ERROR: Invalid program version", p4_version, "in", manifest_file,
-                          file=sys.stderr)
-                    return 1
+                raise TestError(
+                    "ERROR: Invalid program version {} in '{}'",
+                    p4_version, manifest_file)
 
             # check that there is at least one context.json defined, and that file exists
             def check_file_in_manifest(key, name):
                 if key not in program:
-                    print("ERROR: Input file '" + manifest_file + \
-                          "' does not have a", key, "key", file=sys.stderr)
-                    return 1
+                    raise TestError(
+                        "ERROR: Input file '{}' does not have a key '{}'",
+                        manifest_file, key)
 
                 m_dict = program[key]
                 for item in m_dict:
                     m_file = os.path.join(args.output_directory, item['path'])
                     if not os.path.isfile(m_file):
-                        print("ERROR: Input file '" + manifest_file + \
-                              "' contains an invalid", name, "path:", m_file, file=sys.stderr)
-                        return 1
-                return 0
+                        raise TestError(
+                            "ERROR: Input file '{}' contains an invalid "
+                            "{} path: {}", manifest_file, name, m_file)
 
             # check that there is at least one context.json defined
             if len(program['contexts']) == 0:
-                print("ERROR: Input file '" + manifest_file + \
-                      "' contains an empty contexts dictionary", file=sys.stderr)
-                return 1
+                raise TestError(
+                    "ERROR: Input file '{}' contains an empty 'contexts' "
+                    "dictionary", manifest_file)
 
-            rc += check_file_in_manifest('binaries', 'binary file')
-            rc += check_file_in_manifest('graphs', 'graph file')
-            rc += check_file_in_manifest('logs', 'log file')
+            check_file_in_manifest('binaries', 'binary file')
+            check_file_in_manifest('graphs', 'graph file')
+            check_file_in_manifest('logs', 'log file')
             if schema_version >= "1.3.0":
-                rc += check_file_in_manifest('p4i', 'resources file')
-        return rc
+                check_file_in_manifest('p4i', 'resources file')
 
     def checkGraphs(self, args):
         """Check that the produced graphs are valid
 
         """
         if not args.create_graphs:
-            return 0
+            return
         # \TODO: write the checks
-        return 0
 
     def checkArchive(self, args):
         """Check that the produced archive is valid
 
         """
         if args.archive is None:
-            return 0
+            return
         # \TODO: write the checks
-        return 0
 
     def checkTest(self, options):
         """Check that the generated output is correct.
@@ -248,11 +253,17 @@ class Test:
         if self._dry_run: return 0 # nothing to check if we didn't run
 
         args = self._parser.parse_known_args(options)[0]
-        rc = 0
-        rc += self.checkOutputDir(args)
-        rc += self.checkManifest(args)
-        rc += self.checkGraphs(args)
-        rc += self.checkArchive(args)
+        try:
+            self.checkOutputDir(args)
+            self.checkManifest(args)
+            self.checkGraphs(args)
+            self.checkArchive(args)
+        except TestError as e:
+            print("********************", file=sys.stderr)
+            print("Error when checking output", file=sys.stderr)
+            print(e, file=sys.stderr)
+            print("********************", file=sys.stderr)
+            return 1
 
         try:
             if not self._keep_output and not self._dry_run:
@@ -268,7 +279,7 @@ class Test:
             # Couldn't remove the output dir
             pass
 
-        return rc
+        return 0
 
 
     def runTest(self, options, xfail_msg = None):
@@ -373,7 +384,16 @@ test_runner = Test(args)
 
 def worker(test_name):
     rc = runOneTest(test_runner, test_name, test_matrix[test_name][0], test_matrix[test_name][1])
-    if rc != 0: failed.put(test_name)
+    if rc != 0:
+        failed.put(test_name)
+    else:
+        # we need to use sentinels to ensure that we do not miss any failed
+        # tests later
+        # surprisingly enough, the following code sometimes prints 'True':
+        # q = Queue()
+        # q.put(7)
+        # print q.empty()
+        failed.put(None)
 
 if args.jobs > 1:
     with Pool(processes=args.jobs) as pool:
@@ -381,10 +401,16 @@ if args.jobs > 1:
 else:
     for t in tests_to_run: worker(t)
 
+failedTests = []
+cnt = 0
+while cnt != len(tests_to_run):
+    r = failed.get()
+    cnt += 1
+    if r is not None:
+        failedTests.append(r)
+
 # -------- Report the overall status
-if not failed.empty() > 0:
-    failedTests = []
-    while not failed.empty(): failedTests.append(failed.get())
+if failedTests:
     print('Failed tests {} out of {}:'.format(len(failedTests), len(test_matrix)))
     print('  ','\n   '.join(failedTests))
     sys.exit(1)

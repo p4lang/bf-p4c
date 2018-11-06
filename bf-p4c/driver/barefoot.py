@@ -228,10 +228,12 @@ class BarefootBackend(BackendDriver):
         # Developer only options
         if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
             if self.runVerifiers:
-                self._commandsEnabled.append('verifier')
-                # always validate the manifest if opts.validate_manifest or self.runVerifiers:
-                self.add_command_option('manifest-verifier', "{}/manifest.json".format(output_dir))
-                self._commandsEnabled.append('manifest-verifier')
+                if 'assembler' in self._commandsEnabled:
+                    self._commandsEnabled.append('verifier')
+                if 'compiler' in self._commandsEnabled:
+                    # always validate the manifest if opts.validate_manifest or self.runVerifiers:
+                    self.add_command_option('manifest-verifier', "{}/manifest.json".format(output_dir))
+                    self._commandsEnabled.append('manifest-verifier')
 
         # if we need to generate an archive, should be the last command
         if opts.archive is not None:
@@ -412,6 +414,7 @@ class BarefootBackend(BackendDriver):
         """
         run_assembler = 'assembler' in self._commandsEnabled
         run_archiver = 'archiver' in self._commandsEnabled
+        run_compiler = 'compiler' in self._commandsEnabled
         run_verifier = 'verifier' in self._commandsEnabled
 
         # run the preprocessor, compiler, and verifiers (manifest, context schema, and bf-rt)
@@ -429,7 +432,8 @@ class BarefootBackend(BackendDriver):
         # the reason we implement this here, is because the backend will not know
         # what arguments were added by the driver, and filtering them requires keeping
         # both sources in sync.
-        self.updateCompilerFlags(os.path.join(self._output_directory, 'manifest.json'))
+        if run_compiler:  # if compiler doesn't run, there is no manifest
+            self.updateCompilerFlags(os.path.join(self._output_directory, 'manifest.json'))
 
         # we ran the compiler, now we need to parse the manifest and run the assembler
         # for each P4-16 pipe

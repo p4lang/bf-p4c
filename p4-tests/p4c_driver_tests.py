@@ -20,6 +20,10 @@ t2na_program = os.path.join(tests_dir, 'p4_16/ipv4_checksum.p4')
 test_matrix = {
     # Tofino
     'p4_16_noargs': ([p4_16_default], None),
+
+    # Preprocessor only
+    'p4_preprocessor_only': (['-E', p4_16_default], None),
+
     # Tofino P4-16
     'p4_16_tna': (['--target', 'tofino', '--arch', 'tna',
                    '-I', p4_16_path, tna_program], None),
