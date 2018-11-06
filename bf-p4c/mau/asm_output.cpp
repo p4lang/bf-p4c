@@ -2218,7 +2218,7 @@ void MauAsmOutput::emit_static_entries(std::ostream &out, indent_t indent,
             if (auto b = key->to<IR::BoolLiteral>()) {
                 out << indent << "value: " << (b->value ? 1 : 0) << std::endl;
                 if (match_key->match_type == "ternary")
-                    out << indent << "mask: 0x1";
+                    out << indent << "mask: 0x1" << std::endl;
             } else if (key->to<IR::Constant>()) {
                 out << indent << "value: " << key << std::endl;
                 if (match_key->match_type == "ternary") {

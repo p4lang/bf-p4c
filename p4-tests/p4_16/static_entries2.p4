@@ -27,6 +27,24 @@
 #define ETHERTYPE_IPV4 0x0800
 #define ETHERTYPE_IPV6 0x86dd
 
+struct switch_ingress_flags_t {
+    bool ipv4_checksum_err;
+    bool inner_ipv4_checksum_err;
+    bool link_local;
+    bool routed;
+    bool acl_deny;
+    bool racl_deny;
+    bool port_vlan_miss;
+    bool rmac_hit;
+    bool myip;
+    bool glean;
+    bool storm_control_drop;
+    bool qos_policer_drop;
+    bool flood_to_multicast_routers;
+
+    // Add more flags here.
+}
+
 header ethernet_h {
     bit<128> ipv6_dst_addr;
     bit<48> dst_addr;
@@ -36,11 +54,13 @@ header ethernet_h {
     bit<16> lpm_type;
 }
 
+struct switch_metadata_t {
+    bool ipv4_checksum_error;
+}
+
 struct switch_header_t {
     ethernet_h ethernet;
 }
-
-struct switch_metadata_t { }
 
 // ---------------------------------------------------------------------------
 // Ingress parser
@@ -113,6 +133,7 @@ control SwitchIngress(
 
     table forward {
         key = {
+            ig_md.ipv4_checksum_error : ternary;
             hdr.ethernet.ether_type : ternary;
             // hdr.ethernet.ipv6_dst_addr : ternary; // >64 bits Not supported
             // in json generation and driver json parsing
@@ -124,9 +145,9 @@ control SwitchIngress(
         actions = { set_port_and_smac; }
         const default_action = set_port_and_smac(32w0xFF, 9w0x1);
         const entries = {
-            (1 /*, 150 &&& 0xffff00 */,  255 &&& 0xf0, _ /*, _ */) : set_port_and_smac(32w0xFA, 9w0x2); // priority 0
-            (2 /*, _ */, _, _ /*, _ */) : set_port_and_smac(32w0xFB, 9w0x3);          // priority 1
-            (3 /*, _ */, _, 1..9 /*, 8 */) : set_port_and_smac(32w0xFC, 9w0x4);       // priority 2
+            (_, 1 /*, 150 &&& 0xffff00 */,  255 &&& 0xf0, _ /*, _ */) : set_port_and_smac(32w0xFA, 9w0x2); // priority 0
+            (true, 2 /*, _ */, _, _ /*, _ */) : set_port_and_smac(32w0xFB, 9w0x3);          // priority 1
+            (false, 3 /*, _ */, _, 1..9 /*, 8 */) : set_port_and_smac(32w0xFC, 9w0x4);       // priority 2
         }
     }
 
