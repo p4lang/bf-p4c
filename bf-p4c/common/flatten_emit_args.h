@@ -6,6 +6,7 @@
 class FlattenEmitArgs : public Modifier {
     void postorder(IR::MethodCallExpression* mc) override;
     IR::ListExpression* flatten_args(const IR::ListExpression* args);
+    void  explode(const IR::Expression*, IR::Vector<IR::Expression>*);
 };
 
 #endif /* EXTENSIONS_BF_P4C_COMMON_FLATTEN_EMIT_ARGS_H_ */

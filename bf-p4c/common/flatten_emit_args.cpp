@@ -26,14 +26,37 @@ void FlattenEmitArgs::postorder(IR::MethodCallExpression* mc) {
             "Invalid mirror or digest call without any arguments");
         return;
     }
-    auto* arg = mc->arguments->at(field_list_index)->expression;
-    if (auto* args = arg->to<IR::ListExpression>()) {
+    auto* arg = mc->arguments->at(field_list_index);
+    auto* aexpr = arg->expression;
+    if (auto* liste = aexpr->to<IR::ListExpression>()) {
         auto* flattened_args = new IR::Vector<IR::Argument>();
         if (type->name == "Mirror")
             flattened_args->push_back(mc->arguments->at(0));
-        flattened_args->push_back(new IR::Argument(flatten_args(args)));
+        flattened_args->push_back(new IR::Argument(flatten_args(liste)));
         mc->arguments = flattened_args;
         LOG4("Flattened arguments: " << mc);
+    } else if (aexpr->type->to<IR::Type_Header>()) {
+        auto result = new IR::ListExpression(arg->srcInfo, {});
+        explode(aexpr, &result->components);
+        auto newargs = mc->arguments->clone();
+        newargs->at(1) = new IR::Argument(arg->name, result);
+        mc->arguments = newargs;
+        LOG4("Flattened arguments: " << mc);
+    }
+}
+
+void FlattenEmitArgs::explode(const IR::Expression* expression,
+    IR::Vector<IR::Expression>* output) {
+    if (auto st = expression->type->to<IR::Type_Header>()) {
+        for (auto f : st->fields) {
+            auto e = new IR::Member(f->type, expression, f->name);
+            explode(e, output);
+        }
+    } else {
+        BUG_CHECK(!expression->type->is<IR::Type_StructLike>() &&
+            !expression->type->is<IR::Type_Stack>(),
+                  "%1%: unexpected type", expression->type);
+        output->push_back(expression);
     }
 }
 
