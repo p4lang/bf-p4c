@@ -236,7 +236,6 @@ void AllocMeterOutput::setup_layout(ActionFormat::TotalALUPlacement &init_alu_fo
     MeterFormat::Use use;
     use.attached = am;
 
-    int counts[ActionFormat::CONTAINER_TYPES] = {0, 0, 0};
     // slot_uses is used to count how many slots are used for each size (8, 16,
     // 32).  Each bit in slot_use represents a slot being used for that size.
     // for example, 1111 in slot_use[BYTE] means four byte slot are used,
@@ -251,34 +250,26 @@ void AllocMeterOutput::setup_layout(ActionFormat::TotalALUPlacement &init_alu_fo
             auto &single_slot_use = slot_uses[index];
             for (auto &arg_loc : alu.arg_locs) {
                 auto bit_loc = arg_loc.field_hi() / alu.alu_size;
-                if (arg_loc.field_hi() % alu.alu_size != 0)
-                    bit_loc += 1;
                 single_slot_use.setbit(bit_loc);
             }
-            counts[index] = single_slot_use.popcount();
         }
     }
 
-    int count_byte = counts[ActionFormat::BYTE];
-    int count_half = counts[ActionFormat::HALF];
-    int count_full = counts[ActionFormat::FULL];
-    LOG3("count " << count_byte << " " << count_half << " " << count_full);
-
     bitvec byte_range;
-    for (int i = 0; i < count_byte; i++) {
-        byte_range.setbit(i);
+    for (auto c : slot_uses[ActionFormat::BYTE]) {
+        byte_range.setbit(c);
     }
     use.total_layouts[ActionFormat::BYTE] |= byte_range;
 
     bitvec half_range;
-    for (int i = 0; i < count_half; i++) {
-        half_range.setrange(2*i, 2);
+    for (auto c : slot_uses[ActionFormat::HALF]) {
+        half_range.setrange(2*c, 2);
     }
     use.total_layouts[ActionFormat::HALF] |= half_range;
 
     bitvec full_range;
-    for (int i = 0; i < count_full; i++) {
-        full_range.setrange(4*i, 4);
+    for (auto c : slot_uses[ActionFormat::FULL]) {
+        full_range.setrange(4*c, 4);
     }
     use.total_layouts[ActionFormat::FULL] |= full_range;
 
@@ -287,9 +278,7 @@ void AllocMeterOutput::setup_layout(ActionFormat::TotalALUPlacement &init_alu_fo
     layoutChoices.total_meter_output_format[tbl->name] = use;
 
     for (int i = 0; i < ActionFormat::CONTAINER_TYPES; i++) {
-        LOG3("Layout ADT: 0x" << use.total_layouts[i] << " IMMED: "
-                              << use.total_layouts[i] << " METER: "
-                              << use.total_layouts[i]);
+        LOG3("Layout " << " METER: " << use.total_layouts[i]);
     }
 }
 
