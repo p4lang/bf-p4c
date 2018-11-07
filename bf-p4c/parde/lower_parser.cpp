@@ -971,169 +971,173 @@ computeControlPlaneFormat(const PhvInfo& phv,
     return packing;
 }
 
-struct RewriteEmitClot : public DeparserTransform {
-    RewriteEmitClot(const PhvInfo& phv, const ClotInfo& clotInfo) :
+struct RewriteEmitClot : public DeparserModifier {
+    RewriteEmitClot(const PhvInfo& phv, ClotInfo& clotInfo) :
         phv(phv), clotInfo(clotInfo) {}
-
-    std::map<const IR::BFN::EmitChecksum*, const Clot*> emit_checksum_in_clot;
 
  private:
-    const IR::Node* preorder(IR::BFN::Deparser* deparser) override {
+    bool preorder(IR::BFN::Deparser* deparser) override {
         // replace Emits covered in a CLOT with EmitClot
 
-        IR::Vector<IR::BFN::DeparserPrimitive> newEmits;
+        IR::Vector<IR::BFN::Emit> newEmits;
 
         Clot* last = nullptr;
-        for (auto e : deparser->emits) {
-           if (auto emit = e->to<IR::BFN::EmitField>()) {
-               auto field = phv.field(emit->source->field);
-               auto povBit = emit->povBit;
-
-               if (auto c = clotInfo.clot(field)) {
-                   if (c != last) {
-                       auto clotEmit = new IR::BFN::EmitClot(povBit);
-                       clotEmit->clot = c;
-                       newEmits.pushBackOrAppend(clotEmit);
-                   }
-                   last = const_cast<Clot*>(c);
-               } else {
-                   newEmits.pushBackOrAppend(e);
-               }
-           } else if (auto emit_csum = e->to<IR::BFN::EmitChecksum>()) {
-               auto field = phv.field(emit_csum->dest->field);
-               if (auto c = clotInfo.clot(field))
-                   emit_checksum_in_clot[emit_csum] = c;
-               newEmits.pushBackOrAppend(e);
-           } else {
-               newEmits.pushBackOrAppend(e);
-           }
-        }
-
-        auto* clone = deparser->clone();
-        clone->emits = newEmits;
-
-        return clone;
-    }
-
-    const PhvInfo& phv;
-    const ClotInfo& clotInfo;
-};
-
-struct CollectClotChecksumFields : public DeparserInspector {
-    CollectClotChecksumFields(const PhvInfo& phv, const ClotInfo& clotInfo) :
-        phv(phv), clotInfo(clotInfo) {}
-
-    bool preorder(const IR::BFN::Deparser* deparser) override {
-        // look for clot fields in deparser checksums
 
         for (auto emit : deparser->emits) {
-            if (auto csum = emit->to<IR::BFN::EmitChecksum>()) {
-                for (auto source : csum->sources) {
-                    auto field = phv.field(source->field);
-                    if (auto* clot = clotInfo.allocated(field)) {
-                        clot_checksum_fields[clot].push_back(field);
-                    }
-                }
-            }
+           auto povBit = emit->povBit;
+
+           const IR::Expression* source = nullptr;
+
+           if (auto ef = emit->to<IR::BFN::EmitField>())
+               source = ef->source->field;
+           else if (auto ec = emit->to<IR::BFN::EmitChecksum>())
+               source = ec->dest->field;
+
+           BUG_CHECK(source, "No emit source?");
+
+           auto field = phv.field(source);
+
+           if (auto c = clotInfo.clot(field)) {
+               if (auto emit_csum = emit->to<IR::BFN::EmitChecksum>())
+                   clotInfo.clot_to_emit_checksum()[c] = emit_csum;
+
+               if (c != last) {
+                   auto clotEmit = new IR::BFN::EmitClot(povBit);
+                   clotEmit->clot = c;
+                   newEmits.pushBackOrAppend(clotEmit);
+               }
+
+               last = const_cast<Clot*>(c);
+
+               continue;
+           }
+
+           newEmits.pushBackOrAppend(emit);
         }
 
+        deparser->emits = newEmits;
         return false;
     }
 
-    std::map<const Clot*, std::vector<const PHV::Field*>> clot_checksum_fields;
-
     const PhvInfo& phv;
-    const ClotInfo& clotInfo;
+    ClotInfo& clotInfo;
 };
 
-struct InsertClotChecksums : public ParserModifier {
-    struct GetCurrentChecksumId : public ParserInspector {
-        unsigned current_id = 0;
+struct AllocateParserClotChecksums : public PassManager {
+    struct CollectClotChecksumFields : public DeparserInspector {
+        CollectClotChecksumFields(const PhvInfo& phv, const ClotInfo& clotInfo) :
+            phv(phv), clotInfo(clotInfo) {}
 
-        bool preorder(const IR::BFN::LoweredParserChecksum* csum) override {
-            current_id = std::max(current_id, csum->unit_id);
-            return false;
-        }
-    };
+        bool preorder(const IR::BFN::Deparser* deparser) override {
+            // look for clot fields in deparser checksums
 
-    explicit InsertClotChecksums(const PhvInfo& phv,
-        const std::map<const Clot*, std::vector<const PHV::Field*>>& fields) :
-            phv(phv), clot_checksum_fields(fields) { }
-
-    std::vector<nw_byterange>
-    generateByteMask(const std::vector<const PHV::Field*>& clot_csum_fields,
-                     const IR::BFN::LoweredExtractClot* ec) {
-        std::vector<nw_byterange> ranges;
-        unsigned clot_start_byte = ec->dest.start;
-
-        for (auto f : clot_csum_fields) {
-            unsigned offset = ec->dest.offset(f);
-            int sz = (f->size + 7) / 8;
-            ranges.emplace_back(StartLen(clot_start_byte + offset, sz));
-        }
-
-        return ranges;
-    }
-
-    IR::BFN::LoweredParserChecksum*
-    createClotChecksum(unsigned id,
-                       const std::vector<nw_byterange>& mask,
-                       const Clot& clot) {
-        auto csum = new IR::BFN::LoweredParserChecksum(
-                id, mask, 0x0, true, true, IR::BFN::ChecksumMode::CLOT);
-        csum->clot_dest = clot;
-        return csum;
-    }
-
-    bool preorder(IR::BFN::LoweredParser* p) override {
-        GetCurrentChecksumId gid;
-        p->apply(gid);
-        curr_id = std::max(0x2u, gid.current_id);  // clot can only use checksum engine 2-4
-        return true;
-    }
-
-    bool preorder(IR::BFN::LoweredParserState*) override {
-        allocated_in_state = 0;
-        return true;
-    }
-
-    void postorder(IR::BFN::LoweredParserState*) override {
-        curr_id += allocated_in_state;
-        allocated_in_state = 0;
-    }
-
-    bool preorder(IR::BFN::LoweredParserMatch* match) override {
-        unsigned id = curr_id;
-        unsigned allocated = 0;
-        for (auto p : match->statements) {
-            if (auto ec = p->to<IR::BFN::LoweredExtractClot>()) {
-                for (auto c : clot_checksum_fields) {
-                    if (c.first->tag == ec->dest.tag) {
-                        auto mask = generateByteMask(c.second, ec);
-                        auto* csum = createClotChecksum(id, mask, ec->dest);
-                        match->checksums.push_back(csum);
-                        allocated++;
+            for (auto emit : deparser->emits) {
+                if (auto csum = emit->to<IR::BFN::EmitChecksum>()) {
+                    for (auto source : csum->sources) {
+                        auto field = phv.field(source->field);
+                        if (auto* clot = clotInfo.allocated(field)) {
+                            clot_checksum_fields[clot].push_back(field);
+                        }
                     }
                 }
             }
+
+            return false;
         }
-        allocated_in_state = std::max(allocated_in_state, allocated);
-        return true;
-    }
 
-    unsigned curr_id = 2;
-    unsigned allocated_in_state = 0;
+        std::map<const Clot*, std::vector<const PHV::Field*>> clot_checksum_fields;
 
-    const PhvInfo& phv;
-    const std::map<const Clot*, std::vector<const PHV::Field*>>& clot_checksum_fields;
-};
+        const PhvInfo& phv;
+        const ClotInfo& clotInfo;
+    };
 
-struct AllocateClotChecksums : public PassManager {
-    AllocateClotChecksums(const PhvInfo& phv, const ClotInfo& clot) {
+    struct InsertParserClotChecksums : public ParserModifier {
+        struct GetCurrentChecksumId : public ParserInspector {
+            unsigned current_id = 0;
+
+            bool preorder(const IR::BFN::LoweredParserChecksum* csum) override {
+                current_id = std::max(current_id, csum->unit_id);
+                return false;
+            }
+        };
+
+        explicit InsertParserClotChecksums(const PhvInfo& phv,
+            const std::map<const Clot*, std::vector<const PHV::Field*>>& fields) :
+                phv(phv), clot_checksum_fields(fields) { }
+
+        std::vector<nw_byterange>
+        generateByteMask(const std::vector<const PHV::Field*>& clot_csum_fields,
+                         const IR::BFN::LoweredExtractClot* ec) {
+            std::vector<nw_byterange> ranges;
+            unsigned clot_start_byte = ec->dest.start;
+
+            for (auto f : clot_csum_fields) {
+                unsigned offset = ec->dest.offset(f);
+                int sz = (f->size + 7) / 8;
+                ranges.emplace_back(StartLen(clot_start_byte + offset, sz));
+            }
+
+            return ranges;
+        }
+
+        IR::BFN::LoweredParserChecksum*
+        createClotChecksum(unsigned id,
+                           const std::vector<nw_byterange>& mask,
+                           const Clot& clot) {
+            auto csum = new IR::BFN::LoweredParserChecksum(
+                    id, mask, 0x0, true, true, IR::BFN::ChecksumMode::CLOT);
+            csum->clot_dest = clot;
+            return csum;
+        }
+
+        bool preorder(IR::BFN::LoweredParser* p) override {
+            GetCurrentChecksumId gid;
+            p->apply(gid);
+            curr_id = std::max(0x2u, gid.current_id);  // clot can only use checksum engine 2-4
+            return true;
+        }
+
+        bool preorder(IR::BFN::LoweredParserState*) override {
+            allocated_in_state = 0;
+            return true;
+        }
+
+        void postorder(IR::BFN::LoweredParserState*) override {
+            curr_id += allocated_in_state;
+            allocated_in_state = 0;
+        }
+
+        bool preorder(IR::BFN::LoweredParserMatch* match) override {
+            unsigned id = curr_id;
+            unsigned allocated = 0;
+            for (auto p : match->statements) {
+                if (auto ec = p->to<IR::BFN::LoweredExtractClot>()) {
+                    for (auto c : clot_checksum_fields) {
+                        if (c.first->tag == ec->dest.tag) {
+                            auto mask = generateByteMask(c.second, ec);
+                            auto* csum = createClotChecksum(id, mask, ec->dest);
+                            match->checksums.push_back(csum);
+                            allocated++;
+                        }
+                    }
+                }
+            }
+            allocated_in_state = std::max(allocated_in_state, allocated);
+            return true;
+        }
+
+        unsigned curr_id = 2;
+        unsigned allocated_in_state = 0;
+
+        const PhvInfo& phv;
+        const std::map<const Clot*, std::vector<const PHV::Field*>>& clot_checksum_fields;
+    };
+
+    AllocateParserClotChecksums(const PhvInfo& phv, const ClotInfo& clot) {
         auto* collectClotChecksumFields = new CollectClotChecksumFields(phv, clot);
         addPasses({
             collectClotChecksumFields,
-            new InsertClotChecksums(phv, collectClotChecksumFields->clot_checksum_fields)
+            new InsertParserClotChecksums(phv, collectClotChecksumFields->clot_checksum_fields)
         });
     }
 };
@@ -1141,10 +1145,8 @@ struct AllocateClotChecksums : public PassManager {
 /// Generate the lowered deparser IR by splitting references to fields in the
 /// high-level deparser IR into references to containers.
 struct ComputeLoweredDeparserIR : public DeparserInspector {
-    ComputeLoweredDeparserIR(const PhvInfo& phv, const ClotInfo& clotInfo,
-          const std::map<const IR::BFN::EmitChecksum*, const Clot*>& emit_checksum_in_clot)
-      : phv(phv), clotInfo(clotInfo), emit_checksum_in_clot(emit_checksum_in_clot),
-        nextChecksumUnit(0) {
+    ComputeLoweredDeparserIR(const PhvInfo& phv, const ClotInfo& clotInfo)
+      : phv(phv), clotInfo(clotInfo), nextChecksumUnit(0) {
         igLoweredDeparser = new IR::BFN::LoweredDeparser(INGRESS);
         egLoweredDeparser = new IR::BFN::LoweredDeparser(EGRESS);
     }
@@ -1154,6 +1156,36 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
     IR::BFN::LoweredDeparser* egLoweredDeparser;
 
  private:
+    IR::BFN::ChecksumUnitConfig*
+    lowerChecksum(const IR::BFN::EmitChecksum* emitChecksum) {
+        // Allocate a checksum unit and generate the configuration for it.
+        auto* unitConfig = new IR::BFN::ChecksumUnitConfig(nextChecksumUnit);
+
+        IR::Vector<IR::BFN::ContainerRef> phvSources;
+        std::vector<Clot> clotSources;
+
+        std::tie(phvSources, clotSources) =
+            lowerFields(phv, clotInfo, emitChecksum->sources);
+
+        auto* loweredPovBit = lowerPovBit(phv, emitChecksum->povBit);
+
+        for (auto* source : phvSources) {
+            auto* input = new IR::BFN::ChecksumPhvInput(source);
+#if HAVE_JBAY
+            if (Device::currentDevice() == Device::JBAY)
+                input->povBit = loweredPovBit;
+#endif
+            unitConfig->phvs.push_back(input);
+        }
+#if HAVE_JBAY
+        for (auto source : clotSources) {
+            auto* input = new IR::BFN::ChecksumClotInput(source, loweredPovBit);
+            unitConfig->clots.push_back(input);
+        }
+#endif
+        return unitConfig;
+    }
+
     bool preorder(const IR::BFN::Deparser* deparser) override {
         auto* loweredDeparser = deparser->gress == INGRESS ? igLoweredDeparser
                                                            : egLoweredDeparser;
@@ -1243,6 +1275,20 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
             if (auto* emitClot = group.back()->to<IR::BFN::EmitClot>()) {
                 auto* loweredEmitClot = new IR::BFN::LoweredEmitClot(emitClot);
                 loweredDeparser->emits.push_back(loweredEmitClot);
+
+                auto cl = emitClot->clot;
+                if (clotInfo.clot_to_emit_checksum().count(cl)) {
+                    // this emit checksum is part of a clot
+                    auto emitChecksum = clotInfo.clot_to_emit_checksum().at(cl);
+                    auto f = phv.field(emitChecksum->dest->field);
+                    cl->csum_field_to_csum_id[f] = nextChecksumUnit;
+
+                    auto unitConfig = lowerChecksum(emitChecksum);
+                    loweredDeparser->checksums.push_back(unitConfig);
+
+                    nextChecksumUnit++;
+                }
+
                 continue;
             }
 
@@ -1251,43 +1297,19 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
                 BUG_CHECK(group.size() == 1,
                           "Checksum primitives should be in a singleton group");
 
-                // Allocate a checksum unit and generate the configuration for it.
-                auto* unitConfig = new IR::BFN::ChecksumUnitConfig(nextChecksumUnit);
-                IR::Vector<IR::BFN::ContainerRef> phvSources;
-                std::vector<Clot> clotSources;
-                std::tie(phvSources, clotSources) =
-                    lowerFields(phv, clotInfo, emitChecksum->sources);
-                auto* loweredPovBit = lowerPovBit(phv, emitChecksum->povBit);
-
-                for (auto* source : phvSources) {
-                    auto* input = new IR::BFN::ChecksumPhvInput(source);
-#if HAVE_JBAY
-                    if (Device::currentDevice() == Device::JBAY)
-                        input->povBit = loweredPovBit;
-#endif
-                    unitConfig->phvs.push_back(input);
-                }
-#if HAVE_JBAY
-                for (auto source : clotSources) {
-                    auto* input = new IR::BFN::ChecksumClotInput(source, loweredPovBit);
-                    unitConfig->clots.push_back(input);
-                }
-#endif
+                auto unitConfig = lowerChecksum(emitChecksum);
                 loweredDeparser->checksums.push_back(unitConfig);
 
-                if (!emit_checksum_in_clot.count(emitChecksum)) {
-                    // Generate the lowered checksum emit.
-                    auto* loweredEmit =
-                      new IR::BFN::LoweredEmitChecksum(loweredPovBit, nextChecksumUnit);
-                    loweredDeparser->emits.push_back(loweredEmit);
-                } else {
-                    // this emit checksum is part of a clot
-                    auto cl = const_cast<Clot*>(emit_checksum_in_clot.at(emitChecksum));
-                    auto f = phv.field(emitChecksum->dest->field);
-                    cl->csum_field_to_csum_id[f] = nextChecksumUnit;
-                }
+                // Generate the lowered checksum emit.
+                auto* loweredPovBit = lowerPovBit(phv, emitChecksum->povBit);
+
+                auto* loweredEmit =
+                  new IR::BFN::LoweredEmitChecksum(loweredPovBit, nextChecksumUnit);
+
+                loweredDeparser->emits.push_back(loweredEmit);
 
                 nextChecksumUnit++;
+
                 continue;
             }
 
@@ -1371,7 +1393,6 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
 
     const PhvInfo& phv;
     const ClotInfo& clotInfo;
-    const std::map<const IR::BFN::EmitChecksum*, const Clot*>& emit_checksum_in_clot;
     unsigned nextChecksumUnit;
 };
 
@@ -1399,11 +1420,10 @@ struct ReplaceDeparserIR : public DeparserTransform {
 struct LowerDeparserIR : public PassManager {
     LowerDeparserIR(const PhvInfo& phv, ClotInfo& clot) {
         auto* rewriteEmitClot = new RewriteEmitClot(phv, clot);
-        auto* computeLoweredDeparserIR = new ComputeLoweredDeparserIR(phv, clot,
-                                              rewriteEmitClot->emit_checksum_in_clot);
+        auto* computeLoweredDeparserIR = new ComputeLoweredDeparserIR(phv, clot);
         addPasses({
+            new AllocateParserClotChecksums(phv, clot),
             rewriteEmitClot,
-            new AllocateClotChecksums(phv, clot),
             computeLoweredDeparserIR,
             new ReplaceDeparserIR(computeLoweredDeparserIR->igLoweredDeparser,
                                   computeLoweredDeparserIR->egLoweredDeparser)

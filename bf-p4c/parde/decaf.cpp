@@ -1274,7 +1274,7 @@ class RewriteDeparser : public DeparserModifier {
         LOG1("done rewrite deparser");
     }
 
-    void add_emit(IR::Vector<IR::BFN::DeparserPrimitive>& emits,
+    void add_emit(IR::Vector<IR::BFN::Emit>& emits,
                   const IR::Expression* source, const IR::TempVar* pov_bit) {
         auto emit_value = new IR::BFN::EmitField(source, pov_bit);
         emits.push_back(emit_value);
@@ -1283,7 +1283,7 @@ class RewriteDeparser : public DeparserModifier {
     }
 
     const IR::Expression* find_emit_source(const PHV::Field* field,
-                       const IR::Vector<IR::BFN::DeparserPrimitive>& emits) {
+                                           const IR::Vector<IR::BFN::Emit>& emits) {
         for (auto prim : emits) {
             if (auto emit = prim->to<IR::BFN::EmitField>()) {
                 auto f = phv.field(emit->source->field);
@@ -1296,7 +1296,7 @@ class RewriteDeparser : public DeparserModifier {
     }
 
     bool preorder(IR::BFN::Deparser* deparser) override {
-        IR::Vector<IR::BFN::DeparserPrimitive> new_emits;
+        IR::Vector<IR::BFN::Emit> new_emits;
 
         auto& value_to_pov_bit = synth_pov_encoder.value_to_pov_bit;
         auto& default_pov_bit = synth_pov_encoder.default_pov_bit;

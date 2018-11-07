@@ -261,7 +261,7 @@ struct SubstituteUpdateChecksums : public Transform {
  private:
     IR::BFN::Deparser*
     preorder(IR::BFN::Deparser* deparser) override {
-        IR::Vector<IR::BFN::DeparserPrimitive> newEmits;
+        IR::Vector<IR::BFN::Emit> newEmits;
 
         for (auto* p : deparser->emits) {
             bool rewrite = false;
@@ -288,12 +288,12 @@ struct SubstituteUpdateChecksums : public Transform {
         return deparser;
     }
 
-    std::vector<IR::BFN::DeparserPrimitive*>
+    std::vector<IR::BFN::Emit*>
     rewriteEmitChecksum(const IR::BFN::EmitField* emit) {
         auto* source = emit->source->field->to<IR::Member>();
         auto* csumInfo = checksums.at(source->toString());
 
-        std::vector<IR::BFN::DeparserPrimitive*> emitChecksums;
+        std::vector<IR::BFN::Emit*> emitChecksums;
 
         if (!csumInfo->updateConditions.empty()) {
             // If update condition is specified, we create two emits: one for

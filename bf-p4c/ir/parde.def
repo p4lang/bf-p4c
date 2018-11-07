@@ -425,10 +425,8 @@ class EmitClot : Emit {
         out << "emit clot " << clot->tag << " if " << povBit->field->toString();
     }
 
-    // XXX(zma): EmitClot should really be a lowered IR class, since these
-    // are inferred from CLOT allocation.
 #emit
-    const Clot* clot = nullptr;
+    Clot* clot = nullptr;
 #end
 }
 
@@ -489,7 +487,7 @@ class Deparser : AbstractDeparser {
 #apply
     toString { return gress ? "egress deparser" : "ingress deparser"; }
 
-    inline Vector<DeparserPrimitive>    emits;
+    inline Vector<Emit>                 emits;
     inline Vector<DeparserParameter>    params;
     inline NameMap<Digest>              digests;
 }

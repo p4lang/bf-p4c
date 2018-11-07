@@ -26,18 +26,20 @@ class ClotInfo {
 
     std::set<const PHV::Field*> checksum_dests_;
 
-    std::vector<const Clot*> clots_;
+    std::vector<Clot*> clots_;
     std::map<const Clot*, cstring> clot_to_parser_state_;
     std::map<cstring, std::vector<const Clot*>> parser_state_to_clots_;
 
     std::map<cstring, std::map<PHV::Container, nw_byterange>> container_range_;
     std::map<const PHV::Field*, nw_bitrange> field_range_;
 
+    std::map<const Clot*, const IR::BFN::EmitChecksum*> clot_to_emit_checksum_;
+
  public:
     explicit ClotInfo(PhvUse& uses) : uses(uses) {}
 
  public:
-    const std::vector<const Clot*>& clots() const { return clots_; }
+    const std::vector<Clot*>& clots() const { return clots_; }
 
     unsigned num_clots_allocated() const { return Clot::tagCnt; }
 
@@ -55,6 +57,16 @@ class ClotInfo {
               std::map<PHV::Container, nw_byterange>>& container_range() const {
         return container_range_; }
 
+    std::map<const Clot*,
+             const IR::BFN::EmitChecksum*>& clot_to_emit_checksum() {
+        return clot_to_emit_checksum_;
+    }
+
+    const std::map<const Clot*,
+                   const IR::BFN::EmitChecksum*>& clot_to_emit_checksum() const {
+        return clot_to_emit_checksum_;
+    }
+
     void add_field(const PHV::Field* f, const IR::BFN::PacketRVal* rval,
              const IR::BFN::ParserState* state) {
         parser_state_to_fields_[state].push_back(f);
@@ -62,7 +74,7 @@ class ClotInfo {
         field_range_[f] = rval->range();
     }
 
-    void add_clot(const Clot* cl, const IR::BFN::ParserState* state) {
+    void add_clot(Clot* cl, const IR::BFN::ParserState* state) {
         clots_.push_back(cl);
         clot_to_parser_state_[cl] = state->name;
         parser_state_to_clots_[state->name].push_back(cl);
@@ -74,7 +86,7 @@ class ClotInfo {
 
     /// @return the CLOT if field is not used in MAU pipe
     /// and is covered in a CLOT
-    const Clot* allocated(const PHV::Field* field) const {
+    Clot* allocated(const PHV::Field* field) const {
         if (!is_clot_candidate(field))
             return nullptr;
 
@@ -82,7 +94,7 @@ class ClotInfo {
     }
 
     /// @return the pointer to the CLOT if field is covered in a CLOT
-    const Clot* clot(const PHV::Field* field) const {
+    Clot* clot(const PHV::Field* field) const {
         for (auto c : clots_)
             for (auto f : c->all_fields)
                 if (f == field)
@@ -120,19 +132,16 @@ class CollectClotInfo : public Inspector {
         return rv;
     }
 
-    bool preorder(const IR::BFN::ParserPrimitive* prim) override {
+    bool preorder(const IR::BFN::Extract* extract) override {
         auto state = findContext<IR::BFN::ParserState>();
 
-        if (auto extract = prim->to<IR::BFN::Extract>()) {
-            auto rval = extract->source->to<IR::BFN::PacketRVal>();
-            if (rval) {
-                if (auto field_lval = extract->dest->to<IR::BFN::FieldLVal>()) {
-                    if (auto f = phv.field(field_lval->field))
-                        clotInfo.add_field(f, rval, state);
-                } else if (auto checksum_lval = extract->dest->to<IR::BFN::ChecksumLVal>()) {
-                    if (auto f = phv.field(checksum_lval->field))
-                        clotInfo.add_field(f, rval, state);
-                }
+        if (auto rval = extract->source->to<IR::BFN::PacketRVal>()) {
+            if (auto field_lval = extract->dest->to<IR::BFN::FieldLVal>()) {
+                if (auto f = phv.field(field_lval->field))
+                    clotInfo.add_field(f, rval, state);
+            } else if (auto checksum_lval = extract->dest->to<IR::BFN::ChecksumLVal>()) {
+                if (auto f = phv.field(checksum_lval->field))
+                    clotInfo.add_field(f, rval, state);
             }
         }
 

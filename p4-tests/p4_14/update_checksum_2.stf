@@ -1,0 +1,9 @@
+
+add test1 data.f1:0x01010101 setb1(val:0x7f, port:2)
+add test1 data.f1:0x02020202 setb1(val:7, port:3)
+add test2 data.f1:0x02020202 modify_data()
+
+expect 2 01010101 00000202 fbfb 55 66 7f 88
+packet 0 01010101 00000202 0303 55 66 77 88
+expect 3 00000001 00000002 fffc 00 03 04 05
+packet 2 02020202 00000303 0404 55 66 77 88
