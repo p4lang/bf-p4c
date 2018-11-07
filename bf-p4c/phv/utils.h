@@ -592,7 +592,11 @@ class Transaction : public Allocation {
 
 /// An interface for gathering statistics common across each kind of cluster.
 class ClusterStats {
+ private:
+    static int nextId;
+
  public:
+    int uid = nextId++;
     /// @returns true if this cluster can be assigned to containers of kind
     /// @kind.
     virtual bool okIn(PHV::Kind kind) const = 0;

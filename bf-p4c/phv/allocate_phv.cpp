@@ -2335,14 +2335,15 @@ BruteForceAllocationStrategy::allocLoop(PHV::Transaction& rst,
                             core_alloc_i.tryAlloc(slicing_alloc, *container_group, *sc,
                                 bridgedFieldsWithAlignmentConflicts)) {
                         AllocScore score = AllocScore(*partial_alloc, clot_i, core_alloc_i.uses());
-                        LOG4("    ...SUPERCLUSTER score: " << score);
+                        LOG4("    ...SUPERCLUSTER  Uid: " << sc->uid << " score: " << score);
                         if (!best_slice_alloc || score > best_slice_score) {
                             best_slice_score = score;
                             best_slice_alloc = partial_alloc; } } }
 
                 // Break if this slice couldn't be placed.
                 if (best_slice_alloc == boost::none) {
-                    LOG4("...but these SUPERCLUSTER slices could not be placed.");
+                    LOG4("...but these SUPERCLUSTER Uid: " << sc->uid
+                        << " slices could not be placed.");
                     succeeded = false;
                     break; }
 

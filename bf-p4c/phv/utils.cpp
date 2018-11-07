@@ -10,6 +10,8 @@
 
 static int cluster_id_g = 0;                // global counter for assigning cluster ids
 
+int PHV::ClusterStats::nextId = 0;
+
 PHV::ContainerGroup::ContainerGroup(PHV::Size sz, const std::vector<PHV::Container> containers)
 : size_i(sz), containers_i(containers) {
     // Check that all containers are the right size.
@@ -2731,7 +2733,7 @@ std::ostream &operator<<(std::ostream &out, const PHV::RotationalCluster* cl) {
 // TODO(cole): This could really stand to be improved.
 std::ostream &operator<<(std::ostream &out, const PHV::SuperCluster& g) {
     // Print the slice lists.
-    out << "SUPERCLUSTER" << std::endl;
+    out << "SUPERCLUSTER Uid: " << g.uid << std::endl;
     out << "    slice lists:\t";
     if (g.slice_lists().size() == 0) {
         out << "[ ]" << std::endl;
