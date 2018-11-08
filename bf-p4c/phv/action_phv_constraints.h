@@ -494,6 +494,12 @@ class ActionPhvConstraints : public Inspector {
     /// @returns the set of fields which use field @f as sources, across all actions.
     ordered_set<const PHV::Field*> field_destinations(const PHV::Field* f) const;
 
+    /// @returns the destination of field @f in action @action. @returns boost::none if @f is not
+    /// written in @action.
+    boost::optional<const PHV::Field*> field_destination(
+            const PHV::Field* f,
+            const IR::MAU::Action* action) const;
+
     /// @returns true if the field @f is only ever written by move operations.
     bool move_only_operations(const PHV::Field* f) const;
 
@@ -576,6 +582,10 @@ class ActionPhvConstraints : public Inspector {
     bool written_in(const PHV::Field* f, const IR::MAU::Action* act) const {
         return actions_writing_fields(f).count(act);
     }
+
+    /** @returns true if field @f is written in action @act by action data/constant source.
+      */
+    bool written_by_ad_constant(const PHV::Field* f, const IR::MAU::Action* act) const;
 
     /** For GTest function.
       * Checks if the field_writes_to_actions ordered_map entry is valid or not

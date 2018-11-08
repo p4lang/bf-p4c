@@ -1672,6 +1672,18 @@ bool ActionPhvConstraints::checkBridgedPackingConstraints(
     return true;
 }
 
+bool ActionPhvConstraints::written_by_ad_constant(
+        const PHV::Field* f,
+        const IR::MAU::Action* act) const {
+    // If field is not written in this action, return false.
+    if (!written_in(f, act)) return false;
+    PHV::FieldSlice slice(f, StartLen(0, f->size));
+    for (auto operand : constraint_tracker.sources(slice, act))
+        if (operand.ad || operand.constant)
+            return true;
+    return false;
+}
+
 boost::optional<ActionPhvConstraints::OperandInfo>
 ActionPhvConstraints::ConstraintTracker::is_written(
         PHV::FieldSlice slice,
@@ -1734,6 +1746,23 @@ ordered_set<const PHV::Field*> ActionPhvConstraints::field_destinations(const PH
         for (auto slice : destinations)
             rv.insert(slice.field()); }
     return rv;
+}
+
+boost::optional<const PHV::Field*> ActionPhvConstraints::field_destination(
+        const PHV::Field* f,
+        const IR::MAU::Action* action) const {
+    ordered_set<const PHV::Field*> rs;
+    PHV::FieldSlice source(f, StartLen(0, f->size));
+    for (const IR::MAU::Action* act : constraint_tracker.read_in(source)) {
+        if (act != action) continue;
+        auto destinations = constraint_tracker.destinations(source, act);
+        for (auto slice : destinations)
+            rs.insert(slice.field());
+    }
+    BUG_CHECK(rs.size() <= 1, "More than one field written to by field %1% in action %2%", f->name,
+            action->name);
+    if (rs.size() == 0) return boost::none;
+    return (*(rs.begin()));
 }
 
 bool ActionPhvConstraints::move_only_operations(const PHV::Field* f) const {

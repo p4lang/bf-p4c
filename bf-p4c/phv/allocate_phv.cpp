@@ -568,7 +568,13 @@ bool CoreAllocation::satisfies_constraints(
     bool isThisSliceUninitialized = (slice.field()->pov
             || (defuse_i.hasUninitializedRead(slice.field()->id) && !initFields.count(slice)));
 
-    if (hasExtracted && (isThisSliceUninitialized || isThisSliceExtracted)) {
+    bool hasExtractedTogether = std::all_of(
+            slices.begin(), slices.end(), [&] (const PHV::AllocSlice& s) {
+        return phv_i.are_bridged_extracted_together(slice.field(), s.field());
+    });
+
+    if (hasExtracted && !hasExtractedTogether &&
+        (isThisSliceUninitialized || isThisSliceExtracted)) {
         LOG5("        constraint: container already contains extracted slices, "
              "can not be packed, because: this slice is "
              << (isThisSliceExtracted ? "extracted" : "uninitialized"));
@@ -577,10 +583,11 @@ bool CoreAllocation::satisfies_constraints(
     // Account for metadata initialization and ensure that initialized fields are not considered
     // uninitialized any more.
     if (isThisSliceExtracted && (hasUninitializedRead || hasExtracted)) {
-        LOG5("        constraint: this slice is extracted, "
-             "can not be packed, because allocated fields has "
-             << (hasExtracted ? "extracted" : "uninitialized"));
-        return false; }
+        if (!hasExtractedTogether || !hasUninitializedRead) {
+            LOG5("        constraint: this slice is extracted, "
+                    "can not be packed, because allocated fields has "
+                    << (hasExtracted ? "extracted" : "uninitialized"));
+            return false; } }
 
     if (c.is(PHV::Kind::mocha) && !f->is_mocha_candidate())
         return false;

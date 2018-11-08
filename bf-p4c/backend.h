@@ -25,6 +25,8 @@ class Backend : public PassManager {
     FieldDefUse defuse;
     TablesMutuallyExclusive mutex;
     CollectBridgedFields bridged_fields;
+    /// Bridged fields that must be extracted together (result of bridged metadata packing).
+    ordered_map<cstring, ordered_set<cstring>> extracted_together;
     /// Class that represents the backtracking point from table placement to PHV allocation.
     MauBacktracker table_alloc;
     /// List of field names which should not be privatized. Detected by ValidateAllocation pass and

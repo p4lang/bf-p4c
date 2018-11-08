@@ -264,6 +264,8 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "In table .*, the number of bytes required to go through the immediate pathway"
   extensions/p4_tests/p4_14/test_config_311_hash_adb.p4
+  switch_ent_fin_postcard
+  switch_8.4_generic_int_leaf
   )
 
 # BRIG-102
@@ -271,20 +273,6 @@ p4c_add_xfail_reason("tofino"
   "The following operation is not yet supported"
   extensions/p4_tests/p4_14/test_config_235_funnel_shift.p4
   extensions/p4_tests/p4_14/p4-tests/programs/opcode_test/opcode_test.p4
-  )
-
-# P4C-1041
-p4c_add_xfail_reason("tofino"
-  "Compiler Bug.*Slicing the following supercluster is taking too long"
-  switch_generic_int_leaf
-  switch_8.4_generic_int_leaf
-  switch_l3_heavy_int_leaf
-  switch_8.4_l3_heavy_int_leaf
-  switch_msdc_leaf_int
-  switch_8.4_msdc_leaf_int
-  switch_ent_fin_postcard
-  switch_msdc_spine_int
-  switch_8.4_msdc_spine_int
   )
 
 p4c_add_xfail_reason("tofino"
@@ -296,20 +284,26 @@ p4c_add_xfail_reason("tofino"
   "No tables placeable, but not all tables placed?"
   switch_8.4_msdc_ipv4
   switch_msdc_ipv4
+  switch_msdc_spine_int
+  )
+
+p4c_add_xfail_reason("tofino"
+  "error.*Inferred incompatible alignments for field.*"
+  switch_msdc_leaf_int
+  switch_8.4_msdc_leaf_int
+  switch_l3_heavy_int_leaf
+  switch_8.4_l3_heavy_int_leaf
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Cannot specify.*as the default action, as it requires the hash distribution unit"
+  switch_8.4_msdc_spine_int
   )
 
 p4c_add_xfail_reason("tofino"
   "Compiler Bug.*Slicing the following supercluster is taking too long"
   switch_ent_fin_postcard
-  switch_generic_int_leaf
-  switch_l3_heavy_int_leaf
-  switch_msdc_leaf_int
-  switch_msdc_spine_int
-  switch_8.4_l3_heavy_int_leaf
-  switch_8.4_msdc_leaf_int
   switch_8.4_ent_fin_postcard
-  switch_8.4_generic_int_leaf
-  switch_8.4_msdc_spine_int
   )
 
 p4c_add_xfail_reason("tofino"
@@ -1135,6 +1129,8 @@ p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   switch_msdc_l3
   switch_8.4_msdc_l3
+  switch_generic_int_leaf
+  switch_8.4_generic_int_leaf
 )
 
 # BRIG-651

@@ -2424,6 +2424,82 @@ PHV::SlicingIterator::split_super_cluster(const PHV::SuperCluster* sc, bitvec sp
     return rv;
 }
 
+void PHV::SlicingIterator::enforce_MAU_constraints_for_meta_slice_lists(
+        ordered_map<PHV::SuperCluster::SliceList*, bitvec>& split_schema) const {
+    ordered_map<FieldSlice, ordered_set<int>> splitSlices;
+    ordered_map<FieldSlice, std::pair<int, int>> nonExactContainerSlices;
+    ordered_map<FieldSlice, PHV::SuperCluster::SliceList*> sliceToLists;
+    // The split schema is a representation of the bits where each slice in the slice list must be
+    // split, as part of this slicing attempt. It maps each slice in the slice list to a bitvec
+    // representing possible slicing points (1 at a bit position in the bitvec implies that a slice
+    // must be made at that bit position).
+    // This loop does two things:
+    // 1. It identifies all the slice lists with non exact container requirements and memoizes the
+    //    start and end positions of that slice within the slice list (this is memoized as a pair
+    //    stored as a value corresponding to each key field slice). For this purpose, we maintain
+    //    two bit indexes: slice_list_offset (how far we are in the slice list, includes the current
+    //    slice) and the prev_list_offset (which indicates how far into the slice list the current
+    //    slice is).
+    // 2. The loop also identifies all the slices that have been split somewhere in the middle (i.e.
+    //    at non slice boundaries). Note, that middle here means any position in the range [1, size
+    //    - 2], where size is the width of the current slice. The splitSlices map stores a mapping
+    //    from such field slices to the set of bit positions within the slice (not the global
+    //    position in the slice list) where the splits must be performed.
+    for (auto& kv : split_schema) {
+        int slice_list_offset = 0;
+        int prev_slice_offset = 0;
+        // For each slice in the slice list.
+        for (auto slice : *kv.first) {
+            slice_list_offset += slice.size();
+            if (!slice.field()->exact_containers()) {
+                nonExactContainerSlices[slice] = std::make_pair(prev_slice_offset, slice_list_offset
+                        - 1);
+                sliceToLists[slice] = kv.first; }
+            for (int i = prev_slice_offset + 1 ; i < slice_list_offset - 1; i++) {
+                if (kv.second[i] && slice.field()->exact_containers()) {
+                    LOG6("\t  Slice at bit " << (i - prev_slice_offset) << " within slice " <<
+                            slice);
+                    splitSlices[slice].insert(i - prev_slice_offset); } }
+            prev_slice_offset = slice_list_offset; } }
+
+    // If there are no slices with splits within the slice, we don't need to do anything else.
+    if (splitSlices.size() == 0) return;
+    LOG6("\t  Slices split in the middle");
+    for (auto& kv : splitSlices) {
+        std::stringstream ss;
+        ss << "  " << kv.first << " @ ";
+        for (const int b : kv.second)
+            ss << b << " ";
+        LOG6("\t\t" << ss.str());
+    }
+    // If there are no non exact container slice lists, then we don't need to do anything either.
+    if (nonExactContainerSlices.size() == 0) return;
+    LOG6("\t  Slices with non exact container requirements");
+    for (auto& kv : nonExactContainerSlices)
+        LOG6("\t\t" << kv.first << " [" << kv.second.first << ", " << kv.second.second << "]");
+
+    // We check if any of the field slices in the rotational cluster of nonExactContainerSlices
+    // (slice list slices without the exact container requirements) are split in the middle. If they
+    // are, then we slice the non exact container slice list at the same position as the candidate
+    // slice in the rotational cluster.
+    for (auto& kv : nonExactContainerSlices) {
+        auto& slice = kv.first;
+        PHV::SuperCluster::SliceList* sc = sliceToLists[slice];
+        int lo = kv.second.first;
+        int hi = kv.second.second;
+        auto& rot_cluster = sc_i->cluster(slice);
+        for (auto& rot_slice : rot_cluster.slices()) {
+            if (rot_slice == slice) continue;
+            if (splitSlices.count(rot_slice)) {
+                LOG6("\t    Found slice in cluster " << rot_slice << " which is split down the "
+                     "middle.");
+                for (auto b : splitSlices.at(rot_slice)) {
+                    if (lo + b > hi) continue;
+                    LOG6("\t    Setting slice at bit " << (lo + b));
+                    split_schema[sc].setbit(lo + b); } } }
+    }
+}
+
 boost::optional<std::list<PHV::SuperCluster*>> PHV::SlicingIterator::get_slices() const {
     if (has_slice_lists_i) {
         // Convert the compressed schema for each slice list into an expanded schema.
@@ -2436,6 +2512,11 @@ boost::optional<std::list<PHV::SuperCluster*>> PHV::SlicingIterator::get_slices(
                 if (compressed_schema[i])
                     expanded_schema.setbit((i + 1) * 8);
             split_schemas[kv.first] = expanded_schema; }
+
+        // enforce MAU constraints for non exact container size slices lists here. We have to do it
+        // here, because splitting may occur on a non-byte boundary for these non exact container
+        // size slices.
+        enforce_MAU_constraints_for_meta_slice_lists(split_schemas);
 
         // Try slicing using this set of expanded schemas.
         auto res = split_super_cluster(sc_i, split_schemas);

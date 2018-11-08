@@ -1128,6 +1128,9 @@ class SlicingIterator {
     /// with `done_i` set are always equal.
     bool done_i;
 
+    void enforce_MAU_constraints_for_meta_slice_lists(
+            ordered_map<PHV::SuperCluster::SliceList*, bitvec>& split_schema) const;
+
     /// @return a slicing based on the current value of compressed_schemas_i.
     boost::optional<std::list<PHV::SuperCluster*>> get_slices() const;
 

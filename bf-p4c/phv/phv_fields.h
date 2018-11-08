@@ -712,6 +712,14 @@ class PhvInfo {
 
     const SymBitMatrix& mutex() const { return field_mutex; }
 
+    SymBitMatrix                             bridged_extracted_together;
+
+    SymBitMatrix& getBridgedExtractedTogether() { return bridged_extracted_together; }
+    const SymBitMatrix& getBridgedExtractedTogether() const { return bridged_extracted_together; }
+    bool are_bridged_extracted_together(const PHV::Field* f1, const PHV::Field* f2) const {
+        return bridged_extracted_together(f1->id, f2->id);
+    }
+
  private:  // class PhvInfo
     //
     std::map<cstring, PHV::Field>            all_fields;
@@ -954,6 +962,25 @@ class PhvInfo {
  */
 struct CollectPhvInfo : public PassManager {
     explicit CollectPhvInfo(PhvInfo& phv);
+};
+
+/** Marks bridged metadata fields that are extracted in the same byte in the egress parser (because
+  * of bridged metadata packing) as being extracted-together. This will naturally aid packing those
+  * fields in the same container, as the restriction on not packing multiple extracted slices
+  * together in the same container can be relaxed for these fields.
+  */
+class CollectBridgedExtractedTogetherFields : public Inspector {
+ private:
+    PhvInfo& phv_i;
+    const ordered_map<cstring, ordered_set<cstring>>& extractedTogether;
+
+    profile_t init_apply(const IR::Node* root) override;
+
+ public:
+    explicit CollectBridgedExtractedTogetherFields(
+            PhvInfo &p,
+            const ordered_map<cstring, ordered_set<cstring>>& e)
+        : phv_i(p), extractedTogether(e) { }
 };
 
 /**

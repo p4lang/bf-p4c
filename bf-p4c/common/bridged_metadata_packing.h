@@ -113,6 +113,9 @@ class PackBridgedMetadata : public Transform, public TofinoWriteContext {
     const ordered_set<const PHV::Field*>& deparserParams;
     /// Set of all fields with alignment constraints induced by the parser.
     const ordered_map<const PHV::Field*, const PHV::Field*>& parserAlignedFields;
+    /// Map from an egress field to all other egress fields which are packed with the key field, and
+    /// therefore, must be extracted together.
+    ordered_map<cstring, ordered_set<cstring>>& extractedTogether;
     /// No pack constraints reported by MAU backtracker.
     const MauBacktracker& alloc;
 
@@ -122,6 +125,9 @@ class PackBridgedMetadata : public Transform, public TofinoWriteContext {
     /// generated as part of egress bridged header. This map maintains the correspondence between
     /// the two.
     ordered_map<cstring, cstring> egressBridgedMap;
+
+    /// Map of field name in the egress bridged metadata header to the original egress field name.
+    ordered_map<cstring, cstring> reverseEgressBridgedMap;
 
     /// Map of original field to a related field from which this field will derive its alignment
     /// constraints from.
@@ -138,8 +144,9 @@ class PackBridgedMetadata : public Transform, public TofinoWriteContext {
     profile_t init_apply(const IR::Node* root) override;
 
     /// Action analysis for the set of @nonByteAlignedFields in header @h. It populates the
-    /// doNotPack matrix based on results of this analysis.
-    void bridgedActionAnalysis(
+    /// doNotPack matrix based on results of this analysis. @returns a matrix of fields that must be
+    /// packed together.
+    SymBitMatrix bridgedActionAnalysis(
             const IR::Header* h,
             std::vector<const IR::StructField*>& nonByteAlignedFields);
 
@@ -164,7 +171,8 @@ class PackBridgedMetadata : public Transform, public TofinoWriteContext {
             const std::vector<const IR::StructField*>& candidates,
             const ordered_set<const PHV::Field*>& alreadyPackedFields,
             const ordered_map<const IR::StructField*, le_bitrange>& alignmentConstraints,
-            const ordered_set<const IR::StructField*>& conflictingAlignmentConstraints) const;
+            const ordered_set<const IR::StructField*>& conflictingAlignmentConstraints,
+            const SymBitMatrix& mustPack) const;
 
     /// Given the map of alignment constraints for fields @alignmentConstraints, a set of
     /// potentially packable fields @potentiallyPackableFields and the base field @f, @return the
@@ -179,18 +187,39 @@ class PackBridgedMetadata : public Transform, public TofinoWriteContext {
 
     /// Determine alignment constraints associated with the set of @nonByteAlignedFields in header
     /// @h. The result is stored in the @alignmentConstraints map.
+    /// @alignmentConstraints stores the actual alignment constraints.
+    /// @conflictingAlignmentConstraints stores fields with conflicting alignment constraints.
+    /// @mustAlignFields stores fields that must be aligned at the given alignment (as opposed to
+    /// may-align).
     void determineAlignmentConstraints(
             const IR::Header* h,
             const std::vector<const IR::StructField*>& nonByteAlignedFields,
             ordered_map<const IR::StructField*, le_bitrange>& alignmentConstraints,
-            ordered_set<const IR::StructField*>& conflictingAlignmentConstraints);
+            ordered_set<const IR::StructField*>& conflictingAlignmentConstraints,
+            ordered_set<const IR::StructField*>& mustAlignFields);
 
-    /// @returns true if @field1 and @field2 are written in the same action, where the map
-    /// @acts contains mapping of fields to the actions in which they are written.
-    bool fieldsWrittenSameAction(
+    /// @returns all the actions in which both @field1 and @field2 are accessed. @returns an empty
+    /// set if the fields are never written in the same action. @acts contains mapping of fields to
+    /// the actions in which they are accessed. @written is passed as true if @acts summarizes
+    /// writes, and false if @acts summarizes reads.
+    ordered_set<const IR::MAU::Action*> fieldsAccessedSameAction(
             const PHV::Field* field1,
             const PHV::Field* field2,
-            const ordered_map<const PHV::Field*, ordered_set<const IR::MAU::Action*>>& acts) const;
+            const ordered_map<const PHV::Field*, ordered_set<const IR::MAU::Action*>>& acts,
+            bool written = true) const;
+
+    SymBitMatrix mustPack(const ordered_set<const PHV::Field*>& fields) const;
+
+    boost::optional<ordered_map<const PHV::Field*, int>> mustBePackedTogether(
+            const PHV::Field* f1,
+            const PHV::Field* f2,
+            const ordered_set<const IR::MAU::Action*>& actions) const;
+
+    /// @returns true if the bridged field @field must be packed at the alignment determined by
+    /// determineAlignmentConstraints.
+    bool mustAlign(const PHV::Field* field) const;
+
+    const IR::StructField* getPaddingField(int size, int id);
 
  public:
     explicit PackBridgedMetadata(
@@ -201,9 +230,10 @@ class PackBridgedMetadata : public Transform, public TofinoWriteContext {
             const ordered_set<const PHV::Field*>& z,
             const ordered_set<const PHV::Field*>& d,
             const ordered_map<const PHV::Field*, const PHV::Field*>& pa,
+            ordered_map<cstring, ordered_set<cstring>>& e,
             const MauBacktracker& b)
         : phv(p), fields(f), actionConstraints(a), doNotPack(s), phase0Fields(z), deparserParams(d),
-          parserAlignedFields(pa), alloc(b) { }
+          parserAlignedFields(pa), extractedTogether(e), alloc(b) { }
 
     /// @returns the backend name of the field, given the @header and the the @field.
     /// This performs a simple string concatenation.
@@ -321,6 +351,7 @@ class BridgedMetadataPacking : public Logging::PassManager {
             const PhvInfo& p,
             DependencyGraph& dg,
             CollectBridgedFields& b,
+            ordered_map<cstring, ordered_set<cstring>>& e,
             const MauBacktracker& alloc);
 };
 

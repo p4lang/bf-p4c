@@ -31,6 +31,7 @@ void PhvInfo::clear() {
     dummyPaddingNames.clear();
     externalNameMap.clear();
     metadata_overlay.clear();
+    bridged_extracted_together.clear();
     alloc_done_ = false;
     pov_alloc_done = false;
     zeroContainers[0].clear();
@@ -902,6 +903,7 @@ struct ComputeFieldAlignments : public Inspector {
         // position from which it's read from the wire.
         const auto extractedBits = bufferSource->range();
         const auto alignment = FieldAlignment(extractedBits);
+        LOG3("A. Updating alignment of " << fieldInfo->name << " to " << alignment);
         fieldInfo->updateAlignment(alignment);
 
         // If a parsed field starts at a container bit index larger than the bit
@@ -950,6 +952,7 @@ struct ComputeFieldAlignments : public Inspector {
             auto* ingressFieldInfo = phv.field(ingressFieldName);
             BUG_CHECK(ingressFieldInfo != nullptr,
                       "No ingress version of egress bridged metadata field?");
+            LOG3("B. Updating alignment of " << ingressFieldInfo->name << " to " << alignment);
             ingressFieldInfo->updateAlignment(alignment);
             ingressFieldInfo->updateValidContainerRange(validContainerRange);
         }
@@ -993,6 +996,7 @@ struct ComputeFieldAlignments : public Inspector {
             // with the same POV bits must be byte-aligned in a valid Tofino P4
             // program. (If not, you'd end up with garbage bits on the wire.)
             nw_bitrange emittedBits(currentBit, currentBit + fieldInfo->size - 1);
+            LOG3("C. Updating alignment of " << fieldInfo->name << " to " << emittedBits);
             fieldInfo->updateAlignment(FieldAlignment(emittedBits));
             currentBit += fieldInfo->size;
         }
@@ -1180,6 +1184,8 @@ class CollectPardeConstraints : public Inspector {
         // containers *for now*.
         // XXX(seth): We can relax this restriction once we add support for the
         // shifters that the deparser hardware makes available.
+        LOG3("D. Updating alignment of " << f->name << " to " <<
+                FieldAlignment(le_bitrange(StartLen(0, f->size))));
         f->updateAlignment(FieldAlignment(le_bitrange(StartLen(0, f->size))));
         f->set_deparsed_bottom_bits(true);
         f->set_deparsed_to_tm(true);
@@ -1261,6 +1267,8 @@ class CollectPardeConstraints : public Inspector {
                 for (auto fieldListEntry : fieldList->sources) {
                     auto fieldInfo = phv.field(fieldListEntry->field);
                     if (fieldInfo->metadata) {
+                        LOG3("E. Updating alignment of metadata field " << fieldInfo->name << " to "
+                                << FieldAlignment(le_bitrange(StartLen(0, fieldInfo->size))));
                         fieldInfo->updateAlignment(
                                 FieldAlignment(le_bitrange(StartLen(0, fieldInfo->size))));
                         LOG3(fieldInfo << " is marked to be byte_aligned "
@@ -1418,6 +1426,23 @@ class MarkTimestampAndVersion : public Inspector {
  public:
     explicit MarkTimestampAndVersion(PhvInfo& phv) : phv_i(phv) { }
 };
+
+Visitor::profile_t CollectBridgedExtractedTogetherFields::init_apply(const IR::Node* root) {
+    auto& matrix = phv_i.getBridgedExtractedTogether();
+    matrix.clear();
+
+    for (auto kv : extractedTogether) {
+        const auto* f1 = phv_i.field(kv.first);
+        BUG_CHECK(f1, "Field corresponding to %1% not found", kv.first);
+        for (auto fName : kv.second) {
+            const auto* f2 = phv_i.field(fName);
+            BUG_CHECK(f2, "Field corresponding to %1% not found", fName);
+            matrix(f1->id, f2->id) = true;
+        }
+    }
+
+    return Inspector::init_apply(root);
+}
 
 CollectPhvInfo::CollectPhvInfo(PhvInfo& phv) {
     addPasses({

@@ -196,7 +196,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         // Bridged metadata related passes in the backend.
         // Needs to be run after InstructionSelection but before
         // deadcode elimination.
-        new BridgedMetadataPacking(phv, deps, bridged_fields, table_alloc),
+        new BridgedMetadataPacking(phv, deps, bridged_fields, extracted_together, table_alloc),
         // Run after bridged metadata packing as bridged packing updates the parser state.
         new ResolveComputedParserExpressions,
         new RemoveUnusedExtracts(phv),
@@ -217,6 +217,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
                                     // Allow allocation into dark PHVs for testing purposes
 #endif
         new CollectPhvInfo(phv),
+        new CollectBridgedExtractedTogetherFields(phv, extracted_together),
         &defuse,
 
         // DO NOT RUN CollectPhvInfo afterwards, as this will destroy the
