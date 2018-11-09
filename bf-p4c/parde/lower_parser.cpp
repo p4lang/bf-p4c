@@ -262,40 +262,27 @@ struct ExtractSimplifier {
                     extractFromBufferByContainer[slice.container].push_back(newExtract);
             }
         } else if (auto* constantSource = extract->source->to<IR::BFN::ConstantRVal>()) {
-            for (const auto& slice : slices) {
-                // We need to generate a mask from this slice that will pull out
-                // the relevant bits of the constant value. Because we're
-                // applying the mask at compile time, we need to transform this
-                // slice into host endian order. We'll also treat it as a
-                // half-open range to simplify the math.
-                le_bitinterval sliceBits = toHalfOpenRange(slice.field_bits())
-                  .toOrder<Endian::Little>(slice.field->size);
+            for (auto& slice : boost::adaptors::reverse(slices)) {
+                // Large constant may be extracted across multiple containers, therefore we
+                // need to slice the containt into multiple slices and align each slice
+                // within each container.
 
-                // Construct a mask with all 1's in [0, slice.hi).
-                const unsigned long hiMask = (1 << sliceBits.hi) - 1;
-                // Construct a mask with all 1's in [slice.lo, ∞).
-                const unsigned long loMask = (~0ul) << sliceBits.lo;
-                // Construct a mask with all 1's in [slice.lo, slice.hi).
-                const unsigned long mask = hiMask & loMask;
-
-                // Pull out the bits of the value that belong to this slice.
-                // XXX(yumin): It is safe here to convert int with mask to unsigned
-                // here, and needed, because the following left shift might cause overflow.
-                uint32_t maskedValue = constantSource->constant->asInt() & mask;
+                auto constSlice = *(constantSource->constant) >> slice.field_bits().lo;
+                constSlice = constSlice & IR::Constant::GetMask(slice.width);
 
                 // Place those bits at their offset within the container.
-                maskedValue <<= slice.container_bits()
-                  .toOrder<Endian::Little>(slice.container.size()).lo;
+                constSlice = constSlice << slice.container_bits().lo;
 
-                LOG4(" - Placing slice " << sliceBits << " (mask " << mask
-                      << ") into " << slice.container << ". Final value: "
-                      << maskedValue);
+                LOG4("  Placing constant slice " << constSlice << " into " << slice.container);
+
+                BUG_CHECK(constSlice.fitsUint(), "Constant slice larger than 32-bit?");
 
                 // Create an extract that writes just those bits.
                 auto* newSource =
-                  new IR::BFN::LoweredConstantRVal(maskedValue);
+                  new IR::BFN::LoweredConstantRVal(constSlice.asUnsigned());
                 auto* newExtract =
                   new IR::BFN::LoweredExtractPhv(slice.container, newSource);
+
                 newExtract->debug.info.push_back(debugInfoFor(extract, slice));
                 extractConstantByContainer[slice.container].push_back(newExtract);
             }
@@ -1882,17 +1869,8 @@ class ExtractorAllocator {
                            Device::pardeSpec().byteInputBufferSize());
         }
 
-        // TODO(yumin): currently, phv allocation might generate out-of-end allocation
-        // that leads to extraction on metadata across the header boundary. Generally,
-        // it is correct because of the masking. However, this is a constraint that phv
-        // should respect in some day, because if there is not enough payload for this
-        // extraction, it is wrong. But, it is a very rare case, so we are relaxing it here.
-        if (byteActualShift > shift_required) {
-            ::warning("Extraction over the header boundary happens, "
-                      "please make sure packet have at least %1% bytes payload.",
-                      byteActualShift - shift_required);
+        if (byteActualShift > shift_required)
             byteActualShift = shift_required;
-        }
 
         BUG_CHECK(byteActualShift >= 0,
                   "Computed invalid shift %1% when splitting state %2%",

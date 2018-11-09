@@ -26,6 +26,8 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     # Needs stateful init regs support in simple test harness, this test passes
     # on stf2ptf
     extensions/p4_tests/p4_14/stateful_init_regs.p4
+    # Need to manage the 2N/4N alignmentwhen using narrow extractor to wide container in the parser
+    extensions/p4_tests/p4_14/set_metadata_large_const.p4
     )
 
   # Brig/Glass do not follow P4_14 spec for 'drop' in the ingress pipeline
