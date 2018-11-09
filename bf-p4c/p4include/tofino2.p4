@@ -699,6 +699,23 @@ extern LearnAction<T, H, D, U> {
     bit<16> max16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
 }
 
+extern MinMaxAction<T, H, U> {
+    MinMaxAction(Register<T, _> reg);
+    abstract void apply(inout bit<128> value, @optional out U rv1, @optional out U rv2,
+                                       @optional out U rv3, @optional out U rv4);
+    U execute(@optional in H index, @optional out U rv2,
+              @optional out U rv3, @optional out U rv4);
+
+    /* These routines can be called in apply/overflow/underflow methods to get these values
+     * to assign to a return value, but generally no operations can be applied */
+    U address(@optional bit<1> subword); /* return the match address */
+    U predicate(); /* return the predicate value */
+    bit<8> min8(in bit<128> val, in bit<16> mask, @optional out bit<4> index);
+    bit<8> max8(in bit<128> val, in bit<16> mask, @optional out bit<4> index);
+    bit<16> min16(in bit<128> val, in bit<8> mask, @optional out bit<3> index);
+    bit<16> max16(in bit<128> val, in bit<8> mask, @optional out bit<3> index);
+}
+
 extern ActionSelector {
     /// Construct an action selector of 'size' entries
     ActionSelector(bit<32> size, Hash<_> hash, SelectorMode_t mode);

@@ -747,9 +747,7 @@ void AttachTables::InitializeStatefulAlus
 void AttachTables::InitializeStatefulAlus::postorder(const IR::GlobalRef *gref) {
     visitAgain();
     if (auto di = gref->obj->to<IR::Declaration_Instance>()) {
-        if (di->type->toString().startsWith("RegisterAction<") ||
-            di->type->toString().startsWith("DirectRegisterAction<") ||
-            di->type->toString().startsWith("LearnAction<") ||
+        if (strstr(di->type->toString(), "Action<") ||
             di->type->toString() == "selector_action") {
             updateAttachedSalu(di, gref);
         }
@@ -820,9 +818,7 @@ void AttachTables::DefineGlobalRefs::postorder(IR::GlobalRef *gref) {
             LOG3("Created " << att->node_type_name() << ' ' << att->name << " (pt 3)");
             gref->obj = self.converted[di] = att;
             obj = att;
-        } else if (di->type->toString().startsWith("RegisterAction<") ||
-                   di->type->toString().startsWith("DirectRegisterAction<") ||
-                   di->type->toString().startsWith("LearnAction<") ||
+        } else if (strstr(di->type->toString(), "Action<") ||
                    di->type->toString() == "selector_action") {
             auto salu = findAttachedSalu(di);
             // Could be because an earlier pass errored out, and we do not stop_on_error

@@ -903,7 +903,7 @@ bool DoTableLayout::preorder(IR::MAU::Selector *sel) {
         field_list->push_back(ixbar_read->expr);
     }
     auto *hd = new IR::MAU::HashDist(sel->srcInfo, IR::Type::Bits::get(SelectorHashModBits(sel)),
-                                     field_list, sel->algorithm, nullptr);
+                                     field_list, sel->algorithm);
     hd->bit_width = SelectorHashModBits(sel);
     sel->hash_mod = hd;
     return false;

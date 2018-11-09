@@ -78,9 +78,10 @@ Instruction *MinMax::Decode::decode(Table *tbl, const Table::Actions::Action *ac
     rv->slot = MINMAX;
     return rv;
 }
-Instruction *MinMax::pass1(Table *tbl_, Table::Actions::Action *) {
+Instruction *MinMax::pass1(Table *tbl_, Table::Actions::Action *act) {
     auto tbl = dynamic_cast<StatefulTable *>(tbl_);
     mask->pass1(tbl);
+    act->minmax_use = true;
     if (auto k = mask.to<operand::Const>()) {
         tbl->get_const(k->value);
     } else if (auto p = mask.to<operand::Phv>()) {

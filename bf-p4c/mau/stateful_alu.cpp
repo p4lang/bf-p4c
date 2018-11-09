@@ -798,6 +798,8 @@ CreateSaluInstruction::function_param_types = {
     {{ "LearnAction", "apply" },        { param_t::VALUE, param_t::HASH, param_t::LEARN,
                                           param_t::OUTPUT, param_t::OUTPUT,
                                           param_t::OUTPUT, param_t::OUTPUT }},
+    {{ "MinMaxAction", "apply" },       { param_t::VALUE, param_t::OUTPUT, param_t::OUTPUT,
+                                          param_t::OUTPUT, param_t::OUTPUT }},
 #endif
     {{ "selector_action", "apply" },    { param_t::VALUE, param_t::OUTPUT, param_t::OUTPUT,
                                           param_t::OUTPUT, param_t::OUTPUT }}
@@ -911,7 +913,7 @@ unsigned CheckStatefulAlu::AddressLmatchUsage::eval_cmp(const IR::Expression *e)
     }
 }
 
-bool CheckStatefulAlu::AddressLmatchUsage::preorder(const IR::MAU::SaluAction *inst) {
+bool CheckStatefulAlu::AddressLmatchUsage::preorder(const IR::MAU::SaluAction *) {
     inuse_mask = 0;
     return true;
 }

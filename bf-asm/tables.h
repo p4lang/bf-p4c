@@ -380,6 +380,7 @@ public:
             // table, as actions can be ordered in the map different from the
             // assembly order.
             int                                 position_in_assembly = -1;
+            bool                                minmax_use = false;  // jbay sful min/max
             Action(Table *, Actions *, pair_t &, int);
             Action(const char *n, int l) : name(n), lineno(l) {}
             Action(const Action &) = delete;

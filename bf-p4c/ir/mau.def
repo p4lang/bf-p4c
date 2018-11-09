@@ -727,13 +727,6 @@ class HashDist : Expression {
     Expression           field_list;
     hash_function        algorithm;
     int                  bit_width = 0;
-    // Pointer to the IR::Primitive that was used to generate this HashDist
-    // (and then removed).  This is not visited as part of IR traversal.
-    NullOK Primitive     prim;
-
-    visit_children {
-        Expression::visit_children(v);
-        v.visit(field_list, "field_list"); }
 }
 
 

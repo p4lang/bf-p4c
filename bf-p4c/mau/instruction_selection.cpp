@@ -51,8 +51,7 @@ const IR::Node *Synth2PortSetup::postorder(IR::Primitive *prim) {
     IR::MAU::MeterType meter_type = IR::MAU::MeterType::UNUSED;
 
     cstring method = dot ? cstring(dot+1) : prim->name;
-    if (objType == "RegisterAction" || objType == "DirectRegisterAction" ||
-        objType == "LearnAction" || objType == "selector_action") {
+    if (objType.endsWith("Action") || objType == "selector_action") {
         bool direct_access = (prim->operands.size() == 1 && method == "execute") ||
                              objType == "DirectRegisterAction" ||
                              method == "execute_direct";
@@ -578,7 +577,7 @@ const IR::Node *DoInstructionSelection::postorder(IR::Primitive *prim) {
         if (!algorithm.setup(decl->arguments->at(0)->expression))
             BUG("invalid hash algorithm %s", decl->arguments->at(0));
         auto *hd = new IR::MAU::HashDist(prim->srcInfo, IR::Type::Bits::get(size),
-                                         prim->operands[1], algorithm, prim);
+                                         prim->operands[1], algorithm);
         hd->bit_width = size;
         auto next_type = IR::Type::Bits::get(size);
         return new IR::MAU::Instruction(prim->srcInfo, "set", new IR::TempVar(next_type),
@@ -602,23 +601,21 @@ static const IR::Type *stateful_type_for_primitive(const IR::Primitive *prim) {
         prim->name == "Lpf.execute" || prim->name == "DirectLpf.execute" ||
         prim->name == "Wred.execute" || prim->name == "DirectWred.execute")
         return IR::Type_Meter::get();
-    if (prim->name.startsWith("RegisterAction.") ||
-        prim->name.startsWith("DirectRegisterAction.") ||
-        prim->name.startsWith("LearnAction.") || prim->name.startsWith("selector_action."))
+    if (strstr(prim->name, "Action.") || prim->name.startsWith("selector_action."))
         return IR::Type_Register::get();
     BUG("Not a stateful primitive %s", prim);
 }
 
 static ssize_t index_operand(const IR::Primitive *prim) {
-    if (prim->name.startsWith("Counter") || prim->name.startsWith("Meter") ||
-        prim->name == "RegisterAction.execute"|| prim->name == "LearnAction.execute")
+    if (prim->name.startsWith("Direct"))
+        return -1;
+    else if (prim->name.startsWith("Counter") || prim->name.startsWith("Meter") ||
+        prim->name.endsWith("Action.execute"))
         return 1;
-    else if (prim->name.startsWith("RegisterAction.") || prim->name.startsWith("LearnAction."))
+    else if (strstr(prim->name, "Action."))
         return -1;
     else if (prim->name.startsWith("Lpf") || prim->name.startsWith("Wred"))
         return 2;
-    else if (prim->name.startsWith("Direct"))
-        return -1;
     return 1;
 }
 
@@ -691,8 +688,7 @@ void StatefulAttachmentSetup::Scan::postorder(const IR::Primitive *prim) {
     auto dot = prim->name.find('.');
     auto objType = dot ? prim->name.before(dot) : cstring();
     cstring method = dot ? cstring(dot+1) : prim->name;
-    if (objType == "RegisterAction" || objType == "DirectRegisterAction" ||
-        objType == "LearnAction" || objType == "selector_action") {
+    if (objType.endsWith("Action") || objType == "selector_action") {
         obj = prim->operands.at(0)->to<IR::GlobalRef>()->obj->to<IR::MAU::StatefulAlu>();
         BUG_CHECK(obj, "invalid object");
         if (method == "execute") {
@@ -740,7 +736,7 @@ IR::MAU::HashDist *StatefulAttachmentSetup::create_hash_dist(const IR::Expressio
 
     int size = hash_field->type->width_bits();
     auto *hd = new IR::MAU::HashDist(prim->srcInfo, IR::Type::Bits::get(size), hash_field,
-                                     IR::MAU::hash_function::identity(), prim);
+                                     IR::MAU::hash_function::identity());
     hd->bit_width = size;
     return hd;
 }
@@ -783,6 +779,9 @@ void StatefulAttachmentSetup::Scan::setup_index_operand(const IR::Expression *in
 
     if (auto hd = self.find_hash_dist(index_expr, call->prim)) {
         HashDistKey hdk = std::make_pair(synth2port, tbl);
+        if (self.update_hd[hdk] && !self.update_hd[hdk]->equiv(*hd)) {
+            error("%sIncompatible attached indexing between actions in table %s",
+                  call->prim->srcInfo, tbl->name); }
         self.update_hd[hdk] = hd;
         index_expr = hd;
         if (self.addressed_by_index.count(index_check))
@@ -1030,7 +1029,7 @@ void MeterSetup::Update::update_pre_color(IR::MAU::Meter *mtr) {
     if (has_pre_color) {
         auto pre_color = self.update_pre_colors.at(orig_meter);
         auto hd = new IR::MAU::HashDist(pre_color->srcInfo, IR::Type::Bits::get(2), pre_color,
-                       IR::MAU::hash_function::identity(), nullptr);
+                       IR::MAU::hash_function::identity());
         hd->bit_width = 2;
         mtr->pre_color = hd;
     }

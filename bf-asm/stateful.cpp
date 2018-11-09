@@ -269,7 +269,10 @@ template<class REGS> void StatefulTable::write_action_regs(REGS &regs, const Act
     int meter_alu = layout[0].row/4U;
     auto &stateful_regs = regs.rams.map_alu.meter_group[meter_alu].stateful;
     auto &salu_instr_common = stateful_regs.salu_instr_common[act->code];
-    if (is_dual_mode()) {
+    if (act->minmax_use) {
+        salu_instr_common.salu_datasize = 7;
+        salu_instr_common.salu_op_dual = is_dual_mode();
+    } else if (is_dual_mode()) {
         salu_instr_common.salu_datasize = format->log2size - 1;
         salu_instr_common.salu_op_dual = 1; }
     else {

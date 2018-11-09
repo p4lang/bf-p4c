@@ -104,6 +104,7 @@ void CheckT2NAExternInvocation::init_pipe_constraints() {
     valid_in_mau.setbit(genIndex(INGRESS, MAU));
     valid_in_mau.setbit(genIndex(EGRESS, MAU));
     set_pipe_constraints("LearnAction", valid_in_mau);
+    set_pipe_constraints("MinMaxAction", valid_in_mau);
 
     bitvec valid_in_ghost;
     valid_in_ghost.setbit(genIndex(GHOST, MAU));

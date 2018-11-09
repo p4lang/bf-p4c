@@ -2926,7 +2926,7 @@ void IXBar::XBarHashDist::hash_action(const IR::MAU::Table *tbl) {
     }
 
     auto hd = new IR::MAU::HashDist(tbl->srcInfo, IR::Type::Bits::get(bits_required),
-                      field_list, IR::MAU::hash_function::identity(), nullptr);
+                      field_list, IR::MAU::hash_function::identity());
     for (auto ba : tbl->attached) {
         if (!(ba->attached && ba->attached->direct))
             continue;
