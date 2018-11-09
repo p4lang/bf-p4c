@@ -1,5 +1,57 @@
 # Release Notes
 
+## Version 8.5.0-pr.1
+**Slicing and dicing** release
+
+New features
+  - Better error messages and warnings cleanup
+  - Allow Selector Groups Larger than 120
+  - Add support for ValueSet in TNA P4Info & BF-RT JSON
+  - decaf: a deparser optimization of copy assigned fields
+  - Ensure minimum required egress latency is maintained for Tofino
+  - Generate context.json on assembler errors
+  - Use compiler-interfaces repository for JSON schemas
+
+Assembler
+  - Static entries support for ternary and range match
+  - Set the values for default selector mask and default selector value
+
+MAU
+  - Fix get functions on attached tables for Sram tables
+  - hash_action allocation
+  - Add saturating support
+  - Disable unused cmp alus in stateful alus
+  - Mix dleft in exact/ternary tables
+  - Action data bus allocation for meters
+  - Support @reduction_or_group annotation on stateful alu
+
+PHV
+  - Fix mocha/dark PHV allocation and handling of conditional constraints
+  - Live range shrinking pass with metadata initialization
+  - Add MAU constraints to slicing to prevent long-running loop
+  - Bridged metadata packing improvements and Metadata slice list slicing
+
+Parser/Deparser
+  - Collect "no_co_pack" constraint from deparser
+  - Initialize metadata fields in parser
+
+Primitives
+  - Support resubmit.emit() with no parameters
+
+Tofino2
+  - Change MirrorId_t to bit<8> and QueueId_t to bit<7>
+  - Implement D-left and LearnAction
+  - Fix CLOT 3-byte gap constraint
+
+Notable bug fixes
+  - Simplify comparisons of comparisons in CanonGatewayExpr
+  - Fix conditional checksum update
+  - Fix eg_intr_md.pkt_length translation
+  - Generate phase0 annotation for TNA programs
+  - Fixes for pgrs test
+  - Adjust egress packet length for mirrored packet
+  - Do no error out in Python driver if we run with -E
+
 ## Version 8.5.0-pr.0
 The **Share the Tofino P4 love** release
 
