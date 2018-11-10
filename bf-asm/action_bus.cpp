@@ -699,6 +699,9 @@ int ActionBus::find(Source src, int lo, int hi, int size, int *len) {
         // accessing it for 8- or 16- bit slots.
         // There should be a better way of doing this.
         if (src.type == Source::HashDist && size < 4) offset &= 15;
+        // FIXME -- Table Color is 8 bits which can be put in any byte of the output; we
+        // use the offset to say which byte
+        if (src.type == Source::TableColor) offset &= 7;
         if (offset > lo) continue;
         if (offset + (int)slot.second.size <= hi) continue;
         if (size && !(size & slot_sizes[slot.first/32U])) continue;
