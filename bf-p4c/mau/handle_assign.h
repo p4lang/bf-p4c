@@ -56,6 +56,16 @@ class AssignActionHandle : public PassManager {
         explicit AssignHandle(const AssignActionHandle &aah) : self(aah) { }
     };
 
+    class GuaranteeUniqueHandle : public MauInspector {
+        ordered_set<const IR::MAU::ActionData *> action_profiles;
+        std::map<unsigned, const IR::MAU::Action *> unique_handle;
+        profile_t init_apply(const IR::Node *root) override;
+        bool preorder(const IR::MAU::Action *) override;
+
+     public:
+        GuaranteeUniqueHandle() {}
+    };
+
     class ValidateSelectors : public MauInspector {
         ordered_map<const IR::MAU::Selector *, std::vector<PHV::FieldSlice>> selector_keys;
         ordered_map<const IR::MAU::Selector *, const IR::MAU::Table *> initial_table;
@@ -76,7 +86,8 @@ class AssignActionHandle : public PassManager {
             new ValidateSelectors(phv),
             new ActionProfileImposedConstraints,
             new DetermineHandle(*this),
-            new AssignHandle(*this)
+            new AssignHandle(*this),
+            new GuaranteeUniqueHandle
         });
     }
 };

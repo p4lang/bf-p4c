@@ -46,6 +46,8 @@ bool AssignActionHandle::ActionProfileImposedConstraints::preorder(const IR::MAU
 Visitor::profile_t AssignActionHandle::DetermineHandle::init_apply(const IR::Node *root) {
     profile_t rv = MauInspector::init_apply(root);
     handle_position = 0;
+    profile_assignments.clear();
+    self.handle_assignments.clear();
     return rv;
 }
 
@@ -143,6 +145,50 @@ bool AssignActionHandle::ValidateSelectors::preorder(const IR::MAU::Selector *se
                     "selector on table %s.  Barefoot requires the selector key to be identical "
                     "per selector", sel->srcInfo, sel->name, tbl->name, initial_table.at(sel));
         }
+    }
+    return false;
+}
+
+Visitor::profile_t AssignActionHandle::GuaranteeUniqueHandle::init_apply(const IR::Node *root) {
+    auto rv = MauInspector::init_apply(root);
+    unique_handle.clear();
+    action_profiles.clear();
+    return rv;
+}
+
+/**
+ * Ensures that an action handle is unique within a P4 program, as indicated by P4C-1154.
+ * 
+ */
+bool AssignActionHandle::GuaranteeUniqueHandle::preorder(const IR::MAU::Action *act) {
+    visitOnce();
+    auto tbl = findContext<IR::MAU::Table>();
+    const IR::MAU::ActionData *ad = nullptr;
+    for (auto ba : tbl->attached) {
+        ad = ba->attached->to<IR::MAU::ActionData>();
+        if (ad != nullptr)
+            break;
+    }
+
+    if (ad != nullptr) {
+        if (action_profiles.count(ad)) {
+            auto pos = unique_handle.find(act->handle);
+            if (pos != unique_handle.end() && pos->second->name != act->name) {
+                BUG("On action profile %s action %s has a bad handle collision", ad->name,
+                    act->name);
+            }
+            return false;
+        } else {
+            action_profiles.insert(ad);
+        }
+    }
+
+
+    auto pos = unique_handle.find(act->handle);
+    if (pos != unique_handle.end()) {
+        BUG("Actions %s and %s were assigned the same handle", pos->second->name, act->name);
+    } else {
+        unique_handle[act->handle] = act;
     }
     return false;
 }
