@@ -83,6 +83,8 @@ void ActionAnalysis::initialize_action_data(const IR::Expression *expr) {
         field_action.reads.back().speciality = ActionParam::HASH_DIST;
     if (field_action.reads.back().unsliced_expr()->is<IR::MAU::StatefulCounter>())
         field_action.reads.back().speciality = ActionParam::STFUL_COUNTER;
+    if (field_action.reads.back().unsliced_expr()->is<IR::MAU::RandomNumber>())
+        field_action.reads.back().speciality = ActionParam::RANDOM;
 }
 
 ActionAnalysis::ActionParam::speciality_t
@@ -123,10 +125,10 @@ const IR::Expression *ActionAnalysis::isActionParam(const IR::Expression *e,
         if (bits_out)
             *bits_out = bits;
         if ((e->is<IR::MAU::ActionArg>() || e->is<IR::MAU::AttachedOutput>()
-            || e->is<IR::MAU::HashDist>() || e->is<IR::MAU::RandomNumber>()
-            || e->is<IR::MAU::StatefulCounter>()) && type)
+             || e->is<IR::MAU::HashDist>() || e->is<IR::MAU::StatefulCounter>()
+             || e->is<IR::MAU::RandomNumber>()) && type)
             *type = ActionParam::ACTIONDATA;
-        if (e->is<IR::MAU::ActionDataConstant>() && type)
+        else if (e->is<IR::MAU::ActionDataConstant>() && type)
             *type = ActionParam::CONSTANT;
         return e;
     }
@@ -561,7 +563,6 @@ bool ActionAnalysis::init_ad_alloc_alignment(const ActionParam &read, ContainerA
     else if (type == ActionParam::CONSTANT)
         arg_name = action_arg->to<IR::MAU::ActionDataConstant>()->name;
 
-
     ActionFormat::ArgKey ak;
     ak.init(arg_name, read_range.lo, action_format.phv_alloc, container, write_bits.lo);
 
@@ -817,7 +818,7 @@ bitvec ActionAnalysis::ContainerAction::total_write() const {
  *
  * The unused_container_bits are bits that are not live at the same time of any bits of
  * fields in the same container, and thus can be written to.
- * 
+ *
  * For the deposit-field src1, the written bits must be a lo to hi that is contiguous
  * on the write bits.  For deposit-field src2, the opposite is true, as the write must
  * contain a single contiguous hole.
