@@ -178,7 +178,7 @@ struct CollectUpdateChecksums : public Inspector {
     bool preorder(const IR::AssignmentStatement* assignment) {
         auto csum = analyzeUpdateChecksumStatement(assignment);
 
-        if (checksums.count(csum->dest))
+        if (csum && checksums.count(csum->dest))
             csum = checksums.at(csum->dest);
 
         if (csum) {

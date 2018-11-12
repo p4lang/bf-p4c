@@ -333,7 +333,7 @@ p4c_add_xfail_reason("tofino"
   smoketest_switch_l3_heavy_spine_dtel_MirrorOnDropIngressAclTest
   smoketest_switch_l3_heavy_spine_dtel_MirrorOnDropNonDefaultRuleTest
   smoketest_switch_l3_heavy_spine_dtel_INTL45_Transit_IngressMoDTest
-  smoketest_switch_l3_heavy_spine_dtel_intl45_transitTest_hop2_stateless 
+  smoketest_switch_l3_heavy_spine_dtel_intl45_transitTest_hop2_stateless
   smoketest_switch_l3_heavy_spine_dtel_MirrorOnDropEgrNonDefaultRuleTest
   smoketest_switch_l3_heavy_spine_dtel_sai_INGRESS_DROP_REPORT_Test
   smoketest_switch_marker_spine_dtel_intl45_transitTest_hop2_with_digest
@@ -1224,9 +1224,9 @@ p4c_add_xfail_reason("tofino"
 )
 
 # P4C-1059
-# Compiler Bug: Exiting with SIGSEGV
+# Expected failure
 p4c_add_xfail_reason("tofino"
-  "Exiting with SIGSEGV"
+  "error: Output of checksum calculation can only be stored in a 16-bit field"
   extensions/p4_tests/p4_14/p4smith_regression/tofino-bug-1.p4
 )
 
@@ -1393,4 +1393,3 @@ p4c_add_xfail_reason("tofino"
   "No casts should ever reach this point in the Tofino backend"
   extensions/p4_tests/p4_14/p4smith_regression/clue_0.p4
 )
-
