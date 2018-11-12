@@ -39,6 +39,9 @@ class PackConflicts : public Inspector {
     /// Populate the tableActions and actionWrites maps
     bool preorder(const IR::MAU::Action *act) override;
 
+    /// Populate noPack constraints related to learning digests.
+    bool preorder(const IR::BFN::Digest* digest) override;
+
     /// Once the initial information is gathered, generate actual no pack constraints
     void end_apply() override;
 

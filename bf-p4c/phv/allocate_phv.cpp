@@ -1908,6 +1908,11 @@ BruteForceAllocationStrategy::slice_clusters(
             while (!it.done()) {
                 pa_container_sizes.adjust_requirements(*it);
                 unsatisfiable_fields = pa_container_sizes.unsatisfiable_fields(*it);
+                if (unsatisfiable_fields.size() > 0) {
+                    LOG6("Found " << unsatisfiable_fields.size() << " unsatisfiable fields.");
+                    for (const auto* f : unsatisfiable_fields)
+                        LOG6("\t" << f);
+                }
                 if (unsatisfiable_fields.size() == 0) {
                     break; }
                 ++it; }
@@ -1942,7 +1947,10 @@ BruteForceAllocationStrategy::slice_clusters(
                 rst.push_back(new_sc); }
         } else {
             unsatisfiable_fields = pa_container_sizes.unsatisfiable_fields({ sc });
+            if (unsatisfiable_fields.size() > 0)
+                LOG6("Found " << unsatisfiable_fields.size() << " unsatisfiable fields.");
             for (const auto* f : unsatisfiable_fields) {
+                LOG6("\t" << f);
                 if (meter_color_dests.count(f)) {
                     if (f->size > 8)
                         P4C_UNIMPLEMENTED("Currently the compiler only supports allocation "

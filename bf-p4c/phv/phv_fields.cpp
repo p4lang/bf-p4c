@@ -1271,6 +1271,8 @@ class CollectPardeConstraints : public Inspector {
                                 << FieldAlignment(le_bitrange(StartLen(0, fieldInfo->size))));
                         fieldInfo->updateAlignment(
                                 FieldAlignment(le_bitrange(StartLen(0, fieldInfo->size))));
+                        if (fieldInfo->size % 8 == 0)
+                            fieldInfo->set_exact_containers(true);
                         LOG3(fieldInfo << " is marked to be byte_aligned "
                              "because it's in a field_list and digested.");
                     }

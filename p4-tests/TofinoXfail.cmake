@@ -136,11 +136,6 @@ if (PTF_REQUIREMENTS_MET)
     fabric-DWITH_SPGW-DWITH_INT_TRANSIT
     )
 
-  p4c_add_xfail_reason("tofino"
-    "tofino supports up to 12 stages, using 13"
-    fabric-new-DWITH_SPGW
-    )
-
   # broken test: https://github.com/barefootnetworks/p4examples/issues/5
   p4c_add_xfail_reason("tofino"
     "SyntaxError: invalid syntax"
@@ -280,12 +275,12 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
+  switch_msdc_ipv4
+  switch_8.4_msdc_ipv4
   )
 
 p4c_add_xfail_reason("tofino"
   "No tables placeable, but not all tables placed?"
-  switch_8.4_msdc_ipv4
-  switch_msdc_ipv4
   switch_msdc_spine_int
   )
 

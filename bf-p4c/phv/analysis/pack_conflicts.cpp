@@ -32,6 +32,43 @@ bool PackConflicts::preorder(const IR::MAU::Action *act) {
     return true;
 }
 
+bool PackConflicts::preorder(const IR::BFN::Digest* digest) {
+    // The no-pack constraint on metadata fields used in learning digests is not applicable to JBay.
+    if (Device::currentDevice() != Device::TOFINO) return true;
+    // Currently we support only three digests: learning, mirror, and resubmit.
+    if (digest->name != "learning" && digest->name != "mirror" && digest->name != "resubmit")
+        return true;
+    LOG3("    Determining constraints for " << digest->name << " digest.");
+    SymBitMatrix digestPackOkay;
+    ordered_set<const PHV::Field*> allDigestFields;
+    // For fields that are not part of the same digest field lists, set the no-pack constraint.
+    for (auto fieldList : digest->fieldLists) {
+        for (auto flval1 : fieldList->sources) {
+            const auto* f1 = phv.field(flval1->field);
+            // Apply the constraint only to metadata fields.
+            if (!f1->metadata && !f1->bridged) continue;
+            allDigestFields.insert(f1);
+            for (auto flval2 : fieldList->sources) {
+                if (flval1 == flval2) continue;
+                const auto* f2 = phv.field(flval2->field);
+                // Apply the constraint only to metadata fields.
+                if (!f2->metadata && !f2->bridged) continue;
+                // Fields within the same digest field list. So, packing them together is okay.
+                digestPackOkay(f1->id, f2->id) = true; } } }
+
+    // Set no pack for fields not marked digest pack okay.
+    for (const auto* digestField : allDigestFields) {
+        for (const auto& f : phv) {
+            if (digestField == &f) continue;
+            if (digestPackOkay(digestField->id, f.id)) continue;
+            if (f.alwaysPackable || f.isCompilerGeneratedPaddingField()) continue;
+            LOG3("\t  Setting no-pack for digest field " << digestField->name << " and "
+                 "non-digest field " << f.name);
+            fieldNoPack(digestField->id, f.id) = true; } }
+
+    return true;
+}
+
 void PackConflicts::end_apply() {
     for (auto row1 : tableActions) {
         for (auto row2 : tableActions) {
