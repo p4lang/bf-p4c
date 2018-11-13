@@ -368,7 +368,7 @@ ordered_map<const IR::StructField*, int> PackBridgedMetadata::packWithField(
         const std::vector<const IR::StructField*>& candidates,
         const ordered_set<const PHV::Field*>& alreadyPackedFields,
         const ordered_map<const IR::StructField*, le_bitrange>& alignmentConstraints,
-        const ordered_set<const IR::StructField*>& conflictingAlignmentConstraints,
+        const ordered_map<const IR::StructField*, std::set<int>>& conflictingAlignmentConstraints,
         const SymBitMatrix& mustPack) const {
     static ordered_map<const IR::StructField*, int> emptyMap;
     ordered_map<const IR::StructField*, int> rv;
@@ -419,7 +419,7 @@ ordered_map<const IR::StructField*, int> PackBridgedMetadata::packWithField(
                  field2->name);
             continue; }
         if (conflictingAlignmentConstraints.count(f2)) {
-            LOG4("\t\tG. Detected field with conflicting alignment requirements " << field2->name);
+            LOG5("\t\tG. Detected field with conflicting alignment requirements " << field2->name);
             continue; }
         bool packingOkay = true;
         // Ensure that the field under consideration can be packed with every other field in the
@@ -580,7 +580,7 @@ void PackBridgedMetadata::determineAlignmentConstraints(
         const IR::Header* h,
         const std::vector<const IR::StructField*>& nonByteAlignedFields,
         ordered_map<const IR::StructField*, le_bitrange>& alignmentConstraints,
-        ordered_set<const IR::StructField*>& conflictingAlignmentConstraints,
+        ordered_map<const IR::StructField*, std::set<int>>& conflictingAlignmentConstraints,
         ordered_set<const IR::StructField*>& mustAlignFields) {
     for (auto structField : nonByteAlignedFields) {
         ordered_set<const PHV::Field*> relatedFields;
@@ -603,7 +603,8 @@ void PackBridgedMetadata::determineAlignmentConstraints(
             if (alignmentConstraints.count(structField)) {
                 ::warning("Alignment constraint already present for field %1%: %2%", structField,
                         alignmentConstraints.at(structField).lo);
-                conflictingAlignmentConstraints.insert(structField);
+                conflictingAlignmentConstraints[structField].insert(
+                        alignmentConstraints.at(structField).lo);
             } else {
                 alignmentConstraints[structField] = le_bitrange(StartLen(0, field->size));
                 LOG4("\t\tDetected deparser parameter alignment: "  <<
@@ -666,19 +667,30 @@ void PackBridgedMetadata::determineAlignmentConstraints(
                                "Conflicting alignment constraints detected for bridged field %1%"
                                ": %2%, %3%", field->name, f->alignment->littleEndian,
                                alignSource->alignment->littleEndian);
-                    conflictingAlignmentConstraints.insert(structField);
+                    conflictingAlignmentConstraints[structField].insert(f->alignment->littleEndian);
+                    conflictingAlignmentConstraints[structField].insert(
+                            alignSource->alignment->littleEndian);
                     LOG5("\t\t  Conflicting alignment constraint detected for " << structField);
                     continue; }
                 fieldAlignmentMap[field] = f;
                 le_bitrange alignment = StartLen(f->alignment->littleEndian, f->size);
                 alignmentConstraints[structField] = alignment; } } }
     if (LOGGING(4)) {
-        LOG4("\tPrinting bridged fields with alignment constraints:");
-        for (auto kv : alignmentConstraints)
-            LOG4("\t  " << kv.first << " : " << kv.second);
-        LOG4("\tPrinting bridged fields with conflicting constraints:");
-        for (auto f : conflictingAlignmentConstraints)
-            LOG4("\t  " << f);
+        if (alignmentConstraints.size() > 0) {
+            LOG4("\tPrinting bridged fields with alignment constraints:");
+            for (auto kv : alignmentConstraints)
+                LOG4("\t  " << kv.first << " : " << kv.second);
+        }
+        if (conflictingAlignmentConstraints.size() > 0) {
+            LOG4("\tPrinting bridged fields with conflicting constraints:");
+            for (auto kv : conflictingAlignmentConstraints) {
+                std::stringstream ss;
+                ss << "\t  " << kv.first->name << " : ";
+                for (auto pos : kv.second)
+                    ss << pos << " ";
+                LOG4(ss.str());
+            }
+        }
     }
 }
 
@@ -774,7 +786,7 @@ IR::Node* PackBridgedMetadata::preorder(IR::Header* h) {
 
     // Determine nonbyte-aligned bridged fields with alignment constraints.
     ordered_map<const IR::StructField*, le_bitrange> alignmentConstraints;
-    ordered_set<const IR::StructField*> conflictingAlignmentConstraints;
+    ordered_map<const IR::StructField*, std::set<int>> conflictingAlignmentConstraints;
     ordered_set<const IR::StructField*> mustAlignFields;
     determineAlignmentConstraints(h, nonByteAlignedFields, alignmentConstraints,
             conflictingAlignmentConstraints, mustAlignFields);
@@ -838,9 +850,36 @@ IR::Node* PackBridgedMetadata::preorder(IR::Header* h) {
         // Total number of bits in this required packing.
         int totalPackSize = 0;
         int totalAllocatedSize = 0;
+
         for (auto kv : packingWithPositions)
             totalAllocatedSize += kv.first->type->width_bits();
         totalPackSize = 8 * ROUNDUP(totalAllocatedSize, 8);
+
+        // Fields with conflicting alignment are always packed by themselves.
+        if (packingWithPositions.size() == 1) {
+            for (auto kv : packingWithPositions) {
+                if (!conflictingAlignmentConstraints.count(kv.first)) break;
+                cstring conflictingName = getFieldName(h, kv.first);
+                const PHV::Field* conflictingField = phv.field(conflictingName);
+                BUG_CHECK(conflictingField, "No field object for conflicting field %1%",
+                          conflictingName);
+                LOG4("\t\t  Field " << conflictingField->name << " has conflicting alignment.");
+                int maxSpaceRequired = -1;
+                // For fields with conflicting alignment, check if any of the potential alignments
+                // require the field to be packed in a chunk that is larger than the next
+                // byte-aligned chunk size. The required size is represented by the maxSpaceRequired
+                // variable.
+                std::set<int> conflictingPositions = conflictingAlignmentConstraints.at(kv.first);
+                for (int pos : conflictingPositions) {
+                    int req = pos + conflictingField->size;
+                    maxSpaceRequired = (maxSpaceRequired < req) ? req : maxSpaceRequired;
+                }
+                totalPackSize = 8 * ROUNDUP(maxSpaceRequired, 8);
+                LOG4("\t\t  Need " << maxSpaceRequired << " bits for field " <<
+                     conflictingField->name << " with conflicting alignment constraints.");
+            }
+        }
+
         LOG3("\t\tTrying to pack " << totalAllocatedSize << " bits within " << totalPackSize <<
                 " bits.");
         ordered_set<int> freeBits;

@@ -171,7 +171,8 @@ class PackBridgedMetadata : public Transform, public TofinoWriteContext {
             const std::vector<const IR::StructField*>& candidates,
             const ordered_set<const PHV::Field*>& alreadyPackedFields,
             const ordered_map<const IR::StructField*, le_bitrange>& alignmentConstraints,
-            const ordered_set<const IR::StructField*>& conflictingAlignmentConstraints,
+            const ordered_map<const IR::StructField*, std::set<int>>&
+                conflictingAlignmentConstraints,
             const SymBitMatrix& mustPack) const;
 
     /// Given the map of alignment constraints for fields @alignmentConstraints, a set of
@@ -195,7 +196,7 @@ class PackBridgedMetadata : public Transform, public TofinoWriteContext {
             const IR::Header* h,
             const std::vector<const IR::StructField*>& nonByteAlignedFields,
             ordered_map<const IR::StructField*, le_bitrange>& alignmentConstraints,
-            ordered_set<const IR::StructField*>& conflictingAlignmentConstraints,
+            ordered_map<const IR::StructField*, std::set<int>>& conflictingAlignmentConstraints,
             ordered_set<const IR::StructField*>& mustAlignFields);
 
     /// @returns all the actions in which both @field1 and @field2 are accessed. @returns an empty
