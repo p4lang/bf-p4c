@@ -547,21 +547,22 @@ void Visualization::gen_memories(unsigned int stage, Util::JsonObject *parent) {
             case Memories::Use::METER:
             case Memories::Use::STATEFUL:
             case Memories::Use::SELECTOR:
-                for (auto &r : memuse.row) {
+                // meters and stats
+                if (!memuse.home_row.empty()) {
                     auto *item = new Util::JsonObject();
-                    item->emplace("row", new Util::JsonValue(r.row));
+                    item->emplace("row", new Util::JsonValue(memuse.home_row.at(0).first/2));
                     usagesToCtxJson(item, p4name(res).c_str(), memTypeName);
-                    if (r.row % 2 == 0) statistics_alus->append(item);
-                    else                jmeter_alus->append(item);
+                    if (memuse.type == Memories::Use::COUNTER) statistics_alus->append(item);
+                    else                                       jmeter_alus->append(item);
                 }
-
+                // rams and map rams
                 for (auto &r : memuse.row) {
                     for (auto &c : r.col)
                         mkItem(rams, p4name(res) + ext, memTypeName, r.row, c, "column");
                     for (auto c : r.mapcol)
                         mkItem(map_rams, p4name(res) + ext, memTypeName, r.row, c, "unit_id");
                 }
-
+                // color map rams
                 for (auto &r : memuse.color_mapram)
                     for (auto &col : r.col)
                         mkItem(map_rams, p4name(res) + ext, memTypeName, r.row, col, "unit_id");

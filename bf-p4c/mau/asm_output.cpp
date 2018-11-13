@@ -1102,7 +1102,7 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
     for (auto r : mem.home_row) {
         home_row.push_back(r.first);
     }
-    if (!home_row.empty()) {
+    if (mem.type == Memories::Use::ACTIONDATA && !home_row.empty()) {
         if (home_row.size() > 1)
             out << indent << "home_row: " << home_row << std::endl;
         else

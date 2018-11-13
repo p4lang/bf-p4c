@@ -481,7 +481,7 @@ void Memories::set_logical_memuse_type(table_alloc *ta, Use::type_t type) {
             auto unique_id = ta->build_unique_id(nullptr, false, lt);
             (*ta->memuse)[unique_id].type = type; }
     } else if (type == Use::ATCAM) {
-        for (int lt = 0; lt < ta->layout_option->partition_sizes.size(); lt++) {
+        for (unsigned lt = 0; lt < ta->layout_option->partition_sizes.size(); lt++) {
             auto unique_id = ta->build_unique_id(nullptr, false, lt);
             (*ta->memuse)[unique_id].type = type; }
     } else {
@@ -2430,6 +2430,7 @@ void Memories::fill_RAM_use(swbox_fill &candidate, int row, RAM_side_t side, swi
     } else if (type == SYNTH) {
         BUG_CHECK(side == RIGHT, "Allocating Synth2Port table on left side of RAM array");
         twoport_bus[row] = name;
+        alloc.home_row.emplace_back(2*row+side, candidate.group->number);
         alloc.row.emplace_back(row);
     } else if (type == ACTION) {
         action_data_bus[row][side] = name;
@@ -3218,7 +3219,7 @@ bool Memories::allocate_all_no_match_gw() {
  *
  *  This list goes from least to most complex, specifically:
  *  1.  Reserve gateway unit, search bus, result bus, payload
- *  2.  Reserve gateway unit, search bus 
+ *  2.  Reserve gateway unit, search bus
  *  3.  Reserve gateway unit, result bus, payload (if the gateway has no search data)
  *  4.  Reserve gateway unit, result bus
  *  3.  Reserve gateway unit (if the gateway has no search data)
