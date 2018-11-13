@@ -55,6 +55,9 @@ std::ostream &operator<<(std::ostream &out, const MauAsmOutput &mauasm) {
                     stage.first.first /* gress */);
         }
     }
+    if (mauasm.by_stage.empty()) {
+        // minimal pipe config for empty program
+        out << "stage 0 ingress: {}" << std::endl; }
     return out;
 }
 

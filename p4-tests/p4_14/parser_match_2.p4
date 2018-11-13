@@ -38,7 +38,7 @@ parser parse_boring {
     return ingress;
 }
 
-#define P4C_1010_WORKAROUND
+// #define P4C_1010_WORKAROUND
 #ifdef P4C_1010_WORKAROUND
 action noop() { }
 action setb1(val, port) {
