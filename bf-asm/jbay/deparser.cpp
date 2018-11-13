@@ -34,6 +34,10 @@
     DEPARSER_INTRINSIC(JBay, INGRESS, NAME, 1) {                                                \
         JBAY_ARRAY_INTRINSIC(INGRESS, intrin.vals[0], regs.dprsrreg.ho_i, hir.meta.m_##NAME,    \
                              regs.dprsrreg.inp.icr.ingr_meta_pov.m_##NAME, IFSHIFT) }
+#define HO_I_INTRINSIC_RENAME(NAME, REGNAME, IFSHIFT)                                           \
+    DEPARSER_INTRINSIC(JBay, INGRESS, NAME, 1) {                                                \
+        JBAY_ARRAY_INTRINSIC(INGRESS, intrin.vals[0], regs.dprsrreg.ho_i, hir.meta.m_##REGNAME, \
+                             regs.dprsrreg.inp.icr.ingr_meta_pov.m_##REGNAME, IFSHIFT) }
 
 EI_INTRINSIC(drop_ctl, YES)
 EI_INTRINSIC(egress_unicast_port, NO)
@@ -74,9 +78,11 @@ HO_I_INTRINSIC(mirr_mc_ctrl, YES)
 HO_I_INTRINSIC(mirr_qid, YES)
 HO_I_INTRINSIC(mtu_trunc_err_f, YES)
 HO_I_INTRINSIC(mtu_trunc_len, YES)
-HO_I_INTRINSIC(pkt_color, YES)
 HO_I_INTRINSIC(qid, YES)
 HO_I_INTRINSIC(rid, YES)
+HO_I_INTRINSIC_RENAME(meter_color, pkt_color, YES)
+HO_I_INTRINSIC_RENAME(xid, xid_l1, YES)
+HO_I_INTRINSIC_RENAME(yid, xid_l2, YES)
 
 DEPARSER_INTRINSIC(JBay, INGRESS, egress_multicast_group, 2) {
     int idx = 0;
@@ -97,20 +103,6 @@ DEPARSER_INTRINSIC(JBay, INGRESS, hash_lag_ecmp_mcast, 2) {
         case 2:
             JBAY_ARRAY_INTRINSIC(INGRESS, v, regs.dprsrreg.ho_i, hir.meta.m_hash2,
                                  regs.dprsrreg.inp.icr.ingr_meta_pov.m_hash2, YES)
-            break;
-        default:
-            BUG(); } } }
-DEPARSER_INTRINSIC(JBay, INGRESS, xid, 2) {
-    int idx = 0;
-    for (auto &v : intrin.vals) {
-        switch (++idx) {
-        case 1:
-            JBAY_ARRAY_INTRINSIC(INGRESS, v, regs.dprsrreg.ho_i, hir.meta.m_xid_l1,
-                                 regs.dprsrreg.inp.icr.ingr_meta_pov.m_xid_l1, YES)
-            break;
-        case 2:
-            JBAY_ARRAY_INTRINSIC(INGRESS, v, regs.dprsrreg.ho_i, hir.meta.m_xid_l2,
-                                 regs.dprsrreg.inp.icr.ingr_meta_pov.m_xid_l2, YES)
             break;
         default:
             BUG(); } } }

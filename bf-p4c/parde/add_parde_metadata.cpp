@@ -110,14 +110,7 @@ void AddDeparserMetadataShims::addIngressMetadata(IR::BFN::Deparser *d) {
     addDeparserParam(d, tmMeta, "qid", "qid");
     addDeparserParam(d, tmMeta, "icos_for_copy_to_cpu", "copy_to_cpu_cos");
     addDeparserParam(d, tmMeta, "copy_to_cpu", "copy_to_cpu");
-
-    if (Device::currentDevice() == Device::TOFINO)
-        addDeparserParam(d, tmMeta, "packet_color", "meter_color");
-#if HAVE_JBAY
-    else if (Device::currentDevice() == Device::JBAY)
-        addDeparserParam(d, tmMeta, "packet_color", "pkt_color");
-#endif
-
+    addDeparserParam(d, tmMeta, "packet_color", "meter_color");
     addDeparserParam(d, tmMeta, "disable_ucast_cutthru", "ct_disable");
     addDeparserParam(d, tmMeta, "enable_mcast_cutthru", "ct_mcast");
     addDeparserParam(d, tmMeta, "mcast_grp_a", "mcast_grp_a", /* canPack = */ false);

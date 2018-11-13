@@ -734,7 +734,7 @@ deparser <thread>:
     meter_color: <phv-location> [ ':' <pov-bit> ]
     icos: <phv-location> [ ':' <pov-bit> ]
     qid: <phv-location> [ ':' <pov-bit> ]
-    xid: <phv-location>
+    xid: <phv-location> [ ':' <pov-bit> ] 
     yid: <phv-location> [ ':' <pov-bit> ]
     rid: <phv-location> [ ':' <pov-bit> ]
     warp: <phv-location> [ ':' <pov-bit> ]
@@ -742,7 +742,6 @@ deparser <thread>:
     ct_mcast: <phv-location> [ ':' <pov-bit> ]
     # jbay ingress only
     bypass_egr: '{' <phv->location> ':' <pov-bit> '}'
-    pkt_color: '{' <phv->location> ':' <pov-bit> '}'
     # egress only deparser params: [ ':' <pov-bit> ]
     force_tx_err: <phv-location> [ ':' <pov-bit> ]
     tx_pkt_has_offsets: <phv-location> [ ':' <pov-bit> ]

@@ -181,13 +181,6 @@ struct OutputParameters : public Inspector {
             hashLagECMP.push_back(param);
             return false;
         }
-#if HAVE_JBAY
-        if (Device::currentDevice() == Device::JBAY &&
-              (param->name == "xid" || param->name == "yid")) {
-            exclusionId.push_back(param);
-            return false;
-        }
-#endif
         out << indent << param->name << ": ";
         outputParamSource(param);
         outputDebugInfo(out, indent, param->source, param->povBit) << std::endl;
@@ -198,7 +191,6 @@ struct OutputParameters : public Inspector {
     void postorder(const IR::BFN::LoweredDeparser*) override {
         outputParamGroup("egress_multicast_group", egMulticastGroup);
         outputParamGroup("hash_lag_ecmp_mcast", hashLagECMP);
-        outputParamGroup("xid", exclusionId);
     }
 
  private:
