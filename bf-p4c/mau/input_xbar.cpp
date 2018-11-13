@@ -1909,6 +1909,12 @@ void IXBar::write_hash_use(int max_group, int max_single_bit, unsigned hash_tabl
  */
 bool IXBar::allocSelector(const IR::MAU::Selector *as, const IR::MAU::Table *tbl,
                           const PhvInfo &phv, Use &alloc, cstring name) {
+    auto pos = allocated_attached.find(as);
+    if (pos != allocated_attached.end()) {
+        alloc = pos->second;
+        return true;
+    }
+
     safe_vector<IXBar::Use::Byte *>  alloced;
     ContByteConversion map_alloc;
     std::map<cstring, bitvec>        fields_needed;
@@ -2044,6 +2050,12 @@ bool IXBar::can_allocate_on_search_bus(IXBar::Use &alloc, const PHV::Field *fiel
  */
 bool IXBar::allocMeter(const IR::MAU::Meter *mtr, const IR::MAU::Table *tbl, const PhvInfo &phv,
                        Use &alloc, bool on_search_bus) {
+    auto pos = allocated_attached.find(mtr);
+    if (pos != allocated_attached.end()) {
+        alloc = pos->second;
+        return true;
+    }
+
     if (!mtr->alu_output())
         return true;
     if (mtr->input == nullptr)
@@ -2315,6 +2327,12 @@ bool IXBar::setup_stateful_hash_bus(const IR::MAU::StatefulAlu *salu, Use &alloc
  */
 bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu, const IR::MAU::Table *tbl,
                           const PhvInfo &phv, Use &alloc, bool on_search_bus) {
+    auto pos = allocated_attached.find(salu);
+    if (pos != allocated_attached.end()) {
+        alloc = pos->second;
+        return true;
+    }
+
     ContByteConversion map_alloc;
     ordered_set<std::pair<const PHV::Field *, le_bitrange>> phv_sources;
     bool dleft = false;
@@ -3202,6 +3220,41 @@ void IXBar::update(cstring name, const Use &alloc) {
     }
 }
 
+void IXBar::update(const IR::MAU::Table *tbl, const TableResourceAlloc *rsrc) {
+    const IR::MAU::Selector *as = nullptr;
+    const IR::MAU::Meter *mtr = nullptr;
+    const IR::MAU::StatefulAlu *salu = nullptr;
+
+    for (auto ba : tbl->attached) {
+        if (auto as_p = ba->attached->to<IR::MAU::Selector>())
+            as = as_p;
+        if (auto mtr_p = ba->attached->to<IR::MAU::Meter>())
+            mtr = mtr_p;
+        if (auto salu_p = ba->attached->to<IR::MAU::StatefulAlu>())
+            salu = salu_p;
+    }
+
+    auto name = tbl->name;
+    if (as && (allocated_attached.count(as) == 0)) {
+        update(name + "$select", rsrc->selector_ixbar);
+        allocated_attached.emplace(as, rsrc->selector_ixbar);
+    }
+    if (mtr && (allocated_attached.count(mtr) == 0)) {
+        update(name + "$mtr", rsrc->meter_ixbar);
+        allocated_attached.emplace(mtr, rsrc->meter_ixbar);
+    }
+    if (salu && (allocated_attached.count(salu) == 0)) {
+        update(name + "$salu", rsrc->salu_ixbar);
+        allocated_attached.emplace(salu, rsrc->salu_ixbar);
+    }
+
+    update(name + "$gw", rsrc->gateway_ixbar);
+    update(name, rsrc->match_ixbar);
+    int index = 0;
+    for (auto hash_dist : rsrc->hash_dists)
+        update(name + "$hash_dist" + std::to_string(index++), hash_dist.use);
+}
+
 void IXBar::update(const IR::MAU::Table *tbl) {
     if (tbl->for_dleft() && tbl->is_placed()) {
         auto orig_name = tbl->name.before(tbl->name.findlast('$'));
@@ -3210,18 +3263,7 @@ void IXBar::update(const IR::MAU::Table *tbl) {
         dleft_updates.emplace(orig_name);
     }
     if (tbl->is_placed())
-        update(tbl->name, tbl->resources);
-}
-
-void IXBar::update(cstring name, const TableResourceAlloc *rsrc) {
-    update(name + "$register", rsrc->salu_ixbar);
-    update(name + "$meter", rsrc->meter_ixbar);
-    update(name + "$select", rsrc->selector_ixbar);
-    update(name + "$gw", rsrc->gateway_ixbar);
-    update(name, rsrc->match_ixbar);
-    int index = 0;
-    for (auto hash_dist : rsrc->hash_dists)
-        update(name + "$hash_dist" + std::to_string(index++), hash_dist.use);
+        update(tbl, tbl->resources);
 }
 
 static void replace_name(cstring n, std::map<cstring, char> &names) {

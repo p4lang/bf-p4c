@@ -609,6 +609,8 @@ struct IXBar {
         }
     };
 
+    ordered_map<const IR::MAU::AttachedMemory *, const IXBar::Use &> allocated_attached;
+
 
     void clear();
     void field_management(ContByteConversion &map_alloc,
@@ -640,7 +642,8 @@ struct IXBar {
     bool allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResourceAlloc &alloc,
                     const LayoutOption *lo, const ActionFormat::Use *af);
     void update(cstring name, const Use &alloc);
-    void update(cstring name, const TableResourceAlloc *alloc);
+    void update(const IR::MAU::Table *tbl, const TableResourceAlloc *rsrc);
+    // void update(cstring name, const TableResourceAlloc *alloc);
     void update(const IR::MAU::Table *tbl);
     friend std::ostream &operator<<(std::ostream &, const IXBar &);
     const Loc *findExactByte(cstring name, int byte) const {

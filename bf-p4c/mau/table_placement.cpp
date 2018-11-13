@@ -415,7 +415,7 @@ bool TablePlacement::try_alloc_ixbar(TablePlacement::Placed *next,
     resources->clear_ixbar();
     IXBar current_ixbar;
     for (auto *p = done; p && p->stage == next->stage; p = p->prev) {
-        current_ixbar.update(p->name, p->resources);
+        current_ixbar.update(p->table, p->resources);
     }
 
     if (!current_ixbar.allocTable(next->table, phv, *resources, next->use.preferred(),
@@ -432,10 +432,10 @@ bool TablePlacement::try_alloc_ixbar(TablePlacement::Placed *next,
 
     IXBar verify_ixbar;
     for (auto *p = done; p && p->stage == next->stage; p = p->prev) {
-        verify_ixbar.update(p->name, p->resources);
+        verify_ixbar.update(p->table, p->resources);
     }
 
-    verify_ixbar.update(next->name, resources);
+    verify_ixbar.update(next->table, resources);
     return true;
 }
 
@@ -597,37 +597,6 @@ bool TablePlacement::try_alloc_imem(Placed *next, const Placed *done,
     }
     verify_imem.update(next->name, resources, next->table);
     return true;
-}
-
-static void coord_selector_xbar(const TablePlacement::Placed *curr,
-                                const TablePlacement::Placed *done,
-                                TableResourceAlloc *resource,
-                                safe_vector<TableResourceAlloc *> &prev_resources) {
-    const IR::MAU::Selector *as = nullptr;
-    for (auto at : curr->table->attached) {
-        if ((as = at->attached->to<IR::MAU::Selector>()) != nullptr) break;
-    }
-    if (as == nullptr) return;
-    auto loc = resource->memuse.find(curr->table->pp_unique_id(as, false, curr->stage_split));
-    if (loc == resource->memuse.end() || (loc != resource->memuse.end()
-        && !resource->selector_ixbar.use.empty()))
-        return;
-    int j = 0;
-    for (auto *p = done; p && p->stage == curr->stage; p = p->prev, ++j) {
-        const IR::MAU::Selector *p_as = nullptr;
-        if (p == curr)
-            continue;
-        for (auto back_at : p->table->attached) {
-            auto at = back_at->attached;
-            if ((p_as = at->to<IR::MAU::Selector>()) != nullptr)
-                break;
-        }
-        if (p_as == as && !p->resources->selector_ixbar.use.empty()) {
-            resource->selector_ixbar = prev_resources[j]->selector_ixbar;
-            prev_resources[j]->selector_ixbar.clear();
-            break;
-        }
-    }
 }
 
 static void coord_action_data_xbar(const TablePlacement::Placed *curr,
@@ -1043,12 +1012,10 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv, const IR::MA
          " in stage " << rv->stage << (rv->need_more ? " (need more)" : ""));
     int i = 0;
     for (auto *p = done; p && p->stage == rv->stage; p = p->prev, ++i) {
-        coord_selector_xbar(p, done, prev_resources[i], prev_resources);
         coord_action_data_xbar(p, done, prev_resources[i], prev_resources);
         coord_meter_xbar(p, done, prev_resources[i], prev_resources);
         coord_reduction_or_group(p, done, prev_resources[i], prev_resources);
     }
-    coord_selector_xbar(rv, done, resources, prev_resources);
     coord_action_data_xbar(rv, done, resources, prev_resources);
     coord_meter_xbar(rv, done, resources, prev_resources);
     coord_reduction_or_group(rv, done, resources, prev_resources);

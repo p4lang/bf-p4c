@@ -170,6 +170,8 @@ class AdjustStatefulInstructions : public MauTransform {
     const PhvInfo &phv;
     const IR::Expression *preorder(IR::Expression *expr) override;
     const IR::Annotations *preorder(IR::Annotations *) override;
+    const IR::Node *preorder(IR::Node *node) override { visitOnce(); return node; }
+
     bool check_bit_positions(std::map<int, le_bitrange> &salu_inputs, int field_size,
         int starting_bit);
     bool verify_on_search_bus(const IR::MAU::StatefulAlu *, const IXBar::Use &salu_ixbar,
@@ -179,7 +181,7 @@ class AdjustStatefulInstructions : public MauTransform {
          bool &is_hi);
 
  public:
-    explicit AdjustStatefulInstructions(const PhvInfo &p) : phv(p) { }
+    explicit AdjustStatefulInstructions(const PhvInfo &p) : phv(p) { visitDagOnce = false; }
 };
 
 // Generate Primitive Info for actions before instruction adjustment. Once
