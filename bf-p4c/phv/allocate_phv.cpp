@@ -1900,7 +1900,8 @@ BruteForceAllocationStrategy::slice_clusters(
     auto& meter_color_dests = core_alloc_i.actionConstraints().meter_color_dests();
     for (auto* sc : cluster_groups) {
         LOG5("PRESLICING " << sc);
-        auto it = PHV::SlicingIterator(sc);
+        auto it = PHV::SlicingIterator(sc,
+                core_alloc_i.pragmas().pa_container_sizes().field_to_sizes());
         std::set<const PHV::Field*> unsatisfiable_fields;
         auto& pa_container_sizes = core_alloc_i.pragmas().pa_container_sizes();
         if (!it.done()) {
@@ -1938,7 +1939,8 @@ BruteForceAllocationStrategy::slice_clusters(
                 }
                 ::error("No way to slice the following to satisfy @pa_container_size: \n%1%",
                         cstring::to_cstring(sc));
-                it = PHV::SlicingIterator(sc);
+                it = PHV::SlicingIterator(sc,
+                        core_alloc_i.pragmas().pa_container_sizes().field_to_sizes());
                 unsliceable.push_back(sc); }
 
             LOG5("--- into new slices -->");
@@ -2316,7 +2318,8 @@ BruteForceAllocationStrategy::allocLoop(PHV::Transaction& rst,
         boost::optional<std::list<PHV::SuperCluster*>> best_slicing = boost::none;
 
         // Try all possible slicings.
-        auto slice_it = PHV::SlicingIterator(cluster_group);
+        auto slice_it = PHV::SlicingIterator(cluster_group,
+                core_alloc_i.pragmas().pa_container_sizes().field_to_sizes(), false);
         int n_tried = 0;
         if (slice_it.done())
             LOG4("    ...but there are no valid slicings");

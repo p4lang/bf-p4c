@@ -1113,6 +1113,9 @@ class SlicingIterator {
 
     const SuperCluster* sc_i;
     bool has_slice_lists_i;
+    std::map<const PHV::Field*, std::vector<PHV::Size>> pa_container_sizes_i;
+    bool enforcePragmas;
+
     bitvec compressed_schemas_i;
     bitvec boundaries_i;
     bitvec required_slices_i;
@@ -1139,8 +1142,15 @@ class SlicingIterator {
             const int slice_list_size,
             const std::pair<int, int>& slice_location) const;
 
+    /// Changes compressed_schemas_i to account for pa_container_size pragmas.
+    void enforce_container_size_pragmas(
+            const ordered_map<PHV::SuperCluster::SliceList*, std::pair<int, int>>&);
+
  public:
-    explicit SlicingIterator(const SuperCluster* sc);
+    explicit SlicingIterator(
+            const SuperCluster* sc,
+            const std::map<const PHV::Field*, std::vector<PHV::Size>>& pa,
+            bool enforce_pragmas = true);
 
     /// @returns a list of possible slices of @sc.
     std::list<PHV::SuperCluster*> operator*() const;

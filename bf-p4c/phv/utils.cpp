@@ -1483,7 +1483,11 @@ cstring PHV::SlicingIterator::get_slice_coordinates(
     return ss.str();
 }
 
-PHV::SlicingIterator::SlicingIterator(const SuperCluster* sc) : sc_i(sc), done_i(false) {
+PHV::SlicingIterator::SlicingIterator(
+        const SuperCluster* sc,
+        const std::map<const PHV::Field*, std::vector<PHV::Size>>& pa,
+        bool e)
+        : sc_i(sc), done_i(false), enforcePragmas(e) {
     LOG5("Making SlicingIterator for SuperCluster:");
     LOG5(sc);
     num_slicings = 0;
@@ -1536,6 +1540,7 @@ PHV::SlicingIterator::SlicingIterator(const SuperCluster* sc) : sc_i(sc), done_i
         // Offset of the first field in the slice list. We go through slice lists in a supercluster
         // in sequence, and the offset represents that sequence.
         int sliceListOffset = 0;
+        ordered_map<PHV::SuperCluster::SliceList*, std::pair<int, int>> sliceListDetails;
         for (auto* list : sc->slice_lists()) {
             LOG6("Determining initial co-ordinates for slice list");
             LOG6("\t" << *list);
@@ -1552,8 +1557,29 @@ PHV::SlicingIterator::SlicingIterator(const SuperCluster* sc) : sc_i(sc), done_i
 
             // Calculate the size of the slice list up front.
             int sliceListSize = 0;
-            for (auto& slice : *list)
+            for (auto& slice : *list) {
                 sliceListSize += slice.size();
+                auto it = pa.find(slice.field());
+                if (it == pa.end()) continue;
+                // Note down pa_container_size pragmas for all fields in this slice list (if
+                // specified). Then add the same pragmas for all fields in the rotational cluster
+                // with that field.
+                pa_container_sizes_i[it->first] = it->second;
+                LOG6("  Adding pa_container_size for field: " << it->first);
+                for (auto sz : it->second)
+                    LOG6("    " << sz);
+                auto& rot_cluster = sc_i->cluster(slice);
+                for (auto& rot_slice : rot_cluster.slices()) {
+                    if (slice == rot_slice) continue;
+                    if (pa_container_sizes_i.count(rot_slice.field())) {
+                        LOG6("    Both original field and rotational cluster field have "
+                             "container size pragmas!");
+                        // XXX(Deep): Compare the two specifications of size.
+                    }
+                    pa_container_sizes_i[rot_slice.field()] = it->second;
+                    LOG6("  Adding pa_container_size for field: " << rot_slice);
+                    for (auto sz : it->second)
+                        LOG6("    " << sz); } }
 
             // Set to true, if all slices in the slice list are of the same field AND there is a
             // no-split constraint on the field.
@@ -1691,6 +1717,7 @@ PHV::SlicingIterator::SlicingIterator(const SuperCluster* sc) : sc_i(sc), done_i
                       "Were there no slices in the slice list?");
             sliceLocations[*lastSliceInSliceList].second = -1;
             sliceListOffset += sliceListSize;
+            sliceListDetails[list] = std::make_pair(offset, bitsNeededForBoundaries);
         }
         if (LOGGING(6)) {
             LOG6("\tPrinting slicing related information for each slice in the format " <<
@@ -2013,7 +2040,24 @@ PHV::SlicingIterator::SlicingIterator(const SuperCluster* sc) : sc_i(sc), done_i
             }
         }
 
+        if (LOGGING(6)) {
+            std::stringstream ss;
+            for (int i = 0; i < sentinel_idx_i; ++i)
+                ss << (compressed_schemas_i[i] ? "1" : "-");
+            LOG6("Initial compressed schemas before enforcing pragmas: " << ss.str()); }
+
+        // Enforce the slicing imposed by pa_container_size pragmas specified by the programmer.
+        if (enforcePragmas)
+            enforce_container_size_pragmas(sliceListDetails);
+
         compressed_schemas_i = required_slices_i;
+
+        if (LOGGING(6)) {
+            std::stringstream ss;
+            for (int i = 0; i < sentinel_idx_i; ++i)
+                ss << (compressed_schemas_i[i] ? "1" : "-");
+            LOG6("Initial compressed schemas before enforcing containers: " << ss.str()); }
+
         // Start with the smallest number that has sequences of exactly zero,
         // one, or three zeroes, which corresponds to slices sizes of 8b, 16b,
         // and 32b.  @see PHV::inc().
@@ -2022,6 +2066,12 @@ PHV::SlicingIterator::SlicingIterator(const SuperCluster* sc) : sc_i(sc), done_i
                                      boundaries_i,
                                      required_slices_i,
                                      exact_containers_i);
+
+        if (LOGGING(6)) {
+            std::stringstream ss;
+            for (int i = 0; i < sentinel_idx_i; ++i)
+                ss << (compressed_schemas_i[i] ? "1" : "-");
+            LOG6("Initial compressed schemas after enforcing containers: " << ss.str()); }
     } else {
         // In this case, there are no slice lists, and the SuperCluster
         // contains a single RotationalCluster.  We will try all slicings of
@@ -2053,6 +2103,84 @@ PHV::SlicingIterator::SlicingIterator(const SuperCluster* sc) : sc_i(sc), done_i
         cached_i = *res;
     else
         this->operator++();
+}
+
+void PHV::SlicingIterator::enforce_container_size_pragmas(
+        const ordered_map<PHV::SuperCluster::SliceList*, std::pair<int, int>>& listDetails) {
+    // If there are no container size pragmas for this supercluster, nothing to be done.
+    if (pa_container_sizes_i.size() == 0) return;
+    // If there are no slice lists in the super cluster, nothing to be done.
+    if (!has_slice_lists_i) return;
+    for (auto* list : sc_i->slice_lists()) {
+        // Offset of the slice (in bits) within this slice list.
+        int slice_offset = 0;
+        // Start offset of the bitvec corresponding to this slice list within the supercluster's
+        // comperessed slicing schema.
+        int slice_list_offset = listDetails.at(list).first - listDetails.at(list).second;
+        // For each slice in the slice list:
+        for (auto& slice : *list) {
+            auto it = pa_container_sizes_i.find(slice.field());
+            // If the slice doesn't belong to a field with a pa_container_size pragma, then nothing
+            // to be done here.
+            if (it == pa_container_sizes_i.end()) {
+                slice_offset += slice.size();
+                continue;
+            }
+            // Set at bitpositions within the field that we need to slice at to respect the pragmas.
+            std::set<int> slicingPoints;
+            // Only one size specified, implying that either the field spans only one container
+            // size, or it must be divided into even chunks of the specified size.
+            if (it->second.size() == 1) {
+                int size = static_cast<int>(*((it->second).begin()));
+                // If there is a pragma where the container size is less than the size of the field,
+                // then no slicing is required.
+                if (slice.field()->size <= size) {
+                    slice_offset += slice.size();
+                    continue;
+                }
+                // XXX(Deep): Account for case where we have to evenly split the fields.
+            } else {
+                // Offset inside the field at which slicing should be done.
+                int field_offset = 0;
+                for (auto sz : it->second) {
+                    int size = static_cast<int>(sz);
+                    // Ignore slicing points at the end of the field.
+                    // XXX(Deep): What if the field is not at the end of the slice list?
+                    if (field_offset + size > slice.field()->size) continue;
+                    slicingPoints.insert(field_offset + size);
+                    field_offset += size;
+                }
+            }
+            LOG6("  Slice " << slice << " has an associated pa_container_size pragma");
+            for (auto sz : it->second)
+                LOG6("    Size: " << sz);
+            if (slicingPoints.size() > 0) {
+                std::stringstream ss;
+                for (auto limit : slicingPoints)
+                    ss << limit << " ";
+                LOG6("      Slice at: " << ss.str());
+            }
+            for (auto limit : slicingPoints) {
+                // Byte range for the slicing point.
+                le_bitrange sliceRange = StartLen(limit, 1);
+                // If the current slice includes the slicing point, then set the corresponding bit
+                // in the required_slices bitvec to force a slice at the required slicing point.
+                if (slice.range().overlaps(sliceRange)) {
+                    LOG6("      Slice at bit position " << limit << " within this slice");
+                    // Starting index of the field slice.
+                    int field_lo = slice.range().lo;
+                    // bitvec is indexed at 0, so the -1 is necessary.
+                    int slice_pos = slice_list_offset - 1 +
+                        ((slice_offset + (limit - field_lo)) / 8);
+                    LOG6("      Slice at byte " << slice_pos << " within this slice list");
+                    // XXX(Deep): What if the field is not at the end of the slice list?
+                    if (slice_pos >= 0 && slice_pos < listDetails.at(list).first)
+                        required_slices_i.setbit(slice_pos);
+                }
+            }
+            slice_offset += slice.size();
+        }
+    }
 }
 
 namespace PHV {
