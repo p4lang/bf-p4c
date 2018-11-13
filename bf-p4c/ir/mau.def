@@ -696,7 +696,7 @@ class Action : VLIWInstruction {
 }
 
 /// A stateful ALU VLIW instruction -- multiple instructions that all run together
-/// "simultanesouly" in different ALUs (certain ALUs are actually later in the pipeline)
+/// "simultaneously" in different ALUs (certain ALUs are actually later in the pipeline)
 /// in the stateful ALU block (there are 2 comparison, 4 "normal" and 1 output alus)
 class SaluAction : VLIWInstruction {
     cstring                     name;
@@ -704,6 +704,19 @@ class SaluAction : VLIWInstruction {
     safe_vector<ActionArg>      args = {};
     optional Annotations        annotations = Annotations::empty;
     NullOK Expression  output_dst = nullptr;  // implicit write of output to this lvalue
+
+    // The original P4 function that underwent SaluAction translation. Not
+    // visited. This is here so that a higher level representation of the
+    // function is available to tools that consume the JSON representation of
+    // the back-end IR.
+    optional NullOK Function p4func = nullptr;
+
+    visit_children {
+        VLIWInstruction::visit_children(v);
+        action.visit_children(v);
+        v.visit(annotations, "annotations");
+        v.visit(output_dst, "output_dst");
+    }
 
     toString {
         return cstring("action ") + name + " {\n" +

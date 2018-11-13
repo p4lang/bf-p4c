@@ -174,7 +174,7 @@ bool CreateSaluInstruction::preorder(const IR::Function *func) {
     param_types = &function_param_types.at(std::make_pair(action_type_name, func->name));
     LOG3("Creating action " << name << "[" << func->id << "] for stateful table " << salu->name);
     LOG5(func);
-    action = new IR::MAU::SaluAction(func->srcInfo, name);
+    action = new IR::MAU::SaluAction(func->srcInfo, name, func);
     action->annotations = reg_action->annotations;
     outputs.clear();
     onebit = nullptr;
