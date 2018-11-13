@@ -1786,16 +1786,16 @@ class ExtractorAllocator {
         for (auto& r : post) {
             r = nw_byterange(FromTo(r.loByte() - shifted, r.hiByte() - shifted)); }
 
-        if (prev.empty())
-            return {nullptr, cks};
-        if (post.empty())
-            return {cks, nullptr};
-
         auto* prev_cks = cks->clone();
         auto* post_cks = cks->clone();
 
         prev_cks->masked_ranges = prev;
         post_cks->masked_ranges = post;
+
+        if (prev.empty())
+            return {nullptr, post_cks};
+        if (post.empty())
+            return {prev_cks, nullptr};
 
         // if even/odd order changed, mark swap.
         if (shifted % 2 == 1) {
@@ -2519,6 +2519,7 @@ LowerParser::LowerParser(const PhvInfo& phv, ClotInfo& clot, const FieldDefUse &
         pragma_no_init,
         new LowerParserIR(phv, clot),
         new LowerDeparserIR(phv, clot),
+        LOGGING(3) ? new DumpParser("before_split_big_states") : nullptr,
         new SplitBigStates,
         LOGGING(3) ? new DumpParser("after_split_big_states") : nullptr,
         new WarnTernaryMatchFields(phv),
