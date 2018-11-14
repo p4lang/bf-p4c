@@ -430,15 +430,15 @@ void Deparser::gen_learn_quanta(REGS &regs, json::vector &learn_quanta) {
         BUG_CHECK(digest.context_json);
         auto namevec = (*(digest.context_json))["name"];
         auto &names = *(namevec->as_vector());
-        unsigned idx = 0;
+        auto digentry = digest.context_json->begin();
         // Iterate on names. for each name, get the corresponding digest entry and fill in
         for(auto &tname : names) {
+            BUG_CHECK(digentry != digest.context_json->end());
             json::map quanta;
             quanta["name"] = (*tname).c_str();
-            quanta["lq_cfg_type"] = idx;
+            quanta["lq_cfg_type"] = digentry->first->as_number()->val;
             quanta["handle"] = unique_field_list_handle++;
-            auto digentry = (*(digest.context_json))[idx++];
-            auto &digfields = *(digentry->as_vector());
+            auto &digfields = *(digentry->second->as_vector());
             json::vector &fields = quanta["fields"];
             for (auto &tup : digfields) {
                 auto &one = *(tup->as_vector());
@@ -450,6 +450,7 @@ void Deparser::gen_learn_quanta(REGS &regs, json::vector &learn_quanta) {
                 anon["start_bit"] = (*(one[3])).clone();
                 fields.push_back(std::move(anon));
             }
+            digentry++;
             learn_quanta.push_back(std::move(quanta));
         }
     }
