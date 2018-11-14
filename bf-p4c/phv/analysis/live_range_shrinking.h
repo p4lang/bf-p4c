@@ -29,11 +29,19 @@ class FindInitializationNode : public Inspector {
     const TablesMutuallyExclusive&          tableMutex;
     const std::vector<FlowGraph*>&          flowGraph;
 
+    /// Actions where we cannot initialize metadata because they use hash distributions (and
+    // therefore, cannot have a bitmasked-set operation in them).
+    // XXX(Deep): For now, disable initialization at all such actions (and tables that contain those
+    // actions). In the longer term, change this to recognize when a bitmasked-set operation/action
+    // data is necessary to realize the initialization operation.
+    ordered_set<const IR::MAU::Action*>     doNotInitActions;
+
     /// Maximum number of stages required as per the table dependency graph (resource insensitive).
     int maxStages;
 
     profile_t init_apply(const IR::Node* root) override;
     bool preorder(const IR::MAU::Table* tbl) override;
+    bool preorder(const IR::MAU::Action* act) override;
 
     /// @returns true if the def of field @f in unit @u is the definition corresponding to implicit
     /// initialization in the parser.
@@ -106,6 +114,11 @@ class FindInitializationNode : public Inspector {
     bool identifyFieldsToInitialize(
             std::vector<const PHV::Field*>& fields,
             const ordered_map<int, std::pair<int, int>>& livemap) const;
+
+    /// @returns true if metadata initialization is forbidden in @action.
+    bool cannotInitInAction(const IR::MAU::Action* action) const {
+        return doNotInitActions.count(action);
+    }
 
  public:
     /// @returns a map of field to the actions in which initialization must be done for the set of

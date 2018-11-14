@@ -330,6 +330,8 @@ ActionPhvConstraints::NumContainers ActionPhvConstraints::num_container_sources(
     size_t num_unallocated = 0;
     for (auto slice : container_state) {
         auto reads = constraint_tracker.sources(slice, action);
+        // No need to include metadata initialization here because metadata initialized always
+        // happens with a constant/action data as source.
         if (reads.size() == 0)
             LOG5("\t\t\t\tSlice " << slice << " is not written in action " << action->name);
         for (auto operand : reads) {
@@ -410,25 +412,36 @@ boost::optional<PHV::AllocSlice> ActionPhvConstraints::getSourcePHVSlice(
 //  as operands on the same container in the same action.
 bool ActionPhvConstraints::has_ad_or_constant_sources(
         const PHV::Allocation::MutuallyLiveSlices& slices,
-        const IR::MAU::Action* action) const {
+        const IR::MAU::Action* action,
+        const PHV::Allocation::LiveRangeShrinkingMap& initActions) const {
     for (auto slice : slices) {
         for (auto operand : constraint_tracker.sources(slice, action)) {
             if (operand.ad || operand.constant) {
                 LOG5("\t\t\t\t  Field " << slice.field()->name <<
                      " written using action data/constant in action " << action->name);
-                return true; } } }
+                return true; } }
+        // If the field is initialized due to metadata initialization in @action, then add
+        // constant/action data source for the field.
+        if (initActions.count(slice.field()) && initActions.at(slice.field()).count(action)) {
+            LOG5("\t\t\t\t  Field " << slice.field()->name << " initialized for live range "
+                 "shrinking in action " << action->name);
+            return true; }
+    }
     return false;
 }
 
 bool ActionPhvConstraints::all_or_none_constant_sources(
         const PHV::Allocation::MutuallyLiveSlices& slices,
-        const IR::MAU::Action* action) const {
+        const IR::MAU::Action* action,
+        const PHV::Allocation::LiveRangeShrinkingMap& initActions) const {
     unsigned num_slices_written_by_ad = 0;
     for (auto slice : slices) {
         bool written_by_ad = false;
         for (auto operand : constraint_tracker.sources(slice, action))
             if (operand.ad || operand.constant)
                 written_by_ad = true;
+        if (initActions.count(slice.field()) && initActions.at(slice.field()).count(action))
+            written_by_ad = true;
         num_slices_written_by_ad += (written_by_ad ? 1 : 0); }
     if (num_slices_written_by_ad == 0) {
         LOG5("\t\t\t\t  No slice in proposed packing written by action data/constant in action "
@@ -455,7 +468,8 @@ int ActionPhvConstraints::unallocated_bits(PHV::Allocation::MutuallyLiveSlices s
 
 unsigned ActionPhvConstraints::container_operation_type(
         const IR::MAU::Action* action,
-        const PHV::Allocation::MutuallyLiveSlices& slices) const {
+        const PHV::Allocation::MutuallyLiveSlices& slices,
+        const PHV::Allocation::LiveRangeShrinkingMap& initActions) const {
     LOG5("\t\t\tChecking container operation type for action: " << action->name);
     unsigned type_of_operation = 0;
     size_t num_fields_not_written = 0;
@@ -466,7 +480,12 @@ unsigned ActionPhvConstraints::container_operation_type(
         auto field_slice = PHV::FieldSlice(slice.field(), slice.field_slice());
         boost::optional<OperandInfo> fw = constraint_tracker.is_written(field_slice, action);
         if (!fw) {
-            num_fields_not_written++;
+            if (initActions.count(slice.field()) && initActions.at(slice.field()).count(action)) {
+                // This slice is written by metadata initialization for this action.
+                type_of_operation |= OperandInfo::MOVE;
+            } else {
+                num_fields_not_written++;
+            }
         } else if (fw->flags & OperandInfo::MOVE) {
             type_of_operation |= OperandInfo::MOVE;
         } else if (fw->flags & OperandInfo::BITWISE) {
@@ -640,7 +659,8 @@ void ActionPhvConstraints::pack_slices_together(
 // to those mutually exclusive fields should not have an effect on the number of bitmasked-set
 // instructions detected.
 int ActionPhvConstraints::count_bitmasked_set_instructions(
-        const std::vector<PHV::AllocSlice>& slices) const {
+        const std::vector<PHV::AllocSlice>& slices,
+        const PHV::Allocation::LiveRangeShrinkingMap& initActions) const {
     int numBitmaskedSet = 0;
     if (slices.size() == 0)
         return 0;
@@ -654,18 +674,24 @@ int ActionPhvConstraints::count_bitmasked_set_instructions(
     ordered_set<const IR::MAU::Action*> allActionsForSlices;
     for (auto& slice : slices) {
         const auto& writingActions = constraint_tracker.written_in(slice);
-        allActionsForSlices.insert(writingActions.begin(), writingActions.end()); }
+        allActionsForSlices.insert(writingActions.begin(), writingActions.end());
+        if (initActions.count(slice.field()))
+            allActionsForSlices.insert(initActions.at(slice.field()).begin(),
+                    initActions.at(slice.field()).end());
+    }
     // For every action, check if bitmasked-set would be synthesized for the writes to slices.
     for (auto& action : allActionsForSlices) {
-        bool has_ad_constant_sources = has_ad_or_constant_sources(setOfSlices, action);
+        bool has_ad_constant_sources = has_ad_or_constant_sources(setOfSlices, action, initActions);
         // Bitmasked-set instructions require an action data source.
         if (!has_ad_constant_sources)
             continue;
         // Determine the set of fields in the packing (slices) that are not written by action.
         ordered_set<PHV::AllocSlice> fieldsNotWrittenTo;
-        for (auto slice : slices)
-            if (!constraint_tracker.is_written(slice, action))
+        for (auto slice : slices) {
+            if (!constraint_tracker.is_written(slice, action) &&
+                !(initActions.count(slice.field()) && initActions.at(slice.field()).count(action)))
                 fieldsNotWrittenTo.insert(slice);
+        }
         if (is_bitmasked_set(slices, fieldsNotWrittenTo))
             numBitmaskedSet++;
     }
@@ -711,7 +737,8 @@ bool ActionPhvConstraints::check_and_generate_constraints_for_move_with_unalloca
         bool has_ad_constant_sources,
         ordered_map<const IR::MAU::Action*, bool>& phvMustBeAligned,
         ordered_map<const IR::MAU::Action*, size_t>& numSourceContainers,
-        UnionFind<PHV::FieldSlice>& copacking_constraints) {
+        UnionFind<PHV::FieldSlice>& copacking_constraints,
+        const PHV::Allocation::LiveRangeShrinkingMap& initActions) {
     // Special packing constraints are introduced when number of source containers > 2 and
     // number of allocated containers is less than or equal to 2.
     // At this point of the loop, sources.num_allocated <= 2, sources.num_unallocated may be any
@@ -721,10 +748,14 @@ bool ActionPhvConstraints::check_and_generate_constraints_for_move_with_unalloca
     PHV::Allocation::MutuallyLiveSlices state_written_to;
     PHV::Allocation::MutuallyLiveSlices state_not_written_to;
     for (auto slice : container_state) {
-        if (!constraint_tracker.is_written(slice, action))
-            state_not_written_to.insert(slice);
-        else
+        if (constraint_tracker.is_written(slice, action))
+            // If written by normal instruction.
             state_written_to.insert(slice);
+        else if (initActions.count(slice.field()) && initActions.at(slice.field()).count(action))
+            // If written by metadata initialization.
+            state_written_to.insert(slice);
+        else
+            state_not_written_to.insert(slice);
     }
     size_t num_fields_not_written_to = state_not_written_to.size();
     bool has_bits_not_written_to = num_fields_not_written_to > 0;
@@ -742,7 +773,7 @@ bool ActionPhvConstraints::check_and_generate_constraints_for_move_with_unalloca
         // only be a maximum of one PHV source when an action data/constant source is present.
         // Generate these conditional constraints for this particular case.
         if (sources.num_unallocated > 0) {
-            if (!masks_valid(container_state, action, true /*action data only*/)) {
+            if (!masks_valid(container_state, action, true /*action data only*/, initActions)) {
                 LOG5("\t\t\t\tThe action data used for this packing is not contiguous");
                 return false; }
             pack_slices_together(alloc, container_state, copacking_constraints, action, false);
@@ -758,9 +789,12 @@ bool ActionPhvConstraints::check_and_generate_constraints_for_move_with_unalloca
             // valid. Therefore, always check masks if the number of source containers is 1, and
             // there are fields not written to in this candidate packing. Note that if one of the
             // field sets is contiguous, then a valid deposit-field is possible.
+            static PHV::Allocation::LiveRangeShrinkingMap emptyInit;
             if (has_bits_not_written_to) {
-                if (!masks_valid(state_written_to, action, false /*non action data only*/) &&
-                    !masks_valid(state_not_written_to, action, false /*non action data only*/)) {
+                if (!masks_valid(state_written_to, action, false /*non action data only*/,
+                            emptyInit) &&
+                    !masks_valid(state_not_written_to, action, false /*non action data only*/,
+                        emptyInit)) {
                     LOG5("\t\t\t\tMasks found to not be valid for packing");
                     return false; } }
             // If the allocation is to a mocha or dark container, and there is an unallocated
@@ -896,16 +930,11 @@ bool ActionPhvConstraints::check_and_generate_constraints_for_bitwise_op_with_un
     return rv;
 }
 
-boost::optional<PHV::Allocation::ConditionalConstraints>
-ActionPhvConstraints::can_pack(const PHV::Allocation& alloc, const PHV::AllocSlice& slice) {
-    std::vector<PHV::AllocSlice> slices;
-    slices.push_back(slice);
-    return can_pack(alloc, slices);
-}
-
 boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::can_pack(
         const PHV::Allocation& alloc,
-        std::vector<PHV::AllocSlice>& slices) {
+        std::vector<PHV::AllocSlice>& slices,
+        PHV::Allocation::MutuallyLiveSlices& container_state,
+        const PHV::Allocation::LiveRangeShrinkingMap& initActions) {
     PHV::Allocation::ConditionalConstraints rv;
     // Allocating zero slices always succeeds...
     if (slices.size() == 0)
@@ -921,16 +950,15 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
     // Is the container either a mocha or dark container.
     bool mocha_or_dark = c.is(PHV::Kind::dark) || c.is(PHV::Kind::mocha);
 
-    PHV::Allocation::MutuallyLiveSlices container_state = alloc.slicesByLiveness(c, slices);
-    LOG6("\t\tExisting container state: ");
-    for (auto slice : container_state)
-        LOG6("\t\t\t" << slice);
+    if (LOGGING(4)) {
+        LOG4("\t\tExisting container state: ");
+        for (auto slice : container_state)
+            LOG4("\t\t\t" << slice);
 
-    if (LOGGING(5)) {
-        LOG5("\t\tChecking whether field slice(s) ");
+        LOG4("\t\tChecking whether field slice(s) ");
         for (auto slice : slices)
-            LOG5("\t\t\t" << slice.field()->name << " (" << slice.width() << "b)");
-        LOG5("\t\tcan be packed into container " << container_state << " already containing " <<
+            LOG4("\t\t\t" << slice.field()->name << " (" << slice.width() << "b)");
+        LOG4("\t\tcan be packed into container " << container_state << " already containing " <<
                 container_state.size() << " slices"); }
 
     if (LOGGING(6))
@@ -945,11 +973,17 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
     if (pack_conflicts_present(container_state))
         return boost::none;
 
-    // Merge actions for all the candidate fields into a set
+    // Merge actions for all the candidate fields into a set, including initialization actions for
+    // any metadata fields overlaid due to live range shrinking.
     ordered_set<const IR::MAU::Action *> set_of_actions;
     for (auto slice : container_state) {
         const auto& writing_actions = constraint_tracker.written_in(slice);
-        set_of_actions.insert(writing_actions.begin(), writing_actions.end()); }
+        set_of_actions.insert(writing_actions.begin(), writing_actions.end());
+        // Add initialization actions to this set.
+        if (initActions.count(slice.field())) {
+            for (const auto* a : initActions.at(slice.field())) {
+                LOG5("\t\tAdding initialization action " << a->name << " to the set of actions.");
+                set_of_actions.insert(a); } } }
 
     // Debug info: print the names of all actions under consideration for these fields
     if (LOGGING(5)) {
@@ -994,7 +1028,7 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
     UnionFind<PHV::FieldSlice> copacking_constraints;
     for (const auto* action : set_of_actions) {
         LOG5("\t\t\tNeed to check container sources now for action " << action->name);
-        operationType[action] = container_operation_type(action, container_state);
+        operationType[action] = container_operation_type(action, container_state, initActions);
 
         if (operationType[action] == OperandInfo::WHOLE_CONTAINER || operationType[action] ==
                 OperandInfo::MIXED)
@@ -1012,11 +1046,12 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
             LOG5("\t\t\t\tDetected bitwise operations");
 
         // Is there any action data or constant source for the proposed packing in this action?
-        bool has_ad_constant_sources = has_ad_or_constant_sources(container_state, action);
+        bool has_ad_constant_sources = has_ad_or_constant_sources(container_state, action,
+                initActions);
         // If there is an action data or constant source, are all slices in the proposed packing
         // written using action data or constant sources.
         bool all_or_none_ad_constant_sources = has_ad_constant_sources ?
-            all_or_none_constant_sources(container_state, action) : true;
+            all_or_none_constant_sources(container_state, action, initActions) : true;
 
         // If the action involves a bitwise operation for the proposed packing in container c, and
         // only some of the field slices are written using action data or constant sources, then
@@ -1046,7 +1081,7 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
         if (mocha_or_dark) {
             // Only one container source for dark/mocha.
             if (sources.num_allocated > 1) return boost::none;
-            if (!all_field_slices_written_together(container_state, set_of_actions))
+            if (!all_field_slices_written_together(container_state, set_of_actions, initActions))
                 return boost::none;
             phvMustBeAligned[action] = true; }
 
@@ -1069,7 +1104,7 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
         if (operationType[action] == OperandInfo::MOVE) {
             if (!check_and_generate_constraints_for_move_with_unallocated_sources(alloc, action, c,
                     container_state, sources, has_ad_constant_sources, phvMustBeAligned,
-                    numSourceContainers, copacking_constraints))
+                    numSourceContainers, copacking_constraints, initActions))
                 return boost::none;
         } else if (operationType[action] == OperandInfo::BITWISE) {
             // Check the validity of bitwise operations and generate intermediate structures that
@@ -1334,10 +1369,11 @@ bool ActionPhvConstraints::masks_valid(ordered_map<size_t, ordered_set<PHV::Allo
 bool ActionPhvConstraints::masks_valid(
         const PHV::Allocation::MutuallyLiveSlices& container_state,
         const IR::MAU::Action* action,
-        bool actionDataOnly) const {
+        bool actionDataOnly,
+        const PHV::Allocation::LiveRangeShrinkingMap& initActions) const {
     bitvec actionDataConstantMask;
     for (auto slice : container_state) {
-        if (actionDataOnly && has_ad_or_constant_sources({ slice }, action)) {
+        if (actionDataOnly && has_ad_or_constant_sources({ slice }, action, initActions)) {
             LOG7("\t\t\t\t  Action data constant mask for " << slice << " : " <<
                     slice.container_slice().lo << ", " << slice.width());
             actionDataConstantMask |= bitvec(slice.container_slice().lo, slice.width());
@@ -1573,13 +1609,18 @@ bool ActionPhvConstraints::assign_containers_to_unallocated_sources(
 
 bool ActionPhvConstraints::all_field_slices_written_together(
         const PHV::Allocation::MutuallyLiveSlices& container_state,
-        const ordered_set<const IR::MAU::Action*>& set_of_actions) const {
+        const ordered_set<const IR::MAU::Action*>& set_of_actions,
+        const PHV::Allocation::LiveRangeShrinkingMap& initActions) const {
     for (auto action : set_of_actions) {
         boost::optional<bool> thisActionWrites = boost::none;
         // for each AllocSlice in the container, check if it is written by the action.
         for (auto& slice : container_state) {
             boost::optional<OperandInfo> writeStatus = constraint_tracker.is_written(slice, action);
-            if (!writeStatus) {
+            bool metaInit = false;
+            // Metadata initialization done in this action for the field of slice.
+            if (initActions.count(slice.field()) && initActions.at(slice.field()).count(action))
+                metaInit = true;
+            if (!writeStatus && !metaInit) {
                 if (!thisActionWrites)
                     // First slice encountered, so set status to field not written.
                     thisActionWrites = false;

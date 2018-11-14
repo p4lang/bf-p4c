@@ -247,6 +247,11 @@ class Allocation {
 
     Allocation(const SymBitMatrix& mutex, const PhvUse& uses) : mutex_i(&mutex), uses_i(&uses) { }
 
+    /// @returns the meta_init_points_i map for the current allocation object.
+    ordered_map<AllocSlice, ordered_set<const IR::MAU::Action*>>& get_meta_init_points() const {
+        return meta_init_points_i;
+    }
+
  private:
     /// Uniform abstraction for setting container state.  For internal use
     /// only.  @c must exist in this Allocation.
@@ -290,6 +295,10 @@ class Allocation {
     virtual const_iterator begin() const = 0;
     virtual const_iterator end() const = 0;
 
+    /// @returns the set of actions where @slice must be initialized for overlay enabled by live
+    /// range shrinking.
+    ordered_set<const IR::MAU::Action*> getInitPoints(AllocSlice& slice) const;
+
     /// @returns number of containers owned by this allocation.
     virtual size_t size() const = 0;
 
@@ -298,6 +307,10 @@ class Allocation {
 
     /// @returns all the fields that must be initialized in action @act.
     virtual const ordered_set<const PHV::Field*> getMetadataInits(const IR::MAU::Action* act) const;
+
+    /// @returns the set of initialization actions for the field @f.
+    virtual const ordered_set<const IR::MAU::Action*> getInitPointsForField(const PHV::Field* f)
+        const;
 
     /// @returns all the slices allocated to @c.
     ordered_set<AllocSlice> slices(PHV::Container c) const;
@@ -521,6 +534,12 @@ class Transaction : public Allocation {
     : Allocation(*parent.mutex_i, *parent.uses_i), parent_i(&parent) {
         BUG_CHECK(&parent != this, "Creating transaction with self as parent");
     }
+
+    /// Pretty print all the metadata initialization actions for the current transaction (including
+    /// all the parent transactions). Not used anywhere explicitly, but do not remove because calls
+    /// to this function make debugging easy.
+    void printMetaInitPoints() const;
+
     /// Destructor declaration. Does nothing but quiets warnings
     virtual ~Transaction() {}
 
@@ -547,6 +566,9 @@ class Transaction : public Allocation {
 
     /// @returns a summary of status of each container allocated in this transaction.
     cstring getTransactionSummary() const;
+
+    /// @returns the set of actions in which @slice must be initialized for live range shrinking.
+    ordered_set<const IR::MAU::Action*> getInitPoints(AllocSlice& slice) const;
 
     /// Returns the outstanding writes in this view.
     const ordered_map<PHV::Container, ContainerStatus>& getTransactionStatus() const {
@@ -576,6 +598,19 @@ class Transaction : public Allocation {
         auto inits = init_writes_i.at(act);
         rv.insert(inits.begin(), inits.end());
         return rv;
+    }
+
+    /// @returns the set of actions in which field @f is initialized to enable live range shrinking.
+    const ordered_set<const IR::MAU::Action*> getInitPointsForField(const PHV::Field* f) const
+        override {
+        const auto parentInitPoints = parent_i->getInitPointsForField(f);
+        ordered_set<const IR::MAU::Action*> rs;
+        rs.insert(parentInitPoints.begin(), parentInitPoints.end());
+        for (auto kv : meta_init_points_i) {
+            if (kv.first.field() != f) continue;
+            rs.insert(kv.second.begin(), kv.second.end());
+        }
+        return rs;
     }
 
     /// Clears any allocation added to this transaction.

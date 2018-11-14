@@ -826,7 +826,51 @@ CoreAllocation::tryAllocSliceList(
             continue; }
 
         // Check whether the candidate slice allocations respect action-induced constraints.
-        auto action_constraints = actions_i.can_pack(alloc_attempt, candidate_slices);
+        boost::optional<PHV::Allocation::ConditionalConstraints> action_constraints;
+        PHV::Allocation::LiveRangeShrinkingMap initActions;
+
+        // Gather the initialization actions for all the fields that are allocated to/are candidates
+        // for allocation in this container. All these are summarized in the initActions map.
+        for (auto& field_slice : candidate_slices) {
+            // Get the initialization actions for all the field slices that are candidates for
+            // allocation and in the parent transaction.
+            auto initPointsForTransaction = alloc_attempt.getInitPoints(field_slice);
+            if (initPointsForTransaction.size() > 0)
+                initActions[field_slice.field()].insert(initPointsForTransaction.begin(),
+                        initPointsForTransaction.end());
+        }
+        // Get the initialization actions that were determined as part of the current transaction.
+        if (initNodes)
+            for (auto kv : *initNodes)
+                initActions[kv.first].insert(kv.second.begin(), kv.second.end());
+        PHV::Allocation::MutuallyLiveSlices container_state = alloc_attempt.slicesByLiveness(c,
+                candidate_slices);
+        // Actual slices in the container, after accounting for metadata overlay.
+        PHV::Allocation::MutuallyLiveSlices actual_container_state;
+        for (auto& field_slice : container_state) {
+            bool sliceOverlaysAllCandidates = true;
+            for (auto& candidate_slice : candidate_slices) {
+                if (!PHV::Allocation::mutually_exclusive(phv_i.metadata_overlay,
+                            field_slice.field(), candidate_slice.field()))
+                    sliceOverlaysAllCandidates = false;
+            }
+            if (sliceOverlaysAllCandidates) continue;
+            actual_container_state.insert(field_slice);
+            // Get initialization actions for all other slices in this container and not overlaying
+            // with the candidate fields.
+            auto initPointsForTransaction = alloc_attempt.getInitPoints(field_slice);
+            if (initPointsForTransaction.size() > 0)
+                initActions[field_slice.field()].insert(initPointsForTransaction.begin(),
+                        initPointsForTransaction.end());
+        }
+
+        if (initActions.size() > 0)
+            LOG5("Printing total initialization map:\n" <<
+                 meta_init_i.printLiveRangeShrinkingMap(initActions, "\t\t"));
+
+        action_constraints = actions_i.can_pack(alloc_attempt, candidate_slices,
+                actual_container_state, initActions);
+
         if (!action_constraints) {
             LOG5("        ...action constraint: cannot pack into container " << c);
             continue;
@@ -946,7 +990,13 @@ CoreAllocation::tryAllocSliceList(
             }
         } else {
             LOG5("        ...action constraint: can pack into container " << c);
-            num_bitmasks = actions_i.count_bitmasked_set_instructions(candidate_slices); }
+            if (initNodes)
+                num_bitmasks = actions_i.count_bitmasked_set_instructions(candidate_slices,
+                        *initNodes);
+            else
+                num_bitmasks = actions_i.count_bitmasked_set_instructions(candidate_slices,
+                        initActions);
+        }
 
         if (!can_place) continue;
 

@@ -1,15 +1,29 @@
 #include "bf-p4c/phv/analysis/live_range_shrinking.h"
+#include "bf-p4c/mau/table_layout.h"
 
 Visitor::profile_t FindInitializationNode::init_apply(const IR::Node* root) {
     LOG2("Printing dependency graph");
     LOG2(dg);
     maxStages = -1;
+    doNotInitActions.clear();
+    doNotInitActions.clear();
     return Inspector::init_apply(root);
 }
 
 bool FindInitializationNode::preorder(const IR::MAU::Table* tbl) {
     int stage = dg.min_stage(tbl);
     if (stage > maxStages) maxStages = stage;
+    return true;
+}
+
+bool FindInitializationNode::preorder(const IR::MAU::Action* act) {
+    GetHashDistReqs ghdr;
+    act->apply(ghdr);
+    if (ghdr.is_hash_dist_needed()) {
+        LOG2("\tCannot initialize at action " << act->name << " because it requires "
+             "the hash distribution unit.");
+        doNotInitActions.insert(act);
+    }
     return true;
 }
 
@@ -230,6 +244,10 @@ boost::optional<const PHV::Allocation::ActionSet> FindInitializationNode::getIni
     }
 
     for (const auto* act : tablesToActions.getActionsForTable(t)) {
+        if (cannotInitInAction(act)) {
+            LOG2("\t\t\t  Cannot init " << f->name << " in do not init action " << act);
+            return boost::none;
+        }
         // If field is already written in this action, then do not initialize here.
         if (actionConstraints.written_in(f, act)) continue;
         ordered_set<const PHV::Field*> actionReads = actionConstraints.actionReads(act);
@@ -340,6 +358,7 @@ FindInitializationNode::getInitializationCandidates(
             if (tbl->gateway_only()) continue;
             // Do not add group dominator a second time.
             if (tbl == groupDominator) continue;
+            if (!domTree.strictlyDominates(tbl, groupDominator)) continue;
             candidateTables.push_back(tbl);
         }
     }

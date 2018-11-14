@@ -280,7 +280,8 @@ class ActionPhvConstraints : public Inspector {
      */
     bool has_ad_or_constant_sources(
         const PHV::Allocation::MutuallyLiveSlices& slices,
-        const IR::MAU::Action* action) const;
+        const IR::MAU::Action* action,
+        const PHV::Allocation::LiveRangeShrinkingMap& initActions) const;
 
     /** @returns true if all @slices packed in the same container are all read from action data or
       * from constant in action @act, or are never read from action data or from constant in action
@@ -288,7 +289,8 @@ class ActionPhvConstraints : public Inspector {
       */
     bool all_or_none_constant_sources(
         const PHV::Allocation::MutuallyLiveSlices& slices,
-        const IR::MAU::Action* act) const;
+        const IR::MAU::Action* act,
+        const PHV::Allocation::LiveRangeShrinkingMap& initActions) const;
 
     /** Check if two fields share the same container
       */
@@ -316,7 +318,8 @@ class ActionPhvConstraints : public Inspector {
       */
     unsigned container_operation_type(
         const IR::MAU::Action*,
-        const PHV::Allocation::MutuallyLiveSlices&) const;
+        const PHV::Allocation::MutuallyLiveSlices&,
+        const PHV::Allocation::LiveRangeShrinkingMap&) const;
 
     /** Given a set of MutuallyLiveSlices @container_state and the state of allocation @alloc, this
       * function generates packing constraints induced by instructions in the action @action. These
@@ -362,7 +365,8 @@ class ActionPhvConstraints : public Inspector {
     bool masks_valid(
             const PHV::Allocation::MutuallyLiveSlices& container_state,
             const IR::MAU::Action* action,
-            bool actionDataOnly) const;
+            bool actionDataOnly,
+            const PHV::Allocation::LiveRangeShrinkingMap& initActions) const;
 
     /** For each set generated in @copacking_constraints, populate map @req_container with the
       * unallocated field slice and the container to which it should be allocated (same as the
@@ -422,7 +426,8 @@ class ActionPhvConstraints : public Inspector {
             bool has_ad_constant_sources,
             ordered_map<const IR::MAU::Action*, bool>& phvMustBeAligned,
             ordered_map<const IR::MAU::Action*, size_t>& numSourceContainers,
-            UnionFind<PHV::FieldSlice>& copacking_constraints);
+            UnionFind<PHV::FieldSlice>& copacking_constraints,
+            const PHV::Allocation::LiveRangeShrinkingMap& initActions);
 
     /// Generates conditional constraints for bitwise operations. Client for
     /// check_and_generate_constraints_for_bitwise_op_with_unallocated_sources.
@@ -509,14 +514,16 @@ class ActionPhvConstraints : public Inspector {
     /// @container_state are also not written by action b.
     bool all_field_slices_written_together(
             const PHV::Allocation::MutuallyLiveSlices& container_state,
-            const ordered_set<const IR::MAU::Action*>& set_of_actions) const;
+            const ordered_set<const IR::MAU::Action*>& set_of_actions,
+            const PHV::Allocation::LiveRangeShrinkingMap& initActions) const;
 
     /// @returns true if there is a no-pack conflict between the fields in @container_state.
     bool pack_conflicts_present(
             const PHV::Allocation::MutuallyLiveSlices& container_state) const;
 
     /** Checks whether packing @slices into a container will violate MAU action
-     * constraints.
+     * constraints. @initActions is the map of fields to the actions where those fields must be
+     * initialized to enable metadata overlay.
      *
      * @returns bit positions at which unallocated slices must be allocated for
      * the proposed packing to be valid, or boost::none if no packing is
@@ -531,17 +538,17 @@ class ActionPhvConstraints : public Inspector {
      * all the other sources are put in the same set in the UnionFind. The
      * allocator needs to be aware of this case.
      */
-    boost::optional<PHV::Allocation::ConditionalConstraints>
-    can_pack(const PHV::Allocation& alloc, std::vector<PHV::AllocSlice>& slices);
-
-    /// Convenience method that transforms @slice into a singleton slice list,
-    /// which is passed to `can_pack` above.
-    boost::optional<PHV::Allocation::ConditionalConstraints>
-    can_pack(const PHV::Allocation& alloc, const PHV::AllocSlice& slice);
+    boost::optional<PHV::Allocation::ConditionalConstraints> can_pack(
+            const PHV::Allocation& alloc,
+            std::vector<PHV::AllocSlice>& slices,
+            PHV::Allocation::MutuallyLiveSlices& container_state,
+            const PHV::Allocation::LiveRangeShrinkingMap& initActions);
 
     /// Counts the number of bitmasked-set instructions corresponding to @slices in container @c and
     /// allocation object @alloc.
-    int count_bitmasked_set_instructions(const std::vector<PHV::AllocSlice>& slices) const;
+    int count_bitmasked_set_instructions(
+            const std::vector<PHV::AllocSlice>& slices,
+            const PHV::Allocation::LiveRangeShrinkingMap& initActions) const;
 
     /// @returns true if the allocation @container_state in a particular container, where slices in
     /// @fields_not_written_to are not written in the given action, would result in the synthesis of

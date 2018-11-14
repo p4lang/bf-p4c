@@ -80,8 +80,12 @@ p4c_add_xfail_reason("tofino2"
   testdata/p4_14_samples/07-FullTPHV2.p4
   testdata/p4_14_samples/08-FullTPHV3.p4
   switch_dc_basic
-  switch_ent_dc_general
   switch_msdc
+  )
+
+p4c_add_xfail_reason("tofino2"
+  "Compiler Bug.*Fields allocated to CLOT?"
+  switch_ent_dc_general
   )
 
 p4c_add_xfail_reason("tofino2"
@@ -280,9 +284,4 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "Exiting with SIGSEGV"
   extensions/p4_tests/p4_16/bf_p4c_samples/v1model-special-ops-bmv2.p4
-)
-
-p4c_add_xfail_reason("tofino2"
-  "Compiler Bug.*Converting a bitvec to a bitrange"
-  switch_msdc
 )

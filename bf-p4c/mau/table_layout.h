@@ -84,6 +84,19 @@ class LayoutChoices {
     }
 };
 
+/** Checks to see if the table has a hash distribution access somewhere */
+class GetHashDistReqs : public MauInspector {
+    bool _hash_dist_needed;
+    bool preorder(const IR::MAU::HashDist *) {
+        _hash_dist_needed = true;
+        return false;
+    }
+
+ public:
+    bool is_hash_dist_needed() { return _hash_dist_needed; }
+    GetHashDistReqs() : _hash_dist_needed(false) { }
+};
+
 class DoTableLayout : public MauModifier, Backtrack {
     // In order to know how many field sections can be packed together into the same byte
     struct MatchByteKey {

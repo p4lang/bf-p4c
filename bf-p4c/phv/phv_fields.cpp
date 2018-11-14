@@ -326,8 +326,7 @@ bitvec PhvInfo::bits_allocated(
         const PHV::Container c, const ordered_set<const PHV::Field*>& writes) const {
     bitvec ret_bitvec;
     auto& fields = fields_in_container(c);
-    if (fields.size() == 0)
-        return ret_bitvec;
+    if (fields.size() == 0) return ret_bitvec;
     // Gather all the slices of written fields allocated to container c
     ordered_set<const PHV::Field::alloc_slice*> write_slices_in_container;
     for (auto* field : writes) {
@@ -344,8 +343,14 @@ bitvec PhvInfo::bits_allocated(
             bool mutually_exclusive = std::any_of(
                 write_slices_in_container.begin(), write_slices_in_container.end(),
                 [&](const PHV::Field::alloc_slice* slice) {
-                    return field_mutex(slice->field->id, alloc.field->id); });
-            if (!mutually_exclusive)
+                    return field_mutex(slice->field->id, alloc.field->id);
+            });
+            bool meta_overlay = std::any_of(
+                write_slices_in_container.begin(), write_slices_in_container.end(),
+                [&](const PHV::Field::alloc_slice* slice) {
+                    return metadata_overlay(slice->field->id, alloc.field->id);
+            });
+            if (!mutually_exclusive && !meta_overlay)
                 ret_bitvec.setrange(bits.lo, bits.size());
         }); }
     return ret_bitvec;

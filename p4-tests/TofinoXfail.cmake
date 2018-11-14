@@ -275,13 +275,14 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
-  switch_msdc_ipv4
-  switch_8.4_msdc_ipv4
   )
 
 p4c_add_xfail_reason("tofino"
   "No tables placeable, but not all tables placed?"
   switch_msdc_spine_int
+  switch_msdc_ipv4
+  switch_8.4_msdc_ipv4
+  switch_8.4_msdc_spine_int
   )
 
 p4c_add_xfail_reason("tofino"
@@ -290,11 +291,6 @@ p4c_add_xfail_reason("tofino"
   switch_8.4_msdc_leaf_int
   switch_l3_heavy_int_leaf
   switch_8.4_l3_heavy_int_leaf
-  )
-
-p4c_add_xfail_reason("tofino"
-  "Cannot specify.*as the default action, as it requires the hash distribution unit"
-  switch_8.4_msdc_spine_int
   )
 
 p4c_add_xfail_reason("tofino"

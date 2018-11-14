@@ -19,7 +19,6 @@ bool MauBacktracker::backtrack(trigger &trig) {
     } else if (trig.is<BridgedPackingTrigger::failure>()) {
         auto t = dynamic_cast<BridgedPackingTrigger::failure *>(&trig);
         noPackFields.insert(t->bridgedFieldNames.begin(), t->bridgedFieldNames.end());
-        std::cerr << " Bridged packing trigger" << std::endl;
         return true;
     }
     return false;

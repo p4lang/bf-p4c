@@ -226,6 +226,8 @@ void MetadataLiveRange::end_apply() {
         // Ignore metadata fields marked as no_init because initialization would cause their
         // container to become valid.
         if (noInitIntrinsicFields.count(f.name)) continue;
+        // Ignore pa_no_overlay fields.
+        if (noOverlay.count(&f)) continue;
         // Ignore header fields or fields that do not have associated live range affecting pragmas.
         if (!f.bridged && !f.metadata && !f.alwaysPackable && !f.privatizable() && !isNotParsed &&
                 !isNotDeparsed && f.is_deparser_zero_candidate()) {

@@ -548,19 +548,6 @@ void DoTableLayout::setup_layout_options(IR::MAU::Table *tbl) {
                 "cannot be placed", tbl->name);
 }
 
-/** Checks to see if the table has a hash distribution access somewhere */
-class GetHashDistReqs : public MauInspector {
-    bool _hash_dist_needed;
-    bool preorder(const IR::MAU::HashDist *) {
-        _hash_dist_needed = true;
-        return false;
-    }
-
- public:
-    bool is_hash_dist_needed() { return _hash_dist_needed; }
-    GetHashDistReqs() : _hash_dist_needed(false) { }
-};
-
 /* FIXME: This function is for the setup of a table with no match data.  This is currently hacked
    together in order to pass many of the test cases.  This needs to have some standardization
    within the assembly so that all tables that do not require match can possibly work */

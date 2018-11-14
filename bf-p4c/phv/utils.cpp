@@ -110,6 +110,11 @@ void PHV::Allocation::addMetaInitPoints(
         PHV::AllocSlice slice,
         ordered_set<const IR::MAU::Action*> actions) {
     meta_init_points_i[slice] = actions;
+    LOG5("Adding init points for " << slice);
+    LOG5("Number of entries in meta_init_points_i: " << meta_init_points_i.size());
+    if (meta_init_points_i.size() > 0)
+        for (auto kv : meta_init_points_i)
+            LOG5("  Init points for " << kv.first << " : " << kv.second.size());
     for (const IR::MAU::Action* act : actions)
         init_writes_i[act].insert(slice.field());
 }
@@ -368,6 +373,16 @@ PHV::Allocation::getMetadataInits(const IR::MAU::Action* act) const {
     return init_writes_i.at(act);
 }
 
+const ordered_set<const IR::MAU::Action*>
+PHV::Allocation::getInitPointsForField(const PHV::Field* f) const {
+    ordered_set<const IR::MAU::Action*> rs;
+    for (auto kv : meta_init_points_i) {
+        if (kv.first.field() != f) continue;
+        rs.insert(kv.second.begin(), kv.second.end());
+    }
+    return rs;
+}
+
 /* static */ bool
 PHV::Allocation::mutually_exclusive(
         SymBitMatrix mutex,
@@ -449,6 +464,39 @@ PHV::ConcreteAllocation::ConcreteAllocation(const SymBitMatrix& mutex, const Phv
 /// @returns true if this allocation owns @c.
 bool PHV::ConcreteAllocation::contains(PHV::Container c) const {
     return container_status_i.find(c) != container_status_i.end();
+}
+
+ordered_set<const IR::MAU::Action*>
+PHV::Allocation::getInitPoints(PHV::AllocSlice& slice) const {
+    static ordered_set<const IR::MAU::Action*> emptySet;
+    if (!meta_init_points_i.count(slice)) return emptySet;
+    return meta_init_points_i.at(slice);
+}
+
+ordered_set<const IR::MAU::Action*>
+PHV::Transaction::getInitPoints(PHV::AllocSlice& slice) const {
+    if (meta_init_points_i.count(slice))
+        return meta_init_points_i.at(slice);
+    ordered_set<const IR::MAU::Action*> initPointsInParent;
+    const Transaction* parentTransaction = dynamic_cast<const PHV::Transaction*>(parent_i);
+    if (parentTransaction)
+        initPointsInParent = parentTransaction->getInitPoints(slice);
+    else
+        initPointsInParent = parent_i->getInitPoints(slice);
+    return initPointsInParent;
+}
+
+void PHV::Transaction::printMetaInitPoints() const {
+    LOG5("\t\tTransaction: Getting init points for slices:");
+    for (auto kv : meta_init_points_i)
+        LOG5("\t\t  " << kv.first << " : " << kv.second.size());
+    const Transaction* parentTransaction = dynamic_cast<const PHV::Transaction*>(parent_i);
+    while (parentTransaction) {
+        LOG5("\t\tAllocation: Getting init points for slices:");
+        for (auto kv : parentTransaction->get_meta_init_points())
+            LOG5("\t\t  " << kv.first << " : " << kv.second.size());
+        parentTransaction = dynamic_cast<const PHV::Transaction*>(parentTransaction->parent_i);
+    }
 }
 
 ordered_set<const IR::MAU::Action*>
@@ -2093,6 +2141,7 @@ PHV::SlicingIterator::SlicingIterator(
     BUG_CHECK(sentinel_idx_i > 0, "Bad compressed schema sentinel: %1%", sentinel_idx_i);
     LOG3("    ...there are 2^" << sentinel_idx_i << " ways to slice");
     if (LOGGING(6)) {
+        LOG6("Initial compressed schema: " << compressed_schemas_i);
         std::stringstream ss;
         for (int i = 0; i < sentinel_idx_i; ++i)
             ss << (compressed_schemas_i[i] ? "1" : "-");
