@@ -474,13 +474,38 @@ int MatchTable::get_address_mau_actiondata_adr_default(unsigned log2size, bool p
     return rv;
 }
 
-// Create json node for all hash bits
+/**
+ * Generates the hash_bits node for a single hash_function node in the JSON.
+ *
+ * Will add the impact of a single hash_table (64 bit section of the input xbar) to the hash
+ * bits.  If the table requires multiple hash_tables, then the previous hash table value will
+ * be looked up and added.  FIXME: At some point refactor this function to not keep
+ * doing this rewrite.
+ *
+ * The JSON for each hash bit has the following:
+ *     hash_bit - The hash bit in which this is output on the Galois matrix.  (Really whatever
+ *         this bit position is just has to coordinate across the other driver structures, but
+ *         those are also based on the Galois matrix position).
+ *     seed - the bit that is xored in at the end of the calcuation
+ *     bits_to_xor - The field bits from the P4 API that will determine the value of this bit,
+ *         and must be XORed for this bit.  This is a vector of fields with 4 values.
+ *         - field_bit - The p4 field bit to be XORed
+ *         - field_name - The p4 field name to be XORed
+ *         The next two parameters are only needed for dynamic_key_masks, as they indicate
+ *         to the driver which bit to turn off
+ *         - hash_match_group - Which 128 bit input xbar group this bit is appearing in (0-7)
+ *         - hash_match_group_bit - The bit offset within the 128 bit input xbar group.
+ */
 void MatchTable::gen_hash_bits(const std::map<int, HashCol> &hash_table,
-        unsigned hash_table_id, json::vector &hash_bits, unsigned hash_group_no) const {
+        unsigned hash_table_id, json::vector &hash_bits, unsigned hash_group_no,
+        bitvec hash_bits_used) const {
     for (auto &col: hash_table) {
+        if (!hash_bits_used.getbit(col.first))
+            continue;
         json::map hash_bit;
         bool hash_bit_added = false;
         json::vector *bits_to_xor = nullptr;
+        // FIXME: This function has a lot of unnecessary copying and moving around.
         for (auto &hb : hash_bits) {
             if (hb->to<json::map>()["hash_bit"]->to<json::number>() == json::number(col.first)) {
                 bits_to_xor = &(hb->to<json::map>()["bits_to_xor"]->to<json::vector>());
@@ -513,8 +538,8 @@ void MatchTable::gen_hash_bits(const std::map<int, HashCol> &hash_table,
                 bits_to_xor->push_back(json::map{
 		    {"field_bit", json::number(field_bit)},
 		    {"field_name", json::string(key_name)},
-		    {"hash_match_group", json::number(input_xbar->hash_group())},
-		    {"hash_match_group_bit", json::number(0)}
+		    {"hash_match_group", json::number(hash_table_id / 2)},
+		    {"hash_match_group_bit", json::number((hash_table_id % 2) * 64 + bit)}
 		    });
             }
         }
@@ -536,6 +561,8 @@ void MatchTable::add_hash_functions(json::map &stage_tbl) const {
     // table or the hash_distribution which is incorrect. This should move
     // inside the hash_dist so this condition does not occur in the
     // hash_action table
+    bitvec hash_matrix_req;
+    hash_matrix_req.setrange(0, EXACT_HASH_GROUP_SIZE);
     if (!p4_params_list.empty() && input_xbar) {
         auto ht = input_xbar->get_hash_tables();
         if (ht.size() > 0) {
@@ -545,7 +572,8 @@ void MatchTable::add_hash_functions(json::map &stage_tbl) const {
             json::vector &hash_bits = hash_function["hash_bits"] = json::vector();
             for (const auto hash_table : ht) {
                 hash_function["hash_function_number"] = hash_table.first;
-                gen_hash_bits(hash_table.second, hash_table.first, hash_bits, hash_table.first);
+                gen_hash_bits(hash_table.second, hash_table.first, hash_bits, hash_table.first,
+                              hash_matrix_req);
             hash_functions.push_back(std::move(hash_function)); } } }
 }
 

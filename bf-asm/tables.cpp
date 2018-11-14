@@ -1923,7 +1923,9 @@ void Table::canon_field_list(json::vector &field_list) const {
  */
 void Table::get_cjson_source(const std::string &field_name, std::string &source, int &start_bit) const {
     source = "spec";
-    if (field_name == "version") {
+    if (field_name == "hash_group") {
+        source = "proxy_hash";
+    } else if (field_name == "version") {
         source = "version";
     } else if (field_name == "immediate") {
         source = "immediate";

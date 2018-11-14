@@ -29,18 +29,8 @@ bool TableFormat::analyze_layout_option() {
 
     // If table has @dynamic_table_key_masks pragma, the driver expects all bits
     // to be available in the table pack format, so we disable ghosting
-    if (!tbl->layout.atcam && !tbl->dynamic_key_masks) {
+    if (!tbl->layout.atcam && !tbl->dynamic_key_masks && !tbl->layout.proxy_hash) {
         ghost_bits_count = RAM_GHOST_BITS + floor_log2(min_way_size);
-    }
-
-    int per_RAM = layout_option.way.match_groups / layout_option.way.width;
-    auto total_info = match_ixbar.bits_per_search_bus();
-
-    for (auto gi : total_info[0].all_group_info)
-         LOG4("   Group info " << gi);
-
-    for (int i = 0; i < layout_option.way.match_groups; i++) {
-        use->match_groups.emplace_back();
     }
 
     // Initialize all information
@@ -50,8 +40,22 @@ bool TableFormat::analyze_layout_option() {
     search_bus_per_width.resize(layout_option.way.width, 0);
     version_allocated.resize(layout_option.way.match_groups, false);
 
-    single_match = *(match_ixbar.match_hash()[0]);
+    for (int i = 0; i < layout_option.way.match_groups; i++) {
+        use->match_groups.emplace_back();
+    }
 
+    int per_RAM = layout_option.way.match_groups / layout_option.way.width;
+    if (tbl->layout.proxy_hash) {
+        analyze_proxy_hash_option(per_RAM);
+        return true;
+    }
+
+    auto total_info = match_ixbar.bits_per_search_bus();
+
+    for (auto gi : total_info[0].all_group_info)
+         LOG4("   Group info " << gi);
+
+    single_match = *(match_ixbar.match_hash()[0]);
     if (!is_match_entry_wide()) {
         bool rv = analyze_skinny_layout_option(per_RAM, total_info[0].all_group_info);
         if (!rv) return false;
@@ -86,6 +90,46 @@ bool TableFormat::analyze_layout_option() {
 
     // Unsure if more code will be required here in the future
     return true;
+}
+
+/**
+ * Rather than the bytes coming from match data, the bytes have to be built from the
+ * hash matrix.  Thus the bytes are built from the proxy_hash_key_use, on a byte by byte
+ * basis.
+ */
+void TableFormat::analyze_proxy_hash_option(int per_RAM) {
+    auto &ph = proxy_hash_ixbar.proxy_hash_key_use;
+    BUG_CHECK(ph.allocated, "%s: Proxy Hash Table %s does not have an allocation for a proxy "
+              "hash key", tbl->srcInfo, tbl->name);
+
+    use->proxy_hash_group = ph.group;
+    for (int i = 0; i < IXBar::HASH_MATRIX_SIZE; i += 8) {
+        auto bv = ph.hash_bits.getslice(i, 8);
+        if (bv.empty())
+            continue;
+        IXBar::Use::Byte b("proxy_hash", i);
+        b.bit_use = bv;
+        b.proxy_hash = true;
+        b.search_bus = 0;
+        single_match.push_back(b);
+    }
+
+    int total = 0;
+    for (int i = 0; i < layout_option.way.width; i++) {
+        overhead_groups_per_RAM[i] = per_RAM;
+        total += per_RAM;
+    }
+
+    int index = 0;
+    while (total < layout_option.way.match_groups) {
+        overhead_groups_per_RAM[index]++;
+        index++;
+        total++;
+    }
+
+    for (int i = 0; i < layout_option.way.width; i++) {
+        search_bus_per_width[i] = 0;
+    }
 }
 
 /* Specifically for the allocation of groups that only require one RAM.  If it requires
@@ -338,6 +382,7 @@ bool TableFormat::find_format(Use *u) {
     }
     redistribute_next_table();
     verify();
+    LOG3("Table format is successful");
     return true;
 }
 
@@ -972,6 +1017,44 @@ bool TableFormat::allocate_version(int width_sect, const safe_vector<ByteInfo> &
     return false;
 }
 
+void TableFormat::classify_match_bits() {
+    if (tbl->layout.atcam) {
+        auto partition = match_ixbar.atcam_partition();
+        for (auto byte : partition) {
+            use->ghost_bits[byte] = byte.bit_use;
+        }
+    }
+
+    safe_vector<IXBar::Use::Byte> potential_ghost;
+
+    for (auto byte : single_match) {
+        potential_ghost.push_back(byte);
+    }
+
+    if (ghost_bits_count > 0)
+        choose_ghost_bits(potential_ghost);
+
+    std::set<int> search_buses;
+
+    for (auto byte : potential_ghost) {
+        search_buses.insert(byte.search_bus);
+        match_bytes.emplace_back(byte, byte.bit_use);
+    }
+
+
+    for (auto sb : search_buses) {
+        BUG_CHECK(std::count(search_bus_per_width.begin(), search_bus_per_width.end(), sb) > 0,
+                  "Byte on search bus %d appears as a match byte when no search bus is "
+                  "provided on match", sb);
+    }
+
+
+    for (auto info : ghost_bytes) {
+        LOG4("Ghost " << info.byte);
+        use->ghost_bits[info.byte] = info.bit_use;
+    }
+}
+
 /** Ghost bits are bits that are used in the hash to find the location of the entry, but are not
  *  contained within the match.  It is an optimization to save space on match bits.
  *
@@ -992,20 +1075,7 @@ bool TableFormat::allocate_version(int width_sect, const safe_vector<ByteInfo> &
  *  It would be optimal to ghost off the 3 3 bit fields, and the 1 bit fields, as it would remove
  *  4 total PHV bytes to match on.
  */
-void TableFormat::choose_ghost_bits() {
-    if (tbl->layout.atcam) {
-        auto partition = match_ixbar.atcam_partition();
-        for (auto byte : partition) {
-            use->ghost_bits[byte] = byte.bit_use;
-        }
-    }
-
-    safe_vector<IXBar::Use::Byte> potential_ghost;
-
-    for (auto byte : single_match) {
-        potential_ghost.push_back(byte);
-    }
-
+void TableFormat::choose_ghost_bits(safe_vector<IXBar::Use::Byte> &potential_ghost) {
     std::sort(potential_ghost.begin(), potential_ghost.end(),
               [=](const IXBar::Use::Byte &a, const IXBar::Use::Byte &b){
         int t = 0;
@@ -1054,26 +1124,6 @@ void TableFormat::choose_ghost_bits() {
             match_bytes.emplace_back(*it, match_bits);
         }
         it = potential_ghost.erase(it);
-    }
-
-    std::set<int> search_buses;
-
-    for (auto byte : potential_ghost) {
-        search_buses.insert(byte.search_bus);
-        match_bytes.emplace_back(byte, byte.bit_use);
-    }
-
-
-    for (auto sb : search_buses) {
-        BUG_CHECK(std::count(search_bus_per_width.begin(), search_bus_per_width.end(), sb) > 0,
-                  "Byte on search bus %d appears as a match byte when no search bus is "
-                  "provided on match", sb);
-    }
-
-
-    for (auto info : ghost_bytes) {
-        LOG4("Ghost " << info.byte);
-        use->ghost_bits[info.byte] = info.bit_use;
     }
 }
 
@@ -1457,7 +1507,7 @@ bool TableFormat::allocate_match() {
  *    3. Allocate shares: share match groups RAMs
  */
 bool TableFormat::allocate_match_with_algorithm() {
-    choose_ghost_bits();
+    classify_match_bits();
     for (int width_sect = 0; width_sect < layout_option.way.width; width_sect++) {
         allocate_full_fits(width_sect);
     }

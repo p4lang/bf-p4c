@@ -115,6 +115,45 @@ void AlgTcamMatchTable::setup_column_priority() {
     }
 }
 
+/**
+ * Guarantees that the order of the entries provided in the ATCAM table format are order
+ * in HW priority 0-4, (where in HW entry 4 will be favored).  This is required to guarantee that
+ * the entries in the ATCAM pack format are in priority order for the driver.
+ */
+void AlgTcamMatchTable::verify_entry_priority() {
+    int overhead_word = -1;
+    bool overhead_word_set = false;
+    for (int i = 0; i < (int)group_info.size(); i++) {
+        if (!overhead_word_set) {
+            overhead_word = group_info[i].overhead_word;
+            overhead_word_set = true;
+        } else if (overhead_word != group_info[i].overhead_word) {
+            error(format->lineno, "ATCAM tables can at most have only one overhead word");
+            return;
+        }
+    }
+
+    if (overhead_word < 0)
+        overhead_word = word_info.size() - 1;
+
+    if (word_info[overhead_word].size() != group_info.size()) {
+        error(format->lineno, "ATCAM tables do not chain to the same overhead word");
+        return;
+    }
+
+    for (int i = 0; i < (int)word_info[overhead_word].size(); i++) {
+        if (i != word_info[overhead_word][i]) {
+            error(format->lineno, "ATCAM priority not correctly formatted in the compiler");
+            return;
+        }
+    }
+}
+
+void AlgTcamMatchTable::verify_format() {
+    SRamMatchTable::verify_format();
+    verify_entry_priority();
+}
+
 void AlgTcamMatchTable::pass1() {
     LOG1("### ATCAM match table " << name() << " pass1");
     SRamMatchTable::pass1();
@@ -149,23 +188,29 @@ void AlgTcamMatchTable::find_tcam_match() {
     std::map<Phv::Slice, std::pair<match_element, match_element>>       tcam;
     unsigned off = 0;
     /* go through the match fields and find duplicates -- those are the tcam matches */
-    for (auto &match_field : match) {
-        auto sl = *match_field;
+    for (auto match_field : match) {
+        auto phv_p = dynamic_cast<Phv::Ref *>(match_field);
+        if (phv_p == nullptr) {
+            BUG();
+            continue;
+        } 
+        auto phv_ref = *phv_p;
+        auto sl = *phv_ref;
         if (!sl) continue;
         if (exact.count(sl)) {
             if (tcam.count(sl))
-                error(match_field.lineno, "%s appears more than twice in atcam match",
-                      match_field.desc().c_str());
+                error(phv_ref.lineno, "%s appears more than twice in atcam match",
+                      phv_ref.desc().c_str());
             if ((sl.size() % 4U) != 0) {
-                if ((sl.size() == 1) && (match_field.desc().find("$valid") != std::string::npos)) {}
+                if ((sl.size() == 1) && (phv_ref.desc().find("$valid") != std::string::npos)) {}
                 else
-                    warning(match_field.lineno, "tcam match field %s not a multiple of 4 bits",
-                      match_field.desc().c_str()); }
+                    warning(phv_ref.lineno, "tcam match field %s not a multiple of 4 bits",
+                      phv_ref.desc().c_str()); }
             tcam.emplace(sl, std::make_pair(exact.at(sl),
-                            match_element{ &match_field, off, sl->size() }));
+                            match_element{ new Phv::Ref(phv_ref), off, sl->size() }));
             exact.erase(sl);
         } else {
-            exact.emplace(sl, match_element{ &match_field, off, sl->size() }); }
+            exact.emplace(sl, match_element{ new Phv::Ref(phv_ref), off, sl->size() }); }
         off += sl.size(); }
     for (auto e : exact)
         for (auto t : tcam)
@@ -293,6 +338,9 @@ void AlgTcamMatchTable::gen_unit_cfg(json::vector &units, int size) const {
     stage_tbl["default_next_table"] = (hit_next.size() > 0 && hit_next[0].name != "END")
                                     ? hit_next[0]->table_id() : Target::END_OF_PIPE();
     stage_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg();
+    // Hash functions not necessary currently for ATCAM matches, as the result comes from
+    // the partition_field_name
+    stage_tbl["hash_functions"] = json::vector();
     add_pack_format(stage_tbl, format, false);
     units.push_back(std::move(tbl));
 }

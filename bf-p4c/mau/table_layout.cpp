@@ -152,40 +152,43 @@ void DoTableLayout::check_for_ternary(IR::MAU::Table::Layout &layout, const IR::
     }
 }
 
-void DoTableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl) {
-    if (tbl->layout.pre_classifier)
-        layout.entries = tbl->layout.pre_classifer_number_entries;
-    else if (auto k = tbl->match_table->getConstantProperty("size"))
-        layout.entries = k->asInt();
-    else if (auto k = tbl->match_table->getConstantProperty("min_size"))
-        layout.entries = k->asInt();
-    layout.match_width_bits = 0;
-    if (tbl->match_key.empty())
-        return;
+/**
+ * Determines whether a table is set to a proxy hash table, based on the proxy_hash_width
+ * function.
+ */
+void DoTableLayout::check_for_proxy_hash(IR::MAU::Table::Layout &layout,
+        const IR::MAU::Table *tbl) {
+    auto annot = tbl->match_table->getAnnotations();
+    if (auto s = annot->getSingle("proxy_hash_width")) {
+        if (s->expr.size() <= 0) {
+            ::warning("Proxy hash pragma ignored for table %s because value is undefined",
+                      tbl->name);
+        } else {
+            auto pragma_val =  s->expr.at(0)->to<IR::Constant>();
+            ERROR_CHECK(pragma_val != nullptr, "%s: The proxy hash pragma on table %s is "
+                        "not a constant", tbl->srcInfo, tbl->name);
+            ERROR_CHECK(pragma_val->asInt() > 0 && pragma_val->asInt() <= IXBar::HASH_MATRIX_SIZE,
+                "%s: Proxy hash width %d on table %s invalid, as it cannot fit on the "
+                "hash matrix", tbl->srcInfo, pragma_val->asInt(), tbl->name);
+            layout.proxy_hash = true;
+            layout.proxy_hash_width = pragma_val->asInt();
+        }
+    }
+}
 
-    cstring partition_index;
-    if (layout.alpm)
-        check_for_alpm(layout, tbl, partition_index);
-    if (!layout.atcam)
-        check_for_atcam(layout, tbl, partition_index, phv);
-    if (!layout.atcam)
-        check_for_ternary(layout, tbl);
-    if (!layout.alpm && !layout.atcam && !layout.ternary)
-        layout.exact = true;
-
-    safe_vector<int> byte_sizes;
-    bool partition_found = false;
-
-    /** Because the input xbar allocates by container bytes, the estimate should also be
-     *  based on container bytes rather than field bytes.  The point of this byte_impact
-     *  maps is to build container bytes and run analysis on that.
-     */
-    std::map<MatchByteKey, safe_vector<le_bitrange>> byte_impacts;
+/** Because the input xbar allocates by container bytes, the estimate should also be
+ *  based on container bytes rather than field bytes.  The point of this byte_impact
+ *  maps is to build container bytes and run analysis on that.
+ */
+void DoTableLayout::determine_byte_impacts(const IR::MAU::Table *tbl,
+        IR::MAU::Table::Layout &layout,
+        std::map<MatchByteKey, safe_vector<le_bitrange>> &byte_impacts, bool &partition_found,
+        cstring partition_index) {
     for (auto ixbar_read : tbl->match_key) {
         if (!ixbar_read->for_match()) continue;
         le_bitrange bits = { 0, 0 };
         auto *field = phv.field(ixbar_read->expr, &bits);
-        int match_multiplier = 1;
+        int match_multiplier = layout.proxy_hash ? 0 : 1;
         int ixbar_multiplier = 1;
 
         int bytes = 0;
@@ -243,7 +246,42 @@ void DoTableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR:
             BUG("unexpected reads expression %s", ixbar_read->expr);
         }
     }
+}
 
+void DoTableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl) {
+    if (tbl->layout.pre_classifier)
+        layout.entries = tbl->layout.pre_classifer_number_entries;
+    else if (auto k = tbl->match_table->getConstantProperty("size"))
+        layout.entries = k->asInt();
+    else if (auto k = tbl->match_table->getConstantProperty("min_size"))
+        layout.entries = k->asInt();
+    layout.match_width_bits = 0;
+    if (tbl->match_key.empty())
+        return;
+
+    cstring partition_index;
+    if (layout.alpm)
+        check_for_alpm(layout, tbl, partition_index);
+    if (!layout.atcam)
+        check_for_atcam(layout, tbl, partition_index, phv);
+    if (!layout.atcam)
+        check_for_ternary(layout, tbl);
+    check_for_proxy_hash(layout, tbl);
+
+    if (!layout.alpm && !layout.atcam && !layout.ternary && !layout.proxy_hash)
+        layout.exact = true;
+    if (layout.proxy_hash) {
+        ERROR_CHECK(!layout.atcam && !layout.ternary, "%s: A proxy hash table cannot be ternary, "
+                    "as specified for table %s", tbl->srcInfo, tbl->name);
+    }
+
+    safe_vector<int> byte_sizes;
+    bool partition_found = false;
+
+    std::map<MatchByteKey, safe_vector<le_bitrange>> byte_impacts;
+    determine_byte_impacts(tbl, layout, byte_impacts, partition_found, partition_index);
+
+    // Code responsible for determining the ixbar_width_bits and match_width_bits
     for (auto entry : byte_impacts) {
         safe_vector<bitvec> individual_bytes;
         auto &mbk = entry.first;
@@ -286,7 +324,7 @@ void DoTableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR:
         }
     }
 
-    if (!layout.ternary && !layout.atcam) {
+    if (!layout.ternary && !layout.atcam && !layout.proxy_hash) {
         int ghost_bits_left = TableFormat::RAM_GHOST_BITS;
         std::sort(byte_sizes.begin(), byte_sizes.end());
         for (auto byte_size : byte_sizes) {
@@ -297,6 +335,8 @@ void DoTableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR:
             }
         }
         layout.match_width_bits -= TableFormat::RAM_GHOST_BITS;
+    } else if (layout.proxy_hash) {
+        layout.match_width_bits = layout.proxy_hash_width;
     }
 }
 

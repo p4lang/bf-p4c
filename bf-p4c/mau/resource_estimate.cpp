@@ -295,7 +295,7 @@ void StageUseEstimate::calculate_way_sizes(const IR::MAU::Table *tbl, LayoutOpti
         return;
 
     // This indicates that we are using identity function.
-    if (lo->layout.ixbar_width_bits <= ceil_log2(Memories::SRAM_DEPTH)) {
+    if (lo->layout.ixbar_width_bits <= ceil_log2(Memories::SRAM_DEPTH) && !lo->layout.proxy_hash) {
         if (calculated_depth == 1) {
             lo->way_sizes = {1};
             lo->identity = true;

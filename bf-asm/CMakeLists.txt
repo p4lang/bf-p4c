@@ -123,6 +123,7 @@ set (BFAS_COMMON_SOURCES
   phase0.cpp
   phv.cpp
   primitives.cpp
+  proxy_hash.cpp
   salu_inst.cpp
   selection.cpp
   sram_match.cpp
@@ -157,6 +158,7 @@ SET (BFAS_COMMON_HEADERS
   instruction.h
   json.h
   mask_counter.h
+  match_source.h
   misc.h
   p4_table.h
   parser.h

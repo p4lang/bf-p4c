@@ -123,6 +123,7 @@ class DoTableLayout : public MauModifier, Backtrack {
     bool preorder(IR::MAU::Selector *sel) override;
     void check_for_alpm(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl,
                          cstring &partition_index);
+    void check_for_proxy_hash(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl);
     void setup_instr_and_next(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl);
     void setup_match_layout(IR::MAU::Table::Layout &, const IR::MAU::Table *);
     void setup_gateway_layout(IR::MAU::Table::Layout &, IR::MAU::Table *);
@@ -135,6 +136,9 @@ class DoTableLayout : public MauModifier, Backtrack {
     void attach_random_seed(IR::MAU::Table *tbl);
     bool can_be_hash_action(IR::MAU::Table *tbl, std::string &reason);
     void add_hash_action_option(IR::MAU::Table *tbl, bool &hash_action_only);
+    void determine_byte_impacts(const IR::MAU::Table *tbl, IR::MAU::Table::Layout &layout,
+        std::map<MatchByteKey, safe_vector<le_bitrange>> &byte_impacts, bool &partition_found,
+        cstring partition_index);
 
  public:
     explicit DoTableLayout(const PhvInfo &p, LayoutChoices &l) : phv(p), lc(l) {}

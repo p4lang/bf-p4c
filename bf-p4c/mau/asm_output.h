@@ -57,8 +57,12 @@ class MauAsmOutput : public MauInspector {
     }
     bool preorder(const IR::MAU::StatefulAlu *) override { return false; }
     friend std::ostream &operator<<(std::ostream &, const MauAsmOutput &);
+
+ public:
     class TableMatch;
-    void emit_ixbar(std::ostream &out, indent_t, const IXBar::Use *,
+
+ private:
+    void emit_ixbar(std::ostream &out, indent_t, const IXBar::Use *, const IXBar::Use *,
                     const safe_vector<IXBar::HashDistUse> *,
                     const Memories::Use *, const TableMatch *, bool ternary) const;
     void emit_ways(std::ostream &out, indent_t indent, const IXBar::Use *use,
@@ -93,6 +97,10 @@ class MauAsmOutput : public MauInspector {
     void emit_ixbar_meter_alu_hash(std::ostream &out, indent_t indent,
             safe_vector<Slice> &match_data, const IXBar::Use::MeterAluHash &mah,
             const safe_vector<PHV::FieldSlice> &field_list_order) const;
+    void emit_ixbar_proxy_hash(std::ostream &out, indent_t indent, safe_vector<Slice> &match_data,
+            const IXBar::Use::ProxyHashKey &ph,
+            const safe_vector<PHV::FieldSlice> &field_list_order) const;
+
     void emit_single_ixbar(std::ostream& out, indent_t indent, const IXBar::Use *use,
             const TableMatch *fmt, const IR::Expression *hd_expr = nullptr) const;
     void emit_memory(std::ostream &out, indent_t, const Memories::Use &) const;

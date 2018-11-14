@@ -36,6 +36,9 @@ struct IXBar {
     static constexpr int HASH_GROUPS = 8;
     static constexpr int HASH_INDEX_GROUPS = 4;  /* groups of 10 bits for indexing */
     static constexpr int HASH_SINGLE_BITS = 12;  /* top 12 bits of hash table individually */
+    static constexpr int RAM_SELECT_BIT_START = 40;
+    static constexpr int RAM_LINE_SELECT_BITS = 10;
+    static constexpr int HASH_MATRIX_SIZE = RAM_SELECT_BIT_START + HASH_SINGLE_BITS;
     static constexpr int HASH_DIST_SLICES = 3;
     static constexpr int HASH_DIST_BITS = 16;
     static constexpr int HASH_DIST_MAX_EXPAND_BITS = 23;
@@ -165,8 +168,8 @@ struct IXBar {
     /* Track the use of hashtables/groups too -- FIXME -- should it be a separate data structure?
      * strings here are table names
      * NOTE: Changes here require changes to .gdbinit pretty printer */
-    Alloc2D<cstring, HASH_TABLES, HASH_INDEX_GROUPS>    hash_index_use;
     unsigned                                    hash_index_inuse[HASH_INDEX_GROUPS] = { 0 };
+    Alloc2D<cstring, HASH_TABLES, HASH_INDEX_GROUPS>    hash_index_use;
     Alloc2D<cstring, HASH_TABLES, HASH_SINGLE_BITS>     hash_single_bit_use;
     unsigned                                    hash_single_bit_inuse[HASH_SINGLE_BITS] = { 0 };
     Alloc1D<cstring, HASH_GROUPS>                      hash_group_print_use;
@@ -203,7 +206,7 @@ struct IXBar {
         bool search_data() const { return gw_search_bus || gw_hash_group; }
 
         // FIXME: Could be better created initialized through a constructor
-        enum type_t { MATCH, GATEWAY, SELECTOR, METER, STATEFUL_ALU, HASH_DIST, TYPES }
+        enum type_t { MATCH, GATEWAY, PROXY_HASH, SELECTOR, METER, STATEFUL_ALU, HASH_DIST, TYPES }
             type = TYPES;
 
         enum hash_dist_type_t { COUNTER_ADR, METER_ADR, METER_ADR_AND_IMMEDIATE, ACTION_ADR,
@@ -247,6 +250,9 @@ struct IXBar {
             // A index given to each range index, as there are constraints on the multirange
             // distribution that leads to some restrictions on range fields
             int         range_index = -1;
+            // When converting a byte to proxy hash, this is the byte in the table format
+            // in which the hash is provide
+            bool        proxy_hash = false;
 
             Byte(cstring n, int l) : name(n), lo(l) {}
             Byte(cstring n, int l, int g, int gb) : name(n), lo(l), loc(g, gb) {}
@@ -350,6 +356,22 @@ struct IXBar {
             }
         };
 
+        struct ProxyHashKey {
+            bool allocated = false;
+            int group = -1;
+            bitvec hash_bits;
+            IR::MAU::hash_function algorithm;
+            cstring alg_name;
+
+            void clear() {
+                allocated = false;
+                group = -1;
+                hash_bits.clear();
+            }
+        };
+
+        ProxyHashKey proxy_hash_key_use;
+
         // The order in the P4 program that the fields appear in the list
         safe_vector<PHV::FieldSlice> field_list_order;
         HashDistHash hash_dist_hash;
@@ -363,6 +385,7 @@ struct IXBar {
             for (size_t i = 0; i < HASH_GROUPS; i++)
                 hash_seed[i].clear();
             hash_dist_hash.clear();
+            proxy_hash_key_use.clear();
             field_list_order.clear();
         }
 
@@ -611,7 +634,6 @@ struct IXBar {
 
     ordered_map<const IR::MAU::AttachedMemory *, const IXBar::Use &> allocated_attached;
 
-
     void clear();
     void field_management(ContByteConversion &map_alloc,
         safe_vector<PHV::FieldSlice> &field_list_order, const IR::Expression *field,
@@ -623,6 +645,11 @@ struct IXBar {
                         bool second_try);
     int getHashGroup(unsigned hash_table_input);
     void getHashDistGroups(unsigned hash_table_input, int hash_group_opt[2]);
+    bool allocProxyHash(const IR::MAU::Table *tbl, const PhvInfo &phv,
+        const LayoutOption *lo, Use &alloc, Use &proxy_hash_alloc);
+    bool allocProxyHashKey(const IR::MAU::Table *tbl, const PhvInfo &phv, const LayoutOption *lo,
+        Use &proxy_hash_alloc, hash_matrix_reqs &hm_reqs);
+
     bool allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc,
                           const LayoutOption *layout_option,
                           size_t start, size_t last);
@@ -718,6 +745,8 @@ struct IXBar {
     int max_bit_to_byte(bitvec bit_mask);
     int max_index_group(int max_bit);
     int max_index_single_bit(int max_bit);
+    unsigned index_groups_used(bitvec bv) const;
+    unsigned select_bits_used(bitvec bv) const;
     bool hash_use_free(int max_group, int max_single_bit, unsigned hash_table_input);
     void write_hash_use(int max_group, int max_single_bit, unsigned hash_table_input,
         cstring name);
@@ -738,6 +767,7 @@ struct IXBar {
         HashDistAllocParams &hdap, int p4_hash_bits, cstring name);
     bitvec determine_final_xor(const IR::MAU::hash_function *hf,
         std::map<int, le_bitrange> &bit_starts);
+    void determine_proxy_hash_alg(const IR::MAU::Table *tbl, Use &use, int group);
 };
 
 inline std::ostream &operator<<(std::ostream &out, const IXBar::Loc &l) {

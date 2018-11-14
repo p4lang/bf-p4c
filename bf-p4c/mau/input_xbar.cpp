@@ -1071,9 +1071,9 @@ bool IXBar::find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use, bool ternary,
                 allocate_mid_bytes(unalloced, alloced, ternary, prefer_found, order,
                                    mid_byte_order, mid_bytes_needed, bytes_to_allocate,
                                    version_placed);
+                LOG3("Allocation post midbyte ");
+                    print_groups(order, mid_byte_order, ternary);
             }
-            LOG3("Allocation post midbyte ");
-                print_groups(order, mid_byte_order, ternary);
             allocate_groups(unalloced, alloced, ternary, prefer_found, order, mid_byte_order,
                             bytes_to_allocate, groups_needed, hm_reqs.hash_dist, byte_mask);
             allocated = unalloced.size() == 0;
@@ -1176,6 +1176,24 @@ void IXBar::layout_option_calculation(const LayoutOption *layout_option,
     }
 }
 
+unsigned IXBar::index_groups_used(bitvec bv) const {
+    unsigned rv = 0;
+    for (int i = 0; i < HASH_INDEX_GROUPS; i++) {
+        if (bv.getrange(i * RAM_LINE_SELECT_BITS, RAM_LINE_SELECT_BITS))
+            rv |= (1 << i);
+    }
+    return rv;
+}
+
+unsigned IXBar::select_bits_used(bitvec bv) const {
+    unsigned rv = 0;
+    for (int i = RAM_SELECT_BIT_START; i < HASH_MATRIX_SIZE; i++) {
+        if (bv.getbit(i))
+            rv |= (1 << (i - RAM_SELECT_BIT_START));
+    }
+    return rv;
+}
+
 IXBar::hash_matrix_reqs IXBar::match_hash_reqs(const LayoutOption *lo,
         size_t start, size_t last, bool ternary) {
     if (ternary) {
@@ -1186,7 +1204,7 @@ IXBar::hash_matrix_reqs IXBar::match_hash_reqs(const LayoutOption *lo,
     for (size_t index = start; index < last; index++) {
         bits_required += ceil_log2(lo->way_sizes[index]);
     }
-    bits_required += std::min(bits_required, HASH_SINGLE_BITS);
+    bits_required = std::min(bits_required, HASH_SINGLE_BITS);
     int groups_required = std::min(last - start, static_cast<size_t>(IXBar::HASH_INDEX_GROUPS));
     return hash_matrix_reqs(groups_required, bits_required, false);
 }
@@ -1432,6 +1450,235 @@ void IXBar::getHashDistGroups(unsigned hash_table_input, int hash_group_opt[2]) 
        hash_group_opt[1] = hash_dist_groups[1];
     }
 }
+
+/**
+ * Really should be replaced by an extern function call: P4C-1107
+ */
+void IXBar::determine_proxy_hash_alg(const IR::MAU::Table *tbl, Use &alloc, int group) {
+    bool hash_function_found = false;
+    auto annot = tbl->match_table->getAnnotations();
+    if (auto s = annot->getSingle("proxy_hash_algorithm")) {
+        auto pragma_val = s->expr.at(0)->to<IR::StringLiteral>();
+        if (pragma_val == nullptr) {
+            ::error("%s: proxy_hash_algorithm pragma on table %s must be a string", tbl->srcInfo,
+                    tbl->name);
+        } else if (alloc.proxy_hash_key_use.algorithm.setup(pragma_val)) {
+            hash_function_found = true;
+            alloc.proxy_hash_key_use.alg_name = pragma_val->value;
+        }
+    }
+    if (!hash_function_found) {
+        alloc.proxy_hash_key_use.algorithm = IR::MAU::hash_function::random();
+        alloc.proxy_hash_key_use.alg_name = "random";
+    }
+
+    if (alloc.proxy_hash_key_use.algorithm.type == IR::MAU::hash_function::IDENTITY)
+        ::error("%s: A proxy hash table with an identity algorithm is not supported, as specified "
+                "on table %s.  Just use a normal exact match table", tbl->srcInfo, tbl->name);
+
+    int start_bit = alloc.proxy_hash_key_use.hash_bits.ffs();
+    std::map<int, le_bitrange> bit_starts;
+    int bits_seen = 0;
+    do {
+        int end_bit = alloc.proxy_hash_key_use.hash_bits.ffz(start_bit);
+        int p4_lo = bits_seen;
+        int p4_hi = p4_lo + end_bit - start_bit - 1;
+        bit_starts[start_bit] = { p4_lo, p4_hi };
+        bits_seen += end_bit - start_bit;
+        start_bit = alloc.proxy_hash_key_use.hash_bits.ffs(end_bit);
+    } while (start_bit >= 0);
+    alloc.hash_seed[group] = determine_final_xor(&alloc.proxy_hash_key_use.algorithm, bit_starts);
+}
+
+/**
+ * This function is to determine the galois matrix/ixbar requirements for the key to be
+ * used in the hash matrix function.  This is responsible for programming the
+ * proxy_hash_key_use portion of a Use object.
+ *
+ * This specifically coordinates with the proxy_hash_function JSON node in the compiler
+ */
+bool IXBar::allocProxyHashKey(const IR::MAU::Table *tbl, const PhvInfo &phv,
+        const LayoutOption *lo, Use &alloc, hash_matrix_reqs &hm_reqs) {
+    if (tbl->match_key.empty()) return true;
+    ContByteConversion map_alloc;
+    std::map<cstring, bitvec> fields_needed;
+    safe_vector<Use::Byte *> alloced;
+    KeyInfo ki;
+    for (auto ixbar_read : tbl->match_key) {
+        if (!ixbar_read->for_match())
+            continue;
+        field_management(map_alloc, alloc.field_list_order, ixbar_read, fields_needed,
+                         tbl->name, phv, ki);
+    }
+
+    create_alloc(map_alloc, alloc);
+    LOG3("need " << alloc.use.size() << " bytes for proxy hash key of table " << tbl->name);
+
+    bool rv = find_alloc(alloc.use, false, alloced, hm_reqs);
+    if (!rv) {
+        alloc.clear();
+        return false;
+    }
+
+    unsigned hash_table_input = alloc.compute_hash_tables();
+    int hash_group = getHashGroup(hash_table_input);
+    if (hash_group < 0) {
+        alloc.clear();
+        return false;
+    }
+
+    // Determining what bits are available are within the hash matrix
+    bitvec unavailable_bits;
+    for (int index = 0; index < HASH_INDEX_GROUPS; index++) {
+        for (auto ht : bitvec(hash_table_input)) {
+            if ((1 << ht) & hash_index_inuse[index]) {
+                unavailable_bits.setrange(index * RAM_LINE_SELECT_BITS, RAM_LINE_SELECT_BITS);
+            }
+        }
+    }
+    for (int bit = 0; bit < HASH_SINGLE_BITS; bit++) {
+        for (auto ht : bitvec(hash_table_input)) {
+            if ((1 << ht) & hash_index_inuse[bit]) {
+                unavailable_bits.setbit(bit + RAM_SELECT_BIT_START);
+            }
+        }
+    }
+
+    bitvec available_bits = bitvec(0, HASH_MATRIX_SIZE) - unavailable_bits;
+    if (available_bits.popcount() < lo->layout.match_width_bits) {
+        alloc.clear();
+        return false;
+    }
+
+    // Breaking up the possible available bits into bytes, which will be the bytes
+    // compared in the match format
+    safe_vector<std::pair<int, bitvec>> hash_bytes_used;
+    for (int i = 0; i < HASH_MATRIX_SIZE; i+= 8) {
+        bitvec value = available_bits.getslice(i, 8);
+        if (value.empty())
+            continue;
+        hash_bytes_used.emplace_back(i, value);
+    }
+
+    // Pick the bytes that have the most available bits to perform a comparison
+    std::sort(hash_bytes_used.begin(), hash_bytes_used.end(),
+              [](const std::pair<int, bitvec> &a, const std::pair<int, bitvec> &b) {
+        int t;
+        if ((t = a.second.popcount() - b.second.popcount()) != 0)
+            return t > 0;
+        return a.first < b.first;
+    });
+
+    bitvec used_bits;
+    for (auto pair : hash_bytes_used) {
+        int bits_required = lo->layout.match_width_bits - used_bits.popcount();
+        if (bits_required == 0)
+            break;
+        else if (bits_required < 0)
+            BUG("Proxy hash calculation error in ixbar for table %s", tbl->name);
+        bitvec possible_byte_bits = pair.second;
+        bitvec unused_byte_bits;
+        int extra_bits = possible_byte_bits.popcount() - bits_required;
+        if (extra_bits > 0) {
+            int bits_removed = 0;
+            for (auto bit : possible_byte_bits) {
+                if (bits_removed == extra_bits)
+                    break;
+                unused_byte_bits.setbit(bit);
+                bits_removed++;
+            }
+        }
+        bitvec used_byte_bits = possible_byte_bits - unused_byte_bits;
+        used_bits |= (used_byte_bits << pair.first);
+    }
+
+    // Write all of the data structures
+    unsigned indexes = index_groups_used(used_bits);
+    for (auto idx : bitvec(indexes)) {
+        for (auto ht : bitvec(hash_table_input))
+            hash_index_use[ht][idx] = tbl->name + "$proxy_hash";
+        hash_index_inuse[idx] = hash_table_input;
+    }
+    unsigned select_bits = select_bits_used(used_bits);
+    for (auto bit : bitvec(select_bits)) {
+        for (auto ht : bitvec(hash_table_input))
+            hash_single_bit_use[ht][bit] = tbl->name + "$proxy_hash";
+        hash_single_bit_inuse[bit] = hash_table_input;
+    }
+    hash_group_use[hash_group] |= hash_table_input;
+
+    fill_out_use(alloced, false);
+    alloc.hash_table_inputs[hash_group] = hash_table_input;
+    alloc.proxy_hash_key_use.allocated = true;
+    alloc.proxy_hash_key_use.group = hash_group;
+    alloc.proxy_hash_key_use.hash_bits = used_bits;
+    determine_proxy_hash_alg(tbl, alloc, hash_group);
+    return true;
+}
+
+/**
+ * A proxy hash table is an implementation of a match table where instead of matching directly
+ * on a key, the match is on a calculated hash of that key.
+ *
+ * In the diagram in the uArch section 6.2.3 Exact Match Row Vertical/Horizontal (VH) bars,
+ * a search bus can be sourced from either any of the 8 input xbar groups, or any of the 8
+ * hash groups.  A standard match table would match on the search data, while a proxy hash
+ * matches on the hash data.
+ *
+ * The proxy hash table is a choice for the P4 programmer.  A proxy hash can pack more
+ * tightly than a standard match table, as the hash bits can be significantly smaller than
+ * match bits would be.  This of course comes at the risks of collisions on entries.
+ *
+ * A proxy hash table requires two hash functions, one to determine the RAM position of the
+ * key (similar to any SRam based match table), and a second hash for the comparison of the
+ * hash key. 
+ */
+bool IXBar::allocProxyHash(const IR::MAU::Table *tbl, const PhvInfo &phv, const LayoutOption *lo,
+        Use &alloc, Use &proxy_hash_alloc) {
+    safe_vector<IXBar::Use::Byte *> alloced;
+    safe_vector<Use> all_tbl_allocs;
+    bool finished = false;
+    size_t start = 0; size_t last = 0;
+    while (!finished) {
+        Use next_alloc;
+        layout_option_calculation(lo, start, last);
+        /* Essentially a calculation of how much space is potentially available */
+        auto hm_reqs = match_hash_reqs(lo, start, last, false);
+        auto max_hm_reqs = hash_matrix_reqs::max(false, false);
+
+        if (!(allocMatch(false, tbl, phv, next_alloc, alloced, hm_reqs)
+            && allocAllHashWays(false, tbl, next_alloc, lo, start, last))
+            && !(allocMatch(false, tbl, phv, next_alloc, alloced, max_hm_reqs)
+            && allocAllHashWays(false, tbl, next_alloc, lo, start, last))) {
+            next_alloc.clear();
+            alloc.clear();
+            return false;
+        } else {
+           fill_out_use(alloced, false);
+        }
+        alloced.clear();
+        all_tbl_allocs.push_back(next_alloc);
+        if (last == lo->way_sizes.size())
+            finished = true;
+    }
+    for (auto a : all_tbl_allocs) {
+        alloc.add(a);
+    }
+
+    hash_matrix_reqs ph_hm_reqs;
+    ph_hm_reqs.index_groups = max_index_group(lo->layout.match_width_bits);
+    ph_hm_reqs.select_bits = max_index_single_bit(lo->layout.match_width_bits);
+    auto max_ph_hm_reqs = hash_matrix_reqs::max(false, false);
+
+    if (!allocProxyHashKey(tbl, phv, lo, proxy_hash_alloc, ph_hm_reqs)
+        && !allocProxyHashKey(tbl, phv, lo, proxy_hash_alloc, max_ph_hm_reqs)) {
+        alloc.clear();
+        proxy_hash_alloc.clear();
+        return false;
+    }
+    return true;
+}
+
 
 /* Allocate all hashes used within a hash group of a table. The number of hashes in the
    hash group are determined by the layout option */
@@ -3027,8 +3274,8 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
     /* Determine number of groups needed.  Loop through them, alloc match will be the same
        for these.  Alloc All Hash Ways will required multiple groups, and may need to change  */
     LOG1("IXBar::allocTable(" << tbl->name << ")");
-
-    if (!tbl->gateway_only() && !lo->layout.no_match_rams() && !lo->layout.atcam) {
+    if (!tbl->gateway_only() && !lo->layout.no_match_rams() && !lo->layout.atcam &&
+        !lo->layout.proxy_hash) {
         bool ternary = tbl->layout.ternary;
         safe_vector<IXBar::Use::Byte *> alloced;
         safe_vector<Use> all_tbl_allocs;
@@ -3075,6 +3322,11 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
             alloc.match_ixbar.clear();
             return false;
         }
+    } else if (tbl->layout.proxy_hash) {
+        if (!allocProxyHash(tbl, phv, lo, alloc.match_ixbar, alloc.proxy_hash_ixbar)) {
+            alloc.clear_ixbar();
+            return false;
+        }
     }
 
     for (auto back_at : tbl->attached) {
@@ -3113,7 +3365,7 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
         alloc.clear_ixbar();
         return false;
     }
-    LOG1("Input xbar allocation successful " << alloc.match_ixbar.type);
+    LOG1("Input xbar allocation successful");
     return true;
 }
 
@@ -3218,6 +3470,30 @@ void IXBar::update(cstring name, const Use &alloc) {
             BUG("Conflicting hash distribution unit groups");
         hash_dist_groups[hdh.unit] = hdh.group;
     }
+    if (alloc.proxy_hash_key_use.allocated) {
+        auto &ph = alloc.proxy_hash_key_use;
+        for (int ht = 0; ht < HASH_TABLES; ht++) {
+            if (((1U << ht) & alloc.hash_table_inputs[ph.group]) == 0) continue;
+            unsigned indexes = index_groups_used(ph.hash_bits);
+            for (auto idx : bitvec(indexes)) {
+                hash_index_inuse[idx] = alloc.hash_table_inputs[ph.group];
+                if (!hash_index_use[ht][idx])
+                    hash_index_use[ht][idx] = name;
+                else if (hash_index_use[ht][idx] != name)
+                    BUG("Conflicting hash usage between %s and %s", name,
+                         hash_index_use[ht][idx]);
+            }
+            unsigned select_bits = select_bits_used(ph.hash_bits);
+            for (auto bit : bitvec(select_bits)) {
+                hash_single_bit_inuse[bit] = alloc.hash_table_inputs[ph.group];
+                if (!hash_single_bit_use[ht][bit])
+                    hash_single_bit_use[ht][bit] = name;
+                else if (hash_single_bit_use[ht][bit] != name)
+                    BUG("Conflicting hash usage between %s and %s", name,
+                        hash_single_bit_use[ht][bit]);
+            }
+        }
+    }
 }
 
 void IXBar::update(const IR::MAU::Table *tbl, const TableResourceAlloc *rsrc) {
@@ -3248,6 +3524,7 @@ void IXBar::update(const IR::MAU::Table *tbl, const TableResourceAlloc *rsrc) {
         allocated_attached.emplace(salu, rsrc->salu_ixbar);
     }
 
+    update(name + "$proxy_hash", rsrc->proxy_hash_ixbar);
     update(name + "$gw", rsrc->gateway_ixbar);
     update(name, rsrc->match_ixbar);
     int index = 0;

@@ -172,6 +172,12 @@ std::vector<Phv::Ref> split_phv_bytes(const std::vector<Phv::Ref> &v) {
     return rv;
 }
 
+std::string Phv::Ref::toString() const {
+    std::stringstream str;
+    str << *this;
+    return str.str();
+}
+
 void Phv::Ref::dbprint(std::ostream &out) const {
     out << name_;
     if (lo >= 0) {
@@ -186,6 +192,10 @@ void Phv::Ref::dbprint(std::ostream &out) const {
 }
 
 std::string Phv::Ref::desc() const {
+    return toString();
+}
+
+std::string Phv::Slice::toString() const {
     std::stringstream str;
     str << *this;
     return str.str();

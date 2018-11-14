@@ -505,8 +505,9 @@ bool TablePlacement::try_alloc_format(TablePlacement::Placed *next, TableResourc
     if (!siaa.action_data_shared_tables(next->table).empty())
         gw_linked = true;
 
-    TableFormat current_format(*next->use.preferred(), resources->match_ixbar, next->table,
-                                immediate_mask, gw_linked);
+    TableFormat current_format(*next->use.preferred(), resources->match_ixbar,
+                               resources->proxy_hash_ixbar, next->table,
+                               immediate_mask, gw_linked);
 
     if (!current_format.find_format(&resources->table_format)) {
         resources->table_format.clear();

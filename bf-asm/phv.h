@@ -7,6 +7,7 @@
 #include "json.h"
 #include "misc.h"
 #include "target.h"
+#include "match_source.h"
 #include <set>
 #include <vector>
 
@@ -81,6 +82,7 @@ public:
             return valid && a.valid && reg.uid == a.reg.uid &&
                 lo <= a.hi && a.lo <= hi; }
         unsigned size() const { return valid ? hi - lo + 1 : 0; }
+        std::string toString() const;
         void dbprint(std::ostream &out) const;
     };
 protected:
@@ -120,7 +122,7 @@ public:
         return &it->second; }
     static const Slice *get(gress_t gress, const char *name) {
         return get(gress, std::string(name)); }
-    class Ref {
+    class Ref : public MatchSource{
     protected:
         gress_t         gress_;
         std::string     name_;
@@ -158,17 +160,25 @@ public:
                 error(lineno, "No phv record %s", name_.c_str());
             return false; }
         gress_t gress() const { return gress_; }
-        const char *name() const { return name_.c_str(); }
+        const char *name() const override { return name_.c_str(); }
         std::string desc() const;
         int lobit() const { return lo < 0 ? 0 : lo; }
         int hibit() const { return hi < 0 ? (**this).size() - 1 : hi; }
-        unsigned size() const {
+        unsigned size() const override {
             if (lo >= 0) return hi - lo + 1;
             if (auto *s = phv.get(gress_, name_)) return s->size();
             return 0; }
         bool merge(const Ref &r);
+        std::string toString() const override;
         void dbprint(std::ostream &out) const;
+
+        int get_lineno() const override { return lineno; }
+        int fieldlobit() const override { return lobit(); }
+        int fieldhibit() const override { return hibit(); }
+        int slicelobit() const override { return (**this).lo; }
+        int slicehibit() const override { return (**this).hi; }
     };
+
     static const Register *reg(int idx)
         { BUG_CHECK(idx >= 0 && size_t(idx) < phv.regs.size()); return phv.regs[idx]; }
     static const bitvec &use(gress_t gress) { return phv.phv_use[gress]; }

@@ -173,49 +173,153 @@ void SRamMatchTable::verify_format() {
                             group_info[group].tofino_mask[word] |= 1 << (14 + nibble);
                             LOG1("      adding to group " << group); } } } } }
 
-    if (table_type() == ATCAM) {
-        int overhead_word = -1;
-        int overhead_word_set = false;
-        for (int i = 0; i < (int)group_info.size(); i++) {
-            if (!overhead_word_set) {
-                overhead_word = group_info[i].overhead_word;
-            } else if (overhead_word != group_info[i].overhead_word) {
-                error(format->lineno, "ATCAM tables can at most have only one overhead word");
-                return;
-            }
-        }
+    verify_match(fmt_width);
+}
 
-        if (overhead_word < 0)
-            overhead_word = word_info.size() - 1;
-
-        if (word_info[overhead_word].size() != group_info.size()) {
-            error(format->lineno, "ATCAM tables do not chain to the same overhead word");
-            return;
+/**
+ * Guarantees that each match field is a PHV field, which is the standard unless the table is
+ * a proxy hash table.
+ */
+bool SRamMatchTable::verify_match_key() {
+    for (auto *match_key : match) {
+        auto phv_p = dynamic_cast<Phv::Ref *>(match_key);
+        if (phv_p == nullptr) {
+            error(match_key->get_lineno(), "A non PHV match key in table %s", name());
+            continue;
         }
-
-        for (int i = 0; i < (int)word_info[overhead_word].size(); i++) {
-            if (i != word_info[overhead_word][i]) {
-                error(format->lineno, "ATCAM priority not correctly formatted in the compiler");
-                return;
-            }
+        auto phv_ref = *phv_p;
+        phv_ref.check();
+        if (phv_ref->reg.mau_id() < 0)
+            error(phv_ref.lineno, "%s not accessable in mau", phv_ref->reg.name); }
+    auto match_format = format->field("match");
+    if (match_format && match.empty()) {
+        for (auto ixbar_element : *input_xbar) {
+            match.emplace_back(new Phv::Ref(ixbar_element.second.what));
         }
+            
+    }
+    return error_count == 0;
+}
+
+std::unique_ptr<json::map>
+        SRamMatchTable::gen_memory_resource_allocation_tbl_cfg(const Way &way) const {
+    json::map mra;
+    unsigned vpn_ctr = 0;
+    unsigned fmt_width = format ? (format->size + 127)/128 : 0;
+    if (hash_fn_ids.count(way.group) > 0)
+        mra["hash_function_id"] = hash_fn_ids.at(way.group);
+    mra["hash_entry_bit_lo"] = way.subgroup*10;
+    mra["hash_entry_bit_hi"] = way.subgroup*10 + 9;
+    mra["number_entry_bits"] = 10;
+    if (way.mask) {
+        int lo = ffs(way.mask) - 1, hi = floor_log2(way.mask);
+        mra["hash_select_bit_lo"] = EXACT_HASH_FIRST_SELECT_BIT + lo;
+        mra["hash_select_bit_hi"] = EXACT_HASH_FIRST_SELECT_BIT + hi;
+        if (way.mask != (1 << (hi+1)) - (1 << lo)) {
+            warning(way.lineno, "driver does not support discontinuous bits in a way mask");
+            mra["hash_select_bit_mask"] = way.mask >> lo; }
+    } else
+        mra["hash_select_bit_lo"] = mra["hash_select_bit_hi"] = 40;
+    mra["number_select_bits"] = bitcount(way.mask);
+    json::vector mem_units;
+    json::vector &mem_units_and_vpns = mra["memory_units_and_vpns"] = json::vector();
+    for (auto &ram : way.rams) {
+        if (mem_units.empty())
+            vpn_ctr = layout_get_vpn(ram.first, ram.second);
+        else
+            BUG_CHECK(vpn_ctr == layout_get_vpn(ram.first, ram.second));
+        mem_units.push_back(memunit(ram.first, ram.second));
+        if (mem_units.size() == fmt_width) {
+            json::map tmp;
+            tmp["memory_units"] = std::move(mem_units);
+            mem_units = json::vector();
+            json::vector vpns;
+            for (unsigned i = 0; i < format->groups(); i++)
+                vpns.push_back(vpn_ctr++);
+            tmp["vpns"] = std::move(vpns);
+            mem_units_and_vpns.push_back(std::move(tmp)); } }
+    BUG_CHECK(mem_units.empty());
+    return json::mkuniq<json::map>(std::move(mra));
+}
+
+/**
+ * The purpose of this function is to generate the hash_functions JSON node.  The hash functions
+ * are for the driver to determine what RAM/RAM line to write the match data into during entry
+ * adds.
+ *
+ * The JSON nodes for the hash functions are the following:
+ *     - hash_bits - A vector determining what each bit is calculated from.  Look at the comments
+ *           over the function gen_hash_bits
+ *     The following two fields are required for High Availability mode and Entry Reads from HW
+ *     - ghost_bit_to_hash_bit - A vector describing where the ghost bits are in the hash matrix
+ *     - ghost_bit_info - A vector indicating which p4 fields are used as the ghost bits
+ *     The following field is only necessary for dynamic_key_masks
+ *     - hash_function_number - which of the 8 hash functions this table is using.
+ *
+ * The order of the hash functions must coordinate to the order of the hash_function_ids used
+ * in the Way JSON, as this is how a single way knows which hash function to use for its lookup
+ */
+void SRamMatchTable::add_hash_functions(json::map &stage_tbl) const {
+    auto &ht = input_xbar->get_hash_tables();
+    if (ht.size() == 0)
+        return;
+    // Output cjson node only if hash tables present
+    std::map<int, bitvec> hash_bits_per_group;
+    for (auto &way : ways) {
+        bitvec way_impact;
+        way_impact.setrange(way.subgroup * 10, 10);
+        bitvec select_impact;
+        select_impact |= way.mask;
+        way_impact |= select_impact << 40;
+        hash_bits_per_group[way.group] |= way_impact;
     }
 
-    for (auto &r : match) {
-        r.check();
-        if (r->reg.mau_id() < 0)
-            error(r.lineno, "%s not accessable in mau", r->reg.name); }
-    if (error_count > 0) return;
-    auto match_format = format->field("match");
-    if (match_format && match.empty())
-        for (auto ixbar_element : *input_xbar)
-            match.push_back(ixbar_element.second.what);
+    // Order so that the order is the same of the hash_function_ids in the ways
+    std::vector<std::pair<int, bitvec>> hash_function_to_hash_bits(hash_fn_ids.size());
+    for (auto entry : hash_bits_per_group) {
+         int hash_fn_id = hash_fn_ids.at(entry.first);
+         if (hash_fn_id >= hash_fn_ids.size())
+             BUG(); 
+         hash_function_to_hash_bits[hash_fn_id] = entry; 
+    }
+
+    json::vector &hash_functions = stage_tbl["hash_functions"] = json::vector();
+    for (auto entry : hash_function_to_hash_bits) {
+        int hash_group_no = entry.first;
+  
+        json::map hash_function;
+        json::vector &hash_bits = hash_function["hash_bits"] = json::vector();
+        hash_function["hash_function_number"] = hash_group_no;
+        json::vector &ghost_bits_to_hash_bits = hash_function["ghost_bit_to_hash_bit"]
+                                             = json::vector();
+        json::vector &ghost_bits_info = hash_function["ghost_bit_info"] = json::vector();
+            // Get the hash group data
+        auto *hash_group = input_xbar->get_hash_group(hash_group_no);
+        if (hash_group) {
+            // Process only hash tables used per hash group
+            for (unsigned hash_table_id: bitvec(hash_group->tables)) {
+                auto hash_table = input_xbar->get_hash_table(hash_table_id);
+                gen_hash_bits(hash_table, hash_table_id, hash_bits, hash_group_no, entry.second);
+                gen_ghost_bits(hash_table, hash_table_id, ghost_bits_to_hash_bits, ghost_bits_info,
+                               entry.second);
+            }
+            hash_functions.push_back(std::move(hash_function));
+        }
+    }
+}
+
+void SRamMatchTable::verify_match(unsigned fmt_width) {
+    if (!verify_match_key())
+        return;
+    // Build the match_by_bit 
     unsigned bit = 0;
     for (auto &r : match) {
-        match_by_bit[bit] = r;
-        bit += r->size(); }
+        match_by_bit.emplace(bit, r);
+        bit += r->size();
+    }
+    auto match_format = format->field("match");
     if ((unsigned)bit != (match_format ? match_format->size : 0))
-        warning(match[0].lineno, "Match width %d for table %s doesn't match format match "
+        warning(match[0]->get_lineno(), "Match width %d for table %s doesn't match format match "
                 "width %d", bit, name(), match_format->size);
     match_in_word.resize(fmt_width);
     for (unsigned i = 0; i < format->groups(); i++) {
@@ -226,19 +330,40 @@ void SRamMatchTable::verify_format() {
             auto mw = --match_by_bit.upper_bound(bit);
             int lo = bit - mw->first;
             while(mw != match_by_bit.end() &&  mw->first < bit + piece.size()) {
-                if ((piece.lo + mw->first - bit) % 8U != (mw->second->lo % 8U))
-                    error(mw->second.lineno, "bit within byte misalignment matching %s in "
-                          "match group %d of table %s", mw->second.name(), i, name());
+                if ((piece.lo + mw->first - bit) % 8U != (mw->second->slicelobit() % 8U))
+                    error(mw->second->get_lineno(), "bit within byte misalignment matching %s in "
+                          "match group %d of table %s", mw->second->name(), i, name());
                 int hi = std::min((unsigned)mw->second->size()-1, bit+piece.size()-mw->first-1);
                 BUG_CHECK((unsigned)piece.lo/128 < fmt_width);
                 //merge_phv_vec(match_in_word[piece.lo/128], Phv::Ref(mw->second, lo, hi));
-                append(match_in_word[piece.lo/128],
-                       split_phv_bytes(Phv::Ref(mw->second, lo, hi)));
+                
+                if (auto phv_p = dynamic_cast<Phv::Ref *>(mw->second)) {
+                    auto phv_ref = *phv_p;
+                    auto vec = split_phv_bytes(Phv::Ref(phv_ref, lo, hi));
+                    for (auto ref : vec) {
+                        match_in_word[piece.lo/128].emplace_back(new Phv::Ref(ref));
+                    }
+                    
+                } else if (auto hash_p = dynamic_cast<HashMatchSource *>(mw->second)) {
+                    match_in_word[piece.lo/128].push_back(new HashMatchSource(*hash_p));
+                } else {
+                    BUG();
+                }
                 lo = 0;
-                ++mw; }
-            bit += piece.size(); } }
-    for (unsigned i = 0; i < fmt_width; i++)
-        LOG1("  match in word " << i << ": " << match_in_word[i]);
+                ++mw;
+            }
+            bit += piece.size();
+        }
+    }
+    for (unsigned i = 0; i < fmt_width; i++) {
+        std::string match_word_info = "[ ";
+        std::string sep = "";
+        for (auto entry : match_in_word[i]) {
+            match_word_info += sep + entry->toString();
+            sep = ", ";
+        }
+        LOG1("  match in word " << i << ": " << match_word_info);
+    }
 }
 
 static int find_in_ixbar(Table *table, std::vector<Phv::Ref> &match) {
@@ -288,8 +413,14 @@ static int find_in_ixbar(Table *table, std::vector<Phv::Ref> &match) {
 void SRamMatchTable::setup_word_ixbar_group() {
     word_ixbar_group.resize(match_in_word.size());
     unsigned i = 0;
-    for (auto &match : match_in_word)
-        word_ixbar_group[i++] = match.empty() ? -1 : find_in_ixbar(this, match);
+    for (auto &match : match_in_word) {
+        std::vector<Phv::Ref> phv_ref_match;
+        for (auto *source : match) {
+            auto phv_ref = *(dynamic_cast<Phv::Ref *>(source));
+            phv_ref_match.push_back(phv_ref);
+        } 
+        word_ixbar_group[i++] = phv_ref_match.empty() ? -1 : find_in_ixbar(this, phv_ref_match);
+    }
 }
 
 template<class REGS>
@@ -361,11 +492,19 @@ void SRamMatchTable::common_sram_setup(pair_t &kv, const VECTOR(pair_t) &data) {
                     else
                         ways.back().rams.emplace_back(w[i][0].i, w[i][1].i); } } }
     } else if (kv.key == "match") {
-        if (kv.value.type == tVEC)
-            for (auto &v : kv.value.vec)
-                match.emplace_back(gress, v);
-        else
-            match.emplace_back(gress, kv.value);
+        if (kv.value.type == tVEC) {
+            for (auto &v : kv.value.vec) {
+                 if (v == "hash_group")
+                     match.emplace_back(new HashMatchSource(v));
+                 else
+                     match.emplace_back(new Phv::Ref(gress, v));
+            }
+        } else {
+            if (kv.value == "hash_group")
+                match.emplace_back(new HashMatchSource(kv.value));
+            else
+                match.emplace_back(new Phv::Ref(gress, kv.value));
+        }
     } else if (kv.key == "match_group_map") {
         mgm_lineno = kv.value.lineno;
         if (CHECKTYPE(kv.value, tVEC)) {
@@ -416,6 +555,14 @@ void SRamMatchTable::pass1() {
                                   " on table %s", name());
                             break; } }
                     break; } } } }
+}
+
+void SRamMatchTable::setup_hash_function_ids() {
+    unsigned hash_fn_id = 0;
+    for (auto &w : ways) {
+        if (hash_fn_ids.count(w.group) == 0)
+            hash_fn_ids[w.group] = hash_fn_id++;
+    }
 }
 
 void SRamMatchTable::setup_ways() {
@@ -499,6 +646,15 @@ void SRamMatchTable::setup_ways() {
             ++index;
             if (++word == fmt_width) { word = 0; bank++; } }
         ++way; }
+    setup_hash_function_ids();
+}
+
+int SRamMatchTable::determine_pre_byteswizzle_loc(MatchSource *ms, int lo, int hi, int word) {
+    auto phv_p = dynamic_cast<Phv::Ref *>(ms);
+    auto phv_ref = *phv_p;
+    Phv::Slice sl(*phv_ref, lo, hi);
+    BUG_CHECK(word_ixbar_group[word] >= 0);
+    return find_on_ixbar(sl, word_ixbar_group[word]);
 }
 
 template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
@@ -617,6 +773,8 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
             rams_row.emm_ecc_error_uram_ctl[timing_thread(gress)] |= 1U << (col - 2); }
         /* setup input xbars to get data to the right places on the bus(es) */
         bool using_match = false;
+        // Loop for determining the config to indicate which bytes from the search bus
+        // are compared to the bytes on the RAM line
         auto &byteswizzle_ctl = rams_row.exactmatch_row_vh_xbar_byteswizzle_ctl[row.bus];
         for (unsigned i = 0; format && i < format->groups(); i++) {
             if (Format::Field *match = format->field("match", i)) {
@@ -632,9 +790,9 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
                         if (fmt_bit + bits_in_byte > piece.hi + 1)
                             bits_in_byte = piece.hi + 1 - fmt_bit;
                         auto it = --match_by_bit.upper_bound(bit);
-                        Phv::Slice sl(*it->second, bit-it->first, bit-it->first+bits_in_byte-1);
-                        BUG_CHECK(word_ixbar_group[word] >= 0);
-                        int bus_loc = find_on_ixbar(sl, word_ixbar_group[word]);
+                        int lo = bit - it->first;
+                        int hi = lo + bits_in_byte - 1; 
+                        int bus_loc = determine_pre_byteswizzle_loc(it->second, lo, hi, word);
                         BUG_CHECK(bus_loc >= 0 && bus_loc < 16);
                         for (unsigned b = 0; b < bits_in_byte; b++, fmt_bit++)
                             byteswizzle_ctl[byte][fmt_bit%8U] = 0x10 + bus_loc;
@@ -777,46 +935,54 @@ void SRamMatchTable::add_field_to_pack_format(json::vector &field_list, int base
         while(mw != match_by_bit.end() &&  mw->first < bit + piece.size()) {
             std::string source = "";
             std::string immediate_name = "";
-            std::string mw_name = mw->second.name();
+            std::string mw_name = mw->second->name();
             int start_bit = 0;
-            // get_cjson_source(mw_name, act, source, immediate_name, start_bit);
+
             get_cjson_source(mw_name, source, start_bit);
             if (source == "")
                 error(lineno, "Cannot determine proper source for field %s", name.c_str());
-            int hi = std::min((unsigned)mw->second->size()-1, bit+piece.size()-mw->first-1);
-            int width = hi - lo + 1;
-            std::string field_name = mw->second.name();
-            remove_aug_names(field_name);
-
-            // If the name has a slice in it, remove it and add the lo bit of
-            // the slice to field_bit.  This takes the place of
-            // canon_field_list(), rather than extracting the slice component
-            // of the field name, if present, and appending it to the key name.
-            int slice_offset = remove_name_tail_range(field_name);
-
-            // Look up this field in the param list to get a custom key
-            // name, if present.
-            std::string key_name = field_name;
-            auto p = find_p4_param(field_name);
-            if (!p && !p4_params_list.empty()) {
-                warning(lineno, "Cannot find field name %s in p4_param_order "
-                        "for table %s", field_name.c_str(), this->name());
-            } else if (p && !p->key_name.empty()) {
-                key_name = p->key_name;
-                remove_aug_names(key_name); }
+            std::string key_name;
+            std::string match_mode;
+            if (auto phv_p = dynamic_cast<Phv::Ref *>(mw->second)) {
+                std::string field_name = mw->second->name();
+                remove_aug_names(field_name);
+                // If the name has a slice in it, remove it and add the lo bit of
+                // the slice to field_bit.  This takes the place of
+                // canon_field_list(), rather than extracting the slice component
+                // of the field name, if present, and appending it to the key name.
+                int slice_offset = remove_name_tail_range(field_name);
+                auto p = find_p4_param(field_name);
+                key_name = field_name;
+                if (!p && !p4_params_list.empty()) {
+                    warning(lineno, "Cannot find field name %s in p4_param_order "
+                            "for table %s", field_name.c_str(), this->name());
+                } else if (p && !p->key_name.empty()) {
+                    key_name = p->key_name;
+                    remove_aug_names(key_name); 
+                }
+                match_mode = get_match_mode(*phv_p, mw->first);
+                start_bit = lo + slice_offset + mw->second->fieldlobit();
+            } else if (dynamic_cast<HashMatchSource *>(mw->second)) {
+                key_name = "--proxy_hash--";
+                match_mode = "unused";
+                start_bit = mw->second->fieldlobit();
+            } else {
+                BUG();
+            }
 
             field_list.push_back( json::map {
                     { "field_name", json::string(key_name) },
                     { "source", json::string(source) },
                     { "lsb_mem_word_offset", json::number(offset) },
-                    { "start_bit", json::number(start_bit + lo + slice_offset + mw->second.lobit()) },
+                    { "start_bit", json::number(start_bit) }, 
                     { "immediate_name", json::string(immediate_name) },
                     { "lsb_mem_word_idx", json::number(lsb_mem_word_idx) },
                     { "msb_mem_word_idx", json::number(msb_mem_word_idx) },
-                    { "match_mode", json::string(get_match_mode(mw->second, mw->first)) }, //FIXME-JSON
+                    //FIXME-JSON
+                    { "match_mode", json::string(match_mode) },
                     { "enable_pfe", json::False() }, //FIXME-JSON
-                    { "field_width", json::number(width) }});
-            offset += width;
+                    { "field_width", json::number(mw->second->size()) }});
+            offset += mw->second->size();
             lo = 0;
             ++mw; }
         bit += piece.size(); }

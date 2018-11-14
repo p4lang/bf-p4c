@@ -111,6 +111,7 @@ class Table : BFN::Unit {
         bool            atcam = false;
         bool            alpm = false;
         bool            has_range = false;
+        bool            proxy_hash = false;
         int             ixbar_bytes = 0;
         int             match_bytes = 0;
         int             ixbar_width_bits = 0;
@@ -129,6 +130,7 @@ class Table : BFN::Unit {
         int             subtrees_per_partition = 0;
         int             total_actions = 0;
         int             sel_len_bits = 0;
+        int             proxy_hash_width = 0;
         Layout() { memset(this, 0, sizeof(*this)); }
         operator== { return memcmp(this, &a, sizeof(Layout)) == 0; }
         toJSON {

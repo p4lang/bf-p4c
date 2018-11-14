@@ -1,6 +1,7 @@
 #ifndef _tables_h_
 #define _tables_h_
 
+#include <iostream>
 #include <config.h>
 
 #include <set>
@@ -741,7 +742,8 @@ public:
     void gen_idletime_tbl_cfg(json::map &stage_tbl) const;
     int direct_shiftcount() const override { return 64; }
     void gen_hash_bits(const std::map<int, HashCol> &hash_table,
-        unsigned hash_table_id, json::vector &hash_bits, unsigned hash_group_no) const;
+        unsigned hash_table_id, json::vector &hash_bits, unsigned hash_group_no,
+        bitvec hash_bits_used) const;
     virtual void add_hash_functions(json::map &stage_tbl) const;
     void add_all_reference_tables(json::map &tbl, Table *math_table=nullptr) const;
     METER_ACCESS_TYPE default_meter_access_type(bool for_stateful);
@@ -780,7 +782,7 @@ TYPE *TYPE::Type::create(int lineno, const char *name, gress_t gress,   \
     return rv;                                                          \
 }
 
-DECLARE_ABSTRACT_TABLE_TYPE(SRamMatchTable, MatchTable,         // exact or atcam match
+DECLARE_ABSTRACT_TABLE_TYPE(SRamMatchTable, MatchTable,         // exact, atcam, or proxy_hash
 protected:
     struct Way {
         int                              lineno;
@@ -790,9 +792,9 @@ protected:
     std::vector<Way>                      ways;
     struct WayRam { int way, index, word, bank; };
     std::map<std::pair<int, int>, WayRam> way_map;
-    std::vector<Phv::Ref>                 match;
-    std::map<unsigned, Phv::Ref>          match_by_bit;
-    std::vector<std::vector<Phv::Ref>>    match_in_word;
+    std::vector<MatchSource *>              match;
+    std::map<unsigned, MatchSource *>       match_by_bit;
+    std::vector<std::vector<MatchSource *>> match_in_word;
     std::vector<int>                      word_ixbar_group;
     struct GroupInfo {
         /* info about which word(s) are used per format group with wide matches */
@@ -808,12 +810,16 @@ protected:
                                                  * match group in each word */
     int         mgm_lineno = -1;                /* match_group_map lineno */
     bitvec version_nibble_mask;
+    // Which hash groups are assigned to the hash_function_number in the hash_function json node
+    // This is to coordinate with the hash_function_id in the ways
+    std::map<unsigned, unsigned> hash_fn_ids;
     template<class REGS>
     void write_attached_merge_regs(REGS &regs, int bus, int word, int word_group);
     void common_sram_setup(pair_t &, const VECTOR(pair_t) &);
     void common_sram_checks();
     void alloc_vpns() override;
     virtual void setup_ways();
+    void setup_hash_function_ids();
     void pass1() override;
     template<class REGS> void write_regs(REGS &regs);
     FOR_ALL_TARGETS(TARGET_OVERLOAD,
@@ -825,14 +831,22 @@ protected:
     void add_action_cfgs(json::map &tbl, json::map &stage_tbl) const;
     unsigned get_number_entries() const;
     unsigned get_format_width() const;
+    virtual int determine_pre_byteswizzle_loc(MatchSource *ms, int lo, int hi, int word);
     void add_field_to_pack_format(json::vector &field_list, int basebit, std::string name,
                                   const Table::Format::Field &field,
                                   const Table::Actions::Action *act) const override;
+    std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(const Way &) const;
     Actions *get_actions() const override { return actions ? actions : (action ? action->actions : nullptr); }
+    void add_hash_functions(json::map &stage_tbl) const override;
+    virtual void gen_ghost_bits(const std::map<int, HashCol> &hash_table, unsigned hash_table_id,
+        json::vector &ghost_bits_to_hash_bits, json::vector &ghost_bit_info,
+        bitvec hash_bits_used) const { };
 public:
     Format::Field *lookup_field(const std::string &n, const std::string &act = "") const override;
-    void setup_word_ixbar_group();
-    void verify_format();
+    virtual void setup_word_ixbar_group();
+    virtual void verify_format();
+    virtual bool verify_match_key();
+    void verify_match(unsigned fmt_width);
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) const override {
         width = (format->size-1)/128 + 1;
         period = format->groups();
@@ -844,10 +858,10 @@ public:
         void write_merge_regs, (mau_regs &regs, int type, int bus), override {
             write_merge_regs<decltype(regs)>(regs, type, bus); })
     bool is_match_bit(const std::string name, const int bit) const {
-        for (auto m : match) {
-            std::string m_name = m.name();
-            int m_lo = remove_name_tail_range(m_name) + m.lobit();
-            int m_hi = m_lo + m.size() -1;
+        for (auto *m : match) {
+            std::string m_name = m->name();
+            int m_lo = remove_name_tail_range(m_name) + m->fieldlobit();
+            int m_hi = m_lo + m->size() -1;
             if (m_name == name) {
                 if (m_lo <= bit
                         && m_hi >= bit)
@@ -862,21 +876,18 @@ public:
 )
 
 DECLARE_TABLE_TYPE(ExactMatchTable, SRamMatchTable, "exact_match",
-    std::map<unsigned, unsigned> hash_fn_ids;
     bool dynamic_key_masks = false;
     void setup_ways() override;
 public:
-    using Table::gen_memory_resource_allocation_tbl_cfg;
-    std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(const Way &) const;
     int unitram_type() override { return UnitRam::MATCH; }
     table_type_t table_type() const override { return EXACT; }
     bool has_group(int grp) {
         for (auto &way: ways)
             if (way.group == grp) return true;
         return false; }
-    void add_hash_functions(json::map &stage_tbl) const override;
-    void gen_ghost_bits(const std::map<int, HashCol> &hash_table,
-        unsigned hash_table_id, json::map &hash_fn) const;
+    void gen_ghost_bits(const std::map<int, HashCol> &hash_table, unsigned hash_table_id,
+        json::vector &ghost_bit_to_hash_bit, json::vector &ghost_bit_info,
+        bitvec hash_bits_used) const override;
 )
 
 DECLARE_TABLE_TYPE(AlgTcamMatchTable, SRamMatchTable, "atcam_match",
@@ -894,6 +905,8 @@ DECLARE_TABLE_TYPE(AlgTcamMatchTable, SRamMatchTable, "atcam_match",
     std::vector<Phv::Ref*>                s0q1_prefs, s1q0_prefs;
     std::map<int, match_element>          s0q1, s1q0;
     table_type_t table_type() const override { return ATCAM; }
+    void verify_format() override;
+    void verify_entry_priority();
     void setup_column_priority();
     void find_tcam_match();
     void gen_unit_cfg(json::vector &units, int size) const;
@@ -903,7 +916,10 @@ DECLARE_TABLE_TYPE(AlgTcamMatchTable, SRamMatchTable, "atcam_match",
     std::string get_match_mode(const Phv::Ref &pref, int offset) const override;
     void base_alpm_atcam_tbl_cfg(json::map &atcam_tbl, const char *type, int size) const {
         if (p4_table) p4_table->base_alpm_tbl_cfg(atcam_tbl, size, this, P4Table::Atcam); }
-
+    // For ATCAM tables, no hash functions are generated for the table, as the current
+    // interpretation of the table is that the partition index is an identity hash function.
+    // Potentially this could change at some point
+    void add_hash_functions(json::map &stage_tbl) const override {}
     std::string get_lpm_field_name() const {
         std::string lpm = "lpm";
         if(auto *p = find_p4_param_type(lpm))
@@ -923,6 +939,17 @@ DECLARE_TABLE_TYPE(AlgTcamMatchTable, SRamMatchTable, "atcam_match",
                 return p->key_name;
         return name;
     }
+)
+
+DECLARE_TABLE_TYPE(ProxyHashMatchTable, SRamMatchTable, "proxy_hash",
+    bool dynamic_key_masks = false;
+    void setup_ways() override;
+    int proxy_hash_group = -1;
+    std::string proxy_hash_alg = "<invalid>";
+    bool verify_match_key() override;
+    void setup_word_ixbar_group() override;
+    int determine_pre_byteswizzle_loc(MatchSource *ms, int lo, int hi, int word) override;
+    void add_proxy_hash_function(json::map &stage_tbl) const;
 )
 
 DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",

@@ -14,8 +14,8 @@ struct TableResourceAlloc {
     // TODO: Currently we only have a std::map for the UniqueId objects for Memories.  This would
     // make sense to eventually move to IXBar::Use, and even potentially
     // ActionFormat::Use/ActionDataBus::Use for the different types of allocations
-    IXBar::Use                          match_ixbar, gateway_ixbar, selector_ixbar,
-                                        salu_ixbar, meter_ixbar;
+    IXBar::Use                          match_ixbar, gateway_ixbar, proxy_hash_ixbar,
+                                        selector_ixbar, salu_ixbar, meter_ixbar;
     safe_vector<IXBar::HashDistUse>     hash_dists;
     TableFormat::Use                    table_format;
     std::map<UniqueId, Memories::Use>   memuse;
@@ -27,6 +27,7 @@ struct TableResourceAlloc {
         TableResourceAlloc *rv = new TableResourceAlloc;
         rv->match_ixbar = match_ixbar;
         rv->gateway_ixbar = gateway_ixbar;
+        rv->proxy_hash_ixbar = proxy_hash_ixbar;
         rv->selector_ixbar = selector_ixbar;
         rv->salu_ixbar = salu_ixbar;
         rv->meter_ixbar = meter_ixbar;
@@ -44,6 +45,7 @@ struct TableResourceAlloc {
     void clear_ixbar() {
         match_ixbar.clear();
         gateway_ixbar.clear();
+        proxy_hash_ixbar.clear();
         selector_ixbar.clear();
         salu_ixbar.clear();
         meter_ixbar.clear();

@@ -32,7 +32,7 @@ struct TableFormat {
     static constexpr int SINGLE_RAM_BYTES = 16;
     static constexpr int GATEWAY_BYTES = 4;
     static constexpr int VERSION_BYTES = 14;
-    static constexpr int RAM_GHOST_BITS = 10;
+    static constexpr int RAM_GHOST_BITS = IXBar::RAM_LINE_SELECT_BITS;
     static constexpr int VERSION_BITS = 4;
     static constexpr int VERSION_NIBBLES = 4;
     static constexpr int MID_BYTE_LO = 0;
@@ -108,6 +108,7 @@ struct TableFormat {
         std::map<int, safe_vector<int>> ixbar_group_per_width;
         safe_vector<bool> result_bus_needed;
         bitvec avail_sb_bytes;
+        int proxy_hash_group = -1;
 
         /// The byte and individual bits to be ghosted. Ghost bits should be the
         /// same for all match entries.
@@ -140,6 +141,7 @@ struct TableFormat {
     Use *use;
     const LayoutOption &layout_option;
     const IXBar::Use &match_ixbar;
+    const IXBar::Use &proxy_hash_ixbar;
     const IR::MAU::Table *tbl;
 
     // Vector for a hash group, as large tables could potentially use multiple hash groups
@@ -201,6 +203,7 @@ struct TableFormat {
     bool analyze_layout_option();
     bool analyze_skinny_layout_option(int per_RAM, safe_vector<IXBar::Use::GroupInfo> &sizes);
     bool analyze_wide_layout_option(safe_vector<IXBar::Use::GroupInfo> &sizes);
+    void analyze_proxy_hash_option(int per_RAM);
 
     int hit_actions();
     bool allocate_next_table();
@@ -216,9 +219,9 @@ struct TableFormat {
         bitvec &version_loc, bitvec &byte_attempt, bitvec &bit_attempt);
     void fill_out_use(int group, const safe_vector<ByteInfo> &alloced, bitvec &version_loc);
 
-    void choose_ghost_bits();
+    void classify_match_bits();
+    void choose_ghost_bits(safe_vector<IXBar::Use::Byte> &potential_ghost);
     int determine_group(int width_sect, int groups_allocated);
-
     void allocate_share(int width_sect, safe_vector<ByteInfo> &unalloced_group,
         safe_vector<ByteInfo> &alloced, bitvec &version_loc, bitvec &byte_attempt,
         bitvec &bit_attempt, bool overhead_section);
@@ -229,10 +232,10 @@ struct TableFormat {
     void redistribute_next_table();
 
  public:
-    TableFormat(const LayoutOption &l, const IXBar::Use &mi, const IR::MAU::Table *t,
-                const bitvec im, bool gl)
-        : layout_option(l), match_ixbar(mi), tbl(t), immediate_mask(im), gw_linked(gl) {}
-
+    TableFormat(const LayoutOption &l, const IXBar::Use &mi, const IXBar::Use &phi,
+                const IR::MAU::Table *t, const bitvec im, bool gl)
+        : layout_option(l), match_ixbar(mi), proxy_hash_ixbar(phi), tbl(t), immediate_mask(im),
+          gw_linked(gl) {}
     bool find_format(Use *u);
     void verify();
 };

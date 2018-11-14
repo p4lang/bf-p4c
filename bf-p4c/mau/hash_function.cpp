@@ -249,7 +249,10 @@ const IR::MethodCallExpression *IR::MAU::hash_function::hash_to_mce(const IR::Ex
     const IR::Expression *conv_e = nullptr;
 
     cstring error_alg_name;
-    if (auto m = e->to<IR::Member>()) {
+    if (auto s = e->to<IR::StringLiteral>()) {
+        conv_e = convertHashAlgorithmBFN(srcInfo, IR::ID(srcInfo, s->value), on_hash_matrix);
+        error_alg_name = s->value;
+    } else if (auto m = e->to<IR::Member>()) {
         conv_e = convertHashAlgorithmBFN(srcInfo, m->member, on_hash_matrix);
         error_alg_name = m->member.name;
     } else if (auto k = e->to<IR::Constant>()) {

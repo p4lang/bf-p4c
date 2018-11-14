@@ -66,10 +66,27 @@ class MauAsmOutput::TableMatch {
  public:
     safe_vector<Slice>       match_fields;
     safe_vector<Slice>       ghost_bits;
+
+    struct ProxyHashSlice {
+        le_bitrange bits;
+        explicit ProxyHashSlice(le_bitrange b) : bits(b) {}
+
+     public:
+        friend std::ostream &operator<<(std::ostream &, const ProxyHashSlice &);
+    };
+    safe_vector<ProxyHashSlice> proxy_hash_fields;
+    bool proxy_hash = false;
+
     const IR::MAU::Table     *table = nullptr;
+    void init_proxy_hash(const IR::MAU::Table *tbl);
 
     TableMatch(const MauAsmOutput &s, const PhvInfo &phv, const IR::MAU::Table *tbl);
 };
+
+std::ostream &operator<<(std::ostream &out, const MauAsmOutput::TableMatch::ProxyHashSlice &sl) {
+    out << "hash_group" << "(" << sl.bits.lo << ".." << sl.bits.hi << ")";
+    return out;
+}
 
 /** Function that emits the action data aliases needed for consistency across the action data
  *  bus.  The aliases are to be used to set up parameters for the Context JSON, and if necessary
@@ -739,6 +756,27 @@ void MauAsmOutput::emit_ixbar_meter_alu_hash(std::ostream &out, indent_t indent,
     }
 }
 
+void MauAsmOutput::emit_ixbar_proxy_hash(std::ostream &out, indent_t indent,
+        safe_vector<Slice> &match_data, const IXBar::Use::ProxyHashKey &ph,
+        const safe_vector<PHV::FieldSlice> &field_list_order) const {
+    int start_bit = ph.hash_bits.ffs();
+    do {
+        int end_bit = ph.hash_bits.ffz(start_bit);
+        le_bitrange br = { start_bit, end_bit - 1 };
+        int total_bits = 0;
+        out << indent << br.lo << ".." << br.hi << ": ";
+        if (ph.algorithm.ordered) {
+            std::map<int, Slice> match_data_map;
+            emit_ixbar_gather_map(match_data_map, match_data, field_list_order, total_bits);
+            out << FormatHash(nullptr, &match_data_map, nullptr, ph.algorithm, total_bits, &br);
+        } else {
+            out << FormatHash(&match_data, nullptr, nullptr, ph.algorithm, total_bits, &br);
+        }
+        out << std::endl;
+        start_bit = ph.hash_bits.ffs(end_bit);
+    } while (start_bit >= 0);
+}
+
 /** Given an order for an allocation, will determine the input position of the slice in
  *  the allocation, and save it in the match_data_map
  *
@@ -801,6 +839,11 @@ void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent,
     if (use->meter_alu_hash.allocated) {
         emit_ixbar_meter_alu_hash(out, indent, match_data, use->meter_alu_hash,
                                   use->field_list_order);
+    }
+
+    if (use->proxy_hash_key_use.allocated) {
+        emit_ixbar_proxy_hash(out, indent, match_data, use->proxy_hash_key_use,
+                              use->field_list_order);
     }
 
 
@@ -935,6 +978,7 @@ void MauAsmOutput::emit_single_ixbar(std::ostream &out, indent_t indent, const I
 
 /* Emit the ixbar use for a particular type of table */
 void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, const IXBar::Use *use,
+                              const IXBar::Use *proxy_hash_use,
                               const safe_vector<IXBar::HashDistUse> *hash_dist_use,
                               const Memories::Use *mem,
                               const TableMatch *fmt, bool ternary) const {
@@ -942,6 +986,7 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, const IXBar::U
         emit_ways(out, indent, use, mem);
         emit_hash_dist(out, indent, hash_dist_use); }
     if ((use == nullptr || use->use.empty())
+        && (proxy_hash_use == nullptr || proxy_hash_use->use.empty())
         && (hash_dist_use == nullptr || hash_dist_use->empty())) {
         return;
     }
@@ -949,6 +994,10 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, const IXBar::U
     out << indent++ << "input_xbar:" << std::endl;
     if (use) {
         emit_single_ixbar(out, indent, use, fmt);
+    }
+
+    if (proxy_hash_use) {
+        emit_single_ixbar(out, indent, proxy_hash_use, nullptr);
     }
 
     if (hash_dist_use) {
@@ -1370,6 +1419,17 @@ void MauAsmOutput::emit_table_format(std::ostream &out, indent_t indent,
     if (ternary || gateway)
         return;
 
+    if (tm->proxy_hash) {
+        out << indent << "match: [ ";
+        std::string sep = "";
+        for (auto slice : tm->proxy_hash_fields) {
+            out << sep << slice;
+            sep = ", ";
+        }
+        out << " ]" << std::endl;
+        out << indent << "proxy_hash_group: " << use.proxy_hash_group << std::endl;
+    }
+
     // Outputs the match portion
     bool first = true;
     for (auto field : tm->match_fields) {
@@ -1751,6 +1811,25 @@ class MauAsmOutput::EmitAction : public Inspector {
     : self(s), out(o), table(tbl), indent(i) { visitDagOnce = false; }
 };
 
+void MauAsmOutput::TableMatch::init_proxy_hash(const IR::MAU::Table *tbl) {
+    proxy_hash = true;
+    for (auto match_info : tbl->resources->table_format.match_groups[0].match) {
+        const IXBar::Use::Byte &byte = match_info.first;
+        const bitvec &byte_layout = match_info.second;
+
+        int start_bit = byte_layout.ffs();
+        int initial_bit = start_bit;
+        do {
+            int end_bit = byte_layout.ffz(start_bit);
+            int lo = byte.lo + (start_bit - initial_bit);
+            int hi = byte.lo + (end_bit - initial_bit) - 1;
+            le_bitrange bits = { lo, hi };
+            proxy_hash_fields.emplace_back(bits);
+            start_bit = byte_layout.ffs(end_bit);
+        } while (start_bit >= 0);
+    }
+}
+
 /* Information on which tables are matched and ghosted.  This is used by the emit table format,
    and the hashing information.  Comes directly from the table_format object in the resources
    of a table*/
@@ -1758,6 +1837,10 @@ MauAsmOutput::TableMatch::TableMatch(const MauAsmOutput &, const PhvInfo &phv,
         const IR::MAU::Table *tbl) /*: self(s)*/ {
     if (tbl->resources->table_format.match_groups.size() == 0)
         return;
+    if (tbl->layout.proxy_hash) {
+        init_proxy_hash(tbl);
+        return;
+    }
 
     // Determine which fields are part of a table match.  If a field partially ghosted,
     // then this information is contained within the bitvec and the int of the match_info
@@ -2329,10 +2412,11 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
     const char *tbl_type = "gateway";
     indent_t    indent(1);
     bool no_match_hit = tbl->layout.no_match_hit_path() && !tbl->gateway_only();
-    LOG1("No match hit " << no_match_hit);
     if (!tbl->gateway_only())
         tbl_type = tbl->layout.ternary || tbl->layout.no_match_miss_path()
                    ? "ternary_match" : "exact_match";
+    if (tbl->layout.proxy_hash)
+        tbl_type = "proxy_hash";
     if (no_match_hit)
         tbl_type = "hash_action";
     if (tbl->layout.atcam)
@@ -2343,8 +2427,15 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
         emit_table_context_json(out, indent, tbl);
         if (!tbl->layout.no_match_miss_path()) {
             emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
-            emit_ixbar(out, indent, &tbl->resources->match_ixbar, &tbl->resources->hash_dists,
-                       &tbl->resources->memuse.at(unique_id), &fmt, tbl->layout.ternary);
+            const IXBar::Use *proxy_ixbar = tbl->layout.proxy_hash ?
+                                            &tbl->resources->proxy_hash_ixbar : nullptr;
+            emit_ixbar(out, indent, &tbl->resources->match_ixbar, proxy_ixbar,
+                       &tbl->resources->hash_dists, &tbl->resources->memuse.at(unique_id),
+                       &fmt, tbl->layout.ternary);
+            if (proxy_ixbar) {
+                out << indent << "proxy_hash_algorithm: "
+                              << proxy_ixbar->proxy_hash_key_use.alg_name << std::endl;
+            }
         }
         if (!tbl->layout.ternary && !tbl->layout.no_match_rams()) {
             emit_table_format(out, indent, tbl->resources->table_format, &fmt, false, false);
@@ -2356,6 +2447,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
         if (tbl->layout.atcam)
             emit_atcam_match(out, indent, tbl);
     }
+
 
     cstring next_hit = "";  cstring next_miss = "";
     cstring gw_miss;
@@ -2379,7 +2471,8 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
         if (!tbl->gateway_only())
             out << gw_indent++ << "gateway:" << std::endl;
         out << gw_indent << "name: " <<  tbl->build_gateway_name() << std::endl;
-        emit_ixbar(out, gw_indent, &tbl->resources->gateway_ixbar, nullptr, nullptr, &fmt, false);
+        emit_ixbar(out, gw_indent, &tbl->resources->gateway_ixbar, nullptr, nullptr, nullptr, &fmt,
+                   false);
         for (auto &use : Values(tbl->resources->memuse)) {
             if (use.type == Memories::Use::GATEWAY) {
                 out << gw_indent << "row: " << use.row[0].row << std::endl;
@@ -2769,7 +2862,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Meter *meter) {
     out << " }" << std::endl;
     if (meter->input)
         self.emit_ixbar(out, indent, &tbl->resources->meter_ixbar, nullptr, nullptr, nullptr,
-                        false);
+                        nullptr, false);
     self.emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
     cstring imp_type;
     if (!meter->implementation.name)
@@ -2850,7 +2943,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Selector *as) {
         out << ", size: " << as->size;
     out << " }" << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
-    self.emit_ixbar(out, indent, &tbl->resources->selector_ixbar,
+    self.emit_ixbar(out, indent, &tbl->resources->selector_ixbar, nullptr,
                     nullptr, nullptr, nullptr, false);
     out << indent << "mode: " << (as->mode ? as->mode.name : "fair") << " 0" << std::endl;
     // out << indent << "per_flow_enable: " << "meter_pfe" << std::endl;
@@ -2878,8 +2971,8 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::TernaryIndirect *ti) {
     auto unique_id = tbl->unique_id(ti);
     out << indent++ << "ternary_indirect " << unique_id << ':' << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
-    self.emit_ixbar(out, indent, &tbl->resources->match_ixbar, &tbl->resources->hash_dists,
-                    nullptr, nullptr, false);
+    self.emit_ixbar(out, indent, &tbl->resources->match_ixbar, nullptr,
+                    &tbl->resources->hash_dists, nullptr, nullptr, false);
     self.emit_table_format(out, indent, tbl->resources->table_format, nullptr, true, false);
     bitvec source;
     source.setbit(ActionFormat::IMMED);
@@ -2936,7 +3029,8 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
         self.emit_memory(out, indent, *self.selector_memory.at(salu->selector));
     else
         self.emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
-    self.emit_ixbar(out, indent, &tbl->resources->salu_ixbar, nullptr, nullptr, nullptr, false);
+    self.emit_ixbar(out, indent, &tbl->resources->salu_ixbar, nullptr, nullptr, nullptr, nullptr,
+                    false);
     out << indent << "format: { lo: ";
     if (salu->dual)
         out << salu->width/2 << ", hi:" << salu->width/2;

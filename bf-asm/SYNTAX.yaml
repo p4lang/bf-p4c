@@ -474,6 +474,46 @@ stage <constant> <thread>:
         p4: # information about P4 level tables and control plane API
         width: <int>
         # other common keys are NOT available in this table type
+    proxy_hash <name> [<logical_id>]:
+        # Proxy hash Table 
+        row: <vector>
+        column: <vector> | '[' <vector>, ... ']'
+            # see exact_match 
+        input_xbar:
+            # see exact_match
+        format: { <name>: <range>, <name>: <size> ... }
+            # see exact_match
+            match: ...  # exact match groups to match against
+            action: ... # field that selects which action to run
+            next: ...   # next table
+        match: hash_group(<int>..<int>) | '[' hash_group(<int>..<int>), ... ']'
+            # hash groups 
+        ways:
+            - '[' <int>,<int>,<int>, '[' <row>,<col> ']',... ']'
+            # see exact_match
+        proxy_hash_group:
+            # hash group of the 8 possible hash groups to use
+        proxy_hash_algorithm:
+            # for the context JSON, proxy_hash_algorithm key
+        # common keys described above
+        action:
+        actions:
+        action_bus:
+        default_action:
+        default_action_handle:
+        default_action_parameters:
+        context_json:
+        gateway:
+        hash_dist:
+        hit:
+        idletime:
+        meter:
+        miss:
+        next:
+        p4:
+        selector:
+        stateful:
+        stats:
     action <name>:
         # Action table
         logical_row: <vector>
