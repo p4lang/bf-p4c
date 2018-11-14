@@ -499,6 +499,10 @@ foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS)
   endif()
 endforeach()
 
+# 500s timeout is too little for compiling and testing the entire switch, bumping it up
+set_tests_properties("tofino/p4_16_programs_tna_exact_match" PROPERTIES TIMEOUT 1200)
+set_tests_properties("tofino/p4_16_programs_tna_ternary_match" PROPERTIES TIMEOUT 2400)
+
 include(Switch.cmake)
 
 include(Customer.cmake)

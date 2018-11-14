@@ -312,7 +312,7 @@ if [ "$ptftestdir" = "" ]; then
     fi
 fi
 
-if $run_ptf && ! $run_pd && [ -d ${ptftestdir} ]; then
+if $run_ptf && ! $bfrt && ! $run_pd && [ -d ${ptftestdir} ]; then
     for test_script in ${ptftestdir}/*.py; do
         if grep -q pd_base ${test_script}; then
             # test requires pd
@@ -561,7 +561,11 @@ fi
 configure_p4_build() {
     echo "Configuring $name in $testout"
     export MAKEFLAGS="-j $nproc"
-    p4builddir="$(dirname $0)/p4_14/p4-tests/p4-build"
+    if [ $name == switch ]; then
+        p4builddir="$(dirname $0)/p4_16/switch_16"
+    else
+        p4builddir="$(dirname $0)/p4_14/p4-tests/p4-build"
+    fi
     if [ ! -r $p4builddir/configure ] ; then
         pushd $p4builddir > /dev/null
         echo "Reconfiguring p4-build"
@@ -574,11 +578,18 @@ configure_p4_build() {
             rm $f
         fi
     done
-    run $p4builddir/configure --with-${device} --with-p4c=$P4C --enable-thrift \
-        --prefix=$testout LDFLAGS="-L${tools_dir}/lib" CPPFLAGS="-I${tools_dir}/include" \
-        --bindir=$(dirname $P4C):${tools_dir}/bin P4_VERSION=$p4_version P4_NAME=$name P4_PATH=$file \
-        P4FLAGS=$P4FLAGS \
-        > ${testout}/p4-build-conf.log || die
+    if [ $name == switch ]; then
+        run $p4builddir/configure --with-${device} --with-p4c=$P4C --enable-thrift --disable-static \
+            --prefix=$testout --with-cpu-veth LDFLAGS="-L${tools_dir}/lib" CPPFLAGS="-I${tools_dir}/include" \
+            --with-program=tna P4_VERSION=$p4_version P4_NAME=$name P4_PREFIX=dc P4FLAGS=$P4FLAGS \
+            > ${testout}/p4-build-conf.log || die
+    else
+        run $p4builddir/configure --with-${device} --with-p4c=$P4C --enable-thrift \
+            --prefix=$testout LDFLAGS="-L${tools_dir}/lib" CPPFLAGS="-I${tools_dir}/include" \
+            --bindir=$(dirname $P4C):${tools_dir}/bin P4_VERSION=$p4_version P4_NAME=$name P4_PATH=$file \
+            P4FLAGS=$P4FLAGS \
+            > ${testout}/p4-build-conf.log || die
+    fi
     if $verbose ; then
         tail -n 10 ${testout}/p4-build-conf.log
     fi
@@ -699,21 +710,34 @@ if $run_ptf ; then
         pushd $testout > /dev/null
         configure_p4_build $testout
         popd > /dev/null  # $testout
-        manifest=$testdir/${name}${out_ext}.out/${device}/${name}/manifest.json
+        if [ $name == switch ]; then
+            manifest=$testdir/${name}${out_ext}.out/p4src/switch-tofino/switch/manifest.json
+        else
+            manifest=$testdir/${name}${out_ext}.out/${device}/${name}/manifest.json
+            installdiropt="--installdir $testout/$device/$name/"
+        fi
         manifest_realpath=$( realpath $manifest)
         if [ -f $manifest_realpath ]; then
             pipes=$(${MANIFEST_CONFIG} --pipe ${manifest_realpath})
         fi
-        installdiropt="--installdir $testout/$device/$name/"
     fi
 
     if [ $p4_version == "p4-16" ]; then
         conf_args="--name $name --device $device --testdir $testout $installdiropt --pipe ${pipes}"
-        run ./p4c-gen-bfrt-conf $conf_args
+        model_logs_option=""
+        if [ $name == switch ]; then
+            run $(dirname $0)/gen_pd_conf.py --testdir $testout --name $name --device $device \
+            --pipe ${pipes} --switch-api switchapi
+            # One bf_switch PTF test fails with model logs disabled, should remove once the issue
+            # is fixed
+            model_logs_option="--enable-model-logging"
+        else
+            run ./p4c-gen-bfrt-conf $conf_args
+        fi
         if ! $bfrt ; then
             PTF_EXTRA_ARGS="$PTF_EXTRA_ARGS --run-bfrt-as-pi ${pipes}"
         else
-            PTF_EXTRA_ARGS="$PTF_EXTRA_ARGS --bfrt-test $testout/${name}.conf"
+            PTF_EXTRA_ARGS="$PTF_EXTRA_ARGS --bfrt-test $testout/${name}.conf $model_logs_option"
         fi
     fi
 
@@ -738,6 +762,7 @@ if $run_ptf ; then
                 $PTF_EXTRA_ARGS"
     fi
     if [ -n "$PTF_CMD" ]; then
+        echo $PTF_CMD
         run $PTF_CMD
         ptf_test_status=$?
         clean_process "ptf_runner"

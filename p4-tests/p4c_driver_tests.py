@@ -22,7 +22,7 @@ test_matrix = {
     'p4_16_noargs': ([p4_16_default], None),
 
     # Preprocessor only
-    'p4_preprocessor_only': (['-E', p4_16_default], None),
+    'p4_preprocessor_only': (['-E', p4_16_default, '-o', 'p4_preprocessor_only'], None),
 
     # Tofino P4-16
     'p4_16_tna': (['--target', 'tofino', '--arch', 'tna',

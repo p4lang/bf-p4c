@@ -224,19 +224,21 @@ def run_pd_ptf_tests(PTF, device, p4name, config_file, ptfdir, testdir, platform
     os.environ['PYTHONPATH'] += ":" + os.path.join(testdir, site_pkg)
     # for pdfixed
     os.environ['PYTHONPATH'] += ":" + os.path.join(testdir, site_pkg, device+'pd')
+    os.environ['PYTHONPATH'] += ":" + os.path.join(testdir, site_pkg, device)
     # res_pd_rpc -- bf-drivers still uses tofino to install res_pd_rpc: 'tofino' should be device
     if installdir == "/usr/local":
         res_pd_rpc = os.path.join(installdir, 'lib', 'python2.7', 'dist-packages', 'tofino')
     else:
         res_pd_rpc = os.path.join(installdir, 'lib', 'python2.7', 'site-packages', 'tofino')
     os.environ['PYTHONPATH'] += ":" + res_pd_rpc
-    debug('PYTHONPATH={}'.format(os.environ['PYTHONPATH']))
+    info('PYTHONPATH={}'.format(os.environ['PYTHONPATH']))
 
     if port_map_file is None:
         for iface_idx, iface_name in port_map.items():
             ifaces.extend(['-i', '{}@{}'.format(iface_idx, iface_name)])
     cmd = [PTF]
     cmd.extend(['--test-dir', ptfdir])
+    cmd.extend(['--pypath', os.environ['PYTHONPATH']])
     cmd.extend(ifaces)
     cmd.extend(['--socket-recv-size', '10240'])
     test_params = 'arch=\'{}\''.format(device)
@@ -246,6 +248,9 @@ def run_pd_ptf_tests(PTF, device, p4name, config_file, ptfdir, testdir, platform
     test_params += ';thrift_server=\'localhost\''
     test_params += ';use_pi=\'False\''
     test_params += ';test_seed=\'None\''
+    # Pass api_model_json for bf_switch
+    if 'switch_16' in testdir:
+        test_params += ';api_model_json=\'{}\''.format(os.path.join(testdir, 'share/switch/aug_model.json'))
     
     if test_port is not None:
         test_params += ';test_port={}'.format(test_port)
@@ -433,13 +438,17 @@ def main():
             error("PI only supports one tofino.bin and context.json")
             sys.exit(1)
         compiler_out_dir = os.path.join(compiler_out_dir, args.run_bfrt_as_pi[0])
-
+    
     bin_path = os.path.join(compiler_out_dir, args.device + '.bin')
     if args.bfrt_test is None and not os.path.exists(bin_path):
         error("Binary config file {} not found".format(bin_path))
         sys.exit(1)
-
-    cxt_json_path = os.path.join(compiler_out_dir, 'context.json')
+    
+    # bf_switch has a different context.json path
+    if args.bfrt_test and 'switch_16' in compiler_out_dir:
+        cxt_json_path = os.path.join(compiler_out_dir, 'p4src/switch-tofino/switch/pipe/context.json')
+    else:
+        cxt_json_path = os.path.join(compiler_out_dir, 'context.json')
     if args.bfrt_test is None and not os.path.exists(cxt_json_path):
         error("Context json file {} not found".format(cxt_json_path))
         sys.exit(1)

@@ -90,12 +90,16 @@ p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
     "switch_8.4_generic_int_leaf" ${switch_8.4_test} "${testExtraArgs}" "-DGENERIC_INT_LEAF_PROFILE")
 
 # Switch P4-16
-set  (SWITCH_P4_16 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/switch_16/p4src/switch-tofino/switch.p4)
-file (RELATIVE_PATH switch_p4_16_test ${P4C_SOURCE_DIR} ${SWITCH_P4_16})
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-  "switch_p4_16" ${switch_p4_16_test} "${testExtraArgs} -tofino -arch tna" "")
+set (SWITCH_P4_16 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/switch_16/p4src/switch-tofino/switch.p4)
+set (SWITCH_P4_16_PTF ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/switch_16/ptf/api)
+file (RELATIVE_PATH switch_p4_16 ${P4C_SOURCE_DIR} ${SWITCH_P4_16})
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16" ${SWITCH_P4_16}
+  "${testExtraArgs} -ptf -bfrt -to 3600" ${SWITCH_P4_16_PTF})
 #p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
-#  "switch_p4_16" ${switch_p4_16_test} "${testExtraArgs} -tofino2 -arch t2na" "")
+#  "switch_p4_16" ${switch_p4_16} "${testExtraArgs} -tofino2 -arch t2na" "")
+
+# 500s timeout is too little for compiling and testing the entire switch, bumping it up
+set_tests_properties("tofino/smoketest_switch_16" PROPERTIES TIMEOUT 3600)
 
 # Switch master MSDC_PROFILE tests
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_msdc" ${SWITCH_P4}
