@@ -64,6 +64,7 @@ bool FindInitializationNode::summarizeUseDefs(
     // Note all units where f is used.
     for (auto& use : defuse.getAllUses(f->id)) {
         units[f][use.first] |= MetadataLiveRange::READ;
+        LOG2("\t\t  Adding read for unit " << DBPrint::Brief << use.first);
         // For reads, add both the unit where the read happens as well as the non-gateway immediate
         // dominator for the read node (as that node is a candidate for initializing the value of
         // the metadata field).
@@ -81,8 +82,16 @@ bool FindInitializationNode::summarizeUseDefs(
         } else if (use.first->is<IR::MAU::Table>()) {
             const auto* t = use.first->to<IR::MAU::Table>();
             // Only insert the current table as the dominator node if it is a non-gateway table.
-            if (!t->gateway_only())
+            if (!t->gateway_only()) {
                 f_dominators.insert(use.first);
+                // If the field is marked no-init, then we do not actually need to consider the
+                // dominator of the field because no initialization will be required for that field.
+                if (noInit.count(f)) {
+                    LOG2("\t\t\tNot adding dominator for field " << f->name << " marked "
+                         "pa_no_init.");
+                    continue;
+                }
+            }
             auto dom = domTree.getNonGatewayImmediateDominator(t, f->gress);
             if (!dom) {
                 LOG2("\t\t\tNo non gateway dominator for use unit " << t->name);
@@ -92,7 +101,6 @@ bool FindInitializationNode::summarizeUseDefs(
             f_dominators.insert(u);
             LOG2("\t\t\tAdding dominator " << DBPrint::Brief << u);
         }
-        LOG2("\t\t  Adding read for unit " << DBPrint::Brief << use.first);
     }
     return true;
 }
@@ -555,6 +563,12 @@ FindInitializationNode::findInitializationNodes(
             f_table_uses.insert(u->to<IR::MAU::Table>());
         }
 
+        if (noInit.count(f)) {
+            LOG2("\t\tField " << f->name << " marked no_init. No initialization required.");
+            initPoints[f] = emptySet;
+            continue;
+        }
+
         // If the strict dominators are all writes, then we can initialize at those nodes directly,
         // without having to go upto the group dominator.
         auto IsUnitWrite = [&](const IR::BFN::Unit* u) {
@@ -869,7 +883,7 @@ LiveRangeShrinking::LiveRangeShrinking(
         const MetadataLiveRange& l,
         const ActionPhvConstraints& a)
     : domTree(flowGraph),
-      initNode(domTree, p, u, g, i, tableActionsMap, l, a, tableMutex, flowGraph) {
+      initNode(domTree, p, u, g, i.getFields(), tableActionsMap, l, a, tableMutex, flowGraph) {
     addPasses({
         &tableMutex,
         &domTree,

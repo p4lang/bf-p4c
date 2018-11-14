@@ -36,11 +36,13 @@ class MetadataLiveRange : public Inspector {
 
     /// @returns true if the live range indicated by [@minStage1, @maxStage1] either overlaps with
     /// or differs from [@minStage2, @maxStage2] by less than DEP_DIST stages.
-    static bool overlaps(int minStage1, int maxStage1, int minStage2, int maxStage2);
+    static bool overlaps(int minStage1, int maxStage1, int minStage2, int maxStage2, int depDist =
+            DEP_DIST);
 
     /// @returns true if the live range indicated by @range1 either overlaps with or differs from
     /// @range2 by less than DEP_DIST stages.
-    static bool overlaps(std::pair<int, int>& range1, std::pair<int, int>& range2);
+    static bool overlaps(std::pair<int, int>& range1, std::pair<int, int>& range2, int depDist =
+            DEP_DIST);
 
     /// Set of intrinsic metadata fields that must not be initialized.
     static const ordered_set<cstring> noInitIntrinsicFields;

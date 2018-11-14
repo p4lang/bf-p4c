@@ -17,15 +17,16 @@ cstring MetadataLiveRange::printAccess(int access) {
     }
 }
 
-bool MetadataLiveRange::overlaps(std::pair<int, int>& range1, std::pair<int, int>& range2) {
-    return overlaps(range1.first, range1.second, range2.first, range2.second);
+bool MetadataLiveRange::overlaps(std::pair<int, int>& range1, std::pair<int, int>& range2, int
+        depDist) {
+    return overlaps(range1.first, range1.second, range2.first, range2.second, depDist);
 }
 
 bool MetadataLiveRange::overlaps(int minStage1, int maxStage1, int minStage2, int
-        maxStage2) {
-    bool range1LTrange2 = ((minStage1 + DEP_DIST) < minStage2) && ((maxStage1 + DEP_DIST) <
+        maxStage2, int depDist) {
+    bool range1LTrange2 = ((minStage1 + depDist) < minStage2) && ((maxStage1 + depDist) <
             minStage2);
-    bool range2LTrange1 = ((minStage2 + DEP_DIST) < minStage1) && ((maxStage2 + DEP_DIST) <
+    bool range2LTrange1 = ((minStage2 + depDist) < minStage1) && ((maxStage2 + depDist) <
             minStage1);
     return (range1LTrange2 || range2LTrange1);
 }
@@ -219,6 +220,10 @@ void MetadataLiveRange::end_apply() {
     // Set of fields whose live ranges must be calculated.
     ordered_set<const PHV::Field*> fieldsConsidered;
     for (const PHV::Field& f : phv) {
+        if (noInitFields.count(&f)) {
+            fieldsConsidered.insert(&f);
+            continue;
+        }
         // POV bits are always live, so ignore.
         if (f.pov) continue;
         bool isNotParsed = notParsedFields.count(&f);
@@ -265,7 +270,26 @@ void MetadataLiveRange::end_apply() {
             // live range shrinking is possible.
             if (overlaps(range1, range2)) {
                 overlay(f1->id, f2->id) = true;
-                LOG1("    (" << f1->name << ", " << f2->name);
+                LOG3("    (" << f1->name << ", " << f2->name);
+            }
+            // For pa_no_init fields, dependence distance is of little less consideration.
+            if (!overlay(f1->id, f2->id)) {
+                if (noInitFields.count(f1) && noInitFields.count(f2)) {
+                    if (overlaps(range1, range2, 0)) {
+                        overlay(f1->id, f2->id) = true;
+                        LOG1("    (" << f1->name << ", " << f2->name);
+                    }
+                } else if (noInitFields.count(f1) && !noInitFields.count(f2)) {
+                    if (range2.first < range1.first && range2.second < range1.first) {
+                        overlay(f1->id, f2->id) = true;
+                        LOG1("    (" << f1->name << ", " << f2->name);
+                    }
+                } else if (noInitFields.count(f2) && !noInitFields.count(f1)) {
+                    if (range1.first < range2.first && range1.second < range2.first) {
+                        overlay(f1->id, f2->id) = true;
+                        LOG1("    (" << f1->name << ", " << f2->name);
+                    }
+                }
             }
         }
     }

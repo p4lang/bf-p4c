@@ -22,7 +22,7 @@ class FindInitializationNode : public Inspector {
     const PhvInfo&                          phv;
     const FieldDefUse&                      defuse;
     const DependencyGraph&                  dg;
-    const PragmaNoInit&                     noInit;
+    const ordered_set<const PHV::Field*>&   noInit;
     const MapTablesToActions&               tablesToActions;
     const MetadataLiveRange&                metaLiveMap;
     const ActionPhvConstraints&             actionConstraints;
@@ -140,7 +140,7 @@ class FindInitializationNode : public Inspector {
             const PhvInfo& p,
             const FieldDefUse& u,
             const DependencyGraph& g,
-            const PragmaNoInit& i,
+            const ordered_set<const PHV::Field*>& i,
             const MapTablesToActions& t,
             const MetadataLiveRange& l,
             const ActionPhvConstraints& a,
