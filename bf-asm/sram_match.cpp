@@ -910,7 +910,7 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
     if (gateway) gateway->write_regs(regs);
     if (idletime) idletime->write_regs(regs);
     for (auto &hd : hash_dist)
-        hd.write_regs(regs, this, 1, false);
+        hd.write_regs(regs, this);
 }
 
 

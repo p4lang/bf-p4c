@@ -117,6 +117,8 @@ void MeterTable::pass1() {
     if (type == LPF || type == RED)
         stage->table_use[timing_thread(gress)] |= Stage::USE_METER_LPF_RED;
     if (input_xbar) input_xbar->pass1();
+    for (auto &hd : hash_dist)
+        hd.pass1(this, HashDistribution::OTHER, false);
     int prev_row = -1;
     for (auto &row : layout) {
         if (prev_row >= 0)
@@ -454,7 +456,7 @@ void MeterTable::write_regs(REGS &regs) {
     if (push_on_overflow)
         adrdist.oflo_adr_user[0] = adrdist.oflo_adr_user[1] = AdrDist::METER;
     for (auto &hd : hash_dist)
-        hd.write_regs(regs, this, 1, false);
+        hd.write_regs(regs, this);
     if (gress == INGRESS || gress == GHOST) {
         merge.meter_alu_thread[0].meter_alu_thread_ingress |= 1U << home->row/4U;
         merge.meter_alu_thread[1].meter_alu_thread_ingress |= 1U << home->row/4U;

@@ -96,7 +96,7 @@ void SelectionTable::pass1() {
         for (auto &hd : hash_dist)
             hd.xbar_use |= HashDistribution::HASHMOD_DIVIDEND; }
     for (auto &hd : hash_dist)
-        hd.pass1(this);
+        hd.pass1(this, HashDistribution::SELECTOR, non_linear_hash);
     bool home = true;  // first layout row is home row
     for (Layout &row : layout) {
         if (home)
@@ -343,7 +343,7 @@ void SelectionTable::write_regs(REGS &regs) {
         adrdist.deferred_oflo_ctl = 1 << ((home->row-8)/2U); }
     adrdist.packet_action_at_headertime[1][meter_group] = 1;
     for (auto &hd : hash_dist)
-        hd.write_regs(regs, this, 0, non_linear_hash);
+        hd.write_regs(regs, this);
     if (gress == INGRESS || gress == GHOST) {
         merge.meter_alu_thread[0].meter_alu_thread_ingress |= 1U << meter_group;
         merge.meter_alu_thread[1].meter_alu_thread_ingress |= 1U << meter_group;

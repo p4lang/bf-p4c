@@ -39,7 +39,7 @@ void HashActionTable::pass1() {
     for (auto &hd : hash_dist) {
         if (hd.xbar_use == 0)
             hd.xbar_use |= HashDistribution::ACTION_DATA_ADDRESS;
-        hd.pass1(this); }
+        hd.pass1(this, HashDistribution::OTHER, false); }
     if (!gateway && !hash_dist.empty())
         warning(hash_dist[0].lineno, "No gateway in hash_action means hash_dist can't be used");
 }
@@ -127,7 +127,7 @@ void HashActionTable::write_regs(REGS &regs) {
     if (idletime) idletime->write_regs(regs);
     if (gateway) gateway->write_regs(regs);
     for (auto &hd : hash_dist)
-        hd.write_regs(regs, this, 1, false);
+        hd.write_regs(regs, this);
     if (options.match_compiler && !enable_action_data_enable &&
         (!gateway || gateway->empty_match())) {
         /* this seems unneeded? (won't actually be used...) */

@@ -148,7 +148,7 @@ void StatefulTable::pass1() {
               [](const Layout &a, const Layout &b)->bool { return a.row > b.row; });
     stage->table_use[timing_thread(gress)] |= Stage::USE_STATEFUL;
     for (auto &hd : hash_dist)
-        hd.pass1(this);
+        hd.pass1(this, HashDistribution::OTHER, false);
     if (input_xbar) input_xbar->pass1();
     int prev_row = -1;
     for (auto &row : layout) {
@@ -403,8 +403,8 @@ template<class REGS> void StatefulTable::write_regs(REGS &regs) {
             adrdist.deferred_oflo_ctl = 1 << (home->row-8)/2U; }
         adrdist.packet_action_at_headertime[1][meter_group] = 1; }
     write_logging_regs(regs);
-    //for (auto &hd : hash_dist)
-    //    hd.write_regs(regs, this, 0, non_linear_hash);
+    for (auto &hd : hash_dist)
+        hd.write_regs(regs, this);
     if (gress == INGRESS || gress == GHOST) {
         merge.meter_alu_thread[0].meter_alu_thread_ingress |= 1U << meter_group;
         merge.meter_alu_thread[1].meter_alu_thread_ingress |= 1U << meter_group;

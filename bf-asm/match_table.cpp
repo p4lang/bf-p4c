@@ -150,6 +150,8 @@ void MatchTable::pass1() {
         idletime->logical_id = logical_id;
         idletime->pass1(); }
     if (input_xbar) input_xbar->pass1();
+    for (auto &hd : hash_dist)
+        hd.pass1(this, HashDistribution::OTHER, false);
     if (gateway) {
         gateway->logical_id = logical_id;
         gateway->pass1(); }

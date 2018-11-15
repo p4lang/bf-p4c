@@ -66,14 +66,18 @@ bool HashDistribution::compatible(HashDistribution *a) {
     if (id != a->id) return false;
     if (shift != a->shift) return false;
     if (expand != a->expand) return false;
+    if (delay_type != a->delay_type) return false;
+    if (non_linear != a->non_linear) return false;
     if (meter_pre_color && !a->meter_pre_color && (mask & ~a->mask)) return false;
     if (!meter_pre_color && a->meter_pre_color && (~mask & a->mask)) return false;
     return true;
 }
 
-void HashDistribution::pass1(Table *tbl) {
+void HashDistribution::pass1(Table *tbl, delay_type_t delay_type, bool non_linear) {
     LOG1("Hash dist pass1");
     this->tbl = tbl;
+    this->delay_type = delay_type;
+    this->non_linear = non_linear;
     bool err = false;
     for (auto *use : tbl->stage->hash_dist_use[id]) {
         if (!compatible(use)) {
@@ -117,7 +121,7 @@ void HashDistribution::pass1(Table *tbl) {
 }
 
 template<class REGS>
-void HashDistribution::write_regs(REGS &regs, Table *tbl, int type, bool non_linear) {
+void HashDistribution::write_regs(REGS &regs, Table *tbl) {
     /* from HashDistributionResourceAllocation.write_config: */
     auto &merge = regs.rams.match.merge;
     if (non_linear)
@@ -126,7 +130,7 @@ void HashDistribution::write_regs(REGS &regs, Table *tbl, int type, bool non_lin
         merge.mau_hash_group_config.hash_group_egress |= 1 << id;
     merge.mau_hash_group_config.hash_group_enable |= 1 << id;
     merge.mau_hash_group_config.hash_group_sel.set_subfield(hash_group | 8U, 4 * (id/3), 4);
-    merge.mau_hash_group_config.hash_group_ctl.set_subfield(type, 2 * id, 2);
+    merge.mau_hash_group_config.hash_group_ctl.set_subfield(delay_type, 2 * id, 2);
     merge.mau_hash_group_shiftcount.set_subfield(shift, 3 * id, 3);
     merge.mau_hash_group_mask[id] |= mask;
     if (expand >= 0) switch (id % 3) {
@@ -134,13 +138,13 @@ void HashDistribution::write_regs(REGS &regs, Table *tbl, int type, bool non_lin
         merge.mau_hash_group_expand[id/3].hash_slice_group0_expand = 1;
         merge.mau_hash_group_expand[id/3].hash_slice_group2_expand = expand;
         merge.mau_hash_group_config.hash_group_enable |= 1 << (id + 2);
-        merge.mau_hash_group_config.hash_group_ctl.set_subfield(type, 2 * (id + 2), 2);
+        merge.mau_hash_group_config.hash_group_ctl.set_subfield(delay_type, 2 * (id + 2), 2);
         break;
     case 1:
         merge.mau_hash_group_expand[id/3].hash_slice_group1_expand = 1;
         merge.mau_hash_group_expand[id/3].hash_slice_group2_expand = expand - 7;
         merge.mau_hash_group_config.hash_group_enable |= 1 << (id + 1);
-        merge.mau_hash_group_config.hash_group_ctl.set_subfield(type, 2 * (id + 2), 2);
+        merge.mau_hash_group_config.hash_group_ctl.set_subfield(delay_type, 2 * (id + 2), 2);
         break;
     default: BUG(); }
     for (int oxbar : Range(0, 4))
@@ -158,4 +162,4 @@ void HashDistribution::write_regs(REGS &regs, Table *tbl, int type, bool non_lin
             ctl, 5 * (tbl->logical_id%4U), 5); }
 }
 FOR_ALL_TARGETS(INSTANTIATE_TARGET_TEMPLATE,
-                void HashDistribution::write_regs, mau_regs &, Table *, int, bool)
+                void HashDistribution::write_regs, mau_regs &, Table *)
