@@ -773,7 +773,12 @@ CoreAllocation::tryAllocSliceList(
                 // overlay is enabled by live shrinking is possible. If yes, then note down
                 // information about the initialization required and allocated slices for later
                 // constraint verification.
-                if (can_overlay(phv_i.metadata_overlay, slice.field(), alloced_slices)) {
+                bool is_mocha_or_dark = c.is(PHV::Kind::dark) || c.is(PHV::Kind::mocha);
+                // Disable metadata initialization if the container for metadata overlay is a mocha
+                // or dark container.
+                // XXX(Deep): P4C-1187
+                if (!is_mocha_or_dark && can_overlay(phv_i.metadata_overlay, slice.field(),
+                            alloced_slices)) {
                     LOG5("    ...and can overlay " << slice.field() << " on " << alloced_slices <<
                          " with metadata initialization.");
                     initNodes = meta_init_i.findInitializationNodes(alloced_slices, slice,
