@@ -367,12 +367,17 @@ void MauAsmOutput::emit_ways(std::ostream &out, indent_t indent, const IXBar::Us
 /* Generate asm for the hash distribution unit, specifically the unit, group, mask and shift value
    found in each hash dist assembly */
 void MauAsmOutput::emit_hash_dist(std::ostream &out, indent_t indent,
-        const safe_vector<IXBar::HashDistUse> *hash_dist_use) const {
+        const safe_vector<IXBar::HashDistUse> *hash_dist_use, bool hashmod) const {
     if (hash_dist_use == nullptr || hash_dist_use->empty())
         return;
-    out << indent++ << "hash_dist:" << std::endl;
+    bool first = true;
     for (auto &hash_dist : *hash_dist_use) {
+        if (hash_dist.use.type != IXBar::Use::HASH_DIST) continue;
+        if ((hash_dist.use.hash_dist_type == IXBar::Use::HASHMOD) != hashmod) continue;
         for (auto slice : hash_dist.slices) {
+            if (first) {
+                out << indent++ << "hash_dist:" << std::endl;
+                first = false; }
             out << indent <<  slice << ": { ";
             out << "hash: " << hash_dist.groups.at(slice);
             if (hash_dist.masks.count(slice) > 0)
@@ -396,7 +401,8 @@ void MauAsmOutput::emit_hash_dist(std::ostream &out, indent_t indent,
             out << " }" << std::endl;
         }
     }
-    indent--;
+    if (!first)
+        indent--;
 }
 
 /* Determine which bytes of a table's input xbar belong to an individual hash table,
@@ -984,7 +990,7 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, const IXBar::U
                               const TableMatch *fmt, bool ternary) const {
     if (!ternary) {
         emit_ways(out, indent, use, mem);
-        emit_hash_dist(out, indent, hash_dist_use); }
+        emit_hash_dist(out, indent, hash_dist_use, false); }
     if ((use == nullptr || use->use.empty())
         && (proxy_hash_use == nullptr || proxy_hash_use->use.empty())
         && (hash_dist_use == nullptr || hash_dist_use->empty())) {
@@ -2944,6 +2950,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Selector *as) {
     out << " }" << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
     self.emit_ixbar(out, indent, &tbl->resources->selector_ixbar, nullptr,
+
                     nullptr, nullptr, nullptr, false);
     out << indent << "mode: " << (as->mode ? as->mode.name : "fair") << " 0" << std::endl;
     // out << indent << "per_flow_enable: " << "meter_pfe" << std::endl;
@@ -2961,7 +2968,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Selector *as) {
             }
         }
         BUG_CHECK(found, "Could not find hash distribution unit in linkup for hash mod");
-        self.emit_hash_dist(out, indent, &sel_hash_dist);
+        self.emit_hash_dist(out, indent, &sel_hash_dist, true);
     }
     return false;
 }

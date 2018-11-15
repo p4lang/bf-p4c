@@ -385,7 +385,9 @@ class MemoriesUsePrinter(object):
 
 class IXBarUsePrinter(object):
     "Print an IXBar::Use object"
-    use_types = [ "Exact", "Gateway", "Selector", "Meter", "StatefulAlu", "HashDist" ]
+    use_types = [ "Exact", "Gateway", "ProxyHash", "Selector", "Meter", "StatefulAlu", "HashDist" ]
+    hash_dist_use_types = [ "CounterAdr", "MeterAdr", "MeterAdrAndImmed", "ActionAdr",
+                            "Immed", "PreColor", "HashMod" ]
     def __init__(self, val):
         self.val = val
     def use_array(self, arr, indent):
@@ -417,6 +419,9 @@ class IXBarUsePrinter(object):
                 if type_tag != 0: rv += "<%d>" % type_tag
             elif type_tag >= 0 and type_tag < len(self.use_types):
                 rv = self.use_types[type_tag]
+            type_tag = int(self.val['hash_dist_type'])
+            if type_tag >= 0 and type_tag < len(self.hash_dist_use_types):
+                rv += "/" + self.hash_dist_use_types[type_tag]
             rv += self.use_array(self.val['use'], '   ')
             for i in range(0, 8):
                 hti = self.val['hash_table_inputs'][i]
