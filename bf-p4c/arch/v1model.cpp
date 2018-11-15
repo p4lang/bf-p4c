@@ -1618,7 +1618,7 @@ class ConstructSymbolTable : public Inspector {
 
         type = new IR::Type_Name("ActionProfile");
         ERROR_CHECK(node->arguments->size() == 1, "action_profile must have a size argument");
-        auto size = node->arguments->at(0)->expression->to<IR::Constant>()->value;
+        auto size = node->arguments->at(0)->expression->to<IR::Constant>()->asInt();
         auto* args = new IR::Vector<IR::Argument>();
         if (size == 0) {
             WARNING("action_profile " << node->name << "is specified with size 0, "
@@ -1696,7 +1696,7 @@ class ConstructSymbolTable : public Inspector {
             new IR::Declaration_Instance(hashName, specializedType, args));
 
         args = new IR::Vector<IR::Argument>();
-        auto size = node->arguments->at(1)->expression->to<IR::Constant>()->value;
+        auto size = node->arguments->at(1)->expression->to<IR::Constant>()->asInt();
         if (size == 0) {
             WARNING("action_profile " << node->name << "is specified with size 0, "
                                                        "default to 1024.");
