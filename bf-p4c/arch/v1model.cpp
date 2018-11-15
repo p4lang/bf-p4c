@@ -1696,8 +1696,15 @@ class ConstructSymbolTable : public Inspector {
             new IR::Declaration_Instance(hashName, specializedType, args));
 
         args = new IR::Vector<IR::Argument>();
-        // size
-        args->push_back(node->arguments->at(1));
+        auto size = node->arguments->at(1)->expression->to<IR::Constant>()->value;
+        if (size == 0) {
+            WARNING("action_profile " << node->name << "is specified with size 0, "
+                                                       "default to 1024.");
+            size = 1024;  // default size is set to 1024, to be consistent with glass
+            args->push_back(new IR::Argument(new IR::Constant(IR::Type_Bits::get(32), size)));
+        } else {
+            args->push_back(node->arguments->at(1));
+        }
         // hash
         args->push_back(new IR::Argument(new IR::PathExpression(hashName)));
         // selector_mode
