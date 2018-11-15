@@ -223,15 +223,7 @@ void AsmStage::output(json::map &ctxt_json) {
                 set_regs = stage[i].action_set[gress];
             else
                 set_regs |= stage[i].action_set[gress]; }
-        stage[0].group_table_use[gress] = stage[0].table_use[gress];
-        /* propagate group_table_use to adjacent stages that are not match-dependent */
-        for (unsigned i = 1; i < stage.size(); i++) {
-            stage[i].group_table_use[gress] = stage[i].table_use[gress];
-            if (stage[i].stage_dep[gress] != Stage::MATCH_DEP)
-                stage[i].group_table_use[gress] |= stage[i-1].group_table_use[gress]; }
-        for (int i = stage.size()-1; i > 0; i--)
-            if (stage[i].stage_dep[gress] != Stage::MATCH_DEP)
-                stage[i-1].group_table_use[gress] |= stage[i].group_table_use[gress]; }
+        stage[0].group_table_use[gress] = stage[0].table_use[gress]; }
 
     // In Tofino, add match-dependent stages if latency is not the minimum
     // egress latency. There is no such requirement for JBAY - COMPILER-757
@@ -264,6 +256,16 @@ void AsmStage::output(json::map &ctxt_json) {
             }
         }
     }
+
+    /* propagate group_table_use to adjacent stages that are not match-dependent */
+    for (gress_t gress : Range(INGRESS, EGRESS)) {
+        for (unsigned i = 1; i < stage.size(); i++) {
+            stage[i].group_table_use[gress] = stage[i].table_use[gress];
+            if (stage[i].stage_dep[gress] != Stage::MATCH_DEP)
+                stage[i].group_table_use[gress] |= stage[i-1].group_table_use[gress]; }
+        for (int i = stage.size()-1; i > 0; i--)
+            if (stage[i].stage_dep[gress] != Stage::MATCH_DEP)
+                stage[i-1].group_table_use[gress] |= stage[i].group_table_use[gress]; }
 
     for (unsigned i = 0; i < stage.size(); i++)
         SWITCH_FOREACH_TARGET(options.target, stage[i].output<TARGET>(ctxt_json);)
