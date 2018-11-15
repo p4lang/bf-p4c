@@ -40,9 +40,11 @@ env:
 
 before_install:
   - docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
+  - export DOCKER_TAG=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_COMMIT; else echo $TRAVIS_PULL_REQUEST_SHA; fi)
+  - echo "DOCKER_TAG=$DOCKER_TAG"
 
 install:
-  - ./docker_pull.py --image barefootnetworks/bf-p4c-compilers:$TRAVIS_PULL_REQUEST_SHA
+  - ./docker_pull.py --image barefootnetworks/bf-p4c-compilers:$DOCKER_TAG
 
 script:
-  - docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_PARALLEL_LEVEL -e CTEST_OUTPUT_ON_FAILURE -e MAKEFLAGS barefootnetworks/bf-p4c-compilers:$TRAVIS_PULL_REQUEST_SHA ctest -R $TEST_SUITE $TEST_EXTRA_OPTS $TEST_EXTRA_OPTS2
+  - docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_PARALLEL_LEVEL -e CTEST_OUTPUT_ON_FAILURE -e MAKEFLAGS barefootnetworks/bf-p4c-compilers:$DOCKER_TAG ctest -R $TEST_SUITE $TEST_EXTRA_OPTS $TEST_EXTRA_OPTS2

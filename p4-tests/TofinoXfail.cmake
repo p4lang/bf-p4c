@@ -356,12 +356,6 @@ p4c_add_xfail_reason("tofino"
   smoketest_switch_dtel_int_spine_dtel_sai_INGRESS_DROP_REPORT_Test
   )
 
-# Waiting on a bf-drivers update.  Passes with driver master
-p4c_add_xfail_reason("tofino"
-  "Expected packet was not received"
-  smoketest_programs_exm_indirect_1_3
-)
-
 p4c_add_xfail_reason("tofino"
   "Did not receive pkt on 2"
   smoketest_switch_8.4_spine_dtel_int_set_3_INTL45_Transit_DoDTest

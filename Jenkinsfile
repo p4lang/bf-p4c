@@ -1,4 +1,4 @@
-node ('compiler-svr1 || master || compiler-svr4') {
+node ('compiler || compiler-svr4') {
     sh "echo 'Building docker image for PR'"
     // Clean workspace before doing anything
     deleteDir()
@@ -11,7 +11,6 @@ node ('compiler-svr1 || master || compiler-svr4') {
                 timestamps {
                     sh "echo 'Checking out build'"
                     checkout scm
-                    sh "git submodule update --init --recursive"
                     image_tag = sh (
                         script: 'git rev-parse HEAD',
                         returnStdout: true
@@ -35,6 +34,7 @@ node ('compiler-svr1 || master || compiler-svr4') {
                             sh "docker pull barefootnetworks/bf-p4c-compilers:${image_tag}"
                         } catch (err) {
                             // If image not available, build
+                            sh "git submodule update --init --recursive"
                             sh "docker build -f Dockerfile.tofino -t bf-p4c-compilers_${image_tag} --build-arg IMAGE_TYPE=test --build-arg MAKEFLAGS=j32 ."
                             sh "echo 'Tag and push docker image'"
                             sh "docker tag bf-p4c-compilers_${image_tag} barefootnetworks/bf-p4c-compilers:${image_tag}"
@@ -50,7 +50,7 @@ node ('compiler-svr1 || master || compiler-svr4') {
     }
 }
 
-node ('compiler-svr1 || master || compiler') {
+node ('compiler-svr1 || master') {
     sh "echo 'Pull the built docker image for the PR'"
     withCredentials([usernamePassword(
         credentialsId: "bfndocker",

@@ -47,6 +47,8 @@ def main():
     docker_cmd = "docker pull " + args.image
     pull_success = False
     elapsed_time = 0
+
+    eprint('docker pull command:', docker_cmd)
     
     while pull_success or elapsed_time < pull_timeout:
         rc = runner(docker_cmd, cmd_timeout)
