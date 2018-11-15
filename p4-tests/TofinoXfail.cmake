@@ -897,14 +897,6 @@ p4c_add_xfail_reason("tofino"
 
 # END: XFAILs with translation
 
-# P4C-796
-p4c_add_xfail_reason("tofino"
-  "error: : No size count in action"
-  extensions/p4_tests/p4_14/p4-tests/programs/ecc/ecc.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/iterator/iterator.p4
-  )
-
-
 # XXX(cole): Temporarily override previous XFAILs with new failures related to
 # PHV allocation.
 p4c_add_xfail_reason("tofino"
