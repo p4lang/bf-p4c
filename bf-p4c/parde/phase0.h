@@ -36,14 +36,14 @@ struct Phase0Info {
  * Searches for an @phase0 annotation and adds the metadata to the pipe so that
  * we can generate the phase 0 assembly the driver needs.
  *
- * @param ingress  The control to search for the phase 0 table. As the name
+ * @param ingress  The control/parser to search for the phase 0 table. As the name
  *                 implies, this only makes sense for the ingress control.
  * @param pipe     The pipe to which any phase 0 metadata we find should be
  *                 attached.
  * @param refMap   An reference map with up-to-date information for the ingress
  *                 control.
  */
-void extractPhase0(const IR::P4Control* ingress, IR::BFN::Pipe* pipe,
+void extractPhase0(const IR::Node* ingress, IR::BFN::Pipe* pipe,
                    P4::ReferenceMap* refMap);
 
 }  // namespace BFN

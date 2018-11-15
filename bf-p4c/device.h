@@ -55,6 +55,7 @@ class Device {
     static int queueIdWidth() { return Device::get().getQueueIdWidth(); }
     static int portBitWidth() { return Device::get().getPortBitWidth(); }
     static int numParsersPerPipe() { return 18; }
+    static int numMaxChannels() { return Device::get().getNumMaxChannels(); }
 
  protected:
     explicit Device(cstring name) : name_(name) {}
@@ -66,6 +67,8 @@ class Device {
     virtual const PardeSpec& getPardeSpec() const = 0;
     virtual const StatefulAluSpec& getStatefulAluSpec() const = 0;
     virtual int getNumPipes() const = 0;
+    virtual int getNumPortsPerPipe() const = 0;
+    virtual int getNumChannelsPerPort() const = 0;
     virtual int getNumStages() const = 0;
     virtual unsigned getMaxCloneId(gress_t) const = 0;
     virtual unsigned getMaxResubmitId() const = 0;
@@ -73,6 +76,7 @@ class Device {
     virtual int getCloneSessionIdWidth() const = 0;
     virtual int getQueueIdWidth() const = 0;
     virtual int getPortBitWidth() const = 0;
+    virtual int getNumMaxChannels() const = 0;
 
  private:
     static Device* instance_;
@@ -89,6 +93,8 @@ class TofinoDevice : public Device {
     Device::Device_t device_type() const override { return Device::TOFINO; }
     cstring get_name() const override { return "Tofino"; }
     int getNumPipes() const override { return 4; }
+    int getNumPortsPerPipe() const override { return 4; }
+    int getNumChannelsPerPort() const override { return 18; }
     int getNumStages() const override { return 12; }
     unsigned getMaxCloneId(gress_t gress) const override {
         switch (gress) {
@@ -102,6 +108,8 @@ class TofinoDevice : public Device {
     int getCloneSessionIdWidth() const override { return 10; }
     int getQueueIdWidth() const override { return 5; }
     int getPortBitWidth() const override { return 9; }
+    int getNumMaxChannels() const override {
+        return getNumPipes() * getNumPortsPerPipe() * getNumChannelsPerPort(); }
 
     const PhvSpec& getPhvSpec() const override { return phv_; }
     const PardeSpec& getPardeSpec() const override { return parde_; }
@@ -123,6 +131,8 @@ class JBayDevice : public Device {
     Device::Device_t device_type() const override { return Device::JBAY; }
     cstring get_name() const override { return "Tofino2"; }
     int getNumPipes() const override { return 4; }
+    int getNumPortsPerPipe() const override { return 4; }
+    int getNumChannelsPerPort() const override { return 18; }
     int getNumStages() const override { return NUM_MAU_STAGES; }
     unsigned getMaxCloneId(gress_t /* gress */) const override { return 16; }
     unsigned getMaxResubmitId() const override { return 8; }
@@ -130,6 +140,8 @@ class JBayDevice : public Device {
     int getCloneSessionIdWidth() const override { return 8; }
     int getQueueIdWidth() const override { return 7; }
     int getPortBitWidth() const override { return 9; }
+    int getNumMaxChannels() const override {
+        return getNumPipes() * getNumPortsPerPipe() * getNumChannelsPerPort(); }
 
     const PhvSpec& getPhvSpec() const override { return phv_; }
     const PardeSpec& getPardeSpec() const override { return parde_; }

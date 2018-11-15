@@ -712,6 +712,7 @@ struct BfRtSchemaGenerator::PortMetadata {
         return makeBfRtId(0, ::barefoot::P4Ids::PORT_METADATA);
     }
 
+    cstring key_name;
     p4configv1::P4DataTypeSpec typeSpec;
 
     static boost::optional<PortMetadata> fromTofino(
@@ -722,7 +723,7 @@ struct BfRtSchemaGenerator::PortMetadata {
             ::error("Extern instance %1% does not pack a PortMetadata object", pre.name());
             return boost::none;
         }
-        return PortMetadata{portMetadata.type_spec()};
+        return PortMetadata{ portMetadata.key_name(), portMetadata.type_spec() };
     }
 };
 
@@ -1234,10 +1235,10 @@ BfRtSchemaGenerator::addPortMetadata(Util::JsonArray* tablesJson,
     tableJson->emplace("name", PortMetadata::name());
     tableJson->emplace("id", PortMetadata::id());
     tableJson->emplace("table_type", "PortMetadata");
-    // omit size, doesn't mean anything for phase0
+    tableJson->emplace("size", Device::numMaxChannels());
 
     auto* keyJson = new Util::JsonArray();
-    addKeyField(keyJson, BF_RT_DATA_PORT_METADATA_PORT, "$PORT",
+    addKeyField(keyJson, BF_RT_DATA_PORT_METADATA_PORT, portMetadata.key_name + ".ingress_port",
                 true /* mandatory */, "Exact", makeTypeBytes(Device::portBitWidth()));
     tableJson->emplace("key", keyJson);
 
@@ -1264,13 +1265,6 @@ BfRtSchemaGenerator::addPortMetadata(Util::JsonArray* tablesJson,
     tableJson->emplace("attributes", new Util::JsonArray());
 
     tablesJson->append(tableJson);
-}
-
-void
-BfRtSchemaGenerator::addPortMetadataDefault(Util::JsonArray* tablesJson) const {
-    // we use an unset protobuf field (default) to indicate that there is no
-    // programmer-defined PortMetadata extern
-    addPortMetadata(tablesJson, PortMetadata{});
 }
 
 void
@@ -1658,7 +1652,6 @@ BfRtSchemaGenerator::addPortMetadataExtern(Util::JsonArray* tablesJson) const {
             }
         }
     }
-    addPortMetadataDefault(tablesJson);
 }
 
 const Util::JsonObject*

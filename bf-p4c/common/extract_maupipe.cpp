@@ -1162,6 +1162,12 @@ class ExtractPhase0 : public Inspector {
         BFN::extractPhase0(mau, rv, refMap);
     }
 
+    void postorder(const IR::BFN::TranslatedP4Parser *parser) override {
+        gress_t thread = parser->thread;
+        if (thread == EGRESS) return;
+        BFN::extractPhase0(parser, rv, refMap);
+    }
+
  private:
     IR::BFN::Pipe *rv;
     P4::ReferenceMap *refMap;
@@ -1281,6 +1287,7 @@ void BackendConverter::convertTnaProgram(const IR::P4Program* program, BFN_Optio
             }
             if (auto parser = thread->parser->to<IR::BFN::TranslatedP4Parser>()) {
                 parser->apply(ExtractParser(refMap, typeMap, rv));
+                parser->apply(ExtractPhase0(rv, refMap));
             }
             if (auto dprsr = thread->deparser->to<IR::BFN::TranslatedP4Deparser>()) {
                 dprsr->apply(ExtractDeparser(rv));

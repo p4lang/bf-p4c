@@ -34,7 +34,7 @@ std::ostream& operator<<(std::ostream& out, const BFN::Phase0Info* info) {
     if (info->keyName.isNullOrEmpty())
         out << ++indent << "ig_intr_md.ingress_port:";
     else
-        out << ++indent << "$PORT:";
+        out << ++indent << info->keyName << ".ingress_port: ";
     out << "{ type: exact, size: 9 }" << std::endl;
 
     // Write out the field packing format. We have to convert into the LSB-first
@@ -115,12 +115,22 @@ struct FindPhase0Annotation : public Inspector {
     /// needed to generate phase 0 assembly.
     Phase0Info* phase0Info = nullptr;
 
-    bool preorder(const IR::P4Control* control) override {
-        auto* annotation = control->type->annotations->getSingle("phase0");
-        if (!annotation) {
-            LOG4("No @phase0 annotation found on control " << control->name);
-            return false;
+    bool setPhase0Info(const IR::Node *node) {
+        if (phase0Info) return false;
+
+        // Annotation can be on Parser (p4-16) or Control (p4-14). Needs cleanup
+        // once extern support is added
+        const IR::Annotation *annotation = nullptr;
+        cstring name;
+        if (auto p = node->to<IR::P4Parser>()) {
+            annotation = p->type->annotations->getSingle("phase0");
+            name = p->name;
+        } else if (auto c = node->to<IR::P4Control>()) {
+            annotation = c->type->annotations->getSingle("phase0");
+            name = c->name;
         }
+
+        if (!annotation) return false;
 
         auto phase0_warn = false;
         auto num_annots = annotation->expr.size();
@@ -172,7 +182,7 @@ struct FindPhase0Annotation : public Inspector {
         // interpret them correctly. It doesn't need to actually be used in the
         // program, although we do generate code that uses it when translating
         // v1model code to TNA.
-        LOG4("Phase 0 fields for control " << control->name << ":");
+        LOG4("Phase 0 fields for control/parser " << name << ":");
         auto* packing = new FieldPacking;
         for (auto* field : type->fields) {
             auto isPadding = bool(field->annotations->getSingle("hidden"));
@@ -200,7 +210,21 @@ struct FindPhase0Annotation : public Inspector {
         phase0Info = new Phase0Info{tableName, actionName, keyName, packing};
         LOG3("Setting phase0 info to { " << tableName << ", " << actionName << ", "
                 << keyName << ", " << packing << " } ");
+
         return false;
+    }
+
+    bool preorder(const IR::P4Parser* parser) override {
+        return setPhase0Info(parser);
+    }
+
+    bool preorder(const IR::P4Control* control) override {
+        return setPhase0Info(control);
+    }
+    void end_apply() {
+        if (!phase0Info) {
+            LOG4("No @phase0 annotation found on ingress control/parser");
+        }
     }
 
  private:
@@ -229,7 +253,7 @@ struct FindPhase0Annotation : public Inspector {
 
 }  // namespace
 
-void extractPhase0(const IR::P4Control* ingress, IR::BFN::Pipe* pipe,
+void extractPhase0(const IR::Node* ingress, IR::BFN::Pipe* pipe,
                    P4::ReferenceMap* refMap) {
     CHECK_NULL(ingress);
     CHECK_NULL(pipe);

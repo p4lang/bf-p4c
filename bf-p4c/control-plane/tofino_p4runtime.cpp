@@ -464,13 +464,11 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
                 return;
             }
             hasUserPortMetadata = true;
-            // It is not strictly required to update the symbol table here, but
-            // I think it makes things more consistent.
             symbols->add(SymbolType::PORT_METADATA(), PortMetadata::name(), PortMetadata::id());
         }
     }
 
-    static void collectParserSymbols(P4RuntimeSymbolTableIface* symbols,
+    void collectParserSymbols(P4RuntimeSymbolTableIface* symbols,
                                      const IR::ParserBlock* parserBlock) {
         CHECK_NULL(parserBlock);
         auto parser = parserBlock->container;
@@ -479,6 +477,19 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         for (auto s : parser->parserLocals) {
             if (auto inst = s->to<IR::P4ValueSet>()) {
                 symbols->add(SymbolType::VALUE_SET(), inst);
+            }
+        }
+
+        // Extract phase0 ingress intrinsic metadata name provided by user
+        // (usually ig_intr_md). This value is prefixed to the key name in
+        // phase0 table in bf-rt.json (e.g. ig_intr_md.ingress_port). TNA
+        // translation will extract this value during midend and set the key
+        // name in phase0 table in context.json to be consistent.
+        auto *params = parser->getApplyParameters();
+        for (auto p : *params) {
+            if (p->type->toString() == "ingress_intrinsic_metadata_t") {
+                ingressIntrinsicMdParamName = p->name;
+                break;
             }
         }
     }
@@ -523,6 +534,8 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
                 }
             });
         });
+        if (!hasUserPortMetadata)
+            symbols->add(SymbolType::PORT_METADATA(), PortMetadata::name(), PortMetadata::id());
     }
 
     void addTableProperties(const P4RuntimeSymbolTableIface& symbols,
@@ -716,7 +729,8 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
                            const P4::ExternFunction* externFunction) override {
         auto p4RtTypeInfo = p4info->mutable_type_info();
         auto portMetadata = getPortMetadataExtract(externFunction, refMap, p4RtTypeInfo);
-        if (portMetadata) addPortMetadata(symbols, p4info, *portMetadata);
+        if (portMetadata)
+            addPortMetadata(symbols, p4info, *portMetadata);
     }
 
     void addValueSet(const P4RuntimeSymbolTableIface& symbols,
@@ -756,10 +770,12 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             if (!block->is<IR::ParserBlock>()) return;
             analyzeParser(symbols, p4info, block->to<IR::ParserBlock>());
         });
+
+        if (!hasUserPortMetadata) addPortMetadataDefault(symbols, p4info);
     }
 
-    /// @return serialization information for the digest() call represented by
-    /// @call, or boost::none if @call is not a digest() call or is invalid.
+    /// @return serialization information for the port_metadata_extract() call represented by
+    /// @call, or boost::none if @call is not a port_metadata_extract() call or is invalid.
     static boost::optional<PortMetadata>
     getPortMetadataExtract(const P4::ExternFunction* function,
                            ReferenceMap* refMap,
@@ -889,6 +905,16 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
                          const PortMetadata& portMetadataExtract) {
         ::barefoot::PortMetadata portMetadata;
         portMetadata.mutable_type_spec()->CopyFrom(*portMetadataExtract.typeSpec);
+        portMetadata.set_key_name(ingressIntrinsicMdParamName);
+        addP4InfoExternInstance(
+            symbols, SymbolType::PORT_METADATA(), "PortMetadata",
+            PortMetadata::name(), nullptr, portMetadata, p4Info);
+    }
+
+    void addPortMetadataDefault(const P4RuntimeSymbolTableIface& symbols,
+                                p4configv1::P4Info* p4Info) {
+        ::barefoot::PortMetadata portMetadata;
+        portMetadata.set_key_name(ingressIntrinsicMdParamName);
         addP4InfoExternInstance(
             symbols, SymbolType::PORT_METADATA(), "PortMetadata",
             PortMetadata::name(), nullptr, portMetadata, p4Info);
@@ -1139,6 +1165,10 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
     /// True if the TNA P4 program explicitly extracts phase0 metadata to a
     /// programmer-defined struct.
     bool hasUserPortMetadata{false};
+
+    /// This is the user defined value for ingress_intrinsic_metadata_t as
+    /// specified in the P4 program
+    cstring ingressIntrinsicMdParamName;
 };
 
 /// The architecture handler builder implementation for Tofino.

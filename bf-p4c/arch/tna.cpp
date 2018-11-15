@@ -29,200 +29,122 @@ bool isStandardControl(cstring standardControlName,
     return control == standardControl;
 }
 
-/// Restore all `@optional` parameters to the controls specified by the
+/// Restore all parameters to the controls and parsers as specified by the /
 /// architecture.
-struct RestoreOptionalParams : public Transform {
-    explicit RestoreOptionalParams(P4::EvaluatorPass* evaluator)
-      : evaluator(evaluator) { }
+struct RestoreParams: public Transform {
+    explicit RestoreParams(BFN_Options &options, P4::EvaluatorPass* evaluator)
+      : options(options), evaluator(evaluator) { }
 
-    IR::P4Control* preorder(IR::P4Control* control) override {
-        prune();
-
-        if (isStandardControl("ingress", getOriginal<IR::P4Control>(), evaluator))
-            return restoreIngressOptionalParams(control);
-        if (isStandardControl("egress", getOriginal<IR::P4Control>(), evaluator))
-            return restoreEgressOptionalParams(control);
-        return control;
-    }
-
-    IR::P4Control* restoreIngressOptionalParams(IR::P4Control* control) {
+    IR::BFN::TranslatedP4Control* preorder(IR::BFN::TranslatedP4Control* control) {
         auto* params = control->type->getApplyParameters();
         auto* paramList = new IR::ParameterList;
         ordered_map<cstring, cstring> tnaParams;
 
-        auto* headers = params->parameters.at(0);
-        tnaParams.emplace("hdr", headers->name);
-        paramList->push_back(headers);
+        if (control->thread == INGRESS) {
+            prune();
 
-        auto* meta = params->parameters.at(1);
-        tnaParams.emplace("md", meta->name);
-        paramList->push_back(meta);
+            auto* headers = params->parameters.at(0);
+            tnaParams.emplace("hdr", headers->name);
 
-        auto* ig_intr_md = params->parameters.at(2);
-        tnaParams.emplace("ig_intr_md", ig_intr_md->name);
-        paramList->push_back(ig_intr_md);
+            auto* meta = params->parameters.at(1);
+            tnaParams.emplace("ig_md", meta->name);
 
-        if (params->size() <= 3) {
-            // add ig_intr_md_from_prsr
-            auto* path = new IR::Path("ingress_intrinsic_metadata_from_parser_t");
-            auto* type = new IR::Type_Name(path);
-            auto* param = new IR::Parameter("ig_intr_md_from_prsr", IR::Direction::In, type);
-            tnaParams.emplace("ig_intr_md_from_prsr", param->name);
-            paramList->push_back(param);
-        } else {
-            auto* param = params->parameters.at(3);
-            tnaParams.emplace("ig_intr_md_from_prsr", param->name);
-            paramList->push_back(param);
+            auto* ig_intr_md = params->parameters.at(2);
+            tnaParams.emplace("ig_intr_md", ig_intr_md->name);
+
+            auto* ig_intr_md_from_prsr = params->parameters.at(3);
+            tnaParams.emplace("ig_intr_md_from_prsr", ig_intr_md_from_prsr->name);
+
+            auto* ig_intr_md_for_dprsr = params->parameters.at(4);
+            tnaParams.emplace("ig_intr_md_for_dprsr", ig_intr_md_for_dprsr->name);
+
+            auto* ig_intr_md_for_tm = params->parameters.at(5);
+            tnaParams.emplace("ig_intr_md_for_tm", ig_intr_md_for_tm->name);
+
+            // Check for optional ghost_intrinsic_metadata_t for t2na arch
+            if (options.arch == "t2na" && params->parameters.size() > 6) {
+                auto* gh_intr_md = params->parameters.at(6);
+                tnaParams.emplace("gh_intr_md", gh_intr_md->name);
+            }
+        } else if (control->thread == EGRESS) {
+            prune();
+
+            auto* headers = params->parameters.at(0);
+            tnaParams.emplace("hdr", headers->name);
+
+            auto* meta = params->parameters.at(1);
+            tnaParams.emplace("eg_md", meta->name);
+
+            auto* eg_intr_md = params->parameters.at(2);
+            tnaParams.emplace("eg_intr_md", eg_intr_md->name);
+
+            auto* eg_intr_md_from_prsr = params->parameters.at(3);
+            tnaParams.emplace("eg_intr_md_from_prsr", eg_intr_md_from_prsr->name);
+
+            auto* eg_intr_md_for_dprsr = params->parameters.at(4);
+            tnaParams.emplace("eg_intr_md_for_dprsr", eg_intr_md_for_dprsr->name);
+
+            auto* eg_intr_md_for_oport = params->parameters.at(5);
+            tnaParams.emplace("eg_intr_md_for_oport", eg_intr_md_for_oport->name);
         }
 
-        if (params->size() <= 4) {
-            // add ig_intr_md_for_tm
-            auto* path = new IR::Path("ingress_intrinsic_metadata_for_tm_t");
-            auto* type = new IR::Type_Name(path);
-            auto* param = new IR::Parameter("ig_intr_md_for_tm", IR::Direction::InOut, type);
-            tnaParams.emplace("ig_intr_md_for_tm", param->name);
-            paramList->push_back(param);
-        } else {
-            auto* param = params->parameters.at(4);
-            tnaParams.emplace("ig_intr_md_for_tm", param->name);
-            paramList->push_back(param);
-        }
-
-        if (params->size() <= 5) {
-            // add ig_intr_md_for_mb
-            auto* path = new IR::Path("ingress_intrinsic_metadata_for_mirror_buffer_t");
-            auto* type = new IR::Type_Name(path);
-            auto* param = new IR::Parameter("ig_intr_md_for_mb", IR::Direction::InOut, type);
-            tnaParams.emplace("ig_intr_md_for_mb", param->name);
-            paramList->push_back(param);
-        } else {
-            auto* param = params->parameters.at(5);
-            tnaParams.emplace("ig_intr_md_for_mb", param->name);
-            paramList->push_back(param);
-        }
-
-        if (params->size() <= 6) {
-            // add ig_intr_md_for_dprsr
-            auto* path = new IR::Path("ingress_intrinsic_metadata_for_deparser_t");
-            auto* type = new IR::Type_Name(path);
-            auto* param = new IR::Parameter("ig_intr_md_for_dprsr", IR::Direction::InOut, type);
-            tnaParams.emplace("ig_intr_md_for_dprsr", param->name);
-            paramList->push_back(param);
-        } else {
-            auto* param = params->parameters.at(6);
-            tnaParams.emplace("ig_intr_md_for_dprsr", param->name);
-            paramList->push_back(param);
-        }
-        auto* controlType = new IR::Type_Control(control->type->name, paramList);
-
-        auto* result = new IR::BFN::TranslatedP4Control(control->srcInfo, control->name,
-                                                controlType,
+        return new IR::BFN::TranslatedP4Control(control->srcInfo, control->name,
+                                                control->type,
                                                 control->constructorParams, control->controlLocals,
-                                                control->body, tnaParams, INGRESS);
-        return result;
+                                                control->body, tnaParams, control->thread);
     }
 
-    IR::P4Control* restoreEgressOptionalParams(IR::P4Control* control) {
-        auto* params = control->type->getApplyParameters();
+    IR::BFN::TranslatedP4Parser* preorder(IR::BFN::TranslatedP4Parser* parser) {
+        auto* params = parser->type->getApplyParameters();
         auto* paramList = new IR::ParameterList;
         ordered_map<cstring, cstring> tnaParams;
 
-        auto* headers = params->parameters.at(0);
-        tnaParams.emplace("hdr", headers->name);
-        paramList->push_back(headers);
+        if (parser->thread == INGRESS) {
+            prune();
 
-        auto* meta = params->parameters.at(1);
-        tnaParams.emplace("md", meta->name);
-        paramList->push_back(meta);
+            auto* packet = params->parameters.at(0);
+            tnaParams.emplace("pkt", packet->name);
+            paramList->push_back(packet);
 
-        auto* eg_intr_md = params->parameters.at(2);
-        tnaParams.emplace("eg_intr_md", eg_intr_md->name);
-        paramList->push_back(eg_intr_md);
+            auto* headers = params->parameters.at(1);
+            tnaParams.emplace("hdr", headers->name);
+            paramList->push_back(headers);
 
-        if (params->size() <= 3) {
-            // add eg_intr_md_from_prsr
-            auto* path = new IR::Path("egress_intrinsic_metadata_from_parser_t");
-            auto* type = new IR::Type_Name(path);
-            auto* param = new IR::Parameter("eg_intr_md_from_prsr", IR::Direction::In, type);
-            tnaParams.emplace("eg_intr_md_from_prsr", param->name);
-            paramList->push_back(param);
-        } else {
-            auto* param = params->parameters.at(3);
-            tnaParams.emplace("eg_intr_md_from_prsr", param->name);
-            paramList->push_back(param);
+            auto* meta = params->parameters.at(2);
+            tnaParams.emplace("ig_md", meta->name);
+            paramList->push_back(meta);
+
+            auto* ig_intr_md = params->parameters.at(3);
+            tnaParams.emplace("ig_intr_md", ig_intr_md->name);
+            paramList->push_back(ig_intr_md);
+        } else if (parser->thread == EGRESS) {
+            prune();
+
+            auto* packet = params->parameters.at(0);
+            tnaParams.emplace("pkt", packet->name);
+            paramList->push_back(packet);
+
+            auto* headers = params->parameters.at(1);
+            tnaParams.emplace("hdr", headers->name);
+            paramList->push_back(headers);
+
+            auto* meta = params->parameters.at(2);
+            tnaParams.emplace("eg_md", meta->name);
+            paramList->push_back(meta);
+
+            auto* eg_intr_md = params->parameters.at(3);
+            tnaParams.emplace("eg_intr_md", eg_intr_md->name);
+            paramList->push_back(eg_intr_md);
         }
 
-        if (params->size() <= 4) {
-            // add eg_intr_md_for_mb
-            auto* path = new IR::Path("egress_intrinsic_metadata_for_mirror_buffer_t");
-            auto* type = new IR::Type_Name(path);
-            auto* param = new IR::Parameter("eg_intr_md_for_mb", IR::Direction::InOut, type);
-            tnaParams.emplace("eg_intr_md_for_mb", param->name);
-            paramList->push_back(param);
-        } else {
-            auto* param = params->parameters.at(4);
-            tnaParams.emplace("eg_intr_md_for_mb", param->name);
-            paramList->push_back(param);
-        }
-
-        if (params->size() <= 5) {
-            // add eg_intr_md_for_oport
-            auto* path = new IR::Path("egress_intrinsic_metadata_for_output_port_t");
-            auto* type = new IR::Type_Name(path);
-            auto* param = new IR::Parameter("eg_intr_md_for_oport", IR::Direction::InOut, type);
-            tnaParams.emplace("eg_intr_md_for_oport", param->name);
-            paramList->push_back(param);
-        } else {
-            auto* param = params->parameters.at(5);
-            tnaParams.emplace("eg_intr_md_for_oport", param->name);
-            paramList->push_back(param);
-        }
-
-        if (params->size() <= 6) {
-            // add eg_intr_md_for_dprsr
-            auto* path = new IR::Path("egress_intrinsic_metadata_for_deparser_t");
-            auto* type = new IR::Type_Name(path);
-            auto* param = new IR::Parameter("eg_intr_md_for_deparser", IR::Direction::InOut, type);
-            tnaParams.emplace("eg_intr_md_for_dprsr", param->name);
-            paramList->push_back(param);
-        } else {
-            auto* param = params->parameters.at(6);
-            tnaParams.emplace("eg_intr_md_for_dprsr", param->name);
-            paramList->push_back(param);
-        }
-
-        if (params->size() <= 7) {
-            // add ig_intr_md
-            auto* path = new IR::Path("ingress_intrinsic_metadata_t");
-            auto* type = new IR::Type_Name(path);
-            auto* param = new IR::Parameter("ig_intr_md", IR::Direction::InOut, type);
-            tnaParams.emplace("ig_intr_md", param->name);
-            paramList->push_back(param);
-        } else {
-            auto* param = params->parameters.at(7);
-            tnaParams.emplace("ig_intr_md", param->name);
-            paramList->push_back(param);
-        }
-
-        if (params->size() <= 8) {
-            // add ig_intr_md_for_tm
-            auto* path = new IR::Path("ingress_intrinsic_metadata_for_tm_t");
-            auto* type = new IR::Type_Name(path);
-            auto* param = new IR::Parameter("ig_intr_md_for_tm", IR::Direction::InOut, type);
-            tnaParams.emplace("ig_intr_md_for_tm", param->name);
-            paramList->push_back(param);
-        } else {
-            auto* param = params->parameters.at(8);
-            tnaParams.emplace("ig_intr_md_for_tm", param->name);
-            paramList->push_back(param);
-        }
-        auto* controlType = new IR::Type_Control(control->type->name, paramList);
-
-        return new IR::BFN::TranslatedP4Control(control->srcInfo, control->name, controlType,
-                                                control->constructorParams, control->controlLocals,
-                                                control->body, tnaParams, EGRESS);
+        auto parser_type = new IR::Type_Parser(parser->type->name, paramList);
+        return new IR::BFN::TranslatedP4Parser(parser->srcInfo, parser->name,
+                                                parser_type,
+                                                parser->constructorParams, parser->parserLocals,
+                                                parser->states, tnaParams, parser->thread);
     }
 
+    BFN_Options &options;
     P4::EvaluatorPass* evaluator;
 };
 
@@ -271,23 +193,6 @@ struct RewriteControlAndParserBlocks : Transform {
     BlockInfoMapping *bmap;
 };
 
-/// Rewrite P4Control and P4Parser blocks to TranslatedP4Deparser,
-/// TranslatedP4Control and TranslatedP4Parser.
-NormalizeNativeProgram::NormalizeNativeProgram(P4::ReferenceMap* refMap,
-                                               P4::TypeMap* typeMap,
-                                               BFN_Options& options) {
-    setName("NormalizeNativeProgram");
-    addDebugHook(options.getDebugHook());
-    auto* evaluator = new P4::EvaluatorPass(refMap, typeMap);
-    addPasses({
-        evaluator,
-        new RestoreOptionalParams(evaluator),
-        new P4::ClonePathExpressions,
-        new P4::ClearTypeMap(typeMap),
-        new P4::TypeChecking(refMap, typeMap, true),
-    });
-}
-
 class LoweringType : public Transform {
     std::map<cstring, unsigned> enum_encoding;
 
@@ -322,6 +227,8 @@ class InsertPhaseZeroAnnotation : public Transform {
  public:
     InsertPhaseZeroAnnotation() { setName("InsertPhaseZeroAnnotation"); }
 
+    cstring keyName;
+
  private:
     const IR::P4Program* preorder(IR::P4Program* program) override {
         auto* annos = new IR::Annotations();
@@ -341,23 +248,27 @@ class InsertPhaseZeroAnnotation : public Transform {
         return program;
     }
 
-    const IR::Node* preorder(IR::BFN::TranslatedP4Control* control) override {
-        if (control->thread != INGRESS) {
+    const IR::Node* preorder(IR::BFN::TranslatedP4Parser* parser) override {
+        if (parser->thread != INGRESS) {
             prune();
-            return control;
+            return parser;
         }
-        LOG3("visiting ingress control");
-        auto* annotation = new IR::Annotation("phase0", {
-                new IR::StringLiteral(IR::ID("$PORT_METADATA")),
-                new IR::StringLiteral(IR::ID(".set_port_metadata")),
-                new IR::TypeNameExpression(new IR::Type_Name("__phase0_header")),
-                new IR::StringLiteral(IR::ID("$PORT"))
-        });
-        LOG4("Injecting @phase0 annotation onto control " << control->name << ": " << annotation);
-        auto* controlType = control->type->clone();
-        controlType->annotations = controlType->annotations->add(annotation);
-        control->type = controlType;
-        return control;
+        if (parser->tnaParams.count("ig_intr_md")) {
+            keyName = parser->tnaParams.at("ig_intr_md");
+
+            LOG3("visiting ingress parser");
+            auto* annotation = new IR::Annotation("phase0", {
+                    new IR::StringLiteral(IR::ID("$PORT_METADATA")),
+                    new IR::StringLiteral(IR::ID(".set_port_metadata")),
+                    new IR::TypeNameExpression(new IR::Type_Name("__phase0_header")),
+                    new IR::StringLiteral(keyName)
+            });
+            LOG4("Injecting @phase0 annotation onto parser" << parser->name << ": " << annotation);
+            auto* parserType = parser->type->clone();
+            parserType->annotations = parserType->annotations->add(annotation);
+            parser->type = parserType;
+        }
+        return parser;
     }
 };
 
@@ -374,6 +285,7 @@ TnaArchTranslation::TnaArchTranslation(P4::ReferenceMap *refMap,
             toplevel->getMain()->apply(*parseTna);
         }),
         new RewriteControlAndParserBlocks(&parseTna->toBlockInfo),
+        new RestoreParams(options, evaluator),
         new CheckTNAExternInvocation(refMap, typeMap),
         new LoweringType(),
         new P4::ClearTypeMap(typeMap),
@@ -395,6 +307,7 @@ T2naArchTranslation::T2naArchTranslation(P4::ReferenceMap *refMap,
             toplevel->getMain()->apply(*parseTna);
         }),
         new RewriteControlAndParserBlocks(&parseTna->toBlockInfo),
+        new RestoreParams(options, evaluator),
         new CheckT2NAExternInvocation(refMap, typeMap),
         new LoweringType(),
         new P4::ClearTypeMap(typeMap),
