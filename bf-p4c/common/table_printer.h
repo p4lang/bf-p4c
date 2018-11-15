@@ -1,6 +1,10 @@
 #ifndef BF_P4C_COMMON_TABLE_PRINTER_H_
 #define BF_P4C_COMMON_TABLE_PRINTER_H_
 
+#include <iomanip>
+#include "lib/exceptions.h"
+#include "lib/log.h"
+
 /**
  *  Usage: 
  *

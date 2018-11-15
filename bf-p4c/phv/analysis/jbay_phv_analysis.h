@@ -7,7 +7,7 @@
 #include "bf-p4c/mau/table_dependency_graph.h"
 #include "bf-p4c/phv/action_phv_constraints.h"
 #include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/phv/utils.h"
+#include "bf-p4c/phv/utils/utils.h"
 
 class JbayPhvAnalysis : public Inspector {
  private:

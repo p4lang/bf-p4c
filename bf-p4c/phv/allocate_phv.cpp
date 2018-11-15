@@ -1,8 +1,9 @@
-#include "allocate_phv.h"
 #include <boost/format.hpp>
 #include <boost/range/adaptor/reversed.hpp>
 #include <numeric>
 #include "bf-p4c/device.h"
+#include "bf-p4c/phv/allocate_phv.h"
+#include "bf-p4c/phv/utils/slicing_iterator.h"
 #include "lib/log.h"
 
 std::vector<const PHV::Field*>

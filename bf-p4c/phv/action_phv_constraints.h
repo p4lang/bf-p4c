@@ -7,8 +7,8 @@
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/mau/action_analysis.h"
 #include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/phv/utils.h"
 #include "bf-p4c/phv/analysis/pack_conflicts.h"
+#include "bf-p4c/phv/utils/utils.h"
 
 /** This class is meant to gather action information as well as provide information to PHV analysis
   * through function calls. Methods in AllocatePHV query the information contained in class members

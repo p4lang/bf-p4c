@@ -2,7 +2,7 @@
 #define EXTENSIONS_BF_P4C_PHV_ANALYSIS_FIELD_INTERFERENCE_H_
 
 #include "bf-p4c/phv/make_clusters.h"
-#include "bf-p4c/phv/utils.h"
+#include "bf-p4c/phv/utils/utils.h"
 #include "ir/ir.h"
 #include "lib/ordered_map.h"
 #include "lib/symbitmatrix.h"

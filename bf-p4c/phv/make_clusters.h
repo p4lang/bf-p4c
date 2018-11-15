@@ -1,8 +1,6 @@
 #ifndef BF_P4C_PHV_MAKE_CLUSTERS_H_
 #define BF_P4C_PHV_MAKE_CLUSTERS_H_
 
-#include "phv.h"
-#include "phv_parde_mau_use.h"
 #include "ir/ir.h"
 #include "lib/map.h"
 #include "lib/ordered_map.h"
@@ -11,8 +9,10 @@
 #include "bf-p4c/ir/thread_visitor.h"
 #include "bf-p4c/ir/tofino_write_context.h"
 #include "bf-p4c/lib/union_find.hpp"
-#include "bf-p4c/phv/utils.h"
+#include "bf-p4c/phv/phv.h"
+#include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/analysis/pack_conflicts.h"
+#include "bf-p4c/phv/utils/utils.h"
 #include "bf-p4c/mau/gateway.h"
 
 namespace PHV {

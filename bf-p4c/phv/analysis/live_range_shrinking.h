@@ -3,7 +3,6 @@
 
 #include "ir/ir.h"
 #include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/phv/utils.h"
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/common/map_tables_to_actions.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
@@ -13,6 +12,7 @@
 #include "bf-p4c/phv/analysis/dominator_tree.h"
 #include "bf-p4c/phv/analysis/meta_live_range.h"
 #include "bf-p4c/phv/pragma/pa_no_init.h"
+#include "bf-p4c/phv/utils/utils.h"
 
 /** Find the actions in which to initialize metadata fields after live range shrinking.
   */

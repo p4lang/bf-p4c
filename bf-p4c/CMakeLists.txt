@@ -332,7 +332,6 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/asm_output.cpp
   phv/cluster_phv_operations.cpp
   phv/create_thread_local_instances.cpp
-  phv/cluster_to_cluster_interference.cpp
   phv/field_alignment.cpp
   phv/make_clusters.cpp
   phv/mau_backtracker.cpp
@@ -343,8 +342,8 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/privatization.cpp
   phv/table_phv_constraints.cpp
   phv/trivial_alloc.cpp
-  phv/utils.cpp
   phv/validate_allocation.cpp
+  phv/analysis/cluster_to_cluster_interference.cpp
   phv/analysis/critical_path_clusters.cpp
   phv/analysis/deparser_zero.cpp
   phv/analysis/dominator_tree.cpp
@@ -361,6 +360,8 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/pragma/pa_no_init.cpp
   phv/pragma/pa_no_overlay.cpp
   phv/pragma/pa_solitary.cpp
+  phv/utils/slicing_iterator.cpp
+  phv/utils/utils.cpp
   )
 if (ENABLE_JBAY)
   list (APPEND BF_P4C_BACKEND_PHV_SRCS
@@ -381,7 +382,6 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/cluster_phv_operations.h
   phv/constraints.h
   phv/create_thread_local_instances.h
-  phv/cluster_to_cluster_interference.h
   phv/field_alignment.h
   phv/make_clusters.h
   phv/mau_backtracker.h
@@ -392,8 +392,8 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/privatization.h
   phv/table_phv_constraints.h
   phv/trivial_alloc.h
-  phv/utils.h
   phv/validate_allocation.h
+  phv/analysis/cluster_to_cluster_interference.h
   phv/analysis/critical_path_clusters.h
   phv/analysis/deparser_zero.h
   phv/analysis/dominator_tree.h
@@ -411,6 +411,8 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/pragma/pa_no_overlay.h
   phv/pragma/pa_solitary.h
   phv/pragma/phv_pragmas.h
+  phv/utils/slicing_iterator.h
+  phv/utils/utils.h
   )
 if (ENABLE_JBAY)
   list (APPEND BF_P4C_BACKEND_PHV_HDRS

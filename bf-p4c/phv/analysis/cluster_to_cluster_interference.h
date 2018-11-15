@@ -1,14 +1,14 @@
-#ifndef BF_P4C_PHV_CLUSTER_TO_CLUSTER_INTERFERENCE_H_
-#define BF_P4C_PHV_CLUSTER_TO_CLUSTER_INTERFERENCE_H_
+#ifndef BF_P4C_PHV_ANALYSIS_CLUSTER_TO_CLUSTER_INTERFERENCE_H_
+#define BF_P4C_PHV_ANALYSIS_CLUSTER_TO_CLUSTER_INTERFERENCE_H_
 
 #include "bf-p4c/ir/gress.h"
 #include "bf-p4c/ir/thread_visitor.h"
-#include "bf-p4c/phv/phv.h"
 #include "ir/ir.h"
 #include "lib/map.h"
 #include "lib/range.h"
 #include "lib/symbitmatrix.h"
-#include "bf-p4c/phv/utils.h"
+#include "bf-p4c/phv/phv.h"
+#include "bf-p4c/phv/utils/utils.h"
 
 namespace PHV {
 class Field;
@@ -110,4 +110,4 @@ class Cluster_Interference : public Visitor {
 
 std::ostream &operator<<(std::ostream &, Cluster_Interference&);
 
-#endif /* BF_P4C_PHV_CLUSTER_TO_CLUSTER_INTERFERENCE_H_ */
+#endif /* BF_P4C_PHV_ANALYSIS_CLUSTER_TO_CLUSTER_INTERFERENCE_H_ */

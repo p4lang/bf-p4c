@@ -7,7 +7,7 @@
 #include "bf-p4c/phv/allocate_phv.h"
 #include "bf-p4c/phv/constraints.h"
 #include "bf-p4c/phv/field_alignment.h"
-#include "bf-p4c/phv/utils.h"
+#include "bf-p4c/phv/utils/utils.h"
 #include "lib/bitvec.h"
 #include "test/gtest/helpers.h"
 
