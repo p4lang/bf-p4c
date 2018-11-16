@@ -346,6 +346,46 @@ void PragmaContainerSize::add_constraint(
     update_field_slice_req(field, sizes);
 }
 
+cstring PragmaContainerSize::printSizeConstraints(
+        const std::vector<PHV::Size>& sizes) const {
+    std::stringstream ss;
+    ss << "[ ";
+    for (auto sz : sizes)
+        ss << sz << " ";
+    ss << "]";
+    return ss.str();
+}
+
+// Only used by PardePhvConstraints.
+void PragmaContainerSize::check_and_add_constraint(
+        const PHV::Field* field, std::vector<PHV::Size> sizes) {
+    if (!pa_container_sizes_i.count(field)) {
+        add_constraint(field, sizes);
+        return;
+    }
+    // Check if existing constraints are the same as the ones already on this field.
+    // ss contains a pretty print of already existing pragmas.
+    std::vector<PHV::Size> existingSizePragmas = pa_container_sizes_i.at(field);
+    if (existingSizePragmas.size() != sizes.size()) {
+        ::error("@pragma pa_container_size already specifies containers %1% for field %2%."
+                " However, to fit within learning quanta size constraints, the field must "
+                "occupy %3% containers", printSizeConstraints(existingSizePragmas), field->name,
+                printSizeConstraints(sizes));
+        return;
+    }
+
+    // Ensure that the new pragma specifications are the same as the already existing ones.
+    for (int i = 0; i < existingSizePragmas.size(); i++) {
+        if (sizes[i] != existingSizePragmas[i]) {
+            ::error("@pragma pa_container_size already specifies containers %1% for field %2%."
+                    " However, to fit within learning quanta size constraints, the field must "
+                    "occupy %3% containers", printSizeConstraints(existingSizePragmas), field->name,
+                    printSizeConstraints(sizes));
+            return;
+        }
+    }
+}
+
 void PragmaContainerSize::adjust_requirements(const std::list<PHV::SuperCluster*>& sliced) {
     for (const auto* sup_cluster : sliced) {
         for (const auto* slice_list : sup_cluster->slice_lists()) {

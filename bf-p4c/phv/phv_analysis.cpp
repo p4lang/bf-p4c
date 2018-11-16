@@ -2,6 +2,7 @@
 #include "bf-p4c/common/parser_overlay.h"
 #include "bf-p4c/phv/cluster_phv_operations.h"
 #include "bf-p4c/phv/mau_backtracker.h"
+#include "bf-p4c/phv/parde_phv_constraints.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/table_phv_constraints.h"
 #include "bf-p4c/phv/trivial_alloc.h"
@@ -66,6 +67,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
                                    // first round of table allocation (only useful if we backtracked
                                    // from table placement to PHV allocation)
             new TablePhvConstraints(phv),
+            new PardePhvConstraints(phv, pragmas.pa_container_sizes()),
             &critical_path_clusters,
             &action_constraints,
 

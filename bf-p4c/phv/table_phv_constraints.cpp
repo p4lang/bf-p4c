@@ -1,4 +1,4 @@
-#include "table_phv_constraints.h"
+#include "bf-p4c/phv/table_phv_constraints.h"
 #include "bf-p4c/mau/table_layout.h"
 
 Visitor::profile_t TablePhvConstraints::init_apply(const IR::Node* root) {

@@ -85,6 +85,15 @@ class PragmaContainerSize : public Inspector {
      */
     void add_constraint(const PHV::Field* field, std::vector<PHV::Size> sizes);
 
+    /** Pretty print existing size requirements specified in vector @sizes.
+      */
+    cstring printSizeConstraints(const std::vector<PHV::Size>& sizes) const;
+
+    /** Check if the @sizes constraints to be added to @field violates already existing constraints
+      * for that field. If it does, throw an error. Otherwise, add the constraint.
+      */
+    void check_and_add_constraint(const PHV::Field* field, std::vector<PHV::Size> sizes);
+
     /** Adjust field_slice_req_i based on slice list.
      *
      * Since slice list ensures that all fieldslice will be allocated together, so that

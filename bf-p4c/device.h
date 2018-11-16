@@ -41,7 +41,6 @@ class Device {
     static Device_t currentDevice() { return Device::get().device_type(); }
     static cstring name() { return Device::get().get_name(); }
 
-
     static const PhvSpec& phvSpec() { return Device::get().getPhvSpec(); }
     static const PardeSpec& pardeSpec() { return Device::get().getPardeSpec(); }
     struct StatefulAluSpec;
@@ -54,6 +53,7 @@ class Device {
     static int cloneSessionIdWidth() { return Device::get().getCloneSessionIdWidth(); }
     static int queueIdWidth() { return Device::get().getQueueIdWidth(); }
     static int portBitWidth() { return Device::get().getPortBitWidth(); }
+    static unsigned maxDigestSizeInBytes() { return Device::get().getMaxDigestSizeInBytes(); }
     static int numParsersPerPipe() { return 18; }
     static int numMaxChannels() { return Device::get().getNumMaxChannels(); }
 
@@ -73,6 +73,7 @@ class Device {
     virtual unsigned getMaxCloneId(gress_t) const = 0;
     virtual unsigned getMaxResubmitId() const = 0;
     virtual unsigned getMaxDigestId() const = 0;
+    virtual unsigned getMaxDigestSizeInBytes() const = 0;
     virtual int getCloneSessionIdWidth() const = 0;
     virtual int getQueueIdWidth() const = 0;
     virtual int getPortBitWidth() const = 0;
@@ -110,6 +111,7 @@ class TofinoDevice : public Device {
     int getPortBitWidth() const override { return 9; }
     int getNumMaxChannels() const override {
         return getNumPipes() * getNumPortsPerPipe() * getNumChannelsPerPort(); }
+    unsigned getMaxDigestSizeInBytes() const override { return (384/8); }
 
     const PhvSpec& getPhvSpec() const override { return phv_; }
     const PardeSpec& getPardeSpec() const override { return parde_; }
@@ -137,6 +139,7 @@ class JBayDevice : public Device {
     unsigned getMaxCloneId(gress_t /* gress */) const override { return 16; }
     unsigned getMaxResubmitId() const override { return 8; }
     unsigned getMaxDigestId() const override { return 8; }
+    unsigned getMaxDigestSizeInBytes() const override { return (384/8); }
     int getCloneSessionIdWidth() const override { return 8; }
     int getQueueIdWidth() const override { return 7; }
     int getPortBitWidth() const override { return 9; }

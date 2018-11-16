@@ -614,7 +614,34 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         }
     }
 
-    return false;
+    return true;
+}
+
+bool ValidateAllocation::preorder(const IR::BFN::Digest* digest) {
+    // Check that all learning quanta generated is less than the maximum allowed size.
+    if (digest->name != "learning") return true;
+    const PHV::Field* selector = phv.field(digest->selector->field);
+    BUG_CHECK(selector, "Selector field not present in PhvInfo");
+    size_t selectorSize = 0;
+    selector->foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
+        selectorSize += alloc.container.size();
+    });
+    for (auto fieldList : digest->fieldLists) {
+        size_t digestSizeInBits = selectorSize;
+        for (auto flval : fieldList->sources) {
+            const PHV::Field* f = phv.field(flval->field);
+            BUG_CHECK(f, "Digest field not present in PhvInfo");
+            f->foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
+                digestSizeInBits += alloc.container.size();
+            });
+        }
+        BUG_CHECK(digestSizeInBits % 8 == 0, "Digest size in bits cannot be non byte aligned.");
+        size_t digestSizeInBytes = digestSizeInBits / 8;
+        if (digestSizeInBytes > Device::maxDigestSizeInBytes())
+            ::error("Size of learning quanta is %1% bytes, greater than the maximum allowed %2% "
+                    "bytes.", digestSizeInBytes, Device::maxDigestSizeInBytes());
+    }
+    return true;
 }
 
 void ValidateAllocation::checkAndThrowPrivatizeException(

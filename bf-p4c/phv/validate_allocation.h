@@ -36,6 +36,7 @@ class ValidateAllocation final : public Inspector {
 
     SymBitMatrix mutually_exclusive_field_ids;
     profile_t init_apply(const IR::Node* root) override;
+    bool preorder(const IR::BFN::Digest* digest) override;
     bool preorder(const IR::BFN::Pipe* pipe) override;
 
     /// List of all privatized fields that cause PHV allocation to fail; grows monotonically every
