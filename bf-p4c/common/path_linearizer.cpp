@@ -2,6 +2,21 @@
 
 namespace BFN {
 
+cstring LinearPath::to_cstring() {
+    cstring ret = "";
+    unsigned count = 0;
+    for (auto c : components) {
+        if (auto pathexpr = c->to<IR::PathExpression>())
+            ret += pathexpr->path->name;
+        else if (auto member = c->to<IR::Member>())
+            ret += member->member;
+        if (count < components.size() - 1)
+            ret += ".";
+        count++;
+    }
+    return ret;
+}
+
 Visitor::profile_t PathLinearizer::init_apply(const IR::Node* root) {
     BUG_CHECK(root->is<IR::PathExpression>() ||
               root->is<IR::Member>() ||
@@ -23,6 +38,19 @@ void PathLinearizer::postorder(const IR::PathExpression* path) {
 
 void PathLinearizer::postorder(const IR::Member* member) {
     if (linearPath) linearPath->components.push_back(member);
+}
+
+void PathLinearizer::postorder(const IR::ArrayIndex *array) {
+    // XXX(hanw): currently dropped the index for array,
+    // this is not correct, and should be fixed after 8.5
+    if (array->left->is<IR::Member>())
+        if (linearPath) linearPath->components.push_back(array->left->to<IR::Member>());
+}
+
+bool PathLinearizer::preorder(const IR::Constant *) {
+    // Ignore constant; if they are used as ArrayIndex, it will
+    // be represented in the ArrayIndex that contain them.
+    return false;
 }
 
 void PathLinearizer::postorder(const IR::Node* node) {

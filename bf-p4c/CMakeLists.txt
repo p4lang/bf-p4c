@@ -35,6 +35,7 @@ set (P4C_LIB_DEPS ${P4C_LIB_DEPS} PARENT_SCOPE)
 add_subdirectory(logging)
 
 set (BF_P4C_IR_SRCS
+  common/path_linearizer.cpp
   ir/dbprint-tofino.cpp
   ir/bitrange.cpp
   ir/ir_enums.cpp
@@ -55,6 +56,7 @@ set_source_files_properties(${BF_P4C_IR_SRCS} PROPERTIES
   COMPILE_FLAGS "-I${LIBDYNHASH_INCLUDE_DIR}")
 
 set (BF_P4C_IR_HDRS
+  common/path_linearizer.h
   ir/bitrange.h
   ir/control_flow_visitor.h
   ir/gress.h
@@ -71,6 +73,7 @@ set (BF_P4C_IR_HDRS
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_IR_HDRS}")
 
 set (BF_P4C_BACKEND_CONV_SRCS
+  fromv1.0/field_list.cpp
   fromv1.0/lpf.cpp
   fromv1.0/meter.cpp
   fromv1.0/primitives.cpp
@@ -81,6 +84,7 @@ set (BF_P4C_BACKEND_CONV_SRCS
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_CONV_SRCS}")
 
 set (BF_P4C_BACKEND_CONV_HDRS
+  fromv1.0/field_list.h
   fromv1.0/lpf.h
   fromv1.0/meter.h
   fromv1.0/programStructure.h
@@ -128,7 +132,6 @@ set (BF_P4C_BACKEND_COMMON_SRCS
   common/param_binding.cpp
   common/parser_overlay.cpp
   common/parser_critical_path.cpp
-  common/path_linearizer.cpp
   common/run_id.cpp
   common/simplify_references.cpp
   common/slice.cpp
@@ -162,7 +165,6 @@ set (BF_P4C_BACKEND_COMMON_HDRS
   common/param_binding.h
   common/parser_overlay.h
   common/parser_critical_path.h
-  common/path_linearizer.h
   common/run_id.h
   common/simplify_references.h
   common/slice.h

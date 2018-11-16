@@ -33,6 +33,7 @@ namespace BFN {
  */
 struct LinearPath {
     std::vector<const IR::Expression*> components;
+    cstring to_cstring();
 };
 
 /**
@@ -48,6 +49,8 @@ struct LinearPath {
  * If the expression being visited is a valid path-like expression,
  * `PathLinearizer::linearPath` will contain the linearized version of the path.
  * If the expression is not path-like, `linearPath` will contain `boost::none`.
+ *
+ * XXX(hanw): this class is known to not work for header stacks.
  */
 struct PathLinearizer : public Inspector {
     boost::optional<LinearPath> linearPath;
@@ -57,6 +60,8 @@ struct PathLinearizer : public Inspector {
     void postorder(const IR::Path*) override;
     void postorder(const IR::PathExpression* path) override;
     void postorder(const IR::Member* member) override;
+    void postorder(const IR::ArrayIndex* array) override;
+    bool preorder(const IR::Constant*) override;
     void postorder(const IR::Node* node) override;
     void end_apply() override;
 };
