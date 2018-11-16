@@ -92,9 +92,9 @@ node ('compiler-svr1 || master') {
             ansiColor('xterm') {
                 timestamps {
                     sh "echo 'Running tofino PTF tests'"
-                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_PARALLEL_LEVEL=4 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/' -E 'smoketest|/programs|p4testgen|tofino/switch_|p4_16_programs_tna_ternary_match|p4_16_programs_tna_exact_match'
+                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_PARALLEL_LEVEL=4 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/' -E 'smoketest|/programs|p4testgen|tofino/switch_|p4_16_programs_tna_ternary_match|p4_16_programs_tna_exact_match'"
                     sh "echo 'Running tofino PTF tests'"
-                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_PARALLEL_LEVEL=4 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino2|cpplint|gtest|test_p4c_driver' -E 'smoketest'
+                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_PARALLEL_LEVEL=4 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino2|cpplint|gtest|test_p4c_driver' -E 'smoketest'"
                 }
             }
         }

@@ -327,9 +327,7 @@ class BarefootBackend(BackendDriver):
                 jsonTree = json.load(json_file)
                 jsonTree['compile_command'] = ' '.join(sys.argv)
             except:
-                error_msg = "ERROR: Input file '" + jsonTree + \
-                    "' could not be decoded as JSON.\n"
-                self.exitWithError(error_msg)
+                self.exitWithError(None)
 
         if jsonTree is not None:
             with open(jsonFile, "w") as new_file:
@@ -351,7 +349,8 @@ class BarefootBackend(BackendDriver):
         except:
             pass
         finally:
-            print >> sys.stderr, str(error_msg)
+            if error_msg is not None:
+                print >> sys.stderr, str(error_msg)
             sys.exit(1)
 
     def runAssembler(self, dirname, unique_table_offset):

@@ -8,8 +8,8 @@ from time import sleep
 from subprocess import Popen, PIPE
 from threading import Timer
 
-# Docker pull script timeeout (60 mins)
-pull_timeout = 3600
+# Docker pull script timeeout (30 mins)
+pull_timeout = 1800
 # Docker pull command timeout (20 mins)
 cmd_timeout = 1200
 
@@ -33,7 +33,7 @@ def runner(cmd, cmd_timeout):
         rc = m_process.poll()
     finally:
         m_timer.cancel()
-    
+
     return rc
 
 def get_parser():
@@ -49,7 +49,7 @@ def main():
     elapsed_time = 0
 
     eprint('docker pull command:', docker_cmd)
-    
+
     while pull_success or elapsed_time < pull_timeout:
         rc = runner(docker_cmd, cmd_timeout)
         if rc == 0:
@@ -59,7 +59,7 @@ def main():
             eprint('docker image not yet available')
         sleep(60)
         elapsed_time += 60
-    
+
     if pull_success:
         eprint('docker pull success')
     else:

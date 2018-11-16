@@ -184,6 +184,10 @@ int main(int ac, char **av) {
     Logging::FileLog::setOutputDir(options.outputDir);
     Device::init(options.target);
 
+#if !BAREFOOT_INTERNAL
+    // Catch all exceptions in production environment
+    try {
+#endif  // !BAREFOOT_INTERNAL
     // FIXME -- should be based on the architecture option
     P4V1::Converter::createProgramStructure = P4V1::TNA_ProgramStructure::create;
 
@@ -292,4 +296,22 @@ int main(int ac, char **av) {
     if (Log::verbose())
         std::cout << "Done." << std::endl;
     return ::errorCount() > 0 ? COMPILER_ERROR : SUCCESS;
+
+#if !BAREFOOT_INTERNAL
+    // catch all exceptions here
+    } catch (Util::CompilerBug e) {
+        std::cerr << e.what() << std::endl;
+        return COMPILER_ERROR;
+    } catch (Util::CompilerUnimplemented e) {
+        std::cerr << e.what() << std::endl;
+        return COMPILER_ERROR;
+    } catch (Util::CompilationError e) {
+        std::cerr << e.what() << std::endl;
+        return PROGRAM_ERROR;
+    } catch (...) {
+        std::cerr << "Internal compiler error. Please submit a bug report with your code."
+                  << std::endl;
+        return COMPILER_ERROR;
+    }
+#endif  // !BAREFOOT_INTERNAL
 }
