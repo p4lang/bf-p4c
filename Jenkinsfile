@@ -88,13 +88,23 @@ node ('compiler-svr1 || master') {
                 }
             }
         },
-        switch_8_4_ent_dc_general_tests: {
+        travis_backup: {
             ansiColor('xterm') {
                 timestamps {
-                    sh "echo 'Running switch PD tests for ENT_DC_GENERAL_PROFILE_BRIG'"
-                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*smoketest_switch_8.4_ent_dc_general'"
+                    sh "echo 'Running tofino PTF tests'"
+                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_PARALLEL_LEVEL=4 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/' -E 'smoketest|/programs|p4testgen|tofino/switch_|p4_16_programs_tna_ternary_match|p4_16_programs_tna_exact_match'
+                    sh "echo 'Running tofino PTF tests'"
+                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_PARALLEL_LEVEL=4 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino2|cpplint|gtest|test_p4c_driver' -E 'smoketest'
                 }
             }
         }
+        //switch_8_4_ent_dc_general_tests: {
+        //    ansiColor('xterm') {
+        //        timestamps {
+        //            sh "echo 'Running switch PD tests for ENT_DC_GENERAL_PROFILE_BRIG'"
+        //            sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*smoketest_switch_8.4_ent_dc_general'"
+        //        }
+        //    }
+        //}
     )
 }
