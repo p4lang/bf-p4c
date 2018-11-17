@@ -23,13 +23,14 @@
 bool TableFormat::analyze_layout_option() {
     // FIXME: In total needs some information variable passed about ghosting
     LOG3("  Layout option { pack : " << layout_option.way.match_groups << ", width : "
-         << layout_option.way.width << " }");
-    int min_way_size = *std::min_element(layout_option.way_sizes.begin(),
-                                         layout_option.way_sizes.end());
+         << layout_option.way.width << ", entries: " << layout_option.entries << " }");
 
     // If table has @dynamic_table_key_masks pragma, the driver expects all bits
     // to be available in the table pack format, so we disable ghosting
-    if (!tbl->layout.atcam && !tbl->dynamic_key_masks && !tbl->layout.proxy_hash) {
+    if (!tbl->layout.atcam && !tbl->dynamic_key_masks && !tbl->layout.proxy_hash &&
+        layout_option.entries > 0) {
+        int min_way_size = *std::min_element(layout_option.way_sizes.begin(),
+                                             layout_option.way_sizes.end());
         ghost_bits_count = RAM_GHOST_BITS + floor_log2(min_way_size);
     }
 

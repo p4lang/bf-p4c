@@ -44,8 +44,14 @@ unsigned AttachedTable::per_flow_enable_bit(MatchTable *m) const {
         } else if (per_flow_enable_param == "true" && addr) {
             pfe_bit = addr->bit(addr->size-1) - addr->bit(0) + default_pfe_adjust();
         } else {
-            error(lineno, "can't find per_flow_enable param %s in format for %s",
-                  per_flow_enable_param.c_str(), m->name()); }
+            // FIXME -- should be an error, but the compiler can hit this for a shared attached
+            // table that is defaulted in one match table and in the overhead in another.  We
+            // should no longer be generating code that tries to set per_flow_enable: in the
+            // attached table (it should be in the call in the match table) at all, but we still
+            // have issues with DRV-1856?  Comments in the compiler indicate those should go away
+            // and this can be an error again.
+            warning(lineno, "can't find per_flow_enable param %s in format for %s",
+                    per_flow_enable_param.c_str(), m->name()); }
     } else for (auto mt : match_tables) {
         auto bit = per_flow_enable_bit(mt);
         if (bit && pfe_bit && bit != pfe_bit) {
