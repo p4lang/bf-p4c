@@ -225,7 +225,21 @@ bool FindInitializationNode::increasesDependenceCriticalPath(
     return false;
 }
 
+bool FindInitializationNode::cannotInitInAction(
+        const PHV::Container& c,
+        const IR::MAU::Action* action,
+        const PHV::Transaction& alloc) const {
+    // If the PHVs in this action are already unaligned, then we cannot add initialization in this
+    // action.
+    if (actionConstraints.unalignedPHVs(c, action, alloc)) {
+        LOG4("\t\t\tPHVs not aligned in action " << action->name << ". Cannot initialize here.");
+        return true;
+    }
+    return doNotInitActions.count(action);
+}
+
 boost::optional<const PHV::Allocation::ActionSet> FindInitializationNode::getInitPointsForTable(
+        const PHV::Container& c,
         const IR::MAU::Table* t,
         const PHV::Field* f,
         const ordered_set<const IR::MAU::Table*>& prevUses,
@@ -252,7 +266,7 @@ boost::optional<const PHV::Allocation::ActionSet> FindInitializationNode::getIni
     }
 
     for (const auto* act : tablesToActions.getActionsForTable(t)) {
-        if (cannotInitInAction(act)) {
+        if (cannotInitInAction(c, act, alloc)) {
             LOG2("\t\t\t  Cannot init " << f->name << " in do not init action " << act);
             return boost::none;
         }
@@ -290,6 +304,7 @@ boost::optional<const PHV::Allocation::ActionSet> FindInitializationNode::getIni
 
 boost::optional<const PHV::Allocation::ActionSet>
 FindInitializationNode::getInitializationCandidates(
+        const PHV::Container& c,
         const PHV::Field* f,
         const IR::MAU::Table* groupDominator,
         const ordered_map<const IR::BFN::Unit*, unsigned>& u,
@@ -315,7 +330,7 @@ FindInitializationNode::getInitializationCandidates(
         auto access = u.at(unit);
         if (access == MetadataLiveRange::READ)
             BUG("Group dominator cannot be a node that reads the field.");
-        auto initPoints = getInitPointsForTable(groupDominator, f, prevUses, alloc);
+        auto initPoints = getInitPointsForTable(c, groupDominator, f, prevUses, alloc);
         if (!initPoints) return boost::none;
         return initPoints;
     }
@@ -344,7 +359,7 @@ FindInitializationNode::getInitializationCandidates(
         }
         for (const auto* t : fStrictDominators) {
             LOG1("\t\t  Trying to initialize at table " << t->name);
-            auto initPoints = getInitPointsForTable(t, f, prevUses, alloc, true);
+            auto initPoints = getInitPointsForTable(c, t, f, prevUses, alloc, true);
             if (!initPoints) {
                 LOG1("\t\t  Could not initialize at table " << t->name);
                 return boost::none;
@@ -377,7 +392,7 @@ FindInitializationNode::getInitializationCandidates(
     for (const auto* tbl : candidateTables) {
         // Find the first table where initialization is possible.
         LOG2("\t\t  Checking where initialization is possible at table " << tbl->name);
-        auto candidateActions = getInitPointsForTable(tbl, f, prevUses, alloc);
+        auto candidateActions = getInitPointsForTable(c, tbl, f, prevUses, alloc);
         if (!candidateActions) continue;
         LOG2("\t\t  Initialization possible for table " << tbl->name);
         return candidateActions;
@@ -428,6 +443,7 @@ bool FindInitializationNode::identifyFieldsToInitialize(
 
 boost::optional<PHV::Allocation::LiveRangeShrinkingMap>
 FindInitializationNode::findInitializationNodes(
+        const PHV::Container c,
         const ordered_set<const PHV::Field*>& fields,
         const PHV::Transaction& alloc) const {
     PHV::Allocation::LiveRangeShrinkingMap initPoints;
@@ -673,8 +689,8 @@ FindInitializationNode::findInitializationNodes(
             }
         } while (!groupDominatorOK);
 
-        auto initializationCandidates = getInitializationCandidates(f, groupDominator, units.at(f),
-                lastUsedStage, f_table_uses, lastField, alloc);
+        auto initializationCandidates = getInitializationCandidates(c, f, groupDominator,
+                units.at(f), lastUsedStage, f_table_uses, lastField, alloc);
         if (!initializationCandidates) {
             LOG2("\t\tCould not find any actions to initialize field in the group dominator.");
             return boost::none;

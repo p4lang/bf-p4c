@@ -21,6 +21,7 @@ class ActionPhvConstraints : public Inspector {
     const PackConflicts &conflicts;
 
     using ClassifiedSources = ordered_map<size_t, ordered_set<PHV::AllocSlice>>;
+    using PackingConstraints = ordered_map<const IR::MAU::Action*, UnionFind<PHV::FieldSlice>>;
     /// Defines a struct for returning number of containers.
     struct NumContainers {
         size_t num_allocated;
@@ -262,7 +263,7 @@ class ActionPhvConstraints : public Inspector {
       */
     NumContainers num_container_sources(const PHV::Allocation& alloc,
             PHV::Allocation::MutuallyLiveSlices container_state, const IR::MAU::Action* action,
-            UnionFind<PHV::FieldSlice>& copacking_constraints);
+            PackingConstraints& copacking_constraints);
 
     /** Return the first allocated (in @alloc) or proposed (in @slices) source
      * of an instruction in @action that writes to @slice, if any.  There may
@@ -332,7 +333,7 @@ class ActionPhvConstraints : public Inspector {
     void pack_slices_together(
         const PHV::Allocation& alloc,
         const PHV::Allocation::MutuallyLiveSlices& container_state,
-        UnionFind<PHV::FieldSlice> &packing_constraints,
+        PackingConstraints& packing_constraints,
         const IR::MAU::Action* action,
         bool pack_unallocated_only);
 
@@ -426,15 +427,17 @@ class ActionPhvConstraints : public Inspector {
             bool has_ad_constant_sources,
             ordered_map<const IR::MAU::Action*, bool>& phvMustBeAligned,
             ordered_map<const IR::MAU::Action*, size_t>& numSourceContainers,
-            UnionFind<PHV::FieldSlice>& copacking_constraints,
+            PackingConstraints& copacking_constraints,
             const PHV::Allocation::LiveRangeShrinkingMap& initActions);
 
     /// Generates conditional constraints for bitwise operations. Client for
     /// check_and_generate_constraints_for_bitwise_op_with_unallocated_sources.
     bool generate_conditional_constraints_for_bitwise_op(
             const PHV::Allocation::MutuallyLiveSlices& container_state,
+            const IR::MAU::Action* action,
             const ordered_set<PHV::FieldSlice>& sources,
-            UnionFind<PHV::FieldSlice>& copacking_constraints) const;
+            PackingConstraints& copacking_constraints)
+        const;
 
     /// Generates copacking and alignment requirements due to @action for the packing
     /// @container_state in container @c, where the number of PHV-backed sources are represented by
@@ -447,7 +450,8 @@ class ActionPhvConstraints : public Inspector {
             const IR::MAU::Action* action,
             const PHV::Allocation::MutuallyLiveSlices& container_state,
             const NumContainers& sources,
-            UnionFind<PHV::FieldSlice>& copacking_constraints) const;
+            PackingConstraints& copacking_constraints)
+        const;
 
  public:
     explicit ActionPhvConstraints(const PhvInfo &p, const PackConflicts& c)
@@ -583,6 +587,13 @@ class ActionPhvConstraints : public Inspector {
       * constraints
       */
     bool checkBridgedPackingConstraints(const ordered_set<const PHV::Field*>& packing) const;
+
+    /** @returns true if the PHVs used as sources in @action are not aligned
+      */
+    bool unalignedPHVs(
+            const PHV::Container& c,
+            const IR::MAU::Action* action,
+            const PHV::Allocation& alloc) const;
 
     /** @returns true if field @f is written in action @act.
       */

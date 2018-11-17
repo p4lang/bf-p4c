@@ -73,6 +73,7 @@ class FindInitializationNode : public Inspector {
     /// adjacent earlier live range to @f.
     boost::optional<const PHV::Allocation::ActionSet>
         getInitializationCandidates(
+                const PHV::Container& c,
                 const PHV::Field* f,
                 const IR::MAU::Table* t,
                 const ordered_map<const IR::BFN::Unit*, unsigned>& u,
@@ -83,6 +84,7 @@ class FindInitializationNode : public Inspector {
 
     /// @returns a set of actions where field @f must be initialized in @tbl.
     boost::optional<const PHV::Allocation::ActionSet> getInitPointsForTable(
+            const PHV::Container& c,
             const IR::MAU::Table* t,
             const PHV::Field* f,
             const ordered_set<const IR::MAU::Table*>& prevUses,
@@ -116,9 +118,10 @@ class FindInitializationNode : public Inspector {
             const ordered_map<int, std::pair<int, int>>& livemap) const;
 
     /// @returns true if metadata initialization is forbidden in @action.
-    bool cannotInitInAction(const IR::MAU::Action* action) const {
-        return doNotInitActions.count(action);
-    }
+    bool cannotInitInAction(
+            const PHV::Container& c,
+            const IR::MAU::Action* action,
+            const PHV::Transaction& alloc) const;
 
  public:
     /// @returns a map of field to the actions in which initialization must be done for the set of
@@ -126,6 +129,7 @@ class FindInitializationNode : public Inspector {
     /// initialization cannot be realized.
     boost::optional<PHV::Allocation::LiveRangeShrinkingMap>
     findInitializationNodes(
+        const PHV::Container c,
         const ordered_set<const PHV::Field*>& fields,
         const PHV::Transaction& alloc) const;
 
@@ -166,9 +170,18 @@ class LiveRangeShrinking : public PassManager {
             const ordered_set<PHV::AllocSlice>& alloced,
             const PHV::Transaction& alloc) const {
         ordered_set<const PHV::Field*> fields;
-        for (auto& sl : alloced)
+        boost::optional<PHV::Container> c;
+        for (auto& sl : alloced) {
             fields.insert(sl.field());
-        return initNode.findInitializationNodes(fields, alloc);
+            if (!c) {
+                c = sl.container();
+            } else {
+                BUG_CHECK(c == sl.container(),
+                          "Containers for metadata overlay candidates are different");
+            }
+        }
+        BUG_CHECK(c != boost::none, "Container candidate for metadata overlay cannot be NULL.");
+        return initNode.findInitializationNodes(*c, fields, alloc);
     }
 
     boost::optional<PHV::Allocation::LiveRangeShrinkingMap> findInitializationNodes(
