@@ -78,3 +78,36 @@ template<> void Stage::write_regs(Target::Tofino::mau_regs &regs) {
             regs.dp.phv_egress_thread_alu[i][j] = regs.dp.phv_egress_thread_imem[i][j] =
             regs.dp.phv_egress_thread[i][j] = eg_use.getrange(8*phv_use_transpose[i][j], 8); } }
 }
+
+template<>
+void Stage::gen_configuration_cache(Target::Tofino::mau_regs &regs, json::vector &cfg_cache) {
+    Stage::gen_configuration_cache_common(regs, cfg_cache);
+
+    unsigned reg_width = 8;  // this means number of hex characters
+    std::string reg_fqname;
+    std::string reg_name;
+    unsigned reg_value;
+    std::string reg_value_str;
+
+    // meter_ctl
+    auto &meter_ctl = regs.rams.map_alu.meter_group;
+    for (int i = 0; i < 4; i++) {
+        reg_fqname = "mau[" + std::to_string(stageno)
+            + "].rams.map_alu.meter_group["
+            + std::to_string(i) + "]"
+            + ".meter.meter_ctl";
+        reg_name = "stage_" + std::to_string(stageno) + "_meter_ctl_" + std::to_string(i);
+        reg_value = (meter_ctl[i].meter.meter_ctl.meter_bytecount_adjust       & 0x00003FFF)
+                 | ((meter_ctl[i].meter.meter_ctl.meter_byte                   & 0x00000001) << 14)
+                 | ((meter_ctl[i].meter.meter_ctl.meter_enable                 & 0x00000001) << 15)
+                 | ((meter_ctl[i].meter.meter_ctl.lpf_enable                   & 0x00000001) << 16)
+                 | ((meter_ctl[i].meter.meter_ctl.red_enable                   & 0x00000001) << 17)
+                 | ((meter_ctl[i].meter.meter_ctl.meter_alu_egress             & 0x00000001) << 18)
+                 | ((meter_ctl[i].meter.meter_ctl.meter_rng_enable             & 0x00000001) << 19)
+                 | ((meter_ctl[i].meter.meter_ctl.meter_time_scale             & 0x0000000F) << 20);
+
+        if ((reg_value != 0) || (options.match_compiler)) {
+            reg_value_str = int_to_hex_string(reg_value, reg_width);
+            add_cfg_reg(cfg_cache, reg_fqname, reg_name, reg_value_str); }
+    }
+}

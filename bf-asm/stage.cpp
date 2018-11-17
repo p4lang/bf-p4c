@@ -22,7 +22,7 @@ class AsmStage : public Section {
     void input(VECTOR(value_t) args, value_t data);
     void process();
     void output(json::map &);
-    unsigned compute_latency(gress_t gress); 
+    unsigned compute_latency(gress_t gress);
     AsmStage();
     ~AsmStage() {}
     std::vector<Stage>  stage;
@@ -235,7 +235,7 @@ void AsmStage::output(json::map &ctxt_json) {
             bitvec non_match_dep;
             for (unsigned i = 1; i < stage.size(); i++) {
                 auto stage_dep = stage[i].stage_dep[EGRESS];
-                if (stage_dep != Stage::MATCH_DEP) 
+                if (stage_dep != Stage::MATCH_DEP)
                     non_match_dep.setbit(i);
             }
             // Add match-dependent stages and re-evaluate latency
@@ -520,11 +520,15 @@ void Stage::gen_stage_dependency(REGS &regs, json::vector &stg_dependency) {
 
 template<class REGS>
 void Stage::gen_configuration_cache(REGS &regs, json::vector &cfg_cache) {
+}
+
+template<class REGS>
+void Stage::gen_configuration_cache_common(REGS &regs, json::vector &cfg_cache) {
     std::string reg_fqname;
     std::string reg_name;
     unsigned reg_value;
     std::string reg_value_str;
-    unsigned reg_width = 8;
+    unsigned reg_width = 8;  // this means number of hex characters
 
     // meter_sweep_ctl
     auto &meter_sweep_ctl = regs.rams.match.adrdist.meter_sweep_ctl;
@@ -546,6 +550,29 @@ void Stage::gen_configuration_cache(REGS &regs, json::vector &cfg_cache) {
         if ((reg_value != 0) || (options.match_compiler)) {
             reg_value_str = int_to_hex_string(reg_value, reg_width);
             add_cfg_reg(cfg_cache, reg_fqname, reg_name, reg_value_str); } }
+
+    // meter_ctl is different for Tofino and Tofino2, so it is added in
+    // specialized functions.
+
+    // statistics_ctl
+    auto &statistics_ctl = regs.rams.map_alu.stats_wrap;
+    for (int i = 0; i < 4; i++) {
+        reg_fqname = "mau[" + std::to_string(stageno)
+            + "].rams.map_alu.stats_wrap["
+            + std::to_string(i) + "]"
+            + ".stats.statistics_ctl";
+        reg_name = "stage_" + std::to_string(stageno) + "_statistics_ctl_" + std::to_string(i);
+        reg_value = (statistics_ctl[i].stats.statistics_ctl.stats_entries_per_word & 0x00000007)
+                 | ((statistics_ctl[i].stats.statistics_ctl.stats_process_bytes    & 0x00000001) << 3)
+                 | ((statistics_ctl[i].stats.statistics_ctl.stats_process_packets  & 0x00000001) << 4)
+                 | ((statistics_ctl[i].stats.statistics_ctl.lrt_enable             & 0x00000001) << 5)
+                 | ((statistics_ctl[i].stats.statistics_ctl.stats_alu_egress       & 0x00000001) << 6)
+                 | ((statistics_ctl[i].stats.statistics_ctl.stats_bytecount_adjust & 0x00003FFF) << 7)
+                 | ((statistics_ctl[i].stats.statistics_ctl.stats_alu_error_enable & 0x00000001) << 21);
+        if ((reg_value != 0) || (options.match_compiler)) {
+            reg_value_str = int_to_hex_string(reg_value, reg_width);
+            add_cfg_reg(cfg_cache, reg_fqname, reg_name, reg_value_str); }
+    }
 
     // match_input_xbar_din_power_ctl
     auto &mixdpctl = regs.dp.match_input_xbar_din_power_ctl;

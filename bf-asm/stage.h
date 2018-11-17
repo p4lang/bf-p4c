@@ -71,6 +71,8 @@ public:
     ~Stage();
     template<class TARGET> void output(json::map &ctxt_json);
     template<class REGS>
+        void gen_configuration_cache_common(REGS &regs, json::vector &cfg_cache);
+    template<class REGS>
         void gen_configuration_cache(REGS &regs, json::vector &cfg_cache);
     template<class REGS>
         void gen_stage_dependency(REGS &regs, json::vector &stg_dependency);
