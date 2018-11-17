@@ -54,7 +54,7 @@ class LiveRangeOverlay : public Inspector {
         else if (u->gress == EGRESS)
             all_egress_units.insert(u);
         else if (u->gress == GHOST)
-            all_egress_units.insert(u);
+            all_ghost_units.insert(u);
         else
             BUG("Unexpected gress."); }
     void postorder(const IR::BFN::ParserState *u) override {

@@ -112,13 +112,13 @@ struct InstructionMemory {
         std::map<cstring, InstructionMemory::Use::VLIW_Instruction>> shared_action_profiles;
 
     Alloc2Dbase<cstring> &imem_use(gress_t gress) {
-        if (gress == INGRESS)
+        if (gress == INGRESS || gress == GHOST)
             return ingress_imem_use;
         return egress_imem_use;
     }
 
     Alloc2Dbase<bitvec> &imem_slot_inuse(gress_t gress) {
-        if (gress == INGRESS)
+        if (gress == INGRESS || gress == GHOST)
             return ingress_imem_slot_inuse;
         return egress_imem_slot_inuse;
     }
