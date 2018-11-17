@@ -566,6 +566,7 @@ FindInitializationNode::findInitializationNodes(
         if (noInit.count(f)) {
             LOG2("\t\tField " << f->name << " marked no_init. No initialization required.");
             initPoints[f] = emptySet;
+            seenFields.insert(f);
             continue;
         }
 
@@ -580,6 +581,7 @@ FindInitializationNode::findInitializationNodes(
         if (allStrictDominatorsWrite) {
             LOG2("\t\tAll strict dominators write to the field " << f->name);
             initPoints[f] = emptySet;
+            seenFields.insert(f);
             continue;
         } else {
             LOG2("\t\tOnly some strict dominators write to the field " << f->name);

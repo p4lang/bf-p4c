@@ -302,6 +302,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: The stage specified for .* could not place it until stage"
   smoketest_programs_netcache
+  extensions/p4_tests/p4_14/p4-tests/programs/ecc/ecc.p4
   extensions/p4_tests/p4_14/p4-tests/programs/mau_test/mau_test.p4  #P4C-1123
   )
 
