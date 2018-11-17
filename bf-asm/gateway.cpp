@@ -227,8 +227,10 @@ void GatewayTable::pass1() {
                   gw_unit, old->name());
         else
             stage->gw_unit_use[layout[0].row][gw_unit] = this; }
-    if (input_xbar)
+    if (input_xbar) {
         input_xbar->pass1();
+        if (input_xbar->match_group() < 0)
+            error(input_xbar->lineno, "Gateway match keys must be in a single ixbar group"); }
     check_match_key(this, match, "match", 44);
     check_match_key(this, xor_match, "xor", 32);
     std::sort(match.begin(), match.end());
