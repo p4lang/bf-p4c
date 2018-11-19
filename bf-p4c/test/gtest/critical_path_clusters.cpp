@@ -149,7 +149,7 @@ bool resultHas(const std::set<PHV::SuperCluster *>& result,
                     && slices_to_names(slices) == field_names) {
                     return true; } } } }
     return false;
-};
+}
 
 }  // namespace
 
@@ -183,7 +183,7 @@ TEST_F(CriticalPathClustersTest, DISABLED_Basic) {
 
     SymBitMatrix mutex;
     PhvInfo phv(mutex);
-    MauBacktracker table_alloc(phv.field_mutex);
+    MauBacktracker table_alloc(phv.parser_mutex());
     DependencyGraph deps;
     TablesMutuallyExclusive table_mutex;
     ActionMutuallyExclusive action_mutex;
@@ -202,7 +202,8 @@ TEST_F(CriticalPathClustersTest, DISABLED_Basic) {
 
     auto *cluster_cp = new CalcCriticalPathClusters(parser_critical_path);
     post_pm_pipe = post_pm_pipe->apply(*cluster_cp);
-    std::set<PHV::SuperCluster *> result = cluster_cp->calc_critical_clusters(clustering.cluster_groups());
+    std::set<PHV::SuperCluster *> result =
+        cluster_cp->calc_critical_clusters(clustering.cluster_groups());
 
     EXPECT_EQ(resultHas(result, {"ingress::eth.nxt"}), true);
     EXPECT_EQ(resultHas(result, {"ingress::eth.$valid"}), true);

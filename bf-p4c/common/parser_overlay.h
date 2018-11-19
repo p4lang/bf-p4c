@@ -56,7 +56,7 @@ class BuildMutex : public BFN::ControlFlowVisitor, public Inspector {
     using FieldFilter_t = std::function<bool(const PHV::Field* f)>;
 
  private:
-    const PhvInfo&      phv;
+    PhvInfo&      phv;
     const bitvec&       neverOverlay;
 
     // Used to get information about mutually exclusive fields, specified by pragmas
@@ -87,12 +87,12 @@ class BuildMutex : public BFN::ControlFlowVisitor, public Inspector {
 
  public:
     BuildMutex(
-            const PhvInfo& phv,
+            PhvInfo& phv,
             const bitvec& neverOverlay,
             const PragmaMutuallyExclusive& p,
             FieldFilter_t ignore_field)
-            : phv(phv), neverOverlay(neverOverlay), pragmas(p), mutually_exclusive(phv.field_mutex),
-              IgnoreField(ignore_field) {
+            : phv(phv), neverOverlay(neverOverlay), pragmas(p),
+              mutually_exclusive(phv.parser_mutex()), IgnoreField(ignore_field) {
         joinFlows = true;
         visitDagOnce = false; }
 
@@ -117,7 +117,7 @@ class BuildParserOverlay : public BuildMutex {
 
  public:
     BuildParserOverlay(
-            const PhvInfo& phv,
+            PhvInfo& phv,
             const bitvec& neverOverlay,
             const PragmaMutuallyExclusive& p)
         : BuildMutex(phv, neverOverlay, p, ignore_field) { }
@@ -140,7 +140,7 @@ class BuildMetadataOverlay : public BuildMutex {
 
  public:
     BuildMetadataOverlay(
-            const PhvInfo& phv,
+            PhvInfo& phv,
             const bitvec& neverOverlay,
             const PragmaMutuallyExclusive& p)
         : BuildMutex(phv, neverOverlay, p, ignore_field) { }
@@ -151,12 +151,11 @@ class BuildMetadataOverlay : public BuildMutex {
  * they're often never written.
  */
 class ExcludeDeparsedIntrinsicMetadata : public Inspector {
-    const PhvInfo& phv;
+    PhvInfo& phv;
     bitvec& neverOverlay;
 
     profile_t init_apply(const IR::Node* root) override {
         profile_t rv = Inspector::init_apply(root);
-        phv.field_mutex.clear();
         neverOverlay.clear();
         return rv;
     }
@@ -164,10 +163,8 @@ class ExcludeDeparsedIntrinsicMetadata : public Inspector {
     void end_apply() override;
 
  public:
-    ExcludeDeparsedIntrinsicMetadata(
-        const PhvInfo& phv,
-        bitvec& neverOverlay)
-    : phv(phv), neverOverlay(neverOverlay) { }
+    ExcludeDeparsedIntrinsicMetadata(PhvInfo& phv, bitvec& neverOverlay)
+        : phv(phv), neverOverlay(neverOverlay) { }
 };
 
 /** Mark fields specified by pa_no_overlay as never overlaid. These fields are excluded from
@@ -202,13 +199,13 @@ class ExcludePragmaNoOverlayFields : public Inspector {
  */
 class FindAddedHeaderFields : public MauInspector {
  private:
-    const PhvInfo& phv;
+    PhvInfo& phv;
     bitvec& rv;
 
     bool preorder(const IR::Primitive* prim) override;
 
  public:
-    FindAddedHeaderFields(const PhvInfo& phv, bitvec& rv) : phv(phv), rv(rv) { }
+    FindAddedHeaderFields(PhvInfo& phv, bitvec& rv) : phv(phv), rv(rv) { }
 };
 
 /// @see BuildParserOverlay and FindAddedHeaderFields.
@@ -219,7 +216,7 @@ class ParserOverlay : public PassManager {
 
  public:
     ParserOverlay(
-            const PhvInfo& phv,
+            PhvInfo& phv,
             const PHV::Pragmas& pragmas) {
         addPasses({
             new ExcludeDeparsedIntrinsicMetadata(phv, neverOverlay),

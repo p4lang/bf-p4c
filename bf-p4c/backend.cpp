@@ -12,7 +12,6 @@
 #include "bf-p4c/common/extract_maupipe.h"
 #include "bf-p4c/common/elim_unused.h"
 #include "bf-p4c/common/header_stack.h"
-#include "bf-p4c/common/live_range_overlay.h"
 #include "bf-p4c/common/multiple_apply.h"
 #include "bf-p4c/common/parser_overlay.h"
 #include "bf-p4c/common/utils.h"
@@ -149,7 +148,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
     uses(phv),
     defuse(phv),
     bridged_fields(phv),
-    table_alloc(phv.field_mutex) {
+    table_alloc(phv.parser_mutex()) {
     addPasses({
         new DumpPipe("Initial table graph"),
         new CreateThreadLocalInstances,

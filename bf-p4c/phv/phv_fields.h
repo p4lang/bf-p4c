@@ -699,25 +699,41 @@ class PhvInfo {
         }
     };
 
-    /// Stores the mutual exclusion relationships between different PHV fields
-    SymBitMatrix&                            field_mutex;
-
-    /// Stores the potential overlayable relationships due to live ranges between different metadata
-    /// fields.
-    SymBitMatrix                             metadata_overlay;
-
-    /// Stores all pairs of fields that cannot be packed in the same container
-    /// Derived from POV bits of adjacent fields in deparser
-    SymBitMatrix                             no_co_pack;
-
-    const SymBitMatrix& mutex() const { return field_mutex; }
-
-    SymBitMatrix                             bridged_extracted_together;
+    const SymBitMatrix& parser_mutex() const { return field_mutex; }
+    const SymBitMatrix& metadata_mutex() const { return metadata_overlay; }
+    const SymBitMatrix& deparser_no_pack_mutex() const { return deparser_no_pack; }
+    SymBitMatrix& parser_mutex() { return field_mutex; }
+    SymBitMatrix& metadata_mutex() { return metadata_overlay; }
+    SymBitMatrix& deparser_no_pack_mutex() { return deparser_no_pack; }
 
     SymBitMatrix& getBridgedExtractedTogether() { return bridged_extracted_together; }
     const SymBitMatrix& getBridgedExtractedTogether() const { return bridged_extracted_together; }
     bool are_bridged_extracted_together(const PHV::Field* f1, const PHV::Field* f2) const {
         return bridged_extracted_together(f1->id, f2->id);
+    }
+
+    void addDeparserNoPack(const PHV::Field* f1, const PHV::Field* f2) {
+        deparser_no_pack(f1->id, f2->id) = true;
+    }
+
+    void addParserMutex(const PHV::Field* f1, const PHV::Field* f2) {
+        field_mutex(f1->id, f2->id) = true;
+    }
+
+    void addMetadataMutex(const PHV::Field* f1, const PHV::Field* f2) {
+        metadata_overlay(f1->id, f2->id) = true;
+    }
+
+    bool isParserMutex(const PHV::Field* f1, const PHV::Field* f2) const {
+        return field_mutex(f1->id, f2->id);
+    }
+
+    bool isMetadataMutex(const PHV::Field* f1, const PHV::Field* f2) const {
+        return metadata_overlay(f1->id, f2->id);
+    }
+
+    bool isDeparserNoPack(const PHV::Field* f1, const PHV::Field* f2) const {
+        return deparser_no_pack(f1->id, f2->id);
     }
 
  private:  // class PhvInfo
@@ -749,6 +765,21 @@ class PhvInfo {
 
     bool                                alloc_done_ = false;
     bool                                pov_alloc_done = false;
+
+    /// Stores the mutual exclusion relationships between different PHV fields
+    SymBitMatrix&                            field_mutex;
+
+    /// Stores the potential overlayable relationships due to live ranges between different metadata
+    /// fields.
+    SymBitMatrix                             metadata_overlay;
+
+    /// Stores all pairs of fields that cannot be packed in the same container
+    /// Derived from POV bits of adjacent fields in deparser
+    SymBitMatrix                             deparser_no_pack;
+
+    /// bridged_extracted_together(f1->id, f2->id) is true if f1 and f2 are both bridged fields and
+    /// they are extracted as part of the same byte.
+    SymBitMatrix                             bridged_extracted_together;
 
     /// Set of containers that must be set to 0 (and their container validity bit set
     /// unconditionally to 1) for the deparsed zero optimization.

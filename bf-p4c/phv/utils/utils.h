@@ -433,7 +433,10 @@ class Allocation {
 
     /// Utility function.
     /// @returns true if @f1 and @f2 are mutually exclusive.
-    static bool mutually_exclusive(SymBitMatrix mutex, const PHV::Field *f1, const PHV::Field *f2);
+    static bool mutually_exclusive(
+            const SymBitMatrix& mutex,
+            const PHV::Field *f1,
+            const PHV::Field *f2);
 
     /// Available bits of this allocation
     struct AvailableSpot {

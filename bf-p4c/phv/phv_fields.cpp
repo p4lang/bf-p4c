@@ -38,6 +38,8 @@ void PhvInfo::clear() {
     zeroContainers[1].clear();
     reverseMetadataDeps.clear();
     metadataDeps.clear();
+    deparser_no_pack.clear();
+    field_mutex.clear();
 }
 
 void PhvInfo::add(
@@ -1123,10 +1125,9 @@ class CollectPardeConstraints : public Inspector {
                 auto curr_pov_bit = phv.field(ef->povBit->field);
 
                 if (prev_pov_bit && (prev_pov_bit != curr_pov_bit)) {
-                    phv.no_co_pack[prev_field->id][curr_field->id] = 1;
-
+                    phv.addDeparserNoPack(prev_field, curr_field);
                     LOG1("\tMarking " << prev_field->name << " and "
-                                      << curr_field->name << " as no_co_pack");
+                                      << curr_field->name << " as deparser_no_pack");
                 }
 
                 prev_field = curr_field;
@@ -1153,18 +1154,6 @@ class CollectPardeConstraints : public Inspector {
         // XXX(cole): These two constraints will be subsumed by deparser schema.
         src_field->set_deparsed(true);
         src_field->set_exact_containers(true);
-
-        // In the case of conditional checksum update, we have two emits in the deparser
-        // one for the header checksum and the other for the updated value from the deparser
-        // checksum engine. This however breaks the header contiguity in the deparser.
-        // Therefore, we cannot pack the header checksum with its adjacent fields.
-        auto* pov_field = phv.field(emit->povBit->field);
-        BUG_CHECK(pov_field, "Deparser Emit %1% without POV bit?",
-                  cstring::to_cstring(emit));
-
-        // XXX(zma) remove this once no_co_pack constraint is implemented in allocation
-        if (pov_field->name.endsWith("$deparse_original_csum"))
-            src_field->set_no_pack(true);
 
         if (!src_field->privatized()) return;
 

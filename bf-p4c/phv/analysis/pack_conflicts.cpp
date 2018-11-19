@@ -6,8 +6,18 @@ Visitor::profile_t PackConflicts::init_apply(const IR::Node *root) {
     totalNumSet = 0;
     // Initialize the fieldNoPack matrix to allow all fields to be packed together
     for (auto& f1 : phv) {
-        for (auto& f2 : phv)
-            fieldNoPack(f1.id, f2.id) = false; }
+        for (auto& f2 : phv) {
+            // If the fields are no pack according to deparser constraints, then set that here.
+            if (phv.isDeparserNoPack(&f1, &f2)) {
+                fieldNoPack(f1.id, f2.id) = true;
+                continue;
+            }
+            // For all other fields, default is false.
+            fieldNoPack(f1.id, f2.id) = false;
+        }
+        // Same field must always be packable with itself.
+        fieldNoPack(f1.id, f1.id) = false;
+    }
     tableActions.clear();
     actionWrites.clear();
     return rv;

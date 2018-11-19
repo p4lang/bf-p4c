@@ -13,7 +13,6 @@
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/analysis/critical_path_clusters.h"
-#include "bf-p4c/phv/analysis/field_interference.h"
 #include "bf-p4c/phv/analysis/live_range_shrinking.h"
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
 #include "bf-p4c/phv/utils/utils.h"
@@ -183,7 +182,7 @@ class CoreAllocation {
 
     /// @returns true if @f can overlay all fields in @slices.
     static bool can_overlay(
-            SymBitMatrix mutually_exclusive_field_ids,
+            const SymBitMatrix& mutually_exclusive_field_ids,
             const PHV::Field* f,
             const ordered_set<PHV::AllocSlice>& slices);
 
@@ -361,22 +360,17 @@ class AllocationStrategy {
 class BruteForceAllocationStrategy : public AllocationStrategy {
  private:
     const CalcCriticalPathClusters& critical_path_clusters_i;
-    const FieldInterference& field_interference_i;
     const ClotInfo& clot_i;
     ordered_set<cstring>& bridgedFieldsWithAlignmentConflicts;
-    // XXX(yumin): not used right now
-    // Update this everytime after slicing.
-    // FieldInterference::SliceColorMap slice_to_color_i;
 
  public:
     BruteForceAllocationStrategy(const CoreAllocation& alloc,
                                  std::ostream& out,
                                  const CalcCriticalPathClusters& cpc,
-                                 const FieldInterference& f,
                                  const ClotInfo& clot,
                                  ordered_set<cstring>& bf)
-        : AllocationStrategy(alloc, out), critical_path_clusters_i(cpc), field_interference_i(f),
-          clot_i(clot), bridgedFieldsWithAlignmentConflicts(bf) { }
+        : AllocationStrategy(alloc, out), critical_path_clusters_i(cpc), clot_i(clot),
+          bridgedFieldsWithAlignmentConflicts(bf) { }
 
     AllocResult
     tryAllocation(const PHV::Allocation &alloc,
@@ -472,7 +466,6 @@ class AllocatePHV : public Inspector {
     const CalcCriticalPathClusters& critical_path_clusters_i;
     // Used to find metadata initialization possibilities.
     LiveRangeShrinking& meta_init_i;
-    FieldInterference field_interference_i;
 
     // Set of bridged metadata fields that were found to have alignment conflicts during PHV
     // allocation. This set maintains its state across multiple rounds of PHV allocation, therefore,
@@ -535,12 +528,11 @@ class AllocatePHV : public Inspector {
                 ActionPhvConstraints& actions,
                 const CalcCriticalPathClusters& critical_cluster,
                 LiveRangeShrinking& meta_init)
-        : core_alloc_i(phv.field_mutex, clustering, uses, defuse, clot, pragmas, phv, actions,
+        : core_alloc_i(phv.parser_mutex(), clustering, uses, defuse, clot, pragmas, phv, actions,
                 meta_init),
           phv_i(phv), uses_i(uses), clot_i(clot),
-          clustering_i(clustering), mutex_i(phv.field_mutex), pragmas_i(pragmas),
-          critical_path_clusters_i(critical_cluster), meta_init_i(meta_init),
-          field_interference_i(phv.field_mutex, uses) { }
+          clustering_i(clustering), mutex_i(phv.parser_mutex()), pragmas_i(pragmas),
+          critical_path_clusters_i(critical_cluster), meta_init_i(meta_init) { }
 };
 
 #endif  /* BF_P4C_PHV_ALLOCATE_PHV_H_ */

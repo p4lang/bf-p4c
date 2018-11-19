@@ -14,7 +14,6 @@
 #include "bf-p4c/phv/make_clusters.h"
 #include "bf-p4c/phv/mau_backtracker.h"
 #include "bf-p4c/phv/analysis/critical_path_clusters.h"
-#include "bf-p4c/phv/analysis/field_interference.h"
 #include "bf-p4c/phv/analysis/live_range_shrinking.h"
 #include "bf-p4c/phv/analysis/meta_live_range.h"
 #include "bf-p4c/phv/analysis/pack_conflicts.h"

@@ -125,7 +125,6 @@ set (BF_P4C_BACKEND_COMMON_SRCS
   common/flatten_emit_args.cpp
   common/header_stack.cpp
   common/ir_utils.cpp
-  common/live_range_overlay.cpp
   common/map_tables_to_actions.cpp
   common/multiple_apply.cpp
   common/normalize_params.cpp
@@ -158,7 +157,6 @@ set (BF_P4C_BACKEND_COMMON_HDRS
   common/flatten_emit_args.h
   common/header_stack.h
   common/ir_utils.h
-  common/live_range_overlay.h
   common/map_tables_to_actions.h
   common/multiple_apply.h
   common/normalize_params.h
@@ -346,11 +344,9 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/table_phv_constraints.cpp
   phv/trivial_alloc.cpp
   phv/validate_allocation.cpp
-  phv/analysis/cluster_to_cluster_interference.cpp
   phv/analysis/critical_path_clusters.cpp
   phv/analysis/deparser_zero.cpp
   phv/analysis/dominator_tree.cpp
-  phv/analysis/field_interference.cpp
   phv/analysis/meta_live_range.cpp
   phv/analysis/live_range_shrinking.cpp
   phv/analysis/pack_conflicts.cpp
@@ -397,11 +393,9 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/table_phv_constraints.h
   phv/trivial_alloc.h
   phv/validate_allocation.h
-  phv/analysis/cluster_to_cluster_interference.h
   phv/analysis/critical_path_clusters.h
   phv/analysis/deparser_zero.h
   phv/analysis/dominator_tree.h
-  phv/analysis/field_interference.h
   phv/analysis/meta_live_range.h
   phv/analysis/live_range_shrinking.h
   phv/analysis/pack_conflicts.h

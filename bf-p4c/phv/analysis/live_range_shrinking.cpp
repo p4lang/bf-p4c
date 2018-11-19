@@ -282,7 +282,7 @@ boost::optional<const PHV::Allocation::ActionSet> FindInitializationNode::getIni
         // If any of the fields read or written by the action are mutually exclusive with the field
         // to be initialized, then do not initialize the field in this table.
         for (const auto* g : actionReads) {
-            if (phv.field_mutex(f->id, g->id)) {
+            if (phv.isParserMutex(f, g)) {
                 LOG2("\t\t\tIgnoring table " << t->name << " for initialization of " << t->name <<
                      " because action " << act->name << " reads field " << g->name << " which is "
                      "mutually exclusive with field " << f->name);
@@ -290,7 +290,7 @@ boost::optional<const PHV::Allocation::ActionSet> FindInitializationNode::getIni
             }
         }
         for (const auto* g : actionWrites) {
-            if (phv.field_mutex(f->id, g->id)) {
+            if (phv.isParserMutex(f, g)) {
                 LOG2("\t\t\tIgnoring table " << t->name << " for initialization of " << t->name <<
                      " because action " << act->name << " writes field " << g->name << " which is "
                      "mutually exclusive with field " << f->name);
@@ -424,7 +424,7 @@ bool FindInitializationNode::identifyFieldsToInitialize(
             if (index2 <= index1) continue;
             // If two fields with the same live range are mutually exclusive, then only consider one
             // of them for initialization.
-            if (phv.field_mutex(f1->id, f2->id)) {
+            if (phv.isParserMutex(f1, f2)) {
                 LOG2("\t\t  Fields " << f1->name << " and " << f2->name << " are marked as "
                      "mutually exclusive.");
                 if (livemap.at(f1->id) == livemap.at(f2->id))
@@ -525,7 +525,7 @@ FindInitializationNode::findInitializationNodes(
         LOG2("\t  Checking if " << f->name << " needs initialization.");
         // Check against each field initialized so far in this container.
         for (const auto* g : seenFields) {
-            if (phv.field_mutex(f->id, g->id)) {
+            if (phv.isParserMutex(f, g)) {
                 LOG2("\t\tExclusive with field " << g->name);
                 continue;
             }
@@ -846,7 +846,7 @@ Visitor::profile_t ComputeDependencies::init_apply(const IR::Node* root) {
                 if (slice == sl) continue;
                 // If parser mutual exclusion, then we do not need to consider these fields for
                 // metadata initialization.
-                if (phv.field_mutex(f->id, sl.field->id)) continue;
+                if (phv.isParserMutex(f, sl.field)) continue;
                 // If slices do not overlap, then ignore.
                 if (!slice.container_bits().overlaps(sl.container_bits()))
                     continue;

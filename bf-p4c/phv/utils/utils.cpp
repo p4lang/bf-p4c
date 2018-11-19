@@ -384,7 +384,7 @@ PHV::Allocation::getInitPointsForField(const PHV::Field* f) const {
 
 /* static */ bool
 PHV::Allocation::mutually_exclusive(
-        SymBitMatrix mutex,
+        const SymBitMatrix& mutex,
         const PHV::Field *f1,
         const PHV::Field *f2) {
     return mutex(f1->id, f2->id);

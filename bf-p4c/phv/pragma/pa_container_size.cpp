@@ -375,7 +375,7 @@ void PragmaContainerSize::check_and_add_constraint(
     }
 
     // Ensure that the new pragma specifications are the same as the already existing ones.
-    for (int i = 0; i < existingSizePragmas.size(); i++) {
+    for (size_t i = 0; i < existingSizePragmas.size(); i++) {
         if (sizes[i] != existingSizePragmas[i]) {
             ::error("@pragma pa_container_size already specifies containers %1% for field %2%."
                     " However, to fit within learning quanta size constraints, the field must "

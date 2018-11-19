@@ -146,7 +146,7 @@ class MetadataLiveRange : public Inspector {
           noInitFields(pragmas.pa_no_init().getFields()),
           notParsedFields(pragmas.pa_deparser_zero().getNotParsedFields()),
           notDeparsedFields(pragmas.pa_deparser_zero().getNotDeparsedFields()),
-          overlay(phv.metadata_overlay)
+          overlay(phv.metadata_mutex())
     { }
 };
 

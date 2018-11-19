@@ -10,7 +10,6 @@
 #include "bf-p4c/phv/allocate_phv.h"
 #include "bf-p4c/phv/validate_allocation.h"
 #include "bf-p4c/phv/analysis/deparser_zero.h"
-#include "bf-p4c/phv/analysis/field_interference.h"
 #include "bf-p4c/phv/analysis/jbay_phv_analysis.h"
 #include "bf-p4c/phv/analysis/dark.h"
 #include "bf-p4c/phv/analysis/mocha.h"

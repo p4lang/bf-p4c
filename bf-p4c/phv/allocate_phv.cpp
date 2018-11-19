@@ -392,7 +392,7 @@ std::ostream& operator<<(std::ostream& s, const AllocScore& score) {
 
 /* static */
 bool CoreAllocation::can_overlay(
-        SymBitMatrix mutex,
+        const SymBitMatrix& mutex,
         const PHV::Field* f,
         const ordered_set<PHV::AllocSlice>& slices) {
     for (auto slice : slices) {
@@ -778,7 +778,7 @@ CoreAllocation::tryAllocSliceList(
                 // Disable metadata initialization if the container for metadata overlay is a mocha
                 // or dark container.
                 // XXX(Deep): P4C-1187
-                if (!is_mocha_or_dark && can_overlay(phv_i.metadata_overlay, slice.field(),
+                if (!is_mocha_or_dark && can_overlay(phv_i.metadata_mutex(), slice.field(),
                             alloced_slices)) {
                     LOG5("    ...and can overlay " << slice.field() << " on " << alloced_slices <<
                          " with metadata initialization.");
@@ -856,7 +856,7 @@ CoreAllocation::tryAllocSliceList(
         for (auto& field_slice : container_state) {
             bool sliceOverlaysAllCandidates = true;
             for (auto& candidate_slice : candidate_slices) {
-                if (!PHV::Allocation::mutually_exclusive(phv_i.metadata_overlay,
+                if (!PHV::Allocation::mutually_exclusive(phv_i.metadata_mutex(),
                             field_slice.field(), candidate_slice.field()))
                     sliceOverlaysAllCandidates = false;
             }
@@ -1406,8 +1406,8 @@ Visitor::profile_t AllocatePHV::init_apply(const IR::Node* root) {
 
     size_t numBridgedConflicts = bridgedFieldsWithAlignmentConflicts.size();
     AllocationStrategy *strategy =
-        new BruteForceAllocationStrategy(core_alloc_i, report, critical_path_clusters_i,
-                field_interference_i, clot_i, bridgedFieldsWithAlignmentConflicts);
+        new BruteForceAllocationStrategy(core_alloc_i, report, critical_path_clusters_i, clot_i,
+                bridgedFieldsWithAlignmentConflicts);
     auto result = strategy->tryAllocation(alloc, cluster_groups, container_groups);
 
     // Later we can try different strategies,
@@ -2116,9 +2116,6 @@ BruteForceAllocationStrategy::tryAllocation(
 
     // Sorting clusters must happen after the deparser zero superclusters are removed.
     sortClusters(cluster_groups);
-
-    // Results are not used
-    // field_interference_i.calcSliceInterference(cluster_groups);
 
     auto rst = alloc.makeTransaction();
 

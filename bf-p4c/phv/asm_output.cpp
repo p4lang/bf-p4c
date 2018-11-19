@@ -80,7 +80,7 @@ void PhvAsmOutput::emit_phv_field_info(
     out << "          " << "mutually_exclusive_with: [ ";
     std::string sep = "";
     for (const auto* f2 : fieldsInContainer) {
-        if (phv.mutex()(f->id, f2->id)) {
+        if (phv.isParserMutex(f, f2)) {
             out << sep << canon_name(f2->externalName());
             if (sep == "") sep = ", "; } }
     out << " ]" << std::endl;

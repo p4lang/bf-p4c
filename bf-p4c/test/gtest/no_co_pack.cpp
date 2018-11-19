@@ -110,17 +110,17 @@ TEST_F(NoCoPack, Sanity) {
     auto h3_f2 = phv.field("ingress::h3.f2");
     auto h3_f4 = phv.field("ingress::h3.f4");
 
-    EXPECT_FALSE(phv.no_co_pack(h1_f1->id, h1_f1->id));
-    EXPECT_FALSE(phv.no_co_pack(h1_f4->id, h1_f4->id));
+    EXPECT_FALSE(phv.isDeparserNoPack(h1_f1, h1_f1));
+    EXPECT_FALSE(phv.isDeparserNoPack(h1_f4, h1_f4));
 
-    EXPECT_TRUE(phv.no_co_pack(h1_f4->id, h2_f1->id));
-    EXPECT_TRUE(phv.no_co_pack(h2_f4->id, h3_f1->id));
+    EXPECT_TRUE(phv.isDeparserNoPack(h1_f4, h2_f1));
+    EXPECT_TRUE(phv.isDeparserNoPack(h2_f4, h3_f1));
 
-    EXPECT_FALSE(phv.no_co_pack(h1_f4->id, h2_f4->id));
-    EXPECT_FALSE(phv.no_co_pack(h2_f4->id, h3_f4->id));
+    EXPECT_FALSE(phv.isDeparserNoPack(h1_f4, h2_f4));
+    EXPECT_FALSE(phv.isDeparserNoPack(h2_f4, h3_f4));
 
-    EXPECT_FALSE(phv.no_co_pack(h1_f2->id, h1_f4->id));
-    EXPECT_FALSE(phv.no_co_pack(h3_f2->id, h1_f4->id));
+    EXPECT_FALSE(phv.isDeparserNoPack(h1_f2, h1_f4));
+    EXPECT_FALSE(phv.isDeparserNoPack(h3_f2, h1_f4));
 }
 
 }  // namespace Test
