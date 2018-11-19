@@ -261,6 +261,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "In table .*, the number of bytes required to go through the immediate pathway"
   extensions/p4_tests/p4_14/test_config_311_hash_adb.p4
+  ../glass/testsuite/p4_tests/c1/COMPILER-868/comp_868.p4
   switch_ent_fin_postcard
   switch_8.4_generic_int_leaf
   )
@@ -1117,6 +1118,7 @@ p4c_add_xfail_reason("tofino"
   switch_8.4_msdc_l3
   switch_generic_int_leaf
   switch_8.4_generic_int_leaf
+  extensions/p4_tests/p4_14/c1/COMPILER-954/case5730.p4
 )
 
 # BRIG-651
@@ -1304,9 +1306,7 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "./p4c TIMEOUT"
-  ../glass/testsuite/p4_tests/c1/COMPILER-868/comp_868.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-883/case5521.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-954/case5730.p4
+# ../glass/testsuite/p4_tests/c1/COMPILER-883/case5521.p4
   testdata/p4_14_samples/header-stack-ops-bmv2.p4
 )
 

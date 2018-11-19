@@ -509,7 +509,7 @@ include(Customer.cmake)
 # Set a small timeout since these are running into an infinite loop in slicing
 # -to 60 should be removed when Deep merges the fix.
 p4c_add_bf_backend_tests("tofino" "tofino" "v1model" "arista" "${ARISTA_P4_14_TESTS}"
-  "--backward-compatible -to 60")
+  "--backward-compatible -to 300 -Xp4c=\"--disable-pragma=pa_container_size\"")
 
 include(TofinoMustPass.cmake)
 include(TofinoXfail.cmake)
