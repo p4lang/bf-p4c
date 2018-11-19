@@ -4,6 +4,17 @@
 #include "bf-p4c/device.h"
 #include "bf-p4c/phv/phv_fields.h"
 
+std::set<unsigned> ActionAnalysis::ContainerAction::codesForErrorCases =
+    { MULTIPLE_CONTAINER_ACTIONS,
+      READ_PHV_MISMATCH,
+      ACTION_DATA_MISMATCH,
+      CONSTANT_MISMATCH,
+      TOO_MANY_PHV_SOURCES,
+      IMPOSSIBLE_ALIGNMENT,
+      MAU_GROUP_MISMATCH,
+      PHV_AND_ACTION_DATA,
+      MULTIPLE_SHIFTS };
+
 /** Calculates a total container constant, given which constants wrote to which fields in the
  *  operation
  */
@@ -750,8 +761,7 @@ bool ActionAnalysis::verify_P4_action_with_phv(cstring action_name) {
             warning = true;
         }
 
-        if (!same_action)
-            continue;
+        if (!same_action) continue;
 
         cont_action.name = instr_name;
         bool total_init = true;
@@ -771,7 +781,6 @@ bool ActionAnalysis::verify_P4_action_with_phv(cstring action_name) {
             }
         }
         determine_unused_bits(container, cont_action);
-
 
         cstring error_message;
         bool verify = cont_action.verify_possible(error_message, container, action_name, phv);
@@ -798,6 +807,18 @@ bool ActionAnalysis::verify_P4_action_with_phv(cstring action_name) {
             break;
         }
     }
+
+    // For certain error codes, we now should throw an error.
+    for (auto& container_action : *container_actions_map) {
+        auto& cont_action = container_action.second;
+        for (auto refCode : ContainerAction::codesForErrorCases) {
+            if ((cont_action.error_code & refCode) != 0) {
+                error = true;
+                break;
+            }
+        }
+    }
+
     return true;
 }
 

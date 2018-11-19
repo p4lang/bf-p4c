@@ -271,6 +271,9 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         bitvec invalidate_write_bits;
         std::map<PHV::Container, TotalAlignment> phv_alignment;
 
+        // Set of error codes for which we report an error in compilation.
+        static std::set<unsigned> codesForErrorCases;
+
         int counts[ActionParam::TOTAL_TYPES] = {0, 0, 0};
         safe_vector<FieldAction> field_actions;
         int total_types() {
@@ -371,6 +374,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
     bool phv_alloc = false;
     bool ad_alloc = false;
     bool warning = false;
+    bool error = false;
 
     bool action_data_misaligned = false;
     bool verbose = false;
@@ -460,6 +464,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
     void set_verbose() { verbose = true; }
     void set_error_verbose() { error_verbose = true; }
     bool warning_found() { return warning; }
+    bool error_found() { return error; }
 
     ActionAnalysis(const PhvInfo &p, bool pa, bool aa, const IR::MAU::Table *t)
         : phv(p), phv_alloc(pa), ad_alloc(aa), tbl(t) { visitDagOnce = false; }

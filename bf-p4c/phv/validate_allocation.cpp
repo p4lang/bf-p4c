@@ -682,6 +682,7 @@ bool ValidateActions::preorder(const IR::MAU::Action *act) {
     aa.set_verbose();
     act->apply(aa);
     warning_found |= aa.warning_found();
+    error_found |= aa.error_found();
     return false;
 }
 
@@ -698,13 +699,14 @@ void ValidateActions::end_apply() {
     else
         error_message = "Instruction selection creates an instruction that the rest of the "
                         "compiler cannot correctly interpret";
-    if (warning_found) {
+    if (error_found) {
+        ::error(error_message);
+    } else if (warning_found) {
         if (stop_compiler)
             ::error(error_message);
         else
             ::warning(error_message);
     }
 }
-
 
 }  // namespace PHV

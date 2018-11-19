@@ -909,39 +909,14 @@ p4c_add_xfail_reason("tofino"
   # extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   )
 
-# BRIG-219
+# BRIG-1209
+# These are cases that should fail; however, PHV allocation allows these programs to pass and the
+# invalid allocation is caught in action analysis.
 p4c_add_xfail_reason("tofino"
   "PHV allocation creates a container action impossible within a Tofino ALU"
-  # extensions/p4_tests/p4_14/14-MultipleActionsInAContainer.p4
-  # extensions/p4_tests/p4_14/test_config_184_stateful_bug1.p4
-  # extensions/p4_tests/p4_14/test_config_190_modify_with_expr.p4
-  # extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
-  # extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
-  # extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
-  # extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
-  # extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
-  # extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
-
-  # Instruction adjustment needs to synthesize a bitmasked-set but does not.
-  # extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
-  # extensions/p4_tests/p4_14/test_config_50_action_data_different_size_fields.p4
-
-  # Action analysis failures.
-  # extensions/p4_tests/p4_14/test_config_252_pa_required_packing.p4
-  # extensions/p4_tests/p4_14/test_config_256_pa_problem_4.p4
-  # extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
-  # extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
-  # extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
-  # extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
-  # extensions/p4_tests/p4_14/p4-tests/programs/stful/stful.p4
-  )
-
-
-# BRIG-426, and maybe BRIG-421
-p4c_add_xfail_reason("tofino"
-  "No phv record"
   extensions/p4_tests/p4_14/action_conflict_3.p4
   )
+
 
 # p4c_add_xfail_reason("tofino"
 #   "Brig currently only supports one parameter"
