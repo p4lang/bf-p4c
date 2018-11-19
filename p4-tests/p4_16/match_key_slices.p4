@@ -51,7 +51,7 @@ control IngressP(inout headers hdr,
 
     table slice_it0 {
         key = { 
-            hdr.data.f1 & 0x00000000FF00 : exact;
+            hdr.data.f1 & 0x00000000FF00 : exact @name("hdr.data.f1");
             hdr.data.f2[7:0] : exact;
         }
         actions = { setb1; }
@@ -60,7 +60,7 @@ control IngressP(inout headers hdr,
 
     table slice_it1 {
         key = { 
-            hdr.data.f1 & 0xFF00FF00FF00 : exact;
+            hdr.data.f1 & 0xFF00FF00FF00 : exact @name("hdr.data.f1");
             hdr.data.f2[39:32] : exact;
             hdr.data.f2[23:16] : exact;
             hdr.data.f2[7:0] : exact;

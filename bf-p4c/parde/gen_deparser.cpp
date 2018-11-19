@@ -193,16 +193,19 @@ void GenerateDeparser::generateDigest(IR::BFN::Digest *&digest, cstring name,
         // Treat as an empty list.
     } else if (auto* list = expr->to<const IR::Vector<IR::Expression>>()) {
         for (auto* item : *list)
-          sources.push_back(new IR::BFN::FieldLVal(item));
+            sources.push_back(new IR::BFN::FieldLVal(item));
     } else if (auto* list = expr->to<IR::ListExpression>()) {
         for (auto* item : list->components)
-          sources.push_back(new IR::BFN::FieldLVal(item));
+            sources.push_back(new IR::BFN::FieldLVal(item));
     } else if (auto *ref = expr->to<IR::ConcreteHeaderRef>()) {
         if (auto *st = expr->type->to<IR::Type_StructLike>()) {
             for (auto *item : st->fields) {
                 sources.push_back(new IR::BFN::FieldLVal(gen_fieldref(ref->ref, item->name)));
             }
         }
+    } else if (auto* initializer = expr->to<IR::StructInitializerExpression>()) {
+        for (auto *item : initializer->components)
+            sources.push_back(new IR::BFN::FieldLVal(item->expression));
     } else {
         sources.push_back(new IR::BFN::FieldLVal(expr));
     }

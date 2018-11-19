@@ -1376,3 +1376,14 @@ p4c_add_xfail_reason("tofino"
   "No casts should ever reach this point in the Tofino backend"
   extensions/p4_tests/p4_14/p4smith_regression/clue_0.p4
 )
+
+# Not a bug, brig is reporting the correct error message.
+p4c_add_xfail_reason("tofino"
+  "An attached table can only be executed once per action"
+  testdata/p4_16_samples/issue1566.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Wrong number of arguments for method call"
+  testdata/p4_16_samples/issue1560-bmv2.p4
+)
