@@ -51,6 +51,15 @@ bool UniqueId::equal_table(const UniqueId &ui) const {
            speciality == ui.speciality;
 }
 
+UniqueId UniqueId::base_match_id() const {
+    UniqueId rv;
+    rv.name = name;
+    rv.stage_table = stage_table;
+    rv.logical_table = logical_table;
+    rv.speciality = speciality;
+    return rv;
+}
+
 std::string UniqueId::build_name() const {
     std::string rv = "";
     rv += name + "";

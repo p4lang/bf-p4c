@@ -303,6 +303,7 @@ bool AllocMeterOutput::preorder(const IR::MAU::Table* tbl) {
     if (!found_meter)
         return true;
 
+    LOG1("Meter Output " << tbl->name << " " << am->name);
     alloc_format(meter_placement);
     setup_layout(meter_placement, tbl, am);
     return true;

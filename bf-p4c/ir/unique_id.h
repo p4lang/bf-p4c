@@ -165,6 +165,7 @@ class UniqueId {
     bool equal_table(const UniqueId &ui) const;
 
     std::string build_name() const;
+    UniqueId base_match_id() const;
 
     UniqueId() {}
 };

@@ -519,6 +519,9 @@ struct IXBar {
     };
 
     struct hash_matrix_reqs {
+        // The max number of groups that can be used by this table.  Required by gateways,
+        // and stateful/meter tables using the search bus
+        int max_search_buses = -1;
         int index_groups = 0;
         int select_bits = 0;
         bool hash_dist = false;

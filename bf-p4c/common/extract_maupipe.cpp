@@ -910,7 +910,7 @@ class GetBackendTables : public MauInspector {
         for (auto slice : slices) {
             auto ixbar_read = new IR::MAU::InputXBarRead(slice, match_id);
             ixbar_read->from_mask = true;
-            if (match_id.name != "selector")
+            if (ixbar_read->for_match())
                 ixbar_read->p4_param_order = p4_param_order;
             if (ann) {
                 ixbar_read->annotations = ixbar_read->annotations->addAnnotationIfNew(
@@ -949,7 +949,7 @@ class GetBackendTables : public MauInspector {
                 setup_match_mask(tt, mask, match_id, p4_param_order, ann);
             } else {
                 auto ixbar_read = new IR::MAU::InputXBarRead(key_expr, match_id);
-                if (match_id.name != "selector")
+                if (ixbar_read->for_match())
                     ixbar_read->p4_param_order = p4_param_order;
                 if (ann) {
                     ixbar_read->annotations = ixbar_read->annotations->addAnnotationIfNew(
@@ -957,7 +957,7 @@ class GetBackendTables : public MauInspector {
                        new IR::StringLiteral(*ann)); }
                 tt->match_key.push_back(ixbar_read);
             }
-            if (match_id.name != "selector")
+            if (match_id.name != "selector" && match_id.name != "dleft_hash")
                 p4_param_order++;
         }
     }

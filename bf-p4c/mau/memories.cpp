@@ -24,6 +24,105 @@ UniqueId Memories::table_alloc::build_unique_id(const IR::MAU::AttachedMemory *a
     return table->pp_unique_id(at, is_gw, stage_table, logical_table, ppt);
 }
 
+/**
+ * The memuse map holds the allocation of each table that has RAM array requirements.
+ * These include:
+ *     RAMs/buses dedicated to match data
+ *     RAMs/buses dedicated to any of the BackendAttached Objects
+ *         - These can exist from the P4 program: (i.e. counter, meter)
+ *         - These can be implied by requirements (i.e. direct action data, ternary indirect)
+ *     gateways/buses for the gateways
+ *
+ * The key in the memuse map refers to a unique one of these objects, and the key is then
+ * used to build a unique name for the assembly file.
+ *
+ * The other major issue is that multiple tables can access the same P4 object, (i.e. an
+ * action profile).  There must be a unique allocation per P4 based object.
+ *
+ * In the memory use object, currently the P4 object is attached only to one table.  The table
+ * that this P4 object is attached to has a unique id based on that table name.  All other tables
+ * that use that P4 object keep a link to that table in the unattached_tables map.
+ *
+ * Thus the memory object initially decides which shared P4 object the table will be linked
+ * to within the map, as well as keeps a map of the namespace around how to find the linked
+ * table within the asm_output file.
+ */
+
+/**
+ * Given the input parameters, this will return all of the UniqueIds associated with this
+ * particular IR::MAU::Table object.  Generally this is a one-to-one relationship with
+ * a few exceptions.
+ *
+ * ATCAM tables: The match portion and any direct BackendAttached tables (action data/idletime),
+ * have multiple logical table units per allocation
+ *
+ * DLEFT tables: currently split so that each dleft cache is split as a logical table (though
+ * in the long term this could be even stranger).  However by correctly setting up this
+ * function, the corner casing only happens here 
+ *
+ * This leaves room for any other odd corner casing we need to support
+ */
+safe_vector<UniqueId> Memories::table_alloc::allocation_units(const IR::MAU::AttachedMemory *at,
+        bool is_gw, UniqueAttachedId::pre_placed_type_t ppt) const {
+    safe_vector<UniqueId> rv;
+    if (table->layout.atcam) {
+        if (((at && at->direct) || at == nullptr) && is_gw == false) {
+            for (int lt = 0; lt < layout_option->logical_tables(); lt++) {
+                rv.push_back(build_unique_id(at, is_gw, lt, ppt));
+            }
+        } else {
+            rv.push_back(build_unique_id(at, false, 0, ppt));
+        }
+    } else if (table->for_dleft()) {
+        for (int lt = 0; lt < layout_option->logical_tables(); lt++) {
+            rv.push_back(build_unique_id(at, is_gw, lt, ppt));
+        }
+    } else {
+        rv.push_back(build_unique_id(at, is_gw, -1, ppt));
+    }
+    return rv;
+}
+
+/**
+ * Given the particular input parameters, this will return all of the UniqueIds that will not
+ * have a provided allocation, but will be necessary to account for in the unattached_tables
+ * map.
+ *
+ * ATCAM tables: For any indirect BackendAttached Tables, the UniqueId for any logical table > 0
+ * will appear in the unattached object
+ *
+ * DLEFT some point in the future, maybe if other tables are attached, not just the stateful
+ * ALU table.
+ */
+safe_vector<UniqueId> Memories::table_alloc::unattached_units(const IR::MAU::AttachedMemory *at,
+    UniqueAttachedId::pre_placed_type_t ppt) const {
+    safe_vector<UniqueId> rv;
+    if (table->layout.atcam) {
+        if (at && at->direct == false) {
+            for (int lt = 1; lt < layout_option->logical_tables(); lt++) {
+                rv.push_back(build_unique_id(at, false, lt, ppt));
+            }
+        }
+    }
+    return rv;
+}
+
+/**
+ * The union of the allocation_units and the unattached_units
+ */
+safe_vector<UniqueId> Memories::table_alloc::accounted_units(const IR::MAU::AttachedMemory *at,
+    UniqueAttachedId::pre_placed_type_t ppt) const {
+    safe_vector<UniqueId> rv = allocation_units(at, false, ppt);
+    safe_vector<UniqueId> vec2 = unattached_units(at, ppt);
+    safe_vector<UniqueId> intersect;
+    std::set_intersection(rv.begin(), rv.end(), vec2.begin(), vec2.end(),
+                          std::back_inserter(intersect));
+    BUG_CHECK(intersect.empty(), "%s: Error when accounting for uniqueness in logical units "
+              "to address in memory allocation", table->name);
+    rv.insert(rv.end(), vec2.begin(), vec2.end());
+    return rv;
+}
+
 UniqueId Memories::SRAM_group::build_unique_id() const {
     return ta->build_unique_id(attached, false, logical_table, ppt);
 }
@@ -211,6 +310,7 @@ bool Memories::allocate_all() {
     unsigned row = 0;
     bool column_balance_init = false;
     bool finished = false;
+    calculate_entries();
 
     do {
         clear_uses();
@@ -250,28 +350,21 @@ class SetupAttachedTables : public MauInspector {
 
         if (!ta->layout_option->layout.no_match_miss_path() &&
             ta->layout_option->layout.ternary_indirect_required()) {
-            auto unique_id = ta->build_unique_id(nullptr, false, -1, UniqueAttachedId::TIND_PP);
-            (*ta->memuse)[unique_id].type = Memories::Use::TIND;
+            for (auto u_id : ta->allocation_units(nullptr, false, UniqueAttachedId::TIND_PP)) {
+                (*ta->memuse)[u_id].type = Memories::Use::TIND;
+                mi.tind_tables++;
+            }
 
             mem.tind_tables.push_back(ta);
-            mi.tind_tables++;
             mi.tind_RAMs += mem.mems_needed(entries, Memories::SRAM_DEPTH, 1, false);
         }
 
         if (ta->layout_option->layout.direct_ad_required()) {
-            if (ta->table->layout.atcam) {
-                for (int lt = 0; lt < ta->layout_option->logical_tables(); lt++) {
-                    auto unique_id = ta->build_unique_id(nullptr, false, lt,
-                                                         UniqueAttachedId::ADATA_PP);
-                    (*ta->memuse)[unique_id].type = Memories::Use::ACTIONDATA;
-                }
-            } else {
-                auto unique_id = ta->build_unique_id(nullptr, false, -1,
-                                     UniqueAttachedId::ADATA_PP);
-                (*ta->memuse)[unique_id].type = Memories::Use::ACTIONDATA;
+            for (auto u_id : ta->allocation_units(nullptr, false, UniqueAttachedId::ADATA_PP)) {
+                (*ta->memuse)[u_id].type = Memories::Use::ACTIONDATA;
+                mi.action_tables++;
             }
             mem.action_tables.push_back(ta);
-            mi.action_tables++;
             int width = 1;
             int per_row = ActionDataPerWord(&ta->layout_option->layout, &width);
             int depth = mem.mems_needed(entries, Memories::SRAM_DEPTH, per_row, false);
@@ -280,43 +373,41 @@ class SetupAttachedTables : public MauInspector {
         return rv;
     }
 
-    /** For all ATCAM tables, all indirect tables are allocated on logical table 0.  For all
-     *  other logical tables, an entry to the unattached tables needs to be added.
-     */
-    void initialize_indirect_atcam(const IR::MAU::AttachedMemory *at) {
-        int logical_tables = ta->layout_option->partition_sizes.size();
-        for (int lt = 1; lt < logical_tables; lt++) {
-            auto current_lt_id = ta->build_unique_id(at, false, lt);
-            auto tbl_id = ta->build_unique_id(nullptr, false, lt);
-            auto lt_0_id = ta->build_unique_id(at, false, 0);
-            (*ta->memuse)[tbl_id].unattached_tables.emplace(current_lt_id, lt_0_id);
-        }
-    }
-
     /** For shared attached tables, this initializes the unattached maps, if the attached
      *  table is already associated with a table
      */
     bool determine_unattached(const IR::MAU::AttachedMemory *at) {
+        bool attached = false;
+        safe_vector<UniqueId> attached_object_id;
+        safe_vector<UniqueId> unattached_object_ids;
         if (!mem.shared_attached.count(at)) {
-            if (ta->table->layout.atcam && !at->direct)
-                initialize_indirect_atcam(at);
-            return false;
-        }
-        auto linked_id = mem.shared_attached.at(at)->build_unique_id(at);
-
-        if (ta->table->layout.atcam) {
-            int logical_tables = ta->layout_option->partition_sizes.size();
-            for (int lt = 0; lt < logical_tables; lt++) {
-                auto tbl_id = ta->build_unique_id(nullptr, false, lt);
-                auto at_id = ta->build_unique_id(at, false, lt);
-                (*ta->memuse)[tbl_id].unattached_tables.emplace(at_id, linked_id);
-            }
+            // This P4 object is going to be attached to this table
+            attached_object_id = ta->allocation_units(at);
+            unattached_object_ids = ta->unattached_units(at);
+            attached = true;
         } else {
-            auto tbl_id = ta->build_unique_id();
-            auto at_id = ta->build_unique_id(at);
-            (*ta->memuse)[tbl_id].unattached_tables.emplace(at_id, linked_id);
+            // This P4 object is already attached to a different IR::MAU::Table object
+            attached_object_id = mem.shared_attached.at(at)->allocation_units(at);
+            unattached_object_ids = ta->accounted_units(at);
         }
-        return true;
+
+        safe_vector<UniqueId> intersect;
+        std::set_intersection(attached_object_id.begin(), attached_object_id.end(),
+                              unattached_object_ids.begin(), unattached_object_ids.end(),
+                              std::back_inserter(intersect));
+        BUG_CHECK(intersect.empty(), "%s: Error when accounting for uniqueness in logical units "
+                  "to address in memory allocation", ta->table->name);
+        if (unattached_object_ids.size() > 0) {
+            BUG_CHECK(attached_object_id.size() == 1, "%s: Multiple resource indicated for the "
+                      "same object in %s", ta->table->srcInfo, at->name);
+        }
+
+        for (auto unattached_id : unattached_object_ids) {
+            // auto tbl_id = ta->build_unique_id(nullptr, false, unattached_id.logical_table);
+            auto tbl_id = unattached_id.base_match_id();
+            (*ta->memuse)[tbl_id].unattached_tables.emplace(unattached_id, attached_object_id[0]);
+        }
+        return !attached;
     }
 
 
@@ -326,16 +417,16 @@ class SetupAttachedTables : public MauInspector {
 
     bool preorder(const IR::MAU::ActionData *ad) {
         BUG_CHECK(!ad->direct, "No direct action data tables before table placement");
-
         if (determine_unattached(ad))
             return false;
 
-        auto ad_id = ta->build_unique_id(ad);
-        (*ta->memuse)[ad_id].type = Memories::Use::ACTIONDATA;
+        for (auto u_id : ta->allocation_units(ad)) {
+            (*ta->memuse)[u_id].type = Memories::Use::ACTIONDATA;
+            mi.action_tables++;
+        }
 
         mem.indirect_action_tables.push_back(ta);
         mem.shared_attached[ad] = ta;
-        mi.action_tables++;
         int width = 1;
         int per_row = ActionDataPerWord(&ta->table->layout, &width);
         int depth = mem.mems_needed(ad->size, Memories::SRAM_DEPTH, per_row, false);
@@ -347,9 +438,11 @@ class SetupAttachedTables : public MauInspector {
         if (determine_unattached(mtr))
             return false;
 
-        auto mtr_id = ta->build_unique_id(mtr);
-        (*ta->memuse)[mtr_id].type = Memories::Use::METER;
-        mi.meter_tables++;
+        for (auto u_id : ta->allocation_units(mtr)) {
+            (*ta->memuse)[u_id].type = Memories::Use::METER;
+            mi.meter_tables++;
+        }
+
         mem.shared_attached[mtr] = ta;
         if (mtr->direct)
             mi.meter_RAMs += mem.mems_needed(entries, Memories::SRAM_DEPTH, 1, true);
@@ -366,10 +459,10 @@ class SetupAttachedTables : public MauInspector {
     bool preorder(const IR::MAU::Counter *cnt) {
         if (determine_unattached(cnt))
             return false;
-
-        auto ctr_id = ta->build_unique_id(cnt);
-        (*ta->memuse)[ctr_id].type = Memories::Use::COUNTER;
-        mi.stats_tables++;
+        for (auto u_id : ta->allocation_units(cnt)) {
+            (*ta->memuse)[u_id].type = Memories::Use::COUNTER;
+            mi.stats_tables++;
+        }
         mem.shared_attached[cnt] = ta;
         int per_row = CounterPerWord(cnt);
         if (cnt->direct)
@@ -384,51 +477,36 @@ class SetupAttachedTables : public MauInspector {
         return false;
     }
 
-    void handle_dleft(const IR::MAU::StatefulAlu *salu) {
-        auto &dleft_hash_sizes = ta->layout_option->dleft_hash_sizes;
+    void init_dleft_learn_and_match(const IR::MAU::StatefulAlu *salu) {
         if (mem.shared_attached.count(salu)) {
             BUG("Currently sharing a dleft table between two tables is impossible");
         }
-
-
-        for (int lt = 0; lt < ta->layout_option->logical_tables(); lt++) {
-            int RAMs_needed = dleft_hash_sizes[lt] + 1;
-            auto salu_id = ta->build_unique_id(salu, false, lt);
-            mi.stateful_tables++;
-            mi.stateful_RAMs += RAMs_needed;
-            (*ta->memuse)[salu_id].type = Memories::Use::STATEFUL;
-            // For setting up the learn/match associated IDs with a particular dleft hash table
-            for (int lt_learn = 0; lt_learn < lt; lt_learn++) {
-                auto salu_learn_id = ta->build_unique_id(salu, false, lt_learn);
-                (*ta->memuse)[salu_id].dleft_learn.push_back(salu_learn_id);
+        auto u_ids = ta->accounted_units(salu);
+        for (size_t i = 0; i < u_ids.size(); i++) {
+            // Learn from every logical table before you
+            for (size_t j = 0; j < i; j++) {
+                (*ta->memuse)[u_ids[i]].dleft_learn.push_back(u_ids[j]);
             }
-
-            for (int lt_match = 0; lt_match < ta->layout_option->logical_tables(); lt_match++) {
-                if (lt_match == lt)
-                    continue;
-                auto salu_match_id = ta->build_unique_id(salu, false, lt_match);
-                (*ta->memuse)[salu_id].dleft_match.push_back(salu_match_id);
+            // Match with all of the dleft hash tables in that stage
+            for (size_t j = 0; j < u_ids.size(); j++) {
+                if (i == j) continue;
+                (*ta->memuse)[u_ids[i]].dleft_match.push_back(u_ids[j]);
             }
-        }
-
-        if (!stateful_pushed) {
-            mem.stateful_tables.push_back(ta);
-            stateful_pushed = true;
         }
     }
 
     bool preorder(const IR::MAU::StatefulAlu *salu) {
-        if (ta->table->for_dleft()) {
-            handle_dleft(salu);
-            return false;
-        }
         if (determine_unattached(salu))
             return false;
 
-        auto salu_id = ta->build_unique_id(salu);
-        (*ta->memuse)[salu_id].type = Memories::Use::STATEFUL;
+        for (auto u_id : ta->allocation_units(salu)) {
+            (*ta->memuse)[u_id].type = Memories::Use::STATEFUL;
+            mi.stateful_tables++;
+        }
 
-        mi.stateful_tables++;
+        if (ta->table->for_dleft())
+            init_dleft_learn_and_match(salu);
+
         mem.shared_attached[salu] = ta;
         int per_row = RegisterPerWord(salu);
         if (salu->direct)
@@ -451,8 +529,10 @@ class SetupAttachedTables : public MauInspector {
         if (determine_unattached(as))
             return false;
 
-        auto sel_id = ta->build_unique_id(as);
-        (*ta->memuse)[sel_id].type = Memories::Use::SELECTOR;
+        for (auto u_id : ta->allocation_units(as)) {
+            (*ta->memuse)[u_id].type = Memories::Use::SELECTOR;
+        }
+
         mem.selector_tables.push_back(ta);
         mem.shared_attached[as] = ta;
         mi.selector_RAMs += 2;
@@ -460,11 +540,10 @@ class SetupAttachedTables : public MauInspector {
     }
 
     bool preorder(const IR::MAU::IdleTime *idle) {
-        auto idle_id = ta->build_unique_id(idle);
-        (*ta->memuse)[idle_id].type = Memories::Use::IDLETIME;
-
+        for (auto u_id : ta->allocation_units(idle)) {
+            (*ta->memuse)[u_id].type = Memories::Use::IDLETIME;
+        }
         mem.idletime_tables.push_back(ta);
-
         int per_row = IdleTimePerWord(idle);
         mi.idletime_RAMs += mem.mems_needed(entries, Memories::SRAM_DEPTH, per_row, false);
         return false;
@@ -476,17 +555,9 @@ class SetupAttachedTables : public MauInspector {
 };
 
 void Memories::set_logical_memuse_type(table_alloc *ta, Use::type_t type) {
-    if (ta->table->for_dleft()) {
-        for (int lt = 0; lt < ta->layout_option->logical_tables(); lt++) {
-            auto unique_id = ta->build_unique_id(nullptr, false, lt);
-            (*ta->memuse)[unique_id].type = type; }
-    } else if (type == Use::ATCAM) {
-        for (unsigned lt = 0; lt < ta->layout_option->partition_sizes.size(); lt++) {
-            auto unique_id = ta->build_unique_id(nullptr, false, lt);
-            (*ta->memuse)[unique_id].type = type; }
-    } else {
-        auto unique_id = ta->build_unique_id();
-        (*ta->memuse)[unique_id].type = type; }
+    for (auto u_id : ta->allocation_units()) {
+        (*ta->memuse)[u_id].type = type;
+    }
 }
 
 /* Run a quick analysis on all tables added by the table placement algorithm,
@@ -515,14 +586,12 @@ bool Memories::analyze_tables(mem_info &mi) {
             if (ta->layout_option->layout.no_match_hit_path()) {
                 no_match_hit_tables.push_back(ta);
                 set_logical_memuse_type(ta, Use::EXACT);
-                ta->calculated_entries = ta->provided_entries;
             } else {
                 BUG_CHECK(!ta->table->for_dleft(), "DLeft tables can only be "
                           "part of the hit path");
                 set_logical_memuse_type(ta, Use::TERNARY);
                 // In order to potentially provide potential sizes for attached tables,
                 // must at least have a size of 1
-                ta->calculated_entries = 1;
                 no_match_miss_tables.push_back(ta);
             }
             mi.no_match_tables++;
@@ -567,7 +636,6 @@ bool Memories::analyze_tables(mem_info &mi) {
 
            int depth = mems_needed(entries, TCAM_DEPTH, 1, false);
            mi.ternary_TCAMs += TCAMs_needed * depth;
-           ta->calculated_entries = depth * 512;
         }
         SetupAttachedTables setup(*this, ta, entries, mi);
         ta->table->apply(setup);
@@ -593,6 +661,47 @@ bool Memories::mem_info::constraint_check(int lt_allowed) const {
         return false;
     }
     return true;
+}
+
+void Memories::calculate_entries() {
+    for (auto ta : exact_tables) {
+        // Multiple entries if the table is using an SRAM to hold the dleft initial key
+        BUG_CHECK(ta->allocation_units().size() == size_t(ta->layout_option->logical_tables()),
+                  "Logical table mismatch on %s", ta->table->name);
+        ta->calc_entries_per_uid.resize(ta->layout_option->logical_tables(), ta->provided_entries);
+    }
+
+    for (auto ta : atcam_tables) {
+        BUG_CHECK(ta->allocation_units().size() == size_t(ta->layout_option->logical_tables()),
+                  "Logical table mismatch on %s", ta->table->name);
+        for (int lt = 0; lt < ta->layout_option->logical_tables(); lt++) {
+            int search_bus_per_lt = (ta->table->layout.partition_count + SRAM_DEPTH - 1) /
+                                     SRAM_DEPTH;
+        /* we cannot use total_depth since the real number of allocations is max_partition_rams
+         * times the number of ways the match happens */
+            int lt_entries = search_bus_per_lt * ta->layout_option->partition_sizes[lt] *
+                                 ta->layout_option->way.match_groups * SRAM_DEPTH;
+            ta->calc_entries_per_uid.push_back(lt_entries);
+        }
+    }
+
+    for (auto ta : ternary_tables) {
+        BUG_CHECK(ta->allocation_units().size() == size_t(ta->layout_option->logical_tables()),
+                  "Logical table mismatch on %s", ta->table->name);
+        ta->calc_entries_per_uid.resize(ta->layout_option->logical_tables(), ta->provided_entries);
+    }
+
+    for (auto ta : no_match_hit_tables) {
+        BUG_CHECK(ta->allocation_units().size() == size_t(ta->layout_option->logical_tables()),
+                  "Logical table mismatch on %s", ta->table->name);
+        ta->calc_entries_per_uid.resize(ta->layout_option->logical_tables(), 1);
+    }
+
+    for (auto ta : no_match_miss_tables) {
+        BUG_CHECK(ta->allocation_units().size() == size_t(ta->layout_option->logical_tables()),
+                  "Logical table mismatch on %s", ta->table->name);
+        ta->calc_entries_per_uid.resize(ta->layout_option->logical_tables(), 1);
+    }
 }
 
 /* Calculate the size of the ways given the number of RAMs necessary */
@@ -679,32 +788,33 @@ safe_vector<int> Memories::available_match_SRAMs_per_row(unsigned selected_colum
 void Memories::break_exact_tables_into_ways() {
     exact_match_ways.clear();
     for (auto *ta : exact_tables) {
-        ta->calculated_entries = 0;
-        auto unique_id = ta->build_unique_id();
-        (*ta->memuse)[unique_id].ways.clear();
-        (*ta->memuse)[unique_id].row.clear();
-        int index = 0;
-        ta->calculated_entries = ta->layout_option->entries;
-        index = 0;
-        assert(ta->match_ixbar->way_use.size() == ta->layout_option->way_sizes.size());
-        for (auto &way : ta->match_ixbar->way_use) {
-            SRAM_group *wa = new SRAM_group(ta, ta->layout_option->way_sizes[index],
-                                             ta->layout_option->way.width, index,
-                                             way.group, SRAM_group::EXACT);
-            exact_match_ways.push_back(wa);
-            (*ta->memuse)[unique_id].ways.emplace_back(ta->layout_option->way_sizes[index],
-                                                       way.mask);
-            index++;
+        for (auto u_id : ta->allocation_units()) {
+            (*ta->memuse)[u_id].ways.clear();
+            (*ta->memuse)[u_id].row.clear();
+            int index = 0;
+            for (auto &way : ta->match_ixbar->way_use) {
+                SRAM_group *wa
+                      = new SRAM_group(ta, ta->layout_option->way_sizes[index],
+                                       ta->layout_option->way.width, index, way.group,
+                                       SRAM_group::EXACT);
+                wa->logical_table = u_id.logical_table;
+
+                exact_match_ways.push_back(wa);
+                (*ta->memuse)[u_id].ways.emplace_back(ta->layout_option->way_sizes[index],
+                                                      way.mask);
+                index++;
+            }
         }
+        BUG_CHECK(ta->match_ixbar->way_use.size() == ta->layout_option->way_sizes.size(),
+                  "Mismatch of memory ways and ixbar ways");
     }
 
     std::sort(exact_match_ways.begin(), exact_match_ways.end(),
               [=](const SRAM_group *a, const SRAM_group *b) {
          int t;
          if ((t = a->width - b->width) != 0) return t > 0;
-         if ((t = (a->depth - a->placed) - (b->depth - b->placed)) != 0) return t > 0;
-         if ((t = a->ta->calculated_entries - b->ta->calculated_entries) != 0) return t < 0;
-         return a->number < b->number;
+         if ((t = (a->left_to_place()) - (b->left_to_place())) != 0) return t > 0;
+         return a->build_unique_id() < b->build_unique_id();
     });
 }
 
@@ -889,12 +999,13 @@ bool Memories::allocate_all_exact(unsigned column_mask) {
     }
     compress_ways(false);
     for (auto *ta : exact_tables) {
-        auto unique_id = ta->build_unique_id();
-        LOG4("Exact match table " << unique_id.build_name());
-        auto alloc = (*ta->memuse)[unique_id];
-        for (auto row : alloc.row) {
-            LOG4("Row is " << row.row << " and bus is " << row.bus);
-            LOG4("Col is " << row.col);
+        for (auto u_id : ta->allocation_units()) {
+            LOG4("Exact match table " << u_id.build_name());
+            auto alloc = (*ta->memuse)[u_id];
+            for (auto row : alloc.row) {
+                LOG4("Row is " << row.row << " and bus is " << row.bus);
+                LOG4("Col is " << row.col);
+            }
         }
     }
     return true;
@@ -935,18 +1046,18 @@ void Memories::compress_row(Use &alloc) {
  */
 void Memories::compress_ways(bool atcam) {
     if (atcam) {
-       for (auto *ta : atcam_tables) {
-           for (int lt = 0; lt < ta->layout_option->logical_tables(); lt++) {
-                auto unique_id = ta->build_unique_id(nullptr, false, lt);
-                auto &alloc = (*ta->memuse)[unique_id];
+        for (auto *ta : atcam_tables) {
+            for (auto u_id : ta->allocation_units()) {
+                auto &alloc = (*ta->memuse)[u_id];
                 compress_row(alloc);
-           }
-       }
+            }
+        }
     } else {
         for (auto *ta : exact_tables) {
-            auto unique_id = ta->build_unique_id();
-            auto &alloc = (*ta->memuse)[unique_id];
-            compress_row(alloc);
+            for (auto u_id : ta->allocation_units()) {
+                auto &alloc = (*ta->memuse)[u_id];
+                compress_row(alloc);
+            }
         }
     }
 }
@@ -999,41 +1110,23 @@ void Memories::break_atcams_into_partitions() {
     atcam_partitions.clear();
 
     for (auto *ta : atcam_tables) {
-        ta->calculated_entries = 0;
-        for (int lt = 0; lt < ta->layout_option->logical_tables(); lt++) {
-            auto unique_id = ta->build_unique_id(nullptr, false, lt);
-            (*ta->memuse)[unique_id].row.clear();
-            (*ta->memuse)[unique_id].ways.clear();
-        }
-        int total_depth = (ta->provided_entries + ta->table->layout.partition_count - 1) /
-                          ta->table->layout.partition_count;
-        int max_partition_rams = (total_depth + ta->layout_option->way.match_groups - 1) /
-                                  ta->layout_option->way.match_groups;
         int search_bus_per_lt = (ta->table->layout.partition_count + SRAM_DEPTH - 1) / SRAM_DEPTH;
-        /* we cannot use total_depth since the real number of allocations is max_partition_rams
-         * times the number of ways the match happens */
-        ta->calculated_entries = search_bus_per_lt * max_partition_rams *
-                                    ta->layout_option->way.match_groups * SRAM_DEPTH;
-
-
-        int logical_table = 0;
-        for (auto partition_size : ta->layout_option->partition_sizes) {
+        for (auto u_id : ta->allocation_units()) {
+            int lt = u_id.logical_table;
+            (*ta->memuse)[u_id].row.clear();
+            (*ta->memuse)[u_id].ways.clear();
             for (int j = 0; j < search_bus_per_lt; j++) {
-                auto part = new SRAM_group(ta, partition_size, ta->layout_option->way.width,
-                                           j, 0, SRAM_group::ATCAM);
-                part->logical_table = logical_table;
+                // Order is RAM depth, RAM width, number (i.e. which search bus), hash function
+                auto part = new SRAM_group(ta, ta->layout_option->partition_sizes[lt],
+                                           ta->layout_option->way.width, j, 0, SRAM_group::ATCAM);
+                part->logical_table = lt;
                 atcam_partitions.push_back(part);
             }
-            logical_table++;
-        }
-
-        for (int lt = 0; lt < ta->layout_option->logical_tables(); lt++) {
             BUG_CHECK(ta->match_ixbar->way_use.size() == 1, "Somehow multiple ixbar ways "
                       "calculated for an ATCAM table");
             auto way = ta->match_ixbar->way_use[0];
-            auto unique_id = ta->build_unique_id(nullptr, false, lt);
             for (int j = 0; j < ta->layout_option->partition_sizes[lt]; j++) {
-                (*ta->memuse)[unique_id].ways.emplace_back(search_bus_per_lt, way.mask);
+                (*ta->memuse)[u_id].ways.emplace_back(search_bus_per_lt, way.mask);
             }
         }
     }
@@ -1041,10 +1134,8 @@ void Memories::break_atcams_into_partitions() {
               [=](const SRAM_group *a, const SRAM_group *b) {
         int t;
         if ((t = a->width - b->width) != 0) return t > 0;
-        if ((t = (a->depth - a->placed) - (b->depth - b->placed)) != 0) return t > 0;
-        if ((t = a->ta->calculated_entries - b->ta->calculated_entries) != 0) return t < 0;
-        if ((t = a->logical_table - b->logical_table) != 0) return t < 0;
-        return a->number < b->number;
+        if ((t = (a->left_to_place()) - (b->left_to_place())) != 0) return t > 0;
+        return a->build_unique_id() < b->build_unique_id();
     });
 }
 
@@ -1341,66 +1432,70 @@ bool Memories::allocate_all_ternary() {
         [=](const table_alloc *a, table_alloc *b) {
         int t;
         if ((t = a->table->layout.match_bytes - b->table->layout.match_bytes) != 0) return t > 0;
-        if ((t = a->calculated_entries - b->calculated_entries) != 0) return t > 0;
-        return true;
+        return a->total_entries() > b->total_entries();
     });
 
     // FIXME: All of this needs to be changed on this to match up with xbar
     for (auto *ta : ternary_tables) {
-        int midbyte = -1;
-        int TCAMs_necessary = ternary_TCAMs_necessary(ta, midbyte);
-        // FIXME: If the table is just a default action table, essentially a hack
-        if (TCAMs_necessary == 0)
-            continue;
+        int lt_entry = 0;
+        for (auto u_id : ta->allocation_units()) {
+            int midbyte = -1;
+            int TCAMs_necessary = ternary_TCAMs_necessary(ta, midbyte);
 
-        int row = 0; int col = 0;
-        auto unique_id = ta->build_unique_id();
-        Memories::Use &alloc = (*ta->memuse)[unique_id];
-        for (int i = 0; i < ta->calculated_entries / 512; i++) {
-            bool split_midbyte = false;
-            if (!find_ternary_stretch(TCAMs_necessary, row, col, midbyte, split_midbyte))
-                return false;
-            int word = 0;
-            bool increment = true;
-            if (split_midbyte) {
-                word = TCAMs_necessary - 1;
-                increment = false;
+            // FIXME: If the table is just a default action table, essentially a hack
+            if (TCAMs_necessary == 0)
+                continue;
+            int row = 0; int col = 0;
+            Memories::Use &alloc = (*ta->memuse)[u_id];
+            for (int i = 0; i < ta->calc_entries_per_uid[lt_entry] / 512; i++) {
+                bool split_midbyte = false;
+                if (!find_ternary_stretch(TCAMs_necessary, row, col, midbyte, split_midbyte))
+                    return false;
+                int word = 0;
+                bool increment = true;
+                if (split_midbyte) {
+                    word = TCAMs_necessary - 1;
+                    increment = false;
+                }
+                for (int i = row; i < row + TCAMs_necessary; i++) {
+                     tcam_use[i][col] = u_id.build_name();
+                     auto tcam = ta->table_format->tcam_use[word];
+                     if (tcam_midbyte_use[i/2][col] >= 0 && tcam.byte_group >= 0)
+                         BUG_CHECK(tcam_midbyte_use[i/2][col] == tcam.byte_group, "Two contiguous "
+                             "TCAMs cannot correct share midbyte");
+                     else if (tcam_midbyte_use[i/2][col] < 0)
+                         tcam_midbyte_use[i/2][col] = tcam.byte_group;
+                     alloc.row.emplace_back(i, col, word, allocation_count);
+                     alloc.row.back().col.push_back(col);
+                     word = increment ? word + 1 : word - 1;
+                }
+                allocation_count++;
             }
-            for (int i = row; i < row + TCAMs_necessary; i++) {
-                 tcam_use[i][col] = unique_id.build_name();
-                 auto tcam = ta->table_format->tcam_use[word];
-                 if (tcam_midbyte_use[i/2][col] >= 0 && tcam.byte_group >= 0)
-                     BUG_CHECK(tcam_midbyte_use[i/2][col] == tcam.byte_group, "Two contiguous "
-                         "TCAMs cannot correct share midbyte");
-                 else if (tcam_midbyte_use[i/2][col] < 0)
-                     tcam_midbyte_use[i/2][col] = tcam.byte_group;
-                 alloc.row.emplace_back(i, col, word, allocation_count);
-                 alloc.row.back().col.push_back(col);
-                 word = increment ? word + 1 : word - 1;
-            }
-            allocation_count++;
+            lt_entry++;
         }
     }
 
     for (auto *ta : ternary_tables) {
-        auto unique_id = ta->build_unique_id();
-        auto &alloc = (*ta->memuse)[unique_id];
-        std::stable_sort(alloc.row.begin(), alloc.row.end(),
-            [=](const Memories::Use::Row &a, const Memories::Use::Row &b) {
-            int t;
-            if ((t = a.alloc - b.alloc) != 0) return t < 0;
-            if ((t = a.word - b.word) != 0) return t < 0;
-            return a.row < b.row;
-        });
+        for (auto u_id : ta->allocation_units()) {
+            auto &alloc = (*ta->memuse)[u_id];
+            std::stable_sort(alloc.row.begin(), alloc.row.end(),
+                [=](const Memories::Use::Row &a, const Memories::Use::Row &b) {
+                int t;
+                if ((t = a.alloc - b.alloc) != 0) return t < 0;
+                if ((t = a.word - b.word) != 0) return t < 0;
+                return a.row < b.row;
+            });
+        }
     }
 
     for (auto *ta : ternary_tables) {
-        auto unique_id = ta->build_unique_id();
-        auto &alloc = (*ta->memuse)[unique_id];
-        LOG4("Allocation of " << unique_id.build_name());
-        for (auto row : alloc.row) {
-            LOG4("Row is " << row.row << " and bus is " << row.bus);
-            LOG4("Col is " << row.col);
+        for (auto u_id : ta->allocation_units()) {
+            auto &alloc = (*ta->memuse)[u_id];
+            LOG4("Allocation of " << u_id.build_name());
+            for (auto row : alloc.row) {
+                LOG4("Row is " << row.row << " and bus is " << row.bus);
+                LOG4("Col is " << row.col);
+            }
         }
     }
 
@@ -1412,10 +1507,28 @@ bool Memories::allocate_all_ternary() {
 void Memories::find_tind_groups() {
     tind_groups.clear();
     for (auto *ta : tind_tables) {
-        int depth = (ta->calculated_entries + 2047) / 2048;
-        tind_groups.push_back(new SRAM_group(ta, depth, 0, SRAM_group::TIND));
-        tind_groups.back()->ppt = UniqueAttachedId::TIND_PP;
+        int lt_entry = 0;
+        for (auto u_id : ta->allocation_units(nullptr, false, UniqueAttachedId::TIND_PP)) {
+            auto first_entry = ta->table_format->match_groups[0];
+            // Cannot use the TernaryIndirectPerWord function call, as the overhead allocated
+            // may differ than the estimated overhead in the layout_option
+            int tind_size = 1 << ceil_log2(first_entry.overhead_mask().max().index() + 1);
+            tind_size = std::max(tind_size, 8);
+            int per_word = TableFormat::SINGLE_RAM_BITS / tind_size;
+            int depth = mems_needed(ta->calc_entries_per_uid[lt_entry], SRAM_DEPTH, per_word,
+                                    false);
+            tind_groups.push_back(new SRAM_group(ta, depth, 0, SRAM_group::TIND));
+            tind_groups.back()->logical_table = u_id.logical_table;
+            tind_groups.back()->ppt = UniqueAttachedId::TIND_PP;
+        }
     }
+    std::sort(tind_groups.begin(), tind_groups.end(),
+              [=](const SRAM_group *a, const SRAM_group *b) {
+        int t;
+        if ((t = (a->left_to_place()) - (b->left_to_place())) != 0) return t > 0;
+        if ((t = a->logical_table - b->logical_table) != 0) return t < 0;
+        return a->build_unique_id() < b->build_unique_id();
+    });
 }
 
 /* Finds the best row in which to put the tind table */
@@ -1465,22 +1578,23 @@ int Memories::find_best_tind_row(SRAM_group *tg, int &bus) {
 /* Compresses the tind groups on the same row in the use, into one row */
 void Memories::compress_tind_groups() {
     for (auto *ta : tind_tables) {
-        auto unique_id = ta->build_unique_id(nullptr, false, -1, UniqueAttachedId::TIND_PP);
-        auto &alloc = (*ta->memuse)[unique_id];
-        std::sort(alloc.row.begin(), alloc.row.end(),
-            [=](const Memories::Use::Row a, const Memories::Use::Row b) {
-                int t;
-                if ((t = a.row - b.row) != 0) return t < 0;
-                if ((t = a.bus - b.bus) != 0) return t < 0;
-                return false;
-            });
-        for (size_t i = 0; i < alloc.row.size() - 1; i++) {
-            if (alloc.row[i].row == alloc.row[i+1].row &&
-                alloc.row[i].bus == alloc.row[i+1].bus) {
-                alloc.row[i].col.insert(alloc.row[i].col.end(), alloc.row[i+1].col.begin(),
-                                        alloc.row[i+1].col.end());
-                alloc.row.erase(alloc.row.begin() + i + 1);
-                i--;
+        for (auto u_id : ta->allocation_units(nullptr, false, UniqueAttachedId::TIND_PP)) {
+            auto &alloc = (*ta->memuse)[u_id];
+            std::sort(alloc.row.begin(), alloc.row.end(),
+                [=](const Memories::Use::Row a, const Memories::Use::Row b) {
+                    int t;
+                    if ((t = a.row - b.row) != 0) return t < 0;
+                    if ((t = a.bus - b.bus) != 0) return t < 0;
+                    return false;
+                });
+            for (size_t i = 0; i < alloc.row.size() - 1; i++) {
+                if (alloc.row[i].row == alloc.row[i+1].row &&
+                    alloc.row[i].bus == alloc.row[i+1].bus) {
+                    alloc.row[i].col.insert(alloc.row[i].col.end(), alloc.row[i+1].col.begin(),
+                                            alloc.row[i+1].col.end());
+                    alloc.row.erase(alloc.row.begin() + i + 1);
+                    i--;
+                }
             }
         }
     }
@@ -1489,14 +1603,7 @@ void Memories::compress_tind_groups() {
 /* Allocates all of the ternary indirect tables into the first column if they fit.
    FIXME: This is obviously a punt and needs to be adjusted. */
 bool Memories::allocate_all_tind() {
-    std::sort(tind_tables.begin(), tind_tables.end(),
-        [=] (const table_alloc *a, const table_alloc *b) {
-        int t;
-        if ((t = a->calculated_entries - b->calculated_entries) != 0) return t > 0;
-        return true;
-    });
     find_tind_groups();
-
     while (!tind_groups.empty()) {
         auto *tg = tind_groups[0];
         int best_bus = 0;
@@ -1522,15 +1629,7 @@ bool Memories::allocate_all_tind() {
         }
     }
     compress_tind_groups();
-    for (auto *ta : tind_tables) {
-        auto unique_id = ta->build_unique_id(nullptr, false, -1, UniqueAttachedId::TIND_PP);
-        auto &alloc = (*ta->memuse)[unique_id];
-        LOG4("Allocation of " << unique_id.build_name());
-        for (auto row : alloc.row) {
-            LOG4("Row is " << row.row << " and bus is " << row.bus);
-            LOG4("Col is " << row.col);
-        }
-    }
+    log_allocation(&tind_tables, UniqueAttachedId::TIND_PP);
     return true;
 }
 
@@ -1545,9 +1644,15 @@ void Memories::swbox_bus_selectors_indirects() {
             const IR::MAU::Selector *as = nullptr;
             if ((as = at->to<IR::MAU::Selector>()) == nullptr)
                 continue;
-            auto selector_group = new SRAM_group(ta, 2, 0, SRAM_group::SELECTOR);
-            selector_group->attached = as;
-            synth_bus_users.insert(selector_group);
+
+            BUG_CHECK(ta->allocation_units(as).size() == 1, "Cannot have multiple selector "
+                      "objects");
+            for (auto u_id : ta->allocation_units(as)) {
+                auto selector_group = new SRAM_group(ta, 2, 0, SRAM_group::SELECTOR);
+                selector_group->attached = as;
+                selector_group->logical_table = u_id.logical_table;
+                synth_bus_users.insert(selector_group);
+            }
         }
     }
 
@@ -1557,29 +1662,34 @@ void Memories::swbox_bus_selectors_indirects() {
             const IR::MAU::ActionData *ad = nullptr;
             if ((ad = at->to<IR::MAU::ActionData>()) == nullptr)
                 continue;
-            int width = 1;
-            int per_row = ActionDataPerWord(&ta->layout_option->layout, &width);
-            int depth = mems_needed(ad->size, SRAM_DEPTH, per_row, false);
-            int vpn_increment = ActionDataVPNIncrement(&ta->layout_option->layout);
-            int vpn_offset = ActionDataVPNStartPosition(&ta->layout_option->layout);
-            SRAM_group *selector = nullptr;
+            BUG_CHECK(ta->allocation_units(ad).size() == 1, "Cannot have multiple action profile "
+                      "objects");
+            for (auto u_id : ta->allocation_units(ad)) {
+                int width = 1;
+                int per_row = ActionDataPerWord(&ta->layout_option->layout, &width);
+                int depth = mems_needed(ad->size, SRAM_DEPTH, per_row, false);
+                int vpn_increment = ActionDataVPNIncrement(&ta->layout_option->layout);
+                int vpn_offset = ActionDataVPNStartPosition(&ta->layout_option->layout);
+                SRAM_group *selector = nullptr;
 
-            for (auto grp : synth_bus_users) {
-                if (grp->ta == ta && grp->type == SRAM_group::SELECTOR) {
-                    selector = grp;
-                    break;
+                for (auto grp : synth_bus_users) {
+                    if (grp->ta == ta && grp->type == SRAM_group::SELECTOR) {
+                        selector = grp;
+                        break;
+                    }
                 }
-            }
-            for (int i = 0; i < width; i++) {
-                auto action_group = new SRAM_group(ta, depth, i, SRAM_group::ACTION);
-                action_group->attached = ad;
-                action_group->vpn_increment = vpn_increment;
-                action_group->vpn_offset = vpn_offset;
-                if (selector != nullptr) {
-                    action_group->sel.sel_group = selector;
-                    selector->sel.action_groups.insert(action_group);
+                for (int i = 0; i < width; i++) {
+                    auto action_group = new SRAM_group(ta, depth, i, SRAM_group::ACTION);
+                    action_group->logical_table = u_id.logical_table;
+                    action_group->attached = ad;
+                    action_group->vpn_increment = vpn_increment;
+                    action_group->vpn_offset = vpn_offset;
+                    if (selector != nullptr) {
+                        action_group->sel.sel_group = selector;
+                        selector->sel.action_groups.insert(action_group);
+                    }
+                    action_bus_users.insert(action_group);
                 }
-                action_bus_users.insert(action_group);
             }
         }
     }
@@ -1591,8 +1701,6 @@ void Memories::swbox_bus_selectors_indirects() {
  */
 void Memories::swbox_bus_stateful_alus() {
     for (auto *ta : stateful_tables) {
-        if (ta->table->for_dleft())
-            continue;
         const IR::MAU::StatefulAlu *salu = nullptr;
         for (auto back_at : ta->table->attached) {
             auto at = back_at->attached;
@@ -1601,36 +1709,19 @@ void Memories::swbox_bus_stateful_alus() {
             if (salu->selector)
                 // use the selector's memory
                 continue;
-            int per_row = RegisterPerWord(salu);
-            int depth;
-            if (salu->direct) {
-                depth = mems_needed(ta->calculated_entries, SRAM_DEPTH, per_row, true);
-            } else {
-                depth = mems_needed(salu->size, SRAM_DEPTH, per_row, true);
-            }
-            auto reg_group = new SRAM_group(ta, depth, 0, SRAM_group::REGISTER);
-            reg_group->attached = salu;
-            synth_bus_users.insert(reg_group);
-            reg_group->requires_ab = salu->alu_output();
-        }
-    }
-
-    for (auto *ta : stateful_tables) {
-        if (!ta->table->for_dleft())
-            continue;
-        const IR::MAU::StatefulAlu *salu = nullptr;
-        for (auto back_at : ta->table->attached) {
-            salu = back_at->attached->to<IR::MAU::StatefulAlu>();
-            if (salu == nullptr)
-                continue;
-            auto &dleft_hash_sizes = ta->layout_option->dleft_hash_sizes;
-            for (int lt = 0; lt < ta->layout_option->logical_tables(); lt++) {
-                int depth = dleft_hash_sizes[lt] + 1;
-                auto *reg_group = new SRAM_group(ta, depth, 0, SRAM_group::REGISTER);
+            int lt_entry = 0;
+            for (auto u_id : ta->allocation_units(salu)) {
+                int per_row = RegisterPerWord(salu);
+                int entries = salu->direct ? ta->calc_entries_per_uid[lt_entry] : salu->size;
+                int depth = mems_needed(entries, SRAM_DEPTH, per_row, true);
+                if (ta->table->for_dleft())
+                    depth = ta->layout_option->dleft_hash_sizes[lt_entry] + 1;
+                auto reg_group = new SRAM_group(ta, depth, 0, SRAM_group::REGISTER);
                 reg_group->attached = salu;
-                reg_group->logical_table = lt;
-                synth_bus_users.insert(reg_group);
                 reg_group->requires_ab = salu->alu_output();
+                reg_group->logical_table = u_id.logical_table;
+                synth_bus_users.insert(reg_group);
+                lt_entry++;
             }
         }
     }
@@ -1645,16 +1736,17 @@ void Memories::swbox_bus_meters_counters() {
             const IR::MAU::Counter *stats = nullptr;
             if ((stats = at->to<IR::MAU::Counter>()) == nullptr)
                 continue;
-            int per_row = CounterPerWord(stats);
-            int depth;
-            if (stats->direct) {
-                depth = mems_needed(ta->calculated_entries, SRAM_DEPTH, per_row, true);
-            } else {
-                depth = mems_needed(stats->size, SRAM_DEPTH, per_row, true);
+            int lt_entry = 0;
+            for (auto u_id : ta->allocation_units(stats)) {
+                int per_row = CounterPerWord(stats);
+                int entries = stats->direct ? ta->calc_entries_per_uid[lt_entry] : stats->size;
+                int depth = mems_needed(entries, SRAM_DEPTH, per_row, true);
+                auto *stats_group = new SRAM_group(ta, depth, 0, SRAM_group::STATS);
+                stats_group->attached = stats;
+                stats_group->logical_table = u_id.logical_table;
+                synth_bus_users.insert(stats_group);
+                lt_entry++;
             }
-            auto *stats_group = new SRAM_group(ta, depth, 0, SRAM_group::STATS);
-            stats_group->attached = stats;
-            synth_bus_users.insert(stats_group);
         }
     }
 
@@ -1664,28 +1756,22 @@ void Memories::swbox_bus_meters_counters() {
             auto at = back_at->attached;
             if ((meter = at->to<IR::MAU::Meter>()) == nullptr)
                 continue;
-            int depth;
-            if (meter->direct)
-                depth = mems_needed(ta->calculated_entries, SRAM_DEPTH, 1, true);
-            else
-                depth = mems_needed(meter->size, SRAM_DEPTH, 1, true);
+            int lt_entry = 0;
+            for (auto u_id : ta->allocation_units(meter)) {
+                int entries = meter->direct ? ta->calc_entries_per_uid[lt_entry] : meter->size;
+                int depth = mems_needed(entries, SRAM_DEPTH, 1, true);
 
-            auto *meter_group = new SRAM_group(ta, depth, 0, SRAM_group::METER);
-
-            meter_group->attached = meter;
-            bool cm_needed = meter->implementation.name != "lpf" &&
-                             meter->implementation.name != "wred";
-            if (cm_needed) {
-                if (meter->direct)
-                    meter_group->cm.needed = mems_needed(ta->calculated_entries, SRAM_DEPTH,
+                auto *meter_group = new SRAM_group(ta, depth, 0, SRAM_group::METER);
+                meter_group->attached = meter;
+                meter_group->logical_table = u_id.logical_table;
+                if (meter->color_output()) {
+                    meter_group->cm.needed = mems_needed(entries, SRAM_DEPTH,
                                                          COLOR_MAPRAM_PER_ROW, false);
-                else
-                    meter_group->cm.needed = mems_needed(meter->size, SRAM_DEPTH,
-                                                         COLOR_MAPRAM_PER_ROW, false);
-            } else {
-                meter_group->requires_ab = true;
+                } else {
+                    meter_group->requires_ab = true;
+                }
+                synth_bus_users.insert(meter_group);
             }
-            synth_bus_users.insert(meter_group);
         }
     }
 }
@@ -1702,29 +1788,14 @@ void Memories::find_swbox_bus_users() {
         int per_row = ActionDataPerWord(&ta->layout_option->layout, &width);
         int vpn_increment = ActionDataVPNIncrement(&ta->layout_option->layout);
         int vpn_offset = ActionDataVPNStartPosition(&ta->layout_option->layout);
-        if (ta->table->layout.atcam) {
-            int search_bus_per_lt = (ta->table->layout.partition_count + SRAM_DEPTH - 1)
-                                     / SRAM_DEPTH;
-            int entries_per_part_sect = search_bus_per_lt * ta->layout_option->way.match_groups;
-            int logical_table = 0;
-            for (auto partition_size : ta->layout_option->partition_sizes) {
-                int entries = entries_per_part_sect * partition_size * SRAM_DEPTH;
-                int depth = mems_needed(entries, SRAM_DEPTH, per_row, false);
-                for (int i = 0; i < width; i++) {
-                    auto *act_group = new SRAM_group(ta, depth, i, SRAM_group::ACTION);
-                    act_group->logical_table = logical_table;
-                    act_group->direct = true;
-                    act_group->vpn_increment = vpn_increment;
-                    act_group->vpn_offset = vpn_offset;
-                    act_group->ppt = UniqueAttachedId::ADATA_PP;
-                    action_bus_users.insert(act_group);
-                }
-                logical_table++;
-            }
-        } else {
-            int depth = mems_needed(ta->calculated_entries, SRAM_DEPTH, per_row, false);
+        int lt_entry = 0;
+        for (auto u_id : ta->allocation_units(nullptr, false, UniqueAttachedId::ADATA_PP)) {
+            int entries = ta->calc_entries_per_uid[lt_entry];
+            int depth = mems_needed(entries, SRAM_DEPTH, per_row, false);
             for (int i = 0; i < width; i++) {
-                auto act_group = new SRAM_group(ta, depth, i, SRAM_group::ACTION);
+                auto *act_group = new SRAM_group(ta, depth, i, SRAM_group::ACTION);
+                act_group->logical_table = u_id.logical_table;
+                act_group->direct = true;
                 act_group->vpn_increment = vpn_increment;
                 act_group->vpn_offset = vpn_offset;
                 act_group->ppt = UniqueAttachedId::ADATA_PP;
@@ -2633,113 +2704,45 @@ void Memories::fill_color_mapram_use(swbox_fill &candidate, int row, RAM_side_t 
     candidate.group->cm.placed += bitcount(color_mapram_mask);
 }
 
+void Memories::log_allocation(safe_vector<table_alloc *> *tas,
+        UniqueAttachedId::pre_placed_type_t ppt) {
+    for (auto *ta : *tas) {
+        for (auto u_id : ta->allocation_units(nullptr, false, ppt)) {
+            auto alloc = (*ta->memuse)[u_id];
+            LOG4("Allocation for " << u_id.build_name());
+            for (auto row : alloc.row) {
+                LOG4("(Row, Bus, [Columns]) : (" << row.row << ", " << row.bus << ", ["
+                     << row.col << "])");
+            }
+        }
+    }
+}
+
+void Memories::log_allocation(safe_vector<table_alloc *> *tas, UniqueAttachedId::type_t type) {
+    for (auto *ta : *tas) {
+        for (auto ba : ta->table->attached) {
+            if (ba->attached->unique_id().type != type)
+                continue;
+            for (auto u_id : ta->allocation_units(ba->attached)) {
+                auto alloc = (*ta->memuse)[u_id];
+                LOG4("Allocation for " << u_id.build_name());
+                for (auto row : alloc.row) {
+                    LOG4("(Row, Bus, [Columns]) : (" << row.row << ", " << row.bus << ", ["
+                         << row.col << "])");
+                }
+            }
+        }
+    }
+}
+
 /* Logging information for each individual action/twoport table information */
 void Memories::action_bus_users_log() {
-    for (auto *ta : action_tables) {
-        if (ta->table->layout.atcam)
-            continue;
-        auto unique_id = ta->build_unique_id(nullptr, false, -1, UniqueAttachedId::ADATA_PP);
-        auto name = unique_id.build_name();
-        auto alloc = (*ta->memuse)[unique_id];
-        LOG4("Action allocation for " << name);
-        for (auto row : alloc.row) {
-            LOG4("Row is " << row.row << " and bus is " << row.bus);
-            LOG4("Col is " << row.col);
-        }
-    }
-
-    for (auto *ta : action_tables) {
-        if (!ta->table->layout.atcam)
-            continue;
-        for (int lt = 0; lt < ta->layout_option->logical_tables(); lt++) {
-             auto unique_id = ta->build_unique_id(nullptr, false, lt, UniqueAttachedId::ADATA_PP);
-             auto name = unique_id.build_name();
-             auto alloc = (*ta->memuse)[unique_id];
-             LOG4("Action allocation for " << name);
-             for (auto row : alloc.row) {
-                 LOG4("Row is " << row.row << " and bus is " << row.bus);
-                 LOG4("Col is " << row.col);
-             }
-        }
-    }
-
-    for (auto *ta : stats_tables) {
-        for (auto at : ta->table->attached) {
-            const IR::MAU::Counter *stats = nullptr;
-            if ((stats = at->to<IR::MAU::Counter>()) == nullptr)
-                continue;
-            auto unique_id = ta->build_unique_id(stats);
-            auto name = unique_id.build_name();
-            LOG4("Stats table for " << name);
-            auto alloc = (*ta->memuse)[unique_id];
-            for (auto row : alloc.row) {
-                LOG4("Row is " << row.row << " and bus is " << row.bus);
-                LOG4("Col is " << row.col);
-                LOG4("Map col is " << row.mapcol);
-            }
-        }
-    }
-    for (auto *ta : meter_tables) {
-        for (auto at : ta->table->attached) {
-            const IR::MAU::Meter *meter = nullptr;
-            if ((meter = at->to<IR::MAU::Meter>()) == nullptr)
-                continue;
-            auto unique_id = ta->build_unique_id(meter);
-            LOG4("Meter table for " << unique_id.build_name());
-            auto alloc = (*ta->memuse)[unique_id];
-            for (auto row : alloc.row) {
-                LOG4("Row is " << row.row << " and bus is " << row.bus);
-                LOG4("Col is " << row.col);
-                LOG4("Map col is " << row.mapcol);
-            }
-        }
-    }
-    for (auto *ta : stateful_tables) {
-        for (auto at : ta->table->attached) {
-            const IR::MAU::StatefulAlu *salu = nullptr;
-            if ((salu = at->to<IR::MAU::StatefulAlu>()) == nullptr)
-                continue;
-            auto unique_id = ta->build_unique_id(salu);
-            LOG4("Stateful table for " << unique_id.build_name());
-            auto alloc = (*ta->memuse)[unique_id];
-            for (auto row : alloc.row) {
-                LOG4("Row is " << row.row << " and bus is " << row.bus);
-                LOG4("Col is " << row.col);
-                LOG4("Map col is " << row.mapcol);
-            }
-        }
-    }
-
-    for (auto *ta : selector_tables) {
-        for (auto at : ta->table->attached) {
-            const IR::MAU::Selector *as = nullptr;
-            if ((as = at->to<IR::MAU::Selector>()) == nullptr)
-                continue;
-            auto unique_id = ta->build_unique_id(as);
-            LOG4("Selector table for " << unique_id.build_name());
-            auto alloc = (*ta->memuse)[unique_id];
-            for (auto row : alloc.row) {
-                LOG4("Row is " << row.row << " and bus is " << row.bus);
-                LOG4("Col is " << row.col);
-                LOG4("Map col is " << row.mapcol);
-            }
-        }
-    }
-
-    for (auto *ta : indirect_action_tables) {
-        for (auto at : ta->table->attached) {
-            const IR::MAU::ActionData *ad = nullptr;
-            if ((ad = at->to<IR::MAU::ActionData>()) == nullptr)
-                continue;
-            auto unique_id = ta->build_unique_id(ad);
-            LOG4("Action profile allocation for " << unique_id.build_name());
-            auto alloc = (*ta->memuse)[unique_id];
-            for (auto row : alloc.row) {
-                LOG4("Row is " << row.row << " and bus is " << row.bus);
-                LOG4("Col is " << row.col);
-            }
-        }
-    }
+    log_allocation(&action_tables, UniqueAttachedId::ADATA_PP);
+    log_allocation(&stats_tables, UniqueAttachedId::COUNTER);
+    log_allocation(&meter_tables, UniqueAttachedId::METER);
+    log_allocation(&stateful_tables, UniqueAttachedId::STATEFUL_ALU);
+    log_allocation(&selector_tables, UniqueAttachedId::SELECTOR);
+    log_allocation(&indirect_action_tables, UniqueAttachedId::ACTION_DATA);
 }
 
 void Memories::swbox_logical_row(int row, RAM_side_t side, swbox_fill candidates[SWBOX_TYPES],
@@ -3093,28 +3096,31 @@ uint64_t Memories::determine_payload(table_alloc *ta) {
  */
 bool Memories::allocate_all_payload_gw(bool alloc_search_bus) {
     for (auto *ta : payload_gws) {
+        safe_vector<UniqueId> u_ids;
         UniqueId unique_id;
-        if (ta->table_link) {
-            unique_id = ta->table_link->build_unique_id(nullptr, true);
-        } else {
-            BUG("Payload requiring gw has no linked table");
-        }
-        auto &alloc = (*ta->memuse)[unique_id];
-        alloc.type = Use::GATEWAY;
-        if (alloc_search_bus != ta->match_ixbar->search_data())
-            continue;
-
-        bool gw_found = false;
-        if (alloc_search_bus)
-            gw_found = find_search_bus_gw(ta, alloc, unique_id.build_name());
+        if (ta->table_link)
+            u_ids = ta->table_link->allocation_units(nullptr, true);
         else
-            gw_found = find_unit_gw(alloc, unique_id.build_name(), false);
+            BUG("Payload requiring gw has no linked table");
 
-        uint64_t payload_value = determine_payload(ta->table_link);
-        bool match_bus_found = find_match_bus_gw(alloc, payload_value, unique_id.build_name(),
-                                                 ta->table_link);
-        if (!(gw_found && match_bus_found))
-            return false;
+        for (auto u_id : u_ids) {
+            auto &alloc = (*ta->memuse)[u_id];
+            alloc.type = Use::GATEWAY;
+            if (alloc_search_bus != ta->match_ixbar->search_data())
+                continue;
+
+            bool gw_found = false;
+            if (alloc_search_bus)
+                gw_found = find_search_bus_gw(ta, alloc, u_id.build_name());
+            else
+                gw_found = find_unit_gw(alloc, u_id.build_name(), false);
+
+            uint64_t payload_value = determine_payload(ta->table_link);
+            bool match_bus_found = find_match_bus_gw(alloc, payload_value, u_id.build_name(),
+                                                     ta->table_link);
+            if (!(gw_found && match_bus_found))
+                return false;
+        }
     }
     return true;
 }
@@ -3125,25 +3131,25 @@ bool Memories::allocate_all_payload_gw(bool alloc_search_bus) {
  */
 bool Memories::allocate_all_normal_gw(bool alloc_search_bus) {
     for (auto *ta : normal_gws) {
-        // auto name = ta->table->get_use_name(nullptr, true);
-        UniqueId unique_id = ta->build_unique_id(nullptr, true);
-        if (ta->table_link != nullptr)
-            unique_id = ta->table_link->build_unique_id(nullptr, true);
-        auto &alloc = (*ta->memuse)[unique_id];
-        alloc.type = Use::GATEWAY;
-        if (alloc_search_bus != ta->match_ixbar->search_data())
-            continue;
-
-        bool gw_found = false;
-        if (alloc_search_bus)
-            gw_found = find_search_bus_gw(ta, alloc, unique_id.build_name());
-        else
-            gw_found = find_unit_gw(alloc, unique_id.build_name(), false);
-        alloc.gateway.payload_value = 0ULL;
-        alloc.gateway.payload_bus = -1;
-        alloc.gateway.payload_row = -1;
-        if (!gw_found)
-            return false;
+        safe_vector<UniqueId> u_ids = ta->table_link
+                                          ? ta->table_link->allocation_units(nullptr, true)
+                                          : ta->allocation_units(nullptr, true);
+        for (auto u_id : u_ids) {
+            auto &alloc = (*ta->memuse)[u_id];
+            alloc.type = Use::GATEWAY;
+            if (alloc_search_bus != ta->match_ixbar->search_data())
+                continue;
+            bool gw_found = false;
+            if (alloc_search_bus)
+                gw_found = find_search_bus_gw(ta, alloc, u_id.build_name());
+            else
+                gw_found = find_unit_gw(alloc, u_id.build_name(), false);
+            alloc.gateway.payload_value = 0ULL;
+            alloc.gateway.payload_bus = -1;
+            alloc.gateway.payload_row = -1;
+            if (!gw_found)
+                return false;
+        }
     }
 
     return true;
@@ -3154,27 +3160,12 @@ bool Memories::allocate_all_normal_gw(bool alloc_search_bus) {
  */
 bool Memories::allocate_all_no_match_gw() {
     for (auto *ta : no_match_gws) {
-        if (ta->table->for_dleft())
-            continue;
-        auto unique_id = ta->build_unique_id(nullptr, true);
-        auto &alloc = (*ta->memuse)[unique_id];
-        alloc.type = Use::GATEWAY;
-        bool unit_found = find_unit_gw(alloc, unique_id.build_name(), false);
-        bool match_bus_found = find_match_bus_gw(alloc, 0ULL, unique_id.build_name(), ta);
-        if (!(unit_found && match_bus_found))
-            return false;
-    }
-
-    // Initializing gateways for dleft hash tables
-    for (auto *ta : no_match_gws) {
-        if (!ta->table->for_dleft())
-            continue;
-        for (int lt = 0; lt < ta->layout_option->logical_tables(); lt++) {
-            auto unique_id = ta->build_unique_id(nullptr, true, lt);
-            auto &alloc = (*ta->memuse)[unique_id];
+        for (auto u_id : ta->allocation_units(nullptr, true)) {
+            auto &alloc = (*ta->memuse)[u_id];
             alloc.type = Use::GATEWAY;
-            bool unit_found = find_unit_gw(alloc, unique_id.build_name(), false);
-            bool match_bus_found = find_match_bus_gw(alloc, 0ULL, unique_id.build_name(), ta, lt);
+            bool unit_found = find_unit_gw(alloc, u_id.build_name(), false);
+            bool match_bus_found = find_match_bus_gw(alloc, 0ULL, u_id.build_name(), ta,
+                                                     u_id.logical_table);
             if (!(unit_found && match_bus_found))
                 return false;
         }
@@ -3284,33 +3275,28 @@ bool Memories::allocate_all_no_match_miss() {
     // tind tables
     size_t no_match_tables_allocated = 0;
     for (auto *ta : no_match_miss_tables) {
-        auto unique_id = ta->build_unique_id(nullptr, false, -1, UniqueAttachedId::TIND_PP);
-        auto &alloc = (*ta->memuse)[unique_id];
-        alloc.type = Use::TIND;
-        bool found = false;
-
-        found = false;
-        for (int i = 0; i < SRAM_ROWS; i++) {
-            for (int j = 0; j < BUS_COUNT; j++) {
-                if (payload_use[i][j]) continue;
-                if (tind_bus[i][j]) continue;
-                alloc.row.emplace_back(i, j);
-                tind_bus[i][j] = unique_id.build_name();
-                found = true;
-                break;
+        for (auto u_id : ta->allocation_units(nullptr, false, UniqueAttachedId::TIND_PP)) {
+            auto &alloc = (*ta->memuse)[u_id];
+            alloc.type = Use::TIND;
+            bool found = false;
+            for (int i = 0; i < SRAM_ROWS; i++) {
+                for (int j = 0; j < BUS_COUNT; j++) {
+                    if (payload_use[i][j]) continue;
+                    if (tind_bus[i][j]) continue;
+                    alloc.row.emplace_back(i, j);
+                    tind_bus[i][j] = u_id.build_name();
+                    found = true;
+                    break;
+                }
+                if (found) break;
             }
-            if (found) break;
+
+            if (!found)
+                return false;
+            else
+                no_match_tables_allocated++;
         }
-
-        if (!found)
-            break;
-        else
-            no_match_tables_allocated++;
     }
-
-    if (no_match_tables_allocated != no_match_miss_tables.size())
-        return false;
-
     return true;
 }
 
@@ -3419,12 +3405,17 @@ bool Memories::allocate_all_idletime() {
             const IR::MAU::IdleTime *id = nullptr;
             if ((id = at->to<IR::MAU::IdleTime>()) == nullptr)
                 continue;
-
-            int per_row = IdleTimePerWord(id);
-            int depth = mems_needed(ta->calculated_entries, SRAM_DEPTH, per_row, false);
-            auto idletime_group = new SRAM_group(ta, depth, 1, SRAM_group::IDLETIME);
-            idletime_group->attached = id;
-            idletime_groups.push_back(idletime_group);
+            int lt_entry = 0;
+            for (auto u_id : ta->allocation_units(id)) {
+                int per_row = IdleTimePerWord(id);
+                int depth = mems_needed(ta->calc_entries_per_uid[lt_entry], SRAM_DEPTH, per_row,
+                                        false);
+                auto idletime_group = new SRAM_group(ta, depth, 1, SRAM_group::IDLETIME);
+                idletime_group->attached = id;
+                idletime_group->logical_table = u_id.logical_table;
+                idletime_groups.push_back(idletime_group);
+                lt_entry++;
+            }
         }
     }
 

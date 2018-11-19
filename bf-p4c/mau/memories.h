@@ -207,6 +207,8 @@ struct Memories {
     };
 
  private:
+    // The resource information required for an individual IR::MAU::Table object in a single
+    // stage.  Could coordinate to multiple logical tables, (i.e. dleft or atcam tables)
     struct table_alloc {
         const IR::MAU::Table *table;
         const IXBar::Use *match_ixbar;
@@ -214,7 +216,12 @@ struct Memories {
         std::map<UniqueId, Memories::Use>* memuse;
         const LayoutOption *layout_option;
         int provided_entries;
-        int calculated_entries;
+        // Entries per match table allocation_unit (logical table) of the table.  This is
+        // used to determine the attached table requirements if direct
+        safe_vector<int> calc_entries_per_uid;
+        int total_entries() const {
+            return std::accumulate(calc_entries_per_uid.begin(), calc_entries_per_uid.end(), 0);
+        }
         int attached_gw_bytes = 0;
         int stage_table = -1;
         // Linked gw/match table that uses the same result bus
@@ -224,14 +231,24 @@ struct Memories {
                              std::map<UniqueId, Memories::Use> *mu,
                              const LayoutOption *lo, const int e, const int st)
                 : table(t), match_ixbar(mi), table_format(tf), memuse(mu),
-                  layout_option(lo), provided_entries(e),
-                  calculated_entries(0), attached_gw_bytes(0), stage_table(st),
+                  layout_option(lo), provided_entries(e), attached_gw_bytes(0), stage_table(st),
                   table_link(nullptr) {}
         void link_table(table_alloc *ta) {table_link = ta;}
 
         UniqueId build_unique_id(const IR::MAU::AttachedMemory *at = nullptr,
-             bool is_gw = false, int logical_table = -1,
-             UniqueAttachedId::pre_placed_type_t ppt = UniqueAttachedId::NO_PP) const;
+            bool is_gw = false, int logical_table = -1,
+            UniqueAttachedId::pre_placed_type_t ppt = UniqueAttachedId::NO_PP) const;
+
+        safe_vector<UniqueId> allocation_units(const IR::MAU::AttachedMemory *at = nullptr,
+            bool is_gw = false,
+            UniqueAttachedId::pre_placed_type_t ppt = UniqueAttachedId::NO_PP) const;
+
+
+        safe_vector<UniqueId> unattached_units(const IR::MAU::AttachedMemory *at = nullptr,
+            UniqueAttachedId::pre_placed_type_t ppt = UniqueAttachedId::NO_PP) const;
+
+        safe_vector<UniqueId> accounted_units(const IR::MAU::AttachedMemory *at = nullptr,
+            UniqueAttachedId::pre_placed_type_t ppt = UniqueAttachedId::NO_PP) const;
     };
     int logical_tables_allowed = LOGICAL_TABLES;
 
@@ -453,6 +470,7 @@ struct Memories {
     void clear_allocation();
     void set_logical_memuse_type(table_alloc *ta, Use::type_t type);
     bool analyze_tables(mem_info &mi);
+    void calculate_entries();
     void calculate_column_balance(const mem_info &mi, unsigned &row, bool &column_balance_init);
     bool single_allocation_balance(mem_info &mi, unsigned row);
     bool cut_from_left_side(const mem_info &mi, int left_given_columns, int right_given_columns);
@@ -546,6 +564,8 @@ struct Memories {
                                   action_fill &sel_unplaced, action_fill nexts[OFLOW],
                                   int order[SWBOX_TYPES], int RAMs_avail[OFLOW]);
     */
+    void log_allocation(safe_vector<table_alloc *> *tas, UniqueAttachedId::type_t type);
+    void log_allocation(safe_vector<table_alloc *> *tas, UniqueAttachedId::pre_placed_type_t ppt);
     void action_bus_users_log();
     bool find_unit_gw(Memories::Use &alloc, cstring name, bool requires_search_bus);
     bool find_search_bus_gw(table_alloc *ta, Memories::Use &alloc, cstring name);

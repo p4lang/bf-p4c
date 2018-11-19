@@ -1054,7 +1054,7 @@ bool IXBar::find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use, bool ternary,
                                         mid_bytes_needed);
         if (!possible)
             break;
-        if (groups_needed > 1 && byte_mask != ~0U)
+        if (hm_reqs.max_search_buses > 0 && groups_needed > hm_reqs.max_search_buses)
             break;
         for (int i = 0; i < 2 && !allocated; i++) {
             bool version_placed = false;
@@ -2005,6 +2005,9 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
     } else {
         hm_reqs.select_bits = hash_bus_bits;
     }
+    // More constraied than necessary, if the gateway only requires hash bits, but the
+    // search bus requirements must be on one and only one search bus
+    hm_reqs.max_search_buses = 1;
 
     if (!find_alloc(alloc.use, false, xbar_alloced, hm_reqs)) {
         alloc.clear();
@@ -2341,6 +2344,7 @@ bool IXBar::allocMeter(const IR::MAU::Meter *mtr, const IR::MAU::Table *tbl, con
         byte_mask = ((1U << LPF_INPUT_BYTES) - 1);
         if (Device::currentDevice() == Device::TOFINO)
             byte_mask <<= TOFINO_METER_ALU_BYTE_OFFSET;
+        hm_reqs.max_search_buses = 1;
     } else {
         hm_reqs.index_groups = HASH_INDEX_GROUPS;
     }
@@ -2599,6 +2603,7 @@ bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu, const IR::MAU::Table
             alloc.clear();
             return false;
         }
+        hm_reqs.max_search_buses = 1;
     } else {
         int total_bits = 0;
         for (auto &source : phv_sources) {

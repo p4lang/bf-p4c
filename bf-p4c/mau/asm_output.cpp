@@ -1323,20 +1323,17 @@ void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
         if (!adb_to_hr.count(slot))
             continue;
         auto field_bits = adb_to_hr.at(slot);
-        for (auto &s : field_bits) {
-            bitvec total_range(0, ActionFormat::CONTAINER_SIZES[rs.location.type]);
-            int byte_sz = ActionFormat::CONTAINER_SIZES[rs.location.type] / 8;
-            out << rs.location.byte;
-            if (byte_sz > 1)
-                out << ".." << (rs.location.byte + byte_sz - 1);
-            out << " : ";
-            out << ret_name;
-            out << "(" << s.first << ".." << s.second << ")";
-            if (total_index != max_total - 1)
-                out << ", ";
-            else
-                out << " ";
-        }
+        int byte_sz = ActionFormat::CONTAINER_SIZES[rs.location.type] / 8;
+        out << rs.location.byte;
+        if (byte_sz > 1)
+            out << ".." << (rs.location.byte + byte_sz - 1);
+        out << " : ";
+        out << ret_name;
+        out << "(" << (rs.byte_offset * 8) << ".." << ((rs.byte_offset + byte_sz) * 8 - 1) << ")";
+        if (total_index != max_total - 1)
+            out << ", ";
+        else
+            out << " ";
         total_index++;
     }
 
@@ -2807,6 +2804,7 @@ bool MauAsmOutput::EmitAttached::is_unattached(const IR::MAU::AttachedMemory *at
     auto unique_id = tbl->unique_id();
     auto &memuse = tbl->resources->memuse.at(unique_id);
     auto at_unique_id = tbl->unique_id(at);
+    LOG1("Unique id " << unique_id << " " << at_unique_id);
     auto unattached_loc = memuse.unattached_tables.find(at_unique_id);
     if (unattached_loc != memuse.unattached_tables.end())
         return true;
@@ -2983,6 +2981,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::TernaryIndirect *ti) {
     self.emit_table_format(out, indent, tbl->resources->table_format, nullptr, true, false);
     bitvec source;
     source.setbit(ActionFormat::IMMED);
+    source.setbit(ActionFormat::METER);
     self.emit_action_data_bus(out, indent, tbl, source);
     self.emit_table_indir(out, indent, tbl, ti);
     return false;
@@ -3032,6 +3031,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
     if (salu->direct && tbl->layout.hash_action)
         out << ", how_referenced: direct";
     out << " }" << std::endl;
+
     if (salu->selector)
         self.emit_memory(out, indent, *self.selector_memory.at(salu->selector));
     else
