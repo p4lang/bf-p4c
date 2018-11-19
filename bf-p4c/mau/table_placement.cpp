@@ -1092,9 +1092,9 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv, const IR::MA
             rv->match_placed[tblInfo.at(rv->table).uid] = true;
             if (!rv->need_more)
                 rv->placed[tblInfo.at(rv->table).uid] = true;
-            if (rv->gw)
-                rv->placed[tblInfo.at(rv->gw).uid] = true;
         }
+        if (rv->gw)
+            rv->placed[tblInfo.at(rv->gw).uid] = true;
     }
 
     return rv;
@@ -1173,46 +1173,42 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed *
         LOG2("  inserting " << pl->gw->name << " into placed_table_names");
     }
 
-    // FIXME -- if we've placed a gateway and only part of a match table (so gw is nonnull and
-    // need_more_match is true), we should be able to place other tables control dependent
-    // on the gateway (and mutually exclusive with the match) before the rest of the match
-    // table if that would be helpful.  So the `if (pl->gw)` code below should be applicable
-    // even if need_more_match is true, but then where do we stash the gw_match_grp?
-    if (!pl->need_more_match) {
+    if (!pl->need_more) {
         placed_tables.insert(pl->table);
-        if (pl->gw) placed_tables.insert(pl->gw);
-        pl->group->finish_if_placed(work, pl);
-        GroupPlace *gw_match_grp = nullptr;
-        if (pl->gw)  {
-            bool found_match = false;
-            for (auto n : Values(pl->gw->next)) {
-                if (!n || n->tables.size() == 0) continue;
-                if (GroupPlace::in_work(work, n)) continue;
-                bool ready = true;
-                ordered_set<const GroupPlace *> parents;
-                for (auto tbl : seqInfo.at(n).refs) {
-                    if (pl->is_placed(tbl)) {
-                        parents.insert(pl->find_group(tbl));
-                    } else {
-                        ready = false;
-                        break; } }
-                if (n->tables.size() == 1 && n->tables.at(0) == pl->table) {
+        pl->group->finish_if_placed(work, pl); }
+    GroupPlace *gw_match_grp = nullptr;
+    if (pl->gw)  {
+        placed_tables.insert(pl->gw);
+        bool found_match = false;
+        for (auto n : Values(pl->gw->next)) {
+            if (!n || n->tables.size() == 0) continue;
+            if (GroupPlace::in_work(work, n)) continue;
+            bool ready = true;
+            ordered_set<const GroupPlace *> parents;
+            for (auto tbl : seqInfo.at(n).refs) {
+                if (pl->is_placed(tbl)) {
+                    parents.insert(pl->find_group(tbl));
+                } else {
+                    ready = false;
+                    break; } }
+            if (n->tables.size() == 1 && n->tables.at(0) == pl->table) {
+                BUG_CHECK(!found_match && !gw_match_grp, "No table to place");
+                BUG_CHECK(ready && parents.size() == 1, "Gateway incorrectly placed on "
+                          "multi-referenced table");
+                found_match = true;
+                if (pl->need_more)
+                    new GroupPlace(*this, work, parents, n);
+                continue; }
+            GroupPlace *g = ready ? new GroupPlace(*this, work, parents, n) : nullptr;
+            for (auto t : n->tables) {
+                if (t == pl->table) {
                     BUG_CHECK(!found_match && !gw_match_grp, "No table to place");
                     BUG_CHECK(ready && parents.size() == 1, "Gateway incorrectly placed on "
                               "multi-referenced table");
                     found_match = true;
-                    if (pl->need_more)
-                        new GroupPlace(*this, work, parents, n);
-                    continue; }
-                GroupPlace *g = ready ? new GroupPlace(*this, work, parents, n) : nullptr;
-                for (auto t : n->tables) {
-                    if (t == pl->table) {
-                        BUG_CHECK(!found_match && !gw_match_grp, "No table to place");
-                        BUG_CHECK(ready && parents.size() == 1, "Gateway incorrectly placed on "
-                                  "multi-referenced table");
-                        found_match = true;
-                        gw_match_grp = g; } } }
-            BUG_CHECK(found_match, "Failed to find match table"); }
+                    gw_match_grp = g; } } }
+        BUG_CHECK(found_match, "Failed to find match table"); }
+    if (!pl->need_more_match) {
         for (auto n : Values(pl->table->next)) {
             if (n && n->tables.size() > 0 && !GroupPlace::in_work(work, n)) {
                 bool ready = true;
@@ -1292,8 +1288,6 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choic
     choice = NEED_MORE;
     if (b->need_more_match && !a->need_more_match) return true;
     if (a->need_more_match && !b->need_more_match) return false;
-    if (b->need_more && !a->need_more) return true;
-    if (a->need_more && !b->need_more) return false;
 
     int a_deps_stages_control = downward_prop_score.first.deps_stages_control;
     int b_deps_stages_control = downward_prop_score.second.deps_stages_control;
@@ -1452,7 +1446,7 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                     pl->group = grp;
                     bool defer = false;
                     for (auto t : partly_placed) {
-                        if (t == pl->table || pl->is_placed(t))
+                        if (t == pl->table || pl->is_match_placed(t))
                             continue;
                         if (!mutex(t, pl->table)) {
                             LOG3("  - skipping " << pl->name << " as it is not mutually "
