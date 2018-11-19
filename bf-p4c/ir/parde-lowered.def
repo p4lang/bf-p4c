@@ -194,6 +194,7 @@ abstract LoweredMatchValue { }
 /// A constant value that is defined in the P4 program
 class LoweredConstMatchValue : LoweredMatchValue {
     dbprint { out << "const: " << value; }
+    toString { std::stringstream ss; ss << value; return ss.str().c_str(); }
     match_t value;
 }
 
@@ -207,7 +208,8 @@ class LoweredPvsMatchValue : LoweredMatchValue {
     LoweredPvsMatchValue(cstring name, int size, const std::map<FieldSlice, MatcherSlice>& m)
         : mapping(m), name(name), size(size) {}
 #end
-    dbprint { out << "name: " << name << " " << size; }
+    dbprint { out << "pvs: " << name << " " << size; }
+    toString { return name; }
     cstring name;
     int size;
 }

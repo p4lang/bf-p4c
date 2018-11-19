@@ -132,6 +132,9 @@ BFN_Options::BFN_Options() {
     registerOption("--disable-egress-packet-length-adjust", nullptr,
         [this](const char *) { adjust_egress_packet_length = false; return true; },
         "Do not adjust egress packet length");
+    registerOption("--parser-timing-reports", nullptr,
+        [this](const char *) { parser_timing_reports = true; return true; },
+        "Report parser timing summary");
 }
 
 using Target = std::pair<cstring, cstring>;

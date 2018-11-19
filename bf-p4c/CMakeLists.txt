@@ -299,6 +299,7 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/allocate_parser_match_register.h
   parde/adjust_extract.h
   parde/asm_output.h
+  parde/characterize_parser.h
   parde/checksum.h
   parde/clot_info.h
   parde/decaf.h
@@ -319,7 +320,7 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/resubmit.h
   parde/unroll_parser_counter.h
   parde/parde_utils.h
-  parde/parser_graph.h
+  parde/parser_info.h
   parde/p4i/gen_parser_json.h
   parde/p4i/p4i_json_types.h
   )

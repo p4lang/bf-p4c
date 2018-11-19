@@ -20,8 +20,8 @@
 
 class TablePrinter {
  public:
-    TablePrinter(std::ostream &s, std::vector<std::string> headers)
-      : _s(s), _headers(headers) {
+    TablePrinter(std::ostream &s, std::vector<std::string> headers, bool alignLeft = false)
+      : _s(s), _headers(headers), _alignLeft(alignLeft) {
         for (auto& h : headers)
             _colWidth.push_back(h.length());
     }
@@ -36,6 +36,10 @@ class TablePrinter {
                 _colWidth[i] = row[i].length();
     }
 
+    void addSep() {
+        _seps.insert(_data.size());
+    }
+
     void print() const {
         printSep();
 
@@ -43,8 +47,10 @@ class TablePrinter {
 
         printSep();
 
-        for (auto row : _data)
-            printRow(row);
+        for (unsigned i = 0; i < _data.size(); i++) {
+            printRow(_data.at(i));
+            if (_seps.count(i)) printSep();
+        }
 
         printSep();
     }
@@ -64,6 +70,7 @@ class TablePrinter {
 
     void printCell(unsigned col, const std::string& data) const {
         unsigned width = _colWidth.at(col);
+        if (_alignLeft) _s << std::left;
         _s << std::setw(width + cellPad);
         _s << data;
     }
@@ -82,9 +89,12 @@ class TablePrinter {
     std::ostream &_s;
 
     std::vector<std::vector<std::string>> _data;
+    std::set<unsigned> _seps;
+
     std::vector<std::string> _headers;
     std::vector<unsigned> _colWidth;
 
+    bool _alignLeft = false;
     const unsigned cellPad = 2;
 };
 

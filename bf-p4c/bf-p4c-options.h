@@ -29,6 +29,7 @@ class BFN_Options : public CompilerOptions {
     bool display_power_budget = false;
     bool disable_power_check = false;
     bool adjust_egress_packet_length = true;
+    bool parser_timing_reports = false;
     std::set<cstring> disabled_pragmas;
 #if BAREFOOT_INTERNAL
     std::set<cstring> skipped_pipes;

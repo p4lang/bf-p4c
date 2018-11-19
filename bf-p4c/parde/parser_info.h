@@ -1,5 +1,5 @@
-#ifndef EXTENSIONS_BF_P4C_PARDE_PARSER_GRAPH_H_
-#define EXTENSIONS_BF_P4C_PARDE_PARSER_GRAPH_H_
+#ifndef EXTENSIONS_BF_P4C_PARDE_PARSER_INFO_H_
+#define EXTENSIONS_BF_P4C_PARDE_PARSER_INFO_H_
 
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/copy.hpp>
@@ -182,7 +182,39 @@ class ParserGraphImpl : public DirectedGraph {
         return mapped_result;
     }
 
+    // longest path from src to end of parser
+    std::vector<const State*> longest_path(const State* src) const {
+        std::map<const State*, std::vector<const State*>> path_map;
+        return longest_path_impl(src, path_map);
+    }
+
  private:
+    std::vector<const State*> longest_path_impl(const State* src,
+            std::map<const State*, std::vector<const State*>>& path_map) const {
+        if (path_map.count(src))
+            return path_map.at(src);
+
+        const State* longest_succ = nullptr;
+        std::vector<const State*> longest_succ_path;
+
+        if (successors().count(src)) {
+            for (auto succ : successors().at(src)) {
+                auto succ_path = longest_path_impl(succ, path_map);
+
+                if (!longest_succ || succ_path.size() > longest_succ_path.size()) {
+                    longest_succ_path = succ_path;
+                    longest_succ = succ;
+                }
+            }
+        }
+
+        longest_succ_path.insert(longest_succ_path.begin(), src);
+
+        path_map[src] = longest_succ_path;
+
+        return longest_succ_path;
+    }
+
     void get_all_descendants_impl(const State* src,
                                   std::set<const State*>& rv) const {
         if (!successors().count(src))
@@ -402,4 +434,4 @@ using CollectLoweredParserInfo = CollectParserInfoImpl<IR::BFN::LoweredParser,
                                                        IR::BFN::LoweredParserState,
                                                        IR::BFN::LoweredParserMatch>;
 
-#endif  /* EXTENSIONS_BF_P4C_PARDE_PARSER_GRAPH_H_ */
+#endif  /* EXTENSIONS_BF_P4C_PARDE_PARSER_INFO_H_ */

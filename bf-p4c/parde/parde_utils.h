@@ -4,7 +4,7 @@
 #include <boost/algorithm/string.hpp>
 #include <fstream>
 
-#include "bf-p4c/parde/parser_graph.h"
+#include "bf-p4c/parde/parser_info.h"
 
 class DumpParser : public Visitor {
     cstring filename;
@@ -12,7 +12,7 @@ class DumpParser : public Visitor {
     bool detail = true;
 
  public:
-    explicit DumpParser(cstring filename, bool detail = true)
+    explicit DumpParser(cstring filename, bool detail = false)
         : filename(filename), detail(detail) {}
 
  private:

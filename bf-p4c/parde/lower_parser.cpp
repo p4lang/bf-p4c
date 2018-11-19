@@ -16,6 +16,7 @@
 #include "bf-p4c/device.h"
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/parde/allocate_parser_checksum.h"
+#include "bf-p4c/parde/characterize_parser.h"
 #include "bf-p4c/parde/clot_info.h"
 #include "bf-p4c/parde/parde_visitor.h"
 #include "bf-p4c/parde/parde_utils.h"
@@ -2526,5 +2527,6 @@ LowerParser::LowerParser(const PhvInfo& phv, ClotInfo& clot, const FieldDefUse &
         new ComputeInitZeroContainers(phv, defuse, pragma_no_init->getFields()),
         new ComputeMultiwriteContainers,  // Must run after ComputeInitZeroContainers.
         new ComputeBufferRequirements,
+        LOGGING(1) ? new CharacterizeParser : nullptr
     });
 }
