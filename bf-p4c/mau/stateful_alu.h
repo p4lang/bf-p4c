@@ -10,6 +10,7 @@ struct Device::StatefulAluSpec {
     bool                        CmpMask;  // are cmp oprerands maskable?
     std::vector<cstring>        CmpUnits;
     int                         MaxSize;
+    int                         MaxDualSize;
     int                         OutputWords;
     bool                        DivModUnit;
 

@@ -7,6 +7,7 @@ const Device::StatefulAluSpec &TofinoDevice::getStatefulAluSpec() const {
         /* .CmpMask = */ false,
         /* .CmpUnits = */ { "lo", "hi" },
         /* .MaxSize = */ 32,
+        /* .MaxDualSize = */ 64,
         /* .OutputWords = */ 1,
         /* .DivModUnit = */ false,
     };
@@ -19,6 +20,7 @@ const Device::StatefulAluSpec &JBayDevice::getStatefulAluSpec() const {
         /* .CmpMask = */ true,
         /* .CmpUnits = */ { "cmp0", "cmp1", "cmp2", "cmp3" },
         /* .MaxSize = */ 128,
+        /* .MaxDualSize = */ 128,
         /* .OutputWords = */ 4,
         /* .DivModUnit = */ true,
     };
@@ -59,7 +61,7 @@ static bool is_learn(const IR::Expression *e) {
     return false;
 }
 
-/// Check a name to see if it is a reference to an argument of register_action::apply,
+/// Check a name to see if it is a reference to an argument of RegisterAction::apply,
 /// or a reference to the local var we put in alu_hi.
 /// or a reference to a copy of an in argument
 /// If so, process it as an operand and return true
@@ -163,12 +165,12 @@ bool CreateSaluInstruction::preorder(const IR::Function *func) {
         name += "$" + func->name;
         if (func->name == "overflow") {
             if (salu->overflow)
-                error("%s: Conflicting overflow function for register", func->srcInfo);
+                error("%s: Conflicting overflow function for Register", func->srcInfo);
             else
                 salu->overflow = name; }
         if (func->name == "underflow") {
             if (salu->underflow)
-                error("%s: Conflicting underflow function for register", func->srcInfo);
+                error("%s: Conflicting underflow function for Register", func->srcInfo);
             else
                 salu->underflow = name; } }
     param_types = &function_param_types.at(std::make_pair(action_type_name, func->name));
@@ -215,7 +217,7 @@ void CreateSaluInstruction::postorder(const IR::Function *func) {
         if (local.use == LocalVar::ALUHI)
             alu_hi_use++;
     if (alu_hi_use > 1)
-        error("%s: too many locals in register action", func->srcInfo);
+        error("%s: too many locals in RegisterAction", func->srcInfo);
     params = nullptr;
     action = nullptr;
 }
@@ -228,7 +230,7 @@ bool CreateSaluInstruction::preorder(const IR::AssignmentStatement *as) {
     visit(as->left, "left");
     BUG_CHECK(operands.size() == (etype < OUTPUT) || ::errorCount() > 0, "recursion failure");
     if (etype == NONE)
-        error("Can't assign to %s in register action", as->left);
+        error("Can't assign to %s in RegisterAction", as->left);
     else
         visit(as->right);
     if (::errorCount() == 0) {
@@ -398,7 +400,7 @@ bool CreateSaluInstruction::preorder(const IR::Primitive *prim) {
         etype = OUTPUT;
         operands.push_back(new IR::MAU::SaluReg(prim->type, "minmax", false));
     } else {
-        error("%s: expression too complex for register action", prim->srcInfo); }
+        error("%s: expression too complex for RegisterAction", prim->srcInfo); }
     return false;
 }
 
@@ -763,7 +765,7 @@ const IR::MAU::Instruction *CreateSaluInstruction::createInstruction() {
                 LOG3("  add " << *action->action.back());
                 operands.at(0) = new IR::MAU::SaluReg(k->type, "alu_hi", true);
             } else {
-                error("%s: can't output a constant from a register action",
+                error("%s: can't output a constant from a RegisterAction",
                       operands.at(0)->srcInfo); } }
         rv = setup_output();
         break;
@@ -780,7 +782,7 @@ bool CreateSaluInstruction::preorder(const IR::Declaration_Variable *v) {
     } else if (v->type == regtype) {
         locals.emplace(v->name, LocalVar(v->name, true));
     } else {
-        error("register action can't support local var %s", v); }
+        error("RegisterAction can't support local var %s", v); }
     return false;
 }
 
@@ -828,8 +830,9 @@ bool CheckStatefulAlu::preorder(IR::MAU::StatefulAlu *salu) {
     if (auto str = regtype->to<IR::Type_Struct>()) {
         auto nfields = str->fields.size();
         if (nfields < 1 || !(bits = getType(str->fields.at(0)->type)->to<IR::Type::Bits>()) ||
-            nfields > 2 || (nfields > 1 && bits != getType(str->fields.at(1)->type)))
+            nfields > 2 || (nfields > 1 && bits != getType(str->fields.at(1)->type))) {
             bits = nullptr;
+        }
         if (bits) {
             salu->dual = nfields > 1;;
             if (bits->size == 1)
@@ -841,7 +844,7 @@ bool CheckStatefulAlu::preorder(IR::MAU::StatefulAlu *salu) {
             // too small
             bits = nullptr;
         } else if (bits->size > Device::statefulAluSpec().MaxSize) {
-            if (bits->size == Device::statefulAluSpec().MaxSize * 2 && !salu->dual) {
+            if (bits->size == Device::statefulAluSpec().MaxDualSize && !salu->dual) {
                 // we can support 1x1x  double the max width by using dual mode.
                 salu->dual = true;
             } else {
@@ -851,7 +854,14 @@ bool CheckStatefulAlu::preorder(IR::MAU::StatefulAlu *salu) {
             // not a power of two
             bits = nullptr; } }
     if (!bits) {
-        error("Unsupported register element type %s for stateful alu %s", regtype, salu);
+        std::stringstream detail;
+        detail << "    Supported Register element types:\n       ";
+        for (int sz = 8; sz < Device::statefulAluSpec().MaxDualSize; sz += sz)
+            detail << " bit<" << sz << "> int<" << sz << ">";
+        detail << "\n        structs containing one or two fields of one of the above types";
+        detail << "\n        bit<1> bit<" << Device::statefulAluSpec().MaxDualSize << ">\n";
+        error("Unsupported Register element type %s for %s\n%s", regtype, salu->reg,
+              detail.str());
         return false; }
 
     // For a 1bit SALU, the driver expects a set and clr instr. Check if these
@@ -941,7 +951,7 @@ bool CheckStatefulAlu::AddressLmatchUsage::preorder(const IR::MAU::SaluFunction 
             lmatch_operand = fn->expr;
             lmatch_inuse_mask = inuse_mask;
         } else {
-            error("Conflicting address calls in register actions on %s", salu->reg);
+            error("Conflicting address calls in RegisterActions on %s", salu->reg);
         }
     } else {
         lmatch_operand = fn->expr;
