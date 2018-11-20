@@ -92,11 +92,24 @@ class CreateSaluApplyFunction : public Inspector {
                 var = new IR::Path("in_value");
                 idx = 1;
             } else if (attr->name == "alu_lo") {
-                var = new IR::Path("value");
+                // For complement we use the 'in_value' or input value as the
+                // ordering of instructions may change the 'value'
+                // E.g. set_bitc creates an action,
+                // value = 1;
+                // rv = ~value;
+                // Due to ordering this gets transformed to
+                // value = 1;
+                // rv = 0; <- which is incorrect
+                // By using in_value, we get,
+                // value = 1;
+                // rv = ~in_value;
+                auto valStr = self.cmpl_out ? "in_value" : "value";
+                var = new IR::Path(valStr);
                 idx = 0;
                 self.defer_out = true;
             } else if (attr->name == "alu_hi") {
-                var = new IR::Path("value");
+                auto valStr = self.cmpl_out ? "in_value" : "value";
+                var = new IR::Path(valStr);
                 idx = 1;
                 self.defer_out = true;
             } else if (attr->name == "set_bit" || attr->name == "set_bitc") {

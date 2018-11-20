@@ -109,7 +109,30 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
     switch (param_types->at(idx)) {
     case param_t::VALUE:        /* inout value; */
         if (etype == NONE) {
-            if (!dest || dest->use == LocalVar::ALUHI)
+            // alu_lo cannot be used as a synthetic local var as it is always
+            // written back to the memory. In non-dual mode, alu_hi is not
+            // written back, so it can be used as a local temp for a computation
+            // to be output on the action bus
+            // Therefore in some cases we can have a destination local which
+            // assigns to ALUHI. E.g. sampling_cntr in stful.p4
+            // Creating action sampling_alu_0[1596727] for stateful table .sampling_cntr
+            // void apply(inout bit<32> value, out bit<32> rv) {
+            //   bit<32> alu_hi_0/alu_hi <== Local Value for alu_hi
+            //   bit<32> in_value_12/in_value
+            //   rv = 0;
+            //   in_value_12/in_value = value;
+            //   alu_hi_0/alu_hi = 1; <== Local Value set
+            //   if (value >= 10) {
+            //     value = 1; }
+            //   if (in_value_12/in_value < 10) {
+            //     value = in_value_12/in_value + 1; }
+            //   if (in_value_12/in_value >= 10 || ig_intr_md_for_tm.copy_to_cpu != 0) {
+            //     rv = alu_hi_0/alu_hi; <== Local Value used for return value
+            //     }
+            // }
+            // In this case dest->use is LocalVar::NONE, so we also check for
+            // this value and set alu_write accordingly
+            if (!dest || dest->use == LocalVar::ALUHI || dest->use == LocalVar::NONE)
                 alu_write[field_idx] = true;
             etype = VALUE; }
         if (!opcode) opcode = "alu_a";
@@ -736,7 +759,8 @@ const IR::MAU::Instruction *CreateSaluInstruction::createInstruction() {
     case OUTPUT:
         if (regtype->width_bits() == 1) {
             BUG_CHECK(!predicate, "can't have predicate on 1-bit instruction");
-            opcode = onebit_cmpl ? "read_bitc" : "read_bit";
+            opcode = onebit ? onebit->name : "read_bit";
+            if (onebit_cmpl) opcode += "c";
             rv = onebit = new IR::MAU::Instruction(opcode);
             operands.clear();
             operands.push_back(new IR::MAU::SaluReg(IR::Type::Bits::get(1), "alu_lo", false));
