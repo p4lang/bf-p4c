@@ -593,7 +593,10 @@ configure_p4_build() {
     if $verbose ; then
         tail -n 10 ${testout}/p4-build-conf.log
     fi
-    run make install > ${testout}/p4-build-make.log || die
+    run make > ${testout}/p4-build-make.log || die
+    # make install fails for bf-switch for subsequent test sets
+    # TODO: fix this during refactor of runtest
+    run make install > ${testout}/p4-build-make_install.log
 }
 
 if $run_pd ; then
