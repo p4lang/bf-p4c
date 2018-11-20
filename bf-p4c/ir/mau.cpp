@@ -215,5 +215,5 @@ bool IR::MAU::Table::for_dleft() const {
 cstring IR::MAU::Action::externalName() const {
     if (auto *name_annot = annotations->getSingle("name"))
         return IR::Annotation::getName(name_annot);
-    return name.originalName;
+    return name.toString();
 }

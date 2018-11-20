@@ -797,9 +797,8 @@ void StatefulAttachmentSetup::Scan::setup_index_operand(const IR::Expression *in
     }
 
     if (both_hash_and_index) {
-        ::error("%s: The attached table %s is addressed by both hash and index in table %s, "
-                "which cannot be supported.", call->prim->srcInfo, synth2port->name, tbl->name);
-    }
+        ::error("%s: The attached %s is addressed by both hash and index in %s, "
+                "which cannot be supported.", call->prim->srcInfo, synth2port, tbl); }
 
     StatefulCallKey sck = std::make_pair(call, tbl);
     self.update_calls[sck] = index_expr;

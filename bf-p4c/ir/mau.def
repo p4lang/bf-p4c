@@ -262,6 +262,7 @@ class Table : BFN::Unit {
     int stage() const override {
         return logical_id < 0 ? -1 : logical_id / StageUse::MAX_LOGICAL_IDS; }
     gress_t thread() const override { return gress; }
+    toString { return "table " + (match_table ? match_table->name.toString() : name); }
     validate {
         std::set<cstring> gw_next;
         for (auto &gw : gateway_rows) {
@@ -373,7 +374,6 @@ class Table : BFN::Unit {
         // FIXME -- the action is visited, and this will be a 'revisit'
         attached.visit_children(v);
     }
-    toString { return "table " + (match_table ? match_table->name.toString() : name); }
 #apply
 }
 
@@ -638,8 +638,8 @@ class ActionArg : Expression {
     cstring     action_name;
     ID          name;
     ActionArg { if (!srcInfo) srcInfo = name.srcInfo; }
-    dbprint{ out << action_name << ':' << name; }
-    toString{ return name.name; }
+    dbprint { out << action_name << ':' << name; }
+    toString { return name.toString(); }
 }
 
 class StatefulCounter : Expression {
@@ -691,6 +691,7 @@ class Action : VLIWInstruction {
     bool hit_only() const { return default_allowed == false; }
     bool miss_only() const { return miss_action_only == true; }
 
+    toString { return name.toString(); }
     validate {
         ERROR_CHECK(!(hit_only() && miss_only()), "Action %s cannot be both a hit only and a "
                     "miss only action.  Can only be at most one of those categories", name);

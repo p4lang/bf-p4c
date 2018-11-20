@@ -1055,7 +1055,7 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "The attached table .* is addressed by both hash and index in table"
+  "The attached .* is addressed by both hash and index in table"
   extensions/p4_tests/p4_14/test_config_313_neg_test_addr_modes.p4
 )
 
