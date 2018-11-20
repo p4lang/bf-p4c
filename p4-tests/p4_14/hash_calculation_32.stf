@@ -1,5 +1,8 @@
-add test packet.packet_read:0x01010101 action0()
-add test packet.packet_read:0x02020202 action0()
+add hash_normal packet.packet_read:0x01010101 action0
+add port packet.packet_read:0x01010101 set_port(p:0x01)
 
-expect 1 01010101 02020202 03030303 ********
-packet 0 01010101 02020202 03030303 ffffffff
+expect 1 01010101 00000000 00000000 00000000 7bd5c66f 
+packet 0 01010101 00000000 00000000 00000000 ffffffff
+
+expect 1 01010101 31323334 35363738 393a3b3c 4df4abcd
+packet 1 01010101 31323334 35363738 393a3b3c eeeeeeee 

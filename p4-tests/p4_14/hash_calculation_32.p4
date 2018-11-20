@@ -26,7 +26,7 @@ field_list_calculation hash_0 {
     input {
         my_hash;
     }
-    algorithm : crc32;
+    algorithm : crc_32;
     output_width : 32;
 }
 
@@ -34,11 +34,11 @@ action action0() {
     modify_field_with_hash_based_offset(packet.hash_result, 0, hash_0, 4294967296);
 }
 
-action set_port() {
-    modify_field(standard_metadata.egress_spec, 1);
+action set_port(p) {
+    modify_field(standard_metadata.egress_spec, p);
 }
 
-table test {
+table hash_normal {
     reads {
         packet.packet_read : exact;
     }
@@ -47,7 +47,10 @@ table test {
     }
 }
 
-table test2 {
+table port {
+    reads {
+        packet.packet_read : exact;
+    }
     actions {
         set_port;
     }
@@ -55,6 +58,6 @@ table test2 {
 }
 
 control ingress {
-    apply(test);
-    apply(test2);
+    apply(hash_normal);
+    apply(port);
 }

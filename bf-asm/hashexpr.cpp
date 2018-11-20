@@ -164,6 +164,7 @@ class HashExpr::Random : HashExpr {
 class HashExpr::Crc : HashExpr {
     bitvec                      poly;
     bitvec                      init;
+    bitvec                      final_xor;
     std::map<int, Phv::Ref>     what;
     std::vector<Phv::Ref>       vec_what;
     bool                        reverse = false;
@@ -202,7 +203,8 @@ class HashExpr::Crc : HashExpr {
         hash_algorithm.poly |= poly.getrange(0, 32);
         hash_algorithm.init = init.getrange(32, 32) << 32;
         hash_algorithm.init |= init.getrange(0, 32);
-        hash_algorithm.final_xor = 0ULL;
+        hash_algorithm.final_xor = final_xor.getrange(0, 32);
+        hash_algorithm.final_xor |= final_xor.getrange(32, 32) << 32;
         hash_algorithm.extend = false;
         hash_algorithm.msb = false;
     }
@@ -372,8 +374,18 @@ HashExpr *HashExpr::create(gress_t gress, const value_t &what) {
                 }
 
                 if (what.vec.size > 3) {
-                    if (what[3].type == tINT) {
-                        rv->total_input_bits = what[3].i;
+                    if (what[3].type == tBIGINT) {
+                        rv->final_xor.setraw(what[3].bigi.data, what[3].bigi.size);
+                        i++;
+                    } else if (what[3].type == tINT) {
+                        rv->final_xor.setraw(what[3].i & 0xFFFFFFFF);
+                        i++;
+                    }
+                }
+
+                if (what.vec.size > 4) {
+                    if (what[4].type == tINT) {
+                        rv->total_input_bits = what[4].i;
                         i++;
                     }
                 }

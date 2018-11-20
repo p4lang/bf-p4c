@@ -177,6 +177,10 @@ stage <constant> <thread>:
                     crc(<int>, [<int>,] '{' <int> : <phv-location>, ... '}')
                         # crc hash of the given phv locations, at the specified offsets
                         # from the lsb of the crc input as a whole.
+                        # arguments are polynomial (Koopman Notation)
+                        # init shift register
+                        # final xor
+                        # total number of bits in the crc
                     crc_rev(...)
                         # bit-reversed (little endian instead of the defaul big endian) crc
                     <expression> ^ <expression>

@@ -425,6 +425,13 @@ struct IXBar {
         safe_vector<Byte> atcam_partition(int *hash_group = nullptr) const;
         int search_buses_single() const;
         int gateway_group() const;
+        int total_input_bits() const {
+            int rv = 0;
+            for (auto fl : field_list_order) {
+                rv += fl.size();
+            }
+            return rv;
+        }
     };
 
     /** The purpose of this structure is to capture that multiple stretch of fields can
@@ -769,7 +776,7 @@ struct IXBar {
     bool allocHashDistSelMod(int bits_required, const unsigned &hash_table_input,
         HashDistAllocParams &hdap, int p4_hash_bits, cstring name);
     bitvec determine_final_xor(const IR::MAU::hash_function *hf,
-        std::map<int, le_bitrange> &bit_starts);
+        std::map<int, le_bitrange> &bit_starts, int total_input_bits);
     void determine_proxy_hash_alg(const IR::MAU::Table *tbl, Use &use, int group);
 };
 

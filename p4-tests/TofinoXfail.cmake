@@ -15,7 +15,6 @@ set (TOFINO_XFAIL_TESTS # this is intentionally empty because xfails should be a
 # the reasons need more characterization
 if (HARLYN_STF_tofino AND NOT ENABLE_STF2PTF)
 set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
-  extensions/p4_tests/p4_14/hash_calculation_32.p4
   # default drop packet instead of writing to port 0
   testdata/p4_16_samples/issue635-bmv2.p4
   testdata/p4_16_samples/issue655-bmv2.p4

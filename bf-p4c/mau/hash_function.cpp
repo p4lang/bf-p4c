@@ -26,6 +26,8 @@ static std::map<cstring, bfn_crc_alg_t> standard_crcs_t = {
     { "crc_16_bypass", CRC_16_BYPASS },
     { "crc_16_dds_110", CRC_16_DDS_110 },
     { "crc_16_dect", CRC_16_DECT },
+    { "crc_16_dect_r", CRC_16_DECT_R },
+    { "crc_16_dect_x", CRC_16_DECT_X },
     { "crc_16_dnp", CRC_16_DNP },
     { "crc_16_en_13757", CRC_16_EN_13757 },
     { "crc_16_genibus", CRC_16_GENIBUS },
@@ -53,6 +55,7 @@ static std::map<cstring, bfn_crc_alg_t> standard_crcs_t = {
     { "jamcrc", JAMCRC },
     { "xfer", XFER },
     { "crc_64", CRC_64 },
+    { "crc_64", CRC_64_GO_ISO },
     { "crc_64_we", CRC_64_WE },
     { "crc_64_jones", CRC_64_JONES }
 };
@@ -146,7 +149,6 @@ const IR::Expression *IR::MAU::hash_function::convertHashAlgorithmBFN(Util::Sour
     std::string alg_name = algorithm.name + "";
     std::transform(alg_name.begin(), alg_name.end(), alg_name.begin(), ::tolower);
 
-    LOG1("Alg name " << alg_name);
     // Setting the msb or extend flags, and removing them from the name
     while (true) {
         size_t pos = 0;
@@ -189,11 +191,13 @@ const IR::Expression *IR::MAU::hash_function::convertHashAlgorithmBFN(Util::Sour
     bfn_hash_algorithm_t hash_alg;
     hash_alg.hash_bit_width = 0;
     bool hash_error = false;
+    bool upper_bit_set = true;
 
     // Determines the crc functions through the 3rd party library
     if (standard_crcs_t.find(alg_name) != standard_crcs_t.end()) {
         initialize_algorithm(&hash_alg, CRC_DYN, msb, extend, standard_crcs_t.at(alg_name));
         crc_algorithm_set = true;
+        upper_bit_set = false;
     } else if (alg_name == "identity" || alg_name == "random") {
         mc_name = alg_name + "_hash";
     } else if (direct_crc_string_conversion(&hash_alg, alg_name, srcInfo)) {
@@ -219,7 +223,12 @@ const IR::Expression *IR::MAU::hash_function::convertHashAlgorithmBFN(Util::Sour
     if (crc_algorithm_set) {
         mpz_class poly, init, final_xor;
         mpz_import(poly.get_mpz_t(), 1, 0, sizeof(hash_alg.poly), 0, 0, &hash_alg.poly);
-        poly |= (1 << hash_alg.hash_bit_width);
+
+        if (!upper_bit_set) {
+             mpz_class upper_bit = 1;
+             upper_bit <<= hash_alg.hash_bit_width;
+             poly |= upper_bit;
+        }
         mpz_import(init.get_mpz_t(), 1, 0, sizeof(hash_alg.init), 0, 0, &hash_alg.init);
         mpz_import(final_xor.get_mpz_t(), 1, 0, sizeof(hash_alg.final_xor), 0, 0,
                    &hash_alg.final_xor);
@@ -459,7 +468,7 @@ void IR::MAU::hash_function::build_algorithm_t(bfn_hash_algorithm_ *alg) const {
     alg->hash_bit_width = size;
     alg->msb = msb;
     alg->reverse = reverse;
-    alg->poly = poly;
+    alg->poly = (poly << 1) | 1;
     alg->init = init;
     alg->final_xor = final_xor;
 }

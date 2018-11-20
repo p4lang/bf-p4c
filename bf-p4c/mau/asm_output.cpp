@@ -282,10 +282,9 @@ std::ostream &operator<<(std::ostream &out, const FormatHash &hash) {
         out << "stripe(crc";
         if (hash.func.reverse) out << "_rev";
         out << "(0x" << hex(hash.func.poly) << ", ";
-        if (hash.func.init) {
-            out << "0x" << hex(hash.func.init) << ", ";
-            out << hash.total_bits << ", ";
-        }
+        out << "0x" << hex(hash.func.init) << ", ";
+        out << "0x" << hex(hash.func.final_xor) << ", ";
+        out << hash.total_bits << ", ";
         out << *hash.match_data_map << ")";
         // FIXME -- final_xor needs to go into the seed for the hash group
         out << ")";
