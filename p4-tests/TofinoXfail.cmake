@@ -262,7 +262,6 @@ p4c_add_xfail_reason("tofino"
   "In table .*, the number of bytes required to go through the immediate pathway"
   extensions/p4_tests/p4_14/test_config_311_hash_adb.p4
   ../glass/testsuite/p4_tests/c1/COMPILER-868/comp_868.p4
-  switch_ent_fin_postcard
   switch_8.4_generic_int_leaf
   )
 
@@ -280,9 +279,15 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "No tables placeable, but not all tables placed?"
-  switch_msdc_spine_int
   switch_msdc_ipv4
   switch_8.4_msdc_ipv4
+  switch_ent_fin_postcard
+  switch_8.4_ent_fin_postcard
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Compiler Bug.*How did we create a slice list at a non byte boundary?"
+  switch_msdc_spine_int
   switch_8.4_msdc_spine_int
   )
 
@@ -292,12 +297,6 @@ p4c_add_xfail_reason("tofino"
   switch_8.4_msdc_leaf_int
   switch_l3_heavy_int_leaf
   switch_8.4_l3_heavy_int_leaf
-  )
-
-p4c_add_xfail_reason("tofino"
-  "Compiler Bug.*Slicing the following supercluster is taking too long"
-  switch_ent_fin_postcard
-  switch_8.4_ent_fin_postcard
   )
 
 p4c_add_xfail_reason("tofino"

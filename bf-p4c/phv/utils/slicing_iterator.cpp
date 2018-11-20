@@ -493,19 +493,31 @@ PHV::SlicingIterator::SlicingIterator(
                          carryOver);
                     continue;
                 } else {
-                    if (carryOver - slice.size() <= 0) {
+                    int carryOverAfterThisSlice = carryOver - slice.size();
+                    if (carryOverAfterThisSlice <= 0) {
                         // Check for padding fields and setbit on the vector here.
                         intraListSize += carryOver;
                         LOG6("\t\t\tintraListSize increased to " << intraListSize <<
                              " due to carryOver.");
                         int sliceListSizeWithoutPadding = 0;
                         int lastRightOffset = -1;
+                        // Current slice is part of the previous slice list if the carry over after
+                        // this slice is going to be 0.
+                        if (carryOverAfterThisSlice == 0) seenFieldSlices.push_back(slice);
                         for (auto& sl : seenFieldSlices) {
                             if (!sl.field()->isCompilerGeneratedPaddingField()) {
                                 sliceListSizeWithoutPadding += sl.size();
                                 lastRightOffset = sliceLocations[sl].second;
                             }
                             exactSliceListSize[sl] = intraListSize;
+                            // Set the correct right limit for the field slice. If the rounded up
+                            // size of the slice list from its beginning to the current slice is
+                            // equal to the size of the new slice list (represented by
+                            // intraListSize), then it means we need to slice to the right of slice
+                            // sl, and so we set its right limit to -1.
+                            int roundedUpSizeSoFar = 8 * ROUNDUP(sliceListSizeWithoutPadding, 8);
+                            if (roundedUpSizeSoFar == intraListSize)
+                                sliceLocations[sl].second = -1;
                             LOG6("\t\t  E. Setting " << sl << " co-ordinates to: " <<
                                  get_slice_coordinates(exactSliceListSize[sl], sliceLocations[sl]));
                         }
@@ -516,12 +528,13 @@ PHV::SlicingIterator::SlicingIterator(
                                  get_slice_coordinates(exactSliceListSize[slice],
                                      sliceLocations[slice]));
                             alreadyConsidered.insert(slice);
-                            if (lastRightOffset != -1)
-                                required_slices_i.setbit(sliceLocations[slice].second);
                         } else {
                             allSlicesGoToNewSliceList = true;
                             LOG6("\t\t\tMark all slices as part of new slice list.");
                         }
+                        // We have to slice at the lastRightOffset bit.
+                        if (lastRightOffset != -1)
+                            required_slices_i.setbit(lastRightOffset);
                         seenFieldSlices.clear();
                         intraListSize = 0;
                         continue;
