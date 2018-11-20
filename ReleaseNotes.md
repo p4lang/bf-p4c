@@ -1,6 +1,37 @@
 # Release Notes
 
 ## Version 8.5.0-pr.1
+The **Get to par** release
+
+New features
+  - Proxy hash table support
+  - MinMaxAction -- support for 128-bit registers (JBay)
+  - Configure empty MAU pipe
+
+PHV
+  - Bridged metadata packing
+  - Digest constraints
+
+Parser/Deparser
+  - Extract large constant metadata
+
+Primitives and pragmas
+  - Pragma container_size enforced when slicing
+  - Pragma pa_no_init with live range shrinking
+  - Pragma field_list_field_slice (slicing in P4-14) support
+
+Tofino 2
+  - Ghost thread support and fixes
+  - CLOT checksum
+  - Disable metatada initialization for dark and mocha containers
+
+Notable bug fixes
+  - Fix pipeline timing latency issues
+  - p4i visualization fixes
+  - phase0 names consistent with context.json
+
+
+## Version 8.5.0-pr.1
 **Slicing and dicing** release
 
 New features
