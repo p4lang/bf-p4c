@@ -77,11 +77,23 @@ p4c_add_ptf_test_with_ptfdir (
     "${testExtraArgs}" ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/tor.ptf)
 
 # p4-tests has all the includes at the same level with the programs.
-# For JBay we only add emulation
 set (BFN_EXCLUDE_PATTERNS "tofino\\.p4")
-set (BFN_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/emulation/*.p4")
+set (BFN_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/emulation/*.p4"
+               "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/atomic_mod/*.p4"
+               "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/basic_switching/*.p4"
+               "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/resubmit/*.p4"
+               "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/multicast_test/*.p4"
+               "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/mirror_test/*.p4"
+               "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/fast_reconfig/*.p4")
 bfn_find_tests ("${BFN_TESTS}" BFN_TESTS_LIST EXCLUDE "${BFN_EXCLUDE_PATTERNS}")
 bfn_add_p4factory_tests("tofino2" "smoketest_programs" BFN_TESTS_LIST)
+
+bfn_set_ptf_ports_json_file("tofino2" "extensions/p4_tests/p4_14/p4-tests/programs/multicast_test/multicast_test.p4"
+                            "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/ptf-tests/multicast_test/ports.json")
+bfn_set_ptf_ports_json_file("tofino2" "extensions/p4_tests/p4_14/p4-tests/programs/fast_reconfig/fast_reconfig.p4"
+                            "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/ptf-tests/fast_reconfig/ports.json")
+bfn_set_ptf_ports_json_file("tofino2" "extensions/p4_tests/p4_14/p4-tests/programs/mirror_test/mirror_test.p4"
+                            "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/ptf-tests/mirror_test/ports.json")
 
 include(SwitchJBay.cmake)
 include(JBayXfail.cmake)

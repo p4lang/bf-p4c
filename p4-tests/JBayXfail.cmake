@@ -222,6 +222,13 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_14/easy_no_match.p4
   fabric.p4
   tor.p4
+  extensions/p4_tests/p4_14/p4-tests/programs/fast_reconfig/fast_reconfig.p4
+  )
+
+# P4C-1228
+p4c_add_xfail_reason("tofino2"
+  "TTransportException: TSocket read 0 bytes"
+  extensions/p4_tests/p4_14/p4-tests/programs/multicast_test/multicast_test.p4
   )
 
 endif() # PTF_REQUIREMENTS_MET

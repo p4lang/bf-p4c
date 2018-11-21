@@ -690,6 +690,7 @@ if $run_pd ; then
                              $port_map_file \
                              $test_port \
                              $PTF_EXTRA_ARGS"
+        echo $PTF_CMD
         run $PTF_CMD
         ptf_test_status=$?
         clean_process "ptf_runner"
