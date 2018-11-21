@@ -156,76 +156,6 @@ class Allocation {
  public:
     using FieldStatus = ordered_set<AllocSlice>;
 
-    /// Information about PHV containers in each MAU group used to generate occupancy metrics
-    struct MauGroupInfo {
-        size_t  size;
-        int     groupID;
-        size_t  containersUsed;
-        size_t  bitsUsed;
-        size_t  totalContainers;
-
-        MauGroupInfo() : size(0), groupID(0), containersUsed(0), bitsUsed(0), totalContainers(0) {}
-
-        explicit MauGroupInfo(size_t sz, int i, bool cont, size_t bits, size_t total)
-            : size(sz), groupID(i), bitsUsed(bits), totalContainers(total) {
-            containersUsed = cont ? 1 : 0;
-        }
-
-        void update(bool cont, size_t bits) {
-            containersUsed += (cont ? 1 : 0);
-            bitsUsed += bits;
-        }
-    };
-
-    struct TagalongCollectionInfo {
-        std::map<PHV::Type, size_t> containersUsed;
-        std::map<PHV::Type, size_t> bitsUsed;
-        std::map<PHV::Type, size_t> totalContainers;
-
-        static std::string
-        formatPercent(int div, int den) {
-            std::stringstream ss;
-            ss << boost::format("(%=6.3g%%)") % (100.0 * div / den);
-            return ss.str();
-        }
-
-        static std::string
-        formatUsage(int used, int total) {
-            std::stringstream ss;
-            ss << used << " ";
-            ss << formatPercent(used, total);
-            return ss.str();
-        }
-
-        size_t getTotalUsedBits() {
-            size_t rv = 0;
-            for (auto kv : bitsUsed)
-                rv += kv.second;
-            return rv;
-        }
-
-        size_t getTotalAvailableBits() {
-            size_t rv = 0;
-            for (auto& kv : totalContainers)
-                rv += (size_t)kv.first.size() * kv.second;
-            return rv;
-        }
-
-        std::string printUsage(PHV::Type type) {
-            auto used = containersUsed[type];
-            auto total = totalContainers[type];
-
-            return formatUsage(used, total);
-        }
-
-        std::string printTotalUsage() {
-            auto total = getTotalAvailableBits();
-            auto used = getTotalUsedBits();
-
-            return formatUsage(used, total);
-        }
-    };
-
  protected:
     // These are copied from parent to child on creating a transaction, and
     // from child to parent on committing.
@@ -421,9 +351,6 @@ class Allocation {
     /// @returns a summary of the status of each container by type and gress.
     virtual cstring getSummary(const PhvUse& uses) const = 0;
 
-    /// @returns a visual representation of the groupwise occupancy metrics.
-    virtual cstring getOccupancyMetrics(const ordered_map<PHV::Container, int>& used) const = 0;
-
     /// Create a Transaction based on this Allocation.  @see PHV::Transaction for details.
     virtual Transaction makeTransaction() const;
 
@@ -462,6 +389,8 @@ class Allocation {
 };
 
 class ConcreteAllocation : public PHV::Allocation {
+    friend class AllocationReport;
+
     /** Create an allocation from a vector of container IDs.  Physical
      * containers that the Device pins to a particular gress are
      * initialized to that gress.
@@ -501,9 +430,6 @@ class ConcreteAllocation : public PHV::Allocation {
 
     /// @returns a summary of the status of each container by type and gress.
     cstring getSummary(const PhvUse& uses) const override;
-
-    /// @returns a visual representation of the groupwise occupancy metrics.
-    cstring getOccupancyMetrics(const ordered_map<PHV::Container, int>& used) const override;
 };
 
 
@@ -563,9 +489,6 @@ class Transaction : public Allocation {
     /// @returns a summary of the status of each container by type and gress.
     /// @warning not yet implemented.
     cstring getSummary(const PhvUse& uses) const override;
-
-    /// @returns a visual representation of the groupwise occupancy metrics.
-    cstring getOccupancyMetrics(const ordered_map<PHV::Container, int>& used) const override;
 
     /// @returns a summary of status of each container allocated in this transaction.
     cstring getTransactionSummary() const;

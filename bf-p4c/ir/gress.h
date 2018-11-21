@@ -18,6 +18,7 @@ enum gress_t {
 inline gress_t operator~(const gress_t& gress) { return gress_t((gress & 1) ^ 1); }
 
 cstring toString(gress_t gress);
+cstring toSymbol(gress_t gress);
 cstring createThreadName(gress_t gress, cstring name);
 
 std::ostream& operator<<(std::ostream& out, gress_t gress);

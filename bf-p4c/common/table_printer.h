@@ -20,8 +20,10 @@
 
 class TablePrinter {
  public:
-    TablePrinter(std::ostream &s, std::vector<std::string> headers, bool alignLeft = false)
-      : _s(s), _headers(headers), _alignLeft(alignLeft) {
+    enum Align { LEFT, CENTER, RIGHT };
+
+    TablePrinter(std::ostream &s, std::vector<std::string> headers, Align align = RIGHT)
+      : _s(s), _headers(headers), _align(align) {
         for (auto& h : headers)
             _colWidth.push_back(h.length());
     }
@@ -31,13 +33,22 @@ class TablePrinter {
 
         _data.push_back(row);
 
-        for (unsigned i = 0; i < row.size(); i++)
+        for (unsigned i = 0; i < row.size(); i++) {
             if (row[i].length() > _colWidth[i])
                 _colWidth[i] = row[i].length();
+        }
     }
 
     void addSep() {
         _seps.insert(_data.size());
+    }
+
+    void addBlank() {
+        unsigned cols = _colWidth.size();
+        if (cols) {
+            std::vector<std::string> blank(cols, "");
+            addRow(blank);
+        }
     }
 
     void print() const {
@@ -49,7 +60,7 @@ class TablePrinter {
 
         for (unsigned i = 0; i < _data.size(); i++) {
             printRow(_data.at(i));
-            if (_seps.count(i)) printSep();
+            if (_seps.count(i+1)) printSep();
         }
 
         printSep();
@@ -68,10 +79,12 @@ class TablePrinter {
         _s << std::endl;
     }
 
-    void printCell(unsigned col, const std::string& data) const {
+    void printCell(unsigned col, std::string data) const {
         unsigned width = _colWidth.at(col);
-        if (_alignLeft) _s << std::left;
+        if (_align == LEFT) _s << std::left;
         _s << std::setw(width + cellPad);
+        if (_align == CENTER)
+            data += std::string((width + cellPad - data.length() + 1) / 2, ' ');
         _s << data;
     }
 
@@ -94,7 +107,7 @@ class TablePrinter {
     std::vector<std::string> _headers;
     std::vector<unsigned> _colWidth;
 
-    bool _alignLeft = false;
+    Align _align = RIGHT;
     const unsigned cellPad = 2;
 };
 

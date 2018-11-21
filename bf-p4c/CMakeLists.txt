@@ -362,6 +362,7 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/pragma/pa_solitary.cpp
   phv/utils/slicing_iterator.cpp
   phv/utils/utils.cpp
+  phv/utils/report.cpp
   )
 if (ENABLE_JBAY)
   list (APPEND BF_P4C_BACKEND_PHV_SRCS
@@ -412,6 +413,7 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/pragma/phv_pragmas.h
   phv/utils/slicing_iterator.h
   phv/utils/utils.h
+  phv/utils/report.h
   )
 if (ENABLE_JBAY)
   list (APPEND BF_P4C_BACKEND_PHV_HDRS

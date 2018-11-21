@@ -11,6 +11,14 @@ cstring toString(gress_t gress) {
   BUG("Unexpected *gress value");
 }
 
+cstring toSymbol(gress_t gress) {
+  switch (gress) {
+    case INGRESS: return "I";
+    case EGRESS: return "E";
+    case GHOST: return "G"; }
+  BUG("Unexpected *gress value");
+}
+
 cstring createThreadName(gress_t gress, cstring name) {
     return toString(gress) + "::" + name;
 }

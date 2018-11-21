@@ -109,7 +109,7 @@ class CharacterizeParser : public Inspector {
 
         TablePrinter tp(std::clog,
             {"State", "Match", "8-bit", "16-bit", "32-bit", "Total Extracts"},
-            /* alignLeft */ true);
+            TablePrinter::Align::LEFT);
 
         auto sorted = cgl.graphs().at(parser)->topological_sort();
 
