@@ -657,66 +657,44 @@ void MauAsmOutput::emit_ixbar_hash_exact(std::ostream &out, indent_t indent,
  */
 void MauAsmOutput::emit_ixbar_hash_dist_ident(std::ostream &out, indent_t indent,
         safe_vector<Slice> &match_data, const IXBar::Use::HashDistHash &hdh,
-        const IR::Expression *hd_expr) const {
-    if (auto le = hd_expr->to<IR::ListExpression>()) {
-        for (auto it1 = le->components.begin(); it1 != le->components.end(); ++it1) {
-            le_bitrange bits1;
-            auto field1 = phv.field(*it1, &bits1);
-            for (auto it2 = le->components.begin(); it2 != it1; ++it2) {
-                le_bitrange bits2;
-                auto field2 = phv.field(*it2, &bits2);
-                BUG_CHECK(field1 != field2 || !bits1.overlaps(bits2),
-                          "Duplicated input in identity hash: %s and %s", *it2, *it1); } } }
+        const safe_vector<PHV::FieldSlice> &field_list_order) const {
+    int bits_seen = 0;
+    for (auto it = field_list_order.rbegin(); it != field_list_order.rend(); it++) {
+        auto &fs = *it;
+        for (auto &sl : match_data) {
+            if (!(fs.field() && fs.field() == sl.get_field()))
+                continue;
+            auto boost_sl = toClosedRange<RangeUnit::Bit, Endian::Little>
+                                  (fs.range().intersectWith(sl.range()));
+            if (boost_sl == boost::none)
+                continue;
 
-    for (auto &sl : match_data) {
-        int slice_bits_seen = 0;
-        if (auto le = hd_expr->to<IR::ListExpression>()) {
-            for (auto expr : le->components) {
-                le_bitrange bits;
-                auto field = phv.field(expr, &bits);
-                if (field == sl.get_field() && bits.contains(sl.get_lo())) {
-                    slice_bits_seen -= bits.lo;
-                    break; }
-                slice_bits_seen += bits.size(); } }
-
-        int sl_lo = sl.get_lo() + slice_bits_seen;
-        int sl_hi = sl.get_hi() + slice_bits_seen;
-        auto bv = bitvec(hdh.bit_mask);
-        int start_bit = bv.ffs();
-        while (start_bit >= 0) {
-            int end_bit = bv.ffz(start_bit);
-            for (auto position : hdh.bit_starts) {
-                if (!(position.first >= start_bit && position.first < end_bit))
+            // Which slice bits of this field are overlapping
+            le_bitrange field_overlap = *boost_sl;
+            int ident_range_lo = bits_seen + field_overlap.lo - fs.range().lo;
+            int ident_range_hi = ident_range_lo + field_overlap.size() - 1;
+            le_bitrange identity_range = { ident_range_lo, ident_range_hi };
+            for (auto bit_pos : hdh.bit_starts) {
+                // Portion of the p4_output_hash that overlaps with the identity range
+                auto boost_sl2 = toClosedRange<RangeUnit::Bit, Endian::Little>
+                                 (identity_range.intersectWith(bit_pos.second));
+                if (boost_sl2 == boost::none)
                     continue;
-                auto br = position.second;
-                int hash_lo = position.first;
-                int hash_hi = position.first + br.size() - 1;
-
-                // Is slice outside of the bitrange
-                if (br.hi < sl_lo || br.lo > sl_hi)
-                    continue;
-
-                // Shrink slice and bitrange until they are the same size
-                auto adapted_sl = sl;
-                if (sl_lo < br.lo)
-                    adapted_sl.shrink_lo(br.lo - sl_lo);
-                else
-                    hash_lo += (sl_lo - br.lo);
-                if (sl_hi > br.hi)
-                    adapted_sl.shrink_hi(sl_hi - br.hi);
-                else
-                    hash_hi -= br.hi - sl_hi;
-
+                le_bitrange ident_overlap = *boost_sl2;
+                int hash_lo = bit_pos.first + (ident_overlap.lo - bit_pos.second.lo);
+                int hash_hi = hash_lo + ident_overlap.size() - 1;
+                int field_range_lo = field_overlap.lo + (ident_overlap.lo - identity_range.lo);
+                int field_range_hi = field_range_lo + ident_overlap.size() - 1;
+                Slice asm_sl(fs.field(), field_range_lo, field_range_hi);
                 safe_vector<Slice> ident_slice;
-                ident_slice.push_back(adapted_sl);
-
-                out << indent << hash_lo << ".." << hash_hi;
-                out << ": " << FormatHash(&ident_slice, nullptr, nullptr,
-                                          IR::MAU::hash_function::identity())
+                ident_slice.push_back(asm_sl);
+                out << indent << hash_lo << ".." << hash_hi << ": "
+                    << FormatHash(&ident_slice, nullptr, nullptr,
+                                  IR::MAU::hash_function::identity())
                     << std::endl;
             }
-            start_bit = bv.ffs(end_bit);
         }
+        bits_seen += fs.size();
     }
 }
 
@@ -834,8 +812,7 @@ void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent,
                                    safe_vector<Slice> &match_data,
                                    safe_vector<Slice> &ghost,
                                    const IXBar::Use *use, int hash_group,
-                                   int &ident_bits_prev_alloc,
-                                   const IR::Expression *hd_expr) const {
+                                   int &ident_bits_prev_alloc) const {
     if (!use->way_use.empty()) {
         emit_ixbar_hash_exact(out, indent, match_data, ghost, use, hash_group,
                               ident_bits_prev_alloc);
@@ -882,7 +859,7 @@ void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent,
     if (use->hash_dist_hash.allocated) {
         auto &hdh = use->hash_dist_hash;
         if (hdh.algorithm.type == IR::MAU::hash_function::IDENTITY) {
-            emit_ixbar_hash_dist_ident(out, indent, match_data, hdh, hd_expr);
+            emit_ixbar_hash_dist_ident(out, indent, match_data, hdh, use->field_list_order);
             return;
         }
 
@@ -907,42 +884,11 @@ void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent,
                                           total_bits, &br);
             out << std::endl;
         }
-
-        /*
-        for (int i = 0, sliceIdx = 0; i < IXBar::HASH_DIST_SLICES; i++) {
-            if (((1 << i) & hdh.slice) == 0) continue;
-            int first_bit = -1;
-            int last_bit = -1;
-            bool first_bit_found = false;
-            bool last_bit_found = false;
-            for (int j = i * IXBar::HASH_DIST_BITS; j < (i + 1) * IXBar::HASH_DIST_BITS; j++) {
-                if (!first_bit_found) {
-                    if (((UINT64_C(1) << j) & hdh.bit_mask)) {
-                        first_bit_found = true;
-                        first_bit = j;
-                    }
-                    continue;
-                }
-                if (((UINT64_C(1) << j) & hdh.bit_mask) == 0 && !last_bit_found) {
-                    last_bit_found = true;
-                    last_bit = j - 1;
-                }
-                if (((UINT64_C(1) << j) & hdh.bit_mask) != 0 && last_bit_found) {
-                    BUG("Split in address bits for hash distribution");
-                }
-            }
-            if (last_bit == -1)
-                last_bit = (i + 1) * IXBar::HASH_DIST_BITS - 1;
-            out << indent << first_bit << ".." << last_bit;
-            out << ": " << FormatHash(&match_data, nullptr, nullptr, hdh.algorithm) << std::endl;
-            sliceIdx++;
-        }
-        */
     }
 }
 
 void MauAsmOutput::emit_single_ixbar(std::ostream &out, indent_t indent, const IXBar::Use *use,
-        const TableMatch *fmt, const IR::Expression *hd_expr) const {
+        const TableMatch *fmt) const {
     std::map<int, std::map<int, Slice>> sort;
     std::map<int, std::map<int, Slice>> midbytes;
     emit_ixbar_gather_bytes(use->use, sort, midbytes, use->ternary);
@@ -969,7 +915,7 @@ void MauAsmOutput::emit_single_ixbar(std::ostream &out, indent_t indent, const I
                 // FIXME: This is obviously an issue for larger selector tables,
                 //  whole function needs to be replaced
                 emit_ixbar_hash(out, indent, match_data, ghost, use, hash_group,
-                                ident_bits_prev_alloc, hd_expr);
+                                ident_bits_prev_alloc);
                 --indent;
             }
             out << indent++ << "hash group " << hash_group << ":" << std::endl;
@@ -1007,8 +953,7 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, const IXBar::U
 
     if (hash_dist_use) {
         for (auto &hash_dist : *hash_dist_use) {
-            emit_single_ixbar(out, indent, &(hash_dist.use), nullptr,
-                              hash_dist.original_hd->field_list);
+            emit_single_ixbar(out, indent, &(hash_dist.use), nullptr);
         }
     }
 

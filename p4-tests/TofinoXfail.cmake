@@ -112,6 +112,7 @@ if (PTF_REQUIREMENTS_MET)
     05-simple_l3_arping
     extensions/p4_tests/p4_16/ingress_checksum.p4    #TODO(zma) use @calculated_field_update_location to force ingress update
     basic_switching
+    smoketest_switch_16_IdentityHash
     )
 
 # BRIG-686

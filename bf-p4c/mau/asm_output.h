@@ -81,7 +81,7 @@ class MauAsmOutput : public MauInspector {
             const safe_vector<PHV::FieldSlice> &field_list_order, int &total_bits) const;
     void emit_ixbar_hash(std::ostream &out, indent_t indent, safe_vector<Slice> &match_data,
             safe_vector<Slice> &ghost, const IXBar::Use *use, int hash_group,
-            int &ident_bits_prev_alloc, const IR::Expression *hd_expr) const;
+            int &ident_bits_prev_alloc) const;
     void emit_ixbar_hash_exact(std::ostream &out, indent_t indent, safe_vector<Slice> &match_data,
             safe_vector<Slice> &ghost, const IXBar::Use *use, int hash_group,
             int &ident_bits_prev_alloc) const;
@@ -93,7 +93,7 @@ class MauAsmOutput : public MauInspector {
             safe_vector<Slice> &match_data, Slice *ghost, int start_bit, int end_bit) const;
     void emit_ixbar_hash_dist_ident(std::ostream &out, indent_t indent,
             safe_vector<Slice> &match_data, const IXBar::Use::HashDistHash &hdh,
-             const IR::Expression *hd_expr) const;
+            const safe_vector<PHV::FieldSlice> &field_list_order) const;
     void emit_ixbar_meter_alu_hash(std::ostream &out, indent_t indent,
             safe_vector<Slice> &match_data, const IXBar::Use::MeterAluHash &mah,
             const safe_vector<PHV::FieldSlice> &field_list_order) const;
@@ -102,7 +102,7 @@ class MauAsmOutput : public MauInspector {
             const safe_vector<PHV::FieldSlice> &field_list_order) const;
 
     void emit_single_ixbar(std::ostream& out, indent_t indent, const IXBar::Use *use,
-            const TableMatch *fmt, const IR::Expression *hd_expr = nullptr) const;
+            const TableMatch *fmt) const;
     void emit_memory(std::ostream &out, indent_t, const Memories::Use &) const;
     void emit_gateway(std::ostream &out, indent_t gw_indent, const IR::MAU::Table *tbl,
              bool hash_action, cstring next_hit, cstring &gw_miss) const;

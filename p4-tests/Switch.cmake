@@ -97,6 +97,13 @@ p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16" ${SWITCH_P4_16}
   "${testExtraArgs} -ptf -bfrt -to 3600" ${SWITCH_P4_16_PTF})
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_16"
         "all
+        ^switch_tests.L2FloodTest
+        ^switch_tests.IPv4MalformedPacketsTest
+        ^switch_tests.L3MulticastTest
+        ^switch_tests.L2StpTest
+        ^switch_tests.L2LagPVCheckTest
+        ^switch_tests.L2VlanTest
+        ^switch_tests.QoSTest
         ^switch_hostif.HostIfPingTest
         ^switch_hostif.HostIfRxTest")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_HostIfPingTest" ${SWITCH_P4_16}
@@ -107,6 +114,17 @@ p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_HostIfRxTest" ${SWIT
   "${testExtraArgs} -ptf -bfrt -to 3600" ${SWITCH_P4_16_PTF})
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_HostIfRxTest"
         "switch_hostif.HostIfRxTest")
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_IdentityHash" ${SWITCH_P4_16}
+  "${testExtraArgs} -ptf -bfrt -to 3600" ${SWITCH_P4_16_PTF})
+bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_IdentityHash"
+        "switch_tests.L2FloodTest
+         switch_tests.IPv4MalformedPacketsTest
+         switch_tests.L3MulticastTest
+         switch_tests.L2StpTest
+         switch_tests.L2LagPVCheckTest
+         switch_tests.L2VlanTest
+         switch_tests.QoSTest")
+
 
 #p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
 #  "switch_p4_16" ${switch_p4_16} "${testExtraArgs} -tofino2 -arch t2na" "")
@@ -115,6 +133,7 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_HostIfRxTest"
 set_tests_properties("tofino/smoketest_switch_16" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_16_HostIfPingTest" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_16_HostIfRxTest" PROPERTIES TIMEOUT 3600)
+set_tests_properties("tofino/smoketest_switch_16_IdentityHash" PROPERTIES TIMEOUT 3600)
 
 # Switch master MSDC_PROFILE tests
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_msdc" ${SWITCH_P4}

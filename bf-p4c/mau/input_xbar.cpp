@@ -2219,16 +2219,14 @@ bool IXBar::allocSelector(const IR::MAU::Selector *as, const IR::MAU::Table *tbl
     // asm_output can easily locate the positions of all of the the associated fields
     if (mah.algorithm.type == IR::MAU::hash_function::IDENTITY) {
         int bits_seen = 0;
-        for (auto ixbar_read : tbl->match_key) {
-            if (ixbar_read->match_type.name != "selector") continue;
-            le_bitrange bits = { 0, 0 };
-            auto *finfo = phv.field(ixbar_read->expr, &bits);
-            BUG_CHECK(finfo, "Null selector field in PHV allocation");
+        for (auto it = alloc.field_list_order.rbegin(); it != alloc.field_list_order.rend(); it++) {
+            auto fs = *it;
+            le_bitrange bits = fs.range();
             int diff = bits_seen + bits.size() - mode_width_bits;
             if (diff > 0) {
                 bits.hi -= diff;
             }
-            mah.identity_positions[finfo].emplace_back(bits_seen, bits);
+            mah.identity_positions[fs.field()].emplace_back(bits_seen, bits);
             bits_seen += bits.size();
             if (bits_seen >= mode_width_bits)
                 break;
