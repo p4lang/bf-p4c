@@ -79,13 +79,23 @@ bool PardePhvConstraints::preorder(const IR::BFN::Digest* digest) {
                 BUG_CHECK(roundedUpSizeInBytes <= 4, "The rounded up size of field %1% in bytes "
                           "here cannot be greater than 4.", f->name);
                 if (roundedUpSizeInBytes == 1) {
-                    sizePragmas.check_and_add_constraint(f, { PHV::Size::b8});
+                    if (!sizePragmas.check_and_add_constraint(f, { PHV::Size::b8})) {
+                        ::error("To fit within learning quanta size constraints, the field %1% must"
+                                " occupy an 8-bit container. However, there are conflicting "
+                                "pa_container_size constraints on the field", f->name);
+                        continue;
+                    }
                     // Setting the fields to no split ensures that they will be assigned to the same
                     // container.
                     f->set_no_split(true);
                     LOG2("\tSetting " << f->name << " to 8-bit container and no-split");
                 } else if (roundedUpSizeInBytes == 2) {
-                    sizePragmas.check_and_add_constraint(f, { PHV::Size::b16});
+                    if (!sizePragmas.check_and_add_constraint(f, { PHV::Size::b16})) {
+                        ::error("To fit within learning quanta size constraints, the field %1% must"
+                                " occupy a 16-bit container. However, there are conficting "
+                                "pa_container_size constraints on the field", f->name);
+                        continue;
+                    }
                     // Setting the fields to no split ensures that they will be assigned to the same
                     // container.
                     f->set_no_split(true);
@@ -94,10 +104,21 @@ bool PardePhvConstraints::preorder(const IR::BFN::Digest* digest) {
                     // We cannot set no-split for this case as a field between 17-24 bits in size
                     // must necessarily be split across multiple containers. We choose one 16-bit
                     // and one 8-bit container just to avoid using too many containers of one size.
-                    sizePragmas.check_and_add_constraint(f, { PHV::Size::b16, PHV::Size::b8 });
+                    if (!sizePragmas.check_and_add_constraint
+                            (f, { PHV::Size::b16, PHV::Size::b8 })) {
+                        ::error("To fit within learning quanta size constraints, the field %1% must"
+                                " occupy a 16-bit and an 8-bit container. However, there are "
+                                "conflicting pa_container_size constraints on the field", f->name);
+                        continue;
+                    }
                     LOG2("\tSetting " << f->name << " to 16-bit and 8-bit containers");
                 } else {
-                    sizePragmas.check_and_add_constraint(f, { PHV::Size::b32 });
+                    if (!sizePragmas.check_and_add_constraint(f, { PHV::Size::b32 })) {
+                        ::error("To fit within learning quanta size constraints, the field %1% must"
+                                " occupy a 32-bit container. However, there are conflicting "
+                                "pa_container_size constraints on the field", f->name);
+                        continue;
+                    }
                     LOG2("\tSetting " << f->name << " to 32-bit container");
                     // Setting the fields to no split ensures that they will be assigned to the same
                     // container.

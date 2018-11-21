@@ -65,7 +65,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             &pack_conflicts,       // collect list of fields that cannot be packed together based on
                                    // first round of table allocation (only useful if we backtracked
                                    // from table placement to PHV allocation)
-            new TablePhvConstraints(phv),
+            new TablePhvConstraints(phv, pragmas.pa_container_sizes()),
             new PardePhvConstraints(phv, pragmas.pa_container_sizes()),
             &critical_path_clusters,
             &action_constraints,

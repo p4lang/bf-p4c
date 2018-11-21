@@ -29,7 +29,7 @@ class MetadataLiveRangeTest : public TofinoBackendTest {};
 namespace {
 
 boost::optional<TofinoPipeTestCase>
-createMetadataLiveRangeTestCase(const std::string& parserSource) {
+createMetadataLiveRangeTestCase(const std::string& mauSource) {
     auto source = P4_SOURCE(P4Headers::V1MODEL, R"(
 header H1
 {
@@ -76,7 +76,7 @@ control deparse(packet_out packet, in Headers headers) {
 V1Switch(parse(), verifyChecksum(), ingress(), egress(), computeChecksum(), deparse()) main;
     )");
 
-    boost::replace_first(source, "%MAU%", parserSource);
+    boost::replace_first(source, "%MAU%", mauSource);
 
     auto& options = BFNContext::get().options();
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;

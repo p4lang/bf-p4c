@@ -258,10 +258,15 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "In table .*, the number of bytes required to go through the immediate pathway"
+  "Unimplemented compiler support.*Cannot allocate >4 immediate bytes for logical table"
+  extensions/p4_tests/p4_14/test_config_205_modify_field_from_hash.p4
+  switch_msdc_l3
+  switch_8.4_msdc_l3
+  )
+
+p4c_add_xfail_reason("tofino"
+  "error.*To fit hash destinations in less than 4 immediate bytes"
   extensions/p4_tests/p4_14/test_config_311_hash_adb.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-868/comp_868.p4
-  switch_8.4_generic_int_leaf
   )
 
 # BRIG-102
@@ -706,6 +711,8 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_227_set_meta_packing.p4
   extensions/p4_tests/p4_14/test_config_262_req_packing.p4
   extensions/p4_tests/p4_14/test_config_275_match_key_range.p4
+  ../glass/testsuite/p4_tests/c1/COMPILER-868/comp_868.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-954/case5730.p4
   )
 
 # We can't (without some complex acrobatics) support conditional computed
@@ -968,7 +975,6 @@ p4c_add_xfail_reason("tofino"
   "the packing is too complicated .* speciality action data combined with other action data"
   extensions/p4_tests/p4_14/test_config_96_hash_data.p4
   extensions/p4_tests/p4_14/test_config_295_polynomial_hash.p4
-  extensions/p4_tests/p4_14/test_config_205_modify_field_from_hash.p4
   extensions/p4_tests/p4_14/hash_calculation_max_size.p4
   extensions/p4_tests/p4_14/p4-tests/programs/hash_test/hash_test.p4
   )
@@ -1087,11 +1093,8 @@ p4c_add_xfail_reason("tofino"
 # operation.
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
-  switch_msdc_l3
-  switch_8.4_msdc_l3
   switch_generic_int_leaf
   switch_8.4_generic_int_leaf
-  extensions/p4_tests/p4_14/c1/COMPILER-954/case5730.p4
 )
 
 # BRIG-651
