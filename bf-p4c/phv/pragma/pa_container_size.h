@@ -20,7 +20,7 @@
  * Use field_slice_req() when allocating a fieldslice to a container.
  */
 class PragmaContainerSize : public Inspector {
-    const PhvInfo& phv_i;
+    PhvInfo& phv_i;
     const std::set<cstring> disabled_pragmas;
 
     std::map<const PHV::Field*, std::vector<PHV::Size>> pa_container_sizes_i;
@@ -48,9 +48,9 @@ class PragmaContainerSize : public Inspector {
                                 const std::vector<PHV::Size>& sizes);
 
  public:
-    explicit PragmaContainerSize(const PhvInfo& phv) : phv_i(phv) { }
+    explicit PragmaContainerSize(PhvInfo& phv) : phv_i(phv) { }
 
-    explicit PragmaContainerSize(const PhvInfo& phv, const std::set<cstring> disabled)
+    explicit PragmaContainerSize(PhvInfo& phv, const std::set<cstring> disabled)
         : phv_i(phv), disabled_pragmas(disabled) { }
 
     const std::map<const PHV::Field*, std::vector<PHV::Size>>&

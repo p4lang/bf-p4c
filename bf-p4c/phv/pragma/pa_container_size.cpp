@@ -58,7 +58,7 @@ bool PragmaContainerSize::preorder(const IR::BFN::Pipe* pipe) {
         // If there is a pa_container_size pragma on the field, then also apply it to its privatized
         // (TPHV) version.
         boost::optional<cstring> tphvName = field->getTPHVPrivateFieldName();
-        const PHV::Field* privatized_field = tphvName ?  phv_i.field(*tphvName) : nullptr;
+        PHV::Field* privatized_field = tphvName ?  phv_i.field(*tphvName) : nullptr;
         if (privatized_field)
             LOG1("Privatized field in pragma: " << privatized_field);
 
@@ -91,6 +91,21 @@ bool PragmaContainerSize::preorder(const IR::BFN::Pipe* pipe) {
             if (privatized_field)
                 pa_container_sizes_i.erase(privatized_field);
             continue; }
+
+        // Add no-split constraint if the field has only one container size associated with it adn
+        // the size of the container is larger than or equal to the size of the field. The pragma
+        // also implies that the entire field must be packed into a single specified size container.
+        // XXX(Deep): Implement the equivalent of no-split for cases where multiple container sizes
+        // are specified and the size of the field is greater than the size of the specified
+        // container (the second may already be partially handled).
+        if (pa_container_sizes_i[field].size() == 1) {
+            auto container_size = *(pa_container_sizes_i[field].begin());
+            if (static_cast<int>(container_size) > field->size) {
+                field->set_no_split(true);
+                if (privatized_field)
+                    privatized_field->set_no_split(true);
+            }
+        }
     }
     LOG1(*this);
     return true;
