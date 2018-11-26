@@ -35,9 +35,11 @@ node ('compiler || compiler-svr4') {
                         } catch (err) {
                             // If image not available, build
                             sh "git submodule update --init --recursive"
+                            sh "docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD"
                             sh "docker build -f Dockerfile.tofino -t bf-p4c-compilers_${image_tag} --build-arg IMAGE_TYPE=test --build-arg MAKEFLAGS=j32 ."
                             sh "echo 'Tag and push docker image'"
                             sh "docker tag bf-p4c-compilers_${image_tag} barefootnetworks/bf-p4c-compilers:${image_tag}"
+                            sh "docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD"
                             sh "docker push barefootnetworks/bf-p4c-compilers:${image_tag}"
                         }
                     }
