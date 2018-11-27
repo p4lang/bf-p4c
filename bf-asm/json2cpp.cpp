@@ -7,9 +7,6 @@
 #include "indent.h"
 #include "json.h"
 
-
-int indent_t::tabsz = 2;
-
 enum { BOTH, DECL_ONLY, DEFN_ONLY } gen_definitions = BOTH,
 mod_definitions[2][3] = {
     { BOTH, BOTH, DECL_ONLY },

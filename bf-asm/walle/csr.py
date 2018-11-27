@@ -256,7 +256,7 @@ class csr_composite_object (csr_object):
         if args.gen_decl == 'defn':
             argdecls.append("indent_t indent")
         else:
-            argdecls.append("indent_t indent = 1")
+            argdecls.append("indent_t indent = indent_t(1)")
         if self.gen_method_declarator(outfile, args, "void", classname,
                                       "emit_json", argdecls, "const"):
             return

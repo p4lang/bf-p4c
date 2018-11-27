@@ -140,6 +140,7 @@ set (BFAS_COMMON_SOURCES
   ${BFN_P4C_LIB_DIR}/hex.cpp
   ${BFN_P4C_LIB_DIR}/bitvec.cpp
   ${BFN_P4C_LIB_DIR}/log.cpp
+  ${BFN_P4C_LIB_DIR}/indent.cpp
   )
 
 SET (BFAS_COMMON_HEADERS
@@ -178,7 +179,6 @@ SET (BFAS_COMMON_HEADERS
 
 # \TODO: use the headers from p4c/lib for utilities
 set (BFAS_UTIL_HEADERS
-  indent.h
   map.h
   vector.h
   )

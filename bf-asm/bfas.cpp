@@ -46,7 +46,6 @@ std::string asmfile_name;
 
 int log_error = 0;
 static std::string output_dir;
-int indent_t::tabsz = 2;
 extern char *program_name;
 
 // or-ed with table_handle[31:30] to generate unique table handle
