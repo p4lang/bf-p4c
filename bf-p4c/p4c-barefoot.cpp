@@ -133,10 +133,6 @@ void execute_backend(const IR::BFN::Pipe* maupipe, BFN_Options& options) {
     try {
         maupipe = maupipe->apply(backend);
     } catch (Util::P4CExceptionBase &ex) {
-        // expect that all compiler failures to be derived from P4CExceptionBase
-        // compiler bugs or program errors are a different exception hierarchy -- are they?
-        ::error("%s", ex.what());
-
         // produce resource nodes in context.json regardless of failures
         std::cerr << "compilation failed: producing ctxt.json" << std::endl;
         OutputAsm as(backend, options, maupipe->name, backend.get_prim_json(), false);
@@ -144,12 +140,7 @@ void execute_backend(const IR::BFN::Pipe* maupipe, BFN_Options& options) {
 
         if (Log::verbose())
             std::cerr << "Failed." << std::endl;
-        return;
-    } catch (std::exception &e) {
-        ::error("%s", e.what());
-        if (Log::verbose())
-            std::cerr << "Failed." << std::endl;
-        return;
+        throw;
     }
 
     // output the .bfa file
