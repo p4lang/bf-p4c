@@ -279,13 +279,15 @@ struct ExtractSimplifier {
                 BUG_CHECK(constSlice.fitsUint(), "Constant slice larger than 32-bit?");
 
                 // Create an extract that writes just those bits.
-                auto* newSource =
-                  new IR::BFN::LoweredConstantRVal(constSlice.asUnsigned());
-                auto* newExtract =
-                  new IR::BFN::LoweredExtractPhv(slice.container, newSource);
+                if (constSlice.asUnsigned()) {
+                    auto* newSource =
+                      new IR::BFN::LoweredConstantRVal(constSlice.asUnsigned());
+                    auto* newExtract =
+                      new IR::BFN::LoweredExtractPhv(slice.container, newSource);
 
-                newExtract->debug.info.push_back(debugInfoFor(extract, slice));
-                extractConstantByContainer[slice.container].push_back(newExtract);
+                    newExtract->debug.info.push_back(debugInfoFor(extract, slice));
+                    extractConstantByContainer[slice.container].push_back(newExtract);
+                }
             }
         } else {
             BUG("Unexpected parser primitive (most likely something that should "
@@ -2520,9 +2522,9 @@ LowerParser::LowerParser(const PhvInfo& phv, ClotInfo& clot, const FieldDefUse &
         pragma_no_init,
         new LowerParserIR(phv, clot),
         new LowerDeparserIR(phv, clot),
-        LOGGING(3) ? new DumpParser("before_split_big_states") : nullptr,
+        LOGGING(3) ? new DumpParser("before_split_big_states", true) : nullptr,
         new SplitBigStates,
-        LOGGING(3) ? new DumpParser("after_split_big_states") : nullptr,
+        LOGGING(3) ? new DumpParser("after_split_big_states", true) : nullptr,
         new WarnTernaryMatchFields(phv),
         new ComputeInitZeroContainers(phv, defuse, pragma_no_init->getFields()),
         new ComputeMultiwriteContainers,  // Must run after ComputeInitZeroContainers.
