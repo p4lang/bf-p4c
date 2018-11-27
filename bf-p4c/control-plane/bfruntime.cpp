@@ -62,7 +62,11 @@ class BfRtSchemaGenerator {
     // data field with a '$'. For example, for BF_RT_DATA_ACTION_MEMBER_ID, we
     // use the name $ACTION_MEMBER_ID.
     enum BfRtDataFieldIds : P4Id {
-        BF_RT_DATA_START = 100,
+        // ids for fixed data fields must not collide with the auto-generated
+        // ids for P4 fields (e.g. match key fields). Snapshot tables include
+        // ALL the fields defined in the P4 program so we need to ensure that
+        // this BF_RT_DATA_START offset is quite large.
+        BF_RT_DATA_START = (1 << 16),
 
         BF_RT_DATA_MATCH_PRIORITY,
 
@@ -108,6 +112,32 @@ class BfRtSchemaGenerator {
 
         BF_RT_DATA_PORT_METADATA_PORT,
         BF_RT_DATA_PORT_METADATA_DEFAULT_FIELD,
+
+        BF_RT_DATA_SNAPSHOT_TRIGGER_STAGE,
+        BF_RT_DATA_SNAPSHOT_END_STAGE,
+        BF_RT_DATA_SNAPSHOT_ENABLE,
+        BF_RT_DATA_SNAPSHOT_STATUS,
+        BF_RT_DATA_SNAPSHOT_TIMER_ENABLE,
+        BF_RT_DATA_SNAPSHOT_TIMER_VALUE_USECS,
+        BF_RT_DATA_SNAPSHOT_FIELD_INFO,
+        BF_RT_DATA_SNAPSHOT_CONTROL_INFO,
+        BF_RT_DATA_SNAPSHOT_TABLE_INFO,
+        BF_RT_DATA_SNAPSHOT_METER_ALU_INFO,
+        BF_RT_DATA_SNAPSHOT_STAGE_ID,
+        BF_RT_DATA_SNAPSHOT_PREV_STAGE_TRIGGER,
+        BF_RT_DATA_SNAPSHOT_TIMER_TRIGGER,
+        BF_RT_DATA_SNAPSHOT_LOCAL_STAGE_TRIGGER,
+        BF_RT_DATA_SNAPSHOT_NEXT_TABLE_ID,
+        BF_RT_DATA_SNAPSHOT_MPR_NEXT_TABLE_ID,
+        BF_RT_DATA_SNAPSHOT_DEPARSER_ERROR,
+        BF_RT_DATA_SNAPSHOT_TABLE_ID,
+        BF_RT_DATA_SNAPSHOT_METER_ALU_OPERATION_TYPE,
+        BF_RT_DATA_SNAPSHOT_MATCH_HIT_ADDRESS,
+        BF_RT_DATA_SNAPSHOT_TABLE_HIT,
+        BF_RT_DATA_SNAPSHOT_TABLE_INHIBITED,
+        BF_RT_DATA_SNAPSHOT_TABLE_EXECUTED,
+        BF_RT_DATA_SNAPSHOT_LIVENESS_FIELD_NAME,
+        BF_RT_DATA_SNAPSHOT_LIVENESS_VALID_STAGES,
     };
 
     /// Common counter representation between PSA and Tofino architectures
@@ -132,6 +162,8 @@ class BfRtSchemaGenerator {
 
     struct PortMetadata;
 
+    struct Snapshot;
+
     void addMatchTables(Util::JsonArray* tablesJson) const;
     void addActionProfs(Util::JsonArray* tablesJson) const;
     void addCounters(Util::JsonArray* tablesJson) const;
@@ -152,6 +184,8 @@ class BfRtSchemaGenerator {
     void addPortMetadataDefault(Util::JsonArray* tablesJson) const;
     void addLpf(Util::JsonArray* tablesJson, const Lpf& lpf) const;
     void addWred(Util::JsonArray* tablesJson, const Wred& wred) const;
+    void addSnapshot(Util::JsonArray* tablesJson, const Snapshot& snapshot) const;
+    void addSnapshotLiveness(Util::JsonArray* tablesJson, const Snapshot& snapshot) const;
 
     boost::optional<bool> actProfHasSelector(P4Id actProfId) const;
     /// Generates the JSON array for table action specs. When the function
@@ -182,6 +216,10 @@ class BfRtSchemaGenerator {
     static Util::JsonObject* makeCommonDataField(P4Id id, cstring name,
                                                  Util::JsonObject* type, bool repeated,
                                                  Util::JsonArray* annotations = nullptr);
+
+    static Util::JsonObject* makeContainerDataField(P4Id id, cstring name,
+                                                    Util::JsonArray* items, bool repeated,
+                                                    Util::JsonArray* annotations = nullptr);
 
     static void addActionDataField(Util::JsonArray* dataJson, P4Id id, const std::string& name,
                                    bool mandatory, Util::JsonObject* type,
@@ -367,6 +405,14 @@ static Util::JsonObject* makeTypeEnum(const std::vector<cstring>& choices,
     return typeObj;
 }
 
+static Util::JsonObject* makeTypeString(boost::optional<cstring> defaultValue = boost::none) {
+    auto* typeObj = new Util::JsonObject();
+    typeObj->emplace("type", "string");
+    if (defaultValue != boost::none)
+        typeObj->emplace("default_value", *defaultValue);
+    return typeObj;
+}
+
 static void addOneOf(Util::JsonArray* dataJson,
                      Util::JsonArray* choicesJson, bool mandatory, bool readOnly) {
     auto* oneOfJson = new Util::JsonObject();
@@ -383,6 +429,10 @@ static void addSingleton(Util::JsonArray* dataJson,
     singletonJson->emplace("read_only", readOnly);
     singletonJson->emplace("singleton", dataField);
     dataJson->append(singletonJson);
+}
+
+static void addROSingleton(Util::JsonArray* dataJson, Util::JsonObject* dataField) {
+    addSingleton(dataJson, dataField, false, true);
 }
 
 /// Takes a simple P4Info P4DataTypeSpec message in its factory method and
@@ -727,6 +777,38 @@ struct BfRtSchemaGenerator::PortMetadata {
     }
 };
 
+struct BfRtSchemaGenerator::Snapshot {
+    std::string name;
+    P4Id id;
+    struct Field {
+        P4Id id;
+        std::string name;
+        int32_t bitwidth;
+    };
+    std::vector<Field> fields;
+
+    static boost::optional<Snapshot> fromTofino(
+        const p4configv1::ExternInstance& externInstance) {
+        const auto& pre = externInstance.preamble();
+        ::barefoot::Snapshot snapshot;
+        if (!externInstance.info().UnpackTo(&snapshot)) {
+            ::error("Extern instance %1% does not pack a Snapshot object", pre.name());
+            return boost::none;
+        }
+        std::string name;
+        if (snapshot.direction() == ::barefoot::Snapshot::INGRESS)
+          name = snapshot.pipe() + "." + "$SNAPSHOT_INGRESS";
+        else if (snapshot.direction() == ::barefoot::Snapshot::EGRESS)
+          name = snapshot.pipe() + "." + "$SNAPSHOT_EGRESS";
+        else
+          BUG("Unknown snapshot direction");
+        std::vector<Field> fields;
+        for (const auto& f : snapshot.fields())
+          fields.push_back({f.id(), f.name(), f.bitwidth()});
+        return Snapshot{name, pre.id(), std::move(fields)};
+    }
+};
+
 // It is tempting to unify the code for Lpf & Wred (using CRTP?) but the
 // resulting code doesn't look too good and is not really less verbose. In
 // particular aggregate initialization is not possible when a class has a base.
@@ -875,6 +957,22 @@ BfRtSchemaGenerator::makeCommonDataField(P4Id id, cstring name,
     else
         dataField->emplace("annotations", new Util::JsonArray());
     dataField->emplace("type", type);
+    return dataField;
+}
+
+Util::JsonObject*
+BfRtSchemaGenerator::makeContainerDataField(P4Id id, cstring name,
+                                            Util::JsonArray* items, bool repeated,
+                                            Util::JsonArray* annotations) {
+    auto* dataField = new Util::JsonObject();
+    dataField->emplace("id", id);
+    dataField->emplace("name", name);
+    dataField->emplace("repeated", repeated);
+    if (annotations != nullptr)
+        dataField->emplace("annotations", annotations);
+    else
+        dataField->emplace("annotations", new Util::JsonArray());
+    dataField->emplace("container", items);
     return dataField;
 }
 
@@ -1371,6 +1469,215 @@ BfRtSchemaGenerator::addWred(Util::JsonArray* tablesJson, const Wred& wred) cons
     tablesJson->append(tableJson);
 }
 
+void
+BfRtSchemaGenerator::addSnapshot(Util::JsonArray* tablesJson, const Snapshot& snapshot) const {
+    auto* tableJson = new Util::JsonObject();
+
+    tableJson->emplace("name", snapshot.name);
+    tableJson->emplace("id", snapshot.id);
+    tableJson->emplace("table_type", "Snapshot");
+    // There cannot be more than one snapshot per stage (snapshots cannot
+    // overlap)
+    tableJson->emplace("size", Device::numStages());
+
+    auto* keyJson = new Util::JsonArray();
+    addKeyField(keyJson, BF_RT_DATA_SNAPSHOT_TRIGGER_STAGE, "$SNAPSHOT_TRIGGER_STAGE",
+                false /* mandatory */, "Exact", makeTypeInt("uint32", 0));
+    addKeyField(keyJson, BF_RT_DATA_SNAPSHOT_END_STAGE, "$SNAPSHOT_END_STAGE",
+                false /* mandatory */, "Exact", makeTypeInt("uint32", Device::numStages() - 1));
+    for (const auto& sF : snapshot.fields) {
+        addKeyField(keyJson, sF.id, sF.name,
+                    false /* mandatory */, "Ternary", makeTypeBytes(sF.bitwidth, boost::none));
+    }
+    tableJson->emplace("key", keyJson);
+
+    auto* dataJson = new Util::JsonArray();
+    {
+        auto* f = makeCommonDataField(
+            BF_RT_DATA_SNAPSHOT_ENABLE, "$SNAPSHOT_ENABLE",
+            makeTypeBool(), false /* repeated */);
+        addSingleton(dataJson, f, true /* mandatory */, false /* read-only */);
+    }
+    {
+        auto* f = makeCommonDataField(
+            BF_RT_DATA_SNAPSHOT_STATUS, "$SNAPSHOT_STATUS",
+            makeTypeEnum({"PASSIVE", "ARMED", "TRIGGER_HAPPY", "FULL"}), false /* repeated */);
+        addSingleton(dataJson, f, false /* mandatory */, true /* read-only */);
+    }
+    {
+        auto* f = makeCommonDataField(
+            BF_RT_DATA_SNAPSHOT_TIMER_ENABLE, "$SNAPSHOT_TIMER_ENABLE",
+            makeTypeBool(false), false /* repeated */);
+        addSingleton(dataJson, f, false /* mandatory */, false /* read-only */);
+    }
+    {
+        auto* f = makeCommonDataField(
+            BF_RT_DATA_SNAPSHOT_TIMER_VALUE_USECS, "$SNAPSHOT_TIMER_VALUE_USECS",
+            makeTypeInt("uint32"), false /* repeated */);
+        addSingleton(dataJson, f, false /* mandatory */, false /* read-only */);
+    }
+    {  // PHVs
+        auto* containerItemsJson = new Util::JsonArray();
+        {
+            auto* f = makeCommonDataField(
+                BF_RT_DATA_SNAPSHOT_STAGE_ID, "$SNAPSHOT_STAGE_ID",
+                makeTypeInt("uint32"), false /* repeated */);
+            addROSingleton(containerItemsJson, f);
+        }
+        for (const auto& sF : snapshot.fields) {
+            auto* f = makeCommonDataField(
+                sF.id, sF.name, makeTypeBytes(sF.bitwidth, boost::none), false /* repeated */);
+            addROSingleton(containerItemsJson, f);
+        }
+        auto* containerJson = makeContainerDataField(
+            BF_RT_DATA_SNAPSHOT_FIELD_INFO, "$SNAPSHOT_FIELD_INFO",
+            containerItemsJson, true /* repeated */);
+        addROSingleton(dataJson, containerJson);
+    }
+    {  // control information
+        auto* containerItemsJson = new Util::JsonArray();
+        {
+            auto* f = makeCommonDataField(
+                BF_RT_DATA_SNAPSHOT_STAGE_ID, "$SNAPSHOT_STAGE_ID",
+                makeTypeInt("uint32"), false /* repeated */);
+            addROSingleton(containerItemsJson, f);
+        }
+        {
+            auto* f = makeCommonDataField(
+                BF_RT_DATA_SNAPSHOT_PREV_STAGE_TRIGGER, "$SNAPSHOT_PREV_STAGE_TRIGGER",
+                makeTypeBool(), false /* repeated */);
+            addROSingleton(containerItemsJson, f);
+        }
+        {
+            auto* f = makeCommonDataField(
+                BF_RT_DATA_SNAPSHOT_TIMER_TRIGGER, "$SNAPSHOT_TIMER_TRIGGER",
+                makeTypeBool(), false /* repeated */);
+            addROSingleton(containerItemsJson, f);
+        }
+        {
+            auto* f = makeCommonDataField(
+                BF_RT_DATA_SNAPSHOT_LOCAL_STAGE_TRIGGER, "$SNAPSHOT_LOCAL_STAGE_TRIGGER",
+                makeTypeBool(), false /* repeated */);
+            addROSingleton(containerItemsJson, f);
+        }
+        {
+            auto* f = makeCommonDataField(
+                BF_RT_DATA_SNAPSHOT_NEXT_TABLE_ID, "$SNAPSHOT_NEXT_TABLE_ID",
+                makeTypeInt("uint32"), false /* repeated */);
+            addROSingleton(containerItemsJson, f);
+        }
+        if (Device::currentDevice() == Device::JBAY) {
+            auto* f = makeCommonDataField(
+                BF_RT_DATA_SNAPSHOT_MPR_NEXT_TABLE_ID, "$SNAPSHOT_MPR_NEXT_TABLE_ID",
+                makeTypeInt("uint32"), false /* repeated */);
+            addROSingleton(containerItemsJson, f);
+        }
+        if (Device::currentDevice() == Device::JBAY) {
+            auto* f = makeCommonDataField(
+                BF_RT_DATA_SNAPSHOT_DEPARSER_ERROR, "$SNAPSHOT_DEPARSER_ERROR",
+                makeTypeBool(), false /* repeated */);
+            addROSingleton(containerItemsJson, f);
+        }
+        if (Device::currentDevice() == Device::JBAY) {  // meter ALU information
+            auto* meterContainerItemsJson = new Util::JsonArray();
+            {
+                auto* f = makeCommonDataField(
+                    BF_RT_DATA_SNAPSHOT_TABLE_ID, "$SNAPSHOT_TABLE_ID",
+                    makeTypeInt("uint32"), false /* repeated */);
+                addROSingleton(meterContainerItemsJson, f);
+            }
+            {
+                auto* f = makeCommonDataField(
+                    BF_RT_DATA_SNAPSHOT_METER_ALU_OPERATION_TYPE,
+                    "$SNAPSHOT_METER_ALU_OPERATION_TYPE",
+                    makeTypeString(), false /* repeated */);
+                addROSingleton(meterContainerItemsJson, f);
+            }
+            auto* meterContainerJson = makeContainerDataField(
+                BF_RT_DATA_SNAPSHOT_METER_ALU_INFO, "$SNAPSHOT_METER_ALU_INFO",
+                meterContainerItemsJson, true /* repeated */);
+            addROSingleton(containerItemsJson, meterContainerJson);
+        }
+        {  // table ALU information
+            auto* tableContainerItemsJson = new Util::JsonArray();
+            {
+                auto* f = makeCommonDataField(
+                    BF_RT_DATA_SNAPSHOT_TABLE_ID, "$SNAPSHOT_TABLE_ID",
+                    makeTypeInt("uint32"), false /* repeated */);
+                addROSingleton(tableContainerItemsJson, f);
+            }
+            {
+                auto* f = makeCommonDataField(
+                    BF_RT_DATA_SNAPSHOT_MATCH_HIT_ADDRESS, "$SNAPSHOT_MATCH_HIT_ADDRESS",
+                    makeTypeInt("uint32"), false /* repeated */);
+                addROSingleton(tableContainerItemsJson, f);
+            }
+            {
+                auto* f = makeCommonDataField(
+                    BF_RT_DATA_SNAPSHOT_TABLE_HIT, "$SNAPSHOT_TABLE_HIT",
+                    makeTypeBool(), false /* repeated */);
+                addROSingleton(tableContainerItemsJson, f);
+            }
+            {
+                auto* f = makeCommonDataField(
+                    BF_RT_DATA_SNAPSHOT_TABLE_INHIBITED, "$SNAPSHOT_TABLE_INHIBITED",
+                    makeTypeBool(), false /* repeated */);
+                addROSingleton(tableContainerItemsJson, f);
+            }
+            {
+                auto* f = makeCommonDataField(
+                    BF_RT_DATA_SNAPSHOT_TABLE_EXECUTED, "$SNAPSHOT_TABLE_EXECUTED",
+                    makeTypeBool(), false /* repeated */);
+                addROSingleton(tableContainerItemsJson, f);
+            }
+            auto* tableContainerJson = makeContainerDataField(
+                BF_RT_DATA_SNAPSHOT_TABLE_INFO, "$SNAPSHOT_TABLE_INFO",
+                tableContainerItemsJson, true /* repeated */);
+            addROSingleton(containerItemsJson, tableContainerJson);
+        }
+        auto* containerJson = makeContainerDataField(
+            BF_RT_DATA_SNAPSHOT_CONTROL_INFO, "$SNAPSHOT_CONTROL_INFO",
+            containerItemsJson, true /* repeated */);
+        addROSingleton(dataJson, containerJson);
+    }
+    tableJson->emplace("data", dataJson);
+
+    tableJson->emplace("supported_operations", new Util::JsonArray());
+    tableJson->emplace("attributes", new Util::JsonArray());
+
+    tablesJson->append(tableJson);
+}
+
+void
+BfRtSchemaGenerator::addSnapshotLiveness(Util::JsonArray* tablesJson,
+                                         const Snapshot& snapshot) const {
+    auto* tableJson = new Util::JsonObject();
+
+    tableJson->emplace("name", snapshot.name + "_LIVENESS");
+    tableJson->emplace("id", makeBfRtId(snapshot.id, ::barefoot::P4Ids::SNAPSHOT_LIVENESS));
+    tableJson->emplace("table_type", "SnapshotLiveness");
+    tableJson->emplace("size", 0);  // read-only table
+
+    auto* keyJson = new Util::JsonArray();
+    addKeyField(keyJson, BF_RT_DATA_SNAPSHOT_LIVENESS_FIELD_NAME, "$SNAPSHOT_LIVENESS_FIELD_NAME",
+                true /* mandatory */, "Exact", makeTypeString());
+    tableJson->emplace("key", keyJson);
+
+    auto* dataJson = new Util::JsonArray();
+    {
+        auto* f = makeCommonDataField(
+            BF_RT_DATA_SNAPSHOT_LIVENESS_VALID_STAGES, "$SNAPSHOT_LIVENESS_VALID_STAGES",
+            makeTypeInt("uint32"), true /* repeated */);
+        addROSingleton(dataJson, f);
+    }
+    tableJson->emplace("data", dataJson);
+
+    tableJson->emplace("supported_operations", new Util::JsonArray());
+    tableJson->emplace("attributes", new Util::JsonArray());
+
+    tablesJson->append(tableJson);
+}
+
 boost::optional<bool>
 BfRtSchemaGenerator::actProfHasSelector(P4Id actProfId) const {
     if (isOfType(actProfId, p4configv1::P4Ids::ACTION_PROFILE)) {
@@ -1632,6 +1939,14 @@ BfRtSchemaGenerator::addTofinoExterns(Util::JsonArray* tablesJson,
             for (const auto& externInstance : externType.instances()) {
                 auto valueSet = ValueSet::fromTofino(externInstance);
                 if (valueSet != boost::none) addValueSet(tablesJson, *valueSet);
+            }
+        } else if (externTypeId == ::barefoot::P4Ids::SNAPSHOT) {
+            for (const auto& externInstance : externType.instances()) {
+                auto snapshot = Snapshot::fromTofino(externInstance);
+                if (snapshot != boost::none) {
+                    addSnapshot(tablesJson, *snapshot);
+                    addSnapshotLiveness(tablesJson, *snapshot);
+                }
             }
         }
     }

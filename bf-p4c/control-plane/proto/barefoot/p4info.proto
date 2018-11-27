@@ -23,6 +23,8 @@ message P4Ids {
     DIGEST = 0x8E;
     HASH = 0x8F;
     PORT_METADATA = 0x90;
+    SNAPSHOT = 0x91;
+    SNAPSHOT_LIVENESS = 0x92;  // reserved for BFRT
     // Temporary, see ValueSet message definition below
     VALUE_SET = 0xfe;
   }
@@ -148,4 +150,19 @@ message PortMetadata {
 message ValueSet {
   p4.config.v1.P4DataTypeSpec type_spec = 1;
   int32 size = 2;
+}
+
+message Snapshot {
+  string pipe = 1;
+  enum Direction {
+    INGRESS = 0;
+    EGRESS = 1;
+  }
+  Direction direction = 2;
+  message Field {
+    uint32 id = 1;
+    string name = 2;
+    int32 bitwidth = 3;
+  }
+  repeated Field fields = 3;
 }

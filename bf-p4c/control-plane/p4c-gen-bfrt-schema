@@ -74,6 +74,13 @@ class PrimitiveEnumType(PrimitiveTypeBase):
     choices = jsl.ArrayField(required=True, items=jsl.StringField())
     default_value = jsl.StringField(required=False)
 
+class PrimitiveStringType(PrimitiveTypeBase):
+    class Options(object):
+        title = "PrimitiveStringType"
+        description = "An arbitrary string"
+    type_ = jsl.StringField(name="type", required=True, enum=["string"])
+    default_value = jsl.StringField(required=False)
+
 PrimitiveType = jsl.OneOfField(
     name="type",
     required=True,
@@ -81,13 +88,32 @@ PrimitiveType = jsl.OneOfField(
             jsl.DocumentField(PrimitiveBoolType, as_ref=True),
             jsl.DocumentField(PrimitiveBytesType, as_ref=True),
             jsl.DocumentField(PrimitiveFloatType, as_ref=True),
-            jsl.DocumentField(PrimitiveEnumType, as_ref=True)]
+            jsl.DocumentField(PrimitiveEnumType, as_ref=True),
+            jsl.DocumentField(PrimitiveStringType, as_ref=True)]
 )
 
 class BaseDataField(NamedObject):
     annotations = Annotations
     type_ = PrimitiveType
     repeated = jsl.BooleanField(required=True)
+
+class ContainerDataField(NamedObject):
+    class Options(object):
+        title = "ContainerDataField"
+        description = "A data field which itself contains several data fields"
+    annotations = Annotations
+    container = jsl.ArrayField(
+        required=True,
+        items=jsl.OneOfField(fields=[
+            # have to use strings because of cyclic dependency
+            jsl.DocumentField("SingletonData", as_ref=True),
+            jsl.DocumentField("OneOfData", as_ref=True)]),
+        description="All data fields in the container")
+    repeated = jsl.BooleanField(required=True)
+
+DataField = jsl.OneOfField(required=True, fields=[
+    jsl.DocumentField(document_cls=BaseDataField, as_ref=True),
+    jsl.DocumentField(document_cls=ContainerDataField, as_ref=True)])
 
 class KeyField(BaseDataField):
     class Options(object):
@@ -105,18 +131,13 @@ class SingletonData(CommonDataIface):
     class Options(object):
         title = "SingletonData"
         description = "A single action data field"
-    singleton = jsl.DocumentField(
-        required=True,
-        document_cls=BaseDataField,
-        as_ref=True)
+    singleton = DataField
 
 class OneOfData(CommonDataIface):
     class Options(object):
         title = "OneOfData"
         description = "Union of possible action data fields"
-    oneof = jsl.ArrayField(
-        required=True,
-        items=jsl.DocumentField(BaseDataField, as_ref=True))
+    oneof = jsl.ArrayField(required=True, items=DataField)
 
 # we could use a "singleton" field as well, but I believe that the increased
 # uniformity is not required and would not make parsing easier in the drivers.
@@ -142,7 +163,6 @@ class TableCommon(NamedObject):
     size = jsl.IntField(required=False)
     key = jsl.ArrayField(required=True,
                          items=jsl.DocumentField(KeyField, as_ref=True))
-    # no support for recursive one-of because no use-case
     data = jsl.ArrayField(
         required=True,
         items=jsl.OneOfField(fields=[
@@ -178,7 +198,8 @@ class TableWithoutActionSpec(TableCommon):
               "Selector",
               "Counter", "Meter", "Register", "Lpf", "Wred",
               "PortMetadata",
-              "ParserValueSet"])
+              "ParserValueSet",
+              "Snapshot", "SnapshotLiveness"])
 
 class LearnListFieldField(BaseDataField):
     class Options(object):
@@ -219,7 +240,7 @@ def main():
     schema = BfRtSchema.get_schema()
     if args.dump_schema:
         with open(args.dump_schema, 'w') as schema_f:
-	    json.dump(schema, schema_f, indent=4)
+            json.dump(schema, schema_f, indent=4)
     if args.input_json:
         with open(args.input_json, 'r') as input_f:
             bf_rt_json = json.load(input_f)
