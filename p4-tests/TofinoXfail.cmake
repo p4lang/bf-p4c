@@ -286,14 +286,16 @@ p4c_add_xfail_reason("tofino"
   "No tables placeable, but not all tables placed?"
   switch_msdc_ipv4
   switch_8.4_msdc_ipv4
-  switch_ent_fin_postcard
-  switch_8.4_ent_fin_postcard
+  switch_msdc_spine_int
+  switch_8.4_msdc_spine_int
   )
 
 p4c_add_xfail_reason("tofino"
   "Compiler Bug.*How did we create a slice list at a non byte boundary?"
-  switch_msdc_spine_int
-  switch_8.4_msdc_spine_int
+  switch_ent_fin_postcard
+  switch_8.4_ent_fin_postcard
+  switch_generic_int_leaf
+  switch_8.4_generic_int_leaf
   )
 
 p4c_add_xfail_reason("tofino"
@@ -1092,11 +1094,11 @@ p4c_add_xfail_reason("tofino"
 
 # Needs change to source code because of padding field with a 10-bit field that is used in an add
 # operation.
-p4c_add_xfail_reason("tofino"
-  "PHV allocation was not successful"
-  switch_generic_int_leaf
-  switch_8.4_generic_int_leaf
-)
+# p4c_add_xfail_reason("tofino"
+#   "PHV allocation was not successful"
+#   switch_generic_int_leaf
+#   switch_8.4_generic_int_leaf
+# )
 
 # BRIG-651
 p4c_add_xfail_reason("tofino"

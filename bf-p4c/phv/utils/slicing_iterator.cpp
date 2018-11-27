@@ -182,9 +182,15 @@ PHV::SlicingIterator::SlicingIterator(
                 // exclusively of slices of the same no-split field, and if the slice is not byte
                 // aligned, then its left limit is the previous byte boundary. Left limit of -1
                 // indicates that the slice may be split at its start.
+                LOG6("\t\tsliceOffsetWithinSliceList: " << sliceOffsetWithinSliceList <<
+                     ", offset: " << offset);
                 if (sliceOffsetWithinSliceList != 0 && !allSlicesNoSplitSameField &&
-                        (sliceOffsetWithinSliceList / 8 - 1) != 0)
-                    left_limit = offset + (sliceOffsetWithinSliceList / 8 - 1);
+                        (sliceOffsetWithinSliceList / 8) != 0) {
+                    if (sliceOffsetWithinSliceList < 8)
+                        left_limit = -1;
+                    else
+                        left_limit = offset - 1 + (sliceOffsetWithinSliceList / 8);
+                }
                 sliceOffsetWithinSliceList += slice.size();
 
                 // Figure out the byte boundary for the right side (the end of this slice).
@@ -358,6 +364,7 @@ PHV::SlicingIterator::SlicingIterator(
             //    slicing for padding fields.
             if (!minSlice) {
                 LOG6("\tMin slice not found. Continuing...");
+                alreadyConsidered.insert(kv.first);
                 continue;
             }
             LOG6("\tNeed to slice around " << kv.first << " to match slice list size " << minSize <<
@@ -383,12 +390,6 @@ PHV::SlicingIterator::SlicingIterator(
                 // slice before the slice in consideration.
                 offsetWithinOriginalSliceList += slice.size();
             }
-            // carryOver is the number of bits after the current slice in the slice list that must
-            // be put into the same slice list.
-            // E.g. if we have fields a<3b>, b<3b>, c<2b>, and b is the field under consideration
-            // (slice) and minSize is 8b, then posInSliceList = 3, and carryOver = 2b.
-            int carryOver = minSize - offsetWithinOriginalSliceList - kv.first.size();
-            LOG6("\t  " << carryOver << " more bits must be included in this slice list.");
 
             // For any slice, the update limits should be as follows:
             // 1. If offsetWithinOriginalSliceList % minSize == 0 and left != -1, then the slice is
@@ -406,7 +407,19 @@ PHV::SlicingIterator::SlicingIterator(
                 required_slices_i.setbit(left);
                 newSliceBoundaryFoundLeft = true;
                 LOG6("\t  Slicing before slice " << kv.first);
+                // New slice list started.
+                offsetWithinOriginalSliceList = 0;
             }
+
+            // carryOver is the number of bits after the current slice in the slice list that must
+            // be put into the same slice list.
+            // E.g. if we have fields a<3b>, b<3b>, c<2b>, and b is the field under consideration
+            // (slice) and minSize is 8b, then posInSliceList = 3, and carryOver = 2b.
+            LOG6("\t  minSize: " << minSize << ", offset: " << offsetWithinOriginalSliceList <<
+                 ", slice size: " << kv.first.size());
+            int carryOver = minSize - offsetWithinOriginalSliceList - kv.first.size();
+            LOG6("\t  " << carryOver << " more bits must be included in this slice list.");
+
             // Set if a new split in the slice list is created after the current slice.
             bool newSliceBoundaryFoundRight = false;
             if (carryOver == 0 && right != -1) {
@@ -433,7 +446,7 @@ PHV::SlicingIterator::SlicingIterator(
             int newSliceListsProcessedBits = 0;
             bool allSlicesGoToNewSliceList = false;
             for (auto& slice : *slice_list) {
-                if (alreadyProcessedSlices.count(slice)) {
+                if (alreadyConsidered.count(slice) || alreadyProcessedSlices.count(slice)) {
                     LOG6("\t\tNew slice list for slice " << slice << " has already been created.");
                     continue;
                 }
@@ -442,21 +455,36 @@ PHV::SlicingIterator::SlicingIterator(
                         sliceLocations[slice].second << "R.");
                 // Boundary was shifted to before this field, so change the size for the fields seen
                 // so far.
-                if (slice == kv.first && newSliceBoundaryFoundLeft) {
+                if (newSliceBoundaryFoundLeft) {
+                    // Still processing fields before the slicing point.
+                    if (slice != kv.first) {
+                        LOG6("\t\t  Adding " << slice << " to seen fields before slicing point.");
+                        seenFieldSlices.push_back(slice);
+                        continue;
+                    }
+                    // Finally we reach the field slice before which the slicing is done.
+                    int prevSliceListSize = 0;
+                    for (auto& sl : seenFieldSlices)
+                        prevSliceListSize += sl.size();
+                    prevSliceListSize = 8 * (prevSliceListSize / 8);
                     for (auto& sl : seenFieldSlices) {
-                        // ROUNDUP(intraListSize, 8) rounds up intraListSize to the nearest byte
-                        // boundary and returns the number of bytes. Therefore, need to multiply by
-                        // 8.
-                        exactSliceListSize[sl] = 8 * ROUNDUP(intraListSize, 8);
-                        sliceLocations[sl].second = left;
+                        intraListSize += sl.size();
+                        if (intraListSize <= prevSliceListSize)
+                            exactSliceListSize[sl] = prevSliceListSize;
+                        else
+                            exactSliceListSize[sl] -= prevSliceListSize;
+                        LOG6("\t\t\tintraListSize: " << intraListSize << ", left: " << left <<
+                             ", sliceLocations[sl].first: " << sliceLocations[sl].first);
+                        if (sliceLocations[sl].first != left)
+                            sliceLocations[sl].second = left;
                         LOG6("\t\t  C. Setting " << sl << " co-ordinates to: " <<
                              get_slice_coordinates(exactSliceListSize[sl], sliceLocations[sl]));
+                        alreadyProcessedSlices.insert(sl);
                     }
                     // After all the slices in the first slice list are adjusted, clear seenFields
                     // and reset the intraListSize to 0.
-                    for (auto& sl : seenFieldSlices)
-                        alreadyProcessedSlices.insert(sl);
                     seenFieldSlices.clear();
+                    newSliceBoundaryFoundLeft = false;
                     newSliceListsProcessedBits += intraListSize;
                     intraListSize = 0;
                     LOG6("\t\t\tClearing state because we finished the previous slice.");
@@ -520,6 +548,7 @@ PHV::SlicingIterator::SlicingIterator(
                                 sliceLocations[sl].second = -1;
                             LOG6("\t\t  E. Setting " << sl << " co-ordinates to: " <<
                                  get_slice_coordinates(exactSliceListSize[sl], sliceLocations[sl]));
+                            alreadyConsidered.insert(sl);
                         }
                         if (slice.field()->isCompilerGeneratedPaddingField()) {
                             exactSliceListSize[slice] = intraListSize;
@@ -537,6 +566,7 @@ PHV::SlicingIterator::SlicingIterator(
                             required_slices_i.setbit(lastRightOffset);
                         seenFieldSlices.clear();
                         intraListSize = 0;
+                        LOG6("\t\t\tClearing state in preparation for new slice list.");
                         continue;
                     } else {
                         // Handle case where carryOver > 0.
@@ -583,7 +613,7 @@ PHV::SlicingIterator::SlicingIterator(
         if (LOGGING(6)) {
             std::stringstream ss;
             for (int i = 0; i < sentinel_idx_i; ++i)
-                ss << (compressed_schemas_i[i] ? "1" : "-");
+                ss << (required_slices_i[i] ? "1" : "-");
             LOG6("Initial compressed schemas before enforcing pragmas: " << ss.str()); }
 
         // Enforce the slicing imposed by pa_container_size pragmas specified by the programmer.
