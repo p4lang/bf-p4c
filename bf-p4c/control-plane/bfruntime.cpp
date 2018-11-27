@@ -1823,6 +1823,20 @@ BfRtSchemaGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
 
         attributesJson->append("EntryScope");
 
+        // add DynamicKeyMask attribute for exact match tables
+        // There could be an issue if the compiler took the decision (by itself
+        // or through a user pragma) to allocate the exact match table in
+        // TCAMs. In this case changing the dynamic key mask in the drivers at
+        // runtime would require the drivers to modify ALL the entries. This is
+        // not impossible but it is unlikely that the drivers would let you do
+        // that, in which case the BFRT implementation should return a runtime
+        // error.
+        auto supportsDynMask = std::all_of(
+            table.match_fields().begin(), table.match_fields().end(),
+            [](const p4configv1::MatchField& mf) {
+              return mf.match_type() == p4configv1::MatchField::EXACT; });
+        if (supportsDynMask) attributesJson->append("DynamicKeyMask");
+
         if (table.is_const_table()) attributesJson->append("ConstTable");
 
         if (table.idle_timeout_behavior() ==
