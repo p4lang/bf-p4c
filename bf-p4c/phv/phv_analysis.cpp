@@ -9,9 +9,9 @@
 #include "bf-p4c/phv/add_special_constraints.h"
 #include "bf-p4c/phv/allocate_phv.h"
 #include "bf-p4c/phv/validate_allocation.h"
+#include "bf-p4c/phv/analysis/dark.h"
 #include "bf-p4c/phv/analysis/deparser_zero.h"
 #include "bf-p4c/phv/analysis/jbay_phv_analysis.h"
-#include "bf-p4c/phv/analysis/dark.h"
 #include "bf-p4c/phv/analysis/mocha.h"
 #include "bf-p4c/mau/action_mutex.h"
 
@@ -81,7 +81,9 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             // Metadata initialization pass should be run after the metadata live range is
             // calculated.
             &meta_init,
-
+            // Determine parser constant extract constraints, to be run before Clustering.
+            Device::currentDevice() == Device::TOFINO ? new TofinoParserConstantExtract(phv) :
+                nullptr,
 #if HAVE_JBAY
             options.jbay_analysis ? new JbayPhvAnalysis(phv, uses, deps, defuse, action_constraints)
                 : nullptr,

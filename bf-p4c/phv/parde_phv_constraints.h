@@ -41,4 +41,18 @@ class PardePhvConstraints : public Inspector {
      }
 };
 
+class TofinoParserConstantExtract : public Inspector {
+ private:
+    PhvInfo         &phv;
+
+    ordered_map<const IR::BFN::ParserState*, ordered_set<PHV::Field*>> stateToPOVMap;
+
+    profile_t init_apply(const IR::Node* root) override;
+    bool preorder(const IR::BFN::Extract* extract) override;
+    void end_apply() override;
+
+ public:
+    explicit TofinoParserConstantExtract(PhvInfo& p) : phv(p) { }
+};
+
 #endif  /* BF_P4C_PHV_PARDE_PHV_CONSTRAINTS_H_ */

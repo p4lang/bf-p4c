@@ -1,5 +1,5 @@
-#ifndef BF_P4C_PHV_ANALYSIS_PACK_CONFLICTS_H_
-#define BF_P4C_PHV_ANALYSIS_PACK_CONFLICTS_H_
+#ifndef EXTENSIONS_BF_P4C_PHV_ANALYSIS_PACK_CONFLICTS_H_
+#define EXTENSIONS_BF_P4C_PHV_ANALYSIS_PACK_CONFLICTS_H_
 
 #include "ir/ir.h"
 #include "bf-p4c/mau/action_analysis.h"
@@ -68,4 +68,4 @@ class PackConflicts : public Inspector {
     unsigned size() const;
 };
 
-#endif  /* BF_P4C_PHV_ANALYSIS_PACK_CONFLICTS_H_ */
+#endif  /* EXTENSIONS_BF_P4C_PHV_ANALYSIS_PACK_CONFLICTS_H_ */

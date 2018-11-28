@@ -40,6 +40,16 @@ class UnionFind {
         return element_map_i.at(x);
     }
 
+    // Used internally for finding and mutating sets; clients cannot mutate
+    // sets.
+    Set* internalFind(const T x) const {
+        BUG_CHECK(element_map_i.find(x) != element_map_i.end(),
+                  "UnionFind: looking for element not in data structure: %1%\n"
+                  "UnionFind: data structure is\n%2%",
+                  cstring::to_cstring(x), cstring::to_cstring(this));
+        return element_map_i.at(x);
+    }
+
  public:
     /// Creates an empty UnionFind.  Elements can be added with UnionFind::insert.
     UnionFind() { }
@@ -103,7 +113,16 @@ class UnionFind {
     /// @returns a copy of the set containing @x.
     /// @exception if @x is not present.
     Set* setOf(const T x) {
-        Set* internal = internalFind(x);
+        const Set* internal = internalFind(x);
+        auto* rv = new Set();
+        rv->insert(internal->begin(), internal->end());
+        return rv;
+    }
+
+    /// @returns a copy of the set containing @x.
+    /// @exception if @x is not present.
+    Set* setOf(const T x) const {
+        const Set* internal = internalFind(x);
         auto* rv = new Set();
         rv->insert(internal->begin(), internal->end());
         return rv;

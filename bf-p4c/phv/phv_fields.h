@@ -6,6 +6,7 @@
 #include <limits>
 
 #include "bf-p4c/device.h"
+#include "bf-p4c/lib/union_find.hpp"
 #include "bf-p4c/ir/thread_visitor.h"
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/ir/tofino_write_context.h"
@@ -736,6 +737,38 @@ class PhvInfo {
         return deparser_no_pack(f1->id, f2->id);
     }
 
+    /// Clear the state maintained corresponding to constant extractors.
+    void clearConstantExtractionState() {
+        constantExtractedInSameState.clear();
+        sameStateConstantExtraction.clear();
+    }
+
+    /// Inserts a new field @f into the UnionFind structure that keeps track of fields written in
+    /// the same parser state using constant extractors.
+    void insertConstantExtractField(PHV::Field* f) {
+        sameStateConstantExtraction.insert(f);
+    }
+
+    /// Perform a union of sets for fields @f and @g in the sameStateConstantExtraction UnionFind
+    /// struct.
+    void mergeConstantExtracts(PHV::Field* f, PHV::Field* g) {
+        sameStateConstantExtraction.makeUnion(f, g);
+        constantExtractedInSameState[f->id] = true;
+        constantExtractedInSameState[g->id] = true;
+    }
+
+    const UnionFind<PHV::Field*>& getSameSetConstantExtraction() const {
+        return sameStateConstantExtraction;
+    }
+
+    UnionFind<PHV::Field*>& getSameSetConstantExtraction() {
+        return sameStateConstantExtraction;
+    }
+
+    bool hasParserConstantExtract(const PHV::Field* f) const {
+        return constantExtractedInSameState[f->id];
+    }
+
  private:  // class PhvInfo
     //
     std::map<cstring, PHV::Field>            all_fields;
@@ -794,6 +827,13 @@ class PhvInfo {
     // reverseMetadataDeps[t1] = { t_n }, means that all tables in t_n must be placed before we
     // place table t1.
     ordered_map<cstring, ordered_set<cstring>> reverseMetadataDeps;
+
+    // UnionFind struct in PhvInfo for all fields that are written in the same parser state using
+    // constants.
+    UnionFind<PHV::Field*>  sameStateConstantExtraction;
+
+    // Structure to quickly check membership in sameStateConstantExtraction.
+    bitvec constantExtractedInSameState;
 
     void clear();
     void add(cstring fieldName, gress_t gress, int size, int offset,

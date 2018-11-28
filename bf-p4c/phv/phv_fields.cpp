@@ -40,6 +40,8 @@ void PhvInfo::clear() {
     metadataDeps.clear();
     deparser_no_pack.clear();
     field_mutex.clear();
+    constantExtractedInSameState.clear();
+    sameStateConstantExtraction.clear();
 }
 
 void PhvInfo::add(

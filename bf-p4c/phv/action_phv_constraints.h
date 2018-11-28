@@ -525,6 +525,16 @@ class ActionPhvConstraints : public Inspector {
     bool pack_conflicts_present(
             const PHV::Allocation::MutuallyLiveSlices& container_state) const;
 
+    /// @returns true if parser constant extract constraints are satisfied for the candidate
+    /// packing. This only applies to Tofino, where fields written to using constant extractors in
+    /// the same parser state must be allocated within 4 consecutive bits of the same 16-bit
+    /// container, and  within consecutive 3 bits of the same 32 bit container. Note that this
+    /// method will always return true for Tofino2, because no fields are marked as parser constant
+    /// extract candidates by the ParserConstantExtract pass.
+    bool parser_constant_extract_satisfied(
+            const PHV::Container& c,
+            const PHV::Allocation::MutuallyLiveSlices& container_state) const;
+
     /** Checks whether packing @slices into a container will violate MAU action
      * constraints. @initActions is the map of fields to the actions where those fields must be
      * initialized to enable metadata overlay.

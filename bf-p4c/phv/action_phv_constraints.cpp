@@ -728,6 +728,58 @@ bool ActionPhvConstraints::pack_conflicts_present(
     return false;
 }
 
+bool ActionPhvConstraints::parser_constant_extract_satisfied(
+        const PHV::Container& c,
+        const PHV::Allocation::MutuallyLiveSlices& container_state) const {
+    if (c.is(PHV::Size::b8)) return true;
+    const auto& unionFind = phv.getSameSetConstantExtraction();
+    for (auto& slice : container_state) {
+        // For each slice, if it is not marked as parser constant extract, do nothing.
+        if (!phv.hasParserConstantExtract(slice.field())) continue;
+        bitvec range(slice.container_slice().lo, slice.width());
+        const auto* sliceSet = unionFind.setOf(slice.field());
+        for (auto& slice1 : container_state) {
+            if (slice == slice1) continue;
+            // If these are different slices of the same field, then don't do anything.
+            if (slice.field() == slice1.field()) continue;
+            // if the other slice is not marked parser constant extract, then we don't need to do
+            // anything.
+            if (!phv.hasParserConstantExtract(slice1.field())) continue;
+            // If the field is not in the same set as the parser constant extract field, then we are
+            // good.
+            if (sliceSet->find(slice1.field()) == sliceSet->end()) continue;
+            // Both slice and slice1's fields are in the same set. Now we need to make sure they can
+            // be allocated into the same container.
+            range |= bitvec(slice1.container_slice().lo, slice1.width());
+            size_t count = 0;
+            bool firstOneFound = false;
+            size_t prevBit = 0;
+            for (auto b : range) {
+                if (!firstOneFound) {
+                    // First bit. Just set prevBit and exit.
+                    ++count;
+                    prevBit = b;
+                    firstOneFound = true;
+                    continue;
+                }
+                // Later bit. Increase count by the difference between prevBit and the currentBit.
+                count += (b - prevBit);
+                // Set prevBit to current bit.
+                prevBit = b;
+            }
+            // Need to pack within 4 consecutive bits for 16b fields and within 3 consecutive bits
+            // for 32b fields.
+            int maxAllowed = c.is(PHV::Size::b16) ? 4 : 3;
+            if (count <= maxAllowed) continue;
+            LOG5("\t\t\tIn container " << c << ", POV slices " << slice << " and " << slice1 <<
+                 " are packed " << count << " (maxAllowed: " << maxAllowed << "b) bits apart." <<
+                 " Disallowing this packing to save parser extractors.");
+            return false;
+        }
+    }
+    return true;
+}
+
 bool ActionPhvConstraints::check_and_generate_constraints_for_move_with_unallocated_sources(
         const PHV::Allocation& alloc,
         const IR::MAU::Action* action,
@@ -975,6 +1027,11 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
     // packing. If yes, packing not possible.
     if (pack_conflicts_present(container_state))
         return boost::none;
+
+    // Check for parser constant extract for non 8b containers.
+    if (Device::currentDevice() == Device::TOFINO)
+        if (!parser_constant_extract_satisfied(c, container_state))
+            return boost::none;
 
     // Merge actions for all the candidate fields into a set, including initialization actions for
     // any metadata fields overlaid due to live range shrinking.

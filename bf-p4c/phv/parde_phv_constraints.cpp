@@ -136,3 +136,49 @@ bool PardePhvConstraints::preorder(const IR::BFN::Digest* digest) {
     }
     return true;
 }
+
+Visitor::profile_t TofinoParserConstantExtract::init_apply(const IR::Node* root) {
+    phv.clearConstantExtractionState();
+    stateToPOVMap.clear();
+    return Inspector::init_apply(root);
+}
+
+bool TofinoParserConstantExtract::preorder(const IR::BFN::Extract* e) {
+    // The hardware constraints on extracting constants is not applicable to JBay.
+    if (Device::currentDevice() != Device::TOFINO) return true;
+    if (!e->dest) BUG("No destination for parser extract?");
+    PHV::Field* field = phv.field(e->dest->field);
+    if (!field) BUG("No field corresponding to parser extract destination?");
+    // If the field is not being set to a constant value, ignore the extract.
+    if (!e->source->to<IR::BFN::ConstantRVal>()) return true;
+    // Only consider POV fields. For non POV fields, the parser should account for the extractors
+    // correctly.
+    if (!field->pov) return true;
+    auto state = findContext<IR::BFN::ParserState>();
+    if (!state) BUG("No parser state corresponding to extract?");
+    LOG3("\t  Field extracted using constant: " << field->name << ", state: " << state->name);
+    stateToPOVMap[state].insert(field);
+    phv.insertConstantExtractField(field);
+    return true;
+}
+
+void TofinoParserConstantExtract::end_apply() {
+    for (auto kv : stateToPOVMap) {
+        if (kv.second.size() == 1) continue;
+        for (auto* f1 : kv.second) {
+            for (auto* f2 : kv.second) {
+                if (f1 == f2) continue;
+                phv.mergeConstantExtracts(f1, f2); } } }
+
+    if (!LOGGING(2)) return;
+
+    LOG2("\tPrinting sets of fields extracted in the same state");
+    UnionFind<PHV::Field*>& extracts = phv.getSameSetConstantExtraction();
+    int i = 0;
+    for (auto* set : extracts) {
+        if (set->size() < 2) continue;
+        LOG2("\t  Set " << i++);
+        for (auto* f : *set)
+            LOG2("\t\t" << f->name);
+    }
+}
