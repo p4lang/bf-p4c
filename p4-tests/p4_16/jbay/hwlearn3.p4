@@ -104,7 +104,7 @@ control learn_dleft(inout headers hdr, inout metadata meta)(bit<3> stage) {
         meta.retire_flag = tmp2[0:0];
     }
 
-    // @ways(1)  // multiway dleft tables broken due to missing action_bus alloc in compiler.
+    @ways(1) // one way to make getting to later stages easier
     table learn_match {
         key = {
             hdr.ipv4.src_addr : dleft_hash;

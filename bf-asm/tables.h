@@ -1540,6 +1540,7 @@ DECLARE_TABLE_TYPE(StatefulTable, Synth2Port, "stateful",
     int logvpn_lineno = -1;
     int logvpn_min = -1, logvpn_max = -1;
     int pred_shift = 0, pred_comb_shift = 0;
+    int stage_alu_id = -1;
     Ref underflow_action, overflow_action;
 public:
     Ref                 bound_selector;

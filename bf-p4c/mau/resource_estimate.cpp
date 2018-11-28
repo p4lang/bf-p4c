@@ -429,7 +429,11 @@ void StageUseEstimate::options_to_dleft_entries(const IR::MAU::Table *tbl,
         if (salu != nullptr)
             break;
     }
+    if (!attached_entries.count(salu))
+        return;
     auto entries = attached_entries.at(salu);
+    if (entries == 0)
+        return;
 
     /* Figure out how many dleft ways can/should be used for the specified number
      * of entries -- currently ways must be the same size and must be a power of two size.

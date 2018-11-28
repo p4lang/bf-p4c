@@ -111,6 +111,11 @@ bool StatefulTable::setup_jbay(const pair_t &kv) {
                 phv_hash_mask.setraw(kv.value.i);
             else
                 phv_hash_mask.setraw(kv.value.bigi.data, kv.value.bigi.size); }
+    } else if (kv.key == "stage_alu_id") {
+        if (CHECKTYPE(kv.value, tINT)) {
+            if (kv.value.i < 0 || kv.value.i >= 128)
+                error(kv.value.lineno, "invalid stage_alu_id %d", kv.value.i);
+            stage_alu_id = kv.value.i; }
     } else
         return false;
     return true;
@@ -230,7 +235,9 @@ template<> void StatefulTable::write_logging_regs(Target::JBay::mau_regs &regs) 
         salu.salu_const_regfile[i] = const_vals[i] & 0xffffffffU;
         salu.salu_const_regfile_msbs[i] = (const_vals[i] >> 32) & 0x3;
     }
-
+    if (stage_alu_id >= 0) {
+        salu.stateful_ctl.salu_stage_id = stage_alu_id;
+        salu.stateful_ctl.salu_stage_id_enable = 1; }
 }
 
 /// Compute the proper value for the register

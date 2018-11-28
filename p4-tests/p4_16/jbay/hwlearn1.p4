@@ -4,7 +4,8 @@ struct metadata {
     bit<16> src_port;
     bit<16> dst_port;
     @pa_container_size("ingress", "cache_id", 32)
-    bit<15> cache_id;
+    @pa_atomic("ingress", "cache_id")
+    bit<19> cache_id;
     @pa_container_size("ingress", "learn_pred", 32)
     bit<16> learn_pred;
     bit<1>  new_flow_flag;
@@ -74,15 +75,13 @@ control ingress(inout headers hdr, inout metadata meta,
     };
     action do_learn_match() {
         bit<32> tmp2;
-        bit<14> addr = lookup_hash.get({ hdr.ipv4.src_addr, hdr.ipv4.dst_addr,
-                                         hdr.ipv4.protocol, meta.src_port,
-                                         meta.dst_port });
+        // hash skipping ports -- makes it easy to generate collisions
+        bit<14> addr = lookup_hash.get({ hdr.ipv4.src_addr, hdr.ipv4.dst_addr, hdr.ipv4.protocol });
         bit<32> tmp = learn_act.execute(addr, tmp2);
-        meta.cache_id = tmp[20:6];
+        meta.cache_id = tmp[24:6];
         meta.learn_pred = tmp2[19:4];
     }
 
-    @ways(1)  // multiway dleft tables broken due to missing action_bus alloc in compiler.
     table learn_match {
         key = {
             hdr.ipv4.src_addr : dleft_hash;
@@ -130,7 +129,7 @@ control ingress(inout headers hdr, inout metadata meta,
     Register<map_pair, bit<15>>(32768) cid2fidmap;
     RegisterAction<map_pair, bit<15>, bit<16>>(cid2fidmap) register_new_flow = {
         void apply(inout map_pair val, out bit<16> rv) {
-            val.cid = (bit<16>)meta.cache_id;
+            val.cid = meta.cache_id[15:0];
             val.fid = meta.flow_id;
             rv = meta.flow_id; } };
     RegisterAction<map_pair, bit<15>, bit<16>>(cid2fidmap) existing_flow = {
@@ -159,12 +158,13 @@ control ingress(inout headers hdr, inout metadata meta,
             ig_intr_tm_md.ucast_egress_port = 3;
             if (!cuckoo_match.apply().hit) {
                 learn_match.apply();
+                meta.cache_id[14:13] = meta.cache_id[18:17];  // squeeze out excess vpn bits
                 process_dleft_result.apply();
                 if (meta.new_flow_flag == 1) {
                     do_report_cacheid();
-                    register_new_flow.execute(meta.cache_id);
+                    register_new_flow.execute(meta.cache_id[14:0]);
                 } else {
-                    meta.flow_id = existing_flow.execute(meta.cache_id);
+                    meta.flow_id = existing_flow.execute(meta.cache_id[14:0]);
                 }
             }
             inc_flow_counter.execute(meta.flow_id);

@@ -3020,6 +3020,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
 
     auto &memuse = tbl->resources->memuse.at(unique_id);
     if (!memuse.dleft_learn.empty() || !memuse.dleft_match.empty()) {
+        out << indent << "stage_alu_id: " << memuse.dleft_learn.size() << std::endl;
         out << indent++ << "sbus:" << std::endl;
         if (!memuse.dleft_learn.empty())
             out << indent << "learn: [" << emit_vector(memuse.dleft_learn) << "]" << std::endl;

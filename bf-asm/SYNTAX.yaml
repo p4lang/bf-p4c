@@ -707,6 +707,8 @@ stage <constant> <thread>:
           # fifo/stack (jbay only)
         address_shift: <int>
           # shift up the incoming meter address before vpn/index/subword extract (jbay only)
+        stage_alu_id: <int>
+          # stage + alu id to be preprended to output addresses
     dependency: concurrent | action | match
         # set the interstage dependency between this stage and the
         # previous stage.  Ignored in stage 0
