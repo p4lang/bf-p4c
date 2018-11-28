@@ -1366,3 +1366,9 @@ p4c_add_xfail_reason("tofino"
   "Wrong number of arguments for method call"
   testdata/p4_16_samples/issue1560-bmv2.p4
 )
+
+p4c_add_xfail_reason("tofino"
+  "FieldLVal contains unexpected value"
+  testdata/p4_16_samples/issue1607-bmv2.p4
+  testdata/p4_16_samples/issue562-bmv2.p4
+)

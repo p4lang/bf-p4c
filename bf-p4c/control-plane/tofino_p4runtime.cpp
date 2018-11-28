@@ -681,17 +681,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         symbols->add(SymbolType::SNAPSHOT(), control->externalName());
     }
 
-    void postCollect(P4RuntimeSymbolTableIface* symbols) override {
-        // analyze action profiles / selectors and build a mapping from action
-        // profile / selector name to the set of tables referencing them
-        Helpers::forAllEvaluatedBlocks(evaluatedProgram, [&](const IR::Block* block) {
-            if (!block->is<IR::TableBlock>()) return;
-            auto table = block->to<IR::TableBlock>()->container;
-            auto implementation = getTableImplementationName(table, refMap);
-            if (implementation)
-                actionProfilesRefs[*implementation].insert(table->controlPlaneName());
-        });
-
+    void collectExtra(P4RuntimeSymbolTableIface* symbols) override {
         // Collect value sets. This step is required because value set support
         // in "standard" P4Info is currently insufficient.
         // Also retrieve user-provided name for ig_intr_md parameter in ingress
@@ -708,6 +698,22 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         Helpers::forAllEvaluatedBlocks(evaluatedProgram, [&](const IR::Block* block) {
             if (!block->is<IR::ControlBlock>()) return;
             collectSnapshot(symbols, block->to<IR::ControlBlock>(), &snapshotFieldIds);
+        });
+
+        if (!hasUserPortMetadata)
+            symbols->add(SymbolType::PORT_METADATA(), PortMetadata::name(), PortMetadata::id());
+    }
+
+    void postCollect(const P4RuntimeSymbolTableIface& symbols) override {
+        (void)symbols;
+        // analyze action profiles / selectors and build a mapping from action
+        // profile / selector name to the set of tables referencing them
+        Helpers::forAllEvaluatedBlocks(evaluatedProgram, [&](const IR::Block* block) {
+            if (!block->is<IR::TableBlock>()) return;
+            auto table = block->to<IR::TableBlock>()->container;
+            auto implementation = getTableImplementationName(table, refMap);
+            if (implementation)
+                actionProfilesRefs[*implementation].insert(table->controlPlaneName());
         });
 
         // Creates a set of color-aware meters by inspecting every call to the
@@ -732,8 +738,6 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
                 }
             });
         });
-        if (!hasUserPortMetadata)
-            symbols->add(SymbolType::PORT_METADATA(), PortMetadata::name(), PortMetadata::id());
     }
 
     void addTableProperties(const P4RuntimeSymbolTableIface& symbols,

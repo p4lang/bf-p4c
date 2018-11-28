@@ -1,3 +1,9 @@
+#include <boost/algorithm/string/replace.hpp>
+#include <boost/optional.hpp>
+
+#include <array>
+#include <initializer_list>
+
 #include "gtest/gtest.h"
 
 #include "ir/ir.h"
@@ -13,13 +19,6 @@
 #include "bf-p4c/common/multiple_apply.h"
 #include "bf-p4c/test/gtest/tofino_gtest_utils.h"
 #include "bf-p4c/mau/upward_downward_prop.h"
-
-#include <boost/algorithm/string/replace.hpp>
-#include <boost/optional.hpp>
-
-#include <array>
-#include <initializer_list>
-
 
 namespace Test {
 
@@ -163,6 +162,9 @@ TEST_F(TableDependencyGraphTest, GraphInjectedControl) {
 
     apply {
         switch (t1.apply().action_run) {
+            a1 : {
+                t4.apply();
+            }
             default : {
                 if (headers.h1.f2 == headers.h1.f1) {
                     t2.apply();
@@ -172,9 +174,6 @@ TEST_F(TableDependencyGraphTest, GraphInjectedControl) {
                         }
                     }
                 }
-            }
-            a1 : {
-                t4.apply();
             }
         }
     }
@@ -199,7 +198,7 @@ TEST_F(TableDependencyGraphTest, GraphInjectedControl) {
             t2 = kv.first;
         } else if (kv.first->name == "t3_0") {
             t3 = kv.first;
-        } else if (kv.first->name == "t4_0.0") {
+        } else if (kv.first->name == "t4_0") {
             t4 = kv.first;
         }
     }
@@ -375,7 +374,7 @@ TEST_F(TableDependencyGraphTest, GraphEdgeAnnotations) {
 
     ordered_set<cstring> field_names;
     ordered_set<DependencyGraph::dependencies_t> dep_types;
-    for (const auto& kv: dep_info) {
+    for (const auto& kv : dep_info) {
         field_names.insert(kv.first.first->name);
         if (kv.first.first->name == "ingress::headers.h2.f12") {
             dep_types.insert(kv.first.second);
@@ -688,8 +687,6 @@ TEST_F(TableDependencyGraphTest, GraphLayeredControl) {
     EXPECT_EQ(dg.dependence_tail_size(t10), 0);
     EXPECT_EQ(dg.dependence_tail_size(t11), 1);
     EXPECT_EQ(dg.dependence_tail_size(t12), 0);
-
-
 }
 
 struct Scores {
@@ -698,7 +695,7 @@ struct Scores {
     Scores(std::initializer_list<std::initializer_list<int>> l) {
         EXPECT_EQ(l.size(), data.size());
         int i = 0;
-        for (auto sl: l) {
+        for (auto sl : l) {
             EXPECT_EQ(sl.size(), data[i].size());
             int j = 0;
             for (auto s : sl) data[i][j++] = s;
@@ -710,8 +707,7 @@ struct Scores {
 void validate_scores(UpwardDownwardPropagation* upward_downward_prop,
                      const IR::MAU::Table *a_table_to_use, const IR::MAU::Table *b_table_to_use,
                      Scores &a_score, Scores &b_score,
-                     ordered_set<const IR::MAU::Table*> &placed_tables)
-{
+                     ordered_set<const IR::MAU::Table*> &placed_tables) {
     upward_downward_prop->update_placed_tables(placed_tables);
     constexpr int num_prop_types = UpwardDownwardPropagation::NUM_PROP_TYPES;
     constexpr int num_heuristics = UpwardDownwardPropagation::NUM_HEURISTICS;
@@ -754,7 +750,6 @@ void validate_scores(UpwardDownwardPropagation* upward_downward_prop,
             EXPECT_EQ(calc_b, true_b);
         }
     }
-
 }
 
 /*
@@ -941,13 +936,13 @@ TEST_F(TableDependencyGraphTest, UpwardDownwardProp) {
     // Scores (from left to right) are: deps_stages_control, deps_stages, total_deps
     // See definition of PlaceScore in upward_downward_prop for details
     Scores a_score(std::initializer_list<std::initializer_list<int>>(
-                       {{0, 0, 0},   // Downward prop scores
-                        {0, 0, 0},   // Upward prop scores
-                        {0, 0, 0}})); // Local score
+                       {{0, 0, 0},     // Downward prop scores
+                        {0, 0, 0},     // Upward prop scores
+                        {0, 0, 0}}));  // Local score
     Scores b_score(std::initializer_list<std::initializer_list<int>>(
-                       {{3, 3, 0},   // Downward prop scores
-                        {0, 0, 0},   // Upward prop scores
-                        {0, 0, 0}})); // Local score
+                       {{3, 3, 0},     // Downward prop scores
+                        {0, 0, 0},     // Upward prop scores
+                        {0, 0, 0}}));  // Local score
     validate_scores(upward_downward_prop, x2, y, a_score, b_score, placed_tables);
 
     a_score = std::initializer_list<std::initializer_list<int>>(
