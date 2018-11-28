@@ -849,16 +849,6 @@ bool BuildGatewayMatch::preorder(const IR::RangeMatch *rm) {
     return false;
 }
 
-std::ostream &operator<<(std::ostream &out, const BuildGatewayMatch &m) {
-    if (m.range_match.empty())
-        return out << m.match;
-    // only used as a gateway key, so format it as a YAML complex key
-    out << "? [ ";
-    for (int i = m.range_match.size()-1; i >= 0; --i)
-        out << "0x" << hex(m.range_match[i]) << ", ";
-    return out << m.match << " ] ";
-}
-
 GatewayOpt::GatewayOpt(const PhvInfo &phv) : PassManager {
     new PassRepeated {
         new CanonGatewayExpr,

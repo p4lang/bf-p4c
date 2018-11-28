@@ -249,8 +249,9 @@ void AllocMeterOutput::setup_layout(ActionFormat::TotalALUPlacement &init_alu_fo
             int index = alu.gen_index();
             auto &single_slot_use = slot_uses[index];
             for (auto &arg_loc : alu.arg_locs) {
-                auto bit_loc = arg_loc.field_hi() / alu.alu_size;
-                single_slot_use.setbit(bit_loc);
+                auto hi_bit_loc = arg_loc.field_hi() / alu.alu_size;
+                auto lo_bit_loc = arg_loc.field_bit / alu.alu_size;
+                single_slot_use.setrange(lo_bit_loc, hi_bit_loc - lo_bit_loc + 1);
             }
         }
     }

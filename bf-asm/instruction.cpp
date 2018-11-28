@@ -44,6 +44,12 @@ namespace VLIW {
 static const int group_size[] = { 32, 32, 32, 32, 8, 8, 8, 8, 16, 16, 16, 16, 16, 16 };
 
 struct operand {
+    /** A source operand to a VLIW instruction -- this can be a variety of things, so we
+     * have a pointer to an abstract base class and a number of derived concrete classes for
+     * the different kinds of operands.  When we parse the operand, the type may be determined,
+     * or if it is just a name, we will have to wait to a later pass to resolve what the
+     * name refers to.  At that point, the `Named' object created in parsing will be replaced
+     * with the actual operand type */
     static const int ACTIONBUS_OPERAND = 0x20;
     struct Base {
         int     lineno;
@@ -56,11 +62,16 @@ struct operand {
         virtual int phvGroup() { return -1; }
         virtual int bits(int group) = 0;
         virtual unsigned bitoffset(int group) const { return 0; }
-        virtual void mark_use(Table *tbl) {}
         virtual void dbprint(std::ostream &) const = 0;
         virtual bool equiv(const Base *) const = 0;
         virtual void phvRead(std::function<void (const ::Phv::Slice &sl)>) {}
-        virtual void pass2(int) {}
+        /** pass1 called as part of pass1 processing of stage
+         * @tbl - table containing the action with the instruction with this operand
+         * @group - mau PHV group of the ALU (dest) for this instruction */
+        virtual void pass1(Table *tbl, int group) {}
+        /** pass2 called as part of pass2 processing of stage
+         * @group - mau PHV group of the ALU (dest) for this instruction */
+        virtual void pass2(int group) {}
     } *op;
     struct Const : Base {
         int64_t value;
@@ -106,12 +117,14 @@ struct operand {
                 return -1; }
             return reg->reg.mau_id() % ::Phv::mau_groupsize(); }
         unsigned bitoffset(int group) const override { return reg->lo; }
-        void mark_use(Table *tbl) override {
+        void pass1(Table *tbl, int) override {
             tbl->stage->action_use[tbl->gress][reg->reg.uid] = true; }
         void dbprint(std::ostream &out) const override { out << reg; }
         void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) override { fn(*reg); }
     };
     struct Action : Base {
+        /* source referring to either an action data or immediate field OR an attached table
+         * output.  All of these are accessed via the action data bus */
         std::string             name;
         std::string             p4name;
         TableOutputModifier     mod = TableOutputModifier::NONE;
@@ -163,6 +176,13 @@ struct operand {
             else
                 return ACTIONBUS_OPERAND + byte/size;
             return -1; }
+        void pass1(Table *tbl, int group) override {
+            if (field) field->flags |= Table::Format::Field::USED_IMMED;
+            if (lo >= 0 && hi >= 0 && lo/group_size[group] != hi/group_size[group]) {
+                error(lineno, "action bus slice (%d..%d) can't fit in a single slot for %d bit "
+                      "access", lo, hi, group_size[group]);
+                // chop it down to be in range (avoid error cascade)
+                hi = lo | (group_size[group]-1); } }
         void pass2(int group) override {
             int bits = group_size[group];
             unsigned bytes = bits/8U;
@@ -187,8 +207,6 @@ struct operand {
                     table->need_on_actionbus(Table::all.at(name), mod, lo, hi, bytes);
                 else
                     error(lineno, "Can't find any operand named %s", name.c_str()); } }
-        void mark_use(Table *tbl) override {
-            if (field) field->flags |= Table::Format::Field::USED_IMMED; }
         unsigned bitoffset(int group) const override {
             int size = group_size[group]/8U;
             int byte = field ? table->find_on_actionbus(field, lo, hi, size)
@@ -381,7 +399,7 @@ struct operand {
         int phvGroup() override { BUG(); return -1; }
         int bits(int group) override { BUG(); return 0; }
         unsigned bitoffset(int group) const override { BUG(); return 0; }
-        void mark_use(Table *tbl) override { BUG(); }
+        void pass1(Table *, int) override { BUG(); }
         void dbprint(std::ostream &out) const override {
             out << name;
             if (lo >= 0) {
@@ -416,7 +434,6 @@ struct operand {
     int phvGroup() { return op->lookup(op)->phvGroup(); }
     void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) { op->lookup(op)->phvRead(fn); }
     int bits(int group) { return op->lookup(op)->bits(group); }
-    void mark_use(Table *tbl) { op->lookup(op)->mark_use(tbl); }
     void dbprint(std::ostream &out) const { op->dbprint(out); }
     Base *operator->() { return op->lookup(op); }
     template <class T> T *to() { return dynamic_cast<T *>(op->lookup(op)); }
@@ -629,8 +646,8 @@ Instruction *AluOP::pass1(Table *tbl, Table::Actions::Action *) {
         return this; }
     slot = dest->reg.mau_id();
     tbl->stage->action_set[tbl->gress][dest->reg.uid] = true;
-    src1.mark_use(tbl);
-    src2.mark_use(tbl);
+    src1->pass1(tbl, slot/Phv::mau_groupsize());
+    src2->pass1(tbl, slot/Phv::mau_groupsize());
     if (src2.phvGroup() < 0 && opc->swap_args) {
         std::swap(src1, src2);
         opc = opc->swap_args; }
@@ -640,7 +657,7 @@ Instruction *AluOP::pass1(Table *tbl, Table::Actions::Action *) {
 }
 Instruction *AluOP3Src::pass1(Table *tbl, Table::Actions::Action *act) {
     AluOP::pass1(tbl, act);
-    src3.mark_use(tbl);
+    src3->pass1(tbl, slot/Phv::mau_groupsize());
     if (!src3.to<operand::Action>())
         error(lineno, "src3 must be on the action bus");
     return this;
@@ -812,8 +829,8 @@ Instruction *CondMoveMux::pass1(Table *tbl, Table::Actions::Action *) {
         return this; }
     slot = dest->reg.mau_id();
     tbl->stage->action_set[tbl->gress][dest->reg.uid] = true;
-    src1.mark_use(tbl);
-    src2.mark_use(tbl);
+    src1->pass1(tbl, slot/Phv::mau_groupsize());
+    src2->pass1(tbl, slot/Phv::mau_groupsize());
     return this;
 }
 int CondMoveMux::encode() {
@@ -891,8 +908,8 @@ Instruction *DepositField::pass1(Table *tbl, Table::Actions::Action *) {
         return this; }
     slot = dest->reg.mau_id();
     tbl->stage->action_set[tbl->gress][dest->reg.uid] = true;
-    src1.mark_use(tbl);
-    src2.mark_use(tbl);
+    src1->pass1(tbl, slot/Phv::mau_groupsize());
+    src2->pass1(tbl, slot/Phv::mau_groupsize());
     return this;
 }
 int DepositField::encode() {
@@ -981,7 +998,7 @@ Instruction *Set::pass1(Table *tbl, Table::Actions::Action *act) {
             return (new LoadConst(lineno, dest, k->value))->pass1(tbl, act); }
     slot = dest->reg.mau_id();
     tbl->stage->action_set[tbl->gress][dest->reg.uid] = true;
-    src.mark_use(tbl);
+    src->pass1(tbl, slot/Phv::mau_groupsize());
     return this;
 }
 
@@ -1127,8 +1144,8 @@ Instruction *ShiftOP::pass1(Table *tbl, Table::Actions::Action *) {
         return this; }
     slot = dest->reg.mau_id();
     tbl->stage->action_set[tbl->gress][dest->reg.uid] = true;
-    src1.mark_use(tbl);
-    src2.mark_use(tbl);
+    src1->pass1(tbl, slot/Phv::mau_groupsize());
+    src2->pass1(tbl, slot/Phv::mau_groupsize());
     if (src2.phvGroup() < 0)
         error(lineno, "src%s must be phv register", opc->use_src1 ? "2" : "");
     return this;

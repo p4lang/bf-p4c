@@ -28,3 +28,18 @@ std::ostream &operator<<(std::ostream &out, const CollectGatewayFields &gwf) {
     out << endl << "bytes=" << gwf.bytes << " bits=" << gwf.bits << unindent;
     return out;
 }
+
+std::ostream &operator<<(std::ostream &out, const BuildGatewayMatch &m) {
+    if (m.range_match.empty())
+        return out << m.match;
+    // only used as a gateway key, so format it as a YAML complex key
+    out << "? [ ";
+    for (int i = m.range_match.size()-1; i >= 0; --i)
+        out << "0x" << hex(m.range_match[i]) << ", ";
+    return out << m.match << " ] ";
+}
+
+void dump(const CollectGatewayFields &gwf) { std::cout << gwf << std::endl; }
+void dump(const CollectGatewayFields *gwf) { std::cout << *gwf << std::endl; }
+void dump(const BuildGatewayMatch &gwm) { std::cout << gwm << std::endl; }
+void dump(const BuildGatewayMatch *gwm) { std::cout << *gwm << std::endl; }

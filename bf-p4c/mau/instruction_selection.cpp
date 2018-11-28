@@ -98,8 +98,9 @@ const IR::Node *Synth2PortSetup::postorder(IR::Primitive *prim) {
                       "too many outputs");
             int bit = output_offsets[output];
             auto ao = new IR::MAU::AttachedOutput(IR::Type::Bits::get(bit+32), salu);
-            auto instr = new IR::MAU::Instruction(prim->srcInfo, "set", prim->operands[idx],
-                                                  MakeSlice(ao, bit, bit+31));
+            auto dest = prim->operands[idx];
+            auto instr = new IR::MAU::Instruction(prim->srcInfo, "set", dest,
+                                  MakeSlice(ao, bit, bit + dest->type->width_bits() - 1));
             // Have to put these instructions at the highest level of the instruction
             created_instrs.push_back(instr);
         }
