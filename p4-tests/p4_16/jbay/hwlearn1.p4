@@ -122,7 +122,7 @@ control ingress(inout headers hdr, inout metadata meta,
     /* output fifo -- outputs cache ids of new flows */
     Register<bit<16>, _>(32768) output_fifo;
     RegisterAction<bit<16>, _, bit<16>>(output_fifo) report_cacheid = {
-        void apply(inout bit<16> val) { val = (bit<16>)meta.cache_id; } };
+        void apply(inout bit<16> val) { val = meta.cache_id[15:0]; } };
     action do_report_cacheid() { report_cacheid.enqueue(); }
 
     /* map table -- records mapping from cache id to flow id */
