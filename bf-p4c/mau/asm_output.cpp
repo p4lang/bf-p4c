@@ -1236,7 +1236,8 @@ void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
         } else if (emit_immed && action_data_use.is_rand_num(rs.byte_offset, &rn)) {
             auto rng_use = action_data_xbar.rng_locs.at(rn);
             out << "rng(" << rng_use.unit << ", ";
-            int lo = (rs.location.byte * 8) % 8;
+            // random numbers come as full bytes, no masking
+            int lo = rs.byte_offset * 8;
             int hi = lo + byte_sz * 8 - 1;
             out << lo << ".." << hi << ")";
         } else if (action_data_use.is_meter_color(rs.byte_offset, immed)) {
@@ -1642,6 +1643,7 @@ class MauAsmOutput::EmitAction : public Inspector {
             return false;
         } else if (sl->e0->is<IR::MAU::RandomNumber>()) {
             handle_random_number(sl);
+            return false;
         }
         visit(sl->e0);
         if (sl->e0->is<IR::MAU::ActionArg>()) {
