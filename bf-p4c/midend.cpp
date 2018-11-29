@@ -37,6 +37,7 @@
 #include "midend/validateProperties.h"
 #include "common/blockmap.h"
 #include "common/check_header_alignment.h"
+#include "common/elim_emit_headers.h"
 #include "common/flatten_emit_args.h"
 #include "bf-p4c/arch/arch.h"
 #include "bf-p4c/common/normalize_params.h"
@@ -216,6 +217,7 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::SimplifyParsers(&refMap),
         new P4::StrengthReduction(),
         new P4::EliminateTuples(&refMap, &typeMap),
+        new EliminateEmitHeaders(&refMap, &typeMap),
         new P4::SimplifyComparisons(&refMap, &typeMap),
         new InlineSubparserParameter(&refMap),  // run before CopyStructures
         new P4::CopyStructures(&refMap, &typeMap),

@@ -119,6 +119,7 @@ set (BF_P4C_BACKEND_COMMON_SRCS
   common/check_header_alignment.cpp
   common/collect_global_pragma.cpp
   common/copy_header_eliminator.cpp
+  common/elim_emit_headers.cpp
   common/elim_unused.cpp
   common/extract_maupipe.cpp
   common/field_defuse.cpp
@@ -151,6 +152,7 @@ set (BF_P4C_BACKEND_COMMON_HDRS
   common/collect_global_pragma.h
   common/copy_header_eliminator.h
   common/debug_info.h
+  common/elim_emit_headers.h
   common/elim_unused.h
   common/extract_maupipe.h
   common/field_defuse.h
