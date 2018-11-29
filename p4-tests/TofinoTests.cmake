@@ -103,6 +103,12 @@ p4c_add_ptf_test_with_ptfdir_and_spec (
     "${testExtraArgs} -DWITH_SPGW -DWITH_INT_TRANSIT"
     ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos-ptf/fabric-new.ptf "all")
 
+set (TOFINO_32Q_3PIPE_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/tofino32q-3pipe/sfc.p4)
+p4c_add_ptf_test_with_ptfdir_and_spec (
+    "tofino" tofino32q-3pipe ${TOFINO_32Q_3PIPE_P4}
+    "${testExtraArgs} -tofino -arch tna"
+    ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/tofino32q-3pipe-ptf/sfc.ptf "all")
+
 # subset of p4factory tests that we want to run as part of regressions
 # One # means it fails badly but should get it to run soon
 # Two # means it is not required for switch, but we should still try to compile

@@ -12,13 +12,14 @@ unsigned                                                        P4Table::max_han
 const char *P4Table::type_name[] = { 0,
 "match", "action", "selection", "statistics", "meter", "stateful" };
 
-// handle[31:30] is used as handle offset field for multipipe
+// handle[19:16] is used as handle offset field for multipipe
 static unsigned apply_handle_offset(unsigned handle, unsigned offset) {
-    return handle | offset << 30;
+    return handle | (offset & 0xff) << 16;
 }
 
+// clear bit[19:16] which is used to encode pipe_id.
 static unsigned clear_handle_offset(unsigned handle) {
-    return handle & 0x3fffffff;
+    return handle & 0xff00ffff;
 }
 
 P4Table *P4Table::get(P4Table::type t, VECTOR(pair_t) &data) {
@@ -49,7 +50,7 @@ P4Table *P4Table::get(P4Table::type t, VECTOR(pair_t) &data) {
         if (!(rv = by_name[t][n->s])) {
             rv = by_name[t][n->s] = new P4Table;
             rv->name = n->s;
-            rv->handle = apply_handle_offset(t << 24, unique_table_offset); }
+            rv->handle = apply_handle_offset(++max_handle[t] | (t << 24), unique_table_offset); }
     } else {
         error(data[0].key.lineno, "no handle or name in p4 info");
         return 0; }

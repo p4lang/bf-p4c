@@ -1569,7 +1569,7 @@ void Table::Actions::add_action_format(const Table *table, json::map &tbl) const
         // it is a miss action and must be assigned a miss table if specified.
         if (act.default_only && (table->miss_next)) next = table->miss_next;
         if(next && next->name_ == "END") next = Table::Ref();
-        std::string next_table_name = next ? next->name() : "--END_OF_PIPELINE--";
+        std::string next_table_name = next ? next->p4_name() : "--END_OF_PIPELINE--";
         //unsigned next_table = next ? table->get_format_field_size("next") == 8 ?
         //    next->table_id() : next->table_type() == Table::GATEWAY ? 0 : act.next_table_encode : 0;
         unsigned next_table = next ? table->get_format_field_size("next") == 8 ?

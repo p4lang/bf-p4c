@@ -89,7 +89,8 @@ std::ostream& operator<<(std::ostream& out, const BFN::Phase0Info* info) {
     // this is never used, driver expects unique handles as phase0 is
     // represented as a table construct in context.json. We assign the starting
     // handle to phase0, all other action handles start at (0x20 << 24) + 1
-    out <<   indent << "- handle: 0x" << hex(0x20 << 24) << std::endl;
+    // action handles is typically generated in assembler, this is special case.
+    out <<   indent << "- handle: 0x" << hex(0x20 << 24 | info->pipe_id << 16) << std::endl;
     out <<   indent << "- p4_param_order: { ";
     wroteAtLeastOneField = false;
     for (auto& field : *info->packing) {
@@ -109,7 +110,8 @@ namespace {
 /// Search for an @phase0 annotation and create a Phase0Info object if a valid
 /// one is found.
 struct FindPhase0Annotation : public Inspector {
-    explicit FindPhase0Annotation(P4::ReferenceMap* refMap) : refMap(refMap) { }
+    explicit FindPhase0Annotation(P4::ReferenceMap* refMap, int pipe_id) :
+    refMap(refMap), pipe_id(pipe_id) { }
 
     /// If non-null, the metadata from the program's @phase0 annotation which is
     /// needed to generate phase 0 assembly.
@@ -207,7 +209,7 @@ struct FindPhase0Annotation : public Inspector {
             return false;
         }
 
-        phase0Info = new Phase0Info{tableName, actionName, keyName, packing};
+        phase0Info = new Phase0Info{tableName, actionName, keyName, packing, pipe_id};
         LOG3("Setting phase0 info to { " << tableName << ", " << actionName << ", "
                 << keyName << ", " << packing << " } ");
 
@@ -249,6 +251,7 @@ struct FindPhase0Annotation : public Inspector {
     }
 
     P4::ReferenceMap* refMap;
+    int pipe_id;
 };
 
 }  // namespace
@@ -262,7 +265,7 @@ void extractPhase0(const IR::Node* ingress, IR::BFN::Pipe* pipe,
     // Find the phase 0 annotation, and if it's present, save the Phase0Info
     // data structure so we can use it generate assembly at the end of the
     // compilation process.
-    FindPhase0Annotation findPhase0(refMap);
+    FindPhase0Annotation findPhase0(refMap, pipe->id);
     ingress->apply(findPhase0);
     if (findPhase0.phase0Info)
         pipe->phase0Info = findPhase0.phase0Info;

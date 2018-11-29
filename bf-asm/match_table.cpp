@@ -455,10 +455,10 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
 }
 
 void MatchTable::gen_name_lookup(json::map &out) {
-    if (p4_table && p4_table->p4_name())
+    if (p4_table && p4_table->p4_name()) {
         out["table_name"] = p4_table->p4_name();
-    else
-        out["table_name"] = name();
+    } else {
+        out["table_name"] = name(); }
     json::map &actions_map = out["actions"] = json::map();
     if (auto acts = get_actions()) {
         for (auto &a : *acts) {

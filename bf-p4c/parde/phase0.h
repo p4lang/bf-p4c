@@ -30,6 +30,7 @@ struct Phase0Info {
     const cstring actionName;     /// The phase 0 action name.
     const cstring keyName;        /// The phase 0 key name.
     const FieldPacking* packing;  /// How the phase 0 fields should be packed.
+    const int pipe_id;
 };
 
 /**
