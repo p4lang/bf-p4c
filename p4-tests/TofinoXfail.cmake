@@ -314,6 +314,16 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
+  "AttributeError: Client instance has no attribute"
+  smoketest_programs_basic_ipv4_TestLearning 
+  )
+
+p4c_add_xfail_reason("tofino"
+  "InvalidTableOperation: InvalidTableOperation"
+  smoketest_programs_exm_indirect_1_TestExmHashAction2
+  )
+
+p4c_add_xfail_reason("tofino"
   "error.*Power worst case estimated budget exceeded by*"
   #extensions/p4_tests/p4_14/p4-tests/programs/clpm/clpm.p4 # update path when test is added
   )

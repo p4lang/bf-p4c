@@ -4,6 +4,8 @@ node ('compiler || compiler-svr4') {
     deleteDir()
     environment {
         def image_tag = ""
+        def model_cid = ""
+        def p4c_cid = ""
     }
     try {
         stage ('Checkout') {
@@ -62,13 +64,32 @@ node ('compiler-svr1 || master') {
         sh "docker pull barefootnetworks/bf-p4c-compilers:${image_tag}"
     }
     parallel (
-        switch_compile_only: {
+        switch_compile_only_and_stful_meters: {
             ansiColor('xterm') {
                 timestamps {
                     sh "echo 'Running switch profiles compilation for master'"
                     sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*switch_' -E 'smoketest|8.4|p4_14'"
                     sh "echo 'Running switch profiles compilation for rel_8_4'"
                     sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*switch_8.4_' -E 'smoketest'"
+                    sh "echo 'Running stful and meters tests'"
+                    sh "mkdir -p docker_store"
+                    model_cid = sh (
+                        script: 'docker run --rm -t -d -w /usr/local/bin --entrypoint bash barefootnetworks/model:tofino_prog',
+                        returnStdout: true
+                    ).trim()
+                    sh "echo 'model cid: ' $model_cid"
+                    sh "docker cp ${model_cid}:/usr/local/bin/tofino-model docker_store/"
+                    sh "docker tag barefootnetworks/bf-p4c-compilers:${image_tag} barefootnetworks/bf-p4c-compilers:${image_tag}_prog"
+                    def curr_pwd = pwd()
+                    p4c_cid = sh (
+                        script: "docker run --privileged --rm -t -d -v ${curr_pwd}/docker_store:/mnt -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' --entrypoint bash barefootnetworks/bf-p4c-compilers:${image_tag}_prog",
+                        returnStdout: true
+                    ).trim()
+                    sh "echo 'p4c cid: ' $p4c_cid"
+                    sh "docker exec ${p4c_cid} cp /mnt/tofino-model /usr/local/bin/"
+                    sh "docker exec ${p4c_cid} ctest -R 'smoketest_programs_stful|smoketest_programs_meters'"
+                    sh "docker container stop ${model_cid}"
+                    sh "docker container stop ${p4c_cid}"
                 }
             }
         },
@@ -90,11 +111,13 @@ node ('compiler-svr1 || master') {
                 }
             }
         },
-        switch_8_4_ent_dc_general_tests: {
+        switch_8_4_ent_dc_general_tests_and_basic_ipv4: {
             ansiColor('xterm') {
                 timestamps {
                     sh "echo 'Running switch PD tests for ENT_DC_GENERAL_PROFILE_BRIG'"
                     sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*smoketest_switch_8.4_ent_dc_general'"
+                    sh "echo 'Running basic_ipv4 tests'"
+                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R 'smoketest_programs_basic_ipv4'"
                 }
             }
         }
