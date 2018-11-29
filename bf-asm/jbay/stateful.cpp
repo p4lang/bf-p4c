@@ -50,7 +50,12 @@ bool StatefulTable::setup_jbay(const pair_t &kv) {
                 parse_vector(sbus_match, el.value);
             else if (el.key == "learn")
                 parse_vector(sbus_learn, el.value);
-            else
+            else if (el.key == "operation" || el.key == "combine") {
+                if (el.value == "and") sbus_comb = SBUS_AND;
+                else if (el.value == "or") sbus_comb = SBUS_OR;
+                else error(el.value.lineno, "Invalid sbus %s %s, must be 'and' or 'or'",
+                           value_desc(el.key), value_desc(el.value));
+            } else
                 warning(el.key.lineno, "ignoring unknown item %s in sbus of table %s",
                         value_desc(el.key), name()); }
     } else if (kv.key == "fifo" || kv.key == "stack") {

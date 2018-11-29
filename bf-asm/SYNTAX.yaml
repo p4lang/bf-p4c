@@ -694,6 +694,7 @@ stage <constant> <thread>:
           # jbay only -- shared bus use
           learn: <table> | '[' <table>, ... ']'
           match: <table> | '[' <table>, ... ']'
+          combine: "and" | "or"
         fifo: { push: <mode>, pop: <mode> }
         stack: { push: <mode>, pop: <mode> }
         bloom filter clear: <mode>

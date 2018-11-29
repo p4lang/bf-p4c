@@ -232,6 +232,7 @@ void CmpOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions
     auto mmask = sbus_mask(logical_home_row/4U, tbl->sbus_match);
     salu_instr_common.salu_lmatch_sbus_listen = lmask;
     salu_instr_common.salu_match_sbus_listen = mmask;
+    salu_instr_common.salu_sbus_in_comb = tbl->sbus_comb;
     if (lmask || mmask) {
         // if lmask and mmask are both zero, these registers don't matter, but the model
         // will assert if they are non-zero)

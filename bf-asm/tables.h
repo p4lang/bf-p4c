@@ -1546,6 +1546,7 @@ public:
     Ref                 bound_selector;
     unsigned            phv_byte_mask = 0;
     std::vector<Ref>    sbus_learn, sbus_match;
+    enum { SBUS_OR=0, SBUS_AND=1 } sbus_comb = SBUS_OR;
     int                 pred_comb_sel = -1;
     int                 phv_hash_shift = 0;
     bitvec              phv_hash_mask = bitvec(0, 128);
