@@ -1372,6 +1372,12 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue1566.p4
 )
 
+# Negative test
+p4c_add_xfail_reason("tofino"
+  "error: mirror.emit: requires two arguments: mirror_id and field_list"
+  extensions/p4_tests/p4_16/brig-neg-1259.p4
+)
+
 p4c_add_xfail_reason("tofino"
   "Wrong number of arguments for method call"
   testdata/p4_16_samples/issue1560-bmv2.p4

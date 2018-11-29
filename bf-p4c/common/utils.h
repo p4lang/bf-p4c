@@ -2,6 +2,7 @@
 #define EXTENSIONS_BF_P4C_COMMON_UTILS_H_
 
 #include <iostream>
+#include "lib/exceptions.h"
 
 struct DumpPipe : public Inspector {
     const char *heading;
@@ -19,5 +20,14 @@ struct DumpPipe : public Inspector {
                 std::cout << *pipe << std::endl; }
         return false; }
 };
+
+
+/// Report an error with the given message and exit.
+template <typename... T>
+inline void fatal_error(const char* format, T... args) {
+    ::error(format, args...);
+    throw Util::CompilationError("Compilation failed!");
+}
+
 
 #endif /* EXTENSIONS_BF_P4C_COMMON_UTILS_H_ */

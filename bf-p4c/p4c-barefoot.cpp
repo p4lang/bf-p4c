@@ -163,6 +163,8 @@ int main(int ac, char **av) {
     // Program or programmer errors. Nothing to do until the program is fixed
     constexpr unsigned INVOCATION_ERROR = 2;
     constexpr unsigned PROGRAM_ERROR = 3;
+    // Internal compiler error
+    constexpr unsigned INTERNAL_COMPILER_ERROR = 4;
 
 
     AutoCompileContext autoBFNContext(new BFNContext);
@@ -302,7 +304,7 @@ int main(int ac, char **av) {
     } catch (...) {
         std::cerr << "Internal compiler error. Please submit a bug report with your code."
                   << std::endl;
-        return COMPILER_ERROR;
+        return INTERNAL_COMPILER_ERROR;
     }
 #endif  // !BAREFOOT_INTERNAL
 }

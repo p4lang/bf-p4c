@@ -1,4 +1,5 @@
 #include "bf-p4c/common/flatten_emit_args.h"
+#include "bf-p4c/common/utils.h"
 
 void FlattenEmitArgs::postorder(IR::MethodCallExpression* mc) {
     auto method = mc->method->to<IR::Member>();
@@ -26,6 +27,12 @@ void FlattenEmitArgs::postorder(IR::MethodCallExpression* mc) {
             "Invalid mirror or digest call without any arguments");
         return;
     }
+
+    if (type->name == "Mirror" && mc->arguments->size() != 2) {
+        // Fatal error because invalid state later
+        fatal_error("%1%: requires two arguments: mirror_id and field_list", mc);
+    }
+
     auto* arg = mc->arguments->at(field_list_index);
     auto* aexpr = arg->expression;
     if (auto* liste = aexpr->to<IR::ListExpression>()) {
