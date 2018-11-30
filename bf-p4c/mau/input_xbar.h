@@ -373,7 +373,7 @@ struct IXBar {
         ProxyHashKey proxy_hash_key_use;
 
         // The order in the P4 program that the fields appear in the list
-        safe_vector<PHV::FieldSlice> field_list_order;
+        safe_vector<PHV::AbstractField*> field_list_order;
         HashDistHash hash_dist_hash;
 
         void clear() {
@@ -428,7 +428,7 @@ struct IXBar {
         int total_input_bits() const {
             int rv = 0;
             for (auto fl : field_list_order) {
-                rv += fl.size();
+                rv += fl->size();
             }
             return rv;
         }
@@ -558,7 +558,7 @@ struct IXBar {
         IXBar                      &self;
         const PhvInfo              &phv;
         ContByteConversion  &map_alloc;
-        safe_vector<PHV::FieldSlice> &field_list_order;
+        safe_vector<PHV::AbstractField*> &field_list_order;
         // Holds which bitranges of fields have been requested, and will not allocate
         // if a bitrange has been requested multiple times
         std::map<cstring, bitvec>  fields_needed;
@@ -577,7 +577,7 @@ struct IXBar {
 
      public:
         FindSaluSources(IXBar &self, const PhvInfo &phv, ContByteConversion &ma,
-                    safe_vector<PHV::FieldSlice> &flo,
+                    safe_vector<PHV::AbstractField*> &flo,
                     ordered_set<std::pair<const PHV::Field *, le_bitrange>> &ps,
                     bool &d, const IR::MAU::Table *t)
         : self(self), phv(phv), map_alloc(ma), field_list_order(flo), phv_sources(ps), dleft(d),
@@ -646,7 +646,7 @@ struct IXBar {
 
     void clear();
     void field_management(ContByteConversion &map_alloc,
-        safe_vector<PHV::FieldSlice> &field_list_order, const IR::Expression *field,
+        safe_vector<PHV::AbstractField*> &field_list_order, const IR::Expression *field,
         std::map<cstring, bitvec> &fields_needed, cstring name, const PhvInfo &phv,
         KeyInfo &ki);
     bool allocMatch(bool ternary, const IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc,

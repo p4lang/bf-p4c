@@ -78,7 +78,7 @@ class MauAsmOutput : public MauInspector {
             std::map<int, std::map<int, Slice>> &sort) const;
     void emit_ixbar_gather_map(std::map<int, Slice> &match_data_map,
             safe_vector<Slice> &match_data,
-            const safe_vector<PHV::FieldSlice> &field_list_order, int &total_bits) const;
+            const safe_vector<PHV::AbstractField*> &field_list_order, int &total_bits) const;
     void emit_ixbar_hash(std::ostream &out, indent_t indent, safe_vector<Slice> &match_data,
             safe_vector<Slice> &ghost, const IXBar::Use *use, int hash_group,
             int &ident_bits_prev_alloc) const;
@@ -93,13 +93,13 @@ class MauAsmOutput : public MauInspector {
             safe_vector<Slice> &match_data, Slice *ghost, int start_bit, int end_bit) const;
     void emit_ixbar_hash_dist_ident(std::ostream &out, indent_t indent,
             safe_vector<Slice> &match_data, const IXBar::Use::HashDistHash &hdh,
-            const safe_vector<PHV::FieldSlice> &field_list_order) const;
+            const safe_vector<PHV::AbstractField*> &field_list_order) const;
     void emit_ixbar_meter_alu_hash(std::ostream &out, indent_t indent,
             safe_vector<Slice> &match_data, const IXBar::Use::MeterAluHash &mah,
-            const safe_vector<PHV::FieldSlice> &field_list_order) const;
+            const safe_vector<PHV::AbstractField*> &field_list_order) const;
     void emit_ixbar_proxy_hash(std::ostream &out, indent_t indent, safe_vector<Slice> &match_data,
             const IXBar::Use::ProxyHashKey &ph,
-            const safe_vector<PHV::FieldSlice> &field_list_order) const;
+            const safe_vector<PHV::AbstractField*> &field_list_order) const;
 
     void emit_single_ixbar(std::ostream& out, indent_t indent, const IXBar::Use *use,
             const TableMatch *fmt) const;

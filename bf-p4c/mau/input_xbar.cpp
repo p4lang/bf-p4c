@@ -1213,7 +1213,7 @@ IXBar::hash_matrix_reqs IXBar::match_hash_reqs(const LayoutOption *lo,
 /* This is for adding fields to be allocated in the ixbar allocation scheme.  Used by
    match tables, selectors, and hash distribution */
 void IXBar::field_management(ContByteConversion &map_alloc,
-        safe_vector<PHV::FieldSlice> &field_list_order, const IR::Expression *field,
+        safe_vector<PHV::AbstractField*> &field_list_order, const IR::Expression *field,
         std::map<cstring, bitvec> &fields_needed, cstring name, const PhvInfo &phv,
         KeyInfo &ki) {
     const PHV::Field *finfo = nullptr;
@@ -1244,21 +1244,27 @@ void IXBar::field_management(ContByteConversion &map_alloc,
     }
 
     boost::optional<cstring> aliasSourceName = phv.get_alias_name(field);
-    finfo = phv.field(field, &bits);
-    BUG_CHECK(finfo, "unexpected field %s", field);
-    bitvec field_bits(bits.lo, bits.hi - bits.lo + 1);
-    if (fields_needed.count(finfo->name)) {
-        auto &allocated_bits = fields_needed.at(finfo->name);
-        if ((allocated_bits & field_bits).popcount() == field_bits.popcount())
-            return;
-        fields_needed[finfo->name] |= field_bits;
+    if (auto c = field->to<IR::Constant>()) {
+        auto constant = new PHV::Constant(c);
+        field_list_order.push_back(constant);
     } else {
-        fields_needed[finfo->name] = field_bits;
-    }
-    field_list_order.emplace_back(finfo, bits);
-    add_use(map_alloc, finfo, phv, aliasSourceName, &bits, 0, byte_type, 0, ki.range_index);
-    if (byte_type == RANGE) {
-        ki.range_index++;
+        finfo = phv.field(field, &bits);
+        BUG_CHECK(finfo, "unexpected field %s", field);
+        bitvec field_bits(bits.lo, bits.hi - bits.lo + 1);
+        if (fields_needed.count(finfo->name)) {
+            auto &allocated_bits = fields_needed.at(finfo->name);
+            if ((allocated_bits & field_bits).popcount() == field_bits.popcount())
+                return;
+            fields_needed[finfo->name] |= field_bits;
+        } else {
+            fields_needed[finfo->name] = field_bits;
+        }
+        auto fieldSlice = new PHV::FieldSlice(finfo, bits);
+        field_list_order.push_back(fieldSlice);
+        add_use(map_alloc, finfo, phv, aliasSourceName, &bits, 0, byte_type, 0, ki.range_index);
+        if (byte_type == RANGE) {
+            ki.range_index++;
+        }
     }
 }
 
@@ -2221,12 +2227,12 @@ bool IXBar::allocSelector(const IR::MAU::Selector *as, const IR::MAU::Table *tbl
         int bits_seen = 0;
         for (auto it = alloc.field_list_order.rbegin(); it != alloc.field_list_order.rend(); it++) {
             auto fs = *it;
-            le_bitrange bits = fs.range();
+            le_bitrange bits = fs->range();
             int diff = bits_seen + bits.size() - mode_width_bits;
             if (diff > 0) {
                 bits.hi -= diff;
             }
-            mah.identity_positions[fs.field()].emplace_back(bits_seen, bits);
+            mah.identity_positions[fs->field()].emplace_back(bits_seen, bits);
             bits_seen += bits.size();
             if (bits_seen >= mode_width_bits)
                 break;

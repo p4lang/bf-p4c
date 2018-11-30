@@ -179,10 +179,11 @@ stage <constant> <thread>:
                         # with random(3) and we do NOT call srand, so the hash
                         # for a given program is repeatable.
                     crc(<int>, [<int>,] <phv-location>, ...)
+                        # Deprecated.
                         # crc hash of the given phv locations -- first arg is integer
                         # constant denoting polynomial (Koopman notation).  Second arg
                         # is an initial constant prefixed to the input.
-                    crc(<int>, [<int>,] '{' <int> : <phv-location>, ... '}')
+                    crc(<int>, [<int>,] '{' <int> : <phv-location>, ... '}' [, '{' <int> : <int> '}' ])
                         # crc hash of the given phv locations, at the specified offsets
                         # from the lsb of the crc input as a whole.
                         # arguments are polynomial (Koopman Notation)

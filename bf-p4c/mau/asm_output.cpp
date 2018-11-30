@@ -657,21 +657,21 @@ void MauAsmOutput::emit_ixbar_hash_exact(std::ostream &out, indent_t indent,
  */
 void MauAsmOutput::emit_ixbar_hash_dist_ident(std::ostream &out, indent_t indent,
         safe_vector<Slice> &match_data, const IXBar::Use::HashDistHash &hdh,
-        const safe_vector<PHV::FieldSlice> &field_list_order) const {
+        const safe_vector<PHV::AbstractField*> &field_list_order) const {
     int bits_seen = 0;
     for (auto it = field_list_order.rbegin(); it != field_list_order.rend(); it++) {
         auto &fs = *it;
         for (auto &sl : match_data) {
-            if (!(fs.field() && fs.field() == sl.get_field()))
+            if (!(fs->field() && fs->field() == sl.get_field()))
                 continue;
             auto boost_sl = toClosedRange<RangeUnit::Bit, Endian::Little>
-                                  (fs.range().intersectWith(sl.range()));
+                                  (fs->range().intersectWith(sl.range()));
             if (boost_sl == boost::none)
                 continue;
 
             // Which slice bits of this field are overlapping
             le_bitrange field_overlap = *boost_sl;
-            int ident_range_lo = bits_seen + field_overlap.lo - fs.range().lo;
+            int ident_range_lo = bits_seen + field_overlap.lo - fs->range().lo;
             int ident_range_hi = ident_range_lo + field_overlap.size() - 1;
             le_bitrange identity_range = { ident_range_lo, ident_range_hi };
             for (auto bit_pos : hdh.bit_starts) {
@@ -685,7 +685,7 @@ void MauAsmOutput::emit_ixbar_hash_dist_ident(std::ostream &out, indent_t indent
                 int hash_hi = hash_lo + ident_overlap.size() - 1;
                 int field_range_lo = field_overlap.lo + (ident_overlap.lo - identity_range.lo);
                 int field_range_hi = field_range_lo + ident_overlap.size() - 1;
-                Slice asm_sl(fs.field(), field_range_lo, field_range_hi);
+                Slice asm_sl(fs->field(), field_range_lo, field_range_hi);
                 safe_vector<Slice> ident_slice;
                 ident_slice.push_back(asm_sl);
                 out << indent << hash_lo << ".." << hash_hi << ": "
@@ -694,13 +694,13 @@ void MauAsmOutput::emit_ixbar_hash_dist_ident(std::ostream &out, indent_t indent
                     << std::endl;
             }
         }
-        bits_seen += fs.size();
+        bits_seen += fs->size();
     }
 }
 
 void MauAsmOutput::emit_ixbar_meter_alu_hash(std::ostream &out, indent_t indent,
         safe_vector<Slice> &match_data, const IXBar::Use::MeterAluHash &mah,
-        const safe_vector<PHV::FieldSlice> &field_list_order) const {
+        const safe_vector<PHV::AbstractField*> &field_list_order) const {
     if (mah.algorithm.type == IR::MAU::hash_function::IDENTITY) {
         for (auto &slice : match_data) {
             if (mah.identity_positions.count(slice.get_field()) == 0)
@@ -741,7 +741,7 @@ void MauAsmOutput::emit_ixbar_meter_alu_hash(std::ostream &out, indent_t indent,
 
 void MauAsmOutput::emit_ixbar_proxy_hash(std::ostream &out, indent_t indent,
         safe_vector<Slice> &match_data, const IXBar::Use::ProxyHashKey &ph,
-        const safe_vector<PHV::FieldSlice> &field_list_order) const {
+        const safe_vector<PHV::AbstractField*> &field_list_order) const {
     int start_bit = ph.hash_bits.ffs();
     do {
         int end_bit = ph.hash_bits.ffz(start_bit);
@@ -767,7 +767,7 @@ void MauAsmOutput::emit_ixbar_proxy_hash(std::ostream &out, indent_t indent,
  */
 void MauAsmOutput::emit_ixbar_gather_map(std::map<int, Slice> &match_data_map,
         safe_vector<Slice> &match_data,
-        const safe_vector<PHV::FieldSlice> &field_list_order, int &total_size) const {
+        const safe_vector<PHV::AbstractField*> &field_list_order, int &total_size) const {
     for (auto sl : match_data) {
         int order_bit = 0;
         // Traverse field list in reverse order. For a field list the convention
@@ -775,14 +775,14 @@ void MauAsmOutput::emit_ixbar_gather_map(std::map<int, Slice> &match_data_map,
         // field  MSB and last at LSB.
         for (auto fs_itr = field_list_order.rbegin(); fs_itr != field_list_order.rend(); fs_itr++) {
             auto fs = *fs_itr;
-            if (fs.field() != sl.get_field()) {
-                order_bit += fs.size();
+            if (fs->field() != sl.get_field()) {
+                order_bit += fs->size();
                 continue;
             }
 
-            auto half_open_intersect = fs.range().intersectWith(sl.range());
+            auto half_open_intersect = fs->range().intersectWith(sl.range());
             if (half_open_intersect.empty()) {
-                order_bit += fs.size();
+                order_bit += fs->size();
                 continue;
             }
 
@@ -794,15 +794,15 @@ void MauAsmOutput::emit_ixbar_gather_map(std::map<int, Slice> &match_data_map,
             int hi_adjust = std::max(intersect.hi - sl.range().hi, sl.range().hi - intersect.hi);
             adapted_sl.shrink_lo(lo_adjust);
             adapted_sl.shrink_hi(hi_adjust);
-            int offset = adapted_sl.get_lo() - fs.range().lo;
+            int offset = adapted_sl.get_lo() - fs->range().lo;
             match_data_map[order_bit + offset] = adapted_sl;
-            order_bit += fs.size();
+            order_bit += fs->size();
         }
     }
 
     total_size = 0;
     for (auto fs : field_list_order) {
-        total_size += fs.size();
+        total_size += fs->size();
     }
 }
 
