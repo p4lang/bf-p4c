@@ -694,7 +694,7 @@ void Memories::calculate_entries() {
     for (auto ta : no_match_hit_tables) {
         BUG_CHECK(ta->allocation_units().size() == size_t(ta->layout_option->logical_tables()),
                   "Logical table mismatch on %s", ta->table->name);
-        ta->calc_entries_per_uid.resize(ta->layout_option->logical_tables(), 1);
+        ta->calc_entries_per_uid.resize(ta->layout_option->logical_tables(), ta->provided_entries);
     }
 
     for (auto ta : no_match_miss_tables) {

@@ -140,10 +140,11 @@ void HashActionTable::write_regs(REGS &regs) {
  * Unlike the hash functions for exact match tables, the hash action table does not require
  * the Galois position.  On the contrary, the hash action just requires an identity matrix
  * of what the address that is to be generated, as they simply use this address as a baseline
- * for generating the address.
+ * for generating the corresponding address.
  *
- * Thus, the hash function that is provided starts at bit 0, and is in p4 param order.  This
- * is under the guarantee that the compiler will allocate the hash in p4 param order as well.
+ * Thus, the hash function that is provided starts at bit 0, and is in reverse p4 param order.
+ * This is under the guarantee that the compiler will allocate the hash in reverse p4 param
+ * order as well.
  *
  * FIXME: Possibly this should be validated before this is the output, but currently the 
  * compiler will set up the hash in that order 
@@ -153,7 +154,8 @@ void HashActionTable::add_hash_functions(json::map &stage_tbl) const {
     int hash_bit_index = 0;
     json::map hash_function;
     json::vector &hash_bits = hash_function["hash_bits"] = json::vector();
-    for (auto p4_param : p4_params_list) {
+    for (auto it = p4_params_list.rbegin(); it != p4_params_list.rend(); it++) {
+        auto p4_param = *it;
         for (size_t i = p4_param.start_bit; i < p4_param.start_bit + p4_param.bit_width; i++) {
             json::map hash_bit;
             hash_bit["hash_bit"] = hash_bit_index;

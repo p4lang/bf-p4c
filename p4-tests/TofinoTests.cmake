@@ -389,14 +389,10 @@ bfn_set_ptf_test_spec("tofino" "smoketest_programs_exm_indirect_1_2"
         test.TestIndirectStatsPkts32bits
         test.TestSelector
         test.TestSelectorScopes
-        test.TestExm4way6Entries")
+        test.TestExm4way6Entries
+        test.TestExmHashAction
+        test.TestExmHashAction2")
 
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_exm_indirect_1_TestExmHashAction2" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/exm_indirect_1/exm_indirect_1.p4"
-    "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/ptf-tests/exm_indirect_1")
-bfn_set_pd_build_flag("tofino" "smoketest_programs_exm_indirect_1_TestExmHashAction2"
-        "\"--gen-exm-test-pd\"")
-bfn_set_ptf_test_spec("tofino" "smoketest_programs_exm_indirect_1_TestExmHashAction2"
-        "test.TestExmHashAction2")
 
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_exm_smoke_test" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/exm_smoke_test/exm_smoke_test.p4"
     "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/ptf-tests/exm_smoke_test")
