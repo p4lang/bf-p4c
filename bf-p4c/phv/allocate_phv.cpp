@@ -1966,9 +1966,9 @@ BruteForceAllocationStrategy::slice_clusters(
                 pa_container_sizes.adjust_requirements(*it);
                 unsatisfiable_fields = pa_container_sizes.unsatisfiable_fields(*it);
                 if (unsatisfiable_fields.size() > 0) {
-                    LOG6("Found " << unsatisfiable_fields.size() << " unsatisfiable fields.");
+                    LOG5("Found " << unsatisfiable_fields.size() << " unsatisfiable fields.");
                     for (const auto* f : unsatisfiable_fields)
-                        LOG6("\t" << f);
+                        LOG5("\t" << f);
                 }
                 if (unsatisfiable_fields.size() == 0) {
                     break; }

@@ -115,6 +115,37 @@ class SlicingIterator {
     void enforce_container_size_pragmas(
             const ordered_map<PHV::SuperCluster::SliceList*, std::pair<int, int>>&);
 
+    /// Populate the maps used as reference for slicing.
+    int populate_initial_maps(
+            std::list<PHV::SuperCluster::SliceList*>& candidateSliceLists,
+            ordered_map<FieldSlice, std::pair<int, int>>& sliceLocations,
+            ordered_map<FieldSlice, int>& exactSliceListSize,
+            ordered_set<FieldSlice>& paddingFields,
+            ordered_map<PHV::SuperCluster::SliceList*, std::pair<int, int>>& sliceListDetails,
+            ordered_map<FieldSlice, std::pair<int, int>>& originalSliceOffset,
+            const std::map<const PHV::Field*, std::vector<PHV::Size>>& pa);
+
+    /// Slice according to the MAU constraints.
+    void impose_MAU_constraints(
+        const std::list<PHV::SuperCluster::SliceList*>& candidateSliceLists,
+        ordered_map<FieldSlice, std::pair<int, int>>& sliceLocations,
+        ordered_map<FieldSlice, int>& exactSliceListSize,
+        const ordered_set<FieldSlice>& paddingFields,
+        const ordered_map<FieldSlice, std::pair<int, int>>& originalSliceOffset);
+
+    FieldSlice getBestSlicingPoint(
+            const std::vector<FieldSlice>& list,
+            const ordered_set<FieldSlice>& points,
+            const int minSize) const;
+
+    int processSliceListBefore(
+            ordered_set<FieldSlice>& alreadyProcessedSlices,
+            ordered_map<FieldSlice, int>& exactSliceListSize,
+            ordered_map<FieldSlice, std::pair<int, int>>& sliceLocations,
+            const ordered_map<FieldSlice, std::pair<int, int>>& originalSliceOffset,
+            const std::vector<FieldSlice>& list,
+            const FieldSlice& point);
+
  public:
     explicit SlicingIterator(
             const SuperCluster* sc,

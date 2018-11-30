@@ -47,6 +47,8 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             new CollectMochaCandidates(phv, uses),
             new CollectDarkCandidates(phv, uses),
 #endif
+            // Pragmas need to be run here because the later passes may add constraints encoded as
+            // pragmas to various fields after the initial pragma processing is done.
             &pragmas,              // parse and fold PHV-related pragmas
             new DeparserZeroOptimization(phv, pragmas.pa_deparser_zero(), clot),
                                    // identify fields for deparsed zero optimization

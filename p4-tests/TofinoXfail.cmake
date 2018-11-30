@@ -294,14 +294,14 @@ p4c_add_xfail_reason("tofino"
   "No tables placeable, but not all tables placed?"
   switch_msdc_ipv4
   switch_8.4_msdc_ipv4
+  switch_ent_fin_postcard
+  switch_8.4_ent_fin_postcard
   switch_msdc_spine_int
   switch_8.4_msdc_spine_int
   )
 
 p4c_add_xfail_reason("tofino"
-  "Compiler Bug.*How did we create a slice list at a non byte boundary?"
-  switch_ent_fin_postcard
-  switch_8.4_ent_fin_postcard
+  "No way to slice the following to satisfy @pa_container_size"
   switch_generic_int_leaf
   switch_8.4_generic_int_leaf
   )
@@ -711,6 +711,9 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/action_conflict_2.p4
   extensions/p4_tests/p4_14/14-MultipleActionsInAContainer.p4
 
+  # Expected to fail, until we have better user-facing messages.
+  extensions/p4_tests/p4_14/p4smith_regression/mariano_0.p4
+
   # Expected to fail, which means that constraint conflicts are being correctly detected.
   extensions/p4_tests/p4_14/mau_test_neg_test.p4
   #extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case1.p4
@@ -727,8 +730,12 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_227_set_meta_packing.p4
   extensions/p4_tests/p4_14/test_config_262_req_packing.p4
   extensions/p4_tests/p4_14/test_config_275_match_key_range.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-868/comp_868.p4
   extensions/p4_tests/p4_14/c1/COMPILER-954/case5730.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Compiler Bug.*conflicting memory use between"
+  ../glass/testsuite/p4_tests/c1/COMPILER-868/comp_868.p4
   )
 
 # We can't (without some complex acrobatics) support conditional computed
@@ -907,10 +914,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "condition expression too complex"
   extensions/p4_tests/p4_14/test_config_294_parser_loop.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "does not have a PHV allocation though it is used in an action"
   )
 
 p4c_add_xfail_reason("tofino"
@@ -1104,14 +1107,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue1544-1-bmv2.p4
   testdata/p4_16_samples/issue1544-2-bmv2.p4
 )
-
-# Needs change to source code because of padding field with a 10-bit field that is used in an add
-# operation.
-# p4c_add_xfail_reason("tofino"
-#   "PHV allocation was not successful"
-#   switch_generic_int_leaf
-#   switch_8.4_generic_int_leaf
-# )
 
 # BRIG-651
 p4c_add_xfail_reason("tofino"

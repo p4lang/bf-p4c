@@ -47,6 +47,13 @@ class PragmaContainerSize : public Inspector {
     void update_field_slice_req(const PHV::Field* field,
                                 const std::vector<PHV::Size>& sizes);
 
+    // Add no-split constraint if the field has only one container size associated with it adn the
+    // size of the container is larger than or equal to the size of the field. The pragma also
+    // implies that the entire field must be packed into a single specified size container.
+    void check_and_add_no_split(
+            PHV::Field* field,
+            PHV::Field* privatized_field = nullptr) const;
+
  public:
     explicit PragmaContainerSize(PhvInfo& phv) : phv_i(phv) { }
 

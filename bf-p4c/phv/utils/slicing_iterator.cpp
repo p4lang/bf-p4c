@@ -49,7 +49,6 @@ PHV::SlicingIterator::SlicingIterator(
         //    constraint must be the first slice in its slice list.  The
         //    `required_slices_i` bitvec is a compressed schema with bits that
         //    must always be 1.
-        int offset = 0;
 
         // Map of field slice to its byte location; the value pair is [left byte, right byte] within
         // within the slicing schema. If the field is the first field in the slice list, the left
@@ -62,201 +61,29 @@ PHV::SlicingIterator::SlicingIterator(
         // Map of field slice to the size of the slice list it is in. The field slices in this map
         // must belong to slice lists that have an exact containers requirement.
         ordered_map<FieldSlice, int> exactSliceListSize;
+
         // List of compiler-inserted padding fields encountered in this supercluster.
         ordered_set<FieldSlice> paddingFields;
-        // Offset of the first field in the slice list. We go through slice lists in a supercluster
-        // in sequence, and the offset represents that sequence.
-        int sliceListOffset = 0;
+
+        // Map of slice list to a pair <starting offset within bitvec for slice list, bitvec size
+        // required for that slice list>.
         ordered_map<PHV::SuperCluster::SliceList*, std::pair<int, int>> sliceListDetails;
-        for (auto* list : sc->slice_lists()) {
-            LOG6("Determining initial co-ordinates for slice list");
-            LOG6("\t" << *list);
-            int sliceOffsetWithinSliceList = 0;
-            // set to true, if any slice in the slice list has an exact containers requirement.
-            bool has_exact_containers = false;
 
-            // Set, if a slice is a padding field, to the size of the padding field.
-            boost::optional<int> paddingFieldSize = boost::none;
-            // Used to track the last field in a slice list; the last field's right coordinate is
-            // always -1 to indicate that no slicing is required there (there is implicit slicing at
-            // each slice list boundary).
-            boost::optional<FieldSlice> lastSliceInSliceList = boost::none;
+        // Map of slice to offset within its original slice list.
+        ordered_map<FieldSlice, std::pair<int, int>> originalSliceOffset;
 
-            // Calculate the size of the slice list up front.
-            int sliceListSize = 0;
-            for (auto& slice : *list) {
-                sliceListSize += slice.size();
-                auto it = pa.find(slice.field());
-                if (it == pa.end()) continue;
-                // Note down pa_container_size pragmas for all fields in this slice list (if
-                // specified). Then add the same pragmas for all fields in the rotational cluster
-                // with that field.
-                pa_container_sizes_i[it->first] = it->second;
-                LOG6("  Adding pa_container_size for field: " << it->first);
-                for (auto sz : it->second)
-                    LOG6("    " << sz);
-                auto& rot_cluster = sc_i->cluster(slice);
-                for (auto& rot_slice : rot_cluster.slices()) {
-                    if (slice == rot_slice) continue;
-                    if (pa_container_sizes_i.count(rot_slice.field())) {
-                        LOG6("    Both original field and rotational cluster field have "
-                             "container size pragmas!");
-                        // XXX(Deep): Compare the two specifications of size.
-                    }
-                    pa_container_sizes_i[rot_slice.field()] = it->second;
-                    LOG6("  Adding pa_container_size for field: " << rot_slice);
-                    for (auto sz : it->second)
-                        LOG6("    " << sz); } }
+        // List of all slice lists that have exact containers requirement. We will sort these slice
+        // lists in order of decreasing to increasing slice list slice later.
+        std::list<PHV::SuperCluster::SliceList*> candidateSliceLists;
 
-            // Set to true, if all slices in the slice list are of the same field AND there is a
-            // no-split constraint on the field.
-            bool allSlicesNoSplitSameField = true;
-            boost::optional<const PHV::Field*> fieldObserved = boost::none;
-            // Check if the slice list is made up of slices of the same field and is less than
-            // 32-bits in size. (no_split() is not applied to fields of more than 32 bit width).
-            if (sliceListSize <= 32) {
-                for (auto& slice : *list) {
-                    if (!slice.field()->no_split()) {
-                        allSlicesNoSplitSameField = false;
-                        break;
-                    }
-                    if (!fieldObserved) {
-                        fieldObserved = slice.field();
-                        continue;
-                    }
-                    if (*fieldObserved != slice.field()) {
-                        allSlicesNoSplitSameField = false;
-                        break;
-                    }
-                }
-                LOG6("\tIs the slice list composed of slices of the same no-split field? " <<
-                     (allSlicesNoSplitSameField ? "YES" : "NO"));
-            } else {
-                allSlicesNoSplitSameField = false;
-            }
+        int offset = populate_initial_maps(candidateSliceLists, sliceLocations, exactSliceListSize,
+                            paddingFields, sliceListDetails, originalSliceOffset, pa);
 
-            const FieldSlice* prevSlice = nullptr;
-            for (auto& slice : *list) {
-                // Set the last seen slice.
-                LOG6("\tDetermining co-ordinates for slice: " << slice);
-                if (prevSlice)
-                    LOG6("\t\tPrevious slice: " << prevSlice);
-                lastSliceInSliceList = slice;
-                if (slice.field()->exact_containers())
-                    has_exact_containers = true;
-                if (slice.field()->isCompilerGeneratedPaddingField()) {
-                    paddingFieldSize = slice.size();
-                    paddingFields.insert(list->begin(), list->end());
-                }
-
-                // Always require a split at the beginning of a slice with deparsed_bottom_bits.
-                if (slice.field()->deparsed_bottom_bits()
-                        && slice.range().lo == 0 && sliceOffsetWithinSliceList > 0) {
-                    // XXX(cole): 'BUG_CHECK' here might be too strong.
-                    BUG_CHECK(sliceOffsetWithinSliceList % 8 == 0,
-                            "Can't slice on field %1% in slice list %2% "
-                            "(which has deparsed bottom bits) because it is not byte aligned",
-                            cstring::to_cstring(slice), cstring::to_cstring(list));
-                    LOG6("\t  Required slice at " << offset + (sliceOffsetWithinSliceList/ 8 - 1)
-                         << " for field slice " << slice);
-                    required_slices_i.setbit(offset + (sliceOffsetWithinSliceList / 8 - 1)); }
-
-                // If this slice is of the same field as the previous slice and the field is
-                // no_split(), then the current slice should take the same sliceLocations pair as
-                // the previous slice.
-                if (prevSlice && prevSlice->field() == slice.field() && slice.field()->no_split()) {
-                    sliceLocations[slice] = sliceLocations[*prevSlice];
-                    LOG6("\t  A. Setting co-ordinates for a no-split field's slice to the prev " <<
-                         "slice's co-ordinates: " <<
-                         get_slice_coordinates(sliceListSize, sliceLocations.at(slice)));
-                    sliceOffsetWithinSliceList += slice.size();
-                    continue;
-                }
-                // Nearest byte aligned interval before this field slice.
-                // Detect the byte limits for each slice.
-                int left_limit = -1;
-                int right_limit = -1;
-
-                // If this is not the first slice in the slice list (indicated by
-                // sliceOffsetWithinSliceList == 0), and if this slice list is not composed
-                // exclusively of slices of the same no-split field, and if the slice is not byte
-                // aligned, then its left limit is the previous byte boundary. Left limit of -1
-                // indicates that the slice may be split at its start.
-                LOG6("\t\tsliceOffsetWithinSliceList: " << sliceOffsetWithinSliceList <<
-                     ", offset: " << offset);
-                if (sliceOffsetWithinSliceList != 0 && !allSlicesNoSplitSameField &&
-                        (sliceOffsetWithinSliceList / 8) != 0) {
-                    if (sliceOffsetWithinSliceList < 8)
-                        left_limit = -1;
-                    else
-                        left_limit = offset - 1 + (sliceOffsetWithinSliceList / 8);
-                }
-                sliceOffsetWithinSliceList += slice.size();
-
-                // Figure out the byte boundary for the right side (the end of this slice).
-                int addFactor = (sliceOffsetWithinSliceList / 8) -
-                                (1 - bool(sliceOffsetWithinSliceList % 8));
-                // Calculate the number of bytes in the slice list.
-                int sliceListBytesNeeded = sliceListSize / 8 - (1 - bool(sliceListSize % 8));
-                LOG6("\t\tSlice list size: " << sliceListSize << ", sliceListBytesNeeded: " <<
-                     sliceListBytesNeeded);
-
-                // If all slices in the slice list do not all correspond to the same no-split field,
-                // and if the
-                if (!allSlicesNoSplitSameField && addFactor != sliceListBytesNeeded) {
-                    right_limit = offset + addFactor;
-                    LOG6("\t\tSetting right limit offset to: " << right_limit << " (" << offset <<
-                         " + " << addFactor << ")");
-                }
-                sliceLocations[slice] = std::make_pair(left_limit, right_limit);
-                LOG6("\t  B. Setting initial co-ordinates for slice " << slice << " to: " <<
-                     get_slice_coordinates(sliceListSize, sliceLocations.at(slice)));
-                prevSlice = &slice;
-            }
-            // By this time, the value of sliceOffsetWithinSliceList should be equal to the size of
-            // the slice list.
-            BUG_CHECK(sliceOffsetWithinSliceList == sliceListSize,
-                      "Is one of sliceListSize and sliceOffsetWithinSliceList wrong?");
-            // Make sure that we went through all the slices in a slice list and that the slice list
-            // was not empty.
-            BUG_CHECK(sliceOffsetWithinSliceList > 0, "Empty slice list");
-
-            // (range[list].hi + 1) * 8 is the first split position *beyond the
-            // end* of the slice list.  Note that slice lists 8b or smaller
-            // cannot be sliced, which is reflected in bitsNeededForBoundaries = 0.
-            // bitsNeededForBoundaries indicates the number of bits needed to represent the
-            // boundaries at which we can slice the slice list. E.g. for a 32-bit slice list, we can
-            // split at the 8-bit boundary, 16-bit boundary, and 24-bit boundary (the split at the
-            // beginning and end of the slice list is implicit). Therefore, we need 3-bits to
-            // replace the boundaries.
-            int bitsNeededForBoundaries = sliceListSize / 8 - (1 - bool(sliceListSize % 8));
-            ranges_i[list] = StartLen(offset, bitsNeededForBoundaries);
-            if (has_exact_containers) {
-                exact_containers_i.setrange(offset, bitsNeededForBoundaries);
-                for (auto& slice : *list) {
-                    if (!paddingFieldSize)
-                        exactSliceListSize[slice] = sliceListSize;
-                    else
-                        exactSliceListSize[slice] = 8 * ROUNDUP(sliceListSize - *paddingFieldSize,
-                                8);
-                }
-            }
-            offset += bitsNeededForBoundaries;
-            boundaries_i.setbit(offset);
-            LOG5("    ...slice list (" << sliceListSize << "b) with compressed bitvec size "
-                 << bitsNeededForBoundaries << " and offset " << offset);
-
-            BUG_CHECK(lastSliceInSliceList != boost::none,
-                      "Were there no slices in the slice list?");
-            sliceLocations[*lastSliceInSliceList].second = -1;
-            sliceListOffset += sliceListSize;
-            sliceListDetails[list] = std::make_pair(offset, bitsNeededForBoundaries);
-        }
-        if (LOGGING(6)) {
-            LOG6("\tPrinting slicing related information for each slice in the format " <<
+        if (LOGGING(5)) {
+            LOG5("\tPrinting slicing related information for each slice in the format " <<
                  "SLICE : sliceListSize, left limit, right limit");
             for (auto kv : exactSliceListSize)
-                LOG6("\t  " << get_slice_coordinates(kv.second, sliceLocations[kv.first]) <<
+                LOG5("\t  " << get_slice_coordinates(kv.second, sliceLocations[kv.first]) <<
                      "\t:\t" << kv.first); }
 
         // TODO: Consider `no_pack` constraints in required_slices.  If a slice
@@ -291,324 +118,36 @@ PHV::SlicingIterator::SlicingIterator(
                 ss << ((x + 1) * 8) << " ";
             LOG5("    ...with fixed slices at " << ss.str()); }
 
-        // XXX(Deep): The true constraint is that slices, which are part of a rotational cluster
-        // must be sliced in the same way. This prevents searching through invalid values of the
-        // slicing iterator.
+        // Sort all the slice lists with exact containers requirement in increasing order of slice
+        // list size.
+        auto SliceListComparator =
+            [&](PHV::SuperCluster::SliceList* s1,
+                PHV::SuperCluster::SliceList* s2) {
+            FieldSlice& slice1 = *(s1->begin());
+            FieldSlice& slice2 = *(s2->begin());
+            BUG_CHECK(exactSliceListSize.count(slice1), "No entry in exactSliceListSize map");
+            BUG_CHECK(exactSliceListSize.count(slice2), "No entry in exactSliceListSize map");
+            return exactSliceListSize.at(slice1) < exactSliceListSize.at(slice2);
+        };
+        candidateSliceLists.sort(SliceListComparator);
 
-        // For now, we ensure that if multiple slices in the same rotational cluster belong to
-        // different slice lists with exact container requirements, and the width of those slice
-        // lists are different, then the required slicing should necessarily be equivalent for all
-        // those multiple slices in the same rotational cluster.
-        ordered_set<FieldSlice> alreadyConsidered;
-        for (auto kv : exactSliceListSize) {
-            if (alreadyConsidered.count(kv.first)) {
-                LOG6("Ignoring slice " << kv.first << " that has already been processed.");
-                continue;
-            }
-            LOG6("Considering rotational cluster constraints for slice: " << kv.first);
-            // { kv.first } set are all slices that have an exact container requirement and belong
-            // to slice lists.
-            auto& rot_cluster = sc->cluster(kv.first);
-            int minSize = INT_MAX;
-            boost::optional<FieldSlice> minSlice;
-            for (auto& slice : rot_cluster.slices()) {
-                LOG6("\tRotational cluster slice: " << slice);
-                // Ignore the loop if the slice in the rotational cluster is the same as the
-                // candidate slice.
-                if (slice == kv.first) {
-                    LOG6("\t\tRotational slice same as the one being considered.");
-                    continue;
-                }
-                // If the slice in the rotational cluster does not have the exact containers
-                // requirement (it is metadata), then it does not induce any slicing requirements.
-                if (!slice.field()->exact_containers()) {
-                    LOG6("\t\tRotational slice does not have exact containers requirement.");
-                    continue;
-                }
-                // If the slice list size for the non metadata slice is greater than or equal to the
-                // current field's slice list size, then continue. Because this slice might be the
-                // smallest slice of the rotational slices.
-                bool smaller = exactSliceListSize[kv.first] < exactSliceListSize[slice];
-                bool equal = exactSliceListSize[kv.first] == exactSliceListSize[slice];
-                if (!paddingFields.count(kv.first)) {
-                    if (smaller) {
-                        LOG6("\t\tSlice list for candidate slice (" << exactSliceListSize[kv.first]
-                             << "b) smaller than the slice list for slice " << slice << " (" <<
-                             exactSliceListSize[slice] << "b)");
-                        continue;
-                    }
-                    if (equal) {
-                        LOG6("\t\tSlice list for candidate slice (" << exactSliceListSize[kv.first]
-                             << "b) equal in size to the slice list for slice " << slice << " (" <<
-                             exactSliceListSize[slice] << "b)");
-                        continue;
-                    }
-                }
-                if (minSize > exactSliceListSize[slice]) {
-                    minSlice = slice;
-                    minSize = exactSliceListSize[slice];
-                    LOG6("\t\tSetting minSlice to " << slice << " and minSize to " << minSize <<
-                         "b.");
-                }
-            }
+        for (auto it = candidateSliceLists.begin(); it != candidateSliceLists.end(); ++it)
+            LOG1(**it);
 
-            // minSlice represents the slice in the rotational cluster with the exact containers
-            // requirement and the smallest slice list size. In other words, this is the slice
-            // according to which the current slice's slice list must be sliced. If minSlice not
-            // found, then it means one of the following things:
-            // 1. There are no slices with exact container requirements in the same rotational
-            //    cluster.
-            // 2. The current slice itself belongs to the smallest slice list with exact containers
-            //    requirement in this rotational cluster.
-            // 3. The field is a padding field, so it may be cut off; we do not need to enforce
-            //    slicing for padding fields.
-            if (!minSlice) {
-                LOG6("\tMin slice not found. Continuing...");
-                alreadyConsidered.insert(kv.first);
-                continue;
-            }
-            LOG6("\tNeed to slice around " << kv.first << " to match slice list size " << minSize <<
-                 "b of " << *minSlice);
+        impose_MAU_constraints(candidateSliceLists, sliceLocations, exactSliceListSize,
+                paddingFields, originalSliceOffset);
 
-            // Extract information about the slice list for the slice under consideration.
-            auto& slice_lists = sc->slice_list(kv.first);
-            BUG_CHECK(slice_lists.size() == 1, "Multiple slice lists contain slice %1%?", kv.first);
-            const auto* slice_list = *(slice_lists.begin());
-            // posInSliceList is the offset of the current slice within its slice list. This is
-            // determined by iterating through (in sequence) each slice of the slice list, until we
-            // arrive at the current slice.
-            // XXX(Deep): This may be memoized in the future?
-            int offsetWithinOriginalSliceList = 0;
-            for (auto& slice : *slice_list) {
-                // If the left limit is -1, then it indicates the start of a new slice list.
-                // Remember that a slice list at this point may have already been marked for
-                // splitting into multiple slice lists. This condition is essential is necessary for
-                // keeping track of the new slice list limits that are created.
-                if (sliceLocations[slice].first == -1) offsetWithinOriginalSliceList = 0;
-                if (slice == kv.first) break;
-                // Do not include the current slice list in the posInSliceList. That way, we only
-                // slice before the slice in consideration.
-                offsetWithinOriginalSliceList += slice.size();
-            }
+        // Break 24b slice lists into 16b and 8b slices appropriately (only check is that the
+        // slicing should not be in the middle of a slice).
+        // break_24b_slice_lists(sliceLocations, );
 
-            // For any slice, the update limits should be as follows:
-            // 1. If offsetWithinOriginalSliceList % minSize == 0 and left != -1, then the slice is
-            //    byte aligned and a slice boundary must be created to the left of the slice.
-            // 2. If carryOver == 0, and right == -1, it means that we have reached the slice
-            //    after which the original slice list should be split but the split is not yet
-            //    satisfied at that slice (because right == -1). Therefore, create a slice boundary
-            //    to the right of the slice.
-            int left = sliceLocations[kv.first].first;
-            int right = sliceLocations[kv.first].second;
-            LOG6("\t  For candidate slice, left = " << left << " and right = " << right);
-            // Set if a new split in the slice list is created before the current slice.
-            bool newSliceBoundaryFoundLeft = false;
-            if (offsetWithinOriginalSliceList % minSize == 0 && left != -1) {
-                required_slices_i.setbit(left);
-                newSliceBoundaryFoundLeft = true;
-                LOG6("\t  Slicing before slice " << kv.first);
-                // New slice list started.
-                offsetWithinOriginalSliceList = 0;
-            }
+        if (LOGGING(5)) {
+            LOG5("\tPrinting slicing related information for each slice in the format " <<
+                 "SLICE : sliceListSize, left limit, right limit");
+            for (auto kv : exactSliceListSize)
+                LOG5("\t  " << get_slice_coordinates(kv.second, sliceLocations[kv.first]) <<
+                     "\t:\t" << kv.first); }
 
-            // carryOver is the number of bits after the current slice in the slice list that must
-            // be put into the same slice list.
-            // E.g. if we have fields a<3b>, b<3b>, c<2b>, and b is the field under consideration
-            // (slice) and minSize is 8b, then posInSliceList = 3, and carryOver = 2b.
-            LOG6("\t  minSize: " << minSize << ", offset: " << offsetWithinOriginalSliceList <<
-                 ", slice size: " << kv.first.size());
-            int carryOver = minSize - offsetWithinOriginalSliceList - kv.first.size();
-            LOG6("\t  " << carryOver << " more bits must be included in this slice list.");
-
-            // Set if a new split in the slice list is created after the current slice.
-            bool newSliceBoundaryFoundRight = false;
-            if (carryOver == 0 && right != -1) {
-                newSliceBoundaryFoundRight = true;
-                required_slices_i.setbit(right);
-                LOG6("\t  Slicing after slice " << kv.first);
-            }
-            bool slicesLeftToProcess = carryOver > 0;
-            // If no new slice boundary is found, then we do not need to update any of the slice
-            // list related state. Also, if there are more slices left to process, we need to update
-            // the state for those fields accordingly.
-            if (!newSliceBoundaryFoundLeft && !newSliceBoundaryFoundRight && !slicesLeftToProcess)
-                continue;
-
-            // Update the slice list maps that help us decide the required_slices_i value. Once we
-            // decide to break a slice list at a particular boundary, we will get new slice lists;
-            // we need to update the slice lists sizes and the byte boundaries for each slice, once
-            // the point for the slicing is found.
-            LOG6("\t  Need to update the resulting slice list.");
-
-            int intraListSize = 0;
-            std::vector<FieldSlice> seenFieldSlices;
-            ordered_set<FieldSlice> alreadyProcessedSlices;
-            int newSliceListsProcessedBits = 0;
-            bool allSlicesGoToNewSliceList = false;
-            for (auto& slice : *slice_list) {
-                if (alreadyConsidered.count(slice) || alreadyProcessedSlices.count(slice)) {
-                    LOG6("\t\tNew slice list for slice " << slice << " has already been created.");
-                    continue;
-                }
-                LOG6("\t\tCo-ordinate for slice " << slice << ": " << exactSliceListSize[slice] <<
-                        "b, " << sliceLocations[slice].first << "L, " <<
-                        sliceLocations[slice].second << "R.");
-                // Boundary was shifted to before this field, so change the size for the fields seen
-                // so far.
-                if (newSliceBoundaryFoundLeft) {
-                    // Still processing fields before the slicing point.
-                    if (slice != kv.first) {
-                        LOG6("\t\t  Adding " << slice << " to seen fields before slicing point.");
-                        seenFieldSlices.push_back(slice);
-                        continue;
-                    }
-                    // Finally we reach the field slice before which the slicing is done.
-                    int prevSliceListSize = 0;
-                    for (auto& sl : seenFieldSlices)
-                        prevSliceListSize += sl.size();
-                    prevSliceListSize = 8 * (prevSliceListSize / 8);
-                    for (auto& sl : seenFieldSlices) {
-                        intraListSize += sl.size();
-                        if (intraListSize <= prevSliceListSize)
-                            exactSliceListSize[sl] = prevSliceListSize;
-                        else
-                            exactSliceListSize[sl] -= prevSliceListSize;
-                        LOG6("\t\t\tintraListSize: " << intraListSize << ", left: " << left <<
-                             ", sliceLocations[sl].first: " << sliceLocations[sl].first);
-                        if (sliceLocations[sl].first != left)
-                            sliceLocations[sl].second = left;
-                        LOG6("\t\t  C. Setting " << sl << " co-ordinates to: " <<
-                             get_slice_coordinates(exactSliceListSize[sl], sliceLocations[sl]));
-                        alreadyProcessedSlices.insert(sl);
-                    }
-                    // After all the slices in the first slice list are adjusted, clear seenFields
-                    // and reset the intraListSize to 0.
-                    seenFieldSlices.clear();
-                    newSliceBoundaryFoundLeft = false;
-                    newSliceListsProcessedBits += intraListSize;
-                    intraListSize = 0;
-                    LOG6("\t\t\tClearing state because we finished the previous slice.");
-                }
-
-                // Add data related to the current slice whose MAU constraints are being considered.
-                // In this case, there is a new slice list created after the current slice and there
-                // is no other slice after this slice in the current slice list.
-                if (slice == kv.first && newSliceBoundaryFoundRight) {
-                    intraListSize += slice.size();
-                    BUG_CHECK(intraListSize % 8 == 0, "How did we create a slice list at a non "
-                              "byte boundary?");
-                    exactSliceListSize[slice] = intraListSize;
-                    sliceLocations[slice].first = -1;
-                    LOG6("\t\t  D. Setting " << slice << " co-ordinates to: " <<
-                         get_slice_coordinates(exactSliceListSize[slice], sliceLocations[slice]));
-                    newSliceListsProcessedBits += intraListSize;
-                    intraListSize = 0;
-                    alreadyProcessedSlices.insert(slice);
-                    continue;
-                }
-
-                if (carryOver == 0 || (carryOver > 0 && slice == kv.first)) {
-                    seenFieldSlices.push_back(slice);
-                    intraListSize += slice.size();
-                    LOG6("\t\t  a. Discovered " << intraListSize << " bits. Carry over: " <<
-                         carryOver);
-                    continue;
-                }
-                if (allSlicesGoToNewSliceList) {
-                    seenFieldSlices.push_back(slice);
-                    intraListSize += slice.size();
-                    LOG6("\t\t  b. Discovered " << intraListSize << " bits. Carry over: " <<
-                         carryOver);
-                    continue;
-                } else {
-                    int carryOverAfterThisSlice = carryOver - slice.size();
-                    if (carryOverAfterThisSlice <= 0) {
-                        // Check for padding fields and setbit on the vector here.
-                        intraListSize += carryOver;
-                        LOG6("\t\t\tintraListSize increased to " << intraListSize <<
-                             " due to carryOver.");
-                        int sliceListSizeWithoutPadding = 0;
-                        int lastRightOffset = -1;
-                        // Current slice is part of the previous slice list if the carry over after
-                        // this slice is going to be 0.
-                        if (carryOverAfterThisSlice == 0) seenFieldSlices.push_back(slice);
-                        for (auto& sl : seenFieldSlices) {
-                            if (!sl.field()->isCompilerGeneratedPaddingField()) {
-                                sliceListSizeWithoutPadding += sl.size();
-                                lastRightOffset = sliceLocations[sl].second;
-                            }
-                            exactSliceListSize[sl] = intraListSize;
-                            // Set the correct right limit for the field slice. If the rounded up
-                            // size of the slice list from its beginning to the current slice is
-                            // equal to the size of the new slice list (represented by
-                            // intraListSize), then it means we need to slice to the right of slice
-                            // sl, and so we set its right limit to -1.
-                            int roundedUpSizeSoFar = 8 * ROUNDUP(sliceListSizeWithoutPadding, 8);
-                            if (roundedUpSizeSoFar == intraListSize)
-                                sliceLocations[sl].second = -1;
-                            LOG6("\t\t  E. Setting " << sl << " co-ordinates to: " <<
-                                 get_slice_coordinates(exactSliceListSize[sl], sliceLocations[sl]));
-                            alreadyConsidered.insert(sl);
-                        }
-                        if (slice.field()->isCompilerGeneratedPaddingField()) {
-                            exactSliceListSize[slice] = intraListSize;
-                            sliceLocations[slice].second = lastRightOffset;
-                            LOG6("\t\t  F. Setting " << slice << " co-ordinates to: " <<
-                                 get_slice_coordinates(exactSliceListSize[slice],
-                                     sliceLocations[slice]));
-                            alreadyConsidered.insert(slice);
-                        } else {
-                            allSlicesGoToNewSliceList = true;
-                            LOG6("\t\t\tMark all slices as part of new slice list.");
-                        }
-                        // We have to slice at the lastRightOffset bit.
-                        if (lastRightOffset != -1)
-                            required_slices_i.setbit(lastRightOffset);
-                        seenFieldSlices.clear();
-                        intraListSize = 0;
-                        LOG6("\t\t\tClearing state in preparation for new slice list.");
-                        continue;
-                    } else {
-                        // Handle case where carryOver > 0.
-                        LOG6("\t\t  G. Setting " << slice << " co-ordinates to: " <<
-                             get_slice_coordinates(exactSliceListSize[slice],
-                                 sliceLocations[slice]));
-                        carryOver -= slice.size();
-                        alreadyConsidered.insert(slice);
-                        seenFieldSlices.push_back(slice);
-                        intraListSize += slice.size();
-                        LOG6("\t\t  c. Discovered " << intraListSize << " bits. Carry over: " <<
-                             carryOver);
-                        continue;
-                    }
-                }
-                seenFieldSlices.push_back(slice);
-                intraListSize += slice.size();
-                LOG6("\t\t  d. Discovered " << intraListSize << " bits. Carry over: " << carryOver);
-            }
-
-            // At this point, the seenFieldSlices object contains all the remaining slices that must
-            // now be in the same slice list together.
-            int remainingBitsVisited = 0;
-            for (auto& slice : seenFieldSlices) {
-                if (remainingBitsVisited / 8 == 0)
-                    sliceLocations[slice].first = -1;
-                remainingBitsVisited += slice.size();
-                int nextByteBoundary;
-                if (slice.field()->isCompilerGeneratedPaddingField()) {
-                    exactSliceListSize[slice] = 8 * ROUNDUP(intraListSize - slice.size(), 8);
-                    nextByteBoundary = (exactSliceListSize[slice] < remainingBitsVisited)
-                        ? -1 : (8 * ROUNDUP(remainingBitsVisited, 8));
-                } else {
-                    exactSliceListSize[slice] = 8 * ROUNDUP(intraListSize, 8);
-                    nextByteBoundary = 8 * ROUNDUP(remainingBitsVisited, 8);
-                }
-                if (nextByteBoundary == -1 || nextByteBoundary == exactSliceListSize[slice])
-                    sliceLocations[slice].second = -1;
-                LOG6("\t\t  H. Setting " << slice << " co-ordinates to: " <<
-                     get_slice_coordinates(exactSliceListSize[slice], sliceLocations[slice]));
-            }
-        }
 
         if (LOGGING(6)) {
             std::stringstream ss;
@@ -670,10 +209,697 @@ PHV::SlicingIterator::SlicingIterator(
         LOG6("Initial compressed schemas: " << ss.str()); }
 
     // Look for the first valid slicing.
-    if (auto res = get_slices())
+    if (auto res = get_slices()) {
         cached_i = *res;
-    else
+        LOG6("FOUND VALID SLICING");
+    } else {
+        LOG6("DID NOT FIND VALID SLICING");
         this->operator++();
+    }
+}
+
+int PHV::SlicingIterator::populate_initial_maps(
+        std::list<PHV::SuperCluster::SliceList*>& candidateSliceLists,
+        ordered_map<FieldSlice, std::pair<int, int>>& sliceLocations,
+        ordered_map<FieldSlice, int>& exactSliceListSize,
+        ordered_set<FieldSlice>& paddingFields,
+        ordered_map<PHV::SuperCluster::SliceList*, std::pair<int, int>>& sliceListDetails,
+        ordered_map<FieldSlice, std::pair<int, int>>& originalSliceOffset,
+        const std::map<const PHV::Field*, std::vector<PHV::Size>>& pa) {
+    int offset = 0;
+    // Offset of the first field in the slice list. We go through slice lists in a supercluster
+    // in sequence, and the offset represents that sequence.
+    int sliceListOffset = 0;
+    for (auto* list : sc_i->slice_lists()) {
+        LOG6("Determining initial co-ordinates for slice list");
+        LOG6("\t" << *list);
+        int sliceOffsetWithinSliceList = 0;
+        // set to true, if any slice in the slice list has an exact containers requirement.
+        bool has_exact_containers = false;
+
+        // Set, if a slice is a padding field, to the size of the padding field.
+        int paddingFieldSize = -1;
+        // Used to track the last field in a slice list; the last field's right coordinate is
+        // always -1 to indicate that no slicing is required there (there is implicit slicing at
+        // each slice list boundary).
+        FieldSlice* lastSliceInSliceList = nullptr;
+
+        // Calculate the size of the slice list up front.
+        int sliceListSize = 0;
+        for (auto& slice : *list) {
+            sliceListSize += slice.size();
+            auto it = pa.find(slice.field());
+            if (it == pa.end()) continue;
+            // Note down pa_container_size pragmas for all fields in this slice list (if
+            // specified). Then add the same pragmas for all fields in the rotational cluster
+            // with that field.
+            pa_container_sizes_i[it->first] = it->second;
+            LOG6("  Adding pa_container_size for field: " << it->first);
+            for (auto sz : it->second)
+                LOG6("    " << sz);
+            auto& rot_cluster = sc_i->cluster(slice);
+            for (auto& rot_slice : rot_cluster.slices()) {
+                if (slice == rot_slice) continue;
+                if (pa_container_sizes_i.count(rot_slice.field())) {
+                    LOG6("    Both original field and rotational cluster field have "
+                            "container size pragmas!");
+                    // XXX(Deep): Compare the two specifications of size.
+                }
+                pa_container_sizes_i[rot_slice.field()] = it->second;
+                LOG6("  Adding pa_container_size for field: " << rot_slice);
+                for (auto sz : it->second)
+                    LOG6("    " << sz); } }
+
+        // Set to true, if all slices in the slice list are of the same field AND there is a
+        // no-split constraint on the field.
+        bool allSlicesNoSplitSameField = true;
+        const PHV::Field* fieldObserved = nullptr;
+        // Check if the slice list is made up of slices of the same field and is less than
+        // 32-bits in size. (no_split() is not applied to fields of more than 32 bit width).
+        if (sliceListSize <= 32) {
+            for (auto& slice : *list) {
+                if (!slice.field()->no_split()) {
+                    allSlicesNoSplitSameField = false;
+                    break;
+                }
+                if (fieldObserved == nullptr) {
+                    fieldObserved = slice.field();
+                    continue;
+                }
+                if (fieldObserved != slice.field()) {
+                    allSlicesNoSplitSameField = false;
+                    break;
+                }
+            }
+            LOG6("\tIs the slice list composed of slices of the same no-split field? " <<
+                    (allSlicesNoSplitSameField ? "YES" : "NO"));
+        } else {
+            allSlicesNoSplitSameField = false;
+        }
+
+        const FieldSlice* prevSlice = nullptr;
+        for (auto& slice : *list) {
+            originalSliceOffset[slice].first = sliceOffsetWithinSliceList;
+            // Set the last seen slice.
+            LOG6("\tDetermining co-ordinates for slice: " << slice);
+            if (prevSlice)
+                LOG6("\t\tPrevious slice: " << prevSlice);
+            lastSliceInSliceList = &slice;
+            if (slice.field()->exact_containers())
+                has_exact_containers = true;
+            if (slice.field()->isCompilerGeneratedPaddingField()) {
+                paddingFieldSize = slice.size();
+                paddingFields.insert(list->begin(), list->end());
+            }
+
+            // Always require a split at the beginning of a slice with deparsed_bottom_bits.
+            if (slice.field()->deparsed_bottom_bits()
+                    && slice.range().lo == 0 && sliceOffsetWithinSliceList > 0) {
+                // XXX(cole): 'BUG_CHECK' here might be too strong.
+                BUG_CHECK(sliceOffsetWithinSliceList % 8 == 0,
+                        "Can't slice on field %1% in slice list %2% "
+                        "(which has deparsed bottom bits) because it is not byte aligned",
+                        cstring::to_cstring(slice), cstring::to_cstring(list));
+                LOG6("\t  Required slice at " << offset + (sliceOffsetWithinSliceList/ 8 - 1)
+                        << " for field slice " << slice);
+                required_slices_i.setbit(offset + (sliceOffsetWithinSliceList / 8 - 1)); }
+
+            // If this slice is of the same field as the previous slice and the field is
+            // no_split(), then the current slice should take the same sliceLocations pair as
+            // the previous slice.
+            if (prevSlice && prevSlice->field() == slice.field() && slice.field()->no_split()) {
+                sliceLocations[slice] = sliceLocations[*prevSlice];
+                LOG6("\t  A. Setting co-ordinates for a no-split field's slice to the prev " <<
+                        "slice's co-ordinates: " <<
+                        get_slice_coordinates(sliceListSize, sliceLocations.at(slice)));
+                sliceOffsetWithinSliceList += slice.size();
+                continue;
+            }
+            // Nearest byte aligned interval before this field slice.
+            // Detect the byte limits for each slice.
+            int left_limit = -1;
+            int right_limit = -1;
+
+            // If this is not the first slice in the slice list (indicated by
+            // sliceOffsetWithinSliceList == 0), and if this slice list is not composed
+            // exclusively of slices of the same no-split field, and if the slice is not byte
+            // aligned, then its left limit is the previous byte boundary. Left limit of -1
+            // indicates that the slice may be split at its start.
+            LOG6("\t\tsliceOffsetWithinSliceList: " << sliceOffsetWithinSliceList <<
+                    ", offset: " << offset);
+            if (sliceOffsetWithinSliceList != 0 && !allSlicesNoSplitSameField &&
+                    (sliceOffsetWithinSliceList / 8) != 0) {
+                if (sliceOffsetWithinSliceList < 8)
+                    left_limit = -1;
+                else
+                    left_limit = offset - 1 + (sliceOffsetWithinSliceList / 8);
+            }
+            sliceOffsetWithinSliceList += slice.size();
+
+            // Figure out the byte boundary for the right side (the end of this slice).
+            int addFactor = (sliceOffsetWithinSliceList / 8) -
+                (1 - bool(sliceOffsetWithinSliceList % 8));
+            // Calculate the number of bytes in the slice list.
+            int sliceListBytesNeeded = sliceListSize / 8 - (1 - bool(sliceListSize % 8));
+            LOG6("\t\tSlice list size: " << sliceListSize << ", sliceListBytesNeeded: " <<
+                    sliceListBytesNeeded);
+
+            // If all slices in the slice list do not all correspond to the same no-split field,
+            // and if the
+            if (!allSlicesNoSplitSameField && addFactor != sliceListBytesNeeded) {
+                right_limit = offset + addFactor;
+                LOG6("\t\tSetting right limit offset to: " << right_limit << " (" << offset <<
+                        " + " << addFactor << ")");
+            }
+            sliceLocations[slice] = std::make_pair(left_limit, right_limit);
+            LOG6("\t  B. Setting initial co-ordinates for slice " << slice << " to: " <<
+                    get_slice_coordinates(sliceListSize, sliceLocations.at(slice)));
+            prevSlice = &slice;
+        }
+        // By this time, the value of sliceOffsetWithinSliceList should be equal to the size of
+        // the slice list.
+        BUG_CHECK(sliceOffsetWithinSliceList == sliceListSize,
+                "Is one of sliceListSize and sliceOffsetWithinSliceList wrong?");
+        // Make sure that we went through all the slices in a slice list and that the slice list
+        // was not empty.
+        BUG_CHECK(sliceOffsetWithinSliceList > 0, "Empty slice list");
+
+        // (range[list].hi + 1) * 8 is the first split position *beyond the
+        // end* of the slice list.  Note that slice lists 8b or smaller
+        // cannot be sliced, which is reflected in bitsNeededForBoundaries = 0.
+        // bitsNeededForBoundaries indicates the number of bits needed to represent the
+        // boundaries at which we can slice the slice list. E.g. for a 32-bit slice list, we can
+        // split at the 8-bit boundary, 16-bit boundary, and 24-bit boundary (the split at the
+        // beginning and end of the slice list is implicit). Therefore, we need 3-bits to
+        // replace the boundaries.
+        int bitsNeededForBoundaries = sliceListSize / 8 - (1 - bool(sliceListSize % 8));
+        ranges_i[list] = StartLen(offset, bitsNeededForBoundaries);
+        if (has_exact_containers) {
+            candidateSliceLists.push_back(list);
+            exact_containers_i.setrange(offset, bitsNeededForBoundaries);
+            for (auto& slice : *list) {
+                if (paddingFieldSize == -1)
+                    exactSliceListSize[slice] = sliceListSize;
+                else
+                    exactSliceListSize[slice] = 8 * ROUNDUP(sliceListSize - paddingFieldSize,
+                            8);
+            }
+        }
+
+        for (auto& slice : *list) {
+            int sliceOffset = originalSliceOffset[slice].first;
+            if (exactSliceListSize.count(slice))
+                originalSliceOffset[slice].second = exactSliceListSize.at(slice) - sliceOffset;
+            else
+                originalSliceOffset[slice].second = sliceListSize - sliceOffset;
+        }
+
+        offset += bitsNeededForBoundaries;
+        boundaries_i.setbit(offset);
+        LOG5("    ...slice list (" << sliceListSize << "b) with compressed bitvec size "
+                << bitsNeededForBoundaries << " and offset " << offset);
+
+        BUG_CHECK(lastSliceInSliceList != nullptr, "Were there no slices in the slice list?");
+        sliceLocations[*lastSliceInSliceList].second = -1;
+        sliceListOffset += sliceListSize;
+        sliceListDetails[list] = std::make_pair(offset, bitsNeededForBoundaries);
+    }
+    return offset;
+}
+
+void PHV::SlicingIterator::impose_MAU_constraints(
+        const std::list<PHV::SuperCluster::SliceList*>& candidateSliceLists,
+        ordered_map<FieldSlice, std::pair<int, int>>& sliceLocations,
+        ordered_map<FieldSlice, int>& exactSliceListSize,
+        const ordered_set<FieldSlice>& paddingFields,
+        const ordered_map<FieldSlice, std::pair<int, int>>& originalSliceOffset) {
+    // XXX(Deep): The true constraint is that slices, which are part of a rotational cluster
+    // must be sliced in the same way. This prevents searching through invalid values of the
+    // slicing iterator.
+
+    // For now, we ensure that if multiple slices in the same rotational cluster belong to
+    // different slice lists with exact container requirements, and the width of those slice
+    // lists are different, then the required slicing should necessarily be equivalent for all
+    // those multiple slices in the same rotational cluster.
+    ordered_set<FieldSlice> alreadyConsidered;
+    for (auto* list : candidateSliceLists) {
+        for (auto& candidate : *list) {
+            if (alreadyConsidered.count(candidate)) {
+                LOG6("Ignoring slice " << candidate << " that has already been processed.");
+                continue;
+            }
+            alreadyConsidered.insert(candidate);
+            LOG6("Considering rotational cluster constraints for slice: " << candidate);
+            // { candidate } set are all slices that have an exact container requirement and belong
+            // to slice lists.
+            auto& rot_cluster = sc_i->cluster(candidate);
+            int minSize = exactSliceListSize[candidate];
+            boost::optional<FieldSlice> minSlice;
+            for (auto& slice : rot_cluster.slices()) {
+                LOG6("\tRotational cluster slice: " << slice);
+                // Ignore the loop if the slice in the rotational cluster is the same as the
+                // candidate slice.
+                if (slice == candidate) {
+                    LOG6("\t\tRotational slice same as the one being considered.");
+                    continue;
+                }
+                // If the slice in the rotational cluster does not have the exact containers
+                // requirement (it is metadata), then it does not induce any slicing requirements.
+                if (!slice.field()->exact_containers()) {
+                    LOG6("\t\tRotational slice does not have exact containers requirement.");
+                    continue;
+                }
+                // If the slice list size for the non metadata slice is greater than or equal to the
+                // current field's slice list size, then continue. Because this slice might be the
+                // smallest slice of the rotational slices.
+                bool smaller = exactSliceListSize[candidate] < exactSliceListSize[slice];
+                bool equal = exactSliceListSize[candidate] == exactSliceListSize[slice];
+                if (!paddingFields.count(candidate)) {
+                    if (smaller) {
+                        LOG6("\t\tSlice list for candidate slice (" << exactSliceListSize[candidate]
+                             << "b) smaller than the slice list for slice " << slice << " (" <<
+                             exactSliceListSize[slice] << "b)");
+                        continue;
+                    }
+                    if (equal) {
+                        LOG6("\t\tSlice list for candidate slice (" << exactSliceListSize[candidate]
+                             << "b) equal in size to the slice list for slice " << slice << " (" <<
+                             exactSliceListSize[slice] << "b)");
+                        continue;
+                    }
+                }
+                if (minSize > exactSliceListSize[slice]) {
+                    minSlice = slice;
+                    minSize = exactSliceListSize[slice];
+                    LOG6("\t\tSetting minSlice to " << slice << " and minSize to " << minSize <<
+                            "b.");
+                }
+            }
+
+            // minSlice represents the slice in the rotational cluster with the exact containers
+            // requirement and the smallest slice list size. In other words, this is the slice
+            // according to which the current slice's slice list must be sliced. If minSlice not
+            // found, then it means one of the following things:
+            // 1. There are no slices with exact container requirements in the same rotational
+            //    cluster.
+            // 2. The current slice itself belongs to the smallest slice list with exact containers
+            //    requirement in this rotational cluster.
+            // 3. The field is a padding field, so it may be cut off; we do not need to enforce
+            //    slicing for padding fields.
+            if (!minSlice) {
+                LOG6("\tMin slice not found. Continuing...");
+                continue;
+            }
+            LOG6("\tNeed to slice around " << candidate << " to match slice list size " << minSize
+                 << "b of " << *minSlice);
+
+            // Extract information about the slice list for the slice under consideration.
+            auto& slice_lists = sc_i->slice_list(candidate);
+            BUG_CHECK(slice_lists.size() == 1, "Multiple slice lists contain slice %1%?",
+                    candidate);
+            const auto* slice_list = *(slice_lists.begin());
+            // offsetWithinSliceList is the offset of the current slice within its slice list. This
+            // is determined by iterating through (in sequence) each slice of the slice list, until
+            // we arrive at the current slice.
+            // XXX(Deep): This may be memoized in the future?
+            int offsetWithinSliceList = 0;
+            int offsetWithinOriginalSliceList = 0;
+            const FieldSlice* firstSliceInCurrentSliceList = nullptr;
+            for (auto& slice : *slice_list) {
+                // Potential first slice in the slice list for the current slice.
+                if (offsetWithinOriginalSliceList == 0) firstSliceInCurrentSliceList = &slice;
+                // If the left limit is -1, then it indicates the start of a new slice list.
+                // Remember that a slice list at this point may have already been marked for
+                // splitting into multiple slice lists. This condition is essential is necessary for
+                // keeping track of the new slice list limits that are created.  Ignore the first
+                // byte of the slice list while counting offsetWithinSliceList.
+                if (offsetWithinOriginalSliceList > 8 && sliceLocations[slice].first == -1) {
+                    LOG6("\t\t\tCurrent slice: " << slice << ", setting offset to 0.");
+                    firstSliceInCurrentSliceList = &slice;
+                    offsetWithinSliceList = 0;
+                    offsetWithinOriginalSliceList += slice.size();
+                    if (slice != candidate) continue;
+                }
+                // Do not include the current slice list in the offsetWithinSliceList. That way, we
+                // only slice before the current slice.
+                if (slice == candidate) {
+                    LOG6("\t\t\tCurrent slice: " << slice << ", found it! offset: " <<
+                            offsetWithinSliceList);
+                    break;
+                }
+                LOG6("\t\t\tCurrent slice: " << slice << " " << slice.size() <<
+                        "b, offset within original slice list: " << offsetWithinSliceList);
+                offsetWithinSliceList += slice.size();
+                offsetWithinOriginalSliceList += slice.size();
+            }
+            BUG_CHECK(firstSliceInCurrentSliceList != nullptr, "No slice in slice list?");
+            LOG6("\t\tFirst slice in current slice's slice list is: " <<
+                    *firstSliceInCurrentSliceList);
+            bool foundFirstSliceInCurrentSliceList = false;
+
+            // For any slice, the update limits should be as follows:
+            // 1. If offsetWithinSliceList % minSize == 0 and left != -1, then the slice is byte
+            //    aligned and a slice boundary must be created to the left of the slice.
+            // 2. If offsetWithinSliceList % minSize != 0, then the slice needs to be created to the
+            //    left of the current slice between the previously specified boundary of a slice
+            //    list and the current slice. These possible slicing points are represented by the
+            //    possibleSlicingPoints set. We then need to choose the appropriate slicing point
+            //    among these and update the slice lists accordingly.
+            ordered_set<FieldSlice> alreadyProcessedSlices;
+            int processedBits = 0;
+            int left = sliceLocations[candidate].first;
+            int right = sliceLocations[candidate].second;
+            LOG6("\t  For candidate slice, left = " << left << " and right = " << right);
+            // Set if a new split in the slice list is created before the current slice.
+            bool newSliceBoundaryFoundLeft = false;
+
+            std::vector<FieldSlice> sliceListToProcess;
+            ordered_set<FieldSlice> possibleSlicingPoints;
+            // Populate sliceListToProcess with the part of the slice list that have not been
+            // assigned to slice lists yet (remove already processed slices). Also find, all the
+            // possible points where this sliceListToProcess can be sliced; we skip slicing points
+            // that straddle the same field in this case.
+            for (auto& slice : *slice_list) {
+                if (!foundFirstSliceInCurrentSliceList) {
+                    if (slice == *firstSliceInCurrentSliceList) {
+                        foundFirstSliceInCurrentSliceList = true;
+                        sliceListToProcess.push_back(slice);
+                        LOG6("\t\t  Must process " << slice);
+                        if ((originalSliceOffset.at(slice).first % 8) == 0)
+                            possibleSlicingPoints.insert(slice);
+                    } else {
+                        continue;
+                    }
+                } else {
+                    sliceListToProcess.push_back(slice);
+                    LOG6("\t\t  Must process " << slice);
+                    int offsetWithinOriginalSliceList = originalSliceOffset.at(slice).first;
+                    int bitsLeftAfterThisSlice = originalSliceOffset.at(slice).second;
+                    if (offsetWithinOriginalSliceList % 8 == 0 && bitsLeftAfterThisSlice >= minSize
+                        && offsetWithinOriginalSliceList <= originalSliceOffset.at(candidate).first)
+                        possibleSlicingPoints.insert(slice);
+                }
+            }
+            if (possibleSlicingPoints.size() > 0)
+                for (auto& slice : possibleSlicingPoints)
+                    LOG6("\t\t\tPossible slicing point: " << slice);
+
+            if (offsetWithinSliceList % minSize == 0 && left != -1) {
+                required_slices_i.setbit(left);
+                newSliceBoundaryFoundLeft = true;
+                LOG6("\t  A. Slicing before slice " << candidate);
+                // New slice list started.
+                offsetWithinSliceList = 0;
+                int newSliceListSize = processSliceListBefore(alreadyProcessedSlices,
+                        exactSliceListSize, sliceLocations, originalSliceOffset, sliceListToProcess,
+                        candidate);
+                LOG6("\t\tCreated a new slice list of " << newSliceListSize << "b.");
+            } else if (left != -1) {
+                auto slicingPoint = getBestSlicingPoint(sliceListToProcess, possibleSlicingPoints,
+                        minSize);
+                LOG6("\t\t  Best slicing point: " << slicingPoint);
+                if (sliceLocations[slicingPoint].first != -1) {
+                    LOG6("\t  B. Slicing before slice " << slicingPoint);
+                    required_slices_i.setbit(sliceLocations[slicingPoint].first);
+                    newSliceBoundaryFoundLeft = true;
+                    processedBits = processSliceListBefore(alreadyProcessedSlices,
+                            exactSliceListSize, sliceLocations, originalSliceOffset,
+                            sliceListToProcess, slicingPoint);
+                }
+            }
+
+            // 2. If carryOver == 0, and right == -1, it means that we have reached the slice
+            //    after which the original slice list should be split but the split is not yet
+            //    satisfied at that slice (because right == -1). Therefore, create a slice boundary
+            //    to the right of the slice.
+
+            // carryOver is the number of bits after the current slice in the slice list that must
+            // be put into the same slice list.
+            // E.g. if we have fields a<3b>, b<3b>, c<2b>, and b is the field under consideration
+            // (slice) and minSize is 8b, then posInSliceList = 3, and carryOver = 2b.
+            LOG6("\t  minSize: " << minSize << ", offset: " << offsetWithinSliceList <<
+                    ", slice size: " << candidate.size() << ", processedBits: " << processedBits);
+            int carryOver = minSize - (offsetWithinSliceList - processedBits);
+            int carryOverAfterSlice = carryOver - candidate.size();
+            LOG6("\t  " << carryOverAfterSlice << " more bits must be included in this slice "
+                 "list.");
+
+            // Set if a new split in the slice list is created after the current slice.
+            bool newSliceBoundaryFoundRight = false;
+            if (carryOverAfterSlice == 0 && right != -1) {
+                newSliceBoundaryFoundRight = true;
+                required_slices_i.setbit(right);
+                LOG6("\t  Slicing after slice " << candidate);
+            }
+            bool slicesLeftToProcess = carryOverAfterSlice > 0;
+            // If no new slice boundary is found, then we do not need to update any of the slice
+            // list related state. Also, if there are more slices left to process, we need to update
+            // the state for those fields accordingly.
+            if (!newSliceBoundaryFoundLeft && !newSliceBoundaryFoundRight && !slicesLeftToProcess)
+                continue;
+
+            // Update the slice list maps that help us decide the required_slices_i value. Once we
+            // decide to break a slice list at a particular boundary, we will get new slice lists;
+            // we need to update the slice lists sizes and the byte boundaries for each slice, once
+            // the point for the slicing is found.
+            LOG6("\t  Need to update the resulting slice list.");
+
+            int intraListSize = 0;
+            std::vector<FieldSlice> seenFieldSlices;
+            bool allSlicesGoToNewSliceList = false;
+            for (auto& slice : sliceListToProcess) {
+                if (alreadyProcessedSlices.count(slice)) {
+                    LOG6("\t\tNew slice list for slice " << slice << " has already been created.");
+                    continue;
+                }
+                LOG6("\t\tCo-ordinate for slice " << slice << ": " << exactSliceListSize[slice] <<
+                        "b, " << sliceLocations[slice].first << "L, " <<
+                        sliceLocations[slice].second << "R.");
+                // Boundary was shifted to before this field, so change the size for the fields seen
+                // so far.
+                if (newSliceBoundaryFoundLeft) {
+                    // Still processing fields before the slicing point.
+                    if (slice != candidate) {
+                        LOG6("\t\t  Adding " << slice << " to seen fields before slicing point.");
+                        seenFieldSlices.push_back(slice);
+                        continue;
+                    }
+                    // Finally we reach the field slice before which the slicing is done.
+                    for (auto& sl : seenFieldSlices) {
+                        intraListSize += sl.size();
+                        exactSliceListSize[sl] = minSize;
+                        LOG6("\t\t  C. Setting " << sl << " co-ordinates to: " <<
+                                get_slice_coordinates(exactSliceListSize[sl], sliceLocations[sl]));
+                        alreadyProcessedSlices.insert(sl);
+                    }
+                    // After all the slices in the first slice list are adjusted, clear seenFields
+                    // and reset the intraListSize to 0.
+                    seenFieldSlices.clear();
+                    newSliceBoundaryFoundLeft = false;
+                    LOG6("\t\t\tClearing state because we finished the previous slice.");
+                }
+
+                // Add data related to the current slice whose MAU constraints are being considered.
+                // In this case, there is a new slice list created after the current slice and there
+                // is no other slice after this slice in the current slice list.
+                if (slice == candidate && newSliceBoundaryFoundRight) {
+                    intraListSize += slice.size();
+                    BUG_CHECK(intraListSize % 8 == 0, "How did we create a slice list at a non "
+                            "byte boundary?");
+                    exactSliceListSize[slice] = intraListSize;
+                    sliceLocations[slice].first = -1;
+                    LOG6("\t\t  D. Setting " << slice << " co-ordinates to: " <<
+                         get_slice_coordinates(exactSliceListSize[slice], sliceLocations[slice]));
+                    intraListSize = 0;
+                    alreadyProcessedSlices.insert(slice);
+                    continue;
+                }
+
+                if (originalSliceOffset.at(candidate).first > originalSliceOffset.at(slice).first) {
+                    seenFieldSlices.push_back(slice);
+                    intraListSize += slice.size();
+                    LOG6("\t\t  e. Discovered already accounted for slice " << slice);
+                    LOG6("\t\t  intraListSize: " << intraListSize << " bits. Carry over: " <<
+                            carryOver);
+                    continue;
+                }
+
+                if (carryOverAfterSlice == 0 || (carryOverAfterSlice > 0 && slice == candidate)) {
+                    seenFieldSlices.push_back(slice);
+                    intraListSize += slice.size();
+                    carryOver = carryOverAfterSlice;
+                    LOG6("\t\t  a. Discovered " << intraListSize << " bits. Carry over: " <<
+                            carryOver);
+                    continue;
+                }
+                if (allSlicesGoToNewSliceList) {
+                    seenFieldSlices.push_back(slice);
+                    intraListSize += slice.size();
+                    carryOver -= slice.size();
+                    LOG6("\t\t  b. Discovered " << intraListSize << " bits. Carry over: " <<
+                            carryOver);
+                    continue;
+                } else {
+                    int carryOverAfterThisSlice = carryOver - slice.size();
+                    if (carryOverAfterThisSlice <= 0) {
+                        // Check for padding fields and setbit on the vector here.
+                        intraListSize += carryOver;
+                        LOG6("\t\t\tintraListSize increased to " << intraListSize <<
+                                " due to carryOver.");
+                        int sliceListSizeWithoutPadding = 0;
+                        int lastRightOffset = -1;
+                        // Current slice is part of the previous slice list if the carry over after
+                        // this slice is going to be 0.
+                        if (carryOverAfterThisSlice == 0) {
+                            seenFieldSlices.push_back(slice);
+                            carryOver -= slice.size();
+                        }
+                        for (auto& sl : seenFieldSlices) {
+                            if (!sl.field()->isCompilerGeneratedPaddingField()) {
+                                sliceListSizeWithoutPadding += sl.size();
+                                lastRightOffset = sliceLocations[sl].second;
+                            }
+                            exactSliceListSize[sl] = minSize;
+                            // Set the correct right limit for the field slice. If the rounded up
+                            // size of the slice list from its beginning to the current slice is
+                            // equal to the size of the new slice list (represented by
+                            // intraListSize), then it means we need to slice to the right of slice
+                            // sl, and so we set its right limit to -1.
+                            int roundedUpSizeSoFar = 8 * ROUNDUP(sliceListSizeWithoutPadding, 8);
+                            if (roundedUpSizeSoFar == intraListSize)
+                                sliceLocations[sl].second = -1;
+                            LOG6("\t\t  E. Setting " << sl << " co-ordinates to: " <<
+                                 get_slice_coordinates(exactSliceListSize[sl], sliceLocations[sl]));
+                        }
+                        if (slice.field()->isCompilerGeneratedPaddingField()) {
+                            exactSliceListSize[slice] = intraListSize;
+                            sliceLocations[slice].second = lastRightOffset;
+                            LOG6("\t\t  F. Setting " << slice << " co-ordinates to: " <<
+                                    get_slice_coordinates(exactSliceListSize[slice],
+                                        sliceLocations[slice]));
+                            alreadyConsidered.insert(slice);
+                        } else {
+                            allSlicesGoToNewSliceList = true;
+                            LOG6("\t\t\tMark all slices as part of new slice list.");
+                        }
+                        // We have to slice at the lastRightOffset bit.
+                        if (lastRightOffset != -1)
+                            required_slices_i.setbit(lastRightOffset);
+                        seenFieldSlices.clear();
+                        intraListSize = 0;
+                        LOG6("\t\t\tClearing state in preparation for new slice list.");
+                        continue;
+                    } else {
+                        // Handle case where carryOver > 0.
+                        LOG6("\t\t  G. Setting " << slice << " co-ordinates to: " <<
+                                get_slice_coordinates(exactSliceListSize[slice],
+                                    sliceLocations[slice]));
+                        carryOver -= slice.size();
+                        seenFieldSlices.push_back(slice);
+                        intraListSize += slice.size();
+                        LOG6("\t\t  c. Discovered " << intraListSize << " bits. Carry over: " <<
+                                carryOver);
+                        continue;
+                    }
+                }
+                seenFieldSlices.push_back(slice);
+                intraListSize += slice.size();
+                LOG6("\t\t  d. Discovered " << intraListSize << " bits. Carry over: " << carryOver);
+            }
+
+            // At this point, the seenFieldSlices object contains all the remaining slices that must
+            // now be in the same slice list together.
+            int remainingBitsVisited = 0;
+            for (auto& slice : seenFieldSlices) {
+                if (remainingBitsVisited / 8 == 0)
+                    sliceLocations[slice].first = -1;
+                remainingBitsVisited += slice.size();
+                int nextByteBoundary;
+                if (slice.field()->isCompilerGeneratedPaddingField()) {
+                    exactSliceListSize[slice] = 8 * ROUNDUP(intraListSize - slice.size(), 8);
+                    nextByteBoundary = (exactSliceListSize[slice] < remainingBitsVisited)
+                        ? -1 : (8 * ROUNDUP(remainingBitsVisited, 8));
+                } else {
+                    exactSliceListSize[slice] = 8 * ROUNDUP(intraListSize, 8);
+                    nextByteBoundary = 8 * ROUNDUP(remainingBitsVisited, 8);
+                }
+                if (nextByteBoundary == -1 || nextByteBoundary == exactSliceListSize[slice])
+                    sliceLocations[slice].second = -1;
+                LOG6("\t\t  H. Setting " << slice << " co-ordinates to: " <<
+                        get_slice_coordinates(exactSliceListSize[slice], sliceLocations[slice]));
+            }
+        }
+    }
+}
+
+PHV::FieldSlice PHV::SlicingIterator::getBestSlicingPoint(
+        const std::vector<FieldSlice>& list,
+        const ordered_set<FieldSlice>& points,
+        const int minSize) const {
+    for (auto& point : points) {
+        bool pointFound = false;
+        int sliceListSize = 0;
+        for (auto& slice : list) {
+            if (!pointFound && slice != point) continue;
+            if (slice == point) pointFound = true;
+            sliceListSize += slice.size();
+            if (sliceListSize == minSize) return point;
+            if (sliceListSize > minSize) break;
+        }
+        LOG6("\t\t\tSlicing at " << point << " causes a slice boundary to fall between slices.");
+    }
+    // If none of the candidates is suitable, just choose the first possible slicing point.
+    return *(points.begin());
+}
+
+int PHV::SlicingIterator::processSliceListBefore(
+        ordered_set<FieldSlice>& alreadyProcessedSlices,
+        ordered_map<FieldSlice, int>& exactSliceListSize,
+        ordered_map<FieldSlice, std::pair<int, int>>& sliceLocations,
+        const ordered_map<FieldSlice, std::pair<int, int>>& originalSliceOffset,
+        const std::vector<FieldSlice>& list,
+        const FieldSlice& point) {
+    int newSliceListSize = 0;
+    ordered_set<FieldSlice> processedSlices;
+    int pointOriginalOffset = originalSliceOffset.at(point).first;
+    int seenSlicePoint = false;
+    int postSlicePointBits = 0;
+    for (auto& slice : list) {
+        // All slices until one byte past the slicing point processed.
+        if (slice == point) {
+            sliceLocations[slice].first = -1;
+            seenSlicePoint = true;
+            postSlicePointBits += slice.size();
+        }
+        // Set left limit for all slices within the same byte as the slicing point.
+        if (postSlicePointBits > 0 && postSlicePointBits <= 8) {
+            sliceLocations[slice].first = -1;
+            postSlicePointBits += slice.size();
+        }
+        if (seenSlicePoint)
+            LOG6("\t\t  J. Setting " << slice << " co-ordinates to: " <<
+                 get_slice_coordinates(exactSliceListSize[slice], sliceLocations[slice]));
+        if (postSlicePointBits > 8) break;
+        if (seenSlicePoint) continue;
+        // Processing slices before the slicing point here.
+        // These are part of the first byte in the new slice list, so left limit is set accordingly.
+        if (newSliceListSize < 8)
+            sliceLocations[slice].first = -1;
+        // For the slices in the last byte in the new slice list, set right limit to -1.
+        int sliceOriginalOffset = originalSliceOffset.at(slice).first;
+        if (pointOriginalOffset - sliceOriginalOffset <= 8)
+            sliceLocations[slice].second = -1;
+        newSliceListSize += slice.size();
+        processedSlices.insert(slice);
+    }
+    // Set the slice list size for the processed slices.
+    for (auto& slice : processedSlices) {
+        exactSliceListSize[slice] = newSliceListSize;
+        LOG6("\t\t  I. Setting " << slice << " co-ordinates to: " <<
+                get_slice_coordinates(exactSliceListSize[slice], sliceLocations[slice]));
+        alreadyProcessedSlices.insert(slice);
+    }
+    return newSliceListSize;
 }
 
 void PHV::SlicingIterator::enforce_container_size_pragmas(
@@ -1194,12 +1420,13 @@ void PHV::SlicingIterator::enforce_MAU_constraints_for_meta_slice_lists(
                      "middle.");
                 for (auto b : splitSlices.at(rot_slice)) {
                     if (lo + b > hi) continue;
-                    LOG6("\t    Setting slice at bit " << (lo + b));
+                    LOG6("\t    Setting slice at bit " << (lo + b) << " in " << rot_slice);
                     split_schema[sc].setbit(lo + b); } } }
     }
 }
 
 boost::optional<std::list<PHV::SuperCluster*>> PHV::SlicingIterator::get_slices() const {
+    LOG6("Inside get_slices()");
     if (has_slice_lists_i) {
         // Convert the compressed schema for each slice list into an expanded schema.
         ordered_map<PHV::SuperCluster::SliceList*, bitvec> split_schemas;
@@ -1221,10 +1448,13 @@ boost::optional<std::list<PHV::SuperCluster*>> PHV::SlicingIterator::get_slices(
         auto res = split_super_cluster(sc_i, split_schemas);
 
         // If we found a good slicing, return it.
-        if (res && std::all_of(res->begin(), res->end(), PHV::SuperCluster::is_well_formed))
+        if (res && std::all_of(res->begin(), res->end(), PHV::SuperCluster::is_well_formed)) {
+            LOG6("Supercluster with slice list produces well-formed superclusters");
             return res;
-        else
+        } else {
+            LOG6("Supercluster does not get sliced into well-formed superclusters");
             return boost::none;
+        }
     } else {
         // Expand the compressed schema.
         bitvec split_schema;

@@ -92,20 +92,7 @@ bool PragmaContainerSize::preorder(const IR::BFN::Pipe* pipe) {
                 pa_container_sizes_i.erase(privatized_field);
             continue; }
 
-        // Add no-split constraint if the field has only one container size associated with it adn
-        // the size of the container is larger than or equal to the size of the field. The pragma
-        // also implies that the entire field must be packed into a single specified size container.
-        // XXX(Deep): Implement the equivalent of no-split for cases where multiple container sizes
-        // are specified and the size of the field is greater than the size of the specified
-        // container (the second may already be partially handled).
-        if (pa_container_sizes_i[field].size() == 1) {
-            auto container_size = *(pa_container_sizes_i[field].begin());
-            if (static_cast<int>(container_size) > field->size) {
-                field->set_no_split(true);
-                if (privatized_field)
-                    privatized_field->set_no_split(true);
-            }
-        }
+        check_and_add_no_split(field, privatized_field);
     }
     LOG1(*this);
     return true;
@@ -116,6 +103,26 @@ void PragmaContainerSize::end_apply() {
         auto& field = kv.first;
         auto& sizes = kv.second;
         update_field_slice_req(field, sizes); }
+}
+
+void PragmaContainerSize::check_and_add_no_split(
+        PHV::Field* field,
+        PHV::Field* privatized_field) const {
+    // Add no-split constraint if the field has only one container size associated with it adn
+    // the size of the container is larger than or equal to the size of the field. The pragma
+    // also implies that the entire field must be packed into a single specified size container.
+    // XXX(Deep): Implement the equivalent of no-split for cases where multiple container sizes
+    // are specified and the size of the field is greater than the size of the specified
+    // container (the second may already be partially handled).
+    if (pa_container_sizes_i.at(field).size() == 1) {
+        auto container_size = *(pa_container_sizes_i.at(field).begin());
+        if (static_cast<int>(container_size) >= field->size) {
+            field->set_no_split(true);
+            LOG3("Setting field " << field->name << " to no-split.");
+            if (privatized_field)
+                privatized_field->set_no_split(true);
+        }
+    }
 }
 
 void PragmaContainerSize::update_field_slice_req(
@@ -162,13 +169,13 @@ PragmaContainerSize::unsatisfiable_fields(
         const std::list<PHV::SuperCluster*>& sliced) {
     std::set<const PHV::Field*> rst;
     std::set<const PHV::Field*> is_in_slicelist;
-    // field is not sliced in the way specified.
-    LOG3("Calling unsatisfiable_fields on list of superclusters: ");
-    for (const auto* sup_cluster : sliced)
-        LOG3(sup_cluster);
 
+    // field is not sliced in the way specified.
     for (const auto* sup_cluster : sliced) {
+        LOG3("Checking unsatisfiable field for supercluster:");
+        LOG3(sup_cluster);
         for (const auto* slice_list : sup_cluster->slice_lists()) {
+            LOG3("Checking slice list:\n" << *slice_list);
             bool sliceListCheckRequired = false;
             bool need_exact_container =
                 std::any_of(slice_list->begin(), slice_list->end(),
@@ -359,6 +366,8 @@ void PragmaContainerSize::add_constraint(
                   cstring::to_cstring(field)); }
     pa_container_sizes_i[field] = sizes;
     update_field_slice_req(field, sizes);
+    PHV::Field* nonConstField = phv_i.field(field->name);
+    check_and_add_no_split(nonConstField);
 }
 
 cstring PragmaContainerSize::printSizeConstraints(
