@@ -1776,9 +1776,10 @@ class ConstructSymbolTable : public Inspector {
             auto min_width = anno->expr.at(0)->as<IR::Constant>().asInt();
             typeArgs->push_back(IR::Type::Bits::get(min_width));
         } else {
-            auto min_width = IR::Type::Bits::get(32);
+            // Do not impose LRT
+            auto min_width = IR::Type::Bits::get(64);
             typeArgs->push_back(min_width);
-            WARNING("Could not infer min_width for counter %s, using bit<32>" << node);
+            WARNING("Could not infer min_width for counter %s, using bit<64>" << node);
         }
         auto specializedType = new IR::Type_Specialized(
             new IR::Type_Name("DirectCounter"), typeArgs);

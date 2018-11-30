@@ -460,10 +460,11 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
     } else if (tname == "Counter" || tname == "DirectCounter") {
         auto ctr = new IR::MAU::Counter(srcInfo, name, annot);
         setupParam(ctr, args);
+        /* min_width comes via Type_Specialized */
+        auto* t = type->to<IR::Type_Specialized>();
+        ctr->min_width = t ? t->arguments->at(0)->width_bits() : -1;
         for (auto anno : annot->annotations) {
-            if (anno->name == "min_width")
-                ctr->min_width = getConstant(anno);
-            else if (anno->name == "max_width")
+            if (anno->name == "max_width")
                 ctr->max_width = getConstant(anno);
             else if (anno->name == "threshold")
                 ctr->threshold = getConstant(anno);

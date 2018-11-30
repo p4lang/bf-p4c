@@ -969,26 +969,29 @@ void calculate_lrt_threshold_and_interval(const IR::MAU::Table *tbl, IR::MAU::Co
             return;
         }
         lrt_enabled = true;
+        if (cntr->min_width >= 64) {
+            ::error("%s: LR(t) cannot be used on 64 bit counter %s", cntr->srcInfo, cntr->name);
+            return;
+        }
     }
 
-    if (lrt_enabled == false) return;
+    int lrt_scale = 1;
+    if (lrt_enabled) {
+        auto s = annot->getSingle("lrt_scale");
+        auto lrt_val = s->expr.at(0)->to<IR::Constant>();
+        if (lrt_val == nullptr) {
+            ::error("%s: lrt_scale value on counter %s is not a constant", cntr->srcInfo,
+                cntr->name);
+            return;
+        }
+        lrt_scale = lrt_val->asInt();
+        if (lrt_scale <= 0) {
+            ::error("%s: invalid lrt_scale value on counter %s", cntr->srcInfo, cntr->name);
+            return;
+        }
+    }
 
-    // now get the lrt_scale
-    auto s = annot->getSingle("lrt_scale");
-    auto lrt_val = s->expr.at(0)->to<IR::Constant>();
-    if (lrt_val == nullptr) {
-        ::error("%s: lrt_scale value on counter %s is not a constant", cntr->srcInfo, cntr->name);
-        return;
-    }
-    int lrt_scale = lrt_val->asInt();
-    if (lrt_scale <= 0) {
-        ::error("%s: invalid lrt_scale value on counter %s", cntr->srcInfo, cntr->name);
-        return;
-    }
-    if (cntr->min_width >= 64) {
-        ::error("%s: LR(t) cannot be used on 64 bit counter %s", cntr->srcInfo, cntr->name);
-        return;
-    }
+    if (!lrt_enabled) return;
 
     auto &mem = tbl->resources->memuse.at(tbl->unique_id(cntr));
     int rams = 0;
