@@ -52,7 +52,7 @@ control SwitchIngress(
 
     Hash<bit<16>>(HashAlgorithm_t.CRC16) Cistern;
 
-    action set_pkt(){
+    action set_pkt() {
         hdr.hdr1.d = ig_intr_md_from_prsr.global_tstamp;
 	hdr.hdr1.b = Cistern.get<tuple<bit<8>, bit<8>, bit<4>, bit<48>>>({hdr.hdr1.a, hdr.hdr1.c, 4w0, hdr.hdr1.d});
     }
@@ -62,6 +62,7 @@ control SwitchIngress(
         key = { hdr.hdr1.a: ternary; }
 	size = 512;
     }
+
     apply {
         t1.apply();
     }

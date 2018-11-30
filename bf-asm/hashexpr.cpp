@@ -166,6 +166,7 @@ class HashExpr::Crc : HashExpr {
     bitvec                      init;
     bitvec                      final_xor;
     std::map<int, Phv::Ref>     what;
+    std::map<int, bitvec>       constants;
     std::vector<Phv::Ref>       vec_what;
     bool                        reverse = false;
     int                         total_input_bits = -1;
@@ -391,7 +392,7 @@ HashExpr *HashExpr::create(gress_t gress, int stage, const value_t &what) {
                 }
             }
 
-            if (what.vec.size == i+1 && what[i].type == tMAP) {
+            if (what.vec.size > i+1 && what[i].type == tMAP) {
                 for (auto &kv : what[i].map) {
                     if (CHECKTYPE(kv.key, tINT)) {
                         if (rv->what.count(kv.key.i))

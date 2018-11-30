@@ -183,13 +183,18 @@ stage <constant> <thread>:
                         # crc hash of the given phv locations -- first arg is integer
                         # constant denoting polynomial (Koopman notation).  Second arg
                         # is an initial constant prefixed to the input.
-                    crc(<int>, [<int>,] '{' <int> : <phv-location>, ... '}' [, '{' <int> : <int> '}' ])
+                    crc(<int>, [<int>,] '{' <int> : <phv-location>, ... '}' [, '{' <range> : <int> '}' ])
                         # crc hash of the given phv locations, at the specified offsets
                         # from the lsb of the crc input as a whole.
                         # arguments are polynomial (Koopman Notation)
                         # init shift register
                         # final xor
                         # total number of bits in the crc
+                        # --
+                        # hash calculation could have a list of constants as inputs.
+                        # <range> : <int> represents the constant value in hash calculation,
+                        # the key <range> encodes the offset and length of the constant
+                        # the value <int> encodes the value of the constant
                     crc_rev(...)
                         # bit-reversed (little endian instead of the defaul big endian) crc
                     <expression> ^ <expression>

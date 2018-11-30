@@ -8,6 +8,7 @@
 #include "lib/json.h"
 
 struct ToJsonObject {
+    virtual ~ToJsonObject() {}
     virtual Util::JsonObject* toJson() const = 0;
 };
 
