@@ -14,4 +14,4 @@
 **/RELEASING
 **/*.md
 
-Dockerfile.travis
+docker/Dockerfile*

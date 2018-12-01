@@ -120,7 +120,6 @@ if (PTF_REQUIREMENTS_MET)
     05-simple_l3_arping
     extensions/p4_tests/p4_16/ingress_checksum.p4    #TODO(zma) use @calculated_field_update_location to force ingress update
     basic_switching
-    smoketest_switch_16_IdentityHash
     )
 
 # BRIG-686
@@ -270,7 +269,7 @@ p4c_add_xfail_reason("tofino"
   "Unimplemented compiler support.*Cannot allocate >4 immediate bytes for logical table"
   extensions/p4_tests/p4_14/test_config_205_modify_field_from_hash.p4
   switch_msdc_l3
-  switch_8.4_msdc_l3
+  switch_8.5_msdc_l3
   )
 
 p4c_add_xfail_reason("tofino"
@@ -289,27 +288,27 @@ p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
 # Allocation without container conflicts is 13 stages.
-  switch_msdc_spine_int
+  switch_msdc_ipv4
   )
 
 p4c_add_xfail_reason("tofino"
   "error.*Can't split table.*with indirect attached"
   switch_ent_fin_postcard
-  switch_8.4_ent_fin_postcard
+  switch_8.5_ent_fin_postcard
   )
 
 p4c_add_xfail_reason("tofino"
   "No way to slice the following to satisfy @pa_container_size"
   switch_generic_int_leaf
-  switch_8.4_generic_int_leaf
+  switch_8.5_generic_int_leaf
   )
 
 p4c_add_xfail_reason("tofino"
   "error.*Inferred incompatible alignments for field.*"
   switch_msdc_leaf_int
-  switch_8.4_msdc_leaf_int
+  switch_8.5_msdc_leaf_int
   switch_l3_heavy_int_leaf
-  switch_8.4_l3_heavy_int_leaf
+  switch_8.5_l3_heavy_int_leaf
   )
 
 p4c_add_xfail_reason("tofino"
@@ -332,25 +331,16 @@ p4c_add_xfail_reason("tofino"
 # switch_spine_dtel_int and switch_l3_heavy_spine test failures
 p4c_add_xfail_reason("tofino"
   "Received packet did not match expected packet"
-  smoketest_switch_8.4_spine_dtel_int_set_2_INTL45_Transit_IngressMoDTest
-  smoketest_switch_8.4_spine_dtel_int_set_2_MirrorOnDropHostifReasonCodeTest
-  smoketest_switch_8.4_spine_dtel_int_set_2_MirrorOnDropIngressAclTest
-  smoketest_switch_8.4_spine_dtel_int_set_2_MirrorOnDropNonDefaultRuleTest
-  smoketest_switch_8.4_spine_dtel_int_set_2_QueueReport_Entropy_Test
-  smoketest_switch_8.4_spine_dtel_int_set_2_QueueReport_Quota_Test
-  smoketest_switch_8.4_spine_dtel_int_set_2_intl45_transitTest_hop2_stateless
-  smoketest_switch_8.4_spine_dtel_int_set_2_INTL45_Transit_EgressMoDTest
-  smoketest_switch_8.4_spine_dtel_int_set_2_MirrorOnDropEgrNonDefaultRuleTest
-  smoketest_switch_8.4_spine_dtel_int_set_5_INGRESS_DROP_REPORT_Test
-  smoketest_switch_l3_heavy_spine_dtel_QueueReport_Entropy_Test
-  smoketest_switch_l3_heavy_spine_dtel_QueueReport_Quota_Test
-  smoketest_switch_l3_heavy_spine_dtel_MirrorOnDropHostifReasonCodeTest
-  smoketest_switch_l3_heavy_spine_dtel_MirrorOnDropIngressAclTest
-  smoketest_switch_l3_heavy_spine_dtel_MirrorOnDropNonDefaultRuleTest
-  smoketest_switch_l3_heavy_spine_dtel_INTL45_Transit_IngressMoDTest
-  smoketest_switch_l3_heavy_spine_dtel_intl45_transitTest_hop2_stateless
-  smoketest_switch_l3_heavy_spine_dtel_MirrorOnDropEgrNonDefaultRuleTest
-  smoketest_switch_l3_heavy_spine_dtel_sai_INGRESS_DROP_REPORT_Test
+  smoketest_switch_8.5_spine_dtel_int_set_2_INTL45_Transit_IngressMoDTest
+  smoketest_switch_8.5_spine_dtel_int_set_2_MirrorOnDropHostifReasonCodeTest
+  smoketest_switch_8.5_spine_dtel_int_set_2_MirrorOnDropIngressAclTest
+  smoketest_switch_8.5_spine_dtel_int_set_2_MirrorOnDropNonDefaultRuleTest
+  smoketest_switch_8.5_spine_dtel_int_set_2_QueueReport_Entropy_Test
+  smoketest_switch_8.5_spine_dtel_int_set_2_QueueReport_Quota_Test
+  smoketest_switch_8.5_spine_dtel_int_set_2_intl45_transitTest_hop2_stateless
+  smoketest_switch_8.5_spine_dtel_int_set_2_INTL45_Transit_EgressMoDTest
+  smoketest_switch_8.5_spine_dtel_int_set_2_MirrorOnDropEgrNonDefaultRuleTest
+  smoketest_switch_8.5_spine_dtel_int_set_5_INGRESS_DROP_REPORT_Test
   smoketest_switch_marker_spine_dtel_intl45_transitTest_hop2_with_digest
   smoketest_switch_marker_spine_dtel_intl45_transitTest_hop2_qdepth
   smoketest_switch_marker_spine_dtel_intl45_transitTest_Metadata
@@ -377,9 +367,9 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "Did not receive pkt on 2"
-  smoketest_switch_8.4_spine_dtel_int_set_3_INTL45_Transit_DoDTest
-  smoketest_switch_8.4_spine_dtel_int_set_3_MirrorOnDropDoDTest
-  smoketest_switch_8.4_spine_dtel_int_set_3_QueueReport_DoD_Test
+  smoketest_switch_8.5_spine_dtel_int_set_3_INTL45_Transit_DoDTest
+  smoketest_switch_8.5_spine_dtel_int_set_3_MirrorOnDropDoDTest
+  smoketest_switch_8.5_spine_dtel_int_set_3_QueueReport_DoD_Test
   smoketest_switch_l3_heavy_spine_dtel_INTL45_Transit_DoDTest
   smoketest_switch_l3_heavy_spine_dtel_MirrorOnDropDoDTest
   smoketest_switch_l3_heavy_spine_dtel_QueueReport_DoD_Test
@@ -394,12 +384,9 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "Did not receive expected pkt*"
-  smoketest_switch_8.4_spine_dtel_int_set_2_QueueReport_Over_ECMP_Test
-  smoketest_switch_8.4_spine_dtel_int_set_2_QueueReport_MirrorTest
-  smoketest_switch_8.4_spine_dtel_int_set_2_QueueReport_L2_MirrorTest
-  smoketest_switch_l3_heavy_spine_dtel_QueueReport_Over_ECMP_Test
-  smoketest_switch_l3_heavy_spine_dtel_QueueReport_MirrorTest
-  smoketest_switch_l3_heavy_spine_dtel_QueueReport_L2_MirrorTest
+  smoketest_switch_8.5_spine_dtel_int_set_2_QueueReport_Over_ECMP_Test
+  smoketest_switch_8.5_spine_dtel_int_set_2_QueueReport_MirrorTest
+  smoketest_switch_8.5_spine_dtel_int_set_2_QueueReport_L2_MirrorTest
   smoketest_switch_marker_spine_dtel_QueueReport_Over_ECMP_Test
   smoketest_switch_marker_spine_dtel_QueueReport_MirrorTest
   smoketest_switch_marker_spine_dtel_QueueReport_L2_MirrorTest

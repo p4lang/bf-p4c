@@ -38,7 +38,7 @@ node ('compiler || compiler-svr4') {
                             // If image not available, build
                             sh "git submodule update --init --recursive"
                             sh "docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD"
-                            sh "docker build -f Dockerfile.tofino -t bf-p4c-compilers_${image_tag} --build-arg IMAGE_TYPE=test --build-arg MAKEFLAGS=j32 ."
+                            sh "docker build -f docker/Dockerfile.tofino -t bf-p4c-compilers_${image_tag} --build-arg IMAGE_TYPE=test --build-arg MAKEFLAGS=j32 ."
                             sh "echo 'Tag and push docker image'"
                             sh "docker tag bf-p4c-compilers_${image_tag} barefootnetworks/bf-p4c-compilers:${image_tag}"
                             sh "docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD"
@@ -68,9 +68,9 @@ node ('compiler-svr1 || master') {
             ansiColor('xterm') {
                 timestamps {
                     sh "echo 'Running switch profiles compilation for master'"
-                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*switch_' -E 'smoketest|8.4|p4_14'"
-                    sh "echo 'Running switch profiles compilation for rel_8_4'"
-                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*switch_8.4_' -E 'smoketest'"
+                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*switch_' -E 'smoketest|8.5|p4_14'"
+                    sh "echo 'Running switch profiles compilation for rel_8_5'"
+                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*switch_8.5_' -E 'smoketest'"
                     sh "echo 'Running stful and meters tests'"
                     sh "mkdir -p docker_store"
                     model_cid = sh (
@@ -93,29 +93,29 @@ node ('compiler-svr1 || master') {
                 }
             }
         },
-        switch_8_4_msdc_and_switch_16_tests: {
+        switch_8_5_msdc_and_switch_16_tests: {
             ansiColor('xterm') {
                 timestamps {
                     sh "echo 'Running switch PD tests for MSDC_PROFILE_BRIG'"
-                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*smoketest_switch_8.4_msdc'"
+                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*smoketest_switch_8.5_msdc'"
                     sh "echo 'Running bf-switch bfrt tests'"
                     sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*smoketest_switch_16'"
                 }
             }
         },
-        switch_8_4_dc_basic_tests: {
+        switch_8_5_dc_basic_tests: {
             ansiColor('xterm') {
                 timestamps {
                     sh "echo 'Running switch PD tests for DC_BASIC_PROFILE_BRIG'"
-                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*smoketest_switch_8.4_dc_basic'"
+                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*smoketest_switch_8.5_dc_basic'"
                 }
             }
         },
-        switch_8_4_ent_dc_general_tests_and_basic_ipv4: {
+        switch_8_5_ent_dc_general_tests_and_basic_ipv4: {
             ansiColor('xterm') {
                 timestamps {
                     sh "echo 'Running switch PD tests for ENT_DC_GENERAL_PROFILE_BRIG'"
-                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*smoketest_switch_8.4_ent_dc_general'"
+                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*smoketest_switch_8.5_ent_dc_general'"
                     sh "echo 'Running basic_ipv4 tests'"
                     sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R 'smoketest_programs_basic_ipv4'"
                 }

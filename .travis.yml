@@ -26,17 +26,17 @@ env:
     - TEST_SUITE="^tofino/"
       TEST_EXTRA_OPTS="-E"
       TEST_EXTRA_OPTS2="smoketest|/programs|p4testgen|tofino/switch_|p4_16_programs_tna_ternary_match|p4_16_programs_tna_exact_match"
-      DOCKERFILE=Dockerfile.tofino
+      DOCKERFILE=docker/Dockerfile.tofino
     # Run all tofino smoke tests
     - TEST_SUITE="^tofino/.*programs"
       TEST_EXTRA_OPTS="-E"
       TEST_EXTRA_OPTS2="p4_16|TestRealData|_basic_ipv4|_stful|_meters|_dkm|_exm_smoke_test|_exm_direct_|_exm_direct_1_"
-      DOCKERFILE=Dockerfile.tofino
+      DOCKERFILE=docker/Dockerfile.tofino
     # Run all jbay tests (including cpplint and gtest)
     - TEST_SUITE="^tofino2|cpplint|gtest|test_p4c_driver"
       TEST_EXTRA_OPTS="-E"
       TEST_EXTRA_OPTS2="smoketest"
-      DOCKERFILE="Dockerfile.tofino"
+      DOCKERFILE="docker/Dockerfile.tofino"
 
 before_install:
   - docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
@@ -44,7 +44,7 @@ before_install:
   - echo "DOCKER_TAG=$DOCKER_TAG"
 
 install:
-  - ./docker_pull.py --image barefootnetworks/bf-p4c-compilers:$DOCKER_TAG
+  - ./docker/docker_pull.py --image barefootnetworks/bf-p4c-compilers:$DOCKER_TAG
 
 script:
   - docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_PARALLEL_LEVEL -e CTEST_OUTPUT_ON_FAILURE -e MAKEFLAGS barefootnetworks/bf-p4c-compilers:$DOCKER_TAG ctest -R $TEST_SUITE $TEST_EXTRA_OPTS $TEST_EXTRA_OPTS2
