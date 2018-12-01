@@ -307,9 +307,17 @@ int PHV::SlicingIterator::populate_initial_maps(
             lastSliceInSliceList = &slice;
             if (slice.field()->exact_containers())
                 has_exact_containers = true;
+            // Ignore the padding bits beyond the ones that are necessary to make a field with
+            // deparsed, exact containers requirement aligned to byte boundaries.
             if (slice.field()->isCompilerGeneratedPaddingField()) {
                 paddingFieldSize = slice.size();
                 paddingFields.insert(list->begin(), list->end());
+                if (prevSlice && !prevSlice->field()->isCompilerGeneratedPaddingField()) {
+                    if (sliceLocations.at(*prevSlice).second != -1) {
+                        required_slices_i.setbit(sliceLocations.at(*prevSlice).second);
+                        LOG6("\t\t  Slicing before padding field " << slice);
+                    }
+                }
             }
 
             // Always require a split at the beginning of a slice with deparsed_bottom_bits.
