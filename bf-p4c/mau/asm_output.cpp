@@ -288,15 +288,17 @@ std::ostream &operator<<(std::ostream &out, const FormatHash &hash) {
         out << "0x" << hex(hash.func.init) << ", ";
         out << "0x" << hex(hash.func.final_xor) << ", ";
         out << hash.total_bits << ", ";
-        out << *hash.match_data_map << ", ";
+        out << *hash.match_data_map;
         // could not use the operator<< on std::map because the le_bitrange
         // does not print to valid json range.
-        out << "{";
-        const char *sep = " ";
-        for (const auto &kv : *hash.constant_map) {
-            out << sep << kv.first.lo << ".." << kv.first.hi << ": " << kv.second;
-            sep = ", "; }
-        out << "}";
+        if (hash.constant_map) {
+            out << ", {";
+            const char *sep = " ";
+            for (const auto &kv : *hash.constant_map) {
+                out << sep << kv.first.lo << ".." << kv.first.hi << ": " << kv.second;
+                sep = ", ";
+            }
+            out << " }"; }
         out << ")";
         // FIXME -- final_xor needs to go into the seed for the hash group
         out << ")";

@@ -392,7 +392,7 @@ HashExpr *HashExpr::create(gress_t gress, int stage, const value_t &what) {
                 }
             }
 
-            if (what.vec.size > i+1 && what[i].type == tMAP) {
+            if (what.vec.size >= i+1 && what[i].type == tMAP) {
                 for (auto &kv : what[i].map) {
                     if (CHECKTYPE(kv.key, tINT)) {
                         if (rv->what.count(kv.key.i))
