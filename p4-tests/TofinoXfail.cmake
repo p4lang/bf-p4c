@@ -288,16 +288,14 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
+# Allocation without container conflicts is 13 stages.
+  switch_msdc_spine_int
   )
 
 p4c_add_xfail_reason("tofino"
-  "No tables placeable, but not all tables placed?"
-  switch_msdc_ipv4
-  switch_8.4_msdc_ipv4
+  "error.*Can't split table.*with indirect attached"
   switch_ent_fin_postcard
   switch_8.4_ent_fin_postcard
-  switch_msdc_spine_int
-  switch_8.4_msdc_spine_int
   )
 
 p4c_add_xfail_reason("tofino"

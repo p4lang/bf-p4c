@@ -63,6 +63,11 @@ class FindInitializationNode : public Inspector {
             const ordered_set<const IR::BFN::Unit*>& f_units,
             const ordered_set<const IR::BFN::Unit*>& g_units) const;
 
+    /// @returns true if @table reachs any defuse units in @g_units.
+    bool canInitTableReachGUnits(
+            const IR::MAU::Table* table,
+            const ordered_set<const IR::BFN::Unit*>& g_units) const;
+
     /// Trim the set of dominators by removing nodes that are dominated by other dominator nodes
     /// already in the set.
     void getTrimmedDominators(ordered_set<const IR::BFN::Unit*>& candidates) const;
@@ -80,6 +85,7 @@ class FindInitializationNode : public Inspector {
                 const int lastAllowedStage,
                 const ordered_set<const IR::MAU::Table*>& fStrictDominators,
                 const PHV::Field* prevField,
+                const ordered_map<const PHV::Field*, ordered_set<const IR::BFN::Unit*>>& g_units,
                 const PHV::Transaction& alloc) const;
 
     /// @returns a set of actions where field @f must be initialized in @tbl.

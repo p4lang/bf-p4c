@@ -105,6 +105,16 @@ bool FindInitializationNode::summarizeUseDefs(
     return true;
 }
 
+bool FindInitializationNode::canInitTableReachGUnits(
+        const IR::MAU::Table* table,
+        const ordered_set<const IR::BFN::Unit*>& g_units) const {
+    const IR::BFN::Unit* unit = table->to<IR::BFN::Unit>();
+    if (!unit) BUG("How is table %1% not a unit?", table->name);
+    ordered_set<const IR::BFN::Unit*> f_units;
+    f_units.insert(unit);
+    return canFUnitsReachGUnits(f_units, g_units);
+}
+
 bool FindInitializationNode::canFUnitsReachGUnits(
         const ordered_set<const IR::BFN::Unit*>& f_units,
         const ordered_set<const IR::BFN::Unit*>& g_units) const {
@@ -311,6 +321,7 @@ FindInitializationNode::getInitializationCandidates(
         const int lastAllowedStage,
         const ordered_set<const IR::MAU::Table*>& fStrictDominators,
         const PHV::Field* prevField,
+        const ordered_map<const PHV::Field*, ordered_set<const IR::BFN::Unit*>>& g_units,
         const PHV::Transaction& alloc) const {
     PHV::Allocation::ActionSet rv;
     // At this point, the group dominator could be a unit that writes to the field, or a unit that
@@ -368,6 +379,16 @@ FindInitializationNode::getInitializationCandidates(
         }
         LOG1("\t\t  Successfully inserted initialization at strict dominators");
         return rv;
+    }
+
+    // Check if the group dominator (the candidate initialization point) may reach one of the uses
+    // of the fields in the container with earlier live ranges. If it does, then initialization is
+    // not possible. We only need to check this for one table because all the subsequent
+    // initialization points will be dominators of this group dominator.
+    for (auto kv : g_units) {
+        if (kv.second.size() == 0) continue;
+        if (canInitTableReachGUnits(groupDominator, kv.second))
+            return boost::none;
     }
 
     std::vector<const IR::MAU::Table*> candidateTables;
@@ -523,6 +544,7 @@ FindInitializationNode::findInitializationNodes(
         }
 
         LOG2("\t  Checking if " << f->name << " needs initialization.");
+        ordered_map<const PHV::Field*, ordered_set<const IR::BFN::Unit*>> g_units;
         // Check against each field initialized so far in this container.
         for (const auto* g : seenFields) {
             if (phv.isParserMutex(f, g)) {
@@ -541,6 +563,7 @@ FindInitializationNode::findInitializationNodes(
                 LOG4("\t\t  Inserting defuse unit for g: " << DBPrint::Brief << kv.first);
                 g_field_units.insert(kv.first);
             }
+            g_units[g].insert(g_field_units.begin(), g_field_units.end());
             LOG2("\t\tCan all defuses of " << f->name << " reach defuses of " << g->name << "?");
             bool reach_condition = canFUnitsReachGUnits(f_dominators, g_field_units);
             if (reach_condition) {
@@ -649,7 +672,6 @@ FindInitializationNode::findInitializationNodes(
         LOG2("\t\t  Group dominator found: " << groupDominator->name << " (stage " <<
              dg.min_stage(groupDominator) << ")");
 
-
         LOG3("\t\t  Uses of f:");
         auto all_f_table_uses = getTableUsesForField(f, true /* uses */, true /* defs */);
         for (const auto* t : all_f_table_uses)
@@ -690,7 +712,7 @@ FindInitializationNode::findInitializationNodes(
         } while (!groupDominatorOK);
 
         auto initializationCandidates = getInitializationCandidates(c, f, groupDominator,
-                units.at(f), lastUsedStage, f_table_uses, lastField, alloc);
+                units.at(f), lastUsedStage, f_table_uses, lastField, g_units, alloc);
         if (!initializationCandidates) {
             LOG2("\t\tCould not find any actions to initialize field in the group dominator.");
             return boost::none;
