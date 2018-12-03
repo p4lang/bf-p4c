@@ -67,7 +67,7 @@ PHV::SlicingIterator::SlicingIterator(
 
         // Map of slice list to a pair <starting offset within bitvec for slice list, bitvec size
         // required for that slice list>.
-        ordered_map<PHV::SuperCluster::SliceList*, std::pair<int, int>> sliceListDetails;
+        ordered_map<const PHV::SuperCluster::SliceList*, std::pair<int, int>> sliceListDetails;
 
         // Map of slice to offset within its original slice list.
         ordered_map<FieldSlice, std::pair<int, int>> originalSliceOffset;
@@ -139,7 +139,7 @@ PHV::SlicingIterator::SlicingIterator(
 
         // Break 24b slice lists into 16b and 8b slices appropriately (only check is that the
         // slicing should not be in the middle of a slice).
-        // break_24b_slice_lists(sliceLocations, );
+        break_24b_slice_lists(exactSliceListSize, sliceLocations, originalSliceOffset);
 
         if (LOGGING(5)) {
             LOG5("\tPrinting slicing related information for each slice in the format " <<
@@ -148,6 +148,19 @@ PHV::SlicingIterator::SlicingIterator(
                 LOG5("\t  " << get_slice_coordinates(kv.second, sliceLocations[kv.first]) <<
                      "\t:\t" << kv.first); }
 
+        candidateSliceLists.sort(SliceListComparator);
+
+        // We need a second round of impose_MAU_constraints to take into account the new constraints
+        // imposed by the 24b slicing.
+        impose_MAU_constraints(candidateSliceLists, sliceLocations, exactSliceListSize,
+                paddingFields, originalSliceOffset);
+
+        if (LOGGING(5)) {
+            LOG5("\tPrinting slicing related information for each slice in the format " <<
+                 "SLICE : sliceListSize, left limit, right limit");
+            for (auto kv : exactSliceListSize)
+                LOG5("\t  " << get_slice_coordinates(kv.second, sliceLocations[kv.first]) <<
+                     "\t:\t" << kv.first); }
 
         if (LOGGING(6)) {
             std::stringstream ss;
@@ -223,7 +236,7 @@ int PHV::SlicingIterator::populate_initial_maps(
         ordered_map<FieldSlice, std::pair<int, int>>& sliceLocations,
         ordered_map<FieldSlice, int>& exactSliceListSize,
         ordered_set<FieldSlice>& paddingFields,
-        ordered_map<PHV::SuperCluster::SliceList*, std::pair<int, int>>& sliceListDetails,
+        ordered_map<const PHV::SuperCluster::SliceList*, std::pair<int, int>>& sliceListDetails,
         ordered_map<FieldSlice, std::pair<int, int>>& originalSliceOffset,
         const std::map<const PHV::Field*, std::vector<PHV::Size>>& pa) {
     int offset = 0;
@@ -910,8 +923,97 @@ int PHV::SlicingIterator::processSliceListBefore(
     return newSliceListSize;
 }
 
+void PHV::SlicingIterator::break_24b_slice_lists(
+        ordered_map<FieldSlice, int>& exactSliceListSize,
+        ordered_map<FieldSlice, std::pair<int, int>>& sliceLocations,
+        const ordered_map<FieldSlice, std::pair<int, int>>& originalSliceOffset) {
+    LOG6("Breaking 24b slice lists");
+    for (auto kv : exactSliceListSize) {
+        if (kv.second != 24) continue;
+        LOG6("\t\tNeed to break slice " << kv.first << " (" <<
+             get_slice_coordinates(exactSliceListSize.at(kv.first), sliceLocations.at(kv.first))
+             << ")");
+        auto& slice_lists = sc_i->slice_list(kv.first);
+        BUG_CHECK(slice_lists.size() == 1, "Multiple slice lists contain slice %1%?", kv.first);
+        auto* slice_list = *(slice_lists.begin());
+
+        auto& slice = *(slice_list->begin());
+        int sliceListSize = originalSliceOffset.at(slice).first +
+            originalSliceOffset.at(slice).second;
+        LOG6("\t\t  Slice list size: " << sliceListSize);
+
+        // Right now, we only slice lists whose original size was 24b. We do not process slice lists
+        // which become 24b in width as a result of slicing itself.
+        // XXX(Deep): Include created 24b slice lists in this analysis.
+        std::vector<FieldSlice> sliceListToProcess;
+        if (sliceListSize == 24) {
+            for (auto& slice : *slice_list)
+                sliceListToProcess.push_back(slice);
+            break_24b_slice_list(exactSliceListSize, sliceLocations, sliceListToProcess);
+            continue;
+        }
+    }
+}
+
+void PHV::SlicingIterator::break_24b_slice_list(
+        ordered_map<FieldSlice, int>& exactSliceListSize,
+        ordered_map<FieldSlice, std::pair<int, int>>& sliceLocations,
+        const std::vector<FieldSlice>& sliceListToProcess) {
+    LOG6("\t\tInside break 24b slice list");
+    int offset = 0;
+    std::vector<FieldSlice> seenSlices;
+    int sliceOffset = -1;
+    int slicePoint = -1;
+    // If the offset after a field slice in the slice list is at byte boundaries, choose that as the
+    // right slicing point.
+    // seenSlices is the set of all slices that appear in the slice list before the slicing point,
+    // so they will be part of the first slice list that is created.
+    for (auto& slice : sliceListToProcess) {
+        offset += slice.size();
+        seenSlices.push_back(slice);
+        LOG6("\t\t  Offset for slice " << slice << " : " << offset);
+        if (offset != 8 && offset != 16) continue;
+        sliceOffset = offset;
+        slicePoint = sliceLocations[slice].second;
+        break;
+    }
+    LOG6("\t\tSlice at offset " << sliceOffset << " within slice list");
+    // If the slice offset is not 8 or 16, then we will not break slice list here and instead will
+    // rely on enforce_container_sizes to break the 24b slice list.
+    if (sliceOffset != 8 && sliceOffset != 16) return;
+    BUG_CHECK(slicePoint != -1, "Slice point cannot be -1 at this point.");
+    required_slices_i.setbit(slicePoint);
+    // Set new slicing points for slices before the slicing point.
+    offset = 0;
+    // Process slice lists before the determined slicing point.
+    for (auto& slice : seenSlices) {
+        offset += slice.size();
+        exactSliceListSize[slice] = sliceOffset;
+        int right = 8 * ROUNDUP(offset, 8);
+        if (right == sliceOffset)
+            sliceLocations[slice].second = slicePoint;
+        LOG6("\t\t  K. Setting " << slice << " co-ordinates to: " <<
+                get_slice_coordinates(exactSliceListSize[slice], sliceLocations[slice]));
+    }
+    offset = 0;
+    int remainingSliceListSize = 24 - sliceOffset;
+    // Process the second slice list created. These are slices after the slicing point.
+    for (auto& slice : sliceListToProcess) {
+        if (offset + slice.size() <= sliceOffset) {
+            offset += slice.size();
+            continue;
+        }
+        exactSliceListSize[slice] = remainingSliceListSize;
+        if ((8 * (offset / 8)) == sliceOffset)
+            sliceLocations[slice].first = -1;
+        LOG6("\t\t  L. Setting " << slice << " co-ordinates to: " <<
+                get_slice_coordinates(exactSliceListSize[slice], sliceLocations[slice]));
+        offset += slice.size();
+    }
+}
+
 void PHV::SlicingIterator::enforce_container_size_pragmas(
-        const ordered_map<PHV::SuperCluster::SliceList*, std::pair<int, int>>& listDetails) {
+        const ordered_map<const PHV::SuperCluster::SliceList*, std::pair<int, int>>& listDetails) {
     // If there are no container size pragmas for this supercluster, nothing to be done.
     if (pa_container_sizes_i.size() == 0) return;
     // If there are no slice lists in the super cluster, nothing to be done.

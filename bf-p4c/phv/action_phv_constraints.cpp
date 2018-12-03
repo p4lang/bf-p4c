@@ -769,7 +769,7 @@ bool ActionPhvConstraints::parser_constant_extract_satisfied(
             }
             // Need to pack within 4 consecutive bits for 16b fields and within 3 consecutive bits
             // for 32b fields.
-            int maxAllowed = c.is(PHV::Size::b16) ? 4 : 3;
+            size_t maxAllowed = c.is(PHV::Size::b16) ? 4 : 3;
             if (count <= maxAllowed) continue;
             LOG5("\t\t\tIn container " << c << ", POV slices " << slice << " and " << slice1 <<
                  " are packed " << count << " (maxAllowed: " << maxAllowed << "b) bits apart." <<
