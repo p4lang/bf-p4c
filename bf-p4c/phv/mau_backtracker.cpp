@@ -45,6 +45,11 @@ MauBacktracker::inSameStage(const IR::MAU::Table* t1, const IR::MAU::Table* t2) 
     BUG_CHECK(t2, "Null table!");
     ordered_set<int> rs;
     if (tables.size() == 0) return rs;
+    // Some tables in the list of tableActions maintained by PackConflicts may not have an
+    // allocation (dead code eliminated away). The following if condition handles that case.
+    if (!tables.count(TableSummary::getTableName(t1)) ||
+            !tables.count(TableSummary::getTableName(t2)))
+        return rs;
     const ordered_set<int>& t1Stages = tables.at(TableSummary::getTableName(t1));
     const ordered_set<int>& t2Stages = tables.at(TableSummary::getTableName(t2));
     BUG_CHECK(t1Stages.size() > 0, "No allocation for table %1%", t1->name);

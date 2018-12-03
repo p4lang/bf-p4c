@@ -1371,3 +1371,8 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue1607-bmv2.p4
   testdata/p4_16_samples/issue562-bmv2.p4
 )
+
+p4c_add_xfail_reason("tofino"
+  "error.*Can only do checksums on byte-aligned container slices"
+  extensions/p4_tests/p4_14/p4smith_regression/but_0.p4
+)
