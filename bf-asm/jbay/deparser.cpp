@@ -615,7 +615,7 @@ template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
                 int id = set.first;
                 int len = regs.dprsrreg.inp.ipp.ingr.learn_tbl[id].len;
                 int index = 0;
-                BUG_CHECK(len > 0);
+                if (len == 0) continue; // Allow empty param list
                 /* set words first */
                 for(; index < len/4; index++) {
                     regs.dprsrreg.inp.icr.lrnmask[id].mask[11-index] = 0xFFFFFFFF;

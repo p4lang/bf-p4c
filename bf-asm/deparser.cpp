@@ -438,17 +438,20 @@ void Deparser::gen_learn_quanta(REGS &regs, json::vector &learn_quanta) {
             quanta["name"] = (*tname).c_str();
             quanta["lq_cfg_type"] = digentry->first->as_number()->val;
             quanta["handle"] = unique_field_list_handle++;
-            auto &digfields = *(digentry->second->as_vector());
-            json::vector &fields = quanta["fields"];
-            for (auto &tup : digfields) {
-                auto &one = *(tup->as_vector());
-                BUG_CHECK(one.size() == 4);
-                json::map anon;
-                anon["field_name"] = (*(one[0])).clone();
-                anon["start_byte"] = (*(one[1])).clone();
-                anon["field_width"] = (*(one[2])).clone();
-                anon["start_bit"] = (*(one[3])).clone();
-                fields.push_back(std::move(anon));
+            auto *digfields = digentry->second->as_vector();
+            if (digfields) {
+                auto &digfields_vec = *digfields;
+                json::vector &fields = quanta["fields"];
+                for (auto &tup : digfields_vec) {
+                    auto &one = *(tup->as_vector());
+                    BUG_CHECK(one.size() == 4);
+                    json::map anon;
+                    anon["field_name"] = (*(one[0])).clone();
+                    anon["start_byte"] = (*(one[1])).clone();
+                    anon["field_width"] = (*(one[2])).clone();
+                    anon["start_bit"] = (*(one[3])).clone();
+                    fields.push_back(std::move(anon));
+                }
             }
             digentry++;
             learn_quanta.push_back(std::move(quanta));

@@ -18,15 +18,13 @@ void FlattenEmitArgs::postorder(IR::MethodCallExpression* mc) {
     // derive these indices from the TNA model.
     // Assume the following syntax
     //   mirror.emit(session_id, field_list);
+    //   mirror.emit(); - mirror without parameters
     //   resubmit.emit(field_list);
     //   resubmit.emit(); - resubmit without parameters
     //   digest.emit(field_list);
+    //   digest.emit(); - digest without parameters
     int field_list_index = (type->name == "Mirror") ? 1 : 0;
-    if (mc->arguments->size() == 0) {
-        ERROR_CHECK(type->name == "Resubmit",
-            "Invalid mirror or digest call without any arguments");
-        return;
-    }
+    if (mc->arguments->size() == 0) return;
 
     if (type->name == "Mirror" && mc->arguments->size() != 2) {
         // Fatal error because invalid state later

@@ -240,9 +240,7 @@ struct OutputDigests : public Inspector {
         for (auto* entry : digest->entries) {
             out << indent << entry->idx << ":";
             if (entry->sources.size() == 0) {
-                ERROR_CHECK(digest->name == "resubmit",
-                    "Invalid mirror or digest call without any arguments");
-                out << " []" << std::endl;  // output empty list for resubmit with no params
+                out << " []" << std::endl;  // output empty list when no params present
                 continue;
             }
             out << std::endl;
@@ -280,11 +278,17 @@ struct OutputDigests : public Inspector {
         AutoIndent contextJsonIndent(indent);
 
         for (auto* digestEntry : digest->entries) {
-            out << indent << digestEntry->idx << ":" << std::endl;
+            out << indent << digestEntry->idx << ":";
 
             auto* entry = digestEntry->to<IR::BFN::LearningTableEntry>();
             BUG_CHECK(entry, "Digest table entry isn't a learning table "
                       "entry: %1%", digestEntry);
+
+            if (entry->controlPlaneFormat->fields.size() == 0) {
+                out << " []" << std::endl;
+                continue;
+            }
+            out << std::endl;
 
             // The `context.json` format for learn quanta is a bit uninituitive.
             // The start bit indicates the location of the MSB of each field in
