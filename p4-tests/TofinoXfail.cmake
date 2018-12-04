@@ -320,7 +320,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "AttributeError: Client instance has no attribute"
+  "AssertionError"
   smoketest_programs_basic_ipv4_TestLearning 
   )
 

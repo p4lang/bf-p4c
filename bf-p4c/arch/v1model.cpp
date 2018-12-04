@@ -1935,6 +1935,11 @@ class ConstructSymbolTable : public Inspector {
                 for (auto comp : fieldList->components) {
                     fieldListString << comp;
                 }
+            } else if (auto fieldList =
+                    argument->expression->to<IR::StructInitializerExpression>()) {
+                for (auto comp : fieldList->components) {
+                    fieldListString << comp;
+                }
             }
             fieldString += fieldListString.str();
         }
