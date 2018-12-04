@@ -598,9 +598,10 @@ class ActionPhvConstraints : public Inspector {
       */
     bool checkBridgedPackingConstraints(const ordered_set<const PHV::Field*>& packing) const;
 
-    /** @returns true if the PHVs used as sources in @action are not aligned
+    /** @returns true if metadata initialization can be done for a field in container @c at action
+      * @action.
       */
-    bool unalignedPHVs(
+    bool cannot_initialize(
             const PHV::Container& c,
             const IR::MAU::Action* action,
             const PHV::Allocation& alloc) const;

@@ -241,8 +241,9 @@ bool FindInitializationNode::cannotInitInAction(
         const PHV::Transaction& alloc) const {
     // If the PHVs in this action are already unaligned, then we cannot add initialization in this
     // action.
-    if (actionConstraints.unalignedPHVs(c, action, alloc)) {
-        LOG4("\t\t\tPHVs not aligned in action " << action->name << ". Cannot initialize here.");
+    if (actionConstraints.cannot_initialize(c, action, alloc)) {
+        LOG4("\t\t\tAction analysis indicates a pre-existing write using PHV/action data/non-zero "
+             "const to container " << c << " in " << action->name << ". Cannot initialize here.");
         return true;
     }
     return doNotInitActions.count(action);

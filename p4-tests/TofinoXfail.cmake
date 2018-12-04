@@ -289,6 +289,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
 # Allocation without container conflicts is 13 stages.
   switch_msdc_ipv4
+  switch_8.5_msdc_ipv4
   )
 
 p4c_add_xfail_reason("tofino"

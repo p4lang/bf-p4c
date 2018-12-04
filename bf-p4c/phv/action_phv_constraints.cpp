@@ -67,6 +67,15 @@ void ActionPhvConstraints::ConstraintTracker::add_action(
                 fr.ad = true;
             } else if (read.type == ActionAnalysis::ActionParam::CONSTANT) {
                 fr.constant = true;
+                if (read.expr->is<IR::Constant>()) {
+                    const auto* constExpr = read.expr->to<IR::Constant>();
+                    if (constExpr->fitsLong())
+                        fr.const_value = constExpr->asLong();
+                    else
+                        fr.const_value = -1;
+                } else {
+                    fr.const_value = -1;
+                }
             } else {
                 BUG("Read must either be of a PHV, action data, or constant."); }
 
@@ -1840,12 +1849,11 @@ ActionPhvConstraints::ConstraintTracker::is_written(
     return boost::none;
 }
 
-bool ActionPhvConstraints::unalignedPHVs(
+bool ActionPhvConstraints::cannot_initialize(
         const PHV::Container& c,
         const IR::MAU::Action* action,
         const PHV::Allocation& alloc) const {
-    LOG1("\t\t\tChecking container " << c << " for action " << action->name);
-    ordered_map<PHV::FieldSlice, ordered_set<PHV::AllocSlice>> destinationsToBeChecked;
+    LOG5("\t\t\tChecking container " << c << " for action " << action->name);
     for (auto write : constraint_tracker.writes(action)) {
         // For each write in the action, check if the written slice has been allocated yet, and if
         // yes, whether it has been  allocated in container c.
@@ -1856,38 +1864,14 @@ bool ActionPhvConstraints::unalignedPHVs(
                 rangeWritten);
         for (auto dest : per_destination_slices) {
             if (dest.container() != c) continue;
-            // This write is allocated to the current container.
-            destinationsToBeChecked[*(write.phv_used)].insert(dest);
-            LOG1("\t\t\t  Field slice " << (*(write.phv_used)) << " must be checked for source "
-                 "alignment");
-        }
-    }
-
-    // At this stage, we need to check the alignment of all slices in destinationsToBeChecked
-    // against the alignment of their sources (if the sources have been allocated).
-    for (auto kv : destinationsToBeChecked) {
-        const PHV::FieldSlice slice = kv.first;
-        auto reads = constraint_tracker.sources(slice, action);
-        if (reads.size() == 0)
-            BUG("Pretty sure slice for %1% must be written in action %2%", slice.field()->name,
-                action->name);
-        for (auto operand : reads) {
-            // Ignore action data/constant reads.
-            if (operand.ad || operand.constant) continue;
-            const PHV::Field* fieldRead = operand.phv_used->field();
-            le_bitrange rangeRead = operand.phv_used->range();
-            ordered_set<PHV::AllocSlice> per_source_slices = alloc.slices(fieldRead, rangeRead);
-            for (auto source : per_source_slices) {
-                // For each allocated source, check if there is an AllocSlice corresponding to the
-                // source AllocSlice.
-                bool foundAlignedSlice = false;
-                for (PHV::AllocSlice& dest : kv.second) {
-                    if (dest.container_slice() == source.container_slice()) {
-                        foundAlignedSlice = true;
-                        break;
-                    }
-                }
-                if (!foundAlignedSlice) return true;
+            // This written slice is allocated to the current container.
+            PHV::FieldSlice write(dest.field(), dest.field_slice());
+            LOG5("\t\t\t  Field slice " << write << " must be checked for PHV/action data/non-zero "
+                 "constant sources.");
+            for (auto& read : constraint_tracker.sources(write, action)) {
+                if (read.ad) return true;
+                if (read.phv_used != boost::none) return true;
+                if (read.constant && read.const_value != 0) return true;
             }
         }
     }
