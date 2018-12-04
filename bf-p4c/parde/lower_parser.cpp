@@ -1692,7 +1692,6 @@ class ExtractorAllocator {
                 if (extractor_size == 32)
                     n_extractor_used++;
                 extractor_size = 16;  // JBay has one size, 16-bit extractors
-                // TODO(zma) we could pack two 8-bit extract into a single 16-bit extract
             }
 #endif  // HAVE_JBAY
 
@@ -1709,7 +1708,7 @@ class ExtractorAllocator {
             }
             rst.extractedInterval |= byteInterval;
 
-            allocatedExtractorsBySize[extract->dest->container.size()] += n_extractor_used;
+            allocatedExtractorsBySize[extractor_size] += n_extractor_used;
             rst.allocatedExtracts.push_back(extract);
         }
 
