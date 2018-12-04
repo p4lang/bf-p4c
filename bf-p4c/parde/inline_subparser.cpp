@@ -194,7 +194,8 @@ class CollectInlineSubparser : public Inspector {
 
     std::set<std::pair<cstring, cstring>> getReplaceWith() const {
         std::set<std::pair<cstring, cstring>> rst = rewrite_with;
-        rst.erase(cannot_rewrite_with.begin(), cannot_rewrite_with.end());
+        for (auto e : cannot_rewrite_with)
+            rst.erase(e);
         return rst;
     }
 };
