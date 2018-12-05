@@ -25,6 +25,9 @@ void AlgTcamMatchTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "subtrees_per_partition") {
             if (CHECKTYPE(kv.value, tINT))
                 max_subtrees_per_partition = kv.value.i;
+        } else if (kv.key == "bins_per_partition") {
+            if (CHECKTYPE(kv.value, tINT))
+                bins_per_partition = kv.value.i;
         } else common_sram_setup(kv, data); }
     common_sram_checks();
 }
@@ -370,7 +373,7 @@ void AlgTcamMatchTable::gen_tbl_cfg(json::vector &out) const {
         alpm_match_attributes["max_subtrees_per_partition"] = max_subtrees_per_partition;
         alpm_match_attributes["partition_field_name"] = get_partition_field_name();
         alpm_match_attributes["lpm_field_name"] = get_lpm_field_name();
-        alpm_match_attributes["bins_per_partition"] = p4_size()/number_partitions + 1;
+        alpm_match_attributes["bins_per_partition"] = bins_per_partition;
         auto pa_hdl = get_partition_action_handle();
         // Throw an error if partition action handle is not set. The alpm
         // pre-classifier should have a single action which sets the partition

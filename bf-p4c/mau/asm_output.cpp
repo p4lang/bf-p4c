@@ -2315,9 +2315,25 @@ void MauAsmOutput::emit_atcam_match(std::ostream &out, indent_t indent,
         const IR::MAU::Table *tbl) const {
     out << indent << "number_partitions: "
         << tbl->layout.partition_count << std::endl;
-    if (tbl->layout.alpm)
+    if (tbl->layout.alpm) {
         out << indent << "subtrees_per_partition: "
             << tbl->layout.subtrees_per_partition << std::endl;
+        auto tbl_entries = tbl->match_table->getConstantProperty("size") ?
+                            tbl->match_table->getConstantProperty("size")->asInt() : 0;
+        /* table size is optional in p4-14. first check if it comes from p4, otherwise
+         * figure it out based on allocation */
+        if (tbl_entries == 0) {
+            auto unique_id = tbl->unique_id();
+            auto &mem = tbl->resources->memuse.at(unique_id);
+            auto rams = 0;
+            for (auto &row : mem.row) {
+                rams += row.col.size();
+            }
+            tbl_entries = rams * tbl->resources->table_format.match_groups.size() * 1024;
+        }
+        out << indent << "bins_per_partition: " <<
+          tbl_entries/tbl->layout.partition_count + 1 << std::endl;
+    }
     for (auto ixr : tbl->match_key) {
         if (ixr->partition_index) {
             out << indent << "partition_field_name: " <<

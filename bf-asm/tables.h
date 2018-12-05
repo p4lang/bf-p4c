@@ -895,6 +895,7 @@ DECLARE_TABLE_TYPE(AlgTcamMatchTable, SRamMatchTable, "atcam_match",
     std::map<int, int>                    col_priority_way;
     int                                   number_partitions = 0;
     int                                   max_subtrees_per_partition = 0;
+    int                                   bins_per_partition = 0;
     std::string                           partition_field_name = "";
     std::vector<int>                      ixbar_subgroup, ixbar_mask;
     struct match_element {
