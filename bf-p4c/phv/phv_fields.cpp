@@ -548,15 +548,6 @@ void PHV::Field::foreach_alloc(
 //
 // constraints, phv_widths
 //
-bool
-PHV::Field::constrained(bool packing_constraint) const {
-    bool pack_c = mau_phv_no_pack_i || no_pack_i;
-    if (packing_constraint) {
-        return pack_c;
-    }
-    return  pack_c || deparsed_bottom_bits_i;
-}
-
 bool PHV::Field::is_tphv_candidate(const PhvUse& uses) const {
     // Privatized fields are the TPHV copies of header fields. Therefore, privatized fields are
     // always TPHV candidates.

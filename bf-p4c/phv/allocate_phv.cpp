@@ -440,7 +440,11 @@ bool CoreAllocation::satisfies_constraints(
     return satisfies_constraints(group, slice.field());
 }
 
-bool CoreAllocation::satisfies_constraints(std::vector<PHV::AllocSlice> slices) const {
+bool CoreAllocation::satisfies_constraints(
+        std::vector<PHV::AllocSlice> slices,
+        const PHV::Allocation& alloc) const {
+    if (slices.size() == 0) return true;
+
     // Slices placed together must be placed in the same container.
     auto DifferentContainer = [](const PHV::AllocSlice& left, const PHV::AllocSlice& right) {
             return left.container() != right.container();
@@ -503,6 +507,50 @@ bool CoreAllocation::satisfies_constraints(std::vector<PHV::AllocSlice> slices) 
     if (not_adjacent && no_pack) {
         LOG5("    ...but slice list contains multiple fields and one has the 'no pack' constraint");
         return false; }
+
+    // Check sum of constraints.
+    ordered_set<const PHV::Field*> containerBytesFields;
+    ordered_map<const PHV::Field*, int> allocatedBitsInThisTransaction;
+    for (auto& slice : slices) {
+        if (slice.field()->hasMaxContainerBytesConstraint())
+            containerBytesFields.insert(slice.field());
+        allocatedBitsInThisTransaction[slice.field()] += slice.width();
+    }
+
+    // If there are no fields that have the max container bytes constraints, then return true.
+    if (containerBytesFields.size() == 0) return true;
+
+    PHV::Container container = slices.begin()->container();
+    int containerBits = 0;
+    LOG6("Container bit: " << containerBits);
+    for (const auto* f : containerBytesFields) {
+        auto allocated_slices = alloc.slices(f);
+        ordered_set<PHV::Container> containers;
+        int allocated_bits = 0;
+        for (auto& slice : allocated_slices) {
+            LOG6("Slice: " << slice);
+            containers.insert(slice.container());
+            allocated_bits += slice.width();
+        }
+        if (allocated_bits != f->size)
+            allocated_bits += allocatedBitsInThisTransaction.at(f);
+        containers.insert(container);
+        int unallocated_bits = f->size - allocated_bits;
+        for (auto& c : containers) {
+            LOG6("Container: " << c);
+            containerBits += static_cast<int>(c.size());
+        }
+        LOG6("Field: " << f->name);
+        LOG6("  allocated_bits: " << allocated_bits << ", container_bits: " << containerBits <<
+             ", unallocated_bits: " << unallocated_bits);
+        BUG_CHECK(containerBits % 8 == 0, "Sum of container bits cannot be non byte multiple.");
+        int containerBytes = (containerBits / 8) + ROUNDUP(unallocated_bits, 8);
+        if (containerBytes > f->getMaxContainerBytes()) {
+            LOG5("    ...but allocation would violate maximum container bytes allowed for field " <<
+                 f->name);
+            return false;
+        }
+    }
 
     return true;
 }
@@ -746,7 +794,7 @@ CoreAllocation::tryAllocSliceList(
                         c, field_slice.range(), container_slice)); }
 
         // Check slice list<-->container constraints.
-        if (!satisfies_constraints(candidate_slices))
+        if (!satisfies_constraints(candidate_slices, alloc_attempt))
             continue;
 
         // Check that there's space.

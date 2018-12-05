@@ -125,7 +125,6 @@ class Field {
     /// True if this Field is a validity bit.
     bool            pov;
 
-
     /// Represents an allocation of a field slice to a container slice.
     struct alloc_slice {
         const Field*           field;
@@ -196,6 +195,14 @@ class Field {
                                                        /// PHV.
     bool            deparser_zero_i = false;           /// true if the field is a candidate for the
                                                        /// deparser zero optimization.
+
+    /// Maximum size of container bytes this field can occupy. -1 if there is no constraint on this
+    /// field.
+    /// E.g. if an 8-bit field can only occupy a maximum of 2 bytes, this value will be 2, and that
+    /// field will be able to occupy a single 16-bit container, or two 8-bit containers (if the
+    /// field can be split), or an 8-bit container.
+    int             maxContainerBytes_i = -1;
+
 #if HAVE_JBAY
     /// XXX(Deep): Until we move to a stage-based allocation that allows us to move fields into and
     /// out of dark containers, the utilization of dark containers in JBay is not significant. To
@@ -304,7 +311,11 @@ class Field {
 
     size_t num_pack_conflicts() const                      { return numNoPack; }
 
-    bool constrained(bool packing_constraint = false) const;
+    bool hasMaxContainerBytesConstraint() const            { return maxContainerBytes_i != -1; }
+
+    int getMaxContainerBytes() const                       { return maxContainerBytes_i; }
+
+    void setMaxContainerBytes(int size)                    { maxContainerBytes_i = size; }
 
     /// @returns true if this field is a packet field.
     bool isPacketField() const {

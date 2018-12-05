@@ -195,7 +195,9 @@ class CoreAllocation {
         const PHV::ContainerGroup& group, const PHV::AlignedCluster& cluster) const;
 
     /// @returns true if slice list<-->container constraints are satisfied.
-    bool satisfies_constraints(std::vector<PHV::AllocSlice> slices) const;
+    bool satisfies_constraints(
+            std::vector<PHV::AllocSlice> slices,
+            const PHV::Allocation& alloc) const;
 
     /// @returns true if field<-->group constraints are satisfied.
     bool satisfies_constraints(const PHV::ContainerGroup& group, const PHV::Field* f) const;

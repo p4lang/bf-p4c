@@ -105,7 +105,21 @@ void HashFieldsContainerSize::end_apply() {
         }
         // If it is a single destination slice, it could be put in any container without violating
         // the packing constraints imposed by the current packing scheme.
-        if (kv.second.size() == 1) continue;
+        if (kv.second.size() == 1) {
+            PHV::FieldSlice& slice = *(kv.second.begin());
+            // The slice is actually the entire field.
+            if (slice.size() == slice.field()->size) {
+                // Get a non-const field object.
+                PHV::Field* field = phv.field(slice.field()->name);
+                // Set the maximum number of container bytes for this field to be 4.
+                // XXX(Deep): Handle this via sum-of constraint.
+                // XXX(Deep): Handle case where the single object is a field slice that is part of
+                // the field.
+                LOG2("\t  Setting maximum container bytes for " << field->name << " to 4.");
+                field->setMaxContainerBytes(4);
+            }
+            continue;
+        }
         LOG2("\tLogical table: " << kv.first->name);
         // Impose the constraint that the destination slices be allocated to the nearest
         // natural-sized PHV container.
