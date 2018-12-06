@@ -132,7 +132,7 @@ public:
         if (groups.count(grp))
             for (auto &in : groups.at(grp))
                 if (bit >= unsigned(in.lo) && bit <= unsigned(in.hi))
-                    return Phv::Ref(in.what, bit-in.lo, bit-in.hi);
+                    return Phv::Ref(in.what, bit-in.lo, bit-in.lo);
         return Phv::Ref(); }
     std::string get_field_name(int bit) {
         for (auto &g: groups) {

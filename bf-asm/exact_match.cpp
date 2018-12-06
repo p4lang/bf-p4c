@@ -40,6 +40,109 @@ void ExactMatchTable::setup_ways() {
                 break; } } }
 }
 
+/**
+ * Any bits that are not matched directly against, but appear in the key of the p4 table,
+ * are ghost bits.  The rules for ghost bits on exact match tables are:
+ *
+ *    1. Any field that does not appear in the match key must appear in the hash function.  This
+ *       is considered a ghost bit
+ *    2. A hash column can have at most one ghost bit, in order to maintain the linear
+ *       independence of the impact of each ghost bit.  
+ *
+ * The following function verifies these two properties, and saves them in a map to be output
+ * in the gen_ghost_bits function call
+ */
+void ExactMatchTable::determine_ghost_bits() {
+    std::set<std::pair<std::string, int>> ghost_bits;
+    // Determine ghost bits by determine what is not in the match
+    for (auto p4_param : p4_params_list) {
+        for (int bit = p4_param.start_bit; bit < p4_param.start_bit + p4_param.bit_width; bit++) {
+            bool found = false;
+            for (auto ms : match) {
+                std::string field_name = ms->name();
+                remove_aug_names(field_name);
+                int field_bit_lo = remove_name_tail_range(field_name) + ms->fieldlobit();
+                int field_bit_hi = field_bit_lo + ms->size() - 1;
+                if (field_name == p4_param.name && field_bit_lo <= bit && field_bit_hi >= bit) {
+                    found = true;
+                    break;
+                }
+            }
+            if (found)
+                continue;
+            ghost_bits.emplace(p4_param.name, bit);
+        }
+    }
+
+    int way_index = 0;
+    for (auto way : ways) {
+        auto *hash_group = input_xbar->get_hash_group(way.group);
+        BUG_CHECK(hash_group != nullptr);
+
+        // key is the field name/field bit that is the ghost bit
+        // value is the bits that the ghost bit appears in within this way
+        std::map<std::pair<std::string, int>, bitvec> ghost_bit_impact;
+
+        // Calculate the ghost bit per hash way
+        for (unsigned hash_table_id : bitvec(hash_group->tables)) {
+            auto &hash_table = input_xbar->get_hash_table(hash_table_id);
+            for (auto hash_bit : way.select_bits()) {
+                if (hash_table.count(hash_bit) == 0)
+                    continue;
+                const HashCol &hash_col = hash_table.at(hash_bit);
+                for (const auto &input_bit : hash_col.data) {
+                    if (auto ref = input_xbar->get_hashtable_bit(hash_table_id, input_bit)) {
+                        std::string field_name = ref.name();
+                        remove_aug_names(field_name);
+                        int field_bit = remove_name_tail_range(field_name) + ref.fieldlobit();
+                        auto key = std::make_pair(field_name, field_bit);
+                        auto ghost_bit_it = ghost_bits.find(key);
+                        if (ghost_bit_it == ghost_bits.end())
+                            continue;
+
+                        // This is a check to make sure that the ghost bit appears only once
+                        // in the hash column, as an even number of appearances would
+                        // xor each other out, and cancel the hash out.  This check
+                        // should be done on all hash bits
+			if (ghost_bit_impact[key].getbit(hash_bit)) {
+                            error(input_xbar->lineno, "Ghost bit %s:%d appears multiple times "
+                                  "in the same hash col %d", key.first.c_str(), key.second,
+                                  way_index);
+                            return;
+                        }
+                        ghost_bit_impact[key].setbit(hash_bit); 
+                    }
+                }
+            }
+        }
+
+        // Verify that each ghost bit appears in the hash function
+        for (auto gb : ghost_bits) {
+            if (ghost_bit_impact.find(gb) == ghost_bit_impact.end()) {
+                error(input_xbar->lineno, "Ghost bit %s:%d does not appear on the hash function "
+                      "for way %d", gb.first.c_str(), gb.second, way_index);
+                return;
+            }
+        }
+
+        // Verify that the ghost bits are linearly independent, that only one ghost bit
+        // exists per column
+        bitvec total_use;
+        for (auto gbi : ghost_bit_impact) {
+            if (!(total_use & gbi.second).empty())
+                error(input_xbar->lineno, "The ghost bits are not linear independent on way %d",
+                      way_index);
+            total_use |= gbi.second;
+        }
+
+        auto &ghost_bit_position = ghost_bit_positions[way.group];
+        for (auto gbi : ghost_bit_impact) {
+            ghost_bit_position[gbi.first] |= gbi.second;
+        }
+        way_index++;
+    }
+}
+
 void ExactMatchTable::pass2() {
     LOG1("### Exact match table " << name() << " pass2");
     if (logical_id < 0) choose_logical_id();
@@ -49,6 +152,7 @@ void ExactMatchTable::pass2() {
     if (gateway) gateway->pass2();
     if (idletime) idletime->pass2();
     if (format) format->pass2(this);
+    determine_ghost_bits();
 }
 
 void ExactMatchTable::pass3() {
@@ -100,59 +204,39 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) const {
         stage_tbl["size"] = 1024; }
 }
 
-// Create json node for ghost bits - exact match only
-void ExactMatchTable::gen_ghost_bits(const std::map<int, HashCol> &hash_table,
-        unsigned hash_table_id, json::vector &ghost_bits_to_hash_bits,
-        json::vector &ghost_bits_info, bitvec hash_bits_used) const {
-    // Return if this function is already visited
-    bitvec bit_position;
-    for (auto &col: hash_table) {
-        auto hash_bit = col.first;
-        if (!hash_bits_used.getbit(hash_bit)) continue;
-        for (const auto &bit : col.second.data) {
-            if (auto ref = input_xbar->get_hashtable_bit(hash_table_id, bit)) {
-                std::string field_name = ref.name();
-                remove_aug_names(field_name);
-                auto field_bit = remove_name_tail_range(field_name) + ref.lobit();
-                // Ghost bits are bits not present in the match overhead
-                if (!is_match_bit(field_name, field_bit)) {
-                    auto bit_in_match_spec = get_param_start_bit_in_spec(field_name) + field_bit;
-                    auto p4_param = find_p4_param(field_name);
-                    // Generate ghost_bit_info element if not already present
-                    if (!bit_position.getbit(bit_in_match_spec)) {
-                        json::map ghost_bit_info;
-                        ghost_bit_info["bit_in_match_spec"] = bit_in_match_spec;
-                        if (p4_param && !p4_param->key_name.empty()) {
-                            field_name = p4_param->key_name;
-                        }
-                        ghost_bit_info["field_name"] = field_name;
-                        ghost_bits_info.push_back(std::move(ghost_bit_info));
-                        bit_position.setbit(bit_in_match_spec);
-                    }
-                    // Ghost bit index in 'ghost_bit_info' &
-                    // 'ghost_bit_to_hash_bit' is same. Find index in
-                    // 'ghost_bit_info' for this ghost bit since we have already
-                    // populated it and use it to add hash bit to
-                    // 'ghost_bit_to_hash_bit' node
-                    unsigned index = 0;
-                    for (auto &g : ghost_bits_info) {
-                        auto &m = g->to<json::map>();
-                        if (m["bit_in_match_spec"]->to<json::number>() 
-                                    == bit_in_match_spec) break;
-                        index++;
-                    }
-                    if (ghost_bits_to_hash_bits.size() > index) {
-                        json::vector &gbhb = ghost_bits_to_hash_bits[index]->to<json::vector>();
-                        gbhb.push_back(hash_bit);
-                    } else {
-                        json::vector ghost_bit_to_hash_bit;
-                        ghost_bit_to_hash_bit.push_back(hash_bit);
-                        ghost_bits_to_hash_bits.push_back(std::move(ghost_bit_to_hash_bit));
-                    }
+/**
+ * The ghost_bits information is required by the driver to correctly run an entry read from
+ * hardware.  Ghost bits are bits that do not appear in the key, and must be calculated
+ * from the hash matrix.
+ *
+ * The ghost_bits information is broken into two vectors:
+ *
+ * - ghost_bit_info: a vector of information on ghost bits, maps of 2 fields
+ *      1. field_name - name of the field being ghosted
+ *      2. bit_in_match_spec - awfully named for the field bit (not the bit in the entire key)
+ *
+ * - ghost_bit_to_hash_bit: a vector per each entry in the ghost_bit_info describing which
+ *   hash bits coordinate to which ghost bits
+ */
+void ExactMatchTable::gen_ghost_bits(int hash_function_number,
+        json::vector &ghost_bits_to_hash_bits, json::vector &ghost_bits_info) const {
+    if (ghost_bit_positions.count(hash_function_number) == 0)
+        return;
+    auto ghost_bit_pos = ghost_bit_positions.at(hash_function_number);
+    
+    for (auto kv : ghost_bit_pos) {
+        json::map ghost_bit_info;
+        auto field_name = kv.first.first;
+        auto p4_param = find_p4_param(field_name);
+        if (p4_param && !p4_param->key_name.empty())
+            field_name = p4_param->key_name;
+        ghost_bit_info["field_name"] = field_name;
+        ghost_bit_info["bit_in_match_spec"] = kv.first.second;
+        ghost_bits_info.push_back(std::move(ghost_bit_info));
 
-                    break;
-                }
-            }
-        }
+        json::vector ghost_bit_to_hash_bits;
+        for (auto hash_bit : kv.second)
+            ghost_bit_to_hash_bits.push_back(hash_bit); 
+        ghost_bits_to_hash_bits.push_back(std::move(ghost_bit_to_hash_bits));
     }
 }

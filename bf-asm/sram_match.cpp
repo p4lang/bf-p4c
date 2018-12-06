@@ -300,9 +300,8 @@ void SRamMatchTable::add_hash_functions(json::map &stage_tbl) const {
             for (unsigned hash_table_id: bitvec(hash_group->tables)) {
                 auto hash_table = input_xbar->get_hash_table(hash_table_id);
                 gen_hash_bits(hash_table, hash_table_id, hash_bits, hash_group_no, entry.second);
-                gen_ghost_bits(hash_table, hash_table_id, ghost_bits_to_hash_bits, ghost_bits_info,
-                               entry.second);
             }
+            gen_ghost_bits(hash_group_no, ghost_bits_to_hash_bits, ghost_bits_info);
             hash_functions.push_back(std::move(hash_function));
         }
     }

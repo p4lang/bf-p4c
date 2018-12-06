@@ -644,13 +644,6 @@ public:
         for (auto &p : p4_params_list)
             if (p.type == s) return &p;
         return nullptr; }
-    int get_param_start_bit_in_spec(std::string &s) const {
-        remove_name_tail_range(s);
-        int start_bit = 0;
-        for (auto &p : p4_params_list) {
-            if (p.name == s) return start_bit;
-            start_bit += p.bit_width_full; }
-        return -1; }
     virtual std::string get_default_action() {
         return (!default_action.empty()) ? default_action : action ? action->default_action : ""; }
     virtual default_action_params* get_default_action_parameters() {
@@ -788,6 +781,12 @@ protected:
         int                              lineno;
         int                              group, subgroup, mask;
         std::vector<std::pair<int, int>> rams;
+        bitvec select_bits() const {
+            bitvec rv(mask);
+            rv <<= EXACT_HASH_FIRST_SELECT_BIT;
+            rv.setrange(subgroup * EXACT_HASH_ADR_BITS, EXACT_HASH_ADR_BITS);
+            return rv;
+        }
     };
     std::vector<Way>                      ways;
     struct WayRam { int way, index, word, bank; };
@@ -838,9 +837,8 @@ protected:
     std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(const Way &) const;
     Actions *get_actions() const override { return actions ? actions : (action ? action->actions : nullptr); }
     void add_hash_functions(json::map &stage_tbl) const override;
-    virtual void gen_ghost_bits(const std::map<int, HashCol> &hash_table, unsigned hash_table_id,
-        json::vector &ghost_bits_to_hash_bits, json::vector &ghost_bit_info,
-        bitvec hash_bits_used) const { };
+    virtual void gen_ghost_bits(int hash_function_number, json::vector &ghost_bits_to_hash_bits,
+        json::vector &ghost_bits_info) const { }
 public:
     Format::Field *lookup_field(const std::string &n, const std::string &act = "") const override;
     virtual void setup_word_ixbar_group();
@@ -878,6 +876,13 @@ public:
 DECLARE_TABLE_TYPE(ExactMatchTable, SRamMatchTable, "exact_match",
     bool dynamic_key_masks = false;
     void setup_ways() override;
+
+    // The position of the ghost bits in a single hash function
+    // The key is name of the field and the field bit, the value is one-hot for all
+    // bits that this ghost bit has an impact on
+    using GhostBitPositions = std::map<std::pair<std::string, int>, bitvec>; 
+    std::map<int, GhostBitPositions> ghost_bit_positions;
+
 public:
     int unitram_type() override { return UnitRam::MATCH; }
     table_type_t table_type() const override { return EXACT; }
@@ -885,9 +890,9 @@ public:
         for (auto &way: ways)
             if (way.group == grp) return true;
         return false; }
-    void gen_ghost_bits(const std::map<int, HashCol> &hash_table, unsigned hash_table_id,
-        json::vector &ghost_bit_to_hash_bit, json::vector &ghost_bit_info,
-        bitvec hash_bits_used) const override;
+    void determine_ghost_bits();
+    void gen_ghost_bits(int hash_function_number, json::vector &ghost_bits_to_hash_bits,
+                        json::vector &ghost_bits_info) const override;
 )
 
 DECLARE_TABLE_TYPE(AlgTcamMatchTable, SRamMatchTable, "atcam_match",
