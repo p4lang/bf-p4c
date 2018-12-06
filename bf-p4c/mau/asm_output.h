@@ -115,10 +115,8 @@ class MauAsmOutput : public MauInspector {
     void emit_atcam_match(std::ostream &out, indent_t, const IR::MAU::Table *tbl) const;
     void emit_table(std::ostream &out, const IR::MAU::Table *tbl, int stage, gress_t gress) const;
     void emit_static_entries(std::ostream &out, indent_t indent, const IR::MAU::Table *tbl) const;
-    /*
-    std::string find_indirect_index(const IR::MAU::AttachedMemory *am, bool index_only,
-            const IR::MAU::BackendAttached *ba, const IR::MAU::Table *tbl) const;
-    */
+    void next_table_non_action_map(const IR::MAU::Table *,
+            safe_vector<cstring> &next_table_map) const;
     void emit_table_indir(std::ostream &out, indent_t, const IR::MAU::Table *tbl,
             const IR::MAU::TernaryIndirect *ti) const;
     void emit_action_data_format(std::ostream &out, indent_t, const IR::MAU::Table *tbl,
@@ -137,6 +135,7 @@ class MauAsmOutput : public MauInspector {
     std::string build_call(const IR::MAU::AttachedMemory *at_mem,
         const IR::MAU::BackendAttached *ba, const IR::MAU::Table *tbl) const;
     std::string build_sel_len_call(const IR::MAU::Selector *as) const;
+
     class EmitAction;
     class EmitAttached;
     class UnattachedName;

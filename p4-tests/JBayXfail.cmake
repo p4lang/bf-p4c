@@ -38,7 +38,6 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
 
   p4c_add_xfail_reason("tofino2"
     "mismatch from expected.* at byte .*"
-    extensions/p4_tests/p4_14/action_chain_limits.p4
     # clot-phv interaction bug?
     testdata/p4_14_samples/bridge1.p4
     # conditional checksum: JBay needs different treatment

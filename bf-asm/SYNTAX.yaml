@@ -248,6 +248,11 @@ stage <constant> <thread>:
             [- p4_param_order: '{' param_name : <int>, ... '}' ]
                 # Param order specifying param name and width for context json (p4_parameters)
             [- default_action: '{' allowed: true|false, reason: <string> '}' ]
+               # the next table to be run when the entry hits with this action, could be
+               # an index into the hit_next
+            [- next_table: <int> | <name> ]
+               # the next table to run when the entry misses with this action
+            [- next_table_miss: <name> ]
             - <instruction> <operands>
         selector: <table-name>(<index-field> [ , <length-field> [ , <shift-field> ] ] )
             # selection table to use

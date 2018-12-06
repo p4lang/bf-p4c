@@ -190,8 +190,8 @@ void HashActionTable::gen_tbl_cfg(json::vector &out) const {
     json::map &stage_tbl = *add_stage_tbl_cfg(match_attributes, stage_tbl_type, size);
     stage_tbl["memory_resource_allocation"] = nullptr;
     match_attributes["match_type"] = stage_tbl_type;
-    // FIXME-JSON: If the next table is modifiable then we set it to what it's mapped
-    // to. Otherwise, set it to the default next table for this stage.
+    // This is a only a glass required field, as it is only required when no default action
+    // is specified, which is impossible for Brig through p4-16
     stage_tbl["default_next_table"] = Stage::end_of_pipe();
     add_pack_format(stage_tbl, 0, 0, hash_dist.empty() ? 1 : 0);
     add_result_physical_buses(stage_tbl);

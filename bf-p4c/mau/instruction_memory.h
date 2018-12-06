@@ -108,8 +108,8 @@ struct InstructionMemory {
         }
     };
 
-    std::map<const IR::MAU::ActionData *,
-        std::map<cstring, InstructionMemory::Use::VLIW_Instruction>> shared_action_profiles;
+    std::map<const IR::MAU::ActionData *, const Use *> shared_action_profiles;
+        // std::map<cstring, InstructionMemory::Use::VLIW_Instruction>> shared_action_profiles;
 
     Alloc2Dbase<cstring> &imem_use(gress_t gress) {
         if (gress == INGRESS || gress == GHOST)
@@ -128,6 +128,7 @@ struct InstructionMemory {
 
  public:
     bool allocate_imem(const IR::MAU::Table *tbl, Use &alloc, const PhvInfo &phv, bool gw_linked);
+    bool shared_instr(const IR::MAU::Table *tbl, Use &alloc, bool gw_linked);
     void update(cstring name, const Use &alloc, gress_t gress);
     void update(cstring name, const TableResourceAlloc *alloc, gress_t gress);
     void update(cstring name, const TableResourceAlloc *alloc, const IR::MAU::Table *tbl);

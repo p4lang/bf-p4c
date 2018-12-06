@@ -617,30 +617,34 @@ void Table::alloc_vpns() {
     setup_vpns(layout, 0);
 }
 
-void Table::check_next(Table::Ref &n, Table::Actions::Action *act) {
+void Table::check_next(Table::Ref &n) {
     if (n == "END") return;
     if (n.check()) {
         if (logical_id >= 0 && n->logical_id >= 0 ? table_id() > n->table_id()
                                                   : stage->stageno > n->stage->stageno)
             error(n.lineno, "Next table %s comes before %s", n->name(), name());
+        // Need to add to the predication map
         auto &s = n->pred[this];
-        if (act)
-            s.insert(act); }
+    }
 }
 
+
 void Table::check_next() {
-    auto *actions = get_actions();
-    if (actions) {
-        auto action = actions->begin();
-        for (auto &n : hit_next)
-            check_next(n, action == actions->end() ? nullptr : &*action++);
-    } else {
-        for (auto &n : hit_next)
-            check_next(n); }
-    check_next(miss_next, actions ? actions->action(default_action) : nullptr);
-    if (hit_next.size() == 1 && hit_next[0] && !miss_next && actions)
-        for (auto &act : *actions)
-            hit_next[0]->pred[this].insert(&act);
+    for (auto &n : hit_next) {
+        check_next(n);
+    } 
+    check_next(miss_next);
+}
+
+void Table::set_pred() {
+    if (actions == nullptr)
+        return;
+    for (auto &act : *actions) {
+        if (!act.default_only && act.next_table_ref != "END")
+            act.next_table_ref->pred[this].insert(&act);
+        if (act.next_table_miss_ref != "END")
+            act.next_table_miss_ref->pred[this].insert(&act);
+    }
 }
 
 bool Table::choose_logical_id(const slist<Table *> *work) {
@@ -703,6 +707,7 @@ void Table::pass1() {
         }
         actions->pass1(this);
     }
+    set_pred();
 
     if (action) {
         auto reqd_args = 2;
@@ -1021,6 +1026,17 @@ Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv, int pos
                         if CHECKTYPE(a.value, tINT) {
                             handle = a.value.i;
                         }
+                    } else if (a.key == "next_table") {
+                        if (CHECKTYPE2(a.value, tINT, tSTR)) {
+                            if (a.value.type == tINT)
+                                next_table_encode = a.value.i;
+                            else
+                                next_table_ref = a.value;
+                        }
+                    } else if (a.key == "next_table_miss") {
+                        if (CHECKTYPE(a.value, tSTR)) {
+                            next_table_miss_ref = a.value;
+                        }
                     } else if (CHECKTYPE3(a.value, tSTR, tCMD, tINT)) {
                         if (a.value.type == tINT) {
                             auto k = alias.find(a.key.s);
@@ -1062,6 +1078,68 @@ Table::Actions::Actions(Table *tbl, VECTOR(pair_t) &data) {
         actions.emplace(name, tbl, this, kv, pos++); }
 }
 
+void Table::Actions::Action::check_next_ref(Table *tbl, const Table::Ref &ref) const {
+    if (ref != "END" && ref.check() && ref->table_id() >= 0 && ref->table_id() < tbl->table_id()) {
+        error(lineno, "Next table %s for action %s before containing table %s", ref->name(),
+              name.c_str(), tbl->name());
+        return;
+    }
+
+    if (ref != "END" && ref->table_id() > (1U << NEXT_TABLE_MAX_RAM_EXTRACT_BITS) - 1
+        && tbl->get_hit_next().size() == 0) {
+        error(lineno, "Next table cannot properly be saved on the RAM line for this action %s",
+              name.c_str());
+    }
+}
+
+/**
+ * By the end of this function, both next_table and next_table_miss_ref will have been created
+ * and validated.
+ *
+ * Each action must have at least next_table or a next_table_miss from the node.  
+ *     - next_table: The next table to run on hit
+ *     - next_table_miss: The next table to run on miss
+ *
+ * The next_table_encode is the entry into the next_table_hitmap, if a next_table hit map is
+ * provided.  If the next_table hit map is empty, then the next_table_encode won't have been
+ * set.  If the action can be used on a hit, then either a next_table_ref/next_table_encode
+ * would be provided. 
+ *
+ * The next_table_ref could come from the next_table as an int value, which would be on offset
+ * into the hit_map 
+ */
+void Table::Actions::Action::check_next(Table *tbl) {
+    if (next_table_encode >= 0) {
+        if (tbl->get_hit_next().size() == 0 || tbl->get_hit_next().size() < next_table_encode) {
+            error(lineno, "The encoding on action %s is outside the range of the hitmap in "
+                          "table %s", name.c_str(), tbl->name());
+        } else {
+            next_table_ref = tbl->get_hit_next().at(next_table_encode);
+        }
+    }
+
+    if (!next_table_miss_ref.set() && !next_table_ref.set()) {
+        if (tbl->get_hit_next().size() != 1) {
+            error(lineno, "Either next_table or next_table_miss must be required on action %s "
+                  "if the next table cannot be determined", name.c_str());
+        } else {
+            next_table_ref = tbl->get_hit_next()[0];
+            next_table_miss_ref = next_table_ref;
+            next_table_encode = 0;
+        }
+    } else if (!next_table_ref.set()) {
+        if (!default_only) {
+            error(lineno, "Action %s on table %s that can be programmed on hit must have "
+                          "a next_table encoding", name.c_str(), tbl->name());
+        }
+        next_table_ref = next_table_miss_ref;
+    } else if (!next_table_miss_ref.set()) {
+        next_table_miss_ref = next_table_ref;
+    }
+    check_next_ref(tbl, next_table_ref);
+    check_next_ref(tbl, next_table_miss_ref);
+}
+
 void Table::Actions::Action::pass1(Table *tbl) {
     // The compiler generates all action handles which must be specified in the
     // assembly, if not we throw an error.
@@ -1069,6 +1147,11 @@ void Table::Actions::Action::pass1(Table *tbl) {
         error(lineno,
             "No action handle specified for table - %s, action - %s", tbl->name(), name.c_str());
     }
+
+    if (!tbl->to<Synth2Port>() && !tbl->to<Phase0MatchTable>()) {
+        check_next(tbl);
+    }
+
     if (tbl->get_default_action() == name) {
         if (!tbl->default_action_handle)
             tbl->default_action_handle = handle;
@@ -1526,56 +1609,53 @@ void Table::Actions::add_p4_params(const Action &act, json::vector &cfg) const {
 }
 
 void Table::Actions::add_action_format(const Table *table, json::map &tbl) const {
-    /* FIXME -- this is mostly a hack, since the actions need not map 1-to-1 to the
-     * hit_next entries.  Need a way of speicfying next table in the actual action */
-    //if (table->hit_next.size() <= 1) return;
-    // If a table has both an attached gateway and a per-action next table map,
-    // the compiler reserves action code 0 for the gateway's action so it will
-    // never be used in the table. The compiler sticks END in the hit_map for
-    // code 0, as a 'never used' placeholder, which we want to skip when
-    // generating the next table info for the context json.
-    //
-    // This creates a coupling between the compiler's encoding of per-action
-    // next tables and this code in the assembler, so if the compiler is
-    // changed, the assembler will also need updating. This suggests we should
-    // come up with a better way of decoupling this.
-    unsigned hit_index = (table->get_gateway() && (table->hit_next.size() > 1)) ? 1 : 0;
-    int hit_index_inc = 1;
-    // If hit and miss tables are same, set next table for all actions
-    if (table->hit_next.size() == (hit_index + 1))
-        if (table->hit_next[hit_index] == table->miss_next)
-            hit_index_inc = 0;
-    // If miss table not in any hit tables, set next table to miss table for all actions
-    // This is the default action next table or miss table which runtime updates
-    bool set_miss_table = true;
-    for (auto &htbl : table->hit_next)
-        if (htbl == table->miss_next)
-            set_miss_table = false;
     json::vector &action_format = tbl["action_format"] = json::vector();
     for (auto &act : *this) {
         json::map action_format_per_action;
-        // compute what is the next table and set next to empty ref if either this is the
-        // last table or it ran out of indices. Since the hit_index follows the
-        // order of actions in assembly to specify next tables, we use the
-        // 'position_in_assembly' value in each action as index.
-        auto hit_next_index = hit_index + act.position_in_assembly;
-        auto next = (hit_next_index < table->hit_next.size()) ?
-            table->hit_next[hit_next_index] : Table::Ref();
-        // If there is only one next table, all actions will use this table
-        if (table->hit_next.size() == hit_index + 1)
-            next = table->hit_next[hit_index];
-        if (set_miss_table) next = table->miss_next;
-        // If action is labelled default only, it cannot be a hit action, i.e.
-        // it is a miss action and must be assigned a miss table if specified.
-        if (act.default_only && (table->miss_next)) next = table->miss_next;
-        if(next && next->name_ == "END") next = Table::Ref();
-        std::string next_table_name = next ? next->p4_name() : "--END_OF_PIPELINE--";
-        //unsigned next_table = next ? table->get_format_field_size("next") == 8 ?
-        //    next->table_id() : next->table_type() == Table::GATEWAY ? 0 : act.next_table_encode : 0;
-        unsigned next_table = next ? table->get_format_field_size("next") == 8 ?
-            next->table_id() : act.next_table_encode : 0;
-        unsigned next_table_full = next ? next->table_id() : Stage::end_of_pipe();
+        unsigned next_table = 0;
 
+        std::string next_table_name;
+        if (act.default_only) {
+            next_table = -1;
+            next_table_name = "--END_OF_PIPELINE--";
+        } else {
+            if (act.next_table_encode >= 0)
+                next_table = static_cast<unsigned>(act.next_table_encode);
+            else {
+                // The RAM value is only 8 bits, for JBay must be solved by table placement
+                next_table = act.next_table_ref == "END"
+                             ? (1U << NEXT_TABLE_MAX_RAM_EXTRACT_BITS) - 1
+                             : act.next_table_ref->table_id();
+            }
+            next_table_name = act.next_table_ref ? act.next_table_ref->name()
+                                                 : "--END_OF_PIPELINE--";
+        }
+        unsigned next_table_full = act.next_table_miss_ref == "END"
+                                   ? Stage::end_of_pipe() : act.next_table_miss_ref->table_id();
+
+        /**
+         * This following few fields are required on a per stage table action basis.
+         * The following information is:
+         * 
+         * - next_table - The value that will be written into the next field RAM line on a hit,
+         *       when the entry is specified with this action.  This is either an index into 
+         *       the next_table_map_en (if that map is enabled), or the 8 bit next table value.
+         *
+         * - next_table_full - The value that will be written into the miss register for next
+         *       table (next_table_format_data.match_next_table_adr_miss_value), if this action
+         *       is set as the default action.  This is the full 8 bit (9 bit for JBay) next
+         *       table.
+         *
+         * - vliw_instruction - The value that will be written into the action instruction RAM
+         *       entry when the entry is specified with this action.  This is either an index
+         *       into into the 8 entry table mau_action_instruction_adr_map_data, if that is
+         *       enabled, or the full word instruction
+         *
+         * - vliw_instruction_full - The value that will written into the miss register for
+         *       action_instruction (mau_action_instruction_adr_miss_value), when this
+         *       action is specified as the default action.  The full address with the PFE
+         *       bit enabled.
+         */
         action_format_per_action["action_name"] = act.name;
         action_format_per_action["action_handle"] = act.handle;
         action_format_per_action["table_name"] = next_table_name;
@@ -1650,22 +1730,6 @@ void Table::Actions::add_immediate_mapping(json::map &tbl) {
                 { "immediate_least_significant_bit", json::number(a.second.lo) },
                 { "immediate_most_significant_bit", json::number(a.second.hi) },
                 { "field_called", std::move(immed_name) } } } ); } }
-}
-
-void Table::Actions::add_next_table_mapping(Table *table, json::map &tbl) {
-    /* FIXME -- this is mostly a hack, since the actions need not map 1-to-1 to the
-     * hit_next entries.  Need a way of speicfying next table in the actual action */
-    if (table->hit_next.size() <= 1) return;
-    unsigned hit_index = 0;
-    for (auto &act : *this) {
-        if (hit_index >= table->hit_next.size()) break;
-        auto next = table->hit_next[hit_index++];
-        json::map &map = tbl["action_to_next_table_mapping"][act.name];
-        map["next_table_address_to_use"] = hit_index;
-        map["action_name"] = act.name;
-        map["next_table_full_address"] = next ? next->table_id() : Target::END_OF_PIPE();
-        if (next)
-            map["next_table_name"] = next->name(); }
 }
 
 template<class REGS>
@@ -2210,7 +2274,7 @@ json::map &Table::add_pack_format(json::map &stage_tbl, Table::Format *format,
 void Table::common_tbl_cfg(json::map &tbl) const {
     tbl["default_action_handle"] = get_default_action_handle();
     tbl["action_profile"] = action_profile();
-    tbl["default_next_table_mask"] = default_next_table_mask;
+    tbl["default_next_table_mask"] = default_next_table_mask_pair.second;
     //FIXME-JSON: PD related pragma
     tbl["ap_bind_indirect_res_to_match"] = json::vector();
     //FIXME-JSON: PD related, check glass examples for false (ALPM)

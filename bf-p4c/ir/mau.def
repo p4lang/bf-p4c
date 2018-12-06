@@ -218,6 +218,7 @@ class Table : BFN::Unit {
     safe_vector<Way>    ways;
     const TableResourceAlloc            *resources = nullptr;
     bool is_placed() const { return resources != nullptr; }
+    bool hit_miss_p4() const;
     bool action_chain() const;
     bool has_default_path() const;
     int action_next_paths() const;

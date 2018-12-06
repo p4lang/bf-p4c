@@ -611,7 +611,9 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) const {
     json::map &match_attributes = tbl["match_attributes"];
     json::vector &stage_tables = match_attributes["stage_tables"];
     json::map &stage_tbl = *add_stage_tbl_cfg(match_attributes, "ternary_match", number_entries);
-    stage_tbl["default_next_table"] = default_next_table_id;
+    // This is a only a glass required field, as it is only required when no default action
+    // is specified, which is impossible for Brig through p4-16
+    stage_tbl["default_next_table"] = Stage::end_of_pipe();
     json::map &pack_fmt = add_pack_format(stage_tbl, 47, match.size(), 1);
     stage_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg("tcam", layout);
     // FIXME-JSON: If the next table is modifiable then we set it to what it's mapped
@@ -746,12 +748,10 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) const {
         if (acts)
             acts->add_action_format(this, tind);
         add_all_reference_tables(tbl, indirect);
-        if (indirect->actions) {
+        if (indirect->actions)
             indirect->actions->gen_tbl_cfg(tbl["actions"]);
-            indirect->actions->add_next_table_mapping(indirect, stage_tbl);
-        } else if (indirect->action && indirect->action->actions) {
+        else if (indirect->action && indirect->action->actions)
             indirect->action->actions->gen_tbl_cfg(tbl["actions"]);
-            indirect->action->actions->add_next_table_mapping(indirect, stage_tbl); }
         indirect->common_tbl_cfg(tbl);
     } else {
         // FIXME: Add a fake ternary indirect table (as otherwise driver complains)

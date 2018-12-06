@@ -1016,7 +1016,9 @@ json::map* SRamMatchTable::add_common_sram_tbl_cfgs(json::map &tbl,
     json::map *stage_tbl_ptr=
         add_stage_tbl_cfg(match_attributes, stage_table_type.c_str() , get_number_entries());
     json::map &stage_tbl = *stage_tbl_ptr;
-    stage_tbl["default_next_table"] = default_next_table_id;
+    // This is a only a glass required field, as it is only required when no default action
+    // is specified, which is impossible for Brig through p4-16
+    stage_tbl["default_next_table"] = Stage::end_of_pipe();
     match_attributes["match_type"] = match_type;
     add_hash_functions(stage_tbl);
     add_action_cfgs(tbl, stage_tbl);

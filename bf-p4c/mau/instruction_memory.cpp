@@ -78,23 +78,75 @@ bool InstructionMemory::find_row_and_color(bitvec current_bv, gress_t gress,
     return false;
 }
 
+/**
+ * If two tables share an action profile, then the instruction memory location can be the
+ * exact same across both tables.  However, the mem code for the instructions may need to
+ * differ.
+ *
+ * Say for example, we had two tables {t1, t2} share an action profile that had the same 4
+ * actions, {a1, a2, a3, a4 }.  Four actions would require two bits of RAM line per entry.  Let's
+ * say however, that one of the tables, with an action profile, i.e t2, is linked with a gateway.
+ * A gateway requires an action_instruction_adr_map_data entry as well, as the gateway goes
+ * through the hit pathway.
+ *
+ * Thus in our example, t2 would require 5 instruction entries, and thus 3 bits of indirection,
+ * while t1 would only require 2 bits.  Furthermore, if the gateway goes to row 0, then
+ * the an action encoding in t2 wouldn't fit within the 2 bits.
+ *
+ * This function is to share the instruction memory line, while determining the correct
+ * memcode per action.
+ */
+bool InstructionMemory::shared_instr(const IR::MAU::Table *tbl, Use &alloc, bool gw_linked) {
+    const Use *cached_use = nullptr;
+    const IR::MAU::ActionData *ad = nullptr;
+    for (auto back_at : tbl->attached) {
+        auto at = back_at->attached;
+        ad = at->to<IR::MAU::ActionData>();
+        if (ad == nullptr) continue;
+        if (shared_action_profiles.count(ad)) {
+            LOG2("Already shared through the action profile");
+            cached_use = shared_action_profiles.at(ad);
+        }
+    }
+
+    if (cached_use == nullptr)
+        return false;
+
+    int hit_actions = tbl->hit_actions();
+    if (gw_linked)
+        hit_actions += 1;
+
+    bool can_use_hitmap = hit_actions <= TableFormat::IMEM_MAP_TABLE_ENTRIES;
+    int hit_action_index = gw_linked ? 1 : 0;
+    for (auto action : Values(tbl->actions)) {
+        auto instr_pos = cached_use->all_instrs.find(action->name);
+        BUG_CHECK(instr_pos != cached_use->all_instrs.end(), "%s: Error when programming action "
+                  "%s on shared action profile %s and table %s", ad->srcInfo, ad->name, tbl->name);
+
+        Use::VLIW_Instruction single_instr = instr_pos->second;
+        single_instr.mem_code = -1;
+        if (!action->miss_only()) {
+            if (can_use_hitmap)
+                single_instr.mem_code = hit_action_index;
+            else
+                single_instr.mem_code = single_instr.gen_addr();
+            hit_action_index++;
+            LOG2("Action " << action->name << " Mem code " << single_instr.mem_code);
+        }
+        alloc.all_instrs.emplace(action->name, single_instr);
+    }
+    return true;
+}
 
 bool InstructionMemory::allocate_imem(const IR::MAU::Table *tbl, Use &alloc, const PhvInfo &phv,
         bool gw_linked) {
     // Action Profiles always have the same instructions for every table
     LOG1("Allocating action data bus for " << tbl->name);
-    for (auto back_at : tbl->attached) {
-        auto at = back_at->attached;
-        auto ad = at->to<IR::MAU::ActionData>();
-        if (ad == nullptr) continue;
-        if (shared_action_profiles.count(ad)) {
-            LOG2("Already shared through the action profile");
-            auto cached = shared_action_profiles.at(ad);
-            alloc.all_instrs = cached;
-            return true;
-        }
-        shared_action_profiles.emplace(ad, alloc.all_instrs);
+
+    if (shared_instr(tbl, alloc, gw_linked)) {
+        return true;
     }
+
     GenerateVLIWInstructions gen_vliw(phv);
     tbl->apply(gen_vliw);
     auto &use = imem_use(tbl->gress);
@@ -177,7 +229,7 @@ void InstructionMemory::update(cstring name, const TableResourceAlloc *alloc,
         if (ad == nullptr) continue;
         if (shared_action_profiles.count(ad))
             return;
-        shared_action_profiles.emplace(ad, alloc->instr_mem.all_instrs);
+        shared_action_profiles.emplace(ad, &alloc->instr_mem);
     }
     update(name, alloc, tbl->gress);
 }

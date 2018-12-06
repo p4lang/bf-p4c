@@ -128,6 +128,14 @@ UniqueId IR::MAU::Table::unique_id(const IR::MAU::AttachedMemory *at, bool is_gw
     return rv;
 }
 
+bool IR::MAU::Table::hit_miss_p4() const {
+    for (auto &n : next) {
+        if (n.first == "$hit" || n.first == "$miss")
+            return true;
+    }
+    return false;
+}
+
 bool IR::MAU::Table::action_chain() const {
     for (auto &n : next) {
         if (n.first[0] != '$') {

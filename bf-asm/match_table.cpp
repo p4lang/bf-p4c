@@ -321,73 +321,74 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
             ACTION_INSTRUCTION_ADR_ENABLE + act->addr; }
     */
 
-    /*------------------------
-     * Next Table
-     *-----------------------*/
-    // Next Table processing can have 4 different types
-    // 1. One Next Table - No action or next bits in format, uses indirection
-    // map set, index 0 to next table, mask is 0, default doesnt matter
-    // 2. Action bits only - No next bits in format, uses indirection map, set
-    // index to action bits and configure 'next_table' in cjson as this index,
-    // mask is for action bits, default doesnt matter
-    // 3. Next bits < 8 - Uses indirection map, set index to next bits
-    // and configure 'next_table' in cjson as this index, mask is for next bits,
-    // default doesnt matter
-    // 4. Next bits == 8- Does not use indirection map, uses all 8 bits to
-    // configure full address in 'next_table', set default address to full
-    // address
-    Table *next = result->hit_next.size() > 0 ? result : this;
-    int next_field_size = next->get_format_field_size("next");
-    int action_field_size = next->get_format_field_size("action");
-    unsigned next_mask = 0;
-    if (next->hit_next.empty()) {
-        /* nothing to do... */
-    } else if (next->hit_next.size() == 1) {
-        // Only 1 next table, action bits may or may not be present.
-        // Scenario 1 : Action bits present < 8 actions
-        // Scenario 2 : Action bits present > 8 actions
-        // Scenario 3 : Action bits absent = 1 action
-        // Scenario 4 : More than 8 possible next tables
-        setup_next_table_map(regs, next);
-        next_mask = 0;
-    } else if (((1U << next_field_size) <= NEXT_TABLE_SUCCESSOR_TABLE_DEPTH)
-            && (next_field_size > 0)) {
-        // Only setup next table map if there are < 8 next tables when 'next'
-        // field is present in format.
-        setup_next_table_map(regs, next);
-        next_mask = (1U << next_field_size) - 1;
-    } else if ((1U << action_field_size) <= NEXT_TABLE_SUCCESSOR_TABLE_DEPTH) {
-        // Only setup next table map if there are < 8 next tables when 'action'
-        // field is present or absent in format. If no 'action' field is present
-        // in format index 0 is used to setup the default next table
-        setup_next_table_map(regs, next);
-        next_mask = (1U << action_field_size) - 1;
-    } else {
-        next_mask = (1 << next_field_size) - 1;
+    /**
+     * No direct call for a next table, like instruction.  The next table can be determined
+     * from other parameters.  If there is a next parameter in the format, then this is the
+     * field to be used as an extractor.
+     *
+     * If there is no next field, but there is more than one possible entry in the hitmap,
+     * then the action instruction is being used as the index.
+     *
+     * If necessary, i.e. something becomes more complex, then perhaps a call needs to be
+     * added.
+     *
+     * Also, a quick note that though the match_next_table_adr_default is not necessary to set,
+     * the diagram in 6.4.3.3. Next Table Processing, the default register is after the mask.
+     * However, in hardware, the default register is before the mask.
+     */
+    int next_field_size = result->get_format_field_size("next");
+    int action_field_size = result->get_format_field_size("action");
+    unsigned next_table_mask = 0U;
+
+    if (next_field_size > 0) {
+        next_table_mask = ((1U << next_field_size) - 1);
+    } else if (result->get_hit_next().size() > 1) {
+        next_table_mask = ((1U << action_field_size) - 1);
     }
+    setup_next_table_map(regs, result);
+ 
+    merge.next_table_format_data[logical_id].match_next_table_adr_mask = next_table_mask;
 
-    if (next->miss_next || next->miss_next == "END") {
-        merge.next_table_format_data[logical_id].match_next_table_adr_miss_value =
-            default_next_table_id = next->miss_next ? next->miss_next->table_id()
-                                                    : Stage::end_of_pipe(); }
-    // For next table processing the address coming from match overhead goes
-    // through either
-    // 1. And'ed with an adr_mask and or'ed with an adr_default.
-    // 2. And'ed with an adr_mask and lower 3 bits sent to index the next table
-    // map.
-    // This is different from the shift - mask - or which happens in match
-    // merge for other registers. The adr_mask must be set according to how many
-    // bits in the match overhead are being used to determine next table address
-    // either directly or via indexing into the indirection table.  Sec 6.4.3.3
-    // on Next Table Processing in MAU uArch.
-    // The diagram is incorrect, as the default actually comes before the mask
-    if (next->hit_next.size() > 0) {
-        default_next_table_mask = next_mask;
-        merge.next_table_format_data[logical_id].match_next_table_adr_mask = next_mask;
-    } else {
-        merge.next_table_format_data[logical_id].match_next_table_adr_mask =
-        merge.next_table_format_data[logical_id].match_next_table_adr_default = Stage::end_of_pipe(); }
-
+    /**
+     * Unfortunately for the compiler/driver integration, this register is both required
+     * to be owned by the compiler and the driver.  The driver is responsible for programming
+     * this register when the default action of a table is specified.  The value written
+     * is the next_table_full of that particular action.
+     *
+     * However, the compiler owns this register in the following scenarios:
+     *     1. For match_with_no_key tables, where the pathway is through the hit pathway,
+     *        the driver does not touch this register, as the values are actually reversed
+     *     2. For a table that is split into multiple tables, the driver only writes the
+     *        last value.  Thus the compiler now sets up this register for all tables
+     *        before this.
+     */
+    merge.next_table_format_data[logical_id].match_next_table_adr_miss_value =
+         result->get_miss_next() == "END" ? Stage::end_of_pipe()
+                                          : result->get_miss_next()->table_id();
+    /**
+     * The next_table_format_data register is built up of three values:
+     *     - match_next_table_adr_miss_value - Configurable at runtime
+     *     - match_next_table_adr_mask - Static Config
+     *     - match_next_table_adr_default - Static Config
+     *
+     * In order to reprogram the register at runtime, the driver must have all three values to
+     * not require a hardware read, even though only one is truly programmable.  Thus in the
+     * context JSON, we provide the two extra values in an extremely poorly named JSON
+     *
+     * ERROR: Driver doesn't read the match_next_table_adr_default
+     * "default_next_table_mask" - match_next_table_adr_mask
+     * "default_next_table" - Only required if a table has no default_action specified, which is
+     *      only a Glass value.  This could always be 0.  Perhaps we can remove from Brig through
+     *      compiler version?
+     *
+     * Current driver issue is: DRV-2239
+     */
+   
+    // Right now, in the JSON, the only mask that should be provided is the last logical
+    // table of the stage.  By DRV-2239, this should be moved to a per logical table basis.
+    if (table_id() > default_next_table_mask_pair.first) {
+        default_next_table_mask_pair.second = next_table_mask;
+    }
 
     /*------------------------
      * Immediate data found in overhead

@@ -1,10 +1,12 @@
 /* mau table template specializations for jbay -- #included directly in match_tables.cpp */
 
 template<> void MatchTable::setup_next_table_map(Target::JBay::mau_regs &regs, Table *tbl) {
+    if (tbl->get_hit_next().empty())
+        return;
     auto &merge = regs.rams.match.merge;
     merge.next_table_map_en |= (1U << logical_id);
     int i = 0;
-    for (auto &n : tbl->hit_next)
+    for (auto &n : tbl->get_hit_next())
         merge.pred_map_loca[logical_id][i++].pred_map_loca_next_table = n ? n->table_id() : 0x1ff;
     // is this needed?  The model complains if we leave the unused slots as 0
     while(i < 8)

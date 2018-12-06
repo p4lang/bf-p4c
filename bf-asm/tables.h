@@ -375,7 +375,9 @@ public:
             bool                                default_only = false;
             std::string                         default_disallowed_reason = "";
             std::vector<Call>                   attached;
-            int                                 next_table_encode = 0;
+            int                                 next_table_encode = -1;
+            Ref                                 next_table_ref;
+            Ref                                 next_table_miss_ref;
             // The hit map points to next tables for actions as ordered in the
             // assembly, we use 'position_in_assembly' to map the correct next
             // table, as actions can be ordered in the map different from the
@@ -397,6 +399,8 @@ public:
                     if (e.name == param) return &e;
                 return nullptr; }
             void pass1(Table *tbl);
+            void check_next(Table *tbl);
+            void check_next_ref(Table *tbl, const Table::Ref &ref) const;
             void add_indirect_resources(json::vector &indirect_resources) const;
             bool is_color_aware() const;
             void gen_simple_tbl_cfg(json::vector &) const;
@@ -433,7 +437,6 @@ public:
         void add_p4_params(const Action&, json::vector &) const;
         void gen_tbl_cfg(json::vector &) const ;
         void add_immediate_mapping(json::map &);
-        void add_next_table_mapping(Table *, json::map &);
         void add_action_format(const Table *, json::map &) const;
         bool has_hash_dist() { return ( table->table_type() == HASH_ACTION ); }
         size_t size() { return actions.size(); }
@@ -542,8 +545,9 @@ public:
     std::vector<HashDistribution>       hash_dist;
     p4_params                   p4_params_list;
     std::unique_ptr<json::map>  context_json;
-    unsigned                    default_next_table_id = 0xFF;
-    unsigned                    default_next_table_mask = 0x0;
+    // First number is the logical table, second number is the mask register.  Currently
+    // must output the last logical table mask
+    std::pair<int, unsigned>    default_next_table_mask_pair = { -1, 0U };
 
     static std::map<std::string, Table *>       all;
 
@@ -599,6 +603,8 @@ public:
     virtual Call &action_call() { return action; }
     virtual Call &instruction_call() { return instruction; }
     virtual Actions *get_actions() const { return actions; }
+    virtual std::vector<Ref> get_hit_next() const { return hit_next; }
+    virtual Ref get_miss_next() const { return miss_next; }
     virtual void add_reference_table(json::vector &table_refs, const Table::Call& c) const;
     json::map &add_pack_format(json::map &stage_tbl, int memword, int words, int entries = -1) const;
     json::map &add_pack_format(json::map &stage_tbl, Table::Format *format, bool pad_zeros = true,
@@ -626,7 +632,8 @@ public:
     virtual void add_result_physical_buses(json::map &stage_tbl) const;
     void canon_field_list(json::vector &field_list) const;
     void check_next();
-    void check_next(Ref &next, Actions::Action *act = nullptr);
+    void check_next(Ref &next);
+    virtual void set_pred();
     bool choose_logical_id(const slist<Table *> *work = nullptr);
     virtual int hit_next_size() const { return hit_next.size(); }
     const p4_param *find_p4_param(std::string s) const {
@@ -1085,6 +1092,7 @@ DECLARE_TABLE_TYPE(Phase0MatchTable, MatchTable, "phase0_match",
     // or attached tables and do not need a logical id assignment, hence
     // we skip pass0
     void pass0() override {}
+    void set_pred() override { return; }
 )
 DECLARE_TABLE_TYPE(HashActionTable, MatchTable, "hash_action",
 public:
@@ -1134,6 +1142,16 @@ DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
 public:
     Format::Field *lookup_field(const std::string &n,
                                         const std::string &act = "") const override;
+    std::vector<Ref> get_hit_next() const override {
+        if (hit_next.empty() && match_table)
+            return match_table->hit_next;
+        return hit_next;
+    }
+    Ref get_miss_next() const override {
+        if (miss_next != "END" && !miss_next && match_table)
+            return match_table->miss_next;
+        return miss_next;
+    }
     int address_shift() const override { return std::min(5U, format->log2size - 2); }
     unsigned get_default_action_handle() const override {
         unsigned def_act_handle = Table::get_default_action_handle();

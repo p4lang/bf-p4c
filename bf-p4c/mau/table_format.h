@@ -135,6 +135,12 @@ struct TableFormat {
                 return false;
             return !match_groups[0].mask[ACTION].empty();
         }
+
+        int next_table_bits() const {
+            if (match_groups.empty())
+                return false;
+            return match_groups[0].mask[NEXT].popcount();
+        }
     };
 
  private:
