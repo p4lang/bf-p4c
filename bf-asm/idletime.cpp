@@ -27,6 +27,20 @@ void IdletimeTable::setup(VECTOR(pair_t) &data) {
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     value_desc(kv.key), name()); }
     alloc_rams(false, stage->mapram_use);
+    for (auto &r : layout) {
+        if (r.bus < 0) continue;
+        if (r.bus >= IDLETIME_BUSSES) {
+            error(r.lineno, "bus %d invalid", r.bus);
+            continue; }
+        if (r.row >= 4 && r.bus < 10)
+            r.bus += 10;
+        else if (r.row < 4 && r.bus >= 10)
+            error(r.lineno, "idletime bus %d not accessable on row %d", r.bus, r.row);
+        if (Table *old = stage->idletime_bus_use[r.bus]) {
+            if (old != this)
+                error(r.lineno, "Table %s trying to use idletime bus %d which is already in "
+                      "use by table %s", name(), r.bus, old->name());
+        } else stage->idletime_bus_use[r.bus] = this; }
 }
 
 void IdletimeTable::pass1() {
@@ -74,7 +88,7 @@ void IdletimeTable::write_regs(REGS &regs) {
         auto &adrmux = map_alu_row.adrmux;
         auto vpn = row.vpns.begin();
         for (int col : row.cols) {
-            setup_muxctl(map_alu_row.vh_xbars.adr_dist_idletime_adr_xbar_ctl[col], row.bus);
+            setup_muxctl(map_alu_row.vh_xbars.adr_dist_idletime_adr_xbar_ctl[col], row.bus % 10);
             auto &mapram_cfg = adrmux.mapram_config[col];
             //auto &mapram_ctl = adrmux.mapram_ctl[col];
             if (disable_notification)
@@ -117,11 +131,8 @@ void IdletimeTable::write_regs(REGS &regs) {
                     .set_subfield(clear_val, i*precision, precision);
             if (gress)
                 regs.cfg_regs.mau_cfg_mram_thread[col/3U] |= 1U << (col%3U*8U + row.row); }
-        unsigned bus_index = row.bus;
-        if (bus_index < 10 && row.row >= 4)
-            bus_index += 10;
-        adrdist.adr_dist_idletime_adr_oxbar_ctl[bus_index/4]
-            .set_subfield(logical_id | 0x10, 5 * (bus_index%4), 5); }
+        adrdist.adr_dist_idletime_adr_oxbar_ctl[row.bus/4]
+            .set_subfield(logical_id | 0x10, 5 * (row.bus%4), 5); }
     //don't enable initially -- runtime will enable
     //adrdist.idletime_sweep_ctl[logical_id].idletime_en = 1;
     adrdist.idletime_sweep_ctl[logical_id].idletime_sweep_offset = minvpn;

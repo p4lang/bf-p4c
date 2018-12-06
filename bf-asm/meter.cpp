@@ -109,6 +109,12 @@ void MeterTable::pass1() {
     alloc_maprams();
     if (color_maprams.empty() && type != LPF && type != RED)
         error(lineno, "Missing color_maprams in meter table %s", name());
+    for (auto &r : color_maprams) {
+        for (auto col : r.cols) {
+            if (Table *old = stage->mapram_use[r.row][col])
+                error(r.lineno, "Table %s trying to use mapram %d,%d for color, which is "
+                      "in use by table %s", name(), r.row, col, old->name());
+            stage->mapram_use[r.row][col] = this; } }
     if (!no_vpns && !color_maprams.empty() && color_maprams[0].vpns.empty())
         setup_vpns(color_maprams, 0);
     std::sort(layout.begin(), layout.end(),
@@ -414,7 +420,7 @@ void MeterTable::write_regs(REGS &regs) {
             ram_address_mux_ctl.map_ram_radr_mux_select_color = 1;
             ram_address_mux_ctl.ram_stats_meter_adr_mux_select_idlet = 1;
             ram_address_mux_ctl.ram_ofo_stats_mux_select_statsmeter = 1;
-            setup_muxctl(map_alu_row.vh_xbars.adr_dist_idletime_adr_xbar_ctl[col], row.bus);
+            setup_muxctl(map_alu_row.vh_xbars.adr_dist_idletime_adr_xbar_ctl[col], row.bus % 10);
             if (gress)
                 regs.cfg_regs.mau_cfg_mram_thread[col/3U] |= 1U << (col%3U*8U + row.row);
             ++vpn; } }

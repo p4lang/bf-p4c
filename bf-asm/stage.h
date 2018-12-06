@@ -37,6 +37,7 @@ public:
                                                         stats_bus_use,
                                                         selector_adr_bus_use,
                                                         overflow_bus_use;
+    Alloc1D<Table *, IDLETIME_BUSSES>                   idletime_bus_use;
     bitvec      action_bus_use_bit_mask;
     Alloc2D<Table::Actions::Action *, 2, ACTION_IMEM_ADDR_MAX>          imem_addr_use;
     bitvec      imem_use[ACTION_IMEM_SLOTS];
