@@ -2210,6 +2210,7 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
     std::set<const PHV::SuperCluster*> non_slicable;
     std::set<const PHV::SuperCluster*> has_pov;
     std::map<const PHV::SuperCluster*, int> n_extracted_uninitialized;
+    std::map<const PHV::SuperCluster*, size_t> n_container_size_pragma;
     std::set<const PHV::SuperCluster*> has_container_type_pragma;
 
     // calc whether the cluster has pov bits.
@@ -2233,6 +2234,17 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
         }
     }
 #endif
+
+    // calc n_container_size_pragma.
+    const auto& container_sizes = core_alloc_i.pragmas().pa_container_sizes();
+    for (auto* cluster : cluster_groups) {
+        ordered_set<const PHV::Field*> fields;
+        cluster->forall_fieldslices([&] (const PHV::FieldSlice& fs) {
+            if (container_sizes.is_specified(fs.field()))
+                fields.insert(fs.field());
+        });
+        n_container_size_pragma[cluster] = fields.size();
+    }
 
     // calc num_pack_conflicts
     for (auto* super_cluster : cluster_groups)
@@ -2350,6 +2362,9 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
             if (l->slice_lists().size() != r->slice_lists().size()) {
                 return l->slice_lists().size() > r->slice_lists().size(); }
         } else {
+            // for metadata fields, prioritize pa_container size pragmas
+            if (n_container_size_pragma.at(l) != n_container_size_pragma.at(r))
+                return n_container_size_pragma.at(l) > n_container_size_pragma.at(r);
             // for non header field, aggregate size matters
             if (n_valid_starts.at(l) != n_valid_starts.at(r)) {
                 return n_valid_starts.at(l) < n_valid_starts.at(r); }
