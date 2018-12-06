@@ -2520,10 +2520,11 @@ void Memories::fill_RAM_use(swbox_fill &candidate, int row, RAM_side_t side, swi
             alloc.row.back().vpn.push_back(candidate.group->calculate_next_vpn());
             candidate.group->placed++;
             if (candidate.group->is_synth_type()) {
+                BUG_CHECK(k >= LEFT_SIDE_COLUMNS,
+                          "Trying to allocate non-existant left side maprams");
                 mapram_use[row][k - LEFT_SIDE_COLUMNS] = name;
-                alloc.row.back().mapcol.push_back(k - LEFT_SIDE_COLUMNS);
-            }
-        }
+                mapram_inuse[row] |= 1 << (k - LEFT_SIDE_COLUMNS);
+                alloc.row.back().mapcol.push_back(k - LEFT_SIDE_COLUMNS); } }
     }
 
     sram_inuse[row] |= candidate.mask;
@@ -2698,9 +2699,10 @@ void Memories::fill_color_mapram_use(swbox_fill &candidate, int row, RAM_side_t 
         if (((1 << k) & side_mask(side)) == 0)
             continue;
         if ((1 << k) & color_mapram_mask) {
-            alloc.color_mapram.back().col.push_back(k - LEFT_SIDE_COLUMNS);
-        }
-    }
+            BUG_CHECK(k >= LEFT_SIDE_COLUMNS, "Trying to allocate non-existant left side maprams");
+            mapram_use[row][k - LEFT_SIDE_COLUMNS] = name;
+            mapram_inuse[row] |= 1 << (k - LEFT_SIDE_COLUMNS);
+            alloc.color_mapram.back().col.push_back(k - LEFT_SIDE_COLUMNS); } }
     candidate.group->cm.placed += bitcount(color_mapram_mask);
 }
 
@@ -3437,10 +3439,12 @@ bool Memories::allocate_all_idletime() {
 
 void Memories::Use::visit(Memories &mem, std::function<void(cstring &)> fn) const {
     Alloc2Dbase<cstring> *use = 0, *mapuse = 0, *bus = 0, *gw_use = 0;
+    unsigned *inuse = 0, *map_inuse = 0;
     switch (type) {
     case EXACT:
     case ATCAM:
         use = &mem.sram_use;
+        inuse = mem.sram_inuse;
         bus = &mem.sram_print_search_bus;
         break;
     case TERNARY:
@@ -3452,6 +3456,7 @@ void Memories::Use::visit(Memories &mem, std::function<void(cstring &)> fn) cons
         break;
     case TIND:
         use = &mem.sram_use;
+        inuse = mem.sram_inuse;
         bus = &mem.tind_bus;
         break;
     case COUNTER:
@@ -3459,14 +3464,18 @@ void Memories::Use::visit(Memories &mem, std::function<void(cstring &)> fn) cons
     case STATEFUL:
     case SELECTOR:
         use = &mem.sram_use;
+        inuse = mem.sram_inuse;
         mapuse = &mem.mapram_use;
+        map_inuse = mem.mapram_inuse;
         break;
     case ACTIONDATA:
         use = &mem.sram_use;
+        inuse = mem.sram_inuse;
         bus = &mem.action_data_bus;
         break;
     case IDLETIME:
-        mapuse = &mem.mapram_use;
+        use = &mem.mapram_use;
+        inuse = mem.mapram_inuse;
         break;
     default:
         BUG("Unhandled memory use type %d in Memories::Use::visit", type); }
@@ -3477,20 +3486,31 @@ void Memories::Use::visit(Memories &mem, std::function<void(cstring &)> fn) cons
             fn(mem.stateful_bus[r.row]);*/
         if (use) {
             for (auto col : r.col) {
-                fn((*use)[r.row][col]); }
-        }
+                fn((*use)[r.row][col]);
+                if (inuse) {
+                    if ((*use)[r.row][col])
+                        inuse[r.row] |= 1 << col;
+                    else
+                        inuse[r.row] &= ~(1 << col); } } }
         if (mapuse) {
             for (auto col : r.mapcol) {
-                fn((*mapuse)[r.row][col]); }
-        }
+                fn((*mapuse)[r.row][col]);
+                if ((*mapuse)[r.row][col])
+                    map_inuse[r.row] |= 1 << col;
+                else
+                    map_inuse[r.row] &= ~(1 << col); } }
         if (gw_use) {
             fn((*gw_use)[r.row][gateway.unit]);
         }
     }
     if (mapuse) {
         for (auto &r : color_mapram) {
-             for (auto col : r.col) {
-                 fn((*mapuse)[r.row][col]); } } }
+            for (auto col : r.col) {
+                fn((*mapuse)[r.row][col]);
+                if ((*mapuse)[r.row][col])
+                    map_inuse[r.row] |= 1 << col;
+                else
+                    map_inuse[r.row] &= ~(1 << col); } } }
 }
 
 void Memories::update(cstring name, const Memories::Use &alloc) {
