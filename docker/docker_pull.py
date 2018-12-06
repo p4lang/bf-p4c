@@ -8,8 +8,8 @@ from time import sleep
 from subprocess import Popen, PIPE
 from threading import Timer
 
-# Docker pull script timeeout (30 mins)
-pull_timeout = 1800
+# Docker pull script timeeout (40 mins)
+default_pull_timeout = 2400
 # Docker pull command timeout (20 mins)
 cmd_timeout = 1200
 
@@ -40,11 +40,14 @@ def get_parser():
     parser = argparse.ArgumentParser(description='Wait for docker image to be available and pull')
     parser.add_argument('--image', help='Docker image tag to pull',
                         type=str, action='store', required=True)
+    parser.add_argument('--timeout', help='Timeout to build docker image',
+                        type=int, action='store', default=default_pull_timeout, required=False)
     return parser
 
 def main():
     args = get_parser().parse_args()
     docker_cmd = "docker pull " + args.image
+    pull_timeout = args.timeout
     pull_success = False
     elapsed_time = 0
 

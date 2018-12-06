@@ -566,6 +566,8 @@ configure_p4_build() {
     else
         p4builddir="$(dirname $0)/p4_14/p4-tests/p4-build"
     fi
+    # set the path to the p4c-manifest-config for p4-build
+    export PATH=${PATH}:$(dirname $MANIFEST_CONFIG)
     if [ ! -r $p4builddir/configure ] ; then
         pushd $p4builddir > /dev/null
         echo "Reconfiguring p4-build"
@@ -619,6 +621,8 @@ if $run_pd ; then
     p4c=$(realpath $P4C)
     export MAKEFLAGS="-j $nproc"
     export P4C=$p4c
+    # set the path to the p4c-manifest-config for p4-build
+    export PATH=${PATH}:$(dirname $MANIFEST_CONFIG)
     pushd $testout > /dev/null
     name=$(echo $name | tr -d '.-')  # strip out illegal C identifier chars
     echo "Configuring $name in $testout"

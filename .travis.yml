@@ -9,14 +9,10 @@ branches:
   - master
   - stable
 
-cache:
-  timeout: 1800
-  directories:
-  - $HOME/.ccache
-
 env:
   global:
     - MAKEFLAGS="-j4"
+    - PULL_TIMEOUT=2400
     - DOCKER_USERNAME="bfndocker"
     - CTEST_OUTPUT_ON_FAILURE="true"
     - CTEST_PARALLEL_LEVEL=4
@@ -38,13 +34,20 @@ env:
       TEST_EXTRA_OPTS2="smoketest"
       DOCKERFILE="docker/Dockerfile.tofino"
 
+cache:
+  # timeout waiting for docker images
+  timeout: $PULL_TIMEOUT
+  directories:
+  - $HOME/.ccache
+
+
 before_install:
   - docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
   - export DOCKER_TAG=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_COMMIT; else echo $TRAVIS_PULL_REQUEST_SHA; fi)
   - echo "DOCKER_TAG=$DOCKER_TAG"
 
 install:
-  - ./docker/docker_pull.py --image barefootnetworks/bf-p4c-compilers:$DOCKER_TAG
+  - ./docker/docker_pull.py --image barefootnetworks/bf-p4c-compilers:$DOCKER_TAG --timeout $PULL_TIMEOUT
 
 script:
   - docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_PARALLEL_LEVEL -e CTEST_OUTPUT_ON_FAILURE -e MAKEFLAGS barefootnetworks/bf-p4c-compilers:$DOCKER_TAG ctest -R $TEST_SUITE $TEST_EXTRA_OPTS $TEST_EXTRA_OPTS2
