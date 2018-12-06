@@ -540,12 +540,13 @@ class P4RuntimeTest(BaseTest):
     def push_update_add_entry_to_action(self, req, t_name, mk, a_name, params,
                                         priority=None):
         update = req.updates.add()
-        update.type = p4runtime_pb2.Update.INSERT
         table_entry = update.entity.table_entry
         table_entry.table_id = self.get_table_id(t_name)
         if mk is not None:
+            update.type = p4runtime_pb2.Update.INSERT
             self.set_match_key(table_entry, t_name, mk, priority)
         else:
+            update.type = p4runtime_pb2.Update.MODIFY
             table_entry.is_default_action = True
         self.set_action_entry(table_entry, a_name, params)
 
@@ -562,17 +563,15 @@ class P4RuntimeTest(BaseTest):
         update.type = p4runtime_pb2.Update.INSERT
         table_entry = update.entity.table_entry
         table_entry.table_id = self.get_table_id(t_name)
-        if mk is not None:
-            self.set_match_key(table_entry, t_name, mk, priority)
-        else:
-            table_entry.is_default_action = True
+        self.assertIsNotNone(mk, "Cannot set default entry for indirect table")
+        self.set_match_key(table_entry, t_name, mk, priority)
         table_entry.action.action_profile_member_id = mbr_id
 
     def send_request_add_entry_to_member(self, t_name, mk, mbr_id,
                                          priority=None):
         req = self.get_new_write_request()
         self.push_update_add_entry_to_member(req, t_name, mk, mbr_id, priority)
-        return req, self.write_request(req, store=(mk is not None))
+        return req, self.write_request(req, store=True)
 
     def push_update_add_entry_to_group(self, req, t_name, mk, grp_id,
                                        priority=None):
@@ -580,17 +579,15 @@ class P4RuntimeTest(BaseTest):
         update.type = p4runtime_pb2.Update.INSERT
         table_entry = update.entity.table_entry
         table_entry.table_id = self.get_table_id(t_name)
-        if mk is not None:
-            self.set_match_key(table_entry, t_name, mk, priority)
-        else:
-            table_entry.is_default_action = True
+        self.assertIsNotNone(mk, "Cannot set default entry for indirect table")
+        self.set_match_key(table_entry, t_name, mk, priority)
         table_entry.action.action_profile_group_id = grp_id
 
     def send_request_add_entry_to_group(self, t_name, mk, grp_id,
                                         priority=None):
         req = self.get_new_write_request()
         self.push_update_add_entry_to_group(req, t_name, mk, grp_id, priority)
-        return req, self.write_request(req, store=(mk is not None))
+        return req, self.write_request(req, store=True)
 
     # iterates over all requests in reverse order; if they are INSERT updates,
     # replay them as DELETE updates; this is a convenient way to clean-up a lot

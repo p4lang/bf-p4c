@@ -40,14 +40,6 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     testdata/p4_16_samples/issue1000-bmv2.p4
     )
 
-
-  # something weird in STF framework is causing this
-  # the model is sending 6 but showsup as 22
-  p4c_add_xfail_reason("tofino"
-    "counter cntDum packets value is 22, expected 6"
-    testdata/p4_14_samples/counter4.p4
-    )
-
 endif() # HARLYN_STF_tofino
 
 # Tests that run packets:
@@ -120,6 +112,7 @@ if (PTF_REQUIREMENTS_MET)
     05-simple_l3_arping
     extensions/p4_tests/p4_16/ingress_checksum.p4    #TODO(zma) use @calculated_field_update_location to force ingress update
     basic_switching
+    smoketest_switch_16_HostIfRxTest
     )
 
 # BRIG-686

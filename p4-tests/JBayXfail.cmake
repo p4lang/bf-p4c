@@ -18,13 +18,6 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/clone_v1model.p4
   )
 
-  # something weird in STF framework is causing this
-  # the model is sending 6 but showsup as 22
-  p4c_add_xfail_reason("tofino2"
-    "counter cntDum packets value is 22, expected 6"
-   testdata/p4_14_samples/counter4.p4
-   )
-
 # These tests compile successfuly and fail in the model when running the STF test
 # the reasons need more characterization
 if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
@@ -38,6 +31,9 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     testdata/p4_14_samples/gateway3.p4
     testdata/p4_14_samples/gateway4.p4
     testdata/p4_14_samples/basic_routing.p4
+    extensions/p4_tests/p4_14/sful_sel1.p4
+    extensions/p4_tests/p4_14/overlay_add_header.p4
+    extensions/p4_tests/p4_14/uninit_read_1.p4
   )
 
   p4c_add_xfail_reason("tofino2"
