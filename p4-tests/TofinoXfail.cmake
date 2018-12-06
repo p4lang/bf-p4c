@@ -1376,4 +1376,10 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error.*Can only do checksums on byte-aligned container slices"
   extensions/p4_tests/p4_14/p4smith_regression/but_0.p4
+  )
+
+# Negative test. >66 bytes of ternary match key fields used.
+p4c_add_xfail_reason("tofino"
+  "error.*Ternary table.*uses.*as ternary match key. Maximum number of bits allowed is.*"
+  extensions/p4_tests/p4_16/too_many_ternary_match_key_bits.p4
 )

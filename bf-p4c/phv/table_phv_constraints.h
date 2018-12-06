@@ -21,6 +21,7 @@ class TernaryMatchKeyConstraints : public MauModifier {
      static constexpr unsigned BITS_IN_BYTE = 8;
      static constexpr unsigned TERNARY_MATCH_KEY_BITS_THRESHOLD = 64;
      static constexpr unsigned MAX_EXACT_MATCH_KEY_BYTES = 128;
+     static constexpr size_t MAX_TERNARY_MATCH_KEY_BITS = (44 * 12) - 4;
 
      PhvInfo      &phv;
 
