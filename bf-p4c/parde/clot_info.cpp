@@ -277,6 +277,11 @@ class NaiveClotAlloc : public Visitor {
         return (unsigned)gap_needed;
     }
 
+    // This is the core routine to allocate CLOT for a given parse state. The key
+    // idea is that given the list of fields in that state, we try to find the head
+    // and tail index in the list, such that the head and tail gap constraint is
+    // satisfied (see comment above about this). Everything between the head and tail
+    // index can then be allocated to a CLOT.
     bool allocate(const ClotAlloc& ca) {
         LOG3("try allocate " << ca.state->name << ", unused = " << ca.unused_bits);
 
@@ -294,8 +299,8 @@ class NaiveClotAlloc : public Visitor {
         if (fields_in_state.size() == 0)
             return false;
 
-        unsigned head_index = 0;
-        unsigned tail_index = fields_in_state.size() - 1;
+        int head_index = 0;
+        int tail_index = fields_in_state.size() - 1;
 
         auto head_field = fields_in_state[head_index];
         unsigned head_offset = (clotInfo.field_range_.at(head_field)).lo;
@@ -303,7 +308,7 @@ class NaiveClotAlloc : public Visitor {
 
         // skip through first fields until head gap is satisfied
 
-        for (unsigned i = head_index; i <= tail_index && (head_gap_needed > head_offset); i++) {
+        for (int i = head_index; i <= tail_index && (head_gap_needed > head_offset); i++) {
             auto f = fields_in_state.at(i);
             head_offset += f->size;
             head_index++;
@@ -311,18 +316,21 @@ class NaiveClotAlloc : public Visitor {
 
         // skip through last fields until tail gap is satisfied
 
-        for (unsigned i = tail_index; i > head_index && (tail_gap_needed > tail_offset); i--) {
+        for (int i = tail_index; i >= head_index && (tail_gap_needed > tail_offset); i--) {
             auto f = fields_in_state.at(i);
             tail_offset += f->size;
             tail_index--;
         }
+
+        if (head_index > tail_index)
+            return false;
 
         // now see if we can earn some credit on head/tail
 
         unsigned head_gap_credit = 0;
         unsigned tail_gap_credit = 0;
 
-        for (unsigned i = head_index; i < tail_index; i++) {
+        for (int i = head_index; i <= tail_index; i++) {
             auto f = fields_in_state.at(i);
             if (can_allocate_to_clot(f))
                 break;
@@ -331,7 +339,7 @@ class NaiveClotAlloc : public Visitor {
             head_index++;
         }
 
-        for (unsigned i = tail_index; i > head_index; i--) {
+        for (int i = tail_index; i >= head_index; i--) {
             auto f = fields_in_state.at(i);
             if (can_allocate_to_clot(f))
                 break;
@@ -339,6 +347,9 @@ class NaiveClotAlloc : public Visitor {
             tail_gap_credit += f->size;
             tail_index--;
         }
+
+        if (head_index > tail_index)
+            return false;
 
         // TODO(zma) In many cases, it's a win to rollback on head
         // and skip forward on tail to find byte boundary to maximize CLOT
@@ -348,7 +359,7 @@ class NaiveClotAlloc : public Visitor {
 
         // For now, skip forward or rollback to find byte boundary
 
-        for (unsigned i = head_index; i < tail_index; i++) {
+        for (int i = head_index; i <= tail_index; i++) {
             if (head_offset % 8 == 0)
                 break;
             auto f = fields_in_state.at(i);
@@ -357,7 +368,7 @@ class NaiveClotAlloc : public Visitor {
             head_index++;
         }
 
-        for (unsigned i = tail_index; i > head_index; i--) {
+        for (int i = tail_index; i >= head_index; i--) {
             if (tail_offset % 8 == 0)
                 break;
             auto f = fields_in_state.at(i);
@@ -365,6 +376,9 @@ class NaiveClotAlloc : public Visitor {
             tail_gap_credit += f->size;
             tail_index--;
         }
+
+        if (head_index > tail_index)
+            return false;
 
         if (head_gap_needed > head_offset || tail_gap_needed > tail_offset)
             return false;
@@ -391,7 +405,7 @@ class NaiveClotAlloc : public Visitor {
             }
         }
 
-        for (unsigned i = head_index; i <= tail_index; i++) {
+        for (int i = head_index; i <= tail_index; i++) {
             auto f = fields_in_state.at(i);
 
             if (clot == nullptr) {
@@ -426,7 +440,7 @@ class NaiveClotAlloc : public Visitor {
     }
 
     void allocate(const std::vector<ClotAlloc>& req) {
-        for (unsigned i = 0; i < req.size(); ++i) {
+        for (int i = 0; i < req.size(); ++i) {
             if (clotInfo.num_clots_allocated() == TOTAL_CLOTS_AVAIL ||
                 num_live_clots == MAX_CLOTS_LIVE)
                 break;
