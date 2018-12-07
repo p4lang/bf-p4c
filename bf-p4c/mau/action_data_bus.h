@@ -60,14 +60,6 @@ struct ActionDataBus {
 
     safe_vector<std::pair<int, int>> immed_starts;
     std::set<cstring> atcam_updates;
-    std::set<const IR::MAU::ActionData *> shared_action_profiles;
-    // track shared meters and salus, used by action data bus allocation
-    std::set<const IR::MAU::AttachedMemory *> shared_meters;
-    // track allocation for reduction or group, if one of the members
-    // has been allocated for this reduction or group, the name of the
-    // reduction or group is inserted and subsequent allocation reuse
-    // existing allocation.
-    std::set<cstring> reduction_or_groups;
 
     bool reserved_immed[3] = {false, false, false};
 
@@ -148,6 +140,11 @@ struct ActionDataBus {
     void clear();
 
  private:
+    // Holds information on already allocated ActionProfiles, Meters, and Stateful Alus
+    ordered_map<const IR::MAU::AttachedMemory *, const Use &> allocated_attached;
+    // Holds information on already allocated stateful ALUs in the same reduction or group
+    ordered_map<cstring, const Use &> reduction_or_mapping;
+
     int byte_to_output(int byte, ActionFormat::cont_type_t type);
     int output_to_byte(int output, ActionFormat::cont_type_t type);
     int find_byte_sz(ActionFormat::cont_type_t);

@@ -13,8 +13,8 @@ void ActionDataBus::clear() {
     for (auto &in_use : cont_in_use)
         in_use.clear();
     total_in_use.clear();
-    shared_action_profiles.clear();
-    shared_meters.clear();
+    allocated_attached.clear();
+    reduction_or_mapping.clear();
 }
 
 
@@ -972,15 +972,19 @@ bool ActionDataBus::alloc_rng(const bitvec rand_num_layouts[ActionFormat::CONTAI
  */
 bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl, const ActionFormat::Use *use,
                                           TableResourceAlloc &alloc) {
+    LOG1("Allocating action data bus for " << tbl->name);
     for (auto back_at : tbl->attached) {
         auto at = back_at->attached;
         auto ad = at->to<IR::MAU::ActionData>();
         if (ad == nullptr) continue;
-        if (shared_action_profiles.count(ad))
+
+        auto pos = allocated_attached.find(ad);
+        if (pos != allocated_attached.end()) {
+            alloc.action_data_xbar = pos->second;
+            LOG2("Action data bus shared on action profile " << ad->name);
             return true;
-        shared_action_profiles.emplace(ad);
+        }
     }
-    LOG1("Allocating action data bus for " << tbl->name);
 
     LOG2("Initial Action Data Bus");
     LOG2(hex(total_in_use.getrange(96, 32)) << "|" << hex(total_in_use.getrange(64, 32)) << "|"
@@ -1024,35 +1028,41 @@ bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl, const Actio
 bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl, const MeterFormat::Use *use,
         TableResourceAlloc &alloc) {
     const IR::MAU::AttachedMemory* am = nullptr;
+    const IR::MAU::StatefulAlu *salu = nullptr;
     for (auto back_at : tbl->attached) {
         auto at = back_at->attached;
-        if (!at->is<IR::MAU::Meter>() &&
-            !at->is<IR::MAU::StatefulAlu>()) {
-            continue;
+
+        auto mtr = at->to<IR::MAU::Meter>();
+        auto salu = at->to<IR::MAU::StatefulAlu>();
+
+        if ((mtr && mtr->alu_output()) || salu) {
+            am = at;
+            break;
         }
-        am = at->to<IR::MAU::AttachedMemory>();
-        if (am == nullptr) continue;
     }
-    // did not find any attached memory at all, do nothing.
+
     if (am == nullptr)
         return true;
 
-    // if it is the first time allocating for this meter or salu
-    if (!shared_meters.count(am))
-        shared_meters.emplace(am);
-    else
+    LOG1("Allocating action data bus for " << tbl->name << " for meter output of " << am->name);
+    // Do not allocate if this meter/stateful alu has been previously allocated, as it has
+    // been shared with a table in this stage.  Instead, link it with this allocation
+    auto pos = allocated_attached.find(am);
+    if (pos != allocated_attached.end()) {
+        alloc.meter_xbar = pos->second;
+        LOG2("Action data bus shared on meter_adr user " << am->name);
         return true;
-
-    if (auto salu = am->to<IR::MAU::StatefulAlu>()) {
-        LOG1("existing reduction or group " << reduction_or_groups.size());
-        if (!reduction_or_groups.count(salu->reduction_or_group)) {
-            LOG1("added to reduction or group " << salu->reduction_or_group);
-            reduction_or_groups.emplace(salu->reduction_or_group);
-        } else {
-            return true; }
     }
 
-    LOG2("Allocating action data bus for " << tbl->name << " for meter output");
+    if (salu && salu->reduction_or_group) {
+        auto red_pos = reduction_or_mapping.find(salu->reduction_or_group);
+        if (red_pos != reduction_or_mapping.end()) {
+            alloc.meter_xbar = red_pos->second;
+            LOG2("Action data bus shared through reduction or group " << salu->reduction_or_group);
+            return true;
+        }
+    }
+
 
     LOG2("Initial Action Data Bus");
     LOG2(hex(total_in_use.getrange(96, 32)) << "|" << hex(total_in_use.getrange(64, 32)) << "|"
@@ -1060,6 +1070,9 @@ bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl, const Meter
 
     auto &meter_xbar = alloc.meter_xbar;
 
+    for (int i = 0; i < ActionFormat::CONTAINER_TYPES; i++) {
+        LOG2("Layout for type " << i << " is " << use->total_layouts[i]);
+    }
     bool allocated = alloc_meter_output(use->total_layouts, meter_xbar, tbl->name);
     if (!allocated) return false;
 
@@ -1114,39 +1127,57 @@ void ActionDataBus::update(cstring name, const Use &alloc) {
 
 void ActionDataBus::update_action_data(cstring name, const TableResourceAlloc *alloc,
                                        const IR::MAU::Table *tbl) {
+    const IR::MAU::ActionData *ad = nullptr;
     for (auto back_at : tbl->attached) {
         auto at = back_at->attached;
         auto ad = at->to<IR::MAU::ActionData>();
-        if (ad == nullptr) continue;
-        if (shared_action_profiles.count(ad))
-            return;
-        shared_action_profiles.emplace(ad);
+        if (ad != nullptr)
+            break;
     }
+    if (ad) {
+        if (allocated_attached.count(ad) > 0)
+            return;
+    }
+
     update(name, alloc->action_data_xbar);
+    if (ad)
+        allocated_attached.emplace(ad, alloc->action_data_xbar);
 }
 
 void ActionDataBus::update_meter(cstring name, const TableResourceAlloc *alloc,
                                  const IR::MAU::Table *tbl) {
-    bool has_meter = false;
+    const IR::MAU::AttachedMemory *am = nullptr;
+    const IR::MAU::StatefulAlu *salu = nullptr;
     for (auto back_at : tbl->attached) {
         auto at = back_at->attached;
-        // only test for IR::MAU::Meter?
-        auto am = at->to<IR::MAU::AttachedMemory>();
-        if (am == nullptr) continue;
-        has_meter = true;
-        if (shared_meters.count(am))
-            return;
-        shared_meters.emplace(am);
-
-        if (auto salu = am->to<IR::MAU::StatefulAlu>()) {
-            if (reduction_or_groups.count(salu->reduction_or_group))
-                return;
-            reduction_or_groups.emplace(salu->reduction_or_group);
+        auto mtr = at->to<IR::MAU::Meter>();
+        salu = at->to<IR::MAU::StatefulAlu>();
+        if ((mtr && mtr->alu_output()) || salu) {
+            am = at;
+            break;
         }
     }
-    if (has_meter) {
-        update(name, alloc->meter_xbar);
+
+    if (am) {
+        if (allocated_attached.count(am) > 0)
+            return;
+    } else {
+        return;
     }
+
+    if (salu && salu->reduction_or_group) {
+        if (reduction_or_mapping.count(salu->reduction_or_group))
+            return;
+    }
+
+    // Only update if the meter/stateful alu use is not previously accounted for
+    update(name + "$" + am->name, alloc->meter_xbar);
+
+    if (salu && salu->reduction_or_group) {
+        reduction_or_mapping.emplace(salu->reduction_or_group, alloc->meter_xbar);
+    }
+
+    allocated_attached.emplace(am, alloc->meter_xbar);
 }
 
 void ActionDataBus::update(cstring name, const TableResourceAlloc *alloc,

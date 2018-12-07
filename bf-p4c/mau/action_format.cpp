@@ -258,7 +258,7 @@ cstring ActionFormat::Use::get_format_name(int start_byte, cont_type_t type,
 
 bool ActionFormat::Use::in_layouts(int byte_offset, const bitvec layouts[CONTAINER_TYPES]) const {
     for (int i = 0; i < CONTAINER_TYPES; i++) {
-        if (layouts[i].getrange(byte_offset / (CONTAINER_SIZES[i] / 8), (CONTAINER_SIZES[i] / 8)))
+        if (layouts[i].getrange(byte_offset, (CONTAINER_SIZES[i] / 8)))
             return true;
     }
     return false;

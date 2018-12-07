@@ -652,96 +652,6 @@ bool TablePlacement::try_alloc_imem(Placed *next, const Placed *done,
     return true;
 }
 
-static void coord_action_data_xbar(const TablePlacement::Placed *curr,
-                                   const TablePlacement::Placed *done,
-                                   TableResourceAlloc *resource,
-                                   safe_vector<TableResourceAlloc *> &prev_resources) {
-    const IR::MAU::ActionData *ad = nullptr;
-    for (auto at : curr->table->attached) {
-        if ((ad = at->attached->to<IR::MAU::ActionData>()) != nullptr) break;
-    }
-    if (ad == nullptr) return;
-    if (!resource->action_data_xbar.empty())
-        return;
-    int j = 0;
-    for (auto *p = done; p && p->stage == curr->stage; p = p->prev, ++j) {
-        const IR::MAU::ActionData *p_ad = nullptr;
-        if (p == curr)
-            continue;
-        for (auto back_at : p->table->attached) {
-            auto at = back_at->attached;
-            if ((p_ad = at->to<IR::MAU::ActionData>()) != nullptr)
-                break;
-        }
-        if (p_ad == ad && !p->resources->action_data_xbar.empty()) {
-            resource->action_data_xbar = prev_resources[j]->action_data_xbar;
-            resource->instr_mem = prev_resources[j]->instr_mem;
-            break;
-        }
-    }
-}
-
-// handle sharing the same meters across multiple tables
-static void coord_meter_xbar(const TablePlacement::Placed *curr,
-                             const TablePlacement::Placed *done,
-                             TableResourceAlloc *resource,
-                             safe_vector<TableResourceAlloc *> &prev_resources) {
-    const IR::MAU::AttachedMemory *am = nullptr;
-    for (auto at : curr->table->attached) {
-        if ((am = at->attached->to<IR::MAU::AttachedMemory>()) != nullptr) break;
-    }
-    if (am == nullptr) return;
-    if (!resource->meter_xbar.empty())
-        return;
-    int j = 0;
-    for (auto *p = done; p && p->stage == curr->stage; p = p->prev, ++j) {
-        const IR::MAU::AttachedMemory *p_am = nullptr;
-        if (p == curr)
-            continue;
-        for (auto back_at : p->table->attached) {
-            auto at = back_at->attached;
-            if ((p_am = at->to<IR::MAU::AttachedMemory>()) != nullptr)
-                break;
-        }
-        if (p_am == am && !p->resources->meter_xbar.empty()) {
-            resource->meter_xbar = prev_resources[j]->meter_xbar;
-            break;
-        }
-    }
-}
-
-// handle reduction or group for multiple stateful alus
-static void coord_reduction_or_group(const TablePlacement::Placed *curr,
-        const TablePlacement::Placed *done,
-        TableResourceAlloc *resource,
-        safe_vector<TableResourceAlloc *> &prev_resources) {
-    const IR::MAU::StatefulAlu *am = nullptr;
-    for (auto at : curr->table->attached) {
-        if ((am = at->attached->to<IR::MAU::StatefulAlu>()) != nullptr) break;
-    }
-    if (am == nullptr) return;
-    if (!resource->meter_xbar.empty())
-        return;
-    int j = 0;
-    for (auto *p = done; p && p->stage == curr->stage; p = p->prev, ++j) {
-        const IR::MAU::StatefulAlu *p_am = nullptr;
-        if (p == curr)
-            continue;
-        for (auto back_at : p->table->attached) {
-            auto at = back_at->attached;
-            if ((p_am = at->to<IR::MAU::StatefulAlu>()) != nullptr)
-                break;
-        }
-        if (p_am == nullptr)
-            continue;
-        if (p_am->reduction_or_group == am->reduction_or_group &&
-            !p->resources->meter_xbar.empty()) {
-            resource->meter_xbar = prev_resources[j]->meter_xbar;
-            break;
-        }
-    }
-}
-
 /// Check an indirect attached table to see if it can be duplicated across stages, or if there
 /// must be only a single copy of (each element of) the table.  This does not consider
 /// whether it is a good idea to duplicate the table (not a good idea for large tables and
@@ -1071,15 +981,6 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv, const IR::MA
     LOG2("  try_place_table returning " << rv->entries << " of " << rv->name <<
          " in stage " << rv->stage <<
          (rv->need_more_match ? " (need more match)" : rv->need_more ? " (need more)" : ""));
-    int i = 0;
-    for (auto *p = done; p && p->stage == rv->stage; p = p->prev, ++i) {
-        coord_action_data_xbar(p, done, prev_resources[i], prev_resources);
-        coord_meter_xbar(p, done, prev_resources[i], prev_resources);
-        coord_reduction_or_group(p, done, prev_resources[i], prev_resources);
-    }
-    coord_action_data_xbar(rv, done, resources, prev_resources);
-    coord_meter_xbar(rv, done, resources, prev_resources);
-    coord_reduction_or_group(rv, done, resources, prev_resources);
     if (done) {
         if (done->stage == rv->stage)
             done = done->update_resources(rv, 0, prev_resources);
