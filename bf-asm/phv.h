@@ -87,7 +87,11 @@ public:
     };
 protected:
     std::vector<Register *> regs;
-    std::map<std::string, Slice> names[3];
+    struct PerStageInfo {
+        int     max_stage = INT_MAX;
+        Slice   slice;
+    };
+    std::map<std::string, std::map<int, PerStageInfo>> names[3];
 private:
     std::map<const Register *, std::pair<gress_t, std::vector<std::string>>, ptrless<Register>>
                 user_defined;
@@ -102,7 +106,8 @@ private:
 
     void init_phv(target_t);
     void gen_phv_field_size_map();
-    int addreg(gress_t gress, const char *name, const value_t &what);
+    int addreg(gress_t gress, const char *name, const value_t &what,
+               int stage = -1, int max_stage = INT_MAX);
     int get_position_offset(gress_t gress, std::string name);
     void add_phv_field_sizes(gress_t gress, std::string name, int size) {
         bool is_pov = (name.find(".$valid") != std::string::npos);
@@ -115,31 +120,39 @@ private:
             return phv_pov_field_sizes[gress][name];
         return 0; }
 public:
-    static const Slice *get(gress_t gress, const std::string &name) {
+    static const Slice *get(gress_t gress, int stage, const std::string &name) {
         phv.init_phv(options.target);
-        auto it = phv.names[gress].find(name);
-        if (it == phv.names[gress].end()) return 0;
-        return &it->second; }
-    static const Slice *get(gress_t gress, const char *name) {
-        return get(gress, std::string(name)); }
+        if (!phv.names[gress].count(name)) return 0;
+        auto &per_stage = phv.names[gress].at(name);
+        auto it = per_stage.upper_bound(stage);
+        if (it == per_stage.begin()) {
+            if (it == per_stage.end() || stage != -1)
+                return 0;
+        } else {
+            --it; }
+        if (stage > it->second.max_stage ) return 0;
+        return &it->second.slice; }
+    static const Slice *get(gress_t gress, int stg, const char *name) {
+        return get(gress, stg, std::string(name)); }
     class Ref : public MatchSource{
     protected:
         gress_t         gress_;
         std::string     name_;
+        int             stage;
         int             lo, hi;
     public:
         int             lineno;
         Ref() : gress_(INGRESS), lineno(-1) {}
-        Ref(gress_t g, const value_t &n);
-        Ref(gress_t g, int line, const std::string &n, int l, int h) :
-            gress_(g), name_(n), lo(l), hi(h), lineno(line) {}
-        Ref(const Ref &r, int l, int h) : gress_(r.gress_), name_(r.name_),
+        Ref(gress_t g, int stage, const value_t &n);
+        Ref(gress_t g, int stage, int line, const std::string &n, int l, int h) :
+            gress_(g), name_(n), stage(stage), lo(l), hi(h), lineno(line) {}
+        Ref(const Ref &r, int l, int h) : gress_(r.gress_), name_(r.name_), stage(r.stage),
             lo(r.lo < 0 ? l : r.lo + l), hi(r.lo < 0 ? h : r.lo + h),
             lineno(r.lineno) { BUG_CHECK(r.hi < 0 || hi <= r.hi); }
         Ref(const Register &r, gress_t gr, int lo = -1, int hi = -1);
         explicit operator bool() const { return lineno >= 0; }
         Slice operator*() const {
-            if (auto *s = phv.get(gress_, name_)) {
+            if (auto *s = phv.get(gress_, stage, name_)) {
                 if (hi >= 0) return Slice(*s, lo, hi);
                 return *s;
             } else {
@@ -151,7 +164,7 @@ public:
                 return true;
             return **this == *a; }
         bool check() const {
-            if (auto *s = phv.get(gress_, name_)) {
+            if (auto *s = phv.get(gress_, stage, name_)) {
                 if (hi >= 0 && !Slice(*s, lo, hi).valid) {
                     error(lineno, "Invalid slice of %s", name_.c_str());
                     return false; }
@@ -166,7 +179,7 @@ public:
         int hibit() const { return hi < 0 ? (**this).size() - 1 : hi; }
         unsigned size() const override {
             if (lo >= 0) return hi - lo + 1;
-            if (auto *s = phv.get(gress_, name_)) return s->size();
+            if (auto *s = phv.get(gress_, stage, name_)) return s->size();
             return 0; }
         bool merge(const Ref &r);
         std::string toString() const override;

@@ -38,7 +38,7 @@ void Parser::start(int lineno, VECTOR(value_t) args) {
 }
 void Parser::input(VECTOR(value_t) args, value_t data) {
     if (args[0] == "ghost") {
-        ghost_parser = Phv::Ref(GHOST, data);
+        ghost_parser = Phv::Ref(GHOST, 0, data);
         return; }
     if (!CHECKTYPE(data, tMAP)) return;
     for (gress_t gress : Range(INGRESS, EGRESS)) {
@@ -80,7 +80,7 @@ void Parser::input(VECTOR(value_t) args, value_t data) {
                     error(kv.key.lineno, "Multiple parser_error declarations");
                     warning(parser_error[gress].lineno, "Previous was here");
                 } else
-                    parser_error[gress] = Phv::Ref(gress, kv.value);
+                    parser_error[gress] = Phv::Ref(gress, 0, kv.value);
                 continue; }
             if (kv.key == "counter_init") {
                 if (!CHECKTYPE2(kv.value, tVEC, tMAP)) continue;
@@ -105,16 +105,16 @@ void Parser::input(VECTOR(value_t) args, value_t data) {
             if (kv.key == "multi_write") {
                 if (kv.value.type == tVEC)
                     for (auto &el : kv.value.vec)
-                        multi_write.emplace_back(gress, el);
+                        multi_write.emplace_back(gress, 0, el);
                 else
-                    multi_write.emplace_back(gress, kv.value);
+                    multi_write.emplace_back(gress, 0, kv.value);
                 continue; }
             if (kv.key == "init_zero") {
                 if (kv.value.type == tVEC)
                     for (auto &el : kv.value.vec)
-                        init_zero.emplace_back(gress, el);
+                        init_zero.emplace_back(gress, 0, el);
                 else
-                    init_zero.emplace_back(gress, kv.value);
+                    init_zero.emplace_back(gress, 0, kv.value);
                 continue; }
             if (kv.key == "hdr_len_adj") {
                 if (CHECKTYPE(kv.value, tINT))
@@ -314,7 +314,7 @@ Parser::Checksum::Checksum(gress_t gress, pair_t data) : lineno(data.key.lineno)
         } else if (kv.key == "dest") {
             if (kv.value.type == tCMD && kv.value == "clot" && kv.value.vec.size == 2)
                 tag = kv.value[1].i;
-            else dest = Phv::Ref(gress, kv.value);
+            else dest = Phv::Ref(gress, 0, kv.value);
         } else if (kv.key == "end_pos") {
             if (CHECKTYPE(kv.value, tINT)) dst_bit_hdr_end_pos = kv.value.i;
         } else if (kv.key == "mask") {
@@ -846,7 +846,7 @@ Parser::State::Match::Match(int l, gress_t gress, match_t m, VECTOR(pair_t) &dat
         } else if (kv.key == "field_mapping") {
             if (CHECKTYPE(kv.value, tMAP)) {
                 for (auto map : kv.value.map) {
-                    auto ref = Phv::Ref(gress, map.key);
+                    auto ref = Phv::Ref(gress, 0, map.key);
                     auto fm = FieldMapping(ref, map.value);
                     field_mapping.emplace_back(fm);
                 }
@@ -886,7 +886,7 @@ static value_t &extract_save_phv(value_t &data) {
 }
 
 Parser::State::Match::Save::Save(gress_t gress, int l, int h, value_t &data, int flgs) :
-    lo(l), hi(h), where(gress, extract_save_phv(data)), flags(flgs)
+    lo(l), hi(h), where(gress, 0, extract_save_phv(data)), flags(flgs)
 {
     if (hi < lo || hi-lo > 3 || hi-lo == 2)
         error(data.lineno, "Invalid parser extraction size");
@@ -894,7 +894,7 @@ Parser::State::Match::Save::Save(gress_t gress, int l, int h, value_t &data, int
         if (data.vec.size > 2 || data.vec.size < 1)
             error(data.lineno, "Can only extract into single or pair");
         if (data.vec.size == 2)
-            second = Phv::Ref(gress, data[1]); }
+            second = Phv::Ref(gress, 0, data[1]); }
     if (data.type == tCMD) {
         if (data[0] == "offset")
             flags |= OFFSET;
@@ -903,7 +903,7 @@ Parser::State::Match::Save::Save(gress_t gress, int l, int h, value_t &data, int
 }
 
 Parser::State::Match::Set::Set(gress_t gress, value_t &data, int v, int flgs) :
-    where(gress, extract_save_phv(data)), what(v), flags(flgs)
+    where(gress, 0, extract_save_phv(data)), what(v), flags(flgs)
 {
     if (data.type == tCMD) {
         if (data[0] == "offset")

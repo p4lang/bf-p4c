@@ -56,6 +56,7 @@ end
 
 python
 import sys
+import re
 
 def template_split(s):
     parts = []
@@ -74,6 +75,28 @@ def template_split(s):
                 bracket_level += 1
     parts.append("".join(current))
     return parts
+
+TYPE_CACHE = {}
+
+def lookup_type(typename):
+    """Return a gdb.Type object represents given `typename`.
+    For example, x.cast(ty('Buffer'))"""
+    if typename in TYPE_CACHE:
+        return TYPE_CACHE[typename]
+
+    m0 = re.match(r"^(.*\S)\s*const$", typename)
+    m1 = re.match(r"^(.*\S)\s*[*|&]$", typename)
+    if m0 is not None:
+        tp = lookup_type(m0.group(1))
+    elif m1 is None:
+        tp = gdb.lookup_type(typename)
+    else:
+        if m1.group(0).endswith('*'):
+            tp = lookup_type(m1.group(1)).pointer()
+        else:
+            tp = lookup_type(m1.group(1)).reference()
+    TYPE_CACHE[typename] = tp
+    return tp
 
 class ordered_map_Printer:
     "Print an ordered_map<>"
@@ -99,6 +122,42 @@ class ordered_map_Printer:
         def next(self): return self.__next__()
     def children(self):
         return self._iter(self.eltype, self.val['data']['_M_impl']['_M_node']['_M_next'],
+                          self.val['data']['_M_impl']['_M_node'].address)
+
+class ordered_set_Printer:
+    "Print an ordered_set<>"
+    def __init__(self, val):
+        self.val = val
+        self.args = template_split(val.type.tag)
+        self.eltypestr = self.args[0]
+        self.eltype = lookup_type(self.args[0])
+        self.isptr = True if re.match(r"^.*[*]$", self.args[0]) else False
+    def to_string(self):
+        return "ordered_set<..>"
+    class _iter:
+        def __init__(self, eltype, eltypestr, isptr, it, e):
+            self.eltype = eltype
+            self.eltypestr = eltypestr
+            self.isptr = isptr
+            self.it = it
+            self.e = e
+            self.idx = 0
+        def __iter__(self):
+            return self
+        def __next__(self):
+            if self.it == self.e:
+                raise StopIteration
+            el = (self.it + 1).cast(self.eltype.pointer()).dereference()
+            self.it = self.it.dereference()['_M_next']
+            idx = self.idx
+            self.idx = idx + 1
+            if self.isptr:
+                return ("[%d]" % idx, "(" + self.eltypestr + ")" + str(el))
+            return ("[%d]" % idx, el);
+        def next(self): return self.__next__()
+    def children(self):
+        return self._iter(self.eltype, self.eltypestr, self.isptr,
+                          self.val['data']['_M_impl']['_M_node']['_M_next'],
                           self.val['data']['_M_impl']['_M_node'].address)
 
 class ActionFormatUsePrinter(object):
@@ -530,6 +589,8 @@ class UniqueIdPrinter(object):
 def find_pp(val):
     if str(val.type.tag).startswith('ordered_map<'):
         return ordered_map_Printer(val)
+    if str(val.type.tag).startswith('ordered_set<'):
+        return ordered_set_Printer(val)
     if str(val.type.tag).startswith('safe_vector<bool'):
         return safe_vector_bool_Printer(val)
     if str(val.type.tag).startswith('safe_vector<'):

@@ -18,7 +18,7 @@ protected:
 public:
     int lineno;
     bfn_hash_algorithm_t hash_algorithm;
-    static HashExpr *create(gress_t, const value_t &);
+    static HashExpr *create(gress_t, int stage, const value_t &);
     virtual void build_algorithm() = 0;
     virtual bool check_ixbar(InputXbar *ix, int grp) = 0;
     virtual void gen_data(bitvec &data, int bit, InputXbar *ix, int grp);

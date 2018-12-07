@@ -9,6 +9,7 @@
 enum {
     // limits over all targets
     MAX_DEPARSER_CHECKSUM_UNITS = 8,
+    DEPARSER_STAGE = INT_MAX,  // greater than the number of stages
 };
 
 class Deparser : public Section {
@@ -22,9 +23,10 @@ public:
         const int &lineno = val.lineno;
         Val() {}
         virtual ~Val() {}
-        Val(gress_t gr, const value_t &v) : val(gr, v) {}
-        Val(gress_t gr, const value_t &v, const value_t &p) : val(gr, v), pov(gr, p) {}
-        Val(gress_t gr, int tag, const value_t &p) : tag(tag), pov(gr, p) {}
+        Val(gress_t gr, const value_t &v) : val(gr, DEPARSER_STAGE, v) {}
+        Val(gress_t gr, const value_t &v, const value_t &p)
+        : val(gr, DEPARSER_STAGE, v), pov(gr, DEPARSER_STAGE, p) {}
+        Val(gress_t gr, int tag, const value_t &p) : tag(tag), pov(gr, DEPARSER_STAGE, p) {}
         Val &operator=(const Val &a) { val = a.val; tag = a.tag; pov = a.pov; return *this; }
         explicit operator bool() const { return is_phv() || is_clot(); }
         Phv::Slice operator*() const { return *val; }
@@ -63,7 +65,7 @@ public:
                 for (auto &kv : m.map) {
                     if (kv.key == "pov") {
                         if (pov) error(kv.value.lineno, "Duplicate POV");
-                        pov = ::Phv::Ref(gr, kv.value);
+                        pov = ::Phv::Ref(gr, DEPARSER_STAGE, kv.value);
                     } else if (kv.key == "swap" && CHECKTYPE(kv.value, tINT))
                         swap = kv.value.i;
                     else

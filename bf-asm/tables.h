@@ -1300,8 +1300,8 @@ public:
     struct MatchKey {
         int                     offset;
         Phv::Ref                val;
-        MatchKey(gress_t gr, value_t &v) : offset(-1), val(gr, v) {}
-        MatchKey(int off, gress_t gr, value_t &v) : offset(off), val(gr, v) {}
+        MatchKey(gress_t gr, int stg, value_t &v) : offset(-1), val(gr, stg, v) {}
+        MatchKey(int off, gress_t gr, int stg, value_t &v) : offset(off), val(gr, stg, v) {}
         bool operator<(const MatchKey &a) const { return offset < a.offset; }
     };
 private:

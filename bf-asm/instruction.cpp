@@ -94,9 +94,9 @@ struct operand {
     };
     struct Phv : Base {
         ::Phv::Ref      reg;
-        Phv(int line, gress_t g, const value_t &n) : Base(line), reg(g, n) {}
-        Phv(int line, gress_t g, const std::string &n, int l, int h) :
-            Base(line), reg(g, line, n, l, h) {}
+        Phv(int line, gress_t g, int stage, const value_t &n) : Base(line), reg(g, stage, n) {}
+        Phv(int line, gress_t g, int stage, const std::string &n, int l, int h) :
+            Base(line), reg(g, stage, line, n, l, h) {}
         Phv(const ::Phv::Ref &r) : Base(r.lineno), reg(r) {}
         bool equiv(const Base *a_) const override {
             if (auto *a = dynamic_cast<const Phv *>(a_)) {
@@ -424,7 +424,7 @@ struct operand {
         return *this; }
     ~operand() { delete op; }
     operand(Table *tbl, const Table::Actions::Action *act, const value_t &v);
-    operand(gress_t gress, const value_t &v) : op(new Phv(v.lineno, gress, v)) {}
+    operand(gress_t gress, int stage, const value_t &v) : op(new Phv(v.lineno, gress, stage, v)) {}
     operand(const ::Phv::Ref &r) : op(new Phv(r)) {}
     bool valid() const { return op != 0; }
     bool operator==(operand &a) {
@@ -502,8 +502,8 @@ auto operand::Named::lookup(Base *&ref) -> Base * {
         }
     } else if (tbl->find_on_actionbus(name, mod, lo, hi >= 0 ? hi : 7, 0, &len) >= 0) {
         ref = new Action(lineno, name, mod, tbl, lo, hi >= 0 ? hi : len - 1, p4name);
-    } else if (::Phv::get(tbl->gress, name)) {
-        ref = new Phv(lineno, tbl->gress, name, lo, hi);
+    } else if (::Phv::get(tbl->gress, tbl->stage->stageno, name)) {
+        ref = new Phv(lineno, tbl->gress, tbl->stage->stageno, name, lo, hi);
     } else if (sscanf(name.c_str(), "A%d%n", &slot, &len) >= 1 &&
                len == (int)name.size() && slot >= 0 && slot < 32) {
         ref = new RawAction(lineno, slot, lo);
@@ -512,7 +512,7 @@ auto operand::Named::lookup(Base *&ref) -> Base * {
     } else if (Table::all.count(name)) {
         ref = new Action(lineno, name, mod, tbl, lo, hi, p4name);
     } else {
-        ref = new Phv(lineno, tbl->gress, name, this->lo, hi); }
+        ref = new Phv(lineno, tbl->gress, tbl->stage->stageno, name, this->lo, hi); }
     if (ref != this) delete this;
     return ref;
 }
@@ -563,7 +563,7 @@ struct AluOP : VLIWInstruction {
     operand     src1, src2;
     AluOP(const Decode *op, Table *tbl, const Table::Actions::Action *act, const value_t &d,
           const value_t &s1, const value_t &s2)
-    : VLIWInstruction(d.lineno), opc(op), dest(tbl->gress, d),
+    : VLIWInstruction(d.lineno), opc(op), dest(tbl->gress, tbl->stage->stageno + 1, d),
       src1(tbl, act, s1), src2(tbl, act, s2) {}
     std::string name() { return opc->name; };
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
@@ -694,7 +694,7 @@ struct LoadConst : VLIWInstruction {
     Phv::Ref    dest;
     int         src;
     LoadConst(Table *tbl, const Table::Actions::Action *act, const value_t &d, int s)
-        : VLIWInstruction(d.lineno), dest(tbl->gress, d), src(s) {}
+        : VLIWInstruction(d.lineno), dest(tbl->gress, tbl->stage->stageno + 1, d), src(s) {}
     LoadConst(int line, Phv::Ref &d, int v) : VLIWInstruction(line), dest(d), src(v) {}
     std::string name() { return ""; };
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
@@ -772,12 +772,12 @@ struct CondMoveMux : VLIWInstruction {
     unsigned    cond;
     CondMoveMux(Table *tbl, const Decode *op, const Table::Actions::Action *act,
                 const value_t &d, const value_t &s)
-    : VLIWInstruction(d.lineno), opc(op), dest(tbl->gress, d), src1(tbl, act, s),
-      src2(tbl->gress, d) {}
+    : VLIWInstruction(d.lineno), opc(op), dest(tbl->gress, tbl->stage->stageno + 1, d),
+      src1(tbl, act, s), src2(tbl->gress, tbl->stage->stageno, d) {}
     CondMoveMux(Table *tbl, const Decode *op, const Table::Actions::Action *act,
                 const value_t &d, const value_t &s1, const value_t &s2)
-    : VLIWInstruction(d.lineno), opc(op), dest(tbl->gress, d), src1(tbl, act, s1),
-      src2(tbl, act, s2) {}
+    : VLIWInstruction(d.lineno), opc(op), dest(tbl->gress, tbl->stage->stageno + 1, d),
+      src1(tbl, act, s1), src2(tbl, act, s2) {}
     std::string name() { return opc->name; }
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
     void pass2(Table *tbl, Table::Actions::Action *) {
@@ -860,10 +860,12 @@ struct DepositField : VLIWInstruction {
     operand     src1, src2;
     DepositField(Table *tbl, const Table::Actions::Action *act, const value_t &d,
                  const value_t &s)
-    : VLIWInstruction(d.lineno), dest(tbl->gress, d), src1(tbl, act, s), src2(tbl->gress, d) {}
+    : VLIWInstruction(d.lineno), dest(tbl->gress, tbl->stage->stageno + 1, d),
+      src1(tbl, act, s), src2(tbl->gress, tbl->stage->stageno, d) {}
     DepositField(Table *tbl, const Table::Actions::Action *act, const value_t &d,
                  const value_t &s1, const value_t &s2)
-    : VLIWInstruction(d.lineno), dest(tbl->gress, d), src1(tbl, act, s1), src2(tbl, act, s2) {}
+    : VLIWInstruction(d.lineno), dest(tbl->gress, tbl->stage->stageno + 1, d),
+      src1(tbl, act, s1), src2(tbl, act, s2) {}
     DepositField(Table *tbl, const Set &);
     std::string name() { return "deposit_field"; }
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
@@ -953,7 +955,7 @@ struct Set : VLIWInstruction {
     operand     src;
     static AluOP::Decode *opA;
     Set(Table *tbl, const Table::Actions::Action *act, const value_t &d, const value_t &s)
-        : VLIWInstruction(d.lineno), dest(tbl->gress, d), src(tbl, act, s) {}
+    : VLIWInstruction(d.lineno), dest(tbl->gress, tbl->stage->stageno + 1, d), src(tbl, act, s) {}
     std::string name() { return "set"; };
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
     void pass2(Table *tbl, Table::Actions::Action *) { src->pass2(slot/Phv::mau_groupsize()); }
@@ -1038,8 +1040,8 @@ struct NulOP : VLIWInstruction {
                             const VECTOR(value_t) &op) const override;
     } *opc;
     Phv::Ref    dest;
-    NulOP(Table *tbl, const Table::Actions::Action *act, const Decode *o, const value_t &d) :
-        VLIWInstruction(d.lineno), opc(o), dest(tbl->gress, d) {}
+    NulOP(Table *tbl, const Table::Actions::Action *act, const Decode *o, const value_t &d)
+    : VLIWInstruction(d.lineno), opc(o), dest(tbl->gress, tbl->stage->stageno + 1, d) {}
     std::string name() { return opc->name; };
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
     void pass2(Table *, Table::Actions::Action *) {}
@@ -1092,14 +1094,14 @@ struct ShiftOP : VLIWInstruction {
     Phv::Ref    dest;
     operand     src1, src2;
     int         shift;
-    ShiftOP(const Decode *d, Table *tbl, const Table::Actions::Action *act, const value_t *ops) :
-            VLIWInstruction(ops->lineno), opc(d), dest(tbl->gress, ops[0]),
-            src1(tbl, act, ops[1]), src2(tbl, act, ops[2]) {
-                if (opc->use_src1) {
-                    if (CHECKTYPE(ops[3], tINT)) shift = ops[3].i;
-                } else {
-                    src2 = src1;
-                    if (CHECKTYPE(ops[2], tINT)) shift = ops[2].i; } }
+    ShiftOP(const Decode *d, Table *tbl, const Table::Actions::Action *act, const value_t *ops)
+    : VLIWInstruction(ops->lineno), opc(d), dest(tbl->gress, tbl->stage->stageno + 1, ops[0]),
+      src1(tbl, act, ops[1]), src2(tbl, act, ops[2]) {
+        if (opc->use_src1) {
+            if (CHECKTYPE(ops[3], tINT)) shift = ops[3].i;
+        } else {
+            src2 = src1;
+            if (CHECKTYPE(ops[2], tINT)) shift = ops[2].i; } }
     std::string name() { return opc->name; };
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
     void pass2(Table *tbl, Table::Actions::Action *) {

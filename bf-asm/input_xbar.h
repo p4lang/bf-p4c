@@ -71,7 +71,8 @@ class InputXbar {
     uint64_t hash_columns_used(unsigned hash);
     bool can_merge(HashGrp &a, HashGrp &b);
     void add_use(unsigned &byte_use, std::vector<Input> &a);
-    void setup_hash(std::map<int, HashCol> &, int, gress_t, value_t &, int lineno, int lo, int hi);
+    void setup_hash(std::map<int, HashCol> &, int id, gress_t, int stage, value_t &,
+                    int lineno, int lo, int hi);
     struct TcamUseCache {
        std::map<int, std::pair<const Input &, int>>     tcam_use;
        std::set<InputXbar *>                            ixbars_added;

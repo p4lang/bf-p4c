@@ -39,6 +39,14 @@ phv [<thread>]:
         # (16-bit) registers, or W0-W63 for word (32-bit) registers.
         # May also use R0-R224 for all registers in W/B/H order.
         # TW0-TW31, TB0-TB21, TH0-TH47, R256-R367 for tagalong
+    <name>:
+        stage <lo>..<hi>: <register> | <slice>
+        stage <int>: <register> | <slice>
+            # makes name an alias that varies over stages.  In the first form, the map
+            # applies just for those stages; in the second form it applies from that stage
+            # up until the next stage specified by another stage key.  Stage numbers
+            # apply to iPHV (input), so uses for VLIW destinations use the mapping for the
+            # next stage.  Parser uses stage 0 and deparser uses the end-of-pipe stage
     context_json:
         <name>:
             # any keys/vector/values here are converted to json and output into

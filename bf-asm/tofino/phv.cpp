@@ -18,12 +18,12 @@ void Target::Tofino::Phv::init_regs(::Phv &phv) {
             if (sizes[i].size) {
                 char buf[8];
                 sprintf(buf, "R%d", uid);
-                phv.names[INGRESS].emplace(buf, ::Phv::Slice(*reg, 0, sizes[i].size - 1));
-                phv.names[EGRESS].emplace(buf, ::Phv::Slice(*reg, 0, sizes[i].size - 1));
+                phv.names[INGRESS][buf][0].slice = ::Phv::Slice(*reg, 0, sizes[i].size - 1);
+                phv.names[EGRESS][buf][0].slice = ::Phv::Slice(*reg, 0, sizes[i].size - 1);
                 sprintf(buf, "%s%d", sizes[i].code, j);
                 strcpy(reg->name, buf);
-                phv.names[INGRESS].emplace(buf, ::Phv::Slice(*reg, 0, sizes[i].size - 1));
-                phv.names[EGRESS].emplace(buf, ::Phv::Slice(*reg, 0, sizes[i].size - 1)); } } }
+                phv.names[INGRESS][buf][0].slice = ::Phv::Slice(*reg, 0, sizes[i].size - 1);
+                phv.names[EGRESS][buf][0].slice = ::Phv::Slice(*reg, 0, sizes[i].size - 1); } } }
     BUG_CHECK(uid == phv.regs.size());
 }
 

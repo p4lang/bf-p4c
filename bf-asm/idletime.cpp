@@ -118,7 +118,7 @@ void IdletimeTable::write_regs(REGS &regs) {
             if (gress)
                 regs.cfg_regs.mau_cfg_mram_thread[col/3U] |= 1U << (col%3U*8U + row.row); }
         unsigned bus_index = row.bus;
-        if (bus_index < 8 && row.row >= 4)
+        if (bus_index < 10 && row.row >= 4)
             bus_index += 10;
         adrdist.adr_dist_idletime_adr_oxbar_ctl[bus_index/4]
             .set_subfield(logical_id | 0x10, 5 * (bus_index%4), 5); }

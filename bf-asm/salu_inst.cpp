@@ -41,7 +41,7 @@ struct operand {
     struct PhvReg : public Phv {
         ::Phv::Ref      reg;
         PhvReg *clone() const override { return new PhvReg(*this); }
-        PhvReg(gress_t gress, const value_t &v) : Phv(v.lineno), reg(gress, v) {}
+        PhvReg(gress_t gress, int stage, const value_t &v) : Phv(v.lineno), reg(gress, stage, v) {}
         void dbprint(std::ostream &out) const override { out << reg; }
         bool equiv(const Base *a_) const override {
             if (auto *a = dynamic_cast<const PhvReg *>(a_)) {
@@ -192,14 +192,14 @@ operand::operand(Table *tbl, const Table::Actions::Action *act, const value_t &v
         else if (*v == "phv_lo" || *v == "phv_hi")
             op = new PhvRaw(tbl->gress, *v);
         else
-            op = new PhvReg(tbl->gress, *v);
+            op = new PhvReg(tbl->gress, tbl->stage->stageno, *v);
     } else if ((v->type == tCMD) && (v->vec[0] == "math_table")) {
         //operand *opP = new operand(tbl, act, v->vec[1]);
         op = new MathFn(v->lineno, operand(tbl, act, v->vec[1]));
     } else if (*v == "phv_lo" || *v == "phv_hi")
         op = new PhvRaw(tbl->gress, *v);
     else
-        op = new PhvReg(tbl->gress, *v);
+        op = new PhvReg(tbl->gress, tbl->stage->stageno, *v);
 }
 
 enum salu_slot_use {
@@ -639,7 +639,7 @@ Instruction *TMatchOP::Decode::decode(Table *tbl, const Table::Actions::Action *
             } else if (op[idx] == "phv_lo" || op[idx] == "phv_hi") {
                 rv->srcb = new operand::PhvRaw(tbl->gress, op[idx]);
             } else {
-                rv->srcb = new operand::PhvReg(tbl->gress, op[idx]); } } }
+                rv->srcb = new operand::PhvReg(tbl->gress, tbl->stage->stageno, op[idx]); } } }
     if (!rv->srca || !rv->srcb || !rv->mask)
         error(rv->lineno, "Not enough operands to SALU tmatch");
     return rv;

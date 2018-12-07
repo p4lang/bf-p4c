@@ -140,25 +140,25 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "match") {
             if (kv.value.type == tVEC) {
                 for (auto &v : kv.value.vec)
-                    match.emplace_back(gress, v);
+                    match.emplace_back(gress, stage->stageno, v);
             } else if (kv.value.type == tMAP) {
                 for (auto &v : kv.value.map)
                     if (CHECKTYPE(v.key, tINT))
-                        match.emplace_back(v.key.i, gress, v.value);
+                        match.emplace_back(v.key.i, gress, stage->stageno, v.value);
             } else
-                match.emplace_back(gress, kv.value);
+                match.emplace_back(gress, stage->stageno, kv.value);
         } else if (kv.key == "range") {
             /* done above, to be before match parsing */
         } else if (kv.key == "xor") {
             if (kv.value.type == tVEC) {
                 for (auto &v : kv.value.vec)
-                    xor_match.emplace_back(gress, v);
+                    xor_match.emplace_back(gress, stage->stageno, v);
             } else if (kv.value.type == tMAP) {
                 for (auto &v : kv.value.map)
                     if (CHECKTYPE(v.key, tINT))
-                        xor_match.emplace_back(v.key.i, gress, v.value);
+                        xor_match.emplace_back(v.key.i, gress, stage->stageno, v.value);
             } else
-                xor_match.emplace_back(gress, kv.value);
+                xor_match.emplace_back(gress, stage->stageno, kv.value);
         } else if (kv.key.type == tINT || kv.key.type == tBIGINT || kv.key.type == tMATCH ||
                    (kv.key.type == tVEC && range_match != NONE))
         {

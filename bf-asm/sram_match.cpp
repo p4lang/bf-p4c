@@ -16,7 +16,7 @@ Table::Format::Field *SRamMatchTable::lookup_field(const std::string &n,
     if (!rv && !act.empty()) {
         if (auto call = get_action())
             rv = call->lookup_field(n, act); }
-    if (!rv && n == "immediate" && !::Phv::get(gress, n)) {
+    if (!rv && n == "immediate" && !::Phv::get(gress, stage->stageno, n)) {
         static Format::Field default_immediate(nullptr, 32, Format::Field::USED_IMMED);
         rv = &default_immediate; }
     return rv;
@@ -496,13 +496,13 @@ void SRamMatchTable::common_sram_setup(pair_t &kv, const VECTOR(pair_t) &data) {
                  if (v == "hash_group")
                      match.emplace_back(new HashMatchSource(v));
                  else
-                     match.emplace_back(new Phv::Ref(gress, v));
+                     match.emplace_back(new Phv::Ref(gress, stage->stageno, v));
             }
         } else {
             if (kv.value == "hash_group")
                 match.emplace_back(new HashMatchSource(kv.value));
             else
-                match.emplace_back(new Phv::Ref(gress, kv.value));
+                match.emplace_back(new Phv::Ref(gress, stage->stageno, kv.value));
         }
     } else if (kv.key == "match_group_map") {
         mgm_lineno = kv.value.lineno;

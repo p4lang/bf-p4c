@@ -34,33 +34,64 @@ void Phv::start(int lineno, VECTOR(value_t) args) {
               (options.target >= JBAY ? ", ghost" : 0));
 }
 
-int Phv::addreg(gress_t gress, const char *name, const value_t &what) {
+int Phv::addreg(gress_t gress, const char *name, const value_t &what, int stage, int max_stage) {
+    std::string phv_name = name;
+    remove_name_tail_range(phv_name);
+    if (stage == -1 && what.type == tMAP) {
+        int rv = 0;
+        for (auto &kv : what.map) {
+            auto &key = kv.key.type == tCMD && kv.key.vec.size > 1 && kv.key == "stage"
+                ? kv.key[1] : kv.key;
+            if (CHECKTYPE2(key, tINT, tRANGE)) {
+                if (key.type == tINT)
+                    rv |= addreg(gress, name, kv.value, key.i);
+                else
+                    rv |= addreg(gress, name, kv.value, key.lo, key.hi); } }
+        int size = -1;
+        PerStageInfo *prev = 0;
+        for (auto &ch : names[gress].at(name)) {
+            if (prev) {
+                if (prev->max_stage >= ch.first) {
+                    if (prev->max_stage != INT_MAX)
+                        error(what.lineno, "Overalpping assignments in stages %d..%d for %s",
+                              ch.first, prev->max_stage, name);
+                    prev->max_stage = ch.first - 1; } }
+            prev = &ch.second;
+            if (size < 0)
+                size = ch.second.slice->size();
+            else if (size != ch.second.slice->size() && size > 0) {
+                error(what.lineno, "Inconsitent sizes for %s", name);
+                size = 0; } }
+        if (prev && prev->max_stage >= Target::NUM_MAU_STAGES())
+            prev->max_stage = INT_MAX;
+        add_phv_field_sizes(gress, phv_name, size);
+        return rv; }
     if (!CHECKTYPE2M(what, tSTR, tCMD, "register or slice"))
         return -1;
     auto reg = what.type == tSTR ? what.s : what[0].s;
-    if (const Slice *sl = get(gress, reg)) {
-        std::string phv_name = name;
-        remove_name_tail_range(phv_name);
+    if (const Slice *sl = get(gress, stage, reg)) {
         if (sl->valid) {
             phv_use[gress][sl->reg.uid] = true;
             user_defined[&sl->reg].first = gress;
             user_defined[&sl->reg].second.push_back(name); }
+        auto &reg = names[gress][name];
         if (what.type == tSTR) {
-            names[gress].emplace(name, *sl);
-            add_phv_field_sizes(gress, phv_name, sl->size());
-            return 0; }
-        if (what.vec.size != 2) {
+            reg[stage].slice = *sl;
+        } else if (what.vec.size != 2) {
             error(what.lineno, "Syntax error, expecting bit or slice");
-            return -1; }
-        if (!CHECKTYPE2M(what[1], tINT, tRANGE, "bit or slice")) return -1;
-        if (what[1].type == tINT)
-            sl = &names[gress].emplace(name, Slice(*sl, what[1].i, what[1].i)).first->second;
-        else
-            sl = &names[gress].emplace(name, Slice(*sl, what[1].lo, what[1].hi)).first->second;
-        if (!sl->valid) {
+            return -1;
+        } else if (!CHECKTYPE2M(what[1], tINT, tRANGE, "bit or slice")) {
+            return -1;
+        } else if (what[1].type == tINT) {
+            reg[stage].slice = Slice(*sl, what[1].i, what[1].i);
+        } else {
+            reg[stage].slice = Slice(*sl, what[1].lo, what[1].hi); }
+        reg[stage].max_stage = max_stage;
+        if (!reg[stage].slice.valid) {
             error(what.lineno, "Invalid register slice");
             return -1; }
-        add_phv_field_sizes(gress, phv_name, sl->size());
+        if (stage == -1)
+            add_phv_field_sizes(gress, phv_name, reg[stage].slice->size());
         return 0;
     } else {
         error(what.lineno, "No register named %s", reg);
@@ -84,9 +115,9 @@ void Phv::input(VECTOR(value_t) args, value_t data) {
                 for (auto& prop : cjkv.value.map)
                     field_context_json[name][prop.key.s] = toJson(prop.value); }
         } else {
-            if (get(gress, kv.key.s) ||
-                (!args.size && get(EGRESS, kv.key.s)) ||
-                (!args.size && get(GHOST, kv.key.s))) {
+            if (get(gress, INT_MAX, kv.key.s) ||
+                (!args.size && get(EGRESS, INT_MAX, kv.key.s)) ||
+                (!args.size && get(GHOST, INT_MAX, kv.key.s))) {
                 error(kv.key.lineno, "Duplicate phv name '%s'", kv.key.s);
                 continue; }
             if (!addreg(gress, kv.key.s, kv.value) && args.size == 0) {
@@ -101,7 +132,8 @@ void Phv::output_names(json::map &out) {
                 + " [" + join(slot.second.second, ", ") + "]";
 }
 
-Phv::Ref::Ref(gress_t g, const value_t &n) : gress_(g), lo(-1), hi(-1), lineno(n.lineno) {
+Phv::Ref::Ref(gress_t g, int stage, const value_t &n)
+: gress_(g), stage(stage), lo(-1), hi(-1), lineno(n.lineno) {
     if (CHECKTYPE2M(n, tSTR, tCMD, "phv or register reference or slice")) {
         if (n.type == tSTR) {
             name_ = n.s;
@@ -119,7 +151,7 @@ Phv::Ref::Ref(gress_t g, const value_t &n) : gress_(g), lo(-1), hi(-1), lineno(n
 }
 
 Phv::Ref::Ref(const Phv::Register &r, gress_t gr, int l, int h)
-: gress_(gr), name_(r.name), lo(l), hi(h < 0 ? l : h), lineno(-1) { }
+: gress_(gr), stage(0), name_(r.name), lo(l), hi(h < 0 ? l : h), lineno(-1) { }
 
 bool Phv::Ref::merge(const Phv::Ref &r) {
     if (r.name_ != name_ || r.gress_ != gress_) return false;
@@ -268,7 +300,8 @@ void Phv::output(json::map &ctxt_json) {
                 unsigned field_lo = 0;
                 int field_size = 0;
                 json::map phv_record;
-                auto sl = get(gress, field_name);
+                auto sl = get(gress, i, field_name);
+                if (!sl) continue;
                 phv_lsb = sl->lo;
                 phv_msb = sl->hi;
                 field_lo = remove_name_tail_range(field_name, &field_size);

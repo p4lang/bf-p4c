@@ -119,7 +119,7 @@ bool StatefulTable::setup_jbay(const pair_t &kv) {
     } else if (kv.key == "stage_alu_id") {
         if (CHECKTYPE(kv.value, tINT)) {
             if (kv.value.i < 0 || kv.value.i >= 128)
-                error(kv.value.lineno, "invalid stage_alu_id %d", kv.value.i);
+                error(kv.value.lineno, "invalid stage_alu_id %" PRIi64, kv.value.i);
             stage_alu_id = kv.value.i; }
     } else
         return false;

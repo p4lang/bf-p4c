@@ -24,7 +24,7 @@ struct Deparser::FDEntry {
     };
     struct Phv : Base {
         ::Phv::Ref    val;
-        Phv(gress_t g, const value_t &v) : val(g, v) {}
+        Phv(gress_t g, const value_t &v) : val(g, DEPARSER_STAGE, v) {}
         void check(bitvec &phv_use) override {
             if (val.check()) {
                 phv_use[val->reg.uid] = 1;
@@ -82,7 +82,7 @@ struct Deparser::FDEntry {
                 for (auto &kv : data.map) {
                     if (kv.key == "pov") {
                         if (pov) error(kv.value.lineno, "Duplicate POV");
-                        pov = ::Phv::Ref(gress, kv.value);
+                        pov = ::Phv::Ref(gress, DEPARSER_STAGE, kv.value);
                     } else if (kv.key == "max_length" || kv.key == "length") {
                         if (length >= 0)
                             error(kv.value.lineno, "Duplicate length");
@@ -97,11 +97,12 @@ struct Deparser::FDEntry {
                             kv.value == "checksum")
                             csum_replace.emplace(kv.key.i, Checksum(gress, kv.value.vec[1]));
                         else
-                            phv_replace.emplace(kv.key.i, ::Phv::Ref(gress, kv.value));
+                            phv_replace.emplace(kv.key.i,
+                                                ::Phv::Ref(gress, DEPARSER_STAGE, kv.value));
                     } else {
                         error(kv.value.lineno, "Unknown key for clot: %s", value_desc(kv.key)); } }
             } else {
-                pov = ::Phv::Ref(gress, data); } }
+                pov = ::Phv::Ref(gress, DEPARSER_STAGE, data); } }
         void check(bitvec &phv_use) override {
             if (length < 0) length = Parser::clot_maxlen(gress, tag);
             if (length < 0) error(lineno, "No length for clot %s", tag.c_str());
@@ -132,13 +133,13 @@ struct Deparser::FDEntry {
             what = new Clot(gress, v.vec[1], p, pov);
         } else if (v.type == tCMD && v.vec.size == 2 && v == "checksum") {
             what = new Checksum(gress, v.vec[1]);
-            pov = ::Phv::Ref(gress, p);
+            pov = ::Phv::Ref(gress, DEPARSER_STAGE, p);
         } else if (v.type == tINT) {
             what = new Constant(gress, v);
-            pov = ::Phv::Ref(gress, p);
+            pov = ::Phv::Ref(gress, DEPARSER_STAGE, p);
         } else {
             what = new Phv(gress, v);
-            pov = ::Phv::Ref(gress, p); } }
+            pov = ::Phv::Ref(gress, DEPARSER_STAGE, p); } }
     void check(bitvec &phv_use) { what->check(phv_use); }
 };
 
@@ -213,13 +214,13 @@ Deparser::Digest::Digest(Deparser::Digest::Type *t, int l, VECTOR(pair_t) &data)
         else if (l.key.i < 0 || l.key.i >= t->count)
             error(l.key.lineno, "%s index %" PRId64 " out of range", t->name.c_str(), l.key.i);
         else if (l.value.type != tVEC)
-            layout[l.key.i].emplace_back(t->gress, l.value);
+            layout[l.key.i].emplace_back(t->gress, DEPARSER_STAGE, l.value);
         else {
             // XXX(amresh) : Need an empty layout entry if no values are present to
             // set the config registers correctly
             layout.emplace(l.key.i, std::vector<Phv::Ref>());
             for (auto &v : l.value.vec)
-                layout[l.key.i].emplace_back(t->gress, v); } }
+                layout[l.key.i].emplace_back(t->gress, DEPARSER_STAGE, v); } }
     if (!select)
         error(lineno, "No select key in %s spec", t->name.c_str());
 }
@@ -263,7 +264,7 @@ void Deparser::input(VECTOR(value_t) args, value_t data) {
             } else if (kv.key == "pov") {
                 if (!CHECKTYPE(kv.value, tVEC)) continue;
                 for (auto &ent : kv.value.vec)
-                    pov_order[gress].emplace_back(gress, ent);
+                    pov_order[gress].emplace_back(gress, DEPARSER_STAGE, ent);
             } else if (kv.key == "checksum") {
                 if (kv.key.type != tCMD || kv.key.vec.size != 2 || kv.key[1].type != tINT ||
                     kv.key[1].i < 0 || kv.key[1].i >= Target::DEPARSER_CHECKSUM_UNITS())

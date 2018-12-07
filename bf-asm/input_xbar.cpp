@@ -9,7 +9,7 @@
 #include <stdlib.h>
 
 void InputXbar::setup_hash(std::map<int, HashCol> &hash_table, int id,
-                           gress_t gress, value_t &what, int lineno, int lo, int hi)
+                           gress_t gress, int stage, value_t &what, int lineno, int lo, int hi)
 {
     if (lo < 0 || lo >= 52 || hi < 0 || hi >= 52) {
         error(lineno, "Hash column out of range");
@@ -23,7 +23,7 @@ void InputXbar::setup_hash(std::map<int, HashCol> &hash_table, int id,
             if (hash_table[lo].data.max().index() >= 64)
                 error(what.lineno, "Hash column value out of range");
             return; } }
-    HashExpr *fn = HashExpr::create(gress, what);
+    HashExpr *fn = HashExpr::create(gress, stage, what);
     if (!fn) return;
     fn->build_algorithm();
     int width = fn->width();
@@ -84,7 +84,7 @@ InputXbar::InputXbar(Table *t, bool tern, const VECTOR(pair_t) &data)
             auto &group = groups[Group(grtype, index)];
             if (kv.value.type == tVEC) {
                 for (auto &reg : kv.value.vec)
-                    group.emplace_back(Phv::Ref(t->gress, reg));
+                    group.emplace_back(Phv::Ref(t->gress, t->stage->stageno, reg));
             } else if (kv.value.type == tMAP) {
                 for (auto &reg : kv.value.map) {
                     if (!CHECKTYPE2(reg.key, tINT, tRANGE)) continue;
@@ -99,12 +99,13 @@ InputXbar::InputXbar(Table *t, bool tern, const VECTOR(pair_t) &data)
                               Group::group_type(grtype));
                     } else if (grtype == Group::TERNARY && lo >= 40) {
                         if (hi >= lo) hi -= 40;
-                        groups[Group(Group::BYTE, index/2)]
-                            .emplace_back(Phv::Ref(t->gress, reg.value), lo-40, hi);
+                        groups[Group(Group::BYTE, index/2)].emplace_back(
+                            Phv::Ref(t->gress, t->stage->stageno, reg.value), lo-40, hi);
                     } else {
-                        group.emplace_back(Phv::Ref(t->gress, reg.value), lo, hi); } }
+                        group.emplace_back(
+                            Phv::Ref(t->gress, t->stage->stageno, reg.value), lo, hi); } }
             } else
-                group.emplace_back(Phv::Ref(t->gress, kv.value));
+                group.emplace_back(Phv::Ref(t->gress, t->stage->stageno, kv.value));
         } else if (kv.key[0] == "hash") {
             if (kv.key[1] == "group") {
                 if (index >= EXACT_HASH_GROUPS) {
@@ -163,10 +164,10 @@ InputXbar::InputXbar(Table *t, bool tern, const VECTOR(pair_t) &data)
             if (!CHECKTYPE(kv.value, tMAP)) continue;
             for (auto &c : kv.value.map) {
                 if (c.key.type == tINT) {
-                    setup_hash(hash_tables[index], index, t->gress, c.value,
+                    setup_hash(hash_tables[index], index, t->gress, t->stage->stageno, c.value,
                                c.key.lineno, c.key.i, c.key.i);
                 } else if (c.key.type == tRANGE) {
-                    setup_hash(hash_tables[index], index, t->gress, c.value,
+                    setup_hash(hash_tables[index], index, t->gress, t->stage->stageno, c.value,
                                c.key.lineno, c.key.lo, c.key.hi);
                 } else if (CHECKTYPEM(c.key, tCMD, "hash column decriptor")) {
                     if (c.key.vec.size != 2 || c.key[0] != "valid" || c.key[1].type != tINT

@@ -71,7 +71,7 @@ void HashExpr::gen_data(bitvec &data, int logical_hash_bit, InputXbar *ix, int h
 
 class HashExpr::PhvRef : HashExpr {
     Phv::Ref what;
-    PhvRef(gress_t gr, const value_t &v) : HashExpr(v.lineno), what(gr, v) {}
+    PhvRef(gress_t gr, int stg, const value_t &v) : HashExpr(v.lineno), what(gr, stg, v) {}
     friend class HashExpr;
     bool check_ixbar(InputXbar *ix, int grp) override { return ::check_ixbar(what, ix, grp); }
     // void gen_data(bitvec &data, int bit, InputXbar *ix, int grp) override;
@@ -343,12 +343,12 @@ class HashExpr::Slice : HashExpr {
 
 // The ordering for crc expression is:
 // crc(poly, @optional init, @optional input_bits, map)
-HashExpr *HashExpr::create(gress_t gress, const value_t &what) {
+HashExpr *HashExpr::create(gress_t gress, int stage, const value_t &what) {
     if (what.type == tCMD) {
         if (what[0] == "random") {
             Random *rv = new Random(what.lineno);
             for (int i = 1; i < what.vec.size; i++)
-                rv->what.emplace_back(gress, what[i]);
+                rv->what.emplace_back(gress, stage, what[i]);
             return rv;
         } else if ((what[0] == "crc" || what[0] == "crc_rev" || what[0] == "crc_reverse") &&
                    CHECKTYPE2(what[1], tBIGINT, tINT)) {
@@ -398,20 +398,20 @@ HashExpr *HashExpr::create(gress_t gress, const value_t &what) {
                             error(kv.value.lineno, "Duplicate field at offset %" PRId64 "",
                                   kv.value.i);
                         else
-                            rv->what.emplace(kv.key.i, Phv::Ref(gress, kv.value)); } }
+                            rv->what.emplace(kv.key.i, Phv::Ref(gress, stage, kv.value)); } }
             } else {
                 for (; i < what.vec.size; i++) {
-                    rv->vec_what.emplace_back(gress, what[i]); } }
+                    rv->vec_what.emplace_back(gress, stage, what[i]); } }
             return rv;
         } else if (what[0] == "^") {
             Xor *rv = new Xor(what.lineno);
             for (int i = 1; i < what.vec.size; i++)
-                rv->what.push_back(create(gress, what[i]));
+                rv->what.push_back(create(gress, stage, what[i]));
             return rv;
         } else if (what[0] == "stripe") {
             Stripe *rv = new Stripe(what.lineno);
             for (int i = 1; i < what.vec.size; i++)
-                rv->what.push_back(create(gress, what[i]));
+                rv->what.push_back(create(gress, stage, what[i]));
             return rv;
         } else if (what[0] == "slice") {
             if (what.vec.size < 3 ||
@@ -422,7 +422,7 @@ HashExpr *HashExpr::create(gress_t gress, const value_t &what) {
                 error(what.lineno, "Invalid slice operation");
                 return nullptr; }
             Slice *rv = new Slice(what.lineno);
-            rv->what = create(gress, what[1]);
+            rv->what = create(gress, stage, what[1]);
             if (what[2].type == tRANGE) {
                 rv->start = what[2].lo;
                 rv->_width = what[2].hi - what[2].lo + 1;
@@ -432,11 +432,11 @@ HashExpr *HashExpr::create(gress_t gress, const value_t &what) {
                     rv->_width = what[3].i; }
             return rv;
         } else if (what.vec.size == 2) {
-            return new PhvRef(gress, what);
+            return new PhvRef(gress, stage, what);
         } else
             error(what.lineno, "Unsupported hash operation '%s'", what[0].s);
     } else if (what.type == tSTR) {
-        return new PhvRef(gress, what);
+        return new PhvRef(gress, stage, what);
     } else
         error(what.lineno, "Syntax error, expecting hash expression");
     return nullptr;

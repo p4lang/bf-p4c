@@ -29,9 +29,9 @@ void Target::JBay::Phv::init_regs(::Phv &phv) {
                         reg->parser_id_ = byte/2U;
                         reg->deparser_id_ = deparser_id++;
                         byte += reg->size/8U; }
-                    phv.names[INGRESS].emplace(reg->name, ::Phv::Slice(*reg, 0, reg->size - 1));
-                    phv.names[EGRESS].emplace(reg->name, ::Phv::Slice(*reg, 0, reg->size - 1)); 
-                    phv.names[GHOST].emplace(reg->name, ::Phv::Slice(*reg, 0, reg->size - 1)); 
+                    phv.names[INGRESS][reg->name][0].slice = ::Phv::Slice(*reg, 0, reg->size - 1);
+                    phv.names[EGRESS][reg->name][0].slice = ::Phv::Slice(*reg, 0, reg->size - 1); 
+                    phv.names[GHOST][reg->name][0].slice = ::Phv::Slice(*reg, 0, reg->size - 1); 
                 }
             }
         }
