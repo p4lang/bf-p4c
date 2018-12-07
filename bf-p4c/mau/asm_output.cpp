@@ -241,9 +241,10 @@ void MauAsmOutput::emit_action_data_format(std::ostream &out, indent_t indent,
 
 
 struct FormatHash {
+    using RangeOfConstant = std::map<le_bitrange, const IR::Constant*>;
     const safe_vector<Slice>    *match_data;
     const std::map<int, Slice>  *match_data_map;
-    const std::map<le_bitrange, const IR::Constant*> *constant_map;
+    const RangeOfConstant       *constant_map;
     const Slice                 *ghost;
     IR::MAU::hash_function      func;
     int                         total_bits = 0;

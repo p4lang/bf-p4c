@@ -544,6 +544,10 @@ class Field {
     }
 };
 
+/**
+ * The base class for PHV::FieldSlice and PHV::Constant.
+ * A field list could have both field slice and constant.
+ */
 class AbstractField {
  public:
     AbstractField() {}
