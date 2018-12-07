@@ -107,72 +107,63 @@ DEPARSER_INTRINSIC(JBay, INGRESS, hash_lag_ecmp_mcast, 2) {
         default:
             BUG(); } } }
 
-#define JBAY_SIMPLE_DIGEST(GRESS, NAME, TBL, SEL, IFID, CNT)                            \
+/** Macros to build Digest::Type objects for JBay -- 
+ * JBAY_SIMPLE_DIGEST: basic digest that appears one place in the config
+ * JBAY_ARRAY_DIGEST: config is replicated across Header+Output slices
+ * GRESS: INGRESS or EGRESS
+ * NAME: keyword use for this digest in the assembler
+ * ARRAY: Header+Ouput slice array (ho_i or ho_e, matching ingress or egress)
+ * TBL: config register containing the table config
+ * SEL: config register with the selection config
+ * IFID: YES or NO -- if this config needs to pregram id_phv
+ * CNT: how many patterns can be specified in the array
+ * REVERSE: YES or NO -- if the entries in the table are reverse (0 is last byte of header)
+ * IFIDX: YES or NO -- if CNT > 1 (if we index by id)
+ */
+
+#define JBAY_SIMPLE_DIGEST(GRESS, NAME, TBL, SEL, IFID, CNT, REVERSE, IFIDX)            \
+    JBAY_COMMON_DIGEST(GRESS, NAME, TBL, SEL, IFID, CNT, REVERSE, IFIDX)                \
+    JBAY_DIGEST_TABLE(GRESS, TBL, IFID, YES, CNT, REVERSE, IFIDX) }
+#define JBAY_ARRAY_DIGEST(GRESS, NAME, ARRAY, TBL, SEL, IFID, CNT, REVERSE, IFIDX)      \
+    JBAY_COMMON_DIGEST(GRESS, NAME, TBL, SEL, IFID, CNT, REVERSE, IFIDX)                \
+    for (auto &r : ARRAY) {                                                             \
+        JBAY_DIGEST_TABLE(GRESS, r.TBL, IFID, NO, CNT, REVERSE, IFIDX) } }
+
+#define JBAY_COMMON_DIGEST(GRESS, NAME, TBL, SEL, IFID, CNT, REVERSE, IFIDX)            \
     DEPARSER_DIGEST(JBay, GRESS, NAME, CNT, can_shift = true; ) {                       \
         SEL.phv = data.select.val->reg.deparser_id();                                   \
         JBAY_POV(GRESS, data.select, SEL)                                               \
         SEL.shft = data.shift + data.select->lo;                                        \
-        SEL.disable_ = 0;                                                               \
-        JBAY_DIGEST_TABLE(GRESS, TBL, IFID, YES, CNT) }
+        SEL.disable_ = 0;
 
-#define JBAY_ARRAY_DIGEST(GRESS, NAME, ARRAY, TBL, SEL, IFID, CNT)                      \
-    DEPARSER_DIGEST(JBay, GRESS, NAME, CNT, can_shift = true; ) {                       \
-        SEL.phv = data.select.val->reg.deparser_id();                                   \
-        JBAY_POV(GRESS, data.select, SEL)                                               \
-        SEL.shft = data.shift + data.select->lo;                                        \
-        SEL.disable_ = 0;                                                               \
-        for (auto &r : ARRAY) {                                                         \
-            JBAY_DIGEST_TABLE(GRESS, r.TBL, IFID, NO, CNT) } }
+#define JBAY_DIGEST_TABLE(GRESS, REG, IFID, IFVALID, CNT, REVERSE, IFIDX)                       \
+        for (auto &set : data.layout) {                                                         \
+            int id = set.first >> data.shift;                                                   \
+            int idx = 0;                                                                        \
+            REVERSE( int maxidx = REG IFIDX([id]).phvs.size() - 1; )                            \
+            bool first = true;                                                                  \
+            int last = -1;                                                                      \
+            for (auto &reg : set.second) {                                                      \
+                if (first) {                                                                    \
+                    first = false;                                                              \
+                    IFID( REG IFIDX([id]).id_phv = reg->reg.deparser_id(); continue; ) }        \
+                if (last == reg->reg.deparser_id()) continue;                                   \
+                for (int i = reg->reg.size/8; i > 0; i--)                                       \
+                    REG IFIDX([id]).phvs[REVERSE(maxidx -) idx++] = reg->reg.deparser_id();     \
+                last = reg->reg.deparser_id(); }                                                \
+            IFVALID( REG IFIDX([id]).valid = 1; )                                               \
+            REG IFIDX([id]).len = idx; }
 
-#define JBAY_DIGEST_TABLE(GRESS, REG, IFID, IFVALID, CNT)                               \
-        for (auto &set : data.layout) {                                                 \
-            int id = set.first >> data.shift;                                           \
-            int idx = 0;                                                                \
-            bool first = true;                                                          \
-            int last = -1;                                                              \
-            for (auto &reg : set.second) {                                              \
-                if (first) {                                                            \
-                    first = false;                                                      \
-                    IFID( REG[id].id_phv = reg->reg.deparser_id(); continue; ) }        \
-                if (last == reg->reg.deparser_id()) continue;                           \
-                for (int i = reg->reg.size/8; i > 0; i--)                               \
-                    REG[id].phvs[idx++] = reg->reg.deparser_id();                       \
-                last = reg->reg.deparser_id(); }                                        \
-            IFVALID( REG[id].valid = 1; )                                               \
-            REG[id].len = idx; }
-
-
-#define JBAY_LEARN_DIGEST(GRESS, NAME, REG, SEL, IFID, CNT)                            \
-    DEPARSER_DIGEST(JBay, GRESS, NAME, CNT, can_shift = true; ) {                       \
-        SEL.phv = data.select.val->reg.deparser_id();                                   \
-        JBAY_POV(GRESS, data.select, SEL)                                               \
-        SEL.shft = data.shift + data.select->lo;                                        \
-        SEL.disable_ = 0;                                                               \
-        for (auto &set : data.layout) {                                                 \
-            int id = set.first >> data.shift;                                           \
-            int idx = 0;                                                                \
-            bool first = true;                                                          \
-            int last = -1;                                                              \
-            for (auto &reg : set.second) {                                              \
-                if (first) {                                                            \
-                    first = false;                                                      \
-                    IFID( REG[id].id_phv = reg->reg.deparser_id(); continue; ) }        \
-                if (last == reg->reg.deparser_id()) continue;                           \
-                for (int i = reg->reg.size/8; i > 0; i--)  {                            \
-                    REG[id].phvs[47-idx] = reg->reg.deparser_id();                      \
-                    idx++; }                                                            \
-                last = reg->reg.deparser_id(); }                                        \
-            YES( REG[id].valid = 1; )                                               \
-            REG[id].len = idx; } }
-
-JBAY_LEARN_DIGEST(INGRESS, learning, regs.dprsrreg.inp.ipp.ingr.learn_tbl,
-                   regs.dprsrreg.inp.ipp.ingr.m_learn_sel, NO, 8)
+JBAY_SIMPLE_DIGEST(INGRESS, learning, regs.dprsrreg.inp.ipp.ingr.learn_tbl,
+                   regs.dprsrreg.inp.ipp.ingr.m_learn_sel, NO, 8, YES, YES)
 JBAY_ARRAY_DIGEST(INGRESS, mirror, regs.dprsrreg.ho_i, him.mirr_hdr_tbl.entry,
-                  regs.dprsrreg.inp.ipp.ingr.m_mirr_sel, YES, 16)
+                  regs.dprsrreg.inp.ipp.ingr.m_mirr_sel, YES, 16, NO, YES)
 JBAY_ARRAY_DIGEST(EGRESS, mirror, regs.dprsrreg.ho_e, hem.mirr_hdr_tbl.entry,
-                  regs.dprsrreg.inp.ipp.egr.m_mirr_sel, YES, 16)
+                  regs.dprsrreg.inp.ipp.egr.m_mirr_sel, YES, 16, NO, YES)
 JBAY_SIMPLE_DIGEST(INGRESS, resubmit, regs.dprsrreg.inp.ipp.ingr.resub_tbl,
-                   regs.dprsrreg.inp.ipp.ingr.m_resub_sel, NO, 8)
+                   regs.dprsrreg.inp.ipp.ingr.m_resub_sel, NO, 8, NO, YES)
+JBAY_SIMPLE_DIGEST(INGRESS, pgen, regs.dprsrreg.inp.ipp.ingr.pgen_tbl,
+                   regs.dprsrreg.inp.ipp.ingr.m_pgen, NO, 1, NO, NO)
 
 
 // all the jbay deparser subtrees with a dis or disable_ bit
