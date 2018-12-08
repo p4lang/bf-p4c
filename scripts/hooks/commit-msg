@@ -7,51 +7,51 @@ import re
 
 class Decorator:
   def get_branch(self):
-	name = subprocess.Popen("git symbolic-ref -q HEAD", shell=True,
-                                stdout=subprocess.PIPE).stdout.read()
-	return '/'.join(name.rstrip('\n').split('/')[2:])
+        name = subprocess.Popen("git symbolic-ref -q HEAD", shell=True,
+                                stdout=subprocess.PIPE).stdout.read().decode()
+        return '/'.join(name.rstrip('\n').split('/')[2:])
 
   def get_feature(self, branch):
-	l = branch.split('/')
-	if len(l) > 3:
-	  return l[2]
-	else:
-	  return None
+        l = branch.split('/')
+        if len(l) > 3:
+          return l[2]
+        else:
+          return None
 
   def get_fix(self, branch):
-	l = branch.split('/')
-	m = re.match("(brig|p4c|compiler|drv)-(\d+)", l[-1], re.IGNORECASE)
-	if m is not None:
-	  return m.group(1), m.group(2)
-	return None, None
+        l = branch.split('/')
+        m = re.match("(brig|p4c|compiler|drv)-(\d+)", l[-1], re.IGNORECASE)
+        if m is not None:
+          return m.group(1), m.group(2)
+        return None, None
 
   def __init__(self):
-	self.branch = self.get_branch()
-	self.feature = self.get_feature(self.branch)
-	self.project, self.fix = self.get_fix(self.branch)
+        self.branch = self.get_branch()
+        self.feature = self.get_feature(self.branch)
+        self.project, self.fix = self.get_fix(self.branch)
 
   def decorate(self, m):
-	fix = None
-	if self.fix is None:
-	  return m
+        fix = None
+        if self.fix is None:
+          return m
 
         summary = m.split('\n')[0]
-	fix = "%s-%s #assign #start-work #fixed %s #fixed" % \
+        fix = "%s-%s #assign #start-work #fixed %s #fixed" % \
               (self.project.upper(), self.fix, summary)
-	add_fix = True
-	count = 0
+        add_fix = True
+        count = 0
         n = ""
-	for l in m.split('\n'):
-	  if count == 0 and self.feature and feature not in l:
-	    n += "%s %s\n" % (feature, l)
-	  else:
-	    n += "%s\n" % l
-	    count += 1
-	  if fix in l:
-	    add_fix = False
-	if fix is not None and add_fix:
-	  n += '\n' + fix + '\n'
-	return n
+        for l in m.split('\n'):
+          if count == 0 and self.feature and feature not in l:
+            n += "%s %s\n" % (feature, l)
+          else:
+            n += "%s\n" % l
+            count += 1
+          if fix in l:
+            add_fix = False
+        if fix is not None and add_fix:
+          n += '\n' + fix + '\n'
+        return n
 
 msg = None
 with open(sys.argv[1], 'r+') as file:
