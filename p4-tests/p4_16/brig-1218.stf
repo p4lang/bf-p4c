@@ -1,0 +1,5 @@
+add t1 hdr.hdr1.a:0xff compute_hash()
+
+#        a   b   c       d
+expect 2 ff 0101 01 020202020303 aa 66
+packet 0 ff 0101 01 020202020303 aa 66
