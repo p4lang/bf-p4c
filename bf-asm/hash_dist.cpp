@@ -144,7 +144,7 @@ void HashDistribution::write_regs(REGS &regs, Table *tbl) {
         merge.mau_hash_group_expand[id/3].hash_slice_group1_expand = 1;
         merge.mau_hash_group_expand[id/3].hash_slice_group2_expand = expand - 7;
         merge.mau_hash_group_config.hash_group_enable |= 1 << (id + 1);
-        merge.mau_hash_group_config.hash_group_ctl.set_subfield(delay_type, 2 * (id + 2), 2);
+        merge.mau_hash_group_config.hash_group_ctl.set_subfield(delay_type, 2 * (id + 1), 2);
         break;
     default: BUG(); }
     for (int oxbar : Range(0, 4))
