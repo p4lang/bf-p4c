@@ -407,13 +407,48 @@ class CharacterizePower: public MauInspector {
        cycles_to_issue_credit_to_pmarb_ = 28;
        pmarb_cycles_from_receive_credit_to_issue_phv_to_mau_ = 11;
        minimum_egress_pipe_latency_ = 160;
-     } else {
-#if HAVE_JBAY
-      // Need a positive number so power check isn't always hit on JBay.
-      max_power_ = 1.0;
-      // Do not know power numbers yet for JBay, so skip.
-      WARNING("Tofino2 power characterization has not been implemented yet.");
-#endif  // HAVE_JBAY
+
+     } else if (Device::currentDevice() == Device::JBAY) {
+       double ram_scaling_factor = 1.0;  // No number available.
+       double tcam_scaling_factor = 1.0;  // No number available.
+
+       // Note note note: When table placement starts leveraging Tofino2's
+       // different predication mechanism, we will have to rewrite how
+       // the worst case table control flow path is found.  For now,
+       // we will default to Tofino's mechanism.
+       // Enforcing a pessimistic limit is better than setting customer
+       // expectations that anything is permissible.
+
+       // Tofino2 Memory access power numbers (in Watts)
+       // These numbers are currently based on library models, not measurements.
+       // This will be re-visited once real devices are in our lab.
+       // When a number was not available, we defaulted to Tofino's unscaled value.
+       max_power_ = 52.0;  // FIXME: Scaled Tofino by 1.3, but do not know value yet.
+       excess_threshold_ = 10.0;
+       ram_read_power_ = 0.00784163 * ram_scaling_factor;
+       ram_write_power_ = 0.023419 * ram_scaling_factor;  // No number available.
+       tcam_read_power_ = 0.03 * tcam_scaling_factor;
+       map_ram_read_power_ = 0.0025861 * ram_scaling_factor;  // No number available.
+       map_ram_write_power_ = 0.0030107 * ram_scaling_factor;  // No number available.
+       deferred_ram_read_power_ = 0.0029238 * ram_scaling_factor;  // No number available.
+       deferred_ram_write_power_ = 0.0020185 * ram_scaling_factor;  // No number available.
+
+       base_delay_ = 20;
+       base_predication_delay_ = 11;
+       tcam_delay_ = 2;
+       selector_delay_ = 8;
+       meter_lpf_delay_ = 4;
+       stateful_delay_ = 4;
+       mau_corner_turn_latency_ = 0;  // No corner turn in Tofino2.
+       concurrent_latency_contribution_ = 0;  // No concurrent in Tofino2.
+       action_latency_contribution_ = 2;
+
+       // FIXME: Do not know these 4 values yet, or whether deparser scaling will apply.
+       // Once these numbers are known, update usages in CharacterizePower::postorder.
+       deparser_max_phv_valid_ = 288;
+       cycles_to_issue_credit_to_pmarb_ = 28;
+       pmarb_cycles_from_receive_credit_to_issue_phv_to_mau_ = 11;
+       minimum_egress_pipe_latency_ = 0;
      }
 
      deparser_throughput_scaling_starts_ =
@@ -436,7 +471,11 @@ class CharacterizePower: public MauInspector {
        max_selector_words_.emplace(stage, 0);
        has_stateful_.emplace(stage, false);
        has_stats_.emplace(stage, false);
-       stage_dependency_to_previous_.emplace(stage, DEP_CONCURRENT);
+       if (Device::currentDevice() == Device::JBAY) {
+         stage_dependency_to_previous_.emplace(stage, DEP_ACTION);
+       } else {
+         stage_dependency_to_previous_.emplace(stage, DEP_CONCURRENT);
+       }
      }
   }
 

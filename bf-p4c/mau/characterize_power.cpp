@@ -185,10 +185,14 @@ void CharacterizePower::postorder(const IR::BFN::Pipe *) {
       LOG1("MAU latency (cycles): " << mau_latency);
       double scale_factor = 1.0;
 
-      if (mau_latency > 0 && mau_latency > deparser_throughput_scaling_starts_) {
-          scale_factor = deparser_max_phv_valid_ /
-                         (mau_latency + pmarb_cycles_from_receive_credit_to_issue_phv_to_mau_);
-          LOG1("Pipeline latency scaling factor: " << float2str(scale_factor * 100.0) << "%");
+      // FIXME: Do not know yet whether deparser throughput scaling will apply
+      // to devices other than Tofino.  Revisit once have devices in our lab.
+      if (Device::currentDevice() == Device::TOFINO) {
+        if (mau_latency > 0 && mau_latency > deparser_throughput_scaling_starts_) {
+            scale_factor = deparser_max_phv_valid_ /
+                           (mau_latency + pmarb_cycles_from_receive_credit_to_issue_phv_to_mau_);
+            LOG1("Pipeline latency scaling factor: " << float2str(scale_factor * 100.0) << "%");
+        }
       }
 
       worst_power *= scale_factor;
@@ -961,7 +965,7 @@ cstring CharacterizePower::printFeatures() {
         dep_t dep = stage_dependency_to_previous_.at(stage);
         if (dep == DEP_CONCURRENT) {
             deps << "concurrent";
-        } else if (dep == DEP_CONCURRENT) {
+        } else if (dep == DEP_ACTION) {
             deps << "action";
         } else {
             deps << "match";
