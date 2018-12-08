@@ -18,16 +18,25 @@ Visitor::profile_t Clustering::ClearClusteringStructs::init_apply(const IR::Node
 bool Clustering::FindComplexValidityBits::preorder(const IR::MAU::Instruction* inst) {
     bool has_non_val = false;
     const PHV::Field* dst_validity_bit = nullptr;
+    const PHV::Field* src_validity_bit = nullptr;
     for (auto* op : inst->operands) {
         auto* f = phv_i.field(op);
-        if (op == inst->operands[0] && f && f->pov)
+        if (op == inst->operands[0] && f && f->pov) {
             dst_validity_bit = f;
-        else if (!op->is<IR::Literal>())
-            has_non_val = true; }
+        } else if (!op->is<IR::Literal>()) {
+            has_non_val = true;
+            auto* d = phv_i.field(op);
+            if (d && d->pov) src_validity_bit = d;
+        }
+    }
 
     if (dst_validity_bit && has_non_val) {
-        LOG5("Found complex validity bit: " << dst_validity_bit);
-        self.complex_validity_bits_i.insert(dst_validity_bit); }
+        LOG5("Found destination complex validity bit: " << dst_validity_bit);
+        self.complex_validity_bits_i.insert(dst_validity_bit);
+        if (src_validity_bit != nullptr)
+            self.complex_validity_bits_i.insert(src_validity_bit);
+        LOG5("Found source complex validity bit: " << src_validity_bit);
+    }
 
     return false;
 }
@@ -662,10 +671,8 @@ void Clustering::MakeSuperClusters::end_apply() {
     // XXX(cole): Begin hack.  This is a hack to force POV bits to be grouped
     // into 8b chunks by placing them in slice lists, which is overly
     // restrictive.
-    auto* ingress_list = new PHV::SuperCluster::SliceList();
-    auto* egress_list = new PHV::SuperCluster::SliceList();
-    int ingress_list_bits = 0;
-    int egress_list_bits = 0;
+    ordered_set<const PHV::Field*> pov_bits;
+
     for (auto& f : phv_i) {
         // Don't bother adding unreferenced fields.
         if (!self.uses_i.is_referenced(&f)) continue;
@@ -679,37 +686,58 @@ void Clustering::MakeSuperClusters::end_apply() {
 
         // Skip valid bits involved in complex instructions, because they have
         // complicated packing constraints.
-        if (self.complex_validity_bits_i.find(&f) != self.complex_validity_bits_i.end())
+        if (self.complex_validity_bits_i.count(&f)) {
+            LOG5("Ignoring field " << f.name << " because it is a complex validity bit.");
             continue;
+        }
 
-        LOG5("Creating POV BIT LIST with " << f);
+        pov_bits.insert(&f);
+    }
 
-        // NB: Use references to mutate the appropriate list/counter.
-        auto& current_list = f.gress == INGRESS ? ingress_list : egress_list;
-        int& current_list_bits = f.gress == INGRESS ? ingress_list_bits : egress_list_bits;
+    for (int slice_list_size : { 32, 16, 8 }) {
+        LOG1("Attempting to create a POV slice list of size: " << slice_list_size << "b.");
+        auto* ingress_list = new PHV::SuperCluster::SliceList();
+        auto* egress_list = new PHV::SuperCluster::SliceList();
+        int ingress_list_bits = 0;
+        int egress_list_bits = 0;
 
-        // Check if any no-pack constraints have been inferred on the candidate field f and any
-        // other field already in the slice list.
-        bool any_pack_conflicts = std::any_of(current_list->begin(), current_list->end(),
-                [&](const PHV::FieldSlice& slice) {
-                    return conflicts_i.hasPackConflict(&f, slice.field());
-                });
-        if (any_pack_conflicts) {
-            LOG5("Ignoring POV bit " << f.name << " because of a pack conflict");
-            continue; }
-        if (f.no_pack()) {
-            ::error("POV Bit %1% is marked as no-pack", f.name);
-            continue; }
+        ordered_set<const PHV::Field*> allocated_pov_bits;
 
-        current_list->push_back(PHV::FieldSlice(&f));
-        current_list_bits += f.size;
+        for (const auto* f : pov_bits) {
+            LOG1("Creating POV BIT LIST with " << f);
+            // NB: Use references to mutate the appropriate list/counter.
+            auto& current_list = f->gress == INGRESS ? ingress_list : egress_list;
+            int& current_list_bits = f->gress == INGRESS ? ingress_list_bits : egress_list_bits;
 
-        // Make a new list after every 8 bits
-        if (current_list_bits >= 16) {
-            LOG5("Creating new POV slice list: " << current_list);
-            slice_lists_i.insert(current_list);
-            current_list = new PHV::SuperCluster::SliceList();
-            current_list_bits = 0; } }
+            // Check if any no-pack constraints have been inferred on the candidate field f and any
+            // other field already in the slice list.
+            bool any_pack_conflicts = std::any_of(current_list->begin(), current_list->end(),
+                    [&](const PHV::FieldSlice& slice) {
+                    return conflicts_i.hasPackConflict(f, slice.field());
+                    });
+            if (any_pack_conflicts) {
+                LOG1("Ignoring POV bit " << f->name << " because of a pack conflict");
+                continue; }
+            if (f->no_pack()) {
+                ::error("POV Bit %1% is marked as no-pack", f->name);
+                continue; }
+
+            current_list->push_back(PHV::FieldSlice(f));
+            current_list_bits += f->size;
+
+            // Make a new list after every 8 bits
+            if (current_list_bits >= slice_list_size) {
+                LOG1("Creating new POV slice list: " << current_list);
+                slice_lists_i.insert(current_list);
+                for (auto sl = current_list->begin(); sl != current_list->end(); sl++)
+                    allocated_pov_bits.insert((*sl).field());
+                current_list = new PHV::SuperCluster::SliceList();
+                current_list_bits = 0; } }
+
+        for (const auto* f : allocated_pov_bits)
+            if (pov_bits.count(f))
+                pov_bits.erase(f);
+    }
 
     // XXX(cole): end hack.
 

@@ -46,7 +46,9 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     # on stf2ptf
     # decaf: needs to work with CLOT allocation
     extensions/p4_tests/p4_14/stateful_init_regs.p4
+    extensions/p4_tests/p4_14/deparser_copy_opt_1.p4
     extensions/p4_tests/p4_14/deparser_copy_opt_2.p4
+    extensions/p4_tests/p4_14/deparser_copy_opt_3.p4
     )
 
 endif() # HARLYN_STF
@@ -63,16 +65,9 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "error.*Ran out of constant output slots"
-  # decaf: needs to work with CLOT allocation
-  extensions/p4_tests/p4_14/deparser_copy_opt_1.p4
-  extensions/p4_tests/p4_14/deparser_copy_opt_3.p4
-)
-
-p4c_add_xfail_reason("tofino2"
   "Ran out of tcam space in .* parser"
   testdata/p4_14_samples/issue583.p4
-  )
+)
 
 p4c_add_xfail_reason("tofino2"
   "PHV allocation was not successful"
@@ -81,29 +76,33 @@ p4c_add_xfail_reason("tofino2"
   testdata/p4_14_samples/07-FullTPHV2.p4
   testdata/p4_14_samples/08-FullTPHV3.p4
   switch_dc_basic
-  switch_ent_dc_general
-  )
+)
 
 p4c_add_xfail_reason("tofino2"
-  "error: Ran out of space in POV in deparser"
-  switch_p4_16
-  )
+  "Compiler Bug.*Total size of containers used for POV allocation is.*b, greater than"
+  switch_ent_dc_general
+)
+
+p4c_add_xfail_reason("tofino2"
+  "Unimplemented compiler support.*In the ALU operation.*the packing is too complicated.*"
+  extensions/p4_tests/p4_14/brig-906.p4
+)
 
 p4c_add_xfail_reason("tofino2"
   "Wrong number of arguments for method call: packet.extract"
   testdata/p4_14_samples/09-IPv4OptionsUnparsed.p4
   testdata/p4_14_samples/issue781.p4
-  )
+)
 
 p4c_add_xfail_reason("tofino2"
   "Table .* is applied multiple times, and the next table information cannot correctly propagate through this multiple application"
   testdata/p4_14_samples/16-TwoReferences.p4
-  )
+)
 
 p4c_add_xfail_reason("tofino2"
   "error: Assignment cannot be supported in the parser"
   testdata/p4_14_samples/axon.p4
-  )
+)
 
 p4c_add_xfail_reason("tofino2"
   "PHV allocation was not successful"
@@ -120,12 +119,12 @@ p4c_add_xfail_reason("tofino2"
   "Tables .* and .* are not mutually exclusive"
   testdata/p4_14_samples/12-Counters.p4
   testdata/p4_14_samples/13-Counters1and2.p4
-  )
+)
 
 p4c_add_xfail_reason("tofino2"
   "error: standard_metadata.packet_length is not accessible in the ingress pipe"
   testdata/p4_14_samples/queueing.p4
-  )
+)
 
 p4c_add_xfail_reason("tofino2"
   "error: Could not find declaration for .*"
@@ -135,83 +134,83 @@ p4c_add_xfail_reason("tofino2"
   testdata/p4_14_samples/resubmit.p4
   testdata/p4_14_samples/simple_nat.p4
   testdata/p4_14_samples/issue-1426.p4
-  )
+)
 
 p4c_add_xfail_reason("tofino2"
   "Both .* and .* require the .* address hardware, and cannot be on the same table"
   testdata/p4_14_samples/counter.p4
-  )
+)
 
 p4c_add_xfail_reason("tofino2"
   "Only compile-time constants are supported for hash base offset and max value"
   testdata/p4_14_samples/flowlet_switching.p4
-  )
+)
 
 p4c_add_xfail_reason("tofino2"
   ": P4_14 extern type not fully supported"
   testdata/p4_14_samples/issue604.p4
-  )
+)
 
 p4c_add_xfail_reason("tofino2"
   "Structure header ingress_intrinsic_metadata_t does not have a field ucast_egress_port"
   extensions/p4_tests/p4_14/bf_p4c_samples/sai_p4.p4
-  )
+)
 
 p4c_add_xfail_reason("tofino2"
   "Action profile .* does not have any action data"
   testdata/p4_14_samples/selector0.p4
   extensions/p4_tests/p4_14/bf_p4c_samples/port_vlan_mapping.p4
   testdata/p4_14_samples/const_default_action.p4
-  )
+)
 
 p4c_add_xfail_reason("tofino2"
   "The action .* manipulates field .* that requires multiple stages from an action"
   testdata/p4_14_samples/action_inline.p4
-  )
+)
 
 p4c_add_xfail_reason("tofino2"
   "Compiler Bug.*: .*: Cannot find declaration for"
   testdata/p4_14_samples/TLV_parsing.p4
-  )
+)
 
 p4c_add_xfail_reason("tofino2"
   "Unimplemented compiler support.*: Currently the compiler only supports allocation of meter color"
   testdata/p4_14_samples/meter.p4
   testdata/p4_14_samples/meter1.p4
-  )
+)
 
 p4c_add_xfail_reason("tofino2"
   "The method call of read and write on a Register is currently not supported in p4c"
   testdata/p4_14_samples/issue894.p4
   testdata/p4_14_samples/register.p4
-  )
+)
 
 p4c_add_xfail_reason("tofino2"
   "Ran out of parser match registers"
   testdata/p4_14_samples/source_routing.p4
   testdata/p4_14_samples/parser_value_set2.p4
-  )
+)
 
 # Checksum16 is deprecated
 p4c_add_xfail_reason("tofino2"
   "Could not find declaration for"
   extensions/p4_tests/p4_16/ipv4_options.p4
-  )
+)
 
 p4c_add_xfail_reason("tofino2"
   "warning: Instruction selection creates an instruction that the rest of the compiler cannot correctly interpret"
   extensions/p4_tests/p4_16/brig-42.p4
-  )
+)
 
 p4c_add_xfail_reason("tofino2"
   "test.IPv4ChecksumVerifyTest ... FAIL"
   extensions/p4_tests/p4_16/ipv4_checksum.p4
-  )
+)
 
 p4c_add_xfail_reason("tofino2"
   "Can only output full phv registers, not slices, in deparser"
   extensions/p4_tests/p4_16/int_transit.p4
-  )
+)
 
 
 # These tests fail at runtime with the driver
@@ -220,7 +219,7 @@ if (PTF_REQUIREMENTS_MET)
 p4c_add_xfail_reason("tofino2"
   "AssertionError: A packet was received on device .*, port .*, but we expected no packets"
   extensions/p4_tests/p4_16/verify_checksum.p4
-  )
+)
 
 p4c_add_xfail_reason("tofino2"
   "AssertionError: Expected packet was not received on device .*, port .*"
@@ -229,7 +228,7 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_14/easy_no_match.p4
   fabric.p4
   tor.p4
-  )
+)
 
 # P4C-1228
 p4c_add_xfail_reason("tofino2"

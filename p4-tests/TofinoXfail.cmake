@@ -280,16 +280,19 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
-# Allocation without container conflicts is 13 stages.
-  switch_msdc_ipv4
   switch_8.5_msdc_ipv4
+  fabric-new-DWITH_SPGW-DWITH_INT_TRANSIT
   )
 
 p4c_add_xfail_reason("tofino"
   "error.*Can't split table.*with indirect attached"
   switch_ent_fin_postcard
+)
+
+p4c_add_xfail_reason("tofino"
+  "Compiler Bug.*Conflicting alloc in the action data xbar"
   switch_8.5_ent_fin_postcard
-  )
+)
 
 p4c_add_xfail_reason("tofino"
   "No way to slice the following to satisfy @pa_container_size"
@@ -712,11 +715,10 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-954/case5730.p4
   )
 
-# This error will re-manifest once I change the dependence distance to 2.
-# p4c_add_xfail_reason("tofino"
-#  "Compiler Bug.*conflicting memory use between"
-#  ../glass/testsuite/p4_tests/c1/COMPILER-868/comp_868.p4
-#  )
+p4c_add_xfail_reason("tofino"
+ "Compiler Bug.*conflicting memory use between"
+ ../glass/testsuite/p4_tests/c1/COMPILER-868/comp_868.p4
+)
 
 # We can't (without some complex acrobatics) support conditional computed
 # checksums on Tofino. In P4-14, these are operations of the form:
@@ -910,7 +912,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/03-VlanProfile.p4
   extensions/p4_tests/p4_14/19-SimpleTrill.p4
   extensions/p4_tests/p4_14/01-FlexCounter.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-868/comp_868.p4
   # extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   )
 
@@ -977,6 +978,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_295_polynomial_hash.p4
   extensions/p4_tests/p4_14/hash_calculation_max_size.p4
   extensions/p4_tests/p4_14/p4-tests/programs/hash_test/hash_test.p4
+  extensions/p4_tests/p4_14/brig-906.p4
   )
 
 p4c_add_xfail_reason("tofino"

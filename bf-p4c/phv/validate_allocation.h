@@ -52,6 +52,9 @@ class ValidateAllocation final : public Inspector {
     /// returns true if a backtrack exception must be thrown, instead of invoking UndoPrivatization.
     bool throwBacktrackException(
             const std::map<PHV::Container, std::vector<Slice>>& allocations) const;
+
+    /// returns total number of container bits used for POV bit allocation.
+    size_t getPOVContainerBytes() const;
 };
 
 class ValidateActions final : public MauInspector {

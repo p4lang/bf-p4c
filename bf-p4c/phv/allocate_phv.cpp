@@ -2365,6 +2365,9 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
             // for metadata fields, prioritize pa_container size pragmas
             if (n_container_size_pragma.at(l) != n_container_size_pragma.at(r))
                 return n_container_size_pragma.at(l) > n_container_size_pragma.at(r);
+            // prioritize pov bits over other "independent" metadata fields
+            if (has_pov.count(l) != has_pov.count(r))
+                return has_pov.count(l) > has_pov.count(r);
             // for non header field, aggregate size matters
             if (n_valid_starts.at(l) != n_valid_starts.at(r)) {
                 return n_valid_starts.at(l) < n_valid_starts.at(r); }

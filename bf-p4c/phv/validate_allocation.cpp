@@ -614,6 +614,12 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         }
     }
 
+    size_t povBits = getPOVContainerBytes();
+    size_t povLimit = (Device::currentDevice() == Device::TOFINO) ? 256 : 128;
+    if (povBits > povLimit)
+        BUG("Total size of containers used for POV allocation is %1%b, greater than the allowed "
+            "limit of %2%b.", povBits, povLimit);
+
     return true;
 }
 
@@ -667,6 +673,20 @@ bool ValidateAllocation::throwBacktrackException(
         });
     }
     return anyFieldOverlaid;
+}
+
+size_t ValidateAllocation::getPOVContainerBytes() const {
+    ordered_set<PHV::Container> containers;
+    for (const auto& f : phv) {
+        if (!f.pov) continue;
+        f.foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
+            containers.insert(alloc.container);
+        });
+    }
+    size_t rv = 0;
+    for (auto c : containers)
+        rv += static_cast<size_t>(c.size());
+    return rv;
 }
 
 bool ValidateActions::preorder(const IR::MAU::Action *act) {
