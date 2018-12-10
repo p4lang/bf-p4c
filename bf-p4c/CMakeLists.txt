@@ -163,6 +163,7 @@ set (BF_P4C_BACKEND_COMMON_HDRS
   common/multiple_apply.h
   common/normalize_params.h
   common/param_binding.h
+  common/parse_annotations.h
   common/parser_overlay.h
   common/parser_critical_path.h
   common/run_id.h

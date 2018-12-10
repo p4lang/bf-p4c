@@ -762,6 +762,11 @@ p4c_add_xfail_reason("tofino"
   #extensions/p4_tests/p4_14/switch_l2_profile.p4
 )
 
+p4c_add_xfail_reason("tofino"
+  "No PhvInfo::header for header named "
+  testdata/p4_16_samples/issue692-bmv2.p4
+)
+
 
 # BEGIN: XFAILS that match glass XFAILS
 

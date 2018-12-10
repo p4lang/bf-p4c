@@ -9,6 +9,7 @@
 #include "asm.h"
 #include "backend.h"
 #include "bf-p4c-options.h"
+#include "bf-p4c/common/parse_annotations.h"
 #include "bf-p4c/control-plane/tofino_p4runtime.h"
 #include "bf-p4c/visualization.h"
 #include "bf-p4c/logging/filelog.h"
@@ -193,7 +194,7 @@ int main(int ac, char **av) {
     BFNOptionPragmaParser optionsPragmaParser;
     program->apply(P4::ApplyOptionsPragmas(optionsPragmaParser));
 
-    program = P4::FrontEnd(hook).run(options, program, true);
+    program = P4::FrontEnd(BFN::ParseAnnotations(), hook).run(options, program, true);
 
     // If there was an error in the frontend, we are likely to end up
     // with an invalid program for serialization, so we bail out here.

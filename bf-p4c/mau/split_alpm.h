@@ -7,8 +7,6 @@
 /// This pass converts an alpm table into a pre_classifier table + an Atcam table.
 class SplitAlpm : public Transform {
     static const std::set<unsigned> valid_partition_values;
-    static const cstring ALGORITHMIC_LPM_PARTITIONS;
-    static const cstring ALGORITHMIC_LPM_SUBTREES_PER_PARTITION;
     const IR::Node* postorder(IR::MAU::Table *tbl) override;
     const IR::MAU::Table* create_pre_classifier_tcam(
             IR::MAU::Table* tbl, IR::TempVar* tv, unsigned partition_index_bits,
@@ -17,6 +15,9 @@ class SplitAlpm : public Transform {
             unsigned partition_count, unsigned partition_index_bits,
             unsigned subtrees_per_partition);
  public:
+    static const cstring ALGORITHMIC_LPM_PARTITIONS;
+    static const cstring ALGORITHMIC_LPM_SUBTREES_PER_PARTITION;
+
     SplitAlpm() {}
 };
 

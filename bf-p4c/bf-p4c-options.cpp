@@ -11,6 +11,7 @@
 #include "lib/cstring.h"
 #include "version.h"
 #include "bf-p4c/common/collect_global_pragma.h"
+#include "frontends/parsers/parserDriver.h"
 
 BFN_Options::BFN_Options() {
     target = "tofino";
@@ -243,8 +244,21 @@ BFNOptionPragmaParser::parseCompilerOption(const IR::Annotation* annotation) {
     boost::optional<CommandLineOptions> newOptions;
     newOptions.emplace();
 
+    // Parsing of option pragmas is done early in the compiler, before P4₁₆
+    // annotations are parsed, so we are responsible for doing our own parsing
+    // here.
+    auto args = &annotation->expr;
+    if (args->empty()) {
+        auto parseResult =
+            P4::P4ParserDriver::parseExpressionList(annotation->srcInfo,
+                                                    annotation->body);
+        if (parseResult != nullptr) {
+            args = parseResult;
+        }
+    }
+
     bool first = true;
-    for (auto* arg : annotation->expr) {
+    for (auto* arg : *args) {
         auto* argString = arg->to<IR::StringLiteral>();
         if (!argString) {
             ::warning("@pragma command_line arguments must be strings: %1%",

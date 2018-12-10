@@ -31,10 +31,10 @@ control ingress(inout headers hdr, inout metadata meta,
     @name("fifo") Register<pair, bit<32>>(1024) fifo_2_of_3; // Second stage
     @name("fifo") Register<pair, bit<32>>(1024) fifo_3_of_3; // Third stage
 
-    @chain_address(meta.address)
+    @chain_address
     RegisterAction<pair, bit<32>, b32>(fifo_1_of_3) read_1 = {
         void apply(inout pair value, out b32 rv) { rv = value.lo[31:0]; } };
-    @chain_address(meta.address)
+    @chain_address
     RegisterAction<pair, bit<32>, b32>(fifo_2_of_3) read_2 = {
         void apply(inout pair value, out b32 rv) { rv = value.lo[31:0]; } };
     RegisterAction<pair, bit<32>, b32>(fifo_3_of_3) read_3 = {
@@ -63,10 +63,10 @@ control ingress(inout headers hdr, inout metadata meta,
         default_action = multi_stage_3_dequeue();
     }
 
-    @chain_address(meta.address)
+    @chain_address
     RegisterAction<pair, bit<32>, b32>(fifo_1_of_3) write_1 = {
         void apply(inout pair value) { value.lo[31:0] = hdr.ethernet.src_addr[31:0]; } };
-    @chain_address(meta.address)
+    @chain_address
     RegisterAction<pair, bit<32>, b32>(fifo_2_of_3) write_2 = {
         void apply(inout pair value) { value.lo[31:0] = hdr.ethernet.src_addr[31:0]; } };
     RegisterAction<pair, bit<32>, b32>(fifo_3_of_3) write_3 = {
