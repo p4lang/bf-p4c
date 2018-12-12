@@ -33,12 +33,20 @@ bool Clustering::FindComplexValidityBits::preorder(const IR::MAU::Instruction* i
     if (dst_validity_bit && has_non_val) {
         LOG5("Found destination complex validity bit: " << dst_validity_bit);
         self.complex_validity_bits_i.insert(dst_validity_bit);
-        if (src_validity_bit != nullptr)
+        if (src_validity_bit != nullptr) {
             self.complex_validity_bits_i.insert(src_validity_bit);
+            self.complex_validity_bits_i.makeUnion(dst_validity_bit, src_validity_bit);
+        }
         LOG5("Found source complex validity bit: " << src_validity_bit);
     }
 
     return false;
+}
+
+void Clustering::FindComplexValidityBits::end_apply() {
+    if (!LOGGING(2)) return;
+    LOG2("Printing complex validity bits union find structure");
+    LOG2(self.complex_validity_bits_i);
 }
 
 std::vector<PHV::FieldSlice> Clustering::slices(const PHV::Field* field, le_bitrange range) const {
@@ -630,6 +638,257 @@ bool Clustering::MakeSuperClusters::preorder(const IR::HeaderStackItemRef* hr) {
     return false;
 }
 
+#if 0
+// Might need to reintroduce this later.
+void Clustering::MakeSuperClusters::pack_complex_pov_bits() {
+    auto max_set_size = self.complex_validity_bits_i.maxSize();
+    LOG4("Max size: " << max_set_size);
+
+    PHV::SuperCluster::SliceList** ingress_pov_lists = new
+        PHV::SuperCluster::SliceList*[max_set_size];
+    PHV::SuperCluster::SliceList** egress_pov_lists = new
+        PHV::SuperCluster::SliceList*[max_set_size];
+
+    for (size_t i = 0; i < max_set_size; i++) {
+        ingress_pov_lists[i] = new PHV::SuperCluster::SliceList();
+        egress_pov_lists[i] = new PHV::SuperCluster::SliceList();
+    }
+
+    // Allocate the complex validity bits first.
+    // Pair up validity bits that are used in the same actions together.
+    size_t set_num = 0;
+    for (auto* set : self.complex_validity_bits_i) {
+        const PHV::Field* firstFieldInSet = *(set->begin());
+        gress_t gress = firstFieldInSet->gress;
+        auto& pov_list = gress == INGRESS ? ingress_pov_lists : egress_pov_lists;
+
+        // If the size of the set is 1, then the POV bit reads from itself (usually in the case of
+        // stack validity bits).
+        if (set->size() == 1) continue;
+
+        // Possible indices to allocate to for fields in the set.
+        ordered_map<const PHV::Field*, ordered_set<size_t>> fieldToIndices;
+        // Possible fields allocated to indices into pov_list.
+        ordered_map<size_t, ordered_set<const PHV::Field*>> indexToFields;
+        // For each field in the set, check its packability.
+        bool thisSetAllocated = true;
+        for (auto* f : *set) {
+            LOG4("Try to allocate slice list for " << f->name);
+            BUG_CHECK(f->gress == gress, "Fields %1% and %2% in the same cluster cannot be of "
+                      "different gresses", f->name, firstFieldInSet->name);
+            // If this field size is greater than 1 bit, then it might be a header validity bit,
+            // which we allow to float (along with all other fields in its cluster). Therefore,
+            // indicate that we will not pack this set.
+            if (f->size > 1) {
+                thisSetAllocated = false;
+                break;
+            }
+            // Check packability with fields in each pov_list.
+            for (size_t i = 0; i < max_set_size; i++) {
+                bool any_pack_conflicts = std::any_of(pov_list[i]->begin(), pov_list[i]->end(),
+                        [&](const PHV::FieldSlice& slice) {
+                        return conflicts_i.hasPackConflict(f, slice.field());
+                        });
+                if (any_pack_conflicts) {
+                    LOG4("Ignoring POV bit " << f->name << " because of a pack conflict");
+                    continue; }
+                if (pov_list[i]->size() == 0 || self.actions_i.can_pack_pov(pov_list[i], f)) {
+                    fieldToIndices[f].insert(i);
+                    LOG4("Try to allocate slice list for " << f->name);
+                    indexToFields[i].insert(f);
+                }
+            }
+        }
+
+        ordered_map<const PHV::Field*, size_t> allocation;
+        for (auto kv : indexToFields) {
+            size_t minPossibilities = max_set_size + 1;
+            const PHV::Field* minField = nullptr;
+            LOG4("Checking field for slice list index " << kv.first);
+            for (const auto* f : kv.second) {
+                LOG4("  Field considered: " << f->name);
+                // Ignore already allocated field.
+                if (allocation.count(f)) {
+                    LOG4("    ...already allocated");
+                    continue;
+                }
+                size_t thisFieldPossibilities = 0;
+                for (size_t pos : fieldToIndices.at(f)) {
+                    // Ignore previous indexes.
+                    if (pos < kv.first) {
+                        LOG4("    ...ignoring already assigned index " << pos);
+                        continue;
+                    }
+                    thisFieldPossibilities++;
+                }
+                LOG4("    thisFieldPossibilities: " << thisFieldPossibilities);
+                if (thisFieldPossibilities == 0) {
+                    thisSetAllocated = false;
+                    break;
+                }
+                if (minPossibilities > thisFieldPossibilities) {
+                    minField = f;
+                    minPossibilities = thisFieldPossibilities;
+                    LOG4("Changing minField to " << f->name << ", minPossibilities to: " <<
+                            minPossibilities);
+                }
+            }
+            if (!thisSetAllocated) break;
+            if (minField == nullptr) {
+                LOG4("No minField detected");
+                thisSetAllocated = false;
+                break;
+            }
+            LOG4("Allocate " << minField->name << " to slice list index " << kv.first);
+            allocation[minField] = kv.first;
+        }
+
+        if (allocation.size() != set->size()) {
+            LOG4("Not all fields in the set have allocations associated with them");
+            continue;
+        }
+
+        for (auto kv : allocation) {
+            BUG_CHECK(kv.second < max_set_size, "Slice list chosen is less than max slice lists.");
+            pov_list[kv.second]->push_back(PHV::FieldSlice(kv.first));
+        }
+
+        // If this set was allocated fully, then increment set_num.
+        if (thisSetAllocated) ++set_num;
+    }
+
+    for (size_t i = 0; i < max_set_size; i++) {
+        if (ingress_pov_lists[i]->size() > 0) {
+            slice_lists_i.insert(ingress_pov_lists[i]);
+            LOG4("Adding slice list\n" << ingress_pov_lists[i]);
+        }
+        if (egress_pov_lists[i]->size() > 0) {
+            slice_lists_i.insert(egress_pov_lists[i]);
+            LOG4("Adding slice list\n" << egress_pov_lists[i]);
+        }
+    }
+}
+#endif
+
+void Clustering::MakeSuperClusters::pack_pov_bits() {
+    ordered_set<PHV::Field*> pov_bits;
+
+    for (auto& f : phv_i) {
+        // Don't bother adding unreferenced fields.
+        if (!self.uses_i.is_referenced(&f)) continue;
+
+        // Skip everything but POV valid bits.
+        if (!f.pov) continue;
+
+        // Skip valid bits for header stacks, which are allocated with
+        // $stkvalid.
+        if (f.size > 1) continue;
+
+        // Skip valid bits involved in complex instructions, because they have
+        // complicated packing constraints.
+        if (self.complex_validity_bits_i.contains(&f)) {
+            LOG5("Ignoring field " << f.name << " because it is a complex validity bit.");
+            continue;
+        }
+
+        pov_bits.insert(&f);
+    }
+
+    // XXX(Deep): Might need to reintroduce this later, if we need to pack POV bits better.
+    // pack_complex_pov_bits();
+
+    auto* ingress_list = new PHV::SuperCluster::SliceList();
+    auto* egress_list = new PHV::SuperCluster::SliceList();
+    int ingress_list_bits = 0;
+    int egress_list_bits = 0;
+
+    ordered_set<PHV::Field*> allocated_pov_bits;
+
+    ordered_map<PHV::Field*, ordered_set<PHV::Field*>> extractedTogetherBits;
+    const auto& unionFind = phv_i.getSameSetConstantExtraction();
+    for (auto* f : pov_bits) {
+        if (!phv_i.hasParserConstantExtract(f)) continue;
+        const auto* fSet = unionFind.setOf(f);
+        for (auto* f1 : pov_bits) {
+            if (f == f1) continue;
+            if (!phv_i.hasParserConstantExtract(f1)) continue;
+            if (fSet->find(f1) == fSet->end()) continue;
+            extractedTogetherBits[f].insert(f1);
+        }
+    }
+
+    if (LOGGING(3)) {
+        LOG3("Printing extracted together bits");
+        for (auto kv : extractedTogetherBits) {
+            LOG3("\t" << kv.first->name);
+            std::stringstream ss;
+            for (auto* f : kv.second)
+                ss << f->name << " ";
+            LOG3("\t  " << ss.str());
+        }
+    }
+
+    ordered_set<PHV::Field*> allocated_extracted_together_bits;
+    for (auto* f : pov_bits) {
+        if (allocated_extracted_together_bits.count(f)) continue;
+        LOG5("Creating POV BIT LIST with " << f);
+        // NB: Use references to mutate the appropriate list/counter.
+        auto& current_list = f->gress == INGRESS ? ingress_list : egress_list;
+        int& current_list_bits = f->gress == INGRESS ? ingress_list_bits : egress_list_bits;
+
+        // Check if any no-pack constraints have been inferred on the candidate field f and any
+        // other field already in the slice list.
+        bool any_pack_conflicts = std::any_of(current_list->begin(), current_list->end(),
+                [&](const PHV::FieldSlice& slice) {
+                return conflicts_i.hasPackConflict(f, slice.field());
+                });
+        if (any_pack_conflicts) {
+            LOG5("Ignoring POV bit " << f->name << " because of a pack conflict");
+            continue; }
+        if (f->no_pack()) {
+            ::error("POV Bit %1% is marked as no-pack", f->name);
+            continue; }
+
+        std::vector<PHV::FieldSlice> toBeAddedFields;
+        toBeAddedFields.push_back(PHV::FieldSlice(f));
+
+        if (extractedTogetherBits.count(f)) {
+            allocated_extracted_together_bits.insert(f);
+            for (auto* g : extractedTogetherBits[f]) {
+                if (allocated_extracted_together_bits.count(g)) continue;
+                toBeAddedFields.push_back(PHV::FieldSlice(g));
+                allocated_extracted_together_bits.insert(g);
+            }
+        }
+
+        for (auto& slice : toBeAddedFields) {
+            current_list->push_back(slice);
+            current_list_bits += f->size;
+            if (current_list_bits >= 32) {
+                LOG5("Creating new POV slice list: " << current_list);
+                slice_lists_i.insert(current_list);
+                for (auto sl = current_list->begin(); sl != current_list->end(); sl++)
+                    allocated_pov_bits.insert(phv_i.field((*sl).field()->id));
+                current_list = new PHV::SuperCluster::SliceList();
+                current_list_bits = 0;
+            }
+        }
+    }
+
+    if (ingress_list->size() != 0) {
+        LOG4("Creating new POV slice list: " << ingress_list);
+        slice_lists_i.insert(ingress_list);
+        for (auto sl = ingress_list->begin(); sl != ingress_list->end(); sl++)
+            allocated_pov_bits.insert(phv_i.field((*sl).field()->id));
+    }
+    if (egress_list->size() != 0) {
+        LOG4("Creating new POV slice list: " << egress_list);
+        slice_lists_i.insert(egress_list);
+        for (auto sl = egress_list->begin(); sl != egress_list->end(); sl++)
+            allocated_pov_bits.insert(phv_i.field((*sl).field()->id));
+    }
+}
+
 void Clustering::MakeSuperClusters::end_apply() {
     // XXX(cole): This is a temporary hack to try to encourage slices of
     // metadata fields with alignment constraints to be placed together.
@@ -655,6 +914,8 @@ void Clustering::MakeSuperClusters::end_apply() {
                 list->push_back(slice);
             slice_lists_i.insert(list); } }
 
+    pack_pov_bits();
+
     UnionFind<const PHV::RotationalCluster*> cluster_union_find;
     ordered_map<PHV::FieldSlice, PHV::RotationalCluster*> slices_to_clusters;
 
@@ -666,81 +927,6 @@ void Clustering::MakeSuperClusters::end_apply() {
         for (auto* aligned_cluster : rotational_cluster->clusters())
             for (auto& slice : *aligned_cluster)
                 slices_to_clusters[slice] = rotational_cluster; }
-
-
-    // XXX(cole): Begin hack.  This is a hack to force POV bits to be grouped
-    // into 8b chunks by placing them in slice lists, which is overly
-    // restrictive.
-    ordered_set<const PHV::Field*> pov_bits;
-
-    for (auto& f : phv_i) {
-        // Don't bother adding unreferenced fields.
-        if (!self.uses_i.is_referenced(&f)) continue;
-
-        // Skip everything but POV valid bits.
-        if (!f.pov) continue;
-
-        // Skip valid bits for header stacks, which are allocated with
-        // $stkvalid.
-        if (f.size > 1) continue;
-
-        // Skip valid bits involved in complex instructions, because they have
-        // complicated packing constraints.
-        if (self.complex_validity_bits_i.count(&f)) {
-            LOG5("Ignoring field " << f.name << " because it is a complex validity bit.");
-            continue;
-        }
-
-        pov_bits.insert(&f);
-    }
-
-    for (int slice_list_size : { 32, 16, 8 }) {
-        LOG1("Attempting to create a POV slice list of size: " << slice_list_size << "b.");
-        auto* ingress_list = new PHV::SuperCluster::SliceList();
-        auto* egress_list = new PHV::SuperCluster::SliceList();
-        int ingress_list_bits = 0;
-        int egress_list_bits = 0;
-
-        ordered_set<const PHV::Field*> allocated_pov_bits;
-
-        for (const auto* f : pov_bits) {
-            LOG1("Creating POV BIT LIST with " << f);
-            // NB: Use references to mutate the appropriate list/counter.
-            auto& current_list = f->gress == INGRESS ? ingress_list : egress_list;
-            int& current_list_bits = f->gress == INGRESS ? ingress_list_bits : egress_list_bits;
-
-            // Check if any no-pack constraints have been inferred on the candidate field f and any
-            // other field already in the slice list.
-            bool any_pack_conflicts = std::any_of(current_list->begin(), current_list->end(),
-                    [&](const PHV::FieldSlice& slice) {
-                    return conflicts_i.hasPackConflict(f, slice.field());
-                    });
-            if (any_pack_conflicts) {
-                LOG1("Ignoring POV bit " << f->name << " because of a pack conflict");
-                continue; }
-            if (f->no_pack()) {
-                ::error("POV Bit %1% is marked as no-pack", f->name);
-                continue; }
-
-            current_list->push_back(PHV::FieldSlice(f));
-            current_list_bits += f->size;
-
-            // Make a new list after every 8 bits
-            if (current_list_bits >= slice_list_size) {
-                LOG1("Creating new POV slice list: " << current_list);
-                slice_lists_i.insert(current_list);
-                for (auto sl = current_list->begin(); sl != current_list->end(); sl++)
-                    allocated_pov_bits.insert((*sl).field());
-                current_list = new PHV::SuperCluster::SliceList();
-                current_list_bits = 0; } }
-
-        for (const auto* f : allocated_pov_bits)
-            if (pov_bits.count(f))
-                pov_bits.erase(f);
-    }
-
-    // XXX(cole): end hack.
-
 
     // Find sets of rotational clusters that have fields that need to be placed in
     // the same container.

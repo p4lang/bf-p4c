@@ -329,7 +329,7 @@ FindInitializationNode::getInitializationCandidates(
     // strictly dominates a read to the field. It can never be a unit that reads the field.
     const IR::BFN::Unit* unit = groupDominator->to<IR::BFN::Unit>();
     if (!unit) return boost::none;
-    LOG1("\t\t  Group dominator: " << DBPrint::Brief << *unit);
+    LOG3("\t\t  Group dominator: " << DBPrint::Brief << *unit);
 
     // Collect the uses for the previous field so that we may check if initialization increases the
     // dependence tail length.
@@ -357,39 +357,38 @@ FindInitializationNode::getInitializationCandidates(
     if (allowedStage < lastAllowedStage) {
         // If there are more than 3 strict dominating uses of the field, do not initialize (This is
         // to avoid adding too many initializations for the field).
-        LOG1("\t\t  Group dominator at an earlier stage (" << allowedStage << ") than allowed stage"
+        LOG3("\t\t  Group dominator at an earlier stage (" << allowedStage << ") than allowed stage"
              " (" << lastAllowedStage << ")");
         if (fStrictDominators.size() > 3) return boost::none;
-        bool dominatorsInLaterStages = std::any_of(
+        auto all_f_table_uses = getTableUsesForField(f, true /* uses */, true /* defs */);
+        bool dominatorsIncreaseCriticalPath = std::any_of(
                 fStrictDominators.begin(), fStrictDominators.end(), [&](const IR::MAU::Table* t) {
-            return (dg.min_stage(t) > (maxStages - 3));
+            bool returnValue = false;
+            // Inserting initialization at the strict dominator would induce a dependency between
+            // the strict dominator and the uses of the field f. If any of these dependencies
+            // increase the critical path length (corresponding to every single use of f), then we
+            // set the dominatorsIncreaseCritcialPath value to true and do not initialize at the
+            // strict dominators.
+            for (const auto* t1 : all_f_table_uses)
+                returnValue |= increasesDependenceCriticalPath(t, t1);
+            return returnValue;
         });
-        if (dominatorsInLaterStages) {
-            LOG1("\t\t  One of the strict dominators needs initialization in the last three "
-                 "stages.");
+        if (dominatorsIncreaseCriticalPath) {
+            LOG3("\t\t  Initialization at one of the strict dominators would result in the "
+                 "lengthening of the critical path");
             return boost::none;
         }
         for (const auto* t : fStrictDominators) {
-            LOG1("\t\t  Trying to initialize at table " << t->name);
+            LOG3("\t\t  Trying to initialize at table " << t->name);
             auto initPoints = getInitPointsForTable(c, t, f, prevUses, alloc, true);
             if (!initPoints) {
-                LOG1("\t\t  Could not initialize at table " << t->name);
+                LOG3("\t\t  Could not initialize at table " << t->name);
                 return boost::none;
             }
             rv.insert(initPoints->begin(), initPoints->end());
         }
-        LOG1("\t\t  Successfully inserted initialization at strict dominators");
+        LOG3("\t\t  Successfully inserted initialization at strict dominators");
         return rv;
-    }
-
-    // Check if the group dominator (the candidate initialization point) may reach one of the uses
-    // of the fields in the container with earlier live ranges. If it does, then initialization is
-    // not possible. We only need to check this for one table because all the subsequent
-    // initialization points will be dominators of this group dominator.
-    for (auto kv : g_units) {
-        if (kv.second.size() == 0) continue;
-        if (canInitTableReachGUnits(groupDominator, kv.second))
-            return boost::none;
     }
 
     std::vector<const IR::MAU::Table*> candidateTables;
@@ -413,13 +412,24 @@ FindInitializationNode::getInitializationCandidates(
 
     for (const auto* tbl : candidateTables) {
         // Find the first table where initialization is possible.
-        LOG2("\t\t  Checking where initialization is possible at table " << tbl->name);
+        LOG2("\t\t  Checking whether initialization is possible at table " << tbl->name);
+        bool reachCondition = false;
+        for (auto kv : g_units) {
+            if (kv.second.size() == 0) continue;
+            reachCondition |= canInitTableReachGUnits(tbl, kv.second);
+        }
+        if (reachCondition) {
+            LOG2("\t\t  Initialization at " << tbl->name << " would reach uses of previous field.");
+            continue;
+        }
         auto candidateActions = getInitPointsForTable(c, tbl, f, prevUses, alloc);
         if (!candidateActions) continue;
         LOG2("\t\t  Initialization possible for table " << tbl->name);
         return candidateActions;
     }
-    return rv;
+    // If initialization is not possible at any candidate table, then we reach here. So, return
+    // boost::none.
+    return boost::none;
 }
 
 inline bool liveRangesOverlap(
@@ -801,9 +811,9 @@ const IR::MAU::Action* AddInitialization::postorder(IR::MAU::Action* act) {
         act->action.push_back(prim);
         auto tbl = actionsMap.getTableForAction(act_orig);
         if (!tbl)
-            LOG1("\t\tAdding primitive " << prim << " to action " << act->name << " without table");
+            LOG2("\t\tAdding primitive " << prim << " to action " << act->name << " without table");
         else
-            LOG1("\t\tAdding primitive " << prim << " to action " << act->name << ", in table " <<
+            LOG2("\t\tAdding primitive " << prim << " to action " << act->name << ", in table " <<
                  (*tbl)->name);
     }
     return act;

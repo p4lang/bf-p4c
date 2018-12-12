@@ -76,16 +76,7 @@ p4c_add_xfail_reason("tofino2"
   testdata/p4_14_samples/07-FullTPHV2.p4
   testdata/p4_14_samples/08-FullTPHV3.p4
   switch_dc_basic
-)
-
-p4c_add_xfail_reason("tofino2"
-  "Compiler Bug.*Total size of containers used for POV allocation is.*b, greater than"
   switch_ent_dc_general
-)
-
-p4c_add_xfail_reason("tofino2"
-  "Unimplemented compiler support.*In the ALU operation.*the packing is too complicated.*"
-  extensions/p4_tests/p4_14/brig-906.p4
 )
 
 p4c_add_xfail_reason("tofino2"
@@ -102,10 +93,6 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "error: Assignment cannot be supported in the parser"
   testdata/p4_14_samples/axon.p4
-)
-
-p4c_add_xfail_reason("tofino2"
-  "PHV allocation was not successful"
 )
 
 p4c_add_xfail_reason("tofino2"
@@ -284,10 +271,21 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "failed command assembler"
   extensions/p4_tests/p4_14/cond_checksum_update_2.p4
+  extensions/p4_tests/p4_14/cond_checksum_update.p4
 )
 
 # P4C-1011
 p4c_add_xfail_reason("tofino2"
   "Exiting with SIGSEGV"
   extensions/p4_tests/p4_16/bf_p4c_samples/v1model-special-ops-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino2"
+  "Compiler Bug.*Total size of containers used for POV allocation is.*"
+  switch_ent_dc_general
+)
+
+p4c_add_xfail_reason("tofino2"
+  "error.*Ran out of constant output slots"
+  extensions/p4_tests/p4_14/metadata_mutex_1.p4
 )

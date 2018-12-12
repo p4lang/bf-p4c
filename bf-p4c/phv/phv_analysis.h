@@ -26,8 +26,8 @@ class PHV_AnalysisPass : public Logging::PassManager {
  private:
     /// Contains information about placement of tables by an earlier table allocation pass.
     MauBacktracker& table_alloc;
-    /// Clustering information for fields.
-    Clustering clustering;
+    /// PHV related pragma information.
+    PHV::Pragmas pragmas;
     /// Parser critical path of both ingress/egress.
     CalcParserCriticalPath parser_critical_path;
     /// Critical clusters.
@@ -40,12 +40,14 @@ class PHV_AnalysisPass : public Logging::PassManager {
     PackConflicts pack_conflicts;
     /// Action induced packing constraints.
     ActionPhvConstraints action_constraints;
-    /// PHV related pragma information.
-    PHV::Pragmas pragmas;
     /// Metadata live range overlay potential information based on table dependency graph.
     MetadataLiveRange meta_live_range;
     /// Metadata initialization related pass.
     LiveRangeShrinking meta_init;
+    /// Clustering information for fields.
+    Clustering clustering;
+    /// Fields that are going to be deparsed to zero.
+    ordered_set<const PHV::Field*> deparser_zero_fields;
 
  public:
     PHV_AnalysisPass(

@@ -12,6 +12,7 @@
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/common/elim_unused.h"
 #include "bf-p4c/mau/instruction_selection.h"
+#include "bf-p4c/phv/action_phv_constraints.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/cluster_phv_operations.h"
 #include "bf-p4c/phv/mau_backtracker.h"
@@ -107,6 +108,7 @@ const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe,
                                    MauBacktracker& table_alloc,
                                    DependencyGraph& deps,
                                    PackConflicts& conflicts,
+                                   ActionPhvConstraints& actions,
                                    CalcParserCriticalPath& parser_critical_path) {
     PHV::Pragmas* pragmas = new PHV::Pragmas(phv);
     PassManager quick_backend = {
@@ -123,6 +125,7 @@ const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe,
         new FindDependencyGraph(phv, deps),
         &defuse,
         &conflicts,
+        &actions,
         new PHV_Field_Operations(phv),
         &clustering,
     };
@@ -188,16 +191,17 @@ TEST_F(CriticalPathClustersTest, DISABLED_Basic) {
     TablesMutuallyExclusive table_mutex;
     ActionMutuallyExclusive action_mutex;
     PackConflicts conflicts(phv, deps, table_mutex, table_alloc, action_mutex);
+    ActionPhvConstraints actions(phv, conflicts);
     CalcParserCriticalPath parser_critical_path(phv);
     FieldDefUse defuse(phv);
     PhvUse uses(phv);
-    Clustering clustering(phv, uses, conflicts);
+    Clustering clustering(phv, uses, conflicts, actions);
 
     auto *post_pm_pipe = runMockPasses(test->pipe, phv, uses,
                                        defuse,
                                        clustering,
                                        table_alloc,
-                                       deps, conflicts,
+                                       deps, conflicts, actions,
                                        parser_critical_path);
 
     auto *cluster_cp = new CalcCriticalPathClusters(parser_critical_path);

@@ -127,6 +127,21 @@ class UnionFind {
         rv->insert(internal->begin(), internal->end());
         return rv;
     }
+
+    /// @returns true if element@e is present in the UnionFind struct.
+    /// @returns false otherwise.
+    bool contains(const T x) const {
+        return element_map_i.count(x);
+    }
+
+    /// @returns the size of the largest set in the UnionFind struct.
+    size_t maxSize() const {
+        size_t rv = 0;
+        for (const auto* s : sets_i)
+            if (s->size() > rv)
+                rv = s->size();
+        return rv;
+    }
 };
 
 

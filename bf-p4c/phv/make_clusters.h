@@ -9,6 +9,7 @@
 #include "bf-p4c/ir/thread_visitor.h"
 #include "bf-p4c/ir/tofino_write_context.h"
 #include "bf-p4c/lib/union_find.hpp"
+#include "bf-p4c/phv/action_phv_constraints.h"
 #include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/analysis/pack_conflicts.h"
@@ -41,6 +42,7 @@ class Clustering : public PassManager {
     PhvInfo& phv_i;
     PhvUse& uses_i;
     const PackConflicts& conflicts_i;
+    const ActionPhvConstraints& actions_i;
 
     /// Holds all aligned clusters.  Every slice is in exactly one cluster.
     std::list<PHV::AlignedCluster *> aligned_clusters_i;
@@ -58,8 +60,9 @@ class Clustering : public PassManager {
 
     /// Collects validity bits involved in complex instructions, i.e.
     /// instructions that do anything other than assign a constant to the
-    /// validity bit.
-    ordered_set<const PHV::Field*> complex_validity_bits_i;
+    /// validity bit. Fields that are involved in the same assignment statement
+    /// are part of the same UnionFind set.
+    UnionFind<const PHV::Field*> complex_validity_bits_i;
 
     /// Utility method for querying fields_to_slices_i.
     /// @returns the slices of @field in `fields_to_slices_i` overlapping with @range.
@@ -86,6 +89,7 @@ class Clustering : public PassManager {
         PhvInfo& phv_i;
 
         bool preorder(const IR::MAU::Instruction*) override;
+        void end_apply() override;
 
      public:
         explicit FindComplexValidityBits(Clustering& self) : self(self), phv_i(self.phv_i) { }
@@ -256,6 +260,13 @@ class Clustering : public PassManager {
         /// that appear in the same list.
         void end_apply() override;
 
+        /// Pack pov bits into slice lists.
+        void pack_pov_bits();
+
+        /// Pack complex pov bits.
+        /// XXX(Deep): Add this back in, if needed. No need for this right now.
+        /// void pack_complex_pov_bits();
+
         /// Add padding into slice list for fields that will be marshaled, because they
         /// have exact_container requirement but might be non-byte-aligned.
         /// Singleton padding cluster will be inserted into @p cluster_set, if it is added
@@ -284,8 +295,8 @@ class Clustering : public PassManager {
     };
 
  public:
-    Clustering(PhvInfo &p, PhvUse &u, const PackConflicts& c)
-    : phv_i(p), uses_i(u), conflicts_i(c), slice_i(*this) {
+    Clustering(PhvInfo &p, PhvUse &u, const PackConflicts& c, const ActionPhvConstraints& a)
+    : phv_i(p), uses_i(u), conflicts_i(c), actions_i(a),  slice_i(*this) {
         addPasses({
             new ClearClusteringStructs(*this),          // clears pre-existing maps
             new FindComplexValidityBits(*this),         // populates complex_validity_bits_i

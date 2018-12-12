@@ -606,6 +606,13 @@ class ActionPhvConstraints : public Inspector {
             const IR::MAU::Action* action,
             const PHV::Allocation& alloc) const;
 
+    /** @returns true if the POV bit @f can be packed in the same container and the next position in
+      * @slice_list.
+      */
+    bool can_pack_pov(
+            const PHV::SuperCluster::SliceList* slice_list,
+            const PHV::Field* f) const;
+
     /** @returns true if field @f is written in action @act.
       */
     bool written_in(const PHV::Field* f, const IR::MAU::Action* act) const {

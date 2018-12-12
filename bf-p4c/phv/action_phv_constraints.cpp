@@ -1945,6 +1945,57 @@ bool ActionPhvConstraints::move_only_operations(const PHV::Field* f) const {
     return true;
 }
 
+bool ActionPhvConstraints::can_pack_pov(
+        const PHV::SuperCluster::SliceList* slice_list,
+        const PHV::Field* f) const {
+    LOG3("Considering slice list " << *slice_list);
+    ordered_map<const PHV::Field*, size_t> fieldsWithPositions;
+    size_t index = 0;
+    for (auto& slice : *slice_list)
+        fieldsWithPositions[slice.field()] = index++;
+    fieldsWithPositions[f] = index++;
+    for (auto kv : fieldsWithPositions)
+        LOG3(kv.first->name << " : " << kv.second);
+
+    // Conditions:
+    // 1. If these fields are all written in the same container with different kind of
+    //    operands, then reject this packing.
+    ordered_set<const IR::MAU::Action*> set_of_actions;
+    for (auto kv : fieldsWithPositions) {
+        const auto& writing_actions = constraint_tracker.written_in(PHV::FieldSlice(kv.first));
+        set_of_actions.insert(writing_actions.begin(), writing_actions.end());
+    }
+
+    unsigned num_fields = fieldsWithPositions.size();
+    for (const auto* act : set_of_actions) {
+        LOG3("\tChecking action " << act->name);
+        ordered_set<const PHV::Field*> written_by_phv;
+        ordered_set<const PHV::Field*> written_by_ad;
+        ordered_set<const PHV::Field*> not_written;
+        for (auto kv : fieldsWithPositions) {
+            auto source = constraint_tracker.hasPHVSource(kv.first, act);
+            if (!source) {
+                not_written.insert(kv.first);
+                continue;
+            }
+            if (*source == true)
+                written_by_phv.insert(kv.first);
+            else
+                written_by_ad.insert(kv.first);
+        }
+
+        LOG3("phv: " << written_by_phv.size() << ", ad: " << written_by_ad.size() <<
+             ", not written: " << not_written.size());
+        if (num_fields % 8 == 0 && not_written.size() == 0) continue;
+        if (written_by_phv.size() > 0 && written_by_ad.size() > 0 &&
+                (not_written.size() > 0 || num_fields % 8 != 0)) {
+            LOG3("Some part of the container will be overwritten.");
+            return false;
+        }
+    }
+    return true;
+}
+
 boost::optional<bool> ActionPhvConstraints::ConstraintTracker::hasPHVSource(
         const PHV::Field* field,
         const IR::MAU::Action* act) const {

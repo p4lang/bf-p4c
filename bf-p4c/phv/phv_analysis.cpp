@@ -27,14 +27,14 @@ PHV_AnalysisPass::PHV_AnalysisPass(
         MauBacktracker& alloc)
     : Logging::PassManager("phv_allocation_"),
       table_alloc(alloc),
-      clustering(phv, uses, pack_conflicts),
+      pragmas(phv, options),
       parser_critical_path(phv),
       critical_path_clusters(parser_critical_path),
       pack_conflicts(phv, deps, table_mutex, table_alloc, action_mutex),
       action_constraints(phv, pack_conflicts),
-      pragmas(phv, options),
       meta_live_range(phv, deps, defuse, pragmas, uses, table_alloc),
-      meta_init(phv, defuse, deps, pragmas.pa_no_init(), meta_live_range, action_constraints) {
+      meta_init(phv, defuse, deps, pragmas.pa_no_init(), meta_live_range, action_constraints),
+      clustering(phv, uses, pack_conflicts, action_constraints) {
     if (options.trivial_phvalloc) {
         addPasses({
             new PHV::TrivialAlloc(phv)});

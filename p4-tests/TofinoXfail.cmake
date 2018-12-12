@@ -281,17 +281,12 @@ p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
   switch_8.5_msdc_ipv4
-  fabric-new-DWITH_SPGW-DWITH_INT_TRANSIT
   )
 
 p4c_add_xfail_reason("tofino"
-  "error.*Can't split table.*with indirect attached"
-  switch_ent_fin_postcard
-)
-
-p4c_add_xfail_reason("tofino"
-  "Compiler Bug.*Conflicting alloc in the action data xbar"
+  "error.*Can't split table.*with indirect attached MAU::StatefulAlu"
   switch_8.5_ent_fin_postcard
+  switch_ent_fin_postcard
 )
 
 p4c_add_xfail_reason("tofino"
@@ -812,6 +807,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "The selected pack format for table .* could not fit given the input xbar allocation"
   extensions/p4_tests/p4_14/test_config_13_first_selection.p4
+  09-simple_l3_lag_ecmp
 )
 
 p4c_add_xfail_reason("tofino"
@@ -977,7 +973,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_295_polynomial_hash.p4
   extensions/p4_tests/p4_14/hash_calculation_max_size.p4
   extensions/p4_tests/p4_14/p4-tests/programs/hash_test/hash_test.p4
-  extensions/p4_tests/p4_14/brig-906.p4
   )
 
 p4c_add_xfail_reason("tofino"
