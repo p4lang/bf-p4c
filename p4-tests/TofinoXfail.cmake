@@ -890,12 +890,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/13-ResubmitMetadataSize.p4
   )
 
-# translation bug: smeta
-p4c_add_xfail_reason("tofino"
-  "Could not find declaration for smeta"
-  testdata/p4_16_samples/issue677-bmv2.p4
-  )
-
 # missing support in backend: parser counter
 # parser counter translation error.
 p4c_add_xfail_reason("tofino"

@@ -38,6 +38,7 @@
 #include "common/blockmap.h"
 #include "common/check_header_alignment.h"
 #include "common/elim_emit_headers.h"
+#include "common/elim_typedef.h"
 #include "common/flatten_emit_args.h"
 #include "bf-p4c/arch/arch.h"
 #include "bf-p4c/common/normalize_params.h"
@@ -197,6 +198,7 @@ MidEnd::MidEnd(BFN_Options& options) {
     addPasses({
         new P4::EliminateNewtype(&refMap, &typeMap),
         new P4::EliminateSerEnums(&refMap, &typeMap),
+        new P4::EliminateTypedef(&refMap, &typeMap),
         new P4::TypeChecking(&refMap, &typeMap, true),
         new BFN::CheckHeaderAlignment(&typeMap),
         new P4::ConvertEnums(&refMap, &typeMap, new EnumOn32Bits()),
