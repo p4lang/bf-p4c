@@ -52,7 +52,7 @@ P4Table *P4Table::get(P4Table::type t, VECTOR(pair_t) &data) {
             rv->name = n->s;
             rv->handle = apply_handle_offset(++max_handle[t] | (t << 24), unique_table_offset); }
     } else {
-        error(data[0].key.lineno, "no handle or name in p4 info");
+        error(data.size ? data[0].key.lineno : 0, "no handle or name in p4 info");
         return 0; }
     for (auto &kv : MapIterChecked(data)) {
         if (rv->lineno <= 0 || rv->lineno > kv.key.lineno)
@@ -96,6 +96,8 @@ P4Table *P4Table::get(P4Table::type t, VECTOR(pair_t) &data) {
                 else
                     rv->how_referenced = kv.value.s;
             }
+        } else if (kv.key == "hidden") {
+            rv->hidden = get_bool(kv.value);
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in p4 info", value_desc(kv.key)); }
     return rv;
@@ -136,6 +138,7 @@ json::map *P4Table::base_tbl_cfg(json::vector &out, int size, const Table *table
     tbl["name"] = p4_name();
     tbl["table_type"] = type_name[table_type];
     tbl["size"] = explicit_size ? this->size : size;
+    if (hidden) tbl["p4_hidden"] = true;
     return &tbl;
 }
 

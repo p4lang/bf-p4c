@@ -2741,6 +2741,8 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
         auto at_mem = back_at->attached;
         if (at_mem->is<IR::MAU::TernaryIndirect>()) continue;
         if (at_mem->is<IR::MAU::IdleTime>()) continue;  // XXX(zma) idletime is inlined
+        if (at_mem->is<IR::MAU::StatefulAlu>() && back_at->use == IR::MAU::StatefulUse::NO_USE)
+            continue;  // synthetic salu for driver to write to selector; not used directly
         out << indent << at_mem->kind() << ": ";
         out << find_attached_name(tbl, at_mem);
         out << build_call(at_mem, back_at, tbl);
@@ -3068,12 +3070,16 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
         out << ", size: " << salu->size;
     if (salu->direct && tbl->layout.hash_action)
         out << ", how_referenced: direct";
+    if (salu->synthetic_for_selector)
+        out << ", hidden: true";
     out << " }" << std::endl;
 
-    if (salu->selector)
-        self.emit_memory(out, indent, *self.selector_memory.at(salu->selector));
-    else
-        self.emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
+    if (salu->selector) {
+        auto &sel_info = self.selector_memory.at(std::make_pair(tbl->stage(), salu->selector));
+        out << indent << "selection_table: " << sel_info.first << std::endl;
+        self.emit_memory(out, indent, *sel_info.second);
+    } else {
+        self.emit_memory(out, indent, tbl->resources->memuse.at(unique_id)); }
     self.emit_ixbar(out, indent, &tbl->resources->salu_ixbar, nullptr, nullptr, nullptr, nullptr,
                     false);
     out << indent << "format: { lo: ";
@@ -3082,34 +3088,6 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
     else
         out << salu->width;
     out << " }" << std::endl;
-
-    // Write out the table the selector points to
-    /* iterate on the "attached" vector on all the tables in the current gress and stage until
-     * we find the salu->selector we are looking for */
-    if (salu->selector) {
-        const IR::MAU::Table *seltbl = nullptr;
-        auto ti = self.by_stage.find(std::make_pair(gress, stage));
-        if (ti != self.by_stage.end()) {
-            for (auto itbl : ti->second) {
-                for (auto at : itbl.tableInfo->attached) {
-                    auto at_mem = at->attached;
-                    if (at_mem == salu->selector) {
-                        seltbl = itbl.tableInfo;
-                        break;
-                    }
-                    if (seltbl) break;
-                }
-                if (seltbl) break;
-            }
-        }
-        if (!seltbl) {
-            BUG("SALU Selector Table %s not found in stage %d with table %s", salu->selector->name,
-                stage, tbl->name);
-        } else {
-            out << indent << "selection_table: " << seltbl->unique_id(salu->selector)
-              << std::endl;
-        }
-    }
 
     if (salu->init_reg_lo || salu->init_reg_hi) {
         out << indent << "initial_value : ";

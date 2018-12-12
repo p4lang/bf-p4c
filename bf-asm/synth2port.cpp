@@ -60,7 +60,7 @@ json::map *Synth2Port::add_stage_tbl_cfg(json::map &tbl, const char *type, int s
     json::map &stage_tbl = *AttachedTable::add_stage_tbl_cfg(tbl, type, size);
     std::string hr = how_referenced();
     if (hr.empty())
-        hr = indirect ? "indirect" : "direct";
+        hr = direct ? "direct" : "indirect";
     tbl["how_referenced"] = hr; 
     int entries = 1;
     if (format) {

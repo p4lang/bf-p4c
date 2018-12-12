@@ -754,7 +754,8 @@ class VisitAttached : public Inspector {
     }
 
     bool preorder(const IR::MAU::StatefulAlu *salu) override {
-        free_address(salu, layout.meter_addr, METER);
+        if (getParent<IR::MAU::BackendAttached>()->use != IR::MAU::StatefulUse::NO_USE)
+            free_address(salu, layout.meter_addr, METER);
         return false;
     }
     bool preorder(const IR::MAU::Selector *as) override {

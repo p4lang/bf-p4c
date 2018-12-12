@@ -25,6 +25,7 @@
 #include "bf-p4c/mau/instruction_selection.h"
 #include "bf-p4c/mau/ixbar_realign.h"
 #include "bf-p4c/mau/push_pop.h"
+#include "bf-p4c/mau/selector_update.h"
 #include "bf-p4c/mau/split_alpm.h"
 #include "bf-p4c/mau/split_gateways.h"
 #include "bf-p4c/mau/stateful_alu.h"
@@ -155,6 +156,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new CheckForUnimplementedFeatures(),
         new RemoveEmptyControls,
         new MultipleApply,
+        new AddSelectorSalu,
         new CheckStatefulAlu,
         new CollectHeaderStackInfo,  // Needed by CollectPhvInfo.
         new CollectPhvInfo(phv),

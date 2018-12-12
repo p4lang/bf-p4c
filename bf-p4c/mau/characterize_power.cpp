@@ -393,14 +393,15 @@ void CharacterizePower::postorder(const IR::MAU::Table *t) {
             max_selector_words_[stage] = std::max(max_selector_words_.at(stage), sel_words);
 
         } else if (mem.type == Memories::Use::STATEFUL) {
-            auto local_stateful_table = CharacterizePower::PowerMemoryAccess();
-            local_stateful_table.ram_read += 1;  // Stateful are only one ram wide
-            local_stateful_table.ram_write += 1;
-            local_stateful_table.map_ram_read += all_mems;  // All map rams read for synth-2-port
-            local_stateful_table.map_ram_write += 1;        // But only one written
+            if (t->get_attached(use.first)->use != IR::MAU::StatefulUse::NO_USE) {
+                auto local_stateful_table = CharacterizePower::PowerMemoryAccess();
+                local_stateful_table.ram_read += 1;  // Stateful are only one ram wide
+                local_stateful_table.ram_write += 1;
+                local_stateful_table.map_ram_read += all_mems;  // All maprams read for synth-2-port
+                local_stateful_table.map_ram_write += 1;        // But only one written
 
-            stateful_table += local_stateful_table;
-            attached_memory_usage.emplace(use.first, local_stateful_table);
+                stateful_table += local_stateful_table;
+                attached_memory_usage.emplace(use.first, local_stateful_table); }
             has_stateful_[stage] = true;
 
         } else if (mem.type == Memories::Use::COUNTER) {

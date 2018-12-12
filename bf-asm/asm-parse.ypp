@@ -345,23 +345,25 @@ std::ostream &operator<<(std::ostream &out, const SrcInfo &s) {
 
 void warning(int lineno, const char *fmt, va_list args) {
     auto it = line_file_map.upper_bound(lineno);
-    it--;
-    fprintf(stderr, "%s:%d: warning: ", it->second.first.c_str(),
-            lineno - it->first + it->second.second);
+    if (it == line_file_map.begin()) {
+        fprintf(stderr, "<unknown location>: warning: ");
+    } else {
+        --it;
+        fprintf(stderr, "%s:%d: warning: ", it->second.first.c_str(),
+                lineno - it->first + it->second.second); }
     vfprintf(stderr, fmt, args);
     fprintf(stderr, "\n");
     fflush(stderr);
     warn_count++; }
 
 void error(int lineno, const char *fmt, va_list args) {
-    if (line_file_map.empty()) {
+    auto it = line_file_map.upper_bound(lineno);
+    if (it == line_file_map.begin()) {
         fprintf(stderr, "<unknown location>: error: ");
     } else {
-        auto it = line_file_map.upper_bound(lineno);
-        if (it != line_file_map.begin()) it--;
+        --it;
         fprintf(stderr, "%s:%d: error: ", it->second.first.c_str(),
-                lineno - it->first + it->second.second);
-    }
+                lineno - it->first + it->second.second); }
     vfprintf(stderr, fmt, args);
     fprintf(stderr, "\n");
     fflush(stderr);

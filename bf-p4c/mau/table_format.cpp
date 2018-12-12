@@ -680,8 +680,9 @@ bool TableFormat::allocate_all_indirect_ptrs() {
                                              IR::MAU::TypeLocation::OVERHEAD;
 
      for (auto *ba : tbl->attached) {
-         if (ba->attached->is<IR::MAU::Selector>() || ba->attached->is<IR::MAU::Meter>()
-             || ba->attached->is<IR::MAU::StatefulAlu>()) {
+         if (ba->attached->is<IR::MAU::StatefulAlu>() && ba->use != IR::MAU::StatefulUse::NO_USE) {
+             meter_addr_user = ba->attached;
+         } else if (ba->attached->is<IR::MAU::Selector>() || ba->attached->is<IR::MAU::Meter>()) {
              meter_addr_user = ba->attached;
          } else if (ba->attached->is<IR::MAU::Counter>()) {
              stats_addr_user = ba->attached;

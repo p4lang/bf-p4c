@@ -32,7 +32,8 @@ class MauAsmOutput : public MauInspector {
 
     DefaultNext         default_next;
     std::map<std::pair<gress_t, int>, std::vector<TableInstance>>       by_stage;
-    ordered_map<const IR::MAU::Selector *, const Memories::Use *>       selector_memory;
+    ordered_map<std::pair<int, const IR::MAU::Selector *>,
+                std::pair<UniqueId, const Memories::Use *>>     selector_memory;
     profile_t init_apply(const IR::Node *root) override {
         root->apply(default_next);
         return MauInspector::init_apply(root); }
@@ -48,13 +49,14 @@ class MauAsmOutput : public MauInspector {
         by_stage[tableId].push_back(TableInstance(tbl));
         return true; }
     void postorder(const IR::MAU::Selector *as) override {
+        visitAgain();
         auto tbl = findContext<IR::MAU::Table>();
-        if (tbl->is_placed()) {
-          auto unique_id = tbl->unique_id(as);
-          if (tbl->resources->memuse.count(unique_id))
-              selector_memory[as] = &tbl->resources->memuse.at(unique_id);
-        }
-    }
+        auto &unattached = tbl->resources->memuse.at(tbl->unique_id()).unattached_tables;
+        auto unique_id = tbl->unique_id(as);
+        if (tbl->is_placed() && !unattached.count(unique_id) &&
+            tbl->resources->memuse.count(unique_id)) {
+            selector_memory[std::make_pair(tbl->stage(), as)] =
+                std::make_pair(unique_id, &tbl->resources->memuse.at(unique_id)); } }
     bool preorder(const IR::MAU::StatefulAlu *) override { return false; }
     friend std::ostream &operator<<(std::ostream &, const MauAsmOutput &);
 

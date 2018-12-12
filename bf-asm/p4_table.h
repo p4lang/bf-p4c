@@ -23,6 +23,7 @@ class P4Table {
     std::string         name, preferred_match_type;
     unsigned            handle = 0;
     bool                explicit_size = false;
+    bool                hidden = false;
     json::map           *config = 0;
     P4Table() {}
 public:

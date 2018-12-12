@@ -865,20 +865,22 @@ bool CreateSaluInstruction::preorder(const IR::Declaration_Instance *di) {
 }
 
 bool CheckStatefulAlu::preorder(IR::MAU::StatefulAlu *salu) {
-    if (salu->reg->type->is<IR::Type_Extern>()) {
+    const IR::Type *regtype = nullptr;
+    if (salu->selector) {
         // selector action
         BUG_CHECK(salu->width == 1 && salu->dual == false, "wrong size for selector action");
-        return false; }
-    auto regtype = getType(salu->reg->type->to<IR::Type_Specialized>()->arguments->at(0));
+        regtype = IR::Type::Bits::get(1);
+    } else {
+        BUG_CHECK(salu->reg && salu->reg->type->to<IR::Type_Specialized>(), "invalid SALU");
+        regtype = getType(salu->reg->type->to<IR::Type_Specialized>()->arguments->at(0)); }
     auto bits = regtype->to<IR::Type::Bits>();
     if (auto str = regtype->to<IR::Type_Struct>()) {
         auto nfields = str->fields.size();
         if (nfields < 1 || !(bits = getType(str->fields.at(0)->type)->to<IR::Type::Bits>()) ||
             nfields > 2 || (nfields > 1 && bits != getType(str->fields.at(1)->type))) {
-            bits = nullptr;
-        }
+            bits = nullptr; }
         if (bits) {
-            salu->dual = nfields > 1;;
+            salu->dual = nfields > 1;
             if (bits->size == 1)
                 bits = nullptr; } }
     if (bits) {
@@ -912,7 +914,9 @@ bool CheckStatefulAlu::preorder(IR::MAU::StatefulAlu *salu) {
     // instr are already present, if not add them. Test - p4factory stful.p4 -
     // TestOneBit
     if (bits->size == 1) {
-        std::set<cstring> set_clr { "set_bit", "clr_bit" };
+        ordered_set<cstring> set_clr { "set_bit", "clr_bit" };
+        if (salu->selector)
+            set_clr = ordered_set<cstring> { "set_bit_at", "clr_bit_at" };
         for (auto &salu_action : salu->instruction) {
             auto &salu_action_instr = salu_action.second;
             if (salu_action_instr) {

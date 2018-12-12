@@ -128,6 +128,13 @@ UniqueId IR::MAU::Table::unique_id(const IR::MAU::AttachedMemory *at, bool is_gw
     return rv;
 }
 
+const IR::MAU::BackendAttached *IR::MAU::Table::get_attached(UniqueId id) const {
+    for (auto *at : attached)
+        if (unique_id(at->attached) == id)
+            return at;
+    return nullptr;
+}
+
 bool IR::MAU::Table::hit_miss_p4() const {
     for (auto &n : next) {
         if (n.first == "$hit" || n.first == "$miss")

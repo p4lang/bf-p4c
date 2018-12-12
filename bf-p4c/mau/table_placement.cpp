@@ -658,8 +658,12 @@ bool TablePlacement::try_alloc_imem(Placed *next, const Placed *done,
 /// pointless if it won't fit in a single stage anyways).
 bool TablePlacement::can_duplicate(const IR::MAU::AttachedMemory *att) {
     BUG_CHECK(!att->direct, "Not an indirect attached table");
-    return att->is<IR::MAU::Counter>() || att->is<IR::MAU::ActionData>() ||
-           att->is<IR::MAU::Selector>();
+    if (att->is<IR::MAU::Counter>() || att->is<IR::MAU::ActionData>() ||
+        att->is<IR::MAU::Selector>())
+        return true;
+    if (auto *salu = att->to<IR::MAU::StatefulAlu>())
+        return salu->synthetic_for_selector;
+    return false;
 }
 
 bool TablePlacement::initial_stage_and_entries(Placed *rv, const Placed *done,

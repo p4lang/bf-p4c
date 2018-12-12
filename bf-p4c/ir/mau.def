@@ -227,11 +227,12 @@ class Table : BFN::Unit {
     int get_random_seed() const;
     bool for_dleft() const;
 
-    UniqueId pp_unique_id(const IR::MAU::AttachedMemory *at = nullptr,
+    UniqueId pp_unique_id(AttachedMemory at = nullptr,
        bool is_gw = false, int stage_table = -1, int logical_table = -1,
        UniqueAttachedId::pre_placed_type_t ppt = UniqueAttachedId::NO_PP) const;
 
-    UniqueId unique_id(const IR::MAU::AttachedMemory *at = nullptr, bool is_gw = false) const;
+    UniqueId unique_id(AttachedMemory at = nullptr, bool is_gw = false) const;
+    BackendAttached get_attached(UniqueId id) const;
 
 #noconstructor
     Table(cstring n, gress_t gr) : name(n), gress(gr) {}
@@ -454,8 +455,8 @@ class Meter : Synth2Port {
  * the associated stateful alu instructions and config */
 class StatefulAlu : Synth2Port {
     // The single register or action_selector extern used in this stateful alu
-    Declaration_Instance                                reg;
-    NullOK Selector                                     selector = nullptr;
+    optional NullOK Declaration_Instance                reg = nullptr;
+    optional NullOK Selector                            selector = nullptr;
     bool                                                dual = false;  // dual mode
         // if dual is true, the ALU width is half the Register width (field)
         // if dual is false, the ALU width is equal to the Register width
@@ -477,6 +478,7 @@ class StatefulAlu : Synth2Port {
     int                                                 init_reg_hi = 0;
     cstring                                             reduction_or_group = {};
     bool        learn_action = false;  // if any action is a LearnAction
+    bool        synthetic_for_selector = false;  // created for the driver to set selector
 
     class MathUnit {
         bool            valid = false;

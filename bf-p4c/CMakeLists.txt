@@ -217,6 +217,7 @@ set (BF_P4C_BACKEND_MAU_SRCS
   mau/reduction_or.cpp
   mau/resource_estimate.cpp
   mau/resource.cpp
+  mau/selector_update.cpp
   mau/split_alpm.cpp
   mau/split_gateways.cpp
   mau/stateful_alu.cpp
@@ -256,6 +257,7 @@ set (BF_P4C_BACKEND_MAU_HDRS
   mau/reduction_or.h
   mau/resource_estimate.h
   mau/resource.h
+  mau/selector_update.h
   mau/split_alpm.h
   mau/split_gateways.h
   mau/stateful_alu.h

@@ -141,6 +141,7 @@ void StatefulTable::pass1() {
         //Add a back reference to this table
         if (!bound_selector->get_stateful())
             bound_selector->set_stateful(this);
+        if (logical_id < 0) logical_id = bound_selector->logical_id;
     } else {
         alloc_maprams();
         alloc_rams(true, stage->sram_use); }
@@ -446,11 +447,11 @@ void StatefulTable::gen_tbl_cfg(json::vector &out) const {
         for (auto &a : *actions) {
             for (auto &i : a.instr) {
                 if (i->name() == "set_bit_at")
-                    tbl["set_instr_at"] = a.code;
+                    tbl["set_instr_adjust_total"] = a.code;
                 if (i->name() == "set_bit")
                     tbl["set_instr"] = a.code;
                 if (i->name() == "clr_bit_at")
-                    tbl["clr_instr_at"] = a.code;
+                    tbl["clr_instr_adjust_total"] = a.code;
                 if (i->name() == "clr_bit")
                     tbl["clr_instr"] = a.code; } } }
     // Add action handle and instr slot for action which references stateful
