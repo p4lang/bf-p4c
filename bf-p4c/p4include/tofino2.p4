@@ -212,6 +212,15 @@ struct ingress_intrinsic_metadata_for_deparser_t {
     bit<32> adv_flow_ctl;       	// Advanced flow control for TM
     bit<14> mtu_trunc_len;		// MTU for truncation check
     bit<1> mtu_trunc_err_f;		// MTU truncation error flag
+
+    bit<3> learn_sel;                   // Learn quantum table selector
+    bit<1> pktgen_trigger;              // trigger packet generation
+                                        // This is ONLY valid if resubmit_type
+                                        // is not valid.
+    bit<14> pktgen_address;             // Packet generator buffer address.
+    bit<10> pktgen_length;              // Length of generated packet.
+
+    // also need an extern for PacketGen
 }
 // -----------------------------------------------------------------------------
 // GHOST INTRINSIC METADATA
@@ -359,12 +368,13 @@ struct egress_intrinsic_metadata_for_output_port_t {
 // -----------------------------------------------------------------------------
 // PACKET GENERATION
 // -----------------------------------------------------------------------------
-// Packet generator supports up to 8 applications and a total of 16KB packet
+// Packet generator supports up to 16 applications and a total of 16KB packet
 // payload. Each application is associated with one of the four trigger types:
 // - One-time timer
 // - Periodic timer
 // - Port down
 // - Packet recirculation
+// - MAU packet trigger
 // For recirculated packets, the event fires when the first 32 bits of the
 // recirculated packet matches the application match value and mask.
 // A triggered event may generate programmable number of batches with
@@ -768,6 +778,18 @@ extern Digest<T> {
     /// Digest instances in the same deparser control block, and call the pack
     /// method once during a single execution of the control block
     void pack(in T data);
+}
+
+/// Tofino2 supports packet generation at the end of ingress pipeline. Packet
+/// Generation can be triggered by MAU, some limited amount of metadata (128 bits)
+/// can be prepended to the generated packet.
+extern Pktgen {
+    Pktgen();
+
+    /// Define the prefix header for the generated packet.
+    /// @param hdr : T can be a header type, a header stack, a header union,
+    /// or a struct contains fields with such types.
+    void emit<T>(in T hdr);
 }
 
 #endif  /* _JBAY_P4_ */

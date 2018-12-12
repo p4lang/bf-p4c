@@ -109,6 +109,10 @@ void CheckT2NAExternInvocation::init_pipe_constraints() {
     bitvec valid_in_ghost;
     valid_in_ghost.setbit(genIndex(GHOST, MAU));
     set_pipe_constraints("RegisterAction", valid_in_ghost);
+
+    bitvec valid_in_ingress_deparser;
+    valid_in_ingress_deparser.setbit(genIndex(INGRESS, DEPARSER));
+    set_pipe_constraints("Pktgen", valid_in_ingress_deparser);
 }
 
 }  // namespace BFN

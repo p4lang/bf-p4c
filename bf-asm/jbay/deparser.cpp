@@ -60,6 +60,10 @@ HO_E_INTRINSIC(mtu_trunc_len, YES)
 II_INTRINSIC(copy_to_cpu, YES)
 II_INTRINSIC(drop_ctl, YES)
 II_INTRINSIC(egress_unicast_port, NO)
+II_INTRINSIC(learn_sel, YES)
+II_INTRINSIC(pgen, YES)
+II_INTRINSIC(pgen_len, YES)
+II_INTRINSIC(pgen_addr, YES)
 HO_I_INTRINSIC(afc, YES)
 HO_I_INTRINSIC(bypss_egr, YES)
 HO_I_INTRINSIC(copy_to_cpu_cos, YES)
@@ -164,7 +168,6 @@ JBAY_SIMPLE_DIGEST(INGRESS, resubmit, regs.dprsrreg.inp.ipp.ingr.resub_tbl,
                    regs.dprsrreg.inp.ipp.ingr.m_resub_sel, NO, 8, NO, YES)
 JBAY_SIMPLE_DIGEST(INGRESS, pgen, regs.dprsrreg.inp.ipp.ingr.pgen_tbl,
                    regs.dprsrreg.inp.ipp.ingr.m_pgen, NO, 1, NO, NO)
-
 
 // all the jbay deparser subtrees with a dis or disable_ bit
 // FIXME -- should be a way of doing this with a smart template or other metaprogramming.
