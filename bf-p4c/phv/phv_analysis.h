@@ -46,8 +46,6 @@ class PHV_AnalysisPass : public Logging::PassManager {
     MetadataLiveRange meta_live_range;
     /// Metadata initialization related pass.
     LiveRangeShrinking meta_init;
-    /// Fields that are going to be deparsed to zero.
-    ordered_set<const PHV::Field*> deparser_zero_fields;
 
  public:
     PHV_AnalysisPass(

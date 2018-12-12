@@ -452,6 +452,7 @@ class Transaction : public Allocation {
     ///          that, check its ancestors.  If @c has no status yet, return boost::none.
     boost::optional<ContainerStatus> getStatus(PHV::Container c) const override;
 
+ public:
     /// Uniform abstraction for accessing field state.
     /// @returns the FieldStatus of this allocation, if present.  Failing
     ///          that, check its ancestors.  If @f has no status yet, return an empty FieldStatus.
@@ -499,6 +500,46 @@ class Transaction : public Allocation {
     /// Returns the outstanding writes in this view.
     const ordered_map<PHV::Container, ContainerStatus>& getTransactionStatus() const {
         return container_status_i;
+    }
+
+    const ordered_map<const PHV::Field*, FieldStatus>& getFieldStatus() const {
+        return field_status_i;
+    }
+
+    /// Returns a map of parser state to containers that are extracted
+    const ordered_map<cstring, std::set<PHV::Container>>
+    getParserStateToContainers(const PhvInfo& phv) const {
+        ordered_map<cstring, std::set<PHV::Container>> state_to_containers;
+
+        // this transaction's fields
+        for (const auto& kv : getFieldStatus()) {
+            const auto& field = kv.first;
+            const auto& container_slices = kv.second;
+
+            for (auto slice : container_slices) {
+                if (phv.field_to_parser_states.count(field->name)) {
+                    for (auto state : phv.field_to_parser_states.at(field->name))
+                        state_to_containers[state].insert(slice.container());
+                }
+            }
+        }
+
+        // parent's committed fields
+        for (auto& kv : phv.get_all_fields()) {
+            auto field = &(kv.second);
+            auto container_slices = getStatus(field);
+
+            if (container_slices.empty()) continue;
+
+            for (auto slice : container_slices) {
+                if (phv.field_to_parser_states.count(field->name)) {
+                    for (auto state : phv.field_to_parser_states.at(field->name))
+                        state_to_containers[state].insert(slice.container());
+                }
+            }
+        }
+
+        return state_to_containers;
     }
 
     /// @returns a map of all the AllocSlices and the various actions where these slices must be

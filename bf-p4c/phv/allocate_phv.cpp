@@ -1,9 +1,11 @@
 #include <boost/format.hpp>
 #include <boost/range/adaptor/reversed.hpp>
 #include <numeric>
+#include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/phv/allocate_phv.h"
 #include "bf-p4c/phv/utils/slicing_iterator.h"
+#include "bf-p4c/phv/parser_extract_balance_score.h"
 #include "lib/log.h"
 
 std::vector<const PHV::Field*>
@@ -98,6 +100,8 @@ bool AllocScore::operator>(const AllocScore& other) const {
     int delta_mocha_on_phv_bits = n_mocha_on_phv_bits - other.n_mocha_on_phv_bits;
     int delta_dark_on_mocha_bits = n_dark_on_mocha_bits - other.n_dark_on_mocha_bits;
 
+    int delta_parser_extractor_balance = parser_extractor_balance - other.parser_extractor_balance;
+
     int container_type_score = delta_tphv_on_phv_bits + DARK_TO_PHV_DISTANCE *
         delta_dark_on_phv_bits + delta_mocha_on_phv_bits + delta_dark_on_mocha_bits;
 
@@ -111,7 +115,8 @@ bool AllocScore::operator>(const AllocScore& other) const {
     int delta_set_gress = 0;
     int delta_set_parser_group_gress = 0;
     int delta_set_deparser_group_gress = 0;
-    int delta_container_imbalance = 0;
+
+    int delta_container_imbalance = 0;  // this is not used?
 
     // The number of deparser group containers assigned to a gress different
     // than their deparser group (because they only container non-deparsed
@@ -162,6 +167,12 @@ bool AllocScore::operator>(const AllocScore& other) const {
     // For positive metrics (overlay_bits, packing_bits...), higher is better.
     // For negative metrics (wasted_bits, inc_container...), lower is better.
     // Operator> return true if this score is better.
+
+    if (BFNContext::get().options().parser_bandwidth_opt) {
+        if (delta_parser_extractor_balance != 0) {
+            return delta_parser_extractor_balance > 0; }
+    }
+
     if (delta_clot_bits != 0) {
         // This score is better if it has fewer clot bits.
         return delta_clot_bits < 0; }
@@ -204,11 +215,6 @@ bool AllocScore::operator>(const AllocScore& other) const {
     return false;
 }
 
-// static
-AllocScore AllocScore::make_lowest() {
-    return AllocScore();
-}
-
 /** The metrics are calculated:
  * + is_tphv: type of @p group.
  * + n_set_gress:
@@ -222,9 +228,10 @@ AllocScore AllocScore::make_lowest() {
  */
 AllocScore::AllocScore(
         const PHV::Transaction& alloc,
+        const PhvInfo& phv,
         const ClotInfo& clot,
         const PhvUse& uses,
-        const int bitmasks) : AllocScore() {
+        const int bitmasks) {
     using ContainerAllocStatus = PHV::Allocation::ContainerAllocStatus;
     const auto* parent = alloc.getParent();
 
@@ -352,6 +359,15 @@ AllocScore::AllocScore(
             std::abs(count8 - count16) +
             std::abs(count16 - count32);
     }
+
+    if (BFNContext::get().options().parser_bandwidth_opt) {
+        auto state_to_containers = alloc.getParserStateToContainers(phv);
+
+        for (auto& kv : state_to_containers) {
+            StateExtractUsage use(kv.second);
+            parser_extractor_balance += ParserExtractScore::get_score(use);
+        }
+    }
 }
 
 bitvec
@@ -365,6 +381,9 @@ AllocScore::calcContainerAllocVec(const ordered_set<PHV::AllocSlice>& slices) {
 
 std::ostream& operator<<(std::ostream& s, const AllocScore& score) {
     bool any_positive_score = false;
+
+    s << "extract balance: " << score.parser_extractor_balance << ", ";
+
     for (auto kind : Device::phvSpec().containerKinds()) {
         if (score.score.find(kind) == score.score.end())
             continue;
@@ -1105,7 +1124,7 @@ CoreAllocation::tryAllocSliceList(
         if (!conditional_constraints_satisfied)
             continue;
 
-        auto score = AllocScore(this_alloc, clot_i, uses_i, num_bitmasks);
+        auto score = AllocScore(this_alloc, phv_i, clot_i, uses_i, num_bitmasks);
         LOG5("    ...SLICE LIST score: " << score);
 
         // update the best
@@ -1285,7 +1304,7 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAlloc(
                 }  // for slices
 
                 if (failed) continue;
-                auto score = AllocScore(this_alloc, clot_i, uses_i);
+                auto score = AllocScore(this_alloc, phv_i, clot_i, uses_i);
                 if (!best_alloc || score > best_score) {
                     best_alloc = std::move(this_alloc);
                     best_score = score; } }
@@ -2471,7 +2490,8 @@ BruteForceAllocationStrategy::allocLoop(PHV::Transaction& rst,
                     if (auto partial_alloc =
                             core_alloc_i.tryAlloc(slicing_alloc, *container_group, *sc,
                                 bridgedFieldsWithAlignmentConflicts)) {
-                        AllocScore score = AllocScore(*partial_alloc, clot_i, core_alloc_i.uses());
+                        AllocScore score = AllocScore(*partial_alloc,
+                                               core_alloc_i.phv(), clot_i, core_alloc_i.uses());
                         LOG4("    ...SUPERCLUSTER  Uid: " << sc->uid << " score: " << score);
                         if (!best_slice_alloc || score > best_slice_score) {
                             best_slice_score = score;
@@ -2488,7 +2508,8 @@ BruteForceAllocationStrategy::allocLoop(PHV::Transaction& rst,
                 slicing_alloc.commit(*best_slice_alloc); }
 
             // If allocation succeeded, check the score.
-            auto slicing_score = AllocScore(slicing_alloc, clot_i, core_alloc_i.uses());
+            auto slicing_score = AllocScore(slicing_alloc,
+                                            core_alloc_i.phv(), clot_i, core_alloc_i.uses());
             if (LOGGING(4)) {
                 LOG4("Best SUPERCLUSTER score for this slicing: " << slicing_score);
                 LOG4("For the following SUPERCLUSTER slices: ");

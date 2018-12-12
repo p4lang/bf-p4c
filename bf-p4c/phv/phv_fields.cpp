@@ -1414,6 +1414,25 @@ class MarkTimestampAndVersion : public Inspector {
     explicit MarkTimestampAndVersion(PhvInfo& phv) : phv_i(phv) { }
 };
 
+// Map field to the parser states in which they are extracted
+struct MapFieldToParserStates : public ParserInspector {
+    PhvInfo& phv;
+
+    explicit MapFieldToParserStates(PhvInfo& phv) : phv(phv) { }
+
+    bool preorder(const IR::BFN::Extract* extract) override {
+        auto lval = extract->dest->to<IR::BFN::FieldLVal>();
+        if (!lval) return true;
+
+        if (auto* f = phv.field(lval->field)) {
+            auto state = findContext<IR::BFN::ParserState>();
+            phv.field_to_parser_states[f->name].insert(state->name);
+        }
+
+        return true;
+    }
+};
+
 Visitor::profile_t CollectBridgedExtractedTogetherFields::init_apply(const IR::Node* root) {
     auto& matrix = phv_i.getBridgedExtractedTogether();
     matrix.clear();
@@ -1436,6 +1455,7 @@ CollectPhvInfo::CollectPhvInfo(PhvInfo& phv) {
         new ClearPhvInfo(phv),
         new CollectPhvFields(phv),
         new AllocatePOVBits(phv),
+        new MapFieldToParserStates(phv),
         new CollectPardeConstraints(phv),
         new ComputeFieldAlignments(phv),
         new AddIntrinsicConstraints(phv),

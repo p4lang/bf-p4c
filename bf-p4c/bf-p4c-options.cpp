@@ -136,6 +136,9 @@ BFN_Options::BFN_Options() {
     registerOption("--parser-timing-reports", nullptr,
         [this](const char *) { parser_timing_reports = true; return true; },
         "Report parser timing summary");
+    registerOption("--parser-bandwidth-opt", nullptr,
+        [this](const char *) { parser_bandwidth_opt = true; return true; },
+        "Optimize for parser bandwidth");
 }
 
 using Target = std::pair<cstring, cstring>;

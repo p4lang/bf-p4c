@@ -842,6 +842,11 @@ class PhvInfo {
     /// name.
     ordered_map<cstring, PHV::Field*> externalNameMap;
 
+ public:
+    ///
+    ordered_map<cstring, ordered_set<cstring>> field_to_parser_states;
+
+ private:
     bool                                alloc_done_ = false;
     bool                                pov_alloc_done = false;
 

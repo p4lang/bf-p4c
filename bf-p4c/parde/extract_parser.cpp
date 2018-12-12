@@ -411,11 +411,17 @@ struct RewriteParserStatements : public Transform {
         BUG_CHECK(currentBit % 8 == 0,
                   "A non-byte-aligned header type reached the backend");
 
+        if (auto* cf = hdr->to<IR::ConcreteHeaderRef>()) {
+            if (cf->ref->to<IR::Metadata>())
+                return rv;
+        }
+
         // Generate an extract operation for the POV bit.
         auto* type = IR::Type::Bits::get(1);
         auto* validBit = new IR::Member(type, hdr, "$valid");
         rv->push_back(new IR::BFN::Extract(srcInfo, validBit,
                         new IR::BFN::ConstantRVal(type, 1)));
+
         return rv;
     }
 

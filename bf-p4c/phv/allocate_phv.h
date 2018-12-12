@@ -107,15 +107,16 @@ struct AllocScore {
     };
 
     ordered_map<PHV::Kind, ScoreByKind> score;
-    int n_tphv_on_phv_bits;
-    int n_mocha_on_phv_bits;
-    int n_dark_on_phv_bits;
-    int n_dark_on_mocha_bits;
+    int n_tphv_on_phv_bits = 0;
+    int n_mocha_on_phv_bits = 0;
+    int n_dark_on_phv_bits = 0;
+    int n_dark_on_mocha_bits = 0;
     /// Number of bitmasked-set operations introduced by this transaction.
-    int n_num_bitmasked_set;
+    int n_num_bitmasked_set = 0;
 
-    AllocScore() : n_tphv_on_phv_bits(0), n_mocha_on_phv_bits(0), n_dark_on_phv_bits(0),
-                   n_dark_on_mocha_bits(0), n_num_bitmasked_set(0) { }
+    int parser_extractor_balance = 0;
+
+    AllocScore() { }
 
     /** Construct a score from a Transaction.
      *
@@ -124,12 +125,14 @@ struct AllocScore {
      */
     AllocScore(
             const PHV::Transaction& alloc,
+            const PhvInfo& phv,
             const ClotInfo& clot,
             const PhvUse& uses,
             const int bitmasks = 0);
 
+    AllocScore& operator=(const AllocScore& other) = default;
     bool operator>(const AllocScore& other) const;
-    static AllocScore make_lowest();
+    static AllocScore make_lowest() { return AllocScore(); }
 
     /* stateful variables for AllocScore. */
     /// Opportunities for packing if allocated in some order.
@@ -291,6 +294,7 @@ class CoreAllocation {
         const PHV::SuperCluster& super_cluster,
         const ordered_map<PHV::FieldSlice, int>& start_positions) const;
 
+    PhvInfo& phv() const                                  { return phv_i; }
     const PhvUse& uses() const                            { return uses_i; }
     const SymBitMatrix& mutex() const                     { return mutex_i; }
     const FieldDefUse& defuse() const                     { return defuse_i; }

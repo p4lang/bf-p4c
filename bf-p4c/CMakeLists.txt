@@ -386,6 +386,7 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/cluster_phv_operations.h
   phv/constraints.h
   phv/create_thread_local_instances.h
+  phv/parser_extract_balance_score.h
   phv/field_alignment.h
   phv/make_clusters.h
   phv/mau_backtracker.h
