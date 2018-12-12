@@ -203,6 +203,35 @@ class Visualization : public Inspector {
         usages->append(use);
         parent->emplace("usages", usages);
     }
+
+    /// The vector version of the usages node, where there are multiple
+    /// used_for usages.
+    static void usagesToCtxJson(Util::JsonObject *parent,
+                                std::set<std::string> *used_by,
+                                std::set<std::string> *used_for,
+                                const std::string &detail) {
+        auto *usages = new Util::JsonArray();
+        if (!used_by->empty()) {
+            // we need to output an element in the usages array for the cross-product of
+            // used_by and used_for. The detail set is the collection of all details.
+            for (auto each_use : *used_by) {
+                std::for_each(used_for->begin(), used_for->end(),
+                              [each_use, detail] (const std::string& u) {
+                    auto *use = new Util::JsonObject();
+                    // Strip the leading . as p4i shouldn't see it
+                    use->emplace("used_by", new Util::JsonValue(each_use.substr(each_use[0] == '.'
+                                                                                ? 1 : 0)));
+                    use->emplace("used_for", new Util::JsonValue(u));
+                    if (!detail.empty()) {
+                        use->emplace("detail", new Util::JsonValue(detail));  }});
+            }
+        } else {
+            auto *use = new Util::JsonObject();
+            use->emplace("used_by", new Util::JsonValue("--UNUSED--"));
+            usages->append(use);
+        }
+        parent->emplace("usages", usages);
+    }
     Util::JsonObject *getResourcesNode() { return _resourcesNode; }
 
     /// return a pointer to `stage` in `pipe`

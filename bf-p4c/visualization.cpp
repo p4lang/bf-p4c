@@ -94,7 +94,8 @@ bool Visualization::preorder(const IR::BFN::Pipe *p) {
 
     auto *phase0 = new Util::JsonObject();
     if (p->phase0Info)
-        usagesToCtxJson(phase0, p->phase0Info->tableName + "", p->phase0Info->actionName + "");
+        usagesToCtxJson(phase0, std::string(p->phase0Info->tableName),
+                        std::string(p->phase0Info->actionName));
     else
         usagesToCtxJson(phase0, "");
     pipe->emplace("phase0", phase0);
@@ -324,8 +325,8 @@ void Visualization::gen_xbar_bytes(unsigned int stageNo, Util::JsonObject *stage
                       else
                           byte_type = "exact";
                       byte_repr->emplace("byte_type", new Util::JsonValue(byte_type));
-                      usagesToCtxJson(byte_repr, use.total_value(USED_BY),
-                                      use.total_value(USED_FOR), use.total_value(DETAILS));
+                      usagesToCtxJson(byte_repr, use.values(USED_BY),
+                                      use.values(USED_FOR), use.total_value(DETAILS));
                       xb->append(byte_repr);
                   });
     stage->emplace("xbar_bytes", xr);
@@ -346,8 +347,8 @@ void Visualization::gen_hash_bits(unsigned int stageNo, Util::JsonObject *stage)
                       auto *bit_repr = new Util::JsonObject();
                       bit_repr->emplace("hash_bit", new Util::JsonValue(bit_number));
                       bit_repr->emplace("hash_function", new Util::JsonValue(hash_function));
-                      usagesToCtxJson(bit_repr, use.total_value(USED_BY),
-                                      use.total_value(USED_FOR), use.total_value(DETAILS));
+                      usagesToCtxJson(bit_repr, use.values(USED_BY),
+                                      use.values(USED_FOR), use.total_value(DETAILS));
                       hash_bits->append(bit_repr);
                   });
     hash_bits_res->emplace("bits", hash_bits);
@@ -369,8 +370,8 @@ void Visualization::gen_hashdist(unsigned int stageNo, Util::JsonObject *stage) 
                   hd_repr->emplace("hash_id", new Util::JsonValue(hash_id));
                   hd_repr->emplace("unit_id", new Util::JsonValue(unit_id));
 
-                  usagesToCtxJson(hd_repr, use.total_value(USED_BY),
-                                  use.total_value(USED_FOR), use.total_value(DETAILS));
+                  usagesToCtxJson(hd_repr, use.values(USED_BY),
+                                  use.values(USED_FOR), use.total_value(DETAILS));
                   hash_distr->append(hd_repr);
              });
     hash_distr_res->emplace("units", hash_distr);
@@ -612,8 +613,8 @@ void Visualization::gen_action_bus_bytes(unsigned int stageNo, Util::JsonObject 
                       auto use = p.second;
                       auto *byte_repr = new Util::JsonObject();
                       byte_repr->emplace("byte_number", new Util::JsonValue(byte_number));
-                      usagesToCtxJson(byte_repr, use.total_value(USED_BY),
-                                      use.total_value(USED_FOR), use.total_value(DETAILS));
+                      usagesToCtxJson(byte_repr, use.values(USED_BY),
+                                      use.values(USED_FOR), use.total_value(DETAILS));
                       ab->append(byte_repr);
                   });
 
@@ -650,8 +651,8 @@ void Visualization::gen_vliw(unsigned int stageNo, Util::JsonObject *stage) {
                           auto* usage = new Util::JsonObject();
                           usage->emplace("color", new Util::JsonValue(use.color));
                           usage->emplace("gress", new Util::JsonValue(::toString(use.gress)));
-                          usagesToCtxJson(usage, use.total_value(USED_BY),
-                                      use.total_value(USED_FOR), use.total_value(DETAILS));
+                          usagesToCtxJson(usage, use.values(USED_BY),
+                                      use.values(USED_FOR), use.total_value(DETAILS));
                           color_usages->append(usage);
                       }
                       instr->emplace("color_usages", color_usages);
@@ -667,9 +668,7 @@ void Visualization::gen_exm_search_buses(unsigned int stageNo, Util::JsonObject 
     auto *ids = new Util::JsonArray();
     exm_search_buses->emplace("ids", ids);
 
-    // If sharing is ever supported for search buses, we would need
-    // to keep track of something like id_to_usages to avoid defining an
-    // ID multiple times.
+    std::map<int, Util::JsonArray *> id_to_usages;  // Support for sharing buses
     for (auto &res : _stageResources[stageNo]._memoriesUsage) {
         for (auto &use : res._use->memuse) {
             Memories::Use memuse = use.second;
@@ -679,51 +678,22 @@ void Visualization::gen_exm_search_buses(unsigned int stageNo, Util::JsonObject 
             // While there are search buses available for selectors, these
             // are separate from exact match search buses, which is what is
             // referred to here.
-
             switch (memuse.type) {
             case Memories::Use::EXACT:
-            {
-                auto row = memuse.row[0].row;
-                auto bus = memuse.row[0].bus;
-                auto *exm_search_usage = new Util::JsonObject();
-                exm_search_usage->emplace("id", new Util::JsonValue(2 * row + bus));
-                auto *usages = new Util::JsonArray;
-                exm_search_usage->emplace("usages", usages);
-                ids->append(exm_search_usage);
-                auto *usage = new Util::JsonObject();
-                auto tname = res._tableName.substr(res._tableName[0] == '.' ? 1 : 0);
-                usage->emplace("used_by", new Util::JsonValue(tname));
-                usage->emplace("used_for", new Util::JsonValue(memTypeName));
-                // usage->emplace("detail", new Util::JsonValue("?"));
-                usages->append(usage);
-                break;
-            }
             case Memories::Use::ATCAM:
-            {
-                auto row = memuse.row[0].row;
-                auto bus = memuse.row[0].bus;
-                auto *exm_search_usage = new Util::JsonObject();
-                exm_search_usage->emplace("id", new Util::JsonValue(2 * row + bus));
-                auto *usages = new Util::JsonArray;
-                exm_search_usage->emplace("usages", usages);
-                ids->append(exm_search_usage);
-                auto *usage = new Util::JsonObject();
-                auto tname = res._tableName.substr(res._tableName[0] == '.' ? 1 : 0);
-                usage->emplace("used_by", new Util::JsonValue(tname));
-                usage->emplace("used_for", new Util::JsonValue(memTypeName));
-                // usage->emplace("detail", new Util::JsonValue("?"));
-                usages->append(usage);
-                break;
-            }
             case Memories::Use::GATEWAY:
             {
                 auto row = memuse.row[0].row;
                 auto bus = memuse.row[0].bus;
-                auto *exm_search_usage = new Util::JsonObject();
-                exm_search_usage->emplace("id", new Util::JsonValue(2 * row + bus));
-                auto *usages = new Util::JsonArray;
-                exm_search_usage->emplace("usages", usages);
-                ids->append(exm_search_usage);
+                int id = 2 * row + bus;
+                Util::JsonArray *usages = nullptr;
+                auto it = id_to_usages.find(id);
+                if (it != id_to_usages.end()) {
+                    usages = it->second;
+                } else {
+                    usages = new Util::JsonArray;
+                    id_to_usages.emplace(id, usages);
+                }
                 auto *usage = new Util::JsonObject();
                 auto tname = res._tableName.substr(res._tableName[0] == '.' ? 1 : 0);
                 usage->emplace("used_by", new Util::JsonValue(tname));
@@ -732,12 +702,18 @@ void Visualization::gen_exm_search_buses(unsigned int stageNo, Util::JsonObject 
                 usages->append(usage);
                 break;
             }
-            default: {
-                break;
-            }
+            default: break;
             }
         }
     }
+    // now append all the ids found to the ids array
+    for (auto u : id_to_usages) {
+        auto *exm_search_usage = new Util::JsonObject();
+        exm_search_usage->emplace("id", new Util::JsonValue(u.first));
+        exm_search_usage->emplace("usages", u.second);
+        ids->append(exm_search_usage);
+    }
+
     stage->emplace("exm_search_buses", exm_search_buses);
 }
 
@@ -747,9 +723,7 @@ void Visualization::gen_exm_result_buses(unsigned int stageNo, Util::JsonObject 
     auto *ids = new Util::JsonArray();
     exm_result_buses->emplace("ids", ids);
 
-    // If sharing is ever supported for result buses, we would need
-    // to keep track of something like id_to_usages to avoid defining an
-    // ID multiple times.
+    std::map<int, Util::JsonArray *> id_to_usages;  // Support for sharing buses
     for (auto &res : _stageResources[stageNo]._memoriesUsage) {
         for (auto &use : res._use->memuse) {
             Memories::Use memuse = use.second;
@@ -758,31 +732,19 @@ void Visualization::gen_exm_result_buses(unsigned int stageNo, Util::JsonObject 
 
             switch (memuse.type) {
             case Memories::Use::EXACT:
-            {
-                auto row = memuse.row[0].row;
-                auto bus = memuse.row[0].bus;
-                auto *exm_result_usage = new Util::JsonObject();
-                exm_result_usage->emplace("id", new Util::JsonValue(2 * row + bus));
-                auto *usages = new Util::JsonArray;
-                exm_result_usage->emplace("usages", usages);
-                ids->append(exm_result_usage);
-                auto *usage = new Util::JsonObject();
-                auto tname = res._tableName.substr(res._tableName[0] == '.' ? 1 : 0);
-                usage->emplace("used_by", new Util::JsonValue(tname));
-                usage->emplace("used_for", new Util::JsonValue(memTypeName));
-                // usage->emplace("detail", new Util::JsonValue("?"));
-                usages->append(usage);
-                break;
-            }
             case Memories::Use::ATCAM:
             {
                 auto row = memuse.row[0].row;
                 auto bus = memuse.row[0].bus;
-                auto *exm_result_usage = new Util::JsonObject();
-                exm_result_usage->emplace("id", new Util::JsonValue(2 * row + bus));
-                auto *usages = new Util::JsonArray;
-                exm_result_usage->emplace("usages", usages);
-                ids->append(exm_result_usage);
+                int id = 2 * row + bus;
+                Util::JsonArray *usages = nullptr;
+                auto it = id_to_usages.find(id);
+                if (it != id_to_usages.end()) {
+                    usages = it->second;
+                } else {
+                    usages = new Util::JsonArray;
+                    id_to_usages.emplace(id, usages);
+                }
                 auto *usage = new Util::JsonObject();
                 auto tname = res._tableName.substr(res._tableName[0] == '.' ? 1 : 0);
                 usage->emplace("used_by", new Util::JsonValue(tname));
@@ -814,12 +776,18 @@ void Visualization::gen_exm_result_buses(unsigned int stageNo, Util::JsonObject 
                 break;
             }
             */
-            default: {
-                break;
-            }
+            default: break;
             }
         }
     }
+    // now append all the ids found to the ids array
+    for (auto u : id_to_usages) {
+        auto *exm_result_usage = new Util::JsonObject();
+        exm_result_usage->emplace("id", new Util::JsonValue(u.first));
+        exm_result_usage->emplace("usages", u.second);
+        ids->append(exm_result_usage);
+    }
+
     stage->emplace("exm_result_buses", exm_result_buses);
 }
 
@@ -829,9 +797,7 @@ void Visualization::gen_tind_result_buses(unsigned int stageNo, Util::JsonObject
     auto *ids = new Util::JsonArray();
     tind_result_buses->emplace("ids", ids);
 
-    // If sharing is ever supported for result buses, we would need
-    // to keep track of something like id_to_usages to avoid defining an
-    // ID multiple times.
+    std::map<int, Util::JsonArray *> id_to_usages;  // Support for sharing buses
     for (auto &res : _stageResources[stageNo]._memoriesUsage) {
         for (auto &use : res._use->memuse) {
             Memories::Use memuse = use.second;
@@ -843,11 +809,15 @@ void Visualization::gen_tind_result_buses(unsigned int stageNo, Util::JsonObject
             {
                 auto row = memuse.row[0].row;
                 auto bus = memuse.row[0].bus;
-                auto *tind_result_usage = new Util::JsonObject();
-                tind_result_usage->emplace("id", new Util::JsonValue(2 * row + bus));
-                auto *usages = new Util::JsonArray;
-                tind_result_usage->emplace("usages", usages);
-                ids->append(tind_result_usage);
+                int id = 2 * row + bus;
+                Util::JsonArray *usages = nullptr;
+                auto it = id_to_usages.find(id);
+                if (it != id_to_usages.end()) {
+                    usages = it->second;
+                } else {
+                    usages = new Util::JsonArray;
+                    id_to_usages.emplace(id, usages);
+                }
                 auto *usage = new Util::JsonObject();
                 auto tname = res._tableName.substr(res._tableName[0] == '.' ? 1 : 0);
                 usage->emplace("used_by", new Util::JsonValue(tname));
@@ -861,13 +831,16 @@ void Visualization::gen_tind_result_buses(unsigned int stageNo, Util::JsonObject
                 // auto unit = memuse.gateway.unit;
                 // FIXME: How do we know if this is a tind bus or exm bus?
                 if (memuse.gateway.payload_bus == 0 || memuse.gateway.payload_bus == 1) {
-                    auto *tind_result_usage = new Util::JsonObject();
-                    auto result_bus_unit = 2 * memuse.gateway.payload_row;
-                    result_bus_unit += memuse.gateway.payload_bus;
-                    tind_result_usage->emplace("id", new Util::JsonValue(result_bus_unit));
-                    auto *usages = new Util::JsonArray;
-                    tind_result_usage->emplace("usages", usages);
-                    ids->append(tind_result_usage);
+                    auto result_bus_unit = 2 * memuse.gateway.payload_row +
+                        memuse.gateway.payload_bus;
+                    Util::JsonArray *usages = nullptr;
+                    auto it = id_to_usages.find(result_bus_unit);
+                    if (it != id_to_usages.end()) {
+                        usages = it->second;
+                    } else {
+                        usages = new Util::JsonArray;
+                        id_to_usages.emplace(result_bus_unit, usages);
+                    }
                     auto *usage = new Util::JsonObject();
                     auto tname = res._tableName.substr(res._tableName[0] == '.' ? 1 : 0);
                     usage->emplace("used_by", new Util::JsonValue(tname));
@@ -883,6 +856,14 @@ void Visualization::gen_tind_result_buses(unsigned int stageNo, Util::JsonObject
             }
         }
     }
+    // now append all the ids found to the ids array
+    for (auto u : id_to_usages) {
+        auto *tind_result_usage = new Util::JsonObject();
+        tind_result_usage->emplace("id", new Util::JsonValue(u.first));
+        tind_result_usage->emplace("usages", u.second);
+        ids->append(tind_result_usage);
+    }
+
     stage->emplace("tind_result_buses", tind_result_buses);
 }
 
