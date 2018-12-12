@@ -43,11 +43,11 @@ std::ostream &operator<<(std::ostream &out, CreateSaluInstruction::LocalVar::use
     else
         return out << "<invalid " << u << ">"; }
 std::ostream &operator<<(std::ostream &out, CreateSaluInstruction::etype_t e) {
-    static const char *names[] = { "NONE", "IF", "VALUE", "OUTPUT" };
+    static const char *names[] = { "NONE", "MINMAX_IDX", "IF", "VALUE", "OUTPUT", "MATCH" };
     if (e < sizeof(names)/sizeof(names[0]))
         return out << names[e];
     else
-        return out << "<invalid " << e << ">"; }
+        return out << "<invalid " << int(e) << ">"; }
 
 static bool is_address_output(const IR::Expression *e) {
     if (auto *r = e->to<IR::MAU::SaluReg>())
@@ -67,12 +67,12 @@ static bool is_learn(const IR::Expression *e) {
 /// If so, process it as an operand and return true
 bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field) {
     LOG4("applyArg(" << pe << ", " << field << ") etype = " << etype);
-    assert(dest == nullptr || etype != NONE);
+    assert(dest == nullptr || !islvalue(etype));
     IR::Expression *e = nullptr;
     int idx = 0, field_idx = 0;
     if (locals.count(pe->path->name.name)) {
         auto &local = locals.at(pe->path->name.name);
-        if (etype == NONE)
+        if (islvalue(etype))
             dest = &local;
         switch (local.use) {
         case LocalVar::NONE:
@@ -89,12 +89,12 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
             BUG("invalide use in CreateSaluInstruction::LocalVar %s %d", local.name, local.use); }
     } else {
         if (!params) return false;
-        if (etype == NONE)
+        if (islvalue(etype))
             output_index = 0;
         for (auto p : params->parameters) {
             if (p->name == pe->path->name) {
                 break; }
-            if (etype == NONE && param_types->at(idx) == param_t::OUTPUT)
+            if (islvalue(etype) && param_types->at(idx) == param_t::OUTPUT)
                 ++output_index;
             ++idx; }
         if (size_t(idx) >= params->parameters.size()) return false;
@@ -108,7 +108,7 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
     cstring name = field_idx ? "hi" : "lo";
     switch (param_types->at(idx)) {
     case param_t::VALUE:        /* inout value; */
-        if (etype == NONE) {
+        if (islvalue(etype)) {
             // alu_lo cannot be used as a synthetic local var as it is always
             // written back to the memory. In non-dual mode, alu_hi is not
             // written back, so it can be used as a local temp for a computation
@@ -141,7 +141,7 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
         e = new IR::MAU::SaluReg(pe->type, name, field_idx > 0);
         break;
     case param_t::OUTPUT:       /* out rv; */
-        if (etype == NONE)
+        if (islvalue(etype))
             etype = OUTPUT;
         else
             error("Reading out param %s in %s not supported", pe, action_type_name);
@@ -151,19 +151,19 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
         if (!opcode) opcode = "output";
         break;
     case param_t::HASH:         /* in digest */
-        if (etype == NONE) {
+        if (islvalue(etype)) {
             error("Writing in param %s in %s not supported", pe, action_type_name);
             return false; }
         e = new IR::MAU::SaluReg(pe->type, "phv_" + name, field_idx > 0);
         break;
     case param_t::LEARN:        /* in learn */
-        if (etype == NONE) {
+        if (islvalue(etype)) {
             error("Writing in param %s in %s not supported", pe, action_type_name);
             return false; }
         e = new IR::MAU::SaluReg(pe->type, "learn", false);
         break;
     case param_t::MATCH:        /* out match */
-        if (etype != NONE) {
+        if (!islvalue(etype)) {
             error("Reading out param %s in %s not supported", pe, action_type_name);
             return false; }
         etype = MATCH;
@@ -252,7 +252,7 @@ bool CreateSaluInstruction::preorder(const IR::AssignmentStatement *as) {
     opcode = cstring();
     visit(as->left, "left");
     BUG_CHECK(operands.size() == (etype < OUTPUT) || ::errorCount() > 0, "recursion failure");
-    if (etype == NONE)
+    if (islvalue(etype))
         error("Can't assign to %s in RegisterAction", as->left);
     else
         visit(as->right);
@@ -339,15 +339,34 @@ bool CreateSaluInstruction::preorder(const IR::Member *e) {
     LOG4("Member operand: " << operands.back());
     return false;
 }
+
+/* check that a slice is essentially just a cast to the correct size */
+static bool checkSlice(const IR::Slice *sl, unsigned width) {
+    return sl->getL() == 0 && sl->getH() == width - 1;
+}
+
 bool CreateSaluInstruction::preorder(const IR::Slice *sl) {
-    visit(sl->e0, "e0");
-    if (etype == OUTPUT) {
-        if (sl->getL() != 0)
-            error("%scan only output slice at 0 from stateful alu", sl->srcInfo);
-    } else if (operands.back() == sl->e0) {
-        operands.back() = sl;
+    bool keep_slice = false;
+    if (etype == NONE) {
+        if (!checkSlice(sl, salu->alu_width()))
+            error("%scan only output entire %d-bit ALU output from %s", sl->srcInfo,
+                  salu->alu_width(), reg_action->toString());
+    } else if (etype == MINMAX_IDX) {
+        // Magic constant 4 is log_2(memory word size in bytes)
+        if (!checkSlice(sl, 4 - minmax_width))
+            error("%s%s index output can only write to bottom %d bits of output", sl->srcInfo,
+                  minmax_instr->name, 4 - minmax_width);
     } else {
-        operands.back() = new IR::Slice(sl->srcInfo, operands.back(), sl->e1, sl->e2); }
+        if (!checkSlice(sl, salu->alu_width()))
+            error("%scan only read %d-bit slices in %s ALU", sl->srcInfo,
+                  salu->alu_width(), reg_action->toString());
+        keep_slice = true; }
+    visit(sl->e0, "e0");
+    if (keep_slice) {
+        if (operands.back() == sl->e0)
+            operands.back() = sl;
+        else
+            operands.back() = new IR::Slice(sl->srcInfo, operands.back(), sl->e1, sl->e2); }
     return false;
 }
 
@@ -392,7 +411,8 @@ bool CreateSaluInstruction::preorder(const IR::Primitive *prim) {
                 address_subword = k->asInt(); }
     } else if (method == "predicate") {
         operands.push_back(new IR::MAU::SaluReg(prim->type, "predicate", false));
-    } else if (method.startsWith("min") || method.startsWith("max")) {
+    } else if (method == "min8" || method == "max8" || method == "min16" || method == "max16") {
+        minmax_width = (method == "min16" || method == "max16") ? 1 : 0;
         if (etype != OUTPUT) {
             error("%s can only write to an ouput", prim);
             return false; }
@@ -410,7 +430,7 @@ bool CreateSaluInstruction::preorder(const IR::Primitive *prim) {
             minmax_instr = createInstruction(); }
         operands.clear();
         if (prim->operands.size() == 4) {
-            etype = NONE;
+            etype = MINMAX_IDX;
             dest = nullptr;
             opcode = cstring();
             visit(prim->operands[3], "index");

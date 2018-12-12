@@ -1581,7 +1581,8 @@ public:
     int address_shift() const override;
     int unitram_type() override { return UnitRam::STATEFUL; }
     int get_const(int64_t v);
-    bool is_dual_mode() { return dual_mode; }
+    bool is_dual_mode() const { return dual_mode; }
+    int alu_size() const { return 1 << std::min(5U, format->log2size - is_dual_mode()); }
     int home_row() const override { return layout.at(0).row | 3; }
     unsigned meter_group() const { return layout.at(0).row/4U; }
     unsigned determine_shiftcount(Table::Call &call, int group, unsigned word,

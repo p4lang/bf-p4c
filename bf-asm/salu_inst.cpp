@@ -182,24 +182,32 @@ operand::operand(Table *tbl, const Table::Actions::Action *act, const value_t &v
         v = &v->vec[1]; }
     if (v->type == tINT) {
         op = new Const(v->lineno, v->i);
-    } else if (v->type == tBIGINT) {
-        if (v->bigi.size > 1 || v->bigi.data[0] > INT64_MAX)
+        return; }
+    if (v->type == tBIGINT) {
+        if (v->bigi.size > 1)
             error(v->lineno, "Integer too large");
         op = new Const(v->lineno, v->bigi.data[0]);
-    } else if (v->type == tSTR) {
-        if (auto f = tbl->format->field(v->s))
+        return; }
+    if (v->type == tSTR) {
+        if (auto f = tbl->format->field(v->s)) {
             op = new Memory(v->lineno, tbl, f);
-        else if (*v == "phv_lo" || *v == "phv_hi")
-            op = new PhvRaw(tbl->gress, *v);
-        else
-            op = new PhvReg(tbl->gress, tbl->stage->stageno, *v);
-    } else if ((v->type == tCMD) && (v->vec[0] == "math_table")) {
+            return; } }
+    if (v->type == tCMD) {
+        BUG_CHECK(v->vec.size > 0 && v->vec[0].type == tSTR);
+        if (auto f = tbl->format->field(v->vec[0].s)) {
+            if (v->vec.size > 1 && CHECKTYPE(v->vec[1], tRANGE) && v->vec[1].lo != 0)
+                error(v->vec[1].lineno, "Can't slice memory field %s in stateful action",
+                      v->vec[0].s);
+            op = new Memory(v->lineno, tbl, f);
+            return; } }
+    if ((v->type == tCMD) && (v->vec[0] == "math_table")) {
         //operand *opP = new operand(tbl, act, v->vec[1]);
         op = new MathFn(v->lineno, operand(tbl, act, v->vec[1]));
-    } else if (*v == "phv_lo" || *v == "phv_hi")
+        return; }
+    if (*v == "phv_lo" || *v == "phv_hi") {
         op = new PhvRaw(tbl->gress, *v);
-    else
-        op = new PhvReg(tbl->gress, tbl->stage->stageno, *v);
+        return; }
+    op = new PhvReg(tbl->gress, tbl->stage->stageno, *v);
 }
 
 enum salu_slot_use {
@@ -406,8 +414,12 @@ Instruction *AluOP::pass1(Table *tbl_, Table::Actions::Action *act) {
     if (k1 && k2 && k1->value != k2->value)
         error(lineno, "can only have one distinct constant in an SALU instruction");
     if (!k1) k1 = k2;
-    if (k1 && (k1->value < -8 || k1->value >= 8))
+    if (k1 && (k1->value < -8 || k1->value >= 8)) {
         tbl->get_const(k1->value);
+        if (k1->value >= (INT64_C(1) << tbl->alu_size()) ||
+            k1->value < (INT64_C(-1) << (tbl->alu_size() - 1)))
+            error(lineno, "operand %" PRIi64 " out of range for %d bit stateful ALU",
+                  k1->value, tbl->alu_size()); }
     if (srca) srca->pass1(tbl);
     if (srcb) srcb->pass1(tbl);
     return this; }

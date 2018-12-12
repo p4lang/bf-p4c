@@ -515,6 +515,7 @@ class StatefulAlu : Synth2Port {
             return width / 2;
         return width;
     }
+    int alu_width() const { return std::min(32, source_width()); }
 }
 
 class Selector : AttachedMemory {

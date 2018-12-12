@@ -692,7 +692,12 @@ void AttachTables::InitializeStatefulAlus
             salu->size = getConstant(reg->arguments->at(0));
         } else {
             salu->direct = true; }
-        salu->width = regtype ? regtype->arguments->at(0)->width_bits() : 1;
+        if (regtype) {
+            salu->width = regtype->arguments->at(0)->width_bits();
+            if (auto str = regtype->arguments->at(0)->to<IR::Type_Struct>())
+                salu->dual = str->fields.size() > 1;
+        } else {
+            salu->width = 1; }
         if (auto cts = reg->annotations->getSingle("chain_total_size"))
             salu->chain_total_size = getConstant(cts);
         salu_inits[reg] = salu; }

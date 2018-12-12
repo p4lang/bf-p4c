@@ -65,12 +65,16 @@ class CreateSaluInstruction : public Inspector {
     std::map<cstring, LocalVar> locals;
     enum etype_t {
         // tracks the use (context) of the expression we're currently visiting
-        NONE,    // unknown (generally, an lvalue)
+        // lvalue contexts
+        NONE,    // unknown
+        MINMAX_IDX,  // output index of min/max
+        // rvalue contexts
         IF,      // condition -- operand of an if
         VALUE,   // value to be written to memory -- alu output
         OUTPUT,  // value to be written to action data bus output
         MATCH,   // value to be written to match output
         }                       etype = NONE;
+    static bool islvalue(etype_t t) { return t < IF; }
     bool                        negate = false;
     bool                        alu_write[2] = { false, false };
     cstring                     opcode;
@@ -78,6 +82,7 @@ class CreateSaluInstruction : public Inspector {
     int                                         output_index;
     std::vector<const IR::MAU::Instruction *>   cmp_instr;
     const IR::MAU::Instruction                  *divmod_instr = nullptr, *minmax_instr = nullptr;
+    int                                         minmax_width;  // 0 = min/max8, 1 = min/max16
     const IR::Expression                        *predicate = nullptr;
     const IR::MAU::Instruction                  *onebit = nullptr;  // the single 1-bit alu op
     bool                                        onebit_cmpl = false;  // 1-bit op needs cmpl
