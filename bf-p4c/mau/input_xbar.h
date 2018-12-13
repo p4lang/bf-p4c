@@ -461,8 +461,20 @@ struct IXBar {
         std::map<int, bitvec> masks;  // Control the mau_hash_group_mask register per unit
         std::map<int, std::set<cstring>> outputs;  // (extra) outputs per slice
         // Classification of what the hash distribution is used for
-        const IR::MAU::HashDist *original_hd;
         const IR::Expression *field_list;  // For a comparison between IR::HashDist and this
+        /**
+         * This is what is currently used to distinguish the allocation in assembly with the
+         * IR object.  Current assumptions:
+         *     1. The HashDist object doesn't change in the IR, and is only sliced
+         *     2. The HashDist object is unique across the IR, and is only used in one
+         *        allocatable spot.  (This is not true for meter, as the color mapram
+         *        hash dist object has two objects.
+         *
+         * FIXME: This in the longterm is fairly unsafe, especially assumption 1, and the
+         * lookup for this must change
+         */ 
+        const IR::MAU::HashDist *original_hd;
+        bool color_mapram = false;
 
         void clear() {
             use.clear();

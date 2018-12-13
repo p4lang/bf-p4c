@@ -50,6 +50,10 @@ bool MatchTable::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::t
         attached.selector_length.setup(kv.value, this);
         return true;
     }
+    if (kv.key == "meter_color") {
+        attached.meter_color.setup(kv.value, this);
+        return true;
+    }
     if (kv.key == "stats") {
         if (kv.value.type == tVEC)
             for (auto &v : kv.value.vec)

@@ -548,9 +548,13 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
+  "The meter .* requires either an idletime or stats address bus"
+  testdata/p4_14_samples/hash_action_two_same.p4
+)
+
+p4c_add_xfail_reason("tofino"
   "This action requires hash, which can only be done through the hit pathway"
   testdata/p4_14_samples/acl1.p4
-  testdata/p4_14_samples/hash_action_two_same.p4
 )
 
 # p4c_add_xfail_reason("tofino"

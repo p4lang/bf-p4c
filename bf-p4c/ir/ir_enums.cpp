@@ -141,6 +141,27 @@ bool operator>>(cstring s, IR::MAU::TypeLocation &t) {
     return false;
 }
 
+static const char *color_mapram_address_to_str[] = {
+    "IDLETIME", "STATS", "MAPRAM_ADDR_TYPES", "NOT_SET"
+};
+
+std::ostream &operator<<(std::ostream &out, const IR::MAU::ColorMapramAddress &cma) {
+    out << color_mapram_address_to_str[static_cast<int>(cma)];
+    return out;
+}
+
+bool operator>>(cstring s, IR::MAU::ColorMapramAddress &cma) {
+    if (!s || s == "") {
+        cma = IR::MAU::ColorMapramAddress::NOT_SET;
+    }
+    for (int i = 0; i <= static_cast<int>(IR::MAU::ColorMapramAddress::NOT_SET); i++) {
+        if (color_mapram_address_to_str[i] == s) {
+            cma = static_cast<IR::MAU::ColorMapramAddress>(i); return true;
+        }
+    }
+    return false;
+}
+
 static const char *checksum_mode_to_str[] = {
     "VERIFY", "RESIDUAL", "CLOT"
 };

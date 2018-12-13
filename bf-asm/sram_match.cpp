@@ -443,14 +443,14 @@ void SRamMatchTable::write_attached_merge_regs(REGS &regs, int bus, int word, in
             int shiftcount = m->to<MeterTable>()->determine_shiftcount(m, group, word, 0);
             merge.mau_meter_adr_exact_shiftcount[bus][word_group] = shiftcount;
             if (m->uses_colormaprams()) {
-                int huffman_bits_out = 0;
-                if (m.args[0].field() ||
-                    (m.args[0].name() && strcmp(m.args[0].name(), "$DIRECT") == 0)) {
-                    huffman_bits_out = METER_LOWER_HUFFMAN_BITS;
+                int color_shift = m->color_shiftcount(attached.meter_color, group, 0); 
+                if (m->color_addr_type() == MeterTable::IDLE_MAP_ADDR) {
+                    merge.mau_idletime_adr_exact_shiftcount[bus][word_group] = color_shift;
+                    merge.mau_payload_shifter_enable[0][bus].idletime_adr_payload_shifter_en = 1;
+                } else if (m->color_addr_type() == MeterTable::STATS_MAP_ADDR) {
+                    merge.mau_stats_adr_exact_shiftcount[bus][word_group] = color_shift;
+                    merge.mau_payload_shifter_enable[0][bus].stats_adr_payload_shifter_en = 1;
                 }
-                merge.mau_idletime_adr_exact_shiftcount[bus][word_group]
-                    = std::max(shiftcount - METER_ADDRESS_ZERO_PAD + huffman_bits_out, 0);
-                merge.mau_payload_shifter_enable[0][bus].idletime_adr_payload_shifter_en = 1;
             }
         } else if (options.match_compiler) {
             /* unused, so should not be set... */

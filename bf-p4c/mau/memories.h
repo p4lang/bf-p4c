@@ -172,6 +172,7 @@ struct Memories {
         safe_vector<std::pair<int, int>>         home_row;
         safe_vector<Way>                         ways;
         Gateway                                  gateway;
+        IR::MAU::ColorMapramAddress cma = IR::MAU::ColorMapramAddress::NOT_SET;
 
         /** This is a map of AttachedMemory UniqueIds that are shared with other tables, i.e.
          *  Action Profiles.  The AttachedMemory though shared, is only allocated on one table
@@ -193,6 +194,7 @@ struct Memories {
             color_mapram.clear();
             home_row.clear();
             gateway.clear();
+            cma = IR::MAU::ColorMapramAddress::NOT_SET;
         }
 
         void clear() {
@@ -276,6 +278,9 @@ struct Memories {
         struct color_mapram_group {
             int needed = 0;
             int placed = 0;
+            // Necessary for stats addressed color maprams
+            int home_row = -1;
+            IR::MAU::ColorMapramAddress cma = IR::MAU::ColorMapramAddress::NOT_SET;
             bool all_placed() const {
                 BUG_CHECK(placed <= needed, "Placed more RAMs than actually needed");
                 return needed == placed;
@@ -284,6 +289,8 @@ struct Memories {
                 BUG_CHECK(placed <= needed, "Placed more RAMs than actually needed");
                 return needed - placed;
             }
+
+            bool require_stats() const { return cma == IR::MAU::ColorMapramAddress::STATS; }
         };
 
 
@@ -520,7 +527,7 @@ struct Memories {
                                 bool stats_available, bool meter_available,
                                 swbox_fill &curr_oflow, swbox_fill &sel_oflow);
     void adjust_RAMs_available(swbox_fill &curr_oflow, int RAMs_avail[OFLOW], int row,
-                               RAM_side_t side);
+                               RAM_side_t side, bool stats_available);
 
     int half_RAMs_available(int row, bool right_only);
     int half_map_RAMs_available(int row);
@@ -547,8 +554,9 @@ struct Memories {
                               switchbox_t order[SWBOX_TYPES]);
     void set_up_RAM_counts(swbox_fill candidates[SWBOX_TYPES], switchbox_t order[SWBOX_TYPES],
                            int RAMs_avail[OFLOW], int RAMs[SWBOX_TYPES]);
-    void color_mapram_candidates(swbox_fill candidates[SWBOX_TYPES], RAM_side_t side);
-    void set_color_maprams(swbox_fill &candidate, unsigned &avail_maprams);
+    void color_mapram_candidates(swbox_fill candidates[SWBOX_TYPES], RAM_side_t side,
+        bool stats_available);
+    void set_color_maprams(swbox_fill &candidate, unsigned &avail_maprams, bool stats_available);
     void fill_color_mapram_use(swbox_fill &candidate, int row, RAM_side_t side);
     void fill_RAM_use(swbox_fill &candidate, int row, RAM_side_t side, switchbox_t type);
     void remove_placed_group(swbox_fill &candidate, RAM_side_t side);

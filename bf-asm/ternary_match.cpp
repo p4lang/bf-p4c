@@ -813,6 +813,8 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
             attached.selector.setup(kv.value, this);
         } else if (kv.key == "selector_length") {
             attached.selector_length.setup(kv.value, this);
+        } else if (kv.key == "meter_color") {
+            attached.meter_color.setup(kv.value, this);
         } else if (kv.key == "stats") {
             if (kv.value.type == tVEC)
                 for (auto &v : kv.value.vec)

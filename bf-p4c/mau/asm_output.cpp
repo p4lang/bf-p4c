@@ -1102,6 +1102,7 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
         }
         if (color_mapram_row.size() > 1) {
             out << indent << "row: " << color_mapram_row << std::endl;
+            out << indent << "bus: " << color_mapram_bus << std::endl;
             out << indent << "column:" << std::endl;
             for (auto &r : mem.color_mapram)
                 out << indent << "- " << memory_vector(r.col, mem.type, true) << std::endl;
@@ -1111,6 +1112,14 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
             out << indent << "column: " << memory_vector(mem.color_mapram[0].col, mem.type, true)
                 << std::endl;
         }
+        out << indent << "address: ";
+        if (mem.cma == IR::MAU::ColorMapramAddress::IDLETIME)
+            out << "idletime";
+        else if (mem.cma == IR::MAU::ColorMapramAddress::STATS)
+            out << "stats";
+        else
+            BUG("Color mapram has not been allocated an address");
+        out << std::endl;
         indent--;
     }
 }
@@ -2655,7 +2664,7 @@ std::string MauAsmOutput::stateful_counter_addr(IR::MAU::StatefulUse use) const 
  *      2. $DEFAULT - the parameter is defaulted on through the default register
  */
 std::string MauAsmOutput::build_call(const IR::MAU::AttachedMemory *at_mem,
-       const IR::MAU::BackendAttached *ba, const IR::MAU::Table *tbl) const {
+        const IR::MAU::BackendAttached *ba, const IR::MAU::Table *tbl) const {
     if (at_mem->is<IR::MAU::IdleTime>()) {
         return "";
     }
@@ -2672,7 +2681,7 @@ std::string MauAsmOutput::build_call(const IR::MAU::AttachedMemory *at_mem,
         auto hash_dist_uses = tbl->resources->hash_dists;
         const IXBar::HashDistUse *hd_use = nullptr;
         for (auto &hash_dist_use : hash_dist_uses) {
-            if (ba->hash_dist == hash_dist_use.original_hd) {
+            if (ba->hash_dist == hash_dist_use.original_hd && !hash_dist_use.color_mapram) {
                 hd_use = &hash_dist_use;
                 break;
             }
@@ -2699,6 +2708,47 @@ std::string MauAsmOutput::build_call(const IR::MAU::AttachedMemory *at_mem,
         ba->type_location == IR::MAU::TypeLocation::GATEWAY_PAYLOAD) {
         rv += "meter_type";
     } else if (ba->type_location == IR::MAU::TypeLocation::DEFAULT) {
+        rv += "$DEFAULT";
+    }
+    return rv + ")";
+}
+
+/**
+ * Due to the color mapram possibly having a different address, due to the address
+ * coming from hash being different, as the shift and mask happens in the hash distribution
+ * unit, a separate call is built for color maprams.  The enable bit should always be
+ * the same as the meter address enable bit.
+ */
+std::string MauAsmOutput::build_meter_color_call(const IR::MAU::Meter *mtr,
+        const IR::MAU::BackendAttached *ba, const IR::MAU::Table *tbl) const {
+    std::string rv = "(";
+    if (ba->addr_location == IR::MAU::AddrLocation::DIRECT) {
+        rv += "$DIRECT";
+    } else if (ba->addr_location == IR::MAU::AddrLocation::OVERHEAD ||
+               ba->addr_location == IR::MAU::AddrLocation::GATEWAY_PAYLOAD) {
+        rv += indirect_address(mtr);
+    } else if (ba->addr_location == IR::MAU::AddrLocation::HASH) {
+        BUG_CHECK(ba->hash_dist, "Hash Dist not allocated correctly");
+        auto hash_dist_uses = tbl->resources->hash_dists;
+        const IXBar::HashDistUse *hd_use = nullptr;
+        for (auto &hash_dist_use : hash_dist_uses) {
+            if (ba->hash_dist == hash_dist_use.original_hd && hash_dist_use.color_mapram) {
+                hd_use = &hash_dist_use;
+                break;
+            }
+        }
+        BUG_CHECK(hd_use != nullptr, "No associated hash distribution group for a color mapram "
+                  "address");
+        rv += "hash_dist " + std::to_string(hd_use->slices[0]);
+    } else {
+        BUG("Invalid Address for color mapram");
+    }
+
+    rv += ", ";
+    if (ba->pfe_location == IR::MAU::PfeLocation::OVERHEAD ||
+        ba->pfe_location == IR::MAU::PfeLocation::GATEWAY_PAYLOAD) {
+        rv += indirect_pfe(mtr);
+    } else if (ba->pfe_location == IR::MAU::PfeLocation::DEFAULT) {
         rv += "$DEFAULT";
     }
     return rv + ")";
@@ -2747,6 +2797,15 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
         out << find_attached_name(tbl, at_mem);
         out << build_call(at_mem, back_at, tbl);
         out << std::endl;
+        if (auto mtr = at_mem->to<IR::MAU::Meter>()) {
+            if (mtr->color_output()) {
+                out << indent << "meter_color : ";
+                out << find_attached_name(tbl, at_mem);
+                out << build_meter_color_call(mtr, back_at, tbl);
+                out << std::endl;
+            }
+        }
+
         auto as = at_mem->to<IR::MAU::Selector>();
         if (as != nullptr) {
             out << indent <<  "selector_length: " << find_attached_name(tbl, at_mem);

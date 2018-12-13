@@ -373,9 +373,23 @@ void AttachedTables::pass1(MatchTable *self) {
             s->validate_call(s, self, 2, HashDistribution::STATISTICS_ADDRESS, stats[0]);
         }
     }
+
+    bool color_mapram_req = false;
     for (auto &m : meters) {
         if (m) {
             m->validate_call(m, self, 3, HashDistribution::METER_ADDRESS, meters[0]);
+            if (m->uses_colormaprams())
+                color_mapram_req = true;
+        }
+    }
+
+    if (color_mapram_req) {
+        if (meter_color) {
+            meter_color->validate_call(meter_color, self, 2,
+                                       HashDistribution::STATISTICS_ADDRESS, meter_color);
+        } else {
+            error(meters[0].lineno, "Must provide a meter color mapram call when a meter "
+                                    "required color maprams is called");
         }
     }
 
@@ -409,14 +423,14 @@ void AttachedTables::write_tcam_merge_regs(REGS &regs, MatchTable *self, int bus
         int shiftcount = m->determine_shiftcount(m, 0, 0, tcam_shift);
         merge.mau_meter_adr_tcam_shiftcount[bus] = shiftcount;
         if (m->uses_colormaprams()) {
-            int huffman_bits_out = 0;
-            if (m.args[0].field() ||
-                (m.args[0].name() && strcmp(m.args[0].name(), "$DIRECT") == 0)) {
-                huffman_bits_out = METER_LOWER_HUFFMAN_BITS;
+            int color_shift = m->color_shiftcount(meter_color, 0, tcam_shift); 
+            if (m->color_addr_type() == MeterTable::IDLE_MAP_ADDR) {
+                merge.mau_idletime_adr_tcam_shiftcount[bus] = color_shift;
+                merge.mau_payload_shifter_enable[1][bus].idletime_adr_payload_shifter_en = 1;
+            } else if (m->color_addr_type() == MeterTable::STATS_MAP_ADDR) {
+                merge.mau_stats_adr_tcam_shiftcount[bus] = color_shift;
+                merge.mau_payload_shifter_enable[1][bus].stats_adr_payload_shifter_en = 1;
             }
-            merge.mau_idletime_adr_tcam_shiftcount[bus]
-                = std::max(shiftcount - METER_ADDRESS_ZERO_PAD + huffman_bits_out, 0);
-            merge.mau_payload_shifter_enable[1][bus].idletime_adr_payload_shifter_en = 1;
         }
         break; /* all must be the same, only config once */
     }

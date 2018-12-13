@@ -504,6 +504,9 @@ public:
     virtual int memunit(const int r, const int c) const { return r*12 + c; }
     virtual int unitram_type() { BUG(); return -1; }
     virtual bool uses_colormaprams() const { return false; }
+    virtual int color_shiftcount(Table::Call &call, int group, int tcam_shift) const {
+        BUG(); return -1; }
+    virtual int color_addr_type() const { BUG(); return -1; }
     virtual bool adr_mux_select_stats() { return false; }
     virtual bool run_at_eop() { return false; }
     virtual Format* get_format() { return format; }
@@ -677,6 +680,7 @@ struct AttachedTables {
     Table::Call                 selector;
     Table::Call                 selector_length;
     std::vector<Table::Call>    stats, meters, statefuls;
+    Table::Call                 meter_color;
     SelectionTable *get_selector() const;
     MeterTable* get_meter(std::string name = "") const;
     StatefulTable *get_stateful(std::string name = "") const;
@@ -1498,6 +1502,7 @@ DECLARE_TABLE_TYPE(MeterTable, Synth2Port, "meter",
             write_merge_regs<decltype(regs)>(regs, match, type, bus, args); })
     int                 sweep_interval = 2;
 public:
+    enum { IDLE_MAP_ADDR=0, STATS_MAP_ADDR=1 }  color_mapram_addr = IDLE_MAP_ADDR;
     int direct_shiftcount() const override;
     int indirect_shiftcount() const override;
     int address_shift() const override;
@@ -1517,6 +1522,8 @@ public:
     int default_pfe_adjust() const override { return color_aware ? -METER_TYPE_BITS : 0; }
     void set_color_used() override { color_used = true; }
     void set_output_used() override { output_used = true; }
+    int color_shiftcount(Table::Call &call, int group, int tcam_shift) const override;
+    int color_addr_type() const override { return color_mapram_addr; } 
 )
 
 namespace StatefulAlu {

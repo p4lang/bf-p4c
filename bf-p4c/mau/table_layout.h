@@ -97,6 +97,59 @@ class GetHashDistReqs : public MauInspector {
     GetHashDistReqs() : _hash_dist_needed(false) { }
 };
 
+
+class MeterColorMapramAddress : public PassManager {
+    ordered_map<const IR::MAU::Table *, bitvec> occupied_buses;
+    ordered_map<const IR::MAU::Meter *, bitvec> possible_addresses;
+
+    Visitor::profile_t init_apply(const IR::Node *node) override {
+        auto rv = PassManager::init_apply(node);
+        occupied_buses.clear();
+        possible_addresses.clear();
+        return rv;
+    }
+
+    class FindBusUsers : public MauInspector {
+        MeterColorMapramAddress &self;
+        bool preorder(const IR::MAU::IdleTime *) override;
+        bool preorder(const IR::MAU::Counter *) override;
+        // Don't want to visit AttachedOutputs/StatefulCall
+        bool preorder(const IR::MAU::Action *) override { return false; }
+
+     public:
+        explicit FindBusUsers(MeterColorMapramAddress &self) : self(self) { }
+    };
+
+    class DetermineMeterReqs : public MauInspector {
+        MeterColorMapramAddress &self;
+        bool preorder(const IR::MAU::Meter *) override;
+        // Don't want to visit AttachedOutputs/StatefulCall
+        bool preorder(const IR::MAU::Action *) override { return false; }
+
+     public:
+        explicit DetermineMeterReqs(MeterColorMapramAddress &self) : self(self) { }
+    };
+
+    class SetMapramAddress : public MauModifier {
+        MeterColorMapramAddress &self;
+        bool preorder(IR::MAU::Meter *) override;
+        // Don't want to visit AttachedOutputs/StatefulCall
+        bool preorder(IR::MAU::Action *) override { return false; }
+
+     public:
+        explicit SetMapramAddress(MeterColorMapramAddress &self) : self(self) { }
+    };
+
+ public:
+    MeterColorMapramAddress() {
+        addPasses({
+            new FindBusUsers(*this),
+            new DetermineMeterReqs(*this),
+            new SetMapramAddress(*this)
+        });
+    }
+};
+
 class DoTableLayout : public MauModifier, Backtrack {
     // In order to know how many field sections can be packed together into the same byte
     struct MatchByteKey {

@@ -3104,9 +3104,18 @@ void IXBar::XBarHashDist::initialize_hash_dist_unit(IXBar::HashDistUse &hd_use,
     if (hdt == IXBar::Use::COUNTER_ADR) {
         BUG_CHECK(rel_node, "Must provide a non-null counter");
         auto back_at = rel_node->to<IR::MAU::BackendAttached>();
-        auto *counter = back_at->attached->to<IR::MAU::Counter>();
-        int per_word = CounterPerWord(counter);
-        int shift = 3 - ceil_log2(per_word);
+        int shift = 0;
+        if (auto counter = back_at->attached->to<IR::MAU::Counter>()) {
+            int per_word = CounterPerWord(counter);
+            shift = 3 - ceil_log2(per_word);
+        // This is for meter color mapram address
+        } else if (back_at->attached->is<IR::MAU::Meter>()) {
+            shift = 3;
+            hd_use.color_mapram = true;
+        } else {
+            BUG("A counter address can not be used for any non-designated purpose");
+        }
+
         bitvec mask(0, hdh.bits_required);
         hd_use.shifts[hd_use.slices[0]] = shift;
         hd_use.masks[hd_use.slices[0]] = mask;
@@ -3206,18 +3215,25 @@ void IXBar::XBarHashDist::hash_action(const IR::MAU::Table *tbl) {
     auto hd = new IR::MAU::HashDist(tbl->srcInfo, IR::Type::Bits::get(bits_required),
                       field_list, IR::MAU::hash_function::identity());
     for (auto ba : tbl->attached) {
+        bool meter_color_req = false;
         if (!(ba->attached && ba->attached->direct))
             continue;
         IXBar::Use::hash_dist_type_t hdt = IXBar::Use::UNKNOWN;
-        if (ba->attached->is<IR::MAU::Counter>())
+        if (ba->attached->is<IR::MAU::Counter>()) {
             hdt = IXBar::Use::COUNTER_ADR;
-        else if (ba->attached->is<IR::MAU::Meter>())
+        } else if (auto mtr = ba->attached->to<IR::MAU::Meter>()) {
             hdt = IXBar::Use::METER_ADR;
-        else if (auto salu = ba->attached->to<IR::MAU::StatefulAlu>())
+            if (mtr->color_output())
+                meter_color_req = true;
+        } else if (auto salu = ba->attached->to<IR::MAU::StatefulAlu>()) {
             hdt = salu->chain_vpn ? IXBar::Use::METER_ADR_AND_IMMEDIATE : IXBar::Use::METER_ADR;
-        else
+        } else {
             continue;
-        hash_dist_allocation(hd->clone(), hdt, bits_required, 0, ba);
+        }
+        auto hd_clone = hd->clone();
+        hash_dist_allocation(hd_clone, hdt, bits_required, 0, ba);
+        if (meter_color_req)
+            hash_dist_allocation(hd_clone, IXBar::Use::COUNTER_ADR, bits_required, 0, ba);
     }
 
     if (lo->layout.action_data_bytes_in_table > 0) {
@@ -3231,8 +3247,11 @@ void IXBar::XBarHashDist::hash_action(const IR::MAU::Table *tbl) {
 bool IXBar::XBarHashDist::preorder(const IR::MAU::HashDist *hd) {
     if (!allocation_passed)
         return false;
+
     int p4_hash_bit = 0;
     IXBar::Use::hash_dist_type_t hdt = IXBar::Use::UNKNOWN;
+
+    bool meter_color_req = false;
     const IR::Node *rel_node = nullptr;
     if ((rel_node = findContext<IR::MAU::Instruction>()) != nullptr) {
         hdt = IXBar::Use::IMMEDIATE;
@@ -3244,12 +3263,15 @@ bool IXBar::XBarHashDist::preorder(const IR::MAU::HashDist *hd) {
         p4_hash_bit = as->mode == "resilient" ? RESILIENT_MODE_HASH_BITS : FAIR_MODE_HASH_BITS;
     } else if (auto back_at = findContext<IR::MAU::BackendAttached>()) {
         auto at_mem = back_at->attached;
-        if (at_mem->is<IR::MAU::Counter>())
+        if (at_mem->is<IR::MAU::Counter>()) {
             hdt = IXBar::Use::COUNTER_ADR;
-        else if (at_mem->is<IR::MAU::Meter>())
+        } else if (auto mtr = at_mem->to<IR::MAU::Meter>()) {
             hdt = IXBar::Use::METER_ADR;
-        else if (auto salu = at_mem->to<IR::MAU::StatefulAlu>())
+            if (mtr->color_output())
+                meter_color_req = true;
+        } else if (auto salu = at_mem->to<IR::MAU::StatefulAlu>()) {
             hdt = salu->chain_vpn ? IXBar::Use::METER_ADR_AND_IMMEDIATE : IXBar::Use::METER_ADR;
+        }
         rel_node = back_at;
     }
 
@@ -3265,6 +3287,10 @@ bool IXBar::XBarHashDist::preorder(const IR::MAU::HashDist *hd) {
             bits_required = HASH_DIST_MAX_EXPAND_BITS;
     }
     hash_dist_allocation(hd, hdt, bits_required, p4_hash_bit, rel_node);
+    // For the meter color mapram
+    if (meter_color_req)
+        hash_dist_allocation(hd, IXBar::Use::COUNTER_ADR, bits_required, p4_hash_bit, rel_node);
+
     return false;
 }
 

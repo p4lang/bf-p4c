@@ -1767,6 +1767,12 @@ void Memories::swbox_bus_meters_counters() {
                 if (meter->color_output()) {
                     meter_group->cm.needed = mems_needed(entries, SRAM_DEPTH,
                                                          COLOR_MAPRAM_PER_ROW, false);
+                    if (meter->mapram_possible(IR::MAU::ColorMapramAddress::IDLETIME))
+                        meter_group->cm.cma = IR::MAU::ColorMapramAddress::IDLETIME;
+                    else if (meter->mapram_possible(IR::MAU::ColorMapramAddress::STATS))
+                        meter_group->cm.cma = IR::MAU::ColorMapramAddress::STATS;
+                    else
+                        BUG("The color mapram address scheme does not make sense");
                 } else {
                     meter_group->requires_ab = true;
                 }
@@ -1812,7 +1818,7 @@ void Memories::find_swbox_bus_users() {
  *  number of RAMs for synth2port tables and action tables are actually different.
  */
 void Memories::adjust_RAMs_available(swbox_fill &curr_oflow, int RAMs_avail[OFLOW],
-                                     int row, RAM_side_t side) {
+        int row, RAM_side_t side, bool stats_available) {
     RAMs_avail[ACTION] = bitcount(~sram_inuse[row] & side_mask(side));
     if (side == LEFT)
         return;
@@ -1822,16 +1828,37 @@ void Memories::adjust_RAMs_available(swbox_fill &curr_oflow, int RAMs_avail[OFLO
     if (!(curr_oflow && curr_oflow.group->type == SRAM_group::METER))
         return;
 
+    // RAMs currently being used by Matching
     int open_maprams = bitcount(sram_inuse[row] & side_mask(side));
-    if (open_maprams > curr_oflow.group->cm.left_to_place())
-        return;
 
-    int difference = curr_oflow.group->cm.left_to_place() - open_maprams;
-    if (difference > RAMs_avail[SYNTH])
-        difference = RAMs_avail[SYNTH];
+    int synth_rams_required = std::min(RAMs_avail[SYNTH], curr_oflow.group->left_to_place());
+    // If other synth2port tables can be placed, as the curr_oflow table is going to be placed,
+    // the color maprams must be placed, so that the address from the meter alu can overflow
+    // to the color mapram.  By reserving the color mapram, you cannot reserve the corresponding
+    // RAM to a synth2port table, as that RAM would require a corresponding map RAM as well.
+    if (synth_rams_required < RAMs_avail[SYNTH]) {
+        int maprams_avail = open_maprams + (RAMs_avail[SYNTH] - synth_rams_required);
+        int color_maprams_to_allocate
+            = std::min(maprams_avail, curr_oflow.group->cm.left_to_place());
 
-    if (curr_oflow.group->left_to_place() < RAMs_avail[ACTION])
-        RAMs_avail[SYNTH] -= difference;
+        int undedicated_maprams = maprams_avail - color_maprams_to_allocate;
+        // If the color mapram requires a stats address, then the mapram must appear on a stats
+        // homerow.  Furthermore, all color maprams must be on the same row in order to not
+        // use the overflow address, which is required for the meter address on color mapram
+        // write.  (Perhaps requiring multiple stats ram homerows?).  Also if the table could
+        // fit in a single row, it'd be fine as well.
+
+        if (curr_oflow.group->cm.cma == IR::MAU::ColorMapramAddress::STATS) {
+            if (stats_available
+                || color_maprams_to_allocate < curr_oflow.group->cm.left_to_place()) {
+                undedicated_maprams = 0;
+            }
+        }
+
+        // The undedicated maprams might be under matching rams, and SYNTH rams <= ACTION rams
+        RAMs_avail[SYNTH] = std::min(synth_rams_required + undedicated_maprams,
+                                     RAMs_avail[ACTION]);
+    }
 }
 
 void Memories::init_candidate(swbox_fill candidates[SWBOX_TYPES], switchbox_t order[SWBOX_TYPES],
@@ -2169,6 +2196,9 @@ void Memories::best_candidates(swbox_fill best_fits[OFLOW], swbox_fill nexts[OFL
                                int row, int RAMs_avail[OFLOW]) {
     int min_left = 0;
     int min_diff = 0;
+
+    bool stats_bus_available = stats_available ||
+                               (curr_oflow && curr_oflow.group->cm.require_stats());
     if (side == RIGHT) {
         /* Determine the best fit supplementary table on the row */
 
@@ -2177,7 +2207,7 @@ void Memories::best_candidates(swbox_fill best_fits[OFLOW], swbox_fill nexts[OFL
                 continue;
             BUG_CHECK(synth_table->placed == 0, "Cannot have partially placed synth2port table "
                                                 "that isn't overflow");
-            if (!stats_available && synth_table->type == SRAM_group::STATS)
+            if (!stats_bus_available && synth_table->type == SRAM_group::STATS)
                 continue;
             if (!meter_available && synth_table->type != SRAM_group::STATS)
                 continue;
@@ -2196,7 +2226,7 @@ void Memories::best_candidates(swbox_fill best_fits[OFLOW], swbox_fill nexts[OFL
         for (auto synth_table : synth_bus_users) {
             if (curr_oflow.group == synth_table)
                 continue;
-            if (!stats_available && synth_table->type == SRAM_group::STATS)
+            if (!stats_bus_available && synth_table->type == SRAM_group::STATS)
                 continue;
             if (!meter_available && synth_table->type != SRAM_group::STATS)
                 continue;
@@ -2333,7 +2363,7 @@ void Memories::find_swbox_candidates(int row, RAM_side_t side, swbox_fill candid
     int RAMs_avail[OFLOW] = {0, 0};
 
     // Due to color mapram constraints, the RAMs_available for SYNTH vs. ACTION may be different
-    adjust_RAMs_available(curr_oflow, RAMs_avail, row, side);
+    adjust_RAMs_available(curr_oflow, RAMs_avail, row, side, stats_available);
     // No best fits or nexts for oflow, as there is only one oflow location
     swbox_fill best_fits[OFLOW];
     swbox_fill nexts[OFLOW];
@@ -2345,7 +2375,7 @@ void Memories::find_swbox_candidates(int row, RAM_side_t side, swbox_fill candid
         if (curr_oflow && curr_oflow.group->type == SRAM_group::METER
             && !curr_oflow.group->cm.all_placed()) {
             candidates[OFLOW] = curr_oflow;
-            color_mapram_candidates(candidates, side);
+            color_mapram_candidates(candidates, side, stats_available);
         }
         bool actions_available = false;
         for (auto action_group : action_bus_users) {
@@ -2375,14 +2405,26 @@ void Memories::find_swbox_candidates(int row, RAM_side_t side, swbox_fill candid
     int RAMs[SWBOX_TYPES] = {0, 0, 0};
     set_up_RAM_counts(candidates, order, RAMs_avail, RAMs);
     fill_out_masks(candidates, order, RAMs, row, side);
-    color_mapram_candidates(candidates, side);
+    color_mapram_candidates(candidates, side, stats_available);
 }
 
 /** Determine the masks for an individual candidates color maprams */
-void Memories::set_color_maprams(swbox_fill &candidate, unsigned &avail_maprams) {
+void Memories::set_color_maprams(swbox_fill &candidate, unsigned &avail_maprams,
+        bool stats_available) {
     int maprams_needed = candidate.group->cm.left_to_place();
     int maprams_placed = 0;
     unsigned mapram_mask = 0;
+
+    // If the stats bus is required, must wait until a stats bus is available, as well as
+    // must be able to place all of the stats based color maprams
+    if (candidate.group->cm.require_stats()) {
+        if (!stats_available)
+            avail_maprams = 0U;
+        if (candidate.group->cm.left_to_place() > static_cast<int>(bitcount(avail_maprams))) {
+            avail_maprams = 0U;
+        }
+    }
+
     for (int i = LEFT_SIDE_COLUMNS; i < SRAM_COLUMNS && maprams_placed < maprams_needed; i++) {
         if (((1 << i) & avail_maprams) == 0) continue;
         mapram_mask |= (1 << i);
@@ -2429,7 +2471,8 @@ void Memories::set_color_maprams(swbox_fill &candidate, unsigned &avail_maprams)
  *  any home row meter would be placed.  Similar to the RAMs, a mapram order could be
  *  determined, but I wanted to handle this separately.
  */
-void Memories::color_mapram_candidates(swbox_fill candidates[SWBOX_TYPES], RAM_side_t side) {
+void Memories::color_mapram_candidates(swbox_fill candidates[SWBOX_TYPES], RAM_side_t side,
+        bool stats_available) {
     if (side != RIGHT)
         return;
     unsigned avail_maprams = side_mask(side);
@@ -2438,15 +2481,14 @@ void Memories::color_mapram_candidates(swbox_fill candidates[SWBOX_TYPES], RAM_s
         avail_maprams &= ~candidates[i].mapram_mask;
     }
 
+
     if (candidates[OFLOW] && candidates[OFLOW].group->type == SRAM_group::METER) {
         if (!candidates[OFLOW].group->cm.all_placed())
-            set_color_maprams(candidates[OFLOW], avail_maprams);
-        BUG_CHECK(candidates[OFLOW].mapram_mask != 0,
-                  "Oflow candidate does not have any maprams placed");
+            set_color_maprams(candidates[OFLOW], avail_maprams, stats_available);
     }
 
     if (candidates[SYNTH] && !candidates[SYNTH].group->cm.all_placed()) {
-        set_color_maprams(candidates[SYNTH], avail_maprams);
+        set_color_maprams(candidates[SYNTH], avail_maprams, stats_available);
         // FIXME: Could have a similar algorithm to set_up_RAM_counts for color mapram,
         // instead of having separate color mapram information known throughout function.
         // Currently unnecessary because the cm_order never changes.  I think that a function
@@ -2671,30 +2713,36 @@ void Memories::fill_color_mapram_use(swbox_fill &candidate, int row, RAM_side_t 
     auto name = unique_id.build_name();
 
     int bus = -1;
-    int half = row / (SRAM_ROWS / 2);
-    // FIXME: This is the simple solution for color mapram.  There are cases when the
-    // color mapram cannot use the idletime bus, i.e. when the information comes through
-    // hash distribution or if the table requires meter and idletime
-    for (int i = 0; i < NUM_IDLETIME_BUS; i++) {
-        if (idletime_bus[half][i] == name) {
-            bus = i;
-            break;
+    if (candidate.group->cm.cma == IR::MAU::ColorMapramAddress::IDLETIME) {
+        int half = row / (SRAM_ROWS / 2);
+        // FIXME: This is the simple solution for color mapram.  There are cases when the
+        // color mapram cannot use the idletime bus, i.e. when the information comes through
+        // hash distribution or if the table requires meter and idletime
+        for (int i = 0; i < NUM_IDLETIME_BUS; i++) {
+            if (idletime_bus[half][i] == name) {
+                bus = i;
+                break;
+            }
         }
-    }
 
-    for (int i = 0; i < NUM_IDLETIME_BUS && bus < 0; i++) {
-        if (!idletime_bus[half][i])
-            bus = i;
-    }
-
-
-    BUG_CHECK(bus >= 0, "Cannot have a negative color mapram bus.  Should always have a free "
+        for (int i = 0; i < NUM_IDLETIME_BUS && bus < 0; i++) {
+            if (!idletime_bus[half][i])
+                bus = i;
+        }
+        BUG_CHECK(bus >= 0, "Cannot have a negative color mapram bus.  Should always have a free "
                         "choice at this point");
+        idletime_bus[half][bus] = name;
+    } else if (candidate.group->cm.cma == IR::MAU::ColorMapramAddress::STATS) {
+        // On stats, bus 0 will for the stats homerow, which is the only possible bus
+        bus = 0;
+    } else {
+        BUG("Color mapram address not appropriately set up");
+    }
 
     alloc.color_mapram.emplace_back(row, bus);
+    alloc.cma = candidate.group->cm.cma;
     unsigned color_mapram_mask = candidate.mapram_mask & ~candidate.mask;
 
-    idletime_bus[half][bus] = name;
     for (int k = 0; k < SRAM_COLUMNS; k++) {
         if (((1 << k) & side_mask(side)) == 0)
             continue;

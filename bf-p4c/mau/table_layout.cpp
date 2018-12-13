@@ -621,6 +621,16 @@ bool DoTableLayout::can_be_hash_action(IR::MAU::Table *tbl, std::string &reason)
             return false;
         }
     }
+
+    // Making sure that there is a pathway for the color mapram address
+    const IR::MAU::Meter *mtr = nullptr;
+    for (auto ba : tbl->attached) {
+        mtr = ba->attached->to<IR::MAU::Meter>();
+        if (mtr && mtr->color_output() &&
+            !mtr->mapram_possible(IR::MAU::ColorMapramAddress::STATS))
+            return false;
+    }
+
     return true;
 }
 
@@ -1115,8 +1125,77 @@ Visitor::profile_t TableLayout::init_apply(const IR::Node *node) {
     return rv;
 }
 
+/**
+ * A Meter Table that is not an LPF or WRED has a color mapram output for the meter color.
+ * The Meter ALU and Meter RAMs are addressed by the meter_adr registers.
+ *
+ * However, the color mapram uses a different address.  This is because the address to access
+ * the color mapram happens during PHV processing, while the update to the meter alu happens
+ * at the end of the packet, and thus the addressing passed to both pieces of hardware have
+ * to be different.
+ *
+ * As defined in uArch section 6.2.8.4.9 Map RAM Addressing, the Meter Color Map RAM can
+ * either use the idletime_adr or the stats_adr.  The idletime
+ */
+bool MeterColorMapramAddress::FindBusUsers::preorder(const IR::MAU::IdleTime *) {
+    visitAgain();
+    auto *tbl = findContext<IR::MAU::Table>();
+    self.occupied_buses[tbl].setbit(static_cast<int>(IR::MAU::ColorMapramAddress::IDLETIME));
+    return false;
+}
+
+bool MeterColorMapramAddress::FindBusUsers::preorder(const IR::MAU::Counter *) {
+    visitAgain();
+    auto *tbl = findContext<IR::MAU::Table>();
+    self.occupied_buses[tbl].setbit(static_cast<int>(IR::MAU::ColorMapramAddress::STATS));
+    return false;
+}
+
+bool MeterColorMapramAddress::DetermineMeterReqs::preorder(const IR::MAU::Meter *mtr) {
+    if (!mtr->color_output())
+        return false;
+    visitAgain();
+    auto *tbl = findContext<IR::MAU::Table>();
+    auto *ba = findContext<IR::MAU::BackendAttached>();
+    bitvec possible;
+    possible.setbit(static_cast<int>(IR::MAU::ColorMapramAddress::STATS));
+
+    // In uArch section 6.4.3.5.3 Hash Distribution, the hash distribution unit can create
+    // stats and meter addresses, but not idletime address.  Thus if the meter is accessed
+    // by hash distribution, then the color mapram must be addressed by stats
+    if (ba->addr_location != IR::MAU::AddrLocation::HASH)
+        possible.setbit(static_cast<int>(IR::MAU::ColorMapramAddress::IDLETIME));
+
+    auto pos = self.possible_addresses.find(mtr);
+    if (pos != self.possible_addresses.end())
+        possible &= pos->second;
+
+
+    auto occ_pos = self.occupied_buses.find(tbl);
+    if (occ_pos != self.occupied_buses.end())
+        possible -= occ_pos->second;
+
+    if (possible.empty()) {
+        ::error("%s: The meter %s requires either an idletime or stats address bus to return "
+                "a color value, and no bus is available.", mtr->srcInfo, mtr->name);
+    }
+    self.possible_addresses[mtr] = possible;
+    return false;
+}
+
+bool MeterColorMapramAddress::SetMapramAddress::preorder(IR::MAU::Meter *mtr) {
+    if (!mtr->color_output())
+        return false;
+    auto orig_meter = getOriginal()->to<IR::MAU::Meter>();
+    auto bv = self.possible_addresses.at(orig_meter);
+    mtr->possible_mapram_address
+        = bv.getrange(0, static_cast<int>(IR::MAU::ColorMapramAddress::MAPRAM_ADDR_TYPES));
+    return false;
+}
+
 TableLayout::TableLayout(const PhvInfo &p, LayoutChoices &l) : phv(p), lc(l) {
     addPasses({
+        new MeterColorMapramAddress,
         new DoTableLayout(p, lc),
         new ValidateActionProfileFormat(lc),
         new ProhibitAtcamWideSelectors

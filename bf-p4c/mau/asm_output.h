@@ -138,6 +138,8 @@ class MauAsmOutput : public MauInspector {
     std::string build_call(const IR::MAU::AttachedMemory *at_mem,
         const IR::MAU::BackendAttached *ba, const IR::MAU::Table *tbl) const;
     std::string build_sel_len_call(const IR::MAU::Selector *as) const;
+    std::string build_meter_color_call(const IR::MAU::Meter *mtr,
+        const IR::MAU::BackendAttached *ba, const IR::MAU::Table *tbl) const;
 
     class EmitAction;
     class EmitAttached;

@@ -25,6 +25,16 @@ void MeterTable::setup(VECTOR(pair_t) &data) {
                 if (auto *vpn = get(kv.value.map, "vpn"))
                     if (CHECKTYPE(*vpn, tVEC))
                         setup_vpns(color_maprams, &vpn->vec, true); }
+                if (auto addr_type = get(kv.value.map, "address"))
+                    if (CHECKTYPE(*addr_type, tSTR)) {
+                        if (*addr_type == "idletime")
+                            color_mapram_addr = IDLE_MAP_ADDR; 
+                        else if (*addr_type == "stats")
+                            color_mapram_addr = STATS_MAP_ADDR;
+                        else
+                            error(addr_type->lineno, "Unrecognized color mapram address type %s",
+                                  addr_type->s); 
+                    }
         } else if (kv.key == "pre_color") {
             if (CHECKTYPE(kv.value, tCMD)) {
                 if (kv.value != "hash_dist")
@@ -168,6 +178,29 @@ int MeterTable::address_shift() const {
     return 7;  // meters are always 128 bits wide
 }
 
+int MeterTable::color_shiftcount(Table::Call &call, int group, int tcam_shift) const {
+    int extra_padding = 0;
+    int zero_pad = 0;
+    if (color_mapram_addr == IDLE_MAP_ADDR) {
+        extra_padding = IDLETIME_ADDRESS_ZERO_PAD - IDLETIME_HUFFMAN_BITS;
+        zero_pad = IDLETIME_ADDRESS_ZERO_PAD;
+    } else if (color_mapram_addr == STATS_MAP_ADDR) {
+        extra_padding = STAT_ADDRESS_ZERO_PAD - STAT_METER_COLOR_LOWER_HUFFMAN_BITS;
+        zero_pad = STAT_ADDRESS_ZERO_PAD;
+    }
+    
+
+    if (call.args[0].name() && strcmp(call.args[0].name(), "$DIRECT") == 0) {
+        return 64 + tcam_shift + extra_padding; 
+    } else if (auto f = call.args[0].field()) {
+        return f->by_group[group]->bit(0)%128U + extra_padding;
+    } else if (auto f = call.args[1].field()) {
+        return f->bit(0) + zero_pad;
+    } else {
+        return 0;
+    }
+}
+
 unsigned MeterTable::determine_shiftcount(Table::Call &call, int group, unsigned word,
         int tcam_shift) const {
     return determine_meter_shiftcount(call, group, word, tcam_shift);
@@ -190,18 +223,43 @@ template<class REGS> void MeterTable::write_merge_regs(REGS &regs, MatchTable *m
 
 
     if (uses_colormaprams()) {
-        unsigned idle_mask = (1U << IDLETIME_ADDRESS_BITS) - 1;
-        unsigned full_idle_mask = (1U << IDLETIME_FULL_ADDRESS_BITS) - 1;
-        unsigned shift_diff = METER_LOWER_HUFFMAN_BITS - IDLETIME_HUFFMAN_BITS;
-        merge.mau_idletime_adr_mask[type][bus] =
-            (adr_mask >> shift_diff) & idle_mask;
-        merge.mau_idletime_adr_default[type][bus] =
-            (adr_default >> shift_diff) & full_idle_mask;
-        if (per_entry_en_mux_ctl > shift_diff)
-            merge.mau_idletime_adr_per_entry_en_mux_ctl[type][bus]
-                = per_entry_en_mux_ctl - shift_diff;
-        else
-            merge.mau_idletime_adr_per_entry_en_mux_ctl[type][bus] = 0;
+        // Based on the uArch section 6.2.8.4.9 Map RAM Addressing, color maprams can be
+        // addressed by either idletime or stats based addresses.  Which address is used
+        // can be specified in the asm file, and is built according to the specification
+
+        // Could also be done from the meter_color call, as well, but at the moment is
+        // identical to the meter call, only shifted appropriately to the correct address
+        // size
+        if (color_mapram_addr == IDLE_MAP_ADDR) {
+            unsigned idle_mask = (1U << IDLETIME_ADDRESS_BITS) - 1;
+            unsigned full_idle_mask = (1U << IDLETIME_FULL_ADDRESS_BITS) - 1;
+            unsigned shift_diff = METER_LOWER_HUFFMAN_BITS - IDLETIME_HUFFMAN_BITS;
+            merge.mau_idletime_adr_mask[type][bus] =
+                (adr_mask >> shift_diff) & idle_mask;
+            merge.mau_idletime_adr_default[type][bus] =
+                (adr_default >> shift_diff) & full_idle_mask;
+            if (per_entry_en_mux_ctl > shift_diff)
+                merge.mau_idletime_adr_per_entry_en_mux_ctl[type][bus]
+                    = per_entry_en_mux_ctl - shift_diff;
+            else
+                merge.mau_idletime_adr_per_entry_en_mux_ctl[type][bus] = 0;
+        } else if (color_mapram_addr == STATS_MAP_ADDR) {
+            unsigned stats_mask = (1U << STAT_ADDRESS_BITS) - 1;
+            unsigned full_stats_mask = (1U << STAT_FULL_ADDRESS_BITS) - 1;
+            unsigned shift_diff = METER_LOWER_HUFFMAN_BITS
+                                      - STAT_METER_COLOR_LOWER_HUFFMAN_BITS;
+            merge.mau_stats_adr_mask[type][bus] =
+                (adr_mask >> shift_diff) & stats_mask;
+            merge.mau_stats_adr_default[type][bus] =
+                (adr_default >> shift_diff) & full_stats_mask;
+            if (per_entry_en_mux_ctl > shift_diff)
+                merge.mau_stats_adr_per_entry_en_mux_ctl[type][bus]
+                    = per_entry_en_mux_ctl - shift_diff;
+            else
+                merge.mau_stats_adr_per_entry_en_mux_ctl[type][bus] = 0;
+        } else {
+            BUG();
+        }
     }
 }
 
@@ -341,7 +399,8 @@ void MeterTable::write_regs(REGS &regs) {
                 .set_subfield(4 | meter_group_index, 3 * (logical_id%8U), 3);
         } else {
             auto &adr_ctl = map_alu_row.vh_xbars.adr_dist_oflo_adr_xbar_ctl[side];
-            if (home->row >= 8 && logical_row.row < 8) {
+            if (home->row >= UPPER_MATCH_CENTRAL_FIRST_LOGICAL_ROW &&
+                logical_row.row < UPPER_MATCH_CENTRAL_FIRST_LOGICAL_ROW) {
                 adr_ctl.adr_dist_oflo_adr_xbar_source_index = 0;
                 adr_ctl.adr_dist_oflo_adr_xbar_source_sel = AdrDist::OVERFLOW;
                 push_on_overflow = true;
@@ -381,6 +440,25 @@ void MeterTable::write_regs(REGS &regs) {
                     .b_oflo_color_write_o_sel_t_oflo_color_write_i = 1; }
         auto &map_alu_row =  map_alu.row[row.row];
         auto vpn = row.vpns.begin();
+
+        // If the color mapram is not on the same row as the meter ALU, even if no meter
+        // RAMs are on the same row, the address still needs to overflow to that row
+        if (row.row < home->row / 2) {
+            auto &adr_ctl = map_alu_row.vh_xbars.adr_dist_oflo_adr_xbar_ctl[1];
+            // Mapram rows are 0-7, not 0-15 like logical rows
+            if (home->row >= UPPER_MATCH_CENTRAL_FIRST_LOGICAL_ROW
+                && row.row < UPPER_MATCH_CENTRAL_FIRST_ROW) {
+                adr_ctl.adr_dist_oflo_adr_xbar_source_index = 0;
+                adr_ctl.adr_dist_oflo_adr_xbar_source_sel = AdrDist::OVERFLOW;
+                push_on_overflow = true;
+                BUG_CHECK(options.target == TOFINO);
+            } else {
+                adr_ctl.adr_dist_oflo_adr_xbar_source_index = home->row % 8;
+                adr_ctl.adr_dist_oflo_adr_xbar_source_sel = AdrDist::METER;
+            }
+            adr_ctl.adr_dist_oflo_adr_xbar_enable = 1;
+        }
+
         for (int col : row.cols) {
             auto &mapram_config = map_alu_row.adrmux.mapram_config[col];
             if (row.row == home->row/2)
@@ -418,9 +496,14 @@ void MeterTable::write_regs(REGS &regs) {
             ram_address_mux_ctl.map_ram_wadr_mux_select = MapRam::Mux::COLOR;
             ram_address_mux_ctl.map_ram_wadr_mux_enable = 1;
             ram_address_mux_ctl.map_ram_radr_mux_select_color = 1;
-            ram_address_mux_ctl.ram_stats_meter_adr_mux_select_idlet = 1;
             ram_address_mux_ctl.ram_ofo_stats_mux_select_statsmeter = 1;
-            setup_muxctl(map_alu_row.vh_xbars.adr_dist_idletime_adr_xbar_ctl[col], row.bus % 10);
+            // Indicating what bus to pull from, either stats or idletime for the color mapram
+            if (color_mapram_addr == IDLE_MAP_ADDR) {
+                ram_address_mux_ctl.ram_stats_meter_adr_mux_select_idlet = 1;
+                setup_muxctl(map_alu_row.vh_xbars.adr_dist_idletime_adr_xbar_ctl[col], row.bus % 10);
+            } else if (color_mapram_addr == STATS_MAP_ADDR) {
+                ram_address_mux_ctl.ram_stats_meter_adr_mux_select_stats = 1;
+            }
             if (gress)
                 regs.cfg_regs.mau_cfg_mram_thread[col/3U] |= 1U << (col%3U*8U + row.row);
             ++vpn; } }
@@ -435,7 +518,6 @@ void MeterTable::write_regs(REGS &regs) {
         adrdist.meter_color_output_map[m->logical_id].set_subfield(yellow_value,  8, 8);  // yellow
         adrdist.meter_color_output_map[m->logical_id].set_subfield(yellow_value, 16, 8);  // yellow
         adrdist.meter_color_output_map[m->logical_id].set_subfield(red_value, 24, 8);  // red
-        adrdist.movereg_idle_ctl[m->logical_id].movereg_idle_ctl_mc = 1;
         if (type != LPF)
             adrdist.meter_enable |= 1U << m->logical_id;
         /*auto &movereg_ad_ctl = adrdist.movereg_ad_ctl[m->logical_id];
@@ -478,12 +560,28 @@ template<> void MeterTable::meter_color_logical_to_phys(Target::Tofino::mau_regs
     if (!color_maprams.empty()) {
         merge.mau_mapram_color_map_to_logical_ctl[logical_id/8].set_subfield(
             0x4 | alu, 3 * (logical_id%8U), 3);
-        // FIXME -- this bus_index calculation is probably wrong
-        int bus_index = color_maprams[0].bus;
-        if (color_maprams[0].row >= 4) bus_index += 10;
-        adrdist.adr_dist_idletime_adr_oxbar_ctl[bus_index/4]
-            .set_subfield(logical_id | 0x10, 5 * (bus_index%4), 5); }
-    setup_muxctl(adrdist.meter_color_logical_to_phys_ixbar_ctl[logical_id], alu);
+
+        // Determining which buses to send the color mapram address to
+        if (color_mapram_addr == IDLE_MAP_ADDR) {
+            adrdist.movereg_idle_ctl[logical_id].movereg_idle_ctl_mc = 1;
+            for (auto lo : color_maprams) {
+                 int bus_index = lo.bus;
+                 if (color_maprams[0].row >= UPPER_MATCH_CENTRAL_FIRST_ROW)
+                     bus_index += IDLETIME_BUSSES_PER_HALF;
+                 adrdist.adr_dist_idletime_adr_oxbar_ctl[bus_index/4]
+                     .set_subfield(logical_id | 0x10, 5 * (bus_index%4), 5);
+            }
+
+        } else if (color_mapram_addr == STATS_MAP_ADDR) {
+            for (auto lo : color_maprams) {
+                adrdist.adr_dist_stats_adr_icxbar_ctl[logical_id] |= (1U << (lo.row / 2));
+                adrdist.packet_action_at_headertime[0][lo.row / 2] = 1;
+            }
+        } else {
+            BUG();
+        }
+        setup_muxctl(adrdist.meter_color_logical_to_phys_ixbar_ctl[logical_id], alu);
+    }
 }
 
 #if HAVE_JBAY
@@ -492,12 +590,28 @@ template<> void MeterTable::meter_color_logical_to_phys(Target::JBay::mau_regs &
     auto &merge = regs.rams.match.merge;
     auto &adrdist = regs.rams.match.adrdist;
     if (!color_maprams.empty()) {
-        merge.mau_mapram_color_map_to_logical_ctl[alu] |= 1U << logical_id;
-        // FIXME -- this bus_index calculation is probably wrong
-        int bus_index = color_maprams[0].bus;
-        if (color_maprams[0].row >= 4) bus_index += 10;
-        adrdist.adr_dist_idletime_adr_oxbar_ctl[bus_index/4]
-            .set_subfield(logical_id | 0x10, 5 * (bus_index%4), 5); }
+        merge.mau_mapram_color_map_to_logical_ctl[logical_id/8].set_subfield(
+            0x4 | alu, 3 * (logical_id%8U), 3);
+        // Determining which buses to send the color mapram address to
+        if (color_mapram_addr == IDLE_MAP_ADDR) {
+            adrdist.movereg_idle_ctl[logical_id].movereg_idle_ctl_mc = 1;
+            for (auto lo : color_maprams) {
+                 int bus_index = lo.bus;
+                 if (color_maprams[0].row >= UPPER_MATCH_CENTRAL_FIRST_ROW)
+                     bus_index += IDLETIME_BUSSES_PER_HALF;
+                 adrdist.adr_dist_idletime_adr_oxbar_ctl[bus_index/4]
+                     .set_subfield(logical_id | 0x10, 5 * (bus_index%4), 5);
+            }
+
+        } else if (color_mapram_addr == STATS_MAP_ADDR) {
+            for (auto lo : color_maprams) {
+                adrdist.adr_dist_stats_adr_icxbar_ctl[logical_id] |= (1U << (lo.row / 2));
+                adrdist.packet_action_at_headertime[0][lo.row / 2] = 1;
+            }
+        } else {
+            BUG();
+        }
+    }
     adrdist.meter_color_logical_to_phys_icxbar_ctl[logical_id] |= 1 << alu;
 }
 #endif // HAVE_JBAY

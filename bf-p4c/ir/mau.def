@@ -441,6 +441,8 @@ class Meter : Synth2Port {
                                              // brought through hash distribution
     NullOK Expression  input = nullptr;      // LPF and WRED have 32 bit inputs
     ID                 implementation = {};  // Normal, LPF, WRED
+    unsigned           possible_mapram_address = 0;
+
     const char *kind() const override { return "meter"; }
     const Type *getType() const override { return Type_Meter::get(); }
     UniqueAttachedId::type_t get_id_type() const override { return UniqueAttachedId::METER; }
@@ -448,6 +450,10 @@ class Meter : Synth2Port {
                                || implementation.name == "wred"; }
     bool color_output() const { return implementation.name == "normal"
                                  || implementation.name.isNull(); }
+    bool mapram_possible(IR::MAU::ColorMapramAddress cma) const {
+        return possible_mapram_address & (1U << static_cast<int>(cma));
+    }
+
 #nodbprint
 }
 
