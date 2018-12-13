@@ -5,7 +5,7 @@
  */
 class MatchSource {
  public:
-    virtual int fieldlobit() const = 0;    
+    virtual int fieldlobit() const = 0;
     virtual int fieldhibit() const = 0;
     virtual unsigned size() const = 0;
     virtual int slicelobit() const = 0;
@@ -24,9 +24,6 @@ class HashMatchSource : public MatchSource {
  public:
     int lineno;
     HashMatchSource(int line, int l, int h) : lineno(line), lo(l), hi(h) {}
-    HashMatchSource(const HashMatchSource &hms) {
-        memcpy(this, &hms, sizeof(*this));
-    }
     HashMatchSource(value_t value) {
         if (CHECKTYPE(value, tCMD)) {
             lineno = value.lineno;
@@ -53,5 +50,5 @@ class HashMatchSource : public MatchSource {
         str << *this;
         return str.str();
     }
-    void dbprint(std::ostream &out) const { out << name() << "(" << lo << ".." << hi << ")"; } 
+    void dbprint(std::ostream &out) const { out << name() << "(" << lo << ".." << hi << ")"; }
 };

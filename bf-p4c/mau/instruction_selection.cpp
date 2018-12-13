@@ -1228,6 +1228,15 @@ struct CheckInvalidate : public Inspector {
     void postorder(const IR::Primitive *prim) override {
         if (prim->name == "invalidate") {
             auto* f = phv.field(prim->operands[0]);
+            if (!f) {
+                std::string hdrInvalid = "";
+                if (prim->operands[0]->is<IR::ConcreteHeaderRef>()) {
+                    hdrInvalid += "\nTo invalidate a header, use .setInvalid()";
+                }
+                error("%s: invalid operand %s for primitive %s: not a field.%s", prim->srcInfo,
+                      prim->operands[0], prim, hdrInvalid.c_str());
+                return;
+            }
             if (!invalidatable_fields.count(f)) {
                 error("%s: invalid operand %s for primitive %s", prim->srcInfo, f->name, prim);
             }

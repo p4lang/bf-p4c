@@ -130,6 +130,13 @@ struct StateExtractUsage {
         return false;
     }
 
+    // extractor_sizes is a const vector that prevents the default generation of
+    // the copy assignment operator.
+    StateExtractUsage & operator=(const StateExtractUsage &other) {
+        use = other.use;
+        return *this;
+    }
+
     bool operator==(const StateExtractUsage& c) const {
         return use == c.use;
     }
