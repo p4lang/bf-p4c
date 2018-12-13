@@ -280,6 +280,12 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/bf_p4c_samples/v1model-special-ops-bmv2.p4
 )
 
+# P4C-1300
+p4c_add_xfail_reason("tofino2"
+  "error: no more that 2 clots per state"
+  extensions/p4_tests/p4_14/brig-425.p4
+)
+
 p4c_add_xfail_reason("tofino2"
   "Compiler Bug.*Total size of containers used for POV allocation is.*"
   switch_ent_dc_general
