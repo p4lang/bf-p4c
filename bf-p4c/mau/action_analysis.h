@@ -32,7 +32,7 @@ struct TableResourceAlloc;
  */
 class ActionAnalysis : public MauInspector, TofinoWriteContext {
  public:
-    static constexpr int LOADCONST_MAX = 20;
+    static constexpr int LOADCONST_MAX = 21;
     static constexpr int CONST_SRC_MAX = 3;
     static constexpr int JBAY_CONST_SRC_MIN = 2;
     static constexpr int MAX_PHV_SOURCES = 2;

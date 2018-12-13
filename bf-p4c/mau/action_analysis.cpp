@@ -1335,12 +1335,18 @@ void ActionAnalysis::check_constant_to_actiondata(ContainerAction &cont_action,
         const_src_min = JBAY_CONST_SRC_MIN;
 #endif /* HAVE_JBAY */
 
-    if (cont_action.name == "set" && cont_action.ci.alignment.direct_write_bits.popcount()
-                                     == static_cast<int>(container.size())) {
+    if (cont_action.convert_instr_to_bitmasked_set) {
+        // Bitmasked-set must be converted to action data
+        cont_action.error_code |= ContainerAction::CONSTANT_TO_ACTION_DATA;
+        return;
+    } else if (cont_action.name == "set" &&
+               cont_action.ci.alignment.direct_write_bits.popcount()
+                                            == static_cast<int>(container.size()) &&
+               container.is(PHV::Kind::normal)) {
         // Converting to load_const instruction
+
         constant_value = cont_action.ci.build_constant();
-        if (!(valid_instruction_constant(constant_value, LOADCONST_MAX, LOADCONST_MAX,
-                                         container.size()))) {
+        if (constant_value >= (1U << LOADCONST_MAX)) {
             cont_action.error_code |= ContainerAction::CONSTANT_TO_ACTION_DATA;
             return;
         }
@@ -1352,10 +1358,6 @@ void ActionAnalysis::check_constant_to_actiondata(ContainerAction &cont_action,
             cont_action.error_code |= ContainerAction::CONSTANT_TO_ACTION_DATA;
             return;
         }
-    } else if (cont_action.convert_instr_to_bitmasked_set) {
-        // Bitmasked-set must be converted to action data
-        cont_action.error_code |= ContainerAction::CONSTANT_TO_ACTION_DATA;
-        return;
     } else {
         int complement_size = cont_action.ci.alignment.bitrange_size();
         // Set or deposit-field

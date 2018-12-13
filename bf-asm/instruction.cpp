@@ -729,8 +729,11 @@ Instruction *LoadConst::pass1(Table *tbl, Table::Actions::Action *) {
         return this; }
     slot = dest->reg.mau_id();
     int size = Phv::reg(slot)->size;
-    if (size > 23) size = 23;
-    if (src >= (1 << size) || src < -(1 << (size-1)))
+    if (size > 21)
+        size = 21;
+    // The load const source is an unsigned constant (even though the uArch for Tofino says that
+    // the source is signed, this is not true);
+    if (src >= (1 << size) || src < 0)
         error(lineno, "Constant value %d out of range", src);
     src &= (1 << size) - 1;
     tbl->stage->action_set[tbl->gress][dest->reg.uid] = true;
