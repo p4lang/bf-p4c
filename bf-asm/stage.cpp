@@ -469,7 +469,7 @@ void Stage::output(json::map &ctxt_json) {
     auto *regs = new typename TARGET::mau_regs();
     declare_registers(regs, stageno);
     json::map &names = TopLevel::all->name_lookup["stages"][std::to_string(stageno)];
-    Phv::output_names(names["containers"]);
+    Phv::output_names(stageno, names["containers"]);
     json::map &table_names = names["logical_tables"];
     json::vector &ctxt_tables = ctxt_json["tables"];
     for (auto table : tables) {

@@ -73,7 +73,15 @@ int Phv::addreg(gress_t gress, const char *name, const value_t &what, int stage,
         if (sl->valid) {
             phv_use[gress][sl->reg.uid] = true;
             user_defined[&sl->reg].first = gress;
-            user_defined[&sl->reg].second.push_back(name); }
+            if (max_stage != INT_MAX) {
+              /* a name that spans across stages - add it to all stages */
+              for (int i=stage; i <= max_stage; i++) {
+                user_defined[&sl->reg].second[i].push_back(name);
+              }
+            } else {
+                user_defined[&sl->reg].second[stage].push_back(name);
+            }
+        }
         auto &reg = names[gress][name];
         if (what.type == tSTR) {
             reg[stage].slice = *sl;
@@ -126,10 +134,10 @@ void Phv::input(VECTOR(value_t) args, value_t data) {
                     addreg(GHOST, kv.key.s, kv.value); } } }
 }
 
-void Phv::output_names(json::map &out) {
+void Phv::output_names(int stageno, json::map &out) {
     for (auto &slot : phv.user_defined)
         out[std::to_string(slot.first->mau_id())] = std::string(1, "IE"[slot.second.first])
-                + " [" + join(slot.second.second, ", ") + "]";
+                + " [" + join(slot.second.second[stageno], ", ") + "]";
 }
 
 Phv::Ref::Ref(gress_t g, int stage, const value_t &n)
@@ -291,11 +299,12 @@ void Phv::output(json::map &ctxt_json) {
             unsigned phv_number = slot.first->uid;
             unsigned phv_container_size = slot.first->size;
             gress_t gress = slot.second.first;
+            auto stage_usernames = slot.second.second[i];
             json::map phv_container;
             phv_container["phv_number"] = phv_number;
             phv_container["container_type"] = slot.first->type_to_string();
             json::vector &phv_records = phv_container["records"] = json::vector();
-            for (auto field_name : slot.second.second) {
+            for (auto field_name : stage_usernames) {
                 unsigned phv_lsb = 0, phv_msb = 0;
                 unsigned field_lo = 0;
                 int field_size = 0;

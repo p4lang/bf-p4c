@@ -93,7 +93,8 @@ protected:
     };
     std::map<std::string, std::map<int, PerStageInfo>> names[3];
 private:
-    std::map<const Register *, std::pair<gress_t, std::vector<std::string>>, ptrless<Register>>
+    typedef std::map<int, std::vector<std::string>> user_stagenames_t;
+    std::map<const Register *, std::pair<gress_t, user_stagenames_t>, ptrless<Register>>
                 user_defined;
     bitvec      phv_use[3];
     std::map<std::string, int> phv_field_sizes [3];
@@ -197,7 +198,7 @@ public:
     static const bitvec &use(gress_t gress) { return phv.phv_use[gress]; }
     static void setuse(gress_t gress, const bitvec &u) { phv.phv_use[gress] |= u; }
     static void unsetuse(gress_t gress, const bitvec &u) { phv.phv_use[gress] -= u; }
-    static void output_names(json::map &);
+    static void output_names(int, json::map &);
     static std::string db_regset(const bitvec &s);
     static unsigned mau_groupsize();
 };

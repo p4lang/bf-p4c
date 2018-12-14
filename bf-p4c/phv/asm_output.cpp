@@ -1,3 +1,5 @@
+#include <set>
+#include <random>
 #include "asm_output.h"
 #include "bf-p4c/common/asm_output.h"
 #include "bf-p4c/common/field_defuse.h"
@@ -47,11 +49,59 @@ void emit_alloc(
     out << std::endl;
 }
 
+/* For testing assmbler's stage based allocation - takes the current PVH allocation 
+ * and writes it out as a set of random stage based allocation
+ */
+void emit_stage_alloc(
+        std::ostream& out,
+        const PHV::Field::alloc_slice& alloc,
+        PHV::Field* f) {
+    out << "  " << canon_name(f->externalName());
+    if (alloc.field_bit > 0 || alloc.width < f->size)
+        out << '.' << alloc.field_bit << '-' << alloc.field_hi();
+
+    std::set<int> stageset;
+    std::random_device rd;
+    std::mt19937 mteng(rd());
+    std::uniform_int_distribution<> dist(0, Device::numStages());
+    stageset.insert(0);
+    stageset.insert(Device::numStages());
+    for (int i = 0; i < dist(mteng); i++) {
+      stageset.insert(dist(mteng));
+    }
+
+    out << ": " << " { ";
+    int first = *(stageset.begin());
+    stageset.erase(stageset.cbegin());
+    bool prntc = true;
+    for (auto it : stageset) {
+        if (prntc)
+          prntc = false;
+        else
+          out << ',';
+        out << " stage " << first << ".." << it << ": " << alloc.container;
+        if (alloc.container_bit > 0 || alloc.container.size() != static_cast<size_t>(alloc.width)) {
+            out << '(' << alloc.container_bit;
+        if (alloc.width > 1)
+            out << ".." << alloc.container_hi();
+        out << ") "; }
+        first = it + 1;
+    }
+
+    out << " } ";
+    out << std::endl;
+}
+
 void emit_phv_field(
         std::ostream& out,
         PHV::Field* field) {
     field->foreach_alloc([&](const PHV::Field::alloc_slice& slice) {
-        emit_alloc(out, slice, field); });
+        // Testing only
+        if (BFNContext::get().options().stage_allocation)
+            emit_stage_alloc(out, slice, field);
+        else
+            emit_alloc(out, slice, field);
+    });
 }
 
 void PhvAsmOutput::emit_phv_field_info(

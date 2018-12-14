@@ -59,6 +59,10 @@ BFN_Options::BFN_Options() {
         return true;},
         "Skip compiling pipes whose name contains one of the 'pipeX' substring",
         OptionFlags::Hide);
+    registerOption("--stage-alloc", nullptr,
+        [this](const char *) { stage_allocation = true; return true; },
+        "Write out PHV allocation based on stage based allocation",
+        OptionFlags::Hide);
 #endif
     registerOption("-g", nullptr,
         [this](const char *) { debugInfo = true; return true; },
