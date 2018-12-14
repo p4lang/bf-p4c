@@ -214,18 +214,17 @@ class Visualization : public Inspector {
         if (!used_by->empty()) {
             // we need to output an element in the usages array for the cross-product of
             // used_by and used_for. The detail set is the collection of all details.
-            for (auto each_use : *used_by) {
+            for (auto each_use : *used_by)
                 std::for_each(used_for->begin(), used_for->end(),
                               [usages, each_use, detail] (const std::string& u) {
                     auto *use = new Util::JsonObject();
                     // Strip the leading . as p4i shouldn't see it
-                    use->emplace("used_by", new Util::JsonValue(each_use.substr(each_use[0] == '.'
-                                                                                ? 1 : 0)));
+                    auto use_by = each_use.substr(each_use[0] == '.' ? 1 : 0);
+                    use->emplace("used_by", new Util::JsonValue(use_by));
                     use->emplace("used_for", new Util::JsonValue(u));
                     if (!detail.empty())
                         use->emplace("detail", new Util::JsonValue(detail));
                     usages->append(use); });
-            }
         } else {
             auto *use = new Util::JsonObject();
             use->emplace("used_by", new Util::JsonValue("--UNUSED--"));

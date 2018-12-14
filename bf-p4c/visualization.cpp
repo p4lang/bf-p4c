@@ -613,8 +613,8 @@ void Visualization::gen_action_bus_bytes(unsigned int stageNo, Util::JsonObject 
                       auto use = p.second;
                       auto *byte_repr = new Util::JsonObject();
                       byte_repr->emplace("byte_number", new Util::JsonValue(byte_number));
-                      usagesToCtxJson(byte_repr, use.values(USED_BY),
-                                      use.values(USED_FOR), use.total_value(DETAILS));
+                      usagesToCtxJson(byte_repr, use.total_value(USED_BY),
+                                      use.total_value(USED_FOR), use.total_value(DETAILS));
                       ab->append(byte_repr);
                   });
 
@@ -651,8 +651,8 @@ void Visualization::gen_vliw(unsigned int stageNo, Util::JsonObject *stage) {
                           auto* usage = new Util::JsonObject();
                           usage->emplace("color", new Util::JsonValue(use.color));
                           usage->emplace("gress", new Util::JsonValue(::toString(use.gress)));
-                          usagesToCtxJson(usage, use.values(USED_BY),
-                                      use.values(USED_FOR), use.total_value(DETAILS));
+                          usagesToCtxJson(usage, use.total_value(USED_BY),
+                                          use.total_value(USED_FOR), use.total_value(DETAILS));
                           color_usages->append(usage);
                       }
                       instr->emplace("color_usages", color_usages);
