@@ -117,7 +117,7 @@ class GenerateDeparser : public Inspector {
        // We check mirror id 0 is not used in the program, and create a dummy
        // mirror (with id = 0) for i2e;
        if (dprsr->gress == INGRESS && Device::currentDevice() == Device::TOFINO &&
-           BFNContext::get().options().arch == "v1model") {
+           BackendOptions().arch == "v1model") {
            // TODO(zma) it's not very clear to me how to handle this for TNA program
            // in particular, the mirror id is a user defined field. So we probably
            // need to find the field reference of mirror id in the program.

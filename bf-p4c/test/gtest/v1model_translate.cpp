@@ -18,7 +18,7 @@ static boost::optional<TofinoPipeTestCase> makeTestCase(
     const std::string& field, int bitwidth, const std::string& gress) {
     SCOPED_TRACE("V1ModelStdMetaTranslateTest");
 
-    auto& options = BFNContext::get().options();
+    auto& options = BackendOptions();
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
     options.target = "tofino";
     options.arch = "v1model";

@@ -168,7 +168,7 @@ bool AllocScore::operator>(const AllocScore& other) const {
     // For negative metrics (wasted_bits, inc_container...), lower is better.
     // Operator> return true if this score is better.
 
-    if (BFNContext::get().options().parser_bandwidth_opt) {
+    if (BackendOptions().parser_bandwidth_opt) {
         if (delta_parser_extractor_balance != 0) {
             return delta_parser_extractor_balance > 0; }
     }
@@ -360,7 +360,7 @@ AllocScore::AllocScore(
             std::abs(count16 - count32);
     }
 
-    if (BFNContext::get().options().parser_bandwidth_opt) {
+    if (BackendOptions().parser_bandwidth_opt) {
         auto state_to_containers = alloc.getParserStateToContainers(phv);
 
         for (auto& kv : state_to_containers) {

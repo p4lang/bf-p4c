@@ -118,6 +118,13 @@ class BarefootBackend(BackendDriver):
                                     " dependent stages to the egress pipeline to "
                                     " achieve minimum required latency")
 
+        self._argGroup.add_argument("--parser-timing-reports",
+                                    help="Generate parser timing reports",
+                                    action="store_true", default=False)
+        self._argGroup.add_argument("--parser-bandwidth-opt",
+                                    help="Perform parser bandwidth optimization",
+                                    action="store_true", default=False)
+
         self._argGroup.add_argument("--ir-to-json", default=None,
                                     help="Dump the IR after midend to JSON in the specified file.")
         self._argGroup.add_argument("--verbose",
@@ -187,6 +194,12 @@ class BarefootBackend(BackendDriver):
 
         if opts.backward_compatible or opts.language == 'p4-14':
             self.add_command_option('compiler', '--backward-compatible')
+
+        if opts.parser_timing_reports:
+            self.add_command_option('compiler', '--parser-timing-reports')
+
+        if opts.parser_bandwidth_opt:
+            self.add_command_option('compiler', '--parser-bandwidth-opt')
 
         self.skip_compilation = []
         if opts.skip_compilation:

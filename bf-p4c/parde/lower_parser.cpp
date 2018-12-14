@@ -10,6 +10,7 @@
 #include <utility>
 #include <vector>
 
+#include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/common/debug_info.h"
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/common/slice.h"
@@ -2528,6 +2529,6 @@ LowerParser::LowerParser(const PhvInfo& phv, ClotInfo& clot, const FieldDefUse &
         new ComputeInitZeroContainers(phv, defuse, pragma_no_init->getFields()),
         new ComputeMultiwriteContainers,  // Must run after ComputeInitZeroContainers.
         new ComputeBufferRequirements,
-        LOGGING(1) ? new CharacterizeParser : nullptr
+        BackendOptions().parser_timing_reports ? new CharacterizeParser : nullptr
     });
 }

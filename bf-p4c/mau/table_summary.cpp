@@ -9,7 +9,7 @@
 int TableSummary::numInvoked[] = {0};
 
 Visitor::profile_t TableSummary::init_apply(const IR::Node *root) {
-    if (BFNContext::get().options().verbose > 0)
+    if (BackendOptions().verbose > 0)
         tsLog = new Logging::FileLog("table_summary_pipe" + std::to_string(pipe_id) + ".log");
 
     auto rv = MauInspector::init_apply(root);

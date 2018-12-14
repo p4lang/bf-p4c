@@ -78,7 +78,7 @@ V1Switch(parse(), verifyChecksum(), ingress(), egress(), computeChecksum(), depa
 
     boost::replace_first(source, "%MAU%", mauSource);
 
-    auto& options = BFNContext::get().options();
+    auto& options = BackendOptions();
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
     options.target = "tofino";
     options.arch = "v1model";

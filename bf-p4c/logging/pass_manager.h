@@ -25,7 +25,7 @@ class PassManager : public ::PassManager {
 
  protected:
     profile_t init_apply(const IR::Node *root) override {
-        if (BFNContext::get().options().verbose == 0)
+        if (BackendOptions().verbose == 0)
             return ::PassManager::init_apply(root);
 
         static int invocation = 0;
@@ -35,7 +35,7 @@ class PassManager : public ::PassManager {
             _logFile = new Logging::FileLog(_logFilePrefix + ".log", _appendToLog);
         } else {
             cstring pipeId = "";
-            if (!BFNContext::get().options().isv1()) {  // only for P4-16
+            if (!BackendOptions().isv1()) {  // only for P4-16
                 const IR::BFN::Pipe *pipe = root->to<IR::BFN::Pipe>();
                 if (pipe == nullptr)
                     pipe = findContext<IR::BFN::Pipe>();

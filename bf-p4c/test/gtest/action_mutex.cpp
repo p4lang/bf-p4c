@@ -124,7 +124,7 @@ V1Switch(parse(), verifyChecksum(), igrs(), egrs(),
     boost::replace_first(source, "%EGRESS%", mau);
     boost::replace_all(source, "%TABLES%", tables);
 
-    auto& options = BFNContext::get().options();
+    auto& options = BackendOptions();
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
     options.target = "tofino";
     options.arch = "v1model";

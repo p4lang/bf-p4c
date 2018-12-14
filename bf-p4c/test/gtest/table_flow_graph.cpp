@@ -80,7 +80,7 @@ V1Switch(parse(), verifyChecksum(), mau(), mau(),
 
     boost::replace_first(source, "%MAU%", parserSource);
 
-    auto& options = BFNContext::get().options();
+    auto& options = BackendOptions();
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
     options.target = "tofino";
     options.arch = "v1model";

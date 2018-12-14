@@ -309,7 +309,7 @@ TofinoPhvSpec::TofinoPhvSpec() {
     addType(PHV::Type::TH);
     addType(PHV::Type::TW);
 
-    auto phv_scale_factor = BFNContext::get().options().phv_scale_factor;
+    auto phv_scale_factor = BackendOptions().phv_scale_factor;
 
     BUG_CHECK(unsigned(phv_scale_factor * 4) >= 1,
               "PHV scale factor %1% too small", phv_scale_factor);
@@ -413,7 +413,7 @@ JBayPhvSpec::JBayPhvSpec() {
     addType(PHV::Type::DH);
     addType(PHV::Type::DW);
 
-    auto phv_scale_factor = BFNContext::get().options().phv_scale_factor;
+    auto phv_scale_factor = BackendOptions().phv_scale_factor;
     if (phv_scale_factor != 1.0)
         P4C_UNIMPLEMENTED("phv_scale_factor not yet implemented for Tofino2");
 

@@ -63,7 +63,7 @@ createActionTest(const std::string& ingressPipeline,
     boost::replace_first(source, "%INGRESS_PIPELINE%", ingressPipeline);
     boost::replace_first(source, "%EGRESS_PIPELINE%", egressPipeline);
 
-    auto& options = BFNContext::get().options();
+    auto& options = BackendOptions();
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
     options.target = "tofino";
     options.arch = "v1model";
@@ -291,9 +291,13 @@ TEST_F(ActionPhv, IngressMultipleTablesReads) {
             actionList.push_back(act);
             });
 
-    EXPECT_TRUE(apc.is_in_write_to_reads("ingress::h1.field1", actionList[2], "ingress::h2.field1"));
-    EXPECT_FALSE(apc.is_in_write_to_reads("ingress::h1.field1", actionList[0], "ingress::h2.field2"));
-    EXPECT_TRUE(apc.is_in_write_to_reads("ingress::h2.field2", actionList[3], "ingress::h1.field2"));
-    //EXPECT_FALSE(apc.is_in_write_to_reads("ingress::h1.field1", actionList[3], "ingress::h2.field1"));
+    EXPECT_TRUE(apc.is_in_write_to_reads(
+                    "ingress::h1.field1", actionList[2], "ingress::h2.field1"));
+    EXPECT_FALSE(apc.is_in_write_to_reads(
+                    "ingress::h1.field1", actionList[0], "ingress::h2.field2"));
+    EXPECT_TRUE(apc.is_in_write_to_reads(
+                    "ingress::h2.field2", actionList[3], "ingress::h1.field2"));
+    // EXPECT_FALSE(apc.is_in_write_to_reads(
+    //               "ingress::h1.field1", actionList[3], "ingress::h2.field1"));
 }
 }  // namespace Test

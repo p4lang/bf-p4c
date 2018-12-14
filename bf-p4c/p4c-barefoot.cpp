@@ -169,7 +169,7 @@ int main(int ac, char **av) {
 
 
     AutoCompileContext autoBFNContext(new BFNContext);
-    auto& options = BFNContext::get().options();
+    auto& options = BackendOptions();
 
     if (!options.process(ac, av) || ::errorCount() > 0)
         return INVOCATION_ERROR;

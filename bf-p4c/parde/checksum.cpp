@@ -507,7 +507,7 @@ extractChecksumFromDeparser(const IR::BFN::TranslatedP4Deparser* deparser, IR::B
 
     if (!deparser) return pipe;
 
-    if (BFNContext::get().options().verbose > 0)
+    if (BackendOptions().verbose > 0)
         Logging::FileLog parserLog("parser.log", true /* append */);
 
     auto gress = deparser->thread;

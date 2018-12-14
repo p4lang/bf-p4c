@@ -55,7 +55,7 @@ createFieldAlignmentTestCase(const std::string& headerSource) {
 
     boost::replace_first(source, "%HEADER_SOURCE%", headerSource);
 
-    auto& options = BFNContext::get().options();
+    auto& options = BackendOptions();
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
     options.target = "tofino";
     options.arch = "v1model";
@@ -175,7 +175,7 @@ TEST_F(TofinoFieldAlignment, LargeUnalignedFields) {
 }
 
 TEST_F(TofinoFieldAlignment, NonPardeFieldsDoNotForceAlignment) {
-    auto& options = BFNContext::get().options();
+    auto& options = BackendOptions();
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
     options.target = "tofino";
     options.arch = "v1model";

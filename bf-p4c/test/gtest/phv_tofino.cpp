@@ -200,7 +200,7 @@ void CheckPhvContainerJSON() {
 }
 
 void enable_virtual_phv() {
-    auto& options = BFNContext::get().options();
+    auto& options = BackendOptions();
     options.phv_scale_factor = 2;
     Device::reinitialize("Tofino");
 }

@@ -98,7 +98,7 @@ void emit_phv_field(
     field->foreach_alloc([&](const PHV::Field::alloc_slice& slice) {
 #if BAREFOOT_INTERNAL
         // Testing only
-        if (BFNContext::get().options().stage_allocation)
+        if (BackendOptions().stage_allocation)
             emit_stage_alloc(out, slice, field);
         else
 #endif
@@ -146,7 +146,7 @@ void PhvAsmOutput::emit_gress(std::ostream& out, gress_t gress) const {
     for (auto &f : phv) {
         if (f.gress == gress) {
             emit_phv_field(out, &f); } }
-    if (BFNContext::get().options().debugInfo) {
+    if (BackendOptions().debugInfo) {
         out << "  " << "context_json:\n";
         // Collect set of all containers that are allocated to a particular gress.
         std::set<PHV::Container> allocatedContainers;

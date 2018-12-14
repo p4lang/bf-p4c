@@ -45,7 +45,7 @@ class Manifest : public Inspector {
     }
 
  private:
-    Manifest() : _options(BFNContext::get().options()) {
+    Manifest() : _options(BackendOptions()) {
         auto path = Util::PathName(_options.outputDir).join("manifest.json");
         _manifestStream.open(path.toString().c_str(), std::ofstream::out);
         if (!_manifestStream)

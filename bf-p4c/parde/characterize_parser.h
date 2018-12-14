@@ -233,7 +233,7 @@ class CharacterizeParser : public Inspector {
 
         std::clog << std::endl;
 
-        if (BFNContext::get().options().parser_timing_reports) {
+        if (BackendOptions().parser_timing_reports) {
             print_timing_report(parser, longest_path);
 
             std::clog << std::endl;

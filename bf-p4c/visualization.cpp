@@ -871,7 +871,7 @@ std::ostream &operator<<(std::ostream &out, const Visualization &vis) {
     auto res_json = new Util::JsonObject();
     res_json->emplace("schema_version", new Util::JsonValue("1.0.5"));
     res_json->emplace("program_name",
-                      new Util::JsonValue(BFNContext::get().options().programName + ".p4"));
+                      new Util::JsonValue(BackendOptions().programName + ".p4"));
     res_json->emplace("run_id", new Util::JsonValue(RunId::getId()));
     const time_t now = time(NULL);
     char build_date[1024];

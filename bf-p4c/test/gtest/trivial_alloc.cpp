@@ -22,7 +22,7 @@ namespace SharedPhvTestCases {
 static boost::optional<TofinoPipeTestCase> trivialAlloc() {
     SCOPED_TRACE("PhvTestCase::trivialAlloc()");
 
-    auto& options = BFNContext::get().options();
+    auto& options = BackendOptions();
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
     options.target = "tofino";
     options.arch = "v1model";
@@ -245,7 +245,7 @@ class TofinoPHVManualAlloc : public TofinoBackendTest {
  protected:
     static void
     runManualAllocTest(const PHV::ManualAlloc::AssignmentMap& assignments, bool
-            isWidthMismatchTest=false) {
+            isWidthMismatchTest = false) {
         auto testcase = SharedPhvTestCases::trivialAlloc();
         ASSERT_TRUE(testcase);
 
@@ -285,7 +285,7 @@ class TofinoPHVManualAlloc : public TofinoBackendTest {
                     allocated_fields.insert(actual[i].field);
                     auto bitvec_ret = phv.bits_allocated(actual[i].container, allocated_fields);
                     allocated_fields.clear();
-                    bitvec real (8, 8);
+                    bitvec real(8, 8);
                     EXPECT_EQ(bitvec_ret, real);
                 } else if (requested[i].container == "B2" || requested[i].container == "B3") {
                     allocated_fields.insert(actual[i].field);

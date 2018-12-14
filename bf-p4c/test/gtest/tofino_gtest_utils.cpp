@@ -18,7 +18,7 @@ namespace Test {
 /* static */ boost::optional<MidendTestCase>
 MidendTestCase::create(const std::string& source) {
     AutoCompileContext autoBFNContext(new BFNContext(BFNContext::get()));
-    auto& options = BFNContext::get().options();
+    auto& options = BackendOptions();
 
     auto frontendTestCase = FrontendTestCase::create(source, BFN::ParseAnnotations());
     if (!frontendTestCase) return boost::none;
@@ -41,7 +41,7 @@ MidendTestCase::create(const std::string& source) {
 /* static */ boost::optional<TofinoPipeTestCase>
 TofinoPipeTestCase::create(const std::string& source) {
     AutoCompileContext autoBFNContext(new BFNContext(BFNContext::get()));
-    auto& options = BFNContext::get().options();
+    auto& options = BackendOptions();
 
     auto frontendTestCase =
         FrontendTestCase::create(source, options.langVersion, BFN::ParseAnnotations());

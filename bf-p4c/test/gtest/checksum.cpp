@@ -58,7 +58,7 @@ createComputedChecksumTestCase(const std::string& computeChecksumSource,
     boost::replace_first(source, "%COMPUTE_CHECKSUM_SOURCE%", computeChecksumSource);
     boost::replace_first(source, "%DEPARSER_SOURCE%", deparserSource);
 
-    auto& options = BFNContext::get().options();
+    auto& options = BackendOptions();
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
     options.target = "tofino";
     options.arch = "v1model";
@@ -258,7 +258,7 @@ TEST_F(TofinoComputedChecksum, ChecksumFieldInChecksum) {
     checkComputedChecksum(test->pipe, {
         "emit headers.h1.field1 if headers.h1.$valid",
         "emit headers.h1.field2 if headers.h1.$valid",
-        "emit checksum { headers.h1.field1, headers.h1.checksum, headers.h1.field3 } if headers.h1.$valid",
+        "emit checksum { headers.h1.field1, headers.h1.checksum, headers.h1.field3 } if headers.h1.$valid",  // NOLINT
         "emit headers.h1.field3 if headers.h1.$valid"
     });
 }

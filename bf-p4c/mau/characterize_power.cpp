@@ -12,7 +12,7 @@ Visitor::profile_t CharacterizePower::init_apply(const IR::Node *root) {
 void CharacterizePower::end_apply() {
     if (display_power_budget_) {
         std::ofstream myfile;
-        auto outputDir = BFNContext::get().options().outputDir;
+        auto outputDir = BackendOptions().outputDir;
         auto logDir = Util::PathName(outputDir).join("logs").toString();
         int rc = mkdir(logDir.c_str(), 0755);
         if (rc != 0 && errno != EEXIST) {

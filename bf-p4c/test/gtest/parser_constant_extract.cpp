@@ -61,7 +61,7 @@ createParserConstantExtractTestCase(const std::string& parserSource) {
 
     boost::replace_first(source, "%PARSER_SOURCE%", parserSource);
 
-    auto& options = BFNContext::get().options();
+    auto& options = BackendOptions();
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
     options.target = "tofino";
     options.arch = "v1model";
