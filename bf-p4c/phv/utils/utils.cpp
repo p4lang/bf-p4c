@@ -1174,6 +1174,9 @@ std::ostream &operator<<(std::ostream &out, const PHV::Allocation& alloc) {
         order.push_back(tagalong); }
     order.push_back(phvSpec.physicalContainers() - seen);
 
+    TablePrinter tp(out, { "Container", "Gress", "Container Slice", "Field Slice" },
+                   TablePrinter::Align::LEFT);
+
     bool firstEmpty = true;
     for (bitvec group : order) {
         for (auto cid : group) {
@@ -1184,11 +1187,15 @@ std::ostream &operator<<(std::ostream &out, const PHV::Allocation& alloc) {
 
             if (slices.size() == 0) {
                 if (firstEmpty) {
-                    out << "..." << std::endl;
-                    firstEmpty = false; }
-                continue; }
+                    tp.addRow({"...", "", "", ""});
+                    tp.addBlank();
+                    firstEmpty = false;
+                }
+                continue;
+            }
             firstEmpty = true;
 
+            bool firstSlice = true;
             for (auto slice : slices) {
                 std::stringstream container_slice;
                 std::stringstream field_slice;
@@ -1198,13 +1205,20 @@ std::ostream &operator<<(std::ostream &out, const PHV::Allocation& alloc) {
                 if (slice.field_slice().size() != slice.field()->size)
                     field_slice << "[" << slice.field_slice().lo << ":" <<
                     slice.field_slice().hi << "]";
-                out << boost::format("%1%(%2%%6%)%3% %|25t| <-- %|30t|%4%%5%\n")
-                     % cstring::to_cstring(slice.container())
-                     % cstring::to_cstring(gress)
-                     % container_slice.str()
-                     % cstring::to_cstring(slice.field())
-                     % field_slice.str()
-                     % (hardwired ? "-HW" : ""); } } }
+
+                tp.addRow({
+                    firstSlice ? std::string(slice.container().toString()) : "",
+                    firstSlice ? (std::string(toSymbol(*gress)) + (hardwired ? "-HW" : "")) : "",
+                    container_slice.str(),
+                    std::string(slice.field()->name) + field_slice.str()
+                   });
+                firstSlice = false;
+            }
+            tp.addBlank();
+        }
+    }
+
+    tp.print();
     return out;
 }
 

@@ -16,6 +16,8 @@ struct FieldAlignment {
     bool operator==(const FieldAlignment& other) const;
     bool operator!=(const FieldAlignment& other) const;
 
+    bool isByteAligned() const { return littleEndian == 0; }
+
     /// The alignment of the first bit of the field in network order (i.e., the
     /// MSB) specified as a network order bit index mod 8.
     unsigned network;

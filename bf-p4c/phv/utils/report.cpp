@@ -79,7 +79,7 @@ PHV::AllocationReport::printOverlayStatus() const {
         ss << "TOTAL EGRESS T-PHV OVERLAY BITS: "  << overlay_statistics[EGRESS][0] << std::endl;
         ss << "TOTAL EGRESS PHV OVERLAY BITS: "    << overlay_statistics[EGRESS][1] << std::endl;
 
-        if (LOGGING(3)) {
+        if (LOGGING(3) && !overlay_result.empty()) {
             TablePrinter tp(ss, { "Container", "Gress", "Container Slice", "Field Slice" },
                            TablePrinter::Align::LEFT);
 
@@ -91,13 +91,18 @@ PHV::AllocationReport::printOverlayStatus() const {
                 for (const auto& slice : alloc.slices(kv.first)) {
                     std::stringstream container_slice, field_slice;
 
-                    container_slice << slice.container_slice();
-                    field_slice << slice.field() << slice.field_slice();
+                    if (slice.container_slice().size() != int(slice.container().size()))
+                        container_slice << "[" << slice.container_slice().lo << ":" <<
+                        slice.container_slice().hi << "]";
+                    if (slice.field_slice().size() != slice.field()->size)
+                        field_slice << "[" << slice.field_slice().lo << ":" <<
+                        slice.field_slice().hi << "]";
 
                     tp.addRow({first ? std::string(container.toString().c_str()) : "",
                                first ? std::string(toSymbol(*gress).c_str()) : "",
                                container_slice.str(),
-                               field_slice.str()});
+                               std::string(slice.field()->name) + field_slice.str()
+                              });
                     first = false;
                 }
 
