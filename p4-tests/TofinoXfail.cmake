@@ -690,6 +690,7 @@ p4c_add_xfail_reason("tofino"
   # Expected to fail, which means that action analysis is working correctly.
   extensions/p4_tests/p4_14/action_conflict_1.p4
   extensions/p4_tests/p4_14/action_conflict_2.p4
+  extensions/p4_tests/p4_14/action_conflict_3.p4
   extensions/p4_tests/p4_14/14-MultipleActionsInAContainer.p4
 
   # Expected to fail, until we have better user-facing messages.
@@ -914,15 +915,6 @@ p4c_add_xfail_reason("tofino"
   # extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   )
 
-# BRIG-1209
-# These are cases that should fail; however, PHV allocation allows these programs to pass and the
-# invalid allocation is caught in action analysis.
-p4c_add_xfail_reason("tofino"
-  "PHV allocation creates a container action impossible within a Tofino ALU"
-  extensions/p4_tests/p4_14/action_conflict_3.p4
-  )
-
-
 # p4c_add_xfail_reason("tofino"
 #   "Brig currently only supports one parameter"
 #   extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
@@ -931,7 +923,6 @@ p4c_add_xfail_reason("tofino"
 #   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
 #   extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
 #   )
-
 
 p4c_add_xfail_reason("tofino"
   "Operands of arithmetic operations cannot be greater than 32b, but field .* has .*"

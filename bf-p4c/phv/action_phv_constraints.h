@@ -344,7 +344,8 @@ class ActionPhvConstraints : public Inspector {
             const PHV::Allocation& alloc,
             const PHV::Allocation::MutuallyLiveSlices& container_state,
             const IR::MAU::Action* action,
-            const PHV::Container destination);
+            const PHV::Container destination,
+            ordered_set<const IR::MAU::Action*>& unalignedSourceRequiresAlignment);
 
     /** Returns offset (difference between lo bits) by which slice @a differs from slice @b
       * offset = (a.lo - b.lo) % b.container().size()
@@ -392,6 +393,11 @@ class ActionPhvConstraints : public Inspector {
       * @copacking_constraints.
       */
     boost::optional<PHV::FieldSlice> get_smaller_source_slice(
+            const PHV::Allocation& alloc,
+            const UnionFind<PHV::FieldSlice>& copacking_constraints,
+            const ordered_set<PHV::FieldSlice>& container_state);
+
+    boost::optional<PHV::FieldSlice> get_unallocated_slice(
             const PHV::Allocation& alloc,
             const UnionFind<PHV::FieldSlice>& copacking_constraints,
             const ordered_set<PHV::FieldSlice>& container_state);

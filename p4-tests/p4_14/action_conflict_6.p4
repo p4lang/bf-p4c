@@ -1,19 +1,19 @@
 header_type pkt_t {
   fields {
-    f1 : 2;
-    f2 : 2;
-    f3 : 2;
-    f4 : 2;
+    f1 : 12;
+    f2 : 10;
+    f3 : 12;
+    f4 : 30;
 
-    f5 : 2;
-    f6 : 2;
-    f7 : 2;
-    f8 : 2;
+    f5 : 12;
+    f6 : 10;
+    f7 : 12;
+    f8 : 30;
 
-    f9 : 2;
-    fa : 2;
-    fb : 2;
-    fc : 2;
+    f9 : 12;
+    fa : 10;
+    fb : 12;
+    fc : 30;
   }
 }
 
@@ -81,4 +81,3 @@ control ingress {
   apply(table_0);
   apply(setting_port);
 }
-
