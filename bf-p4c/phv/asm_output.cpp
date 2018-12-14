@@ -96,10 +96,12 @@ void emit_phv_field(
         std::ostream& out,
         PHV::Field* field) {
     field->foreach_alloc([&](const PHV::Field::alloc_slice& slice) {
+#if BAREFOOT_INTERNAL
         // Testing only
         if (BFNContext::get().options().stage_allocation)
             emit_stage_alloc(out, slice, field);
         else
+#endif
             emit_alloc(out, slice, field);
     });
 }
