@@ -118,6 +118,8 @@ int PackBridgedMetadata::getHeaderBytes(const IR::Header* h) const {
     int rv = 0;
     for (auto f : h->type->fields)
         rv += f->type->width_bits();
+    BUG_CHECK(rv % 8 == 0, "Bridged metadata packing pass produced a non byte-aligned header %1%",
+              h->name);
     return (rv / 8);
 }
 
@@ -883,7 +885,7 @@ IR::Node* PackBridgedMetadata::preorder(IR::Header* h) {
         LOG3("\t\tTrying to pack " << totalAllocatedSize << " bits within " << totalPackSize <<
                 " bits.");
         ordered_set<int> freeBits;
-        for (int i = 0; i < totalAllocatedSize; i++)
+        for (int i = 0; i < totalPackSize; i++)
             freeBits.insert(i);
         int largestUnoccupiedPosition = totalPackSize - 1;
         LOG3("\t\t  Setting largest unoccupied position to: " << largestUnoccupiedPosition);

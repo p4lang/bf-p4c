@@ -614,6 +614,27 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         }
     }
 
+    // Check that all containers is a tagalong group are all assigned to the same gress (and contain
+    // fields of the same gress).
+    if (Device::currentDevice() == Device::TOFINO) {
+        const auto& collections = phvSpec.tagalongCollections();
+        for (auto collection : collections) {
+            boost::optional<gress_t> gress;
+            for (unsigned cid : collection) {
+                auto c = phvSpec.idToContainer(cid);
+                const auto& fields = phv.fields_in_container(c);
+                if (fields.size() == 0) continue;
+                for (const auto* f : fields) {
+                    if (gress)
+                        BUG_CHECK(f->gress == *gress,
+                                "TPHV collection contains fields from different gresses.");
+                    else
+                        gress = f->gress;
+                }
+            }
+        }
+    }
+
     size_t povBits = getPOVContainerBytes();
     size_t povLimit = (Device::currentDevice() == Device::TOFINO) ? 256 : 128;
     if (povBits > povLimit)

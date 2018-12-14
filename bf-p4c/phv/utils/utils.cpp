@@ -303,12 +303,16 @@ void PHV::Allocation::allocate(
                 slice.container(), *parserGroupGress);
         } else {
             for (unsigned cid : phvSpec.parserGroup(slice_cid)) {
-            auto c = phvSpec.idToContainer(cid);
-            auto cGress = this->parserGroupGress(c);
-            BUG_CHECK(!cGress || *cGress == slice.field()->gress,
-                "Container %1% already has parser group gress set to %2%",
-                c, *this->parserGroupGress(c));
-            this->setParserGroupGress(c, slice.field()->gress); } } }
+                auto c = phvSpec.idToContainer(cid);
+                auto cGress = this->parserGroupGress(c);
+                BUG_CHECK(!cGress || *cGress == slice.field()->gress,
+                        "Container %1% already has parser group gress set to %2%",
+                        c, *this->parserGroupGress(c));
+                this->setParserGroupGress(c, slice.field()->gress);
+            }
+        }
+    }
+
 
     // If the slice is deparsed but the deparser group gress has not yet been
     // set, then set it for each container in the deparser group.
@@ -317,15 +321,27 @@ void PHV::Allocation::allocate(
             auto c = phvSpec.idToContainer(cid);
             auto cGress = this->deparserGroupGress(c);
             BUG_CHECK(!cGress || *cGress == slice.field()->gress,
-                "Container %1% already has deparser group gress set to %2%",
-                c, *this->deparserGroupGress(c));
+                    "Container %1% already has deparser group gress set to %2%",
+                    c, *this->deparserGroupGress(c));
             this->setDeparserGroupGress(c, slice.field()->gress); }
     } else if (isDeparsed) {
         // Otherwise, check that the slice gress (which is equal to the
         // container's gress at this point) matches the deparser group gress.
         BUG_CHECK(slice.field()->gress == *deparserGroupGress,
-            "Cannot allocate %1%, because container is already assigned to %2% but has a "
-            "deparser group assigned to %3%", slice, slice.field()->gress, *deparserGroupGress); }
+                "Cannot allocate %1%, because container is already assigned to %2% but has a "
+                "deparser group assigned to %3%", slice, slice.field()->gress, *deparserGroupGress);
+    }
+
+    // Set gress for all the containers in a tagalong group (for container only).
+    if (slice.container().is(PHV::Kind::tagalong)) {
+        for (unsigned cid : phvSpec.tagalongCollection(slice_cid)) {
+            auto c = phvSpec.idToContainer(cid);
+            auto cGress = this->gress(c);
+            BUG_CHECK(!cGress || *cGress == slice.field()->gress,
+                    "Container %1% already has gress set to %2%", c, *cGress);
+            this->setGress(c, slice.field()->gress);
+        }
+    }
 
     // Update allocation.
     this->addSlice(slice.container(), slice);

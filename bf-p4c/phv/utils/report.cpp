@@ -355,7 +355,8 @@ PHV::AllocationReport::printTagalongCollectionsOccupancyMetrics() const {
 
         if (collectionInfo.gress && gress) {
             BUG_CHECK(*(collectionInfo.gress) == *gress,
-                      "Tagalong collection assigned with fields from both ingress and egress?");
+                    "Tagalong collection for container %1% assigned with fields from both "
+                    "ingress and egress?", container);
         }
 
         collectionInfo.gress = gress;

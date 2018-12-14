@@ -287,6 +287,8 @@ p4c_add_xfail_reason("tofino"
   "error.*Can't split table.*with indirect attached MAU::StatefulAlu"
   switch_8.5_ent_fin_postcard
   switch_ent_fin_postcard
+  switch_8.5_l3_heavy_int_leaf
+  switch_l3_heavy_int_leaf
 )
 
 p4c_add_xfail_reason("tofino"
@@ -296,11 +298,9 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "error.*Inferred incompatible alignments for field.*"
+  "Compiler Bug.*Conflicting alloc in the action data xbar between.*"
   switch_msdc_leaf_int
   switch_8.5_msdc_leaf_int
-  switch_l3_heavy_int_leaf
-  switch_8.5_l3_heavy_int_leaf
   )
 
 p4c_add_xfail_reason("tofino"
