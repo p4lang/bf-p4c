@@ -862,6 +862,9 @@ void TernaryIndirectTable::pass1() {
         if (action.args.size() < 1 || action.args[0].size() <= (unsigned)action_enable)
             error(lineno, "Action enable bit %d out of range for action selector", action_enable);
     if (format) format->pass1(this);
+    for (auto &hd : hash_dist) {
+        hd.pass1(this, HashDistribution::OTHER, false);
+    }
 }
 
 void TernaryIndirectTable::pass2() {
