@@ -956,9 +956,15 @@ bool ActionAnalysis::TotalAlignment::verify_individual_alignments(PHV::Container
             return false;
         right_shift = possible_right_shift;
     }
-    // Can either be non-contiguous or non-aligned, not both
-    if (!contiguous() && !aligned())
-        return false;
+    // For mocha and dark containers, individual writes need to be aligned with their sources.
+    if (container.is(PHV::Kind::mocha) || container.is(PHV::Kind::dark)) {
+        if (!aligned())
+            return false;
+    } else if (container.is(PHV::Kind::normal)) {
+        // Can either be non-contiguous or non-aligned, not both
+        if (!contiguous() && !aligned())
+            return false;
+    }
     return true;
 }
 
