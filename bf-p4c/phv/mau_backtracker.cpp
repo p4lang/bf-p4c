@@ -14,7 +14,9 @@ bool MauBacktracker::backtrack(trigger &trig) {
             for (int st : entry.second)
                 maxStage = (maxStage < st) ? st : maxStage; }
         LOG4("Inserted tables size: " << tables.size());
-        metaInitDisable = t->metaInitDisable;
+        // The OR operation ensures that live range analysis and metadata initialization, once
+        // disabled, is not enabled for the rest of the compilation process.
+        metaInitDisable |= t->metaInitDisable;
         return true;
     } else if (trig.is<BridgedPackingTrigger::failure>()) {
         auto t = dynamic_cast<BridgedPackingTrigger::failure *>(&trig);
