@@ -263,7 +263,9 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
                             MULTIPLE_SHIFTS = (1 << 16),
                             ILLEGAL_ACTION_DATA = (1 << 17),
                             REFORMAT_CONSTANT = (1 << 18),
-                            UNRESOLVED_REPEATED_ACTION_DATA = (1 << 19) };
+                            UNRESOLVED_REPEATED_ACTION_DATA = (1 << 19),
+                            ATTACHED_OUTPUT_ILLEGAL_ALIGNMENT = (1 << 20)
+                         };
         unsigned error_code = NO_PROBLEM;
         cstring name;
         ActionDataInfo adi;
@@ -343,7 +345,8 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         // bool is_contig_rotate(bitvec check, int &shift, int size);
         // bitvec rotate_contig(bitvec orig, int shift, int size);
 
-        void verify_speciality(PHV::Container container, cstring action_name);
+        bool verify_speciality(cstring &error_message, PHV::Container container,
+            cstring action_name);
         bool verify_shift(cstring &error_message, PHV::Container container, const PhvInfo &phv);
         bool verify_phv_mau_group(PHV::Container container);
         bool verify_one_alignment(TotalAlignment &tot_alignment, int size, int &unaligned_count,

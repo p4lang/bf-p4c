@@ -199,6 +199,7 @@ table set_hashes_1_and_2_tbl {
     actions {
         set_hash_1_and_2;
     }
+    default_action : set_hash_1_and_2;
     size : 256;
 }
 
@@ -206,6 +207,7 @@ table set_hash_3_tbl {
     actions {
         set_hash_3;
     }
+    default_action : set_hash_3;
     size : 256;
 }
 

@@ -1,4 +1,5 @@
 #include <boost/optional/optional_io.hpp>
+#include "lib/algorithm.h"
 #include "bf-p4c/phv/action_phv_constraints.h"
 #include "bf-p4c/phv/cluster_phv_operations.h"
 
@@ -29,6 +30,7 @@ void ActionPhvConstraints::ConstraintTracker::clear() {
     action_to_writes.clear();
     write_to_reads_per_action.clear();
     read_to_writes_per_action.clear();
+    statefulWrites.clear();
 }
 
 void ActionPhvConstraints::ConstraintTracker::add_action(
@@ -65,6 +67,10 @@ void ActionPhvConstraints::ConstraintTracker::add_action(
                 action_to_reads[act].insert(*fr.phv_used);
             } else if (read.type == ActionAnalysis::ActionParam::ACTIONDATA) {
                 fr.ad = true;
+                if (read.speciality != ActionAnalysis::ActionParam::NO_SPECIAL) {
+                    fr.special_ad = true;
+                    LOG5("      ...speciality action data read: " << fr);
+                }
             } else if (read.type == ActionAnalysis::ActionParam::CONSTANT) {
                 fr.constant = true;
                 if (read.expr->is<IR::Constant>()) {
@@ -88,8 +94,27 @@ void ActionPhvConstraints::ConstraintTracker::add_action(
             // any destination written by METER_ALU, METER_COLOR, HASH_DIST, or RANDOM must not be
             // packed with other fields written in the same action. To enable this, maintain a list
             // of all actions where such writes happen for the given field.
-            if (read.speciality != ActionAnalysis::ActionParam::NO_SPECIAL)
+            if (read.speciality != ActionAnalysis::ActionParam::NO_SPECIAL) {
                 self.special_no_pack[write.field()].insert(act);
+                if (read.speciality == ActionAnalysis::ActionParam::METER_ALU) {
+                    int lo, hi;
+                    if (auto sl = read.expr->to<IR::Slice>()) {
+                        lo = sl->getL();
+                        hi = sl->getH();
+                    } else {
+                        lo = 0;
+                        hi = read.size() - 1;
+                    }
+                    std::pair<int, int> write_range_pair = std::make_pair(write_range.lo,
+                            write_range.hi);
+                    std::pair<int, int> read_range_pair = std::make_pair(lo, hi);
+                    statefulWrites[write_field][write_range].insert(
+                            std::make_pair(write_range_pair, read_range_pair));
+                    LOG5("\t  ...adding stateful read range [" << lo << ", " << hi << "] and "
+                         "write range [" << write_range_pair.first << ", " <<
+                         write_range_pair.second << "]");
+                }
+            }
 
             if (field_action.reads.size() > 1) {
                 fr.flags |= OperandInfo::ANOTHER_OPERAND;
@@ -439,30 +464,86 @@ bool ActionPhvConstraints::has_ad_or_constant_sources(
     return false;
 }
 
-bool ActionPhvConstraints::all_or_none_constant_sources(
+ActionPhvConstraints::ActionDataUses ActionPhvConstraints::all_or_none_constant_sources(
         const PHV::Allocation::MutuallyLiveSlices& slices,
         const IR::MAU::Action* action,
         const PHV::Allocation::LiveRangeShrinkingMap& initActions) const {
-    unsigned num_slices_written_by_ad = 0;
+    ordered_set<PHV::AllocSlice> slices_written_by_ad;
+    ordered_set<PHV::AllocSlice> slices_written_by_special_ad;
     for (auto slice : slices) {
-        bool written_by_ad = false;
-        for (auto operand : constraint_tracker.sources(slice, action))
-            if (operand.ad || operand.constant)
-                written_by_ad = true;
+        for (auto operand : constraint_tracker.sources(slice, action)) {
+            if (operand.ad || operand.constant) {
+                slices_written_by_ad.insert(slice);
+                if (operand.special_ad)
+                    slices_written_by_special_ad.insert(slice); } }
         if (initActions.count(slice.field()) && initActions.at(slice.field()).count(action))
-            written_by_ad = true;
-        num_slices_written_by_ad += (written_by_ad ? 1 : 0); }
+            slices_written_by_ad.insert(slice);
+    }
+    if (LOGGING(5))
+        for (auto slice : slices_written_by_special_ad)
+            LOG5("\t\t\t\t\t  Special AD slice: " << slice);
+    unsigned num_slices_written_by_special_ad = slices_written_by_special_ad.size();
+    unsigned num_slices_written_by_ad = slices_written_by_ad.size();
+    LOG5("\t\t\t\t\tSpecial AD slices: " << num_slices_written_by_special_ad <<
+         ", AD slices: " << num_slices_written_by_ad);
+    BUG_CHECK(num_slices_written_by_special_ad <= num_slices_written_by_ad,
+              "Slices written by speciality action data cannot be greater than slices written by "
+              "action data");
     if (num_slices_written_by_ad == 0) {
         LOG5("\t\t\t\t  No slice in proposed packing written by action data/constant in action "
              << action->name);
-        return true; }
+        return ALL_AD_CONSTANT; }
+
+    // If there is a slice written by speciality action data and another slice written by other
+    // action data that must always be packed in the same container, then do not return
+    // COMPLEX_AD_PACKING_REQ. Instead, allow the failure to happen in table placement later.
+    bool check_speciality_packing = true;
+    for (auto& sl_ad : slices_written_by_ad) {
+        int offset_ad = sl_ad.field()->offset;
+        int left_sl_ad = (offset_ad + sl_ad.field_slice().lo) / 8;
+        int right_sl_ad = ROUNDUP(offset_ad + sl_ad.field_slice().hi, 8);
+        for (auto& sl_special : slices_written_by_special_ad) {
+            // Only applicable for header fields as the strict parser alignment requirements are
+            // only for headers.
+            if (sl_ad.field()->metadata || sl_special.field()->metadata) continue;
+            // If the slices are of fields belonging to different headers, then we do not have any
+            // pack-together constraints from the parser.
+            if (sl_ad.field()->header() != sl_special.field()->header()) continue;
+            int offset_special = sl_special.field()->offset;
+            int left_sl_special = (offset_special + sl_special.field_slice().lo) / 8;
+            int right_sl_special = ROUNDUP(offset_special + sl_special.field_slice().hi, 8);
+            LOG1("\t\t\t\t  Slice ad: " << sl_ad << ", offset: " << offset_ad << ", lo: " <<
+                    left_sl_ad << ", hi: " << right_sl_ad);
+            LOG1("\t\t\t\t  Slice special: " << sl_special << ", offset: " << offset_special <<
+                    ", lo: " << left_sl_special << ", hi: " << right_sl_special);
+            // If there is an overlap between two different slices (they share the same byte), then
+            // the left limit of the later slice is going to be 1 less than the right limit of the
+            // earlier slice.
+            if (sl_ad != sl_special &&
+               (left_sl_special + 1 == right_sl_ad || left_sl_ad + 1 == right_sl_special)) {
+                LOG1("\t\t\t\t  Slices " << sl_ad << " and " << sl_special << " must be packed in "
+                     "the same container and share a byte.");
+                check_speciality_packing = false;
+            }
+        }
+    }
+
+    if (check_speciality_packing && num_slices_written_by_special_ad != 0 &&
+            num_slices_written_by_ad != num_slices_written_by_special_ad) {
+        // We currently disable packing of field slices if there is a mixture of speciality action
+        // data and normal action data reads in the same action. This may be relaxed in the future
+        // when action data packing becomes more efficient.
+        LOG5("\t\t\t\t  This packing will require combining a speciality action data with other "
+             "action data for action " << action->name << ". The compiler currently does not "
+             "support this feature.");
+        return COMPLEX_AD_PACKING_REQ; }
     if (num_slices_written_by_ad == slices.size()) {
         LOG5("\t\t\t\t  All slices in proposed packing written by action data/constant in action "
              << action->name);
-        return true; }
+        return ALL_AD_CONSTANT; }
     LOG5("\t\t\t\t  Only " << num_slices_written_by_ad << " out of " << slices.size() << " slices "
          " in proposed packing are written by action data/constant in action " << action->name);
-    return false;
+    return SOME_AD_CONSTANT;
 }
 
 int ActionPhvConstraints::unallocated_bits(PHV::Allocation::MutuallyLiveSlices slices,
@@ -734,6 +815,51 @@ bool ActionPhvConstraints::pack_conflicts_present(
                 LOG5("\t\t\t" << sl1.field()->name << " cannot be packed in the same stage with " <<
                      sl2.field()->name);
                 return true; } } }
+    return false;
+}
+
+bool ActionPhvConstraints::stateful_destinations_constraints_violated(
+        const PHV::Allocation::MutuallyLiveSlices& container_state) const {
+    BUG_CHECK(container_state.size() > 0, "No slices in candidate container allocation?");
+    size_t size = static_cast<size_t>(container_state.begin()->container().size());
+    LOG6("\t\t\tContainer size: " << size);
+    const auto& statefulWrites = constraint_tracker.getStatefulWrites();
+    for (auto slice : container_state) {
+        if (!statefulWrites.count(slice.field())) continue;
+        for (auto kv : statefulWrites.at(slice.field())) {
+            LOG6("\t\t\tChecking range " << kv.first);
+            auto written_field_slice = slice.field_slice();
+            if (!kv.first.contains(written_field_slice)) continue;
+            for (auto limit : kv.second) {
+                auto read_range = limit.second;
+                auto write_range = limit.first;
+                if (write_range.first != written_field_slice.lo || write_range.second !=
+                        written_field_slice.hi)
+                    LOG6("\t\t\t  Range " << written_field_slice << " contained in [" <<
+                         write_range.first << ", " << write_range.second << "] but not the same as "
+                         "it.");
+                // Because of the way slicing is done, write_range will always be a superset of
+                // written_field_slice. Therefore, written_field_slice's lo will always be greater
+                // than or equal to write_range's left coordinate (lo) and written_field_slice's hi
+                // will always be lesser than or equal to write_range's right coordinate (hi).
+                LOG7("\t\t\t\tlo: " << read_range.first << ", hi: " << read_range.second);
+                if (write_range.first != written_field_slice.lo) {
+                    read_range.first -= (write_range.first - written_field_slice.lo);
+                    LOG7("\t\t\t\tlo factor: " << (written_field_slice.lo - write_range.first));
+                }
+                if (write_range.second != written_field_slice.hi) {
+                    read_range.second -= (write_range.second - written_field_slice.hi);
+                    LOG7("\t\t\t\thi factor: " << (written_field_slice.hi - write_range.second));
+                }
+                LOG7("\t\t\t\tlo: " << read_range.first << ", hi: " << read_range.second);
+                if (read_range.first / size == read_range.second / size) continue;
+                LOG5("\t\t\tThe alignment of " << slice << " would force the data for ALU operation"
+                     "to go to multiple action data bus slots. Therefore, this packing "
+                     "is not possible.");
+                return true;
+            }
+        }
+    }
     return false;
 }
 
@@ -1037,6 +1163,11 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
     if (pack_conflicts_present(container_state))
         return boost::none;
 
+    // Check if any of the fields are stateful ALU writes and check the data bus alignment
+    // constraints.
+    if (stateful_destinations_constraints_violated(container_state))
+        return boost::none;
+
     // Check for parser constant extract for non 8b containers.
     if (Device::currentDevice() == Device::TOFINO)
         if (!parser_constant_extract_satisfied(c, container_state))
@@ -1119,8 +1250,14 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
                 initActions);
         // If there is an action data or constant source, are all slices in the proposed packing
         // written using action data or constant sources.
-        bool all_or_none_ad_constant_sources = has_ad_constant_sources ?
-            all_or_none_constant_sources(container_state, action, initActions) : true;
+        auto all_or_none_ad_constant_sources = has_ad_constant_sources ?
+            all_or_none_constant_sources(container_state, action, initActions) : NO_AD_CONSTANT;
+        LOG1("all or none constant sources: " << all_or_none_ad_constant_sources);
+
+        // If the action requires combining a speciality action data with a non-speciality action
+        // data, we return false because the compiler currently does not support such packing.
+        if (all_or_none_ad_constant_sources == COMPLEX_AD_PACKING_REQ)
+            return boost::none;
 
         // If the action involves a bitwise operation for the proposed packing in container c, and
         // only some of the field slices are written using action data or constant sources, then
@@ -1913,7 +2050,8 @@ bool ActionPhvConstraints::cannot_initialize(
         const PHV::Container& c,
         const IR::MAU::Action* action,
         const PHV::Allocation& alloc) const {
-    LOG5("\t\t\tChecking container " << c << " for action " << action->name);
+    LOG4("\t\t\tChecking container " << c << " for action " << action->name);
+    ordered_map<PHV::FieldSlice, ordered_set<PHV::AllocSlice>> destinationsToBeChecked;
     for (auto write : constraint_tracker.writes(action)) {
         // For each write in the action, check if the written slice has been allocated yet, and if
         // yes, whether it has been  allocated in container c.

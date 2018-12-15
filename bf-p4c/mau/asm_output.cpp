@@ -1304,6 +1304,7 @@ void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
     }
 
     bool emit_meter_action_data = source.getbit(ActionFormat::METER);
+
     for (auto &rs : meter_xbar.action_data_locs) {
         if (!emit_meter_action_data) continue;
         BUG_CHECK(meter_use.attached != nullptr, "meter cannot be null");

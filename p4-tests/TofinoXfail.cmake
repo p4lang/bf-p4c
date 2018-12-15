@@ -254,11 +254,6 @@ p4c_add_xfail_reason("tofino"
 
 
 p4c_add_xfail_reason("tofino"
-  "PHV allocation creates a container action impossible within a Tofino ALU"
-  extensions/p4_tests/p4_14/test_config_172_stateful_heavy_hitter.p4
-  )
-
-p4c_add_xfail_reason("tofino"
   "Unimplemented compiler support.*Cannot allocate >4 immediate bytes for logical table"
   extensions/p4_tests/p4_14/test_config_205_modify_field_from_hash.p4
   switch_msdc_l3
@@ -967,7 +962,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_96_hash_data.p4
   extensions/p4_tests/p4_14/test_config_295_polynomial_hash.p4
   extensions/p4_tests/p4_14/hash_calculation_max_size.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/hash_test/hash_test.p4
   )
 
 p4c_add_xfail_reason("tofino"

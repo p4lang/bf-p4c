@@ -12,7 +12,6 @@ bool UnimplementedRegisterMethodCalls::preorder(const IR::Primitive *prim) {
     auto dot = prim->name.find('.');
     auto objType = dot ? prim->name.before(dot) : cstring();
     cstring method = dot ? cstring(dot+1) : prim->name;
-    LOG1("Prim " << prim << " " << objType << " " << method);
 
     if (objType == "Register" && (method == "read" || method == "write")) {
         P4C_UNIMPLEMENTED("%s: The method call of read and write on a Register is currently not "
@@ -97,10 +96,11 @@ const IR::Node *Synth2PortSetup::postorder(IR::Primitive *prim) {
             BUG_CHECK(size_t(output) < sizeof(output_offsets)/sizeof(output_offsets[0]),
                       "too many outputs");
             int bit = output_offsets[output];
-            auto ao = new IR::MAU::AttachedOutput(IR::Type::Bits::get(bit+32), salu);
+            int output_size = prim->type->width_bits();
+            auto ao = new IR::MAU::AttachedOutput(IR::Type::Bits::get(bit+output_size), salu);
             auto dest = prim->operands[idx];
             auto instr = new IR::MAU::Instruction(prim->srcInfo, "set", dest,
-                                  MakeSlice(ao, bit, bit + dest->type->width_bits() - 1));
+                                                  MakeSlice(ao, bit, bit+output_size - 1));
             // Have to put these instructions at the highest level of the instruction
             created_instrs.push_back(instr);
         }
@@ -466,9 +466,10 @@ const IR::Slice *DoInstructionSelection::postorder(IR::Slice *sl) {
 
 static const IR::MAU::Instruction *fillInstDest(const IR::Expression *in,
                                                 const IR::Expression *dest, int lo = -1,
-                                                int hi = -1) {
+                                                int hi = -1, bool cast = false) {
     if (auto *c = in->to<IR::Cast>())
-        return fillInstDest(c->expr, dest);
+        // perhaps everything underneath should be cast to the same size
+        return fillInstDest(c->expr, dest, c->destType->width_bits(), -1, true);
     if (auto *sl = in->to<IR::Slice>()) {
         return fillInstDest(sl->e0, dest, sl->getL(), sl->getH());
     }
@@ -482,7 +483,10 @@ static const IR::MAU::Instruction *fillInstDest(const IR::Expression *in,
         for (size_t i = 1; i < rv->operands.size(); i++) {
             if (lo == -1)
                 break;
-            rv->operands[i] = MakeSlice(rv->operands[i], lo, hi);
+            if (cast)
+                rv->operands[i] = new IR::Cast(IR::Type::Bits::get(lo), rv->operands[i]);
+            else
+                rv->operands[i] = MakeSlice(rv->operands[i], lo, hi);
         }
         return rv; }
     return nullptr;
@@ -1133,6 +1137,7 @@ const IR::Node *ConvertCastToSlice::preorder(IR::Cast *c) {
 const IR::Node *ConvertCastToSlice::postorder(IR::MAU::Instruction *instr) {
     if (!contains_cast)
         return instr;
+
     auto converted_instrs = new IR::Vector<IR::Primitive>();
 
     if (instr->name != "set") {

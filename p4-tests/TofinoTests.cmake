@@ -185,7 +185,8 @@ bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/mirror_test/mirror_te
    test.TestBasicEgrMir
    test.TestBatching")
 bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/hash_test/hash_test.p4"
-    "test.TestCrc16")
+    "test.TestCrc32"
+    "test.TestCrc16Xmodem")
 
 bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/pgrs/pgrs.p4"
     "test.TestTxn

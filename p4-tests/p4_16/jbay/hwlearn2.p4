@@ -3,23 +3,15 @@
 struct metadata {
     bit<16> src_port;
     bit<16> dst_port;
-    @pa_container_size("ingress", "meta.cache_id", 32)
     bit<12> cache_id;
-    @pa_container_size("ingress", "meta.old_cache_id", 32)
     bit<12> old_cache_id;
     bit<4> retire_stage;
-    @pa_container_size("ingress", "meta.flow_id", 32)
     bit<16> flow_id;
     bit<1>  new_flow;
-    @pa_container_size("ingress", "meta.fix32w1", 32)
     bit<32> fix32w1;
-    @pa_container_size("ingress", "meta.tmp32", 32)
     bit<32> tmp32;
-    @pa_container_size("ingress", "meta.digest", 32)
-    @pa_container_type("ingress", "meta.digest", "normal")
     bit<16> tmp16;
     bit<64> digest;
-    @pa_container_size("ingress", "meta.learn", 32)
     bit<16> learn;
     bit<4> learn_stage;
 }

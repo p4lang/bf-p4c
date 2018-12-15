@@ -33,6 +33,11 @@ class ActionPhvConstraints : public Inspector {
         NumContainers() : num_allocated(0), num_unallocated(0) {}
     };
 
+    typedef enum action_data_uses_t { SOME_AD_CONSTANT = 0,
+                                      ALL_AD_CONSTANT = 1,
+                                      COMPLEX_AD_PACKING_REQ = 2,
+                                      NO_AD_CONSTANT = 3 } ActionDataUses;
+
     /// Defines a struct for a particular field operation: either read or write.
     // TODO: Will we ever need a boolean indicating read or write in this
     // struct?
@@ -49,6 +54,7 @@ class ActionPhvConstraints : public Inspector {
         // An operand is either action data (ad), a constant (constant), or
         // drawn from a PHV container (phv_used).
         bool ad = false;
+        bool special_ad = false;
         bool constant = false;
         int64_t const_value = 0;
         boost::optional<PHV::FieldSlice> phv_used = boost::none;
@@ -130,6 +136,12 @@ class ActionPhvConstraints : public Inspector {
             ordered_map<const IR::MAU::Action *,
                 ordered_map<le_bitrange,
                     ordered_set<PHV::FieldSlice>>>> read_to_writes_per_action;
+
+        /// Map from stateful destination field to a map of the destination slices to the set of
+        /// ([write_lo, write_hi], [read_lo, read_hi]) slices used while setting those destinations.
+        ordered_map<const PHV::Field*,
+            ordered_map<le_bitrange,
+                ordered_set<std::pair<std::pair<int, int>, std::pair<int, int>>>>> statefulWrites;
 
         /// Used to generate unique action IDs when creating `struct OperandInfo` objects
         static int current_action;
@@ -239,6 +251,14 @@ class ActionPhvConstraints : public Inspector {
          * fields in the vector of AllocSlices represented by @slices
          */
         void print_field_ordering(std::vector<PHV::AllocSlice>& slices) const;
+
+        /** @returns the stateful destinations map.
+          */
+        const ordered_map<const PHV::Field*, ordered_map<le_bitrange,
+              ordered_set<std::pair<std::pair<int, int>, std::pair<int, int>>>>>&
+                  getStatefulWrites() const {
+            return statefulWrites;
+        }
     };
 
     ConstraintTracker constraint_tracker;
@@ -288,7 +308,7 @@ class ActionPhvConstraints : public Inspector {
       * from constant in action @act, or are never read from action data or from constant in action
       * @act.
       */
-    bool all_or_none_constant_sources(
+    ActionDataUses all_or_none_constant_sources(
         const PHV::Allocation::MutuallyLiveSlices& slices,
         const IR::MAU::Action* act,
         const PHV::Allocation::LiveRangeShrinkingMap& initActions) const;
@@ -458,6 +478,10 @@ class ActionPhvConstraints : public Inspector {
             const NumContainers& sources,
             PackingConstraints& copacking_constraints)
         const;
+
+    /// @returns true if a packing violates the alignment constraints for stateful ALU destinations.
+    bool stateful_destinations_constraints_violated(
+            const PHV::Allocation::MutuallyLiveSlices& container_state) const;
 
  public:
     explicit ActionPhvConstraints(const PhvInfo &p, const PackConflicts& c)

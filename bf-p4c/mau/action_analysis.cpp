@@ -13,7 +13,8 @@ std::set<unsigned> ActionAnalysis::ContainerAction::codesForErrorCases =
       IMPOSSIBLE_ALIGNMENT,
       MAU_GROUP_MISMATCH,
       PHV_AND_ACTION_DATA,
-      MULTIPLE_SHIFTS };
+      MULTIPLE_SHIFTS,
+      ATTACHED_OUTPUT_ILLEGAL_ALIGNMENT };
 
 /** Calculates a total container constant, given which constants wrote to which fields in the
  *  operation
@@ -1423,16 +1424,19 @@ bool ActionAnalysis::ContainerAction::verify_phv_mau_group(PHV::Container contai
     return true;
 }
 
-void ActionAnalysis::ContainerAction::verify_speciality(PHV::Container container,
-         cstring action_name) {
+bool ActionAnalysis::ContainerAction::verify_speciality(cstring &error_message,
+         PHV::Container container, cstring action_name) {
     bool speciality_found = false;
     int ad_params = 0;
+    ActionParam *speciality_read = nullptr;
     for (auto field_action : field_actions) {
         for (auto read : field_action.reads) {
             if (read.type == ActionParam::ACTIONDATA || read.type == ActionParam::CONSTANT)
                 ad_params++;
-            if (read.speciality != ActionParam::NO_SPECIAL)
+            if (read.speciality != ActionParam::NO_SPECIAL) {
                 speciality_found = true;
+                speciality_read = &read;
+            }
         }
     }
     if (ad_params > 1 && speciality_found)
@@ -1440,6 +1444,26 @@ void ActionAnalysis::ContainerAction::verify_speciality(PHV::Container container
                           "too complicated due to a too complex container instruction with a "
                           "speciality action data combined with other action data: %s",
                           container.toString(), action_name, *this);
+
+
+    if (speciality_read && speciality_read->speciality == ActionParam::METER_ALU) {
+        int lo = -1;  int hi = -1;
+        if (auto sl = speciality_read->expr->to<IR::Slice>()) {
+            lo = sl->getL();
+            hi = sl->getH();
+        } else {
+            lo = 0;
+            hi = speciality_read->size() - 1;
+        }
+        if (lo / container.size() != hi / container.size()) {
+            error_message += "the alignment of the output of the meter ALU forces the required "
+                             "data for the ALU operation to go to multiple action data bus "
+                             "slots, while the ALU operation can only pull from one.";
+            error_code |= ATTACHED_OUTPUT_ILLEGAL_ALIGNMENT;
+            return false;
+        }
+    }
+    return true;
 }
 
 /** Due to shifts being fairly unique when it comes to action constraints, a separate function
@@ -1510,7 +1534,9 @@ bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
         return verify_shift(error_message, container, phv);
     }
 
-    verify_speciality(container, action_name);
+    if (!verify_speciality(error_message, container, action_name)) {
+        return false;
+    }
 
     int actual_ad = ad_sources();
     int sources_needed = counts[ActionParam::PHV] + actual_ad;

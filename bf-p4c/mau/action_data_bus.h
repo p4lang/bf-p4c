@@ -80,6 +80,10 @@ struct ActionDataBus {
         int byte;
         ActionFormat::cont_type_t type;
         Loc(int b, ActionFormat::cont_type_t t) : byte(b), type(t) {}
+        void dbprint(std::ostream &out) const {
+            int slot_size = (8 << type);
+            out << "ADB[" << byte << ":" << ((byte + slot_size / 8) - 1) << "]";
+        }
     };
     /** Information on the sharing of resources between the BYTE/HALF regions and a potential
      *  full setion sharing the same location in the action data table
@@ -108,6 +112,9 @@ struct ActionDataBus {
                 : location(l), byte_offset(bo) {}
             ReservedSpace(Loc l, int bo, ActionFormat::ad_source_t src)
                 : location(l), byte_offset(bo), source(src) {}
+            void dbprint(std::ostream &out) const {
+                out << "Source:Offset " << source << ":" << byte_offset << " : " << location;
+            }
         };
         // Locations of action data where the ALUs will pull action data
         safe_vector<ReservedSpace> action_data_locs;
