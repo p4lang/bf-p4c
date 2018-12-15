@@ -915,16 +915,15 @@ bool CheckStatefulAlu::preorder(IR::MAU::StatefulAlu *salu) {
     // TestOneBit
     if (bits->size == 1) {
         ordered_set<cstring> set_clr { "set_bit", "clr_bit" };
-        if (salu->selector)
+        if (salu->selector) {
             set_clr = ordered_set<cstring> { "set_bit_at", "clr_bit_at" };
+            if (salu->selector->mode == "resilient")
+                set_clr.insert({ "set_bit", "clr_bit" }); }
         for (auto &salu_action : salu->instruction) {
             auto &salu_action_instr = salu_action.second;
             if (salu_action_instr) {
                 for (auto &salu_instr : salu_action_instr->action) {
-                    set_clr.erase(salu_instr->name);
-                }
-            }
-        }
+                    set_clr.erase(salu_instr->name); } } }
         for (auto sc : set_clr) {
             if (sc == "") continue;
             auto instr_action = new IR::MAU::SaluAction(IR::ID(sc + "_alu$0"));
