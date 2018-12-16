@@ -71,7 +71,7 @@ safe_vector<UniqueId> Memories::table_alloc::allocation_units(const IR::MAU::Att
                 rv.push_back(build_unique_id(at, is_gw, lt, ppt));
             }
         } else {
-            rv.push_back(build_unique_id(at, false, 0, ppt));
+            rv.push_back(build_unique_id(at, is_gw, 0, ppt));
         }
     } else if (table->for_dleft()) {
         for (int lt = 0; lt < layout_option->logical_tables(); lt++) {
@@ -2996,6 +2996,7 @@ bool Memories::find_unit_gw(Memories::Use &alloc, cstring name, bool requires_se
             if (gateway_use[i][j]) continue;
             for (int k = 0; k < BUS_COUNT; k++) {
                 if (requires_search_bus && sram_search_bus[i][k].name) continue;
+                alloc.row.clear();
                 alloc.row.emplace_back(i, k);
                 alloc.gateway.unit = j;
                 gateway_use[i][j] = name;
@@ -3042,6 +3043,7 @@ bool Memories::find_search_bus_gw(table_alloc *ta, Memories::Use &alloc, cstring
                 }
                 exact_ta->attached_gw_bytes += ta->match_ixbar->gw_search_bus_bytes;
                 gw_bytes_reserved[i][k] = true;
+                alloc.row.clear();
                 alloc.row.emplace_back(i, k);
                 alloc.gateway.unit = j;
                 gateway_use[i][j] = name;
@@ -3165,11 +3167,13 @@ bool Memories::allocate_all_payload_gw(bool alloc_search_bus) {
             else
                 gw_found = find_unit_gw(alloc, u_id.build_name(), false);
 
+
             uint64_t payload_value = determine_payload(ta->table_link);
             bool match_bus_found = find_match_bus_gw(alloc, payload_value, u_id.build_name(),
                                                      ta->table_link);
             if (!(gw_found && match_bus_found))
                 return false;
+            BUG_CHECK(alloc.row.size() == 1, "Help me payload");
         }
     }
     return true;
@@ -3199,6 +3203,7 @@ bool Memories::allocate_all_normal_gw(bool alloc_search_bus) {
             alloc.gateway.payload_row = -1;
             if (!gw_found)
                 return false;
+            BUG_CHECK(alloc.row.size() == 1, "Help me normal");
         }
     }
 
@@ -3218,6 +3223,7 @@ bool Memories::allocate_all_no_match_gw() {
                                                      u_id.logical_table);
             if (!(unit_found && match_bus_found))
                 return false;
+            BUG_CHECK(alloc.row.size() == 1, "Help me no match");
         }
     }
     return true;

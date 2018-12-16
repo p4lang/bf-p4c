@@ -710,10 +710,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-954/case5730.p4
   )
 
-p4c_add_xfail_reason("tofino"
- "Compiler Bug.*conflicting memory use between"
- ../glass/testsuite/p4_tests/c1/COMPILER-868/comp_868.p4
-)
 
 # We can't (without some complex acrobatics) support conditional computed
 # checksums on Tofino. In P4-14, these are operations of the form:
@@ -908,6 +904,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/19-SimpleTrill.p4
   extensions/p4_tests/p4_14/01-FlexCounter.p4
   # extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
+  ../glass/testsuite/p4_tests/c1/COMPILER-868/comp_868.p4
   )
 
 # p4c_add_xfail_reason("tofino"

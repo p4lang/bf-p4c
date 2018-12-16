@@ -522,7 +522,7 @@ void Visualization::gen_memories(unsigned int stage, Util::JsonObject *parent) {
             }
 
             LOG3("MemUse: (" << res._tableName << ", p4name: " << p4name(res)
-                 << memuse.type << ")");
+                 << " " << memuse.type << ")");
             switch (memuse.type) {
             case Memories::Use::EXACT:
             case Memories::Use::ATCAM:
