@@ -20,6 +20,10 @@ class ActionPhvConstraints : public Inspector {
     const PhvInfo &phv;
     const PackConflicts &conflicts;
 
+    ordered_map<const PHV::Field*, ordered_set<const PHV::Field*>> same_byte_fields;
+
+    bool prelim_constraints_ok = true;
+
     using ClassifiedSources = ordered_map<size_t, ordered_set<PHV::AllocSlice>>;
     using PackingConstraints = ordered_map<const IR::MAU::Action*, UnionFind<PHV::FieldSlice>>;
     /// Defines a struct for returning number of containers.
@@ -275,6 +279,16 @@ class ActionPhvConstraints : public Inspector {
     /// Print out all the maps created in ActionPhvConstraints.
     void end_apply() override;
 
+    void determine_same_byte_fields();
+
+    const ordered_set<PHV::FieldSlice> get_slices_in_same_byte(const PHV::FieldSlice& slice) const;
+
+    /** When populating action related data for every action, also check if the action results in
+      * unsatisfiable constraints, which would result in failure of PHV allocation. @returns false
+      * if unsatisfiable constraints are introduced.
+      */
+    bool early_check_ok(const IR::MAU::Action* action);
+
     /** Given the state of PHV allocation represented by @alloc and @container_state, a vector of
       * slices to be packed together and mutually live in a given container
       * Also populates the UnionFind structure @copacking_constraints, used to report new packing
@@ -331,10 +345,19 @@ class ActionPhvConstraints : public Inspector {
       */
     unsigned count_container_holes(const PHV::Allocation::MutuallyLiveSlices& state) const;
 
+    /** @returns false if the @slices packed in the same byte result in violation of action
+      * constraints for action @act. Populates the error message accordingly in @ss.  Used by
+      * early_constraints_ok.
+      */
+    bool valid_container_operation_type(
+        const IR::MAU::Action* act,
+        const ordered_set<PHV::FieldSlice>& slices,
+        std::stringstream& ss) const;
+
     /** @returns the type of operation (OperandInfo::MOVE or OperandInfo::WHOLE_CONTAINER or
       * OperandInfo::BITWISE) if for @action, the field slices in @fields are all written using
       * either MOVE or BITWISE or WHOLE_CONTAINER operations (in case of WHOLE_CONTAINER, no field
-      * is @fields may be left unwritten by an action). @returns OperandInfo::MIXED if there is a
+      * in @fields may be left unwritten by an action). @returns OperandInfo::MIXED if there is a
       * mix of WHOLE_CONTAINER, BITWISE, and MOVE operations in the same action.
       */
     unsigned container_operation_type(

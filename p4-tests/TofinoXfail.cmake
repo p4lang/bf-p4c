@@ -1360,3 +1360,14 @@ p4c_add_xfail_reason("tofino"
   "error.*Ternary table.*uses.*as ternary match key. Maximum number of bits allowed is.*"
   extensions/p4_tests/p4_16/too_many_ternary_match_key_bits.p4
 )
+
+# Negative tests for violation of action constraints.
+p4c_add_xfail_reason("tofino"
+  "error.*This program violates action constraints imposed by Tofino."
+  extensions/p4_tests/p4_16/case7944.p4
+  extensions/p4_tests/p4_14/action_conflict_7.p4
+# Need to mark padding field used in add as a padding field. Need to introduce annotation for the
+# same.
+  switch_msdc_l3
+  switch_8.5_msdc_l3
+)

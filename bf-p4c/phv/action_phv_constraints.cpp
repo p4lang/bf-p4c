@@ -1,5 +1,6 @@
 #include <boost/optional/optional_io.hpp>
 #include "lib/algorithm.h"
+#include "bf-p4c/common/asm_output.h"
 #include "bf-p4c/phv/action_phv_constraints.h"
 #include "bf-p4c/phv/cluster_phv_operations.h"
 
@@ -10,6 +11,9 @@ Visitor::profile_t ActionPhvConstraints::init_apply(const IR::Node *root) {
     meter_color_destinations.clear();
     special_no_pack.clear();
     constraint_tracker.clear();
+    prelim_constraints_ok = true;
+    same_byte_fields.clear();
+    determine_same_byte_fields();
     return rv;
 }
 
@@ -20,7 +24,14 @@ bool ActionPhvConstraints::preorder(const IR::MAU::Action *act) {
     aa.set_field_actions_map(&field_actions_map);
     act->apply(aa);
     constraint_tracker.add_action(act, field_actions_map);
+    prelim_constraints_ok &= early_check_ok(act);
     return true;
+}
+
+void ActionPhvConstraints::end_apply() {
+    LOG7("*****Printing  ActionPhvConstraints Maps*****");
+    constraint_tracker.printMapStates();
+    LOG7("*****End Print ActionPhvConstraints Maps*****");
 }
 
 void ActionPhvConstraints::ConstraintTracker::clear() {
@@ -349,10 +360,70 @@ void ActionPhvConstraints::sort(std::vector<PHV::FieldSlice>& slice_list) {
             return l_reads > r_reads; });
 }
 
-void ActionPhvConstraints::end_apply() {
-    LOG7("*****Printing  ActionPhvConstraints Maps*****");
-    constraint_tracker.printMapStates();
-    LOG7("*****End Print ActionPhvConstraints Maps*****");
+void ActionPhvConstraints::determine_same_byte_fields() {
+    ordered_map<const PHV::Field*, le_bitrange> header_bytes;
+    for (const auto& f : phv) {
+        if (f.metadata || f.pov) continue;
+        le_bitrange hdr_byte_range = f.byteAlignedRangeInBits();
+        LOG7("\t  Range for " << f.name << " : " << hdr_byte_range);
+        for (auto kv : header_bytes) {
+            if (kv.first->header() != f.header()) continue;
+            if (kv.second.overlaps(hdr_byte_range)) {
+                LOG6("\t" << kv.first->name << " and " << f.name << " share a byte");
+                same_byte_fields[kv.first].insert(&f);
+                same_byte_fields[&f].insert(kv.first);
+            }
+        }
+        header_bytes[&f] = hdr_byte_range;
+    }
+}
+
+const ordered_set<PHV::FieldSlice>
+ActionPhvConstraints::get_slices_in_same_byte(const PHV::FieldSlice& slice) const {
+    ordered_set<PHV::FieldSlice> rv;
+    rv.insert(PHV::FieldSlice(slice.field(), slice.range()));
+    if (!same_byte_fields.count(slice.field())) return rv;
+    le_bitrange field_range = slice.range();
+    le_bitrange limit = slice.byteAlignedRangeInBits();
+    LOG7("    Range for slice " << limit);
+    for (const auto* f : same_byte_fields.at(slice.field())) {
+        LOG7("    Checking same byte field: " << f->name);
+        le_bitrange f_limit = f->byteAlignedRangeInBits();
+        if (limit.contains(f_limit)) {
+            rv.insert(PHV::FieldSlice(f, StartLen(0, f->size)));
+        } else if (limit.overlaps(f_limit)) {
+            LOG7("      Field " << f->name << " overlaps with " << slice);
+            // XXX(Deep): Need to handle this case.
+        }
+    }
+    return rv;
+}
+
+bool ActionPhvConstraints::early_check_ok(const IR::MAU::Action* act) {
+    const auto& writes_in_act = constraint_tracker.writes(act);
+    ordered_map<PHV::FieldSlice, OperandInfo> slice_to_info;
+    for (auto& info : writes_in_act) {
+        BUG_CHECK(info.phv_used != boost::none, "Write slice cannot be NULL.");
+        slice_to_info[*(info.phv_used)] = info;
+    }
+
+    std::stringstream error_msg;
+    bool rv = true;
+    ordered_set<PHV::FieldSlice> slicesConsidered;
+    for (auto& slice : Keys(slice_to_info)) {
+        // We have already checked constraints related to @slice if the slice is in slicesConsidered
+        // set. Therefore, go to the next slice.
+        if (slicesConsidered.count(PHV::FieldSlice(slice.field(), slice.range()))) continue;
+        std::stringstream ss;
+        const auto slices_in_same_byte = get_slices_in_same_byte(slice);
+        if (!valid_container_operation_type(act, slices_in_same_byte, ss)) {
+            rv = false;
+            error_msg << ss.str();
+        }
+        slicesConsidered.insert(slices_in_same_byte.begin(), slices_in_same_byte.end());
+    }
+    if (!rv) ::error("%1%", error_msg.str());
+    return rv;
 }
 
 ActionPhvConstraints::NumContainers ActionPhvConstraints::num_container_sources(
@@ -512,16 +583,16 @@ ActionPhvConstraints::ActionDataUses ActionPhvConstraints::all_or_none_constant_
             int offset_special = sl_special.field()->offset;
             int left_sl_special = (offset_special + sl_special.field_slice().lo) / 8;
             int right_sl_special = ROUNDUP(offset_special + sl_special.field_slice().hi, 8);
-            LOG1("\t\t\t\t  Slice ad: " << sl_ad << ", offset: " << offset_ad << ", lo: " <<
+            LOG6("\t\t\t\t  Slice ad: " << sl_ad << ", offset: " << offset_ad << ", lo: " <<
                     left_sl_ad << ", hi: " << right_sl_ad);
-            LOG1("\t\t\t\t  Slice special: " << sl_special << ", offset: " << offset_special <<
+            LOG6("\t\t\t\t  Slice special: " << sl_special << ", offset: " << offset_special <<
                     ", lo: " << left_sl_special << ", hi: " << right_sl_special);
             // If there is an overlap between two different slices (they share the same byte), then
             // the left limit of the later slice is going to be 1 less than the right limit of the
             // earlier slice.
             if (sl_ad != sl_special &&
                (left_sl_special + 1 == right_sl_ad || left_sl_ad + 1 == right_sl_special)) {
-                LOG1("\t\t\t\t  Slices " << sl_ad << " and " << sl_special << " must be packed in "
+                LOG5("\t\t\t\t  Slices " << sl_ad << " and " << sl_special << " must be packed in "
                      "the same container and share a byte.");
                 check_speciality_packing = false;
             }
@@ -555,6 +626,85 @@ int ActionPhvConstraints::unallocated_bits(PHV::Allocation::MutuallyLiveSlices s
         LOG4("Total size of mutually live slices is greater than the size of the container");
     return (c.size() - size_used);
 }
+
+bool ActionPhvConstraints::valid_container_operation_type(
+        const IR::MAU::Action* action,
+        const ordered_set<PHV::FieldSlice>& slices,
+        std::stringstream& ss) const {
+    unsigned type_of_operation = 0;
+    ordered_set<PHV::FieldSlice> fields_not_written;
+    ordered_map<cstring, ordered_set<PHV::FieldSlice>> operations_to_fields;
+    cstring operation;
+    cstring action_name = canon_name(action->externalName());
+
+    cstring hdr = (*(slices.begin())).field()->header();
+
+    ss << "This program violates action constraints imposed by " << Device::name() <<
+        "." << std::endl << std::endl;
+    ss << "  The following field slices must be allocated in the same container as they are "
+          "present within the same byte of header " << hdr << ":" << std::endl;
+    for (auto& slice : slices) {
+        ss << "\t" << slice.shortString() << std::endl;
+        boost::optional<OperandInfo> fw = constraint_tracker.is_written(slice, action);
+        if (!fw) {
+            fields_not_written.insert(slice);
+        } else if (fw->flags & OperandInfo::MOVE) {
+            type_of_operation |= OperandInfo::MOVE;
+            operations_to_fields["assignment"].insert(slice);
+            operation = "assignment";
+        } else if (fw->flags & OperandInfo::BITWISE) {
+            type_of_operation |= OperandInfo::BITWISE;
+            operations_to_fields[fw->operation].insert(slice);
+            operation = fw->operation;
+        } else if (fw->flags & OperandInfo::WHOLE_CONTAINER) {
+            type_of_operation |= OperandInfo::WHOLE_CONTAINER;
+            operations_to_fields[fw->operation].insert(slice);
+            operation = fw->operation;
+        }
+    }
+
+    // If there are multiple instruction types for the same container in the same action, then
+    // violates action constraints. Therefore, return false.
+    if (operations_to_fields.size() > 1) {
+        ss << std::endl;
+        ss << "  However, the program requires multiple instruction types for the same container "
+              "in the same action (" << action_name << "):" << std::endl;
+        for (auto kv : operations_to_fields) {
+            ss << "\tThe following slice(s) are written using " << kv.first << " instruction." <<
+                std::endl;
+            for (auto& slice : kv.second)
+                ss << "\t  " << slice.shortString() << std::endl;
+        }
+        ss << std::endl << "Therefore, the program requires an action impossible to synthesize for "
+           << Device::name() << " ALU. Rewrite action " << action_name << " to use the same " <<
+           "instruction for all the above field slices that must be in the same container."<<
+           std::endl;
+        return false;
+    }
+
+    // If there is a WHOLE_CONTAINER or a BITWISE operation writing to this container, and some
+    // slice in the container is not written, then the unwritten slice would be overwritten
+    // illegally. Therefore, flag an error message for this, and return false.
+    if (((type_of_operation & OperandInfo::WHOLE_CONTAINER) ||
+                (type_of_operation & OperandInfo::BITWISE)) && fields_not_written.size() > 0) {
+        ss << std::endl;
+        ss << "  However, the following fields slice(s) are written in action " << action_name <<
+              " by the " << operation << " instruction, which operates on the entire container:" <<
+              std::endl;
+        for (auto& slice : operations_to_fields.at(operation))
+            ss << "\t" << slice.shortString() << std::endl;
+        ss << std::endl << "  As a result, the following field slice(s) not written in action " <<
+            action_name << " will be overwritten illegally:" << std::endl;
+        for (auto& slice : fields_not_written)
+            ss << "\t" << slice.shortString() << std::endl;
+        ss << std::endl << "Therefore, the program requires an action impossible to synthesize for "
+           << Device::name() << " ALU." << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
 
 unsigned ActionPhvConstraints::container_operation_type(
         const IR::MAU::Action* action,
@@ -1252,7 +1402,6 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
         // written using action data or constant sources.
         auto all_or_none_ad_constant_sources = has_ad_constant_sources ?
             all_or_none_constant_sources(container_state, action, initActions) : NO_AD_CONSTANT;
-        LOG1("all or none constant sources: " << all_or_none_ad_constant_sources);
 
         // If the action requires combining a speciality action data with a non-speciality action
         // data, we return false because the compiler currently does not support such packing.

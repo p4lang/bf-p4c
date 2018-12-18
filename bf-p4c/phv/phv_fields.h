@@ -14,6 +14,7 @@
 #include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "ir/ir.h"
+#include "lib/algorithm.h"
 #include "lib/map.h"
 #include "lib/ordered_map.h"
 #include "lib/ordered_set.h"
@@ -528,6 +529,14 @@ class Field {
         return validContainerRange_i;
     }
 
+    /// Returns a range of bits in the header that captures the byte aligned offset of this field
+    /// within its header.
+    le_bitrange byteAlignedRangeInBits() const {
+        int left_limit = 8 * (offset / 8);
+        int right_limit = 8 * ROUNDUP(offset + size - 1, 8);
+        return StartLen(left_limit, right_limit - left_limit);
+    }
+
  private:
     /// Marks the valid starting bit positions (little Endian) for this field.
     /// Valid bit positions may vary depending on container size.
@@ -608,6 +617,22 @@ class FieldSlice : public AbstractField {
     FieldSlice(FieldSlice slice, le_bitrange range) : FieldSlice(slice.field(), range) {
         BUG_CHECK(slice.range().contains(range),
                   "Trying to create field sub-slice larger than the original slice");
+    }
+
+    /// Returns a range of bits in the header that captures the byte aligned offset of this slice
+    /// within its header.
+    /// E.g. Suppose a field f is at offset 10 within its header type and its size is 12 bits. The
+    /// byte aligned range for f[0:7] will be [8, 24].
+    le_bitrange byteAlignedRangeInBits() const {
+        int left_limit = 8 * ((field_i->offset + range_i.lo) / 8);
+        int right_limit = 8 * ROUNDUP(field_i->offset + range_i.hi, 8);
+        return StartLen(left_limit, right_limit - left_limit);
+    }
+
+    cstring shortString() const {
+        std::stringstream ss;
+        ss << field_i->name << "[" << range_i.lo << ":" << range_i.hi << "]";
+        return ss.str();
     }
 
     bool operator==(const FieldSlice& other) const {
