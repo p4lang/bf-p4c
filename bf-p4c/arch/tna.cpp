@@ -2,6 +2,7 @@
 #include "frontends/p4/typeChecking/typeChecker.h"
 #include "frontends/p4/evaluator/evaluator.h"
 #include "frontends/p4/cloner.h"
+#include "midend/validateProperties.h"
 #include "bf-p4c/arch/tna.h"
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/arch/arch.h"
@@ -291,6 +292,8 @@ TnaArchTranslation::TnaArchTranslation(P4::ReferenceMap *refMap,
         new P4::ClearTypeMap(typeMap),
         new P4::TypeChecking(refMap, typeMap, true),
         new InsertPhaseZeroAnnotation,
+        new P4::ValidateTableProperties({"implementation", "size", "counters", "meters",
+                                         "filters", "idle_timeout", "registers"}),
     });
 }
 
@@ -313,6 +316,8 @@ T2naArchTranslation::T2naArchTranslation(P4::ReferenceMap *refMap,
         new P4::ClearTypeMap(typeMap),
         new P4::TypeChecking(refMap, typeMap, true),
         new InsertPhaseZeroAnnotation,
+        new P4::ValidateTableProperties({"implementation", "size", "counters", "meters",
+                                         "filters", "idle_timeout", "registers"}),
     });
 }
 

@@ -40,6 +40,7 @@
 #include "common/elim_emit_headers.h"
 #include "common/elim_typedef.h"
 #include "common/flatten_emit_args.h"
+#include "common/simplify_nested_if.h"
 #include "bf-p4c/arch/arch.h"
 #include "bf-p4c/common/normalize_params.h"
 #include "bf-p4c/parde/unroll_parser_counter.h"
@@ -234,18 +235,7 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::ConstantFolding(&refMap, &typeMap),
         new P4::StrengthReduction(),
         new P4::MoveDeclarations(),
-        (options.arch == "psa")
-            ? new P4::ValidateTableProperties({"implementation", "size", "psa_direct_counters",
-                                               "psa_direct_meters", "idle_timeout"})
-            : nullptr,
-        (options.arch == "v1model")
-            ? new P4::ValidateTableProperties(
-                  {"implementation", "size", "counters", "meters", "idle_timeout"})
-            : nullptr,
-        (options.arch == "tna")
-            ? new P4::ValidateTableProperties({"implementation", "size", "counters", "meters",
-                                               "filters", "idle_timeout", "registers"})
-            : nullptr,
+        new P4::SimplifyNestedIf(&refMap, &typeMap),
         new P4::SimplifyControlFlow(&refMap, &typeMap),
         new BFN::CompileTimeOperations(),
         new P4::TableHit(&refMap, &typeMap),

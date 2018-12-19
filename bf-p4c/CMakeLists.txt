@@ -134,6 +134,7 @@ set (BF_P4C_BACKEND_COMMON_SRCS
   common/parser_overlay.cpp
   common/parser_critical_path.cpp
   common/run_id.cpp
+  common/simplify_nested_if.cpp
   common/simplify_references.cpp
   common/slice.cpp
   common/type_categories.cpp
@@ -169,6 +170,7 @@ set (BF_P4C_BACKEND_COMMON_HDRS
   common/parser_overlay.h
   common/parser_critical_path.h
   common/run_id.h
+  common/simplify_nested_if.h
   common/simplify_references.h
   common/slice.h
   common/table_printer.h

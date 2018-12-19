@@ -38,6 +38,8 @@ typedef bit<16> ReplicationId_t;        // Replication id
 
 typedef error ParserError_t;
 
+const bit<32> PORT_METADATA_SIZE = 32w192;
+
 /// Meter
 enum MeterType_t { PACKETS, BYTES }
 
@@ -534,7 +536,7 @@ extern Random<W> {
 
     /// Return a random number with uniform distribution.
     /// @return : ranom number between 0 and 2**W - 1
-    W get(W d);
+    W get();
 }
 
 /// Idle timeout

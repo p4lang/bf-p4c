@@ -30,6 +30,8 @@ typedef bit<16> ReplicationId_t;        // Replication id
 
 typedef error ParserError_t;
 
+const bit<32> PORT_METADATA_SIZE = 32w64;
+
 /// Meter
 enum MeterType_t { PACKETS, BYTES }
 

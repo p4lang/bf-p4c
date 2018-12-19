@@ -13,6 +13,7 @@
 #include "frontends/p4/uselessCasts.h"
 #include "frontends/p4/typeChecking/typeChecker.h"
 #include "midend/local_copyprop.h"
+#include "midend/validateProperties.h"
 #include "bf-p4c/midend.h"
 #include "bf-p4c/arch/bridge_metadata.h"
 #include "bf-p4c/arch/intrinsic_metadata.h"
@@ -2529,6 +2530,8 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
         structure->backward_compatible = true;
     auto parserChecksums = new V1::TranslateParserChecksums(structure, refMap, typeMap);
     addPasses({
+        new P4::ValidateTableProperties({"implementation", "size", "counters", "meters",
+                                         "idle_timeout"}),
         new P4::LocalCopyPropagation(refMap, typeMap, V1::skipCond),
         new P4::TypeChecking(refMap, typeMap, true),
         new RemoveExternMethodCallsExcludedByAnnotation,

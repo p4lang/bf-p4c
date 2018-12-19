@@ -8,6 +8,7 @@
 #include "midend/convertEnums.h"
 #include "bridge_metadata.h"
 #include "midend/copyStructures.h"
+#include "midend/validateProperties.h"
 #include "psa_program_structure.h"
 #include "psa_converters.h"
 
@@ -736,6 +737,8 @@ PortableSwitchTranslation::PortableSwitchTranslation(
     auto structure = new PSA::ProgramStructure;
 
     addPasses({
+        new P4::ValidateTableProperties({"implementation", "size", "psa_direct_counters",
+                                         "psa_direct_meters", "idle_timeout"}),
         new P4::ConvertEnums(refMap, typeMap, new PSA::PacketPathTo8Bits),
         new P4::CopyStructures(refMap, typeMap),
         new P4::TypeChecking(refMap, typeMap, true),
