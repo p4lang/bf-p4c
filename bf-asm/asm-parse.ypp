@@ -200,6 +200,10 @@ param_expr
         : param '^' value { $$ = CMD(strdup("^"), true, $1, $3); }
         | param '|' value { $$ = CMD(strdup("|"), true, $1, $3); }
         | param '&' value { $$ = CMD(strdup("&"), true, $1, $3); }
+        /* rule duplication to get precedence correct */
+        | param_expr '^' value { $$ = CMD(strdup("^"), true, $1, $3); }
+        | param_expr '|' value { $$ = CMD(strdup("|"), true, $1, $3); }
+        | param_expr '&' value { $$ = CMD(strdup("&"), true, $1, $3); }
         ;
 
 opt_indent_elements: { $$ = empty_map(1); }

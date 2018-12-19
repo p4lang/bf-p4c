@@ -91,6 +91,7 @@ class CreateSaluInstruction : public Inspector {
     std::map<int, const IR::Expression  *>      output_address_subword_predicate;
     IR::MAU::StatefulAlu::MathUnit              math;
     IR::MAU::SaluFunction                       *math_function = nullptr;
+    bool                                        assignDone = false;
 
     const IR::MAU::Instruction *createInstruction();
     bool applyArg(const IR::PathExpression *, cstring);
@@ -104,6 +105,7 @@ class CreateSaluInstruction : public Inspector {
     bool preorder(const IR::Function *) override;
     void postorder(const IR::Function *) override;
     bool preorder(const IR::Annotations *) override { return false; }
+    void doAssignment(const Util::SourceInfo &srcInfo);
     bool preorder(const IR::AssignmentStatement *) override;
     bool preorder(const IR::IfStatement *) override;
     bool preorder(const IR::BlockStatement *) override { return true; }
@@ -131,6 +133,7 @@ class CreateSaluInstruction : public Inspector {
     void postorder(const IR::LAnd *) override;
     bool preorder(const IR::LOr *) override { return true; }
     void postorder(const IR::LOr *) override;
+    bool preorder(const IR::Mux *) override;
     bool preorder(const IR::Add *) override;
     bool preorder(const IR::AddSat *) override;
     bool preorder(const IR::Sub *) override;

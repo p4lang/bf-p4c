@@ -655,7 +655,7 @@ extern DirectRegisterAction<T, U> {
     /* These routines can be called in apply method to get these values
      * to assign to a return value, but generally no operations can be applied */
     U address(@optional bit<1> subword); /* return the match address */
-    U predicate(); /* return the predicate value */
+    U predicate(); /* return the 16-bit predicate value */
     bit<8> min8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
     bit<8> max8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
     bit<16> min16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
@@ -685,7 +685,7 @@ extern RegisterAction<T, H, U> {
     /* These routines can be called in apply/overflow/underflow methods to get these values
      * to assign to a return value, but generally no operations can be applied */
     U address(@optional bit<1> subword); /* return the match address */
-    U predicate(); /* return the predicate value */
+    U predicate(); /* return the 16-bit predicate value */
     bit<8> min8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
     bit<8> max8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
     bit<16> min16<I>(in I val, in bit<8> mask, @optional out bit<3> index);

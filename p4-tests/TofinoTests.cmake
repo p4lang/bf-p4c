@@ -19,7 +19,7 @@ set (P16_V1_EXCLUDE_PATTERNS "tofino\\.h")
 set (P16_V1MODEL_FOR_TOFINO "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/*.p4")
 p4c_find_tests("${P16_V1MODEL_FOR_TOFINO}" p16_v1tests INCLUDE "${P16_V1_INCLUDE_PATTERNS}" EXCLUDE "${P16_V1_EXCLUDE_PATTERNS}")
 
-set (P16_TNA_INCLUDE_PATTERNS "include.*(tofino|tna).p4" "main")
+set (P16_TNA_INCLUDE_PATTERNS "include.*(tofino|tna).p4" "main|common_tna_test")
 set (P16_TNA_EXCLUDE_PATTERNS "tofino\\.h")
 set (P16_TNA_FOR_TOFINO "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/*.p4")
 p4c_find_tests("${P16_TNA_FOR_TOFINO}" p16_tna_tests INCLUDE "${P16_TNA_INCLUDE_PATTERNS}" EXCLUDE "${P16_TNA_EXCLUDE_PATTERNS}")

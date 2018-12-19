@@ -245,6 +245,38 @@ void CreateSaluInstruction::postorder(const IR::Function *func) {
     action = nullptr;
 }
 
+void CreateSaluInstruction::doAssignment(const Util::SourceInfo &srcInfo) {
+    auto *old_predicate = predicate;
+    if (etype == IF && operands.empty() && pred_operands.size() == 1) {
+        // output of conditional expression -- output constant 1 with the predicate
+        predicate = pred_operands[0];
+        if (old_predicate)
+            predicate = new IR::LAnd(old_predicate, predicate);
+        etype = OUTPUT;
+        operands.push_back(new IR::Constant(1)); }
+    BUG_CHECK(operands.size() > (etype < OUTPUT), "recursion failure");
+    if (dest && dest->use != LocalVar::ALUHI) {
+        BUG_CHECK(etype == VALUE, "assert failure");
+        LocalVar::use_t use = LocalVar::NONE;
+        if (auto src = operands.back()->to<IR::MAU::SaluReg>()) {
+            if (dest->pair) {
+                use = LocalVar::MEMALL;
+            } else if (src->hi) {
+                use = LocalVar::MEMHI;
+            } else {
+                use = LocalVar::MEMLO; }
+        } else {
+            use = LocalVar::ALUHI; }
+        if (use == LocalVar::NONE || (dest->use != LocalVar::NONE && dest->use != use))
+            error("%s: %s %s too complex", srcInfo, action_type_name, reg_action->name);
+        dest->use = use;
+        LOG3("local " << dest->name << " use " << dest->use); }
+    if (!dest || dest->use == LocalVar::ALUHI)
+        createInstruction();
+    predicate = old_predicate;
+    assignDone = true;
+}
+
 bool CreateSaluInstruction::preorder(const IR::AssignmentStatement *as) {
     BUG_CHECK(operands.empty(), "recursion failure");
     etype = NONE;
@@ -252,30 +284,13 @@ bool CreateSaluInstruction::preorder(const IR::AssignmentStatement *as) {
     opcode = cstring();
     visit(as->left, "left");
     BUG_CHECK(operands.size() == (etype < OUTPUT) || ::errorCount() > 0, "recursion failure");
+    assignDone = false;
     if (islvalue(etype))
         error("Can't assign to %s in RegisterAction", as->left);
     else
         visit(as->right);
-    if (::errorCount() == 0) {
-        BUG_CHECK(operands.size() > (etype < OUTPUT), "recursion failure");
-        if (dest && dest->use != LocalVar::ALUHI) {
-            BUG_CHECK(etype == VALUE, "assert failure");
-            LocalVar::use_t use = LocalVar::NONE;
-            if (auto src = operands.back()->to<IR::MAU::SaluReg>()) {
-                if (dest->pair) {
-                    use = LocalVar::MEMALL;
-                } else if (src->hi) {
-                    use = LocalVar::MEMHI;
-                } else {
-                    use = LocalVar::MEMLO; }
-            } else {
-                use = LocalVar::ALUHI; }
-            if (use == LocalVar::NONE || (dest->use != LocalVar::NONE && dest->use != use))
-                error("%s: %s %s too complex", as->srcInfo, action_type_name, reg_action->name);
-            dest->use = use;
-            LOG3("local " << dest->name << " use " << dest->use); }
-        if (!dest || dest->use == LocalVar::ALUHI)
-            createInstruction(); }
+    if (::errorCount() == 0 && !assignDone)
+        doAssignment(as->srcInfo);
     operands.clear();
     return false;
 }
@@ -305,6 +320,37 @@ bool CreateSaluInstruction::preorder(const IR::IfStatement *s) {
     new_predicate = negatePred(new_predicate);
     predicate = old_predicate ? new IR::LAnd(old_predicate, new_predicate) : new_predicate;
     visit(s->ifFalse, "ifFalse");
+    predicate = old_predicate;
+    return false;
+}
+
+bool CreateSaluInstruction::preorder(const IR::Mux *mux) {
+    struct {
+        etype_t                         etype;
+        LocalVar                        *dest;
+        IR::Vector<IR::Expression>      operands;
+    } save_state = { etype, dest, operands };
+    etype = IF;
+    dest = nullptr;
+    operands.clear();
+    visit(mux->e0, "e0");
+    BUG_CHECK(operands.empty() && pred_operands.size() == 1, "recursion failure");
+    auto old_predicate = predicate;
+    auto new_predicate = pred_operands.at(0);
+    pred_operands.clear();
+    predicate = old_predicate ? new IR::LAnd(old_predicate, new_predicate) : new_predicate;
+    etype = save_state.etype;
+    dest = save_state.dest;
+    operands = save_state.operands;
+    visit(mux->e1, "e1");
+    doAssignment(mux->srcInfo);
+    new_predicate = negatePred(new_predicate);
+    predicate = old_predicate ? new IR::LAnd(old_predicate, new_predicate) : new_predicate;
+    etype = save_state.etype;
+    dest = save_state.dest;
+    operands = save_state.operands;
+    visit(mux->e2, "e2");
+    doAssignment(mux->srcInfo);
     predicate = old_predicate;
     return false;
 }
@@ -411,6 +457,13 @@ bool CreateSaluInstruction::preorder(const IR::Primitive *prim) {
                 address_subword = k->asInt(); }
     } else if (method == "predicate") {
         operands.push_back(new IR::MAU::SaluReg(prim->type, "predicate", false));
+        if (salu->pred_shift > 0) {
+            if (salu->pred_comb_shift == 0) {
+                warning("conflicting predicate output use in %s, upper bits of "
+                        "flag output will be non-zero", salu);
+            } else {
+                error("%sconflicting use of predicate output in %s", prim->srcInfo, salu); } }
+        salu->pred_shift = 0;
     } else if (method == "min8" || method == "max8" || method == "min16" || method == "max16") {
         minmax_width = (method == "min16" || method == "max16") ? 1 : 0;
         if (etype != OUTPUT) {
@@ -489,6 +542,9 @@ const IR::Expression *CreateSaluInstruction::reuseCmp(const IR::MAU::Instruction
 }
 
 bool CreateSaluInstruction::preorder(const IR::Operation::Relation *rel, cstring op, bool eq) {
+    if (etype == OUTPUT && operands.empty()) {
+        // output a boolean condition directly -- change it into IF setting value to 1
+        etype = IF; }
     if (etype == IF) {
         Pattern::Match<IR::Expression> e1, e2;
         Pattern::Match<IR::Constant> k;
@@ -788,12 +844,21 @@ const IR::MAU::Instruction *CreateSaluInstruction::createInstruction() {
             if (k->value == 0) {
                 // 0 will be output if we don't drive it at all
                 break;
-            } else if (k->value == 1 && predicate) {
+            } else if ((k->value & (k->value-1)) == 0 && predicate) {
                 // use the predicate output
-                // FIXME -- need to set the salu_output_pred_shift/salu_output_pred_comb_shift
-                // registers properly, but we currently have no way of specifying them in the
-                // assembler.  The default (0) value works out for a 1 bit output, but by
-                // using them we could generate other values (any power of 2?)
+                int shift = floor_log2(k->value);
+                if (salu->pred_comb_shift >= 0 && salu->pred_comb_shift != shift)
+                    error("conflicting predicate output use in %s", salu);
+                else
+                    salu->pred_comb_shift = shift;
+                if (salu->pred_shift >= 0 && salu->pred_shift != 28) {
+                    if (shift > 0) {
+                        error("conflicting predicate output use in %s", salu);
+                    } else {
+                        warning("conflicting predicate output use in %s, upper bits of "
+                                "flag output will be non-zero", salu); }
+                } else {
+                    salu->pred_shift = 28; }
                 operands.at(0) = new IR::MAU::SaluReg(k->type, "predicate", false);
             } else if (!salu->dual) {
                 // FIXME -- can't output general constant!  Perhaps have an optimization pass

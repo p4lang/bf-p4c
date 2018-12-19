@@ -3175,6 +3175,11 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
             act->apply(EmitAction(self, out, tbl, indent));
         --indent; }
 
+    if (salu->pred_shift >= 0)
+        out << indent << "pred_shift: " << salu->pred_shift << std::endl;
+    if (salu->pred_comb_shift >= 0)
+        out << indent << "pred_comb_shift: " << salu->pred_comb_shift << std::endl;
+
     auto &memuse = tbl->resources->memuse.at(unique_id);
     if (!memuse.dleft_learn.empty() || !memuse.dleft_match.empty()) {
         out << indent << "stage_alu_id: " << memuse.dleft_learn.size() << std::endl;

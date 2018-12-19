@@ -30,7 +30,7 @@ extern math_unit<T, U> {
 extern RegisterAction<T, I, U> {
     RegisterAction(register<T> reg);
     abstract void apply(inout T value, @optional out U rv);
-    U execute(in bit<32> index);
+    U execute(in I index);
     U execute_log(); /* execute at an index that increments each time */
 }
 

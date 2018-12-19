@@ -654,6 +654,7 @@ extern RegisterAction<T, I, U> {
     // Apply the implemented abstract method using an index that increments each
     // time. This method is useful for stateful logging.
     U execute_log();
+    U predicate(); /* return the 4-bit predicate value */
 }
 
 extern DirectRegisterAction<T, U> {
@@ -672,6 +673,7 @@ extern DirectRegisterAction<T, U> {
         reg.write(value);
         return rv;
     } */
+    U predicate(); /* return the 4-bit predicate value */
 }
 
 extern ActionSelector {

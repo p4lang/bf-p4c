@@ -485,6 +485,8 @@ class StatefulAlu : Synth2Port {
     cstring                                             reduction_or_group = {};
     bool        learn_action = false;  // if any action is a LearnAction
     bool        synthetic_for_selector = false;  // created for the driver to set selector
+    int         pred_shift = -1;
+    int         pred_comb_shift = -1;
 
     class MathUnit {
         bool            valid = false;
