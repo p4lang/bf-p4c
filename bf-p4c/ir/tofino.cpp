@@ -26,12 +26,12 @@ IR::InstanceRef::InstanceRef(cstring prefix, IR::ID n, const IR::Type *t,
                            new InstanceRef(name, f->name, f->type, forceMeta));
     } else if (auto *stk = t->to<IR::Type_Stack>()) {
         if (forceMeta)
-            P4C_UNIMPLEMENTED("metadata arrays not handled in InstanceRef::InstanceRef");
+            P4C_UNIMPLEMENTED("Local metadata array %s not supported", n);
         obj = new IR::HeaderStack(name, stk->elementType->to<IR::Type_Header>(), stk->getSize());
     } else if (t->is<IR::Type::Bits>() || t->is<IR::Type::Boolean>() || t->is<IR::Type_Set>()) {
         obj = nullptr;
     } else {
-        P4C_UNIMPLEMENTED("Unhandled InstanceRef type %1%", t); }
+        P4C_UNIMPLEMENTED("Unsupported type %s %s", t, n); }
     if (obj && ann)
         obj->annotations = ann;
     this->obj = obj;

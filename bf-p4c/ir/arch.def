@@ -26,7 +26,6 @@ class TranslatedP4Control : P4Control {
 /// metadata.
 class TranslatedP4Deparser : P4Control {
     toString { return P4Control::toString() + " on " + cstring::to_cstring(thread); }
-    dbprint { out << toString(); }
 
     /// A map from standard TNA parameter names to the names actually used in
     /// the P4 program. For example, a TNA control prototype may include a
@@ -37,13 +36,14 @@ class TranslatedP4Deparser : P4Control {
 
     /// The thread this control is associated with.
     gress_t thread;
+#nodbprint
 }
 
 /// A P4Parser produced by TNA translation; contains some additional useful
 /// metadata.
 class TranslatedP4Parser : P4Parser {
     toString { return P4Parser::toString() + " on " + cstring::to_cstring(thread); }
-    dbprint { out << toString(); }
+    dbprint { out << thread << " "; P4Parser::dbprint(out); }
 
     /// A map from standard TNA parameter names to the names actually used in
     /// the P4 program. @see TranslatedP4Control::tnaParams.

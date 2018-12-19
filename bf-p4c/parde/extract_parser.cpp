@@ -570,21 +570,18 @@ struct RewriteParserStatements : public Transform {
     const IR::Vector<IR::BFN::ParserPrimitive>*
     preorder(IR::MethodCallStatement* statement) override {
         auto* call = statement->methodCall;
-        auto* method = call->method->to<IR::Member>();
-
-        if (isExtern(method, "Checksum")) {
-            return rewriteChecksumCall(statement);
-        } else if (isExtern(method, "ParserCounter")) {
-            return nullptr;  // TODO
-        } else if (isExtern(method, "ParserPriority")) {
-            return rewriteParserPriorityCall(statement);
-        } else if (method->member == "extract") {
-            return rewriteExtract(statement);
-        } else if (method->member == "advance") {
-            return rewriteAdvance(statement);
-        }
-
-        ::error("Unexpected method call in parser: %1%", statement->toString());
+        if (auto* method = call->method->to<IR::Member>()) {
+            if (isExtern(method, "Checksum")) {
+                return rewriteChecksumCall(statement);
+            } else if (isExtern(method, "ParserCounter")) {
+                return nullptr;  // TODO
+            } else if (isExtern(method, "ParserPriority")) {
+                return rewriteParserPriorityCall(statement);
+            } else if (method->member == "extract") {
+                return rewriteExtract(statement);
+            } else if (method->member == "advance") {
+                return rewriteAdvance(statement); } }
+        ::error("Unexpected method call in parser%s", statement->srcInfo);
         return nullptr;
     }
 

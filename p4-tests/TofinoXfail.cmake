@@ -179,23 +179,26 @@ p4c_add_xfail_reason("tofino"
 # Fails due to complex expressions in the parser that our hardware can't support.
 p4c_add_xfail_reason("tofino"
   "error: Assignment cannot be supported in the parser"
-  testdata/p4_16_samples/scalarmeta-bmv2.p4
   testdata/p4_14_samples/axon.p4
-  testdata/p4_16_samples/stack_complex-bmv2.p4
-  testdata/p4_16_samples/issue737-bmv2.p4
   testdata/p4_16_samples/array-copy-bmv2.p4
+  testdata/p4_16_samples/issue281.p4
+  testdata/p4_16_samples/issue737-bmv2.p4
+  testdata/p4_16_samples/stack_complex-bmv2.p4
+  )
+p4c_add_xfail_reason("tofino"
+  "Compiler Bug.*: Match register not allocated."
   testdata/p4_16_samples/issue1409-bmv2.p4
+  extensions/p4_tests/p4_14/test_config_294_parser_loop.p4
   )
 
 p4c_add_xfail_reason("tofino"
-  "metadata arrays not handled in InstanceRef::InstanceRef"
+  "Local metadata array .* not supported"
   testdata/p4_16_samples/equality-bmv2.p4
-)
+  )
 
 p4c_add_xfail_reason("tofino"
   "error: Field .* of header .* cannot have type header"
   testdata/p4_16_samples/subparser-with-header-stack-bmv2.p4
-  testdata/p4_16_samples/issue281.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -236,7 +239,7 @@ p4c_add_xfail_reason("tofino"
   )
 # varbit not handled in backend
 p4c_add_xfail_reason("tofino"
-  "Unhandled InstanceRef type"
+  "Unsupported type varbit"
   testdata/p4_16_samples/issue447-5-bmv2.p4
   )
 
@@ -429,18 +432,19 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue1544-bmv2.p4
   )
 
-p4c_add_xfail_reason("tofino"
-  "Unhandled InstanceRef type header_union"
-  testdata/p4_16_samples/union-valid-bmv2.p4
-  )
 # BRIG_132
 p4c_add_xfail_reason("tofino"
-  "Unhandled InstanceRef type"
+  "Unsupported type header_union"
   testdata/p4_16_samples/union-bmv2.p4
+  testdata/p4_16_samples/union-valid-bmv2.p4
   testdata/p4_16_samples/union1-bmv2.p4
   testdata/p4_16_samples/union2-bmv2.p4
   testdata/p4_16_samples/union3-bmv2.p4
   testdata/p4_16_samples/union4-bmv2.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Unexpected method call in parser"
   testdata/p4_16_samples/verify-bmv2.p4
   )
 
@@ -618,12 +622,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/arith3-bmv2.p4
   testdata/p4_16_samples/arith4-bmv2.p4
   testdata/p4_16_samples/arith5-bmv2.p4
-  )
-
-# needs copy propagation in parser
-p4c_add_xfail_reason("tofino"
-  "Assignment cannot be supported in the parser: true"
-  testdata/p4_16_samples/issue361-bmv2.p4
   )
 
 # This program tries to assign an error value to a metadata field.
@@ -882,13 +880,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/13-ResubmitMetadataSize.p4
   )
 
-# missing support in backend: parser counter
-# parser counter translation error.
-p4c_add_xfail_reason("tofino"
-  "condition expression too complex"
-  extensions/p4_tests/p4_14/test_config_294_parser_loop.p4
-  )
-
 p4c_add_xfail_reason("tofino"
   "Could not find declaration for x"
   testdata/p4_16_samples/issue1001-bmv2.p4
@@ -1045,20 +1036,10 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_313_neg_test_addr_modes.p4
 )
 
-p4c_add_xfail_reason("tofino"
-  "Unimplemented compiler support.*: metadata arrays not handled"
-  testdata/p4_16_samples/header-stack-ops-bmv2.p4
-)
-
 # Flaky.
 p4c_add_xfail_reason("tofino"
   "Currently non contiguous byte allocation in table format"
   # extensions/p4_tests/p4_14/test_config_215_nondphv.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "condition expression too complex"
-  testdata/p4_14_samples/header-stack-ops-bmv2.p4
 )
 
 # p4smith and p4testgen regression XFAILs
@@ -1250,14 +1231,8 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "Compiler Bug.*: No object named <TypeNameExpression>.*CloneType.E2E"
+  "Compiler Bug.*: No object named .*CloneType.E2E"
   extensions/p4_tests/p4_14/test_config_183_sample_e2e.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "./p4c TIMEOUT"
-# ../glass/testsuite/p4_tests/c1/COMPILER-883/case5521.p4
-  testdata/p4_14_samples/header-stack-ops-bmv2.p4
 )
 
 # BRIG-923
@@ -1325,6 +1300,8 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "No casts should ever reach this point in the Tofino backend"
   extensions/p4_tests/p4_14/p4smith_regression/clue_0.p4
+  fabric-new-DWITH_INT_TRANSIT
+  fabric-new-DWITH_SPGW-DWITH_INT_TRANSIT
 )
 
 # Not a bug, brig is reporting the correct error message.

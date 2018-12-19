@@ -8,7 +8,7 @@ packet_test_setup_check("tofino")
 set (V1_SEARCH_PATTERNS "include.*v1model.p4" "main|common_v1_test")
 set (V1_EXCLUDE_PATTERNS "package" "extern")
 # Exclude some bmv2 p4s with conditional checksum updates that are not needed for backend
-set (V1_EXCLUDE_FILES "issue461-bmv2\\.p4" "issue1079-bmv2\\.p4")
+set (V1_EXCLUDE_FILES "issue461-bmv2\\.p4" "issue1079-bmv2\\.p4" "header-stack-ops-bmv2\\.p4")
 set (P4TESTDATA ${P4C_SOURCE_DIR}/testdata)
 set (P4TESTS_FOR_TOFINO "${P4TESTDATA}/p4_16_samples/*.p4")
 p4c_find_tests("${P4TESTS_FOR_TOFINO}" P4_16_V1_TESTS INCLUDE "${V1_SEARCH_PATTERNS}" EXCLUDE "${V1_EXCLUDE_PATTERNS}")
@@ -34,7 +34,9 @@ p4c_find_tests("${P16_PSA_FOR_TOFINO}" p16_psa_tests INCLUDE "${PSA_SEARCH_PATTE
 # Exclude some p4s with conditional checksum updates that are added separately
 set (P4_14_EXCLUDE_FILES "parser_dc_full\\.p4" "sai_p4\\.p4"
                             "checksum_pragma\\.p4" "port_vlan_mapping\\.p4"
-                            "checksum\\.p4")
+                            "checksum\\.p4"
+                            "header-stack-ops-bmv2\\.p4"  # times out in PHV alloc
+                            )
 set (P4_14_SAMPLES "${P4TESTDATA}/p4_14_samples/*.p4")
 bfn_find_tests("${P4_14_SAMPLES}" p4_14_samples EXCLUDE "${P4_14_EXCLUDE_FILES}")
 

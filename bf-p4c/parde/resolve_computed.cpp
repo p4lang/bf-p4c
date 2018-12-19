@@ -111,7 +111,8 @@ struct ResolveStackRefs : public ParserInspector {
     void updateExtractedIndices(const IR::BFN::Extract* extract,
                                 ExtractedStackIndices& map) const {
         // Is this a write to a header stack item POV bit?
-        if (!extract->source->is<IR::BFN::ConstantRVal>()) return;
+        auto crval = extract->source->to<IR::BFN::ConstantRVal>();
+        if (!crval) return;
         auto lval = extract->dest->to<IR::BFN::FieldLVal>();
         if (!lval) return;
         if (!lval->field->is<IR::Member>()) return;
@@ -120,7 +121,7 @@ struct ResolveStackRefs : public ParserInspector {
         if (!member->expr->is<IR::HeaderStackItemRef>()) return;
 
         // If so, we just finished extracting the corresponding header stack
-        // item. Figure out the index and update the map.
+        // item, or just invalidated it. Figure out the index and update the map.
         auto* ref = member->expr->to<IR::HeaderStackItemRef>();
         BUG_CHECK(resolvedIndices.find(ref) != resolvedIndices.end(),
                   "Didn't resolve header stack index for POV bit?");
@@ -130,7 +131,7 @@ struct ResolveStackRefs : public ParserInspector {
         }
         auto intIndex = std::max(index->to<IR::Constant>()->asInt(), 0);
         auto stackName = ref->base()->toString();
-        map[stackName].setbit(intIndex);
+        map[stackName][intIndex] = crval->constant->value != 0;
     }
 
     void resolve(const IR::HeaderStackItemRef* ref, const ExtractedStackIndices& map) {

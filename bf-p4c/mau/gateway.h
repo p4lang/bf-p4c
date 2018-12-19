@@ -95,7 +95,7 @@ class GatewayRangeMatch : public MauModifier {
     explicit GatewayRangeMatch(const PhvInfo &phv) : phv(phv) {}
 };
 
-class CheckGatewayExpr : public Inspector {
+class CheckGatewayExpr : public MauInspector {
     const PhvInfo       &phv;
     bool preorder(const IR::MAU::Table *tbl) override;
     bool preorder(const IR::MAU::Action *) override { return false; }
