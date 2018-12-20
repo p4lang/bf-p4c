@@ -5,6 +5,75 @@ Visitor::profile_t PardePhvConstraints::init_apply(const IR::Node* root) {
     return rv;
 }
 
+bool PardePhvConstraints::preorder(const IR::BFN::Extract* extract) {
+    // The constant extract constraint is only valid for Tofino.
+    if (Device::currentDevice() != Device::TOFINO) return true;
+    BUG_CHECK(extract->source != nullptr, "Extract must have a source?");
+    if (!extract->source->is<IR::BFN::ConstantRVal>()) return true;
+    const IR::BFN::ConstantRVal* sourceVal = extract->source->to<IR::BFN::ConstantRVal>();
+    const IR::Constant* sourceConstant = sourceVal->constant;
+    BUG_CHECK(extract->dest != nullptr, "No destination for extract?");
+    LOG2("\tConstant extract to " << extract->dest->field << " : " << sourceConstant);
+    auto* field = phv.field(extract->dest->field);
+    BUG_CHECK(field, "No field reference for %1%", extract->dest->field);
+    const IR::BFN::ParserState* ps = findContext<IR::BFN::ParserState>();
+    if (!sourceConstant->fitsLong()) {
+        // If a constant does not fit a long value, then assign the field to 8b containers just to
+        // be safe. If the field is made up of stack validity bits, then ignore this added
+        // constraint, because stack validity bits cannot be split into multiple containers.
+        // Instead, rely on split parser states to initialize this metadata container.
+        if (field->size > 8 && field->pov) {
+            LOG1("\tCannot add 8b restriction to stack validity field " << field->name << " of size"
+                 << field->size << "b.");
+            return true;
+        }
+        LOG1("\tAdding 8b container size constraint to field: " << field->name);
+        bool constraintAdded = sizePragmas.check_and_add_constraint(field, { PHV::Size::b8 });
+        ERROR_CHECK(constraintAdded, "Field %1% is set in parser state %2% using the constant %3%."
+                " Tofino requires the field to go to 8b containers because of hardware constraints."
+                " However, field %1% has been specified already to not be allocated to 8b "
+                "containers.", field->name, ps->name, sourceConstant);
+        return true;
+    }
+    long constant = sourceConstant->asLong();
+    bitvec bv(constant);
+    LOG3("\t  Constant as bitvec: " << bv);
+    // The first bit of the bitvec requires special handling.
+    int firstBit = -1;
+    for (auto b : bv) {
+        if (firstBit == -1) {
+            firstBit = b;
+            LOG3("\t\tFirst bit: " << b);
+            continue;
+        }
+        int diff = b - firstBit;
+        LOG3("\t\tSubsequent bit: " << b);
+        LOG3("\t\t  Difference with first bit: " << diff << ", maximum allowed: " <<
+             MAX_CONSTANT_WINDOW);
+
+        // For other bits, calculate the difference.
+        // XXX(Deep): Add ability to distinguish between the 3b limit for 32b containers and 4b
+        // limit for 16b containers. This requires the implementation of a
+        // `do-not-allocate-to-a-particular-container-size` constraint in PHV.
+        if (diff > MAX_CONSTANT_WINDOW) {
+            if (field->size > 8 && field->pov) {
+                LOG1("\tCannot add 8b restriction to stack validity field " << field->name << " of "
+                     "size " << field->size << "b.");
+                return true;
+            }
+            LOG1("\tAdding 8b container size constraint to field: " << field->name);
+            bool constraintAdded = sizePragmas.check_and_add_constraint(field, { PHV::Size::b8 });
+            ERROR_CHECK(constraintAdded, "Field %1% is set in parser state %2% using the constant "
+                    "%3%. Tofino requires the field to go to 8b containers because of hardware "
+                    "constraints. However, field %1% has been specified already to not be "
+                    "allocated to 8b containers.", field->name, ps->name, sourceConstant);
+            break;
+        }
+    }
+
+    return true;
+}
+
 bool PardePhvConstraints::preorder(const IR::BFN::Digest* digest) {
     // Currently only support these three digests.
     if (digest->name != "learning" && digest->name != "resubmit" && digest->name != "mirror")
