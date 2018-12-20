@@ -1,4 +1,6 @@
 #ifndef BF_P4C_PHV_ACTION_PHV_CONSTRAINTS_H_
+
+
 #define BF_P4C_PHV_ACTION_PHV_CONSTRAINTS_H_
 
 #include <boost/optional.hpp>
@@ -288,6 +290,52 @@ class ActionPhvConstraints : public Inspector {
       * if unsatisfiable constraints are introduced.
       */
     bool early_check_ok(const IR::MAU::Action* action);
+
+    /** Determine the number of PHV sources required for an action that writes @phvSlices (all in
+      * the same container) and classifies them into different source numbers.
+      */
+    UnionFind<PHV::FieldSlice> classify_PHV_sources(
+        const ordered_set<PHV::FieldSlice>& phvSlices,
+        const ordered_map<PHV::FieldSlice, const PHV::SuperCluster::SliceList*>& lists_map) const;
+
+    /** Craft an error message in @ss, if the packing @list in the same container violates action
+      * constraints imposed by @action. @fieldAlignments are the alignments within the container for
+      * different field slices in the supercluster to which list belongs. @lists_map is a map from
+      * each slice to the slice list it belongs to.
+      */
+    bool diagnoseInvalidPacking(
+            const IR::MAU::Action* action,
+            const PHV::SuperCluster::SliceList* list,
+            const ordered_map<PHV::FieldSlice, unsigned>& fieldAlignments,
+            const ordered_map<PHV::FieldSlice, const PHV::SuperCluster::SliceList*>& lists_map,
+            std::stringstream& ss) const;
+
+    /** Craft an error message in @ss for @action_name that requires too many sources (more than 2
+      * PHV sources when action data/constant are not present, or 2 or more PHV sources when action
+      * data/constant is present). @actionDataWrittenSlices are all the slices written by action
+      * data/constant in @action_name, @notWrittenSlices are container slices not written in the
+      * @action_name, @phvSources are the PHV sources classified according to the source number,
+      * @phvAlignedSlices represents the relative alignment required for the source slice with
+      * respect to its destination.
+      */
+    void throw_too_many_sources_error(
+            const ordered_set<PHV::FieldSlice>& actionDataWrittenSlices,
+            const ordered_set<PHV::FieldSlice>& notWrittenSlices,
+            const UnionFind<PHV::FieldSlice>& phvSources,
+            const ordered_map<PHV::FieldSlice, std::pair<int, int>>& phvAlignedSlices,
+            const IR::MAU::Action* action,
+            std::stringstream& ss) const;
+
+    /** Detects if the destination to source mapping @destToSource in @action_name requires a
+      * non-contiguous mask, that cannot be realized by deposit-field instructions. If not, then
+      * craft and error message in @ss.
+      */
+    void throw_non_contiguous_mask_error(
+            const ordered_set<PHV::FieldSlice>& notWrittenSlices,
+            const ordered_map<PHV::FieldSlice, ordered_set<PHV::FieldSlice>>& destToSource,
+            const ordered_map<PHV::FieldSlice, unsigned>& fieldAlignments,
+            cstring action_name,
+            std::stringstream& ss) const;
 
     /** Given the state of PHV allocation represented by @alloc and @container_state, a vector of
       * slices to be packed together and mutually live in a given container
@@ -665,6 +713,15 @@ class ActionPhvConstraints : public Inspector {
     bool can_pack_pov(
             const PHV::SuperCluster::SliceList* slice_list,
             const PHV::Field* f) const;
+
+    /** Diagnose PHV allocation failure for supercluster @sc containing field slices in slice lists
+      * with alignment @sliceAlignments. @returns true if a concrete error violation is detected.
+      * Populates @error_msg with the appropriate error message.
+      */
+    bool diagnoseSuperCluster(
+            const ordered_set<const PHV::SuperCluster::SliceList*>& sc,
+            const ordered_map<PHV::FieldSlice, unsigned>& fieldAlignments,
+            std::stringstream& error_msg) const;
 
     /** @returns true if field @f is written in action @act.
       */

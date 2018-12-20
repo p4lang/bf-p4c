@@ -466,8 +466,6 @@ class AllocatePHV : public Inspector {
     const SymBitMatrix& mutex_i;
     PHV::Pragmas& pragmas_i;
 
-    // Used to create strategies, if they need
-    /// Currently unused ActionPhvConstraints& actions_i;
     // Used to create strategies, if needed
     const CalcCriticalPathClusters& critical_path_clusters_i;
     // Used to find metadata initialization possibilities.
@@ -520,9 +518,19 @@ class AllocatePHV : public Inspector {
 
     /// Throws backtracking exception, if we need to backtrack because of conflicting alignment
     /// constraints induced by bridged metadata packing.
-    void throwBacktrackException(
+    ordered_set<cstring> throwBacktrackException(
             const size_t numBridgedConflicts,
             const std::list<PHV::SuperCluster*>& unallocated) const;
+
+    /** Diagnose why unallocated clusters remained unallocated, and throw the appropriate error
+      * message.
+      */
+    bool diagnoseFailures(const std::list<PHV::SuperCluster *>& unallocated) const;
+
+    /** Diagnose why unallocated supercluster sc remained unallocated, and throw appropriate error
+      * message.
+      */
+    bool diagnoseSuperCluster(const PHV::SuperCluster* sc) const;
 
  public:
     AllocatePHV(const Clustering& clustering,

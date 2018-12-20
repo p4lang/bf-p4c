@@ -607,6 +607,8 @@ class FieldSlice : public AbstractField {
     std::map<PHV::Size, bitvec> startBitsByContainerSize_i;
 
  public:
+    FieldSlice() : field_i(nullptr), range_i(StartLen(0, 0)) { }
+
     explicit FieldSlice(const Field* field, le_bitrange range);
 
     /// Create a slice that holds the entirety of @field.

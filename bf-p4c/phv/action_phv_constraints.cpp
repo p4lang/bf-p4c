@@ -383,7 +383,6 @@ ActionPhvConstraints::get_slices_in_same_byte(const PHV::FieldSlice& slice) cons
     ordered_set<PHV::FieldSlice> rv;
     rv.insert(PHV::FieldSlice(slice.field(), slice.range()));
     if (!same_byte_fields.count(slice.field())) return rv;
-    le_bitrange field_range = slice.range();
     le_bitrange limit = slice.byteAlignedRangeInBits();
     LOG7("    Range for slice " << limit);
     for (const auto* f : same_byte_fields.at(slice.field())) {
@@ -2375,6 +2374,274 @@ boost::optional<bool> ActionPhvConstraints::ConstraintTracker::hasActionDataOrCo
             return false;
     }
     return true;
+}
+
+UnionFind<PHV::FieldSlice> ActionPhvConstraints::classify_PHV_sources(
+        const ordered_set<PHV::FieldSlice>& phvSlices,
+        const ordered_map<PHV::FieldSlice, const PHV::SuperCluster::SliceList*>& lists_map) const {
+    UnionFind<PHV::FieldSlice> classified_sources;
+    ordered_map<const PHV::SuperCluster::SliceList*, PHV::FieldSlice> slice_list_to_slice;
+    for (auto& slice : phvSlices) {
+        classified_sources.insert(slice);
+        // If the slice does not belong to a slice list, then it is to be placed in its own
+        // container.
+        if (!lists_map.count(slice)) continue;
+        // The slice list is already represented in the slice_list_to_slice map. Union the set
+        // corresponding to the representative slice with the current slice.
+        if (slice_list_to_slice.count(lists_map.at(slice))) {
+            classified_sources.makeUnion(slice_list_to_slice.at(lists_map.at(slice)), slice);
+            continue;
+        }
+        // First representative slice of this slice list.
+        slice_list_to_slice[lists_map.at(slice)] = slice;
+    }
+    return classified_sources;
+}
+
+void ActionPhvConstraints::throw_too_many_sources_error(
+        const ordered_set<PHV::FieldSlice>& actionDataWrittenSlices,
+        const ordered_set<PHV::FieldSlice>& notWrittenSlices,
+        const UnionFind<PHV::FieldSlice>& phvSources,
+        const ordered_map<PHV::FieldSlice, std::pair<int, int>>& phvAlignedSlices,
+        const IR::MAU::Action* action,
+        std::stringstream& ss) const {
+    cstring action_name = canon_name(action->externalName());
+    bool adSource = (actionDataWrittenSlices.size() > 0);
+    ss << "it requires too many sources.";
+    unsigned source_num = 1;
+    if (adSource) {
+        ss << std::endl << "\tSource " << (source_num++) << " is action data/constant, which "
+            "write(s) the following field slices:";
+        for (auto& slice : actionDataWrittenSlices) {
+            auto sources = constraint_tracker.sources(slice, action);
+            std::stringstream ss_source;
+            for (auto& source : sources) {
+                if (source.ad) {
+                    ss_source << ", written by action data";
+                    break;
+                } else if (source.constant) {
+                    ss_source << ", written by constant 0x" << std::hex << source.const_value;
+                    break;
+                }
+            }
+            ss << std::endl << "\t  " << slice.shortString() << ss_source.str();
+        }
+    }
+    if (notWrittenSlices.size() > 0) {
+        ss << std::endl << "\tSource " << (source_num++) << " is the container itself, imposed "
+            "by the following fields that are unwritten in action " << action_name << ":";
+        for (auto& slice : notWrittenSlices)
+            ss << std::endl << "\t  " << slice.shortString();
+    }
+    for (const auto* set : phvSources) {
+        bool allSlicesUnwritten = true;
+        // Ignore the slices in the UnionFind struct that are sources because they are not written
+        // in this action. The not-written case has already been handled by the above if-condition.
+        for (auto& slice : *set)
+            if (!notWrittenSlices.count(slice))
+                allSlicesUnwritten = false;
+        if (allSlicesUnwritten) continue;
+        ss << std::endl << "\tSource " << (source_num++) << " contains the following fields:";
+        boost::optional<int> offset = boost::none;
+        bool unaligned = false;
+        ordered_set<PHV::FieldSlice> printedFields;
+        for (auto& slice : *set) {
+            if (printedFields.count(slice)) continue;
+            ss << std::endl << "\t  " << slice.shortString();
+            printedFields.insert(slice);
+            if (phvAlignedSlices.count(slice)) {
+                int start = phvAlignedSlices.at(slice).second;
+                int thisOffset = phvAlignedSlices.at(slice).first - start;
+                if (offset != boost::none && *offset == thisOffset)
+                    unaligned = true;
+                // Start = -1 indicates that the source does not belong to a slice list and
+                // therefore, could potentially have multiple possible alignments within its
+                // container.
+                // XXX(Deep): Potentially improve this by considering bit in byte alignments for
+                // fields.
+                if (start == -1) continue;
+                ss << " @ bits " << start << "-" << (start + slice.size() - 1);
+            }
+        }
+        // Also, output second order alignment violations (the programmer first needs to resolve the
+        // too-many-sources error).
+        // Also, indicate to the user that PHV sources are not aligned (if possible), which violates
+        // alignment constraints when action data/constant is present.
+        if (adSource && offset && *offset != 0) {
+            ss << std::endl << "  and slices of source " << source_num << " are not allocated "
+                << "at the same offsets within the container as the destination slices." <<
+                std::endl;
+            continue;
+        }
+        // If each destination in the container has a different offset relative to its source slice
+        // (and all those source slices are part of the same source container), that also violates
+        // an action constraint.
+        if (unaligned) {
+            ss << std::endl << "  and slices of source " << source_num << " do not have the "
+                "same rotational alignment with respect to their destination slices." <<
+                std::endl;
+            continue;
+        }
+    }
+
+    if (adSource) {
+        ss << std::endl << "  However, " << Device::name() << " supports only one PHV source, "
+            "when action data/constant is present.";
+    } else {
+        ss << std::endl << "  However, " << Device::name() << " supports only two PHV sources.";
+    }
+    ss << std::endl << "  Rewrite action " << action_name << " to use at most 2 PHV sources "
+        "(and no action data/constant source) or 1 PHV source (if action data/constant is "
+        << "necessary)." << std::endl << std::endl;
+}
+
+void ActionPhvConstraints::throw_non_contiguous_mask_error(
+        const ordered_set<PHV::FieldSlice>& notWrittenSlices,
+        const ordered_map<PHV::FieldSlice, ordered_set<PHV::FieldSlice>>& destToSource,
+        const ordered_map<PHV::FieldSlice, unsigned>& fieldAlignments,
+        cstring action_name,
+        std::stringstream& ss) const {
+    ss << " of non-contiguous partial container write(s)." << std::endl;
+    ss << "\tAction " << action_name << " writes the following fields in the container:" <<
+        std::endl;
+    for (const auto& kv : destToSource) {
+        ss << "\t  " << kv.first.shortString();
+        if (kv.first.size() == 1)
+            ss << " @ bit " << fieldAlignments.at(kv.first) << std::endl;
+        else
+            ss << " @ bits " << fieldAlignments.at(kv.first) << "-" <<
+                (fieldAlignments.at(kv.first) + kv.first.size() - 1) << std::endl;
+    }
+    ss << "\tAction " << action_name << " does not write the following container fields:" <<
+        std::endl;
+    for (auto& slice : notWrittenSlices) {
+        ss << "\t  " << slice.shortString();
+        if (slice.size() == 1)
+            ss << " @ bit " << fieldAlignments.at(slice) << std::endl;
+        else
+            ss << " @ bits " << fieldAlignments.at(slice) << "-" << (fieldAlignments.at(slice) +
+                    slice.size() - 1) << std::endl;
+    }
+    ss << "  " << Device::name() << " requires at least one of the set of slices written or "
+       "slices not written to be contiguous." << std::endl << std::endl;
+}
+
+bool ActionPhvConstraints::diagnoseInvalidPacking(
+        const IR::MAU::Action* action,
+        const PHV::SuperCluster::SliceList* list,
+        const ordered_map<PHV::FieldSlice, unsigned>& fieldAlignments,
+        const ordered_map<PHV::FieldSlice, const PHV::SuperCluster::SliceList*>& lists_map,
+        std::stringstream& ss) const {
+    ordered_map<PHV::FieldSlice, ordered_set<PHV::FieldSlice>> destToSource;
+    ordered_map<PHV::FieldSlice, ordered_set<PHV::FieldSlice>> sourceToDest;
+    ordered_set<PHV::FieldSlice> notWrittenSlices;
+    ordered_set<PHV::FieldSlice> actionDataWrittenSlices;
+    ordered_map<PHV::FieldSlice, std::pair<int, int>> phvAlignedSlices;
+    ordered_set<PHV::FieldSlice> allPHVSlices;
+    int offset = 0;
+    cstring action_name = canon_name(action->externalName());
+    bitvec writtenBitvec;
+    bitvec notWrittenBitvec;
+    for (auto& slice : *list) {
+        auto sources = constraint_tracker.sources(slice, action);
+        if (sources.size() == 0) {
+            notWrittenSlices.insert(slice);
+            notWrittenBitvec |= bitvec(fieldAlignments.at(slice), slice.size());
+            allPHVSlices.insert(slice);
+            continue;
+        }
+        writtenBitvec |= bitvec(fieldAlignments.at(slice), slice.size());
+        for (auto& info : sources) {
+            if (info.ad || info.constant) {
+                actionDataWrittenSlices.insert(slice);
+            } else {
+                BUG_CHECK(info.phv_used != boost::none, "No source associated with OperandInfo?");
+                PHV::FieldSlice source_slice = *(info.phv_used);
+                destToSource[slice].insert(source_slice);
+                sourceToDest[source_slice].insert(slice);
+                allPHVSlices.insert(*(info.phv_used));
+                if (fieldAlignments.count(source_slice))
+                    phvAlignedSlices[source_slice] = std::make_pair(fieldAlignments.at(slice),
+                            fieldAlignments.at(source_slice));
+                else
+                    phvAlignedSlices[source_slice] = std::make_pair(fieldAlignments.at(slice), -1);
+            }
+        }
+    }
+    UnionFind<PHV::FieldSlice> phvSources = classify_PHV_sources(allPHVSlices, lists_map);
+    size_t numPHVSources = phvSources.numSets();
+    LOG4("Number of detected PHV sources: " << numPHVSources);
+    LOG4(phvSources);
+
+    bool adSource = (actionDataWrittenSlices.size() > 0);
+    size_t allowedPHVSources = adSource ? 1 : 2;
+    bool tooManySources = (numPHVSources > allowedPHVSources);
+
+    // Detect the case where multiple PHV sources are required, in addition to action data/constant.
+    if (tooManySources) {
+        throw_too_many_sources_error(actionDataWrittenSlices, notWrittenSlices, phvSources,
+                phvAlignedSlices, action, ss);
+        return false;
+    }
+
+    // Detect cases where a deposit-field cannot be synthesized because the mask cannot be
+    // contiguous.
+    if (numPHVSources > 0 && !writtenBitvec.is_contiguous() && !notWrittenBitvec.is_contiguous()) {
+        throw_non_contiguous_mask_error(notWrittenSlices, destToSource, fieldAlignments,
+                action_name, ss);
+        return false;
+    }
+
+    return true;
+}
+
+bool ActionPhvConstraints::diagnoseSuperCluster(
+        const ordered_set<const PHV::SuperCluster::SliceList*>& sc,
+        const ordered_map<PHV::FieldSlice, unsigned>& fieldAlignments,
+        std::stringstream& error_msg) const {
+    // For each slice list, gather all the field slices in it, and the actions that write to that
+    // slice list.
+    error_msg << "This program violates action constraints imposed by " << Device::name() << "." <<
+        std::endl << std::endl;
+    ordered_map<PHV::FieldSlice, const PHV::SuperCluster::SliceList*> slice_to_slice_list;
+    bool error_found = false;
+    for (const auto* list : sc)
+        for (auto& slice : *list)
+            slice_to_slice_list[slice] = list;
+    for (const auto* list : sc) {
+        ordered_set<const IR::MAU::Action*> actions;
+        ordered_set<PHV::FieldSlice> set_of_slices;
+        cstring hdr = (*(list->begin())).field()->header();
+        std::stringstream slices;
+        slices << "  PHV allocation requires the following field slices to be packed together, "
+            "because of the structure of header " << hdr << std::endl;
+        for (auto& slice : *list) {
+            slices << "\t" << slice.shortString() << std::endl;
+            auto actionsWritingSlice = constraint_tracker.written_in(slice);
+            actions.insert(actionsWritingSlice.begin(), actionsWritingSlice.end());
+            set_of_slices.insert(slice);
+        }
+        for (const auto* action : actions) {
+            cstring action_name = canon_name(action->externalName());
+            std::stringstream ss;
+            ss << "  Action " << action_name << " must be rewritten.";
+            // Check whether the operations in this slice list are of the correct kind.
+            if (!valid_container_operation_type(action, set_of_slices, ss)) {
+                error_msg << ss.str();
+                error_found = true;
+                continue;
+            }
+            ss.str(std::string());
+            ss << "  Action " << action_name << " must be rewritten, because ";
+            // Then check if the packing for this supercluster is valid.
+            if (!diagnoseInvalidPacking(action, list, fieldAlignments, slice_to_slice_list, ss)) {
+                error_msg << slices.str() << std::endl;
+                error_msg << ss.str();
+                error_found = true;
+            }
+        }
+    }
+    return error_found;
 }
 
 void ActionPhvConstraints::ConstraintTracker::printMapStates() const {

@@ -48,6 +48,11 @@ action action_3 () {
   modify_field (pkt.f4, pkt.fc);
 }
 
+action action_4 () {
+  modify_field (pkt.f1, pkt.f5);
+  modify_field (pkt.f3, pkt.f7);
+}
+
 action setport (port) {
   modify_field (standard_metadata.egress_spec, port);
 }
@@ -64,6 +69,7 @@ table table_0 {
     action_1;
     action_2;
     action_3;
+    action_4;
   }
   size:1024;
 }

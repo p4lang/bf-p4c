@@ -1481,6 +1481,9 @@ Visitor::profile_t AllocatePHV::init_apply(const IR::Node* root) {
     // and commit result only when it reaches our expectation.
     alloc.commit(result.transaction);
 
+    bool failure_diagnosed = (result.remaining_clusters.size() == 0) ? false :
+        diagnoseFailures(result.remaining_clusters);
+
     // If only privatized fields are unallocated, mark allocation as done.
     // The rollback of unallocated privatized fields will happen in ValidateAllocation.
     if (result.status == AllocResultCode::SUCCESS) {
@@ -1500,25 +1503,77 @@ Visitor::profile_t AllocatePHV::init_apply(const IR::Node* root) {
             LOG1(sc);
         LOG2(alloc);
         LOG2(alloc.getSummary(uses_i));
-    } else if (result.status == AllocResultCode::FAIL_UNSAT) {
-        throwBacktrackException(numBridgedConflicts, result.remaining_clusters);
-        formatAndThrowUnsat(result.remaining_clusters);
     } else {
-        throwBacktrackException(numBridgedConflicts, result.remaining_clusters);
-        formatAndThrowError(alloc, result.remaining_clusters);
+        auto noPackBridgedFields = throwBacktrackException(numBridgedConflicts,
+                result.remaining_clusters);
+        if (noPackBridgedFields.size() > 0)
+            throw BridgedPackingTrigger::failure(noPackBridgedFields);
+        if (result.status == AllocResultCode::FAIL_UNSAT) {
+            formatAndThrowUnsat(result.remaining_clusters);
+        } else if (!failure_diagnosed) {
+            formatAndThrowError(alloc, result.remaining_clusters);
+        }
     }
     return Inspector::init_apply(root);
 }
 
-void AllocatePHV::throwBacktrackException(
+bool AllocatePHV::diagnoseFailures(const std::list<PHV::SuperCluster *>& unallocated) const {
+    bool rv = false;
+    // Prefer actionable error message if we can precisely identify failures for any supercluster.
+    for (auto& sc : unallocated)
+        rv |= diagnoseSuperCluster(sc);
+    return rv;
+}
+
+bool AllocatePHV::diagnoseSuperCluster(const PHV::SuperCluster* sc) const {
+    auto& slice_lists = sc->slice_lists();
+    // Cannot diagnose superclusters without slice lists yet.
+    if (slice_lists.size() == 0) return false;
+    // Identify if this is the minimal slice for this supercluster.
+    // Conditions:
+    // 1. The width of deparsed exact_containers slice lists in the supercluster is already 8b; or
+    // 2. At least one deparsed exact_containers slice list is made up of no_split fields.
+    bool scCannotBeSplitFurther = false;
+    // Note down the offsets of the field slices within the slice list; the offset represents the
+    // slices' alignments within their respective containers.
+    ordered_map<PHV::FieldSlice, unsigned> fieldAlignments;
+    // Only slice lists of interest are the ones with exact containers requirements
+    ordered_set<const PHV::SuperCluster::SliceList*> sliceListsOfInterest;
+
+    for (const auto* list : slice_lists) {
+        bool sliceListExact = false;
+        int sliceListSize = 0;
+        for (auto& slice : *list) {
+            if (slice.field()->no_split()) scCannotBeSplitFurther = true;
+            if (slice.field()->exact_containers()) sliceListExact = true;
+            fieldAlignments[slice] = sliceListSize;
+            sliceListSize += slice.size();
+        }
+        if (sliceListExact && sliceListSize == 8) scCannotBeSplitFurther = true;
+        if (sliceListExact) sliceListsOfInterest.insert(list);
+    }
+    if (!scCannotBeSplitFurther) return false;
+
+    LOG3("The following supercluster fails allocation and cannot be split further:\n" << sc);
+    LOG3("Printing alignments of slice list fields within their containers:");
+    for (auto kv : fieldAlignments)
+        LOG3("  " << kv.second << " : " << kv.first);
+    std::stringstream ss;
+    bool diagnosed = core_alloc_i.actionConstraints().diagnoseSuperCluster(sliceListsOfInterest,
+            fieldAlignments, ss);
+    if (diagnosed) ::error("%1%", ss.str());
+    return diagnosed;
+}
+
+ordered_set<cstring> AllocatePHV::throwBacktrackException(
         const size_t numBridgedConflicts,
         const std::list<PHV::SuperCluster*>& unallocated) const {
+    ordered_set<cstring> noPackBridgedFields;
     // If numBridgedConflicts and the current size of bridgedFieldsWithAlignmentConflicts is the
     // same, then it means no field was added to this set during this round of PHV allocation.
     // Therefore, there are no changes required to bridged metadata packing.
     if (numBridgedConflicts == bridgedFieldsWithAlignmentConflicts.size())
-        return;
-    ordered_set<cstring> noPackBridgedFields;
+        return noPackBridgedFields;
     for (auto* sc : unallocated) {
         sc->forall_fieldslices([&](const PHV::FieldSlice& s) {
             if (!s.field()->bridged) return;
@@ -1531,8 +1586,7 @@ void AllocatePHV::throwBacktrackException(
                  "fields:");
         for (auto s : noPackBridgedFields)
             LOG2("\t  " << s); }
-    if (noPackBridgedFields.size() == 0) return;
-    throw BridgedPackingTrigger::failure(noPackBridgedFields);
+    return noPackBridgedFields;
 }
 
 bool AllocatePHV::onlyPrivatizedFieldsUnallocated(

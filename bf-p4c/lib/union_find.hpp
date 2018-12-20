@@ -142,6 +142,10 @@ class UnionFind {
                 rv = s->size();
         return rv;
     }
+
+    size_t numSets() const {
+        return sets_i.size();
+    }
 };
 
 

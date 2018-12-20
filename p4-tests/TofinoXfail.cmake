@@ -678,7 +678,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
 
   # Expected to fail, which means that action analysis is working correctly.
-  extensions/p4_tests/p4_14/action_conflict_1.p4
   extensions/p4_tests/p4_14/action_conflict_2.p4
   extensions/p4_tests/p4_14/action_conflict_3.p4
   extensions/p4_tests/p4_14/14-MultipleActionsInAContainer.p4
@@ -1339,6 +1338,9 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error.*This program violates action constraints imposed by Tofino."
   extensions/p4_tests/p4_16/case7944.p4
+  extensions/p4_tests/p4_16/case7756.p4
+  extensions/p4_tests/p4_14/action_conflict_1.p4
+  extensions/p4_tests/p4_14/action_conflict_3.p4
   extensions/p4_tests/p4_14/action_conflict_7.p4
 # Need to mark padding field used in add as a padding field. Need to introduce annotation for the
 # same.
