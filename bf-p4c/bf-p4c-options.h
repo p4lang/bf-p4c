@@ -35,7 +35,7 @@ class BFN_Options : public CompilerOptions {
 #if BAREFOOT_INTERNAL
     std::set<cstring> skipped_pipes;
     bool no_power_check = false;
-    bool stage_allocation = true;
+    bool stage_allocation = false;
 #endif
     bool verbose = false;
 
