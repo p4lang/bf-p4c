@@ -574,6 +574,7 @@ def main():
 
     # Check for running processes and kill them
     # Check for zombie processes and wait for their exit
+    defunct_wait_time = 0
     def wait_for_setup(process_name):
         processes_running = subprocess.Popen(["ps", "-ef"],stdout=subprocess.PIPE)
         for process in processes_running.stdout:
@@ -585,7 +586,14 @@ def main():
                 else:
                     debug("{0} still running as defunct: {1}".format(process_name, process))
                     time.sleep(2)
-                    wait_for_setup(process_name)
+                    defunct_wait_time += 2
+                    # Timeout if defunct not killed within 5 mins
+                    if defunct_wait_time < 300:
+                        wait_for_setup(process_name)
+                    else:
+                        debug("{0} still running as defunct: {1}".format(process_name, process))
+                        debug("Timing out!")
+                        return
 
     # Ensure clean environment before starting the test
     def run_setup():

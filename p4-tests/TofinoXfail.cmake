@@ -112,7 +112,6 @@ if (PTF_REQUIREMENTS_MET)
     05-simple_l3_arping
     extensions/p4_tests/p4_16/ingress_checksum.p4    #TODO(zma) use @calculated_field_update_location to force ingress update
     basic_switching
-    smoketest_switch_16_HostIfRxTest
     )
 
 # BRIG-686
@@ -279,26 +278,31 @@ p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
   switch_8.5_msdc_ipv4
+  switch_msdc_ipv4
   )
 
 p4c_add_xfail_reason("tofino"
   "error.*Can't split table.*with indirect attached MAU::StatefulAlu"
   switch_8.5_ent_fin_postcard
-  switch_ent_fin_postcard
   switch_8.5_l3_heavy_int_leaf
-  switch_l3_heavy_int_leaf
 )
 
 p4c_add_xfail_reason("tofino"
   "No way to slice the following to satisfy @pa_container_size"
-  switch_generic_int_leaf
   switch_8.5_generic_int_leaf
   )
 
 p4c_add_xfail_reason("tofino"
   "Compiler Bug.*Conflicting alloc in the action data xbar between.*"
-  switch_msdc_leaf_int
   switch_8.5_msdc_leaf_int
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Table .* is applied multiple times, and the next table information cannot correctly propagate"
+  switch_ent_fin_postcard
+  switch_msdc_leaf_int
+  switch_l3_heavy_int_leaf
+  switch_generic_int_leaf
   )
 
 p4c_add_xfail_reason("tofino"
@@ -306,11 +310,6 @@ p4c_add_xfail_reason("tofino"
   smoketest_programs_netcache
   extensions/p4_tests/p4_14/p4-tests/programs/ecc/ecc.p4
   extensions/p4_tests/p4_14/p4-tests/programs/mau_test/mau_test.p4  #P4C-1123
-  )
-
-p4c_add_xfail_reason("tofino"
-  "AssertionError"
-  smoketest_programs_basic_ipv4_TestLearning 
   )
 
 p4c_add_xfail_reason("tofino"

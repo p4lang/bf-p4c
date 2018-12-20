@@ -59,7 +59,7 @@ RUN add-apt-repository ppa:ubuntu-toolchain-r/test && \
 RUN apt-get install -y net-tools
 
 RUN pip install ply jsl jsonschema pexpect crc16 crcmod simplejson tenjin ipaddress
-COPY docker/ptf_hugepage_setup.sh /bfn/ptf_hugepage_setup.sh
+COPY scripts/ptf_hugepage_setup.sh /bfn/ptf_hugepage_setup.sh
 COPY docker/docker_entry_point.sh /bfn/docker_entry_point.sh
 WORKDIR /mnt/
 
