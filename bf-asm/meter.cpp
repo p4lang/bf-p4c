@@ -435,9 +435,12 @@ void MeterTable::write_regs(REGS &regs) {
                 .b_oflo_color_write_o_sel_r_color_write_i = 1;
             map_alu.mapram_color_write_switchbox[row.row/2U].ctl.r_oflo_color_write_o_mux_select=1;
             BUG_CHECK(home->row/4U >= row.row/2U);
-            for (unsigned i = home->row/4U; i > row.row/2U; i--)
+            for (int i = home->row/4U - 1; i >= (int)(row.row/2U); i--) {
+                /* b_oflo_color_write_o_sel_t_oflo_color_write_i must be set of all
+                 * switchboxes below the homerow
+                 */
                 map_alu.mapram_color_write_switchbox[i].ctl.b_oflo_color_write_o_mux_select
-                    .b_oflo_color_write_o_sel_t_oflo_color_write_i = 1; }
+                    .b_oflo_color_write_o_sel_t_oflo_color_write_i = 1; } }
         auto &map_alu_row =  map_alu.row[row.row];
         auto vpn = row.vpns.begin();
 
