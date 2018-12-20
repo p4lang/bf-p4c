@@ -88,10 +88,28 @@ class ConvertMethodCalls : public MauTransform {
     P4::ReferenceMap        *refMap;
     P4::TypeMap             *typeMap;
 
+    void append_extern_constructor_param(const IR::Declaration_Instance *decl,
+            IR::Vector<IR::Expression>& constructor_params) {
+        if (auto inst = decl->to<IR::Declaration_Instance>()) {
+            // only for Hash extern for now.
+            if (inst->name != "Hash")
+                return;
+            if (inst->arguments == nullptr)
+                return;
+            for (auto arg : *inst->arguments) {
+                if (!arg->expression->is<IR::PathExpression>())
+                    continue;
+                auto path = arg->expression->to<IR::PathExpression>();
+                auto param = refMap->getDeclaration(path->path, false);
+                if (auto d = param->to<IR::Declaration_Instance>())
+                    constructor_params.push_back(new IR::GlobalRef(typeMap->getType(d), d));
+            } } }
+
     const IR::Expression *preorder(IR::MethodCallExpression *mc) {
         auto mi = P4::MethodInstance::resolve(mc, refMap, typeMap, true);
         cstring name;
         const IR::Expression *recv = nullptr, *extra_arg = nullptr;
+        IR::Vector<IR::Expression> constructor_params;
         if (auto bi = mi->to<P4::BuiltInMethod>()) {
             name = bi->name;
             recv = bi->appliedTo;
@@ -111,7 +129,13 @@ class ConvertMethodCalls : public MauTransform {
             } else {
                 auto n = em->object->getNode();
                 recv = new IR::GlobalRef(mem ? mem->expr->srcInfo : mc->method->srcInfo,
-                                         typeMap->getType(n), n); }
+                                         typeMap->getType(n), n);
+                // if current extern takes another extern instance as constructor parameter,
+                // e.g., Hash takes CRC_Polynomial as an argument.
+                if (n->is<IR::Declaration_Instance>())
+                    append_extern_constructor_param(n->to<IR::Declaration_Instance>(),
+                            constructor_params);
+            }
         } else if (auto ef = mi->to<P4::ExternFunction>()) {
             name = ef->method->name;
         } else {
@@ -122,6 +146,8 @@ class ConvertMethodCalls : public MauTransform {
         else
             prim = new IR::Primitive(mc->srcInfo, mc->type, name);
         if (recv) prim->operands.push_back(recv);
+        if (constructor_params.size() != 0)
+            prim->operands.append(constructor_params);
         for (auto arg : *mc->arguments)
             prim->operands.push_back(arg->expression);
         if (extra_arg) prim->operands.push_back(extra_arg);

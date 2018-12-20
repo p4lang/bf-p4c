@@ -317,7 +317,7 @@ struct IXBar {
             bool allocated = false;
             int group = -1;
             bitvec bit_mask;
-            IR::MAU::hash_function algorithm;
+            IR::MAU::HashFunction algorithm;
             ordered_map<const PHV::Field *, safe_vector<matrix_position>> identity_positions;
 
             void clear() {
@@ -343,7 +343,7 @@ struct IXBar {
             */
             // Key is position in 48 bits of input xbar, bitrange is the HashDistSlice
             std::map<int, le_bitrange>     bit_starts;
-            IR::MAU::hash_function      algorithm;
+            IR::MAU::HashFunction      algorithm;
 
             void clear() {
                 allocated = false;
@@ -360,7 +360,7 @@ struct IXBar {
             bool allocated = false;
             int group = -1;
             bitvec hash_bits;
-            IR::MAU::hash_function algorithm;
+            IR::MAU::HashFunction algorithm;
             cstring alg_name;
 
             void clear() {
@@ -787,7 +787,7 @@ struct IXBar {
         cstring name);
     bool allocHashDistSelMod(int bits_required, const unsigned &hash_table_input,
         HashDistAllocParams &hdap, int p4_hash_bits, cstring name);
-    bitvec determine_final_xor(const IR::MAU::hash_function *hf,
+    bitvec determine_final_xor(const IR::MAU::HashFunction *hf,
         std::map<int, le_bitrange> &bit_starts, int total_input_bits);
     void determine_proxy_hash_alg(const IR::MAU::Table *tbl, Use &use, int group);
 };

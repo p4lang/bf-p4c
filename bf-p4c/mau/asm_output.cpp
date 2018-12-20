@@ -246,13 +246,13 @@ struct FormatHash {
     const std::map<int, Slice>  *match_data_map;
     const RangeOfConstant       *constant_map;
     const Slice                 *ghost;
-    IR::MAU::hash_function      func;
+    IR::MAU::HashFunction       func;
     int                         total_bits = 0;
     le_bitrange                 *field_range;
 
     FormatHash(const safe_vector<Slice> *md, const std::map<int, Slice> *mdm,
                const std::map<le_bitrange, const IR::Constant*> *cm, const Slice *g,
-               IR::MAU::hash_function f, int tb = 0, le_bitrange *fr = nullptr)
+               IR::MAU::HashFunction f, int tb = 0, le_bitrange *fr = nullptr)
         : match_data(md), match_data_map(mdm), constant_map(cm), ghost(g),
         func(f), total_bits(tb), field_range(fr) {
         BUG_CHECK(match_data == nullptr || match_data_map == nullptr, "FormatHash not "
@@ -269,10 +269,10 @@ std::ostream &operator<<(std::ostream &out, const FormatHash &hash) {
         return out;
     }
 
-    if (hash.func.type == IR::MAU::hash_function::IDENTITY) {
+    if (hash.func.type == IR::MAU::HashFunction::IDENTITY) {
         BUG_CHECK(hash.match_data, "For an identity, must be a standard vector");
         out << "stripe(" << emit_vector(*hash.match_data) << ")";
-    } else if (hash.func.type == IR::MAU::hash_function::RANDOM) {
+    } else if (hash.func.type == IR::MAU::HashFunction::RANDOM) {
         BUG_CHECK(hash.match_data, "For a random, must be a standard vector");
         if (!hash.match_data->empty()) {
             out << "random(" << emit_vector(*hash.match_data, ", ") << ")";
@@ -281,7 +281,7 @@ std::ostream &operator<<(std::ostream &out, const FormatHash &hash) {
         if (hash.ghost) {
             out << *hash.ghost;
         }
-    } else if (hash.func.type == IR::MAU::hash_function::CRC) {
+    } else if (hash.func.type == IR::MAU::HashFunction::CRC) {
         BUG_CHECK(hash.match_data_map, "For a crc, must be a map");
         out << "stripe(crc";
         if (hash.func.reverse) out << "_rev";
@@ -303,10 +303,10 @@ std::ostream &operator<<(std::ostream &out, const FormatHash &hash) {
         out << ")";
         // FIXME -- final_xor needs to go into the seed for the hash group
         out << ")";
-    } else if (hash.func.type == IR::MAU::hash_function::XOR) {
+    } else if (hash.func.type == IR::MAU::HashFunction::XOR) {
         // fixme -- should be able to implement this in a hash function
         BUG("xor hashing algorithm not supported");
-    } else if (hash.func.type == IR::MAU::hash_function::CSUM) {
+    } else if (hash.func.type == IR::MAU::HashFunction::CSUM) {
         BUG("csum hashing algorithm not supported");
     } else {
         BUG("unknown hashing algorithm %d", hash.func.type);
@@ -466,7 +466,7 @@ void MauAsmOutput::emit_ixbar_hash_way(std::ostream &out, indent_t indent,
         if (way_end != way_start)
             out << ".." << way_end;
         out << ": " << FormatHash(&match_data, nullptr, nullptr,
-                ghost, IR::MAU::hash_function::random())
+                ghost, IR::MAU::HashFunction::random())
             << std::endl;
     }
 }
@@ -481,7 +481,7 @@ void MauAsmOutput::emit_ixbar_hash_way_select(std::ostream &out, indent_t indent
     if (way_end != way_start)
         out << ".." << way_end;
     out << ": " << FormatHash(&match_data, nullptr, nullptr,
-            ghost, IR::MAU::hash_function::random())
+            ghost, IR::MAU::HashFunction::random())
         << std::endl;
 }
 
@@ -707,7 +707,7 @@ void MauAsmOutput::emit_ixbar_hash_dist_ident(std::ostream &out, indent_t indent
                 ident_slice.push_back(asm_sl);
                 out << indent << hash_lo << ".." << hash_hi << ": "
                     << FormatHash(&ident_slice, nullptr, nullptr, nullptr,
-                                  IR::MAU::hash_function::identity())
+                                  IR::MAU::HashFunction::identity())
                     << std::endl;
             }
         }
@@ -718,7 +718,7 @@ void MauAsmOutput::emit_ixbar_hash_dist_ident(std::ostream &out, indent_t indent
 void MauAsmOutput::emit_ixbar_meter_alu_hash(std::ostream &out, indent_t indent,
         safe_vector<Slice> &match_data, const IXBar::Use::MeterAluHash &mah,
         const safe_vector<PHV::AbstractField*> &field_list_order) const {
-    if (mah.algorithm.type == IR::MAU::hash_function::IDENTITY) {
+    if (mah.algorithm.type == IR::MAU::HashFunction::IDENTITY) {
         for (auto &slice : match_data) {
             if (mah.identity_positions.count(slice.get_field()) == 0)
                 continue;
@@ -891,7 +891,7 @@ void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent,
 
     if (use->hash_dist_hash.allocated) {
         auto &hdh = use->hash_dist_hash;
-        if (hdh.algorithm.type == IR::MAU::hash_function::IDENTITY) {
+        if (hdh.algorithm.type == IR::MAU::HashFunction::IDENTITY) {
             emit_ixbar_hash_dist_ident(out, indent, match_data, hdh, use->field_list_order);
             return;
         }

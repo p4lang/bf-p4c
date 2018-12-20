@@ -492,11 +492,19 @@ extern ParserPriority {
 // ----------------------------------------------------------------------------
 // HASH ENGINE
 // ----------------------------------------------------------------------------
+extern CRCPolynomial<T> {
+    CRCPolynomial(T coeff, bool reversed, bool msb, bool extended, T init, T xor);
+}
+
 extern Hash<W> {
     /// Constructor
     /// @type_param W : width of the calculated hash.
     /// @param algo : The default algorithm used for hash calculation.
     Hash(HashAlgorithm_t algo);
+
+    /// Constructor
+    /// @param poly : The default coefficient used for hash algorithm.
+    Hash(HashAlgorithm_t algo, CRCPolynomial<_> poly);
 
     /// Compute the hash for the given data.
     /// @param data : The list of fields contributing to the hash.

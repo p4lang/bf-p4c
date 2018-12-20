@@ -6,7 +6,7 @@ struct bfn_hash_algorithm_;
 namespace IR {
 namespace MAU {
 
-struct hash_function {
+struct HashFunction {
     Util::SourceInfo    srcInfo;
     enum { IDENTITY, CSUM, XOR, CRC, RANDOM }
                         type = IDENTITY;
@@ -19,18 +19,19 @@ struct hash_function {
     uint64_t            final_xor = 0;
     bool                ordered = false;
 
-    bool operator==(const hash_function &a) const {
+    bool operator==(const HashFunction &a) const {
         return type == a.type && size == a.size && msb == a.msb && reverse == a.reverse &&
                poly == a.poly && init == a.init && final_xor == a.final_xor; }
     void toJSON(JSONGenerator &json) const;
-    static hash_function *fromJSON(JSONLoader &);
+    static HashFunction *fromJSON(JSONLoader &);
     bool setup(const IR::Expression *exp);
-    static hash_function identity() {
-        hash_function rv;
+    bool convertPolynomialExtern(const IR::GlobalRef *);
+    static HashFunction identity() {
+        HashFunction rv;
         rv.type = IDENTITY;
         return rv; }
-    static hash_function random() {
-        hash_function rv;
+    static HashFunction random() {
+        HashFunction rv;
         rv.type = RANDOM;
         return rv; }
     bool size_from_algorithm() const {
@@ -64,6 +65,6 @@ struct hash_function {
 }  // end namespace MAU
 }  // end namespace IR
 
-std::ostream &operator<<(std::ostream &, const IR::MAU::hash_function &);
+std::ostream &operator<<(std::ostream &, const IR::MAU::HashFunction &);
 
 #endif /* BF_P4C_MAU_HASH_FUNCTION_H_ */

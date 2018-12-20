@@ -139,7 +139,7 @@ static bool direct_crc_string_conversion(bfn_hash_algorithm_ *hash_alg,
  *     reverse
  */
 
-const IR::Expression *IR::MAU::hash_function::convertHashAlgorithmBFN(Util::SourceInfo srcInfo,
+const IR::Expression *IR::MAU::HashFunction::convertHashAlgorithmBFN(Util::SourceInfo srcInfo,
          IR::ID algorithm, bool *on_hash_matrix) {
     bool msb = false;
     bool endianness_set = false;
@@ -252,7 +252,7 @@ const IR::Expression *IR::MAU::hash_function::convertHashAlgorithmBFN(Util::Sour
  * conversion, the hash function setup can be identical, and just need to handle one type of
  * expression.
  */
-const IR::MethodCallExpression *IR::MAU::hash_function::hash_to_mce(const IR::Expression *e,
+const IR::MethodCallExpression *IR::MAU::HashFunction::hash_to_mce(const IR::Expression *e,
         bool *on_hash_matrix) {
     auto srcInfo = e->srcInfo;
     const IR::Expression *conv_e = nullptr;
@@ -326,7 +326,7 @@ const IR::MethodCallExpression *IR::MAU::hash_function::hash_to_mce(const IR::Ex
 }
 
 /**
- * Responsible for converting a frontend Expression to a IR::MAU::hash_function structure.
+ * Responsible for converting a frontend Expression to a IR::MAU::HashFunction structure.
  * This conversion using the global hash function conversion from the bf-utils function.
  *
  * The conversion is only done for hash functions set up through the galois matrix, and
@@ -334,7 +334,7 @@ const IR::MethodCallExpression *IR::MAU::hash_function::hash_to_mce(const IR::Ex
  * Currently unhandled is the possibility or XORing multiple functions together, which
  * would be a recursive hash function.
  */
-bool IR::MAU::hash_function::setup(const Expression *e) {
+bool IR::MAU::HashFunction::setup(const Expression *e) {
     memset(this, 0, sizeof *this);
     srcInfo = e->srcInfo;
     size = 0;
@@ -415,18 +415,40 @@ bool IR::MAU::hash_function::setup(const Expression *e) {
     return true;
 }
 
-std::ostream &operator<<(std::ostream &out, const IR::MAU::hash_function &h) {
+/*
+ * Convert CRCPolynomial extern to a IR::MAU::HashFunction structure.
+ * This is used by TNA.p4
+ */
+bool IR::MAU::HashFunction::convertPolynomialExtern(const IR::GlobalRef *ref) {
+    auto decl = ref->obj->to<IR::Declaration_Instance>();
+    size = decl->type->width_bits();
+    auto it = decl->arguments->begin();
+    poly = (*it)->expression->to<IR::Constant>()->asInt();
+    std::advance(it, 1);
+    reverse = (*it)->expression->to<IR::BoolLiteral>()->value;
+    std::advance(it, 1);
+    msb = (*it)->expression->to<IR::BoolLiteral>()->value;
+    std::advance(it, 1);
+    extend = (*it)->expression->to<IR::BoolLiteral>()->value;
+    std::advance(it, 1);
+    init = (*it)->expression->to<IR::Constant>()->asInt();
+    std::advance(it, 1);
+    final_xor = (*it)->expression->to<IR::Constant>()->asInt();
+    return true;
+}
+
+std::ostream &operator<<(std::ostream &out, const IR::MAU::HashFunction &h) {
     switch (h.type) {
-    case IR::MAU::hash_function::IDENTITY:
+    case IR::MAU::HashFunction::IDENTITY:
         out << "identity";
         break;
-    case IR::MAU::hash_function::CSUM:
+    case IR::MAU::HashFunction::CSUM:
         out << "csum" << h.size;
         break;
-    case IR::MAU::hash_function::XOR:
+    case IR::MAU::HashFunction::XOR:
         out << "xor" << h.size;
         break;
-    case IR::MAU::hash_function::CRC:
+    case IR::MAU::HashFunction::CRC:
         out << "crc(0x" << hex(h.poly);
         if (h.init)
             out << " init=0x" << hex(h.init);
@@ -434,7 +456,7 @@ std::ostream &operator<<(std::ostream &out, const IR::MAU::hash_function &h) {
         if (h.final_xor)
             out << "^" << hex(h.final_xor);
         break;
-    case IR::MAU::hash_function::RANDOM:
+    case IR::MAU::HashFunction::RANDOM:
         out << "random";
         break;
     default:
@@ -443,7 +465,7 @@ std::ostream &operator<<(std::ostream &out, const IR::MAU::hash_function &h) {
     return out;
 }
 
-void IR::MAU::hash_function::toJSON(JSONGenerator &json) const {
+void IR::MAU::HashFunction::toJSON(JSONGenerator &json) const {
     json << json.indent << "\"type\": " << static_cast<int>(type) << ",\n"
          << json.indent << "\"size\": " << size << ",\n"
          << json.indent << "\"msb\": " << msb << ",\n"
@@ -453,7 +475,7 @@ void IR::MAU::hash_function::toJSON(JSONGenerator &json) const {
          << json.indent << "\"xor\": " << final_xor;
 }
 
-void IR::MAU::hash_function::build_algorithm_t(bfn_hash_algorithm_ *alg) const {
+void IR::MAU::HashFunction::build_algorithm_t(bfn_hash_algorithm_ *alg) const {
     switch (type) {
         case RANDOM:
             alg->hash_alg = RANDOM_DYN; break;
@@ -473,9 +495,9 @@ void IR::MAU::hash_function::build_algorithm_t(bfn_hash_algorithm_ *alg) const {
     alg->final_xor = final_xor;
 }
 
-IR::MAU::hash_function *IR::MAU::hash_function::fromJSON(JSONLoader &json) {
+IR::MAU::HashFunction *IR::MAU::HashFunction::fromJSON(JSONLoader &json) {
     if (!json.json) return nullptr;
-    auto *rv = new hash_function;
+    auto *rv = new HashFunction;
     int type = 0;
     json.load("type", type);
     rv->type = static_cast<decltype(rv->type)>(type);

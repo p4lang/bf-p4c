@@ -1474,11 +1474,11 @@ void IXBar::determine_proxy_hash_alg(const IR::MAU::Table *tbl, Use &alloc, int 
         }
     }
     if (!hash_function_found) {
-        alloc.proxy_hash_key_use.algorithm = IR::MAU::hash_function::random();
+        alloc.proxy_hash_key_use.algorithm = IR::MAU::HashFunction::random();
         alloc.proxy_hash_key_use.alg_name = "random";
     }
 
-    if (alloc.proxy_hash_key_use.algorithm.type == IR::MAU::hash_function::IDENTITY)
+    if (alloc.proxy_hash_key_use.algorithm.type == IR::MAU::HashFunction::IDENTITY)
         ::error("%s: A proxy hash table with an identity algorithm is not supported, as specified "
                 "on table %s.  Just use a normal exact match table", tbl->srcInfo, tbl->name);
 
@@ -2223,7 +2223,7 @@ bool IXBar::allocSelector(const IR::MAU::Selector *as, const IR::MAU::Table *tbl
 
     // Mark the positions of each of the fields on the identity hash, so that the
     // asm_output can easily locate the positions of all of the the associated fields
-    if (mah.algorithm.type == IR::MAU::hash_function::IDENTITY) {
+    if (mah.algorithm.type == IR::MAU::HashFunction::IDENTITY) {
         int bits_seen = 0;
         for (auto it = alloc.field_list_order.rbegin(); it != alloc.field_list_order.rend(); it++) {
             auto fs = *it;
@@ -2381,7 +2381,7 @@ bool IXBar::allocMeter(const IR::MAU::Meter *mtr, const IR::MAU::Table *tbl, con
         mah.allocated = true;
         mah.group = hash_group;
         mah.bit_mask.setrange(0, bits.size());
-        mah.algorithm = IR::MAU::hash_function::identity();
+        mah.algorithm = IR::MAU::HashFunction::identity();
         mah.identity_positions[finfo].emplace_back(0, bits);
         int max_bit = max_bit_to_byte(mah.bit_mask);
         int max_group = max_index_group(max_bit);
@@ -2503,14 +2503,14 @@ bool IXBar::setup_stateful_hash_bus(const IR::MAU::StatefulAlu *salu, Use &alloc
     mah.allocated = true;
     mah.group = hash_group;
     if (dleft) {
-        mah.algorithm = IR::MAU::hash_function::random();
+        mah.algorithm = IR::MAU::HashFunction::random();
         mah.bit_mask.setrange(1, METER_ALU_HASH_BITS);
         // For dleft digest, we need a fixed 1 bit to ensure the digest is nonzero
         // as the valid bit is not contiguous with the digest in the sram field, so
         // trying to match it would waste more hash bits.
         alloc.hash_seed[hash_group] = bitvec(1);
     } else {
-        mah.algorithm = IR::MAU::hash_function::identity();
+        mah.algorithm = IR::MAU::HashFunction::identity();
         bool phv_src_reserved[2] = { false, false };
 
         int source_index = -1;
@@ -3027,7 +3027,7 @@ bool IXBar::allocHashDist(const IR::MAU::HashDist *hd, IXBar::Use::hash_dist_typ
  * Using the bfn_hash_function, this algorithm determines the necessary final_xor positions
  * and writes them into the seed output.
  */
-bitvec IXBar::determine_final_xor(const IR::MAU::hash_function *hf,
+bitvec IXBar::determine_final_xor(const IR::MAU::HashFunction *hf,
         std::map<int, le_bitrange> &bit_starts, int total_input_bits) {
     safe_vector<hash_matrix_output_t> hash_outputs;
     for (auto &entry : bit_starts) {
@@ -3213,7 +3213,7 @@ void IXBar::XBarHashDist::hash_action(const IR::MAU::Table *tbl) {
     }
 
     auto hd = new IR::MAU::HashDist(tbl->srcInfo, IR::Type::Bits::get(bits_required),
-                      field_list, IR::MAU::hash_function::identity());
+                      field_list, IR::MAU::HashFunction::identity());
     for (auto ba : tbl->attached) {
         bool meter_color_req = false;
         if (!(ba->attached && ba->attached->direct))

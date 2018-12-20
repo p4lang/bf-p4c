@@ -558,19 +558,43 @@ const IR::Node *DoInstructionSelection::postorder(IR::Primitive *prim) {
             return new IR::Vector<IR::Expression>({s1, s2});
         }
     } else if (prim->name == "Hash.get") {
-        auto glob = prim->operands.at(0)->to<IR::GlobalRef>();
+        bool custom_hash = false;
+        auto it = prim->operands.begin();
+        // operand 0 is always the extern itself.
+        BUG_CHECK(it != prim->operands.end(), "primitive %s does not have a "
+                                              "reference to P4 extern", prim->name);
+        auto glob = (*it)->to<IR::GlobalRef>();
         auto decl = glob->obj->to<IR::Declaration_Instance>();
         auto type = decl->type->to<IR::Type_Specialized>()->arguments->at(0);
         unsigned size = type->width_bits();
+        std::advance(it, 1);
 
-        int op_size = prim->operands.size();
-        if (op_size > 3) {
-            if (auto *constant = prim->operands[2]->to<IR::Constant>()) {
+        // operand 1 can be either crc_poly or the first argument in get().
+        IR::MAU::HashFunction algorithm;
+        // if operand 1 is crc_poly extern
+        auto crc_poly = (*it)->to<IR::GlobalRef>();
+        if (crc_poly) {
+            custom_hash = true;
+            if (!algorithm.convertPolynomialExtern(crc_poly))
+                BUG("invalid hash algorithm %s", decl->arguments->at(1));
+            std::advance(it, 1); }
+
+        // otherwise, if not a custom hash from user, it is one of the hashes built into compiler.
+        if (!custom_hash && !algorithm.setup(decl->arguments->at(0)->expression))
+                BUG("invalid hash algorithm %s", decl->arguments->at(0));
+
+        // remaining operands must be the arguments for get().
+        int remaining_op_size = std::distance(it, prim->operands.end());
+        auto data = *it;
+        if (remaining_op_size > 1) {
+            auto base = std::next(it, 1);
+            if (auto *constant = (*base)->to<IR::Constant>()) {
                 if (constant->asInt() != 0)
                     error("%s: The initial offset for a hash "
                           "calculation function has to be zero %s",
                           prim->srcInfo, *prim); }
-            if (auto *constant = prim->operands[3]->to<IR::Constant>()) {
+            auto max = std::next(it, 2);
+            if (auto *constant = (*max)->to<IR::Constant>()) {
                 auto value = constant->asUint64();
                 if (value != 0) {
                     size = bitcount(value - 1);
@@ -578,11 +602,7 @@ const IR::Node *DoInstructionSelection::postorder(IR::Primitive *prim) {
                         error("%s: The hash offset must be a power of 2 in a hash calculation %s",
                               prim->srcInfo, *prim); } } }
 
-        IR::MAU::hash_function algorithm;
-        if (!algorithm.setup(decl->arguments->at(0)->expression))
-            BUG("invalid hash algorithm %s", decl->arguments->at(0));
-        auto *hd = new IR::MAU::HashDist(prim->srcInfo, IR::Type::Bits::get(size),
-                                         prim->operands[1], algorithm);
+        auto *hd = new IR::MAU::HashDist(prim->srcInfo, IR::Type::Bits::get(size), data, algorithm);
         hd->bit_width = size;
         auto next_type = IR::Type::Bits::get(size);
         return new IR::MAU::Instruction(prim->srcInfo, "set", new IR::TempVar(next_type),
@@ -741,7 +761,7 @@ IR::MAU::HashDist *StatefulAttachmentSetup::create_hash_dist(const IR::Expressio
 
     int size = hash_field->type->width_bits();
     auto *hd = new IR::MAU::HashDist(prim->srcInfo, IR::Type::Bits::get(size), hash_field,
-                                     IR::MAU::hash_function::identity());
+                                     IR::MAU::HashFunction::identity());
     hd->bit_width = size;
     return hd;
 }
@@ -1033,7 +1053,7 @@ void MeterSetup::Update::update_pre_color(IR::MAU::Meter *mtr) {
     if (has_pre_color) {
         auto pre_color = self.update_pre_colors.at(orig_meter);
         auto hd = new IR::MAU::HashDist(pre_color->srcInfo, IR::Type::Bits::get(2), pre_color,
-                       IR::MAU::hash_function::identity());
+                       IR::MAU::HashFunction::identity());
         hd->bit_width = 2;
         mtr->pre_color = hd;
     }
@@ -1082,7 +1102,7 @@ void DLeftSetup::postorder(IR::MAU::BackendAttached *ba) {
         }
     }
     ba->hash_dist = new IR::MAU::HashDist(IR::Type::Bits::get(0), field_list,
-                                          IR::MAU::hash_function::random(), nullptr);
+                                          IR::MAU::HashFunction::random(), nullptr);
 }
 #endif
 

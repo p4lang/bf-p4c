@@ -531,7 +531,7 @@ class StatefulAlu : Synth2Port {
 class Selector : AttachedMemory {
     ID type = {};
     ID mode = {};
-    hash_function algorithm = {};
+    HashFunction algorithm = {};
     const char *kind() const override { return "selector"; }
     UniqueAttachedId::type_t get_id_type() const override { return UniqueAttachedId::SELECTOR; }
     int num_pools = 0;
@@ -753,7 +753,7 @@ class HashDist : Expression {
     }
     // Fields read by this HashDist
     Expression           field_list;
-    hash_function        algorithm;
+    HashFunction         algorithm;
     int                  bit_width = 0;
 }
 
