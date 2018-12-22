@@ -982,15 +982,19 @@ bool CheckStatefulAlu::preorder(IR::MAU::StatefulAlu *salu) {
         ordered_set<cstring> set_clr { "set_bit", "clr_bit" };
         if (salu->selector) {
             set_clr = ordered_set<cstring> { "set_bit_at", "clr_bit_at" };
-            if (salu->selector->mode == "resilient")
-                set_clr.insert({ "set_bit", "clr_bit" }); }
+            if (salu->selector->mode == "resilient") {
+                set_clr.insert("set_bit");
+                set_clr.insert("clr_bit"); } }
         for (auto &salu_action : salu->instruction) {
             auto &salu_action_instr = salu_action.second;
             if (salu_action_instr) {
                 for (auto &salu_instr : salu_action_instr->action) {
+                    LOG4("SALU " << salu->name << " already has " << salu_instr->name <<
+                         " instruction");
                     set_clr.erase(salu_instr->name); } } }
         for (auto sc : set_clr) {
             if (sc == "") continue;
+            LOG4("SALU " << salu->name << " adding " << sc << " instruction");
             auto instr_action = new IR::MAU::SaluAction(IR::ID(sc + "_alu$0"));
             salu->instruction.addUnique(sc + "_alu$0", instr_action);
             auto set_clr_instr = new IR::MAU::Instruction(sc);
