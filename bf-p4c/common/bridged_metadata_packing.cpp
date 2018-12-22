@@ -19,6 +19,16 @@ bool GatherDeparserParameters::preorder(const IR::BFN::DeparserParameter* p) {
     return true;
 }
 
+// TODO: Remove reliance on phase0 parser state name by visiting Phase0 node in
+// IR::BFN::Parser and use phase0->fields to gather Phase0 fields. The fields
+// must be converted from an IR::StructField to a PHV::Field.
+// TODO: Another chance for optimization is by allowing flexible packing of
+// fields. Right now, the fields are packed to Phase0 bit width (Tofino = 64 and
+// JBAY = 128) with padding inserted. This does not allow flexibility while
+// packing fields into containers. The packing is specified in tna.cpp &
+// arch/phase0.cpp - canPackDataIntoPhase0() method. The packing code can be
+// removed and we can work with only the fields in Phase0. Packing width can be
+// determined by Device::pardeSpec().bitPhase0Width()
 bool GatherPhase0Fields::preorder(const IR::BFN::ParserState* p) {
     // Not a phase 0 parser state
     if (p->name != PHASE0_PARSER_STATE_NAME)

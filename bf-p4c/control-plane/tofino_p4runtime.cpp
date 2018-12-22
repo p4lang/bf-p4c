@@ -10,6 +10,7 @@
 
 #include "barefoot/p4info.pb.h"
 #include "bf-p4c/bf-p4c-options.h"
+#include "bf-p4c/arch/tna.h"
 #include "control-plane/p4RuntimeArchHandler.h"
 #include "control-plane/p4RuntimeSerializer.h"
 #include "control-plane/typeSpecConverter.h"
@@ -581,8 +582,8 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         auto portMetadata = getPortMetadataExtract(externFunction, refMap, nullptr);
         if (portMetadata) {
             if (hasUserPortMetadata) {
-                // TODO(antonin): improve error message when extern added to TNA
-                ::error("Cannot have multiple calls to port_metadata_extract");
+                ::error("Cannot have multiple extern calls for %1%",
+                        BFN::ExternPortMetadataUnpackString);
                 return;
             }
             hasUserPortMetadata = true;
@@ -595,6 +596,16 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         CHECK_NULL(parserBlock);
         auto parser = parserBlock->container;
         CHECK_NULL(parser);
+
+        // Collect any extern functions it may invoke.
+        for (auto state : parser->states) {
+            forAllMatching<IR::MethodCallExpression>(state,
+                          [&](const IR::MethodCallExpression* call) {
+                auto instance = P4::MethodInstance::resolve(call, refMap, typeMap);
+                if (instance->is<P4::ExternFunction>())
+                    collectExternFunction(symbols, instance->to<P4::ExternFunction>());
+            });
+        }
 
         for (auto s : parser->parserLocals) {
             if (auto inst = s->to<IR::P4ValueSet>()) {
@@ -960,6 +971,16 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
                 if (valueSet) addValueSet(symbols, p4info, *valueSet);
             }
         }
+
+        // Add any extern functions within parser states.
+        for (auto state : parser->states) {
+            forAllMatching<IR::MethodCallExpression>(state,
+                          [&](const IR::MethodCallExpression* call) {
+                auto instance = P4::MethodInstance::resolve(call, refMap, typeMap);
+                if (instance->is<P4::ExternFunction>())
+                    addExternFunction(symbols, p4info, instance->to<P4::ExternFunction>());
+            });
+        }
     }
 
     void postAdd(const P4RuntimeSymbolTableIface& symbols,
@@ -986,9 +1007,14 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
                            ReferenceMap* refMap,
                            p4configv1::P4TypeInfo* p4RtTypeInfo) {
         (void)refMap; (void)p4RtTypeInfo;
-        // TODO(antonin)
-        if (function->method->name != "port_metadata_extract")
+        if (function->method->name != BFN::ExternPortMetadataUnpackString)
             return boost::none;
+
+        if (auto *call = function->expr->to<IR::MethodCallExpression>()) {
+            auto *typeArg = call->typeArguments->at(0);
+            auto typeSpec = TypeSpecConverter::convert(refMap, typeArg, p4RtTypeInfo);
+            return PortMetadata{typeSpec};
+        }
         return boost::none;
     }
 

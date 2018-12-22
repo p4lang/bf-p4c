@@ -19,6 +19,8 @@
 #ifndef JBAY_P4_
 #define JBAY_P4_
 
+#include<core.p4>
+
 //XXX Open issues:
 // Meter color
 // Math unit
@@ -554,6 +556,9 @@ extern T max<T>(T t1, T t2);
 extern T min<T>(T t1, T t2);
 
 extern void invalidate<T>(in T field);
+
+/// Phase0
+extern T port_metadata_unpack<T>(packet_in pkt);
 
 /// Counter
 extern Counter<W, I> {

@@ -798,7 +798,8 @@ struct ReplaceParserIR : public Transform {
         prune();
 
         auto* loweredParser =
-          new IR::BFN::LoweredParser(parser->gress, computed.loweredStates.at(parser->start));
+          new IR::BFN::LoweredParser(parser->gress, computed.loweredStates.at(parser->start),
+                                     parser->phase0);
 
         // Record the amount of metadata which is prepended to the packet; this
         // is used to compensate so that e.g. counters record only bytes which

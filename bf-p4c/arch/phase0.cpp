@@ -443,30 +443,6 @@ struct RewritePhase0IfPresent : public Transform {
         return type;
     }
 
-    const IR::BFN::TranslatedP4Control*
-    preorder(IR::BFN::TranslatedP4Control* control) override {
-        if (control->thread != INGRESS || control->name != "ingress") {
-            prune();
-            return control;
-        }
-
-        // Generate an @phase0 annotation; see
-        // `FindPhase0Annotation::showUsage()` for a detailed explanation of the
-        // arguments.
-        auto* annotation = new IR::Annotation("phase0", {
-            new IR::StringLiteral(phase0->table->controlPlaneName()),
-            new IR::StringLiteral(phase0->actionName),
-            new IR::TypeNameExpression(new IR::Type_Name(phase0->p4Type->name))
-        });
-
-        LOG4("Injecting @phase0 annotation onto control " << control->name
-                << ": " << annotation);
-        auto* controlType = control->type->clone();
-        controlType->annotations = controlType->annotations->add(annotation);
-        control->type = controlType;
-        return control;
-    }
-
     const IR::StatOrDecl* preorder(IR::MethodCallStatement* methodCall) override {
         prune();
 
@@ -485,11 +461,21 @@ struct RewritePhase0IfPresent : public Transform {
         return methodCall;
     }
 
+    // Generate phase0 node in parser based on info extracted for phase0
     const IR::BFN::TranslatedP4Parser*
     preorder(IR::BFN::TranslatedP4Parser* parser) override {
-        // The `__phase0` parser state will be part of the ingress parser
-        // program, so don't bother visiting the egress parser.
-        if (parser->thread != INGRESS) prune();
+        if (parser->thread != INGRESS) {
+            prune();
+            return parser;
+        }
+        auto size = Device::numMaxChannels();
+        auto tableName = phase0->table->controlPlaneName();
+        auto actionName = phase0->actionName;
+        auto keyName = "";
+        auto *fieldVec = &phase0->p4Type->fields;
+        auto handle = 0x20 << 24;
+        parser->phase0 =
+            new IR::BFN::Phase0(fieldVec, size, handle, tableName, actionName, keyName);
         return parser;
     }
 

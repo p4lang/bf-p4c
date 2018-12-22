@@ -203,9 +203,15 @@ struct TransitionStack {
             return std::make_pair(dest->toString(), 1);
         if (dest->is<IR::Slice>()) {
             P4C_UNIMPLEMENTED("Cannot extract to a field slice in the parser: %1%", dest);
-        } else if (!dest->is<IR::Member>()) {
+        } else if (!dest->is<IR::Member>() && !dest->is<IR::ConcreteHeaderRef>()) {
             ::warning("Unexpected extract destination: %1%", dest);
             return std::make_pair(dest->toString(), 1);
+        }
+        if (auto* hdrRef = dest->to<IR::ConcreteHeaderRef>()) {
+            auto destName = hdrRef->baseRef()->name;
+            int allowedExtracts = hdrRef->baseRef()->type->to<IR::Type_Header>()
+                                          ->annotations->annotations.size();
+            return std::make_pair(destName, std::max(allowedExtracts, 0));
         }
         auto* member = dest->to<IR::Member>();
         if (!member->expr->is<IR::HeaderStackItemRef>())
@@ -313,7 +319,7 @@ GetBackendParser::extract(const IR::BFN::TranslatedP4Parser* parser) {
     });
 
     IR::BFN::ParserState* startState = getState(p4StateNameToStateName.at("start"));
-    return new IR::BFN::Parser(parser->thread, startState);
+    return new IR::BFN::Parser(parser->thread, startState, parser->phase0);
 }
 
 bool GetBackendParser::addTransition(IR::BFN::ParserState* state, match_t matchVal,

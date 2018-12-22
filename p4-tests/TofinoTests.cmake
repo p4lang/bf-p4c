@@ -547,6 +547,7 @@ set (P4FACTORY_P4_16_PROGRAMS
   tna_lpm_match
   tna_meter_lpf_wred
   tna_operations
+  tna_port_metadata
   tna_range_match
   tna_register
   tna_ternary_match

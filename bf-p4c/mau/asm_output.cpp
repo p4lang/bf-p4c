@@ -39,24 +39,36 @@ class MauAsmOutput::EmitAttached : public Inspector {
 
 std::ostream &operator<<(std::ostream &out, const MauAsmOutput &mauasm) {
     indent_t indent(1);
+    bool phase0OutputAsm = false;
+    // Output phase0 table only once in assembly at the start of stage 0
+    // TODO: For multiple parser support, new assembly syntax under parser
+    // needs to be added to specify phase0 for each parser. Correspondingly,
+    // context.json schema for phase0 table must be changed to include
+    // phase0 info within the parser node
+    auto* pipe = mauasm.pipe;
+    if (auto* parser = pipe->thread[INGRESS].parser->to<IR::BFN::LoweredParser>()) {
+        if (auto p0 = parser->phase0) {
+            out << "stage 0 ingress:" << std::endl;
+            out << p0;
+            phase0OutputAsm = true;
+        }
+    }
+
     for (auto &stage : mauasm.by_stage) {
-        out << "stage " << stage.first.second << ' ' << stage.first.first << ':' << std::endl;
+        if (!phase0OutputAsm || stage.first.second != 0 || stage.first.first != INGRESS)
+            out << "stage " << stage.first.second << ' ' << stage.first.first << ':' << std::endl;
 #if HAVE_JBAY
         if (Device::currentDevice() == Device::JBAY &&
             stage.first.first != GHOST && stage.first.second > 0)
             out << indent << "dependency: match" << std::endl;
 #endif
+
         for (auto &tbl : stage.second) {
-            BUG_CHECK(!(tbl.phase0Info && tbl.tableInfo),
-                      "TableInstance is both a phase 0 table and a regular table?");
-            if (tbl.phase0Info)
-                out << tbl.phase0Info;
-            else
-                mauasm.emit_table(out, tbl.tableInfo, stage.first.second /* stage */,
-                    stage.first.first /* gress */);
+            mauasm.emit_table(out, tbl.tableInfo, stage.first.second /* stage */,
+                stage.first.first /* gress */);
         }
     }
-    if (mauasm.by_stage.empty()) {
+    if (mauasm.by_stage.empty() && !phase0OutputAsm) {
         // minimal pipe config for empty program
         out << "stage 0 ingress: {}" << std::endl; }
     return out;

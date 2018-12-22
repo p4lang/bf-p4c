@@ -92,10 +92,15 @@ bool Visualization::preorder(const IR::BFN::Pipe *p) {
     pipe->emplace("deparser", new Util::JsonArray());
     pipesNode->append(pipe);
 
+    // TODO: With new Phase0 support, the Phase0 Info must be derived from
+    // Phase0 node within the parser object. Below code should be moved into
+    // parser once support for multiple parsers is added as each parser can have
+    // a separate phase0 info.
     auto *phase0 = new Util::JsonObject();
-    if (p->phase0Info)
-        usagesToCtxJson(phase0, std::string(p->phase0Info->tableName),
-                        std::string(p->phase0Info->actionName));
+    auto ig_parser = p->thread[INGRESS].parser->to<IR::BFN::LoweredParser>();
+    auto ig_p0 = (ig_parser) ? ig_parser->phase0 : nullptr;
+    if (ig_p0)
+        usagesToCtxJson(phase0, std::string(ig_p0->tableName), std::string(ig_p0->actionName));
     else
         usagesToCtxJson(phase0, "");
     pipe->emplace("phase0", phase0);

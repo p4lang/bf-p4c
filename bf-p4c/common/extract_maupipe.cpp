@@ -1183,28 +1183,6 @@ class ExtractMetadata : public Inspector {
     ParamBinding *bindings;
 };
 
-class ExtractPhase0 : public Inspector {
- public:
-    ExtractPhase0(IR::BFN::Pipe *rv, P4::ReferenceMap *refMap)
-        : rv(rv), refMap(refMap) {}
-
-    void postorder(const IR::BFN::TranslatedP4Control *mau) override {
-        gress_t thread = mau->thread;
-        if (thread == EGRESS) return;
-        BFN::extractPhase0(mau, rv, refMap);
-    }
-
-    void postorder(const IR::BFN::TranslatedP4Parser *parser) override {
-        gress_t thread = parser->thread;
-        if (thread == EGRESS) return;
-        BFN::extractPhase0(parser, rv, refMap);
-    }
-
- private:
-    IR::BFN::Pipe *rv;
-    P4::ReferenceMap *refMap;
-};
-
 struct ExtractChecksum : public Inspector {
     explicit ExtractChecksum(IR::BFN::Pipe* rv) :
         rv(rv) { setName("ExtractChecksumNative"); }
@@ -1313,13 +1291,11 @@ void BackendConverter::convertTnaProgram(const IR::P4Program* program, BFN_Optio
             thread = thread->apply(*simplifyReferences);
             if (auto mau = thread->mau->to<IR::BFN::TranslatedP4Control>()) {
                 mau->apply(ExtractMetadata(rv, bindings));
-                mau->apply(ExtractPhase0(rv, refMap));
                 mau->apply(GetBackendTables(refMap, typeMap, gress, rv->thread[gress].mau,
                                             converted));
             }
             if (auto parser = thread->parser->to<IR::BFN::TranslatedP4Parser>()) {
                 parser->apply(ExtractParser(refMap, typeMap, rv));
-                parser->apply(ExtractPhase0(rv, refMap));
             }
             if (auto dprsr = thread->deparser->to<IR::BFN::TranslatedP4Deparser>()) {
                 dprsr->apply(ExtractDeparser(rv));
@@ -1374,7 +1350,6 @@ void BackendConverter::convertV1Program(const IR::P4Program *program, BFN_Option
             return;
         if (auto mau = thread->mau->to<IR::BFN::TranslatedP4Control>()) {
             mau->apply(ExtractMetadata(rv, bindings));
-            mau->apply(ExtractPhase0(rv, refMap));
             mau->apply(GetBackendTables(refMap, typeMap, gress, rv->thread[gress].mau, converted));
         }
         if (auto parser = thread->parser->to<IR::BFN::TranslatedP4Parser>()) {

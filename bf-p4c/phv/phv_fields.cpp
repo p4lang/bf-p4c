@@ -1220,8 +1220,8 @@ class CollectPardeConstraints : public Inspector {
 
         for (auto fieldList : digest->fieldLists) {
             for (auto flval : fieldList->sources) {
-                f = phv.field(flval->field);
-                f->set_is_digest(true);
+                if (auto f = phv.field(flval->field))
+                    f->set_is_digest(true);
             }
         }
 

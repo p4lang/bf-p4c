@@ -294,14 +294,13 @@ class LoweredParserState : Unit {
 #end
 }
 
-
 /// The lowered representation of a parser. This is the representation used
 /// after PHV allocation. It contains primitives which operate on PHV containers
 /// and numeric constants.
 class LoweredParser : AbstractParser {
 #noconstructor
-    LoweredParser(gress_t gress, LoweredParserState start)
-        : AbstractParser(gress), start(start) {}
+    LoweredParser(gress_t gress, LoweredParserState start, Phase0 phase0)
+        : AbstractParser(gress), start(start), phase0(phase0) {}
 #apply
 
     toString {
@@ -325,6 +324,7 @@ class LoweredParser : AbstractParser {
     /// but which is not part of the packet itself.
     unsigned prePacketDataLengthBytes = 0;
 
+    optional NullOK Phase0 phase0; // only valid for ingress
 #emit
     /// If present, an EPB configuration for this parser. (This is an
     /// egress-specific feature, so we expect this to never be present on

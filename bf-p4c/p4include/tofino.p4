@@ -19,6 +19,8 @@
 #ifndef TOFINO_P4_
 #define TOFINO_P4_
 
+#include<core.p4>
+
 // ----------------------------------------------------------------------------
 // COMMON TYPES
 // ----------------------------------------------------------------------------
@@ -539,6 +541,9 @@ extern T max<T>(T t1, T t2);
 extern T min<T>(T t1, T t2);
 
 extern void invalidate<T>(in T field);
+
+/// Phase0
+extern T port_metadata_unpack<T>(packet_in pkt);
 
 /// Counter
 /// Indexed counter with `size’ independent counter values.

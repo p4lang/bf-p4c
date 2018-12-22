@@ -492,9 +492,20 @@ class TypeSpecParser {
             // TODO(antonin): same as above, we need a way to pass name
             // annotations
             addField(idOffset, "f1", typeSpec);
+        } else if (typeSpec.has_header()) {
+            auto headerName = typeSpec.header().name();
+            auto p_it = typeInfo.headers().find(headerName);
+            BUG_CHECK(p_it != typeInfo.headers().end(),
+                      "Header name '%1%' not found in P4Info map", headerName);
+            P4Id id = idOffset;
+            for (const auto& member : p_it->second.members()) {
+                auto* type = makeTypeBytes(member.type_spec().bit().bitwidth());
+                fields.push_back({prefix + member.name(), id++, type});
+            }
         } else {
             ::error("Error when generating BF-RT info for '%1%' '%2%': "
-                    "only structs, tuples and bitstrings are currently supported for packed type",
+                    "only structs, headers, tuples and bitstrings are "
+                    "currently supported for packed type",
                     instanceType, instanceName);
         }
 
@@ -1346,7 +1357,7 @@ BfRtSchemaGenerator::addPortMetadata(Util::JsonArray* tablesJson,
         auto* fieldsJson = new Util::JsonArray();
         transformTypeSpecToDataFields(
             fieldsJson, portMetadata.typeSpec, "PortMetadata",
-            PortMetadata::name(), PortMetadata::name() + ".");
+            PortMetadata::name());
         for (auto* f : *fieldsJson) {
             addSingleton(dataJson, f->to<Util::JsonObject>(),
                          true /* mandatory */, false /* read-only */);

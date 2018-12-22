@@ -22,12 +22,9 @@ class MauAsmOutput : public MauInspector {
  private:
     struct TableInstance {
         explicit TableInstance(const IR::MAU::Table *table)
-            : tableInfo(table), phase0Info(nullptr) { }
-        explicit TableInstance(const BFN::Phase0Info *phase0)
-            : tableInfo(nullptr), phase0Info(phase0) { }
+            : tableInfo(table) { }
 
         const IR::MAU::Table *tableInfo;
-        const BFN::Phase0Info *phase0Info;
     };
 
     DefaultNext         default_next;
@@ -37,13 +34,6 @@ class MauAsmOutput : public MauInspector {
     profile_t init_apply(const IR::Node *root) override {
         root->apply(default_next);
         return MauInspector::init_apply(root); }
-    bool preorder(const IR::BFN::Pipe *p) override {
-        pipe = p;
-        if (p->phase0Info) {
-            auto tableId = std::make_pair(INGRESS, 0);
-            by_stage[tableId].push_back(TableInstance(p->phase0Info));
-        }
-        return true; }
     bool preorder(const IR::MAU::Table *tbl) override {
         auto tableId = std::make_pair(tbl->gress, tbl->logical_id/16U);
         by_stage[tableId].push_back(TableInstance(tbl));
@@ -146,7 +136,7 @@ class MauAsmOutput : public MauInspector {
     class UnattachedName;
 
  public:
-    explicit MauAsmOutput(const PhvInfo &p) : phv(p) {}
+    explicit MauAsmOutput(const PhvInfo &phv, const IR::BFN::Pipe *pipe) : phv(phv), pipe(pipe) {}
 };
 
 #endif /* BF_P4C_MAU_ASM_OUTPUT_H_ */

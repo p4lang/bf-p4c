@@ -195,6 +195,7 @@ MidEnd::MidEnd(BFN_Options& options) {
     auto evaluator = new P4::EvaluatorPass(&refMap, &typeMap);
     auto skip_controls = new std::set<cstring>();
     cstring args_to_skip[] = { "ingress_deparser", "egress_deparser"};
+    auto errorOnMethodCall = false;
 
     addPasses({
         new P4::EliminateNewtype(&refMap, &typeMap),
@@ -223,7 +224,11 @@ MidEnd::MidEnd(BFN_Options& options) {
         new EliminateEmitHeaders(&refMap, &typeMap),
         new P4::SimplifyComparisons(&refMap, &typeMap),
         new InlineSubparserParameter(&refMap),  // run before CopyStructures
-        new P4::CopyStructures(&refMap, &typeMap),
+        // errorOnMethodCall argument in CopyStructures is defaulted to true.
+        // This means methods or functions returning structs will be flagged as
+        // an error. Here, we set this to false to allow such scenarios.
+        // E.g. Phase0 extern function returns a header struct.
+        new P4::CopyStructures(&refMap, &typeMap, errorOnMethodCall),
         new P4::NestedStructs(&refMap, &typeMap),
         new P4::SimplifySelectList(&refMap, &typeMap),
         new P4::RemoveSelectBooleans(&refMap, &typeMap),

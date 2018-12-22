@@ -51,6 +51,9 @@ class TranslatedP4Parser : P4Parser {
 
     /// The thread this parser is associated with.
     gress_t thread;
+
+    /// Phase0 Info
+    optional NullOK Phase0 phase0;
 }
 
 /// A thread of P4 execution expressed in frontend IR;

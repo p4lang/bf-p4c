@@ -122,7 +122,7 @@ abstract ParserLVal {
     validate {
         CHECK_NULL(field);
         BUG_CHECK(field->is<IR::Member>() || field->is<IR::TempVar>() ||
-                  field->is<IR::Slice>(),
+                  field->is<IR::Slice>() || field->is<IR::ConcreteHeaderRef>(),
                   "FieldLVal contains unexpected value: %1%", field);
     }
 
@@ -132,7 +132,7 @@ abstract ParserLVal {
 /// Parser write dest that will ultimately be backed by a PHV container.
 class FieldLVal : ParserLVal {
     dbprint { out << field; }
-} 
+}
 
 /// Parser write dest that will be backed by non-PHV container.
 class ChecksumLVal : FieldLVal {
@@ -248,6 +248,23 @@ class ParserPvsMatchValue : ParserMatchValue {
     dbprint { out << "name: " << name << " " << size; }
 }
 
+/// Phase0 representation in the parser. The phase0 or port metadata can be
+/// represented through a table in P4-14 or parser extract/extern in P4-16. In
+/// both cases, the representation is converted to a Phase0 node for the backend.
+class Phase0 {
+    IR::IndexedVector<IR::StructField> fields;
+    int size;
+    int handle;
+    cstring tableName;
+    cstring actionName;
+    cstring keyName;
+
+    dbprint {
+        out << "phase0: tableName: " << tableName
+                << " size: " << size << " handle: 0x " << hex(handle) << std::endl;
+        out << "actionName: " << actionName << " keyName: " << keyName << " fields: " << fields; }
+}
+
 /// The high-level representation of a parser state transition.
 class Transition {
 #emit
@@ -341,6 +358,7 @@ class Parser : AbstractParser {
     toString { return gress ? "egress parser" : "ingress parser"; }
 
     ParserState start;
+    optional NullOK Phase0 phase0; // only valid for ingress
 }
 
 /// A list of fields which will be written into a buffer as part of a deparser

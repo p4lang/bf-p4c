@@ -69,7 +69,7 @@ class AsmOutput : public Inspector {
         LOG1("ASM generation for successful compile? " << (_successfulCompile ? "true" : "false"));
 
         if (_successfulCompile) {
-            MauAsmOutput mauasm(phv);
+            MauAsmOutput mauasm(phv, pipe);
             pipe->apply(mauasm);
 
             *out << "version:" << std::endl

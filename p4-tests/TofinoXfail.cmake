@@ -445,11 +445,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/verify-bmv2.p4
   )
 
-p4c_add_xfail_reason("tofino"
-  "error: .* functions or methods returning structures are not supported on this target"
-  extensions/p4_tests/p4_16/serializer.p4
-  )
-
 # p4c_add_xfail_reason("tofino"
 #   "error: No format field or table named"
 #    extensions/p4_tests/p4_14/c8/COMPILER-616/case3331.p4
@@ -579,6 +574,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Wrong number of arguments for method call"
   testdata/p4_16_samples/checksum1-bmv2.p4
+  extensions/p4_tests/p4_16/serializer.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -1318,8 +1314,12 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "FieldLVal contains unexpected value"
+  "error.*Couldn't resolve computed value for extract in state"
   testdata/p4_16_samples/issue1607-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "mirror field does not exist"
   testdata/p4_16_samples/issue562-bmv2.p4
 )
 
