@@ -64,7 +64,7 @@ node ('compiler-svr1 || master') {
         sh "docker pull barefootnetworks/bf-p4c-compilers:${image_tag}"
     }
     parallel (
-        switch_compile_only_and_stful_meters: {
+        switch_compile_only_and_stful_meters_hash_driven: {
             ansiColor('xterm') {
                 timestamps {
                     sh "echo 'Running switch profiles compilation for master'"
@@ -87,7 +87,7 @@ node ('compiler-svr1 || master') {
                     ).trim()
                     sh "echo 'p4c cid: ' $p4c_cid"
                     sh "docker exec ${p4c_cid} cp /mnt/tofino-model /usr/local/bin/"
-                    sh "docker exec ${p4c_cid} ctest -R 'smoketest_programs_stful|smoketest_programs_meters'"
+                    sh "docker exec ${p4c_cid} ctest -R 'smoketest_programs_stful|smoketest_programs_meters|smoketest_programs_hash_driven'"
                     sh "docker container stop ${model_cid}"
                     sh "docker container stop ${p4c_cid}"
                 }

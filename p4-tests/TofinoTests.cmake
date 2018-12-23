@@ -456,6 +456,13 @@ bfn_set_ptf_ports_json_file("tofino" "smoketest_programs_meters" "${CMAKE_CURREN
 # 500s timeout is too little for compiling and testing the entire test, bumping it up
 set_tests_properties("tofino/smoketest_programs_meters" PROPERTIES TIMEOUT 3600)
 
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_hash_driven" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/hash_driven/hash_driven.p4"
+    "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/ptf-tests/hash_driven")
+bfn_set_ptf_ports_json_file("tofino" "smoketest_programs_hash_driven" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/ptf-tests/hash_driven/ports.json")
+
+# 500s timeout is too little for compiling and testing the entire test, bumping it up
+set_tests_properties("tofino/smoketest_programs_hash_driven" PROPERTIES TIMEOUT 3600)
+
 p4c_add_ptf_test_with_ptfdir ("tofino" "miss_clause" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/PD/miss_clause.p4
     "${testExtraArgs} -pd" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/PD/miss_clause.ptf")
 

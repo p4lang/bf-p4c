@@ -26,7 +26,7 @@ env:
     # Run all tofino smoke tests
     - TEST_SUITE="^tofino/.*programs"
       TEST_EXTRA_OPTS="-E"
-      TEST_EXTRA_OPTS2="p4_16|TestRealData|_basic_ipv4|_stful|_meters|_dkm|_exm_smoke_test|_exm_direct_|_exm_direct_1_"
+      TEST_EXTRA_OPTS2="p4_16|TestRealData|_basic_ipv4|_stful|_meters|_hash_driven|_dkm|_exm_smoke_test|_exm_direct_|_exm_direct_1_"
       DOCKERFILE=docker/Dockerfile.tofino
     # Run all jbay tests (including cpplint and gtest)
     - TEST_SUITE="^tofino2|cpplint|gtest|test_p4c_driver"
