@@ -18,6 +18,7 @@ struct Memories {
     static constexpr int LEFT_SIDE_RAMS = LEFT_SIDE_COLUMNS * SRAM_ROWS;
     static constexpr int RIGHT_SIDE_RAMS = RIGHT_SIDE_COLUMNS * SRAM_ROWS;
     static constexpr int MAPRAM_COLUMNS = 6;
+    static constexpr int MAPRAM_MASK = (1U << MAPRAM_COLUMNS) - 1;
     static constexpr int SRAM_DEPTH = 1024;
     static constexpr int TCAM_ROWS = 12;
     static constexpr int TCAM_COLUMNS = 2;
@@ -35,6 +36,7 @@ struct Memories {
     static constexpr int IMEM_LOOKUP_BITS = 3;
     static constexpr int NUM_IDLETIME_BUS = 10;
     static constexpr int MAX_PARTITION_RAMS_PER_ROW = 5;
+    static constexpr int MATCH_CENTRAL_ROW = 4;
 
     static constexpr int LOGICAL_ROW_MISSING_OFLOW = 8;
 
@@ -282,11 +284,11 @@ struct Memories {
             int home_row = -1;
             IR::MAU::ColorMapramAddress cma = IR::MAU::ColorMapramAddress::NOT_SET;
             bool all_placed() const {
-                BUG_CHECK(placed <= needed, "Placed more RAMs than actually needed");
+                BUG_CHECK(placed <= needed, "Placed more color map RAMs than actually needed");
                 return needed == placed;
             }
             int left_to_place() const {
-                BUG_CHECK(placed <= needed, "Placed more RAMs than actually needed");
+                BUG_CHECK(placed <= needed, "Placed more color map RAMs than actually needed");
                 return needed - placed;
             }
 
@@ -301,8 +303,8 @@ struct Memories {
             ordered_set<SRAM_group *> action_groups;
             bool sel_linked() { return sel_group != nullptr; }
             bool act_linked() { return !action_groups.empty(); }
-            bool sel_all_placed() { return sel_group->all_placed(); }
-            bool action_all_placed() {
+            bool sel_all_placed() const { return sel_group->all_placed(); }
+            bool action_all_placed() const {
                 if (action_groups.empty())
                     BUG("No action corresponding with this selector");
                 for (auto *action_group : action_groups) {
@@ -311,10 +313,10 @@ struct Memories {
                 }
                 return true;
             }
-            bool sel_any_placed() {
+            bool sel_any_placed() const {
                 return sel_group->any_placed();
             }
-            bool action_any_placed() {
+            bool action_any_placed() const {
                 if (action_groups.empty())
                     BUG("No action corresponding with this selector");
                 for (auto *action_group : action_groups) {
@@ -323,20 +325,23 @@ struct Memories {
                 }
                 return false;
             }
+
+            bool all_placed() const { return sel_all_placed() && action_all_placed(); }
+
             bool is_act_corr_group(SRAM_group *corr) {
                 return action_groups.find(corr) != action_groups.end();
             }
             bool is_sel_corr_group(SRAM_group *corr) {
                 return corr == sel_group;
             }
-            bool one_action_left() {
+            bool one_action_left() const {
                 int total_unplaced_groups = 0;
                 for (auto *action_group : action_groups)
                     if (action_group->left_to_place() > 0)
                         total_unplaced_groups++;
                 return total_unplaced_groups == 1;
             }
-            int action_left_to_place() {
+            int action_left_to_place() const {
                 int left_to_place = 0;
                 for (auto *action_group : action_groups)
                     left_to_place += action_group->left_to_place();
@@ -376,8 +381,8 @@ struct Memories {
         }
         bool any_placed() { return (placed != 0); }
         bool needs_ab() { return requires_ab && !all_placed(); }
-        bool is_synth_type() { return type == STATS || type == METER || type == REGISTER
-                                      || type == SELECTOR; }
+        bool is_synth_type() const { return type == STATS || type == METER || type == REGISTER
+                                            || type == SELECTOR; }
         bool sel_act_placed(SRAM_group *corr) {
             if (type == ACTION && sel.sel_linked() && sel.is_sel_corr_group(corr)
                 && corr->sel.action_all_placed())
@@ -395,7 +400,7 @@ struct Memories {
                 return depth;
             }
         }
-        int total_left_to_place() {
+        int total_left_to_place() const {
             if (type == SELECTOR) {
                 int action_depth = 0;
                 for (auto *action_group : sel.action_groups)
@@ -405,6 +410,13 @@ struct Memories {
                 return left_to_place();
             }
         }
+
+        int maprams_left_to_place() const {
+            if (is_synth_type())
+                return left_to_place() + cm.left_to_place();
+            return 0;
+        }
+
         // cstring get_name() const;
         UniqueId build_unique_id() const;
         bool same_wide_action(const SRAM_group &a);
@@ -420,6 +432,34 @@ struct Memories {
         std::map<int, int> buses;
         unsigned column_mask = 0;
     };
+
+    enum switchbox_t { ACTION = 0, SYNTH, OFLOW, SWBOX_TYPES };
+
+    struct LogicalRowUser {
+        SRAM_group *group = nullptr;
+        switchbox_t bus = SWBOX_TYPES;
+        bitvec RAM_mask;
+        bitvec map_RAM_mask;
+
+        operator bool() const { return group != nullptr; }
+        void clear_masks() { RAM_mask.clear(); map_RAM_mask.clear(); }
+        void clear() { group = nullptr; bus = SWBOX_TYPES; clear_masks(); }
+        bool set() const { return !(RAM_mask.empty() && map_RAM_mask.empty()); }
+
+        bitvec color_map_RAM_mask() const {
+            BUG_CHECK(group->type == SRAM_group::METER, "Cannot get color map RAMs of "
+                      " a non-METER");
+            return map_RAM_mask - (RAM_mask >> LEFT_SIDE_COLUMNS);
+        }
+
+        void dbprint(std::ostream &out) const {
+            out << *group << " bus " << bus << " RAM mask: 0x" << RAM_mask
+                << " map RAM mask: 0x" << map_RAM_mask;
+        }
+        LogicalRowUser(SRAM_group *g, switchbox_t b) : group(g), bus(b) {}
+    };
+
+
     /** Information about particular use on a row during allocate_all_swbox_users */
     struct swbox_fill {
         SRAM_group *group = nullptr;
@@ -437,7 +477,6 @@ struct Memories {
 
     // Used for array indices in allocate_all_action
     enum RAM_side_t { LEFT = 0, RIGHT, RAM_SIDES };
-    enum switchbox_t { ACTION = 0, SYNTH, OFLOW, SWBOX_TYPES };
 
     safe_vector<table_alloc *>       tables;
     safe_vector<table_alloc *>       exact_tables;
@@ -455,7 +494,7 @@ struct Memories {
     safe_vector<table_alloc *>       stateful_tables;
     ordered_set<SRAM_group *>        action_bus_users;
     ordered_set<SRAM_group *>        synth_bus_users;
-    ordered_set<SRAM_group *>        must_be_placed_in_half;
+    ordered_set<const SRAM_group *>  must_place_in_half;
     safe_vector<table_alloc *>       gw_tables;
     safe_vector<table_alloc *>       no_match_hit_tables;
     safe_vector<table_alloc *>       no_match_miss_tables;
@@ -465,11 +504,63 @@ struct Memories {
     safe_vector<table_alloc *>       idletime_tables;
     safe_vector<SRAM_group *>        idletime_groups;
 
+
+    // Switchbox Related Helper functions
+    int phys_to_log_row(int physical_row, RAM_side_t side) const;
+    int log_to_phys_row(int logical_row, RAM_side_t *side = nullptr) const;
+    void determine_synth_RAMs(int &RAMs_available, int row, const SRAM_group *curr_oflow) const;
+    void determine_action_RAMs(int &RAMs_available, int row, RAM_side_t side,
+        const safe_vector<LogicalRowUser> &lrus) const;
+    bool alu_pathway_available(SRAM_group *synth_table, int row,
+        const SRAM_group *curr_oflow) const;
+    int lowest_row_to_overflow(const SRAM_group *candidate, int row) const;
+    int open_rams_between_rows(int highest_logical_row, int lowest_logical_row, bitvec sides) const;
+    int open_maprams_between_rows(int highest_phys_row, int lowest_phys_row) const;
+    bool overflow_possible(const SRAM_group *candidate, int row, RAM_side_t side) const;
+    bool can_be_placed_in_half(const SRAM_group *candidate, int row, RAM_side_t side,
+        const SRAM_group *synth, int RAMs_avail_on_row) const;
+    bool break_other_overflow(const SRAM_group *candidate, const SRAM_group *curr_oflow, int row,
+        RAM_side_t side) const;
+    bool satisfy_sel_swbox_constraints(const SRAM_group *candidate,
+        const SRAM_group *sel_oflow, SRAM_group *synth) const;
+    void determine_fit_on_logical_row(SRAM_group **fit_on_logical_row, SRAM_group *candidate,
+        int RAMs_avail) const;
+    void determine_max_req(SRAM_group **max_req, SRAM_group *candidate) const;
+    void candidates_for_synth_row(SRAM_group **fit_on_logical_row, SRAM_group **largest_req,
+        int row, const SRAM_group *curr_oflow, const SRAM_group *sel_oflow, int RAMs_avail) const;
+    void candidates_for_action_row(SRAM_group **fit_on_logical_row, SRAM_group **largest_req,
+        int row, RAM_side_t side, const SRAM_group *curr_oflow, const SRAM_group *sel_oflow,
+        int RAMs_avail, SRAM_group *synth) const;
+    void determine_synth_logical_row_users(SRAM_group *fit_on_logical_row,
+        SRAM_group *max_req, SRAM_group *curr_oflow, safe_vector<LogicalRowUser> &lrus,
+        int RAMs_avail) const;
+    void determine_action_logical_row_users(SRAM_group *fit_on_logical_row,
+        SRAM_group *max_req, SRAM_group *curr_oflow, safe_vector<LogicalRowUser> &lrus,
+        int RAMs_avail) const;
+    void determine_RAM_masks(safe_vector<LogicalRowUser> &lrus, int row, RAM_side_t side,
+        int RAMs_available, bool is_synth_type) const;
+    void one_color_map_RAM_mask(LogicalRowUser &lru, bitvec &map_RAM_in_use,
+        bool &stats_bus_used, int row) const;
+    void determine_color_map_RAM_masks(safe_vector<LogicalRowUser> &lrus, int row) const;
+    void determine_logical_row_masks(safe_vector<LogicalRowUser> &lrus, int row,
+         RAM_side_t side, int RAMs_avaialble, bool is_synth_type) const;
+    void find_swbox_candidates(safe_vector<LogicalRowUser> &lrus, int row, RAM_side_t side,
+        SRAM_group *curr_oflow, SRAM_group *sel_oflow);
+    void fill_RAM_use(LogicalRowUser &lru, int row, RAM_side_t side);
+    void fill_color_map_RAM_use(LogicalRowUser &lru, int row);
+    void remove_placed_group(SRAM_group *candidate, RAM_side_t side);
+    void update_must_place_in_half(const SRAM_group *candidate, switchbox_t bus);
+    void fill_swbox_side(safe_vector<LogicalRowUser> &lrus, int row, RAM_side_t side);
+    void swbox_logical_row(safe_vector<LogicalRowUser> &lrus, int row, RAM_side_t side,
+        SRAM_group *curr_oflow, SRAM_group *sel_oflow);
+    void calculate_curr_oflow(safe_vector<LogicalRowUser> &lrus, SRAM_group **curr_oflow,
+        SRAM_group **synth_oflow, RAM_side_t side) const;
+    void calculate_sel_oflow(safe_vector<LogicalRowUser> &lrus, SRAM_group **sel_oflow) const;
+    // Switchbox related helper functions end
+
     int allocation_count = 0;
-
     ordered_map<const IR::MAU::AttachedMemory *, table_alloc *> shared_attached;
-
-    unsigned side_mask(RAM_side_t side);
+    unsigned side_mask(RAM_side_t side) const;
     unsigned partition_mask(RAM_side_t side);
     int mems_needed(int entries, int depth, int per_mem_row, bool is_twoport);
     void clear_table_vectors();
@@ -521,57 +612,7 @@ struct Memories {
     void swbox_bus_selectors_indirects();
     void swbox_bus_meters_counters();
     void swbox_bus_stateful_alus();
-    void swbox_logical_row(int row, RAM_side_t side, swbox_fill candidates[SWBOX_TYPES],
-                           swbox_fill &curr_oflow, swbox_fill &sel_oflow);
-    void find_swbox_candidates(int row, RAM_side_t side, swbox_fill candidates[SWBOX_TYPES],
-                                bool stats_available, bool meter_available,
-                                swbox_fill &curr_oflow, swbox_fill &sel_oflow);
-    void adjust_RAMs_available(swbox_fill &curr_oflow, int RAMs_avail[OFLOW], int row,
-                               RAM_side_t side, bool stats_available);
 
-    int half_RAMs_available(int row, bool right_only);
-    int half_map_RAMs_available(int row);
-    int synth_half_RAMs_to_place();
-    int synth_half_map_RAMs_to_place();
-    int action_half_RAMs_to_place();
-    bool action_table_best_candidate(SRAM_group *next_synth, swbox_fill &sel_oflow);
-    bool action_table_in_half(SRAM_group *action_table, SRAM_group *next_synth,
-                              swbox_fill &sel_oflow);
-    bool synth_in_half(SRAM_group *synth_table, int row);
-
-    void best_candidates(swbox_fill best_fits[OFLOW], swbox_fill nexts[OFLOW],
-                         swbox_fill &curr_oflow, swbox_fill &sel_oflow,
-                         bool stats_available, bool meter_available, RAM_side_t side, int row,
-                         int RAMs_avail[OFLOW]);
-    void fill_out_masks(swbox_fill candidates[SWBOX_TYPES], switchbox_t order[SWBOX_TYPES],
-                        int RAMs[SWBOX_TYPES], int row, RAM_side_t side);
-    void init_candidate(swbox_fill candidates[SWBOX_TYPES], switchbox_t order[SWBOX_TYPES],
-                        bool bus_used[SWBOX_TYPES], switchbox_t type, int &order_index,
-                        swbox_fill choice, bool test_action_bus);
-    void determine_candidates_order(swbox_fill candidates[SWBOX_TYPES], swbox_fill best_fits[OFLOW],
-                              swbox_fill &curr_oflow, swbox_fill nexts[OFLOW],
-                              int RAMs_avail[OFLOW], RAM_side_t side,
-                              switchbox_t order[SWBOX_TYPES]);
-    void set_up_RAM_counts(swbox_fill candidates[SWBOX_TYPES], switchbox_t order[SWBOX_TYPES],
-                           int RAMs_avail[OFLOW], int RAMs[SWBOX_TYPES]);
-    void color_mapram_candidates(swbox_fill candidates[SWBOX_TYPES], RAM_side_t side,
-        bool stats_available);
-    void set_color_maprams(swbox_fill &candidate, unsigned &avail_maprams, bool stats_available);
-    void fill_color_mapram_use(swbox_fill &candidate, int row, RAM_side_t side);
-    void fill_RAM_use(swbox_fill &candidate, int row, RAM_side_t side, switchbox_t type);
-    void remove_placed_group(swbox_fill &candidate, RAM_side_t side);
-    void fill_swbox_side(swbox_fill candidates[SWBOX_TYPES], int row, RAM_side_t side);
-    void calculate_curr_oflow(swbox_fill candidates[SWBOX_TYPES], swbox_fill &curr_oflow,
-                              swbox_fill &synth_oflow, RAM_side_t side);
-    void calculate_sel_oflow(swbox_fill candidates[SWBOX_TYPES], swbox_fill &sel_oflow);
-    /**
-    bool can_place_selector(action_fill &curr_oflow, SRAM_group *curr_check,
-                            int suppl_RAMs_available, int action_RAMs_available,
-                            action_fill &sel_unplaced);
-    void selector_candidate_setup(action_fill candidates[SWBOX_TYPES], action_fill &curr_oflow,
-                                  action_fill &sel_unplaced, action_fill nexts[OFLOW],
-                                  int order[SWBOX_TYPES], int RAMs_avail[OFLOW]);
-    */
     void log_allocation(safe_vector<table_alloc *> *tas, UniqueAttachedId::type_t type);
     void log_allocation(safe_vector<table_alloc *> *tas, UniqueAttachedId::pre_placed_type_t ppt);
     void action_bus_users_log();

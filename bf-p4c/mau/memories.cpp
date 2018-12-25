@@ -138,7 +138,7 @@ bool Memories::SRAM_group::same_wide_action(const SRAM_group &a) {
 }
 
 
-unsigned Memories::side_mask(RAM_side_t side) {
+unsigned Memories::side_mask(RAM_side_t side) const {
     switch (side) {
         case LEFT:
             return (1 << LEFT_SIDE_COLUMNS) - 1;
@@ -1787,7 +1787,7 @@ void Memories::swbox_bus_meters_counters() {
 void Memories::find_swbox_bus_users() {
     action_bus_users.clear();
     synth_bus_users.clear();
-    must_be_placed_in_half.clear();
+    must_place_in_half.clear();
 
     for (auto *ta : action_tables) {
         int width = 1;
@@ -1814,906 +1814,846 @@ void Memories::find_swbox_bus_users() {
     swbox_bus_stateful_alus();
 }
 
-/** Due to the color mapram allocation algorithm described over color_mapram_candidates, the
- *  number of RAMs for synth2port tables and action tables are actually different.
+/**
+ * These are the RAMs available for synth2port tables on a particular logical row.  Due to
+ * color mapram constraints, currently occasionally not all RAMs on a row are available
+ * to synth2port RAMs, as they themselves require map RAMs, and thus cannot be allocated
+ * for color map RAM space.
+ *
+ * A color map RAM is read and written at different times, and requires two addresses, one
+ * at processing time, and one at EOP.  The EOP information is from the meter ALU, and requires
+ * the same overflowing constraints as the meter RAMs for addresses.  Thus the current setup
+ * is to reserve the overflow position for a meter until both its color maprams and RAMs
+ * are fully placed.
+ *
+ * The other address at processing time can either come from the statistics bus or the idletime
+ * bus.  It is already known which bus is used at this point, but if this statistics bus
+ * is used, then the stats bus cannot be used for anything else, and the RAMs cannot be
+ * dedicated to synth2port 
  */
-void Memories::adjust_RAMs_available(swbox_fill &curr_oflow, int RAMs_avail[OFLOW],
-        int row, RAM_side_t side, bool stats_available) {
-    RAMs_avail[ACTION] = bitcount(~sram_inuse[row] & side_mask(side));
-    if (side == LEFT)
+void Memories::determine_synth_RAMs(int &RAMs_available, int row,
+        const SRAM_group *curr_oflow) const {
+    int unallocated_RAMs = bitcount(~sram_inuse[row] & side_mask(RIGHT));
+
+    if (!(curr_oflow &&
+          curr_oflow->type == SRAM_group::METER &&
+          curr_oflow->cm.left_to_place() > 0)) {
+        RAMs_available = unallocated_RAMs;
         return;
+    }
+    // RAMs that have Match RAMs on them already.  Map RAMs not used for Exact Match
+    int match_RAMs_allocated = bitcount(sram_inuse[row] & side_mask(RIGHT));
 
-    RAMs_avail[SYNTH] = RAMs_avail[ACTION];
+    int curr_oflow_synth_RAMs = std::min(unallocated_RAMs, curr_oflow->left_to_place());
+    int extra_synth_RAMs = 0;
 
-    if (!(curr_oflow && curr_oflow.group->type == SRAM_group::METER))
-        return;
-
-    // RAMs currently being used by Matching
-    int open_maprams = bitcount(sram_inuse[row] & side_mask(side));
-
-    int synth_rams_required = std::min(RAMs_avail[SYNTH], curr_oflow.group->left_to_place());
     // If other synth2port tables can be placed, as the curr_oflow table is going to be placed,
     // the color maprams must be placed, so that the address from the meter alu can overflow
     // to the color mapram.  By reserving the color mapram, you cannot reserve the corresponding
     // RAM to a synth2port table, as that RAM would require a corresponding map RAM as well.
-    if (synth_rams_required < RAMs_avail[SYNTH]) {
-        int maprams_avail = open_maprams + (RAMs_avail[SYNTH] - synth_rams_required);
-        int color_maprams_to_allocate
-            = std::min(maprams_avail, curr_oflow.group->cm.left_to_place());
-
-        int undedicated_maprams = maprams_avail - color_maprams_to_allocate;
-        // If the color mapram requires a stats address, then the mapram must appear on a stats
-        // homerow.  Furthermore, all color maprams must be on the same row in order to not
-        // use the overflow address, which is required for the meter address on color mapram
-        // write.  (Perhaps requiring multiple stats ram homerows?).  Also if the table could
-        // fit in a single row, it'd be fine as well.
-
-        if (curr_oflow.group->cm.cma == IR::MAU::ColorMapramAddress::STATS) {
-            if (stats_available
-                || color_maprams_to_allocate < curr_oflow.group->cm.left_to_place()) {
-                undedicated_maprams = 0;
+    int possible_for_synth_RAMs = unallocated_RAMs - curr_oflow_synth_RAMs;
+    if (possible_for_synth_RAMs > 0) {
+        if (curr_oflow->cm.cma == IR::MAU::ColorMapramAddress::STATS) {
+            // If the color mapram requires a stats address, then the mapram must appear on a stats
+            // homerow.  Furthermore, all color maprams must be on the same row in order to not
+            // use the overflow address, which is required for the meter address on color mapram
+            // write.  (Perhaps requiring multiple stats ram homerows?).  Also if the table could
+            // fit in a single row, it'd be fine as well.
+            if ((row % 2) == 0) {
+                extra_synth_RAMs = 0;
+            } else {
+                extra_synth_RAMs = possible_for_synth_RAMs;
             }
+        } else if (curr_oflow->cm.cma == IR::MAU::ColorMapramAddress::IDLETIME) {
+            // Anything that is impossible for synth2port RAMs is because a dedicated map RAM
+            // must be on that particular RAM.  This RAM can be used for action data
+            int impossible_for_synth_RAMs =
+                std::max(curr_oflow->cm.left_to_place() - match_RAMs_allocated, 0);
+            extra_synth_RAMs = std::max(possible_for_synth_RAMs - impossible_for_synth_RAMs, 0);
         }
-
-        // The undedicated maprams might be under matching rams, and SYNTH rams <= ACTION rams
-        RAMs_avail[SYNTH] = std::min(synth_rams_required + undedicated_maprams,
-                                     RAMs_avail[ACTION]);
     }
+    RAMs_available = curr_oflow_synth_RAMs + extra_synth_RAMs;
+    LOG5("\tRAMs available for synth2port " << RAMs_available);
 }
 
-void Memories::init_candidate(swbox_fill candidates[SWBOX_TYPES], switchbox_t order[SWBOX_TYPES],
-                              bool bus_used[SWBOX_TYPES], switchbox_t type, int &order_index,
-                              swbox_fill choice, bool test_action_bus) {
-     candidates[type] = choice;
-     bus_used[type] = true;
-     BUG_CHECK(order_index < SWBOX_TYPES, "Only a limited number of buses per row");
-     order[order_index++] = type;
-     if (test_action_bus)
-         bus_used[ACTION] |= candidates[type].group->needs_ab();
-}
-
-/** Determines the potential candidates, as well as the order, of the candidates to be placed
- *  in this row.  The following constraints mapped in these decision are:
- *
- *  Synth2Port tables can only have 1 home row, as you can only have one ALU coordinated to
- *  a synth2port table.  However, action data tables can have multiple home rows, as only one bus
- *  is going to fire due to addressing, and the other all 0 buses will be ORed into the same
- *  location on the action data bus.
- *
- *  The algorithm prefers to place synth2port tables if it can, because there is less
- *  space for these tables in the first place.  It goes best fit, then overflow, then next
- *  largest candidate as choices, for synth2port, then for action.  One can put a best fit only
- *  because the overflow can just skip over this particular row.
+/**
+ * Any leftover RAMs not used by synth2port tables are now available for action data.
  */
-void Memories::determine_candidates_order(swbox_fill candidates[SWBOX_TYPES],
-                                    swbox_fill best_fits[OFLOW], swbox_fill &curr_oflow,
-                                    swbox_fill nexts[OFLOW], int RAMs_avail[OFLOW],
-                                    RAM_side_t side, switchbox_t order[SWBOX_TYPES]) {
-    bool bus_used[SWBOX_TYPES] = {false, false, false};
-    int order_i = 0;
-
-    if (side == RIGHT) {
-        if (best_fits[SYNTH] && best_fits[SYNTH].group->left_to_place() == RAMs_avail[SYNTH]
-        && !bus_used[ACTION] && !bus_used[SYNTH] && !bus_used[OFLOW]) {
-            init_candidate(candidates, order, bus_used, SYNTH, order_i, best_fits[SYNTH], true);
-        }
-
-        if (curr_oflow && curr_oflow.group->type != SRAM_group::ACTION && !bus_used[OFLOW]) {
-            init_candidate(candidates, order, bus_used, OFLOW, order_i, curr_oflow, false);
-        }
-        if (nexts[SYNTH] && !bus_used[SYNTH]) {
-            init_candidate(candidates, order, bus_used, SYNTH, order_i, nexts[SYNTH], true);
-        }
+void Memories::determine_action_RAMs(int &RAMs_available, int row, RAM_side_t side,
+        const safe_vector<LogicalRowUser> &lrus) const {
+    int synth_RAMs_used = 0;
+    for (auto &lru : lrus) {
+        synth_RAMs_used += lru.RAM_mask.popcount();
     }
-
-
-    if (best_fits[ACTION] && best_fits[ACTION].group->left_to_place() == RAMs_avail[ACTION]
-        && !bus_used[ACTION] && !bus_used[SYNTH] && !bus_used[OFLOW]) {
-        init_candidate(candidates, order, bus_used, ACTION, order_i, best_fits[ACTION], false);
-    }
-
-
-    if (curr_oflow && curr_oflow.group->type == SRAM_group::ACTION && !bus_used[OFLOW]) {
-        init_candidate(candidates, order, bus_used, OFLOW, order_i, curr_oflow, false);
-    }
-
-    if (nexts[ACTION] && !bus_used[ACTION]) {
-        init_candidate(candidates, order, bus_used, ACTION, order_i, nexts[ACTION], false);
-    }
+    int unallocated_RAMs = bitcount(~sram_inuse[row] & side_mask(side));
+    RAMs_available = std::max(unallocated_RAMs - synth_RAMs_used, 0);
+    LOG5("\tRAMs available for action data " << RAMs_available);
 }
 
-/** Is a test within best candidates to see if even though sel unplaced is not yet finished,
- *  its action can be placed within this next row so that a new selector can be placed as well
- *
- *  Currently commented out as this doesn't fit in, but the optimization could be used in
- *  another PR
-bool Memories::can_place_selector(action_fill &curr_oflow, SRAM_group *curr_check,
-                                  int suppl_RAMs_available, int action_RAMs_available,
-                                  action_fill &sel_unplaced) {
-    Currently removed as it is an optimization that needs a better approach
-    if (!sel_unplaced.group->sel.one_action_left())
-        return false;
 
-    if (curr_oflow.group && curr_oflow.group->type != SRAM_group::ACTION) {
-        if (curr_check->left_to_place() > suppl_RAMs_available) {
+/**
+ * In order to begin placing a synth2port table, there has to be a data pathway to the ALU
+ * for that table.  The current check only allows meters/selectors/stateful ALUs to begin
+ * on an odd row, and statistics tables to begin on an even row.  Perhaps, when the analysis
+ * can verify that the overflow bus has not yet been used, this can be loosened
+ */
+bool Memories::alu_pathway_available(SRAM_group *synth_table, int row,
+        const SRAM_group *curr_oflow) const {
+    BUG_CHECK(synth_table->is_synth_type(), "Alu pathway only required for a synth2port table");
+    if ((row % 2) == 0) {
+        if (synth_table->type != SRAM_group::STATS)
             return false;
-        }
-        if (sel_unplaced.group->sel.one_action_left()
-            && (sel_unplaced.group->sel.action_left_to_place() + curr_check->left_to_place()
-            > action_RAMs_available))
+        // If the meter is to use statistics bus for the color map RAMs
+        if (curr_oflow && curr_oflow->type == SRAM_group::METER &&
+            curr_oflow->cm.left_to_place() > 0 && curr_oflow->cm.require_stats())
             return false;
-
     } else {
-        if (sel_unplaced.group->sel.one_action_left()
-            && (sel_unplaced.group->sel.action_left_to_place() + 1 > action_RAMs_available))
+        if (synth_table->type == SRAM_group::STATS)
             return false;
     }
     return true;
 }
-*/
 
-/** This function called is used in the particular scenario where a previous selector's action
- *  can be placed within the same row as a new selector.  This has the possibility to use
- *  up potentially some RAMs in a particular row
+int Memories::phys_to_log_row(int physical_row, RAM_side_t side) const {
+    return physical_row * RAM_SIDES + static_cast<int>(side);
+}
+
+int Memories::log_to_phys_row(int logical_row, RAM_side_t *side) const {
+    if (side)
+        *side = static_cast<RAM_side_t>(logical_row % 2);
+    return logical_row / 2;
+}
+
+/**
+ * In Tofino specifically, due to a timing issue, the maximum number of rows a RAM can be
+ * from its home row is 6 physical rows.  Thus if the home row is on physical row 7, the lowest
+ * row a RAM can be on is physical row 2.
  *
- *  Currently removed as it is an optimization that needs a better approach
-void Memories::selector_candidate_setup(action_fill candidates[SWBOX_TYPES],
-                                        action_fill &curr_oflow, action_fill &sel_oflow,
-                                        action_fill nexts[OFLOW], int order[SWBOX_TYPES],
-                                        int RAMs_avail[OFLOW]) {
-    bool bus_used[SWBOX_TYPES] = {false, false, false};
-    int order_i = 0;
-    if (
-
-    if (curr_oflow && curr_oflow.group->type != SRAM_group::ACTION && !bus_used[OFLOW])
-        set_cand_and_order(candidates, order, bus_used, OFLOW, order_i, curr_oflow, false);
-
-    // FIXME: Potentially could save room if the action group that is overflowing is the
-    // sel_unplaced group
-
-    if (curr_oflow && curr_oflow.group->type != SRAM_group::ACTION) {
-        candidates[SYNTH] = nexts[SYNTH];
-        order[SUPPL_IND] = 0;
-        if (candidates[SYNTH].group->left_to_place() < RAMs_avail[ACTION]) {
-            candidates[ACTION].group = sel_unplaced.group->sel.action_group_left();
-            order[ACTION_IND] = 1;
-            if (candidates[SYNTH].group->left_to_place() + candidates[ACTION].group->left_to_place()
-                < RAMs_avail[SYNTH]) {
-                candidates[OFLOW].group = curr_oflow.group;
-                order[OFLOW_IND] = 2;
-            }
-        }
+ * For synth2port tables, this is extremely restrictive.  However, for action data tables,
+ * a new home row can be started, as only one action data RAM will activate at most.  As long
+ * as the home rows have the exact same action data bus mux setup, this pattern is fine
+ */
+int Memories::lowest_row_to_overflow(const SRAM_group *candidate, int logical_row) const {
+    int lowest_phys_row = 0;
+    if (Device::currentDevice() == Device::TOFINO) {
+        int phys_row = log_to_phys_row(logical_row);
+        if (candidate->recent_home_row >= 0)
+            phys_row = log_to_phys_row(candidate->recent_home_row);
+        lowest_phys_row = std::max(phys_row - MAX_DATA_SWBOX_ROWS, 0);
+    } else if (Device::currentDevice() == Device::JBAY) {
+        int phys_row = log_to_phys_row(logical_row);
+        lowest_phys_row = (phys_row / MATCH_CENTRAL_ROW) * MATCH_CENTRAL_ROW;
     } else {
-        candidates[ACTION].group = sel_unplaced.group->sel.action_group_left();
-        order[ACTION_IND] = 0;
-        candidates[SYNTH] = nexts[SYNTH];
-        order[SUPPL_IND] = 1;
-        // FIXME: Double check fo putting the correct information
-        if (candidates[ACTION].group->left_to_place() + candidates[SYNTH].group->left_to_place()
-            > RAMs_avail[ACTION]) {
-            if (candidates[ACTION].group->left_to_place() + 1 != RAMs_avail[ACTION])
-                BUG("We have an issue in the double selector algorithm");
-        } else if (candidates[ACTION].group->left_to_place()
-                   + candidates[SYNTH].group->left_to_place()
-                   < RAMs_avail[ACTION]
-                   && curr_oflow && curr_oflow.group != candidates[ACTION].group
-                   && candidates[SYNTH].group != curr_oflow.group) {
-            order[OFLOW_IND] = 2;
-            candidates[OFLOW].group = curr_oflow.group;
-        }
+        BUG("Unrecognized device for overflow calculation");
     }
+    return candidate->is_synth_type() ? phys_to_log_row(lowest_phys_row, RIGHT)
+                                      : phys_to_log_row(lowest_phys_row, LEFT);
 }
-*/
 
-/** Given a list of candidates, and an order in which they can be placed, determine how
- *  many RAMs each of the candidates get.  If a candidate requires no RAMs, and no maprams,
- *  that candidate is cleared.
+int Memories::open_rams_between_rows(int highest_logical_row, int lowest_logical_row,
+       bitvec sides) const {
+    int rv = 0;
+    for (int r = highest_logical_row; r >= lowest_logical_row; r--) {
+        RAM_side_t side = RAM_SIDES;
+        int phys_row = log_to_phys_row(r, &side);
+        if (!sides.getbit(static_cast<int>(side)))
+            continue;
+        rv += bitcount(side_mask(side) & ~sram_inuse[phys_row]);
+    }
+    return rv;
+}
+
+int Memories::open_maprams_between_rows(int highest_phys_row, int lowest_phys_row) const {
+    int rv = 0;
+    for (int r = highest_phys_row; r >= lowest_phys_row; r--) {
+        rv += bitcount(MAPRAM_MASK & ~mapram_inuse[r]);
+    }
+    return rv;
+}
+
+/**
+ * This verifies that there are enough open RAMs between the current row, and the lowest
+ * physical row due to the maximum number of rows possible for overflow to begin placing this
+ * table.  
  */
-void Memories::set_up_RAM_counts(swbox_fill candidates[SWBOX_TYPES],
-                                 switchbox_t order[SWBOX_TYPES], int RAMs_avail[OFLOW],
-                                 int RAMs[SWBOX_TYPES]) {
-    int RAMs_used = 0;
-    int maprams_used = 0;
-    bool synth_oflow_fully_placed = true;
-    for (int i = 0; i < SWBOX_TYPES; i++) {
-        if (order[i] == SWBOX_TYPES) continue;
-        auto &candidate = candidates[order[i]];
-        BUG_CHECK(candidate, "No candidate when an order is specified for this type");
-        BUG_CHECK(!(candidate.group->all_placed() && candidate.group->cm.all_placed()),
-                  "Trying to place a candidate that should have been already completely placed");
-
-        auto type = candidate.group->is_synth_type() ? SYNTH : ACTION;
-
-        int RAMs_needed = candidate.group->left_to_place();
-        RAMs[i] = std::min(RAMs_needed, RAMs_avail[type] - RAMs_used);
-
-        if (order[i] == OFLOW && type == SYNTH && RAMs_needed > RAMs[i])
-            synth_oflow_fully_placed = false;
-        BUG_CHECK(RAMs[i] >= 0, "Cannot have negative RAMs available");
-        RAMs_used += RAMs[i];
-        if (type == SYNTH)
-            maprams_used += RAMs[i];
-    }
-
-    for (int i = 0; i < SWBOX_TYPES; i++) {
-        if (order[i] != SWBOX_TYPES) {
-            auto &candidate = candidates[order[i]];
-            if (RAMs[i] > 0) continue;
-            if (!candidate.group->cm.all_placed()) {
-                if (order[i] == OFLOW)
-                    continue;
-                if (order[i] == SYNTH && synth_oflow_fully_placed)
-                    continue;
-            }
-            candidate.clear();
-        }
-    }
-}
-
-int Memories::half_RAMs_available(int row, bool right_only) {
-    int lowest_row = row >= LOGICAL_ROW_MISSING_OFLOW / 2 ? LOGICAL_ROW_MISSING_OFLOW / 2 : 0;
-    int RAMs = 0;
-    for (int i = row; i >= lowest_row; i--) {
-        if (right_only)
-            RAMs += bitcount(side_mask(RIGHT) & ~sram_inuse[i]);
-        else
-            RAMs += bitcount(side_mask(RAM_SIDES) & ~sram_inuse[i]);
-    }
-    return RAMs;
-}
-
-int Memories::half_map_RAMs_available(int row) {
-    int lowest_row = row >= LOGICAL_ROW_MISSING_OFLOW / 2 ? LOGICAL_ROW_MISSING_OFLOW / 2 : 0;
-
-    int map_RAMs = 0;
-    unsigned mapram_mask = (1 << MAPRAM_COLUMNS) - 1;
-    for (int i = row; i >= lowest_row; i--) {
-        map_RAMs += bitcount(mapram_mask & ~mapram_inuse[i]);
-    }
-    return map_RAMs;
-}
-
-int Memories::synth_half_RAMs_to_place() {
-    int RAMs = 0;
-    for (auto grp : must_be_placed_in_half) {
-        if (!grp->is_synth_type())
-            continue;
-        RAMs += grp->left_to_place();
-    }
-    return RAMs;
-}
-
-int Memories::synth_half_map_RAMs_to_place() {
-    int map_RAMs = 0;
-    for (auto grp : must_be_placed_in_half) {
-        if (!grp->is_synth_type())
-            continue;
-        map_RAMs += grp->left_to_place() + grp->cm.left_to_place();
-    }
-    return map_RAMs;
-}
-
-int Memories::action_half_RAMs_to_place() {
-    int RAMs = 0;
-    for (auto grp : must_be_placed_in_half) {
-        if (grp->is_synth_type())
-            continue;
-        RAMs += grp->left_to_place();
-    }
-    return RAMs;
-}
-
-bool Memories::action_table_best_candidate(SRAM_group *next_synth, swbox_fill &sel_oflow) {
-    bool must_check = false;
-
-#ifdef HAVE_JBAY
-    if (Device::currentDevice() == Device::JBAY)
-        must_check = true;
-#endif /* HAVE_JBAY */
-
-    if (!must_check)
+bool Memories::overflow_possible(const SRAM_group *candidate, int row, RAM_side_t side) const {
+    if (!candidate->is_synth_type())
         return true;
-    if ((next_synth && next_synth->type == SRAM_group::SELECTOR) || sel_oflow)
+    int logical_row = phys_to_log_row(row, side);
+    int lowest_logical_row = lowest_row_to_overflow(candidate, logical_row);
+    if (candidate->type == SRAM_group::ACTION)
+        lowest_logical_row = 0;
+    bitvec sides;
+    sides.setbit(RIGHT);
+    int available_rams = open_rams_between_rows(logical_row, lowest_logical_row, sides);
+    if (available_rams < candidate->left_to_place())
         return false;
     return true;
 }
 
-/** The only major difference in the memory algorithm in Tofino vs. JBay is that one
- *  cannot overflow any information over match central, specifically:
- *      1. Data through the HV switchbox
- *      2. Color mapram data and from the meter ALU
- *      3. Selector Addresses to their associated Action Data RAMs
- *
- *  The algorithm thus needs to prevent a synth2port table from being placed within a half
- *  if it fully cannot be placed within that half.  For action rows, it is less important,
- *  as the action row can start a brand new homerow.  However, a synth2port cannot begin
- *  on a new ALU.
- *
- *  Currently in the driver a synth2port table is only allocated to one stateful ALU, and
- *  cannot be moved around.  Furthermore, in the direct case, one can only use movereg across
- *  a single logical table, which means to move entries, the driver would have to support
- *  a level above movereg.
+/**
+ * The purpose of this function is to guarantee by starting to place this table, by placing
+ * this table in full, the tables that are currently overflowing will not break their
+ * overflow constraint of the maximum number of possible rows.
  */
-bool Memories::action_table_in_half(SRAM_group *action_table, SRAM_group *next_synth,
-                                   swbox_fill &sel_oflow) {
-    bool must_check = false;
-
-#ifdef HAVE_JBAY
-     if (Device::currentDevice() == Device::JBAY)
-         must_check = true;
-#endif /* HAVE_JBAY */
-
-    if (!must_check)
+bool Memories::break_other_overflow(const SRAM_group *candidate, const SRAM_group *curr_oflow,
+        int row, RAM_side_t side) const {
+    if (!(curr_oflow && curr_oflow->is_synth_type()))
         return true;
-
-    if (next_synth && next_synth->type == SRAM_group::SELECTOR) {
-        if (next_synth->sel.action_groups.count(action_table) == 0) {
-            return false;
-        }
-    }
-    if (sel_oflow) {
-        if (sel_oflow.group->sel.action_groups.count(action_table) == 0)
-            return false;
-    }
-    return true;
-}
-
-bool Memories::synth_in_half(SRAM_group *synth_table, int row) {
-    bool must_check = false;
-#ifdef HAVE_JBAY
-    if (Device::currentDevice() == Device::JBAY)
-         must_check = true;
-#endif /* HAVE_JBAY */
-
-    if (!must_check)
+    if (!candidate->is_synth_type())
         return true;
-    int s2p_RAMs = synth_table->left_to_place();
-    int map_RAMs = synth_table->left_to_place() + synth_table->cm.left_to_place();
-    int total_RAMs = synth_table->total_left_to_place();
-
-
-    if (total_RAMs + action_half_RAMs_to_place() + synth_half_RAMs_to_place()
-        > half_RAMs_available(row, false))
-        return false;
-    if (s2p_RAMs + synth_half_RAMs_to_place() > half_RAMs_available(row, true))
-        return false;
-    if (map_RAMs + synth_half_map_RAMs_to_place() > half_map_RAMs_available(row))
+    int logical_row = phys_to_log_row(row, side);
+    int lowest_logical_row = lowest_row_to_overflow(curr_oflow, logical_row);
+    bitvec sides;
+    sides.setbit(RIGHT);
+    int available_rams = open_rams_between_rows(logical_row, lowest_logical_row, sides);
+    int total_RAMs_required = candidate->left_to_place() + curr_oflow->left_to_place();
+    if (available_rams < total_RAMs_required)
         return false;
     return true;
 }
 
-/** Determine potential candidates for the allocation algorithm to choose from.  Specifically
- *  best_fits are the one that could best fit in the current row, and nexts are the one with
- *  the greatest requirements.
+/**
+ * The only major difference in the memory algorithm in Tofino vs. JBay is that one
+ * cannot overflow any information over match central, specifically:
+ *     1. Data through the HV switchbox
+ *     2. Color mapram data and from the meter ALU
+ *     3. Selector Addresses to their associated Action Data RAMs
  *
- *  If the selector overflow is used, the algorithm will not currently place a selector,
- *  even if one could possibly be placed on a the row, as it would not require an overflow.
- *  This is an optimization that one could add later.
+ * The algorithm thus needs to prevent a synth2port table from being placed within a half
+ * if it fully cannot be placed within that half.  For action rows, it is less important,
+ * as the action row can start a brand new homerow.  However, a synth2port cannot begin
+ * on a new ALU.
+ *
+ * Currently in the driver a synth2port table is only allocated to one stateful ALU, and
+ * cannot be moved around.  Furthermore, in the direct case, one can only use movereg across
+ * a single logical table, which means to move entries, the driver would have to support
+ * a level above movereg.
+ *
+ * This also has to guarantee that all action data tables associated with a selector are
+ * in the same physical half as the selector.  Again, possibly this can be loosened up
+ * as selectors are never direct, and thus don't require movereg, but the driver can
+ * currently interpret only one selector per stage.
  */
-void Memories::best_candidates(swbox_fill best_fits[OFLOW], swbox_fill nexts[OFLOW],
-                               swbox_fill &curr_oflow, swbox_fill &sel_oflow,
-                               bool stats_available, bool meter_available, RAM_side_t side,
-                               int row, int RAMs_avail[OFLOW]) {
-    int min_left = 0;
-    int min_diff = 0;
-
-    bool stats_bus_available = stats_available ||
-                               (curr_oflow && curr_oflow.group->cm.require_stats());
-    if (side == RIGHT) {
-        /* Determine the best fit supplementary table on the row */
-
-        for (auto synth_table : synth_bus_users) {
-            if (curr_oflow.group == synth_table)
-                continue;
-            BUG_CHECK(synth_table->placed == 0, "Cannot have partially placed synth2port table "
-                                                "that isn't overflow");
-            if (!stats_bus_available && synth_table->type == SRAM_group::STATS)
-                continue;
-            if (!meter_available && synth_table->type != SRAM_group::STATS)
-                continue;
-            if (synth_table->type == SRAM_group::SELECTOR && sel_oflow)
-                continue;
-            if (!synth_in_half(synth_table, row))
-                continue;
-            int RAM_diff = synth_table->left_to_place() - RAMs_avail[SYNTH];
-            if (RAM_diff >= 0 && RAM_diff < min_diff) {
-                best_fits[SYNTH].group = synth_table;
-                min_diff = RAM_diff;
-            }
-        }
-        min_left = 0;
-        /* Determine the supplementary table with the most left to place */
-        for (auto synth_table : synth_bus_users) {
-            if (curr_oflow.group == synth_table)
-                continue;
-            if (!stats_bus_available && synth_table->type == SRAM_group::STATS)
-                continue;
-            if (!meter_available && synth_table->type != SRAM_group::STATS)
-                continue;
-            if (synth_table->type == SRAM_group::SELECTOR && sel_oflow) {
-                /*
-                && !can_place_selector(curr_oflow, synth_table,
-                               RAMs_avail[SYNTH], RAMs_avail[ACTION], sel_unplaced)) {
-                */
-                continue;
-            }
-
-            if (!synth_in_half(synth_table, row))
-                continue;
-            if (synth_table->total_left_to_place() > min_left) {
-                nexts[SYNTH].group = synth_table;
-                min_left = synth_table->total_left_to_place();
-            }
-        }
-    }
-
-
-    /*
-    if (sel_unplaced && nexts[SYNTH] && nexts[SYNTH].group->type == SRAM_group::SELECTOR) {
-        return;
-    }
-    */
-
-    /* Determine the best fit action on the current row.  Cannot be current oflow group */
-    min_diff = 0;
-    for (auto action_table : action_bus_users) {
-        if (curr_oflow.group == action_table)
-            continue;
-        if (action_table->sel.sel_linked() && !action_table->sel.sel_any_placed())
-            continue;
-        if (!action_table_best_candidate(nexts[SYNTH].group, sel_oflow))
-            continue;
-
-        int RAM_diff = action_table->left_to_place() - RAMs_avail[ACTION];
-        if (RAM_diff >= 0 && RAM_diff < min_diff) {
-            best_fits[ACTION].group = action_table;
-            min_diff = RAM_diff;
-        }
-    }
-
-    min_left = 0;
-    /* Determine the action with the most left to place */
-    for (auto action_table : action_bus_users) {
-        if (curr_oflow.group == action_table) {
-            continue;
-        }
-        // Operates under the assumption that next synth will be attempted before next action.
-        // Assumed from the determine_candidates_order algorithm
-        if (action_table->sel.sel_linked() && !action_table->sel.sel_any_placed()) {
-            if (!(nexts[SYNTH] && nexts[SYNTH].group == action_table->sel.sel_group)) {
-                continue;
-            }
-        }
-
-        if (!action_table_in_half(action_table, nexts[SYNTH].group, sel_oflow))
-            continue;
-
-        if (action_table->left_to_place() > min_left) {
-            nexts[ACTION].group = action_table;
-            min_left = action_table->left_to_place();
-        }
-    }
-
-#ifdef HAVE_JBAY
-    // The algorithm, in order to place the action tables within the same half, must guarantee
-    // that there is enough room for that particular table
+bool Memories::can_be_placed_in_half(const SRAM_group *candidate, int row, RAM_side_t side,
+        const SRAM_group *synth, int avail_RAMs_on_row) const {
     if (Device::currentDevice() == Device::TOFINO)
-        return;
+        return true;
 
-    if (curr_oflow && must_be_placed_in_half.count(curr_oflow.group) == 0
-        && nexts[SYNTH] && nexts[SYNTH].group->type == SRAM_group::SELECTOR) {
-        BUG_CHECK(curr_oflow.group->type == SRAM_group::ACTION, "An overflowing synth2port table "
-                  "must be in placed in that half");
-        curr_oflow.clear();
-    }
-#endif /* HAVE_JBAY */
-}
+    if (must_place_in_half.find(candidate) != must_place_in_half.end())
+        return true;
+    int synth_RAMs = 0;
+    int map_RAMs = 0;
+    int action_RAMs = 0;
 
-/** Given a number of RAMs to allocate, this function finds available RAMs and saves the masks
- *  used with the candidate.
- */
-void Memories::fill_out_masks(swbox_fill candidates[SWBOX_TYPES], switchbox_t order[SWBOX_TYPES],
-                              int RAMs[SWBOX_TYPES], int row, RAM_side_t side) {
-    unsigned init_RAM_mask = ~sram_inuse[row] & side_mask(side);
-    unsigned used_RAM_mask = 0;
-    for (int i = 0; i < SWBOX_TYPES; i++) {
-        // Initialized to SWBOX_TYPES, as this would be out of bounds of the array
-        if (order[i] == SWBOX_TYPES) continue;
-        auto &candidate = candidates[order[i]];
-        if (!candidate) continue;
-        if (RAMs[i] == 0 && !candidate.group->cm.all_placed()) continue;
-
-        BUG_CHECK(RAMs[i] > 0, "Empty RAMs count impossible in fill_out_masks function");
-        unsigned current_mask = 0;
-        int RAMs_filled = 0;
-
-        for (int j = 0; j < SRAM_COLUMNS && RAMs_filled < RAMs[i]; j++) {
-            if (((1 << j) & init_RAM_mask & ~used_RAM_mask) == 0)
-                continue;
-            current_mask |= (1 << j);
-            RAMs_filled++;
+    ///> Note that though the synth2port table has been selected to be placed, it has not yet
+    ///> been placed.  Thus it will not yet be part of the must_place_in_half set at this point.
+    if (synth && synth->type == SRAM_group::SELECTOR) {
+        if (candidate->sel.sel_group == synth) {
+            BUG_CHECK(candidate->type == SRAM_group::ACTION, "Error coordinating selector "
+                      "and action profile in memories");
+            return true;
         }
-        used_RAM_mask |= current_mask;
-        candidate.mask = current_mask;
-        if (candidate.group->type != SRAM_group::ACTION)
-            candidate.mapram_mask = current_mask;
-    }
-}
-
-/** This is the algorithm to determine which candidates to place on this particular row, as well
- *  as what RAMs to use on particular row.  Potential candidates are decided in the
- *  best_candidates function based on what is currently available.  These may be limited due to
- *  table currently used in overflow.
- *
- *  The function determine_candidates_order selects the potential candidates for this row.
- *  The function set_up_RAM_counts then determine the number of RAMs each of these candidates get.
- *  Finally, fill_out_masks and color_mapram_candidates determine which RAMs/maprams go to
- *  which candidate.
- *
- *  Unfortunately the functions are not entirely independent, and corner cases will give rise
- *  to particular lines within each function.  Hopefull this is detailed throughout the comments.
- */
-void Memories::find_swbox_candidates(int row, RAM_side_t side, swbox_fill candidates[SWBOX_TYPES],
-                                      bool stats_available, bool meter_available,
-                                      swbox_fill &curr_oflow, swbox_fill &sel_oflow) {
-    if (action_bus_users.empty() && synth_bus_users.empty()) {
-        return;
+        action_RAMs += synth->sel.action_left_to_place();
     }
 
-    int RAMs_avail[OFLOW] = {0, 0};
-
-    // Due to color mapram constraints, the RAMs_available for SYNTH vs. ACTION may be different
-    adjust_RAMs_available(curr_oflow, RAMs_avail, row, side, stats_available);
-    // No best fits or nexts for oflow, as there is only one oflow location
-    swbox_fill best_fits[OFLOW];
-    swbox_fill nexts[OFLOW];
-
-    // Determines the candidates and potential order
-    best_candidates(best_fits, nexts, curr_oflow, sel_oflow, stats_available, meter_available,
-                    side, row, RAMs_avail);
-    if (!best_fits[ACTION] && !best_fits[SYNTH] && !curr_oflow && !nexts[ACTION] && !nexts[SYNTH]) {
-        if (curr_oflow && curr_oflow.group->type == SRAM_group::METER
-            && !curr_oflow.group->cm.all_placed()) {
-            candidates[OFLOW] = curr_oflow;
-            color_mapram_candidates(candidates, side, stats_available);
+    ///> Gather all of the constraints for the RAMs that are already locked into this match
+    ///> central half
+    for (auto must_place : must_place_in_half) {
+        if (must_place->is_synth_type()) {
+            synth_RAMs += must_place->left_to_place();
+            map_RAMs += must_place->left_to_place() + must_place->cm.left_to_place();
+        } else {
+            action_RAMs += must_place->left_to_place();
         }
-        bool actions_available = false;
-        for (auto action_group : action_bus_users) {
-            if (!action_group->sel.sel_linked() ||
-                (action_group->sel.sel_linked() && action_group->sel.sel_any_placed())) {
-                actions_available = true;
-                break;
+    }
+
+    int lowest_phys_row = (row / MATCH_CENTRAL_ROW) * MATCH_CENTRAL_ROW;
+    bitvec right_side(1U << RIGHT);
+    bitvec all_sides(LEFT, RAM_SIDES);
+    int avail_synth_RAMs = side == RIGHT ? avail_RAMs_on_row : 0;
+    int avail_RAMs = avail_RAMs_on_row;
+
+    ///> The RAMs available on the current RAM line are known, so we add this sum to
+    ///> all available RAMs on the line below
+    avail_synth_RAMs += open_rams_between_rows(phys_to_log_row(row, side) - 1,
+                                               phys_to_log_row(lowest_phys_row, RIGHT),
+                                               right_side);
+    avail_RAMs += open_rams_between_rows(phys_to_log_row(row, side) - 1,
+                                         phys_to_log_row(lowest_phys_row, LEFT),
+                                         all_sides);
+
+    ///> The map RAMs are completely free
+    int avail_map_RAMs = open_maprams_between_rows(row, lowest_phys_row);
+
+    int candidate_synth_RAMs = 0;
+    int candidate_map_RAMs = 0;
+    int candidate_action_RAMs = 0;
+
+    if (candidate->is_synth_type()) {
+        candidate_synth_RAMs += candidate->left_to_place();
+        candidate_map_RAMs += candidate->left_to_place() + candidate->cm.left_to_place();
+        if (candidate->type == SRAM_group::SELECTOR) {
+            for (auto ag : candidate->sel.action_groups) {
+                candidate_action_RAMs += ag->left_to_place();
             }
         }
-        if (!actions_available) {
-            LOG3("No actions available, due to the selector");
+    } else {
+        candidate_action_RAMs += candidate->left_to_place();
+    }
+
+    ///> For standard overflow constraints
+    if (candidate_synth_RAMs + synth_RAMs > avail_synth_RAMs)
+        return false;
+    ///> For color overflow constraints
+    if (candidate_map_RAMs + map_RAMs > avail_map_RAMs)
+        return false;
+
+    ///> For selector overflow constraints
+    if (candidate_synth_RAMs + synth_RAMs + candidate_action_RAMs + action_RAMs > avail_RAMs) {
+        if (candidate->is_synth_type())
+            return false;
+        ///> Action data RAMs don't have overflow issues, but in order to make sure
+        ///> that all selection based action RAMs are prioritized, this check will not start
+        ///> too large action data tables.
+        else if (action_RAMs > 0)
+            return false;
+    }
+    return true;
+}
+
+/**
+ * This function verifies that by placing this candidate, the selector switchbox constraints
+ * are not broken.  The selector switch box is described in uArch section 6.2.10.5.5
+ * The Hash Word Selection Block, summarized below.
+ *
+ * Basically, the offset calculated by the selector has to be added to the action data RAM.  This
+ * is done by sending an up to 7 bit address from the selector ALU to the associated action data
+ * RAMs through a switchbox.  The constraint is that the logical row of the selector ALU must
+ * be >= the logical row of any action data RAM.  Furthermore, there is only one pathway through
+ * the selector switch box, so it is impossible for two selectors to be overflowing their address.
+ *
+ * This function verifies that this constraint is not violated.  It is the most annoying part of
+ * this algorithm, as it is the only instance where synth2port tables and action data tables
+ * cannot be thought of as separate entities, but as having intertwined constraints.
+ * 
+ * FIXME: This function is also overly conservative.  Say the overflowing selectors action data
+ * tables were able to finish on this logical (or even physical row).  Then a new selector could
+ * be started.  However, because synth2port tables are selected before action data tables, this
+ * information is not known ahead of time, and would be some extra work to both lock in an
+ * action data strategy early, and then indicate that when selecting the action data candidates.
+ */
+bool Memories::satisfy_sel_swbox_constraints(const SRAM_group *candidate,
+        const SRAM_group *sel_oflow, SRAM_group *synth) const {
+    if (candidate->type != SRAM_group::SELECTOR && candidate->type != SRAM_group::ACTION)
+        return true;
+
+    ///> Prevent any selector from being placed until the previous selector is fully placed
+    if (candidate->type == SRAM_group::SELECTOR) {
+        if (sel_oflow != nullptr)
+            return false;
+        BUG_CHECK(!candidate->sel.action_any_placed(), "A selector already has action data "
+                  "tables placed, breaking selector switchbox constraints");
+        return true;
+    }
+
+    if (candidate->type == SRAM_group::ACTION) {
+        if (!(candidate->sel.sel_group == nullptr ||
+              candidate->sel.sel_group == sel_oflow ||
+              candidate->sel.sel_group == synth))
+            return false;
+        return true;
+    }
+    BUG("Unreachable in selector swbox constraints");
+    return false;
+}
+
+/**
+ * Determine best fits, i.e. candidate that requires the most number of RAMs that can
+ * still fit on the row 
+ */
+void Memories::determine_fit_on_logical_row(SRAM_group **fit_on_logical_row,
+        SRAM_group *candidate, int RAMs_avail) const {
+    if (RAMs_avail - candidate->left_to_place() > 0) {
+        if (*fit_on_logical_row) {
+            if (candidate->left_to_place() > (**fit_on_logical_row).left_to_place())
+                *fit_on_logical_row = candidate;
+        } else {
+            *fit_on_logical_row = candidate;
+        }
+    }
+}
+
+void Memories::determine_max_req(SRAM_group **max_req, SRAM_group *candidate) const {
+    if (*max_req) {
+        ///> Selectors also include their action data
+        if ((**max_req).total_left_to_place() < candidate->total_left_to_place())
+            *max_req = candidate;
+    } else {
+        *max_req = candidate;
+    }
+}
+
+/**
+ * Determine the best-fit and the maximum requirement candidate for the SYNTH bus.
+ */
+void Memories::candidates_for_synth_row(SRAM_group **fit_on_logical_row,
+        SRAM_group **max_req, int row, const SRAM_group *curr_oflow, const SRAM_group *sel_oflow,
+        int RAMs_avail) const {
+    for (auto synth_table : synth_bus_users) {
+        if (curr_oflow == synth_table)
+            continue;
+        LOG5("\tSynth candidate " << synth_table);
+        BUG_CHECK(!synth_table->any_placed(), "Cannot start a synth2port table and not have "
+                  "it as non-overflowing");
+        if (!alu_pathway_available(synth_table, row, curr_oflow))
+            continue;
+        LOG6("\t    Alu pathway available");
+        if (!overflow_possible(synth_table, row, RIGHT))
+            continue;
+        LOG6("\t    Overflow is possible");
+        if (!satisfy_sel_swbox_constraints(synth_table, sel_oflow, nullptr))
+            continue;
+        LOG6("\t    Satisfies swbox constraints");
+        if (!can_be_placed_in_half(synth_table, row, RIGHT, nullptr, RAMs_avail))
+            continue;
+
+        LOG5("\tCan be max requirement");
+        determine_max_req(max_req, synth_table);
+
+        ///> FIXME: Because these calculations are based on RAMs only, the meter color
+        ///> maprams cannot yet be determined if they will also not require overflow
+        ///> needs.  Therefore, meters cannot yet be best fit
+        if (synth_table->type == SRAM_group::METER && synth_table->cm.left_to_place() > 0)
+            continue;
+        if (!break_other_overflow(synth_table, curr_oflow, row, RIGHT))
+            continue;
+        LOG5("\tCan be the best fit");
+        determine_fit_on_logical_row(fit_on_logical_row, synth_table, RAMs_avail);
+    }
+}
+
+void Memories::candidates_for_action_row(SRAM_group **fit_on_logical_row,
+        SRAM_group **max_req, int row, RAM_side_t side, const SRAM_group *curr_oflow,
+        const SRAM_group *sel_oflow, int RAMs_avail, SRAM_group *synth) const {
+    for (auto action_table : action_bus_users) {
+        if (curr_oflow == action_table)
+            continue;
+        LOG5("\t  Action candidate " << action_table);
+        BUG_CHECK(!action_table->all_placed(), "Cannot be a candidate for action table if fully "
+                  "placed");
+        if (synth && synth->needs_ab())
+            continue;
+        if (!overflow_possible(action_table, row, side))
+            continue;
+        LOG6("\t\tOverflow possible");
+        if (!satisfy_sel_swbox_constraints(action_table, sel_oflow, synth))
+            continue;
+        LOG6("\t\tSwitchbox selector satisfied");
+        if (!can_be_placed_in_half(action_table, row, side, synth, RAMs_avail))
+            continue;
+        LOG6("\t\tCan be placed in half");
+        LOG5("\t  Can be max requirement");
+        determine_max_req(max_req, action_table);
+
+
+        if (!break_other_overflow(action_table, curr_oflow, row, side))
+            continue;
+        LOG5("\t  Can fit on logical row");
+        determine_fit_on_logical_row(fit_on_logical_row, action_table, RAMs_avail);
+    }
+}
+
+/**
+ * Determines the user of the SYNTH bus, based on overflow restrictions and best-fit
+ * properties.
+ */
+void Memories::determine_synth_logical_row_users(SRAM_group *fit_on_logical_row,
+        SRAM_group *max_req, SRAM_group *curr_oflow, safe_vector<LogicalRowUser> &lrus,
+        int RAMs_avail) const {
+    bool synth_bus_used = false;
+    // If a synth2port is overflowing, and we can finish the table on a single row while using
+    // all possible RAMs, then we place the single row table
+    if (curr_oflow && curr_oflow->is_synth_type()) {
+        if (fit_on_logical_row &&
+            curr_oflow->left_to_place() + fit_on_logical_row->left_to_place() >= RAMs_avail) {
+            lrus.emplace_back(fit_on_logical_row, SYNTH);
+            synth_bus_used = true;
+        }
+    }
+
+    // Next we will try to finish the overflow table
+    if (curr_oflow && curr_oflow->is_synth_type())
+        lrus.emplace_back(curr_oflow, OFLOW);
+
+    // Last choice will be for the largest requirements on synth2port
+    if (max_req && !synth_bus_used) {
+        lrus.emplace_back(max_req, SYNTH);
+        synth_bus_used = true;
+    }
+}
+
+void Memories::determine_action_logical_row_users(SRAM_group *fit_on_logical_row,
+        SRAM_group *max_req, SRAM_group *curr_oflow, safe_vector<LogicalRowUser> &lrus,
+        int RAMs_avail) const {
+    // If a action table is overflowing and we can finish a table on a single row while using
+    // all possible RAMs, then we place the single row table
+    bool action_bus_used = false;
+    if (curr_oflow && !curr_oflow->is_synth_type()) {
+        if (fit_on_logical_row &&
+            curr_oflow->left_to_place() + fit_on_logical_row->left_to_place() >= RAMs_avail) {
+            lrus.emplace_back(fit_on_logical_row, ACTION);
+            action_bus_used = true;
+        }
+    }
+
+    // Next we try to finish the overflow table
+    if (curr_oflow && !curr_oflow->is_synth_type())
+        lrus.emplace_back(curr_oflow, OFLOW);
+
+    // Last choice will be for the largest requirements on synth2port
+    if (max_req && !action_bus_used) {
+        lrus.emplace_back(max_req, ACTION);
+        action_bus_used = true;
+    }
+}
+
+/**
+ * This determines which RAMs (and corresponding map RAMs for addressing synth2port tables)
+ * each candidate will be using
+ */
+void Memories::determine_RAM_masks(safe_vector<LogicalRowUser> &lrus, int row, RAM_side_t side,
+        int RAMs_available, bool is_synth_type) const {
+    bitvec RAM_in_use;
+    bitvec map_RAM_in_use;
+    int allocated_RAMs = 0;
+
+    for (auto &lru : lrus) {
+        RAM_in_use |= lru.RAM_mask;
+        map_RAM_in_use |= lru.map_RAM_mask;
+    }
+
+    RAM_in_use |= bitvec(sram_inuse[row] & side_mask(side));
+    int start_ram = side == LEFT ? 0 : LEFT_SIDE_COLUMNS;
+    int end_ram = side == LEFT ? LEFT_SIDE_COLUMNS : SRAM_COLUMNS;
+
+    for (auto &lru : lrus) {
+        auto candidate = lru.group;
+        ///> This function is called twice, once for synth and once for action data.  However,
+        ///> the synth2port tables are already in the vector
+        if (candidate->is_synth_type() != is_synth_type) {
+            BUG_CHECK(lru.set(), "Determine RAM usage cannot be called this way");
+            continue;
+        }
+
+        int allocated_RAMs_per_lru = 0;
+        for (int ram = start_ram; ram < end_ram; ram++) {
+            ///> Don't place more RAMs than are available
+            if (allocated_RAMs == RAMs_available)
+                break;
+            ///> Don't place more RAMs than required per candidate
+            if (allocated_RAMs_per_lru == candidate->left_to_place())
+                break;
+            if (!RAM_in_use.getbit(ram)) {
+                RAM_in_use.setbit(ram);
+                lru.RAM_mask.setbit(ram);
+                allocated_RAMs++;
+                allocated_RAMs_per_lru++;
+                if (candidate->is_synth_type()) {
+                    map_RAM_in_use.setbit(ram - start_ram);
+                    lru.map_RAM_mask.setbit(ram - start_ram);
+                }
+            }
+        }
+    }
+}
+
+/** 
+ * Color maprams are separate maprams that have to be reserved with a meter.  Color is Tofino
+ * is stored as a 2bit field, and a mapram can store up to 4 colors per row.  The color maprams
+ * are used to store information as the packet comes in to the MAU stage, as well as when the
+ * packet leaves the switch.  The total constraints for how color maprams must be laid out are
+ * detailed in a few sections.  First is 6.2.8.4.9 Map RAM Addressing.  The switchbox constraints
+ * are detailed in sections 6.2.11.1.7 Meter Color Map RAM Read Switchbox and 6.2.11.1.8 Meter
+ * Color Map RAM Write Switchbox.  Finally the constraints are summarized in 6.2.13.4 Meter
+ * Color Map RAMs.
+ *
+ * Essentially, reads and writes happen at different times within a meter color mapram, and thus
+ * are accessed differently.  First is on read, the meter uses either the home row meter address
+ * or an overflow address bus to lookup the correct location.  This means that nothing else
+ * on that row can use that overflow bus, unless it is the meter that corresponds to that
+ * bus.
+ *
+ * On a write to the color mapram, the address used is either an idletime or stats address bus,
+ * In general, it is preferable to use an idletime bus, as they're less constrained.  However,
+ * occasionally you must use a stats address bus, and thus that stats address bus cannot be
+ * accessing any other table.
+ *
+ * Also on a write, the meter provides the new color to a color mapram through a color mapram
+ * switchbox.  Similar to the selector or data switchbox, only one color can pass between rows.
+ * Thus, two meters cannot require to go through the same color mapram switchbox.
+ *
+ * You might wonder how the algorithm deals with all of these constraints.  The simple solution
+ * is to just require both the RAMs the color maprams to both be placed before the next
+ * synth2port table can be placed.  This is not too big of an issue, as both Action Data tables
+ * and exact match tables do not require maprams, and thus can be placed in the same location
+ * as the color mapram.  However, because of this constraint, the number of RAMs available
+ * for synth2port tables and action data tables may be different.  Thus the need of the
+ * function adjust_RAMs_available is specified.
+ */
+void Memories::one_color_map_RAM_mask(LogicalRowUser &lru, bitvec &map_RAM_in_use,
+        bool &stats_bus_used, int row) const {
+    auto candidate = lru.group;
+    if (!(candidate->type == SRAM_group::METER && candidate->cm.left_to_place() > 0))
+        return;
+
+    int available_map_RAMs = (bitvec(MAPRAM_MASK) - map_RAM_in_use).popcount();
+    if (available_map_RAMs == 0)
+        return;
+
+    // Only can use one stats bus for the color map RAMs
+    if (candidate->cm.cma == IR::MAU::ColorMapramAddress::STATS) {
+        if (candidate->cm.left_to_place() > available_map_RAMs)
             return;
-        }
-        LOG3("Nothing to place");
-        return;
+        if ((row % 2) == 1)
+            return;
+        if (stats_bus_used)
+            return;
+        stats_bus_used = true;
     }
+    int allocated_map_RAMs = 0;
 
-    switchbox_t order[SWBOX_TYPES] = {SWBOX_TYPES, SWBOX_TYPES, SWBOX_TYPES};
-
-    /*
-    if (sel_unplaced && nexts[SYNTH] && nexts[SYNTH].group->type == SRAM_group::SELECTOR) {
-        selector_candidate_setup(candidates, curr_oflow, sel_unplaced, nexts, order, RAMs_avail);
-    }
-    */
-
-    determine_candidates_order(candidates, best_fits, curr_oflow, nexts, RAMs_avail, side, order);
-    int RAMs[SWBOX_TYPES] = {0, 0, 0};
-    set_up_RAM_counts(candidates, order, RAMs_avail, RAMs);
-    fill_out_masks(candidates, order, RAMs, row, side);
-    color_mapram_candidates(candidates, side, stats_available);
-}
-
-/** Determine the masks for an individual candidates color maprams */
-void Memories::set_color_maprams(swbox_fill &candidate, unsigned &avail_maprams,
-        bool stats_available) {
-    int maprams_needed = candidate.group->cm.left_to_place();
-    int maprams_placed = 0;
-    unsigned mapram_mask = 0;
-
-    // If the stats bus is required, must wait until a stats bus is available, as well as
-    // must be able to place all of the stats based color maprams
-    if (candidate.group->cm.require_stats()) {
-        if (!stats_available)
-            avail_maprams = 0U;
-        if (candidate.group->cm.left_to_place() > static_cast<int>(bitcount(avail_maprams))) {
-            avail_maprams = 0U;
-        }
-    }
-
-    for (int i = LEFT_SIDE_COLUMNS; i < SRAM_COLUMNS && maprams_placed < maprams_needed; i++) {
-        if (((1 << i) & avail_maprams) == 0) continue;
-        mapram_mask |= (1 << i);
-        maprams_placed++;
-    }
-    avail_maprams &= ~mapram_mask;
-    candidate.mapram_mask |= mapram_mask;
-}
-
-/** Color maprams are separate maprams that have to be reserved with a meter.  Color is Tofino
- *  is stored as a 2bit field, and a mapram can store up to 4 colors per row.  The color maprams
- *  are used to store information as the packet comes in to the MAU stage, as well as when the
- *  packet leaves the switch.  The total constraints for how color maprams must be laid out are
- *  detailed in a few sections.  First is 6.2.8.4.9 Map RAM Addressing.  The switchbox constraints
- *  are detailed in sections 6.2.11.1.7 Meter Color Map RAM Read Switchbox and 6.2.11.1.8 Meter
- *  Color Map RAM Write Switchbox.  Finally the constraints are summarized in 6.2.13.4 Meter
- *  Color Map RAMs.
- *
- *  Essentially, reads and writes happen at different times within a meter color mapram, and thus
- *  are accessed differently.  First is on read, the meter uses either the home row meter address
- *  or an overflow address bus to lookup the correct location.  This means that nothing else
- *  on that row can use that overflow bus, unless it is the meter that corresponds to that
- *  bus.
- *
- *  On a write to the color mapram, the address used is either an idletime or stats address bus,
- *  In general, it is preferable to use an idletime bus, as they're less constrained.  However,
- *  occasionally you must use a stats address bus, and thus that stats address bus cannot be
- *  accessing any other table.
- *
- *  Also on a write, the meter provides the new color to a color mapram through a color mapram
- *  switchbox.  Similar to the selector or data switchbox, only one color can pass between rows.
- *  Thus, two meters cannot require to go through the same color mapram switchbox.
- *
- *  You might wonder how the algorithm deals with all of these constraints.  The simple solution
- *  is to just require both the RAMs the color maprams to both be placed before the next
- *  synth2port table can be placed.  This is not too big of an issue, as both Action Data tables
- *  and exact match tables do not require maprams, and thus can be placed in the same location
- *  as the color mapram.  However, because of this constraint, the number of RAMs available
- *  for synth2port tables and action data tables may be different.  Thus the need of the
- *  function adjust_RAMs_available is specified.
- *
- *  This function is similar to fill_out_masks, except that it is for color maprams only,
- *  rather than maprams.  Right now the overflowing meter's color maprams are placed before
- *  any home row meter would be placed.  Similar to the RAMs, a mapram order could be
- *  determined, but I wanted to handle this separately.
- */
-void Memories::color_mapram_candidates(swbox_fill candidates[SWBOX_TYPES], RAM_side_t side,
-        bool stats_available) {
-    if (side != RIGHT)
-        return;
-    unsigned avail_maprams = side_mask(side);
-    for (int i = 0; i < SWBOX_TYPES; i++) {
-        if (!candidates[i]) continue;
-        avail_maprams &= ~candidates[i].mapram_mask;
-    }
-
-
-    if (candidates[OFLOW] && candidates[OFLOW].group->type == SRAM_group::METER) {
-        if (!candidates[OFLOW].group->cm.all_placed())
-            set_color_maprams(candidates[OFLOW], avail_maprams, stats_available);
-    }
-
-    if (candidates[SYNTH] && !candidates[SYNTH].group->cm.all_placed()) {
-        set_color_maprams(candidates[SYNTH], avail_maprams, stats_available);
-        // FIXME: Could have a similar algorithm to set_up_RAM_counts for color mapram,
-        // instead of having separate color mapram information known throughout function.
-        // Currently unnecessary because the cm_order never changes.  I think that a function
-        // before this should clear all unused candidates rather than this
-        if (candidates[SYNTH].mapram_mask == 0)
-            candidates[SYNTH].clear();
-    }
-}
-
-/** This converts the swbox_fill masks to allocations within the Memories::Use object.  Also
- *  links wide action tables underneath the same Use objects
- */
-void Memories::fill_swbox_side(swbox_fill candidates[SWBOX_TYPES], int row, RAM_side_t side) {
-    for (int i = 0; i < SWBOX_TYPES; i++) {
-        auto sb_type = static_cast<switchbox_t>(i);
-        auto &candidate = candidates[i];
-        if (!candidate) continue;
-        if (bitcount(candidate.mask) == 0 && bitcount(candidate.mapram_mask) == 0)
-            BUG("Trying to fill in a use object with nothing to allocate");
-        fill_RAM_use(candidates[i], row, side, sb_type);
-        if (candidate.group->type == SRAM_group::METER)
-            fill_color_mapram_use(candidate, row, side);
-        remove_placed_group(candidate, side);
-    }
-
-    // FIXME: Potentially need to set up the difference between wide action tables within
-    // the assembly output
-    if (candidates[ACTION] && candidates[OFLOW]
-        && candidates[ACTION].group->same_wide_action(*candidates[OFLOW].group)) {
-        if (candidates[ACTION].group == candidates[OFLOW].group) {
-            BUG("Shouldn't be the same for action and oflow");
+    for (int mr = 0; mr < MAPRAM_COLUMNS; mr++) {
+        if (allocated_map_RAMs == candidate->cm.left_to_place())
+            break;
+        if (!map_RAM_in_use.getbit(mr)) {
+            map_RAM_in_use.setbit(mr);
+            lru.map_RAM_mask.setbit(mr);
+            allocated_map_RAMs++;
         }
     }
 }
 
-/** Fill out the Memories::Use object with the RAMs reserved by the candidate, as well as any
- *  other useful data structures.  If the table is synth2port, the algorithm also reserves
- *  maprams as well.
+/**
+ * This determines the color map RAMs each candidate uses.  Overflow map RAMs are prioritized
+ * for the reason that currently no meter can be the fit_on_logical_row candidate, and thus
+ * the synth2port table is always second.  Perhaps if this check is ever folded in, the
+ * correct table can be prioritized.
  */
-void Memories::fill_RAM_use(swbox_fill &candidate, int row, RAM_side_t side, switchbox_t type) {
-    if (candidate.mask == 0)
+void Memories::determine_color_map_RAM_masks(safe_vector<LogicalRowUser> &lrus, int row) const {
+    bitvec map_RAM_in_use;
+    for (auto &lru : lrus)
+        map_RAM_in_use |= lru.map_RAM_mask;
+
+    map_RAM_in_use |= bitvec(mapram_inuse[row] & MAPRAM_MASK);
+    bool stats_bus_used = false;
+
+    bool overflow_finished = false;
+    for (auto &lru : lrus) {
+        if (lru.bus != OFLOW)
+            continue;
+        if (lru.group->type != SRAM_group::METER)
+            continue;
+        one_color_map_RAM_mask(lru, map_RAM_in_use, stats_bus_used, row);
+        if (lru.RAM_mask.popcount() == lru.group->left_to_place() &&
+            lru.color_map_RAM_mask().popcount() == lru.group->cm.left_to_place()) {
+            overflow_finished = true;
+        }
+    }
+
+    for (auto &lru : lrus) {
+        if (lru.bus != SYNTH)
+            continue;
+        if (lru.group->type != SRAM_group::METER)
+            continue;
+        ///> If the overflow candidates is not finished yet, then no color mapram of the SYNTH
+        ///> table can be placed, as that this will require the synth_oflow for both
+        if (!overflow_finished)
+            continue;
+        one_color_map_RAM_mask(lru, map_RAM_in_use, stats_bus_used, row);
+    }
+}
+
+
+/**
+ * Given the candidates selected, these function determine which RAMs and which map RAMs go
+ * to the corresponding candidates.  The LogicalRowUser vector is ordered based on which
+ * candidate to prioritize for RAMs.
+ *
+ * At the end of this function, the vector will only contain candidates that have actual
+ * allocations, i.e. RAMs or color map RAMs. 
+ */
+void Memories::determine_logical_row_masks(safe_vector<LogicalRowUser> &lrus, int row,
+        RAM_side_t side, int RAMs_available, bool is_synth_type) const {
+    std::set<switchbox_t> bus_users;
+    ///> Only one user per switchbox_t
+    for (auto &lru : lrus) {
+        if (bus_users.count(lru.bus))
+            BUG("Multiple group trying to use the same bus type %s on logical row %d", lru.bus,
+                phys_to_log_row(row, side));
+        bus_users.insert(lru.bus);
+    }
+
+    determine_RAM_masks(lrus, row, side, RAMs_available, is_synth_type);
+    if (is_synth_type) {
+        determine_color_map_RAM_masks(lrus, row);
+    }
+
+    bitvec RAM_mask(sram_inuse[row]);
+    bitvec map_RAM_mask(mapram_inuse[row]);
+    for (auto &lru : lrus) {
+        if (!(RAM_mask & lru.RAM_mask).empty())
+            BUG("Collision of RAMs on logical row %d", phys_to_log_row(row, side));
+        if (!(map_RAM_mask & lru.map_RAM_mask).empty())
+            BUG("Collision of map RAMs on physical row %d", row);
+        RAM_mask |= lru.RAM_mask;
+        map_RAM_mask |= lru.map_RAM_mask;
+    }
+
+    ///> Clear any non users
+    auto it = lrus.begin();
+    while (it != lrus.end()) {
+        if (it->set())
+            it++;
+        else
+            it = lrus.erase(it);
+    }
+}
+
+/**
+ * The purpose of this function is to determine which SRAM_groups use which RAMs and map RAMs.
+ * The potential candidates are determined based on their needs and if they can fit into
+ * the current overflow set up.
+ *
+ * The potential candidates for synth2port are determined first.  Then the RAMs and map RAMs
+ * for these candidates are determined.  This is then followed by the action data candidates.
+ * There are two major reasons for this:
+ *
+ *     1. The overflow constraints are much stricter on synth2port tables than action data
+ *        tables, and their constraints are easier to handle first.
+ *     2. Certain action data tables are not able to be placed until their corresponding
+ *        selector table is placed, given the constraints behind the selector adr switchbox.
+ */
+void Memories::find_swbox_candidates(safe_vector<LogicalRowUser> &lrus, int row, RAM_side_t side,
+        SRAM_group *curr_oflow, SRAM_group *sel_oflow) {
+    if (action_bus_users.empty() && synth_bus_users.empty())
         return;
 
-    auto unique_id = candidate.group->build_unique_id();
+    std::array<int, OFLOW> RAMs_avail_on_row = { { 0, 0 } };
+    ///> These SRAM_groups can fit entirely on this row without overflowing, and can be placed
+    ///> without breaking overflow constraints
+    std::array<SRAM_group *, OFLOW> fit_on_logical_row = { { nullptr, nullptr } };
+    ///> These SRAM_groups require the maximum number of resources and should be prioritized
+    std::array<SRAM_group *, OFLOW> max_req = { { nullptr, nullptr } };
+
+    ///> Determine the synth2port tables and requirements
+    if (side == RIGHT) {
+        determine_synth_RAMs(RAMs_avail_on_row[SYNTH], row, curr_oflow);
+        candidates_for_synth_row(&fit_on_logical_row[SYNTH], &max_req[SYNTH], row, curr_oflow,
+                                 sel_oflow, RAMs_avail_on_row[SYNTH]);
+        determine_synth_logical_row_users(fit_on_logical_row[SYNTH], max_req[SYNTH], curr_oflow,
+                                          lrus, RAMs_avail_on_row[SYNTH]);
+        determine_logical_row_masks(lrus, row, side, RAMs_avail_on_row[SYNTH], true);
+    }
+
+    SRAM_group *synth = nullptr;
+    for (auto &lru : lrus) {
+        if (lru.bus != SYNTH) continue;
+        synth = lru.group;
+        break;
+    }
+
+    ///> Determine action data tables and requirements
+    determine_action_RAMs(RAMs_avail_on_row[ACTION], row, side, lrus);
+    candidates_for_action_row(&fit_on_logical_row[ACTION], &max_req[ACTION], row, side, curr_oflow,
+                              sel_oflow, RAMs_avail_on_row[ACTION], synth);
+    determine_action_logical_row_users(fit_on_logical_row[ACTION], max_req[ACTION], curr_oflow,
+                                       lrus, RAMs_avail_on_row[ACTION]);
+    determine_logical_row_masks(lrus, row, side, RAMs_avail_on_row[ACTION], false);
+
+    for (auto &lru : lrus) {
+        LOG4("    Candidate " << lru.group << " on bus " << lru.bus
+             << " RAM mask : 0x" << lru.RAM_mask
+             << " map RAM mask 0x" << lru.map_RAM_mask);
+    }
+}
+
+/**
+ * This fills out the Memories::Use object, as well as the Memories objects on which
+ * RAMs (and synth2port map RAMs) are being used, based on the allocation in that
+ * particular row
+ */
+void Memories::fill_RAM_use(LogicalRowUser &lru, int row, RAM_side_t side) {
+    if (lru.RAM_mask.empty())
+        return;
+    auto candidate = lru.group;
+
+    auto unique_id = candidate->build_unique_id();
     auto name = unique_id.build_name();
-    auto &alloc = (*candidate.group->ta->memuse)[unique_id];
-    if (type == OFLOW) {
+    auto &alloc = (*candidate->ta->memuse)[unique_id];
+    if (lru.bus == OFLOW) {
         overflow_bus[row][side] = name;
         alloc.row.emplace_back(row);
-        if (candidate.group->type == SRAM_group::ACTION)
-            alloc.row.back().word = candidate.group->number;
-    } else if (type == SYNTH) {
+        if (candidate->type == SRAM_group::ACTION)
+            alloc.row.back().word = candidate->number;
+    } else if (lru.bus == SYNTH) {
         BUG_CHECK(side == RIGHT, "Allocating Synth2Port table on left side of RAM array");
         twoport_bus[row] = name;
-        alloc.home_row.emplace_back(2*row+side, candidate.group->number);
+        candidate->recent_home_row = phys_to_log_row(row, side);
+        alloc.home_row.emplace_back(phys_to_log_row(row, side), candidate->number);
         alloc.row.emplace_back(row);
-    } else if (type == ACTION) {
+    } else if (lru.bus == ACTION) {
         action_data_bus[row][side] = name;
-        alloc.row.emplace_back(row, side, candidate.group->number);
-        alloc.home_row.emplace_back(2*row + side, candidate.group->number);
-        candidate.group->recent_home_row = row;
+        alloc.row.emplace_back(row, side, candidate->number);
+        alloc.home_row.emplace_back(phys_to_log_row(row, side), candidate->number);
+        candidate->recent_home_row = phys_to_log_row(row, side);
     }
 
+    ///> Fills out the RAM objects
     for (int k = 0; k < SRAM_COLUMNS; k++) {
         if (((1 << k) & side_mask(side)) == 0)
             continue;
 
-        if ((1 << k) & candidate.mask) {
+        if (lru.RAM_mask.getbit(k)) {
             sram_use[row][k] = name;
             alloc.row.back().col.push_back(k);
-            alloc.row.back().vpn.push_back(candidate.group->calculate_next_vpn());
-            candidate.group->placed++;
-            if (candidate.group->is_synth_type()) {
+            alloc.row.back().vpn.push_back(candidate->calculate_next_vpn());
+            candidate->placed++;
+            if (candidate->is_synth_type()) {
                 BUG_CHECK(k >= LEFT_SIDE_COLUMNS,
                           "Trying to allocate non-existant left side maprams");
                 mapram_use[row][k - LEFT_SIDE_COLUMNS] = name;
                 mapram_inuse[row] |= 1 << (k - LEFT_SIDE_COLUMNS);
-                alloc.row.back().mapcol.push_back(k - LEFT_SIDE_COLUMNS); } }
+                alloc.row.back().mapcol.push_back(k - LEFT_SIDE_COLUMNS);
+            }
+        }
     }
 
-    sram_inuse[row] |= candidate.mask;
-    if (type == SYNTH) {
-        if (candidate.group->type == SRAM_group::STATS)
+    sram_inuse[row] |= lru.RAM_mask.getrange(0, SRAM_COLUMNS);
+    if (lru.bus == SYNTH) {
+        if (candidate->type == SRAM_group::STATS)
             stats_alus[row/2] = name;
         else
             meter_alus[row/2] = name;
     }
 }
 
-/** The algorithm operates under the assumption that anything left within the action_bus_users and
- *  synth_bus_users still has allocation requirements.  This function therefore removes any
- *  group that has been completely placed by the algorithm.
- */
-void Memories::remove_placed_group(swbox_fill &candidate, RAM_side_t side) {
-    bool removed = false;
-    if (candidate.group->all_placed() && candidate.group->cm.all_placed()) {
-        if (candidate.group->is_synth_type()) {
-            BUG_CHECK(side == RIGHT, "Allocating Synth2Port table on left side of RAM array");
-            auto synth_table_loc = synth_bus_users.find(candidate.group);
-            BUG_CHECK(synth_table_loc != synth_bus_users.end(),
-                      "Removing a synth2port table that isn't in the list of potential tables");
-            synth_bus_users.erase(synth_table_loc);
-        } else {
-            auto action_table_loc = action_bus_users.find(candidate.group);
-            BUG_CHECK(action_table_loc != action_bus_users.end(),
-                      "Removing an action table that isn't in the list of potential tables");
-            action_bus_users.erase(action_table_loc);
-        }
-        removed = true;
-    }
-
-#ifdef HAVE_JBAY
-    if (Device::currentDevice() == Device::JBAY) {
-        if (removed) {
-            if (must_be_placed_in_half.count(candidate.group))
-                must_be_placed_in_half.erase(candidate.group);
-        } else {
-            if (candidate.group->is_synth_type()) {
-                must_be_placed_in_half.insert(candidate.group);
-            }
-
-            if (candidate.group->type == SRAM_group::SELECTOR) {
-                for (auto ag : candidate.group->sel.action_groups) {
-                    if (!ag->all_placed())
-                        must_be_placed_in_half.insert(ag);
-                }
-            }
-        }
-    }
-#endif
-}
-
-/** This ensures that no collision exists within the action selector overflow switchbox, and
- *  will update the information for the next row.
- */
-void Memories::calculate_sel_oflow(swbox_fill candidates[SWBOX_TYPES], swbox_fill &sel_oflow) {
-    bool sel_oflow_needed = false;
-    if (sel_oflow && !sel_oflow.group->sel.action_all_placed()) {
-        sel_oflow_needed = true;
-    }
-
-    if (candidates[SYNTH] && candidates[SYNTH].group->type == SRAM_group::SELECTOR
-        && !candidates[SYNTH].group->sel.action_all_placed()) {
-        BUG_CHECK(!sel_oflow_needed, "Collision on selector oflow");
-        sel_oflow_needed = true;
-        sel_oflow = candidates[SYNTH];
-    }
-
-    if (!sel_oflow_needed)
-        sel_oflow.clear();
-    else
-        sel_oflow.clear_masks();
-}
-
-/** Calculates the group that will be using the overflow switchbox.  Between rows, the switchbox
- *  is used to calculate a right to left overflow.  A synth2port table cannot overflow to the left
- *  side of the RAM array, but an action can potentially overflow from right to left.  Because an
- *  action table can have multiple home rows, it is fine to break an overflowing action.  However,
- *  a synth2port table cannot have a broken overflow.
- */
-void Memories::calculate_curr_oflow(swbox_fill candidates[SWBOX_TYPES],
-                                    swbox_fill &curr_oflow, swbox_fill &synth_oflow,
-                                    RAM_side_t side) {
-    bool synth_oflow_needed = false;
-    bool curr_oflow_needed = false;
-    if (side == RIGHT) {
-        if (candidates[SYNTH] && !(candidates[SYNTH].group->all_placed()
-                                   && candidates[SYNTH].group->cm.all_placed())) {
-            synth_oflow = candidates[SYNTH];
-            synth_oflow_needed = true;
-        }
-        if (candidates[OFLOW] && candidates[OFLOW].group->is_synth_type()
-            && !(candidates[OFLOW].group->all_placed()
-                 && candidates[OFLOW].group->cm.all_placed())) {
-            BUG_CHECK(!synth_oflow_needed, "Multiple synth2port require overflow");
-            synth_oflow = candidates[OFLOW];
-            synth_oflow_needed = true;
-        } else if (curr_oflow && curr_oflow.group->is_synth_type()
-             && !(curr_oflow.group->all_placed()
-                  && curr_oflow.group->cm.all_placed())) {
-             // This check exists in case nothing could be placed within a row, and the synth2port
-             // table needs to just overflow across this row
-             BUG_CHECK(!synth_oflow_needed, "Multiple synth2port require overflow");
-             synth_oflow = curr_oflow;
-             synth_oflow_needed = true;
-        }
-
-        if (!synth_oflow_needed)
-            synth_oflow.clear();
-        else
-            synth_oflow.clear_masks();
-    }
-
-    if (candidates[OFLOW] && !candidates[OFLOW].group->is_synth_type()
-        && !candidates[OFLOW].group->all_placed()) {
-        curr_oflow = candidates[OFLOW];
-        curr_oflow_needed = true;
-    } else if (curr_oflow && !curr_oflow.group->is_synth_type()
-               && !curr_oflow.group->all_placed()) {
-        // Again, this will overflow curr_oflow if no RAMs were allocated in this logical row
-        curr_oflow_needed = true;
-    } else if (candidates[ACTION] && !candidates[ACTION].group->all_placed()) {
-        curr_oflow = candidates[ACTION];
-        curr_oflow_needed = true;
-    }
-
-    if (!curr_oflow_needed)
-        curr_oflow.clear();
-    else
-        curr_oflow.clear_masks();
-}
-
 /** Fills the Use object for meters specifically for color maprams. */
-void Memories::fill_color_mapram_use(swbox_fill &candidate, int row, RAM_side_t side) {
-    BUG_CHECK(candidate.group->type == SRAM_group::METER && side == RIGHT,
-              "Can only allocate color maprams for Meters");
-    if (candidate.mapram_mask == candidate.mask)
+void Memories::fill_color_map_RAM_use(LogicalRowUser &lru, int row) {
+    auto candidate = lru.group;
+    if (candidate->type != SRAM_group::METER)
         return;
+    if (lru.color_map_RAM_mask().empty())
+        return;
+    BUG_CHECK(candidate->type == SRAM_group::METER && candidate->cm.left_to_place() > 0,
+              "Color maprams assigned to a non-meter");
 
-    auto unique_id = candidate.group->build_unique_id();
-    auto &alloc = (*candidate.group->ta->memuse)[unique_id];
+    auto unique_id = candidate->build_unique_id();
+    auto &alloc = (*candidate->ta->memuse)[unique_id];
     auto name = unique_id.build_name();
 
     int bus = -1;
-    if (candidate.group->cm.cma == IR::MAU::ColorMapramAddress::IDLETIME) {
+    if (candidate->cm.cma == IR::MAU::ColorMapramAddress::IDLETIME) {
         int half = row / (SRAM_ROWS / 2);
         // FIXME: This is the simple solution for color mapram.  There are cases when the
         // color mapram cannot use the idletime bus, i.e. when the information comes through
@@ -2732,7 +2672,7 @@ void Memories::fill_color_mapram_use(swbox_fill &candidate, int row, RAM_side_t 
         BUG_CHECK(bus >= 0, "Cannot have a negative color mapram bus.  Should always have a free "
                         "choice at this point");
         idletime_bus[half][bus] = name;
-    } else if (candidate.group->cm.cma == IR::MAU::ColorMapramAddress::STATS) {
+    } else if (candidate->cm.cma == IR::MAU::ColorMapramAddress::STATS) {
         // On stats, bus 0 will for the stats homerow, which is the only possible bus
         bus = 0;
     } else {
@@ -2740,19 +2680,171 @@ void Memories::fill_color_mapram_use(swbox_fill &candidate, int row, RAM_side_t 
     }
 
     alloc.color_mapram.emplace_back(row, bus);
-    alloc.cma = candidate.group->cm.cma;
-    unsigned color_mapram_mask = candidate.mapram_mask & ~candidate.mask;
+    alloc.cma = candidate->cm.cma;
+    bitvec color_mapram_mask = lru.color_map_RAM_mask();
 
-    for (int k = 0; k < SRAM_COLUMNS; k++) {
-        if (((1 << k) & side_mask(side)) == 0)
-            continue;
-        if ((1 << k) & color_mapram_mask) {
-            BUG_CHECK(k >= LEFT_SIDE_COLUMNS, "Trying to allocate non-existant left side maprams");
-            mapram_use[row][k - LEFT_SIDE_COLUMNS] = name;
-            mapram_inuse[row] |= 1 << (k - LEFT_SIDE_COLUMNS);
-            alloc.color_mapram.back().col.push_back(k - LEFT_SIDE_COLUMNS); } }
-    candidate.group->cm.placed += bitcount(color_mapram_mask);
+    for (int k = 0; k < MAPRAM_COLUMNS; k++) {
+        if (color_mapram_mask.getbit(k)) {
+            mapram_use[row][k] = name;
+            mapram_inuse[row] |= 1 << k;
+            alloc.color_mapram.back().col.push_back(k);
+        }
+    }
+    candidate->cm.placed += color_mapram_mask.popcount();
 }
+
+void Memories::remove_placed_group(SRAM_group *candidate, RAM_side_t side) {
+    if (candidate->all_placed() && candidate->cm.all_placed()) {
+        if (candidate->is_synth_type()) {
+            BUG_CHECK(side == RIGHT, "Allocating Synth2Port table on left side of RAM array");
+            auto synth_table_loc = synth_bus_users.find(candidate);
+            BUG_CHECK(synth_table_loc != synth_bus_users.end(),
+                      "Removing a synth2port table that isn't in the list of potential tables");
+            synth_bus_users.erase(synth_table_loc);
+        } else {
+            auto action_table_loc = action_bus_users.find(candidate);
+            BUG_CHECK(action_table_loc != action_bus_users.end(),
+                      "Removing an action table that isn't in the list of potential tables");
+            action_bus_users.erase(action_table_loc);
+        }
+    }
+}
+
+/**
+ * Updates the must place in half object if the strategy has locked particular RAMs in.
+ */
+void Memories::update_must_place_in_half(const SRAM_group *candidate, switchbox_t bus) {
+    if (bus != SYNTH)
+        return;
+    BUG_CHECK(must_place_in_half.find(candidate) == must_place_in_half.end(), "Trying to "
+              "allocate a synth2port table to multiple home rows");
+    must_place_in_half.insert(candidate);
+    for (auto ag : candidate->sel.action_groups)
+        must_place_in_half.insert(ag);
+}
+
+void Memories::fill_swbox_side(safe_vector<LogicalRowUser> &lrus, int row, RAM_side_t side) {
+    for (auto &lru : lrus) {
+        BUG_CHECK(lru.set(), "Trying to fill in a use object with nothing to allocate");
+        fill_RAM_use(lru, row, side);
+        if (side == RIGHT)
+            fill_color_map_RAM_use(lru, row);
+        remove_placed_group(lru.group, side);
+        update_must_place_in_half(lru.group, lru.bus);
+    }
+}
+
+/**
+ * Each logical row has up to three buses in order to move data to the associated position.
+ * These buses are described in the switchbox_t enum:
+ *
+ *     ACTION - Using this bus outputs any action data RAMs on this row to the action data bus
+ *         muxes.  This is referred to as the home row of the action data table
+ *     SYNTH - Using this bus takes the meter alu/stats alu on this row.  Because counters
+ *         and meters are on opposite row, the SYNTH notation for this is fine.  This is
+ *         also referred to as the home row of the synth2port table
+ *     OFLOW - Any RAM using the overflow bus will be overflowing the data up to its homerow
+ *         through the switchbox
+ *
+ * The purpose of this function is to determine which SRAM_groups uses which buses, and RAMs
+ * in those rows, and then to allocate those RAMs to that positijon 
+ */
+void Memories::swbox_logical_row(safe_vector<LogicalRowUser> &lrus, int row, RAM_side_t side,
+        SRAM_group *curr_oflow, SRAM_group *sel_oflow) {
+    lrus.clear();
+    LOG4("    RAMs available on row " << bitcount(side_mask(side) & ~sram_inuse[row]));
+    if (bitcount(side_mask(side) & ~sram_inuse[row]) == 0)
+        return;
+    find_swbox_candidates(lrus, row, side, curr_oflow, sel_oflow);
+
+    if (lrus.empty())
+        return;
+    fill_swbox_side(lrus, row, side);
+}
+
+/** 
+ * Calculates two possible overflow objects:
+ *    curr_oflow - the group that is overflowing from the current logical row to the
+ *        next logical row.  After this calculation, can only be action data, as synth2port
+ *        only appear on half of the rows.
+ *    synth_oflow - the synth2port table that will be overflowing when moving to the next
+ *        physical row.  Will override the curr_oflow, if that object is action data
+ *
+ * All double pointers are set in this function
+ */
+void Memories::calculate_curr_oflow(safe_vector<LogicalRowUser> &lrus, SRAM_group **curr_oflow,
+        SRAM_group **synth_oflow, RAM_side_t side) const {
+    std::array<SRAM_group *, SWBOX_TYPES> candidates = { { nullptr, nullptr, nullptr } };
+
+    for (auto &lru : lrus) {
+        candidates[static_cast<int>(lru.bus)] = lru.group;
+    }
+
+    ///> The overflow candidate by definition must be the curr_oflow object
+    if (candidates[OFLOW])
+        BUG_CHECK(*curr_oflow != nullptr && *curr_oflow == candidates[OFLOW], "Error in "
+                  "calculating overflow");
+
+    bool synth_oflow_needed = false;
+    if (side == RIGHT) {
+        if (candidates[SYNTH] &&
+            !(candidates[SYNTH]->all_placed() && candidates[SYNTH]->cm.all_placed())) {
+            *synth_oflow = candidates[SYNTH];
+            synth_oflow_needed = true;
+        }
+        if (*curr_oflow && (*curr_oflow)->is_synth_type()
+            && !((*curr_oflow)->all_placed() && (*curr_oflow)->cm.all_placed())) {
+            BUG_CHECK(!synth_oflow_needed, "Multiple synth2port require overflow");
+            *synth_oflow = *curr_oflow;
+            synth_oflow_needed = true;
+        }
+
+        if (!synth_oflow_needed)
+            *synth_oflow = nullptr;
+    }
+
+    bool curr_oflow_needed = false;
+    // Can potentially overflow from both the upper portion or right to left as well.  Right
+    // now we favor upper than right to left, but if right to left is possible, then we use that
+    if (*curr_oflow && !(*curr_oflow)->is_synth_type() && !(*curr_oflow)->all_placed()) {
+        curr_oflow_needed = true;
+        // Again, this will overflow curr_oflow if no RAMs were allocated in this logical row
+    } else if (candidates[ACTION] && !candidates[ACTION]->all_placed()) {
+        *curr_oflow = candidates[ACTION];
+        curr_oflow_needed = true;
+    }
+
+    if (!curr_oflow_needed)
+        *curr_oflow = nullptr;
+}
+
+/**
+ * This function calculates the selector overflow, i.e. the link between selector and action
+ * data headed through the selector_adr_switchbox
+ */
+void Memories::calculate_sel_oflow(safe_vector<LogicalRowUser> &lrus,
+        SRAM_group **sel_oflow) const {
+    bool sel_oflow_needed = false;
+    SRAM_group *synth = nullptr;
+    for (auto &lru : lrus) {
+        if (lru.bus != SYNTH) continue;
+        synth = lru.group;
+        break;
+    }
+
+    if (*sel_oflow && !(*sel_oflow)->sel.action_all_placed())
+        sel_oflow_needed = true;
+
+    if (synth && synth->type == SRAM_group::SELECTOR && !synth->sel.action_all_placed()) {
+        BUG_CHECK(!sel_oflow_needed, "Collision on selector switch box");
+        sel_oflow_needed = true;
+        *sel_oflow = synth;
+    }
+
+    if (!sel_oflow_needed)
+        *sel_oflow = nullptr;
+}
+
 
 void Memories::log_allocation(safe_vector<table_alloc *> *tas,
         UniqueAttachedId::pre_placed_type_t ppt) {
@@ -2795,43 +2887,6 @@ void Memories::action_bus_users_log() {
     log_allocation(&indirect_action_tables, UniqueAttachedId::ACTION_DATA);
 }
 
-void Memories::swbox_logical_row(int row, RAM_side_t side, swbox_fill candidates[SWBOX_TYPES],
-                                 swbox_fill &curr_oflow, swbox_fill &sel_oflow) {
-    for (int k = 0; k < SWBOX_TYPES; k++)
-        candidates[k].clear();
-
-    if (bitcount(side_mask(side) & ~sram_inuse[row]) == 0)
-        return;
-
-    bool stats_available = true; bool meter_available = true;
-
-    // FIXME: A stats alu is available on even rows while a meter alu is available on odd rows.
-    // Now this could be loosened through a check to see if one could overflow up to a higher
-    // ALU, but that is unimplemented
-    if ((row % 2) == 1 || stats_alus[(row+1)/2]) {
-        stats_available = false;
-    }
-
-    if (meter_alus[row/2] || (row % 2) == 0) {
-        meter_available = false;
-    }
-
-    // Determine the candidates to place as well as what RAMs each candidate will have
-    find_swbox_candidates(row, side, candidates, stats_available, meter_available, curr_oflow,
-                          sel_oflow);
-
-    bool candidate_found = false;
-    for (int k = 0; k < SWBOX_TYPES; k++) {
-        if (candidates[k]) {
-            candidate_found = true;
-        }
-    }
-
-    if (!candidate_found)
-        return;
-    // Fill out the Use structures based on the candidates
-    fill_swbox_side(candidates, row, side);
-}
 
 /** The purpose of this section of code is to allocate all data HV (Horizontal/Vertical) switchbox
  *  users.  This particular switchbox is shown in section 6.2.4.4 (RAM Data Bus Horizontal/Vertical
@@ -2859,7 +2914,7 @@ void Memories::swbox_logical_row(int row, RAM_side_t side, swbox_fill candidates
  *  on a row below the original home row of that attached table.  Using the switchbox, the data
  *  can then flow either horizontally or vertically to the home row location of that particular
  *  action data/synth2port table.  This is extremely useful if for instance the table cannot fit
- *  on a particular row.
+ *  on only one row.
  *
  *  The switchbox itself has limitations.  Only one bus can vertically overflow between rows.
  *  Thus, the bus can either come from that row, or the previously overflowed bus.  Also,
@@ -2903,41 +2958,63 @@ void Memories::swbox_logical_row(int row, RAM_side_t side, swbox_fill candidates
  */
 bool Memories::allocate_all_swbox_users() {
     find_swbox_bus_users();
-    swbox_fill curr_oflow, synth_oflow;
-    swbox_fill candidates[SWBOX_TYPES];
-    swbox_fill sel_oflow;
+    safe_vector<LogicalRowUser> lrus;
+    SRAM_group *curr_oflow = nullptr, *sel_oflow = nullptr, *synth_oflow = nullptr;
 
     for (int i = SRAM_ROWS - 1; i >= 0; i--) {
-        synth_oflow.clear();
+        synth_oflow = nullptr;
         for (int j = RAM_SIDES - 1; j >= 0; j--) {
             auto side = static_cast<RAM_side_t>(j);
-            swbox_logical_row(i, side, candidates, curr_oflow, sel_oflow);
-            calculate_curr_oflow(candidates, curr_oflow, synth_oflow, side);
-            calculate_sel_oflow(candidates, sel_oflow);
+            LOG4("    Allocating Logical Row " << phys_to_log_row(i, side));
+            swbox_logical_row(lrus, i, side, curr_oflow, sel_oflow);
+            calculate_curr_oflow(lrus, &curr_oflow, &synth_oflow, side);
+            calculate_sel_oflow(lrus, &sel_oflow);
+            if (curr_oflow)
+                BUG_CHECK(!(curr_oflow->all_placed() && curr_oflow->cm.all_placed()), "The "
+                          "overflow candidate has already been placed");
         }
 
         // Always overflow the synth2port table between rows
-        if (synth_oflow)
+        if (synth_oflow) {
+            BUG_CHECK(!(synth_oflow->all_placed() && synth_oflow->cm.all_placed()), "The "
+                      "synth2port overflow is not correct");
             curr_oflow = synth_oflow;
+        }
 
-        if (i != SRAM_ROWS - 1 && curr_oflow.group)
-            vert_overflow_bus[i] = std::make_pair(curr_oflow.group->build_unique_id().build_name(),
-                                                  curr_oflow.group->number);
+        if (i != SRAM_ROWS - 1 && curr_oflow)
+            vert_overflow_bus[i] = std::make_pair(curr_oflow->build_unique_id().build_name(),
+                                                  curr_oflow->number);
 
         // Due to a timing constraint not yet even described in the uArch, the maximum number
         // of rows a particular table can overflow is 6.
         // FIXME: Need to cause this to fail specifically on twoport tables that can't use more
         // than 1 ALU
-        if (curr_oflow.group && curr_oflow.group->recent_home_row - i >= MAX_DATA_SWBOX_ROWS - 1) {
-            if (curr_oflow.group->type != SRAM_group::ACTION)
-                curr_oflow.group->depth++;
-            curr_oflow.clear();
+        if (curr_oflow) {
+            BUG_CHECK(curr_oflow->recent_home_row >= 0, "Home row is not set on overflow");
+            if (log_to_phys_row(curr_oflow->recent_home_row) - MAX_DATA_SWBOX_ROWS > i) {
+                ///> Color map RAMs can overflow more than 6 rows.
+                if (curr_oflow->is_synth_type()) {
+                    if (!curr_oflow->all_placed())
+                        BUG("A synth2port has overflowed over the maximum number of rows. "
+                            "Should not have reached this point");
+                } else {
+                    curr_oflow = nullptr;
+                }
+            }
         }
 
 #ifdef HAVE_JBAY
         // JBay has no overflow bus between logical row 7 and 8
-        if ((Device::currentDevice() == Device::JBAY) && i == LOGICAL_ROW_MISSING_OFLOW / 2) {
-            curr_oflow.clear();
+        if ((Device::currentDevice() == Device::JBAY) && i == MATCH_CENTRAL_ROW) {
+            for (auto group : must_place_in_half) {
+                if (!(group->all_placed() && group->cm.all_placed())) {
+                    LOG4("    Group not finished " << group);
+                    BUG("A group that was started in a match central half was not finished "
+                        "in that half");
+                }
+            }
+            curr_oflow = nullptr;
+            must_place_in_half.clear();
         }
 #endif /* HAVE_JBAY */
     }
@@ -3438,12 +3515,11 @@ bool Memories::allocate_idletime_in_top_or_bottom_half(SRAM_group* idletime_grou
     return idletime_group->all_placed();
 }
 
-
 bool Memories::allocate_idletime(SRAM_group* idletime_group) {
     // Pick the most available section of the map RAM array to try to fit in an idletime
     // resource allocation
-    int top_half_maprams = half_map_RAMs_available(SRAM_ROWS - 1);
-    int bottom_half_maprams = half_map_RAMs_available((SRAM_ROWS / 2) - 1);
+    int top_half_maprams = open_maprams_between_rows(SRAM_ROWS - 1, MATCH_CENTRAL_ROW);
+    int bottom_half_maprams = open_maprams_between_rows(MATCH_CENTRAL_ROW - 1, 0);
 
     bool in_top_half = top_half_maprams >= bottom_half_maprams;
     if (allocate_idletime_in_top_or_bottom_half(idletime_group, in_top_half))
