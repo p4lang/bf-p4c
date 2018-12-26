@@ -993,6 +993,8 @@ Visitor::profile_t ReplaceBridgedMetadataUses::init_apply(const IR::Node* root) 
     newEmits.clear();
     bridgedOffsets.clear();
     bridgedFields.clear();
+    bridgedRef = nullptr;
+    povExpr = nullptr;
 
     LOG3("    Adding bridged fields for ingress");
     addBridgedFields(pack.getIngressBridgedHeader());
@@ -1073,6 +1075,10 @@ void ReplaceBridgedMetadataUses::replaceEmit(const IR::BFN::EmitField* e) {
     if (!fieldSource || !bridgedFields.count(fieldSource->name))
         return;
     LOG4("\t  Found emit for bridged field " << e);
+    if (povExpr != nullptr)
+        BUG_CHECK(povExpr == povBit->field, "Different POV bit found");
+    else
+        povExpr = povBit->field;
     const IR::Member* oldMember = source->field->to<IR::Member>();
     BUG_CHECK(oldMember, "Member corresponding to %1% not found", source->field);
     const IR::Type* type = bridgedFields.at(fieldSource->name);
@@ -1095,6 +1101,13 @@ IR::Node* ReplaceBridgedMetadataUses::preorder(IR::BFN::EmitField* e) {
     return e;
 }
 
+IR::Node* ReplaceBridgedMetadataUses::preorder(IR::ConcreteHeaderRef* ref) {
+    const IR::Header* h = pack.getIngressBridgedHeader();
+    if (ref->ref->name == h->name)
+        bridgedRef = ref;
+    return ref;
+}
+
 IR::Node* ReplaceBridgedMetadataUses::postorder(IR::BFN::Deparser* d) {
     if (d->thread() == EGRESS) return d;
     const IR::Header* h = pack.getIngressBridgedHeader();
@@ -1102,9 +1115,22 @@ IR::Node* ReplaceBridgedMetadataUses::postorder(IR::BFN::Deparser* d) {
     for (auto it = h->type->fields.rbegin(); it != h->type->fields.rend(); ++it) {
         auto* f = *it;
         cstring fieldName = pack.getFieldName(h, f);
-        BUG_CHECK(newEmits.count(fieldName), "New emit corresponding to field name %1% not found",
-                fieldName);
-        d->emits.insert(d->emits.begin(), newEmits.at(fieldName)); }
+        if (newEmits.count(fieldName)) {
+            d->emits.insert(d->emits.begin(), newEmits.at(fieldName));
+        } else {
+            BUG_CHECK(bridgedRef != nullptr, "No header type defined for bridged header?");
+            auto* headerType = bridgedRef->type->to<IR::Type_StructLike>();
+            BUG_CHECK(headerType != nullptr, "Emitted bridged header is of non-structlike type:"
+                      " %1%", headerType);
+            const IR::Expression* fieldRef = new IR::Member(f->type, bridgedRef, f->name);
+            LOG1("New expression: " << fieldRef);
+            BUG_CHECK(povExpr != nullptr, "No POV bit corresponding to bridged emit found");
+            const IR::BFN::EmitField* newEmit = new IR::BFN::EmitField(fieldRef, povExpr);
+            LOG1("New emit created: " << newEmit);
+            // Add new emit for a padding field that did not exist.
+            d->emits.insert(d->emits.begin(), newEmit);
+        }
+    }
     if (LOGGING(3)) {
         for (auto e : d->emits) {
             LOG3("Reprint emit " << ++numEmit << " : " << e); } }

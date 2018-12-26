@@ -1,0 +1,14 @@
+
+
+add table_0 pkt.f1:0x1 action_0(a:0x3, b:0x5, c:0x6)
+add table_0 pkt.f1:0x2 action_1(a:0x2, b:0x3, c:0x4)
+add setting_port pkt.f1:0x1 setport(port:0x3)
+add setting_port pkt.f1:0x2 setport(port:0x4)
+add table_1 pkt.f1:0x1 action_2()
+add table_1 pkt.f1:0x2 action_3()
+
+expect 3 AE 
+packet 0 78
+
+expect 4 64
+packet 0 87 

@@ -280,6 +280,9 @@ class ReplaceBridgedMetadataUses : public Transform {
     const PhvInfo& phv;
     const PackBridgedMetadata& pack;
 
+    IR::ConcreteHeaderRef* bridgedRef = nullptr;
+    const IR::Expression* povExpr = nullptr;
+
     /// Map: Bridged field name to IR::Type*.
     ordered_map<cstring, const IR::Type*> bridgedFields;
     /// Map: Bridged field name to offset within the header.
@@ -291,6 +294,7 @@ class ReplaceBridgedMetadataUses : public Transform {
     IR::Node* preorder(IR::BFN::Pipe* pipe) override;
     IR::Node* preorder(IR::BFN::Extract* e) override;
     IR::Node* preorder(IR::BFN::EmitField* e) override;
+    IR::Node* preorder(IR::ConcreteHeaderRef* ref) override;
 
     /// Add emits for the revised bridged metadata packing to the deparser.
     IR::Node* postorder(IR::BFN::Deparser* d) override;

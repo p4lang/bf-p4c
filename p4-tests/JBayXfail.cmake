@@ -75,6 +75,7 @@ p4c_add_xfail_reason("tofino2"
   testdata/p4_14_samples/06-FullTPHV1.p4
   testdata/p4_14_samples/07-FullTPHV2.p4
   testdata/p4_14_samples/08-FullTPHV3.p4
+  extensions/p4_tests/p4_14/bridged_packing_2.p4
   switch_dc_basic
   switch_ent_dc_general
 )
