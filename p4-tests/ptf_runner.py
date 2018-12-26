@@ -490,9 +490,6 @@ def main():
     else:
         top_builddir = args.top_builddir
 
-    # Systematically create the default veth pairs if they don't exist
-    check_and_add_ifaces()
-
     port_map = OrderedDict()
     if port_map_path is None:
         veth_start_index = 0
@@ -508,6 +505,7 @@ def main():
             port_map[2] = "veth251"
         else:
             port_map[64] = "veth251"
+        check_and_add_ifaces()
     else:
         import json
         with open(port_map_path) as port_map_f:
