@@ -21,11 +21,10 @@ abstract UnresolvedStackRef : Expression {
 
     /// @return a clone of this UnresolvedStackRef which does not compare equal
     /// to the original or to any other existing UnresolvedStackRef.
-    UnresolvedStackRef makeFresh() const {
-        auto* newRef = this->clone();
-        newRef->id = nextId++;
-        return newRef;
-    }
+    UnresolvedStackRef makeFresh() const { return clone()->makeFresh(); }
+    UnresolvedStackRef makeFresh() {
+        id = nextId++;
+        return this; }
 
     size_t id;
 }

@@ -5,6 +5,7 @@
 #include "bf-p4c/logging/pass_manager.h"
 
 /// Represent a ParserRval and the state where it is defined.
+/// null element represents uninitialized
 struct ParserRValDef {
     const IR::BFN::ParserState* state;
     const IR::BFN::ParserRVal* rval;
@@ -12,6 +13,10 @@ struct ParserRValDef {
                   const IR::BFN::ParserRVal* rval)
         : state(state), rval(rval) { }
     ParserRValDef() : state(nullptr), rval(nullptr) { }
+    bool operator==(const ParserRValDef &a) const {
+        return state == a.state &&
+               rval ? a.rval ? rval->equiv(*a.rval) : false : a.rval == nullptr; }
+    bool operator!=(const ParserRValDef &a) const { return !operator==(a); }
 };
 
 /**
