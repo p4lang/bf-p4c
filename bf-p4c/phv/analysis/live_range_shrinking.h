@@ -176,18 +176,19 @@ class LiveRangeShrinking : public PassManager {
             const ordered_set<PHV::AllocSlice>& alloced,
             const PHV::Transaction& alloc) const {
         ordered_set<const PHV::Field*> fields;
-        boost::optional<PHV::Container> c;
+        PHV::Container c;
         for (auto& sl : alloced) {
             fields.insert(sl.field());
-            if (!c) {
+            if (c == PHV::Container()) {
                 c = sl.container();
             } else {
                 BUG_CHECK(c == sl.container(),
                           "Containers for metadata overlay candidates are different");
             }
         }
-        BUG_CHECK(c != boost::none, "Container candidate for metadata overlay cannot be NULL.");
-        return initNode.findInitializationNodes(*c, fields, alloc);
+        BUG_CHECK(c != PHV::Container(),
+                  "Container candidate for metadata overlay cannot be NULL.");
+        return initNode.findInitializationNodes(c, fields, alloc);
     }
 
     boost::optional<PHV::Allocation::LiveRangeShrinkingMap> findInitializationNodes(

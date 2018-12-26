@@ -182,20 +182,21 @@ std::vector<ActionPhvConstraints::OperandInfo> ActionPhvConstraints::ConstraintT
 
     // Find the range containing @dst, if any.
     auto& by_range = by_action.at(act);
-    boost::optional<le_bitrange> containing = boost::none;
+    const le_bitrange *containing = nullptr;
     for (auto& kv : by_range) {
         if (kv.first.contains(dst.range())) {
-            BUG_CHECK(containing == boost::none,
+            BUG_CHECK(containing == nullptr,
                       "Field %1% written to more than once in action %2%",
                       dst.field()->name, act);
-            containing = kv.first; } }
-    if (!containing)
+            containing = &(kv.first); } }
+    if (containing == nullptr)
         return rv;
 
     // Shrink each source field operand to correspond to the slice of the
     // destination, if any.  The offset of `dst` in `containing` must
     // correspond to the shrunken range to the source operand range.
     unsigned offset = dst.range().lo - containing->lo;    // Positive because containing.
+
     for (auto field_op : by_range.at(*containing)) {
         // Skip non-PHV operands.
         if (!field_op.phv_used) {
@@ -1210,17 +1211,19 @@ bool ActionPhvConstraints::generate_conditional_constraints_for_bitwise_op(
         ActionPhvConstraints::PackingConstraints& copacking_constraints)
     const {
     if (sources.size() == 0) return true;
-    boost::optional<bool> destSameAsSource;
+    bool firstSliceProcessed = false;
+    bool destSameAsSource = false;
     for (auto& slice : container_state) {
         PHV::FieldSlice sl(slice.field(), slice.field_slice());
         bool sameAsSource = sources.count(sl);
-        if (!destSameAsSource) {
+        if (!firstSliceProcessed) {
             destSameAsSource = sameAsSource;
+            firstSliceProcessed = true;
         } else {
-            if (sameAsSource != *destSameAsSource) {
+            if (sameAsSource != destSameAsSource) {
                 LOG6("\t\t\t\tCannot generate conditional constraints for bitwise operations.");
                 return false; } } }
-    if (destSameAsSource && *destSameAsSource) {
+    if (destSameAsSource) {
         LOG6("\t\t\t\tDo not need to generate conditional constraints for bitwise operations, "
              "as the sources are the same as destination.");
         return true; }
@@ -1876,10 +1879,10 @@ ActionPhvConstraints::verify_two_container_alignment(
                     per_source_slices.insert(sourceSlice); }
 
             // Combine multiple adjacent source slices.
-            boost::optional<PHV::AllocSlice> src_slice = boost::none;
+            PHV::AllocSlice* src_slice = nullptr;
             for (auto& slice : per_source_slices) {
-                if (!src_slice) {
-                    src_slice = slice;
+                if (src_slice == nullptr) {
+                    src_slice = &slice;
                     continue; }
 
                 // XXX(cole): We might be able to handle slices of the same
@@ -1891,7 +1894,7 @@ ActionPhvConstraints::verify_two_container_alignment(
                           "Non-adjacent container slices of the same field");
                 BUG_CHECK(src_slice->field_slice().hi + 1 == slice.field_slice().lo,
                           "Non-adjacent field slices of the same field");
-                src_slice = PHV::AllocSlice(src_slice->field(),
+                src_slice = new PHV::AllocSlice(src_slice->field(),
                                             src_slice->container(),
                                             src_slice->field_slice().lo,
                                             src_slice->container_slice().lo,
@@ -1900,7 +1903,7 @@ ActionPhvConstraints::verify_two_container_alignment(
 
             // For every source slice, check alignment individually and divide it up as part of
             // either the first source container or the second source container
-            if (!src_slice) {
+            if (src_slice == nullptr) {
                 LOG5("\t\t\t\t\tNo source slice found");
                 continue; }
             auto sl = *src_slice;
@@ -2056,7 +2059,7 @@ bool ActionPhvConstraints::all_field_slices_written_together(
         const ordered_set<const IR::MAU::Action*>& set_of_actions,
         const PHV::Allocation::LiveRangeShrinkingMap& initActions) const {
     for (auto action : set_of_actions) {
-        boost::optional<bool> thisActionWrites = boost::none;
+        enum WriteType { NO_INIT, NOT_WRITTEN, WRITTEN } thisActionWrites = NO_INIT;
         // for each AllocSlice in the container, check if it is written by the action.
         for (auto& slice : container_state) {
             boost::optional<OperandInfo> writeStatus = constraint_tracker.is_written(slice, action);
@@ -2065,17 +2068,17 @@ bool ActionPhvConstraints::all_field_slices_written_together(
             if (initActions.count(slice.field()) && initActions.at(slice.field()).count(action))
                 metaInit = true;
             if (!writeStatus && !metaInit) {
-                if (!thisActionWrites)
+                if (thisActionWrites == NO_INIT)
                     // First slice encountered, so set status to field not written.
-                    thisActionWrites = false;
-                else if (*thisActionWrites == true)
+                    thisActionWrites = NOT_WRITTEN;
+                else if (thisActionWrites == WRITTEN)
                     // If a field was written previously, this returns false.
                     return false;
             } else {
-                if (!thisActionWrites)
+                if (thisActionWrites == NO_INIT)
                     // first slice encountered, so set status to field written.
-                    thisActionWrites = true;
-                else if (*thisActionWrites == false)
+                    thisActionWrites = WRITTEN;
+                else if (thisActionWrites == NOT_WRITTEN)
                     // If a field was not written previously, this returns false.
                     return false; } } }
     return true;
@@ -2538,7 +2541,6 @@ bool ActionPhvConstraints::diagnoseInvalidPacking(
     ordered_set<PHV::FieldSlice> actionDataWrittenSlices;
     ordered_map<PHV::FieldSlice, std::pair<int, int>> phvAlignedSlices;
     ordered_set<PHV::FieldSlice> allPHVSlices;
-    int offset = 0;
     cstring action_name = canon_name(action->externalName());
     bitvec writtenBitvec;
     bitvec notWrittenBitvec;

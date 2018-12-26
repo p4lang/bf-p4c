@@ -726,7 +726,7 @@ CoreAllocation::tryAllocSliceList(
     int container_size = int(group.width());
 
     // Set previous_container to the container returned as part of start_positions
-    boost::optional<PHV::Container> previous_container = boost::none;
+    PHV::Container previous_container;
     LOG5("trying to allocate slices at container indices: ");
     for (auto& slice : slices) {
         if (LOGGING(5)) {
@@ -737,7 +737,7 @@ CoreAllocation::tryAllocSliceList(
             LOG5(ss.str()); }
         if (start_positions.at(slice).container) {
             PHV::Container tmpContainer = *(start_positions.at(slice).container);
-            if (!previous_container)
+            if (previous_container == PHV::Container())
                 previous_container = tmpContainer; } }
 
     // Check if any of these slices have already been allocated.  If so, record
@@ -761,7 +761,8 @@ CoreAllocation::tryAllocSliceList(
             return boost::none; }
 
         // Check if all previous allocations were to the same container.
-        if (previous_container && *previous_container != alloc_slice.container()) {
+        if (previous_container != PHV::Container() &&
+                previous_container != alloc_slice.container()) {
             LOG5("    ...but some slices in this list have already been allocated to different "
                  "containers");
             return boost::none; }
@@ -798,8 +799,8 @@ CoreAllocation::tryAllocSliceList(
         int num_bitmasks = 0;
         // If any slices were already allocated, ensure that unallocated slices
         // are allocated to the same container.
-        if (previous_container && *previous_container != c) {
-            LOG5("    ...but some slices were already allocated to " << *previous_container);
+        if (previous_container != PHV::Container() && previous_container != c) {
+            LOG5("    ...but some slices were already allocated to " << previous_container);
             continue; }
 
         std::vector<PHV::AllocSlice> candidate_slices;
