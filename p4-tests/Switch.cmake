@@ -194,9 +194,7 @@ p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_sai_acl" ${SWI
 # Excluding some saiacl tests which need more ports than the supported HW ports
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_sai_acl"
         "acl-ocp
-        ^saiacl.BindAclTableInGroupTest
-        ^saiacl.L3AclLagRedirectTest
-        ^saiacl.L3AclRedirectTest")
+        ^saiacl.BindAclTableInGroupTest")
 bfn_set_ptf_port_map_file("tofino" "smoketest_switch_dc_basic_sai_acl"
     "${SWITCH_PTF_DIR_SAI}/default_interface_to_front_map.ini")
 bfn_set_ptf_ports_json_file("tofino" "smoketest_switch_dc_basic_sai_acl"
