@@ -127,6 +127,8 @@ class Clustering : public PassManager {
         /// field.
         profile_t init_apply(const IR::Node *root) override;
 
+        bool preorder(const IR::MAU::Table* tbl) override;
+
         /// For each occurrence of a field in a slicing operation, split its
         /// slices in fields_to_slice_i along the boundary of the new slice.
         bool preorder(const IR::Expression*) override;
@@ -151,28 +153,6 @@ class Clustering : public PassManager {
     };
 
     MakeSlices          slice_i;
-
-    /** Ensure that fields involved in gateway comparisons are sliced in the same manner.
-      * Suppose we have two fields hdr1.f1 and hdr2.f2 that are used in the gateway expression 
-      * if (hdr1.f1 == hdr.f2). This requires hdr1.f1 and hdr2.f2 to be aligned in their respective
-      * containers. However, the Clustering passes assume that both these fields are sliced in the
-      * same manner, without actually slicing fields so. This pass looks at fields involved in
-      * gateway expressions and ensures that they are sliced in the same manner.
-      */
-    class MakeGatewaySlices : public Inspector {
-        Clustering& self;
-        MakeSlices& slices_i;
-        PhvInfo& phv_i;
-
-        bool preorder(const IR::MAU::Table*) override;
-
-        boost::optional<std::vector<le_bitrange>>
-            getIntervals(const PHV::Field* a, const PHV::Field* b) const;
-
-     public:
-        explicit MakeGatewaySlices(Clustering& self, MakeSlices& slices)
-            : self(self), slices_i(slices), phv_i(self.phv_i) { }
-    };
 
     class MakeAlignedClusters : public Inspector {
         Clustering& self;
@@ -301,9 +281,6 @@ class Clustering : public PassManager {
             new ClearClusteringStructs(*this),          // clears pre-existing maps
             new FindComplexValidityBits(*this),         // populates complex_validity_bits_i
             &slice_i,
-            // Ensure that all fields used in gateway comparison (which must be aligned with each
-            // other) also have slices at the same positions).
-            new MakeGatewaySlices(*this, slice_i),
             new MakeAlignedClusters(*this),             // populates aligned_clusters_i
             new MakeRotationalClusters(*this),          // populates rotational_clusters_i
             new MakeSuperClusters(*this),               // populates super_clusters_i

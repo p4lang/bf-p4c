@@ -100,6 +100,38 @@ Visitor::profile_t Clustering::MakeSlices::init_apply(const IR::Node *root) {
     return rv;
 }
 
+bool Clustering::MakeSlices::preorder(const IR::MAU::Table* tbl) {
+    CollectGatewayFields collect_fields(phv_i);
+    tbl->apply(collect_fields);
+
+    auto& info_set = collect_fields.info;
+
+    ordered_map<const PHV::Field*, le_bitrange> slices;
+    for (auto& field_info : info_set) {
+        auto& info = field_info.second;
+        BUG_CHECK(!slices.count(field_info.first), "Already existing entry in slices map");
+        slices[field_info.first] = info.bits;
+        // We need to make sure that slices that are XORed with each other for gateway comparisons
+        // should be sliced in the same way. The end_apply() method takes the equivalently sliced
+        // sets in `equivalences_i` and propagates fine-grained slicing through those fields until
+        // we reach a fixed point. Therefore, implementing equivalent slicing for gateway comparison
+        // slices is equivalent to adding those equivalent slices to the `equivalences_i` object.
+        for (auto* field_b : info.xor_with) {
+            ordered_set<PHV::FieldSlice> equivalence;
+            auto foundEntry = slices.find(field_b);
+            if (foundEntry != slices.end()) {
+                PHV::FieldSlice slice1 = PHV::FieldSlice(field_info.first, info.bits);
+                PHV::FieldSlice slice2 = PHV::FieldSlice(field_b, slices.at(field_b));
+                equivalence.insert(slice1);
+                equivalence.insert(slice2);
+                LOG5("\tAdding equivalence for gateway slices: " << slice1 << " and " << slice2);
+            }
+            equivalences_i.emplace_back(equivalence);
+        }
+    }
+    return true;
+}
+
 bool Clustering::MakeSlices::preorder(const IR::Expression *e) {
     le_bitrange range;
     PHV::Field* field = phv_i.field(e, &range);
@@ -224,111 +256,6 @@ bool Clustering::MakeAlignedClusters::preorder(const IR::MAU::Instruction* inst)
             ++dst_slices_it;
             ++these_slices_it; } }
 
-    return false;
-}
-
-boost::optional<std::vector<le_bitrange>> Clustering::MakeGatewaySlices::getIntervals(
-        const PHV::Field* a,
-        const PHV::Field* b) const {
-    auto slices_a = self.slices(a, StartLen(0, a->size));
-    auto slices_b = self.slices(b, StartLen(0, b->size));
-    std::vector<le_bitrange> intervals_a, intervals_b;
-    for (auto slice_a : slices_a)
-        intervals_a.push_back(slice_a.range());
-    for (auto slice_b : slices_b)
-        intervals_b.push_back(slice_b.range());
-    std::vector<le_bitrange> rv;
-
-    // If each field only has one slice, that slice necessarily spans the entire field and so no
-    // further slicing is required.
-    if (slices_a.size() == 1 && slices_b.size() == 1)
-        return boost::none;
-    // If the fields are of different sizes, calculate a bitrange that represents the overhang that
-    // the larger field has over the smaller field.
-    bool fieldSizesEqual = (a->size == b->size);
-    int smallerFieldSize = (a->size > b->size) ? b->size : a->size;
-    int largerFieldSize = (a->size < b->size) ? b->size : a->size;
-    boost::optional<le_bitrange> overhang = boost::none;
-    if (!fieldSizesEqual)
-        overhang = StartLen(smallerFieldSize - 1, largerFieldSize - smallerFieldSize);
-
-    // Check if the intervals of slices are the same for both fields.
-    auto a_it = slices_a.begin();
-    auto b_it = slices_b.begin();
-    le_bitrange seenSlices;
-    // Loop as long as there is a slice to process.
-    for (; a_it != slices_a.end() || b_it != slices_b.end();) {
-        // If either of the fields is out of slices, then just keep adding the range for the other
-        // field's slices. Also do not include slices in the overhang parts of the larger field.
-        if (a_it == slices_a.end() && b_it != slices_b.end()) {
-            if (seenSlices.contains(b_it->range())
-                    || (overhang && overhang->contains(b_it->range()))) {
-                ++b_it;
-                continue; }
-            rv.push_back(b_it->range());
-            LOG5("Adding range " << b_it->range() << " from field " << b->name << " to intervals.");
-            ++b_it;
-            continue; }
-        if (b_it == slices_b.end() && a_it != slices_a.end()) {
-            if (seenSlices.contains(a_it->range())
-                    || (overhang && overhang->contains(a_it->range()))) {
-                ++a_it;
-                continue; }
-            rv.push_back(a_it->range());
-            LOG5("Adding range " << a_it->range() << " from field " << a->name << " to intervals.");
-            ++a_it;
-            continue; }
-        // If the ranges are in lockstep, then go to the next slice for both the fields.
-        if (a_it->range() == b_it->range()) {
-            rv.push_back(a_it->range());
-            LOG5("Both slices " << *a_it << " and " << *b_it << " represent the same range "
-                 "for their respective fields");
-            seenSlices |= a_it->range();
-            ++a_it;
-            ++b_it;
-            continue; }
-        // If field a's slice is fully contained within field b's slice (without the ranges being
-        // equal), then add field a's interval. Similarly, if field b's slice is fully contained
-        // within field a's slice, then add field b's interval.
-        if (b_it->range().contains(a_it->range())) {
-            rv.push_back(a_it->range());
-            seenSlices |= a_it->range();
-            LOG5("Adding range " << a_it->range() << " from field " << a->name << " to intervals.");
-            ++a_it;
-            continue;
-        } else if (a_it->range().contains(b_it->range())) {
-            rv.push_back(b_it->range());
-            seenSlices |= b_it->range();
-            LOG5("Adding range " << b_it->range() << " from field " << b->name << " to intervals.");
-            ++b_it;
-            continue;
-        }
-    }
-    return rv;
-}
-
-bool Clustering::MakeGatewaySlices::preorder(const IR::MAU::Table* tbl) {
-    CollectGatewayFields collect_fields(phv_i);
-    tbl->apply(collect_fields);
-    auto& info_set = collect_fields.info;
-
-    for (auto& field_info : info_set) {
-        auto* field = field_info.first;
-        auto& info = field_info.second;
-        for (auto* xor_with : info.xor_with) {
-            auto* field_a = phv_i.field(field->id);
-            auto* field_b = phv_i.field(xor_with->id);
-            auto slices_a = self.slices(field_a, StartLen(0, field_a->size));
-            auto slices_b = self.slices(field_b, StartLen(0, field_b->size));
-            // Get the most fine-grained intervals for slices for field_a and field_b.
-            auto intervals = getIntervals(field_a, field_b);
-            // If there is only one slice for both fields, and both are used directly, no further
-            // slicing is required.
-            if (!intervals) continue;
-            // Make sure that both the fields are sliced in exactly the same way.
-            for (auto& range : *intervals) {
-                slices_i.updateSlices(field_a, range);
-                slices_i.updateSlices(field_b, range); } } }
     return false;
 }
 
@@ -637,138 +564,6 @@ bool Clustering::MakeSuperClusters::preorder(const IR::HeaderStackItemRef* hr) {
     visitHeaderRef(hr);
     return false;
 }
-
-#if 0
-// Might need to reintroduce this later.
-void Clustering::MakeSuperClusters::pack_complex_pov_bits() {
-    auto max_set_size = self.complex_validity_bits_i.maxSize();
-    LOG4("Max size: " << max_set_size);
-
-    PHV::SuperCluster::SliceList** ingress_pov_lists = new
-        PHV::SuperCluster::SliceList*[max_set_size];
-    PHV::SuperCluster::SliceList** egress_pov_lists = new
-        PHV::SuperCluster::SliceList*[max_set_size];
-
-    for (size_t i = 0; i < max_set_size; i++) {
-        ingress_pov_lists[i] = new PHV::SuperCluster::SliceList();
-        egress_pov_lists[i] = new PHV::SuperCluster::SliceList();
-    }
-
-    // Allocate the complex validity bits first.
-    // Pair up validity bits that are used in the same actions together.
-    size_t set_num = 0;
-    for (auto* set : self.complex_validity_bits_i) {
-        const PHV::Field* firstFieldInSet = *(set->begin());
-        gress_t gress = firstFieldInSet->gress;
-        auto& pov_list = gress == INGRESS ? ingress_pov_lists : egress_pov_lists;
-
-        // If the size of the set is 1, then the POV bit reads from itself (usually in the case of
-        // stack validity bits).
-        if (set->size() == 1) continue;
-
-        // Possible indices to allocate to for fields in the set.
-        ordered_map<const PHV::Field*, ordered_set<size_t>> fieldToIndices;
-        // Possible fields allocated to indices into pov_list.
-        ordered_map<size_t, ordered_set<const PHV::Field*>> indexToFields;
-        // For each field in the set, check its packability.
-        bool thisSetAllocated = true;
-        for (auto* f : *set) {
-            LOG4("Try to allocate slice list for " << f->name);
-            BUG_CHECK(f->gress == gress, "Fields %1% and %2% in the same cluster cannot be of "
-                      "different gresses", f->name, firstFieldInSet->name);
-            // If this field size is greater than 1 bit, then it might be a header validity bit,
-            // which we allow to float (along with all other fields in its cluster). Therefore,
-            // indicate that we will not pack this set.
-            if (f->size > 1) {
-                thisSetAllocated = false;
-                break;
-            }
-            // Check packability with fields in each pov_list.
-            for (size_t i = 0; i < max_set_size; i++) {
-                bool any_pack_conflicts = std::any_of(pov_list[i]->begin(), pov_list[i]->end(),
-                        [&](const PHV::FieldSlice& slice) {
-                        return conflicts_i.hasPackConflict(f, slice.field());
-                        });
-                if (any_pack_conflicts) {
-                    LOG4("Ignoring POV bit " << f->name << " because of a pack conflict");
-                    continue; }
-                if (pov_list[i]->size() == 0 || self.actions_i.can_pack_pov(pov_list[i], f)) {
-                    fieldToIndices[f].insert(i);
-                    LOG4("Try to allocate slice list for " << f->name);
-                    indexToFields[i].insert(f);
-                }
-            }
-        }
-
-        ordered_map<const PHV::Field*, size_t> allocation;
-        for (auto kv : indexToFields) {
-            size_t minPossibilities = max_set_size + 1;
-            const PHV::Field* minField = nullptr;
-            LOG4("Checking field for slice list index " << kv.first);
-            for (const auto* f : kv.second) {
-                LOG4("  Field considered: " << f->name);
-                // Ignore already allocated field.
-                if (allocation.count(f)) {
-                    LOG4("    ...already allocated");
-                    continue;
-                }
-                size_t thisFieldPossibilities = 0;
-                for (size_t pos : fieldToIndices.at(f)) {
-                    // Ignore previous indexes.
-                    if (pos < kv.first) {
-                        LOG4("    ...ignoring already assigned index " << pos);
-                        continue;
-                    }
-                    thisFieldPossibilities++;
-                }
-                LOG4("    thisFieldPossibilities: " << thisFieldPossibilities);
-                if (thisFieldPossibilities == 0) {
-                    thisSetAllocated = false;
-                    break;
-                }
-                if (minPossibilities > thisFieldPossibilities) {
-                    minField = f;
-                    minPossibilities = thisFieldPossibilities;
-                    LOG4("Changing minField to " << f->name << ", minPossibilities to: " <<
-                            minPossibilities);
-                }
-            }
-            if (!thisSetAllocated) break;
-            if (minField == nullptr) {
-                LOG4("No minField detected");
-                thisSetAllocated = false;
-                break;
-            }
-            LOG4("Allocate " << minField->name << " to slice list index " << kv.first);
-            allocation[minField] = kv.first;
-        }
-
-        if (allocation.size() != set->size()) {
-            LOG4("Not all fields in the set have allocations associated with them");
-            continue;
-        }
-
-        for (auto kv : allocation) {
-            BUG_CHECK(kv.second < max_set_size, "Slice list chosen is less than max slice lists.");
-            pov_list[kv.second]->push_back(PHV::FieldSlice(kv.first));
-        }
-
-        // If this set was allocated fully, then increment set_num.
-        if (thisSetAllocated) ++set_num;
-    }
-
-    for (size_t i = 0; i < max_set_size; i++) {
-        if (ingress_pov_lists[i]->size() > 0) {
-            slice_lists_i.insert(ingress_pov_lists[i]);
-            LOG4("Adding slice list\n" << ingress_pov_lists[i]);
-        }
-        if (egress_pov_lists[i]->size() > 0) {
-            slice_lists_i.insert(egress_pov_lists[i]);
-            LOG4("Adding slice list\n" << egress_pov_lists[i]);
-        }
-    }
-}
-#endif
 
 void Clustering::MakeSuperClusters::pack_pov_bits() {
     ordered_set<PHV::Field*> pov_bits;
