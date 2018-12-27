@@ -443,6 +443,13 @@ const IR::Node* EgressDeparserConverter::postorder(IR::P4Control* node) {
     tnaParams.emplace("eg_intr_md", param->name);
     paramList->push_back(param);
 
+    // add ig_intr_md
+    path = new IR::Path("ingress_intrinsic_metadata_t");
+    type = new IR::Type_Name(path);
+    param = new IR::Parameter("ig_intr_md", IR::Direction::In, type);
+    tnaParams.emplace("ig_intr_md", param->name);
+    paramList->push_back(param);
+
     // add ig_intr_md_for_tm
     path = new IR::Path("ingress_intrinsic_metadata_for_tm_t");
     type = new IR::Type_Name(path);

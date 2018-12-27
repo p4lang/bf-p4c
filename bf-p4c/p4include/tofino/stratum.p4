@@ -89,6 +89,7 @@ control EgressDeparser<H, M, CG>(
     in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
     in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr,
     in egress_intrinsic_metadata_t eg_intr_md,
+    in ingress_intrinsic_metadata_t ig_intr_md,
     in ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm,
     inout CG aux);
 
