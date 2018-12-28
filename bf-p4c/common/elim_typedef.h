@@ -13,12 +13,9 @@ namespace P4 {
  */
 class DoReplaceTypedef final : public Transform {
     const ReferenceMap* refMap;
-    const TypeMap* typeMap;
 
  public:
-    explicit DoReplaceTypedef(const ReferenceMap* refMap, const TypeMap* typeMap):
-    refMap(refMap), typeMap(typeMap)
-    { setName("DoReplaceTypedef"); }
+    explicit DoReplaceTypedef(const ReferenceMap* refMap): refMap(refMap) {}
     const IR::Type* preorder(IR::Type_Name* type) override;
 };
 
@@ -26,7 +23,7 @@ class EliminateTypedef final : public PassManager {
  public:
     EliminateTypedef(ReferenceMap* refMap, TypeMap* typeMap) {
         passes.push_back(new TypeChecking(refMap, typeMap));
-        passes.push_back(new DoReplaceTypedef(refMap, typeMap));
+        passes.push_back(new DoReplaceTypedef(refMap));
         passes.push_back(new ClearTypeMap(typeMap));
         setName("EliminateTypedef");
     }

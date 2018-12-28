@@ -440,7 +440,7 @@ class NaiveClotAlloc : public Visitor {
     }
 
     void allocate(const std::vector<ClotAlloc>& req) {
-        for (int i = 0; i < req.size(); ++i) {
+        for (unsigned i = 0; i < req.size(); ++i) {
             if (clotInfo.num_clots_allocated() == TOTAL_CLOTS_AVAIL ||
                 num_live_clots == MAX_CLOTS_LIVE)
                 break;

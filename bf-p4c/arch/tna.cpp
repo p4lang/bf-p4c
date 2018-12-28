@@ -40,7 +40,6 @@ struct RestoreParams: public Transform {
 
     IR::BFN::TranslatedP4Control* preorder(IR::BFN::TranslatedP4Control* control) {
         auto* params = control->type->getApplyParameters();
-        auto* paramList = new IR::ParameterList;
         ordered_map<cstring, cstring> tnaParams;
 
         if (control->thread == INGRESS) {
@@ -440,15 +439,13 @@ class ConvertPhase0AssignToExtract: public Transform {
                 auto packetInParam = parser->tnaParams.at("pkt");
                 auto* args = new IR::Vector<IR::Argument>();
                 if (lExpr) {
-                    IR::Argument* a;
+                    IR::Argument* a = new IR::Argument(lExpr);
                     if (auto p0Type = lExpr->type->to<IR::Type_Struct>()) {
                         auto *p0Hdr = new IR::Type_Header(p0Type->name, p0Type->fields);
                         if (auto *m = lExpr->to<IR::Member>()) {
                             auto *p0Member = new IR::Member(p0Hdr, m->expr, m->member);
                             a = new IR::Argument(p0Member);
                         }
-                    } else {
-                        a = new IR::Argument(lExpr);
                     }
                     args->push_back(a);
                     auto* method = new IR::Member(new IR::PathExpression(packetInParam),

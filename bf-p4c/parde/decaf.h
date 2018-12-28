@@ -178,14 +178,14 @@ class AssignChain : public std::vector<const Assign*> {
 
 struct FieldGroup : public ordered_set<const PHV::Field*> { };
 
-static std::string print(const FieldGroup& group) {
+inline std::string print(const FieldGroup& group) {
     std::stringstream ss;
     for (auto f : group)
         ss << "    " << f->name << std::endl;
     return ss.str();
 }
 
-static std::string print(const std::vector<FieldGroup>& groups) {
+inline std::string print(const std::vector<FieldGroup>& groups) {
     std::stringstream ss;
     for (unsigned i = 0; i < groups.size(); i++) {
         ss << i << ":" << std::endl;
@@ -683,13 +683,8 @@ class RewriteDeparser : public DeparserModifier {
 };
 
 class DeparserCopyOpt : public PassManager {
-    const PhvInfo &phv;
-    PhvUse &uses;
-    const DependencyGraph& dg;
-
  public:
-    DeparserCopyOpt(const PhvInfo &phv, PhvUse &uses, const DependencyGraph& dg)
-            : phv(phv), uses(uses), dg(dg) {
+    DeparserCopyOpt(const PhvInfo &phv, PhvUse &uses, const DependencyGraph&) {
         auto collect_hdr_valid_bits = new CollectHeaderValidBits(phv);
 
         auto collect_weak_fields = new CollectWeakFields(phv, uses);

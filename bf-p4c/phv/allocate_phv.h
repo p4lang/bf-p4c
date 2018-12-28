@@ -468,8 +468,6 @@ class AllocatePHV : public Inspector {
 
     // Used to create strategies, if needed
     const CalcCriticalPathClusters& critical_path_clusters_i;
-    // Used to find metadata initialization possibilities.
-    LiveRangeShrinking& meta_init_i;
 
     // Set of bridged metadata fields that were found to have alignment conflicts during PHV
     // allocation. This set maintains its state across multiple rounds of PHV allocation, therefore,
@@ -546,7 +544,7 @@ class AllocatePHV : public Inspector {
                 meta_init),
           phv_i(phv), uses_i(uses), clot_i(clot),
           clustering_i(clustering), mutex_i(phv.parser_mutex()), pragmas_i(pragmas),
-          critical_path_clusters_i(critical_cluster), meta_init_i(meta_init) { }
+          critical_path_clusters_i(critical_cluster) { }
 };
 
 #endif  /* BF_P4C_PHV_ALLOCATE_PHV_H_ */

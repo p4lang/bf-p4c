@@ -1193,7 +1193,7 @@ bool MeterColorMapramAddress::SetMapramAddress::preorder(IR::MAU::Meter *mtr) {
     return false;
 }
 
-TableLayout::TableLayout(const PhvInfo &p, LayoutChoices &l) : phv(p), lc(l) {
+TableLayout::TableLayout(const PhvInfo &p, LayoutChoices &l) : lc(l) {
     addPasses({
         new MeterColorMapramAddress,
         new DoTableLayout(p, lc),

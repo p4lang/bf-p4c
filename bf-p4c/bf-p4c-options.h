@@ -66,7 +66,7 @@ class BFNContext final : public P4CContext {
     BFN_Options optionsInstance;
 };
 
-static BFN_Options& BackendOptions() { return BFNContext::get().options(); }
+inline BFN_Options& BackendOptions() { return BFNContext::get().options(); }
 
 /**
  * An IOptionPragmaParser implementation that supports Barefoot-specific

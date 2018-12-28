@@ -127,7 +127,6 @@ const IR::Constant *ConstantsToActionData::preorder(IR::Constant *constant) {
         int write_count = 0;
         int container_bit = 0;
         PHV::Container container;
-        cstring container_name;
         field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice &alloc) {
             write_count++;
             container_bit = alloc.container_bit;

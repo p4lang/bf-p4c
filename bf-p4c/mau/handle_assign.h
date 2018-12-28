@@ -11,11 +11,9 @@
  *
  * This will also validate some constraints currently imposed by Brig's allocation of
  * actions on action profiles, mainly that the actions for each action profile must be the
- * same action, (at least the same action name and parameters)  
+ * same action, (at least the same action name and parameters)
  */
 class AssignActionHandle : public PassManager {
-    const PhvInfo &phv;
-
     class ActionProfileImposedConstraints : public MauInspector {
         ordered_map<const IR::MAU::ActionData *, std::set<cstring>> profile_actions;
         bool preorder(const IR::MAU::ActionData *) override;
@@ -80,8 +78,7 @@ class AssignActionHandle : public PassManager {
     };
 
  public:
-    explicit AssignActionHandle(const PhvInfo &phv)
-            : phv(phv) {
+    explicit AssignActionHandle(const PhvInfo &phv) {
         addPasses({
             new ValidateSelectors(phv),
             new ActionProfileImposedConstraints,

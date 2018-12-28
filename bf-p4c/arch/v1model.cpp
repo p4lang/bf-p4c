@@ -2493,7 +2493,7 @@ template <class T> inline const T *findContext(const Visitor::Context *c) {
 // However, we do not wish to copy propagate field reference in the clone3(),
 // recirculate(), etc, as the translation will need to convert them to
 // appropriate metadata in tna.
-bool skipMethodCallStatement(const Visitor::Context *ctxt, const IR::Expression * expr) {
+bool skipMethodCallStatement(const Visitor::Context *ctxt, const IR::Expression *) {
     auto c = findContext<IR::MethodCallStatement>(ctxt);
     if (!c) return true;
 

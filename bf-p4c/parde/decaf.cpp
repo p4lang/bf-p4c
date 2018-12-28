@@ -933,7 +933,7 @@ SynthesizePovEncoder::create_pov_encoder(gress_t gress, const MatchAction& match
     LOG3(match_action.print());
 
     static int id = 0;
-    std::string table_name = gress + "_decaf_pov_encoder_" + std::to_string(id++);
+    std::string table_name = toString(gress) + "_decaf_pov_encoder_" + std::to_string(id++);
 
     auto encoder = new IR::MAU::Table(table_name.c_str(), gress);
 

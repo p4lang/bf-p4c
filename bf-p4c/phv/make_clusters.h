@@ -42,7 +42,9 @@ class Clustering : public PassManager {
     PhvInfo& phv_i;
     PhvUse& uses_i;
     const PackConflicts& conflicts_i;
+#if 0  // Used in MakeSuperClusters which is now disabled
     const ActionPhvConstraints& actions_i;
+#endif  // 0
 
     /// Holds all aligned clusters.  Every slice is in exactly one cluster.
     std::list<PHV::AlignedCluster *> aligned_clusters_i;
@@ -275,8 +277,8 @@ class Clustering : public PassManager {
     };
 
  public:
-    Clustering(PhvInfo &p, PhvUse &u, const PackConflicts& c, const ActionPhvConstraints& a)
-    : phv_i(p), uses_i(u), conflicts_i(c), actions_i(a),  slice_i(*this) {
+    Clustering(PhvInfo &p, PhvUse &u, const PackConflicts& c, const ActionPhvConstraints&)
+        : phv_i(p), uses_i(u), conflicts_i(c), /* actions_i(a), */ slice_i(*this) {
         addPasses({
             new ClearClusteringStructs(*this),          // clears pre-existing maps
             new FindComplexValidityBits(*this),         // populates complex_validity_bits_i

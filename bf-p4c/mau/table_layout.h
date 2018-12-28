@@ -230,7 +230,6 @@ class ProhibitAtcamWideSelectors : public MauInspector {
 };
 
 class TableLayout : public PassManager {
-    const PhvInfo &phv;
     LayoutChoices &lc;
 
     profile_t init_apply(const IR::Node *root) override;
