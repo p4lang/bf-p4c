@@ -27,7 +27,7 @@ class VerifyAssignedShifts : public ParserInspector {
 // ResolveStackRefs.
 class MakeUnresolvedStackRefsUnique : public ParserTransform {
     const IR::BFN::UnresolvedStackRef*
-    preorder(IR::BFN::UnresolvedStackRef* ref) {
+    preorder(IR::BFN::UnresolvedStackRef* ref) override {
         if (visitedRefIds.count(ref->id))
             ref->makeFresh();
         visitedRefIds.insert(ref->id);
@@ -78,7 +78,7 @@ struct ResolveStackRefs : public ParserInspector, ControlFlowVisitor {
             if (!other.stack_state.count(el.first))
                 el.second.unknown |= el.second.valid; }
 
-    profile_t init_apply(const IR::Node *root) {
+    profile_t init_apply(const IR::Node *root) override {
         resolvedIndices.clear();
         return ParserInspector::init_apply(root); }
     bool filter_join_point(const IR::Node *n) override { return !n->is<IR::BFN::ParserState>(); }
@@ -123,7 +123,7 @@ struct ResolveStackRefs : public ParserInspector, ControlFlowVisitor {
         return last;
     }
 
-    void postorder(const IR::BFN::Extract *extract) {
+    void postorder(const IR::BFN::Extract *extract) override {
         // Is this a write to a header stack item POV bit?
         auto crval = extract->source->to<IR::BFN::ConstantRVal>();
         if (!crval) return;
@@ -150,7 +150,7 @@ struct ResolveStackRefs : public ParserInspector, ControlFlowVisitor {
         stack_state[stackName].unknown[intIndex] = 0;
     }
 
-    void postorder(const IR::HeaderStackItemRef* ref) {
+    void postorder(const IR::HeaderStackItemRef* ref) override {
         // Explicit references to a specific header stack index are trivial; we
         // just resolve them to the specified index.
         if (!ref->index()->is<IR::BFN::UnresolvedStackRef>()) {
@@ -359,7 +359,7 @@ struct CopyPropagateParserValues : public ParserInspector, ControlFlowVisitor {
         return true;
     }
 
-    bool preorder(const IR::BFN::Transition *trans) {
+    bool preorder(const IR::BFN::Transition *trans) override {
         LOG5(id << ": " << IndentCtl::indent << trans << IndentCtl::unindent);
         BUG_CHECK(!!trans->shift, "shift not comuted yet?");
         if (*trans->shift == 0) return true;
@@ -382,10 +382,10 @@ struct CopyPropagateParserValues : public ParserInspector, ControlFlowVisitor {
         return true;
     }
 
-    bool preorder(const IR::BFN::ParserState *state) {
+    bool preorder(const IR::BFN::ParserState *state) override {
         LOG4(id << ":visit state " << state->name << IndentCtl::indent);
         return true; }
-    void postorder(const IR::BFN::ParserState *) {
+    void postorder(const IR::BFN::ParserState *) override {
         if (LOGGING(4))
             ::Log::Detail::fileLogOutput(__FILE__) << IndentCtl::unindent;
     }
@@ -501,7 +501,7 @@ struct CopyPropagateParserValues : public ParserInspector, ControlFlowVisitor {
         return;
     }
 
-    bool preorder(const IR::BFN::Extract *extract) {
+    bool preorder(const IR::BFN::Extract *extract) override {
         if (auto lval = extract->dest->to<IR::BFN::FieldLVal>()) {
             auto dest = lval->field->toString();
             auto *state = findContext<IR::BFN::ParserState>();
@@ -516,10 +516,10 @@ struct CopyPropagateParserValues : public ParserInspector, ControlFlowVisitor {
                 // The source is a simple r-value; just record the new definition
                 // for `dest` and move on.
                 setReachingDefs(reachingDefs[dest], ParserRValDef(state, extract->source)); }
-            LOG4(id << ":reachingDefs[" << dest << "] = " << reachingDefs[dest]); }
+            LOG4(id << ":reachingDefs[" << dest << "] = " << &reachingDefs[dest]); }
         return true; }
 
-    bool preorder(const IR::BFN::Select *select) {
+    bool preorder(const IR::BFN::Select *select) override {
         // If the source of this select is a computed r-value, its
         // expression may use a definition we've seen. Try to simplify it.
         if (auto* computed = select->source->to<IR::BFN::ComputedRVal>())
@@ -660,7 +660,7 @@ class CheckResolvedParserExpressions : public ParserTransform {
         return select;
     }
 
-    const IR::BFN::Parser *postorder(IR::BFN::Parser *parser) {
+    const IR::BFN::Parser *postorder(IR::BFN::Parser *parser) override {
         LOG3("after CheckResolvedParserExpressions for " << parser->toString() << parser <<
                      " start=" << parser->start->name);
         return parser; }
