@@ -55,27 +55,29 @@ class CollectInlineSubparser : public Inspector {
  private:
     std::pair<cstring, cstring>
     getAssignNames(const IR::AssignmentStatement* assign) const {
+        cstring src, dest;
         auto* rhs = assign->right;
         auto* lhs = assign->left;
         if (auto* lhs_path = lhs->to<IR::PathExpression>()) {
-            cstring dest = lhs_path->path->name;
+            dest = lhs_path->path->name;
             if (auto* rhs_path = rhs->to<IR::PathExpression>()) {
-                cstring src = rhs_path->path->name;
-                return { dest, src };
+                src = rhs_path->path->name;
             }
         }
-        return std::make_pair("", "");
+        return std::make_pair(dest, src);
     }
 
     bool hasUse(const IR::ParserState* state, cstring inst) const {
         bool has_use = false;
         forAllMatching<IR::MethodCallExpression>(
                 &state->components, [&] (const IR::MethodCallExpression* call_expr) {
-                    forAllMatching<IR::PathExpression>(
-                            call_expr, [&] (const IR::PathExpression* path) {
-                                if (path->path->name.name == inst) {
-                                    has_use = true; }
-                            }); });
+                    auto method = call_expr->method->to<IR::Member>();
+                    if (method->member != "extract") {
+                        forAllMatching<IR::PathExpression>(
+                                call_expr, [&] (const IR::PathExpression* path) {
+                                    if (path->path->name.name == inst) {
+                                        has_use = true; }
+                                }); }  });
         forAllMatching<IR::SelectExpression>(
                 &state->components, [&] (const IR::SelectExpression* call_expr) {
                     forAllMatching<IR::PathExpression>(
@@ -97,17 +99,16 @@ class CollectInlineSubparser : public Inspector {
         return has_copy;
     }
 
-    bool neverUseBefore(const std::vector<const IR::ParserState*>& stack,
-                        cstring dest,
-                        cstring src) const {
+    bool neverUseBefore(cstring dest, cstring src) const {
         if (!stack.size()) return true;
         for (auto i = stack.rbegin() + 1; i < stack.rend(); ++i) {
             auto* state = (*i);
             // If this state is where value copied in, do not check further.
-            if (hasAssign(state, src, dest)) {
-                LOG3("Check stops at, state->name = " << state->name);
+            if (hasAssign(state, dest, src)) {
+                LOG4(dest << " <- " << src << " in " << state->name);
                 break; }
             if (hasUse(state, dest)) {
+                LOG4(dest << " has use in " << state->name);
                 return false; }
         }
         return true;
@@ -124,6 +125,11 @@ class CollectInlineSubparser : public Inspector {
     }
 
     void dfs(const IR::ParserState* state) {
+        if (in_stack.count(state)) {
+            return; }
+
+        Visiting(state);
+
         // Do check first so that loop case is covered.
         forAllMatching<IR::AssignmentStatement>(
                 state, [&] (const IR::AssignmentStatement* assign) {
@@ -132,24 +138,19 @@ class CollectInlineSubparser : public Inspector {
                     // copy out to parameter, where src is the local variable, and dest is the
                     // out parameter.
                     if (parameters.count(dest)) {
-                        if (neverUseBefore(stack, dest, src) && neverUseAfter(state, src)) {
+                        if (neverUseBefore(dest, src) && neverUseAfter(state, src)) {
                             rewrite_with.insert({src, dest});
-                            LOG1("Possible replace, src " << src << " by " << dest);
+                            LOG4("Possible replace: " << src << " -> " << dest);
                         } else {
                             cannot_rewrite_with.insert({src, dest});
-                            LOG1("Do not replace, , src " << src << " by " << dest);
-                            LOG3("Reason: neverUseBefore = " << neverUseBefore(stack, dest, src));
-                            LOG3("Reason, neverUseAfter = " << neverUseAfter(state, src));
+                            LOG4("Do not replace: " << src << " -> " << dest);
+                            LOG4("Reason: neverUseBefore = " << neverUseBefore(dest, src));
+                            LOG4("Reason: neverUseAfter = " << neverUseAfter(state, src));
                         }
                     } else {
-                        LOG3("Ignore assignment to non-parameter: " << dest);
+                        LOG4("Ignore assignment to non-parameter: " << dest);
                     }
                 });
-
-        if (in_stack.count(state)) {
-            return; }
-
-        Visiting(state);
 
         for (const auto* next : getNextStates(refMap, state)) {
             dfs(next); }
@@ -158,10 +159,14 @@ class CollectInlineSubparser : public Inspector {
     }
 
     bool preorder(const IR::P4Parser* parser) {
+        parameters.clear();
+        stack.clear();
+        in_stack.clear();
+
         // parameters
-        for (const auto* para : parser->type->applyParams->parameters) {
-            LOG3("Found parameter, para->name = " << para->name);
-            parameters.insert(para->name.name);
+        for (const auto* param : parser->type->applyParams->parameters) {
+            LOG4("Found parameter: " << param->name);
+            parameters.insert(param->name.name);
         }
 
         auto start = parser->states.getDeclaration<IR::ParserState>("start");
@@ -215,7 +220,9 @@ class ReplaceSubparserPath : public Modifier {
             return true; }
         cstring name = path->path->name.name;
         if (replace_by.count(name)) {
-            path->path = new IR::Path(IR::ID(replace_by[name]));
+            cstring new_name = replace_by[name];
+            path->path = new IR::Path(IR::ID(new_name));
+            LOG4("replace " << name << " with " << new_name);
         }
         return true;
     }
