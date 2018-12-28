@@ -350,7 +350,7 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
         next_table_mask = ((1U << action_field_size) - 1);
     }
     setup_next_table_map(regs, result);
- 
+
     merge.next_table_format_data[logical_id].match_next_table_adr_mask = next_table_mask;
 
     /**
@@ -387,7 +387,7 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
      *
      * Current driver issue is: DRV-2239
      */
-   
+
     // Right now, in the JSON, the only mask that should be provided is the last logical
     // table of the stage.  By DRV-2239, this should be moved to a per logical table basis.
     if (table_id() > default_next_table_mask_pair.first) {
@@ -596,8 +596,6 @@ void MatchTable::add_all_reference_tables(json::map &tbl, Table *match_table) co
         if (a->selector) {
             unsigned sel_mask = (1U << METER_TYPE_START_BIT) - 1;
             sel_mask &= ~((1U << SELECTOR_LOWER_HUFFMAN_BITS) - 1);
-            tbl["default_selector_mask"] = sel_mask;
-            tbl["default_selector_value"] = METER_SELECTOR << METER_TYPE_START_BIT;
             add_reference_table(selection_table_refs, a->selector); }
         for (auto &m : a->meters) { add_reference_table(meter_table_refs, m); }
         for (auto &s : a->stats) { add_reference_table(statistics_table_refs, s); }

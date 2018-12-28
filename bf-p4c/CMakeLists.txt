@@ -646,6 +646,39 @@ endif (ENABLE_JBAY)
 install (FILES ${DRIVER_FILES} ${P4C_DRIVER_MACROS}
   DESTINATION ${P4C_ARTIFACTS_OUTPUT_DIRECTORY}/p4c_src)
 
+# install the tools that generate logging
+set (LOGGING_SCRIPTS
+  ${BFN_P4C_SOURCE_DIR}/compiler_interfaces/tools/create_mau_json
+  ${BFN_P4C_SOURCE_DIR}/compiler_interfaces/tools/create_phv_json
+  ${BFN_P4C_SOURCE_DIR}/compiler_interfaces/tools/create_mau_characterize
+  ${BFN_P4C_SOURCE_DIR}/compiler_interfaces/tools/create_mau_resources
+  ${BFN_P4C_SOURCE_DIR}/compiler_interfaces/tools/create_pa_characterize
+  ${BFN_P4C_SOURCE_DIR}/compiler_interfaces/tools/create_pa_results
+  )
+set (LOGGING_FILES
+  ${BFN_P4C_SOURCE_DIR}/compiler_interfaces/tools/utils.py
+  ${BFN_P4C_SOURCE_DIR}/compiler_interfaces/tools/__init__.py
+  )
+set (SCHEMA_FILES
+  ${BFN_P4C_SOURCE_DIR}/compiler_interfaces/schemas/context_schema.py
+  ${BFN_P4C_SOURCE_DIR}/compiler_interfaces/schemas/manifest_schema.py
+  ${BFN_P4C_SOURCE_DIR}/compiler_interfaces/schemas/mau_schema.py
+  ${BFN_P4C_SOURCE_DIR}/compiler_interfaces/schemas/phv_schema.py
+  ${BFN_P4C_SOURCE_DIR}/compiler_interfaces/schemas/power_schema.py
+  ${BFN_P4C_SOURCE_DIR}/compiler_interfaces/schemas/resources_schema.py
+  ${BFN_P4C_SOURCE_DIR}/compiler_interfaces/schemas/schema_enum_values.py
+  ${BFN_P4C_SOURCE_DIR}/compiler_interfaces/schemas/schema_keys.py
+  ${BFN_P4C_SOURCE_DIR}/compiler_interfaces/schemas/__init__.py
+  )
+install (PROGRAMS ${BFN_P4C_SOURCE_DIR}/compiler_interfaces/tools/p4c-build-logs
+  DESTINATION bin)
+install (PROGRAMS ${LOGGING_SCRIPTS}
+  DESTINATION ${P4C_ARTIFACTS_OUTPUT_DIRECTORY}/p4c_tools)
+install (FILES ${LOGGING_FILES}
+  DESTINATION ${P4C_ARTIFACTS_OUTPUT_DIRECTORY}/p4c_tools)
+install (FILES ${SCHEMA_FILES}
+  DESTINATION ${P4C_ARTIFACTS_OUTPUT_DIRECTORY}/schemas)
+
 # hack to get around the fact that the test scripts expect the backend
 # binary to be in the top level directory. This should go away when we
 # fix the scripts.

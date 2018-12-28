@@ -80,7 +80,8 @@ class BarefootBackend(BackendDriver):
                 self.runVerifiers = True
 
         # order of commands
-        self.enable_commands(['preprocessor', 'compiler', 'assembler'])
+        self.enable_commands(['preprocessor', 'compiler', 'assembler',
+                              'summary_logging'])
 
         # additional options
         self.add_command_line_options()
@@ -237,6 +238,16 @@ class BarefootBackend(BackendDriver):
 
             self.add_command_option('bf-rt-verifier', opts.bf_rt_schema)
             self._commandsEnabled.append('bf-rt-verifier')
+
+        if opts.verbose > 0:
+            log_scripts_dir = os.environ['P4C_BIN_DIR']
+            top_src_dir = checkEnv()
+            if top_src_dir:
+                # dev environment
+                log_scripts_dir = os.path.join(top_src_dir, 'compiler_interfaces/tools')
+            if os.path.exists(os.path.join(log_scripts_dir, 'p4c-build-logs')):
+                self.add_command('summary_logging', os.path.join(log_scripts_dir, 'p4c-build-logs'))
+                self._commandsEnabled.append('summary_logging')
 
         # Developer only options
         if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
@@ -428,9 +439,12 @@ class BarefootBackend(BackendDriver):
         run_archiver = 'archiver' in self._commandsEnabled
         run_compiler = 'compiler' in self._commandsEnabled
         run_verifier = 'verifier' in self._commandsEnabled
+        run_summary_logs = 'summary_logging' in self._commandsEnabled
 
         # run the preprocessor, compiler, and verifiers (manifest, context schema, and bf-rt)
-        self.disable_commands(['assembler', 'archiver', 'verifier'])
+        self.disable_commands(['assembler', 'archiver', 'verifier',
+                               'summary_logging'])
+
         rc = BackendDriver.run(self)
         # Error codes defined in p4c-barefoot.cpp:main
         if rc > 1:  # Invocation or program error. Can't recover anything from this, exit
@@ -472,6 +486,16 @@ class BarefootBackend(BackendDriver):
                     self.checkAndRunCmd('verifier')
                 unique_table_offset += 1
 
+                if run_summary_logs:
+                    if pipe.get('context', False):  # context.json is required
+                        try:
+                            self.add_command_option('summary_logging', "{}".format(pipe['context']))
+                            if pipe.get('resources', False):
+                                self.add_command_option('summary_logging', "-r {}".format(pipe['resources']))
+                            self.add_command_option('summary_logging', "-o {}".format(pipe['pipe_dir']))
+                            self.checkAndRunCmd('summary_logging')
+                        except:
+                            pass
 
         # run the archiver if one has been set
         if run_archiver:
