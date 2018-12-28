@@ -108,24 +108,19 @@ bool Clustering::MakeSlices::preorder(const IR::MAU::Table* tbl) {
 
     ordered_map<const PHV::Field*, le_bitrange> slices;
     for (auto& field_info : info_set) {
-        auto& info = field_info.second;
-        BUG_CHECK(!slices.count(field_info.first), "Already existing entry in slices map");
-        slices[field_info.first] = info.bits;
         // We need to make sure that slices that are XORed with each other for gateway comparisons
         // should be sliced in the same way. The end_apply() method takes the equivalently sliced
         // sets in `equivalences_i` and propagates fine-grained slicing through those fields until
         // we reach a fixed point. Therefore, implementing equivalent slicing for gateway comparison
         // slices is equivalent to adding those equivalent slices to the `equivalences_i` object.
+        auto& info = field_info.second;
         for (auto* field_b : info.xor_with) {
             ordered_set<PHV::FieldSlice> equivalence;
-            auto foundEntry = slices.find(field_b);
-            if (foundEntry != slices.end()) {
-                PHV::FieldSlice slice1 = PHV::FieldSlice(field_info.first, info.bits);
-                PHV::FieldSlice slice2 = PHV::FieldSlice(field_b, slices.at(field_b));
-                equivalence.insert(slice1);
-                equivalence.insert(slice2);
-                LOG5("\tAdding equivalence for gateway slices: " << slice1 << " and " << slice2);
-            }
+            PHV::FieldSlice slice1 = PHV::FieldSlice(field_info.first, info.bits);
+            PHV::FieldSlice slice2 = PHV::FieldSlice(field_b, info_set.at(field_b).bits);
+            equivalence.insert(slice1);
+            equivalence.insert(slice2);
+            LOG5("\tAdding equivalence for gateway slices: " << slice1 << " and " << slice2);
             equivalences_i.emplace_back(equivalence);
         }
     }
