@@ -73,14 +73,14 @@ abstract InputBufferRVal : ParserRVal {
 /// location in the packet data section of the input buffer
 class PacketRVal : InputBufferRVal {
     dbprint {
-        out << "packet bits " << interval() << "(" << range().size() << "b)";
+        out << "packet bits " << interval();
     }
 }
 
 /// location in the metadata secion of the input buffer
 class MetadataRVal : InputBufferRVal {
     dbprint {
-        out << "metadata bits " << interval() << "(" << range().size() << "b)";
+        out << "metadata bits " << interval();
     }
 }
 

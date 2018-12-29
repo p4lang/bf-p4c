@@ -1,10 +1,12 @@
 #ifndef EXTENSIONS_BF_P4C_PARDE_PARDE_UTILS_H_
 #define EXTENSIONS_BF_P4C_PARDE_PARDE_UTILS_H_
 
+#include <sys/stat.h>
 #include <boost/algorithm/string.hpp>
 #include <fstream>
 
 #include "bf-p4c/parde/parser_info.h"
+#include "bf-p4c/bf-p4c-options.h"
 
 class DumpParser : public Visitor {
     cstring filename;
@@ -13,7 +15,7 @@ class DumpParser : public Visitor {
 
  public:
     explicit DumpParser(cstring filename, bool detail = false)
-        : filename(filename), detail(detail) {}
+        : filename(filename), detail(detail || LOGGING(4)) {}
 
  private:
     static std::string escape(std::string s) {
@@ -39,7 +41,8 @@ class DumpParser : public Visitor {
     }
 
     void dump(const IR::BFN::ParserState* state) {
-        out << to_label("State", state) << " [shape=record";
+        out << to_label("State", state);
+        out << " [shape=record, style=\"filled,rounded\", fillcolor=cornsilk";
         out << ", label=\"{";
         out << state->name << ":\\l\\l";
 
@@ -47,7 +50,8 @@ class DumpParser : public Visitor {
             for (auto stmt : state->statements)
                 out << "    " << stmt << "\\l";
 
-            out << "\\l";
+            if (state->statements.size())
+                out << "\\l";
 
             for (auto select : state->selects)
                 out << "    " << select << "\\l";
@@ -85,7 +89,7 @@ class DumpParser : public Visitor {
     }
 
     void dump(const IR::BFN::LoweredParserState* state) {
-        out << to_label("State", state) << " [shape=record, style=rounded";
+        out << to_label("State", state) << " [style=filled, fillcolor=lightskyblue1, shape=record";
         out << ", label=\"{";
         out << state->name << ":\\l\\l";
 
@@ -99,7 +103,7 @@ class DumpParser : public Visitor {
     }
 
     void dump(const IR::BFN::LoweredParserMatch* match) {
-        out << to_label("Match", match) << " [shape=record";
+        out << to_label("Match", match) << " [style=filled, fillcolor=aliceblue, shape=record";
         out << ", label=\"{";
         out << "match " << match->value << ": \\l\\l";
 
@@ -107,17 +111,22 @@ class DumpParser : public Visitor {
             for (auto stmt : match->statements)
                 out << "    " << stmt << "\\l";
 
-            out << "\\l";
+            if (match->statements.size())
+                out << "\\l";
 
             for (auto save : match->saves)
                 out << "    " << save << "\\l";
 
-            out << "\\l";
+            if (match->saves.size())
+                out << "\\l";
 
             for (auto csum : match->checksums)
                 out << "    " << csum << "\\l";
 
-            out << "\\l shift: " << match->shift;
+            if (match->checksums.size())
+                out << "\\l";
+
+            out << "shift: " << match->shift;
         }
 
         out << "}\"";
@@ -154,6 +163,23 @@ class DumpParser : public Visitor {
         }
     }
 
+    std::ofstream* open_file(gress_t gress) {
+        std::string outdir(BackendOptions().outputDir.c_str());
+        outdir += "/graphs";
+
+        int rc = mkdir(outdir.c_str(), 0755);
+        if (rc != 0 && errno != EEXIST) {
+            std::cerr << "Failed to create directory: " << outdir << std::endl;
+            return nullptr;
+        }
+
+        static int fid = 0;
+        std::string filepath = outdir + "/" + std::to_string(fid++) + "_" + filename
+                                      + "_" + ::toString(gress) + ".dot";
+
+        return new std::ofstream(filepath);
+    }
+
     template <typename ParserGraphType>
     void dump_graph(const ParserGraphType& graph, gress_t gress) {
         out.str(std::string());
@@ -165,11 +191,12 @@ class DumpParser : public Visitor {
 
         out << "}" << std::endl;
 
-        std::ofstream fs(filename + "_" + ::toString(gress) + ".dot");
+        auto fs = open_file(gress);
 
-        fs << escape(out.str());
-
-        fs.close();
+        if (fs) {
+            *fs << escape(out.str());
+            fs->close();
+        }
     }
 
     const IR::Node *apply_visitor(const IR::Node *n, const char*) override { return n; }

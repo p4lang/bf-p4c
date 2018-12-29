@@ -2523,9 +2523,9 @@ LowerParser::LowerParser(const PhvInfo& phv, ClotInfo& clot, const FieldDefUse &
         pragma_no_init,
         new LowerParserIR(phv, clot),
         new LowerDeparserIR(phv, clot),
-        LOGGING(3) ? new DumpParser("before_split_big_states", true) : nullptr,
+        LOGGING(3) ? new DumpParser("before_split_big_states") : nullptr,
         new SplitBigStates,
-        LOGGING(3) ? new DumpParser("after_split_big_states", true) : nullptr,
+        LOGGING(3) ? new DumpParser("after_split_big_states") : nullptr,
         new WarnTernaryMatchFields(phv),
         new ComputeInitZeroContainers(phv, defuse, pragma_no_init->getFields()),
         new ComputeMultiwriteContainers,  // Must run after ComputeInitZeroContainers.

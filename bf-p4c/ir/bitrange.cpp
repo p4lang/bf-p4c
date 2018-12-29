@@ -9,8 +9,7 @@ namespace {
 
 void writeRangeToStream(std::ostream& out, const char* prefix, int lo, int hi,
                         const char* suffix) {
-    // FIXME(zma) precision?
-    out << prefix << lo;
+    out << std::dec << prefix << lo;
     if (hi != lo) out << ".." << hi;
     out << suffix;
 }
@@ -27,33 +26,17 @@ std::pair<int, int> rangeFromJSON(JSONLoader& json) {
     return endpoints;
 }
 
-std::ostream& writeHalfOpenRangeToStream(std::ostream& out, RangeUnit unit,
-                                         Endian order, int lo, int hi) {
+std::ostream& toStream(std::ostream& out, RangeUnit unit,
+                       Endian order, int lo, int hi, bool closed) {
     const char* prefix = "?[";
     switch (order) {
         case Endian::Network: prefix = "N["; break;
         case Endian::Little: prefix = "L["; break;
     }
-    const char* suffix = ")?";
+    const char* suffix = closed ? "]?" : ")?";
     switch (unit) {
-        case RangeUnit::Bit: suffix = ")b"; break;
-        case RangeUnit::Byte: suffix = ")B"; break;
-    }
-    writeRangeToStream(out, prefix, lo, hi, suffix);
-    return out;
-}
-
-std::ostream& writeClosedRangeToStream(std::ostream& out, RangeUnit unit,
-                                       Endian order, int lo, int hi) {
-    const char* prefix = "?[";
-    switch (order) {
-        case Endian::Network: prefix = "N["; break;
-        case Endian::Little: prefix = "L["; break;
-    }
-    const char* suffix = "]?";
-    switch (unit) {
-        case RangeUnit::Bit: suffix = "]b"; break;
-        case RangeUnit::Byte: suffix = "]B"; break;
+        case RangeUnit::Bit: suffix = closed ? "]b" : ")b"; break;
+        case RangeUnit::Byte: suffix = closed ? "]B" : ")B"; break;
     }
     writeRangeToStream(out, prefix, lo, hi, suffix);
     return out;

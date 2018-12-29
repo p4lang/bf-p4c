@@ -401,6 +401,7 @@ PHV::AllocationReport::printTagalongCollectionsOccupancyMetrics() const {
         totalAvailBits += info.getTotalAvailableBits();
     }
 
+    tp.addSep();
     tp.addRow({"Total",
                "",
                formatUsage(totalUsed[PHV::Type::TB], totalAvail[PHV::Type::TB]),

@@ -691,26 +691,19 @@ using le_bitinterval = HalfOpenRange<RangeUnit::Bit, Endian::Little>;
 using nw_byteinterval = HalfOpenRange<RangeUnit::Byte, Endian::Network>;
 using le_byteinterval = HalfOpenRange<RangeUnit::Byte, Endian::Little>;
 
-/// A helper function that implements operator<<() for HalfOpenRanges, so that
-/// the entire implementation doesn't need to be in the header file.
-std::ostream& writeHalfOpenRangeToStream(std::ostream& out, RangeUnit unit,
-                                         Endian order, int lo, int hi);
+std::ostream& toStream(std::ostream& out, RangeUnit unit,
+                       Endian order, int lo, int hi, bool closed);
 
 template <RangeUnit Unit, Endian Order>
 std::ostream& operator<<(std::ostream& out,
                          const HalfOpenRange<Unit, Order>& range) {
-    return writeHalfOpenRangeToStream(out, Unit, Order, range.lo, range.hi);
+    return toStream(out, Unit, Order, range.lo, range.hi, false);
 }
-
-/// A helper function that implements operator<<() for ClosedRanges, so that
-/// the entire implementation doesn't need to be in the header file.
-std::ostream& writeClosedRangeToStream(std::ostream& out, RangeUnit unit,
-                                       Endian order, int lo, int hi);
 
 template <RangeUnit Unit, Endian Order>
 std::ostream& operator<<(std::ostream& out,
                          const ClosedRange<Unit, Order>& range) {
-    return writeClosedRangeToStream(out, Unit, Order, range.lo, range.hi);
+    return toStream(out, Unit, Order, range.lo, range.hi, true);
 }
 
 #endif /* EXTENSIONS_BF_P4C_IR_BITRANGE_H_ */
