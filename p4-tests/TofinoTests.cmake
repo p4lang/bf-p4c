@@ -109,11 +109,9 @@ p4c_add_ptf_test_with_ptfdir_and_spec (
     "${testExtraArgs} -DWITH_SPGW -DWITH_INT_TRANSIT"
     ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos-ptf/fabric-new.ptf "all")
 
-set (TOFINO_32Q_3PIPE_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/tofino32q-3pipe/sfc.p4)
-p4c_add_ptf_test_with_ptfdir_and_spec (
-    "tofino" tofino32q-3pipe ${TOFINO_32Q_3PIPE_P4}
-    "${testExtraArgs} -tofino -arch tna"
-    ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/tofino32q-3pipe-ptf/sfc.ptf "all")
+file(RELATIVE_PATH tofino32q-3pipe_path ${P4C_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/tofino32q-3pipe/sfc.p4)
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
+  "tofino32q-3pipe" ${tofino32q-3pipe_path} "${testExtraArgs} -tofino -arch tna" "")
 
 # subset of p4factory tests that we want to run as part of regressions
 # One # means it fails badly but should get it to run soon
@@ -572,7 +570,7 @@ p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
 # P4-16 Programs with PTF tests
 foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS)
   p4c_add_ptf_test_with_ptfdir ("tofino" "p4_16_programs_${t}" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/p4_16_programs/${t}/${t}.p4"
-    "${testExtraArgs} -ptf -bfrt -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/p4_16_programs/${t}")
+    "${testExtraArgs} -bfrt -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/p4_16_programs/${t}")
   bfn_set_p4_build_flag("tofino" "p4_16_programs_${t}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/p4_16_programs")
   set (ports_json ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/p4_16_programs/${t}/ports.json)
   if (EXISTS ${ports_json})

@@ -100,9 +100,11 @@ set_tests_properties("tofino/switch_${SWITCH_VERSION}_ent_dc_general" PROPERTIES
 set (SWITCH_P4_16 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/switch_16/p4src/switch-tofino/switch.p4)
 set (SWITCH_P4_16_PTF ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/switch_16/ptf/api)
 file (RELATIVE_PATH switch_p4_16 ${P4C_SOURCE_DIR} ${SWITCH_P4_16})
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16" ${SWITCH_P4_16}
-  "${testExtraArgs} -ptf -bfrt -to 3600" ${SWITCH_P4_16_PTF})
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_16"
+p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
+  "smoketest_switch_16_compile" ${switch_p4_16} "$testExtraArgs}" "-arch tna -bfrt -force-link")
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_Tests" ${SWITCH_P4_16}
+  "${testExtraArgs} -bfrt -to 3600" ${SWITCH_P4_16_PTF})
+bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_Tests"
         "all
         ^switch_tests.L2FloodTest
         ^switch_tests.IPv4MalformedPacketsTest
@@ -114,15 +116,15 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_16"
         ^switch_hostif.HostIfPingTest
         ^switch_hostif.HostIfRxTest")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_HostIfPingTest" ${SWITCH_P4_16}
-  "${testExtraArgs} -ptf -bfrt -to 3600" ${SWITCH_P4_16_PTF})
+  "${testExtraArgs} -bfrt -to 3600" ${SWITCH_P4_16_PTF})
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_HostIfPingTest"
         "switch_hostif.HostIfPingTest")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_HostIfRxTest" ${SWITCH_P4_16}
-  "${testExtraArgs} -ptf -bfrt -to 3600" ${SWITCH_P4_16_PTF})
+  "${testExtraArgs} -bfrt -to 3600" ${SWITCH_P4_16_PTF})
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_HostIfRxTest"
         "switch_hostif.HostIfRxTest")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_IdentityHash" ${SWITCH_P4_16}
-  "${testExtraArgs} -ptf -bfrt -to 3600" ${SWITCH_P4_16_PTF})
+  "${testExtraArgs} -bfrt -to 3600" ${SWITCH_P4_16_PTF})
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_IdentityHash"
         "switch_tests.L2FloodTest
          switch_tests.IPv4MalformedPacketsTest
@@ -130,14 +132,20 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_IdentityHash"
          switch_tests.L2StpTest
          switch_tests.L2LagPVCheckTest
          switch_tests.L2VlanTest
-         switch_tests.QoSTest")
-
-
-#p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
-#  "switch_p4_16" ${switch_p4_16} "${testExtraArgs} -tofino2 -arch t2na" "")
+         switch_tests.QoSTest"
+  )
+# All switch_16 tests should depend on the test being compiled, rather than
+# relying on the first one to compile the test.
+set_tests_properties(
+  "tofino/smoketest_switch_16_Tests"
+  "tofino/smoketest_switch_16_HostIfPingTest"
+  "tofino/smoketest_switch_16_HostIfRxTest"
+  "tofino/smoketest_switch_16_IdentityHash"
+  PROPERTIES DEPENDS "tofino/smoketest_switch_16_compile"
+  )
 
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
-set_tests_properties("tofino/smoketest_switch_16" PROPERTIES TIMEOUT 3600)
+set_tests_properties("tofino/smoketest_switch_16_Tests" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_16_HostIfPingTest" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_16_HostIfRxTest" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_16_IdentityHash" PROPERTIES TIMEOUT 3600)
@@ -342,7 +350,7 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_ipv4"
         "l2 l3 acl tunnel mirror
         ^aclfrag ^dynhash ^urpf ^mpls ^mcast ^racl ^warminit ^stp ^non-vxlan-tunnel
         switch_tests.IPv4inIPv4Test
-        switch_tests.IPv4inIPv6Test  
+        switch_tests.IPv4inIPv6Test
         ^switch_tests.MalformedPacketsTest
         ^switch_tests.ExceptionPacketsTest
         ^switch_tests.ExceptionPacketsTest_IPV6
