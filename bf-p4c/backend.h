@@ -11,6 +11,7 @@
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/mau/table_mutex.h"
+#include "bf-p4c/mau/table_summary.h"
 
 class FieldDefUse;
 
@@ -29,6 +30,7 @@ class Backend : public PassManager {
     ordered_map<cstring, ordered_set<cstring>> extracted_together;
     /// Class that represents the backtracking point from table placement to PHV allocation.
     MauBacktracker table_alloc;
+    TableSummary table_summary;
     /// List of field names which should not be privatized. Detected by ValidateAllocation pass and
     /// used by Privatization (when invoked due to backtracking) or UndoPrivatization to prevent
     /// privatization.

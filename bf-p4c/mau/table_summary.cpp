@@ -130,6 +130,13 @@ void TableSummary::throwBacktrackException() {
         throw PHVTrigger::failure(tableAlloc, true /* metaInitDisable */); }
 }
 
+const ordered_set<int> TableSummary::stages(const IR::MAU::Table* tbl) const {
+    ordered_set<int> rs;
+    cstring tbl_name = getTableName(tbl);
+    if (!tableAlloc.count(tbl_name)) return rs;
+    return tableAlloc.at(tbl_name);
+}
+
 void TableSummary::printTablePlacement() {
     LOG1("Number of tables allocated: " << order.size());
     LOG1("Stage | Table Name");

@@ -49,6 +49,7 @@
 #include "bf-p4c/phv/privatization.h"
 #include "bf-p4c/phv/validate_allocation.h"
 #include "bf-p4c/phv/analysis/dark.h"
+#include "bf-p4c/phv/utils/live_range_report.h"
 
 // Set the default base directory for logging files
 // This will be overwritten by FileLog::setOutputDir in main, however, the
@@ -149,7 +150,8 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
     uses(phv),
     defuse(phv),
     bridged_fields(phv),
-    table_alloc(phv.parser_mutex()) {
+    table_alloc(phv.parser_mutex()),
+    table_summary(pipe_id) {
     addPasses({
         new DumpPipe("Initial table graph"),
         new CreateThreadLocalInstances,
@@ -249,7 +251,8 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new ReinstateAliasSources(phv),    // revert AliasMembers/Slices to their original sources
         options.privatization ? &defuse : nullptr,
         new TableAllocPass(options, phv, deps),
-        new TableSummary(pipe_id),
+        &table_summary,
+        new LiveRangeReport(phv, table_summary, defuse),
         // Rerun defuse analysis here so that table placements are used to correctly calculate live
         // ranges output in the assembly.
         &defuse,

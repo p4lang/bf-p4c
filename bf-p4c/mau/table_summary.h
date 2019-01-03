@@ -70,6 +70,12 @@ class TableSummary: public MauInspector {
     /// compiler-generated name otherwise.
     static cstring getTableName(const IR::MAU::Table* tbl);
 
+    /// @return the set of stages to which table @t has been allocated.
+    const ordered_set<int> stages(const IR::MAU::Table* tbl) const;
+
+    /// @returns the maximum number of stages used by the program.
+    int maxStages() const { return maxStage; }
+
     friend std::ostream &operator<<(std::ostream &out, const TableSummary &ts);
 };
 
