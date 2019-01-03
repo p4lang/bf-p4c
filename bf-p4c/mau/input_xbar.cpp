@@ -3048,12 +3048,15 @@ bitvec IXBar::determine_final_xor(const IR::MAU::HashFunction *hf,
     safe_vector<ixbar_input_t> hash_inputs;
     for (auto &entry : field_list) {
         ixbar_input_t hash_input;
-        if (entry->is_constant()) {
+        if (entry->is<PHV::Constant>()) {
             hash_input.type = ixbar_input_type::tCONST;
-            hash_input.constant = dynamic_cast<PHV::Constant*>(entry)->constant_value();
+            if (!entry->to<PHV::Constant>()->value->fitsUint64())
+                ::error("The size of constant %1% is too large, "
+                        "the maximum supported size is 64 bit", entry->to<PHV::Constant>()->value);
+            hash_input.u.constant = entry->to<PHV::Constant>()->value->asUint64();
         } else {
             hash_input.type = ixbar_input_type::tPHV;
-            hash_input.valid = true;
+            hash_input.u.valid = true;
         }
         hash_input.ixbar_bit_position = entry->range().lo;
         hash_input.bit_size = entry->size();

@@ -564,7 +564,9 @@ class AbstractField {
     virtual int size() const = 0;
     virtual const PHV::Field* field() const = 0;
     virtual le_bitrange range() const = 0;
-    virtual bool is_constant() const = 0;
+    template<typename T> const T &as() const { return dynamic_cast<const T&>(this); }
+    template<typename T> const T *to() const { return dynamic_cast<const T*>(this); }
+    template<typename T> bool is() const { return to<T>() != nullptr; }
 };
 
 /**
@@ -581,9 +583,6 @@ class Constant : public AbstractField {
     int size() const override { return value->type->width_bits(); }
     const PHV::Field* field() const override { return nullptr; }
     le_bitrange range() const override { return range_i; }
-    bool is_constant() const override { return true; }
-    uint32_t constant_value() const { return value->asInt(); }
-
     const IR::Constant* value;
 };
 
@@ -685,8 +684,6 @@ class FieldSlice : public AbstractField {
 
     /// @returns the bits of the field included in this field slice.
     le_bitrange range() const override { return range_i; }
-
-    bool is_constant() const override { return false; }
 
     /// Sets the valid starting bit positions (little Endian) for this field.
     /// For example, setStartBits(PHV::Size::b8, bitvec(0,1)) means that the least

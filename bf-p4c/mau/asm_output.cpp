@@ -812,8 +812,8 @@ void MauAsmOutput::emit_ixbar_gather_map(std::map<int, Slice> &match_data_map,
         // field  MSB and last at LSB.
         for (auto fs_itr = field_list_order.rbegin(); fs_itr != field_list_order.rend(); fs_itr++) {
             auto fs = *fs_itr;
-            if (fs->is_constant()) {
-                auto cons = dynamic_cast<PHV::Constant*>(fs);
+            if (fs->is<PHV::Constant>()) {
+                auto cons = fs->to<PHV::Constant>();
                 le_bitrange br = { order_bit, order_bit + fs->size() - 1 };
                 constant_map[br] = cons->value;
                 order_bit += fs->size();
