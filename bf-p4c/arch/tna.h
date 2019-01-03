@@ -58,3 +58,4 @@ struct T2naArchTranslation : public PassManager {
 }  // namespace BFN
 
 #endif /* BF_P4C_ARCH_TNA_H_ */
+

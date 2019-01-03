@@ -5,6 +5,21 @@
 # LIBBFUTILS_LIBRARY
 #
 
+set (BFUTILS_INSTALL_DIR ${BFN_P4C_SOURCE_DIR}/../install)
+if (INSTALL_LIBDYNHASH)
+  message(STATUS "Installing bf-utils library ...")
+  execute_process(COMMAND ${BFN_P4C_SOURCE_DIR}/scripts/make_and_install_dynhash.sh --install-dir ${BFUTILS_INSTALL_DIR} --no-sudo --repo ${BFN_P4C_SOURCE_DIR}/bf-utils --no-repo-update
+    WORKING_DIRECTORY ${BFN_P4C_SOURCE_DIR}
+    RESULT_VARIABLE bfutils_install
+    OUTPUT_VARIABLE bfutils_output_log
+    ERROR_VARIABLE bfutils_error_log
+    )
+  if (${bfutils_install})
+    message(FATAL_ERROR "Failed to install bfutils library:\n${bfutils_output_log}\n${bfutils_error_log}")
+  else()
+    message(STATUS "Installed bfutils in ${BFUTILS_INSTALL_DIR}\n${bfutils_output_log}")
+  endif()
+endif()
 
 # save the suffixes
 set(__cmake_find_lib_suffixes ${CMAKE_FIND_LIBRARY_SUFFIXES})
@@ -13,7 +28,7 @@ set(CMAKE_FIND_LIBRARY_SUFFIXES .a)
 
 find_path(LIBDYNHASH_INCLUDE_DIR NAMES dynamic_hash/dynamic_hash.h
   PATHS
-  ${BFN_P4C_SOURCE_DIR}/../install/include/bfutils
+  ${BFUTILS_INSTALL_DIR}/include/bfutils
   ${CMAKE_INSTALL_PREFIX}/include/bfutils
   /usr/local/include/bfutils
   /usr/include/bfutils
@@ -21,7 +36,7 @@ find_path(LIBDYNHASH_INCLUDE_DIR NAMES dynamic_hash/dynamic_hash.h
 
 find_library(LIBDYNHASH_LIBRARY NAMES dynhash
   HINTS
-  ${BFN_P4C_SOURCE_DIR}/../install/lib
+  ${BFUTILS_INSTALL_DIR}/lib
   ${CMAKE_INSTALL_PREFIX}/lib
   /usr/local/lib
   /usr/lib

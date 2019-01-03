@@ -453,6 +453,7 @@ void HashExpr::find_input(Phv::Ref what, std::vector<ixbar_input_t> &inputs, Inp
             (int(group_bit_position + what->size() - 1) / 64 != (hash_table % 2)))
             continue;
         ixbar_input_t input;
+        input.type = ixbar_input_type::tPHV;
         input.ixbar_bit_position = group_bit_position + (hash_table / 2) * 128;
         input.bit_size = what->size();
         input.valid = true;
@@ -497,6 +498,7 @@ void HashExpr::Crc::gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, InputXb
         ixbar_input_t normal_input;
         ixbar_input_t invalid_input;
         if (previous_range_hi != entry.first) {
+            invalid_input.type = ixbar_input_type::tPHV;
             invalid_input.valid = false;
             invalid_input.bit_size = entry.first - previous_range_hi;
             inputs.push_back(invalid_input);

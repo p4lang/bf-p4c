@@ -1495,7 +1495,7 @@ void IXBar::determine_proxy_hash_alg(const IR::MAU::Table *tbl, Use &alloc, int 
     } while (start_bit >= 0);
     alloc.hash_seed[group]
         |= determine_final_xor(&alloc.proxy_hash_key_use.algorithm, bit_starts,
-                               alloc.total_input_bits());
+                               alloc.field_list_order, alloc.total_input_bits());
 }
 
 /**
@@ -3019,7 +3019,8 @@ bool IXBar::allocHashDist(const IR::MAU::HashDist *hd, IXBar::Use::hash_dist_typ
     alloc.hash_dist_hash.bit_starts = hdap.bit_starts;
     alloc.hash_dist_hash.group = used_hash_group;
     alloc.hash_seed[used_hash_group]
-        |= determine_final_xor(&hd->algorithm, hdap.bit_starts, alloc.total_input_bits());
+        |= determine_final_xor(&hd->algorithm, hdap.bit_starts,
+                               alloc.field_list_order, alloc.total_input_bits());
     return rv;
 }
 
@@ -3028,7 +3029,8 @@ bool IXBar::allocHashDist(const IR::MAU::HashDist *hd, IXBar::Use::hash_dist_typ
  * and writes them into the seed output.
  */
 bitvec IXBar::determine_final_xor(const IR::MAU::HashFunction *hf,
-        std::map<int, le_bitrange> &bit_starts, int total_input_bits) {
+        std::map<int, le_bitrange> &bit_starts,
+        safe_vector<PHV::AbstractField*> field_list, int total_input_bits) {
     safe_vector<hash_matrix_output_t> hash_outputs;
     for (auto &entry : bit_starts) {
         hash_matrix_output_t hash_output;
@@ -3042,8 +3044,24 @@ bitvec IXBar::determine_final_xor(const IR::MAU::HashFunction *hf,
     hash_seed_t hash_seed;
     hash_seed.hash_seed_value = 0ULL;
     hash_seed.hash_seed_used = 0ULL;
-    determine_seed_2(hash_outputs.data(), hash_outputs.size(), total_input_bits, &hash_alg,
-                     &hash_seed);
+
+    safe_vector<ixbar_input_t> hash_inputs;
+    for (auto &entry : field_list) {
+        ixbar_input_t hash_input;
+        if (entry->is_constant()) {
+            hash_input.type = ixbar_input_type::tCONST;
+            hash_input.constant = dynamic_cast<PHV::Constant*>(entry)->constant_value();
+        } else {
+            hash_input.type = ixbar_input_type::tPHV;
+            hash_input.valid = true;
+        }
+        hash_input.ixbar_bit_position = entry->range().lo;
+        hash_input.bit_size = entry->size();
+        hash_inputs.push_back(hash_input);
+    }
+    determine_seed(hash_outputs.data(), hash_outputs.size(),
+                   hash_inputs.data(), hash_inputs.size(), total_input_bits, &hash_alg,
+                   &hash_seed);
 
     unsigned lo_unsigned = hash_seed.hash_seed_value & ((1ULL << 32) - 1);
     unsigned hi_unsigned = (hash_seed.hash_seed_value >> 32) & ((1ULL << 32) - 1);

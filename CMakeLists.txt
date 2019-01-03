@@ -14,6 +14,7 @@ OPTION(ENABLE_JBAY "Enable JBay" ON)
 OPTION(ENABLE_BAREFOOT_INTERNAL "Enable Barefoot Internal" ON)
 OPTION(ENABLE_TESTING "Enable test genration" ON)
 OPTION(FIXED_LIBDYNHASH "Use future version of the Dynamic hash library" OFF)
+OPTION(INSTALL_LIBDYNHASH "Install the Dynamic hash library" OFF)
 
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 

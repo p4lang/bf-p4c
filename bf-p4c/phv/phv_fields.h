@@ -582,6 +582,7 @@ class Constant : public AbstractField {
     const PHV::Field* field() const override { return nullptr; }
     le_bitrange range() const override { return range_i; }
     bool is_constant() const override { return true; }
+    uint32_t constant_value() const { return value->asInt(); }
 
     const IR::Constant* value;
 };

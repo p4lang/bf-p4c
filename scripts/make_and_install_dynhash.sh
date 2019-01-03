@@ -3,16 +3,22 @@
 
 top_dir=$(dirname $0)/..
 usage() {
-    echo "$0 [--branch br][--repo dir] [--install-dir dir]"
+    echo "$0 [--branch br][--repo dir] [--install-dir dir] [--no-sudo]"
     echo "   --branch <branch> the bf-utils repo branch. Default: master."
     echo "   --repo <dir> specifies the directory for the bf-utils repo."
     echo "          If it does not exist, it clones the repo in the specified directory."
     echo "   --install-dir <dir> the directory prefix to install the library and headers."
+    echo "   --no-repo-update do not update the repo to the latest."
+    echo "          Assumes it's been done already. Used for Jenkins/Travis."
+    echo "   --no-sudo install in a local directory, so no need for sudo."
 }
 
 install_dir=/usr/local
 repo_dir=$top_dir/../bf-utils
 branch=master
+repo_update=true
+SUDO=
+if [[ $(uname -s) == 'Linux' ]]; then SUDO=sudo ; fi
 while [[ $# -gt 0 ]] ; do
     if [ ! -z $1 ]; then
         case $1 in
@@ -27,6 +33,14 @@ while [[ $# -gt 0 ]] ; do
             -r|--repo)
                 repo_dir=$2
                 shift; shift;
+                ;;
+            --no-sudo)
+                SUDO="";
+                shift;
+                ;;
+            --no-repo-update)
+                repo_update=false;
+                shift;
                 ;;
             -b|--branch)
                 branch=$2
@@ -59,8 +73,10 @@ if [[ ! -d $repo_dir ]] ; then
 else
     cd $repo_dir
 fi
-git checkout $branch
-git pull --ff origin master
+if [[ $repo_update == true ]]; then
+    git checkout $branch
+    git pull --ff origin $branch
+fi
 echo "Running autogen.sh ..."
 ./autogen.sh > /dev/null
 mkdir -p build && cd build
@@ -68,8 +84,6 @@ echo "Running configure ..."
 ../configure --prefix=$install_dir > /dev/null
 make libdynhash.la
 echo "Installing ..."
-SUDO=
-if [[ $(uname -s) == 'Linux' ]]; then SUDO=sudo ; fi
 $SUDO mkdir -p $install_dir/lib $install_dir/include/bfutils
 $SUDO cp .libs/libdynhash.a $install_dir/lib
 $SUDO cp -r ../include/dynamic_hash $install_dir/include/bfutils
