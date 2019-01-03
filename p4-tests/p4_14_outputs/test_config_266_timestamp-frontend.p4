@@ -162,15 +162,15 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".set_pkt") action set_pkt_0() {
+    @name(".set_pkt") action set_pkt() {
         hdr.hdr1.d = hdr.ig_intr_md_from_parser_aux.ingress_global_tstamp;
     }
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing() {
     }
-    @name(".t1") table t1 {
+    @name(".t1") table t1_0 {
         actions = {
-            set_pkt_0();
-            do_nothing_0();
+            set_pkt();
+            do_nothing();
             @defaultonly NoAction_0();
         }
         key = {
@@ -180,7 +180,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_0();
     }
     apply {
-        t1.apply();
+        t1_0.apply();
     }
 }
 

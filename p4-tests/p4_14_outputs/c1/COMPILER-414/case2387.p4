@@ -818,7 +818,7 @@ control English(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Whitetail.Tannehill   : exact;
-            meta.Whitetail.Darden[19:0]: lpm;
+            meta.Whitetail.Darden[19:0]: lpm @name("Whitetail.Darden") ;
         }
         size = 131072;
         default_action = Barnwell();
@@ -858,7 +858,7 @@ control English(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Saticoy.Angwin         : exact;
-            meta.Saticoy.Coleman[106:64]: lpm;
+            meta.Saticoy.Coleman[106:64]: lpm @name("Saticoy.Coleman") ;
         }
         size = 65536;
         default_action = Barnwell();
@@ -871,7 +871,7 @@ control English(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Saticoy.Surrey       : exact;
-            meta.Saticoy.Coleman[63:0]: lpm;
+            meta.Saticoy.Coleman[63:0]: lpm @name("Saticoy.Coleman") ;
         }
         size = 16384;
         default_action = Barnwell();
@@ -883,7 +883,7 @@ control English(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Gorman.Lostine         : exact;
-            meta.Saticoy.Coleman[127:64]: lpm;
+            meta.Saticoy.Coleman[127:64]: lpm @name("Saticoy.Coleman") ;
         }
         size = 8192;
     }
@@ -929,11 +929,11 @@ control English(inout headers hdr, inout metadata meta, inout standard_metadata_
                 switch (CedarKey.apply().action_run) {
                     Barnwell: {
                         switch (Sunflower.apply().action_run) {
-                            Barnwell: {
-                                Bellwood.apply();
-                            }
                             Marlton: {
                                 Annandale.apply();
+                            }
+                            Barnwell: {
+                                Bellwood.apply();
                             }
                         }
 
@@ -1845,7 +1845,7 @@ control Victoria(inout headers hdr, inout metadata meta, inout standard_metadata
             bit<1> in_value;
             in_value = value;
             value = in_value;
-            rv = ~value;
+            rv = ~in_value;
         }
     };
     @name(".Woodsboro") RegisterAction<bit<1>, bit<32>, bit<1>>(Illmo) Woodsboro = {

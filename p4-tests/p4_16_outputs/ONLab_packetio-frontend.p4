@@ -45,13 +45,13 @@ parser ParserImpl(packet_in packet, out headers_t hdr, inout metadata_t meta, in
 }
 
 control ingress(inout headers_t hdr, inout metadata_t meta, inout standard_metadata_t standard_metadata) {
-    @name("ingress.send_to_cpu") action send_to_cpu_0() {
+    @name("ingress.send_to_cpu") action send_to_cpu() {
         standard_metadata.egress_spec = 9w320;
     }
-    @name("ingress.set_egress_port") action set_egress_port_0(PortId port) {
+    @name("ingress.set_egress_port") action set_egress_port(PortId port) {
         standard_metadata.egress_spec = port;
     }
-    @name("ingress.table0") table table0 {
+    @name("ingress.table0") table table0_0 {
         support_timeout = false;
         key = {
             standard_metadata.ingress_port: ternary @name("standard_metadata.ingress_port") ;
@@ -60,16 +60,16 @@ control ingress(inout headers_t hdr, inout metadata_t meta, inout standard_metad
             hdr.ethernet.etherType        : ternary @name("hdr.ethernet.etherType") ;
         }
         actions = {
-            set_egress_port_0();
-            send_to_cpu_0();
+            set_egress_port();
+            send_to_cpu();
         }
-        default_action = send_to_cpu_0();
+        default_action = send_to_cpu();
     }
     apply {
         if (hdr.packet_out.isValid()) 
             standard_metadata.egress_spec = hdr.packet_out.egress_port;
         else 
-            table0.apply();
+            table0_0.apply();
     }
 }
 

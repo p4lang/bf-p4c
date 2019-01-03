@@ -168,7 +168,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.ethernet.etherType[11:0]: exact @name("ethernet.etherType[11:0]") ;
+            hdr.ethernet.etherType[11:0]: exact @name("ethernet.etherType") ;
             hdr.ethernet.dstAddr        : exact @name("ethernet.dstAddr") ;
             hdr.ethernet.srcAddr        : exact @name("ethernet.srcAddr") ;
         }
@@ -183,7 +183,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             hdr.ethernet.dstAddr        : exact @name("ethernet.dstAddr") ;
-            hdr.ethernet.etherType[11:0]: exact @name("ethernet.etherType[11:0]") ;
+            hdr.ethernet.etherType[11:0]: exact @name("ethernet.etherType") ;
             hdr.ethernet.srcAddr        : exact @name("ethernet.srcAddr") ;
         }
         size = 4096;
@@ -198,7 +198,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         key = {
             hdr.ethernet.dstAddr        : exact @name("ethernet.dstAddr") ;
             hdr.ethernet.srcAddr        : exact @name("ethernet.srcAddr") ;
-            hdr.ethernet.etherType[11:0]: exact @name("ethernet.etherType[11:0]") ;
+            hdr.ethernet.etherType[11:0]: exact @name("ethernet.etherType") ;
         }
         size = 4096;
         default_action = NoAction();

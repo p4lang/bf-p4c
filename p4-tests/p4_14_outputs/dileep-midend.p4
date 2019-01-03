@@ -240,7 +240,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_13() {
     }
-    @name(".nop") action nop_0() {
+    @name(".nop") action nop() {
     }
     @name(".nop") action nop_7() {
     }
@@ -254,7 +254,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".nop") action nop_12() {
     }
-    @name(".hop_ipv4") action hop_ipv4_0(bit<9> egress_port) {
+    @name(".hop_ipv4") action hop_ipv4(bit<9> egress_port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
         hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
     }
@@ -262,7 +262,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
         hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
     }
-    @name(".next_hop_ipv4") action next_hop_ipv4_0(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
+    @name(".next_hop_ipv4") action next_hop_ipv4(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
         hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
         hdr.ethernet.srcAddr = srcmac;
@@ -274,26 +274,26 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
     }
-    @name(".mod_mac_adr") action mod_mac_adr_0(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
+    @name(".mod_mac_adr") action mod_mac_adr(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
     }
-    @name(".tcp_hdr_rm") action tcp_hdr_rm_0(bit<9> egress_port) {
+    @name(".tcp_hdr_rm") action tcp_hdr_rm(bit<9> egress_port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
         hdr.tcp.setInvalid();
         hdr.ipv4.protocol = 8w0;
     }
-    @name(".udp_hdr_add") action udp_hdr_add_0(bit<9> egress_port) {
+    @name(".udp_hdr_add") action udp_hdr_add(bit<9> egress_port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
         hdr.udp.setValid();
         hdr.ipv4.protocol = 8w17;
         hdr.ipv4.totalLen = hdr.ipv4.totalLen + 16w8;
     }
-    @name(".ipv4_routing") table ipv4_routing {
+    @name(".ipv4_routing") table ipv4_routing_0 {
         actions = {
-            nop_0();
-            hop_ipv4_0();
+            nop();
+            hop_ipv4();
             @defaultonly NoAction_0();
         }
         key = {
@@ -301,10 +301,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name(".ipv4_routing_exm_stage_5") table ipv4_routing_exm_stage_1 {
+    @name(".ipv4_routing_exm_stage_5") table ipv4_routing_exm_stage {
         actions = {
             nop_7();
-            next_hop_ipv4_0();
+            next_hop_ipv4();
             @defaultonly NoAction_8();
         }
         key = {
@@ -314,7 +314,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 28672;
         default_action = NoAction_8();
     }
-    @name(".ipv4_routing_exm_stage_6") table ipv4_routing_exm_stage_2 {
+    @name(".ipv4_routing_exm_stage_6") table ipv4_routing_exm_stage_0 {
         actions = {
             nop_8();
             next_hop_ipv4_2();
@@ -326,7 +326,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 8192;
         default_action = NoAction_9();
     }
-    @name(".ipv4_routing_stage_1") table ipv4_routing_stage_0 {
+    @name(".ipv4_routing_stage_1") table ipv4_routing_stage {
         actions = {
             nop_9();
             hop_ipv4_2();
@@ -339,10 +339,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_10();
     }
-    @name(".tcam_tbl_stage_2") table tcam_tbl_stage_0 {
+    @name(".tcam_tbl_stage_2") table tcam_tbl_stage {
         actions = {
             nop_10();
-            mod_mac_adr_0();
+            mod_mac_adr();
             @defaultonly NoAction_11();
         }
         key = {
@@ -350,10 +350,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_11();
     }
-    @name(".tcp_rm_tbl_stage_4") table tcp_rm_tbl_stage_0 {
+    @name(".tcp_rm_tbl_stage_4") table tcp_rm_tbl_stage {
         actions = {
             nop_11();
-            tcp_hdr_rm_0();
+            tcp_hdr_rm();
             @defaultonly NoAction_12();
         }
         key = {
@@ -361,10 +361,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_12();
     }
-    @name(".udp_add_tbl_stage_3") table udp_add_tbl_stage_0 {
+    @name(".udp_add_tbl_stage_3") table udp_add_tbl_stage {
         actions = {
             nop_12();
-            udp_hdr_add_0();
+            udp_hdr_add();
             @defaultonly NoAction_13();
         }
         key = {
@@ -373,13 +373,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_13();
     }
     apply {
-        ipv4_routing.apply();
-        ipv4_routing_stage_0.apply();
-        tcam_tbl_stage_0.apply();
-        udp_add_tbl_stage_0.apply();
-        tcp_rm_tbl_stage_0.apply();
-        ipv4_routing_exm_stage_1.apply();
-        ipv4_routing_exm_stage_2.apply();
+        ipv4_routing_0.apply();
+        ipv4_routing_stage.apply();
+        tcam_tbl_stage.apply();
+        udp_add_tbl_stage.apply();
+        tcp_rm_tbl_stage.apply();
+        ipv4_routing_exm_stage.apply();
+        ipv4_routing_exm_stage_0.apply();
     }
 }
 

@@ -181,6 +181,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             count_it;
         }
+        default_action = count_it();
     }
     @name(".table_b") table table_b {
         actions = {

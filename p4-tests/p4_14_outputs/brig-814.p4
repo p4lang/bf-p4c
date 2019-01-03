@@ -212,31 +212,31 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".bloom_filter_3") register<bit<1>>(32w262144) bloom_filter_3;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".bloom_filter_alu_1") RegisterAction<bit<1>, bit<32>, bit<1>>(bloom_filter_1) bloom_filter_alu_1 = {
+    @reduction_or_group("bloom_filter") @name(".bloom_filter_alu_1") RegisterAction<bit<1>, bit<32>, bit<1>>(bloom_filter_1) bloom_filter_alu_1 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             bit<1> in_value;
             in_value = value;
             value = 1w1;
-            rv = ~value;
+            rv = ~in_value;
         }
     };
-    @name(".bloom_filter_alu_2") RegisterAction<bit<1>, bit<32>, bit<1>>(bloom_filter_2) bloom_filter_alu_2 = {
+    @reduction_or_group("bloom_filter") @name(".bloom_filter_alu_2") RegisterAction<bit<1>, bit<32>, bit<1>>(bloom_filter_2) bloom_filter_alu_2 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             bit<1> in_value;
             in_value = value;
             value = 1w1;
-            rv = ~value;
+            rv = ~in_value;
         }
     };
-    @name(".bloom_filter_alu_3") RegisterAction<bit<1>, bit<32>, bit<1>>(bloom_filter_3) bloom_filter_alu_3 = {
+    @reduction_or_group("bloom_filter") @name(".bloom_filter_alu_3") RegisterAction<bit<1>, bit<32>, bit<1>>(bloom_filter_3) bloom_filter_alu_3 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             bit<1> in_value;
             in_value = value;
             value = 1w1;
-            rv = ~value;
+            rv = ~in_value;
         }
     };
     @name(".check_bloom_filter_1") action check_bloom_filter_1() {
@@ -268,18 +268,21 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             check_bloom_filter_1;
         }
         size = 1;
+        default_action = check_bloom_filter_1();
     }
     @name(".bloom_filter_2") table bloom_filter_2_0 {
         actions = {
             check_bloom_filter_2;
         }
         size = 1;
+        default_action = check_bloom_filter_2();
     }
     @name(".bloom_filter_3") table bloom_filter_3_0 {
         actions = {
             check_bloom_filter_3;
         }
         size = 1;
+        default_action = check_bloom_filter_3();
     }
     @name(".bloom_filter_sample") table bloom_filter_sample {
         actions = {

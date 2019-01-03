@@ -758,10 +758,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         MnlGHy.apply();
         switch (BeBzRQ.apply().action_run) {
-            bqioIq: {
-                EghpzX.apply();
-                YKYNSG.apply();
-            }
             hTEbHS: {
                 if (meta.BdarYZ.NWqDYn == 1w0x1) {
                     OuIfwj.apply();
@@ -779,6 +775,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                         ehyhNJ.apply();
                     }
                 }
+            }
+            bqioIq: {
+                EghpzX.apply();
+                YKYNSG.apply();
             }
         }
 

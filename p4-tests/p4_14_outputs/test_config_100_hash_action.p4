@@ -230,6 +230,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             action_2;
         }
+        default_action = action_2();
     }
     apply {
         if (hdr.pkt.isValid()) {

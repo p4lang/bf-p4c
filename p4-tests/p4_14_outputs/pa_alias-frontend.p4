@@ -38,22 +38,22 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    @name(".setport") action setport_0(bit<9> port) {
+    @name(".setport") action setport(bit<9> port) {
         standard_metadata.egress_spec = port;
     }
-    @name(".first") action first_0() {
+    @name(".first") action first() {
         hdr.pkt.f1 = 8w0x8;
         hdr.pkt.f2 = 8w0x4;
         hdr.pkt.f3 = 8w0x2;
     }
-    @name(".second") action second_0(bit<8> param) {
+    @name(".second") action second(bit<8> param) {
         hdr.pkt.f1 = param;
         hdr.pkt.f2 = meta.meta.m2;
         hdr.pkt.f3 = 8w0x5;
     }
-    @name(".setting_port") table setting_port {
+    @name(".setting_port") table setting_port_0 {
         actions = {
-            setport_0();
+            setport();
             @defaultonly NoAction_0();
         }
         key = {
@@ -61,10 +61,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name(".test1") table test1 {
+    @name(".test1") table test1_0 {
         actions = {
-            first_0();
-            second_0();
+            first();
+            second();
             @defaultonly NoAction_3();
         }
         key = {
@@ -74,8 +74,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_3();
     }
     apply {
-        setting_port.apply();
-        test1.apply();
+        setting_port_0.apply();
+        test1_0.apply();
     }
 }
 

@@ -156,15 +156,15 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".set_t") action set_t_0() {
+    @name(".set_t") action set_t() {
         hdr.ethernet.etherType = 16w2;
     }
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing() {
     }
-    @name(".t0") table t0 {
+    @name(".t0") table t0_0 {
         actions = {
-            set_t_0();
-            do_nothing_0();
+            set_t();
+            do_nothing();
             @defaultonly NoAction_0();
         }
         key = {
@@ -174,7 +174,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_0();
     }
     apply {
-        t0.apply();
+        t0_0.apply();
     }
 }
 

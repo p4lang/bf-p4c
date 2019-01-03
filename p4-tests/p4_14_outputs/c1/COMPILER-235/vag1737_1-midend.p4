@@ -393,22 +393,22 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     @name(".NoAction") action NoAction_1() {
     }
-    @name(".nop") action nop_0() {
+    @name(".nop") action nop() {
     }
-    @name(".add_vlan_tag") action add_vlan_tag_0() {
+    @name(".add_vlan_tag") action add_vlan_tag() {
         hdr.outer_vlan_tag.setValid();
         hdr.outer_vlan_tag.vid = meta.egress_l2_metadata.vid;
         hdr.outer_vlan_tag.ethertype = hdr.outer_ethernet.ethertype;
         hdr.outer_ethernet.ethertype = 16w0x8100;
     }
-    @name(".bd2vid") action bd2vid_0(bit<12> ObALmB) {
+    @name(".bd2vid") action bd2vid(bit<12> ObALmB) {
         meta.egress_l2_metadata.vid = ObALmB;
         hdr.outer_vlan_tag.setInvalid();
     }
-    @name(".add_vlan_tag") table add_vlan_tag_1 {
+    @name(".add_vlan_tag") table add_vlan_tag_2 {
         actions = {
-            nop_0();
-            add_vlan_tag_0();
+            nop();
+            add_vlan_tag();
             @defaultonly NoAction_0();
         }
         key = {
@@ -418,9 +418,9 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         size = 64;
         default_action = NoAction_0();
     }
-    @name(".assign_vid") table assign_vid {
+    @name(".assign_vid") table assign_vid_0 {
         actions = {
-            bd2vid_0();
+            bd2vid();
             @defaultonly NoAction_1();
         }
         key = {
@@ -430,8 +430,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = NoAction_1();
     }
     apply {
-        assign_vid.apply();
-        add_vlan_tag_1.apply();
+        assign_vid_0.apply();
+        add_vlan_tag_2.apply();
     }
 }
 
@@ -496,18 +496,18 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_47() {
     }
-    @name(".uZpeEH") action uZpeEH_0() {
+    @name(".uZpeEH") action uZpeEH() {
         meta.egress_l2_metadata.DxjBnx = 1w0x1;
         meta.egress_l2_metadata.xALOuI = 1w0x1;
         meta.egress_l2_metadata.VqbwXd = meta.egress_l2_metadata.outer_bd + 16w0x1000;
     }
-    @name(".QXYBjG") action QXYBjG_0() {
-        digest<jeqIuB>(32w0x0, { meta.ozKgHM.zVITkG, meta.l2_metadata.outer_bd, hdr.inner_ethernet.srcOUI, hdr.inner_ethernet.srcSTA, hdr.outer_ipv4.srcAddr });
+    @name(".QXYBjG") action QXYBjG() {
+        digest<jeqIuB>(32w0x0, {meta.ozKgHM.zVITkG,meta.l2_metadata.outer_bd,hdr.inner_ethernet.srcOUI,hdr.inner_ethernet.srcSTA,hdr.outer_ipv4.srcAddr});
     }
-    @name(".XVktOe") action XVktOe_0(bit<16> rJWdDI) {
+    @name(".XVktOe") action XVktOe(bit<16> rJWdDI) {
         meta.ipv4_metadata.vrf = rJWdDI;
     }
-    @name(".wpFyFj") action wpFyFj_0(bit<8> NldXIO, bit<1> zbyrRT, bit<1> iCFOSL, bit<1> gJQdqX, bit<1> EsFJTP) {
+    @name(".wpFyFj") action wpFyFj(bit<8> NldXIO, bit<1> zbyrRT, bit<1> iCFOSL, bit<1> gJQdqX, bit<1> EsFJTP) {
         meta.l2_metadata.mUhTtj = 1w0x1;
         meta.PdKkSx.VLGXXG = NldXIO;
         meta.PdKkSx.OTmmdU = zbyrRT;
@@ -515,17 +515,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.PdKkSx.vxRZLD = gJQdqX;
         meta.PdKkSx.PqcjFS = EsFJTP;
     }
-    @name(".FjFvSI") action FjFvSI_0() {
-        digest<RgamWT>(32w0x0, { meta.ozKgHM.zVITkG, meta.l2_metadata.srcOUI, meta.l2_metadata.srcSTA, meta.l2_metadata.outer_bd, meta.l2_metadata.inner_bd });
+    @name(".FjFvSI") action FjFvSI() {
+        digest<RgamWT>(32w0x0, {meta.ozKgHM.zVITkG,meta.l2_metadata.srcOUI,meta.l2_metadata.srcSTA,meta.l2_metadata.outer_bd,meta.l2_metadata.inner_bd});
     }
-    @name(".jwLDdv") action jwLDdv_0() {
+    @name(".jwLDdv") action jwLDdv() {
     }
-    @name(".Ayapvg") action Ayapvg_0(bit<16> ZPSBzg) {
+    @name(".Ayapvg") action Ayapvg(bit<16> ZPSBzg) {
         meta.l2_metadata.outer_bd = ZPSBzg;
     }
-    @name(".jYRXTf") action jYRXTf_0() {
+    @name(".jYRXTf") action jYRXTf() {
     }
-    @name(".QYBPRQ") action QYBPRQ_0(bit<16> ObALmB, bit<8> NldXIO, bit<1> zbyrRT, bit<1> iCFOSL, bit<1> gJQdqX, bit<1> EsFJTP, bit<1> LqZpLg) {
+    @name(".QYBPRQ") action QYBPRQ(bit<16> ObALmB, bit<8> NldXIO, bit<1> zbyrRT, bit<1> iCFOSL, bit<1> gJQdqX, bit<1> EsFJTP, bit<1> LqZpLg) {
         meta.l2_metadata.outer_bd = ObALmB;
         meta.l2_metadata.mUhTtj = LqZpLg;
         meta.PdKkSx.VLGXXG = NldXIO;
@@ -534,44 +534,44 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.PdKkSx.vxRZLD = gJQdqX;
         meta.PdKkSx.PqcjFS = EsFJTP;
     }
-    @name(".YpQxby") action YpQxby_0() {
+    @name(".YpQxby") action YpQxby() {
         meta.l2_metadata.JFtqsz = 1w0x1;
         meta.l2_metadata.OjymPH = 1w0x1;
     }
-    @name(".JZMMTw") action JZMMTw_0() {
+    @name(".JZMMTw") action JZMMTw() {
         meta.PdKkSx.TNJQUK = 1w0x1;
     }
-    @name(".ZByrIe") action ZByrIe_0() {
+    @name(".ZByrIe") action ZByrIe() {
         hdr.outer_ethernet.ethertype = hdr.outer_vlan_tag.ethertype;
         meta.l2_metadata.prio = hdr.outer_vlan_tag.prio;
         hdr.outer_vlan_tag.setInvalid();
     }
-    @name(".JnIDid") action JnIDid_0() {
+    @name(".JnIDid") action JnIDid() {
         meta.egress_l2_metadata.GbMjEH = 1w0x1;
         meta.egress_l2_metadata.MXEAcT = 1w0x1;
         meta.egress_l2_metadata.VqbwXd = meta.egress_l2_metadata.outer_bd;
     }
-    @name(".uYBjrZ") action uYBjrZ_0() {
+    @name(".uYBjrZ") action uYBjrZ() {
     }
-    @name(".yTtrnk") action yTtrnk_0(bit<8> JuQPYe) {
+    @name(".yTtrnk") action yTtrnk(bit<8> JuQPYe) {
     }
-    @name(".xfABlB") action xfABlB_0() {
+    @name(".xfABlB") action xfABlB() {
         meta.l2_metadata.AlAsan = 1w0x1;
         meta.ozKgHM.zVITkG = 8w0x0;
     }
-    @name(".xsDQie") action xsDQie_0(bit<16> yppSOY) {
+    @name(".xsDQie") action xsDQie(bit<16> yppSOY) {
         meta.egress_l2_metadata.fqhobT = 1w0x1;
         meta.egress_l2_metadata.inner_bd = yppSOY;
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)yppSOY;
         meta.egress_l2_metadata.egress_port = (bit<9>)yppSOY;
     }
-    @name(".tsXBkz") action tsXBkz_0(bit<16> hkkrmJ) {
+    @name(".tsXBkz") action tsXBkz(bit<16> hkkrmJ) {
         meta.egress_l2_metadata.DxjBnx = 1w0x1;
         meta.egress_l2_metadata.VqbwXd = hkkrmJ;
     }
-    @name(".ruSbdS") action ruSbdS_0() {
+    @name(".ruSbdS") action ruSbdS() {
     }
-    @name(".sRuUvS") action sRuUvS_0(bit<16> ZPSBzg, bit<8> NldXIO, bit<1> zbyrRT, bit<1> iCFOSL, bit<1> gJQdqX, bit<1> EsFJTP) {
+    @name(".sRuUvS") action sRuUvS(bit<16> ZPSBzg, bit<8> NldXIO, bit<1> zbyrRT, bit<1> iCFOSL, bit<1> gJQdqX, bit<1> EsFJTP) {
         meta.l2_metadata.pQXqBl = ZPSBzg;
         meta.l2_metadata.mUhTtj = 1w0x1;
         meta.PdKkSx.VLGXXG = NldXIO;
@@ -580,21 +580,21 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.PdKkSx.vxRZLD = gJQdqX;
         meta.PdKkSx.PqcjFS = EsFJTP;
     }
-    @name(".sgfrDS") action sgfrDS_0() {
+    @name(".sgfrDS") action sgfrDS() {
     }
     @name(".sgfrDS") action sgfrDS_2() {
     }
-    @name(".ukhAli") action ukhAli_0() {
+    @name(".ukhAli") action ukhAli() {
         meta.egress_l2_metadata.vRiVoY = 1w0x1;
         meta.egress_l2_metadata.VqbwXd = meta.egress_l2_metadata.outer_bd;
     }
-    @name(".TwIQHU") action TwIQHU_0(bit<16> ZJeNes) {
+    @name(".TwIQHU") action TwIQHU(bit<16> ZJeNes) {
         meta.Eqzejr.SXktkN = ZJeNes;
     }
     @name(".TwIQHU") action TwIQHU_2(bit<16> ZJeNes) {
         meta.Eqzejr.SXktkN = ZJeNes;
     }
-    @name(".uNBXVV") action uNBXVV_0() {
+    @name(".uNBXVV") action uNBXVV() {
         meta.ipv4_metadata.srcAddr = hdr.inner_ipv4.srcAddr;
         meta.ipv4_metadata.dstAddr = hdr.inner_ipv4.dstAddr;
         meta.ipv6_metadata.srcAddr = hdr.outer_ipv6.srcAddr;
@@ -604,7 +604,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.l2_metadata.srcOUI = hdr.inner_ethernet.srcOUI;
         meta.l2_metadata.srcSTA = hdr.inner_ethernet.srcSTA;
     }
-    @name(".zEaBcj") action zEaBcj_0() {
+    @name(".zEaBcj") action zEaBcj() {
         meta.l2_metadata.eDTSaM = 2w0x0;
         meta.l2_metadata.inner_bd = (bit<16>)meta.port_metadata.ouVJSA;
         meta.ipv4_metadata.srcAddr = hdr.outer_ipv4.srcAddr;
@@ -616,20 +616,20 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.l2_metadata.srcOUI = hdr.outer_ethernet.srcOUI;
         meta.l2_metadata.srcSTA = hdr.outer_ethernet.srcSTA;
     }
-    @name(".SBqFEe") action SBqFEe_0(bit<16> UWsnEK) {
+    @name(".SBqFEe") action SBqFEe(bit<16> UWsnEK) {
         meta.l2_metadata.inner_bd = UWsnEK;
     }
-    @name(".KQcrRq") action KQcrRq_0() {
+    @name(".KQcrRq") action KQcrRq() {
         meta.l2_metadata.FZIXaP = 1w0x1;
         meta.ozKgHM.zVITkG = 8w0x1;
     }
-    @name(".set_ingress_port_properties") action set_ingress_port_properties_0(bit<14> DSyDIW, bit<1> wPlBaD, bit<12> jsYLqr, bit<1> tTfUVS) {
+    @name(".set_ingress_port_properties") action set_ingress_port_properties(bit<14> DSyDIW, bit<1> wPlBaD, bit<12> jsYLqr, bit<1> tTfUVS) {
         meta.port_metadata.ouVJSA = DSyDIW;
         meta.port_metadata.cCOHKE = wPlBaD;
         meta.port_metadata.vid = jsYLqr;
         meta.port_metadata.huEsCO = tTfUVS;
     }
-    @name(".GXegax") action GXegax_0(bit<8> NldXIO, bit<1> zbyrRT, bit<1> iCFOSL, bit<1> gJQdqX, bit<1> EsFJTP) {
+    @name(".GXegax") action GXegax(bit<8> NldXIO, bit<1> zbyrRT, bit<1> iCFOSL, bit<1> gJQdqX, bit<1> EsFJTP) {
         meta.l2_metadata.pQXqBl[11:0] = ((bit<16>)meta.port_metadata.vid)[11:0];
         meta.l2_metadata.mUhTtj = 1w0x1;
         meta.PdKkSx.VLGXXG = NldXIO;
@@ -638,35 +638,35 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.PdKkSx.vxRZLD = gJQdqX;
         meta.PdKkSx.PqcjFS = EsFJTP;
     }
-    @name(".GrmhMU") action GrmhMU_0() {
+    @name(".GrmhMU") action GrmhMU() {
         meta.l2_metadata.dhmjSj = 1w0x1;
     }
-    @name(".MbuqfL") action MbuqfL_0() {
+    @name(".MbuqfL") action MbuqfL() {
         meta.egress_l2_metadata.dstOUI = meta.l2_metadata.dstOUI;
         meta.egress_l2_metadata.dstSTA = meta.l2_metadata.dstSTA;
         meta.egress_l2_metadata.srcOUI = meta.l2_metadata.srcOUI;
         meta.egress_l2_metadata.srcSTA = meta.l2_metadata.srcSTA;
         meta.egress_l2_metadata.outer_bd = meta.l2_metadata.outer_bd;
     }
-    @name(".AosIFt") table AosIFt {
+    @name(".AosIFt") table AosIFt_0 {
         actions = {
-            uZpeEH_0();
+            uZpeEH();
             @defaultonly NoAction_26();
         }
         size = 1;
         default_action = NoAction_26();
     }
-    @name(".FObudl") table FObudl {
+    @name(".FObudl") table FObudl_0 {
         actions = {
-            QXYBjG_0();
+            QXYBjG();
             @defaultonly NoAction_27();
         }
         size = 1;
         default_action = NoAction_27();
     }
-    @name(".FsxDka") table FsxDka {
+    @name(".FsxDka") table FsxDka_0 {
         actions = {
-            XVktOe_0();
+            XVktOe();
             @defaultonly NoAction_28();
         }
         key = {
@@ -676,9 +676,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 16384;
         default_action = NoAction_28();
     }
-    @name(".FyMYiX") table FyMYiX {
+    @name(".FyMYiX") table FyMYiX_0 {
         actions = {
-            wpFyFj_0();
+            wpFyFj();
             @defaultonly NoAction_29();
         }
         key = {
@@ -687,19 +687,19 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_29();
     }
-    @name(".GKgaxO") table GKgaxO {
+    @name(".GKgaxO") table GKgaxO_0 {
         actions = {
-            FjFvSI_0();
+            FjFvSI();
             @defaultonly NoAction_30();
         }
         size = 1;
         default_action = NoAction_30();
     }
-    @name(".GiINoN") table GiINoN {
+    @name(".GiINoN") table GiINoN_0 {
         actions = {
-            jwLDdv_0();
-            Ayapvg_0();
-            jYRXTf_0();
+            jwLDdv();
+            Ayapvg();
+            jYRXTf();
             @defaultonly NoAction_31();
         }
         key = {
@@ -710,10 +710,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_31();
     }
-    @name(".KPlvUi") table KPlvUi {
+    @name(".KPlvUi") table KPlvUi_0 {
         actions = {
-            QYBPRQ_0();
-            YpQxby_0();
+            QYBPRQ();
+            YpQxby();
             @defaultonly NoAction_32();
         }
         key = {
@@ -722,9 +722,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_32();
     }
-    @name(".KhzFiy") table KhzFiy {
+    @name(".KhzFiy") table KhzFiy_0 {
         actions = {
-            JZMMTw_0();
+            JZMMTw();
             @defaultonly NoAction_33();
         }
         key = {
@@ -735,18 +735,18 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_33();
     }
-    @name(".LbcSdm") table LbcSdm {
+    @name(".LbcSdm") table LbcSdm_0 {
         actions = {
-            ZByrIe_0();
+            ZByrIe();
             @defaultonly NoAction_34();
         }
         size = 1;
         default_action = NoAction_34();
     }
-    @name(".OgtsFH") table OgtsFH {
+    @name(".OgtsFH") table OgtsFH_0 {
         actions = {
-            JnIDid_0();
-            uYBjrZ_0();
+            JnIDid();
+            uYBjrZ();
             @defaultonly NoAction_35();
         }
         key = {
@@ -756,10 +756,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1;
         default_action = NoAction_35();
     }
-    @name(".OsNzCx") table OsNzCx {
+    @name(".OsNzCx") table OsNzCx_0 {
         actions = {
-            yTtrnk_0();
-            xfABlB_0();
+            yTtrnk();
+            xfABlB();
             @defaultonly NoAction_36();
         }
         key = {
@@ -771,11 +771,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 65536;
         default_action = NoAction_36();
     }
-    @name(".PHSvkl") table PHSvkl {
+    @name(".PHSvkl") table PHSvkl_0 {
         actions = {
-            xsDQie_0();
-            tsXBkz_0();
-            ruSbdS_0();
+            xsDQie();
+            tsXBkz();
+            ruSbdS();
             @defaultonly NoAction_37();
         }
         key = {
@@ -786,10 +786,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 65536;
         default_action = NoAction_37();
     }
-    @name(".RmXtve") table RmXtve {
+    @name(".RmXtve") table RmXtve_0 {
         actions = {
-            sRuUvS_0();
-            sgfrDS_0();
+            sRuUvS();
+            sgfrDS();
             @defaultonly NoAction_38();
         }
         key = {
@@ -799,17 +799,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_38();
     }
-    @name(".UHdtQj") table UHdtQj {
+    @name(".UHdtQj") table UHdtQj_0 {
         actions = {
-            ukhAli_0();
+            ukhAli();
             @defaultonly NoAction_39();
         }
         size = 1;
         default_action = NoAction_39();
     }
-    @atcam_partition_index("ipv4_metadata.vrf") @atcam_number_partitions(16384) @name(".XWEKAE") table XWEKAE {
+    @atcam_partition_index("ipv4_metadata.vrf") @atcam_number_partitions(16384) @name(".XWEKAE") table XWEKAE_0 {
         actions = {
-            TwIQHU_0();
+            TwIQHU();
             @defaultonly NoAction_40();
         }
         key = {
@@ -819,10 +819,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 147456;
         default_action = NoAction_40();
     }
-    @name(".ceGwFc") table ceGwFc {
+    @name(".ceGwFc") table ceGwFc_0 {
         actions = {
-            uNBXVV_0();
-            zEaBcj_0();
+            uNBXVV();
+            zEaBcj();
             @defaultonly NoAction_41();
         }
         key = {
@@ -834,10 +834,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_41();
     }
-    @name(".chPApZ") table chPApZ {
+    @name(".chPApZ") table chPApZ_0 {
         actions = {
-            SBqFEe_0();
-            KQcrRq_0();
+            SBqFEe();
+            KQcrRq();
             @defaultonly NoAction_42();
         }
         key = {
@@ -846,7 +846,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_42();
     }
-    @name(".fDUvPP") table fDUvPP {
+    @name(".fDUvPP") table fDUvPP_0 {
         actions = {
             TwIQHU_2();
             sgfrDS_2();
@@ -859,9 +859,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 65536;
         default_action = NoAction_43();
     }
-    @name(".ingress_port_properties") table ingress_port_properties {
+    @name(".ingress_port_properties") table ingress_port_properties_0 {
         actions = {
-            set_ingress_port_properties_0();
+            set_ingress_port_properties();
             @defaultonly NoAction_44();
         }
         key = {
@@ -870,9 +870,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction_44();
     }
-    @name(".jubrcZ") table jubrcZ {
+    @name(".jubrcZ") table jubrcZ_0 {
         actions = {
-            GXegax_0();
+            GXegax();
             @defaultonly NoAction_45();
         }
         key = {
@@ -881,9 +881,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_45();
     }
-    @name(".rmac") table rmac {
+    @name(".rmac") table rmac_0 {
         actions = {
-            GrmhMU_0();
+            GrmhMU();
             @defaultonly NoAction_46();
         }
         key = {
@@ -893,9 +893,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 64;
         default_action = NoAction_46();
     }
-    @name(".sFQXXt") table sFQXXt {
+    @name(".sFQXXt") table sFQXXt_0 {
         actions = {
-            MbuqfL_0();
+            MbuqfL();
             @defaultonly NoAction_47();
         }
         size = 1;
@@ -903,51 +903,51 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (hdr.ig_intr_md.resubmit_flag == 1w0x0) 
-            ingress_port_properties.apply();
-        rmac.apply();
-        switch (ceGwFc.apply().action_run) {
-            uNBXVV_0: {
-                chPApZ.apply();
-                KPlvUi.apply();
-            }
-            zEaBcj_0: {
+            ingress_port_properties_0.apply();
+        rmac_0.apply();
+        switch (ceGwFc_0.apply().action_run) {
+            zEaBcj: {
                 if (meta.port_metadata.huEsCO == 1w0x1) 
-                    GiINoN.apply();
+                    GiINoN_0.apply();
                 if (hdr.outer_vlan_tag.isValid()) 
-                    switch (RmXtve.apply().action_run) {
-                        sgfrDS_0: {
-                            FyMYiX.apply();
+                    switch (RmXtve_0.apply().action_run) {
+                        sgfrDS: {
+                            FyMYiX_0.apply();
                         }
                     }
 
-                jubrcZ.apply();
+                jubrcZ_0.apply();
+            }
+            uNBXVV: {
+                chPApZ_0.apply();
+                KPlvUi_0.apply();
             }
         }
 
         if (meta.port_metadata.cCOHKE == 1w0x0 && meta.l2_metadata.FZIXaP == 1w0x0) 
-            OsNzCx.apply();
+            OsNzCx_0.apply();
         if (meta.l2_metadata.JFtqsz == 1w0x0 && meta.l2_metadata.OjymPH == 1w0x0) 
-            KhzFiy.apply();
+            KhzFiy_0.apply();
         if (meta.l2_metadata.outer_bd != 16w0x0) 
-            sFQXXt.apply();
+            sFQXXt_0.apply();
         if (meta.YKjpKX.ZtjVUq == 1w0x0 && meta.YKjpKX.tgfjtx == 1w0x0 && meta.l2_metadata.JFtqsz == 1w0x0 && meta.PdKkSx.TNJQUK == 1w0x1) 
             if (meta.PdKkSx.OTmmdU == 1w0x1 && (meta.l2_metadata.eDTSaM == 2w0x0 && hdr.outer_ipv4.isValid() || meta.l2_metadata.eDTSaM != 2w0x0 && hdr.inner_ipv4.isValid())) 
-                switch (fDUvPP.apply().action_run) {
+                switch (fDUvPP_0.apply().action_run) {
                     sgfrDS_2: {
-                        FsxDka.apply();
+                        FsxDka_0.apply();
                         if (meta.ipv4_metadata.vrf != 16w0x0) 
-                            XWEKAE.apply();
+                            XWEKAE_0.apply();
                     }
                 }
 
         if (meta.l2_metadata.JFtqsz == 1w0x0) 
-            switch (PHSvkl.apply().action_run) {
-                ruSbdS_0: {
-                    switch (OgtsFH.apply().action_run) {
-                        uYBjrZ_0: {
+            switch (PHSvkl_0.apply().action_run) {
+                ruSbdS: {
+                    switch (OgtsFH_0.apply().action_run) {
+                        uYBjrZ: {
                             if (meta.egress_l2_metadata.dstOUI & 24w0x10000 == 24w0x10000) 
-                                AosIFt.apply();
-                            UHdtQj.apply();
+                                AosIFt_0.apply();
+                            UHdtQj_0.apply();
                         }
                     }
 
@@ -955,11 +955,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             }
 
         if (meta.l2_metadata.FZIXaP == 1w0x1) 
-            FObudl.apply();
+            FObudl_0.apply();
         if (meta.l2_metadata.AlAsan == 1w0x1) 
-            GKgaxO.apply();
+            GKgaxO_0.apply();
         if (hdr.outer_vlan_tag.isValid()) 
-            LbcSdm.apply();
+            LbcSdm_0.apply();
     }
 }
 

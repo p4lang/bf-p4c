@@ -455,7 +455,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.ScmCsW.VqbwXd = meta.ScmCsW.OOQMnL + 16w0x1000;
     }
     @name(".QXYBjG") action QXYBjG() {
-        digest<jeqIuB>(32w0x0, { meta.ozKgHM.zVITkG, meta.mkMLHZ.TpUrJg, hdr.yovXod.mLIwDF, hdr.yovXod.meZADn, hdr.gOeqxi.FNBJdE });
+        digest<jeqIuB>(32w0x0, {meta.ozKgHM.zVITkG,meta.mkMLHZ.TpUrJg,hdr.yovXod.mLIwDF,hdr.yovXod.meZADn,hdr.gOeqxi.FNBJdE});
     }
     @name(".XVktOe") action XVktOe(bit<16> rJWdDI) {
         meta.MeZwMk.qXPfMg = rJWdDI;
@@ -470,7 +470,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.PdKkSx.PqcjFS = EsFJTP;
     }
     @name(".FjFvSI") action FjFvSI() {
-        digest<RgamWT>(32w0x0, { meta.ozKgHM.zVITkG, meta.mkMLHZ.qiziyI, meta.mkMLHZ.iXArIT, meta.mkMLHZ.TpUrJg, meta.mkMLHZ.bcqHSY });
+        digest<RgamWT>(32w0x0, {meta.ozKgHM.zVITkG,meta.mkMLHZ.qiziyI,meta.mkMLHZ.iXArIT,meta.mkMLHZ.TpUrJg,meta.mkMLHZ.bcqHSY});
     }
     @name(".jwLDdv") action jwLDdv() {
         meta.mkMLHZ.TpUrJg = (bit<16>)meta.sTsPkb.nsEAdO;
@@ -857,10 +857,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             XzThII.apply();
         yYaWKh.apply();
         switch (ceGwFc.apply().action_run) {
-            uNBXVV: {
-                chPApZ.apply();
-                KPlvUi.apply();
-            }
             zEaBcj: {
                 if (meta.sTsPkb.huEsCO == 1w0x1) 
                     GiINoN.apply();
@@ -872,6 +868,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                     }
 
                 jubrcZ.apply();
+            }
+            uNBXVV: {
+                chPApZ.apply();
+                KPlvUi.apply();
             }
         }
 

@@ -179,7 +179,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_11() {
     }
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing() {
     }
     @name(".do_nothing") action do_nothing_6() {
     }
@@ -191,12 +191,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".do_nothing") action do_nothing_10() {
     }
-    @name(".action_0") action action_1() {
+    @name(".action_0") action action_0() {
         hdr.pkt.field_f_16 = 16w1;
     }
-    @name(".table_a") table table_a {
+    @name(".table_a") table table_a_0 {
         actions = {
-            do_nothing_0();
+            do_nothing();
             @defaultonly NoAction_0();
         }
         key = {
@@ -205,7 +205,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_0();
     }
-    @name(".table_b") table table_b {
+    @name(".table_b") table table_b_0 {
         actions = {
             do_nothing_6();
             @defaultonly NoAction_7();
@@ -216,7 +216,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_7();
     }
-    @name(".table_c") table table_c {
+    @name(".table_c") table table_c_0 {
         actions = {
             do_nothing_7();
             @defaultonly NoAction_8();
@@ -227,7 +227,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_8();
     }
-    @name(".table_d") table table_d {
+    @name(".table_d") table table_d_0 {
         actions = {
             do_nothing_8();
             @defaultonly NoAction_9();
@@ -238,10 +238,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_9();
     }
-    @entries_with_ranges(64) @tcam_error_detect(1) @name(".table_e") table table_e {
+    @entries_with_ranges(64) @tcam_error_detect(1) @name(".table_e") table table_e_0 {
         actions = {
             do_nothing_9();
-            action_1();
+            action_0();
             @defaultonly NoAction_10();
         }
         key = {
@@ -252,7 +252,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_10();
     }
-    @tcam_error_detect(1) @name(".table_f") table table_f {
+    @tcam_error_detect(1) @name(".table_f") table table_f_0 {
         actions = {
             do_nothing_10();
             @defaultonly NoAction_11();
@@ -264,12 +264,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_11();
     }
     apply {
-        table_a.apply();
-        table_b.apply();
-        table_c.apply();
-        table_d.apply();
-        table_e.apply();
-        table_f.apply();
+        table_a_0.apply();
+        table_b_0.apply();
+        table_c_0.apply();
+        table_d_0.apply();
+        table_e_0.apply();
+        table_f_0.apply();
     }
 }
 

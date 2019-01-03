@@ -178,53 +178,50 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".NoAction") action NoAction_0() {
+    @name(".counter_egress") direct_counter(CounterType.packets) counter_egress_0;
+    @name(".egress_action") action egress_action_0(bit<8> idx) {
+        counter_egress_0.count();
     }
-    @name(".counter_egress") direct_counter(CounterType.packets) counter_egress;
-    @name(".egress_action") action egress_action(bit<8> idx) {
-        counter_egress.count();
-    }
-    @use_hash_action(1) @name(".simple_table_egress") table simple_table_egress {
+    @use_hash_action(1) @name(".simple_table_egress") table simple_table_egress_0 {
         actions = {
-            egress_action();
-            @defaultonly NoAction_0();
+            egress_action_0();
         }
         key = {
-            hdr.ethernet.dstAddr[8:0]: exact @name("ethernet.dstAddr[8:0]") ;
+            hdr.ethernet.dstAddr[8:0]: exact @name("ethernet.dstAddr") ;
         }
         size = 512;
-        counters = counter_egress;
-        default_action = NoAction_0();
+        default_action = egress_action_0(idx = 8w0);
+        counters = counter_egress_0;
     }
     apply {
-        simple_table_egress.apply();
+        simple_table_egress_0.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".NoAction") action NoAction_1() {
+    @name(".NoAction") action NoAction_0() {
     }
-    @name(".counter_0") counter(32w512, CounterType.packets) counter_0;
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".counter_0") counter(32w512, CounterType.packets) counter_1;
+    @name(".do_nothing") action do_nothing() {
     }
-    @name(".set_dst_addr") action set_dst_addr_0(bit<32> idx) {
-        counter_0.count(idx);
+    @name(".set_dst_addr") action set_dst_addr(bit<32> idx) {
+        counter_1.count(idx);
     }
-    @use_identity_hash(1) @immediate(0) @name(".simple_table") table simple_table {
+    @use_identity_hash(1) @immediate(0) @name(".simple_table") table simple_table_0 {
         actions = {
-            do_nothing_0();
-            set_dst_addr_0();
-            @defaultonly NoAction_1();
+            do_nothing();
+            set_dst_addr();
+            @defaultonly NoAction_0();
         }
         key = {
-            hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr[15:0]") ;
+            hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr") ;
         }
         size = 65536;
-        default_action = NoAction_1();
+        default_action = NoAction_0();
     }
     apply {
         if (hdr.ethernet.isValid() && hdr.ipv4.isValid()) 
-            simple_table.apply();
+            simple_table_0.apply();
     }
 }
 

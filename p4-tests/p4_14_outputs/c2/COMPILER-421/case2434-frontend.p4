@@ -469,14 +469,14 @@ struct headers {
 #include <tofino/stateful_alu.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<80> tmp_4;
-    bit<56> tmp_5;
-    bit<104> tmp_6;
-    bit<8> tmp_7;
-    bit<8> tmp_8;
+    bit<80> tmp;
+    bit<56> tmp_0;
+    bit<104> tmp_1;
+    bit<8> tmp_2;
+    bit<8> tmp_3;
     @name(".cw_try_ipv4") state cw_try_ipv4 {
-        tmp_4 = packet.lookahead<bit<80>>();
-        transition select(tmp_4[7:0]) {
+        tmp = packet.lookahead<bit<80>>();
+        transition select(tmp[7:0]) {
             8w0x4: parse_outer_ipv4;
             8w0x29: parse_outer_ipv4;
             8w0x88: parse_outer_ipv4;
@@ -488,8 +488,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
         }
     }
     @name(".cw_try_ipv6") state cw_try_ipv6 {
-        tmp_5 = packet.lookahead<bit<56>>();
-        transition select(tmp_5[7:0]) {
+        tmp_0 = packet.lookahead<bit<56>>();
+        transition select(tmp_0[7:0]) {
             8w0x4: parse_outer_ipv6;
             8w0x29: parse_outer_ipv6;
             8w0x88: parse_outer_ipv6;
@@ -509,8 +509,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
         }
     }
     @name(".determine_first_parser") state determine_first_parser {
-        tmp_6 = packet.lookahead<bit<104>>();
-        transition select(tmp_6[7:0]) {
+        tmp_1 = packet.lookahead<bit<104>>();
+        transition select(tmp_1[7:0]) {
             8w0xec: parse_ecolog;
             8w0xeb: parse_ebheader;
             default: parse_outer_ethernet;
@@ -673,8 +673,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
     @name(".parse_mpls_cw") state parse_mpls_cw {
         packet.extract<mpls_cw_t>(hdr.mpls_cw);
-        tmp_7 = packet.lookahead<bit<8>>();
-        transition select(tmp_7[7:0]) {
+        tmp_2 = packet.lookahead<bit<8>>();
+        transition select(tmp_2[7:0]) {
             8w0x45: cw_try_ipv4;
             8w0x46 &&& 8w0xfe: cw_try_ipv4;
             8w0x48 &&& 8w0xf8: cw_try_ipv4;
@@ -683,8 +683,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
         }
     }
     @name(".parse_mpls_cw_determine") state parse_mpls_cw_determine {
-        tmp_8 = packet.lookahead<bit<8>>();
-        transition select(tmp_8[7:0]) {
+        tmp_3 = packet.lookahead<bit<8>>();
+        transition select(tmp_3[7:0]) {
             8w0x0: parse_mpls_cw;
             8w0x45: cw_try_ipv4;
             8w0x46 &&& 8w0xfe: cw_try_ipv4;
@@ -786,7 +786,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".do_add_ebheader") action do_add_ebheader_0() {
+    @name(".do_add_ebheader") action do_add_ebheader() {
         hdr.ebheader.setValid();
         hdr.ebheader.ethertype_eb = 8w0xeb;
         hdr.ebheader.dst_main_out = meta.ebmeta.lanwan_out_port;
@@ -801,41 +801,41 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         hdr.ebheader.flowhash_hi = meta.ebmeta.flowhash_hi;
         hdr.ebheader.flowhash_lo = meta.ebmeta.flowhash_lo;
     }
-    @name("._nop") action _nop_0() {
+    @name("._nop") action _nop() {
     }
-    @name("._nop") action _nop_2() {
+    @name("._nop") action _nop_1() {
     }
-    @name(".do_remove_ebheader") action do_remove_ebheader_0() {
+    @name(".do_remove_ebheader") action do_remove_ebheader() {
         meta.ebmeta.dst_mirror_agg = hdr.ebheader.dst_mirror_agg;
         meta.ebmeta.dst_mirror_out = hdr.ebheader.dst_mirror_out;
         hdr.ebheader.setInvalid();
     }
-    @name(".add_ebheader") table add_ebheader {
+    @name(".add_ebheader") table add_ebheader_0 {
         actions = {
-            do_add_ebheader_0();
-            _nop_0();
+            do_add_ebheader();
+            _nop();
         }
         key = {
             meta.ebmeta.port_type: exact @name("ebmeta.port_type") ;
         }
         size = 3;
-        default_action = _nop_0();
+        default_action = _nop();
     }
-    @name(".remove_ebheader") table remove_ebheader {
+    @name(".remove_ebheader") table remove_ebheader_0 {
         actions = {
-            do_remove_ebheader_0();
-            _nop_2();
+            do_remove_ebheader();
+            _nop_1();
         }
         key = {
             meta.ebmeta.port_type : exact @name("ebmeta.port_type") ;
             hdr.ebheader.isValid(): exact @name("ebheader.$valid$") ;
         }
         size = 3;
-        default_action = _nop_2();
+        default_action = _nop_1();
     }
     apply {
-        add_ebheader.apply();
-        remove_ebheader.apply();
+        add_ebheader_0.apply();
+        remove_ebheader_0.apply();
     }
 }
 
@@ -844,7 +844,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    @name(".do_bypass") action do_bypass_0() {
+    @name(".do_bypass") action do_bypass() {
         meta.ebmeta.port_type = 3w4;
         hdr.ig_intr_md_for_tm.ucast_egress_port = meta.ebmeta.lanwan_out_port;
     }
@@ -912,223 +912,223 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("._nop") action _nop_66() {
     }
-    @name(".mark_bypass_mode") action mark_bypass_mode_0() {
+    @name(".mark_bypass_mode") action mark_bypass_mode() {
         meta.bypass_meta.mode_enabled = 1w1;
     }
-    @name(".set_mpls_offset") action set_mpls_offset_0(bit<8> offset) {
+    @name(".set_mpls_offset") action set_mpls_offset(bit<8> offset) {
         meta.ebmeta.offset_mpls = offset;
     }
-    @name(".dpi_egress_port") action dpi_egress_port_0() {
+    @name(".dpi_egress_port") action dpi_egress_port() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = hdr.ebheader.dst_main_out;
     }
-    @name("._drop") action _drop_0() {
+    @name("._drop") action _drop() {
         mark_to_drop();
     }
     @name("._drop") action _drop_2() {
         mark_to_drop();
     }
-    @name(".mark_bypass_lacp_bfd") action mark_bypass_lacp_bfd_0() {
+    @name(".mark_bypass_lacp_bfd") action mark_bypass_lacp_bfd() {
         meta.bypass_meta.lacp_bfd = 1w1;
     }
-    @name(".do_forward_log") action do_forward_log_0(bit<9> out_port) {
+    @name(".do_forward_log") action do_forward_log(bit<9> out_port) {
         meta.ebmeta.port_type = 3w4;
         hdr.ig_intr_md_for_tm.ucast_egress_port = out_port;
     }
-    @name(".mark_bypass_multi4") action mark_bypass_multi4_0() {
+    @name(".mark_bypass_multi4") action mark_bypass_multi4() {
         meta.bypass_meta.multi4 = 1w1;
     }
-    @name(".mark_bypass_multi6") action mark_bypass_multi6_0() {
+    @name(".mark_bypass_multi6") action mark_bypass_multi6() {
         meta.bypass_meta.multi6 = 1w1;
     }
-    @name(".mark_bypass_multi_mpls") action mark_bypass_multi_mpls_0() {
+    @name(".mark_bypass_multi_mpls") action mark_bypass_multi_mpls() {
         meta.bypass_meta.multi_mpls = 1w1;
     }
-    @name(".set_tcp_flow_data") action set_tcp_flow_data_0() {
+    @name(".set_tcp_flow_data") action set_tcp_flow_data() {
         meta.ebmeta.flow_proto = 3w1;
         meta.ebmeta.flow_srcPort = hdr.tcp.portSrc;
         meta.ebmeta.flow_dstPort = hdr.tcp.portDst;
     }
-    @name(".set_udp_flow_data") action set_udp_flow_data_0() {
+    @name(".set_udp_flow_data") action set_udp_flow_data() {
         meta.ebmeta.flow_proto = 3w2;
         meta.ebmeta.flow_srcPort = hdr.udp.portSrc;
         meta.ebmeta.flow_dstPort = hdr.udp.portDst;
     }
-    @name(".set_sctp_flow_data") action set_sctp_flow_data_0() {
+    @name(".set_sctp_flow_data") action set_sctp_flow_data() {
         meta.ebmeta.flow_proto = 3w3;
         meta.ebmeta.flow_srcPort = hdr.sctp.portSrc;
         meta.ebmeta.flow_dstPort = hdr.sctp.portDst;
     }
-    @name(".set_udplite_flow_data") action set_udplite_flow_data_0() {
+    @name(".set_udplite_flow_data") action set_udplite_flow_data() {
         meta.ebmeta.flow_proto = 3w4;
         meta.ebmeta.flow_srcPort = hdr.udplite.portSrc;
         meta.ebmeta.flow_dstPort = hdr.udplite.portDst;
     }
-    @name(".set_dpi_out_and_queue") action set_dpi_out_and_queue_0(bit<9> port, bit<8> queue) {
+    @name(".set_dpi_out_and_queue") action set_dpi_out_and_queue(bit<9> port, bit<8> queue) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
         meta.ebmeta.rss_queue = queue;
     }
-    @name(".set_flow_hash_ipv4_lan") action set_flow_hash_ipv4_lan_0() {
+    @name(".set_flow_hash_ipv4_lan") action set_flow_hash_ipv4_lan() {
         meta.ebmeta.flowhash = meta.flowhash_meta.ipv4_lan;
         meta.ebmeta.flowhash_hi = meta.flowhash_meta.ipv4_l16;
         meta.ebmeta.flowhash_lo = meta.flowhash_meta.ipv4_w16;
     }
-    @name(".set_flow_hash_ipv4_wan") action set_flow_hash_ipv4_wan_0() {
+    @name(".set_flow_hash_ipv4_wan") action set_flow_hash_ipv4_wan() {
         meta.ebmeta.flowhash = meta.flowhash_meta.ipv4_wan;
         meta.ebmeta.flowhash_hi = meta.flowhash_meta.ipv4_w16;
         meta.ebmeta.flowhash_lo = meta.flowhash_meta.ipv4_l16;
     }
-    @name(".set_flow_hash_ipv6_lan") action set_flow_hash_ipv6_lan_0() {
+    @name(".set_flow_hash_ipv6_lan") action set_flow_hash_ipv6_lan() {
         meta.ebmeta.flowhash = meta.flowhash_meta.ipv6_lan;
         meta.ebmeta.flowhash_hi = meta.flowhash_meta.ipv6_l16;
         meta.ebmeta.flowhash_lo = meta.flowhash_meta.ipv6_w16;
     }
-    @name(".set_flow_hash_ipv6_wan") action set_flow_hash_ipv6_wan_0() {
+    @name(".set_flow_hash_ipv6_wan") action set_flow_hash_ipv6_wan() {
         meta.ebmeta.flowhash = meta.flowhash_meta.ipv6_wan;
         meta.ebmeta.flowhash_hi = meta.flowhash_meta.ipv6_w16;
         meta.ebmeta.flowhash_lo = meta.flowhash_meta.ipv6_l16;
     }
-    @name(".set_flow_hash_imac_lan") action set_flow_hash_imac_lan_0() {
+    @name(".set_flow_hash_imac_lan") action set_flow_hash_imac_lan() {
         meta.ebmeta.flowhash = meta.flowhash_meta.imac_lan;
         meta.ebmeta.flowhash_hi = meta.flowhash_meta.imac_l16;
         meta.ebmeta.flowhash_lo = meta.flowhash_meta.imac_w16;
     }
-    @name(".set_flow_hash_imac_wan") action set_flow_hash_imac_wan_0() {
+    @name(".set_flow_hash_imac_wan") action set_flow_hash_imac_wan() {
         meta.ebmeta.flowhash = meta.flowhash_meta.imac_wan;
         meta.ebmeta.flowhash_hi = meta.flowhash_meta.imac_w16;
         meta.ebmeta.flowhash_lo = meta.flowhash_meta.imac_l16;
     }
-    @name(".set_flow_hash_omac_lan") action set_flow_hash_omac_lan_0() {
+    @name(".set_flow_hash_omac_lan") action set_flow_hash_omac_lan() {
         meta.ebmeta.flowhash = meta.flowhash_meta.omac_lan;
         meta.ebmeta.flowhash_hi = meta.flowhash_meta.omac_l16;
         meta.ebmeta.flowhash_lo = meta.flowhash_meta.omac_w16;
     }
-    @name(".set_flow_hash_omac_wan") action set_flow_hash_omac_wan_0() {
+    @name(".set_flow_hash_omac_wan") action set_flow_hash_omac_wan() {
         meta.ebmeta.flowhash = meta.flowhash_meta.omac_wan;
         meta.ebmeta.flowhash_hi = meta.flowhash_meta.omac_w16;
         meta.ebmeta.flowhash_lo = meta.flowhash_meta.omac_l16;
     }
-    @name(".do_set_port_metadata") action do_set_port_metadata_0(bit<3> port_type, bit<1> is_lan, bit<1> is_nat, bit<9> linked_port, bit<1> is_lanwan) {
+    @name(".do_set_port_metadata") action do_set_port_metadata(bit<3> port_type, bit<1> is_lan, bit<1> is_nat, bit<9> linked_port, bit<1> is_lanwan) {
         meta.ebmeta.port_type = port_type;
         meta.ebmeta.is_lan = is_lan;
         meta.ebmeta.is_nat = is_nat;
         meta.ebmeta.lanwan_out_port = linked_port;
         meta.ebmeta.is_lanwan = is_lanwan;
     }
-    @name(".choose_lan_outer_mac_hash") action choose_lan_outer_mac_hash_0() {
+    @name(".choose_lan_outer_mac_hash") action choose_lan_outer_mac_hash() {
         meta.ebmeta.port_hash = meta.dpihash_meta.omac_lan_hash;
     }
-    @name(".choose_wan_outer_mac_hash") action choose_wan_outer_mac_hash_0() {
+    @name(".choose_wan_outer_mac_hash") action choose_wan_outer_mac_hash() {
         meta.ebmeta.port_hash = meta.dpihash_meta.omac_wan_hash;
     }
-    @name(".choose_lan_inner_mac_hash") action choose_lan_inner_mac_hash_0() {
+    @name(".choose_lan_inner_mac_hash") action choose_lan_inner_mac_hash() {
         meta.ebmeta.port_hash = meta.dpihash_meta.imac_lan_hash;
     }
-    @name(".choose_wan_inner_mac_hash") action choose_wan_inner_mac_hash_0() {
+    @name(".choose_wan_inner_mac_hash") action choose_wan_inner_mac_hash() {
         meta.ebmeta.port_hash = meta.dpihash_meta.imac_wan_hash;
     }
-    @name(".choose_lan_ipv4_hash") action choose_lan_ipv4_hash_0() {
+    @name(".choose_lan_ipv4_hash") action choose_lan_ipv4_hash() {
         meta.ebmeta.port_hash = meta.dpihash_meta.ipv4_lan_hash;
     }
-    @name(".choose_wan_ipv4_hash") action choose_wan_ipv4_hash_0() {
+    @name(".choose_wan_ipv4_hash") action choose_wan_ipv4_hash() {
         meta.ebmeta.port_hash = meta.dpihash_meta.ipv4_wan_hash;
     }
-    @name(".choose_lan_ipv6_hash") action choose_lan_ipv6_hash_0() {
+    @name(".choose_lan_ipv6_hash") action choose_lan_ipv6_hash() {
         meta.ebmeta.port_hash = meta.dpihash_meta.ipv6_lan_hash;
     }
-    @name(".choose_wan_ipv6_hash") action choose_wan_ipv6_hash_0() {
+    @name(".choose_wan_ipv6_hash") action choose_wan_ipv6_hash() {
         meta.ebmeta.port_hash = meta.dpihash_meta.ipv6_wan_hash;
     }
-    @name(".calc_dpi_lan_inner_mac_nat_hash") action calc_dpi_lan_inner_mac_nat_hash_0() {
+    @name(".calc_dpi_lan_inner_mac_nat_hash") action calc_dpi_lan_inner_mac_nat_hash() {
         hash<bit<16>, bit<16>, tuple<bit<48>>, bit<32>>(meta.dpihash_meta.imac_lan_hash, HashAlgorithm.crc16, 16w0, { hdr.inner_ethernet.srcAddr }, 32w65536);
     }
-    @name(".calc_dpi_lan_inner_mac_mag_hash") action calc_dpi_lan_inner_mac_mag_hash_0() {
+    @name(".calc_dpi_lan_inner_mac_mag_hash") action calc_dpi_lan_inner_mac_mag_hash() {
         hash<bit<16>, bit<16>, tuple<bit<48>, bit<48>>, bit<32>>(meta.dpihash_meta.imac_lan_hash, HashAlgorithm.crc16, 16w0, { hdr.inner_ethernet.srcAddr, hdr.inner_ethernet.dstAddr }, 32w65536);
     }
-    @name(".calc_dpi_lan_ipv4_nat_hash") action calc_dpi_lan_ipv4_nat_hash_0() {
+    @name(".calc_dpi_lan_ipv4_nat_hash") action calc_dpi_lan_ipv4_nat_hash() {
         hash<bit<16>, bit<16>, tuple<bit<32>>, bit<32>>(meta.dpihash_meta.ipv4_lan_hash, HashAlgorithm.crc16, 16w0, { hdr.outer_ipv4.srcAddr }, 32w65536);
     }
-    @name(".calc_dpi_lan_ipv4_mag_hash") action calc_dpi_lan_ipv4_mag_hash_0() {
+    @name(".calc_dpi_lan_ipv4_mag_hash") action calc_dpi_lan_ipv4_mag_hash() {
         hash<bit<16>, bit<16>, tuple<bit<32>, bit<32>>, bit<32>>(meta.dpihash_meta.ipv4_lan_hash, HashAlgorithm.crc16, 16w0, { hdr.outer_ipv4.srcAddr, hdr.outer_ipv4.dstAddr }, 32w65536);
     }
-    @name(".calc_dpi_lan_ipv6_nat_hash") action calc_dpi_lan_ipv6_nat_hash_0() {
+    @name(".calc_dpi_lan_ipv6_nat_hash") action calc_dpi_lan_ipv6_nat_hash() {
         hash<bit<16>, bit<16>, tuple<bit<128>>, bit<32>>(meta.dpihash_meta.ipv6_lan_hash, HashAlgorithm.crc16, 16w0, { hdr.outer_ipv6.srcAddr }, 32w65536);
     }
-    @name(".calc_dpi_lan_ipv6_mag_hash") action calc_dpi_lan_ipv6_mag_hash_0() {
+    @name(".calc_dpi_lan_ipv6_mag_hash") action calc_dpi_lan_ipv6_mag_hash() {
         hash<bit<16>, bit<16>, tuple<bit<128>, bit<128>>, bit<32>>(meta.dpihash_meta.ipv6_lan_hash, HashAlgorithm.crc16, 16w0, { hdr.outer_ipv6.srcAddr, hdr.outer_ipv6.dstAddr }, 32w65536);
     }
-    @name(".calc_dpi_lan_outer_mac_nat_hash") action calc_dpi_lan_outer_mac_nat_hash_0() {
+    @name(".calc_dpi_lan_outer_mac_nat_hash") action calc_dpi_lan_outer_mac_nat_hash() {
         hash<bit<16>, bit<16>, tuple<bit<48>>, bit<32>>(meta.dpihash_meta.omac_lan_hash, HashAlgorithm.crc16, 16w0, { hdr.outer_ethernet.srcAddr }, 32w65536);
     }
-    @name(".calc_dpi_lan_outer_mac_mag_hash") action calc_dpi_lan_outer_mac_mag_hash_0() {
+    @name(".calc_dpi_lan_outer_mac_mag_hash") action calc_dpi_lan_outer_mac_mag_hash() {
         hash<bit<16>, bit<16>, tuple<bit<48>, bit<48>>, bit<32>>(meta.dpihash_meta.omac_lan_hash, HashAlgorithm.crc16, 16w0, { hdr.outer_ethernet.srcAddr, hdr.outer_ethernet.dstAddr }, 32w65536);
     }
-    @name(".calc_dpi_wan_inner_mac_nat_hash") action calc_dpi_wan_inner_mac_nat_hash_0() {
+    @name(".calc_dpi_wan_inner_mac_nat_hash") action calc_dpi_wan_inner_mac_nat_hash() {
         hash<bit<16>, bit<16>, tuple<bit<48>>, bit<32>>(meta.dpihash_meta.imac_wan_hash, HashAlgorithm.crc16, 16w0, { hdr.inner_ethernet.dstAddr }, 32w65536);
     }
-    @name(".calc_dpi_wan_inner_mac_mag_hash") action calc_dpi_wan_inner_mac_mag_hash_0() {
+    @name(".calc_dpi_wan_inner_mac_mag_hash") action calc_dpi_wan_inner_mac_mag_hash() {
         hash<bit<16>, bit<16>, tuple<bit<48>, bit<48>>, bit<32>>(meta.dpihash_meta.imac_wan_hash, HashAlgorithm.crc16, 16w0, { hdr.inner_ethernet.dstAddr, hdr.inner_ethernet.srcAddr }, 32w65536);
     }
-    @name(".calc_dpi_wan_ipv4_nat_hash") action calc_dpi_wan_ipv4_nat_hash_0() {
+    @name(".calc_dpi_wan_ipv4_nat_hash") action calc_dpi_wan_ipv4_nat_hash() {
         hash<bit<16>, bit<16>, tuple<bit<32>>, bit<32>>(meta.dpihash_meta.ipv4_wan_hash, HashAlgorithm.crc16, 16w0, { hdr.outer_ipv4.dstAddr }, 32w65536);
     }
-    @name(".calc_dpi_wan_ipv4_mag_hash") action calc_dpi_wan_ipv4_mag_hash_0() {
+    @name(".calc_dpi_wan_ipv4_mag_hash") action calc_dpi_wan_ipv4_mag_hash() {
         hash<bit<16>, bit<16>, tuple<bit<32>, bit<32>>, bit<32>>(meta.dpihash_meta.ipv4_wan_hash, HashAlgorithm.crc16, 16w0, { hdr.outer_ipv4.dstAddr, hdr.outer_ipv4.srcAddr }, 32w65536);
     }
-    @name(".calc_dpi_wan_ipv6_nat_hash") action calc_dpi_wan_ipv6_nat_hash_0() {
+    @name(".calc_dpi_wan_ipv6_nat_hash") action calc_dpi_wan_ipv6_nat_hash() {
         hash<bit<16>, bit<16>, tuple<bit<128>>, bit<32>>(meta.dpihash_meta.ipv6_wan_hash, HashAlgorithm.crc16, 16w0, { hdr.outer_ipv6.dstAddr }, 32w65536);
     }
-    @name(".calc_dpi_wan_ipv6_mag_hash") action calc_dpi_wan_ipv6_mag_hash_0() {
+    @name(".calc_dpi_wan_ipv6_mag_hash") action calc_dpi_wan_ipv6_mag_hash() {
         hash<bit<16>, bit<16>, tuple<bit<128>, bit<128>>, bit<32>>(meta.dpihash_meta.ipv6_wan_hash, HashAlgorithm.crc16, 16w0, { hdr.outer_ipv6.dstAddr, hdr.outer_ipv6.srcAddr }, 32w65536);
     }
-    @name(".calc_dpi_wan_outer_mac_nat_hash") action calc_dpi_wan_outer_mac_nat_hash_0() {
+    @name(".calc_dpi_wan_outer_mac_nat_hash") action calc_dpi_wan_outer_mac_nat_hash() {
         hash<bit<16>, bit<16>, tuple<bit<48>>, bit<32>>(meta.dpihash_meta.omac_wan_hash, HashAlgorithm.crc16, 16w0, { hdr.outer_ethernet.dstAddr }, 32w65536);
     }
-    @name(".calc_dpi_wan_outer_mac_mag_hash") action calc_dpi_wan_outer_mac_mag_hash_0() {
+    @name(".calc_dpi_wan_outer_mac_mag_hash") action calc_dpi_wan_outer_mac_mag_hash() {
         hash<bit<16>, bit<16>, tuple<bit<48>, bit<48>>, bit<32>>(meta.dpihash_meta.omac_wan_hash, HashAlgorithm.crc16, 16w0, { hdr.outer_ethernet.dstAddr, hdr.outer_ethernet.srcAddr }, 32w65536);
     }
-    @name(".calc_flow_lan_imac") action calc_flow_lan_imac_0() {
+    @name(".calc_flow_lan_imac") action calc_flow_lan_imac() {
         hash<bit<32>, bit<32>, tuple<bit<48>, bit<16>, bit<1>, bit<48>, bit<16>, bit<1>>, bit<64>>(meta.flowhash_meta.imac_lan, HashAlgorithm.crc32, 32w0, { hdr.inner_ethernet.srcAddr, hdr.inner_ethernet.etherType, meta.ebmeta.is_nat, hdr.inner_ethernet.dstAddr, hdr.inner_ethernet.etherType, meta.ebmeta.is_nat }, 64w4294967296);
     }
-    @name(".calc_flow_lan_ipv4") action calc_flow_lan_ipv4_0() {
+    @name(".calc_flow_lan_ipv4") action calc_flow_lan_ipv4() {
         hash<bit<32>, bit<32>, tuple<bit<32>, bit<16>, bit<3>, bit<1>, bit<32>, bit<16>, bit<3>, bit<1>>, bit<64>>(meta.flowhash_meta.ipv4_lan, HashAlgorithm.crc32, 32w0, { hdr.outer_ipv4.srcAddr, meta.ebmeta.flow_srcPort, meta.ebmeta.flow_proto, meta.ebmeta.is_nat, hdr.outer_ipv4.dstAddr, meta.ebmeta.flow_dstPort, meta.ebmeta.flow_proto, meta.ebmeta.is_nat }, 64w4294967296);
     }
-    @name(".calc_flow_lan_ipv6") action calc_flow_lan_ipv6_0() {
+    @name(".calc_flow_lan_ipv6") action calc_flow_lan_ipv6() {
         hash<bit<32>, bit<32>, tuple<bit<128>, bit<16>, bit<3>, bit<1>, bit<128>, bit<16>, bit<3>, bit<1>>, bit<64>>(meta.flowhash_meta.ipv6_lan, HashAlgorithm.crc32, 32w0, { hdr.outer_ipv6.srcAddr, meta.ebmeta.flow_srcPort, meta.ebmeta.flow_proto, meta.ebmeta.is_nat, hdr.outer_ipv6.dstAddr, meta.ebmeta.flow_dstPort, meta.ebmeta.flow_proto, meta.ebmeta.is_nat }, 64w4294967296);
     }
-    @name(".calc_flow_lan_omac") action calc_flow_lan_omac_0() {
+    @name(".calc_flow_lan_omac") action calc_flow_lan_omac() {
         hash<bit<32>, bit<32>, tuple<bit<48>, bit<16>, bit<1>, bit<48>, bit<16>, bit<1>>, bit<64>>(meta.flowhash_meta.omac_lan, HashAlgorithm.crc32, 32w0, { hdr.outer_ethernet.srcAddr, hdr.outer_ethernet.etherType, meta.ebmeta.is_nat, hdr.outer_ethernet.dstAddr, hdr.outer_ethernet.etherType, meta.ebmeta.is_nat }, 64w4294967296);
     }
-    @name(".calc_flow_parts_imac") action calc_flow_parts_imac_0() {
+    @name(".calc_flow_parts_imac") action calc_flow_parts_imac() {
         hash<bit<16>, bit<16>, tuple<bit<48>, bit<16>, bit<1>>, bit<32>>(meta.flowhash_meta.imac_l16, HashAlgorithm.crc16, 16w0, { hdr.inner_ethernet.srcAddr, hdr.inner_ethernet.etherType, meta.ebmeta.is_nat }, 32w65536);
         hash<bit<16>, bit<16>, tuple<bit<48>, bit<16>, bit<1>>, bit<32>>(meta.flowhash_meta.imac_w16, HashAlgorithm.crc16, 16w0, { hdr.inner_ethernet.dstAddr, hdr.inner_ethernet.etherType, meta.ebmeta.is_nat }, 32w65536);
     }
-    @name(".calc_flow_parts_ipv4") action calc_flow_parts_ipv4_0() {
+    @name(".calc_flow_parts_ipv4") action calc_flow_parts_ipv4() {
         hash<bit<16>, bit<16>, tuple<bit<32>, bit<16>, bit<3>, bit<1>>, bit<32>>(meta.flowhash_meta.ipv4_l16, HashAlgorithm.crc16, 16w0, { hdr.outer_ipv4.srcAddr, meta.ebmeta.flow_srcPort, meta.ebmeta.flow_proto, meta.ebmeta.is_nat }, 32w65536);
         hash<bit<16>, bit<16>, tuple<bit<32>, bit<16>, bit<3>, bit<1>>, bit<32>>(meta.flowhash_meta.ipv4_w16, HashAlgorithm.crc16, 16w0, { hdr.outer_ipv4.dstAddr, meta.ebmeta.flow_dstPort, meta.ebmeta.flow_proto, meta.ebmeta.is_nat }, 32w65536);
     }
-    @name(".calc_flow_parts_ipv6") action calc_flow_parts_ipv6_0() {
+    @name(".calc_flow_parts_ipv6") action calc_flow_parts_ipv6() {
         hash<bit<16>, bit<16>, tuple<bit<128>, bit<16>, bit<3>, bit<1>>, bit<32>>(meta.flowhash_meta.ipv6_l16, HashAlgorithm.crc16, 16w0, { hdr.outer_ipv6.srcAddr, meta.ebmeta.flow_srcPort, meta.ebmeta.flow_proto, meta.ebmeta.is_nat }, 32w65536);
         hash<bit<16>, bit<16>, tuple<bit<128>, bit<16>, bit<3>, bit<1>>, bit<32>>(meta.flowhash_meta.ipv6_w16, HashAlgorithm.crc16, 16w0, { hdr.outer_ipv6.dstAddr, meta.ebmeta.flow_dstPort, meta.ebmeta.flow_proto, meta.ebmeta.is_nat }, 32w65536);
     }
-    @name(".calc_flow_parts_omac") action calc_flow_parts_omac_0() {
+    @name(".calc_flow_parts_omac") action calc_flow_parts_omac() {
         hash<bit<16>, bit<16>, tuple<bit<48>, bit<16>, bit<1>>, bit<32>>(meta.flowhash_meta.omac_l16, HashAlgorithm.crc16, 16w0, { hdr.outer_ethernet.srcAddr, hdr.outer_ethernet.etherType, meta.ebmeta.is_nat }, 32w65536);
         hash<bit<16>, bit<16>, tuple<bit<48>, bit<16>, bit<1>>, bit<32>>(meta.flowhash_meta.omac_w16, HashAlgorithm.crc16, 16w0, { hdr.outer_ethernet.dstAddr, hdr.outer_ethernet.etherType, meta.ebmeta.is_nat }, 32w65536);
     }
-    @name(".calc_flow_wan_imac") action calc_flow_wan_imac_0() {
+    @name(".calc_flow_wan_imac") action calc_flow_wan_imac() {
         hash<bit<32>, bit<32>, tuple<bit<48>, bit<16>, bit<1>, bit<48>, bit<16>, bit<1>>, bit<64>>(meta.flowhash_meta.imac_wan, HashAlgorithm.crc32, 32w0, { hdr.inner_ethernet.dstAddr, hdr.inner_ethernet.etherType, meta.ebmeta.is_nat, hdr.inner_ethernet.srcAddr, hdr.inner_ethernet.etherType, meta.ebmeta.is_nat }, 64w4294967296);
     }
-    @name(".calc_flow_wan_ipv4") action calc_flow_wan_ipv4_0() {
+    @name(".calc_flow_wan_ipv4") action calc_flow_wan_ipv4() {
         hash<bit<32>, bit<32>, tuple<bit<32>, bit<16>, bit<3>, bit<1>, bit<32>, bit<16>, bit<3>, bit<1>>, bit<64>>(meta.flowhash_meta.ipv4_wan, HashAlgorithm.crc32, 32w0, { hdr.outer_ipv4.dstAddr, meta.ebmeta.flow_dstPort, meta.ebmeta.flow_proto, meta.ebmeta.is_nat, hdr.outer_ipv4.srcAddr, meta.ebmeta.flow_srcPort, meta.ebmeta.flow_proto, meta.ebmeta.is_nat }, 64w4294967296);
     }
-    @name(".calc_flow_wan_ipv6") action calc_flow_wan_ipv6_0() {
+    @name(".calc_flow_wan_ipv6") action calc_flow_wan_ipv6() {
         hash<bit<32>, bit<32>, tuple<bit<128>, bit<16>, bit<3>, bit<1>, bit<128>, bit<16>, bit<3>, bit<1>>, bit<64>>(meta.flowhash_meta.ipv6_wan, HashAlgorithm.crc32, 32w0, { hdr.outer_ipv6.dstAddr, meta.ebmeta.flow_dstPort, meta.ebmeta.flow_proto, meta.ebmeta.is_nat, hdr.outer_ipv6.srcAddr, meta.ebmeta.flow_srcPort, meta.ebmeta.flow_proto, meta.ebmeta.is_nat }, 64w4294967296);
     }
-    @name(".calc_flow_wan_omac") action calc_flow_wan_omac_0() {
+    @name(".calc_flow_wan_omac") action calc_flow_wan_omac() {
         hash<bit<32>, bit<32>, tuple<bit<48>, bit<16>, bit<1>, bit<48>, bit<16>, bit<1>>, bit<64>>(meta.flowhash_meta.omac_wan, HashAlgorithm.crc32, 32w0, { hdr.outer_ethernet.dstAddr, hdr.outer_ethernet.etherType, meta.ebmeta.is_nat, hdr.outer_ethernet.srcAddr, hdr.outer_ethernet.etherType, meta.ebmeta.is_nat }, 64w4294967296);
     }
-    @name(".aggregate_bypass") table aggregate_bypass {
+    @name(".aggregate_bypass") table aggregate_bypass_0 {
         actions = {
-            do_bypass_0();
+            do_bypass();
             _nop_35();
         }
         key = {
@@ -1141,9 +1141,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 16;
         default_action = _nop_35();
     }
-    @name(".bypass_mode") table bypass_mode {
+    @name(".bypass_mode") table bypass_mode_0 {
         actions = {
-            mark_bypass_mode_0();
+            mark_bypass_mode();
             _nop_36();
         }
         key = {
@@ -1152,9 +1152,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 3;
         default_action = _nop_36();
     }
-    @name(".calc_mpls_offset") table calc_mpls_offset {
+    @name(".calc_mpls_offset") table calc_mpls_offset_0 {
         actions = {
-            set_mpls_offset_0();
+            set_mpls_offset();
             _nop_37();
         }
         key = {
@@ -1168,9 +1168,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 7;
         default_action = _nop_37();
     }
-    @name(".dpi_set_egress_port") table dpi_set_egress_port {
+    @name(".dpi_set_egress_port") table dpi_set_egress_port_0 {
         actions = {
-            dpi_egress_port_0();
+            dpi_egress_port();
             _nop_38();
         }
         key = {
@@ -1179,9 +1179,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 3;
         default_action = _nop_38();
     }
-    @name(".drop_if_no_ebheader") table drop_if_no_ebheader {
+    @name(".drop_if_no_ebheader") table drop_if_no_ebheader_0 {
         actions = {
-            _drop_0();
+            _drop();
             _nop_39();
         }
         key = {
@@ -1192,9 +1192,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 2;
         default_action = _nop_39();
     }
-    @name(".forward_lacp_bfd") table forward_lacp_bfd {
+    @name(".forward_lacp_bfd") table forward_lacp_bfd_0 {
         actions = {
-            mark_bypass_lacp_bfd_0();
+            mark_bypass_lacp_bfd();
             _nop_40();
         }
         key = {
@@ -1207,9 +1207,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 8;
         default_action = _nop_40();
     }
-    @name(".forward_log") table forward_log {
+    @name(".forward_log") table forward_log_0 {
         actions = {
-            do_forward_log_0();
+            do_forward_log();
             _nop_41();
         }
         key = {
@@ -1220,9 +1220,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 32;
         default_action = _nop_41();
     }
-    @name(".forward_multicast_ipv4") table forward_multicast_ipv4 {
+    @name(".forward_multicast_ipv4") table forward_multicast_ipv4_0 {
         actions = {
-            mark_bypass_multi4_0();
+            mark_bypass_multi4();
             _nop_42();
         }
         key = {
@@ -1233,9 +1233,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 200;
         default_action = _nop_42();
     }
-    @name(".forward_multicast_ipv6") table forward_multicast_ipv6 {
+    @name(".forward_multicast_ipv6") table forward_multicast_ipv6_0 {
         actions = {
-            mark_bypass_multi6_0();
+            mark_bypass_multi6();
             _nop_43();
         }
         key = {
@@ -1246,9 +1246,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 200;
         default_action = _nop_43();
     }
-    @name(".forward_multicast_mpls") table forward_multicast_mpls {
+    @name(".forward_multicast_mpls") table forward_multicast_mpls_0 {
         actions = {
-            mark_bypass_multi_mpls_0();
+            mark_bypass_multi_mpls();
             _nop_44();
         }
         key = {
@@ -1258,12 +1258,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 200;
         default_action = _nop_44();
     }
-    @name(".get_flow_ports") table get_flow_ports {
+    @name(".get_flow_ports") table get_flow_ports_0 {
         actions = {
-            set_tcp_flow_data_0();
-            set_udp_flow_data_0();
-            set_sctp_flow_data_0();
-            set_udplite_flow_data_0();
+            set_tcp_flow_data();
+            set_udp_flow_data();
+            set_sctp_flow_data();
+            set_udplite_flow_data();
             _nop_45();
         }
         key = {
@@ -1275,9 +1275,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 5;
         default_action = _nop_45();
     }
-    @name(".set_dpi_output") table set_dpi_output {
+    @name(".set_dpi_output") table set_dpi_output_0 {
         actions = {
-            set_dpi_out_and_queue_0();
+            set_dpi_out_and_queue();
             _nop_46();
         }
         key = {
@@ -1287,16 +1287,16 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 65537;
         default_action = _nop_46();
     }
-    @name(".set_flow_hash") table set_flow_hash {
+    @name(".set_flow_hash") table set_flow_hash_0 {
         actions = {
-            set_flow_hash_ipv4_lan_0();
-            set_flow_hash_ipv4_wan_0();
-            set_flow_hash_ipv6_lan_0();
-            set_flow_hash_ipv6_wan_0();
-            set_flow_hash_imac_lan_0();
-            set_flow_hash_imac_wan_0();
-            set_flow_hash_omac_lan_0();
-            set_flow_hash_omac_wan_0();
+            set_flow_hash_ipv4_lan();
+            set_flow_hash_ipv4_wan();
+            set_flow_hash_ipv6_lan();
+            set_flow_hash_ipv6_wan();
+            set_flow_hash_imac_lan();
+            set_flow_hash_imac_wan();
+            set_flow_hash_omac_lan();
+            set_flow_hash_omac_wan();
             _nop_47();
         }
         key = {
@@ -1308,9 +1308,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 16;
         default_action = _nop_47();
     }
-    @name(".set_port_metadata") table set_port_metadata {
+    @name(".set_port_metadata") table set_port_metadata_0 {
         actions = {
-            do_set_port_metadata_0();
+            do_set_port_metadata();
             _drop_2();
         }
         key = {
@@ -1319,16 +1319,16 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = _drop_2();
     }
-    @name(".set_valid_hash") table set_valid_hash {
+    @name(".set_valid_hash") table set_valid_hash_0 {
         actions = {
-            choose_lan_outer_mac_hash_0();
-            choose_wan_outer_mac_hash_0();
-            choose_lan_inner_mac_hash_0();
-            choose_wan_inner_mac_hash_0();
-            choose_lan_ipv4_hash_0();
-            choose_wan_ipv4_hash_0();
-            choose_lan_ipv6_hash_0();
-            choose_wan_ipv6_hash_0();
+            choose_lan_outer_mac_hash();
+            choose_wan_outer_mac_hash();
+            choose_lan_inner_mac_hash();
+            choose_wan_inner_mac_hash();
+            choose_lan_ipv4_hash();
+            choose_wan_ipv4_hash();
+            choose_lan_ipv6_hash();
+            choose_wan_ipv6_hash();
             _nop_48();
         }
         key = {
@@ -1340,10 +1340,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 16;
         default_action = _nop_48();
     }
-    @name(".tbl_dpi_lan_imac_hash") table tbl_dpi_lan_imac_hash {
+    @name(".tbl_dpi_lan_imac_hash") table tbl_dpi_lan_imac_hash_0 {
         actions = {
-            calc_dpi_lan_inner_mac_nat_hash_0();
-            calc_dpi_lan_inner_mac_mag_hash_0();
+            calc_dpi_lan_inner_mac_nat_hash();
+            calc_dpi_lan_inner_mac_mag_hash();
             _nop_49();
         }
         key = {
@@ -1355,10 +1355,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 100;
         default_action = _nop_49();
     }
-    @name(".tbl_dpi_lan_ipv4_hash") table tbl_dpi_lan_ipv4_hash {
+    @name(".tbl_dpi_lan_ipv4_hash") table tbl_dpi_lan_ipv4_hash_0 {
         actions = {
-            calc_dpi_lan_ipv4_nat_hash_0();
-            calc_dpi_lan_ipv4_mag_hash_0();
+            calc_dpi_lan_ipv4_nat_hash();
+            calc_dpi_lan_ipv4_mag_hash();
             _nop_50();
         }
         key = {
@@ -1368,10 +1368,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 100;
         default_action = _nop_50();
     }
-    @name(".tbl_dpi_lan_ipv6_hash") table tbl_dpi_lan_ipv6_hash {
+    @name(".tbl_dpi_lan_ipv6_hash") table tbl_dpi_lan_ipv6_hash_0 {
         actions = {
-            calc_dpi_lan_ipv6_nat_hash_0();
-            calc_dpi_lan_ipv6_mag_hash_0();
+            calc_dpi_lan_ipv6_nat_hash();
+            calc_dpi_lan_ipv6_mag_hash();
             _nop_51();
         }
         key = {
@@ -1381,10 +1381,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 100;
         default_action = _nop_51();
     }
-    @name(".tbl_dpi_lan_omac_hash") table tbl_dpi_lan_omac_hash {
+    @name(".tbl_dpi_lan_omac_hash") table tbl_dpi_lan_omac_hash_0 {
         actions = {
-            calc_dpi_lan_outer_mac_nat_hash_0();
-            calc_dpi_lan_outer_mac_mag_hash_0();
+            calc_dpi_lan_outer_mac_nat_hash();
+            calc_dpi_lan_outer_mac_mag_hash();
             _nop_52();
         }
         key = {
@@ -1396,10 +1396,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 100;
         default_action = _nop_52();
     }
-    @name(".tbl_dpi_wan_imac_hash") table tbl_dpi_wan_imac_hash {
+    @name(".tbl_dpi_wan_imac_hash") table tbl_dpi_wan_imac_hash_0 {
         actions = {
-            calc_dpi_wan_inner_mac_nat_hash_0();
-            calc_dpi_wan_inner_mac_mag_hash_0();
+            calc_dpi_wan_inner_mac_nat_hash();
+            calc_dpi_wan_inner_mac_mag_hash();
             @defaultonly NoAction_0();
         }
         key = {
@@ -1411,10 +1411,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 100;
         default_action = NoAction_0();
     }
-    @name(".tbl_dpi_wan_ipv4_hash") table tbl_dpi_wan_ipv4_hash {
+    @name(".tbl_dpi_wan_ipv4_hash") table tbl_dpi_wan_ipv4_hash_0 {
         actions = {
-            calc_dpi_wan_ipv4_nat_hash_0();
-            calc_dpi_wan_ipv4_mag_hash_0();
+            calc_dpi_wan_ipv4_nat_hash();
+            calc_dpi_wan_ipv4_mag_hash();
             _nop_53();
         }
         key = {
@@ -1424,10 +1424,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 100;
         default_action = _nop_53();
     }
-    @name(".tbl_dpi_wan_ipv6_hash") table tbl_dpi_wan_ipv6_hash {
+    @name(".tbl_dpi_wan_ipv6_hash") table tbl_dpi_wan_ipv6_hash_0 {
         actions = {
-            calc_dpi_wan_ipv6_nat_hash_0();
-            calc_dpi_wan_ipv6_mag_hash_0();
+            calc_dpi_wan_ipv6_nat_hash();
+            calc_dpi_wan_ipv6_mag_hash();
             _nop_54();
         }
         key = {
@@ -1437,10 +1437,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 100;
         default_action = _nop_54();
     }
-    @name(".tbl_dpi_wan_omac_hash") table tbl_dpi_wan_omac_hash {
+    @name(".tbl_dpi_wan_omac_hash") table tbl_dpi_wan_omac_hash_0 {
         actions = {
-            calc_dpi_wan_outer_mac_nat_hash_0();
-            calc_dpi_wan_outer_mac_mag_hash_0();
+            calc_dpi_wan_outer_mac_nat_hash();
+            calc_dpi_wan_outer_mac_mag_hash();
             @defaultonly NoAction_3();
         }
         key = {
@@ -1452,9 +1452,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 100;
         default_action = NoAction_3();
     }
-    @name(".tbl_flow_hash_lan_imac") table tbl_flow_hash_lan_imac {
+    @name(".tbl_flow_hash_lan_imac") table tbl_flow_hash_lan_imac_0 {
         actions = {
-            calc_flow_lan_imac_0();
+            calc_flow_lan_imac();
             _nop_55();
         }
         key = {
@@ -1466,9 +1466,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 3;
         default_action = _nop_55();
     }
-    @name(".tbl_flow_hash_lan_ipv4") table tbl_flow_hash_lan_ipv4 {
+    @name(".tbl_flow_hash_lan_ipv4") table tbl_flow_hash_lan_ipv4_0 {
         actions = {
-            calc_flow_lan_ipv4_0();
+            calc_flow_lan_ipv4();
             _nop_56();
         }
         key = {
@@ -1478,9 +1478,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 3;
         default_action = _nop_56();
     }
-    @name(".tbl_flow_hash_lan_ipv6") table tbl_flow_hash_lan_ipv6 {
+    @name(".tbl_flow_hash_lan_ipv6") table tbl_flow_hash_lan_ipv6_0 {
         actions = {
-            calc_flow_lan_ipv6_0();
+            calc_flow_lan_ipv6();
             _nop_57();
         }
         key = {
@@ -1490,9 +1490,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 3;
         default_action = _nop_57();
     }
-    @name(".tbl_flow_hash_lan_omac") table tbl_flow_hash_lan_omac {
+    @name(".tbl_flow_hash_lan_omac") table tbl_flow_hash_lan_omac_0 {
         actions = {
-            calc_flow_lan_omac_0();
+            calc_flow_lan_omac();
             _nop_58();
         }
         key = {
@@ -1504,9 +1504,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 3;
         default_action = _nop_58();
     }
-    @name(".tbl_flow_hash_parts_imac") table tbl_flow_hash_parts_imac {
+    @name(".tbl_flow_hash_parts_imac") table tbl_flow_hash_parts_imac_0 {
         actions = {
-            calc_flow_parts_imac_0();
+            calc_flow_parts_imac();
             _nop_59();
         }
         key = {
@@ -1518,9 +1518,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 3;
         default_action = _nop_59();
     }
-    @name(".tbl_flow_hash_parts_ipv4") table tbl_flow_hash_parts_ipv4 {
+    @name(".tbl_flow_hash_parts_ipv4") table tbl_flow_hash_parts_ipv4_0 {
         actions = {
-            calc_flow_parts_ipv4_0();
+            calc_flow_parts_ipv4();
             _nop_60();
         }
         key = {
@@ -1530,9 +1530,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 3;
         default_action = _nop_60();
     }
-    @name(".tbl_flow_hash_parts_ipv6") table tbl_flow_hash_parts_ipv6 {
+    @name(".tbl_flow_hash_parts_ipv6") table tbl_flow_hash_parts_ipv6_0 {
         actions = {
-            calc_flow_parts_ipv6_0();
+            calc_flow_parts_ipv6();
             _nop_61();
         }
         key = {
@@ -1542,9 +1542,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 3;
         default_action = _nop_61();
     }
-    @name(".tbl_flow_hash_parts_omac") table tbl_flow_hash_parts_omac {
+    @name(".tbl_flow_hash_parts_omac") table tbl_flow_hash_parts_omac_0 {
         actions = {
-            calc_flow_parts_omac_0();
+            calc_flow_parts_omac();
             _nop_62();
         }
         key = {
@@ -1556,9 +1556,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 3;
         default_action = _nop_62();
     }
-    @name(".tbl_flow_hash_wan_imac") table tbl_flow_hash_wan_imac {
+    @name(".tbl_flow_hash_wan_imac") table tbl_flow_hash_wan_imac_0 {
         actions = {
-            calc_flow_wan_imac_0();
+            calc_flow_wan_imac();
             _nop_63();
         }
         key = {
@@ -1570,9 +1570,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 3;
         default_action = _nop_63();
     }
-    @name(".tbl_flow_hash_wan_ipv4") table tbl_flow_hash_wan_ipv4 {
+    @name(".tbl_flow_hash_wan_ipv4") table tbl_flow_hash_wan_ipv4_0 {
         actions = {
-            calc_flow_wan_ipv4_0();
+            calc_flow_wan_ipv4();
             _nop_64();
         }
         key = {
@@ -1582,9 +1582,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 3;
         default_action = _nop_64();
     }
-    @name(".tbl_flow_hash_wan_ipv6") table tbl_flow_hash_wan_ipv6 {
+    @name(".tbl_flow_hash_wan_ipv6") table tbl_flow_hash_wan_ipv6_0 {
         actions = {
-            calc_flow_wan_ipv6_0();
+            calc_flow_wan_ipv6();
             _nop_65();
         }
         key = {
@@ -1594,9 +1594,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 3;
         default_action = _nop_65();
     }
-    @name(".tbl_flow_hash_wan_omac") table tbl_flow_hash_wan_omac {
+    @name(".tbl_flow_hash_wan_omac") table tbl_flow_hash_wan_omac_0 {
         actions = {
-            calc_flow_wan_omac_0();
+            calc_flow_wan_omac();
             _nop_66();
         }
         key = {
@@ -1608,32 +1608,32 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 3;
         default_action = _nop_66();
     }
-    @name(".per_hash_bytes_ctr") counter(32w65536, CounterType.bytes) _per_hash_bytes_ctr_0;
-    @name(".per_hash_packets_ctr") counter(32w65536, CounterType.packets) _per_hash_packets_ctr_0;
-    @name(".do_update_byte_counters") action _do_update_byte_counters() {
-        _per_hash_bytes_ctr_0.count((bit<32>)meta.ebmeta.port_hash);
+    @name(".per_hash_bytes_ctr") counter(32w65536, CounterType.bytes) _per_hash_bytes_ctr;
+    @name(".per_hash_packets_ctr") counter(32w65536, CounterType.packets) _per_hash_packets_ctr;
+    @name(".do_update_byte_counters") action _do_update_byte_counters_0() {
+        _per_hash_bytes_ctr.count((bit<32>)meta.ebmeta.port_hash);
     }
-    @name("._nop") action __nop() {
+    @name("._nop") action __nop_0() {
     }
     @name("._nop") action __nop_2() {
     }
-    @name(".do_update_packet_counters") action _do_update_packet_counters() {
-        _per_hash_packets_ctr_0.count((bit<32>)meta.ebmeta.port_hash);
+    @name(".do_update_packet_counters") action _do_update_packet_counters_0() {
+        _per_hash_packets_ctr.count((bit<32>)meta.ebmeta.port_hash);
     }
-    @name(".update_byte_counters") table _update_byte_counters_0 {
+    @name(".update_byte_counters") table _update_byte_counters {
         actions = {
-            _do_update_byte_counters();
-            __nop();
+            _do_update_byte_counters_0();
+            __nop_0();
         }
         key = {
             meta.ebmeta.port_type: exact @name("ebmeta.port_type") ;
         }
         size = 3;
-        default_action = __nop();
+        default_action = __nop_0();
     }
-    @name(".update_packet_counters") table _update_packet_counters_0 {
+    @name(".update_packet_counters") table _update_packet_counters {
         actions = {
-            _do_update_packet_counters();
+            _do_update_packet_counters_0();
             __nop_2();
         }
         key = {
@@ -1643,43 +1643,43 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = __nop_2();
     }
     apply {
-        tbl_dpi_lan_ipv4_hash.apply();
-        tbl_dpi_wan_ipv4_hash.apply();
-        tbl_dpi_lan_ipv6_hash.apply();
-        calc_mpls_offset.apply();
-        get_flow_ports.apply();
-        set_port_metadata.apply();
-        bypass_mode.apply();
-        forward_lacp_bfd.apply();
-        forward_multicast_mpls.apply();
-        forward_multicast_ipv4.apply();
-        forward_multicast_ipv6.apply();
-        tbl_dpi_wan_ipv6_hash.apply();
-        tbl_dpi_lan_imac_hash.apply();
-        tbl_dpi_lan_omac_hash.apply();
-        aggregate_bypass.apply();
-        tbl_dpi_wan_imac_hash.apply();
-        tbl_dpi_wan_omac_hash.apply();
-        tbl_flow_hash_lan_ipv6.apply();
-        tbl_flow_hash_wan_ipv6.apply();
-        tbl_flow_hash_parts_ipv6.apply();
-        set_valid_hash.apply();
-        tbl_flow_hash_lan_imac.apply();
-        tbl_flow_hash_wan_imac.apply();
-        tbl_flow_hash_parts_imac.apply();
-        _update_byte_counters_0.apply();
-        _update_packet_counters_0.apply();
-        set_dpi_output.apply();
-        tbl_flow_hash_lan_omac.apply();
-        tbl_flow_hash_wan_omac.apply();
-        tbl_flow_hash_parts_omac.apply();
-        tbl_flow_hash_lan_ipv4.apply();
-        tbl_flow_hash_wan_ipv4.apply();
-        tbl_flow_hash_parts_ipv4.apply();
-        set_flow_hash.apply();
-        forward_log.apply();
-        drop_if_no_ebheader.apply();
-        dpi_set_egress_port.apply();
+        tbl_dpi_lan_ipv4_hash_0.apply();
+        tbl_dpi_wan_ipv4_hash_0.apply();
+        tbl_dpi_lan_ipv6_hash_0.apply();
+        calc_mpls_offset_0.apply();
+        get_flow_ports_0.apply();
+        set_port_metadata_0.apply();
+        bypass_mode_0.apply();
+        forward_lacp_bfd_0.apply();
+        forward_multicast_mpls_0.apply();
+        forward_multicast_ipv4_0.apply();
+        forward_multicast_ipv6_0.apply();
+        tbl_dpi_wan_ipv6_hash_0.apply();
+        tbl_dpi_lan_imac_hash_0.apply();
+        tbl_dpi_lan_omac_hash_0.apply();
+        aggregate_bypass_0.apply();
+        tbl_dpi_wan_imac_hash_0.apply();
+        tbl_dpi_wan_omac_hash_0.apply();
+        tbl_flow_hash_lan_ipv6_0.apply();
+        tbl_flow_hash_wan_ipv6_0.apply();
+        tbl_flow_hash_parts_ipv6_0.apply();
+        set_valid_hash_0.apply();
+        tbl_flow_hash_lan_imac_0.apply();
+        tbl_flow_hash_wan_imac_0.apply();
+        tbl_flow_hash_parts_imac_0.apply();
+        _update_byte_counters.apply();
+        _update_packet_counters.apply();
+        set_dpi_output_0.apply();
+        tbl_flow_hash_lan_omac_0.apply();
+        tbl_flow_hash_wan_omac_0.apply();
+        tbl_flow_hash_parts_omac_0.apply();
+        tbl_flow_hash_lan_ipv4_0.apply();
+        tbl_flow_hash_wan_ipv4_0.apply();
+        tbl_flow_hash_parts_ipv4_0.apply();
+        set_flow_hash_0.apply();
+        forward_log_0.apply();
+        drop_if_no_ebheader_0.apply();
+        dpi_set_egress_port_0.apply();
     }
 }
 

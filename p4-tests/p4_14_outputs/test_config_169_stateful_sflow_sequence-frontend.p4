@@ -9,6 +9,7 @@ struct meta_t {
 struct sflowHdr_t {
     bit<16> seq_num;
     bit<16> num_samples;
+    @saturating 
     bit<16> temp;
     bit<16> drops;
 }
@@ -229,47 +230,47 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_7() {
     }
-    bit<32> tmp_1;
-    bit<32> tmp_2;
-    @name(".seq_num_gen") DirectRegisterAction<bit<32>, bit<32>>(sflow_state_seq_num) seq_num_gen = {
+    bit<32> tmp;
+    bit<32> tmp_0;
+    @name(".seq_num_gen") DirectRegisterAction<bit<32>, bit<32>>(sflow_state_seq_num) seq_num_gen_0 = {
         void apply(inout bit<32> value, out bit<32> rv) {
-            bit<32> alu_hi;
-            bit<32> in_value;
-            in_value = value;
-            alu_hi = in_value;
-            value = in_value + 32w1;
-            rv = alu_hi;
+            bit<32> alu_hi_0;
+            bit<32> in_value_0;
+            in_value_0 = value;
+            alu_hi_0 = in_value_0;
+            value = in_value_0 + 32w1;
+            rv = alu_hi_0;
         }
     };
-    @name(".sflow_exp_seq_num") DirectRegisterAction<bit<32>, bit<32>>(sflow_state_exp_seq_num) sflow_exp_seq_num = {
+    @name(".sflow_exp_seq_num") DirectRegisterAction<bit<32>, bit<32>>(sflow_state_exp_seq_num) sflow_exp_seq_num_0 = {
         void apply(inout bit<32> value, out bit<32> rv) {
-            bit<32> alu_hi_2;
-            bit<32> in_value_2;
-            in_value_2 = value;
-            alu_hi_2 = (bit<32>)meta.sflowHdr.seq_num - in_value_2;
+            bit<32> alu_hi_1;
+            bit<32> in_value_1;
+            in_value_1 = value;
+            alu_hi_1 = (bit<32>)meta.sflowHdr.seq_num - in_value_1;
             value = (bit<32>)meta.sflowHdr.temp;
-            rv = alu_hi_2;
+            rv = alu_hi_1;
         }
     };
-    @name(".get_sflow_seq_num") action get_sflow_seq_num_0() {
-        tmp_1 = seq_num_gen.execute();
-        meta.meta.sflow_sample_seq_no = tmp_1;
+    @name(".get_sflow_seq_num") action get_sflow_seq_num() {
+        tmp = seq_num_gen_0.execute();
+        meta.meta.sflow_sample_seq_no = tmp;
     }
-    @name(".calc_next_seq_num") action calc_next_seq_num_0() {
-        meta.sflowHdr.temp = meta.sflowHdr.seq_num + meta.sflowHdr.num_samples;
+    @name(".calc_next_seq_num") action calc_next_seq_num() {
+        meta.sflowHdr.temp = meta.sflowHdr.seq_num |+| meta.sflowHdr.num_samples;
     }
-    @name(".chk_sflow_seq_num") action chk_sflow_seq_num_0() {
-        tmp_2 = sflow_exp_seq_num.execute();
-        meta.sflowHdr.drops = (bit<16>)tmp_2;
+    @name(".chk_sflow_seq_num") action chk_sflow_seq_num() {
+        tmp_0 = sflow_exp_seq_num_0.execute();
+        meta.sflowHdr.drops = (bit<16>)tmp_0;
     }
-    @name(".drop_me") action drop_me_0() {
+    @name(".drop_me") action drop_me() {
         mark_to_drop();
     }
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing() {
     }
-    @name(".sflow_seq_num") table sflow_seq_num {
+    @name(".sflow_seq_num") table sflow_seq_num_0 {
         actions = {
-            get_sflow_seq_num_0();
+            get_sflow_seq_num();
             @defaultonly NoAction_0();
         }
         key = {
@@ -279,17 +280,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_0();
     }
-    @name(".sflow_verify_seq_no_step_1") table sflow_verify_seq_no_step_1 {
+    @name(".sflow_verify_seq_no_step_1") table sflow_verify_seq_no_step {
         actions = {
-            calc_next_seq_num_0();
+            calc_next_seq_num();
             @defaultonly NoAction_5();
         }
         size = 512;
         default_action = NoAction_5();
     }
-    @stage(1) @name(".sflow_verify_seq_no_step_2") table sflow_verify_seq_no_step_2 {
+    @stage(1) @name(".sflow_verify_seq_no_step_2") table sflow_verify_seq_no_step_0 {
         actions = {
-            chk_sflow_seq_num_0();
+            chk_sflow_seq_num();
             @defaultonly NoAction_6();
         }
         key = {
@@ -298,10 +299,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 16384;
         default_action = NoAction_6();
     }
-    @name(".sflow_verify_seq_no_step_3") table sflow_verify_seq_no_step_3 {
+    @name(".sflow_verify_seq_no_step_3") table sflow_verify_seq_no_step_4 {
         actions = {
-            drop_me_0();
-            do_nothing_0();
+            drop_me();
+            do_nothing();
             @defaultonly NoAction_7();
         }
         key = {
@@ -311,10 +312,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_7();
     }
     apply {
-        sflow_seq_num.apply();
-        sflow_verify_seq_no_step_1.apply();
-        sflow_verify_seq_no_step_2.apply();
-        sflow_verify_seq_no_step_3.apply();
+        sflow_seq_num_0.apply();
+        sflow_verify_seq_no_step.apply();
+        sflow_verify_seq_no_step_0.apply();
+        sflow_verify_seq_no_step_4.apply();
     }
 }
 

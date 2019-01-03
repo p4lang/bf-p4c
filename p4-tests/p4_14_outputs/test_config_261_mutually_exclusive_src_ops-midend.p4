@@ -197,29 +197,29 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_5() {
     }
-    @name(".set_a") action set_a_0() {
+    @name(".set_a") action set_a() {
         meta.meta.x = hdr.pkt_a.b;
     }
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing() {
     }
     @name(".do_nothing") action do_nothing_3() {
     }
     @name(".do_nothing") action do_nothing_4() {
     }
-    @name(".set_b") action set_b_0() {
+    @name(".set_b") action set_b() {
         meta.meta.x = hdr.pkt_b.b;
         meta.meta.y = hdr.pkt_a.c;
     }
-    @name(".set_blah") action set_blah_0(bit<16> x) {
+    @name(".set_blah") action set_blah(bit<16> x) {
         hdr.eth.etype = x;
     }
-    @name(".set_hash") action set_hash_0() {
+    @name(".set_hash") action set_hash() {
         hash<bit<32>, bit<32>, tuple_0, bit<64>>(hdr.eth.blah1, HashAlgorithm.crc32, 32w0, { meta.meta.x }, 64w4294967296);
     }
-    @name(".t_a") table t_a {
+    @name(".t_a") table t_a_0 {
         actions = {
-            set_a_0();
-            do_nothing_0();
+            set_a();
+            do_nothing();
             @defaultonly NoAction_0();
         }
         key = {
@@ -228,9 +228,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_0();
     }
-    @name(".t_b") table t_b {
+    @name(".t_b") table t_b_0 {
         actions = {
-            set_b_0();
+            set_b();
             do_nothing_3();
             @defaultonly NoAction_4();
         }
@@ -240,10 +240,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_4();
     }
-    @name(".t_last") table t_last {
+    @name(".t_last") table t_last_0 {
         actions = {
-            set_blah_0();
-            set_hash_0();
+            set_blah();
+            set_hash();
             do_nothing_4();
             @defaultonly NoAction_5();
         }
@@ -256,10 +256,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (hdr.pkt_a.isValid()) 
-            t_a.apply();
+            t_a_0.apply();
         else 
-            t_b.apply();
-        t_last.apply();
+            t_b_0.apply();
+        t_last_0.apply();
     }
 }
 

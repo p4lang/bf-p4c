@@ -162,15 +162,15 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing() {
     }
-    @name(".a2") action a2_0() {
+    @name(".a2") action a2() {
         hdr.w0.w = 32w2;
     }
-    @name(".et1") table et1 {
+    @name(".et1") table et1_0 {
         actions = {
-            do_nothing_0();
-            a2_0();
+            do_nothing();
+            a2();
             @defaultonly NoAction_0();
         }
         key = {
@@ -179,28 +179,28 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = NoAction_0();
     }
     apply {
-        et1.apply();
+        et1_0.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".do_nothing") action do_nothing_1() {
+    @name(".do_nothing") action do_nothing_2() {
     }
-    @name(".set_p") action set_p_0() {
+    @name(".set_p") action set_p() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = 9w1;
     }
-    @name(".t1") table t1 {
+    @name(".t1") table t1_0 {
         actions = {
-            do_nothing_1();
-            set_p_0();
+            do_nothing_2();
+            set_p();
         }
         key = {
             hdr.w0.w: ternary @name("w0.w") ;
         }
-        default_action = set_p_0();
+        default_action = set_p();
     }
     apply {
-        t1.apply();
+        t1_0.apply();
     }
 }
 

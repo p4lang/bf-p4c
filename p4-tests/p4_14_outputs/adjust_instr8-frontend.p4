@@ -38,41 +38,41 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    @name(".setport") action setport_0(bit<9> port) {
+    @name(".setport") action setport(bit<9> port) {
         standard_metadata.egress_spec = port;
     }
-    @name(".a1") action a1_0() {
+    @name(".a1") action a1() {
         hdr.data.x1 = 2w0;
         hdr.data.x2 = 2w0;
     }
-    @name(".a2") action a2_0() {
+    @name(".a2") action a2() {
         hdr.data.x1 = 2w3;
         hdr.data.x2 = 2w2;
         hdr.data.x3 = 2w0;
     }
-    @name(".a3") action a3_0() {
+    @name(".a3") action a3() {
         hdr.data.y1 = 4w0xe;
         hdr.data.y2 = 2w0x2;
     }
-    @name(".a4") action a4_0() {
+    @name(".a4") action a4() {
         hdr.data.y1 = 4w0x6;
         hdr.data.y2 = 2w0x1;
         hdr.data.y3 = 2w0x1;
     }
-    @name(".a5") action a5_0() {
+    @name(".a5") action a5() {
         hdr.data.u3 = 12w0xffd;
     }
-    @name(".a6") action a6_0() {
+    @name(".a6") action a6() {
         hdr.data.u2 = 2w0x3;
         hdr.data.u3 = 12w0xff8;
     }
-    @name(".a7") action a7_0() {
+    @name(".a7") action a7() {
         hdr.data.v1 = 28w0xffffffe;
         hdr.data.v2 = 2w0x1;
     }
-    @name(".set_port") table set_port {
+    @name(".set_port") table set_port_0 {
         actions = {
-            setport_0();
+            setport();
             @defaultonly NoAction_0();
         }
         key = {
@@ -80,15 +80,15 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name(".test1") table test1 {
+    @name(".test1") table test1_0 {
         actions = {
-            a1_0();
-            a2_0();
-            a3_0();
-            a4_0();
-            a5_0();
-            a6_0();
-            a7_0();
+            a1();
+            a2();
+            a3();
+            a4();
+            a5();
+            a6();
+            a7();
             @defaultonly NoAction_3();
         }
         key = {
@@ -97,8 +97,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_3();
     }
     apply {
-        test1.apply();
-        set_port.apply();
+        test1_0.apply();
+        set_port_0.apply();
     }
 }
 

@@ -149,23 +149,23 @@ struct metadata_t {
 }
 
 parser SwitchIngressParser(packet_in pkt, out switch_header_t hdr, out metadata_t ig_md, out ingress_intrinsic_metadata_t ig_intr_md) {
-    ethernet_h ethernet_1;
-    ethernet_h tmp_4;
-    ingress_intrinsic_metadata_t ig_intr_md_1;
-    pktgen_timer_header_t hdr_2_pktgen_timer;
-    pktgen_tail_t hdr_2_pktgen_tail;
-    ethernet_h hdr_2_ethernet;
-    vlan_tag_h hdr_2_vlan_tag;
-    ipv4_h hdr_2_ipv4;
-    ipv6_h hdr_2_ipv6;
-    tcp_h hdr_2_tcp;
-    udp_h hdr_2_udp;
-    bit<112> tmp;
-    @name("SwitchIngressParser.simple_parser.ipv4_checksum") Checksum<bit<16>>(HashAlgorithm_t.CSUM16) simple_parser_ipv4_checksum_1;
+    ethernet_h ethernet_0;
+    ethernet_h tmp;
+    ingress_intrinsic_metadata_t ig_intr_md_0;
+    pktgen_timer_header_t hdr_0_pktgen_timer;
+    pktgen_tail_t hdr_0_pktgen_tail;
+    ethernet_h hdr_0_ethernet;
+    vlan_tag_h hdr_0_vlan_tag;
+    ipv4_h hdr_0_ipv4;
+    ipv6_h hdr_0_ipv6;
+    tcp_h hdr_0_tcp;
+    udp_h hdr_0_udp;
+    bit<112> tmp_4;
+    @name("SwitchIngressParser.simple_parser.ipv4_checksum") Checksum<bit<16>>(HashAlgorithm_t.CSUM16) simple_parser_ipv4_checksum;
     state start {
-        ig_intr_md_1.setInvalid();
-        pkt.extract<ingress_intrinsic_metadata_t>(ig_intr_md_1);
-        transition select(ig_intr_md_1.resubmit_flag) {
+        ig_intr_md_0.setInvalid();
+        pkt.extract<ingress_intrinsic_metadata_t>(ig_intr_md_0);
+        transition select(ig_intr_md_0.resubmit_flag) {
             1w1: TofinoIngressParser_parse_resubmit;
             1w0: TofinoIngressParser_parse_port_metadata;
             default: noMatch;
@@ -176,59 +176,59 @@ parser SwitchIngressParser(packet_in pkt, out switch_header_t hdr, out metadata_
     }
     state TofinoIngressParser_parse_port_metadata {
         pkt.advance(32w64);
-        ig_intr_md = ig_intr_md_1;
-        tmp = pkt.lookahead<bit<112>>();
-        tmp_4.setValid();
-        tmp_4.dst_addr = tmp[111:64];
-        tmp_4.src_addr = tmp[63:16];
-        tmp_4.ether_type = tmp[15:0];
-        ethernet_1 = tmp_4;
-        transition select(ethernet_1.ether_type) {
+        ig_intr_md = ig_intr_md_0;
+        tmp_4 = pkt.lookahead<bit<112>>();
+        tmp.setValid();
+        tmp.dst_addr = tmp_4[111:64];
+        tmp.src_addr = tmp_4[63:16];
+        tmp.ether_type = tmp_4[15:0];
+        ethernet_0 = tmp;
+        transition select(ethernet_0.ether_type) {
             16w0x9001: parse_pktgen;
             default: parse_pkt;
         }
     }
     state parse_pkt {
-        hdr_2_pktgen_timer = hdr.pktgen_timer;
-        hdr_2_pktgen_tail = hdr.pktgen_tail;
-        hdr_2_ethernet = hdr.ethernet;
-        hdr_2_vlan_tag = hdr.vlan_tag;
-        hdr_2_ipv4 = hdr.ipv4;
-        hdr_2_ipv6 = hdr.ipv6;
-        hdr_2_tcp = hdr.tcp;
-        hdr_2_udp = hdr.udp;
-        pkt.extract<ethernet_h>(hdr_2_ethernet);
-        transition select(hdr_2_ethernet.ether_type) {
+        hdr_0_pktgen_timer = hdr.pktgen_timer;
+        hdr_0_pktgen_tail = hdr.pktgen_tail;
+        hdr_0_ethernet = hdr.ethernet;
+        hdr_0_vlan_tag = hdr.vlan_tag;
+        hdr_0_ipv4 = hdr.ipv4;
+        hdr_0_ipv6 = hdr.ipv6;
+        hdr_0_tcp = hdr.tcp;
+        hdr_0_udp = hdr.udp;
+        pkt.extract<ethernet_h>(hdr_0_ethernet);
+        transition select(hdr_0_ethernet.ether_type) {
             16w0x800: SimplePacketParser_parse_ipv4;
             default: reject;
         }
     }
     state SimplePacketParser_parse_ipv4 {
-        pkt.extract<ipv4_h>(hdr_2_ipv4);
-        simple_parser_ipv4_checksum_1.add<ipv4_h>(hdr_2_ipv4);
-        transition select(hdr_2_ipv4.protocol) {
+        pkt.extract<ipv4_h>(hdr_0_ipv4);
+        simple_parser_ipv4_checksum.add<ipv4_h>(hdr_0_ipv4);
+        transition select(hdr_0_ipv4.protocol) {
             8w6: SimplePacketParser_parse_tcp;
             8w17: SimplePacketParser_parse_udp;
             default: parse_pkt_0;
         }
     }
     state SimplePacketParser_parse_udp {
-        pkt.extract<udp_h>(hdr_2_udp);
+        pkt.extract<udp_h>(hdr_0_udp);
         transition parse_pkt_0;
     }
     state SimplePacketParser_parse_tcp {
-        pkt.extract<tcp_h>(hdr_2_tcp);
+        pkt.extract<tcp_h>(hdr_0_tcp);
         transition parse_pkt_0;
     }
     state parse_pkt_0 {
-        hdr.pktgen_timer = hdr_2_pktgen_timer;
-        hdr.pktgen_tail = hdr_2_pktgen_tail;
-        hdr.ethernet = hdr_2_ethernet;
-        hdr.vlan_tag = hdr_2_vlan_tag;
-        hdr.ipv4 = hdr_2_ipv4;
-        hdr.ipv6 = hdr_2_ipv6;
-        hdr.tcp = hdr_2_tcp;
-        hdr.udp = hdr_2_udp;
+        hdr.pktgen_timer = hdr_0_pktgen_timer;
+        hdr.pktgen_tail = hdr_0_pktgen_tail;
+        hdr.ethernet = hdr_0_ethernet;
+        hdr.vlan_tag = hdr_0_vlan_tag;
+        hdr.ipv4 = hdr_0_ipv4;
+        hdr.ipv6 = hdr_0_ipv6;
+        hdr.tcp = hdr_0_tcp;
+        hdr.udp = hdr_0_udp;
         transition accept;
     }
     state parse_pktgen {
@@ -257,11 +257,11 @@ struct tuple_0 {
 }
 
 control SwitchIngressDeparser(packet_out pkt, inout switch_header_t hdr, in metadata_t ig_md, in ingress_intrinsic_metadata_for_deparser_t ig_dprsr_md) {
-    bit<16> tmp_5;
-    @name("SwitchIngressDeparser.ipv4_checksum") Checksum<bit<16>>(HashAlgorithm_t.CSUM16) ipv4_checksum;
+    bit<16> tmp_0;
+    @name("SwitchIngressDeparser.ipv4_checksum") Checksum<bit<16>>(HashAlgorithm_t.CSUM16) ipv4_checksum_1;
     @hidden action act() {
-        tmp_5 = ipv4_checksum.update<tuple_0>({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.total_len, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.frag_offset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.src_addr, hdr.ipv4.dst_addr });
-        hdr.ipv4.hdr_checksum = tmp_5;
+        tmp_0 = ipv4_checksum_1.update<tuple_0>({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.total_len, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.frag_offset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.src_addr, hdr.ipv4.dst_addr });
+        hdr.ipv4.hdr_checksum = tmp_0;
         pkt.emit<pktgen_timer_header_t>(hdr.pktgen_timer);
         pkt.emit<pktgen_tail_t>(hdr.pktgen_tail);
         pkt.emit<ethernet_h>(hdr.ethernet);
@@ -281,70 +281,70 @@ control SwitchIngressDeparser(packet_out pkt, inout switch_header_t hdr, in meta
 }
 
 parser SwitchEgressParser(packet_in pkt, out switch_header_t hdr, out metadata_t eg_md, out egress_intrinsic_metadata_t eg_intr_md) {
-    egress_intrinsic_metadata_t eg_intr_md_1;
-    pktgen_timer_header_t hdr_3_pktgen_timer;
-    pktgen_tail_t hdr_3_pktgen_tail;
-    ethernet_h hdr_3_ethernet;
-    vlan_tag_h hdr_3_vlan_tag;
-    ipv4_h hdr_3_ipv4;
-    ipv6_h hdr_3_ipv6;
-    tcp_h hdr_3_tcp;
-    udp_h hdr_3_udp;
-    @name("SwitchEgressParser.simple_parser.ipv4_checksum") Checksum<bit<16>>(HashAlgorithm_t.CSUM16) simple_parser_ipv4_checksum_2;
+    egress_intrinsic_metadata_t eg_intr_md_0;
+    pktgen_timer_header_t hdr_1_pktgen_timer;
+    pktgen_tail_t hdr_1_pktgen_tail;
+    ethernet_h hdr_1_ethernet;
+    vlan_tag_h hdr_1_vlan_tag;
+    ipv4_h hdr_1_ipv4;
+    ipv6_h hdr_1_ipv6;
+    tcp_h hdr_1_tcp;
+    udp_h hdr_1_udp;
+    @name("SwitchEgressParser.simple_parser.ipv4_checksum") Checksum<bit<16>>(HashAlgorithm_t.CSUM16) simple_parser_ipv4_checksum_0;
     state start {
-        eg_intr_md_1.setInvalid();
-        pkt.extract<egress_intrinsic_metadata_t>(eg_intr_md_1);
-        eg_intr_md = eg_intr_md_1;
-        hdr_3_pktgen_timer = hdr.pktgen_timer;
-        hdr_3_pktgen_tail = hdr.pktgen_tail;
-        hdr_3_ethernet = hdr.ethernet;
-        hdr_3_vlan_tag = hdr.vlan_tag;
-        hdr_3_ipv4 = hdr.ipv4;
-        hdr_3_ipv6 = hdr.ipv6;
-        hdr_3_tcp = hdr.tcp;
-        hdr_3_udp = hdr.udp;
-        pkt.extract<ethernet_h>(hdr_3_ethernet);
-        transition select(hdr_3_ethernet.ether_type) {
+        eg_intr_md_0.setInvalid();
+        pkt.extract<egress_intrinsic_metadata_t>(eg_intr_md_0);
+        eg_intr_md = eg_intr_md_0;
+        hdr_1_pktgen_timer = hdr.pktgen_timer;
+        hdr_1_pktgen_tail = hdr.pktgen_tail;
+        hdr_1_ethernet = hdr.ethernet;
+        hdr_1_vlan_tag = hdr.vlan_tag;
+        hdr_1_ipv4 = hdr.ipv4;
+        hdr_1_ipv6 = hdr.ipv6;
+        hdr_1_tcp = hdr.tcp;
+        hdr_1_udp = hdr.udp;
+        pkt.extract<ethernet_h>(hdr_1_ethernet);
+        transition select(hdr_1_ethernet.ether_type) {
             16w0x800: SimplePacketParser_parse_ipv4_0;
             default: reject;
         }
     }
     state SimplePacketParser_parse_ipv4_0 {
-        pkt.extract<ipv4_h>(hdr_3_ipv4);
-        simple_parser_ipv4_checksum_2.add<ipv4_h>(hdr_3_ipv4);
-        transition select(hdr_3_ipv4.protocol) {
+        pkt.extract<ipv4_h>(hdr_1_ipv4);
+        simple_parser_ipv4_checksum_0.add<ipv4_h>(hdr_1_ipv4);
+        transition select(hdr_1_ipv4.protocol) {
             8w6: SimplePacketParser_parse_tcp_0;
             8w17: SimplePacketParser_parse_udp_0;
             default: start_2;
         }
     }
     state SimplePacketParser_parse_udp_0 {
-        pkt.extract<udp_h>(hdr_3_udp);
+        pkt.extract<udp_h>(hdr_1_udp);
         transition start_2;
     }
     state SimplePacketParser_parse_tcp_0 {
-        pkt.extract<tcp_h>(hdr_3_tcp);
+        pkt.extract<tcp_h>(hdr_1_tcp);
         transition start_2;
     }
     state start_2 {
-        hdr.pktgen_timer = hdr_3_pktgen_timer;
-        hdr.pktgen_tail = hdr_3_pktgen_tail;
-        hdr.ethernet = hdr_3_ethernet;
-        hdr.vlan_tag = hdr_3_vlan_tag;
-        hdr.ipv4 = hdr_3_ipv4;
-        hdr.ipv6 = hdr_3_ipv6;
-        hdr.tcp = hdr_3_tcp;
-        hdr.udp = hdr_3_udp;
+        hdr.pktgen_timer = hdr_1_pktgen_timer;
+        hdr.pktgen_tail = hdr_1_pktgen_tail;
+        hdr.ethernet = hdr_1_ethernet;
+        hdr.vlan_tag = hdr_1_vlan_tag;
+        hdr.ipv4 = hdr_1_ipv4;
+        hdr.ipv6 = hdr_1_ipv6;
+        hdr.tcp = hdr_1_tcp;
+        hdr.udp = hdr_1_udp;
         transition accept;
     }
 }
 
 control SwitchEgressDeparser(packet_out pkt, inout switch_header_t hdr, in metadata_t eg_md, in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr) {
-    bit<16> tmp_6;
-    @name("SwitchEgressDeparser.ipv4_checksum") Checksum<bit<16>>(HashAlgorithm_t.CSUM16) ipv4_checksum_0;
+    bit<16> tmp_1;
+    @name("SwitchEgressDeparser.ipv4_checksum") Checksum<bit<16>>(HashAlgorithm_t.CSUM16) ipv4_checksum_2;
     @hidden action act_0() {
-        tmp_6 = ipv4_checksum_0.update<tuple_0>({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.total_len, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.frag_offset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.src_addr, hdr.ipv4.dst_addr });
-        hdr.ipv4.hdr_checksum = tmp_6;
+        tmp_1 = ipv4_checksum_2.update<tuple_0>({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.total_len, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.frag_offset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.src_addr, hdr.ipv4.dst_addr });
+        hdr.ipv4.hdr_checksum = tmp_1;
         pkt.emit<ethernet_h>(hdr.ethernet);
         pkt.emit<ipv4_h>(hdr.ipv4);
         pkt.emit<udp_h>(hdr.udp);
@@ -364,23 +364,23 @@ control SwitchEgressDeparser(packet_out pkt, inout switch_header_t hdr, in metad
 control SwitchIngress(inout switch_header_t hdr, inout metadata_t ig_md, in ingress_intrinsic_metadata_t ig_intr_md, in ingress_intrinsic_metadata_from_parser_t ig_prsr_md, inout ingress_intrinsic_metadata_for_deparser_t ig_dprsr_md, inout ingress_intrinsic_metadata_for_tm_t ig_tm_md) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name("SwitchIngress.pkt_port_counter") Counter<bit<32>, PortId_t>(32w512, CounterType_t.PACKETS_AND_BYTES) pkt_port_counter;
-    @name("SwitchIngress.set_mgid") action set_mgid_0(MulticastGroupId_t mgid) {
+    @name("SwitchIngress.pkt_port_counter") Counter<bit<32>, PortId_t>(32w512, CounterType_t.PACKETS_AND_BYTES) pkt_port_counter_0;
+    @name("SwitchIngress.set_mgid") action set_mgid(MulticastGroupId_t mgid) {
         ig_tm_md.mcast_grp_a = mgid;
         hdr.pktgen_tail.ether_type = 16w0x800;
     }
-    @name("SwitchIngress.drop") action drop_0() {
+    @name("SwitchIngress.drop") action drop() {
         ig_dprsr_md.drop_ctl = 3w0x1;
     }
-    @name("SwitchIngress.forward") table forward {
+    @name("SwitchIngress.forward") table forward_0 {
         actions = {
-            set_mgid_0();
+            set_mgid();
             @defaultonly NoAction_0();
         }
         default_action = NoAction_0();
     }
     @hidden action act_1() {
-        pkt_port_counter.count(ig_intr_md.ingress_port);
+        pkt_port_counter_0.count(ig_intr_md.ingress_port);
     }
     @hidden table tbl_act_1 {
         actions = {
@@ -390,13 +390,13 @@ control SwitchIngress(inout switch_header_t hdr, inout metadata_t ig_md, in ingr
     }
     @hidden table tbl_drop {
         actions = {
-            drop_0();
+            drop();
         }
-        const default_action = drop_0();
+        const default_action = drop();
     }
     apply {
         if (hdr.pktgen_tail.isValid()) 
-            forward.apply();
+            forward_0.apply();
         else {
             tbl_act_1.apply();
             tbl_drop.apply();
@@ -405,18 +405,14 @@ control SwitchIngress(inout switch_header_t hdr, inout metadata_t ig_md, in ingr
 }
 
 control SwitchEgress(inout switch_header_t hdr, inout metadata_t eg_md, in egress_intrinsic_metadata_t eg_intr_md, in egress_intrinsic_metadata_from_parser_t eg_intr_from_prsr, inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr, inout egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport) {
-    bit<1> tmp_7;
-    bit<8> tmp_8;
+    bit<1> tmp_2;
+    bit<8> tmp_3;
     @name(".NoAction") action NoAction_1() {
     }
-    @name(".NoAction") action NoAction_7() {
+    @name(".NoAction") action NoAction_5() {
     }
-    @name(".NoAction") action NoAction_8() {
-    }
-    @name(".NoAction") action NoAction_9() {
-    }
-    @name("SwitchEgress.port_pkts_reg") Register<bit<32>, bit<32>>(32w1024) port_pkts_reg;
-    @name("SwitchEgress.port_pkts_alu") RegisterAction<bit<32>, bit<32>, bit<1>>(port_pkts_reg) port_pkts_alu = {
+    @name("SwitchEgress.port_pkts_reg") Register<bit<32>, bit<32>>(32w1024) port_pkts_reg_0;
+    @name("SwitchEgress.port_pkts_alu") RegisterAction<bit<32>, bit<32>, bit<1>>(port_pkts_reg_0) port_pkts_alu_0 = {
         void apply(inout bit<32> value, out bit<1> read_value) {
             if (value < eg_md.max_counter) {
                 value = value + 32w1;
@@ -428,8 +424,8 @@ control SwitchEgress(inout switch_header_t hdr, inout metadata_t eg_md, in egres
             }
         }
     };
-    @name("SwitchEgress.dip_choose_reg") Register<bit<8>, bit<32>>(32w1024) dip_choose_reg;
-    @name("SwitchEgress.dip_choose_alu") RegisterAction<bit<8>, bit<32>, bit<8>>(dip_choose_reg) dip_choose_alu = {
+    @name("SwitchEgress.dip_choose_reg") Register<bit<8>, bit<32>>(32w1024) dip_choose_reg_0;
+    @name("SwitchEgress.dip_choose_alu") RegisterAction<bit<8>, bit<32>, bit<8>>(dip_choose_reg_0) dip_choose_alu_0 = {
         void apply(inout bit<8> value, out bit<8> read_value) {
             if (eg_md.pkt_counter == 1w1) 
                 if (value < eg_md.max_index) 
@@ -439,60 +435,58 @@ control SwitchEgress(inout switch_header_t hdr, inout metadata_t eg_md, in egres
             read_value = value;
         }
     };
-    @name("SwitchEgress.set_dip") action set_dip_0(ipv4_addr_t ip, mac_addr_t smac, mac_addr_t dmac) {
+    @name("SwitchEgress.set_dip") action set_dip(ipv4_addr_t ip, mac_addr_t smac, mac_addr_t dmac) {
         hdr.ipv4.dst_addr = ip;
         hdr.ethernet.dst_addr = dmac;
         hdr.ethernet.src_addr = smac;
     }
-    @name("SwitchEgress.flow_set") table flow_set {
+    @name("SwitchEgress.flow_set") table flow_set_0 {
         key = {
             eg_md.flow_index: exact @name("eg_md.flow_index") ;
         }
         actions = {
-            set_dip_0();
+            set_dip();
             @defaultonly NoAction_1();
         }
         size = 256;
         default_action = NoAction_1();
     }
-    @name("SwitchEgress.max_read_run") action max_read_run_0(bit<32> max_counter, bit<8> max_index) {
+    @name("SwitchEgress.max_read_run") action max_read_run(bit<32> max_counter, bit<8> max_index) {
         eg_md.max_counter = max_counter;
         eg_md.max_index = max_index;
     }
-    @name("SwitchEgress.max_read") table max_read {
+    @name("SwitchEgress.max_read") table max_read_0 {
         actions = {
-            max_read_run_0();
-            @defaultonly NoAction_7();
+            max_read_run();
+            @defaultonly NoAction_5();
         }
-        default_action = NoAction_7();
+        default_action = NoAction_5();
     }
-    @name("SwitchEgress.pkt_counter_get_run") action pkt_counter_get_run_0() {
-        tmp_7 = port_pkts_alu.execute((bit<32>)eg_intr_md.egress_port);
-        eg_md.pkt_counter = tmp_7;
+    @name("SwitchEgress.pkt_counter_get_run") action pkt_counter_get_run() {
+        tmp_2 = port_pkts_alu_0.execute((bit<32>)eg_intr_md.egress_port);
+        eg_md.pkt_counter = tmp_2;
     }
-    @name("SwitchEgress.pkt_counter_get") table pkt_counter_get {
+    @name("SwitchEgress.pkt_counter_get") table pkt_counter_get_0 {
         actions = {
-            pkt_counter_get_run_0();
-            @defaultonly NoAction_8();
+            pkt_counter_get_run();
         }
-        default_action = NoAction_8();
+        default_action = pkt_counter_get_run();
     }
-    @name("SwitchEgress.flow_counter_get_run") action flow_counter_get_run_0() {
-        tmp_8 = dip_choose_alu.execute((bit<32>)eg_intr_md.egress_port);
-        eg_md.flow_index = tmp_8;
+    @name("SwitchEgress.flow_counter_get_run") action flow_counter_get_run() {
+        tmp_3 = dip_choose_alu_0.execute((bit<32>)eg_intr_md.egress_port);
+        eg_md.flow_index = tmp_3;
     }
-    @name("SwitchEgress.flow_counter_get") table flow_counter_get {
+    @name("SwitchEgress.flow_counter_get") table flow_counter_get_0 {
         actions = {
-            flow_counter_get_run_0();
-            @defaultonly NoAction_9();
+            flow_counter_get_run();
         }
-        default_action = NoAction_9();
+        default_action = flow_counter_get_run();
     }
     apply {
-        max_read.apply();
-        pkt_counter_get.apply();
-        flow_counter_get.apply();
-        flow_set.apply();
+        max_read_0.apply();
+        pkt_counter_get_0.apply();
+        flow_counter_get_0.apply();
+        flow_set_0.apply();
     }
 }
 

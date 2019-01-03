@@ -134,26 +134,23 @@ control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_me
     @name(".bloom_filter_1") table bloom_filter_1_0 {
         actions = {
             check_bloom_filter_1();
-            @defaultonly NoAction();
         }
+        default_action = check_bloom_filter_1();
         size = 1;
-        default_action = NoAction();
     }
     @name(".bloom_filter_1") table bloom_filter_2_0 {
         actions = {
             check_bloom_filter_2();
-            @defaultonly NoAction();
         }
+        default_action = check_bloom_filter_2();
         size = 1;
-        default_action = NoAction();
     }
     @name(".bloom_filter_1") table bloom_filter_3_0 {
         actions = {
             check_bloom_filter_3();
-            @defaultonly NoAction();
         }
+        default_action = check_bloom_filter_3();
         size = 1;
-        default_action = NoAction();
     }
     @name(".bloom_filter_sample") table bloom_filter_sample {
         actions = {

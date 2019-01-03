@@ -460,10 +460,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_45() {
     }
-    @name(".fUXSVp") action fUXSVp_0() {
+    @name(".fUXSVp") action fUXSVp() {
         meta.jtDeHH.nsfmlu = 1w0x1;
     }
-    @name(".bqioIq") action bqioIq_0() {
+    @name(".bqioIq") action bqioIq() {
         meta.OlPBiN.ioCVkH = hdr.lYXUin.tqMJMA;
         meta.OlPBiN.gVnEFV = hdr.lYXUin.zMkMTl;
         meta.OviEQo.YsfBYV = hdr.hibXlf.jEpyFj;
@@ -473,7 +473,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.cfDyxP.kLfTIU = hdr.oPHKWO.KaAvFG;
         meta.cfDyxP.FpUAZo = hdr.oPHKWO.wNAybQ;
     }
-    @name(".hTEbHS") action hTEbHS_0() {
+    @name(".hTEbHS") action hTEbHS() {
         meta.cfDyxP.nZmyfl = 2w0x0;
         meta.cfDyxP.vAMWZi = (bit<16>)meta.BdarYZ.XzqkeH;
         meta.OlPBiN.ioCVkH = hdr.ujAsAs.tqMJMA;
@@ -485,7 +485,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.cfDyxP.kLfTIU = hdr.QUzEun.KaAvFG;
         meta.cfDyxP.FpUAZo = hdr.QUzEun.wNAybQ;
     }
-    @name(".BrnZuC") action BrnZuC_0(bit<8> INJWFP, bit<1> hndQBi, bit<1> gVOHDB, bit<1> unFWnl, bit<1> dVyMUm) {
+    @name(".BrnZuC") action BrnZuC(bit<8> INJWFP, bit<1> hndQBi, bit<1> gVOHDB, bit<1> unFWnl, bit<1> dVyMUm) {
         meta.snSjFB.WwpGkv = INJWFP;
         meta.snSjFB.YRMmxz = hndQBi;
         meta.snSjFB.IMDzBn = gVOHDB;
@@ -506,101 +506,101 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.snSjFB.yURZDh = unFWnl;
         meta.snSjFB.ZJQrpS = dVyMUm;
     }
-    @name(".SLmkQK") action SLmkQK_0(bit<16> XzuDRg) {
+    @name(".SLmkQK") action SLmkQK(bit<16> XzuDRg) {
         meta.cfDyxP.vAMWZi = XzuDRg;
     }
-    @name(".qoKTrI") action qoKTrI_0() {
+    @name(".qoKTrI") action qoKTrI() {
         meta.cfDyxP.GiugcX = 1w0x1;
         meta.IYRPFS.JiMzUK = 8w0x1;
     }
-    @name(".IJasQc") action IJasQc_0() {
-        digest<uajPdr>(32w0x0, { meta.IYRPFS.JiMzUK, meta.cfDyxP.kLfTIU, meta.cfDyxP.FpUAZo, meta.cfDyxP.eHdmgU, meta.cfDyxP.vAMWZi });
+    @name(".IJasQc") action IJasQc() {
+        digest<uajPdr>(32w0x0, {meta.IYRPFS.JiMzUK,meta.cfDyxP.kLfTIU,meta.cfDyxP.FpUAZo,meta.cfDyxP.eHdmgU,meta.cfDyxP.vAMWZi});
     }
-    @name(".Mkwjtg") action Mkwjtg_0() {
+    @name(".Mkwjtg") action Mkwjtg() {
         meta.cfDyxP.TZUCwE = 1w0x1;
     }
-    @name(".jJkNQM") action jJkNQM_0() {
+    @name(".jJkNQM") action jJkNQM() {
         meta.jtDeHH.RzhGTS = 1w0x1;
     }
-    @name(".STOiil") action STOiil_0() {
-        digest<HgFUwb>(32w0x0, { meta.IYRPFS.JiMzUK, meta.cfDyxP.eHdmgU, hdr.oPHKWO.KaAvFG, hdr.oPHKWO.wNAybQ, hdr.ujAsAs.tqMJMA });
+    @name(".STOiil") action STOiil() {
+        digest<HgFUwb>(32w0x0, {meta.IYRPFS.JiMzUK,meta.cfDyxP.eHdmgU,hdr.oPHKWO.KaAvFG,hdr.oPHKWO.wNAybQ,hdr.ujAsAs.tqMJMA});
     }
-    @name(".VuYGSt") action VuYGSt_0() {
+    @name(".VuYGSt") action VuYGSt() {
         meta.cfDyxP.eHdmgU = (bit<16>)meta.BdarYZ.VtlLDM;
     }
-    @name(".zJjFjD") action zJjFjD_0(bit<16> sjlUYX) {
+    @name(".zJjFjD") action zJjFjD(bit<16> sjlUYX) {
         meta.cfDyxP.eHdmgU = sjlUYX;
     }
-    @name(".GuOBkd") action GuOBkd_0() {
+    @name(".GuOBkd") action GuOBkd() {
         meta.cfDyxP.eHdmgU = (bit<16>)hdr.LkPrni.BaAnQa;
     }
-    @name(".gmRSWY") action gmRSWY_0(bit<16> bKufzO) {
+    @name(".gmRSWY") action gmRSWY(bit<16> bKufzO) {
         meta.YEKoZE.vEUGte = 1w0x1;
         meta.YEKoZE.iTtIao = bKufzO;
     }
-    @name(".GoSejn") action GoSejn_0(bit<16> golbSh) {
+    @name(".GoSejn") action GoSejn(bit<16> golbSh) {
         meta.YEKoZE.niJaGq = 1w0x1;
         meta.YEKoZE.LAIizK = golbSh;
     }
-    @name(".bwywWE") action bwywWE_0() {
+    @name(".bwywWE") action bwywWE() {
     }
-    @name(".mwcXxi") action mwcXxi_0(bit<16> EZSaKG) {
+    @name(".mwcXxi") action mwcXxi(bit<16> EZSaKG) {
         meta.OlPBiN.ZEWlin = EZSaKG;
     }
-    @name(".YzsWpD") action YzsWpD_0() {
+    @name(".YzsWpD") action YzsWpD() {
         meta.YEKoZE.niJaGq = 1w0x1;
         meta.YEKoZE.zpCVKR = 1w0x1;
         meta.YEKoZE.LAIizK = meta.YEKoZE.jvCpRl + 16w0x1000;
     }
-    @name(".zggnXV") action zggnXV_0() {
+    @name(".zggnXV") action zggnXV() {
     }
     @name(".zggnXV") action zggnXV_2() {
     }
-    @name(".MbVkKv") action MbVkKv_0(bit<16> rwWKsJ) {
+    @name(".MbVkKv") action MbVkKv(bit<16> rwWKsJ) {
         meta.cfDyxP.eHdmgU = rwWKsJ;
     }
-    @name(".EIFNhP") action EIFNhP_0() {
+    @name(".EIFNhP") action EIFNhP() {
         meta.cfDyxP.EdbVwo = 1w0x1;
         meta.cfDyxP.LvzHhI = 1w0x1;
     }
-    @name(".QzlCgG") action QzlCgG_0(bit<14> pGureS, bit<1> bDQhft, bit<13> rycpwZ, bit<1> hnLajG) {
+    @name(".QzlCgG") action QzlCgG(bit<14> pGureS, bit<1> bDQhft, bit<13> rycpwZ, bit<1> hnLajG) {
         meta.BdarYZ.XzqkeH = pGureS;
         meta.BdarYZ.HtUdGu = bDQhft;
         meta.BdarYZ.VtlLDM = rycpwZ;
         meta.BdarYZ.NWqDYn = hnLajG;
     }
-    @name(".cwomqL") action cwomqL_0(bit<16> gwfDnu) {
+    @name(".cwomqL") action cwomqL(bit<16> gwfDnu) {
         meta.ktbBdq.Ljzbvt = gwfDnu;
     }
     @name(".cwomqL") action cwomqL_2(bit<16> gwfDnu) {
         meta.ktbBdq.Ljzbvt = gwfDnu;
     }
-    @name(".ICxVPq") action ICxVPq_0() {
+    @name(".ICxVPq") action ICxVPq() {
         meta.YEKoZE.FbyyQT = 1w0x1;
         meta.YEKoZE.LKfNSO = 1w0x1;
         meta.YEKoZE.LAIizK = meta.YEKoZE.jvCpRl;
     }
-    @name(".dtVxfa") action dtVxfa_0() {
+    @name(".dtVxfa") action dtVxfa() {
     }
-    @name(".RMFuCv") action RMFuCv_0() {
+    @name(".RMFuCv") action RMFuCv() {
         meta.YEKoZE.iopEOe = 1w0x1;
         meta.YEKoZE.LAIizK = meta.YEKoZE.jvCpRl;
     }
-    @name(".aFPTVw") action aFPTVw_0() {
+    @name(".aFPTVw") action aFPTVw() {
         meta.ndIRii.OyFTpX = 1w0x1;
     }
-    @name(".qIYpNC") action qIYpNC_0() {
+    @name(".qIYpNC") action qIYpNC() {
         meta.YEKoZE.eOdtuN = meta.cfDyxP.eguEQM;
         meta.YEKoZE.QeEJZF = meta.cfDyxP.YWkHqd;
         meta.YEKoZE.NONZPg = meta.cfDyxP.kLfTIU;
         meta.YEKoZE.pkJpeD = meta.cfDyxP.FpUAZo;
         meta.YEKoZE.jvCpRl = meta.cfDyxP.eHdmgU;
     }
-    @name(".uPHxCo") action uPHxCo_0() {
+    @name(".uPHxCo") action uPHxCo() {
     }
-    @ways(2) @name(".BOnrSR") table BOnrSR {
+    @ways(2) @name(".BOnrSR") table BOnrSR_0 {
         actions = {
-            fUXSVp_0();
+            fUXSVp();
             @defaultonly NoAction_0();
         }
         key = {
@@ -609,10 +609,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_0();
     }
-    @name(".BeBzRQ") table BeBzRQ {
+    @name(".BeBzRQ") table BeBzRQ_0 {
         actions = {
-            bqioIq_0();
-            hTEbHS_0();
+            bqioIq();
+            hTEbHS();
             @defaultonly NoAction_24();
         }
         key = {
@@ -624,9 +624,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_24();
     }
-    @name(".CHXYIU") table CHXYIU {
+    @name(".CHXYIU") table CHXYIU_0 {
         actions = {
-            BrnZuC_0();
+            BrnZuC();
             @defaultonly NoAction_25();
         }
         key = {
@@ -635,10 +635,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_25();
     }
-    @name(".EghpzX") table EghpzX {
+    @name(".EghpzX") table EghpzX_0 {
         actions = {
-            SLmkQK_0();
-            qoKTrI_0();
+            SLmkQK();
+            qoKTrI();
             @defaultonly NoAction_26();
         }
         key = {
@@ -647,17 +647,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_26();
     }
-    @name(".KbbyqJ") table KbbyqJ {
+    @name(".KbbyqJ") table KbbyqJ_0 {
         actions = {
-            IJasQc_0();
+            IJasQc();
             @defaultonly NoAction_27();
         }
         size = 1;
         default_action = NoAction_27();
     }
-    @name(".MnlGHy") table MnlGHy {
+    @name(".MnlGHy") table MnlGHy_0 {
         actions = {
-            Mkwjtg_0();
+            Mkwjtg();
             @defaultonly NoAction_28();
         }
         key = {
@@ -667,9 +667,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 64;
         default_action = NoAction_28();
     }
-    @ways(8) @name(".NudxbW") table NudxbW {
+    @ways(8) @name(".NudxbW") table NudxbW_0 {
         actions = {
-            jJkNQM_0();
+            jJkNQM();
             @defaultonly NoAction_29();
         }
         key = {
@@ -679,19 +679,19 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_29();
     }
-    @name(".OOBXBe") table OOBXBe {
+    @name(".OOBXBe") table OOBXBe_0 {
         actions = {
-            STOiil_0();
+            STOiil();
             @defaultonly NoAction_30();
         }
         size = 1;
         default_action = NoAction_30();
     }
-    @name(".OuIfwj") table OuIfwj {
+    @name(".OuIfwj") table OuIfwj_0 {
         actions = {
-            VuYGSt_0();
-            zJjFjD_0();
-            GuOBkd_0();
+            VuYGSt();
+            zJjFjD();
+            GuOBkd();
             @defaultonly NoAction_31();
         }
         key = {
@@ -702,11 +702,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_31();
     }
-    @name(".RFvNXO") table RFvNXO {
+    @name(".RFvNXO") table RFvNXO_0 {
         actions = {
-            gmRSWY_0();
-            GoSejn_0();
-            bwywWE_0();
+            gmRSWY();
+            GoSejn();
+            bwywWE();
             @defaultonly NoAction_32();
         }
         key = {
@@ -717,9 +717,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 65536;
         default_action = NoAction_32();
     }
-    @name(".RSLvpr") table RSLvpr {
+    @name(".RSLvpr") table RSLvpr_0 {
         actions = {
-            mwcXxi_0();
+            mwcXxi();
             @defaultonly NoAction_33();
         }
         key = {
@@ -729,18 +729,18 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 16384;
         default_action = NoAction_33();
     }
-    @name(".UXzVfm") table UXzVfm {
+    @name(".UXzVfm") table UXzVfm_0 {
         actions = {
-            YzsWpD_0();
+            YzsWpD();
             @defaultonly NoAction_34();
         }
         size = 1;
         default_action = NoAction_34();
     }
-    @name(".UqMimZ") table UqMimZ {
+    @name(".UqMimZ") table UqMimZ_0 {
         actions = {
             BrnZuC_3();
-            zggnXV_0();
+            zggnXV();
             @defaultonly NoAction_35();
         }
         key = {
@@ -750,10 +750,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_35();
     }
-    @name(".YKYNSG") table YKYNSG {
+    @name(".YKYNSG") table YKYNSG_0 {
         actions = {
-            MbVkKv_0();
-            EIFNhP_0();
+            MbVkKv();
+            EIFNhP();
             @defaultonly NoAction_36();
         }
         key = {
@@ -762,7 +762,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_36();
     }
-    @name(".ehyhNJ") table ehyhNJ {
+    @name(".ehyhNJ") table ehyhNJ_0 {
         actions = {
             BrnZuC_4();
             @defaultonly NoAction_37();
@@ -773,9 +773,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_37();
     }
-    @name(".fMlLMk") table fMlLMk {
+    @name(".fMlLMk") table fMlLMk_0 {
         actions = {
-            QzlCgG_0();
+            QzlCgG();
             @defaultonly NoAction_38();
         }
         key = {
@@ -784,9 +784,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction_38();
     }
-    @atcam_partition_index("OlPBiN.ZEWlin") @atcam_number_partitions(16384) @name(".hywqVp") table hywqVp {
+    @atcam_partition_index("OlPBiN.ZEWlin") @atcam_number_partitions(16384) @name(".hywqVp") table hywqVp_0 {
         actions = {
-            cwomqL_0();
+            cwomqL();
             @defaultonly NoAction_39();
         }
         key = {
@@ -796,10 +796,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 147456;
         default_action = NoAction_39();
     }
-    @ways(1) @name(".iAPDQh") table iAPDQh {
+    @ways(1) @name(".iAPDQh") table iAPDQh_0 {
         actions = {
-            ICxVPq_0();
-            dtVxfa_0();
+            ICxVPq();
+            dtVxfa();
             @defaultonly NoAction_40();
         }
         key = {
@@ -809,17 +809,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1;
         default_action = NoAction_40();
     }
-    @name(".lvfcRk") table lvfcRk {
+    @name(".lvfcRk") table lvfcRk_0 {
         actions = {
-            RMFuCv_0();
+            RMFuCv();
             @defaultonly NoAction_41();
         }
         size = 1;
         default_action = NoAction_41();
     }
-    @name(".nhkOEk") table nhkOEk {
+    @name(".nhkOEk") table nhkOEk_0 {
         actions = {
-            aFPTVw_0();
+            aFPTVw();
             @defaultonly NoAction_42();
         }
         key = {
@@ -830,17 +830,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_42();
     }
-    @name(".pswDoc") table pswDoc {
+    @name(".pswDoc") table pswDoc_0 {
         actions = {
-            qIYpNC_0();
+            qIYpNC();
             @defaultonly NoAction_43();
         }
         size = 1;
         default_action = NoAction_43();
     }
-    @ways(4) @name(".sUWDpz") table sUWDpz {
+    @ways(4) @name(".sUWDpz") table sUWDpz_0 {
         actions = {
-            uPHxCo_0();
+            uPHxCo();
             @defaultonly NoAction_44();
         }
         key = {
@@ -849,7 +849,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 2048;
         default_action = NoAction_44();
     }
-    @name(".xGtDBG") table xGtDBG {
+    @name(".xGtDBG") table xGtDBG_0 {
         actions = {
             cwomqL_2();
             zggnXV_2();
@@ -864,55 +864,55 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (hdr.ig_intr_md.resubmit_flag == 1w0x0) 
-            fMlLMk.apply();
-        MnlGHy.apply();
-        switch (BeBzRQ.apply().action_run) {
-            bqioIq_0: {
-                EghpzX.apply();
-                YKYNSG.apply();
-            }
-            hTEbHS_0: {
+            fMlLMk_0.apply();
+        MnlGHy_0.apply();
+        switch (BeBzRQ_0.apply().action_run) {
+            hTEbHS: {
                 if (meta.BdarYZ.NWqDYn == 1w0x1) 
-                    OuIfwj.apply();
+                    OuIfwj_0.apply();
                 if (hdr.LkPrni.isValid() && (hdr.ujAsAs.isValid() || hdr.SozCdH.isValid())) 
-                    switch (UqMimZ.apply().action_run) {
-                        zggnXV_0: {
-                            CHXYIU.apply();
+                    switch (UqMimZ_0.apply().action_run) {
+                        zggnXV: {
+                            CHXYIU_0.apply();
                         }
                     }
 
                 else 
                     if (hdr.ujAsAs.isValid() || hdr.SozCdH.isValid()) 
-                        ehyhNJ.apply();
+                        ehyhNJ_0.apply();
+            }
+            bqioIq: {
+                EghpzX_0.apply();
+                YKYNSG_0.apply();
             }
         }
 
-        sUWDpz.apply();
-        BOnrSR.apply();
-        NudxbW.apply();
+        sUWDpz_0.apply();
+        BOnrSR_0.apply();
+        NudxbW_0.apply();
         if (meta.cfDyxP.EdbVwo == 1w0x0 && meta.cfDyxP.LvzHhI == 1w0x0) 
-            nhkOEk.apply();
+            nhkOEk_0.apply();
         if (meta.KcFelw.pkkAoe == 1w0x0 && meta.KcFelw.awtutZ == 1w0x0 && meta.cfDyxP.EdbVwo == 1w0x0) 
             if (meta.snSjFB.YRMmxz == 1w0x1 && (meta.cfDyxP.nZmyfl == 2w0x0 && hdr.ujAsAs.isValid() || meta.cfDyxP.nZmyfl != 2w0x0 && hdr.lYXUin.isValid())) 
-                switch (xGtDBG.apply().action_run) {
+                switch (xGtDBG_0.apply().action_run) {
                     zggnXV_2: {
-                        RSLvpr.apply();
+                        RSLvpr_0.apply();
                         if (meta.OlPBiN.ZEWlin != 16w0x0) 
-                            hywqVp.apply();
+                            hywqVp_0.apply();
                     }
                 }
 
         if (meta.ndIRii.OyFTpX == 1w0x0) 
-            pswDoc.apply();
+            pswDoc_0.apply();
         if (meta.cfDyxP.EdbVwo == 1w0x0) 
-            switch (RFvNXO.apply().action_run) {
-                bwywWE_0: {
-                    switch (iAPDQh.apply().action_run) {
-                        dtVxfa_0: {
+            switch (RFvNXO_0.apply().action_run) {
+                bwywWE: {
+                    switch (iAPDQh_0.apply().action_run) {
+                        dtVxfa: {
                             if (meta.YEKoZE.eOdtuN & 24w0x10000 == 24w0x10000) 
-                                UXzVfm.apply();
+                                UXzVfm_0.apply();
                             else 
-                                lvfcRk.apply();
+                                lvfcRk_0.apply();
                         }
                     }
 
@@ -920,9 +920,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             }
 
         if (meta.cfDyxP.GiugcX == 1w0x1) 
-            OOBXBe.apply();
+            OOBXBe_0.apply();
         if (meta.cfDyxP.zfeFym == 1w0x1) 
-            KbbyqJ.apply();
+            KbbyqJ_0.apply();
     }
 }
 

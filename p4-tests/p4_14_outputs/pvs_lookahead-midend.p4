@@ -153,23 +153,23 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<16> tmp_0;
-    @parser_value_set_size(4) @name(".int_inport") value_set<bit<9>>(4) int_inport;
-    @parser_value_set_size(1) @name(".int_diffserv") value_set<bit<8>>(4) int_diffserv;
+    bit<16> tmp;
+    @parser_value_set_size(4) @name(".int_inport") value_set<bit<9>>(4) int_inport_0;
+    @parser_value_set_size(1) @name(".int_diffserv") value_set<bit<8>>(1) int_diffserv_0;
     @name(".parse_intl45_ipv4") state parse_intl45_ipv4 {
         packet.extract<ipv4_t>(hdr.ipv4);
         transition accept;
     }
     @name(".parse_ipv4") state parse_ipv4 {
         transition select(hdr.ig_intr_md.ingress_port) {
-            int_inport: parse_ipv4_original;
+            int_inport_0: parse_ipv4_original;
             default: parse_ipv4_check_diffserv;
         }
     }
     @name(".parse_ipv4_check_diffserv") state parse_ipv4_check_diffserv {
-        tmp_0 = packet.lookahead<bit<16>>();
-        transition select(tmp_0[7:0]) {
-            int_diffserv: parse_intl45_ipv4;
+        tmp = packet.lookahead<bit<16>>();
+        transition select(tmp[7:0]) {
+            int_diffserv_0: parse_intl45_ipv4;
             default: parse_ipv4_original;
         }
     }

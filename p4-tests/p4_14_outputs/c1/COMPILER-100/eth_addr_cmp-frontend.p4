@@ -166,7 +166,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".addr_compare") action addr_compare_0(bit<1> is_equal, bit<9> port) {
+    @name(".addr_compare") action addr_compare(bit<1> is_equal, bit<9> port) {
         meta.md.is_equal = is_equal;
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
@@ -174,14 +174,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.md.is_equal = is_equal;
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".addr_compare_failure") table addr_compare_failure {
+    @name(".addr_compare_failure") table addr_compare_failure_0 {
         actions = {
-            addr_compare_0();
+            addr_compare();
         }
         size = 1;
-        default_action = addr_compare_0(1w0, 9w2);
+        default_action = addr_compare(1w0, 9w2);
     }
-    @name(".addr_compare_success") table addr_compare_success {
+    @name(".addr_compare_success") table addr_compare_success_0 {
         actions = {
             addr_compare_2();
         }
@@ -191,11 +191,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     apply {
         if (hdr.ethernet.srcAddr_hi == hdr.ethernet.dstAddr_hi) 
             if (hdr.ethernet.srcAddr_lo == hdr.ethernet.dstAddr_lo) 
-                addr_compare_failure.apply();
+                addr_compare_failure_0.apply();
             else 
-                addr_compare_success.apply();
+                addr_compare_success_0.apply();
         else 
-            addr_compare_success.apply();
+            addr_compare_success_0.apply();
     }
 }
 

@@ -2,6 +2,7 @@
 #include <v1model.p4>
 
 struct meta_t {
+    @saturating 
     int<8> needs_sampling;
 }
 

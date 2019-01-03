@@ -562,7 +562,7 @@ control Arial(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Braxton.Ohiowa         : exact;
-            meta.Braxton.Westpoint[63:0]: lpm;
+            meta.Braxton.Westpoint[63:0]: lpm @name("Braxton.Westpoint") ;
         }
         size = 16384;
         default_action = Tarnov();
@@ -575,7 +575,7 @@ control Arial(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Moline.Hallville   : exact;
-            meta.Moline.Aurora[19:0]: lpm;
+            meta.Moline.Aurora[19:0]: lpm @name("Moline.Aurora") ;
         }
         size = 131072;
         default_action = Tarnov();
@@ -613,7 +613,7 @@ control Arial(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Braxton.Wanilla          : exact;
-            meta.Braxton.Westpoint[106:64]: lpm;
+            meta.Braxton.Westpoint[106:64]: lpm @name("Braxton.Westpoint") ;
         }
         size = 65536;
         default_action = Tarnov();
@@ -625,7 +625,7 @@ control Arial(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Wagener.Coqui            : exact;
-            meta.Braxton.Westpoint[127:64]: lpm;
+            meta.Braxton.Westpoint[127:64]: lpm @name("Braxton.Westpoint") ;
         }
         size = 8192;
     }
@@ -771,7 +771,7 @@ control Chamois(inout headers hdr, inout metadata meta, inout standard_metadata_
             bit<1> in_value;
             in_value = value;
             value = in_value;
-            rv = ~value;
+            rv = ~in_value;
         }
     };
     @name(".Sequim") action Sequim() {

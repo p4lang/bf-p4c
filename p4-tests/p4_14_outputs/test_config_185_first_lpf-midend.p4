@@ -169,33 +169,33 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<16> tmp_2;
-    bit<8> tmp_3;
-    bit<8> tmp_4;
+    bit<16> tmp;
+    bit<8> tmp_0;
+    bit<8> tmp_1;
     @name(".NoAction") action NoAction_0() {
     }
     @name(".NoAction") action NoAction_4() {
     }
     @name(".NoAction") action NoAction_5() {
     }
-    @name(".my_lpf") DirectLpf<bit<16>>() my_lpf;
-    @name(".my_meter") DirectMeter(MeterType_t.BYTES) my_meter;
-    @name(".my_wred") DirectWred<bit<16>>(8w127, 8w63) my_wred;
-    @name(".action_0") action action_3() {
-        tmp_2 = my_lpf.execute(hdr.ethernet.etherType);
-        hdr.ethernet.blah0 = tmp_2;
+    @name(".my_lpf") DirectLpf<bit<16>>() my_lpf_0;
+    @name(".my_meter") DirectMeter(MeterType_t.BYTES) my_meter_0;
+    @name(".my_wred") DirectWred<bit<16>>(8w127, 8w63) my_wred_0;
+    @name(".action_0") action action_0() {
+        tmp = my_lpf_0.execute(hdr.ethernet.etherType);
+        hdr.ethernet.blah0 = tmp;
     }
-    @name(".action_1") action action_4() {
-        tmp_3 = my_wred.execute(hdr.ethernet.etherType);
-        hdr.ethernet.blah1 = tmp_3;
+    @name(".action_1") action action_1() {
+        tmp_0 = my_wred_0.execute(hdr.ethernet.etherType);
+        hdr.ethernet.blah1 = tmp_0;
     }
-    @name(".action_2") action action_5() {
-        tmp_4 = my_meter.execute();
-        hdr.ethernet.blah2 = tmp_4;
+    @name(".action_2") action action_2() {
+        tmp_1 = my_meter_0.execute();
+        hdr.ethernet.blah2 = tmp_1;
     }
-    @name(".table_0") table table_0 {
+    @name(".table_0") table table_3 {
         actions = {
-            action_3();
+            action_0();
             @defaultonly NoAction_0();
         }
         key = {
@@ -204,9 +204,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_0();
     }
-    @name(".table_1") table table_1 {
+    @name(".table_1") table table_4 {
         actions = {
-            action_4();
+            action_1();
             @defaultonly NoAction_4();
         }
         key = {
@@ -215,9 +215,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_4();
     }
-    @name(".table_2") table table_2 {
+    @name(".table_2") table table_5 {
         actions = {
-            action_5();
+            action_2();
             @defaultonly NoAction_5();
         }
         key = {
@@ -227,9 +227,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_5();
     }
     apply {
-        table_0.apply();
-        table_1.apply();
-        table_2.apply();
+        table_3.apply();
+        table_4.apply();
+        table_5.apply();
     }
 }
 

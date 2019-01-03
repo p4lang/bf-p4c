@@ -256,11 +256,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         switch (tchain_0.apply().action_run) {
-            default: {
-                t2_0.apply();
-            }
             setb1: {
                 t1_0.apply();
+            }
+            default: {
+                t2_0.apply();
             }
         }
 

@@ -35,32 +35,32 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    @name(".port_down") selector_action(sel_profile) port_down = {
+    @name(".port_down") selector_action(sel_profile) port_down_0 = {
         void apply(inout bit<1> value) {
-            bit<1> in_value;
+            bit<1> in_value_0;
             value = 1w1;
         }
     };
-    @name(".port_up") selector_action(sel_profile) port_up = {
+    @name(".port_up") selector_action(sel_profile) port_up_0 = {
         void apply(inout bit<1> value) {
-            bit<1> in_value_2;
+            bit<1> in_value_1;
             value = 1w0;
         }
     };
-    @name(".set_output") action set_output_0(bit<9> port) {
+    @name(".set_output") action set_output(bit<9> port) {
         standard_metadata.egress_spec = port;
     }
-    @name(".set_port_up") action set_port_up_0() {
-        port_up.execute((bit<32>)hdr.data.b4);
+    @name(".set_port_up") action set_port_up() {
+        port_up_0.execute((bit<32>)hdr.data.b4);
         standard_metadata.egress_spec = 9w0;
     }
-    @name(".set_port_down") action set_port_down_0() {
-        port_down.execute((bit<32>)hdr.data.b4);
+    @name(".set_port_down") action set_port_down() {
+        port_down_0.execute((bit<32>)hdr.data.b4);
         standard_metadata.egress_spec = 9w0;
     }
-    @name(".select_output") table select_output {
+    @name(".select_output") table select_output_0 {
         actions = {
-            set_output_0();
+            set_output();
             @defaultonly NoAction_0();
         }
         key = {
@@ -74,10 +74,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         implementation = sel_profile;
         default_action = NoAction_0();
     }
-    @name(".update_output") table update_output {
+    @name(".update_output") table update_output_0 {
         actions = {
-            set_port_up_0();
-            set_port_down_0();
+            set_port_up();
+            set_port_down();
             @defaultonly NoAction_3();
         }
         key = {
@@ -88,9 +88,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (hdr.data.b2 == 8w1) 
-            update_output.apply();
+            update_output_0.apply();
         else 
-            select_output.apply();
+            select_output_0.apply();
     }
 }
 

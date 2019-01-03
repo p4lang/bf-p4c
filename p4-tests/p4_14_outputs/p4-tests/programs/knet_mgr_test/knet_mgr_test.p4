@@ -253,7 +253,7 @@ control process_ingress_knet(inout headers hdr, inout metadata meta, inout stand
             hdr.ig_intr_md.ingress_port: exact;
         }
         size = 288;
-        default_action = add_cpu_header();
+        default_action = add_cpu_header(pad1 = 0, fabric_color = 0, fabric_qos = 0, dst_device = 0, dst_port_or_group = 0, reserved1 = 0, ingress_ifindex = 0, ingress_bd = 0, reason_code = 0);
     }
     apply {
         if (hdr.ig_intr_md.ingress_port != 9w64) {

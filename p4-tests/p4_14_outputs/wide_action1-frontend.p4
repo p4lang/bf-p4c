@@ -29,7 +29,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".set_wide_action") action set_wide_action_0(bit<32> param1, bit<32> param2, bit<32> param3, bit<32> param4, bit<32> param5, bit<32> param6, bit<9> port) {
+    @name(".set_wide_action") action set_wide_action(bit<32> param1, bit<32> param2, bit<32> param3, bit<32> param4, bit<32> param5, bit<32> param6, bit<9> port) {
         hdr.h.f1 = param1;
         hdr.h.f2 = param2;
         hdr.h.f3 = param3;
@@ -38,9 +38,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.h.f6 = param6;
         standard_metadata.egress_spec = port;
     }
-    @name(".t") table t {
+    @name(".t") table t_0 {
         actions = {
-            set_wide_action_0();
+            set_wide_action();
             @defaultonly NoAction_0();
         }
         key = {
@@ -50,7 +50,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_0();
     }
     apply {
-        t.apply();
+        t_0.apply();
     }
 }
 

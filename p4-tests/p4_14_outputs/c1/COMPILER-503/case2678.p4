@@ -771,7 +771,7 @@ control Devore(inout headers hdr, inout metadata meta, inout standard_metadata_t
             bit<1> in_value;
             in_value = value;
             value = in_value;
-            rv = ~value;
+            rv = ~in_value;
         }
     };
     @name(".Lowland") action Lowland() {
@@ -907,8 +907,8 @@ control Fieldon(inout headers hdr, inout metadata meta, inout standard_metadata_
             Blitchton_0;
         }
         key = {
-            hdr.eg_intr_md.egress_port[6:0]: exact;
-            hdr.eg_intr_md.egress_qid[2:0] : exact;
+            hdr.eg_intr_md.egress_port[6:0]: exact @name("eg_intr_md.egress_port") ;
+            hdr.eg_intr_md.egress_qid[2:0] : exact @name("eg_intr_md.egress_qid") ;
         }
         size = 1024;
         counters = Stidham;
@@ -954,7 +954,7 @@ control Forman(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         key = {
             meta.Reinbeck.Lofgreen     : exact;
-            meta.Reinbeck.Elsmere[19:0]: lpm;
+            meta.Reinbeck.Elsmere[19:0]: lpm @name("Reinbeck.Elsmere") ;
         }
         size = 131072;
         default_action = Shoshone();
@@ -1030,7 +1030,7 @@ control Forman(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         key = {
             meta.Humacao.Fosters          : exact;
-            meta.Humacao.Hiawassee[106:64]: lpm;
+            meta.Humacao.Hiawassee[106:64]: lpm @name("Humacao.Hiawassee") ;
         }
         size = 65536;
         default_action = Shoshone();
@@ -1050,7 +1050,7 @@ control Forman(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         key = {
             meta.Humacao.Poneto         : exact;
-            meta.Humacao.Hiawassee[63:0]: lpm;
+            meta.Humacao.Hiawassee[63:0]: lpm @name("Humacao.Hiawassee") ;
         }
         size = 16384;
         default_action = Shoshone();
@@ -1062,7 +1062,7 @@ control Forman(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         key = {
             meta.Chloride.Rocheport       : exact;
-            meta.Humacao.Hiawassee[127:64]: lpm;
+            meta.Humacao.Hiawassee[127:64]: lpm @name("Humacao.Hiawassee") ;
         }
         size = 8192;
     }
@@ -1711,6 +1711,10 @@ control Neuse(inout headers hdr, inout metadata meta, inout standard_metadata_t 
     }
     apply {
         switch (Ortley.apply().action_run) {
+            Sidon: {
+                MillHall.apply();
+                Nipton.apply();
+            }
             Embarrass: {
                 if (!hdr.Foster.isValid() && meta.Lowemont.Grandy == 1w1) {
                     Emida.apply();
@@ -1726,10 +1730,6 @@ control Neuse(inout headers hdr, inout metadata meta, inout standard_metadata_t 
                 else {
                     Loris.apply();
                 }
-            }
-            Sidon: {
-                MillHall.apply();
-                Nipton.apply();
             }
         }
 
@@ -1877,7 +1877,7 @@ control Roseville(inout headers hdr, inout metadata meta, inout standard_metadat
         }
         key = {
             meta.Burrel.Waring          : exact;
-            meta.Reinbeck.Elsmere[31:16]: ternary;
+            meta.Reinbeck.Elsmere[31:16]: ternary @name("Reinbeck.Elsmere") ;
             meta.Netcong.Greenbush      : ternary;
             meta.Netcong.Samson         : ternary;
             meta.Burrel.Virgin          : ternary;
@@ -1911,7 +1911,7 @@ control Roseville(inout headers hdr, inout metadata meta, inout standard_metadat
         }
         key = {
             meta.Burrel.Waring           : exact;
-            meta.Humacao.Hiawassee[31:16]: ternary;
+            meta.Humacao.Hiawassee[31:16]: ternary @name("Humacao.Hiawassee") ;
             meta.Netcong.Greenbush       : ternary;
             meta.Netcong.Samson          : ternary;
             meta.Burrel.Virgin           : ternary;

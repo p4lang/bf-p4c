@@ -164,6 +164,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         actions = {
             egress_action;
         }
+        default_action = egress_action();
     }
     apply {
         simple_table_egress.apply();
@@ -219,7 +220,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             do_nothing;
         }
         key = {
-            hdr.ethernet.srcAddr[15:0]: exact;
+            hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr") ;
         }
         size = 65536;
     }
@@ -229,7 +230,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             do_nothing;
         }
         key = {
-            hdr.ethernet.srcAddr[15:0]: exact;
+            hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr") ;
         }
         size = 65536;
     }
@@ -239,7 +240,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             do_nothing;
         }
         key = {
-            hdr.ethernet.srcAddr[15:0]: exact;
+            hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr") ;
         }
         size = 65536;
     }
@@ -249,7 +250,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             do_nothing;
         }
         key = {
-            hdr.ethernet.srcAddr[15:0]: exact;
+            hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr") ;
         }
         size = 65536;
     }
@@ -259,7 +260,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             do_nothing;
         }
         key = {
-            hdr.ethernet.srcAddr[15:0]: exact;
+            hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr") ;
         }
         size = 65536;
     }
@@ -269,7 +270,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             do_nothing;
         }
         key = {
-            hdr.ethernet.srcAddr[15:0]: exact;
+            hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr") ;
         }
         size = 65536;
     }
@@ -279,7 +280,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             do_nothing;
         }
         key = {
-            hdr.ethernet.srcAddr[15:0]: exact;
+            hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr") ;
         }
         size = 65536;
     }
@@ -289,7 +290,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             do_nothing;
         }
         key = {
-            hdr.ethernet.srcAddr[15:0]: exact;
+            hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr") ;
         }
         size = 65536;
     }
@@ -299,7 +300,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             do_nothing;
         }
         key = {
-            hdr.ethernet.srcAddr[15:0]: exact;
+            hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr") ;
         }
         size = 65536;
     }
@@ -309,7 +310,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             do_nothing;
         }
         key = {
-            hdr.ethernet.srcAddr[15:0]: exact;
+            hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr") ;
         }
         size = 65536;
     }
@@ -319,7 +320,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             do_nothing;
         }
         key = {
-            hdr.ethernet.srcAddr[15:0]: exact;
+            hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr") ;
         }
         size = 65536;
     }
@@ -329,7 +330,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             do_nothing;
         }
         key = {
-            hdr.ethernet.srcAddr[15:0]: exact;
+            hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr") ;
         }
         size = 65536;
     }
@@ -337,6 +338,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             ingress_action;
         }
+        default_action = ingress_action();
     }
     apply {
         if (hdr.ethernet.etherType == 16w0) {

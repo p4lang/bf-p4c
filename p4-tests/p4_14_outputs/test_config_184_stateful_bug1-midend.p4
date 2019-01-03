@@ -172,37 +172,35 @@ struct tuple_0 {
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<32> tmp_0;
+    bit<32> tmp;
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".NoAction") action NoAction_3() {
-    }
-    @initial_register_lo_value(1) @name(".sampling_alu") RegisterAction<bit<32>, bit<32>, bit<32>>(sampling_cntr) sampling_alu = {
+    @initial_register_lo_value(1) @name(".sampling_alu") RegisterAction<bit<32>, bit<32>, bit<32>>(sampling_cntr) sampling_alu_0 = {
         void apply(inout bit<32> value, out bit<32> rv) {
-            bit<32> in_value;
+            bit<32> in_value_0;
             rv = 32w0;
-            in_value = value;
+            in_value_0 = value;
             if (value >= 32w10) 
                 value = 32w1;
-            if (in_value < 32w10) 
-                value = in_value + 32w1;
-            if (in_value >= 32w10 || hdr.ig_intr_md_for_tm.copy_to_cpu != 1w0) 
+            if (in_value_0 < 32w10) 
+                value = in_value_0 + 32w1;
+            if (in_value_0 >= 32w10 || hdr.ig_intr_md_for_tm.copy_to_cpu != 1w0) 
                 rv = 32w1;
         }
     };
-    @name(".action_0") action action_2(bit<32> idx) {
-        tmp_0 = sampling_alu.execute(idx);
-        hdr.ig_intr_md_for_tm.copy_to_cpu = (bit<1>)tmp_0;
+    @name(".action_0") action action_0(bit<32> idx) {
+        tmp = sampling_alu_0.execute(idx);
+        hdr.ig_intr_md_for_tm.copy_to_cpu = (bit<1>)tmp;
     }
-    @name(".action_1") action action_3() {
+    @name(".action_1") action action_1() {
     }
-    @name(".action_7") action action_4() {
+    @name(".action_7") action action_5() {
         hash<bit<16>, bit<16>, tuple_0, bit<32>>(hdr.ethernet.blah, HashAlgorithm.random, 16w0, { hdr.ethernet.dstAddr, hdr.ethernet.etherType }, 32w262144);
     }
-    @name(".table_0") table table_0 {
+    @name(".table_0") table table_2 {
         actions = {
-            action_2();
-            action_3();
+            action_0();
+            action_1();
             @defaultonly NoAction_0();
         }
         key = {
@@ -211,16 +209,15 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_0();
     }
-    @name(".table_1") table table_1 {
+    @name(".table_1") table table_3 {
         actions = {
-            action_4();
-            @defaultonly NoAction_3();
+            action_5();
         }
-        default_action = NoAction_3();
+        default_action = action_5();
     }
     apply {
-        table_0.apply();
-        table_1.apply();
+        table_2.apply();
+        table_3.apply();
     }
 }
 

@@ -135,18 +135,21 @@ control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_me
         actions = {
             check_bloom_filter_1;
         }
+        default_action = check_bloom_filter_1;
         size = 1;
     }
     @name(".bloom_filter_1") table bloom_filter_2_0 {
         actions = {
             check_bloom_filter_2;
         }
+        default_action = check_bloom_filter_2;
         size = 1;
     }
     @name(".bloom_filter_1") table bloom_filter_3_0 {
         actions = {
             check_bloom_filter_3;
         }
+        default_action = check_bloom_filter_3;
         size = 1;
     }
     @name(".bloom_filter_sample") table bloom_filter_sample {

@@ -23,45 +23,45 @@ header ingress_skip_t {
 }
 
 parser ParserI(packet_in b, out headers hdr, out metadata meta, out ingress_intrinsic_metadata_t ig_intr_md) {
-    ingress_skip_t skip;
+    ingress_skip_t skip_0;
     state start {
         b.extract<ingress_intrinsic_metadata_t>(ig_intr_md);
-        b.extract<ingress_skip_t>(skip);
+        b.extract<ingress_skip_t>(skip_0);
         b.extract<data_t>(hdr.data);
         transition accept;
     }
 }
 
 control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_metadata_t ig_intr_md, in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md, inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md, inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
-    bool tmp_0;
-    @name("IngressP.noop") action noop_0() {
+    bool tmp;
+    @name("IngressP.noop") action noop() {
     }
     @name("IngressP.noop") action noop_3() {
     }
     @name("IngressP.noop") action noop_4() {
     }
-    @name("IngressP.set_port") action set_port_0(bit<9> port) {
+    @name("IngressP.set_port") action set_port(bit<9> port) {
         ig_intr_tm_md.ucast_egress_port = port;
     }
-    @name("IngressP.t1_act") action t1_act_0(bit<8> b3) {
+    @name("IngressP.t1_act") action t1_act(bit<8> b3) {
         hdr.data.b3 = b3;
     }
-    @name("IngressP.t2_act") action t2_act_0(bit<8> b4) {
+    @name("IngressP.t2_act") action t2_act(bit<8> b4) {
         hdr.data.b4 = b4;
     }
-    @name("IngressP.t1") table t1 {
+    @name("IngressP.t1") table t1_0 {
         actions = {
-            t1_act_0();
-            noop_0();
+            t1_act();
+            noop();
         }
         key = {
             hdr.data.h1: exact @name("hdr.data.h1") ;
         }
-        default_action = noop_0();
+        default_action = noop();
     }
-    @name("IngressP.t2") table t2 {
+    @name("IngressP.t2") table t2_0 {
         actions = {
-            t2_act_0();
+            t2_act();
             noop_3();
         }
         key = {
@@ -69,9 +69,9 @@ control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_me
         }
         default_action = noop_3();
     }
-    @name("IngressP.port_setter") table port_setter {
+    @name("IngressP.port_setter") table port_setter_0 {
         actions = {
-            set_port_0();
+            set_port();
             noop_4();
         }
         key = {
@@ -82,13 +82,13 @@ control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_me
     }
     apply {
         if (hdr.data.b1 == 8w0) {
-            tmp_0 = t1.apply().hit;
-            if (!tmp_0) 
-                t2.apply();
+            tmp = t1_0.apply().hit;
+            if (!tmp) 
+                t2_0.apply();
         }
         else 
-            t2.apply();
-        port_setter.apply();
+            t2_0.apply();
+        port_setter_0.apply();
     }
 }
 

@@ -267,9 +267,9 @@ struct tuple_1 {
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<3> temp;
-    bit<4> temp_0;
-    bit<8> temp_1;
+    bit<3> temp_2;
+    bit<4> temp_3;
+    bit<8> temp_4;
     @name(".NoAction") action NoAction_0() {
     }
     @name(".NoAction") action NoAction_5() {
@@ -278,14 +278,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_7() {
     }
-    @name(".colorCntr") counter(32w1024, CounterType.packets) colorCntr;
-    @name(".counter_0") counter(32w16, CounterType.packets) counter_0;
-    @name(".meter_0") meter(32w256, MeterType.bytes) meter_0;
-    @name(".meter_1") meter(32w256, MeterType.bytes) meter_1;
-    @name(".count_color") action count_color_0(bit<32> color_idx) {
-        colorCntr.count(color_idx);
+    @name(".colorCntr") counter(32w1024, CounterType.packets) colorCntr_0;
+    @name(".counter_0") counter(32w16, CounterType.packets) counter_1;
+    @name(".meter_0") meter(32w256, MeterType.bytes) meter_2;
+    @name(".meter_1") meter(32w256, MeterType.bytes) meter_3;
+    @name(".count_color") action count_color(bit<32> color_idx) {
+        colorCntr_0.count(color_idx);
     }
-    @name(".nop") action nop_0() {
+    @name(".nop") action nop() {
     }
     @name(".nop") action nop_4() {
     }
@@ -293,27 +293,27 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".nop") action nop_6() {
     }
-    @name(".meter_or_action") action meter_or_action_0(bit<9> egress_port, bit<8> idx) {
-        meter_1.execute_meter<bit<3>>((bit<32>)idx, temp);
-        hdr.ig_intr_md_for_tm.drop_ctl = hdr.ig_intr_md_for_tm.drop_ctl | temp;
+    @name(".meter_or_action") action meter_or_action(bit<9> egress_port, bit<8> idx) {
+        meter_3.execute_meter<bit<3>>((bit<32>)idx, temp_2);
+        hdr.ig_intr_md_for_tm.drop_ctl = hdr.ig_intr_md_for_tm.drop_ctl | temp_2;
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
     }
-    @name(".cnt_action") action cnt_action_0() {
-        hash<bit<4>, bit<4>, tuple_0, bit<5>>(temp_0, HashAlgorithm.identity, 4w0, { hdr.ipv4.version }, 5w16);
-        counter_0.count((bit<32>)temp_0);
+    @name(".cnt_action") action cnt_action() {
+        hash<bit<4>, bit<4>, tuple_0, bit<5>>(temp_3, HashAlgorithm.identity, 4w0, { hdr.ipv4.version }, 5w16);
+        counter_1.count((bit<32>)temp_3);
     }
-    @name(".meter_action") action meter_action_0(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
+    @name(".meter_action") action meter_action(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
         hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
-        hash<bit<8>, bit<8>, tuple_1, bit<9>>(temp_1, HashAlgorithm.identity, 8w0, { hdr.ipv4.protocol }, 9w256);
-        meter_0.execute_meter<bit<8>>((bit<32>)temp_1, hdr.ipv4.diffserv);
+        hash<bit<8>, bit<8>, tuple_1, bit<9>>(temp_4, HashAlgorithm.identity, 8w0, { hdr.ipv4.protocol }, 9w256);
+        meter_2.execute_meter<bit<8>>((bit<32>)temp_4, hdr.ipv4.diffserv);
     }
-    @name(".color_match") table color_match {
+    @name(".color_match") table color_match_0 {
         actions = {
-            count_color_0();
-            nop_0();
+            count_color();
+            nop();
             @defaultonly NoAction_0();
         }
         key = {
@@ -323,10 +323,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_0();
     }
-    @name(".meter_drop") table meter_drop {
+    @name(".meter_drop") table meter_drop_0 {
         actions = {
             nop_4();
-            meter_or_action_0();
+            meter_or_action();
             @defaultonly NoAction_5();
         }
         key = {
@@ -335,10 +335,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_5();
     }
-    @name(".simple_counter") table simple_counter {
+    @name(".simple_counter") table simple_counter_0 {
         actions = {
             nop_5();
-            cnt_action_0();
+            cnt_action();
             @defaultonly NoAction_6();
         }
         key = {
@@ -347,10 +347,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_6();
     }
-    @name(".simple_meter") table simple_meter {
+    @name(".simple_meter") table simple_meter_0 {
         actions = {
             nop_6();
-            meter_action_0();
+            meter_action();
             @defaultonly NoAction_7();
         }
         key = {
@@ -362,11 +362,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     apply {
         if (hdr.tcp.isValid()) 
             if (hdr.tcp.srcPort == 16w555) 
-                meter_drop.apply();
+                meter_drop_0.apply();
             else {
-                simple_meter.apply();
-                simple_counter.apply();
-                color_match.apply();
+                simple_meter_0.apply();
+                simple_counter_0.apply();
+                color_match_0.apply();
             }
     }
 }

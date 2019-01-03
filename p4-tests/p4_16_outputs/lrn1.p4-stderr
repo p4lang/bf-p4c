@@ -1,0 +1,12 @@
+lrn1.p4(268): warning: accept state in parser ePrsr is unreachable
+parser ePrsr(packet_in pkt, out headers hdr, out metadata md,
+       ^^^^^
+lrn1.p4(109): [--Wwarn=uninitialized_out_param] warning: out parameter md may be uninitialized when iPrsr terminates
+parser iPrsr(packet_in pkt, out headers hdr, out metadata md,
+                                                          ^^
+lrn1.p4(109)
+parser iPrsr(packet_in pkt, out headers hdr, out metadata md,
+       ^^^^^
+lrn1.p4(268): warning: accept state in parser ePrsr is unreachable
+parser ePrsr(packet_in pkt, out headers hdr, out metadata md,
+       ^^^^^

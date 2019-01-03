@@ -108,42 +108,50 @@ control SwitchIngress(inout switch_header_t hdr, inout switch_metadata_t ig_md, 
 control SwitchEgress(inout switch_header_t hdr, inout switch_metadata_t eg_md, in egress_intrinsic_metadata_t eg_intr_md, in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr, inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprs, inout egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name("SwitchEgress.nop") action nop_0() {
+    @name("SwitchEgress.nop") action nop() {
     }
-    @name("SwitchEgress.queue") table queue {
+    @name("SwitchEgress.queue") table queue_0 {
         key = {
             eg_intr_md.egress_port: exact @name("eg_intr_md.egress_port") ;
         }
         actions = {
-            nop_0();
+            nop();
             @defaultonly NoAction_0();
         }
         idle_timeout = true;
         default_action = NoAction_0();
     }
     apply {
-        queue.apply();
+        queue_0.apply();
     }
 }
 
-parser TofinoIngressParser_0(packet_in pkt, out switch_header_t hdr, out switch_metadata_t ig_md, out ingress_intrinsic_metadata_t ig_intr_md) {
+parser EmptyIngressParser_0(packet_in pkt, out switch_header_t hdr, out switch_metadata_t ig_md, out ingress_intrinsic_metadata_t ig_intr_md) {
+    ingress_intrinsic_metadata_t ig_intr_md_0;
     state start {
-        pkt.extract<ingress_intrinsic_metadata_t>(ig_intr_md);
-        transition select(ig_intr_md.resubmit_flag) {
-            1w1: parse_resubmit;
-            1w0: parse_port_metadata;
+        ig_intr_md_0.setInvalid();
+        transition TofinoIngressParser_start;
+    }
+    state TofinoIngressParser_start {
+        pkt.extract<ingress_intrinsic_metadata_t>(ig_intr_md_0);
+        transition select(ig_intr_md_0.resubmit_flag) {
+            1w1: TofinoIngressParser_parse_resubmit;
+            1w0: TofinoIngressParser_parse_port_metadata;
         }
     }
-    state parse_resubmit {
+    state TofinoIngressParser_parse_resubmit {
         transition reject;
     }
-    state parse_port_metadata {
-        pkt.advance(32w64);
+    state TofinoIngressParser_parse_port_metadata {
+        transition start_0;
+    }
+    state start_0 {
+        ig_intr_md = ig_intr_md_0;
         transition accept;
     }
 }
 
-Pipeline<switch_header_t, switch_metadata_t, switch_header_t, switch_metadata_t>(TofinoIngressParser_0(), SwitchIngress(), SwitchIngressDeparser(), SwitchEgressParser(), SwitchEgress(), SwitchEgressDeparser()) pipe0;
+Pipeline<switch_header_t, switch_metadata_t, switch_header_t, switch_metadata_t>(EmptyIngressParser_0(), SwitchIngress(), SwitchIngressDeparser(), SwitchEgressParser(), SwitchEgress(), SwitchEgressDeparser()) pipe0;
 
 Switch<switch_header_t, switch_metadata_t, switch_header_t, switch_metadata_t, _, _, _, _, _, _, _, _, _, _, _, _>(pipe0) main;
 

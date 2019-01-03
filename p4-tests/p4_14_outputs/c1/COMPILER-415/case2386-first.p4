@@ -632,7 +632,7 @@ control Carrizozo(inout headers hdr, inout metadata meta, inout standard_metadat
             bit<1> in_value;
             in_value = value;
             value = in_value;
-            rv = ~value;
+            rv = ~in_value;
         }
     };
     @name(".Greenbush") action Greenbush() {
@@ -919,7 +919,7 @@ control Cusick(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         key = {
             meta.Piermont.Palmer          : exact @name("Piermont.Palmer") ;
-            meta.Sheldahl.Coverdale[31:16]: ternary @name("Sheldahl.Coverdale[31:16]") ;
+            meta.Sheldahl.Coverdale[31:16]: ternary @name("Sheldahl.Coverdale") ;
             meta.Conneaut.Scissors        : ternary @name("Conneaut.Scissors") ;
             meta.Conneaut.Leonore         : ternary @name("Conneaut.Leonore") ;
             meta.Conneaut.Picabo          : ternary @name("Conneaut.Picabo") ;
@@ -937,7 +937,7 @@ control Cusick(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         key = {
             meta.Piermont.Palmer        : exact @name("Piermont.Palmer") ;
-            meta.Lindsborg.Cammal[31:16]: ternary @name("Lindsborg.Cammal[31:16]") ;
+            meta.Lindsborg.Cammal[31:16]: ternary @name("Lindsborg.Cammal") ;
             meta.Conneaut.Scissors      : ternary @name("Conneaut.Scissors") ;
             meta.Conneaut.Leonore       : ternary @name("Conneaut.Leonore") ;
             meta.Conneaut.Picabo        : ternary @name("Conneaut.Picabo") ;
@@ -967,7 +967,7 @@ control Cusick(inout headers hdr, inout metadata meta, inout standard_metadata_t
 
 control ElkRidge(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Horsehead") action Horsehead() {
-        digest<Reidland>(32w0, { meta.Darmstadt.Romney, meta.Conneaut.Syria, hdr.Danville.Janney, hdr.Danville.Bunker, hdr.Winnebago.Sarepta });
+        digest<Reidland>(32w0, {meta.Darmstadt.Romney,meta.Conneaut.Syria,hdr.Danville.Janney,hdr.Danville.Bunker,hdr.Winnebago.Sarepta});
     }
     @name(".Suamico") table Suamico {
         actions = {
@@ -1056,7 +1056,7 @@ control Exell(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Lindsborg.OldTown     : exact @name("Lindsborg.OldTown") ;
-            meta.Lindsborg.Cammal[19:0]: lpm @name("Lindsborg.Cammal[19:0]") ;
+            meta.Lindsborg.Cammal[19:0]: lpm @name("Lindsborg.Cammal") ;
         }
         size = 131072;
         default_action = Leoma();
@@ -1083,7 +1083,7 @@ control Exell(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Padroni.Goldenrod         : exact @name("Padroni.Goldenrod") ;
-            meta.Sheldahl.Coverdale[127:64]: lpm @name("Sheldahl.Coverdale[127:64]") ;
+            meta.Sheldahl.Coverdale[127:64]: lpm @name("Sheldahl.Coverdale") ;
         }
         size = 8192;
         default_action = NoAction();
@@ -1096,7 +1096,7 @@ control Exell(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Sheldahl.MudLake          : exact @name("Sheldahl.MudLake") ;
-            meta.Sheldahl.Coverdale[106:64]: lpm @name("Sheldahl.Coverdale[106:64]") ;
+            meta.Sheldahl.Coverdale[106:64]: lpm @name("Sheldahl.Coverdale") ;
         }
         size = 65536;
         default_action = Leoma();
@@ -1109,7 +1109,7 @@ control Exell(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Sheldahl.Larue          : exact @name("Sheldahl.Larue") ;
-            meta.Sheldahl.Coverdale[63:0]: lpm @name("Sheldahl.Coverdale[63:0]") ;
+            meta.Sheldahl.Coverdale[63:0]: lpm @name("Sheldahl.Coverdale") ;
         }
         size = 16384;
         default_action = Leoma();
@@ -1135,11 +1135,11 @@ control Exell(inout headers hdr, inout metadata meta, inout standard_metadata_t 
                 switch (Cathcart.apply().action_run) {
                     Leoma: {
                         switch (Ireton.apply().action_run) {
-                            Leoma: {
-                                Sebewaing.apply();
-                            }
                             Oshoto: {
                                 Linden.apply();
+                            }
+                            Leoma: {
+                                Sebewaing.apply();
                             }
                         }
 
@@ -1151,6 +1151,9 @@ control Exell(inout headers hdr, inout metadata meta, inout standard_metadata_t 
                     switch (Malmo.apply().action_run) {
                         Leoma: {
                             switch (Gibbs.apply().action_run) {
+                                Lisle: {
+                                    Pringle.apply();
+                                }
                                 Leoma: {
                                     switch (Nason.apply().action_run) {
                                         Northboro: {
@@ -1158,9 +1161,6 @@ control Exell(inout headers hdr, inout metadata meta, inout standard_metadata_t 
                                         }
                                     }
 
-                                }
-                                Lisle: {
-                                    Pringle.apply();
                                 }
                             }
 
@@ -1391,7 +1391,7 @@ control FlatRock(inout headers hdr, inout metadata meta, inout standard_metadata
 
 control Hodges(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Soledad") action Soledad() {
-        digest<Honokahua>(32w0, { meta.Darmstadt.Romney, meta.Conneaut.Admire, meta.Conneaut.Faysville, meta.Conneaut.Syria, meta.Conneaut.Vesuvius });
+        digest<Honokahua>(32w0, {meta.Darmstadt.Romney,meta.Conneaut.Admire,meta.Conneaut.Faysville,meta.Conneaut.Syria,meta.Conneaut.Vesuvius});
     }
     @name(".Yaurel") table Yaurel {
         actions = {

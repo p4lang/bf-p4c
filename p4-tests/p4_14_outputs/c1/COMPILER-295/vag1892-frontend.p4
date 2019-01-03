@@ -170,15 +170,15 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    @name(".set_port") action set_port_0(bit<9> port) {
+    @name(".set_port") action set_port(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
     @name(".set_port") action set_port_2(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".port_based_egress") table port_based_egress {
+    @name(".port_based_egress") table port_based_egress_0 {
         actions = {
-            set_port_0();
+            set_port();
             @defaultonly NoAction_0();
         }
         key = {
@@ -187,7 +187,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction_0();
     }
-    @name(".vid_based_egress") table vid_based_egress {
+    @name(".vid_based_egress") table vid_based_egress_0 {
         actions = {
             set_port_2();
             @defaultonly NoAction_3();
@@ -200,9 +200,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (hdr.ig_intr_md.resubmit_flag == 1w0) 
-            port_based_egress.apply();
+            port_based_egress_0.apply();
         if (hdr.vlan_tag.isValid()) 
-            vid_based_egress.apply();
+            vid_based_egress_0.apply();
     }
 }
 

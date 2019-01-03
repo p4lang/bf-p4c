@@ -208,20 +208,20 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".do_egr_encode") action do_egr_encode_0() {
+    @name(".do_egr_encode") action do_egr_encode() {
         hdr.ipv4.identification = hdr.eg_intr_md.egress_rid;
         hdr.ipv4.diffserv = (bit<8>)hdr.eg_intr_md.egress_rid_first;
     }
-    @name(".egr_encode") table egr_encode {
+    @name(".egr_encode") table egr_encode_0 {
         actions = {
-            do_egr_encode_0();
+            do_egr_encode();
             @defaultonly NoAction_0();
         }
         default_action = NoAction_0();
     }
     apply {
         if (hdr.ipv4.isValid()) 
-            egr_encode.apply();
+            egr_encode_0.apply();
     }
 }
 
@@ -234,38 +234,38 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_9() {
     }
-    @name(".flood") action flood_0() {
+    @name(".flood") action flood() {
         hdr.ig_intr_md_for_tm.mcast_grp_a = meta.ing_md.brid;
     }
-    @name(".switch") action switch_1(bit<9> egr_port) {
+    @name(".switch") action switch_0(bit<9> egr_port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egr_port;
     }
-    @name(".route") action route_0(bit<16> vrf) {
+    @name(".route") action route(bit<16> vrf) {
         meta.ing_md.l3 = 1w1;
         meta.ing_md.vrf = vrf;
     }
-    @name(".mcast_route") action mcast_route_0(bit<16> xid, bit<16> mgid1, bit<16> mgid2) {
+    @name(".mcast_route") action mcast_route(bit<16> xid, bit<16> mgid1, bit<16> mgid2) {
         hdr.ig_intr_md_for_tm.level1_exclusion_id = xid;
         hdr.ig_intr_md_for_tm.mcast_grp_a = mgid1;
         hdr.ig_intr_md_for_tm.mcast_grp_b = mgid2;
         hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
     }
-    @name(".set_ifid") action set_ifid_0(bit<32> ifid) {
+    @name(".set_ifid") action set_ifid(bit<32> ifid) {
         meta.ing_md.ifid = ifid;
         hdr.ig_intr_md_for_tm.ucast_egress_port = 9w0x1ff;
     }
-    @name(".set_src_ifid_md") action set_src_ifid_md_0(bit<16> rid, bit<9> yid, bit<16> brid, bit<13> h1, bit<13> h2) {
+    @name(".set_src_ifid_md") action set_src_ifid_md(bit<16> rid, bit<9> yid, bit<16> brid, bit<13> h1, bit<13> h2) {
         hdr.ig_intr_md_for_tm.rid = rid;
         hdr.ig_intr_md_for_tm.level2_exclusion_id = yid;
         meta.ing_md.brid = brid;
         hdr.ig_intr_md_for_tm.level1_mcast_hash = h1;
         hdr.ig_intr_md_for_tm.level2_mcast_hash = h2;
     }
-    @name(".ing_dmac") table ing_dmac {
+    @name(".ing_dmac") table ing_dmac_0 {
         actions = {
-            flood_0();
-            switch_1();
-            route_0();
+            flood();
+            switch_0();
+            route();
             @defaultonly NoAction_1();
         }
         key = {
@@ -274,9 +274,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_1();
     }
-    @name(".ing_ipv4_mcast") table ing_ipv4_mcast {
+    @name(".ing_ipv4_mcast") table ing_ipv4_mcast_0 {
         actions = {
-            mcast_route_0();
+            mcast_route();
             @defaultonly NoAction_7();
         }
         key = {
@@ -286,9 +286,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_7();
     }
-    @name(".ing_port") table ing_port {
+    @name(".ing_port") table ing_port_0 {
         actions = {
-            set_ifid_0();
+            set_ifid();
             @defaultonly NoAction_8();
         }
         key = {
@@ -298,9 +298,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_8();
     }
-    @name(".ing_src_ifid") table ing_src_ifid {
+    @name(".ing_src_ifid") table ing_src_ifid_0 {
         actions = {
-            set_src_ifid_md_0();
+            set_src_ifid_md();
             @defaultonly NoAction_9();
         }
         key = {
@@ -309,11 +309,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_9();
     }
     apply {
-        ing_port.apply();
-        ing_src_ifid.apply();
-        ing_dmac.apply();
+        ing_port_0.apply();
+        ing_src_ifid_0.apply();
+        ing_dmac_0.apply();
         if (meta.ing_md.l3 == 1w1) 
-            ing_ipv4_mcast.apply();
+            ing_ipv4_mcast_0.apply();
     }
 }
 

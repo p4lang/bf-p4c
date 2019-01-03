@@ -191,37 +191,37 @@ struct tuple_0 {
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<8> tmp_1;
-    tuple_0 tmp_2;
+    bit<8> tmp;
+    tuple_0 tmp_0;
     @name(".NoAction") action NoAction_0() {
     }
     @name(".NoAction") action NoAction_4() {
     }
     @name(".NoAction") action NoAction_5() {
     }
-    @name(".action_select") action action_select_0() {
-        tmp_2.field = hdr.ipv4.blah1;
-        tmp_2.field_0 = hdr.ipv4.blah2;
-        tmp_2.field_1 = hdr.ipv4.blah3;
-        hash<bit<8>, bit<32>, tuple_0, bit<64>>(tmp_1, HashAlgorithm.random, 32w0, tmp_2, 64w16384);
-        hdr.ipv4.blah2 = tmp_1;
+    @name(".action_select") action action_select() {
+        tmp_0.field = hdr.ipv4.blah1;
+        tmp_0.field_0 = hdr.ipv4.blah2;
+        tmp_0.field_1 = hdr.ipv4.blah3;
+        hash<bit<8>, bit<32>, tuple_0, bit<64>>(tmp, HashAlgorithm.random, 32w0, tmp_0, 64w16384);
+        hdr.ipv4.blah2 = tmp;
     }
-    @name(".action_0") action action_2(bit<16> param0) {
+    @name(".action_0") action action_0(bit<16> param0) {
         hdr.ipv4.hdrChecksum = param0;
     }
-    @name(".big_action") action big_action_0(bit<32> param0, bit<32> param1, bit<48> param2) {
+    @name(".big_action") action big_action(bit<32> param0, bit<32> param1, bit<48> param2) {
         hdr.ipv4.dstAddr = param0;
         hdr.ipv4.srcAddr = param1;
         hdr.ethernet.dstAddr = param2;
     }
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing() {
     }
-    @name(".action_1") action action_3(bit<16> param1) {
+    @name(".action_1") action action_1(bit<16> param1) {
         hdr.ethernet.etherType = param1;
     }
-    @name(".table_group") table table_group {
+    @name(".table_group") table table_group_0 {
         actions = {
-            action_select_0();
+            action_select();
             @defaultonly NoAction_0();
         }
         key = {
@@ -229,11 +229,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @immediate(0) @selector_max_group_size(121) @name(".test_select") table test_select {
+    @immediate(0) @selector_max_group_size(121) @name(".test_select") table test_select_0 {
         actions = {
-            action_2();
-            big_action_0();
-            do_nothing_0();
+            action_0();
+            big_action();
+            do_nothing();
             @defaultonly NoAction_4();
         }
         key = {
@@ -248,9 +248,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         implementation = some_action_profile;
         default_action = NoAction_4();
     }
-    @name(".test_select2") table test_select2 {
+    @name(".test_select2") table test_select2_0 {
         actions = {
-            action_3();
+            action_1();
             @defaultonly NoAction_5();
         }
         key = {
@@ -264,9 +264,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_5();
     }
     apply {
-        test_select.apply();
-        test_select2.apply();
-        table_group.apply();
+        test_select_0.apply();
+        test_select2_0.apply();
+        table_group_0.apply();
     }
 }
 

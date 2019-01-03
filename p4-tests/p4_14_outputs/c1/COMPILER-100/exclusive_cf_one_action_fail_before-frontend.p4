@@ -155,18 +155,18 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    @name(".a1") action a1_0() {
+    @name(".a1") action a1() {
     }
     @name(".a1") action a1_2() {
     }
-    @name(".table1") table table1 {
+    @name(".table1") table table1_0 {
         actions = {
-            a1_0();
+            a1();
             @defaultonly NoAction_0();
         }
         default_action = NoAction_0();
     }
-    @name(".table2") table table2 {
+    @name(".table2") table table2_0 {
         actions = {
             a1_2();
             @defaultonly NoAction_3();
@@ -174,13 +174,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_3();
     }
     apply {
-        table1.apply();
+        table1_0.apply();
         if (hdr.ether.etherType == 16w0x800) {
-            table1.apply();
-            table2.apply();
+            table1_0.apply();
+            table2_0.apply();
         }
         else 
-            table1.apply();
+            table1_0.apply();
     }
 }
 

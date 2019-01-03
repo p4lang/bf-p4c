@@ -160,26 +160,26 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".branch") action branch_0() {
+    @name(".branch") action branch() {
         meta.md.direction[0:0] = ((bit<1>)hdr.ether.dstAddr)[0:0];
     }
-    @name(".a1") action a1_0() {
+    @name(".a1") action a1() {
         meta.md.port = 9w1;
         hdr.ig_intr_md_for_tm.ucast_egress_port = 9w1;
     }
-    @name(".a2") action a2_0() {
+    @name(".a2") action a2() {
         meta.md.port = 9w2;
     }
-    @name(".a3") action a3_0() {
+    @name(".a3") action a3() {
         meta.md.port = 9w3;
     }
-    @name(".a4") action a4_0() {
+    @name(".a4") action a4() {
         meta.md.port = 9w4;
     }
-    @name(".a5") action a5_0() {
+    @name(".a5") action a5() {
         meta.md.port = 9w5;
     }
-    @name(".forward") action forward_0() {
+    @name(".forward") action forward() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = meta.md.port;
     }
     @name(".forward") action forward_4() {
@@ -191,20 +191,20 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".forward") action forward_6() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = meta.md.port;
     }
-    @name(".t0") table t0 {
+    @name(".t0") table t0_0 {
         actions = {
-            branch_0();
+            branch();
         }
         size = 1;
-        default_action = branch_0();
+        default_action = branch();
     }
-    @name(".t1") table t1 {
+    @name(".t1") table t1_0 {
         actions = {
-            a1_0();
-            a2_0();
-            a3_0();
-            a4_0();
-            a5_0();
+            a1();
+            a2();
+            a3();
+            a4();
+            a5();
             @defaultonly NoAction_0();
         }
         key = {
@@ -212,28 +212,28 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name(".t2") table t2 {
+    @name(".t2") table t2_0 {
         actions = {
-            forward_0();
+            forward();
         }
         size = 1;
-        default_action = forward_0();
+        default_action = forward();
     }
-    @name(".t3") table t3 {
+    @name(".t3") table t3_0 {
         actions = {
             forward_4();
         }
         size = 1;
         default_action = forward_4();
     }
-    @name(".t4") table t4 {
+    @name(".t4") table t4_0 {
         actions = {
             forward_5();
         }
         size = 1;
         default_action = forward_5();
     }
-    @name(".t5") table t5 {
+    @name(".t5") table t5_0 {
         actions = {
             forward_6();
         }
@@ -241,24 +241,24 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = forward_6();
     }
     apply {
-        t0.apply();
+        t0_0.apply();
         if (meta.md.direction == 1w1) 
-            switch (t1.apply().action_run) {
-                a2_0: {
-                    t2.apply();
+            switch (t1_0.apply().action_run) {
+                a2: {
+                    t2_0.apply();
                 }
-                a3_0: {
-                    t3.apply();
+                a3: {
+                    t3_0.apply();
                 }
             }
 
         else 
-            switch (t1.apply().action_run) {
-                a4_0: {
-                    t4.apply();
+            switch (t1_0.apply().action_run) {
+                a4: {
+                    t4_0.apply();
                 }
-                a5_0: {
-                    t5.apply();
+                a5: {
+                    t5_0.apply();
                 }
             }
 

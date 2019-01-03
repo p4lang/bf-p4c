@@ -219,13 +219,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_7() {
     }
-    bool tmp_2;
-    bool tmp_3;
-    bool tmp_4;
-    @name(".do_forward") action do_forward_0(bit<9> port) {
+    bool tmp;
+    bool tmp_0;
+    bool tmp_1;
+    @name(".do_forward") action do_forward(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".assign_vlan") action assign_vlan_0(bit<3> prio, bit<1> cfi, bit<12> vid) {
+    @name(".assign_vlan") action assign_vlan(bit<3> prio, bit<1> cfi, bit<12> vid) {
         meta.m.prio = prio;
         meta.m.cfi = cfi;
         meta.m.vid = vid;
@@ -245,26 +245,26 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.m.cfi = cfi;
         meta.m.vid = vid;
     }
-    @name(".do_set_vid") action do_set_vid_0() {
+    @name(".do_set_vid") action do_set_vid() {
         hdr.vlan_tag.vid = meta.m.vid;
     }
-    @name(".do_set_vlan_tag") action do_set_vlan_tag_0() {
+    @name(".do_set_vlan_tag") action do_set_vlan_tag() {
         hdr.vlan_tag.setValid();
         hdr.vlan_tag.prio = meta.m.prio;
         hdr.vlan_tag.cfi = meta.m.cfi;
         hdr.vlan_tag.vid = meta.m.vid;
         hdr.vlan_tag.etherType = meta.m.etherType;
     }
-    @name(".forward") table forward {
+    @name(".forward") table forward_0 {
         actions = {
-            do_forward_0();
+            do_forward();
         }
         size = 1;
-        default_action = do_forward_0(9w1);
+        default_action = do_forward(9w1);
     }
-    @name(".mac_based_vlan") table mac_based_vlan {
+    @name(".mac_based_vlan") table mac_based_vlan_0 {
         actions = {
-            assign_vlan_0();
+            assign_vlan();
             @defaultonly NoAction_0();
         }
         key = {
@@ -274,7 +274,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         implementation = vlan_profile;
         default_action = NoAction_0();
     }
-    @name(".port_based_vlan") table port_based_vlan {
+    @name(".port_based_vlan") table port_based_vlan_0 {
         actions = {
             assign_vlan_4();
             @defaultonly NoAction_5();
@@ -286,7 +286,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         implementation = vlan_profile;
         default_action = NoAction_5();
     }
-    @name(".protocol_based_vlan") table protocol_based_vlan {
+    @name(".protocol_based_vlan") table protocol_based_vlan_0 {
         actions = {
             assign_vlan_5();
             @defaultonly NoAction_6();
@@ -298,21 +298,21 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         implementation = vlan_profile;
         default_action = NoAction_6();
     }
-    @name(".set_vid") table set_vid {
+    @name(".set_vid") table set_vid_0 {
         actions = {
-            do_set_vid_0();
+            do_set_vid();
         }
         size = 1;
-        default_action = do_set_vid_0();
+        default_action = do_set_vid();
     }
-    @name(".set_vlan_tag") table set_vlan_tag {
+    @name(".set_vlan_tag") table set_vlan_tag_0 {
         actions = {
-            do_set_vlan_tag_0();
+            do_set_vlan_tag();
         }
         size = 1;
-        default_action = do_set_vlan_tag_0();
+        default_action = do_set_vlan_tag();
     }
-    @name(".subnet_based_vlan") table subnet_based_vlan {
+    @name(".subnet_based_vlan") table subnet_based_vlan_0 {
         actions = {
             assign_vlan_6();
             @defaultonly NoAction_7();
@@ -326,28 +326,28 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (!hdr.vlan_tag.isValid() || hdr.vlan_tag.vid == 12w0) {
-            tmp_4 = subnet_based_vlan.apply().hit;
-            if (tmp_4) 
+            tmp_1 = subnet_based_vlan_0.apply().hit;
+            if (tmp_1) 
                 ;
             else {
-                tmp_3 = mac_based_vlan.apply().hit;
-                if (tmp_3) 
+                tmp_0 = mac_based_vlan_0.apply().hit;
+                if (tmp_0) 
                     ;
                 else {
-                    tmp_2 = protocol_based_vlan.apply().hit;
-                    if (tmp_2) 
+                    tmp = protocol_based_vlan_0.apply().hit;
+                    if (tmp) 
                         ;
                     else 
-                        port_based_vlan.apply();
+                        port_based_vlan_0.apply();
                 }
             }
         }
         if (!hdr.vlan_tag.isValid()) 
-            set_vlan_tag.apply();
+            set_vlan_tag_0.apply();
         else 
             if (hdr.vlan_tag.vid == 12w0) 
-                set_vid.apply();
-        forward.apply();
+                set_vid_0.apply();
+        forward_0.apply();
     }
 }
 

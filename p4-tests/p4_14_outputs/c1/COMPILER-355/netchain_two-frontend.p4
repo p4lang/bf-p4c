@@ -274,61 +274,61 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_9() {
     }
-    bit<32> tmp_2;
-    bit<32> tmp_3;
-    bit<32> tmp_4;
-    @name(".seq_alu") RegisterAction<bit<32>, bit<32>, bit<32>>(seq_register) seq_alu = {
+    bit<32> tmp;
+    bit<32> tmp_0;
+    bit<32> tmp_1;
+    @name(".seq_alu") RegisterAction<bit<32>, bit<32>, bit<32>>(seq_register) seq_alu_0 = {
         void apply(inout bit<32> value, out bit<32> rv) {
-            bit<32> in_value;
-            in_value = value;
+            bit<32> in_value_0;
+            in_value_0 = value;
             rv = 32w1;
-            if (hdr.netchain_hdr.seq > in_value) 
+            if (hdr.netchain_hdr.seq > in_value_0) 
                 value = hdr.netchain_hdr.seq;
         }
     };
-    @name(".value_alu_1") RegisterAction<bit<32>, bit<32>, bit<32>>(value_register_1) value_alu_1 = {
+    @name(".value_alu_1") RegisterAction<bit<32>, bit<32>, bit<32>>(value_register_1) value_alu = {
         void apply(inout bit<32> value, out bit<32> rv) {
-            bit<32> in_value_3;
+            bit<32> in_value_1;
             if (meta.md.write_valid == 1w1) 
                 value = hdr.netchain_value.val1;
             rv = value;
         }
     };
-    @name(".value_alu_2") RegisterAction<bit<32>, bit<32>, bit<32>>(value_register_2) value_alu_2 = {
+    @name(".value_alu_2") RegisterAction<bit<32>, bit<32>, bit<32>>(value_register_2) value_alu_0 = {
         void apply(inout bit<32> value, out bit<32> rv) {
-            bit<32> in_value_4;
+            bit<32> in_value_2;
             if (meta.md.write_valid == 1w1) 
                 value = hdr.netchain_value.val2;
             rv = value;
         }
     };
-    @name(".set_egress") action set_egress_0(bit<9> egress_spec) {
+    @name(".set_egress") action set_egress(bit<9> egress_spec) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_spec;
     }
-    @name("._no_op") action _no_op_0() {
+    @name("._no_op") action _no_op() {
     }
-    @name(".get_index") action get_index_0(bit<16> seq_idx, bit<16> val_idx1, bit<16> val_idx2) {
+    @name(".get_index") action get_index(bit<16> seq_idx, bit<16> val_idx1, bit<16> val_idx2) {
         meta.md.seq_index = seq_idx;
         meta.md.val_index1 = val_idx1;
         meta.md.val_index2 = val_idx2;
         meta.md.key_exist = 1w1;
     }
-    @name(".run_seq_alu") action run_seq_alu_0() {
-        tmp_2 = seq_alu.execute((bit<32>)meta.md.seq_index);
-        meta.md.write_valid = (bit<1>)tmp_2;
+    @name(".run_seq_alu") action run_seq_alu() {
+        tmp = seq_alu_0.execute((bit<32>)meta.md.seq_index);
+        meta.md.write_valid = (bit<1>)tmp;
     }
-    @name(".run_value_alu_1") action run_value_alu() {
-        tmp_3 = value_alu_1.execute((bit<32>)meta.md.val_index1);
-        hdr.netchain_value.val1 = tmp_3;
+    @name(".run_value_alu_1") action run_value_alu_1() {
+        tmp_0 = value_alu.execute((bit<32>)meta.md.val_index1);
+        hdr.netchain_value.val1 = tmp_0;
     }
-    @name(".run_value_alu_2") action run_value_alu_0() {
-        tmp_4 = value_alu_2.execute((bit<32>)meta.md.val_index2);
-        hdr.netchain_value.val2 = tmp_4;
+    @name(".run_value_alu_2") action run_value_alu_2() {
+        tmp_1 = value_alu_0.execute((bit<32>)meta.md.val_index2);
+        hdr.netchain_value.val2 = tmp_1;
     }
-    @name(".ipv4_routing") table ipv4_routing {
+    @name(".ipv4_routing") table ipv4_routing_0 {
         actions = {
-            set_egress_0();
-            _no_op_0();
+            set_egress();
+            _no_op();
             @defaultonly NoAction_0();
         }
         key = {
@@ -337,9 +337,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_0();
     }
-    @name(".netchain_index") table netchain_index {
+    @name(".netchain_index") table netchain_index_0 {
         actions = {
-            get_index_0();
+            get_index();
             @defaultonly NoAction_6();
         }
         key = {
@@ -348,25 +348,25 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 65536;
         default_action = NoAction_6();
     }
-    @name(".netchain_seq_check") table netchain_seq_check {
+    @name(".netchain_seq_check") table netchain_seq_check_0 {
         actions = {
-            run_seq_alu_0();
+            run_seq_alu();
             @defaultonly NoAction_7();
         }
         size = 1;
         default_action = NoAction_7();
     }
-    @name(".netchain_value_1") table netchain_value_1 {
+    @name(".netchain_value_1") table netchain_value_0 {
         actions = {
-            run_value_alu();
+            run_value_alu_1();
             @defaultonly NoAction_8();
         }
         size = 1;
         default_action = NoAction_8();
     }
-    @name(".netchain_value_2") table netchain_value_2 {
+    @name(".netchain_value_2") table netchain_value_3 {
         actions = {
-            run_value_alu_0();
+            run_value_alu_2();
             @defaultonly NoAction_9();
         }
         size = 1;
@@ -374,15 +374,15 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (hdr.netchain_hdr.isValid()) {
-            netchain_index.apply();
+            netchain_index_0.apply();
             if (meta.md.key_exist == 1w1) {
                 if (hdr.netchain_hdr.op == 8w1) 
-                    netchain_seq_check.apply();
-                netchain_value_1.apply();
-                netchain_value_2.apply();
+                    netchain_seq_check_0.apply();
+                netchain_value_0.apply();
+                netchain_value_3.apply();
             }
         }
-        ipv4_routing.apply();
+        ipv4_routing_0.apply();
     }
 }
 

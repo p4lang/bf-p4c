@@ -32,48 +32,48 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    @name(".cnt") direct_counter(CounterType.packets) cnt;
-    @name(".cnt2") direct_counter(CounterType.packets) cnt2;
-    @name(".c1_3") action c1_1(bit<16> val1, bit<16> val2, bit<16> val3) {
-        cnt.count();
+    @name(".cnt") direct_counter(CounterType.packets) cnt_0;
+    @name(".cnt2") direct_counter(CounterType.packets) cnt2_0;
+    @name(".c1_3") action c1_0(bit<16> val1, bit<16> val2, bit<16> val3) {
+        cnt_0.count();
         hdr.data.c1 = val1;
         hdr.data.c2 = val2;
         hdr.data.c3 = val3;
     }
-    @name(".test1") table test1 {
+    @name(".test1") table test1_0 {
         actions = {
-            c1_1();
+            c1_0();
             @defaultonly NoAction_0();
         }
         key = {
             hdr.data.f1: exact @name("data.f1") ;
         }
         size = 32768;
-        counters = cnt;
+        counters = cnt_0;
         default_action = NoAction_0();
     }
-    @name(".c4_6") action c4_1(bit<16> val4, bit<16> val5, bit<16> val6, bit<9> port) {
-        cnt2.count();
+    @name(".c4_6") action c4_0(bit<16> val4, bit<16> val5, bit<16> val6, bit<9> port) {
+        cnt2_0.count();
         hdr.data.c4 = val4;
         hdr.data.c5 = val5;
         hdr.data.c6 = val6;
         standard_metadata.egress_spec = port;
     }
-    @name(".test2") table test2 {
+    @name(".test2") table test2_0 {
         actions = {
-            c4_1();
+            c4_0();
             @defaultonly NoAction_3();
         }
         key = {
             hdr.data.f2: exact @name("data.f2") ;
         }
         size = 10000;
-        counters = cnt2;
+        counters = cnt2_0;
         default_action = NoAction_3();
     }
     apply {
-        test1.apply();
-        test2.apply();
+        test1_0.apply();
+        test2_0.apply();
     }
 }
 

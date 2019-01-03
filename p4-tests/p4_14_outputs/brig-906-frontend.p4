@@ -230,67 +230,67 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 @name(".global_pkt_counter") register<bit<32>>(32w16) global_pkt_counter;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<32> tmp_1;
-    bit<32> tmp_2;
-    @name(".cross_container_copy_1") RegisterAction<bit<32>, bit<32>, bit<32>>(dummy_reg_1) cross_container_copy_0 = {
+    bit<32> tmp;
+    bit<32> tmp_0;
+    @name(".cross_container_copy_1") RegisterAction<bit<32>, bit<32>, bit<32>>(dummy_reg_1) cross_container_copy = {
         void apply(inout bit<32> value, out bit<32> rv) {
-            bit<32> in_value;
+            bit<32> in_value_0;
             value = (bit<32>)meta.md.status_cycle;
             rv = value;
         }
     };
-    @name(".global_pkt_count_incr") RegisterAction<bit<32>, bit<32>, bit<32>>(global_pkt_counter) global_pkt_count_incr = {
+    @name(".global_pkt_count_incr") RegisterAction<bit<32>, bit<32>, bit<32>>(global_pkt_counter) global_pkt_count_incr_0 = {
         void apply(inout bit<32> value, out bit<32> rv) {
-            bit<32> in_value_2;
-            in_value_2 = value;
-            value = in_value_2 + 32w1;
+            bit<32> in_value_1;
+            in_value_1 = value;
+            value = in_value_1 + 32w1;
             rv = value;
         }
     };
-    @name(".bounce") action bounce_0() {
+    @name(".bounce") action bounce() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = hdr.ig_intr_md.ingress_port;
     }
-    @name(".incr_global_counter") action incr_global_counter_0() {
-        tmp_1 = global_pkt_count_incr.execute(32w0);
-        meta.md.global_pkt_count = tmp_1;
+    @name(".incr_global_counter") action incr_global_counter() {
+        tmp = global_pkt_count_incr_0.execute(32w0);
+        meta.md.global_pkt_count = tmp;
     }
-    @name(".maintain_2bit_variable") action maintain_2bit_variable_0() {
+    @name(".maintain_2bit_variable") action maintain_2bit_variable() {
         meta.md.status_cycle = (bit<2>)meta.md.global_pkt_count;
     }
-    @name(".write_output") action write_output_0() {
+    @name(".write_output") action write_output() {
         hdr.ipv4.dip = (bit<32>)meta.md.status_cycle;
-        tmp_2 = cross_container_copy_0.execute(32w0);
-        hdr.ipv4.sip = tmp_2;
+        tmp_0 = cross_container_copy.execute(32w0);
+        hdr.ipv4.sip = tmp_0;
     }
-    @name(".tb_bounce") table tb_bounce {
+    @name(".tb_bounce") table tb_bounce_0 {
         actions = {
-            bounce_0();
+            bounce();
         }
-        default_action = bounce_0();
+        default_action = bounce();
     }
-    @name(".tb_incr_global_counter") table tb_incr_global_counter {
+    @name(".tb_incr_global_counter") table tb_incr_global_counter_0 {
         actions = {
-            incr_global_counter_0();
+            incr_global_counter();
         }
-        default_action = incr_global_counter_0();
+        default_action = incr_global_counter();
     }
-    @name(".tb_maintain_2bit_variable") table tb_maintain_2bit_variable {
+    @name(".tb_maintain_2bit_variable") table tb_maintain_2bit_variable_0 {
         actions = {
-            maintain_2bit_variable_0();
+            maintain_2bit_variable();
         }
-        default_action = maintain_2bit_variable_0();
+        default_action = maintain_2bit_variable();
     }
-    @name(".tb_write_output") table tb_write_output {
+    @name(".tb_write_output") table tb_write_output_0 {
         actions = {
-            write_output_0();
+            write_output();
         }
-        default_action = write_output_0();
+        default_action = write_output();
     }
     apply {
-        tb_incr_global_counter.apply();
-        tb_maintain_2bit_variable.apply();
-        tb_write_output.apply();
-        tb_bounce.apply();
+        tb_incr_global_counter_0.apply();
+        tb_maintain_2bit_variable_0.apply();
+        tb_write_output_0.apply();
+        tb_bounce_0.apply();
     }
 }
 

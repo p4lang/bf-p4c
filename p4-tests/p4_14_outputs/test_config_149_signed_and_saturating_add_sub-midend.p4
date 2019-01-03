@@ -114,10 +114,12 @@ header pkt_t {
     bit<32> field_b_32;
     bit<32> field_c_32;
     bit<32> field_d_32;
+    @saturating 
     bit<16> field_e_sat;
     bit<16> field_f_16;
     bit<16> field_g_16;
     bit<16> field_h_16;
+    @saturating 
     int<8>  field_i_signed_sat;
     bit<8>  field_j_8;
     bit<8>  field_k_8;
@@ -165,32 +167,32 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".action_0") action action_6() {
+    @name(".action_0") action action_0() {
         hdr.pkt.field_a_signed = hdr.pkt.field_a_signed + (int<32>)hdr.pkt.field_b_32;
     }
-    @name(".action_1") action action_7() {
-        hdr.pkt.field_e_sat = hdr.pkt.field_e_sat + hdr.pkt.field_f_16;
+    @name(".action_1") action action_1() {
+        hdr.pkt.field_e_sat = hdr.pkt.field_e_sat |+| hdr.pkt.field_f_16;
     }
-    @name(".action_2") action action_8() {
-        hdr.pkt.field_i_signed_sat = hdr.pkt.field_i_signed_sat + (int<8>)hdr.pkt.field_j_8;
+    @name(".action_2") action action_2() {
+        hdr.pkt.field_i_signed_sat = hdr.pkt.field_i_signed_sat |+| (int<8>)hdr.pkt.field_j_8;
     }
-    @name(".action_3") action action_9() {
+    @name(".action_3") action action_3() {
         hdr.pkt.field_a_signed = hdr.pkt.field_a_signed - (int<32>)hdr.pkt.field_b_32;
     }
-    @name(".action_4") action action_10() {
-        hdr.pkt.field_e_sat = hdr.pkt.field_e_sat - hdr.pkt.field_f_16;
+    @name(".action_4") action action_4() {
+        hdr.pkt.field_e_sat = hdr.pkt.field_e_sat |-| hdr.pkt.field_f_16;
     }
-    @name(".action_5") action action_11() {
-        hdr.pkt.field_i_signed_sat = hdr.pkt.field_i_signed_sat - (int<8>)hdr.pkt.field_j_8;
+    @name(".action_5") action action_5() {
+        hdr.pkt.field_i_signed_sat = hdr.pkt.field_i_signed_sat |-| (int<8>)hdr.pkt.field_j_8;
     }
-    @name(".table_0") table table_0 {
+    @name(".table_0") table table_1 {
         actions = {
-            action_6();
-            action_7();
-            action_8();
-            action_9();
-            action_10();
-            action_11();
+            action_0();
+            action_1();
+            action_2();
+            action_3();
+            action_4();
+            action_5();
             @defaultonly NoAction_0();
         }
         key = {
@@ -200,7 +202,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_0();
     }
     apply {
-        table_0.apply();
+        table_1.apply();
     }
 }
 

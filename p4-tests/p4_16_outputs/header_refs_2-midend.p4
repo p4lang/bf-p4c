@@ -25,25 +25,25 @@ parser p(packet_in b, out packet_t hdrs, inout user_metadata_t user, inout stand
 }
 
 control ingress(inout packet_t hdrs, inout user_metadata_t user, inout standard_metadata_t meta) {
-    @name("ingress.nop") action nop_0() {
+    @name("ingress.nop") action nop() {
     }
-    @name("ingress.set_port") action set_port_0(bit<9> port) {
+    @name("ingress.set_port") action set_port(bit<9> port) {
         meta.egress_spec = port;
     }
-    @name("ingress.t") table t {
+    @name("ingress.t") table t_0 {
         key = {
             meta.ingress_port: exact @name("meta.ingress_port") ;
             user.data.f1     : exact @name("user.data.f1") ;
             hdrs.data.f1     : exact @name("hdrs.data.f1") ;
         }
         actions = {
-            nop_0();
-            set_port_0();
+            nop();
+            set_port();
         }
-        default_action = set_port_0(9w1);
+        default_action = set_port(9w1);
     }
     apply {
-        t.apply();
+        t_0.apply();
     }
 }
 

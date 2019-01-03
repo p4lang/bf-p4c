@@ -170,21 +170,21 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_5() {
     }
-    @name(".action_0") action action_3() {
+    @name(".action_0") action action_0() {
         bypass_egress();
     }
-    @name(".action_0") action action_4() {
+    @name(".action_0") action action_1() {
         bypass_egress();
     }
-    @name(".action_1") action action_5() {
+    @name(".action_1") action action_2() {
         mark_to_drop();
     }
     @name(".action_2") action action_7() {
     }
-    @name(".table_0") table table_0 {
+    @name(".table_0") table table_3 {
         actions = {
-            action_3();
-            action_5();
+            action_0();
+            action_2();
             @defaultonly NoAction_0();
         }
         key = {
@@ -193,7 +193,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_0();
     }
-    @name(".table_1") table table_1 {
+    @name(".table_1") table table_4 {
         actions = {
             action_7();
             @defaultonly NoAction_4();
@@ -203,9 +203,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_4();
     }
-    @name(".table_2") table table_2 {
+    @name(".table_2") table table_5 {
         actions = {
-            action_4();
+            action_1();
             @defaultonly NoAction_5();
         }
         key = {
@@ -214,9 +214,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_5();
     }
     apply {
-        table_0.apply();
-        table_1.apply();
-        table_2.apply();
+        table_3.apply();
+        table_4.apply();
+        table_5.apply();
     }
 }
 

@@ -17,7 +17,7 @@ header my_hdr_t {
 
 struct headers_t {
     ethernet_t ethernet;
-    @pa_container_size("ingress", "my_hdr.f2", 16) 
+    @pa_container_size("ingress" , "my_hdr.f2" , 16) 
     my_hdr_t   my_hdr;
 }
 

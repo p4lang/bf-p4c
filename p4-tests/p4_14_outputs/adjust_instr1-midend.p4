@@ -42,29 +42,29 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_5() {
     }
-    @name(".adjust_first") action adjust_first_0() {
+    @name(".adjust_first") action adjust_first() {
         hdr.hdr.x1 = meta.offset_meta.x1;
         hdr.hdr.x2 = meta.offset_meta.x2;
     }
-    @name(".adjust_first_ad") action adjust_first_ad_0(bit<6> param1, bit<6> param2) {
+    @name(".adjust_first_ad") action adjust_first_ad(bit<6> param1, bit<6> param2) {
         hdr.hdr.x1 = param1;
         hdr.hdr.x2 = param2;
     }
-    @name(".adjust_second") action adjust_second_0() {
+    @name(".adjust_second") action adjust_second() {
         hdr.hdr.x3 = hdr.hdr.x1;
         hdr.hdr.x4 = hdr.hdr.x2;
     }
-    @name(".set_offset") action set_offset_0(bit<6> off_val1, bit<6> off_val2) {
+    @name(".set_offset") action set_offset(bit<6> off_val1, bit<6> off_val2) {
         meta.offset_meta.x1 = off_val1;
         meta.offset_meta.x2 = off_val2;
     }
-    @name(".setport") action setport_0(bit<9> port) {
+    @name(".setport") action setport(bit<9> port) {
         standard_metadata.egress_spec = port;
     }
-    @name(".adjust1") table adjust1 {
+    @name(".adjust1") table adjust1_0 {
         actions = {
-            adjust_first_0();
-            adjust_first_ad_0();
+            adjust_first();
+            adjust_first_ad();
             @defaultonly NoAction_0();
         }
         key = {
@@ -72,9 +72,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name(".adjust2") table adjust2 {
+    @name(".adjust2") table adjust2_0 {
         actions = {
-            adjust_second_0();
+            adjust_second();
             @defaultonly NoAction_4();
         }
         key = {
@@ -82,9 +82,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_4();
     }
-    @name(".offset") table offset {
+    @name(".offset") table offset_0 {
         actions = {
-            set_offset_0();
+            set_offset();
             @defaultonly NoAction_5();
         }
         key = {
@@ -92,17 +92,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_5();
     }
-    @name(".setting_port") table setting_port {
+    @name(".setting_port") table setting_port_0 {
         actions = {
-            setport_0();
+            setport();
         }
-        default_action = setport_0(9w1);
+        default_action = setport(9w1);
     }
     apply {
-        offset.apply();
-        adjust1.apply();
-        adjust2.apply();
-        setting_port.apply();
+        offset_0.apply();
+        adjust1_0.apply();
+        adjust2_0.apply();
+        setting_port_0.apply();
     }
 }
 

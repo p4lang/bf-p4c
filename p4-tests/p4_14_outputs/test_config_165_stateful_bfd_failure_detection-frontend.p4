@@ -193,41 +193,41 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    bit<8> tmp_0;
-    @name(".bfd_cnt_rx_alu") RegisterAction<bit<8>, bit<32>, bit<8>>(bfd_cnt) bfd_cnt_rx_alu = {
+    bit<8> tmp;
+    @name(".bfd_cnt_rx_alu") RegisterAction<bit<8>, bit<32>, bit<8>>(bfd_cnt) bfd_cnt_rx_alu_0 = {
         void apply(inout bit<8> value) {
-            bit<8> in_value;
+            bit<8> in_value_0;
             value = 8w0;
         }
     };
-    @name(".bfd_cnt_tx_alu") RegisterAction<bit<8>, bit<32>, bit<8>>(bfd_cnt) bfd_cnt_tx_alu = {
+    @name(".bfd_cnt_tx_alu") RegisterAction<bit<8>, bit<32>, bit<8>>(bfd_cnt) bfd_cnt_tx_alu_0 = {
         void apply(inout bit<8> value, out bit<8> rv) {
-            bit<8> alu_hi;
-            bit<8> in_value_2;
+            bit<8> alu_hi_0;
+            bit<8> in_value_1;
             rv = 8w0;
-            in_value_2 = value;
-            alu_hi = 8w1;
-            value = in_value_2 + 8w1;
-            if (in_value_2 > 8w3) 
-                rv = alu_hi;
+            in_value_1 = value;
+            alu_hi_0 = 8w1;
+            value = in_value_1 + 8w1;
+            if (in_value_1 > 8w3) 
+                rv = alu_hi_0;
         }
     };
-    @name(".bfd_rx") action bfd_rx_0(bit<32> idx) {
-        bfd_cnt_rx_alu.execute(idx);
+    @name(".bfd_rx") action bfd_rx(bit<32> idx) {
+        bfd_cnt_rx_alu_0.execute(idx);
     }
-    @name(".bfd_tx") action bfd_tx_0(bit<32> idx) {
-        tmp_0 = bfd_cnt_tx_alu.execute(idx);
-        meta.meta.bfd_timeout_detected = tmp_0;
+    @name(".bfd_tx") action bfd_tx(bit<32> idx) {
+        tmp = bfd_cnt_tx_alu_0.execute(idx);
+        meta.meta.bfd_timeout_detected = tmp;
     }
-    @name(".drop_me") action drop_me_0() {
+    @name(".drop_me") action drop_me() {
         mark_to_drop();
     }
-    @name(".on_miss") action on_miss_0() {
+    @name(".on_miss") action on_miss() {
     }
-    @name(".bfd") table bfd {
+    @name(".bfd") table bfd_0 {
         actions = {
-            bfd_rx_0();
-            bfd_tx_0();
+            bfd_rx();
+            bfd_tx();
             @defaultonly NoAction_0();
         }
         key = {
@@ -237,10 +237,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_0();
     }
-    @name(".check_needs") table check_needs {
+    @name(".check_needs") table check_needs_0 {
         actions = {
-            drop_me_0();
-            on_miss_0();
+            drop_me();
+            on_miss();
             @defaultonly NoAction_3();
         }
         key = {
@@ -249,8 +249,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_3();
     }
     apply {
-        bfd.apply();
-        check_needs.apply();
+        bfd_0.apply();
+        check_needs_0.apply();
     }
 }
 

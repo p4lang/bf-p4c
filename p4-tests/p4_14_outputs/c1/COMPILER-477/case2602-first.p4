@@ -824,7 +824,7 @@ control Eastover(inout headers hdr, inout metadata meta, inout standard_metadata
             bit<1> in_value;
             in_value = value;
             value = in_value;
-            rv = ~value;
+            rv = ~in_value;
         }
     };
     @name(".NewSite") action NewSite(bit<1> Rohwer) {
@@ -1207,7 +1207,7 @@ control Knierim(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Klawock.Ocilla           : exact @name("Klawock.Ocilla") ;
-            meta.Cannelton.Barnhill[31:16]: ternary @name("Cannelton.Barnhill[31:16]") ;
+            meta.Cannelton.Barnhill[31:16]: ternary @name("Cannelton.Barnhill") ;
             meta.Millhaven.Mankato        : ternary @name("Millhaven.Mankato") ;
             meta.Millhaven.Ferndale       : ternary @name("Millhaven.Ferndale") ;
             meta.Millhaven.Osseo          : ternary @name("Millhaven.Osseo") ;
@@ -1225,7 +1225,7 @@ control Knierim(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Klawock.Ocilla        : exact @name("Klawock.Ocilla") ;
-            meta.IttaBena.Devers[31:16]: ternary @name("IttaBena.Devers[31:16]") ;
+            meta.IttaBena.Devers[31:16]: ternary @name("IttaBena.Devers") ;
             meta.Millhaven.Mankato     : ternary @name("Millhaven.Mankato") ;
             meta.Millhaven.Ferndale    : ternary @name("Millhaven.Ferndale") ;
             meta.Millhaven.Osseo       : ternary @name("Millhaven.Osseo") ;
@@ -1438,7 +1438,7 @@ control McIntosh(inout headers hdr, inout metadata meta, inout standard_metadata
 
 control Montross(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Oxnard") action Oxnard() {
-        digest<Twinsburg>(32w0, { meta.Cherokee.Blueberry, meta.Millhaven.Crooks, meta.Millhaven.Neubert, meta.Millhaven.PellLake, meta.Millhaven.Shopville });
+        digest<Twinsburg>(32w0, {meta.Cherokee.Blueberry,meta.Millhaven.Crooks,meta.Millhaven.Neubert,meta.Millhaven.PellLake,meta.Millhaven.Shopville});
     }
     @name(".Lydia") table Lydia {
         actions = {
@@ -1633,7 +1633,7 @@ control Oshoto(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         key = {
             meta.GunnCity.Brinkman      : exact @name("GunnCity.Brinkman") ;
-            meta.IttaBena.Devers[127:64]: lpm @name("IttaBena.Devers[127:64]") ;
+            meta.IttaBena.Devers[127:64]: lpm @name("IttaBena.Devers") ;
         }
         size = 8192;
         default_action = NoAction();
@@ -1674,7 +1674,7 @@ control Oshoto(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         key = {
             meta.IttaBena.Nixon         : exact @name("IttaBena.Nixon") ;
-            meta.IttaBena.Devers[106:64]: lpm @name("IttaBena.Devers[106:64]") ;
+            meta.IttaBena.Devers[106:64]: lpm @name("IttaBena.Devers") ;
         }
         size = 65536;
         default_action = Wentworth();
@@ -1700,7 +1700,7 @@ control Oshoto(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         key = {
             meta.Cannelton.Suamico       : exact @name("Cannelton.Suamico") ;
-            meta.Cannelton.Barnhill[19:0]: lpm @name("Cannelton.Barnhill[19:0]") ;
+            meta.Cannelton.Barnhill[19:0]: lpm @name("Cannelton.Barnhill") ;
         }
         size = 131072;
         default_action = Wentworth();
@@ -1713,7 +1713,7 @@ control Oshoto(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         key = {
             meta.IttaBena.Hershey     : exact @name("IttaBena.Hershey") ;
-            meta.IttaBena.Devers[63:0]: lpm @name("IttaBena.Devers[63:0]") ;
+            meta.IttaBena.Devers[63:0]: lpm @name("IttaBena.Devers") ;
         }
         size = 16384;
         default_action = Wentworth();
@@ -1737,11 +1737,11 @@ control Oshoto(inout headers hdr, inout metadata meta, inout standard_metadata_t
                 switch (Lazear.apply().action_run) {
                     Wentworth: {
                         switch (Oreland.apply().action_run) {
-                            Wentworth: {
-                                Arpin.apply();
-                            }
                             WestLine: {
                                 Swanlake.apply();
+                            }
+                            Wentworth: {
+                                Arpin.apply();
                             }
                         }
 
@@ -1901,8 +1901,8 @@ control Thermal(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.eg_intr_md.egress_port[6:0]: exact @name("eg_intr_md.egress_port[6:0]") ;
-            hdr.eg_intr_md.egress_qid[2:0] : exact @name("eg_intr_md.egress_qid[2:0]") ;
+            hdr.eg_intr_md.egress_port[6:0]: exact @name("eg_intr_md.egress_port") ;
+            hdr.eg_intr_md.egress_qid[2:0] : exact @name("eg_intr_md.egress_qid") ;
         }
         size = 1024;
         counters = Crump;
@@ -2174,7 +2174,7 @@ control Tunis(inout headers hdr, inout metadata meta, inout standard_metadata_t 
 
 control Zemple(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".LaFayette") action LaFayette() {
-        digest<Verndale>(32w0, { meta.Cherokee.Blueberry, meta.Millhaven.PellLake, hdr.Molino.Albin, hdr.Molino.Assinippi, hdr.Denmark.Fannett });
+        digest<Verndale>(32w0, {meta.Cherokee.Blueberry,meta.Millhaven.PellLake,hdr.Molino.Albin,hdr.Molino.Assinippi,hdr.Denmark.Fannett});
     }
     @name(".Lynne") table Lynne {
         actions = {

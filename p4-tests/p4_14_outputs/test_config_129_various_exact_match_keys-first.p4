@@ -200,7 +200,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             hdr.pkt.field_a     : exact @name("pkt.field_a") ;
-            hdr.pkt.field_b[7:3]: exact @name("pkt.field_b[7:3]") ;
+            hdr.pkt.field_b[7:3]: exact @name("pkt.field_b") ;
             hdr.pkt.field_c     : exact @name("pkt.field_c") ;
             hdr.pkt.field_e     : exact @name("pkt.field_e") ;
             hdr.pkt.field_f     : exact @name("pkt.field_f") ;

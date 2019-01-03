@@ -167,11 +167,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    @name(".action_0") action action_2() {
+    @name(".action_0") action action_0() {
         hdr.pkt.field_a_32 = hdr.pkt.field_b_32 + hdr.pkt.field_c_32;
         hdr.pkt.field_j_8 = 8w3;
     }
-    @name(".action_0") action action_3() {
+    @name(".action_0") action action_1() {
         hdr.pkt.field_a_32 = hdr.pkt.field_b_32 + hdr.pkt.field_c_32;
         hdr.pkt.field_j_8 = 8w3;
     }
@@ -183,15 +183,15 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.pkt.field_a_32 = hdr.pkt.field_b_32 - hdr.pkt.field_c_32;
         hdr.pkt.field_e_16 = hdr.pkt.field_e_16 << 5;
     }
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing() {
     }
     @name(".do_nothing") action do_nothing_2() {
     }
-    @name(".table_0") table table_0 {
+    @name(".table_0") table table_2 {
         actions = {
-            action_2();
+            action_0();
             action_6();
-            do_nothing_0();
+            do_nothing();
             @defaultonly NoAction_0();
         }
         key = {
@@ -200,9 +200,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_0();
     }
-    @name(".table_1") table table_1 {
+    @name(".table_1") table table_3 {
         actions = {
-            action_3();
+            action_1();
             action_7();
             do_nothing_2();
             @defaultonly NoAction_3();
@@ -215,9 +215,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (hdr.pkt.field_i_8 == 8w1) 
-            table_0.apply();
+            table_2.apply();
         else 
-            table_1.apply();
+            table_3.apply();
     }
 }
 

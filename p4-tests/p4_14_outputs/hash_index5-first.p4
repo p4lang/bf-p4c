@@ -163,9 +163,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".test1") table test1 {
         actions = {
             countb2();
-            @defaultonly NoAction();
         }
-        default_action = NoAction();
+        default_action = countb2(val = 8w0);
     }
     apply {
         test1.apply();

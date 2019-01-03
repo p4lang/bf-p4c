@@ -637,7 +637,7 @@ control Dresser(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Dialville.ElMirage       : exact;
-            meta.Dialville.Youngtown[19:0]: lpm;
+            meta.Dialville.Youngtown[19:0]: lpm @name("Dialville.Youngtown") ;
         }
         size = 131072;
         default_action = Pawtucket();
@@ -675,7 +675,7 @@ control Dresser(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Arroyo.Merritt         : exact;
-            meta.Arroyo.IowaCity[106:64]: lpm;
+            meta.Arroyo.IowaCity[106:64]: lpm @name("Arroyo.IowaCity") ;
         }
         size = 65536;
         default_action = Pawtucket();
@@ -688,7 +688,7 @@ control Dresser(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Arroyo.Jenison       : exact;
-            meta.Arroyo.IowaCity[63:0]: lpm;
+            meta.Arroyo.IowaCity[63:0]: lpm @name("Arroyo.IowaCity") ;
         }
         size = 16384;
         default_action = Pawtucket();
@@ -711,7 +711,7 @@ control Dresser(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Ahuimanu.Halltown      : exact;
-            meta.Arroyo.IowaCity[127:64]: lpm;
+            meta.Arroyo.IowaCity[127:64]: lpm @name("Arroyo.IowaCity") ;
         }
         size = 8192;
     }
@@ -1355,7 +1355,7 @@ control Sitka(inout headers hdr, inout metadata meta, inout standard_metadata_t 
             bit<1> in_value;
             in_value = value;
             value = in_value;
-            rv = ~value;
+            rv = ~in_value;
         }
     };
     @name(".Theba") RegisterAction<bit<1>, bit<32>, bit<1>>(Tryon) Theba = {

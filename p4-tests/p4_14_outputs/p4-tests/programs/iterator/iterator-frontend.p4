@@ -190,25 +190,25 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_17() {
     }
-    @name(".ha_cntr") direct_counter(CounterType.packets) ha_cntr;
-    @name(".cntr") @min_width(32) counter(32w1000, CounterType.packets_and_bytes) cntr;
-    @name(".r0_alu") DirectRegisterAction<bit<32>, bit<32>>(r0) r0_alu = {
+    @name(".ha_cntr") direct_counter(CounterType.packets) ha_cntr_0;
+    @name(".cntr") @min_width(32) counter(32w1000, CounterType.packets_and_bytes) cntr_0;
+    @name(".r0_alu") DirectRegisterAction<bit<32>, bit<32>>(r0) r0_alu_0 = {
         void apply(inout bit<32> value) {
-            bit<32> in_value;
-            in_value = value;
-            value = in_value + 32w1;
+            bit<32> in_value_0;
+            in_value_0 = value;
+            value = in_value_0 + 32w1;
         }
     };
-    @name(".n") action n_1() {
+    @name(".n") action n() {
     }
-    @name(".n") action n_2() {
+    @name(".n") action n_0() {
     }
     @name(".n") action n_5() {
     }
-    @name(".set_dmac") action set_dmac_0(bit<48> d) {
+    @name(".set_dmac") action set_dmac(bit<48> d) {
         hdr.ethernet.dstAddr = d;
     }
-    @name(".a") action a_0(bit<9> x) {
+    @name(".a") action a(bit<9> x) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = x;
     }
     @name(".a") action a_4(bit<9> x) {
@@ -220,85 +220,85 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".a") action a_6(bit<9> x) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = x;
     }
-    @name(".b") action b_0(bit<9> x, bit<32> i) {
+    @name(".b") action b_1(bit<9> x, bit<32> i) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = x;
-        cntr.count(i);
+        cntr_0.count(i);
     }
     @name(".b") action b_5(bit<9> x, bit<32> i) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = x;
-        cntr.count(i);
+        cntr_0.count(i);
     }
     @name(".b") action b_6(bit<9> x, bit<32> i) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = x;
-        cntr.count(i);
+        cntr_0.count(i);
     }
     @name(".b") action b_7(bit<9> x, bit<32> i) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = x;
-        cntr.count(i);
+        cntr_0.count(i);
     }
-    @name(".c") action c_0(bit<9> x) {
+    @name(".c") action c(bit<9> x) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = x;
-        cntr.count(32w1);
+        cntr_0.count(32w1);
     }
     @name(".c") action c_4(bit<9> x) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = x;
-        cntr.count(32w1);
+        cntr_0.count(32w1);
     }
     @name(".c") action c_5(bit<9> x) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = x;
-        cntr.count(32w1);
+        cntr_0.count(32w1);
     }
     @name(".c") action c_6(bit<9> x) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = x;
-        cntr.count(32w1);
+        cntr_0.count(32w1);
     }
-    @name(".d") action d_0(bit<128> x, bit<20> y, bit<32> i) {
+    @name(".d") action d_1(bit<128> x, bit<20> y, bit<32> i) {
         hdr.ipv6.srcAddr = x;
         hdr.ipv6.flowLabel = y;
-        cntr.count(i);
+        cntr_0.count(i);
     }
     @name(".d") action d_5(bit<128> x, bit<20> y, bit<32> i) {
         hdr.ipv6.srcAddr = x;
         hdr.ipv6.flowLabel = y;
-        cntr.count(i);
+        cntr_0.count(i);
     }
     @name(".d") action d_6(bit<128> x, bit<20> y, bit<32> i) {
         hdr.ipv6.srcAddr = x;
         hdr.ipv6.flowLabel = y;
-        cntr.count(i);
+        cntr_0.count(i);
     }
     @name(".d") action d_7(bit<128> x, bit<20> y, bit<32> i) {
         hdr.ipv6.srcAddr = x;
         hdr.ipv6.flowLabel = y;
-        cntr.count(i);
+        cntr_0.count(i);
     }
-    @name(".e") action e_0() {
-        cntr.count(32w0);
+    @name(".e") action e() {
+        cntr_0.count(32w0);
     }
     @name(".e") action e_4() {
-        cntr.count(32w0);
+        cntr_0.count(32w0);
     }
     @name(".e") action e_5() {
-        cntr.count(32w0);
+        cntr_0.count(32w0);
     }
     @name(".e") action e_6() {
-        cntr.count(32w0);
+        cntr_0.count(32w0);
     }
-    @name(".N") action N_0(bit<16> x) {
+    @name(".N") action N(bit<16> x) {
         hdr.ig_intr_md_for_tm.rid = x;
     }
-    @name(".r0_inc") action r0_inc_0() {
-        r0_alu.execute();
+    @name(".r0_inc") action r0_inc() {
+        r0_alu_0.execute();
     }
-    @name(".r0_inc_duplicate") action r0_inc_duplicate_0() {
-        r0_alu.execute();
+    @name(".r0_inc_duplicate") action r0_inc_duplicate() {
+        r0_alu_0.execute();
     }
-    @name(".set_smac") action set_smac_0(bit<48> s) {
+    @name(".set_smac") action set_smac(bit<48> s) {
         hdr.ethernet.srcAddr = s;
     }
-    @alpm(1) @name(".alpm") table alpm {
+    @alpm(1) @name(".alpm") table alpm_0 {
         actions = {
-            n_1();
+            n();
             @defaultonly NoAction_0();
         }
         key = {
@@ -306,9 +306,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name(".e_keyless") table e_keyless {
+    @name(".e_keyless") table e_keyless_0 {
         actions = {
-            set_dmac_0();
+            set_dmac();
             @defaultonly NoAction_10();
         }
         key = {
@@ -317,9 +317,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 10;
         default_action = NoAction_10();
     }
-    @name(".exm") table exm {
+    @name(".exm") table exm_0 {
         actions = {
-            n_2();
+            n_0();
             @defaultonly NoAction_11();
         }
         key = {
@@ -327,13 +327,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_11();
     }
-    @name(".exm_ap") table exm_ap {
+    @name(".exm_ap") table exm_ap_0 {
         actions = {
-            a_0();
-            b_0();
-            c_0();
-            d_0();
-            e_0();
+            a();
+            b_1();
+            c();
+            d_1();
+            e();
             @defaultonly NoAction_12();
         }
         key = {
@@ -344,7 +344,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         implementation = ap;
         default_action = NoAction_12();
     }
-    @name(".exm_sel") table exm_sel {
+    @name(".exm_sel") table exm_sel_0 {
         actions = {
             a_4();
             b_5();
@@ -364,9 +364,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_13();
     }
     @name(".n") action n_6() {
-        ha_cntr.count();
+        ha_cntr_0.count();
     }
-    @use_hash_action(1) @name(".ha") table ha {
+    @use_hash_action(1) @name(".ha") table ha_0 {
         actions = {
             n_6();
         }
@@ -375,29 +375,29 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 512;
         default_action = n_6();
-        counters = ha_cntr;
+        counters = ha_cntr_0;
     }
-    @command_line("--no-dead-code-elimination") @name(".p0") table p0 {
+    @command_line("--no-dead-code-elimination") @name(".p0") table p0_0 {
         actions = {
-            N_0();
+            N();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 288;
-        default_action = N_0(16w0);
+        default_action = N(16w0);
     }
-    @name(".r") table r {
+    @name(".r") table r_0 {
         actions = {
-            r0_inc_0();
-            r0_inc_duplicate_0();
+            r0_inc();
+            r0_inc_duplicate();
         }
         size = 1;
-        default_action = r0_inc_0();
+        default_action = r0_inc();
     }
-    @name(".t_keyless") table t_keyless {
+    @name(".t_keyless") table t_keyless_0 {
         actions = {
-            set_smac_0();
+            set_smac();
             @defaultonly NoAction_14();
         }
         key = {
@@ -406,7 +406,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 10;
         default_action = NoAction_14();
     }
-    @name(".tcam") table tcam {
+    @name(".tcam") table tcam_0 {
         actions = {
             n_5();
             @defaultonly NoAction_15();
@@ -416,7 +416,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_15();
     }
-    @name(".tcam_ap") table tcam_ap {
+    @name(".tcam_ap") table tcam_ap_0 {
         actions = {
             a_5();
             b_6();
@@ -433,7 +433,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         implementation = ap;
         default_action = NoAction_16();
     }
-    @name(".tcam_sel") table tcam_sel {
+    @name(".tcam_sel") table tcam_sel_0 {
         actions = {
             a_6();
             b_7();
@@ -454,25 +454,25 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (1w0 == hdr.ig_intr_md.resubmit_flag) 
-            p0.apply();
-        exm.apply();
-        tcam.apply();
-        ha.apply();
-        alpm.apply();
+            p0_0.apply();
+        exm_0.apply();
+        tcam_0.apply();
+        ha_0.apply();
+        alpm_0.apply();
         if (hdr.ig_intr_md.ingress_port == 9w0) 
-            exm_sel.apply();
+            exm_sel_0.apply();
         else 
             if (hdr.ig_intr_md.ingress_port == 9w1) 
-                tcam_sel.apply();
+                tcam_sel_0.apply();
             else 
                 if (hdr.ig_intr_md.ingress_port == 9w2) 
-                    exm_ap.apply();
+                    exm_ap_0.apply();
                 else 
                     if (hdr.ig_intr_md.ingress_port == 9w3) 
-                        tcam_ap.apply();
-        r.apply();
-        e_keyless.apply();
-        t_keyless.apply();
+                        tcam_ap_0.apply();
+        r_0.apply();
+        e_keyless_0.apply();
+        t_keyless_0.apply();
     }
 }
 

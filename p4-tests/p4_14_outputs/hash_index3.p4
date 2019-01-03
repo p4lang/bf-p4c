@@ -170,6 +170,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.b1: exact;
         }
         size = 256;
+        default_action = setf1(val = 0);
     }
     @name(".test2") table test2 {
         actions = {

@@ -658,7 +658,7 @@ control ElMango(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Ellicott.Pecos         : exact @name("Ellicott.Pecos") ;
-            meta.Broadford.Range[127:64]: lpm @name("Broadford.Range[127:64]") ;
+            meta.Broadford.Range[127:64]: lpm @name("Broadford.Range") ;
         }
         size = 8192;
         default_action = NoAction();
@@ -671,7 +671,7 @@ control ElMango(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Sanatoga.Berville       : exact @name("Sanatoga.Berville") ;
-            meta.Sanatoga.Atlasburg[19:0]: lpm @name("Sanatoga.Atlasburg[19:0]") ;
+            meta.Sanatoga.Atlasburg[19:0]: lpm @name("Sanatoga.Atlasburg") ;
         }
         size = 131072;
         default_action = DosPalos();
@@ -712,7 +712,7 @@ control ElMango(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Broadford.Osterdock    : exact @name("Broadford.Osterdock") ;
-            meta.Broadford.Range[106:64]: lpm @name("Broadford.Range[106:64]") ;
+            meta.Broadford.Range[106:64]: lpm @name("Broadford.Range") ;
         }
         size = 65536;
         default_action = DosPalos();
@@ -753,7 +753,7 @@ control ElMango(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Broadford.Twinsburg  : exact @name("Broadford.Twinsburg") ;
-            meta.Broadford.Range[63:0]: lpm @name("Broadford.Range[63:0]") ;
+            meta.Broadford.Range[63:0]: lpm @name("Broadford.Range") ;
         }
         size = 16384;
         default_action = DosPalos();
@@ -1052,7 +1052,7 @@ control Gibbstown(inout headers hdr, inout metadata meta, inout standard_metadat
 
 control Johnsburg(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Ottertail") action Ottertail() {
-        digest<Blakeslee>(32w0, { meta.Denby.Angwin, meta.Goodlett.DewyRose, hdr.Wailuku.Paoli, hdr.Wailuku.Shelbiana, hdr.Valmont.Shirley });
+        digest<Blakeslee>(32w0, {meta.Denby.Angwin,meta.Goodlett.DewyRose,hdr.Wailuku.Paoli,hdr.Wailuku.Shelbiana,hdr.Valmont.Shirley});
     }
     @name(".Bondad") table Bondad {
         actions = {
@@ -1309,7 +1309,7 @@ control Parnell(inout headers hdr, inout metadata meta, inout standard_metadata_
             bit<1> in_value;
             in_value = value;
             value = in_value;
-            rv = ~value;
+            rv = ~in_value;
         }
     };
     @name(".Tocito") action Tocito(bit<1> Astor) {
@@ -1700,6 +1700,10 @@ control Rankin(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     apply {
         switch (Pembine.apply().action_run) {
+            Manville: {
+                Gibson.apply();
+                Langdon.apply();
+            }
             Ballville: {
                 if (meta.Wolsey.Farthing == 1w1) 
                     Othello.apply();
@@ -1712,10 +1716,6 @@ control Rankin(inout headers hdr, inout metadata meta, inout standard_metadata_t
 
                 else 
                     Phelps.apply();
-            }
-            Manville: {
-                Gibson.apply();
-                Langdon.apply();
             }
         }
 
@@ -1886,7 +1886,7 @@ control Stehekin(inout headers hdr, inout metadata meta, inout standard_metadata
 
 control Trooper(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Kaeleku") action Kaeleku() {
-        digest<Palco>(32w0, { meta.Denby.Angwin, meta.Goodlett.Paradis, meta.Goodlett.Blitchton, meta.Goodlett.DewyRose, meta.Goodlett.Blossom });
+        digest<Palco>(32w0, {meta.Denby.Angwin,meta.Goodlett.Paradis,meta.Goodlett.Blitchton,meta.Goodlett.DewyRose,meta.Goodlett.Blossom});
     }
     @name(".Kaufman") table Kaufman {
         actions = {

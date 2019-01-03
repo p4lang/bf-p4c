@@ -32,27 +32,27 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    @name(".setport") action setport_0(bit<9> port) {
+    @name(".setport") action setport(bit<9> port) {
         standard_metadata.egress_spec = port;
     }
-    @name(".action_0") action action_3(bit<32> word) {
+    @name(".action_0") action action_0(bit<32> word) {
         hdr.pkt.c = word | hdr.pkt.c;
         hdr.pkt.d = 8w0;
         hdr.pkt.e = 16w0;
     }
-    @name(".action_1") action action_4(bit<16> halfword) {
+    @name(".action_1") action action_1(bit<16> halfword) {
         hdr.pkt.e = hdr.pkt.e | halfword;
         hdr.pkt.c = 32w0;
         hdr.pkt.d = 8w0;
     }
-    @name(".action_2") action action_5(bit<8> byte) {
+    @name(".action_2") action action_2(bit<8> byte) {
         hdr.pkt.d = hdr.pkt.d + byte;
         hdr.pkt.c = 32w0;
         hdr.pkt.e = 16w0;
     }
-    @name(".setting_port") table setting_port {
+    @name(".setting_port") table setting_port_0 {
         actions = {
-            setport_0();
+            setport();
             @defaultonly NoAction_0();
         }
         key = {
@@ -60,11 +60,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name(".table_0") table table_0 {
+    @name(".table_0") table table_1 {
         actions = {
-            action_3();
-            action_4();
-            action_5();
+            action_0();
+            action_1();
+            action_2();
             @defaultonly NoAction_3();
         }
         key = {
@@ -74,8 +74,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_3();
     }
     apply {
-        table_0.apply();
-        setting_port.apply();
+        table_1.apply();
+        setting_port_0.apply();
     }
 }
 

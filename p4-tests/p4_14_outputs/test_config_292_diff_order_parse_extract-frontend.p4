@@ -152,11 +152,11 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<8> tmp_0;
+    bit<8> tmp;
     @name(".p_s0") state p_s0 {
         packet.extract<single_word_t>(hdr.w0);
-        tmp_0 = packet.lookahead<bit<8>>();
-        transition select(tmp_0[7:0]) {
+        tmp = packet.lookahead<bit<8>>();
+        transition select(tmp[7:0]) {
             8w0: p_s1a;
             default: p_s1b;
         }
@@ -183,15 +183,15 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing() {
     }
-    @name(".set_p") action set_p_0(bit<9> p) {
+    @name(".set_p") action set_p(bit<9> p) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = p;
     }
-    @name(".t1") table t1 {
+    @name(".t1") table t1_0 {
         actions = {
-            do_nothing_0();
-            set_p_0();
+            do_nothing();
+            set_p();
             @defaultonly NoAction_0();
         }
         key = {
@@ -200,7 +200,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_0();
     }
     apply {
-        t1.apply();
+        t1_0.apply();
     }
 }
 

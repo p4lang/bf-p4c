@@ -165,13 +165,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @use_hash_action(1) @name(".test1") table test1 {
         actions = {
             setf1();
-            @defaultonly NoAction();
         }
         key = {
             hdr.data.b1: exact @name("data.b1") ;
         }
         size = 256;
-        default_action = NoAction();
+        default_action = setf1(val = 32w0);
     }
     @name(".test2") table test2 {
         actions = {

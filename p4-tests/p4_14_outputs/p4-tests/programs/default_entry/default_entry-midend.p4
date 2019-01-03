@@ -277,7 +277,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 #include <tofino/p4_14_prim.p4>
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<8> tmp_1;
+    bit<8> tmp;
     @name(".NoAction") action NoAction_0() {
     }
     @name(".NoAction") action NoAction_10() {
@@ -296,24 +296,24 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_17() {
     }
-    @name(".CounterA") counter(32w1024, CounterType.packets) CounterA;
-    @name(".keyless_cntr") counter(32w512, CounterType.packets) keyless_cntr;
-    @name(".meter_1") direct_meter<bit<8>>(MeterType.bytes) meter_1;
-    @meter_pre_color_aware_per_flow_enable(1) @name(".meter_2") meter(32w500, MeterType.bytes) meter_2;
-    @initial_register_lo_value(1) @name(".r_alu") RegisterAction<bit<32>, bit<32>, bit<32>>(keyless_reg) r_alu = {
+    @name(".CounterA") counter(32w1024, CounterType.packets) CounterA_0;
+    @name(".keyless_cntr") counter(32w512, CounterType.packets) keyless_cntr_0;
+    @name(".meter_1") direct_meter<bit<8>>(MeterType.bytes) meter_0;
+    @meter_pre_color_aware_per_flow_enable(1) @name(".meter_2") meter(32w500, MeterType.bytes) meter_3;
+    @initial_register_lo_value(1) @name(".r_alu") RegisterAction<bit<32>, bit<32>, bit<32>>(keyless_reg) r_alu_0 = {
         void apply(inout bit<32> value) {
             value = value + 32w5;
         }
     };
-    @name("._CounterAAction1") action _CounterAAction1_0(bit<32> idx) {
-        CounterA.count(idx);
+    @name("._CounterAAction1") action _CounterAAction1(bit<32> idx) {
+        CounterA_0.count(idx);
         hdr.ig_intr_md_for_tm.ucast_egress_port = 9w3;
     }
-    @name("._CounterAAction2") action _CounterAAction2_0() {
-        CounterA.count(32w37);
+    @name("._CounterAAction2") action _CounterAAction2() {
+        CounterA_0.count(32w37);
         hdr.ig_intr_md_for_tm.ucast_egress_port = 9w3;
     }
-    @name(".act_1") action act(bit<12> value_0, bit<3> value_1, bit<8> value_2) {
+    @name(".act_1") action act_0(bit<12> value_0, bit<3> value_1, bit<8> value_2) {
         hdr.vlan_tag.vlan_id = value_0;
         hdr.vlan_tag.pri = value_1;
         hdr.ipv4.ttl = value_2;
@@ -323,15 +323,15 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.vlan_tag.pri = value_1;
         hdr.ipv4.ttl = value_2;
     }
-    @name(".set_egr") action set_egr_0(bit<9> egress_spec) {
+    @name(".set_egr") action set_egr(bit<9> egress_spec) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_spec;
     }
     @name(".set_egr") action set_egr_2(bit<9> egress_spec) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_spec;
     }
-    @name(".nop") action nop_1() {
+    @name(".nop") action nop() {
     }
-    @name(".nop") action nop_2() {
+    @name(".nop") action nop_0() {
     }
     @name(".nop") action nop_14() {
     }
@@ -353,49 +353,49 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".nop") action nop_23() {
     }
-    @name(".custom_action_3") action custom_action(bit<9> egress_port, bit<48> dstAddr, bit<32> dstIp) {
+    @name(".custom_action_3") action custom_action_1(bit<9> egress_port, bit<48> dstAddr, bit<32> dstIp) {
         hdr.ipv4.dstAddr = dstIp;
         hdr.ethernet.dstAddr = dstAddr;
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
         hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
     }
-    @name(".egress_port") action egress_port_0(bit<9> egress_port) {
+    @name(".egress_port") action egress_port_1(bit<9> egress_port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
     }
     @name(".egress_port") action egress_port_3(bit<9> egress_port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
     }
-    @name(".nhop_set") action nhop_set_0(bit<9> port) {
+    @name(".nhop_set") action nhop_set(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".set_ipv4_dst") action set_ipv4_dst_0(bit<32> x) {
+    @name(".set_ipv4_dst") action set_ipv4_dst(bit<32> x) {
         hdr.ipv4.dstAddr = x;
     }
     @name(".set_ipv4_dst") action set_ipv4_dst_2(bit<32> x) {
         hdr.ipv4.dstAddr = x;
     }
-    @name(".keyless_counts") action keyless_counts_0(bit<32> stat_idx, bit<32> stful_idx) {
-        keyless_cntr.count(stat_idx);
-        r_alu.execute(stful_idx);
+    @name(".keyless_counts") action keyless_counts(bit<32> stat_idx, bit<32> stful_idx) {
+        keyless_cntr_0.count(stat_idx);
+        r_alu_0.execute(stful_idx);
     }
-    @name(".keyless_action") action keyless_action_0(bit<12> value_0, bit<3> value_1, bit<8> value_2, bit<9> value_3) {
+    @name(".keyless_action") action keyless_action(bit<12> value_0, bit<3> value_1, bit<8> value_2, bit<9> value_3) {
         hdr.vlan_tag.vlan_id = value_0;
         hdr.vlan_tag.pri = value_1;
         hdr.ipv4.ttl = value_2;
         hdr.ig_intr_md_for_tm.ucast_egress_port = value_3;
     }
-    @name(".meter_action_color_aware") action meter_action_color_aware_0(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac, bit<32> idx) {
+    @name(".meter_action_color_aware") action meter_action_color_aware(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac, bit<32> idx) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
         hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
-        execute_meter_with_color<meter, bit<32>, bit<8>>(meter_2, idx, tmp_1, hdr.ipv4.diffserv);
-        hdr.ipv4.diffserv = tmp_1;
+        execute_meter_with_color<meter, bit<32>, bit<8>>(meter_3, idx, tmp, hdr.ipv4.diffserv);
+        hdr.ipv4.diffserv = tmp;
     }
-    @name(".keyless_set_egr") action keyless_set_egr_0() {
+    @name(".keyless_set_egr") action keyless_set_egr() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = 9w0;
     }
-    @name(".prepare_keyless") action prepare_keyless_0(bit<9> egr_port) {
+    @name(".prepare_keyless") action prepare_keyless(bit<9> egr_port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egr_port;
         hdr.tcp.srcPort = 16w9006;
     }
@@ -411,13 +411,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ig_intr_md_for_tm.ucast_egress_port = egr_port;
         hdr.tcp.srcPort = 16w9006;
     }
-    @name(".custom_action_2") action custom_action_0(bit<8> ttl) {
+    @name(".custom_action_2") action custom_action_2(bit<8> ttl) {
         hdr.ipv4.ttl = ttl;
     }
-    @name("._CounterATable") table _CounterATable {
+    @name("._CounterATable") table _CounterATable_0 {
         actions = {
-            _CounterAAction1_0();
-            _CounterAAction2_0();
+            _CounterAAction1();
+            _CounterAAction2();
             @defaultonly NoAction_0();
         }
         key = {
@@ -426,11 +426,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_0();
     }
-    @name(".exm_dir") table exm_dir {
+    @name(".exm_dir") table exm_dir_0 {
         actions = {
-            act();
-            set_egr_0();
-            nop_1();
+            act_0();
+            set_egr();
+            nop();
             @defaultonly NoAction_10();
         }
         key = {
@@ -438,11 +438,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_10();
     }
-    @name(".exm_indr") table exm_indr {
+    @name(".exm_indr") table exm_indr_0 {
         actions = {
-            nop_2();
-            custom_action();
-            egress_port_0();
+            nop_0();
+            custom_action_1();
+            egress_port_1();
             @defaultonly NoAction_11();
         }
         key = {
@@ -454,9 +454,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         implementation = custom_action_3_profile;
         default_action = NoAction_11();
     }
-    @name(".ipv4_routing_select") table ipv4_routing_select {
+    @name(".ipv4_routing_select") table ipv4_routing_select_0 {
         actions = {
-            nhop_set_0();
+            nhop_set();
             nop_14();
             @defaultonly NoAction_12();
         }
@@ -471,21 +471,21 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         implementation = ecmp_action_profile;
         default_action = NoAction_12();
     }
-    @name(".keyless_direct") table keyless_direct {
+    @name(".keyless_direct") table keyless_direct_0 {
         actions = {
-            set_ipv4_dst_0();
+            set_ipv4_dst();
             nop_15();
         }
-        default_action = set_ipv4_dst_0(32w127);
+        default_action = set_ipv4_dst(32w127);
     }
-    @name(".keyless_direct_2") table keyless_direct_2 {
+    @name(".keyless_direct_2") table keyless_direct_1 {
         actions = {
             set_ipv4_dst_2();
             @defaultonly nop_16();
         }
         default_action = nop_16();
     }
-    @name(".keyless_indirect") table keyless_indirect {
+    @name(".keyless_indirect") table keyless_indirect_0 {
         actions = {
             egress_port_3();
             @defaultonly NoAction_13();
@@ -493,22 +493,22 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         implementation = indirect_action_profile;
         default_action = NoAction_13();
     }
-    @name(".keyless_indirect_resources") table keyless_indirect_resources {
+    @name(".keyless_indirect_resources") table keyless_indirect_resources_0 {
         actions = {
-            keyless_counts_0();
+            keyless_counts();
         }
-        default_action = keyless_counts_0(32w1, 32w2);
+        default_action = keyless_counts(32w1, 32w2);
     }
-    @name(".keyless_table") table keyless_table {
+    @name(".keyless_table") table keyless_table_0 {
         actions = {
-            keyless_action_0();
+            keyless_action();
         }
-        default_action = keyless_action_0(12w1901, 3w3, 8w32, 9w56);
+        default_action = keyless_action(12w1901, 3w3, 8w32, 9w56);
     }
-    @name(".meter_tbl_color_aware_indirect") table meter_tbl_color_aware_indirect {
+    @name(".meter_tbl_color_aware_indirect") table meter_tbl_color_aware_indirect_0 {
         actions = {
             nop_17();
-            meter_action_color_aware_0();
+            meter_action_color_aware();
             @defaultonly NoAction_14();
         }
         key = {
@@ -518,45 +518,45 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_14();
     }
     @name(".nop") action nop_24() {
-        meter_1.read(hdr.ipv4.diffserv);
+        meter_0.read(hdr.ipv4.diffserv);
     }
-    @name(".next_hop_ipv4") action next_hop_ipv4_0(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
-        meter_1.read(hdr.ipv4.diffserv);
+    @name(".next_hop_ipv4") action next_hop_ipv4(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
+        meter_0.read(hdr.ipv4.diffserv);
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
         hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
     }
-    @name(".meter_tbl_direct") table meter_tbl_direct {
+    @name(".meter_tbl_direct") table meter_tbl_direct_0 {
         actions = {
             nop_24();
-            next_hop_ipv4_0();
+            next_hop_ipv4();
             @defaultonly NoAction_15();
         }
         key = {
             hdr.ipv4.dstAddr: exact @name("ipv4.dstAddr") ;
             hdr.ipv4.srcAddr: exact @name("ipv4.srcAddr") ;
         }
-        meters = meter_1;
+        meters = meter_0;
         default_action = NoAction_15();
     }
-    @name(".pure_keyless") table pure_keyless {
+    @name(".pure_keyless") table pure_keyless_0 {
         actions = {
-            keyless_set_egr_0();
+            keyless_set_egr();
         }
-        default_action = keyless_set_egr_0();
+        default_action = keyless_set_egr();
     }
-    @alpm(1) @name(".set_egr_alpm") table set_egr_alpm {
+    @alpm(1) @name(".set_egr_alpm") table set_egr_alpm_0 {
         actions = {
-            prepare_keyless_0();
+            prepare_keyless();
             nop_18();
         }
         key = {
             hdr.ipv4.dstAddr: lpm @name("ipv4.dstAddr") ;
         }
-        default_action = prepare_keyless_0(9w2);
+        default_action = prepare_keyless(9w2);
     }
-    @clpm_prefix("ipv4.dstAddr") @clpm_prefix_length(1, 7, 512) @clpm_prefix_length(8, 1024) @clpm_prefix_length(9, 32, 512) @name(".set_egr_clpm") table set_egr_clpm {
+    @clpm_prefix("ipv4.dstAddr") @clpm_prefix_length(1, 7, 512) @clpm_prefix_length(8, 1024) @clpm_prefix_length(9, 32, 512) @name(".set_egr_clpm") table set_egr_clpm_0 {
         actions = {
             prepare_keyless_4();
             nop_19();
@@ -567,7 +567,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 2048;
         default_action = prepare_keyless_4(9w3);
     }
-    @name(".set_egr_exm") table set_egr_exm {
+    @name(".set_egr_exm") table set_egr_exm_0 {
         actions = {
             prepare_keyless_5();
             nop_20();
@@ -575,9 +575,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         key = {
             hdr.ipv4.dstAddr: exact @name("ipv4.dstAddr") ;
         }
-        default_action = prepare_keyless_5();
+        default_action = prepare_keyless_5(egr_port = 9w0);
     }
-    @name(".set_egr_tcam") table set_egr_tcam {
+    @name(".set_egr_tcam") table set_egr_tcam_0 {
         actions = {
             prepare_keyless_6();
             nop_21();
@@ -587,7 +587,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = prepare_keyless_6(9w1);
     }
-    @name(".tcam_dir") table tcam_dir {
+    @name(".tcam_dir") table tcam_dir_0 {
         actions = {
             act_2();
             set_egr_2();
@@ -600,10 +600,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_16();
     }
-    @name(".tcam_indr") table tcam_indr {
+    @name(".tcam_indr") table tcam_indr_0 {
         actions = {
             nop_23();
-            custom_action_0();
+            custom_action_2();
             @defaultonly NoAction_17();
         }
         key = {
@@ -617,36 +617,36 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (hdr.tcp.srcPort == 16w9001) {
-            keyless_table.apply();
-            exm_dir.apply();
-            exm_indr.apply();
-            _CounterATable.apply();
-            meter_tbl_direct.apply();
-            meter_tbl_color_aware_indirect.apply();
-            ipv4_routing_select.apply();
-            tcam_dir.apply();
-            tcam_indr.apply();
+            keyless_table_0.apply();
+            exm_dir_0.apply();
+            exm_indr_0.apply();
+            _CounterATable_0.apply();
+            meter_tbl_direct_0.apply();
+            meter_tbl_color_aware_indirect_0.apply();
+            ipv4_routing_select_0.apply();
+            tcam_dir_0.apply();
+            tcam_indr_0.apply();
             if (hdr.ig_intr_md_for_tm.ucast_egress_port != 9w0) 
-                pure_keyless.apply();
+                pure_keyless_0.apply();
         }
         else 
             if (hdr.tcp.srcPort == 16w9002) 
-                set_egr_exm.apply();
+                set_egr_exm_0.apply();
             else 
                 if (hdr.tcp.srcPort == 16w9003) 
-                    set_egr_tcam.apply();
+                    set_egr_tcam_0.apply();
                 else 
                     if (hdr.tcp.srcPort == 16w9004) 
-                        set_egr_alpm.apply();
+                        set_egr_alpm_0.apply();
                     else 
                         if (hdr.tcp.srcPort == 16w9005) 
-                            set_egr_clpm.apply();
+                            set_egr_clpm_0.apply();
         if (hdr.tcp.srcPort == 16w9006) {
-            keyless_direct.apply();
-            keyless_direct_2.apply();
-            keyless_indirect_resources.apply();
+            keyless_direct_0.apply();
+            keyless_direct_1.apply();
+            keyless_indirect_resources_0.apply();
             if (hdr.ig_intr_md_for_tm.ucast_egress_port == 9w0) 
-                keyless_indirect.apply();
+                keyless_indirect_0.apply();
         }
     }
 }

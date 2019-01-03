@@ -179,41 +179,41 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    bit<17> temp;
-    bit<17> temp_0;
-    bit<8> tmp_3;
-    bit<8> tmp_4;
-    bit<8> tmp_5;
-    bit<8> tmp_6;
-    @name(".alu_0") RegisterAction<bit<8>, bit<32>, bit<8>>(reg_0) alu_0 = {
+    bit<17> temp_1;
+    bit<17> temp_2;
+    bit<8> tmp;
+    bit<8> tmp_0;
+    bit<8> tmp_1;
+    bit<8> tmp_2;
+    @reduction_or_group("or_group_1") @name(".alu_0") RegisterAction<bit<8>, bit<32>, bit<8>>(reg_0) alu = {
         void apply(inout bit<8> value, out bit<8> rv) {
-            bit<8> in_value;
+            bit<8> in_value_0;
             value = 8w15;
             rv = value;
         }
     };
-    @name(".alu_1") RegisterAction<bit<8>, bit<32>, bit<8>>(reg_1) alu_1 = {
+    @reduction_or_group("or_group_1") @name(".alu_1") RegisterAction<bit<8>, bit<32>, bit<8>>(reg_1) alu_2 = {
         void apply(inout bit<8> value, out bit<8> rv) {
-            bit<8> in_value_2;
+            bit<8> in_value_1;
             value = 8w0x30;
             rv = value;
         }
     };
-    @name(".action_0") action action_2() {
-        hash<bit<17>, bit<17>, tuple<bit<32>, bit<32>>, bit<18>>(temp, HashAlgorithm.random, 17w0, { hdr.pkt.field_a_32, hdr.pkt.field_b_32 }, 18w131072);
-        tmp_3 = alu_0.execute((bit<32>)temp);
-        tmp_4 = meta.meta.result_8 | tmp_3;
-        meta.meta.result_8 = tmp_4;
+    @name(".action_0") action action_0() {
+        hash<bit<17>, bit<17>, tuple<bit<32>, bit<32>>, bit<18>>(temp_1, HashAlgorithm.random, 17w0, { hdr.pkt.field_a_32, hdr.pkt.field_b_32 }, 18w131072);
+        tmp = alu.execute((bit<32>)temp_1);
+        tmp_0 = meta.meta.result_8 | tmp;
+        meta.meta.result_8 = tmp_0;
     }
-    @name(".action_1") action action_3() {
-        hash<bit<17>, bit<17>, tuple<bit<32>, bit<32>, bit<16>>, bit<18>>(temp_0, HashAlgorithm.random, 17w0, { hdr.pkt.field_c_32, hdr.pkt.field_d_32, hdr.pkt.field_e_16 }, 18w131072);
-        tmp_5 = alu_1.execute((bit<32>)temp_0);
-        tmp_6 = meta.meta.result_8 | tmp_5;
-        meta.meta.result_8 = tmp_6;
+    @name(".action_1") action action_1() {
+        hash<bit<17>, bit<17>, tuple<bit<32>, bit<32>, bit<16>>, bit<18>>(temp_2, HashAlgorithm.random, 17w0, { hdr.pkt.field_c_32, hdr.pkt.field_d_32, hdr.pkt.field_e_16 }, 18w131072);
+        tmp_1 = alu_2.execute((bit<32>)temp_2);
+        tmp_2 = meta.meta.result_8 | tmp_1;
+        meta.meta.result_8 = tmp_2;
     }
-    @name(".table_0") table table_0 {
+    @name(".table_0") table table_2 {
         actions = {
-            action_2();
+            action_0();
             @defaultonly NoAction_0();
         }
         key = {
@@ -222,9 +222,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_0();
     }
-    @name(".table_1") table table_1 {
+    @name(".table_1") table table_3 {
         actions = {
-            action_3();
+            action_1();
             @defaultonly NoAction_3();
         }
         key = {
@@ -234,8 +234,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_3();
     }
     apply {
-        table_0.apply();
-        table_1.apply();
+        table_2.apply();
+        table_3.apply();
     }
 }
 

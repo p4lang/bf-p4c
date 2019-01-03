@@ -572,7 +572,7 @@ control Addison(inout headers hdr, inout metadata meta, inout standard_metadata_
             bit<1> in_value;
             in_value = value;
             value = in_value;
-            rv = ~value;
+            rv = ~in_value;
         }
     };
     @name(".Gosnell") action Gosnell() {
@@ -699,7 +699,7 @@ control Agawam(inout headers hdr, inout metadata meta, inout standard_metadata_t
 
 control Amazonia(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Lefor") action Lefor() {
-        digest<Oklee>(32w0, { meta.Merrill.Eclectic, meta.Egypt.Sandstone, meta.Egypt.Ivyland, meta.Egypt.Sudden, meta.Egypt.MuleBarn });
+        digest<Oklee>(32w0, {meta.Merrill.Eclectic,meta.Egypt.Sandstone,meta.Egypt.Ivyland,meta.Egypt.Sudden,meta.Egypt.MuleBarn});
     }
     @name(".BigBow") table BigBow {
         actions = {
@@ -738,7 +738,7 @@ control BigPoint(inout headers hdr, inout metadata meta, inout standard_metadata
             @defaultonly Spanaway();
         }
         key = {
-            meta.Egypt.Salduro & 24w0xfeffff: exact @name("Egypt.Salduro & 16711679") ;
+            meta.Egypt.Salduro & 24w0xfeffff: exact @name("Egypt.Salduro") ;
             meta.Egypt.HydePark             : exact @name("Egypt.HydePark") ;
             meta.Egypt.Sudden               : exact @name("Egypt.Sudden") ;
         }
@@ -1403,7 +1403,7 @@ control Orrum(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Energy.Lovelady     : exact @name("Energy.Lovelady") ;
-            meta.Energy.Lepanto[63:0]: lpm @name("Energy.Lepanto[63:0]") ;
+            meta.Energy.Lepanto[63:0]: lpm @name("Energy.Lepanto") ;
         }
         size = 16384;
         default_action = Handley();
@@ -1416,7 +1416,7 @@ control Orrum(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Energy.Winfall        : exact @name("Energy.Winfall") ;
-            meta.Energy.Lepanto[106:64]: lpm @name("Energy.Lepanto[106:64]") ;
+            meta.Energy.Lepanto[106:64]: lpm @name("Energy.Lepanto") ;
         }
         size = 65536;
         default_action = Handley();
@@ -1429,7 +1429,7 @@ control Orrum(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Avondale.Camino       : exact @name("Avondale.Camino") ;
-            meta.Energy.Lepanto[127:64]: lpm @name("Energy.Lepanto[127:64]") ;
+            meta.Energy.Lepanto[127:64]: lpm @name("Energy.Lepanto") ;
         }
         size = 8192;
         default_action = NoAction();
@@ -1457,7 +1457,7 @@ control Orrum(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Sieper.Wyman      : exact @name("Sieper.Wyman") ;
-            meta.Sieper.Yreka[19:0]: lpm @name("Sieper.Yreka[19:0]") ;
+            meta.Sieper.Yreka[19:0]: lpm @name("Sieper.Yreka") ;
         }
         size = 131072;
         default_action = Handley();
@@ -1496,11 +1496,11 @@ control Orrum(inout headers hdr, inout metadata meta, inout standard_metadata_t 
                 switch (Azusa.apply().action_run) {
                     Handley: {
                         switch (Stockton.apply().action_run) {
-                            Handley: {
-                                Loris.apply();
-                            }
                             Minetto: {
                                 Resaca.apply();
+                            }
+                            Handley: {
+                                Loris.apply();
                             }
                         }
 
@@ -1827,6 +1827,10 @@ control Ugashik(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         switch (Lignite.apply().action_run) {
+            Temvik: {
+                Allen.apply();
+                Gwynn.apply();
+            }
             Suffern: {
                 if (meta.Norridge.Kinsey == 1w1) 
                     Tulalip.apply();
@@ -1839,10 +1843,6 @@ control Ugashik(inout headers hdr, inout metadata meta, inout standard_metadata_
 
                 else 
                     Emmorton.apply();
-            }
-            Temvik: {
-                Allen.apply();
-                Gwynn.apply();
             }
         }
 
@@ -1859,7 +1859,7 @@ control Ugashik(inout headers hdr, inout metadata meta, inout standard_metadata_
 
 control Westtown(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Trenary") action Trenary() {
-        digest<Langhorne>(32w0, { meta.Merrill.Eclectic, meta.Egypt.Sudden, hdr.Boquet.Bardwell, hdr.Boquet.Donner, hdr.Sherack.Cedonia });
+        digest<Langhorne>(32w0, {meta.Merrill.Eclectic,meta.Egypt.Sudden,hdr.Boquet.Bardwell,hdr.Boquet.Donner,hdr.Sherack.Cedonia});
     }
     @name(".Paulette") table Paulette {
         actions = {

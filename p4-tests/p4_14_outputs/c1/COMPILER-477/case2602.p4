@@ -825,7 +825,7 @@ control Eastover(inout headers hdr, inout metadata meta, inout standard_metadata
             bit<1> in_value;
             in_value = value;
             value = in_value;
-            rv = ~value;
+            rv = ~in_value;
         }
     };
     @name(".NewSite") action NewSite(bit<1> Rohwer) {
@@ -1194,7 +1194,7 @@ control Knierim(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Klawock.Ocilla           : exact;
-            meta.Cannelton.Barnhill[31:16]: ternary;
+            meta.Cannelton.Barnhill[31:16]: ternary @name("Cannelton.Barnhill") ;
             meta.Millhaven.Mankato        : ternary;
             meta.Millhaven.Ferndale       : ternary;
             meta.Millhaven.Osseo          : ternary;
@@ -1212,7 +1212,7 @@ control Knierim(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Klawock.Ocilla        : exact;
-            meta.IttaBena.Devers[31:16]: ternary;
+            meta.IttaBena.Devers[31:16]: ternary @name("IttaBena.Devers") ;
             meta.Millhaven.Mankato     : ternary;
             meta.Millhaven.Ferndale    : ternary;
             meta.Millhaven.Osseo       : ternary;
@@ -1617,7 +1617,7 @@ control Oshoto(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         key = {
             meta.GunnCity.Brinkman      : exact;
-            meta.IttaBena.Devers[127:64]: lpm;
+            meta.IttaBena.Devers[127:64]: lpm @name("IttaBena.Devers") ;
         }
         size = 8192;
     }
@@ -1657,7 +1657,7 @@ control Oshoto(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         key = {
             meta.IttaBena.Nixon         : exact;
-            meta.IttaBena.Devers[106:64]: lpm;
+            meta.IttaBena.Devers[106:64]: lpm @name("IttaBena.Devers") ;
         }
         size = 65536;
         default_action = Wentworth();
@@ -1681,7 +1681,7 @@ control Oshoto(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         key = {
             meta.Cannelton.Suamico       : exact;
-            meta.Cannelton.Barnhill[19:0]: lpm;
+            meta.Cannelton.Barnhill[19:0]: lpm @name("Cannelton.Barnhill") ;
         }
         size = 131072;
         default_action = Wentworth();
@@ -1694,7 +1694,7 @@ control Oshoto(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         key = {
             meta.IttaBena.Hershey     : exact;
-            meta.IttaBena.Devers[63:0]: lpm;
+            meta.IttaBena.Devers[63:0]: lpm @name("IttaBena.Devers") ;
         }
         size = 16384;
         default_action = Wentworth();
@@ -1716,11 +1716,11 @@ control Oshoto(inout headers hdr, inout metadata meta, inout standard_metadata_t
                 switch (Lazear.apply().action_run) {
                     Wentworth: {
                         switch (Oreland.apply().action_run) {
-                            Wentworth: {
-                                Arpin.apply();
-                            }
                             WestLine: {
                                 Swanlake.apply();
+                            }
+                            Wentworth: {
+                                Arpin.apply();
                             }
                         }
 
@@ -1876,8 +1876,8 @@ control Thermal(inout headers hdr, inout metadata meta, inout standard_metadata_
             McDaniels_0;
         }
         key = {
-            hdr.eg_intr_md.egress_port[6:0]: exact;
-            hdr.eg_intr_md.egress_qid[2:0] : exact;
+            hdr.eg_intr_md.egress_port[6:0]: exact @name("eg_intr_md.egress_port") ;
+            hdr.eg_intr_md.egress_qid[2:0] : exact @name("eg_intr_md.egress_qid") ;
         }
         size = 1024;
         counters = Crump;

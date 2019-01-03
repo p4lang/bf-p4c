@@ -1103,7 +1103,7 @@ control Green(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Merkel.Grassy         : exact @name("Merkel.Grassy") ;
-            meta.Accomac.Rienzi[127:64]: lpm @name("Accomac.Rienzi[127:64]") ;
+            meta.Accomac.Rienzi[127:64]: lpm @name("Accomac.Rienzi") ;
         }
         size = 8192;
         default_action = NoAction();
@@ -1130,7 +1130,7 @@ control Green(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Accomac.Hargis        : exact @name("Accomac.Hargis") ;
-            meta.Accomac.Rienzi[106:64]: lpm @name("Accomac.Rienzi[106:64]") ;
+            meta.Accomac.Rienzi[106:64]: lpm @name("Accomac.Rienzi") ;
         }
         size = 65536;
         default_action = Millston();
@@ -1170,7 +1170,7 @@ control Green(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Accomac.Hernandez   : exact @name("Accomac.Hernandez") ;
-            meta.Accomac.Rienzi[63:0]: lpm @name("Accomac.Rienzi[63:0]") ;
+            meta.Accomac.Rienzi[63:0]: lpm @name("Accomac.Rienzi") ;
         }
         size = 16384;
         default_action = Millston();
@@ -1198,7 +1198,7 @@ control Green(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Chaumont.Inkom          : exact @name("Chaumont.Inkom") ;
-            meta.Chaumont.Manasquan[19:0]: lpm @name("Chaumont.Manasquan[19:0]") ;
+            meta.Chaumont.Manasquan[19:0]: lpm @name("Chaumont.Manasquan") ;
         }
         size = 131072;
         default_action = Millston();
@@ -1222,11 +1222,11 @@ control Green(inout headers hdr, inout metadata meta, inout standard_metadata_t 
                 switch (Milano.apply().action_run) {
                     Millston: {
                         switch (Witherbee.apply().action_run) {
-                            Millston: {
-                                Sparkill.apply();
-                            }
                             Stuttgart: {
                                 Wanamassa.apply();
+                            }
+                            Millston: {
+                                Sparkill.apply();
                             }
                         }
 
@@ -1238,6 +1238,9 @@ control Green(inout headers hdr, inout metadata meta, inout standard_metadata_t 
                     switch (Ekron.apply().action_run) {
                         Millston: {
                             switch (Nordland.apply().action_run) {
+                                Needles: {
+                                    Rillton.apply();
+                                }
                                 Millston: {
                                     switch (Bluff.apply().action_run) {
                                         Napanoch: {
@@ -1245,9 +1248,6 @@ control Green(inout headers hdr, inout metadata meta, inout standard_metadata_t 
                                         }
                                     }
 
-                                }
-                                Needles: {
-                                    Rillton.apply();
                                 }
                             }
 
@@ -1284,7 +1284,7 @@ control Halsey(inout headers hdr, inout metadata meta, inout standard_metadata_t
 
 control Kapowsin(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Burmester") action Burmester() {
-        digest<Slick>(32w0, { meta.Gerlach.Powelton, meta.Roxboro.Okarche, hdr.Pillager.PineAire, hdr.Pillager.Topanga, hdr.Tappan.TroutRun });
+        digest<Slick>(32w0, {meta.Gerlach.Powelton,meta.Roxboro.Okarche,hdr.Pillager.PineAire,hdr.Pillager.Topanga,hdr.Tappan.TroutRun});
     }
     @name(".Hubbell") table Hubbell {
         actions = {
@@ -1368,7 +1368,7 @@ control Kranzburg(inout headers hdr, inout metadata meta, inout standard_metadat
 
 control Mapleview(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Marcus") action Marcus() {
-        digest<Hemet>(32w0, { meta.Gerlach.Powelton, meta.Roxboro.Kennedale, meta.Roxboro.Kapalua, meta.Roxboro.Okarche, meta.Roxboro.Dietrich });
+        digest<Hemet>(32w0, {meta.Gerlach.Powelton,meta.Roxboro.Kennedale,meta.Roxboro.Kapalua,meta.Roxboro.Okarche,meta.Roxboro.Dietrich});
     }
     @name(".Tatum") table Tatum {
         actions = {
@@ -1443,7 +1443,7 @@ control OjoFeliz(inout headers hdr, inout metadata meta, inout standard_metadata
             bit<1> in_value;
             in_value = value;
             value = in_value;
-            rv = ~value;
+            rv = ~in_value;
         }
     };
     @name(".ShowLow") RegisterAction<bit<1>, bit<32>, bit<1>>(Redfield) ShowLow = {

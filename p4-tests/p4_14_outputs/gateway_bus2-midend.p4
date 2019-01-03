@@ -31,20 +31,20 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    @name(".set_b3") action set_b3_0(bit<8> val3) {
+    @name(".set_b3") action set_b3(bit<8> val3) {
         hdr.data.b3 = val3;
     }
-    @name(".noop") action noop_0() {
+    @name(".noop") action noop() {
     }
     @name(".noop") action noop_2() {
     }
-    @name(".set_port") action set_port_0(bit<9> port) {
+    @name(".set_port") action set_port(bit<9> port) {
         standard_metadata.egress_spec = port;
     }
-    @name(".test1") table test1 {
+    @name(".test1") table test1_0 {
         actions = {
-            set_b3_0();
-            noop_0();
+            set_b3();
+            noop();
             @defaultonly NoAction_0();
         }
         key = {
@@ -54,9 +54,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name(".test2") table test2 {
+    @name(".test2") table test2_0 {
         actions = {
-            set_port_0();
+            set_port();
             noop_2();
             @defaultonly NoAction_3();
         }
@@ -67,8 +67,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (hdr.data.b1 == 8w9 && hdr.data.b2 == 8w1) 
-            test1.apply();
-        test2.apply();
+            test1_0.apply();
+        test2_0.apply();
     }
 }
 

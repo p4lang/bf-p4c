@@ -166,43 +166,43 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".stateful_cntr") register<bit<16>>(32w8192) stateful_cntr;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<16> tmp_0;
+    bit<16> tmp;
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".cntr") RegisterAction<bit<16>, bit<32>, bit<16>>(stateful_cntr) cntr = {
+    @name(".cntr") RegisterAction<bit<16>, bit<32>, bit<16>>(stateful_cntr) cntr_0 = {
         void apply(inout bit<16> value) {
             value = value + 16w1;
         }
     };
-    @name(".cntr2") RegisterAction<bit<16>, bit<32>, bit<16>>(stateful_cntr) cntr2 = {
+    @name(".cntr2") RegisterAction<bit<16>, bit<32>, bit<16>>(stateful_cntr) cntr2_0 = {
         void apply(inout bit<16> value) {
             value = value + 16w255;
         }
     };
-    @name(".cntr3") RegisterAction<bit<16>, bit<32>, bit<16>>(stateful_cntr) cntr3 = {
+    @name(".cntr3") RegisterAction<bit<16>, bit<32>, bit<16>>(stateful_cntr) cntr3_0 = {
         void apply(inout bit<16> value, out bit<16> rv) {
             value = value + 16w63;
             rv = value;
         }
     };
-    @name(".cnt") action cnt_0(bit<32> idx) {
-        cntr.execute(idx);
+    @name(".cnt") action cnt(bit<32> idx) {
+        cntr_0.execute(idx);
     }
-    @name(".cnt2") action cnt2_0(bit<32> idx) {
-        cntr2.execute(idx);
+    @name(".cnt2") action cnt2(bit<32> idx) {
+        cntr2_0.execute(idx);
     }
-    @name(".cnt3") action cnt3_0(bit<32> idx) {
-        tmp_0 = cntr3.execute(idx);
-        hdr.pkt.field_l_8 = (bit<8>)tmp_0;
+    @name(".cnt3") action cnt3(bit<32> idx) {
+        tmp = cntr3_0.execute(idx);
+        hdr.pkt.field_l_8 = (bit<8>)tmp;
     }
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing() {
     }
-    @name(".match_cntr") table match_cntr {
+    @name(".match_cntr") table match_cntr_0 {
         actions = {
-            cnt_0();
-            cnt2_0();
-            cnt3_0();
-            do_nothing_0();
+            cnt();
+            cnt2();
+            cnt3();
+            do_nothing();
             @defaultonly NoAction_0();
         }
         key = {
@@ -212,7 +212,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_0();
     }
     apply {
-        match_cntr.apply();
+        match_cntr_0.apply();
     }
 }
 

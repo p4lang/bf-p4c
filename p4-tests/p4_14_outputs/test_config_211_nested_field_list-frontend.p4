@@ -37,15 +37,15 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".action_0") action action_1() {
+    @name(".action_0") action action_0() {
         hash<bit<8>, bit<8>, tuple<tuple<bit<16>>, bit<16>, bit<32>>, bit<16>>(hdr.pkt.field_i_8, HashAlgorithm.crc16, 8w0, { { hdr.pkt.field_e_16 }, hdr.pkt.field_f_16, hdr.pkt.field_a_32 }, 16w256);
     }
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing() {
     }
-    @name(".table_0") table table_0 {
+    @name(".table_0") table table_1 {
         actions = {
-            action_1();
-            do_nothing_0();
+            action_0();
+            do_nothing();
             @defaultonly NoAction_0();
         }
         key = {
@@ -54,7 +54,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_0();
     }
     apply {
-        table_0.apply();
+        table_1.apply();
     }
 }
 

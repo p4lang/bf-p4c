@@ -34,18 +34,18 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @lrt_scale(100) @name(".counter_0") @min_width(32) direct_counter(CounterType.packets_and_bytes) counter_0;
-    @name(".nop") action nop() {
-        counter_0.count();
+    @lrt_scale(100) @name(".counter_0") @min_width(32) direct_counter(CounterType.packets_and_bytes) counter_1;
+    @name(".nop") action nop_0() {
+        counter_1.count();
     }
-    @name(".action_0") action action_0(bit<32> param0, bit<8> param1, bit<8> param2, bit<8> param3, bit<8> param4) {
-        counter_0.count();
+    @name(".action_0") action action_1(bit<32> param0, bit<8> param1, bit<8> param2, bit<8> param3, bit<8> param4) {
+        counter_1.count();
         hdr.pkt.a = param0;
     }
-    @immediate(0) @name(".table_0") table table_0 {
+    @immediate(0) @name(".table_0") table table_1 {
         actions = {
-            nop();
-            action_0();
+            nop_0();
+            action_1();
             @defaultonly NoAction_0();
         }
         key = {
@@ -53,11 +53,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.dstPort: ternary @name("pkt.dstPort") ;
         }
         size = 4096;
-        counters = counter_0;
+        counters = counter_1;
         default_action = NoAction_0();
     }
     apply {
-        table_0.apply();
+        table_1.apply();
     }
 }
 

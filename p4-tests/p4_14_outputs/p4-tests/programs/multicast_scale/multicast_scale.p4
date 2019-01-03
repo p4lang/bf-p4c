@@ -180,7 +180,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             @defaultonly on_miss;
         }
         key = {
-            hdr.eg_intr_md.egress_port[6:0]: exact;
+            hdr.eg_intr_md.egress_port[6:0]: exact @name("eg_intr_md.egress_port") ;
             hdr.eg_intr_md.egress_rid      : exact;
         }
         size = 1048576;
@@ -219,8 +219,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             mcast_both;
         }
         key = {
-            hdr.ig_intr_md.ingress_port[6:0]: exact;
-            hdr.ethernet.dmac[31:0]         : exact;
+            hdr.ig_intr_md.ingress_port[6:0]: exact @name("ig_intr_md.ingress_port") ;
+            hdr.ethernet.dmac[31:0]         : exact @name("ethernet.dmac") ;
         }
         size = 65536;
     }

@@ -343,7 +343,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.ethernet.etherType[7:0]: exact @name("ethernet.etherType[7:0]") ;
+            hdr.ethernet.etherType[7:0]: exact @name("ethernet.etherType") ;
         }
         size = 256;
         default_action = NoAction();
@@ -361,7 +361,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.ethernet.etherType[7:0]: exact @name("ethernet.etherType[7:0]") ;
+            hdr.ethernet.etherType[7:0]: exact @name("ethernet.etherType") ;
         }
         size = 256;
         default_action = NoAction();

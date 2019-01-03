@@ -192,35 +192,35 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_5() {
     }
-    @name(".my_meter") direct_meter<bit<2>>(MeterType.bytes) my_meter;
-    @name(".action_1") action action_0(bit<4> x) {
+    @name(".my_meter") direct_meter<bit<2>>(MeterType.bytes) my_meter_0;
+    @name(".action_1") action action_1(bit<4> x) {
         meta.meta.x = x;
     }
-    @name(".action_2") action action_3() {
+    @name(".action_2") action action_2() {
         mark_to_drop();
     }
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing() {
     }
-    @name(".action_0") action action_0_1(bit<2> y) {
-        my_meter.read(meta.meta.color);
+    @name(".action_0") action action_5(bit<2> y) {
+        my_meter_0.read(meta.meta.color);
         hdr.ipv4.diffserv = 8w5;
         meta.meta.y = y;
     }
-    @name(".table_0") table table_0 {
+    @name(".table_0") table table_3 {
         actions = {
-            action_0_1();
+            action_5();
             @defaultonly NoAction_0();
         }
         key = {
             hdr.ipv4.srcAddr: lpm @name("ipv4.srcAddr") ;
         }
         size = 512;
-        meters = my_meter;
+        meters = my_meter_0;
         default_action = NoAction_0();
     }
-    @name(".table_1") table table_1 {
+    @name(".table_1") table table_4 {
         actions = {
-            action_0();
+            action_1();
             @defaultonly NoAction_4();
         }
         key = {
@@ -229,10 +229,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_4();
     }
-    @name(".table_2") table table_2 {
+    @name(".table_2") table table_5 {
         actions = {
-            action_3();
-            do_nothing_0();
+            action_2();
+            do_nothing();
             @defaultonly NoAction_5();
         }
         key = {
@@ -244,9 +244,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_5();
     }
     apply {
-        table_0.apply();
-        table_1.apply();
-        table_2.apply();
+        table_3.apply();
+        table_4.apply();
+        table_5.apply();
     }
 }
 

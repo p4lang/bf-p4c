@@ -24,9 +24,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bool tmp_3;
-    bool tmp_4;
-    bool tmp_5;
+    bool tmp;
+    bool tmp_0;
+    bool tmp_1;
     @name(".NoAction") action NoAction_0() {
     }
     @name(".NoAction") action NoAction_1() {
@@ -47,7 +47,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_23() {
     }
-    @name("ingress.setb1") action setb1_0(bit<8> val) {
+    @name("ingress.setb1") action setb1(bit<8> val) {
         hdr.data.b1 = val;
     }
     @name("ingress.setb1") action setb1_4(bit<8> val) {
@@ -59,9 +59,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("ingress.setb1") action setb1_6(bit<8> val) {
         hdr.data.b1 = val;
     }
-    @name("ingress.noop") action noop_0() {
+    @name("ingress.noop") action noop() {
     }
-    @name("ingress.noop") action noop_1() {
+    @name("ingress.noop") action noop_2() {
     }
     @name("ingress.noop") action noop_8() {
     }
@@ -71,37 +71,37 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("ingress.noop") action noop_11() {
     }
-    @name("ingress.A") table A {
+    @name("ingress.A") table A_0 {
         key = {
             hdr.data.f1: exact @name("hdr.data.f1") ;
         }
         actions = {
-            noop_0();
+            noop();
             @defaultonly NoAction_0();
         }
         default_action = NoAction_0();
     }
-    @name("ingress.B") table B {
+    @name("ingress.B") table B_0 {
         key = {
             hdr.data.f1: exact @name("hdr.data.f1") ;
         }
         actions = {
-            setb1_0();
+            setb1();
             @defaultonly NoAction_1();
         }
         default_action = NoAction_1();
     }
-    @name("ingress.C") table C {
+    @name("ingress.C") table C_0 {
         key = {
             hdr.data.f1: exact @name("hdr.data.f1") ;
         }
         actions = {
-            noop_1();
+            noop_2();
             @defaultonly NoAction_16();
         }
         default_action = NoAction_16();
     }
-    @name("ingress.X") table X {
+    @name("ingress.X") table X_0 {
         key = {
             hdr.data.f1: exact @name("hdr.data.f1") ;
         }
@@ -111,7 +111,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_17();
     }
-    @name("ingress.Y") table Y {
+    @name("ingress.Y") table Y_0 {
         key = {
             hdr.data.f1: exact @name("hdr.data.f1") ;
         }
@@ -121,7 +121,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_18();
     }
-    @name("ingress.X2") table X2 {
+    @name("ingress.X2") table X2_0 {
         key = {
             hdr.data.f1: exact @name("hdr.data.f1") ;
         }
@@ -131,7 +131,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_19();
     }
-    @name("ingress.Y2") table Y2 {
+    @name("ingress.Y2") table Y2_0 {
         key = {
             hdr.data.f1: exact @name("hdr.data.f1") ;
         }
@@ -141,7 +141,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_20();
     }
-    @name("ingress.Z1") table Z1 {
+    @name("ingress.Z1") table Z1_0 {
         key = {
             hdr.data.b1: exact @name("hdr.data.b1") ;
         }
@@ -151,7 +151,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_21();
     }
-    @name("ingress.Z2") table Z2 {
+    @name("ingress.Z2") table Z2_0 {
         key = {
             hdr.data.b1: exact @name("hdr.data.b1") ;
         }
@@ -161,7 +161,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_22();
     }
-    @name("ingress.Z3") table Z3 {
+    @name("ingress.Z3") table Z3_0 {
         key = {
             hdr.data.b1: exact @name("hdr.data.b1") ;
         }
@@ -172,22 +172,22 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_23();
     }
     @hidden action act() {
-        tmp_5 = true;
+        tmp_1 = true;
     }
     @hidden action act_0() {
-        tmp_5 = false;
+        tmp_1 = false;
     }
     @hidden action act_1() {
-        tmp_3 = true;
+        tmp = true;
     }
     @hidden action act_2() {
-        tmp_3 = false;
+        tmp = false;
     }
     @hidden action act_3() {
-        tmp_4 = true;
+        tmp_0 = true;
     }
     @hidden action act_4() {
-        tmp_4 = false;
+        tmp_0 = false;
     }
     @hidden table tbl_act {
         actions = {
@@ -226,38 +226,38 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         const default_action = act_4();
     }
     apply {
-        if (A.apply().hit) 
+        if (A_0.apply().hit) 
             tbl_act.apply();
         else 
             tbl_act_0.apply();
-        if (tmp_5) {
-            if (B.apply().hit) 
+        if (tmp_1) {
+            if (B_0.apply().hit) 
                 tbl_act_1.apply();
             else 
                 tbl_act_2.apply();
-            if (tmp_3) 
-                X.apply();
+            if (tmp) 
+                X_0.apply();
             else 
-                Y.apply();
+                Y_0.apply();
         }
         else {
-            if (C.apply().hit) 
+            if (C_0.apply().hit) 
                 tbl_act_3.apply();
             else 
                 tbl_act_4.apply();
-            if (tmp_4) 
-                X2.apply();
+            if (tmp_0) 
+                X2_0.apply();
             else 
-                Y2.apply();
+                Y2_0.apply();
         }
-        Z1.apply();
-        Z2.apply();
-        Z3.apply();
+        Z1_0.apply();
+        Z2_0.apply();
+        Z3_0.apply();
     }
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bool tmp_6;
+    bool tmp_2;
     @name(".NoAction") action NoAction_24() {
     }
     @name(".NoAction") action NoAction_25() {
@@ -266,7 +266,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     @name(".NoAction") action NoAction_27() {
     }
-    @name("egress.setf2") action setf2_0(bit<32> val) {
+    @name("egress.setf2") action setf2(bit<32> val) {
         hdr.data.f2 = val;
     }
     @name("egress.setf2") action setf2_3(bit<32> val) {
@@ -277,17 +277,17 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     @name("egress.noop") action noop_12() {
     }
-    @name("egress.alpha") table alpha {
+    @name("egress.alpha") table alpha_0 {
         key = {
             hdr.data.f2: exact @name("hdr.data.f2") ;
         }
         actions = {
-            setf2_0();
+            setf2();
             @defaultonly NoAction_24();
         }
         default_action = NoAction_24();
     }
-    @name("egress.beta") table beta {
+    @name("egress.beta") table beta_0 {
         key = {
             hdr.data.f2: exact @name("hdr.data.f2") ;
         }
@@ -297,7 +297,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         default_action = NoAction_25();
     }
-    @name("egress.gamma") table gamma {
+    @name("egress.gamma") table gamma_0 {
         key = {
             hdr.data.f2: exact @name("hdr.data.f2") ;
         }
@@ -307,7 +307,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         default_action = NoAction_26();
     }
-    @name("egress.t2") table t2 {
+    @name("egress.t2") table t2_0 {
         key = {
             hdr.data.h1: exact @name("hdr.data.h1") ;
         }
@@ -318,10 +318,10 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = NoAction_27();
     }
     @hidden action act_5() {
-        tmp_6 = true;
+        tmp_2 = true;
     }
     @hidden action act_6() {
-        tmp_6 = false;
+        tmp_2 = false;
     }
     @hidden table tbl_act_5 {
         actions = {
@@ -336,14 +336,14 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         const default_action = act_6();
     }
     apply {
-        alpha.apply();
-        if (beta.apply().hit) 
+        alpha_0.apply();
+        if (beta_0.apply().hit) 
             tbl_act_5.apply();
         else 
             tbl_act_6.apply();
-        if (tmp_6) 
-            t2.apply();
-        gamma.apply();
+        if (tmp_2) 
+            t2_0.apply();
+        gamma_0.apply();
     }
 }
 

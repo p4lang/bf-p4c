@@ -40,7 +40,7 @@ control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_me
     }
     table slice_it0 {
         key = {
-            hdr.data.f1 & 48w0xff00: exact @name("hdr.data.f1 & 65280") ;
+            hdr.data.f1 & 48w0xff00: exact @name("hdr.data.f1") ;
             hdr.data.f2[7:0]       : exact @name("hdr.data.f2[7:0]") ;
         }
         actions = {
@@ -50,7 +50,7 @@ control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_me
     }
     table slice_it1 {
         key = {
-            hdr.data.f1 & 48w0xff00ff00ff00: exact @name("hdr.data.f1 & 280379743338240") ;
+            hdr.data.f1 & 48w0xff00ff00ff00: exact @name("hdr.data.f1") ;
             hdr.data.f2[39:32]             : exact @name("hdr.data.f2[39:32]") ;
             hdr.data.f2[23:16]             : exact @name("hdr.data.f2[23:16]") ;
             hdr.data.f2[7:0]               : exact @name("hdr.data.f2[7:0]") ;

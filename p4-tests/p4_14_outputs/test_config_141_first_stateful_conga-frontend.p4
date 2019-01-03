@@ -172,13 +172,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    @name(".get_preferred_next_hop") action get_preferred_next_hop_0() {
+    @name(".get_preferred_next_hop") action get_preferred_next_hop() {
     }
-    @name(".update_preferred_next_hop") action update_preferred_next_hop_0() {
+    @name(".update_preferred_next_hop") action update_preferred_next_hop() {
     }
-    @name(".conga_rd_next_hop_table") table conga_rd_next_hop_table {
+    @name(".conga_rd_next_hop_table") table conga_rd_next_hop_table_0 {
         actions = {
-            get_preferred_next_hop_0();
+            get_preferred_next_hop();
             @defaultonly NoAction_0();
         }
         key = {
@@ -187,9 +187,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_0();
     }
-    @name(".conga_wr_next_hop_table") table conga_wr_next_hop_table {
+    @name(".conga_wr_next_hop_table") table conga_wr_next_hop_table_0 {
         actions = {
-            update_preferred_next_hop_0();
+            update_preferred_next_hop();
             @defaultonly NoAction_3();
         }
         key = {
@@ -199,8 +199,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_3();
     }
     apply {
-        conga_rd_next_hop_table.apply();
-        conga_wr_next_hop_table.apply();
+        conga_rd_next_hop_table_0.apply();
+        conga_wr_next_hop_table_0.apply();
     }
 }
 

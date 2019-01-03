@@ -31,27 +31,27 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_5() {
     }
-    @name(".set_port") action set_port_0(bit<9> port) {
+    @name(".set_port") action set_port(bit<9> port) {
         standard_metadata.egress_spec = port;
     }
-    @name(".constant_conversion_adt") action constant_conversion_adt_0(bit<4> param1, bit<32> param2) {
+    @name(".constant_conversion_adt") action constant_conversion_adt(bit<4> param1, bit<32> param2) {
         hdr.data.n1 = 4w4;
         hdr.data.n2 = param1;
         hdr.data.f1 = param2;
     }
-    @name(".constant_conversion_adt2") action constant_conversion_adt2_0(bit<4> param1) {
+    @name(".constant_conversion_adt2") action constant_conversion_adt2(bit<4> param1) {
         hdr.data.n1 = 4w9;
         hdr.data.n2 = param1;
         hdr.data.f1 = 32w0x77777f77;
     }
-    @name(".constant_conversion_immed") action constant_conversion_immed_0(bit<4> param1) {
+    @name(".constant_conversion_immed") action constant_conversion_immed(bit<4> param1) {
         hdr.data.n1 = 4w7;
         hdr.data.n2 = param1;
         hdr.data.b1 = 8w0xab;
     }
-    @name(".port_setter") table port_setter {
+    @name(".port_setter") table port_setter_0 {
         actions = {
-            set_port_0();
+            set_port();
             @defaultonly NoAction_0();
         }
         key = {
@@ -59,10 +59,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name(".test1") table test1 {
+    @name(".test1") table test1_0 {
         actions = {
-            constant_conversion_adt_0();
-            constant_conversion_adt2_0();
+            constant_conversion_adt();
+            constant_conversion_adt2();
             @defaultonly NoAction_4();
         }
         key = {
@@ -70,9 +70,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_4();
     }
-    @name(".test2") table test2 {
+    @name(".test2") table test2_0 {
         actions = {
-            constant_conversion_immed_0();
+            constant_conversion_immed();
             @defaultonly NoAction_5();
         }
         key = {
@@ -81,9 +81,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_5();
     }
     apply {
-        test1.apply();
-        test2.apply();
-        port_setter.apply();
+        test1_0.apply();
+        test2_0.apply();
+        port_setter_0.apply();
     }
 }
 

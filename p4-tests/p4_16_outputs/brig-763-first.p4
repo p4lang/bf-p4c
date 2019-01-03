@@ -383,9 +383,8 @@ control SwitchEgress(inout switch_header_t hdr, inout metadata_t eg_md, in egres
     table pkt_counter_get {
         actions = {
             pkt_counter_get_run();
-            @defaultonly NoAction();
         }
-        default_action = NoAction();
+        default_action = pkt_counter_get_run();
     }
     action flow_counter_get_run() {
         eg_md.flow_index = dip_choose_alu.execute((bit<32>)eg_intr_md.egress_port);
@@ -393,9 +392,8 @@ control SwitchEgress(inout switch_header_t hdr, inout metadata_t eg_md, in egres
     table flow_counter_get {
         actions = {
             flow_counter_get_run();
-            @defaultonly NoAction();
         }
-        default_action = NoAction();
+        default_action = flow_counter_get_run();
     }
     apply {
         max_read.apply();

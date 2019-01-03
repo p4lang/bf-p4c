@@ -200,7 +200,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             hdr.ethernet.etherType    : ternary;
-            hdr.ethernet.srcAddr[39:8]: ternary;
+            hdr.ethernet.srcAddr[39:8]: ternary @name("ethernet.srcAddr") ;
         }
         max_size = 1024;
     }

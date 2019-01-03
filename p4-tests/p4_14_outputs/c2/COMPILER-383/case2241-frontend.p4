@@ -199,12 +199,12 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".superaction") action superaction_0() {
+    @name(".superaction") action superaction() {
         hdr.h.setValid();
     }
-    @name(".supertable") table supertable {
+    @name(".supertable") table supertable_0 {
         actions = {
-            superaction_0();
+            superaction();
             @defaultonly NoAction_0();
         }
         key = {
@@ -213,7 +213,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_0();
     }
     apply {
-        supertable.apply();
+        supertable_0.apply();
     }
 }
 

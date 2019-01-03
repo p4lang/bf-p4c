@@ -239,7 +239,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".dummy_cntr") direct_counter(CounterType.packets) dummy_cntr;
+    @name(".dummy_cntr") @min_width(64) direct_counter(CounterType.packets) dummy_cntr;
     @name(".set_ip_id") action set_ip_id(bit<16> ip_id, bit<9> egress_port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
         hdr.ipv4.identification = ip_id;

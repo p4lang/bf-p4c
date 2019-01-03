@@ -269,38 +269,38 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".tcp_sport_modify") action tcp_sport_modify_0(bit<16> sPort, bit<9> port) {
+    @name(".tcp_sport_modify") action tcp_sport_modify(bit<16> sPort, bit<9> port) {
         hdr.tcp.srcPort = sPort;
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".tcp_dport_modify") action tcp_dport_modify_0(bit<16> dPort, bit<9> port) {
+    @name(".tcp_dport_modify") action tcp_dport_modify(bit<16> dPort, bit<9> port) {
         hdr.tcp.dstPort = dPort;
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".ipsa_modify") action ipsa_modify_0(bit<32> ipsa, bit<9> port) {
+    @name(".ipsa_modify") action ipsa_modify(bit<32> ipsa, bit<9> port) {
         hdr.ipv4.srcAddr = ipsa;
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".ipda_modify") action ipda_modify_0(bit<32> ipda, bit<9> port) {
+    @name(".ipda_modify") action ipda_modify(bit<32> ipda, bit<9> port) {
         hdr.ipv4.dstAddr = ipda;
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".ipds_modify") action ipds_modify_0(bit<8> ds, bit<9> port) {
+    @name(".ipds_modify") action ipds_modify(bit<8> ds, bit<9> port) {
         hdr.ipv4.diffserv = ds;
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".ipttl_modify") action ipttl_modify_0(bit<8> ttl, bit<9> port) {
+    @name(".ipttl_modify") action ipttl_modify(bit<8> ttl, bit<9> port) {
         hdr.ipv4.ttl = ttl;
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".match_tbl") table match_tbl {
+    @name(".match_tbl") table match_tbl_0 {
         actions = {
-            tcp_sport_modify_0();
-            tcp_dport_modify_0();
-            ipsa_modify_0();
-            ipda_modify_0();
-            ipds_modify_0();
-            ipttl_modify_0();
+            tcp_sport_modify();
+            tcp_dport_modify();
+            ipsa_modify();
+            ipda_modify();
+            ipds_modify();
+            ipttl_modify();
             @defaultonly NoAction_0();
         }
         key = {
@@ -311,7 +311,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_0();
     }
     apply {
-        match_tbl.apply();
+        match_tbl_0.apply();
     }
 }
 

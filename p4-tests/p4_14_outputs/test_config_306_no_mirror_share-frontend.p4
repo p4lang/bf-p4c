@@ -166,16 +166,16 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     @name(".NoAction") action NoAction_1() {
     }
-    @name(".set_port") action set_port_0(bit<9> p) {
+    @name(".set_port") action set_port(bit<9> p) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = p;
     }
-    @name(".do_mirror") action do_mirror_0(bit<9> p) {
+    @name(".do_mirror") action do_mirror(bit<9> p) {
         clone3<tuple<bit<4>>>(CloneType.E2E, 32w0, { meta.meta.y });
         hdr.ig_intr_md_for_tm.ucast_egress_port = p;
     }
-    @name(".e_mt1") table e_mt1 {
+    @name(".e_mt1") table e_mt1_0 {
         actions = {
-            set_port_0();
+            set_port();
             @defaultonly NoAction_0();
         }
         key = {
@@ -185,9 +185,9 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         default_action = NoAction_0();
     }
-    @name(".e_t0") table e_t0 {
+    @name(".e_t0") table e_t0_0 {
         actions = {
-            do_mirror_0();
+            do_mirror();
             @defaultonly NoAction_1();
         }
         key = {
@@ -200,26 +200,26 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     apply {
         if (hdr.eg_intr_md_from_parser_aux.clone_src == 4w0) 
-            e_t0.apply();
+            e_t0_0.apply();
         else 
-            e_mt1.apply();
+            e_mt1_0.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_5() {
     }
-    @name(".set_meta") action set_meta_0(bit<4> x, bit<4> y, bit<8> z) {
+    @name(".set_meta") action set_meta(bit<4> x, bit<4> y, bit<8> z) {
         meta.meta.x = x;
         meta.meta.y = y;
         meta.meta.z = z;
     }
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing() {
     }
-    @name(".i_t0") table i_t0 {
+    @name(".i_t0") table i_t0_0 {
         actions = {
-            set_meta_0();
-            do_nothing_0();
+            set_meta();
+            do_nothing();
             @defaultonly NoAction_5();
         }
         key = {
@@ -229,7 +229,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_5();
     }
     apply {
-        i_t0.apply();
+        i_t0_0.apply();
     }
 }
 

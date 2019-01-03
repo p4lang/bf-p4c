@@ -242,31 +242,31 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 @name(".kv_register") register<bit<32>>(32w8192) kv_register;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<32> tmp_0;
+    bit<32> tmp;
     @name(".NoAction") action NoAction_0() {
     }
     @name(".NoAction") action NoAction_3() {
     }
-    @name(".kv_alu") RegisterAction<bit<32>, bit<32>, bit<32>>(kv_register) kv_alu = {
+    @name(".kv_alu") RegisterAction<bit<32>, bit<32>, bit<32>>(kv_register) kv_alu_0 = {
         void apply(inout bit<32> value, out bit<32> rv) {
             if (hdr.kv.op == 8w1) 
                 value = hdr.kv.value;
             rv = value;
         }
     };
-    @name(".set_egr") action set_egr_0(bit<9> egress_spec) {
+    @name(".set_egr") action set_egr(bit<9> egress_spec) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_spec;
     }
-    @name("._no_op") action _no_op_0() {
+    @name("._no_op") action _no_op() {
     }
-    @name(".kv_execute") action kv_execute_0(bit<32> index) {
-        tmp_0 = kv_alu.execute(index);
-        hdr.kv.value = tmp_0;
+    @name(".kv_execute") action kv_execute(bit<32> index) {
+        tmp = kv_alu_0.execute(index);
+        hdr.kv.value = tmp;
     }
-    @name(".forward") table forward {
+    @name(".forward") table forward_0 {
         actions = {
-            set_egr_0();
-            _no_op_0();
+            set_egr();
+            _no_op();
             @defaultonly NoAction_0();
         }
         key = {
@@ -274,9 +274,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name(".kv_process") table kv_process {
+    @name(".kv_process") table kv_process_0 {
         actions = {
-            kv_execute_0();
+            kv_execute();
             @defaultonly NoAction_3();
         }
         key = {
@@ -287,8 +287,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (hdr.kv.isValid()) 
-            kv_process.apply();
-        forward.apply();
+            kv_process_0.apply();
+        forward_0.apply();
     }
 }
 

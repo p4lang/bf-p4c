@@ -4,9 +4,9 @@ brig-814-2.p4(55): [--Wwarn=uninitialized_out_param] warning: out parameter meta
 brig-814-2.p4(53)
 parser ParserI(packet_in packet,
        ^^^^^^^
-brig-814-2.p4(191): [--Wwarn=uninitialized_out_param] warning: out parameter meta may be uninitialized when ParserE terminates
+brig-814-2.p4(194): [--Wwarn=uninitialized_out_param] warning: out parameter meta may be uninitialized when ParserE terminates
                out metadata meta,
                             ^^^^
-brig-814-2.p4(189)
+brig-814-2.p4(192)
 parser ParserE(packet_in b,
        ^^^^^^^

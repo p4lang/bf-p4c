@@ -3,9 +3,9 @@
 #include <tofino/stateful_alu.p4>
 
 struct metadata {
-    @pa_container_size("ingress", "meta.a", 32) @pa_atomic("ingress", "meta.a") 
+    @pa_container_size("ingress" , "meta.a" , 32) @pa_atomic("ingress" , "meta.a") 
     bit<16> a;
-    @pa_container_size("ingress", "meta.b", 32) @pa_atomic("ingress", "meta.b") 
+    @pa_container_size("ingress" , "meta.b" , 32) @pa_atomic("ingress" , "meta.b") 
     bit<16> b;
 }
 
@@ -23,6 +23,8 @@ struct headers {
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     state start {
+        meta.a = 0;
+        meta.b = 0;
         packet.extract(hdr.data);
         transition accept;
     }

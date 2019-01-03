@@ -165,40 +165,40 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".action_0") action action_6(bit<8> my_param_a) {
+    @name(".action_0") action action_0(bit<8> my_param_a) {
         hdr.pkt.field_a = my_param_a;
     }
-    @name(".action_1") action action_7(bit<16> my_param_c) {
+    @name(".action_1") action action_1(bit<16> my_param_c) {
         hdr.pkt.field_c = my_param_c;
     }
-    @name(".action_2") action action_8(bit<32> my_param_e) {
+    @name(".action_2") action action_2(bit<32> my_param_e) {
         hdr.pkt.field_e = my_param_e;
     }
-    @name(".action_3") action action_9(bit<32> my_param_f, bit<32> my_param_g) {
+    @name(".action_3") action action_3(bit<32> my_param_f, bit<32> my_param_g) {
         hdr.pkt.field_f = my_param_f;
         hdr.pkt.field_g = my_param_g;
     }
-    @name(".action_4") action action_10(bit<32> my_param_h, bit<32> my_param_i, bit<32> my_param_j, bit<32> my_param_k) {
+    @name(".action_4") action action_4(bit<32> my_param_h, bit<32> my_param_i, bit<32> my_param_j, bit<32> my_param_k) {
         hdr.pkt.field_h = my_param_h;
         hdr.pkt.field_i = my_param_i;
         hdr.pkt.field_j = my_param_j;
         hdr.pkt.field_k = my_param_k;
     }
-    @name(".action_5") action action_11(bit<32> my_param_h, bit<32> my_param_i, bit<32> my_param_j, bit<32> my_param_k, bit<32> my_param_l) {
+    @name(".action_5") action action_5(bit<32> my_param_h, bit<32> my_param_i, bit<32> my_param_j, bit<32> my_param_k, bit<32> my_param_l) {
         hdr.pkt.field_h = my_param_h;
         hdr.pkt.field_i = my_param_i;
         hdr.pkt.field_j = my_param_j;
         hdr.pkt.field_k = my_param_k;
         hdr.pkt.field_l = my_param_l;
     }
-    @immediate(0) @action_entries(1024) @name(".table_0") table table_0 {
+    @immediate(0) @action_entries(1024) @name(".table_0") table table_1 {
         actions = {
-            action_6();
-            action_7();
-            action_8();
-            action_9();
-            action_10();
-            action_11();
+            action_0();
+            action_1();
+            action_2();
+            action_3();
+            action_4();
+            action_5();
             @defaultonly NoAction_0();
         }
         key = {
@@ -208,7 +208,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_0();
     }
     apply {
-        table_0.apply();
+        table_1.apply();
     }
 }
 

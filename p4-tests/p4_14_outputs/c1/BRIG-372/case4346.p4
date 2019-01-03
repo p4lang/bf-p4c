@@ -1172,7 +1172,7 @@ control Chatcolet(inout headers hdr, inout metadata meta, inout standard_metadat
             bit<1> in_value;
             in_value = value;
             value = in_value;
-            rv = ~value;
+            rv = ~in_value;
         }
     };
     @name(".Spivey") RegisterAction<bit<1>, bit<32>, bit<1>>(Lesley) Spivey = {
@@ -1336,7 +1336,7 @@ control Counce(inout headers hdr, inout metadata meta, inout standard_metadata_t
             @defaultonly MintHill;
         }
         key = {
-            hdr.ig_intr_md.ingress_port[6:0]: exact;
+            hdr.ig_intr_md.ingress_port[6:0]: exact @name("ig_intr_md.ingress_port") ;
             hdr.Olcott.NantyGlo             : ternary;
             hdr.Olcott.Browning             : ternary;
         }
@@ -1486,7 +1486,7 @@ control Faysville(inout headers hdr, inout metadata meta, inout standard_metadat
             meta.Upalco.DewyRose                    : ternary;
             meta.Upalco.Fieldon                     : ternary;
             meta.Talmo.Gotham                       : ternary;
-            hdr.ig_intr_md_for_tm.mcast_grp_a[15:14]: ternary;
+            hdr.ig_intr_md_for_tm.mcast_grp_a[15:14]: ternary @name("ig_intr_md_for_tm.mcast_grp_a") ;
         }
         size = 512;
     }
@@ -1584,7 +1584,7 @@ control Gabbs(inout headers hdr, inout metadata meta, inout standard_metadata_t 
             bit<1> in_value;
             in_value = value;
             value = in_value;
-            rv = ~value;
+            rv = ~in_value;
         }
     };
     @name(".Craig") action Craig() {
@@ -1814,7 +1814,7 @@ control Kalskag(inout headers hdr, inout metadata meta, inout standard_metadata_
             Dunedin;
         }
         key = {
-            meta.Emajagua.Raeford[3:0]: exact;
+            meta.Emajagua.Raeford[3:0]: exact @name("Emajagua.Raeford") ;
         }
         size = 16;
     }
@@ -1923,7 +1923,7 @@ control Leflore(inout headers hdr, inout metadata meta, inout standard_metadata_
             Machens;
         }
         key = {
-            meta.Upalco.Colonie[11:0]: exact;
+            meta.Upalco.Colonie[11:0]: exact @name("Upalco.Colonie") ;
         }
         size = 4096;
         default_action = Machens(0);
@@ -1961,7 +1961,7 @@ control Libby(inout headers hdr, inout metadata meta, inout standard_metadata_t 
             MintHill_0;
         }
         key = {
-            meta.Gresston.Ovett[14:0]: exact;
+            meta.Gresston.Ovett[14:0]: exact @name("Gresston.Ovett") ;
         }
         size = 32768;
         default_action = MintHill_0();
@@ -1975,7 +1975,7 @@ control Libby(inout headers hdr, inout metadata meta, inout standard_metadata_t 
             Tallevast;
         }
         key = {
-            meta.Gresston.Ovett[16:15]: ternary;
+            meta.Gresston.Ovett[16:15]: ternary @name("Gresston.Ovett") ;
         }
         size = 16;
     }
@@ -2061,7 +2061,7 @@ control Merino(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         key = {
             meta.Wyanet.Rixford          : exact;
-            meta.Portal.McDaniels[127:64]: lpm;
+            meta.Portal.McDaniels[127:64]: lpm @name("Portal.McDaniels") ;
         }
         size = 8192;
     }
@@ -2074,7 +2074,7 @@ control Merino(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         key = {
             meta.Wyanet.Rixford          : exact;
-            meta.Portal.McDaniels[127:96]: lpm;
+            meta.Portal.McDaniels[127:96]: lpm @name("Portal.McDaniels") ;
         }
         size = 512;
     }
@@ -2086,7 +2086,7 @@ control Merino(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         key = {
             meta.Nunnelly.Monkstown     : exact;
-            meta.Nunnelly.Amazonia[19:0]: lpm;
+            meta.Nunnelly.Amazonia[19:0]: lpm @name("Nunnelly.Amazonia") ;
         }
         size = 131072;
         default_action = MintHill();
@@ -2099,7 +2099,7 @@ control Merino(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         key = {
             meta.Portal.Raynham        : exact;
-            meta.Portal.McDaniels[63:0]: lpm;
+            meta.Portal.McDaniels[63:0]: lpm @name("Portal.McDaniels") ;
         }
         size = 16384;
         default_action = MintHill();
@@ -2112,7 +2112,7 @@ control Merino(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         key = {
             meta.Portal.Empire           : exact;
-            meta.Portal.McDaniels[106:64]: lpm;
+            meta.Portal.McDaniels[106:64]: lpm @name("Portal.McDaniels") ;
         }
         size = 65536;
         default_action = MintHill();
@@ -2278,7 +2278,7 @@ control Mynard(inout headers hdr, inout metadata meta, inout standard_metadata_t
             Ripley;
         }
         key = {
-            meta.Upalco.Pilottown[10:0]: exact;
+            meta.Upalco.Pilottown[10:0]: exact @name("Upalco.Pilottown") ;
         }
         size = 256;
         default_action = Vandling();
@@ -2349,7 +2349,7 @@ control Nevis(inout headers hdr, inout metadata meta, inout standard_metadata_t 
             bit<1> in_value;
             in_value = value;
             value = in_value;
-            rv = ~value;
+            rv = ~in_value;
         }
     };
     @name(".Boysen") action Boysen() {
@@ -2804,7 +2804,7 @@ control Raritan(inout headers hdr, inout metadata meta, inout standard_metadata_
         key = {
             meta.Upalco.Headland           : ternary;
             meta.Upalco.Walcott            : ternary;
-            hdr.eg_intr_md.egress_port[6:0]: exact;
+            hdr.eg_intr_md.egress_port[6:0]: exact @name("eg_intr_md.egress_port") ;
         }
         size = 512;
     }
@@ -2849,7 +2849,7 @@ control Rattan(inout headers hdr, inout metadata meta, inout standard_metadata_t
             meta.Bigspring.Verdemont      : ternary;
             meta.Bigspring.Combine        : ternary;
             meta.Nunnelly.Amazonia        : ternary;
-            meta.Portal.McDaniels[127:112]: ternary;
+            meta.Portal.McDaniels[127:112]: ternary @name("Portal.McDaniels") ;
             meta.Bigspring.Correo         : ternary;
             meta.Bigspring.RioLinda       : ternary;
             meta.Upalco.Fieldon           : ternary;
@@ -2884,7 +2884,7 @@ control RedBay(inout headers hdr, inout metadata meta, inout standard_metadata_t
             Gillespie;
         }
         key = {
-            meta.Upalco.Colonie[31:24]: exact;
+            meta.Upalco.Colonie[31:24]: exact @name("Upalco.Colonie") ;
         }
         size = 256;
         default_action = Gillespie(0, 0, 0);
@@ -2894,7 +2894,7 @@ control RedBay(inout headers hdr, inout metadata meta, inout standard_metadata_t
             Gorum;
         }
         key = {
-            meta.Upalco.Monohan: exact;
+            meta.Upalco.Monohan: exact @name("Upalco.Monohan") ;
         }
         size = 4096;
         default_action = Gorum(0);
@@ -3088,7 +3088,7 @@ control Stecker(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.Bigspring.Correo = meta.Coupland.Cushing;
         meta.Bigspring.RioLinda = meta.Coupland.Dyess;
         meta.Bigspring.Verdemont[1:0] = ((bit<2>)meta.Coupland.Edinburgh)[1:0];
-        meta.Bigspring.Lignite = (bit<1>)meta.Coupland.Edinburgh >> 2;
+        meta.Bigspring.Lignite = (bit<1>)(meta.Coupland.Edinburgh >> 2);
         meta.Upalco.DewyRose = 3w1;
         meta.Starkey.WarEagle = meta.Bigspring.Kokadjo;
         meta.Bigspring.Homeworth = meta.Coupland.Chavies;
@@ -3110,7 +3110,7 @@ control Stecker(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.Bigspring.Kenvil = hdr.Olcott.Basic;
         meta.Bigspring.Correo = meta.Coupland.Cornville;
         meta.Bigspring.Verdemont[1:0] = ((bit<2>)meta.Coupland.Umkumiut)[1:0];
-        meta.Bigspring.Lignite = (bit<1>)meta.Coupland.Umkumiut >> 2;
+        meta.Bigspring.Lignite = (bit<1>)(meta.Coupland.Umkumiut >> 2);
         meta.DeBeque.Oakes = hdr.Panola[0].LaPlata;
         meta.Starkey.WarEagle = hdr.ElDorado.Folcroft;
         meta.Bigspring.Kokadjo = hdr.ElDorado.Folcroft;
@@ -3300,7 +3300,7 @@ control Stout(inout headers hdr, inout metadata meta, inout standard_metadata_t 
             MintHill;
         }
         key = {
-            meta.Upalco.Pilottown[10:0]: exact;
+            meta.Upalco.Pilottown[10:0]: exact @name("Upalco.Pilottown") ;
             meta.Moraine.Surrency      : selector;
         }
         size = 256;
@@ -3366,9 +3366,9 @@ control Sully(inout headers hdr, inout metadata meta, inout standard_metadata_t 
     @name(".Stout") Stout() Stout_0;
     apply {
         switch (Staunton.apply().action_run) {
-            Jonesport: {
-            }
             Stuttgart: {
+            }
+            Jonesport: {
             }
             default: {
                 Stout_0.apply(hdr, meta, standard_metadata);
@@ -3446,7 +3446,7 @@ control Sunflower(inout headers hdr, inout metadata meta, inout standard_metadat
         }
         key = {
             meta.Bigspring.Verdemont     : exact;
-            meta.Bigspring.Homeworth[2:2]: exact;
+            meta.Bigspring.Homeworth[2:2]: exact @name("Bigspring.Homeworth") ;
             meta.Talmo.Lumpkin           : exact;
         }
         size = 512;
@@ -3496,7 +3496,7 @@ control Sunflower(inout headers hdr, inout metadata meta, inout standard_metadat
         }
         key = {
             meta.Bigspring.Verdemont     : exact;
-            meta.Bigspring.Homeworth[2:2]: exact;
+            meta.Bigspring.Homeworth[2:2]: exact @name("Bigspring.Homeworth") ;
             meta.Bigspring.Hanks         : exact;
         }
         size = 4096;
@@ -3657,14 +3657,14 @@ control Wisdom(inout headers hdr, inout metadata meta, inout standard_metadata_t
             MintHill_1;
         }
         key = {
-            hdr.ig_intr_md.ingress_port[6:0]                        : exact;
+            hdr.ig_intr_md.ingress_port[6:0]                        : exact @name("ig_intr_md.ingress_port") ;
             meta.Bozeman.Sasser                                     : ternary;
             meta.Bozeman.Liberal                                    : ternary;
             meta.Bigspring.Paxson                                   : ternary;
             meta.Bigspring.Ekwok                                    : ternary;
             meta.Bigspring.Elimsport                                : ternary;
             meta.Bigspring.Kenvil                                   : ternary;
-            hdr.ig_intr_md_from_parser_aux.ingress_parser_err[12:12]: ternary;
+            hdr.ig_intr_md_from_parser_aux.ingress_parser_err[12:12]: ternary @name("ig_intr_md_from_parser_aux.ingress_parser_err") ;
             meta.Bigspring.Lignite                                  : ternary;
         }
         size = 512;
@@ -3689,7 +3689,7 @@ control Wisdom(inout headers hdr, inout metadata meta, inout standard_metadata_t
             MintHill;
         }
         key = {
-            meta.Bigspring.Marquette: exact;
+            meta.Bigspring.Marquette: exact @name("Bigspring.Marquette") ;
         }
         size = 4096;
         default_action = MintHill();
@@ -3822,7 +3822,7 @@ control Woodfield(inout headers hdr, inout metadata meta, inout standard_metadat
             Eclectic;
         }
         key = {
-            hdr.ig_intr_md.ingress_port[6:0]: exact;
+            hdr.ig_intr_md.ingress_port[6:0]: exact @name("ig_intr_md.ingress_port") ;
         }
     }
     apply {
@@ -3880,7 +3880,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             MintHill_2;
         }
         key = {
-            hdr.eg_intr_md.egress_port[6:0]: exact;
+            hdr.eg_intr_md.egress_port[6:0]: exact @name("eg_intr_md.egress_port") ;
             meta.Wakita.NewTrier           : ternary;
             meta.Wakita.Peosta             : ternary;
         }
@@ -4019,7 +4019,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             Janney;
         }
         key = {
-            meta.Coupland.Cornville[7:7]: exact;
+            meta.Coupland.Cornville[7:7]: exact @name("Coupland.Cornville") ;
             hdr.Aynor.isValid()         : exact;
             hdr.PineLawn.isValid()      : exact;
         }

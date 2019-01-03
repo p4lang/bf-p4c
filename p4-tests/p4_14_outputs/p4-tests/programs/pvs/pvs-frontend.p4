@@ -215,9 +215,9 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @parser_value_set_size(2) @name(".pvs2") value_set<bit<16>>(4) pvs2;
-    @parser_value_set_size(5) @name(".pvs1") value_set<bit<16>>(4) pvs1;
-    @parser_value_set_size(5) @name(".pvs5") value_set<bit<16>>(4) pvs5;
+    @parser_value_set_size(2) @name(".pvs2") value_set<bit<16>>(2) pvs2_0;
+    @parser_value_set_size(5) @name(".pvs1") value_set<bit<16>>(5) pvs1_0;
+    @parser_value_set_size(5) @name(".pvs5") value_set<bit<16>>(5) pvs5_0;
     @name(".$start") state start {
         transition select((InstanceType_0)standard_metadata.instance_type) {
             InstanceType_0.START: start_0;
@@ -227,7 +227,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     @name(".parse_ethernet") state parse_ethernet {
         packet.extract<ethernet_t>(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
-            pvs2: parse_vlan;
+            pvs2_0: parse_vlan;
             default: accept;
         }
     }
@@ -238,7 +238,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     @name(".parse_vlan") state parse_vlan {
         packet.extract<vlan_tag_t>(hdr.vlan_tag_);
         transition select(hdr.vlan_tag_.etherType) {
-            pvs1: parse_ipv4;
+            pvs1_0: parse_ipv4;
             default: accept;
         }
     }
@@ -248,7 +248,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     @packet_entry @name(".start_i2e_mirrored") state start_i2e_mirrored {
         packet.extract<ethernet_t>(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
-            pvs5: parse_vlan;
+            pvs5_0: parse_vlan;
             default: accept;
         }
     }
@@ -259,17 +259,17 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     @name(".NoAction") action NoAction_1() {
     }
-    @name(".mod_ttl") action mod_ttl_0(bit<8> val) {
+    @name(".mod_ttl") action mod_ttl(bit<8> val) {
         hdr.ipv4.ttl = val;
     }
-    @name(".mod_vid") action mod_vid_0(bit<12> val) {
+    @name(".mod_vid") action mod_vid(bit<12> val) {
         hdr.vlan_tag_.vid = val;
     }
-    @name(".noop") action noop_0() {
+    @name(".noop") action noop() {
     }
-    @name(".read_ttl") table read_ttl {
+    @name(".read_ttl") table read_ttl_0 {
         actions = {
-            mod_ttl_0();
+            mod_ttl();
             @defaultonly NoAction_0();
         }
         key = {
@@ -279,10 +279,10 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         size = 512;
         default_action = NoAction_0();
     }
-    @name(".vlan2") table vlan2 {
+    @name(".vlan2") table vlan2_0 {
         actions = {
-            mod_vid_0();
-            noop_0();
+            mod_vid();
+            noop();
             @defaultonly NoAction_1();
         }
         key = {
@@ -293,50 +293,50 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = NoAction_1();
     }
     apply {
-        vlan2.apply();
-        read_ttl.apply();
+        vlan2_0.apply();
+        read_ttl_0.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_5() {
     }
-    @name(".do_ing_mir") action do_ing_mir_0() {
+    @name(".do_ing_mir") action do_ing_mir() {
         clone(CloneType.I2E, (bit<32>)meta.md.ing_mir_ses);
     }
-    @name(".set_md") action set_md_0(bit<1> ing_mir, bit<10> ing_ses, bit<1> egr_mir, bit<10> egr_ses) {
+    @name(".set_md") action set_md(bit<1> ing_mir, bit<10> ing_ses, bit<1> egr_mir, bit<10> egr_ses) {
         meta.md.do_ing_mirroring = ing_mir;
         meta.md.do_egr_mirroring = egr_mir;
         meta.md.ing_mir_ses = ing_ses;
         meta.md.egr_mir_ses = egr_ses;
     }
-    @name(".vlan_miss") action vlan_miss_0(bit<9> egress_port) {
+    @name(".vlan_miss") action vlan_miss(bit<9> egress_port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
     }
-    @name(".vlan_hit") action vlan_hit_0(bit<9> egress_port) {
+    @name(".vlan_hit") action vlan_hit(bit<9> egress_port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
     }
-    @name(".ing_mir") table ing_mir_1 {
+    @name(".ing_mir") table ing_mir_0 {
         actions = {
-            do_ing_mir_0();
+            do_ing_mir();
         }
         size = 1;
-        default_action = do_ing_mir_0();
+        default_action = do_ing_mir();
     }
-    @name(".p0") table p0 {
+    @name(".p0") table p0_0 {
         actions = {
-            set_md_0();
+            set_md();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 288;
-        default_action = set_md_0(1w0, 10w0, 1w0, 10w0);
+        default_action = set_md(1w0, 10w0, 1w0, 10w0);
     }
-    @name(".vlan") table vlan {
+    @name(".vlan") table vlan_0 {
         actions = {
-            vlan_miss_0();
-            vlan_hit_0();
+            vlan_miss();
+            vlan_hit();
             @defaultonly NoAction_5();
         }
         key = {
@@ -348,10 +348,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (1w0 == hdr.ig_intr_md.resubmit_flag) 
-            p0.apply();
+            p0_0.apply();
         if (1w1 == meta.md.do_ing_mirroring) 
-            ing_mir_1.apply();
-        vlan.apply();
+            ing_mir_0.apply();
+        vlan_0.apply();
     }
 }
 

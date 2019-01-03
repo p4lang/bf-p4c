@@ -124,25 +124,25 @@ control SwitchIngress(inout switch_header_t hdr, inout switch_metadata_t ig_md, 
 }
 
 control SwitchEgress(inout switch_header_t hdr, inout switch_metadata_t eg_md, in egress_intrinsic_metadata_t eg_intr_md, in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr, inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprs, inout egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport) {
-    @name("SwitchEgress.dummy_lpf") Lpf<bit<19>, bit<10>>(32w1024) dummy_lpf;
-    @name("SwitchEgress.dummy_wred") Wred<bit<19>, bit<10>>(32w1024, 8w0, 8w1) dummy_wred;
-    @name("SwitchEgress.set_wred_flag") action set_wred_flag_0() {
-        dummy_wred.execute(eg_intr_md.enq_qdepth, 10w1);
+    @name("SwitchEgress.dummy_lpf") Lpf<bit<19>, bit<10>>(32w1024) dummy_lpf_0;
+    @name("SwitchEgress.dummy_wred") Wred<bit<19>, bit<10>>(32w1024, 8w0, 8w1) dummy_wred_0;
+    @name("SwitchEgress.set_wred_flag") action set_wred_flag() {
+        dummy_wred_0.execute(eg_intr_md.enq_qdepth, 10w1);
     }
-    @name("SwitchEgress.set_avg_queue") action set_avg_queue_0() {
-        dummy_lpf.execute(eg_intr_md.deq_qdepth, 10w1);
+    @name("SwitchEgress.set_avg_queue") action set_avg_queue() {
+        dummy_lpf_0.execute(eg_intr_md.deq_qdepth, 10w1);
     }
     @hidden table tbl_set_avg_queue {
         actions = {
-            set_avg_queue_0();
+            set_avg_queue();
         }
-        const default_action = set_avg_queue_0();
+        const default_action = set_avg_queue();
     }
     @hidden table tbl_set_wred_flag {
         actions = {
-            set_wred_flag_0();
+            set_wred_flag();
         }
-        const default_action = set_wred_flag_0();
+        const default_action = set_wred_flag();
     }
     apply {
         tbl_set_avg_queue.apply();
@@ -150,20 +150,22 @@ control SwitchEgress(inout switch_header_t hdr, inout switch_metadata_t eg_md, i
     }
 }
 
-parser TofinoIngressParser_0(packet_in pkt, out switch_header_t hdr, out switch_metadata_t ig_md, out ingress_intrinsic_metadata_t ig_intr_md) {
+parser EmptyIngressParser_0(packet_in pkt, out switch_header_t hdr, out switch_metadata_t ig_md, out ingress_intrinsic_metadata_t ig_intr_md) {
+    ingress_intrinsic_metadata_t ig_intr_md_0;
     state start {
-        pkt.extract<ingress_intrinsic_metadata_t>(ig_intr_md);
-        transition select(ig_intr_md.resubmit_flag) {
-            1w1: parse_resubmit;
-            1w0: parse_port_metadata;
+        ig_intr_md_0.setInvalid();
+        pkt.extract<ingress_intrinsic_metadata_t>(ig_intr_md_0);
+        transition select(ig_intr_md_0.resubmit_flag) {
+            1w1: TofinoIngressParser_parse_resubmit;
+            1w0: TofinoIngressParser_parse_port_metadata;
             default: noMatch_0;
         }
     }
-    state parse_resubmit {
+    state TofinoIngressParser_parse_resubmit {
         transition reject;
     }
-    state parse_port_metadata {
-        pkt.advance(32w64);
+    state TofinoIngressParser_parse_port_metadata {
+        ig_intr_md = ig_intr_md_0;
         transition accept;
     }
     state noMatch_0 {
@@ -172,7 +174,7 @@ parser TofinoIngressParser_0(packet_in pkt, out switch_header_t hdr, out switch_
     }
 }
 
-Pipeline<switch_header_t, switch_metadata_t, switch_header_t, switch_metadata_t>(TofinoIngressParser_0(), SwitchIngress(), SwitchIngressDeparser(), SwitchEgressParser(), SwitchEgress(), SwitchEgressDeparser()) pipe0;
+Pipeline<switch_header_t, switch_metadata_t, switch_header_t, switch_metadata_t>(EmptyIngressParser_0(), SwitchIngress(), SwitchIngressDeparser(), SwitchEgressParser(), SwitchEgress(), SwitchEgressDeparser()) pipe0;
 
 Switch<switch_header_t, switch_metadata_t, switch_header_t, switch_metadata_t, _, _, _, _, _, _, _, _, _, _, _, _>(pipe0) main;
 

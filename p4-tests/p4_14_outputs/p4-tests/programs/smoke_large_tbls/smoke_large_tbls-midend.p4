@@ -245,22 +245,22 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_5() {
     }
-    @name(".dummy_cntr") direct_counter(CounterType.packets) dummy_cntr;
-    @name(".set_ip_id") action set_ip_id_0(bit<16> ip_id, bit<9> egress_port) {
+    @name(".dummy_cntr") @min_width(64) direct_counter(CounterType.packets) dummy_cntr_0;
+    @name(".set_ip_id") action set_ip_id(bit<16> ip_id, bit<9> egress_port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
         hdr.ipv4.identification = ip_id;
     }
-    @name(".nop") action nop_1() {
+    @name(".nop") action nop() {
     }
-    @name(".nop") action nop_2() {
+    @name(".nop") action nop_0() {
     }
-    @name(".set_egress") action set_egress_1(bit<9> egress_port) {
+    @name(".set_egress") action set_egress(bit<9> egress_port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
     }
-    @atcam_partition_index("vlan_tag.vlan_id") @name(".atcam_indirect_tbl") table atcam_indirect_tbl {
+    @atcam_partition_index("vlan_tag.vlan_id") @name(".atcam_indirect_tbl") table atcam_indirect_tbl_0 {
         actions = {
-            set_ip_id_0();
-            nop_1();
+            set_ip_id();
+            nop();
             @defaultonly NoAction_0();
         }
         key = {
@@ -271,10 +271,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         implementation = atcam_action_profile;
         default_action = NoAction_0();
     }
-    @pack(2) @ways(4) @atcam_partition_index("vlan_tag.vlan_id") @name(".atcam_tbl") table atcam_tbl {
+    @pack(2) @ways(4) @atcam_partition_index("vlan_tag.vlan_id") @name(".atcam_tbl") table atcam_tbl_0 {
         actions = {
-            set_egress_1();
-            nop_2();
+            set_egress();
+            nop_0();
             @defaultonly NoAction_4();
         }
         key = {
@@ -285,17 +285,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 500000;
         default_action = NoAction_4();
     }
-    @name(".set_egress") action set_egress_2(bit<9> egress_port) {
-        dummy_cntr.count();
+    @name(".set_egress") action set_egress_0(bit<9> egress_port) {
+        dummy_cntr_0.count();
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
     }
     @name(".nop") action nop_4() {
-        dummy_cntr.count();
+        dummy_cntr_0.count();
     }
-    @command_line("--no-dead-code-elimination") @name(".idle_stats_tbl") table idle_stats_tbl {
+    @command_line("--no-dead-code-elimination") @name(".idle_stats_tbl") table idle_stats_tbl_0 {
         support_timeout = true;
         actions = {
-            set_egress_2();
+            set_egress_0();
             nop_4();
             @defaultonly NoAction_5();
         }
@@ -335,13 +335,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.udp.hdr_length     : ternary @name("udp.hdr_length") ;
         }
         size = 2048;
-        counters = dummy_cntr;
+        counters = dummy_cntr_0;
         default_action = NoAction_5();
     }
     apply {
-        idle_stats_tbl.apply();
-        atcam_tbl.apply();
-        atcam_indirect_tbl.apply();
+        idle_stats_tbl_0.apply();
+        atcam_tbl_0.apply();
+        atcam_indirect_tbl_0.apply();
     }
 }
 

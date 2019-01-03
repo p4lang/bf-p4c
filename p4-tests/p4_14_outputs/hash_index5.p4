@@ -164,6 +164,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             countb2;
         }
+        default_action = countb2(val = 0);
     }
     apply {
         test1.apply();

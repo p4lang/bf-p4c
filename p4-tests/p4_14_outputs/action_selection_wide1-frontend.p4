@@ -39,24 +39,24 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".setr1_5") action setr1(bit<32> val1, bit<32> val2, bit<32> val3, bit<32> val4, bit<32> val5) {
+    @name(".setr1_5") action setr1_0(bit<32> val1, bit<32> val2, bit<32> val3, bit<32> val4, bit<32> val5) {
         hdr.data.r1 = val1;
         hdr.data.r2 = val2;
         hdr.data.r3 = val3;
         hdr.data.r4 = val4;
         hdr.data.r5 = val5;
     }
-    @name(".setr6_10") action setr6(bit<32> val6, bit<32> val7, bit<32> val8, bit<32> val9, bit<32> val10) {
+    @name(".setr6_10") action setr6_0(bit<32> val6, bit<32> val7, bit<32> val8, bit<32> val9, bit<32> val10) {
         hdr.data.r6 = val6;
         hdr.data.r7 = val7;
         hdr.data.r8 = val8;
         hdr.data.r9 = val9;
         hdr.data.r10 = val10;
     }
-    @name(".test1") table test1 {
+    @name(".test1") table test1_0 {
         actions = {
-            setr1();
-            setr6();
+            setr1_0();
+            setr6_0();
             @defaultonly NoAction_0();
         }
         key = {
@@ -70,7 +70,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_0();
     }
     apply {
-        test1.apply();
+        test1_0.apply();
     }
 }
 

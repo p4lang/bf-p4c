@@ -196,15 +196,15 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing() {
     }
-    @name(".action_1") action action_2() {
+    @name(".action_1") action action_0() {
         hdr.hdr2.a = hdr.hdr2.a + hdr.eg_intr_md.pkt_length;
     }
-    @name(".table_e0") table table_e0 {
+    @name(".table_e0") table table_e0_0 {
         actions = {
-            do_nothing_0();
-            action_2();
+            do_nothing();
+            action_0();
             @defaultonly NoAction_0();
         }
         key = {
@@ -217,24 +217,24 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = NoAction_0();
     }
     apply {
-        table_e0.apply();
+        table_e0_0.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_1() {
     }
-    @name(".do_nothing") action do_nothing_1() {
+    @name(".do_nothing") action do_nothing_2() {
     }
-    @name(".action_0") action action_3(bit<8> py, bit<16> pz) {
+    @name(".action_0") action action_1(bit<8> py, bit<16> pz) {
         meta.meta.x = 8w1;
         meta.meta.y = py;
         meta.meta.z = pz;
     }
-    @name(".table_i0") table table_i0 {
+    @name(".table_i0") table table_i0_0 {
         actions = {
-            do_nothing_1();
-            action_3();
+            do_nothing_2();
+            action_1();
             @defaultonly NoAction_1();
         }
         key = {
@@ -244,7 +244,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_1();
     }
     apply {
-        table_i0.apply();
+        table_i0_0.apply();
     }
 }
 

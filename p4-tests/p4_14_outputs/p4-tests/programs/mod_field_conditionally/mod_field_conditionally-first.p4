@@ -245,7 +245,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             set_p();
         }
-        default_action = set_p();
+        default_action = set_p(p = 9w0);
     }
     apply {
         if (hdr.ipv4.isValid()) {

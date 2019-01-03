@@ -178,13 +178,13 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".egr_cntr") counter(32w256, CounterType.packets) egr_cntr;
-    @name(".egr_act") action egr_act_0(bit<32> idx) {
-        egr_cntr.count(idx);
+    @name(".egr_cntr") counter(32w256, CounterType.packets) egr_cntr_0;
+    @name(".egr_act") action egr_act(bit<32> idx) {
+        egr_cntr_0.count(idx);
     }
-    @name(".cntr_tbl") table cntr_tbl {
+    @name(".cntr_tbl") table cntr_tbl_0 {
         actions = {
-            egr_act_0();
+            egr_act();
             @defaultonly NoAction_0();
         }
         key = {
@@ -196,7 +196,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = NoAction_0();
     }
     apply {
-        cntr_tbl.apply();
+        cntr_tbl_0.apply();
     }
 }
 
@@ -211,8 +211,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_11() {
     }
-    @name(".igr_cntr") counter(32w256, CounterType.packets) igr_cntr;
-    @name(".n") action n_0() {
+    @name(".igr_cntr") counter(32w256, CounterType.packets) igr_cntr_0;
+    @name(".n") action n() {
     }
     @name(".n") action n_5() {
     }
@@ -222,7 +222,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".n") action n_8() {
     }
-    @name(".set_dmac") action set_dmac_0(bit<48> d) {
+    @name(".set_dmac") action set_dmac(bit<48> d) {
         hdr.ethernet.dstAddr = d;
     }
     @name(".set_dmac") action set_dmac_5(bit<48> d) {
@@ -237,7 +237,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".set_dmac") action set_dmac_8(bit<48> d) {
         hdr.ethernet.dstAddr = d;
     }
-    @name(".set_smac") action set_smac_0(bit<48> s) {
+    @name(".set_smac") action set_smac(bit<48> s) {
         hdr.ethernet.srcAddr = s;
     }
     @name(".set_smac") action set_smac_5(bit<48> s) {
@@ -252,7 +252,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".set_smac") action set_smac_8(bit<48> s) {
         hdr.ethernet.srcAddr = s;
     }
-    @name(".set_dmac_ipv6") action set_dmac_ipv6_0(bit<48> dmac, bit<128> daddr) {
+    @name(".set_dmac_ipv6") action set_dmac_ipv6(bit<48> dmac, bit<128> daddr) {
         hdr.ethernet.dstAddr = dmac;
         hdr.ipv6.dstAddr = daddr;
     }
@@ -260,25 +260,25 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ethernet.dstAddr = dmac;
         hdr.ipv6.dstAddr = daddr;
     }
-    @name(".set_dmac_cntr") action set_dmac_cntr_0(bit<48> d, bit<32> idx) {
+    @name(".set_dmac_cntr") action set_dmac_cntr(bit<48> d, bit<32> idx) {
         hdr.ethernet.dstAddr = d;
-        igr_cntr.count(idx);
+        igr_cntr_0.count(idx);
     }
-    @name(".set_smac_cntr") action set_smac_cntr_0(bit<48> s, bit<32> idx) {
+    @name(".set_smac_cntr") action set_smac_cntr(bit<48> s, bit<32> idx) {
         hdr.ethernet.srcAddr = s;
-        igr_cntr.count(idx);
+        igr_cntr_0.count(idx);
     }
-    @name(".a") action a_0() {
+    @name(".a") action a() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = hdr.ig_intr_md.ingress_port;
     }
-    @name(".smd") action smd_0() {
+    @name(".smd") action smd() {
         meta.md.ingress_port = (bit<10>)hdr.ig_intr_md.ingress_port;
     }
-    @atcam_partition_index("md.ingress_port") @name(".atcam") table atcam {
+    @atcam_partition_index("md.ingress_port") @name(".atcam") table atcam_0 {
         actions = {
-            n_0();
-            set_dmac_0();
-            set_smac_0();
+            n();
+            set_dmac();
+            set_smac();
             @defaultonly NoAction_1();
         }
         key = {
@@ -288,7 +288,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 10240;
         default_action = NoAction_1();
     }
-    @name(".exm") table exm {
+    @name(".exm") table exm_0 {
         actions = {
             n_5();
             set_dmac_5();
@@ -301,14 +301,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_8();
     }
-    @name(".indirect") table indirect {
+    @name(".indirect") table indirect_0 {
         actions = {
             n_6();
             set_dmac_6();
             set_smac_6();
-            set_dmac_ipv6_0();
-            set_dmac_cntr_0();
-            set_smac_cntr_0();
+            set_dmac_ipv6();
+            set_dmac_cntr();
+            set_smac_cntr();
             @defaultonly NoAction_9();
         }
         key = {
@@ -318,7 +318,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         implementation = ap;
         default_action = NoAction_9();
     }
-    @name(".sel_tbl") table sel_tbl {
+    @name(".sel_tbl") table sel_tbl_0 {
         actions = {
             n_7();
             set_dmac_7();
@@ -334,19 +334,19 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         implementation = sel_ap;
         default_action = NoAction_10();
     }
-    @name(".set_egr") table set_egr {
+    @name(".set_egr") table set_egr_0 {
         actions = {
-            a_0();
+            a();
         }
-        default_action = a_0();
+        default_action = a();
     }
-    @name(".set_metadata2") table set_metadata2 {
+    @name(".set_metadata2") table set_metadata2_0 {
         actions = {
-            smd_0();
+            smd();
         }
-        default_action = smd_0();
+        default_action = smd();
     }
-    @name(".tcam") table tcam {
+    @name(".tcam") table tcam_0 {
         actions = {
             n_8();
             set_dmac_8();
@@ -361,13 +361,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_11();
     }
     apply {
-        set_metadata2.apply();
-        exm.apply();
-        tcam.apply();
-        atcam.apply();
-        indirect.apply();
-        sel_tbl.apply();
-        set_egr.apply();
+        set_metadata2_0.apply();
+        exm_0.apply();
+        tcam_0.apply();
+        atcam_0.apply();
+        indirect_0.apply();
+        sel_tbl_0.apply();
+        set_egr_0.apply();
     }
 }
 

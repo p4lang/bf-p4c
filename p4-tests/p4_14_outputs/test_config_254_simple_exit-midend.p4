@@ -161,10 +161,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_5() {
     }
-    @name(".action_0") action action_2() {
+    @name(".action_0") action action_0() {
         hasExited = true;
     }
-    @name(".action_1") action action_3() {
+    @name(".action_1") action action_1() {
         mark_to_drop();
     }
     @name(".action_1") action action_6() {
@@ -173,17 +173,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".action_1") action action_7() {
         mark_to_drop();
     }
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing() {
     }
     @name(".do_nothing") action do_nothing_3() {
     }
     @name(".do_nothing") action do_nothing_4() {
     }
-    @name(".table_0") table table_0 {
+    @name(".table_0") table table_3 {
         actions = {
-            action_2();
-            action_3();
-            do_nothing_0();
+            action_0();
+            action_1();
+            do_nothing();
             @defaultonly NoAction_0();
         }
         key = {
@@ -192,7 +192,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_0();
     }
-    @name(".table_1") table table_1 {
+    @name(".table_1") table table_4 {
         actions = {
             action_6();
             do_nothing_3();
@@ -203,7 +203,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_4();
     }
-    @name(".table_2") table table_2 {
+    @name(".table_2") table table_5 {
         actions = {
             action_7();
             do_nothing_4();
@@ -225,10 +225,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         tbl_act.apply();
-        table_0.apply();
+        table_3.apply();
         if (!hasExited) {
-            table_1.apply();
-            table_2.apply();
+            table_4.apply();
+            table_5.apply();
         }
     }
 }

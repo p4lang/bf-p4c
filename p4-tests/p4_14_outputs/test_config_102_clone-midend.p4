@@ -150,13 +150,12 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<1> tmp_0;
     @name(".abc") state abc {
         packet.extract<ethernet_t>(hdr.ethernet);
         transition accept;
     }
     @name(".start") state start {
-        tmp_0 = packet.lookahead<bit<1>>();
+        packet.lookahead<bit<1>>();
         transition abc;
     }
 }
@@ -168,16 +167,16 @@ struct tuple_0 {
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".egr_action") action egr_action_0() {
+    @name(".egr_action") action egr_action() {
         clone3<tuple_0>(CloneType.E2E, 32w7, { meta.m.foo });
     }
-    @name(".egr_action2") action egr_action2_0() {
+    @name(".egr_action2") action egr_action2() {
         clone(CloneType.E2E, 32w8);
     }
-    @name(".egr_null_table") table egr_null_table {
+    @name(".egr_null_table") table egr_null_table_0 {
         actions = {
-            egr_action_0();
-            egr_action2_0();
+            egr_action();
+            egr_action2();
             @defaultonly NoAction_0();
         }
         key = {
@@ -188,23 +187,23 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = NoAction_0();
     }
     apply {
-        egr_null_table.apply();
+        egr_null_table_0.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_1() {
     }
-    @name(".ingr_action") action ingr_action_0() {
+    @name(".ingr_action") action ingr_action() {
         clone3<tuple_0>(CloneType.I2E, 32w5, { meta.m.foo });
     }
-    @name(".ingr_action2") action ingr_action2_0() {
+    @name(".ingr_action2") action ingr_action2() {
         clone(CloneType.I2E, 32w6);
     }
-    @name(".ingr_null_table") table ingr_null_table {
+    @name(".ingr_null_table") table ingr_null_table_0 {
         actions = {
-            ingr_action_0();
-            ingr_action2_0();
+            ingr_action();
+            ingr_action2();
             @defaultonly NoAction_1();
         }
         key = {
@@ -213,7 +212,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_1();
     }
     apply {
-        ingr_null_table.apply();
+        ingr_null_table_0.apply();
     }
 }
 

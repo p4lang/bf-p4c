@@ -158,18 +158,18 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".do_stuff") action do_stuff_0() {
+    @name(".do_stuff") action do_stuff() {
         hdr.ethernet.ethertype = (bit<16>)meta.m.f + 16w4096;
         hdr.ig_intr_md_for_tm.ucast_egress_port = hdr.ig_intr_md.ingress_port;
     }
-    @name(".t") table t {
+    @name(".t") table t_0 {
         actions = {
-            do_stuff_0();
+            do_stuff();
         }
-        default_action = do_stuff_0();
+        default_action = do_stuff();
     }
     apply {
-        t.apply();
+        t_0.apply();
     }
 }
 

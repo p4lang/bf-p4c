@@ -188,7 +188,7 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<112> tmp_1;
+    bit<112> tmp;
     @name(".parse_cpu_ethernet") state parse_cpu_ethernet {
         packet.extract<ethernet_t>(hdr.cpu_ethernet);
         transition select(hdr.cpu_ethernet.etherType) {
@@ -221,8 +221,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
         }
     }
     @name(".start") state start {
-        tmp_1 = packet.lookahead<bit<112>>();
-        transition select(tmp_1[15:0]) {
+        tmp = packet.lookahead<bit<112>>();
+        transition select(tmp[15:0]) {
             16w0xbf01: parse_cpu_ethernet;
             default: parse_ethernet;
         }
@@ -232,9 +232,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".send_ether") action send_ether_0() {
+    @name(".send_ether") action send_ether() {
     }
-    @name(".send_to_cpu") action send_to_cpu_0() {
+    @name(".send_to_cpu") action send_to_cpu() {
         hdr.cpu_ethernet.setValid();
         hdr.cpu_ethernet.dstAddr = 48w0xffffffffffff;
         hdr.cpu_ethernet.srcAddr = 48w0xaaaaaaaaaaaa;
@@ -244,7 +244,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         hdr.to_cpu.ingress_port = (bit<16>)meta.mirror_meta.ingress_port;
         hdr.to_cpu.pkt_length = hdr.eg_intr_md.pkt_length;
     }
-    @name(".send_rspan") action send_rspan_0(bit<3> pcp, bit<1> cfi, bit<12> vid) {
+    @name(".send_rspan") action send_rspan(bit<3> pcp, bit<1> cfi, bit<12> vid) {
         hdr.vlan_tag.push_front(1);
         hdr.vlan_tag[0].setValid();
         hdr.vlan_tag[0].setValid();
@@ -254,11 +254,11 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         hdr.vlan_tag[0].etherType = hdr.ethernet.etherType;
         hdr.ethernet.etherType = 16w0x8100;
     }
-    @name(".mirror_dest") table mirror_dest_1 {
+    @name(".mirror_dest") table mirror_dest_0 {
         actions = {
-            send_ether_0();
-            send_to_cpu_0();
-            send_rspan_0();
+            send_ether();
+            send_to_cpu();
+            send_rspan();
             @defaultonly NoAction_0();
         }
         key = {
@@ -268,7 +268,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     apply {
         if (hdr.eg_intr_md_from_parser_aux.clone_src != 4w0) 
-            mirror_dest_1.apply();
+            mirror_dest_0.apply();
     }
 }
 
@@ -279,41 +279,41 @@ struct tuple_0 {
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bool tmp_2;
+    bool tmp_0;
     @name(".NoAction") action NoAction_1() {
     }
     @name(".NoAction") action NoAction_6() {
     }
     @name(".NoAction") action NoAction_7() {
     }
-    @name(".ipv4_host_stats") direct_counter(CounterType.packets_and_bytes) ipv4_host_stats;
-    @name(".acl_drop") action acl_drop_0() {
+    @name(".ipv4_host_stats") direct_counter(CounterType.packets_and_bytes) ipv4_host_stats_0;
+    @name(".acl_drop") action acl_drop() {
         mark_to_drop();
     }
-    @name(".acl_mirror") action acl_mirror_0(bit<32> mirror_dest) {
+    @name(".acl_mirror") action acl_mirror(bit<32> mirror_dest) {
         meta.mirror_meta.mirror_type = 1w0;
         meta.mirror_meta.ingress_port = hdr.ig_intr_md.ingress_port;
         meta.mirror_meta.mirror_dest = (bit<10>)mirror_dest;
         clone3<tuple_0>(CloneType.I2E, mirror_dest, { hdr.ig_intr_md.ingress_port, (bit<10>)mirror_dest, 1w0 });
     }
-    @name(".acl_drop_and_mirror") action acl_drop_and_mirror_0(bit<32> mirror_dest) {
+    @name(".acl_drop_and_mirror") action acl_drop_and_mirror(bit<32> mirror_dest) {
         mark_to_drop();
         meta.mirror_meta.mirror_type = 1w0;
         meta.mirror_meta.ingress_port = hdr.ig_intr_md.ingress_port;
         meta.mirror_meta.mirror_dest = (bit<10>)mirror_dest;
         clone3<tuple_0>(CloneType.I2E, mirror_dest, { hdr.ig_intr_md.ingress_port, (bit<10>)mirror_dest, 1w0 });
     }
-    @name(".send") action send_1(bit<9> port) {
+    @name(".send") action send(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".discard") action discard_1() {
+    @name(".discard") action discard() {
         hdr.ig_intr_md_for_tm.drop_ctl = 3w1;
     }
-    @name(".ing_acl") table ing_acl {
+    @name(".ing_acl") table ing_acl_0 {
         actions = {
-            acl_drop_0();
-            acl_mirror_0();
-            acl_drop_and_mirror_0();
+            acl_drop();
+            acl_mirror();
+            acl_drop_and_mirror();
             @defaultonly NoAction_1();
         }
         key = {
@@ -329,31 +329,31 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_1();
     }
-    @name(".send") action send_2(bit<9> port) {
-        ipv4_host_stats.count();
+    @name(".send") action send_0(bit<9> port) {
+        ipv4_host_stats_0.count();
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".discard") action discard_2() {
-        ipv4_host_stats.count();
+    @name(".discard") action discard_0() {
+        ipv4_host_stats_0.count();
         hdr.ig_intr_md_for_tm.drop_ctl = 3w1;
     }
-    @name(".ipv4_host") table ipv4_host {
+    @name(".ipv4_host") table ipv4_host_0 {
         actions = {
-            send_2();
-            discard_2();
+            send_0();
+            discard_0();
             @defaultonly NoAction_6();
         }
         key = {
             hdr.ipv4.dstAddr: exact @name("ipv4.dstAddr") ;
         }
         size = 32768;
-        counters = ipv4_host_stats;
+        counters = ipv4_host_stats_0;
         default_action = NoAction_6();
     }
-    @name(".ipv4_lpm") table ipv4_lpm {
+    @name(".ipv4_lpm") table ipv4_lpm_0 {
         actions = {
-            send_1();
-            discard_1();
+            send();
+            discard();
             @defaultonly NoAction_7();
         }
         key = {
@@ -363,10 +363,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_7();
     }
     @hidden action act() {
-        tmp_2 = true;
+        tmp_0 = true;
     }
     @hidden action act_0() {
-        tmp_2 = false;
+        tmp_0 = false;
     }
     @hidden table tbl_act {
         actions = {
@@ -382,16 +382,16 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (hdr.ipv4.isValid()) {
-            if (ipv4_host.apply().hit) 
+            if (ipv4_host_0.apply().hit) 
                 tbl_act.apply();
             else 
                 tbl_act_0.apply();
-            if (tmp_2) 
+            if (tmp_0) 
                 ;
             else 
-                ipv4_lpm.apply();
+                ipv4_lpm_0.apply();
         }
-        ing_acl.apply();
+        ing_acl_0.apply();
     }
 }
 

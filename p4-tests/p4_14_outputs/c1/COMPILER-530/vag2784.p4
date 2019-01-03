@@ -167,7 +167,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             set_egr;
         }
         key = {
-            hdr.ethernet.etherType[11:0]: exact;
+            hdr.ethernet.etherType[11:0]: exact @name("ethernet.etherType") ;
             hdr.ethernet.dstAddr        : exact;
             hdr.ethernet.srcAddr        : exact;
         }
@@ -180,7 +180,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             hdr.ethernet.dstAddr        : exact;
-            hdr.ethernet.etherType[11:0]: exact;
+            hdr.ethernet.etherType[11:0]: exact @name("ethernet.etherType") ;
             hdr.ethernet.srcAddr        : exact;
         }
         size = 4096;
@@ -193,7 +193,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         key = {
             hdr.ethernet.dstAddr        : exact;
             hdr.ethernet.srcAddr        : exact;
-            hdr.ethernet.etherType[11:0]: exact;
+            hdr.ethernet.etherType[11:0]: exact @name("ethernet.etherType") ;
         }
         size = 4096;
     }

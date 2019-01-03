@@ -161,38 +161,38 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".do1") action do1_0() {
+    @name(".do1") action do1() {
         meta.m.f1 = 8w1;
     }
-    @name(".do2") action do2_0() {
+    @name(".do2") action do2() {
         meta.m.f2 = 8w2;
     }
-    @name(".set_port") action set_port_0() {
+    @name(".set_port") action set_port() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m.f1;
     }
-    @name(".t1") table t1 {
+    @name(".t1") table t1_0 {
         actions = {
-            do1_0();
-            do2_0();
+            do1();
+            do2();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
-        default_action = do1_0();
+        default_action = do1();
     }
-    @name(".t2") table t2 {
+    @name(".t2") table t2_0 {
         actions = {
-            set_port_0();
+            set_port();
         }
         key = {
             meta.m.f1: exact @name("m.f1") ;
             meta.m.f2: exact @name("m.f2") ;
         }
-        default_action = set_port_0();
+        default_action = set_port();
     }
     apply {
-        t1.apply();
-        t2.apply();
+        t1_0.apply();
+        t2_0.apply();
     }
 }
 

@@ -207,22 +207,22 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_5() {
     }
-    @name(".do_trill_forward") action do_trill_forward_0(bit<48> new_mac_da, bit<48> new_mac_sa, bit<12> new_vlan_id, bit<9> new_port) {
+    @name(".do_trill_forward") action do_trill_forward(bit<48> new_mac_da, bit<48> new_mac_sa, bit<12> new_vlan_id, bit<9> new_port) {
         hdr.outer_ethernet.dstAddr = new_mac_da;
         hdr.outer_ethernet.srcAddr = new_mac_sa;
         hdr.vlan_tag.vid = new_vlan_id;
         hdr.ig_intr_md_for_tm.ucast_egress_port = new_port;
         meta.m.hopCount = hdr.trill.hopCount;
     }
-    @name(".do_trill_forward_1") action do_trill_forward_3() {
+    @name(".do_trill_forward_1") action do_trill_forward_1() {
         meta.m.hopCount = meta.m.hopCount + 6w63;
     }
-    @name(".do_trill_forward_2") action do_trill_forward_4() {
+    @name(".do_trill_forward_2") action do_trill_forward_2() {
         hdr.trill.hopCount = meta.m.hopCount;
     }
-    @name(".trill_forward") table trill_forward {
+    @name(".trill_forward") table trill_forward_0 {
         actions = {
-            do_trill_forward_0();
+            do_trill_forward();
             @defaultonly NoAction_0();
         }
         key = {
@@ -230,25 +230,25 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name(".trill_forward_1") table trill_forward_1 {
+    @name(".trill_forward_1") table trill_forward_3 {
         actions = {
-            do_trill_forward_3();
+            do_trill_forward_1();
             @defaultonly NoAction_4();
         }
         default_action = NoAction_4();
     }
-    @name(".trill_forward_2") table trill_forward_2 {
+    @name(".trill_forward_2") table trill_forward_4 {
         actions = {
-            do_trill_forward_4();
+            do_trill_forward_2();
             @defaultonly NoAction_5();
         }
         default_action = NoAction_5();
     }
     apply {
-        switch (trill_forward.apply().action_run) {
-            do_trill_forward_0: {
-                trill_forward_1.apply();
-                trill_forward_2.apply();
+        switch (trill_forward_0.apply().action_run) {
+            do_trill_forward: {
+                trill_forward_3.apply();
+                trill_forward_4.apply();
             }
         }
 

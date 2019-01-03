@@ -1095,7 +1095,7 @@ control Green(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Merkel.Grassy         : exact;
-            meta.Accomac.Rienzi[127:64]: lpm;
+            meta.Accomac.Rienzi[127:64]: lpm @name("Accomac.Rienzi") ;
         }
         size = 8192;
     }
@@ -1121,7 +1121,7 @@ control Green(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Accomac.Hargis        : exact;
-            meta.Accomac.Rienzi[106:64]: lpm;
+            meta.Accomac.Rienzi[106:64]: lpm @name("Accomac.Rienzi") ;
         }
         size = 65536;
         default_action = Millston();
@@ -1159,7 +1159,7 @@ control Green(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Accomac.Hernandez   : exact;
-            meta.Accomac.Rienzi[63:0]: lpm;
+            meta.Accomac.Rienzi[63:0]: lpm @name("Accomac.Rienzi") ;
         }
         size = 16384;
         default_action = Millston();
@@ -1185,7 +1185,7 @@ control Green(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Chaumont.Inkom          : exact;
-            meta.Chaumont.Manasquan[19:0]: lpm;
+            meta.Chaumont.Manasquan[19:0]: lpm @name("Chaumont.Manasquan") ;
         }
         size = 131072;
         default_action = Millston();
@@ -1207,11 +1207,11 @@ control Green(inout headers hdr, inout metadata meta, inout standard_metadata_t 
                 switch (Milano.apply().action_run) {
                     Millston: {
                         switch (Witherbee.apply().action_run) {
-                            Millston: {
-                                Sparkill.apply();
-                            }
                             Stuttgart: {
                                 Wanamassa.apply();
+                            }
+                            Millston: {
+                                Sparkill.apply();
                             }
                         }
 
@@ -1224,6 +1224,9 @@ control Green(inout headers hdr, inout metadata meta, inout standard_metadata_t 
                     switch (Ekron.apply().action_run) {
                         Millston: {
                             switch (Nordland.apply().action_run) {
+                                Needles: {
+                                    Rillton.apply();
+                                }
                                 Millston: {
                                     switch (Bluff.apply().action_run) {
                                         Napanoch: {
@@ -1231,9 +1234,6 @@ control Green(inout headers hdr, inout metadata meta, inout standard_metadata_t 
                                         }
                                     }
 
-                                }
-                                Needles: {
-                                    Rillton.apply();
                                 }
                             }
 
@@ -1426,7 +1426,7 @@ control OjoFeliz(inout headers hdr, inout metadata meta, inout standard_metadata
             bit<1> in_value;
             in_value = value;
             value = in_value;
-            rv = ~value;
+            rv = ~in_value;
         }
     };
     @name(".ShowLow") RegisterAction<bit<1>, bit<32>, bit<1>>(Redfield) ShowLow = {

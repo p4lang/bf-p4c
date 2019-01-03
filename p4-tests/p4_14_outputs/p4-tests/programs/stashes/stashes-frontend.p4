@@ -247,13 +247,13 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".result_cntr") counter(32w256, CounterType.packets) result_cntr;
-    @name(".inc_count") action inc_count_0(bit<32> idx) {
-        result_cntr.count(idx);
+    @name(".result_cntr") counter(32w256, CounterType.packets) result_cntr_0;
+    @name(".inc_count") action inc_count(bit<32> idx) {
+        result_cntr_0.count(idx);
     }
-    @name(".cntr_tbl") table cntr_tbl {
+    @name(".cntr_tbl") table cntr_tbl_0 {
         actions = {
-            inc_count_0();
+            inc_count();
             @defaultonly NoAction_0();
         }
         key = {
@@ -264,7 +264,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = NoAction_0();
     }
     apply {
-        cntr_tbl.apply();
+        cntr_tbl_0.apply();
     }
 }
 
@@ -279,12 +279,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_11() {
     }
-    @name(".direct_cntr") direct_counter(CounterType.packets) direct_cntr;
-    @name(".change_fields") action change_fields_1(bit<16> dstPort, bit<9> eg_port) {
+    @name(".direct_cntr") direct_counter(CounterType.packets) direct_cntr_0;
+    @name(".change_fields") action change_fields(bit<16> dstPort, bit<9> eg_port) {
         hdr.tcp.dstPort = dstPort;
         hdr.ig_intr_md_for_tm.ucast_egress_port = eg_port;
     }
-    @name(".change_fields") action change_fields_2(bit<16> dstPort, bit<9> eg_port) {
+    @name(".change_fields") action change_fields_0(bit<16> dstPort, bit<9> eg_port) {
         hdr.tcp.dstPort = dstPort;
         hdr.ig_intr_md_for_tm.ucast_egress_port = eg_port;
     }
@@ -296,11 +296,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.tcp.dstPort = dstPort;
         hdr.ig_intr_md_for_tm.ucast_egress_port = eg_port;
     }
-    @name(".nop") action nop_0() {
+    @name(".nop") action nop() {
     }
-    @ways(3) @pack(1) @name(".deep_routing") table deep_routing {
+    @ways(3) @pack(1) @name(".deep_routing") table deep_routing_0 {
         actions = {
-            change_fields_1();
+            change_fields();
             @defaultonly NoAction_1();
         }
         key = {
@@ -311,11 +311,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_1();
     }
     @name(".change_fields") action change_fields_8(bit<16> dstPort, bit<9> eg_port) {
-        direct_cntr.count();
+        direct_cntr_0.count();
         hdr.tcp.dstPort = dstPort;
         hdr.ig_intr_md_for_tm.ucast_egress_port = eg_port;
     }
-    @stage(0) @ways(3) @pack(1) @name(".direct_routing") table direct_routing {
+    @stage(0) @ways(3) @pack(1) @name(".direct_routing") table direct_routing_0 {
         actions = {
             change_fields_8();
             @defaultonly NoAction_8();
@@ -325,13 +325,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.srcAddr: exact @name("ipv4.srcAddr") ;
         }
         size = 1024;
-        counters = direct_cntr;
+        counters = direct_cntr_0;
         default_action = NoAction_8();
     }
-    @stage(1) @ways(2) @pack(3) @name(".indirect_routing") table indirect_routing {
+    @stage(1) @ways(2) @pack(3) @name(".indirect_routing") table indirect_routing_0 {
         actions = {
-            nop_0();
-            change_fields_2();
+            nop();
+            change_fields_0();
             @defaultonly NoAction_9();
         }
         key = {
@@ -342,7 +342,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         implementation = indirect_profile;
         default_action = NoAction_9();
     }
-    @name(".wide_deep_routing") table wide_deep_routing {
+    @name(".wide_deep_routing") table wide_deep_routing_0 {
         actions = {
             change_fields_6();
             @defaultonly NoAction_10();
@@ -358,7 +358,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 11000;
         default_action = NoAction_10();
     }
-    @stage(2) @name(".wide_routing") table wide_routing {
+    @stage(2) @name(".wide_routing") table wide_routing_0 {
         actions = {
             change_fields_7();
             @defaultonly NoAction_11();
@@ -379,11 +379,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_11();
     }
     apply {
-        direct_routing.apply();
-        indirect_routing.apply();
-        wide_routing.apply();
-        deep_routing.apply();
-        wide_deep_routing.apply();
+        direct_routing_0.apply();
+        indirect_routing_0.apply();
+        wide_routing_0.apply();
+        deep_routing_0.apply();
+        wide_deep_routing_0.apply();
     }
 }
 

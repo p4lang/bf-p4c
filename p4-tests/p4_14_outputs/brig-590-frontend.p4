@@ -226,19 +226,19 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".do_ing_mir") action do_ing_mir_0() {
+    @name(".do_ing_mir") action do_ing_mir() {
         clone(CloneType.I2E, (bit<32>)meta.md.ing_mir_ses);
     }
-    @name(".ing_mir") table ing_mir {
+    @name(".ing_mir") table ing_mir_0 {
         actions = {
-            do_ing_mir_0();
+            do_ing_mir();
         }
         size = 1;
-        default_action = do_ing_mir_0();
+        default_action = do_ing_mir();
     }
     apply {
         if (1w1 == meta.md.do_ing_mirroring) 
-            ing_mir.apply();
+            ing_mir_0.apply();
     }
 }
 

@@ -177,28 +177,28 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bool tmp_0;
+    bool tmp;
     @name(".NoAction") action NoAction_0() {
     }
     @name(".NoAction") action NoAction_3() {
     }
-    @name(".flex_counter") counter(32w8192, CounterType.packets) flex_counter;
-    @name(".update_flex_counter") action update_flex_counter_0() {
-        flex_counter.count((bit<32>)meta.md.flex_counter_index);
+    @name(".flex_counter") counter(32w8192, CounterType.packets) flex_counter_0;
+    @name(".update_flex_counter") action update_flex_counter() {
+        flex_counter_0.count((bit<32>)meta.md.flex_counter_index);
     }
-    @name(".set_flex_counter_index") action set_flex_counter_index_0(bit<13> flex_counter_base) {
+    @name(".set_flex_counter_index") action set_flex_counter_index(bit<13> flex_counter_base) {
         meta.md.flex_counter_index = flex_counter_base + (bit<13>)hdr.vlan_tag.prio;
     }
-    @name(".update_counters") table update_counters {
+    @name(".update_counters") table update_counters_0 {
         actions = {
-            update_flex_counter_0();
+            update_flex_counter();
             @defaultonly NoAction_0();
         }
         default_action = NoAction_0();
     }
-    @name(".vlan") table vlan {
+    @name(".vlan") table vlan_0 {
         actions = {
-            set_flex_counter_index_0();
+            set_flex_counter_index();
             @defaultonly NoAction_3();
         }
         key = {
@@ -208,10 +208,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_3();
     }
     @hidden action act() {
-        tmp_0 = true;
+        tmp = true;
     }
     @hidden action act_0() {
-        tmp_0 = false;
+        tmp = false;
     }
     @hidden table tbl_act {
         actions = {
@@ -226,12 +226,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         const default_action = act_0();
     }
     apply {
-        if (vlan.apply().hit) 
+        if (vlan_0.apply().hit) 
             tbl_act.apply();
         else 
             tbl_act_0.apply();
-        if (tmp_0) 
-            update_counters.apply();
+        if (tmp) 
+            update_counters_0.apply();
     }
 }
 

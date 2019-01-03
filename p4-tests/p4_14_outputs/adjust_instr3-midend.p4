@@ -25,22 +25,22 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".setport") action setport_0(bit<9> port) {
+    @name(".setport") action setport(bit<9> port) {
         standard_metadata.egress_spec = port;
     }
-    @name(".set_nibbles") action set_nibbles_0(bit<4> param1, bit<4> param2) {
+    @name(".set_nibbles") action set_nibbles(bit<4> param1, bit<4> param2) {
         hdr.data.n1 = param1;
         hdr.data.n2 = param2;
     }
-    @name(".setting_port") table setting_port {
+    @name(".setting_port") table setting_port_0 {
         actions = {
-            setport_0();
+            setport();
         }
-        default_action = setport_0(9w1);
+        default_action = setport(9w1);
     }
-    @name(".test1") table test1 {
+    @name(".test1") table test1_0 {
         actions = {
-            set_nibbles_0();
+            set_nibbles();
             @defaultonly NoAction_0();
         }
         key = {
@@ -49,8 +49,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_0();
     }
     apply {
-        test1.apply();
-        setting_port.apply();
+        test1_0.apply();
+        setting_port_0.apply();
     }
 }
 

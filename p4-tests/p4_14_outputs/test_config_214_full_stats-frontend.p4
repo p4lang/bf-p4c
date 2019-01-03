@@ -223,19 +223,19 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_5() {
     }
-    @name(".counter_0") @min_width(64) counter(32w35000, CounterType.packets_and_bytes) counter_0;
-    @name(".counter_1") @min_width(64) counter(32w5000, CounterType.packets_and_bytes) counter_1;
-    @name(".meter_2") direct_meter<bit<2>>(MeterType.bytes) meter_1;
-    @name(".action_0") action action_2(bit<32> idx) {
-        counter_0.count(idx);
+    @name(".counter_0") @min_width(64) counter(32w35000, CounterType.packets_and_bytes) counter_2;
+    @name(".counter_1") @min_width(64) counter(32w5000, CounterType.packets_and_bytes) counter_3;
+    @name(".meter_2") direct_meter<bit<2>>(MeterType.bytes) meter_0;
+    @name(".action_0") action action_0(bit<32> idx) {
+        counter_2.count(idx);
     }
-    @name(".action_1") action action_3(bit<32> idx) {
-        counter_1.count(idx);
+    @name(".action_1") action action_1(bit<32> idx) {
+        counter_3.count(idx);
         random<bit<8>>(hdr.ipv4.ttl, 8w0, 8w0xff);
     }
-    @name(".table_0") table table_0 {
+    @name(".table_0") table table_3 {
         actions = {
-            action_2();
+            action_0();
             @defaultonly NoAction_0();
         }
         key = {
@@ -244,9 +244,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_0();
     }
-    @name(".table_1") table table_1 {
+    @name(".table_1") table table_4 {
         actions = {
-            action_3();
+            action_1();
             @defaultonly NoAction_4();
         }
         key = {
@@ -255,25 +255,25 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_4();
     }
-    @name(".action_2") action action_2_1() {
-        meter_1.read(hdr.blah.color);
+    @name(".action_2") action action_2_0() {
+        meter_0.read(hdr.blah.color);
     }
-    @pack(1) @name(".table_2") table table_2 {
+    @pack(1) @name(".table_2") table table_5 {
         actions = {
-            action_2_1();
+            action_2_0();
             @defaultonly NoAction_5();
         }
         key = {
             hdr.ipv4.dstAddr: exact @name("ipv4.dstAddr") ;
         }
         size = 4096;
-        meters = meter_1;
+        meters = meter_0;
         default_action = NoAction_5();
     }
     apply {
-        table_0.apply();
-        table_1.apply();
-        table_2.apply();
+        table_3.apply();
+        table_4.apply();
+        table_5.apply();
     }
 }
 

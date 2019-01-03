@@ -216,26 +216,26 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_7() {
     }
-    @name(".ipv4_lpm_hit") action ipv4_lpm_hit_0() {
+    @name(".ipv4_lpm_hit") action ipv4_lpm_hit() {
         hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
     }
-    @name(".lpm_miss") action lpm_miss_0(bit<16> param0) {
+    @name(".lpm_miss") action lpm_miss(bit<16> param0) {
         hdr.ethernet.etherType = param0;
         mark_to_drop();
     }
-    @name(".set_partition_index") action set_partition_index_0(bit<11> idx) {
+    @name(".set_partition_index") action set_partition_index(bit<11> idx) {
         meta.meta.partition_index = idx;
     }
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing() {
     }
-    @name(".do_nothing") action do_nothing_1() {
+    @name(".do_nothing") action do_nothing_2() {
     }
     @name(".do_nothing_2") action do_nothing_4() {
     }
-    @atcam_partition_index("meta.partition_index") @name(".ipv4_alg_tcam") table ipv4_alg_tcam {
+    @atcam_partition_index("meta.partition_index") @name(".ipv4_alg_tcam") table ipv4_alg_tcam_0 {
         actions = {
-            ipv4_lpm_hit_0();
-            lpm_miss_0();
+            ipv4_lpm_hit();
+            lpm_miss();
             @defaultonly NoAction_0();
         }
         key = {
@@ -246,9 +246,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 65536;
         default_action = NoAction_0();
     }
-    @name(".ipv4_lpm_partition") table ipv4_lpm_partition {
+    @name(".ipv4_lpm_partition") table ipv4_lpm_partition_0 {
         actions = {
-            set_partition_index_0();
+            set_partition_index();
             @defaultonly NoAction_5();
         }
         key = {
@@ -258,9 +258,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_5();
     }
-    @name(".table_n") table table_n {
+    @name(".table_n") table table_n_0 {
         actions = {
-            do_nothing_0();
+            do_nothing();
             do_nothing_4();
             @defaultonly NoAction_6();
         }
@@ -269,9 +269,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_6();
     }
-    @name(".table_x") table table_x {
+    @name(".table_x") table table_x_0 {
         actions = {
-            do_nothing_1();
+            do_nothing_2();
             @defaultonly NoAction_7();
         }
         key = {
@@ -280,12 +280,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_7();
     }
     apply {
-        ipv4_lpm_partition.apply();
-        switch (ipv4_alg_tcam.apply().action_run) {
-            lpm_miss_0: {
-                switch (table_n.apply().action_run) {
+        ipv4_lpm_partition_0.apply();
+        switch (ipv4_alg_tcam_0.apply().action_run) {
+            lpm_miss: {
+                switch (table_n_0.apply().action_run) {
                     do_nothing_4: {
-                        table_x.apply();
+                        table_x_0.apply();
                     }
                 }
 

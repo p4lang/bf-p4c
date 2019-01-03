@@ -57,11 +57,11 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".a1") action a1_0() {
+    @name(".a1") action a1() {
     }
-    @name(".T1") table T1 {
+    @name(".T1") table T1_0 {
         actions = {
-            a1_0();
+            a1();
             @defaultonly NoAction_0();
         }
         size = 1;
@@ -69,7 +69,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (meta.m.a == 1w0 && hdr.ipv4.ttl > 8w0) 
-            T1.apply();
+            T1_0.apply();
     }
 }
 

@@ -125,25 +125,25 @@ control SwitchIngress(inout switch_header_t hdr, inout switch_metadata_t ig_md, 
 
 control SwitchEgress(inout switch_header_t hdr, inout switch_metadata_t eg_md, in egress_intrinsic_metadata_t eg_intr_md, in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr, inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprs, inout egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport) {
     bool hasExited;
-    bit<1> wred_flag;
-    bit<19> avg_queue;
-    bit<8> tmp_1;
-    bit<19> tmp_2;
+    bit<1> wred_flag_0;
+    bit<19> avg_queue_0;
+    bit<8> tmp;
+    bit<19> tmp_0;
     @name(".NoAction") action NoAction_0() {
     }
     @name(".NoAction") action NoAction_4() {
     }
     @name(".NoAction") action NoAction_5() {
     }
-    @name("SwitchEgress.dummy_lpf") DirectLpf<bit<19>>() dummy_lpf;
-    @name("SwitchEgress.indirect_wred") Wred<bit<19>, bit<10>>(32w1024, 8w0, 8w1) indirect_wred;
-    @name("SwitchEgress.set_ipv4_ecn") action set_ipv4_ecn_0() {
+    @name("SwitchEgress.dummy_lpf") DirectLpf<bit<19>>() dummy_lpf_0;
+    @name("SwitchEgress.indirect_wred") Wred<bit<19>, bit<10>>(32w1024, 8w0, 8w1) indirect_wred_0;
+    @name("SwitchEgress.set_ipv4_ecn") action set_ipv4_ecn() {
         hdr.ipv4.diffserv[1:0] = 2w0b11;
     }
-    @name("SwitchEgress.set_ipv6_ecn") action set_ipv6_ecn_0() {
+    @name("SwitchEgress.set_ipv6_ecn") action set_ipv6_ecn() {
         hdr.ipv6.traffic_class[1:0] = 2w0b11;
     }
-    @name("SwitchEgress.ecn_marking") table ecn_marking {
+    @name("SwitchEgress.ecn_marking") table ecn_marking_0 {
         key = {
             hdr.ipv4.isValid()    : ternary @name("hdr.ipv4.$valid$") ;
             hdr.ipv4.diffserv     : ternary @name("hdr.ipv4.diffserv") ;
@@ -152,47 +152,47 @@ control SwitchEgress(inout switch_header_t hdr, inout switch_metadata_t eg_md, i
         }
         actions = {
             NoAction_0();
-            set_ipv4_ecn_0();
-            set_ipv6_ecn_0();
+            set_ipv4_ecn();
+            set_ipv6_ecn();
         }
         size = 1024;
         default_action = NoAction_0();
     }
-    @name("SwitchEgress.set_wred_flag") action set_wred_flag_0(bit<10> index) {
-        tmp_1 = indirect_wred.execute(eg_intr_md.enq_qdepth, index);
-        wred_flag = (bit<1>)tmp_1;
+    @name("SwitchEgress.set_wred_flag") action set_wred_flag(bit<10> index) {
+        tmp = indirect_wred_0.execute(eg_intr_md.enq_qdepth, index);
+        wred_flag_0 = (bit<1>)tmp;
     }
-    @name("SwitchEgress.wred") table wred {
+    @name("SwitchEgress.wred") table wred_0 {
         key = {
             eg_intr_md.egress_port: exact @name("eg_intr_md.egress_port") ;
             eg_intr_md.egress_qid : exact @name("eg_intr_md.egress_qid") ;
         }
         actions = {
             NoAction_4();
-            set_wred_flag_0();
+            set_wred_flag();
         }
         const default_action = NoAction_4();
         size = 2048;
     }
-    @name("SwitchEgress.set_avg_queue") action set_avg_queue_0() {
-        tmp_2 = dummy_lpf.execute(eg_intr_md.deq_qdepth);
-        avg_queue = tmp_2;
+    @name("SwitchEgress.set_avg_queue") action set_avg_queue() {
+        tmp_0 = dummy_lpf_0.execute(eg_intr_md.deq_qdepth);
+        avg_queue_0 = tmp_0;
     }
-    @name("SwitchEgress.queue") table queue {
+    @name("SwitchEgress.queue") table queue_0 {
         key = {
             eg_intr_md.egress_port: exact @name("eg_intr_md.egress_port") ;
         }
         actions = {
-            set_avg_queue_0();
+            set_avg_queue();
             @defaultonly NoAction_5();
         }
-        filters = dummy_lpf;
+        filters = dummy_lpf_0;
         default_action = NoAction_5();
     }
     @hidden action act_1() {
         hasExited = false;
-        wred_flag = 1w0;
-        avg_queue = 19w0;
+        wred_flag_0 = 1w0;
+        avg_queue_0 = 19w0;
     }
     @hidden action act_2() {
         hasExited = true;
@@ -211,31 +211,33 @@ control SwitchEgress(inout switch_header_t hdr, inout switch_metadata_t eg_md, i
     }
     apply {
         tbl_act_1.apply();
-        queue.apply();
-        if (avg_queue == 19w0) 
+        queue_0.apply();
+        if (avg_queue_0 == 19w0) 
             tbl_act_2.apply();
         if (!hasExited) {
-            wred.apply();
-            if (wred_flag == 1w1) 
-                ecn_marking.apply();
+            wred_0.apply();
+            if (wred_flag_0 == 1w1) 
+                ecn_marking_0.apply();
         }
     }
 }
 
-parser TofinoIngressParser_0(packet_in pkt, out switch_header_t hdr, out switch_metadata_t ig_md, out ingress_intrinsic_metadata_t ig_intr_md) {
+parser EmptyIngressParser_0(packet_in pkt, out switch_header_t hdr, out switch_metadata_t ig_md, out ingress_intrinsic_metadata_t ig_intr_md) {
+    ingress_intrinsic_metadata_t ig_intr_md_0;
     state start {
-        pkt.extract<ingress_intrinsic_metadata_t>(ig_intr_md);
-        transition select(ig_intr_md.resubmit_flag) {
-            1w1: parse_resubmit;
-            1w0: parse_port_metadata;
+        ig_intr_md_0.setInvalid();
+        pkt.extract<ingress_intrinsic_metadata_t>(ig_intr_md_0);
+        transition select(ig_intr_md_0.resubmit_flag) {
+            1w1: TofinoIngressParser_parse_resubmit;
+            1w0: TofinoIngressParser_parse_port_metadata;
             default: noMatch_0;
         }
     }
-    state parse_resubmit {
+    state TofinoIngressParser_parse_resubmit {
         transition reject;
     }
-    state parse_port_metadata {
-        pkt.advance(32w64);
+    state TofinoIngressParser_parse_port_metadata {
+        ig_intr_md = ig_intr_md_0;
         transition accept;
     }
     state noMatch_0 {
@@ -244,22 +246,24 @@ parser TofinoIngressParser_0(packet_in pkt, out switch_header_t hdr, out switch_
     }
 }
 
-Pipeline<switch_header_t, switch_metadata_t, switch_header_t, switch_metadata_t>(TofinoIngressParser_0(), SwitchIngress(), SwitchIngressDeparser(), SwitchEgressParser(), SwitchEgress(), SwitchEgressDeparser()) pipe0;
+Pipeline<switch_header_t, switch_metadata_t, switch_header_t, switch_metadata_t>(EmptyIngressParser_0(), SwitchIngress(), SwitchIngressDeparser(), SwitchEgressParser(), SwitchEgress(), SwitchEgressDeparser()) pipe0;
 
-parser TofinoIngressParser_1(packet_in pkt, out switch_header_t hdr, out switch_metadata_t ig_md, out ingress_intrinsic_metadata_t ig_intr_md) {
+parser EmptyIngressParser_1(packet_in pkt, out switch_header_t hdr, out switch_metadata_t ig_md, out ingress_intrinsic_metadata_t ig_intr_md) {
+    ingress_intrinsic_metadata_t ig_intr_md_1;
     state start {
-        pkt.extract<ingress_intrinsic_metadata_t>(ig_intr_md);
-        transition select(ig_intr_md.resubmit_flag) {
-            1w1: parse_resubmit;
-            1w0: parse_port_metadata;
+        ig_intr_md_1.setInvalid();
+        pkt.extract<ingress_intrinsic_metadata_t>(ig_intr_md_1);
+        transition select(ig_intr_md_1.resubmit_flag) {
+            1w1: TofinoIngressParser_parse_resubmit_0;
+            1w0: TofinoIngressParser_parse_port_metadata_0;
             default: noMatch_1;
         }
     }
-    state parse_resubmit {
+    state TofinoIngressParser_parse_resubmit_0 {
         transition reject;
     }
-    state parse_port_metadata {
-        pkt.advance(32w64);
+    state TofinoIngressParser_parse_port_metadata_0 {
+        ig_intr_md = ig_intr_md_1;
         transition accept;
     }
     state noMatch_1 {
@@ -268,7 +272,7 @@ parser TofinoIngressParser_1(packet_in pkt, out switch_header_t hdr, out switch_
     }
 }
 
-Pipeline<switch_header_t, switch_metadata_t, switch_header_t, switch_metadata_t>(TofinoIngressParser_1(), SwitchIngress(), SwitchIngressDeparser(), SwitchEgressParser(), SwitchEgress(), SwitchEgressDeparser()) pipe1;
+Pipeline<switch_header_t, switch_metadata_t, switch_header_t, switch_metadata_t>(EmptyIngressParser_1(), SwitchIngress(), SwitchIngressDeparser(), SwitchEgressParser(), SwitchEgress(), SwitchEgressDeparser()) pipe1;
 
 Switch<switch_header_t, switch_metadata_t, switch_header_t, switch_metadata_t, switch_header_t, switch_metadata_t, switch_header_t, switch_metadata_t, _, _, _, _, _, _, _, _>(pipe0, pipe1) main;
 

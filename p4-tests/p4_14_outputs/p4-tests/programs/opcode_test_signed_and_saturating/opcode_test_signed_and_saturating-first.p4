@@ -120,13 +120,16 @@ header ipv4_t {
     bit<4>  ihl;
     bit<8>  diffserv;
     bit<16> totalLen;
+    @saturating 
     int<16> identification;
     bit<3>  flags;
     bit<13> fragOffset;
+    @saturating 
     int<8>  ttl;
     bit<8>  protocol;
     bit<16> hdrChecksum;
     bit<32> srcAddr;
+    @saturating 
     int<32> dstAddr;
 }
 
@@ -218,24 +221,24 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ig_intr_md_for_tm.ucast_egress_port = p;
     }
     @name(".a16bit_sadds") action a16bit_sadds(int<16> value) {
-        hdr.ipv4.identification = hdr.ipv4.identification + value;
+        hdr.ipv4.identification = hdr.ipv4.identification |+| value;
     }
     @name(".a16bit_ssubs") action a16bit_ssubs(int<16> value) {
-        hdr.ipv4.identification = value - hdr.ipv4.identification;
+        hdr.ipv4.identification = value |-| hdr.ipv4.identification;
     }
     @name(".do_nothing") action do_nothing() {
     }
     @name(".a32bit_sadds") action a32bit_sadds(int<32> value) {
-        hdr.ipv4.dstAddr = hdr.ipv4.dstAddr + value;
+        hdr.ipv4.dstAddr = hdr.ipv4.dstAddr |+| value;
     }
     @name(".a32bit_ssubs") action a32bit_ssubs(int<32> value) {
-        hdr.ipv4.dstAddr = value - hdr.ipv4.dstAddr;
+        hdr.ipv4.dstAddr = value |-| hdr.ipv4.dstAddr;
     }
     @name(".a8bit_sadds") action a8bit_sadds(int<8> value) {
-        hdr.ipv4.ttl = hdr.ipv4.ttl + value;
+        hdr.ipv4.ttl = hdr.ipv4.ttl |+| value;
     }
     @name(".a8bit_ssubs") action a8bit_ssubs(int<8> value) {
-        hdr.ipv4.ttl = value - hdr.ipv4.ttl;
+        hdr.ipv4.ttl = value |-| hdr.ipv4.ttl;
     }
     @name(".port_table") table port_table {
         actions = {

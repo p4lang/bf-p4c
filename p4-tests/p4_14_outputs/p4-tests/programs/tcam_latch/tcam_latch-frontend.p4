@@ -182,23 +182,23 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    @name(".set_copy_to_cpu") action set_copy_to_cpu_0() {
+    @name(".set_copy_to_cpu") action set_copy_to_cpu() {
         hdr.ig_intr_md_for_tm.copy_to_cpu = 1w1;
     }
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing() {
     }
     @name(".do_nothing") action do_nothing_2() {
     }
-    @name(".set_p") action set_p_0(bit<9> p) {
+    @name(".set_p") action set_p(bit<9> p) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = p;
     }
-    @name(".clear_copy_to_cpu") action clear_copy_to_cpu_0() {
+    @name(".clear_copy_to_cpu") action clear_copy_to_cpu() {
         hdr.ig_intr_md_for_tm.copy_to_cpu = 1w0;
     }
-    @name(".table_1") table table_1 {
+    @name(".table_1") table table_0 {
         actions = {
-            set_copy_to_cpu_0();
-            do_nothing_0();
+            set_copy_to_cpu();
+            do_nothing();
             @defaultonly NoAction_0();
         }
         key = {
@@ -206,9 +206,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name(".table_2") table table_2 {
+    @name(".table_2") table table_4 {
         actions = {
-            set_p_0();
+            set_p();
             do_nothing_2();
             @defaultonly NoAction_3();
         }
@@ -217,17 +217,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_3();
     }
-    @name(".table_3") table table_3 {
+    @name(".table_3") table table_5 {
         actions = {
-            clear_copy_to_cpu_0();
+            clear_copy_to_cpu();
         }
-        default_action = clear_copy_to_cpu_0();
+        default_action = clear_copy_to_cpu();
     }
     apply {
         if (hdr.ipv4.isValid()) {
-            table_1.apply();
-            table_2.apply();
-            table_3.apply();
+            table_0.apply();
+            table_4.apply();
+            table_5.apply();
         }
     }
 }

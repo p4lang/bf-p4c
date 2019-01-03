@@ -184,25 +184,25 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_5() {
     }
-    @name(".action_0") action action_3() {
+    @name(".action_0") action action_0() {
         hdr.ipv4.diffserv = 8w1;
     }
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing() {
     }
     @name(".do_nothing") action do_nothing_3() {
     }
     @name(".do_nothing") action do_nothing_4() {
     }
-    @name(".action_1") action action_4() {
+    @name(".action_1") action action_1() {
         hdr.ipv4.totalLen = 16w2;
     }
-    @name(".action_2") action action_5() {
+    @name(".action_2") action action_2() {
         hdr.ipv4.ttl = 8w3;
     }
-    @name(".table_0") table table_0 {
+    @name(".table_0") table table_3 {
         actions = {
-            action_3();
-            do_nothing_0();
+            action_0();
+            do_nothing();
             @defaultonly NoAction_0();
         }
         key = {
@@ -211,9 +211,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         max_size = 1024;
         default_action = NoAction_0();
     }
-    @name(".table_1") table table_1 {
+    @name(".table_1") table table_4 {
         actions = {
-            action_4();
+            action_1();
             do_nothing_3();
             @defaultonly NoAction_4();
         }
@@ -224,9 +224,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         max_size = 16384;
         default_action = NoAction_4();
     }
-    @name(".table_2") table table_2 {
+    @name(".table_2") table table_5 {
         actions = {
-            action_5();
+            action_2();
             do_nothing_4();
             @defaultonly NoAction_5();
         }
@@ -238,11 +238,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (hdr.ethernet.etherType == 16w0x800) 
-            table_0.apply();
+            table_3.apply();
         if (hdr.ipv4.isValid()) 
-            table_1.apply();
+            table_4.apply();
         if (hdr.ethernet.etherType == hdr.ipv4.totalLen) 
-            table_2.apply();
+            table_5.apply();
     }
 }
 

@@ -168,28 +168,28 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    bit<8> tmp_0;
-    @name(".b_test") DirectRegisterAction<bit<8>, bit<8>>(r_test) b_test = {
+    bit<8> tmp;
+    @name(".b_test") DirectRegisterAction<bit<8>, bit<8>>(r_test) b_test_0 = {
         void apply(inout bit<8> value, out bit<8> rv) {
-            bit<8> alu_hi;
-            bit<8> in_value;
-            in_value = value;
-            if (in_value == 8w1) 
-                alu_hi = 8w1;
-            if (in_value == 8w0x0) 
-                alu_hi = 8w2;
-            if (in_value != 8w0x0) 
-                value = in_value + 8w255;
-            rv = alu_hi;
+            bit<8> alu_hi_0;
+            bit<8> in_value_0;
+            in_value_0 = value;
+            if (in_value_0 == 8w1) 
+                alu_hi_0 = 8w1;
+            if (in_value_0 == 8w0x0) 
+                alu_hi_0 = 8w2;
+            if (in_value_0 != 8w0x0) 
+                value = in_value_0 + 8w255;
+            rv = alu_hi_0;
         }
     };
-    @name(".a_test") action a_test_0() {
-        tmp_0 = b_test.execute();
-        hdr.pkt.field_k_8 = tmp_0;
+    @name(".a_test") action a_test() {
+        tmp = b_test_0.execute();
+        hdr.pkt.field_k_8 = tmp;
     }
-    @name(".t_test") table t_test {
+    @name(".t_test") table t_test_0 {
         actions = {
-            a_test_0();
+            a_test();
             @defaultonly NoAction_0();
         }
         key = {
@@ -199,7 +199,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_0();
     }
     apply {
-        t_test.apply();
+        t_test_0.apply();
     }
 }
 

@@ -166,29 +166,29 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    @name(".a1") action a1_0(bit<60> p1) {
+    @name(".a1") action a1(bit<60> p1) {
         meta.m1.f1 = p1;
     }
-    @name(".a2") action a2_0() {
+    @name(".a2") action a2() {
         hdr.ethernet.dstAddr[7:0] = ((bit<48>)meta.m1.f1)[7:0];
     }
-    @name(".t1") table t1 {
+    @name(".t1") table t1_0 {
         actions = {
-            a1_0();
+            a1();
             @defaultonly NoAction_0();
         }
         default_action = NoAction_0();
     }
-    @name(".t2") table t2 {
+    @name(".t2") table t2_0 {
         actions = {
-            a2_0();
+            a2();
             @defaultonly NoAction_3();
         }
         default_action = NoAction_3();
     }
     apply {
-        t1.apply();
-        t2.apply();
+        t1_0.apply();
+        t2_0.apply();
     }
 }
 

@@ -189,37 +189,37 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    bit<8> tmp_0;
-    @name(".sampler_alu") DirectRegisterAction<bit<8>, bit<8>>(flow_cnt) sampler_alu = {
+    bit<8> tmp;
+    @name(".sampler_alu") DirectRegisterAction<bit<8>, bit<8>>(flow_cnt) sampler_alu_0 = {
         void apply(inout bit<8> value, out bit<8> rv) {
-            bit<8> alu_hi;
-            bit<8> in_value;
+            bit<8> alu_hi_0;
+            bit<8> in_value_0;
             rv = 8w0;
-            in_value = value;
-            alu_hi = 8w1;
-            if (in_value == 8w100) 
+            in_value_0 = value;
+            alu_hi_0 = 8w1;
+            if (in_value_0 == 8w100) 
                 value = 8w0;
-            if (in_value != 8w100) 
-                value = in_value + 8w1;
-            if (in_value == 8w100) 
-                rv = alu_hi;
+            if (in_value_0 != 8w100) 
+                value = in_value_0 + 8w1;
+            if (in_value_0 == 8w100) 
+                rv = alu_hi_0;
         }
     };
-    @name(".drop_me") action drop_me_0() {
+    @name(".drop_me") action drop_me() {
         mark_to_drop();
     }
-    @name(".on_miss") action on_miss_0() {
+    @name(".on_miss") action on_miss() {
     }
     @name(".on_miss") action on_miss_2() {
     }
-    @name(".ipv4_fib_hit") action ipv4_fib_hit_0() {
-        tmp_0 = sampler_alu.execute();
-        meta.meta.needs_sampling = tmp_0;
+    @name(".ipv4_fib_hit") action ipv4_fib_hit() {
+        tmp = sampler_alu_0.execute();
+        meta.meta.needs_sampling = tmp;
     }
-    @name(".check_needs") table check_needs {
+    @name(".check_needs") table check_needs_0 {
         actions = {
-            drop_me_0();
-            on_miss_0();
+            drop_me();
+            on_miss();
             @defaultonly NoAction_0();
         }
         key = {
@@ -227,9 +227,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name(".ipv4_fib") table ipv4_fib {
+    @name(".ipv4_fib") table ipv4_fib_0 {
         actions = {
-            ipv4_fib_hit_0();
+            ipv4_fib_hit();
             @defaultonly on_miss_2();
         }
         key = {
@@ -239,8 +239,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = on_miss_2();
     }
     apply {
-        ipv4_fib.apply();
-        check_needs.apply();
+        ipv4_fib_0.apply();
+        check_needs_0.apply();
     }
 }
 

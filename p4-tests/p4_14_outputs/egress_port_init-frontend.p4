@@ -156,16 +156,16 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     @name(".NoAction") action NoAction_1() {
     }
-    @name(".a2") action a2_0() {
+    @name(".a2") action a2() {
         hdr.data.f = hdr.ig_intr_md_for_tm.ucast_egress_port;
     }
-    @name(".a3") action a3_0() {
+    @name(".a3") action a3() {
         hdr.data.f = hdr.ig_intr_md_for_tm.ucast_egress_port;
         hdr.ig_intr_md_for_tm.ucast_egress_port = 9w0x2;
     }
-    @name(".t2") table t2 {
+    @name(".t2") table t2_0 {
         actions = {
-            a2_0();
+            a2();
             @defaultonly NoAction_0();
         }
         key = {
@@ -173,9 +173,9 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         default_action = NoAction_0();
     }
-    @name(".t3") table t3 {
+    @name(".t3") table t3_0 {
         actions = {
-            a3_0();
+            a3();
             @defaultonly NoAction_1();
         }
         key = {
@@ -184,20 +184,20 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = NoAction_1();
     }
     apply {
-        t2.apply();
-        t3.apply();
+        t2_0.apply();
+        t3_0.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_5() {
     }
-    @name(".a1") action a1_0() {
+    @name(".a1") action a1() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = hdr.data.f;
     }
-    @name(".t1") table t1 {
+    @name(".t1") table t1_0 {
         actions = {
-            a1_0();
+            a1();
             @defaultonly NoAction_5();
         }
         key = {
@@ -206,7 +206,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_5();
     }
     apply {
-        t1.apply();
+        t1_0.apply();
     }
 }
 

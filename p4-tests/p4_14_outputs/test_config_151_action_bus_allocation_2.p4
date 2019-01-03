@@ -114,10 +114,12 @@ header pkt_t {
     bit<32> field_b_32;
     bit<32> field_c_32;
     bit<32> field_d_32;
+    @saturating 
     bit<16> field_e_sat;
     bit<16> field_f_16;
     bit<16> field_g_16;
     bit<16> field_h_16;
+    @saturating 
     int<8>  field_i_signed_sat;
     bit<8>  field_j_8;
     bit<8>  field_k_8;

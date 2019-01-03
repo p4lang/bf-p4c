@@ -30,7 +30,7 @@ struct user_metadata_t {
 }
 
 parser TopParser(packet_in b, out packet_t p, inout user_metadata_t m, inout standard_metadata_t meta) {
-    @name("TopParser.ck") Checksum16() ck_1;
+    @name("TopParser.ck") Checksum16() ck_0;
     state start {
         b.extract<ipv4_t>(p.ipv4);
         verify(p.ipv4.version == 4w4, error.IPv4IncorrectVersion);
@@ -40,23 +40,23 @@ parser TopParser(packet_in b, out packet_t p, inout user_metadata_t m, inout sta
 }
 
 control ingress(inout packet_t p, inout user_metadata_t m, inout standard_metadata_t meta) {
-    @name("ingress.sendToCPU") action sendToCPU_0() {
+    @name("ingress.sendToCPU") action sendToCPU() {
         meta.egress_spec = 9w64;
     }
-    @name("ingress.forward") action forward_0() {
+    @name("ingress.forward") action forward() {
         meta.egress_spec = 9w1;
     }
     @hidden table tbl_sendToCPU {
         actions = {
-            sendToCPU_0();
+            sendToCPU();
         }
-        const default_action = sendToCPU_0();
+        const default_action = sendToCPU();
     }
     @hidden table tbl_forward {
         actions = {
-            forward_0();
+            forward();
         }
-        const default_action = forward_0();
+        const default_action = forward();
     }
     apply {
         if (p.ipv4.ihl > 4w5) 

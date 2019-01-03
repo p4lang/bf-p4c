@@ -34,48 +34,48 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    @name(".meter_1") direct_meter<bit<8>>(MeterType.bytes) meter_1;
-    @name(".meter_2") direct_meter<bit<8>>(MeterType.bytes) meter_2;
-    @name(".h1_3") action h1_1(bit<16> val1, bit<16> val2, bit<16> val3) {
-        meter_1.read(hdr.data.color_1);
+    @name(".meter_1") direct_meter<bit<8>>(MeterType.bytes) meter_0;
+    @name(".meter_2") direct_meter<bit<8>>(MeterType.bytes) meter_3;
+    @name(".h1_3") action h1_0(bit<16> val1, bit<16> val2, bit<16> val3) {
+        meter_0.read(hdr.data.color_1);
         hdr.data.h1 = val1;
         hdr.data.h2 = val2;
         hdr.data.h3 = val3;
     }
-    @name(".test1") table test1 {
+    @name(".test1") table test1_0 {
         actions = {
-            h1_1();
+            h1_0();
             @defaultonly NoAction_0();
         }
         key = {
             hdr.data.f1: exact @name("data.f1") ;
         }
         size = 6000;
-        meters = meter_1;
+        meters = meter_0;
         default_action = NoAction_0();
     }
-    @name(".h4_6") action h4_1(bit<16> val4, bit<16> val5, bit<16> val6, bit<9> port) {
-        meter_2.read(hdr.data.color_2);
+    @name(".h4_6") action h4_0(bit<16> val4, bit<16> val5, bit<16> val6, bit<9> port) {
+        meter_3.read(hdr.data.color_2);
         hdr.data.h4 = val4;
         hdr.data.h5 = val5;
         hdr.data.h6 = val6;
         standard_metadata.egress_spec = port;
     }
-    @name(".test2") table test2 {
+    @name(".test2") table test2_0 {
         actions = {
-            h4_1();
+            h4_0();
             @defaultonly NoAction_3();
         }
         key = {
             hdr.data.f2: exact @name("data.f2") ;
         }
         size = 10000;
-        meters = meter_2;
+        meters = meter_3;
         default_action = NoAction_3();
     }
     apply {
-        test1.apply();
-        test2.apply();
+        test1_0.apply();
+        test2_0.apply();
     }
 }
 

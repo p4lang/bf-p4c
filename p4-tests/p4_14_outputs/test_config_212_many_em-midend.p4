@@ -67,9 +67,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_31() {
     }
-    @name(".action_0") action action_2() {
+    @name(".action_0") action action_0() {
     }
-    @name(".action_0") action action_3() {
+    @name(".action_0") action action_1() {
     }
     @name(".action_0") action action_34() {
     }
@@ -131,9 +131,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".action_1") action action_63() {
     }
-    @name(".table_0") table table_0 {
+    @name(".table_0") table table_10 {
         actions = {
-            action_2();
+            action_0();
             action_48();
             @defaultonly NoAction_0();
         }
@@ -143,9 +143,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_0();
     }
-    @name(".table_1") table table_1 {
+    @name(".table_1") table table_11 {
         actions = {
-            action_3();
+            action_1();
             action_49();
             @defaultonly NoAction_17();
         }
@@ -155,7 +155,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_17();
     }
-    @name(".table_2") table table_2 {
+    @name(".table_2") table table_12 {
         actions = {
             action_34();
             action_50();
@@ -167,7 +167,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_18();
     }
-    @name(".table_3") table table_3 {
+    @name(".table_3") table table_13 {
         actions = {
             action_35();
             action_51();
@@ -179,7 +179,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_19();
     }
-    @name(".table_4") table table_4 {
+    @name(".table_4") table table_14 {
         actions = {
             action_36();
             action_52();
@@ -191,7 +191,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_20();
     }
-    @name(".table_5") table table_5 {
+    @name(".table_5") table table_15 {
         actions = {
             action_37();
             action_53();
@@ -203,7 +203,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_21();
     }
-    @name(".table_6") table table_6 {
+    @name(".table_6") table table_16 {
         actions = {
             action_38();
             action_54();
@@ -215,7 +215,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_22();
     }
-    @name(".table_7") table table_7 {
+    @name(".table_7") table table_17 {
         actions = {
             action_39();
             action_55();
@@ -227,7 +227,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_23();
     }
-    @name(".table_8") table table_8 {
+    @name(".table_8") table table_18 {
         actions = {
             action_40();
             action_56();
@@ -239,7 +239,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_24();
     }
-    @name(".table_9") table table_9 {
+    @name(".table_9") table table_19 {
         actions = {
             action_41();
             action_57();
@@ -251,7 +251,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_25();
     }
-    @ways(2) @name(".table_a") table table_a {
+    @ways(2) @name(".table_a") table table_a_0 {
         actions = {
             action_42();
             action_58();
@@ -263,7 +263,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_26();
     }
-    @name(".table_b") table table_b {
+    @name(".table_b") table table_b_0 {
         actions = {
             action_43();
             action_59();
@@ -275,7 +275,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_27();
     }
-    @name(".table_c") table table_c {
+    @name(".table_c") table table_c_0 {
         actions = {
             action_44();
             action_60();
@@ -287,7 +287,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_28();
     }
-    @name(".table_d") table table_d {
+    @name(".table_d") table table_d_0 {
         actions = {
             action_45();
             action_61();
@@ -299,7 +299,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_29();
     }
-    @name(".table_e") table table_e {
+    @name(".table_e") table table_e_0 {
         actions = {
             action_46();
             action_62();
@@ -311,7 +311,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_30();
     }
-    @name(".table_f") table table_f {
+    @name(".table_f") table table_f_0 {
         actions = {
             action_47();
             action_63();
@@ -324,22 +324,22 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_31();
     }
     apply {
-        table_0.apply();
-        table_1.apply();
-        table_2.apply();
-        table_3.apply();
-        table_4.apply();
-        table_5.apply();
-        table_6.apply();
-        table_7.apply();
-        table_8.apply();
-        table_9.apply();
-        table_a.apply();
-        table_b.apply();
-        table_c.apply();
-        table_d.apply();
-        table_e.apply();
-        table_f.apply();
+        table_10.apply();
+        table_11.apply();
+        table_12.apply();
+        table_13.apply();
+        table_14.apply();
+        table_15.apply();
+        table_16.apply();
+        table_17.apply();
+        table_18.apply();
+        table_19.apply();
+        table_a_0.apply();
+        table_b_0.apply();
+        table_c_0.apply();
+        table_d_0.apply();
+        table_e_0.apply();
+        table_f_0.apply();
     }
 }
 

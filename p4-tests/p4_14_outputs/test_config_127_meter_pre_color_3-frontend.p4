@@ -175,16 +175,16 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".meter_1") meter(32w500, MeterType.bytes) meter_0;
-    @name(".do_nothing") action do_nothing_2() {
+    @name(".meter_1") meter(32w500, MeterType.bytes) meter_4;
+    @name(".do_nothing") action do_nothing() {
     }
-    @name(".action_1") action action_0(bit<8> param0) {
-        execute_meter_with_color<meter, bit<32>, bit<8>>(meter_0, 32w7, hdr.pkt.color_1, hdr.pkt.pre_color_1);
+    @name(".action_1") action action_1(bit<8> param0) {
+        execute_meter_with_color<meter, bit<32>, bit<8>>(meter_4, 32w7, hdr.pkt.color_1, hdr.pkt.pre_color_1);
     }
-    @idletime_two_way_notification(1) @include_stash(1) @name(".table_1") table table_0 {
+    @idletime_two_way_notification(1) @include_stash(1) @name(".table_1") table table_4 {
         actions = {
-            do_nothing_2();
-            action_0();
+            do_nothing();
+            action_1();
             @defaultonly NoAction_0();
         }
         key = {
@@ -194,7 +194,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = NoAction_0();
     }
     apply {
-        table_0.apply();
+        table_4.apply();
     }
 }
 
@@ -205,15 +205,15 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_7() {
     }
-    @name(".meter_0") @pre_color(hdr.pkt.pre_color_0) direct_meter<bit<4>>(MeterType.bytes) meter_1;
-    @name(".meter_2") @pre_color(hdr.pkt.pre_color_2) direct_meter<bit<8>>(MeterType.bytes) meter_2;
-    @name(".meter_3") @pre_color(hdr.pkt.pre_color_3) direct_meter<bit<8>>(MeterType.bytes) meter_3;
-    @name(".action_0") action action_0_1(bit<8> param0) {
-        meter_1.read(hdr.pkt.color_0);
+    @name(".meter_0") @pre_color(hdr.pkt.pre_color_0) direct_meter<bit<4>>(MeterType.bytes) meter_5;
+    @name(".meter_2") @pre_color(hdr.pkt.pre_color_2) direct_meter<bit<8>>(MeterType.bytes) meter_6;
+    @name(".meter_3") @pre_color(hdr.pkt.pre_color_3) direct_meter<bit<8>>(MeterType.bytes) meter_7;
+    @name(".action_0") action action_0_0(bit<8> param0) {
+        meter_5.read(hdr.pkt.color_0);
     }
-    @include_stash(1) @name(".table_0") table table_1 {
+    @include_stash(1) @name(".table_0") table table_5 {
         actions = {
-            action_0_1();
+            action_0_0();
             @defaultonly NoAction_1();
         }
         key = {
@@ -228,43 +228,43 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.pre_color_3: exact @name("pkt.pre_color_3") ;
         }
         size = 1024;
-        meters = meter_1;
+        meters = meter_5;
         default_action = NoAction_1();
     }
-    @name(".do_nothing") action do_nothing_3() {
-        meter_2.read(hdr.pkt.color_2);
+    @name(".do_nothing") action do_nothing_0() {
+        meter_6.read(hdr.pkt.color_2);
     }
-    @name(".table_2") table table_2 {
+    @name(".table_2") table table_6 {
         actions = {
-            do_nothing_3();
+            do_nothing_0();
             @defaultonly NoAction_6();
         }
         key = {
             hdr.pkt.field_e_16: ternary @name("pkt.field_e_16") ;
         }
         size = 512;
-        meters = meter_2;
+        meters = meter_6;
         default_action = NoAction_6();
     }
-    @name(".do_nothing") action do_nothing_4() {
-        meter_3.read(hdr.pkt.color_3);
+    @name(".do_nothing") action do_nothing_1() {
+        meter_7.read(hdr.pkt.color_3);
     }
-    @name(".table_3") table table_3 {
+    @name(".table_3") table table_7 {
         actions = {
-            do_nothing_4();
+            do_nothing_1();
             @defaultonly NoAction_7();
         }
         key = {
             hdr.pkt.field_e_16: ternary @name("pkt.field_e_16") ;
         }
         size = 512;
-        meters = meter_3;
+        meters = meter_7;
         default_action = NoAction_7();
     }
     apply {
-        table_1.apply();
-        table_2.apply();
-        table_3.apply();
+        table_5.apply();
+        table_6.apply();
+        table_7.apply();
     }
 }
 

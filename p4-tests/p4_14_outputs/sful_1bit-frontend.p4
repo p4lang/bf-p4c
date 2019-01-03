@@ -34,66 +34,66 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    bit<1> tmp_3;
-    bit<1> tmp_4;
-    bit<1> tmp_5;
-    bit<1> tmp_6;
-    @name(".sful1") RegisterAction<bit<1>, bit<32>, bit<1>>(reg) sful1 = {
+    bit<1> tmp;
+    bit<1> tmp_0;
+    bit<1> tmp_1;
+    bit<1> tmp_2;
+    @name(".sful1") RegisterAction<bit<1>, bit<32>, bit<1>>(reg) sful1_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            bit<1> in_value;
-            in_value = value;
-            rv = in_value;
+            bit<1> in_value_0;
+            in_value_0 = value;
+            rv = in_value_0;
             value = 1w1;
         }
     };
-    @name(".sful2") RegisterAction<bit<1>, bit<32>, bit<1>>(reg) sful2 = {
+    @name(".sful2") RegisterAction<bit<1>, bit<32>, bit<1>>(reg) sful2_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            bit<1> in_value_4;
-            in_value_4 = value;
-            rv = in_value_4;
+            bit<1> in_value_1;
+            in_value_1 = value;
+            rv = in_value_1;
             value = 1w0;
         }
     };
-    @name(".sful3") RegisterAction<bit<1>, bit<32>, bit<1>>(reg) sful3 = {
+    @name(".sful3") RegisterAction<bit<1>, bit<32>, bit<1>>(reg) sful3_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            bit<1> in_value_5;
-            in_value_5 = value;
-            rv = in_value_5;
-            value = in_value_5;
+            bit<1> in_value_2;
+            in_value_2 = value;
+            rv = in_value_2;
+            value = in_value_2;
         }
     };
-    @name(".sful4") RegisterAction<bit<1>, bit<32>, bit<1>>(reg) sful4 = {
+    @name(".sful4") RegisterAction<bit<1>, bit<32>, bit<1>>(reg) sful4_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            bit<1> in_value_6;
-            in_value_6 = value;
-            rv = ~in_value_6;
-            value = in_value_6;
+            bit<1> in_value_3;
+            in_value_3 = value;
+            rv = ~in_value_3;
+            value = in_value_3;
         }
     };
-    @name(".output") action output_0(bit<9> port) {
+    @name(".output") action output(bit<9> port) {
         standard_metadata.egress_spec = port;
     }
-    @name(".set") action set_1() {
-        tmp_3 = sful1.execute(32w1);
-        hdr.data.bit1 = tmp_3;
+    @name(".set") action set_0() {
+        tmp = sful1_0.execute(32w1);
+        hdr.data.bit1 = tmp;
     }
-    @name(".clr") action clr_0() {
-        tmp_4 = sful2.execute(32w1);
-        hdr.data.bit1 = tmp_4;
+    @name(".clr") action clr() {
+        tmp_0 = sful2_0.execute(32w1);
+        hdr.data.bit1 = tmp_0;
     }
-    @name(".read") action read_0() {
-        tmp_5 = sful3.execute(32w1);
-        hdr.data.bit1 = tmp_5;
+    @name(".read") action read_1() {
+        tmp_1 = sful3_0.execute(32w1);
+        hdr.data.bit1 = tmp_1;
     }
-    @name(".readc") action readc_0() {
-        tmp_6 = sful4.execute(32w1);
-        hdr.data.bit1 = tmp_6;
+    @name(".readc") action readc() {
+        tmp_2 = sful4_0.execute(32w1);
+        hdr.data.bit1 = tmp_2;
     }
-    @name(".noop") action noop_0() {
+    @name(".noop") action noop() {
     }
-    @name(".do_out") table do_out {
+    @name(".do_out") table do_out_0 {
         actions = {
-            output_0();
+            output();
             @defaultonly NoAction_0();
         }
         key = {
@@ -101,22 +101,22 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name(".test1") table test1 {
+    @name(".test1") table test1_0 {
         actions = {
-            set_1();
-            clr_0();
-            read_0();
-            readc_0();
-            noop_0();
+            set_0();
+            clr();
+            read_1();
+            readc();
+            noop();
         }
         key = {
             hdr.data.b1: exact @name("data.b1") ;
         }
-        default_action = noop_0();
+        default_action = noop();
     }
     apply {
-        test1.apply();
-        do_out.apply();
+        test1_0.apply();
+        do_out_0.apply();
     }
 }
 

@@ -395,19 +395,19 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_9() {
     }
-    @name(".a1") action a1_0() {
+    @name(".a1") action a1() {
     }
-    @name(".a2") action a2_0() {
+    @name(".a2") action a2() {
     }
-    @name(".a3") action a3_0() {
+    @name(".a3") action a3() {
     }
-    @name(".a4") action a4_0() {
+    @name(".a4") action a4() {
     }
-    @name(".a5") action a5_0() {
+    @name(".a5") action a5() {
     }
-    @name(".t1") table t1 {
+    @name(".t1") table t1_0 {
         actions = {
-            a1_0();
+            a1();
             @defaultonly NoAction_0();
         }
         key = {
@@ -478,9 +478,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name(".t2") table t2 {
+    @name(".t2") table t2_0 {
         actions = {
-            a2_0();
+            a2();
             @defaultonly NoAction_6();
         }
         key = {
@@ -519,9 +519,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_6();
     }
-    @name(".t3") table t3 {
+    @name(".t3") table t3_0 {
         actions = {
-            a3_0();
+            a3();
             @defaultonly NoAction_7();
         }
         key = {
@@ -592,9 +592,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_7();
     }
-    @name(".t4") table t4 {
+    @name(".t4") table t4_0 {
         actions = {
-            a4_0();
+            a4();
             @defaultonly NoAction_8();
         }
         key = {
@@ -633,9 +633,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_8();
     }
-    @name(".t5") table t5 {
+    @name(".t5") table t5_0 {
         actions = {
-            a5_0();
+            a5();
             @defaultonly NoAction_9();
         }
         key = {
@@ -670,11 +670,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_9();
     }
     apply {
-        t1.apply();
-        t2.apply();
-        t3.apply();
-        t4.apply();
-        t5.apply();
+        t1_0.apply();
+        t2_0.apply();
+        t3_0.apply();
+        t4_0.apply();
+        t5_0.apply();
     }
 }
 

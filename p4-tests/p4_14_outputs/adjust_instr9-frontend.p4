@@ -54,47 +54,47 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".noop") action noop_0() {
+    @name(".noop") action noop() {
     }
     @name(".noop") action noop_3() {
     }
     @name(".noop") action noop_4() {
     }
-    @name(".cc1_act") action cc1_act_0() {
+    @name(".cc1_act") action cc1_act() {
         hdr.cc1.x1 = hdr.cc1.x2;
         hdr.cc1.z1 = hdr.cc1.z2;
     }
-    @name(".cc2_act") action cc2_act_0() {
+    @name(".cc2_act") action cc2_act() {
         hdr.cc2.u1 = hdr.cc2.v2;
         hdr.cc2.v1 = hdr.cc2.u2;
     }
-    @name(".port_action") action port_action_0(bit<9> port) {
+    @name(".port_action") action port_action(bit<9> port) {
         standard_metadata.egress_spec = port;
     }
-    @name(".cc1_table") table cc1_table {
+    @name(".cc1_table") table cc1_table_0 {
         actions = {
-            noop_0();
-            cc1_act_0();
+            noop();
+            cc1_act();
         }
         key = {
             hdr.init.read: exact @name("init.read") ;
         }
-        default_action = noop_0();
+        default_action = noop();
     }
-    @name(".cc2_table") table cc2_table {
+    @name(".cc2_table") table cc2_table_0 {
         actions = {
             noop_3();
-            cc2_act_0();
+            cc2_act();
         }
         key = {
             hdr.init.read: exact @name("init.read") ;
         }
         default_action = noop_3();
     }
-    @name(".port_table") table port_table {
+    @name(".port_table") table port_table_0 {
         actions = {
             noop_4();
-            port_action_0();
+            port_action();
         }
         key = {
             hdr.init.read: ternary @name("init.read") ;
@@ -103,10 +103,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (hdr.cc1.isValid()) 
-            cc1_table.apply();
+            cc1_table_0.apply();
         if (hdr.cc2.isValid()) 
-            cc2_table.apply();
-        port_table.apply();
+            cc2_table_0.apply();
+        port_table_0.apply();
     }
 }
 

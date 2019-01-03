@@ -802,10 +802,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         XwcVlN.apply();
         switch (MewBbN.apply().action_run) {
-            GawuMf: {
-                jKqWQQ.apply();
-                CvmGZq.apply();
-            }
             HyMSUz: {
                 if (meta.ZcGoCa.UztNiv == 1w0x1) {
                     SHvAeR.apply();
@@ -819,6 +815,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
 
                 }
                 wIHiQR.apply();
+            }
+            GawuMf: {
+                jKqWQQ.apply();
+                CvmGZq.apply();
             }
         }
 

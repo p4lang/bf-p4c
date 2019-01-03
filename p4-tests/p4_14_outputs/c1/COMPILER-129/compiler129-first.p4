@@ -28,6 +28,7 @@ struct egress_metadata_t {
     bit<1>  routed;
     bit<16> same_bd_check;
     bit<8>  drop_reason;
+    @saturating 
     bit<32> sflow_take_sample;
 }
 
@@ -62,6 +63,7 @@ struct i2e_metadata_t {
     bit<1>  drop_flag;
     bit<8>  drop_reason;
     bit<1>  control_frame;
+    @saturating 
     bit<32> sflow_take_sample;
     bit<3>  sflow_session_id;
 }
@@ -274,6 +276,7 @@ struct l3_metadata_t {
     bit<1>  routed;
     bit<1>  outer_routed;
     bit<8>  mtu_index;
+    @saturating 
     bit<16> l3_mtu_check;
     bit<4>  tunnel_type;
     bit<1>  bc;
@@ -2039,8 +2042,8 @@ control process_rewrite(inout headers hdr, inout metadata meta, inout standard_m
         key = {
             hdr.ipv4.isValid()       : exact @name("ipv4.$valid$") ;
             hdr.ipv6.isValid()       : exact @name("ipv6.$valid$") ;
-            hdr.ipv4.dstAddr[31:28]  : ternary @name("ipv4.dstAddr[31:28]") ;
-            hdr.ipv6.dstAddr[127:120]: ternary @name("ipv6.dstAddr[127:120]") ;
+            hdr.ipv4.dstAddr[31:28]  : ternary @name("ipv4.dstAddr") ;
+            hdr.ipv6.dstAddr[127:120]: ternary @name("ipv6.dstAddr") ;
         }
         default_action = NoAction();
     }
@@ -2115,8 +2118,8 @@ control process_mac_rewrite(inout headers hdr, inout metadata meta, inout standa
             hdr.ipv4.isValid()       : exact @name("ipv4.$valid$") ;
             hdr.ipv6.isValid()       : exact @name("ipv6.$valid$") ;
             hdr.mpls[0].isValid()    : exact @name("mpls[0].$valid$") ;
-            hdr.ipv4.dstAddr[31:28]  : ternary @name("ipv4.dstAddr[31:28]") ;
-            hdr.ipv6.dstAddr[127:120]: ternary @name("ipv6.dstAddr[127:120]") ;
+            hdr.ipv4.dstAddr[31:28]  : ternary @name("ipv4.dstAddr") ;
+            hdr.ipv6.dstAddr[127:120]: ternary @name("ipv6.dstAddr") ;
         }
         default_action = NoAction();
     }
@@ -2144,10 +2147,10 @@ control process_mtu(inout headers hdr, inout metadata meta, inout standard_metad
         meta.l3_metadata.l3_mtu_check = 16w0xffff;
     }
     @name(".ipv4_mtu_check") action ipv4_mtu_check(bit<16> l3_mtu) {
-        meta.l3_metadata.l3_mtu_check = l3_mtu - hdr.ipv4.totalLen;
+        meta.l3_metadata.l3_mtu_check = l3_mtu |-| hdr.ipv4.totalLen;
     }
     @name(".ipv6_mtu_check") action ipv6_mtu_check(bit<16> l3_mtu) {
-        meta.l3_metadata.l3_mtu_check = l3_mtu - hdr.ipv6.payloadLen;
+        meta.l3_metadata.l3_mtu_check = l3_mtu |-| hdr.ipv6.payloadLen;
     }
     @name(".mtu") table mtu {
         actions = {
@@ -2453,7 +2456,7 @@ control process_tunnel_encap(inout headers hdr, inout metadata meta, inout stand
         meta.tunnel_metadata.tunnel_index = tunnel_index;
     }
     @name(".tunnel_mtu_check") action tunnel_mtu_check(bit<16> l3_mtu) {
-        meta.l3_metadata.l3_mtu_check = l3_mtu - meta.egress_metadata.payload_length;
+        meta.l3_metadata.l3_mtu_check = l3_mtu |-| meta.egress_metadata.payload_length;
     }
     @name(".tunnel_mtu_miss") action tunnel_mtu_miss() {
         meta.l3_metadata.l3_mtu_check = 16w0xffff;
@@ -3880,7 +3883,7 @@ control validate_outer_ipv4_header(inout headers hdr, inout metadata meta, inout
         key = {
             hdr.ipv4.version                     : ternary @name("ipv4.version") ;
             meta.l3_metadata.lkp_ip_ttl          : ternary @name("l3_metadata.lkp_ip_ttl") ;
-            meta.ipv4_metadata.lkp_ipv4_sa[31:24]: ternary @name("ipv4_metadata.lkp_ipv4_sa[31:24]") ;
+            meta.ipv4_metadata.lkp_ipv4_sa[31:24]: ternary @name("ipv4_metadata.lkp_ipv4_sa") ;
         }
         size = 64;
         default_action = NoAction();
@@ -3909,7 +3912,7 @@ control validate_outer_ipv6_header(inout headers hdr, inout metadata meta, inout
         key = {
             hdr.ipv6.version                       : ternary @name("ipv6.version") ;
             meta.l3_metadata.lkp_ip_ttl            : ternary @name("l3_metadata.lkp_ip_ttl") ;
-            meta.ipv6_metadata.lkp_ipv6_sa[127:112]: ternary @name("ipv6_metadata.lkp_ipv6_sa[127:112]") ;
+            meta.ipv6_metadata.lkp_ipv6_sa[127:112]: ternary @name("ipv6_metadata.lkp_ipv6_sa") ;
         }
         size = 64;
         default_action = NoAction();

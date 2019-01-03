@@ -153,17 +153,17 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".a") action a_0() {
+    @name(".a") action a() {
     }
-    @name(".t") table t {
+    @name(".t") table t_0 {
         actions = {
-            a_0();
+            a();
             @defaultonly NoAction_0();
         }
         default_action = NoAction_0();
     }
     apply {
-        t.apply();
+        t_0.apply();
     }
 }
 

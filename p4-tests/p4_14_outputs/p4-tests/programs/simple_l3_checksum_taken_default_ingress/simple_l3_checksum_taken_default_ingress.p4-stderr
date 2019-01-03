@@ -1,0 +1,7 @@
+simple_l3_checksum_taken_default_ingress.p4(639): warning: -1: negative value with unsigned type
+    add_to_field(ipv4.ttl, -1);
+                            ^
+simple_l3_checksum_taken_default_ingress.p4(711): warning: -1: negative value with unsigned type
+    add_to_field(ipv6.hopLimit, -1);
+                                 ^
+warning: The order of headers in deparser is not uniquely determined by parser!

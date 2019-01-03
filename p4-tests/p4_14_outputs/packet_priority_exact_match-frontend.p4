@@ -152,7 +152,7 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<112> tmp_0;
+    bit<112> tmp;
     @name(".parse_ethernet") state parse_ethernet {
         packet.extract<ethernet_t>(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
@@ -179,8 +179,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
         transition accept;
     }
     @name(".start") state start {
-        tmp_0 = packet.lookahead<bit<112>>();
-        transition select(tmp_0[15:0]) {
+        tmp = packet.lookahead<bit<112>>();
+        transition select(tmp[15:0]) {
             default: parse_ethernet;
         }
     }

@@ -166,7 +166,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             hdr.test.field_a      : ternary @name("test.field_a") ;
-            hdr.test.field_b[15:8]: ternary @name("test.field_b[15:8]") ;
+            hdr.test.field_b[15:8]: ternary @name("test.field_b") ;
         }
         default_action = NoAction();
     }

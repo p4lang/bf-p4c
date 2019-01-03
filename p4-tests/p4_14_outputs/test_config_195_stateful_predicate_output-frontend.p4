@@ -178,38 +178,38 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    bit<8> tmp_1;
-    bit<8> tmp_2;
-    @name(".b_comb_pred") RegisterAction<bit<8>, bit<32>, bit<8>>(r_pred) b_comb_pred = {
+    bit<8> tmp;
+    bit<8> tmp_0;
+    @name(".b_comb_pred") RegisterAction<bit<8>, bit<32>, bit<8>>(r_pred) b_comb_pred_0 = {
         void apply(inout bit<8> value, out bit<8> rv) {
-            bit<8> in_value;
+            bit<8> in_value_0;
             rv = 8w0;
-            in_value = value;
-            if (in_value > 8w0) 
+            in_value_0 = value;
+            if (in_value_0 > 8w0) 
                 rv = 8w1;
-            value = in_value + 8w2;
+            value = in_value_0 + 8w2;
         }
     };
-    @name(".b_pred") RegisterAction<bit<8>, bit<32>, bit<8>>(r_pred) b_pred = {
+    @name(".b_pred") RegisterAction<bit<8>, bit<32>, bit<8>>(r_pred) b_pred_0 = {
         void apply(inout bit<8> value, out bit<8> rv) {
-            bit<8> in_value_2;
-            in_value_2 = value;
+            bit<8> in_value_1;
+            in_value_1 = value;
             rv = 8w1;
-            value = in_value_2 + 8w1;
+            value = in_value_1 + 8w1;
         }
     };
-    @name(".a_pred") action a_pred_0(bit<32> idx) {
-        tmp_1 = b_pred.execute(idx);
-        meta.meta.pred_4 = (bit<4>)tmp_1;
+    @name(".a_pred") action a_pred(bit<32> idx) {
+        tmp = b_pred_0.execute(idx);
+        meta.meta.pred_4 = (bit<4>)tmp;
     }
-    @name(".a_comb_pred") action a_comb_pred_0(bit<32> idx) {
-        tmp_2 = b_comb_pred.execute(idx);
-        meta.meta.comb_pred_1 = (bit<1>)tmp_2;
+    @name(".a_comb_pred") action a_comb_pred(bit<32> idx) {
+        tmp_0 = b_comb_pred_0.execute(idx);
+        meta.meta.comb_pred_1 = (bit<1>)tmp_0;
     }
-    @name(".t_pred") table t_pred {
+    @name(".t_pred") table t_pred_0 {
         actions = {
-            a_pred_0();
-            a_comb_pred_0();
+            a_pred();
+            a_comb_pred();
             @defaultonly NoAction_0();
         }
         key = {
@@ -219,7 +219,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_0();
     }
     apply {
-        t_pred.apply();
+        t_pred_0.apply();
     }
 }
 

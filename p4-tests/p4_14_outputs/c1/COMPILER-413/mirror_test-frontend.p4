@@ -174,23 +174,23 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     @name(".NoAction") action NoAction_1() {
     }
-    @name(".do_change_eth_src") action do_change_eth_src_0() {
+    @name(".do_change_eth_src") action do_change_eth_src() {
         hdr.ethernet.srcAddr = 48w0xaaaaaaaaaaaa;
     }
-    @name(".e2e_mirror") action e2e_mirror_0(bit<32> mirror_id) {
+    @name(".e2e_mirror") action e2e_mirror(bit<32> mirror_id) {
         clone(CloneType.E2E, mirror_id);
     }
-    @name(".change_eth_src") table change_eth_src {
+    @name(".change_eth_src") table change_eth_src_0 {
         actions = {
-            do_change_eth_src_0();
+            do_change_eth_src();
             @defaultonly NoAction_0();
         }
         size = 1;
         default_action = NoAction_0();
     }
-    @name(".egress_mirror") table egress_mirror {
+    @name(".egress_mirror") table egress_mirror_0 {
         actions = {
-            e2e_mirror_0();
+            e2e_mirror();
             @defaultonly NoAction_1();
         }
         key = {
@@ -202,24 +202,24 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     apply {
         if (hdr.eg_intr_md_from_parser_aux.clone_src == 4w0) 
-            egress_mirror.apply();
+            egress_mirror_0.apply();
         if (!hdr.vlan_tag.isValid()) 
-            change_eth_src.apply();
+            change_eth_src_0.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_5() {
     }
-    @name(".set_egr") action set_egr_0(bit<9> egress_spec) {
+    @name(".set_egr") action set_egr(bit<9> egress_spec) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_spec;
     }
-    @name(".nop") action nop_0() {
+    @name(".nop") action nop() {
     }
-    @name(".forward") table forward {
+    @name(".forward") table forward_0 {
         actions = {
-            set_egr_0();
-            nop_0();
+            set_egr();
+            nop();
             @defaultonly NoAction_5();
         }
         key = {
@@ -229,7 +229,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_5();
     }
     apply {
-        forward.apply();
+        forward_0.apply();
     }
 }
 

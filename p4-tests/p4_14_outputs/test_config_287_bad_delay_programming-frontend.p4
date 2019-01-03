@@ -32,20 +32,20 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    @name(".action1") action action1_0() {
+    @name(".action1") action action1() {
         hdr.pkt.srcAddr = 32w1;
     }
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing() {
     }
     @name(".do_nothing") action do_nothing_2() {
     }
-    @name(".action2") action action2_0() {
+    @name(".action2") action action2() {
         hdr.pkt.dstAddr = 32w2;
     }
-    @name(".table1") table table1 {
+    @name(".table1") table table1_0 {
         actions = {
-            action1_0();
-            do_nothing_0();
+            action1();
+            do_nothing();
             @defaultonly NoAction_0();
         }
         key = {
@@ -53,9 +53,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name(".table2") table table2 {
+    @name(".table2") table table2_0 {
         actions = {
-            action2_0();
+            action2();
             do_nothing_2();
             @defaultonly NoAction_3();
         }
@@ -67,8 +67,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     apply {
         if (hdr.pkt.isValid()) 
             if (hdr.pkt.protocol == 8w0) {
-                table1.apply();
-                table2.apply();
+                table1_0.apply();
+                table2_0.apply();
             }
     }
 }

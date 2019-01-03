@@ -17,7 +17,7 @@ header my_hdr_t {
 
 struct headers_t {
     ethernet_t ethernet;
-    @pa_container_size("ingress", "my_hdr.f2", 16) 
+    @pa_container_size("ingress" , "my_hdr.f2" , 16) 
     my_hdr_t   my_hdr;
 }
 
@@ -30,26 +30,26 @@ parser ParserImpl(packet_in packet, out headers_t hdr, inout metadata_t meta, in
 }
 
 control ingress(inout headers_t hdr, inout metadata_t meta, inout standard_metadata_t standard_metadata) {
-    @name("ingress.set_f2_hit") action set_f2_hit_0(bit<9> v) {
+    @name("ingress.set_f2_hit") action set_f2_hit(bit<9> v) {
         standard_metadata.egress_spec = standard_metadata.ingress_port;
         hdr.my_hdr.f2 = v;
     }
-    @name("ingress.set_f2_miss") action set_f2_miss_0() {
+    @name("ingress.set_f2_miss") action set_f2_miss() {
         standard_metadata.egress_spec = standard_metadata.ingress_port;
         hdr.my_hdr.f2 = 9w199;
     }
-    @name("ingress.t") table t {
+    @name("ingress.t") table t_0 {
         key = {
             hdr.my_hdr.f1: exact @name("hdr.my_hdr.f1") ;
         }
         actions = {
-            set_f2_hit_0();
-            set_f2_miss_0();
+            set_f2_hit();
+            set_f2_miss();
         }
-        default_action = set_f2_miss_0();
+        default_action = set_f2_miss();
     }
     apply {
-        t.apply();
+        t_0.apply();
     }
 }
 

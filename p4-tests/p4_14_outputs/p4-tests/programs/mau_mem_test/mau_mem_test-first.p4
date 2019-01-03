@@ -163,9 +163,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name(".simple_table_egress") table simple_table_egress {
         actions = {
             egress_action();
-            @defaultonly NoAction();
         }
-        default_action = NoAction();
+        default_action = egress_action();
     }
     apply {
         simple_table_egress.apply();
@@ -222,7 +221,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr[15:0]") ;
+            hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr") ;
         }
         size = 65536;
         default_action = NoAction();
@@ -234,7 +233,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr[15:0]") ;
+            hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr") ;
         }
         size = 65536;
         default_action = NoAction();
@@ -246,7 +245,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr[15:0]") ;
+            hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr") ;
         }
         size = 65536;
         default_action = NoAction();
@@ -258,7 +257,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr[15:0]") ;
+            hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr") ;
         }
         size = 65536;
         default_action = NoAction();
@@ -270,7 +269,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr[15:0]") ;
+            hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr") ;
         }
         size = 65536;
         default_action = NoAction();
@@ -282,7 +281,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr[15:0]") ;
+            hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr") ;
         }
         size = 65536;
         default_action = NoAction();
@@ -294,7 +293,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr[15:0]") ;
+            hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr") ;
         }
         size = 65536;
         default_action = NoAction();
@@ -306,7 +305,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr[15:0]") ;
+            hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr") ;
         }
         size = 65536;
         default_action = NoAction();
@@ -318,7 +317,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr[15:0]") ;
+            hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr") ;
         }
         size = 65536;
         default_action = NoAction();
@@ -330,7 +329,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr[15:0]") ;
+            hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr") ;
         }
         size = 65536;
         default_action = NoAction();
@@ -342,7 +341,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr[15:0]") ;
+            hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr") ;
         }
         size = 65536;
         default_action = NoAction();
@@ -354,7 +353,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr[15:0]") ;
+            hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr") ;
         }
         size = 65536;
         default_action = NoAction();
@@ -362,9 +361,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @stage_0 @name(".simple_table_ingress") table simple_table_ingress {
         actions = {
             ingress_action();
-            @defaultonly NoAction();
         }
-        default_action = NoAction();
+        default_action = ingress_action();
     }
     apply {
         if (hdr.ethernet.etherType == 16w0) 

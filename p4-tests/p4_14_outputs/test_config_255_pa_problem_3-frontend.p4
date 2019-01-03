@@ -212,36 +212,36 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing() {
     }
     @name(".do_nothing") action do_nothing_2() {
     }
-    @name(".read_vlan") action read_vlan_0() {
+    @name(".read_vlan") action read_vlan() {
         meta.m.p = hdr.vlan.priority;
         meta.m.c = hdr.vlan.cfi;
         meta.m.v = hdr.vlan.vid;
         meta.m.t = hdr.vlan.vtype;
         meta.m.x = hdr.vlan.vid;
     }
-    @name(".set_port") action set_port_0(bit<9> p) {
+    @name(".set_port") action set_port(bit<9> p) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = p;
     }
-    @name(".t1") table t1 {
+    @name(".t1") table t1_0 {
         actions = {
-            do_nothing_0();
-            read_vlan_0();
+            do_nothing();
+            read_vlan();
             @defaultonly NoAction_0();
         }
         key = {
-            hdr.ethernet.srcAddr[15:0]: ternary @name("ethernet.srcAddr[15:0]") ;
+            hdr.ethernet.srcAddr[15:0]: ternary @name("ethernet.srcAddr") ;
         }
         size = 512;
         default_action = NoAction_0();
     }
-    @name(".t2") table t2 {
+    @name(".t2") table t2_0 {
         actions = {
             do_nothing_2();
-            set_port_0();
+            set_port();
             @defaultonly NoAction_3();
         }
         key = {
@@ -255,8 +255,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_3();
     }
     apply {
-        t1.apply();
-        t2.apply();
+        t1_0.apply();
+        t2_0.apply();
     }
 }
 

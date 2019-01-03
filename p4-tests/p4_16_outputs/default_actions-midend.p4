@@ -25,10 +25,10 @@ parser ParserI(packet_in b, out headers hdr, out metadata meta, out ingress_intr
 }
 
 control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_metadata_t ig_intr_md, in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md, inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md, inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
-    @name("IngressP.set_port_act") action set_port_act_0(bit<9> port) {
+    @name("IngressP.set_port_act") action set_port_act(bit<9> port) {
         ig_intr_tm_md.ucast_egress_port = port;
     }
-    @name("IngressP.setb1") action setb1_0(bit<8> b1) {
+    @name("IngressP.setb1") action setb1(bit<8> b1) {
         hdr.data.b1 = b1;
     }
     @name("IngressP.setb1") action setb1_6(bit<8> b1) {
@@ -46,48 +46,48 @@ control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_me
     @name("IngressP.setb1") action setb1_10(bit<8> b1) {
         hdr.data.b1 = b1;
     }
-    @name("IngressP.setb2") action setb2_0(bit<8> b2) {
+    @name("IngressP.setb2") action setb2(bit<8> b2) {
         hdr.data.b2 = b2;
     }
     @name("IngressP.setb2") action setb2_2(bit<8> b2) {
         hdr.data.b2 = b2;
     }
-    @name("IngressP.noop") action noop_0() {
+    @name("IngressP.noop") action noop() {
     }
     @name("IngressP.noop") action noop_3() {
     }
     @name("IngressP.noop") action noop_4() {
     }
-    @name("IngressP.df_act1") table df_act1 {
+    @name("IngressP.df_act1") table df_act1_0 {
         key = {
             hdr.data.f1: exact @name("hdr.data.f1") ;
         }
         actions = {
-            setb1_0();
+            setb1();
         }
-        default_action = setb1_0(8w0x77);
+        default_action = setb1(8w0x77);
     }
-    @name("IngressP.df_act2") table df_act2 {
+    @name("IngressP.df_act2") table df_act2_0 {
         key = {
             hdr.data.f1: exact @name("hdr.data.f1") ;
         }
         actions = {
             setb1_6();
-            @default_only noop_0();
+            @default_only noop();
         }
-        default_action = noop_0();
+        default_action = noop();
     }
-    @name("IngressP.df_act3") table df_act3 {
+    @name("IngressP.df_act3") table df_act3_0 {
         key = {
             hdr.data.f1: exact @name("hdr.data.f1") ;
         }
         actions = {
             setb1_7();
-            @default_only setb2_0();
+            @default_only setb2();
         }
-        default_action = setb2_0(8w0x88);
+        default_action = setb2(8w0x88);
     }
-    @name("IngressP.df_act4") table df_act4 {
+    @name("IngressP.df_act4") table df_act4_0 {
         key = {
             hdr.data.f1: exact @name("hdr.data.f1") ;
         }
@@ -96,7 +96,7 @@ control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_me
         }
         const default_action = setb1_8(8w0x55);
     }
-    @name("IngressP.df_act5") table df_act5 {
+    @name("IngressP.df_act5") table df_act5_0 {
         key = {
             hdr.data.f1: exact @name("hdr.data.f1") ;
         }
@@ -106,7 +106,7 @@ control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_me
         }
         const default_action = noop_3();
     }
-    @name("IngressP.df_act6") table df_act6 {
+    @name("IngressP.df_act6") table df_act6_0 {
         key = {
             hdr.data.f1: exact @name("hdr.data.f1") ;
         }
@@ -116,9 +116,9 @@ control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_me
         }
         const default_action = setb2_2(8w0x88);
     }
-    @name("IngressP.set_port") table set_port {
+    @name("IngressP.set_port") table set_port_0 {
         actions = {
-            set_port_act_0();
+            set_port_act();
             noop_4();
         }
         key = {
@@ -127,13 +127,13 @@ control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_me
         default_action = noop_4();
     }
     apply {
-        df_act1.apply();
-        df_act2.apply();
-        df_act3.apply();
-        df_act4.apply();
-        df_act5.apply();
-        df_act6.apply();
-        set_port.apply();
+        df_act1_0.apply();
+        df_act2_0.apply();
+        df_act3_0.apply();
+        df_act4_0.apply();
+        df_act5_0.apply();
+        df_act6_0.apply();
+        set_port_0.apply();
     }
 }
 

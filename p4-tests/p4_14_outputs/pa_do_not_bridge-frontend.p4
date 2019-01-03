@@ -34,13 +34,13 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".second") action second_0(bit<8> param) {
+    @name(".second") action second(bit<8> param) {
         hdr.pkt.f1 = param;
         hdr.pkt.f3 = meta.meta.m;
     }
-    @name(".test2") table test2 {
+    @name(".test2") table test2_0 {
         actions = {
-            second_0();
+            second();
             @defaultonly NoAction_0();
         }
         key = {
@@ -49,7 +49,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = NoAction_0();
     }
     apply {
-        test2.apply();
+        test2_0.apply();
     }
 }
 
@@ -58,17 +58,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_5() {
     }
-    @name(".setport") action setport_0(bit<9> port) {
+    @name(".setport") action setport(bit<9> port) {
         standard_metadata.egress_spec = port;
     }
-    @name(".first") action first_0() {
+    @name(".first") action first() {
         hdr.pkt.f1 = 8w0x8;
         hdr.pkt.f2 = meta.meta.m;
         meta.meta.m = 8w0x2;
     }
-    @name(".setting_port") table setting_port {
+    @name(".setting_port") table setting_port_0 {
         actions = {
-            setport_0();
+            setport();
             @defaultonly NoAction_1();
         }
         key = {
@@ -76,9 +76,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_1();
     }
-    @name(".test1") table test1 {
+    @name(".test1") table test1_0 {
         actions = {
-            first_0();
+            first();
             @defaultonly NoAction_5();
         }
         key = {
@@ -88,8 +88,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_5();
     }
     apply {
-        test1.apply();
-        setting_port.apply();
+        test1_0.apply();
+        setting_port_0.apply();
     }
 }
 

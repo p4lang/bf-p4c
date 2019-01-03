@@ -644,7 +644,7 @@ control Dresser(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Dialville.ElMirage       : exact @name("Dialville.ElMirage") ;
-            meta.Dialville.Youngtown[19:0]: lpm @name("Dialville.Youngtown[19:0]") ;
+            meta.Dialville.Youngtown[19:0]: lpm @name("Dialville.Youngtown") ;
         }
         size = 131072;
         default_action = Pawtucket();
@@ -684,7 +684,7 @@ control Dresser(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Arroyo.Merritt         : exact @name("Arroyo.Merritt") ;
-            meta.Arroyo.IowaCity[106:64]: lpm @name("Arroyo.IowaCity[106:64]") ;
+            meta.Arroyo.IowaCity[106:64]: lpm @name("Arroyo.IowaCity") ;
         }
         size = 65536;
         default_action = Pawtucket();
@@ -697,7 +697,7 @@ control Dresser(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Arroyo.Jenison       : exact @name("Arroyo.Jenison") ;
-            meta.Arroyo.IowaCity[63:0]: lpm @name("Arroyo.IowaCity[63:0]") ;
+            meta.Arroyo.IowaCity[63:0]: lpm @name("Arroyo.IowaCity") ;
         }
         size = 16384;
         default_action = Pawtucket();
@@ -723,7 +723,7 @@ control Dresser(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Ahuimanu.Halltown      : exact @name("Ahuimanu.Halltown") ;
-            meta.Arroyo.IowaCity[127:64]: lpm @name("Arroyo.IowaCity[127:64]") ;
+            meta.Arroyo.IowaCity[127:64]: lpm @name("Arroyo.IowaCity") ;
         }
         size = 8192;
         default_action = NoAction();
@@ -793,7 +793,7 @@ control Dresser(inout headers hdr, inout metadata meta, inout standard_metadata_
 
 control Hollyhill(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Amite") action Amite() {
-        digest<Shelby>(32w0, { meta.Yukon.Florala, meta.Seagrove.Jermyn, hdr.Gerty.Snowball, hdr.Gerty.Waipahu, hdr.Aredale.Norwood });
+        digest<Shelby>(32w0, {meta.Yukon.Florala,meta.Seagrove.Jermyn,hdr.Gerty.Snowball,hdr.Gerty.Waipahu,hdr.Aredale.Norwood});
     }
     @name(".Satolah") table Satolah {
         actions = {
@@ -968,7 +968,7 @@ control Lordstown(inout headers hdr, inout metadata meta, inout standard_metadat
 
 control Magma(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Dubach") action Dubach() {
-        digest<Rhine>(32w0, { meta.Yukon.Florala, meta.Seagrove.Amanda, meta.Seagrove.Waucousta, meta.Seagrove.Jermyn, meta.Seagrove.Tascosa });
+        digest<Rhine>(32w0, {meta.Yukon.Florala,meta.Seagrove.Amanda,meta.Seagrove.Waucousta,meta.Seagrove.Jermyn,meta.Seagrove.Tascosa});
     }
     @name(".Hedrick") table Hedrick {
         actions = {
@@ -1376,7 +1376,7 @@ control Sitka(inout headers hdr, inout metadata meta, inout standard_metadata_t 
             bit<1> in_value;
             in_value = value;
             value = in_value;
-            rv = ~value;
+            rv = ~in_value;
         }
     };
     @name(".Theba") RegisterAction<bit<1>, bit<32>, bit<1>>(Tryon) Theba = {

@@ -561,7 +561,7 @@ control Arial(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Braxton.Ohiowa         : exact @name("Braxton.Ohiowa") ;
-            meta.Braxton.Westpoint[63:0]: lpm @name("Braxton.Westpoint[63:0]") ;
+            meta.Braxton.Westpoint[63:0]: lpm @name("Braxton.Westpoint") ;
         }
         size = 16384;
         default_action = Tarnov();
@@ -574,7 +574,7 @@ control Arial(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Moline.Hallville   : exact @name("Moline.Hallville") ;
-            meta.Moline.Aurora[19:0]: lpm @name("Moline.Aurora[19:0]") ;
+            meta.Moline.Aurora[19:0]: lpm @name("Moline.Aurora") ;
         }
         size = 131072;
         default_action = Tarnov();
@@ -614,7 +614,7 @@ control Arial(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Braxton.Wanilla          : exact @name("Braxton.Wanilla") ;
-            meta.Braxton.Westpoint[106:64]: lpm @name("Braxton.Westpoint[106:64]") ;
+            meta.Braxton.Westpoint[106:64]: lpm @name("Braxton.Westpoint") ;
         }
         size = 65536;
         default_action = Tarnov();
@@ -627,7 +627,7 @@ control Arial(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Wagener.Coqui            : exact @name("Wagener.Coqui") ;
-            meta.Braxton.Westpoint[127:64]: lpm @name("Braxton.Westpoint[127:64]") ;
+            meta.Braxton.Westpoint[127:64]: lpm @name("Braxton.Westpoint") ;
         }
         size = 8192;
         default_action = NoAction();
@@ -776,7 +776,7 @@ control Chamois(inout headers hdr, inout metadata meta, inout standard_metadata_
             bit<1> in_value;
             in_value = value;
             value = in_value;
-            rv = ~value;
+            rv = ~in_value;
         }
     };
     @name(".Sequim") action Sequim() {
@@ -1129,7 +1129,7 @@ control Longwood(inout headers hdr, inout metadata meta, inout standard_metadata
 
 control Mabel(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Eveleth") action Eveleth() {
-        digest<Monkstown>(32w0, { meta.Quivero.Bevington, meta.Nashoba.Crumstown, meta.Nashoba.Hatchel, meta.Nashoba.Allons, meta.Nashoba.Ekron });
+        digest<Monkstown>(32w0, {meta.Quivero.Bevington,meta.Nashoba.Crumstown,meta.Nashoba.Hatchel,meta.Nashoba.Allons,meta.Nashoba.Ekron});
     }
     @name(".Riner") table Riner {
         actions = {
@@ -1260,7 +1260,7 @@ control Meridean(inout headers hdr, inout metadata meta, inout standard_metadata
 
 control Nahunta(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Correo") action Correo() {
-        digest<Charm>(32w0, { meta.Quivero.Bevington, meta.Nashoba.Allons, hdr.Maydelle.Barclay, hdr.Maydelle.Bootjack, hdr.Slick.Corfu });
+        digest<Charm>(32w0, {meta.Quivero.Bevington,meta.Nashoba.Allons,hdr.Maydelle.Barclay,hdr.Maydelle.Bootjack,hdr.Slick.Corfu});
     }
     @name(".Corum") table Corum {
         actions = {

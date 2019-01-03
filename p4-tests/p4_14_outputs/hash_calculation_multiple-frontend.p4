@@ -34,77 +34,77 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".set_port") action set_port_0() {
+    @name(".set_port") action set_port() {
         standard_metadata.egress_spec = 9w1;
     }
-    @name(".action1") action action1_0() {
+    @name(".action1") action action1() {
         hash<bit<16>, bit<16>, tuple<bit<32>, bit<32>>, bit<32>>(hdr.packet.hash_result1, HashAlgorithm.random, 16w0, { hdr.packet.hash_field1, hdr.packet.hash_field2 }, 32w65536);
     }
-    @name(".action2") action action2_0() {
+    @name(".action2") action action2() {
         hash<bit<16>, bit<16>, tuple<bit<32>, bit<32>>, bit<32>>(hdr.packet.hash_result2, HashAlgorithm.random, 16w0, { hdr.packet.hash_field1, hdr.packet.hash_field3 }, 32w65536);
     }
-    @name(".action3") action action3_0() {
+    @name(".action3") action action3() {
         hash<bit<16>, bit<16>, tuple<bit<32>, bit<32>>, bit<32>>(hdr.packet.hash_result3, HashAlgorithm.crc16, 16w0, { hdr.packet.hash_field1, hdr.packet.hash_field4 }, 32w65536);
     }
-    @name(".action4") action action4_0() {
+    @name(".action4") action action4() {
         hash<bit<16>, bit<16>, tuple<bit<32>, bit<32>>, bit<32>>(hdr.packet.hash_result4, HashAlgorithm.random, 16w0, { hdr.packet.hash_field1, hdr.packet.hash_field5 }, 32w65536);
     }
-    @name(".action5") action action5_0() {
+    @name(".action5") action action5() {
         hash<bit<16>, bit<16>, tuple<bit<32>, bit<32>>, bit<32>>(hdr.packet.hash_result5, HashAlgorithm.random, 16w0, { hdr.packet.hash_field1, hdr.packet.hash_field6 }, 32w65536);
     }
-    @name(".action6") action action6_0() {
+    @name(".action6") action action6() {
         hash<bit<16>, bit<16>, tuple<bit<32>, bit<32>>, bit<32>>(hdr.packet.hash_result6, HashAlgorithm.crc16, 16w0, { hdr.packet.hash_field1, hdr.packet.hash_field7 }, 32w65536);
     }
-    @name(".port") table port {
+    @name(".port") table port_0 {
         actions = {
-            set_port_0();
+            set_port();
         }
-        default_action = set_port_0();
+        default_action = set_port();
     }
-    @name(".test1") table test1 {
+    @name(".test1") table test1_0 {
         actions = {
-            action1_0();
+            action1();
         }
-        default_action = action1_0();
+        default_action = action1();
     }
-    @name(".test2") table test2 {
+    @name(".test2") table test2_0 {
         actions = {
-            action2_0();
+            action2();
         }
-        default_action = action2_0();
+        default_action = action2();
     }
-    @name(".test3") table test3 {
+    @name(".test3") table test3_0 {
         actions = {
-            action3_0();
+            action3();
         }
-        default_action = action3_0();
+        default_action = action3();
     }
-    @name(".test4") table test4 {
+    @name(".test4") table test4_0 {
         actions = {
-            action4_0();
+            action4();
         }
-        default_action = action4_0();
+        default_action = action4();
     }
-    @name(".test5") table test5 {
+    @name(".test5") table test5_0 {
         actions = {
-            action5_0();
+            action5();
         }
-        default_action = action5_0();
+        default_action = action5();
     }
-    @name(".test6") table test6 {
+    @name(".test6") table test6_0 {
         actions = {
-            action6_0();
+            action6();
         }
-        default_action = action6_0();
+        default_action = action6();
     }
     apply {
-        test1.apply();
-        test2.apply();
-        test3.apply();
-        test4.apply();
-        test5.apply();
-        test6.apply();
-        port.apply();
+        test1_0.apply();
+        test2_0.apply();
+        test3_0.apply();
+        test4_0.apply();
+        test5_0.apply();
+        test6_0.apply();
+        port_0.apply();
     }
 }
 

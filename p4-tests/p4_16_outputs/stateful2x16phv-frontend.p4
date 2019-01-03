@@ -3,9 +3,9 @@
 #include <tofino/stateful_alu.p4>
 
 struct metadata {
-    @pa_container_size("ingress", "meta.a", 32) @pa_atomic("ingress", "meta.a") 
+    @pa_container_size("ingress" , "meta.a" , 32) @pa_atomic("ingress" , "meta.a") 
     bit<16> a;
-    @pa_container_size("ingress", "meta.b", 32) @pa_atomic("ingress", "meta.b") 
+    @pa_container_size("ingress" , "meta.b" , 32) @pa_atomic("ingress" , "meta.b") 
     bit<16> b;
 }
 
@@ -23,6 +23,8 @@ struct headers {
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     state start {
+        meta.a = 16w0;
+        meta.b = 16w0;
         packet.extract<data_t>(hdr.data);
         transition accept;
     }
@@ -34,15 +36,15 @@ struct pair {
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<16> tmp_0;
-    @name("ingress.accum") register<pair>(32w2048) accum;
-    @name("ingress.write") RegisterAction<pair, bit<32>, bit<16>>(accum) write_1 = {
+    bit<16> tmp;
+    @name("ingress.accum") register<pair>(32w2048) accum_0;
+    @name("ingress.write") RegisterAction<pair, bit<32>, bit<16>>(accum_0) write_0 = {
         void apply(inout pair value) {
             value.lo = meta.a;
             value.hi = meta.b;
         }
     };
-    @name("ingress.read") RegisterAction<pair, bit<32>, bit<16>>(accum) read_1 = {
+    @name("ingress.read") RegisterAction<pair, bit<32>, bit<16>>(accum_0) read_0 = {
         void apply(inout pair value, out bit<16> rv) {
             rv = value.hi;
         }
@@ -52,10 +54,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.a = meta.a + hdr.data.f1[15:0];
         meta.b = meta.b + hdr.data.f2[15:0];
         if (hdr.data.b1 == 8w0) 
-            write_1.execute((bit<32>)hdr.data.b2);
+            write_0.execute((bit<32>)hdr.data.b2);
         else {
-            tmp_0 = read_1.execute((bit<32>)hdr.data.b2);
-            hdr.data.h1 = tmp_0;
+            tmp = read_0.execute((bit<32>)hdr.data.b2);
+            hdr.data.h1 = tmp;
         }
     }
 }

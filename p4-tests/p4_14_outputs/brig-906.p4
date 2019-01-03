@@ -257,7 +257,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.md.global_pkt_count = global_pkt_count_incr.execute(32w0);
     }
     @name(".maintain_2bit_variable") action maintain_2bit_variable() {
-        meta.md.status_cycle = (bit<2>)meta.md.global_pkt_count >> 0;
+        meta.md.status_cycle = (bit<2>)(meta.md.global_pkt_count >> 0);
     }
     @name(".write_output") action write_output() {
         hdr.ipv4.dip = (bit<32>)meta.md.status_cycle;

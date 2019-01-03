@@ -162,36 +162,36 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".fwd") action fwd_0() {
+    @name(".fwd") action fwd() {
         standard_metadata.egress_spec = meta.md.port;
     }
-    @name(".upd") action upd_0(bit<9> p) {
+    @name(".upd") action upd(bit<9> p) {
         meta.md.port = p;
     }
-    @name(".forward") table forward {
+    @name(".forward") table forward_0 {
         actions = {
-            fwd_0();
+            fwd();
         }
         key = {
             hdr.ethernet.ethertype: exact @name("ethernet.ethertype") ;
         }
         size = 128;
-        default_action = fwd_0();
+        default_action = fwd();
     }
-    @name(".update") table update {
+    @name(".update") table update_0 {
         actions = {
-            upd_0();
+            upd();
         }
         key = {
             hdr.ethernet.ethertype: exact @name("ethernet.ethertype") ;
         }
         size = 128;
-        default_action = upd_0(9w3);
+        default_action = upd(9w3);
     }
     apply {
         if (hdr.ethernet.isValid()) 
-            update.apply();
-        forward.apply();
+            update_0.apply();
+        forward_0.apply();
     }
 }
 

@@ -55,14 +55,14 @@ control deparser(packet_out b, in packet_t hdrs, inout standard_metadata meta) {
 }
 
 control c(inout packet_t hdrs, inout standard_metadata meta) {
-    @name("c.a") action a_0() {
+    @name("c.a") action a() {
         meta.egress_spec = 9w3;
     }
     @hidden table tbl_a {
         actions = {
-            a_0();
+            a();
         }
-        const default_action = a_0();
+        const default_action = a();
     }
     apply {
         tbl_a.apply();

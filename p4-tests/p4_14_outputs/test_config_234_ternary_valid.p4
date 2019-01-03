@@ -42,7 +42,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             do_nothing;
         }
         key = {
-            hdr.ethernet.isValid(): ternary;
+            hdr.ethernet.isValid(): ternary @name("valid") ;
             hdr.ethernet.isValid(): exact;
             hdr.ethernet.isValid(): exact;
             hdr.ethernet.etherType: exact;

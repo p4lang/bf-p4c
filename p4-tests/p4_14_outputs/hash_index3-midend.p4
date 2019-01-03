@@ -158,56 +158,53 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".NoAction") action NoAction_4() {
+    @name(".NoAction") action NoAction_3() {
     }
-    @name(".NoAction") action NoAction_5() {
-    }
-    @name(".setf1") action setf1_0(bit<32> val) {
+    @name(".setf1") action setf1(bit<32> val) {
         hdr.data.f1 = val;
     }
-    @name(".setf3") action setf3_0(bit<32> val) {
+    @name(".setf3") action setf3(bit<32> val) {
         hdr.data.f3 = val;
     }
     @name(".setf3") action setf3_2(bit<32> val) {
         hdr.data.f3 = val;
     }
-    @use_hash_action(1) @name(".test1") table test1 {
+    @use_hash_action(1) @name(".test1") table test1_0 {
         actions = {
-            setf1_0();
-            @defaultonly NoAction_0();
+            setf1();
         }
         key = {
             hdr.data.b1: exact @name("data.b1") ;
         }
         size = 256;
-        default_action = NoAction_0();
+        default_action = setf1(val = 32w0);
     }
-    @name(".test2") table test2 {
+    @name(".test2") table test2_0 {
         actions = {
-            setf3_0();
-            @defaultonly NoAction_4();
+            setf3();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.data.f2: ternary @name("data.f2") ;
         }
-        default_action = NoAction_4();
+        default_action = NoAction_0();
     }
-    @name(".test3") table test3 {
+    @name(".test3") table test3_0 {
         actions = {
             setf3_2();
-            @defaultonly NoAction_5();
+            @defaultonly NoAction_3();
         }
         key = {
             hdr.data.f4: ternary @name("data.f4") ;
         }
-        default_action = NoAction_5();
+        default_action = NoAction_3();
     }
     apply {
         if (hdr.data.b2 == 8w10) 
-            test1.apply();
+            test1_0.apply();
         else 
-            test2.apply();
-        test3.apply();
+            test2_0.apply();
+        test3_0.apply();
     }
 }
 

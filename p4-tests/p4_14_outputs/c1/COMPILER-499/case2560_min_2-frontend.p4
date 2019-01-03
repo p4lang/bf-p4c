@@ -418,7 +418,7 @@ struct headers {
 #include <tofino/stateful_alu.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<112> tmp_1;
+    bit<112> tmp;
     @name(".Aguilar") state Aguilar {
         packet.extract<Moylan>(hdr.Linden[0]);
         meta.Selby.Wentworth = hdr.Linden[0].Sallisaw;
@@ -517,8 +517,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
         transition accept;
     }
     @name(".start") state start {
-        tmp_1 = packet.lookahead<bit<112>>();
-        transition select(tmp_1[15:0]) {
+        tmp = packet.lookahead<bit<112>>();
+        transition select(tmp[15:0]) {
             16w0xbf00: Bellville;
             default: Fallis;
         }
@@ -549,43 +549,43 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_17() {
     }
-    bit<32> tmp_2;
-    @name(".Angus") action Angus_1(bit<32> Rohwer) {
+    bit<32> tmp_0;
+    @name(".Angus") action Angus(bit<32> Rohwer) {
         if (meta.Washoe.Minburn >= Rohwer) 
-            tmp_2 = meta.Washoe.Minburn;
+            tmp_0 = meta.Washoe.Minburn;
         else 
-            tmp_2 = Rohwer;
-        meta.Washoe.Minburn = tmp_2;
+            tmp_0 = Rohwer;
+        meta.Washoe.Minburn = tmp_0;
     }
     @name(".Angus") action Angus_6(bit<32> Rohwer) {
         if (meta.Washoe.Minburn >= Rohwer) 
-            tmp_2 = meta.Washoe.Minburn;
+            tmp_0 = meta.Washoe.Minburn;
         else 
-            tmp_2 = Rohwer;
-        meta.Washoe.Minburn = tmp_2;
+            tmp_0 = Rohwer;
+        meta.Washoe.Minburn = tmp_0;
     }
     @name(".Angus") action Angus_7(bit<32> Rohwer) {
         if (meta.Washoe.Minburn >= Rohwer) 
-            tmp_2 = meta.Washoe.Minburn;
+            tmp_0 = meta.Washoe.Minburn;
         else 
-            tmp_2 = Rohwer;
-        meta.Washoe.Minburn = tmp_2;
+            tmp_0 = Rohwer;
+        meta.Washoe.Minburn = tmp_0;
     }
     @name(".Angus") action Angus_8(bit<32> Rohwer) {
         if (meta.Washoe.Minburn >= Rohwer) 
-            tmp_2 = meta.Washoe.Minburn;
+            tmp_0 = meta.Washoe.Minburn;
         else 
-            tmp_2 = Rohwer;
-        meta.Washoe.Minburn = tmp_2;
+            tmp_0 = Rohwer;
+        meta.Washoe.Minburn = tmp_0;
     }
     @name(".Angus") action Angus_9(bit<32> Rohwer) {
         if (meta.Washoe.Minburn >= Rohwer) 
-            tmp_2 = meta.Washoe.Minburn;
+            tmp_0 = meta.Washoe.Minburn;
         else 
-            tmp_2 = Rohwer;
-        meta.Washoe.Minburn = tmp_2;
+            tmp_0 = Rohwer;
+        meta.Washoe.Minburn = tmp_0;
     }
-    @name(".Wamego") action Wamego_0(bit<16> Elkton) {
+    @name(".Wamego") action Wamego(bit<16> Elkton) {
         meta.Woodston.Cleta = Elkton;
     }
     @name(".Wamego") action Wamego_6(bit<16> Elkton) {
@@ -603,7 +603,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".Wamego") action Wamego_10(bit<16> Elkton) {
         meta.Woodston.Cleta = Elkton;
     }
-    @name(".Goessel") action Goessel_0(bit<11> IowaCity) {
+    @name(".Goessel") action Goessel(bit<11> IowaCity) {
         meta.Woodston.Paisley = IowaCity;
     }
     @name(".Goessel") action Goessel_6(bit<11> IowaCity) {
@@ -621,7 +621,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".Goessel") action Goessel_10(bit<11> IowaCity) {
         meta.Woodston.Paisley = IowaCity;
     }
-    @name(".Fillmore") action Fillmore_0() {
+    @name(".Fillmore") action Fillmore() {
         meta.Blanding.Unionvale = 1w1;
         meta.Blanding.Edgemont = 8w9;
     }
@@ -629,11 +629,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.Blanding.Unionvale = 1w1;
         meta.Blanding.Edgemont = 8w9;
     }
-    @name(".Roosville") action Roosville_0(bit<16> Dedham, bit<16> Joyce) {
+    @name(".Roosville") action Roosville(bit<16> Dedham, bit<16> Joyce) {
         meta.Cantwell.BarNunn = Dedham;
         meta.Woodston.Cleta = Joyce;
     }
-    @name(".Lueders") action Lueders_0() {
+    @name(".Lueders") action Lueders() {
     }
     @name(".Lueders") action Lueders_7() {
     }
@@ -647,17 +647,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".Lueders") action Lueders_12() {
     }
-    @name(".Calcasieu") action Calcasieu_0(bit<13> BirchBay, bit<16> Nanson) {
+    @name(".Calcasieu") action Calcasieu(bit<13> BirchBay, bit<16> Nanson) {
         meta.Hitterdal.Dixie = BirchBay;
         meta.Woodston.Cleta = Nanson;
     }
-    @name(".Garwood") action Garwood_0(bit<11> Stanwood, bit<16> Salamatof) {
+    @name(".Garwood") action Garwood(bit<11> Stanwood, bit<16> Salamatof) {
         meta.Hitterdal.Lenoir = Stanwood;
         meta.Woodston.Cleta = Salamatof;
     }
     @stage(1) @name(".Angus") table Angus_10 {
         actions = {
-            Angus_1();
+            Angus();
             @defaultonly NoAction_0();
         }
         key = {
@@ -666,12 +666,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_0();
     }
-    @action_default_only("Fillmore") @idletime_precision(1) @name(".Boquet") table Boquet {
+    @action_default_only("Fillmore") @idletime_precision(1) @name(".Boquet") table Boquet_0 {
         support_timeout = true;
         actions = {
-            Wamego_0();
-            Goessel_0();
-            Fillmore_0();
+            Wamego();
+            Goessel();
+            Fillmore();
             @defaultonly NoAction_10();
         }
         key = {
@@ -681,7 +681,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_10();
     }
-    @stage(4) @name(".Claypool") table Claypool {
+    @stage(4) @name(".Claypool") table Claypool_0 {
         actions = {
             Angus_6();
             @defaultonly NoAction_11();
@@ -692,10 +692,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_11();
     }
-    @action_default_only("Lueders") @name(".Grampian") table Grampian {
+    @action_default_only("Lueders") @name(".Grampian") table Grampian_0 {
         actions = {
-            Roosville_0();
-            Lueders_0();
+            Roosville();
+            Lueders();
             @defaultonly NoAction_12();
         }
         key = {
@@ -705,7 +705,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 16384;
         default_action = NoAction_12();
     }
-    @atcam_partition_index("Hitterdal.Dixie") @atcam_number_partitions(8192) @name(".KeyWest") table KeyWest {
+    @atcam_partition_index("Hitterdal.Dixie") @atcam_number_partitions(8192) @name(".KeyWest") table KeyWest_0 {
         actions = {
             Wamego_6();
             Goessel_6();
@@ -713,12 +713,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Hitterdal.Dixie           : exact @name("Hitterdal.Dixie") ;
-            meta.Hitterdal.Danville[106:64]: lpm @name("Hitterdal.Danville[106:64]") ;
+            meta.Hitterdal.Danville[106:64]: lpm @name("Hitterdal.Danville") ;
         }
         size = 65536;
         default_action = Lueders_7();
     }
-    @stage(2) @name(".London") table London {
+    @stage(2) @name(".London") table London_0 {
         actions = {
             Angus_7();
             @defaultonly NoAction_13();
@@ -729,7 +729,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_13();
     }
-    @stage(0) @name(".Meyers") table Meyers {
+    @stage(0) @name(".Meyers") table Meyers_0 {
         actions = {
             Angus_8();
             @defaultonly NoAction_14();
@@ -740,7 +740,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_14();
     }
-    @atcam_partition_index("Hitterdal.Lenoir") @atcam_number_partitions(2048) @name(".Minoa") table Minoa {
+    @atcam_partition_index("Hitterdal.Lenoir") @atcam_number_partitions(2048) @name(".Minoa") table Minoa_0 {
         actions = {
             Wamego_7();
             Goessel_7();
@@ -748,12 +748,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Hitterdal.Lenoir        : exact @name("Hitterdal.Lenoir") ;
-            meta.Hitterdal.Danville[63:0]: lpm @name("Hitterdal.Danville[63:0]") ;
+            meta.Hitterdal.Danville[63:0]: lpm @name("Hitterdal.Danville") ;
         }
         size = 16384;
         default_action = Lueders_8();
     }
-    @idletime_precision(1) @name(".Neches") table Neches {
+    @idletime_precision(1) @name(".Neches") table Neches_0 {
         support_timeout = true;
         actions = {
             Wamego_8();
@@ -767,20 +767,20 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 65536;
         default_action = Lueders_9();
     }
-    @command_line("--no-dead-code-elimination") @action_default_only("Fillmore") @name(".Nuyaka") table Nuyaka {
+    @command_line("--no-dead-code-elimination") @action_default_only("Fillmore") @name(".Nuyaka") table Nuyaka_0 {
         actions = {
-            Calcasieu_0();
+            Calcasieu();
             Fillmore_2();
             @defaultonly NoAction_15();
         }
         key = {
             meta.Bieber.Coverdale          : exact @name("Bieber.Coverdale") ;
-            meta.Hitterdal.Danville[127:64]: lpm @name("Hitterdal.Danville[127:64]") ;
+            meta.Hitterdal.Danville[127:64]: lpm @name("Hitterdal.Danville") ;
         }
         size = 8192;
         default_action = NoAction_15();
     }
-    @idletime_precision(1) @name(".Saragosa") table Saragosa {
+    @idletime_precision(1) @name(".Saragosa") table Saragosa_0 {
         support_timeout = true;
         actions = {
             Wamego_9();
@@ -794,7 +794,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 65536;
         default_action = Lueders_10();
     }
-    @stage(3) @name(".Taopi") table Taopi {
+    @stage(3) @name(".Taopi") table Taopi_0 {
         actions = {
             Angus_9();
             @defaultonly NoAction_16();
@@ -805,9 +805,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_16();
     }
-    @action_default_only("Lueders") @name(".Valeene") table Valeene {
+    @action_default_only("Lueders") @name(".Valeene") table Valeene_0 {
         actions = {
-            Garwood_0();
+            Garwood();
             Lueders_11();
             @defaultonly NoAction_17();
         }
@@ -818,7 +818,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 2048;
         default_action = NoAction_17();
     }
-    @ways(2) @atcam_partition_index("Cantwell.BarNunn") @atcam_number_partitions(16384) @name(".Waretown") table Waretown {
+    @ways(2) @atcam_partition_index("Cantwell.BarNunn") @atcam_number_partitions(16384) @name(".Waretown") table Waretown_0 {
         actions = {
             Wamego_10();
             Goessel_10();
@@ -826,27 +826,27 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Cantwell.BarNunn     : exact @name("Cantwell.BarNunn") ;
-            meta.Cantwell.Colona[19:0]: lpm @name("Cantwell.Colona[19:0]") ;
+            meta.Cantwell.Colona[19:0]: lpm @name("Cantwell.Colona") ;
         }
         size = 131072;
         default_action = Lueders_12();
     }
     apply {
-        Meyers.apply();
+        Meyers_0.apply();
         Angus_10.apply();
-        London.apply();
-        Taopi.apply();
-        Claypool.apply();
+        London_0.apply();
+        Taopi_0.apply();
+        Claypool_0.apply();
         if (meta.Selby.Yukon == 1w0 && meta.Bieber.Sequim == 1w1) 
             if (meta.Bieber.Lathrop == 1w1 && meta.Selby.Malabar == 1w1) 
-                switch (Neches.apply().action_run) {
+                switch (Neches_0.apply().action_run) {
                     Lueders_9: {
-                        switch (Grampian.apply().action_run) {
-                            Lueders_0: {
-                                Boquet.apply();
+                        switch (Grampian_0.apply().action_run) {
+                            Roosville: {
+                                Waretown_0.apply();
                             }
-                            Roosville_0: {
-                                Waretown.apply();
+                            Lueders: {
+                                Boquet_0.apply();
                             }
                         }
 
@@ -855,16 +855,16 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
 
             else 
                 if (meta.Bieber.Mosinee == 1w1 && meta.Selby.Lewiston == 1w1) 
-                    switch (Saragosa.apply().action_run) {
+                    switch (Saragosa_0.apply().action_run) {
                         Lueders_10: {
-                            switch (Valeene.apply().action_run) {
-                                Garwood_0: {
-                                    Minoa.apply();
+                            switch (Valeene_0.apply().action_run) {
+                                Garwood: {
+                                    Minoa_0.apply();
                                 }
                                 Lueders_11: {
-                                    switch (Nuyaka.apply().action_run) {
-                                        Calcasieu_0: {
-                                            KeyWest.apply();
+                                    switch (Nuyaka_0.apply().action_run) {
+                                        Calcasieu: {
+                                            KeyWest_0.apply();
                                         }
                                     }
 

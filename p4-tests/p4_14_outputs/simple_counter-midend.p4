@@ -30,31 +30,31 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    @name(".cnt") direct_counter(CounterType.packets) cnt;
-    @name(".c3_4") action c3_0(bit<8> val3, bit<8> val4, bit<9> port) {
+    @name(".cnt") direct_counter(CounterType.packets) cnt_0;
+    @name(".c3_4") action c3_1(bit<8> val3, bit<8> val4, bit<9> port) {
         hdr.data.c3 = val3;
         hdr.data.c4 = val4;
         standard_metadata.egress_spec = port;
     }
-    @name(".c1_2") action c1_1(bit<8> val1, bit<8> val2) {
-        cnt.count();
+    @name(".c1_2") action c1_0(bit<8> val1, bit<8> val2) {
+        cnt_0.count();
         hdr.data.c1 = val1;
         hdr.data.c2 = val2;
     }
-    @name(".test1") table test1 {
+    @name(".test1") table test1_0 {
         actions = {
-            c1_1();
+            c1_0();
             @defaultonly NoAction_0();
         }
         key = {
             hdr.data.f1: exact @name("data.f1") ;
         }
-        counters = cnt;
+        counters = cnt_0;
         default_action = NoAction_0();
     }
-    @name(".test2") table test2 {
+    @name(".test2") table test2_0 {
         actions = {
-            c3_0();
+            c3_1();
             @defaultonly NoAction_3();
         }
         key = {
@@ -64,8 +64,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_3();
     }
     apply {
-        test1.apply();
-        test2.apply();
+        test1_0.apply();
+        test2_0.apply();
     }
 }
 

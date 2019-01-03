@@ -176,21 +176,21 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".ap") @mode("fair") action_selector(HashAlgorithm.crc16, 32w0, 32w16) ap;
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".do_drop_it") action do_drop_it_0() {
+    @name(".do_drop_it") action do_drop_it() {
         mark_to_drop();
     }
-    @name(".drop_it") table drop_it {
+    @name(".drop_it") table drop_it_0 {
         actions = {
-            do_drop_it_0();
+            do_drop_it();
         }
         size = 1;
-        default_action = do_drop_it_0();
+        default_action = do_drop_it();
     }
     apply {
         if (meta.md.pass == 1w1) 
             ;
         else 
-            drop_it.apply();
+            drop_it_0.apply();
     }
 }
 
@@ -209,14 +209,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_11() {
     }
-    @name(".cntr") @min_width(32) counter(32w16384, CounterType.packets) cntr;
-    @name(".m") meter(32w1024, MeterType.packets) m;
-    @initial_register_lo_value(1) @name(".r_alu") RegisterAction<bit<16>, bit<32>, bit<16>>(r) r_alu = {
+    @name(".cntr") @min_width(32) counter(32w16384, CounterType.packets) cntr_0;
+    @name(".m") meter(32w1024, MeterType.packets) m_0;
+    @initial_register_lo_value(1) @name(".r_alu") RegisterAction<bit<16>, bit<32>, bit<16>>(r) r_alu_0 = {
         void apply(inout bit<16> value) {
             value = value + 16w1;
         }
     };
-    @name(".pass") action pass_0() {
+    @name(".pass") action pass_1() {
         meta.md.pass = 1w1;
     }
     @name(".pass") action pass_7() {
@@ -234,7 +234,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".pass") action pass_11() {
         meta.md.pass = 1w1;
     }
-    @name(".nop") action nop_0() {
+    @name(".nop") action nop() {
     }
     @name(".nop") action nop_6() {
     }
@@ -246,10 +246,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".nop") action nop_10() {
     }
-    @name(".run_m") action run_m_0() {
-        m.execute_meter<bit<2>>(32w917, meta.md.color);
+    @name(".run_m") action run_m() {
+        m_0.execute_meter<bit<2>>(32w917, meta.md.color);
     }
-    @name(".set_md") action set_md_0(bit<1> chk_prsr, bit<1> chk_simple_tcam, bit<1> chk_simple_exm, bit<1> chk_stats, bit<1> chk_meter, bit<1> chk_stful, bit<1> chk_sel, bit<1> chk_idle_t, bit<1> chk_idle_e, bit<20> key) {
+    @name(".set_md") action set_md(bit<1> chk_prsr, bit<1> chk_simple_tcam, bit<1> chk_simple_exm, bit<1> chk_stats, bit<1> chk_meter, bit<1> chk_stful, bit<1> chk_sel, bit<1> chk_idle_t, bit<1> chk_idle_e, bit<20> key) {
         meta.test_sel.chk_prsr = chk_prsr;
         meta.test_sel.chk_simple_tcam = chk_simple_tcam;
         meta.test_sel.chk_simple_exm = chk_simple_exm;
@@ -261,7 +261,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.test_sel.chk_idle_e = chk_idle_e;
         meta.test_sel.key = key;
     }
-    @name(".set_key") action set_key_0(bit<20> x) {
+    @name(".set_key") action set_key(bit<20> x) {
         meta.test_sel.key = x;
     }
     @name(".set_key") action set_key_3(bit<20> x) {
@@ -270,29 +270,29 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".set_key") action set_key_4(bit<20> x) {
         meta.test_sel.key = x;
     }
-    @name(".do_set_dest") action do_set_dest_0() {
+    @name(".do_set_dest") action do_set_dest() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = hdr.ig_intr_md.ingress_port;
     }
-    @name(".count_it") action count_it_0() {
-        cntr.count((bit<32>)meta.test_sel.key);
+    @name(".count_it") action count_it() {
+        cntr_0.count((bit<32>)meta.test_sel.key);
     }
-    @name(".run_r") action run_r_0() {
-        r_alu.execute((bit<32>)meta.test_sel.key);
+    @name(".run_r") action run_r() {
+        r_alu_0.execute((bit<32>)meta.test_sel.key);
     }
-    @stage(10) @include_idletime(1) @idletime_precision(3) @name(".idle_exm") table idle_exm {
+    @stage(10) @include_idletime(1) @idletime_precision(3) @name(".idle_exm") table idle_exm_0 {
         support_timeout = true;
         actions = {
-            pass_0();
-            nop_0();
+            pass_1();
+            nop();
             @defaultonly NoAction_0();
         }
         key = {
-            meta.test_sel.key[9:0]: exact @name("test_sel.key[9:0]") ;
+            meta.test_sel.key[9:0]: exact @name("test_sel.key") ;
         }
         size = 1024;
         default_action = NoAction_0();
     }
-    @stage(9) @include_idletime(1) @idletime_precision(1) @name(".idle_tcam") table idle_tcam {
+    @stage(9) @include_idletime(1) @idletime_precision(1) @name(".idle_tcam") table idle_tcam_0 {
         support_timeout = true;
         actions = {
             pass_7();
@@ -305,24 +305,24 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_7();
     }
-    @stage(5) @name(".mtr") table mtr {
+    @stage(5) @name(".mtr") table mtr_0 {
         actions = {
-            run_m_0();
+            run_m();
         }
         size = 1;
-        default_action = run_m_0();
+        default_action = run_m();
     }
-    @name(".p0") table p0 {
+    @name(".p0") table p0_0 {
         actions = {
-            set_md_0();
+            set_md();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 288;
-        default_action = set_md_0(1w0, 1w0, 1w0, 1w0, 1w0, 1w0, 1w0, 1w0, 1w0, 20w0);
+        default_action = set_md(1w0, 1w0, 1w0, 1w0, 1w0, 1w0, 1w0, 1w0, 1w0, 20w0);
     }
-    @stage(0) @name(".prsr") table prsr {
+    @stage(0) @name(".prsr") table prsr_0 {
         actions = {
             pass_8();
             nop_7();
@@ -334,29 +334,29 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 2;
         default_action = NoAction_8();
     }
-    @stage(6) @name(".sel") table sel_1 {
+    @stage(6) @name(".sel") table sel_0 {
         actions = {
-            set_key_0();
+            set_key();
             nop_8();
             pass_9();
             @defaultonly NoAction_9();
         }
         key = {
-            meta.test_sel.key[9:0]: exact @name("test_sel.key[9:0]") ;
+            meta.test_sel.key[9:0]: exact @name("test_sel.key") ;
             meta.test_sel.key     : selector @name("test_sel.key") ;
         }
         size = 1024;
         implementation = ap;
         default_action = NoAction_9();
     }
-    @name(".set_dest") table set_dest {
+    @name(".set_dest") table set_dest_0 {
         actions = {
-            do_set_dest_0();
+            do_set_dest();
         }
         size = 1;
-        default_action = do_set_dest_0();
+        default_action = do_set_dest();
     }
-    @stage(2) @immediate(0) @name(".simple_exm") table simple_exm {
+    @stage(2) @immediate(0) @name(".simple_exm") table simple_exm_0 {
         actions = {
             pass_10();
             nop_9();
@@ -364,12 +364,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_10();
         }
         key = {
-            meta.test_sel.key[9:0]: exact @name("test_sel.key[9:0]") ;
+            meta.test_sel.key[9:0]: exact @name("test_sel.key") ;
         }
         size = 1024;
         default_action = NoAction_10();
     }
-    @stage(1) @name(".simple_tcam") table simple_tcam {
+    @stage(1) @name(".simple_tcam") table simple_tcam_0 {
         actions = {
             pass_11();
             nop_10();
@@ -382,42 +382,42 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_11();
     }
-    @stage(3) @name(".stats") table stats {
+    @stage(3) @name(".stats") table stats_0 {
         actions = {
-            count_it_0();
+            count_it();
         }
         size = 1;
-        default_action = count_it_0();
+        default_action = count_it();
     }
-    @stage(4) @name(".stful") table stful {
+    @stage(4) @name(".stful") table stful_0 {
         actions = {
-            run_r_0();
+            run_r();
         }
         size = 1;
-        default_action = run_r_0();
+        default_action = run_r();
     }
     apply {
         if (1w0 == hdr.ig_intr_md.resubmit_flag) 
-            p0.apply();
+            p0_0.apply();
         if (meta.test_sel.chk_prsr == 1w1) 
-            prsr.apply();
+            prsr_0.apply();
         if (meta.test_sel.chk_simple_tcam == 1w1) 
-            simple_tcam.apply();
+            simple_tcam_0.apply();
         if (meta.test_sel.chk_simple_exm == 1w1) 
-            simple_exm.apply();
+            simple_exm_0.apply();
         if (meta.test_sel.chk_stats == 1w1) 
-            stats.apply();
+            stats_0.apply();
         if (meta.test_sel.chk_stful == 1w1) 
-            stful.apply();
+            stful_0.apply();
         if (meta.test_sel.chk_meter == 1w1) 
-            mtr.apply();
+            mtr_0.apply();
         if (meta.test_sel.chk_sel == 1w1) 
-            sel_1.apply();
+            sel_0.apply();
         if (meta.test_sel.chk_idle_t == 1w1) 
-            idle_tcam.apply();
+            idle_tcam_0.apply();
         if (meta.test_sel.chk_idle_e == 1w1) 
-            idle_exm.apply();
-        set_dest.apply();
+            idle_exm_0.apply();
+        set_dest_0.apply();
     }
 }
 

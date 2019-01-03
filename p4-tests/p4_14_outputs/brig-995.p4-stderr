@@ -1,0 +1,57 @@
+brig-995.p4(75): warning: Could not infer type for vrf, using bit<8>
+action set_bd_properties(bd, vrf, stp_group, learning_enabled,
+                             ^^^
+brig-995.p4(75): warning: Could not infer type for stp_group, using bit<8>
+action set_bd_properties(bd, vrf, stp_group, learning_enabled,
+                                  ^^^^^^^^^
+brig-995.p4(75): warning: Could not infer type for learning_enabled, using bit<8>
+action set_bd_properties(bd, vrf, stp_group, learning_enabled,
+                                             ^^^^^^^^^^^^^^^^
+brig-995.p4(76): warning: Could not infer type for bd_label, using bit<8>
+                         bd_label, stats_idx, rmac_group,
+                         ^^^^^^^^
+brig-995.p4(76): warning: Could not infer type for stats_idx, using bit<8>
+                         bd_label, stats_idx, rmac_group,
+                                   ^^^^^^^^^
+brig-995.p4(76): warning: Could not infer type for rmac_group, using bit<8>
+                         bd_label, stats_idx, rmac_group,
+                                              ^^^^^^^^^^
+brig-995.p4(77): warning: Could not infer type for ipv4_unicast_enabled, using bit<8>
+                         ipv4_unicast_enabled, ipv6_unicast_enabled,
+                         ^^^^^^^^^^^^^^^^^^^^
+brig-995.p4(77): warning: Could not infer type for ipv6_unicast_enabled, using bit<8>
+                         ipv4_unicast_enabled, ipv6_unicast_enabled,
+                                               ^^^^^^^^^^^^^^^^^^^^
+brig-995.p4(78): warning: Could not infer type for ipv4_urpf_mode, using bit<8>
+                         ipv4_urpf_mode, ipv6_urpf_mode,
+                         ^^^^^^^^^^^^^^
+brig-995.p4(78): warning: Could not infer type for ipv6_urpf_mode, using bit<8>
+                         ipv4_urpf_mode, ipv6_urpf_mode,
+                                         ^^^^^^^^^^^^^^
+brig-995.p4(79): warning: Could not infer type for igmp_snooping_enabled, using bit<8>
+                         igmp_snooping_enabled, mld_snooping_enabled,
+                         ^^^^^^^^^^^^^^^^^^^^^
+brig-995.p4(79): warning: Could not infer type for mld_snooping_enabled, using bit<8>
+                         igmp_snooping_enabled, mld_snooping_enabled,
+                                                ^^^^^^^^^^^^^^^^^^^^
+brig-995.p4(80): warning: Could not infer type for ipv4_multicast_enabled, using bit<8>
+                         ipv4_multicast_enabled, ipv6_multicast_enabled,
+                         ^^^^^^^^^^^^^^^^^^^^^^
+brig-995.p4(80): warning: Could not infer type for ipv6_multicast_enabled, using bit<8>
+                         ipv4_multicast_enabled, ipv6_multicast_enabled,
+                                                 ^^^^^^^^^^^^^^^^^^^^^^
+brig-995.p4(81): warning: Could not infer type for mrpf_group, using bit<8>
+                         mrpf_group,
+                         ^^^^^^^^^^
+brig-995.p4(82): warning: Could not infer type for ipv4_mcast_key, using bit<8>
+                         ipv4_mcast_key, ipv4_mcast_key_type,
+                         ^^^^^^^^^^^^^^
+brig-995.p4(82): warning: Could not infer type for ipv4_mcast_key_type, using bit<8>
+                         ipv4_mcast_key, ipv4_mcast_key_type,
+                                         ^^^^^^^^^^^^^^^^^^^
+brig-995.p4(83): warning: Could not infer type for ipv6_mcast_key, using bit<8>
+                         ipv6_mcast_key, ipv6_mcast_key_type,
+                         ^^^^^^^^^^^^^^
+brig-995.p4(83): warning: Could not infer type for ipv6_mcast_key_type, using bit<8>
+                         ipv6_mcast_key, ipv6_mcast_key_type,
+                                         ^^^^^^^^^^^^^^^^^^^

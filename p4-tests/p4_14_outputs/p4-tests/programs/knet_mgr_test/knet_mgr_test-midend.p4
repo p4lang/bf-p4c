@@ -211,10 +211,10 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".set_egress_port") action _set_egress_port() {
+    @name(".set_egress_port") action _set_egress_port_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)hdr.fabric_header_cpu.ingressPort;
     }
-    @name(".add_cpu_header") action _add_cpu_header(bit<1> pad1, bit<3> fabric_color, bit<5> fabric_qos, bit<8> dst_device, bit<16> dst_port_or_group, bit<2> reserved1, bit<16> ingress_ifindex, bit<16> ingress_bd, bit<16> reason_code) {
+    @name(".add_cpu_header") action _add_cpu_header_0(bit<1> pad1, bit<3> fabric_color, bit<5> fabric_qos, bit<8> dst_device, bit<16> dst_port_or_group, bit<2> reserved1, bit<16> ingress_ifindex, bit<16> ingress_bd, bit<16> reason_code) {
         hdr.fabric_header.setValid();
         hdr.fabric_header.packetType = 3w5;
         hdr.fabric_header.headerVersion = 2w0;
@@ -235,31 +235,31 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ethernet.etherType = 16w0x9000;
         hdr.ig_intr_md_for_tm.ucast_egress_port = 9w64;
     }
-    @name(".fabric_tbl") table _fabric_tbl_0 {
+    @name(".fabric_tbl") table _fabric_tbl {
         actions = {
-            _set_egress_port();
+            _set_egress_port_0();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 288;
-        default_action = _set_egress_port();
+        default_action = _set_egress_port_0();
     }
-    @name(".port_tbl") table _port_tbl_0 {
+    @name(".port_tbl") table _port_tbl {
         actions = {
-            _add_cpu_header();
+            _add_cpu_header_0();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 288;
-        default_action = _add_cpu_header();
+        default_action = _add_cpu_header_0(pad1 = 1w0, fabric_color = 3w0, fabric_qos = 5w0, dst_device = 8w0, dst_port_or_group = 16w0, reserved1 = 2w0, ingress_ifindex = 16w0, ingress_bd = 16w0, reason_code = 16w0);
     }
     apply {
         if (hdr.ig_intr_md.ingress_port != 9w64) 
-            _port_tbl_0.apply();
+            _port_tbl.apply();
         else 
-            _fabric_tbl_0.apply();
+            _fabric_tbl.apply();
     }
 }
 

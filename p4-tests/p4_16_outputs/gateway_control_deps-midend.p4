@@ -32,10 +32,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_7() {
     }
-    @name("ingress.a1") action a1_0(bit<8> val) {
+    @name("ingress.a1") action a1(bit<8> val) {
         hdr.data.b1 = val;
     }
-    @name("ingress.noop") action noop_0() {
+    @name("ingress.noop") action noop() {
     }
     @name("ingress.noop") action noop_4() {
     }
@@ -43,18 +43,18 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("ingress.noop") action noop_6() {
     }
-    @name("ingress.t1") table t1 {
+    @name("ingress.t1") table t1_0 {
         key = {
             hdr.data.f1: exact @name("hdr.data.f1") ;
         }
         actions = {
-            a1_0();
-            noop_0();
+            a1();
+            noop();
             @defaultonly NoAction_0();
         }
         default_action = NoAction_0();
     }
-    @name("ingress.t2") table t2 {
+    @name("ingress.t2") table t2_0 {
         key = {
             hdr.data.f1: exact @name("hdr.data.f1") ;
         }
@@ -64,7 +64,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_5();
     }
-    @name("ingress.t3") table t3 {
+    @name("ingress.t3") table t3_0 {
         key = {
             hdr.data.f1: exact @name("hdr.data.f1") ;
         }
@@ -74,7 +74,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_6();
     }
-    @name("ingress.t4") table t4 {
+    @name("ingress.t4") table t4_0 {
         key = {
             hdr.data.f1: exact @name("hdr.data.f1") ;
         }
@@ -85,20 +85,20 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_7();
     }
     apply {
-        switch (t1.apply().action_run) {
+        switch (t1_0.apply().action_run) {
             default: {
                 if (hdr.data.f2 == hdr.data.f1) {
-                    t2.apply();
-                    switch (t3.apply().action_run) {
+                    t2_0.apply();
+                    switch (t3_0.apply().action_run) {
                         noop_5: {
-                            t4.apply();
+                            t4_0.apply();
                         }
                     }
 
                 }
             }
-            a1_0: {
-                t4.apply();
+            a1: {
+                t4_0.apply();
             }
         }
 

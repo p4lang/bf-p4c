@@ -655,7 +655,7 @@ control ElMango(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Ellicott.Pecos         : exact;
-            meta.Broadford.Range[127:64]: lpm;
+            meta.Broadford.Range[127:64]: lpm @name("Broadford.Range") ;
         }
         size = 8192;
     }
@@ -667,7 +667,7 @@ control ElMango(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Sanatoga.Berville       : exact;
-            meta.Sanatoga.Atlasburg[19:0]: lpm;
+            meta.Sanatoga.Atlasburg[19:0]: lpm @name("Sanatoga.Atlasburg") ;
         }
         size = 131072;
         default_action = DosPalos();
@@ -704,7 +704,7 @@ control ElMango(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Broadford.Osterdock    : exact;
-            meta.Broadford.Range[106:64]: lpm;
+            meta.Broadford.Range[106:64]: lpm @name("Broadford.Range") ;
         }
         size = 65536;
         default_action = DosPalos();
@@ -745,7 +745,7 @@ control ElMango(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Broadford.Twinsburg  : exact;
-            meta.Broadford.Range[63:0]: lpm;
+            meta.Broadford.Range[63:0]: lpm @name("Broadford.Range") ;
         }
         size = 16384;
         default_action = DosPalos();
@@ -1295,7 +1295,7 @@ control Parnell(inout headers hdr, inout metadata meta, inout standard_metadata_
             bit<1> in_value;
             in_value = value;
             value = in_value;
-            rv = ~value;
+            rv = ~in_value;
         }
     };
     @name(".Tocito") action Tocito(bit<1> Astor) {
@@ -1666,6 +1666,10 @@ control Rankin(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     apply {
         switch (Pembine.apply().action_run) {
+            Manville: {
+                Gibson.apply();
+                Langdon.apply();
+            }
             Ballville: {
                 if (meta.Wolsey.Farthing == 1w1) {
                     Othello.apply();
@@ -1681,10 +1685,6 @@ control Rankin(inout headers hdr, inout metadata meta, inout standard_metadata_t
                 else {
                     Phelps.apply();
                 }
-            }
-            Manville: {
-                Gibson.apply();
-                Langdon.apply();
             }
         }
 

@@ -828,7 +828,7 @@ control English(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Whitetail.Tannehill   : exact @name("Whitetail.Tannehill") ;
-            meta.Whitetail.Darden[19:0]: lpm @name("Whitetail.Darden[19:0]") ;
+            meta.Whitetail.Darden[19:0]: lpm @name("Whitetail.Darden") ;
         }
         size = 131072;
         default_action = Barnwell();
@@ -870,7 +870,7 @@ control English(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Saticoy.Angwin         : exact @name("Saticoy.Angwin") ;
-            meta.Saticoy.Coleman[106:64]: lpm @name("Saticoy.Coleman[106:64]") ;
+            meta.Saticoy.Coleman[106:64]: lpm @name("Saticoy.Coleman") ;
         }
         size = 65536;
         default_action = Barnwell();
@@ -883,7 +883,7 @@ control English(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Saticoy.Surrey       : exact @name("Saticoy.Surrey") ;
-            meta.Saticoy.Coleman[63:0]: lpm @name("Saticoy.Coleman[63:0]") ;
+            meta.Saticoy.Coleman[63:0]: lpm @name("Saticoy.Coleman") ;
         }
         size = 16384;
         default_action = Barnwell();
@@ -896,7 +896,7 @@ control English(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Gorman.Lostine         : exact @name("Gorman.Lostine") ;
-            meta.Saticoy.Coleman[127:64]: lpm @name("Saticoy.Coleman[127:64]") ;
+            meta.Saticoy.Coleman[127:64]: lpm @name("Saticoy.Coleman") ;
         }
         size = 8192;
         default_action = NoAction();
@@ -947,11 +947,11 @@ control English(inout headers hdr, inout metadata meta, inout standard_metadata_
                 switch (CedarKey.apply().action_run) {
                     Barnwell: {
                         switch (Sunflower.apply().action_run) {
-                            Barnwell: {
-                                Bellwood.apply();
-                            }
                             Marlton: {
                                 Annandale.apply();
+                            }
+                            Barnwell: {
+                                Bellwood.apply();
                             }
                         }
 
@@ -1488,7 +1488,7 @@ control Keachi(inout headers hdr, inout metadata meta, inout standard_metadata_t
 
 control Layton(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Stilwell") action Stilwell() {
-        digest<Berlin>(32w0, { meta.Pearcy.Firesteel, meta.Timken.Comobabi, meta.Timken.Osakis, meta.Timken.Crystola, meta.Timken.Homeworth });
+        digest<Berlin>(32w0, {meta.Pearcy.Firesteel,meta.Timken.Comobabi,meta.Timken.Osakis,meta.Timken.Crystola,meta.Timken.Homeworth});
     }
     @name(".WindLake") table WindLake {
         actions = {
@@ -1808,7 +1808,7 @@ control Pekin(inout headers hdr, inout metadata meta, inout standard_metadata_t 
 
 control Shauck(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Unity") action Unity() {
-        digest<Burmester>(32w0, { meta.Pearcy.Firesteel, meta.Timken.Crystola, hdr.Radcliffe.Henderson, hdr.Radcliffe.Lookeba, hdr.Harlem.Biehle });
+        digest<Burmester>(32w0, {meta.Pearcy.Firesteel,meta.Timken.Crystola,hdr.Radcliffe.Henderson,hdr.Radcliffe.Lookeba,hdr.Harlem.Biehle});
     }
     @name(".Westwood") table Westwood {
         actions = {
@@ -1881,7 +1881,7 @@ control Victoria(inout headers hdr, inout metadata meta, inout standard_metadata
             bit<1> in_value;
             in_value = value;
             value = in_value;
-            rv = ~value;
+            rv = ~in_value;
         }
     };
     @name(".Woodsboro") RegisterAction<bit<1>, bit<32>, bit<1>>(Illmo) Woodsboro = {

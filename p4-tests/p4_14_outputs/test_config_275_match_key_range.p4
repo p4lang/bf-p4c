@@ -202,8 +202,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             do_nothing;
         }
         key = {
-            meta.meta.x_32[31:24]: ternary;
-            meta.meta.y_32[31:16]: ternary;
+            meta.meta.x_32[31:24]: ternary @name("meta.x_32") ;
+            meta.meta.y_32[31:16]: ternary @name("meta.y_32") ;
             hdr.hdr1.e_16        : exact;
             meta.meta.z_32       : exact;
         }

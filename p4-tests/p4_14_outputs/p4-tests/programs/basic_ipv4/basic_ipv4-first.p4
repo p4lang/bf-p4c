@@ -69,7 +69,7 @@ header egress_intrinsic_metadata_from_parser_aux_t {
     bit<8>  coalesce_sample_count;
 }
 
-@command_line("--disable-init-metadata") header ethernet_t {
+header ethernet_t {
     bit<48> dstAddr;
     bit<48> srcAddr;
     bit<16> etherType;
@@ -336,12 +336,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         mark_to_drop();
     }
     @name(".learn_1") action learn_1(bit<20> learn_meta_1, bit<10> learn_meta_4) {
-        digest<learn_1_0>(32w0, { hdr.ipv4.ihl, hdr.ipv4.protocol, hdr.ipv4.srcAddr, hdr.ethernet.srcAddr, hdr.ethernet.dstAddr, hdr.ipv4.fragOffset, hdr.ipv4.identification, meta.routing_metadata.learn_meta_1, meta.routing_metadata.learn_meta_4 });
+        digest<learn_1_0>(32w0, {hdr.ipv4.ihl,hdr.ipv4.protocol,hdr.ipv4.srcAddr,hdr.ethernet.srcAddr,hdr.ethernet.dstAddr,hdr.ipv4.fragOffset,hdr.ipv4.identification,meta.routing_metadata.learn_meta_1,meta.routing_metadata.learn_meta_4});
         meta.routing_metadata.learn_meta_1 = learn_meta_1;
         meta.routing_metadata.learn_meta_4 = learn_meta_4;
     }
     @name(".learn_2") action learn_2(bit<24> learn_meta_2, bit<25> learn_meta_3) {
-        digest<learn_2_0>(32w0, { hdr.ipv4.ihl, hdr.ipv4.identification, hdr.ipv4.protocol, hdr.ipv4.srcAddr, hdr.ethernet.srcAddr, hdr.ethernet.dstAddr, hdr.ipv4.fragOffset, meta.routing_metadata.learn_meta_2, meta.routing_metadata.learn_meta_3 });
+        digest<learn_2_0>(32w0, {hdr.ipv4.ihl,hdr.ipv4.identification,hdr.ipv4.protocol,hdr.ipv4.srcAddr,hdr.ethernet.srcAddr,hdr.ethernet.dstAddr,hdr.ipv4.fragOffset,meta.routing_metadata.learn_meta_2,meta.routing_metadata.learn_meta_3});
         meta.routing_metadata.learn_meta_2 = learn_meta_2;
         meta.routing_metadata.learn_meta_3 = learn_meta_3;
     }

@@ -424,10 +424,10 @@ struct headers {
 #include <tofino/stateful_alu.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<104> tmp_0;
+    bit<104> tmp;
     @name(".determine_first_parser") state determine_first_parser {
-        tmp_0 = packet.lookahead<bit<104>>();
-        transition select(tmp_0[7:0]) {
+        tmp = packet.lookahead<bit<104>>();
+        transition select(tmp[7:0]) {
             8w0xec: accept;
             8w0xeb: parse_ebheader;
             default: parse_outer_ethernet;
@@ -455,7 +455,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     @name(".NoAction") action NoAction_1() {
     }
-    @name(".do_add_ebheader") action do_add_ebheader_0() {
+    @name(".do_add_ebheader") action do_add_ebheader() {
         hdr.ebheader.setValid();
         hdr.ebheader.ethertype_eb = 8w0xeb;
         hdr.ebheader.dst_main_out = meta.ebmeta.lanwan_out_port;
@@ -466,19 +466,19 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         hdr.ebheader.offset_ip1 = meta.ebmeta.offset_ip1;
         hdr.ebheader.offset_ip2 = meta.ebmeta.offset_ip2;
     }
-    @name("._nop") action _nop_0() {
+    @name("._nop") action _nop() {
     }
-    @name("._nop") action _nop_1() {
+    @name("._nop") action _nop_2() {
     }
-    @name(".do_remove_ebheader") action do_remove_ebheader_0() {
+    @name(".do_remove_ebheader") action do_remove_ebheader() {
         meta.ebmeta.dst_mirror_agg = hdr.ebheader.dst_mirror_agg;
         meta.ebmeta.dst_mirror_out = hdr.ebheader.dst_mirror_out;
         hdr.ebheader.setInvalid();
     }
-    @name(".add_ebheader") table add_ebheader {
+    @name(".add_ebheader") table add_ebheader_0 {
         actions = {
-            do_add_ebheader_0();
-            _nop_0();
+            do_add_ebheader();
+            _nop();
             @defaultonly NoAction_0();
         }
         key = {
@@ -486,10 +486,10 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         default_action = NoAction_0();
     }
-    @name(".remove_ebheader") table remove_ebheader {
+    @name(".remove_ebheader") table remove_ebheader_0 {
         actions = {
-            do_remove_ebheader_0();
-            _nop_1();
+            do_remove_ebheader();
+            _nop_2();
             @defaultonly NoAction_1();
         }
         key = {
@@ -498,8 +498,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = NoAction_1();
     }
     apply {
-        add_ebheader.apply();
-        remove_ebheader.apply();
+        add_ebheader_0.apply();
+        remove_ebheader_0.apply();
     }
 }
 
@@ -512,10 +512,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_11() {
     }
-    @name(".calc_dpi_lan_mac_hash") action calc_dpi_lan_mac_hash_0() {
+    @name(".calc_dpi_lan_mac_hash") action calc_dpi_lan_mac_hash() {
         hash<bit<16>, bit<16>, tuple<bit<48>>, bit<32>>(meta.ebmeta.port_hash, HashAlgorithm.crc16, 16w0, { hdr.outer_ethernet.srcAddr }, 32w256);
     }
-    @name(".calc_dpi_wan_mac_hash") action calc_dpi_wan_mac_hash_0() {
+    @name(".calc_dpi_wan_mac_hash") action calc_dpi_wan_mac_hash() {
         hash<bit<16>, bit<16>, tuple<bit<48>>, bit<32>>(meta.ebmeta.port_hash, HashAlgorithm.crc16, 16w0, { hdr.outer_ethernet.dstAddr }, 32w256);
     }
     @name("._nop") action _nop_6() {
@@ -524,25 +524,25 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("._nop") action _nop_8() {
     }
-    @name(".set_nat_lanwan_flag_and_linked_port") action set_nat_lanwan_flag_and_linked_port_0(bit<1> is_lan, bit<1> is_nat, bit<9> linked_port) {
+    @name(".set_nat_lanwan_flag_and_linked_port") action set_nat_lanwan_flag_and_linked_port(bit<1> is_lan, bit<1> is_nat, bit<9> linked_port) {
         meta.ebmeta.is_lan = is_lan;
         meta.ebmeta.is_nat = is_nat;
         meta.ebmeta.lanwan_out_port = linked_port;
     }
-    @name(".set_port_type") action set_port_type_0(bit<3> port_type) {
+    @name(".set_port_type") action set_port_type(bit<3> port_type) {
         meta.ebmeta.port_type = port_type;
     }
-    @name("._drop") action _drop_0() {
+    @name("._drop") action _drop() {
         mark_to_drop();
     }
-    @name(".set_dpi_out_and_queue") action set_dpi_out_and_queue_0(bit<9> port, bit<8> queue) {
+    @name(".set_dpi_out_and_queue") action set_dpi_out_and_queue(bit<9> port, bit<8> queue) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
         meta.ebmeta.rss_queue = queue;
     }
-    @name(".calc_dpi_hash") table calc_dpi_hash {
+    @name(".calc_dpi_hash") table calc_dpi_hash_0 {
         actions = {
-            calc_dpi_lan_mac_hash_0();
-            calc_dpi_wan_mac_hash_0();
+            calc_dpi_lan_mac_hash();
+            calc_dpi_wan_mac_hash();
             _nop_6();
             @defaultonly NoAction_8();
         }
@@ -552,9 +552,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_8();
     }
-    @name(".determine_nat_lanwan_flag_and_linked_port") table determine_nat_lanwan_flag_and_linked_port {
+    @name(".determine_nat_lanwan_flag_and_linked_port") table determine_nat_lanwan_flag_and_linked_port_0 {
         actions = {
-            set_nat_lanwan_flag_and_linked_port_0();
+            set_nat_lanwan_flag_and_linked_port();
             _nop_7();
             @defaultonly NoAction_9();
         }
@@ -563,10 +563,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_9();
     }
-    @name(".determine_port_type") table determine_port_type {
+    @name(".determine_port_type") table determine_port_type_0 {
         actions = {
-            set_port_type_0();
-            _drop_0();
+            set_port_type();
+            _drop();
             @defaultonly NoAction_10();
         }
         key = {
@@ -574,9 +574,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_10();
     }
-    @name(".set_dpi_output") table set_dpi_output {
+    @name(".set_dpi_output") table set_dpi_output_0 {
         actions = {
-            set_dpi_out_and_queue_0();
+            set_dpi_out_and_queue();
             _nop_8();
             @defaultonly NoAction_11();
         }
@@ -587,10 +587,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_11();
     }
     apply {
-        determine_port_type.apply();
-        determine_nat_lanwan_flag_and_linked_port.apply();
-        calc_dpi_hash.apply();
-        set_dpi_output.apply();
+        determine_port_type_0.apply();
+        determine_nat_lanwan_flag_and_linked_port_0.apply();
+        calc_dpi_hash_0.apply();
+        set_dpi_output_0.apply();
     }
 }
 

@@ -187,32 +187,32 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".action_0") action action_1(bit<8> p) {
+    @name(".action_0") action action_0(bit<8> p) {
         meta.meta.mac_da = hdr.ethernet.dstAddr;
         hdr.ipv4.diffserv = p;
         meta.meta.x = hdr.ipv4.protocol;
     }
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing() {
     }
     @name(".do_nothing") action do_nothing_2() {
     }
-    @name(".set_p") action set_p_0(bit<9> p) {
+    @name(".set_p") action set_p(bit<9> p) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = p;
     }
-    @command_line("--no-dead-code-elimination") @name(".table_0") table table_0 {
+    @command_line("--no-dead-code-elimination") @name(".table_0") table table_2 {
         actions = {
-            action_1();
-            do_nothing_0();
+            action_0();
+            do_nothing();
         }
         key = {
             hdr.ethernet.etherType: ternary @name("ethernet.etherType") ;
         }
         size = 256;
-        default_action = action_1(8w5);
+        default_action = action_0(8w5);
     }
-    @name(".table_1") table table_1 {
+    @name(".table_1") table table_3 {
         actions = {
-            set_p_0();
+            set_p();
             do_nothing_2();
         }
         key = {
@@ -220,12 +220,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.meta.y     : exact @name("meta.y") ;
         }
         size = 256;
-        default_action = set_p_0(9w7);
+        default_action = set_p(9w7);
     }
     apply {
         if (hdr.ethernet.isValid()) {
-            table_0.apply();
-            table_1.apply();
+            table_2.apply();
+            table_3.apply();
         }
     }
 }

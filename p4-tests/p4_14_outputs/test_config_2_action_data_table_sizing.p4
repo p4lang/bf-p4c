@@ -182,7 +182,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         key = {
             hdr.my_test_config_1.a_32    : lpm;
             hdr.my_test_config_1.e_32    : ternary;
-            hdr.my_test_config_1.b_8[7:4]: ternary;
+            hdr.my_test_config_1.b_8[7:4]: ternary @name("my_test_config_1.b_8") ;
             hdr.my_test_config_1.c_8     : ternary;
         }
         max_size = 1024;

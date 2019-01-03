@@ -114,10 +114,12 @@ header pkt_t {
     bit<32> field_b_32;
     bit<32> field_c_32;
     bit<32> field_d_32;
+    @saturating 
     bit<16> field_e_sat;
     bit<16> field_f_16;
     bit<16> field_g_16;
     bit<16> field_h_16;
+    @saturating 
     int<8>  field_i_signed_sat;
     bit<8>  field_j_8;
     bit<8>  field_k_8;
@@ -167,29 +169,29 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    @name(".action_0") action action_6(int<32> param0) {
+    @name(".action_0") action action_0(int<32> param0) {
         hdr.pkt.field_a_signed = hdr.pkt.field_a_signed + param0;
     }
-    @name(".action_1") action action_7(bit<16> param0) {
-        hdr.pkt.field_e_sat = hdr.pkt.field_e_sat + param0;
+    @name(".action_1") action action_1(bit<16> param0) {
+        hdr.pkt.field_e_sat = hdr.pkt.field_e_sat |+| param0;
     }
-    @name(".action_2") action action_8(int<8> param0) {
-        hdr.pkt.field_i_signed_sat = hdr.pkt.field_i_signed_sat + param0;
+    @name(".action_2") action action_2(int<8> param0) {
+        hdr.pkt.field_i_signed_sat = hdr.pkt.field_i_signed_sat |+| param0;
     }
-    @name(".action_3") action action_9(bit<32> param0) {
+    @name(".action_3") action action_3(bit<32> param0) {
         hdr.pkt.field_c_32 = param0;
     }
-    @name(".action_4") action action_10(bit<16> param0) {
+    @name(".action_4") action action_4(bit<16> param0) {
         hdr.pkt.field_g_16 = param0;
     }
-    @name(".action_5") action action_11(bit<8> param0) {
+    @name(".action_5") action action_5(bit<8> param0) {
         hdr.pkt.field_k_8 = param0;
     }
-    @name(".table_0") table table_0 {
+    @name(".table_0") table table_2 {
         actions = {
-            action_6();
-            action_7();
-            action_8();
+            action_0();
+            action_1();
+            action_2();
             @defaultonly NoAction_0();
         }
         key = {
@@ -198,11 +200,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_0();
     }
-    @name(".table_1") table table_1 {
+    @name(".table_1") table table_3 {
         actions = {
-            action_9();
-            action_10();
-            action_11();
+            action_3();
+            action_4();
+            action_5();
             @defaultonly NoAction_3();
         }
         key = {
@@ -212,8 +214,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_3();
     }
     apply {
-        table_0.apply();
-        table_1.apply();
+        table_2.apply();
+        table_3.apply();
     }
 }
 

@@ -552,7 +552,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.wYDlac.zAHqEG = yTbavB;
     }
     @name(".QrzRAL") action QrzRAL() {
-        digest<VTPwAK>(32w0x0, { meta.vsoyDU.zZzaZs, meta.jSqpae.MkajiY, meta.jSqpae.TWqzUp, meta.jSqpae.pOIqxO, meta.jSqpae.VvPTXS });
+        digest<VTPwAK>(32w0x0, {meta.vsoyDU.zZzaZs,meta.jSqpae.MkajiY,meta.jSqpae.TWqzUp,meta.jSqpae.pOIqxO,meta.jSqpae.VvPTXS});
     }
     @name(".hnaYfv") action hnaYfv(bit<16> EzGJjr) {
         meta.Jmvzsq.MyzObD = EzGJjr;
@@ -567,7 +567,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.wYDlac.zAHqEG = yTbavB;
     }
     @name(".RzTKNQ") action RzTKNQ() {
-        digest<RaHIyp>(32w0x0, { meta.vsoyDU.zZzaZs, meta.jSqpae.pOIqxO, hdr.MYGeIm.duGsPV, hdr.MYGeIm.IfGrgl, hdr.sULdSu.Ihpezt });
+        digest<RaHIyp>(32w0x0, {meta.vsoyDU.zZzaZs,meta.jSqpae.pOIqxO,hdr.MYGeIm.duGsPV,hdr.MYGeIm.IfGrgl,hdr.sULdSu.Ihpezt});
     }
     @name(".yeJxkf") action yeJxkf(bit<8> TOekST, bit<1> mBHiec, bit<1> guaLer, bit<1> IOiVJT, bit<1> yTbavB) {
         meta.jSqpae.DZNMIg = (bit<16>)meta.ZcGoCa.mdnlIN;
@@ -847,10 +847,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             fNqUti.apply();
         XwcVlN.apply();
         switch (MewBbN.apply().action_run) {
-            GawuMf: {
-                jKqWQQ.apply();
-                CvmGZq.apply();
-            }
             HyMSUz: {
                 if (meta.ZcGoCa.UztNiv == 1w0x1) 
                     SHvAeR.apply();
@@ -862,6 +858,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                     }
 
                 wIHiQR.apply();
+            }
+            GawuMf: {
+                jKqWQQ.apply();
+                CvmGZq.apply();
             }
         }
 

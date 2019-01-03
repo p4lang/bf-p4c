@@ -1,0 +1,12 @@
+static_entries2.p4(71): [--Wwarn=uninitialized_out_param] warning: out parameter ig_md may be uninitialized when SwitchIngressParser terminates
+        out switch_metadata_t ig_md,
+                              ^^^^^
+static_entries2.p4(68)
+parser SwitchIngressParser(
+       ^^^^^^^^^^^^^^^^^^^
+static_entries2.p4(92): [--Wwarn=uninitialized_out_param] warning: out parameter eg_md may be uninitialized when SwitchEgressParser terminates
+        out switch_metadata_t eg_md,
+                              ^^^^^
+static_entries2.p4(89)
+parser SwitchEgressParser(
+       ^^^^^^^^^^^^^^^^^^

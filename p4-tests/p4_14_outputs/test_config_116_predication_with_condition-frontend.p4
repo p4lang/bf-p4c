@@ -171,25 +171,25 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_5() {
     }
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing() {
     }
-    @name(".do_nothing") action do_nothing_2() {
+    @name(".do_nothing") action do_nothing_1() {
     }
-    @name(".action_0") action action_3(bit<16> param0) {
+    @name(".action_0") action action_0(bit<16> param0) {
         hdr.pkt.field_f_16 = param0;
     }
     @name(".do_nothing_1") action do_nothing_4() {
     }
-    @name(".action_1") action action_4(bit<16> param0) {
+    @name(".action_1") action action_1(bit<16> param0) {
         hdr.pkt.field_f_16 = param0;
     }
-    @name(".action_2") action action_5(bit<16> param0) {
+    @name(".action_2") action action_2(bit<16> param0) {
         hdr.pkt.field_f_16 = param0;
     }
-    @name(".table_0") table table_0 {
+    @name(".table_0") table table_3 {
         actions = {
-            do_nothing_0();
-            action_3();
+            do_nothing();
+            action_0();
             @defaultonly NoAction_0();
         }
         key = {
@@ -198,10 +198,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_0();
     }
-    @name(".table_1") table table_1 {
+    @name(".table_1") table table_4 {
         actions = {
             do_nothing_4();
-            action_4();
+            action_1();
             @defaultonly NoAction_4();
         }
         key = {
@@ -210,10 +210,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_4();
     }
-    @name(".table_2") table table_2 {
+    @name(".table_2") table table_5 {
         actions = {
-            do_nothing_2();
-            action_5();
+            do_nothing_1();
+            action_2();
             @defaultonly NoAction_5();
         }
         key = {
@@ -223,13 +223,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_5();
     }
     apply {
-        switch (table_0.apply().action_run) {
-            do_nothing_0: {
+        switch (table_3.apply().action_run) {
+            do_nothing: {
                 if (hdr.pkt.isValid()) 
-                    switch (table_1.apply().action_run) {
+                    switch (table_4.apply().action_run) {
                         do_nothing_4: {
                             if (hdr.pkt.isValid()) 
-                                table_2.apply();
+                                table_5.apply();
                         }
                     }
 

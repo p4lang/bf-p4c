@@ -50,25 +50,25 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    @name(".action_0") action action_2(bit<16> blah1, bit<16> blah2, bit<16> blah3) {
+    @name(".action_0") action action_0(bit<16> blah1, bit<16> blah2, bit<16> blah3) {
         meta.meta.a = blah1;
         meta.meta.b = blah2;
         meta.meta.c = blah3;
     }
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing() {
     }
     @name(".do_nothing") action do_nothing_2() {
     }
-    @name(".action_1") action action_3() {
+    @name(".action_1") action action_1() {
         meta.meta.e = 32w7;
         meta.meta.f = 32w8;
         meta.meta.g = 32w2097151;
         meta.meta.h = 32w4294967295;
     }
-    @name(".table_0") table table_0 {
+    @name(".table_0") table table_2 {
         actions = {
-            action_2();
-            do_nothing_0();
+            action_0();
+            do_nothing();
             @defaultonly NoAction_0();
         }
         key = {
@@ -77,9 +77,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_0();
     }
-    @immediate(0) @name(".table_1") table table_1 {
+    @immediate(0) @name(".table_1") table table_3 {
         actions = {
-            action_3();
+            action_1();
             do_nothing_2();
             @defaultonly NoAction_3();
         }
@@ -90,8 +90,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_3();
     }
     apply {
-        table_0.apply();
-        table_1.apply();
+        table_2.apply();
+        table_3.apply();
     }
 }
 

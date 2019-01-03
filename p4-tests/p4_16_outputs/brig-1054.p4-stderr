@@ -1,0 +1,3 @@
+brig-1054.p4(39): [--Wwarn=uninitialized_use] warning: hdr may not be completely initialized
+        nestedParser.apply(pkt, hdr);
+                                ^^^

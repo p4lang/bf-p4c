@@ -53,15 +53,16 @@ control SwitchIngress(inout switch_header_t hdr, inout switch_metadata_t ig_md, 
     table forward {
         key = {
             hdr.ethernet.ether_type: exact @name("hdr.ethernet.ether_type") ;
+            hdr.ethernet.isValid() : exact @name("hdr.ethernet.$valid$") ;
         }
         actions = {
             set_port_and_smac();
         }
         const default_action = set_port_and_smac(32w0x1);
         const entries = {
-                        16w0x800 : set_port_and_smac(32w0x2);
+                        (16w0x800, true) : set_port_and_smac(32w0x2);
 
-                        16w0x86dd : set_port_and_smac(32w0x3);
+                        (16w0x86dd, true) : set_port_and_smac(32w0x3);
 
         }
 

@@ -154,7 +154,7 @@ struct headers {
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @parser_value_set_size(4) @name(".int_inport") value_set<bit<9>>(4) int_inport;
-    @parser_value_set_size(1) @name(".int_diffserv") value_set<bit<8>>(4) int_diffserv;
+    @parser_value_set_size(1) @name(".int_diffserv") value_set<bit<8>>(1) int_diffserv;
     @name(".parse_intl45_ipv4") state parse_intl45_ipv4 {
         packet.extract<ipv4_t>(hdr.ipv4);
         transition accept;

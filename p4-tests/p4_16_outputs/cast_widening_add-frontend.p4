@@ -22,31 +22,31 @@ header ingress_skip_t {
 }
 
 parser ParserI(packet_in b, out headers hdr, out metadata meta, out ingress_intrinsic_metadata_t ig_intr_md) {
-    ingress_skip_t skip;
+    ingress_skip_t skip_0;
     state start {
         b.extract<ingress_intrinsic_metadata_t>(ig_intr_md);
-        b.extract<ingress_skip_t>(skip);
+        b.extract<ingress_skip_t>(skip_0);
         b.extract<data_t>(hdr.data);
         transition accept;
     }
 }
 
 control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_metadata_t ig_intr_md, in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md, inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md, inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
-    @name("IngressP.act") action act_0(bit<9> port) {
+    @name("IngressP.act") action act(bit<9> port) {
         ig_intr_tm_md.ucast_egress_port = port;
         hdr.data.f1 = (bit<32>)hdr.data.b2 + hdr.data.f1;
     }
-    @name("IngressP.test") table test {
+    @name("IngressP.test") table test_0 {
         actions = {
-            act_0();
+            act();
         }
         key = {
             hdr.data.f1: exact @name("hdr.data.f1") ;
         }
-        default_action = act_0(9w1);
+        default_action = act(9w1);
     }
     apply {
-        test.apply();
+        test_0.apply();
     }
 }
 

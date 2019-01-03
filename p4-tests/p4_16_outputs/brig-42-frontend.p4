@@ -38,9 +38,9 @@ control MyVerifyChecksum(inout my_packet hdr, inout my_metadata meta) {
 }
 
 control MyIngress(inout my_packet p, inout my_metadata m, inout standard_metadata_t s) {
-    bit<8> v1;
-    bit<8> v2;
-    @name("MyIngress.nop") action nop_0() {
+    bit<8> v1_0;
+    bit<8> v2_0;
+    @name("MyIngress.nop") action nop() {
     }
     @name("MyIngress.nop") action nop_6() {
     }
@@ -52,7 +52,7 @@ control MyIngress(inout my_packet p, inout my_metadata m, inout standard_metadat
     }
     @name("MyIngress.nop") action nop_10() {
     }
-    @name("MyIngress.do_push") action do_push_0() {
+    @name("MyIngress.do_push") action do_push() {
         p.data.push_front(1);
         p.data[0].setValid();
         p.data[0].data_eof = 8w1;
@@ -100,72 +100,72 @@ control MyIngress(inout my_packet p, inout my_metadata m, inout standard_metadat
         p.instr.pop_front(1);
         s.egress_spec = 9w2;
     }
-    @name("MyIngress.do_add") action do_add_0() {
-        v1 = p.data[0].data_value;
-        v2 = p.data[1].data_value;
+    @name("MyIngress.do_add") action do_add() {
+        v1_0 = p.data[0].data_value;
+        v2_0 = p.data[1].data_value;
         p.data.pop_front(1);
         p.data[0].data_eof = 8w1;
-        p.data[0].data_value = v1 + v2;
+        p.data[0].data_value = v1_0 + v2_0;
         p.instr.pop_front(1);
         s.egress_spec = 9w2;
     }
     @name("MyIngress.do_add") action do_add_6() {
-        v1 = p.data[0].data_value;
-        v2 = p.data[1].data_value;
+        v1_0 = p.data[0].data_value;
+        v2_0 = p.data[1].data_value;
         p.data.pop_front(1);
         p.data[0].data_eof = 8w1;
-        p.data[0].data_value = v1 + v2;
+        p.data[0].data_value = v1_0 + v2_0;
         p.instr.pop_front(1);
         s.egress_spec = 9w2;
     }
     @name("MyIngress.do_add") action do_add_7() {
-        v1 = p.data[0].data_value;
-        v2 = p.data[1].data_value;
+        v1_0 = p.data[0].data_value;
+        v2_0 = p.data[1].data_value;
         p.data.pop_front(1);
         p.data[0].data_eof = 8w1;
-        p.data[0].data_value = v1 + v2;
+        p.data[0].data_value = v1_0 + v2_0;
         p.instr.pop_front(1);
         s.egress_spec = 9w2;
     }
     @name("MyIngress.do_add") action do_add_8() {
-        v1 = p.data[0].data_value;
-        v2 = p.data[1].data_value;
+        v1_0 = p.data[0].data_value;
+        v2_0 = p.data[1].data_value;
         p.data.pop_front(1);
         p.data[0].data_eof = 8w1;
-        p.data[0].data_value = v1 + v2;
+        p.data[0].data_value = v1_0 + v2_0;
         p.instr.pop_front(1);
         s.egress_spec = 9w2;
     }
     @name("MyIngress.do_add") action do_add_9() {
-        v1 = p.data[0].data_value;
-        v2 = p.data[1].data_value;
+        v1_0 = p.data[0].data_value;
+        v2_0 = p.data[1].data_value;
         p.data.pop_front(1);
         p.data[0].data_eof = 8w1;
-        p.data[0].data_value = v1 + v2;
+        p.data[0].data_value = v1_0 + v2_0;
         p.instr.pop_front(1);
         s.egress_spec = 9w2;
     }
     @name("MyIngress.do_add") action do_add_10() {
-        v1 = p.data[0].data_value;
-        v2 = p.data[1].data_value;
+        v1_0 = p.data[0].data_value;
+        v2_0 = p.data[1].data_value;
         p.data.pop_front(1);
         p.data[0].data_eof = 8w1;
-        p.data[0].data_value = v1 + v2;
+        p.data[0].data_value = v1_0 + v2_0;
         p.instr.pop_front(1);
         s.egress_spec = 9w2;
     }
-    @name("MyIngress.t1") table t1 {
+    @name("MyIngress.t1") table t1_0 {
         key = {
             p.instr[0].instr_code: exact @name("p.instr[0].instr_code") ;
         }
         actions = {
-            nop_0();
-            do_push_0();
-            do_add_0();
+            nop();
+            do_push();
+            do_add();
         }
-        default_action = nop_0();
+        default_action = nop();
     }
-    @name("MyIngress.t2") table t2 {
+    @name("MyIngress.t2") table t2_0 {
         key = {
             p.instr[0].instr_code: exact @name("p.instr[0].instr_code") ;
         }
@@ -176,7 +176,7 @@ control MyIngress(inout my_packet p, inout my_metadata m, inout standard_metadat
         }
         default_action = nop_6();
     }
-    @name("MyIngress.t3") table t3 {
+    @name("MyIngress.t3") table t3_0 {
         key = {
             p.instr[0].instr_code: exact @name("p.instr[0].instr_code") ;
         }
@@ -187,7 +187,7 @@ control MyIngress(inout my_packet p, inout my_metadata m, inout standard_metadat
         }
         default_action = nop_7();
     }
-    @name("MyIngress.t4") table t4 {
+    @name("MyIngress.t4") table t4_0 {
         key = {
             p.instr[0].instr_code: exact @name("p.instr[0].instr_code") ;
         }
@@ -198,7 +198,7 @@ control MyIngress(inout my_packet p, inout my_metadata m, inout standard_metadat
         }
         default_action = nop_8();
     }
-    @name("MyIngress.t5") table t5 {
+    @name("MyIngress.t5") table t5_0 {
         key = {
             p.instr[0].instr_code: exact @name("p.instr[0].instr_code") ;
         }
@@ -209,7 +209,7 @@ control MyIngress(inout my_packet p, inout my_metadata m, inout standard_metadat
         }
         default_action = nop_9();
     }
-    @name("MyIngress.t6") table t6 {
+    @name("MyIngress.t6") table t6_0 {
         key = {
             p.instr[0].instr_code: exact @name("p.instr[0].instr_code") ;
         }
@@ -222,17 +222,17 @@ control MyIngress(inout my_packet p, inout my_metadata m, inout standard_metadat
     }
     apply {
         if (p.instr[0].isValid()) 
-            t1.apply();
+            t1_0.apply();
         if (p.instr[0].isValid()) 
-            t2.apply();
+            t2_0.apply();
         if (p.instr[0].isValid()) 
-            t3.apply();
+            t3_0.apply();
         if (p.instr[0].isValid()) 
-            t4.apply();
+            t4_0.apply();
         if (p.instr[0].isValid()) 
-            t5.apply();
+            t5_0.apply();
         if (p.instr[0].isValid()) 
-            t6.apply();
+            t6_0.apply();
     }
 }
 

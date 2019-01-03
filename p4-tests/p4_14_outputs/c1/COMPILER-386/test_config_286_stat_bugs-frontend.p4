@@ -36,24 +36,24 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    @name(".stats1") counter(32w64, CounterType.packets_and_bytes) stats1;
-    @name(".stats2") counter(32w64, CounterType.packets_and_bytes) stats2;
-    @name(".action1") action action1_0() {
-        stats1.count(32w1);
+    @name(".stats1") counter(32w64, CounterType.packets_and_bytes) stats1_0;
+    @name(".stats2") counter(32w64, CounterType.packets_and_bytes) stats2_0;
+    @name(".action1") action action1() {
+        stats1_0.count(32w1);
     }
-    @name(".action2") action action2_0() {
-        stats2.count(32w1);
+    @name(".action2") action action2() {
+        stats2_0.count(32w1);
     }
-    @name(".table1") table table1 {
+    @name(".table1") table table1_0 {
         actions = {
-            action1_0();
+            action1();
             @defaultonly NoAction_0();
         }
         default_action = NoAction_0();
     }
-    @name(".table2") table table2 {
+    @name(".table2") table table2_0 {
         actions = {
-            action2_0();
+            action2();
             @defaultonly NoAction_3();
         }
         key = {
@@ -63,9 +63,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (hdr.pkt.isValid()) 
-            table1.apply();
+            table1_0.apply();
         if (hdr.pkt.isValid()) 
-            table2.apply();
+            table2_0.apply();
     }
 }
 

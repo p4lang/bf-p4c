@@ -812,10 +812,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         yYaWKh.apply();
         switch (ceGwFc.apply().action_run) {
-            uNBXVV: {
-                chPApZ.apply();
-                KPlvUi.apply();
-            }
             zEaBcj: {
                 if (meta.sTsPkb.huEsCO == 1w0x1) {
                     GiINoN.apply();
@@ -829,6 +825,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
 
                 }
                 jubrcZ.apply();
+            }
+            uNBXVV: {
+                chPApZ.apply();
+                KPlvUi.apply();
             }
         }
 

@@ -187,14 +187,13 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @use_hash_action(1) @name(".simple_table_egress") table simple_table_egress {
         actions = {
             egress_action_0();
-            @defaultonly NoAction();
         }
         key = {
-            hdr.ethernet.dstAddr[8:0]: exact @name("ethernet.dstAddr[8:0]") ;
+            hdr.ethernet.dstAddr[8:0]: exact @name("ethernet.dstAddr") ;
         }
         size = 512;
+        default_action = egress_action_0(idx = 8w0);
         counters = counter_egress;
-        default_action = NoAction();
     }
     apply {
         simple_table_egress.apply();
@@ -215,7 +214,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr[15:0]") ;
+            hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr") ;
         }
         size = 65536;
         default_action = NoAction();

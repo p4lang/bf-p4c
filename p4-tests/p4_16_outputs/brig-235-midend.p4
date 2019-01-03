@@ -15,11 +15,11 @@ struct user_metadata_t {
 }
 
 parser InParser(packet_in pkt, out headers_t hdr, out user_metadata_t md, out ingress_intrinsic_metadata_t ig_intr_md) {
-    data_h hdr_1_data;
+    data_h hdr_0_data;
     state start {
-        hdr_1_data = hdr.data;
-        pkt.extract<data_h>(hdr_1_data);
-        hdr.data = hdr_1_data;
+        hdr_0_data = hdr.data;
+        pkt.extract<data_h>(hdr_0_data);
+        hdr.data = hdr_0_data;
         transition accept;
     }
 }
@@ -27,14 +27,14 @@ parser InParser(packet_in pkt, out headers_t hdr, out user_metadata_t md, out in
 control SwitchIngress(inout headers_t hdr, inout user_metadata_t md, in ingress_intrinsic_metadata_t ig_intr_md, in ingress_intrinsic_metadata_from_parser_t ig_intr_md_from_prsr, inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprsr_md, inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name("SwitchIngress.m_action") action m_action_0() {
+    @name("SwitchIngress.m_action") action m_action() {
     }
-    @name("SwitchIngress.nop") action nop_0() {
+    @name("SwitchIngress.nop") action nop() {
     }
-    @name("SwitchIngress.t") table t {
+    @name("SwitchIngress.t") table t_0 {
         actions = {
-            nop_0();
-            m_action_0();
+            nop();
+            m_action();
             @defaultonly NoAction_0();
         }
         key = {
@@ -43,7 +43,7 @@ control SwitchIngress(inout headers_t hdr, inout user_metadata_t md, in ingress_
         default_action = NoAction_0();
     }
     apply {
-        t.apply();
+        t_0.apply();
     }
 }
 

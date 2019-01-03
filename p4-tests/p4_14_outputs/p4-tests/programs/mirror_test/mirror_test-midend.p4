@@ -163,55 +163,55 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".do_egr_mir") action do_egr_mir_0() {
+    @name(".do_egr_mir") action do_egr_mir() {
         clone(CloneType.E2E, (bit<32>)meta.md.egr_mir_ses);
     }
-    @name(".egr_mir") table egr_mir_1 {
+    @name(".egr_mir") table egr_mir_0 {
         actions = {
-            do_egr_mir_0();
+            do_egr_mir();
         }
         size = 1;
-        default_action = do_egr_mir_0();
+        default_action = do_egr_mir();
     }
     apply {
         if (1w1 == meta.md.do_egr_mirroring) 
-            egr_mir_1.apply();
+            egr_mir_0.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".do_ing_mir") action do_ing_mir_0() {
+    @name(".do_ing_mir") action do_ing_mir() {
         clone(CloneType.I2E, (bit<32>)meta.md.ing_mir_ses);
     }
-    @name(".set_md") action set_md_0(bit<9> dest_port, bit<1> ing_mir, bit<10> ing_ses, bit<1> egr_mir, bit<10> egr_ses) {
+    @name(".set_md") action set_md(bit<9> dest_port, bit<1> ing_mir, bit<10> ing_ses, bit<1> egr_mir, bit<10> egr_ses) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = dest_port;
         meta.md.do_ing_mirroring = ing_mir;
         meta.md.do_egr_mirroring = egr_mir;
         meta.md.ing_mir_ses = ing_ses;
         meta.md.egr_mir_ses = egr_ses;
     }
-    @name(".ing_mir") table ing_mir_1 {
+    @name(".ing_mir") table ing_mir_0 {
         actions = {
-            do_ing_mir_0();
+            do_ing_mir();
         }
         size = 1;
-        default_action = do_ing_mir_0();
+        default_action = do_ing_mir();
     }
-    @name(".p0") table p0 {
+    @name(".p0") table p0_0 {
         actions = {
-            set_md_0();
+            set_md();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 288;
-        default_action = set_md_0(9w0, 1w0, 10w0, 1w0, 10w0);
+        default_action = set_md(9w0, 1w0, 10w0, 1w0, 10w0);
     }
     apply {
         if (1w0 == hdr.ig_intr_md.resubmit_flag) 
-            p0.apply();
+            p0_0.apply();
         if (1w1 == meta.md.do_ing_mirroring) 
-            ing_mir_1.apply();
+            ing_mir_0.apply();
     }
 }
 

@@ -79,8 +79,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_9() {
     }
-    @name(".cnt_0") counter(32w2048, CounterType.packets_and_bytes) cnt_0;
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".cnt_0") counter(32w2048, CounterType.packets_and_bytes) cnt;
+    @name(".do_nothing") action do_nothing() {
     }
     @name(".do_nothing") action do_nothing_5() {
     }
@@ -90,38 +90,38 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".do_nothing") action do_nothing_8() {
     }
-    @name(".action_0") action action_5(bit<32> idx) {
+    @name(".action_0") action action_0(bit<32> idx) {
         meta.meta.tbl0_tbl1 = 16w1;
         meta.meta.tbl0_tbl2 = 16w1;
         meta.meta.tbl0_tbl3 = 16w1;
         meta.meta.tbl0 = 16w1;
-        cnt_0.count(idx);
+        cnt.count(idx);
     }
-    @name(".action_1") action action_6() {
+    @name(".action_1") action action_1() {
         meta.meta.tbl0_tbl1 = 16w1;
         meta.meta.tbl1_tbl2 = 16w1;
         meta.meta.tbl1_tbl3 = 16w1;
         meta.meta.tbl1 = 16w1;
     }
-    @name(".action_2") action action_7() {
+    @name(".action_2") action action_2() {
         meta.meta.tbl0_tbl2 = 16w1;
         meta.meta.tbl1_tbl2 = 16w1;
         meta.meta.tbl2_tbl3 = 16w1;
         meta.meta.tbl2 = 16w1;
     }
-    @name(".action_3") action action_8() {
+    @name(".action_3") action action_3() {
         meta.meta.tbl0_tbl3 = 16w1;
         meta.meta.tbl1_tbl3 = 16w1;
         meta.meta.tbl2_tbl3 = 16w1;
         meta.meta.tbl3 = 16w1;
     }
-    @name(".action_4") action action_9() {
+    @name(".action_4") action action_4() {
         meta.meta.tbl4 = 16w1;
     }
-    @name(".table_i0") table table_i0 {
+    @name(".table_i0") table table_i0_0 {
         actions = {
-            do_nothing_0();
-            action_5();
+            do_nothing();
+            action_0();
             @defaultonly NoAction_0();
         }
         key = {
@@ -131,10 +131,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_0();
     }
-    @name(".table_i1") table table_i1 {
+    @name(".table_i1") table table_i1_0 {
         actions = {
             do_nothing_5();
-            action_6();
+            action_1();
             @defaultonly NoAction_6();
         }
         key = {
@@ -145,10 +145,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_6();
     }
-    @name(".table_i2") table table_i2 {
+    @name(".table_i2") table table_i2_0 {
         actions = {
             do_nothing_6();
-            action_7();
+            action_2();
             @defaultonly NoAction_7();
         }
         key = {
@@ -160,10 +160,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_7();
     }
-    @name(".table_i3") table table_i3 {
+    @name(".table_i3") table table_i3_0 {
         actions = {
             do_nothing_7();
-            action_8();
+            action_3();
             @defaultonly NoAction_8();
         }
         key = {
@@ -176,10 +176,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_8();
     }
-    @name(".table_i4") table table_i4 {
+    @name(".table_i4") table table_i4_0 {
         actions = {
             do_nothing_8();
-            action_9();
+            action_4();
             @defaultonly NoAction_9();
         }
         key = {
@@ -192,13 +192,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (hdr.hdr0.c == 8w0) {
-            table_i0.apply();
-            table_i1.apply();
-            table_i2.apply();
-            table_i3.apply();
+            table_i0_0.apply();
+            table_i1_0.apply();
+            table_i2_0.apply();
+            table_i3_0.apply();
         }
         else 
-            table_i4.apply();
+            table_i4_0.apply();
     }
 }
 

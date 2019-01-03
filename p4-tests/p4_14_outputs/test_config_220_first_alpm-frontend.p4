@@ -214,21 +214,21 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_5() {
     }
-    @name(".ipv4_lpm_hit") action ipv4_lpm_hit_0() {
+    @name(".ipv4_lpm_hit") action ipv4_lpm_hit() {
         hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
     }
-    @name(".lpm_miss") action lpm_miss_0(bit<16> param0) {
+    @name(".lpm_miss") action lpm_miss(bit<16> param0) {
         hdr.ethernet.etherType = param0;
         mark_to_drop();
     }
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing() {
     }
     @name(".do_nothing") action do_nothing_2() {
     }
-    @alpm(1) @alpm_partitions(2048) @alpm_subtrees_per_partition(1) @name(".ipv4_alpm") table ipv4_alpm {
+    @alpm(1) @alpm_partitions(2048) @alpm_subtrees_per_partition(1) @name(".ipv4_alpm") table ipv4_alpm_0 {
         actions = {
-            ipv4_lpm_hit_0();
-            lpm_miss_0();
+            ipv4_lpm_hit();
+            lpm_miss();
             @defaultonly NoAction_0();
         }
         key = {
@@ -238,9 +238,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 65536;
         default_action = NoAction_0();
     }
-    @name(".table_0") table table_0 {
+    @name(".table_0") table table_2 {
         actions = {
-            do_nothing_0();
+            do_nothing();
             @defaultonly NoAction_4();
         }
         key = {
@@ -248,7 +248,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_4();
     }
-    @name(".table_1") table table_1 {
+    @name(".table_1") table table_3 {
         actions = {
             do_nothing_2();
             @defaultonly NoAction_5();
@@ -259,9 +259,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_5();
     }
     apply {
-        table_0.apply();
-        ipv4_alpm.apply();
-        table_1.apply();
+        table_2.apply();
+        ipv4_alpm_0.apply();
+        table_3.apply();
     }
 }
 

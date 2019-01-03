@@ -94,97 +94,88 @@ struct tuple_0 {
 }
 
 control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_metadata_t ig_intr_md, in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md, inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md, inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
-    bit<32> tmp_8;
-    bit<1> tmp_9;
-    bit<32> tmp_11;
-    bit<1> tmp_12;
-    bit<32> tmp_14;
-    bit<1> tmp_15;
+    bit<32> tmp;
+    bit<1> tmp_0;
+    bit<32> tmp_2;
+    bit<1> tmp_3;
+    bit<32> tmp_5;
+    bit<1> tmp_6;
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".NoAction") action NoAction_5() {
-    }
-    @name(".NoAction") action NoAction_6() {
-    }
-    @name(".NoAction") action NoAction_7() {
-    }
-    @name(".bloom_filter_alu_1") RegisterAction<bit<1>, bit<32>, bit<1>>(bloom_filter_1) bloom_filter_alu_1 = {
+    @name(".bloom_filter_alu_1") RegisterAction<bit<1>, bit<32>, bit<1>>(bloom_filter_1) bloom_filter_alu = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = 1w1;
             rv = 1w0;
         }
     };
-    @name(".bloom_filter_alu_2") RegisterAction<bit<1>, bit<32>, bit<1>>(bloom_filter_2) bloom_filter_alu_2 = {
+    @name(".bloom_filter_alu_2") RegisterAction<bit<1>, bit<32>, bit<1>>(bloom_filter_2) bloom_filter_alu_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = 1w1;
             rv = 1w0;
         }
     };
-    @name(".bloom_filter_alu_3") RegisterAction<bit<1>, bit<32>, bit<1>>(bloom_filter_3) bloom_filter_alu_3 = {
+    @name(".bloom_filter_alu_3") RegisterAction<bit<1>, bit<32>, bit<1>>(bloom_filter_3) bloom_filter_alu_4 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = 1w1;
             rv = 1w0;
         }
     };
-    @name("IngressP.hash_1") Hash<bit<32>>(HashAlgorithm_t.RANDOM) hash_1;
-    @name("IngressP.hash_2") Hash<bit<32>>(HashAlgorithm_t.RANDOM) hash_2;
-    @name("IngressP.hash_3") Hash<bit<32>>(HashAlgorithm_t.RANDOM) hash_3;
-    @name(".check_bloom_filter_1") action check_bloom_filter() {
-        tmp_8 = hash_1.get<tuple_0>({ hdr.ipv4.proto, hdr.ipv4.sip, hdr.ipv4.dip, hdr.tcp.sPort, hdr.tcp.dPort }, 32w0, 32w262144);
-        tmp_9 = bloom_filter_alu_1.execute(tmp_8);
-        meta.md.bf_tmp = meta.md.bf_tmp | tmp_9;
+    @name("IngressP.hash_1") Hash<bit<32>>(HashAlgorithm_t.RANDOM) hash_0;
+    @name("IngressP.hash_2") Hash<bit<32>>(HashAlgorithm_t.RANDOM) hash_4;
+    @name("IngressP.hash_3") Hash<bit<32>>(HashAlgorithm_t.RANDOM) hash_5;
+    @name(".check_bloom_filter_1") action check_bloom_filter_1() {
+        tmp = hash_0.get<tuple_0>({ hdr.ipv4.proto, hdr.ipv4.sip, hdr.ipv4.dip, hdr.tcp.sPort, hdr.tcp.dPort }, 32w0, 32w262144);
+        tmp_0 = bloom_filter_alu.execute(tmp);
+        meta.md.bf_tmp = meta.md.bf_tmp | tmp_0;
     }
-    @name(".check_bloom_filter_1") action check_bloom_filter_0() {
-        tmp_11 = hash_2.get<tuple_0>({ hdr.ipv4.proto, hdr.ipv4.sip, hdr.ipv4.dip, hdr.tcp.sPort, hdr.tcp.dPort }, 32w0, 32w262144);
-        tmp_12 = bloom_filter_alu_2.execute(tmp_11);
-        meta.md.bf_tmp = meta.md.bf_tmp | tmp_12;
+    @name(".check_bloom_filter_1") action check_bloom_filter_2() {
+        tmp_2 = hash_4.get<tuple_0>({ hdr.ipv4.proto, hdr.ipv4.sip, hdr.ipv4.dip, hdr.tcp.sPort, hdr.tcp.dPort }, 32w0, 32w262144);
+        tmp_3 = bloom_filter_alu_0.execute(tmp_2);
+        meta.md.bf_tmp = meta.md.bf_tmp | tmp_3;
     }
-    @name(".check_bloom_filter_1") action check_bloom_filter_4() {
-        tmp_14 = hash_3.get<tuple_0>({ hdr.ipv4.proto, hdr.ipv4.sip, hdr.ipv4.dip, hdr.tcp.sPort, hdr.tcp.dPort }, 32w0, 32w262144);
-        tmp_15 = bloom_filter_alu_3.execute(tmp_14);
-        meta.md.bf_tmp = meta.md.bf_tmp | tmp_15;
+    @name(".check_bloom_filter_1") action check_bloom_filter_3() {
+        tmp_5 = hash_5.get<tuple_0>({ hdr.ipv4.proto, hdr.ipv4.sip, hdr.ipv4.dip, hdr.tcp.sPort, hdr.tcp.dPort }, 32w0, 32w262144);
+        tmp_6 = bloom_filter_alu_4.execute(tmp_5);
+        meta.md.bf_tmp = meta.md.bf_tmp | tmp_6;
     }
-    @name(".bloom_filter_mark_sample") action bloom_filter_mark_sample_0() {
+    @name(".bloom_filter_mark_sample") action bloom_filter_mark_sample() {
         ig_intr_tm_md.copy_to_cpu = true;
     }
-    @name(".bloom_filter_1") table bloom_filter_1_0 {
+    @name(".bloom_filter_1") table bloom_filter_1_1 {
         actions = {
-            check_bloom_filter();
+            check_bloom_filter_1();
+        }
+        default_action = check_bloom_filter_1();
+        size = 1;
+    }
+    @name(".bloom_filter_1") table bloom_filter_2_1 {
+        actions = {
+            check_bloom_filter_2();
+        }
+        default_action = check_bloom_filter_2();
+        size = 1;
+    }
+    @name(".bloom_filter_1") table bloom_filter_3_1 {
+        actions = {
+            check_bloom_filter_3();
+        }
+        default_action = check_bloom_filter_3();
+        size = 1;
+    }
+    @name(".bloom_filter_sample") table bloom_filter_sample_0 {
+        actions = {
+            bloom_filter_mark_sample();
             @defaultonly NoAction_0();
         }
         size = 1;
         default_action = NoAction_0();
     }
-    @name(".bloom_filter_1") table bloom_filter_2_0 {
-        actions = {
-            check_bloom_filter_0();
-            @defaultonly NoAction_5();
-        }
-        size = 1;
-        default_action = NoAction_5();
-    }
-    @name(".bloom_filter_1") table bloom_filter_3_0 {
-        actions = {
-            check_bloom_filter_4();
-            @defaultonly NoAction_6();
-        }
-        size = 1;
-        default_action = NoAction_6();
-    }
-    @name(".bloom_filter_sample") table bloom_filter_sample {
-        actions = {
-            bloom_filter_mark_sample_0();
-            @defaultonly NoAction_7();
-        }
-        size = 1;
-        default_action = NoAction_7();
-    }
     apply {
-        bloom_filter_1_0.apply();
-        bloom_filter_2_0.apply();
-        bloom_filter_3_0.apply();
+        bloom_filter_1_1.apply();
+        bloom_filter_2_1.apply();
+        bloom_filter_3_1.apply();
         if (meta.md.bf_tmp != 1w0) 
-            bloom_filter_sample.apply();
+            bloom_filter_sample_0.apply();
     }
 }
 

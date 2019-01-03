@@ -184,27 +184,27 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    @name(".sel_action_0") action sel_action(bit<16> p0, bit<8> p1) {
+    @name(".sel_action_0") action sel_action_0(bit<16> p0, bit<8> p1) {
         hdr.ethernet.etherType = p0;
         hdr.ipv4.diffserv = p1;
     }
-    @name(".sel_action_1") action sel_action_2(bit<16> p0, bit<8> p1, bit<32> p2) {
+    @name(".sel_action_1") action sel_action_1(bit<16> p0, bit<8> p1, bit<32> p2) {
         hdr.ethernet.etherType = p0;
         hdr.ipv4.diffserv = p1;
         hdr.ipv4.dstAddr = p2;
     }
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing() {
     }
     @name(".do_nothing") action do_nothing_2() {
     }
-    @name(".set_p") action set_p_0(bit<9> p) {
+    @name(".set_p") action set_p(bit<9> p) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = p;
     }
-    @selector_max_group_size(121) @name(".t0") table t0 {
+    @selector_max_group_size(121) @name(".t0") table t0_0 {
         actions = {
-            sel_action();
-            sel_action_2();
-            do_nothing_0();
+            sel_action_0();
+            sel_action_1();
+            do_nothing();
             @defaultonly NoAction_0();
         }
         key = {
@@ -218,10 +218,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         implementation = prof;
         default_action = NoAction_0();
     }
-    @name(".t1") table t1 {
+    @name(".t1") table t1_0 {
         actions = {
             do_nothing_2();
-            set_p_0();
+            set_p();
             @defaultonly NoAction_3();
         }
         key = {
@@ -231,8 +231,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_3();
     }
     apply {
-        t0.apply();
-        t1.apply();
+        t0_0.apply();
+        t1_0.apply();
     }
 }
 

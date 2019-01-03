@@ -619,7 +619,7 @@ control Abernant(inout headers hdr, inout metadata meta, inout standard_metadata
 
 control Antelope(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Hayfield") action Hayfield() {
-        digest<Henning>(32w0, { meta.Elkins.Pinecreek, meta.Netcong.Rawlins, meta.Netcong.Kittredge, meta.Netcong.Eucha, meta.Netcong.Mantee });
+        digest<Henning>(32w0, {meta.Elkins.Pinecreek,meta.Netcong.Rawlins,meta.Netcong.Kittredge,meta.Netcong.Eucha,meta.Netcong.Mantee});
     }
     @name(".Comobabi") table Comobabi {
         actions = {
@@ -771,7 +771,7 @@ control Devore(inout headers hdr, inout metadata meta, inout standard_metadata_t
             bit<1> in_value;
             in_value = value;
             value = in_value;
-            rv = ~value;
+            rv = ~in_value;
         }
     };
     @name(".Lowland") action Lowland() {
@@ -913,8 +913,8 @@ control Fieldon(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.eg_intr_md.egress_port[6:0]: exact @name("eg_intr_md.egress_port[6:0]") ;
-            hdr.eg_intr_md.egress_qid[2:0] : exact @name("eg_intr_md.egress_qid[2:0]") ;
+            hdr.eg_intr_md.egress_port[6:0]: exact @name("eg_intr_md.egress_port") ;
+            hdr.eg_intr_md.egress_qid[2:0] : exact @name("eg_intr_md.egress_qid") ;
         }
         size = 1024;
         counters = Stidham;
@@ -960,7 +960,7 @@ control Forman(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         key = {
             meta.Reinbeck.Lofgreen     : exact @name("Reinbeck.Lofgreen") ;
-            meta.Reinbeck.Elsmere[19:0]: lpm @name("Reinbeck.Elsmere[19:0]") ;
+            meta.Reinbeck.Elsmere[19:0]: lpm @name("Reinbeck.Elsmere") ;
         }
         size = 131072;
         default_action = Shoshone();
@@ -1042,7 +1042,7 @@ control Forman(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         key = {
             meta.Humacao.Fosters          : exact @name("Humacao.Fosters") ;
-            meta.Humacao.Hiawassee[106:64]: lpm @name("Humacao.Hiawassee[106:64]") ;
+            meta.Humacao.Hiawassee[106:64]: lpm @name("Humacao.Hiawassee") ;
         }
         size = 65536;
         default_action = Shoshone();
@@ -1062,7 +1062,7 @@ control Forman(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         key = {
             meta.Humacao.Poneto         : exact @name("Humacao.Poneto") ;
-            meta.Humacao.Hiawassee[63:0]: lpm @name("Humacao.Hiawassee[63:0]") ;
+            meta.Humacao.Hiawassee[63:0]: lpm @name("Humacao.Hiawassee") ;
         }
         size = 16384;
         default_action = Shoshone();
@@ -1075,7 +1075,7 @@ control Forman(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         key = {
             meta.Chloride.Rocheport       : exact @name("Chloride.Rocheport") ;
-            meta.Humacao.Hiawassee[127:64]: lpm @name("Humacao.Hiawassee[127:64]") ;
+            meta.Humacao.Hiawassee[127:64]: lpm @name("Humacao.Hiawassee") ;
         }
         size = 8192;
         default_action = NoAction();
@@ -1295,7 +1295,7 @@ control Garlin(inout headers hdr, inout metadata meta, inout standard_metadata_t
 
 control GilaBend(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".McIntyre") action McIntyre() {
-        digest<Grottoes>(32w0, { meta.Elkins.Pinecreek, meta.Netcong.Eucha, hdr.Brush.Tahuya, hdr.Brush.Kennedale, hdr.Scherr.Kalaloch });
+        digest<Grottoes>(32w0, {meta.Elkins.Pinecreek,meta.Netcong.Eucha,hdr.Brush.Tahuya,hdr.Brush.Kennedale,hdr.Scherr.Kalaloch});
     }
     @name(".Mizpah") table Mizpah {
         actions = {
@@ -1737,6 +1737,10 @@ control Neuse(inout headers hdr, inout metadata meta, inout standard_metadata_t 
     }
     apply {
         switch (Ortley.apply().action_run) {
+            Sidon: {
+                MillHall.apply();
+                Nipton.apply();
+            }
             Embarrass: {
                 if (!hdr.Foster.isValid() && meta.Lowemont.Grandy == 1w1) 
                     Emida.apply();
@@ -1749,10 +1753,6 @@ control Neuse(inout headers hdr, inout metadata meta, inout standard_metadata_t 
 
                 else 
                     Loris.apply();
-            }
-            Sidon: {
-                MillHall.apply();
-                Nipton.apply();
             }
         }
 
@@ -1900,7 +1900,7 @@ control Roseville(inout headers hdr, inout metadata meta, inout standard_metadat
         }
         key = {
             meta.Burrel.Waring          : exact @name("Burrel.Waring") ;
-            meta.Reinbeck.Elsmere[31:16]: ternary @name("Reinbeck.Elsmere[31:16]") ;
+            meta.Reinbeck.Elsmere[31:16]: ternary @name("Reinbeck.Elsmere") ;
             meta.Netcong.Greenbush      : ternary @name("Netcong.Greenbush") ;
             meta.Netcong.Samson         : ternary @name("Netcong.Samson") ;
             meta.Burrel.Virgin          : ternary @name("Burrel.Virgin") ;
@@ -1934,7 +1934,7 @@ control Roseville(inout headers hdr, inout metadata meta, inout standard_metadat
         }
         key = {
             meta.Burrel.Waring           : exact @name("Burrel.Waring") ;
-            meta.Humacao.Hiawassee[31:16]: ternary @name("Humacao.Hiawassee[31:16]") ;
+            meta.Humacao.Hiawassee[31:16]: ternary @name("Humacao.Hiawassee") ;
             meta.Netcong.Greenbush       : ternary @name("Netcong.Greenbush") ;
             meta.Netcong.Samson          : ternary @name("Netcong.Samson") ;
             meta.Burrel.Virgin           : ternary @name("Burrel.Virgin") ;

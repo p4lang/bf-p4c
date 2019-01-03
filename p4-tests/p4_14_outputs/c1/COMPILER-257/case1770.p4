@@ -233,7 +233,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.h1.f1           : exact;
-            hdr.ethHdr.dmac[27:0]: lpm;
+            hdr.ethHdr.dmac[27:0]: lpm @name("ethHdr.dmac") ;
         }
         size = 131072;
     }

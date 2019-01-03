@@ -51,10 +51,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    @name(".setport") action setport_0(bit<9> port) {
+    @name(".setport") action setport(bit<9> port) {
         standard_metadata.egress_spec = port;
     }
-    @name(".a1") action a1_0(bit<8> byte0, bit<8> byte1, bit<8> byte2, bit<8> byte3, bit<8> byte4, bit<8> byte5, bit<8> byte6, bit<8> byte7, bit<8> byte8, bit<8> byte9, bit<8> bytea, bit<8> byteb, bit<8> bytec, bit<8> byted, bit<8> bytee, bit<8> bytef) {
+    @name(".a1") action a1(bit<8> byte0, bit<8> byte1, bit<8> byte2, bit<8> byte3, bit<8> byte4, bit<8> byte5, bit<8> byte6, bit<8> byte7, bit<8> byte8, bit<8> byte9, bit<8> bytea, bit<8> byteb, bit<8> bytec, bit<8> byted, bit<8> bytee, bit<8> bytef) {
         hdr.hdr.b0 = byte0;
         hdr.hdr.b1 = byte1;
         hdr.hdr.b2 = byte2;
@@ -72,7 +72,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.hdr.be = bytee;
         hdr.hdr.bf = bytef;
     }
-    @name(".a2") action a2_0(bit<16> half0, bit<16> half1, bit<16> half2, bit<16> half3, bit<16> half4, bit<16> half5, bit<16> half6, bit<16> half7) {
+    @name(".a2") action a2(bit<16> half0, bit<16> half1, bit<16> half2, bit<16> half3, bit<16> half4, bit<16> half5, bit<16> half6, bit<16> half7) {
         hdr.hdr.h0 = half0;
         hdr.hdr.h1 = half1;
         hdr.hdr.h2 = half2;
@@ -82,7 +82,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.hdr.h6 = half6;
         hdr.hdr.h7 = half7;
     }
-    @name(".a3") action a3_0(bit<8> byte0, bit<8> byte1, bit<8> byte2, bit<8> byte3, bit<8> byte4, bit<8> byte5, bit<8> byte6, bit<8> byte7, bit<8> byte8, bit<8> byte9, bit<16> half5, bit<16> half6, bit<16> half7) {
+    @name(".a3") action a3(bit<8> byte0, bit<8> byte1, bit<8> byte2, bit<8> byte3, bit<8> byte4, bit<8> byte5, bit<8> byte6, bit<8> byte7, bit<8> byte8, bit<8> byte9, bit<16> half5, bit<16> half6, bit<16> half7) {
         hdr.hdr.b0 = byte0;
         hdr.hdr.b1 = byte1;
         hdr.hdr.b2 = byte2;
@@ -97,7 +97,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.hdr.h6 = half6;
         hdr.hdr.h7 = half7;
     }
-    @name(".a4") action a4_0(bit<8> byte0, bit<8> byte1, bit<8> byte2, bit<8> byte3, bit<8> byte4, bit<8> byte5, bit<16> half0, bit<16> half1, bit<16> half2, bit<32> full0) {
+    @name(".a4") action a4(bit<8> byte0, bit<8> byte1, bit<8> byte2, bit<8> byte3, bit<8> byte4, bit<8> byte5, bit<16> half0, bit<16> half1, bit<16> half2, bit<32> full0) {
         hdr.hdr.b0 = byte0;
         hdr.hdr.b1 = byte1;
         hdr.hdr.b2 = byte2;
@@ -109,9 +109,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.hdr.h2 = half2;
         hdr.hdr.f0 = full0;
     }
-    @name(".setting_port") table setting_port {
+    @name(".setting_port") table setting_port_0 {
         actions = {
-            setport_0();
+            setport();
             @defaultonly NoAction_0();
         }
         key = {
@@ -119,12 +119,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name(".t1") table t1 {
+    @name(".t1") table t1_0 {
         actions = {
-            a1_0();
-            a2_0();
-            a3_0();
-            a4_0();
+            a1();
+            a2();
+            a3();
+            a4();
             @defaultonly NoAction_3();
         }
         key = {
@@ -133,8 +133,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_3();
     }
     apply {
-        t1.apply();
-        setting_port.apply();
+        t1_0.apply();
+        setting_port_0.apply();
     }
 }
 

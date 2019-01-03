@@ -14,19 +14,19 @@ parser ParserImpl(packet_in packet, out headers_t hdr, inout metadata_t meta, in
 }
 
 control ingress(inout headers_t hdr, inout metadata_t meta, inout standard_metadata_t standard_metadata) {
-    @name("ingress.ingress_port_counter") counter(32w512, CounterType.bytes) ingress_port_counter;
+    @name("ingress.ingress_port_counter") counter(32w512, CounterType.bytes) ingress_port_counter_0;
     apply {
         standard_metadata.egress_spec = 9w2;
         if (standard_metadata.ingress_port < 9w511) 
-            ingress_port_counter.count((bit<32>)standard_metadata.ingress_port);
+            ingress_port_counter_0.count((bit<32>)standard_metadata.ingress_port);
     }
 }
 
 control egress(inout headers_t hdr, inout metadata_t meta, inout standard_metadata_t standard_metadata) {
-    @name("egress.egress_port_counter") counter(32w512, CounterType.bytes) egress_port_counter;
+    @name("egress.egress_port_counter") counter(32w512, CounterType.bytes) egress_port_counter_0;
     apply {
         if (standard_metadata.egress_port < 9w511) 
-            egress_port_counter.count((bit<32>)standard_metadata.egress_port);
+            egress_port_counter_0.count((bit<32>)standard_metadata.egress_port);
     }
 }
 

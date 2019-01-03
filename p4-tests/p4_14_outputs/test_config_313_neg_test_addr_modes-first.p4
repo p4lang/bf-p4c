@@ -569,14 +569,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             }
             if (meta.ig_md.pfe_override_test == 1w1) 
                 switch (eg_tcam_or_exm.apply().action_run) {
-                    do_exm: {
-                        e1.apply();
-                        e2.apply();
-                        e3.apply();
-                        e4.apply();
-                        e5.apply();
-                        e6.apply();
-                    }
                     do_tcam: {
                         t1.apply();
                         t2.apply();
@@ -584,6 +576,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                         t4.apply();
                         t5.apply();
                         t6.apply();
+                    }
+                    do_exm: {
+                        e1.apply();
+                        e2.apply();
+                        e3.apply();
+                        e4.apply();
+                        e5.apply();
+                        e6.apply();
                     }
                 }
 

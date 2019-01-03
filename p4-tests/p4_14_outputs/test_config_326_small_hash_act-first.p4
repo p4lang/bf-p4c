@@ -160,7 +160,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             action_0();
         }
         key = {
-            hdr.one.x & 8w0x81: exact @name("one.x & 129") ;
+            hdr.one.x & 8w0x81: exact @name("one.x") ;
         }
         size = 4;
         default_action = action_0(8w5);

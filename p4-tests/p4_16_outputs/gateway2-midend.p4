@@ -24,20 +24,20 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("ingress.setb1") action setb1_0(bit<8> val) {
+    @name("ingress.setb1") action setb1(bit<8> val) {
         hdr.data.b1 = val;
     }
-    @name("ingress.noop") action noop_0() {
+    @name("ingress.noop") action noop() {
     }
-    @name("ingress.test") table test {
+    @name("ingress.test") table test_0 {
         key = {
             hdr.data.f1: ternary @name("hdr.data.f1") ;
         }
         actions = {
-            setb1_0();
-            noop_0();
+            setb1();
+            noop();
         }
-        default_action = setb1_0(8w0xaa);
+        default_action = setb1(8w0xaa);
     }
     @hidden action act() {
         standard_metadata.egress_spec = 9w2;
@@ -51,7 +51,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     apply {
         tbl_act.apply();
         if (hdr.data.f2[27:20] == hdr.data.f1[27:20] && hdr.data.f2[11:4] == hdr.data.f1[11:4]) 
-            test.apply();
+            test_0.apply();
     }
 }
 

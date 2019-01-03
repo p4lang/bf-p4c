@@ -173,25 +173,25 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_7() {
     }
-    @name(".action1") action action1_0() {
+    @name(".action1") action action1() {
         meta.ing_metadata.field1 = 1w1;
     }
-    @name(".action2") action action2_0() {
+    @name(".action2") action action2() {
         meta.ing_metadata.field2 = 1w1;
     }
-    @name(".action3") action action3_0() {
+    @name(".action3") action action3() {
         meta.ing_metadata.field3 = 1w1;
     }
     @name(".action3") action action3_2() {
         meta.ing_metadata.field3 = 1w1;
     }
-    @name(".action4") action action4_0(bit<48> newAddr) {
+    @name(".action4") action action4(bit<48> newAddr) {
         hdr.ethernet.srcAddr = newAddr;
     }
-    @name(".table1") table table1 {
+    @name(".table1") table table1_0 {
         actions = {
-            action1_0();
-            action2_0();
+            action1();
+            action2();
             @defaultonly NoAction_0();
         }
         key = {
@@ -199,9 +199,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name(".table2") table table2 {
+    @name(".table2") table table2_0 {
         actions = {
-            action3_0();
+            action3();
             @defaultonly NoAction_5();
         }
         key = {
@@ -209,7 +209,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_5();
     }
-    @name(".table3") table table3 {
+    @name(".table3") table table3_0 {
         actions = {
             action3_2();
             @defaultonly NoAction_6();
@@ -219,9 +219,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_6();
     }
-    @name(".table4") table table4 {
+    @name(".table4") table table4_0 {
         actions = {
-            action4_0();
+            action4();
             @defaultonly NoAction_7();
         }
         key = {
@@ -230,16 +230,16 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_7();
     }
     apply {
-        switch (table1.apply().action_run) {
-            action1_0: {
-                table2.apply();
+        switch (table1_0.apply().action_run) {
+            action1: {
+                table2_0.apply();
             }
-            action2_0: {
-                table3.apply();
+            action2: {
+                table3_0.apply();
             }
         }
 
-        table4.apply();
+        table4_0.apply();
     }
 }
 

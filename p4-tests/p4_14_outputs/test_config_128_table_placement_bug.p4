@@ -192,7 +192,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             hdr.pkt.field_e_16      : exact;
-            hdr.pkt.field_f_16[15:2]: exact;
+            hdr.pkt.field_f_16[15:2]: exact @name("pkt.field_f_16") ;
         }
         size = 1024;
     }

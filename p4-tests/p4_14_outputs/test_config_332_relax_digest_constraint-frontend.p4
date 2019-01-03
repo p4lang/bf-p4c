@@ -166,19 +166,19 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".action_0") action action_2() {
+    @name(".action_0") action action_0() {
         hdr.ethernet.etherType = 16w4;
     }
-    @name(".action_1") action action_3() {
-        digest<my_digest>(32w0, { hdr.ethernet.dstAddr_hi, hdr.ethernet.srcAddr_hi, hdr.ethernet.dstAddr_lo, hdr.ethernet.srcAddr_lo, hdr.ethernet.etherType });
+    @name(".action_1") action action_1() {
+        digest<my_digest>(32w0, {hdr.ethernet.dstAddr_hi,hdr.ethernet.srcAddr_hi,hdr.ethernet.dstAddr_lo,hdr.ethernet.srcAddr_lo,hdr.ethernet.etherType});
     }
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing() {
     }
-    @name(".table_0") table table_0 {
+    @name(".table_0") table table_1 {
         actions = {
-            action_2();
-            action_3();
-            do_nothing_0();
+            action_0();
+            action_1();
+            do_nothing();
             @defaultonly NoAction_0();
         }
         key = {
@@ -188,7 +188,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_0();
     }
     apply {
-        table_0.apply();
+        table_1.apply();
     }
 }
 

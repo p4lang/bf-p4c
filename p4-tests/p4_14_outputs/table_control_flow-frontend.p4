@@ -54,10 +54,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_23() {
     }
-    bool tmp_2;
-    bool tmp_3;
-    bool tmp_4;
-    @name(".noop") action noop_0() {
+    bool tmp;
+    bool tmp_0;
+    bool tmp_1;
+    @name(".noop") action noop() {
     }
     @name(".noop") action noop_4() {
     }
@@ -65,7 +65,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".noop") action noop_6() {
     }
-    @name(".setb1") action setb1_0(bit<32> val, bit<8> port) {
+    @name(".setb1") action setb1(bit<32> val, bit<8> port) {
         hdr.data.b1 = val;
     }
     @name(".setb1") action setb1_5(bit<32> val, bit<8> port) {
@@ -80,24 +80,24 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".setb1") action setb1_8(bit<32> val, bit<8> port) {
         hdr.data.b1 = val;
     }
-    @name(".setf12") action setf12_0(bit<32> val) {
+    @name(".setf12") action setf12(bit<32> val) {
         hdr.data.f12 = val;
     }
-    @name(".setf7") action setf7_0(bit<32> val) {
+    @name(".setf7") action setf7(bit<32> val) {
         hdr.data.f7 = val;
     }
-    @name(".setf8") action setf8_0(bit<32> val) {
+    @name(".setf8") action setf8(bit<32> val) {
         hdr.data.f8 = val;
     }
-    @name(".setf9") action setf9_0(bit<32> val) {
+    @name(".setf9") action setf9(bit<32> val) {
         hdr.data.f9 = val;
     }
-    @name(".setf10") action setf10_0(bit<32> val) {
+    @name(".setf10") action setf10(bit<32> val) {
         hdr.data.f10 = val;
     }
-    @name(".t1") table t1 {
+    @name(".t1") table t1_0 {
         actions = {
-            noop_0();
+            noop();
             @defaultonly NoAction_0();
         }
         key = {
@@ -106,9 +106,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 8192;
         default_action = NoAction_0();
     }
-    @name(".t10") table t10 {
+    @name(".t10") table t10_0 {
         actions = {
-            setb1_0();
+            setb1();
             @defaultonly NoAction_13();
         }
         key = {
@@ -116,10 +116,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_13();
     }
-    @name(".t11") table t11 {
+    @name(".t11") table t11_0 {
         actions = {
             noop_4();
-            setf12_0();
+            setf12();
             @defaultonly NoAction_14();
         }
         key = {
@@ -127,7 +127,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_14();
     }
-    @name(".t12") table t12 {
+    @name(".t12") table t12_0 {
         actions = {
             noop_5();
             @defaultonly NoAction_15();
@@ -137,7 +137,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_15();
     }
-    @name(".t2") table t2 {
+    @name(".t2") table t2_0 {
         actions = {
             setb1_5();
             noop_6();
@@ -149,9 +149,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 8192;
         default_action = NoAction_16();
     }
-    @name(".t3") table t3 {
+    @name(".t3") table t3_0 {
         actions = {
-            setf7_0();
+            setf7();
             @defaultonly NoAction_17();
         }
         key = {
@@ -160,9 +160,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 65536;
         default_action = NoAction_17();
     }
-    @name(".t4") table t4 {
+    @name(".t4") table t4_0 {
         actions = {
-            setf8_0();
+            setf8();
             @defaultonly NoAction_18();
         }
         key = {
@@ -171,9 +171,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 65536;
         default_action = NoAction_18();
     }
-    @name(".t5") table t5 {
+    @name(".t5") table t5_0 {
         actions = {
-            setf9_0();
+            setf9();
             @defaultonly NoAction_19();
         }
         key = {
@@ -182,9 +182,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 95536;
         default_action = NoAction_19();
     }
-    @name(".t6") table t6 {
+    @name(".t6") table t6_0 {
         actions = {
-            setf10_0();
+            setf10();
             @defaultonly NoAction_20();
         }
         key = {
@@ -193,7 +193,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 95536;
         default_action = NoAction_20();
     }
-    @name(".t7") table t7 {
+    @name(".t7") table t7_0 {
         actions = {
             setb1_6();
             @defaultonly NoAction_21();
@@ -203,7 +203,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_21();
     }
-    @name(".t8") table t8 {
+    @name(".t8") table t8_0 {
         actions = {
             setb1_7();
             @defaultonly NoAction_22();
@@ -213,7 +213,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_22();
     }
-    @name(".t9") table t9 {
+    @name(".t9") table t9_0 {
         actions = {
             setb1_8();
             @defaultonly NoAction_23();
@@ -224,23 +224,23 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_23();
     }
     apply {
-        tmp_4 = t11.apply().hit;
-        if (tmp_4) {
-            t12.apply();
-            tmp_2 = t1.apply().hit;
-            if (tmp_2) 
-                t2.apply();
-            t3.apply();
-            tmp_3 = t4.apply().hit;
-            if (tmp_3) 
-                t5.apply();
+        tmp_1 = t11_0.apply().hit;
+        if (tmp_1) {
+            t12_0.apply();
+            tmp = t1_0.apply().hit;
+            if (tmp) 
+                t2_0.apply();
+            t3_0.apply();
+            tmp_0 = t4_0.apply().hit;
+            if (tmp_0) 
+                t5_0.apply();
             else 
-                t6.apply();
-            t7.apply();
+                t6_0.apply();
+            t7_0.apply();
         }
-        t8.apply();
-        t9.apply();
-        t10.apply();
+        t8_0.apply();
+        t9_0.apply();
+        t10_0.apply();
     }
 }
 

@@ -32,7 +32,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_5() {
     }
-    @name(".setb1") action setb1_0(bit<8> val, bit<9> port) {
+    @name(".setb1") action setb1(bit<8> val, bit<9> port) {
         hdr.data.b1 = val;
         standard_metadata.egress_spec = port;
     }
@@ -44,16 +44,16 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.data.b1 = val;
         standard_metadata.egress_spec = port;
     }
-    @name(".noop") action noop_0() {
+    @name(".noop") action noop() {
     }
     @name(".noop") action noop_3() {
     }
     @name(".noop") action noop_4() {
     }
-    @name(".test1") table test1 {
+    @name(".test1") table test1_0 {
         actions = {
-            setb1_0();
-            noop_0();
+            setb1();
+            noop();
             @defaultonly NoAction_0();
         }
         key = {
@@ -61,7 +61,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name(".test2") table test2 {
+    @name(".test2") table test2_0 {
         actions = {
             setb1_3();
             noop_3();
@@ -72,7 +72,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_4();
     }
-    @name(".test3") table test3 {
+    @name(".test3") table test3_0 {
         actions = {
             setb1_4();
             noop_4();
@@ -84,13 +84,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_5();
     }
     apply {
-        test3.apply();
+        test3_0.apply();
         if (hdr.data.b2 == hdr.data.b3 || hdr.data.b4 == 8w10) 
             if (hdr.data.b1 == hdr.data.b2 && hdr.data.b4 == 8w10) 
-                test1.apply();
+                test1_0.apply();
         else 
             if (hdr.data.b1 != hdr.data.b2) 
-                test2.apply();
+                test2_0.apply();
     }
 }
 

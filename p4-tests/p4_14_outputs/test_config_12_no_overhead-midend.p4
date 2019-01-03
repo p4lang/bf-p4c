@@ -180,12 +180,12 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".action_0") action action_1() {
+    @name(".action_0") action action_0() {
         hdr.ipv4.diffserv = 8w1;
     }
-    @name(".table_0") table table_0 {
+    @name(".table_0") table table_1 {
         actions = {
-            action_1();
+            action_0();
             @defaultonly NoAction_0();
         }
         key = {
@@ -196,7 +196,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (hdr.ethernet.etherType == 16w0x800) 
-            table_0.apply();
+            table_1.apply();
     }
 }
 

@@ -175,7 +175,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.pkt.srcAddr[7:0]: exact @name("pkt.srcAddr[7:0]") ;
+            hdr.pkt.srcAddr[7:0]: exact @name("pkt.srcAddr") ;
             hdr.pkt.srcPort     : exact @name("pkt.srcPort") ;
             hdr.pkt.protocol    : exact @name("pkt.protocol") ;
         }

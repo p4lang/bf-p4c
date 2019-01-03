@@ -44,22 +44,22 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_5() {
     }
-    @name(".set_fields") action set_fields_0(bit<32> big_field, bit<2> half_nibble1, bit<2> half_nibble2) {
+    @name(".set_fields") action set_fields(bit<32> big_field, bit<2> half_nibble1, bit<2> half_nibble2) {
         hdr.hdr.f4 = big_field;
         hdr.hdr.hn1 = half_nibble1;
         hdr.hdr.hn2 = half_nibble2;
     }
-    @name(".back_to_hdr") action back_to_hdr_0() {
+    @name(".back_to_hdr") action back_to_hdr() {
         hdr.hdr.hn2 = meta.nibble_meta.hn1;
         hdr.hdr.hn4 = meta.nibble_meta.hn2;
     }
-    @name(".set_nibble_meta") action set_nibble_meta_0() {
+    @name(".set_nibble_meta") action set_nibble_meta() {
         meta.nibble_meta.hn1 = hdr.hdr.hn1;
         meta.nibble_meta.hn2 = hdr.hdr.hn2;
     }
-    @name(".set_all") table set_all {
+    @name(".set_all") table set_all_0 {
         actions = {
-            set_fields_0();
+            set_fields();
             @defaultonly NoAction_0();
         }
         key = {
@@ -67,9 +67,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name(".set_back") table set_back {
+    @name(".set_back") table set_back_0 {
         actions = {
-            back_to_hdr_0();
+            back_to_hdr();
             @defaultonly NoAction_4();
         }
         key = {
@@ -77,9 +77,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_4();
     }
-    @name(".set_nibbles") table set_nibbles {
+    @name(".set_nibbles") table set_nibbles_0 {
         actions = {
-            set_nibble_meta_0();
+            set_nibble_meta();
             @defaultonly NoAction_5();
         }
         key = {
@@ -88,9 +88,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_5();
     }
     apply {
-        set_all.apply();
-        set_nibbles.apply();
-        set_back.apply();
+        set_all_0.apply();
+        set_nibbles_0.apply();
+        set_back_0.apply();
     }
 }
 

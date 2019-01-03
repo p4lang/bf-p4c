@@ -813,8 +813,8 @@ control Armagh(inout headers hdr, inout metadata meta, inout standard_metadata_t
             Careywood_0;
         }
         key = {
-            hdr.eg_intr_md.egress_port[6:0]: exact;
-            hdr.eg_intr_md.egress_qid[2:0] : exact;
+            hdr.eg_intr_md.egress_port[6:0]: exact @name("eg_intr_md.egress_port") ;
+            hdr.eg_intr_md.egress_qid[2:0] : exact @name("eg_intr_md.egress_qid") ;
         }
         size = 1024;
         counters = Ogunquit;
@@ -947,7 +947,7 @@ control DelMar(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         key = {
             meta.Blanding.Dixie           : exact;
-            meta.Blanding.Danville[106:64]: lpm;
+            meta.Blanding.Danville[106:64]: lpm @name("Blanding.Danville") ;
         }
         size = 65536;
         default_action = McCartys();
@@ -959,7 +959,7 @@ control DelMar(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         key = {
             meta.Youngtown.Coverdale      : exact;
-            meta.Blanding.Danville[127:64]: lpm;
+            meta.Blanding.Danville[127:64]: lpm @name("Blanding.Danville") ;
         }
         size = 8192;
     }
@@ -982,7 +982,7 @@ control DelMar(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         key = {
             meta.Blanding.Lenoir        : exact;
-            meta.Blanding.Danville[63:0]: lpm;
+            meta.Blanding.Danville[63:0]: lpm @name("Blanding.Danville") ;
         }
         size = 16384;
         default_action = McCartys();
@@ -1020,7 +1020,7 @@ control DelMar(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         key = {
             meta.Selby.BarNunn     : exact;
-            meta.Selby.Colona[19:0]: lpm;
+            meta.Selby.Colona[19:0]: lpm @name("Selby.Colona") ;
         }
         size = 131072;
         default_action = McCartys();
@@ -1075,6 +1075,9 @@ control DelMar(inout headers hdr, inout metadata meta, inout standard_metadata_t
                     switch (Heizer.apply().action_run) {
                         McCartys: {
                             switch (Oneonta.apply().action_run) {
+                                Shirley: {
+                                    Estero.apply();
+                                }
                                 McCartys: {
                                     switch (Ceiba.apply().action_run) {
                                         Hoagland: {
@@ -1082,9 +1085,6 @@ control DelMar(inout headers hdr, inout metadata meta, inout standard_metadata_t
                                         }
                                     }
 
-                                }
-                                Shirley: {
-                                    Estero.apply();
                                 }
                             }
 
@@ -1127,7 +1127,7 @@ control Dovray(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         key = {
             meta.Tillamook.Brady         : exact;
-            meta.Blanding.Danville[31:16]: ternary;
+            meta.Blanding.Danville[31:16]: ternary @name("Blanding.Danville") ;
             meta.Horton.Kealia           : ternary;
             meta.Horton.Floyd            : ternary;
             meta.Horton.Halliday         : ternary;
@@ -1161,7 +1161,7 @@ control Dovray(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         key = {
             meta.Tillamook.Brady    : exact;
-            meta.Selby.Colona[31:16]: ternary;
+            meta.Selby.Colona[31:16]: ternary @name("Selby.Colona") ;
             meta.Horton.Kealia      : ternary;
             meta.Horton.Floyd       : ternary;
             meta.Horton.Halliday    : ternary;
@@ -1612,7 +1612,7 @@ control Montegut(inout headers hdr, inout metadata meta, inout standard_metadata
             bit<1> in_value;
             in_value = value;
             value = in_value;
-            rv = ~value;
+            rv = ~in_value;
         }
     };
     @name(".Rodessa") RegisterAction<bit<1>, bit<32>, bit<1>>(Bloomdale) Rodessa = {
@@ -2003,6 +2003,10 @@ control Penitas(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         switch (Barney.apply().action_run) {
+            DelRosa: {
+                Harriston.apply();
+                Dalkeith.apply();
+            }
             Creston: {
                 if (!hdr.LaFayette.isValid() && meta.Ulysses.Anniston == 1w1) {
                     Harris.apply();
@@ -2018,10 +2022,6 @@ control Penitas(inout headers hdr, inout metadata meta, inout standard_metadata_
                 else {
                     Wanilla.apply();
                 }
-            }
-            DelRosa: {
-                Harriston.apply();
-                Dalkeith.apply();
             }
         }
 

@@ -114,10 +114,12 @@ header pkt_t {
     bit<32> field_b_32;
     bit<32> field_c_32;
     bit<32> field_d_32;
+    @saturating 
     bit<16> field_e_sat;
     bit<16> field_f_16;
     bit<16> field_g_16;
     bit<16> field_h_16;
+    @saturating 
     int<8>  field_i_signed_sat;
     bit<8>  field_j_8;
     bit<8>  field_k_8;
@@ -167,19 +169,19 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.pkt.field_a_signed = hdr.pkt.field_a_signed + (int<32>)hdr.pkt.field_b_32;
     }
     @name(".action_1") action action_1() {
-        hdr.pkt.field_e_sat = hdr.pkt.field_e_sat + hdr.pkt.field_f_16;
+        hdr.pkt.field_e_sat = hdr.pkt.field_e_sat |+| hdr.pkt.field_f_16;
     }
     @name(".action_2") action action_2() {
-        hdr.pkt.field_i_signed_sat = hdr.pkt.field_i_signed_sat + (int<8>)hdr.pkt.field_j_8;
+        hdr.pkt.field_i_signed_sat = hdr.pkt.field_i_signed_sat |+| (int<8>)hdr.pkt.field_j_8;
     }
     @name(".action_3") action action_3() {
         hdr.pkt.field_a_signed = hdr.pkt.field_a_signed - (int<32>)hdr.pkt.field_b_32;
     }
     @name(".action_4") action action_4() {
-        hdr.pkt.field_e_sat = hdr.pkt.field_e_sat - hdr.pkt.field_f_16;
+        hdr.pkt.field_e_sat = hdr.pkt.field_e_sat |-| hdr.pkt.field_f_16;
     }
     @name(".action_5") action action_5() {
-        hdr.pkt.field_i_signed_sat = hdr.pkt.field_i_signed_sat - (int<8>)hdr.pkt.field_j_8;
+        hdr.pkt.field_i_signed_sat = hdr.pkt.field_i_signed_sat |-| (int<8>)hdr.pkt.field_j_8;
     }
     @name(".table_0") table table_0 {
         actions = {

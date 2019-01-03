@@ -540,45 +540,45 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     @name(".NoAction") action NoAction_1() {
     }
-    @name(".Eclectic") action _Eclectic(bit<12> Kaplan) {
+    @name(".Eclectic") action _Eclectic_0(bit<12> Kaplan) {
         meta.Barksdale.Honalo = Kaplan;
     }
-    @name(".Yerington") action _Yerington() {
+    @name(".Yerington") action _Yerington_0() {
         meta.Barksdale.Honalo = (bit<12>)meta.Barksdale.Rotan;
     }
-    @name(".Towaoc") table _Towaoc_0 {
+    @name(".Towaoc") table _Towaoc {
         actions = {
-            _Eclectic();
-            _Yerington();
+            _Eclectic_0();
+            _Yerington_0();
         }
         key = {
             hdr.eg_intr_md.egress_port: exact @name("eg_intr_md.egress_port") ;
             meta.Barksdale.Rotan      : exact @name("Barksdale.Rotan") ;
         }
         size = 4096;
-        default_action = _Yerington();
+        default_action = _Yerington_0();
     }
-    @name(".Shickley") action _Shickley(bit<24> Hahira, bit<24> Escondido) {
+    @name(".Shickley") action _Shickley_0(bit<24> Hahira, bit<24> Escondido) {
         meta.Barksdale.Ebenezer = Hahira;
         meta.Barksdale.Lemoyne = Escondido;
     }
-    @name(".Junior") action _Junior() {
+    @name(".Junior") action _Junior_0() {
         hdr.Skillman.Waldo = meta.Barksdale.Maywood;
         hdr.Skillman.Halbur = meta.Barksdale.Greenlawn;
         hdr.Skillman.Barclay = meta.Barksdale.Ebenezer;
         hdr.Skillman.Bootjack = meta.Barksdale.Lemoyne;
         hdr.Slick.PellLake = hdr.Slick.PellLake + 8w255;
     }
-    @name(".Quinwood") action _Quinwood() {
+    @name(".Quinwood") action _Quinwood_0() {
         hdr.Skillman.Waldo = meta.Barksdale.Maywood;
         hdr.Skillman.Halbur = meta.Barksdale.Greenlawn;
         hdr.Skillman.Barclay = meta.Barksdale.Ebenezer;
         hdr.Skillman.Bootjack = meta.Barksdale.Lemoyne;
         hdr.DuPont.Darco = hdr.DuPont.Darco + 8w255;
     }
-    @name(".Magnolia") table _Magnolia_0 {
+    @name(".Magnolia") table _Magnolia {
         actions = {
-            _Shickley();
+            _Shickley_0();
             @defaultonly NoAction_0();
         }
         key = {
@@ -587,10 +587,10 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         size = 8;
         default_action = NoAction_0();
     }
-    @name(".Markville") table _Markville_0 {
+    @name(".Markville") table _Markville {
         actions = {
-            _Junior();
-            _Quinwood();
+            _Junior_0();
+            _Quinwood_0();
             @defaultonly NoAction_1();
         }
         key = {
@@ -603,31 +603,31 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         size = 512;
         default_action = NoAction_1();
     }
-    @name(".Renick") action _Renick() {
+    @name(".Renick") action _Renick_0() {
     }
-    @name(".Coyote") action _Coyote() {
+    @name(".Coyote") action _Coyote_0() {
         hdr.Ahmeek[0].setValid();
         hdr.Ahmeek[0].Pinta = meta.Barksdale.Honalo;
         hdr.Ahmeek[0].Wrens = hdr.Skillman.Topanga;
         hdr.Skillman.Topanga = 16w0x8100;
     }
-    @name(".LakePine") table _LakePine_0 {
+    @name(".LakePine") table _LakePine {
         actions = {
-            _Renick();
-            _Coyote();
+            _Renick_0();
+            _Coyote_0();
         }
         key = {
             meta.Barksdale.Honalo     : exact @name("Barksdale.Honalo") ;
             hdr.eg_intr_md.egress_port: exact @name("eg_intr_md.egress_port") ;
         }
         size = 64;
-        default_action = _Coyote();
+        default_action = _Coyote_0();
     }
     apply {
-        _Towaoc_0.apply();
-        _Magnolia_0.apply();
-        _Markville_0.apply();
-        _LakePine_0.apply();
+        _Towaoc.apply();
+        _Magnolia.apply();
+        _Markville.apply();
+        _LakePine.apply();
     }
 }
 
@@ -698,7 +698,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_69() {
     }
-    @name(".Panaca") action _Panaca(bit<14> WestLine, bit<1> Bucklin, bit<12> Normangee, bit<1> Neoga, bit<1> Myrick, bit<6> Malmo, bit<2> Amenia, bit<3> Telida, bit<6> Mattson) {
+    @name(".Panaca") action _Panaca_0(bit<14> WestLine, bit<1> Bucklin, bit<12> Normangee, bit<1> Neoga, bit<1> Myrick, bit<6> Malmo, bit<2> Amenia, bit<3> Telida, bit<6> Mattson) {
         meta.Shine.Walcott = WestLine;
         meta.Shine.Baldwin = Bucklin;
         meta.Shine.Hanston = Normangee;
@@ -709,9 +709,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.Shine.Layton = Telida;
         meta.Shine.Garwood = Mattson;
     }
-    @command_line("--no-dead-code-elimination") @name(".Lapoint") table _Lapoint_0 {
+    @command_line("--no-dead-code-elimination") @name(".Lapoint") table _Lapoint {
         actions = {
-            _Panaca();
+            _Panaca_0();
             @defaultonly NoAction_37();
         }
         key = {
@@ -720,13 +720,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction_37();
     }
-    @min_width(16) @name(".Gastonia") direct_counter(CounterType.packets_and_bytes) _Gastonia_0;
-    @name(".SweetAir") action _SweetAir() {
+    @min_width(16) @name(".Gastonia") direct_counter(CounterType.packets_and_bytes) _Gastonia;
+    @name(".SweetAir") action _SweetAir_0() {
         meta.Nashoba.Chualar = 1w1;
     }
-    @name(".Inola") table _Inola_0 {
+    @name(".Inola") table _Inola {
         actions = {
-            _SweetAir();
+            _SweetAir_0();
             @defaultonly NoAction_38();
         }
         key = {
@@ -736,36 +736,36 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_38();
     }
-    @name(".Duffield") action _Duffield(bit<8> Hamburg) {
-        _Gastonia_0.count();
+    @name(".Duffield") action _Duffield_0(bit<8> Hamburg) {
+        _Gastonia.count();
         meta.Barksdale.Pickett = 1w1;
         meta.Barksdale.Timken = Hamburg;
         meta.Nashoba.FourTown = 1w1;
     }
-    @name(".Bowden") action _Bowden() {
-        _Gastonia_0.count();
+    @name(".Bowden") action _Bowden_0() {
+        _Gastonia.count();
         meta.Nashoba.Iselin = 1w1;
         meta.Nashoba.Laxon = 1w1;
     }
-    @name(".Crystola") action _Crystola() {
-        _Gastonia_0.count();
+    @name(".Crystola") action _Crystola_0() {
+        _Gastonia.count();
         meta.Nashoba.FourTown = 1w1;
     }
-    @name(".Belmore") action _Belmore() {
-        _Gastonia_0.count();
+    @name(".Belmore") action _Belmore_0() {
+        _Gastonia.count();
         meta.Nashoba.Belcourt = 1w1;
     }
-    @name(".Ferndale") action _Ferndale() {
-        _Gastonia_0.count();
+    @name(".Ferndale") action _Ferndale_0() {
+        _Gastonia.count();
         meta.Nashoba.Laxon = 1w1;
     }
-    @name(".Wilmore") table _Wilmore_0 {
+    @name(".Wilmore") table _Wilmore {
         actions = {
-            _Duffield();
-            _Bowden();
-            _Crystola();
-            _Belmore();
-            _Ferndale();
+            _Duffield_0();
+            _Bowden_0();
+            _Crystola_0();
+            _Belmore_0();
+            _Ferndale_0();
             @defaultonly NoAction_39();
         }
         key = {
@@ -774,10 +774,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.Skillman.Halbur: ternary @name("Skillman.Halbur") ;
         }
         size = 512;
-        counters = _Gastonia_0;
+        counters = _Gastonia;
         default_action = NoAction_39();
     }
-    @name(".Grygla") action _Grygla(bit<16> Gordon, bit<8> Poipu, bit<1> Ambler, bit<1> Coronado, bit<1> Vieques, bit<1> Virgin) {
+    @name(".Grygla") action _Grygla_0(bit<16> Gordon, bit<8> Poipu, bit<1> Ambler, bit<1> Coronado, bit<1> Vieques, bit<1> Virgin) {
         meta.Nashoba.Kekoskee = Gordon;
         meta.Nashoba.Charters = 1w1;
         meta.Wagener.Coqui = Poipu;
@@ -786,13 +786,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.Wagener.Spiro = Vieques;
         meta.Wagener.Anaconda = Virgin;
     }
-    @name(".Tarnov") action _Tarnov() {
+    @name(".Tarnov") action _Tarnov_4() {
     }
-    @name(".Tarnov") action _Tarnov_0() {
+    @name(".Tarnov") action _Tarnov_5() {
     }
-    @name(".Tarnov") action _Tarnov_1() {
+    @name(".Tarnov") action _Tarnov_6() {
     }
-    @name(".Shabbona") action _Shabbona(bit<8> Hooksett, bit<1> Wetonka, bit<1> Gotebo, bit<1> Larsen, bit<1> Earlimart) {
+    @name(".Shabbona") action _Shabbona_0(bit<8> Hooksett, bit<1> Wetonka, bit<1> Gotebo, bit<1> Larsen, bit<1> Earlimart) {
         meta.Nashoba.Kekoskee = (bit<16>)meta.Shine.Hanston;
         meta.Nashoba.Charters = 1w1;
         meta.Wagener.Coqui = Hooksett;
@@ -801,26 +801,26 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.Wagener.Spiro = Larsen;
         meta.Wagener.Anaconda = Earlimart;
     }
-    @name(".Hanford") action _Hanford() {
+    @name(".Hanford") action _Hanford_0() {
         meta.Nashoba.Allons = (bit<16>)meta.Shine.Hanston;
         meta.Nashoba.Ekron = (bit<16>)meta.Shine.Walcott;
     }
-    @name(".Edinburg") action _Edinburg(bit<16> Yemassee) {
+    @name(".Edinburg") action _Edinburg_0(bit<16> Yemassee) {
         meta.Nashoba.Allons = Yemassee;
         meta.Nashoba.Ekron = (bit<16>)meta.Shine.Walcott;
     }
-    @name(".Moseley") action _Moseley() {
+    @name(".Moseley") action _Moseley_0() {
         meta.Nashoba.Allons = (bit<16>)hdr.Ahmeek[0].Pinta;
         meta.Nashoba.Ekron = (bit<16>)meta.Shine.Walcott;
     }
-    @name(".Honokahua") action _Honokahua(bit<16> TenSleep) {
+    @name(".Honokahua") action _Honokahua_0(bit<16> TenSleep) {
         meta.Nashoba.Ekron = TenSleep;
     }
-    @name(".Valeene") action _Valeene() {
+    @name(".Valeene") action _Valeene_0() {
         meta.Nashoba.McCammon = 1w1;
         meta.Quivero.Bevington = 8w1;
     }
-    @name(".PeaRidge") action _PeaRidge(bit<16> Shoreview, bit<8> Surrency, bit<1> Gullett, bit<1> Conejo, bit<1> Shingler, bit<1> Haslet, bit<1> Edgemoor) {
+    @name(".PeaRidge") action _PeaRidge_0(bit<16> Shoreview, bit<8> Surrency, bit<1> Gullett, bit<1> Conejo, bit<1> Shingler, bit<1> Haslet, bit<1> Edgemoor) {
         meta.Nashoba.Allons = Shoreview;
         meta.Nashoba.Kekoskee = Shoreview;
         meta.Nashoba.Charters = Edgemoor;
@@ -830,10 +830,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.Wagener.Spiro = Shingler;
         meta.Wagener.Anaconda = Haslet;
     }
-    @name(".Glenolden") action _Glenolden() {
+    @name(".Glenolden") action _Glenolden_0() {
         meta.Nashoba.Ivanhoe = 1w1;
     }
-    @name(".Naylor") action _Naylor() {
+    @name(".Naylor") action _Naylor_0() {
         meta.Moline.Millstone = hdr.Dialville.Corfu;
         meta.Moline.Aurora = hdr.Dialville.Ottertail;
         meta.Moline.Stennett = hdr.Dialville.Anchorage;
@@ -856,7 +856,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.Shine.Layton = 3w0;
         meta.Shine.Garwood = 6w0;
     }
-    @name(".Youngtown") action _Youngtown() {
+    @name(".Youngtown") action _Youngtown_0() {
         meta.Nashoba.Berea = 2w0;
         meta.Moline.Millstone = hdr.Slick.Corfu;
         meta.Moline.Aurora = hdr.Slick.Ottertail;
@@ -878,7 +878,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.Nashoba.Halfa = meta.Alamance.Blanchard;
         meta.Nashoba.Noelke = meta.Alamance.SaintAnn;
     }
-    @name(".Leland") action _Leland(bit<8> Menifee, bit<1> DewyRose, bit<1> Lambert, bit<1> Fergus, bit<1> Parkville) {
+    @name(".Leland") action _Leland_0(bit<8> Menifee, bit<1> DewyRose, bit<1> Lambert, bit<1> Fergus, bit<1> Parkville) {
         meta.Nashoba.Kekoskee = (bit<16>)hdr.Ahmeek[0].Pinta;
         meta.Nashoba.Charters = 1w1;
         meta.Wagener.Coqui = Menifee;
@@ -887,10 +887,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.Wagener.Spiro = Fergus;
         meta.Wagener.Anaconda = Parkville;
     }
-    @action_default_only("Tarnov") @name(".Biggers") table _Biggers_0 {
+    @action_default_only("Tarnov") @name(".Biggers") table _Biggers {
         actions = {
-            _Grygla();
-            _Tarnov();
+            _Grygla_0();
+            _Tarnov_4();
             @defaultonly NoAction_40();
         }
         key = {
@@ -900,10 +900,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_40();
     }
-    @name(".Bleecker") table _Bleecker_0 {
+    @name(".Bleecker") table _Bleecker {
         actions = {
-            _Tarnov_0();
-            _Shabbona();
+            _Tarnov_5();
+            _Shabbona_0();
             @defaultonly NoAction_41();
         }
         key = {
@@ -912,11 +912,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_41();
     }
-    @name(".Crump") table _Crump_0 {
+    @name(".Crump") table _Crump {
         actions = {
-            _Hanford();
-            _Edinburg();
-            _Moseley();
+            _Hanford_0();
+            _Edinburg_0();
+            _Moseley_0();
             @defaultonly NoAction_42();
         }
         key = {
@@ -927,21 +927,21 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_42();
     }
-    @name(".Kaeleku") table _Kaeleku_0 {
+    @name(".Kaeleku") table _Kaeleku {
         actions = {
-            _Honokahua();
-            _Valeene();
+            _Honokahua_0();
+            _Valeene_0();
         }
         key = {
             hdr.Slick.Corfu: exact @name("Slick.Corfu") ;
         }
         size = 4096;
-        default_action = _Valeene();
+        default_action = _Valeene_0();
     }
-    @name(".Myton") table _Myton_0 {
+    @name(".Myton") table _Myton {
         actions = {
-            _PeaRidge();
-            _Glenolden();
+            _PeaRidge_0();
+            _Glenolden_0();
             @defaultonly NoAction_43();
         }
         key = {
@@ -950,10 +950,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_43();
     }
-    @name(".Wenona") table _Wenona_0 {
+    @name(".Wenona") table _Wenona {
         actions = {
-            _Naylor();
-            _Youngtown();
+            _Naylor_0();
+            _Youngtown_0();
         }
         key = {
             hdr.Skillman.Waldo : exact @name("Skillman.Waldo") ;
@@ -962,12 +962,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Nashoba.Berea : exact @name("Nashoba.Berea") ;
         }
         size = 1024;
-        default_action = _Youngtown();
+        default_action = _Youngtown_0();
     }
-    @name(".Wyatte") table _Wyatte_0 {
+    @name(".Wyatte") table _Wyatte {
         actions = {
-            _Tarnov_1();
-            _Leland();
+            _Tarnov_6();
+            _Leland_0();
             @defaultonly NoAction_44();
         }
         key = {
@@ -976,57 +976,57 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_44();
     }
-    bit<18> _Chamois_temp_1;
-    bit<18> _Chamois_temp_2;
-    bit<1> _Chamois_tmp_1;
-    bit<1> _Chamois_tmp_2;
-    @name(".Millikin") RegisterAction<bit<1>, bit<32>, bit<1>>(Sprout) _Millikin_0 = {
+    bit<18> _Chamois_temp;
+    bit<18> _Chamois_temp_0;
+    bit<1> _Chamois_tmp;
+    bit<1> _Chamois_tmp_0;
+    @name(".Millikin") RegisterAction<bit<1>, bit<32>, bit<1>>(Sprout) _Millikin = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            bit<1> _Chamois_in_value_1;
-            _Chamois_in_value_1 = value;
-            value = _Chamois_in_value_1;
+            bit<1> _Chamois_in_value;
+            _Chamois_in_value = value;
+            value = _Chamois_in_value;
             rv = value;
         }
     };
-    @name(".Pierpont") RegisterAction<bit<1>, bit<32>, bit<1>>(Jemison) _Pierpont_0 = {
+    @name(".Pierpont") RegisterAction<bit<1>, bit<32>, bit<1>>(Jemison) _Pierpont = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            bit<1> _Chamois_in_value_2;
-            _Chamois_in_value_2 = value;
-            value = _Chamois_in_value_2;
-            rv = ~value;
+            bit<1> _Chamois_in_value_0;
+            _Chamois_in_value_0 = value;
+            value = _Chamois_in_value_0;
+            rv = ~_Chamois_in_value_0;
         }
     };
-    @name(".Sequim") action _Sequim() {
-        hash<bit<18>, bit<18>, tuple<bit<6>, bit<12>>, bit<19>>(_Chamois_temp_1, HashAlgorithm.identity, 18w0, { meta.Shine.Sitka, hdr.Ahmeek[0].Pinta }, 19w262144);
-        _Chamois_tmp_1 = _Millikin_0.execute((bit<32>)_Chamois_temp_1);
-        meta.Comobabi.Oneonta = _Chamois_tmp_1;
+    @name(".Sequim") action _Sequim_0() {
+        hash<bit<18>, bit<18>, tuple<bit<6>, bit<12>>, bit<19>>(_Chamois_temp, HashAlgorithm.identity, 18w0, { meta.Shine.Sitka, hdr.Ahmeek[0].Pinta }, 19w262144);
+        _Chamois_tmp = _Millikin.execute((bit<32>)_Chamois_temp);
+        meta.Comobabi.Oneonta = _Chamois_tmp;
     }
-    @name(".Hartwick") action _Hartwick(bit<1> Beresford) {
+    @name(".Hartwick") action _Hartwick_0(bit<1> Beresford) {
         meta.Comobabi.Oneonta = Beresford;
     }
-    @name(".Evendale") action _Evendale() {
+    @name(".Evendale") action _Evendale_0() {
         meta.Nashoba.Ladoga = hdr.Ahmeek[0].Pinta;
         meta.Nashoba.Pollard = 1w1;
     }
-    @name(".Woodrow") action _Woodrow() {
+    @name(".Woodrow") action _Woodrow_0() {
         meta.Nashoba.Ladoga = meta.Shine.Hanston;
         meta.Nashoba.Pollard = 1w0;
     }
-    @name(".Cadott") action _Cadott() {
-        hash<bit<18>, bit<18>, tuple<bit<6>, bit<12>>, bit<19>>(_Chamois_temp_2, HashAlgorithm.identity, 18w0, { meta.Shine.Sitka, hdr.Ahmeek[0].Pinta }, 19w262144);
-        _Chamois_tmp_2 = _Pierpont_0.execute((bit<32>)_Chamois_temp_2);
-        meta.Comobabi.Mentone = _Chamois_tmp_2;
+    @name(".Cadott") action _Cadott_0() {
+        hash<bit<18>, bit<18>, tuple<bit<6>, bit<12>>, bit<19>>(_Chamois_temp_0, HashAlgorithm.identity, 18w0, { meta.Shine.Sitka, hdr.Ahmeek[0].Pinta }, 19w262144);
+        _Chamois_tmp_0 = _Pierpont.execute((bit<32>)_Chamois_temp_0);
+        meta.Comobabi.Mentone = _Chamois_tmp_0;
     }
-    @name(".Duchesne") table _Duchesne_0 {
+    @name(".Duchesne") table _Duchesne {
         actions = {
-            _Sequim();
+            _Sequim_0();
         }
         size = 1;
-        default_action = _Sequim();
+        default_action = _Sequim_0();
     }
-    @use_hash_action(0) @name(".EastDuke") table _EastDuke_0 {
+    @use_hash_action(0) @name(".EastDuke") table _EastDuke {
         actions = {
-            _Hartwick();
+            _Hartwick_0();
             @defaultonly NoAction_45();
         }
         key = {
@@ -1035,55 +1035,55 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 64;
         default_action = NoAction_45();
     }
-    @name(".Elihu") table _Elihu_0 {
+    @name(".Elihu") table _Elihu {
         actions = {
-            _Evendale();
+            _Evendale_0();
             @defaultonly NoAction_46();
         }
         size = 1;
         default_action = NoAction_46();
     }
-    @name(".Fairhaven") table _Fairhaven_0 {
+    @name(".Fairhaven") table _Fairhaven {
         actions = {
-            _Woodrow();
+            _Woodrow_0();
             @defaultonly NoAction_47();
         }
         size = 1;
         default_action = NoAction_47();
     }
-    @name(".Tulalip") table _Tulalip_0 {
+    @name(".Tulalip") table _Tulalip {
         actions = {
-            _Cadott();
+            _Cadott_0();
         }
         size = 1;
-        default_action = _Cadott();
+        default_action = _Cadott_0();
     }
-    @name(".Dolores") action _Dolores() {
+    @name(".Dolores") action _Dolores_0() {
         hash<bit<32>, bit<32>, tuple<bit<24>, bit<24>, bit<24>, bit<24>, bit<16>>, bit<64>>(meta.Edesville.Raven, HashAlgorithm.crc32, 32w0, { hdr.Skillman.Waldo, hdr.Skillman.Halbur, hdr.Skillman.Barclay, hdr.Skillman.Bootjack, hdr.Skillman.Topanga }, 64w4294967296);
     }
-    @name(".Blossom") table _Blossom_0 {
+    @name(".Blossom") table _Blossom {
         actions = {
-            _Dolores();
+            _Dolores_0();
             @defaultonly NoAction_48();
         }
         size = 1;
         default_action = NoAction_48();
     }
-    @name(".Ocheyedan") action _Ocheyedan() {
+    @name(".Ocheyedan") action _Ocheyedan_0() {
         meta.Nashoba.Halfa = meta.Shine.Layton;
     }
-    @name(".Antlers") action _Antlers() {
+    @name(".Antlers") action _Antlers_0() {
         meta.Nashoba.Vallejo = meta.Shine.Garwood;
     }
-    @name(".Harbor") action _Harbor() {
+    @name(".Harbor") action _Harbor_0() {
         meta.Nashoba.Vallejo = meta.Moline.Stennett;
     }
-    @name(".Alakanuk") action _Alakanuk() {
+    @name(".Alakanuk") action _Alakanuk_0() {
         meta.Nashoba.Vallejo = (bit<6>)meta.Braxton.Wyndmere;
     }
-    @name(".FlatRock") table _FlatRock_0 {
+    @name(".FlatRock") table _FlatRock {
         actions = {
-            _Ocheyedan();
+            _Ocheyedan_0();
             @defaultonly NoAction_49();
         }
         key = {
@@ -1092,11 +1092,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1;
         default_action = NoAction_49();
     }
-    @name(".Volcano") table _Volcano_0 {
+    @name(".Volcano") table _Volcano {
         actions = {
-            _Antlers();
-            _Harbor();
-            _Alakanuk();
+            _Antlers_0();
+            _Harbor_0();
+            _Alakanuk_0();
             @defaultonly NoAction_50();
         }
         key = {
@@ -1106,19 +1106,19 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 3;
         default_action = NoAction_50();
     }
-    @min_width(16) @name(".Trotwood") direct_counter(CounterType.packets_and_bytes) _Trotwood_0;
-    @name(".Stoystown") action _Stoystown() {
+    @min_width(16) @name(".Trotwood") direct_counter(CounterType.packets_and_bytes) _Trotwood;
+    @name(".Stoystown") action _Stoystown_0() {
         meta.Wagener.Glendale = 1w1;
     }
-    @name(".Winside") action _Winside() {
+    @name(".Winside") action _Winside_0() {
     }
-    @name(".Indrio") action _Indrio() {
+    @name(".Indrio") action _Indrio_0() {
         meta.Nashoba.Success = 1w1;
         meta.Quivero.Bevington = 8w0;
     }
-    @name(".Dillsburg") table _Dillsburg_0 {
+    @name(".Dillsburg") table _Dillsburg {
         actions = {
-            _Stoystown();
+            _Stoystown_0();
             @defaultonly NoAction_51();
         }
         key = {
@@ -1129,11 +1129,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_51();
     }
-    @name(".Durant") table _Durant_0 {
+    @name(".Durant") table _Durant {
         support_timeout = true;
         actions = {
-            _Winside();
-            _Indrio();
+            _Winside_0();
+            _Indrio_0();
             @defaultonly NoAction_52();
         }
         key = {
@@ -1145,17 +1145,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 65536;
         default_action = NoAction_52();
     }
-    @name(".McCune") action _McCune() {
-        _Trotwood_0.count();
+    @name(".McCune") action _McCune_0() {
+        _Trotwood.count();
         meta.Nashoba.BigRock = 1w1;
     }
-    @name(".Tarnov") action _Tarnov_2() {
-        _Trotwood_0.count();
+    @name(".Tarnov") action _Tarnov_7() {
+        _Trotwood.count();
     }
-    @action_default_only("Tarnov") @name(".Shamokin") table _Shamokin_0 {
+    @action_default_only("Tarnov") @name(".Shamokin") table _Shamokin {
         actions = {
-            _McCune();
-            _Tarnov_2();
+            _McCune_0();
+            _Tarnov_7();
             @defaultonly NoAction_53();
         }
         key = {
@@ -1167,46 +1167,46 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Nashoba.Iselin  : ternary @name("Nashoba.Iselin") ;
         }
         size = 512;
-        counters = _Trotwood_0;
+        counters = _Trotwood;
         default_action = NoAction_53();
     }
-    @name(".Alnwick") action _Alnwick() {
+    @name(".Alnwick") action _Alnwick_0() {
         hash<bit<32>, bit<32>, tuple<bit<128>, bit<128>, bit<20>, bit<8>>, bit<64>>(meta.Edesville.CeeVee, HashAlgorithm.crc32, 32w0, { hdr.DuPont.Bayville, hdr.DuPont.Bluford, hdr.DuPont.Chewalla, hdr.DuPont.Hartford }, 64w4294967296);
     }
-    @name(".Croft") action _Croft() {
+    @name(".Croft") action _Croft_0() {
         hash<bit<32>, bit<32>, tuple<bit<8>, bit<32>, bit<32>>, bit<64>>(meta.Edesville.CeeVee, HashAlgorithm.crc32, 32w0, { hdr.Slick.Attica, hdr.Slick.Corfu, hdr.Slick.Ottertail }, 64w4294967296);
     }
-    @name(".Rollins") table _Rollins_0 {
+    @name(".Rollins") table _Rollins {
         actions = {
-            _Alnwick();
+            _Alnwick_0();
             @defaultonly NoAction_54();
         }
         size = 1;
         default_action = NoAction_54();
     }
-    @name(".RoseBud") table _RoseBud_0 {
+    @name(".RoseBud") table _RoseBud {
         actions = {
-            _Croft();
+            _Croft_0();
             @defaultonly NoAction_55();
         }
         size = 1;
         default_action = NoAction_55();
     }
-    @name(".ElkNeck") action _ElkNeck() {
+    @name(".ElkNeck") action _ElkNeck_0() {
         hash<bit<32>, bit<32>, tuple<bit<32>, bit<32>, bit<16>, bit<16>>, bit<64>>(meta.Edesville.Wewela, HashAlgorithm.crc32, 32w0, { hdr.Slick.Corfu, hdr.Slick.Ottertail, hdr.Tahlequah.Stecker, hdr.Tahlequah.Deeth }, 64w4294967296);
     }
-    @name(".Anthon") table _Anthon_0 {
+    @name(".Anthon") table _Anthon {
         actions = {
-            _ElkNeck();
+            _ElkNeck_0();
             @defaultonly NoAction_56();
         }
         size = 1;
         default_action = NoAction_56();
     }
-    @name(".Gobles") action _Gobles(bit<16> Putnam) {
+    @name(".Gobles") action _Gobles_1(bit<16> Putnam) {
         meta.Roseau.Firesteel = Putnam;
     }
-    @name(".Gobles") action _Gobles_0(bit<16> Putnam) {
+    @name(".Gobles") action _Gobles_2(bit<16> Putnam) {
         meta.Roseau.Firesteel = Putnam;
     }
     @name(".Gobles") action _Gobles_8(bit<16> Putnam) {
@@ -1221,7 +1221,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".Gobles") action _Gobles_11(bit<16> Putnam) {
         meta.Roseau.Firesteel = Putnam;
     }
-    @name(".Kaweah") action _Kaweah(bit<11> Benkelman) {
+    @name(".Kaweah") action _Kaweah_0(bit<11> Benkelman) {
         meta.Roseau.Plush = Benkelman;
         meta.Wagener.Cresco = 1w1;
     }
@@ -1245,7 +1245,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.Roseau.Plush = Benkelman;
         meta.Wagener.Cresco = 1w1;
     }
-    @name(".Tarnov") action _Tarnov_3() {
+    @name(".Tarnov") action _Tarnov_8() {
     }
     @name(".Tarnov") action _Tarnov_20() {
     }
@@ -1263,47 +1263,47 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".Tarnov") action _Tarnov_27() {
     }
-    @name(".Reubens") action _Reubens(bit<11> Hobart, bit<16> Malesus) {
+    @name(".Reubens") action _Reubens_0(bit<11> Hobart, bit<16> Malesus) {
         meta.Braxton.Ohiowa = Hobart;
         meta.Roseau.Firesteel = Malesus;
     }
-    @name(".EastLake") action _EastLake(bit<13> Quijotoa, bit<16> Pelican) {
+    @name(".EastLake") action _EastLake_0(bit<13> Quijotoa, bit<16> Pelican) {
         meta.Braxton.Wanilla = Quijotoa;
         meta.Roseau.Firesteel = Pelican;
     }
-    @name(".Bowen") action _Bowen(bit<16> Monahans, bit<16> Ramah) {
+    @name(".Bowen") action _Bowen_0(bit<16> Monahans, bit<16> Ramah) {
         meta.Moline.Hallville = Monahans;
         meta.Roseau.Firesteel = Ramah;
     }
-    @atcam_partition_index("Braxton.Ohiowa") @atcam_number_partitions(2048) @name(".Braymer") table _Braymer_0 {
+    @atcam_partition_index("Braxton.Ohiowa") @atcam_number_partitions(2048) @name(".Braymer") table _Braymer {
         actions = {
-            _Gobles();
-            _Kaweah();
-            _Tarnov_3();
+            _Gobles_1();
+            _Kaweah_0();
+            _Tarnov_8();
         }
         key = {
             meta.Braxton.Ohiowa         : exact @name("Braxton.Ohiowa") ;
-            meta.Braxton.Westpoint[63:0]: lpm @name("Braxton.Westpoint[63:0]") ;
+            meta.Braxton.Westpoint[63:0]: lpm @name("Braxton.Westpoint") ;
         }
         size = 16384;
-        default_action = _Tarnov_3();
+        default_action = _Tarnov_8();
     }
-    @ways(2) @atcam_partition_index("Moline.Hallville") @atcam_number_partitions(16384) @name(".Browndell") table _Browndell_0 {
+    @ways(2) @atcam_partition_index("Moline.Hallville") @atcam_number_partitions(16384) @name(".Browndell") table _Browndell {
         actions = {
-            _Gobles_0();
+            _Gobles_2();
             _Kaweah_6();
             _Tarnov_20();
         }
         key = {
             meta.Moline.Hallville   : exact @name("Moline.Hallville") ;
-            meta.Moline.Aurora[19:0]: lpm @name("Moline.Aurora[19:0]") ;
+            meta.Moline.Aurora[19:0]: lpm @name("Moline.Aurora") ;
         }
         size = 131072;
         default_action = _Tarnov_20();
     }
-    @action_default_only("Tarnov") @name(".Edinburgh") table _Edinburgh_0 {
+    @action_default_only("Tarnov") @name(".Edinburgh") table _Edinburgh {
         actions = {
-            _Reubens();
+            _Reubens_0();
             _Tarnov_21();
             @defaultonly NoAction_57();
         }
@@ -1314,7 +1314,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 2048;
         default_action = NoAction_57();
     }
-    @idletime_precision(1) @name(".Hiland") table _Hiland_0 {
+    @idletime_precision(1) @name(".Hiland") table _Hiland {
         support_timeout = true;
         actions = {
             _Gobles_8();
@@ -1328,7 +1328,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 65536;
         default_action = _Tarnov_22();
     }
-    @atcam_partition_index("Braxton.Wanilla") @atcam_number_partitions(8192) @name(".Hurdtown") table _Hurdtown_0 {
+    @atcam_partition_index("Braxton.Wanilla") @atcam_number_partitions(8192) @name(".Hurdtown") table _Hurdtown {
         actions = {
             _Gobles_9();
             _Kaweah_8();
@@ -1336,25 +1336,25 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Braxton.Wanilla          : exact @name("Braxton.Wanilla") ;
-            meta.Braxton.Westpoint[106:64]: lpm @name("Braxton.Westpoint[106:64]") ;
+            meta.Braxton.Westpoint[106:64]: lpm @name("Braxton.Westpoint") ;
         }
         size = 65536;
         default_action = _Tarnov_23();
     }
-    @action_default_only("Tarnov") @name(".Madera") table _Madera_0 {
+    @action_default_only("Tarnov") @name(".Madera") table _Madera {
         actions = {
-            _EastLake();
+            _EastLake_0();
             _Tarnov_24();
             @defaultonly NoAction_58();
         }
         key = {
             meta.Wagener.Coqui            : exact @name("Wagener.Coqui") ;
-            meta.Braxton.Westpoint[127:64]: lpm @name("Braxton.Westpoint[127:64]") ;
+            meta.Braxton.Westpoint[127:64]: lpm @name("Braxton.Westpoint") ;
         }
         size = 8192;
         default_action = NoAction_58();
     }
-    @action_default_only("Tarnov") @idletime_precision(1) @name(".Metter") table _Metter_0 {
+    @action_default_only("Tarnov") @idletime_precision(1) @name(".Metter") table _Metter {
         support_timeout = true;
         actions = {
             _Gobles_10();
@@ -1369,9 +1369,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_59();
     }
-    @action_default_only("Tarnov") @name(".MillCity") table _MillCity_0 {
+    @action_default_only("Tarnov") @name(".MillCity") table _MillCity {
         actions = {
-            _Bowen();
+            _Bowen_0();
             _Tarnov_26();
             @defaultonly NoAction_60();
         }
@@ -1382,7 +1382,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 16384;
         default_action = NoAction_60();
     }
-    @idletime_precision(1) @name(".Woodridge") table _Woodridge_0 {
+    @idletime_precision(1) @name(".Woodridge") table _Woodridge {
         support_timeout = true;
         actions = {
             _Gobles_11();
@@ -1396,25 +1396,25 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 65536;
         default_action = _Tarnov_27();
     }
-    @name(".Jessie") action _Jessie() {
+    @name(".Jessie") action _Jessie_0() {
         meta.Penrose.Lathrop = meta.Edesville.Wewela;
     }
     @name(".Tarnov") action _Tarnov_28() {
     }
     @name(".Tarnov") action _Tarnov_29() {
     }
-    @name(".Skene") action _Skene() {
+    @name(".Skene") action _Skene_0() {
         meta.Penrose.Philbrook = meta.Edesville.Raven;
     }
-    @name(".Kewanee") action _Kewanee() {
+    @name(".Kewanee") action _Kewanee_0() {
         meta.Penrose.Philbrook = meta.Edesville.CeeVee;
     }
-    @name(".Mooreland") action _Mooreland() {
+    @name(".Mooreland") action _Mooreland_0() {
         meta.Penrose.Philbrook = meta.Edesville.Wewela;
     }
-    @immediate(0) @name(".Joshua") table _Joshua_0 {
+    @immediate(0) @name(".Joshua") table _Joshua {
         actions = {
-            _Jessie();
+            _Jessie_0();
             _Tarnov_28();
             @defaultonly NoAction_61();
         }
@@ -1427,11 +1427,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 6;
         default_action = NoAction_61();
     }
-    @action_default_only("Tarnov") @immediate(0) @name(".PineCity") table _PineCity_0 {
+    @action_default_only("Tarnov") @immediate(0) @name(".PineCity") table _PineCity {
         actions = {
-            _Skene();
-            _Kewanee();
-            _Mooreland();
+            _Skene_0();
+            _Kewanee_0();
+            _Mooreland_0();
             _Tarnov_29();
             @defaultonly NoAction_62();
         }
@@ -1453,7 +1453,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".Gobles") action _Gobles_12(bit<16> Putnam) {
         meta.Roseau.Firesteel = Putnam;
     }
-    @name(".Petty") table _Petty_0 {
+    @name(".Petty") table _Petty {
         actions = {
             _Gobles_12();
             @defaultonly NoAction_63();
@@ -1466,29 +1466,29 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         implementation = Tabler;
         default_action = NoAction_63();
     }
-    @name(".Chenequa") action _Chenequa() {
+    @name(".Chenequa") action _Chenequa_0() {
         meta.Barksdale.Maywood = meta.Nashoba.Yakima;
         meta.Barksdale.Greenlawn = meta.Nashoba.Roodhouse;
         meta.Barksdale.Thalmann = meta.Nashoba.Crumstown;
         meta.Barksdale.Soledad = meta.Nashoba.Hatchel;
         meta.Barksdale.Rotan = meta.Nashoba.Allons;
     }
-    @name(".Youngwood") table _Youngwood_0 {
+    @name(".Youngwood") table _Youngwood {
         actions = {
-            _Chenequa();
+            _Chenequa_0();
         }
         size = 1;
-        default_action = _Chenequa();
+        default_action = _Chenequa_0();
     }
-    @name(".Canton") action _Canton(bit<24> Lilydale, bit<24> Hewins, bit<16> BirchRun) {
+    @name(".Canton") action _Canton_0(bit<24> Lilydale, bit<24> Hewins, bit<16> BirchRun) {
         meta.Barksdale.Rotan = BirchRun;
         meta.Barksdale.Maywood = Lilydale;
         meta.Barksdale.Greenlawn = Hewins;
         meta.Barksdale.Hannibal = 1w1;
     }
-    @name(".Honaker") table _Honaker_0 {
+    @name(".Honaker") table _Honaker {
         actions = {
-            _Canton();
+            _Canton_0();
             @defaultonly NoAction_64();
         }
         key = {
@@ -1497,64 +1497,64 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 65536;
         default_action = NoAction_64();
     }
-    @name(".Hulbert") action _Hulbert() {
+    @name(".Hulbert") action _Hulbert_0() {
         meta.Barksdale.Winger = 1w1;
         meta.Barksdale.Range = meta.Barksdale.Rotan;
     }
-    @name(".Suwanee") action _Suwanee() {
+    @name(".Suwanee") action _Suwanee_0() {
         meta.Barksdale.Devers = 1w1;
         meta.Barksdale.Powelton = 1w1;
         meta.Barksdale.Range = meta.Barksdale.Rotan;
     }
-    @name(".Longport") action _Longport() {
+    @name(".Longport") action _Longport_0() {
     }
-    @name(".SanJuan") action _SanJuan() {
+    @name(".SanJuan") action _SanJuan_0() {
         meta.Barksdale.Rockaway = 1w1;
         meta.Barksdale.Palomas = 1w1;
         meta.Barksdale.Range = meta.Barksdale.Rotan + 16w4096;
     }
-    @name(".Stonefort") action _Stonefort(bit<16> Chloride) {
+    @name(".Stonefort") action _Stonefort_0(bit<16> Chloride) {
         meta.Barksdale.Mullins = 1w1;
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)Chloride;
         meta.Barksdale.Aspetuck = Chloride;
     }
-    @name(".RossFork") action _RossFork(bit<16> Pilger) {
+    @name(".RossFork") action _RossFork_0(bit<16> Pilger) {
         meta.Barksdale.Rockaway = 1w1;
         meta.Barksdale.Range = Pilger;
     }
-    @name(".PineLawn") action _PineLawn() {
+    @name(".PineLawn") action _PineLawn_0() {
     }
-    @name(".Almeria") table _Almeria_0 {
+    @name(".Almeria") table _Almeria {
         actions = {
-            _Hulbert();
+            _Hulbert_0();
         }
         size = 1;
-        default_action = _Hulbert();
+        default_action = _Hulbert_0();
     }
-    @ways(1) @name(".Century") table _Century_0 {
+    @ways(1) @name(".Century") table _Century {
         actions = {
-            _Suwanee();
-            _Longport();
+            _Suwanee_0();
+            _Longport_0();
         }
         key = {
             meta.Barksdale.Maywood  : exact @name("Barksdale.Maywood") ;
             meta.Barksdale.Greenlawn: exact @name("Barksdale.Greenlawn") ;
         }
         size = 1;
-        default_action = _Longport();
+        default_action = _Longport_0();
     }
-    @name(".Maryhill") table _Maryhill_0 {
+    @name(".Maryhill") table _Maryhill {
         actions = {
-            _SanJuan();
+            _SanJuan_0();
         }
         size = 1;
-        default_action = _SanJuan();
+        default_action = _SanJuan_0();
     }
-    @name(".Ripon") table _Ripon_0 {
+    @name(".Ripon") table _Ripon {
         actions = {
-            _Stonefort();
-            _RossFork();
-            _PineLawn();
+            _Stonefort_0();
+            _RossFork_0();
+            _PineLawn_0();
         }
         key = {
             meta.Barksdale.Maywood  : exact @name("Barksdale.Maywood") ;
@@ -1562,15 +1562,15 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Barksdale.Rotan    : exact @name("Barksdale.Rotan") ;
         }
         size = 65536;
-        default_action = _PineLawn();
+        default_action = _PineLawn_0();
     }
-    @name(".Davant") action _Davant(bit<3> Bangor, bit<5> Eldena) {
+    @name(".Davant") action _Davant_0(bit<3> Bangor, bit<5> Eldena) {
         hdr.ig_intr_md_for_tm.ingress_cos = Bangor;
         hdr.ig_intr_md_for_tm.qid = Eldena;
     }
-    @name(".Hester") table _Hester_0 {
+    @name(".Hester") table _Hester {
         actions = {
-            _Davant();
+            _Davant_0();
             @defaultonly NoAction_65();
         }
         key = {
@@ -1582,38 +1582,38 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 80;
         default_action = NoAction_65();
     }
-    @min_width(64) @name(".Cornell") counter(32w4096, CounterType.packets) _Cornell_0;
-    @name(".ElkFalls") meter(32w2048, MeterType.packets) _ElkFalls_0;
-    @name(".Olathe") action _Olathe(bit<32> Gould) {
-        _ElkFalls_0.execute_meter<bit<2>>(Gould, meta.Cabot.Glenoma);
+    @min_width(64) @name(".Cornell") counter(32w4096, CounterType.packets) _Cornell;
+    @name(".ElkFalls") meter(32w2048, MeterType.packets) _ElkFalls;
+    @name(".Olathe") action _Olathe_0(bit<32> Gould) {
+        _ElkFalls.execute_meter<bit<2>>(Gould, meta.Cabot.Glenoma);
     }
-    @name(".Tamora") action _Tamora(bit<32> Lenexa) {
+    @name(".Tamora") action _Tamora_0(bit<32> Lenexa) {
         meta.Nashoba.BigRock = 1w1;
-        _Cornell_0.count(Lenexa);
+        _Cornell.count(Lenexa);
     }
-    @name(".Coalgate") action _Coalgate(bit<5> Senatobia, bit<32> Tramway) {
+    @name(".Coalgate") action _Coalgate_0(bit<5> Senatobia, bit<32> Tramway) {
         hdr.ig_intr_md_for_tm.qid = Senatobia;
-        _Cornell_0.count(Tramway);
+        _Cornell.count(Tramway);
     }
-    @name(".Hartwell") action _Hartwell(bit<5> Redmon, bit<3> Rembrandt, bit<32> Cooter) {
+    @name(".Hartwell") action _Hartwell_0(bit<5> Redmon, bit<3> Rembrandt, bit<32> Cooter) {
         hdr.ig_intr_md_for_tm.qid = Redmon;
         hdr.ig_intr_md_for_tm.ingress_cos = Rembrandt;
-        _Cornell_0.count(Cooter);
+        _Cornell.count(Cooter);
     }
-    @name(".Lisman") action _Lisman(bit<32> Belpre) {
-        _Cornell_0.count(Belpre);
+    @name(".Lisman") action _Lisman_0(bit<32> Belpre) {
+        _Cornell.count(Belpre);
     }
-    @name(".Buckholts") action _Buckholts(bit<32> Maben) {
+    @name(".Buckholts") action _Buckholts_0(bit<32> Maben) {
         hdr.ig_intr_md_for_tm.copy_to_cpu = 1w1;
-        _Cornell_0.count(Maben);
+        _Cornell.count(Maben);
     }
-    @name(".Gonzales") action _Gonzales() {
+    @name(".Gonzales") action _Gonzales_0() {
         meta.Nashoba.Silesia = 1w1;
         meta.Nashoba.BigRock = 1w1;
     }
-    @name(".Amasa") table _Amasa_0 {
+    @name(".Amasa") table _Amasa {
         actions = {
-            _Olathe();
+            _Olathe_0();
             @defaultonly NoAction_66();
         }
         key = {
@@ -1623,13 +1623,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 2048;
         default_action = NoAction_66();
     }
-    @name(".Philip") table _Philip_0 {
+    @name(".Philip") table _Philip {
         actions = {
-            _Tamora();
-            _Coalgate();
-            _Hartwell();
-            _Lisman();
-            _Buckholts();
+            _Tamora_0();
+            _Coalgate_0();
+            _Hartwell_0();
+            _Lisman_0();
+            _Buckholts_0();
             @defaultonly NoAction_67();
         }
         key = {
@@ -1640,21 +1640,21 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_67();
     }
-    @name(".Plata") table _Plata_0 {
+    @name(".Plata") table _Plata {
         actions = {
-            _Gonzales();
+            _Gonzales_0();
         }
         size = 1;
-        default_action = _Gonzales();
+        default_action = _Gonzales_0();
     }
-    @name(".Maybell") action _Maybell(bit<9> Wilton) {
+    @name(".Maybell") action _Maybell_0(bit<9> Wilton) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = Wilton;
     }
     @name(".Tarnov") action _Tarnov_30() {
     }
-    @name(".Mekoryuk") table _Mekoryuk_0 {
+    @name(".Mekoryuk") table _Mekoryuk {
         actions = {
-            _Maybell();
+            _Maybell_0();
             _Tarnov_30();
             @defaultonly NoAction_68();
         }
@@ -1666,103 +1666,103 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         implementation = Brazil;
         default_action = NoAction_68();
     }
-    @name(".Correo") action _Correo() {
-        digest<Charm>(32w0, { meta.Quivero.Bevington, meta.Nashoba.Allons, hdr.Maydelle.Barclay, hdr.Maydelle.Bootjack, hdr.Slick.Corfu });
+    @name(".Correo") action _Correo_0() {
+        digest<Charm>(32w0, {meta.Quivero.Bevington,meta.Nashoba.Allons,hdr.Maydelle.Barclay,hdr.Maydelle.Bootjack,hdr.Slick.Corfu});
     }
-    @name(".Corum") table _Corum_0 {
+    @name(".Corum") table _Corum {
         actions = {
-            _Correo();
+            _Correo_0();
         }
         size = 1;
-        default_action = _Correo();
+        default_action = _Correo_0();
     }
-    @name(".Eveleth") action _Eveleth() {
-        digest<Monkstown>(32w0, { meta.Quivero.Bevington, meta.Nashoba.Crumstown, meta.Nashoba.Hatchel, meta.Nashoba.Allons, meta.Nashoba.Ekron });
+    @name(".Eveleth") action _Eveleth_0() {
+        digest<Monkstown>(32w0, {meta.Quivero.Bevington,meta.Nashoba.Crumstown,meta.Nashoba.Hatchel,meta.Nashoba.Allons,meta.Nashoba.Ekron});
     }
-    @name(".Riner") table _Riner_0 {
+    @name(".Riner") table _Riner {
         actions = {
-            _Eveleth();
+            _Eveleth_0();
             @defaultonly NoAction_69();
         }
         size = 1;
         default_action = NoAction_69();
     }
-    @name(".ElMirage") action _ElMirage() {
+    @name(".ElMirage") action _ElMirage_0() {
         hdr.Skillman.Topanga = hdr.Ahmeek[0].Wrens;
         hdr.Ahmeek[0].setInvalid();
     }
-    @name(".Tolleson") table _Tolleson_0 {
+    @name(".Tolleson") table _Tolleson {
         actions = {
-            _ElMirage();
+            _ElMirage_0();
         }
         size = 1;
-        default_action = _ElMirage();
+        default_action = _ElMirage_0();
     }
     apply {
         if (hdr.ig_intr_md.resubmit_flag == 1w0) 
-            _Lapoint_0.apply();
-        _Wilmore_0.apply();
-        _Inola_0.apply();
-        switch (_Wenona_0.apply().action_run) {
-            _Naylor: {
-                _Kaeleku_0.apply();
-                _Myton_0.apply();
+            _Lapoint.apply();
+        _Wilmore.apply();
+        _Inola.apply();
+        switch (_Wenona.apply().action_run) {
+            _Naylor_0: {
+                _Kaeleku.apply();
+                _Myton.apply();
             }
-            _Youngtown: {
+            _Youngtown_0: {
                 if (meta.Shine.Emigrant == 1w1) 
-                    _Crump_0.apply();
+                    _Crump.apply();
                 if (hdr.Ahmeek[0].isValid()) 
-                    switch (_Biggers_0.apply().action_run) {
-                        _Tarnov: {
-                            _Wyatte_0.apply();
+                    switch (_Biggers.apply().action_run) {
+                        _Tarnov_4: {
+                            _Wyatte.apply();
                         }
                     }
 
                 else 
-                    _Bleecker_0.apply();
+                    _Bleecker.apply();
             }
         }
 
         if (hdr.Ahmeek[0].isValid()) {
-            _Elihu_0.apply();
+            _Elihu.apply();
             if (meta.Shine.Oronogo == 1w1) {
-                _Tulalip_0.apply();
-                _Duchesne_0.apply();
+                _Tulalip.apply();
+                _Duchesne.apply();
             }
         }
         else {
-            _Fairhaven_0.apply();
+            _Fairhaven.apply();
             if (meta.Shine.Oronogo == 1w1) 
-                _EastDuke_0.apply();
+                _EastDuke.apply();
         }
-        _Blossom_0.apply();
-        _FlatRock_0.apply();
-        _Volcano_0.apply();
-        switch (_Shamokin_0.apply().action_run) {
-            _Tarnov_2: {
+        _Blossom.apply();
+        _FlatRock.apply();
+        _Volcano.apply();
+        switch (_Shamokin.apply().action_run) {
+            _Tarnov_7: {
                 if (meta.Shine.Baldwin == 1w0 && meta.Nashoba.McCammon == 1w0) 
-                    _Durant_0.apply();
-                _Dillsburg_0.apply();
+                    _Durant.apply();
+                _Dillsburg.apply();
             }
         }
 
         if (hdr.Slick.isValid()) 
-            _RoseBud_0.apply();
+            _RoseBud.apply();
         else 
             if (hdr.DuPont.isValid()) 
-                _Rollins_0.apply();
+                _Rollins.apply();
         if (hdr.Tahlequah.isValid()) 
-            _Anthon_0.apply();
+            _Anthon.apply();
         if (meta.Nashoba.BigRock == 1w0 && meta.Wagener.Glendale == 1w1) 
             if (meta.Wagener.Bayard == 1w1 && meta.Nashoba.MuleBarn == 1w1) 
-                switch (_Woodridge_0.apply().action_run) {
+                switch (_Woodridge.apply().action_run) {
                     _Tarnov_27: {
-                        switch (_MillCity_0.apply().action_run) {
-                            _Bowen: {
-                                _Browndell_0.apply();
+                        switch (_MillCity.apply().action_run) {
+                            _Bowen_0: {
+                                _Browndell.apply();
                             }
                             _Tarnov_26: {
-                                _Metter_0.apply();
+                                _Metter.apply();
                             }
                         }
 
@@ -1771,16 +1771,16 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
 
             else 
                 if (meta.Wagener.LasLomas == 1w1 && meta.Nashoba.Portales == 1w1) 
-                    switch (_Hiland_0.apply().action_run) {
+                    switch (_Hiland.apply().action_run) {
                         _Tarnov_22: {
-                            switch (_Edinburgh_0.apply().action_run) {
-                                _Reubens: {
-                                    _Braymer_0.apply();
+                            switch (_Edinburgh.apply().action_run) {
+                                _Reubens_0: {
+                                    _Braymer.apply();
                                 }
                                 _Tarnov_21: {
-                                    switch (_Madera_0.apply().action_run) {
-                                        _EastLake: {
-                                            _Hurdtown_0.apply();
+                                    switch (_Madera.apply().action_run) {
+                                        _EastLake_0: {
+                                            _Hurdtown.apply();
                                         }
                                     }
 
@@ -1790,45 +1790,45 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                         }
                     }
 
-        _Joshua_0.apply();
-        _PineCity_0.apply();
+        _Joshua.apply();
+        _PineCity.apply();
         if (meta.Roseau.Plush != 11w0) 
-            _Petty_0.apply();
+            _Petty.apply();
         if (meta.Nashoba.Allons != 16w0) 
-            _Youngwood_0.apply();
+            _Youngwood.apply();
         if (meta.Roseau.Firesteel != 16w0) 
-            _Honaker_0.apply();
+            _Honaker.apply();
         if (meta.Nashoba.BigRock == 1w0) 
-            switch (_Ripon_0.apply().action_run) {
-                _PineLawn: {
-                    switch (_Century_0.apply().action_run) {
-                        _Longport: {
+            switch (_Ripon.apply().action_run) {
+                _PineLawn_0: {
+                    switch (_Century.apply().action_run) {
+                        _Longport_0: {
                             if (meta.Barksdale.Maywood & 24w0x10000 == 24w0x10000) 
-                                _Maryhill_0.apply();
+                                _Maryhill.apply();
                             else 
-                                _Almeria_0.apply();
+                                _Almeria.apply();
                         }
                     }
 
                 }
             }
 
-        _Hester_0.apply();
+        _Hester.apply();
         if (meta.Nashoba.BigRock == 1w0) 
             if (meta.Barksdale.Hannibal == 1w0 && meta.Nashoba.Ekron == meta.Barksdale.Aspetuck) 
-                _Plata_0.apply();
+                _Plata.apply();
             else {
-                _Amasa_0.apply();
-                _Philip_0.apply();
+                _Amasa.apply();
+                _Philip.apply();
             }
         if (meta.Barksdale.Aspetuck & 16w0x2000 == 16w0x2000) 
-            _Mekoryuk_0.apply();
+            _Mekoryuk.apply();
         if (meta.Nashoba.McCammon == 1w1) 
-            _Corum_0.apply();
+            _Corum.apply();
         if (meta.Nashoba.Success == 1w1) 
-            _Riner_0.apply();
+            _Riner.apply();
         if (hdr.Ahmeek[0].isValid()) 
-            _Tolleson_0.apply();
+            _Tolleson.apply();
     }
 }
 

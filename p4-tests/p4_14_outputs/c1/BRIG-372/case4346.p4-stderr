@@ -22,81 +22,9 @@ case4346.p4(2418): warning: -1: negative value with unsigned type
 case4346.p4(2441): warning: -1: negative value with unsigned type
    Portville( -1 );
                ^
-case4346.p4(904): warning: >>: shifting value with 1 bits by 2
-   shift_right( Bigspring.Lignite, Coupland.Edinburgh, 2 );
-   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-case4346.p4(926): warning: >>: shifting value with 1 bits by 2
-   shift_right( Bigspring.Lignite, Coupland.Umkumiut, 2 );
-   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-case4346.p4(904): warning: >>: shifting value with 1 bits by 2
-   shift_right( Bigspring.Lignite, Coupland.Edinburgh, 2 );
-   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-case4346.p4(926): warning: >>: shifting value with 1 bits by 2
-   shift_right( Bigspring.Lignite, Coupland.Umkumiut, 2 );
-   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-case4346.p4(904): warning: >>: shifting value with 1 bits by 2
-   shift_right( Bigspring.Lignite, Coupland.Edinburgh, 2 );
-   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-case4346.p4(926): warning: >>: shifting value with 1 bits by 2
-   shift_right( Bigspring.Lignite, Coupland.Umkumiut, 2 );
-   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-case4346.p4(904): warning: >>: shifting value with 1 bits by 2
-   shift_right( Bigspring.Lignite, Coupland.Edinburgh, 2 );
-   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-case4346.p4(926): warning: >>: shifting value with 1 bits by 2
-   shift_right( Bigspring.Lignite, Coupland.Umkumiut, 2 );
-   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-case4346.p4(904): warning: >>: shifting value with 1 bits by 2
-   shift_right( Bigspring.Lignite, Coupland.Edinburgh, 2 );
-   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-case4346.p4(926): warning: >>: shifting value with 1 bits by 2
-   shift_right( Bigspring.Lignite, Coupland.Umkumiut, 2 );
-   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-case4346.p4(904): warning: >>: shifting value with 1 bits by 2
-   shift_right( Bigspring.Lignite, Coupland.Edinburgh, 2 );
-   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-case4346.p4(926): warning: >>: shifting value with 1 bits by 2
-   shift_right( Bigspring.Lignite, Coupland.Umkumiut, 2 );
-   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-case4346.p4(904): warning: >>: shifting value with 1 bits by 2
-   shift_right( Bigspring.Lignite, Coupland.Edinburgh, 2 );
-   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-case4346.p4(926): warning: >>: shifting value with 1 bits by 2
-   shift_right( Bigspring.Lignite, Coupland.Umkumiut, 2 );
-   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-case4346.p4(904): warning: >>: shifting value with 1 bits by 2
-   shift_right( Bigspring.Lignite, Coupland.Edinburgh, 2 );
-   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-case4346.p4(926): warning: >>: shifting value with 1 bits by 2
-   shift_right( Bigspring.Lignite, Coupland.Umkumiut, 2 );
-   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-case4346.p4(904): warning: >>: shifting value with 1 bits by 2
-   shift_right( Bigspring.Lignite, Coupland.Edinburgh, 2 );
-   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-case4346.p4(926): warning: >>: shifting value with 1 bits by 2
-   shift_right( Bigspring.Lignite, Coupland.Umkumiut, 2 );
-   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-case4346.p4(904): warning: >>: shifting value with 1 bits by 2
-   shift_right( Bigspring.Lignite, Coupland.Edinburgh, 2 );
-   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-case4346.p4(926): warning: >>: shifting value with 1 bits by 2
-   shift_right( Bigspring.Lignite, Coupland.Umkumiut, 2 );
-   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-case4346.p4(904): warning: >>: shifting value with 1 bits by 2
-   shift_right( Bigspring.Lignite, Coupland.Edinburgh, 2 );
-   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-case4346.p4(926): warning: >>: shifting value with 1 bits by 2
-   shift_right( Bigspring.Lignite, Coupland.Umkumiut, 2 );
-   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 case4346.p4(465): warning: SelectCase: unreachable
       0xBF00 : Glendale;
       ^^^^^^
 case4346.p4(463): warning: ListExpression: transition does not depend on select argument
    return select(current(96, 16)) {
                  ^^^^^^^^^^^^^^^
-case4346.p4(904): warning: >>: shifting value with 1 bits by 2
-   shift_right( Bigspring.Lignite, Coupland.Edinburgh, 2 );
-   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-case4346.p4(926): warning: >>: shifting value with 1 bits by 2
-   shift_right( Bigspring.Lignite, Coupland.Umkumiut, 2 );
-   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

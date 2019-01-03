@@ -34,28 +34,28 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_5() {
     }
-    @name(".set_port") action set_port_0(bit<9> port) {
+    @name(".set_port") action set_port(bit<9> port) {
         standard_metadata.egress_spec = port;
     }
-    @name(".bitmasked_adt") action bitmasked_adt_0(bit<2> param1, bit<2> param2, bit<32> param3) {
+    @name(".bitmasked_adt") action bitmasked_adt(bit<2> param1, bit<2> param2, bit<32> param3) {
         hdr.data.x1 = param1;
         hdr.data.x3 = param2;
         hdr.data.f1 = param3;
     }
-    @name(".bitmasked_immed") action bitmasked_immed_0(bit<2> param1, bit<2> param2, bit<8> param3) {
+    @name(".bitmasked_immed") action bitmasked_immed(bit<2> param1, bit<2> param2, bit<8> param3) {
         hdr.data.x1 = param1;
         hdr.data.x3 = param2;
         hdr.data.b1 = param3;
     }
-    @name(".bitmasked_immed2") action bitmasked_immed2_0(bit<2> param1, bit<2> param2, bit<8> param3, bit<8> param4) {
+    @name(".bitmasked_immed2") action bitmasked_immed2(bit<2> param1, bit<2> param2, bit<8> param3, bit<8> param4) {
         hdr.data.x2 = param1;
         hdr.data.x4 = param2;
         hdr.data.b1 = param3;
         hdr.data.b2 = param4;
     }
-    @name(".port_setter") table port_setter {
+    @name(".port_setter") table port_setter_0 {
         actions = {
-            set_port_0();
+            set_port();
             @defaultonly NoAction_0();
         }
         key = {
@@ -63,9 +63,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name(".test1") table test1 {
+    @name(".test1") table test1_0 {
         actions = {
-            bitmasked_adt_0();
+            bitmasked_adt();
             @defaultonly NoAction_4();
         }
         key = {
@@ -73,10 +73,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_4();
     }
-    @name(".test2") table test2 {
+    @name(".test2") table test2_0 {
         actions = {
-            bitmasked_immed_0();
-            bitmasked_immed2_0();
+            bitmasked_immed();
+            bitmasked_immed2();
             @defaultonly NoAction_5();
         }
         key = {
@@ -85,9 +85,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_5();
     }
     apply {
-        test1.apply();
-        test2.apply();
-        port_setter.apply();
+        test1_0.apply();
+        test2_0.apply();
+        port_setter_0.apply();
     }
 }
 

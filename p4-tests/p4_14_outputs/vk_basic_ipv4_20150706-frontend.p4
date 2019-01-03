@@ -248,15 +248,15 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".nop") action nop_0() {
+    @name(".nop") action nop() {
     }
-    @name(".udp_set_src") action udp_set_src_0(bit<16> port) {
+    @name(".udp_set_src") action udp_set_src(bit<16> port) {
         hdr.udp.srcPort = port;
     }
-    @immediate(1) @stage(0) @name(".eg_udp") table eg_udp {
+    @immediate(1) @stage(0) @name(".eg_udp") table eg_udp_0 {
         actions = {
-            nop_0();
-            udp_set_src_0();
+            nop();
+            udp_set_src();
             @defaultonly NoAction_0();
         }
         key = {
@@ -268,27 +268,27 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = NoAction_0();
     }
     apply {
-        eg_udp.apply();
+        eg_udp_0.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_1() {
     }
-    @name(".nop") action nop_1() {
+    @name(".nop") action nop_2() {
     }
-    @name(".hop_ipv4") action hop_ipv4_0(bit<9> egress_port) {
+    @name(".hop_ipv4") action hop_ipv4(bit<9> egress_port) {
         {
-            bit<8> ttl_0 = hdr.ipv4.ttl;
-            ttl_0 = ttl_0 + 8w255;
+            bit<8> ttl_1 = hdr.ipv4.ttl;
+            ttl_1 = ttl_1 + 8w255;
             hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
-            hdr.ipv4.ttl = ttl_0;
+            hdr.ipv4.ttl = ttl_1;
         }
     }
-    @stage(5) @name(".tcam_range") table tcam_range {
+    @stage(5) @name(".tcam_range") table tcam_range_0 {
         actions = {
-            nop_1();
-            hop_ipv4_0();
+            nop_2();
+            hop_ipv4();
             @defaultonly NoAction_1();
         }
         key = {
@@ -299,7 +299,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_1();
     }
     apply {
-        tcam_range.apply();
+        tcam_range_0.apply();
     }
 }
 

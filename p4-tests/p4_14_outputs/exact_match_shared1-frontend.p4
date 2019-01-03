@@ -45,7 +45,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_15() {
     }
-    @name(".noop") action noop_0() {
+    @name(".noop") action noop() {
     }
     @name(".noop") action noop_8() {
     }
@@ -61,9 +61,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".noop") action noop_14() {
     }
-    @name(".test1") table test1 {
+    @name(".test1") table test1_0 {
         actions = {
-            noop_0();
+            noop();
             @defaultonly NoAction_0();
         }
         key = {
@@ -71,7 +71,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name(".test2") table test2 {
+    @name(".test2") table test2_0 {
         actions = {
             noop_8();
             @defaultonly NoAction_9();
@@ -81,7 +81,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_9();
     }
-    @name(".test3") table test3 {
+    @name(".test3") table test3_0 {
         actions = {
             noop_9();
             @defaultonly NoAction_10();
@@ -91,7 +91,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_10();
     }
-    @name(".test4") table test4 {
+    @name(".test4") table test4_0 {
         actions = {
             noop_10();
             @defaultonly NoAction_11();
@@ -101,7 +101,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_11();
     }
-    @name(".test5") table test5 {
+    @name(".test5") table test5_0 {
         actions = {
             noop_11();
             @defaultonly NoAction_12();
@@ -111,7 +111,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_12();
     }
-    @name(".test6") table test6 {
+    @name(".test6") table test6_0 {
         actions = {
             noop_12();
             @defaultonly NoAction_13();
@@ -121,7 +121,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_13();
     }
-    @name(".test7") table test7 {
+    @name(".test7") table test7_0 {
         actions = {
             noop_13();
             @defaultonly NoAction_14();
@@ -131,7 +131,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_14();
     }
-    @name(".test8") table test8 {
+    @name(".test8") table test8_0 {
         actions = {
             noop_14();
             @defaultonly NoAction_15();
@@ -143,14 +143,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_15();
     }
     apply {
-        test1.apply();
-        test2.apply();
-        test3.apply();
-        test4.apply();
-        test5.apply();
-        test6.apply();
-        test7.apply();
-        test8.apply();
+        test1_0.apply();
+        test2_0.apply();
+        test3_0.apply();
+        test4_0.apply();
+        test5_0.apply();
+        test6_0.apply();
+        test7_0.apply();
+        test8_0.apply();
     }
 }
 

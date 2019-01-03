@@ -28,31 +28,31 @@ struct pair {
 control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_metadata_t ig_intr_md, in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md, inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md, inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name("IngressP.test_reg_dir") DirectRegister<pair>() test_reg_dir;
-    @name("IngressP.test_reg_dir_action") DirectRegisterAction<pair, bit<32>>(test_reg_dir) test_reg_dir_action = {
+    @name("IngressP.test_reg_dir") DirectRegister<pair>() test_reg_dir_0;
+    @name("IngressP.test_reg_dir_action") DirectRegisterAction<pair, bit<32>>(test_reg_dir_0) test_reg_dir_action_0 = {
         void apply(inout pair value, out bit<32> read_value) {
             read_value = value.second;
             value.first = value.first + 32w1;
             value.second = value.second + 32w100;
         }
     };
-    @name("IngressP.register_action_dir") action register_action_dir_0() {
-        test_reg_dir_action.execute();
+    @name("IngressP.register_action_dir") action register_action_dir() {
+        test_reg_dir_action_0.execute();
     }
-    @name("IngressP.reg_match_dir") table reg_match_dir {
+    @name("IngressP.reg_match_dir") table reg_match_dir_0 {
         key = {
             hdr.data.v: exact @name("hdr.data.v") ;
         }
         actions = {
-            register_action_dir_0();
+            register_action_dir();
             @defaultonly NoAction_0();
         }
         size = 1024;
-        registers = test_reg_dir;
+        registers = test_reg_dir_0;
         default_action = NoAction_0();
     }
     apply {
-        reg_match_dir.apply();
+        reg_match_dir_0.apply();
         ig_intr_tm_md.bypass_egress = true;
     }
 }

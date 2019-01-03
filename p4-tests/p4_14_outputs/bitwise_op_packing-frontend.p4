@@ -29,16 +29,16 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".and_action") action and_action_0() {
+    @name(".and_action") action and_action() {
         hdr.data.f4 = hdr.data.f3 & hdr.data.f4;
         hdr.data.pad2 = hdr.data.pad1 & hdr.data.pad2;
     }
-    @name(".noop") action noop_0() {
+    @name(".noop") action noop() {
     }
-    @name(".and_action") table and_action_1 {
+    @name(".and_action") table and_action_2 {
         actions = {
-            and_action_0();
-            noop_0();
+            and_action();
+            noop();
             @defaultonly NoAction_0();
         }
         key = {
@@ -47,7 +47,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = NoAction_0();
     }
     apply {
-        and_action_1.apply();
+        and_action_2.apply();
     }
 }
 

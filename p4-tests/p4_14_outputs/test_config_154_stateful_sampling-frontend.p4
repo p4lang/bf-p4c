@@ -2,6 +2,7 @@
 #include <v1model.p4>
 
 struct meta_t {
+    @saturating 
     int<8> needs_sampling;
 }
 
@@ -174,27 +175,27 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    bit<8> tmp_0;
-    @name(".sampler_alu") DirectRegisterAction<bit<8>, bit<8>>(flow_cnt) sampler_alu = {
+    bit<8> tmp;
+    @name(".sampler_alu") DirectRegisterAction<bit<8>, bit<8>>(flow_cnt) sampler_alu_0 = {
         void apply(inout bit<8> value, out bit<8> rv) {
-            bit<8> in_value;
+            bit<8> in_value_0;
             rv = 8w0;
-            in_value = value;
-            if (in_value == 8w10) 
+            in_value_0 = value;
+            if (in_value_0 == 8w10) 
                 value = 8w1;
-            if (in_value != 8w10) 
-                value = in_value + 8w1;
-            if (in_value == 8w10) 
+            if (in_value_0 != 8w10) 
+                value = in_value_0 + 8w1;
+            if (in_value_0 == 8w10) 
                 rv = value;
         }
     };
-    @name(".sample") action sample_0() {
-        tmp_0 = sampler_alu.execute();
-        meta.meta.needs_sampling = (int<8>)tmp_0;
+    @name(".sample") action sample() {
+        tmp = sampler_alu_0.execute();
+        meta.meta.needs_sampling = (int<8>)tmp;
     }
-    @name(".match_tbl") table match_tbl {
+    @name(".match_tbl") table match_tbl_0 {
         actions = {
-            sample_0();
+            sample();
             @defaultonly NoAction_0();
         }
         key = {
@@ -205,7 +206,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_0();
     }
     apply {
-        match_tbl.apply();
+        match_tbl_0.apply();
     }
 }
 

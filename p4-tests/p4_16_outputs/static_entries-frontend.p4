@@ -43,28 +43,29 @@ control SwitchEgressDeparser(packet_out pkt, inout switch_header_t hdr, in switc
 }
 
 control SwitchIngress(inout switch_header_t hdr, inout switch_metadata_t ig_md, in ingress_intrinsic_metadata_t ig_intr_md, in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md, inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md, inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
-    @name("SwitchIngress.set_port_and_smac") action set_port_and_smac_0(bit<32> src_addr) {
+    @name("SwitchIngress.set_port_and_smac") action set_port_and_smac(bit<32> src_addr) {
         hdr.ethernet.src_addr = (bit<48>)src_addr;
         ig_intr_tm_md.ucast_egress_port = ig_intr_md.ingress_port;
     }
-    @name("SwitchIngress.forward") table forward {
+    @name("SwitchIngress.forward") table forward_0 {
         key = {
             hdr.ethernet.ether_type: exact @name("hdr.ethernet.ether_type") ;
+            hdr.ethernet.isValid() : exact @name("hdr.ethernet.$valid$") ;
         }
         actions = {
-            set_port_and_smac_0();
+            set_port_and_smac();
         }
-        const default_action = set_port_and_smac_0(32w0x1);
+        const default_action = set_port_and_smac(32w0x1);
         const entries = {
-                        16w0x800 : set_port_and_smac_0(32w0x2);
+                        (16w0x800, true) : set_port_and_smac(32w0x2);
 
-                        16w0x86dd : set_port_and_smac_0(32w0x3);
+                        (16w0x86dd, true) : set_port_and_smac(32w0x3);
 
         }
 
     }
     apply {
-        forward.apply();
+        forward_0.apply();
     }
 }
 

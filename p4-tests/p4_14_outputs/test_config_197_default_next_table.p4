@@ -197,7 +197,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             do_nothing;
         }
         key = {
-            hdr.pkt.field_a_32[7:0]: ternary;
+            hdr.pkt.field_a_32[7:0]: ternary @name("pkt.field_a_32") ;
         }
         size = 256;
     }

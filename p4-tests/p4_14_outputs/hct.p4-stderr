@@ -1,0 +1,6 @@
+hct.p4(57): warning: drop_ctl shadows .drop_ctl
+action drop_ctl( drop_ctl ) {
+                 ^^^^^^^^
+hct.p4(57)
+action drop_ctl( drop_ctl ) {
+^

@@ -214,20 +214,20 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    @name(".ipv4_lpm_hit") action ipv4_lpm_hit_0() {
+    @name(".ipv4_lpm_hit") action ipv4_lpm_hit() {
         hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
     }
-    @name(".lpm_miss") action lpm_miss_0(bit<8> param0) {
+    @name(".lpm_miss") action lpm_miss(bit<8> param0) {
         hdr.ipv4.ttl = param0;
         mark_to_drop();
     }
-    @name(".set_partition_index") action set_partition_index_0(bit<10> idx) {
+    @name(".set_partition_index") action set_partition_index(bit<10> idx) {
         meta.meta.partition_index = idx;
     }
-    @pack(1) @ways(4) @atcam_partition_index("meta.partition_index") @name(".ipv4_alg_tcam") table ipv4_alg_tcam {
+    @pack(1) @ways(4) @atcam_partition_index("meta.partition_index") @name(".ipv4_alg_tcam") table ipv4_alg_tcam_0 {
         actions = {
-            ipv4_lpm_hit_0();
-            lpm_miss_0();
+            ipv4_lpm_hit();
+            lpm_miss();
             @defaultonly NoAction_0();
         }
         key = {
@@ -239,9 +239,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         implementation = ap;
         default_action = NoAction_0();
     }
-    @name(".ipv4_lpm_partition") table ipv4_lpm_partition {
+    @name(".ipv4_lpm_partition") table ipv4_lpm_partition_0 {
         actions = {
-            set_partition_index_0();
+            set_partition_index();
             @defaultonly NoAction_3();
         }
         key = {
@@ -252,8 +252,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_3();
     }
     apply {
-        ipv4_lpm_partition.apply();
-        ipv4_alg_tcam.apply();
+        ipv4_lpm_partition_0.apply();
+        ipv4_alg_tcam_0.apply();
     }
 }
 

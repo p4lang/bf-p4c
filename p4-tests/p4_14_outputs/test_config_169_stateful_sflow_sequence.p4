@@ -9,6 +9,7 @@ struct meta_t {
 struct sflowHdr_t {
     bit<16> seq_num;
     bit<16> num_samples;
+    @saturating 
     bit<16> temp;
     bit<16> drops;
 }
@@ -247,7 +248,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.meta.sflow_sample_seq_no = seq_num_gen.execute();
     }
     @name(".calc_next_seq_num") action calc_next_seq_num() {
-        meta.sflowHdr.temp = meta.sflowHdr.seq_num + meta.sflowHdr.num_samples;
+        meta.sflowHdr.temp = meta.sflowHdr.seq_num |+| meta.sflowHdr.num_samples;
     }
     @name(".chk_sflow_seq_num") action chk_sflow_seq_num() {
         meta.sflowHdr.drops = (bit<16>)sflow_exp_seq_num.execute();

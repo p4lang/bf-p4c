@@ -32,10 +32,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    bit<16> tmp_1;
-    bit<16> tmp_2;
-    @name("ingress.accum") register<pair>(32w4096) accum;
-    @name("ingress.sful_a") RegisterAction<pair, bit<32>, bit<16>>(accum) sful_a = {
+    bit<16> tmp;
+    bit<16> tmp_0;
+    @name("ingress.accum") register<pair>(32w4096) accum_0;
+    @name("ingress.sful_a") RegisterAction<pair, bit<32>, bit<16>>(accum_0) sful_a_0 = {
         void apply(inout pair value, out bit<16> rv) {
             rv = value.first;
             if (hdr.data.h2 > value.first && hdr.data.h2 < value.second) 
@@ -46,27 +46,27 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 value.second = hdr.data.h3;
         }
     };
-    @name("ingress.sful_b") RegisterAction<pair, bit<32>, bit<16>>(accum) sful_b = {
+    @name("ingress.sful_b") RegisterAction<pair, bit<32>, bit<16>>(accum_0) sful_b_0 = {
         void apply(inout pair value, out bit<16> rv) {
             rv = value.second;
             if (value.second <= hdr.data.h2) 
                 value.second = value.second + hdr.data.h3;
         }
     };
-    @name("ingress.act_a") action act_a_0(bit<9> port) {
+    @name("ingress.act_a") action act_a(bit<9> port) {
         standard_metadata.egress_spec = port;
-        tmp_1 = sful_a.execute(hdr.data.f2);
-        hdr.data.h1 = tmp_1;
+        tmp = sful_a_0.execute(hdr.data.f2);
+        hdr.data.h1 = tmp;
     }
-    @name("ingress.act_b") action act_b_0(bit<9> port) {
+    @name("ingress.act_b") action act_b(bit<9> port) {
         standard_metadata.egress_spec = port;
-        tmp_2 = sful_b.execute(hdr.data.f2);
-        hdr.data.h1 = tmp_2;
+        tmp_0 = sful_b_0.execute(hdr.data.f2);
+        hdr.data.h1 = tmp_0;
     }
-    @name("ingress.test1") table test1 {
+    @name("ingress.test1") table test1_0 {
         actions = {
-            act_a_0();
-            act_b_0();
+            act_a();
+            act_b();
             @defaultonly NoAction_0();
         }
         key = {
@@ -75,7 +75,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_0();
     }
     apply {
-        test1.apply();
+        test1_0.apply();
     }
 }
 

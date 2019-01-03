@@ -174,11 +174,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_11() {
     }
-    @name(".set_type") action set_type_0(bit<16> t, bit<16> x) {
+    @name(".set_type") action set_type(bit<16> t, bit<16> x) {
         hdr.ethernet.etherType = t;
         meta.meta.x = x;
     }
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing() {
     }
     @name(".do_nothing") action do_nothing_6() {
     }
@@ -190,26 +190,26 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".do_nothing") action do_nothing_10() {
     }
-    @name(".set_mac_da") action set_mac_da_0(bit<48> d) {
+    @name(".set_mac_da") action set_mac_da(bit<48> d) {
         hdr.ethernet.dstAddr = d;
     }
     @name(".set_mac_da") action set_mac_da_2(bit<48> d) {
         hdr.ethernet.dstAddr = d;
     }
-    @name(".set_port") action set_port_0(bit<9> p) {
+    @name(".set_port") action set_port(bit<9> p) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = p;
         hdr.ethernet.etherType = meta.meta.z;
     }
-    @name(".set_y") action set_y_0() {
+    @name(".set_y") action set_y() {
         meta.meta.y = 16w2;
     }
-    @name(".set_z") action set_z_0() {
+    @name(".set_z") action set_z() {
         meta.meta.z = 16w3;
     }
-    @name(".t0") table t0 {
+    @name(".t0") table t0_0 {
         actions = {
-            set_type_0();
-            do_nothing_0();
+            set_type();
+            do_nothing();
             @defaultonly NoAction_0();
         }
         key = {
@@ -218,9 +218,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_0();
     }
-    @name(".t1") table t1 {
+    @name(".t1") table t1_0 {
         actions = {
-            set_mac_da_0();
+            set_mac_da();
             do_nothing_6();
             @defaultonly NoAction_7();
         }
@@ -231,7 +231,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_7();
     }
-    @name(".t2") table t2 {
+    @name(".t2") table t2_0 {
         actions = {
             set_mac_da_2();
             do_nothing_7();
@@ -243,9 +243,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_8();
     }
-    @name(".t_last") table t_last {
+    @name(".t_last") table t_last_0 {
         actions = {
-            set_port_0();
+            set_port();
             do_nothing_8();
             @defaultonly NoAction_9();
         }
@@ -256,9 +256,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_9();
     }
-    @name(".t_y") table t_y {
+    @name(".t_y") table t_y_0 {
         actions = {
-            set_y_0();
+            set_y();
             do_nothing_9();
             @defaultonly NoAction_10();
         }
@@ -268,9 +268,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_10();
     }
-    @name(".t_z") table t_z {
+    @name(".t_z") table t_z_0 {
         actions = {
-            set_z_0();
+            set_z();
             do_nothing_10();
             @defaultonly NoAction_11();
         }
@@ -281,14 +281,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_11();
     }
     apply {
-        t0.apply();
-        t1.apply();
-        t2.apply();
+        t0_0.apply();
+        t1_0.apply();
+        t2_0.apply();
         if (hdr.ethernet.isValid()) 
-            t_y.apply();
+            t_y_0.apply();
         else 
-            t_z.apply();
-        t_last.apply();
+            t_z_0.apply();
+        t_last_0.apply();
     }
 }
 

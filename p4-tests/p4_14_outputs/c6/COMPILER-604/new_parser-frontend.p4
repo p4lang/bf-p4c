@@ -324,11 +324,11 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<24> tmp_4;
-    bit<4> tmp_5;
-    bit<16> tmp_6;
-    bit<16> tmp_7;
-    bit<16> tmp_8;
+    bit<24> tmp;
+    bit<4> tmp_0;
+    bit<16> tmp_1;
+    bit<16> tmp_2;
+    bit<16> tmp_3;
     @name(".parse_arp") state parse_arp {
         packet.extract<etherII_t>(hdr.etherII);
         packet.extract<arp_t>(hdr.arp);
@@ -458,16 +458,16 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
         }
     }
     @name(".parse_mpls") state parse_mpls {
-        tmp_4 = packet.lookahead<bit<24>>();
-        transition select(tmp_4[0:0]) {
+        tmp = packet.lookahead<bit<24>>();
+        transition select(tmp[0:0]) {
             1w0: parse_mpls_non_bos;
             1w1: parse_mpls_bos;
         }
     }
     @name(".parse_mpls_bos") state parse_mpls_bos {
         packet.extract<mpls_t>(hdr.mpls_bos);
-        tmp_5 = packet.lookahead<bit<4>>();
-        transition select(tmp_5[3:0]) {
+        tmp_0 = packet.lookahead<bit<4>>();
+        transition select(tmp_0[3:0]) {
             4w4: parse_pure_ipv4;
             4w6: parse_pure_ipv6;
             default: accept;
@@ -508,8 +508,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
     @name(".parse_snap") state parse_snap {
         packet.extract<snap_t>(hdr.snap);
-        tmp_6 = packet.lookahead<bit<16>>();
-        transition select(tmp_6[15:0]) {
+        tmp_1 = packet.lookahead<bit<16>>();
+        transition select(tmp_1[15:0]) {
             16w0x800: parse_ipv4;
             16w0x806: parse_arp;
             16w0x86dd: parse_ipv6;
@@ -526,8 +526,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
     @name(".parse_vlan_tag") state parse_vlan_tag {
         packet.extract<vlan_tag_t>(hdr.vlan_tag.next);
-        tmp_7 = packet.lookahead<bit<16>>();
-        transition select(tmp_7[15:0]) {
+        tmp_2 = packet.lookahead<bit<16>>();
+        transition select(tmp_2[15:0]) {
             16w0x0 &&& 16w0xfc00: parse_llc;
             16w0x400 &&& 16w0xfe00: parse_llc;
             16w0x8100 &&& 16w0xfeff: parse_vlan_tag;
@@ -540,8 +540,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
     @name(".start") state start {
         packet.extract<ethernet_t>(hdr.ethernet);
-        tmp_8 = packet.lookahead<bit<16>>();
-        transition select(tmp_8[15:0]) {
+        tmp_3 = packet.lookahead<bit<16>>();
+        transition select(tmp_3[15:0]) {
             16w0x0 &&& 16w0xfc00: parse_llc;
             16w0x400 &&& 16w0xfe00: parse_llc;
             16w0x8100 &&& 16w0xfeff: parse_vlan_tag;

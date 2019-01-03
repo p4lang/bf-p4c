@@ -246,29 +246,29 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    @name(".drop_it") action drop_it_0() {
+    @name(".drop_it") action drop_it() {
         mark_to_drop();
     }
-    @name(".set_p") action set_p_0(bit<9> p) {
+    @name(".set_p") action set_p(bit<9> p) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = p;
     }
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing() {
     }
     @name(".do_nothing") action do_nothing_2() {
     }
-    @name(".set_byte_d") action set_byte_d_0(bit<16> d) {
+    @name(".set_byte_d") action set_byte_d(bit<16> d) {
         hdr.some_payload.d = d;
     }
-    @name(".drop_table") table drop_table {
+    @name(".drop_table") table drop_table_0 {
         actions = {
-            drop_it_0();
+            drop_it();
         }
-        default_action = drop_it_0();
+        default_action = drop_it();
     }
-    @name(".port_table") table port_table {
+    @name(".port_table") table port_table_0 {
         actions = {
-            set_p_0();
-            do_nothing_0();
+            set_p();
+            do_nothing();
             @defaultonly NoAction_0();
         }
         key = {
@@ -276,9 +276,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name(".table_1") table table_1 {
+    @name(".table_1") table table_0 {
         actions = {
-            set_byte_d_0();
+            set_byte_d();
             do_nothing_2();
             @defaultonly NoAction_3();
         }
@@ -293,11 +293,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     apply {
         if (hdr.ig_intr_md_from_parser_aux.ingress_parser_err == 16w0) {
             if (hdr.udp.isValid()) 
-                table_1.apply();
-            port_table.apply();
+                table_0.apply();
+            port_table_0.apply();
         }
         else 
-            drop_table.apply();
+            drop_table_0.apply();
     }
 }
 

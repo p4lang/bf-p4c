@@ -39,36 +39,36 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_5() {
     }
-    @name(".setport") action setport_0(bit<9> port) {
+    @name(".setport") action setport(bit<9> port) {
         standard_metadata.egress_spec = port;
     }
-    @name(".bitmasked_full") action bitmasked_full_0(bit<26> param1, bit<2> param2) {
+    @name(".bitmasked_full") action bitmasked_full(bit<26> param1, bit<2> param2) {
         hdr.data.t1 = param1;
         hdr.data.x2 = param2;
     }
-    @name(".all_bytes") action all_bytes_0(bit<8> byte1, bit<8> byte2, bit<8> byte3, bit<8> byte4) {
+    @name(".all_bytes") action all_bytes(bit<8> byte1, bit<8> byte2, bit<8> byte3, bit<8> byte4) {
         hdr.data.b1 = byte1;
         hdr.data.b2 = byte2;
         hdr.data.b3 = byte3;
         hdr.data.b4 = byte4;
     }
-    @name(".some_halves") action some_halves_0(bit<16> half1, bit<16> half2) {
+    @name(".some_halves") action some_halves(bit<16> half1, bit<16> half2) {
         hdr.data.h1 = half1;
         hdr.data.h2 = half2;
     }
-    @name(".bitmasked_full2") action bitmasked_full2_0(bit<26> param1, bit<2> param2) {
+    @name(".bitmasked_full2") action bitmasked_full2(bit<26> param1, bit<2> param2) {
         hdr.data.t1 = param1;
         hdr.data.x2 = param2;
     }
-    @name(".all_halves") action all_halves_0(bit<16> half1, bit<16> half2, bit<16> half3, bit<16> half4) {
+    @name(".all_halves") action all_halves(bit<16> half1, bit<16> half2, bit<16> half3, bit<16> half4) {
         hdr.data.h1 = half1;
         hdr.data.h2 = half2;
         hdr.data.h3 = half3;
         hdr.data.h4 = half4;
     }
-    @name(".port_setter") table port_setter {
+    @name(".port_setter") table port_setter_0 {
         actions = {
-            setport_0();
+            setport();
             @defaultonly NoAction_0();
         }
         key = {
@@ -76,11 +76,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name(".test1") table test1 {
+    @name(".test1") table test1_0 {
         actions = {
-            bitmasked_full_0();
-            all_bytes_0();
-            some_halves_0();
+            bitmasked_full();
+            all_bytes();
+            some_halves();
             @defaultonly NoAction_4();
         }
         key = {
@@ -88,10 +88,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_4();
     }
-    @name(".test2") table test2 {
+    @name(".test2") table test2_0 {
         actions = {
-            bitmasked_full2_0();
-            all_halves_0();
+            bitmasked_full2();
+            all_halves();
             @defaultonly NoAction_5();
         }
         key = {
@@ -100,9 +100,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_5();
     }
     apply {
-        test1.apply();
-        test2.apply();
-        port_setter.apply();
+        test1_0.apply();
+        test2_0.apply();
+        port_setter_0.apply();
     }
 }
 

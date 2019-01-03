@@ -176,24 +176,24 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    bit<16> tmp_0;
-    @initial_register_lo_value(1) @name(".cntr") DirectRegisterAction<bit<16>, bit<16>>(stateful_cntr) cntr = {
+    bit<16> tmp;
+    @initial_register_lo_value(1) @name(".cntr") DirectRegisterAction<bit<16>, bit<16>>(stateful_cntr) cntr_0 = {
         void apply(inout bit<16> value, out bit<16> rv) {
-            bit<16> in_value;
-            in_value = value;
-            value = in_value + 16w1;
+            bit<16> in_value_0;
+            in_value_0 = value;
+            value = in_value_0 + 16w1;
             rv = value;
         }
     };
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing() {
     }
-    @name(".cnt") action cnt_0() {
-        tmp_0 = cntr.execute();
-        meta.meta.count_value = tmp_0;
+    @name(".cnt") action cnt() {
+        tmp = cntr_0.execute();
+        meta.meta.count_value = tmp;
     }
-    @name(".dummy") table dummy {
+    @name(".dummy") table dummy_0 {
         actions = {
-            do_nothing_0();
+            do_nothing();
             @defaultonly NoAction_0();
         }
         key = {
@@ -201,9 +201,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name(".match_cntr") table match_cntr {
+    @name(".match_cntr") table match_cntr_0 {
         actions = {
-            cnt_0();
+            cnt();
             @defaultonly NoAction_3();
         }
         key = {
@@ -213,8 +213,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_3();
     }
     apply {
-        match_cntr.apply();
-        dummy.apply();
+        match_cntr_0.apply();
+        dummy_0.apply();
     }
 }
 

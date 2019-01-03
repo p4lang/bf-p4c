@@ -169,18 +169,18 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_5() {
     }
-    @name(".do_forward") action do_forward_0(bit<9> port) {
+    @name(".do_forward") action do_forward(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".a1") action a1_0(bit<8> r1) {
+    @name(".a1") action a1(bit<8> r1) {
         meta.m.f1 = r1;
     }
-    @name(".a2") action a2_0() {
+    @name(".a2") action a2() {
         meta.m.f2 = meta.m.f1;
     }
-    @name(".forward") table forward {
+    @name(".forward") table forward_0 {
         actions = {
-            do_forward_0();
+            do_forward();
             @defaultonly NoAction_0();
         }
         key = {
@@ -189,9 +189,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name(".t1") table t1 {
+    @name(".t1") table t1_0 {
         actions = {
-            a1_0();
+            a1();
             @defaultonly NoAction_4();
         }
         key = {
@@ -199,9 +199,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_4();
     }
-    @name(".t2") table t2 {
+    @name(".t2") table t2_0 {
         actions = {
-            a2_0();
+            a2();
             @defaultonly NoAction_5();
         }
         key = {
@@ -210,9 +210,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_5();
     }
     apply {
-        t1.apply();
-        t2.apply();
-        forward.apply();
+        t1_0.apply();
+        t2_0.apply();
+        forward_0.apply();
     }
 }
 

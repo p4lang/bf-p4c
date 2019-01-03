@@ -236,10 +236,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_73() {
     }
-    @name(".egr_eq_ing_action") action egr_eq_ing_action_0(bit<9> port) {
+    @name(".egr_eq_ing_action") action egr_eq_ing_action(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing() {
     }
     @name(".do_nothing") action do_nothing_36() {
     }
@@ -311,9 +311,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".do_nothing") action do_nothing_70() {
     }
-    @name(".eg_port") table eg_port {
+    @name(".eg_port") table eg_port_0 {
         actions = {
-            egr_eq_ing_action_0();
+            egr_eq_ing_action();
             @defaultonly NoAction_0();
         }
         key = {
@@ -321,9 +321,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @stage(0) @ways(5) @name(".exm_table0_0") table exm_table0_0 {
+    @stage(0) @ways(5) @name(".exm_table0_0") table exm_table0 {
         actions = {
-            do_nothing_0();
+            do_nothing();
             @defaultonly NoAction_38();
         }
         key = {
@@ -332,7 +332,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 5120;
         default_action = NoAction_38();
     }
-    @stage(0) @ways(5) @name(".exm_table0_1") table exm_table0_1 {
+    @stage(0) @ways(5) @name(".exm_table0_1") table exm_table0_2 {
         actions = {
             do_nothing_36();
             @defaultonly NoAction_39();
@@ -343,7 +343,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 5120;
         default_action = NoAction_39();
     }
-    @stage(10) @ways(5) @name(".exm_table10_0") table exm_table10_0 {
+    @stage(10) @ways(5) @name(".exm_table10_0") table exm_table10 {
         actions = {
             do_nothing_37();
             @defaultonly NoAction_40();
@@ -354,7 +354,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 5120;
         default_action = NoAction_40();
     }
-    @stage(10) @ways(5) @name(".exm_table10_1") table exm_table10_1 {
+    @stage(10) @ways(5) @name(".exm_table10_1") table exm_table10_2 {
         actions = {
             do_nothing_38();
             @defaultonly NoAction_41();
@@ -365,7 +365,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 5120;
         default_action = NoAction_41();
     }
-    @stage(11) @ways(5) @name(".exm_table11_0") table exm_table11_0 {
+    @stage(11) @ways(5) @name(".exm_table11_0") table exm_table11 {
         actions = {
             do_nothing_39();
             @defaultonly NoAction_42();
@@ -376,7 +376,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 5120;
         default_action = NoAction_42();
     }
-    @stage(11) @ways(5) @name(".exm_table11_1") table exm_table11_1 {
+    @stage(11) @ways(5) @name(".exm_table11_1") table exm_table11_2 {
         actions = {
             do_nothing_40();
             @defaultonly NoAction_43();
@@ -387,7 +387,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 5120;
         default_action = NoAction_43();
     }
-    @stage(1) @ways(5) @name(".exm_table1_0") table exm_table1_0 {
+    @stage(1) @ways(5) @name(".exm_table1_0") table exm_table1 {
         actions = {
             do_nothing_41();
             @defaultonly NoAction_44();
@@ -398,7 +398,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 5120;
         default_action = NoAction_44();
     }
-    @stage(1) @ways(5) @name(".exm_table1_1") table exm_table1_1 {
+    @stage(1) @ways(5) @name(".exm_table1_1") table exm_table1_2 {
         actions = {
             do_nothing_42();
             @defaultonly NoAction_45();
@@ -409,7 +409,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 5120;
         default_action = NoAction_45();
     }
-    @stage(2) @ways(5) @name(".exm_table2_0") table exm_table2_0 {
+    @stage(2) @ways(5) @name(".exm_table2_0") table exm_table2 {
         actions = {
             do_nothing_43();
             @defaultonly NoAction_46();
@@ -420,7 +420,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 5120;
         default_action = NoAction_46();
     }
-    @stage(2) @ways(5) @name(".exm_table2_1") table exm_table2_1 {
+    @stage(2) @ways(5) @name(".exm_table2_1") table exm_table2_2 {
         actions = {
             do_nothing_44();
             @defaultonly NoAction_47();
@@ -431,7 +431,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 5120;
         default_action = NoAction_47();
     }
-    @stage(3) @ways(5) @name(".exm_table3_0") table exm_table3_0 {
+    @stage(3) @ways(5) @name(".exm_table3_0") table exm_table3 {
         actions = {
             do_nothing_45();
             @defaultonly NoAction_48();
@@ -442,7 +442,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 5120;
         default_action = NoAction_48();
     }
-    @stage(3) @ways(5) @name(".exm_table3_1") table exm_table3_1 {
+    @stage(3) @ways(5) @name(".exm_table3_1") table exm_table3_2 {
         actions = {
             do_nothing_46();
             @defaultonly NoAction_49();
@@ -453,7 +453,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 5120;
         default_action = NoAction_49();
     }
-    @stage(4) @ways(5) @name(".exm_table4_0") table exm_table4_0 {
+    @stage(4) @ways(5) @name(".exm_table4_0") table exm_table4 {
         actions = {
             do_nothing_47();
             @defaultonly NoAction_50();
@@ -464,7 +464,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 5120;
         default_action = NoAction_50();
     }
-    @stage(4) @ways(5) @name(".exm_table4_1") table exm_table4_1 {
+    @stage(4) @ways(5) @name(".exm_table4_1") table exm_table4_2 {
         actions = {
             do_nothing_48();
             @defaultonly NoAction_51();
@@ -475,7 +475,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 5120;
         default_action = NoAction_51();
     }
-    @stage(5) @ways(5) @name(".exm_table5_0") table exm_table5_0 {
+    @stage(5) @ways(5) @name(".exm_table5_0") table exm_table5 {
         actions = {
             do_nothing_49();
             @defaultonly NoAction_52();
@@ -486,7 +486,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 5120;
         default_action = NoAction_52();
     }
-    @stage(5) @ways(5) @name(".exm_table5_1") table exm_table5_1 {
+    @stage(5) @ways(5) @name(".exm_table5_1") table exm_table5_2 {
         actions = {
             do_nothing_50();
             @defaultonly NoAction_53();
@@ -497,7 +497,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 5120;
         default_action = NoAction_53();
     }
-    @stage(6) @ways(5) @name(".exm_table6_0") table exm_table6_0 {
+    @stage(6) @ways(5) @name(".exm_table6_0") table exm_table6 {
         actions = {
             do_nothing_51();
             @defaultonly NoAction_54();
@@ -508,7 +508,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 5120;
         default_action = NoAction_54();
     }
-    @stage(6) @ways(5) @name(".exm_table6_1") table exm_table6_1 {
+    @stage(6) @ways(5) @name(".exm_table6_1") table exm_table6_2 {
         actions = {
             do_nothing_52();
             @defaultonly NoAction_55();
@@ -519,7 +519,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 5120;
         default_action = NoAction_55();
     }
-    @stage(7) @ways(5) @name(".exm_table7_0") table exm_table7_0 {
+    @stage(7) @ways(5) @name(".exm_table7_0") table exm_table7 {
         actions = {
             do_nothing_53();
             @defaultonly NoAction_56();
@@ -530,7 +530,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 5120;
         default_action = NoAction_56();
     }
-    @stage(7) @ways(5) @name(".exm_table7_1") table exm_table7_1 {
+    @stage(7) @ways(5) @name(".exm_table7_1") table exm_table7_2 {
         actions = {
             do_nothing_54();
             @defaultonly NoAction_57();
@@ -541,7 +541,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 5120;
         default_action = NoAction_57();
     }
-    @stage(8) @ways(5) @name(".exm_table8_0") table exm_table8_0 {
+    @stage(8) @ways(5) @name(".exm_table8_0") table exm_table8 {
         actions = {
             do_nothing_55();
             @defaultonly NoAction_58();
@@ -552,7 +552,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 5120;
         default_action = NoAction_58();
     }
-    @stage(8) @ways(5) @name(".exm_table8_1") table exm_table8_1 {
+    @stage(8) @ways(5) @name(".exm_table8_1") table exm_table8_2 {
         actions = {
             do_nothing_56();
             @defaultonly NoAction_59();
@@ -563,7 +563,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 5120;
         default_action = NoAction_59();
     }
-    @stage(9) @ways(5) @name(".exm_table9_0") table exm_table9_0 {
+    @stage(9) @ways(5) @name(".exm_table9_0") table exm_table9 {
         actions = {
             do_nothing_57();
             @defaultonly NoAction_60();
@@ -574,7 +574,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 5120;
         default_action = NoAction_60();
     }
-    @stage(9) @ways(5) @name(".exm_table9_1") table exm_table9_1 {
+    @stage(9) @ways(5) @name(".exm_table9_1") table exm_table9_2 {
         actions = {
             do_nothing_58();
             @defaultonly NoAction_61();
@@ -585,7 +585,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 5120;
         default_action = NoAction_61();
     }
-    @stage(0) @name(".tcam_table0") table tcam_table0 {
+    @stage(0) @name(".tcam_table0") table tcam_table0_0 {
         actions = {
             do_nothing_59();
             @defaultonly NoAction_62();
@@ -596,7 +596,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 12288;
         default_action = NoAction_62();
     }
-    @stage(1) @name(".tcam_table1") table tcam_table1 {
+    @stage(1) @name(".tcam_table1") table tcam_table1_0 {
         actions = {
             do_nothing_60();
             @defaultonly NoAction_63();
@@ -607,7 +607,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 12288;
         default_action = NoAction_63();
     }
-    @stage(10) @name(".tcam_table10") table tcam_table10 {
+    @stage(10) @name(".tcam_table10") table tcam_table10_0 {
         actions = {
             do_nothing_61();
             @defaultonly NoAction_64();
@@ -618,7 +618,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 12288;
         default_action = NoAction_64();
     }
-    @stage(11) @name(".tcam_table11") table tcam_table11 {
+    @stage(11) @name(".tcam_table11") table tcam_table11_0 {
         actions = {
             do_nothing_62();
             @defaultonly NoAction_65();
@@ -629,7 +629,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 12288;
         default_action = NoAction_65();
     }
-    @stage(2) @name(".tcam_table2") table tcam_table2 {
+    @stage(2) @name(".tcam_table2") table tcam_table2_0 {
         actions = {
             do_nothing_63();
             @defaultonly NoAction_66();
@@ -640,7 +640,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 12288;
         default_action = NoAction_66();
     }
-    @stage(3) @name(".tcam_table3") table tcam_table3 {
+    @stage(3) @name(".tcam_table3") table tcam_table3_0 {
         actions = {
             do_nothing_64();
             @defaultonly NoAction_67();
@@ -651,7 +651,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 12288;
         default_action = NoAction_67();
     }
-    @stage(4) @name(".tcam_table4") table tcam_table4 {
+    @stage(4) @name(".tcam_table4") table tcam_table4_0 {
         actions = {
             do_nothing_65();
             @defaultonly NoAction_68();
@@ -662,7 +662,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 12288;
         default_action = NoAction_68();
     }
-    @stage(5) @name(".tcam_table5") table tcam_table5 {
+    @stage(5) @name(".tcam_table5") table tcam_table5_0 {
         actions = {
             do_nothing_66();
             @defaultonly NoAction_69();
@@ -673,7 +673,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 12288;
         default_action = NoAction_69();
     }
-    @stage(6) @name(".tcam_table6") table tcam_table6 {
+    @stage(6) @name(".tcam_table6") table tcam_table6_0 {
         actions = {
             do_nothing_67();
             @defaultonly NoAction_70();
@@ -684,7 +684,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 12288;
         default_action = NoAction_70();
     }
-    @stage(7) @name(".tcam_table7") table tcam_table7 {
+    @stage(7) @name(".tcam_table7") table tcam_table7_0 {
         actions = {
             do_nothing_68();
             @defaultonly NoAction_71();
@@ -695,7 +695,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 12288;
         default_action = NoAction_71();
     }
-    @stage(8) @name(".tcam_table8") table tcam_table8 {
+    @stage(8) @name(".tcam_table8") table tcam_table8_0 {
         actions = {
             do_nothing_69();
             @defaultonly NoAction_72();
@@ -706,7 +706,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 12288;
         default_action = NoAction_72();
     }
-    @stage(9) @name(".tcam_table9") table tcam_table9 {
+    @stage(9) @name(".tcam_table9") table tcam_table9_0 {
         actions = {
             do_nothing_70();
             @defaultonly NoAction_73();
@@ -718,43 +718,43 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_73();
     }
     apply {
-        eg_port.apply();
-        exm_table0_0.apply();
-        exm_table0_1.apply();
-        tcam_table0.apply();
-        exm_table1_0.apply();
-        exm_table1_1.apply();
-        tcam_table1.apply();
-        exm_table2_0.apply();
-        exm_table2_1.apply();
-        tcam_table2.apply();
-        exm_table3_0.apply();
-        exm_table3_1.apply();
-        tcam_table3.apply();
-        exm_table4_0.apply();
-        exm_table4_1.apply();
-        tcam_table4.apply();
-        exm_table5_0.apply();
-        exm_table5_1.apply();
-        tcam_table5.apply();
-        exm_table6_0.apply();
-        exm_table6_1.apply();
-        tcam_table6.apply();
-        exm_table7_0.apply();
-        exm_table7_1.apply();
-        tcam_table7.apply();
-        exm_table8_0.apply();
-        exm_table8_1.apply();
-        tcam_table8.apply();
-        exm_table9_0.apply();
-        exm_table9_1.apply();
-        tcam_table9.apply();
-        exm_table10_0.apply();
-        exm_table10_1.apply();
-        tcam_table10.apply();
-        exm_table11_0.apply();
-        exm_table11_1.apply();
-        tcam_table11.apply();
+        eg_port_0.apply();
+        exm_table0.apply();
+        exm_table0_2.apply();
+        tcam_table0_0.apply();
+        exm_table1.apply();
+        exm_table1_2.apply();
+        tcam_table1_0.apply();
+        exm_table2.apply();
+        exm_table2_2.apply();
+        tcam_table2_0.apply();
+        exm_table3.apply();
+        exm_table3_2.apply();
+        tcam_table3_0.apply();
+        exm_table4.apply();
+        exm_table4_2.apply();
+        tcam_table4_0.apply();
+        exm_table5.apply();
+        exm_table5_2.apply();
+        tcam_table5_0.apply();
+        exm_table6.apply();
+        exm_table6_2.apply();
+        tcam_table6_0.apply();
+        exm_table7.apply();
+        exm_table7_2.apply();
+        tcam_table7_0.apply();
+        exm_table8.apply();
+        exm_table8_2.apply();
+        tcam_table8_0.apply();
+        exm_table9.apply();
+        exm_table9_2.apply();
+        tcam_table9_0.apply();
+        exm_table10.apply();
+        exm_table10_2.apply();
+        tcam_table10_0.apply();
+        exm_table11.apply();
+        exm_table11_2.apply();
+        tcam_table11_0.apply();
     }
 }
 

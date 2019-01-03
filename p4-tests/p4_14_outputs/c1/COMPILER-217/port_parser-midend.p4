@@ -180,17 +180,17 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".do_remove_fabric") action do_remove_fabric_0() {
+    @name(".do_remove_fabric") action do_remove_fabric() {
         hdr.bff.setInvalid();
     }
-    @name(".remove_fabric") table remove_fabric {
+    @name(".remove_fabric") table remove_fabric_0 {
         actions = {
-            do_remove_fabric_0();
+            do_remove_fabric();
         }
-        default_action = do_remove_fabric_0();
+        default_action = do_remove_fabric();
     }
     apply {
-        remove_fabric.apply();
+        remove_fabric_0.apply();
     }
 }
 
@@ -199,18 +199,18 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    @name(".do_ethernet_forward") action do_ethernet_forward_0(bit<9> port) {
+    @name(".do_ethernet_forward") action do_ethernet_forward(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".do_fabric_forward") action do_fabric_forward_0() {
+    @name(".do_fabric_forward") action do_fabric_forward() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)hdr.bff.f1;
     }
-    @name(".set_port_properties") action set_port_properties_0(bit<1> port_type) {
+    @name(".set_port_properties") action set_port_properties(bit<1> port_type) {
         meta.m.port_type = port_type;
     }
-    @name(".ethernet_forward") table ethernet_forward {
+    @name(".ethernet_forward") table ethernet_forward_0 {
         actions = {
-            do_ethernet_forward_0();
+            do_ethernet_forward();
             @defaultonly NoAction_0();
         }
         key = {
@@ -218,15 +218,15 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name(".fabric_forward") table fabric_forward {
+    @name(".fabric_forward") table fabric_forward_0 {
         actions = {
-            do_fabric_forward_0();
+            do_fabric_forward();
         }
-        default_action = do_fabric_forward_0();
+        default_action = do_fabric_forward();
     }
-    @name(".ingress_port") table ingress_port_1 {
+    @name(".ingress_port") table ingress_port_0 {
         actions = {
-            set_port_properties_0();
+            set_port_properties();
             @defaultonly NoAction_3();
         }
         key = {
@@ -237,11 +237,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (hdr.ig_intr_md.resubmit_flag == 1w0) 
-            ingress_port_1.apply();
+            ingress_port_0.apply();
         if (hdr.bff.isValid()) 
-            fabric_forward.apply();
+            fabric_forward_0.apply();
         else 
-            ethernet_forward.apply();
+            ethernet_forward_0.apply();
     }
 }
 

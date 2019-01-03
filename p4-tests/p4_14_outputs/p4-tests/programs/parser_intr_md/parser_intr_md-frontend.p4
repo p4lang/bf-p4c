@@ -174,7 +174,7 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @parser_value_set_size(2) @name(".pvs_fabric_port") value_set<bit<9>>(4) pvs_fabric_port;
+    @parser_value_set_size(2) @name(".pvs_fabric_port") value_set<bit<9>>(2) pvs_fabric_port_0;
     @name(".parse_ethernet") state parse_ethernet {
         packet.extract<ethernet_t>(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
@@ -193,7 +193,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
     @name(".start") state start {
         transition select(hdr.ig_intr_md.ingress_port) {
-            pvs_fabric_port: parse_fabric_header;
+            pvs_fabric_port_0: parse_fabric_header;
             default: parse_ethernet;
         }
     }
@@ -202,20 +202,20 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".fwd_to_fabric") action fwd_to_fabric_0(bit<9> egress_port) {
+    @name(".fwd_to_fabric") action fwd_to_fabric(bit<9> egress_port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
     }
-    @name(".fwd_to_server") action fwd_to_server_0(bit<9> egress_port) {
+    @name(".fwd_to_server") action fwd_to_server(bit<9> egress_port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
     }
-    @name(".fwd_drop") action fwd_drop_0() {
+    @name(".fwd_drop") action fwd_drop() {
         mark_to_drop();
     }
-    @name(".fwd_packet") table fwd_packet {
+    @name(".fwd_packet") table fwd_packet_0 {
         actions = {
-            fwd_to_fabric_0();
-            fwd_to_server_0();
-            fwd_drop_0();
+            fwd_to_fabric();
+            fwd_to_server();
+            fwd_drop();
             @defaultonly NoAction_0();
         }
         key = {
@@ -226,7 +226,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_0();
     }
     apply {
-        fwd_packet.apply();
+        fwd_packet_0.apply();
     }
 }
 

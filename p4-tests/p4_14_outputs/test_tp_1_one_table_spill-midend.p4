@@ -180,13 +180,13 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".action_e") action action_e_0(bit<8> param2, bit<16> param_3) {
+    @name(".action_e") action action_e(bit<8> param2, bit<16> param_3) {
         hdr.ipv4.diffserv = param2;
         hdr.ipv4.hdrChecksum = param_3;
     }
-    @name(".table_e") table table_e {
+    @name(".table_e") table table_e_0 {
         actions = {
-            action_e_0();
+            action_e();
             @defaultonly NoAction_0();
         }
         key = {
@@ -196,7 +196,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = NoAction_0();
     }
     apply {
-        table_e.apply();
+        table_e_0.apply();
     }
 }
 
@@ -205,19 +205,19 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_5() {
     }
-    @name(".action_0") action action_2(bit<8> param0) {
+    @name(".action_0") action action_0(bit<8> param0) {
         hdr.ipv4.diffserv = param0;
     }
-    @name(".action_1") action action_3(bit<16> param1) {
+    @name(".action_1") action action_1(bit<16> param1) {
         hdr.ipv4.hdrChecksum = param1;
     }
     @name(".action_1") action action_5(bit<16> param1) {
         hdr.ipv4.hdrChecksum = param1;
     }
-    @name(".table_0") table table_0 {
+    @name(".table_0") table table_2 {
         actions = {
-            action_2();
-            action_3();
+            action_0();
+            action_1();
             @defaultonly NoAction_1();
         }
         key = {
@@ -225,7 +225,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_1();
     }
-    @name(".table_1") table table_1 {
+    @name(".table_1") table table_3 {
         actions = {
             action_5();
             @defaultonly NoAction_5();
@@ -237,8 +237,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_5();
     }
     apply {
-        table_0.apply();
-        table_1.apply();
+        table_2.apply();
+        table_3.apply();
     }
 }
 

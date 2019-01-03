@@ -34,14 +34,14 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".counter_0") @min_width(32) counter(32w2048, CounterType.packets_and_bytes) counter_0;
-    @name(".action_0") action action_1(bit<32> param0, bit<8> param1, bit<8> param2, bit<8> param3, bit<8> param4) {
-        counter_0.count(32w2047);
+    @name(".counter_0") @min_width(32) counter(32w2048, CounterType.packets_and_bytes) counter_1;
+    @name(".action_0") action action_0(bit<32> param0, bit<8> param1, bit<8> param2, bit<8> param3, bit<8> param4) {
+        counter_1.count(32w2047);
         hdr.pkt.a = param0;
     }
-    @name(".table_0") table table_0 {
+    @name(".table_0") table table_1 {
         actions = {
-            action_1();
+            action_0();
             @defaultonly NoAction_0();
         }
         key = {
@@ -52,7 +52,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_0();
     }
     apply {
-        table_0.apply();
+        table_1.apply();
     }
 }
 

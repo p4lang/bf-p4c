@@ -210,7 +210,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".set_p") action set_p_0(bit<9> p) {
+    @name(".set_p") action set_p(bit<9> p) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = p;
         hdr.pay.setValid();
         hdr.pay.marker = 8w1;
@@ -218,12 +218,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ipv4.totalLen = hdr.ipv4.totalLen + 16w16;
         hdr.udp.len_ = hdr.udp.len_ + 16w16;
     }
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing() {
     }
-    @name(".table_1") table table_1 {
+    @name(".table_1") table table_0 {
         actions = {
-            set_p_0();
-            do_nothing_0();
+            set_p();
+            do_nothing();
             @defaultonly NoAction_0();
         }
         key = {
@@ -233,7 +233,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (hdr.udp.isValid()) 
-            table_1.apply();
+            table_0.apply();
     }
 }
 

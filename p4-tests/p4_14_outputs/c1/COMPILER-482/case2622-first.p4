@@ -822,8 +822,8 @@ control Armagh(inout headers hdr, inout metadata meta, inout standard_metadata_t
             @defaultonly NoAction();
         }
         key = {
-            hdr.eg_intr_md.egress_port[6:0]: exact @name("eg_intr_md.egress_port[6:0]") ;
-            hdr.eg_intr_md.egress_qid[2:0] : exact @name("eg_intr_md.egress_qid[2:0]") ;
+            hdr.eg_intr_md.egress_port[6:0]: exact @name("eg_intr_md.egress_port") ;
+            hdr.eg_intr_md.egress_qid[2:0] : exact @name("eg_intr_md.egress_qid") ;
         }
         size = 1024;
         counters = Ogunquit;
@@ -959,7 +959,7 @@ control DelMar(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         key = {
             meta.Blanding.Dixie           : exact @name("Blanding.Dixie") ;
-            meta.Blanding.Danville[106:64]: lpm @name("Blanding.Danville[106:64]") ;
+            meta.Blanding.Danville[106:64]: lpm @name("Blanding.Danville") ;
         }
         size = 65536;
         default_action = McCartys();
@@ -972,7 +972,7 @@ control DelMar(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         key = {
             meta.Youngtown.Coverdale      : exact @name("Youngtown.Coverdale") ;
-            meta.Blanding.Danville[127:64]: lpm @name("Blanding.Danville[127:64]") ;
+            meta.Blanding.Danville[127:64]: lpm @name("Blanding.Danville") ;
         }
         size = 8192;
         default_action = NoAction();
@@ -998,7 +998,7 @@ control DelMar(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         key = {
             meta.Blanding.Lenoir        : exact @name("Blanding.Lenoir") ;
-            meta.Blanding.Danville[63:0]: lpm @name("Blanding.Danville[63:0]") ;
+            meta.Blanding.Danville[63:0]: lpm @name("Blanding.Danville") ;
         }
         size = 16384;
         default_action = McCartys();
@@ -1038,7 +1038,7 @@ control DelMar(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         key = {
             meta.Selby.BarNunn     : exact @name("Selby.BarNunn") ;
-            meta.Selby.Colona[19:0]: lpm @name("Selby.Colona[19:0]") ;
+            meta.Selby.Colona[19:0]: lpm @name("Selby.Colona") ;
         }
         size = 131072;
         default_action = McCartys();
@@ -1094,6 +1094,9 @@ control DelMar(inout headers hdr, inout metadata meta, inout standard_metadata_t
                     switch (Heizer.apply().action_run) {
                         McCartys: {
                             switch (Oneonta.apply().action_run) {
+                                Shirley: {
+                                    Estero.apply();
+                                }
                                 McCartys: {
                                     switch (Ceiba.apply().action_run) {
                                         Hoagland: {
@@ -1101,9 +1104,6 @@ control DelMar(inout headers hdr, inout metadata meta, inout standard_metadata_t
                                         }
                                     }
 
-                                }
-                                Shirley: {
-                                    Estero.apply();
                                 }
                             }
 
@@ -1143,7 +1143,7 @@ control Dovray(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         key = {
             meta.Tillamook.Brady         : exact @name("Tillamook.Brady") ;
-            meta.Blanding.Danville[31:16]: ternary @name("Blanding.Danville[31:16]") ;
+            meta.Blanding.Danville[31:16]: ternary @name("Blanding.Danville") ;
             meta.Horton.Kealia           : ternary @name("Horton.Kealia") ;
             meta.Horton.Floyd            : ternary @name("Horton.Floyd") ;
             meta.Horton.Halliday         : ternary @name("Horton.Halliday") ;
@@ -1177,7 +1177,7 @@ control Dovray(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         key = {
             meta.Tillamook.Brady    : exact @name("Tillamook.Brady") ;
-            meta.Selby.Colona[31:16]: ternary @name("Selby.Colona[31:16]") ;
+            meta.Selby.Colona[31:16]: ternary @name("Selby.Colona") ;
             meta.Horton.Kealia      : ternary @name("Horton.Kealia") ;
             meta.Horton.Floyd       : ternary @name("Horton.Floyd") ;
             meta.Horton.Halliday    : ternary @name("Horton.Halliday") ;
@@ -1320,7 +1320,7 @@ control Hecker(inout headers hdr, inout metadata meta, inout standard_metadata_t
 
 control Huxley(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Loyalton") action Loyalton() {
-        digest<Belgrade>(32w0, { meta.Cantwell.Scherr, meta.Horton.Yardley, meta.Horton.Washta, meta.Horton.Ivanhoe, meta.Horton.Edler });
+        digest<Belgrade>(32w0, {meta.Cantwell.Scherr,meta.Horton.Yardley,meta.Horton.Washta,meta.Horton.Ivanhoe,meta.Horton.Edler});
     }
     @name(".Mizpah") table Mizpah {
         actions = {
@@ -1635,7 +1635,7 @@ control Montegut(inout headers hdr, inout metadata meta, inout standard_metadata
             bit<1> in_value;
             in_value = value;
             value = in_value;
-            rv = ~value;
+            rv = ~in_value;
         }
     };
     @name(".Rodessa") RegisterAction<bit<1>, bit<32>, bit<1>>(Bloomdale) Rodessa = {
@@ -2039,6 +2039,10 @@ control Penitas(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         switch (Barney.apply().action_run) {
+            DelRosa: {
+                Harriston.apply();
+                Dalkeith.apply();
+            }
             Creston: {
                 if (!hdr.LaFayette.isValid() && meta.Ulysses.Anniston == 1w1) 
                     Harris.apply();
@@ -2051,10 +2055,6 @@ control Penitas(inout headers hdr, inout metadata meta, inout standard_metadata_
 
                 else 
                     Wanilla.apply();
-            }
-            DelRosa: {
-                Harriston.apply();
-                Dalkeith.apply();
             }
         }
 
@@ -2178,7 +2178,7 @@ control Suarez(inout headers hdr, inout metadata meta, inout standard_metadata_t
 
 control Timbo(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Hisle") action Hisle() {
-        digest<RedCliff>(32w0, { meta.Cantwell.Scherr, meta.Horton.Ivanhoe, hdr.RockHill.Laramie, hdr.RockHill.Wolcott, hdr.Lakebay.Blunt });
+        digest<RedCliff>(32w0, {meta.Cantwell.Scherr,meta.Horton.Ivanhoe,hdr.RockHill.Laramie,hdr.RockHill.Wolcott,hdr.Lakebay.Blunt});
     }
     @name(".Langtry") table Langtry {
         actions = {

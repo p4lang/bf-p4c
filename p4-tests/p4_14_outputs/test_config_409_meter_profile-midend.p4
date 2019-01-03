@@ -185,32 +185,32 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<8> tmp_0;
+    bit<8> tmp;
     @name(".NoAction") action NoAction_0() {
     }
     @name(".NoAction") action NoAction_3() {
     }
-    @meter_profile(9) @name(".meter_0") meter(32w2048, MeterType.bytes) meter_1;
-    @name(".meter_1") @green(0) @meter_profile(3) @red(255) @yellow(127) Meter<bit<32>>(32w4096, MeterType_t.BYTES) meter_3;
-    @name(".do_nothing") action do_nothing_0() {
+    @meter_profile(9) @name(".meter_0") meter(32w2048, MeterType.bytes) meter_0;
+    @name(".meter_1") @green(0) @meter_profile(3) @red(255) @yellow(127) Meter<bit<32>>(32w4096, MeterType_t.BYTES) meter_2;
+    @name(".do_nothing") action do_nothing() {
     }
     @name(".do_nothing") action do_nothing_2() {
     }
-    @name(".mtr_0") action mtr(bit<32> idx) {
-        meter_1.execute_meter<bit<8>>(idx, hdr.w1.c);
+    @name(".mtr_0") action mtr_0(bit<32> idx) {
+        meter_0.execute_meter<bit<8>>(idx, hdr.w1.c);
     }
-    @name(".drop_it") action drop_it_0() {
+    @name(".drop_it") action drop_it() {
         mark_to_drop();
     }
-    @name(".mtr_1") action mtr_2(bit<32> idx) {
-        tmp_0 = meter_3.execute(idx);
-        hdr.w2.a = tmp_0;
+    @name(".mtr_1") action mtr_1(bit<32> idx) {
+        tmp = meter_2.execute(idx);
+        hdr.w2.a = tmp;
     }
-    @name(".t0") table t0 {
+    @name(".t0") table t0_0 {
         actions = {
-            do_nothing_0();
-            mtr();
-            drop_it_0();
+            do_nothing();
+            mtr_0();
+            drop_it();
             @defaultonly NoAction_0();
         }
         key = {
@@ -221,10 +221,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name(".t1") table t1 {
+    @name(".t1") table t1_0 {
         actions = {
             do_nothing_2();
-            mtr_2();
+            mtr_1();
             @defaultonly NoAction_3();
         }
         key = {
@@ -233,8 +233,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_3();
     }
     apply {
-        t0.apply();
-        t1.apply();
+        t0_0.apply();
+        t1_0.apply();
     }
 }
 

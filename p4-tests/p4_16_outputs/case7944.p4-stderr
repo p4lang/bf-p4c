@@ -1,0 +1,18 @@
+case7944.p4(49): warning: start: implicit transition to `reject'
+    state start {
+          ^^^^^
+case7944.p4(76): warning: start: implicit transition to `reject'
+    state start {
+          ^^^^^
+case7944.p4(44): warning: accept state in parser ingress_parser is unreachable
+parser ingress_parser( packet_in packet,
+       ^^^^^^^^^^^^^^
+case7944.p4(70): warning: accept state in parser eg_parser is unreachable
+parser eg_parser( packet_in packet,
+       ^^^^^^^^^
+case7944.p4(44): warning: accept state in parser ingress_parser is unreachable
+parser ingress_parser( packet_in packet,
+       ^^^^^^^^^^^^^^
+case7944.p4(87): warning: accept state in parser egress_parser is unreachable
+parser egress_parser( packet_in packet,
+       ^^^^^^^^^^^^^

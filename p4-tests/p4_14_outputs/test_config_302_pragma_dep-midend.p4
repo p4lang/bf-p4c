@@ -191,7 +191,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_9() {
     }
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing() {
     }
     @name(".do_nothing") action do_nothing_5() {
     }
@@ -201,7 +201,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".do_nothing") action do_nothing_8() {
     }
-    @name(".set_w0") action set_w0_0(bit<32> p) {
+    @name(".set_w0") action set_w0(bit<32> p) {
         hdr.w0.w = p;
     }
     @name(".set_w0") action set_w0_3(bit<32> p) {
@@ -210,17 +210,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".set_w0") action set_w0_4(bit<32> p) {
         hdr.w0.w = p;
     }
-    @name(".set_p") action set_p_0() {
+    @name(".set_p") action set_p() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = 9w1;
         hdr.w0.w = 32w2;
     }
-    @name(".set_w1") action set_w1_0() {
+    @name(".set_w1") action set_w1() {
         hdr.w1.w = 32w2;
     }
-    @name(".t0") table t0 {
+    @name(".t0") table t0_0 {
         actions = {
-            do_nothing_0();
-            set_w0_0();
+            do_nothing();
+            set_w0();
             @defaultonly NoAction_0();
         }
         key = {
@@ -228,7 +228,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name(".t1") table t1 {
+    @name(".t1") table t1_0 {
         actions = {
             do_nothing_5();
             set_w0_3();
@@ -239,7 +239,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_6();
     }
-    @ignore_table_dependency("t1") @name(".t2") table t2 {
+    @ignore_table_dependency("t1") @name(".t2") table t2_0 {
         actions = {
             do_nothing_6();
             set_w0_4();
@@ -250,10 +250,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_7();
     }
-    @name(".t3") table t3 {
+    @name(".t3") table t3_0 {
         actions = {
             do_nothing_7();
-            set_p_0();
+            set_p();
             @defaultonly NoAction_8();
         }
         key = {
@@ -261,10 +261,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_8();
     }
-    @force_table_dependency("t3") @name(".t4") table t4 {
+    @force_table_dependency("t3") @name(".t4") table t4_0 {
         actions = {
             do_nothing_8();
-            set_w1_0();
+            set_w1();
             @defaultonly NoAction_9();
         }
         key = {
@@ -273,13 +273,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_9();
     }
     apply {
-        t0.apply();
+        t0_0.apply();
         if (hdr.w2.isValid()) 
-            t1.apply();
-        t2.apply();
+            t1_0.apply();
+        t2_0.apply();
         if (hdr.w1.isValid()) 
-            t3.apply();
-        t4.apply();
+            t3_0.apply();
+        t4_0.apply();
     }
 }
 

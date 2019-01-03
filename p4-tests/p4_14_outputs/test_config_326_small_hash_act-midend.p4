@@ -153,18 +153,18 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     bit<8> key_0;
-    @name(".action_0") action action_1(bit<8> p) {
+    @name(".action_0") action action_0(bit<8> p) {
         hdr.one.x = p;
     }
-    @name(".table_0") table table_0 {
+    @name(".table_0") table table_1 {
         actions = {
-            action_1();
+            action_0();
         }
         key = {
-            key_0: exact @name("one.x & 129") ;
+            key_0: exact @name("one.x") ;
         }
         size = 4;
-        default_action = action_1(8w5);
+        default_action = action_0(8w5);
     }
     @hidden action act() {
         key_0 = hdr.one.x & 8w0x81;
@@ -177,7 +177,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         tbl_act.apply();
-        table_0.apply();
+        table_1.apply();
     }
 }
 

@@ -40,35 +40,35 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".noop") action noop_0() {
+    @name(".noop") action noop() {
     }
     @name(".noop") action noop_2() {
     }
-    @name(".port_set") action port_set_0(bit<9> port) {
+    @name(".port_set") action port_set(bit<9> port) {
         standard_metadata.egress_spec = port;
     }
-    @name(".bm_set1") action bm_set1_0(bit<4> param1, bit<4> param2, bit<4> param3) {
+    @name(".bm_set1") action bm_set1(bit<4> param1, bit<4> param2, bit<4> param3) {
         hdr.write_values.u1 = param1;
         hdr.write_values.u2 = param2;
         hdr.write_values.u3 = param3;
         hdr.write_values.w1 = param1;
         hdr.write_values.y1 = param1;
     }
-    @name(".bm_set2") action bm_set2_0(bit<4> param1, bit<4> param2, bit<4> param3) {
+    @name(".bm_set2") action bm_set2(bit<4> param1, bit<4> param2, bit<4> param3) {
         hdr.write_values.u1 = param1;
         hdr.write_values.u2 = param2;
         hdr.write_values.u3 = param3;
         hdr.write_values.w2 = param1;
         hdr.write_values.y2 = param1;
     }
-    @name(".bm_set3") action bm_set3_0(bit<4> param1, bit<4> param2, bit<4> param3) {
+    @name(".bm_set3") action bm_set3(bit<4> param1, bit<4> param2, bit<4> param3) {
         hdr.write_values.u1 = param1;
         hdr.write_values.u2 = param2;
         hdr.write_values.u3 = param3;
         hdr.write_values.w1 = param2;
         hdr.write_values.w3 = param3;
     }
-    @name(".bm_set4") action bm_set4_0(bit<4> param1, bit<4> param2, bit<4> param3) {
+    @name(".bm_set4") action bm_set4(bit<4> param1, bit<4> param2, bit<4> param3) {
         hdr.write_values.u1 = param1;
         hdr.write_values.u2 = param2;
         hdr.write_values.u3 = param3;
@@ -76,7 +76,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.write_values.w2 = param2;
         hdr.write_values.w3 = param3;
     }
-    @name(".bm_set5") action bm_set5_0(bit<4> param1, bit<4> param2, bit<4> param3) {
+    @name(".bm_set5") action bm_set5(bit<4> param1, bit<4> param2, bit<4> param3) {
         hdr.write_values.u1 = param1;
         hdr.write_values.u2 = param2;
         hdr.write_values.u3 = param3;
@@ -84,7 +84,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.write_values.w2 = param2;
         hdr.write_values.w3 = param1;
     }
-    @name(".bm_set6") action bm_set6_0(bit<4> param1, bit<4> param2, bit<4> param3) {
+    @name(".bm_set6") action bm_set6(bit<4> param1, bit<4> param2, bit<4> param3) {
         hdr.write_values.u1 = param1;
         hdr.write_values.u2 = param2;
         hdr.write_values.u3 = param3;
@@ -93,7 +93,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.write_values.w3 = param3;
         hdr.write_values.y1 = param3;
     }
-    @name(".bm_set7") action bm_set7_0(bit<4> param1, bit<4> param2, bit<4> param3) {
+    @name(".bm_set7") action bm_set7(bit<4> param1, bit<4> param2, bit<4> param3) {
         hdr.write_values.u1 = param1;
         hdr.write_values.u2 = param2;
         hdr.write_values.u3 = param3;
@@ -103,26 +103,26 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.write_values.y1 = param1;
         hdr.write_values.y2 = param3;
     }
-    @name(".set_port") table set_port {
+    @name(".set_port") table set_port_0 {
         actions = {
-            noop_0();
-            port_set_0();
+            noop();
+            port_set();
         }
         key = {
             hdr.read_values.f1: ternary @name("read_values.f1") ;
         }
-        default_action = noop_0();
+        default_action = noop();
     }
-    @name(".test1") table test1 {
+    @name(".test1") table test1_0 {
         actions = {
             noop_2();
-            bm_set1_0();
-            bm_set2_0();
-            bm_set3_0();
-            bm_set4_0();
-            bm_set5_0();
-            bm_set6_0();
-            bm_set7_0();
+            bm_set1();
+            bm_set2();
+            bm_set3();
+            bm_set4();
+            bm_set5();
+            bm_set6();
+            bm_set7();
         }
         key = {
             hdr.read_values.f1: exact @name("read_values.f1") ;
@@ -130,8 +130,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = noop_2();
     }
     apply {
-        set_port.apply();
-        test1.apply();
+        set_port_0.apply();
+        test1_0.apply();
     }
 }
 

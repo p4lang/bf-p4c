@@ -193,33 +193,33 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_5() {
     }
-    @name(".fwd") action fwd_0() {
+    @name(".fwd") action fwd() {
         standard_metadata.egress_spec = meta.md.port;
     }
-    @name(".read_bar_1") action read_bar() {
+    @name(".read_bar_1") action read_bar_1() {
         hdr.wire.foo = meta.md.bar;
         hdr.cpu.setValid();
         hdr.cpu.foo = 16w0;
     }
-    @name(".read_bar_2") action read_bar_0() {
+    @name(".read_bar_2") action read_bar_2() {
         hdr.cpu.foo = meta.md.bar;
     }
-    @name(".write_bar") action write_bar_0(bit<16> val) {
+    @name(".write_bar") action write_bar(bit<16> val) {
         meta.md.bar = val;
     }
-    @name(".forward") table forward {
+    @name(".forward") table forward_0 {
         actions = {
-            fwd_0();
+            fwd();
         }
         key = {
             hdr.ethernet.ethertype: exact @name("ethernet.ethertype") ;
         }
         size = 128;
-        default_action = fwd_0();
+        default_action = fwd();
     }
-    @name(".read_bar_1_t") table read_bar_1_t {
+    @name(".read_bar_1_t") table read_bar_1_t_0 {
         actions = {
-            read_bar();
+            read_bar_1();
             @defaultonly NoAction_0();
         }
         key = {
@@ -227,9 +227,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name(".read_bar_2_t") table read_bar_2_t {
+    @name(".read_bar_2_t") table read_bar_2_t_0 {
         actions = {
-            read_bar_0();
+            read_bar_2();
             @defaultonly NoAction_4();
         }
         key = {
@@ -237,18 +237,18 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_4();
     }
-    @name(".write_bar_t") table write_bar_t {
+    @name(".write_bar_t") table write_bar_t_0 {
         actions = {
-            write_bar_0();
+            write_bar();
             @defaultonly NoAction_5();
         }
         default_action = NoAction_5();
     }
     apply {
-        write_bar_t.apply();
-        read_bar_1_t.apply();
-        read_bar_2_t.apply();
-        forward.apply();
+        write_bar_t_0.apply();
+        read_bar_1_t_0.apply();
+        read_bar_2_t_0.apply();
+        forward_0.apply();
     }
 }
 

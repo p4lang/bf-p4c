@@ -120,13 +120,16 @@ header ipv4_t {
     bit<4>  ihl;
     bit<8>  diffserv;
     bit<16> totalLen;
+    @saturating 
     int<16> identification;
     bit<3>  flags;
     bit<13> fragOffset;
+    @saturating 
     int<8>  ttl;
     bit<8>  protocol;
     bit<16> hdrChecksum;
     bit<32> srcAddr;
+    @saturating 
     int<32> dstAddr;
 }
 
@@ -214,54 +217,54 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".set_p") action set_p_0(bit<9> p) {
+    @name(".set_p") action set_p(bit<9> p) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = p;
     }
-    @name(".a16bit_sadds") action a16bit_sadds_0(int<16> value) {
-        hdr.ipv4.identification = hdr.ipv4.identification + value;
+    @name(".a16bit_sadds") action a16bit_sadds(int<16> value) {
+        hdr.ipv4.identification = hdr.ipv4.identification |+| value;
     }
-    @name(".a16bit_ssubs") action a16bit_ssubs_0(int<16> value) {
-        hdr.ipv4.identification = value - hdr.ipv4.identification;
+    @name(".a16bit_ssubs") action a16bit_ssubs(int<16> value) {
+        hdr.ipv4.identification = value |-| hdr.ipv4.identification;
     }
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing() {
     }
     @name(".do_nothing") action do_nothing_3() {
     }
     @name(".do_nothing") action do_nothing_4() {
     }
-    @name(".a32bit_sadds") action a32bit_sadds_0(int<32> value) {
-        hdr.ipv4.dstAddr = hdr.ipv4.dstAddr + value;
+    @name(".a32bit_sadds") action a32bit_sadds(int<32> value) {
+        hdr.ipv4.dstAddr = hdr.ipv4.dstAddr |+| value;
     }
-    @name(".a32bit_ssubs") action a32bit_ssubs_0(int<32> value) {
-        hdr.ipv4.dstAddr = value - hdr.ipv4.dstAddr;
+    @name(".a32bit_ssubs") action a32bit_ssubs(int<32> value) {
+        hdr.ipv4.dstAddr = value |-| hdr.ipv4.dstAddr;
     }
-    @name(".a8bit_sadds") action a8bit_sadds_0(int<8> value) {
-        hdr.ipv4.ttl = hdr.ipv4.ttl + value;
+    @name(".a8bit_sadds") action a8bit_sadds(int<8> value) {
+        hdr.ipv4.ttl = hdr.ipv4.ttl |+| value;
     }
-    @name(".a8bit_ssubs") action a8bit_ssubs_0(int<8> value) {
-        hdr.ipv4.ttl = value - hdr.ipv4.ttl;
+    @name(".a8bit_ssubs") action a8bit_ssubs(int<8> value) {
+        hdr.ipv4.ttl = value |-| hdr.ipv4.ttl;
     }
-    @name(".port_table") table port_table {
+    @name(".port_table") table port_table_0 {
         actions = {
-            set_p_0();
+            set_p();
         }
-        default_action = set_p_0(9w0);
+        default_action = set_p(9w0);
     }
-    @name(".t16bit") table t16bit {
+    @name(".t16bit") table t16bit_0 {
         actions = {
-            a16bit_sadds_0();
-            a16bit_ssubs_0();
-            do_nothing_0();
+            a16bit_sadds();
+            a16bit_ssubs();
+            do_nothing();
         }
         key = {
             hdr.tcp.srcPort: exact @name("tcp.srcPort") ;
         }
-        default_action = do_nothing_0();
+        default_action = do_nothing();
     }
-    @name(".t32bit") table t32bit {
+    @name(".t32bit") table t32bit_0 {
         actions = {
-            a32bit_sadds_0();
-            a32bit_ssubs_0();
+            a32bit_sadds();
+            a32bit_ssubs();
             do_nothing_3();
         }
         key = {
@@ -269,10 +272,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = do_nothing_3();
     }
-    @name(".t8bit") table t8bit {
+    @name(".t8bit") table t8bit_0 {
         actions = {
-            a8bit_sadds_0();
-            a8bit_ssubs_0();
+            a8bit_sadds();
+            a8bit_ssubs();
             do_nothing_4();
         }
         key = {
@@ -282,11 +285,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (hdr.tcp.isValid()) {
-            t8bit.apply();
-            t16bit.apply();
-            t32bit.apply();
+            t8bit_0.apply();
+            t16bit_0.apply();
+            t32bit_0.apply();
         }
-        port_table.apply();
+        port_table_0.apply();
     }
 }
 

@@ -170,35 +170,35 @@ struct tuple_0 {
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".copy_meta") action copy_meta_0() {
+    @name(".copy_meta") action copy_meta() {
         hdr.data.b1 = meta.meta.m1;
         hdr.data.b2 = meta.meta.m2;
         hdr.data.b3 = meta.meta.m3;
         hdr.data.b4 = meta.meta.m4;
     }
-    @name(".noop") action noop_0() {
+    @name(".noop") action noop() {
     }
-    @name(".mirror_eg1") action mirror_eg1_0() {
+    @name(".mirror_eg1") action mirror_eg1() {
         clone3<tuple_0>(CloneType.E2E, 32w4, { meta.meta.m1, meta.meta.m2 });
     }
-    @name(".mirror_eg2") action mirror_eg2_0() {
+    @name(".mirror_eg2") action mirror_eg2() {
         clone3<tuple_0>(CloneType.E2E, 32w5, { meta.meta.m3, meta.meta.m4 });
     }
-    @name(".mirror_eg3") action mirror_eg3_0() {
+    @name(".mirror_eg3") action mirror_eg3() {
         clone(CloneType.E2E, 32w6);
     }
-    @name(".eg_adjust") table eg_adjust {
+    @name(".eg_adjust") table eg_adjust_0 {
         actions = {
-            copy_meta_0();
+            copy_meta();
         }
-        default_action = copy_meta_0();
+        default_action = copy_meta();
     }
-    @name(".eg_mirror") table eg_mirror {
+    @name(".eg_mirror") table eg_mirror_0 {
         actions = {
-            noop_0();
-            mirror_eg1_0();
-            mirror_eg2_0();
-            mirror_eg3_0();
+            noop();
+            mirror_eg1();
+            mirror_eg2();
+            mirror_eg3();
             @defaultonly NoAction_0();
         }
         key = {
@@ -208,42 +208,42 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     apply {
         if (hdr.eg_intr_md_from_parser_aux.clone_src != 4w0) 
-            eg_adjust.apply();
-        eg_mirror.apply();
+            eg_adjust_0.apply();
+        eg_mirror_0.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_1() {
     }
-    @name(".noop") action noop_1() {
+    @name(".noop") action noop_2() {
     }
     @name(".noop") action noop_4() {
     }
-    @name(".mirror_ig1") action mirror_ig1_0() {
+    @name(".mirror_ig1") action mirror_ig1() {
         clone3<tuple_0>(CloneType.I2E, 32w1, { meta.meta.m1, meta.meta.m2 });
     }
-    @name(".mirror_ig2") action mirror_ig2_0() {
+    @name(".mirror_ig2") action mirror_ig2() {
         clone3<tuple_0>(CloneType.I2E, 32w2, { meta.meta.m3, meta.meta.m4 });
     }
-    @name(".mirror_ig3") action mirror_ig3_0() {
+    @name(".mirror_ig3") action mirror_ig3() {
         clone(CloneType.I2E, 32w3);
     }
-    @name(".clear_meta") action clear_meta_0() {
+    @name(".clear_meta") action clear_meta() {
         meta.meta.m1 = 8w0;
         meta.meta.m2 = 8w0;
         meta.meta.m3 = 8w0;
         meta.meta.m4 = 8w0;
     }
-    @name(".set_port") action set_port_0(bit<9> port) {
+    @name(".set_port") action set_port(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".ig_mirror") table ig_mirror {
+    @name(".ig_mirror") table ig_mirror_0 {
         actions = {
-            noop_1();
-            mirror_ig1_0();
-            mirror_ig2_0();
-            mirror_ig3_0();
+            noop_2();
+            mirror_ig1();
+            mirror_ig2();
+            mirror_ig3();
             @defaultonly NoAction_1();
         }
         key = {
@@ -251,26 +251,26 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_1();
     }
-    @name(".init_meta") table init_meta {
+    @name(".init_meta") table init_meta_0 {
         actions = {
-            clear_meta_0();
+            clear_meta();
         }
-        default_action = clear_meta_0();
+        default_action = clear_meta();
     }
-    @name(".output") table output {
+    @name(".output") table output_0 {
         actions = {
             noop_4();
-            set_port_0();
+            set_port();
         }
         key = {
             hdr.data.f1: ternary @name("data.f1") ;
         }
-        default_action = set_port_0(9w10);
+        default_action = set_port(9w10);
     }
     apply {
-        init_meta.apply();
-        ig_mirror.apply();
-        output.apply();
+        init_meta_0.apply();
+        ig_mirror_0.apply();
+        output_0.apply();
     }
 }
 

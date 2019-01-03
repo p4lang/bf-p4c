@@ -189,9 +189,10 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             egress_action_0;
         }
         key = {
-            hdr.ethernet.dstAddr[8:0]: exact;
+            hdr.ethernet.dstAddr[8:0]: exact @name("ethernet.dstAddr") ;
         }
         size = 512;
+        default_action = egress_action_0(idx = 0);
         counters = counter_egress;
     }
     apply {
@@ -212,7 +213,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             set_dst_addr;
         }
         key = {
-            hdr.ethernet.srcAddr[15:0]: exact;
+            hdr.ethernet.srcAddr[15:0]: exact @name("ethernet.srcAddr") ;
         }
         size = 65536;
     }

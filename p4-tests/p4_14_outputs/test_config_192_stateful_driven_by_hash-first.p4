@@ -303,7 +303,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.pkt.field_d_32[9:0]: exact @name("pkt.field_d_32[9:0]") ;
+            hdr.pkt.field_d_32[9:0]: exact @name("pkt.field_d_32") ;
         }
         size = 1024;
         default_action = NoAction();
@@ -311,10 +311,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".t_no_key") table t_no_key {
         actions = {
             a_no_key();
-            @defaultonly NoAction();
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = a_no_key();
     }
     @name(".t_t_direct") table t_t_direct {
         actions = {

@@ -269,35 +269,35 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    @name(".hash_action_ha") action hash_action_ha_0(bit<12> value_0, bit<3> value_1, bit<8> value_2) {
+    @name(".hash_action_ha") action hash_action_ha(bit<12> value_0, bit<3> value_1, bit<8> value_2) {
         hdr.vlan_tag.vlan_id = value_0;
         hdr.vlan_tag.pri = value_1;
         hdr.ipv4.ttl = value_2;
     }
-    @name(".set_md") action set_md_0(bit<9> level2_exclusion_id, bit<5> qid, bit<3> cos, bit<16> rid, bit<13> level1_mcast_hash) {
+    @name(".set_md") action set_md(bit<9> level2_exclusion_id, bit<5> qid, bit<3> cos, bit<16> rid, bit<13> level1_mcast_hash) {
         hdr.ig_intr_md_for_tm.level2_exclusion_id = level2_exclusion_id;
         hdr.ig_intr_md_for_tm.qid = qid;
         hdr.ig_intr_md_for_tm.ingress_cos = cos;
         hdr.ig_intr_md_for_tm.rid = rid;
         hdr.ig_intr_md_for_tm.level1_mcast_hash = level1_mcast_hash;
     }
-    @name(".set_egr_port") action set_egr_port_0(bit<9> val) {
+    @name(".set_egr_port") action set_egr_port(bit<9> val) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = val;
     }
-    @name(".drop_packet") action drop_packet_0() {
+    @name(".drop_packet") action drop_packet() {
         mark_to_drop();
     }
-    @name(".tcam_range_action") action tcam_range_action_0(bit<9> val, bit<12> value_0, bit<3> value_1, bit<8> value_2) {
+    @name(".tcam_range_action") action tcam_range_action(bit<9> val, bit<12> value_0, bit<3> value_1, bit<8> value_2) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = val;
         hdr.vlan_tag.vlan_id = value_0;
         hdr.vlan_tag.pri = value_1;
         hdr.ipv4.ttl = value_2;
     }
-    @name(".nop") action nop_0() {
+    @name(".nop") action nop() {
     }
-    @use_hash_action(1) @stage(3) @name(".hash_action_ha_exm") table hash_action_ha_exm {
+    @use_hash_action(1) @stage(3) @name(".hash_action_ha_exm") table hash_action_ha_exm_0 {
         actions = {
-            hash_action_ha_0();
+            hash_action_ha();
         }
         key = {
             hdr.ipv4.ttl          : exact @name("ipv4.ttl") ;
@@ -306,22 +306,22 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ethernet.isValid(): exact @name("ethernet.$valid$") ;
         }
         size = 8192;
-        default_action = hash_action_ha_0(12w1947, 3w5, 8w45);
+        default_action = hash_action_ha(12w1947, 3w5, 8w45);
     }
-    @phase0(1) @name(".port_tbl") table port_tbl {
+    @phase0(1) @name(".port_tbl") table port_tbl_0 {
         actions = {
-            set_md_0();
+            set_md();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 288;
-        default_action = set_md_0(9w0, 5w0, 3w0, 16w0, 13w0);
+        default_action = set_md(9w0, 5w0, 3w0, 16w0, 13w0);
     }
-    @stage(1) @name(".set_eg") table set_eg {
+    @stage(1) @name(".set_eg") table set_eg_0 {
         actions = {
-            set_egr_port_0();
-            drop_packet_0();
+            set_egr_port();
+            drop_packet();
             @defaultonly NoAction_0();
         }
         key = {
@@ -334,10 +334,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction_0();
     }
-    @command_line("--no-dead-code-elimination") @entries_with_ranges(1) @immediate(1) @stage(4) @name(".tcam_range") table tcam_range {
+    @command_line("--no-dead-code-elimination") @entries_with_ranges(1) @immediate(1) @stage(4) @name(".tcam_range") table tcam_range_0 {
         actions = {
-            tcam_range_action_0();
-            nop_0();
+            tcam_range_action();
+            nop();
             @defaultonly NoAction_3();
         }
         key = {
@@ -350,11 +350,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (1w0 == hdr.ig_intr_md.resubmit_flag) 
-            port_tbl.apply();
-        set_eg.apply();
+            port_tbl_0.apply();
+        set_eg_0.apply();
         if (hdr.tcp.srcPort == 16w9000) 
-            hash_action_ha_exm.apply();
-        tcam_range.apply();
+            hash_action_ha_exm_0.apply();
+        tcam_range_0.apply();
     }
 }
 

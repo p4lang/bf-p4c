@@ -177,23 +177,23 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    @name(".meter_0") direct_meter<bit<8>>(MeterType.bytes) meter_0;
-    @name(".do_nothing") action do_nothing_1() {
+    @name(".meter_0") direct_meter<bit<8>>(MeterType.bytes) meter_1;
+    @name(".do_nothing") action do_nothing() {
     }
-    @name(".action_1") action action_0() {
+    @name(".action_1") action action_1() {
         hdr.pkt.field_h_16 = 16w1;
     }
-    @name(".do_nothing") action do_nothing_2() {
-        meter_0.read(meta.meta.color);
+    @name(".do_nothing") action do_nothing_0() {
+        meter_1.read(meta.meta.color);
     }
-    @name(".action_0") action action_0_1() {
-        meter_0.read(meta.meta.color);
+    @name(".action_0") action action_3() {
+        meter_1.read(meta.meta.color);
         hdr.pkt.field_g_16 = 16w1;
     }
-    @name(".table_0") table table_0 {
+    @name(".table_0") table table_2 {
         actions = {
-            do_nothing_2();
-            action_0_1();
+            do_nothing_0();
+            action_3();
             @defaultonly NoAction_0();
         }
         key = {
@@ -201,13 +201,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_f_16: exact @name("pkt.field_f_16") ;
         }
         size = 1024;
-        meters = meter_0;
+        meters = meter_1;
         default_action = NoAction_0();
     }
-    @name(".table_1") table table_1 {
+    @name(".table_1") table table_3 {
         actions = {
-            do_nothing_1();
-            action_0();
+            do_nothing();
+            action_1();
             @defaultonly NoAction_3();
         }
         key = {
@@ -219,8 +219,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_3();
     }
     apply {
-        table_0.apply();
-        table_1.apply();
+        table_2.apply();
+        table_3.apply();
     }
 }
 

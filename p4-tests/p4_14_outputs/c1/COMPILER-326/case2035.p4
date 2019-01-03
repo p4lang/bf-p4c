@@ -572,7 +572,7 @@ control Addison(inout headers hdr, inout metadata meta, inout standard_metadata_
             bit<1> in_value;
             in_value = value;
             value = in_value;
-            rv = ~value;
+            rv = ~in_value;
         }
     };
     @name(".Gosnell") action Gosnell() {
@@ -731,7 +731,7 @@ control BigPoint(inout headers hdr, inout metadata meta, inout standard_metadata
             @defaultonly Spanaway;
         }
         key = {
-            meta.Egypt.Salduro & 24w0xfeffff: exact;
+            meta.Egypt.Salduro & 24w0xfeffff: exact @name("Egypt.Salduro") ;
             meta.Egypt.HydePark             : exact;
             meta.Egypt.Sudden               : exact;
         }
@@ -1378,7 +1378,7 @@ control Orrum(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Energy.Lovelady     : exact;
-            meta.Energy.Lepanto[63:0]: lpm;
+            meta.Energy.Lepanto[63:0]: lpm @name("Energy.Lepanto") ;
         }
         size = 16384;
         default_action = Handley();
@@ -1391,7 +1391,7 @@ control Orrum(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Energy.Winfall        : exact;
-            meta.Energy.Lepanto[106:64]: lpm;
+            meta.Energy.Lepanto[106:64]: lpm @name("Energy.Lepanto") ;
         }
         size = 65536;
         default_action = Handley();
@@ -1403,7 +1403,7 @@ control Orrum(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Avondale.Camino       : exact;
-            meta.Energy.Lepanto[127:64]: lpm;
+            meta.Energy.Lepanto[127:64]: lpm @name("Energy.Lepanto") ;
         }
         size = 8192;
     }
@@ -1428,7 +1428,7 @@ control Orrum(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Sieper.Wyman      : exact;
-            meta.Sieper.Yreka[19:0]: lpm;
+            meta.Sieper.Yreka[19:0]: lpm @name("Sieper.Yreka") ;
         }
         size = 131072;
         default_action = Handley();
@@ -1463,11 +1463,11 @@ control Orrum(inout headers hdr, inout metadata meta, inout standard_metadata_t 
                 switch (Azusa.apply().action_run) {
                     Handley: {
                         switch (Stockton.apply().action_run) {
-                            Handley: {
-                                Loris.apply();
-                            }
                             Minetto: {
                                 Resaca.apply();
+                            }
+                            Handley: {
+                                Loris.apply();
                             }
                         }
 
@@ -1789,6 +1789,10 @@ control Ugashik(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         switch (Lignite.apply().action_run) {
+            Temvik: {
+                Allen.apply();
+                Gwynn.apply();
+            }
             Suffern: {
                 if (meta.Norridge.Kinsey == 1w1) {
                     Tulalip.apply();
@@ -1804,10 +1808,6 @@ control Ugashik(inout headers hdr, inout metadata meta, inout standard_metadata_
                 else {
                     Emmorton.apply();
                 }
-            }
-            Temvik: {
-                Allen.apply();
-                Gwynn.apply();
             }
         }
 

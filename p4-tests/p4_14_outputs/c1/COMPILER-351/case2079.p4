@@ -602,7 +602,7 @@ control Amber(inout headers hdr, inout metadata meta, inout standard_metadata_t 
             bit<1> in_value;
             in_value = value;
             value = in_value;
-            rv = ~value;
+            rv = ~in_value;
         }
     };
     @name(".Shorter") RegisterAction<bit<1>, bit<32>, bit<1>>(Jefferson) Shorter = {
@@ -1657,7 +1657,7 @@ control SandCity(inout headers hdr, inout metadata meta, inout standard_metadata
         }
         key = {
             meta.Bowers.Mancelona    : exact;
-            meta.Bowers.Humacao[19:0]: lpm;
+            meta.Bowers.Humacao[19:0]: lpm @name("Bowers.Humacao") ;
         }
         size = 131072;
         default_action = FlatLick();
@@ -1694,7 +1694,7 @@ control SandCity(inout headers hdr, inout metadata meta, inout standard_metadata
         }
         key = {
             meta.Wildell.Pilottown     : exact;
-            meta.Panola.Alnwick[127:64]: lpm;
+            meta.Panola.Alnwick[127:64]: lpm @name("Panola.Alnwick") ;
         }
         size = 8192;
     }
@@ -1731,7 +1731,7 @@ control SandCity(inout headers hdr, inout metadata meta, inout standard_metadata
         }
         key = {
             meta.Panola.Flynn        : exact;
-            meta.Panola.Alnwick[63:0]: lpm;
+            meta.Panola.Alnwick[63:0]: lpm @name("Panola.Alnwick") ;
         }
         size = 16384;
         default_action = FlatLick();
@@ -1757,7 +1757,7 @@ control SandCity(inout headers hdr, inout metadata meta, inout standard_metadata
         }
         key = {
             meta.Panola.Hewitt         : exact;
-            meta.Panola.Alnwick[106:64]: lpm;
+            meta.Panola.Alnwick[106:64]: lpm @name("Panola.Alnwick") ;
         }
         size = 65536;
         default_action = FlatLick();
@@ -1768,11 +1768,11 @@ control SandCity(inout headers hdr, inout metadata meta, inout standard_metadata
                 switch (Cairo.apply().action_run) {
                     FlatLick: {
                         switch (Denmark.apply().action_run) {
-                            FlatLick: {
-                                SomesBar.apply();
-                            }
                             Lynne: {
                                 Brantford.apply();
+                            }
+                            FlatLick: {
+                                SomesBar.apply();
                             }
                         }
 
@@ -1785,6 +1785,9 @@ control SandCity(inout headers hdr, inout metadata meta, inout standard_metadata
                     switch (Monowi.apply().action_run) {
                         FlatLick: {
                             switch (Pidcoke.apply().action_run) {
+                                Welch: {
+                                    Rendon.apply();
+                                }
                                 FlatLick: {
                                     switch (Margie.apply().action_run) {
                                         Monsey: {
@@ -1792,9 +1795,6 @@ control SandCity(inout headers hdr, inout metadata meta, inout standard_metadata
                                         }
                                     }
 
-                                }
-                                Welch: {
-                                    Rendon.apply();
                                 }
                             }
 

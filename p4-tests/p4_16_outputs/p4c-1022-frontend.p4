@@ -30,59 +30,59 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    @name("ingress.setb1") action setb1_0(bit<8> val) {
+    @name("ingress.setb1") action setb1(bit<8> val) {
         hdr.data.b1 = val;
     }
-    @name("ingress.noop") action noop_0() {
+    @name("ingress.noop") action noop() {
     }
     @name("ingress.noop") action noop_3() {
     }
     @name("ingress.noop") action noop_4() {
     }
-    @name("ingress.set_flag1") action set_flag1_0() {
+    @name("ingress.set_flag1") action set_flag1() {
         meta.flag1 = true;
     }
-    @name("ingress.set_flag2") action set_flag2_0() {
+    @name("ingress.set_flag2") action set_flag2() {
         meta.flag2 = true;
     }
-    @name("ingress.flg1") table flg1 {
+    @name("ingress.flg1") table flg1_0 {
         key = {
             hdr.data.f1[31:16]: exact @name("hdr.data.f1[31:16]") ;
         }
         actions = {
-            set_flag1_0();
-            noop_0();
+            set_flag1();
+            noop();
             @defaultonly NoAction_0();
         }
         default_action = NoAction_0();
     }
-    @name("ingress.flg2") table flg2 {
+    @name("ingress.flg2") table flg2_0 {
         key = {
             hdr.data.f1[15:0]: exact @name("hdr.data.f1[15:0]") ;
         }
         actions = {
-            set_flag2_0();
+            set_flag2();
             noop_3();
             @defaultonly NoAction_3();
         }
         default_action = NoAction_3();
     }
-    @name("ingress.test") table test {
+    @name("ingress.test") table test_0 {
         key = {
             hdr.data.f1: ternary @name("hdr.data.f1") ;
         }
         actions = {
-            setb1_0();
+            setb1();
             noop_4();
         }
-        default_action = setb1_0(8w0xaa);
+        default_action = setb1(8w0xaa);
     }
     apply {
         standard_metadata.egress_spec = 9w2;
-        flg1.apply();
-        flg2.apply();
+        flg1_0.apply();
+        flg2_0.apply();
         if (hdr.data.f2[7:0] == 8w2 && hdr.data.f2[15:12] == 4w0 && meta.flag1 && meta.flag2) 
-            test.apply();
+            test_0.apply();
     }
 }
 

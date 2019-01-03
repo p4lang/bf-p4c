@@ -177,52 +177,52 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".stateful_cntr_2") register<bit<16>>(32w0) stateful_cntr_2;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<16> tmp_1;
-    bit<8> tmp_2;
+    bit<16> tmp;
+    bit<8> tmp_0;
     @name(".NoAction") action NoAction_0() {
     }
     @name(".NoAction") action NoAction_4() {
     }
     @name(".NoAction") action NoAction_5() {
     }
-    @name(".cntr_1") DirectRegisterAction<bit<16>, bit<16>>(stateful_cntr_1) cntr_1 = {
+    @name(".cntr_1") DirectRegisterAction<bit<16>, bit<16>>(stateful_cntr_1) cntr = {
         void apply(inout bit<16> value) {
             value = value + 16w1;
         }
     };
-    @name(".cntr_2") DirectRegisterAction<bit<16>, bit<16>>(stateful_cntr_2) cntr_2 = {
+    @name(".cntr_2") DirectRegisterAction<bit<16>, bit<16>>(stateful_cntr_2) cntr_0 = {
         void apply(inout bit<16> value, out bit<16> rv) {
             value = value + 16w1;
             rv = value;
         }
     };
-    @name(".sampler_alu") DirectRegisterAction<bit<8>, bit<8>>(flow_cnt) sampler_alu = {
+    @name(".sampler_alu") DirectRegisterAction<bit<8>, bit<8>>(flow_cnt) sampler_alu_0 = {
         void apply(inout bit<8> value, out bit<8> rv) {
-            bit<8> in_value_4;
+            bit<8> in_value_2;
             rv = 8w0;
-            in_value_4 = value;
+            in_value_2 = value;
             if (value == 8w10) 
                 value = 8w1;
-            if (in_value_4 != 8w10) 
-                value = in_value_4 + 8w1;
-            if (in_value_4 == 8w10) 
+            if (in_value_2 != 8w10) 
+                value = in_value_2 + 8w1;
+            if (in_value_2 == 8w10) 
                 rv = value;
         }
     };
-    @name(".cnt_1") action cnt() {
-        cntr_1.execute();
+    @name(".cnt_1") action cnt_1() {
+        cntr.execute();
     }
-    @name(".cnt_2") action cnt_0() {
-        tmp_1 = cntr_2.execute();
-        meta.meta.count_value = tmp_1;
+    @name(".cnt_2") action cnt_2() {
+        tmp = cntr_0.execute();
+        meta.meta.count_value = tmp;
     }
-    @name(".sample") action sample_0() {
-        tmp_2 = sampler_alu.execute();
-        meta.meta.needs_sampling = tmp_2;
+    @name(".sample") action sample() {
+        tmp_0 = sampler_alu_0.execute();
+        meta.meta.needs_sampling = tmp_0;
     }
-    @table_counter("disabled") @name(".match_cntr_1") table match_cntr_1 {
+    @table_counter("disabled") @name(".match_cntr_1") table match_cntr {
         actions = {
-            cnt();
+            cnt_1();
             @defaultonly NoAction_0();
         }
         key = {
@@ -231,9 +231,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 16384;
         default_action = NoAction_0();
     }
-    @name(".match_cntr_2") table match_cntr_2 {
+    @name(".match_cntr_2") table match_cntr_0 {
         actions = {
-            cnt_0();
+            cnt_2();
             @defaultonly NoAction_4();
         }
         key = {
@@ -244,9 +244,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 16384;
         default_action = NoAction_4();
     }
-    @name(".match_flow") table match_flow {
+    @name(".match_flow") table match_flow_0 {
         actions = {
-            sample_0();
+            sample();
             @defaultonly NoAction_5();
         }
         key = {
@@ -257,9 +257,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_5();
     }
     apply {
-        match_cntr_1.apply();
-        match_cntr_2.apply();
-        match_flow.apply();
+        match_cntr.apply();
+        match_cntr_0.apply();
+        match_flow_0.apply();
     }
 }
 

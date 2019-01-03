@@ -355,6 +355,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         next_hop_ipv4(egress_port, srcmac, dstmac);
         execute_meter_with_color(meter_2, idx, hdr.ipv4.diffserv, hdr.ipv4.diffserv);
     }
+    @name(".meter_action_color_unaware") action meter_action_color_unaware(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac, bit<32> idx) {
+        next_hop_ipv4(egress_port, srcmac, dstmac);
+        meter_2.execute_meter((bit<32>)idx, hdr.ipv4.diffserv);
+    }
     @stage(11) @name(".color_match") table color_match {
         actions = {
             count_color;
@@ -440,6 +444,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop;
             meter_action_color_aware;
+            meter_action_color_unaware;
         }
         key = {
             hdr.ipv4.dstAddr: exact;

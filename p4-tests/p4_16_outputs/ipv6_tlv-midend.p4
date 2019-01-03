@@ -85,8 +85,8 @@ struct switch_metadata_t {
 }
 
 parser SwitchIngressParser(packet_in pkt, out switch_header_t hdr, out switch_metadata_t ig_md, out ingress_intrinsic_metadata_t ig_intr_md) {
-    bit<8> tmp_1;
-    @name("SwitchIngressParser.counter") ParserCounter<bit<8>>() counter;
+    bit<8> tmp;
+    @name("SwitchIngressParser.counter") ParserCounter<bit<8>>() counter_0;
     state start {
         pkt.extract<ingress_intrinsic_metadata_t>(ig_intr_md);
         transition select(ig_intr_md.resubmit_flag) {
@@ -112,14 +112,14 @@ parser SwitchIngressParser(packet_in pkt, out switch_header_t hdr, out switch_me
     }
     state parse_ipv6_srh {
         pkt.extract<ipv6_srh_h>(hdr.ipv6_srh);
-        counter.set(hdr.ipv6_srh.segment_left, 8w0xff, 8w0, 8w0xff, 8w1);
+        counter_0.set(hdr.ipv6_srh.segment_left, 8w0xff, 8w0, 8w0xff, 8w1);
         transition parse_ipv6_srh_segment_list;
     }
     state parse_ipv6_srh_segment_list {
         pkt.extract<segment_id_h>(hdr.ipv6_srh_segment_list.next);
-        counter.decrement(8w0x1);
-        tmp_1 = counter.get();
-        transition select(tmp_1) {
+        counter_0.decrement(8w0x1);
+        tmp = counter_0.get();
+        transition select(tmp) {
             8w0: accept;
             default: parse_ipv6_srh_segment_list;
         }
@@ -145,11 +145,11 @@ struct tuple_0 {
 }
 
 control SwitchIngressDeparser(packet_out pkt, inout switch_header_t hdr, in switch_metadata_t ig_md, in ingress_intrinsic_metadata_for_deparser_t ig_intr_dprsr_md) {
-    bit<16> tmp_2;
-    @name("SwitchIngressDeparser.ipv4_checksum") Checksum<bit<16>>(HashAlgorithm_t.CRC16) ipv4_checksum;
+    bit<16> tmp_0;
+    @name("SwitchIngressDeparser.ipv4_checksum") Checksum<bit<16>>(HashAlgorithm_t.CRC16) ipv4_checksum_0;
     @hidden action act() {
-        tmp_2 = ipv4_checksum.update<tuple_0>({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.total_len, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.frag_offset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.src_addr, hdr.ipv4.dst_addr });
-        hdr.ipv4.hdr_checksum = tmp_2;
+        tmp_0 = ipv4_checksum_0.update<tuple_0>({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.total_len, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.frag_offset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.src_addr, hdr.ipv4.dst_addr });
+        hdr.ipv4.hdr_checksum = tmp_0;
         pkt.emit<ethernet_h>(hdr.ethernet);
         pkt.emit<ipv4_h>(hdr.ipv4);
         pkt.emit<udp_h>(hdr.udp);
@@ -169,26 +169,30 @@ control SwitchIngressDeparser(packet_out pkt, inout switch_header_t hdr, in swit
 control SwitchIngress(inout switch_header_t hdr, inout switch_metadata_t ig_md, in ingress_intrinsic_metadata_t ig_intr_md, in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md, inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md, inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name("SwitchIngress.forward") action forward_0(PortId_t port) {
+    @name("SwitchIngress.forward") action forward(PortId_t port) {
         ig_intr_tm_md.ucast_egress_port = port;
     }
-    @name("SwitchIngress.srv6") table srv6 {
+    @name("SwitchIngress.srv6") table srv6_0 {
         key = {
             hdr.ipv6_srh.isValid(): exact @name("hdr.ipv6_srh.$valid$") ;
         }
         actions = {
             NoAction_0();
-            forward_0();
+            forward();
         }
         default_action = NoAction_0();
     }
     apply {
-        srv6.apply();
+        srv6_0.apply();
     }
 }
 
 parser EmptyEgressParser_0(packet_in pkt, out switch_header_t hdr, out switch_metadata_t eg_md, out egress_intrinsic_metadata_t eg_intr_md) {
+    egress_intrinsic_metadata_t eg_intr_md_0;
     state start {
+        eg_intr_md_0.setInvalid();
+        pkt.extract<egress_intrinsic_metadata_t>(eg_intr_md_0);
+        eg_intr_md = eg_intr_md_0;
         transition accept;
     }
 }

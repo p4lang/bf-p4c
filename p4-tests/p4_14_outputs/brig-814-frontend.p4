@@ -214,101 +214,95 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".NoAction") action NoAction_5() {
-    }
-    @name(".NoAction") action NoAction_6() {
-    }
-    @name(".NoAction") action NoAction_7() {
-    }
-    bit<18> temp;
-    bit<18> temp_0;
-    bit<18> temp_1;
-    bit<1> tmp_5;
-    bit<1> tmp_6;
-    bit<1> tmp_7;
-    bit<1> tmp_8;
-    bit<1> tmp_9;
-    bit<1> tmp_10;
-    @name(".bloom_filter_alu_1") RegisterAction<bit<1>, bit<32>, bit<1>>(bloom_filter_1) bloom_filter_alu_1 = {
+    bit<18> temp_2;
+    bit<18> temp_3;
+    bit<18> temp_4;
+    bit<1> tmp;
+    bit<1> tmp_0;
+    bit<1> tmp_1;
+    bit<1> tmp_2;
+    bit<1> tmp_3;
+    bit<1> tmp_4;
+    @reduction_or_group("bloom_filter") @name(".bloom_filter_alu_1") RegisterAction<bit<1>, bit<32>, bit<1>>(bloom_filter_1) bloom_filter_alu = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            bit<1> in_value;
+            bit<1> in_value_0;
+            in_value_0 = value;
             value = 1w1;
-            rv = ~value;
+            rv = ~in_value_0;
         }
     };
-    @name(".bloom_filter_alu_2") RegisterAction<bit<1>, bit<32>, bit<1>>(bloom_filter_2) bloom_filter_alu_2 = {
+    @reduction_or_group("bloom_filter") @name(".bloom_filter_alu_2") RegisterAction<bit<1>, bit<32>, bit<1>>(bloom_filter_2) bloom_filter_alu_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            bit<1> in_value_3;
+            bit<1> in_value_1;
+            in_value_1 = value;
             value = 1w1;
-            rv = ~value;
+            rv = ~in_value_1;
         }
     };
-    @name(".bloom_filter_alu_3") RegisterAction<bit<1>, bit<32>, bit<1>>(bloom_filter_3) bloom_filter_alu_3 = {
+    @reduction_or_group("bloom_filter") @name(".bloom_filter_alu_3") RegisterAction<bit<1>, bit<32>, bit<1>>(bloom_filter_3) bloom_filter_alu_4 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            bit<1> in_value_4;
+            bit<1> in_value_2;
+            in_value_2 = value;
             value = 1w1;
-            rv = ~value;
+            rv = ~in_value_2;
         }
     };
-    @name(".check_bloom_filter_1") action check_bloom_filter() {
-        hash<bit<18>, bit<18>, tuple<bit<8>, bit<32>, bit<32>, bit<16>, bit<16>>, bit<19>>(temp, HashAlgorithm.random, 18w0, { hdr.ipv4.proto, hdr.ipv4.sip, hdr.ipv4.dip, hdr.tcp.sPort, hdr.tcp.dPort }, 19w262144);
-        tmp_5 = bloom_filter_alu_1.execute((bit<32>)temp);
-        tmp_6 = meta.md.bf_tmp | tmp_5;
-        meta.md.bf_tmp = tmp_6;
+    @name(".check_bloom_filter_1") action check_bloom_filter_1() {
+        hash<bit<18>, bit<18>, tuple<bit<8>, bit<32>, bit<32>, bit<16>, bit<16>>, bit<19>>(temp_2, HashAlgorithm.random, 18w0, { hdr.ipv4.proto, hdr.ipv4.sip, hdr.ipv4.dip, hdr.tcp.sPort, hdr.tcp.dPort }, 19w262144);
+        tmp = bloom_filter_alu.execute((bit<32>)temp_2);
+        tmp_0 = meta.md.bf_tmp | tmp;
+        meta.md.bf_tmp = tmp_0;
     }
-    @name(".check_bloom_filter_2") action check_bloom_filter_0() {
-        hash<bit<18>, bit<18>, tuple<bit<8>, bit<32>, bit<32>, bit<16>, bit<16>>, bit<19>>(temp_0, HashAlgorithm.random, 18w0, { hdr.ipv4.proto, hdr.ipv4.sip, hdr.ipv4.dip, hdr.tcp.sPort, hdr.tcp.dPort }, 19w262144);
-        tmp_7 = bloom_filter_alu_2.execute((bit<32>)temp_0);
-        tmp_8 = meta.md.bf_tmp | tmp_7;
-        meta.md.bf_tmp = tmp_8;
+    @name(".check_bloom_filter_2") action check_bloom_filter_2() {
+        hash<bit<18>, bit<18>, tuple<bit<8>, bit<32>, bit<32>, bit<16>, bit<16>>, bit<19>>(temp_3, HashAlgorithm.random, 18w0, { hdr.ipv4.proto, hdr.ipv4.sip, hdr.ipv4.dip, hdr.tcp.sPort, hdr.tcp.dPort }, 19w262144);
+        tmp_1 = bloom_filter_alu_0.execute((bit<32>)temp_3);
+        tmp_2 = meta.md.bf_tmp | tmp_1;
+        meta.md.bf_tmp = tmp_2;
     }
-    @name(".check_bloom_filter_3") action check_bloom_filter_4() {
-        hash<bit<18>, bit<18>, tuple<bit<8>, bit<32>, bit<32>, bit<16>, bit<16>>, bit<19>>(temp_1, HashAlgorithm.random, 18w0, { hdr.ipv4.proto, hdr.ipv4.sip, hdr.ipv4.dip, hdr.tcp.sPort, hdr.tcp.dPort }, 19w262144);
-        tmp_9 = bloom_filter_alu_3.execute((bit<32>)temp_1);
-        tmp_10 = meta.md.bf_tmp | tmp_9;
-        meta.md.bf_tmp = tmp_10;
+    @name(".check_bloom_filter_3") action check_bloom_filter_3() {
+        hash<bit<18>, bit<18>, tuple<bit<8>, bit<32>, bit<32>, bit<16>, bit<16>>, bit<19>>(temp_4, HashAlgorithm.random, 18w0, { hdr.ipv4.proto, hdr.ipv4.sip, hdr.ipv4.dip, hdr.tcp.sPort, hdr.tcp.dPort }, 19w262144);
+        tmp_3 = bloom_filter_alu_4.execute((bit<32>)temp_4);
+        tmp_4 = meta.md.bf_tmp | tmp_3;
+        meta.md.bf_tmp = tmp_4;
     }
-    @name(".bloom_filter_mark_sample") action bloom_filter_mark_sample_0() {
+    @name(".bloom_filter_mark_sample") action bloom_filter_mark_sample() {
         hdr.ig_intr_md_for_tm.copy_to_cpu = 1w1;
     }
-    @name(".bloom_filter_1") table bloom_filter_1_0 {
+    @name(".bloom_filter_1") table bloom_filter_1_1 {
         actions = {
-            check_bloom_filter();
+            check_bloom_filter_1();
+        }
+        size = 1;
+        default_action = check_bloom_filter_1();
+    }
+    @name(".bloom_filter_2") table bloom_filter_2_1 {
+        actions = {
+            check_bloom_filter_2();
+        }
+        size = 1;
+        default_action = check_bloom_filter_2();
+    }
+    @name(".bloom_filter_3") table bloom_filter_3_1 {
+        actions = {
+            check_bloom_filter_3();
+        }
+        size = 1;
+        default_action = check_bloom_filter_3();
+    }
+    @name(".bloom_filter_sample") table bloom_filter_sample_0 {
+        actions = {
+            bloom_filter_mark_sample();
             @defaultonly NoAction_0();
         }
         size = 1;
         default_action = NoAction_0();
     }
-    @name(".bloom_filter_2") table bloom_filter_2_0 {
-        actions = {
-            check_bloom_filter_0();
-            @defaultonly NoAction_5();
-        }
-        size = 1;
-        default_action = NoAction_5();
-    }
-    @name(".bloom_filter_3") table bloom_filter_3_0 {
-        actions = {
-            check_bloom_filter_4();
-            @defaultonly NoAction_6();
-        }
-        size = 1;
-        default_action = NoAction_6();
-    }
-    @name(".bloom_filter_sample") table bloom_filter_sample {
-        actions = {
-            bloom_filter_mark_sample_0();
-            @defaultonly NoAction_7();
-        }
-        size = 1;
-        default_action = NoAction_7();
-    }
     apply {
-        bloom_filter_1_0.apply();
-        bloom_filter_2_0.apply();
-        bloom_filter_3_0.apply();
+        bloom_filter_1_1.apply();
+        bloom_filter_2_1.apply();
+        bloom_filter_3_1.apply();
         if (meta.md.bf_tmp != 1w0) 
-            bloom_filter_sample.apply();
+            bloom_filter_sample_0.apply();
     }
 }
 

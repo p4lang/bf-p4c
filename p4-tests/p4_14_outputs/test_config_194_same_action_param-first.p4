@@ -220,7 +220,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.pkt.field_a_32[7:0]: ternary @name("pkt.field_a_32[7:0]") ;
+            hdr.pkt.field_a_32[7:0]: ternary @name("pkt.field_a_32") ;
         }
         size = 256;
         default_action = NoAction();

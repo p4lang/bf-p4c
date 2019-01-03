@@ -186,16 +186,16 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".nop") action nop_0() {
+    @name(".nop") action nop() {
     }
-    @name(".mod_mac_adr") action mod_mac_adr_0(bit<8> egress_port, bit<48> srcmac, bit<48> dstmac) {
+    @name(".mod_mac_adr") action mod_mac_adr(bit<8> egress_port, bit<48> srcmac, bit<48> dstmac) {
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
     }
-    @immediate(1) @name(".tcam_tbl_stage_2") table tcam_tbl_stage_0 {
+    @immediate(1) @name(".tcam_tbl_stage_2") table tcam_tbl_stage {
         actions = {
-            nop_0();
-            mod_mac_adr_0();
+            nop();
+            mod_mac_adr();
             @defaultonly NoAction_0();
         }
         key = {
@@ -204,7 +204,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_0();
     }
     apply {
-        tcam_tbl_stage_0.apply();
+        tcam_tbl_stage.apply();
     }
 }
 

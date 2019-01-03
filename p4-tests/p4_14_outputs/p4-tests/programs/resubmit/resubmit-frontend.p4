@@ -168,29 +168,29 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    @name(".nop") action nop_0() {
+    @name(".nop") action nop() {
     }
     @name(".nop") action nop_2() {
     }
-    @name(".nhop_set") action nhop_set_0(bit<9> port) {
+    @name(".nhop_set") action nhop_set(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".nhop_set_with_type") action nhop_set_with_type_0(bit<9> port) {
+    @name(".nhop_set_with_type") action nhop_set_with_type(bit<9> port) {
         hdr.ethernet.etherType = meta.test_metadata.field_C;
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".do_resubmit") action do_resubmit_0() {
+    @name(".do_resubmit") action do_resubmit() {
         resubmit<tuple<>>({  });
     }
-    @name(".do_resubmit_with_fields") action do_resubmit_with_fields_0() {
+    @name(".do_resubmit_with_fields") action do_resubmit_with_fields() {
         meta.test_metadata.field_C = 16w0x1234;
         resubmit<tuple<bit<8>, bit<16>>>({ meta.test_metadata.field_A, meta.test_metadata.field_C });
     }
-    @name(".l2_nhop") table l2_nhop {
+    @name(".l2_nhop") table l2_nhop_0 {
         actions = {
-            nop_0();
-            nhop_set_0();
-            nhop_set_with_type_0();
+            nop();
+            nhop_set();
+            nhop_set_with_type();
             @defaultonly NoAction_0();
         }
         key = {
@@ -199,11 +199,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_0();
     }
-    @name(".l2_resubmit") table l2_resubmit {
+    @name(".l2_resubmit") table l2_resubmit_0 {
         actions = {
             nop_2();
-            do_resubmit_0();
-            do_resubmit_with_fields_0();
+            do_resubmit();
+            do_resubmit_with_fields();
             @defaultonly NoAction_3();
         }
         key = {
@@ -214,9 +214,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (1w0 == hdr.ig_intr_md.resubmit_flag) 
-            l2_resubmit.apply();
+            l2_resubmit_0.apply();
         else 
-            l2_nhop.apply();
+            l2_nhop_0.apply();
     }
 }
 

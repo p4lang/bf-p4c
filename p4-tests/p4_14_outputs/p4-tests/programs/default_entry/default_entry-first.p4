@@ -513,7 +513,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         key = {
             hdr.ipv4.dstAddr: exact @name("ipv4.dstAddr") ;
         }
-        default_action = prepare_keyless();
+        default_action = prepare_keyless(egr_port = 9w0);
     }
     @name(".set_egr_tcam") table set_egr_tcam {
         actions = {

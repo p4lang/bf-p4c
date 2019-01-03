@@ -35,41 +35,41 @@ parser p(packet_in b, out packet_t hdrs, inout standard_metadata meta) {
 }
 
 control ingress(inout packet_t hdrs, inout standard_metadata meta) {
-    @name("ingress.set_port") action set_port_0(bit<9> port) {
+    @name("ingress.set_port") action set_port(bit<9> port) {
         meta.egress_spec = port;
     }
-    @name("ingress.set_f1") action set_f1_0(bit<32> val) {
+    @name("ingress.set_f1") action set_f1(bit<32> val) {
         hdrs.data.f1 = val;
         meta.egress_spec = 9w2;
     }
-    @name("ingress.noop") action noop_0() {
+    @name("ingress.noop") action noop() {
     }
     @name("ingress.noop") action noop_2() {
     }
-    @name("ingress.t1") table t1 {
+    @name("ingress.t1") table t1_0 {
         key = {
             hdrs.data.f1: ternary @name("hdrs.data.f1") ;
         }
         actions = {
-            set_port_0();
-            noop_0();
+            set_port();
+            noop();
         }
-        default_action = noop_0();
+        default_action = noop();
     }
-    @name("ingress.t2") table t2 {
+    @name("ingress.t2") table t2_0 {
         key = {
             hdrs.data.f1: ternary @name("hdrs.data.f1") ;
         }
         actions = {
-            set_f1_0();
+            set_f1();
             noop_2();
         }
         default_action = noop_2();
     }
     apply {
-        t1.apply();
+        t1_0.apply();
         if (hdrs.data.f2 == 32w0) 
-            t2.apply();
+            t2_0.apply();
     }
 }
 

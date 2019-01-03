@@ -168,7 +168,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ethernet.etherType = 16w4;
     }
     @name(".action_1") action action_1() {
-        digest<my_digest>(32w0, { hdr.ethernet.dstAddr_hi, hdr.ethernet.srcAddr_hi, hdr.ethernet.dstAddr_lo, hdr.ethernet.srcAddr_lo, hdr.ethernet.etherType });
+        digest<my_digest>(32w0, {hdr.ethernet.dstAddr_hi,hdr.ethernet.srcAddr_hi,hdr.ethernet.dstAddr_lo,hdr.ethernet.srcAddr_lo,hdr.ethernet.etherType});
     }
     @name(".do_nothing") action do_nothing() {
     }

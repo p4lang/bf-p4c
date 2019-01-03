@@ -2,18 +2,18 @@
 #include <v1model.p4>
 
 header pkt_t {
-    bit<12> f1;
-    bit<10> f2;
-    bit<12> f3;
-    bit<30> f4;
-    bit<12> f5;
-    bit<10> f6;
-    bit<12> f7;
-    bit<30> f8;
-    bit<12> f9;
-    bit<10> fa;
-    bit<12> fb;
-    bit<30> fc;
+    bit<2> f1;
+    bit<2> f2;
+    bit<2> f3;
+    bit<2> f4;
+    bit<2> f5;
+    bit<2> f6;
+    bit<2> f7;
+    bit<2> f8;
+    bit<2> f9;
+    bit<2> fa;
+    bit<2> fb;
+    bit<2> fc;
 }
 
 struct metadata {
@@ -42,7 +42,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.pkt.f1 = hdr.pkt.f5;
     }
     @name(".action_1") action action_1() {
-        hdr.pkt.f1 = (bit<12>)hdr.pkt.f8;
+        hdr.pkt.f1 = hdr.pkt.f8;
     }
     @name(".action_2") action action_2() {
         hdr.pkt.f1 = hdr.pkt.f5;
@@ -53,6 +53,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.pkt.f2 = hdr.pkt.f6;
         hdr.pkt.f3 = hdr.pkt.fb;
         hdr.pkt.f4 = hdr.pkt.fc;
+    }
+    @name(".action_4") action action_4() {
+        hdr.pkt.f1 = hdr.pkt.f5;
+        hdr.pkt.f3 = hdr.pkt.f7;
     }
     @name(".setting_port") table setting_port {
         actions = {
@@ -70,6 +74,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             action_1();
             action_2();
             action_3();
+            action_4();
             @defaultonly NoAction();
         }
         key = {

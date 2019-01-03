@@ -29,26 +29,26 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    bit<16> tmp_0;
-    @name("ingress.accum") register<bit<16>>(32w2048) accum;
-    @name("ingress.logh1") RegisterAction<bit<16>, bit<32>, bit<16>>(accum) logh1 = {
+    bit<16> tmp;
+    @name("ingress.accum") register<bit<16>>(32w2048) accum_0;
+    @name("ingress.logh1") RegisterAction<bit<16>, bit<32>, bit<16>>(accum_0) logh1_0 = {
         void apply(inout bit<16> value) {
             value = hdr.data.h1;
         }
     };
-    @name("ingress.query") RegisterAction<bit<16>, bit<32>, bit<16>>(accum) query = {
+    @name("ingress.query") RegisterAction<bit<16>, bit<32>, bit<16>>(accum_0) query_0 = {
         void apply(inout bit<16> value, out bit<16> rv) {
             rv = value;
         }
     };
-    @name("ingress.logit") action logit_0(bit<9> port) {
+    @name("ingress.logit") action logit(bit<9> port) {
         standard_metadata.egress_spec = port;
         hdr.data.b1 = 8w0xff;
-        logh1.execute_log();
+        logh1_0.execute_log();
     }
-    @name("ingress.do_log") table do_log {
+    @name("ingress.do_log") table do_log_0 {
         actions = {
-            logit_0();
+            logit();
             @defaultonly NoAction_0();
         }
         key = {
@@ -56,15 +56,15 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name("ingress.getit") action getit_0(bit<11> index, bit<9> port) {
+    @name("ingress.getit") action getit(bit<11> index, bit<9> port) {
         standard_metadata.egress_spec = port;
         hdr.data.b1 = 8w0xfe;
-        tmp_0 = query.execute((bit<32>)index);
-        hdr.data.h1 = tmp_0;
+        tmp = query_0.execute((bit<32>)index);
+        hdr.data.h1 = tmp;
     }
-    @name("ingress.do_query") table do_query {
+    @name("ingress.do_query") table do_query_0 {
         actions = {
-            getit_0();
+            getit();
             @defaultonly NoAction_3();
         }
         key = {
@@ -74,9 +74,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (hdr.data.b1 == 8w0) 
-            do_query.apply();
+            do_query_0.apply();
         else 
-            do_log.apply();
+            do_log_0.apply();
     }
 }
 

@@ -28,23 +28,23 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 @name(".accum") register<bit<16>>(32w0) accum;
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<16> tmp_0;
+    bit<16> tmp;
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".sful") DirectRegisterAction<bit<16>, bit<16>>(accum) sful = {
+    @name(".sful") DirectRegisterAction<bit<16>, bit<16>>(accum) sful_0 = {
         void apply(inout bit<16> value, out bit<16> rv) {
             rv = value;
             value = value + (bit<16>)hdr.data.b1;
         }
     };
-    @name(".addb1") action addb1_0(bit<9> port) {
+    @name(".addb1") action addb1(bit<9> port) {
         standard_metadata.egress_spec = port;
-        tmp_0 = sful.execute();
-        hdr.data.h1 = tmp_0;
+        tmp = sful_0.execute();
+        hdr.data.h1 = tmp;
     }
-    @name(".test1") table test1 {
+    @name(".test1") table test1_0 {
         actions = {
-            addb1_0();
+            addb1();
             @defaultonly NoAction_0();
         }
         key = {
@@ -53,7 +53,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_0();
     }
     apply {
-        test1.apply();
+        test1_0.apply();
     }
 }
 

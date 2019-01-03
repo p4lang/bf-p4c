@@ -234,9 +234,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".table_2") table table_2 {
         actions = {
             action_2();
-            @defaultonly NoAction();
         }
-        default_action = NoAction();
+        default_action = action_2();
     }
     apply {
         if (hdr.pkt.isValid()) {

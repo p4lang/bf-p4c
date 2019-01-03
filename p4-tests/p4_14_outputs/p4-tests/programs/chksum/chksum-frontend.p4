@@ -199,28 +199,28 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".set_egress_port") action set_egress_port_0(bit<9> port) {
+    @name(".set_egress_port") action set_egress_port(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".drop_packet") action drop_packet_0() {
+    @name(".drop_packet") action drop_packet() {
         mark_to_drop();
     }
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing() {
     }
-    @name(".egress_port") table egress_port_1 {
+    @name(".egress_port") table egress_port_0 {
         actions = {
-            set_egress_port_0();
-            drop_packet_0();
-            do_nothing_0();
+            set_egress_port();
+            drop_packet();
+            do_nothing();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 100;
-        default_action = do_nothing_0();
+        default_action = do_nothing();
     }
     apply {
-        egress_port_1.apply();
+        egress_port_0.apply();
     }
 }
 

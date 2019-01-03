@@ -110,6 +110,7 @@ header ingress_parser_control_signals {
 }
 
 header pkt_t {
+    @saturating 
     int<32> field_a_32;
     bit<32> field_b_32;
     bit<32> field_c_32;
@@ -167,15 +168,15 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    @name(".action_0") action action_2() {
-        hdr.pkt.field_a_32 = hdr.pkt.field_a_32 + -32s1;
+    @name(".action_0") action action_0() {
+        hdr.pkt.field_a_32 = hdr.pkt.field_a_32 |-| 32s1;
     }
-    @name(".action_1") action action_3(bit<8> p0) {
+    @name(".action_1") action action_1(bit<8> p0) {
         hdr.pkt.field_i_8 = hdr.pkt.field_i_8 - hdr.pkt.field_j_8;
     }
-    @name(".table_0") table table_0 {
+    @name(".table_0") table table_2 {
         actions = {
-            action_2();
+            action_0();
             @defaultonly NoAction_0();
         }
         key = {
@@ -184,9 +185,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_0();
     }
-    @name(".table_1") table table_1 {
+    @name(".table_1") table table_3 {
         actions = {
-            action_3();
+            action_1();
             @defaultonly NoAction_3();
         }
         key = {
@@ -196,8 +197,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_3();
     }
     apply {
-        table_0.apply();
-        table_1.apply();
+        table_2.apply();
+        table_3.apply();
     }
 }
 

@@ -240,7 +240,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_9() {
     }
-    @name(".switch_to_dest_port") action switch_to_dest_port_0(bit<9> dport) {
+    @name(".switch_to_dest_port") action switch_to_dest_port(bit<9> dport) {
         meta.md.table_hit = 1w1;
         hdr.ig_intr_md_for_tm.ucast_egress_port = dport;
     }
@@ -256,12 +256,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.md.table_hit = 1w1;
         hdr.ig_intr_md_for_tm.ucast_egress_port = dport;
     }
-    @name(".switch_to_miss_port") action switch_to_miss_port_0(bit<9> miss_port) {
+    @name(".switch_to_miss_port") action switch_to_miss_port(bit<9> miss_port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = miss_port;
     }
-    @ways(6) @pack(3) @dynamic_table_key_masks(1) @name(".l2_multistage_ways_6_pack_3") table l2_multistage_ways_6_pack_0 {
+    @ways(6) @pack(3) @dynamic_table_key_masks(1) @name(".l2_multistage_ways_6_pack_3") table l2_multistage_ways_6_pack {
         actions = {
-            switch_to_dest_port_0();
+            switch_to_dest_port();
             @defaultonly NoAction_0();
         }
         key = {
@@ -271,7 +271,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 64000;
         default_action = NoAction_0();
     }
-    @stage(0) @ways(3) @pack(2) @dynamic_table_key_masks(1) @name(".l2_stage0_ways_3_pack_2") table l2_stage0_ways_3_pack_0 {
+    @stage(0) @ways(3) @pack(2) @dynamic_table_key_masks(1) @name(".l2_stage0_ways_3_pack_2") table l2_stage0_ways_3_pack {
         actions = {
             switch_to_dest_port_4();
             @defaultonly NoAction_6();
@@ -283,7 +283,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_6();
     }
-    @stage(1) @ways(6) @pack(2) @dynamic_table_key_masks(1) @name(".l2_stage1_ways_6_pack_2") table l2_stage1_ways_6_pack_0 {
+    @stage(1) @ways(6) @pack(2) @dynamic_table_key_masks(1) @name(".l2_stage1_ways_6_pack_2") table l2_stage1_ways_6_pack {
         actions = {
             switch_to_dest_port_5();
             @defaultonly NoAction_7();
@@ -295,7 +295,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_7();
     }
-    @stage(2) @ways(6) @pack(3) @dynamic_table_key_masks(1) @name(".l2_stage2_ways_6_pack_3") table l2_stage2_ways_6_pack_0 {
+    @stage(2) @ways(6) @pack(3) @dynamic_table_key_masks(1) @name(".l2_stage2_ways_6_pack_3") table l2_stage2_ways_6_pack {
         actions = {
             switch_to_dest_port_6();
             @defaultonly NoAction_8();
@@ -307,9 +307,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_8();
     }
-    @name(".miss_check") table miss_check {
+    @name(".miss_check") table miss_check_0 {
         actions = {
-            switch_to_miss_port_0();
+            switch_to_miss_port();
             @defaultonly NoAction_9();
         }
         key = {
@@ -319,11 +319,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_9();
     }
     apply {
-        l2_stage0_ways_3_pack_0.apply();
-        l2_stage1_ways_6_pack_0.apply();
-        l2_stage2_ways_6_pack_0.apply();
-        l2_multistage_ways_6_pack_0.apply();
-        miss_check.apply();
+        l2_stage0_ways_3_pack.apply();
+        l2_stage1_ways_6_pack.apply();
+        l2_stage2_ways_6_pack.apply();
+        l2_multistage_ways_6_pack.apply();
+        miss_check_0.apply();
     }
 }
 

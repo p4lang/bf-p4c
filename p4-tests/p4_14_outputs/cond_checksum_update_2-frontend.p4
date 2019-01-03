@@ -167,15 +167,15 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     @name(".NoAction") action NoAction_1() {
     }
-    @name(".enable_checksum_update_0") action enable_checksum_update() {
+    @name(".enable_checksum_update_0") action enable_checksum_update_0() {
         meta.meta.update_checksum_0 = 1w1;
     }
-    @name(".enable_checksum_update_1") action enable_checksum_update_2() {
+    @name(".enable_checksum_update_1") action enable_checksum_update_1() {
         meta.meta.update_checksum_1 = 1w1;
     }
-    @name(".test2") table test2 {
+    @name(".test2") table test2_0 {
         actions = {
-            enable_checksum_update();
+            enable_checksum_update_0();
             @defaultonly NoAction_0();
         }
         key = {
@@ -183,9 +183,9 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         default_action = NoAction_0();
     }
-    @name(".test3") table test3 {
+    @name(".test3") table test3_0 {
         actions = {
-            enable_checksum_update_2();
+            enable_checksum_update_1();
             @defaultonly NoAction_1();
         }
         key = {
@@ -194,24 +194,24 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = NoAction_1();
     }
     apply {
-        test2.apply();
-        test3.apply();
+        test2_0.apply();
+        test3_0.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_5() {
     }
-    @name(".setb1") action setb1_0(bit<8> val, bit<9> port) {
+    @name(".setb1") action setb1(bit<8> val, bit<9> port) {
         hdr.data.b1 = val;
         standard_metadata.egress_spec = port;
     }
-    @name(".noop") action noop_0() {
+    @name(".noop") action noop() {
     }
-    @name(".test1") table test1 {
+    @name(".test1") table test1_0 {
         actions = {
-            setb1_0();
-            noop_0();
+            setb1();
+            noop();
             @defaultonly NoAction_5();
         }
         key = {
@@ -220,7 +220,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_5();
     }
     apply {
-        test1.apply();
+        test1_0.apply();
     }
 }
 

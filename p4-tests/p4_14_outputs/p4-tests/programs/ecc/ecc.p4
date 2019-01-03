@@ -246,7 +246,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             nop;
         }
         key = {
-            meta.test_sel.key[9:0]: exact;
+            meta.test_sel.key[9:0]: exact @name("test_sel.key") ;
         }
         size = 1024;
     }
@@ -295,7 +295,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             pass;
         }
         key = {
-            meta.test_sel.key[9:0]: exact;
+            meta.test_sel.key[9:0]: exact @name("test_sel.key") ;
             meta.test_sel.key     : selector;
         }
         size = 1024;
@@ -315,7 +315,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             set_key;
         }
         key = {
-            meta.test_sel.key[9:0]: exact;
+            meta.test_sel.key[9:0]: exact @name("test_sel.key") ;
         }
         size = 1024;
     }

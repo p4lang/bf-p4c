@@ -165,38 +165,38 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".a1") action a1_0(bit<16> a) {
+    @name(".a1") action a1(bit<16> a) {
         hdr.hdr1.a = a;
     }
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing() {
     }
-    @name(".t1") table t1 {
+    @name(".t1") table t1_0 {
         actions = {
-            a1_0();
-            do_nothing_0();
+            a1();
+            do_nothing();
         }
         key = {
             meta.meta.x: exact @name("meta.x") ;
             meta.meta.y: exact @name("meta.y") ;
         }
         size = 512;
-        default_action = do_nothing_0();
+        default_action = do_nothing();
     }
     apply {
-        t1.apply();
+        t1_0.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".a0") action a0_0(bit<4> x, bit<4> y) {
+    @name(".a0") action a0(bit<4> x, bit<4> y) {
         meta.meta.x = x;
         meta.meta.y = y;
     }
-    @name(".t0") table t0 {
+    @name(".t0") table t0_0 {
         actions = {
-            a0_0();
+            a0();
             @defaultonly NoAction_0();
         }
         key = {
@@ -207,7 +207,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (hdr.ig_intr_md.resubmit_flag == 1w0) 
-            t0.apply();
+            t0_0.apply();
     }
 }
 

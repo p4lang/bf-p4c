@@ -45,22 +45,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".setb1") action setb1(bit<8> val, bit<9> port) {
-        standard_metadata.egress_spec = port;
-    }
-    @name(".noop") action noop() {
-    }
-    @name(".test1") table test1 {
-        actions = {
-            setb1;
-            noop;
-        }
-        key = {
-            hdr.boring.yawn: exact;
-        }
-    }
     apply {
-        test1.apply();
     }
 }
 

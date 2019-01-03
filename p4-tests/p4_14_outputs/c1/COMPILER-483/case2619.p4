@@ -1167,6 +1167,10 @@ control Joplin(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     apply {
         switch (Basehor.apply().action_run) {
+            Penrose: {
+                Ronan.apply();
+                Cochise.apply();
+            }
             Anthony: {
                 if (!hdr.Mattapex.isValid() && meta.Riverwood.Robbs == 1w1) {
                     Caulfield.apply();
@@ -1182,10 +1186,6 @@ control Joplin(inout headers hdr, inout metadata meta, inout standard_metadata_t
                 else {
                     Manistee.apply();
                 }
-            }
-            Penrose: {
-                Ronan.apply();
-                Cochise.apply();
             }
         }
 
@@ -1309,8 +1309,8 @@ control Knoke(inout headers hdr, inout metadata meta, inout standard_metadata_t 
             Monkstown_0;
         }
         key = {
-            hdr.eg_intr_md.egress_port[6:0]: exact;
-            hdr.eg_intr_md.egress_qid[2:0] : exact;
+            hdr.eg_intr_md.egress_port[6:0]: exact @name("eg_intr_md.egress_port") ;
+            hdr.eg_intr_md.egress_qid[2:0] : exact @name("eg_intr_md.egress_qid") ;
         }
         size = 1024;
         counters = Redvale;
@@ -1366,7 +1366,7 @@ control LaHabra(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Coronado.Wellton       : exact;
-            meta.Mishawaka.Sabina[31:16]: ternary;
+            meta.Mishawaka.Sabina[31:16]: ternary @name("Mishawaka.Sabina") ;
             meta.Perrin.Greycliff       : ternary;
             meta.Perrin.Volens          : ternary;
             meta.Perrin.Agawam          : ternary;
@@ -1384,7 +1384,7 @@ control LaHabra(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Coronado.Wellton     : exact;
-            meta.Magma.Ossining[31:16]: ternary;
+            meta.Magma.Ossining[31:16]: ternary @name("Magma.Ossining") ;
             meta.Perrin.Greycliff     : ternary;
             meta.Perrin.Volens        : ternary;
             meta.Perrin.Agawam        : ternary;
@@ -1615,7 +1615,7 @@ control McLaurin(inout headers hdr, inout metadata meta, inout standard_metadata
         }
         key = {
             meta.Magma.Neshaminy     : exact;
-            meta.Magma.Ossining[19:0]: lpm;
+            meta.Magma.Ossining[19:0]: lpm @name("Magma.Ossining") ;
         }
         size = 131072;
         default_action = LasLomas();
@@ -1653,7 +1653,7 @@ control McLaurin(inout headers hdr, inout metadata meta, inout standard_metadata
         }
         key = {
             meta.Mishawaka.Woolsey     : exact;
-            meta.Mishawaka.Sabina[63:0]: lpm;
+            meta.Mishawaka.Sabina[63:0]: lpm @name("Mishawaka.Sabina") ;
         }
         size = 16384;
         default_action = LasLomas();
@@ -1677,7 +1677,7 @@ control McLaurin(inout headers hdr, inout metadata meta, inout standard_metadata
         }
         key = {
             meta.Mishawaka.Betterton     : exact;
-            meta.Mishawaka.Sabina[106:64]: lpm;
+            meta.Mishawaka.Sabina[106:64]: lpm @name("Mishawaka.Sabina") ;
         }
         size = 65536;
         default_action = LasLomas();
@@ -1689,7 +1689,7 @@ control McLaurin(inout headers hdr, inout metadata meta, inout standard_metadata
         }
         key = {
             meta.Abernant.Crossett       : exact;
-            meta.Mishawaka.Sabina[127:64]: lpm;
+            meta.Mishawaka.Sabina[127:64]: lpm @name("Mishawaka.Sabina") ;
         }
         size = 8192;
     }
@@ -1699,11 +1699,11 @@ control McLaurin(inout headers hdr, inout metadata meta, inout standard_metadata
                 switch (Alexis.apply().action_run) {
                     LasLomas: {
                         switch (MillHall.apply().action_run) {
-                            LasLomas: {
-                                Alakanuk.apply();
-                            }
                             Nickerson: {
                                 Balmorhea.apply();
+                            }
+                            LasLomas: {
+                                Alakanuk.apply();
                             }
                         }
 
@@ -1716,6 +1716,9 @@ control McLaurin(inout headers hdr, inout metadata meta, inout standard_metadata
                     switch (Bowdon.apply().action_run) {
                         LasLomas: {
                             switch (Maiden.apply().action_run) {
+                                Loretto: {
+                                    Melba.apply();
+                                }
                                 LasLomas: {
                                     switch (Qulin.apply().action_run) {
                                         Richlawn: {
@@ -1723,9 +1726,6 @@ control McLaurin(inout headers hdr, inout metadata meta, inout standard_metadata
                                         }
                                     }
 
-                                }
-                                Loretto: {
-                                    Melba.apply();
                                 }
                             }
 
@@ -2016,7 +2016,7 @@ control Tahuya(inout headers hdr, inout metadata meta, inout standard_metadata_t
             bit<1> in_value;
             in_value = value;
             value = in_value;
-            rv = ~value;
+            rv = ~in_value;
         }
     };
     @name(".Mizpah") RegisterAction<bit<1>, bit<32>, bit<1>>(NewSite) Mizpah = {

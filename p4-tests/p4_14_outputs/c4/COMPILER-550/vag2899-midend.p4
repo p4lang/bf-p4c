@@ -177,19 +177,19 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_5() {
     }
-    @name(".init_meta") action init_meta_0() {
+    @name(".init_meta") action init_meta() {
         meta.meta.lb_type = 2w0;
         meta.meta.zero_fill = 1w0;
         meta.meta.lb_group = 3w0;
         meta.meta.one_zero_fill = 2w2;
     }
-    @name(".set_lb_group") action set_lb_group_0(bit<3> group) {
+    @name(".set_lb_group") action set_lb_group(bit<3> group) {
         meta.meta.lb_group = group;
     }
-    @name(".set_lb_port") action set_lb_port_0(bit<8> port) {
+    @name(".set_lb_port") action set_lb_port(bit<8> port) {
         meta.meta.lb_port = port;
     }
-    @name(".re_encap_and_send") action re_encap_and_send_0(bit<9> port) {
+    @name(".re_encap_and_send") action re_encap_and_send(bit<9> port) {
         hdr.ethernet.lb_type = meta.meta.lb_type;
         hdr.ethernet.zero_fill = meta.meta.zero_fill;
         hdr.ethernet.lb_group = meta.meta.lb_group;
@@ -197,16 +197,16 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ethernet.lb_port = meta.meta.lb_port;
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".t0") table t0 {
+    @name(".t0") table t0_0 {
         actions = {
-            init_meta_0();
+            init_meta();
         }
         size = 1;
-        default_action = init_meta_0();
+        default_action = init_meta();
     }
-    @name(".t1") table t1 {
+    @name(".t1") table t1_0 {
         actions = {
-            set_lb_group_0();
+            set_lb_group();
             @defaultonly NoAction_0();
         }
         key = {
@@ -214,9 +214,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name(".t2") table t2 {
+    @name(".t2") table t2_0 {
         actions = {
-            set_lb_port_0();
+            set_lb_port();
             @defaultonly NoAction_4();
         }
         key = {
@@ -224,9 +224,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_4();
     }
-    @name(".t3") table t3 {
+    @name(".t3") table t3_0 {
         actions = {
-            re_encap_and_send_0();
+            re_encap_and_send();
             @defaultonly NoAction_5();
         }
         key = {
@@ -235,10 +235,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_5();
     }
     apply {
-        t0.apply();
-        t1.apply();
-        t2.apply();
-        t3.apply();
+        t0_0.apply();
+        t1_0.apply();
+        t2_0.apply();
+        t3_0.apply();
     }
 }
 

@@ -171,11 +171,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_9() {
     }
-    @name(".action_0") action action_5(bit<32> my_param_0, bit<32> my_param_4) {
+    @name(".action_0") action action_0(bit<32> my_param_0, bit<32> my_param_4) {
         hdr.pkt.field_a = my_param_0;
         hdr.pkt.field_g = my_param_4;
     }
-    @name(".nop") action nop_0() {
+    @name(".nop") action nop() {
     }
     @name(".nop") action nop_5() {
     }
@@ -185,22 +185,22 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".nop") action nop_8() {
     }
-    @name(".action_1") action action_6(bit<32> my_param_1) {
+    @name(".action_1") action action_1(bit<32> my_param_1) {
         hdr.pkt.field_c = my_param_1;
     }
-    @name(".action_2") action action_7(bit<32> my_param_2) {
+    @name(".action_2") action action_2(bit<32> my_param_2) {
         hdr.pkt.field_e = my_param_2;
     }
-    @name(".action_3") action action_8(bit<32> my_param_3) {
+    @name(".action_3") action action_3(bit<32> my_param_3) {
         hdr.pkt.field_i = my_param_3;
     }
-    @name(".action_4") action action_9(bit<32> my_param_4) {
+    @name(".action_4") action action_4(bit<32> my_param_4) {
         hdr.pkt.field_j = my_param_4;
     }
-    @immediate(0) @name(".table_0") table table_0 {
+    @immediate(0) @name(".table_0") table table_5 {
         actions = {
-            action_5();
-            nop_0();
+            action_0();
+            nop();
             @defaultonly NoAction_0();
         }
         key = {
@@ -209,9 +209,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256000;
         default_action = NoAction_0();
     }
-    @name(".table_1") table table_1 {
+    @name(".table_1") table table_6 {
         actions = {
-            action_6();
+            action_1();
             nop_5();
             @defaultonly NoAction_6();
         }
@@ -220,9 +220,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_6();
     }
-    @name(".table_2") table table_2 {
+    @name(".table_2") table table_7 {
         actions = {
-            action_7();
+            action_2();
             nop_6();
             @defaultonly NoAction_7();
         }
@@ -231,9 +231,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_7();
     }
-    @name(".table_3") table table_3 {
+    @name(".table_3") table table_8 {
         actions = {
-            action_8();
+            action_3();
             nop_7();
             @defaultonly NoAction_8();
         }
@@ -242,9 +242,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_8();
     }
-    @name(".table_4") table table_4 {
+    @name(".table_4") table table_9 {
         actions = {
-            action_9();
+            action_4();
             nop_8();
             @defaultonly NoAction_9();
         }
@@ -254,17 +254,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_9();
     }
     apply {
-        switch (table_0.apply().action_run) {
-            nop_0: {
-                table_1.apply();
+        switch (table_5.apply().action_run) {
+            nop: {
+                table_6.apply();
             }
         }
 
         if (hdr.pkt.isValid()) 
-            table_2.apply();
+            table_7.apply();
         else 
-            table_3.apply();
-        table_4.apply();
+            table_8.apply();
+        table_9.apply();
     }
 }
 

@@ -287,23 +287,23 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".nop") action nop_0() {
+    @name(".nop") action nop() {
     }
-    @name(".fib_hit_nexthop") action fib_hit_nexthop_0(bit<16> nexthop_index) {
+    @name(".fib_hit_nexthop") action fib_hit_nexthop(bit<16> nexthop_index) {
         meta.l3_metadata.fib_hit = 1w1;
         meta.l3_metadata.fib_nexthop = nexthop_index;
         meta.l3_metadata.fib_nexthop_type = 1w0;
     }
-    @name(".fib_hit_ecmp") action fib_hit_ecmp_0(bit<16> ecmp_index) {
+    @name(".fib_hit_ecmp") action fib_hit_ecmp(bit<16> ecmp_index) {
         meta.l3_metadata.fib_hit = 1w1;
         meta.l3_metadata.fib_nexthop = ecmp_index;
         meta.l3_metadata.fib_nexthop_type = 1w1;
     }
-    @command_line("--no-dead-code-elimination") @alpm(1) @name(".perf_alpm_immediate_action") table perf_alpm_immediate_action {
+    @command_line("--no-dead-code-elimination") @alpm(1) @name(".perf_alpm_immediate_action") table perf_alpm_immediate_action_0 {
         actions = {
-            nop_0();
-            fib_hit_nexthop_0();
-            fib_hit_ecmp_0();
+            nop();
+            fib_hit_nexthop();
+            fib_hit_ecmp();
             @defaultonly NoAction_0();
         }
         key = {
@@ -314,7 +314,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_0();
     }
     apply {
-        perf_alpm_immediate_action.apply();
+        perf_alpm_immediate_action_0.apply();
     }
 }
 

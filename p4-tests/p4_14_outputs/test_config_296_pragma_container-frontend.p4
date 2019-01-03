@@ -163,15 +163,15 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".wide_add_1") action wide_add() {
+    @name(".wide_add_1") action wide_add_0() {
         hdr.pkt.c = hdr.pkt.c + hdr.pkt.d;
     }
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing() {
     }
-    @name(".t1") table t1 {
+    @name(".t1") table t1_0 {
         actions = {
-            wide_add();
-            do_nothing_0();
+            wide_add_0();
+            do_nothing();
             @defaultonly NoAction_0();
         }
         key = {
@@ -181,7 +181,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_0();
     }
     apply {
-        t1.apply();
+        t1_0.apply();
     }
 }
 

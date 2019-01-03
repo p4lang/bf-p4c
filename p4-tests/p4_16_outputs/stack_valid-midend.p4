@@ -22,43 +22,43 @@ parser p(packet_in b, out packet_t hdrs, inout user_metadata_t m, inout standard
 }
 
 control ingress(inout packet_t hdrs, inout user_metadata_t m, inout standard_metadata_t meta) {
-    @name("ingress.set_port") action set_port_0(bit<9> port) {
+    @name("ingress.set_port") action set_port(bit<9> port) {
         meta.egress_spec = port;
     }
     @name("ingress.set_port") action set_port_2() {
         meta.egress_spec = 9w2;
     }
-    @name("ingress.t") table t {
+    @name("ingress.t") table t_0 {
         key = {
             hdrs.data[0].f: exact @name("hdrs.data[0].f") ;
         }
         actions = {
-            set_port_0();
+            set_port();
         }
-        default_action = set_port_0(9w1);
+        default_action = set_port(9w1);
     }
-    @name("ingress.do_push") action do_push_0() {
+    @name("ingress.do_push") action do_push() {
         hdrs.data.push_front(1);
         hdrs.data[0].setValid();
     }
-    @name("ingress.do_pop") action do_pop_0() {
+    @name("ingress.do_pop") action do_pop() {
         hdrs.data.pop_front(1);
     }
-    @name("ingress.push") table push {
+    @name("ingress.push") table push_0 {
         key = {
         }
         actions = {
-            do_push_0();
+            do_push();
         }
-        default_action = do_push_0();
+        default_action = do_push();
     }
-    @name("ingress.pop") table pop {
+    @name("ingress.pop") table pop_0 {
         key = {
         }
         actions = {
-            do_pop_0();
+            do_pop();
         }
-        default_action = do_pop_0();
+        default_action = do_pop();
     }
     @hidden table tbl_set_port {
         actions = {
@@ -67,10 +67,10 @@ control ingress(inout packet_t hdrs, inout user_metadata_t m, inout standard_met
         const default_action = set_port_2();
     }
     apply {
-        push.apply();
-        pop.apply();
+        push_0.apply();
+        pop_0.apply();
         if (!hdrs.data[1].isValid()) 
-            t.apply();
+            t_0.apply();
         else 
             tbl_set_port.apply();
     }

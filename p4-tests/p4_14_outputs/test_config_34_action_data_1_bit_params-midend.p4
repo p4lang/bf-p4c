@@ -187,7 +187,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".action_0") action action_1(bit<1> my_param_0, bit<1> my_param_1, bit<1> my_param_2, bit<1> my_param_3, bit<1> my_param_4, bit<1> my_param_5, bit<1> my_param_6, bit<1> my_param_7, bit<1> my_param_8, bit<1> my_param_9, bit<1> my_param_10, bit<1> my_param_11, bit<1> my_param_12, bit<1> my_param_13, bit<1> my_param_14, bit<1> my_param_15, bit<1> my_param_16, bit<1> my_param_17, bit<1> my_param_18, bit<1> my_param_19, bit<1> my_param_20, bit<1> my_param_21, bit<1> my_param_22, bit<1> my_param_23, bit<1> my_param_24, bit<1> my_param_25, bit<1> my_param_26, bit<1> my_param_27, bit<1> my_param_28, bit<1> my_param_29, bit<1> my_param_30, bit<1> my_param_31) {
+    @name(".action_0") action action_0(bit<1> my_param_0, bit<1> my_param_1, bit<1> my_param_2, bit<1> my_param_3, bit<1> my_param_4, bit<1> my_param_5, bit<1> my_param_6, bit<1> my_param_7, bit<1> my_param_8, bit<1> my_param_9, bit<1> my_param_10, bit<1> my_param_11, bit<1> my_param_12, bit<1> my_param_13, bit<1> my_param_14, bit<1> my_param_15, bit<1> my_param_16, bit<1> my_param_17, bit<1> my_param_18, bit<1> my_param_19, bit<1> my_param_20, bit<1> my_param_21, bit<1> my_param_22, bit<1> my_param_23, bit<1> my_param_24, bit<1> my_param_25, bit<1> my_param_26, bit<1> my_param_27, bit<1> my_param_28, bit<1> my_param_29, bit<1> my_param_30, bit<1> my_param_31) {
         hdr.test.field_0 = my_param_0;
         hdr.test.field_1 = my_param_1;
         hdr.test.field_2 = my_param_2;
@@ -221,9 +221,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.test.field_30 = my_param_30;
         hdr.test.field_31 = my_param_31;
     }
-    @name(".table_0") table table_0 {
+    @name(".table_0") table table_1 {
         actions = {
-            action_1();
+            action_0();
             @defaultonly NoAction_0();
         }
         key = {
@@ -232,7 +232,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_0();
     }
     apply {
-        table_0.apply();
+        table_1.apply();
     }
 }
 

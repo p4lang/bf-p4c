@@ -41,8 +41,8 @@ parser ParserE(packet_in b, out headers hdr, out metadata meta, out egress_intri
 }
 
 control EgressP(inout headers hdr, inout metadata meta, in egress_intrinsic_metadata_t eg_intr_md, in egress_intrinsic_metadata_from_parser_t eg_intr_prsr_md, inout egress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md, inout egress_intrinsic_metadata_for_output_port_t eg_intr_oport_md) {
-    @name("EgressP.port_pkts_reg") Register<bit<32>, bit<9>>(32w1024) port_pkts_reg;
-    @name("EgressP.port_pkts_alu") RegisterAction<bit<32>, bit<9>, bit<8>>(port_pkts_reg) port_pkts_alu = {
+    @name("EgressP.port_pkts_reg") Register<bit<32>, bit<9>>(32w1024) port_pkts_reg_0;
+    @name("EgressP.port_pkts_alu") RegisterAction<bit<32>, bit<9>, bit<8>>(port_pkts_reg_0) port_pkts_alu_0 = {
         void apply(inout bit<32> value, out bit<8> read_value) {
             if (value < hdr.data.max_counter) {
                 value = value + 32w1;
@@ -55,7 +55,7 @@ control EgressP(inout headers hdr, inout metadata meta, in egress_intrinsic_meta
         }
     };
     apply {
-        port_pkts_alu.execute(eg_intr_md.egress_port);
+        port_pkts_alu_0.execute(eg_intr_md.egress_port);
     }
 }
 

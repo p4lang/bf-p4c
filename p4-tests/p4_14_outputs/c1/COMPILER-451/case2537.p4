@@ -1057,7 +1057,7 @@ control Ceiba(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Nason.Glyndon            : exact;
-            meta.Baldridge.PikeView[31:16]: ternary;
+            meta.Baldridge.PikeView[31:16]: ternary @name("Baldridge.PikeView") ;
             meta.Renton.Cascade           : ternary;
             meta.Renton.Ewing             : ternary;
             meta.Renton.Clintwood         : ternary;
@@ -1075,7 +1075,7 @@ control Ceiba(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Nason.Glyndon           : exact;
-            meta.Antimony.RushHill[31:16]: ternary;
+            meta.Antimony.RushHill[31:16]: ternary @name("Antimony.RushHill") ;
             meta.Renton.Cascade          : ternary;
             meta.Renton.Ewing            : ternary;
             meta.Renton.Clintwood        : ternary;
@@ -1392,7 +1392,7 @@ control Hiawassee(inout headers hdr, inout metadata meta, inout standard_metadat
             bit<1> in_value;
             in_value = value;
             value = in_value;
-            rv = ~value;
+            rv = ~in_value;
         }
     };
     @name(".Sudbury") action Sudbury() {
@@ -1781,7 +1781,7 @@ control Pearl(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Silva.Parshall            : exact;
-            meta.Baldridge.PikeView[127:64]: lpm;
+            meta.Baldridge.PikeView[127:64]: lpm @name("Baldridge.PikeView") ;
         }
         size = 8192;
     }
@@ -1818,7 +1818,7 @@ control Pearl(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Baldridge.Villanova     : exact;
-            meta.Baldridge.PikeView[63:0]: lpm;
+            meta.Baldridge.PikeView[63:0]: lpm @name("Baldridge.PikeView") ;
         }
         size = 16384;
         default_action = Whitefish();
@@ -1844,7 +1844,7 @@ control Pearl(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Antimony.Balmville     : exact;
-            meta.Antimony.RushHill[19:0]: lpm;
+            meta.Antimony.RushHill[19:0]: lpm @name("Antimony.RushHill") ;
         }
         size = 131072;
         default_action = Whitefish();
@@ -1857,7 +1857,7 @@ control Pearl(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Baldridge.Riverwood       : exact;
-            meta.Baldridge.PikeView[106:64]: lpm;
+            meta.Baldridge.PikeView[106:64]: lpm @name("Baldridge.PikeView") ;
         }
         size = 65536;
         default_action = Whitefish();

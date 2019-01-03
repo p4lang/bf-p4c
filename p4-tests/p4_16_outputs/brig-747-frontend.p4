@@ -29,13 +29,13 @@ control SwitchIngressDeparser(packet_out pkt, inout switch_header_t hdr, in meta
 }
 
 parser SwitchEgressParser(packet_in pkt, out switch_header_t hdr, out metadata_t eg_md, out egress_intrinsic_metadata_t eg_intr_md) {
-    ethernet_h ethernet_1;
-    ethernet_h tmp_0;
+    ethernet_h ethernet_0;
+    ethernet_h tmp;
     state start {
         pkt.extract<egress_intrinsic_metadata_t>(eg_intr_md);
-        tmp_0 = pkt.lookahead<ethernet_h>();
-        ethernet_1 = tmp_0;
-        transition select(ethernet_1.ether_type) {
+        tmp = pkt.lookahead<ethernet_h>();
+        ethernet_0 = tmp;
+        transition select(ethernet_0.ether_type) {
             16w0x9001: accept;
             default: accept;
         }

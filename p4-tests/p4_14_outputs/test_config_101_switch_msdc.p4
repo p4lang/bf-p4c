@@ -1942,6 +1942,11 @@ control process_qos(inout headers hdr, inout metadata meta, inout standard_metad
     }
 }
 
+control process_multicast(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    apply {
+    }
+}
+
 control process_ipv4_racl(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
     }
@@ -2078,7 +2083,7 @@ control process_ipv4_fib(inout headers hdr, inout metadata meta, inout standard_
         }
         key = {
             meta.ingress_metadata.vrf           : exact;
-            meta.ipv4_metadata.lkp_ipv4_da[31:9]: exact;
+            meta.ipv4_metadata.lkp_ipv4_da[31:9]: exact @name("ipv4_metadata.lkp_ipv4_da") ;
         }
         size = 30720;
     }
@@ -2090,7 +2095,7 @@ control process_ipv4_fib(inout headers hdr, inout metadata meta, inout standard_
         }
         key = {
             meta.ingress_metadata.vrf           : exact;
-            meta.ipv4_metadata.lkp_ipv4_da[31:8]: exact;
+            meta.ipv4_metadata.lkp_ipv4_da[31:8]: exact @name("ipv4_metadata.lkp_ipv4_da") ;
         }
         size = 38400;
     }
@@ -2102,7 +2107,7 @@ control process_ipv4_fib(inout headers hdr, inout metadata meta, inout standard_
         }
         key = {
             meta.ingress_metadata.vrf           : exact;
-            meta.ipv4_metadata.lkp_ipv4_da[31:7]: exact;
+            meta.ipv4_metadata.lkp_ipv4_da[31:7]: exact @name("ipv4_metadata.lkp_ipv4_da") ;
         }
         size = 3840;
     }
@@ -2114,7 +2119,7 @@ control process_ipv4_fib(inout headers hdr, inout metadata meta, inout standard_
         }
         key = {
             meta.ingress_metadata.vrf           : exact;
-            meta.ipv4_metadata.lkp_ipv4_da[31:6]: exact;
+            meta.ipv4_metadata.lkp_ipv4_da[31:6]: exact @name("ipv4_metadata.lkp_ipv4_da") ;
         }
         size = 7680;
     }
@@ -2126,7 +2131,7 @@ control process_ipv4_fib(inout headers hdr, inout metadata meta, inout standard_
         }
         key = {
             meta.ingress_metadata.vrf           : exact;
-            meta.ipv4_metadata.lkp_ipv4_da[31:5]: exact;
+            meta.ipv4_metadata.lkp_ipv4_da[31:5]: exact @name("ipv4_metadata.lkp_ipv4_da") ;
         }
         size = 7680;
     }
@@ -2138,7 +2143,7 @@ control process_ipv4_fib(inout headers hdr, inout metadata meta, inout standard_
         }
         key = {
             meta.ingress_metadata.vrf           : exact;
-            meta.ipv4_metadata.lkp_ipv4_da[31:4]: exact;
+            meta.ipv4_metadata.lkp_ipv4_da[31:4]: exact @name("ipv4_metadata.lkp_ipv4_da") ;
         }
         size = 30720;
     }
@@ -2150,7 +2155,7 @@ control process_ipv4_fib(inout headers hdr, inout metadata meta, inout standard_
         }
         key = {
             meta.ingress_metadata.vrf           : exact;
-            meta.ipv4_metadata.lkp_ipv4_da[31:3]: exact;
+            meta.ipv4_metadata.lkp_ipv4_da[31:3]: exact @name("ipv4_metadata.lkp_ipv4_da") ;
         }
         size = 15360;
     }
@@ -2162,7 +2167,7 @@ control process_ipv4_fib(inout headers hdr, inout metadata meta, inout standard_
         }
         key = {
             meta.ingress_metadata.vrf           : exact;
-            meta.ipv4_metadata.lkp_ipv4_da[31:2]: exact;
+            meta.ipv4_metadata.lkp_ipv4_da[31:2]: exact @name("ipv4_metadata.lkp_ipv4_da") ;
         }
         size = 23040;
     }
@@ -2174,7 +2179,7 @@ control process_ipv4_fib(inout headers hdr, inout metadata meta, inout standard_
         }
         key = {
             meta.ingress_metadata.vrf           : exact;
-            meta.ipv4_metadata.lkp_ipv4_da[31:1]: exact;
+            meta.ipv4_metadata.lkp_ipv4_da[31:1]: exact @name("ipv4_metadata.lkp_ipv4_da") ;
         }
         size = 1024;
     }
@@ -2233,11 +2238,6 @@ control process_ipv6_fib(inout headers hdr, inout metadata meta, inout standard_
 }
 
 control process_urpf_bd(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    apply {
-    }
-}
-
-control process_multicast(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
     }
 }
@@ -2575,6 +2575,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".process_mac_acl") process_mac_acl() process_mac_acl_0;
     @name(".process_ip_acl") process_ip_acl() process_ip_acl_0;
     @name(".process_qos") process_qos() process_qos_0;
+    @name(".process_multicast") process_multicast() process_multicast_0;
     @name(".process_ipv4_racl") process_ipv4_racl() process_ipv4_racl_0;
     @name(".process_nat") process_nat() process_nat_0;
     @name(".process_ipv4_urpf") process_ipv4_urpf() process_ipv4_urpf_0;
@@ -2583,7 +2584,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".process_ipv6_urpf") process_ipv6_urpf() process_ipv6_urpf_0;
     @name(".process_ipv6_fib") process_ipv6_fib() process_ipv6_fib_0;
     @name(".process_urpf_bd") process_urpf_bd() process_urpf_bd_0;
-    @name(".process_multicast") process_multicast() process_multicast_0;
     @name(".process_merge_results") process_merge_results() process_merge_results_0;
     @name(".process_nexthop") process_nexthop() process_nexthop_0;
     @name(".process_ingress_bd_stats") process_ingress_bd_stats() process_ingress_bd_stats_0;
@@ -2623,6 +2623,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             }
             process_qos_0.apply(hdr, meta, standard_metadata);
             switch (rmac.apply().action_run) {
+                rmac_miss: {
+                    process_multicast_0.apply(hdr, meta, standard_metadata);
+                }
                 default: {
                     if (meta.l3_metadata.lkp_ip_type == 2w1 && meta.ipv4_metadata.ipv4_unicast_enabled == 1w1) {
                         process_ipv4_racl_0.apply(hdr, meta, standard_metadata);
@@ -2638,9 +2641,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                         }
                     }
                     process_urpf_bd_0.apply(hdr, meta, standard_metadata);
-                }
-                rmac_miss: {
-                    process_multicast_0.apply(hdr, meta, standard_metadata);
                 }
             }
 

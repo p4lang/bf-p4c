@@ -163,19 +163,19 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    @name(".a0") action a0_0() {
+    @name(".a0") action a0() {
         hash<bit<16>, bit<16>, tuple_0, bit<32>>(hdr.pkt.c, HashAlgorithm.identity, 16w0, { hdr.pkt.a }, 32w65536);
     }
-    @name(".a1") action a1_0() {
+    @name(".a1") action a1() {
         hash<bit<16>, bit<16>, tuple_0, bit<32>>(hdr.pkt.d, HashAlgorithm.identity, 16w0, { hdr.pkt.b }, 32w65536);
     }
-    @name(".set_p") action set_p_0() {
+    @name(".set_p") action set_p() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = 9w1;
     }
-    @name(".t1") table t1 {
+    @name(".t1") table t1_0 {
         actions = {
-            a0_0();
-            a1_0();
+            a0();
+            a1();
             @defaultonly NoAction_0();
         }
         key = {
@@ -183,16 +183,16 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name(".t2") table t2 {
+    @name(".t2") table t2_0 {
         actions = {
-            set_p_0();
+            set_p();
             @defaultonly NoAction_3();
         }
         default_action = NoAction_3();
     }
     apply {
-        t1.apply();
-        t2.apply();
+        t1_0.apply();
+        t2_0.apply();
     }
 }
 

@@ -454,7 +454,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.IYRPFS.JiMzUK = 8w0x1;
     }
     @name(".IJasQc") action IJasQc() {
-        digest<uajPdr>(32w0x0, { meta.IYRPFS.JiMzUK, meta.cfDyxP.kLfTIU, meta.cfDyxP.FpUAZo, meta.cfDyxP.eHdmgU, meta.cfDyxP.vAMWZi });
+        digest<uajPdr>(32w0x0, {meta.IYRPFS.JiMzUK,meta.cfDyxP.kLfTIU,meta.cfDyxP.FpUAZo,meta.cfDyxP.eHdmgU,meta.cfDyxP.vAMWZi});
     }
     @name(".Mkwjtg") action Mkwjtg() {
         meta.cfDyxP.TZUCwE = 1w0x1;
@@ -463,7 +463,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.jtDeHH.RzhGTS = 1w0x1;
     }
     @name(".STOiil") action STOiil() {
-        digest<HgFUwb>(32w0x0, { meta.IYRPFS.JiMzUK, meta.cfDyxP.eHdmgU, hdr.oPHKWO.KaAvFG, hdr.oPHKWO.wNAybQ, hdr.ujAsAs.tqMJMA });
+        digest<HgFUwb>(32w0x0, {meta.IYRPFS.JiMzUK,meta.cfDyxP.eHdmgU,hdr.oPHKWO.KaAvFG,hdr.oPHKWO.wNAybQ,hdr.ujAsAs.tqMJMA});
     }
     @name(".VuYGSt") action VuYGSt() {
         meta.cfDyxP.eHdmgU = (bit<16>)meta.BdarYZ.VtlLDM;
@@ -802,10 +802,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             fMlLMk.apply();
         MnlGHy.apply();
         switch (BeBzRQ.apply().action_run) {
-            bqioIq: {
-                EghpzX.apply();
-                YKYNSG.apply();
-            }
             hTEbHS: {
                 if (meta.BdarYZ.NWqDYn == 1w0x1) 
                     OuIfwj.apply();
@@ -819,6 +815,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                 else 
                     if (hdr.ujAsAs.isValid() || hdr.SozCdH.isValid()) 
                         ehyhNJ.apply();
+            }
+            bqioIq: {
+                EghpzX.apply();
+                YKYNSG.apply();
             }
         }
 

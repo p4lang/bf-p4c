@@ -597,7 +597,7 @@ control Garrison(inout headers hdr, inout metadata meta, inout standard_metadata
         }
         key = {
             meta.Hitterdal.Dixie           : exact;
-            meta.Hitterdal.Danville[106:64]: lpm;
+            meta.Hitterdal.Danville[106:64]: lpm @name("Hitterdal.Danville") ;
         }
         size = 65536;
         default_action = Lueders();
@@ -610,7 +610,7 @@ control Garrison(inout headers hdr, inout metadata meta, inout standard_metadata
         }
         key = {
             meta.Hitterdal.Lenoir        : exact;
-            meta.Hitterdal.Danville[63:0]: lpm;
+            meta.Hitterdal.Danville[63:0]: lpm @name("Hitterdal.Danville") ;
         }
         size = 16384;
         default_action = Lueders();
@@ -636,7 +636,7 @@ control Garrison(inout headers hdr, inout metadata meta, inout standard_metadata
         }
         key = {
             meta.Bieber.Coverdale          : exact;
-            meta.Hitterdal.Danville[127:64]: lpm;
+            meta.Hitterdal.Danville[127:64]: lpm @name("Hitterdal.Danville") ;
         }
         size = 8192;
     }
@@ -673,7 +673,7 @@ control Garrison(inout headers hdr, inout metadata meta, inout standard_metadata
         }
         key = {
             meta.Cantwell.BarNunn     : exact;
-            meta.Cantwell.Colona[19:0]: lpm;
+            meta.Cantwell.Colona[19:0]: lpm @name("Cantwell.Colona") ;
         }
         size = 131072;
         default_action = Lueders();
@@ -684,11 +684,11 @@ control Garrison(inout headers hdr, inout metadata meta, inout standard_metadata
                 switch (Neches.apply().action_run) {
                     Lueders: {
                         switch (Grampian.apply().action_run) {
-                            Lueders: {
-                                Boquet.apply();
-                            }
                             Roosville: {
                                 Waretown.apply();
+                            }
+                            Lueders: {
+                                Boquet.apply();
                             }
                         }
 

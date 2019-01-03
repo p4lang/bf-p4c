@@ -251,26 +251,26 @@ struct headers {
 #include <tofino/stateful_alu.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<80> tmp_4;
-    bit<56> tmp_5;
-    bit<104> tmp_6;
-    bit<8> tmp_7;
-    bit<8> tmp_8;
+    bit<80> tmp;
+    bit<56> tmp_0;
+    bit<104> tmp_1;
+    bit<8> tmp_2;
+    bit<8> tmp_3;
     @name(".cw_try_ipv4") state cw_try_ipv4 {
-        tmp_4 = packet.lookahead<bit<80>>();
-        transition select(tmp_4[7:0]) {
+        tmp = packet.lookahead<bit<80>>();
+        transition select(tmp[7:0]) {
             default: accept;
         }
     }
     @name(".cw_try_ipv6") state cw_try_ipv6 {
-        tmp_5 = packet.lookahead<bit<56>>();
-        transition select(tmp_5[7:0]) {
+        tmp_0 = packet.lookahead<bit<56>>();
+        transition select(tmp_0[7:0]) {
             default: accept;
         }
     }
     @name(".determine_first_parser") state determine_first_parser {
-        tmp_6 = packet.lookahead<bit<104>>();
-        transition select(tmp_6[7:0]) {
+        tmp_1 = packet.lookahead<bit<104>>();
+        transition select(tmp_1[7:0]) {
             8w0xec: accept;
             8w0xeb: parse_ebheader;
             default: parse_outer_ethernet;
@@ -294,8 +294,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
     @name(".parse_mpls_cw") state parse_mpls_cw {
         packet.extract<mpls_cw_t>(hdr.mpls_cw);
-        tmp_7 = packet.lookahead<bit<8>>();
-        transition select(tmp_7[7:0]) {
+        tmp_2 = packet.lookahead<bit<8>>();
+        transition select(tmp_2[7:0]) {
             8w0x45: cw_try_ipv4;
             8w0x46 &&& 8w0xfe: cw_try_ipv4;
             8w0x48 &&& 8w0xf8: cw_try_ipv4;
@@ -304,8 +304,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
         }
     }
     @name(".parse_mpls_cw_determine") state parse_mpls_cw_determine {
-        tmp_8 = packet.lookahead<bit<8>>();
-        transition select(tmp_8[7:0]) {
+        tmp_3 = packet.lookahead<bit<8>>();
+        transition select(tmp_3[7:0]) {
             8w0x0: parse_mpls_cw;
             8w0x45: cw_try_ipv4;
             8w0x46 &&& 8w0xfe: cw_try_ipv4;
@@ -348,7 +348,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     @name(".NoAction") action NoAction_1() {
     }
-    @name(".do_add_ebheader") action do_add_ebheader_0() {
+    @name(".do_add_ebheader") action do_add_ebheader() {
         hdr.ebheader.setValid();
         hdr.ebheader.ethertype_eb = 8w0xeb;
         hdr.ebheader.dst_main_dpi = meta.ebmeta.lanwan_out_port;
@@ -360,18 +360,18 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         hdr.ebheader.offset_ip1 = meta.ebmeta.ip1_offset;
         hdr.ebheader.offset_ip2 = meta.ebmeta.ip2_offset;
     }
-    @name("._nop") action _nop_0() {
+    @name("._nop") action _nop() {
     }
-    @name("._nop") action _nop_1() {
+    @name("._nop") action _nop_2() {
     }
-    @name(".do_remove_ebheader") action do_remove_ebheader_0() {
+    @name(".do_remove_ebheader") action do_remove_ebheader() {
         meta.ebmeta.mirror_port = hdr.ebheader.dst_mirror;
         hdr.ebheader.setInvalid();
     }
-    @name(".add_ebheader") table add_ebheader {
+    @name(".add_ebheader") table add_ebheader_0 {
         actions = {
-            do_add_ebheader_0();
-            _nop_0();
+            do_add_ebheader();
+            _nop();
             @defaultonly NoAction_0();
         }
         key = {
@@ -379,10 +379,10 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         default_action = NoAction_0();
     }
-    @name(".remove_ebheader") table remove_ebheader {
+    @name(".remove_ebheader") table remove_ebheader_0 {
         actions = {
-            do_remove_ebheader_0();
-            _nop_1();
+            do_remove_ebheader();
+            _nop_2();
             @defaultonly NoAction_1();
         }
         key = {
@@ -391,8 +391,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = NoAction_1();
     }
     apply {
-        add_ebheader.apply();
-        remove_ebheader.apply();
+        add_ebheader_0.apply();
+        remove_ebheader_0.apply();
     }
 }
 
@@ -401,22 +401,22 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_7() {
     }
-    @name(".set_nat_lanwan_flag_and_linked_port") action set_nat_lanwan_flag_and_linked_port_0(bit<1> is_banan, bit<1> is_nat, bit<8> linked_port) {
+    @name(".set_nat_lanwan_flag_and_linked_port") action set_nat_lanwan_flag_and_linked_port(bit<1> is_banan, bit<1> is_nat, bit<8> linked_port) {
         meta.ebmeta.is_banan = is_banan;
         meta.ebmeta.is_nat = is_nat;
         meta.ebmeta.lanwan_out_port = linked_port;
     }
     @name("._nop") action _nop_4() {
     }
-    @name(".set_port_type") action set_port_type_0(bit<3> port_type) {
+    @name(".set_port_type") action set_port_type(bit<3> port_type) {
         meta.ebmeta.port_type = port_type;
     }
-    @name("._drop") action _drop_0() {
+    @name("._drop") action _drop() {
         mark_to_drop();
     }
-    @name(".determine_nat_lanwan_flag_and_linked_port") table determine_nat_lanwan_flag_and_linked_port {
+    @name(".determine_nat_lanwan_flag_and_linked_port") table determine_nat_lanwan_flag_and_linked_port_0 {
         actions = {
-            set_nat_lanwan_flag_and_linked_port_0();
+            set_nat_lanwan_flag_and_linked_port();
             _nop_4();
             @defaultonly NoAction_6();
         }
@@ -425,10 +425,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_6();
     }
-    @name(".determine_port_type") table determine_port_type {
+    @name(".determine_port_type") table determine_port_type_0 {
         actions = {
-            set_port_type_0();
-            _drop_0();
+            set_port_type();
+            _drop();
             @defaultonly NoAction_7();
         }
         key = {
@@ -437,8 +437,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_7();
     }
     apply {
-        determine_port_type.apply();
-        determine_nat_lanwan_flag_and_linked_port.apply();
+        determine_port_type_0.apply();
+        determine_nat_lanwan_flag_and_linked_port_0.apply();
     }
 }
 

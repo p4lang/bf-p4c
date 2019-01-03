@@ -181,19 +181,21 @@ struct tuple_0 {
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<12> temp;
-    bit<13> temp_0;
-    bit<10> temp_1;
-    bit<16> temp_2;
-    bit<12> temp_3;
-    bit<13> temp_4;
-    bit<16> tmp_5;
-    bit<16> tmp_6;
-    bit<8> tmp_7;
-    bit<16> tmp_8;
-    bit<16> tmp_9;
-    bit<16> tmp_10;
+    bit<12> temp_5;
+    bit<13> temp_6;
+    bit<10> temp_7;
+    bit<16> temp_8;
+    bit<12> temp_9;
+    bit<13> temp_10;
+    bit<16> tmp;
+    bit<16> tmp_0;
+    bit<8> tmp_1;
+    bit<16> tmp_2;
+    bit<16> tmp_3;
+    bit<16> tmp_4;
     @name(".NoAction") action NoAction_0() {
+    }
+    @name(".NoAction") action NoAction_6() {
     }
     @name(".NoAction") action NoAction_7() {
     }
@@ -201,83 +203,79 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_9() {
     }
-    @name(".NoAction") action NoAction_10() {
-    }
-    @name(".NoAction") action NoAction_11() {
-    }
-    @name(".b_em_direct") RegisterAction<bit<16>, bit<32>, bit<16>>(r_em_direct) b_em_direct = {
+    @name(".b_em_direct") RegisterAction<bit<16>, bit<32>, bit<16>>(r_em_direct) b_em_direct_0 = {
         void apply(inout bit<16> value, out bit<16> rv) {
             value = value + 16w1;
             rv = value;
         }
     };
-    @name(".b_em_indirect") RegisterAction<bit<16>, bit<32>, bit<16>>(r_em_indirect) b_em_indirect = {
+    @name(".b_em_indirect") RegisterAction<bit<16>, bit<32>, bit<16>>(r_em_indirect) b_em_indirect_0 = {
         void apply(inout bit<16> value, out bit<16> rv) {
             value = value + 16w5;
             rv = value;
         }
     };
-    @name(".b_hash_act") RegisterAction<bit<8>, bit<32>, bit<8>>(r_hash_act) b_hash_act = {
+    @name(".b_hash_act") RegisterAction<bit<8>, bit<32>, bit<8>>(r_hash_act) b_hash_act_0 = {
         void apply(inout bit<8> value, out bit<8> rv) {
             value = value + 8w5;
             rv = value;
         }
     };
-    @name(".b_no_key") RegisterAction<bit<16>, bit<32>, bit<16>>(r_no_key) b_no_key = {
+    @name(".b_no_key") RegisterAction<bit<16>, bit<32>, bit<16>>(r_no_key) b_no_key_0 = {
         void apply(inout bit<16> value, out bit<16> rv) {
             value = value + 16w5;
             rv = value;
         }
     };
-    @name(".b_t_direct") RegisterAction<bit<16>, bit<32>, bit<16>>(r_t_direct) b_t_direct = {
+    @name(".b_t_direct") RegisterAction<bit<16>, bit<32>, bit<16>>(r_t_direct) b_t_direct_0 = {
         void apply(inout bit<16> value, out bit<16> rv) {
             value = value + 16w1;
             rv = value;
         }
     };
-    @name(".b_t_indirect") RegisterAction<bit<16>, bit<32>, bit<16>>(r_t_indirect) b_t_indirect = {
+    @name(".b_t_indirect") RegisterAction<bit<16>, bit<32>, bit<16>>(r_t_indirect) b_t_indirect_0 = {
         void apply(inout bit<16> value, out bit<16> rv) {
             value = value + 16w5;
             rv = value;
         }
     };
-    @name(".a_em_direct") action a_em_direct_0() {
-        hash<bit<12>, bit<12>, tuple_0, bit<13>>(temp, HashAlgorithm.random, 12w0, { hdr.pkt.field_a_32, hdr.pkt.field_b_32 }, 13w4096);
-        tmp_5 = b_em_direct.execute((bit<32>)temp);
-        hdr.pkt.field_e_16 = tmp_5;
+    @name(".a_em_direct") action a_em_direct() {
+        hash<bit<12>, bit<12>, tuple_0, bit<13>>(temp_5, HashAlgorithm.random, 12w0, { hdr.pkt.field_a_32, hdr.pkt.field_b_32 }, 13w4096);
+        tmp = b_em_direct_0.execute((bit<32>)temp_5);
+        hdr.pkt.field_e_16 = tmp;
     }
-    @name(".a_em_indirect") action a_em_indirect_0() {
-        hash<bit<13>, bit<13>, tuple_0, bit<14>>(temp_0, HashAlgorithm.random, 13w0, { hdr.pkt.field_a_32, hdr.pkt.field_b_32 }, 14w8192);
-        tmp_6 = b_em_indirect.execute((bit<32>)temp_0);
-        hdr.pkt.field_f_16 = tmp_6;
+    @name(".a_em_indirect") action a_em_indirect() {
+        hash<bit<13>, bit<13>, tuple_0, bit<14>>(temp_6, HashAlgorithm.random, 13w0, { hdr.pkt.field_a_32, hdr.pkt.field_b_32 }, 14w8192);
+        tmp_0 = b_em_indirect_0.execute((bit<32>)temp_6);
+        hdr.pkt.field_f_16 = tmp_0;
     }
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing() {
     }
     @name(".do_nothing") action do_nothing_2() {
     }
-    @name(".a_hash_act") action a_hash_act_0() {
-        hash<bit<10>, bit<10>, tuple_0, bit<11>>(temp_1, HashAlgorithm.random, 10w0, { hdr.pkt.field_a_32, hdr.pkt.field_b_32 }, 11w1024);
-        tmp_7 = b_hash_act.execute((bit<32>)temp_1);
-        hdr.pkt.field_j_8 = tmp_7;
+    @name(".a_hash_act") action a_hash_act() {
+        hash<bit<10>, bit<10>, tuple_0, bit<11>>(temp_7, HashAlgorithm.random, 10w0, { hdr.pkt.field_a_32, hdr.pkt.field_b_32 }, 11w1024);
+        tmp_1 = b_hash_act_0.execute((bit<32>)temp_7);
+        hdr.pkt.field_j_8 = tmp_1;
     }
-    @name(".a_no_key") action a_no_key_0() {
-        hash<bit<16>, bit<16>, tuple_0, bit<17>>(temp_2, HashAlgorithm.random, 16w0, { hdr.pkt.field_a_32, hdr.pkt.field_b_32 }, 17w65536);
-        tmp_8 = b_no_key.execute((bit<32>)temp_2);
-        hdr.pkt.field_i_8 = (bit<8>)tmp_8;
+    @name(".a_no_key") action a_no_key() {
+        hash<bit<16>, bit<16>, tuple_0, bit<17>>(temp_8, HashAlgorithm.random, 16w0, { hdr.pkt.field_a_32, hdr.pkt.field_b_32 }, 17w65536);
+        tmp_2 = b_no_key_0.execute((bit<32>)temp_8);
+        hdr.pkt.field_i_8 = (bit<8>)tmp_2;
     }
-    @name(".a_t_direct") action a_t_direct_0() {
-        hash<bit<12>, bit<12>, tuple_0, bit<13>>(temp_3, HashAlgorithm.random, 12w0, { hdr.pkt.field_a_32, hdr.pkt.field_b_32 }, 13w4096);
-        tmp_9 = b_t_direct.execute((bit<32>)temp_3);
-        hdr.pkt.field_g_16 = tmp_9;
+    @name(".a_t_direct") action a_t_direct() {
+        hash<bit<12>, bit<12>, tuple_0, bit<13>>(temp_9, HashAlgorithm.random, 12w0, { hdr.pkt.field_a_32, hdr.pkt.field_b_32 }, 13w4096);
+        tmp_3 = b_t_direct_0.execute((bit<32>)temp_9);
+        hdr.pkt.field_g_16 = tmp_3;
     }
-    @name(".a_t_indirect") action a_t_indirect_0() {
-        hash<bit<13>, bit<13>, tuple_0, bit<14>>(temp_4, HashAlgorithm.random, 13w0, { hdr.pkt.field_a_32, hdr.pkt.field_b_32 }, 14w8192);
-        tmp_10 = b_t_indirect.execute((bit<32>)temp_4);
-        hdr.pkt.field_h_16 = tmp_10;
+    @name(".a_t_indirect") action a_t_indirect() {
+        hash<bit<13>, bit<13>, tuple_0, bit<14>>(temp_10, HashAlgorithm.random, 13w0, { hdr.pkt.field_a_32, hdr.pkt.field_b_32 }, 14w8192);
+        tmp_4 = b_t_indirect_0.execute((bit<32>)temp_10);
+        hdr.pkt.field_h_16 = tmp_4;
     }
-    @name(".t_em_direct") table t_em_direct {
+    @name(".t_em_direct") table t_em_direct_0 {
         actions = {
-            a_em_direct_0();
+            a_em_direct();
             @defaultonly NoAction_0();
         }
         key = {
@@ -286,67 +284,66 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_0();
     }
-    @name(".t_em_indirect") table t_em_indirect {
+    @name(".t_em_indirect") table t_em_indirect_0 {
         actions = {
-            a_em_indirect_0();
-            do_nothing_0();
-            @defaultonly NoAction_7();
+            a_em_indirect();
+            do_nothing();
+            @defaultonly NoAction_6();
         }
         key = {
             hdr.pkt.field_a_32: exact @name("pkt.field_a_32") ;
         }
         size = 2048;
-        default_action = NoAction_7();
+        default_action = NoAction_6();
     }
-    @name(".t_hash_act") table t_hash_act {
+    @name(".t_hash_act") table t_hash_act_0 {
         actions = {
-            a_hash_act_0();
-            @defaultonly NoAction_8();
+            a_hash_act();
+            @defaultonly NoAction_7();
         }
         key = {
-            hdr.pkt.field_d_32[9:0]: exact @name("pkt.field_d_32[9:0]") ;
+            hdr.pkt.field_d_32[9:0]: exact @name("pkt.field_d_32") ;
         }
         size = 1024;
-        default_action = NoAction_8();
+        default_action = NoAction_7();
     }
-    @name(".t_no_key") table t_no_key {
+    @name(".t_no_key") table t_no_key_0 {
         actions = {
-            a_no_key_0();
-            @defaultonly NoAction_9();
+            a_no_key();
         }
         size = 1024;
-        default_action = NoAction_9();
+        default_action = a_no_key();
     }
-    @name(".t_t_direct") table t_t_direct {
+    @name(".t_t_direct") table t_t_direct_0 {
         actions = {
-            a_t_direct_0();
-            @defaultonly NoAction_10();
+            a_t_direct();
+            @defaultonly NoAction_8();
         }
         key = {
             hdr.pkt.field_a_32: ternary @name("pkt.field_a_32") ;
         }
         size = 4096;
-        default_action = NoAction_10();
+        default_action = NoAction_8();
     }
-    @name(".t_t_indirect") table t_t_indirect {
+    @name(".t_t_indirect") table t_t_indirect_0 {
         actions = {
-            a_t_indirect_0();
+            a_t_indirect();
             do_nothing_2();
-            @defaultonly NoAction_11();
+            @defaultonly NoAction_9();
         }
         key = {
             hdr.pkt.field_a_32: ternary @name("pkt.field_a_32") ;
         }
         size = 2048;
-        default_action = NoAction_11();
+        default_action = NoAction_9();
     }
     apply {
-        t_em_direct.apply();
-        t_em_indirect.apply();
-        t_t_direct.apply();
-        t_t_indirect.apply();
-        t_no_key.apply();
-        t_hash_act.apply();
+        t_em_direct_0.apply();
+        t_em_indirect_0.apply();
+        t_t_direct_0.apply();
+        t_t_indirect_0.apply();
+        t_no_key_0.apply();
+        t_hash_act_0.apply();
     }
 }
 

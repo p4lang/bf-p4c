@@ -662,7 +662,7 @@ control Chunchula(inout headers hdr, inout metadata meta, inout standard_metadat
             bit<1> in_value;
             in_value = value;
             value = in_value;
-            rv = ~value;
+            rv = ~in_value;
         }
     };
     @name(".Heflin") action Heflin() {
@@ -1520,7 +1520,7 @@ control Trout(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Romero.Armstrong    : exact;
-            meta.Mabel.Overton[31:16]: ternary;
+            meta.Mabel.Overton[31:16]: ternary @name("Mabel.Overton") ;
             meta.Goodrich.Vidal      : ternary;
             meta.Goodrich.Nixon      : ternary;
             meta.Goodrich.Gillette   : ternary;
@@ -1538,7 +1538,7 @@ control Trout(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Romero.Armstrong       : exact;
-            meta.Fredonia.Fordyce[31:16]: ternary;
+            meta.Fredonia.Fordyce[31:16]: ternary @name("Fredonia.Fordyce") ;
             meta.Goodrich.Vidal         : ternary;
             meta.Goodrich.Nixon         : ternary;
             meta.Goodrich.Gillette      : ternary;
@@ -1703,7 +1703,7 @@ control PortVue(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Westville.Kiron      : exact;
-            meta.Mabel.Overton[127:64]: lpm;
+            meta.Mabel.Overton[127:64]: lpm @name("Mabel.Overton") ;
         }
         size = 8192;
     }
@@ -1715,7 +1715,7 @@ control PortVue(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Mabel.Sharon       : exact;
-            meta.Mabel.Overton[63:0]: lpm;
+            meta.Mabel.Overton[63:0]: lpm @name("Mabel.Overton") ;
         }
         size = 16384;
         default_action = Norland();
@@ -1728,7 +1728,7 @@ control PortVue(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Mabel.Suffolk        : exact;
-            meta.Mabel.Overton[106:64]: lpm;
+            meta.Mabel.Overton[106:64]: lpm @name("Mabel.Overton") ;
         }
         size = 65536;
         default_action = Norland();
@@ -1741,7 +1741,7 @@ control PortVue(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Fredonia.Mossville    : exact;
-            meta.Fredonia.Fordyce[19:0]: lpm;
+            meta.Fredonia.Fordyce[19:0]: lpm @name("Fredonia.Fordyce") ;
         }
         size = 131072;
         default_action = Norland();
@@ -1791,11 +1791,11 @@ control PortVue(inout headers hdr, inout metadata meta, inout standard_metadata_
                 switch (Powhatan.apply().action_run) {
                     Norland: {
                         switch (Coronado.apply().action_run) {
-                            Norland: {
-                                Adamstown.apply();
-                            }
                             Roseville: {
                                 Lenoir.apply();
+                            }
+                            Norland: {
+                                Adamstown.apply();
                             }
                         }
 
@@ -1808,6 +1808,9 @@ control PortVue(inout headers hdr, inout metadata meta, inout standard_metadata_
                     switch (Topawa.apply().action_run) {
                         Norland: {
                             switch (WhiteOwl.apply().action_run) {
+                                Roberta: {
+                                    Gardena.apply();
+                                }
                                 Norland: {
                                     switch (Floris.apply().action_run) {
                                         BealCity: {
@@ -1815,9 +1818,6 @@ control PortVue(inout headers hdr, inout metadata meta, inout standard_metadata_
                                         }
                                     }
 
-                                }
-                                Roberta: {
-                                    Gardena.apply();
                                 }
                             }
 

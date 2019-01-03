@@ -97,18 +97,18 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_5() {
     }
-    @name(".setBar") action setBar_0() {
+    @name(".setBar") action setBar() {
         meta.ing_md.barHit = 1w1;
     }
-    @name(".set_fib_result") action set_fib_result_0(bit<16> res) {
+    @name(".set_fib_result") action set_fib_result(bit<16> res) {
         meta.ing_md.fib_result = res;
     }
-    @name(".set_partition_index") action set_partition_index_0(bit<11> index) {
+    @name(".set_partition_index") action set_partition_index(bit<11> index) {
         meta.ing_md.partition_index = index;
     }
-    @name(".bar1") table bar1 {
+    @name(".bar1") table bar1_0 {
         actions = {
-            setBar_0();
+            setBar();
             @defaultonly NoAction_0();
         }
         key = {
@@ -120,9 +120,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_0();
     }
-    @atcam_partition_index("ing_md.partition_index") @ways(5) @name(".fib") table fib {
+    @atcam_partition_index("ing_md.partition_index") @ways(5) @name(".fib") table fib_0 {
         actions = {
-            set_fib_result_0();
+            set_fib_result();
             @defaultonly NoAction_4();
         }
         key = {
@@ -133,22 +133,22 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 16384;
         default_action = NoAction_4();
     }
-    @name(".partition") table partition {
+    @name(".partition") table partition_0 {
         actions = {
-            set_partition_index_0();
+            set_partition_index();
             @defaultonly NoAction_5();
         }
         key = {
             meta.ing_md.vrf       : exact @name("ing_md.vrf") ;
-            hdr.ipv4.dstAddr[31:8]: lpm @name("ipv4.dstAddr[31:8]") ;
+            hdr.ipv4.dstAddr[31:8]: lpm @name("ipv4.dstAddr") ;
         }
         size = 1024;
         default_action = NoAction_5();
     }
     apply {
-        partition.apply();
-        bar1.apply();
-        fib.apply();
+        partition_0.apply();
+        bar1_0.apply();
+        fib_0.apply();
     }
 }
 

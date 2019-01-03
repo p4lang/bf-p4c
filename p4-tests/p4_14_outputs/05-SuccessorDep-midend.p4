@@ -162,11 +162,11 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".nop") action nop_0() {
+    @name(".nop") action nop() {
     }
-    @name(".e_t1") table e_t1 {
+    @name(".e_t1") table e_t1_0 {
         actions = {
-            nop_0();
+            nop();
             @defaultonly NoAction_0();
         }
         key = {
@@ -175,7 +175,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = NoAction_0();
     }
     apply {
-        e_t1.apply();
+        e_t1_0.apply();
     }
 }
 
@@ -186,27 +186,27 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_7() {
     }
-    @name(".nop") action nop_1() {
+    @name(".nop") action nop_2() {
     }
     @name(".nop") action nop_4() {
     }
-    @name(".ing_drop") action ing_drop_0() {
+    @name(".ing_drop") action ing_drop() {
         meta.ing_metadata.drop = 1w1;
     }
     @name(".ing_drop") action ing_drop_2() {
         meta.ing_metadata.drop = 1w1;
     }
-    @name(".set_egress_port") action set_egress_port_0(bit<8> egress_port) {
+    @name(".set_egress_port") action set_egress_port(bit<8> egress_port) {
         meta.ing_metadata.egress_port = egress_port;
     }
-    @name(".set_bd") action set_bd_0(bit<16> bd) {
+    @name(".set_bd") action set_bd(bit<16> bd) {
         meta.ing_metadata.bd = bd;
     }
-    @name(".dmac") table dmac {
+    @name(".dmac") table dmac_0 {
         actions = {
-            nop_1();
-            ing_drop_0();
-            set_egress_port_0();
+            nop_2();
+            ing_drop();
+            set_egress_port();
             @defaultonly NoAction_1();
         }
         key = {
@@ -216,9 +216,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 131072;
         default_action = NoAction_1();
     }
-    @name(".port_bd") table port_bd {
+    @name(".port_bd") table port_bd_0 {
         actions = {
-            set_bd_0();
+            set_bd();
             @defaultonly NoAction_6();
         }
         key = {
@@ -227,7 +227,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_6();
     }
-    @name(".smac_filter") table smac_filter {
+    @name(".smac_filter") table smac_filter_0 {
         actions = {
             nop_4();
             ing_drop_2();
@@ -239,11 +239,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_7();
     }
     apply {
-        port_bd.apply();
+        port_bd_0.apply();
         if (meta.ing_metadata.bd != 16w0) 
-            dmac.apply();
+            dmac_0.apply();
         else 
-            smac_filter.apply();
+            smac_filter_0.apply();
     }
 }
 

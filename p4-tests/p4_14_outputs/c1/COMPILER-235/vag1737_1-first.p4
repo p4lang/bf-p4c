@@ -454,7 +454,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.egress_l2_metadata.VqbwXd = meta.egress_l2_metadata.outer_bd + 16w0x1000;
     }
     @name(".QXYBjG") action QXYBjG() {
-        digest<jeqIuB>(32w0x0, { meta.ozKgHM.zVITkG, meta.l2_metadata.outer_bd, hdr.inner_ethernet.srcOUI, hdr.inner_ethernet.srcSTA, hdr.outer_ipv4.srcAddr });
+        digest<jeqIuB>(32w0x0, {meta.ozKgHM.zVITkG,meta.l2_metadata.outer_bd,hdr.inner_ethernet.srcOUI,hdr.inner_ethernet.srcSTA,hdr.outer_ipv4.srcAddr});
     }
     @name(".XVktOe") action XVktOe(bit<16> rJWdDI) {
         meta.ipv4_metadata.vrf = rJWdDI;
@@ -468,7 +468,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.PdKkSx.PqcjFS = EsFJTP;
     }
     @name(".FjFvSI") action FjFvSI() {
-        digest<RgamWT>(32w0x0, { meta.ozKgHM.zVITkG, meta.l2_metadata.srcOUI, meta.l2_metadata.srcSTA, meta.l2_metadata.outer_bd, meta.l2_metadata.inner_bd });
+        digest<RgamWT>(32w0x0, {meta.ozKgHM.zVITkG,meta.l2_metadata.srcOUI,meta.l2_metadata.srcSTA,meta.l2_metadata.outer_bd,meta.l2_metadata.inner_bd});
     }
     @name(".jwLDdv") action jwLDdv() {
     }
@@ -853,10 +853,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             ingress_port_properties.apply();
         rmac.apply();
         switch (ceGwFc.apply().action_run) {
-            uNBXVV: {
-                chPApZ.apply();
-                KPlvUi.apply();
-            }
             zEaBcj: {
                 if (meta.port_metadata.huEsCO == 1w0x1) 
                     GiINoN.apply();
@@ -868,6 +864,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                     }
 
                 jubrcZ.apply();
+            }
+            uNBXVV: {
+                chPApZ.apply();
+                KPlvUi.apply();
             }
         }
 

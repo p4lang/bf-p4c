@@ -177,23 +177,23 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<32> tmp_0;
+    bit<32> tmp;
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".action_0") action action_3(bit<32> src0) {
+    @name(".action_0") action action_0(bit<32> src0) {
         hdr.hdr_0.c = src0;
     }
-    @name(".action_1") action action_4(bit<32> src1) {
+    @name(".action_1") action action_1(bit<32> src1) {
     }
-    @name(".action_2") action action_5(bool cond2, bit<32> src2) {
-        tmp_0 = (cond2 ? src2 : tmp_0);
-        tmp_0 = (!cond2 ? hdr.hdr_0.c : tmp_0);
+    @name(".action_2") action action_2(bool cond2, bit<32> src2) {
+        tmp = (cond2 ? src2 : tmp);
+        tmp = (!cond2 ? hdr.hdr_0.c : tmp);
     }
-    @name(".table_i0") table table_i0 {
+    @name(".table_i0") table table_i0_0 {
         actions = {
-            action_3();
-            action_4();
-            action_5();
+            action_0();
+            action_1();
+            action_2();
             @defaultonly NoAction_0();
         }
         key = {
@@ -203,7 +203,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_0();
     }
     apply {
-        table_i0.apply();
+        table_i0_0.apply();
     }
 }
 

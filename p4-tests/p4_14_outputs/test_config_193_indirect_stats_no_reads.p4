@@ -172,6 +172,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             action_0;
         }
+        default_action = action_0();
     }
     apply {
         table_0.apply();

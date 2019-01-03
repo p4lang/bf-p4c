@@ -123,7 +123,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.ing_md.vrf       : exact;
-            hdr.ipv4.dstAddr[31:8]: lpm;
+            hdr.ipv4.dstAddr[31:8]: lpm @name("ipv4.dstAddr") ;
         }
         size = 1024;
     }

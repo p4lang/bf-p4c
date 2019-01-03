@@ -1018,7 +1018,7 @@ control Baskin(inout headers hdr, inout metadata meta, inout standard_metadata_t
         key = {
             meta.Westboro.Sturgeon   : exact;
             meta.Westboro.Giltner    : exact;
-            meta.Westboro.Correo[2:2]: exact;
+            meta.Westboro.Correo[2:2]: exact @name("Westboro.Correo") ;
             meta.Westboro.Gerty      : exact;
         }
         size = 4096;
@@ -1060,7 +1060,7 @@ control Baskin(inout headers hdr, inout metadata meta, inout standard_metadata_t
         key = {
             meta.Westboro.Sturgeon   : exact;
             meta.Westboro.Giltner    : exact;
-            meta.Westboro.Correo[2:2]: exact;
+            meta.Westboro.Correo[2:2]: exact @name("Westboro.Correo") ;
             meta.Scherr.McDavid      : exact;
         }
         size = 512;
@@ -1378,7 +1378,7 @@ control Cornville(inout headers hdr, inout metadata meta, inout standard_metadat
             Avondale;
         }
         key = {
-            meta.CoalCity.CruzBay[31:24]: exact;
+            meta.CoalCity.CruzBay[31:24]: exact @name("CoalCity.CruzBay") ;
         }
         size = 256;
         default_action = Avondale(0, 0, 0);
@@ -1388,7 +1388,7 @@ control Cornville(inout headers hdr, inout metadata meta, inout standard_metadat
             Soldotna;
         }
         key = {
-            meta.CoalCity.CruzBay[16:0]: exact;
+            meta.CoalCity.CruzBay[16:0]: exact @name("CoalCity.CruzBay") ;
         }
         size = 4096;
         default_action = Soldotna(0);
@@ -1398,7 +1398,7 @@ control Cornville(inout headers hdr, inout metadata meta, inout standard_metadat
             Mondovi;
         }
         key = {
-            meta.CoalCity.Cozad: exact;
+            meta.CoalCity.Cozad: exact @name("CoalCity.Cozad") ;
         }
         size = 4096;
         default_action = Mondovi(0);
@@ -1582,7 +1582,7 @@ control Geneva(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         key = {
             meta.Macon.Prismatic      : exact;
-            meta.Macon.Anchorage[19:0]: lpm;
+            meta.Macon.Anchorage[19:0]: lpm @name("Macon.Anchorage") ;
         }
         size = 131072;
         default_action = Fitler();
@@ -1595,7 +1595,7 @@ control Geneva(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         key = {
             meta.Evelyn.Fiftysix       : exact;
-            meta.Evelyn.Macland[106:64]: lpm;
+            meta.Evelyn.Macland[106:64]: lpm @name("Evelyn.Macland") ;
         }
         size = 65536;
         default_action = Fitler();
@@ -1621,7 +1621,7 @@ control Geneva(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         key = {
             meta.Evelyn.Nowlin       : exact;
-            meta.Evelyn.Macland[63:0]: lpm;
+            meta.Evelyn.Macland[63:0]: lpm @name("Evelyn.Macland") ;
         }
         size = 16384;
         default_action = Fitler();
@@ -1634,7 +1634,7 @@ control Geneva(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         key = {
             meta.Wetumpka.Cannelton    : exact;
-            meta.Evelyn.Macland[127:64]: lpm;
+            meta.Evelyn.Macland[127:64]: lpm @name("Evelyn.Macland") ;
         }
         size = 8192;
     }
@@ -1706,7 +1706,7 @@ control Gowanda(inout headers hdr, inout metadata meta, inout standard_metadata_
             Fitler;
         }
         key = {
-            meta.Westboro.Trion: exact;
+            meta.Westboro.Trion: exact @name("Westboro.Trion") ;
         }
         size = 4096;
         default_action = Fitler();
@@ -1765,7 +1765,7 @@ control Gowanda(inout headers hdr, inout metadata meta, inout standard_metadata_
             Fitler_0;
         }
         key = {
-            hdr.ig_intr_md.ingress_port[6:0]: exact;
+            hdr.ig_intr_md.ingress_port[6:0]: exact @name("ig_intr_md.ingress_port") ;
             meta.Humeston.Hector            : ternary;
             meta.Humeston.Sarepta           : ternary;
             meta.Westboro.Cleator           : ternary;
@@ -1860,7 +1860,7 @@ control Loris(inout headers hdr, inout metadata meta, inout standard_metadata_t 
             Fitler;
         }
         key = {
-            meta.CoalCity.Killen[9:0]: exact;
+            meta.CoalCity.Killen[9:0]: exact @name("CoalCity.Killen") ;
             meta.Woodfield.Wauna     : selector;
         }
         size = 1024;
@@ -1948,9 +1948,9 @@ control Gunter(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name(".Loris") Loris() Loris_0;
     apply {
         switch (Stennett.apply().action_run) {
-            Chitina_0: {
-            }
             Norwood_0: {
+            }
+            Chitina_0: {
             }
             default: {
                 Loris_0.apply(hdr, meta, standard_metadata);
@@ -1970,8 +1970,8 @@ control Habersham(inout headers hdr, inout metadata meta, inout standard_metadat
             Lasker;
         }
         key = {
-            hdr.eg_intr_md.egress_port[6:0]: exact;
-            hdr.eg_intr_md.egress_qid[2:0] : exact;
+            hdr.eg_intr_md.egress_port[6:0]: exact @name("eg_intr_md.egress_port") ;
+            hdr.eg_intr_md.egress_qid[2:0] : exact @name("eg_intr_md.egress_qid") ;
         }
         size = 1024;
     }
@@ -2257,7 +2257,7 @@ control LaMonte(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Westboro.Giltner       : ternary;
             meta.Westboro.Larose        : ternary;
             meta.Macon.Anchorage        : ternary;
-            meta.Evelyn.Macland[127:112]: ternary;
+            meta.Evelyn.Macland[127:112]: ternary @name("Evelyn.Macland") ;
             meta.Westboro.Weatherly     : ternary;
             meta.Westboro.Halliday      : ternary;
             meta.CoalCity.Hopeton       : ternary;
@@ -2584,7 +2584,7 @@ control Ludowici(inout headers hdr, inout metadata meta, inout standard_metadata
             bit<1> in_value;
             in_value = value;
             value = in_value;
-            rv = ~value;
+            rv = ~in_value;
         }
     };
     @name(".Larwill") action Larwill() {
@@ -2623,7 +2623,7 @@ control Ludowici(inout headers hdr, inout metadata meta, inout standard_metadata
             WestEnd;
         }
         key = {
-            hdr.ig_intr_md.ingress_port[6:0]: exact;
+            hdr.ig_intr_md.ingress_port[6:0]: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 72;
     }
@@ -2733,7 +2733,7 @@ control Redvale(inout headers hdr, inout metadata meta, inout standard_metadata_
             Falls;
         }
         key = {
-            hdr.ig_intr_md.ingress_port[6:0]: exact;
+            hdr.ig_intr_md.ingress_port[6:0]: exact @name("ig_intr_md.ingress_port") ;
         }
     }
     apply {
@@ -2844,7 +2844,7 @@ control Wattsburg(inout headers hdr, inout metadata meta, inout standard_metadat
             Hawley;
         }
         key = {
-            meta.Weyauwega.Alcoma[16:15]: ternary;
+            meta.Weyauwega.Alcoma[16:15]: ternary @name("Weyauwega.Alcoma") ;
         }
         size = 16;
     }
@@ -2857,7 +2857,7 @@ control Wattsburg(inout headers hdr, inout metadata meta, inout standard_metadat
             Fitler_1;
         }
         key = {
-            meta.Weyauwega.Alcoma[14:0]: exact;
+            meta.Weyauwega.Alcoma[14:0]: exact @name("Weyauwega.Alcoma") ;
         }
         size = 32768;
         default_action = Fitler_1();
@@ -2959,7 +2959,7 @@ control Wellford(inout headers hdr, inout metadata meta, inout standard_metadata
             Junior_0;
         }
         key = {
-            hdr.ig_intr_md.ingress_port[6:0]: exact;
+            hdr.ig_intr_md.ingress_port[6:0]: exact @name("ig_intr_md.ingress_port") ;
             hdr.Greenland.Wheatland         : ternary;
             hdr.Greenland.Wabasha           : ternary;
         }
@@ -3029,7 +3029,7 @@ control Wyatte(inout headers hdr, inout metadata meta, inout standard_metadata_t
         meta.Westboro.Weatherly = meta.Hershey.Munger;
         meta.Westboro.Halliday = meta.Hershey.Hookstown;
         meta.Westboro.Sturgeon[0:0] = ((bit<1>)meta.Hershey.Aguila)[0:0];
-        meta.Westboro.Giltner = (bit<1>)meta.Hershey.Aguila >> 1;
+        meta.Westboro.Giltner = (bit<1>)(meta.Hershey.Aguila >> 1);
         meta.Westboro.LaVale = 1w0;
         meta.CoalCity.Parrish = 3w1;
         meta.Scherr.Mango = 2w1;
@@ -3058,7 +3058,7 @@ control Wyatte(inout headers hdr, inout metadata meta, inout standard_metadata_t
         meta.Westboro.Weatherly = meta.Hershey.Swansboro;
         meta.Westboro.Halliday = meta.Hershey.Mulhall;
         meta.Westboro.Sturgeon[0:0] = ((bit<1>)meta.Hershey.Hecker)[0:0];
-        meta.Westboro.Giltner = (bit<1>)meta.Hershey.Hecker >> 1;
+        meta.Westboro.Giltner = (bit<1>)(meta.Hershey.Hecker >> 1);
         meta.Missoula.Caban = hdr.Mission[0].Berne;
         meta.Westboro.LaVale = meta.Hershey.Covelo;
         meta.Wildell.Dushore = hdr.Vandling.Dresser;
@@ -3288,7 +3288,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             Patchogue;
         }
         key = {
-            meta.Hershey.Swansboro[7:7]: exact;
+            meta.Hershey.Swansboro[7:7]: exact @name("Hershey.Swansboro") ;
             hdr.Amory.isValid()        : exact;
             hdr.Martelle.isValid()     : exact;
         }

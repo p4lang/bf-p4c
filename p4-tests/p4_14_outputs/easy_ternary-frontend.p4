@@ -154,24 +154,24 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".nop") action nop_0() {
+    @name(".nop") action nop() {
     }
-    @name(".do") action do_0(bit<8> val, bit<9> port) {
+    @name(".do") action do(bit<8> val, bit<9> port) {
         hdr.h.f2 = val;
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".t") table t {
+    @name(".t") table t_0 {
         actions = {
-            nop_0();
-            do_0();
+            nop();
+            do();
         }
         key = {
             hdr.h.f1: lpm @name("h.f1") ;
         }
-        default_action = nop_0();
+        default_action = nop();
     }
     apply {
-        t.apply();
+        t_0.apply();
     }
 }
 

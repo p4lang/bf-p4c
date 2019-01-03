@@ -46,33 +46,33 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_5() {
     }
-    @name(".test3_counter") counter(32w4000, CounterType.packets) test3_counter;
-    @name(".setb1") action setb1_0(bit<8> val1) {
+    @name(".test3_counter") counter(32w4000, CounterType.packets) test3_counter_0;
+    @name(".setb1") action setb1(bit<8> val1) {
         hdr.data.b1 = val1;
     }
-    @name(".setb2") action setb2_0(bit<8> val2) {
+    @name(".setb2") action setb2(bit<8> val2) {
         hdr.data.b2 = val2;
     }
-    @name(".setb3") action setb3_0(bit<8> val3) {
+    @name(".setb3") action setb3(bit<8> val3) {
         hdr.data.b3 = val3;
     }
-    @name(".setb4") action setb4_0(bit<8> val4) {
+    @name(".setb4") action setb4(bit<8> val4) {
         hdr.data.b4 = val4;
     }
-    @name(".setb5") action setb5_0(bit<8> val5) {
+    @name(".setb5") action setb5(bit<8> val5) {
         hdr.data.b5 = val5;
     }
-    @name(".setb6") action setb6_0(bit<8> val6) {
+    @name(".setb6") action setb6(bit<8> val6) {
         hdr.data.b6 = val6;
     }
-    @name(".my_count") action my_count_0(bit<32> idx) {
-        test3_counter.count(idx);
+    @name(".my_count") action my_count(bit<32> idx) {
+        test3_counter_0.count(idx);
     }
-    @name(".test1") table test1 {
+    @name(".test1") table test1_0 {
         actions = {
-            setb1_0();
-            setb2_0();
-            setb3_0();
+            setb1();
+            setb2();
+            setb3();
             @defaultonly NoAction_0();
         }
         key = {
@@ -85,11 +85,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         implementation = set_b1_3;
         default_action = NoAction_0();
     }
-    @name(".test2") table test2 {
+    @name(".test2") table test2_0 {
         actions = {
-            setb4_0();
-            setb5_0();
-            setb6_0();
+            setb4();
+            setb5();
+            setb6();
             @defaultonly NoAction_4();
         }
         key = {
@@ -102,9 +102,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         implementation = set_b4_6;
         default_action = NoAction_4();
     }
-    @name(".test3") table test3 {
+    @name(".test3") table test3_0 {
         actions = {
-            my_count_0();
+            my_count();
             @defaultonly NoAction_5();
         }
         key = {
@@ -114,9 +114,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_5();
     }
     apply {
-        test1.apply();
-        test2.apply();
-        test3.apply();
+        test1_0.apply();
+        test2_0.apply();
+        test3_0.apply();
     }
 }
 

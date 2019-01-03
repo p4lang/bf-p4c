@@ -1,0 +1,18 @@
+upf.p4(121): warning: Table flow_table is not used; removing
+    table flow_table {
+          ^^^^^^^^^^
+upf.p4(139): warning: Table policy_table is not used; removing
+    table policy_table {
+          ^^^^^^^^^^^^
+upf.p4(38): warning: ig_drp_cntr: unused instance
+    DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES) ig_drp_cntr;
+                                                            ^^^^^^^^^^^
+upf.p4(203): warning: eg_drp_cntr: unused instance
+    DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES) eg_drp_cntr;
+                                                            ^^^^^^^^^^^
+parde.p4(22): [--Wwarn=uninitialized_out_param] warning: out parameter ig_md may be uninitialized when UPFIngressParser terminates
+            out upf_ingress_metadata_t ig_md,
+                                       ^^^^^
+parde.p4(19)
+parser UPFIngressParser(
+       ^^^^^^^^^^^^^^^^

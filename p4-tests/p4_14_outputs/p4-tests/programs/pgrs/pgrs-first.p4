@@ -535,17 +535,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             }
             if (meta.ig_md.pfe_override_test == 1w1) 
                 switch (eg_tcam_or_exm.apply().action_run) {
-                    do_exm: {
-                        e1.apply();
-                        e2.apply();
-                        e4.apply();
-                        e5.apply();
-                    }
                     do_tcam: {
                         t1.apply();
                         t2.apply();
                         t4.apply();
                         t5.apply();
+                    }
+                    do_exm: {
+                        e1.apply();
+                        e2.apply();
+                        e4.apply();
+                        e5.apply();
                     }
                 }
 

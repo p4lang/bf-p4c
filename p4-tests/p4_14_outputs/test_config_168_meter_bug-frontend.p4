@@ -180,23 +180,23 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".exm_meter2") direct_meter<bit<8>>(MeterType.bytes) exm_meter2;
-    @name(".action_0") action action_0() {
-        exm_meter2.read(hdr.ipv4.diffserv);
+    @name(".exm_meter2") direct_meter<bit<8>>(MeterType.bytes) exm_meter2_0;
+    @name(".action_0") action action_2() {
+        exm_meter2_0.read(hdr.ipv4.diffserv);
         hdr.ipv4.ttl = 8w4;
     }
-    @name(".action_1") action action_1() {
-        exm_meter2.read(hdr.ipv4.diffserv);
+    @name(".action_1") action action_3() {
+        exm_meter2_0.read(hdr.ipv4.diffserv);
         hdr.ipv4.ttl = 8w5;
     }
-    @name(".nop") action nop() {
-        exm_meter2.read(hdr.ipv4.diffserv);
+    @name(".nop") action nop_0() {
+        exm_meter2_0.read(hdr.ipv4.diffserv);
     }
-    @name(".table_0") table table_0 {
+    @name(".table_0") table table_1 {
         actions = {
-            action_0();
-            action_1();
-            nop();
+            action_2();
+            action_3();
+            nop_0();
             @defaultonly NoAction_0();
         }
         key = {
@@ -204,11 +204,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.dstAddr : exact @name("ipv4.dstAddr") ;
             hdr.ipv4.diffserv: exact @name("ipv4.diffserv") ;
         }
-        meters = exm_meter2;
+        meters = exm_meter2_0;
         default_action = NoAction_0();
     }
     apply {
-        table_0.apply();
+        table_1.apply();
     }
 }
 

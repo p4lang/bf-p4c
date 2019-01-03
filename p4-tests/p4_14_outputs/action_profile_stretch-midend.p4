@@ -39,29 +39,29 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    @name(".setb1") action setb1_0(bit<8> val1) {
+    @name(".setb1") action setb1(bit<8> val1) {
         hdr.data.b1 = val1;
     }
     @name(".setb1") action setb1_2(bit<8> val1) {
         hdr.data.b1 = val1;
     }
-    @name(".setb2") action setb2_0(bit<8> val2) {
+    @name(".setb2") action setb2(bit<8> val2) {
         hdr.data.b2 = val2;
     }
     @name(".setb2") action setb2_2(bit<8> val2) {
         hdr.data.b2 = val2;
     }
-    @name(".setb3") action setb3_0(bit<8> val3) {
+    @name(".setb3") action setb3(bit<8> val3) {
         hdr.data.b3 = val3;
     }
     @name(".setb3") action setb3_2(bit<8> val3) {
         hdr.data.b3 = val3;
     }
-    @name(".test1") table test1 {
+    @name(".test1") table test1_0 {
         actions = {
-            setb1_0();
-            setb2_0();
-            setb3_0();
+            setb1();
+            setb2();
+            setb3();
             @defaultonly NoAction_0();
         }
         key = {
@@ -71,7 +71,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         implementation = set_b1_3;
         default_action = NoAction_0();
     }
-    @name(".test2") table test2 {
+    @name(".test2") table test2_0 {
         actions = {
             setb1_2();
             setb2_2();
@@ -87,9 +87,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (hdr.data.b4 == 8w0) 
-            test1.apply();
+            test1_0.apply();
         else 
-            test2.apply();
+            test2_0.apply();
     }
 }
 

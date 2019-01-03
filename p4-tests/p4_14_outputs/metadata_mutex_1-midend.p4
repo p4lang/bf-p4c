@@ -163,40 +163,40 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".read_f1") action read_f1_0() {
+    @name(".read_f1") action read_f1() {
         hdr.ethernet.etherType = meta.m.f1;
     }
-    @name(".read_f2") action read_f2_0() {
+    @name(".read_f2") action read_f2() {
         hdr.ethernet.etherType = meta.m.f2;
     }
-    @name(".nop") action nop_0() {
+    @name(".nop") action nop() {
     }
-    @name(".do") action do_0() {
+    @name(".do") action do() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = 9w2;
     }
-    @name(".set_etherType") table set_etherType {
+    @name(".set_etherType") table set_etherType_0 {
         actions = {
-            read_f1_0();
-            read_f2_0();
+            read_f1();
+            read_f2();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
-        default_action = read_f1_0();
+        default_action = read_f1();
     }
-    @name(".t") table t {
+    @name(".t") table t_0 {
         actions = {
-            nop_0();
-            do_0();
+            nop();
+            do();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
-        default_action = do_0();
+        default_action = do();
     }
     apply {
-        t.apply();
-        set_etherType.apply();
+        t_0.apply();
+        set_etherType_0.apply();
     }
 }
 

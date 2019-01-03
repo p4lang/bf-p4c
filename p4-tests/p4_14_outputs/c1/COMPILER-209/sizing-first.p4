@@ -128,7 +128,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.ing_md.vrf       : exact @name("ing_md.vrf") ;
-            hdr.ipv4.dstAddr[31:8]: lpm @name("ipv4.dstAddr[31:8]") ;
+            hdr.ipv4.dstAddr[31:8]: lpm @name("ipv4.dstAddr") ;
         }
         size = 1024;
         default_action = NoAction();

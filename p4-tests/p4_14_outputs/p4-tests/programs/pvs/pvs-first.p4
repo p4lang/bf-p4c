@@ -215,11 +215,11 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @parser_value_set_size(2) @name(".pvs2") value_set<bit<16>>(4) pvs2;
-    @parser_value_set_size(9) @name(".pvs3") value_set<tuple<bit<6>, bit<14>>>(4) pvs3;
-    @parser_value_set_size(2) @name(".pvs4") value_set<bit<32>>(4) pvs4;
-    @parser_value_set_size(5) @name(".pvs1") value_set<bit<16>>(4) pvs1;
-    @parser_value_set_size(5) @name(".pvs5") value_set<bit<16>>(4) pvs5;
+    @parser_value_set_size(2) @name(".pvs2") value_set<bit<16>>(2) pvs2;
+    @parser_value_set_size(9) @name(".pvs3") value_set<tuple<bit<6>, bit<14>>>(9) pvs3;
+    @parser_value_set_size(2) @name(".pvs4") value_set<bit<32>>(2) pvs4;
+    @parser_value_set_size(5) @name(".pvs1") value_set<bit<16>>(5) pvs1;
+    @parser_value_set_size(5) @name(".pvs5") value_set<bit<16>>(5) pvs5;
     @name(".$start") state start {
         transition select((InstanceType_0)standard_metadata.instance_type) {
             InstanceType_0.START: start_0;

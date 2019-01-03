@@ -56,7 +56,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             hdr.zoe.isValid()     : exact;
-            hdr.zoe.seesawing[5:4]: ternary;
+            hdr.zoe.seesawing[5:4]: ternary @name("zoe.seesawing") ;
         }
     }
     apply {

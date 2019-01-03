@@ -171,16 +171,16 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_5() {
     }
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing() {
     }
     @name(".do_nothing") action do_nothing_3() {
     }
     @name(".do_nothing") action do_nothing_4() {
     }
-    @name(".action_0") action action_2(bit<32> param0) {
+    @name(".action_0") action action_0(bit<32> param0) {
         hdr.pkt.field_a_32 = param0;
     }
-    @name(".action_0") action action_3(bit<32> param0) {
+    @name(".action_0") action action_1(bit<32> param0) {
         hdr.pkt.field_a_32 = param0;
     }
     @name(".action_1") action action_6(bit<32> param1) {
@@ -189,10 +189,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".action_1") action action_7(bit<32> param1) {
         hdr.pkt.field_b_32 = param1;
     }
-    @name(".table_0") table table_0 {
+    @name(".table_0") table table_3 {
         actions = {
-            do_nothing_0();
-            action_2();
+            do_nothing();
+            action_0();
             action_6();
             @defaultonly NoAction_0();
         }
@@ -203,10 +203,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         implementation = shared_action_profile;
         default_action = NoAction_0();
     }
-    @name(".table_1") table table_1 {
+    @name(".table_1") table table_4 {
         actions = {
             do_nothing_3();
-            action_3();
+            action_1();
             action_7();
             @defaultonly NoAction_4();
         }
@@ -217,7 +217,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         implementation = shared_action_profile;
         default_action = NoAction_4();
     }
-    @name(".table_2") table table_2 {
+    @name(".table_2") table table_5 {
         actions = {
             do_nothing_4();
             @defaultonly NoAction_5();
@@ -229,10 +229,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (hdr.pkt.field_i_8 == 8w0) 
-            table_0.apply();
+            table_3.apply();
         else 
-            table_1.apply();
-        table_2.apply();
+            table_4.apply();
+        table_5.apply();
     }
 }
 

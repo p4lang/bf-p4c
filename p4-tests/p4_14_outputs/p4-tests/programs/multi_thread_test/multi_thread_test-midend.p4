@@ -271,88 +271,88 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_5() {
     }
-    @name(".cntr_exm_tbl_1") direct_counter(CounterType.packets) cntr_exm_tbl_0;
-    @name(".cntr_tcam_tbl_1") direct_counter(CounterType.packets) cntr_tcam_tbl_0;
-    @name(".verify_cntr") direct_counter(CounterType.packets) verify_cntr;
-    @name(".nop") action nop() {
-        cntr_exm_tbl_0.count();
+    @name(".cntr_exm_tbl_1") direct_counter(CounterType.packets) cntr_exm_tbl;
+    @name(".cntr_tcam_tbl_1") direct_counter(CounterType.packets) cntr_tcam_tbl;
+    @name(".verify_cntr") direct_counter(CounterType.packets) verify_cntr_0;
+    @name(".nop") action nop_0() {
+        cntr_exm_tbl.count();
     }
-    @name(".drop_1") action drop_1() {
-        cntr_exm_tbl_0.count();
+    @name(".drop_1") action drop_0() {
+        cntr_exm_tbl.count();
         mark_to_drop();
     }
-    @name(".recirc") action recirc(bit<9> dst_port) {
-        cntr_exm_tbl_0.count();
+    @name(".recirc") action recirc_0(bit<9> dst_port) {
+        cntr_exm_tbl.count();
         hdr.ig_intr_md_for_tm.ucast_egress_port = dst_port;
     }
-    @name(".exm_tbl_1") table exm_tbl_0 {
+    @name(".exm_tbl_1") table exm_tbl {
         actions = {
-            nop();
-            drop_1();
-            recirc();
+            nop_0();
+            drop_0();
+            recirc_0();
             @defaultonly NoAction_0();
         }
         key = {
             hdr.ipv4.dstAddr: exact @name("ipv4.dstAddr") ;
         }
         size = 102400;
-        counters = cntr_exm_tbl_0;
+        counters = cntr_exm_tbl;
         default_action = NoAction_0();
     }
-    @name(".nop") action nop_3() {
-        cntr_tcam_tbl_0.count();
+    @name(".nop") action nop_1() {
+        cntr_tcam_tbl.count();
     }
-    @name(".drop_1") action drop_1_2() {
-        cntr_tcam_tbl_0.count();
+    @name(".drop_1") action drop_1_0() {
+        cntr_tcam_tbl.count();
         mark_to_drop();
     }
-    @name(".recirc") action recirc_3(bit<9> dst_port) {
-        cntr_tcam_tbl_0.count();
+    @name(".recirc") action recirc_1(bit<9> dst_port) {
+        cntr_tcam_tbl.count();
         hdr.ig_intr_md_for_tm.ucast_egress_port = dst_port;
     }
-    @name(".tcam_tbl_1") table tcam_tbl_0 {
+    @name(".tcam_tbl_1") table tcam_tbl {
         actions = {
-            nop_3();
-            drop_1_2();
-            recirc_3();
+            nop_1();
+            drop_1_0();
+            recirc_1();
             @defaultonly NoAction_4();
         }
         key = {
             hdr.ipv4.dstAddr: ternary @name("ipv4.dstAddr") ;
         }
         size = 51200;
-        counters = cntr_tcam_tbl_0;
+        counters = cntr_tcam_tbl;
         default_action = NoAction_4();
     }
-    @name(".nop") action nop_4() {
-        verify_cntr.count();
+    @name(".nop") action nop_2() {
+        verify_cntr_0.count();
     }
-    @name(".drop_1") action drop_1_3() {
-        verify_cntr.count();
+    @name(".drop_1") action drop_1_1() {
+        verify_cntr_0.count();
         mark_to_drop();
     }
-    @name(".recirc") action recirc_4(bit<9> dst_port) {
-        verify_cntr.count();
+    @name(".recirc") action recirc_2(bit<9> dst_port) {
+        verify_cntr_0.count();
         hdr.ig_intr_md_for_tm.ucast_egress_port = dst_port;
     }
-    @name(".verify_tbl") table verify_tbl {
+    @name(".verify_tbl") table verify_tbl_0 {
         actions = {
-            nop_4();
-            drop_1_3();
-            recirc_4();
+            nop_2();
+            drop_1_1();
+            recirc_2();
             @defaultonly NoAction_5();
         }
         key = {
             hdr.ipv4.dstAddr: exact @name("ipv4.dstAddr") ;
         }
         size = 51200;
-        counters = verify_cntr;
+        counters = verify_cntr_0;
         default_action = NoAction_5();
     }
     apply {
-        exm_tbl_0.apply();
-        tcam_tbl_0.apply();
-        verify_tbl.apply();
+        exm_tbl.apply();
+        tcam_tbl.apply();
+        verify_tbl_0.apply();
     }
 }
 

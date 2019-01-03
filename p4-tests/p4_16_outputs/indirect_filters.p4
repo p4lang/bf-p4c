@@ -57,7 +57,7 @@ header udp_h {
     bit<16> checksum;
 }
 
-parser TofinoIngressParser<H, M>(packet_in pkt, out H hdr, out M ig_md, out ingress_intrinsic_metadata_t ig_intr_md) {
+parser TofinoIngressParser(packet_in pkt, out ingress_intrinsic_metadata_t ig_intr_md) {
     state start {
         pkt.extract(ig_intr_md);
         transition select(ig_intr_md.resubmit_flag) {
@@ -69,20 +69,29 @@ parser TofinoIngressParser<H, M>(packet_in pkt, out H hdr, out M ig_md, out ingr
         transition reject;
     }
     state parse_port_metadata {
-        pkt.advance(64);
         transition accept;
     }
 }
 
-parser TofinoEgressParser<H, M>(packet_in pkt, out H hdr, out M eg_md, out egress_intrinsic_metadata_t eg_intr_md) {
+parser TofinoEgressParser(packet_in pkt, out egress_intrinsic_metadata_t eg_intr_md) {
     state start {
         pkt.extract(eg_intr_md);
         transition accept;
     }
 }
 
-parser EmptyEgressParser<H, M>(packet_in pkt, out H hdr, out M eg_md, out egress_intrinsic_metadata_t eg_intr_md) {
+parser EmptyIngressParser<H, M>(packet_in pkt, out H hdr, out M ig_md, out ingress_intrinsic_metadata_t ig_intr_md) {
+    TofinoIngressParser() tofino_parser;
     state start {
+        tofino_parser.apply(pkt, ig_intr_md);
+        transition accept;
+    }
+}
+
+parser EmptyEgressParser<H, M>(packet_in pkt, out H hdr, out M eg_md, out egress_intrinsic_metadata_t eg_intr_md) {
+    TofinoEgressParser() tofino_parser;
+    state start {
+        tofino_parser.apply(pkt, eg_intr_md);
         transition accept;
     }
 }
@@ -165,7 +174,7 @@ control SwitchEgress(inout switch_header_t hdr, inout switch_metadata_t eg_md, i
     }
 }
 
-Pipeline(TofinoIngressParser<switch_header_t, switch_metadata_t>(), SwitchIngress(), SwitchIngressDeparser(), SwitchEgressParser(), SwitchEgress(), SwitchEgressDeparser()) pipe0;
+Pipeline(EmptyIngressParser<switch_header_t, switch_metadata_t>(), SwitchIngress(), SwitchIngressDeparser(), SwitchEgressParser(), SwitchEgress(), SwitchEgressDeparser()) pipe0;
 
 Switch(pipe0) main;
 

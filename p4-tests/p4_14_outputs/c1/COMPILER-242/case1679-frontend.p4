@@ -447,7 +447,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_21() {
     }
-    @name(".tNoIui") action tNoIui_0(bit<8> tDVDRX, bit<1> CzrSAo, bit<1> jKuAKM, bit<1> zvrvfA, bit<1> XKAzdx) {
+    @name(".tNoIui") action tNoIui(bit<8> tDVDRX, bit<1> CzrSAo, bit<1> jKuAKM, bit<1> zvrvfA, bit<1> XKAzdx) {
         meta.zOxPzX.EzUaHZ = tDVDRX;
         meta.zOxPzX.uGjozA = CzrSAo;
         meta.zOxPzX.iNqMBP = jKuAKM;
@@ -468,25 +468,25 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.zOxPzX.uaMZSu = zvrvfA;
         meta.zOxPzX.RnjqzX = XKAzdx;
     }
-    @name(".vckvUK") action vckvUK_0() {
+    @name(".vckvUK") action vckvUK() {
     }
-    @name(".TNeyqd") action TNeyqd_0(bit<14> fCnLMA, bit<1> CKZhjB, bit<13> cMiJVG, bit<1> PEPqQR) {
+    @name(".TNeyqd") action TNeyqd(bit<14> fCnLMA, bit<1> CKZhjB, bit<13> cMiJVG, bit<1> PEPqQR) {
         meta.YxcqTZ.WpWIBS = fCnLMA;
         meta.YxcqTZ.aDFfah = CKZhjB;
         meta.YxcqTZ.SxlBOA = cMiJVG;
         meta.YxcqTZ.OGAZaG = PEPqQR;
     }
-    @name(".NSzCvQ") action NSzCvQ_0() {
+    @name(".NSzCvQ") action NSzCvQ() {
         meta.tHxLKe.IBXNtZ = 1w0x1;
     }
-    @name(".vWyCJo") action vWyCJo_0(bit<12> NdosAt) {
+    @name(".vWyCJo") action vWyCJo(bit<12> NdosAt) {
         meta.tHxLKe.PxQXWg = NdosAt;
     }
-    @name(".oDoDiF") action oDoDiF_0() {
+    @name(".oDoDiF") action oDoDiF() {
         meta.tHxLKe.DTDyic = 1w0x1;
         meta.DAONgH.PlcSkB = 8w0x1;
     }
-    @name(".zRZBHS") action zRZBHS_0() {
+    @name(".zRZBHS") action zRZBHS() {
         meta.NkoYaG.RWHfxc = hdr.XwLeqw.Vkxquf;
         meta.NkoYaG.ybmlEl = hdr.XwLeqw.NkPqcV;
         meta.TZJYtn.RIevRy = hdr.BZzyQX.IDNtJG;
@@ -496,7 +496,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.tHxLKe.RSLrrz = hdr.vQBhIB.OydOme;
         meta.tHxLKe.QIxCXx = hdr.vQBhIB.bZBHws;
     }
-    @name(".CpbDtS") action CpbDtS_0() {
+    @name(".CpbDtS") action CpbDtS() {
         meta.tHxLKe.pIQUaB = 2w0x0;
         meta.tHxLKe.PxQXWg = (bit<12>)meta.YxcqTZ.WpWIBS;
         meta.NkoYaG.RWHfxc = hdr.XKlCuY.Vkxquf;
@@ -508,32 +508,32 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.tHxLKe.RSLrrz = hdr.OGAwff.OydOme;
         meta.tHxLKe.QIxCXx = hdr.OGAwff.bZBHws;
     }
-    @name(".QVzCQs") action QVzCQs_0(bit<12> vmpnDP) {
+    @name(".QVzCQs") action QVzCQs(bit<12> vmpnDP) {
         meta.tHxLKe.jBgsFy = vmpnDP;
     }
-    @name(".heGnIt") action heGnIt_0() {
+    @name(".heGnIt") action heGnIt() {
         meta.tHxLKe.jijIMQ = 1w0x1;
         meta.tHxLKe.BwTtvP = 1w0x1;
     }
-    @name(".YYBVRK") action YYBVRK_0() {
+    @name(".YYBVRK") action YYBVRK() {
         meta.tHxLKe.jBgsFy = (bit<12>)meta.YxcqTZ.SxlBOA;
     }
-    @name(".CigvAL") action CigvAL_0(bit<12> hnwZMj) {
+    @name(".CigvAL") action CigvAL(bit<12> hnwZMj) {
         meta.tHxLKe.jBgsFy = hnwZMj;
     }
-    @name(".kfudnb") action kfudnb_0() {
+    @name(".kfudnb") action kfudnb() {
         meta.tHxLKe.jBgsFy = hdr.RCeMTB.bKQlQb;
     }
-    @name(".lBAbwY") action lBAbwY_0() {
+    @name(".lBAbwY") action lBAbwY() {
         meta.tHxLKe.dFMPOI = hdr.RCeMTB.bKQlQb;
     }
-    @name(".lPdoWi") action lPdoWi_0() {
+    @name(".lPdoWi") action lPdoWi() {
         meta.tHxLKe.dFMPOI = (bit<12>)meta.YxcqTZ.SxlBOA;
     }
-    @name(".EmgemB") table EmgemB {
+    @name(".EmgemB") table EmgemB_0 {
         actions = {
-            tNoIui_0();
-            vckvUK_0();
+            tNoIui();
+            vckvUK();
             @defaultonly NoAction_0();
         }
         key = {
@@ -543,7 +543,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_0();
     }
-    @name(".FTvKgb") table FTvKgb {
+    @name(".FTvKgb") table FTvKgb_0 {
         actions = {
             tNoIui_3();
             @defaultonly NoAction_12();
@@ -554,7 +554,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_12();
     }
-    @name(".HIjCXW") table HIjCXW {
+    @name(".HIjCXW") table HIjCXW_0 {
         actions = {
             tNoIui_4();
             @defaultonly NoAction_13();
@@ -565,9 +565,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 8092;
         default_action = NoAction_13();
     }
-    @name(".INOSeK") table INOSeK {
+    @name(".INOSeK") table INOSeK_0 {
         actions = {
-            TNeyqd_0();
+            TNeyqd();
             @defaultonly NoAction_14();
         }
         key = {
@@ -576,9 +576,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction_14();
     }
-    @name(".JrMSBe") table JrMSBe {
+    @name(".JrMSBe") table JrMSBe_0 {
         actions = {
-            NSzCvQ_0();
+            NSzCvQ();
             @defaultonly NoAction_15();
         }
         key = {
@@ -588,10 +588,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 64;
         default_action = NoAction_15();
     }
-    @name(".KjYLTh") table KjYLTh {
+    @name(".KjYLTh") table KjYLTh_0 {
         actions = {
-            vWyCJo_0();
-            oDoDiF_0();
+            vWyCJo();
+            oDoDiF();
             @defaultonly NoAction_16();
         }
         key = {
@@ -600,10 +600,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_16();
     }
-    @name(".UnqUFr") table UnqUFr {
+    @name(".UnqUFr") table UnqUFr_0 {
         actions = {
-            zRZBHS_0();
-            CpbDtS_0();
+            zRZBHS();
+            CpbDtS();
             @defaultonly NoAction_17();
         }
         key = {
@@ -615,10 +615,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_17();
     }
-    @name(".WVyiva") table WVyiva {
+    @name(".WVyiva") table WVyiva_0 {
         actions = {
-            QVzCQs_0();
-            heGnIt_0();
+            QVzCQs();
+            heGnIt();
             @defaultonly NoAction_18();
         }
         key = {
@@ -627,11 +627,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_18();
     }
-    @name(".XzzeTs") table XzzeTs {
+    @name(".XzzeTs") table XzzeTs_0 {
         actions = {
-            YYBVRK_0();
-            CigvAL_0();
-            kfudnb_0();
+            YYBVRK();
+            CigvAL();
+            kfudnb();
             @defaultonly NoAction_19();
         }
         key = {
@@ -642,17 +642,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_19();
     }
-    @name(".bsvkkV") table bsvkkV {
+    @name(".bsvkkV") table bsvkkV_0 {
         actions = {
-            lBAbwY_0();
+            lBAbwY();
             @defaultonly NoAction_20();
         }
         size = 1;
         default_action = NoAction_20();
     }
-    @name(".whxSrZ") table whxSrZ {
+    @name(".whxSrZ") table whxSrZ_0 {
         actions = {
-            lPdoWi_0();
+            lPdoWi();
             @defaultonly NoAction_21();
         }
         size = 1;
@@ -660,33 +660,33 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (hdr.ig_intr_md.resubmit_flag == 1w0x0) 
-            INOSeK.apply();
-        JrMSBe.apply();
-        switch (UnqUFr.apply().action_run) {
-            CpbDtS_0: {
+            INOSeK_0.apply();
+        JrMSBe_0.apply();
+        switch (UnqUFr_0.apply().action_run) {
+            CpbDtS: {
                 if (meta.YxcqTZ.OGAZaG == 1w0x1) 
-                    XzzeTs.apply();
+                    XzzeTs_0.apply();
                 if (hdr.XKlCuY.isValid() || hdr.KkUuiN.isValid()) 
                     if (hdr.RCeMTB.isValid()) 
-                        switch (EmgemB.apply().action_run) {
-                            vckvUK_0: {
-                                FTvKgb.apply();
+                        switch (EmgemB_0.apply().action_run) {
+                            vckvUK: {
+                                FTvKgb_0.apply();
                             }
                         }
 
                     else 
-                        HIjCXW.apply();
+                        HIjCXW_0.apply();
             }
-            zRZBHS_0: {
-                KjYLTh.apply();
-                WVyiva.apply();
+            zRZBHS: {
+                KjYLTh_0.apply();
+                WVyiva_0.apply();
             }
         }
 
         if (hdr.RCeMTB.isValid()) 
-            bsvkkV.apply();
+            bsvkkV_0.apply();
         else 
-            whxSrZ.apply();
+            whxSrZ_0.apply();
     }
 }
 

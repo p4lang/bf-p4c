@@ -1,0 +1,33 @@
+perusal_0.p4(210): warning: Could not infer type for combo, using bit<8>
+action cycladess(combo, inauspiciously, cautioning) {
+                 ^^^^^
+perusal_0.p4(210): warning: Could not infer type for inauspiciously, using bit<8>
+action cycladess(combo, inauspiciously, cautioning) {
+                        ^^^^^^^^^^^^^^
+perusal_0.p4(210): warning: Could not infer type for cautioning, using bit<8>
+action cycladess(combo, inauspiciously, cautioning) {
+                                        ^^^^^^^^^^
+perusal_0.p4(201): warning: 7: signed value does not fit in 2 bits
+  modify_field_rng_uniform(airbags.shipbuilders, 0, 7);
+                                                    ^
+perusal_0.p4(195): warning: Could not infer type for malaysians, using bit<8>
+action causal(malaysians, sarnoff, recommences) {
+              ^^^^^^^^^^
+perusal_0.p4(195): warning: Could not infer type for sarnoff, using bit<8>
+action causal(malaysians, sarnoff, recommences) {
+                          ^^^^^^^
+perusal_0.p4(195): warning: Could not infer type for recommences, using bit<8>
+action causal(malaysians, sarnoff, recommences) {
+                                   ^^^^^^^^^^^
+perusal_0.p4(295): warning: 0: zero mask
+    airbags.histologists mask 0 : exact;
+                              ^
+perusal_0.p4(269): warning: 0: zero mask
+    shamelessness.placebos mask 0 : exact;
+                                ^
+perusal_0.p4(295): warning: 0: Constant key field
+    airbags.histologists mask 0 : exact;
+                              ^
+perusal_0.p4(269): warning: 0: Constant key field
+    shamelessness.placebos mask 0 : exact;
+                                ^

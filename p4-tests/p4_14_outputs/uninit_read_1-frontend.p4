@@ -162,21 +162,21 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".fwd") action fwd_0() {
+    @name(".fwd") action fwd() {
         standard_metadata.egress_spec = meta.md.port;
     }
-    @name(".forward") table forward {
+    @name(".forward") table forward_0 {
         actions = {
-            fwd_0();
+            fwd();
         }
         key = {
             hdr.ethernet.ethertype: exact @name("ethernet.ethertype") ;
         }
         size = 128;
-        default_action = fwd_0();
+        default_action = fwd();
     }
     apply {
-        forward.apply();
+        forward_0.apply();
     }
 }
 

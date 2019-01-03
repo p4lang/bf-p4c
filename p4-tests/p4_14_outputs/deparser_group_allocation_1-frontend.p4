@@ -356,183 +356,183 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".write_b0") action write_b0_0() {
+    @name(".write_b0") action write_b0() {
         hdr.hb.field_0_b1 = hdr.hb.field_0_b2 + hdr.hb.field_0_b3;
         hdr.hb.field_0_b3 = hdr.hb.field_0_b4 + hdr.hb.field_0_b5;
         hdr.hb.field_0_b5 = hdr.hb.field_0_b6 + hdr.hb.field_0_b7;
         hdr.hb.field_0_b7 = hdr.hb.field_0_b8 + hdr.hb.field_0_b9;
     }
-    @name(".write_b1") action write_b1_0() {
+    @name(".write_b1") action write_b1() {
         hdr.hb.field_1_b1 = hdr.hb.field_1_b2 + hdr.hb.field_1_b3;
         hdr.hb.field_1_b3 = hdr.hb.field_1_b4 + hdr.hb.field_1_b5;
         hdr.hb.field_1_b5 = hdr.hb.field_1_b6 + hdr.hb.field_1_b7;
         hdr.hb.field_1_b7 = hdr.hb.field_1_b8 + hdr.hb.field_1_b9;
     }
-    @name(".write_b2") action write_b2_0() {
+    @name(".write_b2") action write_b2() {
         hdr.hb.field_2_b1 = hdr.hb.field_2_b2 + hdr.hb.field_2_b3;
         hdr.hb.field_2_b3 = hdr.hb.field_2_b4 + hdr.hb.field_2_b5;
         hdr.hb.field_2_b5 = hdr.hb.field_2_b6 + hdr.hb.field_2_b7;
         hdr.hb.field_2_b7 = hdr.hb.field_2_b8 + hdr.hb.field_2_b9;
     }
-    @name(".write_h0") action write_h0_0() {
+    @name(".write_h0") action write_h0() {
         hdr.hh.field_0_h1 = hdr.hh.field_0_h2 + hdr.hh.field_0_h3;
         hdr.hh.field_0_h3 = hdr.hh.field_0_h4 + hdr.hh.field_0_h5;
         hdr.hh.field_0_h5 = hdr.hh.field_0_h6 + hdr.hh.field_0_h7;
         hdr.hh.field_0_h7 = hdr.hh.field_0_h8 + hdr.hh.field_0_h9;
     }
-    @name(".write_h1") action write_h1_0() {
+    @name(".write_h1") action write_h1() {
         hdr.hh.field_1_h1 = hdr.hh.field_1_h2 + hdr.hh.field_1_h3;
         hdr.hh.field_1_h3 = hdr.hh.field_1_h4 + hdr.hh.field_1_h5;
         hdr.hh.field_1_h5 = hdr.hh.field_1_h6 + hdr.hh.field_1_h7;
         hdr.hh.field_1_h7 = hdr.hh.field_1_h8 + hdr.hh.field_1_h9;
     }
-    @name(".write_h2") action write_h2_0() {
+    @name(".write_h2") action write_h2() {
         hdr.hh.field_2_h1 = hdr.hh.field_2_h2 + hdr.hh.field_2_h3;
         hdr.hh.field_2_h3 = hdr.hh.field_2_h4 + hdr.hh.field_2_h5;
         hdr.hh.field_2_h5 = hdr.hh.field_2_h6 + hdr.hh.field_2_h7;
         hdr.hh.field_2_h7 = hdr.hh.field_2_h8 + hdr.hh.field_2_h9;
     }
-    @name(".write_h3") action write_h3_0() {
+    @name(".write_h3") action write_h3() {
         hdr.hh.field_3_h1 = hdr.hh.field_3_h2 + hdr.hh.field_3_h3;
         hdr.hh.field_3_h3 = hdr.hh.field_3_h4 + hdr.hh.field_3_h5;
         hdr.hh.field_3_h5 = hdr.hh.field_3_h6 + hdr.hh.field_3_h7;
         hdr.hh.field_3_h7 = hdr.hh.field_3_h8 + hdr.hh.field_3_h9;
     }
-    @name(".write_h4") action write_h4_0() {
+    @name(".write_h4") action write_h4() {
         hdr.hh.field_4_h1 = hdr.hh.field_4_h2 + hdr.hh.field_4_h3;
         hdr.hh.field_4_h3 = hdr.hh.field_4_h4 + hdr.hh.field_4_h5;
         hdr.hh.field_4_h5 = hdr.hh.field_4_h6 + hdr.hh.field_4_h7;
         hdr.hh.field_4_h7 = hdr.hh.field_4_h8 + hdr.hh.field_4_h9;
     }
-    @name(".write_w0") action write_w0_0() {
+    @name(".write_w0") action write_w0() {
         hdr.hw.field_0_w1 = hdr.hw.field_0_w2 + hdr.hw.field_0_w3;
         hdr.hw.field_0_w3 = hdr.hw.field_0_w4 + 32w0x1;
         hdr.hw.field_0_w5 = hdr.hw.field_0_w6 + hdr.hw.field_0_w7;
         hdr.hw.field_0_w7 = hdr.hw.field_0_w8 + hdr.hw.field_0_w9;
     }
-    @name(".write_w1") action write_w1_0() {
+    @name(".write_w1") action write_w1() {
         hdr.hw.field_1_w1 = hdr.hw.field_1_w2 + hdr.hw.field_1_w3;
         hdr.hw.field_1_w3 = hdr.hw.field_1_w4 + 32w0x1;
         hdr.hw.field_1_w5 = hdr.hw.field_1_w6 + hdr.hw.field_1_w7;
         hdr.hw.field_1_w7 = hdr.hw.field_1_w8 + hdr.hw.field_1_w9;
     }
-    @name(".write_w2") action write_w2_0() {
+    @name(".write_w2") action write_w2() {
         hdr.hw.field_2_w1 = hdr.hw.field_2_w2 + hdr.hw.field_2_w3;
         hdr.hw.field_2_w3 = hdr.hw.field_2_w4 + 32w0x1;
         hdr.hw.field_2_w5 = hdr.hw.field_2_w6 + hdr.hw.field_2_w7;
         hdr.hw.field_2_w7 = hdr.hw.field_2_w8 + hdr.hw.field_2_w9;
     }
-    @name(".tb0") table tb0 {
+    @name(".tb0") table tb0_0 {
         actions = {
-            write_b0_0();
+            write_b0();
         }
         key = {
             hdr.hb.field_0_b1: exact @name("hb.field_0_b1") ;
         }
-        default_action = write_b0_0();
+        default_action = write_b0();
     }
-    @name(".tb1") table tb1 {
+    @name(".tb1") table tb1_0 {
         actions = {
-            write_b1_0();
+            write_b1();
         }
         key = {
             hdr.hb.field_1_b1: exact @name("hb.field_1_b1") ;
         }
-        default_action = write_b1_0();
+        default_action = write_b1();
     }
-    @name(".tb2") table tb2 {
+    @name(".tb2") table tb2_0 {
         actions = {
-            write_b2_0();
+            write_b2();
         }
         key = {
             hdr.hb.field_2_b1: exact @name("hb.field_2_b1") ;
         }
-        default_action = write_b2_0();
+        default_action = write_b2();
     }
-    @name(".th0") table th0 {
+    @name(".th0") table th0_0 {
         actions = {
-            write_h0_0();
+            write_h0();
         }
         key = {
             hdr.hh.field_0_h1: exact @name("hh.field_0_h1") ;
         }
-        default_action = write_h0_0();
+        default_action = write_h0();
     }
-    @name(".th1") table th1 {
+    @name(".th1") table th1_0 {
         actions = {
-            write_h1_0();
+            write_h1();
         }
         key = {
             hdr.hh.field_1_h1: exact @name("hh.field_1_h1") ;
         }
-        default_action = write_h1_0();
+        default_action = write_h1();
     }
-    @name(".th2") table th2 {
+    @name(".th2") table th2_0 {
         actions = {
-            write_h2_0();
+            write_h2();
         }
         key = {
             hdr.hh.field_2_h1: exact @name("hh.field_2_h1") ;
         }
-        default_action = write_h2_0();
+        default_action = write_h2();
     }
-    @name(".th3") table th3 {
+    @name(".th3") table th3_0 {
         actions = {
-            write_h3_0();
+            write_h3();
         }
         key = {
             hdr.hh.field_3_h1: exact @name("hh.field_3_h1") ;
         }
-        default_action = write_h3_0();
+        default_action = write_h3();
     }
-    @name(".th4") table th4 {
+    @name(".th4") table th4_0 {
         actions = {
-            write_h4_0();
+            write_h4();
         }
         key = {
             hdr.hh.field_4_h1: exact @name("hh.field_4_h1") ;
         }
-        default_action = write_h4_0();
+        default_action = write_h4();
     }
-    @name(".tw0") table tw0 {
+    @name(".tw0") table tw0_0 {
         actions = {
-            write_w0_0();
+            write_w0();
         }
         key = {
             hdr.hw.field_0_w1: exact @name("hw.field_0_w1") ;
         }
-        default_action = write_w0_0();
+        default_action = write_w0();
     }
-    @name(".tw1") table tw1 {
+    @name(".tw1") table tw1_0 {
         actions = {
-            write_w1_0();
+            write_w1();
         }
         key = {
             hdr.hw.field_1_w1: exact @name("hw.field_1_w1") ;
         }
-        default_action = write_w1_0();
+        default_action = write_w1();
     }
-    @name(".tw2") table tw2 {
+    @name(".tw2") table tw2_0 {
         actions = {
-            write_w2_0();
+            write_w2();
         }
         key = {
             hdr.hw.field_2_w1: exact @name("hw.field_2_w1") ;
         }
-        default_action = write_w2_0();
+        default_action = write_w2();
     }
     apply {
-        tb0.apply();
-        tb1.apply();
-        tb2.apply();
-        th0.apply();
-        th1.apply();
-        th2.apply();
-        th3.apply();
-        th4.apply();
-        tw0.apply();
-        tw1.apply();
-        tw2.apply();
+        tb0_0.apply();
+        tb1_0.apply();
+        tb2_0.apply();
+        th0_0.apply();
+        th1_0.apply();
+        th2_0.apply();
+        th3_0.apply();
+        th4_0.apply();
+        tw0_0.apply();
+        tw1_0.apply();
+        tw2_0.apply();
     }
 }
 
@@ -545,29 +545,29 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_7() {
     }
-    @name(".fwd") action fwd_0() {
+    @name(".fwd") action fwd() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = 9w2;
     }
-    @name(".a1") action a1_0() {
+    @name(".a1") action a1() {
     }
-    @name(".a2") action a2_0() {
+    @name(".a2") action a2() {
     }
-    @name(".a3") action a3_0() {
+    @name(".a3") action a3() {
     }
-    @name(".a4") action a4_0() {
+    @name(".a4") action a4() {
     }
-    @name(".forward") table forward {
+    @name(".forward") table forward_0 {
         actions = {
-            fwd_0();
+            fwd();
         }
         key = {
             hdr.hb.field_1_b1: exact @name("hb.field_1_b1") ;
         }
-        default_action = fwd_0();
+        default_action = fwd();
     }
-    @name(".t1") table t1 {
+    @name(".t1") table t1_0 {
         actions = {
-            a1_0();
+            a1();
             @defaultonly NoAction_0();
         }
         key = {
@@ -598,9 +598,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name(".t2") table t2 {
+    @name(".t2") table t2_0 {
         actions = {
-            a2_0();
+            a2();
             @defaultonly NoAction_5();
         }
         key = {
@@ -639,9 +639,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_5();
     }
-    @name(".t3") table t3 {
+    @name(".t3") table t3_0 {
         actions = {
-            a3_0();
+            a3();
             @defaultonly NoAction_6();
         }
         key = {
@@ -656,9 +656,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_6();
     }
-    @name(".t4") table t4 {
+    @name(".t4") table t4_0 {
         actions = {
-            a4_0();
+            a4();
             @defaultonly NoAction_7();
         }
         key = {
@@ -694,11 +694,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_7();
     }
     apply {
-        t1.apply();
-        t2.apply();
-        t3.apply();
-        t4.apply();
-        forward.apply();
+        t1_0.apply();
+        t2_0.apply();
+        t3_0.apply();
+        t4_0.apply();
+        forward_0.apply();
     }
 }
 

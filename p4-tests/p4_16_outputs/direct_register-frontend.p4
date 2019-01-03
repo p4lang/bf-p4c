@@ -43,8 +43,8 @@ parser ParserE(packet_in b, out headers hdr, out metadata meta, out egress_intri
 control EgressP(inout headers hdr, inout metadata meta, in egress_intrinsic_metadata_t eg_intr_md, in egress_intrinsic_metadata_from_parser_t eg_intr_prsr_md, inout egress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md, inout egress_intrinsic_metadata_for_output_port_t eg_intr_oport_md) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name("EgressP.port_pkts_reg") DirectRegister<bit<32>>() port_pkts_reg;
-    @name("EgressP.port_pkts_alu") DirectRegisterAction<bit<32>, bit<8>>(port_pkts_reg) port_pkts_alu = {
+    @name("EgressP.port_pkts_reg") DirectRegister<bit<32>>() port_pkts_reg_0;
+    @name("EgressP.port_pkts_alu") DirectRegisterAction<bit<32>, bit<8>>(port_pkts_reg_0) port_pkts_alu_0 = {
         void apply(inout bit<32> value, out bit<8> read_value) {
             if (value < hdr.data.max_counter) {
                 value = value + 32w1;
@@ -56,22 +56,22 @@ control EgressP(inout headers hdr, inout metadata meta, in egress_intrinsic_meta
             }
         }
     };
-    @name("EgressP.execute_port_pkts_alu") action execute_port_pkts_alu_0() {
-        port_pkts_alu.execute();
+    @name("EgressP.execute_port_pkts_alu") action execute_port_pkts_alu() {
+        port_pkts_alu_0.execute();
     }
-    @name("EgressP.t_port_pkts_alu") table t_port_pkts_alu {
+    @name("EgressP.t_port_pkts_alu") table t_port_pkts_alu_0 {
         key = {
             eg_intr_md.egress_port: exact @name("eg_intr_md.egress_port") ;
         }
         actions = {
-            execute_port_pkts_alu_0();
+            execute_port_pkts_alu();
             @defaultonly NoAction_0();
         }
         default_action = NoAction_0();
-        registers = port_pkts_reg;
+        registers = port_pkts_reg_0;
     }
     apply {
-        t_port_pkts_alu.apply();
+        t_port_pkts_alu_0.apply();
     }
 }
 

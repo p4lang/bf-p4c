@@ -213,7 +213,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_5() {
     }
-    @name(".ipv4_lpm_hit") action ipv4_lpm_hit_0(bit<9> egress_port) {
+    @name(".ipv4_lpm_hit") action ipv4_lpm_hit(bit<9> egress_port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
         hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
     }
@@ -225,29 +225,29 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
         hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
     }
-    @name(".ipv4_lpm_hit_change_dmac") action ipv4_lpm_hit_change_dmac_0(bit<9> egress_port, bit<48> dstmac) {
+    @name(".ipv4_lpm_hit_change_dmac") action ipv4_lpm_hit_change_dmac(bit<9> egress_port, bit<48> dstmac) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
         hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
         hdr.ethernet.dstAddr = dstmac;
     }
-    @name(".lpm_miss") action lpm_miss_0() {
+    @name(".lpm_miss") action lpm_miss() {
         mark_to_drop();
     }
     @name(".lpm_miss") action lpm_miss_2() {
         mark_to_drop();
     }
-    @name(".nop") action nop_0() {
+    @name(".nop") action nop() {
     }
     @name(".nop") action nop_3() {
     }
     @name(".nop") action nop_4() {
     }
-    @alpm(1) @name(".ipv4_alpm") table ipv4_alpm {
+    @alpm(1) @name(".ipv4_alpm") table ipv4_alpm_0 {
         actions = {
-            ipv4_lpm_hit_0();
-            ipv4_lpm_hit_change_dmac_0();
-            lpm_miss_0();
-            nop_0();
+            ipv4_lpm_hit();
+            ipv4_lpm_hit_change_dmac();
+            lpm_miss();
+            nop();
             @defaultonly NoAction_0();
         }
         key = {
@@ -257,7 +257,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 8192;
         default_action = NoAction_0();
     }
-    @alpm(1) @name(".ipv4_alpm_idle") table ipv4_alpm_idle {
+    @alpm(1) @name(".ipv4_alpm_idle") table ipv4_alpm_idle_0 {
         support_timeout = true;
         actions = {
             ipv4_lpm_hit_3();
@@ -270,7 +270,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 8192;
         default_action = NoAction_4();
     }
-    @alpm(1) @alpm_partitions(1024) @alpm_subtrees_per_partition(4) @name(".ipv4_alpm_large") table ipv4_alpm_large {
+    @alpm(1) @alpm_partitions(1024) @alpm_subtrees_per_partition(4) @name(".ipv4_alpm_large") table ipv4_alpm_large_0 {
         actions = {
             ipv4_lpm_hit_4();
             lpm_miss_2();
@@ -285,9 +285,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_5();
     }
     apply {
-        ipv4_alpm.apply();
-        ipv4_alpm_large.apply();
-        ipv4_alpm_idle.apply();
+        ipv4_alpm_0.apply();
+        ipv4_alpm_large_0.apply();
+        ipv4_alpm_idle_0.apply();
     }
 }
 

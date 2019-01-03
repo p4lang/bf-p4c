@@ -631,7 +631,7 @@ control Carrizozo(inout headers hdr, inout metadata meta, inout standard_metadat
             bit<1> in_value;
             in_value = value;
             value = in_value;
-            rv = ~value;
+            rv = ~in_value;
         }
     };
     @name(".Greenbush") action Greenbush() {
@@ -910,7 +910,7 @@ control Cusick(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         key = {
             meta.Piermont.Palmer          : exact;
-            meta.Sheldahl.Coverdale[31:16]: ternary;
+            meta.Sheldahl.Coverdale[31:16]: ternary @name("Sheldahl.Coverdale") ;
             meta.Conneaut.Scissors        : ternary;
             meta.Conneaut.Leonore         : ternary;
             meta.Conneaut.Picabo          : ternary;
@@ -928,7 +928,7 @@ control Cusick(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         key = {
             meta.Piermont.Palmer        : exact;
-            meta.Lindsborg.Cammal[31:16]: ternary;
+            meta.Lindsborg.Cammal[31:16]: ternary @name("Lindsborg.Cammal") ;
             meta.Conneaut.Scissors      : ternary;
             meta.Conneaut.Leonore       : ternary;
             meta.Conneaut.Picabo        : ternary;
@@ -1049,7 +1049,7 @@ control Exell(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Lindsborg.OldTown     : exact;
-            meta.Lindsborg.Cammal[19:0]: lpm;
+            meta.Lindsborg.Cammal[19:0]: lpm @name("Lindsborg.Cammal") ;
         }
         size = 131072;
         default_action = Leoma();
@@ -1075,7 +1075,7 @@ control Exell(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Padroni.Goldenrod         : exact;
-            meta.Sheldahl.Coverdale[127:64]: lpm;
+            meta.Sheldahl.Coverdale[127:64]: lpm @name("Sheldahl.Coverdale") ;
         }
         size = 8192;
     }
@@ -1087,7 +1087,7 @@ control Exell(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Sheldahl.MudLake          : exact;
-            meta.Sheldahl.Coverdale[106:64]: lpm;
+            meta.Sheldahl.Coverdale[106:64]: lpm @name("Sheldahl.Coverdale") ;
         }
         size = 65536;
         default_action = Leoma();
@@ -1100,7 +1100,7 @@ control Exell(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Sheldahl.Larue          : exact;
-            meta.Sheldahl.Coverdale[63:0]: lpm;
+            meta.Sheldahl.Coverdale[63:0]: lpm @name("Sheldahl.Coverdale") ;
         }
         size = 16384;
         default_action = Leoma();
@@ -1124,11 +1124,11 @@ control Exell(inout headers hdr, inout metadata meta, inout standard_metadata_t 
                 switch (Cathcart.apply().action_run) {
                     Leoma: {
                         switch (Ireton.apply().action_run) {
-                            Leoma: {
-                                Sebewaing.apply();
-                            }
                             Oshoto: {
                                 Linden.apply();
+                            }
+                            Leoma: {
+                                Sebewaing.apply();
                             }
                         }
 
@@ -1141,6 +1141,9 @@ control Exell(inout headers hdr, inout metadata meta, inout standard_metadata_t 
                     switch (Malmo.apply().action_run) {
                         Leoma: {
                             switch (Gibbs.apply().action_run) {
+                                Lisle: {
+                                    Pringle.apply();
+                                }
                                 Leoma: {
                                     switch (Nason.apply().action_run) {
                                         Northboro: {
@@ -1148,9 +1151,6 @@ control Exell(inout headers hdr, inout metadata meta, inout standard_metadata_t 
                                         }
                                     }
 
-                                }
-                                Lisle: {
-                                    Pringle.apply();
                                 }
                             }
 

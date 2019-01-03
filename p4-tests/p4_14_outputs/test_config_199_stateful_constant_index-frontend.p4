@@ -165,24 +165,24 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    bit<32> tmp_0;
-    @name(".sampling_alu") RegisterAction<bit<32>, bit<32>, bit<32>>(sampling_cntr) sampling_alu = {
+    bit<32> tmp;
+    @name(".sampling_alu") RegisterAction<bit<32>, bit<32>, bit<32>>(sampling_cntr) sampling_alu_0 = {
         void apply(inout bit<32> value, out bit<32> rv) {
-            bit<32> in_value;
-            in_value = value;
-            value = in_value + 32w1;
+            bit<32> in_value_0;
+            in_value_0 = value;
+            value = in_value_0 + 32w1;
             rv = value;
         }
     };
-    @name(".action_0") action action_2() {
-        tmp_0 = sampling_alu.execute(32w8191);
-        hdr.ethernet.x = tmp_0;
+    @name(".action_0") action action_0() {
+        tmp = sampling_alu_0.execute(32w8191);
+        hdr.ethernet.x = tmp;
     }
-    @name(".action_1") action action_3() {
+    @name(".action_1") action action_1() {
     }
-    @ways(1) @name(".table_0") table table_0 {
+    @ways(1) @name(".table_0") table table_2 {
         actions = {
-            action_2();
+            action_0();
             @defaultonly NoAction_0();
         }
         key = {
@@ -191,9 +191,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_0();
     }
-    @name(".table_1") table table_1 {
+    @name(".table_1") table table_3 {
         actions = {
-            action_3();
+            action_1();
             @defaultonly NoAction_3();
         }
         key = {
@@ -203,8 +203,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_3();
     }
     apply {
-        table_0.apply();
-        table_1.apply();
+        table_2.apply();
+        table_3.apply();
     }
 }
 

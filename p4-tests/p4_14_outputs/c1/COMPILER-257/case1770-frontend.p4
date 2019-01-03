@@ -210,26 +210,26 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_5() {
     }
-    @name(".b") action b_0() {
+    @name(".b") action b_1() {
         meta.h1.f1 = 14w1;
     }
-    @name(".do_forward") action do_forward_0(bit<9> port) {
+    @name(".do_forward") action do_forward(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".a") action a_0(bit<12> data) {
+    @name(".a") action a(bit<12> data) {
         meta.h1.f2 = data;
     }
-    @name(".f") table f {
+    @name(".f") table f_0 {
         actions = {
-            b_0();
+            b_1();
             @defaultonly NoAction_0();
         }
         size = 1;
         default_action = NoAction_0();
     }
-    @name(".forward") table forward {
+    @name(".forward") table forward_0 {
         actions = {
-            do_forward_0();
+            do_forward();
             @defaultonly NoAction_4();
         }
         key = {
@@ -237,22 +237,22 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_4();
     }
-    @atcam_partition_index("h1.f1") @atcam_number_partitions(16384) @name(".t") table t {
+    @atcam_partition_index("h1.f1") @atcam_number_partitions(16384) @name(".t") table t_0 {
         actions = {
-            a_0();
+            a();
             @defaultonly NoAction_5();
         }
         key = {
             meta.h1.f1           : exact @name("h1.f1") ;
-            hdr.ethHdr.dmac[27:0]: lpm @name("ethHdr.dmac[27:0]") ;
+            hdr.ethHdr.dmac[27:0]: lpm @name("ethHdr.dmac") ;
         }
         size = 131072;
         default_action = NoAction_5();
     }
     apply {
-        f.apply();
-        t.apply();
-        forward.apply();
+        f_0.apply();
+        t_0.apply();
+        forward_0.apply();
     }
 }
 

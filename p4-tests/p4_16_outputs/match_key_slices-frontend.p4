@@ -21,48 +21,48 @@ header ingress_skip_t {
 }
 
 parser ParserI(packet_in b, out headers hdr, out metadata meta, out ingress_intrinsic_metadata_t ig_intr_md) {
-    ingress_skip_t skip;
+    ingress_skip_t skip_0;
     state start {
         b.extract<ingress_intrinsic_metadata_t>(ig_intr_md);
-        b.extract<ingress_skip_t>(skip);
+        b.extract<ingress_skip_t>(skip_0);
         b.extract<data_t>(hdr.data);
         transition accept;
     }
 }
 
 control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_metadata_t ig_intr_md, in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md, inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md, inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
-    @name("IngressP.setb1") action setb1_0(bit<8> b1, bit<9> port) {
+    @name("IngressP.setb1") action setb1(bit<8> b1, bit<9> port) {
         ig_intr_tm_md.ucast_egress_port = port;
         hdr.data.b1 = b1;
     }
-    @name("IngressP.setb2") action setb2_0(bit<8> b2) {
+    @name("IngressP.setb2") action setb2(bit<8> b2) {
         hdr.data.b2 = b2;
     }
-    @name("IngressP.slice_it0") table slice_it0 {
+    @name("IngressP.slice_it0") table slice_it0_0 {
         key = {
-            hdr.data.f1 & 48w0xff00: exact @name("hdr.data.f1 & 65280") ;
+            hdr.data.f1 & 48w0xff00: exact @name("hdr.data.f1") ;
             hdr.data.f2[7:0]       : exact @name("hdr.data.f2[7:0]") ;
         }
         actions = {
-            setb1_0();
+            setb1();
         }
-        default_action = setb1_0(8w0x77, 9w0);
+        default_action = setb1(8w0x77, 9w0);
     }
-    @name("IngressP.slice_it1") table slice_it1 {
+    @name("IngressP.slice_it1") table slice_it1_0 {
         key = {
-            hdr.data.f1 & 48w0xff00ff00ff00: exact @name("hdr.data.f1 & 280379743338240") ;
+            hdr.data.f1 & 48w0xff00ff00ff00: exact @name("hdr.data.f1") ;
             hdr.data.f2[39:32]             : exact @name("hdr.data.f2[39:32]") ;
             hdr.data.f2[23:16]             : exact @name("hdr.data.f2[23:16]") ;
             hdr.data.f2[7:0]               : exact @name("hdr.data.f2[7:0]") ;
         }
         actions = {
-            setb2_0();
+            setb2();
         }
-        default_action = setb2_0(8w0x77);
+        default_action = setb2(8w0x77);
     }
     apply {
-        slice_it0.apply();
-        slice_it1.apply();
+        slice_it0_0.apply();
+        slice_it1_0.apply();
     }
 }
 

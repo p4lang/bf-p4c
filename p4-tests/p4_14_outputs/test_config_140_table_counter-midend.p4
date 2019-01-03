@@ -168,18 +168,18 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".NoAction") action NoAction_0() {
     }
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing() {
     }
     @name(".do_nothing") action do_nothing_3() {
     }
     @name(".do_nothing") action do_nothing_4() {
     }
-    @name(".action_1") action action_0(bit<16> param0) {
+    @name(".action_1") action action_1(bit<16> param0) {
         hdr.pkt.field_g_16 = param0;
     }
-    @table_counter("gateway_hit") @name(".table_0") table table_0 {
+    @table_counter("gateway_hit") @name(".table_0") table table_3 {
         actions = {
-            do_nothing_0();
+            do_nothing();
             @defaultonly NoAction_0();
         }
         key = {
@@ -188,19 +188,19 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_0();
     }
-    @table_counter("table_miss") @name(".table_1") table table_1 {
+    @table_counter("table_miss") @name(".table_1") table table_4 {
         actions = {
             do_nothing_3();
-            @defaultonly action_0();
+            @defaultonly action_1();
         }
         key = {
             hdr.pkt.field_e_16: exact @name("pkt.field_e_16") ;
             hdr.pkt.field_f_16: exact @name("pkt.field_f_16") ;
         }
         size = 16384;
-        default_action = action_0(16w0xf);
+        default_action = action_1(16w0xf);
     }
-    @table_counter("table_hit") @name(".table_2") table table_2 {
+    @table_counter("table_hit") @name(".table_2") table table_5 {
         actions = {
             do_nothing_4();
         }
@@ -212,10 +212,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (hdr.pkt.isValid()) 
-            table_0.apply();
+            table_3.apply();
         else 
-            table_1.apply();
-        table_2.apply();
+            table_4.apply();
+        table_5.apply();
     }
 }
 

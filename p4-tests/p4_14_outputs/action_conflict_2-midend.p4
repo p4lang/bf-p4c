@@ -39,36 +39,36 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    @name(".setport") action setport_0(bit<9> port) {
+    @name(".setport") action setport(bit<9> port) {
         standard_metadata.egress_spec = port;
     }
-    @name(".action_0") action action_4() {
+    @name(".action_0") action action_0() {
         hdr.pkt.f1 = hdr.pkt.f5;
         hdr.pkt.f2 = hdr.pkt.fa;
         hdr.pkt.f3 = hdr.pkt.f8;
         hdr.pkt.f4 = hdr.pkt.f7;
     }
-    @name(".action_1") action action_5() {
+    @name(".action_1") action action_1() {
         hdr.pkt.f1 = hdr.pkt.f5;
         hdr.pkt.f2 = hdr.pkt.fa;
         hdr.pkt.f3 = hdr.pkt.f7;
         hdr.pkt.f4 = hdr.pkt.fc;
     }
-    @name(".action_2") action action_6() {
+    @name(".action_2") action action_2() {
         hdr.pkt.f1 = hdr.pkt.f5;
         hdr.pkt.f2 = hdr.pkt.fa;
         hdr.pkt.f3 = hdr.pkt.f7;
         hdr.pkt.f4 = hdr.pkt.f8;
     }
-    @name(".action_3") action action_7() {
+    @name(".action_3") action action_3() {
         hdr.pkt.f1 = hdr.pkt.f7;
         hdr.pkt.f2 = hdr.pkt.f8;
         hdr.pkt.f3 = hdr.pkt.f9;
         hdr.pkt.f4 = hdr.pkt.fa;
     }
-    @name(".setting_port") table setting_port {
+    @name(".setting_port") table setting_port_0 {
         actions = {
-            setport_0();
+            setport();
             @defaultonly NoAction_0();
         }
         key = {
@@ -76,12 +76,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name(".table_0") table table_0 {
+    @name(".table_0") table table_1 {
         actions = {
-            action_4();
-            action_5();
-            action_6();
-            action_7();
+            action_0();
+            action_1();
+            action_2();
+            action_3();
             @defaultonly NoAction_3();
         }
         key = {
@@ -94,8 +94,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_3();
     }
     apply {
-        table_0.apply();
-        setting_port.apply();
+        table_1.apply();
+        setting_port_0.apply();
     }
 }
 

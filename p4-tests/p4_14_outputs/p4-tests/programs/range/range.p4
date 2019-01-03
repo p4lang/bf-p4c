@@ -6,6 +6,10 @@ struct bit9_t {
     bit<9> tartly;
 }
 
+struct range_res_t {
+    bit<32> res;
+}
+
 header egress_intrinsic_metadata_t {
     bit<7>  _pad0;
     bit<9>  egress_port;
@@ -135,48 +139,11 @@ header ipv4_t {
     bit<32> dstAddr;
 }
 
-header ipv6_t {
-    bit<4>   version;
-    bit<8>   trafficClass;
-    bit<20>  flowLabel;
-    bit<16>  payloadLen;
-    bit<8>   nextHdr;
-    bit<8>   hopLimit;
-    bit<128> srcAddr;
-    bit<128> dstAddr;
-}
-
-header tcp_t {
-    bit<16> srcPort;
-    bit<16> dstPort;
-    bit<32> seqNo;
-    bit<32> ackNo;
-    bit<4>  dataOffset;
-    bit<3>  res;
-    bit<3>  ecn;
-    bit<6>  ctrl;
-    bit<16> window;
-    bit<16> checksum;
-    bit<16> urgentPtr;
-}
-
-header udp_t {
-    bit<16> srcPort;
-    bit<16> dstPort;
-    bit<16> hdr_length;
-    bit<16> checksum;
-}
-
-header vlan_tag_t {
-    bit<3>  pri;
-    bit<1>  cfi;
-    bit<12> vlan_id;
-    bit<16> etherType;
-}
-
 struct metadata {
     @name(".bit9") 
-    bit9_t bit9;
+    bit9_t      bit9;
+    @name(".range_res") 
+    range_res_t range_res;
 }
 
 struct headers {
@@ -204,90 +171,81 @@ struct headers {
     ingress_parser_control_signals                 ig_prsr_ctrl;
     @name(".ipv4") 
     ipv4_t                                         ipv4;
-    @name(".ipv6") 
-    ipv6_t                                         ipv6;
-    @name(".tcp") 
-    tcp_t                                          tcp;
-    @name(".udp") 
-    udp_t                                          udp;
-    @name(".vlan_tag") 
-    vlan_tag_t                                     vlan_tag;
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".parse_ethernet") state parse_ethernet {
         packet.extract(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
-            16w0x8100: parse_vlan_tag;
             16w0x800: parse_ipv4;
-            16w0x86dd: parse_ipv6;
-            default: accept;
         }
     }
     @name(".parse_ipv4") state parse_ipv4 {
         packet.extract(hdr.ipv4);
-        transition select(hdr.ipv4.fragOffset, hdr.ipv4.protocol) {
-            (13w0, 8w6): parse_tcp;
-            (13w0, 8w17): parse_udp;
-            default: accept;
-        }
-    }
-    @name(".parse_ipv6") state parse_ipv6 {
-        packet.extract(hdr.ipv6);
-        transition select(hdr.ipv6.nextHdr) {
-            8w6: parse_tcp;
-            8w17: parse_udp;
-            default: accept;
-        }
-    }
-    @name(".parse_tcp") state parse_tcp {
-        packet.extract(hdr.tcp);
         transition accept;
-    }
-    @name(".parse_udp") state parse_udp {
-        packet.extract(hdr.udp);
-        transition accept;
-    }
-    @name(".parse_vlan_tag") state parse_vlan_tag {
-        packet.extract(hdr.vlan_tag);
-        transition select(hdr.vlan_tag.etherType) {
-            16w0x800: parse_ipv4;
-            default: accept;
-        }
     }
     @name(".start") state start {
         transition parse_ethernet;
     }
 }
+#include <tofino/p4_14_prim.p4>
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".set_egress") action set_egress(bit<9> port) {
-        hdr.ig_intr_md_for_tm.ucast_egress_port = port;
+    @name(".set_res") action set_res(bit<32> a) {
+        meta.range_res.res = a;
     }
-    @name(".set_val") action set_val(bit<9> val) {
+    @name(".on_miss") action on_miss() {
+        meta.range_res.res = 32w0xffffffff;
+    }
+    @name(".set_range_key") action set_range_key(bit<9> val) {
+        meta.bit9.gauche = 1w0;
         meta.bit9.tartly = val;
+    }
+    @name(".pass") action pass() {
+        hdr.ig_intr_md_for_tm.ucast_egress_port = hdr.ig_intr_md.ingress_port;
+        bypass_egress();
+    }
+    @name(".fail") action fail() {
+        hdr.ig_intr_md_for_tm.ucast_egress_port = hdr.ig_intr_md.ingress_port;
+        hdr.ethernet.setInvalid();
+        bypass_egress();
     }
     @name(".bit9_match") table bit9_match {
         actions = {
-            set_egress;
+            set_res;
+            on_miss;
         }
         key = {
             meta.bit9.gauche: ternary;
             meta.bit9.tartly: range;
         }
         size = 1024;
+        default_action = on_miss();
     }
     @name(".range_set") table range_set {
         actions = {
-            set_val;
+            set_range_key;
         }
         key = {
             hdr.ipv4.srcAddr: exact;
         }
     }
+    @name(".verify_match") table verify_match {
+        actions = {
+            pass;
+            fail;
+        }
+        key = {
+            meta.bit9.tartly  : exact;
+            meta.range_res.res: exact;
+        }
+        size = 1024;
+        default_action = fail();
+    }
     apply {
         range_set.apply();
         bit9_match.apply();
+        verify_match.apply();
     }
 }
 
@@ -299,11 +257,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
         packet.emit(hdr.ethernet);
-        packet.emit(hdr.ipv6);
-        packet.emit(hdr.vlan_tag);
         packet.emit(hdr.ipv4);
-        packet.emit(hdr.udp);
-        packet.emit(hdr.tcp);
     }
 }
 

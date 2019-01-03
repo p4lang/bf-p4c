@@ -214,33 +214,33 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_17() {
     }
-    @name(".do_new_inner_cfi") action do_new_inner_cfi_0() {
+    @name(".do_new_inner_cfi") action do_new_inner_cfi() {
         hdr.vlan_tag[1].cfi = meta.meta.new_inner_cfi;
     }
-    @name(".do_new_inner_pri") action do_new_inner_pri_0() {
+    @name(".do_new_inner_pri") action do_new_inner_pri() {
         hdr.vlan_tag[1].pri = meta.meta.new_inner_pri;
     }
-    @name(".do_new_inner_tpid") action do_new_inner_tpid_0() {
+    @name(".do_new_inner_tpid") action do_new_inner_tpid() {
         hdr.vlan_tag[0].ethertype = meta.meta.new_inner_tpid;
     }
-    @name(".do_new_inner_vid") action do_new_inner_vid_0() {
+    @name(".do_new_inner_vid") action do_new_inner_vid() {
         hdr.vlan_tag[1].vid = meta.meta.new_inner_vid;
     }
-    @name(".do_new_outer_cfi") action do_new_outer_cfi_0() {
+    @name(".do_new_outer_cfi") action do_new_outer_cfi() {
         hdr.vlan_tag[0].cfi = meta.meta.new_outer_cfi;
     }
-    @name(".do_new_outer_pri") action do_new_outer_pri_0() {
+    @name(".do_new_outer_pri") action do_new_outer_pri() {
         hdr.vlan_tag[0].pri = meta.meta.new_outer_pri;
     }
-    @name(".do_new_outer_tpid") action do_new_outer_tpid_0() {
+    @name(".do_new_outer_tpid") action do_new_outer_tpid() {
         hdr.ethernet.ethertype = meta.meta.new_outer_tpid;
     }
-    @name(".do_new_outer_vid") action do_new_outer_vid_0() {
+    @name(".do_new_outer_vid") action do_new_outer_vid() {
         hdr.vlan_tag[0].vid = meta.meta.new_outer_vid;
     }
-    @name(".nop") action nop_0() {
+    @name(".nop") action nop() {
     }
-    @name(".rewrite_tags") action rewrite_tags_0(bit<16> new_outer_tpid, bit<1> new_outer_tpid_en, bit<3> new_outer_pri, bit<1> new_outer_pri_en, bit<1> new_outer_cfi, bit<1> new_outer_cfi_en, bit<12> new_outer_vid, bit<1> new_outer_vid_en, bit<16> new_inner_tpid, bit<1> new_inner_tpid_en, bit<3> new_inner_pri, bit<1> new_inner_pri_en, bit<1> new_inner_cfi, bit<1> new_inner_cfi_en, bit<12> new_inner_vid, bit<1> new_inner_vid_en) {
+    @name(".rewrite_tags") action rewrite_tags(bit<16> new_outer_tpid, bit<1> new_outer_tpid_en, bit<3> new_outer_pri, bit<1> new_outer_pri_en, bit<1> new_outer_cfi, bit<1> new_outer_cfi_en, bit<12> new_outer_vid, bit<1> new_outer_vid_en, bit<16> new_inner_tpid, bit<1> new_inner_tpid_en, bit<3> new_inner_pri, bit<1> new_inner_pri_en, bit<1> new_inner_cfi, bit<1> new_inner_cfi_en, bit<12> new_inner_vid, bit<1> new_inner_vid_en) {
         meta.meta.new_outer_tpid = new_outer_tpid;
         meta.meta.new_outer_tpid_en = new_outer_tpid_en;
         meta.meta.new_outer_pri = new_outer_pri;
@@ -258,66 +258,66 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.meta.new_inner_vid = new_inner_vid;
         meta.meta.new_inner_vid_en = new_inner_vid_en;
     }
-    @name(".new_inner_cfi") table new_inner_cfi_1 {
+    @name(".new_inner_cfi") table new_inner_cfi_0 {
         actions = {
-            do_new_inner_cfi_0();
+            do_new_inner_cfi();
             @defaultonly NoAction_0();
         }
         default_action = NoAction_0();
     }
-    @name(".new_inner_pri") table new_inner_pri_1 {
+    @name(".new_inner_pri") table new_inner_pri_0 {
         actions = {
-            do_new_inner_pri_0();
+            do_new_inner_pri();
             @defaultonly NoAction_10();
         }
         default_action = NoAction_10();
     }
-    @name(".new_inner_tpid") table new_inner_tpid_1 {
+    @name(".new_inner_tpid") table new_inner_tpid_0 {
         actions = {
-            do_new_inner_tpid_0();
+            do_new_inner_tpid();
             @defaultonly NoAction_11();
         }
         default_action = NoAction_11();
     }
-    @name(".new_inner_vid") table new_inner_vid_1 {
+    @name(".new_inner_vid") table new_inner_vid_0 {
         actions = {
-            do_new_inner_vid_0();
+            do_new_inner_vid();
             @defaultonly NoAction_12();
         }
         default_action = NoAction_12();
     }
-    @name(".new_outer_cfi") table new_outer_cfi_1 {
+    @name(".new_outer_cfi") table new_outer_cfi_0 {
         actions = {
-            do_new_outer_cfi_0();
+            do_new_outer_cfi();
             @defaultonly NoAction_13();
         }
         default_action = NoAction_13();
     }
-    @name(".new_outer_pri") table new_outer_pri_1 {
+    @name(".new_outer_pri") table new_outer_pri_0 {
         actions = {
-            do_new_outer_pri_0();
+            do_new_outer_pri();
             @defaultonly NoAction_14();
         }
         default_action = NoAction_14();
     }
-    @name(".new_outer_tpid") table new_outer_tpid_1 {
+    @name(".new_outer_tpid") table new_outer_tpid_0 {
         actions = {
-            do_new_outer_tpid_0();
+            do_new_outer_tpid();
             @defaultonly NoAction_15();
         }
         default_action = NoAction_15();
     }
-    @name(".new_outer_vid") table new_outer_vid_1 {
+    @name(".new_outer_vid") table new_outer_vid_0 {
         actions = {
-            do_new_outer_vid_0();
+            do_new_outer_vid();
             @defaultonly NoAction_16();
         }
         default_action = NoAction_16();
     }
-    @name(".vlan_xlate") table vlan_xlate {
+    @name(".vlan_xlate") table vlan_xlate_0 {
         actions = {
-            nop_0();
-            rewrite_tags_0();
+            nop();
+            rewrite_tags();
             @defaultonly NoAction_17();
         }
         key = {
@@ -329,23 +329,23 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_17();
     }
     apply {
-        vlan_xlate.apply();
+        vlan_xlate_0.apply();
         if (meta.meta.new_outer_tpid_en == 1w1) 
-            new_outer_tpid_1.apply();
+            new_outer_tpid_0.apply();
         if (meta.meta.new_outer_pri_en == 1w1) 
-            new_outer_pri_1.apply();
+            new_outer_pri_0.apply();
         if (meta.meta.new_outer_cfi_en == 1w1) 
-            new_outer_cfi_1.apply();
+            new_outer_cfi_0.apply();
         if (meta.meta.new_outer_vid_en == 1w1) 
-            new_outer_vid_1.apply();
+            new_outer_vid_0.apply();
         if (meta.meta.new_inner_tpid_en == 1w1) 
-            new_inner_tpid_1.apply();
+            new_inner_tpid_0.apply();
         if (meta.meta.new_inner_pri_en == 1w1) 
-            new_inner_pri_1.apply();
+            new_inner_pri_0.apply();
         if (meta.meta.new_inner_cfi_en == 1w1) 
-            new_inner_cfi_1.apply();
+            new_inner_cfi_0.apply();
         if (meta.meta.new_inner_vid_en == 1w1) 
-            new_inner_vid_1.apply();
+            new_inner_vid_0.apply();
     }
 }
 

@@ -204,7 +204,7 @@ struct headers {
 #include <tofino/stateful_alu.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<8> tmp_2;
+    bit<8> tmp;
     @name(".parse_ethernet") state parse_ethernet {
         packet.extract<ethernet_t>(hdr.ethernet);
         transition select(hdr.ethernet.ethertype) {
@@ -234,8 +234,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
         }
     }
     @name(".start") state start {
-        tmp_2 = packet.lookahead<bit<8>>();
-        transition select(tmp_2[7:0]) {
+        tmp = packet.lookahead<bit<8>>();
+        transition select(tmp[7:0]) {
             default: parse_ethernet;
         }
     }
@@ -261,34 +261,34 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_9() {
     }
-    bit<32> tmp_3;
-    bool tmp_4;
-    @name(".kv_alu") RegisterAction<bit<32>, bit<32>, bit<32>>(kv_register) kv_alu = {
+    bit<32> tmp_0;
+    bool tmp_1;
+    @name(".kv_alu") RegisterAction<bit<32>, bit<32>, bit<32>>(kv_register) kv_alu_0 = {
         void apply(inout bit<32> value, out bit<32> rv) {
-            bit<32> in_value;
-            in_value = value;
-            rv = in_value;
+            bit<32> in_value_0;
+            in_value_0 = value;
+            rv = in_value_0;
         }
     };
-    @name(".set_egr_port") action set_egr_port_0(bit<9> port) {
+    @name(".set_egr_port") action set_egr_port(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".set_dest") action set_dest_0(bit<9> port) {
+    @name(".set_dest") action set_dest(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".set_next_hop") action set_next_hop_0(bit<16> nh) {
+    @name(".set_next_hop") action set_next_hop(bit<16> nh) {
         meta.md.nh_id = nh;
     }
-    @name(".kv_read") action kv_read_0(bit<32> index) {
-        tmp_3 = kv_alu.execute(index);
-        hdr.kv.value = tmp_3;
+    @name(".kv_read") action kv_read(bit<32> index) {
+        tmp_0 = kv_alu_0.execute(index);
+        hdr.kv.value = tmp_0;
     }
-    @name(".set_egr_ifid") action set_egr_ifid_0(bit<16> ifid) {
+    @name(".set_egr_ifid") action set_egr_ifid(bit<16> ifid) {
         meta.md.egr_ifid = ifid;
     }
-    @seletor_num_max_groups(128) @selector_max_group_size(1200) @name(".egr_ifid") table egr_ifid_1 {
+    @seletor_num_max_groups(128) @selector_max_group_size(1200) @name(".egr_ifid") table egr_ifid_0 {
         actions = {
-            set_egr_port_0();
+            set_egr_port();
             @defaultonly NoAction_0();
         }
         key = {
@@ -304,9 +304,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         implementation = lag_ap;
         default_action = NoAction_0();
     }
-    @name(".egr_port") table egr_port {
+    @name(".egr_port") table egr_port_0 {
         actions = {
-            set_dest_0();
+            set_dest();
             @defaultonly NoAction_6();
         }
         key = {
@@ -315,9 +315,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 16384;
         default_action = NoAction_6();
     }
-    @name(".ipv4_route") table ipv4_route {
+    @name(".ipv4_route") table ipv4_route_0 {
         actions = {
-            set_next_hop_0();
+            set_next_hop();
             @defaultonly NoAction_7();
         }
         key = {
@@ -326,9 +326,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_7();
     }
-    @name(".kv_process") table kv_process {
+    @name(".kv_process") table kv_process_0 {
         actions = {
-            kv_read_0();
+            kv_read();
             @defaultonly NoAction_8();
         }
         key = {
@@ -337,9 +337,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_8();
     }
-    @name(".next_hop") table next_hop {
+    @name(".next_hop") table next_hop_0 {
         actions = {
-            set_egr_ifid_0();
+            set_egr_ifid();
             @defaultonly NoAction_9();
         }
         key = {
@@ -350,14 +350,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (hdr.kv.isValid()) 
-            kv_process.apply();
-        ipv4_route.apply();
-        next_hop.apply();
-        tmp_4 = egr_ifid_1.apply().hit;
-        if (tmp_4) 
+            kv_process_0.apply();
+        ipv4_route_0.apply();
+        next_hop_0.apply();
+        tmp_1 = egr_ifid_0.apply().hit;
+        if (tmp_1) 
             ;
         else 
-            egr_port.apply();
+            egr_port_0.apply();
     }
 }
 

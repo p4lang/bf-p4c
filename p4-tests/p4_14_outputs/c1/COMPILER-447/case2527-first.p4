@@ -958,7 +958,7 @@ control Careywood(inout headers hdr, inout metadata meta, inout standard_metadat
         }
         key = {
             meta.Nason.Glyndon           : exact @name("Nason.Glyndon") ;
-            meta.Antimony.RushHill[31:16]: ternary @name("Antimony.RushHill[31:16]") ;
+            meta.Antimony.RushHill[31:16]: ternary @name("Antimony.RushHill") ;
             meta.Renton.Cascade          : ternary @name("Renton.Cascade") ;
             meta.Renton.Ewing            : ternary @name("Renton.Ewing") ;
             meta.Renton.Clintwood        : ternary @name("Renton.Clintwood") ;
@@ -976,7 +976,7 @@ control Careywood(inout headers hdr, inout metadata meta, inout standard_metadat
         }
         key = {
             meta.Nason.Glyndon            : exact @name("Nason.Glyndon") ;
-            meta.Baldridge.PikeView[31:16]: ternary @name("Baldridge.PikeView[31:16]") ;
+            meta.Baldridge.PikeView[31:16]: ternary @name("Baldridge.PikeView") ;
             meta.Renton.Cascade           : ternary @name("Renton.Cascade") ;
             meta.Renton.Ewing             : ternary @name("Renton.Ewing") ;
             meta.Renton.Clintwood         : ternary @name("Renton.Clintwood") ;
@@ -1190,7 +1190,7 @@ control Hospers(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Baldridge.Riverwood       : exact @name("Baldridge.Riverwood") ;
-            meta.Baldridge.PikeView[106:64]: lpm @name("Baldridge.PikeView[106:64]") ;
+            meta.Baldridge.PikeView[106:64]: lpm @name("Baldridge.PikeView") ;
         }
         size = 65536;
         default_action = Wetumpka();
@@ -1258,7 +1258,7 @@ control Hospers(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Antimony.Balmville     : exact @name("Antimony.Balmville") ;
-            meta.Antimony.RushHill[19:0]: lpm @name("Antimony.RushHill[19:0]") ;
+            meta.Antimony.RushHill[19:0]: lpm @name("Antimony.RushHill") ;
         }
         size = 131072;
         default_action = Wetumpka();
@@ -1271,7 +1271,7 @@ control Hospers(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Silva.Parshall            : exact @name("Silva.Parshall") ;
-            meta.Baldridge.PikeView[127:64]: lpm @name("Baldridge.PikeView[127:64]") ;
+            meta.Baldridge.PikeView[127:64]: lpm @name("Baldridge.PikeView") ;
         }
         size = 8192;
         default_action = NoAction();
@@ -1298,7 +1298,7 @@ control Hospers(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         key = {
             meta.Baldridge.Villanova     : exact @name("Baldridge.Villanova") ;
-            meta.Baldridge.PikeView[63:0]: lpm @name("Baldridge.PikeView[63:0]") ;
+            meta.Baldridge.PikeView[63:0]: lpm @name("Baldridge.PikeView") ;
         }
         size = 16384;
         default_action = Wetumpka();
@@ -1802,7 +1802,7 @@ control Nanuet(inout headers hdr, inout metadata meta, inout standard_metadata_t
 
 control Oconee(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Maddock") action Maddock() {
-        digest<Chatcolet>(32w0, { meta.Milesburg.Ferndale, meta.Renton.Borup, hdr.Donna.Grantfork, hdr.Donna.Walcott, hdr.Bowdon.Satolah });
+        digest<Chatcolet>(32w0, {meta.Milesburg.Ferndale,meta.Renton.Borup,hdr.Donna.Grantfork,hdr.Donna.Walcott,hdr.Bowdon.Satolah});
     }
     @name(".Yemassee") table Yemassee {
         actions = {
@@ -1930,7 +1930,7 @@ control Tiverton(inout headers hdr, inout metadata meta, inout standard_metadata
             bit<1> in_value;
             in_value = value;
             value = in_value;
-            rv = ~value;
+            rv = ~in_value;
         }
     };
     @name(".Sudbury") action Sudbury(bit<1> Moraine) {
@@ -2050,7 +2050,7 @@ control Vieques(inout headers hdr, inout metadata meta, inout standard_metadata_
 
 control Waldport(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Flaherty") action Flaherty() {
-        digest<TenSleep>(32w0, { meta.Milesburg.Ferndale, meta.Renton.Cantwell, meta.Renton.MudLake, meta.Renton.Borup, meta.Renton.Rodessa });
+        digest<TenSleep>(32w0, {meta.Milesburg.Ferndale,meta.Renton.Cantwell,meta.Renton.MudLake,meta.Renton.Borup,meta.Renton.Rodessa});
     }
     @name(".BoxElder") table BoxElder {
         actions = {

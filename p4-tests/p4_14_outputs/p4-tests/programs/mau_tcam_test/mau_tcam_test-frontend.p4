@@ -156,26 +156,29 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".NoAction") action NoAction_0() {
+    @name(".counter_egress") counter(32w512, CounterType.packets) counter_egress_0;
+    @name(".egress_action") action egress_action() {
+        counter_egress_0.count((bit<32>)hdr.eg_intr_md.egress_port);
     }
-    @name(".counter_egress") counter(32w512, CounterType.packets) counter_egress;
-    @name(".egress_action") action egress_action_0() {
-        counter_egress.count((bit<32>)hdr.eg_intr_md.egress_port);
-    }
-    @name(".simple_table_egress") table simple_table_egress {
+    @name(".simple_table_egress") table simple_table_egress_0 {
         actions = {
-            egress_action_0();
-            @defaultonly NoAction_0();
+            egress_action();
         }
-        default_action = NoAction_0();
+        default_action = egress_action();
     }
     apply {
-        simple_table_egress.apply();
+        simple_table_egress_0.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".NoAction") action NoAction_1() {
+    @name(".NoAction") action NoAction_0() {
+    }
+    @name(".NoAction") action NoAction_13() {
+    }
+    @name(".NoAction") action NoAction_14() {
+    }
+    @name(".NoAction") action NoAction_15() {
     }
     @name(".NoAction") action NoAction_16() {
     }
@@ -193,219 +196,210 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_23() {
     }
-    @name(".NoAction") action NoAction_24() {
-    }
-    @name(".NoAction") action NoAction_25() {
-    }
-    @name(".NoAction") action NoAction_26() {
-    }
-    @name(".NoAction") action NoAction_27() {
-    }
-    @name(".counter_ingress") counter(32w512, CounterType.packets) counter_ingress;
-    @name(".action_0") action action_12(bit<9> port) {
+    @name(".counter_ingress") counter(32w512, CounterType.packets) counter_ingress_0;
+    @name(".action_0") action action_0(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".action_1") action action_13(bit<9> port) {
+    @name(".action_1") action action_1(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".action_10") action action_14(bit<9> port) {
+    @name(".action_10") action action_2(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".action_11") action action_15(bit<9> port) {
+    @name(".action_11") action action_3(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".action_2") action action_16(bit<9> port) {
+    @name(".action_2") action action_4(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".action_3") action action_17(bit<9> port) {
+    @name(".action_3") action action_5(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".action_4") action action_18(bit<9> port) {
+    @name(".action_4") action action_6(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".action_5") action action_19(bit<9> port) {
+    @name(".action_5") action action_7(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".action_6") action action_20(bit<9> port) {
+    @name(".action_6") action action_8(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".action_7") action action_21(bit<9> port) {
+    @name(".action_7") action action_9(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".action_8") action action_22(bit<9> port) {
+    @name(".action_8") action action_10(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".action_9") action action_23(bit<9> port) {
+    @name(".action_9") action action_11(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".ingress_action") action ingress_action_0() {
-        counter_ingress.count((bit<32>)hdr.ig_intr_md.ingress_port);
+    @name(".ingress_action") action ingress_action() {
+        counter_ingress_0.count((bit<32>)hdr.ig_intr_md.ingress_port);
     }
-    @use_identity_hash(1) @immediate(0) @stage_0 @name(".simple_table_0") table simple_table_0 {
+    @use_identity_hash(1) @immediate(0) @stage_0 @name(".simple_table_0") table simple_table {
         actions = {
-            action_12();
-            @defaultonly NoAction_1();
+            action_0();
+            @defaultonly NoAction_0();
         }
         key = {
-            hdr.ethernet.srcAddr[12:0]: ternary @name("ethernet.srcAddr[12:0]") ;
+            hdr.ethernet.srcAddr[12:0]: ternary @name("ethernet.srcAddr") ;
         }
         size = 8192;
-        default_action = NoAction_1();
+        default_action = NoAction_0();
     }
-    @use_identity_hash(1) @immediate(0) @stage_1 @name(".simple_table_1") table simple_table_1 {
+    @use_identity_hash(1) @immediate(0) @stage_1 @name(".simple_table_1") table simple_table_12 {
         actions = {
-            action_13();
+            action_1();
+            @defaultonly NoAction_13();
+        }
+        key = {
+            hdr.ethernet.srcAddr[12:0]: ternary @name("ethernet.srcAddr") ;
+        }
+        size = 8192;
+        default_action = NoAction_13();
+    }
+    @use_identity_hash(1) @immediate(0) @stage_10 @name(".simple_table_10") table simple_table_13 {
+        actions = {
+            action_2();
+            @defaultonly NoAction_14();
+        }
+        key = {
+            hdr.ethernet.srcAddr[12:0]: ternary @name("ethernet.srcAddr") ;
+        }
+        size = 8192;
+        default_action = NoAction_14();
+    }
+    @use_identity_hash(1) @immediate(0) @stage_11 @name(".simple_table_11") table simple_table_14 {
+        actions = {
+            action_3();
+            @defaultonly NoAction_15();
+        }
+        key = {
+            hdr.ethernet.srcAddr[12:0]: ternary @name("ethernet.srcAddr") ;
+        }
+        size = 8192;
+        default_action = NoAction_15();
+    }
+    @use_identity_hash(1) @immediate(0) @stage_2 @name(".simple_table_2") table simple_table_15 {
+        actions = {
+            action_4();
             @defaultonly NoAction_16();
         }
         key = {
-            hdr.ethernet.srcAddr[12:0]: ternary @name("ethernet.srcAddr[12:0]") ;
+            hdr.ethernet.srcAddr[12:0]: ternary @name("ethernet.srcAddr") ;
         }
         size = 8192;
         default_action = NoAction_16();
     }
-    @use_identity_hash(1) @immediate(0) @stage_10 @name(".simple_table_10") table simple_table_2 {
+    @use_identity_hash(1) @immediate(0) @stage_3 @name(".simple_table_3") table simple_table_16 {
         actions = {
-            action_14();
+            action_5();
             @defaultonly NoAction_17();
         }
         key = {
-            hdr.ethernet.srcAddr[12:0]: ternary @name("ethernet.srcAddr[12:0]") ;
+            hdr.ethernet.srcAddr[12:0]: ternary @name("ethernet.srcAddr") ;
         }
         size = 8192;
         default_action = NoAction_17();
     }
-    @use_identity_hash(1) @immediate(0) @stage_11 @name(".simple_table_11") table simple_table_3 {
+    @use_identity_hash(1) @immediate(0) @stage_4 @name(".simple_table_4") table simple_table_17 {
         actions = {
-            action_15();
+            action_6();
             @defaultonly NoAction_18();
         }
         key = {
-            hdr.ethernet.srcAddr[12:0]: ternary @name("ethernet.srcAddr[12:0]") ;
+            hdr.ethernet.srcAddr[12:0]: ternary @name("ethernet.srcAddr") ;
         }
         size = 8192;
         default_action = NoAction_18();
     }
-    @use_identity_hash(1) @immediate(0) @stage_2 @name(".simple_table_2") table simple_table_4 {
+    @use_identity_hash(1) @immediate(0) @stage_5 @name(".simple_table_5") table simple_table_18 {
         actions = {
-            action_16();
+            action_7();
             @defaultonly NoAction_19();
         }
         key = {
-            hdr.ethernet.srcAddr[12:0]: ternary @name("ethernet.srcAddr[12:0]") ;
+            hdr.ethernet.srcAddr[12:0]: ternary @name("ethernet.srcAddr") ;
         }
         size = 8192;
         default_action = NoAction_19();
     }
-    @use_identity_hash(1) @immediate(0) @stage_3 @name(".simple_table_3") table simple_table_5 {
+    @use_identity_hash(1) @immediate(0) @stage_6 @name(".simple_table_6") table simple_table_19 {
         actions = {
-            action_17();
+            action_8();
             @defaultonly NoAction_20();
         }
         key = {
-            hdr.ethernet.srcAddr[12:0]: ternary @name("ethernet.srcAddr[12:0]") ;
+            hdr.ethernet.srcAddr[12:0]: ternary @name("ethernet.srcAddr") ;
         }
         size = 8192;
         default_action = NoAction_20();
     }
-    @use_identity_hash(1) @immediate(0) @stage_4 @name(".simple_table_4") table simple_table_6 {
+    @use_identity_hash(1) @immediate(0) @stage_7 @name(".simple_table_7") table simple_table_20 {
         actions = {
-            action_18();
+            action_9();
             @defaultonly NoAction_21();
         }
         key = {
-            hdr.ethernet.srcAddr[12:0]: ternary @name("ethernet.srcAddr[12:0]") ;
+            hdr.ethernet.srcAddr[12:0]: ternary @name("ethernet.srcAddr") ;
         }
         size = 8192;
         default_action = NoAction_21();
     }
-    @use_identity_hash(1) @immediate(0) @stage_5 @name(".simple_table_5") table simple_table_7 {
+    @use_identity_hash(1) @immediate(0) @stage_8 @name(".simple_table_8") table simple_table_21 {
         actions = {
-            action_19();
+            action_10();
             @defaultonly NoAction_22();
         }
         key = {
-            hdr.ethernet.srcAddr[12:0]: ternary @name("ethernet.srcAddr[12:0]") ;
+            hdr.ethernet.srcAddr[12:0]: ternary @name("ethernet.srcAddr") ;
         }
         size = 8192;
         default_action = NoAction_22();
     }
-    @use_identity_hash(1) @immediate(0) @stage_6 @name(".simple_table_6") table simple_table_8 {
+    @use_identity_hash(1) @immediate(0) @stage_9 @name(".simple_table_9") table simple_table_22 {
         actions = {
-            action_20();
+            action_11();
             @defaultonly NoAction_23();
         }
         key = {
-            hdr.ethernet.srcAddr[12:0]: ternary @name("ethernet.srcAddr[12:0]") ;
+            hdr.ethernet.srcAddr[12:0]: ternary @name("ethernet.srcAddr") ;
         }
         size = 8192;
         default_action = NoAction_23();
     }
-    @use_identity_hash(1) @immediate(0) @stage_7 @name(".simple_table_7") table simple_table_9 {
+    @stage_0 @name(".simple_table_ingress") table simple_table_ingress_0 {
         actions = {
-            action_21();
-            @defaultonly NoAction_24();
+            ingress_action();
         }
-        key = {
-            hdr.ethernet.srcAddr[12:0]: ternary @name("ethernet.srcAddr[12:0]") ;
-        }
-        size = 8192;
-        default_action = NoAction_24();
-    }
-    @use_identity_hash(1) @immediate(0) @stage_8 @name(".simple_table_8") table simple_table_10 {
-        actions = {
-            action_22();
-            @defaultonly NoAction_25();
-        }
-        key = {
-            hdr.ethernet.srcAddr[12:0]: ternary @name("ethernet.srcAddr[12:0]") ;
-        }
-        size = 8192;
-        default_action = NoAction_25();
-    }
-    @use_identity_hash(1) @immediate(0) @stage_9 @name(".simple_table_9") table simple_table_11 {
-        actions = {
-            action_23();
-            @defaultonly NoAction_26();
-        }
-        key = {
-            hdr.ethernet.srcAddr[12:0]: ternary @name("ethernet.srcAddr[12:0]") ;
-        }
-        size = 8192;
-        default_action = NoAction_26();
-    }
-    @stage_0 @name(".simple_table_ingress") table simple_table_ingress {
-        actions = {
-            ingress_action_0();
-            @defaultonly NoAction_27();
-        }
-        default_action = NoAction_27();
+        default_action = ingress_action();
     }
     apply {
         if (hdr.ethernet.etherType == 16w0) 
-            simple_table_0.apply();
+            simple_table.apply();
         if (hdr.ethernet.etherType == 16w1) 
-            simple_table_1.apply();
+            simple_table_12.apply();
         if (hdr.ethernet.etherType == 16w2) 
-            simple_table_4.apply();
+            simple_table_15.apply();
         if (hdr.ethernet.etherType == 16w3) 
-            simple_table_5.apply();
+            simple_table_16.apply();
         if (hdr.ethernet.etherType == 16w4) 
-            simple_table_6.apply();
+            simple_table_17.apply();
         if (hdr.ethernet.etherType == 16w5) 
-            simple_table_7.apply();
+            simple_table_18.apply();
         if (hdr.ethernet.etherType == 16w6) 
-            simple_table_8.apply();
+            simple_table_19.apply();
         if (hdr.ethernet.etherType == 16w7) 
-            simple_table_9.apply();
+            simple_table_20.apply();
         if (hdr.ethernet.etherType == 16w8) 
-            simple_table_10.apply();
+            simple_table_21.apply();
         if (hdr.ethernet.etherType == 16w9) 
-            simple_table_11.apply();
+            simple_table_22.apply();
         if (hdr.ethernet.etherType == 16w10) 
-            simple_table_2.apply();
+            simple_table_13.apply();
         if (hdr.ethernet.etherType == 16w11) 
-            simple_table_3.apply();
-        simple_table_ingress.apply();
+            simple_table_14.apply();
+        simple_table_ingress_0.apply();
     }
 }
 

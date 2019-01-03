@@ -789,8 +789,8 @@ control Capitola(inout headers hdr, inout metadata meta, inout standard_metadata
             Gilman_0;
         }
         key = {
-            hdr.eg_intr_md.egress_port[6:0]: exact;
-            hdr.eg_intr_md.egress_qid[2:0] : exact;
+            hdr.eg_intr_md.egress_port[6:0]: exact @name("eg_intr_md.egress_port") ;
+            hdr.eg_intr_md.egress_qid[2:0] : exact @name("eg_intr_md.egress_qid") ;
         }
         size = 1024;
         counters = FlatLick;
@@ -855,7 +855,7 @@ control Comal(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Redmon.Lehigh             : exact;
-            meta.Terrytown.Clearlake[31:16]: ternary;
+            meta.Terrytown.Clearlake[31:16]: ternary @name("Terrytown.Clearlake") ;
             meta.Deeth.Elderon             : ternary;
             meta.Deeth.Dutton              : ternary;
             meta.Redmon.Telida             : ternary;
@@ -873,7 +873,7 @@ control Comal(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         key = {
             meta.Redmon.Lehigh         : exact;
-            meta.Holliday.Huttig[31:16]: ternary;
+            meta.Holliday.Huttig[31:16]: ternary @name("Holliday.Huttig") ;
             meta.Deeth.Elderon         : ternary;
             meta.Deeth.Dutton          : ternary;
             meta.Redmon.Telida         : ternary;
@@ -1605,7 +1605,7 @@ control Oakford(inout headers hdr, inout metadata meta, inout standard_metadata_
             bit<1> in_value;
             in_value = value;
             value = in_value;
-            rv = ~value;
+            rv = ~in_value;
         }
     };
     @name(".SomesBar") RegisterAction<bit<1>, bit<32>, bit<1>>(Argentine) SomesBar = {
@@ -1783,7 +1783,7 @@ control Paragould(inout headers hdr, inout metadata meta, inout standard_metadat
         }
         key = {
             meta.Rillton.Epsie              : exact;
-            meta.Terrytown.Clearlake[127:64]: lpm;
+            meta.Terrytown.Clearlake[127:64]: lpm @name("Terrytown.Clearlake") ;
         }
         size = 8192;
     }
@@ -1817,7 +1817,7 @@ control Paragould(inout headers hdr, inout metadata meta, inout standard_metadat
         }
         key = {
             meta.Terrytown.Roswell        : exact;
-            meta.Terrytown.Clearlake[63:0]: lpm;
+            meta.Terrytown.Clearlake[63:0]: lpm @name("Terrytown.Clearlake") ;
         }
         size = 16384;
         default_action = Scherr();
@@ -1830,7 +1830,7 @@ control Paragould(inout headers hdr, inout metadata meta, inout standard_metadat
         }
         key = {
             meta.Holliday.Dresden     : exact;
-            meta.Holliday.Huttig[19:0]: lpm;
+            meta.Holliday.Huttig[19:0]: lpm @name("Holliday.Huttig") ;
         }
         size = 131072;
         default_action = Scherr();
@@ -1857,7 +1857,7 @@ control Paragould(inout headers hdr, inout metadata meta, inout standard_metadat
         }
         key = {
             meta.Terrytown.Mahomet          : exact;
-            meta.Terrytown.Clearlake[106:64]: lpm;
+            meta.Terrytown.Clearlake[106:64]: lpm @name("Terrytown.Clearlake") ;
         }
         size = 65536;
         default_action = Scherr();
@@ -1868,11 +1868,11 @@ control Paragould(inout headers hdr, inout metadata meta, inout standard_metadat
                 switch (DeLancey.apply().action_run) {
                     Scherr: {
                         switch (Emida.apply().action_run) {
-                            Scherr: {
-                                Buncombe.apply();
-                            }
                             Villas: {
                                 Noyack.apply();
+                            }
+                            Scherr: {
+                                Buncombe.apply();
                             }
                         }
 

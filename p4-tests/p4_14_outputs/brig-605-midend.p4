@@ -38,7 +38,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_5() {
     }
-    @name(".stick") action stick_0() {
+    @name(".stick") action stick() {
         standard_metadata.egress_spec = 9w1;
     }
     @name(".stick") action stick_3() {
@@ -47,9 +47,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".stick") action stick_4() {
         standard_metadata.egress_spec = 9w1;
     }
-    @name(".clickers") table clickers {
+    @name(".clickers") table clickers_0 {
         actions = {
-            stick_0();
+            stick();
             @defaultonly NoAction_0();
         }
         key = {
@@ -59,30 +59,30 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name(".parenthesised") table parenthesised {
+    @name(".parenthesised") table parenthesised_0 {
         actions = {
             stick_3();
             @defaultonly NoAction_4();
         }
         default_action = NoAction_4();
     }
-    @name(".spanishs") table spanishs {
+    @name(".spanishs") table spanishs_0 {
         actions = {
             stick_4();
             @defaultonly NoAction_5();
         }
         key = {
             hdr.zoe.isValid()     : exact @name("zoe.$valid$") ;
-            hdr.zoe.seesawing[5:4]: ternary @name("zoe.seesawing[5:4]") ;
+            hdr.zoe.seesawing[5:4]: ternary @name("zoe.seesawing") ;
         }
         default_action = NoAction_5();
     }
     apply {
-        parenthesised.apply();
+        parenthesised_0.apply();
         if (hdr.expounded.isValid() && 8w0 > hdr.expounded.carmelos) 
-            clickers.apply();
+            clickers_0.apply();
         if (hdr.zoe.tycoons < 16w4) 
-            spanishs.apply();
+            spanishs_0.apply();
     }
 }
 

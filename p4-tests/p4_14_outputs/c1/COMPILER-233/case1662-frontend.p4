@@ -199,20 +199,20 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    @name("._nop") action _nop_0() {
+    @name("._nop") action _nop() {
     }
     @name("._nop") action _nop_2() {
     }
-    @name(".set_ecmp_nexthop") action set_ecmp_nexthop_0(bit<9> port) {
+    @name(".set_ecmp_nexthop") action set_ecmp_nexthop(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
     @name(".set_ecmp_nexthop") action set_ecmp_nexthop_2(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name(".ecmp_group") table ecmp_group {
+    @name(".ecmp_group") table ecmp_group_0 {
         actions = {
-            _nop_0();
-            set_ecmp_nexthop_0();
+            _nop();
+            set_ecmp_nexthop();
             @defaultonly NoAction_0();
         }
         key = {
@@ -222,7 +222,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         implementation = ecmp_action_profile;
         default_action = NoAction_0();
     }
-    @name(".ecmp_group2") table ecmp_group2 {
+    @name(".ecmp_group2") table ecmp_group2_0 {
         actions = {
             _nop_2();
             set_ecmp_nexthop_2();
@@ -237,9 +237,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (hdr.ipv4.isValid()) 
-            ecmp_group.apply();
+            ecmp_group_0.apply();
         else 
-            ecmp_group2.apply();
+            ecmp_group2_0.apply();
     }
 }
 

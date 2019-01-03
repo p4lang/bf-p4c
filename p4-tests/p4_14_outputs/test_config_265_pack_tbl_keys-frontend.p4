@@ -173,23 +173,23 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".NoAction") action NoAction_3() {
     }
-    @name(".set_meta") action set_meta_0(bit<1> x, bit<1> z) {
+    @name(".set_meta") action set_meta(bit<1> x, bit<1> z) {
         meta.meta.w = 1w1;
         meta.meta.x = x;
         meta.meta.y = 1w0;
         meta.meta.z = z;
     }
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing() {
     }
     @name(".do_nothing") action do_nothing_2() {
     }
-    @name(".set_pkt") action set_pkt_0(bit<16> b) {
+    @name(".set_pkt") action set_pkt(bit<16> b) {
         hdr.hdr1.b = b;
     }
-    @name(".t1") table t1 {
+    @name(".t1") table t1_0 {
         actions = {
-            set_meta_0();
-            do_nothing_0();
+            set_meta();
+            do_nothing();
             @defaultonly NoAction_0();
         }
         key = {
@@ -198,9 +198,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_0();
     }
-    @name(".t2") table t2 {
+    @name(".t2") table t2_0 {
         actions = {
-            set_pkt_0();
+            set_pkt();
             do_nothing_2();
             @defaultonly NoAction_3();
         }
@@ -214,8 +214,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_3();
     }
     apply {
-        t1.apply();
-        t2.apply();
+        t1_0.apply();
+        t2_0.apply();
     }
 }
 

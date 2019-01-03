@@ -154,19 +154,19 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".do") action do_0() {
+    @name(".do") action do() {
         hdr.h.f2 = 8w5;
         hdr.ig_intr_md_for_tm.ucast_egress_port = 9w1;
     }
-    @name(".t") table t {
+    @name(".t") table t_0 {
         actions = {
-            do_0();
+            do();
         }
-        default_action = do_0();
+        default_action = do();
     }
     apply {
         if (hdr.h.f1 == 8w0) 
-            t.apply();
+            t_0.apply();
     }
 }
 

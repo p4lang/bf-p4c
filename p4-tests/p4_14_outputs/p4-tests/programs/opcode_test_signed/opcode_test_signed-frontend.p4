@@ -214,95 +214,95 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    int<16> tmp_5;
-    int<16> tmp_6;
-    int<32> tmp_7;
-    int<32> tmp_8;
-    int<8> tmp_9;
-    int<8> tmp_10;
-    @name(".set_p") action set_p_0(bit<9> p) {
+    int<16> tmp;
+    int<16> tmp_0;
+    int<32> tmp_1;
+    int<32> tmp_2;
+    int<8> tmp_3;
+    int<8> tmp_4;
+    @name(".set_p") action set_p(bit<9> p) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = p;
     }
-    @name(".a16bit_shrs") action a16bit_shrs_0() {
+    @name(".a16bit_shrs") action a16bit_shrs() {
         hdr.ipv4.identification = hdr.ipv4.identification >> 3;
     }
-    @name(".a16bit_mins") action a16bit_mins_0(int<16> value) {
+    @name(".a16bit_mins") action a16bit_mins(int<16> value) {
         if (hdr.ipv4.identification <= value) 
-            tmp_5 = hdr.ipv4.identification;
+            tmp = hdr.ipv4.identification;
         else 
-            tmp_5 = value;
-        hdr.ipv4.identification = tmp_5;
+            tmp = value;
+        hdr.ipv4.identification = tmp;
     }
-    @name(".a16bit_maxs") action a16bit_maxs_0(int<16> value) {
+    @name(".a16bit_maxs") action a16bit_maxs(int<16> value) {
         if (hdr.ipv4.identification >= value) 
-            tmp_6 = hdr.ipv4.identification;
+            tmp_0 = hdr.ipv4.identification;
         else 
-            tmp_6 = value;
-        hdr.ipv4.identification = tmp_6;
+            tmp_0 = value;
+        hdr.ipv4.identification = tmp_0;
     }
-    @name(".do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing() {
     }
     @name(".do_nothing") action do_nothing_3() {
     }
     @name(".do_nothing") action do_nothing_4() {
     }
-    @name(".a32bit_shrs") action a32bit_shrs_0() {
+    @name(".a32bit_shrs") action a32bit_shrs() {
         hdr.ipv4.dstAddr = hdr.ipv4.dstAddr >> 3;
     }
-    @name(".a32bit_mins") action a32bit_mins_0(int<32> value) {
+    @name(".a32bit_mins") action a32bit_mins(int<32> value) {
         if (hdr.ipv4.dstAddr <= value) 
-            tmp_7 = hdr.ipv4.dstAddr;
+            tmp_1 = hdr.ipv4.dstAddr;
         else 
-            tmp_7 = value;
-        hdr.ipv4.dstAddr = tmp_7;
+            tmp_1 = value;
+        hdr.ipv4.dstAddr = tmp_1;
     }
-    @name(".a32bit_maxs") action a32bit_maxs_0(int<32> value) {
+    @name(".a32bit_maxs") action a32bit_maxs(int<32> value) {
         if (hdr.ipv4.dstAddr >= value) 
-            tmp_8 = hdr.ipv4.dstAddr;
+            tmp_2 = hdr.ipv4.dstAddr;
         else 
-            tmp_8 = value;
-        hdr.ipv4.dstAddr = tmp_8;
+            tmp_2 = value;
+        hdr.ipv4.dstAddr = tmp_2;
     }
-    @name(".a8bit_shrs") action a8bit_shrs_0() {
+    @name(".a8bit_shrs") action a8bit_shrs() {
         hdr.ipv4.diffserv = hdr.ipv4.diffserv >> 3;
     }
-    @name(".a8bit_mins") action a8bit_mins_0(int<8> value) {
+    @name(".a8bit_mins") action a8bit_mins(int<8> value) {
         if (hdr.ipv4.diffserv <= value) 
-            tmp_9 = hdr.ipv4.diffserv;
+            tmp_3 = hdr.ipv4.diffserv;
         else 
-            tmp_9 = value;
-        hdr.ipv4.diffserv = tmp_9;
+            tmp_3 = value;
+        hdr.ipv4.diffserv = tmp_3;
     }
-    @name(".a8bit_maxs") action a8bit_maxs_0(int<8> value) {
+    @name(".a8bit_maxs") action a8bit_maxs(int<8> value) {
         if (hdr.ipv4.diffserv >= value) 
-            tmp_10 = hdr.ipv4.diffserv;
+            tmp_4 = hdr.ipv4.diffserv;
         else 
-            tmp_10 = value;
-        hdr.ipv4.diffserv = tmp_10;
+            tmp_4 = value;
+        hdr.ipv4.diffserv = tmp_4;
     }
-    @name(".port_table") table port_table {
+    @name(".port_table") table port_table_0 {
         actions = {
-            set_p_0();
+            set_p();
         }
-        default_action = set_p_0(9w0);
+        default_action = set_p(9w0);
     }
-    @name(".t16bit") table t16bit {
+    @name(".t16bit") table t16bit_0 {
         actions = {
-            a16bit_shrs_0();
-            a16bit_mins_0();
-            a16bit_maxs_0();
-            do_nothing_0();
+            a16bit_shrs();
+            a16bit_mins();
+            a16bit_maxs();
+            do_nothing();
         }
         key = {
             hdr.tcp.srcPort: exact @name("tcp.srcPort") ;
         }
-        default_action = do_nothing_0();
+        default_action = do_nothing();
     }
-    @name(".t32bit") table t32bit {
+    @name(".t32bit") table t32bit_0 {
         actions = {
-            a32bit_shrs_0();
-            a32bit_mins_0();
-            a32bit_maxs_0();
+            a32bit_shrs();
+            a32bit_mins();
+            a32bit_maxs();
             do_nothing_3();
         }
         key = {
@@ -310,11 +310,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = do_nothing_3();
     }
-    @name(".t8bit") table t8bit {
+    @name(".t8bit") table t8bit_0 {
         actions = {
-            a8bit_shrs_0();
-            a8bit_mins_0();
-            a8bit_maxs_0();
+            a8bit_shrs();
+            a8bit_mins();
+            a8bit_maxs();
             do_nothing_4();
         }
         key = {
@@ -324,11 +324,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (hdr.tcp.isValid()) {
-            t8bit.apply();
-            t16bit.apply();
-            t32bit.apply();
+            t8bit_0.apply();
+            t16bit_0.apply();
+            t32bit_0.apply();
         }
-        port_table.apply();
+        port_table_0.apply();
     }
 }
 
