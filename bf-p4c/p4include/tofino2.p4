@@ -444,6 +444,8 @@ header ptp_metadata_t {
 
 extern Checksum<W> {
     /// Constructor.
+    /// @type_param W : Width of the calculated checksum. Only bit<16> is
+    /// supported.
     /// @param algorithm : Only HashAlgorithm_t.CSUM16 is supported.
     Checksum(HashAlgorithm_t algorithm);
 
@@ -457,15 +459,17 @@ extern Checksum<W> {
     /// data must be byte aligned.
     void subtract<T>(in T data);
 
-    /// Verify whether the complemented sum is zero.
+    /// Verify whether the complemented sum is zero, i.e. the checksum is valid.
+    /// @return : Boolean flag indicating wether the checksum is valid or not.
     bool verify();
 
-    W residual_checksum();
+    /// Get the calculated checksum value.
+    /// @return : The calculated checksum value for added fields.
+    W get();
 
     /// Calculate the checksum for a  given list of fields.
+    /// @param data : List of fields contributing to the checksum value.
     W update<T>(in T data);
-
-    W update<T>(in T data, in W residul_csum);
 }
 
 // ----------------------------------------------------------------------------
