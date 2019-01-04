@@ -697,7 +697,6 @@ void MauAsmOutput::emit_ixbar_hash_dist_ident(std::ostream &out, indent_t indent
                                   (fs->range().intersectWith(sl.range()));
             if (boost_sl == boost::none)
                 continue;
-
             // Which slice bits of this field are overlapping
             le_bitrange field_overlap = *boost_sl;
             int ident_range_lo = bits_seen + field_overlap.lo - fs->range().lo;

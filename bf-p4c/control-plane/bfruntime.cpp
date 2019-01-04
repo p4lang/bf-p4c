@@ -164,6 +164,8 @@ class BfRtSchemaGenerator {
 
     struct Snapshot;
 
+    struct DynHash;
+
     void addMatchTables(Util::JsonArray* tablesJson) const;
     void addActionProfs(Util::JsonArray* tablesJson) const;
     void addCounters(Util::JsonArray* tablesJson) const;
@@ -181,6 +183,7 @@ class BfRtSchemaGenerator {
     void addActionProfCommon(Util::JsonArray* tablesJson, const ActionProf& actionProf) const;
     void addLearnFilterCommon(Util::JsonArray* learnFiltersJson, const Digest& digest) const;
     void addPortMetadata(Util::JsonArray* tablesJson, const PortMetadata& portMetadata) const;
+    void addDynHash(Util::JsonArray* tablesJson, const DynHash& dynHash) const;
     void addPortMetadataDefault(Util::JsonArray* tablesJson) const;
     void addLpf(Util::JsonArray* tablesJson, const Lpf& lpf) const;
     void addWred(Util::JsonArray* tablesJson, const Wred& wred) const;
@@ -788,6 +791,27 @@ struct BfRtSchemaGenerator::PortMetadata {
     }
 };
 
+struct BfRtSchemaGenerator::DynHash {
+    static const std::string name() { return "$HASH"; }
+    static constexpr P4Id id() {
+        return makeBfRtId(0, ::barefoot::P4Ids::HASH);
+    }
+
+    // cstring key_name;
+    p4configv1::P4DataTypeSpec typeSpec;
+
+    static boost::optional<DynHash> fromTofino(
+        const p4configv1::ExternInstance& externInstance) {
+        const auto& pre = externInstance.preamble();
+        ::barefoot::DynHash dynHash;
+        if (!externInstance.info().UnpackTo(&dynHash)) {
+            ::error("Extern instance %1% does not pack a PortMetadata object", pre.name());
+            return boost::none;
+        }
+        return DynHash{ dynHash.type_spec() };
+    }
+};
+
 struct BfRtSchemaGenerator::Snapshot {
     std::string name;
     P4Id id;
@@ -1356,7 +1380,7 @@ BfRtSchemaGenerator::addPortMetadata(Util::JsonArray* tablesJson,
         ::p4::config::v1::P4DataTypeSpec::TYPE_SPEC_NOT_SET) {
         auto* fieldsJson = new Util::JsonArray();
         transformTypeSpecToDataFields(
-            fieldsJson, portMetadata.typeSpec, "PortMetadata",
+            fieldsJson, portMetadata.typeSpec, "DynHash",
             PortMetadata::name());
         for (auto* f : *fieldsJson) {
             addSingleton(dataJson, f->to<Util::JsonObject>(),
@@ -1372,6 +1396,34 @@ BfRtSchemaGenerator::addPortMetadata(Util::JsonArray* tablesJson,
 
     tableJson->emplace("supported_operations", new Util::JsonArray());
     tableJson->emplace("attributes", new Util::JsonArray());
+
+    tablesJson->append(tableJson);
+}
+
+void
+BfRtSchemaGenerator::addDynHash(Util::JsonArray* tablesJson,
+                                     const DynHash& dynHash) const {
+    auto* tableJson = new Util::JsonObject();
+    tableJson->emplace("name", DynHash::name());
+    tableJson->emplace("id", DynHash::id());
+    tableJson->emplace("table_type", "DynHash");
+
+    auto* dataJson = new Util::JsonArray();
+    if (dynHash.typeSpec.type_spec_case() !=
+        ::p4::config::v1::P4DataTypeSpec::TYPE_SPEC_NOT_SET) {
+        auto* fieldsJson = new Util::JsonArray();
+        transformTypeSpecToDataFields(
+            fieldsJson, dynHash.typeSpec, "DynHash",
+            DynHash::name());
+        for (auto* f : *fieldsJson) {
+            addSingleton(dataJson, f->to<Util::JsonObject>(),
+                         true /* mandatory */, false /* read-only */);
+      }
+    }
+    tableJson->emplace("data", dataJson);
+
+    tableJson->emplace("supported_operations", new Util::JsonArray());
+    tableJson->emplace("attributes", "dynhash_attribute");
 
     tablesJson->append(tableJson);
 }
@@ -1965,6 +2017,13 @@ BfRtSchemaGenerator::addTofinoExterns(Util::JsonArray* tablesJson,
                 if (snapshot != boost::none) {
                     addSnapshot(tablesJson, *snapshot);
                     addSnapshotLiveness(tablesJson, *snapshot);
+                }
+            }
+        } else if (externTypeId == ::barefoot::P4Ids::HASH) {
+            for (const auto& externInstance : externType.instances()) {
+                auto dynHash = DynHash::fromTofino(externInstance);
+                if (dynHash != boost::none) {
+                    // addDynHash(tablesJson, *dynHash);
                 }
             }
         }

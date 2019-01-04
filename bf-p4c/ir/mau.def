@@ -755,6 +755,10 @@ class HashDist : Expression {
     Expression           field_list;
     HashFunction         algorithm;
     int                  bit_width = 0;
+
+    // Field List and Calculation names as specified in P4 program used for PD Generation
+    cstring     field_list_name;
+    cstring     field_list_calc_name;
 }
 
 

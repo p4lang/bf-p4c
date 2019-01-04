@@ -138,6 +138,9 @@ class SymbolType final : public P4RuntimeSymbolType {
     static P4RuntimeSymbolType PORT_METADATA() {
         return P4RuntimeSymbolType::make(barefoot::P4Ids::PORT_METADATA);
     }
+    static P4RuntimeSymbolType HASH() {
+        return P4RuntimeSymbolType::make(barefoot::P4Ids::HASH);
+    }
     static P4RuntimeSymbolType LPF() {
         return P4RuntimeSymbolType::make(barefoot::P4Ids::LPF);
     }
@@ -178,6 +181,16 @@ struct Digest {
     const p4configv1::P4DataTypeSpec* typeSpec;  // The format of the packed data.
     const IR::IAnnotated* annotations;  // If non-null, any annotations applied to this digest
                                         // declaration.
+};
+
+/// The information about a hash instance which is needed to serialize it.
+struct DynHash {
+    const cstring name;       // The fully qualified external name of the dynhash
+    const p4configv1::P4DataTypeSpec* typeSpec;  // The format of the fields used
+    // for hash calculation.
+    const IR::IAnnotated* annotations;  // If non-null, any annotations applied to this dynhash
+                                        // declaration.
+    std::vector<cstring> hashFieldNames;  // Field Names of a Hash Field List
 };
 
 /// The information about a value set instance which is needed to serialize it.
@@ -498,7 +511,7 @@ class SnapshotFieldFinder : public Inspector {
 };
 
 /// Implements @ref P4RuntimeArchHandlerIface for the Tofino architecture. The
-/// overridden metods will be called by the @P4RuntimeSerializer to collect and
+/// overridden methods will be called by the @P4RuntimeSerializer to collect and
 /// serialize Tofino-specific symbols which are exposed to the control-plane.
 class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeArchHandlerIface {
  public:
@@ -574,6 +587,8 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             symbols->add(SymbolType::WRED(), decl);
         } else if (externBlock->type->name == "DirectWred") {
             symbols->add(SymbolType::DIRECT_WRED(), decl);
+        } else if (externBlock->type->name == "Hash") {
+            symbols->add(SymbolType::HASH(), decl);
         }
     }
 
@@ -934,6 +949,9 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         } else if (externBlock->type->name == "Wred") {
             auto wred = Wred::from(externBlock);
             if (wred) addWred(symbols, p4info, *wred);
+        } else if (externBlock->type->name == "Hash") {
+            auto dynHash = getDynHash(decl, p4RtTypeInfo);
+            if (dynHash) addDynHash(symbols, p4info, *dynHash);
         }
     }
 
@@ -1048,6 +1066,41 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         return Digest{decl->controlPlaneName(), typeSpec, decl->to<IR::IAnnotated>()};
     }
 
+    boost::optional<DynHash> getDynHash(const IR::Declaration_Instance* decl,
+                                      p4configv1::P4TypeInfo* p4RtTypeInfo) {
+        std::vector<const P4::ExternMethod*> hashCalls;
+        // Get Hash Calls in the program for the declaration.
+        forAllExternMethodCalls(decl, [&](const P4::ExternMethod* method) {
+            hashCalls.push_back(method); });
+        if (hashCalls.size() == 0) return boost::none;
+        // if (hashCalls.size() > 1) {
+        //     ::error("Expected single call to get for hash instance '%1%'", decl);
+        //     return boost::none;
+        // }
+        // LOG4("Found 'get' method call for hash instance " << decl->controlPlaneName());
+
+        // Extract typeArgs and field Names to be passed on through dynHash
+        // instance
+        if (auto *call = hashCalls[0]->expr->to<IR::MethodCallExpression>()) {
+            auto *typeArg = call->typeArguments->at(0);
+            auto typeSpec = TypeSpecConverter::convert(refMap, typeArg, p4RtTypeInfo);
+            BUG_CHECK(typeSpec != nullptr,
+                  "P4 type %1% could not be converted to P4Info P4DataTypeSpec");
+
+            auto fieldListArg = call->arguments->at(0);
+            LOG4("FieldList for Hash: " << fieldListArg);
+            std::vector<cstring> hashFieldNames;
+            if (auto fieldListExpr = fieldListArg->expression->to<IR::ListExpression>()) {
+                for (auto f : fieldListExpr->components) {
+                    hashFieldNames.push_back(f->toString());
+                }
+            }
+            return DynHash{decl->controlPlaneName(), typeSpec,
+                decl->to<IR::IAnnotated>(), hashFieldNames};
+        }
+        return boost::none;
+    }
+
     static boost::optional<ActionProfile>
     getActionProfile(cstring name,
                      const IR::Type_Extern* type,
@@ -1129,6 +1182,19 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             symbols, SymbolType::DIGEST(), "Digest",
             digestInstance.name, digestInstance.annotations, digest,
             p4Info);
+    }
+
+    void addDynHash(const P4RuntimeSymbolTableIface& symbols,
+                   p4configv1::P4Info* p4Info,
+                   const DynHash& dynHashInstance) {
+        ::barefoot::DynHash dynHash;
+        dynHash.mutable_type_spec()->CopyFrom(*dynHashInstance.typeSpec);
+        for (const auto& f : dynHashInstance.hashFieldNames) {
+            dynHash.add_field_names(f);
+        }
+        addP4InfoExternInstance(
+            symbols, SymbolType::HASH(), "DynHash", dynHashInstance.name,
+            dynHashInstance.annotations, dynHash, p4Info);
     }
 
     void addPortMetadata(const P4RuntimeSymbolTableIface& symbols,
@@ -1452,7 +1518,7 @@ void generateP4Runtime(const IR::P4Program* program,
 
     auto p4RuntimeSerializer = P4::P4RuntimeSerializer::get();
     // By design we can use the same architecture handler implementation for
-    // both TNA and JNA.
+    // both TNA and T2NA.
     p4RuntimeSerializer->registerArch("tna", new TofinoArchHandlerBuilder());
     p4RuntimeSerializer->registerArch("t2na", new TofinoArchHandlerBuilder());
 

@@ -604,6 +604,8 @@ struct IXBar {
         const LayoutOption *lo;
         bool allocation_passed = true;
         const IR::MAU::Table *tbl;
+        cstring field_list_name = "";
+        cstring field_list_calc_name = "";
 
         void initialize_hash_dist_unit(IXBar::HashDistUse &hd_use, const IR::Node *rel_node);
 

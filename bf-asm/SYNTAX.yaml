@@ -819,6 +819,9 @@ primitives: <filename>
     # within table actions. These are placed in the respective actions as
     # primitives node. This node is mainly used by model for logging
     # instructions as specified in original p4 program
+dynhash: <filename>
+    # Defines the name of the json file that has the dynamic hash calculation
+    # node. This node is directly merged into the context json at the top level
 # version 1.0.0
 version: <number>
     # semantic versioning number

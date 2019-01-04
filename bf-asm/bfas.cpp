@@ -17,7 +17,7 @@
 #define MAJOR_VERSION   1
 #define MINOR_VERSION   0
 
-const std::string SCHEMA_VERSION = "1.5.12";
+const std::string SCHEMA_VERSION = "1.6.0";
 
 option_t options = {
     .binary = PIPE0,
@@ -89,7 +89,6 @@ void output_all() {
     ctxtJson["compiler_version"] = BF_P4C_VERSION;
     ctxtJson["program_name"] = asmfile_name;
     ctxtJson["learn_quanta"] = json::vector();
-    ctxtJson["dynamic_hash_calculations"] = json::vector();
     ctxtJson["parser"] = json::map();
     ctxtJson["phv_allocation"] = json::vector();
     ctxtJson["tables"] = json::vector();

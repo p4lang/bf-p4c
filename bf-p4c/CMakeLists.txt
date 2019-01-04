@@ -206,6 +206,7 @@ set (BF_P4C_BACKEND_MAU_SRCS
   mau/asm_output.cpp
   mau/attached_output.cpp
   mau/characterize_power.cpp
+  mau/dynhash.cpp
   mau/field_use.cpp
   mau/db-gateway.cpp
   mau/gateway.cpp
@@ -245,6 +246,7 @@ set (BF_P4C_BACKEND_MAU_HDRS
   mau/asm_output.h
   mau/attached_output.h
   mau/characterize_power.h
+  mau/dynhash.h
   mau/default_next.h
   mau/field_use.h
   mau/gateway.h

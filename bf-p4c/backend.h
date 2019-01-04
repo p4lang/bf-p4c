@@ -38,6 +38,8 @@ class Backend : public PassManager {
     // Primitives Json Node, is populated before instruction adjustment and
     // passed to AsmOutput to output primitive json file
     Util::JsonObject primNode;
+    // Dynamic Hash Calculations Node, is populated at the end of backend passes
+    Util::JsonObject dynHashNode;
 
  public:
     explicit Backend(const BFN_Options& options, int pipe_id);
@@ -46,6 +48,7 @@ class Backend : public PassManager {
     const ClotInfo      &get_clot()   const { return clot; }
     const FieldDefUse   &get_defuse() const { return defuse; }
     const Util::JsonObject &get_prim_json() const { return primNode; }
+    const Util::JsonObject &get_dynhash_json() const { return dynHashNode; }
 };
 
 }  // namespace BFN

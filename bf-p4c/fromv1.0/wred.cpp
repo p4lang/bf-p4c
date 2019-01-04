@@ -1,4 +1,5 @@
 #include "wred.h"
+#include "bf-p4c/fromv1.0/programStructure.h"
 
 P4V1::WREDConverter::WREDConverter() {
     addConverter("wred", this);
@@ -80,12 +81,9 @@ const IR::Statement *P4V1::WREDConverter::convertExternCall(P4V1::ProgramStructu
     BUG_CHECK(et && et->name == "wred", "Extern %s is not wred type, but %s", ext, ext->type);
     ExpressionConverter conv(structure);
     const IR::Statement *rv = nullptr;
-    if (prim->name != "execute") {
-        BUG("Unknown method %s in wred", prim->name); }
+    auto args = new IR::Vector<IR::Argument>();
     BUG_CHECK(prim->operands.size() >= 2 && prim->operands.size() <= 3,
               "Expected 2 or 3 operands for %s", prim->name);
-    auto dest = conv.convert(prim->operands.at(1));
-    auto args = new IR::Vector<IR::Argument>();
     if (auto prop = ext->properties.get<IR::Property>("wred_input")) {
         if (auto ev = prop->value->to<IR::ExpressionValue>()) {
             args->push_back(new IR::Argument(conv.convert(ev->expression)));
@@ -94,12 +92,26 @@ const IR::Statement *P4V1::WREDConverter::convertExternCall(P4V1::ProgramStructu
             return nullptr; }
     } else {
         error("No wred_input in %s", ext); }
-    if (prim->operands.size() == 3)
-        args->push_back(new IR::Argument(conv.convert(prim->operands.at(2))));
+    IR::BlockStatement *block = nullptr;
+    if (prim->name == "execute_from_hash") {
+        cstring temp = structure->makeUniqueName("temp");
+        block = P4V1::generate_hash_block_statement(structure, prim, temp, conv, 3);
+        args->push_back(new IR::Argument(new IR::Cast(IR::Type_Bits::get(32),
+                        new IR::PathExpression(new IR::Path(temp)))));
+    } else if (prim->name == "execute") {
+        if (prim->operands.size() == 3)
+            args->push_back(new IR::Argument(conv.convert(prim->operands.at(2))));
+    } else {
+        BUG("Unknown method %s in wred", prim->name);
+    }
     auto extref = new IR::PathExpression(structure->externs.get(ext));
     auto method = new IR::Member(prim->srcInfo, extref, "execute");
     auto mc = new IR::MethodCallExpression(prim->srcInfo, IR::Type::Bits::get(8), method, args);
+    auto dest = conv.convert(prim->operands.at(1));
     rv = structure->assign(prim->srcInfo, dest, mc, dest->type);
+    if (block) {
+        block->push_back(rv);
+        rv = block; }
     return rv;
 }
 

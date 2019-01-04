@@ -106,6 +106,7 @@ set (BFAS_COMMON_SOURCES
   counter.cpp
   crash.cpp
   deparser.cpp
+  dynhash.cpp
   exact_match.cpp
   gateway.cpp
   hash_action.cpp

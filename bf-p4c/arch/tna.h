@@ -13,7 +13,8 @@ class BFN_Options;
 
 namespace BFN {
 
-const cstring ExternPortMetadataUnpackString = "port_metadata_unpack";
+const cstring ExternPortMetadataUnpackString    = "port_metadata_unpack";
+const cstring ExternDynamicHashString           = "hash";
 
 /**
  * Normalize a TNA program's control and package instantiations so that later

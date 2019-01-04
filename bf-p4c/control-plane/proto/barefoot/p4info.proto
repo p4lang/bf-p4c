@@ -130,9 +130,10 @@ message Digest {
   p4.config.v1.P4DataTypeSpec type_spec = 1;
 }
 
-message Hash {
+message DynHash {
   //TODO(msharif): Not sure if hash algorithm is needed?
   p4.config.v1.P4DataTypeSpec type_spec = 1;
+  repeated string field_names = 2;
 }
 
 // Any metadata associated with ingress port.

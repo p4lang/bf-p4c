@@ -3234,7 +3234,7 @@ void IXBar::XBarHashDist::hash_action(const IR::MAU::Table *tbl) {
     }
 
     auto hd = new IR::MAU::HashDist(tbl->srcInfo, IR::Type::Bits::get(bits_required),
-                      field_list, IR::MAU::HashFunction::identity());
+                      field_list, IR::MAU::HashFunction::identity(), nullptr, nullptr);
     for (auto ba : tbl->attached) {
         bool meter_color_req = false;
         if (!(ba->attached && ba->attached->direct))

@@ -245,4 +245,43 @@ CONVERT_PRIMITIVE(swap) {
 }
 
 
+// This function is identical to the one in frontend in all aspects except that
+// the field list used as argument after conversion is a modified class of
+// ListExpression. This class saves the field list calculation and field list
+// names which are then used in context json to generate PD
+CONVERT_PRIMITIVE(modify_field_with_hash_based_offset, 1) {
+    ExpressionConverter conv(structure);
+    if (primitive->operands.size() != 4) return nullptr;
+
+    auto dest = conv.convert(primitive->operands.at(0));
+    auto base = conv.convert(primitive->operands.at(1));
+    auto max = conv.convert(primitive->operands.at(3));
+    auto args = new IR::Vector<IR::Argument>();
+
+    auto flc = structure->getFieldListCalculation(primitive->operands.at(2));
+    if (flc == nullptr) {
+        ::error("%1%: Expected a field_list_calculation", primitive->operands.at(2));
+        return nullptr;
+    }
+    auto ttype = IR::Type_Bits::get(flc->output_width);
+    auto fl = structure->getFieldLists(flc);
+    if (fl == nullptr)
+        return nullptr;
+    const IR::ListExpression *listExp = conv.convert(fl)->to<IR::ListExpression>();
+    auto list = new IR::HashListExpression(flc->srcInfo, listExp->components, flc->name);
+    list->fieldListNames = flc->input;
+
+    auto algorithm = structure->convertHashAlgorithms(flc->algorithm);
+    args->push_back(new IR::Argument(dest));
+    args->push_back(new IR::Argument(algorithm));
+    args->push_back(new IR::Argument(new IR::Cast(ttype, base)));
+    args->push_back(new IR::Argument(list));
+    args->push_back(new IR::Argument(
+        new IR::Cast(max->srcInfo, IR::Type_Bits::get(2 * flc->output_width), max)));
+    auto hash = new IR::PathExpression(structure->v1model.hash.Id());
+    auto mc = new IR::MethodCallExpression(primitive->srcInfo, hash, args);
+    auto result = new IR::MethodCallStatement(primitive->srcInfo, mc);
+    return result;
+}
+
 }  // end namespace P4V1

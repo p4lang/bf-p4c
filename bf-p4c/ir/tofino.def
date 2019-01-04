@@ -332,3 +332,12 @@ class BFN::AliasSlice : IR::Slice {
     : IR::Slice(source->srcInfo, dest->type, dest->e0, dest->e1, dest->e2), source(source) { }
 #end
 }
+
+/// This class adds the convenience of specifying field list and field list
+//calculation names specified in a p4 program to a ListExpression which carries
+//the field list
+class HashListExpression : IR::ListExpression {
+    cstring             fieldListCalcName;
+    NullOK IR::NameList fieldListNames = nullptr;
+#nodbprint
+}

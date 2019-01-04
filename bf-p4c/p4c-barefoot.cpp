@@ -11,6 +11,7 @@
 #include "bf-p4c-options.h"
 #include "bf-p4c/common/parse_annotations.h"
 #include "bf-p4c/control-plane/tofino_p4runtime.h"
+#include "bf-p4c/mau/dynhash.h"
 #include "bf-p4c/visualization.h"
 #include "bf-p4c/logging/filelog.h"
 #include "common/extract_maupipe.h"
@@ -64,6 +65,7 @@ class OutputAsm : public PassManager {
     cstring pipeName;
 
     BFN::Visualization _visualization;
+    BFN::DynamicHashJson _dynhash;
     const Util::JsonObject &_primitives;
 
     void end_apply() override {
@@ -92,6 +94,13 @@ class OutputAsm : public PassManager {
             std::ofstream prim(primitivesFile);
             _primitives.serialize(prim);
             prim << std::endl << std::flush;
+            // Output dynamic hash json file
+            cstring dynHashFile = dir + "/" + _options.programName + ".dynhash.json";
+            LOG2("ASM generation for dynamic hash: " << dynHashFile);
+            ctxt_stream << "dynhash: \"" <<
+                dynHashFile << "\"" << std::endl << std::flush;
+            std::ofstream dynhash(dynHashFile);
+            dynhash << _dynhash << std::endl << std::flush;
         }
         if (_options.debugInfo) {  // generate resources info only if invoked with -g
             // Output resources json file
@@ -108,13 +117,13 @@ class OutputAsm : public PassManager {
 
  public:
     explicit OutputAsm(const BFN::Backend &b, const BFN_Options& o,
-                        cstring pipeName, const Util::JsonObject& p,
-                       bool success = true) :
+            cstring pipeName, const Util::JsonObject& p, bool success = true) :
         _options(o), _success(success), pipeName(pipeName), _primitives(p) {
         setStopOnError(false);
         addPasses({ new BFN::AsmOutput(b.get_phv(), b.get_clot(), b.get_defuse(), o,
                                        pipeName, success),
-                    &_visualization
+                    &_visualization,
+                    &_dynhash
                     });
         setName("Assembly output");
     }
@@ -144,7 +153,7 @@ void execute_backend(const IR::BFN::Pipe* maupipe, BFN_Options& options) {
         throw;
     }
 
-    // output the .bfa file
+    // output the .bfa, .prim.json & .dynhash.json files
     if (maupipe) {
         OutputAsm as(backend, options, maupipe->name, backend.get_prim_json());
         maupipe->apply(as); }

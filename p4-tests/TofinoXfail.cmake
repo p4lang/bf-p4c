@@ -956,12 +956,6 @@ p4c_add_xfail_reason("tofino"
   # extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   )
 
-# dynamic hash
-p4c_add_xfail_reason("tofino"
-  "Unknown method execute_from_hash in wred"
-  extensions/p4_tests/p4_14/p4-tests/programs/dyn_hash/dyn_hash.p4
-  )
-
 # shared register between ingress and egress is not supported
 p4c_add_xfail_reason("tofino"
   "error: Could not find declaration for r"

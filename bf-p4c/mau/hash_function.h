@@ -14,7 +14,7 @@ struct HashFunction {
     bool                extend = false;
     bool                reverse = false;  // crc reverse bits
     int                 size = 0;
-    uint64_t            poly = 0;         // crc polynoimal in koopman form (poly-1)/2
+    uint64_t            poly = 0;         // crc polynomial in koopman form (poly-1)/2
     uint64_t            init = 0;
     uint64_t            final_xor = 0;
     bool                ordered = false;
@@ -39,6 +39,7 @@ struct HashFunction {
             return true;
         return false;
     }
+
     std::string name() const {
         std::string algo_name = "";
         if (type == IDENTITY) {
@@ -51,6 +52,20 @@ struct HashFunction {
             algo_name = "xor";
         }
         return algo_name;
+    }
+
+    std::string algo_type() const {
+        std::string algo_type = "";
+        if (type == IDENTITY) {
+            algo_type = "identity";
+        } else if (type == CRC) {
+            algo_type = "crc";
+        } else if (type == RANDOM) {
+            algo_type = "random";
+        } else if (type == XOR) {
+            algo_type = "xor";
+        }
+        return algo_type;
     }
 
  private:

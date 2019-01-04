@@ -1,6 +1,7 @@
 #include "stateful_alu.h"
 #include "frontends/p4-14/typecheck.h"
 #include "lib/bitops.h"
+#include "bf-p4c/fromv1.0/programStructure.h"
 
 P4V1::StatefulAluConverter::StatefulAluConverter() {
     addConverter("stateful_alu", this);
@@ -578,16 +579,7 @@ const IR::Statement *P4V1::StatefulAluConverter::convertExternCall(
         auto ttype = IR::Type_Bits::get(flc->output_width);
         block = new IR::BlockStatement;
         cstring temp = structure->makeUniqueName("temp");
-        block->push_back(new IR::Declaration_Variable(temp, ttype));
-        args->push_back(new IR::Argument(new IR::PathExpression(new IR::Path(temp))));
-        args->push_back(new IR::Argument(structure->convertHashAlgorithms(flc->algorithm)));
-        args->push_back(new IR::Argument(new IR::Constant(ttype, 0)));
-        args->push_back(new IR::Argument(conv.convert(flc->input_fields)));
-        args->push_back(new IR::Argument(new IR::Constant(IR::Type_Bits::get(flc->output_width + 1),
-                                         1 << flc->output_width)));
-        block->push_back(new IR::MethodCallStatement(new IR::MethodCallExpression(
-                new IR::PathExpression(structure->v1model.hash.Id()), args)));
-        args = new IR::Vector<IR::Argument>();
+        block = P4V1::generate_hash_block_statement(structure, prim, temp, conv, 2);
         args->push_back(new IR::Argument(new IR::Cast(IR::Type_Bits::get(32),
                         new IR::PathExpression(new IR::Path(temp)))));
     } else if (prim->name == "execute_stateful_log") {

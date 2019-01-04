@@ -137,6 +137,7 @@ static bool direct_crc_string_conversion(bfn_hash_algorithm_ *hash_alg,
  *     init
  *     final_xor
  *     reverse
+ *     name
  */
 
 const IR::Expression *IR::MAU::HashFunction::convertHashAlgorithmBFN(Util::SourceInfo srcInfo,
@@ -346,6 +347,7 @@ bool IR::MAU::HashFunction::setup(const Expression *e) {
     cstring alg_name;
     if (auto meth = mce->method->to<IR::PathExpression>()) {
         alg_name = meth->path->name.name;
+        // name = mce->getAnnotations()->getSingle("name");
     } else {
         BUG("%s: Cannot properly set up the hash function", mce->srcInfo);
     }
@@ -411,6 +413,7 @@ bool IR::MAU::HashFunction::setup(const Expression *e) {
             // fall through
         }
     }
+
 
     return true;
 }
