@@ -1898,22 +1898,24 @@ BfRtSchemaGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
 
         if (table.idle_timeout_behavior() ==
             p4configv1::Table::NOTIFY_CONTROL) {
+            auto pollModeOnly = std::count(
+                pre.annotations().begin(), pre.annotations().end(),
+                "@idletime_precision(1)");
+
             operationsJson->append("UpdateHitState");
             attributesJson->append("IdleTimeout");
-            {
-                auto* f = makeCommonDataField(
-                    BF_RT_DATA_ENTRY_TTL, "$ENTRY_TTL",
-                    makeTypeInt("uint32", 0 /* default TTL -> ageing disabled */),
-                    false /* repeated */);
-                addSingleton(dataJson, f, false /* mandatory */, false /* read-only */);
-            }
-            {
-                auto* f = makeCommonDataField(
-                    BF_RT_DATA_ENTRY_HIT_STATE, "$ENTRY_HIT_STATE",
-                    makeTypeEnum({"ENTRY_IDLE", "ENTRY_ACTIVE"}),
-                    false /* repeated */);
-                addSingleton(dataJson, f, false /* mandatory */, true /* read-only */);
-            }
+
+            auto* fEntryTTL = makeCommonDataField(
+                BF_RT_DATA_ENTRY_TTL, "$ENTRY_TTL",
+                makeTypeInt("uint32", 0 /* default TTL -> ageing disabled */),
+                false /* repeated */);
+            auto* fEntryHitState = makeCommonDataField(
+                BF_RT_DATA_ENTRY_HIT_STATE, "$ENTRY_HIT_STATE",
+                makeTypeEnum({"ENTRY_IDLE", "ENTRY_ACTIVE"}),
+                false /* repeated */);
+            addSingleton(dataJson, fEntryHitState, false /* mandatory */, true /* read-only */);
+            if (!pollModeOnly)
+              addSingleton(dataJson, fEntryTTL, false /* mandatory */, false /* read-only */);
         }
 
         tableJson->emplace("data", dataJson);
