@@ -1,4 +1,4 @@
-FROM barefootnetworks/model:tofino_stage
+FROM barefootnetworks/model:tofino_master
 
 MAINTAINER bfn-docker <bfn-docker@barefootnetworks.com>
 ENV DEBIAN_FRONTEND noninteractive
@@ -76,7 +76,7 @@ WORKDIR /bfn/bf-p4c-compilers
 ENV LDFLAGS="-Wl,-s"
 RUN /usr/local/bin/ccache --zero-stats && \
     ./bootstrap_bfn_compilers.sh -DCMAKE_BUILD_TYPE=RELEASE \
-                                 -DINSTALL_LIBDYNHASH=ON \
+                                 -DINSTALL_LIBDYNHASH=OFF \
                                  -DENABLE_P4C_GRAPHS=OFF \
                                  -DENABLE_BMV2=OFF -DENABLE_P4TEST=OFF \
                                  -DENABLE_EBPF=OFF -DENABLE_STF2PTF=OFF \
