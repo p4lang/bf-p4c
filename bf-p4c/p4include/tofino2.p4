@@ -658,6 +658,16 @@ extern RegisterParam<T> {
     T read();
 }
 
+extern MathUnit<T> {
+    /// Configure a math unit for use in a register action
+    MathUnit(bool invert, int<2> shift, int<6> scale,
+             tuple< bit<8>, bit<8>, bit<8>, bit<8>,
+                    bit<8>, bit<8>, bit<8>, bit<8>,
+                    bit<8>, bit<8>, bit<8>, bit<8>,
+                    bit<8>, bit<8>, bit<8>, bit<8> > data);
+    T execute(in T x);
+};
+
 extern DirectRegisterAction<T, U> {
     DirectRegisterAction(DirectRegister<T> reg);
     abstract void apply(inout T value, @optional out U rv);

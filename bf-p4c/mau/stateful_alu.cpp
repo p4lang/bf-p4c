@@ -420,7 +420,7 @@ bool CreateSaluInstruction::preorder(const IR::Primitive *prim) {
     cstring method;
     if (auto p = prim->name.find('.'))
         method = p + 1;
-    if (prim->name == "math_unit.execute") {
+    if (prim->name == "math_unit.execute" || prim->name == "MathUnit.execute") {
         BUG_CHECK(prim->operands.size() == 2, "typechecking failure");
         visit(prim->operands.at(1), "math_input");
         operands.back() = new IR::MAU::SaluFunction(prim->srcInfo, operands.back(), "math_table");

@@ -67,6 +67,7 @@ void CheckExternInvocationCommon::init_common_pipe_constraints() {
     set_pipe_constraints("Register", valid_in_mau);
     set_pipe_constraints("DirectRegister", valid_in_mau);
     set_pipe_constraints("RegisterParam", valid_in_mau);
+    set_pipe_constraints("MathUnit", valid_in_mau);
     set_pipe_constraints("RegisterAction", valid_in_mau);
     set_pipe_constraints("DirectRegisterAction", valid_in_mau);
     set_pipe_constraints("ActionSelector", valid_in_mau);

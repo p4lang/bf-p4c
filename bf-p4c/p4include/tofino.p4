@@ -647,6 +647,16 @@ extern RegisterParam<T> {
     T read();
 }
 
+extern MathUnit<T> {
+    /// Configure a math unit for use in a register action
+    MathUnit(bool invert, int<2> shift, int<6> scale,
+             tuple< bit<8>, bit<8>, bit<8>, bit<8>,
+                    bit<8>, bit<8>, bit<8>, bit<8>,
+                    bit<8>, bit<8>, bit<8>, bit<8>,
+                    bit<8>, bit<8>, bit<8>, bit<8> > data);
+    T execute(in T x);
+};
+
 // This is implemented using an experimental feature in p4c and subject to
 // change. See https://github.com/p4lang/p4-spec/issues/561
 extern RegisterAction<T, I, U> {

@@ -428,9 +428,9 @@ template<class REGS> void StatefulTable::write_regs(REGS &regs) {
     if (math_table) {
         for (size_t i = 0; i < math_table.data.size(); ++i)
             salu.salu_mathtable[i/4U].set_subfield(math_table.data[i], 8*(i%4U), 8);
-        salu.salu_mathunit_ctl.salu_mathunit_output_scale = math_table.scale & 0x2fU;
+        salu.salu_mathunit_ctl.salu_mathunit_output_scale = math_table.scale & 0x3fU;
         salu.salu_mathunit_ctl.salu_mathunit_exponent_invert = math_table.invert;
-        salu.salu_mathunit_ctl.salu_mathunit_exponent_shift = math_table.shift & 0x2U; }
+        salu.salu_mathunit_ctl.salu_mathunit_exponent_shift = math_table.shift & 0x3U; }
 }
 
 void StatefulTable::gen_tbl_cfg(json::vector &out) const {

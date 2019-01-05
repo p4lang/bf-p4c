@@ -152,6 +152,7 @@ struct operand::MathFn : public Base {
             return of.op == a->of.op;
         } else return false; }
     const char *kind() const override { return "math fn"; }
+    void pass1(StatefulTable *tbl) override { of->pass1(tbl); }
 };
 
 operand::operand(Table *tbl, const Table::Actions::Action *act, const value_t &v_, bool can_mask)
@@ -381,10 +382,12 @@ Instruction *AluOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
     if (rv->srcb.to<operand::Memory>())
         error(rv->lineno, "Can't reference memory in %soperand of %s instruction",
               operands != A ? "first " : "", op[0].s);
-    if (rv->srcb.to<operand::MathFn>()) {
+    if (auto mf = rv->srcb.to<operand::MathFn>()) {
         rv->slot = ALU2LO;
         if (rv->dest != LO)
-            error(rv->lineno, "Can't reference math table in alu-hi"); }
+            error(rv->lineno, "Can't reference math table in alu-hi");
+        if (!mf->of.to<operand::Phv>() && !mf->of.to<operand::Memory>())
+            error(rv->lineno, "Math table input must come from Phv or memory"); }
     if (rv->srca.neg) {
         if (auto k = rv->srca.to<operand::Const>())
             k->value = -k->value;
