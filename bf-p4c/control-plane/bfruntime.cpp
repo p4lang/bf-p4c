@@ -1389,7 +1389,7 @@ BfRtSchemaGenerator::addPortMetadata(Util::JsonArray* tablesJson,
     } else {
         auto* f = makeCommonDataField(
             BF_RT_DATA_PORT_METADATA_DEFAULT_FIELD, "$DEFAULT_FIELD",
-            makeTypeInt("uint64", 0ull), false /* repeated */);
+            makeTypeBytes(Device::pardeSpec().bitPhase0Size()), false /* repeated */);
         addSingleton(dataJson, f, false /* mandatory */, false /* read-only */);
     }
     tableJson->emplace("data", dataJson);
