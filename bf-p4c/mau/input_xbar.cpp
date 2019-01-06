@@ -1251,6 +1251,16 @@ void IXBar::field_management(ContByteConversion &map_alloc,
         finfo = phv.field(field, &bits);
         BUG_CHECK(finfo, "unexpected field %s", field);
         bitvec field_bits(bits.lo, bits.hi - bits.lo + 1);
+        if (byte_type == PARTITION_INDEX) {
+            int bits_used = 0;
+        }
+        // Currently, due to driver, only one field is allowed to be the partition index
+        if (byte_type == PARTITION_INDEX) {
+            int diff = bits.size() - ki.partition_bits;
+            if (diff > 0)
+                bits.hi -= diff;
+        }
+
         if (fields_needed.count(finfo->name)) {
             auto &allocated_bits = fields_needed.at(finfo->name);
             if ((allocated_bits & field_bits).popcount() == field_bits.popcount())
@@ -1890,7 +1900,9 @@ bool IXBar::allocPartition(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &m
     }
 
     KeyInfo ki;
-    ki.is_atcam = true;  ki.partition = true;
+    ki.is_atcam = true;
+    ki.partition = true;
+    ki.partition_bits = tbl->layout.partition_bits;
     for (auto ixbar_read : tbl->match_key) {
         if (!ixbar_read->for_match())
             continue;

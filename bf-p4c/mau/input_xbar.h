@@ -635,6 +635,7 @@ struct IXBar {
         bool hash_dist = false;
         bool is_atcam = false;
         bool partition = false;
+        int partition_bits = 0;
         int range_index = 0;
         KeyInfo() { }
     };
