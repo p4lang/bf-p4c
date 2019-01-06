@@ -12,7 +12,7 @@ control ingress(inout headers hdr, inout metadata meta,
                 in ghost_intrinsic_metadata_t gmd) {
 
     action trigger() {
-	ig_intr_dprsr_md.pktgen_trigger = 1w1;
+	ig_intr_dprsr_md.pktgen = true;
 	ig_intr_dprsr_md.pktgen_length = 10w512;
 	ig_intr_dprsr_md.pktgen_address = 14w400;
     }

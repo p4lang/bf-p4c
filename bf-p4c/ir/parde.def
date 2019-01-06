@@ -369,16 +369,15 @@ class DigestFieldList {
     /// The fields to be copied into the buffer.
     inline Vector<FieldLVal> sources;
 
-    /// The control plane name for this field list, if any. Only learning is
-    /// exposed to the control plane; other kinds of digest field lists don't
-    /// need a name.
-    cstring controlPlaneName;
+    /// Learning needs control plane name for the field list.
+    optional cstring controlPlaneName;
 }
 
 /// A deparser digest. Each digest writes one of several lists of fields into a
 /// special hardware buffer, with the list to be used chosen by the value of a
 /// selector field.
 class Digest {
+    Digest(cstring name) : name(name) { }
     Digest(cstring name, FieldLVal selector) : name(name), selector(selector) { }
     Digest(cstring name, Expression selector)
         : name(name), selector(new FieldLVal(selector)) { }
@@ -390,8 +389,9 @@ class Digest {
     cstring name;
 
     /// The field which controls which field list will be written into the
-    /// buffer.
-    FieldLVal selector;
+    /// buffer. Selector is nullptr when only one field list is supported.
+    /// For example, tofino2 pktgen only supports one field list.
+    optional NullOK FieldLVal selector;
 
     /// The available field lists
     inline Vector<DigestFieldList> fieldLists;

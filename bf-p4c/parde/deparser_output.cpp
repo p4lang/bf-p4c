@@ -230,12 +230,14 @@ struct OutputDigests : public Inspector {
         out << indent << digest->name << ":" << std::endl;
         AutoIndent digestIndent(indent);
 
-        out << indent << "select: ";
-        if (digest->povBit) out << "{ ";
-        out << digest->selector;
-        if (digest->povBit) out << ": " << digest->povBit << " }";
+        if (digest->selector) {
+            out << indent << "select: ";
+            if (digest->povBit) out << "{ ";
+            out << digest->selector;
+            if (digest->povBit) out << ": " << digest->povBit << " }";
 
-        outputDebugInfo(out, indent, digest->selector) << std::endl;
+            outputDebugInfo(out, indent, digest->selector) << std::endl;
+        }
 
         for (auto* entry : digest->entries) {
             out << indent << entry->idx << ":";

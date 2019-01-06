@@ -166,7 +166,7 @@ JBAY_ARRAY_DIGEST(EGRESS, mirror, regs.dprsrreg.ho_e, hem.mirr_hdr_tbl.entry,
                   regs.dprsrreg.inp.ipp.egr.m_mirr_sel, YES, 16, NO, YES)
 JBAY_SIMPLE_DIGEST(INGRESS, resubmit, regs.dprsrreg.inp.ipp.ingr.resub_tbl,
                    regs.dprsrreg.inp.ipp.ingr.m_resub_sel, NO, 8, NO, YES)
-JBAY_SIMPLE_DIGEST(INGRESS, pgen, regs.dprsrreg.inp.ipp.ingr.pgen_tbl,
+JBAY_SIMPLE_DIGEST(INGRESS, pktgen, regs.dprsrreg.inp.ipp.ingr.pgen_tbl,
                    regs.dprsrreg.inp.ipp.ingr.m_pgen, NO, 1, NO, NO)
 
 // all the jbay deparser subtrees with a dis or disable_ bit

@@ -218,7 +218,7 @@ struct ingress_intrinsic_metadata_for_deparser_t {
     bit<1> mtu_trunc_err_f;		// MTU truncation error flag
 
     bit<3> learn_sel;                   // Learn quantum table selector
-    bit<1> pktgen_trigger;              // trigger packet generation
+    bool pktgen;                        // trigger packet generation
                                         // This is ONLY valid if resubmit_type
                                         // is not valid.
     bit<14> pktgen_address;             // Packet generator buffer address.

@@ -136,7 +136,7 @@ void AddDeparserMetadataShims::addIngressMetadata(IR::BFN::Deparser *d) {
         addDeparserParam(d, dpMeta, "adv_flow_ctl", "afc", true);
         addDeparserParam(d, dpMeta, "mtu_trunc_len", "mtu_trunc_len", true);
         addDeparserParam(d, dpMeta, "mtu_trunc_err_f", "mtu_trunc_err_f", true);
-        addDeparserParam(d, dpMeta, "pktgen_trigger", "pgen", true);
+        addDeparserParam(d, dpMeta, "pktgen", "pgen", true);
         addDeparserParam(d, dpMeta, "pktgen_length", "pgen_len", true);
         addDeparserParam(d, dpMeta, "pktgen_address", "pgen_addr", true);
         addDeparserParam(d, dpMeta, "learn_sel", "learn_sel", true);

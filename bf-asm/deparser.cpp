@@ -221,7 +221,7 @@ Deparser::Digest::Digest(Deparser::Digest::Type *t, int l, VECTOR(pair_t) &data)
             layout.emplace(l.key.i, std::vector<Phv::Ref>());
             for (auto &v : l.value.vec)
                 layout[l.key.i].emplace_back(t->gress, DEPARSER_STAGE, v); } }
-    if (!select)
+    if (!select && t->name != "pktgen")
         error(lineno, "No select key in %s spec", t->name.c_str());
 }
 

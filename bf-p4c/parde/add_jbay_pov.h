@@ -35,6 +35,8 @@ class AddJBayMetadataPOV : public Transform {
         return param; }
     IR::BFN::Digest *
     postorder(IR::BFN::Digest *digest) override {
+        if (!digest->selector)
+            return digest;
         digest->povBit =
           new IR::BFN::FieldLVal(new IR::TempVar(IR::Type::Bits::get(1), true,
                                                  digest->selector->field->toString() + ".$valid"));

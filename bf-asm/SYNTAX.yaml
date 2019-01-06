@@ -763,7 +763,7 @@ deparser <thread>:
         select: <phv-location> [ ':' <pov-bit> ]
             # controls which digest group is output
         shift: <constant>
-            <int>: <phv-location> | '[' <phv-location>, ... ']'
+        <int>: <phv-location> | '[' <phv-location>, ... ']'
                 # values for a single digest group; specifies the sequence of
                 # phv containers in the appropriate table entry. this is usually
                 # data that is included in the digest, but it may also contain

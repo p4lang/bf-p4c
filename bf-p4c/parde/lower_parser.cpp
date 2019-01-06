@@ -1341,13 +1341,17 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
         // Lower digests from fields to containers.
         for (auto& item : deparser->digests) {
             auto* digest = item.second;
-            auto* loweredSelector =
-                lowerUnsplittableField(phv, clotInfo, digest->selector, "digest selector");
-            auto* lowered =
-              new IR::BFN::LoweredDigest(digest->name, loweredSelector);
 
-              if (digest->povBit)
-                  lowered->povBit = lowerPovBit(phv, digest->povBit);
+            auto* lowered =
+              new IR::BFN::LoweredDigest(digest->name);
+
+            if (digest->selector) {
+                auto *loweredSelector =
+                        lowerUnsplittableField(phv, clotInfo, digest->selector, "digest selector");
+                lowered->selector = loweredSelector; }
+
+            if (digest->povBit)
+                lowered->povBit = lowerPovBit(phv, digest->povBit);
 
             // Each field list, when lowered, becomes a digest table entry.
             // Learning field lists are used to generate the format for learn

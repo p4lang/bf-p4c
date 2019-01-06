@@ -429,7 +429,7 @@ class LoweredDigest {
     cstring name;
 
     /// The container which selects a digest table entry.
-    BFN::ContainerRef selector;
+    optional NullOK BFN::ContainerRef selector;
 
     /// The available table entries; the index of each entry in the vector
     /// corresponds to the selector value which chooses it.

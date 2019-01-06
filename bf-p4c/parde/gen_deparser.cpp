@@ -79,6 +79,9 @@ class GenerateDeparser : public Inspector {
                 auto expr = (num_args == 0) ? new IR::ListExpression({})
                                             : mc->arguments->at(0)->expression;
                 generateDigest(digests["resubmit"], "resubmit", expr);
+            } else if (type->name == "Pktgen") {
+                auto expr = mc->arguments->at(0)->expression;
+                generateDigest(digests["pktgen"], "pktgen", expr);
             } else {
                 error("Unsupported method call %s in deparser", mc);
             }
@@ -152,7 +155,8 @@ class GenerateDeparser : public Inspector {
 // FIXME -- factor this with Digests::add_to_digest in digest.h?
 void GenerateDeparser::generateDigest(IR::BFN::Digest *&digest, cstring name,
                                       const IR::Expression *expr, cstring controlPlaneName) {
-    const IR::Constant *k = nullptr;
+    int digest_index = 0;
+    const IR::Literal *k = nullptr;
     const IR::Expression *select;
     if (!pred) {
         error("%s:Unconditional %s.emit not supported", expr->srcInfo, name);
@@ -162,28 +166,34 @@ void GenerateDeparser::generateDigest(IR::BFN::Digest *&digest, cstring name,
             select = eq->right;
         else if ((k = eq->right->to<IR::Constant>()))
             select = eq->left;
+        else if ((k = eq->left->to<IR::BoolLiteral>()))
+            select = eq->right;
+        else if ((k = eq->right->to<IR::BoolLiteral>()))
+            select = eq->left;
     } else if (auto bo = pred->to<IR::Member>()) {
         // 'if (boolean)' is the same as 'if (boolean == 1)'
         if (bo->type->to<IR::Type_Boolean>()) {
-            k = new IR::Constant(1);
+            k = new IR::BoolLiteral(true);
+            digest_index = 0;
             select = pred;
         }
     }
     if (!k) {
         error("%s.emit condition %s not supported", name, pred);
         return;
-    }
+    } else if (k->is<IR::Constant>()) {
+            digest_index = k->to<IR::Constant>()->asInt(); }
 
     if (!digest) {
         digest = new IR::BFN::Digest(name, select);
         dprsr->digests.addUnique(name, digest);
-    } else if (!equiv(select, digest->selector->field)) {
+    } else if (!select->equiv(*digest->selector->field)) {
         error("Inconsistent %s selectors, %s and %s", name, select,
               digest->selector->field);
     }
 
     for (auto fieldList : digest->fieldLists) {
-        if (fieldList->idx == k->asInt()) {
+        if (fieldList->idx == digest_index) {
             return;
         }
     }
@@ -210,24 +220,8 @@ void GenerateDeparser::generateDigest(IR::BFN::Digest *&digest, cstring name,
         sources.push_back(new IR::BFN::FieldLVal(expr));
     }
 
-    auto* fieldList = new IR::BFN::DigestFieldList(k->asInt(), sources, controlPlaneName);
+    auto* fieldList = new IR::BFN::DigestFieldList(digest_index, sources, controlPlaneName);
     digest->fieldLists.push_back(fieldList);
-}
-
-// FIXME -- yet another 'deep' comparison for expressions
-bool GenerateDeparser::equiv(const IR::Expression *a, const IR::Expression *b) const {
-    if (a == b) return true;
-    if (typeid(*a) != typeid(*b)) return false;
-    if (auto ma = a->to<IR::Member>()) {
-        auto mb = b->to<IR::Member>();
-        return ma->member == mb->member && equiv(ma->expr, mb->expr); }
-    if (auto pa = a->to<IR::PathExpression>()) {
-        auto pb = b->to<IR::PathExpression>();
-        return pa->path->name == pb->path->name; }
-    if (auto ka = a->to<IR::Constant>()) {
-        auto kb = b->to<IR::Constant>();
-        return ka->value == kb->value; }
-    return false;
 }
 
 }  // namespace
