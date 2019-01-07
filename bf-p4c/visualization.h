@@ -102,8 +102,12 @@ class Visualization : public Inspector {
         void append(JsonResource *jr);
 
         void dbprint(std::ostream &out) const {
-            for (auto kv : json_vectors)
-                out << " " << toString(kv.first) << ": " << kv.second;
+            for (auto kv : json_vectors) {
+                out << " " << toString(kv.first) << ": ";
+               for (auto s : kv.second) {
+                    out << s << " ";
+               }
+           }
         }
 
         JsonResource() {}
