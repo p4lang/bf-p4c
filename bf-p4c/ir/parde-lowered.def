@@ -4,7 +4,6 @@
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/ir/ir_enums.h"
 #include "bf-p4c/parde/clot.h"
-#include "bf-p4c/parde/epb_config.h"
 #include "bf-p4c/parde/match_register.h"
 #include "bf-p4c/phv/phv.h"
 
@@ -319,18 +318,14 @@ class LoweredParser : AbstractParser {
     /// The set of PHV containers that are zero initialized 
     inline Vector<BFN::ContainerRef> initZeroContainers;
 
-    /// The amount of data, in bytes, which this parser program expects to be
-    /// prepended to the packet by the hardware or by compiler-generated code,
-    /// but which is not part of the packet itself.
-    unsigned prePacketDataLengthBytes = 0;
+    /// Num of bytes of metadata prepended to user packet
+    unsigned hdrLenAdj = 0;
 
     optional NullOK Phase0 phase0; // only valid for ingress
 #emit
-    /// If present, an EPB configuration for this parser. (This is an
-    /// egress-specific feature, so we expect this to never be present on
-    /// ingress.) The interpretation of the configuration is device-specific; use
-    /// the utility methods on PardeSpec to interact with it.
-    boost::optional<EgressParserBufferConfig> epbConfig;
+    /// bitmask for selection of optional metadata metadata (egress only)
+    /// refer to CSR for what metadata field each bit means
+    boost::optional<unsigned> metaOpt;
 #end
 }
 

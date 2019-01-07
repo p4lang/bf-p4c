@@ -1,5 +1,5 @@
-#ifndef TOFINO_TEST_GTEST_TOFINO_GTEST_UTILS_H_
-#define TOFINO_TEST_GTEST_TOFINO_GTEST_UTILS_H_
+#ifndef EXTENSIONS_BF_P4C_TEST_GTEST_TOFINO_GTEST_UTILS_H_
+#define EXTENSIONS_BF_P4C_TEST_GTEST_TOFINO_GTEST_UTILS_H_
 
 #include <boost/optional.hpp>
 #include <string>
@@ -51,7 +51,7 @@ struct TofinoPipeTestCase {
 class TofinoBackendTest : public ::testing::Test {
  public:
     TofinoBackendTest() : autoBFNContext(new BFNContext()) {
-        Device::reinitialize("Tofino"); }
+        Device::init("Tofino"); }
 
  private:
     AutoCompileContext autoBFNContext;
@@ -61,7 +61,7 @@ class TofinoBackendTest : public ::testing::Test {
 class JBayBackendTest : public ::testing::Test {
  public:
     JBayBackendTest() : autoBFNContext(new BFNContext()) {
-        Device::reinitialize("Tofino2"); }
+        Device::init("Tofino2"); }
 
  private:
     AutoCompileContext autoBFNContext;
@@ -69,4 +69,4 @@ class JBayBackendTest : public ::testing::Test {
 
 }  // namespace Test
 
-#endif /* TOFINO_TEST_GTEST_TOFINO_GTEST_UTILS_H_ */
+#endif /* EXTENSIONS_BF_P4C_TEST_GTEST_TOFINO_GTEST_UTILS_H_ */

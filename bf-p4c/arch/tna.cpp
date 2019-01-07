@@ -9,6 +9,7 @@
 #include "bf-p4c/arch/check_extern_invocation.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/lib/pad_alignment.h"
+#include "bf-p4c/parde/field_packing.h"
 
 namespace BFN {
 

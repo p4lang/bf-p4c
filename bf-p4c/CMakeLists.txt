@@ -293,7 +293,6 @@ set (BF_P4C_BACKEND_PARDE_SRCS
   parde/inline_subparser.cpp
   parde/merge_parser_state.cpp
   parde/mirror.cpp
-  parde/parde_spec.cpp
   parde/parser_output.cpp
   parde/phase0.cpp
   parde/resolve_computed.cpp
@@ -314,7 +313,6 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/checksum.h
   parde/clot_info.h
   parde/decaf.h
-  parde/epb_config.h
   parde/egress_packet_length.h
   parde/extract_parser.h
   parde/field_packing.h

@@ -4,6 +4,7 @@
 #include <utility>
 #include <vector>
 
+#include "ir/ir.h"
 #include "lib/cstring.h"
 #include "lib/hex.h"
 

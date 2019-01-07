@@ -5,7 +5,6 @@
 #include "bf-p4c/parde/field_packing.h"
 #include "frontends/p4/coreLibrary.h"
 #include "frontends/p4/fromv1.0/v1model.h"
-#include "ir/ir.h"
 #include "lib/cstring.h"
 #include "lib/indent.h"
 

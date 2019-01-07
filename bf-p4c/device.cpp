@@ -4,7 +4,7 @@
 Device* Device::instance_ = nullptr;
 
 void Device::init(cstring name) {
-    if (instance_ != nullptr) return;
+    instance_ = nullptr;
 
     std::string lower_name(name);
     std::transform(lower_name.begin(), lower_name.end(), lower_name.begin(), ::tolower);
@@ -17,9 +17,4 @@ void Device::init(cstring name) {
 #endif /* HAVE_JBAY */
     else
         BUG("Unknown device %s", name);
-}
-
-void Device::reinitialize(cstring name) {
-    instance_ = nullptr;
-    init(name);
 }

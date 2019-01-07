@@ -843,22 +843,6 @@ IR::BFN::ParserState* GetBackendParser::getState(cstring name) {
                   "adding padding.", state->p4State->controlPlaneName());
     auto shift = bitsAdvanced.nextByte();
 
-#if HAVE_JBAY
-    /* This is a hack - JBay's EPB buffer is tapped off at 4 byte intervals rather
-     * than like every byte in Tofino. This means the buffer size to extract egress
-     * metadata must be a muliple of 4 rounded up. The right way to do this is to
-     * get a Jbay_instrinsic_metadata.p4 file with the right paddings so that the
-     * compiler is agnosic about these restrictions. For now, this change along
-     * with JBayPardeSpec::byteEgressMetadataSize are together working around this
-     * issue. The other fix is to remove Tofino specific metadata size hardcoded
-     * in parde_spec.cpp since that completely negates the aspect of including these
-     * files
-     */
-    if ((Device::currentDevice() == Device::JBAY) && (name == "$egress_metadata")) {
-        shift = ((shift+3)/4)*4;
-    }
-#endif
-
     LOG2("GetParser::state(" << name << ")");
 
     // case 1: no select

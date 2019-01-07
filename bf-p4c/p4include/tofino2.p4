@@ -301,7 +301,8 @@ header egress_intrinsic_metadata_t {
 
     bit<16> pkt_length;                 // Packet length, in bytes
 
-    bit<8> _pad9;
+    bit<8> _pad9;                       // Pad to 4-byte alignment for egress
+                                        // intrinsic metadata (HW constraint)
 }
 
 

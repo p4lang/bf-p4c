@@ -19,6 +19,7 @@
 #include "bf-p4c/parde/allocate_parser_checksum.h"
 #include "bf-p4c/parde/characterize_parser.h"
 #include "bf-p4c/parde/clot_info.h"
+#include "bf-p4c/parde/field_packing.h"
 #include "bf-p4c/parde/parde_visitor.h"
 #include "bf-p4c/parde/parde_utils.h"
 #include "bf-p4c/phv/phv_fields.h"
@@ -312,7 +313,7 @@ struct ExtractSimplifier {
             BUG_CHECK(bufferSource, "Unexpected non-buffer source");
 
             if (std::is_same<InputBufferRValType, IR::BFN::LoweredMetadataRVal>::value)
-                BUG_CHECK(toHalfOpenRange(Device::pardeSpec().byteMappedInputBufferRange())
+                BUG_CHECK(toHalfOpenRange(Device::pardeSpec().byteInputBufferMetadataRange())
                             .contains(bufferSource->byteInterval()),
                           "Buffer mapped I/O range is outside of the mapped input "
                           "buffer range: %1%", bufferSource->byteInterval());
@@ -801,20 +802,11 @@ struct ReplaceParserIR : public Transform {
           new IR::BFN::LoweredParser(parser->gress, computed.loweredStates.at(parser->start),
                                      parser->phase0);
 
-        // Record the amount of metadata which is prepended to the packet; this
-        // is used to compensate so that e.g. counters record only bytes which
-        // are part of the "real" packet. On egress, it may vary according to
-        // the EPB configuration, which is determined by which fields are used
-        // in the program.
-        // XXX(seth): We just use a default EPB configuration for now.
         if (parser->gress == INGRESS) {
-            loweredParser->prePacketDataLengthBytes =
-              Device::pardeSpec().byteTotalIngressMetadataSize();
+            loweredParser->hdrLenAdj = Device::pardeSpec().byteTotalIngressMetadataSize();
         } else {
-            const auto epbConfig = Device::pardeSpec().defaultEPBConfig();
-            loweredParser->epbConfig = epbConfig;
-            loweredParser->prePacketDataLengthBytes =
-              Device::pardeSpec().byteEgressMetadataSize(epbConfig);
+            loweredParser->metaOpt = Device::pardeSpec().egressPacketBufferConfig();
+            loweredParser->hdrLenAdj = Device::pardeSpec().byteEgressIntrinsicMetadataSize();
         }
 
         if (parser->gress == INGRESS && computed.igParserError)
@@ -913,7 +905,6 @@ computeControlPlaneFormat(const PhvInfo& phv,
 
     boost::optional<LastContainerInfo> last;
     auto* packing = new BFN::FieldPacking;
-
 
     // Walk over the field sequence in network order and construct a
     // FieldPacking that reflects its structure, with padding added where

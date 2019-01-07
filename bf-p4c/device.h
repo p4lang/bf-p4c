@@ -5,7 +5,7 @@
 #include "lib/exceptions.h"
 #include "phv/phv_spec.h"
 #include "parde/parde_spec.h"
-
+#include "ir/gress.h"
 
 class Device {
  public:
@@ -14,24 +14,10 @@ class Device {
      * Initialize the global device context for the provided target - e.g.
      * "Tofino" or "JBay".
      *
-     * No-op if the global device context was already initialized.
-     *
      * This should be called as early as possible at startup, since the Device
      * singleton is available everywhere in the compiler.
      */
     static void init(cstring name);
-
-    /**
-     * Initialize the global device context for the provided target - e.g.
-     * "Tofino" or "JBay".
-     *
-     * If the global device context was already initialized, it is replaced.
-     * This will invalidate many data structures throughout the compiler; it's
-     * the responsibility of the caller to choose a safe point to do this.
-     * This is intended for use with unit tests.
-     */
-    static void reinitialize(cstring name);
-
 
     static const Device& get() {
        BUG_CHECK(instance_ != nullptr, "Target device not initialized!");
