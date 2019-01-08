@@ -792,8 +792,8 @@ deparser <thread>:
     learning: <digest-params> [ ':' <pov-bit> ]
     resubmit: <digest-params> [ ':' <pov-bit> ]
     copy_to_cpu: <phv-location> [ ':' <pov-bit> ]
-    egress_multicast_group: <phv-location> | '[' <phv-location>, <phv-location ']'
-    hash_lag_ecmp_mcast: <phv-location> | '[' <phv-location>, <phv-location ']'
+    egress_multicast_group_<int>: <phv-location> [ ':' <pov-bit> ]
+    hash_lag_ecmp_mcast_<int>: <phv-location> [ ':' <pov-bit> ]
     copy_to_cpu_cos: <phv-location> [ ':' <pov-bit> ]
     ingress_port_source: <phv-location> [ ':' <pov-bit> ]
     deflect_on_drop: <phv-location> [ ':' <pov-bit> ]

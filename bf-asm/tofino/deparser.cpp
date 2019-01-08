@@ -10,25 +10,26 @@
         if (intrin.vals[0].pov)                                                         \
             error(intrin.vals[0].pov.lineno, "No POV support in tofino "#NAME);         \
         PFX.NAME.valid = 1; }
+#define SIMPLE_INTRINSIC_RENAME(GR, PFX, NAME, REGNAME, IF_SHIFT)                       \
+    DEPARSER_INTRINSIC(Tofino, GR, NAME, 1) {                                           \
+        PFX.REGNAME.phv = intrin.vals[0].val->reg.deparser_id();                        \
+        IF_SHIFT( PFX.REGNAME.shft = intrin.vals[0].val->lo; )                          \
+        PFX.REGNAME.valid = 1; }
 #define IIR_MAIN_INTRINSIC(NAME, SHFT) SIMPLE_INTRINSIC(INGRESS, regs.input.iir.main_i, NAME, SHFT)
 #define IIR_INTRINSIC(NAME, SHFT)      SIMPLE_INTRINSIC(INGRESS, regs.input.iir.ingr, NAME, SHFT)
 #define HIR_INTRINSIC(NAME, SHFT)      SIMPLE_INTRINSIC(INGRESS, regs.header.hir.ingr, NAME, SHFT)
+#define HIR_INTRINSIC_RENAME(NAME, REGNAME, SHFT)                                       \
+    SIMPLE_INTRINSIC_RENAME(INGRESS, regs.header.hir.ingr, NAME, REGNAME, SHFT)
 #define IER_MAIN_INTRINSIC(NAME, SHFT) SIMPLE_INTRINSIC(EGRESS, regs.input.ier.main_e, NAME, SHFT)
 #define HER_INTRINSIC(NAME, SHFT)      SIMPLE_INTRINSIC(EGRESS, regs.header.her.egr, NAME, SHFT)
 
 IIR_MAIN_INTRINSIC(egress_unicast_port, NO)
 IIR_MAIN_INTRINSIC(drop_ctl, YES)
 IIR_INTRINSIC(copy_to_cpu, YES)
-DEPARSER_INTRINSIC(Tofino, INGRESS, egress_multicast_group, 2) {
-    int i = 0;
-    for (auto &el : intrin.vals) {
-        regs.header.hir.ingr.egress_multicast_group[i].phv = el.val->reg.deparser_id();
-        regs.header.hir.ingr.egress_multicast_group[i++].valid = 1; } }
-DEPARSER_INTRINSIC(Tofino, INGRESS, hash_lag_ecmp_mcast, 2) {
-    int i = 0;
-    for (auto &el : intrin.vals) {
-        regs.header.hir.ingr.hash_lag_ecmp_mcast[i].phv = el.val->reg.deparser_id();
-        regs.header.hir.ingr.hash_lag_ecmp_mcast[i++].valid = 1; } }
+HIR_INTRINSIC_RENAME(egress_multicast_group_0, egress_multicast_group[0], NO)
+HIR_INTRINSIC_RENAME(egress_multicast_group_1, egress_multicast_group[1], NO)
+HIR_INTRINSIC_RENAME(hash_lag_ecmp_mcast_0, hash_lag_ecmp_mcast[0], NO)
+HIR_INTRINSIC_RENAME(hash_lag_ecmp_mcast_1, hash_lag_ecmp_mcast[1], NO)
 HIR_INTRINSIC(copy_to_cpu_cos, YES)
 DEPARSER_INTRINSIC(Tofino, INGRESS, ingress_port_source, 1) {
     regs.header.hir.ingr.ingress_port.phv = intrin.vals[0].val->reg.deparser_id();

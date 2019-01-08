@@ -165,7 +165,7 @@ struct OutputChecksums : public Inspector {
 
 /// Generate assembly which configures the intrinsic deparser parameters.
 struct OutputParameters : public Inspector {
-    using ParamGroup = std::vector<const IR::BFN::LoweredDeparserParameter*>;
+    using ParamGroup = std::map<const int, const IR::BFN::LoweredDeparserParameter*>;
 
     explicit OutputParameters(std::ostream& out) : out(out), indent(1) { }
 
@@ -173,14 +173,18 @@ struct OutputParameters : public Inspector {
         // There are a few deparser parameters that need to be grouped in the
         // generated assembly; we save these off to the side and deal with them
         // at the end.
-        if (param->name == "mcast_grp_a" || param->name == "mcast_grp_b") {
-            egMulticastGroup.push_back(param);
-            return false;
-        }
-        if (param->name == "level1_mcast_hash" || param->name == "level2_mcast_hash") {
-            hashLagECMP.push_back(param);
-            return false;
-        }
+        if (param->name == "mcast_grp_a") {
+            egMulticastGroup.emplace(0, param);
+            return false; }
+        if (param->name == "mcast_grp_b") {
+            egMulticastGroup.emplace(1, param);
+            return false; }
+        if (param->name == "level1_mcast_hash") {
+            hashLagECMP.emplace(0, param);
+            return false; }
+        if (param->name == "level2_mcast_hash") {
+            hashLagECMP.emplace(1, param);
+            return false; }
         out << indent << param->name << ": ";
         outputParamSource(param);
         outputDebugInfo(out, indent, param->source, param->povBit) << std::endl;
@@ -203,13 +207,12 @@ struct OutputParameters : public Inspector {
     void outputParamGroup(const char* groupName, const ParamGroup& group) {
         if (group.empty()) return;
 
-        out << indent << groupName << ":" << std::endl;
-
-        AutoIndent paramGroupIndex(indent);
-        for (auto* param : group) {
+        for (auto &param : group) {
+            out << indent << groupName << "_" << param.first << ":" << std::endl;
+            AutoIndent paramGroupIndex(indent);
             out << indent << "- ";
-            outputParamSource(param);
-            outputDebugInfo(out, indent, param->source, param->povBit);
+            outputParamSource(param.second);
+            outputDebugInfo(out, indent, param.second->source, param.second->povBit);
             out << std::endl;
         }
     }
@@ -219,7 +222,6 @@ struct OutputParameters : public Inspector {
 
     ParamGroup egMulticastGroup;
     ParamGroup hashLagECMP;
-    ParamGroup exclusionId;
 };
 
 /// Generate the assembly for digests.

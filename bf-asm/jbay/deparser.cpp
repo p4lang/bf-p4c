@@ -30,6 +30,10 @@
     DEPARSER_INTRINSIC(JBay, INGRESS, NAME, 1) {                                                \
         JBAY_SIMPLE_INTRINSIC(INGRESS, intrin.vals[0], regs.dprsrreg.inp.ipp.ingr.m_##NAME,     \
                               IFSHIFT) }
+#define II_INTRINSIC_RENAME(NAME, REGNAME, IFSHIFT)                                             \
+    DEPARSER_INTRINSIC(JBay, INGRESS, NAME, 1) {                                                \
+        JBAY_SIMPLE_INTRINSIC(INGRESS, intrin.vals[0], regs.dprsrreg.inp.ipp.ingr.m_##REGNAME,  \
+                              IFSHIFT) }
 #define HO_I_INTRINSIC(NAME, IFSHIFT)                                                           \
     DEPARSER_INTRINSIC(JBay, INGRESS, NAME, 1) {                                                \
         JBAY_ARRAY_INTRINSIC(INGRESS, intrin.vals[0], regs.dprsrreg.ho_i, hir.meta.m_##NAME,    \
@@ -60,6 +64,8 @@ HO_E_INTRINSIC(mtu_trunc_len, YES)
 II_INTRINSIC(copy_to_cpu, YES)
 II_INTRINSIC(drop_ctl, YES)
 II_INTRINSIC(egress_unicast_port, NO)
+II_INTRINSIC_RENAME(egress_multicast_group_0, mgid1, NO)
+II_INTRINSIC_RENAME(egress_multicast_group_1, mgid2, NO)
 II_INTRINSIC(learn_sel, YES)
 II_INTRINSIC(pgen, YES)
 II_INTRINSIC(pgen_len, YES)
@@ -87,31 +93,10 @@ HO_I_INTRINSIC(rid, YES)
 HO_I_INTRINSIC_RENAME(meter_color, pkt_color, YES)
 HO_I_INTRINSIC_RENAME(xid, xid_l1, YES)
 HO_I_INTRINSIC_RENAME(yid, xid_l2, YES)
+HO_I_INTRINSIC_RENAME(hash_lag_ecmp_mcast_0, hash1, YES)
+HO_I_INTRINSIC_RENAME(hash_lag_ecmp_mcast_1, hash2, YES)
 
-DEPARSER_INTRINSIC(JBay, INGRESS, egress_multicast_group, 2) {
-    int idx = 0;
-    for (auto &v : intrin.vals) {
-        switch (++idx) {
-        case 1: JBAY_SIMPLE_INTRINSIC(INGRESS, v, regs.dprsrreg.inp.ipp.ingr.m_mgid1, NO) break;
-        case 2: JBAY_SIMPLE_INTRINSIC(INGRESS, v, regs.dprsrreg.inp.ipp.ingr.m_mgid2, NO) break;
-        default: BUG(); } } }
-
-DEPARSER_INTRINSIC(JBay, INGRESS, hash_lag_ecmp_mcast, 2) {
-    int idx = 0;
-    for (auto &v : intrin.vals) {
-        switch (++idx) {
-        case 1:
-            JBAY_ARRAY_INTRINSIC(INGRESS, v, regs.dprsrreg.ho_i, hir.meta.m_hash1,
-                                 regs.dprsrreg.inp.icr.ingr_meta_pov.m_hash1, YES)
-            break;
-        case 2:
-            JBAY_ARRAY_INTRINSIC(INGRESS, v, regs.dprsrreg.ho_i, hir.meta.m_hash2,
-                                 regs.dprsrreg.inp.icr.ingr_meta_pov.m_hash2, YES)
-            break;
-        default:
-            BUG(); } } }
-
-/** Macros to build Digest::Type objects for JBay -- 
+/** Macros to build Digest::Type objects for JBay --
  * JBAY_SIMPLE_DIGEST: basic digest that appears one place in the config
  * JBAY_ARRAY_DIGEST: config is replicated across Header+Output slices
  * GRESS: INGRESS or EGRESS
