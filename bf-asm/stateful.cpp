@@ -430,7 +430,10 @@ template<class REGS> void StatefulTable::write_regs(REGS &regs) {
             salu.salu_mathtable[i/4U].set_subfield(math_table.data[i], 8*(i%4U), 8);
         salu.salu_mathunit_ctl.salu_mathunit_output_scale = math_table.scale & 0x3fU;
         salu.salu_mathunit_ctl.salu_mathunit_exponent_invert = math_table.invert;
-        salu.salu_mathunit_ctl.salu_mathunit_exponent_shift = math_table.shift & 0x3U; }
+        switch (math_table.shift) {
+        case -1: salu.salu_mathunit_ctl.salu_mathunit_exponent_shift = 2; break;
+        case  0: salu.salu_mathunit_ctl.salu_mathunit_exponent_shift = 0; break;
+        case  1: salu.salu_mathunit_ctl.salu_mathunit_exponent_shift = 1; break; } }
 }
 
 void StatefulTable::gen_tbl_cfg(json::vector &out) const {

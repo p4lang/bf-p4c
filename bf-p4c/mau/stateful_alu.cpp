@@ -416,6 +416,19 @@ bool CreateSaluInstruction::preorder(const IR::Slice *sl) {
     return false;
 }
 
+static double mul(double x) { return x; }
+static double sqr(double x) { return x*x; }
+static double rsqrt(double x) { return 1.0/sqrt(x); }
+static double div(double x) { return 1.0/x; }
+static double rsqr(double x) { return 1.0/x*x; }
+
+static double (*fn[2][3])(double) = { { sqrt, mul, sqr }, { rsqrt, div, rsqr } };
+// fn_max is max(fn(x)) for the x value range we need ([4/8, 15/8] for shift == -1,
+// [8/8, 15/8] for shift >= 0)
+static double fn_max[2][3] = { { 1.36930639376291528364, 1.875, 3.515625 },
+                               { 1.41421356237309504880, 1.0, 1.0 } };
+
+
 bool CreateSaluInstruction::preorder(const IR::Primitive *prim) {
     cstring method;
     if (auto p = prim->name.find('.'))
@@ -428,24 +441,64 @@ bool CreateSaluInstruction::preorder(const IR::Primitive *prim) {
         auto gref = prim->operands.at(0)->to<IR::GlobalRef>();
         auto mu = gref ? gref->obj->to<IR::Declaration_Instance>() : nullptr;
         BUG_CHECK(mu, "typechecking failure?");
-        BUG_CHECK(mu->arguments->size() == 4, "typechecking failure");
         math.valid = true;
-        if (auto k = mu->arguments->at(0)->expression->to<IR::BoolLiteral>())
+        unsigned i = mu->arguments->size()-1;
+        BUG_CHECK(i >= 1 && i <= 3, "typechecking failure");
+        if (auto k = mu->arguments->at(0)->expression->to<IR::BoolLiteral>()) {
             math.exp_invert = k->value;
-        if (auto k = mu->arguments->at(1)->expression->to<IR::Constant>())
-            math.exp_shift = k->asInt();
-        if (auto k = mu->arguments->at(2)->expression->to<IR::Constant>())
-            math.scale = k->asInt();
-        if (auto data = mu->arguments->at(3)->expression->to<IR::ListExpression>()) {
-            unsigned i = 0;
-            for (auto e : data->components) {
-                if (i >= sizeof(math.table)/sizeof(math.table[0])) {
-                    error("%s: too many elements for math table initializer", data->srcInfo);
-                    break; }
-                if (auto k = e->to<IR::Constant>())
-                    math.table[i++] = k->asInt(); }
+            if (auto k = mu->arguments->at(1)->expression->to<IR::Constant>())
+                math.exp_shift = k->asInt();
+            BUG_CHECK(i == 3, "typechecking failure");
+        } else if (auto m = mu->arguments->at(0)->expression->to<IR::Member>()) {
+            BUG_CHECK(i < 3, "typechecking failure");
+            if (m->member == "MUL") {
+                math.exp_shift = 0;
+                math.exp_invert = false;
+            } else if (m->member == "SQR") {
+                math.exp_shift = 1;
+                math.exp_invert = false;
+            } else if (m->member == "SQRT") {
+                math.exp_shift = -1;
+                math.exp_invert = false;
+            } else if (m->member == "DIV") {
+                math.exp_shift = 0;
+                math.exp_invert = true;
+            } else if (m->member == "RSQR") {
+                math.exp_shift = 1;
+                math.exp_invert = true;
+            } else if (m->member == "RSQRT") {
+                math.exp_shift = -1;
+                math.exp_invert = true;
+            } else {
+                BUG("Invalid MathUnit ctor arg %s", m); }
         } else {
-            error("initializer %s is not a list expression", mu->arguments->at(3)->expression); }
+            BUG("Invalid MathUnit ctor arg %s", mu->arguments->at(0)); }
+        if (auto data = mu->arguments->at(i)->expression->to<IR::ListExpression>()) {
+            BUG_CHECK(i >= 2, "typechecking failure");
+            if (auto k = mu->arguments->at(i-1)->expression->to<IR::Constant>())
+                math.scale = k->asInt();
+            i = 16 - data->components.size();
+            BUG_CHECK(i == 0 || i == 4 || i == 8, "Wrong number of MathUnit values");
+            for (auto e : data->components) {
+                if (auto k = e->to<IR::Constant>())
+                    math.table[i] = k->asInt();
+                ++i; }
+        } else if (auto k = mu->arguments->at(i)->expression->to<IR::Constant>()) {
+            BUG_CHECK(i == 1, "typechecking failure");
+            double val = k->asUint64() * fn_max[math.exp_invert][math.exp_shift + 1];
+            // choose the largest possible scale such that all table entries will be < 256
+            math.scale = floor(log2(val)) - 7;
+            if (math.scale > 31) {
+                warning("%sMathUnit scale overflow %d, capping at 31", mu->srcInfo, math.scale);
+                math.scale = 31; }
+            val = k->asUint64() * pow(2.0, -math.scale);
+            for (i = math.exp_shift >= 0 ? 8 : 4; i < 16; ++i) {
+                math.table[i] = rint(fn[math.exp_invert][math.exp_shift + 1](i/8.0) * val);
+                if (math.table[i] > 255)
+                    math.table[i] = 255; }
+        } else {
+            error("%s is not a %s", mu->arguments->at(i)->expression,
+                  i > 1 ? "list expression" : "constant"); }
     } else if (method == "address") {
         operands.push_back(new IR::MAU::SaluReg(prim->type, "address", false));
         address_subword = 0;

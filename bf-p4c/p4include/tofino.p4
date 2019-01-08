@@ -647,6 +647,15 @@ extern RegisterParam<T> {
     T read();
 }
 
+enum MathOp_t {
+    MUL,             // 2^scale * f(x)         --  false,  0
+    SQR,             // 2^scale * f(x^2)       --  false,  1
+    SQRT,            // 2^scale * f(sqrt(x))   --  false, -1
+    DIV,             // 2^scale * f(1/x)       --  true,   0
+    RSQR,            // 2^scale * f(1/x^2)     --  true,   1
+    RSQRT            // 2^scale * f(1/sqrt(x)) --  true,  -1
+};
+
 extern MathUnit<T> {
     /// Configure a math unit for use in a register action
     MathUnit(bool invert, int<2> shift, int<6> scale,
@@ -654,6 +663,12 @@ extern MathUnit<T> {
                     bit<8>, bit<8>, bit<8>, bit<8>,
                     bit<8>, bit<8>, bit<8>, bit<8>,
                     bit<8>, bit<8>, bit<8>, bit<8> > data);
+    MathUnit(MathOp_t op, int<6> scale,
+             tuple< bit<8>, bit<8>, bit<8>, bit<8>,
+                    bit<8>, bit<8>, bit<8>, bit<8>,
+                    bit<8>, bit<8>, bit<8>, bit<8>,
+                    bit<8>, bit<8>, bit<8>, bit<8> > data);
+    MathUnit(MathOp_t op, bit<64> factor);  // configure as factor * op(x)
     T execute(in T x);
 };
 
