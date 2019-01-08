@@ -30,7 +30,7 @@
     M(int, NUM_MAU_STAGES) M(int, END_OF_PIPE) \
     M(int, PHASE0_FORMAT_WIDTH) \
     M(int, STATEFUL_CMP_UNITS) M(int, STATEFUL_OUTPUT_UNITS) M(int, STATEFUL_PRED_MASK) \
-    M(int, STATEFUL_TMATCH_UNITS) \
+    M(int, STATEFUL_CONST_WIDTH) M(int, STATEFUL_TMATCH_UNITS) \
     M(int, METER_ALU_GROUP_DATA_DELAY)
 
 #define DECLARE_PER_TARGET_CONSTANT(TYPE, NAME) static TYPE NAME();
@@ -109,6 +109,7 @@ class Target::Tofino : public Target {
         STATEFUL_TMATCH_UNITS = 0,
         STATEFUL_OUTPUT_UNITS = 1,
         STATEFUL_PRED_MASK = (1U << (1 << STATEFUL_CMP_UNITS)) - 1,
+        STATEFUL_CONST_WIDTH = 32,
     };
 };
 
@@ -191,6 +192,7 @@ class Target::JBay : public Target {
         STATEFUL_TMATCH_UNITS = 2,
         STATEFUL_OUTPUT_UNITS = 4,
         STATEFUL_PRED_MASK = (1U << (1 << STATEFUL_CMP_UNITS)) - 1,
+        STATEFUL_CONST_WIDTH = 34,
     };
 };
 void declare_registers(const Target::JBay::top_level_regs *regs);

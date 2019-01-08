@@ -83,7 +83,7 @@ Instruction *MinMax::pass1(Table *tbl_, Table::Actions::Action *act) {
     mask->pass1(tbl);
     act->minmax_use = true;
     if (auto k = mask.to<operand::Const>()) {
-        tbl->get_const(k->value);
+        tbl->get_const(k->lineno, k->value);
     } else if (auto p = mask.to<operand::Phv>()) {
         if (p->phv_index(tbl))
             error(lineno, "%s phv mask must come from the lower half input", name().c_str()); }
@@ -100,7 +100,7 @@ void MinMax::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Action
     auto &salu_instr_common = meter_group.stateful.salu_instr_common[act->code];
     if (auto k = mask.to<operand::Const>()) {
         auto &salu_instr_cmp = meter_group.stateful.salu_instr_cmp_alu[act->code][3];
-        salu_instr_cmp.salu_cmp_regfile_adr = tbl->get_const(k->value);
+        salu_instr_cmp.salu_cmp_regfile_adr = tbl->get_const(k->lineno, k->value);
         salu_instr_common.salu_minmax_mask_ctl = 1;
     } else {
         salu_instr_common.salu_minmax_mask_ctl = 0; }
@@ -141,7 +141,7 @@ void AluOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions
                 salu.salu_const_src = k->value;
                 salu.salu_regfile_const = 0;
             } else {
-                salu.salu_const_src = tbl->get_const(k->value);
+                salu.salu_const_src = tbl->get_const(k->lineno, k->value);
                 salu.salu_regfile_const = 1; }
         } else BUG(); }
     if (srcb) {
@@ -162,7 +162,7 @@ void AluOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions
                 salu.salu_const_src = k->value;
                 salu.salu_regfile_const = 0;
             } else {
-                salu.salu_const_src = tbl->get_const(k->value);
+                salu.salu_const_src = tbl->get_const(k->lineno, k->value);
                 salu.salu_regfile_const = 1; }
         } else BUG(); }
 }
@@ -213,16 +213,16 @@ void CmpOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions
                 salu.salu_cmp_mask_input = 0;
             } else {
                 salu.salu_cmp_mask_input = 1;
-                salu.salu_cmp_regfile_adr = tbl->get_const(maska); } } }
+                salu.salu_cmp_regfile_adr = tbl->get_const(srca->lineno, maska); } } }
     if (srcb) {
         salu.salu_cmp_bsrc_input = srcb->phv_index(tbl);
         salu.salu_cmp_bsrc_sign = srcb_neg;
         salu.salu_cmp_bsrc_enable = 1;
         if (maskb != uint32_t(-1)) {
             salu.salu_cmp_bsrc_mask_enable = 1;
-            salu.salu_cmp_regfile_adr = tbl->get_const(maskb); } }
+            salu.salu_cmp_regfile_adr = tbl->get_const(srcb->lineno, maskb); } }
     if (srcc && (srcc->value < -32 || srcc->value >= 32)) {
-        salu.salu_cmp_regfile_adr = tbl->get_const(srcc->value);
+        salu.salu_cmp_regfile_adr = tbl->get_const(srcc->lineno, srcc->value);
         salu.salu_cmp_regfile_const = 1;
     } else {
         salu.salu_cmp_const_src = srcc ? srcc->value & 0x2f : 0;

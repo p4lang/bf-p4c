@@ -19,7 +19,7 @@ static std::map<int, std::pair<std::string, int>> line_file_map;
  * the normal case it does NOT try to destroy stuff on the value stack,
  * but rather just pops it and lets it go.  Do not try to use them
  * outside of bison action code */
-static value_t value(int v, int lineno_adj) {
+static value_t value(int64_t v, int lineno_adj) {
     value_t rv = {tINT, lineno - lineno_adj};
     rv.i = v;
     return rv; }

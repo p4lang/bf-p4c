@@ -1551,6 +1551,7 @@ DECLARE_TABLE_TYPE(StatefulTable, Synth2Port, "stateful",
                                 int bus, const std::vector<Call::Arg> &args), override {
             write_merge_regs<decltype(regs)>(regs, match, type, bus, args); })
     std::vector<int64_t>   const_vals;
+    std::vector<int>       const_vals_lineno;
     struct MathTable {
         int                     lineno = -1;
         std::vector<int>        data;
@@ -1587,7 +1588,7 @@ public:
     int indirect_shiftcount() const override;
     int address_shift() const override;
     int unitram_type() override { return UnitRam::STATEFUL; }
-    int get_const(int64_t v);
+    int get_const(int lineno, int64_t v);
     bool is_dual_mode() const { return dual_mode; }
     int alu_size() const { return 1 << std::min(5U, format->log2size - is_dual_mode()); }
     int home_row() const override { return layout.at(0).row | 3; }

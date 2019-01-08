@@ -237,6 +237,9 @@ template<> void StatefulTable::write_logging_regs(Target::JBay::mau_regs &regs) 
         slice = phv_hash_mask.getrange(32*idx++, 32);
 
     for (size_t i = 0; i < const_vals.size(); ++i) {
+        if (const_vals[i] > (INT64_C(1) << 33) || const_vals[i] <= -(INT64_C(1) << 33))
+            error(const_vals_lineno[i], "constant value %" PRId64 " too large for stateful alu",
+                  const_vals[i]);
         salu.salu_const_regfile[i] = const_vals[i] & 0xffffffffU;
         salu.salu_const_regfile_msbs[i] = (const_vals[i] >> 32) & 0x3;
     }

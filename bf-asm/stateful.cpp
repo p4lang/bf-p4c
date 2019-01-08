@@ -37,14 +37,18 @@ void StatefulTable::setup(VECTOR(pair_t) &data) {
             if (!CHECKTYPE2(kv.value, tVEC, tMAP)) continue;
             if (kv.value.type == tVEC) {
                 parse_vector(const_vals, kv.value);
+                for (auto &v : kv.value.vec)
+                    const_vals_lineno.push_back(v.lineno);
             } else {
                 for (auto &v : kv.value.map)
                     if (CHECKTYPE(v.key, tINT) && CHECKTYPE(v.value, tINT)) {
                         if (v.key.i < 0 || v.key.i >= 4)
                             error(v.key.lineno, "invalid index for const_table");
-                        if (const_vals.size() <= size_t(v.key.i))
+                        if (const_vals.size() <= size_t(v.key.i)) {
                             const_vals.resize(v.key.i + 1);
-                        const_vals[v.key.i] = v.value.i; } }
+                            const_vals_lineno.resize(v.key.i + 1); }
+                        const_vals[v.key.i] = v.value.i;
+                        const_vals_lineno[v.key.i] = v.value.lineno; } }
         } else if (kv.key == "math_table") {
             if (!CHECKTYPE(kv.value, tMAP)) continue;
             math_table.lineno = kv.value.lineno;
@@ -211,10 +215,11 @@ void StatefulTable::pass1() {
               overflow_action.name.c_str(), name());
 }
 
-int StatefulTable::get_const(int64_t v) {
+int StatefulTable::get_const(int lineno, int64_t v) {
     size_t rv = std::find(const_vals.begin(), const_vals.end(), v) - const_vals.begin();
-    if (rv == const_vals.size())
+    if (rv == const_vals.size()) {
         const_vals.push_back(v);
+        const_vals_lineno.push_back(lineno); }
     return rv;
 }
 

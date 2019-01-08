@@ -418,11 +418,17 @@ Instruction *AluOP::pass1(Table *tbl_, Table::Actions::Action *act) {
         error(lineno, "can only have one distinct constant in an SALU instruction");
     if (!k1) k1 = k2;
     if (k1 && (k1->value < -8 || k1->value >= 8)) {
-        tbl->get_const(k1->value);
         if (k1->value >= (INT64_C(1) << tbl->alu_size()) ||
-            k1->value < (INT64_C(-1) << (tbl->alu_size() - 1)))
+            k1->value < (INT64_C(-1) << (tbl->alu_size() - 1))) {
             error(lineno, "operand %" PRIi64 " out of range for %d bit stateful ALU",
-                  k1->value, tbl->alu_size()); }
+                  k1->value, tbl->alu_size());
+        } else if (k1->value >= (INT64_C(1) << (Target::STATEFUL_CONST_WIDTH() - 1))) {
+            // constants have a limited width, and are always signed, so need to make
+            // sure they wrap properly
+            k1->value -= INT64_C(1) << Target::STATEFUL_CONST_WIDTH();
+            if (k2 && k2 != k1)
+                k2->value = k1->value; }
+        tbl->get_const(k1->lineno, k1->value); }
     if (srca) srca->pass1(tbl);
     if (srcb) srcb->pass1(tbl);
     return this; }

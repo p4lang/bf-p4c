@@ -34,8 +34,11 @@ template<> void StatefulTable::write_logging_regs(Target::Tofino::mau_regs &regs
         merge.mau_stateful_log_vpn_limit[meter_group/2]
             .set_subfield(logvpn_max, 6 * (meter_group%2), 6); }
 
-    for (size_t i = 0; i < const_vals.size(); ++i)
-        salu.salu_const_regfile[i] = const_vals[i] & 0xffffffffU;
+    for (size_t i = 0; i < const_vals.size(); ++i) {
+        if (const_vals[i] > INT_MAX || const_vals[i] < INT_MIN)
+            error(const_vals_lineno[i], "constant value %" PRId64 " too large for stateful alu",
+                  const_vals[i]);
+        salu.salu_const_regfile[i] = const_vals[i] & 0xffffffffU; }
 }
 
 /// Compute the proper value for the register

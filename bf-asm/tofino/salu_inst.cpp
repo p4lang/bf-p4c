@@ -23,7 +23,7 @@ void AluOP::write_regs(Target::Tofino::mau_regs &regs, Table *tbl_, Table::Actio
                 salu.salu_const_src = k->value;
                 salu.salu_regfile_const = 0;
             } else {
-                salu.salu_const_src = tbl->get_const(k->value);
+                salu.salu_const_src = tbl->get_const(k->lineno, k->value);
                 salu.salu_regfile_const = 1; }
         } else BUG(); }
     if (srcb) {
@@ -43,7 +43,7 @@ void AluOP::write_regs(Target::Tofino::mau_regs &regs, Table *tbl_, Table::Actio
                 salu.salu_const_src = k->value & 0xf;
                 salu.salu_regfile_const = 0;
             } else {
-                salu.salu_const_src = tbl->get_const(k->value);
+                salu.salu_const_src = tbl->get_const(k->lineno, k->value);
                 salu.salu_regfile_const = 1; }
         } else BUG(); }
 }
@@ -85,7 +85,7 @@ void CmpOP::write_regs(Target::Tofino::mau_regs &regs, Table *tbl_, Table::Actio
             salu.salu_cmp_const_src = srcc->value & 0xf;
             salu.salu_cmp_regfile_const = 0;
         } else {
-            salu.salu_cmp_const_src = tbl->get_const(srcc->value);
+            salu.salu_cmp_const_src = tbl->get_const(srcc->lineno, srcc->value);
             salu.salu_cmp_regfile_const = 1; } }
     salu.salu_cmp_opcode = opc->opcode | (type << 2);
 }
