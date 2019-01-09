@@ -1,5 +1,6 @@
-#include "bf-p4c/phv/utils/live_range_report.h"
+#include "bf-p4c/phv/analysis/meta_live_range.h"
 #include "bf-p4c/common/table_printer.h"
+#include "bf-p4c/phv/utils/live_range_report.h"
 
 cstring use_type(unsigned use) {
     if (use == 0) return "";
@@ -29,10 +30,19 @@ std::map<int, unsigned> LiveRangeReport::processUseDefSet(
         if (use_unit->is<IR::BFN::ParserState>() || use_unit->is<IR::BFN::Parser>()) {
             auto* ps = use_unit->to<IR::BFN::ParserState>();
             cstring use_location;
-            if (!ps)
+            if (!ps) {
                 use_location = " to parser";
-            else
+            } else {
                 use_location = " to parser state " + ps->name;
+                // Ignore initialization in parser.
+                cstring compareToString = (use_unit->thread() == INGRESS) ?
+                    MetadataLiveRange::INGRESS_PARSER_ENTRY :
+                    MetadataLiveRange::EGRESS_PARSER_ENTRY;
+                if (usedef == WRITE && ps->name.startsWith(compareToString)) {
+                    LOG4("\t  Ignoring initialization in " << use_location);
+                    continue;
+                }
+            }
             fieldMap[PARSER] |= usedef;
             LOG4("\tAssign " << use_type(usedef) << use_location);
         } else if (use_unit->is<IR::BFN::Deparser>()) {
