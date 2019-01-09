@@ -1348,3 +1348,8 @@ p4c_add_xfail_reason("tofino"
   "error.*Tofino requires the field to go to 8b containers because of hardware constraints."
   extensions/p4_tests/p4_16/constant_extract_neg.p4
 )
+
+p4c_add_xfail_reason("tofino"
+  "metadata field of type header empty_t not supported on tofino"
+  extensions/p4_tests/p4_16/fabric-psa/fabric.p4
+)

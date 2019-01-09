@@ -102,7 +102,7 @@ class AnalyzeProgram : public Inspector {
             new IR::StructField("clone_digest_id", IR::Type::Bits::get(4)));
         // add bridged_metadata header
         cgm->fields.push_back(
-            new IR::StructField("bridged_metadata",
+            new IR::StructField("^bridged_metadata",
                 typeMap->getTypeType(structure->bridge.p4Type, true)));
 
         cgm->fields.push_back(new IR::StructField("drop", IR::Type::Boolean::get()));
