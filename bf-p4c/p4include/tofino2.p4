@@ -386,9 +386,9 @@ struct egress_intrinsic_metadata_for_output_port_t {
 // programmable number of packets per batch.
 
 header pktgen_timer_header_t {
-    bit<3> _pad1;
+    bit<2> _pad1;
     bit<2> pipe_id;                     // Pipe id
-    bit<3> app_id;                      // Application id
+    bit<4> app_id;                      // Application id
     bit<8> _pad2;
 
     bit<16> batch_id;                   // Start at 0 and increment to a
@@ -399,9 +399,9 @@ header pktgen_timer_header_t {
 }
 
 header pktgen_port_down_header_t {
-    bit<3> _pad1;
+    bit<2> _pad1;
     bit<2> pipe_id;                     // Pipe id
-    bit<3> app_id;                      // Application id
+    bit<4> app_id;                      // Application id
     bit<15> _pad2;
     bit<9> port_num;                    // Port number
 
@@ -410,14 +410,35 @@ header pktgen_port_down_header_t {
 }
 
 header pktgen_recirc_header_t {
-    bit<3> _pad1;
+    bit<2> _pad1;
     bit<2> pipe_id;                     // Pipe id
-    bit<3> app_id;                      // Application id
-    bit<24> key;                        // Key from the recirculated packet
+    bit<4> app_id;                      // Application id
+    bit<8> _pad2;
+    bit<16> batch_id;                   // Start at 0 and increment to a
+                                        // programmed number
 
     bit<16> packet_id;                  // Start at 0 and increment to a
                                         // programmed number
 }
+
+header pktgen_deparser_header_t {
+    bit<2> _pad1;
+    bit<2> pipe_id;                     // Pipe id
+    bit<4> app_id;                      // Application id
+    bit<8> _pad2;
+    bit<16> batch_id;                   // Start at 0 and increment to a
+                                        // programmed number
+
+    bit<16> packet_id;                  // Start at 0 and increment to a
+                                        // programmed number
+}
+
+header pktgen_pfc_header_t {
+    bit<2> _pad1;
+    bit<2> pipe_id;                     // Pipe id
+    bit<4> app_id;                      // Application id
+    bit<40> _pad2;
+};
 
 // -----------------------------------------------------------------------------
 // TIME SYNCHRONIZATION
