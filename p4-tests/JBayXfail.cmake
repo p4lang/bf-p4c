@@ -287,7 +287,7 @@ p4c_add_xfail_reason("tofino2"
 
 # P4C-1300
 p4c_add_xfail_reason("tofino2"
-  "error: no more that 2 clots per state"
+  "Parser extract didn't receive a PHV allocation"
   extensions/p4_tests/p4_14/brig-425.p4
 )
 

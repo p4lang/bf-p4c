@@ -22,7 +22,8 @@ class ClotInfo {
     ordered_map<const IR::BFN::ParserState*,
                 std::vector<const PHV::Field*>> parser_state_to_fields_;
 
-    ordered_map<const PHV::Field*, const IR::BFN::ParserState*> field_to_parser_state_;
+    ordered_map<const PHV::Field*,
+                std::set<const IR::BFN::ParserState*>> field_to_parser_states_;
 
     std::set<const PHV::Field*> checksum_dests_;
 
@@ -70,7 +71,7 @@ class ClotInfo {
     void add_field(const PHV::Field* f, const IR::BFN::PacketRVal* rval,
              const IR::BFN::ParserState* state) {
         parser_state_to_fields_[state].push_back(f);
-        field_to_parser_state_[f] = state;
+        field_to_parser_states_[f].insert(state);
         field_range_[f] = rval->range();
     }
 
@@ -104,7 +105,7 @@ class ClotInfo {
 
     void clear() {
         parser_state_to_fields_.clear();
-        field_to_parser_state_.clear();
+        field_to_parser_states_.clear();
         checksum_dests_.clear();
         clots_.clear();
         clot_to_parser_state_.clear();

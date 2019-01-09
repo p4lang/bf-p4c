@@ -175,19 +175,33 @@ class NaiveClotAlloc : public Visitor {
     }
 
     bool is_packed_with_phv_field(const PHV::Field* f) {
-        auto state = clotInfo.field_to_parser_state_.at(f);
-        for (auto id : field_to_byte_idx.at(state).at(f)) {
-            for (auto ff : byte_idx_to_field.at(state).at(id)) {
-                if (!clotInfo.is_clot_candidate(ff))
-                    return true;
+        auto& states = clotInfo.field_to_parser_states_.at(f);
+        for (auto state : states) {
+            for (auto id : field_to_byte_idx.at(state).at(f)) {
+                for (auto ff : byte_idx_to_field.at(state).at(id)) {
+                    if (!clotInfo.is_clot_candidate(ff))
+                        return true;
+                }
             }
         }
 
         return false;
     }
 
+    // Fields extracted in multiple mutex states can be allocated to CLOT
+    // though it complicates things. We can allocate them to their own
+    // CLOT or combine them with other fields in their states and create
+    // synthetic POV bits so that we don't deparse them multiple times at
+    // deparser. TODO(zma)
+    bool is_extracted_in_multiple_states(const PHV::Field* f) {
+        auto& states = clotInfo.field_to_parser_states_.at(f);
+        return states.size() > 1;
+    }
+
     bool can_allocate_to_clot(const PHV::Field* f) {
-        return clotInfo.is_clot_candidate(f) && !is_packed_with_phv_field(f);
+        return clotInfo.is_clot_candidate(f) &&
+               !is_packed_with_phv_field(f) &&
+               !is_extracted_in_multiple_states(f);
     }
 
     bool is_checksum_field(const PHV::Field* f) {
@@ -223,7 +237,7 @@ class NaiveClotAlloc : public Visitor {
 
        for (auto i : {0, 1} )
            for (auto ca : req[i])
-                LOG3("state " << ca.state->name << " has " << ca.unused_bits << " unused bytes");
+                LOG3("state " << ca.state->name << " has " << ca.unused_bits << " unused bits");
 
        return req;
     }
