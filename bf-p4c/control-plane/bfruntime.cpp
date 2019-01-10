@@ -116,7 +116,6 @@ class BfRtSchemaGenerator {
         BF_RT_DATA_SNAPSHOT_TRIGGER_STAGE,
         BF_RT_DATA_SNAPSHOT_END_STAGE,
         BF_RT_DATA_SNAPSHOT_ENABLE,
-        BF_RT_DATA_SNAPSHOT_STATUS,
         BF_RT_DATA_SNAPSHOT_TIMER_ENABLE,
         BF_RT_DATA_SNAPSHOT_TIMER_VALUE_USECS,
         BF_RT_DATA_SNAPSHOT_FIELD_INFO,
@@ -128,6 +127,7 @@ class BfRtSchemaGenerator {
         BF_RT_DATA_SNAPSHOT_TIMER_TRIGGER,
         BF_RT_DATA_SNAPSHOT_LOCAL_STAGE_TRIGGER,
         BF_RT_DATA_SNAPSHOT_NEXT_TABLE_ID,
+        BF_RT_DATA_SNAPSHOT_NEXT_TABLE_NAME,
         BF_RT_DATA_SNAPSHOT_MPR_NEXT_TABLE_ID,
         BF_RT_DATA_SNAPSHOT_DEPARSER_ERROR,
         BF_RT_DATA_SNAPSHOT_TABLE_ID,
@@ -1563,12 +1563,6 @@ BfRtSchemaGenerator::addSnapshot(Util::JsonArray* tablesJson, const Snapshot& sn
     }
     {
         auto* f = makeCommonDataField(
-            BF_RT_DATA_SNAPSHOT_STATUS, "$SNAPSHOT_STATUS",
-            makeTypeEnum({"PASSIVE", "ARMED", "TRIGGER_HAPPY", "FULL"}), false /* repeated */);
-        addSingleton(dataJson, f, false /* mandatory */, true /* read-only */);
-    }
-    {
-        auto* f = makeCommonDataField(
             BF_RT_DATA_SNAPSHOT_TIMER_ENABLE, "$SNAPSHOT_TIMER_ENABLE",
             makeTypeBool(false), false /* repeated */);
         addSingleton(dataJson, f, false /* mandatory */, false /* read-only */);
@@ -1623,10 +1617,18 @@ BfRtSchemaGenerator::addSnapshot(Util::JsonArray* tablesJson, const Snapshot& sn
                 makeTypeBool(), false /* repeated */);
             addROSingleton(containerItemsJson, f);
         }
+        // SNAPSHOT_NEXT_TABLE_ID is temporarily disabled until support can be
+        // added to the BF-RT implementation in the drivers.
+        // {
+        //     auto* f = makeCommonDataField(
+        //         BF_RT_DATA_SNAPSHOT_NEXT_TABLE_ID, "$SNAPSHOT_NEXT_TABLE_ID",
+        //         makeTypeInt("uint32"), false /* repeated */);
+        //     addROSingleton(containerItemsJson, f);
+        // }
         {
             auto* f = makeCommonDataField(
-                BF_RT_DATA_SNAPSHOT_NEXT_TABLE_ID, "$SNAPSHOT_NEXT_TABLE_ID",
-                makeTypeInt("uint32"), false /* repeated */);
+                BF_RT_DATA_SNAPSHOT_NEXT_TABLE_NAME, "$SNAPSHOT_NEXT_TABLE_NAME",
+                makeTypeString(), false /* repeated */);
             addROSingleton(containerItemsJson, f);
         }
         if (Device::currentDevice() == Device::JBAY) {
