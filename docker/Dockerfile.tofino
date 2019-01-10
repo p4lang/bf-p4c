@@ -66,7 +66,10 @@ ARG GEN_REF_OUTPUTS=false
 # testing dependencies
 RUN apt-get install -y net-tools
 
-RUN pip install ply jsl jsonschema pexpect crc16 crcmod simplejson tenjin ipaddress
+RUN pip install jsl jsonschema pexpect crc16 crcmod simplejson tenjin ipaddress
+# Install ply 3.9 for compatibility with p4c-tofino
+RUN pip install ply==3.9
+
 COPY . /bfn/bf-p4c-compilers/
 COPY scripts/ptf_hugepage_setup.sh /bfn/ptf_hugepage_setup.sh
 COPY docker/docker_entry_point.sh /bfn/docker_entry_point.sh

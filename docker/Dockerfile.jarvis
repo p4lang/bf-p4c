@@ -58,7 +58,10 @@ RUN add-apt-repository ppa:ubuntu-toolchain-r/test && \
 # testing dependencies
 RUN apt-get install -y net-tools
 
-RUN pip install ply jsl jsonschema pexpect crc16 crcmod simplejson tenjin ipaddress
+RUN pip install jsl jsonschema pexpect crc16 crcmod simplejson tenjin ipaddress
+RUN pip install ply==3.9
+
+
 COPY scripts/ptf_hugepage_setup.sh /bfn/ptf_hugepage_setup.sh
 COPY docker/docker_entry_point.sh /bfn/docker_entry_point.sh
 COPY p4-tests/p4testutils/veth_setup.sh /bfn/veth_setup.sh
