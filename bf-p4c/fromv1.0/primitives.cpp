@@ -270,6 +270,8 @@ CONVERT_PRIMITIVE(modify_field_with_hash_based_offset, 1) {
     const IR::ListExpression *listExp = conv.convert(fl)->to<IR::ListExpression>();
     auto list = new IR::HashListExpression(flc->srcInfo, listExp->components, flc->name);
     list->fieldListNames = flc->input;
+    if (flc->algorithm->names.size() > 0)
+        list->algorithms = flc->algorithm;
 
     auto algorithm = structure->convertHashAlgorithms(flc->algorithm);
     args->push_back(new IR::Argument(dest));

@@ -30,3 +30,45 @@ P4V1::generate_hash_block_statement(P4V1::ProgramStructure *structure,
                 new IR::PathExpression(structure->v1model.hash.Id()), block_args)));
         return block;
 }
+
+// This convertTable function calls the parent frontend convertTable function
+// and appends additional info required for the backend. This is currently
+// restricted to action selectors and pulls out information on hash calculation
+// which is used by PD Generation.
+// For future use, this can be expanded to include other info used by backend
+// which is not extracted from the frontend function call.
+const IR::P4Table*
+P4V1::TNA_ProgramStructure::convertTable(const IR::V1Table* table, cstring newName,
+                               IR::IndexedVector<IR::Declaration> &stateful,
+                               std::map<cstring, cstring> &mapNames) {
+    // Generate p4Table from frontend call
+    auto p4Table = ProgramStructure::convertTable(table, newName, stateful, mapNames);
+
+    // Check for action selector and generate a new IR::TNA_P4Table with hash
+    // info required for PD Generation
+    cstring profile = table->action_profile.name;
+    auto *action_profile = action_profiles.get(profile);
+    auto *action_selector = action_profile ?
+        action_selectors.get(action_profile->selector.name) : nullptr;
+
+    if (action_selector) {
+        auto flc = field_list_calculations.get(action_selector->key.name);
+        if (flc) {
+            auto annos = p4Table->getAnnotations();
+            annos = annos->addAnnotation("action_selector_hash_field_calc_name",
+                                                new IR::StringLiteral(flc->name));
+            annos = annos->addAnnotation("action_selector_hash_field_list_name",
+                                                new IR::StringLiteral(flc->input->names[0]));
+            for (auto a : flc->algorithm->names) {
+                annos = annos->addAnnotation("algorithm", new IR::StringLiteral(a));
+            }
+            annos = annos->addAnnotation("action_selector_hash_field_calc_output_width",
+                                                new IR::Constant(flc->output_width));
+            auto newP4Table = new IR::P4Table(p4Table->srcInfo, newName,
+                                    annos, p4Table->properties);
+            LOG4("Adding dynamic hash annotations: " << annos << " to table " << table->name);
+            return newP4Table;
+        }
+    }
+    return p4Table;
+}

@@ -602,23 +602,7 @@ const IR::Node *DoInstructionSelection::postorder(IR::Primitive *prim) {
                         error("%s: The hash offset must be a power of 2 in a hash calculation %s",
                               prim->srcInfo, *prim); } } }
 
-        cstring field_list_name = "";
-        cstring field_list_calc_name = "";
-        if (auto hashExpr = data->to<IR::HashListExpression>()) {
-            field_list_calc_name = hashExpr->fieldListCalcName;
-            if (auto n = hashExpr->fieldListNames) {
-                auto fieldListNames = n->names;
-                if (fieldListNames.size() > 0) {
-                    // Use the first field list name for Hash Dist. Currently
-                    // backend support only exists for single field list. The
-                    // fieldListNames however has all names as specified in p4
-                    // program and can be used once this support is added
-                    field_list_name = fieldListNames[0];
-                }
-            }
-        }
-        auto *hd = new IR::MAU::HashDist(prim->srcInfo, IR::Type::Bits::get(size), data, algorithm,
-                                    field_list_name, field_list_calc_name);
+        auto *hd = new IR::MAU::HashDist(prim->srcInfo, IR::Type::Bits::get(size), data, algorithm);
         hd->bit_width = size;
         auto next_type = IR::Type::Bits::get(size);
         return new IR::MAU::Instruction(prim->srcInfo, "set", new IR::TempVar(next_type),
@@ -777,7 +761,7 @@ IR::MAU::HashDist *StatefulAttachmentSetup::create_hash_dist(const IR::Expressio
 
     int size = hash_field->type->width_bits();
     auto *hd = new IR::MAU::HashDist(prim->srcInfo, IR::Type::Bits::get(size), hash_field,
-                                     IR::MAU::HashFunction::identity(), nullptr, nullptr);
+                                     IR::MAU::HashFunction::identity());
     hd->bit_width = size;
     return hd;
 }
@@ -1069,7 +1053,7 @@ void MeterSetup::Update::update_pre_color(IR::MAU::Meter *mtr) {
     if (has_pre_color) {
         auto pre_color = self.update_pre_colors.at(orig_meter);
         auto hd = new IR::MAU::HashDist(pre_color->srcInfo, IR::Type::Bits::get(2), pre_color,
-                       IR::MAU::HashFunction::identity(), nullptr, nullptr);
+                       IR::MAU::HashFunction::identity());
         hd->bit_width = 2;
         mtr->pre_color = hd;
     }

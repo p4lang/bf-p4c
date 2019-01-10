@@ -18,12 +18,14 @@ static const unsigned algoHandleBase = (0x23 << 24);
 static unsigned fieldListHandle = 0x0;
 static unsigned dynHashHandle = 0x0;
 static unsigned algoHandle = 0x0;
+static std::map<cstring, unsigned> algoHandles;
 class DynamicHashJson : public MauInspector {
  private:
     Util::JsonArray *_dynHashNode = nullptr;
     bool preorder(const IR::MAU::Table *tbl) override;
-    void gen_ixbar_json(const IXBar::Use &ixbar_use, Util::JsonObject *_dhc,
-                            int stage, cstring fl_name);
+    void gen_ixbar_json(const IXBar::Use &ixbar_use,
+        Util::JsonObject *_dhc, int stage, const cstring field_list_name,
+        const IR::NameList *algorithms, int hash_width = -1);
  public:
     DynamicHashJson();
     /// output the json hierarchy into the asm file (as Yaml)

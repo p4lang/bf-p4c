@@ -157,10 +157,10 @@ class MetadataInfo {
  *
  * NB: This is a work in progress, as we slowly transition from using
  * IR::Expression (which is a v1.def IR node) to IR::BFN::Value.
- * 
+ *
  * In the back end, all expressions are converted to values and instructions.
  * For example,
- *  
+ *
  *    ipv4.ttl = ipv4.ttl - 1
  *
  * becomes
@@ -333,11 +333,13 @@ class BFN::AliasSlice : IR::Slice {
 #end
 }
 
-/// This class adds the convenience of specifying field list and field list
-//calculation names specified in a p4 program to a ListExpression which carries
-//the field list
+/** This class adds the convenience of specifying field list, field list
+ *  calculation and algorithm names specified in a p4 program to a ListExpression
+ *  which carries the field list
+ */
 class HashListExpression : IR::ListExpression {
     cstring             fieldListCalcName;
-    NullOK IR::NameList fieldListNames = nullptr;
+    NullOK IR::NameList fieldListNames  = nullptr;
+    NullOK IR::NameList algorithms      = nullptr;
 #nodbprint
 }
