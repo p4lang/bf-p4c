@@ -454,13 +454,13 @@ void StatefulTable::gen_tbl_cfg(json::vector &out) const {
     if (actions) {
         for (auto &a : *actions) {
             for (auto &i : a.instr) {
-                if (i->name() == "set_bit_at")
+                if ((i->name() == "set_bit_at") || (i->name() == "set_bitc_at"))
                     tbl["set_instr_adjust_total"] = a.code;
-                if (i->name() == "set_bit")
+                if ((i->name() == "set_bit") || (i->name() == "set_bitc"))
                     tbl["set_instr"] = a.code;
-                if (i->name() == "clr_bit_at")
+                if ((i->name() == "clr_bit_at") || (i->name() == "clr_bitc_at"))
                     tbl["clr_instr_adjust_total"] = a.code;
-                if (i->name() == "clr_bit")
+                if ((i->name() == "clr_bit") || (i->name() == "clr_bitc"))
                     tbl["clr_instr"] = a.code; } } }
     // Add action handle and instr slot for action which references stateful
     for (auto *m : match_tables) {

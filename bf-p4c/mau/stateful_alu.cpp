@@ -878,6 +878,9 @@ const IR::MAU::Instruction *CreateSaluInstruction::createInstruction() {
             BUG_CHECK(k, "non-const writeback in 1-bit instruction?");
             opcode = k->value ? "set_bit" : "clr_bit";
             if (onebit_cmpl) opcode += 'c';
+            /* For non-resilient hashes, all the bits must be updated whenever a port comes
+             * up or down and hence must use the adjust_total instructions */
+            if (salu->selector && salu->selector->mode == "fair") opcode += "_at";
             rv = onebit = new IR::MAU::Instruction(opcode);
             break; }
         if (predicate)
@@ -1044,7 +1047,12 @@ bool CheckStatefulAlu::preorder(IR::MAU::StatefulAlu *salu) {
                 for (auto &salu_instr : salu_action_instr->action) {
                     LOG4("SALU " << salu->name << " already has " << salu_instr->name <<
                          " instruction");
-                    set_clr.erase(salu_instr->name); } } }
+                    std::string name = std::string(salu_instr->name);
+                    /* make sure that if the "bitc" variant instruction exists then
+                     * we do not add the non-c variant. */
+                    auto pos = name.find("bitc");
+                    if (pos != std::string::npos) name.erase(pos+3, 1);
+                    set_clr.erase(name); } } }
         for (auto sc : set_clr) {
             if (sc == "") continue;
             LOG4("SALU " << salu->name << " adding " << sc << " instruction");
