@@ -41,12 +41,12 @@ class MauAsmOutput : public MauInspector {
     void postorder(const IR::MAU::Selector *as) override {
         visitAgain();
         auto tbl = findContext<IR::MAU::Table>();
-        auto &unattached = tbl->resources->memuse.at(tbl->unique_id()).unattached_tables;
-        auto unique_id = tbl->unique_id(as);
-        if (tbl->is_placed() && !unattached.count(unique_id) &&
-            tbl->resources->memuse.count(unique_id)) {
-            selector_memory[std::make_pair(tbl->stage(), as)] =
-                std::make_pair(unique_id, &tbl->resources->memuse.at(unique_id)); } }
+        if (tbl->is_placed()) {
+            auto &unattached = tbl->resources->memuse.at(tbl->unique_id()).unattached_tables;
+            auto unique_id = tbl->unique_id(as);
+            if (!unattached.count(unique_id) && tbl->resources->memuse.count(unique_id)) {
+                selector_memory[std::make_pair(tbl->stage(), as)] =
+                std::make_pair(unique_id, &tbl->resources->memuse.at(unique_id)); } } }
     bool preorder(const IR::MAU::StatefulAlu *) override { return false; }
     friend std::ostream &operator<<(std::ostream &, const MauAsmOutput &);
 
