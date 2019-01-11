@@ -57,6 +57,7 @@ bool DynamicHashJson::preorder(const IR::MAU::Table *tbl) {
                     gen_ixbar_json(ixbar_use, _dynHashCalc, tbl->stage(),
                                     fieldListName, field_list->algorithms);
                     _dynHashNode->append(_dynHashCalc);
+                    return true;
                 }
             }
         }

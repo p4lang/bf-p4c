@@ -19,11 +19,21 @@ P4V1::generate_hash_block_statement(P4V1::ProgramStructure *structure,
         IR::BlockStatement *block = new IR::BlockStatement;
         auto ttype = IR::Type_Bits::get(flc->output_width);
         block->push_back(new IR::Declaration_Variable(temp, ttype));
+
+        auto fl = structure->getFieldLists(flc);
+        if (fl == nullptr)
+            return nullptr;
+        const IR::ListExpression *listExp = conv.convert(fl)->to<IR::ListExpression>();
+        auto list = new IR::HashListExpression(flc->srcInfo, listExp->components, flc->name);
+        list->fieldListNames = flc->input;
+        if (flc->algorithm->names.size() > 0)
+            list->algorithms = flc->algorithm;
+
         auto block_args = new IR::Vector<IR::Argument>();
         block_args->push_back(new IR::Argument(new IR::PathExpression(new IR::Path(temp))));
         block_args->push_back(new IR::Argument(structure->convertHashAlgorithms(flc->algorithm)));
         block_args->push_back(new IR::Argument(new IR::Constant(ttype, 0)));
-        block_args->push_back(new IR::Argument(conv.convert(flc->input_fields)));
+        block_args->push_back(new IR::Argument(list));
         block_args->push_back(new IR::Argument(
             new IR::Constant(IR::Type_Bits::get(flc->output_width + 1), 1 << flc->output_width)));
         block->push_back(new IR::MethodCallStatement(new IR::MethodCallExpression(

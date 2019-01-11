@@ -19,12 +19,22 @@ static cstring makeHashCall(ProgramStructure *structure, IR::BlockStatement *blo
     auto ttype = IR::Type_Bits::get(flc->output_width);
     cstring temp = structure->makeUniqueName("temp");
     block->push_back(new IR::Declaration_Variable(temp, ttype));
+
+    auto fl = structure->getFieldLists(flc);
+    if (fl == nullptr)
+        return nullptr;
+    const IR::ListExpression *listExp = conv.convert(fl)->to<IR::ListExpression>();
+    auto list = new IR::HashListExpression(flc->srcInfo, listExp->components, flc->name);
+    list->fieldListNames = flc->input;
+    if (flc->algorithm->names.size() > 0)
+        list->algorithms = flc->algorithm;
+
     block->push_back(new IR::MethodCallStatement(
         new IR::MethodCallExpression(flc->srcInfo, structure->v1model.hash.Id(), {
             new IR::Argument(new IR::PathExpression(new IR::Path(temp))),
             new IR::Argument(structure->convertHashAlgorithms(flc->algorithm)),
             new IR::Argument(new IR::Constant(ttype, 0)),
-            new IR::Argument(conv.convert(flc->input_fields)),
+            new IR::Argument(list),
             new IR::Argument(new IR::Constant(IR::Type_Bits::get(flc->output_width + 1),
                              1 << flc->output_width)) })));
     return temp;
