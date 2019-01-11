@@ -93,11 +93,12 @@ install_python_packages() {
     # do not upgrade pip until Ubuntu sorts out their issues
     # If you have already upgraded, do: sudo apt-get remove python-pip python-pip-whl
     # $SUDO pip install --upgrade pip
-    $SUDO pip install setuptools || die "Failed to install needed packages"
-    $SUDO pip install ply || die "Failed to install needed packages"
-    $SUDO pip install jsl jsonschema || die "Failed to install needed packages"
-    $SUDO pip install thrift==0.9.2 || die "Failed to install needed packages"  # need this one instead
-    $SUDO pip install pexpect || die "Failed to install needed packages"
+    $SUDO pip install setuptools || die "Failed to install setuptools packages"
+    $SUDO pip install pyinstaller || die "Failed to install pyinstaller packages"
+    $SUDO pip install ply==3.9 || die "Failed to install ply packages"
+    $SUDO pip install jsl jsonschema || die "Failed to install jsl packages"
+    $SUDO pip install thrift==0.9.2 || die "Failed to install thrift packages"  # need this one instead
+    $SUDO pip install pexpect || die "Failed to install pexpect packages"
 }
 
 install_linux_packages() {
