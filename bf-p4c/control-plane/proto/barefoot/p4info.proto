@@ -25,6 +25,8 @@ message P4Ids {
     PORT_METADATA = 0x90;
     SNAPSHOT = 0x91;
     SNAPSHOT_LIVENESS = 0x92;  // reserved for BFRT
+    HASH_CONFIGURE = 0x93;
+    HASH_COMPUTE = 0x94;  // reserved for BFRT
     // Temporary, see ValueSet message definition below
     VALUE_SET = 0xfe;
   }
@@ -134,6 +136,7 @@ message DynHash {
   //TODO(msharif): Not sure if hash algorithm is needed?
   p4.config.v1.P4DataTypeSpec type_spec = 1;
   repeated string field_names = 2;
+  int32 hash_width = 3;
 }
 
 // Any metadata associated with ingress port.

@@ -191,6 +191,7 @@ struct DynHash {
     const IR::IAnnotated* annotations;  // If non-null, any annotations applied to this dynhash
                                         // declaration.
     std::vector<cstring> hashFieldNames;  // Field Names of a Hash Field List
+    const int hashWidth;
 };
 
 /// The information about a value set instance which is needed to serialize it.
@@ -1073,15 +1074,20 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         forAllExternMethodCalls(decl, [&](const P4::ExternMethod* method) {
             hashCalls.push_back(method); });
         if (hashCalls.size() == 0) return boost::none;
-        // if (hashCalls.size() > 1) {
-        //     ::error("Expected single call to get for hash instance '%1%'", decl);
-        //     return boost::none;
-        // }
-        // LOG4("Found 'get' method call for hash instance " << decl->controlPlaneName());
+        if (hashCalls.size() > 1) {
+            ::warning("Expected single call to get for hash instance '%1%'."
+                    "Control plane API is not generated for this hash call", decl);
+            return boost::none;
+        }
+        LOG4("Found 'get' method call for hash instance " << decl->controlPlaneName());
 
         // Extract typeArgs and field Names to be passed on through dynHash
         // instance
         if (auto *call = hashCalls[0]->expr->to<IR::MethodCallExpression>()) {
+            int hashWidth = 0;
+            if (auto t = call->type->to<IR::Type_Bits>()) {
+                hashWidth = t->width_bits();
+            }
             auto *typeArg = call->typeArguments->at(0);
             auto typeSpec = TypeSpecConverter::convert(refMap, typeArg, p4RtTypeInfo);
             BUG_CHECK(typeSpec != nullptr,
@@ -1096,7 +1102,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
                 }
             }
             return DynHash{decl->controlPlaneName(), typeSpec,
-                decl->to<IR::IAnnotated>(), hashFieldNames};
+                decl->to<IR::IAnnotated>(), hashFieldNames, hashWidth};
         }
         return boost::none;
     }
@@ -1188,6 +1194,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
                    p4configv1::P4Info* p4Info,
                    const DynHash& dynHashInstance) {
         ::barefoot::DynHash dynHash;
+        dynHash.set_hash_width(dynHashInstance.hashWidth);
         dynHash.mutable_type_spec()->CopyFrom(*dynHashInstance.typeSpec);
         for (const auto& f : dynHashInstance.hashFieldNames) {
             dynHash.add_field_names(f);

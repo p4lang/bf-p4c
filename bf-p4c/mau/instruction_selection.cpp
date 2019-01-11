@@ -177,7 +177,8 @@ const IR::MAU::Action *Synth2PortSetup::postorder(IR::MAU::Action *act) {
 template<class T> static
 T *clone(const T *ir) { return ir ? ir->clone() : nullptr; }
 
-DoInstructionSelection::DoInstructionSelection(const PhvInfo &phv) : phv(phv) {}
+DoInstructionSelection::DoInstructionSelection(const BFN_Options& options, const PhvInfo &phv)
+        : options(options), phv(phv) {}
 
 Visitor::profile_t DoInstructionSelection::init_apply(const IR::Node *root) {
     auto rv = MauTransform::init_apply(root);
@@ -602,6 +603,20 @@ const IR::Node *DoInstructionSelection::postorder(IR::Primitive *prim) {
                         error("%s: The hash offset must be a power of 2 in a hash calculation %s",
                               prim->srcInfo, *prim); } } }
 
+        // ADD PD GEN Info for Dynamic Hashing in P4_16
+        if (options.langVersion == CompilerOptions::FrontendVersion::P4_16) {
+            auto dynHashName = decl->controlPlaneName() + ".$CONFIGURE";
+            if (auto le = data->to<IR::ListExpression>()) {
+                auto hle = new IR::HashListExpression(data->srcInfo, le->components, dynHashName);
+                auto nl = new IR::NameList();
+                nl->names.push_back("$field_list_1");
+                hle->fieldListNames = nl;
+                auto al = new IR::NameList();
+                al->names.emplace_back(data->srcInfo, algorithm.name());
+                hle->algorithms = al;
+                data = hle;
+            }
+        }
         auto *hd = new IR::MAU::HashDist(prim->srcInfo, IR::Type::Bits::get(size), data, algorithm);
         hd->bit_width = size;
         auto next_type = IR::Type::Bits::get(size);
@@ -1852,11 +1867,11 @@ const IR::MAU::Instruction *
 /** EliminateAllButLastWrite has to follow VerifyParallelWritesAndReads.  Look at the example
  *  above EliminateAllButLastWrite
  */
-InstructionSelection::InstructionSelection(PhvInfo &phv) : PassManager {
+InstructionSelection::InstructionSelection(const BFN_Options& options, PhvInfo &phv) : PassManager {
     new ValidateInvalidatePrimitive(phv),
     new UnimplementedRegisterMethodCalls,
     new Synth2PortSetup(phv),
-    new DoInstructionSelection(phv),
+    new DoInstructionSelection(options, phv),
     new ConvertCastToSlice,
     new StatefulAttachmentSetup(phv),
     new MeterSetup(phv),

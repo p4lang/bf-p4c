@@ -1,6 +1,7 @@
 #ifndef BF_P4C_MAU_INSTRUCTION_SELECTION_H_
 #define BF_P4C_MAU_INSTRUCTION_SELECTION_H_
 
+#include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/ir/tofino_write_context.h"
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/phv/phv_fields.h"
@@ -62,6 +63,7 @@ class Synth2PortSetup : public MauTransform {
  *      and interpreted by the remainder of the compiler
  */
 class DoInstructionSelection : public MauTransform, TofinoWriteContext {
+    const BFN_Options &options;
     const PhvInfo &phv;
     IR::MAU::Action                     *af = nullptr;
     class SplitInstructions;
@@ -96,7 +98,7 @@ class DoInstructionSelection : public MauTransform, TofinoWriteContext {
     IR::Member *genIntrinsicMetadata(gress_t gress, cstring header, cstring field);
 
  public:
-    explicit DoInstructionSelection(const PhvInfo &phv);
+    DoInstructionSelection(const BFN_Options &options, const PhvInfo &phv);
 };
 
 /** This pass was specifically created to deal with adding the HashDist object to different
@@ -380,7 +382,7 @@ class ConvertCastToSlice : public MauTransform, P4WriteContext {
 
 class InstructionSelection : public PassManager {
  public:
-    explicit InstructionSelection(PhvInfo &);
+    InstructionSelection(const BFN_Options&, PhvInfo &);
 };
 
 #endif /* BF_P4C_MAU_INSTRUCTION_SELECTION_H_ */

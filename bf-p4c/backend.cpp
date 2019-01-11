@@ -177,7 +177,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         (options.arch == "v1model" && options.adjust_egress_packet_length) ?
             new AdjustEgressPacketLength(phv, defuse) : nullptr,
         new CollectPhvInfo(phv),
-        new InstructionSelection(phv),
+        new InstructionSelection(options, phv),
         new DumpPipe("After InstructionSelection"),
         new Alias(phv, options),             // Add aliasing from the pa_alias pragmas
         new CollectPhvInfo(phv),

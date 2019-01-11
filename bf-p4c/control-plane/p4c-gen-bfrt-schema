@@ -160,6 +160,7 @@ class TableCommon(NamedObject):
         title = "Table"
         description = "Table object which can be controlled through BF-RT; can be either a P4 table or a fixed table"
     table_type = jsl.StringField(required=True)
+    read_only = jsl.BooleanField(required=False)
     size = jsl.IntField(required=False)
     key = jsl.ArrayField(required=True,
                          items=jsl.DocumentField(KeyField, as_ref=True))
@@ -199,7 +200,8 @@ class TableWithoutActionSpec(TableCommon):
               "Counter", "Meter", "Register", "Lpf", "Wred",
               "PortMetadata",
               "ParserValueSet",
-              "Snapshot", "SnapshotLiveness"])
+              "Snapshot", "SnapshotLiveness",
+              "DynHashConfigure", "DynHashCompute"])
 
 class LearnListFieldField(BaseDataField):
     class Options(object):

@@ -95,10 +95,11 @@ const IR::BFN::Pipe* runMockPasses(
         PHV::Pragmas& pragmas,
         MauBacktracker& entry,
         MetadataLiveRange& metaLiveRange) {
+    auto options = new BFN_Options();  // dummy options used in Pass
     PassManager quick_backend = {
         new CollectHeaderStackInfo,
         new CollectPhvInfo(phv),
-        new InstructionSelection(phv),
+        new InstructionSelection(*options, phv),
         &defuse,
         new ElimUnused(phv, defuse),
         new ElimUnusedHeaderStackInfo,

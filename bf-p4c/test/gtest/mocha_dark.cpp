@@ -8,6 +8,7 @@
 #include "lib/error.h"
 #include "lib/symbitmatrix.h"
 #include "test/gtest/helpers.h"
+#include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/mau/instruction_selection.h"
@@ -82,10 +83,11 @@ const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe,
                                    PhvInfo& phv,
                                    FieldDefUse& defuse,
                                    PhvUse& uses) {
+    auto options = new BFN_Options();  // dummy options used in Pass
     PassManager quick_backend = {
         new CollectHeaderStackInfo,
         new CollectPhvInfo(phv),
-        new DoInstructionSelection(phv),
+        new DoInstructionSelection(*options, phv),
         &defuse,
         &uses
     };
