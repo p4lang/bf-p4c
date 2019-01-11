@@ -40,6 +40,7 @@
 #include "common/elim_emit_headers.h"
 #include "common/elim_typedef.h"
 #include "common/flatten_emit_args.h"
+#include "common/rewrite_egress_intrinsic_metadata_header.h"
 #include "common/simplify_nested_if.h"
 #include "bf-p4c/arch/arch.h"
 #include "bf-p4c/common/normalize_params.h"
@@ -200,13 +201,13 @@ MidEnd::MidEnd(BFN_Options& options) {
     addPasses({
         new P4::EliminateNewtype(&refMap, &typeMap),
         new P4::EliminateSerEnums(&refMap, &typeMap),
-        new P4::EliminateTypedef(&refMap, &typeMap),
         new P4::TypeChecking(&refMap, &typeMap, true),
         new BFN::CheckHeaderAlignment(&typeMap),
         new P4::ConvertEnums(&refMap, &typeMap, new EnumOn32Bits()),
         new P4::RemoveActionParameters(&refMap, &typeMap),
         new P4::OrderArguments(&refMap, &typeMap),
         new BFN::ArchTranslation(&refMap, &typeMap, options),
+        new P4::EliminateTypedef(&refMap, &typeMap),
         new P4::SimplifyControlFlow(&refMap, &typeMap),
         new P4::SimplifyKey(
             &refMap, &typeMap,
@@ -264,7 +265,9 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::MoveActionsToTables(&refMap, &typeMap),
         evaluator,
         new VisitFunctor([this, evaluator]() { toplevel = evaluator->getToplevelBlock(); }),
+        new RewriteEgressIntrinsicMetadataHeader,
         new NormalizeParams(),
+        new P4::ClearTypeMap(&typeMap),
         new P4::TypeChecking(&refMap, &typeMap, true),
         new FlattenEmitArgs(),
         new P4::ClearTypeMap(&typeMap),

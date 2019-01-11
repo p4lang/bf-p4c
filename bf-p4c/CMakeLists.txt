@@ -169,6 +169,7 @@ set (BF_P4C_BACKEND_COMMON_HDRS
   common/parse_annotations.h
   common/parser_overlay.h
   common/parser_critical_path.h
+  common/rewrite_egress_intrinsic_metadata_header.h
   common/run_id.h
   common/simplify_nested_if.h
   common/simplify_references.h

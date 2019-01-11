@@ -41,14 +41,6 @@ class PardeSpec {
                byteIngressPrePacketPaddingSize();
     }
 
-    /// @return the size in bytes of *used fields* in the egress intrinsic metadata header
-    /// For now, we assume all fields are used; though this should really be program specific. TODO
-    virtual size_t byteEgressIntrinsicMetadataSize() const = 0;
-
-    /// @return bitmask indicating which egress intrinsic metadata fields are used
-    /// For now, we assume all fields are used; though this should really be program specific. TODO
-    virtual unsigned egressPacketBufferConfig() const { return (1 << 13) - 1; }
-
     /// The size of input buffer, in bytes.
     int byteInputBufferSize() const { return 32; }
 
@@ -72,7 +64,6 @@ class TofinoPardeSpec : public PardeSpec {
  public:
     size_t bytePhase0Size() const override { return 8; }
     size_t byteIngressPrePacketPaddingSize() const override { return 0; }
-    size_t byteEgressIntrinsicMetadataSize() const override { return 27; }
 
     const std::map<unsigned, unsigned>& extractorSpec() const override {
         static const std::map<unsigned, unsigned> extractorSpec = {
@@ -95,7 +86,6 @@ class JBayPardeSpec : public PardeSpec {
  public:
     size_t bytePhase0Size() const override { return 16; }
     size_t byteIngressPrePacketPaddingSize() const override { return 8; }
-    size_t byteEgressIntrinsicMetadataSize() const override { return 28; }
 
     const std::map<unsigned, unsigned>& extractorSpec() const override {
         static const std::map<unsigned, unsigned> extractorSpec = {

@@ -78,7 +78,7 @@ bool AddDeparserMetadataShims::preorder(IR::BFN::Deparser *d) {
 
 namespace {
 
-void addDeparserParam(IR::BFN::Deparser* deparser,
+void addDeparserParamRename(IR::BFN::Deparser* deparser,
                       const IR::HeaderOrMetadata* meta,
                       cstring field, cstring paramName,
                       bool canPack = true) {
@@ -98,48 +98,57 @@ void addDeparserParam(IR::BFN::Deparser* deparser,
     deparser->params.push_back(param);
 }
 
+// Use this method if field name is same as param (assembly) name
+// FIXME(zma) move renaming to assembler; having multiple names for
+// same thing is never a good idea ...
+void addDeparserParam(IR::BFN::Deparser* deparser,
+                      const IR::HeaderOrMetadata* meta,
+                      cstring field, bool canPack = true) {
+    addDeparserParamRename(deparser, meta, field, field, canPack);
+}
+
 }  // namespace
 
 void AddDeparserMetadataShims::addIngressMetadata(IR::BFN::Deparser *d) {
     auto* tmMeta = getMetadataType(pipe, "ingress_intrinsic_metadata_for_tm");
-    addDeparserParam(d, tmMeta, "ucast_egress_port", "egress_unicast_port",
+    addDeparserParamRename(d, tmMeta, "ucast_egress_port", "egress_unicast_port",
                      /* canPack = */ false);
-    addDeparserParam(d, tmMeta, "bypass_egress", "bypss_egr");
-    addDeparserParam(d, tmMeta, "deflect_on_drop", "deflect_on_drop");
-    addDeparserParam(d, tmMeta, "ingress_cos", "icos");
-    addDeparserParam(d, tmMeta, "qid", "qid");
-    addDeparserParam(d, tmMeta, "icos_for_copy_to_cpu", "copy_to_cpu_cos");
-    addDeparserParam(d, tmMeta, "copy_to_cpu", "copy_to_cpu");
-    addDeparserParam(d, tmMeta, "packet_color", "meter_color");
-    addDeparserParam(d, tmMeta, "disable_ucast_cutthru", "ct_disable");
-    addDeparserParam(d, tmMeta, "enable_mcast_cutthru", "ct_mcast");
-    addDeparserParam(d, tmMeta, "mcast_grp_a", "mcast_grp_a", /* canPack = */ false);
-    addDeparserParam(d, tmMeta, "mcast_grp_b", "mcast_grp_b", /* canPack = */ false);
-    addDeparserParam(d, tmMeta, "level1_mcast_hash", "level1_mcast_hash");
-    addDeparserParam(d, tmMeta, "level2_mcast_hash", "level2_mcast_hash");
-    addDeparserParam(d, tmMeta, "level1_exclusion_id", "xid");
-    addDeparserParam(d, tmMeta, "level2_exclusion_id", "yid");
-    addDeparserParam(d, tmMeta, "rid", "rid");
+    addDeparserParamRename(d, tmMeta, "bypass_egress", "bypss_egr");
+    addDeparserParam(d, tmMeta, "deflect_on_drop");
+    addDeparserParamRename(d, tmMeta, "ingress_cos", "icos");
+    addDeparserParam(d, tmMeta, "qid");
+    addDeparserParamRename(d, tmMeta, "icos_for_copy_to_cpu", "copy_to_cpu_cos");
+    addDeparserParam(d, tmMeta, "copy_to_cpu");
+    addDeparserParamRename(d, tmMeta, "packet_color", "meter_color");
+    addDeparserParamRename(d, tmMeta, "disable_ucast_cutthru", "ct_disable");
+    addDeparserParamRename(d, tmMeta, "enable_mcast_cutthru", "ct_mcast");
+    addDeparserParam(d, tmMeta, "mcast_grp_a", /* canPack = */ false);
+    addDeparserParam(d, tmMeta, "mcast_grp_b", /* canPack = */ false);
+    addDeparserParam(d, tmMeta, "level1_mcast_hash");
+    addDeparserParam(d, tmMeta, "level2_mcast_hash");
+    addDeparserParamRename(d, tmMeta, "level1_exclusion_id", "xid");
+    addDeparserParamRename(d, tmMeta, "level2_exclusion_id", "yid");
+    addDeparserParam(d, tmMeta, "rid");
 
     auto* dpMeta = getMetadataType(pipe, "ingress_intrinsic_metadata_for_deparser");
-    addDeparserParam(d, dpMeta, "drop_ctl", "drop_ctl", /* canPack = */ false);
+    addDeparserParam(d, dpMeta, "drop_ctl", /* canPack = */ false);
 #if HAVE_JBAY
     if (Device::currentDevice() == Device::JBAY) {
-        addDeparserParam(d, dpMeta, "mirror_hash", "mirr_hash", true);
-        addDeparserParam(d, dpMeta, "mirror_io_select", "mirr_io_sel", true);
-        addDeparserParam(d, dpMeta, "mirror_egress_port", "mirr_egress_port", true);
-        addDeparserParam(d, dpMeta, "mirror_qid", "mirr_qid", true);
-        addDeparserParam(d, dpMeta, "mirror_deflect_on_drop", "mirr_dond_ctrl", true);
-        addDeparserParam(d, dpMeta, "mirror_ingress_cos", "mirr_icos", true);
-        addDeparserParam(d, dpMeta, "mirror_multicast_ctrl", "mirr_mc_ctrl", true);
-        addDeparserParam(d, dpMeta, "mirror_copy_to_cpu_ctrl", "mirr_c2c_ctrl", true);
-        addDeparserParam(d, dpMeta, "adv_flow_ctl", "afc", true);
-        addDeparserParam(d, dpMeta, "mtu_trunc_len", "mtu_trunc_len", true);
-        addDeparserParam(d, dpMeta, "mtu_trunc_err_f", "mtu_trunc_err_f", true);
-        addDeparserParam(d, dpMeta, "pktgen", "pgen", true);
-        addDeparserParam(d, dpMeta, "pktgen_length", "pgen_len", true);
-        addDeparserParam(d, dpMeta, "pktgen_address", "pgen_addr", true);
-        addDeparserParam(d, dpMeta, "learn_sel", "learn_sel", true);
+        addDeparserParamRename(d, dpMeta, "mirror_hash", "mirr_hash");
+        addDeparserParamRename(d, dpMeta, "mirror_io_select", "mirr_io_sel");
+        addDeparserParamRename(d, dpMeta, "mirror_egress_port", "mirr_egress_port");
+        addDeparserParamRename(d, dpMeta, "mirror_qid", "mirr_qid");
+        addDeparserParamRename(d, dpMeta, "mirror_deflect_on_drop", "mirr_dond_ctrl");
+        addDeparserParamRename(d, dpMeta, "mirror_ingress_cos", "mirr_icos");
+        addDeparserParamRename(d, dpMeta, "mirror_multicast_ctrl", "mirr_mc_ctrl");
+        addDeparserParamRename(d, dpMeta, "mirror_copy_to_cpu_ctrl", "mirr_c2c_ctrl");
+        addDeparserParamRename(d, dpMeta, "adv_flow_ctl", "afc");
+        addDeparserParam(d, dpMeta, "mtu_trunc_len");
+        addDeparserParam(d, dpMeta, "mtu_trunc_err_f");
+        addDeparserParamRename(d, dpMeta, "pktgen", "pgen");
+        addDeparserParamRename(d, dpMeta, "pktgen_length", "pgen_len");
+        addDeparserParamRename(d, dpMeta, "pktgen_address", "pgen_addr");
+        addDeparserParam(d, dpMeta, "learn_sel");
     }
 #endif
 }
@@ -147,30 +156,30 @@ void AddDeparserMetadataShims::addIngressMetadata(IR::BFN::Deparser *d) {
 void AddDeparserMetadataShims::addEgressMetadata(IR::BFN::Deparser *d) {
     auto* outputMeta =
       getMetadataType(pipe, "egress_intrinsic_metadata_for_output_port");
-    addDeparserParam(d, outputMeta, "capture_tstamp_on_tx", "capture_tx_ts");
-    addDeparserParam(d, outputMeta, "update_delay_on_tx", "tx_pkt_has_offsets");
-    addDeparserParam(d, outputMeta, "force_tx_error", "force_tx_err");
+    addDeparserParamRename(d, outputMeta, "capture_tstamp_on_tx", "capture_tx_ts");
+    addDeparserParamRename(d, outputMeta, "update_delay_on_tx", "tx_pkt_has_offsets");
+    addDeparserParamRename(d, outputMeta, "force_tx_error", "force_tx_err");
 
     auto* dpMeta = getMetadataType(pipe, "egress_intrinsic_metadata_for_deparser");
-    addDeparserParam(d, dpMeta, "drop_ctl", "drop_ctl", /* canPack = */ false);
+    addDeparserParam(d, dpMeta, "drop_ctl", /* canPack = */ false);
 #if HAVE_JBAY
     if (Device::currentDevice() == Device::JBAY) {
-        addDeparserParam(d, dpMeta, "mirror_hash", "mirr_hash", true);
-        addDeparserParam(d, dpMeta, "mirror_io_select", "mirr_io_sel", true);
-        addDeparserParam(d, dpMeta, "mirror_egress_port", "mirr_egress_port", true);
-        addDeparserParam(d, dpMeta, "mirror_qid", "mirr_qid", true);
-        addDeparserParam(d, dpMeta, "mirror_deflect_on_drop", "mirr_dond_ctrl", true);
-        addDeparserParam(d, dpMeta, "mirror_ingress_cos", "mirr_icos", true);
-        addDeparserParam(d, dpMeta, "mirror_multicast_ctrl", "mirr_mc_ctrl", true);
-        addDeparserParam(d, dpMeta, "mirror_copy_to_cpu_ctrl", "mirr_c2c_ctrl", true);
-        addDeparserParam(d, dpMeta, "adv_flow_ctl", "afc", true);
-        addDeparserParam(d, dpMeta, "mtu_trunc_len", "mtu_trunc_len", true);
-        addDeparserParam(d, dpMeta, "mtu_trunc_err_f", "mtu_trunc_err_f", true);
+        addDeparserParamRename(d, dpMeta, "mirror_hash", "mirr_hash");
+        addDeparserParamRename(d, dpMeta, "mirror_io_select", "mirr_io_sel");
+        addDeparserParamRename(d, dpMeta, "mirror_egress_port", "mirr_egress_port");
+        addDeparserParamRename(d, dpMeta, "mirror_qid", "mirr_qid");
+        addDeparserParamRename(d, dpMeta, "mirror_deflect_on_drop", "mirr_dond_ctrl");
+        addDeparserParamRename(d, dpMeta, "mirror_ingress_cos", "mirr_icos");
+        addDeparserParamRename(d, dpMeta, "mirror_multicast_ctrl", "mirr_mc_ctrl");
+        addDeparserParamRename(d, dpMeta, "mirror_copy_to_cpu_ctrl", "mirr_c2c_ctrl");
+        addDeparserParamRename(d, dpMeta, "adv_flow_ctl", "afc");
+        addDeparserParam(d, dpMeta, "mtu_trunc_len");
+        addDeparserParam(d, dpMeta, "mtu_trunc_err_f");
     }
 #endif
     /* egress_port is how the egress deparser knows where to push
      * the reassembled header and is absolutely necessary
      */
     auto* egMeta = getMetadataType(pipe, "egress_intrinsic_metadata");
-    addDeparserParam(d, egMeta, "egress_port", "egress_unicast_port");
+    addDeparserParamRename(d, egMeta, "egress_port", "egress_unicast_port");
 }

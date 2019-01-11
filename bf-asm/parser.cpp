@@ -131,10 +131,6 @@ void Parser::input(VECTOR(value_t) args, value_t data) {
                 continue; }
             define_state(gress, kv); }
 
-        if (!hdr_len_adj[gress]) { 
-            error(lineno[gress], "Parser header length adjust value not specified for %sgress", 
-                                    gress ? "e" : "in");
-        }
         // process the CLOTs immediately rather than in Parser::process() so that it
         // happens before Deparser::process()
         for (auto &vec : Values(clots[gress])) {

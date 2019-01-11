@@ -836,6 +836,13 @@ p4c_add_xfail_reason("tofino"
   "Could not find declaration for standard_metadata"
   testdata/p4_14_samples/issue-1426.p4
 )
+
+# EliminateTypeDef pass does not work properly?
+p4c_add_xfail_reason("tofino"
+  "Could not find declaration for smeta"
+  testdata/p4_16_samples/issue677-bmv2.p4
+)
+
 # invalid tests, issue604.p4 is a v1.1 testcase
 # P4-14 program can not define extern
 p4c_add_xfail_reason("tofino"

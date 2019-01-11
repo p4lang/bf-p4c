@@ -153,9 +153,6 @@ class AddIntrinsicMetadata : public Transform {
 
         // Add a state that skips over any padding between the phase 0 data and the
         // beginning of the packet.
-        // XXX(seth): This "padding" is new in JBay, and it may contain actual data
-        // rather than just padding. Once we have a chance to investigate what it
-        // does, we'll want to revisit this.
         const auto bitSkip = Device::pardeSpec().bitIngressPrePacketPaddingSize();
         auto *skipToPacketState =
             createGeneratedParserState("skip_to_packet", {
@@ -279,10 +276,6 @@ class AddIntrinsicMetadata : public Transform {
         parser->states.push_back(checkMirroredState);
 
         // This state handles the extraction of egress intrinsic metadata.
-        // TODO(zma): Not all egress intrinsic metadata are used in the program,
-        // we should insert extract statements for those used (probably in the backend),
-        // and config the EPB accordingly in the assembly.
-
         auto *egMetadataState =
             createGeneratedParserState("egress_metadata", {
                 createSetMetadata(parser, "eg_intr_md_from_prsr", "parser_err", 16, 0),

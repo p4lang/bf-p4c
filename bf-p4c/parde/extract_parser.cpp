@@ -406,6 +406,9 @@ struct RewriteParserStatements : public Transform {
             auto width = field->type->width_bits();
             auto* rval = new IR::BFN::PacketRVal(StartLen(currentBit, width));
             auto* extract = new IR::BFN::Extract(srcInfo, fref, rval);
+
+            LOG5("add extract: " << extract);
+
             currentBit += width;
             rv->push_back(extract);
             extractedFields[fref] = rval;
