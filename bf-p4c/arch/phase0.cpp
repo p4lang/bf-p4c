@@ -1,8 +1,8 @@
-#include "bf-p4c/arch/phase0.h"
+#include "phase0.h"
 
 #include <algorithm>
-#include "bf-p4c/common/path_linearizer.h"
-#include "bf-p4c/common/type_categories.h"
+#include "bf-p4c/midend/path_linearizer.h"
+#include "bf-p4c/midend/type_categories.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/lib/pad_alignment.h"
 #include "bf-p4c/parde/field_packing.h"

@@ -6,7 +6,7 @@
 #include "frontends/common/resolveReferences/referenceMap.h"
 #include "frontends/p4/typeMap.h"
 #include "bf-p4c/mau/mau_visitor.h"
-#include "bf-p4c/common/param_binding.h"
+#include "bf-p4c/midend/param_binding.h"
 #include "bf-p4c/parde/resubmit.h"
 #include "bf-p4c/parde/mirror.h"
 #include "bf-p4c/arch/arch.h"

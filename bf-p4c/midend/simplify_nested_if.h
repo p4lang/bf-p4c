@@ -5,11 +5,11 @@
 #include "frontends/p4/simplify.h"
 #include "frontends/p4/typeChecking/typeChecker.h"
 #include "frontends/p4/typeMap.h"
-#include "bf-p4c/common/path_linearizer.h"
-#include "bf-p4c/common/type_categories.h"
+#include "bf-p4c/midend/path_linearizer.h"
+#include "bf-p4c/midend/type_categories.h"
 
-#ifndef _EXTENSIONS_BF_P4C_COMMON_SIMPLIFY_NESTED_IF_H_
-#define _EXTENSIONS_BF_P4C_COMMON_SIMPLIFY_NESTED_IF_H_
+#ifndef _EXTENSIONS_BF_P4C_MIDEND_SIMPLIFY_NESTED_IF_H_
+#define _EXTENSIONS_BF_P4C_MIDEND_SIMPLIFY_NESTED_IF_H_
 
 namespace P4 {
 
@@ -144,4 +144,4 @@ class SimplifyNestedIf : public PassManager {
 
 }  // namespace P4
 
-#endif /* _EXTENSIONS_BF_P4C_COMMON_SIMPLIFY_NESTED_IF_H_ */
+#endif /* _EXTENSIONS_BF_P4C_MIDEND_SIMPLIFY_NESTED_IF_H_ */

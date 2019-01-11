@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
 
-#include "bf-p4c/common/path_linearizer.h"
+#include "bf-p4c/midend/path_linearizer.h"
 #include "ir/ir.h"
 
 namespace BFN {

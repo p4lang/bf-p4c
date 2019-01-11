@@ -1,5 +1,5 @@
-#ifndef _COMMON_SIMPLIFY_REFERENCES_H_
-#define _COMMON_SIMPLIFY_REFERENCES_H_
+#ifndef _MIDEND_SIMPLIFY_REFERENCES_H_
+#define _MIDEND_SIMPLIFY_REFERENCES_H_
 
 #include <vector>
 #include "ir/ir.h"
@@ -43,4 +43,4 @@ struct SimplifyReferences : public PassManager {
                        P4::TypeMap* typeMap);
 };
 
-#endif /* _COMMON_SIMPLIFY_REFERENCES_H_ */
+#endif /* _MIDEND_SIMPLIFY_REFERENCES_H_ */

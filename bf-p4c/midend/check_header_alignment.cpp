@@ -1,4 +1,4 @@
-#include "bf-p4c/common/check_header_alignment.h"
+#include "bf-p4c/midend/check_header_alignment.h"
 #include "bf-p4c/device.h"
 #include "frontends/p4/typeMap.h"
 

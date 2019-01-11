@@ -1,5 +1,5 @@
-#ifndef _COMMON_NORMALIZE_PARAMS_H_
-#define _COMMON_NORMALIZE_PARAMS_H_
+#ifndef _MIDEND_NORMALIZE_PARAMS_H_
+#define _MIDEND_NORMALIZE_PARAMS_H_
 
 #include "frontends/common/resolveReferences/referenceMap.h"
 #include "frontends/p4/typeMap.h"
@@ -63,4 +63,4 @@ class NormalizeParams : public Modifier {
     NormalizeParams() {}
 };
 
-#endif  /* _COMMON_NORMALIZE_PARAMS_H_ */
+#endif  /* _MIDEND_NORMALIZE_PARAMS_H_ */

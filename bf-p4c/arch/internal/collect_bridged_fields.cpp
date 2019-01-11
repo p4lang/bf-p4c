@@ -1,8 +1,8 @@
-#include "bf-p4c/arch/internal/collect_bridged_fields.h"
+#include "collect_bridged_fields.h"
 
 #include <boost/range/adaptor/sliced.hpp>
 
-#include "bf-p4c/common/path_linearizer.h"
+#include "bf-p4c/midend/path_linearizer.h"
 #include "frontends/common/resolveReferences/referenceMap.h"
 #include "frontends/p4/typeMap.h"
 #include "ir/ir.h"

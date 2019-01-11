@@ -1,5 +1,5 @@
-#ifndef BF_P4C_COMMON_PATH_LINEARIZER_H_
-#define BF_P4C_COMMON_PATH_LINEARIZER_H_
+#ifndef BF_P4C_MIDEND_PATH_LINEARIZER_H_
+#define BF_P4C_MIDEND_PATH_LINEARIZER_H_
 
 #include <boost/optional.hpp>
 #include <vector>
@@ -68,4 +68,4 @@ struct PathLinearizer : public Inspector {
 
 }  // namespace BFN
 
-#endif  /* BF_P4C_COMMON_PATH_LINEARIZER_H_ */
+#endif  /* BF_P4C_MIDEND_PATH_LINEARIZER_H_ */

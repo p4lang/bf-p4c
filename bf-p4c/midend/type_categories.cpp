@@ -1,7 +1,7 @@
-#include "bf-p4c/common/type_categories.h"
+#include "type_categories.h"
 
 #include <algorithm>
-#include "bf-p4c/common/path_linearizer.h"
+#include "path_linearizer.h"
 #include "frontends/common/resolveReferences/referenceMap.h"
 #include "frontends/p4/typeMap.h"
 

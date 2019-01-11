@@ -1,4 +1,4 @@
-#include "bf-p4c/common/path_linearizer.h"
+#include "path_linearizer.h"
 
 namespace BFN {
 

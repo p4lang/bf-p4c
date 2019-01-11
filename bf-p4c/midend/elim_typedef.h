@@ -1,5 +1,5 @@
-#ifndef EXTENSIONS_BF_P4C_COMMON_ELIM_TYPEDEF_H_
-#define EXTENSIONS_BF_P4C_COMMON_ELIM_TYPEDEF_H_
+#ifndef EXTENSIONS_BF_P4C_MIDEND_ELIM_TYPEDEF_H_
+#define EXTENSIONS_BF_P4C_MIDEND_ELIM_TYPEDEF_H_
 
 #include "ir/ir.h"
 #include "frontends/p4/typeChecking/typeChecker.h"
@@ -31,4 +31,4 @@ class EliminateTypedef final : public PassManager {
 
 }  // namespace P4
 
-#endif /* EXTENSIONS_BF_P4C_COMMON_ELIM_TYPEDEF_H_ */
+#endif /* EXTENSIONS_BF_P4C_MIDEND_ELIM_TYPEDEF_H_ */

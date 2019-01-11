@@ -1,5 +1,5 @@
-#ifndef BF_P4C_COMMON_BLOCKMAP_H_
-#define BF_P4C_COMMON_BLOCKMAP_H_
+#ifndef BF_P4C_MIDEND_BLOCKMAP_H_
+#define BF_P4C_MIDEND_BLOCKMAP_H_
 
 #include "ir/ir.h"
 #include "frontends/p4/evaluator/evaluator.h"
@@ -42,4 +42,4 @@ class FillFromBlockMap : public Transform {
     : refMap(refMap), typeMap(typeMap) { dontForwardChildrenBeforePreorder = true; }
 };
 
-#endif /* BF_P4C_COMMON_BLOCKMAP_H_ */
+#endif /* BF_P4C_MIDEND_BLOCKMAP_H_ */

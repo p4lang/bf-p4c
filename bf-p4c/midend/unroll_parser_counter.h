@@ -1,8 +1,9 @@
-#ifndef BF_P4C_PARDE_UNROLL_PARSER_COUNTER_H_
-#define BF_P4C_PARDE_UNROLL_PARSER_COUNTER_H_
+#ifndef BF_P4C_MIDEND_UNROLL_PARSER_COUNTER_H_
+#define BF_P4C_MIDEND_UNROLL_PARSER_COUNTER_H_
 
 #include "ir/ir.h"
 #include "lib/cstring.h"
+#include "frontends/common/resolveReferences/referenceMap.h"
 
 /** Unroll states that loop on parser counter value.
  * This pass tries to remove the common use of parser counter in the mid-end
@@ -162,4 +163,4 @@ class UnrollParserCounter : public Modifier {
     explicit UnrollParserCounter(P4::ReferenceMap *refMap) : refMap(refMap) { }
 };
 
-#endif /* BF_P4C_PARDE_UNROLL_PARSER_COUNTER_H_ */
+#endif /* BF_P4C_MIDEND_UNROLL_PARSER_COUNTER_H_ */

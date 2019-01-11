@@ -1,4 +1,4 @@
-#include "bf-p4c/common/flatten_emit_args.h"
+#include "flatten_emit_args.h"
 #include "bf-p4c/common/utils.h"
 
 void FlattenEmitArgs::postorder(IR::MethodCallExpression* mc) {

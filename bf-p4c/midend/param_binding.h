@@ -1,5 +1,5 @@
-#ifndef _COMMON_PARAM_BINDING_H_
-#define _COMMON_PARAM_BINDING_H_
+#ifndef _MIDEND_PARAM_BINDING_H_
+#define _MIDEND_PARAM_BINDING_H_
 
 #include <map>
 #include "ir/ir.h"
@@ -46,4 +46,4 @@ class ParamBinding : public Inspector {
     void postorder(const IR::Declaration_Variable *var);
 };
 
-#endif /* _COMMON_PARAM_BINDING_H_ */
+#endif /* _MIDEND_PARAM_BINDING_H_ */

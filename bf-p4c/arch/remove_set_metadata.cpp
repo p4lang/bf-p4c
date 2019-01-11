@@ -1,7 +1,7 @@
-#include "bf-p4c/arch/remove_set_metadata.h"
+#include "remove_set_metadata.h"
 
-#include "bf-p4c/common/path_linearizer.h"
-#include "bf-p4c/common/type_categories.h"
+#include "bf-p4c/midend/path_linearizer.h"
+#include "bf-p4c/midend/type_categories.h"
 #include "frontends/common/resolveReferences/referenceMap.h"
 #include "frontends/p4/typeMap.h"
 #include "ir/ir.h"

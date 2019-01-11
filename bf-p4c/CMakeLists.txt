@@ -35,7 +35,7 @@ set (P4C_LIB_DEPS ${P4C_LIB_DEPS} PARENT_SCOPE)
 add_subdirectory(logging)
 
 set (BF_P4C_IR_SRCS
-  common/path_linearizer.cpp
+  midend/path_linearizer.cpp
   ir/dbprint-tofino.cpp
   ir/bitrange.cpp
   ir/ir_enums.cpp
@@ -56,7 +56,7 @@ set_source_files_properties(${BF_P4C_IR_SRCS} PROPERTIES
   COMPILE_FLAGS "-I${LIBDYNHASH_INCLUDE_DIR}")
 
 set (BF_P4C_IR_HDRS
-  common/path_linearizer.h
+  midend/path_linearizer.h
   ir/bitrange.h
   ir/control_flow_visitor.h
   ir/gress.h
@@ -71,6 +71,39 @@ set (BF_P4C_IR_HDRS
   phv/phv.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_IR_HDRS}")
+
+set (BF_P4C_MIDEND_SRCS
+  midend/check_header_alignment.cpp
+  midend/elim_emit_headers.cpp
+  midend/elim_typedef.cpp
+  midend/flatten_emit_args.cpp
+  midend/inline_subparser.cpp
+  midend/normalize_params.cpp
+  midend/param_binding.cpp
+  midend/unroll_parser_counter.cpp
+  midend/simplify_nested_if.cpp
+  midend/simplify_references.cpp
+  midend/type_categories.cpp
+  )
+add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_MIDEND_SRCS}")
+build_unified(BF_P4C_MIDEND_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
+
+set (BF_P4C_BACKEND_MIDEND_HDRS
+  midend/blockmap.h
+  midend/check_header_alignment.h
+  midend/elim_emit_headers.h
+  midend/elim_typedef.h
+  midend/flatten_emit_args.h
+  midend/inline_subparser.h
+  midend/normalize_params.h
+  midend/param_binding.h
+  midend/unroll_parser_counter.h
+  midend/rewrite_egress_intrinsic_metadata_header.h
+  midend/simplify_nested_if.h
+  midend/simplify_references.h
+  midend/type_categories.h
+  )
+add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_MIDEND_HDRS}")
 
 set (BF_P4C_BACKEND_CONV_SRCS
   fromv1.0/field_list.cpp
@@ -109,35 +142,25 @@ foreach(src IN LISTS BF_P4C_BACKEND_CONV_SRCS)
 endforeach()
 set(EXTENSION_P4_14_CONV_SOURCES ${EXTENSION_P4_14_CONV_SOURCES} ${QUAL_BF_P4C_P4_14_CONV_SRCS} PARENT_SCOPE)
 
-
 set (BF_P4C_BACKEND_COMMON_SRCS
   common/alias.cpp
   common/asm_output.cpp
   common/bridged_metadata_packing.cpp
   common/bridged_metadata_replacement.cpp
   common/check_for_unimplemented_features.cpp
-  common/check_header_alignment.cpp
   common/collect_global_pragma.cpp
   common/copy_header_eliminator.cpp
-  common/elim_emit_headers.cpp
-  common/elim_typedef.cpp
   common/elim_unused.cpp
   common/extract_maupipe.cpp
   common/field_defuse.cpp
-  common/flatten_emit_args.cpp
   common/header_stack.cpp
   common/ir_utils.cpp
   common/map_tables_to_actions.cpp
   common/multiple_apply.cpp
-  common/normalize_params.cpp
-  common/param_binding.cpp
   common/parser_overlay.cpp
   common/parser_critical_path.cpp
   common/run_id.cpp
-  common/simplify_nested_if.cpp
-  common/simplify_references.cpp
   common/slice.cpp
-  common/type_categories.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_COMMON_SRCS}")
 build_unified(BF_P4C_BACKEND_COMMON_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
@@ -145,37 +168,26 @@ build_unified(BF_P4C_BACKEND_COMMON_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 set (BF_P4C_BACKEND_COMMON_HDRS
   common/alias.h
   common/autoindent.h
-  common/blockmap.h
   common/bridged_metadata_packing.h
   common/bridged_metadata_replacement.h
   common/check_for_unimplemented_features.h
-  common/check_header_alignment.h
   common/check_header_refs.h
   common/collect_global_pragma.h
   common/copy_header_eliminator.h
   common/debug_info.h
-  common/elim_emit_headers.h
-  common/elim_typedef.h
   common/elim_unused.h
   common/extract_maupipe.h
   common/field_defuse.h
-  common/flatten_emit_args.h
   common/header_stack.h
   common/ir_utils.h
   common/map_tables_to_actions.h
   common/multiple_apply.h
-  common/normalize_params.h
-  common/param_binding.h
   common/parse_annotations.h
   common/parser_overlay.h
   common/parser_critical_path.h
-  common/rewrite_egress_intrinsic_metadata_header.h
   common/run_id.h
-  common/simplify_nested_if.h
-  common/simplify_references.h
   common/slice.h
   common/table_printer.h
-  common/type_categories.h
   common/utils.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_COMMON_HDRS}")
@@ -291,14 +303,12 @@ set (BF_P4C_BACKEND_PARDE_SRCS
   parde/field_packing.cpp
   parde/gen_deparser.cpp
   parde/lower_parser.cpp
-  parde/inline_subparser.cpp
   parde/merge_parser_state.cpp
   parde/mirror.cpp
   parde/parser_output.cpp
   parde/phase0.cpp
   parde/resolve_computed.cpp
   parde/resubmit.cpp
-  parde/unroll_parser_counter.cpp
   parde/p4i/gen_parser_json.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_PARDE_SRCS}")
@@ -318,7 +328,6 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/extract_parser.h
   parde/field_packing.h
   parde/gen_deparser.h
-  parde/inline_subparser.h
   parde/lower_parser.h
   parde/marshal.h
   parde/match_register.h
@@ -328,7 +337,6 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/phase0.h
   parde/resolve_computed.h
   parde/resubmit.h
-  parde/unroll_parser_counter.h
   parde/parde_utils.h
   parde/parser_info.h
   parde/p4i/gen_parser_json.h
@@ -577,6 +585,7 @@ set (hack_p4_14include_HEADERS
 endif (ENABLE_JBAY)
 
 set (BF_P4C_SOURCES
+  ${BF_P4C_MIDEND_SRCS}
   ${BF_P4C_BACKEND_COMMON_SRCS}
   ${BF_P4C_BACKEND_CONTROL_PLANE_SRCS}
   ${BF_P4C_BACKEND_MAU_SRCS}

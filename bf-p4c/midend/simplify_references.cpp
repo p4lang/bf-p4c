@@ -1,9 +1,9 @@
-#include "bf-p4c/common/simplify_references.h"
+#include "simplify_references.h"
 
 #include "frontends/common/resolveReferences/referenceMap.h"
 #include "frontends/p4/evaluator/evaluator.h"
 #include "frontends/p4/typeMap.h"
-#include "bf-p4c/common/param_binding.h"
+#include "bf-p4c/midend/param_binding.h"
 
 namespace {
 

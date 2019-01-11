@@ -1,4 +1,4 @@
-#include "bf-p4c/parde/inline_subparser.h"
+#include "bf-p4c/midend/inline_subparser.h"
 
 namespace {
 

@@ -1,5 +1,5 @@
-#ifndef EXTENSIONS_BF_P4C_COMMON_FLATTEN_EMIT_ARGS_H_
-#define EXTENSIONS_BF_P4C_COMMON_FLATTEN_EMIT_ARGS_H_
+#ifndef EXTENSIONS_BF_P4C_MIDEND_FLATTEN_EMIT_ARGS_H_
+#define EXTENSIONS_BF_P4C_MIDEND_FLATTEN_EMIT_ARGS_H_
 
 #include "ir/ir.h"
 
@@ -9,4 +9,4 @@ class FlattenEmitArgs : public Modifier {
     void  explode(const IR::Expression*, IR::Vector<IR::Expression>*);
 };
 
-#endif /* EXTENSIONS_BF_P4C_COMMON_FLATTEN_EMIT_ARGS_H_ */
+#endif /* EXTENSIONS_BF_P4C_MIDEND_FLATTEN_EMIT_ARGS_H_ */
