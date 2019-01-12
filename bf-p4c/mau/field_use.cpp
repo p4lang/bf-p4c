@@ -23,7 +23,18 @@ void FieldUse::access_field(cstring name) {
 }
 
 bool FieldUse::preorder(const IR::Member *f) {
-    access_field(f->toString());
+    auto* field = phv.field(f);
+    if (!field) {
+        access_field(f->toString());
+        return false;
+    }
+    const PHV::Field* alias = phv.getAliasDestination(field);
+    // If this field is an alias source, then ensure that we use the alias destination to record the
+    // access.
+    if (alias == nullptr)
+        access_field(f->toString());
+    else
+        access_field(alias->name);
     return false;
 }
 

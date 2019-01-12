@@ -6,8 +6,10 @@
 #include "lib/bitvec.h"
 #include "lib/safe_vector.h"
 #include "bf-p4c/ir/tofino_write_context.h"
+#include "bf-p4c/phv/phv_fields.h"
 
 class FieldUse : public MauInspector, TofinoWriteContext {
+    const PhvInfo&              phv;
     safe_vector<cstring>        field_names;
     std::map<cstring, int>      field_index;
     struct rw_t { bitvec reads, writes; };
@@ -18,8 +20,9 @@ class FieldUse : public MauInspector, TofinoWriteContext {
     bool preorder(const IR::HeaderStackItemRef *f) override;
     bool preorder(const IR::TempVar *t) override;
     friend std::ostream &operator<<(std::ostream &, const FieldUse &);
+
  public:
-    FieldUse() { visitDagOnce = false; }
+    explicit FieldUse(const PhvInfo& p) : phv(p) { visitDagOnce = false; }
     bitvec tables_modify(const IR::MAU::TableSeq *t) const;
     bitvec tables_access(const IR::MAU::TableSeq *t) const;
     bitvec tables_modify(const IR::MAU::Table *t) const;

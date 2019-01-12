@@ -144,7 +144,8 @@ class Field {
         int field_hi() const              { return field_bit + width - 1; }
         int container_hi() const          { return container_bit + width - 1; }
         bool operator==(const alloc_slice& other) const {
-            return container == other.container &&
+            return field == other.field &&
+                   container == other.container &&
                    field_bit == other.field_bit &&
                    container_bit == other.container_bit &&
                    width == other.width; }
@@ -1046,6 +1047,13 @@ class PhvInfo {
     /// @returns the aliasMap.
     const ordered_map<const PHV::Field*, const PHV::Field*>& getAliasMap() const {
         return aliasMap;
+    }
+
+    /// @return alias destination corresponding to @f. Return nullptr if no aliasing relationship
+    /// exists.
+    const PHV::Field* getAliasDestination(const PHV::Field* f) const {
+        if (aliasMap.count(f)) return aliasMap.at(f);
+        return nullptr;
     }
 
     /// @returns the set of deparsed zero containers.

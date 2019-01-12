@@ -123,11 +123,11 @@ class TableAllocPass : public Logging::PassManager {
                 new TableLayout(phv, lc),
                 new AssignActionHandle(phv),
                 new MeterOutputSetup(phv, lc),  // after TableLayout to be part of backtrack
-                new TableFindSeqDependencies,
+                new TableFindSeqDependencies(phv),
                 new FindDependencyGraph(phv, deps),
-                new SpreadGatewayAcrossSeq,
+                new SpreadGatewayAcrossSeq(phv),
                 new CheckTableNameDuplicate,
-                new TableFindSeqDependencies,
+                new TableFindSeqDependencies(phv),
                 new CheckTableNameDuplicate,
                 new FindDependencyGraph(phv, deps),
                 &mutex,
@@ -135,7 +135,7 @@ class TableAllocPass : public Logging::PassManager {
                 new DumpPipe("Before TablePlacement"),
                 new TablePlacement(&deps, mutex, phv, lc, siaa, options.forced_placement),
                 new CheckTableNameDuplicate,
-                new TableFindSeqDependencies,  // not needed?
+                new TableFindSeqDependencies(phv),  // not needed?
                 new FinalTableLayout(phv, lc),
                 new CheckTableNameDuplicate
             });
