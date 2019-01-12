@@ -6,7 +6,7 @@ from p4.v1 import p4runtime_pb2
 from p4.tmp import p4config_pb2
 from p4.config.v1 import p4info_pb2
 
-from base_test import P4RuntimeTest, stringify
+from p4runtime_base_tests import P4RuntimeTest, stringify
 
 # Creates a dumbPacket corresponding to the header h_t.
 def dumbPacket(f1=0xab, f2=0xef, f3=0xaa):

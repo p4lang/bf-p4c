@@ -2,8 +2,8 @@ import ptf.testutils as testutils
 
 from p4.v1 import p4runtime_pb2
 
-from base_test import P4RuntimeTest, autocleanup
-from base_test import stringify, ipv4_to_binary, mac_to_binary
+from p4runtime_base_tests import P4RuntimeTest, autocleanup
+from p4runtime_base_tests import stringify, ipv4_to_binary, mac_to_binary
 
 class IngressChecksumTest(P4RuntimeTest):
     def runTest(self):

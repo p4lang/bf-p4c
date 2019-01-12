@@ -23,7 +23,7 @@ from scapy.contrib.mpls import MPLS
 from scapy.layers.inet import IP, UDP, TCP
 from scapy.layers.l2 import Ether, Dot1Q
 
-from base_test import P4RuntimeTest, stringify, mac_to_binary, ipv4_to_binary
+from p4runtime_base_tests import P4RuntimeTest, stringify, mac_to_binary, ipv4_to_binary
 
 import scapy.main
 scapy.main.load_contrib("xnt")

@@ -175,7 +175,7 @@ def run_pi_ptf_tests(PTF, grpc_addr, ptfdir, p4info_path, port_map, stftest,
 
     ifaces = []
     # find base_test.py
-    pypath = os.path.dirname(os.path.abspath(__file__))
+    pypath = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'p4testutils')
     if 'PYTHONPATH' in os.environ:
         os.environ['PYTHONPATH'] += ":" + pypath
     else:

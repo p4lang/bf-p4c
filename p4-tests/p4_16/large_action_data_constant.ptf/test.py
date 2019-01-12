@@ -6,7 +6,7 @@ import ptf.packet as scapy
 
 from p4.v1 import p4runtime_pb2
 
-from base_test import P4RuntimeTest
+from p4runtime_base_tests import P4RuntimeTest
 
 class ConstantSetTest(P4RuntimeTest):
     def runTest(self):

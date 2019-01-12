@@ -2,7 +2,7 @@ import ptf.testutils as testutils
 
 from p4.v1 import p4runtime_pb2
 
-from base_test import P4RuntimeTest, stringify
+from p4runtime_base_tests import P4RuntimeTest, stringify
 
 class MulticastTest(P4RuntimeTest):
     # TODO(antonin): move to P4RuntimeTest base class if other P4Runtime tests

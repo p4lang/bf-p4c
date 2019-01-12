@@ -2,7 +2,7 @@ import ptf.testutils as testutils
 
 from p4.v1 import p4runtime_pb2
 
-from base_test import P4RuntimeTest, stringify
+from p4runtime_base_tests import P4RuntimeTest, stringify
 
 from itertools import chain
 

@@ -17,8 +17,8 @@ from p4.v1 import p4runtime_pb2
 from p4.tmp import p4config_pb2
 from p4.config.v1 import p4info_pb2
 
-from base_test import P4RuntimeTest
-from base_test import stringify
+from p4runtime_base_tests import P4RuntimeTest
+from p4runtime_base_tests import stringify
 
 from stf_parser import STFParser
 from stf_runner import STFRunner, STFNamedEntry

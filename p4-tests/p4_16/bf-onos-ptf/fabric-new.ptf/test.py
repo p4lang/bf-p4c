@@ -18,7 +18,7 @@ from itertools import combinations
 
 from ptf.testutils import group
 
-from base_test import autocleanup
+from p4runtime_base_tests import autocleanup
 from fabric_test import *
 
 vlan_confs = {

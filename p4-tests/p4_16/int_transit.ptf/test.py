@@ -3,8 +3,8 @@ from ptf.mask import Mask
 
 from p4.v1 import p4runtime_pb2
 
-from base_test import P4RuntimeTest, autocleanup
-from base_test import stringify, ipv4_to_binary, mac_to_binary
+from p4runtime_base_tests import P4RuntimeTest, autocleanup
+from p4runtime_base_tests import stringify, ipv4_to_binary, mac_to_binary
 
 import scapy.main
 scapy.main.load_contrib("xnt")
