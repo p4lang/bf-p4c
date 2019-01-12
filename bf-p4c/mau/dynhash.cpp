@@ -195,16 +195,14 @@ void DynamicHashJson::gen_ixbar_json(const IXBar::Use &ixbar_use,
                 _algo->emplace("msb", algorithm->msb);
                 _algo->emplace("extend", algorithm->extend);
                 _algo->emplace("reverse", algorithm->reverse);
-                std::stringstream poly;
                 // Convert poly in koopman notation to actual value
-                poly << std::hex << (algorithm->poly << 1) + 1;
-                _algo->emplace("poly", "0x" + poly.str());
-                std::stringstream init;
-                init << std::hex << algorithm->init;
-                _algo->emplace("init", "0x" + init.str());
-                std::stringstream final_xor;
-                final_xor << std::hex << algorithm->final_xor;
-                _algo->emplace("final_xor", "0x" + final_xor.str());
+                mpz_class poly = algorithm->poly;
+                poly = (poly << 1) + 1;
+                _algo->emplace("poly", "0x" + poly.get_str(16));
+                mpz_class init = algorithm->init;
+                _algo->emplace("init", "0x" + init.get_str(16));
+                mpz_class final_xor = algorithm->final_xor;
+                _algo->emplace("final_xor", "0x" + final_xor.get_str(16));
                 _algos->append(_algo);
                 is_default = false;  // only set 1st algo to default
             }
