@@ -1452,16 +1452,13 @@ BfRtSchemaGenerator::addDynHashConfig(Util::JsonArray* tablesJson,
     tableJson->emplace("key", new Util::JsonArray());  // empty key for configure table
 
     auto* dataJson = new Util::JsonArray();
-    if (dynHash.typeSpec.type_spec_case() !=
-        ::p4::config::v1::P4DataTypeSpec::TYPE_SPEC_NOT_SET) {
-        auto* fieldsJson = new Util::JsonArray();
-        transformTypeSpecToDataFields(
-            fieldsJson, dynHash.typeSpec, "DynHash",
-            dynHash.name, &dynHash.hashFieldNames, "", ".$PRIORITY");
-        for (auto* f : *fieldsJson) {
-            addSingleton(dataJson, f->to<Util::JsonObject>(),
-                         true /* mandatory */, false /* read-only */);
-      }
+    auto parser = TypeSpecParser::make(
+        p4info, dynHash.typeSpec, "DynHash", dynHash.name, &dynHash.hashFieldNames,
+        "", ".$PRIORITY");
+    for (const auto &f : parser) {
+        auto* fJson = makeCommonDataField(
+            f.id, f.name, makeTypeInt("uint32", 0 /* default */), false /* repeated */);
+        addSingleton(dataJson, fJson, false /* mandatory */, false /* read-only */);
     }
     tableJson->emplace("data", dataJson);
     tableJson->emplace("supported_operations", new Util::JsonArray());
@@ -1484,7 +1481,7 @@ BfRtSchemaGenerator::addDynHashCompute(Util::JsonArray* tablesJson,
     tableJson->emplace("size", 1);
 
     P4Id id = 1;
-    int hashNameIdx = 0;
+    size_t hashNameIdx = 0;
     auto* keyJson = new Util::JsonArray();
     for (const auto& member : dynHash.typeSpec.tuple().members()) {
         auto* type = makeTypeBytes(member.bitstring().bit().bitwidth());
