@@ -865,6 +865,9 @@ struct ReplaceParserIR : public Transform {
         } else {
             loweredParser->metaOpt = computed.egressMetaOpt;
             loweredParser->hdrLenAdj = computed.egressMetaSize;
+
+            // Make sure the 2-byte egress port is included in this offset adjustment.
+            loweredParser->hdrLenAdj += 2;
         }
 
         if (parser->gress == INGRESS && computed.igParserError)
