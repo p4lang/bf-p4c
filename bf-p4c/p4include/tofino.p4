@@ -677,12 +677,6 @@ extern MathUnit<T> {
 extern RegisterAction<T, I, U> {
     RegisterAction(Register<T, I> reg);
 
-    // Abstract method that needs to be implemented when RegisterAction is
-    // instantiated.
-    // @param value : register value.
-    // @param rv : return value.
-    abstract void apply(inout T value, @optional out U rv);
-
     U execute(in I index); /* {
         U rv;
         T value = reg.read(index);
@@ -690,21 +684,22 @@ extern RegisterAction<T, I, U> {
         reg.write(index, value);
         return rv;
     } */
-
     // Apply the implemented abstract method using an index that increments each
     // time. This method is useful for stateful logging.
     U execute_log();
-    U predicate(); /* return the 4-bit predicate value */
-}
-
-extern DirectRegisterAction<T, U> {
-    DirectRegisterAction(DirectRegister<T> reg);
 
     // Abstract method that needs to be implemented when RegisterAction is
     // instantiated.
     // @param value : register value.
     // @param rv : return value.
+    @synchronous(execute, execute_log)
     abstract void apply(inout T value, @optional out U rv);
+
+    U predicate(); /* return the 4-bit predicate value */
+}
+
+extern DirectRegisterAction<T, U> {
+    DirectRegisterAction(DirectRegister<T> reg);
 
     U execute(); /* {
         U rv;
@@ -713,6 +708,14 @@ extern DirectRegisterAction<T, U> {
         reg.write(value);
         return rv;
     } */
+
+    // Abstract method that needs to be implemented when RegisterAction is
+    // instantiated.
+    // @param value : register value.
+    // @param rv : return value.
+    @synchronous(execute)
+    abstract void apply(inout T value, @optional out U rv);
+
     U predicate(); /* return the 4-bit predicate value */
 }
 

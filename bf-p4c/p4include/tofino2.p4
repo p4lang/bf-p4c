@@ -707,8 +707,9 @@ extern MathUnit<T> {
 
 extern DirectRegisterAction<T, U> {
     DirectRegisterAction(DirectRegister<T> reg);
-    abstract void apply(inout T value, @optional out U rv);
     U execute(@optional out U rv2, @optional out U rv3, @optional out U rv4);
+    @synchronous(execute)
+    abstract void apply(inout T value, @optional out U rv);
 
     /* These routines can be called in apply method to get these values
      * to assign to a return value, but generally no operations can be applied */
@@ -722,8 +723,6 @@ extern DirectRegisterAction<T, U> {
 
 extern RegisterAction<T, H, U> {
     RegisterAction(Register<T, H> reg);
-    abstract void apply(inout T value, @optional out U rv1, @optional out U rv2,
-                                       @optional out U rv3, @optional out U rv4);
     U execute(@optional in H index, @optional out U rv2,
               @optional out U rv3, @optional out U rv4);
 
@@ -732,10 +731,15 @@ extern RegisterAction<T, H, U> {
     U dequeue(@optional out U rv2, @optional out U rv3, @optional out U rv4);  /* fifo pop */
     U push(@optional out U rv2, @optional out U rv3, @optional out U rv4);  /* stack push */
     U pop(@optional out U rv2, @optional out U rv3, @optional out U rv4);  /* stack pop */
+    @synchronous(execute, execute_log, enqueue, dequeue, push, pop)
+    abstract void apply(inout T value, @optional out U rv1, @optional out U rv2,
+                                       @optional out U rv3, @optional out U rv4);
 
+    @synchronous(enqueue, push)
     @optional abstract void overflow(@optional inout T value,
                                      @optional out U rv1, @optional out U rv2,
                                      @optional out U rv3, @optional out U rv4);
+    @synchronous(dequeue, pop)
     @optional abstract void underflow(@optional inout T value,
                                       @optional out U rv1, @optional out U rv2,
                                       @optional out U rv3, @optional out U rv4);
@@ -752,10 +756,11 @@ extern RegisterAction<T, H, U> {
 
 extern LearnAction<T, H, D, U> {
     LearnAction(Register<T, H> reg);
+    U execute(in H index, @optional out U rv2, @optional out U rv3, @optional out U rv4);
+    @synchronous(execute)
     abstract void apply(inout T value, in D digest, in bool learn,
                         @optional out U rv1, @optional out U rv2,
                         @optional out U rv3, @optional out U rv4);
-    U execute(in H index, @optional out U rv2, @optional out U rv3, @optional out U rv4);
 
     /* These routines can be called in apply method to get these values
      * to assign to a return value, but generally no operations can be applied */
@@ -769,10 +774,11 @@ extern LearnAction<T, H, D, U> {
 
 extern MinMaxAction<T, H, U> {
     MinMaxAction(Register<T, _> reg);
-    abstract void apply(inout bit<128> value, @optional out U rv1, @optional out U rv2,
-                                       @optional out U rv3, @optional out U rv4);
     U execute(@optional in H index, @optional out U rv2,
               @optional out U rv3, @optional out U rv4);
+    @synchronous(execute)
+    abstract void apply(inout bit<128> value, @optional out U rv1, @optional out U rv2,
+                                       @optional out U rv3, @optional out U rv4);
 
     /* These routines can be called in apply/overflow/underflow methods to get these values
      * to assign to a return value, but generally no operations can be applied */

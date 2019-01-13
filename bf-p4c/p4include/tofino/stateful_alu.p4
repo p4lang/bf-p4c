@@ -29,19 +29,22 @@ extern math_unit<T, U> {
 
 extern RegisterAction<T, I, U> {
     RegisterAction(register<T> reg);
-    abstract void apply(inout T value, @optional out U rv);
     U execute(in I index);
     U execute_log(); /* execute at an index that increments each time */
+    @synchronous(execute, execute_log)
+    abstract void apply(inout T value, @optional out U rv);
 }
 
 extern DirectRegisterAction<T, U> {
     DirectRegisterAction(register<T> reg);
-    abstract void apply(inout T value, @optional out U rv);
     U execute();
+    @synchronous(execute)
+    abstract void apply(inout T value, @optional out U rv);
 }
 
 extern selector_action {
     selector_action(action_selector sel);
-    abstract void apply(inout bit<1> value, @optional out bit<1> rv);
     bit<1> execute(@optional in bit<32> index);
+    @synchronous(execute)
+    abstract void apply(inout bit<1> value, @optional out bit<1> rv);
 }

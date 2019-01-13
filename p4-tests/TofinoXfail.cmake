@@ -438,6 +438,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/union2-bmv2.p4
   testdata/p4_16_samples/union3-bmv2.p4
   testdata/p4_16_samples/union4-bmv2.p4
+  testdata/p4_16_samples/bvec_union-bmv2.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -729,8 +730,9 @@ p4c_add_xfail_reason("tofino"
 # Also incorrect P4_14->16 conversion for varbit extract, but a different
 # symptom.
 p4c_add_xfail_reason("tofino"
-  "Cannot find declaration for len"
+  "Cannot find declaration for"
   testdata/p4_14_samples/TLV_parsing.p4
+  testdata/p4_14_samples/issue576.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -829,6 +831,12 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Could not find declaration for standard_metadata"
   testdata/p4_16_samples/parser_error-bmv2.p4
+  )
+# no support for checksum verify/update
+p4c_add_xfail_reason("tofino"
+  "Could not find declaration for standard_metadata"
+  testdata/p4_16_samples/checksum2-bmv2.p4
+  testdata/p4_16_samples/checksum3-bmv2.p4
   )
 # Because of copy-in / copy-out, we generate a "standard_metadata_1" variable
 # that is not translated properly (same as BRIG-633?)
@@ -1322,6 +1330,8 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "mirror field does not exist"
   testdata/p4_16_samples/issue562-bmv2.p4
+  testdata/p4_16_samples/issue1642-bmv2.p4
+  testdata/p4_16_samples/issue383-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1360,3 +1370,14 @@ p4c_add_xfail_reason("tofino"
   "metadata field of type header empty_t not supported on tofino"
   extensions/p4_tests/p4_16/fabric-psa/fabric.p4
 )
+
+#new p4c tests 1/9/19
+p4c_add_xfail_reason("tofino"
+  "error: Could not find declaration for"
+  testdata/p4_16_samples/p4rt_digest_complex.p4
+  )
+p4c_add_xfail_reason("tofino"
+  "Compiler Bug.*: unexpected reads expression"
+  testdata/p4_16_samples/bvec-hdr-bmv2.p4
+  )
+

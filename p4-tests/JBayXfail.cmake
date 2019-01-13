@@ -158,6 +158,7 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "Compiler Bug.*: .*: Cannot find declaration for"
   testdata/p4_14_samples/TLV_parsing.p4
+  testdata/p4_14_samples/issue576.p4
 )
 
 p4c_add_xfail_reason("tofino2"
