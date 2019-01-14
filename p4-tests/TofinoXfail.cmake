@@ -681,6 +681,7 @@ p4c_add_xfail_reason("tofino"
 
   # Expected to fail, until we have better user-facing messages.
   extensions/p4_tests/p4_14/p4smith_regression/mariano_0.p4
+  extensions/p4_tests/p4_14/p4smith_regression/soured_0.p4
 
   # Expected to fail, which means that constraint conflicts are being correctly detected.
   extensions/p4_tests/p4_14/mau_test_neg_test.p4
@@ -902,7 +903,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/19-SimpleTrill.p4
   extensions/p4_tests/p4_14/01-FlexCounter.p4
   # extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-868/comp_868.p4
   )
 
 # p4c_add_xfail_reason("tofino"
@@ -1375,9 +1375,14 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: Could not find declaration for"
   testdata/p4_16_samples/p4rt_digest_complex.p4
-  )
+)
+
 p4c_add_xfail_reason("tofino"
   "Compiler Bug.*: unexpected reads expression"
   testdata/p4_16_samples/bvec-hdr-bmv2.p4
-  )
+)
 
+p4c_add_xfail_reason("tofino"
+  "Compiler Bug.*: Field slicing has created a slice list at a nonbyte boundary."
+  ../glass/testsuite/p4_tests/c1/COMPILER-868/comp_868.p4
+)
