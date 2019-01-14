@@ -87,7 +87,7 @@ void LiveRangeReport::setFieldLiveMap(
 cstring LiveRangeReport::printFieldLiveness(
         const ordered_map<const PHV::Field*, std::map<int, unsigned>>& livemap) {
     std::stringstream ss;
-    ss << std::endl << "Live Ranges for Fields:" << std::endl;
+    ss << std::endl << "Live Ranges for PHV Fields:" << std::endl;
     std::vector<std::string> headers;
     headers.push_back("Field");
     headers.push_back("Bit Size");
@@ -161,8 +161,15 @@ Visitor::profile_t LiveRangeReport::init_apply(const IR::Node* root) {
     int maxDeviceStages = Device::numStages();
     maxStages = (maxStagesInAlloc > maxDeviceStages) ? maxStagesInAlloc : maxDeviceStages;
     ordered_map<const PHV::Field*, std::map<int, unsigned>> livemap;
-    for (const PHV::Field& f : phv)
+    for (const PHV::Field& f : phv) {
+        bool only_tphv_allocation = true;
+        f.foreach_alloc([&](const PHV::Field::alloc_slice& slice) {
+            if (!slice.container.is(PHV::Kind::tagalong))
+                only_tphv_allocation = false;
+        });
+        if (only_tphv_allocation) continue;
         setFieldLiveMap(&f, livemap);
+    }
     LOG1(printFieldLiveness(livemap));
     LOG1(printBitStats());
     return Inspector::init_apply(root);
