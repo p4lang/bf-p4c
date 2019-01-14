@@ -39,7 +39,6 @@ bool TableFormat::analyze_layout_option() {
     full_match_groups_per_RAM.resize(layout_option.way.width, 0);
     shared_groups_per_RAM.resize(layout_option.way.width, 0);
     search_bus_per_width.resize(layout_option.way.width, 0);
-    version_allocated.resize(layout_option.way.match_groups, false);
 
     for (int i = 0; i < layout_option.way.match_groups; i++) {
         use->match_groups.emplace_back();
@@ -1146,9 +1145,8 @@ int TableFormat::determine_group(int width_sect, int groups_allocated) {
         }
     }
 
-    if (search_bus_per_width[width_sect] == -1)
-        return -1;
-
+    // Could in theory put version bits at this position, so don't skip if:
+    // the search_bus_per_width[width_sect] == -1
     int search_bus_seen = 0;
     for (int i = 0; i < layout_option.way.width; i++) {
         if (width_sect == i) {
@@ -1191,7 +1189,7 @@ void TableFormat::fill_out_use(int group, const safe_vector<ByteInfo> &alloced,
     if (!version_loc.empty()) {
         group_use.mask[VERS] |= version_loc;
         total_use |= version_loc;
-        version_allocated[group] = true;
+        version_allocated.setbit(group);
         auto byte_offset = (version_loc.min().index() / 8);
         if ((byte_offset % SINGLE_RAM_BYTES) < VERSION_BYTES)
             match_byte_use.setbit(byte_offset);
@@ -1369,7 +1367,6 @@ bool TableFormat::allocate_shares() {
             if (shared_groups_per_RAM[width_sect] > MAX_SHARED_GROUPS)
                 break;
             int group = overhead_groups_seen + full_match_groups_per_RAM[width_sect];
-            group += i;
             allocate_share(width_sect, unalloced_groups[group], allocated[group],
                            version_locs[group], byte_attempt, bit_attempt, true);
         }
@@ -1470,6 +1467,7 @@ bool TableFormat::allocate_match() {
         match_bytes.clear();
         ghost_bytes.clear();
         std::fill(full_match_groups_per_RAM.begin(), full_match_groups_per_RAM.end(), 0);
+        version_allocated.clear();
 
         use->ghost_bits.clear();
         match_byte_use.clear();
@@ -1532,6 +1530,9 @@ bool TableFormat::allocate_match_with_algorithm() {
             continue;
         split_match |= search_bus_alloc[sb] < layout_option.way.match_groups;
     }
+
+
+    split_match |= version_allocated.popcount() != layout_option.way.match_groups;
 
     if (split_match) {
         // Will not split up wide matches

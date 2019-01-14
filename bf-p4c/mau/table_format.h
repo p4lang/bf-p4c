@@ -178,7 +178,7 @@ struct TableFormat {
 
     safe_vector<int> full_match_groups_per_RAM;
     safe_vector<int> shared_groups_per_RAM;
-    safe_vector<bool> version_allocated;
+    bitvec version_allocated;
 
     // Match group index in use coordinate to whenever they are found in the match_groups_per_RAM
     // i.e. if the match_groups_per_RAM looks like [2, 2], then use->match_groups[0] and

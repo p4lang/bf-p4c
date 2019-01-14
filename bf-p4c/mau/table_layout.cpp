@@ -490,6 +490,7 @@ void DoTableLayout::setup_exact_match(IR::MAU::Table *tbl, int action_data_bytes
         if ((overhead_width > 1 || entry_count > MAX_ENTRIES_PER_ROW) && tbl->layout.atcam)
             break;
 
+
         int width = std::max({ bit_limit_width, byte_limit_width, overhead_width, pack_width });
 
         int mod_value;
@@ -542,10 +543,15 @@ void DoTableLayout::setup_layout_options(IR::MAU::Table *tbl) {
         index++;
     }
 
-    bool possible_pack_formats = lc.total_layout_options.size();
-    LOG2("Total number of layout options " << possible_pack_formats);
+    auto pack_format_it = lc.total_layout_options.find(tbl->name);
+    int possible_pack_formats = 0;
+    if (pack_format_it != lc.total_layout_options.end()) {
+        possible_pack_formats = pack_format_it->second.size();
+        LOG2("Total number of layout options " << possible_pack_formats);
+    }
     ERROR_CHECK(possible_pack_formats > 0, "The table %s cannot find a valid packing, and "
-                "cannot be placed", tbl->name);
+                "cannot be placed.  Possibly the match key is too wide given the constraints of "
+                "Barefoot hardware", tbl->name);
 }
 
 /* FIXME: This function is for the setup of a table with no match data.  This is currently hacked

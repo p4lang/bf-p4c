@@ -412,7 +412,7 @@ void StageUseEstimate::options_to_atcam_entries(const IR::MAU::Table *tbl, int e
         lo.way_sizes.push_back(ways_per_partition);
         lo.srams = ram_depth * lo.way.width * ways_per_partition;
         lo.entries = ram_depth * ways_per_partition * lo.way.match_groups
-                     * Memories::SRAM_DEPTH;
+                     * std::min(tbl->layout.partition_count, Memories::SRAM_DEPTH);
     }
 }
 
