@@ -755,7 +755,7 @@ if $run_bfrt ; then
         config_args="--with-${device} --with-p4c=$P4C --enable-thrift --disable-static \
             --prefix=$testout --with-cpu-veth LDFLAGS="-L${tools_dir}/lib" CPPFLAGS="-I${tools_dir}/include" \
             --with-program=tna P4_VERSION=$p4_version P4_NAME=$name P4_PREFIX=dc"
-        manifest=$testdir/${name}${out_ext}.out/p4src/switch-tofino/switch/manifest.json
+        manifest=$testdir/${name}${out_ext}.out/p4src/switch-${device}/switch/manifest.json
     else
         p4builddir="$(dirname $0)/p4_14/p4-tests/p4-build"
         config_args="--with-${device} --with-p4c=$P4C --enable-thrift \
