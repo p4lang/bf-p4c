@@ -1004,7 +1004,7 @@ unsigned SRamMatchTable::get_number_entries() const {
     unsigned fmt_width = get_format_width();
     unsigned number_entries = 0;
     if (format)
-        number_entries = layout_size()/fmt_width * format->groups() * 1024;
+        number_entries = layout_size()/fmt_width * format->groups() * entry_ram_depth();
     return number_entries;
 }
 

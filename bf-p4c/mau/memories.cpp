@@ -16,6 +16,8 @@ static const char *sram_group_type_to_str[] = {
     "Exact", "Action", "Stats", "Meter", "Register", "Selector", "Tind", "Idletime", "Atcam"
 };
 
+constexpr int Memories::SRAM_DEPTH;
+
 /** Building a UniqueId per table alloc.  The stage table comes from initialization, all other
  *  data must be provided
  */

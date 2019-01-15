@@ -839,6 +839,7 @@ protected:
     json::map* add_common_sram_tbl_cfgs(json::map &tbl,
         std::string match_type, std::string stage_table_type) const;
     void add_action_cfgs(json::map &tbl, json::map &stage_tbl) const;
+    virtual unsigned entry_ram_depth() const { return 1024; }
     unsigned get_number_entries() const;
     unsigned get_format_width() const;
     virtual int determine_pre_byteswizzle_loc(MatchSource *ms, int lo, int hi, int word);
@@ -956,6 +957,7 @@ DECLARE_TABLE_TYPE(AlgTcamMatchTable, SRamMatchTable, "atcam_match",
                 return p->key_name;
         return name;
     }
+    unsigned entry_ram_depth() const override { return std::min(number_partitions, 1024); }
 )
 
 DECLARE_TABLE_TYPE(ProxyHashMatchTable, SRamMatchTable, "proxy_hash",
