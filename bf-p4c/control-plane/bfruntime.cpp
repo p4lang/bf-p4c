@@ -133,6 +133,7 @@ class BfRtSchemaGenerator {
         BF_RT_DATA_SNAPSHOT_MPR_NEXT_TABLE_ID,
         BF_RT_DATA_SNAPSHOT_DEPARSER_ERROR,
         BF_RT_DATA_SNAPSHOT_TABLE_ID,
+        BF_RT_DATA_SNAPSHOT_TABLE_NAME,
         BF_RT_DATA_SNAPSHOT_METER_ALU_OPERATION_TYPE,
         BF_RT_DATA_SNAPSHOT_MATCH_HIT_ADDRESS,
         BF_RT_DATA_SNAPSHOT_TABLE_HIT,
@@ -1697,8 +1698,8 @@ BfRtSchemaGenerator::addSnapshot(Util::JsonArray* tablesJson, const Snapshot& sn
                 makeTypeBool(), false /* repeated */);
             addROSingleton(containerItemsJson, f);
         }
-        // SNAPSHOT_NEXT_TABLE_ID is temporarily disabled until support can be
-        // added to the BF-RT implementation in the drivers.
+        // TODO(antonin): SNAPSHOT_NEXT_TABLE_ID is temporarily disabled until
+        // support can be added to the BF-RT implementation in the drivers.
         // {
         //     auto* f = makeCommonDataField(
         //         BF_RT_DATA_SNAPSHOT_NEXT_TABLE_ID, "$SNAPSHOT_NEXT_TABLE_ID",
@@ -1712,6 +1713,9 @@ BfRtSchemaGenerator::addSnapshot(Util::JsonArray* tablesJson, const Snapshot& sn
             addROSingleton(containerItemsJson, f);
         }
         if (Device::currentDevice() == Device::JBAY) {
+            // TODO(antonin): This is likely not appropriate / sufficient for
+            // MPR. Maybe this should be a repeated field of table ids / names
+            // instead...
             auto* f = makeCommonDataField(
                 BF_RT_DATA_SNAPSHOT_MPR_NEXT_TABLE_ID, "$SNAPSHOT_MPR_NEXT_TABLE_ID",
                 makeTypeInt("uint32"), false /* repeated */);
@@ -1725,10 +1729,17 @@ BfRtSchemaGenerator::addSnapshot(Util::JsonArray* tablesJson, const Snapshot& sn
         }
         if (Device::currentDevice() == Device::JBAY) {  // meter ALU information
             auto* meterContainerItemsJson = new Util::JsonArray();
+            // TODO(antonin): same as above, can be added back later
+            // {
+            //     auto* f = makeCommonDataField(
+            //         BF_RT_DATA_SNAPSHOT_TABLE_ID, "$SNAPSHOT_TABLE_ID",
+            //         makeTypeInt("uint32"), false /* repeated */);
+            //     addROSingleton(meterContainerItemsJson, f);
+            // }
             {
                 auto* f = makeCommonDataField(
-                    BF_RT_DATA_SNAPSHOT_TABLE_ID, "$SNAPSHOT_TABLE_ID",
-                    makeTypeInt("uint32"), false /* repeated */);
+                    BF_RT_DATA_SNAPSHOT_TABLE_NAME, "$SNAPSHOT_TABLE_NAME",
+                    makeTypeString(), false /* repeated */);
                 addROSingleton(meterContainerItemsJson, f);
             }
             {
@@ -1745,10 +1756,17 @@ BfRtSchemaGenerator::addSnapshot(Util::JsonArray* tablesJson, const Snapshot& sn
         }
         {  // table ALU information
             auto* tableContainerItemsJson = new Util::JsonArray();
+            // TODO(antonin): same as above, can be added back later
+            // {
+            //     auto* f = makeCommonDataField(
+            //         BF_RT_DATA_SNAPSHOT_TABLE_ID, "$SNAPSHOT_TABLE_ID",
+            //         makeTypeInt("uint32"), false /* repeated */);
+            //     addROSingleton(tableContainerItemsJson, f);
+            // }
             {
                 auto* f = makeCommonDataField(
-                    BF_RT_DATA_SNAPSHOT_TABLE_ID, "$SNAPSHOT_TABLE_ID",
-                    makeTypeInt("uint32"), false /* repeated */);
+                    BF_RT_DATA_SNAPSHOT_TABLE_NAME, "$SNAPSHOT_TABLE_NAME",
+                    makeTypeString(), false /* repeated */);
                 addROSingleton(tableContainerItemsJson, f);
             }
             {
