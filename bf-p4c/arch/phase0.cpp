@@ -81,9 +81,33 @@ struct FindPhase0Table : public Inspector {
 
     boost::optional<Phase0TableMetadata> phase0;
 
-    bool preorder(const IR::BFN::TranslatedP4Control* control) override {
-        // Phase 0 tables are only allowed in ingress.
-        return control->thread == INGRESS;
+    // Helper pass to check for stateful calls
+    struct CheckStateful : public Inspector {
+        bool &hasStateful;
+        explicit CheckStateful(bool &hasStateful) : hasStateful(hasStateful) {}
+
+        bool preorder(const IR::MethodCallExpression* mce) override {
+            if (auto member = mce->method->to<IR::Member>()) {
+                if (member->member == "execute") {
+                    hasStateful = true;
+                    return false;
+                }
+            }
+            return true;
+        }
+    };
+
+    // Function is always called when Phase0 Table is not valid. Check for
+    // phase0 pragma, if it is set then we fail compile as the pragma enforces
+    // phase0 table to always be implemented in the parser. If phase0 pragma is
+    // not set we return false
+    bool checkPhase0Pragma(const bool phase0PragmaSet, const IR::P4Table* table,
+                                                            cstring errStr = "") {
+        ERROR_CHECK(!phase0PragmaSet,
+            "Phase0 pragma set but table - %s is not a valid Phase0. Reason - %s",
+                                                                table->name, errStr);
+        phase0 = boost::none;
+        return false;
     }
 
     bool preorder(const IR::P4Table* table) override {
@@ -93,51 +117,83 @@ struct FindPhase0Table : public Inspector {
         phase0->table = table;
         LOG3("Checking if " << phase0->table->name << " is a valid phase 0 table");
 
+        // Check if phase0 pragma is used on the table. This indicates the table
+        // is a phase0 table.
+        // Pragma value = 1 => Table must be implemented only in parser
+        // Pragma value = 0 => Table must be implemented only in MAU
+        bool phase0PragmaSet = false;
+        auto annot = table->getAnnotations();
+        if (auto s = annot->getSingle("phase0")) {
+            auto pragma_val = s->expr.at(0)->to<IR::Constant>();
+            ERROR_CHECK((pragma_val != nullptr),
+                "Invalid Phase0 pragma value. Must be a constant (either 0 or 1) on table - %s",
+                table->name);
+            if (auto pragma_val = s->expr.at(0)->to<IR::Constant>()) {
+                ERROR_CHECK((pragma_val->value == 0) || (pragma_val->value == 1),
+                    "Invalid Phase0 pragma value. Must be either 0 or 1 on table - %s",
+                    table->name);
+                if (pragma_val->value == 0) {
+                    LOG3(" - Phase0 pragma set to 0 on table");
+                    phase0 = boost::none;
+                    return false;
+                } else if (pragma_val->value == 1) {
+                    LOG3(" - Phase0 pragma set to 1 on table");
+                    phase0PragmaSet = true;
+                }
+            }
+        }
+
         // Check if this table meets all of the phase 0 criteria.
+        if (!tableInIngress()) {
+            cstring errGress = "Invalid gress; table expected in Ingress";
+            LOG3(" - " << errGress);
+            return checkPhase0Pragma(phase0PragmaSet, table, errGress);
+        }
+        LOG3(" - The gress is correct (Ingress)");
+
         if (!hasCorrectSize(phase0->table)) {
-            LOG3(" - Invalid size; expected " << phase0TableSize);
-            phase0 = boost::none;
-            return false;
+            auto expectedSize = Device::numMaxChannels();
+            cstring errSize = "Invalid size; expected " + std::to_string(expectedSize);
+            LOG3(" - " << errSize);
+            return checkPhase0Pragma(phase0PragmaSet, table, errSize);
         }
         LOG3(" - The size is correct");
 
-        if (!hasNoSideEffects(phase0->table)) {
-            LOG3(" - Invalid because it has side effects");
-            phase0 = boost::none;
-            return false;
+        cstring errSideEffects = "";
+        if (!hasNoSideEffects(phase0->table, errSideEffects)) {
+            LOG3(" - Invalid because it has side effects." << errSideEffects);
+            return checkPhase0Pragma(phase0PragmaSet, table, errSideEffects);
         }
         LOG3(" - It has no side effects");
 
-        if (!hasCorrectKey(phase0->table)) {
-            LOG3(" - Invalid key; the phase 0 table should match against "
-                 "`ingress_port`");
-            phase0 = boost::none;
-            return false;
+        cstring errKey = "";
+        if (!hasCorrectKey(phase0->table, errKey)) {
+            LOG3(" - " << errKey);
+            return checkPhase0Pragma(phase0PragmaSet, table, errKey);
         }
-        LOG3(" - The key is correct");
+        LOG3(" - The key (ingress_port) and table type (exact)  are correct");
 
-        if (!hasValidAction(phase0->table)) {
-            LOG3(" - Invalid action; the phase 0 table should contain one action "
-                 "that only writes metadata fields and only reads constants or "
-                 "action parameters");
-            phase0 = boost::none;
-            return false;
+        cstring errAction = "";
+        if (!hasValidAction(phase0->table, errAction)) {
+            LOG3(" - " << errAction);
+            return checkPhase0Pragma(phase0PragmaSet, table, errAction);
         }
         LOG3(" - The action is valid");
 
-        if (!hasValidControlFlow(phase0->table)) {
-            LOG3(" - Invalid control flow; the phase 0 table must be applied "
-                 "first in ingress, and must be guarded with an `if` that "
-                 "checks that `resubmit_flag` is zero");
-            phase0 = boost::none;
-            return false;
+        cstring errControlFlow = "";
+        if (!hasValidControlFlow(phase0->table, errControlFlow)) {
+            LOG3(" - " << errControlFlow);
+            return checkPhase0Pragma(phase0PragmaSet, table);
         }
         LOG3(" - The control flow is valid");
 
         if (!canPackDataIntoPhase0()) {
-            LOG3(" - The action parameters are too large to pack into "
-                   << Device::pardeSpec().bitPhase0Size() << " bits");
-            phase0 = boost::none;
+            auto phase0PackWidth = Device::pardeSpec().bitPhase0Size();
+            cstring errPack = "Invalid action parameters;";
+            errPack += "Action parameters are too large to pack into ";
+            errPack += std::to_string(phase0PackWidth) + " bits";
+            LOG3(" - " << errPack);
+            return checkPhase0Pragma(phase0PragmaSet, table, errPack);
         }
         LOG3(" - The action parameters fit into the phase 0 data");
 
@@ -151,6 +207,13 @@ struct FindPhase0Table : public Inspector {
     }
 
  private:
+    bool tableInIngress() const {
+        // The phase 0 table must always be in Ingress
+        auto* control = findContext<IR::BFN::TranslatedP4Control>();
+        if (!control) return false;
+        return control->thread == INGRESS;
+    }
+
     bool hasCorrectSize(const IR::P4Table* table) const {
         // The phase 0 table's size must have a specific value.
         auto* sizeProperty = table->properties->getProperty("size");
@@ -162,31 +225,44 @@ struct FindPhase0Table : public Inspector {
         return size->fitsInt() && size->asInt() == phase0TableSize;
     }
 
-    bool hasNoSideEffects(const IR::P4Table* table) const {
-        // The phase 0 table cannot have any side effects or attached tables.
-        // XXX(seth): This isn't a complete check; for example, we should forbid
-        // stateful ALU.
-
+    bool hasNoSideEffects(const IR::P4Table* table, cstring &errStr) const {
         // Actions profiles aren't allowed.
+        errStr = "Action profiles not allowed on phase 0 table";
         auto implProp = P4V1::V1Model::instance.tableAttributes
                                                .tableImplementation.name;
         if (table->properties->getProperty(implProp) != nullptr) return false;
 
+        errStr = "Counters not allowed on phase 0 table";
         // Counters aren't allowed.
         auto counterProp = P4V1::V1Model::instance.tableAttributes
                                                   .counters.name;
         if (table->properties->getProperty(counterProp) != nullptr) return false;
 
         // Meters aren't allowed.
+        errStr = "Meters not allowed on phase 0 table";
         auto meterProp = P4V1::V1Model::instance.tableAttributes
                                                 .meters.name;
         if (table->properties->getProperty(meterProp) != nullptr) return false;
 
+        // Statefuls aren't allowed.
+        errStr = "Statefuls not allowed on phase 0 table";
+        auto* al = table->getActionList();
+        // Check for stateful execute call within table actions
+        for (auto act : al->actionList) {
+            bool hasStateful = false;
+            CheckStateful findStateful(hasStateful);
+            auto decl = refMap->getDeclaration(act->getPath())->to<IR::P4Action>();
+            decl->apply(findStateful);
+            if (hasStateful) return false;
+        }
+
+        errStr = "";
         return true;
     }
 
-    bool hasCorrectKey(const IR::P4Table* table) const {
+    bool hasCorrectKey(const IR::P4Table* table, cstring &errStr) const {
         // The phase 0 table must match against 'ingress_intrinsic_metadata.ingress_port'.
+        errStr = "Invalid key; the phase 0 table should match against ingress_port";
         auto* key = table->getKey();
         if (key == nullptr) return false;
         if (key->keyElements.size() != 1) return false;
@@ -199,12 +275,14 @@ struct FindPhase0Table : public Inspector {
         if (containingTypeDecl->name != "ingress_intrinsic_metadata_t") return false;
         if (member->member != "ingress_port") return false;
 
+        errStr = "Invalid match type; the phase 0 table should be an exact match table";
         // The match type must be 'exact'.
         auto* matchType = refMap->getDeclaration(keyElem->matchType->path, true)
                                ->to<IR::Declaration_ID>();
         if (matchType->name.name != P4::P4CoreLibrary::instance.exactMatch.name)
             return false;
 
+        errStr = "";
         return true;
     }
 
@@ -221,7 +299,8 @@ struct FindPhase0Table : public Inspector {
         return false;
     }
 
-    bool hasValidAction(const IR::P4Table* table) {
+    bool hasValidAction(const IR::P4Table* table, cstring &errStr) {
+        errStr = "Invalid action; action is empty";
         auto* actions = table->getActionList();
         if (actions == nullptr) return false;
 
@@ -232,6 +311,7 @@ struct FindPhase0Table : public Inspector {
             if (actionElem != nullptr) return false;
             actionElem = elem;
         }
+        errStr = "Invalid action; multiple actions present";
         if (actionElem == nullptr) return false;
 
         auto* decl = refMap->getDeclaration(actionElem->getPath(), true);
@@ -242,6 +322,7 @@ struct FindPhase0Table : public Inspector {
         phase0->actionName = action->externalName();
 
         // The action should have only action data parameters.
+        errStr = "Invalid action; action does not have only action data parameters";
         for (auto* param : *action->parameters)
             if (param->direction != IR::Direction::None) return false;
 
@@ -251,6 +332,7 @@ struct FindPhase0Table : public Inspector {
 
         for (auto* statement : action->body->components) {
             // The action should contain only assignments.
+            errStr = "Invalid action; action does not contain only assignments";
             if (!statement->is<IR::AssignmentStatement>()) return false;
             auto* assignment = statement->to<IR::AssignmentStatement>();
             auto* dest = assignment->left;
@@ -261,6 +343,7 @@ struct FindPhase0Table : public Inspector {
             // that the parser doesn't already write to.
             PathLinearizer path;
             dest->apply(path);
+            errStr = "Invalid action; action writes to non metadata fields";
             if (!path.linearPath) {
                 LOG5("   - Assigning to an expression which is too complex: " << dest);
                 return false;
@@ -286,9 +369,10 @@ struct FindPhase0Table : public Inspector {
                 continue;
             }
 
+            errStr = "Invalid action; action assigns from a value which is not ";
+            errStr += "a constant or an action parameter";
             if (!isParam(source, action->parameters)) {
-                LOG5("   - Assigning from a value which is not a constant or "
-                     "an action parameter: " << source);
+                LOG5("   - " << errStr << source);
                 return false;
             }
 
@@ -298,23 +382,28 @@ struct FindPhase0Table : public Inspector {
             });
         }
 
+        errStr = "";
         return true;
     }
 
-    bool hasValidControlFlow(const IR::P4Table* table) {
+    bool hasValidControlFlow(const IR::P4Table* table, cstring &errStr) {
+        cstring errPrefix = "Invalid control flow; ";
         // The phase 0 table should be applied in the control's first statement.
+        errStr = errPrefix + "the phase 0 table must be applied first in ingress";
         auto* control = findContext<IR::P4Control>();
         if (!control) return false;
         if (control->body->components.size() == 0) return false;
         auto& statements = control->body->components;
 
         // That statement should be an `if` statement.
+        errStr = errPrefix + "the phase 0 table must be guarded with an 'if' clause";
         if (!statements[0]->is<IR::IfStatement>()) return false;
         auto* ifStatement = statements[0]->to<IR::IfStatement>();
         if (!ifStatement->condition->is<IR::Equ>()) return false;
         auto* equ = ifStatement->condition->to<IR::Equ>();
 
         // The `if` should check that `ingress_intrinsic_metadata.resubmit_flag` is 0.
+        errStr = errStr + ", that checks if 'resubmit_flag' is zero";
         auto* member = equ->left->to<IR::Member>()
                      ? equ->left->to<IR::Member>()
                      : equ->right->to<IR::Member>();
@@ -330,6 +419,7 @@ struct FindPhase0Table : public Inspector {
         if (!constant->fitsInt() || constant->asInt() != 0) return false;
 
         // The body of the `if` should consist only of the table apply call.
+        errStr = errStr + " and should consist of only the table apply call";
         if (!ifStatement->ifTrue->is<IR::MethodCallStatement>()) return false;
         phase0->applyCallToReplace = ifStatement->ifTrue->to<IR::MethodCallStatement>();
         auto* mi = P4::MethodInstance::resolve(phase0->applyCallToReplace,
@@ -337,6 +427,7 @@ struct FindPhase0Table : public Inspector {
         if (!mi->isApply() || !mi->to<P4::ApplyMethod>()->isTableApply()) return false;
         if (mi->object != table) return false;
 
+        errStr = "";
         return true;
     }
 

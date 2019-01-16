@@ -23,6 +23,16 @@ macro(p4c_add_xfail_reason tag reason)
 endmacro(p4c_add_xfail_reason)
 
 # tests will succeed when it finds the "reason" regex
+macro(p4c_add_tofino_success_reason reason __tests)
+  foreach (t ${__tests})
+    set (__testname "tofino/${t}")
+    set_tests_properties (${__testname} PROPERTIES
+      PASS_REGULAR_EXPRESSION "${reason}"
+      WILL_FAIL 0)
+  endforeach()
+endmacro(p4c_add_tofino_success_reason)
+
+# tests will succeed when it finds the "reason" regex
 macro(p4c_add_codegen_success_reason reason __tests)
   foreach (t ${__tests})
     set (__testname "codegen/${t}")

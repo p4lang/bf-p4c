@@ -593,6 +593,15 @@ p4c_add_bf_backend_tests("tofino" "tofino" "v1model" "arista" "${ARISTA_P4_14_TE
 include(TofinoMustPass.cmake)
 include(TofinoXfail.cmake)
 
+set  (PHASE0_PRAGMA_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/phase0_pragma.p4)
+file (RELATIVE_PATH phase0test ${P4C_SOURCE_DIR} ${PHASE0_PRAGMA_P4})
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
+  "phase0_pragma_test" ${phase0test} "${testExtraArgs} -Tphase0:5" "")
+p4c_add_tofino_success_reason(
+  "No phase 0 table found; skipping phase 0 translation"
+  phase0_pragma_test 
+)
+
 #
 # Commented out because we're not yet ready to run all these failed profiles
 # and save cycles on testing
