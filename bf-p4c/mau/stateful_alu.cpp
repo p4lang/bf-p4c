@@ -1,3 +1,4 @@
+#include <cmath>
 #include "stateful_alu.h"
 #include "bf-p4c/common/ir_utils.h"
 #include "ir/pattern.h"
