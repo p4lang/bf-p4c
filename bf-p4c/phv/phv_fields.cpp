@@ -549,12 +549,17 @@ void PHV::Field::foreach_alloc(
 // constraints, phv_widths
 //
 bool PHV::Field::is_tphv_candidate(const PhvUse& uses) const {
+    PHV::FieldSlice slice(this, StartLen(0, size));
+    return slice.is_tphv_candidate(uses);
+}
+
+bool PHV::FieldSlice::is_tphv_candidate(const PhvUse& uses) const {
     // Privatized fields are the TPHV copies of header fields. Therefore, privatized fields are
     // always TPHV candidates.
-    if (privatized_i) return true;
-    if (alwaysPackable) return false;  // __pad_ fields are not considered as tphv.
+    if (field_i->privatized()) return true;
+    if (field_i->alwaysPackable) return false;  // __pad_ fields are not considered as tphv.
     // TODO(zma) derive these rather than hard-coding the name
-    std::string f_name(name.c_str());
+    std::string f_name(field_i->name.c_str());
     if (f_name.find("compiler_generated_meta") != std::string::npos &&
         f_name.find("residual_checksum_") != std::string::npos) {
         return true;
@@ -562,7 +567,8 @@ bool PHV::Field::is_tphv_candidate(const PhvUse& uses) const {
     // XXX(zma) somehow phv allocation can't derive this one
     if (f_name.find("$constant") != std::string::npos)
         return true;
-    return !uses.is_used_mau(this) && !pov && !metadata && !deparsed_to_tm_i && !is_digest_i;
+    return !uses.is_used_mau(field_i, range_i) && !field_i->metadata && !field_i->pov &&
+        !field_i->deparsed_to_tm() && !field_i->is_digest();
 }
 
 void PHV::Field::updateAlignment(const FieldAlignment& newAlignment) {

@@ -265,7 +265,8 @@ AllocScore::AllocScore(
 
         if (kind == PHV::Kind::normal) {
             for (const auto& slice : slices) {
-                if (slice.field()->is_tphv_candidate(uses))
+                PHV::FieldSlice fieldSlice(slice.field(), slice.field_slice());
+                if (fieldSlice.is_tphv_candidate(uses))
                     n_tphv_on_phv_bits += (slice.width());
                 else if (slice.field()->is_mocha_candidate())
                     n_mocha_on_phv_bits += (slice.width());

@@ -694,6 +694,9 @@ class FieldSlice : public AbstractField {
     /// @returns the bit positions (little Endian) at which the least significant
     /// bit of this field may be placed.
     bitvec getStartBits(PHV::Size size) const;
+
+    /// @returns true if the slice can be allocated to a TPHV container.
+    bool is_tphv_candidate(const PhvUse& uses) const;
 };
 
 std::ostream &operator<<(std::ostream &out, const Field &);

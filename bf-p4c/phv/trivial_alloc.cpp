@@ -406,9 +406,18 @@ bool ManualAlloc::preorder(const IR::BFN::Pipe *pipe) {
             group.push_back(*nextField);
         }
 
-        if (group.ids.intersects(uses.use_i[1][group.gress])) {
+        bool mau_use = false;
+        bool parde_use = false;
+        for (auto id : group.ids) {
+            auto* f = phv.field(id);
+            if (uses.is_used_mau(f))
+                mau_use = true;
+            if (uses.is_used_parde(f))
+                parde_use = true;
+        }
+        if (mau_use) {
             // This group is used in the MAU pipeline.
-        } else if (group.ids.intersects(uses.use_i[0][group.gress])) {
+        } else if (parde_use) {
             // This group is only used in the parser/deparser.
             group.tagalong = true;
         } else {

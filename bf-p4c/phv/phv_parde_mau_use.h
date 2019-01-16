@@ -15,11 +15,15 @@ class Field;
 class PhvInfo;
 
 class Phv_Parde_Mau_Use : public Inspector, public TofinoWriteContext {
-    /// Fields written in the MAU pipeline.
-    bitvec      written_i;
+    using FieldToRangeMap = ordered_map<const PHV::Field*, ordered_set<le_bitrange>>;
 
-    /// Fields used in at least one ALU instruction.
-    bitvec      used_alu_i;
+    /// Fields written in the MAU pipeline. Keys are fields written in the MAU pipeline. Values are
+    /// all the different slices of the fields that are written.
+    FieldToRangeMap written_i;
+
+    /// Fields used in at least one ALU instruction. Keys are fields used in an ALU instruction.
+    /// Values are the slices of the fields so used.
+    FieldToRangeMap used_alu_i;
 
     /// Fields extracted in the parser.
     bitvec      extracted_i[3];
@@ -31,11 +35,13 @@ class Phv_Parde_Mau_Use : public Inspector, public TofinoWriteContext {
     enum { PARDE = 0, MAU = 1 };
 
  public:
-    bitvec      use_i[2][3];
-    /*                |  ^- gress                 */
-    /*                0 == use in parser/deparser */
-    /*                1 == use in mau             */
+    /// Represents uses of fields in MAU/PARDE. Keys of the outer maps are all the fields used in
+    /// the program. The inner map represents how those fields are used. The key of the inner map
+    /// represents where the use (read or write) happens in the PARDE (value 0) or MAU (value 1).
+    /// The values in the inner map are the slices of the fields used in the respective units.
+    ordered_map<const PHV::Field*, ordered_map<unsigned, ordered_set<le_bitrange>>> use_i;
 
+    /// Fields used in the deparser.
     bitvec      deparser_i[3];
     /*                |    ^- gress               */
     /*                 == use in deparser         */
@@ -51,6 +57,7 @@ class Phv_Parde_Mau_Use : public Inspector, public TofinoWriteContext {
 
     /// @returns true if @f is used (read or written) in the MAU pipeline.
     bool is_used_mau(const PHV::Field *f) const;
+    bool is_used_mau(const PHV::Field* f, le_bitrange range) const;
 
     /// @returns true if @f is written in the MAU pipeline.
     bool is_written_mau(const PHV::Field *f) const;
