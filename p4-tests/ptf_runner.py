@@ -274,11 +274,13 @@ def run_pd_ptf_tests(PTF, device, p4name, config_file, ptfdir, testdir, platform
     return p.returncode == 0
 
 # model uses the context json to lookup names when logging
-def start_model(model, out=None, context_json=None, port_map_path=None, 
+def start_model(model, out=None, context_json=None, config=None, port_map_path=None, 
                 device=None, extra_ptf_args=None, disable_logging=None):
     cmd = [model]
     if context_json is not None:
         cmd.extend(['-l', context_json])
+    if config is not None:
+        cmd.extend(['--p4-target-config', config])
     if port_map_path is not None:
         cmd.extend(['-f', port_map_path])
         if '2pipe' in port_map_path:
@@ -303,13 +305,12 @@ def start_switchd(switchd, status_port, conf_path, with_pd = None,
     cmd = [switchd]
     cmd.extend(['--install-dir', installdir])
     cmd.extend(['--conf-file', conf_path])
-    if device is not None and 'tofino2' in device:
-        cmd.extend(['--skip-hld', 'krt'])
     cmd.extend(['--status-port', str(status_port)])
     if with_pd is None:
         cmd.append('--skip-p4')
+        # Add p4rt server for tests using p4runtime
+        cmd.extend(['--p4rt-server', '0.0.0.0:50051'])
     else:
-        cmd.extend(['--no-pi'])
         cmd.extend(['--init-mode', 'cold'])
     cmd.append('--background')
     info("Starting switchd: {}".format(' '.join(cmd)))
@@ -612,25 +613,26 @@ def main():
         if args.enable_model_logging:
 	    disable_model_logging = False
 
+        if args.pdtest is not None:
+            conf_path = args.pdtest
+        elif args.bfrt_test is not None:
+            conf_path = os.path.join(compiler_out_dir, args.name + '.conf')
+        else:
+            conf_path = os.path.join(
+                os.path.dirname(os.path.realpath(__file__)), args.device + '.conf')
+        info("conf at {}".format(conf_path))
+        assert(os.path.exists(conf_path))
+
         with open(model_log_path, 'w') as model_out, \
              open(switchd_log_path, 'w') as switchd_out:
             model_p = start_model(HARLYN_MODEL, out=model_out,
                                   context_json=cxt_json_path,
+                                  config=conf_path,
                                   port_map_path=port_map_path,
                                   device=args.device,
                                   extra_ptf_args=extra_ptf_args,
                                   disable_logging=disable_model_logging)
             processes["model"] = model_p
-
-            if args.pdtest is not None:
-                conf_path = args.pdtest
-            elif args.bfrt_test is not None:
-                conf_path = os.path.join(compiler_out_dir, args.name + '.conf')
-            else:
-                conf_path = os.path.join(
-                    os.path.dirname(os.path.realpath(__file__)), args.device + '.conf')
-            info("conf at {}".format(conf_path))
-            assert(os.path.exists(conf_path))
 
             switchd_status_port = 6789
             pi_choice = args.pdtest

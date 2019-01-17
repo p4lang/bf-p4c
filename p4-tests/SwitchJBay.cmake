@@ -25,14 +25,13 @@ file (RELATIVE_PATH switch_p4_16 ${P4C_SOURCE_DIR} ${SWITCH_P4_16})
 p4c_add_test_with_args("tofino2" ${P4C_RUNTEST} FALSE
   "smoketest_switch_16_compile" ${switch_p4_16} "$testExtraArgs}" "-tofino2 -arch t2na -bfrt -force-link")
 p4c_add_ptf_test_with_ptfdir ("tofino2" "smoketest_switch_16_Tests" ${SWITCH_P4_16}
-  "${testExtraArgs} -bfrt -to 3600" ${SWITCH_P4_16_PTF})
+  "${testExtraArgs} -tofino2 -arch t2na -bfrt -to 3600" ${SWITCH_P4_16_PTF})
+# Cannot run some of the tests as they access ports outside the range of the set ports using veth_setup.sh
 bfn_set_ptf_test_spec("tofino2" "smoketest_switch_16_Tests"
-        "switch_bfrt.SMIBfRtTest
-        switch_hostif.HostIfPktGenTest
-        switch_tests.ACLTest
-        switch_tests.L2BridgeTest
-        switch_tests.L3BridgeTest
-        switch_tests.TunnelMalformedPacketsTest")
+        "all
+        ^switch_tests.L2LagTest
+        ^switch_tests.L3ECMPTest
+        ^switch_tests.L3MulticastTest")
 
 # All switch_16 tests should depend on the test being compiled, rather than
 # relying on the first one to compile the test.

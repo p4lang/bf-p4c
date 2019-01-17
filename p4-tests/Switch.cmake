@@ -103,7 +103,7 @@ file (RELATIVE_PATH switch_p4_16 ${P4C_SOURCE_DIR} ${SWITCH_P4_16})
 p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
   "smoketest_switch_16_compile" ${switch_p4_16} "$testExtraArgs}" "-arch tna -bfrt -force-link")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_Tests" ${SWITCH_P4_16}
-  "${testExtraArgs} -bfrt -to 3600" ${SWITCH_P4_16_PTF})
+  "${testExtraArgs} -arch tna -bfrt -to 3600" ${SWITCH_P4_16_PTF})
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_Tests"
         "all
         ^switch_tests.L2FloodTest
