@@ -820,6 +820,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/table_dependency_graph.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/tofino_write_context.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/tofino_gtest_utils.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/tphv_slice.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/trivial_alloc.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/type_categories.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/union_find.cpp

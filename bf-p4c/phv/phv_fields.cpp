@@ -567,8 +567,8 @@ bool PHV::FieldSlice::is_tphv_candidate(const PhvUse& uses) const {
     // XXX(zma) somehow phv allocation can't derive this one
     if (f_name.find("$constant") != std::string::npos)
         return true;
-    return !uses.is_used_mau(field_i, range_i) && !field_i->metadata && !field_i->pov &&
-        !field_i->deparsed_to_tm() && !field_i->is_digest();
+    return !uses.is_used_mau(field_i, range_i) && !field_i->pov && !field_i->deparsed_to_tm() &&
+        !field_i->is_digest() && (!field_i->metadata || uses.is_used_parde(field_i));
 }
 
 void PHV::Field::updateAlignment(const FieldAlignment& newAlignment) {
