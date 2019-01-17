@@ -1,5 +1,24 @@
 #include <core.p4>
 #include <tofino.p4>
+
+struct tuple_0 {
+    bit<8> field;
+    bit<8> field_0;
+    bit<8> field_1;
+    bit<8> field_2;
+    bit<8> field_3;
+    bit<8> field_4;
+    bit<8> field_5;
+    bit<8> field_6;
+    bit<8> field_7;
+    bit<8> field_8;
+    bit<8> field_9;
+    bit<8> field_10;
+    bit<8> field_11;
+    bit<8> field_12;
+    bit<8> field_13;
+    bit<8> field_14;
+}
 #include <tna.p4>
 
 header data_t {

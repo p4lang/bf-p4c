@@ -822,7 +822,7 @@ bool CreateSaluInstruction::divmod(const IR::Operation::Binary *e, cstring op) {
         visit(e->right, "right");
         if (divmod_instr) {
             if (!operands.equiv(divmod_instr->operands))
-                error("%s: only one div/mod operation possible in a stateful alu");
+                error("%s: only one div/mod operation possible in a stateful alu", e);
         } else {
             divmod_instr = createInstruction(); }
         operands.clear();

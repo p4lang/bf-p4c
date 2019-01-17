@@ -1,5 +1,24 @@
 #include <core.p4>
 #include <tofino.p4>
+
+struct tuple_0 {
+    bit<8> field;
+    bit<8> field_0;
+    bit<8> field_1;
+    bit<8> field_2;
+    bit<8> field_3;
+    bit<8> field_4;
+    bit<8> field_5;
+    bit<8> field_6;
+    bit<8> field_7;
+    bit<8> field_8;
+    bit<8> field_9;
+    bit<8> field_10;
+    bit<8> field_11;
+    bit<8> field_12;
+    bit<8> field_13;
+    bit<8> field_14;
+}
 #include <tna.p4>
 
 header data_t {
@@ -31,11 +50,11 @@ parser ParserI(packet_in b, out headers hdr, out metadata meta, out ingress_intr
     }
 }
 
-struct tuple_0 {
-    bit<32> field;
-    bit<32> field_0;
-    bit<4>  field_1;
-    bit<16> field_2;
+struct tuple_1 {
+    bit<32> field_15;
+    bit<32> field_16;
+    bit<4>  field_17;
+    bit<16> field_18;
 }
 
 control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_metadata_t ig_intr_md, in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md, inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md, inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
@@ -46,7 +65,7 @@ control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_me
     @name("IngressP.Cistern") Hash<bit<16>>(HashAlgorithm_t.CRC16, crc_poly_0) Cistern_0;
     @name("IngressP.act") action act(bit<9> port) {
         ig_intr_tm_md.ucast_egress_port = port;
-        tmp = Cistern_0.get<tuple_0>({ hdr.data.f1, hdr.data.f2, 4w0, hdr.data.h1 });
+        tmp = Cistern_0.get<tuple_1>({ hdr.data.f1, hdr.data.f2, 4w0, hdr.data.h1 });
         hdr.data.h1 = tmp;
     }
     @name("IngressP.test") table test_0 {

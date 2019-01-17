@@ -2,10 +2,6 @@ header hdr_t_1 {
     bit<32> useless;
 }
 
-header hdr_t_2 {
-    varbit<448> opts;
-}
-
 #include <core.p4>
 #include <v1model.p4>
 
@@ -24,14 +20,15 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    hdr_t_1 tmp_hdr_1;
-    hdr_t_2 tmp_hdr_2;
+    hdr_t_1 tmp_hdr_0;
+    hdr_t_1 tmp;
+    bit<32> tmp_0;
     @name(".start") state start {
-        packet.extract<hdr_t_1>(tmp_hdr_1);
-        packet.extract<hdr_t_2>(tmp_hdr_2, (tmp_hdr_1.useless << 1 << 3) + 32w4294967264);
-        hdr.hdr.setValid();
-        hdr.hdr.useless = tmp_hdr_1.useless;
-        hdr.hdr.opts = tmp_hdr_2.opts;
+        tmp_0 = packet.lookahead<bit<32>>();
+        tmp.setValid();
+        tmp.useless = tmp_0[31:0];
+        tmp_hdr_0 = tmp;
+        packet.extract<hdr_t>(hdr.hdr, (tmp_hdr_0.useless << 1 << 3) + 32w4294967264);
         transition accept;
     }
 }

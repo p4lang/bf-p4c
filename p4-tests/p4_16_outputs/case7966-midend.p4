@@ -1,5 +1,24 @@
 #include <core.p4>
 #include <tofino.p4>
+
+struct tuple_0 {
+    bit<8> field;
+    bit<8> field_0;
+    bit<8> field_1;
+    bit<8> field_2;
+    bit<8> field_3;
+    bit<8> field_4;
+    bit<8> field_5;
+    bit<8> field_6;
+    bit<8> field_7;
+    bit<8> field_8;
+    bit<8> field_9;
+    bit<8> field_10;
+    bit<8> field_11;
+    bit<8> field_12;
+    bit<8> field_13;
+    bit<8> field_14;
+}
 #include <tna.p4>
 
 typedef bit<8> inthdr_type_t;
@@ -186,15 +205,15 @@ control egress_control(inout headers_t hdr, inout local_metadata_t eg_md, in egr
     }
 }
 
-struct tuple_0 {
-    bit<8>  field;
-    bit<16> field_0;
+struct tuple_1 {
+    bit<8>  field_15;
+    bit<16> field_16;
 }
 
 control egress_deparser(packet_out packet, inout headers_t hdr, in local_metadata_t eg_md, in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr) {
     @name("egress_deparser.clone_e2e.mirror") Mirror() clone_e2e_mirror;
     @hidden action act_0() {
-        clone_e2e_mirror.emit<tuple_0>(hdr.bridged_meta.mirror_id, { eg_md.mirrored_meta.hdr_type, eg_md.mirrored_meta.pad0 });
+        clone_e2e_mirror.emit<tuple_1>(hdr.bridged_meta.mirror_id, { eg_md.mirrored_meta.hdr_type, eg_md.mirrored_meta.pad0 });
     }
     @hidden action act_1() {
         packet.emit<bridged_meta_hdr_t>(hdr.bridged_meta);

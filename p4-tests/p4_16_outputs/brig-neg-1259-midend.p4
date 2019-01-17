@@ -1,5 +1,24 @@
 #include <core.p4>
 #include <tofino.p4>
+
+struct tuple_0 {
+    bit<8> field;
+    bit<8> field_0;
+    bit<8> field_1;
+    bit<8> field_2;
+    bit<8> field_3;
+    bit<8> field_4;
+    bit<8> field_5;
+    bit<8> field_6;
+    bit<8> field_7;
+    bit<8> field_8;
+    bit<8> field_9;
+    bit<8> field_10;
+    bit<8> field_11;
+    bit<8> field_12;
+    bit<8> field_13;
+    bit<8> field_14;
+}
 #include <tna.p4>
 
 header ethernet_t {
@@ -237,7 +256,7 @@ control egress_deparser(packet_out packet, inout headers_t hdr, in local_metadat
     }
     apply {
         tbl_act_0.apply();
-        @pa_container_size("egress", "mirr_id", 16) {
+        @pa_container_size("egress" , "mirr_id" , 16) {
             _clone_e2e_clone_e2e.apply();
         }
     }

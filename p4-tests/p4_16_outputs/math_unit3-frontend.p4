@@ -36,7 +36,7 @@ control ingress(inout headers hdr, inout metadata meta, in ingress_intrinsic_met
     }
     bit<32> tmp;
     @name("ingress.accum") Register<bit<32>, bit<32>>(32w1) accum_0;
-    @name("ingress.rsqrt") MathUnit<bit<32>>(MathOp_t.RSQRT, 32s0x1000000) rsqrt_0;
+    @name("ingress.rsqrt") MathUnit<bit<32>>(MathOp_t.RSQRT, 64w0x1000000) rsqrt_0;
     @name("ingress.run") RegisterAction<bit<32>, bit<1>, bit<32>>(accum_0) run_0 = {
         void apply(inout bit<32> value, out bit<32> rv) {
             bit<32> tmp_0;

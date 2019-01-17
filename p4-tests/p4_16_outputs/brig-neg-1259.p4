@@ -54,7 +54,7 @@ struct local_metadata_t {
     mirror_metadata_t mirr_md;
 }
 
-@pa_container_size("egress", "mirr_id", 16) control clone_e2e_control(inout headers_t hdr, in local_metadata_t md) {
+@pa_container_size("egress" , "mirr_id" , 16) control clone_e2e_control(inout headers_t hdr, in local_metadata_t md) {
     Mirror() mirror;
     action clone(bit<48> dst_addr, MirrorId_t mirr_id) {
         mirror.emit(mirr_id);

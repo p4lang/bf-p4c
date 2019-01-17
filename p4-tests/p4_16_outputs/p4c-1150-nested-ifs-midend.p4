@@ -1,5 +1,24 @@
 #include <core.p4>
 #include <tofino.p4>
+
+struct tuple_0 {
+    bit<8> field;
+    bit<8> field_0;
+    bit<8> field_1;
+    bit<8> field_2;
+    bit<8> field_3;
+    bit<8> field_4;
+    bit<8> field_5;
+    bit<8> field_6;
+    bit<8> field_7;
+    bit<8> field_8;
+    bit<8> field_9;
+    bit<8> field_10;
+    bit<8> field_11;
+    bit<8> field_12;
+    bit<8> field_13;
+    bit<8> field_14;
+}
 #include <tna.p4>
 
 struct digest_0 {
@@ -156,7 +175,7 @@ control ingress(inout headers hdr, inout metadata md, in ingress_intrinsic_metad
     }
 }
 
-struct tuple_0 {
+struct tuple_1 {
 }
 
 control iDprsr(packet_out packet, inout headers hdr, in metadata md, in ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprs) {
@@ -190,10 +209,10 @@ control iDprsr(packet_out packet, inout headers hdr, in metadata md, in ingress_
         d5_0.pack(t_1);
     }
     @hidden action act_5() {
-        m0_0.emit<tuple_0>(md.session_id, {  });
+        m0_0.emit<tuple_1>(md.session_id, {  });
     }
     @hidden action act_6() {
-        m1_0.emit<tuple_0>(md.session_id, {  });
+        m1_0.emit<tuple_1>(md.session_id, {  });
     }
     @hidden action act_7() {
         packet.emit<ethernet_h>(hdr.ethernet);

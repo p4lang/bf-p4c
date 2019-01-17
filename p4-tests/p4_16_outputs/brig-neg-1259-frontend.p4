@@ -203,7 +203,7 @@ control egress_deparser(packet_out packet, inout headers_t hdr, in local_metadat
         packet.emit<ethernet_t>(hdr.ethernet);
         packet.emit<vlan_tag_t>(hdr.vlan);
         packet.emit<ipv4_t>(hdr.ipv4);
-        @pa_container_size("egress", "mirr_id", 16) {
+        @pa_container_size("egress" , "mirr_id" , 16) {
             _clone_e2e_clone_e2e.apply();
         }
     }

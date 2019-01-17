@@ -1,10 +1,6 @@
 #include <core.p4>
 #include <v1model.p4>
 
-struct routing_metadata_t {
-    bit<1> drop;
-}
-
 header egress_intrinsic_metadata_t {
     bit<7>  _pad0;
     bit<9>  egress_port;
@@ -174,8 +170,6 @@ header vlan_tag_t {
 }
 
 struct metadata {
-    @name(".routing_metadata") 
-    routing_metadata_t routing_metadata;
 }
 
 struct headers {
@@ -205,7 +199,7 @@ struct headers {
     ipv4_t                                         ipv4;
     @name(".ipv6") 
     ipv6_t                                         ipv6;
-    @pa_container_size("ingress", "ipv4.identification", 32) @name(".tcp") 
+    @name(".tcp") 
     tcp_t                                          tcp;
     @name(".udp") 
     udp_t                                          udp;

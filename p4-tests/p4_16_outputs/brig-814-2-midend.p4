@@ -1,5 +1,24 @@
 #include <core.p4>
 #include <tofino.p4>
+
+struct tuple_0 {
+    bit<8> field;
+    bit<8> field_0;
+    bit<8> field_1;
+    bit<8> field_2;
+    bit<8> field_3;
+    bit<8> field_4;
+    bit<8> field_5;
+    bit<8> field_6;
+    bit<8> field_7;
+    bit<8> field_8;
+    bit<8> field_9;
+    bit<8> field_10;
+    bit<8> field_11;
+    bit<8> field_12;
+    bit<8> field_13;
+    bit<8> field_14;
+}
 #include <tna.p4>
 
 struct user_metadata_t {
@@ -85,12 +104,12 @@ Register<bit<1>, bit<32>>(32w262144) bloom_filter_2;
 
 Register<bit<1>, bit<32>>(32w262144) bloom_filter_3;
 
-struct tuple_0 {
-    bit<8>  field;
-    bit<32> field_0;
-    bit<32> field_1;
-    bit<16> field_2;
-    bit<16> field_3;
+struct tuple_1 {
+    bit<8>  field_15;
+    bit<32> field_16;
+    bit<32> field_17;
+    bit<16> field_18;
+    bit<16> field_19;
 }
 
 control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_metadata_t ig_intr_md, in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md, inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md, inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
@@ -124,17 +143,17 @@ control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_me
     @name("IngressP.hash_2") Hash<bit<32>>(HashAlgorithm_t.RANDOM) hash_4;
     @name("IngressP.hash_3") Hash<bit<32>>(HashAlgorithm_t.RANDOM) hash_5;
     @name(".check_bloom_filter_1") action check_bloom_filter_1() {
-        tmp = hash_0.get<tuple_0>({ hdr.ipv4.proto, hdr.ipv4.sip, hdr.ipv4.dip, hdr.tcp.sPort, hdr.tcp.dPort }, 32w0, 32w262144);
+        tmp = hash_0.get<tuple_1>({ hdr.ipv4.proto, hdr.ipv4.sip, hdr.ipv4.dip, hdr.tcp.sPort, hdr.tcp.dPort }, 32w0, 32w262144);
         tmp_0 = bloom_filter_alu.execute(tmp);
         meta.md.bf_tmp = meta.md.bf_tmp | tmp_0;
     }
     @name(".check_bloom_filter_1") action check_bloom_filter_2() {
-        tmp_2 = hash_4.get<tuple_0>({ hdr.ipv4.proto, hdr.ipv4.sip, hdr.ipv4.dip, hdr.tcp.sPort, hdr.tcp.dPort }, 32w0, 32w262144);
+        tmp_2 = hash_4.get<tuple_1>({ hdr.ipv4.proto, hdr.ipv4.sip, hdr.ipv4.dip, hdr.tcp.sPort, hdr.tcp.dPort }, 32w0, 32w262144);
         tmp_3 = bloom_filter_alu_0.execute(tmp_2);
         meta.md.bf_tmp = meta.md.bf_tmp | tmp_3;
     }
     @name(".check_bloom_filter_1") action check_bloom_filter_3() {
-        tmp_5 = hash_5.get<tuple_0>({ hdr.ipv4.proto, hdr.ipv4.sip, hdr.ipv4.dip, hdr.tcp.sPort, hdr.tcp.dPort }, 32w0, 32w262144);
+        tmp_5 = hash_5.get<tuple_1>({ hdr.ipv4.proto, hdr.ipv4.sip, hdr.ipv4.dip, hdr.tcp.sPort, hdr.tcp.dPort }, 32w0, 32w262144);
         tmp_6 = bloom_filter_alu_4.execute(tmp_5);
         meta.md.bf_tmp = meta.md.bf_tmp | tmp_6;
     }

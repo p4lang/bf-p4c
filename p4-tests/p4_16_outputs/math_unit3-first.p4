@@ -33,7 +33,7 @@ parser ParserImpl(packet_in packet, out headers hdr, out metadata meta, out ingr
 
 control ingress(inout headers hdr, inout metadata meta, in ingress_intrinsic_metadata_t ig_intr_md, in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md, inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md, inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
     Register<bit<32>, bit<32>>(32w1) accum;
-    MathUnit<bit<32>>(MathOp_t.RSQRT, 32s0x1000000) rsqrt;
+    MathUnit<bit<32>>(MathOp_t.RSQRT, 64w0x1000000) rsqrt;
     RegisterAction<bit<32>, bit<1>, bit<32>>(accum) run = {
         void apply(inout bit<32> value, out bit<32> rv) {
             value = rsqrt.execute(hdr.data.f2);
