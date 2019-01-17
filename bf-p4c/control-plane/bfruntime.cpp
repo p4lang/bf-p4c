@@ -1163,7 +1163,10 @@ BfRtSchemaGenerator::addMeterCommon(Util::JsonArray* tablesJson, const Meter& me
     tableJson->emplace("data", dataJson);
 
     tableJson->emplace("supported_operations", new Util::JsonArray());
-    tableJson->emplace("attributes", new Util::JsonArray());
+
+    auto* attributesJson = new Util::JsonArray();
+    attributesJson->append("MeterByteCountAdjust");
+    tableJson->emplace("attributes", attributesJson);
 
     tablesJson->append(tableJson);
 }
@@ -1971,6 +1974,7 @@ BfRtSchemaGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
                 operationsJson->append("SyncCounters");
             } else if (auto meter = getDirectMeter(directResId)) {
                 addMeterDataFields(dataJson, *meter);
+                attributesJson->append("MeterByteCountAdjust");
             } else if (auto register_ = getDirectRegister(directResId)) {
                 addRegisterDataFields(dataJson, *register_, maxActionParamId);
                 operationsJson->append("SyncRegisters");
