@@ -84,6 +84,7 @@ set (BF_P4C_MIDEND_SRCS
   midend/simplify_nested_if.cpp
   midend/simplify_references.cpp
   midend/type_categories.cpp
+  midend/type_checker.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_MIDEND_SRCS}")
 build_unified(BF_P4C_MIDEND_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
@@ -102,6 +103,7 @@ set (BF_P4C_BACKEND_MIDEND_HDRS
   midend/simplify_nested_if.h
   midend/simplify_references.h
   midend/type_categories.h
+  midend/type_checker.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_MIDEND_HDRS}")
 
@@ -160,6 +162,7 @@ set (BF_P4C_BACKEND_COMMON_SRCS
   common/parser_overlay.cpp
   common/parser_critical_path.cpp
   common/run_id.cpp
+  common/rewrite_flexible_struct.cpp
   common/slice.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_COMMON_SRCS}")
@@ -186,6 +189,7 @@ set (BF_P4C_BACKEND_COMMON_HDRS
   common/parser_overlay.h
   common/parser_critical_path.h
   common/run_id.h
+  common/rewrite_flexible_struct.h
   common/slice.h
   common/table_printer.h
   common/utils.h
@@ -594,6 +598,7 @@ set (BF_P4C_SOURCES
   ${BF_P4C_BACKEND_PARDE_SRCS}
   ${BF_P4C_BACKEND_PHV_SRCS}
   ${BF_P4C_BACKEND_ARCH_SRCS}
+  ${BF_P4C_BACKEND_MIDEND_SRCS}
   ${BF_P4C_BACKEND_MAIN_SRCS}
   )
 

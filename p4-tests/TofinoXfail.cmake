@@ -282,6 +282,10 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error.*Can't split table.*with indirect attached MAU::StatefulAlu"
   switch_8.5_ent_fin_postcard
+  switch_8.5_l3_heavy_int_leaf
+  switch_ent_fin_postcard
+  switch_l3_heavy_int_leaf
+  switch_generic_int_leaf
 )
 
 p4c_add_xfail_reason("tofino"
@@ -293,14 +297,7 @@ p4c_add_xfail_reason("tofino"
   "Compiler Bug.*Conflicting alloc in the action data xbar between.*"
   switch_8.5_msdc_leaf_int
   switch_8.5_l3_heavy_int_leaf
-  )
-
-p4c_add_xfail_reason("tofino"
-  "Table .* is applied multiple times, and the next table information cannot correctly propagate"
-  switch_ent_fin_postcard
   switch_msdc_leaf_int
-  switch_l3_heavy_int_leaf
-  switch_generic_int_leaf
   )
 
 p4c_add_xfail_reason("tofino"
@@ -839,12 +836,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/checksum2-bmv2.p4
   testdata/p4_16_samples/checksum3-bmv2.p4
   )
-# Because of copy-in / copy-out, we generate a "standard_metadata_1" variable
-# that is not translated properly (same as BRIG-633?)
-p4c_add_xfail_reason("tofino"
-  "Could not find declaration for standard_metadata"
-  testdata/p4_14_samples/issue-1426.p4
-)
 
 # EliminateTypeDef pass does not work properly?
 p4c_add_xfail_reason("tofino"
@@ -1385,4 +1376,22 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Compiler Bug.*: Field slicing has created a slice list at a nonbyte boundary."
   ../glass/testsuite/p4_tests/c1/COMPILER-868/comp_868.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "source of modify_field invalid"
+  testdata/p4_16_samples/strength3.p4
+)
+
+# p4runtime issue with flattenHeaders pass
+p4c_add_xfail_reason("tofino"
+  "FH cannot find replacement for"
+  extensions/p4_tests/p4_16/serializer-struct.p4
+  extensions/p4_tests/p4_16/serializer.p4
+  extensions/p4_tests/p4_16/serializer2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Could not find declaration for b"
+  testdata/p4_16_samples/issue1660-bmv2.p4
 )

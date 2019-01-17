@@ -3,6 +3,12 @@
 
 #include "bf-p4c/device.h"
 
+namespace P4 {
+class TypeMap;
+}
+
+namespace BFN {
+
 class RewriteEgressIntrinsicMetadataHeader : public PassManager {
     struct CollectUsedFields : public Inspector {
         std::set<cstring> used_fields;
@@ -100,14 +106,17 @@ class RewriteEgressIntrinsicMetadataHeader : public PassManager {
     };
 
  public:
-    RewriteEgressIntrinsicMetadataHeader() {
+    explicit RewriteEgressIntrinsicMetadataHeader(P4::TypeMap* typeMap) {
         auto collectUsedFields = new CollectUsedFields;
 
         addPasses({
             collectUsedFields,
-            new RewriteHeader(*collectUsedFields)
+            new RewriteHeader(*collectUsedFields),
+            new P4::ClearTypeMap(typeMap),
         });
     }
 };
+
+}  // namespace BFN
 
 #endif /* BF_P4C_MIDEND_REWRITE_EGRESS_INTRINSIC_METADATA_HEADER_H_ */

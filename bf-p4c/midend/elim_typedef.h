@@ -24,7 +24,7 @@ class EliminateTypedef final : public PassManager {
     EliminateTypedef(ReferenceMap* refMap, TypeMap* typeMap) {
         passes.push_back(new TypeChecking(refMap, typeMap));
         passes.push_back(new DoReplaceTypedef(refMap));
-        passes.push_back(new ClearTypeMap(typeMap));
+        passes.push_back(new P4::TypeChecking(refMap, typeMap, true));
         setName("EliminateTypedef");
     }
 };

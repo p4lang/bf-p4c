@@ -33,11 +33,11 @@ typedef bit<16> switch_nexthop_t;
 struct switch_metadata_t {
     PortId_t port;
     bit<1> check;
+    bit<6> pad;
 }
 
 header serialized_struct_t {
-    bit<8> type;
-    switch_metadata_t data;
+    switch_metadata_t meta;
 }
 
 struct switch_header_t {
@@ -101,6 +101,7 @@ control SwitchIngressDeparser(packet_out pkt,
                               in switch_metadata_t ig_md,
                               in ingress_intrinsic_metadata_for_deparser_t ig_intr_dprsr_md) {
     apply {
+        pkt.emit(hdr.bridged_md);
         pkt.emit(hdr.ethernet);
         pkt.emit(hdr.ipv4);
         pkt.emit(hdr.udp);
@@ -117,9 +118,8 @@ control SwitchIngress(
         inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
 
     action add_bridged_md() {
-        hdr.bridged_md.data = {ig_md.port, ig_md.check};
-	hdr.bridged_md.type = 8w0;
-	hdr.bridged_md.setValid();
+        hdr.bridged_md.setValid();
+        hdr.bridged_md.meta = {ig_md.port, ig_md.check, 6w0};
     }
 
     apply {
@@ -141,7 +141,7 @@ parser SwitchEgressParser(
 
     state parse_bridged_md {
         pkt.extract(hdr.bridged_md);
-        eg_md = hdr.bridged_md.data;
+        eg_md = hdr.bridged_md.meta;
         transition accept;
     }
 }

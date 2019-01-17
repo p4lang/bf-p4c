@@ -24,6 +24,7 @@ class CheckHeaderAlignment final : public Inspector {
 
  private:
     bool preorder(const IR::Type_Header* header) override;
+    bool findFlexibleAnnotation(const IR::Type_StructLike* header);
 
  public:
     explicit CheckHeaderAlignment(P4::TypeMap* typeMap) : typeMap(typeMap) {}

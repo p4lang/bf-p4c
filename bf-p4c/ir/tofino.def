@@ -343,3 +343,17 @@ class HashListExpression : IR::ListExpression {
     NullOK IR::NameList algorithms      = nullptr;
 #nodbprint
 }
+
+/**
+ * This class represents the flexible header that maybe optimized by the backend
+ * with a different layout. It is used by bridging.
+ * Since we do not have corresponding P4-syntax, we use the @flexible annotation
+ * to infer this IR node, e.g.
+ *
+ * @flexible
+ * struct s { bit<8> f0; }
+ */
+class BFN::Type_StructFlexible : IR::Type_StructLike {
+#nodbprint
+    toString{ return cstring("struct ") + externalName(); }
+}

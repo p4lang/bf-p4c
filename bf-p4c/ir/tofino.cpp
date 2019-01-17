@@ -30,6 +30,12 @@ IR::InstanceRef::InstanceRef(cstring prefix, IR::ID n, const IR::Type *t,
         obj = new IR::HeaderStack(name, stk->elementType->to<IR::Type_Header>(), stk->getSize());
     } else if (t->is<IR::Type::Bits>() || t->is<IR::Type::Boolean>() || t->is<IR::Type_Set>()) {
         obj = nullptr;
+    } else if (auto *meta = t->to<IR::BFN::Type_StructFlexible>()) {
+        obj = new IR::Metadata(name, meta);
+        for (auto f : meta->fields)
+            if (f->type->is<IR::Type_StructLike>() || f->type->is<IR::Type_Stack>())
+                nested.add(name + "." + f->name,
+                           new InstanceRef(name, f->name, f->type, forceMeta));
     } else {
         P4C_UNIMPLEMENTED("Unsupported type %s %s", t, n); }
     if (obj && ann)

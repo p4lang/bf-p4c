@@ -21,6 +21,7 @@
 #include "midend/eliminateSerEnums.h"
 #include "midend/expandEmit.h"
 #include "midend/expandLookahead.h"
+#include "midend/flattenHeaders.h"
 #include "midend/local_copyprop.h"
 #include "midend/nestedStructs.h"
 #include "midend/orderArguments.h"
@@ -41,11 +42,13 @@
 #include "bf-p4c/midend/elim_emit_headers.h"
 #include "bf-p4c/midend/elim_typedef.h"
 #include "bf-p4c/midend/flatten_emit_args.h"
+#include "bf-p4c/midend/inline_subparser.h"
+#include "bf-p4c/midend/normalize_params.h"
 #include "bf-p4c/midend/rewrite_egress_intrinsic_metadata_header.h"
 #include "bf-p4c/midend/simplify_nested_if.h"
-#include "bf-p4c/midend/normalize_params.h"
+#include "bf-p4c/midend/type_checker.h"
 #include "bf-p4c/midend/unroll_parser_counter.h"
-#include "bf-p4c/midend/inline_subparser.h"
+#include "bf-p4c/common/rewrite_flexible_struct.h"
 
 namespace BFN {
 
@@ -193,7 +196,7 @@ MidEnd::MidEnd(BFN_Options& options) {
     // we may come through this path even if the program is actually a P4 v1.0 program
     setName("MidEnd");;;
     refMap.setIsV1(true);
-    auto evaluator = new P4::EvaluatorPass(&refMap, &typeMap);
+    auto evaluator = new BFN::EvaluatorPass(&refMap, &typeMap);
     auto skip_controls = new std::set<cstring>();
     cstring args_to_skip[] = { "ingress_deparser", "egress_deparser"};
     auto errorOnMethodCall = false;
@@ -215,12 +218,12 @@ MidEnd::MidEnd(BFN_Options& options) {
                              new BFN::IsPhase0())),
         new P4::RemoveExits(&refMap, &typeMap),
         new P4::ConstantFolding(&refMap, &typeMap),
-        new P4::StrengthReduction(),
+        new P4::StrengthReduction(&refMap, &typeMap),
         new P4::SimplifySelectCases(&refMap, &typeMap, true),  // constant keysets
         new P4::ExpandLookahead(&refMap, &typeMap),
         new P4::ExpandEmit(&refMap, &typeMap),
         new P4::SimplifyParsers(&refMap),
-        new P4::StrengthReduction(),
+        new P4::StrengthReduction(&refMap, &typeMap),
         new P4::EliminateTuples(&refMap, &typeMap),
         new EliminateEmitHeaders(&refMap, &typeMap),
         new P4::SimplifyComparisons(&refMap, &typeMap),
@@ -239,7 +242,7 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::SimplifyBitwise(),
         new P4::LocalCopyPropagation(&refMap, &typeMap, skipRegisterActionOutput),
         new P4::ConstantFolding(&refMap, &typeMap),
-        new P4::StrengthReduction(),
+        new P4::StrengthReduction(&refMap, &typeMap),
         new P4::MoveDeclarations(),
         new P4::SimplifyNestedIf(&refMap, &typeMap),
         new P4::SimplifyControlFlow(&refMap, &typeMap),
@@ -263,15 +266,9 @@ MidEnd::MidEnd(BFN_Options& options) {
         }),
         new P4::SynthesizeActions(&refMap, &typeMap, new SkipControls(skip_controls)),
         new P4::MoveActionsToTables(&refMap, &typeMap),
-        evaluator,
-        new VisitFunctor([this, evaluator]() { toplevel = evaluator->getToplevelBlock(); }),
-        new RewriteEgressIntrinsicMetadataHeader,
-        new NormalizeParams(),
-        new P4::ClearTypeMap(&typeMap),
-        new P4::TypeChecking(&refMap, &typeMap, true),
-        new FlattenEmitArgs(),
-        new P4::ClearTypeMap(&typeMap),
-        new P4::TypeChecking(&refMap, &typeMap, true),
+        new RewriteEgressIntrinsicMetadataHeader(&typeMap),
+        new RenameArchParams(&refMap, &typeMap),
+        new SimplifyEmitArgs(&refMap, &typeMap),
         new FillFromBlockMap(&refMap, &typeMap),
         new UnrollParserCounter(&refMap),
         evaluator,

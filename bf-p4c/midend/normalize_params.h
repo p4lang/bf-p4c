@@ -1,9 +1,10 @@
 #ifndef _MIDEND_NORMALIZE_PARAMS_H_
 #define _MIDEND_NORMALIZE_PARAMS_H_
 
+#include "ir/ir.h"
 #include "frontends/common/resolveReferences/referenceMap.h"
 #include "frontends/p4/typeMap.h"
-#include "ir/ir.h"
+#include "bf-p4c/midend/type_checker.h"
 
 /** At the P4 level, the TNA architecture provides an interface for users to
  * define custom parsers/controls/deparsers that are parameterized on
@@ -46,9 +47,7 @@
 // XXX(cole): Rather than producing an error, it would be better to rewrite the
 // conflicting user-supplied instance names.
 class NormalizeParams : public Modifier {
-    // const P4::ReferenceMap*         refMap;
-    // const P4::TypeMap*              typeMap;
-    // const IR::ToplevelBlock*   toplevel;
+    const IR::ToplevelBlock*   toplevel;
 
     /// Maps (original) parameter node pointers for each block to the names
     /// that should replace them.
@@ -60,7 +59,19 @@ class NormalizeParams : public Modifier {
     bool preorder(IR::P4Control* control) override;
 
  public:
-    NormalizeParams() {}
+    explicit NormalizeParams(const IR::ToplevelBlock* toplevel) : toplevel(toplevel) {}
+};
+
+class RenameArchParams : public PassManager {
+    const IR::ToplevelBlock*   toplevel;
+ public:
+    RenameArchParams(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {
+        auto evaluator = new BFN::EvaluatorPass(refMap, typeMap);
+        auto eval = new VisitFunctor([this, evaluator]() {
+            toplevel = evaluator->getToplevelBlock(); });
+        passes.push_back(eval);
+        passes.push_back(new NormalizeParams(toplevel));
+    }
 };
 
 #endif  /* _MIDEND_NORMALIZE_PARAMS_H_ */

@@ -27,26 +27,42 @@
 #define IP_PROTOCOLS_TCP 6
 #define IP_PROTOCOLS_UDP 17
 
-typedef bit<16> switch_nexthop_t;
-
 @flexible
 struct switch_metadata_t {
     PortId_t port;
+    MirrorId_t session_id;
     bit<1> check;
+    bit<4> pad;
 }
 
-header serialized_struct_t {
+@flexible
+struct bridge_metadata_t {
+    PortId_t port;
+    bit<1> check;
+    bit<6> pad;
+}
+
+typedef bit<16> switch_nexthop_t;
+
+header serialized_bridge_metadata_t {
     bit<8> type;
-    switch_metadata_t data;
+    bridge_metadata_t meta;
+}
+
+header serialized_switch_metadata_t {
+    bit<8> type;
+    switch_metadata_t meta;
 }
 
 struct switch_header_t {
-    serialized_struct_t bridged_md;
+    serialized_bridge_metadata_t bridged_md;
+    serialized_switch_metadata_t mirrored_md;
     ethernet_h ethernet;
     ipv4_h ipv4;
     tcp_h tcp;
     udp_h udp;
 }
+
 
 // ---------------------------------------------------------------------------
 // Ingress parser
@@ -100,7 +116,15 @@ control SwitchIngressDeparser(packet_out pkt,
                               inout switch_header_t hdr,
                               in switch_metadata_t ig_md,
                               in ingress_intrinsic_metadata_for_deparser_t ig_intr_dprsr_md) {
+    Mirror() mirror;
     apply {
+        if (ig_intr_dprsr_md.mirror_type == 1) {
+	    hdr.mirrored_md.setValid();
+            hdr.mirrored_md.meta = {ig_md.port, ig_md.session_id, ig_md.check, 4w0};
+            hdr.mirrored_md.type = 8w0;
+            mirror.emit(ig_md.session_id, hdr.mirrored_md);
+        }
+        pkt.emit(hdr.bridged_md);
         pkt.emit(hdr.ethernet);
         pkt.emit(hdr.ipv4);
         pkt.emit(hdr.udp);
@@ -117,13 +141,28 @@ control SwitchIngress(
         inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
 
     action add_bridged_md() {
-        hdr.bridged_md.data = {ig_md.port, ig_md.check};
-	hdr.bridged_md.type = 8w0;
 	hdr.bridged_md.setValid();
+        hdr.bridged_md.meta = {ig_md.port, ig_md.check, 6w0};
+        hdr.bridged_md.type = 8w0;
+    }
+
+    action set_mirror_attributes(MirrorId_t session_id) {
+        ig_md.session_id = session_id;
+        ig_intr_dprsr_md.mirror_type = 1;
+    }
+
+    // port-based mirroring.
+    table mirror {
+        key = { ig_md.port : exact; }
+        actions = {
+            NoAction;
+            set_mirror_attributes;
+        }
     }
 
     apply {
         ig_md.check = 1w1;
+        mirror.apply();
         add_bridged_md();
     }
 }
@@ -136,12 +175,26 @@ parser SwitchEgressParser(
     TofinoEgressParser() tofino_parser;
     state start {
         tofino_parser.apply(pkt, eg_intr_md);
-        transition parse_bridged_md;
+        bit<8> type = pkt.lookahead<bit<8>>();
+        transition select(type) {
+            8w0 : parse_bridged_md;
+            8w1 : parse_mirrored_md;
+        }
     }
 
     state parse_bridged_md {
         pkt.extract(hdr.bridged_md);
-        eg_md = hdr.bridged_md.data;
+        bridge_metadata_t bridged_md = hdr.bridged_md.meta;
+        eg_md.port = bridged_md.port;
+        eg_md.check = bridged_md.check;
+        transition accept;
+    }
+
+    state parse_mirrored_md {
+        pkt.extract(hdr.mirrored_md);
+        switch_metadata_t mirrored_md = hdr.mirrored_md.meta;
+        eg_md.port = mirrored_md.port;
+        eg_md.check = mirrored_md.check;
         transition accept;
     }
 }
@@ -169,3 +222,4 @@ Pipeline(SwitchIngressParser(),
          EmptyEgressDeparser<switch_header_t, switch_metadata_t>()) pipe0;
 
 Switch(pipe0) main;
+

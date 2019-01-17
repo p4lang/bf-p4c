@@ -54,7 +54,7 @@ void FlattenEmitArgs::explode(const IR::Expression* expression,
     IR::Vector<IR::Expression>* output) {
     if (auto st = expression->type->to<IR::Type_Header>()) {
         for (auto f : st->fields) {
-            auto e = new IR::Member(f->type, expression, f->name);
+            auto e = new IR::Member(expression, f->name);
             explode(e, output);
         }
     } else {

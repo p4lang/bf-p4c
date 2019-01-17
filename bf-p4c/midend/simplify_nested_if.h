@@ -133,10 +133,9 @@ class SimplifyNestedIf : public PassManager {
         auto skip = new ProcessDeparser();
         passes.push_back(new TypeChecking(refMap, typeMap));
         passes.push_back(new DoSimplifyNestedIf(skip));
-        passes.push_back(new StrengthReduction());
+        passes.push_back(new StrengthReduction(refMap, typeMap));
         passes.push_back(new SimplifyControlFlow(refMap, typeMap));
         passes.push_back(new DoSimplifyComplexCondition(policy, skip));
-        passes.push_back(new ClearTypeMap(typeMap));
         passes.push_back(new TypeChecking(refMap, typeMap, true));
         setName("SimplifyNestedIf");
     }

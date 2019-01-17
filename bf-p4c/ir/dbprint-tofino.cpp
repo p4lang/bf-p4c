@@ -362,3 +362,4 @@ void IR::BFN::Pipe::dbprint(std::ostream &out) const {
                      << indent << thread[1].mau << unindent << endl
                      << thread[1].deparser << unindent;
 }
+

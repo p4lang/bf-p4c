@@ -70,6 +70,8 @@ class ParseAnnotations : public P4::ParseAnnotations {
                 PARSE("use_hash_action", Expression),
                 PARSE("ways", Expression),
 
+                PARSE_EMPTY("flexible"),
+
                 // Ignore p4v annotations.
                 PARSE_SKIP("assert"),
                 PARSE_SKIP("assume"),

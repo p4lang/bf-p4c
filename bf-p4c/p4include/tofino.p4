@@ -372,33 +372,6 @@ header ptp_metadata_t {
                                         // message
 }
 
-header serialized_struct_t {
-    varbit<1024> opaque;
-}
-
-// Serializer extern provides a simple mechanism to serialize a struct.
-extern Serializer<T> {
-    // Constructor.
-    // Instantiate a serializer with arbitray packing.
-    Serializer();
-
-    // Constructor.
-    // Instantiate a serializer with arbitray packing.
-    // @param lenght : Specify the lenght of the serialized bit string.
-    Serializer(bit<32> length);
-
-    // Serialize the given data.
-    // @param data : data to be serialized.
-    serialized_struct_t pack(in T data);
-
-    // Deserialize the given variable-width header.
-    // @param hdr : serialized data.
-    T  unpack(in serialized_struct_t hdr);
-
-    // Return the dynamic width of the variable length header.
-    bit<32> header_length();
-}
-
 // -----------------------------------------------------------------------------
 // CHECKSUM
 // -----------------------------------------------------------------------------

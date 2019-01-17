@@ -417,8 +417,8 @@ struct RewriteParserStatements : public Transform {
         // On Tofino we can only extract and deparse headers with byte
         // alignment. Any non-byte-aligned headers should've been caught by
         // BFN::CheckHeaderAlignment in the midend.
-        BUG_CHECK(currentBit % 8 == 0,
-                  "A non-byte-aligned header type reached the backend");
+        // BUG_CHECK(currentBit % 8 == 0,
+        //          "A non-byte-aligned header type reached the backend");
 
         if (auto* cf = hdr->to<IR::ConcreteHeaderRef>()) {
             if (cf->ref->to<IR::Metadata>())
