@@ -50,8 +50,8 @@ const IR::Declaration_Instance *P4V1::WREDConverter::convertExternInstance(
     if (direct && instance_count)
         error("wred %s specifies both 'direct' and 'instance_count'", ext);
     if (!drop_value)
-        drop_value = new IR::Constant(input_type, (1U << input_type->width_bits()) - 1);
-    if (!no_drop_value) no_drop_value = new IR::Constant(input_type, 0);
+        drop_value = new IR::Constant(IR::Type::Bits::get(8), (1U << 8) - 1);
+    if (!no_drop_value) no_drop_value = new IR::Constant(IR::Type::Bits::get(8), 0);
 
     auto args = new IR::Vector<IR::Argument>;
     if (instance_count)

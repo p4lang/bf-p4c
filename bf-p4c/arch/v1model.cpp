@@ -155,6 +155,11 @@ class LoadTargetArchitecture : public Inspector {
 
         structure->addMetadata(
                 EGRESS,
+                MetadataField{"eg_intr_md", "deq_timedelta", 32},
+                MetadataField{"eg_intr_md", "deq_timedelta", 18});
+
+        structure->addMetadata(
+                EGRESS,
                 MetadataField{"eg_intr_md_from_parser_aux", "clone_src", 4},
                 MetadataField{"compiler_generated_meta", "clone_src", 4});
 
