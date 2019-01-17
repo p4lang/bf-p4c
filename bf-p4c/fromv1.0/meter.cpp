@@ -109,16 +109,20 @@ const IR::Statement *P4V1::MeterConverter::convertExternCall(P4V1::ProgramStruct
                         new IR::PathExpression(new IR::Path(temp)))));
     } else {
         if (prim->operands.size() > 2)
-            args->push_back(new IR::Argument(conv.convert(prim->operands.at(2))));
+            args->push_back(new IR::Argument(new IR::Cast(IR::Type_Bits::get(32),
+                            conv.convert(prim->operands.at(2)))));
         if (prim->operands.size() > 3)
-            args->push_back(new IR::Argument(conv.convert(prim->operands.at(3))));
+            args->push_back(new IR::Argument(new IR::Cast(IR::Type_Bits::get(32),
+                            conv.convert(prim->operands.at(3)))));
     }
     auto extref = new IR::PathExpression(structure->externs.get(ext));
     auto method = new IR::Member(prim->srcInfo, extref, "execute");
     IR::Expression *expr = new IR::MethodCallExpression(prim->srcInfo, method, args);
     if (with_or)
-        expr = new IR::BOr(conv.convert(prim->operands.at(1)), expr);
-    rv = structure->assign(prim->srcInfo, dest, expr, IR::Type::Bits::get(8));
+        expr = new IR::BOr(new IR::Cast(IR::Type_Bits::get(8),
+                    conv.convert(prim->operands.at(1))), expr);
+    rv = structure->assign(prim->srcInfo, dest, expr,
+            IR::Type::Bits::get(dest->type->width_bits()));
     if (block) {
         block->push_back(rv);
         rv = block; }
