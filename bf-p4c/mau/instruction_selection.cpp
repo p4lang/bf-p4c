@@ -1238,32 +1238,8 @@ const IR::Node *ConvertCastToSlice::postorder(IR::MAU::Instruction *instr) {
     return converted_instrs;
 }
 
-struct CollectInvalidatableFields : public Inspector {
-    explicit CollectInvalidatableFields(const PhvInfo& phv) : phv(phv) { }
-
-    bool preorder(const IR::BFN::DeparserParameter* parameter) override {
-        if (parameter->canPack == false) {
-            invalidatable_fields.insert(phv.field(parameter->source->field));
-        }
-        return true;
-    }
-
-    bool preorder(const IR::Member* parameter) override {
-        if (parameter->member.name.endsWith("digest_type")) {
-            invalidatable_fields.insert(phv.field(parameter->toString()));
-        }
-        return true;
-    }
-
-    std::set<const PHV::Field*> invalidatable_fields;
-    const PhvInfo& phv;
-};
-
 struct CheckInvalidate : public Inspector {
-    CheckInvalidate(const PhvInfo& phv,
-                    const std::set<const PHV::Field*>& fields)
-        : phv(phv), invalidatable_fields(fields) { }
-
+    explicit CheckInvalidate(const PhvInfo& phv) : phv(phv) { }
 
     void postorder(const IR::Primitive *prim) override {
         if (prim->name == "invalidate") {
@@ -1277,24 +1253,13 @@ struct CheckInvalidate : public Inspector {
                       prim->operands[0], prim, hdrInvalid.c_str());
                 return;
             }
-            if (!invalidatable_fields.count(f)) {
+            if (!f->is_invalidate_from_arch()) {
                 error("%s: invalid operand %s for primitive %s", prim->srcInfo, f->name, prim);
             }
         }
     }
 
     const PhvInfo& phv;
-    const std::set<const PHV::Field*>& invalidatable_fields;
-};
-
-struct ValidateInvalidatePrimitive : public PassManager {
-    explicit ValidateInvalidatePrimitive(const PhvInfo& phv) {
-        auto* collectFields = new CollectInvalidatableFields(phv);
-        addPasses({
-                collectFields,
-                    new CheckInvalidate(phv, collectFields->invalidatable_fields),
-            });
-    }
 };
 
 /** The execution of Counters, Meters, and Stateful ALUs can be per action.  In the following
@@ -1868,7 +1833,7 @@ const IR::MAU::Instruction *
  *  above EliminateAllButLastWrite
  */
 InstructionSelection::InstructionSelection(const BFN_Options& options, PhvInfo &phv) : PassManager {
-    new ValidateInvalidatePrimitive(phv),
+    new CheckInvalidate(phv),
     new UnimplementedRegisterMethodCalls,
     new Synth2PortSetup(phv),
     new DoInstructionSelection(options, phv),

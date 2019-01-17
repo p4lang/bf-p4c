@@ -480,12 +480,6 @@ class DeparserParameter {
     /// If present, the POV bit controlling whether the contents of the source
     /// location are valid. Not used on Tofino.
     NullOK FieldLVal povBit = nullptr;
-
-#emit
-    /// If true, the source for this deparser parameter can be safely packed
-    /// with other fields.
-    bool canPack = true;
-#end
 }
 
 /// The supertype for all BFN IR deparsers.

@@ -1055,49 +1055,29 @@ class AddIntrinsicConstraints : public Inspector {
 
     profile_t init_apply(const IR::Node* root) override {
         for (auto& f : phv) {
-            for (auto& kv : invalidate_fields_from_arch()) {
+            if (f.pov) continue;
+
+            for (auto& intr : {"ingress::ig_intr_md", "egress::eg_intr_md"}) {
                 std::string f_name(f.name.c_str());
-                if (f_name.find(kv.first) != std::string::npos
-                    && f_name.find(kv.second) != std::string::npos) {
+                if (f_name.find(intr) != std::string::npos) {
                     f.set_intrinsic(true);
-                    f.set_invalidate_from_arch(true);
                     LOG1("\tMarking field " << f.name << " as intrinsic");
-                    LOG1("\tMarking field " << f.name << " as invalidate from arch");
+                }
+            }
+
+            if (Device::currentDevice() == Device::TOFINO) {
+                for (auto& kv : invalidate_fields_from_arch()) {
+                    std::string f_name(f.name.c_str());
+                    if (f_name.find(kv.first) != std::string::npos
+                        && f_name.find(kv.second) != std::string::npos) {
+                        f.set_no_pack(true);
+                        f.set_invalidate_from_arch(true);
+                        LOG1("\tMarking field " << f.name << " as invalidate from arch");
+                    }
                 }
             }
         }
         return Inspector::init_apply(root);
-    }
-
-    bool preorder(const IR::BFN::ParserState* p) override {
-        LOG1("Parser state: " << p->name);
-        if (!p->name.endsWith("$ingress_metadata") && !p->name.endsWith("$egress_metadata") &&
-                !p->name.endsWith("$entry_point"))
-            return true;
-        for (auto stmt : p->statements) {
-            const auto* e = stmt->to<IR::BFN::Extract>();
-            if (!e) continue;
-
-            const auto* fieldLVal = e->dest->to<IR::BFN::FieldLVal>();
-            if (!fieldLVal) continue;
-
-            auto* f = phv.field(fieldLVal->field);
-            if (!f) continue;
-
-            if (f->name.endsWith("$always_deparse") ||
-                f->name.endsWith("^bridged_metadata_indicator"))
-                continue;
-
-            if (f->pov) continue;
-
-            std::string f_name(f->name.c_str());
-            if (f_name.find("$constant_") != std::string::npos)
-                continue;
-
-            f->set_intrinsic(true);
-            LOG1("\tMarking field " << f->name << " as intrinsic");
-        }
-        return true;
     }
 
  public:
@@ -1187,17 +1167,6 @@ class CollectPardeConstraints : public Inspector {
         BUG_CHECK(f->size <= 32, "The architecture requires that field %1% not be split "
                   "across PHV containers, but the field is larger than the largest PHV container.",
                   cstring::to_cstring(f));
-
-        // If this field can be packed with other fields, we're done.
-        if (param->canPack) return;
-
-        // The field assigned to this parameter cannot be packed with other
-        // fields; this is generally because Tofino's hidden container
-        // validity bit matters for this parameter, and if we packed it with
-        // other fields, writes to those other fields would change the
-        // hidden container validity bit and break the program.
-        f->set_no_pack(true);
-        f->set_read_container_valid_bit(true);
     }
 
     void postorder(const IR::BFN::Digest* digest) override {
@@ -1216,12 +1185,7 @@ class CollectPardeConstraints : public Inspector {
         BUG_CHECK(f != nullptr, "Field not created in PhvInfo");
         f->set_deparsed_bottom_bits(true);
         f->set_no_split(true);
-        // TODO:
-        // This constraint can be removed by setting digest field to an invalid value
-        // in the parser, instead of using the validity bit of container, which implies
-        // the no_pack here.
         f->set_no_pack(true);
-        f->set_read_container_valid_bit(true);
         f->set_is_digest(true);
 
         for (auto fieldList : digest->fieldLists) {

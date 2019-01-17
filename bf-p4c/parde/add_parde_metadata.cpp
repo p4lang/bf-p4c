@@ -80,20 +80,9 @@ namespace {
 
 void addDeparserParamRename(IR::BFN::Deparser* deparser,
                       const IR::HeaderOrMetadata* meta,
-                      cstring field, cstring paramName,
-                      bool canPack = true) {
+                      cstring field, cstring paramName) {
     auto* param =
       new IR::BFN::DeparserParameter(paramName, gen_fieldref(meta, field));
-
-    // Packing restrictions arise from Tofino's hidden container validity bits,
-    // which control the behavior of certain deparser parameters. If the fields
-    // assigned to those parameters are packed with other fields in the same
-    // container, then writes to those other fields will affect the container
-    // validity bit, which can cause the program to misbehave. Other devices use
-    // explicit POV bits for the same purpose, so they don't have this problem,
-    // and we can ignore the restriction.
-    if (Device::currentDevice() == Device::TOFINO)
-        param->canPack = canPack;
 
     deparser->params.push_back(param);
 }
@@ -103,16 +92,15 @@ void addDeparserParamRename(IR::BFN::Deparser* deparser,
 // same thing is never a good idea ...
 void addDeparserParam(IR::BFN::Deparser* deparser,
                       const IR::HeaderOrMetadata* meta,
-                      cstring field, bool canPack = true) {
-    addDeparserParamRename(deparser, meta, field, field, canPack);
+                      cstring field) {
+    addDeparserParamRename(deparser, meta, field, field);
 }
 
 }  // namespace
 
 void AddDeparserMetadataShims::addIngressMetadata(IR::BFN::Deparser *d) {
     auto* tmMeta = getMetadataType(pipe, "ingress_intrinsic_metadata_for_tm");
-    addDeparserParamRename(d, tmMeta, "ucast_egress_port", "egress_unicast_port",
-                     /* canPack = */ false);
+    addDeparserParamRename(d, tmMeta, "ucast_egress_port", "egress_unicast_port");
     addDeparserParamRename(d, tmMeta, "bypass_egress", "bypss_egr");
     addDeparserParam(d, tmMeta, "deflect_on_drop");
     addDeparserParamRename(d, tmMeta, "ingress_cos", "icos");
@@ -122,8 +110,8 @@ void AddDeparserMetadataShims::addIngressMetadata(IR::BFN::Deparser *d) {
     addDeparserParamRename(d, tmMeta, "packet_color", "meter_color");
     addDeparserParamRename(d, tmMeta, "disable_ucast_cutthru", "ct_disable");
     addDeparserParamRename(d, tmMeta, "enable_mcast_cutthru", "ct_mcast");
-    addDeparserParam(d, tmMeta, "mcast_grp_a", /* canPack = */ false);
-    addDeparserParam(d, tmMeta, "mcast_grp_b", /* canPack = */ false);
+    addDeparserParam(d, tmMeta, "mcast_grp_a");
+    addDeparserParam(d, tmMeta, "mcast_grp_b");
     addDeparserParam(d, tmMeta, "level1_mcast_hash");
     addDeparserParam(d, tmMeta, "level2_mcast_hash");
     addDeparserParamRename(d, tmMeta, "level1_exclusion_id", "xid");
@@ -131,7 +119,7 @@ void AddDeparserMetadataShims::addIngressMetadata(IR::BFN::Deparser *d) {
     addDeparserParam(d, tmMeta, "rid");
 
     auto* dpMeta = getMetadataType(pipe, "ingress_intrinsic_metadata_for_deparser");
-    addDeparserParam(d, dpMeta, "drop_ctl", /* canPack = */ false);
+    addDeparserParam(d, dpMeta, "drop_ctl");
 #if HAVE_JBAY
     if (Device::currentDevice() == Device::JBAY) {
         addDeparserParamRename(d, dpMeta, "mirror_hash", "mirr_hash");
@@ -161,7 +149,7 @@ void AddDeparserMetadataShims::addEgressMetadata(IR::BFN::Deparser *d) {
     addDeparserParamRename(d, outputMeta, "force_tx_error", "force_tx_err");
 
     auto* dpMeta = getMetadataType(pipe, "egress_intrinsic_metadata_for_deparser");
-    addDeparserParam(d, dpMeta, "drop_ctl", /* canPack = */ false);
+    addDeparserParam(d, dpMeta, "drop_ctl");
 #if HAVE_JBAY
     if (Device::currentDevice() == Device::JBAY) {
         addDeparserParamRename(d, dpMeta, "mirror_hash", "mirr_hash");

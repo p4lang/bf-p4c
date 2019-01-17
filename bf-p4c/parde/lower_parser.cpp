@@ -2485,9 +2485,6 @@ class ComputeInitZeroContainers : public ParserModifier {
                 continue;
             }
 
-            // XXX(yumin): fields that reads $valid should not be initialized.
-            if (f.read_container_valid_bit()) continue;
-
             if (defuse.hasUninitializedRead(f.id)) {
                 // If pa_no_init specified, then the field does not have to rely on parser zero
                 // initialization.

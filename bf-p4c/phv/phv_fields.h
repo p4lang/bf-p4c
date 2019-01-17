@@ -235,9 +235,6 @@ class Field {
      **/
     bool            is_marshaled_i = false;
 
-    /// true if hardware read the container validity bit, e.g. deparser paramerter, digest index
-    bool            read_container_valid_bit_i = false;
-
     /// MAU operations performed on this field.
     safe_vector<FieldOperation> operations_i;
 
@@ -285,8 +282,6 @@ class Field {
     bool deparsed_to_tm() const                            { return deparsed_to_tm_i; }
     void set_deparsed_to_tm(bool b)                        { deparsed_to_tm_i = b; }
 
-    bool read_container_valid_bit() const                  { return read_container_valid_bit_i; }
-    void set_read_container_valid_bit(bool b)              { read_container_valid_bit_i = b; }
     bool is_marshaled() const                              { return is_marshaled_i; }
     void set_is_marshaled(bool b)                          { is_marshaled_i = b; }
 
