@@ -1130,7 +1130,7 @@ void ActionDataBus::update_action_data(cstring name, const TableResourceAlloc *a
     const IR::MAU::ActionData *ad = nullptr;
     for (auto back_at : tbl->attached) {
         auto at = back_at->attached;
-        auto ad = at->to<IR::MAU::ActionData>();
+        ad = at->to<IR::MAU::ActionData>();
         if (ad != nullptr)
             break;
     }
