@@ -9,6 +9,7 @@
 #include "bf-p4c/mau/table_flow_graph.h"
 #include "bf-p4c/mau/table_mutex.h"
 #include "bf-p4c/phv/action_phv_constraints.h"
+#include "bf-p4c/phv/mau_backtracker.h"
 #include "bf-p4c/phv/analysis/dominator_tree.h"
 #include "bf-p4c/phv/analysis/meta_live_range.h"
 #include "bf-p4c/phv/pragma/pa_no_init.h"
@@ -28,6 +29,7 @@ class FindInitializationNode : public Inspector {
     const ActionPhvConstraints&             actionConstraints;
     const TablesMutuallyExclusive&          tableMutex;
     const std::vector<FlowGraph*>&          flowGraph;
+    const MauBacktracker&                   tableAlloc;
 
     /// Actions where we cannot initialize metadata because they use hash distributions (and
     // therefore, cannot have a bitmasked-set operation in them).
@@ -76,17 +78,28 @@ class FindInitializationNode : public Inspector {
     /// dominator @t for the defuse units of @f and a stage @lastAllowedStage, after which the
     /// initialization should be performed. @prevField is the overlapping field that has the
     /// adjacent earlier live range to @f.
-    boost::optional<const PHV::Allocation::ActionSet>
-        getInitializationCandidates(
-                const PHV::Container& c,
-                const PHV::Field* f,
-                const IR::MAU::Table* t,
-                const ordered_map<const IR::BFN::Unit*, unsigned>& u,
-                const int lastAllowedStage,
-                const ordered_set<const IR::MAU::Table*>& fStrictDominators,
-                const PHV::Field* prevField,
-                const ordered_map<const PHV::Field*, ordered_set<const IR::BFN::Unit*>>& g_units,
-                const PHV::Transaction& alloc) const;
+    boost::optional<const PHV::Allocation::ActionSet> getInitializationCandidates(
+            const PHV::Container& c,
+            const PHV::Field* f,
+            const IR::MAU::Table* t,
+            const ordered_map<const IR::BFN::Unit*, unsigned>& u,
+            const int lastAllowedStage,
+            const ordered_set<const IR::MAU::Table*>& fStrictDominators,
+            const PHV::Field* prevField,
+            const ordered_map<const PHV::Field*, ordered_set<const IR::BFN::Unit*>>& g_units,
+            const PHV::Allocation::MutuallyLiveSlices& container_state,
+            const PHV::Transaction& alloc) const;
+
+    /** Given @initField that is being initialized at @initTable, and @container_state that is live
+      * at the same time as @initField within the same container, this method returns true, if:
+      * 1. initTable and any table t, where any slice in container_state is written, are in the same
+      *    stage (as per previous, container conflict free rounds of table placement), and
+      * 2. initTable and table t are not mutually exclusive.
+      */
+    bool mayViolatePackConflict(
+            const IR::MAU::Table* initTable,
+            const PHV::Field* initField,
+            const PHV::Allocation::MutuallyLiveSlices& container_state) const;
 
     /// @returns a set of actions where field @f must be initialized in @tbl.
     boost::optional<const PHV::Allocation::ActionSet> getInitPointsForTable(
@@ -94,6 +107,7 @@ class FindInitializationNode : public Inspector {
             const IR::MAU::Table* t,
             const PHV::Field* f,
             const ordered_set<const IR::MAU::Table*>& prevUses,
+            const PHV::Allocation::MutuallyLiveSlices& container_state,
             const PHV::Transaction& alloc,
             bool ignoreMutex = false) const;
 
@@ -137,7 +151,8 @@ class FindInitializationNode : public Inspector {
     findInitializationNodes(
         const PHV::Container c,
         const ordered_set<const PHV::Field*>& fields,
-        const PHV::Transaction& alloc) const;
+        const PHV::Transaction& alloc,
+        const PHV::Allocation::MutuallyLiveSlices& container_state) const;
 
     /// Pretty prints the PHV::Allocation::LiveRangeShrinkingMap @m. The basic indentation is
     /// specified by @indent.
@@ -155,9 +170,10 @@ class FindInitializationNode : public Inspector {
             const MetadataLiveRange& l,
             const ActionPhvConstraints& a,
             const TablesMutuallyExclusive& m,
-            const std::vector<FlowGraph*>& fg)
+            const std::vector<FlowGraph*>& fg,
+            const MauBacktracker& bt)
         : domTree(d), phv(p), defuse(u), dg(g), noInit(i), tablesToActions(t), metaLiveMap(l),
-          actionConstraints(a), tableMutex(m), flowGraph(fg) { }
+          actionConstraints(a), tableMutex(m), flowGraph(fg), tableAlloc(bt) { }
 };
 
 /** This pass is the pass manager for metadata initialization and provides external interfaces to
@@ -174,7 +190,8 @@ class LiveRangeShrinking : public PassManager {
  public:
     boost::optional<PHV::Allocation::LiveRangeShrinkingMap> findInitializationNodes(
             const ordered_set<PHV::AllocSlice>& alloced,
-            const PHV::Transaction& alloc) const {
+            const PHV::Transaction& alloc,
+            const PHV::Allocation::MutuallyLiveSlices& container_state) const {
         ordered_set<const PHV::Field*> fields;
         PHV::Container c;
         for (auto& sl : alloced) {
@@ -188,17 +205,18 @@ class LiveRangeShrinking : public PassManager {
         }
         BUG_CHECK(c != PHV::Container(),
                   "Container candidate for metadata overlay cannot be NULL.");
-        return initNode.findInitializationNodes(c, fields, alloc);
+        return initNode.findInitializationNodes(c, fields, alloc, container_state);
     }
 
     boost::optional<PHV::Allocation::LiveRangeShrinkingMap> findInitializationNodes(
             const ordered_set<PHV::AllocSlice>& alloced,
             const PHV::AllocSlice& slice,
-            const PHV::Transaction& alloc) const {
+            const PHV::Transaction& alloc,
+            const PHV::Allocation::MutuallyLiveSlices& container_state) const {
         ordered_set<PHV::AllocSlice> candidates;
         candidates.insert(alloced.begin(), alloced.end());
         candidates.insert(slice);
-        return findInitializationNodes(candidates, alloc);
+        return findInitializationNodes(candidates, alloc, container_state);
     }
 
     /// Pretty prints the LiveRangeShrinkingMap @m. The basic indentation is specified by
@@ -215,7 +233,8 @@ class LiveRangeShrinking : public PassManager {
             const DependencyGraph& g,
             const PragmaNoInit& i,
             const MetadataLiveRange& l,
-            const ActionPhvConstraints& a);
+            const ActionPhvConstraints& a,
+            const MauBacktracker& bt);
 };
 
 /** A helper class that maps PHV::Field to an IR::Expression.

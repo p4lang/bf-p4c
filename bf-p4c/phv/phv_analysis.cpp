@@ -33,7 +33,8 @@ PHV_AnalysisPass::PHV_AnalysisPass(
       pack_conflicts(phv, deps, table_mutex, table_alloc, action_mutex),
       action_constraints(phv, pack_conflicts),
       meta_live_range(phv, deps, defuse, pragmas, uses, table_alloc),
-      meta_init(phv, defuse, deps, pragmas.pa_no_init(), meta_live_range, action_constraints),
+      meta_init(phv, defuse, deps, pragmas.pa_no_init(), meta_live_range, action_constraints,
+              alloc),
       clustering(phv, uses, pack_conflicts, action_constraints) {
     if (options.trivial_phvalloc) {
         addPasses({

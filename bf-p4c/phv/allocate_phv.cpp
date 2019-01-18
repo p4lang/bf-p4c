@@ -851,8 +851,23 @@ CoreAllocation::tryAllocSliceList(
                             alloced_slices)) {
                     LOG5("    ...and can overlay " << slice.field() << " on " << alloced_slices <<
                          " with metadata initialization.");
+                    PHV::Allocation::MutuallyLiveSlices container_state =
+                        alloc_attempt.slicesByLiveness(c, candidate_slices);
+                    // Actual slices in the container, after accounting for metadata overlay.
+                    PHV::Allocation::MutuallyLiveSlices actual_container_state;
+                    for (auto& field_slice : container_state) {
+                        bool sliceOverlaysAllCandidates = true;
+                        for (auto& candidate_slice : candidate_slices) {
+                            if (!PHV::Allocation::mutually_exclusive(phv_i.metadata_mutex(),
+                                        field_slice.field(), candidate_slice.field()))
+                                sliceOverlaysAllCandidates = false;
+                        }
+                        if (sliceOverlaysAllCandidates) continue;
+                        actual_container_state.insert(field_slice);
+                    }
+
                     initNodes = meta_init_i.findInitializationNodes(alloced_slices, slice,
-                            alloc_attempt);
+                            alloc_attempt, actual_container_state);
                     if (!initNodes) {
                         LOG5("       ...but cannot find initialization points.");
                         can_place = false;

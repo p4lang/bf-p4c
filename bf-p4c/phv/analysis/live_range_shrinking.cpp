@@ -249,13 +249,37 @@ bool FindInitializationNode::cannotInitInAction(
     return doNotInitActions.count(action);
 }
 
+bool FindInitializationNode::mayViolatePackConflict(
+        const IR::MAU::Table* initTable,
+        const PHV::Field* initField,
+        const PHV::Allocation::MutuallyLiveSlices& container_state) const {
+    for (auto& slice : container_state) {
+        if (slice.field() == initField) continue;
+        for (auto& def : defuse.getAllDefs(slice.field()->id)) {
+            const auto* t = def.first->to<IR::MAU::Table>();
+            if (!t) continue;
+            if (t == initTable) continue;
+            if (tableAlloc.inSameStage(initTable, t).size() != 0 && !tableMutex(initTable, t)) {
+                LOG2("Initialization table " << initTable->name << " and def table " << t->name <<
+                     " of " << slice << " is in the same stage, and therefore there is a pack "
+                     "conflict.");
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 boost::optional<const PHV::Allocation::ActionSet> FindInitializationNode::getInitPointsForTable(
         const PHV::Container& c,
         const IR::MAU::Table* t,
         const PHV::Field* f,
         const ordered_set<const IR::MAU::Table*>& prevUses,
+        const PHV::Allocation::MutuallyLiveSlices& container_state,
         const PHV::Transaction& alloc,
         bool ignoreMutex) const {
+    if (mayViolatePackConflict(t, f, container_state))
+        return boost::none;
     // Initializing at table t requires that there is a dependence now from the previous uses of
     // table to table t. Return boost::none if this initialization would result in an increase in
     // the maximum number of stages in the dependence graph.
@@ -323,6 +347,7 @@ FindInitializationNode::getInitializationCandidates(
         const ordered_set<const IR::MAU::Table*>& fStrictDominators,
         const PHV::Field* prevField,
         const ordered_map<const PHV::Field*, ordered_set<const IR::BFN::Unit*>>& g_units,
+        const PHV::Allocation::MutuallyLiveSlices& container_state,
         const PHV::Transaction& alloc) const {
     PHV::Allocation::ActionSet rv;
     // At this point, the group dominator could be a unit that writes to the field, or a unit that
@@ -342,7 +367,8 @@ FindInitializationNode::getInitializationCandidates(
         auto access = u.at(unit);
         if (access == MetadataLiveRange::READ)
             BUG("Group dominator cannot be a node that reads the field.");
-        auto initPoints = getInitPointsForTable(c, groupDominator, f, prevUses, alloc);
+        auto initPoints = getInitPointsForTable(c, groupDominator, f, prevUses, container_state,
+                alloc);
         if (!initPoints) return boost::none;
         return initPoints;
     }
@@ -380,7 +406,8 @@ FindInitializationNode::getInitializationCandidates(
         }
         for (const auto* t : fStrictDominators) {
             LOG3("\t\t  Trying to initialize at table " << t->name);
-            auto initPoints = getInitPointsForTable(c, t, f, prevUses, alloc, true);
+            auto initPoints = getInitPointsForTable(c, t, f, prevUses, container_state, alloc,
+                    true);
             if (!initPoints) {
                 LOG3("\t\t  Could not initialize at table " << t->name);
                 return boost::none;
@@ -422,7 +449,7 @@ FindInitializationNode::getInitializationCandidates(
             LOG2("\t\t  Initialization at " << tbl->name << " would reach uses of previous field.");
             continue;
         }
-        auto candidateActions = getInitPointsForTable(c, tbl, f, prevUses, alloc);
+        auto candidateActions = getInitPointsForTable(c, tbl, f, prevUses, container_state, alloc);
         if (!candidateActions) continue;
         LOG2("\t\t  Initialization possible for table " << tbl->name);
         return candidateActions;
@@ -477,7 +504,8 @@ boost::optional<PHV::Allocation::LiveRangeShrinkingMap>
 FindInitializationNode::findInitializationNodes(
         const PHV::Container c,
         const ordered_set<const PHV::Field*>& fields,
-        const PHV::Transaction& alloc) const {
+        const PHV::Transaction& alloc,
+        const PHV::Allocation::MutuallyLiveSlices& container_state) const {
     PHV::Allocation::LiveRangeShrinkingMap initPoints;
     // If there aren't multiple fields in the queried field set, then initialization is not
     // required.
@@ -723,7 +751,9 @@ FindInitializationNode::findInitializationNodes(
         } while (!groupDominatorOK);
 
         auto initializationCandidates = getInitializationCandidates(c, f, groupDominator,
-                units.at(f), lastUsedStage, f_table_uses, lastField, g_units, alloc);
+                units.at(f), lastUsedStage, f_table_uses, lastField, g_units, container_state,
+                alloc);
+
         if (!initializationCandidates) {
             LOG2("\t\tCould not find any actions to initialize field in the group dominator.");
             return boost::none;
@@ -932,9 +962,10 @@ LiveRangeShrinking::LiveRangeShrinking(
         const DependencyGraph& g,
         const PragmaNoInit& i,
         const MetadataLiveRange& l,
-        const ActionPhvConstraints& a)
+        const ActionPhvConstraints& a,
+        const MauBacktracker& bt)
     : domTree(flowGraph),
-      initNode(domTree, p, u, g, i.getFields(), tableActionsMap, l, a, tableMutex, flowGraph) {
+      initNode(domTree, p, u, g, i.getFields(), tableActionsMap, l, a, tableMutex, flowGraph, bt) {
     addPasses({
         &tableMutex,
         &domTree,
