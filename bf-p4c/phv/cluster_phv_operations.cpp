@@ -25,6 +25,7 @@ const ordered_set<cstring> PHV_Field_Operations::SHIFT_OPS = {
 };
 
 void PHV_Field_Operations::processSaluInst(const IR::MAU::Instruction* inst) {
+    LOG4("Stateful instruction: " << inst);
     // SALU operands have the following constraints:
     //
     //  - If the SALU instruction is the same size as the container sources,
@@ -122,9 +123,18 @@ void PHV_Field_Operations::processInst(const IR::MAU::Instruction* inst) {
     if (inst->operands.empty())
         return;
 
+    LOG4("Instruction: " << inst);
     le_bitrange dest_bits;
     auto* dst = phv.field(inst->operands[0], &dest_bits);
+    bool alignStatefulSource = false;
     for (int idx = 0; idx < int(inst->operands.size()); ++idx) {
+        if (idx > 0) {
+            LOG4("  Operand " << idx << ": " << inst->operands[idx]);
+            if (inst->name != "set" && inst->operands[idx]->is<IR::MAU::AttachedOutput>()) {
+                LOG4("    Stateful output used as operand.");
+                alignStatefulSource = true;
+            }
+        }
         le_bitrange field_bits;
         PHV::Field* field = phv.field(inst->operands[idx], &field_bits);
         if (!field) continue;
@@ -209,6 +219,22 @@ void PHV_Field_Operations::processInst(const IR::MAU::Instruction* inst) {
             LOG3("Marking "  << field->name << " as 'no pack' because it is a source of a "
                  "shift operation " << inst);
             field->set_no_pack(true); } }
+
+    if (!alignStatefulSource) return;
+
+    // Currently, because of limitations in the compiler, all operands of a non-set operation must
+    // be aligned at bit 0 in the container, if one of the operands is a stateful ALU output.
+    // XXX(Deep): Add implementation for a particular slice to be in the bottom bits of its
+    // container.
+    for (int idx = 0; idx < int(inst->operands.size()); ++idx) {
+        le_bitrange field_bits;
+        PHV::Field* field = phv.field(inst->operands[idx], &field_bits);
+        if (!field) continue;
+        if (field_bits.size() == field->size) {
+            field->set_deparsed_bottom_bits(true);
+            LOG4("    Setting " << field->name << " to deparsed bottom bits.");
+        }
+    }
 }
 
 bool PHV_Field_Operations::preorder(const IR::MAU::Instruction *inst) {
