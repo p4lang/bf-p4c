@@ -1322,6 +1322,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue562-bmv2.p4
   testdata/p4_16_samples/issue1642-bmv2.p4
   testdata/p4_16_samples/issue383-bmv2.p4
+  testdata/p4_16_samples/issue1653-complex-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1380,6 +1381,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "source of modify_field invalid"
   testdata/p4_16_samples/strength3.p4
+  testdata/p4_16_samples/strength4.p4
 )
 
 # p4runtime issue with flattenHeaders pass
@@ -1393,4 +1395,10 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Could not find declaration for b"
   testdata/p4_16_samples/issue1660-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Field .* of header .* cannot have type bool"
+  testdata/p4_16_samples/header-bool-bmv2.p4
+  testdata/p4_16_samples/issue1653-bmv2.p4
 )

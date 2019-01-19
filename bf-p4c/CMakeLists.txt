@@ -278,6 +278,7 @@ set (BF_P4C_BACKEND_MAU_HDRS
   mau/memories.h
   mau/push_pop.h
   mau/reduction_or.h
+  mau/remove_noop_gateway.h
   mau/resource_estimate.h
   mau/resource.h
   mau/selector_update.h

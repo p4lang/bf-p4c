@@ -25,6 +25,7 @@
 #include "bf-p4c/mau/instruction_selection.h"
 #include "bf-p4c/mau/ixbar_realign.h"
 #include "bf-p4c/mau/push_pop.h"
+#include "bf-p4c/mau/remove_noop_gateway.h"
 #include "bf-p4c/mau/selector_update.h"
 #include "bf-p4c/mau/split_alpm.h"
 #include "bf-p4c/mau/split_gateways.h"
@@ -251,6 +252,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new ReinstateAliasSources(phv),    // revert AliasMembers/Slices to their original sources
         options.privatization ? &defuse : nullptr,
         new TableAllocPass(options, phv, deps),
+        new RemoveNoopGateway,
         &table_summary,
         new LiveRangeReport(phv, table_summary, defuse),
         // Rerun defuse analysis here so that table placements are used to correctly calculate live

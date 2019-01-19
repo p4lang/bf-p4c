@@ -86,7 +86,7 @@ void IR::MAU::StatefulAlu::dbprint(std::ostream &out) const {
 }
 
 void IR::MAU::TableSeq::dbprint(std::ostream &out) const {
-    out << "seq" << tables.size() << ":";
+    out << "seq" << tables.size() << "[" << id << "]:";
     for (unsigned i = 1; i < tables.size(); i++) {
         out << ' ';
         for (unsigned j = 0; j < i; j++) out << (deps(i, j) ? '1' : '0'); }

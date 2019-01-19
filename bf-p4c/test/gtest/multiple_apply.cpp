@@ -242,4 +242,24 @@ TEST_F(MultipleApplyTest, LogicallyMutuallyExclusive) {
     EXPECT_TRUE(ma.mutex_error("ingress.t2"));
 }
 
+/** The tail of the TableSeqs match up, so we can split off the common tail giviing a
+ *  common invokation of the table
+ */
+TEST_F(MultipleApplyTest, CommonTail) {
+    auto test = createMultipleApplyTest(P4_SOURCE(P4Headers::NONE, R"(
+        if (hdr.data.b1 == 0) {
+            t1.apply();
+            t2.apply();
+        } else {
+            t2.apply();
+        }
+        t3.apply();
+    )"));
+
+    MultipleApply ma;
+    test->pipe->apply(ma);
+    EXPECT_FALSE(ma.distinct_error("ingress.t2"));
+}
+
+
 }  // namespace Test

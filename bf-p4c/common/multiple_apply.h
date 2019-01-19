@@ -30,19 +30,33 @@ class MultipleApply : public PassManager {
             : mutex(m), errors(e) {}
     };
 
+    typedef ordered_map<const IR::MAU::TableSeq *, const IR::MAU::TableSeq *> tsmap_t;
     class EquivalentTableSequence : public MauInspector {
-        ordered_map<const IR::MAU::TableSeq *, const IR::MAU::TableSeq *> &equiv_seqs;
+        tsmap_t &equiv_seqs;
+        tsmap_t &equiv_tails;
         ordered_set<const IR::MAU::TableSeq *> unique_seqs;
 
         profile_t init_apply(const IR::Node *) override;
         void postorder(const IR::MAU::TableSeq *) override;
+        bool equiv(const IR::MAU::Table *a, const IR::MAU::Table *b);
         bool equiv(const IR::MAU::TableSeq *a, const IR::MAU::TableSeq *b);
+        bool tail_equiv(const IR::MAU::TableSeq *a, const IR::MAU::TableSeq *b);
         bool equiv_gateway(const IR::Expression *a, const IR::Expression *b);
 
      public:
-        explicit EquivalentTableSequence(ordered_map<const IR::MAU::TableSeq *,
-                                                     const IR::MAU::TableSeq *> &es)
-            : equiv_seqs(es) {}
+        explicit EquivalentTableSequence(tsmap_t &es, tsmap_t &et)
+            : equiv_seqs(es), equiv_tails(et) {}
+    };
+
+    class MergeTails : public MauModifier {
+        tsmap_t                 &equiv_tails;
+        std::set<cstring>       names;
+
+        bool preorder(IR::BFN::Pipe *) override;
+        void postorder(IR::BFN::Pipe *) override;
+        bool preorder(IR::MAU::TableSeq *) override;
+     public:
+        explicit MergeTails(tsmap_t &et) : equiv_tails(et) {}
     };
 
     class RefactorSequence : public MauTransform {
@@ -73,7 +87,8 @@ class MultipleApply : public PassManager {
         explicit UniqueGatewayChain(std::set<cstring> &e) : errors(e) { visitDagOnce = false; }
     };
 
-    ordered_map<const IR::MAU::TableSeq *, const IR::MAU::TableSeq *> equiv_seqs;
+    tsmap_t equiv_seqs;
+    tsmap_t equiv_tails;
 
  public:
     bool mutex_error(cstring name) {

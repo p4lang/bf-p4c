@@ -2130,14 +2130,13 @@ void MauAsmOutput::emit_gateway(std::ostream &out, indent_t gw_indent,
         if (tbl->gateway_rows.back().first) {
             out << gw_indent << "miss: run_table" << std::endl;
         }
-        out << gw_indent++ << "condition: " << std::endl;
-        out << gw_indent << "expression: \"(" << tbl->gateway_cond << ")\"" << std::endl;
-        out << gw_indent << "true: "
-            << (cond_tables.count("$true") ? cond_tables["$true"] : cond_tables["$torf"])
-            << std::endl;
-        out << gw_indent << "false: "
-            << (cond_tables.count("$false") ? cond_tables["$false"] : cond_tables["$torf"])
-            << std::endl;
+        if (tbl->gateway_cond) {
+            out << gw_indent++ << "condition: " << std::endl;
+            out << gw_indent << "expression: \"(" << tbl->gateway_cond << ")\"" << std::endl;
+            if (auto t = cond_tables["$true"] ? cond_tables["$true"] : cond_tables["$torf"])
+                out << gw_indent << "true: " << t << std::endl;
+            if (auto t = cond_tables["$false"] ? cond_tables["$false"] : cond_tables["$torf"])
+                out << gw_indent << "false: " << t << std::endl; }
     } else {
         WARNING("Failed to fit gateway expression for " << tbl->name);
     }

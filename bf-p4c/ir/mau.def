@@ -597,6 +597,8 @@ class TableSeq {
         if (b) tables.push_back(b); }
     bool empty() const { return tables.empty(); }
     Table front() const { return tables.empty() ? nullptr : tables.front(); }
+    Table back() const { return tables.empty() ? nullptr : tables.back(); }
+    size_t size() const { return tables.size(); }
     validate {
         bool first = true;
         gress_t gress;
