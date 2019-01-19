@@ -416,7 +416,6 @@ class FindDataDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
         LOG3(dg);
     }
 
-    void flow_dead() override;
     void flow_merge(Visitor &v) override;
 
     void all_bfs(boost::default_bfs_visitor* vis);

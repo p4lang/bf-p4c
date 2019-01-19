@@ -182,6 +182,8 @@ IR::Node* ValidToStkvalid::postorder(IR::Member* member) {
     // element's validity bit.  See the comment for HeaderPushPop for details
     // on the stkvalid encoding.
     int stkvalidIdx = info.maxpop + info.size - 1 - idx;
+    BUG_CHECK(stkvalidIdx >= 0 && stkvalidIdx < info.size + info.maxpop + info.maxpush,
+              "stkvalidIdx %d out of range for %s", stkvalidIdx, ref->base());
 
     auto* stkvalid = new IR::Member(member->srcInfo,
                                     IR::Type::Bits::get(info.size + info.maxpop + info.maxpush),

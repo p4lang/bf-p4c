@@ -455,12 +455,6 @@ inline std::set<T> &operator |=(std::set<T> &s, const std::set<T> &a) {
     s.insert(a.begin(), a.end());
     return s; }
 
-void FindDataDependencyGraph::flow_dead() {
-    access.clear();
-    red_or_use.clear();
-    cont_write.clear();
-}
-
 void FindDataDependencyGraph::flow_merge(Visitor &v) {
     for (auto &a : dynamic_cast<FindDataDependencyGraph &>(v).access) {
         access[a.first].ixbar_read |= a.second.ixbar_read;

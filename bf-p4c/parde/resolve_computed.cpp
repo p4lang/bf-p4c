@@ -53,21 +53,22 @@ struct ResolveStackRefs : public ParserInspector, ControlFlowVisitor {
         joinFlows = true; }
 
  private:
+    int id;
+    static int id_ctr;
     struct IndexState {
         bitvec  valid;          // indices that are valid or indeterminate
         bitvec  unknown;        // indices that are indeterminate
                                 // 'unknown' will always be a subset of 'valid'
     };
     std::map<cstring, IndexState>       stack_state;
-    bool                                flow_dead_flag = false;  // true == bottom element
-    ResolveStackRefs *clone() const override { return new ResolveStackRefs(*this); }
-    void flow_dead() override { flow_dead_flag = true; stack_state.clear(); }
+    ResolveStackRefs *clone() const override {
+        auto *rv = new ResolveStackRefs(*this);
+        rv->id = ++id_ctr;
+        LOG7("  clone " << id << " -> " << rv->id);
+        return rv; }
     void flow_merge(Visitor &other_) override {
         auto &other = dynamic_cast<ResolveStackRefs &>(other_);
-        if (flow_dead_flag) {
-            stack_state = other.stack_state;
-            flow_dead_flag = other.flow_dead_flag;
-            return; }
+        LOG7("  flow_merge " << other.id << " -> " << id);
         for (auto &el : other.stack_state) {
             auto &state = stack_state[el.first];
             auto &other_state = el.second;
@@ -80,13 +81,22 @@ struct ResolveStackRefs : public ParserInspector, ControlFlowVisitor {
 
     profile_t init_apply(const IR::Node *root) override {
         resolvedIndices.clear();
+        id = id_ctr = 0;
         return ParserInspector::init_apply(root); }
     bool filter_join_point(const IR::Node *n) override { return !n->is<IR::BFN::ParserState>(); }
 
-    bool preorder(const IR::BFN::Parser *) override {
+    bool preorder(const IR::BFN::Parser *parser) override {
         stack_state.clear();  // each parser is independent and CANNOT share states
-        flow_dead_flag = false;
+        LOG3(id << ":ResolveStackRefs for "<< parser->toString() << parser <<
+             " start=" << parser->start->name);
         return true; }
+    bool preorder(const IR::BFN::ParserState *state) {
+        LOG4(id << ":visit state " << state->name << IndentCtl::indent);
+        return true; }
+    void postorder(const IR::BFN::ParserState *) {
+        if (LOGGING(4))
+            ::Log::Detail::fileLogOutput(__FILE__) << IndentCtl::unindent;
+    }
 
     unsigned nextIndex(const IR::HeaderStackItemRef* ref) const {
         const auto stackName = ref->base()->toString();
@@ -143,9 +153,10 @@ struct ResolveStackRefs : public ParserInspector, ControlFlowVisitor {
         if (!index->is<IR::Constant>()) {
             return;
         }
+        LOG4(id << ": " << DBPrint::Prec_Low << DBPrint::Brief << extract <<
+             " -> [" << index << "]" << DBPrint::Reset);
         auto intIndex = std::max(index->to<IR::Constant>()->asInt(), 0);
         auto stackName = ref->base()->toString();
-        BUG_CHECK(!flow_dead_flag, "dead flow");
         stack_state[stackName].valid[intIndex] = crval->constant->value != 0;
         stack_state[stackName].unknown[intIndex] = 0;
     }
@@ -197,6 +208,8 @@ struct ResolveStackRefs : public ParserInspector, ControlFlowVisitor {
         }
     }
 };
+
+int ResolveStackRefs::id_ctr;
 
 struct AssignNextAndLast : public ParserModifier {
     explicit AssignNextAndLast(const HeaderStackItemRefIndices &resolvedIndices)
@@ -305,7 +318,6 @@ struct CopyPropagateParserValues : public ParserInspector, ControlFlowVisitor {
     /// A map from l-values (identified by strings) to the r-value(s) most recently
     /// assigned to them.  Can't use a set because we don't have IR::Node::operator< (yet?)
     std::map<cstring, std::vector<ParserRValDef>> reachingDefs;
-    bool flow_dead_flag = false;  // true == bottom element
     void addReachingDef(std::vector<ParserRValDef> &set, const ParserRValDef &rvd) {
         if (std::find(set.begin(), set.end(), rvd) == set.end())
             set.push_back(rvd); }
@@ -317,18 +329,10 @@ struct CopyPropagateParserValues : public ParserInspector, ControlFlowVisitor {
         rv->id = ++id_ctr;
         LOG7("  clone " << id << " -> " << rv->id);
         return rv; }
-    void flow_dead() override {
-        LOG7("  flow_dead " << id);
-        flow_dead_flag = true;
-        reachingDefs.clear(); }
     void flow_merge(Visitor &other_) override {
         auto &other = dynamic_cast<CopyPropagateParserValues &>(other_);
         // FIXME -- use erase_if (currently in table_placement.cpp)
         LOG7("  flow_merge " << other.id << " -> " << id);
-        if (flow_dead_flag) {
-            reachingDefs = other.reachingDefs;
-            flow_dead_flag = other.flow_dead_flag;
-            return; }
         for (auto &el : reachingDefs) {
             if (!other.reachingDefs.count(el.first)) {
                 addReachingDef(el.second, ParserRValDef());
@@ -353,7 +357,6 @@ struct CopyPropagateParserValues : public ParserInspector, ControlFlowVisitor {
 
     bool preorder(const IR::BFN::Parser *parser) override {
         reachingDefs.clear();
-        flow_dead_flag = false;
         LOG3(id << ":CopyPropagateParserValues for "<< parser->toString() << parser <<
              " start=" << parser->start->name);
         return true;

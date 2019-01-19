@@ -308,65 +308,81 @@ class Table : BFN::Unit {
         auto &gateway_inhibit(v.flow_clone());
         gateway_inhibit.visit(gateway_payload, "gateway_payload");
         match_key.visit_children(v);
+        Visitor *current = &v;
         if (!gateway_only()) {
-            auto &clone(v.flow_clone());
-            v.flow_dead();
+            Visitor *before_action = &v.flow_clone();
             // Can separate table using hit/miss from tables using action chaining,
             // as in P4 semantically, a table can not use both hit/miss and action chaining
             // Potentially if that changes, we will have to support it with a layered approach
             // to the next table propagation
             if (!next.count("$hit") && !next.count("$miss")) {
-                auto &default_action(clone.flow_clone());
-                default_action.flow_dead();
+                Visitor *default_action = nullptr;
                 for (auto &action : actions) {
-                    auto &clone2(clone.flow_clone());
-                    clone2.visit(action.second);
+                    if (!current) current = &before_action->flow_clone();
+                    current->visit(action.second);
                     if (next.count(action.first)) {
-                        clone2.visit(next.at(action.first), action.first);
-                        v.flow_merge(clone2);
+                        current->visit(next.at(action.first), action.first);
+                        if (current != &v)
+                            v.flow_merge(*current);
                     } else {
-                        default_action.flow_merge(clone2);
-                    }
-                }
-                if (next.count("$default"))
-                    default_action.visit(next.at("$default"), "$default");
-                v.flow_merge(default_action);
+                        if (default_action)
+                            default_action->flow_merge(*current);
+                        else if (current == &v)
+                            default_action = &current->flow_clone();
+                        else
+                            default_action = current; }
+                    current = nullptr; }
+                if (next.count("$default")) {
+                    // if there are no actions that use the $default next, use a nop action
+                    if (!default_action) default_action = &before_action->flow_clone();
+                    default_action->visit(next.at("$default"), "$default"); }
+                if (default_action) {
+                    v.flow_merge(*default_action); }
             } else {
-                auto &hit_actions(clone.flow_clone());
-                auto &miss_actions(clone.flow_clone());
-                hit_actions.flow_dead();
-                miss_actions.flow_dead();
-
+                Visitor *hit_actions = nullptr, *miss_actions = nullptr;
                 for (auto &action : Values(actions)) {
-                    auto &clone2(clone.flow_clone());
-                    clone2.visit(action);
-                    if (!action->hit_only())
-                        miss_actions.flow_merge(clone2);
-                    if (!action->miss_only())
-                        hit_actions.flow_merge(clone2);
-                }
+                    if (!current) current = &before_action->flow_clone();
+                    current->visit(action);
+                    if (!action->hit_only()) {
+                        if (miss_actions)
+                            miss_actions->flow_merge(*current);
+                        else
+                            miss_actions = current; }
+                    if (!action->miss_only()) {
+                        if (hit_actions)
+                            hit_actions->flow_merge(*current);
+                        else if (current != miss_actions)
+                            hit_actions = current;
+                        else
+                            hit_actions = &current->flow_clone(); }
+                    current = nullptr; }
 
-                if (next.count("$hit"))
-                    hit_actions.visit(next.at("$hit"), "$hit");
-                if (next.count("$miss"))
-                    miss_actions.visit(next.at("$miss"), "$miss");
-                v.flow_merge(hit_actions);
-                v.flow_merge(miss_actions);
+                if (next.count("$hit")) {
+                    if (!hit_actions) hit_actions = &before_action->flow_clone();
+                    hit_actions->visit(next.at("$hit"), "$hit"); }
+                if (next.count("$miss")) {
+                    if (!miss_actions) miss_actions = &before_action->flow_clone();
+                    miss_actions->visit(next.at("$miss"), "$miss"); }
+                if (hit_actions && hit_actions != &v)
+                    v.flow_merge(*hit_actions);
+                if (miss_actions && miss_actions != &v)
+                    v.flow_merge(*miss_actions);
             }
             if (next.count("$try_next_stage")) {
-                auto &clone2(clone.flow_clone());
-                clone2.visit(next.at("$try_next_stage"), "$try_next_stage");
-                v.flow_merge(clone2);
-            }
-        } else {
-            v.flow_dead(); }
+                before_action->visit(next.at("$try_next_stage"), "$try_next_stage");
+                v.flow_merge(*before_action);
+                before_action = nullptr; } }
         std::set<cstring> gw_next;
         for (auto &gw : gateway_rows) {
             if (gw.second && !gw_next.count(gw.second)) {
-                auto &clone2(gateway_inhibit.flow_clone());
                 if (next.count(gw.second)) {
-                    clone2.visit(next.at(gw.second), gw.second); }
-                v.flow_merge(clone2);
+                    if (!current) current = &gateway_inhibit.flow_clone();
+                    current->visit(next.at(gw.second), gw.second);
+                    if (current != &v)
+                        v.flow_merge(*current);
+                } else {
+                    v.flow_merge(gateway_inhibit); }
+                current = nullptr;
                 gw_next.emplace(gw.second); } }
         // FIXME -- attached tables are not properly visited here in the control-flow order,
         // FIXME -- because we don't really know which actions will trigger them.  They

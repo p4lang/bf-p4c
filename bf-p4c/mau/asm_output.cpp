@@ -14,6 +14,8 @@
 #include "lib/indent.h"
 #include "lib/stringref.h"
 
+int DefaultNext::id_counter = 0;
+
 class MauAsmOutput::EmitAttached : public Inspector {
     friend class MauAsmOutput;
     const MauAsmOutput          &self;

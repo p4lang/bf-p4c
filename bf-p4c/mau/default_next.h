@@ -5,10 +5,14 @@
 #include "bf-p4c/ir/control_flow_visitor.h"
 
 class DefaultNext : public MauInspector, BFN::ControlFlowVisitor {
+    int id;
+    static int id_counter;
     std::map<const IR::MAU::Table *, const IR::MAU::Table *>    *default_next;
     std::set<const IR::MAU::Table *>    prev_tbls;
     bool preorder(const IR::Expression *) override { return false; }
     bool preorder(const IR::MAU::Table *tbl) override {
+        LOG3(id << ": DefaultNext::preorder(" << tbl->name << ") prev=" <<
+             DBPrint::Brief << prev_tbls << DBPrint::Reset);
         for (auto prev : prev_tbls) {
             if (default_next->count(prev)) {
                 if (default_next->at(prev) != tbl)
@@ -18,12 +22,22 @@ class DefaultNext : public MauInspector, BFN::ControlFlowVisitor {
         prev_tbls.clear();
         return true; }
     void postorder(const IR::MAU::Table *tbl) override {
+        LOG3(id << ": DefaultNext::postorder(" << tbl->name << ")");
         prev_tbls.insert(tbl); }
-    DefaultNext *clone() const override { return new DefaultNext(*this); }
+    DefaultNext *clone() const override {
+        auto *rv = new DefaultNext(*this);
+        rv->id = ++id_counter;
+        LOG3(id << ": DefaultNext::clone -> " << rv->id);
+        return rv; }
     void flow_merge(Visitor &a_) override {
         auto &a = dynamic_cast<DefaultNext &>(a_);
+        LOG3(id << ": DefaultNext::flow_merge <- " << a.id);
         prev_tbls.insert(a.prev_tbls.begin(), a.prev_tbls.end()); }
-    DefaultNext(const DefaultNext &) = default;
+    DefaultNext(const DefaultNext &a) = default;
+    profile_t init_apply(const IR::Node *root) {
+        LOG1("DefaultNext starting");
+        id = id_counter = 0;
+        return MauInspector::init_apply(root); }
 
  public:
     DefaultNext() : default_next(new std::remove_reference<decltype(*default_next)>::type) {
