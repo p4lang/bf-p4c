@@ -832,7 +832,7 @@ struct AdjustMatchValue : public ParserModifier {
             int field_start = 0;
             for (const auto& rs : boost::adaptors::reverse(select->reg_slices)) {
                 auto reg = rs.first;
-                auto reg_slice = rs.second;
+                auto reg_slice = rs.second.toOrder<Endian::Little>(reg.size * 8);
 
                 nw_bitrange field_slice(StartLen(field_start, reg_slice.size()));
                 adjusted->mapping[{field_name, field_slice}] =  {reg, reg_slice};

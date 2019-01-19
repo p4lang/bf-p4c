@@ -201,7 +201,7 @@ class LoweredConstMatchValue : LoweredMatchValue {
 class LoweredPvsMatchValue : LoweredMatchValue {
 #emit
     using FieldSlice = std::pair<cstring, nw_bitrange>;
-    using MatcherSlice = std::pair<MatchRegister, nw_bitrange>;
+    using MatcherSlice = std::pair<MatchRegister, le_bitrange>;
     std::map<FieldSlice, MatcherSlice> mapping;
 
     LoweredPvsMatchValue(cstring name, int size, const std::map<FieldSlice, MatcherSlice>& m)
