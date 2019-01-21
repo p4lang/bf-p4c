@@ -227,7 +227,7 @@ class Allocation {
 
     /// @returns the set of actions where @slice must be initialized for overlay enabled by live
     /// range shrinking.
-    ordered_set<const IR::MAU::Action*> getInitPoints(AllocSlice& slice) const;
+    ordered_set<const IR::MAU::Action*> getInitPoints(const AllocSlice& slice) const;
 
     /// @returns number of containers owned by this allocation.
     virtual size_t size() const = 0;
@@ -426,7 +426,7 @@ class ConcreteAllocation : public PHV::Allocation {
 
     /// @returns a set of actions where the slice @slice must be initialized. @returns an empty set
     /// of actions if initialization is not required.
-    ordered_set<const IR::MAU::Action*> getInitPoints(AllocSlice slice) const;
+    ordered_set<const IR::MAU::Action*> getInitPoints(const AllocSlice slice) const;
 
     /// @returns a summary of the status of each container by type and gress.
     cstring getSummary(const PhvUse& uses) const override;
@@ -495,7 +495,7 @@ class Transaction : public Allocation {
     cstring getTransactionSummary() const;
 
     /// @returns the set of actions in which @slice must be initialized for live range shrinking.
-    ordered_set<const IR::MAU::Action*> getInitPoints(AllocSlice& slice) const;
+    ordered_set<const IR::MAU::Action*> getInitPoints(const AllocSlice& slice) const;
 
     /// Returns the outstanding writes in this view.
     const ordered_map<PHV::Container, ContainerStatus>& getTransactionStatus() const {

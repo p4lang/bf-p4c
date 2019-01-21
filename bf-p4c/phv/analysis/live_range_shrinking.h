@@ -99,7 +99,8 @@ class FindInitializationNode : public Inspector {
     bool mayViolatePackConflict(
             const IR::MAU::Table* initTable,
             const PHV::Field* initField,
-            const PHV::Allocation::MutuallyLiveSlices& container_state) const;
+            const PHV::Allocation::MutuallyLiveSlices& container_state,
+            const PHV::Transaction& alloc) const;
 
     /// @returns a set of actions where field @f must be initialized in @tbl.
     boost::optional<const PHV::Allocation::ActionSet> getInitPointsForTable(

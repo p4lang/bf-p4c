@@ -268,8 +268,12 @@ p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
   switch_8.5_msdc_ipv4
+)
+
+p4c_add_xfail_reason("tofino"
+  "error: action data bus conflict on row.*between tables.*and.*"
   switch_msdc_ipv4
-  )
+)
 
 p4c_add_xfail_reason("tofino"
   "error.*Can't split table.*with indirect attached MAU::StatefulAlu"
@@ -1652,7 +1656,6 @@ p4c_add_xfail_reason("tofino"
 # P4C-1394
 p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
-  ../glass/testsuite/p4_tests/phv/COMPILER-788/comp_788.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-546/switch_comp546.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-243/comp243.p4
   )

@@ -483,14 +483,14 @@ bool PHV::ConcreteAllocation::contains(PHV::Container c) const {
 }
 
 ordered_set<const IR::MAU::Action*>
-PHV::Allocation::getInitPoints(PHV::AllocSlice& slice) const {
+PHV::Allocation::getInitPoints(const PHV::AllocSlice& slice) const {
     static ordered_set<const IR::MAU::Action*> emptySet;
     if (!meta_init_points_i.count(slice)) return emptySet;
     return meta_init_points_i.at(slice);
 }
 
 ordered_set<const IR::MAU::Action*>
-PHV::Transaction::getInitPoints(PHV::AllocSlice& slice) const {
+PHV::Transaction::getInitPoints(const PHV::AllocSlice& slice) const {
     if (meta_init_points_i.count(slice))
         return meta_init_points_i.at(slice);
     ordered_set<const IR::MAU::Action*> initPointsInParent;
@@ -516,7 +516,7 @@ void PHV::Transaction::printMetaInitPoints() const {
 }
 
 ordered_set<const IR::MAU::Action*>
-PHV::ConcreteAllocation::getInitPoints(PHV::AllocSlice slice) const {
+PHV::ConcreteAllocation::getInitPoints(const PHV::AllocSlice slice) const {
     static ordered_set<const IR::MAU::Action*> emptySet;
     if (!meta_init_points_i.count(slice)) return emptySet;
     return meta_init_points_i.at(slice);

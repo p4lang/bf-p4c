@@ -252,17 +252,43 @@ bool FindInitializationNode::cannotInitInAction(
 bool FindInitializationNode::mayViolatePackConflict(
         const IR::MAU::Table* initTable,
         const PHV::Field* initField,
-        const PHV::Allocation::MutuallyLiveSlices& container_state) const {
-    for (auto& slice : container_state) {
+        const PHV::Allocation::MutuallyLiveSlices& container_state,
+        const PHV::Transaction& alloc) const {
+    // Tables containing the initialization points for all the existing fields in the container.
+    ordered_set<const IR::MAU::Table*> initTablesForExistingFields;
+    for (const PHV::AllocSlice& slice : container_state) {
         if (slice.field() == initField) continue;
+        auto initPoints = alloc.getInitPoints(slice);
+        for (const auto* act : initPoints) {
+            auto t = tablesToActions.getTableForAction(act);
+            if (!t) continue;
+            initTablesForExistingFields.insert(*t);
+            LOG4("\t\t  Need to check def of field " << initField->name << " against the table "
+                 << (*t)->name << " where " << slice << " is initialized.");
+        }
         for (auto& def : defuse.getAllDefs(slice.field()->id)) {
             const auto* t = def.first->to<IR::MAU::Table>();
             if (!t) continue;
             if (t == initTable) continue;
             if (tableAlloc.inSameStage(initTable, t).size() != 0 && !tableMutex(initTable, t)) {
-                LOG2("Initialization table " << initTable->name << " and def table " << t->name <<
-                     " of " << slice << " is in the same stage, and therefore there is a pack "
+                LOG3("\t\tInitialization table " << initTable->name << " and def table " << t->name
+                     << " of " << slice << " are in the same stage, and therefore there is a pack "
                      "conflict.");
+                return true; } } }
+
+    // Check that the def tables of the field being initialized are not in the same stage as the
+    // initialization tables for slices already allocated in this container. If they are, this would
+    // result in a container conflict for this container, and could possibly lengthen the dependency
+    // chain. Therefore, we choose not to initialize this field in this table.
+    for (const auto* t : initTablesForExistingFields) {
+        for (auto& def : defuse.getAllDefs(initField->id)) {
+            const auto* d = def.first->to<IR::MAU::Table>();
+            if (!d) continue;
+            if (t == d) continue;
+            if (tableAlloc.inSameStage(t, d).size() != 0 && !tableMutex(t, d)) {
+                LOG3("\t\tInitialization table " << t->name << " and def table " << d->name <<
+                     " of " << initField->name << " are in the same stage, and therefore there is "
+                     "a pack conflict.");
                 return true;
             }
         }
@@ -278,7 +304,7 @@ boost::optional<const PHV::Allocation::ActionSet> FindInitializationNode::getIni
         const PHV::Allocation::MutuallyLiveSlices& container_state,
         const PHV::Transaction& alloc,
         bool ignoreMutex) const {
-    if (mayViolatePackConflict(t, f, container_state))
+    if (mayViolatePackConflict(t, f, container_state, alloc))
         return boost::none;
     // Initializing at table t requires that there is a dependence now from the previous uses of
     // table to table t. Return boost::none if this initialization would result in an increase in
