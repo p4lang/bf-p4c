@@ -915,6 +915,11 @@ CoreAllocation::tryAllocSliceList(
             allocedSlices = boost::none;
             continue; }
 
+        // Maintain a list of conditional constraints that are already a part of a slice list that
+        // follows the required alignment. Therefore, we do not need to recursively call
+        // tryAllocSliceList() for those slice lists because those slice lists will be allocated at
+        // the required alignment later on during the allocation of the supercluster.
+        std::set<int> conditionalConstraintsToErase;
         // Check whether the candidate slice allocations respect action-induced constraints.
         boost::optional<PHV::Allocation::ConditionalConstraints> action_constraints;
         PHV::Allocation::LiveRangeShrinkingMap initActions;
@@ -1021,6 +1026,9 @@ CoreAllocation::tryAllocSliceList(
                     break;
                 }
 
+                // At this point, all conditional placements for this source are in the same slice
+                // list. If the alignments check out, we do not need to apply the conditional
+                // constraints for this source.
                 if (slice_list) {
                     // Check that the positions induced by action constraints match
                     // the positions in the slice list.  The offset is relative to
@@ -1063,19 +1071,10 @@ CoreAllocation::tryAllocSliceList(
                         } else {
                             offset += slice.range().size(); } }
 
-                    // If we've reached here, then all the slices that have
-                    // conditional constraints are in slice_list, and the slice
-                    // list must be placed with its first field starting at
-                    // offset - size.
-                    // Update the action constraints with positions for all fields
-                    // in the slice list.
-                    int required_offset = offset - size;
-                    PHV::Allocation::ConditionalConstraint slice_constraints;
-                    for (auto& slice : **slice_list) {
-                        slice_constraints[slice] =
-                            PHV::Allocation::ConditionalConstraintData(required_offset);
-                        required_offset += slice.range().size(); }
-                    (*action_constraints)[kv_source.first] = slice_constraints;
+                    // If we've reached here, then all the slices that have conditional constraints
+                    // are in slice_list at the right required alignment. Therefore, we can mark
+                    // this source for erasure from the conditional constraints map.
+                    conditionalConstraintsToErase.insert(kv_source.first);
                 }
             }
         } else {
@@ -1089,6 +1088,11 @@ CoreAllocation::tryAllocSliceList(
         }
 
         if (!can_place) continue;
+
+        if (conditionalConstraintsToErase.size() > 0) {
+            for (auto i : conditionalConstraintsToErase) {
+                LOG5("\t\tErasing conditional constraint associated with source #" << i);
+                (*action_constraints).erase(i); } }
 
         // Create this alloc for calculating score.
         auto this_alloc = alloc_attempt.makeTransaction();

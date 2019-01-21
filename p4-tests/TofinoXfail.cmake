@@ -300,6 +300,8 @@ p4c_add_xfail_reason("tofino"
   smoketest_programs_netcache
   extensions/p4_tests/p4_14/p4-tests/programs/ecc/ecc.p4
   extensions/p4_tests/p4_14/p4-tests/programs/mau_test/mau_test.p4  #P4C-1123
+  # Intended to test infinite recursive in tryAllocSliceList.
+  extensions/p4_tests/p4_14/conditional_constraints_infinite_loop.p4
   )
 
 p4c_add_xfail_reason("tofino"
