@@ -51,8 +51,75 @@ set (TOFINO_V1_TEST_SUITES
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/bf_p4c_samples/*.p4
   # p4_16_samples
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf_p4c_samples/*.p4
+  # glass phv tests
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/*.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/*/*.p4
+  # glass mau tests
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/mau/*.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/mau/*/*.p4
+  # glass parde tests
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/parde/*.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/parde/*/*.p4
+  # glass c1 tests
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c1/COMPILER-913/test_config_395_checksum_update_location.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c1/COMPILER-915/test_config_393_alias_dep.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c1/COMPILER-964/test_config_401_random_num.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c1/COMPILER-977/comp_977.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c1/COMPILER-1019/case6894.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c1/COMPILER-1041/comp_1041.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c1/COMPILER-1066/test_config_414_container_valid_bit_for_tcam.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c1/COMPILER-1105/case8039.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c1/COMPILER-1105/test_config_417_disable_xbar_sharing.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c1/COMPILER-1113/case8138.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c1/COMPILER-1114/case8156.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c1/DRV-543/case2499.p4
+  # glass c2 tests
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c2/COMPILER-443/case2514.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c2/COMPILER-466/case2563_with_nop.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c2/COMPILER-466/case2563_without_nop.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c2/COMPILER-475/case2600.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c2/COMPILER-502/case2675.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c2/COMPILER-533/case2736.p4
+  # glass c13 tests
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c13/COMPILER-564/case3825.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c13/COMPILER-687/case3769.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c13/COMPILER-688/06-Phase0.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c13/COMPILER-842/comp_842.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c13/COMPILER-842/mod_field_cond.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c13/COMPILER-854/case5273.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c13/COMPILER-922/case5792.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c13/COMPILER-938/bitscopy_test.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c13/COMPILER-1003/case6738.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c13/COMPILER-1006/case6738_2.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c13/COMPILER-1026/case6830.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c13/COMPILER-1028/case6962.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c13/DRV-1092/drv_1092.p4
   )
 p4c_add_bf_backend_tests("tofino" "tofino" "v1model" "base" "${TOFINO_V1_TEST_SUITES}")
+
+# Add some long running glass c2 tests with increased timeout
+file(RELATIVE_PATH glass_c2_path ${P4C_SOURCE_DIR} ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c2)
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
+  "c2_COMPILER-421_case2434" ${glass_c2_path}/COMPILER-421/case2434.p4 "${testExtraArgs} -to 2400" "")
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
+  "c2_COMPILER-426_case2475" ${glass_c2_path}/COMPILER-426/case2475.p4 "${testExtraArgs} -to 2400" "")
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
+  "c2_COMPILER-599_case3230" ${glass_c2_path}/COMPILER-599/case3230.p4 "${testExtraArgs} -to 2400" "")
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
+  "c2_COMPILER-510_case2682" ${glass_c2_path}/COMPILER-510/case2682.p4 "${testExtraArgs} -to 2400" "")
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
+  "c2_COMPILER-514_balancer_one" ${glass_c2_path}/COMPILER-514/balancer_one.p4 "${testExtraArgs} -to 2400" "")
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
+  "c2_COMPILER-537_case2834" ${glass_c2_path}/COMPILER-537/case2834.p4 "${testExtraArgs} -to 2400" "")
+
+
+# 500s timeout is too little for compiling some glass c2 tests, bumping it up
+set_tests_properties("tofino/c2_COMPILER-421_case2434" PROPERTIES TIMEOUT 2400)
+set_tests_properties("tofino/c2_COMPILER-426_case2475" PROPERTIES TIMEOUT 2400)
+set_tests_properties("tofino/c2_COMPILER-599_case3230" PROPERTIES TIMEOUT 2400)
+set_tests_properties("tofino/c2_COMPILER-510_case2682" PROPERTIES TIMEOUT 2400)
+set_tests_properties("tofino/c2_COMPILER-514_balancer_one" PROPERTIES TIMEOUT 2400)
+set_tests_properties("tofino/c2_COMPILER-537_case2834" PROPERTIES TIMEOUT 2400)
 
 set (TOFINO_TNA_TEST_SUITES
   ${p16_tna_tests}

@@ -73,7 +73,7 @@ node ('compiler-svr1 || master') {
             ansiColor('xterm') {
                 timestamps {
                     sh "echo 'Running switch profiles compilation for master'"
-                    sh "docker run -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*switch_' -E 'smoketest|8.5|p4_14'"
+                    sh "docker run -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*switch_' -E 'smoketest|8.5|p4_14|glass'"
                     sh "echo 'Running switch profiles compilation for rel_8_5'"
                     sh "docker run -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*switch_8.5_' -E 'smoketest'"
                     sh "echo 'Running stful and meters tests'"

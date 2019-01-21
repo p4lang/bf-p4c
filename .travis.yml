@@ -21,7 +21,7 @@ env:
     # Run all tofino tests excluding smoketests
     - TEST_SUITE="^tofino/"
       TEST_EXTRA_OPTS="-E"
-      TEST_EXTRA_OPTS2="smoketest|/programs|p4testgen|tofino/switch_|p4_16_programs_tna_ternary_match|p4_16_programs_tna_exact_match|p4_16_programs_tna_lpm_match"
+      TEST_EXTRA_OPTS2="smoketest|/programs|p4testgen|tofino/switch_|p4_16_programs_tna_ternary_match|p4_16_programs_tna_exact_match|p4_16_programs_tna_lpm_match|c2_COMPILER"
       DOCKERFILE=docker/Dockerfile.tofino
     # Run all tofino smoke tests
     - TEST_SUITE="^tofino/.*programs"
