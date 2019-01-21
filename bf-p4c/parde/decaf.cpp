@@ -936,6 +936,7 @@ SynthesizePovEncoder::create_pov_encoder(gress_t gress, const MatchAction& match
     std::string table_name = toString(gress) + "_decaf_pov_encoder_" + std::to_string(id++);
 
     auto encoder = new IR::MAU::Table(table_name.c_str(), gress);
+    encoder->is_compiler_generated = true;
 
     auto p4_name = table_name + "_" + cstring::to_cstring(gress);
     encoder->match_table = new IR::P4Table(p4_name.c_str(), new IR::TableProperties());

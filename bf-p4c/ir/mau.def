@@ -67,6 +67,10 @@ class Table : BFN::Unit {
     bool                                        dynamic_key_masks = false;
     NullOK EntriesList                          entries_list;
     bool                                        created_during_tp = false;
+    // Flag to indicate the table is compiler generated. This flag is passed on
+    // the assembly and context json as 'p4_hidden' to disable PD API generation
+    // on this table
+    bool                                        is_compiler_generated = false;
 
     class IndirectAddress {
         bool shifter_enabled = false;

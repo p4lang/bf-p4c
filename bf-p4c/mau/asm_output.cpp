@@ -2165,6 +2165,8 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
         out << ", size: " << k->asInt();
     if (tbl->layout.pre_classifier || tbl->layout.alpm)
         out << ", match_type: alpm";
+    if (tbl->is_compiler_generated)
+        out << ", hidden: true";
     for (auto back_at : tbl->attached) {
         auto at = back_at->attached;
         if (auto ap = at->to<IR::MAU::ActionData>())

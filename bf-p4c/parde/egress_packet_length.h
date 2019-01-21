@@ -112,6 +112,7 @@ class InsertEgressPacketLengthAdjustTable : public MauTransform {
         if (gress != EGRESS) return tableSeq;
 
         auto adjustTable = new IR::MAU::Table("egress_pkt_length_adjust", EGRESS);
+        adjustTable->is_compiler_generated = true;
 
         adjustTable->match_table = new IR::P4Table(cstring("no_match"), new IR::TableProperties());
 

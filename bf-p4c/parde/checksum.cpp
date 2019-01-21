@@ -475,8 +475,10 @@ struct InsertChecksumConditions : public Transform {
                 cstring tableName = csumInfo->dest + "_encode_update_condition";
 
                 auto gw = new IR::MAU::Table(tableName + "_gw", gress, csumInfo->povBit->field);
+                gw->is_compiler_generated = true;
 
                 auto condTable = new IR::MAU::Table(tableName, gress);
+                condTable->is_compiler_generated = true;
                 condTable->actions[action->name] = action;
 
                 gw->next.emplace("$true", new IR::MAU::TableSeq(condTable));

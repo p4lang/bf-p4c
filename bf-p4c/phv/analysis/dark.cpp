@@ -326,6 +326,7 @@ AddPrivatizedDarkTableInit::addInit(const IR::MAU::TableSeq* seq, gress_t gress)
         return seq;
     }
     auto* table = new IR::MAU::Table("__init_dark_begin_" + cstring::to_cstring(gress), gress);
+    table->is_compiler_generated = true;
     table->actions[action->name] = action;
     auto p4Name = "__init_dark_begin_p4_" + cstring::to_cstring(gress);
     table->match_table = new IR::P4Table(p4Name.c_str(), new IR::TableProperties());
