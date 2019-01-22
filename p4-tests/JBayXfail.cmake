@@ -87,11 +87,6 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "Table .* is applied multiple times, and the next table information cannot correctly propagate through this multiple application"
-  testdata/p4_14_samples/16-TwoReferences.p4
-)
-
-p4c_add_xfail_reason("tofino2"
   "error: Assignment cannot be supported in the parser"
   testdata/p4_14_samples/axon.p4
 )

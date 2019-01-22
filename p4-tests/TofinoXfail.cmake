@@ -750,8 +750,6 @@ p4c_add_xfail_reason("tofino"
   # extensions/p4_tests/p4_14/c1/COMPILER-100/exclusive_cf_multiple_actions.p4
   # extensions/p4_tests/p4_14/c1/COMPILER-100/exclusive_cf_fail_next_ptr.p4
   # extensions/p4_tests/p4_14/c1/COMPILER-100/exclusive_cf_one_action.p4
-  testdata/p4_14_samples/16-TwoReferences.p4
-  # extensions/p4_tests/p4_14/c1/COMPILER-125/16-TwoReferences.p4
   testdata/p4_16_samples/issue986-bmv2.p4
   )
 

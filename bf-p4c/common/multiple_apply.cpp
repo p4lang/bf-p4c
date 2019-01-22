@@ -42,7 +42,6 @@ void MultipleApply::MutuallyExclusiveApplies::postorder(const IR::MAU::Table *tb
 }
 
 Visitor::profile_t MultipleApply::EquivalentTableSequence::init_apply(const IR::Node *node) {
-    equiv_seqs.clear();
     equiv_tails.clear();
     unique_seqs.clear();
     return MauInspector::init_apply(node);
@@ -51,22 +50,18 @@ Visitor::profile_t MultipleApply::EquivalentTableSequence::init_apply(const IR::
 /** Tries to find sequences that are equivalent. Saves them so that they can be replaced later
  */
 void MultipleApply::EquivalentTableSequence::postorder(const IR::MAU::TableSeq *seq) {
-    bool equiv_found = false;
+    BUG_CHECK(unique_seqs.count(seq) == 0, "Inspector calling same seq more than once");
     for (auto unique_seq : unique_seqs) {
-        if (equiv(seq, unique_seq)) {
-            equiv_seqs[seq] = unique_seq;
-            equiv_found = true;
-            break;
-        } else if (!unique_seq->empty() && tail_equiv(seq, unique_seq)) {
-            equiv_tails[seq] = unique_seq;
-        } else if (!seq->empty() && tail_equiv(unique_seq, seq)) {
-            if (!equiv_tails[unique_seq] || equiv_tails[unique_seq]->size() < seq->size())
-                equiv_tails[unique_seq] = seq;
+        if (auto len = tail_equiv(seq, unique_seq)) {
+            if (equiv_tails[seq].len < len) {
+                equiv_tails[seq].len = len;
+                equiv_tails[seq].other = unique_seq; }
+            if (equiv_tails[unique_seq].len < len) {
+                equiv_tails[unique_seq].len = len;
+                equiv_tails[unique_seq].other = seq; }
         }
     }
-
-    if (!equiv_found)
-        unique_seqs.emplace(seq);
+    unique_seqs.emplace(seq);
 }
 
 /** Equivalence checks. If all match table in sequence A corresponds with all match table in
@@ -81,6 +76,9 @@ bool MultipleApply::EquivalentTableSequence::equiv(const IR::MAU::Table *a,
     if (a->gateway_only() != b->gateway_only())
         return false;
     if (a->gateway_only()) {
+        if (a->name.startsWith("$tstail"))
+            // created by previous iteration of MergeTails, so don't do it again
+            return false;
         if (a->gateway_rows.size() != b->gateway_rows.size())
              return false;
         for (size_t j = 0; j < a->gateway_rows.size(); j++) {
@@ -118,16 +116,14 @@ bool MultipleApply::EquivalentTableSequence::equiv(const IR::MAU::TableSeq *a,
     return true;
 }
 
-/* test if b is equivalent to the tail of a */
-bool MultipleApply::EquivalentTableSequence::tail_equiv(const IR::MAU::TableSeq *a,
+/** return the number of trailing identical tables for two sequences. */
+int MultipleApply::EquivalentTableSequence::tail_equiv(const IR::MAU::TableSeq *a,
         const IR::MAU::TableSeq *b) {
-    if (a->tables.size() <= b->tables.size())
-        return false;
-    size_t diff = a->tables.size() - b->tables.size();
-    for (size_t i = 0; i < b->tables.size(); i++) {
-        if (!equiv(a->tables[diff+i], b->tables[i])) return false;
-    }
-    return true;
+    int rv = 0;
+    auto atail = a->tables.end(), btail = b->tables.end();
+    while (rv < a->tables.size() && rv < b->tables.size() && equiv(*--atail, *--btail))
+        ++rv;
+    return rv;
 }
 
 /** This is a rather dumb check of equivalent gateways.  Instead of comparing the symbolic value
@@ -153,29 +149,39 @@ bool MultipleApply::EquivalentTableSequence::equiv_gateway(const IR::Expression 
     return false;
 }
 
-bool MultipleApply::MergeTails::preorder(IR::BFN::Pipe *pipe) {
-    // if equiv_tails is empty, there's nothing to be done, so return immediately
-    if (equiv_tails.empty()) return false;
-    LOG5("MergeTails size=" << equiv_tails.size() << ":\n" << pipe->thread[INGRESS].mau);
-    for (auto &el : equiv_tails)
-        LOG5("  [" << el.first->id << "] has tail [" << el.second->id << "]");
-    return true;
+const IR::BFN::Pipe *MultipleApply::MergeTails::preorder(IR::BFN::Pipe *pipe) {
+    if (equiv_tails.empty()) {
+        // if equiv_tails is empty, there's nothing to be done, so return immediately
+        prune();
+    } else {
+        LOG5("MergeTails size=" << equiv_tails.size() << ":\n" << pipe->thread[INGRESS].mau);
+        for (auto &el : equiv_tails)
+            LOG5("  [" << el.first->id << "] matches [" << el.second.other->id << "] "
+                 "len=" << el.second.len); }
+    return pipe;
 }
 
-void MultipleApply::MergeTails::postorder(IR::BFN::Pipe *pipe) {
+const IR::BFN::Pipe *MultipleApply::MergeTails::postorder(IR::BFN::Pipe *pipe) {
     LOG5("MergeTails after:\n" << pipe->thread[INGRESS].mau);
+    return pipe;
 }
 
-/** If the tail-end of this TableSeq is identical to another TableSeq, then remove it and
- *  replace it with a trivial table that just runs the tail directly.
- *  This will introduce a noop gateway to set the next table, wasting a logical
+/** If the tail-end of this TableSeq is identical to the tail another TableSeq, then remove
+ *  it and replace it with a trivial table that just runs the tail directly.  If (one of)
+ *  the sequences IS the entire tail, then that sequence can be used directly in both places
+ *  and an noop gateway is not needed when it is the entire sequence.  If both sequences
+ *  are the whole tail (identical sequences), then they are just replaced by one.
+ *  If when looking at another table with a common tail, that table has a longer tail with
+ *  3rd table, then we do nothing, letting the pass merge (just) the longest tails.  We
+ *  run this pass repeatedly until all tails are merged.
+ *
+ *  This may introduce a noop gateway to set the next table, wasting a logical
  *  table and a gateway.  Unfortunately we currently have no other way of representing this
  *  in the Table/TableSeq DAG.  The later RemoveNoopGateways pass will probably remove it,
  *  but there are corner cases where it is unable to remove it.
  *
- *  The code in EquivalentTableSequence identifies TableSeq that exactly match the tail of
- *  another TableSeq, and this method splits those matched seqs into a prefix and the tail.
- *  As an example, with
+ *  The code in EquivalentTableSequence identifies TableSeq that have matching tails, and this
+ *  method splits those matched seqs into a prefix and the tail.  As an example, with
  *
  *      if (test) {
  *          t1.apply();
@@ -203,25 +209,37 @@ void MultipleApply::MergeTails::postorder(IR::BFN::Pipe *pipe) {
  *
  * with a common t3/t4 sequence.  This allows table placement to place those tables once.
  */
-bool MultipleApply::MergeTails::preorder(IR::MAU::TableSeq *seq) {
-    if (auto *tail = ::get(equiv_tails, getOriginal<IR::MAU::TableSeq>())) {
-        seq->tables.erase(seq->tables.begin() + (seq->size() - tail->size()), seq->tables.end());
-        auto *tbl = new IR::MAU::Table(cstring::make_unique(names, "$tstail", '.'),
-                                       seq->tables.front()->gress);
-        names.insert(tbl->name);
-        tbl->gateway_rows.emplace_back(nullptr, "$jmp");
-        tbl->next["$jmp"] = tail;
-        seq->tables.push_back(tbl); }
-    return true;
-}
-
-/** This replaces all copies of a sequence with just one version of the sequence.  This must be
- *  a preorder rather than a postorder, as one could have nested replaceable sequences
- */
-const IR::MAU::TableSeq *MultipleApply::RefactorSequence::preorder(IR::MAU::TableSeq *seq) {
-    auto orig = getOriginal<IR::MAU::TableSeq>();
-    if (equiv_seqs.find(orig) != equiv_seqs.end())
-        return equiv_seqs.at(orig);
+const IR::MAU::TableSeq *MultipleApply::MergeTails::postorder(IR::MAU::TableSeq *seq) {
+    auto *orig = getOriginal<IR::MAU::TableSeq>();
+    if (!equiv_tails.count(orig)) return seq;
+    auto &info = equiv_tails.at(orig);
+    if (!info.tail) {
+        auto &rinfo = equiv_tails.at(info.other);
+        if (rinfo.len > info.len) {
+            // the other seq has longer common tail with a 3rd seq, so we need
+            // to defer dealing with this seq until they've been merged.
+            return seq; }
+        BUG_CHECK(rinfo.len == info.len, "MergeTails invalid data");
+        if (!(info.tail = rinfo.tail)) {
+            if (info.len == seq->size()) {
+                info.tail = rinfo.tail = *seq == *orig ? orig : seq;
+                return seq;
+            } else if (info.len == rinfo.other->size()) {
+                info.tail = rinfo.tail = rinfo.other;
+            } else {
+                auto *split = new IR::MAU::TableSeq();
+                split->tables.insert(split->tables.begin(),
+                    seq->tables.begin() + (seq->size() - info.len), seq->tables.end());
+                info.tail = rinfo.tail = split; } } }
+    if (info.len == seq->size())
+        return info.tail;
+    seq->tables.erase(seq->tables.begin() + (seq->size() - info.len), seq->tables.end());
+    auto *tbl = new IR::MAU::Table(cstring::make_unique(names, "$tstail", '.'),
+                                   seq->tables.front()->gress);
+    names.insert(tbl->name);
+    tbl->gateway_rows.emplace_back(nullptr, "$jmp");
+    tbl->next["$jmp"] = info.tail;
+    seq->tables.push_back(tbl);
     return seq;
 }
 
@@ -246,10 +264,9 @@ MultipleApply::MultipleApply() {
         &mutex,
         new MutuallyExclusiveApplies(mutex, mutex_errors),
         new PassRepeatUntil({
-            new EquivalentTableSequence(equiv_seqs, equiv_tails),
+            new EquivalentTableSequence(equiv_tails),
             new MergeTails(equiv_tails)
         }, [this]()->bool { return equiv_tails.empty(); }),
-        new RefactorSequence(equiv_seqs),
         new DistinctTables(distinct_errors),
         new DefaultNext(),
     });
