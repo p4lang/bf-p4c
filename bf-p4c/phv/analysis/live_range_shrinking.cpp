@@ -82,8 +82,9 @@ bool FindInitializationNode::summarizeUseDefs(
         } else if (use.first->is<IR::MAU::Table>()) {
             const auto* t = use.first->to<IR::MAU::Table>();
             // Only insert the current table as the dominator node if it is a non-gateway table.
+            bool addReadNode = false;
             if (!t->gateway_only()) {
-                f_dominators.insert(use.first);
+                addReadNode = true;
                 // If the field is marked no-init, then we do not actually need to consider the
                 // dominator of the field because no initialization will be required for that field.
                 if (noInit.count(f)) {
@@ -95,10 +96,13 @@ bool FindInitializationNode::summarizeUseDefs(
             auto dom = domTree.getNonGatewayImmediateDominator(t, f->gress);
             if (!dom) {
                 LOG2("\t\t\tNo non gateway dominator for use unit " << t->name);
-                continue;
+                return false;
             }
             const auto* u = (*dom)->to<IR::BFN::Unit>();
             f_dominators.insert(u);
+            // Only add read node if it has a non gateway dominator table (i.e. a potential
+            // initialization point).
+            if (addReadNode) f_dominators.insert(use.first);
             LOG2("\t\t\tAdding dominator " << DBPrint::Brief << u);
         }
     }
@@ -592,9 +596,8 @@ FindInitializationNode::findInitializationNodes(
         // with the dominator nodes for the uses and defs of f.
         LOG2("\t\tSummarizing defuse and dominator for field " << f->name);
         if (!summarizeUseDefs(f, units, f_dominators)) {
-            LOG2("\t\tUses of field " << f->name << " contains the deparser and the non gateway "
-                 "dominator of the deparser is the parser in this program. Therefore, cannot "
-                 "initialize metadata.");
+            LOG2("\t\tUses of field " << f->name << " contains a unit (deparser/table) whose non "
+                 "gateway dominator is the parser. Therefore, cannot initialize metadata.");
             return boost::none;
         }
 

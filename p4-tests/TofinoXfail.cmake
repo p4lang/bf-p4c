@@ -1394,6 +1394,9 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/phv/COMPILER-1065/comp_1065.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-1094/comp_1094.p4
   ../glass/testsuite/p4_tests/c2/COMPILER-443/case2514.p4
+# bigger problem is that the container conflict free table placement is 15 stages for the following
+# program.
+  ../glass/testsuite/p4_tests/c2/COMPILER-502/case2675.p4
   c2_COMPILER-537_case2834
   c2_COMPILER-514_balancer_one
   c2_COMPILER-510_case2682
@@ -1695,12 +1698,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/c2/COMPILER-466/case2563_with_nop.p4
   ../glass/testsuite/p4_tests/c2/COMPILER-466/case2563_without_nop.p4
   ../glass/testsuite/p4_tests/c2/COMPILER-475/case2600.p4
-  )
-
-# P4C-1398
-p4c_add_xfail_reason("tofino"
-  "Group dominator cannot be a node that reads the field"
-  ../glass/testsuite/p4_tests/c2/COMPILER-502/case2675.p4
   )
 
 # P4C-1400
