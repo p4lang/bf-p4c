@@ -2086,6 +2086,7 @@ class SplitBigStates : public ParserModifier {
                     } else {
                         shifted += rst.shift;
                     }
+                    break;
                 } else {
                     // because allocateOneState will try to allocate saves as long as
                     // it is possible to be reached in the input buffer, saves might be

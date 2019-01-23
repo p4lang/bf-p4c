@@ -356,6 +356,8 @@ void PHV::Allocation::commit(Transaction& view) {
     BUG_CHECK(view.getParent() == this, "Trying to commit PHV allocation transaction to an "
               "allocation that is not its parent");
 
+    state_to_containers_i.clear();
+
     // Merge the status from the view.
     for (auto kv : view.getTransactionStatus())
         this->addStatus(kv.first, kv.second);
@@ -397,6 +399,44 @@ PHV::Allocation::getInitPointsForField(const PHV::Field* f) const {
         rs.insert(kv.second.begin(), kv.second.end());
     }
     return rs;
+}
+
+const ordered_set<unsigned>
+PHV::Allocation::getTagalongCollectionsUsed() const {
+    ordered_set<unsigned> rv;
+
+    for (const auto kv : container_status_i) {
+        const auto& container = kv.first;
+        const auto& status = kv.second;
+
+        const auto kind = container.type().kind();
+        if (kind != PHV::Kind::tagalong) continue;
+        if (status.alloc_status == ContainerAllocStatus::EMPTY) continue;
+
+        unsigned collectionID = Device::phvSpec().getTagalongCollectionId(container);
+        rv.insert(collectionID);
+    }
+
+    return rv;
+}
+
+const ordered_map<cstring, std::set<PHV::Container>>&
+PHV::Allocation::getParserStateToContainers(const PhvInfo& phv) const {
+    if (state_to_containers_i.empty()) {
+        for (const auto& kv : field_status_i) {
+            const auto& field = kv.first;
+            const auto& container_slices = kv.second;
+
+            for (auto slice : container_slices) {
+                if (phv.field_to_parser_states.count(field->name)) {
+                    for (auto state : phv.field_to_parser_states.at(field->name))
+                        state_to_containers_i[state].insert(slice.container());
+                }
+            }
+        }
+    }
+
+    return state_to_containers_i;
 }
 
 /* static */ bool
@@ -612,7 +652,8 @@ PHV::Transaction::getStatus(PHV::Container c) const {
     return parentStatus;
 }
 
-PHV::Allocation::FieldStatus PHV::Transaction::getStatus(const PHV::Field* f) const {
+PHV::Allocation::FieldStatus
+PHV::Transaction::getStatus(const PHV::Field* f) const {
     // If a status exists in the transaction, then it includes info from the
     // parent.
     if (field_status_i.find(f) != field_status_i.end())

@@ -83,27 +83,22 @@ struct AllocScore {
     using ContainerAllocStatus = PHV::Allocation::ContainerAllocStatus;
     static constexpr int DARK_TO_PHV_DISTANCE = 2;
     struct ScoreByKind {
-        int n_set_gress;
-        int n_set_parser_group_gress;
-        int n_set_deparser_group_gress;
-        int n_overlay_bits;
-        int n_packing_bits;  // how many wasted bits in partial container get used.
-        int n_packing_priority;  // smaller, better.
-        int n_inc_containers;
-        int n_wasted_bits;  // if no_pack but taking a container larger than it.
+        int n_set_gress = 0;
+        int n_set_parser_group_gress = 0;
+        int n_set_deparser_group_gress = 0;
+        int n_overlay_bits = 0;
+        int n_packing_bits = 0;  // how many wasted bits in partial container get used.
+        int n_packing_priority = 0;  // smaller, better.
+        int n_inc_containers = 0;
+        int n_wasted_bits = 0;  // if no_pack but taking a container larger than it.
 
         // The number of CLOT-eligible bits that have been allocated to PHV
         // (JBay only).
-        int n_clot_bits;
+        int n_clot_bits = 0;
 
         // The number of containers in a deparser group allocated to
         // non-deparsed fields of a different gress than the deparser group.
-        int n_mismatched_deparser_gress;
-
-        // The difference in the number of PHV containers available by size.
-        // Lower is better, as it indicates that roughly the same number of 8b,
-        // 16b, and 32b containers remain.
-        int container_imbalance;
+        int n_mismatched_deparser_gress = 0;
     };
 
     ordered_map<PHV::Kind, ScoreByKind> score;
@@ -115,6 +110,7 @@ struct AllocScore {
     int n_num_bitmasked_set = 0;
 
     int parser_extractor_balance = 0;
+    int n_inc_tphv_collections = 0;
 
     AllocScore() { }
 

@@ -101,6 +101,7 @@ bool AllocScore::operator>(const AllocScore& other) const {
     int delta_dark_on_mocha_bits = n_dark_on_mocha_bits - other.n_dark_on_mocha_bits;
 
     int delta_parser_extractor_balance = parser_extractor_balance - other.parser_extractor_balance;
+    int delta_inc_tphv_collections = n_inc_tphv_collections - other.n_inc_tphv_collections;
 
     int container_type_score = delta_tphv_on_phv_bits + DARK_TO_PHV_DISTANCE *
         delta_dark_on_phv_bits + delta_mocha_on_phv_bits + delta_dark_on_mocha_bits;
@@ -115,8 +116,6 @@ bool AllocScore::operator>(const AllocScore& other) const {
     int delta_set_gress = 0;
     int delta_set_parser_group_gress = 0;
     int delta_set_deparser_group_gress = 0;
-
-    int delta_container_imbalance = 0;  // this is not used?
 
     // The number of deparser group containers assigned to a gress different
     // than their deparser group (because they only container non-deparsed
@@ -138,8 +137,7 @@ bool AllocScore::operator>(const AllocScore& other) const {
             delta_set_gress += penalty * score.at(kind).n_set_gress;
             delta_set_parser_group_gress += penalty * score.at(kind).n_set_parser_group_gress;
             delta_set_deparser_group_gress += penalty * score.at(kind).n_set_deparser_group_gress;
-            delta_mismatched_gress += bonus * score.at(kind).n_mismatched_deparser_gress;
-            delta_container_imbalance += penalty * score.at(kind).container_imbalance; }
+            delta_mismatched_gress += bonus * score.at(kind).n_mismatched_deparser_gress; }
 
         // Subtract other score.
         if (other.score.find(kind) != other.score.end()) {
@@ -154,9 +152,7 @@ bool AllocScore::operator>(const AllocScore& other) const {
                 penalty * other.score.at(kind).n_set_parser_group_gress;
             delta_set_deparser_group_gress -=
                 penalty * other.score.at(kind).n_set_deparser_group_gress;
-            delta_mismatched_gress -= bonus * other.score.at(kind).n_mismatched_deparser_gress;
-            delta_container_imbalance -=
-                penalty * other.score.at(kind).container_imbalance; }
+            delta_mismatched_gress -= bonus * other.score.at(kind).n_mismatched_deparser_gress; }
     }
 
     // An AllocScore has several metrics, some are positive while some are negative.
@@ -178,6 +174,8 @@ bool AllocScore::operator>(const AllocScore& other) const {
         return delta_clot_bits < 0; }
     if (container_type_score != 0)
         return container_type_score < 0;
+    if (delta_inc_tphv_collections != 0) {
+        return delta_inc_tphv_collections < 0; }
     // Opt for the AllocScore, which minimizes the number of bitmasked-set instructions. This helps
     // with action data packing and gives table placement a better shot at fitting within the number
     // of stages available on the device.
@@ -224,7 +222,6 @@ bool AllocScore::operator>(const AllocScore& other) const {
  * + n_packing_bits: use bits that ContainerAllocStatus is PARTIAL in parent.
  * + n_inc_containers: the number of container used that was EMPTY.
  * + n_wasted_bits: if field is no_pack, container.size() - slice.width().
- * + container_imbalance: the sum of the difference between free 8b, 16b, and 32b containers.
  */
 AllocScore::AllocScore(
         const PHV::Transaction& alloc,
@@ -279,8 +276,8 @@ AllocScore::AllocScore(
                     n_dark_on_mocha_bits += (slice.width());
 
         // calc_n_inc_containers
-        ContainerAllocStatus merged_status = alloc.alloc_status(container);
-        ContainerAllocStatus parent_status = parent->alloc_status(container);
+        auto merged_status = alloc.alloc_status(container);
+        auto parent_status = parent->alloc_status(container);
         if (parent_status == ContainerAllocStatus::EMPTY
             && merged_status != ContainerAllocStatus::EMPTY) {
             score[kind].n_inc_containers++; }
@@ -349,22 +346,29 @@ AllocScore::AllocScore(
         // Deparser group gress
         if (!parent->deparserGroupGress(container) && deparserGroupGress) {
             score[kind].n_set_deparser_group_gress++; }
+    }
 
-        // container imbalance
-        // XXX(cole): This currently weights packing into 32b containers
-        // highest, followed by 16b, and then 8b.
-        auto count8  = alloc.empty_containers(PHV::Size::b8) * 4;
-        auto count16 = alloc.empty_containers(PHV::Size::b16) * 2;
-        auto count32 = alloc.empty_containers(PHV::Size::b32);
-        score[kind].container_imbalance =
-            std::abs(count8 - count16) +
-            std::abs(count16 - count32);
+    // calc_n_inc_tphv_collections
+    auto my_tphv_collections = alloc.getTagalongCollectionsUsed();
+    auto parent_tphv_collections = parent->getTagalongCollectionsUsed();
+    for (auto col : my_tphv_collections) {
+        if (!parent_tphv_collections.count(col))
+            n_inc_tphv_collections++;
     }
 
     if (BackendOptions().parser_bandwidth_opt) {
-        auto state_to_containers = alloc.getParserStateToContainers(phv);
+        ordered_map<cstring, std::set<PHV::Container>> total_state_to_containers;
 
-        for (auto& kv : state_to_containers) {
+        auto& my_state_to_containers = alloc.getParserStateToContainers(phv);
+        auto& parent_state_to_containers = parent->getParserStateToContainers(phv);
+
+        for (auto& kv : my_state_to_containers)
+            total_state_to_containers[kv.first].insert(kv.second.begin(), kv.second.end());
+
+        for (auto& kv : parent_state_to_containers)
+            total_state_to_containers[kv.first].insert(kv.second.begin(), kv.second.end());
+
+        for (auto& kv : total_state_to_containers) {
             StateExtractUsage use(kv.second);
             parser_extractor_balance += ParserExtractScore::get_score(use);
         }
@@ -383,6 +387,7 @@ AllocScore::calcContainerAllocVec(const ordered_set<PHV::AllocSlice>& slices) {
 std::ostream& operator<<(std::ostream& s, const AllocScore& score) {
     bool any_positive_score = false;
 
+    s << "inc_tphv_collections: " << score.n_inc_tphv_collections << ", ";
     s << "extract balance: " << score.parser_extractor_balance << ", ";
 
     for (auto kind : Device::phvSpec().containerKinds()) {
@@ -400,7 +405,6 @@ std::ostream& operator<<(std::ostream& s, const AllocScore& score) {
         s << "packing_prio: " << score.score.at(kind).n_packing_priority << ", ";
         s << "inc_containers: " << score.score.at(kind).n_inc_containers << ", ";
         s << "set_gress: " << score.score.at(kind).n_set_gress << ", ";
-        s << "free container imbalance: " << score.score.at(kind).container_imbalance << ", ";
         s << "bitmasked-set: " << score.n_num_bitmasked_set;
         s << "]"; }
 
