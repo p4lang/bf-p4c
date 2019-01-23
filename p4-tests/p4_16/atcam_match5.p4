@@ -63,7 +63,7 @@ control IngressP(
     table atcam_match {
         actions = { first; noop; }
         key = { hdr.data.h1 : ternary;
-                meta.partition.partition_index : exact; }
+                meta.partition.partition_index : exact @name("partition.partition_index"); }
         default_action = noop();
         size = 163840;
     }

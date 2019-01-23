@@ -62,23 +62,11 @@ void DoTableLayout::check_for_atcam(IR::MAU::Table::Layout &layout, const IR::MA
     bool partitions_found = false;
     int partition_count = -1;
 
-    if (auto s = annot->getSingle("atcam_partition_index")) {
-        auto pragma_val = s->expr.at(0)->to<IR::StringLiteral>();
-        ERROR_CHECK(pragma_val != nullptr, "%s: Please provide a valid atcam_partition_index "
-                    "for table %s", tbl->srcInfo, tbl->name);
-        if (pragma_val) {
-            // The pragma name may not be fully qualified, eg. "bar.f" instead
-            // of the full "foo.bar.f".  PHV::Field objects use fully qualified
-            // names, but `phv.field()` can look up partial names; use that to
-            // look up the Field object using the partial name from the
-            // annotation, so that all name comparisons are done using
-            // fully-qualified names.
-            auto gress = cstring::to_cstring(tbl->gress);
-            auto* partition_index_field = phv.field(gress + "::" + pragma_val->value);
-            if (partition_index_field) {
-                partition_index = partition_index_field->name;
-                index_found = true; } }
-    }
+    for (auto key : tbl->match_key) {
+        if (key->partition_index) {
+            auto* partition_index_field = phv.field(key->expr);
+            partition_index = partition_index_field->name;
+            index_found = true; } }
 
     if (auto s = annot->getSingle("atcam_number_partitions")) {
         auto pragma_val = s->expr.at(0)->to<IR::Constant>();
@@ -907,21 +895,11 @@ bool DoTableLayout::preorder(IR::MAU::Action *act) {
 
 bool DoTableLayout::preorder(IR::MAU::InputXBarRead *read) {
     auto tbl = findContext<IR::MAU::Table>();
-    if (tbl->layout.atcam) {
-        cstring partition_index;
-        if (tbl->layout.alpm) {
-            auto hdr_instance_name = tbl->name + "__metadata";
-            auto pidx_field_name = tbl->name + "_partition_index";
-            partition_index = hdr_instance_name + "." + pidx_field_name;
-        } else {
-            auto annot = tbl->match_table->getAnnotations();
-            auto s = annot->getSingle("atcam_partition_index");
-            partition_index = s->expr.at(0)->to<IR::StringLiteral>()->value;
-            if (VisitingThread(this) == INGRESS)
-                partition_index = "ingress::" + partition_index;
-            else
-                partition_index = "egress::" + partition_index;
-        }
+    cstring partition_index;
+    if (tbl->layout.alpm) {
+        auto hdr_instance_name = tbl->name + "__metadata";
+        auto pidx_field_name = tbl->name + "_partition_index";
+        partition_index = hdr_instance_name + "." + pidx_field_name;
 
         // Look up the PHV::Field objects to ensure that we compare
         // fully-qualified names.
