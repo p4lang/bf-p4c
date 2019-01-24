@@ -1363,6 +1363,7 @@ void Parser::State::Match::write_config(REGS &regs, Parser *pa, State *state,
 
 template<class REGS>
 void Parser::State::Match::write_config(REGS &regs, json::vector &vec) {
+    int select_statement_bit = 0;
     for (auto f : field_mapping) {
         json::map container_cjson;
         container_cjson["container_width"] = Parser::match_key_size(f.container_id.c_str());
@@ -1372,7 +1373,6 @@ void Parser::State::Match::write_config(REGS &regs, json::vector &vec) {
 
         container_cjson["mask"] = (1 << (f.hi - f.lo + 1)) - 1;
         json::vector field_mapping_cjson;
-        int select_statement_bit = f.where.lobit();
         for (auto i = f.lo; i <= f.hi; i++) {
             json::map field_map;
             field_map["register_bit"] = i;
