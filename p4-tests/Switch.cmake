@@ -145,6 +145,7 @@ set_tests_properties(
   )
 
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
+set_tests_properties("tofino/smoketest_switch_16_compile" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino/smoketest_switch_16_Tests" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_16_HostIfPingTest" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_16_HostIfRxTest" PROPERTIES TIMEOUT 3600)
