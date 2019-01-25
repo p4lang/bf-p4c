@@ -276,22 +276,12 @@ p4c_add_xfail_reason("tofino"
   switch_ent_fin_postcard
   switch_generic_int_leaf
 )
-p4c_add_xfail_reason("tofino"
-  "Compiler Bug.*: Conflicting alloc in the action data xbar between"
-  switch_l3_heavy_int_leaf
-)
 
 p4c_add_xfail_reason("tofino"
   "No way to slice the following to satisfy @pa_container_size"
   switch_8.5_generic_int_leaf
   )
 
-p4c_add_xfail_reason("tofino"
-  "Compiler Bug.*Conflicting alloc in the action data xbar between.*"
-  switch_8.5_msdc_leaf_int
-  switch_8.5_l3_heavy_int_leaf
-  switch_msdc_leaf_int
-  )
 
 p4c_add_xfail_reason("tofino"
   "error: The stage specified for .* could not place it until stage"
@@ -300,6 +290,10 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4-tests/programs/mau_test/mau_test.p4  #P4C-1123
   # Intended to test infinite recursive in tryAllocSliceList.
   extensions/p4_tests/p4_14/conditional_constraints_infinite_loop.p4
+  switch_l3_heavy_int_leaf
+  switch_msdc_leaf_int
+  switch_8.5_msdc_leaf_int
+  switch_8.5_l3_heavy_int_leaf
   )
 
 p4c_add_xfail_reason("tofino"
@@ -664,6 +658,8 @@ p4c_add_xfail_reason("tofino"
 
   # Expected to fail, which means that constraint conflicts are being correctly detected.
   extensions/p4_tests/p4_14/mau_test_neg_test.p4
+  ../glass/testsuite/p4_tests/phv/COMPILER-724/comp_724.p4
+  ../glass/testsuite/p4_tests/parde/COMPILER-612/leaf.p4
   #extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case1.p4
   #extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case2.p4
   #extensions/p4_tests/p4_14/c5/COMPILER-594/comp594.p4
@@ -1717,12 +1713,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/mau/COMPILER-814/comp_814.p4
   )
 
-# P4C-1402
-p4c_add_xfail_reason("tofino"
-  "Conflicting alloc in the action data xbar between .* and .* at byte .*"
-  ../glass/testsuite/p4_tests/phv/COMPILER-724/comp_724.p4
-  ../glass/testsuite/p4_tests/parde/COMPILER-612/leaf.p4
-  )
   
 # 1403
 p4c_add_xfail_reason("tofino"

@@ -189,9 +189,9 @@ void ActionDataBus::reserve_immed_csr(int start_byte) {
  */
 bool ActionDataBus::alloc_ad_table(const bitvec *total_layouts,
                                    const bitvec full_layout_bitmasked, Use &use, cstring name) {
-    LOG2("Total Layouts for Action Data Table");
+    LOG2(" Total Layouts for Action Data Table");
     for (int i = 0; i < ActionFormat::CONTAINER_TYPES; i++) {
-        LOG2("Layout for type " << i << " is " << total_layouts[i]);
+        LOG2(" Layout for type " << i << " is " << total_layouts[i]);
     }
     bitvec byte_layout = total_layouts[ActionFormat::BYTE];
     bitvec half_layout = total_layouts[ActionFormat::HALF];
@@ -212,7 +212,7 @@ bool ActionDataBus::alloc_ad_table(const bitvec *total_layouts,
                 ActionFormat::ADT);
         if (!allocated) return false;
     }
-    LOG2("Allocated Byte Section");
+    LOG3("    Allocated Byte Section");
 
     max = half_layout.max().index();
 
@@ -223,7 +223,7 @@ bool ActionDataBus::alloc_ad_table(const bitvec *total_layouts,
                 ActionFormat::ADT);
         if (!allocated) return false;
     }
-    LOG2("Allocated Half Section");
+    LOG3("    Allocated Half Section");
 
     max = full_layout.max().index();
 
@@ -237,7 +237,7 @@ bool ActionDataBus::alloc_ad_table(const bitvec *total_layouts,
                 ActionFormat::ADT);
         if (!allocated) return false;
     }
-    LOG2("Allocated Full Section");
+    LOG3("    Allocated Full Section");
     return true;
 }
 
@@ -245,9 +245,9 @@ bool ActionDataBus::alloc_ad_table(const bitvec *total_layouts,
 // if so, use the previous allocation to enable sharing action data bus for the same
 // meter output for tables in the same stage.
 bool ActionDataBus::alloc_meter_output(const bitvec *total_layouts, Use &use, cstring name) {
-    LOG2("Total Layouts for Meter Output");
+    LOG2(" Total Layouts for Meter Output");
     for (int i = 0; i < ActionFormat::CONTAINER_TYPES; i++) {
-        LOG2("Layout for type " << i << " is " << total_layouts[i]);
+        LOG2(" Layout for type " << i << " is " << total_layouts[i]);
     }
     bitvec byte_layout = total_layouts[ActionFormat::BYTE];
     bitvec half_layout = total_layouts[ActionFormat::HALF];
@@ -268,7 +268,7 @@ bool ActionDataBus::alloc_meter_output(const bitvec *total_layouts, Use &use, cs
                 ActionFormat::METER);
         if (!allocated) return false;
     }
-    LOG2("Allocated Byte Section");
+    LOG3("    Allocated Byte Section");
 
     max = half_layout.max().index();
 
@@ -279,7 +279,7 @@ bool ActionDataBus::alloc_meter_output(const bitvec *total_layouts, Use &use, cs
                 ActionFormat::METER);
         if (!allocated) return false;
     }
-    LOG2("Allocated Half Section");
+    LOG3("    Allocated Half Section");
 
     max = full_layout.max().index();
 
@@ -293,7 +293,7 @@ bool ActionDataBus::alloc_meter_output(const bitvec *total_layouts, Use &use, cs
                 ActionFormat::METER);
         if (!allocated) return false;
     }
-    LOG2("Allocated Full Section");
+    LOG3("    Allocated Full Section");
     return true;
 }
 
@@ -877,9 +877,9 @@ bool ActionDataBus::alloc_shared_immed(Use &use, bitvec layouts[ActionFormat::CO
  */
 bool ActionDataBus::alloc_immediate(const bitvec total_layouts[ActionFormat::CONTAINER_TYPES],
                                     Use &use, cstring name) {
-    LOG2("Total Layouts for Action Format Immediate");
+    LOG2(" Total Layouts for Action Format Immediate");
     for (int i = 0; i < ActionFormat::CONTAINER_TYPES; i++) {
-        LOG2("Layout for type " << i << " is " << total_layouts[i]);
+        LOG2(" Layout for type " << i << " is " << total_layouts[i]);
     }
 
     auto type = ActionFormat::BYTE;
@@ -888,20 +888,20 @@ bool ActionDataBus::alloc_immediate(const bitvec total_layouts[ActionFormat::CON
 
     bool found = alloc_unshared_immed(use, type, layout, combined_layout, name);
     if (!found) return false;
-    LOG2("Allocate Byte Section" << " " << layout << " " << combined_layout);
+    LOG3("    Allocate Byte Section" << " " << layout << " " << combined_layout);
 
     type = ActionFormat::HALF;
     layout = total_layouts[type];
     found = alloc_unshared_immed(use, type, layout, combined_layout, name);
     if (!found) return false;
-    LOG2("Allocate Half Section" << " " << layout << " " << combined_layout);
+    LOG3("    Allocate Half Section" << " " << layout << " " << combined_layout);
 
     bitvec layouts[ActionFormat::CONTAINER_TYPES];
     for (int i = 0; i < ActionFormat::CONTAINER_TYPES; i++)
         layouts[i] = total_layouts[i];
     found = alloc_shared_immed(use, layouts, name);
     if (!found) return false;
-    LOG2("Allocate Full Section");
+    LOG3("    Allocate Full Section");
     return true;
 }
 
@@ -981,14 +981,14 @@ bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl, const Actio
         auto pos = allocated_attached.find(ad);
         if (pos != allocated_attached.end()) {
             alloc.action_data_xbar = pos->second;
-            LOG2("Action data bus shared on action profile " << ad->name);
+            LOG2(" Action data bus shared on action profile " << ad->name);
             return true;
         }
     }
 
-    LOG2("Initial Action Data Bus");
-    LOG2(hex(total_in_use.getrange(96, 32)) << "|" << hex(total_in_use.getrange(64, 32)) << "|"
-         << hex(total_in_use.getrange(32, 32)) << "|" << hex(total_in_use.getrange(0, 32)));
+    LOG2(" Initial Action Data Bus");
+    LOG2(" " << hex(total_in_use.getrange(96, 32)) << "|" << hex(total_in_use.getrange(64, 32))
+         << "|" << hex(total_in_use.getrange(32, 32)) << "|" << hex(total_in_use.getrange(0, 32)));
 
     auto &ad_xbar = alloc.action_data_xbar;
 
@@ -1013,9 +1013,9 @@ bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl, const Actio
     allocated = alloc_rng(use->rand_num_layouts, ad_xbar, use->rand_num_placement, tbl->name);
     if (!allocated) return false;
 
-    LOG2("Action data bus for " << tbl->name);
+    LOG2(" Action data bus for " << tbl->name);
     for (auto &rs : ad_xbar.action_data_locs) {
-        LOG2("Reserved " << rs.location.byte << " for offset " << rs.byte_offset << " of type "
+        LOG2(" Reserved " << rs.location.byte << " for offset " << rs.byte_offset << " of type "
              << rs.location.type);
     }
 
@@ -1033,7 +1033,7 @@ bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl, const Meter
         auto at = back_at->attached;
 
         auto mtr = at->to<IR::MAU::Meter>();
-        auto salu = at->to<IR::MAU::StatefulAlu>();
+        salu = at->to<IR::MAU::StatefulAlu>();
 
         if ((mtr && mtr->alu_output()) || salu) {
             am = at;
@@ -1050,35 +1050,39 @@ bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl, const Meter
     auto pos = allocated_attached.find(am);
     if (pos != allocated_attached.end()) {
         alloc.meter_xbar = pos->second;
-        LOG2("Action data bus shared on meter_adr user " << am->name);
+        LOG2(" Action data bus shared on meter_adr user " << am->name);
         return true;
     }
+
 
     if (salu && salu->reduction_or_group) {
         auto red_pos = reduction_or_mapping.find(salu->reduction_or_group);
         if (red_pos != reduction_or_mapping.end()) {
             alloc.meter_xbar = red_pos->second;
-            LOG2("Action data bus shared through reduction or group " << salu->reduction_or_group);
+            LOG2(" Action data bus shared through reduction or group " << salu->reduction_or_group);
             return true;
         }
     }
 
 
-    LOG2("Initial Action Data Bus");
-    LOG2(hex(total_in_use.getrange(96, 32)) << "|" << hex(total_in_use.getrange(64, 32)) << "|"
-         << hex(total_in_use.getrange(32, 32)) << "|" << hex(total_in_use.getrange(0, 32)));
+    LOG2(" Initial Action Data Bus");
+    LOG2(" " << hex(total_in_use.getrange(96, 32)) << "|" << hex(total_in_use.getrange(64, 32))
+         << "|" << hex(total_in_use.getrange(32, 32)) << "|" << hex(total_in_use.getrange(0, 32)));
 
     auto &meter_xbar = alloc.meter_xbar;
 
     for (int i = 0; i < ActionFormat::CONTAINER_TYPES; i++) {
-        LOG2("Layout for type " << i << " is " << use->total_layouts[i]);
+        LOG2(" Layout for type " << i << " is " << use->total_layouts[i]);
     }
     bool allocated = alloc_meter_output(use->total_layouts, meter_xbar, tbl->name);
     if (!allocated) return false;
 
-    LOG2("End Action Data Bus");
-    LOG2(hex(total_in_use.getrange(96, 32)) << "|" << hex(total_in_use.getrange(64, 32)) << "|"
-         << hex(total_in_use.getrange(32, 32)) << "|" << hex(total_in_use.getrange(0, 32)));
+    LOG2(" Action data bus for " << tbl->name);
+    for (auto &rs : meter_xbar.action_data_locs) {
+        LOG2(" Reserved " << rs.location.byte << " for offset " << rs.byte_offset << " of type "
+             << rs.location.type);
+    }
+
     return true;
 }
 
@@ -1166,8 +1170,9 @@ void ActionDataBus::update_meter(cstring name, const TableResourceAlloc *alloc,
     }
 
     if (salu && salu->reduction_or_group) {
-        if (reduction_or_mapping.count(salu->reduction_or_group))
+        if (reduction_or_mapping.count(salu->reduction_or_group)) {
             return;
+        }
     }
 
     // Only update if the meter/stateful alu use is not previously accounted for
