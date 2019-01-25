@@ -274,8 +274,11 @@ p4c_add_xfail_reason("tofino"
   "error.*Can't split table.*with indirect attached MAU::StatefulAlu"
   switch_8.5_ent_fin_postcard
   switch_ent_fin_postcard
-  switch_l3_heavy_int_leaf
   switch_generic_int_leaf
+)
+p4c_add_xfail_reason("tofino"
+  "Compiler Bug.*: Conflicting alloc in the action data xbar between"
+  switch_l3_heavy_int_leaf
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1404,7 +1407,6 @@ p4c_add_xfail_reason("tofino"
 # P4C-1374
 p4c_add_xfail_reason("tofino"
   "error.*Can't split table.*with indirect attached MAU::StatefulAlu"
-  ../glass/testsuite/p4_tests/mau/test_config_173_stateful_bloom_filter.p4
   ../glass/testsuite/p4_tests/mau/test_config_174_stateful_flow_learning.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-587/l4l.p4
   )

@@ -915,10 +915,16 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv, const IR::MA
 
             if (rv->entries < set_entries) {
                 for (auto *ba : rv->table->attached) {
-                    if (ba->attached->direct)
+                    if (ba->attached->direct) {
                         rv->attached_entries[ba->attached] = rv->entries;
-                    else if (!can_duplicate(ba->attached))
-                        rv->attached_entries[ba->attached] = 0; }
+                    } else if (!can_duplicate(ba->attached)) {
+                        if (done && done->stage == rv->stage) {
+                            // FIXME -- as we can't (yet) have the indirect table in a later
+                            // stage, don't try placements that would require it, as they
+                            // will always fail with a "can't split" at line ~1427
+                            advance_to_next_stage = true;
+                            break; }
+                        rv->attached_entries[ba->attached] = 0; } }
                 rv->need_more = rv->need_more_match = true;
                 // If the table is split for the first time, then the stage_split is set to 0
                 if (rv->initial_stage_split == -1)
