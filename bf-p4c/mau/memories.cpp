@@ -2992,14 +2992,17 @@ bool Memories::allocate_all_swbox_users() {
         // FIXME: Need to cause this to fail specifically on twoport tables that can't use more
         // than 1 ALU
         if (curr_oflow) {
+            LOG4("    curr_oflow recent home row " << curr_oflow->recent_home_row);
             BUG_CHECK(curr_oflow->recent_home_row >= 0, "Home row is not set on overflow");
-            if (log_to_phys_row(curr_oflow->recent_home_row) - MAX_DATA_SWBOX_ROWS > i) {
+            if (log_to_phys_row(curr_oflow->recent_home_row) - MAX_DATA_SWBOX_ROWS == i) {
                 ///> Color map RAMs can overflow more than 6 rows.
                 if (curr_oflow->is_synth_type()) {
                     if (!curr_oflow->all_placed())
                         BUG("A synth2port has overflowed over the maximum number of rows. "
                             "Should not have reached this point");
                 } else {
+                    LOG4("    We can clear out curr oflow of an action "
+                         << curr_oflow->build_unique_id());
                     curr_oflow = nullptr;
                 }
             }

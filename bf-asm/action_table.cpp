@@ -358,7 +358,7 @@ void ActionTable::pass1() {
     for (auto row = layout.begin(); row != layout.end(); ++row) {
         if (row->word > 0) word = row->word;
         if (!prev || prev->word != word || ((home_rows >> row->row) & 1) != 0
-            || home_row - row->row > 10 /* can't go over >10 rows for timing */
+            || home_row/2 - row->row/2 > 5 /* can't go over 5 physical rows for timing */
 #ifdef HAVE_JBAY
             || (options.target == JBAY && home_row >= 8 && row->row < 8)
             /* can't flow between logical row 7 and 8 in JBay*/

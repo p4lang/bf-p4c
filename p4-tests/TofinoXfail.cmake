@@ -271,11 +271,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "error: action data bus conflict on row.*between tables.*and.*"
-  switch_msdc_ipv4
-)
-
-p4c_add_xfail_reason("tofino"
   "error.*Can't split table.*with indirect attached MAU::StatefulAlu"
   switch_8.5_ent_fin_postcard
   switch_ent_fin_postcard
