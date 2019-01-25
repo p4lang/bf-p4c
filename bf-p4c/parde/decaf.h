@@ -1,6 +1,7 @@
 #ifndef BF_P4C_PARDE_DECAF_H_
 #define BF_P4C_PARDE_DECAF_H_
 
+#include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/parde/parde_visitor.h"
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
@@ -235,6 +236,8 @@ struct CollectHeaderValidBits : public DeparserInspector {
 class CollectWeakFields : public Inspector, BFN::ControlFlowVisitor {
     const PhvInfo &phv;
     const PhvUse &uses;
+    const FieldDefUse &defuse;
+    const DependencyGraph &dg;
 
     FieldGroup strong_fields;
 
@@ -246,7 +249,9 @@ class CollectWeakFields : public Inspector, BFN::ControlFlowVisitor {
     FieldGroup read_only_weak_fields;
     std::map<gress_t, ordered_set<const IR::Constant*>> all_constants;
 
-    CollectWeakFields(const PhvInfo &phv, const PhvUse &uses) : phv(phv), uses(uses) {
+    CollectWeakFields(const PhvInfo &phv, const PhvUse &uses,
+                      const FieldDefUse &defuse, const DependencyGraph &dg) :
+            phv(phv), uses(uses), defuse(defuse), dg(dg) {
         joinFlows = true;
         visitDagOnce = false;
     }
@@ -355,8 +360,11 @@ class CollectWeakFields : public Inspector, BFN::ControlFlowVisitor {
     bool preorder(const IR::MAU::StatefulAlu*) override { return false; }
     bool preorder(const IR::MAU::Instruction* instr) override;
 
-    bool is_strong_by_transitivity(const PHV::Field* f, std::set<const PHV::Field*>& visited);
-    bool is_strong_by_transitivity(const PHV::Field* f);
+    // returns true if all defs of src happen before dst
+    bool all_defs_happen_before(const PHV::Field* src, const PHV::Field* dst);
+    bool is_strong_by_transitivity(const PHV::Field* dst, const PHV::Field* src,
+                                   std::set<const PHV::Field*>& visited);
+    bool is_strong_by_transitivity(const PHV::Field* dst);
 
     void add_read_only_weak_fields();
     void get_all_constants();
@@ -684,10 +692,11 @@ class RewriteDeparser : public DeparserModifier {
 
 class DeparserCopyOpt : public PassManager {
  public:
-    DeparserCopyOpt(const PhvInfo &phv, PhvUse &uses, const DependencyGraph&) {
+    DeparserCopyOpt(const PhvInfo &phv, PhvUse &uses,
+                    const FieldDefUse& defuse, const DependencyGraph& dg) {
         auto collect_hdr_valid_bits = new CollectHeaderValidBits(phv);
 
-        auto collect_weak_fields = new CollectWeakFields(phv, uses);
+        auto collect_weak_fields = new CollectWeakFields(phv, uses, defuse, dg);
 
         auto values_at_deparser = new ComputeValuesAtDeparser(*collect_weak_fields);
 

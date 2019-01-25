@@ -120,25 +120,49 @@ bool CollectWeakFields::preorder(const IR::MAU::Instruction* instr) {
     return false;
 }
 
-bool CollectWeakFields::is_strong_by_transitivity(const PHV::Field* f,
-        std::set<const PHV::Field*>& visited) {
-    if (visited.count(f))
+bool CollectWeakFields::all_defs_happen_before(const PHV::Field* src, const PHV::Field* dst) {
+    auto src_defs = defuse.getAllDefs(src->id);
+    auto dst_defs = defuse.getAllDefs(dst->id);
+
+    for (auto sd : src_defs) {
+        for (auto dd : dst_defs) {
+            auto ts = sd.first->to<IR::MAU::Table>();
+            auto td = dd.first->to<IR::MAU::Table>();
+            if (ts && td) {
+                if (dg.happens_before(td, ts)) {
+                    return false;
+                }
+            }
+        }
+    }
+
+    LOG4("all defs of " << src->name << " happen before " << dst->name);
+
+    return true;
+}
+
+bool CollectWeakFields::is_strong_by_transitivity(const PHV::Field* dst, const PHV::Field* src,
+                                                  std::set<const PHV::Field*>& visited) {
+    if (visited.count(src))
         return false;
 
-    visited.insert(f);
+    visited.insert(src);
 
-    if (read_only_weak_fields.count(f))
+    if (read_only_weak_fields.count(src))
         return false;
 
-    if (strong_fields.count(f))
+    if (all_defs_happen_before(src, dst))
+        return false;
+
+    if (strong_fields.count(src))
         return true;
 
-    if (!field_to_weak_assigns.count(f))
+    if (!field_to_weak_assigns.count(src))
         return true;
 
-    for (auto assign : field_to_weak_assigns.at(f)) {
+    for (auto assign : field_to_weak_assigns.at(src)) {
         if (assign->src->field) {
-            if (is_strong_by_transitivity(assign->src->field, visited))
+            if (is_strong_by_transitivity(dst, assign->src->field, visited))
                 return true;
         }
     }
@@ -146,9 +170,17 @@ bool CollectWeakFields::is_strong_by_transitivity(const PHV::Field* f,
     return false;
 }
 
-bool CollectWeakFields::is_strong_by_transitivity(const PHV::Field* f) {
+bool CollectWeakFields::is_strong_by_transitivity(const PHV::Field* dst) {
     std::set<const PHV::Field*> visited;
-    return is_strong_by_transitivity(f, visited);
+
+    for (auto assign : field_to_weak_assigns.at(dst)) {
+        if (assign->src->field) {
+            if (is_strong_by_transitivity(dst, assign->src->field, visited))
+                return true;
+        }
+    }
+
+    return false;
 }
 
 void CollectWeakFields::add_read_only_weak_fields() {
@@ -354,9 +386,11 @@ void ComputeValuesAtDeparser::group_weak_fields() {
 
             new_set.insert(f);
 
-            for (auto assign : kv.second)
-                if (assign->src->field)
-                    new_set.insert(assign->src->field);
+            for (auto assign : kv.second) {
+                auto src = assign->src->field;
+                if (src && weak_fields.field_to_weak_assigns.count(src))
+                    new_set.insert(src);
+            }
 
             weak_field_groups.push_back(new_set);
         }

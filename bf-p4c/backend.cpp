@@ -184,7 +184,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new CollectPhvInfo(phv),
         &defuse,
         new FindDependencyGraph(phv, deps),
-        options.decaf ? new DeparserCopyOpt(phv, uses, deps) : nullptr,
+        options.decaf ? new DeparserCopyOpt(phv, uses, defuse, deps) : nullptr,
         options.privatization ? new Privatization(phv, deps, doNotPrivatize, defuse) : nullptr,
                                   // For read-only fields, generate private TPHV and PHV copies.
 
