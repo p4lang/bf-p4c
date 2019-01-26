@@ -562,7 +562,8 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "error: : An attached table can only be executed once per action"
+  "error: Tables .* and .* are not mutually exclusive, yet share"
+  testdata/p4_16_samples/issue1566.p4
   testdata/p4_16_samples/issue1566-bmv2.p4
   )
 
@@ -1214,12 +1215,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4smith_regression/clue_0.p4
   fabric-new-DWITH_INT_TRANSIT
   fabric-new-DWITH_SPGW-DWITH_INT_TRANSIT
-)
-
-# Not a bug, brig is reporting the correct error message.
-p4c_add_xfail_reason("tofino"
-  "An attached table can only be executed once per action"
-  testdata/p4_16_samples/issue1566.p4
 )
 
 # Negative test

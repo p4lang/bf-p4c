@@ -77,19 +77,26 @@ class EnumOn32Bits : public P4::ChooseEnumRepresentation {
 };
 
 /**
-This class implements a policy suitable for the SynthesizeActions pass.
-The policy is: do not synthesize actions for the controls whose names
-are in the specified set.
-For example, we expect that the code in the deparser will not use any
-tables or actions.
+This class implements a policy suitable for the SynthesizeActions pass:
+  - do not synthesize actions for the controls whose names are in the specified set.
+    For example, we expect that the code in the deparser will not use any
+    tables or actions.
+  - do not combine statements with data dependencies (except on Hash.get) into a single action
+  - do not combine uses of externs (other than Hash) into one action
+  The hash exceptions above are because a common idiom is to use a hash function to hash some
+  data and use the result as the index into a table execute method.  We prefer keeping that in
+  one action as we can do it directly; if split it requires extra PHV (to hold the hash value)
+  and an extra stage.
+
+  It would probably be better to allow ActionSynthesis to combine stuff as much as possible and
+  later split actions that don't work in a sinlge cycle.  We don't yet have a general action
+  splitting/rewriting pass, however, and this is simpler for now.
 */
-class SkipControls : public P4::ActionSynthesisPolicy {
+class ActionSynthesisPolicy : public P4::ActionSynthesisPolicy {
     // set of controls where actions are not synthesized
     const std::set<cstring> *skip;
 
- public:
-    explicit SkipControls(const std::set<cstring> *skip) : skip(skip) { CHECK_NULL(skip); }
-    bool convert(const IR::P4Control* control) const {
+    bool convert(const Visitor::Context *, const IR::P4Control* control) override {
         if (control->is<IR::BFN::TranslatedP4Deparser>()) {
             return false;
         }
@@ -98,6 +105,71 @@ class SkipControls : public P4::ActionSynthesisPolicy {
                 return false;
         return true;
     }
+
+    static const IR::Type_Extern *externType(const IR::Type *type) {
+        if (auto *spec = type->to<IR::Type_SpecializedCanonical>())
+            type = spec->baseType;
+        return type->to<IR::Type_Extern>(); }
+
+    class FindPathsWritten : public Inspector, TofinoWriteContext {
+        std::set<cstring>       &writes;
+        bool preorder(const IR::PathExpression *pe) {
+            if (isWrite()) writes.insert(pe->toString());
+            return false; }
+        bool preorder(const IR::Member *m) {
+            if (isWrite()) writes.insert(m->toString());
+            return false; }
+        bool preorder(const IR::AssignmentStatement *assign) {
+            // special case -- ignore writing the result of a 'hash.get' call to a var,
+            // as we can use that directly in the same action (hash is computed in ixbar hash)
+            if (auto *mc = assign->right->to<IR::MethodCallExpression>()) {
+                if (auto *m = mc->method->to<IR::Member>()) {
+                    if (auto *et = externType(m->expr->type)) {
+                        if (et->name == "Hash" && m->member == "get") return false; } } }
+            return true; }
+
+     public:
+        explicit FindPathsWritten(std::set<cstring> &w) : writes(w) {} };
+
+    class DependsOnPaths : public Inspector {
+        std::set<cstring>       &paths;
+        bool                    rv = false;
+        bool preorder(const IR::PathExpression *pe) {
+            if (paths.count(pe->toString())) rv = true;
+            return !rv; }
+        bool preorder(const IR::Member *m) {
+            if (paths.count(m->toString())) rv = true;
+            return !rv; }
+        bool preorder(const IR::Node *) { return !rv; }
+
+     public:
+        explicit operator bool() { return rv; }
+        DependsOnPaths(const IR::Node *n, std::set<cstring> &p) : paths(p), rv(false) {
+            n->apply(*this); } };
+
+    class ReferencesExtern : public Inspector {
+        bool                    rv = false;
+        bool preorder(const IR::PathExpression *pe) {
+            if (rv) return false;
+            auto *et = externType(pe->type);
+            if (et && et->name != "Hash") {
+                rv = true; }
+            return !rv; }
+        bool preorder(const IR::Node *) { return !rv; }
+
+     public:
+        explicit operator bool() { return rv; }
+        explicit ReferencesExtern(const IR::Node *n) { n->apply(*this); } };
+
+    bool can_combine(const Visitor::Context *, const IR::BlockStatement *blk,
+                     const IR::StatOrDecl *stmt) override {
+        std::set<cstring>       writes;
+        if (ReferencesExtern(blk) && ReferencesExtern(stmt)) return false;
+        blk->apply(FindPathsWritten(writes));
+        return !DependsOnPaths(stmt, writes); }
+
+ public:
+    explicit ActionSynthesisPolicy(const std::set<cstring> *skip) : skip(skip) { CHECK_NULL(skip); }
 };
 
 class IsPhase0 : public P4::KeyIsSimple {
@@ -264,7 +336,7 @@ MidEnd::MidEnd(BFN_Options& options) {
             }
             return root;
         }),
-        new P4::SynthesizeActions(&refMap, &typeMap, new SkipControls(skip_controls)),
+        new P4::SynthesizeActions(&refMap, &typeMap, new ActionSynthesisPolicy(skip_controls)),
         new P4::MoveActionsToTables(&refMap, &typeMap),
         new RewriteEgressIntrinsicMetadataHeader(&typeMap),
         new RenameArchParams(&refMap, &typeMap),

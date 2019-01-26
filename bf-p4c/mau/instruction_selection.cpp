@@ -352,7 +352,7 @@ const IR::Expression *DoInstructionSelection::postorder(IR::BXor *e) {
 
 const IR::Expression *DoInstructionSelection::postorder(IR::Cmpl *e) {
     if (!af) return e;
-    if (auto *fold = clone(e->expr->to<IR::MAU::Instruction>())) {
+    if (auto *fold = ::clone(e->expr->to<IR::MAU::Instruction>())) {
         if (fold->name == "and") fold->name = "nand";
         else if (fold->name == "andca") fold->name = "orcb";
         else if (fold->name == "andcb") fold->name = "orca";
