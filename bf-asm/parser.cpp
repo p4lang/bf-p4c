@@ -1082,8 +1082,10 @@ void Parser::State::Match::pass1(Parser *pa, State *state) {
         if (!s.where.check()) continue;
         if (s.where->reg.parser_id() < 0)
             error(s.where.lineno, "%s is not accessable in the parser", s.where->reg.name);
-        if (s.lo >= 32 && s.lo < 54)
+        if (options.target == TOFINO && s.lo >= 32 && s.lo < 54)
             error(s.where.lineno, "byte 32-53 of input buffer cannot be used for output");
+        if (options.target == JBAY && s.lo >= 32 && s.lo < 48)
+            error(s.where.lineno, "byte 32-47 of input buffer cannot be used for output");
         pa->phv_use[state->gress][s.where->reg.uid] = 1;
         int size = s.where->reg.size;
         if (s.second) {

@@ -32,10 +32,19 @@ void AddParserMetadataShims::addIngressMetadata(IR::BFN::Parser *parser) {
         prim->push_back(new IR::BFN::Extract(bridgedMetadataIndicator,
                 new IR::BFN::ConstantRVal(0)));
     }
-    prim->push_back(new IR::BFN::Extract(globalTimestamp,
-            new IR::BFN::MetadataRVal(StartLen(432, 48))));
-    prim->push_back(new IR::BFN::Extract(globalVersion,
-            new IR::BFN::MetadataRVal(StartLen(480, 32))));
+    if (Device::currentDevice() == Device::TOFINO) {
+        prim->push_back(new IR::BFN::Extract(globalTimestamp,
+                new IR::BFN::MetadataRVal(StartLen(432, 48))));
+        prim->push_back(new IR::BFN::Extract(globalVersion,
+                new IR::BFN::MetadataRVal(StartLen(480, 32))));
+    } else if (Device::currentDevice() == Device::JBAY) {
+        prim->push_back(new IR::BFN::Extract(globalTimestamp,
+                new IR::BFN::MetadataRVal(StartLen(400, 48))));
+        prim->push_back(new IR::BFN::Extract(globalVersion,
+                new IR::BFN::MetadataRVal(StartLen(448, 32))));
+        // XXX(zma) paser uArch says extractor 9-16 has another
+        // version field at byte [60:63], not sure how to use this
+    }
 
     parser->start =
       new IR::BFN::ParserState(createThreadName(parser->gress, "$entry_point"), parser->gress,
