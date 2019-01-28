@@ -5,6 +5,7 @@
 #include "bf-p4c/common/slice.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/mau/asm_output.h"
+#include "ir/pattern.h"
 
 class CanonGatewayExpr::NeedNegate : public Inspector {
     bool        rv = false;
@@ -24,16 +25,29 @@ class CanonGatewayExpr::NeedNegate : public Inspector {
 };
 
 static mpz_class SliceReduce(IR::Operation::Relation *rel, mpz_class val) {
-    int slice = 0;
-    while (val != 0 && (val & 1) == 0) {
-        ++slice;
-        val /= 2; }
+    int slice = ffs(val);
     if (slice > 0) {
+        val >>= slice;
         LOG4("Slicing " << slice << " bits off the bottom of " << rel);
         rel->left = MakeSlice(rel->left, slice, rel->left->type->width_bits() - 1);
         rel->right = new IR::Constant(val);
         LOG4("Now have " << rel); }
     return val;
+}
+
+/// Try to figure out where an expression should be sliced to better byte align things
+/// by slicing on a byte boundary.  @returns the bit-within-byte of the lowest bit of the
+/// expression (0..7)
+static int byte_align(const IR::Expression *e) {
+    if (auto *sl = e->to<IR::Slice>())
+        return (sl->getL() + byte_align(sl->e0)) & 7;
+    if (auto *b = e->to<IR::Operation::Binary>())
+        return byte_align(b->left);
+    if (auto *m = e->to<IR::Member>())
+        return m->offset_bits() & 7;
+    if (auto *u = e->to<IR::Operation::Unary>())
+        return byte_align(u->expr);
+    return 0;
 }
 
 IR::Node *CanonGatewayExpr::preorder(IR::MAU::Table *tbl) {
@@ -84,6 +98,42 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::Operation::Relation *e) {
         if (add_not)
             return postorder(new IR::LNot(e->left));
         return e->left; }
+    Pattern::Match<IR::Expression>      e1, e2;
+    Pattern::Match<IR::Constant>        k1, k2;
+    int width = e->left->type->width_bits();
+    if (((e1 & k1) == k2).match(e) || ((e1 & k1) != k2).match(e)) {
+        // masked comparison
+        auto shift = ffs(k1->value);
+        if (shift > 0) {
+            if (unsigned(ffs(k2->value)) >= unsigned(shift)) {
+                // subtle point -- unsigned casts above to be true when ffs returns -1
+                e->left = new IR::BAnd(MakeSlice(e1, shift, width - 1),
+                                       MakeSlice(k1, shift, width - 1));
+                e->right = new IR::Constant(k2->value >> shift);
+            } else {
+                auto rv = new IR::BoolLiteral(e->srcInfo, e->is<IR::Equ>() ? false : true);
+                warning("Masked comparison is always %s", rv);
+                return rv; } }
+    } else if (((e1 & k1) == (e2 & k2)).match(e) || ((e1 & k1) != (e2 & k2)).match(e)) {
+        BUG_CHECK(width == e1->type->width_bits(), "Type mismatch in CanonGatewayExpr");
+        auto shift = ffs(k1->value | k2->value);
+        if (shift > 0) {
+            e->left = new IR::BAnd(MakeSlice(e1, shift, width - 1),
+                                   MakeSlice(k1, shift, width - 1));
+            e->right = new IR::BAnd(MakeSlice(e2, shift, width - 1),
+                                    MakeSlice(k2, shift, width - 1)); } }
+    if (width > 32) {
+        // We can't handle wide matches in one go, so split it.
+        int slice_at = 32 - byte_align(e->left);
+        auto *clone = e->clone();
+        e->left = MakeSlice(e->left, slice_at, width-1);
+        e->right = MakeSlice(e->right, slice_at, width-1);
+        clone->left = MakeSlice(clone->left, 0, slice_at-1);
+        clone->right = MakeSlice(clone->right, 0, slice_at-1);
+        if (e->is<IR::Equ>())
+            return new IR::LAnd(clone, e);
+        else
+            return new IR::LOr(clone, e); }
     return e;
 }
 
@@ -282,6 +332,11 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::BAnd *e) {
         auto *t = e->left;
         e->left = e->right;
         e->right = t; }
+    if (auto k = e->right->to<IR::Constant>()) {
+        int maxbit = floor_log2(k->value);
+        if (e->left->type->width_bits() > maxbit) {
+            e->left = MakeSlice(e->left, 0, maxbit);
+            e->type = e->left->type; } }
     return e;
 }
 const IR::Expression *CanonGatewayExpr::postorder(IR::BOr *e) {
@@ -484,12 +539,12 @@ bool CollectGatewayFields::preorder(const IR::Expression *e) {
     if (!finfo) return true;
     info_t &info = this->info[finfo];
     const Context *ctxt = nullptr;
+    info.mask.setrange(bits.lo, bits.size());
     if (info.bits.lo >= 0) {
         if (bits.lo < info.bits.lo) info.bits.lo = bits.lo;
         if (bits.hi > info.bits.hi) info.bits.hi = bits.hi;
     } else {
         info.bits = bits; }
-    info.need_mask = -1;  // FIXME -- should look for mask ops and extract them
     if (findContext<IR::RangeMatch>()) {
         info.need_range = need_range = true;
     } else if (auto *rel = findContext<IR::Operation::Relation>(ctxt)) {
@@ -556,7 +611,7 @@ bool CollectGatewayFields::compute_offsets() {
                     if (f.bit + b.hi - f.lo >= bits)
                         bits = f.bit + b.hi - f.lo + 1; } }
             if (done) continue; }
-        if (bytes+size > 4 || info.need_range) {
+        if ((bytes+size > 4 && size == 1) || info.need_range) {
             info.offsets.emplace_back(bits + 32, info.bits);
             LOG5("  bit " << bits + 32 << " " << field.name);
             bits += info.bits.size();
@@ -564,8 +619,10 @@ bool CollectGatewayFields::compute_offsets() {
             field.foreach_byte(info.bits, [&](const PHV::Field::alloc_slice &sl) {
                 info.offsets.emplace_back(bytes*8U + sl.container_bit%8U, sl.field_bits());
                 LOG5("  byte " << bytes << " " << sl << " " << field.name);
-                ++bytes;
-            }); } }
+                if (bytes == 4 && bits == 0) {
+                    bits += 8;
+                } else {
+                    ++bytes; } }); } }
     if (bytes > 4) return false;
     return bits <= 12;
 }
@@ -710,7 +767,7 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
         match_field = field;
         match_field_bits = bits;
         LOG4("  match_field = " << field->name << ' ' << bits);
-        if (bits.size() == 1 && !getParent<IR::Operation::Relation>()) {
+        if (bits.size() == 1 && !findContext<IR::Operation::Relation>()) {
             auto &match_info = fields.info.at(match_field);
             LOG4("  match_info = " << match_info);
             for (auto &off : match_info.offsets) {

@@ -890,7 +890,6 @@ p4c_add_xfail_reason("tofino"
   p4testgen_faecess_0
   )
 
-
 p4c_add_xfail_reason("tofino"
   "address too large for table"
   testdata/p4_14_samples/saturated-bmv2.p4
@@ -1511,12 +1510,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error.*To fit hash destinations in less than 4 immediate bytes"
   ../glass/testsuite/p4_tests/mau/test_config_311_hash_adb.p4
-  )
-
-# P4C-1213
-p4c_add_xfail_reason("tofino"
-  "error: : condition too complex"
-  ../glass/testsuite/p4_tests/mau/test_config_363_gateway_opt.p4
   )
 
 # P4C-599

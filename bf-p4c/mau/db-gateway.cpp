@@ -7,9 +7,9 @@ using namespace DBPrint;
 using namespace IndentCtl;
 
 std::ostream &operator<<(std::ostream &out, const CollectGatewayFields::info_t &info) {
-    out << info.bits;
+    out << info.bits << " mask=0x" << info.mask;
+    if (info.const_eq) out << " const_eq";
     if (info.need_range) out << " range";
-    if (~info.need_mask) out << " mask=0x" << hex(info.need_mask);
     for (auto &off : info.offsets) out << " " << off.first << ":" << off.second;
     for (auto &off : info.xor_offsets) out << " xor:" << off.first << ":" << off.second;
     return out;

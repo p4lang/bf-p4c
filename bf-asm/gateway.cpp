@@ -343,7 +343,7 @@ unsigned GatewayTable::input_use() const {
 /* FIXME -- how to deal with (or even specify) matches in the upper 24 bits coming from
  * the hash bus?   Currently we assume that the input_xbar is declared to set up the
  * hash signals correctly so that we can just match them.  Should at least check it
- * somewhere, somehow. */
+ * somewhere, somehow. We do some checking in check_match_key above, but is that enough? */
 template<class REGS>
 static bool setup_vh_xbar(REGS &regs, Table *table, Table::Layout &row, int base,
                           std::vector<GatewayTable::MatchKey> &match, int group)
@@ -352,14 +352,13 @@ static bool setup_vh_xbar(REGS &regs, Table *table, Table::Layout &row, int base
     auto &byteswizzle_ctl = rams_row.exactmatch_row_vh_xbar_byteswizzle_ctl[row.bus];
     for (auto &r : match) {
         if (r.offset >= 32) break; /* skip hash matches */
-        unsigned byte = base + r.offset / 8;
-        int ibyte = table->find_on_ixbar(*r.val, group);
-        if (ibyte < 0) {
-            error(r.val.lineno, "Can't find %s on ixbar", r.val.desc().c_str());
-            return false; }
-        for (unsigned b = 0; b < (r.val->size()+7)/8; b++, byte++, ibyte++)
-            for (unsigned bit = 0; bit < 8; bit++)
-                byteswizzle_ctl[byte][bit] = 0x10 + ibyte; }
+        for (int bit = 0; bit < r.val->size(); ++bit) {
+            int ibyte = table->find_on_ixbar(*Phv::Ref(r.val, bit, bit), group);
+            if (ibyte < 0) {
+                error(r.val.lineno, "Can't find %s(%d) on ixbar", r.val.desc().c_str(), bit);
+                return false; }
+            unsigned byte = base + (r.offset + bit)/ 8;
+            byteswizzle_ctl[byte][(r.val->lo + bit) & 7] = 0x10 + ibyte; } }
     return true;
 }
 

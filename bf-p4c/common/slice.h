@@ -14,6 +14,7 @@ std::pair<int, int> getSliceLoHi(const IR::Expression* e);
  *  This may be an IR:Slice or not.  Any slices on slices or slices on
  *  constants are folded to the simplest form.  Slices that extract off
  *  the top of an expression (past the msb) are implicitly zero-extended
+ *  Also strength-reduce slices on bitwise operations
  */
 const IR::Expression *MakeSlice(const IR::Expression *e, int lo, int hi);
 

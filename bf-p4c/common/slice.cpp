@@ -89,8 +89,13 @@ const IR::Expression *MakeSlice(const IR::Expression *e, int lo, int hi) {
     if (auto k = e->to<IR::Constant>()) {
         auto rv = ((*k >> lo) & IR::Constant((UINT64_C(1) << (hi-lo+1)) - 1)).clone();
         rv->type = IR::Type::Bits::get(hi-lo+1);
-        return rv;
-    }
+        return rv; }
+    if (auto a = e->to<IR::BAnd>())
+        return new IR::BAnd(e->srcInfo, MakeSlice(a->left, lo, hi), MakeSlice(a->right, lo, hi));
+    if (auto o = e->to<IR::BOr>())
+        return new IR::BOr(e->srcInfo, MakeSlice(o->left, lo, hi), MakeSlice(o->right, lo, hi));
+    if (auto o = e->to<IR::BXor>())
+        return new IR::BXor(e->srcInfo, MakeSlice(o->left, lo, hi), MakeSlice(o->right, lo, hi));
     if (lo >= e->type->width_bits()) {
         return new IR::Constant(IR::Type::Bits::get(hi-lo+1), 0); }
     if (hi >= e->type->width_bits()) {

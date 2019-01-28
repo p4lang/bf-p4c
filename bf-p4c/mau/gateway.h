@@ -64,10 +64,10 @@ class CollectGatewayFields : public Inspector {
  public:
     struct info_t {
         ordered_set<const PHV::Field *> xor_with;       // {x: x ==/!= this field in gateway }
-        le_bitrange             bits = { -1, -1 };
+        le_bitrange             bits = { -1, -1 };      // bitrange covering mask
+        bitvec                  mask;                   // bits read/needed
         bool                    const_eq = false;       // ==/!= with constant or bool check
         bool                    need_range = false;     // </>= with constant
-        uint64_t                need_mask = 0;
         safe_vector<std::pair<int, le_bitrange>> offsets;
         safe_vector<std::pair<int, le_bitrange>> xor_offsets; };
     ordered_map<const PHV::Field *, info_t>       info;
