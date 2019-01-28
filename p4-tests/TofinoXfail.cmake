@@ -1015,13 +1015,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4smith_regression/underpin_0.p4
 )
 
-# BRIG-679
-# error: Gateway match key chubs.dr not in matching hash column
-p4c_add_xfail_reason("tofino"
-  "not in matching hash column"
-  extensions/p4_tests/p4_14/p4smith_regression/vindemiatrixs_0.p4
-)
-
 # BRIG-779
 # error: SelectExpression: Cannot unify bit<8> to int<8>
 # p4c_add_xfail_reason("tofino"
