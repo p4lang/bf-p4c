@@ -297,7 +297,7 @@ void MeterTable::write_regs(REGS &regs) {
             auto &meter = map_alu.meter_group[meter_group_index].meter;
             auto &meter_ctl = meter.meter_ctl;
             auto &red_value_ctl = meter.red_value_ctl;
-            meter_ctl.meter_bytecount_adjust = 0; // FIXME
+            meter_ctl.meter_bytecount_adjust = 0; // FIXME -- need asm syntax to set
             auto &delay_ctl = map_alu.meter_alu_group_data_delay_ctl[meter_group_index];
             delay_ctl.meter_alu_right_group_delay = Target::METER_ALU_GROUP_DATA_DELAY()
                                                         + row/4 + stage->tcam_delay(gress);
@@ -346,7 +346,7 @@ void MeterTable::write_regs(REGS &regs) {
             //meter_sweep_ctl.meter_sweep_en = 1;
             meter_sweep_ctl.meter_sweep_offset = minvpn;
             meter_sweep_ctl.meter_sweep_size = maxvpn;
-            meter_sweep_ctl.meter_sweep_remove_hole_pos = 0; // FIXME
+            meter_sweep_ctl.meter_sweep_remove_hole_pos = 0; // FIXME -- see CSR?
             meter_sweep_ctl.meter_sweep_remove_hole_en = 0; // FIXME
             meter_sweep_ctl.meter_sweep_interval = sweep_interval + profile;
             if (input_xbar) {

@@ -642,7 +642,8 @@ void InputXbar::write_regs(REGS &regs) {
                     xbar.match_input_xbar_816b_ctl[word_group][i]
                         .match_input_xbar_816b_ctl_enable = 1; }
                 if ((i ^ phv_byte) & swizzle_mask)
-                    LOG1("FIXME -- need swizzle for " << input.what); }
+                    error(input.what.lineno, "Need tcam swizzle for %s",
+                          input.what.toString().c_str()); }
             auto &power_ctl = regs.dp.match_input_xbar_din_power_ctl;
             // we do in fact want mau_id, not ixbar_id here!
             set_power_ctl_reg(power_ctl, input.what->reg.mau_id()); }

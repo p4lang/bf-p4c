@@ -1739,7 +1739,7 @@ void Table::write_mapram_regs(REGS &regs, int row, int col, int vpn, int type) {
     mapram_config.mapram_type = type;
     mapram_config.mapram_logical_table = logical_id;
     mapram_config.mapram_vpn_members = 0;
-    if (!options.match_compiler) // FIXME -- compiler doesn't set this?
+    if (!options.match_compiler) // FIXME -- glass doesn't set this?
         mapram_config.mapram_vpn = vpn;
     if (gress == INGRESS)
         mapram_config.mapram_ingress = 1;
@@ -1748,8 +1748,6 @@ void Table::write_mapram_regs(REGS &regs, int row, int col, int vpn, int type) {
     mapram_config.mapram_enable = 1;
     mapram_config.mapram_ecc_check = 1;
     mapram_config.mapram_ecc_generate = 1;
-    //if (!options.match_compiler) // FIXME -- compiler doesn't set this?
-    //    mapram_ctl.mapram_vpn_limit = maxvpn;
     if (gress)
         regs.cfg_regs.mau_cfg_mram_thread[col/3U] |= 1U << (col%3U*8U + row);
 }

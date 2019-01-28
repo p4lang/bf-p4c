@@ -28,19 +28,12 @@ of the script)
 
 ## **Building Assembler**
 
-    user@box$ cd tofino-asm
-    user@box$ ./bootstrap.sh
-    user@box$ make
-
-Assembler executable `bfas` is created in the build directory on running make. The
-chip schema binary in tofino & jbay directories are used to generate backend
-files and compiled in gen/tofino or gen/jbay
-
-json2cpp program is used to compile the backend files which contain register,
-memory and pipe stages resource information.
+The assenbler is built automatically as part of the full bf-p4c-tofino build; there
+is currently no supported standalone method of building the assembler by itself.
 
 ## **Address Sanitizer checks**
 
+(obsolete)
 To enable address sanitizer checks in the assembler use,
 
 user@box$ ./bootstrap.sh --enable-asan-checks
@@ -240,18 +233,6 @@ parameterized and placed in the constants.h file
 "tofino" and "jbay" directories hold the chip schema to be used by the
 assembler. The chip schema contains register information and is a binary
 (python pickle file) generated from csv file in bfnregs repository.
-
-The chip schema for tofino is copied from the glass compiler repository to align
-with comparing glass output jsons.  To ensure glass and assembler are always pointing
-to the same schema, create a symlink in your tofino-asm source directory to the
-templates directory in the glass repo:
-
-    ln -s $HOME/p4c-tofino/p4c_tofino/target/tofino/output/templates p4c-templates
-
-(FIXME -- now that glass is in the same repo, should do this automatically?)
-
-then any time you update the glass repo with a new chip.schema it will
-automatically be copied into the tofino-asm source tree.
 
 ### **Extracting information from hardware bfnregs info**
 

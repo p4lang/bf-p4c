@@ -26,7 +26,8 @@ public:
     struct Register {
         char                                            name[8];
         enum type_t { NORMAL, TAGALONG, CHECKSUM, MOCHA, DARK }   type;
-        // FIXME-PHV  various places depend on the uids matching container encoding
+        // uid is used for "phv_number" in the context.json, but otherwise is just
+        // a unique id for the register, encoded differently for different targets
         unsigned short                                  index, uid, size;
         Register() {}
         Register(const Register &) = delete;

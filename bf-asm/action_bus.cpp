@@ -128,7 +128,6 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
                 if (kv.value.type == tCMD) {
                     if (kv.value[1] == "color") {
                         src.type = Source::ColorRef;
-                        // FIXME -- meter color could be ORed into any byte of the immediate?
                         if (!sz) off = 24, sz = 8;
                     } else if (kv.value[1] == "address") {
                         src.type = Source::AddressRef; }}
@@ -170,7 +169,6 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
                 if (kv.value.type == tCMD) {
                     if (kv.value[1] == "color") {
                         src.type = Source::ColorRef;
-                        // FIXME -- meter color could be ORed into any byte of the immediate?
                         if (!sz) off = 24, sz = 8;
                     } else if (kv.value[1] == "address") {
                         src.type = Source::AddressRef; } }
@@ -699,8 +697,8 @@ int ActionBus::find(Source src, int lo, int hi, int size, int *len) {
         // accessing it for 8- or 16- bit slots.
         // There should be a better way of doing this.
         if (src.type == Source::HashDist && size < 4) offset &= 15;
-        // FIXME -- Table Color is 8 bits which can be put in any byte of the output; we
-        // use the offset to say which byte
+        // Table Color is 8 bits which is ORed into the top of the immediate;  The offset is
+        // thus >= 24, but we want to ignore that here and just use the offset within the byte
         if (src.type == Source::TableColor) offset &= 7;
         if (offset > lo) continue;
         if (offset + (int)slot.second.size <= hi) continue;

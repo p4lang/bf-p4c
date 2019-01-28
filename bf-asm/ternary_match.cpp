@@ -173,9 +173,6 @@ void TernaryMatchTable::pass1() {
     LOG1("### Ternary match table " << name() << " pass1");
     MatchTable::pass1();
     stage->table_use[timing_thread(gress)] |= Stage::USE_TCAM;
-    /* FIXME -- unconditionally setting piped mode -- only need it for wide
-     * match across a 4-row boundary */
-    stage->table_use[timing_thread(gress)] |= Stage::USE_TCAM_PIPED;
     // Dont allocate id (mark them as used) for empty ternary tables (keyless
     // tables). Keyless tables are marked ternary with a tind. They are setup by
     // the driver to always miss (since there is no match) and run the miss
@@ -373,10 +370,8 @@ void TernaryMatchTable::write_regs(REGS &regs) {
         if (++word == match.size()) word = 0; }
     if (tcam_id >= 0)
         setup_muxctl(merge.tcam_hit_to_logical_table_ixbar_outputmap[tcam_id], logical_id);
-    /* FIXME -- setting piped mode if any table in the stage is piped -- perhaps
-     * FIXME -- tables can be different? */
     if (tcam_id >= 0) {
-        if (stage->table_use[timing_thread(gress)] & Stage::USE_TCAM_PIPED)
+        if (stage->table_use[timing_thread(gress)] & Stage::USE_TCAM)
             merge.tcam_table_prop[tcam_id].tcam_piped = 1;
         merge.tcam_table_prop[tcam_id].thread = timing_thread(gress);
         merge.tcam_table_prop[tcam_id].enabled = 1;

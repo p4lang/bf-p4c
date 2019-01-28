@@ -6,7 +6,6 @@
 class Target::Tofino::Phv : public Target::Phv {
     friend class ::Phv;
     struct Register : public ::Phv::Register {
-        // FIXME -- base register class is Tofino-like, no need to change
         int parser_id() const override { return uid; }
         int mau_id() const override { return uid < FIRST_TPHV ? uid : -1; }
         int ixbar_id() const override { return uid < FIRST_TPHV ? uid : -1; }

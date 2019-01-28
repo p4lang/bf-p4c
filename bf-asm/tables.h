@@ -1564,7 +1564,7 @@ DECLARE_TABLE_TYPE(StatefulTable, Synth2Port, "stateful",
     }                   math_table;
     bool dual_mode = false;
     bool offset_vpn = false;
-    bool address_used = false;  // FIXME offset_vpn and address_used are the same?
+    bool address_used = false;
     int meter_adr_shift = 0;
     int stateful_counter_mode = 0;
     int watermark_level = 0;

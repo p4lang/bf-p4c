@@ -222,7 +222,6 @@ public:
                                                         // 32-bit value
     std::vector<Phv::Ref>               multi_write, init_zero;
     bitvec                              phv_use[2], phv_allow_multi_write, phv_init_valid;
-    // FIXME -- multi_write stuff should be split by gress?
     int                                 hdr_len_adj[2], meta_opt;
     Alloc1D<Checksum *, PARSER_CHECKSUM_ROWS>                           checksum_use[2];
     Alloc1D<CounterInit *, PARSER_CTRINIT_ROWS>                         counter_init[2];

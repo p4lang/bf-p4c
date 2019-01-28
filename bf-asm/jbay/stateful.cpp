@@ -199,6 +199,9 @@ template<> void StatefulTable::write_logging_regs(Target::JBay::mau_regs &regs) 
                 rep[1].set_subfield(meter_group() | 0x4, 3*(m->logical_id % 8U), 3); }
         adrdist.meter_alu_adr_range_check_icxbar_map[meter_group()] |= 1U << m->logical_id;
         if (offset_vpn) {
+            if (!address_used)
+                warning(lineno, "Adjusting output address of %s for next stage, but noone is "
+                        "reading it", name());
             adrdist.mau_stateful_log_stage_vpn_offset[m->logical_id]
                 .stateful_log_stage_vpn_offset = maxvpn - minvpn + 1; }
         adrdist.stateful_instr_width_logical[m->logical_id] = format->log2size - 3; }

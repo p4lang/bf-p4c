@@ -5,22 +5,42 @@
 
 namespace json {
 
+static int digit_value(char ch) {
+    if (ch >= 'a') return ch - 'a' + 10;
+    if (ch >= 'A') return ch - 'A' + 10;
+    if (ch >= '0' && ch <= '9') return ch - '0';
+    return 999;
+}
+
 std::istream &operator>>(std::istream &in, std::unique_ptr<obj> &json) {
     while (in) {
         bool neg = false;
         char ch;
+        int base = 10, digit;
         in >> ch;
         switch(ch) {
         case '-':
             neg = true;
             in >> ch;
+            if (ch != '0') goto digit;
             /* fall through */
-        case '0': case '1': case '2': case '3': case '4':
+        case '0':
+            base = 8;
+            in >> ch;
+            if (ch == 'x' || ch == 'X') {
+                base = 16;
+                in >> ch;
+            } else if (ch == 'b') {
+                base = 2;
+                in >> ch; }
+            /* fall through */
+        digit: case '1': case '2': case '3': case '4':
         case '5': case '6': case '7': case '8': case '9': {
             int64_t l = 0;
-            while (in && isdigit(ch)) {
-                /* FIXME -- deal with overflow ... and hex? */
-                l = l * 10 + ch - '0';
+            while (in && (digit = digit_value(ch)) < base)  {
+                if ((INT64_MAX - digit)/base < l) {
+                    /* FIXME -- deal with overflow */ }
+                l = l * base + digit;
                 in >> ch; }
             if (in) in.unget();
             if (neg) l = -l;
@@ -154,9 +174,8 @@ map &map::merge(const map &a) {
                 exist->to<map>().merge(el.second->to<map>());
             } else if (exist->is<vector>() && el.second->is<vector>()) {
                 auto &vec = exist->to<vector>();
-                for (auto &vel : el.second->to<vector>()) {
+                for (auto &vel : el.second->to<vector>())
                     vec.push_back(vel->clone());
-                }
             } else {
                 exist = el.second->clone(); }
         } else {

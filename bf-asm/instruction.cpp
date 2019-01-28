@@ -272,7 +272,6 @@ struct operand {
             return true; }
         HashDist *clone() override { return new HashDist(*this); }
         void pass2(int group) override {
-            // FIXME -- check lo/hi for sanity
             if (units.size() > 2) {
                 error(lineno, "Can't use more than 2 hash_dist units together in an action");
                 return; }
@@ -487,7 +486,7 @@ auto operand::Named::lookup(Base *&ref) -> Base * {
     int lo = this->lo >= 0 ? this->lo : 0;
     if (auto *field = tbl->lookup_field(name, action)) {
         if (!options.match_compiler) {
-            /* FIXME -- The old compiler generates refs past the end of action table fields
+            /* FIXME -- The glass compiler generates refs past the end of action table fields
              * like these, and just accesses whatever bits happen to be there.  So we
              * supress these error checks for compatibility (ex: tests/action_bus1.p4) */
             if ((unsigned)lo >= field->size) {

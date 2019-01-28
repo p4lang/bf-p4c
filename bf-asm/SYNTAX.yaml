@@ -274,7 +274,6 @@ stage <constant> <thread>:
             # statistics table to use
         meter: <table-name> [ (<index-field>) ]
             # meter table to use
-            # FIXME -- how to specify meter type
         stateful: <table-name> [ (<sful action> [, <index-field> ]) ]
         stateful: <table-name> [ (<sful action>, counter [ hit | miss | gateway ]) ]
             # stateful table to use

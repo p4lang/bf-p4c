@@ -322,8 +322,6 @@ Stage::Stage(Stage &&a) : Stage_data(std::move(a)) {
 }
 
 int Stage::tcam_delay(gress_t gress) {
-    if (group_table_use[timing_thread(gress)] & Stage::USE_TCAM_PIPED)
-        return 2;
     if (group_table_use[timing_thread(gress)] & Stage::USE_TCAM)
         return 2;
     if (group_table_use[timing_thread(gress)] & Stage::USE_WIDE_SELECTOR)
@@ -392,7 +390,6 @@ template<class TARGET> void Stage::write_common_regs(typename TARGET::mau_regs &
       adrdist.bubble_req_ctl[gress].bubble_req_ext_fltr_en = 0x1;
     }
 
-    /* FIXME -- need to set based on interstage dependencies */
     regs.dp.phv_fifo_enable.phv_fifo_ingress_action_output_enable = stage_dep[INGRESS] != ACTION_DEP;
     regs.dp.phv_fifo_enable.phv_fifo_egress_action_output_enable = stage_dep[EGRESS] != ACTION_DEP;
     if (stageno != AsmStage::numstages()-1) {
@@ -401,7 +398,7 @@ template<class TARGET> void Stage::write_common_regs(typename TARGET::mau_regs &
         regs.dp.phv_fifo_enable.phv_fifo_egress_final_output_enable =
             this[1].stage_dep[EGRESS] == ACTION_DEP; }
     for (gress_t gress : Range(INGRESS, EGRESS))
-        if (table_use[gress] & USE_TCAM_PIPED)
+        if (table_use[gress] & USE_TCAM)
             regs.tcams.tcam_piped |=  options.match_compiler ? 3 : 1 << gress;
 
     /* Error handling related */

@@ -108,9 +108,9 @@ template<> void Stage::write_regs(Target::JBay::mau_regs &regs) {
             regs.dp.next_stage_dependency_on_cur[gress] = this[1].stage_dep[gress] != MATCH_DEP;
         else if (AsmStage::numstages() < Target::JBay::NUM_MAU_STAGES)
             regs.dp.next_stage_dependency_on_cur[gress] = 1;
-        /* FIXME -- making this depend on the dependency of the next stage seems wrong */
         auto &deferred_eop_bus_delay = regs.rams.match.adrdist.deferred_eop_bus_delay[gress];
         deferred_eop_bus_delay.eop_internal_delay_fifo = pred_cycle(gress) + 2;
+        /* FIXME -- making this depend on the dependency of the next stage seems wrong */
         if (stageno == AsmStage::numstages()-1) {
             if (AsmStage::numstages() < Target::JBay::NUM_MAU_STAGES)
                 deferred_eop_bus_delay.eop_output_delay_fifo = 1;

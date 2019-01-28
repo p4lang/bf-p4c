@@ -48,10 +48,7 @@ void HashActionTable::pass2() {
     LOG1("### Hash Action " << name() << " pass2");
     if (logical_id < 0) choose_logical_id();
     if (layout.size() != 1 || layout[0].bus < 0)
-        error(lineno, "Need explicit row/bus in hash_action table"); // FIXME
-    //if (hash_dist.empty())
-    //    error(lineno, "Need explicit hash_dist in hash_action table"); // FIXME
-    //if (bus >= 2) stage->table_use[timing_thread(gress)] |= Stage::USE_TCAM;
+        error(lineno, "Need explicit row/bus in hash_action table");
     if (input_xbar)
         input_xbar->pass2();
     if (actions) actions->pass2(this);

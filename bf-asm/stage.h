@@ -43,7 +43,7 @@ public:
     bitvec      imem_use[ACTION_IMEM_SLOTS];
 
     // for timing, ghost thread is tied to ingress, so we track ghost as ingress here
-    enum { USE_TCAM=1, USE_TCAM_PIPED=2, USE_STATEFUL=4, USE_METER=8, USE_METER_LPF_RED=16,
+    enum { USE_TCAM=1, USE_STATEFUL=4, USE_METER=8, USE_METER_LPF_RED=16,
            USE_SELECTOR=32, USE_WIDE_SELECTOR=64, USE_STATEFUL_DIVIDE=128 };
     int /* enum */      table_use[2], group_table_use[2];
 
