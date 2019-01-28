@@ -65,13 +65,12 @@ class AllocationReport {
 
         MauGroupInfo() {}
 
-        explicit MauGroupInfo(size_t sz, int i, bool cont,
-                              size_t used, size_t allocated, size_t total,
-                              boost::optional<gress_t> gr)
-            : size(sz), groupID(i), bitsUsed(used), bitsAllocated(allocated),
-              totalContainers(total) {
+        explicit MauGroupInfo(size_t sz, int i, bool cont, size_t used, size_t allocated,
+                boost::optional<gress_t> gr)
+            : size(sz), groupID(i), bitsUsed(used), bitsAllocated(allocated) {
             containersUsed = cont ? 1 : 0;
             if (gr) gress.insert(*gr);
+            totalContainers = Device::phvSpec().numContainersInGroup();
         }
 
         void update(bool cont, size_t used, size_t allocated, boost::optional<gress_t> gr) {

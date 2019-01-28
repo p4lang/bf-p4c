@@ -264,6 +264,22 @@ bitvec PhvSpec::deparserGroup(unsigned id) const {
     return range(containerType, (index / groupSize) * groupSize, groupSize);
 }
 
+unsigned PhvSpec::getContainersPerGroup(
+        const std::map<PHV::Size, unsigned>& numContainersPerGroup) const {
+    unsigned rv = 0;
+    // Check that the number of containers in each MAU group is the same (applicable only to Tofino
+    // and Tofino2).
+    for (auto kv : numContainersPerGroup) {
+        if (rv == 0) {
+            rv = kv.second;
+            continue;
+        }
+        BUG_CHECK(rv == kv.second,
+                  "Neither Tofino nor Tofino2 support MAU groups of different sizes");
+    }
+    return rv;
+}
+
 Util::JsonObject *PhvSpec::toJson() const {
     // Create the "phv_containers" node.
     auto *phv_containers = new Util::JsonObject();
@@ -320,15 +336,22 @@ TofinoPhvSpec::TofinoPhvSpec() {
         { PHV::Type::W, std::make_pair(4*phv_scale_factor, 16) }
     };
 
+    std::map<PHV::Size, unsigned> numContainersPerGroup;
     for (auto kv : rawMauGroupSpec) {
         PHV::Type t = kv.first;
         unsigned numGroups = kv.second.first;
         unsigned numContainers = kv.second.second;
+        if (numContainersPerGroup.count(t.size()))
+            BUG_CHECK(numContainersPerGroup[t.size()] == numContainers,
+                    "Neither Tofino nor Tofino2 support MAU groups of different sizes.");
+        else
+            numContainersPerGroup[t.size()] = numContainers;
         sizeToTypeMap[t.size()].insert(t);
         MauGroupType desc(numGroups);
         desc.addType(t, numContainers);
         mauGroupSpec[t.size()] = desc;
     }
+    containersPerGroup = getContainersPerGroup(numContainersPerGroup);
 
     if (LOGGING(1)) {
         for (auto kv : mauGroupSpec) {
@@ -423,19 +446,23 @@ JBayPhvSpec::JBayPhvSpec() {
         { PHV::Size::b32, {{4, {{PHV::Type::W, 12}, {PHV::Type::MW, 4}, {PHV::Type::DW, 4}} }} }
     };
 
+    std::map<PHV::Size, unsigned> numContainersPerGroup;
     for (auto kv : rawMauGroupSpec) {
         PHV::Size sz = kv.first;
+        numContainersPerGroup[sz] = 0;
         for (auto kv1 : kv.second) {
             unsigned numGroups = kv1.first;
             std::map<PHV::Type, unsigned> types = kv1.second;
             for (auto kv2 : types) {
                 PHV::Type t = kv2.first;
                 sizeToTypeMap[sz].insert(t);
+                numContainersPerGroup[sz] += kv2.second;
             }
             MauGroupType desc(numGroups, types);
             mauGroupSpec[sz] = desc;
         }
     }
+    containersPerGroup = getContainersPerGroup(numContainersPerGroup);
 
     if (LOGGING(1)) {
         for (auto kv : mauGroupSpec) {

@@ -64,6 +64,10 @@ class PhvSpec {
      */
     std::map<PHV::Size, MauGroupType> mauGroupSpec;
 
+    /** Number of containers in a single MAU group.
+      */
+    unsigned containersPerGroup = 0;
+
     std::map<PHV::Size, std::vector<unsigned>> ingressOnlyMauGroupIds;
 
     std::map<PHV::Size, std::vector<unsigned>> egressOnlyMauGroupIds;
@@ -79,6 +83,10 @@ class PhvSpec {
     /// of PhvSpec; after a PhvSpec instance is constructed, its list of
     /// container types is considered immutable.
     void addType(PHV::Type t);
+
+    /// Return the number of containers in an MAU group.
+    unsigned getContainersPerGroup(
+            const std::map<PHV::Size, unsigned>& numContainersPerGroup) const;
 
  public:
     /// @return the PHV container types available on this device.
@@ -96,6 +104,10 @@ class PhvSpec {
     /// @return the number of PHV container types available on this device.
     /// Behaves the same as `containerTypes().size()`.
     unsigned numContainerTypes() const;
+
+    /// @returns the number of containers in a single MAU group. Assumption currently is that each
+    /// group has the same number of containers (applicable to both Tofino and Tofino2).
+    unsigned numContainersInGroup() const { return containersPerGroup; }
 
     /// @return the PHV container type corresponding to the given numeric id.
     /// Different devices may map the same id to different types. Behaves the
