@@ -1,9 +1,3 @@
-exm_indirect_1.p4(908): warning: -1: negative value with unsigned type
-    add_to_field(ipv4.ttl, -1);
-                            ^
-exm_indirect_1.p4(205): warning: -1: negative value with unsigned type
-    add_to_field(ttl, -1);
-                       ^
 exm_indirect_1.p4(204): warning: egress_port shadows .egress_port
 action hop(ttl, egress_port) {
                 ^^^^^^^^^^^

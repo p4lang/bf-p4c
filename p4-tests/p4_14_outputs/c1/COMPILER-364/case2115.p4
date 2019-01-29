@@ -1727,11 +1727,11 @@ control TiffCity(inout headers hdr, inout metadata meta, inout standard_metadata
     }
     @name(".LaHabra") action LaHabra() {
         Slagle();
-        hdr.Tappan.Amherst = hdr.Tappan.Amherst + 8w255;
+        hdr.Tappan.Amherst = hdr.Tappan.Amherst - 8w1;
     }
     @name(".Mahopac") action Mahopac() {
         Slagle();
-        hdr.Bothwell.Ocilla = hdr.Bothwell.Ocilla + 8w255;
+        hdr.Bothwell.Ocilla = hdr.Bothwell.Ocilla - 8w1;
     }
     @name(".Dickson") action Dickson(bit<24> Biloxi, bit<24> Neshoba) {
         meta.Skyway.Remington = Biloxi;

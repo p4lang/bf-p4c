@@ -339,7 +339,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         hdr.ipv4.dstAddr = dip;
     }
     @name(".action1") action action1() {
-        hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
+        hdr.ipv4.ttl = hdr.ipv4.ttl - 8w1;
     }
     @name(".egr_act1") action egr_act1(bit<16> tcp_sport) {
         hdr.tcp.srcPort = tcp_sport;
@@ -413,7 +413,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".nop") action nop() {
     }
     @name(".hop") action hop(inout bit<8> ttl, bit<9> egress_port) {
-        ttl = ttl + 8w255;
+        ttl = ttl - 8w1;
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
     }
     @name(".next_hop_ipv4") action next_hop_ipv4(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {

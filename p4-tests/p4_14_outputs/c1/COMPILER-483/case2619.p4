@@ -754,11 +754,11 @@ control Borup(inout headers hdr, inout metadata meta, inout standard_metadata_t 
     }
     @name(".Ovett") action Ovett() {
         Toulon();
-        hdr.Halfa.DesPeres = hdr.Halfa.DesPeres + 8w255;
+        hdr.Halfa.DesPeres = hdr.Halfa.DesPeres - 8w1;
     }
     @name(".Oxford") action Oxford() {
         Toulon();
-        hdr.Pinetop.Bammel = hdr.Pinetop.Bammel + 8w255;
+        hdr.Pinetop.Bammel = hdr.Pinetop.Bammel - 8w1;
     }
     @name(".Burrel") action Burrel() {
         hdr.Lamison[0].setValid();

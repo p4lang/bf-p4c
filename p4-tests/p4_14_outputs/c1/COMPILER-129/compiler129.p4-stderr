@@ -1,30 +1,9 @@
-compiler129.p4(2930): warning: -1: negative value with unsigned type
-    add_to_field(ipv4.ttl, -1);
-                            ^
-compiler129.p4(2935): warning: -1: negative value with unsigned type
-    add_to_field(ipv4.ttl, -1);
-                            ^
-compiler129.p4(2940): warning: -1: negative value with unsigned type
-    add_to_field(ipv6.hopLimit, -1);
-                                 ^
-compiler129.p4(2945): warning: -1: negative value with unsigned type
-    add_to_field(ipv6.hopLimit, -1);
-                                 ^
-compiler129.p4(2950): warning: -1: negative value with unsigned type
-    add_to_field(mpls[0].ttl, -1);
-                               ^
 compiler129.p4(5181): warning: Could not infer type for session_id, using bit<8>
 action egress_mirror_coal_hdr(session_id, id) {
                               ^^^^^^^^^^
 compiler129.p4(5181): warning: Could not infer type for id, using bit<8>
 action egress_mirror_coal_hdr(session_id, id) {
                                           ^^
-compiler129.p4(1781): warning: -1: negative value with unsigned type
-    add_to_field(l2_metadata.field_26 , -1);
-                                         ^
-compiler129.p4(1814): warning: -4: negative value with unsigned type
-    add_to_field(l2_metadata.field_59 , -4);
-                                         ^
 warning: The order of headers in deparser is not uniquely determined by parser!
 warning: .bd_action_profile: unused instance
 warning: .ecmp_action_profile: unused instance

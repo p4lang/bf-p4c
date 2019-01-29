@@ -1411,11 +1411,11 @@ control Pineridge(inout headers hdr, inout metadata meta, inout standard_metadat
     }
     @name(".Brantford") action Brantford() {
         Baidland();
-        hdr.Valmont.Fairlea = hdr.Valmont.Fairlea + 8w255;
+        hdr.Valmont.Fairlea = hdr.Valmont.Fairlea - 8w1;
     }
     @name(".Arriba") action Arriba() {
         Baidland();
-        hdr.Shelbina.Alexis = hdr.Shelbina.Alexis + 8w255;
+        hdr.Shelbina.Alexis = hdr.Shelbina.Alexis - 8w1;
     }
     @name(".Tonasket") action Tonasket() {
         hdr.Moodys[0].setValid();

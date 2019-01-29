@@ -1,3 +1,0 @@
-action_spec_format.p4(243): warning: -1: negative value with unsigned type
-    add_to_field(ttl, -1);
-                       ^

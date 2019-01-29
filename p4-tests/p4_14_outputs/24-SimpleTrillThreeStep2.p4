@@ -209,7 +209,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.m.hopCount = hdr.trill.hopCount;
     }
     @name(".do_trill_forward_1") action do_trill_forward_1() {
-        meta.m.hopCount = meta.m.hopCount + 6w63;
+        meta.m.hopCount = meta.m.hopCount - 6w1;
     }
     @name(".do_trill_forward_2") action do_trill_forward_2() {
         hdr.trill.hopCount = meta.m.hopCount;

@@ -59,7 +59,7 @@ control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_me
         }
         key = {
             hdr.data.h1                   : ternary @name("hdr.data.h1") ;
-            meta.partition.partition_index: exact @name("meta.partition.partition_index") ;
+            meta.partition.partition_index: exact @name("partition.partition_index") ;
         }
         default_action = noop();
         size = 163840;

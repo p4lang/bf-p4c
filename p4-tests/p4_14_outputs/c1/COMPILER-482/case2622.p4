@@ -2200,11 +2200,11 @@ control Wauconda(inout headers hdr, inout metadata meta, inout standard_metadata
     }
     @name(".Domestic") action Domestic() {
         Padonia();
-        hdr.Lakebay.Boysen = hdr.Lakebay.Boysen + 8w255;
+        hdr.Lakebay.Boysen = hdr.Lakebay.Boysen - 8w1;
     }
     @name(".Philbrook") action Philbrook() {
         Padonia();
-        hdr.Salome.Trail = hdr.Salome.Trail + 8w255;
+        hdr.Salome.Trail = hdr.Salome.Trail - 8w1;
     }
     @name(".Lynch") action Lynch() {
         hdr.Pineville[0].setValid();

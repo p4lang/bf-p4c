@@ -806,11 +806,11 @@ control Clarendon(inout headers hdr, inout metadata meta, inout standard_metadat
     }
     @name(".Davie") action Davie() {
         Ossipee();
-        hdr.Sherack.WebbCity = hdr.Sherack.WebbCity + 8w255;
+        hdr.Sherack.WebbCity = hdr.Sherack.WebbCity - 8w1;
     }
     @name(".Merkel") action Merkel() {
         Ossipee();
-        hdr.Gastonia.Bicknell = hdr.Gastonia.Bicknell + 8w255;
+        hdr.Gastonia.Bicknell = hdr.Gastonia.Bicknell - 8w1;
     }
     @name(".Firebrick") action Firebrick(bit<24> Ironside, bit<24> BigRun) {
         meta.DuBois.Magma = Ironside;

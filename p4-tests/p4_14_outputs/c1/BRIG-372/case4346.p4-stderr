@@ -1,21 +1,3 @@
-case4346.p4(2290): warning: -1: negative value with unsigned type
-   add_to_field(Aynor.Worthing, -1);
-                                 ^
-case4346.p4(2294): warning: -1: negative value with unsigned type
-   add_to_field(PineLawn.McBrides, -1);
-                                    ^
-case4346.p4(2351): warning: -1: negative value with unsigned type
-   add_to_field( Hennessey.Worthing, -1 );
-                                      ^
-case4346.p4(2355): warning: -1: negative value with unsigned type
-   add_to_field( Antonito.McBrides, -1 );
-                                     ^
-case4346.p4(2469): warning: -1: negative value with unsigned type
-   add_to_field( Hennessey.Worthing, -1 );
-                                      ^
-case4346.p4(2473): warning: -1: negative value with unsigned type
-   add_to_field( Antonito.McBrides, -1 );
-                                     ^
 case4346.p4(2418): warning: -1: negative value with unsigned type
    ArchCape( -1 );
               ^

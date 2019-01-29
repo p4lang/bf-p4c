@@ -2346,12 +2346,12 @@ control Lovilia(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".Shuqualak") action Shuqualak() {
         Willard();
-        hdr.Amory.Teaneck = hdr.Amory.Teaneck + 8w255;
+        hdr.Amory.Teaneck = hdr.Amory.Teaneck - 8w1;
         hdr.Amory.Houston = meta.Missoula.Crossnore;
     }
     @name(".Smithland") action Smithland() {
         Willard();
-        hdr.Martelle.Glynn = hdr.Martelle.Glynn + 8w255;
+        hdr.Martelle.Glynn = hdr.Martelle.Glynn - 8w1;
         hdr.Martelle.Doyline = meta.Missoula.Crossnore;
     }
     @name(".WallLake") action WallLake() {

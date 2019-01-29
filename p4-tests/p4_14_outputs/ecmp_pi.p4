@@ -237,7 +237,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".set_nhop") action set_nhop(bit<32> nhop_ipv4, bit<9> port) {
         meta.routing_metadata.nhop_ipv4 = nhop_ipv4;
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
-        hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
+        hdr.ipv4.ttl = hdr.ipv4.ttl - 8w1;
     }
     @name(".set_dmac") action set_dmac(bit<48> dmac) {
         hdr.ethernet.dstAddr = dmac;

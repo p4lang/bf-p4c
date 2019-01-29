@@ -538,7 +538,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".l3_forward_v4") action l3_forward_v4(bit<48> dmac, bit<48> smac, bit<9> port) {
         meta.meta.ipv4_checksum_update = 1w1;
-        hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
+        hdr.ipv4.ttl = hdr.ipv4.ttl - 8w1;
         l3_forward(dmac, smac, port);
     }
     @name(".nat_v4") action nat_v4(bit<32> sip, bit<32> dip, bit<8> ttl, bit<9> port) {
@@ -565,7 +565,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".l3_forward_v6") action l3_forward_v6(bit<48> dmac, bit<48> smac, bit<9> port) {
         l3_forward(dmac, smac, port);
-        hdr.ipv6.hopLimit = hdr.ipv6.hopLimit + 8w255;
+        hdr.ipv6.hopLimit = hdr.ipv6.hopLimit - 8w1;
     }
     @name(".nat_v6") action nat_v6(bit<128> sip, bit<128> dip, bit<8> ttl, bit<9> port) {
         hdr.ipv6.srcAddr = sip;

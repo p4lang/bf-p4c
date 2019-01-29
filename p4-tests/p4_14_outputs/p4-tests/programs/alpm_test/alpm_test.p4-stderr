@@ -1,3 +1,0 @@
-alpm_test.p4(111): warning: -1: negative value with unsigned type
-    add_to_field(ttl, -1);
-                       ^

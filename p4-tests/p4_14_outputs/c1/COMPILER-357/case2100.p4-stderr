@@ -1,6 +1,0 @@
-case2100.p4(2220): warning: -1: negative value with unsigned type
-   add_to_field(Slick.PellLake, -1);
-                                 ^
-case2100.p4(2225): warning: -1: negative value with unsigned type
-   add_to_field(DuPont.Darco, -1);
-                               ^

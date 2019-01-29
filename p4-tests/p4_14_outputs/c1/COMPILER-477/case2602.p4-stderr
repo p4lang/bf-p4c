@@ -1,9 +1,3 @@
-case2602.p4(2343): warning: -1: negative value with unsigned type
-   add_to_field(Denmark.Tusayan, -1);
-                                  ^
-case2602.p4(2348): warning: -1: negative value with unsigned type
-   add_to_field(Valders.Rosboro, -1);
-                                  ^
 case2602.p4(2566): warning: Could not infer type for Melstrand, using bit<8>
 action Caulfield( Melstrand ) {
                   ^^^^^^^^^

@@ -539,11 +539,11 @@ control Bonilla(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".WallLake") action WallLake() {
         Mullins();
-        hdr.Aredale.Arthur = hdr.Aredale.Arthur + 8w255;
+        hdr.Aredale.Arthur = hdr.Aredale.Arthur - 8w1;
     }
     @name(".Faith") action Faith() {
         Mullins();
-        hdr.Ackerman.Paisano = hdr.Ackerman.Paisano + 8w255;
+        hdr.Ackerman.Paisano = hdr.Ackerman.Paisano - 8w1;
     }
     @name(".Telegraph") action Telegraph(bit<24> Blossom, bit<24> Annville) {
         meta.CedarKey.Leeville = Blossom;

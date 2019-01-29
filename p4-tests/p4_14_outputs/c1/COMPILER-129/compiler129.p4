@@ -2070,23 +2070,23 @@ control process_mac_rewrite(inout headers hdr, inout metadata meta, inout standa
     }
     @name(".ipv4_unicast_rewrite") action ipv4_unicast_rewrite() {
         hdr.ethernet.dstAddr = meta.egress_metadata.mac_da;
-        hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
+        hdr.ipv4.ttl = hdr.ipv4.ttl - 8w1;
     }
     @name(".ipv4_multicast_rewrite") action ipv4_multicast_rewrite() {
         hdr.ethernet.dstAddr = hdr.ethernet.dstAddr | 48w0x1005e000000;
-        hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
+        hdr.ipv4.ttl = hdr.ipv4.ttl - 8w1;
     }
     @name(".ipv6_unicast_rewrite") action ipv6_unicast_rewrite() {
         hdr.ethernet.dstAddr = meta.egress_metadata.mac_da;
-        hdr.ipv6.hopLimit = hdr.ipv6.hopLimit + 8w255;
+        hdr.ipv6.hopLimit = hdr.ipv6.hopLimit - 8w1;
     }
     @name(".ipv6_multicast_rewrite") action ipv6_multicast_rewrite() {
         hdr.ethernet.dstAddr = hdr.ethernet.dstAddr | 48w0x333300000000;
-        hdr.ipv6.hopLimit = hdr.ipv6.hopLimit + 8w255;
+        hdr.ipv6.hopLimit = hdr.ipv6.hopLimit - 8w1;
     }
     @name(".mpls_rewrite") action mpls_rewrite() {
         hdr.ethernet.dstAddr = meta.egress_metadata.mac_da;
-        hdr.mpls[0].ttl = hdr.mpls[0].ttl + 8w255;
+        hdr.mpls[0].ttl = hdr.mpls[0].ttl - 8w1;
     }
     @name(".rewrite_smac") action rewrite_smac(bit<48> smac) {
         hdr.ethernet.srcAddr = smac;
@@ -2880,7 +2880,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.l2_metadata.field_23 = 4w3;
         meta.l2_metadata.field_24 = meta.l2_metadata.field_24 + 4w4;
         meta.l2_metadata.field_25 = 4w5;
-        meta.l2_metadata.field_26 = meta.l2_metadata.field_26 + 4w15;
+        meta.l2_metadata.field_26 = meta.l2_metadata.field_26 - 4w1;
         meta.l2_metadata.field_27 = 4w2;
         meta.l2_metadata.field_28 = 4w3;
         meta.l2_metadata.field_29 = 4w4;
@@ -2913,7 +2913,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.l2_metadata.field_56 = meta.l2_metadata.field_56 + 4w1;
         meta.l2_metadata.field_57 = 4w2;
         meta.l2_metadata.field_58 = 4w3;
-        meta.l2_metadata.field_59 = meta.l2_metadata.field_59 + 4w12;
+        meta.l2_metadata.field_59 = meta.l2_metadata.field_59 - 4w4;
         meta.l2_metadata.field_60 = 4w5;
         meta.l2_metadata.lkp_pkt_type = 3w1;
         meta.l2_metadata.lkp_mac_sa = 48w1;

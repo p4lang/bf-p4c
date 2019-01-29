@@ -1403,7 +1403,7 @@ control process_rewrite(inout headers hdr, inout metadata meta, inout standard_m
         meta.egress_metadata.smac_idx = smac_idx;
         meta.egress_metadata.mac_da = dmac;
         meta.egress_metadata.routed = 1w1;
-        hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
+        hdr.ipv4.ttl = hdr.ipv4.ttl - 8w1;
         meta.egress_metadata.bd = meta.i_fabric_header.egress_bd;
     }
     @name(".rewrite") table rewrite {
@@ -1432,7 +1432,7 @@ control process_mac_rewrite(inout headers hdr, inout metadata meta, inout standa
     @name(".rewrite_multicast_mac") action rewrite_multicast_mac(bit<48> smac) {
         hdr.ethernet.srcAddr = smac;
         hdr.ethernet.dstAddr = 48w0x1005e000000;
-        hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
+        hdr.ipv4.ttl = hdr.ipv4.ttl - 8w1;
     }
     @name(".mac_rewrite") table mac_rewrite {
         actions = {

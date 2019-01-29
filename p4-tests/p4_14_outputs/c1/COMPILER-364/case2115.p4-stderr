@@ -1,6 +1,0 @@
-case2115.p4(2251): warning: -1: negative value with unsigned type
-   add_to_field(Tappan.Amherst, -1);
-                                 ^
-case2115.p4(2256): warning: -1: negative value with unsigned type
-   add_to_field(Bothwell.Ocilla, -1);
-                                  ^

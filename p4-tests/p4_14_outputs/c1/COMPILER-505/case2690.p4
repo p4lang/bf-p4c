@@ -2014,12 +2014,12 @@ control Sabula(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     @name(".Flourtown") action Flourtown() {
         Moweaqua();
-        hdr.Uniopolis.Lindsborg = hdr.Uniopolis.Lindsborg + 8w255;
+        hdr.Uniopolis.Lindsborg = hdr.Uniopolis.Lindsborg - 8w1;
         hdr.Uniopolis.Titonka = meta.Redmon.Telida;
     }
     @name(".Heeia") action Heeia() {
         Moweaqua();
-        hdr.Bairoil.Yaurel = hdr.Bairoil.Yaurel + 8w255;
+        hdr.Bairoil.Yaurel = hdr.Bairoil.Yaurel - 8w1;
         hdr.Bairoil.Maben = meta.Redmon.Telida;
     }
     @name(".Chubbuck") action Chubbuck() {

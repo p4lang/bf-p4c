@@ -210,7 +210,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.outer_ethernet.srcAddr = new_mac_sa;
         hdr.vlan_tag.vid = new_vlan_id;
         hdr.ig_intr_md_for_tm.ucast_egress_port = new_port;
-        meta.m.hopCount = meta.m.hopCount + 6w63;
+        meta.m.hopCount = meta.m.hopCount - 6w1;
     }
     @name(".fix_trill_header") table fix_trill_header {
         actions = {

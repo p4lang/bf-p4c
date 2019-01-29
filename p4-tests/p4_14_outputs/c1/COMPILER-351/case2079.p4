@@ -934,11 +934,11 @@ control Farragut(inout headers hdr, inout metadata meta, inout standard_metadata
     }
     @name(".Holliday") action Holliday() {
         Gladden();
-        hdr.Harviell.Malabar = hdr.Harviell.Malabar + 8w255;
+        hdr.Harviell.Malabar = hdr.Harviell.Malabar - 8w1;
     }
     @name(".Chatfield") action Chatfield() {
         Gladden();
-        hdr.Anaconda.Lambrook = hdr.Anaconda.Lambrook + 8w255;
+        hdr.Anaconda.Lambrook = hdr.Anaconda.Lambrook - 8w1;
     }
     @name(".Emmet") action Emmet() {
         hdr.Walcott[0].setValid();

@@ -1140,12 +1140,12 @@ control Garlin(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     @name(".Chaumont") action Chaumont() {
         Sutter();
-        hdr.Scherr.Elderon = hdr.Scherr.Elderon + 8w255;
+        hdr.Scherr.Elderon = hdr.Scherr.Elderon - 8w1;
         hdr.Scherr.Lansdale = meta.Burrel.Virgin;
     }
     @name(".Campo") action Campo() {
         Sutter();
-        hdr.McCracken.Lamine = hdr.McCracken.Lamine + 8w255;
+        hdr.McCracken.Lamine = hdr.McCracken.Lamine - 8w1;
         hdr.McCracken.Plano = meta.Burrel.Virgin;
     }
     @name(".Locke") action Locke() {

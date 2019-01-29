@@ -1,6 +1,0 @@
-case2622.p4(2405): warning: -1: negative value with unsigned type
-   add_to_field(Lakebay.Boysen, -1);
-                                 ^
-case2622.p4(2410): warning: -1: negative value with unsigned type
-   add_to_field(Salome.Trail, -1);
-                               ^

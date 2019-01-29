@@ -1468,11 +1468,11 @@ control LeCenter(inout headers hdr, inout metadata meta, inout standard_metadata
     }
     @name(".Rocklin") action Rocklin() {
         Lovewell();
-        hdr.Winnebago.Duquoin = hdr.Winnebago.Duquoin + 8w255;
+        hdr.Winnebago.Duquoin = hdr.Winnebago.Duquoin - 8w1;
     }
     @name(".Humeston") action Humeston() {
         Lovewell();
-        hdr.Woodburn.Century = hdr.Woodburn.Century + 8w255;
+        hdr.Woodburn.Century = hdr.Woodburn.Century - 8w1;
     }
     @name(".Bernice") action Bernice() {
         hdr.Allgood[0].setValid();

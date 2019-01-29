@@ -1,6 +1,0 @@
-case2079.p4(2304): warning: -1: negative value with unsigned type
-   add_to_field(Harviell.Malabar, -1);
-                                   ^
-case2079.p4(2309): warning: -1: negative value with unsigned type
-   add_to_field(Anaconda.Lambrook, -1);
-                                    ^

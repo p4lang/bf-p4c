@@ -197,7 +197,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.outer_ethernet.srcAddr = new_mac_sa;
         hdr.vlan_tag.vid = new_vlan_id;
         hdr.ig_intr_md_for_tm.ucast_egress_port = new_port;
-        hdr.mpls.ttl = hdr.mpls.ttl + 8w255;
+        hdr.mpls.ttl = hdr.mpls.ttl - 8w1;
     }
     @name(".mpls_forward") table mpls_forward {
         actions = {

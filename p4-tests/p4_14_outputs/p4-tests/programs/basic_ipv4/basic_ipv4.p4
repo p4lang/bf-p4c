@@ -324,7 +324,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.tcp.dstPort = dport;
     }
     @name(".hop") action hop(inout bit<8> ttl, bit<9> egress_port) {
-        ttl = ttl + 8w255;
+        ttl = ttl - 8w1;
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
     }
     @name(".hop_ipv4") action hop_ipv4(bit<9> egress_port) {

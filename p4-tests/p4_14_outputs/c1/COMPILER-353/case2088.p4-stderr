@@ -1,6 +1,0 @@
-case2088.p4(2336): warning: -1: negative value with unsigned type
-   add_to_field(Valmont.Fairlea, -1);
-                                  ^
-case2088.p4(2341): warning: -1: negative value with unsigned type
-   add_to_field(Shelbina.Alexis, -1);
-                                  ^

@@ -1,3 +1,0 @@
-20-SimpleTrillTwoStep.p4(85): warning: -1: negative value with unsigned type
-    add_to_field(m.hopCount, -1);
-                              ^

@@ -591,11 +591,11 @@ control Amasa(inout headers hdr, inout metadata meta, inout standard_metadata_t 
     }
     @name(".Hanapepe") action Hanapepe() {
         Ackley();
-        hdr.Bowdon.Pelican = hdr.Bowdon.Pelican + 8w255;
+        hdr.Bowdon.Pelican = hdr.Bowdon.Pelican - 8w1;
     }
     @name(".Nipton") action Nipton() {
         Ackley();
-        hdr.Strasburg.Othello = hdr.Strasburg.Othello + 8w255;
+        hdr.Strasburg.Othello = hdr.Strasburg.Othello - 8w1;
     }
     @name(".Wimberley") action Wimberley() {
         hdr.Casper[0].setValid();

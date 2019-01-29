@@ -1234,11 +1234,11 @@ control Ericsburg(inout headers hdr, inout metadata meta, inout standard_metadat
     }
     @name(".Odebolt") action Odebolt() {
         Holden();
-        hdr.Bowdon.Pelican = hdr.Bowdon.Pelican + 8w255;
+        hdr.Bowdon.Pelican = hdr.Bowdon.Pelican - 8w1;
     }
     @name(".Wimberley") action Wimberley() {
         Holden();
-        hdr.Strasburg.Othello = hdr.Strasburg.Othello + 8w255;
+        hdr.Strasburg.Othello = hdr.Strasburg.Othello - 8w1;
     }
     @name(".Krupp") action Krupp() {
         hdr.Casper[0].setValid();

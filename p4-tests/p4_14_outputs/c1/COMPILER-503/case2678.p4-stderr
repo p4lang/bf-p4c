@@ -1,9 +1,3 @@
 case2678.p4(2672): warning: Could not infer type for Rockland, using bit<8>
 action Rotonda( Rockland ) {
                 ^^^^^^^^
-case2678.p4(2418): warning: -1: negative value with unsigned type
-   add_to_field(Scherr.Elderon, -1);
-                                 ^
-case2678.p4(2424): warning: -1: negative value with unsigned type
-   add_to_field(McCracken.Lamine, -1);
-                                   ^

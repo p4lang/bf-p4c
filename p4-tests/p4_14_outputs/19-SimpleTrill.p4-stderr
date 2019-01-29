@@ -1,3 +1,0 @@
-19-SimpleTrill.p4(76): warning: -1: negative value with unsigned type
-    add_to_field(trill.hopCount, -1);
-                                  ^

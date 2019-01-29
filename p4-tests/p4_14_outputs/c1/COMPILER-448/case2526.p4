@@ -1911,11 +1911,11 @@ control Seaford(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".Phelps") action Phelps() {
         Wimberley();
-        hdr.Bowdon.Pelican = hdr.Bowdon.Pelican + 8w255;
+        hdr.Bowdon.Pelican = hdr.Bowdon.Pelican - 8w1;
     }
     @name(".Ackley") action Ackley() {
         Wimberley();
-        hdr.Strasburg.Othello = hdr.Strasburg.Othello + 8w255;
+        hdr.Strasburg.Othello = hdr.Strasburg.Othello - 8w1;
     }
     @name(".Holden") action Holden() {
         hdr.Casper[0].setValid();

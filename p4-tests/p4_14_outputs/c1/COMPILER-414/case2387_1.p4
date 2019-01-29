@@ -1091,11 +1091,11 @@ control Hooksett(inout headers hdr, inout metadata meta, inout standard_metadata
     }
     @name(".NorthRim") action NorthRim() {
         Hookstown();
-        hdr.Harlem.Perryton = hdr.Harlem.Perryton + 8w255;
+        hdr.Harlem.Perryton = hdr.Harlem.Perryton - 8w1;
     }
     @name(".MiraLoma") action MiraLoma() {
         Hookstown();
-        hdr.Lugert.Anguilla = hdr.Lugert.Anguilla + 8w255;
+        hdr.Lugert.Anguilla = hdr.Lugert.Anguilla - 8w1;
     }
     @name(".Willette") action Willette() {
         hdr.Maryhill[0].setValid();

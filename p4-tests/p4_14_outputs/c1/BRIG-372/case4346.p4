@@ -2540,11 +2540,11 @@ control Raritan(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".Yaurel") action Yaurel() {
         Gully();
-        hdr.Aynor.Worthing = hdr.Aynor.Worthing + 8w255;
+        hdr.Aynor.Worthing = hdr.Aynor.Worthing - 8w1;
     }
     @name(".Mendham") action Mendham() {
         Gully();
-        hdr.PineLawn.McBrides = hdr.PineLawn.McBrides + 8w255;
+        hdr.PineLawn.McBrides = hdr.PineLawn.McBrides - 8w1;
     }
     @name(".Belvidere") action Belvidere() {
     }
@@ -2600,11 +2600,11 @@ control Raritan(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".Moorpark") action Moorpark() {
         Moapa();
-        hdr.Hennessey.Worthing = hdr.Hennessey.Worthing + 8w255;
+        hdr.Hennessey.Worthing = hdr.Hennessey.Worthing - 8w1;
     }
     @name(".Colstrip") action Colstrip() {
         Moapa();
-        hdr.Antonito.McBrides = hdr.Antonito.McBrides + 8w255;
+        hdr.Antonito.McBrides = hdr.Antonito.McBrides - 8w1;
     }
     @name(".Milesburg") action Milesburg(bit<16> Pierson, bit<16> Lugert, bit<24> Montalba, bit<24> Kiana) {
         hdr.Kipahulu.NantyGlo = meta.Upalco.Bledsoe;
@@ -2648,11 +2648,11 @@ control Raritan(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".Wrens") action Wrens() {
         Nenana(meta.Upalco.Reynolds, meta.Upalco.Merit);
-        hdr.Hennessey.Worthing = hdr.Hennessey.Worthing + 8w255;
+        hdr.Hennessey.Worthing = hdr.Hennessey.Worthing - 8w1;
     }
     @name(".Ammon") action Ammon() {
         Nenana(meta.Upalco.Reynolds, meta.Upalco.Merit);
-        hdr.Antonito.McBrides = hdr.Antonito.McBrides + 8w255;
+        hdr.Antonito.McBrides = hdr.Antonito.McBrides - 8w1;
     }
     @name(".ArchCape") action ArchCape(bit<8> Sanford) {
         hdr.Hennessey.Esmond = hdr.Aynor.Esmond;

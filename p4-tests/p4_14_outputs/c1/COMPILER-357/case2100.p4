@@ -1549,11 +1549,11 @@ control SneeOosh(inout headers hdr, inout metadata meta, inout standard_metadata
     }
     @name(".Junior") action Junior() {
         Reading();
-        hdr.Slick.PellLake = hdr.Slick.PellLake + 8w255;
+        hdr.Slick.PellLake = hdr.Slick.PellLake - 8w1;
     }
     @name(".Quinwood") action Quinwood() {
         Reading();
-        hdr.DuPont.Darco = hdr.DuPont.Darco + 8w255;
+        hdr.DuPont.Darco = hdr.DuPont.Darco - 8w1;
     }
     @name(".Magnolia") table Magnolia {
         actions = {

@@ -1409,11 +1409,11 @@ control Neponset(inout headers hdr, inout metadata meta, inout standard_metadata
     }
     @name(".Maybell") action Maybell() {
         Elkton();
-        hdr.Thaxton.Flaherty = hdr.Thaxton.Flaherty + 8w255;
+        hdr.Thaxton.Flaherty = hdr.Thaxton.Flaherty - 8w1;
     }
     @name(".Varna") action Varna() {
         Elkton();
-        hdr.Gilliatt.Chardon = hdr.Gilliatt.Chardon + 8w255;
+        hdr.Gilliatt.Chardon = hdr.Gilliatt.Chardon - 8w1;
     }
     @name(".White") action White() {
         hdr.Dunnstown[0].setValid();

@@ -1,7 +1,1 @@
-test_config_101_switch_msdc.p4(2991): warning: -1: negative value with unsigned type
-    add_to_field(ipv4.ttl, -1);
-                            ^
-test_config_101_switch_msdc.p4(1763): warning: -1: negative value with unsigned type
-    add_to_field(ipv4.ttl, -1);
-                            ^
 warning: The order of headers in deparser is not uniquely determined by parser!

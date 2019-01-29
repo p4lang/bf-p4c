@@ -958,11 +958,11 @@ control Farson(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     @name(".Speed") action Speed() {
         Blencoe();
-        hdr.Denmark.Tusayan = hdr.Denmark.Tusayan + 8w255;
+        hdr.Denmark.Tusayan = hdr.Denmark.Tusayan - 8w1;
     }
     @name(".Segundo") action Segundo() {
         Blencoe();
-        hdr.Valders.Rosboro = hdr.Valders.Rosboro + 8w255;
+        hdr.Valders.Rosboro = hdr.Valders.Rosboro - 8w1;
     }
     @name(".Peletier") action Peletier() {
         hdr.Trimble[0].setValid();

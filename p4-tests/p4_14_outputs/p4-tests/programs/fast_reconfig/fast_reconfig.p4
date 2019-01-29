@@ -237,7 +237,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ig_intr_md_for_tm.level1_exclusion_id = xid;
         hdr.ig_intr_md_for_tm.mcast_grp_a = mgid1;
         hdr.ig_intr_md_for_tm.mcast_grp_b = mgid2;
-        hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
+        hdr.ipv4.ttl = hdr.ipv4.ttl - 8w1;
     }
     @name(".set_ifid") action set_ifid(bit<32> ifid) {
         meta.ing_md.ifid = ifid;

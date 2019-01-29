@@ -1,6 +1,3 @@
-default_entry.p4(232): warning: -1: negative value with unsigned type
-    add_to_field(ttl, -1);
-                       ^
 default_entry.p4(231): warning: egress_port shadows .egress_port
 action hop(ttl, egress_port) {
                 ^^^^^^^^^^^

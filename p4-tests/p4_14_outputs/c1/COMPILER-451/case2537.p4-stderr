@@ -1,9 +1,3 @@
-case2537.p4(2246): warning: -1: negative value with unsigned type
-   add_to_field(Bowdon.Pelican, -1);
-                                 ^
-case2537.p4(2251): warning: -1: negative value with unsigned type
-   add_to_field(Strasburg.Othello, -1);
-                                    ^
 case2537.p4(2455): warning: Could not infer type for Hettinger, using bit<8>
 action Alamosa( Hettinger ) {
                 ^^^^^^^^^

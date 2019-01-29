@@ -1,6 +1,0 @@
-case2387_1.p4(2293): warning: -1: negative value with unsigned type
-   add_to_field(Harlem.Perryton, -1);
-                                  ^
-case2387_1.p4(2298): warning: -1: negative value with unsigned type
-   add_to_field(Lugert.Anguilla, -1);
-                                  ^

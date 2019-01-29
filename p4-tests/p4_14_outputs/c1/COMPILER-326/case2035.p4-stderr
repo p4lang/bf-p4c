@@ -1,6 +1,0 @@
-case2035.p4(2260): warning: -1: negative value with unsigned type
-   add_to_field(Sherack.WebbCity, -1);
-                                   ^
-case2035.p4(2265): warning: -1: negative value with unsigned type
-   add_to_field(Gastonia.Bicknell, -1);
-                                    ^

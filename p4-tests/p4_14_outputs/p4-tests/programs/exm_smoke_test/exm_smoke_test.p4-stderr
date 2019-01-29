@@ -1,6 +1,3 @@
-exm_smoke_test.p4(200): warning: -1: negative value with unsigned type
-    add_to_field(ttl, -1);
-                       ^
 exm_smoke_test.p4(199): warning: egress_port shadows .egress_port
 action hop(ttl, egress_port) {
                 ^^^^^^^^^^^
