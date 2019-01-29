@@ -21,8 +21,11 @@ p4c_find_tests("${P16_V1MODEL_FOR_TOFINO}" p16_v1tests INCLUDE "${P16_V1_INCLUDE
 
 set (P16_TNA_INCLUDE_PATTERNS "include.*(tofino|tna).p4" "main|common_tna_test")
 set (P16_TNA_EXCLUDE_PATTERNS "tofino\\.h")
+# digest_tna.p4 is used for another test (digest-std-p4runtime) with different args
+set (P16_TNA_EXCLUDE_FILES "digest_tna\\.p4")
 set (P16_TNA_FOR_TOFINO "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/*.p4")
-p4c_find_tests("${P16_TNA_FOR_TOFINO}" p16_tna_tests INCLUDE "${P16_TNA_INCLUDE_PATTERNS}" EXCLUDE "${P16_TNA_EXCLUDE_PATTERNS}")
+p4c_find_tests("${P16_TNA_FOR_TOFINO}" P4_16_TNA_TESTS INCLUDE "${P16_TNA_INCLUDE_PATTERNS}" EXCLUDE "${P16_TNA_EXCLUDE_PATTERNS}")
+bfn_find_tests("${P4_16_TNA_TESTS}" p16_tna_tests EXCLUDE "${P16_TNA_EXCLUDE_FILES}")
 
 set (PSA_SEARCH_PATTERNS "include.*psa.p4")
 set (PSA_EXCLUDE_PATTERNS "package" "extern")
@@ -134,6 +137,12 @@ p4c_add_bf_backend_tests("tofino" "tofino" "psa" "base" "${TOFINO_PSA_TEST_SUITE
 p4c_add_ptf_test_with_ptfdir (
     "tofino" tor.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/google-tor/p4/spec/tor.p4
     "${testExtraArgs}" ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/tor.ptf)
+
+# this tests conversion from Tofino-specific P4Info to "standard" P4Info
+p4c_add_ptf_test_with_ptfdir (
+    "tofino" digest-std-p4runtime ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/digest_tna.p4
+    "${testExtraArgs} --p4runtime-force-std-externs -arch tna"
+    ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/digest.ptf)
 
 set (ONOS_FABRIC_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos/pipelines/fabric/src/main/resources/fabric.p4)
 # run all combinations of fabric.p4 by enabling / disabling SPGW and INT
