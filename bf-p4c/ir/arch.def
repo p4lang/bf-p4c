@@ -20,6 +20,9 @@ class TranslatedP4Control : P4Control {
 
     /// The thread this control is associated with.
     gress_t thread;
+
+    /// The pipe name this control belongs to
+    optional NullOK cstring pipeName;
 }
 
 /// A P4Deparser produced by TNA translation; contains some additional useful
@@ -36,6 +39,9 @@ class TranslatedP4Deparser : P4Control {
 
     /// The thread this control is associated with.
     gress_t thread;
+
+    /// The pipe name this control belongs to
+    optional NullOK cstring pipeName;
 #nodbprint
 }
 
@@ -54,6 +60,9 @@ class TranslatedP4Parser : P4Parser {
 
     /// Phase0 Info
     optional NullOK Phase0 phase0;
+
+    /// The pipe name this control belongs to
+    optional NullOK cstring pipeName;
 }
 
 /// A thread of P4 execution expressed in frontend IR;

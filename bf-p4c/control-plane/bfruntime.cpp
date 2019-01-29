@@ -789,11 +789,8 @@ struct BfRtSchemaGenerator::Register {
 };
 
 struct BfRtSchemaGenerator::PortMetadata {
-    static const std::string name() { return "$PORT_METADATA"; }
-    static constexpr P4Id id() {
-        return makeBfRtId(0, ::barefoot::P4Ids::PORT_METADATA);
-    }
-
+    P4Id id;
+    cstring name;
     cstring key_name;
     p4configv1::P4DataTypeSpec typeSpec;
 
@@ -805,7 +802,8 @@ struct BfRtSchemaGenerator::PortMetadata {
             ::error("Extern instance %1% does not pack a PortMetadata object", pre.name());
             return boost::none;
         }
-        return PortMetadata{ portMetadata.key_name(), portMetadata.type_spec() };
+        return PortMetadata{ pre.id(), pre.name(),
+            portMetadata.key_name(), portMetadata.type_spec() };
     }
 };
 
@@ -1400,8 +1398,8 @@ void
 BfRtSchemaGenerator::addPortMetadata(Util::JsonArray* tablesJson,
                                      const PortMetadata& portMetadata) const {
     auto* tableJson = new Util::JsonObject();
-    tableJson->emplace("name", PortMetadata::name());
-    tableJson->emplace("id", PortMetadata::id());
+    tableJson->emplace("name", portMetadata.name);
+    tableJson->emplace("id", portMetadata.id);
     tableJson->emplace("table_type", "PortMetadata");
     tableJson->emplace("size", Device::numMaxChannels());
 
@@ -1416,7 +1414,7 @@ BfRtSchemaGenerator::addPortMetadata(Util::JsonArray* tablesJson,
         auto* fieldsJson = new Util::JsonArray();
         transformTypeSpecToDataFields(
             fieldsJson, portMetadata.typeSpec, "PortMetadata",
-            PortMetadata::name());
+            portMetadata.name);
         for (auto* f : *fieldsJson) {
             addSingleton(dataJson, f->to<Util::JsonObject>(),
                          true /* mandatory */, false /* read-only */);
@@ -2144,10 +2142,12 @@ BfRtSchemaGenerator::addPortMetadataExtern(Util::JsonArray* tablesJson) const {
     for (const auto& externType : p4info.externs()) {
         auto externTypeId = static_cast<::barefoot::P4Ids::Prefix>(externType.extern_type_id());
         if (externTypeId == ::barefoot::P4Ids::PORT_METADATA) {
+            // For multipipe and multiple ingress per pipe scenarios we can have
+            // multiple port metadata extern instances in the program, here we
+            // add all instances collected in the program
             for (const auto& externInstance : externType.instances()) {
                 auto portMetadata = PortMetadata::fromTofino(externInstance);
                 if (portMetadata != boost::none) addPortMetadata(tablesJson, *portMetadata);
-                return;
             }
         }
     }

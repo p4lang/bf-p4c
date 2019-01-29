@@ -102,38 +102,40 @@ set (SWITCH_P4_16_PTF ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/switch_16/ptf/api)
 file (RELATIVE_PATH switch_p4_16 ${P4C_SOURCE_DIR} ${SWITCH_P4_16})
 p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
   "smoketest_switch_16_compile" ${switch_p4_16} "$testExtraArgs}" "-arch tna -bfrt -force-link")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_Tests" ${SWITCH_P4_16}
-  "${testExtraArgs} -arch tna -bfrt -to 3600" ${SWITCH_P4_16_PTF})
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_Tests"
-        "all
-        ^switch_tests.L2FloodTest
-        ^switch_tests.IPv4MalformedPacketsTest
-        ^switch_tests.L3MulticastTest
-        ^switch_tests.L2StpTest
-        ^switch_tests.L2LagPVCheckTest
-        ^switch_tests.L2VlanTest
-        ^switch_tests.QoSTest
-        ^switch_hostif.HostIfPingTest
-        ^switch_hostif.HostIfRxTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_HostIfPingTest" ${SWITCH_P4_16}
-  "${testExtraArgs} -bfrt -to 3600" ${SWITCH_P4_16_PTF})
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_HostIfPingTest"
-        "switch_hostif.HostIfPingTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_HostIfRxTest" ${SWITCH_P4_16}
-  "${testExtraArgs} -bfrt -to 3600" ${SWITCH_P4_16_PTF})
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_HostIfRxTest"
-        "switch_hostif.HostIfRxTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_IdentityHash" ${SWITCH_P4_16}
-  "${testExtraArgs} -bfrt -to 3600" ${SWITCH_P4_16_PTF})
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_IdentityHash"
-        "switch_tests.L2FloodTest
-         switch_tests.IPv4MalformedPacketsTest
-         switch_tests.L3MulticastTest
-         switch_tests.L2StpTest
-         switch_tests.L2LagPVCheckTest
-         switch_tests.L2VlanTest
-         switch_tests.QoSTest"
-  )
+
+
+ p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_Tests" ${SWITCH_P4_16}
+   "${testExtraArgs} -arch tna -bfrt -to 3600" ${SWITCH_P4_16_PTF})
+ bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_Tests"
+         "all
+         ^switch_tests.L2FloodTest
+         ^switch_tests.IPv4MalformedPacketsTest
+         ^switch_tests.L3MulticastTest
+         ^switch_tests.L2StpTest
+         ^switch_tests.L2LagPVCheckTest
+         ^switch_tests.L2VlanTest
+         ^switch_tests.QoSTest
+         ^switch_hostif.HostIfPingTest
+         ^switch_hostif.HostIfRxTest")
+ p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_HostIfPingTest" ${SWITCH_P4_16}
+   "${testExtraArgs} -bfrt -to 3600" ${SWITCH_P4_16_PTF})
+ bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_HostIfPingTest"
+         "switch_hostif.HostIfPingTest")
+ p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_HostIfRxTest" ${SWITCH_P4_16}
+   "${testExtraArgs} -bfrt -to 3600" ${SWITCH_P4_16_PTF})
+ bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_HostIfRxTest"
+         "switch_hostif.HostIfRxTest")
+ p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_IdentityHash" ${SWITCH_P4_16}
+   "${testExtraArgs} -bfrt -to 3600" ${SWITCH_P4_16_PTF})
+ bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_IdentityHash"
+         "switch_tests.L2FloodTest
+          switch_tests.IPv4MalformedPacketsTest
+          switch_tests.L3MulticastTest
+          switch_tests.L2StpTest
+          switch_tests.L2LagPVCheckTest
+          switch_tests.L2VlanTest
+          switch_tests.QoSTest"
+   )
 # All switch_16 tests should depend on the test being compiled, rather than
 # relying on the first one to compile the test.
 set_tests_properties(

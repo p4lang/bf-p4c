@@ -387,9 +387,6 @@ struct Wred {
 struct PortMetadata {
   const p4configv1::P4DataTypeSpec* typeSpec;  // format of port metadata
   static const cstring name() { return "$PORT_METADATA"; }
-  static p4rt_id_t id() {
-      return static_cast<p4rt_id_t>(SymbolType::PORT_METADATA()) << 24;
-  }
 };
 
 /// The information required for each field in order to generate the Snapshot
@@ -516,10 +513,50 @@ class SnapshotFieldFinder : public Inspector {
 /// serialize Tofino-specific symbols which are exposed to the control-plane.
 class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeArchHandlerIface {
  public:
+    std::unordered_map<const IR::Block *, cstring> blockPipeNameMap;
+
+    template <typename Func>
+    void forAllPipeBlocks(const IR::ToplevelBlock* evaluatedProgram, Func function) {
+        static std::vector<cstring> pipeNames = {"pipe0", "pipe1", "pipe2", "pipe3"};
+        auto main = evaluatedProgram->getMain();
+        for (auto pipeName : pipeNames) {
+            auto pipe = main->findParameterValue(pipeName);
+            // all pipes but "pipe0" are optional
+            if (!pipe) continue;
+            BUG_CHECK(pipe->is<IR::PackageBlock>(), "Expected package");
+            function(pipeName, pipe->to<IR::PackageBlock>());
+        }
+    }
+
     P4RuntimeArchHandlerTofino(ReferenceMap* refMap,
                                TypeMap* typeMap,
                                const IR::ToplevelBlock* evaluatedProgram)
-        : refMap(refMap), typeMap(typeMap), evaluatedProgram(evaluatedProgram) { }
+        : refMap(refMap), typeMap(typeMap), evaluatedProgram(evaluatedProgram) {
+        // Create a map of all blocks to their pipe names. This map will
+        // be used during collect and post processing to prefix
+        // table/extern instances wherever applicable with a fully qualified
+        // name. This distinction is necessary when the driver looks up
+        // context.json across multiple pipes for the table name
+        // TODO: Currently only creates map for parser blocks, must be extended
+        // for other blocks
+        forAllPipeBlocks(evaluatedProgram, [&](cstring , const IR::PackageBlock* pkg) {
+            auto gress = pkg->findParameterValue("ingress_parser");
+            auto parser = gress->to<IR::ParserBlock>();
+            BUG_CHECK(parser, "Expected parser block");
+            auto p4BlockName = pkg->node->to<IR::Declaration_Instance>()->Name();
+            blockPipeNameMap[parser] = p4BlockName;
+        });
+    }
+
+    cstring getFullyQualifiedPortMetadataName(const IR::ParserBlock *parserBlock) {
+        auto name = parserBlock->getName() + "." + PortMetadata::name();
+        // Generate fully qualified names only for multipipe scenarios
+        if (blockPipeNameMap.size() > 1) {
+            name = blockPipeNameMap[parserBlock]
+                   + "." + name;
+        }
+        return name;
+    }
 
     void collectTableProperties(P4RuntimeSymbolTableIface* symbols,
                                 const IR::TableBlock* tableBlock) override {
@@ -593,17 +630,22 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         }
     }
 
-    void collectExternFunction(P4RuntimeSymbolTableIface* symbols,
-                               const P4::ExternFunction* externFunction) override {
+    void collectExternFunction(P4RuntimeSymbolTableIface*,
+                               const P4::ExternFunction*) override {}
+
+    void collectPortMetadataExternFunction(P4RuntimeSymbolTableIface* symbols,
+                               const P4::ExternFunction* externFunction,
+                               const IR::ParserBlock* parserBlock) {
         auto portMetadata = getPortMetadataExtract(externFunction, refMap, nullptr);
         if (portMetadata) {
-            if (hasUserPortMetadata) {
+            if (hasUserPortMetadata.count(parserBlock)) {
                 ::error("Cannot have multiple extern calls for %1%",
                         BFN::ExternPortMetadataUnpackString);
                 return;
             }
-            hasUserPortMetadata = true;
-            symbols->add(SymbolType::PORT_METADATA(), PortMetadata::name(), PortMetadata::id());
+            hasUserPortMetadata.insert(parserBlock);
+            auto portMetadataFullName = getFullyQualifiedPortMetadataName(parserBlock);
+            symbols->add(SymbolType::PORT_METADATA(), portMetadataFullName);
         }
     }
 
@@ -619,7 +661,8 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
                           [&](const IR::MethodCallExpression* call) {
                 auto instance = P4::MethodInstance::resolve(call, refMap, typeMap);
                 if (instance->is<P4::ExternFunction>())
-                    collectExternFunction(symbols, instance->to<P4::ExternFunction>());
+                    collectPortMetadataExternFunction(symbols,
+                            instance->to<P4::ExternFunction>(), parserBlock);
             });
         }
 
@@ -663,19 +706,14 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
     void getSnapshotControls() {
         static std::vector<cstring> pipeNames = {"pipe0", "pipe1", "pipe2", "pipe3"};
         static std::vector<cstring> gressNames = {"ingress", "egress"};
-        auto main = evaluatedProgram->getMain();
-        for (auto pipeName : pipeNames) {
-            auto pipe = main->findParameterValue(pipeName);
-            // all pipes but "pipe0" are optional
-            if (!pipe) continue;
-            BUG_CHECK(pipe->is<IR::PackageBlock>(), "Expected package");
+        forAllPipeBlocks(evaluatedProgram, [&](cstring pipeName, const IR::PackageBlock* pkg) {
             for (auto gressName : gressNames) {
-                auto gress = pipe->to<IR::PackageBlock>()->findParameterValue(gressName);
+                auto gress = pkg->findParameterValue(gressName);
                 BUG_CHECK(gress->is<IR::ControlBlock>(), "Expected control");
                 auto control = gress->to<IR::ControlBlock>();
                 snapshotInfo.emplace(control, SnapshotInfo{pipeName, gressName, 0u, "", {}});
             }
-        }
+        });
     }
 
     /// This method is called for each control block. If a control is relevant
@@ -727,8 +765,15 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             collectSnapshot(symbols, block->to<IR::ControlBlock>(), &snapshotFieldIds);
         });
 
-        if (!hasUserPortMetadata)
-            symbols->add(SymbolType::PORT_METADATA(), PortMetadata::name(), PortMetadata::id());
+        // Check if each parser block in program has a port metadata extern
+        // defined, if not we add a default instances to symbol table
+        for (auto entry : blockPipeNameMap) {
+            auto parserBlock = entry.first->to<IR::ParserBlock>();
+            if (hasUserPortMetadata.count(parserBlock) == 0) {  // no extern, add default
+                auto portMetadataFullName = getFullyQualifiedPortMetadataName(parserBlock);
+                symbols->add(SymbolType::PORT_METADATA(), portMetadataFullName);
+            }
+        }
     }
 
     void postCollect(const P4RuntimeSymbolTableIface& symbols) override {
@@ -956,13 +1001,21 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         }
     }
 
-    void addExternFunction(const P4RuntimeSymbolTableIface& symbols,
+    void addExternFunction(const P4RuntimeSymbolTableIface&,
+                           p4configv1::P4Info*, const P4::ExternFunction*) override {}
+
+    void addPortMetadataExternFunction(const P4RuntimeSymbolTableIface& symbols,
                            p4configv1::P4Info* p4info,
-                           const P4::ExternFunction* externFunction) override {
+                           const P4::ExternFunction* externFunction,
+                           const IR::ParserBlock* parserBlock) {
         auto p4RtTypeInfo = p4info->mutable_type_info();
         auto portMetadata = getPortMetadataExtract(externFunction, refMap, p4RtTypeInfo);
-        if (portMetadata)
-            addPortMetadata(symbols, p4info, *portMetadata);
+        if (portMetadata) {
+            if (blockPipeNameMap.count(parserBlock)) {
+                auto portMetadataFullName = getFullyQualifiedPortMetadataName(parserBlock);
+                addPortMetadata(symbols, p4info, *portMetadata, portMetadataFullName);
+            }
+        }
     }
 
     void addValueSet(const P4RuntimeSymbolTableIface& symbols,
@@ -997,7 +1050,8 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
                           [&](const IR::MethodCallExpression* call) {
                 auto instance = P4::MethodInstance::resolve(call, refMap, typeMap);
                 if (instance->is<P4::ExternFunction>())
-                    addExternFunction(symbols, p4info, instance->to<P4::ExternFunction>());
+                    addPortMetadataExternFunction(symbols, p4info,
+                            instance->to<P4::ExternFunction>(), parserBlock);
             });
         }
     }
@@ -1013,7 +1067,16 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             analyzeParser(symbols, p4info, block->to<IR::ParserBlock>());
         });
 
-        if (!hasUserPortMetadata) addPortMetadataDefault(symbols, p4info);
+        // Check if each parser block in program has a port metadata extern
+        // defined, if not we add a default instances
+        for (auto entry : blockPipeNameMap) {
+            if (hasUserPortMetadata.count(entry.first) == 0) {
+                auto parserBlock = entry.first->to<IR::ParserBlock>();
+                auto portMetadataFullName =
+                    getFullyQualifiedPortMetadataName(parserBlock);
+                addPortMetadataDefault(symbols, p4info, portMetadataFullName);
+            }
+        }
 
         for (const auto& snapshot : snapshotInfo)
             addSnapshot(symbols, p4info, snapshot.second);
@@ -1206,22 +1269,23 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
 
     void addPortMetadata(const P4RuntimeSymbolTableIface& symbols,
                          p4configv1::P4Info* p4Info,
-                         const PortMetadata& portMetadataExtract) {
+                         const PortMetadata& portMetadataExtract,
+                         const cstring &name) {
         ::barefoot::PortMetadata portMetadata;
         portMetadata.mutable_type_spec()->CopyFrom(*portMetadataExtract.typeSpec);
         portMetadata.set_key_name(ingressIntrinsicMdParamName);
         addP4InfoExternInstance(
             symbols, SymbolType::PORT_METADATA(), "PortMetadata",
-            PortMetadata::name(), nullptr, portMetadata, p4Info);
+            name, nullptr, portMetadata, p4Info);
     }
 
     void addPortMetadataDefault(const P4RuntimeSymbolTableIface& symbols,
-                                p4configv1::P4Info* p4Info) {
+                                p4configv1::P4Info* p4Info, const cstring &name) {
         ::barefoot::PortMetadata portMetadata;
         portMetadata.set_key_name(ingressIntrinsicMdParamName);
         addP4InfoExternInstance(
             symbols, SymbolType::PORT_METADATA(), "PortMetadata",
-            PortMetadata::name(), nullptr, portMetadata, p4Info);
+            name, nullptr, portMetadata, p4Info);
     }
 
     void addSnapshot(const P4RuntimeSymbolTableIface& symbols,
@@ -1488,9 +1552,8 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
     /// The set of color-aware meters in the program.
     std::unordered_set<cstring> colorAwareMeters;
 
-    /// True if the TNA P4 program explicitly extracts phase0 metadata to a
-    /// programmer-defined struct.
-    bool hasUserPortMetadata{false};
+    /// A set of all all (parser) blocks containing port metadata
+    std::unordered_set<const IR::Block *> hasUserPortMetadata;
 
     /// This is the user defined value for ingress_intrinsic_metadata_t as
     /// specified in the P4 program

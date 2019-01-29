@@ -93,10 +93,13 @@ enum ArchBlockType {
 
 struct BlockInfo {
     int index;
+    // XXX(amresh); In addition to the index, we need the pipe name to generate
+    // a fully qualified name in case of multipipe scenarios.
+    cstring pipe;
     gress_t gress;
     ArchBlockType type;
-    BlockInfo(int index, gress_t gress, ArchBlockType type)
-        : index(index), gress(gress), type(type) {}
+    BlockInfo(int index, cstring pipe, gress_t gress, ArchBlockType type)
+        : index(index), pipe(pipe), gress(gress), type(type) {}
 
     bool operator<(const BlockInfo& other) const {
         return std::tie(index, gress, type)
@@ -110,6 +113,7 @@ struct BlockInfo {
 
     void dbprint(std::ostream& out) {
         out << "index " << index << " ";
+        out << "pipe" << pipe << " ";
         out << "gress " << gress << " ";
         out << "type " << type << std::endl;
     }
@@ -126,18 +130,19 @@ class ParseTna : public Inspector {
 
     void parsePipeline(const IR::PackageBlock* block, unsigned index) {
         auto thread_i = new IR::BFN::P4Thread();
+        auto pipe = block->node->to<IR::Declaration_Instance>()->Name();
         auto ingress_parser = block->getParameterValue("ingress_parser");
-        BlockInfo ip(index, INGRESS, PARSER);
+        BlockInfo ip(index, pipe, INGRESS, PARSER);
         thread_i->parser = ingress_parser->to<IR::ParserBlock>()->container;
         toBlockInfo.emplace(ingress_parser->to<IR::ParserBlock>()->container, ip);
 
         auto ingress = block->getParameterValue("ingress");
-        BlockInfo ig(index, INGRESS, MAU);
+        BlockInfo ig(index, pipe, INGRESS, MAU);
         thread_i->mau = ingress->to<IR::ControlBlock>()->container;
         toBlockInfo.emplace(ingress->to<IR::ControlBlock>()->container, ig);
 
         auto ingress_deparser = block->getParameterValue("ingress_deparser");
-        BlockInfo id(index, INGRESS, DEPARSER);
+        BlockInfo id(index, pipe, INGRESS, DEPARSER);
         thread_i->deparser = ingress_deparser->to<IR::ControlBlock>()->container;
         toBlockInfo.emplace(ingress_deparser->to<IR::ControlBlock>()->container, id);
 
@@ -145,18 +150,18 @@ class ParseTna : public Inspector {
 
         auto thread_e = new IR::BFN::P4Thread();
         auto egress_parser = block->getParameterValue("egress_parser");
-        BlockInfo ep(index, EGRESS, PARSER);
+        BlockInfo ep(index, pipe, EGRESS, PARSER);
         thread_e->parser = egress_parser->to<IR::ParserBlock>()->container;
         toBlockInfo.emplace(egress_parser->to<IR::ParserBlock>()->container, ep);
 
         auto egress = block->getParameterValue("egress");
         thread_e->mau = egress->to<IR::ControlBlock>()->container;
-        BlockInfo eg(index, EGRESS, MAU);
+        BlockInfo eg(index, pipe, EGRESS, MAU);
         toBlockInfo.emplace(egress->to<IR::ControlBlock>()->container, eg);
 
         auto egress_deparser = block->getParameterValue("egress_deparser");
         thread_e->deparser = egress_deparser->to<IR::ControlBlock>()->container;
-        BlockInfo ed(index, EGRESS, DEPARSER);
+        BlockInfo ed(index, pipe, EGRESS, DEPARSER);
         toBlockInfo.emplace(egress_deparser->to<IR::ControlBlock>()->container, ed);
 
         threads->emplace(std::make_pair(index, EGRESS), thread_e);
@@ -166,7 +171,7 @@ class ParseTna : public Inspector {
             auto thread_g = new IR::BFN::P4Thread();
             thread_g->mau = ghost_cb;
             threads->emplace(std::make_pair(index, GHOST), thread_g);
-            toBlockInfo.emplace(ghost_cb, BlockInfo(index, GHOST, MAU));
+            toBlockInfo.emplace(ghost_cb, BlockInfo(index, pipe, GHOST, MAU));
         }
     }
 

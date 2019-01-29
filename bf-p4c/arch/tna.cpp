@@ -94,7 +94,8 @@ struct RestoreParams: public Transform {
         return new IR::BFN::TranslatedP4Control(control->srcInfo, control->name,
                                                 control->type,
                                                 control->constructorParams, control->controlLocals,
-                                                control->body, tnaParams, control->thread);
+                                                control->body, tnaParams,
+                                                control->thread, control->pipeName);
     }
 
     IR::BFN::TranslatedP4Parser* preorder(IR::BFN::TranslatedP4Parser* parser) {
@@ -145,7 +146,7 @@ struct RestoreParams: public Transform {
                                                 parser_type,
                                                 parser->constructorParams, parser->parserLocals,
                                                 parser->states, tnaParams, parser->thread,
-                                                parser->phase0);
+                                                parser->phase0, parser->pipeName);
     }
 
     BFN_Options &options;
@@ -163,11 +164,12 @@ struct RewriteControlAndParserBlocks : Transform {
             return node;
         }
         auto binfo = bmap->at(orig);
+        auto pipeName = (bmap->size() == 6) ? "" : binfo.pipe;
         auto rv = new IR::BFN::TranslatedP4Parser(
             node->srcInfo, node->name,
             node->type, node->constructorParams,
             node->parserLocals, node->states,
-            {}, binfo.gress);
+            {}, binfo.gress, pipeName);
         return rv;
     }
 
@@ -178,17 +180,18 @@ struct RewriteControlAndParserBlocks : Transform {
             return node;
         }
         auto binfo = bmap->at(orig);
+        auto pipeName = (bmap->size() == 6) ? "" : binfo.pipe;
         if (binfo.type == ArchBlockType::MAU) {
             auto rv = new IR::BFN::TranslatedP4Control(
                 node->srcInfo, node->name, node->type,
                 node->constructorParams, node->controlLocals,
-                node->body, {}, binfo.gress);
+                node->body, {}, binfo.gress, binfo.pipe);
             return rv;
         } else if (binfo.type == ArchBlockType::DEPARSER) {
             auto rv = new IR::BFN::TranslatedP4Deparser(
                 node->srcInfo, node->name, node->type,
                 node->constructorParams, node->controlLocals,
-                node->body, {}, binfo.gress);
+                node->body, {}, binfo.gress, pipeName);
             return rv;
         }
         return node;
@@ -344,7 +347,9 @@ class UpdatePhase0NodeInParser: public Transform {
         if (parser->thread == EGRESS) return parser;
         auto *origParser = getOriginal<IR::BFN::TranslatedP4Parser>();
         auto size = Device::numMaxChannels();
-        auto tableName = "$PORT_METADATA";
+        auto tableName = parser->name + ".$PORT_METADATA";
+        if (!parser->pipeName.isNullOrEmpty())
+            tableName = parser->pipeName + "." + tableName;
         auto actionName = "set_port_metadata";
         auto keyName = "phase0_data";
         cstring hdrName = "__phase0_header" + std::to_string(phase0_count);
