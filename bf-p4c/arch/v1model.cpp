@@ -2536,7 +2536,7 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
     auto parserChecksums = new V1::TranslateParserChecksums(structure, refMap, typeMap);
     addPasses({
         new P4::ValidateTableProperties({"implementation", "size", "counters", "meters",
-                                         "idle_timeout"}),
+                                         "support_timeout"}),
         new P4::LocalCopyPropagation(refMap, typeMap, V1::skipCond),
         new P4::TypeChecking(refMap, typeMap, true),
         new RemoveExternMethodCallsExcludedByAnnotation,
