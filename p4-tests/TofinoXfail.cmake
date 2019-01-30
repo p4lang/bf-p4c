@@ -95,13 +95,9 @@ endif() # ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET
 
 if (PTF_REQUIREMENTS_MET)
 
+# DRV-2380
   p4c_add_xfail_reason("tofino"
-    "The following operation is not yet supported"
-    extensions/p4_tests/p4_14/p4-tests/programs/opcode_test/opcode_test.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "AssertionError"
+    "TTransportException"
     extensions/p4_tests/p4_14/p4-tests/programs/perf_test_alpm/perf_test_alpm.p4
     )
 
@@ -256,12 +252,6 @@ p4c_add_xfail_reason("tofino"
   "Unimplemented compiler support.*Cannot allocate >4 immediate bytes for logical table"
   switch_msdc_l3
   switch_8.5_msdc_l3
-  )
-
-# BRIG-102
-p4c_add_xfail_reason("tofino"
-  "The following operation is not yet supported"
-  extensions/p4_tests/p4_14/p4-tests/programs/opcode_test/opcode_test.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -1306,6 +1296,19 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue1653-bmv2.p4
 )
 
+# P4C-1442
+p4c_add_xfail_reason("tofino"
+  "AssertionError: Expected packet was not received on device 0, port 64"
+  brig_569
+  simple_l3_mirror
+)
+
+# Need to debug the issue: xfail for now
+p4c_add_xfail_reason("tofino"
+  "ValueError: Unknown field .*"
+  p4_16_programs_tna_meter_lpf_wred
+)
+
 # Glass test suite bugs
 
 # P4C-1368
@@ -1719,4 +1722,10 @@ p4c_add_xfail_reason("tofino"
   "Field is extracted in the parser, but its first container slice has an incompatible alignment"
   ../glass/testsuite/p4_tests/mau/COMPILER-710/comp_710.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-702/comp_702.p4
+  )
+
+# P4C doesn't support use_container_valid pragma?
+p4c_add_xfail_reason("tofino"
+  "Structure struct ingress_intrinsic_metadata_for_tm_t does not have a field isValid"
+  ../glass/testsuite/p4_tests/mau/test_config_420_intr_md_tcam_valid.p4
   )

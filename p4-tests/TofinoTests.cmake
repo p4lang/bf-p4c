@@ -193,12 +193,10 @@ set (P4FACTORY_REGRESSION_TESTS
   # # clpm
   emulation
   fast_reconfig
-  hash_test
   mirror_test
   # # multicast_scale
   multicast_test
   # # multi-device
-  opcode_test
   pcie_pkt_test
   # # pctr
   pgrs
@@ -251,9 +249,6 @@ bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/mirror_test/mirror_te
    test.TestBasicIngMir
    test.TestBasicEgrMir
    test.TestBatching")
-bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/hash_test/hash_test.p4"
-    "test.TestCrc32"
-    "test.TestCrc16Xmodem")
 
 bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/pgrs/pgrs.p4"
     "test.TestTxn
