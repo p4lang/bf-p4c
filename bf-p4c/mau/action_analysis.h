@@ -58,6 +58,13 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
             return expr->type->width_bits();
         }
 
+        le_bitrange range() const {
+            auto sl = expr->to<IR::Slice>();
+            if (sl)
+                return { static_cast<int>(sl->getL()), static_cast<int>(sl->getH()) };
+            return {0, size() - 1};
+        }
+
         friend std::ostream &operator<<(std::ostream &out, const ActionParam &);
 
         // void dbprint(std::ostream &out) const;

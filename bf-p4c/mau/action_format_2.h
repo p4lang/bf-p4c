@@ -6,7 +6,10 @@
 #include "lib/bitvec.h"
 #include "lib/ordered_set.h"
 #include "lib/safe_vector.h"
+#include "ir/ir.h"
 #include "bf-p4c/ir/bitrange.h"
+#include "bf-p4c/mau/action_analysis.h"
+#include "bf-p4c/phv/phv.h"
 
 /**
  * The purpose of this class is the base abstract class for any parameter that can appear
@@ -26,11 +29,13 @@ class ActionDataParam {
     // virtual const ActionDataParam *shared_param(const ActionDataParam *, int &start_bit) = 0;
     virtual int size() const = 0;
     virtual const ActionDataParam *split(int lo, int hi) const = 0;
+    virtual bool only_one_overlap_solution() const = 0;
 
     virtual bool is_next_bit_of_param(const ActionDataParam *) const = 0;
-    virtual const ActionDataParam *get_extended_param(unsigned extension) const = 0;
-    virtual const ActionDataParam *overlap(const ActionDataParam *ad, le_bitrange *my_overlap,
-        le_bitrange *ad_overlap) const = 0;
+    virtual const ActionDataParam *get_extended_param(unsigned extension,
+        const ActionDataParam *) const = 0;
+    virtual const ActionDataParam *overlap(const ActionDataParam *ad, bool guaranteed_one_overlap,
+        le_bitrange *my_overlap, le_bitrange *ad_overlap) const = 0;
     virtual bool equiv_value(const ActionDataParam *) const = 0;
     virtual void dbprint(std::ostream &out) const = 0;
     template<typename T> const T *to() const { return dynamic_cast<const T*>(this); }
@@ -69,6 +74,8 @@ class Argument : public ActionDataParam {
         return new Argument(_name, split_range);
     }
 
+    bool only_one_overlap_solution() const override { return true; }
+
     bool is_next_bit_of_param(const ActionDataParam *ad) const override {
         if (size() != 1) return false;
         const Argument *arg = ad->to<Argument>();
@@ -76,14 +83,15 @@ class Argument : public ActionDataParam {
         return arg->_name == _name && arg->_param_field.hi + 1 == _param_field.lo;
     }
 
-    const ActionDataParam *get_extended_param(unsigned extension) const override {
+    const ActionDataParam *get_extended_param(unsigned extension,
+             const ActionDataParam *) const override {
          auto rv = new Argument(*this);
          rv->_param_field.hi += extension;
          return rv;
     }
 
-    const ActionDataParam *overlap(const ActionDataParam *ad, le_bitrange *my_overlap,
-        le_bitrange *ad_overlap) const override;
+    const ActionDataParam *overlap(const ActionDataParam *ad, bool guaranteed_one_overlap,
+        le_bitrange *my_overlap, le_bitrange *ad_overlap) const override;
     bool equiv_value(const ActionDataParam *ad) const {
         const Argument *arg = ad->to<Argument>();
         if (arg == nullptr) return false;
@@ -91,6 +99,37 @@ class Argument : public ActionDataParam {
     }
     int size() const override { return _param_field.size(); }
     void dbprint(std::ostream &out) const { out << _name << " " << _param_field; }
+};
+
+/**
+ * This class represents a section of IR::MAU::ActionDataConstant, or an IR::Constant that
+ * cannot be created as the src1 operand of an ALU operation.  The constant instead must come
+ * from Action Ram.
+ *
+ * Similar to IR::Constant, the constant has a value and a bit size.  Due to the size of the
+ * constant theoretically being infinite, a bitvec is used to store the value (though in
+ * theory, an mpz_class could have been used as well 
+ */
+class Constant : public ActionDataParam {
+    bitvec _value;
+    size_t _size;
+    le_bitrange range() const { return {0, static_cast<int>(_size) - 1}; }
+
+ public:
+    Constant(int v, size_t sz) : _value(v), _size(sz) {}
+    Constant(bitvec v, size_t sz) : _value(v), _size(sz) {}
+
+    const ActionDataParam *split(int lo, int hi) const override;
+    bool only_one_overlap_solution() const override { return false; }
+    bool is_next_bit_of_param(const ActionDataParam *ad) const override;
+    const ActionDataParam *get_extended_param(unsigned extension,
+        const ActionDataParam *ad) const override;
+    const ActionDataParam *overlap(const ActionDataParam *ad, bool only_one_overlap_solution,
+        le_bitrange *my_overlap, le_bitrange *ad_overlap) const override;
+    bool equiv_value(const ActionDataParam *ad) const;
+    bitvec value() const { return _value; }
+    int size() const override { return _size; }
+    void dbprint(std::ostream &out) const { out << "0x" << _value << " : " << _size << " bits"; }
 };
 
 /*
@@ -104,16 +143,63 @@ class ADConstant : public ActionDataParam {
 };
 */
 
-/*
-class ActionDataForSingleALU2 {
-    PHV::Container write_container;
-    safe_vector<const ActionDataParam *> arguments;
-    // LOCATION
-    // Start Bit
-    What byte in the RAM/ immediate ADB location
-};
-*/
+struct ALUParameter {
+    const ActionDataParam *param;
+    le_bitrange phv_bits;
+    int right_shift;
 
+    ALUParameter(const ActionDataParam *p, le_bitrange pb)
+        : param(p), phv_bits(pb), right_shift(0) {}
+};
+
+enum ALUOPConstraint_t { ISOLATED, BITMASKED_SET, DEPOSIT_FIELD };
+
+class ActionDataRamSection;
+
+/**
+ * This class is the representation of the src1 of a single ALU operation when the src1 comes
+ * from the Action Data Bus.  Essentially a single PHV instruction could be represented as,
+ * (somewhat):
+ *      PHV Container number(phv_bits) = function(ADB SLOT number(slot_bits))
+ *
+ * This class represents the data contained within slot-hi to slot-lo.  What is known at
+ * Action Format allocation are both which container the data is headed to and which bits
+ * of the container are used.
+ *
+ * The purpose of the allocation is to both figure out the slot_bits ( which is just the PHV
+ * bits barrel_shifted right by a certain amount), as well as a potential RAM location to store
+ * this Action Data.
+ */
+class ActionDataForSingleALU2 {;
+    // The location of the P4 parameters, i.e. what bits contain particular bitranges.  This
+    // is knowledge required for the driver to pack the RAM
+    safe_vector<ALUParameter> params;
+    // The bits that are to be written in the PHV Container
+    bitvec phv_bits;
+    // The amount to barrel-shift right the phv_bits in order to know the associated slot_bits
+    int right_shift;
+    PHV::Container container;
+    // Information on how the data is used, in order to potentially pack in RAM space other
+    // ActionDataForSingleALU2s
+    ALUOPConstraint_t constraint;
+
+ public:
+    void add_param(ALUParameter &ap) {
+        params.push_back(ap);
+        phv_bits.setrange(ap.phv_bits.lo, ap.phv_bits.size());
+    }
+    bool contains_only_one_overlap_solution() const {
+        for (auto param : params) {
+            if (param.param->only_one_overlap_solution())
+                return true;
+        }
+        return false;
+    }
+
+    ActionDataForSingleALU2(PHV::Container cont, ALUOPConstraint_t cons)
+        : right_shift(0), container(cont), constraint(cons) { }
+    const ActionDataRamSection *create_RamSection(bool shift_to_lsb) const;
+};
 
 struct SharedActionDataParam {
     const ActionDataParam *param;
@@ -254,15 +340,17 @@ class ActionDataRamSection {
     ///> Recursive PackingConstraint on how data can rotate
     PackingConstraint pack_info;
 
-    bitvec bits_in_use() const;
-    safe_vector<le_bitrange> open_holes() const;
+    ///> map of ActionDataForSingleALU operations with their action data requirements allocated
+    ///> in this RAMSection
 
-    void gather_shared_params(const ActionDataRamSection *ad,
-        safe_vector<SharedActionDataParam> &shared_params) const;
+
     bool is_better_merge_than(const ActionDataRamSection *comp) const;
 
  public:
+    safe_vector<const ActionDataForSingleALU2 *> alu_requirements;
     // Made public for unit tests.  Not sure if there is a way around this
+    bitvec bits_in_use() const;
+    safe_vector<le_bitrange> open_holes() const;
     const ActionDataRamSection *expand_to_size(size_t expand_size) const;
     const ActionDataRamSection *can_rotate(int init_bit, int final_bit) const;
     const ActionDataRamSection *rotate_in_range(le_bitrange range) const;
@@ -270,7 +358,14 @@ class ActionDataRamSection {
     const ActionDataRamSection *merge(const ActionDataRamSection *ad) const;
     const ActionDataRamSection *condense(const ActionDataRamSection *) const;
     const ActionDataRamSection *better_merge_cand(const ActionDataRamSection *) const;
+    void gather_shared_params(const ActionDataRamSection *ad,
+        safe_vector<SharedActionDataParam> &shared_params, bool only_one_overlap_solution) const;
     PackingConstraint get_pack_info() const { return pack_info; }
+
+    bool is_data_subset_of(const ActionDataRamSection *ad) const;
+    bool contains(const ActionDataRamSection *ad_small) const;
+    bool contains_any_rotation_from_0(const ActionDataRamSection *ad_small) const;
+    bool contains(const ActionDataForSingleALU2 *ad_alu) const;
 
     size_t size() const { return action_data_bits.size(); }
     ActionDataPositions action_data_positions() const;
@@ -278,6 +373,69 @@ class ActionDataRamSection {
     ActionDataRamSection(int s, PackingConstraint &pc)
         : action_data_bits(s, nullptr), pack_info(pc) { }
     void add_param(int bit, const ActionDataParam *);
+    void add_alu_req(const ActionDataForSingleALU2 *rv) { alu_requirements.push_back(rv); }
+};
+
+enum ActionDataLocation_t { ACTION_DATA_TABLE, IMMEDIATE, METER_ALU };
+
+/**
+ * Information on the position of a single ActionDataForSingleALU2 on a RAM line.  Due
+ * to the constraint, that all of the action data in a single ALU operation has to appear
+ * in a single Action Data Bus slot.  Due to the direct extraction through the homerow bus,
+ * the following constraint must be satisfied:
+ *
+ *     - slot_bit_lo / container_size == slot_bit_hi / container_size (integer division)
+ *
+ * This means that the entirety of a single ALU operation starts a byte and is a particular
+ * size.  The start can either be in ActionDataTable RAM or Match RAM (Immediate)
+ *
+ * Specifically for anything that comes from a Meter ALU, a third location has been provided
+ */
+struct ActionDataALUPosition {
+    // The information on the P4 parameters within this region
+    const ActionDataForSingleALU2 *alu_op;
+    // Whether the data is in ActionData, Immmediate, or a from a Meter ALU operation
+    ActionDataLocation_t ad_loc;
+    // The byte offset within the allocation
+    size_t start_byte;
+
+ public:
+    ActionDataALUPosition(const ActionDataForSingleALU2 *ao, ActionDataLocation_t al, size_t sb)
+        : alu_op(ao), ad_loc(al), start_byte(sb) { }
+};
+
+using RamSec_vec_t = safe_vector<const ActionDataRamSection *>;
+using PossibleCondenses = safe_vector<RamSec_vec_t>;
+
+class ActionFormat2 {
+    const PhvInfo &phv;
+    const IR::MAU::Table *tbl;
+    int calc_max_size = 0;
+    std::map<cstring, RamSec_vec_t> init_ram_sections;
+    std::map<cstring, safe_vector<ActionDataALUPosition>> action_data_positions;
+
+    void create_argument(ActionDataForSingleALU2 &alu, ActionAnalysis::ActionParam &read,
+        le_bitrange container_bits);
+    void create_constant(ActionDataForSingleALU2 &alu, ActionAnalysis::ActionParam &read,
+        le_bitrange container_bits);
+
+    void create_action_data_alus_for_action(ActionAnalysis::ContainerActionsMap &ca_map,
+        cstring action_name);
+    void analyze_actions();
+
+    void initial_possible_condenses(PossibleCondenses &condenses, const RamSec_vec_t &ram_sects);
+    void incremental_possible_condenses(PossibleCondenses &condense, const RamSec_vec_t &ram_sects);
+
+    bool is_better_condense(RamSec_vec_t &ram_sects, const ActionDataRamSection *best,
+        size_t best_skip1, size_t best_skip2, const ActionDataRamSection *comp, size_t comp_skip1,
+        size_t comp_skip2);
+    void condense_action(cstring action_name, RamSec_vec_t &ram_sects);
+    void shrink_possible_condenses(PossibleCondenses &pc, RamSec_vec_t &ram_sects,
+        const ActionDataRamSection *ad, size_t i_pos, size_t j_pos);
+
+ public:
+    void allocate_format(int orig_max_size);
+    ActionFormat2(const PhvInfo &p, const IR::MAU::Table *t) : phv(p), tbl(t) {}
 };
 
 #endif  /* EXTENSIONS_BF_P4C_MAU_ACTION_FORMAT_2_H_ */

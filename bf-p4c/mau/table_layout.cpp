@@ -2,6 +2,7 @@
 #include <math.h>
 
 #include <set>
+#include "bf-p4c/mau/action_format_2.h"
 #include "bf-p4c/mau/input_xbar.h"
 #include "bf-p4c/mau/memories.h"
 #include "bf-p4c/mau/resource.h"
@@ -1177,11 +1178,21 @@ bool MeterColorMapramAddress::SetMapramAddress::preorder(IR::MAU::Meter *mtr) {
     return false;
 }
 
+bool ActionFormat2Calc::preorder(const IR::MAU::Table *tbl) {
+    ActionFormat2 af(phv, tbl);
+    auto los = lc.get_layout_options(tbl);
+    if (!los.empty())
+        af.allocate_format(los.at(0).layout.action_data_bytes_in_table);
+    return true;
+}
+
+
 TableLayout::TableLayout(const PhvInfo &p, LayoutChoices &l) : lc(l) {
     addPasses({
         new MeterColorMapramAddress,
         new DoTableLayout(p, lc),
         new ValidateActionProfileFormat(lc),
-        new ProhibitAtcamWideSelectors
+        new ProhibitAtcamWideSelectors,
+        new ActionFormat2Calc(p, lc)
     });
 }

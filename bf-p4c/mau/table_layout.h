@@ -229,6 +229,15 @@ class ProhibitAtcamWideSelectors : public MauInspector {
      ProhibitAtcamWideSelectors() { visitDagOnce = false; }
 };
 
+class ActionFormat2Calc : public MauInspector {
+    const PhvInfo &phv;
+    const LayoutChoices &lc;
+    bool preorder(const IR::MAU::Table *) override;
+
+ public:
+    explicit ActionFormat2Calc(const PhvInfo &p, const LayoutChoices &l) : phv(p), lc(l) { }
+};
+
 class TableLayout : public PassManager {
     LayoutChoices &lc;
 

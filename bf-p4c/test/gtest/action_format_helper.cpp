@@ -360,4 +360,144 @@ TEST(ActionFormatHelper, RotateIntoRange) {
     RotateIntoRange_test1(ad, arg1);
 }
 
+TEST(ActionFormatHelper, ConstantOverlap) {
+    PackingConstraint pc;
+    pc = pc.expand(1, 8);
+    ActionDataRamSection *constant1 = new ActionDataRamSection(8, pc);
+    ActionDataRamSection *constant2 = new ActionDataRamSection(8, pc);
+
+    Constant *con1 = new Constant(0xf0, 8);
+    constant1->add_param(0, con1);
+
+    Constant *con2 = new Constant(0xf, 4);
+    constant2->add_param(0, con2);
+
+    safe_vector<SharedActionDataParam> shared_params;
+    constant1->gather_shared_params(constant2, shared_params, false);
+    EXPECT_EQ(shared_params.size(), 1);
+    auto shared_arg = shared_params[0];
+    auto con_overlap = shared_arg.param->to<Constant>();
+    EXPECT_EQ(con_overlap->value().getrange(0, 4), 0xf);
+    EXPECT_EQ(con_overlap->size(), 4);
+    EXPECT_EQ(shared_arg.a_start_bit, 4);
+    EXPECT_EQ(shared_arg.b_start_bit, 0);
+
+    ActionDataRamSection *constant3 = new ActionDataRamSection(8, pc);
+    Constant *con3 = new Constant(0x3c, 6);
+    constant3->add_param(2, con3);
+
+    shared_params.clear();
+    constant1->gather_shared_params(constant3, shared_params, false);
+    EXPECT_EQ(shared_params.size(), 1);
+    shared_arg = shared_params[0];
+    con_overlap = shared_arg.param->to<Constant>();
+    EXPECT_EQ(shared_arg.a_start_bit, 2);
+    EXPECT_EQ(shared_arg.b_start_bit, 2);
+}
+
+
+TEST(ActionFormatHelper, DataSubset) {
+    PackingConstraint pc;
+    pc = pc.expand(1, 8);
+    ActionDataRamSection *ad1 = new ActionDataRamSection(8, pc);
+    ActionDataRamSection *ad2 = new ActionDataRamSection(8, pc);
+
+    Argument *arg1 = new Argument("arg1", {0, 7});
+    Argument *arg1_mini = new Argument ("arg1", {2, 5});
+    ad1->add_param(0, arg1);
+    ad2->add_param(2, arg1_mini);
+
+    EXPECT_TRUE(ad2->is_data_subset_of(ad1));
+    EXPECT_FALSE(ad1->is_data_subset_of(ad2));
+}
+
+
+void Contains_test1(ActionDataRamSection *ad_outside, ActionDataRamSection *ad_inside) {
+    Argument *arg1 = new Argument("arg1", {0, 7});
+
+    ad_outside->add_param(8, arg1);
+    ad_inside->add_param(0, arg1);
+
+    EXPECT_TRUE(ad_outside->contains(ad_inside));
+    EXPECT_FALSE(ad_inside->contains(ad_outside));
+    EXPECT_TRUE(ad_outside->contains_any_rotation_from_0(ad_inside));
+}
+
+void Contains_test2(ActionDataRamSection *ad_outside, ActionDataRamSection *ad_inside) {
+    Argument *arg1 = new Argument("arg1", {0, 7});
+    Argument *arg1_mini1 = new Argument("arg1", {0, 3});
+    Argument *arg1_mini2 = new Argument("arg1", {4, 7});
+
+    ad_outside->add_param(8, arg1);
+    ad_inside->add_param(0, arg1_mini2);
+    ad_inside->add_param(4, arg1_mini1);
+
+    EXPECT_TRUE(ad_outside->contains(ad_inside));
+    EXPECT_FALSE(ad_inside->contains(ad_outside));
+    EXPECT_TRUE(ad_outside->contains_any_rotation_from_0(ad_inside));
+}
+
+void Contains_test3(ActionDataRamSection *ad_outside, ActionDataRamSection *ad_inside) {
+    Argument *arg1 = new Argument("arg1", {0, 7});
+
+    ad_outside->add_param(8, arg1);
+    ad_inside->add_param(4, arg1);
+
+    EXPECT_FALSE(ad_outside->contains(ad_inside));
+    EXPECT_FALSE(ad_inside->contains(ad_outside));
+    EXPECT_FALSE(ad_outside->contains_any_rotation_from_0(ad_inside));
+}
+
+void Contains_test4(ActionDataRamSection *ad_outside, ActionDataRamSection *ad_inside) {
+    Constant *con1 = new Constant(0x55, 8);
+    Constant *con2 = new Constant(0x1, 2);
+
+    ad_outside->add_param(8, con1);
+    ad_inside->add_param(0, con2);
+
+    EXPECT_FALSE(ad_outside->contains(ad_inside));
+    EXPECT_FALSE(ad_inside->contains(ad_outside));
+    EXPECT_TRUE(ad_outside->contains_any_rotation_from_0(ad_inside));
+}
+
+void Contains_test5(ActionDataRamSection *ad_outside, ActionDataRamSection *ad_inside) {
+    Constant *con1 = new Constant(0x55, 8);
+    Constant *con2 = new Constant(0xfe, 8);
+
+    ad_outside->add_param(8, con1);
+    ad_inside->add_param(0, con2);
+
+    EXPECT_FALSE(ad_outside->contains(ad_inside));
+    EXPECT_FALSE(ad_inside->contains(ad_outside));
+    EXPECT_FALSE(ad_outside->contains_any_rotation_from_0(ad_inside));
+}
+
+void Contains_test6(ActionDataRamSection *ad_outside, ActionDataRamSection *ad_inside) {
+    Constant *con1 = new Constant(0x55, 8);
+    Constant *con2 = new Constant(0xaa, 8);
+
+    ad_outside->add_param(8, con1);
+    ad_inside->add_param(0, con2);
+
+    EXPECT_FALSE(ad_outside->contains(ad_inside));
+    EXPECT_FALSE(ad_inside->contains(ad_outside));
+    EXPECT_TRUE(ad_outside->contains_any_rotation_from_0(ad_inside));
+}
+
+TEST(ActionFormatHelper, Contains) {
+    PackingConstraint pc;
+    PackingConstraint first_layer_pc = pc.expand(1, 8);
+    PackingConstraint second_layer_pc = first_layer_pc.expand(8, 16);
+
+    ActionDataRamSection ad_outside(16, pc);
+    ActionDataRamSection ad_inside(16, second_layer_pc);
+
+    Contains_test1(new ActionDataRamSection(ad_outside), new ActionDataRamSection(ad_inside));
+    Contains_test2(new ActionDataRamSection(ad_outside), new ActionDataRamSection(ad_inside));
+    Contains_test3(new ActionDataRamSection(ad_outside), new ActionDataRamSection(ad_inside));
+    Contains_test4(new ActionDataRamSection(ad_outside), new ActionDataRamSection(ad_inside));
+    Contains_test5(new ActionDataRamSection(ad_outside), new ActionDataRamSection(ad_inside));
+    Contains_test6(new ActionDataRamSection(ad_outside), new ActionDataRamSection(ad_inside));
+}
+
 }  // namespace Test
