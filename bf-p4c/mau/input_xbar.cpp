@@ -2746,13 +2746,16 @@ bool IXBar::allocHashDistImmediate(const IR::MAU::HashDist *hd, const ActionForm
 
     safe_vector<bitvec> masks;
     int hash_dist_groups_needed = 0;
+    int position_min = 2;
     for (int i = 0; i < 2; i++) {
         auto small_mask = immed_bitmask.getslice(i * HASH_DIST_BITS, HASH_DIST_BITS);
         if (!small_mask.empty()) {
             hash_dist_groups_needed++;
             masks.push_back(small_mask);
+            position_min = std::min(position_min, i);
         }
     }
+    position_min *= HASH_DIST_BITS;
     BUG_CHECK(hash_dist_groups_needed > 0, "Hash dist groups allocated but not required?");
 
     // unsigned avail_groups = ((1 << HASH_DIST_SLICES) - 1) & (~used_hash_dist_slices);
@@ -2781,11 +2784,13 @@ bool IXBar::allocHashDistImmediate(const IR::MAU::HashDist *hd, const ActionForm
             if (first_time) {
                 // Coordinate the alignment of input xbar bits to immediate bit locations
                 for (auto position : immed_bit_positions) {
-                    if (position.first < allocated_groups * HASH_DIST_BITS
-                        || position.first >= (allocated_groups + 1) * HASH_DIST_BITS) {
+                    auto lo_bit = position.first - position_min;
+                    BUG_CHECK(lo_bit >= 0, "Minimum hash dist bit larger than allocated");
+                    if (lo_bit < allocated_groups * HASH_DIST_BITS ||
+                        lo_bit >= (allocated_groups + 1) * HASH_DIST_BITS) {
                         continue;
                     }
-                    int initial_add = position.first - (allocated_groups * HASH_DIST_BITS);
+                    int initial_add = lo_bit - (allocated_groups * HASH_DIST_BITS);
                     int init_bit = j * HASH_DIST_BITS;
                     hdap.bit_starts[init_bit + initial_add] = position.second;
                 }

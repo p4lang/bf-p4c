@@ -62,7 +62,7 @@ static std::map<cstring, bfn_crc_alg_t> standard_crcs_t = {
 
 /**
  * The purpose of this function is to directly convert a p4_14 algorithm string to a crc
- * polynomial if possible.  It uses predefined keywords such as poly_, not_rev_,
+ * polynomial if possible.  It uses predefined keywords such as poly_, not_rev,
  * init_, and final_xor_ to determine whether the allocation was valid.
  *
  * Again, string manipulation can be rigid, but the best placed to handle this would
@@ -88,7 +88,7 @@ static bool direct_crc_string_conversion(bfn_hash_algorithm_ *hash_alg,
     }
     hash_alg->hash_bit_width = ceil_log2(hash_alg->poly) - 1;
 
-    if ((pos = alg_name.find("not_rev_")) != std::string::npos) {
+    if ((pos = alg_name.find("not_rev")) != std::string::npos) {
         hash_alg->reverse = false;
     } else {
         hash_alg->reverse = true;
