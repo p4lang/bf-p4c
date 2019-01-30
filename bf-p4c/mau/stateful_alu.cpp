@@ -1,6 +1,7 @@
 #include <cmath>
 #include "stateful_alu.h"
 #include "bf-p4c/common/ir_utils.h"
+#include "bf-p4c/common/asm_output.h"  // for generic formatting routines
 #include "ir/pattern.h"
 
 const Device::StatefulAluSpec &TofinoDevice::getStatefulAluSpec() const {
@@ -272,8 +273,14 @@ void CreateSaluInstruction::doAssignment(const Util::SourceInfo &srcInfo) {
             error("%s: %s %s too complex", srcInfo, action_type_name, reg_action->name);
         dest->use = use;
         LOG3("local " << dest->name << " use " << dest->use); }
-    if (!dest || dest->use == LocalVar::ALUHI)
+    if (!dest) {
         createInstruction();
+    } else if (dest->use == LocalVar::ALUHI) {
+        if (opcode == "alu_a" && Pattern(0).match(operands.back())) {
+            // don't need to initialize the temp alu_hi to 0, it is that by default
+            LOG3("  elide alu_a " << emit_vector(operands));
+        } else {
+            createInstruction(); } }
     predicate = old_predicate;
     assignDone = true;
 }

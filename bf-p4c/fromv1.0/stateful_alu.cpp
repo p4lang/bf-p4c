@@ -256,10 +256,7 @@ class CreateSaluApplyFunction : public Inspector {
     void end_apply(const IR::Node *) {
         if (need_alu_hi)
             body->components.insert(body->components.begin(),
-                                    new IR::Declaration_Variable("alu_hi", utype));
-            // FIXME -- should initialize to 0 to avoid warnings about uninitialized values?
-            // FIXME -- doing so causes a redundant assgnment of 0 which may cause asm
-            // FIXME -- failure due to too many instructions in the stateful action.
+                    new IR::Declaration_Variable("alu_hi", utype, new IR::Constant(utype, 0)));
         auto apply_params = new IR::ParameterList({
                      new IR::Parameter("value", IR::Direction::InOut, rtype) });
         if (have_output) {
@@ -576,7 +573,6 @@ const IR::Statement *P4V1::StatefulAluConverter::convertExternCall(
         if (!flc) {
             error("%s: Expected a field_list_calculation", prim->operands.at(1));
             return nullptr; }
-        auto ttype = IR::Type_Bits::get(flc->output_width);
         block = new IR::BlockStatement;
         cstring temp = structure->makeUniqueName("temp");
         block = P4V1::generate_hash_block_statement(structure, prim, temp, conv, 2);
