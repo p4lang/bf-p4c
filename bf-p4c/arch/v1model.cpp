@@ -35,7 +35,7 @@ class FixupBackwardCompatibility : public Transform {
     const IR::Node* postorder(IR::Parameter* param) {
         auto ctxt = findOrigCtxt<IR::Type_Control>();
         if (!ctxt) return param;
-        if (ctxt->name != "Egress") return param;
+        if (ctxt->name != "EgressT") return param;
         if (auto tn = param->type->to<IR::Type_Name>()) {
             if (tn->path->name != "egress_intrinsic_metadata_t")
                 return param;

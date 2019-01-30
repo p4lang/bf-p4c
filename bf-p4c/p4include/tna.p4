@@ -25,19 +25,19 @@
 // The following declarations provide a template for the programmable blocks in
 // Tofino.
 
-parser IngressParser<H, M>(
+parser IngressParserT<H, M>(
     packet_in pkt,
     out H hdr,
     out M ig_md,
     out ingress_intrinsic_metadata_t ig_intr_md);
 
-parser EgressParser<H, M>(
+parser EgressParserT<H, M>(
     packet_in pkt,
     out H hdr,
     out M eg_md,
     out egress_intrinsic_metadata_t eg_intr_md);
 
-control Ingress<H, M>(
+control IngressT<H, M>(
     inout H hdr,
     inout M ig_md,
     in ingress_intrinsic_metadata_t ig_intr_md,
@@ -45,7 +45,7 @@ control Ingress<H, M>(
     inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
     inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm);
 
-control Egress<H, M>(
+control EgressT<H, M>(
     inout H hdr,
     inout M eg_md,
     in egress_intrinsic_metadata_t eg_intr_md,
@@ -53,25 +53,25 @@ control Egress<H, M>(
     inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
     inout egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport);
 
-control IngressDeparser<H, M>(
+control IngressDeparserT<H, M>(
     packet_out pkt,
     inout H hdr,
     in M metadata,
     in ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr);
 
-control EgressDeparser<H, M>(
+control EgressDeparserT<H, M>(
     packet_out pkt,
     inout H hdr,
     in M metadata,
     in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr);
 
 package Pipeline<IH, IM, EH, EM>(
-    IngressParser<IH, IM> ingress_parser,
-    Ingress<IH, IM> ingress,
-    IngressDeparser<IH, IM> ingress_deparser,
-    EgressParser<EH, EM> egress_parser,
-    Egress<EH, EM> egress,
-    EgressDeparser<EH, EM> egress_deparser);
+    IngressParserT<IH, IM> ingress_parser,
+    IngressT<IH, IM> ingress,
+    IngressDeparserT<IH, IM> ingress_deparser,
+    EgressParserT<EH, EM> egress_parser,
+    EgressT<EH, EM> egress,
+    EgressDeparserT<EH, EM> egress_deparser);
 
 @pkginfo(arch="TNA", version="1.0.0")
 package Switch<IH0, IM0, EH0, EM0, IH1, IM1, EH1, EM1,

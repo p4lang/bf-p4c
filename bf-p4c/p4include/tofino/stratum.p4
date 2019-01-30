@@ -32,7 +32,7 @@ enum CloneType {
     E2E
 }
 
-parser IngressParser<H, M, CG>(
+parser IngressParserT<H, M, CG>(
     packet_in pkt,
     out H hdr,
     out M ig_md,
@@ -41,7 +41,7 @@ parser IngressParser<H, M, CG>(
     out ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm,
     inout CG aux);
 
-parser EgressParser<H, M, CG>(
+parser EgressParserT<H, M, CG>(
     packet_in pkt,
     out H hdr,
     out M eg_md,
@@ -52,7 +52,7 @@ parser EgressParser<H, M, CG>(
     inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm,
     inout CG aux);
 
-control Ingress<H, M, CG>(
+control IngressT<H, M, CG>(
     inout H hdr,
     inout M ig_md,
     in ingress_intrinsic_metadata_t ig_intr_md,
@@ -61,7 +61,7 @@ control Ingress<H, M, CG>(
     inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm,
     inout CG aux);
 
-control Egress<H, M, CG>(
+control EgressT<H, M, CG>(
     inout H hdr,
     inout M eg_md,
     in egress_intrinsic_metadata_t eg_intr_md,
@@ -74,7 +74,7 @@ control Egress<H, M, CG>(
     inout ingress_intrinsic_metadata_from_parser_t ig_intr_md_from_prsr,
     inout CG aux);
 
-control IngressDeparser<H, M, CG>(
+control IngressDeparserT<H, M, CG>(
     packet_out pkt,
     inout H hdr,
     in M metadata,
@@ -82,7 +82,7 @@ control IngressDeparser<H, M, CG>(
     in ingress_intrinsic_metadata_t ig_intr_md,
     inout CG aux);
 
-control EgressDeparser<H, M, CG>(
+control EgressDeparserT<H, M, CG>(
     packet_out pkt,
     inout H hdr,
     in M metadata,
@@ -94,12 +94,12 @@ control EgressDeparser<H, M, CG>(
     inout CG aux);
 
 package Pipeline<IH, IM, EH, EM, CG>(
-    IngressParser<IH, IM, CG> ingress_parser,
-    Ingress<IH, IM, CG> ingress,
-    IngressDeparser<IH, IM, CG> ingress_deparser,
-    EgressParser<EH, EM, CG> egress_parser,
-    Egress<EH, EM, CG> egress,
-    EgressDeparser<EH, EM, CG> egress_deparser);
+    IngressParserT<IH, IM, CG> ingress_parser,
+    IngressT<IH, IM, CG> ingress,
+    IngressDeparserT<IH, IM, CG> ingress_deparser,
+    EgressParserT<EH, EM, CG> egress_parser,
+    EgressT<EH, EM, CG> egress,
+    EgressDeparserT<EH, EM, CG> egress_deparser);
 
 package Switch<IH0, IM0, EH0, EM0, CG0, IH1, IM1, EH1, EM1, CG1,
                IH2, IM2, EH2, EM2, CG2, IH3, IM3, EH3, EM3, CG3>(
