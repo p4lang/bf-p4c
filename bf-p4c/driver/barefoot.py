@@ -132,6 +132,12 @@ class BarefootBackend(BackendDriver):
                                     action="store", default=0, type=int, choices=[0, 1, 2, 3],
                                     help="Set compiler logging verbosity level: 0=OFF, 1=SUMMARY, 2=INFO, 3=DEBUG")
 
+        self._argGroup.add_argument("--p4runtime-force-std-externs",
+                                    action="store_true", default=False,
+                                    help="Generate P4Info file using standard extern messages"
+                                    " instead of Tofino-specific ones, for a P4 program written"
+                                    " for a Tofino-specific arch")
+
         if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
             self._argGroup.add_argument("--validate-output", action="store_true", default=False,
                                         help="run context.json validation")
@@ -238,6 +244,9 @@ class BarefootBackend(BackendDriver):
 
             self.add_command_option('bf-rt-verifier', opts.bf_rt_schema)
             self._commandsEnabled.append('bf-rt-verifier')
+
+        if opts.p4runtime_force_std_externs:
+            self.add_command_option('compiler', '--p4runtime-force-std-externs')
 
         if opts.verbose > 0:
             log_scripts_dir = os.environ['P4C_BIN_DIR']

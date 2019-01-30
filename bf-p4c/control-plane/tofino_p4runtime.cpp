@@ -20,6 +20,7 @@
 #include "frontends/p4/typeMap.h"
 #include "lib/nullstream.h"
 #include "p4/config/v1/p4info.pb.h"
+#include "p4runtime_force_std.h"
 
 using P4::ControlPlaneAPI::P4RuntimeSymbolTableIface;
 using P4::ControlPlaneAPI::P4RuntimeSymbolType;
@@ -1586,6 +1587,12 @@ void generateP4Runtime(const IR::P4Program* program,
     if (Log::verbose())
         std::cout << "Generating P4Runtime output for architecture " << arch << std::endl;
 
+    if (options.p4RuntimeForceStdExterns && (arch != "tna" && arch != "t2na")) {
+        ::error("--p4runtime-force-std-externs can only be used with "
+                "Tofino-specific architectures, such as 'tna'");
+        return;
+    }
+
     auto p4RuntimeSerializer = P4::P4RuntimeSerializer::get();
     // By design we can use the same architecture handler implementation for
     // both TNA and T2NA.
@@ -1601,7 +1608,12 @@ void generateP4Runtime(const IR::P4Program* program,
             return;
         }
 
-        p4Runtime.serializeP4InfoTo(out, options.p4RuntimeFormat);
+        if (options.p4RuntimeForceStdExterns) {
+            auto p4RuntimeStd = convertToStdP4Runtime(p4Runtime);
+            p4RuntimeStd.serializeP4InfoTo(out, options.p4RuntimeFormat);
+        } else {
+            p4Runtime.serializeP4InfoTo(out, options.p4RuntimeFormat);
+        }
     }
 
     if (!options.p4RuntimeEntriesFile.isNullOrEmpty()) {
