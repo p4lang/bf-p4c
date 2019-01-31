@@ -1,4 +1,8 @@
+#if __TARGET_TOFINO__ == 2
+#include "t2na.p4"
+#else
 #include "tna.p4"
+#endif
 
 struct metadata { }
 

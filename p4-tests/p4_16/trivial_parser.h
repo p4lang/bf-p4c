@@ -12,30 +12,22 @@ struct headers {
     data_t data;
 }
 
-#ifdef _TOFINO_NATIVE_ARCHITECTURE_P4_
-header ingress_skip_t { bit<64> pad; }
-#define META_DIR        out
-#else
-#define META_DIR        inout
-#endif
-
-parser ParserImpl(packet_in packet, out headers hdr, META_DIR metadata meta,
-#ifdef _TOFINO_NATIVE_ARCHITECTURE_P4_
-                  out ingress_intrinsic_metadata_t ig_intr_md
-#else
+parser ParserImpl(packet_in packet, out headers hdr,
+#if defined(_V1_MODEL_P4_)
+                  inout metadata meta,
                   inout standard_metadata_t standard_metadata
+#else
+                  out metadata meta,
+                  out ingress_intrinsic_metadata_t ig_intr_md
 #endif
 ) {
-#ifdef _TOFINO_NATIVE_ARCHITECTURE_P4_
-    ingress_skip_t skip;
-#endif
     state start {
 #ifdef METADATA_INIT
         METADATA_INIT(meta)
 #endif
-#ifdef _TOFINO_NATIVE_ARCHITECTURE_P4_
+#if !defined(_V1_MODEL_P4_)
         packet.extract(ig_intr_md);
-        packet.extract(skip);
+        packet.advance(PORT_METADATA_SIZE);
 #endif
         packet.extract(hdr.data);
         transition accept;
