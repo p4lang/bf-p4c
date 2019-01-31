@@ -172,18 +172,13 @@ void AlgTcamMatchTable::setup_nibble_mask(Table::Format::Field *match, int group
         if (match->hi(bit) < bit + el.width - 1)
             error(el.field->lineno, "match bits for %s not contiguous in match(%d)",
                   el.field->desc().c_str(), group);
-        else if ((bit % 4U) != 0) {
-            // Ignore warnings for single valid bits
-            if ((el.width == 1) && (el.field->desc().find("$valid") != std::string::npos)) {}
-            else
-                warning(el.field->lineno, "match bits for %s not nibble aligned in match(%d)",
-                  el.field->desc().c_str(), group);
-            if (el.width < 4)
-                mask.setrange(bit/4U, el.width);
-            else
-                mask.setrange(bit/4U, el.width/4U);
-        } else
-            mask.setrange(bit/4U, el.width/4U); }
+        // Determining the nibbles dedicated to s0q1 or s1q0
+        int start_bit = bit;
+        int end_bit = start_bit + el.width - 1;
+        int start_nibble = start_bit / 4U; 
+        int end_nibble = end_bit / 4U;
+        mask.setrange(start_nibble, end_nibble - start_nibble + 1);
+    }
 }
 
 void AlgTcamMatchTable::find_tcam_match() {
@@ -221,16 +216,20 @@ void AlgTcamMatchTable::find_tcam_match() {
                 error(e.second.field->lineno, "%s overlaps %s in atcam match",
                       e.second.field->desc().c_str(), t.second.first.field->desc().c_str());
     if (error_count > 0) return;
+
     /* for the tcam pairs, treat first as s0q1 and second as s1q0 */
     for (auto &el : Values(tcam)) {
         s0q1[el.first.offset] = el.first;
-        s1q0[el.second.offset] = el.second; }
+        s1q0[el.second.offset] = el.second; 
+    }
     /* now find the bits in each group that match with the tcam pairs, ensure that they
      * are nibble-aligned, and setup the nibble masks */
     for (unsigned i = 0; i < format->groups(); i++) {
         if (Format::Field *match = format->field("match", i)) {
             setup_nibble_mask(match, i, s0q1, s0q1_nibbles);
             setup_nibble_mask(match, i, s1q0, s1q0_nibbles);
+            if (!(s0q1_nibbles & s1q0_nibbles).empty())
+                error(format->lineno, "Cannot determine if a ternary nibble is s0q1 or s1q0");
         } else {
             error(format->lineno, "no 'match' field in format group %d", i); } }
 }
