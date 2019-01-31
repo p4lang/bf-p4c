@@ -52,17 +52,17 @@ std::ostream& operator<<(std::ostream& out, const IR::BFN::Phase0* p0) {
                                  field->type->width_bits());
     }
 
-    ERROR_CHECK((packing->totalWidth == Device::pardeSpec().bitPhase0Size()),
+    auto phase0Size = Device::pardeSpec().bitPhase0Size();
+    ERROR_CHECK((packing->totalWidth == phase0Size),
                   "Phase 0 type is %1%b, but its size must be exactly "
                   "%2%b on %3%", packing->totalWidth,
-                  Device::pardeSpec().bitPhase0Size(),
-                  Device::name());
+                  phase0Size, Device::name());
 
     // Write out the field packing format. We have to convert into the LSB-first
     // representation that the assembler uses.
     const nw_bitrange phase0Range =
-      StartLen(0, Device::pardeSpec().bitPhase0Size());
-    BUG_CHECK(int(packing->totalWidth) == phase0Range.size(),
+      StartLen(0, phase0Size);
+    BUG_CHECK(int(packing->totalWidth) == phase0Size,
               "Expected phase 0 field packing to allocate exactly %1% bits",
               phase0Range.size());
     bool wroteAtLeastOneField = false;

@@ -17,7 +17,6 @@ struct StageUse {
 
 namespace BFN {
 struct HeaderStackInfo;
-struct Phase0Info;
 }  // namespace BFN
 #end
 
@@ -55,16 +54,12 @@ class BFN::Pipe {
     NullOK MAU::TableSeq ghost_thread = nullptr;  // GHOST -- just mau, no parser or deparser
 
 #emit
-    /// If non-null, the phase 0 metadata for this pipe.
-    ::BFN::Phase0Info* phase0Info = nullptr;
-
     /// If non-null, information about header stack usage in this pipe.
     ::BFN::HeaderStackInfo* headerStackInfo = nullptr;
 #end
 
 #apply
     operator== { return metadata == a.metadata &&
-                        phase0Info == a.phase0Info &&
                         headerStackInfo == a.headerStackInfo &&
                         thread[0] == a.thread[0] &&
                         thread[1] == a.thread[1] &&

@@ -293,7 +293,7 @@ class UpdatePhase0NodeInParser: public Transform {
 
  private:
     IR::IndexedVector<IR::StructField>* canPackDataIntoPhase0(
-                const IR::IndexedVector<IR::StructField>* fields) {
+                const IR::IndexedVector<IR::StructField>* fields, const int phase0Size) {
         // Generate the phase 0 data layout.
         BFN::FieldPacking *packing = new BFN::FieldPacking();
         for (auto* param : *fields) {
@@ -312,8 +312,6 @@ class UpdatePhase0NodeInParser: public Transform {
             packing->padToAlignment(8);
         }
 
-        // Pad out the layout to fill the available phase 0 space.
-        int phase0Size = Device::pardeSpec().bitPhase0Size();
         packing->padToAlignment(phase0Size);
 
         // Make sure we didn't overflow.
@@ -357,9 +355,10 @@ class UpdatePhase0NodeInParser: public Transform {
 
         // If no extern is specified inject phase0 in parser
         auto* fields = new IR::IndexedVector<IR::StructField>();
+        int phase0Size = Device::pardeSpec().bitPhase0Size();
         fields->push_back(new IR::StructField(keyName,
-                              IR::Type::Bits::get(Device::pardeSpec().bitPhase0Size())));
-        auto *packedFields = canPackDataIntoPhase0(fields);
+                              IR::Type::Bits::get(phase0Size)));
+        auto *packedFields = canPackDataIntoPhase0(fields, phase0Size);
 
         // If extern present update phase0 with extern info
         if (phase0_calls && phase0_calls->count(origParser)) {
@@ -367,14 +366,25 @@ class UpdatePhase0NodeInParser: public Transform {
             if (auto *pmdFields = pmdHeader.second) {
                 keyName = pmdHeader.first;
                 hdrName = pmdFields->name.toString();
-                packedFields = canPackDataIntoPhase0(&pmdFields->fields);
+                packedFields = canPackDataIntoPhase0(&pmdFields->fields, phase0Size);
             }
         }
-        auto phase0_type = new IR::Type_Header(hdrName, *packedFields);
-        declarations->push_back(phase0_type);
-
         parser->phase0 =
             new IR::BFN::Phase0(packedFields, size, handle, tableName, actionName, keyName);
+
+        // The parser header needs the total phase0 bit to be extracted/skipped.
+        // We check if there is any additional ingress padding for port metadata
+        // and add it to the header
+        auto parserPackedFields = packedFields->clone();
+        int ingress_padding = Device::pardeSpec().bitIngressPrePacketPaddingSize();
+        if (ingress_padding) {
+            auto *fieldType = IR::Type::Bits::get(ingress_padding);
+            parserPackedFields->push_back(new IR::StructField("__ingress_pad__",
+                                        fieldType));
+        }
+        auto phase0_type = new IR::Type_Header(hdrName, *parserPackedFields);
+        declarations->push_back(phase0_type);
+
         LOG4("Adding phase0 to Ingress Parser " << parser->phase0);
         return parser;
     }
