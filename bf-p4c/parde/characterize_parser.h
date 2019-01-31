@@ -1,8 +1,9 @@
 #ifndef EXTENSIONS_BF_P4C_PARDE_CHARACTERIZE_PARSER_H_
 #define EXTENSIONS_BF_P4C_PARDE_CHARACTERIZE_PARSER_H_
 
-#include "bf-p4c/common/table_printer.h"
 #include "bf-p4c/bf-p4c-options.h"
+#include "bf-p4c/common/table_printer.h"
+#include "bf-p4c/logging/filelog.h"
 #include "bf-p4c/parde/parser_info.h"
 
 class CharacterizeParser : public Inspector {
@@ -233,18 +234,23 @@ class CharacterizeParser : public Inspector {
 
         std::clog << std::endl;
 
-        if (BackendOptions().parser_timing_reports) {
-            print_timing_report(parser, longest_path);
+        print_timing_report(parser, longest_path);
 
-            std::clog << std::endl;
-        }
+        std::clog << std::endl;
 
         std::clog << "Extractor usage:" << std::endl;
 
         print_extractor_usage(parser);
     }
 
-    void end_apply() override {
+    void end_apply(const IR::Node *root) override {
+        cstring pipeId = "";
+        if (!BackendOptions().isv1()) {  // only for P4-16
+            const IR::BFN::Pipe *pipe = root->to<IR::BFN::Pipe>();
+            pipeId = "_pipe" + std::to_string(pipe ? pipe->id : 0);
+        }
+        Logging::FileLog parserLog(cstring("parser.characterize") + pipeId + ".log", false);
+
         std::clog << "Parser Characterization Report:" << std::endl;
 
         for (auto ps : parser_to_states)

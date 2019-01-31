@@ -8,6 +8,7 @@ struct DumpPipe : public Inspector {
     const char *heading;
     DumpPipe() : heading(nullptr) {}
     explicit DumpPipe(const char *h) : heading(h) {}
+#if BAREFOOT_INTERNAL
     bool preorder(const IR::Node *pipe) override {
         if (Log::verbose() || LOGGING(1)) {
             if (heading)
@@ -19,6 +20,7 @@ struct DumpPipe : public Inspector {
             else
                 std::cout << *pipe << std::endl; }
         return false; }
+#endif  // BAREFOOT_INTERNAL
 };
 
 
