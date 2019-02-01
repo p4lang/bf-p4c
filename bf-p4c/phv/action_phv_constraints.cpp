@@ -433,6 +433,7 @@ ActionPhvConstraints::NumContainers ActionPhvConstraints::num_container_sources(
         ActionPhvConstraints::PackingConstraints& packing_constraints) {
     ordered_set<PHV::Container> containerList;
     size_t num_unallocated = 0;
+    ordered_map<const PHV::Field*, ordered_set<PHV::FieldSlice>> unallocFieldToSlices;
     for (auto slice : container_state) {
         auto reads = constraint_tracker.sources(slice, action);
         // No need to include metadata initialization here because metadata initialized always
@@ -460,11 +461,24 @@ ActionPhvConstraints::NumContainers ActionPhvConstraints::num_container_sources(
                 per_source_containers.insert(source_slice.container());
                 LOG5("\t\t\t\t\tSource slice for " << slice << " : " << source_slice); }
             if (per_source_containers.size() == 0) {
-                LOG5("\t\t\t\tSource " << fieldRead->name << " has not been allocated yet.");
-                ++num_unallocated;
+                LOG5("\t\t\t\tSource " << *(operand.phv_used) << " has not been allocated yet.");
+                unallocFieldToSlices[fieldRead].insert(*(operand.phv_used));
             } else {
-                containerList.insert(per_source_containers.begin(), per_source_containers.end()); }
-        } }
+                containerList.insert(per_source_containers.begin(), per_source_containers.end());
+            }
+        }
+    }
+    for (auto kv : unallocFieldToSlices) {
+        LOG5("\t\t\t\tSource field: " << kv.first->name);
+        if (kv.first->no_split()) {
+            ++num_unallocated;
+            continue;
+        }
+        for (auto slice : kv.second) {
+            LOG5("\t\t\t\t  Unallocated slice: " << slice);
+            ++num_unallocated;
+        }
+    }
     LOG5("\t\t\t\tNumber of allocated sources  : " << containerList.size());
     LOG5("\t\t\t\tNumber of unallocated sources: " << num_unallocated);
     LOG5("\t\t\t\tTotal number of sources      : " << (containerList.size() + num_unallocated));
