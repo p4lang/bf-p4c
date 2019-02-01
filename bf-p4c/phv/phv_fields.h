@@ -915,6 +915,8 @@ class PhvInfo {
              bool isMetadata, bool isPOV, bool bridged = false, bool isPad = false);
     void add_hdr(cstring headerName, const IR::Type_StructLike* type,
                  gress_t gress, bool isMetadata);
+    void add_struct(cstring structName, const IR::Type_StructLike* type, gress_t gress, bool meta,
+            bool bridged, int offset);
     void addTempVar(const IR::TempVar* tempVar, gress_t gress);
 
     template<typename Iter>

@@ -5,6 +5,12 @@
 #include "ir/ir.h"
 #include "lib/cstring.h"
 #include "lib/error.h"
+#include "bf-p4c/common/bridged_metadata_replacement.h"
+#include "bf-p4c/common/flexible_packing.h"
+#include "bf-p4c/mau/table_dependency_graph.h"
+#include "bf-p4c/mau/instruction_selection.h"
+#include "bf-p4c/phv/mau_backtracker.h"
+#include "bf-p4c/phv/phv_fields.h"
 #include "test/gtest/helpers.h"
 #include "bf-p4c/parde/parde_visitor.h"
 #include "bf-p4c/parde/resolve_computed.h"
@@ -96,6 +102,28 @@ createParserCriticalPathTestCase(const std::string& parserSource) {
 }
 
 }  // namespace
+
+const IR::BFN::Pipe* runMockPasses(const IR::BFN::Pipe* pipe) {
+    auto options = new BFN_Options();  // dummy options used in pass.
+    SymBitMatrix overlay;
+    PhvInfo phv(overlay);
+    DependencyGraph dg;
+    FindDependencyGraph deps(phv, dg);
+    CollectBridgedFields bridged_fields(phv);
+    ordered_map<cstring, ordered_set<cstring>> extracted_together;
+    MauBacktracker table_alloc(phv.parser_mutex());
+    PassManager quick_backend = {
+        new CollectHeaderStackInfo,
+        new CollectPhvInfo(phv),
+        new DoInstructionSelection(*options, phv),
+        new FindDependencyGraph(phv, dg),
+        &table_alloc,
+        new CollectPhvInfo(phv),
+        new FlexiblePacking(phv, dg, bridged_fields, extracted_together, table_alloc),
+        new CollectPhvInfo(phv)
+    };
+    return pipe->apply(quick_backend);
+}
 
 TEST_F(ResolveComputedTest, TwoPathSameDef) {
     auto test = createParserCriticalPathTestCase(
@@ -195,9 +223,10 @@ TEST_F(ResolveComputedTest, TwoDef) {
     )"));
     ASSERT_TRUE(test);
 
+    auto* prep = runMockPasses(test->pipe);
     auto* run = new ResolveComputedParserExpressions();
     auto* check = new VerifyRegisterAssigned();
-    auto* resolved = test->pipe->apply(*run);
+    auto* resolved = prep->apply(*run);
     EXPECT_TRUE(resolved);
     if (resolved) {
         resolved->apply(*check);
@@ -292,9 +321,10 @@ TEST_F(ResolveComputedTest, Parent) {
     )"));
     ASSERT_TRUE(test);
 
+    auto* prep = runMockPasses(test->pipe);
     auto* run = new ResolveComputedParserExpressions();
     auto* check = new VerifyRegisterAssigned();
-    auto* resolved = test->pipe->apply(*run);
+    auto* resolved = prep->apply(*run);
     EXPECT_TRUE(resolved);
     if (resolved) {
         resolved->apply(*check);

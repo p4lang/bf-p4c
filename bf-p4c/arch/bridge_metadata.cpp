@@ -22,7 +22,11 @@
 namespace BFN {
 namespace {
 
-static const cstring bridged_metadata_header = "^bridged_metadata_header";
+static const cstring COMPILER_META = "compiler_generated_meta";
+static const cstring BRIDGED_MD = "^bridged_metadata";
+static const cstring BRIDGED_MD_HEADER = "^bridged_metadata_header";
+static const cstring BRIDGED_MD_FIELD = "^fields";
+static const cstring BRIDGED_MD_INDICATOR = "^bridged_metadata_indicator";
 
 struct BridgeIngressToEgress : public Transform {
     BridgeIngressToEgress(const ordered_set<FieldRef>& fieldsToBridge,
@@ -40,13 +44,12 @@ struct BridgeIngressToEgress : public Transform {
         // indicate to the egress parser that it's dealing with bridged metadata
         // rather than mirrored data. (We could pack more information in there,
         // too, but we don't right now.)
-        fields.push_back(new IR::StructField("^bridged_metadata_indicator",
+        fields.push_back(new IR::StructField(BRIDGED_MD_INDICATOR,
                                              IR::Type::Bits::get(8)));
 
-        // The rest of the fields come from CollectBridgedFields.
-        // TODO(yumin): for __pad__ field, we should have a global variable to name
-        // them to avoid conflict.
+        IR::IndexedVector<IR::StructField> structFields;
         unsigned padFieldId = 0;
+        // The rest of the fields come from CollectBridgedFields.
         for (auto& bridgedField : fieldsToBridge) {
             cstring fieldName = bridgedField.first + bridgedField.second;
             fieldName = fieldName.replace('.', '_');
@@ -57,34 +60,49 @@ struct BridgeIngressToEgress : public Transform {
                       bridgedField.first, bridgedField.second);
             auto& info = fieldInfo.at(bridgedField);
 
+            // Add padding field for every bridged metadata field to ensure that the resulting
+            // header is byte aligned.
             const int alignment = getAlignment(info.type->width_bits());
             if (alignment != 0) {
                 cstring padFieldName = "__pad_";
                 padFieldName += cstring::to_cstring(padFieldId++);
                 auto* fieldAnnotations = new IR::Annotations({
-                    new IR::Annotation(IR::ID("hidden"), { }) });
-                fields.push_back(new IR::StructField(padFieldName,
-                                                     fieldAnnotations,
-                                                     IR::Type::Bits::get(alignment)));
+                        new IR::Annotation(IR::ID("hidden"), { }) });
+                structFields.push_back(new IR::StructField(padFieldName, fieldAnnotations,
+                            IR::Type::Bits::get(alignment)));
             }
+            if (info.type->is<IR::Type_Stack>())
+                P4C_UNIMPLEMENTED("Currently the compiler does not support bridging field %1% "
+                        "of type stack.", fieldName);
+            structFields.push_back(new IR::StructField(fieldName, info.type));
+        }
+        // Only push the fields type if there are bridged fields.
+        if (structFields.size() > 0) {
+            if (LOGGING(3)) {
+                LOG3("\tNumber of fields to bridge: " << fieldsToBridge.size());
+                for (auto* f : structFields)
+                    LOG3("\t  Bridged field: " << f->name);
+            }
+            auto annot = new IR::Annotations({new IR::Annotation(IR::ID("flexible"), {})});
+            auto bridgedMetaType =
+                new IR::Type_Struct("fields", annot, structFields);
 
-            fields.push_back(new IR::StructField(fieldName, info.type));
+            fields.push_back(new IR::StructField(BRIDGED_MD_FIELD, bridgedMetaType));
         }
 
-        auto* layoutKind = new IR::StringLiteral(IR::ID("flexible"));
+        auto* layoutKind = new IR::StringLiteral(IR::ID("BRIDGED"));
         bridgedHeaderType =
-          new IR::Type_Header(bridged_metadata_header, new IR::Annotations({
-              new IR::Annotation(IR::ID("layout"), {layoutKind})
-          }), fields);
+          new IR::Type_Header(BRIDGED_MD_HEADER,
+                  new IR::Annotations({ new IR::Annotation(IR::ID("layout"), { layoutKind }) }),
+                  fields);
+        LOG1("Bridged header type: " << bridgedHeaderType);
 
         // We'll inject a field containing the new header into the user metadata
         // struct. Figure out which type that is.
-        // XXX(seth): Long term, we really want to be using the
-        // compiler-generated package parameter to hold this kind of thing.
         forAllMatching<IR::BFN::TranslatedP4Control>(root,
                       [&](const IR::BFN::TranslatedP4Control* control) {
             if (!cgMetadataStructName.isNullOrEmpty()) return;
-            auto p4ParamName = control->tnaParams.at("compiler_generated_meta");
+            auto p4ParamName = control->tnaParams.at(COMPILER_META);
             auto* params = control->type->getApplyParameters();
             auto* param = params->getParameter(p4ParamName);
             BUG_CHECK(param, "Couldn't find param %1% on control: %2%",
@@ -108,12 +126,12 @@ struct BridgeIngressToEgress : public Transform {
         prune();
         if (type->name != cgMetadataStructName) return type;
 
-        LOG1("Will inject the new field");
+        LOG1("Will inject the new field " << BRIDGED_MD_HEADER);
 
         // Inject the new field. This will give us access to the bridged
         // metadata type everywhere in the program.
-        type->fields.push_back(new IR::StructField("^bridged_metadata",
-                                                   new IR::Type_Name(bridged_metadata_header)));
+        type->fields.push_back(new IR::StructField(BRIDGED_MD,
+                                                   new IR::Type_Name(BRIDGED_MD_HEADER)));
         return type;
     }
 
@@ -132,14 +150,14 @@ struct BridgeIngressToEgress : public Transform {
                   state->name);
         if (tnaContext->thread != INGRESS) return state;
 
-        auto cgMetadataParam = tnaContext->tnaParams.at("compiler_generated_meta");
+        auto cgMetadataParam = tnaContext->tnaParams.at(COMPILER_META);
 
         // Add "compiler_generated_meta.^bridged_metadata.^bridged_metadata_indicator = 0;".
         {
             auto* member = new IR::Member(new IR::PathExpression(cgMetadataParam),
-                                          IR::ID("^bridged_metadata"));
+                                          IR::ID(BRIDGED_MD));
             auto* fieldMember =
-              new IR::Member(member, IR::ID("^bridged_metadata_indicator"));
+              new IR::Member(member, IR::ID(BRIDGED_MD_INDICATOR));
             auto* value = new IR::Constant(IR::Type::Bits::get(8), 0);
             auto* assignment = new IR::AssignmentStatement(fieldMember, value);
             state->components.push_back(assignment);
@@ -147,9 +165,9 @@ struct BridgeIngressToEgress : public Transform {
 
         // Add "md.^bridged_metadata.setValid();"
         {
-            auto cgMetadataParam = tnaContext->tnaParams.at("compiler_generated_meta");
+            auto cgMetadataParam = tnaContext->tnaParams.at(COMPILER_META);
             auto* member = new IR::Member(new IR::PathExpression(cgMetadataParam),
-                                          IR::ID("^bridged_metadata"));
+                                          IR::ID(BRIDGED_MD));
             auto* method = new IR::Member(member, IR::ID("setValid"));
             auto* args = new IR::Vector<IR::Argument>;
             auto* callExpr = new IR::MethodCallExpression(method, args);
@@ -170,17 +188,18 @@ struct BridgeIngressToEgress : public Transform {
         auto* method = new IR::Member(new IR::PathExpression(packetInParam),
                                       IR::ID("extract"));
 
-        auto cgMetadataParam = tnaContext->tnaParams.at("compiler_generated_meta");
+        auto cgMetadataParam = tnaContext->tnaParams.at(COMPILER_META);
         auto* member = new IR::Member(new IR::PathExpression(cgMetadataParam),
-                                      IR::ID("^bridged_metadata"));
+                                      IR::ID(BRIDGED_MD));
         auto* args = new IR::Vector<IR::Argument>({ new IR::Argument(member) });
         auto* callExpr = new IR::MethodCallExpression(method, args);
         state->components.push_back(new IR::MethodCallStatement(callExpr));
 
         // Copy all of the bridged fields to their final locations.
         for (auto& bridgedField : fieldsToBridge) {
-            auto* member = new IR::Member(new IR::PathExpression(cgMetadataParam),
-                                          IR::ID("^bridged_metadata"));
+            auto* member = new IR::Member(
+                    new IR::Member(new IR::PathExpression(cgMetadataParam),
+                            IR::ID(BRIDGED_MD)), BRIDGED_MD_FIELD);
             auto* fieldMember =
               new IR::Member(member, bridgedHeaderFieldNames.at(bridgedField));
 
@@ -207,7 +226,7 @@ struct BridgeIngressToEgress : public Transform {
 
     IR::BFN::TranslatedP4Control*
     updateIngressControl(IR::BFN::TranslatedP4Control* control) {
-        auto cgMetadataParam = control->tnaParams.at("compiler_generated_meta");
+        auto cgMetadataParam = control->tnaParams.at(COMPILER_META);
 
         // Inject code to copy all of the bridged fields into the bridged
         // metadata header. This will run at the very end of the ingress
@@ -215,8 +234,9 @@ struct BridgeIngressToEgress : public Transform {
         auto* body = control->body->clone();
 
         for (auto& bridgedField : fieldsToBridge) {
-            auto* member = new IR::Member(new IR::PathExpression(cgMetadataParam),
-                                          IR::ID("^bridged_metadata"));
+            auto* member = new IR::Member(
+                    new IR::Member(new IR::PathExpression(cgMetadataParam),
+                            IR::ID(BRIDGED_MD)), IR::ID(BRIDGED_MD_FIELD));
             auto* fieldMember =
               new IR::Member(member, bridgedHeaderFieldNames.at(bridgedField));
 
@@ -251,9 +271,9 @@ struct BridgeIngressToEgress : public Transform {
         auto* method = new IR::Member(new IR::PathExpression(packetOutParam),
                                       IR::ID("emit"));
 
-        auto cgMetadataParam = control->tnaParams.at("compiler_generated_meta");
+        auto cgMetadataParam = control->tnaParams.at(COMPILER_META);
         auto* member = new IR::Member(new IR::PathExpression(cgMetadataParam),
-                                      IR::ID("^bridged_metadata"));
+                        IR::ID(BRIDGED_MD));
         auto* args = new IR::Vector<IR::Argument>({ new IR::Argument(member) });
         auto* callExpr = new IR::MethodCallExpression(method, args);
 
@@ -280,8 +300,8 @@ struct BridgeIngressToEgress : public Transform {
         auto assign = new IR::AssignmentStatement(flag, new IR::Constant(ftype, 1));
         stmts->push_back(assign);
 
-        auto* member = new IR::Member(new IR::PathExpression("compiler_generated_meta"),
-                            IR::ID("^bridged_metadata"));
+        auto* member = new IR::Member(new IR::PathExpression(COMPILER_META),
+                        IR::ID(BRIDGED_MD));
         auto* method = new IR::Member(member, IR::ID("setInvalid"));
         auto* args = new IR::Vector<IR::Argument>;
         auto* callExpr = new IR::MethodCallExpression(method, args);
@@ -336,7 +356,7 @@ struct PsaBridgeIngressToEgress : public Transform {
         // indicate to the egress parser that it's dealing with bridged metadata
         // rather than mirrored data. (We could pack more information in there,
         // too, but we don't right now.)
-        fields.push_back(new IR::StructField("^bridged_metadata_indicator",
+        fields.push_back(new IR::StructField(BRIDGED_MD_INDICATOR,
                                              IR::Type::Bits::get(8)));
 
         // The rest of the fields come from CollectBridgedFields.
@@ -356,9 +376,9 @@ struct PsaBridgeIngressToEgress : public Transform {
             fields.push_back(bridgedField);
         }
 
-        auto* layoutKind = new IR::StringLiteral(IR::ID("flexible"));
+        auto* layoutKind = new IR::StringLiteral(IR::ID("bridged_header"));
         bridgedHeaderType =
-            new IR::Type_Header(bridged_metadata_header, new IR::Annotations({
+            new IR::Type_Header(BRIDGED_MD_HEADER, new IR::Annotations({
                  new IR::Annotation(IR::ID("layout"), {layoutKind})}), fields);
 
         return Transform::init_apply(root);
@@ -372,8 +392,8 @@ struct PsaBridgeIngressToEgress : public Transform {
 
         // Inject the new field. This will give us access to the bridged
         // metadata type everywhere in the program.
-        type->fields.push_back(new IR::StructField("^bridged_metadata",
-                                                   new IR::Type_Name(bridged_metadata_header)));
+        type->fields.push_back(new IR::StructField(BRIDGED_MD,
+                                                   new IR::Type_Name(BRIDGED_MD_HEADER)));
         return type;
     }
 
@@ -392,14 +412,14 @@ struct PsaBridgeIngressToEgress : public Transform {
                   state->name);
         if (tnaContext->thread != INGRESS) return state;
 
-        auto cgMetadataParam = tnaContext->tnaParams.at("compiler_generated_meta");
+        auto cgMetadataParam = tnaContext->tnaParams.at(COMPILER_META);
 
         // Add "compiler_generated_meta.^bridged_metadata.^bridged_metadata_indicator = 0;".
         {
             auto* member = new IR::Member(new IR::PathExpression(cgMetadataParam),
-                                          IR::ID("^bridged_metadata"));
+                                          IR::ID(BRIDGED_MD));
             auto* fieldMember =
-                new IR::Member(member, IR::ID("^bridged_metadata_indicator"));
+                new IR::Member(member, IR::ID(BRIDGED_MD_INDICATOR));
             auto* value = new IR::Constant(IR::Type::Bits::get(8), 0);
             auto* assignment = new IR::AssignmentStatement(fieldMember, value);
             state->components.push_back(assignment);
@@ -407,9 +427,9 @@ struct PsaBridgeIngressToEgress : public Transform {
 
         // Add "md.^bridged_metadata.setValid();"
         {
-            auto cgMetadataParam = tnaContext->tnaParams.at("compiler_generated_meta");
+            auto cgMetadataParam = tnaContext->tnaParams.at(COMPILER_META);
             auto* member = new IR::Member(new IR::PathExpression(cgMetadataParam),
-                                          IR::ID("^bridged_metadata"));
+                                          IR::ID(BRIDGED_MD));
             auto* method = new IR::Member(member, IR::ID("setValid"));
             auto* args = new IR::Vector<IR::Argument>;
             auto* callExpr = new IR::MethodCallExpression(method, args);
@@ -430,9 +450,9 @@ struct PsaBridgeIngressToEgress : public Transform {
         auto* method = new IR::Member(new IR::PathExpression(packetInParam),
                                       IR::ID("extract"));
 
-        auto cgMetadataParam = tnaContext->tnaParams.at("compiler_generated_meta");
+        auto cgMetadataParam = tnaContext->tnaParams.at(COMPILER_META);
         auto* member = new IR::Member(new IR::PathExpression(cgMetadataParam),
-                                      IR::ID("^bridged_metadata"));
+                                      IR::ID(BRIDGED_MD));
         auto* args = new IR::Vector<IR::Argument>({ new IR::Argument(member) });
         auto* callExpr = new IR::MethodCallExpression(method, args);
         state->components.push_back(new IR::MethodCallStatement(callExpr));
@@ -457,9 +477,9 @@ struct PsaBridgeIngressToEgress : public Transform {
         auto* method = new IR::Member(new IR::PathExpression(packetOutParam),
                                       IR::ID("emit"));
 
-        auto cgMetadataParam = control->tnaParams.at("compiler_generated_meta");
+        auto cgMetadataParam = control->tnaParams.at(COMPILER_META);
         auto* member = new IR::Member(new IR::PathExpression(cgMetadataParam),
-                                      IR::ID("^bridged_metadata"));
+                                      IR::ID(BRIDGED_MD));
         auto* args = new IR::Vector<IR::Argument>({ new IR::Argument(member) });
         auto* callExpr = new IR::MethodCallExpression(method, args);
 
@@ -513,7 +533,7 @@ struct FindBridgeMetadataAssignment : public Transform {
             return false;
         auto headerType = type->to<IR::Type_Header>();
         LOG1("header type " << headerType);
-        return headerType->name == "^bridged_metadata_header";
+        return headerType->name == BRIDGED_MD_HEADER;
     }
 
     bool isCompilerGeneratedType(const IR::Type* type) {

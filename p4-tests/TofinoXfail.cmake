@@ -538,7 +538,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Wrong number of arguments for method call"
   testdata/p4_16_samples/checksum1-bmv2.p4
-  extensions/p4_tests/p4_16/serializer.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -580,12 +579,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/arith3-bmv2.p4
   testdata/p4_16_samples/arith4-bmv2.p4
   testdata/p4_16_samples/arith5-bmv2.p4
-  )
-
-# This program tries to assign an error value to a metadata field.
-p4c_add_xfail_reason("tofino"
-  "error: metadata field of type error not supported on tofino"
-  testdata/p4_16_samples/issue510-bmv2.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -637,6 +630,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/08-FullTPHV3.p4
   extensions/p4_tests/p4_14/04-FullPHV3.p4
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
+  ../glass/testsuite/p4_tests/mau/COMPILER-815/int_heavy.p4
 
   # Expected to fail, which means that action analysis is working correctly.
   extensions/p4_tests/p4_14/action_conflict_2.p4
@@ -892,6 +886,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/table-entries-exact-bmv2.p4
   testdata/p4_16_samples/table-entries-exact-ternary-bmv2.p4
   testdata/p4_16_samples/table-entries-priority-bmv2.p4
+  testdata/p4_16_samples/bvec-hdr-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1147,27 +1142,20 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4smith_regression/shrubs_0.p4
 )
 
-# BRIG-927
 p4c_add_xfail_reason("tofino"
-  "the alignment of fields within the container renders the action impossible"
+  "error: error.NoError invalid key expression"
+  testdata/p4_16_samples/issue1062-bmv2.p4
 )
 
 # BRIG-934
 p4c_add_xfail_reason("tofino"
-  "error: metadata field of type error not supported on tofino"
+  "error.*Field.*of size 0 not supported on Tofino"
   testdata/p4_16_samples/issue1325-bmv2.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "error: error.NoError invalid key expression"
-  testdata/p4_16_samples/issue1062-bmv2.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "error: metadata field of type error not supported on tofino"
   # This test attempts to match on a field of `error` type.
   testdata/p4_16_samples/issue1062-1-bmv2.p4
-  )
+  extensions/p4_tests/p4_16/fabric-psa/fabric.p4
+  testdata/p4_16_samples/issue510-bmv2.p4
+)
 
 # P4C-1011
 p4c_add_xfail_reason("tofino"
@@ -1255,20 +1243,10 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/constant_extract_neg.p4
 )
 
-p4c_add_xfail_reason("tofino"
-  "metadata field of type header empty_t not supported on tofino"
-  extensions/p4_tests/p4_16/fabric-psa/fabric.p4
-)
-
 #new p4c tests 1/9/19
 p4c_add_xfail_reason("tofino"
-  "error: Could not find declaration for"
+  "Compiler Bug.*Only bistring fields expected in header type declaration header"
   testdata/p4_16_samples/p4rt_digest_complex.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "Compiler Bug.*: unexpected reads expression"
-  testdata/p4_16_samples/bvec-hdr-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1278,10 +1256,15 @@ p4c_add_xfail_reason("tofino"
 )
 
 # p4runtime issue with flattenHeaders pass
+# Also P4C-1446
 p4c_add_xfail_reason("tofino"
-  "FH cannot find replacement for"
+  "Inferred valid container ranges"
   extensions/p4_tests/p4_16/serializer-struct.p4
   extensions/p4_tests/p4_16/serializer.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Compiler Bug.*FieldLVal contains unexpected value"
   extensions/p4_tests/p4_16/serializer2.p4
 )
 
@@ -1711,12 +1694,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/mau/test_config_373_execute_meter_with_or.p4
   )
 
-# P4C-1404
-p4c_add_xfail_reason("tofino"
-  "Different POV bit found"
-  ../glass/testsuite/p4_tests/mau/COMPILER-815/int_heavy.p4
-  )
-
 # P4C-1405
 p4c_add_xfail_reason("tofino"
   "Field is extracted in the parser, but its first container slice has an incompatible alignment"
@@ -1729,3 +1706,9 @@ p4c_add_xfail_reason("tofino"
   "Structure struct ingress_intrinsic_metadata_for_tm_t does not have a field isValid"
   ../glass/testsuite/p4_tests/mau/test_config_420_intr_md_tcam_valid.p4
   )
+
+# P4C does not support bridging of header stacks within serializable structs
+p4c_add_xfail_reason("tofino"
+  "Unimplemented compiler support.*Currently the compiler does not support bridging field.*of type stack"
+  testdata/p4_16_samples/subparser-with-header-stack-bmv2.p4
+)

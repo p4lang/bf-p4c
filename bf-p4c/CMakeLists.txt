@@ -147,7 +147,6 @@ set(EXTENSION_P4_14_CONV_SOURCES ${EXTENSION_P4_14_CONV_SOURCES} ${QUAL_BF_P4C_P
 set (BF_P4C_BACKEND_COMMON_SRCS
   common/alias.cpp
   common/asm_output.cpp
-  common/bridged_metadata_packing.cpp
   common/bridged_metadata_replacement.cpp
   common/check_for_unimplemented_features.cpp
   common/collect_global_pragma.cpp
@@ -155,6 +154,7 @@ set (BF_P4C_BACKEND_COMMON_SRCS
   common/elim_unused.cpp
   common/extract_maupipe.cpp
   common/field_defuse.cpp
+  common/flexible_packing.cpp
   common/header_stack.cpp
   common/ir_utils.cpp
   common/map_tables_to_actions.cpp
@@ -171,7 +171,6 @@ build_unified(BF_P4C_BACKEND_COMMON_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 set (BF_P4C_BACKEND_COMMON_HDRS
   common/alias.h
   common/autoindent.h
-  common/bridged_metadata_packing.h
   common/bridged_metadata_replacement.h
   common/check_for_unimplemented_features.h
   common/check_header_refs.h
@@ -181,6 +180,7 @@ set (BF_P4C_BACKEND_COMMON_HDRS
   common/elim_unused.h
   common/extract_maupipe.h
   common/field_defuse.h
+  common/flexible_packing.h
   common/header_stack.h
   common/ir_utils.h
   common/map_tables_to_actions.h

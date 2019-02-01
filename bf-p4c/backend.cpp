@@ -7,10 +7,10 @@
 #include "bf-p4c/common/alias.h"
 #include "bf-p4c/common/bridged_metadata_replacement.h"
 #include "bf-p4c/common/check_for_unimplemented_features.h"
-#include "bf-p4c/common/bridged_metadata_packing.h"
 #include "bf-p4c/common/check_header_refs.h"
 #include "bf-p4c/common/extract_maupipe.h"
 #include "bf-p4c/common/elim_unused.h"
+#include "bf-p4c/common/flexible_packing.h"
 #include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/common/multiple_apply.h"
 #include "bf-p4c/common/parser_overlay.h"
@@ -201,10 +201,11 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         // Bridged metadata related passes in the backend.
         // Needs to be run after InstructionSelection but before
         // deadcode elimination.
-        new BridgedMetadataPacking(phv, deps, bridged_fields, extracted_together, table_alloc),
+        new FlexiblePacking(phv, deps, bridged_fields, extracted_together, table_alloc),
+        new CollectPhvInfo(phv),
+        &defuse,
         // Run after bridged metadata packing as bridged packing updates the parser state.
         new ResolveComputedParserExpressions,
-        new RemoveUnusedExtracts(phv),
         new CollectPhvInfo(phv),
         &defuse,
         new AlpmSetup,

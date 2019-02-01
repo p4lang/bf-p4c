@@ -1,5 +1,6 @@
-#include "bf-p4c/common/bridged_metadata_packing.h"
 #include <cstring>
+#include "bf-p4c/common/flexible_packing.h"
+#include "bf-p4c/common/ir_utils.h"
 #include "bf-p4c/lib/pad_alignment.h"
 
 // XXX(Deep): BRIG-333
@@ -60,29 +61,19 @@ bool GatherParserExtracts::preorder(const IR::BFN::Extract* e) {
     return true;
 }
 
-cstring PackBridgedMetadata::getEgressFieldName(cstring ingressName) const {
-    if (!ingressName.startsWith(INGRESS_FIELD_PREFIX)) {
-        BUG("Called getEgressFieldName on ingress fieldname %1%", ingressName);
-        return cstring(); }
-    // ingress::foo.bar -> egress::foo.bar
-    return (EGRESS_FIELD_PREFIX + ingressName.substr(9));
-}
-
-cstring
-PackBridgedMetadata::getFieldName(const IR::Header* hdr, const IR::StructField* field) const {
-    auto name = hdr->name + "." + field->name;
-    if (auto* fieldInfo = phv.field(name))
-        return fieldInfo->name;
-    return name;
-}
-
-Visitor::profile_t PackBridgedMetadata::init_apply(const IR::Node* root) {
-    ingressBridgedHeader = nullptr;
-    egressBridgedHeader = nullptr;
+Visitor::profile_t RepackFlexHeaders::init_apply(const IR::Node* root) {
     egressBridgedMap.clear();
     reverseEgressBridgedMap.clear();
     extractedTogether.clear();
     fieldAlignmentMap.clear();
+    ingressFlexibleTypes.clear();
+    headerToFlexibleStructsMap.clear();
+    repackedHeaders.clear();
+    paddingFieldNames.clear();
+    flexibleStructs.clear();
+
+    if (LOGGING(1))
+        LOG1("\tNumber of bridged fields: " << fields.bridged_to_orig.size());
     for (auto kv : fields.bridged_to_orig) {
         cstring origName = getEgressFieldName(kv.second);
         cstring bridgedName = getEgressFieldName(kv.first);
@@ -91,27 +82,36 @@ Visitor::profile_t PackBridgedMetadata::init_apply(const IR::Node* root) {
     }
 
     if (LOGGING(5)) {
-        LOG5("\nPrinting orig to bridged");
-        for (auto kv : fields.orig_to_bridged)
-            LOG5("\t" << kv.first << " : " << kv.second);
-        LOG5("\nPrinting bridged to orig");
-        for (auto kv : fields.bridged_to_orig)
-            LOG5("\t" << kv.first << " : " << kv.second);
-        LOG5("\nPrinting bridged to external");
-        for (auto kv : fields.bridged_to_external_name)
-            LOG5("\t" << kv.first << " : " << kv.second);
-        LOG5("\nPrinting orig to bridged");
-        for (auto kv : fields.orig_to_bridged_name)
-            LOG5("\t" << kv.first << " : " << kv.second); }
-    if (LOGGING(3)) {
-        LOG3("\nPrinting egress bridged to external");
+        if (fields.orig_to_bridged.size() > 0) {
+            LOG5("\n\tPrinting orig to bridged");
+            for (auto kv : fields.orig_to_bridged)
+                LOG5("\t  " << kv.first << " : " << kv.second);
+        }
+        if (fields.bridged_to_orig.size() > 0) {
+            LOG5("\n\tPrinting bridged to orig");
+            for (auto kv : fields.bridged_to_orig)
+                LOG5("\t  " << kv.first << " : " << kv.second);
+        }
+        if (fields.bridged_to_external_name.size() > 0) {
+            LOG5("\n\tPrinting bridged to external");
+            for (auto kv : fields.bridged_to_external_name)
+                LOG5("\t  " << kv.first << " : " << kv.second);
+        }
+        if (fields.orig_to_bridged_name.size() > 0) {
+            LOG5("\n\tPrinting orig to bridged");
+            for (auto kv : fields.orig_to_bridged_name)
+                LOG5("\t  " << kv.first << " : " << kv.second);
+        }
+    }
+    if (LOGGING(3) && egressBridgedMap.size() > 0) {
+        LOG3("\n\tPrinting egress bridged to external");
         for (auto kv : egressBridgedMap)
-            LOG3(kv.first << "\t" << kv.second); }
+            LOG3("\t  " << kv.first << "\t" << kv.second); }
 
     return Transform::init_apply(root);
 }
 
-cstring PackBridgedMetadata::getNonBridgedEgressFieldName(cstring ingressName) const {
+cstring RepackFlexHeaders::getNonBridgedEgressFieldName(cstring ingressName) const {
     if (!ingressName.startsWith(INGRESS_FIELD_PREFIX)) {
         BUG("Called getNonBridgedEgressFieldName on ingress fieldname %1%", ingressName);
         return cstring();
@@ -121,19 +121,33 @@ cstring PackBridgedMetadata::getNonBridgedEgressFieldName(cstring ingressName) c
         if (kv.second == egressBridgedName)
             return kv.first;
     }
-    return cstring();
+    return egressBridgedName;
 }
 
-int PackBridgedMetadata::getHeaderBytes(const IR::Header* h) const {
+int RepackFlexHeaders::getHeaderBits(const IR::Header* h) const {
     int rv = 0;
     for (auto f : h->type->fields)
         rv += f->type->width_bits();
-    BUG_CHECK(rv % 8 == 0, "Bridged metadata packing pass produced a non byte-aligned header %1%",
-              h->name);
-    return (rv / 8);
+    return rv;
 }
 
-bool PackBridgedMetadata::hasCommonAction(
+int RepackFlexHeaders::getHeaderBytes(const IR::Header* h) const {
+    int bits = getHeaderBits(h);
+    BUG_CHECK(bits % 8 == 0, "Serializer packing produces a nonbyte-aligned header %1%", h->name);
+    return (bits / 8);
+}
+
+unsigned RepackFlexHeaders::getFlexTypeBits(const IR::BFN::Type_StructFlexible* flexType) const {
+    int rv = 0;
+    for (auto f : flexType->fields) {
+        if (f->is<IR::BFN::Type_StructFlexible>())
+            ::error("Nested flexible structs are not supported.");
+        rv += f->type->width_bits();
+    }
+    return rv;
+}
+
+bool RepackFlexHeaders::hasCommonAction(
         ordered_set<const IR::MAU::Action*>& set1,
         ordered_set<const IR::MAU::Action*>& set2) const {
     // Ignore the action BRIDGED_INIT_ACTION_NAME added for bridged metadata initialization.
@@ -146,7 +160,7 @@ bool PackBridgedMetadata::hasCommonAction(
     return false;
 }
 
-void PackBridgedMetadata::printNoPackConstraint(
+void RepackFlexHeaders::printNoPackConstraint(
         cstring errorMessage,
         const PHV::Field* f1,
         const PHV::Field* f2) const {
@@ -154,7 +168,7 @@ void PackBridgedMetadata::printNoPackConstraint(
          << f2->name << " (" << f2->id << ") (" << f2->size << "b)");
 }
 
-ordered_set<const IR::MAU::Action*> PackBridgedMetadata::fieldsAccessedSameAction(
+ordered_set<const IR::MAU::Action*> RepackFlexHeaders::fieldsAccessedSameAction(
         const PHV::Field* field1,
         const PHV::Field* field2,
         const ordered_map<const PHV::Field*, ordered_set<const IR::MAU::Action*>>& acts,
@@ -179,7 +193,7 @@ ordered_set<const IR::MAU::Action*> PackBridgedMetadata::fieldsAccessedSameActio
 
 // If the fields @f1 and @f2 are to be packed together, this returns a map of the field and its
 // corresponding required alignment.
-boost::optional<ordered_map<const PHV::Field*, int>> PackBridgedMetadata::mustBePackedTogether(
+boost::optional<ordered_map<const PHV::Field*, int>> RepackFlexHeaders::mustBePackedTogether(
         const PHV::Field* f1,
         const PHV::Field* f2,
         const ordered_set<const IR::MAU::Action*>& actions) const {
@@ -225,7 +239,7 @@ boost::optional<ordered_map<const PHV::Field*, int>> PackBridgedMetadata::mustBe
     return reqAlignment;
 }
 
-SymBitMatrix PackBridgedMetadata::mustPack(const ordered_set<const PHV::Field*>& fields) const {
+SymBitMatrix RepackFlexHeaders::mustPack(const ordered_set<const PHV::Field*>& fields) const {
     ordered_map<const PHV::Field*, ordered_set<const IR::MAU::Action*>> reads;
     ordered_map<const PHV::Field*, const PHV::Field*> otherGressMapping;
     SymBitMatrix mustPackMatrix;
@@ -305,13 +319,13 @@ SymBitMatrix PackBridgedMetadata::mustPack(const ordered_set<const PHV::Field*>&
     return mustPackMatrix;
 }
 
-SymBitMatrix PackBridgedMetadata::bridgedActionAnalysis(
-        const IR::Header* h,
+SymBitMatrix RepackFlexHeaders::bridgedActionAnalysis(
+        cstring hdrName,
         std::vector<const IR::StructField*>& nonByteAlignedFields) {
     ordered_map<const PHV::Field*, ordered_set<const IR::MAU::Action*>> fieldToActionWrites;
     ordered_set<const PHV::Field*> fields;
     for (auto f : nonByteAlignedFields) {
-        cstring fieldName = getFieldName(h, f);
+        cstring fieldName = getFieldName(hdrName, f);
         const auto* field = phv.field(fieldName);
         BUG_CHECK(field, "Field corresponding to name %1% not found", fieldName);
         fields.insert(field);
@@ -373,9 +387,9 @@ SymBitMatrix PackBridgedMetadata::bridgedActionAnalysis(
     return mustPackMatrix;
 }
 
-ordered_map<const IR::StructField*, int> PackBridgedMetadata::packWithField(
+ordered_map<const IR::StructField*, int> RepackFlexHeaders::packWithField(
         const int alignment,
-        const IR::Header* h,
+        cstring hdrName,
         const IR::StructField* f,
         const std::vector<const IR::StructField*>& candidates,
         const ordered_set<const PHV::Field*>& alreadyPackedFields,
@@ -385,13 +399,13 @@ ordered_map<const IR::StructField*, int> PackBridgedMetadata::packWithField(
     static ordered_map<const IR::StructField*, int> emptyMap;
     ordered_map<const IR::StructField*, int> rv;
     ordered_set<const IR::StructField*> potentiallyPackableFields;
-    const PHV::Field* field1 = phv.field(getFieldName(h, f));
+    const PHV::Field* field1 = phv.field(getFieldName(hdrName, f));
     potentiallyPackableFields.insert(f);
-    LOG4("\tPack with field: " << field1->name);
+    LOG4("\tPack with field: " << field1->name << " alignment: " << alignment);
 
     ordered_map<const PHV::Field*, const IR::StructField*> mustPackFields;
     for (auto f2 : candidates) {
-        const PHV::Field* field2 = phv.field(getFieldName(h, f2));
+        const PHV::Field* field2 = phv.field(getFieldName(hdrName, f2));
         if (field1 == field2) continue;
         if (mustPack(field1->id, field2->id)) {
             LOG4("\t\tDetected must pack field " << field2->name);
@@ -418,7 +432,8 @@ ordered_map<const IR::StructField*, int> PackBridgedMetadata::packWithField(
     // Check packing possibility of every candidate field. By the end of this loop, all fields that
     // can potentially be packed with the given field @f.
     for (auto f2 : candidates) {
-        const PHV::Field* field2 = phv.field(getFieldName(h, f2));
+        const PHV::Field* field2 = phv.field(getFieldName(hdrName, f2));
+        if (field1 == field2) continue;
         // If the field under consideration has already been packed, then ignore it.
         if (alreadyPackedFields.count(field2)) {
             LOG4("\t\tB. Already packed " << field2->name);
@@ -437,7 +452,7 @@ ordered_map<const IR::StructField*, int> PackBridgedMetadata::packWithField(
         // Ensure that the field under consideration can be packed with every other field in the
         // potentiallyPackableFields set.
         for (auto kv : potentiallyPackableFields) {
-            const PHV::Field* field3 = phv.field(getFieldName(h, kv));
+            const PHV::Field* field3 = phv.field(getFieldName(hdrName, kv));
             if (doNotPack(field2->id, field3->id)) {
                 LOG4("\t\tD. Detected no pack condition for " << field1->name << " and " <<
                      field2->name);
@@ -453,7 +468,7 @@ ordered_map<const IR::StructField*, int> PackBridgedMetadata::packWithField(
         ordered_set<const PHV::Field*> packing;
         packing.insert(field1);
         for (auto* f : potentiallyPackableFields)
-            packing.insert(phv.field(getFieldName(h, f)));
+            packing.insert(phv.field(getFieldName(hdrName, f)));
         packing.insert(field2);
         if (!actionConstraints.checkBridgedPackingConstraints(packing)) {
             LOG4("\t\tE. Packing violates action constraints " << field2->name);
@@ -552,7 +567,7 @@ ordered_map<const IR::StructField*, int> PackBridgedMetadata::packWithField(
     return rv;
 }
 
-ordered_set<const IR::StructField*> PackBridgedMetadata::checkPotentialPackAlignmentReqs(
+ordered_set<const IR::StructField*> RepackFlexHeaders::checkPotentialPackAlignmentReqs(
         const ordered_map<const IR::StructField*, le_bitrange>& alignmentConstraints,
         ordered_set<const IR::StructField*>& potentiallyPackableFields,
         const IR::StructField* field) const {
@@ -588,8 +603,8 @@ ordered_set<const IR::StructField*> PackBridgedMetadata::checkPotentialPackAlign
     return conflictingFields;
 }
 
-void PackBridgedMetadata::determineAlignmentConstraints(
-        const IR::Header* h,
+void RepackFlexHeaders::determineAlignmentConstraints(
+        cstring hdrName,
         const std::vector<const IR::StructField*>& nonByteAlignedFields,
         ordered_map<const IR::StructField*, le_bitrange>& alignmentConstraints,
         ordered_map<const IR::StructField*, std::set<int>>& conflictingAlignmentConstraints,
@@ -597,7 +612,7 @@ void PackBridgedMetadata::determineAlignmentConstraints(
     for (auto structField : nonByteAlignedFields) {
         ordered_set<const PHV::Field*> relatedFields;
         std::queue<const PHV::Field*> fieldsNotVisited;
-        cstring fieldName = getFieldName(h, structField);
+        cstring fieldName = getFieldName(hdrName, structField);
         const auto* field = phv.field(fieldName);
         BUG_CHECK(field, "No field named %1% found", fieldName);
         LOG4("\tDetermining alignment constraint for " << fieldName);
@@ -706,7 +721,7 @@ void PackBridgedMetadata::determineAlignmentConstraints(
     }
 }
 
-bool PackBridgedMetadata::mustAlign(const PHV::Field* field) const {
+bool RepackFlexHeaders::mustAlign(const PHV::Field* field) const {
     auto writeActions = actionConstraints.actions_writing_fields(field);
     if (writeActions.size() == 0) return false;
     for (const auto* a : writeActions) {
@@ -720,7 +735,7 @@ bool PackBridgedMetadata::mustAlign(const PHV::Field* field) const {
     return false;
 }
 
-const IR::StructField* PackBridgedMetadata::getPaddingField(int size, int id) {
+const IR::StructField* RepackFlexHeaders::getPaddingField(int size, int id) const {
     cstring padFieldName = "__pad_" + cstring::to_cstring(id);
     auto* fieldAnnotations = new IR::Annotations({new IR::Annotation(IR::ID("hidden"), { })
             });
@@ -729,54 +744,76 @@ const IR::StructField* PackBridgedMetadata::getPaddingField(int size, int id) {
     return padField;
 }
 
-IR::Node* PackBridgedMetadata::preorder(IR::Header* h) {
-    auto annotations = h->type->getAnnotations();
-    // Ignore nonflexible headers.
-    if (annotations->getSingle("layout") == nullptr)
-        return h;
-    LOG3("Candidate bridged metadata header found: " << h->name);
-    LOG3("Candidate header types: " << h->type);
-    cstring headerName = h->name;
-    // Only process bridged metadata headers.
-    if (!headerName.endsWith("^bridged_metadata")) return h;
+cstring RepackFlexHeaders::getFlexStructName(
+        const IR::Header* h,
+        const IR::BFN::Type_StructFlexible* flexType) {
+    cstring rv = h->name;
+    for (auto f : h->type->fields) {
+        if (!f->type->is<IR::BFN::Type_StructFlexible>()) continue;
+        const IR::BFN::Type_StructFlexible* candidate = f->type->to<IR::BFN::Type_StructFlexible>();
+        if (flexType != candidate) continue;
+        rv += "." + f->name;
+        return rv;
+    }
+    return rv;
+}
 
-    // If it is the egress bridged metadata header, then use the packed header created for the
-    // ingress bridged metadata header.
-    // This assumes that the ingress header will always be packed before the egress header.
-    if (headerName.startsWith(EGRESS_FIELD_PREFIX)) {
-        if (ingressBridgedHeader == nullptr) {
-            BUG("Do not have a bridged header in ingress");
-            return h; }
-        LOG1("Original Egress header layout: " << h->type);
-        LOG1("Size of original egress bridged header: " << getHeaderBytes(h));
-        auto* layoutKind = new IR::StringLiteral(IR::ID("flexible"));
-        auto* egressBridgedHeaderType = new IR::Type_Header(h->type->name,
-            new IR::Annotations({ new IR::Annotation(IR::ID("layout"), {layoutKind}) }),
-            ingressBridgedHeader->type->fields);
-        LOG1("New Egress Bridged header: " << egressBridgedHeaderType);
-        egressBridgedHeader = new IR::Header(h->name, egressBridgedHeaderType);
-        LOG1("New size of egress bridged header: " << getHeaderBytes(egressBridgedHeader));
-        return egressBridgedHeader; }
+cstring RepackFlexHeaders::getEgressFieldName(cstring ingressName) {
+    if (!ingressName.startsWith(INGRESS_FIELD_PREFIX)) {
+        BUG("Called getEgressFieldName on ingress fieldname %1%", ingressName);
+        return cstring(); }
+    // ingress::foo.bar -> egress::foo.bar
+    return (EGRESS_FIELD_PREFIX + ingressName.substr(9));
+}
 
-    // Ingress bridged metadata header, if it comes here.
-    LOG1("Original Ingress header layout: " << h->type);
-    LOG1("Size of original ingress bridged header: " << getHeaderBytes(h));
+cstring RepackFlexHeaders::getIngressFieldName(cstring egressName) {
+    if (!egressName.startsWith(EGRESS_FIELD_PREFIX)) {
+        BUG("Called getIngressFieldName on ingress fieldname %1%", egressName);
+        return cstring();
+    }
+    // egress::foo.bar -> ingress::foo.bar
+    return (INGRESS_FIELD_PREFIX + egressName.substr(8));
+}
+
+cstring RepackFlexHeaders::getFieldName(cstring hdr, const IR::StructField* field) const {
+    auto name = hdr + "." + field->name;
+    if (auto* fieldInfo = phv.field(name))
+        return fieldInfo->name;
+    return name;
+}
+
+IR::Type_Struct* RepackFlexHeaders::repackFlexibleStruct(
+        const IR::Header* h,
+        const IR::StructField* flex) {
+    const IR::BFN::Type_StructFlexible* flexType = flex->type->to<IR::BFN::Type_StructFlexible>();
+    BUG_CHECK(flexType, "Flexible struct type could not be derived");
+    cstring structName = RepackFlexHeaders::getFlexStructName(h, flexType);
+    LOG1("Flexible struct name: " << structName);
+    if (structName == h->name)
+        BUG("Did not get name corresponding to flexible struct in header %1%", h->name);
+    if (structName.startsWith(EGRESS_FIELD_PREFIX))
+        BUG("Cannot repack egress header %1%", h->name);
+
+    LOG1("Original flexible struct layout: " << flexType);
+    LOG1("Size of original flexible struct: " << getFlexTypeBits(flexType));
     // Fields that will form the basis of the new repacked header.
     IR::IndexedVector<IR::StructField> fields;
-    // Non byte aligned fields in the header.
+    // Non byte algined fields in the header.
     std::vector<const IR::StructField*> nonByteAlignedFields;
-    for (auto f : h->type->fields) {
+    for (auto f : flexType->fields) {
         // Ignore existing padding fields.
-        if (f->getAnnotations()->getSingle("hidden") != nullptr)
-            continue;
+        if (f->getAnnotations()->getSingle("hidden") != nullptr) continue;
         if (f->type->width_bits() % 8 == 0) {
-            // Add byte aligned bridged metadata field directly into the header.
-            fields.push_back(f);
-            continue; }
-        nonByteAlignedFields.push_back(f); }
-
-    LOG4("Added " << fields.size() << " byte aligned fields");
-    LOG4("Number of nonbyte aligned fields: " << nonByteAlignedFields.size());
+            // Add byte aligned fields directly into the new type.
+            IR::ID newName(flex->name + "." + f->name);
+            IR::StructField* newField = new IR::StructField(newName, f->annotations, f->type);
+            fields.push_back(newField);
+            continue;
+        }
+        nonByteAlignedFields.push_back(f);
+    }
+    LOG4("Added " << fields.size() << " byte aligned fields.");
+    LOG4("Number of non byte aligned fields: " << nonByteAlignedFields.size());
 
     // Sort the nonbyte aligned fields according to size.
     std::sort(nonByteAlignedFields.begin(), nonByteAlignedFields.end(),
@@ -784,29 +821,29 @@ IR::Node* PackBridgedMetadata::preorder(IR::Header* h) {
             return a->type->width_bits() < b->type->width_bits();
     });
 
-    // Logging information about nonbyte-aligned bridged metadata fields.
+    // Logging information about nonbyte-aligned fields.
     if (LOGGING(4)) {
         for (auto f : nonByteAlignedFields) {
-            const auto* field = phv.field(headerName + "." + f->name);
+            const auto* field = phv.field(structName + "." + f->name);
             LOG4("\tField: " << f->name << " (" << f->type->width_bits() << "b)");
             LOG4("\t  PHV Field: " << field);
             if (field->alignment)
-                LOG4("\t  Computed Alignment: " << *(field->alignment)); } }
+                LOG4("\t  Compute Alignment: " << *(field->alignment));
+        }
+    }
 
-    // Populate doNotPack matrix based on results of action analysis.
-    auto sliceListAlignment = bridgedActionAnalysis(h, nonByteAlignedFields);
-
+    auto sliceListAlignment = bridgedActionAnalysis(structName, nonByteAlignedFields);
     // Determine nonbyte-aligned bridged fields with alignment constraints.
     ordered_map<const IR::StructField*, le_bitrange> alignmentConstraints;
     ordered_map<const IR::StructField*, std::set<int>> conflictingAlignmentConstraints;
     ordered_set<const IR::StructField*> mustAlignFields;
-    determineAlignmentConstraints(h, nonByteAlignedFields, alignmentConstraints,
+    determineAlignmentConstraints(structName, nonByteAlignedFields, alignmentConstraints,
             conflictingAlignmentConstraints, mustAlignFields);
 
     unsigned padFieldId = 0;
     ordered_set<const PHV::Field*> alreadyPackedFields;
     for (auto f1 : nonByteAlignedFields) {
-        const PHV::Field* tempField = phv.field(getFieldName(h, f1));
+        const PHV::Field* tempField = phv.field(getFieldName(structName, f1));
         if (alreadyPackedFields.count(tempField)) {
             LOG4("\t  A. Already packed " << tempField->name);
             continue; }
@@ -827,25 +864,9 @@ IR::Node* PackBridgedMetadata::preorder(IR::Header* h) {
                 packingWithPositions[f1] = source->alignment->littleEndian;
             }
         } else {
-            packingWithPositions = packWithField(alignment, h, f1, nonByteAlignedFields,
+            packingWithPositions = packWithField(alignment, structName, f1, nonByteAlignedFields,
                     alreadyPackedFields, alignmentConstraints, conflictingAlignmentConstraints,
                     sliceListAlignment);
-            LOG3("\t\tResulting packing has " << packingWithPositions.size() << " fields.");
-            // Determine fields that must be extracted together on the egress parser.
-            for (auto kv : packingWithPositions) {
-                cstring fName1 = getEgressFieldName(getFieldName(h, kv.first));
-                LOG3("\t\t  " << kv.first << " @ " << kv.second);
-                for (auto kv1 : packingWithPositions) {
-                    cstring fName2 = getEgressFieldName(getFieldName(h, kv1.first));
-                    if (fName1 == fName2) continue;
-                    BUG_CHECK(reverseEgressBridgedMap.count(fName1),
-                            "No entry in reverse egress bridged map for %1%", fName1);
-                    BUG_CHECK(reverseEgressBridgedMap.count(fName2),
-                            "No entry in reverse egress bridged map for %1%", fName2);
-                    extractedTogether[reverseEgressBridgedMap.at(fName1)].insert(
-                            reverseEgressBridgedMap.at(fName2));
-                }
-            }
 
             // For fields that are alone in their byte aligned boundary, and must not be aligned at
             // a given bit position or have conflicting alignment constraints, we choose to align
@@ -871,7 +892,7 @@ IR::Node* PackBridgedMetadata::preorder(IR::Header* h) {
         if (packingWithPositions.size() == 1) {
             for (auto kv : packingWithPositions) {
                 if (!conflictingAlignmentConstraints.count(kv.first)) break;
-                cstring conflictingName = getFieldName(h, kv.first);
+                cstring conflictingName = getFieldName(structName, kv.first);
                 const PHV::Field* conflictingField = phv.field(conflictingName);
                 BUG_CHECK(conflictingField, "No field object for conflicting field %1%",
                           conflictingName);
@@ -900,6 +921,7 @@ IR::Node* PackBridgedMetadata::preorder(IR::Header* h) {
         int largestUnoccupiedPosition = totalPackSize - 1;
         LOG3("\t\t  Setting largest unoccupied position to: " << largestUnoccupiedPosition);
         std::vector<const IR::StructField*> packing;
+        ordered_set<const IR::StructField*> padFields;
         while (!freeBits.empty()) {
             int largestPosition = -1;
             const IR::StructField* candidate = nullptr;
@@ -918,6 +940,8 @@ IR::Node* PackBridgedMetadata::preorder(IR::Header* h) {
                 if (padSize == 0) break;
                 LOG4("\t\t  Need to insert padding of size: " << padSize);
                 const IR::StructField* padField = getPaddingField(padSize, padFieldId++);
+                LOG4("\t\t  Padding field: " << padField);
+                padFields.insert(padField);
                 fieldsPackedTogether.push_back(padField);
                 freeBits.clear();
                 largestUnoccupiedPosition = -1;
@@ -934,7 +958,9 @@ IR::Node* PackBridgedMetadata::preorder(IR::Header* h) {
                                 (largestUnoccupiedPosition - outerLimitForField));
                         const IR::StructField* padField = getPaddingField(padSize,
                                 padFieldId++);
+                        LOG4("\t\t  Padding field: " << padField);
                         fieldsPackedTogether.push_back(padField);
+                        padFields.insert(padField);
                     }
                 }
             }
@@ -944,219 +970,427 @@ IR::Node* PackBridgedMetadata::preorder(IR::Header* h) {
             LOG5("\t\t  Setting largest unoccupied position to: " << largestUnoccupiedPosition);
             fieldsPackedTogether.push_back(candidate);
             packingWithPositions.erase(candidate);
-            const PHV::Field* packingField = phv.field(getFieldName(h, candidate));
+            cstring alreadyPackedFieldName = getFieldName(structName,
+                    candidate);
+            const PHV::Field* packingField = phv.field(alreadyPackedFieldName);
+            LOG5("\t\tInserting into already packed field: " << alreadyPackedFieldName);
             alreadyPackedFields.insert(packingField);
+            LOG5("\t\tInserting " << packingField->name << " into already packed fields.");
         }
 
+        ordered_set<cstring> fieldsExtractedTogether;
         for (auto it = fieldsPackedTogether.begin(); it != fieldsPackedTogether.end(); ++it) {
-            const PHV::Field* fld = phv.field(getFieldName(h, *it));
-            LOG4("\t\tPushing field " << fld << " of type " << (*it)->type->width_bits() <<
+            cstring fieldName = getFieldName(structName, *it);
+            LOG4("\t\tA. Pushing field " << fieldName << " of type " << (*it)->type->width_bits() <<
                     "b.");
-            fields.push_back(*it); }
+            if (padFields.count(*it))
+                paddingFieldNames.insert(fieldName);
+            IR::ID newName(flex->name + "." + (*it)->name);
+            IR::StructField* newField = new IR::StructField(newName, (*it)->annotations,
+                    (*it)->type);
+            fieldsExtractedTogether.insert(newName);
+            fields.push_back(newField);
+        }
+        for (auto f1 : fieldsExtractedTogether) {
+            for (auto f2 : fieldsExtractedTogether) {
+                if (f1 == f2) continue;
+                cstring fName1 = h->name + "." + f1;
+                cstring fName2 = h->name + "." + f2;
+                extractedTogether[fName1].insert(fName2);
+                extractedTogether[fName2].insert(fName1);
+            }
+        }
     }
 
-    auto* layoutKind = new IR::StringLiteral(IR::ID("flexible"));
-    auto* ingressBridgedHeaderType = new IR::Type_Header(h->type->name,
-            new IR::Annotations({ new IR::Annotation(IR::ID("layout"), {layoutKind}) }),
-            fields);
-    ingressBridgedHeader = new IR::Header(h->name, ingressBridgedHeaderType);
-    LOG1("Ingress Bridged header : " << ingressBridgedHeaderType);
-    LOG1("New size of ingress bridged header: " << getHeaderBytes(ingressBridgedHeader));
-
-    if (extractedTogether.size() == 0) return ingressBridgedHeader;
-
-    LOG2("  Printing fields that must be extracted together.");
-    for (auto kv : extractedTogether) {
-        std::stringstream ss;
-        ss << "\t" << kv.first << " : ";
-        for (auto f : kv.second)
-            ss << f << " ";
-        LOG2(ss.str());
-    }
-
-    return ingressBridgedHeader;
+    auto* repackedType = new IR::Type_Struct(flexType->name, flexType->annotations, fields);
+    return repackedType;
 }
 
-void ReplaceBridgedMetadataUses::addBridgedFields(const IR::Header* header) {
-    // packetIndex stores the offset within the header.
-    unsigned packetIndex = 0;
+bool RepackFlexHeaders::isFlexibleHeader(const IR::Header* h) {
+    bool foundFlexibleStruct = false;
+    for (auto f : h->type->fields) {
+        if (f->type->is<IR::BFN::Type_StructFlexible>()) {
+            foundFlexibleStruct = true;
+            headerToFlexibleStructsMap[h].insert(f);
+            flexibleStructs.insert(f->type);
+        }
+    }
+    return foundFlexibleStruct;
+}
+
+IR::Node* RepackFlexHeaders::preorder(IR::Header* h) {
+    if (!isFlexibleHeader(h)) return h;
+    LOG3("Candidate flexible header found: " << h->name);
+    LOG3("Candidate header type: " << h->type);
+    LOG3("Candidate header size: " << getHeaderBits(h) << "b");
+    // Only process bridged metadata headers.
+    cstring headerName = h->name;
+    // If it is an egress header, take its new type from the repacked ingress version.
+    if (headerName.startsWith(EGRESS_FIELD_PREFIX)) {
+        cstring ingressName = getIngressFieldName(headerName);
+        if (!repackedHeaders.count(ingressName))
+            BUG("Cannot find repacking corresponding to ingress header %1%", ingressName);
+        auto* egressHeaderType = new IR::Type_Header(h->type->name, h->type->annotations,
+                repackedHeaders.at(ingressName)->type->fields);
+        auto* egressRepackedHeader = new IR::Header(headerName, egressHeaderType);
+        repackedHeaders[headerName] = egressRepackedHeader;
+        LOG1("Repacked egress header: " << egressRepackedHeader);
+        LOG1("Repacked egress header type: " << egressHeaderType);
+        LOG1("Repacked egress header size: " << getHeaderBytes(egressRepackedHeader) << "B");
+        return egressRepackedHeader;
+    }
+
+    for (auto kv : headerToFlexibleStructsMap) {
+        LOG3("  " << kv.second.size() << " flexible structs in header " << h->name);
+        for (auto flex : kv.second) {
+            const auto* flexType = flex->type->to<IR::BFN::Type_StructFlexible>();
+            ingressFlexibleTypes[flexType] = repackFlexibleStruct(h, flex);
+        }
+    }
+
+    IR::IndexedVector<IR::StructField> fields;
+    for (auto f : h->type->fields) {
+        if (!f->type->is<IR::BFN::Type_StructFlexible>()) {
+            fields.push_back(f);
+            continue;
+        }
+        const IR::BFN::Type_StructFlexible* flexType = f->type->to<IR::BFN::Type_StructFlexible>();
+        if (!ingressFlexibleTypes.count(flexType))
+            BUG("Repacking not done for flexible type %1%", f->name);
+        for (auto f1 : ingressFlexibleTypes.at(flexType)->fields)
+            fields.push_back(f1);
+    }
+    auto* repackedHeaderType = new IR::Type_Header(h->type->name, h->type->annotations, fields);
+    auto* repackedHeader = new IR::Header(h->name, repackedHeaderType);
+    repackedHeaders[headerName] = repackedHeader;
+    LOG1("Repacked header: " << repackedHeader->name);
+    LOG1("Repacked header type: " << repackedHeader->type);
+    LOG1("Repacked header size: " << getHeaderBytes(repackedHeader) << "B");
+    return repackedHeader;
+}
+
+Visitor::profile_t ProduceParserMappings::init_apply(const IR::Node* root) {
+    parserStateToHeadersMap.clear();
+    headerNameToRefMap.clear();
+    bridgedToExpressionsMap.clear();
+    return Inspector::init_apply(root);
+}
+
+bool ProduceParserMappings::preorder(const IR::BFN::ParserState* p) {
+    for (auto stmt : p->statements) {
+        auto* e = stmt->to<IR::BFN::Extract>();
+        if (!e) continue;
+        if (!e->source->is<IR::BFN::PacketRVal>()) continue;
+        auto* destVal = e->dest->to<IR::BFN::FieldLVal>();
+        if (!destVal) BUG("No destination object for extract %1%", e);
+        const auto* f = phv.field(destVal->field);
+        if (!f) BUG("No field corresponding to destination %1% of extract %2%", destVal->field, e);
+        cstring headerName = f->header();
+        if (!parserStateToHeadersMap.count(p->name)) {
+            parserStateToHeadersMap[p->name].push_back(headerName);
+            continue;
+        }
+        auto& existingHeaders = parserStateToHeadersMap.at(p->name);
+        bool foundHeader = false;
+        for (auto s : existingHeaders) {
+            if (s == headerName) {
+                foundHeader = true;
+                break;
+            }
+        }
+        if (foundHeader) continue;
+        parserStateToHeadersMap[p->name].push_back(headerName);
+    }
+    return true;
+}
+
+bool ProduceParserMappings::preorder(const IR::Header* h) {
+    headerNameToRefMap[h->name] = h;
+    // At this point, header is flattened, so safe to do this.
+    for (auto f : h->type->fields) {
+        cstring name = h->name + "." + f->name;
+        IR::Member* mem = gen_fieldref(h, f->name);
+        if (!mem) BUG("Could not produce member corresponding to %1%", f->name);
+        bridgedToExpressionsMap[name] = mem;
+    }
+    return false;
+}
+
+void ReplaceFlexFieldUses::addBridgedFields(const IR::Header* header) {
     if (!header) return;
     for (auto f : header->type->fields) {
-        cstring fieldName = pack.getFieldName(header, f);
-        LOG3("    Field Name: " << fieldName << " Type: " << f->type << " Offset: " << packetIndex);
+        cstring fieldName = pack.getFieldName(header->name, f);
         bridgedFields[fieldName] = f->type;
-        bridgedOffsets[fieldName] = packetIndex;
-        packetIndex += f->type->width_bits(); }
+    }
 }
 
-Visitor::profile_t ReplaceBridgedMetadataUses::init_apply(const IR::Node* root) {
-    newEmits.clear();
-    bridgedOffsets.clear();
+Visitor::profile_t ReplaceFlexFieldUses::init_apply(const IR::Node* root) {
     bridgedFields.clear();
-    bridgedRef = nullptr;
-    povExpr = nullptr;
+    repackedHeaders.clear();
+    parserStatesToModify.clear();
+    emitsToBeReplaced.clear();
+    fieldsToReplace.clear();
+    egressBridgedMap.clear();
+    reverseEgressBridgedMap.clear();
+    extractedTogether.clear();
 
-    LOG3("    Adding bridged fields for ingress");
-    addBridgedFields(pack.getIngressBridgedHeader());
-    LOG3("    Adding bridged fields for egress");
-    addBridgedFields(pack.getEgressBridgedHeader());
-    LOG3("    Number of bridged fields: " << bridgedFields.size());
+    repackedHeaders = pack.getRepackedHeaders();
+    for (const auto* h : repackedHeaders)
+        addBridgedFields(h);
+
+    if (bridgedFields.size() > 0) {
+        LOG3("\tNumber of flexible fields: " << bridgedFields.size());
+        for (auto kv : bridgedFields)
+            LOG3("\t  " << kv.first << " (" << kv.second->width_bits() << "b)");
+    }
+
+    auto& hdrToFlex = pack.getHeaderToFlexibleStructsMap();
+    for (auto kv : hdrToFlex) {
+        for (auto flex : kv.second) {
+            const auto* flexType = flex->type->to<IR::BFN::Type_StructFlexible>();
+            for (auto f : flexType->fields)
+                fieldsToReplace.insert(kv.first->name + "." + flex->name + "." + f->name);
+        }
+    }
 
     return Transform::init_apply(root);
 }
 
-IR::Node* ReplaceBridgedMetadataUses::preorder(IR::BFN::Pipe* pipe) {
+IR::Node* ReplaceFlexFieldUses::preorder(IR::BFN::Pipe* pipe) {
     // If there are no bridged fields, avoid the IR traversal because there are no bridged metadata
     // fields whose uses must be replaced.
-    if (bridgedFields.size() == 0)
-        prune();
+    if (bridgedFields.size() == 0) prune();
     return pipe;
 }
 
-IR::Node* ReplaceBridgedMetadataUses::postorder(IR::BFN::ParserState* p) {
+IR::Node* ReplaceFlexFieldUses::preorder(IR::BFN::ParserState* ps) {
+    bool extractToBridgedMetadataFound = false;
+    for (auto stmt : ps->statements)
+        if (const auto* e = stmt->to<IR::BFN::Extract>())
+            extractToBridgedMetadataFound |= processExtract(e);
+    if (extractToBridgedMetadataFound) {
+        LOG4("\t  Must modify parser state: " << ps->name);
+        parserStatesToModify.insert(ps);
+    }
+    return ps;
+}
+
+IR::Node* ReplaceFlexFieldUses::preorder(IR::BFN::Extract* e) {
+    const auto* ps = findContext<IR::BFN::ParserState>();
+    if (!parserStatesToModify.count(ps)) return e;
+    if (!e->source->is<IR::BFN::ComputedRVal>()) return e;
+    auto* computedVal = e->source->to<IR::BFN::ComputedRVal>();
+    auto* destField = e->dest->to<IR::BFN::FieldLVal>();
+    if (!destField) return e;
+    const PHV::Field* dest = phv.field(destField->field);
+    const PHV::Field* source = phv.field(computedVal->source);
+    if (!dest || !source) return e;
+    egressBridgedMap[source->name] = dest->name;
+    reverseEgressBridgedMap[dest->name] = source->name;
+    return e;
+}
+
+const std::vector<IR::BFN::Extract*> ReplaceFlexFieldUses::getNewExtracts(
+        cstring h,
+        unsigned& packetOffset) const {
+    std::vector<IR::BFN::Extract*> rv;
+    const IR::Header* hdr = info.getHeaderRefForName(h);
+    BUG_CHECK(hdr, "No header object corresponding to name %1%", h);
+    // At this point, the header type is flattened.
+    for (auto f : hdr->type->fields) {
+        IR::Member* newDest = gen_fieldref(hdr, f->name);
+        int width = f->type->width_bits();
+        nw_bitrange range = StartLen(packetOffset, width);
+        packetOffset += width;
+        IR::BFN::PacketRVal* source = new IR::BFN::PacketRVal(range);
+        IR::BFN::Extract* newE = new IR::BFN::Extract(newDest, source);
+        LOG3("\t\tGenerated new extract: " << newE);
+        rv.push_back(newE);
+    }
+    return rv;
+}
+
+bool ReplaceFlexFieldUses::processExtract(const IR::BFN::Extract* e) {
+    auto* fieldLVal = e->dest->to<IR::BFN::FieldLVal>();
+    if (!fieldLVal) return false;
+    if (pack.isFlexibleStruct(fieldLVal->field->type)) {
+        LOG4("\t  Found flexible type: " << fieldLVal->field->type);
+        return true;
+    }
+    return false;
+}
+
+IR::BFN::Extract* ReplaceFlexFieldUses::getNewComputedVal(const IR::BFN::Extract* e) const {
+    const IR::BFN::ComputedRVal* source = e->source->to<IR::BFN::ComputedRVal>();
+    BUG_CHECK(source, "Cannot get computed source for ComputedRVal object %1%", e);
+    const auto* f = phv.field(source->source);
+    auto* newE = new IR::BFN::Extract(e->dest, e->source);
+    if (!f) return newE;
+    if (!fieldsToReplace.count(f->name)) return newE;
+    if (!bridgedFields.count(f->name)) return newE;
+    LOG4("\t\tFound field to replace: " << e);
+    auto& exprMap = info.getBridgedToExpressionsMap();
+    if (exprMap.count(f->name)) {
+        IR::Member* mem = exprMap.at(f->name);
+        IR::BFN::ComputedRVal* source = new IR::BFN::ComputedRVal(mem);
+        IR::BFN::Extract* newExtract = new IR::BFN::Extract(e->dest, source);
+        LOG4("\t\t  New computed val extract: " << newExtract);
+        return newExtract;
+    }
+    return newE;
+}
+
+IR::Node* ReplaceFlexFieldUses::postorder(IR::BFN::ParserState* p) {
     // Only process the parser state which extracts bridged metadata header in the egress pipeline.
-    if (p->name != PackBridgedMetadata::EGRESS_BRIDGED_PARSER_STATE_NAME)
-        return p;
-    // Update the shift of each transition out of the egress bridged metadata header, taking the new
-    // packing into account.
+    if (!parserStatesToModify.count(p)) return p;
+
+    LOG4("\tPostorder for parser state " << p->name);
+    IR::Vector<IR::BFN::ParserPrimitive> statements;
+    unsigned packetOffset = 0;
+    auto extractedHeaders = info.getExtractedHeaders(p);
+    LOG4("\t  Number of extracted headers: " << extractedHeaders.size());
+    for (auto s : extractedHeaders)
+        LOG4("\t\tHeader: " << s);
+    unsigned headerNum = 0;
+    for (auto stmt : p->statements) {
+        auto* extract = stmt->to<IR::BFN::Extract>();
+        if (!extract) {
+            statements.push_back(stmt);
+            continue;
+        }
+        auto* rval = extract->source->to<IR::BFN::PacketRVal>();
+        auto* cval = extract->source->to<IR::BFN::ComputedRVal>();
+        if (!rval && !cval) {
+            statements.push_back(stmt);
+            continue;
+        }
+        if (cval) {
+            statements.push_back(getNewComputedVal(extract));
+            continue;
+        }
+        auto* destVal = extract->dest->to<IR::BFN::FieldLVal>();
+        if (!destVal) BUG("No destination object for extract %2%", extract);
+        const auto* f = phv.field(destVal->field);
+        if (!f) BUG("Cannot find Field object corresponding to %1%", destVal->field);
+        cstring hName = f->header();
+        if (headerNum < extractedHeaders.size() && extractedHeaders[headerNum] == hName) {
+            LOG4("\t\t  Encountered first field of header " << hName);
+            auto newExtracts = getNewExtracts(hName, packetOffset);
+            for (auto* e : newExtracts)
+                statements.push_back(e);
+            ++headerNum;
+        }
+    }
+
+    BUG_CHECK(packetOffset % 8 == 0, "Non byte aligned packet bits extracted in %1%", p->name);
+    unsigned packetOffsetBytes = packetOffset / 8;
     IR::Vector<IR::BFN::Transition> transitions;
     for (auto t : p->transitions) {
         auto* value = t->value;
         BUG_CHECK(value, "No value attached to transition %1%", t);
         auto* constValue = value->to<IR::BFN::ParserConstMatchValue>();
         BUG_CHECK(constValue, "No constant value attached to transition %1%", t);
-        int shift = pack.getHeaderBytes(pack.getEgressBridgedHeader());
-        LOG3("    New shift calculated: " << shift);
-        auto* newTransition =  new IR::BFN::Transition(constValue->value, shift, t->next);
+        auto* newTransition = new IR::BFN::Transition(constValue->value, packetOffsetBytes,
+                t->next);
         newTransition->saves = t->saves;
-        transitions.push_back(newTransition); }
-    IR::BFN::ParserState* newParserState =
-        new IR::BFN::ParserState(p->name, p->gress, p->statements, p->selects, transitions);
-    LOG3("    New Parser State: " << newParserState);
+        transitions.push_back(newTransition);
+    }
+    IR::BFN::ParserState* newParserState = new IR::BFN::ParserState(p->name, p->gress, statements,
+            p->selects, transitions);
+    LOG3("\tNew parser state:\n" << newParserState);
     return newParserState;
 }
 
-IR::BFN::Extract*
-ReplaceBridgedMetadataUses::replaceExtract(const IR::BFN::Extract* e, const PHV::Field* dest) {
-    LOG3("\t  Found extract for bridged field " << e);
-    auto& egressBridgedMap = pack.getEgressBridgedMap();
-    BUG_CHECK(egressBridgedMap.count(dest->name), "No added version of the egress bridged metadata "
-              "%1%", dest->name);
-    cstring bridgedName = egressBridgedMap.at(dest->name);
-    auto bitWidth = bridgedFields.at(bridgedName)->width_bits();
-    auto* newSource = new IR::BFN::PacketRVal(StartLen(bridgedOffsets.at(bridgedName), bitWidth));
-    auto* newExtract = new IR::BFN::Extract(e->dest, newSource);
-    LOG3("\t  Added new extract: " << newExtract);
-    return newExtract;
-}
-
-IR::Node* ReplaceBridgedMetadataUses::preorder(IR::BFN::Extract* e) {
-    auto* state = findContext<IR::BFN::ParserState>();
-    if (state->name != PackBridgedMetadata::EGRESS_BRIDGED_PARSER_STATE_NAME)
-        return e;
-    auto* fieldLVal = e->dest->to<IR::BFN::FieldLVal>();
-    if (!fieldLVal) return e;
-    auto* f = phv.field(fieldLVal->field);
-    if (!f) return e;
-    auto& egressBridgedMap = pack.getEgressBridgedMap();
-    if (egressBridgedMap.count(f->name)) {
-        LOG2("\tReplacing extract for " << f->name);
-        return replaceExtract(e, f);
+IR::Node* ReplaceFlexFieldUses::preorder(IR::BFN::EmitField* e) {
+    if (e->source->field->type->is<IR::BFN::Type_StructFlexible>()) {
+        const auto* f = phv.field(e->source->field);
+        BUG_CHECK(f, "Field object corresponding to %1% not found", e->source->field);
+        emitsToBeReplaced.insert(f->header());
+        LOG4("\t\tInsert " << f->header() << " to emits to be replaced");
     }
     return e;
 }
 
-void ReplaceBridgedMetadataUses::replaceEmit(const IR::BFN::EmitField* e) {
-    auto* source = e->source;
-    auto* povBit = e->povBit;
-    auto* fieldSource = phv.field(source->field);
-    // At this point, these emits may correspond to fields that will be removed later by dead code
-    // elimination. Therefore, no BUG_CHECK here.
-    if (!fieldSource || !bridgedFields.count(fieldSource->name))
-        return;
-    LOG4("\t  Found emit for bridged field " << e);
-    if (povExpr != nullptr)
-        BUG_CHECK(povExpr == povBit->field, "Different POV bit found");
-    else
-        povExpr = povBit->field;
-    const IR::Member* oldMember = source->field->to<IR::Member>();
-    BUG_CHECK(oldMember, "Member corresponding to %1% not found", source->field);
-    const IR::Type* type = bridgedFields.at(fieldSource->name);
-    const IR::Member* newMember = new IR::Member(source->field->srcInfo, type, new
-            IR::ConcreteHeaderRef(pack.getIngressBridgedHeader()), oldMember->member);
-    IR::BFN::EmitField* newEmit = new IR::BFN::EmitField(newMember, povBit->field);
-    newEmits[fieldSource->name] = newEmit;
-    LOG3("\t  New emit: " << newEmit);
+const std::vector<IR::BFN::EmitField*>
+ReplaceFlexFieldUses::getNewEmits(
+        const IR::Header* h,
+        const IR::BFN::FieldLVal* pov) const {
+    std::vector<IR::BFN::EmitField*> rv;
+    BUG_CHECK(pov, "No POV bit for header %1%", h->name);
+    for (auto f : h->type->fields) {
+        IR::Member* newDest = gen_fieldref(h, f->name);
+        IR::BFN::EmitField* newE = new IR::BFN::EmitField(newDest, pov->field);
+        LOG4("\t\tGenerated new emit: " << newE);
+        rv.push_back(newE);
+    }
+    return rv;
 }
 
-IR::Node* ReplaceBridgedMetadataUses::preorder(IR::BFN::EmitField* e) {
-    const IR::Expression* source = e->source->field;
-    const PHV::Field* f = phv.field(source);
-    if (!f) return e;
-    bool isIngress = f->name.startsWith(PackBridgedMetadata::INGRESS_FIELD_PREFIX);
-    bool isBridged = strstr(f->name.c_str(), PackBridgedMetadata::BRIDGED_FIELD_PREFIX);
-    if (isIngress && isBridged) {
-        replaceEmit(e);
-        return nullptr; }
-    return e;
-}
-
-IR::Node* ReplaceBridgedMetadataUses::preorder(IR::ConcreteHeaderRef* ref) {
-    const IR::Header* h = pack.getIngressBridgedHeader();
-    if (ref->ref->name == h->name)
-        bridgedRef = ref;
-    return ref;
-}
-
-IR::Node* ReplaceBridgedMetadataUses::postorder(IR::BFN::Deparser* d) {
-    if (d->thread() == EGRESS) return d;
-    const IR::Header* h = pack.getIngressBridgedHeader();
-    unsigned numEmit = 0;
-    for (auto it = h->type->fields.rbegin(); it != h->type->fields.rend(); ++it) {
-        auto* f = *it;
-        cstring fieldName = pack.getFieldName(h, f);
-        if (newEmits.count(fieldName)) {
-            d->emits.insert(d->emits.begin(), newEmits.at(fieldName));
+IR::Node* ReplaceFlexFieldUses::postorder(IR::BFN::Deparser* d) {
+    IR::Vector<IR::BFN::Emit> emits;
+    ordered_set<cstring> emitsDoneReplacing;
+    for (auto* e : d->emits) {
+        const auto* emitField = e->to<IR::BFN::EmitField>();
+        if (!emitField) {
+            emits.push_back(e);
+            continue;
+        }
+        const auto* f = phv.field(emitField->source->field);
+        BUG_CHECK(f, "Field object corresponding to %1% not found", emitField->source->field);
+        if (emitsDoneReplacing.count(f->header())) continue;
+        if (emitsToBeReplaced.count(f->header())) {
+            const IR::Header* h = info.getHeaderRefForName(f->header());
+            BUG_CHECK(h, "No header object corresponding to name %1%", f->header());
+            auto newEmits = getNewEmits(h, emitField->povBit);
+            for (auto* newE : newEmits)
+                emits.push_back(newE);
+            emitsDoneReplacing.insert(h->name);
         } else {
-            BUG_CHECK(bridgedRef != nullptr, "No header type defined for bridged header?");
-            auto* headerType = bridgedRef->type->to<IR::Type_StructLike>();
-            BUG_CHECK(headerType != nullptr, "Emitted bridged header is of non-structlike type:"
-                      " %1%", headerType);
-            const IR::Expression* fieldRef = new IR::Member(f->type, bridgedRef, f->name);
-            LOG1("New expression: " << fieldRef);
-            BUG_CHECK(povExpr != nullptr, "No POV bit corresponding to bridged emit found");
-            const IR::BFN::EmitField* newEmit = new IR::BFN::EmitField(fieldRef, povExpr);
-            LOG1("New emit created: " << newEmit);
-            // Add new emit for a padding field that did not exist.
-            d->emits.insert(d->emits.begin(), newEmit);
+            emits.push_back(e);
         }
     }
-    if (LOGGING(3)) {
-        for (auto e : d->emits) {
-            LOG3("Reprint emit " << ++numEmit << " : " << e); } }
+    // Clear the emits in the deparser and replace with the new ones.
+    d->emits.clear();
+    for (auto* e : emits)
+        d->emits.push_back(e);
     return d;
 }
 
-IR::Node* RemoveUnusedExtracts::preorder(IR::BFN::Extract* e) {
-    auto* state = findContext<IR::BFN::ParserState>();
-    if (state->name != PackBridgedMetadata::EGRESS_BRIDGED_PARSER_STATE_NAME)
-        return e;
-    auto* fieldLVal = e->dest->to<IR::BFN::FieldLVal>();
-    if (!fieldLVal) return e;
-    auto* f = phv.field(fieldLVal->field);
-    if (!f) return e;
-    bool isEgress = f->name.startsWith(PackBridgedMetadata::EGRESS_FIELD_PREFIX);
-    bool isBridged = strstr(f->name.c_str(), PackBridgedMetadata::BRIDGED_FIELD_PREFIX);
-    cstring bmIndicator = cstring(PackBridgedMetadata::EGRESS_FIELD_PREFIX) +
-                          cstring(BM_INDICATOR);
-    if (f->name != bmIndicator && isEgress && isBridged) {
-        LOG4("    Removing extract corresponding to egress version of bridged field: " << f);
-        return nullptr; }
-    return e;
+void ReplaceFlexFieldUses::end_apply() {
+    auto& extracted = pack.getExtractedTogether();
+    if (LOGGING(6)) {
+        for (auto kv : egressBridgedMap)
+            LOG6("\t\t" << kv.first << " : " << kv.second);
+        for (auto kv : extracted) {
+            LOG6("\t\t" << kv.first);
+            for (auto s : kv.second)
+                LOG6("\t\t  " << s);
+        }
+    }
+    auto& paddingFieldNames = pack.getPaddingFieldNames();
+    for (auto kv : extracted) {
+        LOG6("\t  " << kv.first);
+        if (paddingFieldNames.count(kv.first)) continue;
+        cstring key = pack.getEgressFieldName(kv.first);
+        if (egressBridgedMap.count(key))
+            key = egressBridgedMap.at(key);
+        LOG6("\t\tKey: " << key);
+        for (auto s : kv.second) {
+            if (paddingFieldNames.count(s)) continue;
+            cstring value = pack.getEgressFieldName(s);
+            LOG6("\t\t  Original value: " << value);
+            if (egressBridgedMap.count(value))
+                value = egressBridgedMap.at(value);
+            LOG6("\t\t  Value: " << value);
+            extractedTogether[key].insert(value);
+            extractedTogether[value].insert(key);
+            LOG3("\t  Extracted together: " << key << ", " << value);
+        }
+    }
 }
 
-BridgedMetadataPacking::BridgedMetadataPacking(
-            const PhvInfo& p,
+FlexiblePacking::FlexiblePacking(
+            PhvInfo& p,
             DependencyGraph& dg,
             CollectBridgedFields& b,
             ordered_map<cstring, ordered_set<cstring>>& e,
@@ -1165,8 +1399,10 @@ BridgedMetadataPacking::BridgedMetadataPacking(
       bridgedFields(b),
       packConflicts(p, dg, tMutex, alloc, aMutex),
       actionConstraints(p, packConflicts),
-      packMetadata(p, b, actionConstraints, doNotPack, phase0Fields, deparserParams,
-                   parserAlignedFields, e, alloc) {
+      packHeaders(p, b, actionConstraints, doNotPack, phase0Fields, deparserParams,
+                   parserAlignedFields, alloc),
+      parserMappings(p),
+      bmUses(p, packHeaders, parserMappings, e) {
           addPasses({
               &bridgedFields,
               new ReplaceOriginalFieldWithBridged(p, bridgedFields),
@@ -1178,7 +1414,8 @@ BridgedMetadataPacking::BridgedMetadataPacking(
               new GatherDeparserParameters(p, deparserParams),
               new GatherPhase0Fields(p, phase0Fields),
               new GatherParserExtracts(p, parserAlignedFields),
-              &packMetadata,
-              new ReplaceBridgedMetadataUses(p, packMetadata)
+              &packHeaders,
+              &parserMappings,
+              &bmUses
           });
 }

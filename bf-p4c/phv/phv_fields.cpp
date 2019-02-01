@@ -54,7 +54,7 @@ void PhvInfo::add(
         LOG3("Already added field; skipping: " << name);
         return; }
     LOG3("PhvInfo adding " << (pad ? "padding" : (meta ? "metadata" : "header")) << " field " <<
-         name << " size " << size);
+         name << " size " << size << " offset " << offset);
     auto *info = &all_fields[name];
     info->name = name;
     info->id = by_id.size();
@@ -66,6 +66,30 @@ void PhvInfo::add(
     info->bridged = bridged;
     info->alwaysPackable = pad;
     by_id.push_back(info);
+}
+
+void PhvInfo::add_struct(
+        cstring name,
+        const IR::Type_StructLike *type,
+        gress_t gress,
+        bool meta,
+        bool bridged,
+        int offset) {
+    BUG_CHECK(type, "No type for %1%", name);
+    LOG3("PhvInfo adding " << (meta ? " metadata" : "header") << " for struct " << name);
+    for (auto f : type->fields) {
+        int size = f->type->width_bits();
+        cstring f_name = name + '.' + f->name;
+        if (f->type->is<IR::Type_StructLike>()) {
+            auto* struct_type = f->type->to<IR::Type_StructLike>();
+            add_struct(f_name, struct_type, gress, meta, bridged, offset);
+        }
+        if (size == 0)
+            ::error("%1% Field %2% of size %3% not supported on %4%", f->srcInfo, f_name, size,
+                    Device::name());
+        bool isPad = f->getAnnotations()->getSingle("hidden") != nullptr;
+        add(f_name, gress, size, offset -= size, meta, false, bridged, isPad);
+    }
 }
 
 void PhvInfo::add_hdr(cstring name, const IR::Type_StructLike *type, gress_t gress, bool meta) {
@@ -87,12 +111,18 @@ void PhvInfo::add_hdr(cstring name, const IR::Type_StructLike *type, gress_t gre
         offset += f->type->width_bits();
     for (auto f : type->fields) {
         int size = f->type->width_bits();
+        cstring f_name = name + '.' + f->name;
+        if (f->type->is<IR::Type_StructLike>()) {
+            auto* struct_type = f->type->to<IR::Type_StructLike>();
+            // Add fields inside nested structs.
+            add_struct(f_name, struct_type, gress, meta, bridged, offset);
+        }
         if (size == 0)
-            error("%s%s field of type %s not supported on tofino", f->srcInfo,
-                  meta ? "metadata" : "header", f->type->toString());
+            ::error("%1% Field %2% of size %3% not supported on %4%", f->srcInfo, f_name, size,
+                    Device::name());
         // "Hidden" annotation indicates padding introduced with bridged metadata fields
         bool isPad = f->getAnnotations()->getSingle("hidden") != nullptr;
-        add(name + '.' + f->name, gress, size, offset -= size, meta, false, bridged, isPad); }
+        add(f_name, gress, size, offset -= size, meta, false, bridged, isPad); }
     int end = by_id.size();
     all_structs.emplace(name, StructInfo(meta, gress, start, end - start));
 }
@@ -1413,6 +1443,8 @@ Visitor::profile_t CollectBridgedExtractedTogetherFields::init_apply(const IR::N
         for (auto fName : kv.second) {
             const auto* f2 = phv_i.field(fName);
             BUG_CHECK(f2, "Field corresponding to %1% not found", fName);
+            // Ignore extracted together for padding fields.
+            if (f1->alwaysPackable || f2->alwaysPackable) continue;
             matrix(f1->id, f2->id) = true;
         }
     }
