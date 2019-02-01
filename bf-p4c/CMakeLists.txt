@@ -671,6 +671,7 @@ install (FILES ${DRIVER_FILES} ${P4C_DRIVER_MACROS}
 # install the tools that generate logging
 set (INTERFACES_DIR ${BFN_P4C_SOURCE_DIR}/compiler_interfaces)
 set (LOGGING_FILES
+  ${INTERFACES_DIR}/p4c-build-logs
   ${INTERFACES_DIR}/tools/create_mau_json.py
   ${INTERFACES_DIR}/tools/create_phv_json.py
   ${INTERFACES_DIR}/tools/create_mau_characterize.py
@@ -694,8 +695,8 @@ set (SCHEMA_FILES
 
 add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/dist/p4c-build-logs
   POST_BUILD
-  COMMAND pyinstaller --onefile --distpath=${CMAKE_CURRENT_BINARY_DIR}/dist ${INTERFACES_DIR}/p4c-build-logs.spec
-  DEPENDS ${LOGGING_FILES} ${SCHEMA_FILES}
+  COMMAND PYTHONPATH=${INTERFACES_DIR} pyinstaller --onefile --workpath=${CMAKE_CURRENT_BINARY_DIR}/build --distpath=${CMAKE_CURRENT_BINARY_DIR}/dist ${INTERFACES_DIR}/p4c-build-logs.spec
+  DEPENDS ${LOGGING_FILES} ${SCHEMA_FILES} ${INTERFACES_DIR}/p4c-build-logs.spec
   WORKING_DIRECTORY ${INTERFACES_DIR}
   COMMENT "Package logging tools")
 
@@ -792,7 +793,7 @@ add_dependencies(bfn_p4runtime barefootdir controlplane)
 if (ENABLE_TESTING)
   # # Tofino-specific GTests.
   set (GTEST_BF_P4C_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/action_format_helper.cpp 
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/action_format_helper.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/action_mutex.cpp
     # ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/action_phv.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/bitrange.cpp

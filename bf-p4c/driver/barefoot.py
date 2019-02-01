@@ -253,7 +253,7 @@ class BarefootBackend(BackendDriver):
             top_src_dir = checkEnv()
             if top_src_dir:
                 # dev environment
-                log_scripts_dir = os.path.join(top_src_dir, 'compiler_interfaces/tools')
+                log_scripts_dir = os.path.join(top_src_dir, 'compiler_interfaces')
             if os.path.exists(os.path.join(log_scripts_dir, 'p4c-build-logs')):
                 self.add_command('summary_logging', os.path.join(log_scripts_dir, 'p4c-build-logs'))
                 self._commandsEnabled.append('summary_logging')
