@@ -1416,6 +1416,7 @@ FlexiblePacking::FlexiblePacking(
               new GatherParserExtracts(p, parserAlignedFields),
               &packHeaders,
               &parserMappings,
-              &bmUses
+              &bmUses,
+              new CollectPhvInfo(p)
           });
 }

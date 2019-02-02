@@ -196,18 +196,12 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         // metadata packing.
         &table_alloc,
         new CollectPhvInfo(phv),
-        &defuse,
-
-        // Bridged metadata related passes in the backend.
-        // Needs to be run after InstructionSelection but before
-        // deadcode elimination.
+        // Repacking of flexible headers (including bridged metadata) in the backend.
+        // Needs to be run after InstructionSelection but before deadcode elimination.
         new FlexiblePacking(phv, deps, bridged_fields, extracted_together, table_alloc),
-        new CollectPhvInfo(phv),
-        &defuse,
         // Run after bridged metadata packing as bridged packing updates the parser state.
         new ResolveComputedParserExpressions,
         new CollectPhvInfo(phv),
-        &defuse,
         new AlpmSetup,
         new CollectPhvInfo(phv),
         new ValidToStkvalid(phv),   // Alias header stack $valid fields with $stkvalid slices.
