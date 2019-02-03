@@ -136,7 +136,7 @@ p4c_add_bf_backend_tests("tofino" "tofino" "psa" "base" "${TOFINO_PSA_TEST_SUITE
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino" tor.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/google-tor/p4/spec/tor.p4
-    "${testExtraArgs}" ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/tor.ptf)
+    "${testExtraArgs} --arch v1model" ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/tor.ptf)
 
 # this tests conversion from Tofino-specific P4Info to "standard" P4Info
 p4c_add_ptf_test_with_ptfdir (
@@ -608,7 +608,7 @@ p4c_add_test_label("tofino" "cpplint" "easy-ternary-archive")
 
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE "tor-archive"
   extensions/p4_tests/p4_16/google-tor/p4/spec/tor.p4
-  "-norun --create-graphs --archive --validate-manifest" "")
+  "-norun --arch v1model --create-graphs --archive --validate-manifest" "")
 p4c_add_test_label("tofino" "cpplint" "tor-archive")
 
 ## P4-16 Programs
@@ -643,7 +643,7 @@ p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
 # P4-16 Programs with PTF tests
 foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS)
   p4c_add_ptf_test_with_ptfdir ("tofino" "p4_16_programs_${t}" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/p4_16_programs/${t}/${t}.p4"
-    "${testExtraArgs} -bfrt -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/p4_16_programs/${t}")
+    "${testExtraArgs} -target tofino -arch tna -bfrt -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/p4_16_programs/${t}")
   bfn_set_p4_build_flag("tofino" "p4_16_programs_${t}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/p4_16_programs")
   set (ports_json ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/p4_16_programs/${t}/ports.json)
   if (EXISTS ${ports_json})
@@ -672,7 +672,7 @@ p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
   "phase0_pragma_test" ${phase0test} "${testExtraArgs} -Tphase0:5" "")
 p4c_add_tofino_success_reason(
   "No phase 0 table found; skipping phase 0 translation"
-  phase0_pragma_test 
+  phase0_pragma_test
 )
 
 #

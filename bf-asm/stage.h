@@ -84,11 +84,7 @@ public:
     int pred_cycle(gress_t gress);
     int tcam_delay(gress_t gress);
     static int first_table(gress_t gress);
-    static unsigned end_of_pipe() {
-        if      (options.target == TOFINO) return 0xff;
-        else if (options.target == JBAY)   return 0x1ff;
-        error(0, "no device specified?");  return 0x0;
-    }
+    static unsigned end_of_pipe() { return Target::END_OF_PIPE(); }
 };
 
 #endif /* _stage_h_ */

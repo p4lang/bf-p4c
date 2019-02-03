@@ -161,5 +161,5 @@ void HashDistribution::write_regs(REGS &regs, Table *tbl) {
         merge.mau_meter_precolor_hash_map_to_logical_ctl[tbl->logical_id/4U].set_subfield(
             ctl, 5 * (tbl->logical_id%4U), 5); }
 }
-FOR_ALL_TARGETS(INSTANTIATE_TARGET_TEMPLATE,
+FOR_ALL_REGISTER_SETS(INSTANTIATE_TARGET_TEMPLATE,
                 void HashDistribution::write_regs, mau_regs &, Table *)

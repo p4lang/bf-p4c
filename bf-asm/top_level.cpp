@@ -16,7 +16,7 @@ TopLevel::~TopLevel() {
 }
 
 template<class TARGET>
-TopLevelTarget<TARGET>::TopLevelTarget() {
+TopLevelRegs<TARGET>::TopLevelRegs() {
     declare_registers(&this->mem_top, sizeof(this->mem_top),
         [this](std::ostream &out, const char *addr, const void *end) {
             out << "memories.top";
@@ -36,7 +36,7 @@ TopLevelTarget<TARGET>::TopLevelTarget() {
 }
 
 template<class TARGET>
-TopLevelTarget<TARGET>::~TopLevelTarget() {
+TopLevelRegs<TARGET>::~TopLevelRegs() {
     undeclare_registers(&this->mem_top);
     undeclare_registers(&this->mem_pipe);
     undeclare_registers(&this->reg_top);
@@ -44,7 +44,7 @@ TopLevelTarget<TARGET>::~TopLevelTarget() {
 }
 
 template<class TARGET>
-void TopLevelTarget<TARGET>::output(json::map &ctxt_json) {
+void TopLevelRegs<TARGET>::output(json::map &ctxt_json) {
     for (int i = 0; i < 4; i++) {
         if (options.binary >= PIPE0 && options.binary != PIPE0 + i) {
             this->mem_top.pipes[i].disable();
@@ -84,7 +84,5 @@ void TopLevelTarget<TARGET>::output(json::map &ctxt_json) {
                 this->reg_pipe.emit_binary(*binfile, 0); } } }
 }
 
-template class TopLevelTarget<Target::Tofino>;
-#if HAVE_JBAY
-template class TopLevelTarget<Target::JBay>;
-#endif
+#define TOP_LEVEL_REGS(REGSET)        template class TopLevelRegs<Target::REGSET>;
+FOR_ALL_REGISTER_SETS(TOP_LEVEL_REGS)

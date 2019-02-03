@@ -34,7 +34,7 @@ class DefaultNext : public MauInspector, BFN::ControlFlowVisitor {
         LOG3(id << ": DefaultNext::flow_merge <- " << a.id);
         prev_tbls.insert(a.prev_tbls.begin(), a.prev_tbls.end()); }
     DefaultNext(const DefaultNext &a) = default;
-    profile_t init_apply(const IR::Node *root) {
+    profile_t init_apply(const IR::Node *root) override {
         LOG1("DefaultNext starting");
         id = id_counter = 0;
         return MauInspector::init_apply(root); }

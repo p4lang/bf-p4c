@@ -246,6 +246,48 @@ class Test:
             return
         # \TODO: write the checks
 
+    def checkMAUStagesForTarget(self, args):
+        """Check that the number of stages generated in the resources file
+           is valid for the target:
+        """
+        stages = {
+            "tofino"   : 12,
+            "tofino2"  : 20,
+            "tofino2h" :  6,
+            "tofino2m" : 12,
+            "tofino2u" : 20
+        }
+
+        if args.preprocessor_only:
+            return
+
+        manifest_file = os.path.join(args.output_directory, "manifest.json")
+
+        with open(manifest_file, 'r') as json_file:
+            manifest = json.load(json_file)
+            schema_version = manifest['schema_version']
+            target = manifest['target']
+            if target not in stages.keys():
+                raise TestError("ERROR: Invalid target {}".format(target))
+            program = manifest['programs'][0]
+            p4_version = program['p4_version']
+            resources_files = program['p4i']
+            for r in resources_files:
+                m_file = os.path.join(args.output_directory, r['path'])
+                if not os.path.isfile(m_file):
+                    raise TestError(
+                        "ERROR: Input file '{}' contains an invalid "
+                        "{} path: {}", manifest_file, 'resources file', m_file)
+                with open(m_file, 'r') as res_file:
+                    res_json = json.load(res_file)
+                    resources = res_json['resources']
+                    nStages = int(resources['pipes'][0]['mau']['nStages'])
+                    if nStages != stages[target]:
+                        raise TestError(
+                            "ERROR: Number of stages in resource file {} != {} expected".format(nStages, stages[target]))
+        # success
+        # if we either did not have a resource file, or all the stages check out.
+
     def checkTest(self, options):
         """Check that the generated output is correct.
 
@@ -258,6 +300,7 @@ class Test:
             self.checkManifest(args)
             self.checkGraphs(args)
             self.checkArchive(args)
+            self.checkMAUStagesForTarget(args)
         except TestError as e:
             print("********************", file=sys.stderr)
             print("Error when checking output", file=sys.stderr)

@@ -88,8 +88,8 @@ void AsmStage::input(VECTOR(value_t) args, value_t data) {
                 if (stageno == Target::NUM_MAU_STAGES()/2)
                     error(kv.value.lineno, "stage %d must be match dependent", stageno);
 #ifdef HAVE_JBAY
-                else if (options.target == JBAY)
-                    error(kv.value.lineno, "no concurrent execution on Tofino2");
+                else if (!Target::SUPPORT_CONCURRENT_STAGE_DEP())
+                    error(kv.value.lineno, "no concurrent execution on %s", Target::name());
 #endif /* HAVE_JBAY */
             } else if (kv.value == "action") {
                 stage[stageno].stage_dep[gress] = Stage::ACTION_DEP;
@@ -215,7 +215,7 @@ void AsmStage::output(json::map &ctxt_json) {
                     stage[i].stage_dep[gress] = Stage::ACTION_DEP;
                 } else {
                     LOG1("stage " << i << " " << gress << " is concurrent with previous stage");
-                    if (options.target == JBAY)
+                    if (!Target::SUPPORT_CONCURRENT_STAGE_DEP())
                         stage[i].stage_dep[gress] = Stage::ACTION_DEP;
                     else
                         stage[i].stage_dep[gress] = Stage::CONCURRENT; } }

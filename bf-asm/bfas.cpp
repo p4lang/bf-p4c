@@ -74,7 +74,10 @@ std::string usage(std::string tfas) {
 
 void output_all() {
     switch (options.target) {
-#define SET_TOP_LEVEL(TARGET) case Target::TARGET::tag: new TopLevelTarget<Target::TARGET>; break;
+#define SET_TOP_LEVEL(TARGET)                                           \
+    case Target::TARGET::tag:                                           \
+        new TopLevelRegs<Target::TARGET::register_type>;                \
+        break;
     FOR_ALL_TARGETS(SET_TOP_LEVEL)
     default:
         std::cerr << "No target set" << std::endl;

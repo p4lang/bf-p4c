@@ -351,7 +351,7 @@ class BarefootBackend(BackendDriver):
         """
         Set the compile_command in the manifest or context.json
         """
-        if self._dry_run:
+        if self._dry_run or not os.path.exists(jsonFile):
             return
 
         jsonTree = None

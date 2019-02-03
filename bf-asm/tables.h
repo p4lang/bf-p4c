@@ -454,14 +454,14 @@ public:
     virtual void pass1();
     virtual void pass2() = 0;
     virtual void pass3() = 0;
-    FOR_ALL_TARGETS(TARGET_OVERLOAD,
+    FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
         virtual void write_action_regs, (mau_regs &, const Actions::Action *), {})
-    FOR_ALL_TARGETS(TARGET_OVERLOAD,
+    FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
         virtual void write_merge_regs, (mau_regs &, int type, int bus), { assert(0); })
-    FOR_ALL_TARGETS(TARGET_OVERLOAD,
+    FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
         virtual void write_merge_regs, (mau_regs &, MatchTable *match, int type, int bus,
                                         const std::vector<Call::Arg> &args), { assert(0); })
-    FOR_ALL_TARGETS(TARGET_OVERLOAD,
+    FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
         virtual void write_regs, (mau_regs &), = 0)
 
     virtual void gen_tbl_cfg(json::vector &out) const = 0;
@@ -672,7 +672,8 @@ public:
     void pass1() override { assert(0); }
     void pass2() override { assert(0); }
     void pass3() override { assert(0); }
-    FOR_ALL_TARGETS(TARGET_OVERLOAD, virtual void write_regs, (mau_regs &), override { assert(0); })
+    FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
+        virtual void write_regs, (mau_regs &), override { assert(0); })
     void gen_tbl_cfg(json::vector &out) const override { assert(0); }
 };
 
@@ -770,7 +771,7 @@ public:                                                                 \
     void pass2() override;                                              \
     void pass3() override;                                              \
     template<class REGS> void write_regs(REGS &regs);                   \
-    FOR_ALL_TARGETS(TARGET_OVERLOAD,                                    \
+    FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,                              \
         void write_regs,(mau_regs &regs), override {                    \
             write_regs<decltype(regs)>(regs); })                        \
     void gen_tbl_cfg(json::vector &out) const override;                 \
@@ -832,7 +833,7 @@ protected:
     void setup_hash_function_ids();
     void pass1() override;
     template<class REGS> void write_regs(REGS &regs);
-    FOR_ALL_TARGETS(TARGET_OVERLOAD,
+    FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
         void write_regs,(mau_regs &regs), override {
             write_regs<decltype(regs)>(regs); })
     virtual std::string get_match_mode(const Phv::Ref &pref, int offset) const;
@@ -864,7 +865,7 @@ public:
         period_name = "match group size"; }
     template<class REGS> void write_merge_regs(REGS &regs, int type, int bus) {
         attached.write_merge_regs(regs, this, type, bus); }
-    FOR_ALL_TARGETS(TARGET_OVERLOAD,
+    FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
         void write_merge_regs, (mau_regs &regs, int type, int bus), override {
             write_merge_regs<decltype(regs)>(regs, type, bus); })
     bool is_match_bit(const std::string name, const int bit) const {
@@ -1105,7 +1106,7 @@ public:
     //int                                 row = -1, bus = -1;
     table_type_t table_type() const override { return HASH_ACTION; }
     template<class REGS> void write_merge_regs(REGS &regs, int type, int bus);
-    FOR_ALL_TARGETS(TARGET_OVERLOAD,
+    FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
         void write_merge_regs, (mau_regs &regs, int type, int bus), override {
             write_merge_regs<decltype(regs)>(regs, type, bus); })
     Format::Field *lookup_field(const std::string &n,
@@ -1141,7 +1142,7 @@ DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
         return attached.find_address_field(tbl); }
     template<class REGS> void write_merge_regs(REGS &regs, int type, int bus) {
         attached.write_merge_regs(regs, match_table, type, bus); }
-    FOR_ALL_TARGETS(TARGET_OVERLOAD,
+    FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
         void write_merge_regs, (mau_regs &regs, int type, int bus), override {
             write_merge_regs<decltype(regs)>(regs, type, bus); })
     int unitram_type() override { return UnitRam::TERNARY_INDIRECTION; }
@@ -1239,7 +1240,7 @@ public:
     bool validate_call(Table::Call &call, MatchTable *self, size_t required_args,
                        int hash_dist_type, Table::Call &first_call) override;
     // used by Selection and Stateful tables.
-    FOR_ALL_TARGETS(TARGET_OVERLOAD,
+    FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
         int meter_alu_fifo_enable_from_mask, (mau_regs &, unsigned bytemask))
 )
 
@@ -1373,7 +1374,7 @@ public:
                           const std::vector<Call::Arg> &args);
     template<class REGS> void setup_logical_alu_map(REGS &regs, int logical_id, int alu);
     template<class REGS> void setup_physical_alu_map(REGS &regs, int type, int bus, int alu);
-    FOR_ALL_TARGETS(TARGET_OVERLOAD,
+    FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
         void write_merge_regs, (mau_regs &regs, MatchTable *match, int type,
                                 int bus, const std::vector<Call::Arg> &args), override {
             write_merge_regs<decltype(regs)>(regs, match, type, bus, args); })
@@ -1419,10 +1420,10 @@ public:
     void pass3() override;
     template<class REGS> void write_merge_regs(REGS &regs, int type, int bus);
     template<class REGS> void write_regs(REGS &regs);
-    FOR_ALL_TARGETS(TARGET_OVERLOAD,
+    FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
         void write_regs,(mau_regs &regs), override {
             write_regs<decltype(regs)>(regs); })
-    FOR_ALL_TARGETS(TARGET_OVERLOAD,
+    FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
         void write_merge_regs, (mau_regs &regs, int type, int bus), override {
             write_merge_regs<decltype(regs)>(regs, type, bus); })
     void gen_tbl_cfg(json::vector &out) const override { /* nothing at top level */ }
@@ -1442,10 +1443,10 @@ DECLARE_ABSTRACT_TABLE_TYPE(Synth2Port, AttachedTable,
     json::map *add_stage_tbl_cfg(json::map &tbl, const char *type, int size) const override;
 public:
     template<class REGS> void write_regs(REGS &regs);
-    FOR_ALL_TARGETS(TARGET_OVERLOAD,
+    FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
         void write_regs,(mau_regs &regs), override {
             write_regs<decltype(regs)>(regs); })
-    FOR_ALL_TARGETS(TARGET_OVERLOAD,
+    FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
         void write_merge_regs, (mau_regs &regs, MatchTable *match, int type, int bus,
                                 const std::vector<Call::Arg> &args), override = 0)
     void common_init_setup(const VECTOR(pair_t) &, bool, P4Table::type) override;
@@ -1460,7 +1461,7 @@ DECLARE_TABLE_TYPE(CounterTable, Synth2Port, "counter",
     table_type_t table_type() const override { return COUNTER; }
     template<class REGS> void write_merge_regs(REGS &regs, MatchTable *match, int type, int bus,
                                                const std::vector<Call::Arg> &args);
-    FOR_ALL_TARGETS(TARGET_OVERLOAD,
+    FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
         void write_merge_regs, (mau_regs &regs, MatchTable *match, int type,
                                 int bus, const std::vector<Call::Arg> &args), override {
             write_merge_regs<decltype(regs)>(regs, match, type, bus, args); })
@@ -1498,7 +1499,7 @@ DECLARE_TABLE_TYPE(MeterTable, Synth2Port, "meter",
     template<class REGS> void write_merge_regs(REGS &regs, MatchTable *match, int type, int bus,
                                                const std::vector<Call::Arg> &args);
     template<class REGS> void meter_color_logical_to_phys(REGS &regs, int logical_id, int alu);
-    FOR_ALL_TARGETS(TARGET_OVERLOAD,
+    FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
         void write_merge_regs, (mau_regs &regs, MatchTable *match, int type,
                                 int bus, const std::vector<Call::Arg> &args), override {
             write_merge_regs<decltype(regs)>(regs, match, type, bus, args); })
@@ -1542,13 +1543,13 @@ DECLARE_TABLE_TYPE(StatefulTable, Synth2Port, "stateful",
     bool setup_jbay(const pair_t &kv);
 #endif
     template<class REGS> void write_action_regs(REGS &regs, const Actions::Action *);
-    FOR_ALL_TARGETS(TARGET_OVERLOAD,
+    FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
         void write_action_regs,(mau_regs &regs, const Actions::Action *act), override {
             write_action_regs<decltype(regs)>(regs, act); })
     template<class REGS> void write_merge_regs(REGS &regs, MatchTable *match, int type, int bus,
                                                const std::vector<Call::Arg> &args);
     template<class REGS> void write_logging_regs(REGS &regs);
-    FOR_ALL_TARGETS(TARGET_OVERLOAD,
+    FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
         void write_merge_regs, (mau_regs &regs, MatchTable *match, int type,
                                 int bus, const std::vector<Call::Arg> &args), override {
             write_merge_regs<decltype(regs)>(regs, match, type, bus, args); })
@@ -1600,15 +1601,16 @@ public:
     unsigned per_flow_enable_bit(MatchTable *m = nullptr) const override;
     void set_address_used() override { address_used = true; }
     void set_output_used() override { output_used = true; }
-    FOR_ALL_TARGETS(TARGET_OVERLOAD, static int parse_counter_mode, (target_type, const value_t &))
+    FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
+        static int parse_counter_mode, (target_type, const value_t &))
     static int parse_counter_mode(const value_t &v) {
         SWITCH_FOREACH_TARGET(options.target, return parse_counter_mode(TARGET(), v););
         return 0;  // should not reach here, but avoid warning
     }
-    FOR_ALL_TARGETS(TARGET_OVERLOAD, void set_counter_mode, (target_type, int))
+    FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD, void set_counter_mode, (target_type, int))
     void set_counter_mode(int mode) {
         SWITCH_FOREACH_TARGET(options.target, set_counter_mode(TARGET(), mode);); }
-    FOR_ALL_TARGETS(TARGET_OVERLOAD,
+    FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
         void gen_tbl_cfg, (target_type, json::map &, json::map &), const)
 #if HAVE_JBAY
     Alloc1D<StatefulAlu::TMatchInfo, Target::JBay::STATEFUL_TMATCH_UNITS>       tmatch_use;

@@ -9,7 +9,7 @@
 
 
 enum config_version_t { CONFIG_OLD=1, CONFIG_NEW=2, CONFIG_BOTH=3 };
-enum target_t { TOFINO=1, JBAY=2, TARGET_INDEX_LIMIT };
+enum target_t { TOFINO=1, JBAY=2, TOFINO2H, TOFINO2U, TOFINO2M, TARGET_INDEX_LIMIT };
 enum binary_type_t { NO_BINARY,
     FOUR_PIPE,  // binary replicating to all 4 pipes
     ONE_PIPE,   // binary for one pipe with pipe offset addresses
@@ -33,6 +33,8 @@ extern struct option_t {
     target_t            target;
     config_version_t    version;
     bool                werror;
+
+    bool isJBayTarget();
 } options;
 
 extern unsigned unique_action_handle;

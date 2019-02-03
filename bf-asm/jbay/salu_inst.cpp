@@ -55,7 +55,7 @@ struct MinMax : public SaluInstruction {
         if (inc) out << " ++";
         if (dec) out << " --";
         if (phv) out << " phv"; }
-    FOR_ALL_TARGETS(DECLARE_FORWARD_VIRTUAL_INSTRUCTION_WRITE_REGS)
+    FOR_ALL_REGISTER_SETS(DECLARE_FORWARD_VIRTUAL_INSTRUCTION_WRITE_REGS)
 };
 
 MinMax::Decode opMIN8("min8", JBAY, 0), opMAX8("max8", JBAY, 1),

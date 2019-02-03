@@ -39,7 +39,7 @@ class RewriteEgressIntrinsicMetadataHeader : public PassManager {
 
         IR::IndexedVector<IR::StructField> new_fields;
 
-        profile_t init_apply(const IR::Node* root) {
+        profile_t init_apply(const IR::Node* root) override {
             BUG_CHECK(used_fields.eg_intr_md, "egress_intrinsic_metadata_t not found?");
 
             const IR::StructField* prev = nullptr;

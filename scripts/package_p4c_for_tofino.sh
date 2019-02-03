@@ -4,7 +4,7 @@ set -e
 
 topdir=$(dirname $0)/..
 builddir=build.release
-set -x
+# set -x
 if [[ $(uname -s) == 'Linux' ]]; then
     parallel_make=`cat /proc/cpuinfo | grep processor | wc -l`
     enable_static="-DENABLE_STATIC_LIBS=ON"
@@ -13,16 +13,36 @@ else
     enable_static=""
 fi
 
+usage() {
+    echo $1
+    echo "Usage: ./scripts/package_p4c_for_tofino.sh <optional arguments>"
+    echo "   --install-prefix <install_prefix>"
+    echo "   --barefoot-internal"
+}
+
+
 install_prefix=/usr/local
-if [ "$1" == "--install-prefix" ]; then
-    if [ -z "$2" ]; then
-        echo "Error: Install prefix has to be specified"
-        echo "Usage: ./scripts/package_p4c_for_tofino.sh --install-prefix <install_prefix>"
-        exit 1
-    fi
-    install_prefix="$2"
-    shift; shift;
-fi
+barefoot_internal="-DENABLE_BAREFOOT_INTERNAL=OFF"
+while [ $# -gt 0 ]; do
+    case $1 in
+        --install-prefix)
+            if [ -z "$2" ]; then
+                usage "Error: Install prefix has to be specified"
+                exit 1
+            fi
+            install_prefix="$2"
+            shift;
+            ;;
+        --barefoot-internal)
+            barefoot_internal="-DENABLE_BAREFOOT_INTERNAL=ON"
+            ;;
+        -h|--help)
+            usage ""
+            exit 0
+            ;;
+    esac
+    shift
+done
 
 $topdir/bootstrap_bfn_compilers.sh --no-ptf --build-dir $builddir \
                                    -DCMAKE_BUILD_TYPE=RELEASE \
@@ -30,7 +50,7 @@ $topdir/bootstrap_bfn_compilers.sh --no-ptf --build-dir $builddir \
                                    -DENABLE_BMV2=OFF -DENABLE_EBPF=OFF \
                                    -DENABLE_P4TEST=OFF -DENABLE_P4C_GRAPHS=OFF \
                                    $enable_static \
-                                   -DENABLE_BAREFOOT_INTERNAL=OFF \
+                                   $barefoot_internal \
                                    -DENABLE_TESTING=OFF -DENABLE_GTESTS=OFF
 cd $builddir
 make -j $parallel_make package

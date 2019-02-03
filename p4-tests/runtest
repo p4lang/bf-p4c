@@ -68,6 +68,7 @@ device="tofino"
 # suffix for harlyn and bfswitchd -- until those get renamed or merged into a single exec
 toolsdevice="tofino"
 arch="v1model"
+target="tofino"
 p4info=true
 
 force_link=false
@@ -169,7 +170,7 @@ while [ $# -gt 1 ]; do
         echo >&2 "p4c test runner options"
         echo >&2 "   -dbas          run bfas under gdb"
         echo >&2 "   -gdb           run p4c-barefoot under gdb"
-        echo >&2 "   -tofino2       target tofino2"
+        echo >&2 "   -tofino2       target tofino2 -- deprecate"
         echo >&2 "   -nop4info      not generate p4info"
         echo >&2 "   -bfrt          generate the BF-RT JSON"
         echo >&2 "   -norun         don't run tests, just the compiler"
@@ -180,8 +181,9 @@ while [ $# -gt 1 ]; do
         echo >&2 "   -p4c <p4cpath> p4c compiler path for PD tests (glass/brig)"
         echo >&2 "   -keep-logs     if specified, keep PTF logs"
         echo >&2 "   -time          time commands as they run"
-        echo >&2 "   -tofino        target tofino (default)"
+        echo >&2 "   -tofino        target tofino (default) -- deprecate"
         echo >&2 "   -arch <arch>   p4 architecture (default v1model)"
+        echo >&2 "   -target <target> target (default tofino)"
         echo >&2 "   -to <sec>      timeout programs after <sec> seconds (default $TIMEOUT)"
         echo >&2 "   -v             verbose -- print commands before running them"
         echo >&2 "other arguments passed to p4c-barefoot:"
@@ -232,12 +234,29 @@ while [ $# -gt 1 ]; do
     -keep-logs)
         keep_PTF_LOGS="--keep-logs"
         ;;
+    -target)
+        target=$2
+        if [[ $target = "tofino" ]]; then
+            device="tofino"
+            toolsdevice="tofino"
+        elif [[ $target =~ "tofino2" ]]; then
+            device="tofino2"
+            toolsdevice="jbay"
+        else
+            echo "Unknown target $target"
+            exit 1
+        fi
+        testdir=$target
+        shift
+        ;;
     -tofino)
+        target="tofino"
         device="tofino"
         toolsdevice="tofino"
         testdir=tofino
         ;;
     -tofino2)
+        target="tofino2"
         device="tofino2"
         toolsdevice="jbay"
         testdir=tofino2
@@ -296,14 +315,29 @@ fi
 P4C_ARGS="$P4C_ARGS -g"
 
 p4_version=""
-if [ $(expr "$file" : ".*v1_2") -gt 0 -o $(expr "$file" : ".*p4_16") -gt 0 ]; then
-    P4C_ARGS="$P4C_ARGS --target ${device} --arch ${arch}"
-    P4C_ARGS="$P4C_ARGS --std p4-16"
-    p4_version="p4-16"
+if [ $(expr "$P4C_ARGS" : ".*--std") -gt 0 ]; then
+    offset=$(expr "$P4C_ARGS" : ".*--std ")
+    p4_version=${P4C_ARGS:$offset:5}
 else
-    P4C_ARGS="$P4C_ARGS --target ${device} --arch v1model"
-    P4C_ARGS="$P4C_ARGS --std p4-14"
-    p4_version="p4-14"
+    # guess the version based on the file name
+    if [ $(expr "$file" : ".*v1_2") -gt 0 -o $(expr "$file" : ".*p4_16") -gt 0 ]; then
+        p4_version="p4-16"
+    else
+        p4_version="p4-14"
+    fi
+    P4C_ARGS="$P4C_ARGS --std $p4_version"
+fi
+
+if [ $(expr "$P4C_ARGS" : ".*--arch") -eq 0 ]; then
+    if [[ $p4_version = "p4-14" ]]; then
+        P4C_ARGS="$P4C_ARGS --arch v1model"
+    else
+        P4C_ARGS="$P4C_ARGS --arch ${arch}"
+    fi
+fi
+
+if [ $(expr "$P4C_ARGS" : ".*--target") -eq 0 ]; then
+    P4C_ARGS="$P4C_ARGS --target ${target}"
 fi
 
 has_stf=false
@@ -385,7 +419,7 @@ if $debug; then
     exit
 fi
 
-# Not sure why the below lines are required, commenting for now. 
+# Not sure why the below lines are required, commenting for now.
 # TODO: Remove if not required. Else, enable.
 #if [ $(expr "$file" : ".*_errors") -gt 0 ]; then
 #    if run $P4C $P4C_ARGS $file -o $testdir/${name}${out_ext}.out; then
@@ -435,8 +469,8 @@ fi
 native_compile() {
     local p4c_args=$1
     local file=$2
-    local p4c_out=$3   
- 
+    local p4c_out=$3
+
     run $P4C $p4c_args $file -o $p4c_out || die
     # find all pipe names from manifest.json in current compilation
     pipes=$(${MANIFEST_CONFIG} --pipe ${manifest})
@@ -579,7 +613,7 @@ configure_and_build() {
     local p4builddir=$1
     local config_args=$2
     local testout=$3
-    
+
     echo "Configuring $name in $testout"
     export MAKEFLAGS="-j $nproc"
 
@@ -621,6 +655,10 @@ set_env() {
     if [ ! -d $testout ]; then
         mkdir -p $testout
     fi
+
+    # get the full path for P4C
+    p4c=$(realpath $P4C)
+    export P4C=$p4c
 }
 
 clean_env() {
@@ -631,15 +669,13 @@ clean_env() {
 
 # For p4_14 programs and switch PTF tests using PD API
 if $run_pd ; then
-    set_env
-
     # If P4C_pd specified and running a pd test, apply the path based on the
-    # compiler choice
+    # compiler choice. Needs to be before setting the environment.
     if [ ! -z "$P4C_pd" ]; then
         P4C=$P4C_pd
     fi
-    p4c=$(realpath $P4C)
-    export P4C=$p4c
+
+    set_env
 
     name=$(echo $name | tr -d '.-')  # strip out illegal C identifier chars
 
@@ -753,16 +789,18 @@ if $run_bfrt ; then
     if [ $name == switch ]; then
         p4builddir="$(dirname $0)/p4_16/switch_16"
         config_args="--with-${device} --with-p4c=$P4C --enable-thrift --disable-static \
-            --prefix=$testout --with-cpu-veth LDFLAGS="-L${tools_dir}/lib" CPPFLAGS="-I${tools_dir}/include" \
+            --prefix=$testout --with-cpu-veth \
+            LDFLAGS="-L${tools_dir}/lib" CPPFLAGS="-I${tools_dir}/include" \
             --with-program=$arch P4_VERSION=$p4_version P4_NAME=$name P4_PREFIX=dc"
         manifest=$testdir/${name}${out_ext}.out/p4src/switch-${device}/switch/manifest.json
     else
         p4builddir="$(dirname $0)/p4_14/p4-tests/p4-build"
         config_args="--with-${device} --with-p4c=$P4C --enable-thrift \
             --prefix=$testout LDFLAGS="-L${tools_dir}/lib" CPPFLAGS="-I${tools_dir}/include" \
-            --bindir=$(dirname $P4C):${tools_dir}/bin P4_VERSION=$p4_version P4_NAME=$name P4_PATH=$file"
+            --bindir=$(dirname $P4C):${tools_dir}/bin \
+            P4_ARCHITECTURE=$arch P4_VERSION=$p4_version P4_NAME=$name P4_PATH=$file"
         manifest=$testdir/${name}${out_ext}.out/${device}/${name}/manifest.json
-        installdiropt="--installdir $testout/$device/$name/"
+        installdiropt="--installdir $testout/${device}/$name/"
     fi
 
     pushd $testout > /dev/null

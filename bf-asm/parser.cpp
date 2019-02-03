@@ -613,7 +613,7 @@ const char* Parser::match_key_loc_name(int loc) {
         if (loc == 2) return "byte0";
         if (loc == 3) return "byte1";
 #if HAVE_JBAY
-    } else if (options.target == JBAY) {
+    } else if (options.isJBayTarget()) {
         if (loc == 0) return "byte0";
         if (loc == 1) return "byte1";
         if (loc == 2) return "byte2";
@@ -639,7 +639,7 @@ int Parser::match_key_loc(const char* key) {
         if (!strcmp(key, "byte0")) return 2;
         if (!strcmp(key, "byte1")) return 3;
 #if HAVE_JBAY
-    } else if (options.target == JBAY) {
+    } else if (options.isJBayTarget()) {
         if (!strcmp(key, "byte0")) return 2;
         if (!strcmp(key, "byte1")) return 3;
         if (!strcmp(key, "byte2")) return 0;

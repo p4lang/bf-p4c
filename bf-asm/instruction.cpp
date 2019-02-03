@@ -30,7 +30,7 @@ Instruction::Decode::Decode(const char *name, target_t target, int set, bool ts)
 Instruction *Instruction::decode(Table *tbl, const Table::Actions::Action *act,
                                  const VECTOR(value_t) &op) {
     for (auto d : ValuesForKey(Instruction::Decode::opcode[tbl->instruction_set()], op[0].s)) {
-        if ((d->targets >> options.target) & 1)
+        if ((d->targets >> Target::register_set()) & 1)
             return d->decode(tbl, act, op); }
     if (auto p = strchr(op[0].s, '.')) {
         std::string opname(op[0].s, p - op[0].s);
@@ -85,7 +85,7 @@ struct operand {
             int32_t val = value;
             if (val > 0 && ((val >> (group_size[group] - 1)) & 1))
                 val |= UINT64_MAX << group_size[group];
-            int minconst = (options.target == JBAY) ? -4 : -8;
+            int minconst = Target::MINIMUM_INSTR_CONSTANT();
             if (val >= minconst && val < 8)
                 return val+24;
             error(lineno, "constant value %" PRId64 " out of range for immediate", value);
@@ -530,7 +530,7 @@ struct VLIWInstruction : Instruction {
     virtual int encode() = 0;
     template<class REGS>
     void write_regs(REGS &regs, Table *tbl, Table::Actions::Action *act);
-    FOR_ALL_TARGETS(DECLARE_FORWARD_VIRTUAL_INSTRUCTION_WRITE_REGS)
+    FOR_ALL_REGISTER_SETS(DECLARE_FORWARD_VIRTUAL_INSTRUCTION_WRITE_REGS)
 };
 
 #include "tofino/instruction.cpp"
@@ -674,7 +674,7 @@ void AluOP3Src::pass2(Table *tbl, Table::Actions::Action *act) {
 
 int AluOP::encode() {
     int rv = (opc->opcode << 10) | (src1.bits(slot/Phv::mau_groupsize()) << 4);
-    if (options.target == JBAY) rv <<= 1;
+    if (options.isJBayTarget()) rv <<= 1;
     return rv | src2.bits(slot/Phv::mau_groupsize());
 }
 bool AluOP::equiv(Instruction *a_) {
@@ -698,7 +698,7 @@ struct LoadConst : VLIWInstruction {
     std::string name() { return ""; };
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
     void pass2(Table *, Table::Actions::Action *) {}
-    int encode();
+    int encode() { return Target::encodeConst(src); }
     bool equiv(Instruction *a_);
     void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) { }
     void dbprint(std::ostream &out) const {
@@ -738,15 +738,7 @@ Instruction *LoadConst::pass1(Table *tbl, Table::Actions::Action *) {
     tbl->stage->action_set[tbl->gress][dest->reg.uid] = true;
     return this;
 }
-int LoadConst::encode() {
-    if (options.target == TOFINO)
-        return (src >> 10 << 15) | (0x8 << 10) | (src & 0x3ff);
-#if HAVE_JBAY
-    else if (options.target == JBAY)
-        return (src >> 11 << 16) | (0x8 << 11) | (src & 0x7ff);
-#endif
-    else { BUG(); return 0; }
-}
+
 bool LoadConst::equiv(Instruction *a_) {
     if (auto *a = dynamic_cast<LoadConst *>(a_)) {
         return dest == a->dest && src == a->src;
@@ -837,7 +829,7 @@ Instruction *CondMoveMux::pass1(Table *tbl, Table::Actions::Action *) {
 }
 int CondMoveMux::encode() {
     int rv = (cond << 15) | (opc->opcode << 10) | (src1.bits(slot/Phv::mau_groupsize()) << 4);
-    if (options.target == JBAY) rv <<= 1;
+    if (options.isJBayTarget()) rv <<= 1;
     /* funny cond test on src2 is to match the compiler output -- if we're not testing
      * src2 validity, what we specify as src2 is irrelevant */
     return rv | (cond & 0x40 ? src2.bits(slot/Phv::mau_groupsize()) : 0);
@@ -936,7 +928,7 @@ int DepositField::encode() {
         break;
     default:
         BUG(); }
-    if (options.target == JBAY) bits <<= 1;
+    if (options.isJBayTarget()) bits <<= 1;
     return bits | src2.bits(slot/Phv::mau_groupsize());
 }
 bool DepositField::equiv(Instruction *a_) {
@@ -997,7 +989,7 @@ Instruction *Set::pass1(Table *tbl, Table::Actions::Action *act) {
         if (dest->reg.type == Phv::Register::DARK) {
             error(dest.lineno, "can't set dark phv to a constant");
             return this; }
-        int minconst = (options.target == JBAY) ? -4 : -8;
+        int minconst = Target::MINIMUM_INSTR_CONSTANT();
         if (k->value < minconst || k->value >= 8)
             return (new LoadConst(lineno, dest, k->value))->pass1(tbl, act); }
     slot = dest->reg.mau_id();
@@ -1011,7 +1003,7 @@ int Set::encode() {
     switch (dest->reg.type) {
     case Phv::Register::NORMAL:
         rv = (opA->opcode << 10) | (rv << 4);
-        if (options.target == JBAY) rv <<= 1;
+        if (options.isJBayTarget()) rv <<= 1;
         rv |= (slot & 0xf);
         break;
     case Phv::Register::MOCHA:
@@ -1157,7 +1149,7 @@ Instruction *ShiftOP::pass1(Table *tbl, Table::Actions::Action *) {
 int ShiftOP::encode() {
     int rv = (shift << 16) | (opc->opcode << 10);
     if (opc->use_src1 || options.match_compiler) rv |= src1.bits(slot/Phv::mau_groupsize()) << 4;
-    if (options.target == JBAY) rv <<= 1;
+    if (options.isJBayTarget()) rv <<= 1;
     return rv | src2.bits(slot/Phv::mau_groupsize());
 }
 bool ShiftOP::equiv(Instruction *a_) {

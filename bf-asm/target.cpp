@@ -157,11 +157,16 @@ void declare_registers(const Target::JBay::deparser_regs *regs) {
 }
 #endif // HAVE_JBAY
 
+int Target::encodeConst(int src) {
+    SWITCH_FOREACH_TARGET(options.target, return TARGET::encodeConst(src); );
+    BUG(); return 0;
+}
+
 // should these be inline in the header file?
 #define DEFINE_PER_TARGET_CONSTANT(TYPE, NAME)                          \
 TYPE Target::NAME() {                                                   \
     SWITCH_FOREACH_TARGET(options.target, return TARGET::NAME; )        \
-    BUG_CHECK(!"invalid target");                                          \
-    return 0;                                                          \
+    BUG_CHECK(!"invalid target");                                       \
+    return (TYPE){};                                                    \
 }
 PER_TARGET_CONSTANTS(DEFINE_PER_TARGET_CONSTANT)

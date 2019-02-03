@@ -5,13 +5,23 @@
 #include "bfas.h"
 
 /** FOR_ALL_TARGETS -- metamacro that expands a macro for each defined target
+ *  FOR_ALL_REGISTER_SETS -- metamacro that expands for each distinct register set;
+ *              basically a subset of targets with one per distinct register set
  */
 #if HAVE_JBAY
 #define FOR_ALL_TARGETS(M, ...) \
-    M(Tofino, ##__VA_ARGS__) \
+    M(Tofino, ##__VA_ARGS__)   \
+    M(JBay, ##__VA_ARGS__)     \
+    M(Tofino2H, ##__VA_ARGS__) \
+    M(Tofino2M, ##__VA_ARGS__) \
+    M(Tofino2U, ##__VA_ARGS__)
+#define FOR_ALL_REGISTER_SETS(M, ...) \
+    M(Tofino, ##__VA_ARGS__)   \
     M(JBay, ##__VA_ARGS__)
 #else
 #define FOR_ALL_TARGETS(M, ...) \
+    M(Tofino, ##__VA_ARGS__)
+#define FOR_ALL_REGISTER_SETS(M, ...) \
     M(Tofino, ##__VA_ARGS__)
 #endif // HAVE_JBAY
 
@@ -23,6 +33,7 @@
 
 #define PER_TARGET_CONSTANTS(M) \
     M(const char *, name) \
+    M(target_t, register_set)  \
     M(int, PARSER_CHECKSUM_UNITS) \
     M(int, DEPARSER_CHECKSUM_UNITS) M(int, DEPARSER_MAX_POV_BYTES) \
     M(int, DEPARSER_CONSTANTS) \
@@ -31,7 +42,10 @@
     M(int, PHASE0_FORMAT_WIDTH) \
     M(int, STATEFUL_CMP_UNITS) M(int, STATEFUL_OUTPUT_UNITS) M(int, STATEFUL_PRED_MASK) \
     M(int, STATEFUL_CONST_WIDTH) M(int, STATEFUL_TMATCH_UNITS) \
-    M(int, METER_ALU_GROUP_DATA_DELAY)
+    M(int, METER_ALU_GROUP_DATA_DELAY) \
+    M(bool, SUPPORT_CONCURRENT_STAGE_DEP) \
+    M(bool, SUPPORT_OVERFLOW_BUS) \
+    M(int, MINIMUM_INSTR_CONSTANT)
 
 #define DECLARE_PER_TARGET_CONSTANT(TYPE, NAME) static TYPE NAME();
 
@@ -40,6 +54,8 @@ class Target {
     class Phv;
     FOR_ALL_TARGETS(DECLARE_TARGET_CLASS)
     PER_TARGET_CONSTANTS(DECLARE_PER_TARGET_CONSTANT)
+
+    static int encodeConst(int src);
 };
 
 #include "gen/tofino/memories.pipe_addrmap.h"
@@ -58,7 +74,9 @@ class Target::Tofino : public Target {
  public:
     static constexpr const char * const name = "tofino";
     static constexpr target_t tag = TOFINO;
+    static constexpr target_t register_set = TOFINO;
     typedef Target::Tofino target_type;
+    typedef Target::Tofino register_type;
     class Phv;
     struct                                          top_level_regs {
         typedef ::Tofino::memories_top                  _mem_top;
@@ -110,7 +128,13 @@ class Target::Tofino : public Target {
         STATEFUL_OUTPUT_UNITS = 1,
         STATEFUL_PRED_MASK = (1U << (1 << STATEFUL_CMP_UNITS)) - 1,
         STATEFUL_CONST_WIDTH = 32,
+        SUPPORT_CONCURRENT_STAGE_DEP = 1,
+        SUPPORT_OVERFLOW_BUS = 1,
+        MINIMUM_INSTR_CONSTANT = -8,
     };
+    static int encodeConst(int src) {
+        return (src >> 10 << 15) | (0x8 << 10) | (src & 0x3ff);
+    }
 };
 
 void declare_registers(const Target::Tofino::top_level_regs *regs);
@@ -139,7 +163,9 @@ class Target::JBay : public Target {
  public:
     static constexpr const char * const name = "tofino2";
     static constexpr target_t tag = JBAY;
+    static constexpr target_t register_set = JBAY;
     typedef Target::JBay target_type;
+    typedef Target::JBay register_type;
     class Phv;
     struct                                          top_level_regs {
         typedef ::JBay::memories_top                    _mem_top;
@@ -193,7 +219,13 @@ class Target::JBay : public Target {
         STATEFUL_OUTPUT_UNITS = 4,
         STATEFUL_PRED_MASK = (1U << (1 << STATEFUL_CMP_UNITS)) - 1,
         STATEFUL_CONST_WIDTH = 34,
+        SUPPORT_CONCURRENT_STAGE_DEP = 0,
+        SUPPORT_OVERFLOW_BUS = 0,
+        MINIMUM_INSTR_CONSTANT = -4,
     };
+    static int encodeConst(int src) {
+        return (src >> 11 << 16) | (0x8 << 11) | (src & 0x7ff);
+    }
 };
 void declare_registers(const Target::JBay::top_level_regs *regs);
 void undeclare_registers(const Target::JBay::top_level_regs *regs);
@@ -201,6 +233,41 @@ void declare_registers(const Target::JBay::parser_regs *regs);
 void undeclare_registers(const Target::JBay::parser_regs *regs);
 void declare_registers(const Target::JBay::mau_regs *regs, int stage);
 void declare_registers(const Target::JBay::deparser_regs *regs);
+
+class Target::Tofino2H : public Target::JBay {
+ public:
+    static constexpr const char * const name = "tofino2h";
+    static constexpr target_t tag = TOFINO2H;
+    typedef Target::Tofino2H target_type;
+    class Phv;
+    enum {
+        NUM_MAU_STAGES = 6
+    };
+};
+
+class Target::Tofino2M : public Target::JBay {
+ public:
+    static constexpr const char * const name = "tofino2m";
+    static constexpr target_t tag = TOFINO2M;
+    typedef Target::Tofino2M target_type;
+    class Phv;
+    enum {
+        NUM_MAU_STAGES = 12
+    };
+};
+
+class Target::Tofino2U : public Target::JBay {
+ public:
+    static constexpr const char * const name = "tofino2u";
+    static constexpr target_t tag = TOFINO2U;
+    typedef Target::Tofino2U target_type;
+    class Phv;
+    enum {
+        NUM_MAU_STAGES = 20
+    };
+};
+
+inline bool option_t::isJBayTarget() { return Target::register_set() == JBAY; }
 #endif // HAVE_JBAY
 
 /** Macro to buid a switch table switching on a target_t, expanding to the same

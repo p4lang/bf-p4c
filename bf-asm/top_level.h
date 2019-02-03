@@ -4,7 +4,7 @@
 #include "target.h"
 #include "json.h"
 
-template<class TARGET> class TopLevelTarget;
+template<class REGSET> class TopLevelRegs;
 
 class TopLevel {
 protected:
@@ -16,26 +16,26 @@ public:
     virtual ~TopLevel();
     virtual void output(json::map &) = 0;
     static void output_all(json::map &ctxtJson) { all->output(ctxtJson); }
-    template<class T> static TopLevelTarget<T> *regs();
+    template<class T> static TopLevelRegs<typename T::register_type> *regs();
 #define SET_MAU_STAGE(TARGET)                                                           \
     virtual void set_mau_stage(int, const char *i, Target::TARGET::mau_regs *r) {       \
         BUG_CHECK(!"register mismatch"); }
-    FOR_ALL_TARGETS(SET_MAU_STAGE)
+    FOR_ALL_REGISTER_SETS(SET_MAU_STAGE)
 };
 
-template<class TARGET>
-class TopLevelTarget : public TopLevel, public TARGET::top_level_regs {
+template<class REGSET>
+class TopLevelRegs : public TopLevel, public REGSET::top_level_regs {
 public:
 
-    TopLevelTarget();
-    ~TopLevelTarget();
+    TopLevelRegs();
+    ~TopLevelRegs();
 
     void output(json::map &);
-    void set_mau_stage(int stage, const char *file, typename TARGET::mau_regs *regs) {
+    void set_mau_stage(int stage, const char *file, typename REGSET::mau_regs *regs) {
         this->reg_pipe.mau[stage].set(file, regs); }
 };
 
-template<class T> TopLevelTarget<T> *TopLevel::regs() {
-    return dynamic_cast<TopLevelTarget<T> *>(all); }
+template<class T> TopLevelRegs<typename T::register_type> *TopLevel::regs() {
+    return dynamic_cast<TopLevelRegs<typename T::register_type> *>(all); }
 
 #endif /* _top_level_h_ */

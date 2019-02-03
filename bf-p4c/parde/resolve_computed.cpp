@@ -90,10 +90,10 @@ struct ResolveStackRefs : public ParserInspector, ControlFlowVisitor {
         LOG3(id << ":ResolveStackRefs for "<< parser->toString() << parser <<
              " start=" << parser->start->name);
         return true; }
-    bool preorder(const IR::BFN::ParserState *state) {
+    bool preorder(const IR::BFN::ParserState *state) override {
         LOG4(id << ":visit state " << state->name << IndentCtl::indent);
         return true; }
-    void postorder(const IR::BFN::ParserState *) {
+    void postorder(const IR::BFN::ParserState *) override {
         if (LOGGING(4))
             ::Log::Detail::fileLogOutput(__FILE__) << IndentCtl::unindent;
     }

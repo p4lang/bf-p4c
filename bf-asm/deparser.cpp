@@ -158,7 +158,7 @@ public:
 #define VIRTUAL_TARGET_METHODS(TARGET) \
     virtual void setregs(Target::TARGET::deparser_regs &regs, Deparser &deparser,       \
                          Intrinsic &vals) { BUG_CHECK(!"target mismatch"); }
-    FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
+    FOR_ALL_REGISTER_SETS(VIRTUAL_TARGET_METHODS)
 #undef VIRTUAL_TARGET_METHODS
 };
 
@@ -191,9 +191,10 @@ public:
 #define VIRTUAL_TARGET_METHODS(TARGET)                                                  \
     virtual void setregs(Target::TARGET::deparser_regs &regs, Deparser &deparser,       \
                          Deparser::Digest &data) { BUG_CHECK(!"target mismatch"); }
-    FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
+    FOR_ALL_REGISTER_SETS(VIRTUAL_TARGET_METHODS)
 #undef VIRTUAL_TARGET_METHODS
 };
+
 Deparser::Digest::Digest(Deparser::Digest::Type *t, int l, VECTOR(pair_t) &data) {
     type = t;
     lineno = l;
@@ -279,7 +280,7 @@ void Deparser::input(VECTOR(value_t) args, value_t data) {
                             checksum[gress][unit].emplace_back(gress, ent.key, ent.value);
                     }
                 }
-            } else if (auto *itype = ::get(Intrinsic::Type::all[options.target][gress],
+            } else if (auto *itype = ::get(Intrinsic::Type::all[Target::register_set()][gress],
                                            value_desc(&kv.key))) {
                 intrinsics.emplace_back(itype, kv.key.lineno);
                 auto &intrin = intrinsics.back();
@@ -292,7 +293,7 @@ void Deparser::input(VECTOR(value_t) args, value_t data) {
                         intrin.vals.emplace_back(gress, el.key, el.value);
                 } else {
                     intrin.vals.emplace_back(gress, kv.value); }
-            } else if (auto *digest = ::get(Digest::Type::all[options.target][gress],
+            } else if (auto *digest = ::get(Digest::Type::all[Target::register_set()][gress],
                                             value_desc(&kv.key))) {
                 if (CHECKTYPE(kv.value, tMAP))
                     digests.emplace_back(digest, kv.value.lineno, kv.value.map);
@@ -415,7 +416,9 @@ void Deparser::output(json::map& map) {
         declare_registers(regs);
         write_config(*regs);
         gen_learn_quanta(*regs, map["learn_quanta"]);
+        return;
     )
+    error(__LINE__, "Unsupported target %d", options.target);
 }
 
 /* this is a bit complicated since the output from compiler digest is as follows:
@@ -461,11 +464,11 @@ void Deparser::gen_learn_quanta(REGS &regs, json::vector &learn_quanta) {
 }
 
 unsigned Deparser::FDEntry::Checksum::encode() {
-    SWITCH_FOREACH_TARGET(options.target, return encode<TARGET>(); );
+    SWITCH_FOREACH_TARGET(options.target, return encode<TARGET::register_type>(); );
     return -1;
 }
 
 unsigned Deparser::FDEntry::Constant::encode() {
-    SWITCH_FOREACH_TARGET(options.target, return encode<TARGET>(); );
+    SWITCH_FOREACH_TARGET(options.target, return encode<TARGET::register_type>(); );
     return -1;
 }

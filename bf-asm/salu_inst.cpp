@@ -306,7 +306,7 @@ struct AluOP : public SaluInstruction {
         out << "INSTR: " << opc->name << " pred=0x" << hex(predication_encode)
             << " " << (dest ? "hi" : "lo") << ", " << srca << ", " << srcb; }
     template<class REGS> void write_regs(REGS &regs, Table *tbl, Table::Actions::Action *act);
-    FOR_ALL_TARGETS(DECLARE_FORWARD_VIRTUAL_INSTRUCTION_WRITE_REGS)
+    FOR_ALL_REGISTER_SETS(DECLARE_FORWARD_VIRTUAL_INSTRUCTION_WRITE_REGS)
 };
 
 static AluOP::Decode opADD("add", 0x1c, true), opSUB("sub", 0x1e),
@@ -451,7 +451,7 @@ struct BitOP : public SaluInstruction {
     void dbprint(std::ostream &out) const override{
         out << "INSTR: " << opc->name; }
     template<class REGS> void write_regs(REGS &regs, Table *tbl, Table::Actions::Action *act);
-    FOR_ALL_TARGETS(DECLARE_FORWARD_VIRTUAL_INSTRUCTION_WRITE_REGS)
+    FOR_ALL_REGISTER_SETS(DECLARE_FORWARD_VIRTUAL_INSTRUCTION_WRITE_REGS)
 };
 
 static BitOP::Decode opSET_BIT("set_bit", 0x0), opSET_BITC("set_bitc", 0x1),
@@ -510,7 +510,7 @@ struct CmpOP : public SaluInstruction {
         if (learn) out << ", learn";
         if (learn_not) out << ", learn_not"; }
     template<class REGS> void write_regs(REGS &regs, Table *tbl, Table::Actions::Action *act);
-    FOR_ALL_TARGETS(DECLARE_FORWARD_VIRTUAL_INSTRUCTION_WRITE_REGS)
+    FOR_ALL_REGISTER_SETS(DECLARE_FORWARD_VIRTUAL_INSTRUCTION_WRITE_REGS)
 };
 
 static CmpOP::Decode opEQU("equ", 0, false), opNEQ("neq", 1, false),
@@ -612,7 +612,7 @@ struct TMatchOP : public SaluInstruction {
         if (learn) out << ", learn";
         if (learn_not) out << ", learn_not"; }
     template<class REGS> void write_regs(REGS &regs, Table *tbl, Table::Actions::Action *act);
-    FOR_ALL_TARGETS(DECLARE_FORWARD_VIRTUAL_INSTRUCTION_WRITE_REGS)
+    FOR_ALL_REGISTER_SETS(DECLARE_FORWARD_VIRTUAL_INSTRUCTION_WRITE_REGS)
 };
 
 static TMatchOP::Decode opTMatch("tmatch");
@@ -703,8 +703,8 @@ struct OutOP : public SaluInstruction {
     int lmatch_pred = 0;
 #endif
     operand::Phv *output_operand = 0;
-    FOR_ALL_TARGETS(TARGET_OVERLOAD, void decode_output_mux, (target_type, value_t &op))
-    FOR_ALL_TARGETS(TARGET_OVERLOAD, int decode_output_option, (target_type, value_t &op))
+    FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD, void decode_output_mux, (register_type, value_t &op))
+    FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD, int decode_output_option, (register_type, value_t &op))
     OutOP(const Decode *op, int lineno) : SaluInstruction(lineno) {}
     std::string name() override { return "output"; };
     Instruction *pass1(Table *tbl, Table::Actions::Action *) override;
@@ -717,7 +717,7 @@ struct OutOP : public SaluInstruction {
 #endif
             << " mux=" << output_mux; }
     template<class REGS> void write_regs(REGS &regs, Table *tbl, Table::Actions::Action *act);
-    FOR_ALL_TARGETS(DECLARE_FORWARD_VIRTUAL_INSTRUCTION_WRITE_REGS)
+    FOR_ALL_REGISTER_SETS(DECLARE_FORWARD_VIRTUAL_INSTRUCTION_WRITE_REGS)
 };
 
 static OutOP::Decode opOUTPUT("output");

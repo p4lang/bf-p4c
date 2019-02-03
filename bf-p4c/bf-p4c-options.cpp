@@ -156,9 +156,21 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
         {"tofino", "tna"},
         {"tofino", "psa"},
 #if HAVE_JBAY
+  #if BAREFOOT_INTERNAL
+        // allow p4-14 support on Tofino2 only for internal builds
         {"tofino2", "v1model"},
+        {"tofino2h", "v1model"},
+        {"tofino2m", "v1model"},
+        {"tofino2u", "v1model"},
+  #endif  /* BAREFOOT_INTERNAL */
         {"tofino2", "tna"},
         {"tofino2", "t2na"},
+        {"tofino2h", "tna"},
+        {"tofino2h", "t2na"},
+        {"tofino2m", "tna"},
+        {"tofino2m", "t2na"},
+        {"tofino2u", "tna"},
+        {"tofino2u", "t2na"},
 #endif /* HAVE_JBAY */
     };
 

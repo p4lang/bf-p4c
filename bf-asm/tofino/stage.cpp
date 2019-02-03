@@ -32,13 +32,13 @@ template<> void Stage::write_regs(Target::Tofino::mau_regs &regs) {
                 regs.dp.stage_concurrent_with_prev |= 1U << gress; }
         if (stageno != AsmStage::numstages()-1)
             regs.dp.next_stage_dependency_on_cur[gress] = MATCH_DEP - this[1].stage_dep[gress];
-        else if (AsmStage::numstages() < Target::Tofino::NUM_MAU_STAGES)
+        else if (AsmStage::numstages() < Target::NUM_MAU_STAGES())
             regs.dp.next_stage_dependency_on_cur[gress] = 2;
         auto &deferred_eop_bus_delay = regs.rams.match.adrdist.deferred_eop_bus_delay[gress];
         deferred_eop_bus_delay.eop_internal_delay_fifo = pred_cycle(gress) + 3;
         /* FIXME -- making this depend on the dependency of the next stage seems wrong */
         if (stageno == AsmStage::numstages()-1) {
-            if (AsmStage::numstages() < Target::Tofino::NUM_MAU_STAGES)
+            if (AsmStage::numstages() < Target::NUM_MAU_STAGES())
                 deferred_eop_bus_delay.eop_output_delay_fifo = 0;
             else
                 deferred_eop_bus_delay.eop_output_delay_fifo = pipelength(gress) - 1;

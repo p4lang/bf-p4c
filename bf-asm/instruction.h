@@ -20,7 +20,7 @@ struct Instruction {
     virtual void phvRead(std::function<void (const Phv::Slice &sl)>) = 0;
 #define VIRTUAL_TARGET_METHODS(TARGET) \
     virtual void write_regs(Target::TARGET::mau_regs &, Table *, Table::Actions::Action *) = 0;
-    FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
+    FOR_ALL_REGISTER_SETS(VIRTUAL_TARGET_METHODS)
 #undef VIRTUAL_TARGET_METHODS
 #define DECLARE_FORWARD_VIRTUAL_INSTRUCTION_WRITE_REGS(TARGET)                          \
     void write_regs(Target::TARGET::mau_regs &regs, Table *tbl,                         \

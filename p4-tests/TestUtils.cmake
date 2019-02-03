@@ -95,7 +95,7 @@ endfunction()
 # add additional arguments to building the pd test, after the call to add_test
 function(bfn_set_p4_build_flag tag p4test p4_build_flag)
   set_property(TEST "${tag}/${p4test}"
-    APPEND PROPERTY ENVIRONMENT "P4FLAGS=${p4_build_flag}")
+    APPEND PROPERTY ENVIRONMENT "P4FLAGS=\"${p4_build_flag}\"")
 endfunction()
 
 # add additional arguments to a test, after the call to add_test
@@ -188,7 +188,7 @@ macro(packet_test_setup_check device)
   set(HARLYN_MODEL_SEARCH_PATHS
     ${BFN_P4C_SOURCE_DIR}/../install/bin
     ${CMAKE_INSTALL_PREFIX}/bin)
-    
+
   find_program(HARLYN_MODEL tofino-model PATHS ${HARLYN_MODEL_SEARCH_PATHS} NO_DEFAULT_PATH)
 
   if (HARLYN_MODEL)
@@ -197,7 +197,7 @@ macro(packet_test_setup_check device)
     MESSAGE (WARNING "PTF tests need tofino-model for ${device}.\nLooked in ${HARLYN_MODEL_SEARCH_PATHS}.")
   endif()
 
-  if (PTF AND BF_SWITCHD AND HARLYN_MODEL)  
+  if (PTF AND BF_SWITCHD AND HARLYN_MODEL)
     set (PTF_REQUIREMENTS_MET TRUE)
     MESSAGE (STATUS "All PTF dependencies were found.")
   else()

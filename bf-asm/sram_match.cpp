@@ -467,7 +467,7 @@ void SRamMatchTable::write_attached_merge_regs(REGS &regs, int bus, int word, in
             merge.mau_meter_adr_exact_shiftcount[bus][word_group] = 16; }
         break; /* all must be the same, only config once */ }
 }
-FOR_ALL_TARGETS(INSTANTIATE_TARGET_TEMPLATE,
+FOR_ALL_REGISTER_SETS(INSTANTIATE_TARGET_TEMPLATE,
                 void SRamMatchTable::write_attached_merge_regs, mau_regs &, int, int, int)
 
 void SRamMatchTable::common_sram_setup(pair_t &kv, const VECTOR(pair_t) &data) {

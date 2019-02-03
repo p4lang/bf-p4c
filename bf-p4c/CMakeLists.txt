@@ -661,11 +661,34 @@ set (DRIVER_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino.cfg
   )
 if (ENABLE_JBAY)
-set (DRIVER_FILES ${DRIVER_FILES}
-  ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino2.cfg)
+  set (JBAY_TARGET_CFG_FILE ${P4C_BINARY_DIR}/p4c_src/p4c.tofino2.cfg)
+  set_source_files_properties (${JBAY_TARGET_CFG_FILE} PROPERTIES GENERATED TRUE)
+  # hack used to compile p4-14 program to JBay, we should not develop anything
+  # significant with P4-14, it is only used to support existing programs.
+  add_custom_target(jbay_hack
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${P4C_BINARY_DIR}/p4_14include/tofino2
+    COMMAND for h in ${hack_p4_14include_HEADERS} \; do
+      ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/\$$h ${P4C_BINARY_DIR}/\$$h \;
+    done
+    )
+  add_dependencies(p4c_driver jbay_hack)
+  if (NOT ENABLE_BAREFOOT_INTERNAL)
+    # Remove the P4-14 support for JBay
+    add_custom_command(OUTPUT ${JBAY_TARGET_CFG_FILE}
+      COMMAND sed -e '/v1model/d' ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino2.cfg > ${JBAY_TARGET_CFG_FILE}
+      COMMENT "Removing P4-14 support for Tofino2"
+      )
+  else()
+    add_custom_command(OUTPUT ${JBAY_TARGET_CFG_FILE}
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino2.cfg ${JBAY_TARGET_CFG_FILE}
+      COMMENT "Copying Tofino2 config"
+      )
+  endif()
+  add_custom_target(remove_p4_14_for_jbay ALL DEPENDS ${JBAY_TARGET_CFG_FILE})
+  add_dependencies(p4c_driver remove_p4_14_for_jbay)
 endif (ENABLE_JBAY)
 
-install (FILES ${DRIVER_FILES} ${P4C_DRIVER_MACROS}
+install (FILES ${DRIVER_FILES} ${JBAY_TARGET_CFG_FILE} ${P4C_DRIVER_MACROS}
   DESTINATION ${P4C_ARTIFACTS_OUTPUT_DIRECTORY}/p4c_src)
 
 # install the tools that generate logging
@@ -730,17 +753,6 @@ add_custom_target(linkp4cbarefoot
   )
 add_dependencies(p4c_driver linkp4cbarefoot)
 
-# hack used to compile p4-14 program to JBay, we should not develop anything
-# significant with P4-14, it is only used to support existing programs.
-if (ENABLE_JBAY)
-add_custom_target(jbay_hack
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${P4C_BINARY_DIR}/p4_14include/tofino2
-  COMMAND for h in ${hack_p4_14include_HEADERS} \; do
-     ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/\$$h ${P4C_BINARY_DIR}/\$$h \;
-  done
-)
-add_dependencies(p4c_driver jbay_hack)
-endif (ENABLE_JBAY)
 
 
 # Set default target and architecture to tofino-tna

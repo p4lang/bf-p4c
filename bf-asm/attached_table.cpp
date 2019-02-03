@@ -16,11 +16,9 @@ void AttachedTable::pass1() {
     if (per_flow_enable_param == "false")
         per_flow_enable = false;
 
-#ifdef HAVE_JBAY
-    if (options.target == JBAY && stage->overflow_bus_use[7])
-        error(layout[0].lineno,
-              "table %s, Tofino2 has no overflow bus between logical row 7 and 8", name());
-#endif /* HAVE_JBAY */
+    if (!Target::SUPPORT_OVERFLOW_BUS() && stage->overflow_bus_use[7])
+        error(layout[0].lineno, "table %s, %s has no overflow bus between logical row 7 and 8",
+              name(), Target::name());
 }
 
 unsigned AttachedTable::per_flow_enable_bit(MatchTable *m) const {
@@ -266,7 +264,7 @@ const Table::Call *AttachedTables::get_call(const Table *tbl) const {
  */
 bool AttachedTable::validate_call(Table::Call &call, MatchTable *self, size_t required_args,
         int hash_dist_type, Table::Call &first_call) {
-    if (!self) return false; 
+    if (!self) return false;
     if (call->stage != self->stage) {
         error(call.lineno, "%s not in same stage as %s", call->name(), self->name());
         return false;
@@ -366,7 +364,7 @@ void AttachedTables::pass1(MatchTable *self) {
             error(selector.lineno, "Must provide selector length information when a selector "
                                    "is called");
         }
-        
+
     }
     for (auto &s : stats) {
         if (s) {
@@ -408,7 +406,7 @@ void AttachedTables::write_merge_regs(REGS &regs, MatchTable *self, int type, in
     if (selector)
         get_selector()->write_merge_regs(regs, self, type, bus, selector.args);
 }
-FOR_ALL_TARGETS(INSTANTIATE_TARGET_TEMPLATE,
+FOR_ALL_REGISTER_SETS(INSTANTIATE_TARGET_TEMPLATE,
                 void AttachedTables::write_merge_regs, mau_regs &, MatchTable *, int, int)
 
 template<class REGS>
@@ -423,7 +421,7 @@ void AttachedTables::write_tcam_merge_regs(REGS &regs, MatchTable *self, int bus
         int shiftcount = m->determine_shiftcount(m, 0, 0, tcam_shift);
         merge.mau_meter_adr_tcam_shiftcount[bus] = shiftcount;
         if (m->uses_colormaprams()) {
-            int color_shift = m->color_shiftcount(meter_color, 0, tcam_shift); 
+            int color_shift = m->color_shiftcount(meter_color, 0, tcam_shift);
             if (m->color_addr_type() == MeterTable::IDLE_MAP_ADDR) {
                 merge.mau_idletime_adr_tcam_shiftcount[bus] = color_shift;
                 merge.mau_payload_shifter_enable[1][bus].idletime_adr_payload_shifter_en = 1;
@@ -440,5 +438,5 @@ void AttachedTables::write_tcam_merge_regs(REGS &regs, MatchTable *self, int bus
         break; /* all must be the same, only config once */
     }
 }
-FOR_ALL_TARGETS(INSTANTIATE_TARGET_TEMPLATE,
+FOR_ALL_REGISTER_SETS(INSTANTIATE_TARGET_TEMPLATE,
                 void AttachedTables::write_tcam_merge_regs, mau_regs &, MatchTable *, int, int)

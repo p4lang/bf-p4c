@@ -92,4 +92,11 @@ test_matrix = {
     'p4_16_jbay_t2na': (['--target', 'tofino2', '--arch', 't2na', t2na_program], None),
     'p4_16_jbay_v1model': (['--target', 'tofino2', '--arch', 'v1model', v1model_program], None),
     # 'p4_16_jbay_tna': (['--target', 'tofino2', '--arch', 'tna', tna_program], None),
+
+    # Tofino2H
+    'tofino2h' : (['--target', 'tofino2h', '--arch', 't2na', '-g', '-o', 'tofino2h', t2na_program], None),
+    # Tofino2M
+    'tofino2m' : (['--target', 'tofino2m', '--arch', 't2na', '-g', '-o', 'tofino2m', t2na_program], None),
+    # Tofino2U
+    'tofino2u' : (['--target', 'tofino2u', '--arch', 't2na', '-g', '-o', 'tofino2u', t2na_program], None),
 }

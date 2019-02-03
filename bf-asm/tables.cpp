@@ -1379,7 +1379,8 @@ template<class REGS> void Table::Actions::write_regs(REGS &regs, Table *tbl) {
         for (auto *inst : act.instr)
             inst->write_regs(regs, tbl, &act); }
 }
-FOR_ALL_TARGETS(INSTANTIATE_TARGET_TEMPLATE, void Table::Actions::write_regs, mau_regs &, Table *)
+FOR_ALL_REGISTER_SETS(INSTANTIATE_TARGET_TEMPLATE,
+        void Table::Actions::write_regs, mau_regs &, Table *)
 
 /**
  * Indirect Counters, Meters, and Stateful Alus can be addressed in many different ways, e.g.
@@ -1751,7 +1752,7 @@ void Table::write_mapram_regs(REGS &regs, int row, int col, int vpn, int type) {
     if (gress)
         regs.cfg_regs.mau_cfg_mram_thread[col/3U] |= 1U << (col%3U*8U + row);
 }
-FOR_ALL_TARGETS(INSTANTIATE_TARGET_TEMPLATE,
+FOR_ALL_REGISTER_SETS(INSTANTIATE_TARGET_TEMPLATE,
                 void Table::write_mapram_regs, mau_regs &, int, int, int, int)
 
 HashDistribution *Table::find_hash_dist(int unit) {

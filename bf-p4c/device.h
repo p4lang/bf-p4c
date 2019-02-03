@@ -108,6 +108,8 @@ class TofinoDevice : public Device {
 class JBayDevice : public Device {
     const JBayPhvSpec phv_;
     const JBayPardeSpec parde_;
+
+ protected:
 #ifdef EMU_OVERRIDE_STAGE_COUNT
     const int NUM_MAU_STAGES = EMU_OVERRIDE_STAGE_COUNT;
 #else
@@ -136,6 +138,24 @@ class JBayDevice : public Device {
     const PardeSpec& getPardeSpec() const override { return parde_; }
     const StatefulAluSpec& getStatefulAluSpec() const override;
 };
+
+/// Tofino2 variants. The only difference between them is the number of
+/// stages.
+class JBayHDevice : public JBayDevice {
+ public:
+    int getNumStages() const override { return 6; }
+};
+
+class JBayMDevice : public JBayDevice {
+ public:
+    int getNumStages() const override { return 12; }
+};
+
+class JBayUDevice : public JBayDevice {
+ public:
+    int getNumStages() const override { return 20; }
+};
+
 #endif /* HAVE_JBAY */
 
 #endif /* EXTENSIONS_BF_P4C_DEVICE_H_ */

@@ -878,8 +878,8 @@ template<class REGS> void ActionBus::write_action_regs(REGS &regs, Table *tbl,
                     " set in bytemask for " << el.second.name);
     }
 }
-FOR_ALL_TARGETS(INSTANTIATE_TARGET_TEMPLATE,
-                void ActionBus::write_action_regs, mau_regs &, Table *, int, unsigned)
+FOR_ALL_REGISTER_SETS(INSTANTIATE_TARGET_TEMPLATE,
+        void ActionBus::write_action_regs, mau_regs &, Table *, int, unsigned)
 
 template<class REGS> void ActionBus::write_immed_regs(REGS &regs, Table *tbl) {
     LOG2("--- ActionBus write_immed_regs(" << tbl->name() << ")");
@@ -928,7 +928,8 @@ template<class REGS> void ActionBus::write_immed_regs(REGS &regs, Table *tbl) {
         regs.rams.match.adrdist.immediate_data_rng_logical_map_ctl[tbl->logical_id/4]
             .set_subfield(rngmask, 5 * (tbl->logical_id%4U), 5); }
 }
-FOR_ALL_TARGETS(INSTANTIATE_TARGET_TEMPLATE, void ActionBus::write_immed_regs, mau_regs &, Table *)
+FOR_ALL_REGISTER_SETS(INSTANTIATE_TARGET_TEMPLATE,
+        void ActionBus::write_immed_regs, mau_regs &, Table *)
 
 ActionBus::MeterBus_t ActionBus::MeterBus;
 
