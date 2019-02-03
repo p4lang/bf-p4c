@@ -960,7 +960,7 @@ class GetBackendTables : public MauInspector {
             return;
         int p4_param_order = 0;
 
-        boost::optional<cstring> partition_index = boost::none;
+        boost::optional<cstring> partition_index = boost::make_optional(false, cstring());
         // Fold 'atcam_partition_index' annotation into InputXbarRead IR node.
         auto annot = table->getAnnotations();
         auto s = annot->getSingle("atcam_partition_index");
@@ -969,7 +969,7 @@ class GetBackendTables : public MauInspector {
 
         for (auto key_elem : key->keyElements) {
             // Get name annotation, if present.
-            boost::optional<cstring> ann = boost::none;
+            boost::optional<cstring> ann = boost::make_optional(false, cstring());
             if (auto nameAnn = key_elem->getAnnotation(IR::Annotation::nameAnnotation))
                 ann = IR::Annotation::getName(nameAnn);
 

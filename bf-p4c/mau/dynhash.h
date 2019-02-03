@@ -15,9 +15,9 @@ namespace BFN {
 static const unsigned fieldListHandleBase = (0x21 << 24);
 static const unsigned dynHashHandleBase = (0x22 << 24);
 static const unsigned algoHandleBase = (0x23 << 24);
-static unsigned fieldListHandle = 0x0;
-static unsigned dynHashHandle = 0x0;
-static unsigned algoHandle = 0x0;
+extern unsigned fieldListHandle;
+extern unsigned dynHashHandle;
+extern unsigned algoHandle;
 static std::map<cstring, unsigned> algoHandles;
 class DynamicHashJson : public MauInspector {
  private:

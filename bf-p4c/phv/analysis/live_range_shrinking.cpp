@@ -123,7 +123,7 @@ bool FindInitializationNode::canFUnitsReachGUnits(
         const ordered_set<const IR::BFN::Unit*>& f_units,
         const ordered_set<const IR::BFN::Unit*>& g_units) const {
     bool rv = false;
-    boost::optional<gress_t> gress;
+    auto gress = boost::make_optional(false, gress_t());
     for (const auto* u1 : f_units) {
         bool deparser1 = u1->is<IR::BFN::Deparser>();
         bool table1 = u1->is<IR::MAU::Table>();

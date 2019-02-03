@@ -3,6 +3,10 @@
 
 namespace BFN {
 
+unsigned fieldListHandle = 0x0;
+unsigned dynHashHandle = 0x0;
+unsigned algoHandle = 0x0;
+
 bool DynamicHashJson::preorder(const IR::MAU::Table *tbl) {
     LOG1(" Table: " << tbl->name);
     if (tbl->gateway_only()) return true;

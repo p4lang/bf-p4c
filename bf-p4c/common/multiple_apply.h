@@ -31,7 +31,7 @@ class MultipleApply : public PassManager {
     };
 
     struct tail_info_t {
-        int                     len = 0;        // length of the common tail
+        size_t                  len = 0;        // length of the common tail
         const IR::MAU::TableSeq *other = 0;     // other seq with common tail
         const IR::MAU::TableSeq *tail = 0;      // tail chosen/created in MergeTails
     };
@@ -44,7 +44,7 @@ class MultipleApply : public PassManager {
         void postorder(const IR::MAU::TableSeq *) override;
         bool equiv(const IR::MAU::Table *a, const IR::MAU::Table *b);
         bool equiv(const IR::MAU::TableSeq *a, const IR::MAU::TableSeq *b);
-        int tail_equiv(const IR::MAU::TableSeq *a, const IR::MAU::TableSeq *b);
+        size_t tail_equiv(const IR::MAU::TableSeq *a, const IR::MAU::TableSeq *b);
         bool equiv_gateway(const IR::Expression *a, const IR::Expression *b);
 
      public:

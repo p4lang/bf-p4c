@@ -173,9 +173,10 @@ int main(int ac, char **av) {
     // Program or programmer errors. Nothing to do until the program is fixed
     constexpr unsigned INVOCATION_ERROR = 2;
     constexpr unsigned PROGRAM_ERROR = 3;
+#if !BAREFOOT_INTERNAL
     // Internal compiler error
     constexpr unsigned INTERNAL_COMPILER_ERROR = 4;
-
+#endif
 
     AutoCompileContext autoBFNContext(new BFNContext);
     auto& options = BackendOptions();

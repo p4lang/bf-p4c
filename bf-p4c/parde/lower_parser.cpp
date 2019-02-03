@@ -964,7 +964,7 @@ computeControlPlaneFormat(const PhvInfo& phv,
         int remainingBitsInContainer;
     };
 
-    boost::optional<LastContainerInfo> last;
+    boost::optional<LastContainerInfo> last = boost::make_optional(false, LastContainerInfo());
     auto* packing = new BFN::FieldPacking;
 
     // Walk over the field sequence in network order and construct a
@@ -1249,7 +1249,7 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
             le_bitrange povFieldBits;
         };
 
-        boost::optional<LastSimpleEmitInfo> lastSimpleEmit;
+        auto lastSimpleEmit = boost::make_optional(false, LastSimpleEmitInfo());
         std::vector<std::vector<const IR::BFN::DeparserPrimitive*>> groupedEmits;
 
         // The deparser contains a sequence of emit-like primitives which we'd

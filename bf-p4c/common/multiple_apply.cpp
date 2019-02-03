@@ -117,9 +117,9 @@ bool MultipleApply::EquivalentTableSequence::equiv(const IR::MAU::TableSeq *a,
 }
 
 /** return the number of trailing identical tables for two sequences. */
-int MultipleApply::EquivalentTableSequence::tail_equiv(const IR::MAU::TableSeq *a,
+size_t MultipleApply::EquivalentTableSequence::tail_equiv(const IR::MAU::TableSeq *a,
         const IR::MAU::TableSeq *b) {
-    int rv = 0;
+    size_t rv = 0;
     auto atail = a->tables.end(), btail = b->tables.end();
     while (rv < a->tables.size() && rv < b->tables.size() && equiv(*--atail, *--btail))
         ++rv;

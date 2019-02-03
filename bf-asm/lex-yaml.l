@@ -153,7 +153,8 @@ void bigint_init(VECTOR(uintptr_t) &val, int64_t v) {
         VECTOR_init(val, sizeof(int64_t)/sizeof(uintptr_t));
         do {
             val.data[val.size++] = v;
-            v >>= CHAR_BIT * sizeof(uintptr_t);
+            v >>= CHAR_BIT * sizeof(uintptr_t) / 2;
+            v >>= CHAR_BIT * sizeof(uintptr_t) / 2;
         } while (v > 0);
     } else {
         VECTOR_init1(val, v);

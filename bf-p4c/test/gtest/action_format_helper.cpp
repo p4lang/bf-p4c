@@ -10,7 +10,7 @@ void BasicRotation_test1(ActionDataRamSection *ad, Argument *arg) {
 
     ActionDataPositions ad_positions = rotate1->action_data_positions();
 
-    EXPECT_EQ(ad_positions.size(), 1);
+    EXPECT_EQ(ad_positions.size(), 1U);
     auto ad_pos = ad_positions.find(4);
     EXPECT_TRUE(ad_pos != ad_positions.end());
     if (ad_pos != ad_positions.end()) {
@@ -19,7 +19,7 @@ void BasicRotation_test1(ActionDataRamSection *ad, Argument *arg) {
 
     auto right_rotate1 = rotate1->can_rotate(4, 2);
     ad_positions = right_rotate1->action_data_positions();
-    EXPECT_EQ(ad_positions.size(), 1);
+    EXPECT_EQ(ad_positions.size(), 1U);
     ad_pos = ad_positions.find(2);
     EXPECT_TRUE(ad_pos != ad_positions.end());
     if (ad_pos != ad_positions.end()) {
@@ -32,7 +32,7 @@ void BasicRotation_test2(ActionDataRamSection *ad, Argument *arg) {
     BUG_CHECK(rotate2 != nullptr, "Rotation should be possible");
 
     ActionDataPositions ad_positions = rotate2->action_data_positions();
-    EXPECT_EQ(ad_positions.size(), 2);
+    EXPECT_EQ(ad_positions.size(), 2U);
     auto ad_pos = ad_positions.find(0);
     EXPECT_TRUE(ad_pos != ad_positions.end());
     if (ad_pos != ad_positions.end()) {
@@ -69,7 +69,7 @@ void LayeredRotation_test1(ActionDataRamSection *ad, Argument *arg1, Argument *a
     BUG_CHECK(byte_rotate != nullptr, "Rotation should be possible");
     ActionDataPositions ad_positions = byte_rotate->action_data_positions();
 
-    EXPECT_EQ(ad_positions.size(), 3);
+    EXPECT_EQ(ad_positions.size(), 3U);
     auto ad_pos = ad_positions.find(0);
     EXPECT_TRUE(ad_pos != ad_positions.end());
     if (ad_pos != ad_positions.end()) {
@@ -95,7 +95,7 @@ void LayeredRotation_test2(ActionDataRamSection *ad, Argument *arg1, Argument *a
     BUG_CHECK(bit_rotate1 != nullptr, "Rotation should be possible");
     ActionDataPositions ad_positions = bit_rotate1->action_data_positions();
 
-    EXPECT_EQ(ad_positions.size(), 3);
+    EXPECT_EQ(ad_positions.size(), 3U);
     auto ad_pos = ad_positions.find(0);
     EXPECT_TRUE(ad_pos != ad_positions.end());
     if (ad_pos != ad_positions.end()) {
@@ -158,7 +158,7 @@ void SimpleMerge_test1(ActionDataRamSection *ad1, ActionDataRamSection *ad2) {
     auto pack_info = merge->get_pack_info();
     auto rec_const = pack_info.get_recursive_constraints();
 
-    EXPECT_EQ(rec_const.size(), 8);
+    EXPECT_EQ(rec_const.size(), 8U);
     EXPECT_EQ(pack_info.get_granularity(), 1);
 }
 
@@ -185,7 +185,7 @@ void OverlapMerge_test1(ActionDataRamSection *ad1, ActionDataRamSection *ad2) {
     auto pack_info = merge->get_pack_info();
     auto rec_const = pack_info.get_recursive_constraints();
 
-    EXPECT_EQ(rec_const.size(), 8);
+    EXPECT_EQ(rec_const.size(), 8U);
     EXPECT_EQ(pack_info.get_granularity(), 1);
 }
 
@@ -212,25 +212,25 @@ void CrossSizeMerge_test1(ActionDataRamSection *ad_8bit, ActionDataRamSection *a
 
     auto pack_info = merge->get_pack_info();
     auto rec_const_level1 = pack_info.get_recursive_constraints();
-    EXPECT_EQ(rec_const_level1.size(), 2);
+    EXPECT_EQ(rec_const_level1.size(), 2U);
     EXPECT_EQ(pack_info.get_granularity(), 8);
 
     auto pack_info2_1 = rec_const_level1[0];
     auto rec_const_level2_1 = pack_info2_1.get_recursive_constraints();
 
-    EXPECT_EQ(rec_const_level2_1.size(), 8);
+    EXPECT_EQ(rec_const_level2_1.size(), 8U);
     EXPECT_EQ(pack_info2_1.get_granularity(), 1);
 
     auto pack_info3_1 = rec_const_level2_1[0];
     auto rec_const_level3_1 = pack_info3_1.get_recursive_constraints();
 
-    EXPECT_EQ(rec_const_level3_1.size(), 0);
+    EXPECT_EQ(rec_const_level3_1.size(), 0U);
     EXPECT_EQ(pack_info3_1.get_granularity(), -1);
 
     auto pack_info2_2 = rec_const_level1[1];
     auto rec_const_level2_2 = pack_info2_2.get_recursive_constraints();
 
-    EXPECT_EQ(rec_const_level2_2.size(), 0);
+    EXPECT_EQ(rec_const_level2_2.size(), 0U);
     EXPECT_EQ(pack_info2_2.get_granularity(), -1);
 }
 
@@ -244,19 +244,19 @@ void CrossSizeMerge_test2(ActionDataRamSection *ad_8bit, ActionDataRamSection *a
 
     auto pack_info = merge->get_pack_info();
     auto rec_const_level1 = pack_info.get_recursive_constraints();
-    EXPECT_EQ(rec_const_level1.size(), 2);
+    EXPECT_EQ(rec_const_level1.size(), 2U);
     EXPECT_EQ(pack_info.get_granularity(), 8);
 
     auto pack_info2_1 = rec_const_level1[0];
     auto rec_const_level2_1 = pack_info2_1.get_recursive_constraints();
 
-    EXPECT_EQ(rec_const_level2_1.size(), 0);
+    EXPECT_EQ(rec_const_level2_1.size(), 0U);
     EXPECT_FALSE(pack_info2_1.is_rotational());
 
     auto pack_info2_2 = rec_const_level1[1];
     auto rec_const_level2_2 = pack_info2_2.get_recursive_constraints();
 
-    EXPECT_EQ(rec_const_level2_2.size(), 0);
+    EXPECT_EQ(rec_const_level2_2.size(), 0U);
     EXPECT_FALSE(pack_info2_2.is_rotational());
 }
 
@@ -271,19 +271,19 @@ void CrossSizeMerge_test3(ActionDataRamSection *ad_8bit, ActionDataRamSection *a
 
     auto pack_info = merge->get_pack_info();
     auto rec_const_level1 = pack_info.get_recursive_constraints();
-    EXPECT_EQ(rec_const_level1.size(), 2);
+    EXPECT_EQ(rec_const_level1.size(), 2U);
     EXPECT_EQ(pack_info.get_granularity(), 8);
 
     auto pack_info2_1 = rec_const_level1[0];
     auto rec_const_level2_1 = pack_info2_1.get_recursive_constraints();
 
-    EXPECT_EQ(rec_const_level2_1.size(), 0);
+    EXPECT_EQ(rec_const_level2_1.size(), 0U);
     EXPECT_FALSE(pack_info2_1.is_rotational());
 
     auto pack_info2_2 = rec_const_level1[1];
     auto rec_const_level2_2 = pack_info2_2.get_recursive_constraints();
 
-    EXPECT_EQ(rec_const_level2_2.size(), 0);
+    EXPECT_EQ(rec_const_level2_2.size(), 0U);
     EXPECT_FALSE(pack_info2_2.is_rotational());
 }
 
@@ -317,7 +317,7 @@ void RotateIntoRange_test1(ActionDataRamSection *ad, Argument *arg) {
     BUG_CHECK(rotate1 != nullptr, "Rotation should be allowed");
     ActionDataPositions ad_positions = rotate1->action_data_positions();
 
-    EXPECT_EQ(ad_positions.size(), 1);
+    EXPECT_EQ(ad_positions.size(), 1U);
     auto ad_pos = ad_positions.find(4);
     EXPECT_TRUE(ad_pos != ad_positions.end());
     if (ad_pos != ad_positions.end()) {
@@ -329,7 +329,7 @@ void RotateIntoRange_test1(ActionDataRamSection *ad, Argument *arg) {
 
     ad_positions = rotate2->action_data_positions();
 
-    EXPECT_EQ(ad_positions.size(), 1);
+    EXPECT_EQ(ad_positions.size(), 1U);
     ad_pos = ad_positions.find(8);
     EXPECT_TRUE(ad_pos != ad_positions.end());
     if (ad_pos != ad_positions.end()) {
@@ -374,10 +374,10 @@ TEST(ActionFormatHelper, ConstantOverlap) {
 
     safe_vector<SharedActionDataParam> shared_params;
     constant1->gather_shared_params(constant2, shared_params, false);
-    EXPECT_EQ(shared_params.size(), 1);
+    EXPECT_EQ(shared_params.size(), 1U);
     auto shared_arg = shared_params[0];
     auto con_overlap = shared_arg.param->to<Constant>();
-    EXPECT_EQ(con_overlap->value().getrange(0, 4), 0xf);
+    EXPECT_EQ(con_overlap->value().getrange(0, 4), 0xfUL);
     EXPECT_EQ(con_overlap->size(), 4);
     EXPECT_EQ(shared_arg.a_start_bit, 4);
     EXPECT_EQ(shared_arg.b_start_bit, 0);
@@ -388,7 +388,7 @@ TEST(ActionFormatHelper, ConstantOverlap) {
 
     shared_params.clear();
     constant1->gather_shared_params(constant3, shared_params, false);
-    EXPECT_EQ(shared_params.size(), 1);
+    EXPECT_EQ(shared_params.size(), 1U);
     shared_arg = shared_params[0];
     con_overlap = shared_arg.param->to<Constant>();
     EXPECT_EQ(shared_arg.a_start_bit, 2);

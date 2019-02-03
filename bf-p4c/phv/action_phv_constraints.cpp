@@ -2126,17 +2126,16 @@ bool ActionPhvConstraints::checkBridgedPackingConstraints(
     // write.
     for (auto* act : allActions) {
         // true if we have encountered a PHV source for one of the fields in the packing.
-        boost::optional<bool> foundPHVSource;
+        boost::optional<bool> foundPHVSource = boost::make_optional(false, false);
         // true if we have encountered an action data/constant source for one of the fields in the
         // packing.
-        boost::optional<bool> foundADConstantSource;
+        boost::optional<bool> foundADConstantSource = boost::make_optional(false, false);
         LOG6("\t\t    Action: " << act->name);
         BUG_CHECK(act->name != "act", "Action %1% should have been removed earlier", act->name);
         // For each field in packing:
         for (auto* f : packing) {
-            boost::optional<bool> hasPHVSource = constraint_tracker.hasPHVSource(f, act);
-            boost::optional<bool> hasADSource = constraint_tracker.hasActionDataOrConstantSource(f,
-                    act);
+            auto hasPHVSource = constraint_tracker.hasPHVSource(f, act);
+            auto hasADSource = constraint_tracker.hasActionDataOrConstantSource(f, act);
             LOG6("\t\t\t  Field: " << f->name);
             std::stringstream ss;
             if (hasPHVSource)

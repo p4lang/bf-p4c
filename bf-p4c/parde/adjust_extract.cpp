@@ -137,8 +137,8 @@ void AdjustExtract::postorder(IR::BFN::ParserState* state) {
 
 std::pair<size_t, size_t>
 AdjustExtract::calcPrePadding(const PHV::Field* field) {
-    boost::optional<size_t> post_padding;
-    boost::optional<size_t> pre_padding;
+    auto post_padding = boost::make_optional<size_t>(false, 0);
+    auto pre_padding = boost::make_optional<size_t>(false, 0);
     auto alloc = phv.get_alloc(field);
     for (auto& slice : alloc) {
         if (slice.width != int(slice.container.size())) {

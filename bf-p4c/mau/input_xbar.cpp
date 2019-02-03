@@ -1251,9 +1251,6 @@ void IXBar::field_management(ContByteConversion &map_alloc,
         finfo = phv.field(field, &bits);
         BUG_CHECK(finfo, "unexpected field %s", field);
         bitvec field_bits(bits.lo, bits.hi - bits.lo + 1);
-        if (byte_type == PARTITION_INDEX) {
-            int bits_used = 0;
-        }
         // Currently, due to driver, only one field is allowed to be the partition index
         if (byte_type == PARTITION_INDEX) {
             int diff = bits.size() - ki.partition_bits;

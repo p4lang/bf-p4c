@@ -279,12 +279,12 @@ class VerifyStateNamessAreUnique : public ParserInspector {
 using ParserValueResolution =
     std::map<const IR::BFN::ComputedRVal*, std::vector<ParserRValDef>>;
 
+#if 0
 std::ostream& operator<<(std::ostream &out, const ParserRValDef &rvd) {
     out << rvd.state->name << ": " << rvd.rval;
     return out;
 }
 
-#if 0
 std::ostream& operator<<(std::ostream& s, const ParserValueResolution& mapping) {
     for (const auto& kv : mapping) {
         s << "For " << kv.first << " multiple defs found: " << "\n";

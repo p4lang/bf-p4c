@@ -26,7 +26,7 @@ bool FindExpressionsForFields::preorder(const IR::Expression* expr) {
 void FindExpressionsForFields::end_apply() {
     if (LOGGING(1)) {
         LOG1("    All aliasing fields: ");
-        for (auto kv : pragmaAlias.getAliasMap()) {
+        for (auto &kv : pragmaAlias.getAliasMap()) {
             std::stringstream ss;
             if (kv.second.range)
                 ss << "[" << kv.second.range->hi << ":" << kv.second.range->lo << "]";

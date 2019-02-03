@@ -1922,7 +1922,7 @@ MauAsmOutput::TableMatch::TableMatch(const MauAsmOutput &, const PhvInfo &phv,
         const bitvec &byte_layout = match_info.second;
 
         safe_vector<Slice> single_byte_match_fields;
-        for (auto fi : byte.field_bytes) {
+        for (auto &fi : byte.field_bytes) {
             bitvec cont_loc = fi.cont_loc();
             bitvec layout_shifted
                 = byte_layout.getslice(byte_layout.min().index() / 8 * 8, 8);
@@ -1961,7 +1961,7 @@ MauAsmOutput::TableMatch::TableMatch(const MauAsmOutput &, const PhvInfo &phv,
         const IXBar::Use::Byte &byte = ghost_info.first;
         const bitvec &byte_layout = ghost_info.second;
 
-        for (auto fi : byte.field_bytes) {
+        for (auto &fi : byte.field_bytes) {
             bitvec cont_loc = fi.cont_loc();
             bitvec layout_shifted
                 = byte_layout.getslice(byte_layout.min().index() / 8 * 8, 8);

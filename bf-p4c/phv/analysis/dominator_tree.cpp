@@ -194,7 +194,7 @@ BuildDominatorTree::getAllDominators(const IR::MAU::Table* t, gress_t gress) con
 const IR::MAU::Table*
 BuildDominatorTree::getNonGatewayGroupDominator(ordered_set<const IR::MAU::Table*>& tables) const {
     // Validate that all tables are of the same gress.
-    boost::optional<gress_t> gress = boost::none;
+    boost::optional<gress_t> gress = boost::make_optional(false, gress_t());
     for (const auto* t : tables) {
         if (!gress) {
             gress = t->gress;
@@ -206,7 +206,7 @@ BuildDominatorTree::getNonGatewayGroupDominator(ordered_set<const IR::MAU::Table
 
     // Find all the nodes from the given table to the source.
     ordered_map<const IR::MAU::Table*, std::vector<const IR::MAU::Table*>> pathsToSource;
-    boost::optional<unsigned> minDepth = boost::none;
+    boost::optional<unsigned> minDepth = boost::make_optional(false, 0U);
     for (const auto* t : tables) {
         pathsToSource[t] = getAllDominators(t, gress.get());
         LOG3("\t\t\tTable " << t->name << " is at depth " << pathsToSource[t].size() << " in the "
@@ -246,7 +246,7 @@ BuildDominatorTree::getNonGatewayGroupDominator(ordered_set<const IR::MAU::Table
     // the same table. If we do encounter the same table, then that table is the group dominator.
     // Return the non gateway dominator for that group dominator.
     for (unsigned i = 0; minDepth && i < minDepth.get(); ++i) {
-        boost::optional<const IR::MAU::Table*> dom;
+        auto dom = boost::make_optional<const IR::MAU::Table*>(false, nullptr);
         bool foundCommonAncestor = true;
         LOG4("\t\t\t  i = " << i);
         for (const auto* t : tables) {
@@ -289,8 +289,8 @@ cstring BuildDominatorTree::hasImmediateDominator(gress_t g, cstring t) const {
 
 bool BuildDominatorTree::strictlyDominates(cstring t1, cstring t2, gress_t gress) const {
     const ImmediateDominatorMap* iDom = iDominator.at(gress);
-    const IR::MAU::Table* tbl1;
-    const IR::MAU::Table* tbl2;
+    const IR::MAU::Table* tbl1 = nullptr;
+    const IR::MAU::Table* tbl2 = nullptr;
     for (auto kv : *iDom) {
         if (kv.first == nullptr) continue;
         if (kv.first->name == t1) tbl1 = kv.first;
@@ -301,8 +301,8 @@ bool BuildDominatorTree::strictlyDominates(cstring t1, cstring t2, gress_t gress
 
 bool BuildDominatorTree::isDominator(cstring t1, gress_t gress, cstring t2) const {
     const ImmediateDominatorMap* iDom = iDominator.at(gress);
-    const IR::MAU::Table* tbl1;
-    const IR::MAU::Table* tbl2;
+    const IR::MAU::Table* tbl1 = nullptr;
+    const IR::MAU::Table* tbl2 = nullptr;
     for (auto kv : *iDom) {
         if (kv.first == nullptr) continue;
         if (kv.first->name == t1) tbl1 = kv.first;

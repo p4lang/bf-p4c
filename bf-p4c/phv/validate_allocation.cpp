@@ -619,7 +619,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
     if (Device::currentDevice() == Device::TOFINO) {
         const auto& collections = phvSpec.tagalongCollections();
         for (auto collection : collections) {
-            boost::optional<gress_t> gress;
+            auto gress = boost::make_optional(false, gress_t());
             for (unsigned cid : collection) {
                 auto c = phvSpec.idToContainer(cid);
                 const auto& fields = phv.fields_in_container(c);

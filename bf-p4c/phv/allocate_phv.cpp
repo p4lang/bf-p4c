@@ -988,7 +988,8 @@ CoreAllocation::tryAllocSliceList(
             // Find slice lists that contain slices in action_constraints.
             can_place = true;
             for (auto kv_source : *action_constraints) {
-                boost::optional<const PHV::SuperCluster::SliceList*> slice_list = boost::none;
+                auto slice_list =
+                    boost::make_optional<const PHV::SuperCluster::SliceList *>(false, 0);
                 bool has_not_in_list = false;
                 for (auto& slice_and_pos : kv_source.second) {
                     const auto& slice_lists = super_cluster.slice_list(slice_and_pos.first);
