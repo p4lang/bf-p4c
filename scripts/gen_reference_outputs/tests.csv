@@ -18,7 +18,7 @@ test_config_185_first_lpf,/bfn/bf-p4c-compilers/glass/testsuite/p4_tests/mau/tes
 test_config_152_stateful_simple_cntr,/bfn/bf-p4c-compilers/glass/testsuite/p4_tests/mau/test_config_152_stateful_simple_cntr.p4,,"",tofino,p4-14,v1model
 test_config_123_meter_2,/bfn/bf-p4c-compilers/glass/testsuite/p4_tests/mau/test_config_123_meter_2.p4,,"",tofino,p4-14,v1model
 pvs,/bfn/bf-p4c-compilers/p4-tests/p4_14/p4-tests/programs/pvs/pvs.p4,,"--archive",tofino,p4-14,v1model
-opcode_test,/bfn/bf-p4c-compilers/p4-tests/p4_14/p4-tests/programs/opcode_test/opcode_test.p4,,"--archive",tofino,p4-14,v1model
+opcode_test,/bfn/bf-p4c-compilers/p4-tests/p4_14/p4-tests/internal_p4_14/opcode_test/opcode_test.p4,,"--archive",tofino,p4-14,v1model
 stful,/bfn/bf-p4c-compilers/p4-tests/p4_14/p4-tests/programs/stful/stful.p4,,"--archive",tofino,p4-14,v1model
 action_spec_format,/bfn/bf-p4c-compilers/p4-tests/p4_14/p4-tests/programs/action_spec_format/action_spec_format.p4,,"--archive",tofino,p4-14,v1model
 alpm_test,/bfn/bf-p4c-compilers/p4-tests/p4_14/p4-tests/programs/alpm_test/alpm_test.p4,,"--archive",tofino,p4-14,v1model
