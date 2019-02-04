@@ -51,12 +51,11 @@ bool GatherParserExtracts::preorder(const IR::BFN::Extract* e) {
     if (!fieldLVal) return true;
     auto* f = phv.field(fieldLVal->field);
     if (!f) return true;
-    if (!f->name.startsWith(FIELD_PREFIX)) return true;
     auto* source = e->source->to<IR::BFN::ComputedRVal>();
     if (!source) return true;
     auto* sourceField = phv.field(source->source);
     if (!sourceField) return true;
-    parserAlignedFields[f] = sourceField;
+    parserAlignedFields[f].insert(sourceField);
     LOG5("    Initialization due to ComputedRVal in parser: " << f);
     return true;
 }
@@ -662,6 +661,10 @@ void RepackFlexHeaders::determineAlignmentConstraints(
             for (const PHV::Field* f : destinations) {
                 if (!relatedFields.count(f))
                     fieldsNotVisited.push(f); }
+            if (parserAlignedFields.count(currentField))
+                for (const auto* f : parserAlignedFields.at(currentField))
+                    if (!relatedFields.count(f))
+                        fieldsNotVisited.push(f);
             LOG6("\t\t  Now, we have " << fieldsNotVisited.size() << " fields unvisited"); }
 
         if (LOGGING(4) && relatedFields.count(field) == 0) {
@@ -857,11 +860,13 @@ IR::Type_Struct* RepackFlexHeaders::repackFlexibleStruct(
         ordered_map<const IR::StructField*, int> packingWithPositions;
         if (parserAlignedFields.count(tempField)) {
             LOG4("\t\t  F. No other field packed because parser aligned field: " << f1);
-            const PHV::Field* source = parserAlignedFields.at(tempField);
-            if (source->alignment) {
-                LOG4("\t\tAlignment constraint on " << tempField << " : " << *(source->alignment) <<
-                     " " << source->alignment->littleEndian);
-                packingWithPositions[f1] = source->alignment->littleEndian;
+            for (const auto* source : parserAlignedFields.at(tempField)) {
+                // XXX(Deep): What if alignment from multiple sources conflicts?
+                if (source->alignment) {
+                    LOG4("\t\tAlignment constraint on " << tempField << " : " <<
+                         *(source->alignment) << " " << source->alignment->littleEndian);
+                    packingWithPositions[f1] = source->alignment->littleEndian;
+                }
             }
         } else {
             packingWithPositions = packWithField(alignment, structName, f1, nonByteAlignedFields,

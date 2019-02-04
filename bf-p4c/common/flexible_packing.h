@@ -64,8 +64,7 @@ class GatherParserExtracts : public Inspector {
     const PhvInfo& phv;
     /// Map of all fields with alignment constraints due to initialization in the parser with values
     /// being the field they are initialized to.
-    ordered_map<const PHV::Field*, const PHV::Field*>& parserAlignedFields;
-    static constexpr char const *FIELD_PREFIX = "ingress::^bridged_metadata";
+    ordered_map<const PHV::Field*, ordered_set<const PHV::Field*>>& parserAlignedFields;
 
     profile_t init_apply(const IR::Node* root) override {
         parserAlignedFields.clear();
@@ -77,7 +76,7 @@ class GatherParserExtracts : public Inspector {
  public:
     explicit GatherParserExtracts(
             const PhvInfo& p,
-            ordered_map<const PHV::Field*, const PHV::Field*>& f)
+            ordered_map<const PHV::Field*, ordered_set<const PHV::Field*>>& f)
         : phv(p), parserAlignedFields(f) { }
 };
 
@@ -126,7 +125,7 @@ class RepackFlexHeaders : public Transform, public TofinoWriteContext {
     /// Set of all fields used as deparser parameters.
     const ordered_set<const PHV::Field*>& deparserParams;
     /// Set of all fields with alignment constraints induced by the parser.
-    const ordered_map<const PHV::Field*, const PHV::Field*>& parserAlignedFields;
+    const ordered_map<const PHV::Field*, ordered_set<const PHV::Field*>>& parserAlignedFields;
     /// No pack constraints reported by MAU backtracker.
     const MauBacktracker& alloc;
 
@@ -299,7 +298,7 @@ class RepackFlexHeaders : public Transform, public TofinoWriteContext {
             SymBitMatrix& s,
             const ordered_set<const PHV::Field*>& z,
             const ordered_set<const PHV::Field*>& d,
-            const ordered_map<const PHV::Field*, const PHV::Field*>& pa,
+            const ordered_map<const PHV::Field*, ordered_set<const PHV::Field*>>& pa,
             const MauBacktracker& b)
         : phv(p), fields(f), actionConstraints(a), doNotPack(s), phase0Fields(z), deparserParams(d),
           parserAlignedFields(pa), alloc(b) { }
@@ -477,7 +476,8 @@ class FlexiblePacking : public Logging::PassManager {
     ActionMutuallyExclusive                             aMutex;
     ordered_set<const PHV::Field*>                      phase0Fields;
     ordered_set<const PHV::Field*>                      deparserParams;
-    ordered_map<const PHV::Field*, const PHV::Field*>   parserAlignedFields;
+
+    ordered_map<const PHV::Field*, ordered_set<const PHV::Field*>>   parserAlignedFields;
 
  public:
     explicit FlexiblePacking(

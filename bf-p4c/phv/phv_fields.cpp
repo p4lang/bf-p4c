@@ -1439,10 +1439,11 @@ Visitor::profile_t CollectBridgedExtractedTogetherFields::init_apply(const IR::N
 
     for (auto kv : extractedTogether) {
         const auto* f1 = phv_i.field(kv.first);
-        BUG_CHECK(f1, "Field corresponding to %1% not found", kv.first);
+        // Fields may be eliminated by dead code elimination. So, no need for these bug checks.
+        if (!f1) continue;
         for (auto fName : kv.second) {
             const auto* f2 = phv_i.field(fName);
-            BUG_CHECK(f2, "Field corresponding to %1% not found", fName);
+            if (!f2) continue;
             // Ignore extracted together for padding fields.
             if (f1->alwaysPackable || f2->alwaysPackable) continue;
             matrix(f1->id, f2->id) = true;
