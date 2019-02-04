@@ -623,9 +623,8 @@ set (P4FACTORY_P4_16_PROGRAMS
   tna_lpm_match
   tna_meter_lpf_wred
   tna_operations
-  # FIXME: Enable test after updating it to include
-  # <instance-name>.$PORT_METADATA as phase0 table name
-  # tna_port_metadata
+  tna_port_metadata
+  tna_port_metadata_extern
   tna_range_match
   tna_register
   tna_ternary_match
