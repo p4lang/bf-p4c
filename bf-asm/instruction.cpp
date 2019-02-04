@@ -292,8 +292,12 @@ struct operand {
                         error(lineno, "No hash dist %d in table %s", u, table->name());
                     xbar_use = HashDistribution::IMMEDIATE_HIGH; }
             } else if (auto hd = find_hash_dist(units.at(0))) {
-                if (!(hd->xbar_use & HashDistribution::IMMEDIATE_HIGH))
-                    hd->xbar_use |= HashDistribution::IMMEDIATE_LOW;
+                if (hd->xbar_use & HashDistribution::IMMEDIATE_HIGH) {
+                    if (size == 4) {
+                        lo += 16;
+                        hi += 16; }
+                } else {
+                    hd->xbar_use |= HashDistribution::IMMEDIATE_LOW; }
             } else error(lineno, "No hash dist %d in table %s", units.at(0), table->name());
             int lo = this->lo;
             for (auto u : units) {
@@ -310,7 +314,7 @@ struct operand {
                 return -1; }
             if (units.size() == 2) {
                 auto hd1 = find_hash_dist(units.at(1));
-                if (table->find_on_actionbus(hd1, lo+16, hi, size) != byte + 2)
+                if (table->find_on_actionbus(hd1, lo + 16, hi, size) != byte + 2)
                     error(lineno, "hash dists %d and %d not contiguous on the action bus",
                           hd->id, hd1->id); }
             if (size == 2) byte -= 32;
