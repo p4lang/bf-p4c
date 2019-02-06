@@ -43,15 +43,21 @@ struct L2_digest {
 }
 
 control ingress(inout Headers h, inout Meta m, inout standard_metadata_t sm) {
+    direct_counter(CounterType.packets) pkt_counters;
     action send_digest() {
+        pkt_counters.count();
         digest<L2_digest>(1, {h.ethernet.smac, sm.ingress_port});
+    }
+    action nop() {
+        pkt_counters.count();
     }
     table smac {
         key = { h.ethernet.smac : exact; }
-        actions = { send_digest; NoAction; }
+        actions = { send_digest; nop; }
         const default_action = send_digest();
         size = 4096;
         support_timeout = true;
+        counters = pkt_counters;
     }
     apply { smac.apply(); sm.egress_spec = sm.ingress_port; }
 }

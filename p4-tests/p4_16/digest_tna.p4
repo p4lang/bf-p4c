@@ -39,16 +39,22 @@ control IngressP(
         in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md,
         inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md,
         inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
+    DirectCounter<bit<32> >(CounterType_t.PACKETS) pkt_counters;
     action send_digest() {
+        pkt_counters.count();
         ig_intr_dprs_md.digest_type = 0;
         meta.ig_port = ig_intr_md.ingress_port;
     }
+    action nop() {
+        pkt_counters.count();
+    }
     table smac {
         key = { h.ethernet.smac : exact; }
-        actions = { send_digest; NoAction; }
+        actions = { send_digest; nop; }
         const default_action = send_digest();
         size = 4096;
         idle_timeout = true;
+        counters = pkt_counters;
     }
 
     apply {

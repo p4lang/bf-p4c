@@ -8,14 +8,30 @@ from p4runtime_base_tests import stringify, P4RuntimeMissingStreamMsgException
 import time
 
 class IdleTimeoutTest(P4RuntimeTest):
-    pass
+    def setUp(self):
+        P4RuntimeTest.setUp(self)
+        self.counter_name = "pkt_counters"
+        self.counter_id = self.get_direct_counter_id(self.counter_name)
+
+    def check_counter(self, table_entry, expected):
+        req = p4runtime_pb2.ReadRequest()
+        req.device_id = self.device_id
+        entity = req.entities.add()
+        counter_entry = entity.direct_counter_entry
+        counter_entry.table_entry.CopyFrom(table_entry)
+        count = 0
+        for rep in self.stub.Read(req):
+            for entity in rep.entities:
+                counter_entry = entity.direct_counter_entry
+                count = counter_entry.data.packet_count
+        self.assertEqual(count, expected)
 
 class IdleTimeoutNotification(IdleTimeoutTest):
     @autocleanup
     def runTest(self):
         smac = mac_to_binary("aa:bb:cc:dd:ee:ff")
         self.send_request_add_entry_to_action(
-            "smac", [self.Exact("h.ethernet.smac", smac)], "NoAction", [],
+            "smac", [self.Exact("h.ethernet.smac", smac)], "nop", [],
             timeout_ms=1000)
         self.get_idle_timeout_notification(timeout=3)
         # another notification is expected after the TTL expires again
@@ -26,14 +42,14 @@ class IdleTimeoutModifyTTL(IdleTimeoutTest):
     def runTest(self):
         smac = mac_to_binary("aa:bb:cc:dd:ee:ff")
         self.send_request_add_entry_to_action(
-            "smac", [self.Exact("h.ethernet.smac", smac)], "NoAction", [],
+            "smac", [self.Exact("h.ethernet.smac", smac)], "nop", [],
             timeout_ms=100000)  # 100s
 
         time.sleep(1)
 
         req = self.get_new_write_request()
         self.push_update_add_entry_to_action(
-            req, "smac", [self.Exact("h.ethernet.smac", smac)], "NoAction", [],
+            req, "smac", [self.Exact("h.ethernet.smac", smac)], "nop", [],
             timeout_ms=2000)
         req.updates[-1].type = p4runtime_pb2.Update.MODIFY
         self.write_request(req, store=False)
@@ -46,13 +62,15 @@ class IdleTimeoutTimeSinceLastHit(IdleTimeoutTest):
         smac = mac_to_binary("aa:bb:cc:dd:ee:ff")
         wreq = self.get_new_write_request()
         self.push_update_add_entry_to_action(
-            wreq, "smac", [self.Exact("h.ethernet.smac", smac)], "NoAction", [],
+            wreq, "smac", [self.Exact("h.ethernet.smac", smac)], "nop", [],
             timeout_ms=100000)
         self.write_request(wreq)
 
         pkt = testutils.simple_tcp_packet(eth_src=smac)
         testutils.send_packet(self, self.swports(1), str(pkt))
         testutils.verify_packet(self, pkt, self.swports(1))
+
+        self.check_counter(wreq.updates[-1].entity.table_entry, 1)
 
         time.sleep(2)
 
@@ -109,7 +127,7 @@ class DigestNotificationAndAck(DigestTest):
         testutils.send_packet(self, port, str(pkt))
         testutils.verify_packet(self, pkt, port)
 
-        # we didn't send an ack yet so no 
+        # we didn't send an ack yet so no new notification
         with self.assertRaises(P4RuntimeMissingStreamMsgException):
             self.get_digest_notification(timeout=2)
 

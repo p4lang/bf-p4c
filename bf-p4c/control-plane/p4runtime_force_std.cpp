@@ -66,6 +66,10 @@ class P4RuntimeStdConverter {
         // them to standard P4Info objects (when it was possible)
         p4info->clear_externs();
 
+        // update implementation_id and direct_resource_ids fields in Table
+        // messages because the ids have changed
+        updateTables(p4info);
+
         return p4info;
     }
 
@@ -110,6 +114,9 @@ class P4RuntimeStdConverter {
         } while (allocatedIds.count(id) > 0);
         allocatedIds.insert(id);
         preOut->set_id(id);
+        auto r = oldToNewIds.emplace(preIn.id(), preOut->id());
+        BUG_CHECK(r.second, "Id %1% was already in id map when converting P4Info to standard",
+                  preIn.id());
     }
 
     void convertActionProfile(p4configv1::P4Info* p4info,
@@ -195,8 +202,40 @@ class P4RuntimeStdConverter {
         digestStd->mutable_type_spec()->CopyFrom(digest.type_spec());
     }
 
+    void updateTables(p4configv1::P4Info* p4info) {
+        for (auto& table : *p4info->mutable_tables()) {
+            auto& tableName = table.preamble().name();
+            auto implementationId = table.implementation_id();
+            if (implementationId) {
+                auto idIt = oldToNewIds.find(implementationId);
+                if (idIt != oldToNewIds.end()) {
+                    table.set_implementation_id(idIt->second);
+                } else {
+                    ::error("Unknown implementation id %1% for table '%2%' "
+                            "(maybe the implementation extern type is not supported)",
+                            implementationId, tableName);
+                    table.clear_implementation_id();
+                }
+            }
+            int idx = 0;
+            for (auto directResourceId : table.direct_resource_ids()) {
+                auto idIt = oldToNewIds.find(directResourceId);
+                if (idIt != oldToNewIds.end()) {
+                    table.set_direct_resource_ids(idx++, idIt->second);
+                } else {
+                    ::warning("Unknown direct resource id %1% for table '%2%' "
+                              "(maybe the extern type is not supported), "
+                              "so dropping the direct resource for the table",
+                              directResourceId, tableName);
+                }
+            }
+            table.mutable_direct_resource_ids()->Truncate(idx);
+        }
+    }
+
     const p4configv1::P4Info* p4infoIn;
     std::unordered_set<P4Id> allocatedIds{};
+    std::unordered_map<P4Id, P4Id> oldToNewIds{};
 };
 
 P4::P4RuntimeAPI convertToStdP4Runtime(const P4::P4RuntimeAPI& p4RuntimeIn) {
