@@ -494,7 +494,9 @@ void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
     for (unsigned i = 0; i < field_bytes; i++) {
         json::map entry;
         unsigned entry_lo = lsb_offset;
+        unsigned entry_offset_lo = lsb_offset;
         unsigned entry_size = field_width;
+        unsigned entry_pad_size = entry_size;
         entry["field_name"] = fix_name;
         entry["lsb_mem_word_offset"] = entry_lo;
         entry["lsb_mem_word_idx"] = lsb_idx;
@@ -508,17 +510,33 @@ void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
         // encodings (dirtcam = 2 (4bit lo), dirtcam = 3 (4bit hi)
         if (p && ((dirtcam_mode == DIRTCAM_4B_LO) ||
                     (dirtcam_mode == DIRTCAM_4B_HI))) {
-            entry_size = 4;
+            // Range entries are broken into 4 bit nibbles but can be < 4 bits
+            // depending on how they eventually get allocated within a
+            // container. In such cases the field/field slice can
+            // be located anywhere in those 4 bits. We specify a nibble_offset
+            // to indicate where the field starts in the nibble, set the
+            // lsb_mem_word_offset to start of the nibble and ensure the
+            // field_width denotes the width of the field/slice in the nibble.
+            // While generating padding however we treat the entire nibble as a
+            // field and do not pad any bits within the nibble when they are
+            // unused by the field
+            bool has_nibble_offset = entry_size < 4;
+            entry_size = has_nibble_offset ? entry_size : 4;
+            entry_pad_size = 4;
             entry["source"] = "range";
             // Shift start bit based on which nibble is used in range
             entry["start_bit"] =
                 i * 8 + start_bit + (dirtcam_mode == DIRTCAM_4B_HI) * 4 + slice_offset;
             entry["field_width"] = entry_size;
-            entry_lo = lsb_offset + i*8 + 4*(dirtcam_mode == DIRTCAM_4B_HI);
+            entry_offset_lo = lsb_offset + i*8 + 4*(dirtcam_mode == DIRTCAM_4B_HI);
+            entry_lo = has_nibble_offset ? 1 + i*8 + 4*(dirtcam_mode == DIRTCAM_4B_HI)
+                                     : entry_offset_lo;
             entry["lsb_mem_word_offset"] = entry_lo;
             json::map &entry_range = entry["range"];
             entry_range["type"] = 4;
             entry_range["is_duplicate"] = false;
+            if (has_nibble_offset)
+                entry_range["nibble_offset"] = entry_offset_lo - entry_lo;
 
             // Add the duplicate entry as well. It is unclear why this entry is
             // needed by the driver, as most of the information is duplicated
@@ -526,7 +544,9 @@ void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
             // nibble. But currently we see driver crash in the absence of this
             // field in some situations, hence we add it here.
             json::map entry_dup;
-            unsigned entry_lo_dup = lsb_offset + i*8 + 4*(dirtcam_mode == DIRTCAM_4B_LO);
+            unsigned entry_lo_dup = has_nibble_offset ?
+                         1 + i*8 + 4*(dirtcam_mode == DIRTCAM_4B_LO)
+                        :lsb_offset + i*8 + 4*(dirtcam_mode == DIRTCAM_4B_LO);
             entry_dup["field_name"] = fix_name;
             entry_dup["lsb_mem_word_offset"] = entry_lo_dup;
             entry_dup["lsb_mem_word_idx"] = lsb_idx;
@@ -537,10 +557,12 @@ void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
             json::map &entry_dup_range = entry_dup["range"];
             entry_dup_range["type"] = 4;
             entry_dup_range["is_duplicate"] = true;
-            tcam_bits.setrange(entry_lo_dup, entry_size);
+            if (has_nibble_offset)
+                entry_dup_range["nibble_offset"] = entry_offset_lo - entry_lo;
+            tcam_bits.setrange(entry_lo_dup, entry_pad_size);
             out.push_back(std::move(entry_dup));
         }
-        tcam_bits.setrange(entry_lo, entry_size);
+        tcam_bits.setrange(entry_lo, entry_pad_size);
         out.push_back(std::move(entry)); }
 
 }
