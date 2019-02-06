@@ -272,13 +272,18 @@ class Test:
             program = manifest['programs'][0]
             p4_version = program['p4_version']
             resources_files = program['p4i']
+            resources_file = None
             for r in resources_files:
                 m_file = os.path.join(args.output_directory, r['path'])
                 if not os.path.isfile(m_file):
                     raise TestError(
                         "ERROR: Input file '{}' contains an invalid "
                         "{} path: {}", manifest_file, 'resources file', m_file)
-                with open(m_file, 'r') as res_file:
+                # Get the resources.json/res.json path if it exists
+                if r['type'] is "resources":
+                    resources_file = os.path.join(args.output_directory, r['path'])
+            if resources_file:
+                with open(resources_file, 'r') as res_file:
                     res_json = json.load(res_file)
                     resources = res_json['resources']
                     nStages = int(resources['pipes'][0]['mau']['nStages'])
