@@ -212,7 +212,7 @@ bool CreateSaluInstruction::preorder(const IR::Function *func) {
 }
 
 void CreateSaluInstruction::postorder(const IR::Function *func) {
-    BUG_CHECK(params == func->type->parameters, "recursion failure");
+    BUG_CHECK(params == func->type->parameters, "%1%: recursion failure", func);
     if (cmp_instr.size() > Device::statefulAluSpec().CmpUnits.size())
         error("%s: %s %s.%s needs %d comparisons; only %d possible", func->srcInfo,
               action_type_name, reg_action->name, func->name, cmp_instr.size(),
@@ -256,7 +256,7 @@ void CreateSaluInstruction::doAssignment(const Util::SourceInfo &srcInfo) {
             predicate = new IR::LAnd(old_predicate, predicate);
         etype = OUTPUT;
         operands.push_back(new IR::Constant(1)); }
-    BUG_CHECK(operands.size() > (etype < OUTPUT), "recursion failure");
+    BUG_CHECK(operands.size() > (etype < OUTPUT), "%1%: recursion failure", srcInfo);
     if (dest && dest->use != LocalVar::ALUHI) {
         BUG_CHECK(etype == VALUE, "assert failure");
         LocalVar::use_t use = LocalVar::NONE;
@@ -286,12 +286,13 @@ void CreateSaluInstruction::doAssignment(const Util::SourceInfo &srcInfo) {
 }
 
 bool CreateSaluInstruction::preorder(const IR::AssignmentStatement *as) {
-    BUG_CHECK(operands.empty(), "recursion failure");
+    BUG_CHECK(operands.empty(), "%1%: recursion failure", as);
     etype = NONE;
     dest = nullptr;
     opcode = cstring();
     visit(as->left, "left");
-    BUG_CHECK(operands.size() == (etype < OUTPUT) || ::errorCount() > 0, "recursion failure");
+    BUG_CHECK(operands.size() == (etype < OUTPUT) || ::errorCount() > 0, "%1%: recursion failure",
+              as->left);
     assignDone = false;
     if (islvalue(etype))
         error("Can't assign to %s in RegisterAction", as->left);
@@ -314,11 +315,12 @@ static const IR::Expression *negatePred(const IR::Expression *e) {
 }
 
 bool CreateSaluInstruction::preorder(const IR::IfStatement *s) {
-    BUG_CHECK(operands.empty() && pred_operands.empty(), "recursion failure");
+    BUG_CHECK(operands.empty() && pred_operands.empty(), "%1%: recursion failure", s);
     etype = IF;
     dest = nullptr;
     visit(s->condition, "condition");
-    BUG_CHECK(operands.empty() && pred_operands.size() == 1, "recursion failure");
+    BUG_CHECK(operands.empty() && pred_operands.size() == 1, "%1%: recursion failure",
+              s->condition);
     etype = NONE;
     auto old_predicate = predicate;
     auto new_predicate = pred_operands.at(0);
@@ -342,7 +344,7 @@ bool CreateSaluInstruction::preorder(const IR::Mux *mux) {
     dest = nullptr;
     operands.clear();
     visit(mux->e0, "e0");
-    BUG_CHECK(operands.empty() && pred_operands.size() == 1, "recursion failure");
+    BUG_CHECK(operands.empty() && pred_operands.size() == 1, "%1%: recursion failure", mux->e0);
     auto old_predicate = predicate;
     auto new_predicate = pred_operands.at(0);
     pred_operands.clear();
@@ -548,7 +550,8 @@ bool CreateSaluInstruction::preorder(const IR::Primitive *prim) {
             dest = nullptr;
             opcode = cstring();
             visit(prim->operands[3], "index");
-            BUG_CHECK(operands.size() == 0 || ::errorCount() > 0, "recursion failure");
+            BUG_CHECK(operands.size() == 0 || ::errorCount() > 0, "%1%: recursion failure",
+                      prim->operands[3]);
             operands.push_back(new IR::MAU::SaluReg(prim->type, "minmax_index", false));
             createInstruction();
             operands.clear(); }
@@ -602,6 +605,24 @@ const IR::Expression *CreateSaluInstruction::reuseCmp(const IR::MAU::Instruction
     return nullptr;
 }
 
+void CreateSaluInstruction::setupCmp(cstring op) {
+    int idx = 0;
+    opcode = op;
+    for (auto cmp : cmp_instr) {
+        if (auto inst = reuseCmp(cmp, idx++)) {
+            LOG4("Relation reuse pred_operand: " << inst);
+            pred_operands.push_back(inst);
+            operands.clear();
+            return; } }
+    cstring name = Device::statefulAluSpec().cmpUnit(idx);
+    operands.insert(operands.begin(), new IR::MAU::SaluCmpReg(name, idx));
+    cmp_instr.push_back(createInstruction());
+    if (!name.startsWith("cmp")) name = "cmp" + name;
+    pred_operands.push_back(new IR::MAU::SaluCmpReg(name, idx));
+    LOG4("Relation pred_operand: " << pred_operands.back());
+    operands.clear();
+}
+
 bool CreateSaluInstruction::preorder(const IR::Operation::Relation *rel, cstring op, bool eq) {
     if (etype == OUTPUT && operands.empty()) {
         // output a boolean condition directly -- change it into IF setting value to 1
@@ -624,23 +645,15 @@ bool CreateSaluInstruction::preorder(const IR::Operation::Relation *rel, cstring
             visit(rel->right, "right");
             negate = !negate; }
         BUG_CHECK(etype == IF, "etype changed?");
-        int idx = 0;
-        for (auto cmp : cmp_instr) {
-            if (auto inst = reuseCmp(cmp, idx++)) {
-                LOG4("Relation reuse pred_operand: " << inst);
-                pred_operands.push_back(inst);
-                operands.clear();
-                return false; } }
-        cstring name = Device::statefulAluSpec().cmpUnit(idx);
-        operands.insert(operands.begin(), new IR::MAU::SaluCmpReg(name, idx));
-        cmp_instr.push_back(createInstruction());
-        if (!name.startsWith("cmp")) name = "cmp" + name;
-        pred_operands.push_back(new IR::MAU::SaluCmpReg(name, idx));
-        LOG4("Relation pred_operand: " << pred_operands.back());
-        operands.clear();
+        setupCmp(opcode);
     } else {
         error("%s: expression in stateful alu too complex", rel->srcInfo); }
     return false;
+}
+
+void CreateSaluInstruction::postorder(const IR::Cast *c) {
+    if (etype == IF && c->type->to<IR::Type::Boolean>())
+        setupCmp("neq");
 }
 
 void CreateSaluInstruction::postorder(const IR::LNot *e) {
@@ -648,9 +661,9 @@ void CreateSaluInstruction::postorder(const IR::LNot *e) {
         if (operands.size() == 1 && is_learn(operands.back())) {
             operands.back() = new IR::LNot(e->srcInfo, operands.back());
             return; }
-        BUG_CHECK(pred_operands.size() == 1 || ::errorCount() > 0, "recursion failure");
+        BUG_CHECK(pred_operands.size() == 1 || ::errorCount() > 0, "%1%: recursion failure", e);
         if (pred_operands.size() < 1) return;  // can only happen if there has been an error
-        pred_operands.back() = new IR::LNot(e->srcInfo, pred_operands.back());
+        pred_operands.back() = negatePred(pred_operands.back());
         LOG4("LNot rewrite pred_opeands: " << pred_operands.back());
     } else {
         error("%s: expression too complex for stateful alu", e->srcInfo); }
@@ -658,7 +671,7 @@ void CreateSaluInstruction::postorder(const IR::LNot *e) {
 void CreateSaluInstruction::postorder(const IR::LAnd *e) {
     if (etype == IF) {
         if (pred_operands.size() == 1) return;  // to deal with learn -- not always correct
-        BUG_CHECK(pred_operands.size() == 2 || ::errorCount() > 0, "recursion failure");
+        BUG_CHECK(pred_operands.size() == 2 || ::errorCount() > 0, "%1%: recursion failure", e);
         if (pred_operands.size() < 2) return;  // can only happen if there has been an error
         auto r = pred_operands.back();
         pred_operands.pop_back();
@@ -670,7 +683,7 @@ void CreateSaluInstruction::postorder(const IR::LAnd *e) {
 void CreateSaluInstruction::postorder(const IR::LOr *e) {
     if (etype == IF) {
         if (pred_operands.size() == 1) return;  // to deal with learn -- not always correct
-        BUG_CHECK(pred_operands.size() == 2 || ::errorCount() > 0, "recursion failure");
+        BUG_CHECK(pred_operands.size() == 2 || ::errorCount() > 0, "%1%: recursion failure", e);
         if (pred_operands.size() < 2) return;  // can only happen if there has been an error
         auto r = pred_operands.back();
         pred_operands.pop_back();
@@ -1148,4 +1161,3 @@ bool CheckStatefulAlu::preorder(IR::MAU::SaluFunction *fn) {
     fn->expr = lmatch_usage.lmatch_operand;
     return false;
 }
-

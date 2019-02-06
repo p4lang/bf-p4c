@@ -96,6 +96,7 @@ class CreateSaluInstruction : public Inspector {
     const IR::MAU::Instruction *createInstruction();
     bool applyArg(const IR::PathExpression *, cstring);
     const IR::Expression *reuseCmp(const IR::MAU::Instruction *cmp, int idx);
+    void setupCmp(cstring op);
     const IR::MAU::Instruction *setup_output();
 
     bool preorder(const IR::Declaration_Instance *di) override;
@@ -127,6 +128,7 @@ class CreateSaluInstruction : public Inspector {
     bool preorder(const IR::Geq *r) override { return preorder(r, "geq", false); }
     bool preorder(const IR::Leq *r) override { return preorder(r, "leq", false); }
     bool preorder(const IR::Cast *) override { return true; }
+    void postorder(const IR::Cast *) override;
     bool preorder(const IR::LNot *) override { return true; }
     void postorder(const IR::LNot *) override;
     bool preorder(const IR::LAnd *) override { return true; }
