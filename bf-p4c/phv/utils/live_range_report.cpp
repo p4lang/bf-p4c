@@ -2,7 +2,7 @@
 #include "bf-p4c/common/table_printer.h"
 #include "bf-p4c/phv/utils/live_range_report.h"
 
-cstring use_type(unsigned use) {
+cstring LiveRangeReport::use_type(unsigned use) {
     if (use == 0) return "";
     std::stringstream ss;
     bool checkLiveness = true;
@@ -44,16 +44,16 @@ std::map<int, unsigned> LiveRangeReport::processUseDefSet(
                 }
             }
             fieldMap[PARSER] |= usedef;
-            LOG4("\tAssign " << use_type(usedef) << use_location);
+            LOG4("\tAssign " << LiveRangeReport::use_type(usedef) << use_location);
         } else if (use_unit->is<IR::BFN::Deparser>()) {
             fieldMap[DEPARSER] |= usedef;
-            LOG4("\tAssign " << use_type(usedef) << " to deparser");
+            LOG4("\tAssign " << LiveRangeReport::use_type(usedef) << " to deparser");
         } else if (use_unit->is<IR::MAU::Table>()) {
             const auto* t = use_unit->to<IR::MAU::Table>();
             auto stages = alloc.stages(t);
             for (auto stage : stages) {
                 fieldMap[stage] |= usedef;
-                LOG4("\tAssign " << use_type(usedef) << " to stage " << stage);
+                LOG4("\tAssign " << LiveRangeReport::use_type(usedef) << " to stage " << stage);
             }
         } else {
             BUG("Unknown unit encountered %1%", use_unit->toString());
@@ -103,7 +103,7 @@ cstring LiveRangeReport::printFieldLiveness(
         row.push_back(std::to_string(kv.first->size));
         for (int i = -1; i <= maxStages; i++) {
             if (kv.second.count(i)) {
-                row.push_back(std::string(use_type(kv.second.at(i))));
+                row.push_back(std::string(LiveRangeReport::use_type(kv.second.at(i))));
                 if (kv.second.at(i) & READ)
                     stageToReadBits[i] += kv.first->size;
                 if (kv.second.at(i) & WRITE)

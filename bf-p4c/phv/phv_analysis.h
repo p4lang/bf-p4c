@@ -14,6 +14,7 @@
 #include "bf-p4c/phv/make_clusters.h"
 #include "bf-p4c/phv/mau_backtracker.h"
 #include "bf-p4c/phv/analysis/critical_path_clusters.h"
+#include "bf-p4c/phv/analysis/dark_live_range.h"
 #include "bf-p4c/phv/analysis/live_range_shrinking.h"
 #include "bf-p4c/phv/analysis/meta_live_range.h"
 #include "bf-p4c/phv/analysis/pack_conflicts.h"
@@ -42,6 +43,7 @@ class PHV_AnalysisPass : public Logging::PassManager {
     ActionPhvConstraints action_constraints;
     /// Metadata live range overlay potential information based on table dependency graph.
     MetadataLiveRange meta_live_range;
+    DarkLiveRange dark_live_range;
     /// Metadata initialization related pass.
     LiveRangeShrinking meta_init;
     /// Clustering information for fields.

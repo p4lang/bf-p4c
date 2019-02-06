@@ -33,6 +33,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
       pack_conflicts(phv, deps, table_mutex, table_alloc, action_mutex),
       action_constraints(phv, pack_conflicts),
       meta_live_range(phv, deps, defuse, pragmas, uses, table_alloc),
+      dark_live_range(phv, clot, deps, defuse, pragmas, uses, table_alloc),
       meta_init(phv, defuse, deps, pragmas.pa_no_init(), meta_live_range, action_constraints,
               alloc),
       clustering(phv, uses, pack_conflicts, action_constraints) {
@@ -43,11 +44,11 @@ PHV_AnalysisPass::PHV_AnalysisPass(
         addPasses({
             &uses,                 // use of field in mau, parde
             new PhvInfo::DumpPhvFields(phv, uses),
-#if HAVE_JBAY
             // Determine candidates for mocha PHVs.
-            new CollectMochaCandidates(phv, uses),
-            new CollectDarkCandidates(phv, uses),
-#endif
+            Device::currentDevice() == Device::JBAY ? new CollectMochaCandidates(phv, uses) :
+                        nullptr,
+            Device::currentDevice() == Device::JBAY ? new CollectDarkCandidates(phv, uses) :
+                        nullptr,
             // Pragmas need to be run here because the later passes may add constraints encoded as
             // pragmas to various fields after the initial pragma processing is done.
             &pragmas,              // parse and fold PHV-related pragmas
@@ -81,6 +82,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             // Determine `ideal` live ranges for metadata fields in preparation for live range
             // shrinking that will be effected during and post AllocatePHV.
             &meta_live_range,
+            Device::currentDevice() == Device::JBAY ? &dark_live_range : nullptr,
             // Metadata initialization pass should be run after the metadata live range is
             // calculated.
             &meta_init,

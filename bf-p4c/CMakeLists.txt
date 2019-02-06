@@ -373,6 +373,7 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/trivial_alloc.cpp
   phv/validate_allocation.cpp
   phv/analysis/critical_path_clusters.cpp
+  phv/analysis/dark_live_range.cpp
   phv/analysis/deparser_zero.cpp
   phv/analysis/dominator_tree.cpp
   phv/analysis/meta_live_range.cpp
@@ -425,6 +426,7 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/trivial_alloc.h
   phv/validate_allocation.h
   phv/analysis/critical_path_clusters.h
+  phv/analysis/dark_live_range.h
   phv/analysis/deparser_zero.h
   phv/analysis/dominator_tree.h
   phv/analysis/meta_live_range.h

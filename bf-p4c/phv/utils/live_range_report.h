@@ -10,6 +10,7 @@
 class LiveRangeReport : public Inspector {
  public:
     typedef enum use_t { READ = 1, WRITE = 2, LIVE = 4 } USE_T;
+    static cstring use_type(unsigned use);
 
  private:
     const PhvInfo&          phv;

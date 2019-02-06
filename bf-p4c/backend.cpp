@@ -212,10 +212,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         (options.no_deadcode_elimination == false) ? new ElimUnusedHeaderStackInfo : nullptr,
         new MergeParserStates,
         &defuse,
-#if HAVE_JBAY
         Device::currentDevice() == Device::JBAY ? new DarkPrivatization(phv) : nullptr,
-                                    // Allow allocation into dark PHVs for testing purposes
-#endif
         new CollectPhvInfo(phv),
         new CollectBridgedExtractedTogetherFields(phv, extracted_together),
         &defuse,
@@ -226,10 +223,8 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new GatherExternalNames(phv),
 
         new CheckForHeaders(),
-#if HAVE_JBAY
         Device::currentDevice() == Device::JBAY && options.use_clot ?
             new AllocateClot(clot, phv, uses) : nullptr,
-#endif  // HAVE_JBAY
         &defuse,
         (options.no_deadcode_elimination == false) ? new ElimUnused(phv, defuse) : nullptr,
 

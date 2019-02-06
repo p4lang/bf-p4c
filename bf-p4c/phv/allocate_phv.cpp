@@ -588,6 +588,13 @@ bool CoreAllocation::satisfies_constraints(
     const PHV::Field* f = slice.field();
     PHV::Container c = slice.container();
 
+    // Check container type.
+    if (c.is(PHV::Kind::mocha) && !f->is_mocha_candidate())
+        return false;
+
+    if (c.is(PHV::Kind::dark) && !f->is_dark_candidate())
+        return false;
+
     // Check gress.
     auto containerGress = alloc.gress(c);
     if (containerGress && *containerGress != f->gress) {
@@ -661,12 +668,6 @@ bool CoreAllocation::satisfies_constraints(
                     "can not be packed, because allocated fields has "
                     << (hasExtracted ? "extracted" : "uninitialized"));
             return false; } }
-
-    if (c.is(PHV::Kind::mocha) && !f->is_mocha_candidate())
-        return false;
-
-    if (c.is(PHV::Kind::dark) && !f->is_dark_candidate())
-        return false;
 
     return true;
 }

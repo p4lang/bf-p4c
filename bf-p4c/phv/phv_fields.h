@@ -772,9 +772,11 @@ class PhvInfo {
 
     const SymBitMatrix& parser_mutex() const { return field_mutex; }
     const SymBitMatrix& metadata_mutex() const { return metadata_overlay; }
+    const SymBitMatrix& dark_mutex() const { return dark_overlay; }
     const SymBitMatrix& deparser_no_pack_mutex() const { return deparser_no_pack; }
     SymBitMatrix& parser_mutex() { return field_mutex; }
     SymBitMatrix& metadata_mutex() { return metadata_overlay; }
+    SymBitMatrix& dark_mutex() { return dark_overlay; }
     SymBitMatrix& deparser_no_pack_mutex() { return deparser_no_pack; }
 
     SymBitMatrix& getBridgedExtractedTogether() { return bridged_extracted_together; }
@@ -795,12 +797,20 @@ class PhvInfo {
         metadata_overlay(f1->id, f2->id) = true;
     }
 
+    void addDarkMutex(const PHV::Field* f1, const PHV::Field* f2) {
+        dark_overlay(f1->id, f2->id) = true;
+    }
+
     bool isParserMutex(const PHV::Field* f1, const PHV::Field* f2) const {
         return field_mutex(f1->id, f2->id);
     }
 
     bool isMetadataMutex(const PHV::Field* f1, const PHV::Field* f2) const {
         return metadata_overlay(f1->id, f2->id);
+    }
+
+    bool isDarkMutex(const PHV::Field* f1, const PHV::Field* f2) const {
+        return dark_overlay(f1->id, f2->id);
     }
 
     bool isDeparserNoPack(const PHV::Field* f1, const PHV::Field* f2) const {
@@ -880,6 +890,8 @@ class PhvInfo {
     /// Stores the potential overlayable relationships due to live ranges between different metadata
     /// fields.
     SymBitMatrix                             metadata_overlay;
+
+    SymBitMatrix                             dark_overlay;
 
     /// Stores all pairs of fields that cannot be packed in the same container
     /// Derived from POV bits of adjacent fields in deparser
