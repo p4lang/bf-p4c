@@ -1149,12 +1149,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/constant_extract_neg.p4
 )
 
-#new p4c tests 1/9/19
-p4c_add_xfail_reason("tofino"
-  "Compiler Bug.*Only bistring fields expected in header type declaration header"
-  testdata/p4_16_samples/p4rt_digest_complex.p4
-)
-
 p4c_add_xfail_reason("tofino"
   "The table .* with no key cannot have the action .*"
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
@@ -1488,6 +1482,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/simple_nat.p4
   # truncate is not supported in tna
   testdata/p4_14_samples/truncate.p4
+  testdata/p4_16_samples/p4rt_digest_complex.p4
   )
 
 # P4C-1390

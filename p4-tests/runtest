@@ -135,7 +135,8 @@ findbin() {
     echo $bin
 }
 
-P4C=./p4c
+# Set P4C to ./p4c by default unless set by the environment
+P4C="${P4C:-./p4c}"
 P4C_pd=""
 testdir=tofino
 filter_P4C_ARGS=""

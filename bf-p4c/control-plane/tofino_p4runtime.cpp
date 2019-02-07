@@ -11,6 +11,7 @@
 #include "barefoot/p4info.pb.h"
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/arch/tna.h"
+#include "control-plane/flattenHeader.h"
 #include "control-plane/p4RuntimeArchHandler.h"
 #include "control-plane/p4RuntimeSerializer.h"
 #include "control-plane/typeSpecConverter.h"
@@ -206,6 +207,7 @@ struct ValueSet {
     static boost::optional<ValueSet>
     from(const IR::P4ValueSet* instance,
          const ReferenceMap* refMap,
+         const TypeMap* typeMap,
          p4configv1::P4TypeInfo* p4RtTypeInfo) {
         CHECK_NULL(instance);
         int64_t size = 0;
@@ -219,7 +221,8 @@ struct ValueSet {
             return boost::none;
         }
         size = sizeConstant->value.get_si();
-        auto typeSpec = TypeSpecConverter::convert(refMap, instance->elementType, p4RtTypeInfo);
+        auto typeSpec = TypeSpecConverter::convert(
+            refMap, typeMap, instance->elementType, p4RtTypeInfo);
         CHECK_NULL(typeSpec);
         return ValueSet{instance->controlPlaneName(),
                         typeSpec,
@@ -241,6 +244,7 @@ struct Register {
     static boost::optional<Register>
     from(const IR::ExternBlock* instance,
          const ReferenceMap* refMap,
+         const TypeMap* typeMap,
          p4configv1::P4TypeInfo* p4RtTypeInfo) {
         CHECK_NULL(instance);
         auto declaration = instance->node->to<IR::Declaration_Instance>();
@@ -254,7 +258,7 @@ struct Register {
         BUG_CHECK(type->arguments->size() == 2,
                   "%1%: expected two type arguments", instance);
         auto typeArg = type->arguments->at(0);
-        auto typeSpec = TypeSpecConverter::convert(refMap, typeArg, p4RtTypeInfo);
+        auto typeSpec = TypeSpecConverter::convert(refMap, typeMap, typeArg, p4RtTypeInfo);
         CHECK_NULL(typeSpec);
 
         return Register{declaration->controlPlaneName(),
@@ -269,6 +273,7 @@ struct Register {
     fromDirect(const P4::ExternInstance& instance,
                const IR::P4Table* table,
                const ReferenceMap* refMap,
+               const TypeMap* typeMap,
                p4configv1::P4TypeInfo* p4RtTypeInfo) {
         CHECK_NULL(table);
         BUG_CHECK(instance.name != boost::none,
@@ -289,7 +294,7 @@ struct Register {
         BUG_CHECK(type->arguments->size() == 1,
                   "%1%: expected one type argument", declaration);
         auto typeArg = type->arguments->at(0);
-        auto typeSpec = TypeSpecConverter::convert(refMap, typeArg, p4RtTypeInfo);
+        auto typeSpec = TypeSpecConverter::convert(refMap, typeMap, typeArg, p4RtTypeInfo);
         CHECK_NULL(typeSpec);
 
         return Register{*instance.name, typeSpec, 0, instance.annotations};
@@ -465,13 +470,14 @@ class SnapshotFieldFinder : public Inspector {
     }
 
     bool preorder(const IR::Type_Header* type) override {
-        (void)type;
+        auto flattenedType = P4::ControlPlaneAPI::FlattenHeader::flatten(typeMap, type);
         if (includeValid) {
             prefixList.push_back("$valid$");
             addField(1);  // valid field (POV) has bitwidth of 1
             prefixList.pop_back();
         }
-        return true;
+        for (const auto& sf : flattenedType->fields) visit(sf);
+        return false;
     }
 
     bool preorder(const IR::StructField* f) override {
@@ -637,7 +643,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
     void collectPortMetadataExternFunction(P4RuntimeSymbolTableIface* symbols,
                                const P4::ExternFunction* externFunction,
                                const IR::ParserBlock* parserBlock) {
-        auto portMetadata = getPortMetadataExtract(externFunction, refMap, nullptr);
+        auto portMetadata = getPortMetadataExtract(externFunction, refMap, typeMap, nullptr);
         if (portMetadata) {
             if (hasUserPortMetadata.count(parserBlock)) {
                 ::error("Cannot have multiple extern calls for %1%",
@@ -924,7 +930,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             table, "registers", refMap, typeMap);
         if (!directRegisterInstance) return boost::none;
         return Register::fromDirect(
-            *directRegisterInstance, table, refMap, p4RtTypeInfo);
+            *directRegisterInstance, table, refMap, typeMap, p4RtTypeInfo);
     }
 
     /// @return the direct filter instance associated with @table, if it has
@@ -988,7 +994,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             auto digest = getDigest(decl, p4RtTypeInfo);
             if (digest) addDigest(symbols, p4info, *digest);
         } else if (externBlock->type->name == "Register") {
-            auto register_ = Register::from(externBlock, refMap, p4RtTypeInfo);
+            auto register_ = Register::from(externBlock, refMap, typeMap, p4RtTypeInfo);
             if (register_) addRegister(symbols, p4info, *register_);
         } else if (externBlock->type->name == "Lpf") {
             auto lpf = Lpf::from(externBlock);
@@ -1010,7 +1016,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
                            const P4::ExternFunction* externFunction,
                            const IR::ParserBlock* parserBlock) {
         auto p4RtTypeInfo = p4info->mutable_type_info();
-        auto portMetadata = getPortMetadataExtract(externFunction, refMap, p4RtTypeInfo);
+        auto portMetadata = getPortMetadataExtract(externFunction, refMap, typeMap, p4RtTypeInfo);
         if (portMetadata) {
             if (blockPipeNameMap.count(parserBlock)) {
                 auto portMetadataFullName = getFullyQualifiedPortMetadataName(parserBlock);
@@ -1040,7 +1046,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
 
         for (auto s : parser->parserLocals) {
             if (auto inst = s->to<IR::P4ValueSet>()) {
-                auto valueSet = ValueSet::from(inst, refMap, p4info->mutable_type_info());
+                auto valueSet = ValueSet::from(inst, refMap, typeMap, p4info->mutable_type_info());
                 if (valueSet) addValueSet(symbols, p4info, *valueSet);
             }
         }
@@ -1088,14 +1094,14 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
     static boost::optional<PortMetadata>
     getPortMetadataExtract(const P4::ExternFunction* function,
                            ReferenceMap* refMap,
+                           const TypeMap* typeMap,
                            p4configv1::P4TypeInfo* p4RtTypeInfo) {
-        (void)refMap; (void)p4RtTypeInfo;
         if (function->method->name != BFN::ExternPortMetadataUnpackString)
             return boost::none;
 
         if (auto *call = function->expr->to<IR::MethodCallExpression>()) {
             auto *typeArg = call->typeArguments->at(0);
-            auto typeSpec = TypeSpecConverter::convert(refMap, typeArg, p4RtTypeInfo);
+            auto typeSpec = TypeSpecConverter::convert(refMap, typeMap, typeArg, p4RtTypeInfo);
             return PortMetadata{typeSpec};
         }
         return boost::none;
@@ -1124,7 +1130,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         auto type = decl->type->to<IR::Type_Specialized>();
         BUG_CHECK(type->arguments->size() == 1, "%1%: expected one type argument", decl);
         auto typeArg = type->arguments->at(0);
-        auto typeSpec = TypeSpecConverter::convert(refMap, typeArg, p4RtTypeInfo);
+        auto typeSpec = TypeSpecConverter::convert(refMap, typeMap, typeArg, p4RtTypeInfo);
         BUG_CHECK(typeSpec != nullptr,
                   "P4 type %1% could not be converted to P4Info P4DataTypeSpec");
 
@@ -1153,7 +1159,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
                 hashWidth = t->width_bits();
             }
             auto *typeArg = call->typeArguments->at(0);
-            auto typeSpec = TypeSpecConverter::convert(refMap, typeArg, p4RtTypeInfo);
+            auto typeSpec = TypeSpecConverter::convert(refMap, typeMap, typeArg, p4RtTypeInfo);
             BUG_CHECK(typeSpec != nullptr,
                   "P4 type %1% could not be converted to P4Info P4DataTypeSpec");
 
