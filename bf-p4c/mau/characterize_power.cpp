@@ -45,7 +45,7 @@ void CharacterizePower::end_apply() {
 
       double eps = max_power_ / 104729.0;
       double total_power = ingress_worst_power_ + egress_worst_power_;
-      LOG1("Worst case table power: " << float2str(total_power));
+      LOG4("Worst case table power: " << float2str(total_power));
 
       if (total_power < (max_power_ + eps)) {
           // Power check successful
@@ -76,7 +76,7 @@ void CharacterizePower::end_apply() {
 }
 
 bool CharacterizePower::preorder(const IR::BFN::Pipe *p) {
-  LOG1("Working on pipe " << p->id);
+  LOG4("Working on pipe " << p->id);
   logFileName_ = "mau.power_pipe" + std::to_string(p->id) + ".log";
   ingress_root_ = nullptr;
   egress_root_ = nullptr;
@@ -133,9 +133,9 @@ void CharacterizePower::postorder(const IR::BFN::Pipe *) {
       std::vector<SimpleTableNode*> topo = g->topo_sort();
       std::map<SimpleTableNode*, double> dist = {};
       std::map<SimpleTableNode*, SimpleTableNode*> prev = {};
-      LOG1("Topological Sort:");
+      LOG4("Topological Sort:");
       for (auto n : topo) {
-          LOG1("   " << n->unique_id_);
+          LOG4("   " << n->unique_id_);
           dist.emplace(n, NINF);
           prev.emplace(n, nullptr);
       }
@@ -145,7 +145,7 @@ void CharacterizePower::postorder(const IR::BFN::Pipe *) {
 
       for (auto n : topo) {
           prev_node = n;
-          // LOG1("Looking at " << n->unique_id_ << " with dist " << dist.at(n));
+          // LOG4("Looking at " << n->unique_id_ << " with dist " << dist.at(n));
           if (dist.at(n) != NINF) {
               for (auto c : n->children_) {
                   double wt = 0.0;
@@ -158,7 +158,7 @@ void CharacterizePower::postorder(const IR::BFN::Pipe *) {
                   if (dist.at(c) < new_wt) {
                       dist[c] = new_wt;
                       prev[c] = n;
-                      // LOG1("  set prev of " << c->unique_id_ << " to be " << n->unique_id_);
+                      // LOG4("  set prev of " << c->unique_id_ << " to be " << n->unique_id_);
                   }
               }
           }
@@ -169,20 +169,20 @@ void CharacterizePower::postorder(const IR::BFN::Pipe *) {
           worst_power = dist.at(prev_node);
       }
 
-      LOG1("Worst case table path:");
+      LOG4("Worst case table path:");
       while (prev_node != nullptr) {
           if (pipe == 0) {
               ingress_worst_case_path_.push(prev_node->unique_id_);
           } else {
               egress_worst_case_path_.push(prev_node->unique_id_);
           }
-          LOG1("  " << prev_node->unique_id_);
+          LOG4("  " << prev_node->unique_id_);
           prev_node = prev.at(prev_node);
       }
 
       uint16_t mau_latency = compute_pipe_latency(pipe);
 
-      LOG1("MAU latency (cycles): " << mau_latency);
+      LOG4("MAU latency (cycles): " << mau_latency);
       double scale_factor = 1.0;
 
       // FIXME: Do not know yet whether deparser throughput scaling will apply
@@ -191,12 +191,12 @@ void CharacterizePower::postorder(const IR::BFN::Pipe *) {
         if (mau_latency > 0 && mau_latency > deparser_throughput_scaling_starts_) {
             scale_factor = deparser_max_phv_valid_ /
                            (mau_latency + pmarb_cycles_from_receive_credit_to_issue_phv_to_mau_);
-            LOG1("Pipeline latency scaling factor: " << float2str(scale_factor * 100.0) << "%");
+            LOG4("Pipeline latency scaling factor: " << float2str(scale_factor * 100.0) << "%");
         }
       }
 
       worst_power *= scale_factor;
-      LOG1("Worst case gress power: " << float2str(worst_power) << "W.");
+      LOG4("Worst case gress power: " << float2str(worst_power) << "W.");
 
       if (pipe == 0) {
           ingress_worst_power_ = worst_power;
@@ -305,25 +305,21 @@ void CharacterizePower::postorder(const IR::MAU::Table *t) {
             // Total RAMs accessed will then be the sum of the widths of ways.
             uint16_t num_ways = 0;
             for (auto way : t->ways) {
-                // FIXME(mea): confirm the way.width attribute is updated at the end of placement
-                // In a few test programs, it seems to be.
-                // LOG1("  exact match width = " << way.width);
+                // LOG4("  exact match width = " << way.width);
                 ++num_ways;
                 match_table.ram_read += way.width;
             }
             has_exact_[stage] = true;
-            // FIXME(mea): If this is a keyless table, not sure how to figure out
-            // if it is using an exact match or ternary result bus.
-
+            // FIXME(mea): If this is a keyless table, compiler currently always
+            // uses an exact match bus.  This would have to be changed
+            // when that does.
         } else if (mem.type == Memories::Use::ATCAM) {
             // One unit of depth in each column is accessed on a table read.
             // Total RAMs accessed will then be the sum of the widths of columns.
             uint16_t col_ram_width = 0;
             uint16_t num_cols = 0;
             for (auto way : t->ways) {
-                // FIXME(mea): confirm the way.width attribute is updated at the end of placement
-                // In a few test programs, it seems to be.
-                LOG1("  atcam match width = " << way.width);
+                LOG4("  atcam match width = " << way.width);
                 if (col_ram_width != 0) {
                   BUG_CHECK(way.width != col_ram_width, "ATCAM column widths do not match.");
                 }
@@ -341,7 +337,6 @@ void CharacterizePower::postorder(const IR::MAU::Table *t) {
             tind_table.ram_read += 1;
 
         } else if (mem.type == Memories::Use::ACTIONDATA) {
-            // FIXME(mea): Verify that action data bytes in table will pad to actual entry size.
             uint16_t ram_width = (t->layout.action_data_bytes_in_table + 15) / 16;
 
             auto local_action_data_table = CharacterizePower::PowerMemoryAccess();
@@ -385,7 +380,7 @@ void CharacterizePower::postorder(const IR::MAU::Table *t) {
             attached_memory_usage.emplace(use.first, local_selector_table);
             has_selector_[stage] = true;
 
-            uint16_t sel_words = 1;  // FIXME(mea): is this the correct way to get this number?
+            uint16_t sel_words = 1;
             if (selector_group_size_.find(use.first) != selector_group_size_.end()) {
                 int gsize = selector_group_size_.at(use.first) + 119;
                 sel_words = gsize / 120;
@@ -462,10 +457,10 @@ void CharacterizePower::postorder(const IR::MAU::Table *t) {
     double table_power = compute_table_power(memory_access);
     double normalized_wt = compute_table_weight(table_power);
 
-    LOG1("\nTable power = " << table_power << " Watts.");
-    LOG1("Table normalized weight = " << normalized_wt << ".");
-    LOG1("logical_id = " << logical_table_id << ".");
-    LOG1("\n" << memory_access);
+    LOG4("\nTable power = " << table_power << " Watts.");
+    LOG4("Table normalized weight = " << normalized_wt << ".");
+    LOG4("logical_id = " << logical_table_id << ".");
+    LOG4("\n" << memory_access);
 
     table_memory_access.emplace(my_unique_id, memory_access);
     auto pwr_summary = PowerTableSummary(stage % Device::numStages(),
@@ -477,14 +472,14 @@ void CharacterizePower::postorder(const IR::MAU::Table *t) {
 
 
 bool CharacterizePower::preorder(const IR::MAU::TableSeq *seq) {
-    // LOG1("Pre order:");
+    // LOG4("Pre order:");
     for (auto t : seq->tables) {
         if (t->gress == INGRESS && ingress_root_ == nullptr) {
            ingress_root_ = t;
         } else if (t->gress == EGRESS && egress_root_ == nullptr) {
           egress_root_ = t;
         }
-        // LOG1("  " << t->name);
+        // LOG4("  " << t->name);
     }
     return true;
 }
@@ -492,25 +487,25 @@ bool CharacterizePower::preorder(const IR::MAU::TableSeq *seq) {
 void CharacterizePower::postorder(const IR::MAU::TableSeq *seq) {
     for (auto t : seq->tables) {
         SimpleTableGraph* graph = get_graph(t->gress);
-        // LOG1("  " << t->name);
+        // LOG4("  " << t->name);
         bool has_gateway = table_to_attached_gateway.find(t->unique_id()) !=
                            table_to_attached_gateway.end();
 
-        // LOG1("  next:");
+        // LOG4("  next:");
         if (has_gateway) {
             auto gw_uid = table_to_attached_gateway.at(t->unique_id());
             graph->add_edge(gw_uid, t->unique_id(), "");
         }
 
         for (auto n : t->next) {
-          // LOG1("      n.first = " << n.first);
+          // LOG4("      n.first = " << n.first);
           auto def_next = next_for(t, n.first, default_next_);
 
           if (table_to_attached_gateway.find(def_next) != table_to_attached_gateway.end()) {
-              // LOG1("         default_next (pre) = " << def_next);
+              // LOG4("         default_next (pre) = " << def_next);
               def_next = table_to_attached_gateway.at(def_next);
           }
-          // LOG1("         default_next = " << def_next);
+          // LOG4("         default_next = " << def_next);
 
           if (has_gateway && (n.first == "$false")) {
             auto gw_uid = table_to_attached_gateway.at(t->unique_id());
@@ -524,10 +519,10 @@ void CharacterizePower::postorder(const IR::MAU::TableSeq *seq) {
         }
         auto def_tbl_hit = next_for(t, "$default", default_next_);
         if (table_to_attached_gateway.find(def_tbl_hit) != table_to_attached_gateway.end()) {
-            // LOG1("         default_tbl_hit (pre) = " << def_tbl_hit);
+            // LOG4("         default_tbl_hit (pre) = " << def_tbl_hit);
             def_tbl_hit = table_to_attached_gateway.at(def_tbl_hit);
         }
-        // LOG1("     default_tbl_hit = " << def_tbl_hit);
+        // LOG4("     default_tbl_hit = " << def_tbl_hit);
 
         // floating gateway false condition
         if (t->gateway_rows.size() > 0 && !t->gateway_name) {
@@ -538,10 +533,10 @@ void CharacterizePower::postorder(const IR::MAU::TableSeq *seq) {
 
         auto def_tbl_miss = next_for(t, "$miss", default_next_);
         if (table_to_attached_gateway.find(def_tbl_miss) != table_to_attached_gateway.end()) {
-            // LOG1("         def_tbl_miss (pre) = " << def_tbl_miss);
+            // LOG4("         def_tbl_miss (pre) = " << def_tbl_miss);
             def_tbl_miss = table_to_attached_gateway.at(def_tbl_miss);
         }
-        // LOG1("     default_tbl_miss = " << def_tbl_miss);
+        // LOG4("     default_tbl_miss = " << def_tbl_miss);
         graph->add_edge(t->unique_id(), def_tbl_miss, "tbl-miss");
     }
 }
@@ -582,18 +577,18 @@ void CharacterizePower::compute_stage_dependencies(uint16_t pipe) {
       auto vec = tup.second;
 
       if (stage < Device::numStages()) {
-          LOG1("Tables in ingress stage " << stage << ":");
+          LOG4("Tables in ingress stage " << stage << ":");
       } else {
-          LOG1("Tables in egress stage " << (stage % Device::numStages()) << ":");
+          LOG4("Tables in egress stage " << (stage % Device::numStages()) << ":");
       }
       for (auto t : vec) {
-          LOG1("   " << t->name);
+          LOG4("   " << t->name);
       }
     }
 
     for (int st = 1; st < Device::numStages(); ++st) {
         uint16_t cur_stage = st + (pipe * Device::numStages());
-        // LOG1("Working on stage " << cur_stage);
+        // LOG4("Working on stage " << cur_stage);
 
         int prev_st = st - 1;
         dep_t the_dep = DEP_ACTION;  // JBay has no concurrent dependency
@@ -606,7 +601,7 @@ void CharacterizePower::compute_stage_dependencies(uint16_t pipe) {
 
             while (prev_st >= 0 && the_dep == DEP_CONCURRENT) {
                 uint16_t prev_stage = prev_st + (pipe * Device::numStages());
-                // LOG1("   looking at prev stage " << prev_st);
+                // LOG4("   looking at prev stage " << prev_st);
 
                 if (stage_to_tables_.find(prev_stage) != stage_to_tables_.end()) {
                     auto prev_tables = stage_to_tables_.at(prev_stage);
@@ -693,11 +688,11 @@ void CharacterizePower::add_unattached_memory_accesses() {
     // Need to loop over tables again, and find
 
     for (auto t : match_tables_with_unattached) {
-        // LOG1("Table " << t->name << " has unattached.");
+        // LOG4("Table " << t->name << " has unattached.");
         auto my_unique_id = t->unique_id();
 
         auto tbl_memory_access = table_memory_access.at(my_unique_id);
-        // LOG1("Memory access before\n" << tbl_memory_access);
+        // LOG4("Memory access before\n" << tbl_memory_access);
 
         for (auto &use : t->resources->memuse) {
             auto &mem = use.second;
@@ -707,22 +702,21 @@ void CharacterizePower::add_unattached_memory_accesses() {
             for (auto &unattached : mem.unattached_tables) {
                 // auto &attached_table_unique_id = unattached.first;
                 auto &match_attached_to_unique_id = unattached.second;
-                // LOG1("Unattached attached_table_unique_id = " << attached_table_unique_id);
-                // LOG1("     match_attached_to_unique_id = " << match_attached_to_unique_id);
+                // LOG4("Unattached attached_table_unique_id = " << attached_table_unique_id);
+                // LOG4("     match_attached_to_unique_id = " << match_attached_to_unique_id);
 
                 if (attached_memory_usage.find(match_attached_to_unique_id) !=
                     attached_memory_usage.end()) {
                     auto attached_mem_access =
                       attached_memory_usage.at(match_attached_to_unique_id);
                     tbl_memory_access += attached_mem_access;
-                    // LOG1("Found attached memory access\n" << attached_mem_access);
+                    // LOG4("Found attached memory access\n" << attached_mem_access);
                 } else {
-                    // FIXME(mea): Should this be a BUG?
                     WARNING("Unable to find shared resource memory usage for " << t->name << ".");
                 }
             }
         }
-        // LOG1("Memory access after\n" << tbl_memory_access);
+        // LOG4("Memory access after\n" << tbl_memory_access);
     }
 }
 
@@ -800,7 +794,7 @@ void SimpleTableGraph::add_edge(UniqueId parent, UniqueId child, cstring edge_na
 
   parent_node->add_child(child_node, edge_name);
   child_node->add_parent(parent_node);
-  LOG1("Added edge from " << parent_node->unique_id_ << " to " << child_node->unique_id_);
+  LOG4("Added edge from " << parent_node->unique_id_ << " to " << child_node->unique_id_);
 }
 
 /**
