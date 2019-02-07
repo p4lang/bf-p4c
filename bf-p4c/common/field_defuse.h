@@ -135,6 +135,9 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
                     return true; }
         return false;
     }
+
+    /// @returns true if the field @f is used in the parser.
+    bool isUsedInParser(const PHV::Field* f) const;
 };
 
 #endif /* _FIELD_DEFUSE_H_ */

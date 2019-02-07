@@ -3,6 +3,7 @@
 
 #include <boost/optional.hpp>
 #include "ir/ir.h"
+#include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/mau/action_analysis.h"
 #include "bf-p4c/parde/clot_info.h"
 #include "bf-p4c/phv/phv_fields.h"
@@ -22,6 +23,7 @@
 class IdentifyDeparserZeroCandidates : public Inspector {
  private:
     PhvInfo&                            phv;
+    const FieldDefUse&                  defuse;
     const PragmaDeparserZero&           pragmaFields;
     ordered_set<const PHV::Field*>&     candidateFields;
 
@@ -46,9 +48,10 @@ class IdentifyDeparserZeroCandidates : public Inspector {
  public:
     explicit IdentifyDeparserZeroCandidates(
             PhvInfo& p,
+            const FieldDefUse& d,
             const PragmaDeparserZero& f,
             ordered_set<const PHV::Field*>& c)
-        : phv(p), pragmaFields(f), candidateFields(c) { }
+        : phv(p), defuse(d), pragmaFields(f), candidateFields(c) { }
 };
 
 /** Remove all extracts and initializations for the deparsed zero fields.
@@ -77,6 +80,7 @@ class DeparserZeroOptimization : public PassManager {
  public:
     explicit DeparserZeroOptimization(
             PhvInfo& p,
+            const FieldDefUse& d,
             const PragmaDeparserZero& pf,
             const ClotInfo &c);
 };

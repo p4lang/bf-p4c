@@ -116,14 +116,21 @@ void IdentifyDeparserZeroCandidates::eliminateNonByteAlignedFields() {
 void IdentifyDeparserZeroCandidates::end_apply() {
     LOG4("\tExamining fields for deparser zero optimization:");
     for (auto& f : phv) {
+        if (f.isGhostField()) continue;
         if (f.metadata || f.pov) continue;
         if (f.alwaysPackable) continue;
         if (f.bridged) continue;
-        if (!pragmaFields.getNotParsedFields().count(&f))
-            continue;
+        bool pragmaSpecified = pragmaFields.getNotParsedFields().count(&f);
+        bool usedInParser = defuse.isUsedInParser(&f);
+        if (!pragmaSpecified && usedInParser) continue;
         LOG4("\t  Nonbridged, nonmetadata, nonpov field specified as not parsed: " << f);
         if (mauReadFields[f.id]) {
             LOG4("\t\tField read in MAU");
+            continue;
+        }
+        // Do not assign to zero container if the field is neither read nor written in the MAU.
+        if (!mauWrittenFields[f.id]) {
+            LOG4("\t\tField not written in MAU");
             continue;
         }
         if (mauWrittenByNonSets[f.id]) {
@@ -171,10 +178,11 @@ IR::Node* ImplementDeparserZero::preorder(IR::MAU::Instruction* inst) {
 
 DeparserZeroOptimization::DeparserZeroOptimization(
         PhvInfo& p,
+        const FieldDefUse& d,
         const PragmaDeparserZero& pf,
         const ClotInfo& c) {
     addPasses({
-        new IdentifyDeparserZeroCandidates(p, pf, candidateFields),
+        new IdentifyDeparserZeroCandidates(p, d, pf, candidateFields),
         new ImplementDeparserZero(p, candidateFields, c)
     });
 }

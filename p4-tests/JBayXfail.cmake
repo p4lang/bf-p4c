@@ -267,7 +267,12 @@ p4c_add_xfail_reason("tofino2"
   testdata/p4_14_samples/simple_nat.p4
   # truncate is not supported in jna
   testdata/p4_14_samples/truncate.p4
-  )
+)
+
+p4c_add_xfail_reason("tofino2"
+  "Compiler Bug.*Total size of containers used for POV allocation is.*"
+  switch_msdc
+)
 
 p4c_add_xfail_reason("tofino2"
   "failed command assembler"

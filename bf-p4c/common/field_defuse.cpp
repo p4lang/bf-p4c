@@ -287,6 +287,16 @@ std::ostream &operator<<(std::ostream &out, const code &c) {
         return out << "??"; }
 }
 
+bool FieldDefUse::isUsedInParser(const PHV::Field* f) const {
+    for (const FieldDefUse::locpair def : getAllDefs(f->id))
+        if (def.first->is<IR::BFN::ParserState>() || def.first->is<IR::BFN::Parser>())
+            return true;
+    for (const FieldDefUse::locpair use : getAllUses(f->id))
+        if (use.first->is<IR::BFN::ParserState>() || use.first->is<IR::BFN::Parser>())
+            return true;
+    return false;
+}
+
 void FieldDefUse::end_apply(const IR::Node *) {
     // Get all uninitialized fields
     for (const auto& def : parser_zero_inits) {

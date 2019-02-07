@@ -52,7 +52,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             // Pragmas need to be run here because the later passes may add constraints encoded as
             // pragmas to various fields after the initial pragma processing is done.
             &pragmas,              // parse and fold PHV-related pragmas
-            new DeparserZeroOptimization(phv, pragmas.pa_deparser_zero(), clot),
+            new DeparserZeroOptimization(phv, defuse, pragmas.pa_deparser_zero(), clot),
                                    // identify fields for deparsed zero optimization
             new ParserOverlay(phv, pragmas),
                                    // produce pairs of mutually exclusive header
