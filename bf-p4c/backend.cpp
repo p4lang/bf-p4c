@@ -211,12 +211,8 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         (options.no_deadcode_elimination == false) ? new ElimUnused(phv, defuse) : nullptr,
         (options.no_deadcode_elimination == false) ? new ElimUnusedHeaderStackInfo : nullptr,
         new MergeParserStates,
-        &defuse,
-        Device::currentDevice() == Device::JBAY ? new DarkPrivatization(phv) : nullptr,
         new CollectPhvInfo(phv),
         new CollectBridgedExtractedTogetherFields(phv, extracted_together),
-        &defuse,
-
         // DO NOT RUN CollectPhvInfo afterwards, as this will destroy the
         // external names for bridged metadata PHV::Field objects.
         new SetExternalNameForBridgedMetadata(phv, bridged_fields),
