@@ -6,6 +6,7 @@
 #include <numeric>
 #include <sstream>
 #include "bf-p4c/ir/tofino_write_context.h"
+#include "bf-p4c/lib/error_type.h"
 #include "table_injected_deps.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "ir/ir.h"
@@ -174,9 +175,10 @@ class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWrit
         for (auto upstream_t : tables) {
             if (upstream_t.first->match_table &&
                     ignoreDep.count(upstream_t.first->match_table->externalName())) {
-                WARN_CHECK(upstream_t.second == range, "Table %s's pragma ignore_table_dependency "
-                           "of %s is also ignoring PHV added action dependencies over container "
-                           "%s, which may not have been the desired outcome", table->name,
+                WARN_CHECK(upstream_t.second == range, BFN::ErrorType::WARN_PRAGMA_USE,
+                           "Table %1%: pragma ignore_table_dependency "
+                           "of %2% is also ignoring PHV added action dependencies over container "
+                           "%3%, which may not have been the desired outcome", table,
                             upstream_t.first->name, container.toString());
                 continue;
             }

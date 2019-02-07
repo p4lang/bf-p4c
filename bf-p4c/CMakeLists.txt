@@ -9,6 +9,8 @@ MESSAGE("-- Adding p4c-barefoot")
 set(BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE "5" CACHE STRING
     "Target unified compilation chunk size for bf-p4c (an integer or ALL)")
 
+# add_cxx_compiler_option ("-Werror")
+
 set(OPENSSL_ROOT_DIR "/usr/local/opt/openssl")
 if(ENABLE_STATIC_LIBS)
   set (OPENSSL_USE_STATIC_LIBS TRUE)
@@ -212,6 +214,7 @@ set (BF_P4C_BACKEND_CONTROL_PLANE_HDRS
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_CONTROL_PLANE_HDRS}")
 
 set (BF_P4C_BACKEND_LIB_HDRS
+  lib/error_type.h
   lib/union_find.hpp
   lib/vertex_weighted_coloring.h
   )

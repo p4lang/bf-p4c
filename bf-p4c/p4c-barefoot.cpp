@@ -13,6 +13,7 @@
 #include "bf-p4c/control-plane/tofino_p4runtime.h"
 #include "bf-p4c/mau/dynhash.h"
 #include "bf-p4c/visualization.h"
+#include "bf-p4c/lib/error_type.h"
 #include "bf-p4c/logging/filelog.h"
 #include "common/extract_maupipe.h"
 #include "common/run_id.h"
@@ -162,6 +163,8 @@ void execute_backend(const IR::BFN::Pipe* maupipe, BFN_Options& options) {
 int main(int ac, char **av) {
     setup_gc_logging();
     setup_signals();
+    // initialize the Barefoot specific error types
+    BFN::ErrorType::getErrorTypes();
 
     // define a set of constants to return so we can decide what to do for
     // context,json generation, as we need to generate as much as we can

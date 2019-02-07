@@ -109,15 +109,6 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "error: Could not find declaration for .*"
-  testdata/p4_14_samples/copy_to_cpu.p4
-  testdata/p4_14_samples/issue1058.p4
-  testdata/p4_14_samples/packet_redirect.p4
-  testdata/p4_14_samples/resubmit.p4
-  testdata/p4_14_samples/simple_nat.p4
-)
-
-p4c_add_xfail_reason("tofino2"
   "Both .* and .* require the .* address hardware, and cannot be on the same table"
   testdata/p4_14_samples/counter.p4
 )
@@ -133,7 +124,7 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "Structure header ingress_intrinsic_metadata_t does not have a field ucast_egress_port"
+  "error: Field .* is not a member of structure header .*"
   extensions/p4_tests/p4_14/bf_p4c_samples/sai_p4.p4
 )
 
@@ -262,11 +253,22 @@ p4c_add_xfail_reason("tofino2"
   testdata/p4_14_samples/hash_action_two_same.p4
 )
 
-# truncate is not supported in jna
+# P4C-539
 p4c_add_xfail_reason("tofino2"
-  "Could not find declaration for truncate"
+  "error: .*: Not found declaration"
+  # We fail to translate `generate_digest()`.
+  testdata/p4_14_samples/issue1058.p4
+  # We fail to translate `resubmit()`.
+  testdata/p4_14_samples/resubmit.p4
+  # Checksum16 is deprecated
+  extensions/p4_tests/p4_16/ipv4_options.p4
+  # We fail to translate `standard_metadata.instance_type`.
+  testdata/p4_14_samples/copy_to_cpu.p4
+  testdata/p4_14_samples/packet_redirect.p4
+  testdata/p4_14_samples/simple_nat.p4
+  # truncate is not supported in jna
   testdata/p4_14_samples/truncate.p4
-)
+  )
 
 p4c_add_xfail_reason("tofino2"
   "failed command assembler"

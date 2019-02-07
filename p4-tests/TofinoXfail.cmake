@@ -194,12 +194,6 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "error: Could not find declaration for action_.*"
-  testdata/p4_16_samples/action_profile-bmv2.p4
-  testdata/p4_16_samples/issue297-bmv2.p4
-  )
-
-p4c_add_xfail_reason("tofino"
   "Action profile .* does not have any action data"
   testdata/p4_14_samples/selector0.p4
   extensions/p4_tests/p4_14/bf_p4c_samples/port_vlan_mapping.p4
@@ -233,12 +227,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Unsupported type varbit"
   testdata/p4_16_samples/issue447-5-bmv2.p4
-  )
-
-# Checksum16 is deprecated
-p4c_add_xfail_reason("tofino"
-  "Could not find declaration for"
-  extensions/p4_tests/p4_16/ipv4_options.p4
   )
 
 #p4c_add_xfail_reason("tofino"
@@ -753,44 +741,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 # START: XFAILs with translation
-# We fail to translate `resubmit()`.
-p4c_add_xfail_reason("tofino"
-  "Could not find declaration for standard_metadata"
-  testdata/p4_14_samples/resubmit.p4
-  testdata/p4_16_samples/drop-bmv2.p4
-  testdata/p4_16_samples/std_meta_inlining.p4
-  )
-# We fail to translate `standard_metadata.instance_type`.
-p4c_add_xfail_reason("tofino"
-  "Could not find declaration for standard_metadata"
-  # extensions/p4_tests/p4_14/c1/COMPILER-559/case2987.p4
-  testdata/p4_14_samples/copy_to_cpu.p4
-  testdata/p4_14_samples/packet_redirect.p4
-  testdata/p4_14_samples/simple_nat.p4
-  )
-# We fail to translate `generate_digest()`.
-p4c_add_xfail_reason("tofino"
-  "Could not find declaration for standard_metadata"
-  testdata/p4_14_samples/issue1058.p4
-  )
-# no support for parser_error
-p4c_add_xfail_reason("tofino"
-  "Could not find declaration for standard_metadata"
-  testdata/p4_16_samples/parser_error-bmv2.p4
-  )
-# no support for checksum verify/update
-p4c_add_xfail_reason("tofino"
-  "Could not find declaration for standard_metadata"
-  testdata/p4_16_samples/checksum2-bmv2.p4
-  testdata/p4_16_samples/checksum3-bmv2.p4
-  )
-
-# EliminateTypeDef pass does not work properly?
-p4c_add_xfail_reason("tofino"
-  "Could not find declaration for smeta"
-  testdata/p4_16_samples/issue677-bmv2.p4
-)
-
 # invalid tests, issue604.p4 is a v1.1 testcase
 # P4-14 program can not define extern
 p4c_add_xfail_reason("tofino"
@@ -799,7 +749,7 @@ p4c_add_xfail_reason("tofino"
   )
 # are we going to retire these switch profiles?
 p4c_add_xfail_reason("tofino"
-  "Structure header .* does not have a field"
+  "error: Field .* is not a member of structure header .*"
   extensions/p4_tests/p4_14/bf_p4c_samples/sai_p4.p4
   )
 
@@ -825,11 +775,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: resubmit digest limited to 8 bytes"
   extensions/p4_tests/p4_14/13-ResubmitMetadataSize.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "Could not find declaration for x"
-  testdata/p4_16_samples/issue1001-bmv2.p4
   )
 
 # END: XFAILs with translation
@@ -904,12 +849,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "source of modify_field invalid"
   # extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
-  )
-
-# shared register between ingress and egress is not supported
-p4c_add_xfail_reason("tofino"
-  "error: Could not find declaration for r"
-  testdata/p4_16_samples/issue1097-2-bmv2.p4
   )
 
 # # BRIG-372
@@ -1086,13 +1025,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue1210.p4
 )
 
-# truncate is not supported in tna
-p4c_add_xfail_reason("tofino"
-  "Could not find declaration for truncate"
-  testdata/p4_14_samples/truncate.p4
-)
-
-
 # frontend does not support {} on psa_direct_counter table property
 p4c_add_xfail_reason("tofino"
   "Expected .* property value for table .* to resolve to an extern instance"
@@ -1266,11 +1198,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Compiler Bug.*FieldLVal contains unexpected value"
   extensions/p4_tests/p4_16/serializer2.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "Could not find declaration for b"
-  testdata/p4_16_samples/issue1660-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1532,7 +1459,7 @@ p4c_add_xfail_reason("tofino"
   "Tables .* and .* are not mutually exclusive"
   ../glass/testsuite/p4_tests/mau/COMPILER-445/comp_445_counter.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-531/test_config_320_pragma_ignore_dep.p4
-  ../glass/testsuite/p4_tests/mau/COMPILER-1068/comp_1068.p4 
+  ../glass/testsuite/p4_tests/mau/COMPILER-1068/comp_1068.p4
   ../glass/testsuite/p4_tests/parde/COMPILER-1091/comp_1091.p4
   )
 
@@ -1562,16 +1489,38 @@ p4c_add_xfail_reason("tofino"
 
 # P4C-539
 p4c_add_xfail_reason("tofino"
-  "Could not find declaration for eg_intr_md"
-  ../glass/testsuite/p4_tests/mau/COMPILER-837/comp_837_2.p4
-  ../glass/testsuite/p4_tests/parde/COMPILER-675/select_on_egress_port.p4
-  )
-
-# P4C-539
-p4c_add_xfail_reason("tofino"
-  "Could not find declaration for eg_intr_md_from_parser_aux"
+  "error: .*: Not found declaration"
   ../glass/testsuite/p4_tests/parde/COMPILER-319/mirror-eg_intr_md-all.p4
   ../glass/testsuite/p4_tests/parde/COMPILER-319/mirror-eg_intr_md_from_parser_aux.p4
+  ../glass/testsuite/p4_tests/parde/COMPILER-675/select_on_egress_port.p4
+  ../glass/testsuite/p4_tests/mau/COMPILER-837/comp_837_2.p4
+  testdata/p4_16_samples/action_profile-bmv2.p4
+  testdata/p4_16_samples/issue297-bmv2.p4
+  # EliminateTypeDef pass does not work properly?
+  testdata/p4_16_samples/issue677-bmv2.p4
+  testdata/p4_16_samples/issue1001-bmv2.p4
+  # We fail to translate `generate_digest()`.
+  testdata/p4_14_samples/issue1058.p4
+  # shared register between ingress and egress is not supported
+  testdata/p4_16_samples/issue1097-2-bmv2.p4
+  testdata/p4_16_samples/issue1660-bmv2.p4
+  # We fail to translate `resubmit()`.
+  testdata/p4_14_samples/resubmit.p4
+  testdata/p4_16_samples/drop-bmv2.p4
+  testdata/p4_16_samples/std_meta_inlining.p4
+  # no support for checksum verify/update
+  testdata/p4_16_samples/checksum2-bmv2.p4
+  testdata/p4_16_samples/checksum3-bmv2.p4
+  # no support for parser_error
+  testdata/p4_16_samples/parser_error-bmv2.p4
+  # Checksum16 is deprecated
+  extensions/p4_tests/p4_16/ipv4_options.p4
+  # We fail to translate `standard_metadata.instance_type`.
+  testdata/p4_14_samples/copy_to_cpu.p4
+  testdata/p4_14_samples/packet_redirect.p4
+  testdata/p4_14_samples/simple_nat.p4
+  # truncate is not supported in tna
+  testdata/p4_14_samples/truncate.p4
   )
 
 # P4C-1390
@@ -1650,7 +1599,7 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/c13/DRV-1092/drv_1092.p4
   )
 
-# P4C-1397 
+# P4C-1397
 p4c_add_xfail_reason("tofino"
   "Total size of containers used for POV allocation is .*b, greater than the allowed limit of 256b"
   ../glass/testsuite/p4_tests/c2/COMPILER-466/case2563_with_nop.p4
@@ -1680,7 +1629,7 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/mau/COMPILER-814/comp_814.p4
   )
 
-  
+
 # 1403
 p4c_add_xfail_reason("tofino"
   "PHV allocation creates a container action impossible within a Tofino ALU"
@@ -1703,7 +1652,7 @@ p4c_add_xfail_reason("tofino"
 
 # P4C doesn't support use_container_valid pragma?
 p4c_add_xfail_reason("tofino"
-  "Structure struct ingress_intrinsic_metadata_for_tm_t does not have a field isValid"
+  "error: Field isValid is not a member of structure struct ingress_intrinsic_metadata_for_tm_t"
   ../glass/testsuite/p4_tests/mau/test_config_420_intr_md_tcam_valid.p4
   )
 

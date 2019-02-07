@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <list>
 #include <sstream>
+#include "bf-p4c/lib/error_type.h"
 #include "bf-p4c/mau/action_data_bus.h"
 #include "bf-p4c/mau/field_use.h"
 #include "bf-p4c/mau/input_xbar.h"
@@ -687,8 +688,9 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, const Placed *done,
         if (t->layout.exact) {
             if (t->layout.ixbar_width_bits < ceil_log2(set_entries)) {
                 set_entries = 1 << t->layout.ixbar_width_bits;
-                ::warning("Shrinking table %1%: with %2% match bits, can only have %3% entries",
-                          t->name, t->layout.ixbar_width_bits, set_entries);
+                ::warning(BFN::ErrorType::WARN_TABLE_PLACEMENT,
+                          "Shrinking %1%: with %2% match bits, can only have %3% entries",
+                          t, t->layout.ixbar_width_bits, set_entries);
             }
         }
     }

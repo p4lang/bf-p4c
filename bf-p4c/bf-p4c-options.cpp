@@ -16,6 +16,7 @@
 BFN_Options::BFN_Options() {
     target = "tofino";
     arch   = "v1model";
+
     compilerVersion = BF_P4C_VERSION;
 
     registerOption("-o", "dir",
@@ -155,7 +156,6 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
         {"tofino", "v1model"},
         {"tofino", "tna"},
         {"tofino", "psa"},
-#if HAVE_JBAY
   #if BAREFOOT_INTERNAL
         // allow p4-14 support on Tofino2 only for internal builds
         {"tofino2", "v1model"},
@@ -171,14 +171,24 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
         {"tofino2m", "t2na"},
         {"tofino2u", "tna"},
         {"tofino2u", "t2na"},
-#endif /* HAVE_JBAY */
     };
+    // BFN_Options::process is called twice: once from the main, and once
+    // from applyPragmaOptions to handle pragma command_line.
+    // This variable prevents doing the actions below twice, since the
+    // pragma command line will only invoke the callbacks for the
+    // respective options.
+    static bool processed = false;
+
+    // need this before processing options in the base class for gtest
+    // which is corrupting outputDir data member (on Linux!). Why?
+    // Don't know, and I'm at the end of my patience with it ...
+    if (!processed) outputDir = ".";
 
     auto remainingOptions = CompilerOptions::process(argc, argv);
 
-    static bool processed = false;
-
     if (!processed) {
+        processed = true;
+
         Target t = { target, arch };
         if (!supportedTargets.count(t)) {
             ::error("Target '%s-%s' is not supported", target, arch);
@@ -191,36 +201,35 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
         else if (target == "tofino2")
             preprocessor_options += " -D__TARGET_TOFINO__=2";
 #endif
-        processed = true;
-    }
 
-    // Cache the names of the output directory and the program name
-    cstring inputFile;
-    if (remainingOptions && remainingOptions->size() >= 1) {
-        inputFile = cstring(remainingOptions->at(0));
-    } else {
-        inputFile = cstring("dummy.p4i");
-    }
-    // A complicated way to get a string out of a string, however,
-    // Calin says basename(const_cast<char *>()) does not work on
-    // certain linux distro.
-    size_t len = inputFile.size();
-    char *buffer = new char[len+1];
-    strncpy(buffer, inputFile.c_str(), len);
+        // Cache the names of the output directory and the program name
+        cstring inputFile;
+        if (remainingOptions && remainingOptions->size() >= 1) {
+            inputFile = cstring(remainingOptions->at(0));
+        } else {
+            inputFile = cstring("dummy.p4i");
+        }
+        // A complicated way to get a string out of a string, however,
+        // Calin says basename(const_cast<char *>()) does not work on
+        // certain linux distro.
+        size_t len = inputFile.size();
+        char *buffer = new char[len+1];
+        strncpy(buffer, inputFile.c_str(), len);
 
-    char *program_name_ptr = basename(buffer);
-    BUG_CHECK(program_name_ptr, "No valid output argument");
-    std::string program_name(program_name_ptr);
-    programName = cstring(program_name.substr(0, program_name.rfind(".")));
-    delete [] buffer;
+        char *program_name_ptr = basename(buffer);
+        BUG_CHECK(program_name_ptr, "No valid output argument");
+        std::string program_name(program_name_ptr);
+        programName = cstring(program_name.substr(0, program_name.rfind(".")));
+        delete [] buffer;
 
-    // same here, could have used dirname(const_char<char *>())
-    if (!outputDir.size() || outputDir == ".")
-        outputDir = cstring(programName + "." + target);
-    int rc = mkdir(outputDir.c_str(), 0755);
-    if (rc != 0 && errno != EEXIST) {
-        std::cerr << "Failed to create directory: " << outputDir << std::endl;
-        return remainingOptions;
+        // same here, could have used dirname(const_char<char *>())
+        if (!outputDir || outputDir == ".")
+            outputDir = cstring(programName + "." + target);
+        int rc = mkdir(outputDir.c_str(), 0755);
+        if (rc != 0 && errno != EEXIST) {
+            std::cerr << "Failed to create directory: " << outputDir << std::endl;
+            return remainingOptions;
+        }
     }
 
     return remainingOptions;

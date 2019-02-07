@@ -42,7 +42,7 @@ class BFN_Options : public CompilerOptions {
     cstring bfRtSchema = "";
     bool p4RuntimeForceStdExterns = false;
     cstring programName;
-    cstring outputDir;    // output directory, default "programName.device"
+    cstring outputDir = nullptr;    // output directory, default "programName.device"
 
     BFN_Options();
 

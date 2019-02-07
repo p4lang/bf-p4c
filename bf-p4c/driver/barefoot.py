@@ -131,7 +131,12 @@ class BarefootBackend(BackendDriver):
         self._argGroup.add_argument("--verbose",
                                     action="store", default=0, type=int, choices=[0, 1, 2, 3],
                                     help="Set compiler logging verbosity level: 0=OFF, 1=SUMMARY, 2=INFO, 3=DEBUG")
-
+        self._argGroup.add_argument("--Wdisable", action="store", default=None, type=str,
+                                    help="Disable a compiler diagnostic, or disable all warnings "
+                                    "if no diagnostic is specified.")
+        self._argGroup.add_argument("--Werror", action="store", default=None, type=str,
+                                    help="Report an error for a compiler diagnostic, or treat all "
+                                    "warnings as errors if no diagnostic is specified.")
         self._argGroup.add_argument("--p4runtime-force-std-externs",
                                     action="store_true", default=False,
                                     help="Generate P4Info file using standard extern messages"
@@ -222,6 +227,11 @@ class BarefootBackend(BackendDriver):
 
         if opts.disable_egress_latency_padding:
             self.add_command_option('assembler', '--disable-egress-latency-padding')
+
+        if opts.Wdisable is not None:
+            self.add_command_option('compiler', '--Wdisable={}'.format(opts.Wdisable))
+        if opts.Werror is not None:
+            self.add_command_option('compiler', '--Werror={}'.format(opts.Werror))
 
         if opts.verbose > 0:
             ta_logging = "table_placement:3,table_summary:1"
