@@ -17,7 +17,7 @@
 #define MAJOR_VERSION   1
 #define MINOR_VERSION   0
 
-const std::string SCHEMA_VERSION = "1.6.3";
+const std::string SCHEMA_VERSION = "1.6.4";
 
 option_t options = {
     .binary = PIPE0,
@@ -73,10 +73,12 @@ std::string usage(std::string tfas) {
     return u; }
 
 void output_all() {
+    auto targetName = "unknown";
     switch (options.target) {
 #define SET_TOP_LEVEL(TARGET)                                           \
     case Target::TARGET::tag:                                           \
         new TopLevelRegs<Target::TARGET::register_type>;                \
+        targetName = Target::TARGET::name;                              \
         break;
     FOR_ALL_TARGETS(SET_TOP_LEVEL)
     default:
@@ -90,6 +92,7 @@ void output_all() {
     ctxtJson["build_date"] = build_date;
     ctxtJson["schema_version"] = SCHEMA_VERSION;
     ctxtJson["compiler_version"] = BF_P4C_VERSION;
+    ctxtJson["target"] = targetName;
     ctxtJson["program_name"] = asmfile_name;
     ctxtJson["learn_quanta"] = json::vector();
     ctxtJson["parser"] = json::map();
