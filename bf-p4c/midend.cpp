@@ -40,6 +40,7 @@
 #include "bf-p4c/midend/blockmap.h"
 #include "bf-p4c/midend/check_header_alignment.h"
 #include "bf-p4c/midend/elim_cast.h"
+#include "bf-p4c/midend/check_unsupported.h"
 #include "bf-p4c/midend/elim_emit_headers.h"
 #include "bf-p4c/midend/elim_typedef.h"
 #include "bf-p4c/midend/flatten_emit_args.h"
@@ -278,7 +279,8 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::EliminateNewtype(&refMap, &typeMap),
         new P4::EliminateSerEnums(&refMap, &typeMap),
         new P4::TypeChecking(&refMap, &typeMap, true),
-        new CheckHeaderAlignment(&typeMap),
+        new BFN::CheckUnsupported(&refMap, &typeMap),
+        new BFN::CheckHeaderAlignment(&typeMap),
         new P4::ConvertEnums(&refMap, &typeMap, new EnumOn32Bits()),
         new P4::RemoveActionParameters(&refMap, &typeMap),
         new P4::OrderArguments(&refMap, &typeMap),

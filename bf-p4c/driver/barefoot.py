@@ -306,13 +306,19 @@ class BarefootBackend(BackendDriver):
 
         manifest_filename = "{}/manifest.json".format(self._output_directory)
 
-        if self._dry_run and not os.path.isfile(manifest_filename):
+        if self._dry_run:
             print 'parse manifest:', manifest_filename
             self._pipes = [ { 'context': '{}/pipe/context.json'.format(self._output_directory),
                               'resources': '{}/pipe/resources.json'.format(self._output_directory),
                               'pipe_dir': '{}/pipe'.format(self._output_directory)
             } ]
             return 0
+
+        # compilation failed and there is no manifest. An error should have been printed,
+        # so we simply exit here
+        if not os.path.isfile(manifest_filename):
+            self.exitWithError(None)
+
 
         with open(manifest_filename, "rb") as json_file:
             try:

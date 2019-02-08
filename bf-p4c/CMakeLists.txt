@@ -77,6 +77,7 @@ add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_IR_HDRS}")
 set (BF_P4C_MIDEND_SRCS
   midend/check_header_alignment.cpp
   midend/elim_cast.cpp
+  midend/check_unsupported.cpp
   midend/elim_emit_headers.cpp
   midend/elim_typedef.cpp
   midend/flatten_emit_args.cpp
@@ -96,6 +97,7 @@ set (BF_P4C_BACKEND_MIDEND_HDRS
   midend/blockmap.h
   midend/check_header_alignment.h
   midend/elim_cast.h
+  midend/check_unsupported.h
   midend/elim_emit_headers.h
   midend/elim_typedef.h
   midend/flatten_emit_args.h

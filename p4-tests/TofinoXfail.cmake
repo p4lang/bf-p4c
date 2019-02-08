@@ -183,11 +183,6 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Local metadata array .* not supported"
-  testdata/p4_16_samples/equality-bmv2.p4
-  )
-
-p4c_add_xfail_reason("tofino"
   "error: Field .* of header .* cannot have type header"
   testdata/p4_16_samples/subparser-with-header-stack-bmv2.p4
   )
@@ -209,23 +204,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue995-bmv2.p4
   testdata/p4_14_samples/source_routing.p4
   testdata/p4_14_samples/parser_value_set2.p4
-  )
-
-# varbit extracts don't work in parser
-p4c_add_xfail_reason("tofino"
-  "Wrong number of arguments for method call"
-  testdata/p4_16_samples/equality-varbit-bmv2.p4
-  testdata/p4_16_samples/issue447-bmv2.p4
-  testdata/p4_16_samples/issue447-1-bmv2.p4
-  testdata/p4_16_samples/issue447-2-bmv2.p4
-  testdata/p4_16_samples/issue447-3-bmv2.p4
-  testdata/p4_16_samples/issue447-4-bmv2.p4
-  testdata/p4_16_samples/issue1025-bmv2.p4
-  )
-# varbit not handled in backend
-p4c_add_xfail_reason("tofino"
-  "Unsupported type varbit"
-  testdata/p4_16_samples/issue447-5-bmv2.p4
   )
 
 #p4c_add_xfail_reason("tofino"
@@ -529,11 +507,6 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Wrong number of arguments for method call"
-  testdata/p4_16_samples/checksum1-bmv2.p4
-  )
-
-p4c_add_xfail_reason("tofino"
   "expected a method call"
   testdata/p4_16_samples/issue1538.p4
   )
@@ -665,22 +638,6 @@ p4c_add_xfail_reason("tofino"
   "Tofino does not support conditional checksum verification"
   testdata/p4_16_samples/v1model-special-ops-bmv2.p4
 )
-
-# Incorrect P4_14->16 conversion for varbit extract
-p4c_add_xfail_reason("tofino"
-  "Wrong number of arguments for method call: packet.extract"
-  testdata/p4_14_samples/09-IPv4OptionsUnparsed.p4
-  testdata/p4_14_samples/issue781.p4
-  # extensions/p4_tests/p4_14/c2/COMPILER-379/case2210.p4
-  )
-
-# Also incorrect P4_14->16 conversion for varbit extract, but a different
-# symptom.
-p4c_add_xfail_reason("tofino"
-  "Cannot find declaration for"
-  testdata/p4_14_samples/TLV_parsing.p4
-  testdata/p4_14_samples/issue576.p4
-  )
 
 p4c_add_xfail_reason("tofino"
   "Conditional emit b.emit not supported"
@@ -1108,11 +1065,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: mirror.emit: requires two arguments: mirror_id and field_list"
   extensions/p4_tests/p4_16/brig-neg-1259.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "Wrong number of arguments for method call"
-  testdata/p4_16_samples/issue1560-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1653,3 +1605,32 @@ p4c_add_xfail_reason("tofino"
   "recursion failure"
   extensions/p4_tests/p4_14/p4c-1429.p4
 )
+
+# P4C does not support varbits and packet_in.extract(hdr, size)
+p4c_add_xfail_reason("tofino"
+  "Unimplemented compiler support.* the varbit type is not yet supported in the backend"
+  # The typechecker requires that the hdr argument in packet-in.extract is a varbit header, so the following
+  # message won't be issued. However, the check is valid and I tested it manually by skipping the header check.
+  # "Unimplemented compiler support.* extract with a variable number of bits is not yet supported in the backend"
+  extensions/p4_tests/p4_16/p4c-1478-neg.p4
+  # Incorrect P4_14->16 conversion for varbit extract
+  # was "Wrong number of arguments for method call: packet.extract"
+  testdata/p4_14_samples/09-IPv4OptionsUnparsed.p4
+  testdata/p4_16_samples/checksum1-bmv2.p4
+  # was "Local metadata array .* not supported"
+  testdata/p4_16_samples/equality-bmv2.p4
+  # was "Wrong number of arguments for method call"
+  testdata/p4_16_samples/equality-varbit-bmv2.p4
+  testdata/p4_16_samples/issue447-bmv2.p4
+  testdata/p4_16_samples/issue447-1-bmv2.p4
+  testdata/p4_16_samples/issue447-2-bmv2.p4
+  testdata/p4_16_samples/issue447-3-bmv2.p4
+  testdata/p4_16_samples/issue447-4-bmv2.p4
+  testdata/p4_16_samples/issue447-5-bmv2.p4
+  testdata/p4_16_samples/issue1025-bmv2.p4
+  testdata/p4_16_samples/issue1291-bmv2.p4
+  testdata/p4_16_samples/issue1560-bmv2.p4
+  testdata/p4_14_samples/issue576.p4
+  testdata/p4_14_samples/issue781.p4
+  testdata/p4_14_samples/TLV_parsing.p4
+  )
