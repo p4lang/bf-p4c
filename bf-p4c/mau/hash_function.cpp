@@ -13,6 +13,7 @@
  * to the programmer if a simple spelling mistake is found.
  */
 static std::map<cstring, bfn_crc_alg_t> standard_crcs_t = {
+    { "crc8", CRC_8 },
     { "crc_8", CRC_8 },
     { "crc_8_darc", CRC_8_DARC },
     { "crc_8_i_code", CRC_8_I_CODE },
@@ -54,6 +55,7 @@ static std::map<cstring, bfn_crc_alg_t> standard_crcs_t = {
     { "crc_32q", CRC_32Q },
     { "jamcrc", JAMCRC },
     { "xfer", XFER },
+    { "crc64", CRC_64 },
     { "crc_64", CRC_64 },
     { "crc_64", CRC_64_GO_ISO },
     { "crc_64_we", CRC_64_WE },
@@ -280,14 +282,22 @@ const IR::MethodCallExpression *IR::MAU::HashFunction::hash_to_mce(const IR::Exp
             error_alg_name = "random";
             break;
         case 2:
+            conv_e = convertHashAlgorithmBFN(srcInfo, IR::ID("crc_8"), on_hash_matrix);
+            error_alg_name = "crc_8";
+            break;
+        case 3:
             conv_e = convertHashAlgorithmBFN(srcInfo, IR::ID("crc_16"), on_hash_matrix);
             error_alg_name = "crc_16";
             break;
-        case 3:
+        case 4:
             conv_e = convertHashAlgorithmBFN(srcInfo, IR::ID("crc_32"), on_hash_matrix);
             error_alg_name = "crc_32";
             break;
-        case 4:
+        case 5:
+            conv_e = convertHashAlgorithmBFN(srcInfo, IR::ID("crc_64"), on_hash_matrix);
+            error_alg_name = "crc_64";
+            break;
+        case 6:
             conv_e = convertHashAlgorithmBFN(srcInfo, IR::ID("csum16"), on_hash_matrix);
             error_alg_name = "csum16";
             break;
