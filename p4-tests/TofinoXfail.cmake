@@ -387,7 +387,7 @@ p4c_add_xfail_reason("tofino"
 #   extensions/p4_tests/p4_14/c1/COMPILER-235/vag1662.p4
   testdata/p4_14_samples/12-Counters.p4
   testdata/p4_14_samples/13-Counters1and2.p4
-  ../glass/testsuite/p4_tests/mau/COMPILER-1068/comp_1068.p4 
+  ../glass/testsuite/p4_tests/mau/COMPILER-1068/comp_1068.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -627,6 +627,7 @@ p4c_add_xfail_reason("tofino"
   # Expected to fail, until we have better user-facing messages.
   extensions/p4_tests/p4_14/p4smith_regression/mariano_0.p4
   extensions/p4_tests/p4_14/p4smith_regression/soured_0.p4
+  extensions/p4_tests/p4_16/cast_widening_add.p4
 
   # Expected to fail, which means that constraint conflicts are being correctly detected.
   extensions/p4_tests/p4_14/mau_test_neg_test.p4
@@ -982,6 +983,21 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4-tests/programs/power/power.p4
 )
 
+# P4C-1067
+# Expected failure, negative test.
+p4c_add_xfail_reason("tofino"
+  "Operands of arithmetic operations cannot be greater than 64 bits"
+  extensions/p4_tests/p4_16/p4c-1067-neg.p4
+)
+
+# P4C-1067
+# Expected failure, negative test.
+p4c_add_xfail_reason("tofino"
+  "Operand field bit .* of wide arithmetic operation cannot have even and odd container placement constraints"
+  extensions/p4_tests/p4_16/p4c-1067-neg2.p4
+)
+
+
 # BRIG-584
 p4c_add_xfail_reason("tofino"
   "Unimplemented compiler support.*: Cannot extract to a field slice in the parser"
@@ -1224,13 +1240,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: Assignment cannot be supported in the parser"
   ../glass/testsuite/p4_tests/phv/test_config_402_parser_sub.p4
-  )
-
-# P4C-1067
-p4c_add_xfail_reason("tofino"
-  "Operands of arithmetic operations cannot be greater than 32b, but field .* has .*"
-  ../glass/testsuite/p4_tests/phv/test_config_296_pragma_container.p4
-  ../glass/testsuite/p4_tests/phv/test_config_258_wide_add.p4
   )
 
 # P4C-590
@@ -1636,11 +1645,11 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "The following operation is not yet supported"
-  ../glass/testsuite/p4_tests/mau/COMPILER-815/int_heavy.p4	
+  ../glass/testsuite/p4_tests/mau/COMPILER-815/int_heavy.p4
   testdata/p4_14_samples/issue-1559.p4
 )
 
 p4c_add_xfail_reason("tofino"
   "recursion failure"
-  extensions/p4_tests/p4_14/p4c-1429.p4	
+  extensions/p4_tests/p4_14/p4c-1429.p4
 )

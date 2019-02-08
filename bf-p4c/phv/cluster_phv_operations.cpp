@@ -1,6 +1,7 @@
 #include "bf-p4c/phv/cluster_phv_operations.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/ir/bitrange.h"
+#include "common/utils.h"
 #include "lib/log.h"
 
 const ordered_set<cstring> PHV_Field_Operations::BITWISE_OPS = {
@@ -39,6 +40,9 @@ void PHV_Field_Operations::processSaluInst(const IR::MAU::Instruction* inst) {
     //
     //  - SALUs have a byte mask, not a bit mask, so nothing can be packed in
     //    the same byte as an SALU operand.
+    //    FIXME: This is only true when pulling in SALU inputs from a RAM
+    //    search bus.  If the input is provided from hash, there is no such
+    //    constraint.
     //
     //    XXX(cole): This last constraint is not implemented!
 
@@ -54,12 +58,13 @@ void PHV_Field_Operations::processSaluInst(const IR::MAU::Instruction* inst) {
             PHV::Field* field = phv.field(inst->operands[idx], &field_bits);
             if (!field) continue;
             if (field_bits.size() % 8 <= 1)
-                // If the field is byte aligned or 1 bit larger than a byte aligned size, then round
-                // it up to the next byte-aligned bit size.
+                // If the field is byte aligned or 1 bit larger than a byte aligned size,
+                // then round it up to the next byte-aligned bit size.
                 max_total_operand_size += (8 * ROUNDUP(field_bits.size(), 8));
             else
-                // If the field is more than 1 bit larger than a byte aligned size, then it may take
-                // up one byte more than the next byte-aligned size in the worst case.
+                // If the field is more than 1 bit larger than a byte aligned size,
+                // then it may take up one byte more than the next byte-aligned size
+                // in the worst case.
                 max_total_operand_size += (8 * (ROUNDUP(field_bits.size(), 8) + 1));
         }
         for (int idx = 0; idx < int(inst->operands.size()); ++idx) {
@@ -83,6 +88,8 @@ void PHV_Field_Operations::processSaluInst(const IR::MAU::Instruction* inst) {
             // Moreover, when an SALU operand is placed in a larger PHV
             // container, it must be placed such that it can be loaded into the
             // right place on the input crossbar.
+            // FIXME: Again, this is only a constraint until can use the
+            // hash input path.
             //
             // IXBAR byte indices
             //  8 <--  8b, 16b, 32b SALU operand 1 starts here
@@ -155,20 +162,44 @@ void PHV_Field_Operations::processInst(const IR::MAU::Instruction* inst) {
         // Apply no_pack constraint on carry-based operation. If sliced, apply
         // on the slice only.  If f can't be split but is larger than 32 bits,
         // report an error.
-        if (field_bits.size() > 32)
-            P4C_UNIMPLEMENTED(
-                "Operands of arithmetic operations cannot be greater than 32b, but field %1%%2% "
-                "has %3%b and is involved in '%4%'", cstring::to_cstring(field),
-                field_bits.size() != field->size ? cstring::to_cstring(field_bits) : "",
-                field_bits.size(), inst->name);
-        LOG3("Marking " << field->name << field_bits << " as 'no split' for its use in "
-             "instruction " << inst->name << ".");
+        if (field_bits.size() > 64)
+            fatal_error(
+                "Operands of arithmetic operations cannot be greater than 64 bits, "
+                "but field %1% is %2% bits and is involved in: %3%", field->name,
+                field_bits.size(), inst);
 
-        // TODO(cole): Unify no_split and no_split_at.
-        if (field_bits.size() == field->size)
-            field->set_no_split(true);
-        else
-            field->set_no_split_at(field_bits);
+        if (field_bits.size() > 32) {
+            bool success = field->add_wide_arith_start_bit(field_bits.lo);
+            if (!success) {
+              fatal_error(
+                  "Operand field bit %1% of wide arithmetic operation cannot have even and odd "
+                  "container placement constraints.  Field %2% has an even alignement "
+                  "constraint from: %3%", field_bits.lo, field->name, inst);
+            }
+            LOG3("Marking " << field->name << "[" << field_bits.lo <<
+                 "] as used in wide arithmetic operation for "
+                 "instruction " << inst->name << ".");
+
+            LOG6("  field_bits = " << field_bits);
+            int lo_lsb = field_bits.lo;
+            int lo_len = 32;
+            int hi_lsb = lo_lsb + 32;
+            int hi_len = field_bits.size() - 32;
+            le_bitrange lsb_slice = le_bitrange(StartLen(lo_lsb, lo_len));
+            le_bitrange msb_slice = le_bitrange(StartLen(hi_lsb, hi_len));
+            field->set_no_split_at(lsb_slice);
+            field->set_no_split_at(msb_slice);
+            LOG6("  field " << field->name << " cannot split slice " << lsb_slice);
+            LOG6("  field " << field->name << " cannot split slice " << msb_slice);
+        } else {
+            LOG3("Marking " << field->name << field_bits << " as 'no split' for its use in "
+                 "instruction " << inst->name << ".");
+            // TODO(cole): Unify no_split and no_split_at.
+            if (field_bits.size() == field->size)
+                field->set_no_split(true);
+            else
+                field->set_no_split_at(field_bits);
+        }
 
         // The destination of a non-bitwise instruction must be placed alone in
         // its PHV container, because carry or shift instructions might
@@ -191,6 +222,8 @@ void PHV_Field_Operations::processInst(const IR::MAU::Instruction* inst) {
         // after this instruction executes.  Hence, two back-to-back addition
         // instructions could overflow the lower bits of the destination
         // container and modify the destination field.
+        // XXX(mike): This example is wrong.  What if BBBB + DDDD overflows?
+        // Likely, cannot pack sources either.
         //
         // Until we add a "don't pack the lower order bits" constraint, we'll
         // have to rely on validate allocation to catch bad packings that hit

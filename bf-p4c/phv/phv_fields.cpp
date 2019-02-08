@@ -710,9 +710,15 @@ void PHV::Field::set_no_split(bool b) {
 }
 
 bool PHV::Field::no_split_at(int pos) const {
+    // Note: A constaint that requires splitting a field at a specific bit
+    // position means that we are allowed to split at the lsb position.
+    // For example:
+    //    x[63:0] = y[63:0] + 1
+    //    x and y must be split into slices as [63:32] and [31:0].
+    //    When creating slices, slicing at bit position 32 should be allowed.
     return std::any_of(
             no_split_ranges_i.begin(), no_split_ranges_i.end(), [&] (const le_bitrange& r) {
-                return r.contains(pos); });
+                return r.contains(pos) && r.lo != pos; });
 }
 
 void PHV::Field::set_no_split_at(le_bitrange range) {
@@ -1535,14 +1541,13 @@ std::ostream &PHV::operator<<(std::ostream &out, const PHV::Field &field) {
     if (field.deparsed_bottom_bits()) out << " deparsed_bottom_bits";
     if (field.deparsed_to_tm()) out << " deparsed_to_tm";
     if (field.exact_containers()) out << " exact_containers";
+    if (field.used_in_wide_arith()) out << " wide_arith";
     if (field.privatized()) out << " TPHV-priv";
     if (field.privatizable()) out << " PHV-priv";
-#if HAVE_JBAY
     if (Device::currentDevice() == Device::JBAY) {
         if (field.is_mocha_candidate()) out << " mocha";
         if (field.is_dark_candidate()) out << " dark";
     }
-#endif
     if (field.is_checksummed()) out << " checksummed";
     return out;
 }
@@ -1621,6 +1626,7 @@ std::ostream &operator<<(std::ostream &out, const PHV::FieldSlice& fs) {
     if (field.deparsed_bottom_bits()) out << " deparsed_bottom_bits";
     if (field.deparsed_to_tm()) out << " deparsed_to_tm";
     if (field.exact_containers()) out << " exact_containers";
+    if (field.used_in_wide_arith()) out << " wide_arith";
     if (field.privatized()) out << " TPHV-priv";
     if (field.privatizable()) out << " PHV-priv";
     out << " [" << fs.range().lo << ":" << fs.range().hi << "]";

@@ -197,6 +197,12 @@ class Field {
                                                        /// PHV.
     bool            deparser_zero_i = false;           /// true if the field is a candidate for the
                                                        /// deparser zero optimization.
+    ordered_set<int> wide_arith_start_bit_;            /// Set of start bits of wide arithmetic
+                                                       /// operations.  For example, if a program
+                                                       /// had ipv6.dstAddr[127:64] += 1 and
+                                                       /// ipv6.dstAddr[63:0] += 1, this set would
+                                                       /// contain 0 and 64.
+
 
     /// Maximum size of container bytes this field can occupy. -1 if there is no constraint on this
     /// field.
@@ -205,7 +211,6 @@ class Field {
     /// field can be split), or an 8-bit container.
     int             maxContainerBytes_i = -1;
 
-#if HAVE_JBAY
     /// XXX(Deep): Until we move to a stage-based allocation that allows us to move fields into and
     /// out of dark containers, the utilization of dark containers in JBay is not significant. To
     /// address this and enable testing, I am introducing a privatizable dark category of fields.
@@ -215,7 +220,6 @@ class Field {
     /// privatizable_dark_i property is set to true for all mocha fields that could be allocated
     /// into dark containers with dark privatization.
     bool            privatizable_dark_i = false;
-#endif
 
     /// Ranges of this field that can not be split.
     /// E.g. in a<32b> = b<32b> + c[0:31]<48b>, [0:31] will be the no_split range for c.
@@ -253,11 +257,8 @@ class Field {
     void set_mocha_candidate(bool c)                       { mocha_i = c; }
     void set_dark_candidate(bool c)                        { dark_i = c; }
     void set_deparser_zero_candidate(bool c)               { deparser_zero_i = c; }
-
-#if HAVE_JBAY
     bool is_privatizable_dark() const                      { return privatizable_dark_i; }
     void set_privatizable_dark(bool c)                     { privatizable_dark_i = c; }
-#endif
 
     //
     // constraints
@@ -276,7 +277,37 @@ class Field {
     bool no_split() const;
     void set_no_split(bool b);
     bool no_split_at(int pos) const;
-    void set_no_split_at(le_bitrange range);
+    void set_no_split_at(le_bitrange range);  // The indicated slice cannot be split.
+    bool used_in_wide_arith() const { return wide_arith_start_bit_.size() > 0; }
+
+    bool bit_used_in_wide_arith(int slice_bit) const {
+      for (auto bit : wide_arith_start_bit_) {
+          if (slice_bit >= bit && slice_bit < (bit + 64))
+              return true; }
+      return false;
+    }
+    bool bit_is_wide_arith_lo(int slice_bit) const {
+      for (auto bit : wide_arith_start_bit_) {
+          if (slice_bit < (bit + 32))
+              return true; }
+      return false;
+    }
+
+    // Only called for least signficant bit of wide arith operation.
+    // Returns true if could successfully add constraint.
+    bool add_wide_arith_start_bit(int start_bit) {
+        for (auto bit : wide_arith_start_bit_) {
+            if (bit != start_bit) {
+                // conflicting constraint if start bit has to go to both
+                // odd and even container locations
+                if (bit < start_bit && start_bit < (bit + 64))
+                    return false;
+                if (start_bit < bit && bit < (start_bit + 64))
+                    return false;
+            } }
+        wide_arith_start_bit_.insert(start_bit);
+        return true;
+    }
     std::vector<le_bitrange> no_split_ranges() const       { return no_split_ranges_i; }
 
     bool deparsed_to_tm() const                            { return deparsed_to_tm_i; }

@@ -145,7 +145,9 @@ void execute_backend(const IR::BFN::Pipe* maupipe, BFN_Options& options) {
         maupipe = maupipe->apply(backend);
     } catch (Util::P4CExceptionBase &ex) {
         // produce resource nodes in context.json regardless of failures
-        std::cerr << "compilation failed: producing ctxt.json" << std::endl;
+        #if BAREFOOT_INTERNAL
+            std::cerr << "compilation failed: producing context.json" << std::endl;
+        #endif
         OutputAsm as(backend, options, maupipe->name, backend.get_prim_json(), false);
         maupipe->apply(as);
 

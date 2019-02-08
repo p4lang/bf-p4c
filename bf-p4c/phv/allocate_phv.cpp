@@ -395,10 +395,10 @@ std::ostream& operator<<(std::ostream& s, const AllocScore& score) {
             continue;
         any_positive_score = true;
         s << "[";
-        s << "tphv: " << (kind == PHV::Kind::tagalong) << ", ";
-#ifdef HAVE_JBAY
-        s << "clot_bits: " << score.score.at(kind).n_clot_bits << ", ";
-#endif
+        if (Device::currentDevice() == Device::TOFINO)
+            s << "tphv: " << (kind == PHV::Kind::tagalong) << ", ";
+        else if (Device::currentDevice() == Device::JBAY)
+            s << "clot_bits: " << score.score.at(kind).n_clot_bits << ", ";
         s << "wasted_bits: " << score.score.at(kind).n_wasted_bits << ", ";
         s << "overlay_bits: " << score.score.at(kind).n_overlay_bits << ", ";
         s << "packing_bits: " << score.score.at(kind).n_packing_bits << ", ";
@@ -541,6 +541,43 @@ bool CoreAllocation::satisfies_constraints(
         allocatedBitsInThisTransaction[slice.field()] += slice.width();
     }
 
+    // Check that slices that appear in wide arithmetic operations
+    // are being allocated to the correct odd/even container number.
+    for (auto& alloc_slice : slices) {
+        if (alloc_slice.field()->used_in_wide_arith()) {
+            auto cidx = alloc_slice.container().index();
+            int lo_bit = alloc_slice.field_slice().lo;
+            LOG7("   cidx = " << cidx << " and lo_bit = " << lo_bit);
+            if (alloc_slice.field()->bit_is_wide_arith_lo(lo_bit)) {
+                if ((cidx % 2) != 0) {
+                    LOG5("    cannot start wide arith lo at odd container.");
+                    return false; }
+            } else {
+                if ((cidx % 2) == 0) {
+                    LOG5("    cannot start wide arith hi at even container.");
+                    return false; }
+
+                // Find the lo AllocSlice for the field.
+                // Check that it is one less than the current container.
+                // Note: Allocation approach assumes that the lo slice is
+                // allocated before the hi.
+                bool found = false;
+                for (auto &as : alloc.slices(alloc_slice.field())) {
+                    if (as.field() == alloc_slice.field()) {
+                        int lo_bit2 = as.field_slice().lo;
+                        if (lo_bit2 == (lo_bit - 32)) {
+                            found = true;
+                            LOG6("   Found linked lo slice " << as);
+                            auto lo_container_idx = as.container().index();
+                            if (cidx != (lo_container_idx + 1)) {
+                                LOG5("    cannot start wide arith hi at non-adjacent container.");
+                                return false; }
+                            break; } } }
+                BUG_CHECK(found, "Unable to find lo field slice associated with"
+                          " wide arithmetic operation %1%", alloc_slice);
+            }
+        } }
+
     // If there are no fields that have the max container bytes constraints, then return true.
     if (containerBytesFields.size() == 0) return true;
 
@@ -575,7 +612,6 @@ bool CoreAllocation::satisfies_constraints(
             return false;
         }
     }
-
     return true;
 }
 
@@ -791,8 +827,20 @@ CoreAllocation::tryAllocSliceList(
 
     // Return if the slices can't fit together in a container.
     int aggregate_size = 0;
-    for (auto& slice : slices)
+    bool wide_arith_lo = false;
+    PHV::SuperCluster::SliceList *hi_slice = nullptr;
+    for (auto& slice : slices) {
         aggregate_size += slice.size();
+        if (slice.field()->bit_used_in_wide_arith(slice.range().lo)) {
+            if (slice.field()->bit_is_wide_arith_lo(slice.range().lo)) {
+                wide_arith_lo = true;
+                hi_slice = super_cluster.findLinkedWideArithSliceList(&slices);
+                BUG_CHECK(hi_slice, "Unable to find hi field slice associated with"
+                          " wide arithmetic operation in the cluster %1%", super_cluster);
+                LOG7("   \nthink slice is wide arith lo: " << slice);
+                LOG7("   found linked slice list: " << hi_slice);
+            } }
+    }  // end for (auto& slice : slices)
     if (container_size < aggregate_size) {
         LOG5("    ...but these slices are " << aggregate_size << "b in total and cannot fit in a "
              << container_size << "b container");
@@ -803,15 +851,15 @@ CoreAllocation::tryAllocSliceList(
     boost::optional<PHV::Transaction> best_candidate = boost::none;
     for (const PHV::Container c : group) {
         int num_bitmasks = 0;
+        LOG6("Looking at container: " << c);
         // If any slices were already allocated, ensure that unallocated slices
         // are allocated to the same container.
         if (previous_container != PHV::Container() && previous_container != c) {
             LOG5("    ...but some slices were already allocated to " << previous_container);
             continue; }
 
-        std::vector<PHV::AllocSlice> candidate_slices;
-
         // Generate candidate_slices if we choose this container.
+        std::vector<PHV::AllocSlice> candidate_slices;
         for (auto& field_slice : slices) {
             le_bitrange container_slice =
                 StartLen(start_positions.at(field_slice).bitPosition, field_slice.size());
@@ -1151,6 +1199,49 @@ CoreAllocation::tryAllocSliceList(
         if (!conditional_constraints_satisfied)
             continue;
 
+        // If this is a wide arithmetic lo operation, make sure
+        // the most significant slices can be allocated in the directly
+        // adjacent container -- either the container is free or can overlay.
+        // Do this here, after lo slice has been committed to transaction.
+        if (wide_arith_lo) {
+            std::vector<PHV::AllocSlice> hi_candidate_slices;
+            bool can_alloc_hi = false;
+            for (const auto next_container : group) {
+                if ((c.index() + 1) == next_container.index()) {
+                    LOG5("Checking adjacent container " << next_container);
+                    const std::vector<PHV::Container> one_container = {next_container};
+                    // so confusing, parameter size here means bit width,
+                    // but group.size() returns the number of containers.
+                    auto small_grp = PHV::ContainerGroup(group.width(), one_container);
+
+                    ordered_map<PHV::FieldSlice, int> hi_slice_alignment;
+                    ordered_map<const PHV::AlignedCluster*, int> hi_cluster_alignment;
+                    ordered_set<cstring> tmpBridgedConflicts;
+                    bool buildHiSetup = buildAlignmentMaps(small_grp,
+                                                           super_cluster,
+                                                           hi_slice,
+                                                           hi_slice_alignment,
+                                                           hi_cluster_alignment,
+                                                           tmpBridgedConflicts);
+                    if (!buildHiSetup) {
+                        LOG6("Couldn't build hi setup?");
+                        can_alloc_hi = false;
+                        break; }
+
+                    auto try_hi = tryAllocSliceList(this_alloc, small_grp,
+                                                    super_cluster, hi_slice_alignment);
+                    if (try_hi != boost::none) {
+                        LOG5("Wide arith hi slice could be allocated in " << next_container);
+                        LOG5("" << hi_slice);
+                        can_alloc_hi = true; }
+                    break; } }
+            if (!can_alloc_hi) {
+              LOG5("Wide arithmetic hi slice could not be allocated.");
+              continue;
+            } else {
+              LOG5("Wide arithmetic hi slice could be allocated."); }
+        }
+
         auto score = AllocScore(this_alloc, phv_i, clot_i, uses_i, num_bitmasks);
         LOG5("    ...SLICE LIST score: " << score);
 
@@ -1168,7 +1259,6 @@ CoreAllocation::tryAllocSliceList(
     return alloc_attempt;
 }
 
-#ifdef HAVE_JBAY
 static bool isClotSuperCluster(const ClotInfo& clots, const PHV::SuperCluster& sc) {
     // In JBay, a clot-candidate field may sometimes be allocated to a PHV
     // container, eg. if it is adjacent to a field that must be packed into a
@@ -1190,11 +1280,59 @@ static bool isClotSuperCluster(const ClotInfo& clots, const PHV::SuperCluster& s
             return true; }
     return false;
 }
-#else
-static bool isClotSuperCluster(const ClotInfo&, const PHV::SuperCluster&) {
-    return false;
+
+bool CoreAllocation::buildAlignmentMaps(
+  const PHV::ContainerGroup& container_group,
+  const PHV::SuperCluster& super_cluster,
+  const PHV::SuperCluster::SliceList* slice_list,
+  ordered_map<PHV::FieldSlice, int>& slice_alignment,
+  ordered_map<const PHV::AlignedCluster*, int>& cluster_alignment,
+  ordered_set<cstring>& bridgedFieldsWithAlignmentConflicts) const {
+    int le_offset = 0;
+    for (auto& slice : *slice_list) {
+        const PHV::AlignedCluster& cluster = super_cluster.aligned_cluster(slice);
+        auto valid_start_options = satisfies_constraints(container_group, cluster);
+        if (valid_start_options == boost::none)
+            return false;
+
+        if (valid_start_options->empty()) {
+            LOG5("    ...but there are no valid starting positions for " << slice);
+            return false; }
+
+        // If this is the first slice, then its starting alignment can be adjusted.
+        if (le_offset == 0)
+            le_offset = *valid_start_options->begin();
+
+        // Return if the slice 's cluster cannot be placed at the current
+        // starting offset.
+        if (!valid_start_options->getbit(le_offset)) {
+            LOG5("    ...but slice list requires slice to start at " << le_offset <<
+                 " which its cluster cannot support: " << slice);
+            // The condition to check if fieldsWithAlignmentConflicts has this
+            // field already is essential for convergence.
+            if (slice.field()->bridged &&
+                    !bridgedFieldsWithAlignmentConflicts.count(slice.field()->name)) {
+                LOG5("   ...alignment constraint for bridged field slice " << slice <<
+                     ". May backtrack if this slice is not allocated.");
+                bridgedFieldsWithAlignmentConflicts.insert(slice.field()->name); }
+            return false; }
+
+        // Return if the slice is part of another slice list but was previously
+        // placed at a different start location.
+        // XXX(cole): We may need to be smarter about coordinating all
+        // valid starting ranges for all slice lists.
+        if (cluster_alignment.find(&cluster) != cluster_alignment.end() &&
+                cluster_alignment.at(&cluster) != le_offset) {
+            LOG5("    ...but two slice lists have conflicting alignment requirements for "
+                 "field slice %1%" << slice);
+            return false; }
+
+        // Otherwise, update the alignment for this slice's cluster.
+        cluster_alignment[&cluster] = le_offset;
+        slice_alignment[slice] = le_offset;
+        le_offset += slice.size(); }
+    return true;
 }
-#endif
 
 // SUPERCLUSTER <--> CONTAINER GROUP allocation.
 boost::optional<PHV::Transaction> CoreAllocation::tryAlloc(
@@ -1224,50 +1362,15 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAlloc(
     // various actions. This helps simplify constraints by placing destinations before sources
     actions_i.sort(slice_lists);
     for (const PHV::SuperCluster::SliceList* slice_list : slice_lists) {
-        int le_offset = 0;
         ordered_map<PHV::FieldSlice, int> slice_alignment;
-        for (auto& slice : *slice_list) {
-            const PHV::AlignedCluster& cluster = super_cluster.aligned_cluster(slice);
-            auto valid_start_options = satisfies_constraints(container_group, cluster);
-            if (valid_start_options == boost::none)
-                return boost::none;
-
-            if (valid_start_options->empty()) {
-                LOG5("    ...but there are no valid starting positions for " << slice);
-                return boost::none; }
-
-            // If this is the first slice, then its starting alignment can be adjusted.
-            if (le_offset == 0)
-                le_offset = *valid_start_options->begin();
-
-            // Return if the slice 's cluster cannot be placed at the current
-            // starting offset.
-            if (!valid_start_options->getbit(le_offset)) {
-                LOG5("    ...but slice list requires slice to start at " << le_offset <<
-                     " which its cluster cannot support: " << slice);
-                // The condition to check if fieldsWithAlignmentConflicts has this field already is
-                // essential for convergence.
-                if (slice.field()->bridged &&
-                        !bridgedFieldsWithAlignmentConflicts.count(slice.field()->name)) {
-                    LOG5("   ...alignment constraint for bridged field slice " << slice <<
-                         ". May backtrack if this slice is not allocated.");
-                    bridgedFieldsWithAlignmentConflicts.insert(slice.field()->name); }
-                return boost::none; }
-
-            // Return if the slice is part of another slice list but was previously
-            // placed at a different start location.
-            // XXX(cole): We may need to be smarter about coordinating all
-            // valid starting ranges for all slice lists.
-            if (cluster_alignment.find(&cluster) != cluster_alignment.end() &&
-                    cluster_alignment.at(&cluster) != le_offset) {
-                LOG5("    ...but two slice lists have conflicting alignment requirements for "
-                     "field slice %1%" << slice);
-                return boost::none; }
-
-            // Otherwise, update the alignment for this slice's cluster.
-            cluster_alignment[&cluster] = le_offset;
-            slice_alignment[slice] = le_offset;
-            le_offset += slice.size(); }
+        bool couldSetup = buildAlignmentMaps(container_group,
+                                             super_cluster,
+                                             slice_list,
+                                             slice_alignment,
+                                             cluster_alignment,
+                                             bridgedFieldsWithAlignmentConflicts);
+        if (!couldSetup)
+            return boost::none;
 
         // Try allocating the slice list.
         auto partial_alloc_result =
@@ -1667,6 +1770,7 @@ static std::string printSliceConstraints(const PHV::FieldSlice& slice) {
     return printSlice(slice) + ": "
             + (f->no_pack() ? "no_pack " : "")
             + (f->no_split() ? "no_split " : "")
+            + (f->used_in_wide_arith() ? "wide_arith " : "")
             + (f->exact_containers() ? "exact_containers" : "");
 }
 
@@ -2043,10 +2147,8 @@ BruteForceAllocationStrategy::pounderRoundAllocLoop(
     const int N_CLUSTER_LIMITATION = 20;
     if (cluster_groups.size() > N_CLUSTER_LIMITATION) {
         return { }; }
-#if HAVE_JBAY
     if (Device::currentDevice() == Device::JBAY) {
         return { }; }
-#endif  // HAVE_JBAY
 
     std::list<PHV::SuperCluster*> allocated_sc;
     auto& pa_container_sizes = core_alloc_i.pragmas().pa_container_sizes();
@@ -2321,7 +2423,6 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
         });
     }
 
-#if HAVE_JBAY
     // calc whether the cluster has container type pragma. Only for JBay.
     if (Device::currentDevice() == Device::JBAY) {
         const ordered_map<const PHV::Field*, cstring> container_type_pragmas =
@@ -2333,7 +2434,6 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
             });
         }
     }
-#endif
 
     // calc n_container_size_pragma.
     const auto& container_sizes = core_alloc_i.pragmas().pa_container_sizes();
@@ -2442,11 +2542,9 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
     //     return l->max_width() > r->max_width(); }
 
     auto ClusterGroupComparator = [&] (PHV::SuperCluster* l, PHV::SuperCluster* r) {
-#if HAVE_JBAY
         if (Device::currentDevice() == Device::JBAY) {
             if (has_container_type_pragma.count(l) != has_container_type_pragma.count(r)) {
                 return has_container_type_pragma.count(l) > has_container_type_pragma.count(r); } }
-#endif
         if (has_no_pack.count(l) != has_no_pack.count(r)) {
             return has_no_pack.count(l) > has_no_pack.count(r); }
         if (has_no_split.count(l) != has_no_split.count(r)) {

@@ -201,6 +201,12 @@ class SlicingIterator {
     static boost::optional<std::list<PHV::SuperCluster*>> split_super_cluster(
         const PHV::SuperCluster* sc,
         bitvec split_schema);
+
+    // Returns a new list of SuperClusters, where any SuperCluster that
+    // participates in wide arithmetic has been merged and ordered
+    // for allocation.
+    static std::list<PHV::SuperCluster*> merge_wide_arith_super_clusters(
+      const std::list<PHV::SuperCluster*> sc);
 };
 
 }  // namespace PHV

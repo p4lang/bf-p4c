@@ -40,15 +40,12 @@ class PHV_Field_Operations : public Inspector {
      * split, with the exception of certain arithmetic operations that can be
      * split across adjacent (even/odd) PHV containers.
      *
-     * XXX(cole): We don't currently support splitting operands of arithmetic
-     * instructions.
-     *
      * The following instructions are bitwise.
      */
     static const ordered_set<cstring> BITWISE_OPS;
 
-    // The following instructions are shift instructions, for which even the sources should have a
-    // no-pack property.
+    // The following instructions are shift instructions, for which
+    // even the sources should have a no-pack property.
     static const ordered_set<cstring> SHIFT_OPS;
 
  private:

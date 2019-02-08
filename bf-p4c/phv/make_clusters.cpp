@@ -379,7 +379,7 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
 
     // Build slice lists.  All slices of the same field go in the same slice
     // list.  Additionally, non-byte aligned fields are grouped together in the
-    // smallest byte-aligned chink.  Use reverse order, because types list
+    // smallest byte-aligned chunk.  Use reverse order, because types list
     // fields in network order, not little Endian order.
     PHV::SuperCluster::SliceList *accumulator = new PHV::SuperCluster::SliceList();
     int accumulator_bits = 0;
@@ -389,6 +389,7 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
     // TODO(yumin): optional<bool> is not good.
     boost::optional<bool> prev_is_tphv = boost::none;
     bool lastNoPack = false;
+    bool lastWideArith = false;
     bool lastDeparserZero = false;
     bool break_at_next_byte_boundary = false;
 
@@ -398,6 +399,7 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
         prev_is_tphv = boost::none;
         accumulator = new PHV::SuperCluster::SliceList();
         lastNoPack = false;
+        lastWideArith = false;
         lastDeparserZero = false;
         break_at_next_byte_boundary = false;
     };
@@ -438,7 +440,11 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
         // any) must be alwaysPackable
         if (lastNoPack && !field->alwaysPackable) {
             StartNewSliceList();
-            LOG5("Starting new slice list (to isolate a no_pack field): "); }
+            LOG5("Starting new slice list (to isolate a no_pack field): ");
+        } else if (lastWideArith && !field->alwaysPackable) {
+            StartNewSliceList();
+            LOG5("Starting new slice list (to isolate a field used in wide arithmetic): ");
+        }
 
         // If the slice list containers a deparser_zero field and the current field is not a
         // deparser zero optimization candidate, then start a new slice list.
@@ -464,6 +470,11 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
             // Break at bottom as well
             StartNewSliceList();
             LOG5("Starting new slice list (for no_pack field):");
+        } else if (accumulator_bits && (field->used_in_wide_arith())) {
+            // Break off the existing slice list if this field is used in wide arithmetic
+            // Break at bottom as well
+            StartNewSliceList();
+            LOG5("Starting new slice list (for field used in wide arithmetic):");
         } else if (accumulator_bits && !lastDeparserZero && field->is_deparser_zero_candidate()) {
             // Break off the existing slice list if this field is a deparser zero optimization
             // candidate.
@@ -525,6 +536,7 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
             field_slice_list_size += slice.size(); }
         accumulator_bits += field->size;
         lastNoPack = field->no_pack();
+        lastWideArith = field->used_in_wide_arith();
         lastDeparserZero = field->is_deparser_zero_candidate();
 
         // We use AND because all slices in a slice list must be TPHV
@@ -899,4 +911,3 @@ Visitor::profile_t Clustering::ValidateDeparserZeroClusters::init_apply(const IR
 // IR::BFN::Deparser has a field egress_port,
 // which points to the egress port in the egress pipeline & egress spec in the ingress pipeline
 // Each Deparser holds a vector of digests, one of which will be the learning digest if present
-

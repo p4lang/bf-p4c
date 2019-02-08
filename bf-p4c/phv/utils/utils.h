@@ -14,7 +14,7 @@ namespace PHV {
 
 /** A set of PHV containers of the same size. */
 class ContainerGroup {
-    /// Size of each container in this group.
+    /// Size (bit width) of each container in this group.
     const PHV::Size size_i;
 
     /// Types of each container in this group.
@@ -954,6 +954,37 @@ class SuperCluster : public ClusterStats {
                   "Field %1% not in cluster group", cstring::to_cstring(slice));
         return slices_to_clusters_i.at(slice)->cluster(slice);
     }
+
+    /// @returns a new SuperCluster object that is the union of the provided
+    /// SuperCluster inputs.
+    SuperCluster* merge(const SuperCluster *sc1) {
+        ordered_set<const RotationalCluster*> new_clusters_i;
+        ordered_set<SliceList*> new_slice_lists;
+        for (auto *c1 : clusters_i) { new_clusters_i.insert(c1); }
+        for (auto *c2 : sc1->clusters_i) { new_clusters_i.insert(c2); }
+        for (auto *sl1 : slice_lists_i) { new_slice_lists.insert(sl1); }
+        for (auto *sl2 : sc1->slice_lists_i) { new_slice_lists.insert(sl2); }
+        return new SuperCluster(new_clusters_i, new_slice_lists);
+    }
+
+    /// Merge this SuperCluster with the input SuperCluster, and
+    /// return a new SuperCluster.
+    /// This function is only intended to be called when the two
+    /// SuperClusters are linked by wide arithmetic allocation requirements.
+    /// This function merges the slice lists such that slice lists
+    /// that are paired by wide arithmetic requirements are adjacent in
+    /// the list, and the slice list destined for an even container (the lo slice)
+    /// appears before the slice list destined for an odd container (the hi slice).
+    SuperCluster* mergeAndSortBasedOnWideArith(const SuperCluster *sc1);
+
+    /// @returns true if two SuperClusters need to be merged, because
+    /// they container hi/lo field slices that participate in a wide
+    /// arithmetic operation.
+    bool needToMergeForWideArith(const SuperCluster *sc) const;
+
+    /// Given a SliceList within a SuperCluster, find its linked
+    /// wide arithmetic SliceList.
+    SuperCluster::SliceList* findLinkedWideArithSliceList(const SuperCluster::SliceList* sl) const;
 
     /// @returns true if this cluster can be assigned to containers of kind
     /// @kind.

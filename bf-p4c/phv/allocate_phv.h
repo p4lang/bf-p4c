@@ -166,6 +166,17 @@ class CoreAllocation {
     // allocation fails due to alignment reasons. Used to backtrack to bridged metadata packing.
     ordered_set<const PHV::Field*> fieldsWithAlignmentConflicts;
 
+    // Builds two maps used by tryAllocSliceList.
+    // slice_alignment maps field slice to start bit location in a container.
+    // cluster_alignment maps aligned cluster ot start bit location in a container.
+    bool buildAlignmentMaps(
+      const PHV::ContainerGroup& container_group,
+      const PHV::SuperCluster& super_cluster,
+      const PHV::SuperCluster::SliceList* slice_list,
+      ordered_map<PHV::FieldSlice, int>& slice_alignment,
+      ordered_map<const PHV::AlignedCluster*, int>& cluster_alignment,
+      ordered_set<cstring>& bridgedFieldsWithAlignmentConflicts) const;
+
  public:
     CoreAllocation(const SymBitMatrix& mutex,
                    const Clustering&,

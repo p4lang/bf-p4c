@@ -958,7 +958,6 @@ boost::optional<PHV::SliceResult<PHV::AlignedCluster>> PHV::AlignedCluster::slic
         // Update the slice map.
         rv.slice_map.emplace(PHV::FieldSlice(slice), std::make_pair(lo_slice, hi_slice));
     }
-
     rv.lo = new PHV::AlignedCluster(kind_i, lo_slices);
     rv.hi = new PHV::AlignedCluster(kind_i, hi_slices);
     return rv;
@@ -1118,6 +1117,103 @@ PHV::SuperCluster::slice_list(const PHV::FieldSlice& slice) const {
 
 bool PHV::SuperCluster::okIn(PHV::Kind kind) const {
     return kind_i <= kind;
+}
+
+PHV::SuperCluster* PHV::SuperCluster::mergeAndSortBasedOnWideArith(
+  const PHV::SuperCluster *sc) {
+    std::list<SliceList*> non_wide_slice_lists;
+    std::list<SliceList*> wide_lo_slice_lists;
+    std::list<SliceList*> wide_hi_slice_lists;
+
+    auto processSliceList =
+        [&](const ordered_set<SliceList*> *sl) {
+        for (auto *a_list : *sl) {
+            bool w = false;
+            bool wLo = false;
+            for (auto& fs : *a_list) {
+                if (fs.field()->bit_used_in_wide_arith(fs.range().lo)) {
+                    w = true;
+                    wLo = fs.field()->bit_is_wide_arith_lo(fs.range().lo);
+                    if (wLo)
+                        wide_lo_slice_lists.push_back(a_list);
+                    else
+                        wide_hi_slice_lists.push_back(a_list);
+                    break; } }
+            if (!w) {
+                non_wide_slice_lists.push_back(a_list);
+            }
+        }
+    };
+    processSliceList(&slice_lists_i);
+    processSliceList(&sc->slice_lists_i);
+
+    // Sort all the slice lists with wide arithmetic requirements
+    // such that least significant bits of a field slice appear
+    // earlier in the list, and the paired field slices are
+    // adjacent in the list.
+    // When we assign slices to containers, we need to consider
+    // them in order so some other slice doesn't swoop in and take
+    // its required location.
+    std::list<SliceList*> wide_slice_lists;
+    for (auto *lo_slice : wide_lo_slice_lists) {
+        wide_slice_lists.push_back(lo_slice);
+        // find its linked hi slice list
+        auto *hi_slice = sc->findLinkedWideArithSliceList(lo_slice);
+        BUG_CHECK(hi_slice, "Unable to find linked hi slice for %1%",
+                  cstring::to_cstring(lo_slice));
+        wide_slice_lists.push_back(hi_slice);
+    }
+    ordered_set<const RotationalCluster*> new_clusters_i;
+    ordered_set<SliceList*> new_slice_lists;
+    for (auto c : clusters_i) { new_clusters_i.insert(c); }
+    for (auto *c2 : sc->clusters_i) { new_clusters_i.insert(c2); }
+    for (auto sl : wide_slice_lists) { new_slice_lists.insert(sl); }
+    for (auto sl : non_wide_slice_lists) { new_slice_lists.insert(sl); }
+    return new SuperCluster(new_clusters_i, new_slice_lists);
+}
+
+bool PHV::SuperCluster::needToMergeForWideArith(const SuperCluster *sc) const {
+    for (auto* list : slice_lists()) {
+        for (auto& fs : *list) {
+            int lo1 = fs.range().lo;
+            if (fs.field()->bit_used_in_wide_arith(lo1)) {
+                for (auto* list2 : sc->slice_lists()) {
+                    for (auto& fs2 : *list2) {
+                        int lo2 = fs2.range().lo;
+                        if (lo1 != lo2 && fs.field() == fs2.field()) {
+                            if (fs2.field()->bit_used_in_wide_arith(lo2)) {
+                                if (((lo1 + 32) == lo2) || (lo2 + 32) == lo1) {
+                                    return true; } } } } } } } }
+    return false;
+}
+
+PHV::SuperCluster::SliceList* PHV::SuperCluster::findLinkedWideArithSliceList(
+  const PHV::SuperCluster::SliceList *sl) const {
+    // if a particular field slice participates in wide arithmetic,
+    // search for its linked SliceList (either hi or lo)
+    for (auto &fs : *sl) {
+        int slice_lsb = fs.range().lo;
+        if (fs.field()->bit_used_in_wide_arith(slice_lsb)) {
+            bool lo_slice = false;
+            if (fs.field()->bit_is_wide_arith_lo(fs.range().lo))
+                lo_slice = true;
+            LOG7("Looking for slice list " << sl);
+            LOG7("   lo_slice?  " << lo_slice);
+            LOG7("   slice_lsb = " << slice_lsb);
+            for (auto* list : slice_lists()) {
+                for (auto &fs2 : *list) {
+                    int slice_lsb2 = fs2.range().lo;
+                    LOG7("   Looking for slice list " << list);
+                    LOG7("      slice_lsb2 = " << slice_lsb2);
+                    if (fs2.field()->bit_used_in_wide_arith(slice_lsb2)) {
+                        if (0 == std::strcmp(fs.field()->name, fs2.field()->name)) {
+                            if (lo_slice && (slice_lsb + 32) == slice_lsb2)
+                                return list;
+                            else if (!lo_slice && (slice_lsb - 32) == slice_lsb2)
+                                return list;
+                        } } } } }
+    }
+    return nullptr;  // not linked (or not wide arith slice)
 }
 
 bool PHV::SuperCluster::contains(const PHV::Field* f) const {

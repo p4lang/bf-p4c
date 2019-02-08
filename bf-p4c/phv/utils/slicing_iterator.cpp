@@ -50,7 +50,7 @@ PHV::SlicingIterator::SlicingIterator(
         //    `required_slices_i` bitvec is a compressed schema with bits that
         //    must always be 1.
 
-        // Map of field slice to its byte location; the value pair is [left byte, right byte] within
+        // Map of field slice to its byte location; the value pair is [left byte, right byte]
         // within the slicing schema. If the field is the first field in the slice list, the left
         // byte is set to -1; similarly, the right byte is set to -1 if the field is the last field
         // in the slice list. The first and last field slices are special because we always
@@ -1183,8 +1183,8 @@ static void update_slices(const RotationalCluster* old,
             if (split_res.slice_map.find(old_slice) != split_res.slice_map.end()) {
                 auto& slice_lo = split_res.slice_map.at(old_slice).first;
                 auto& slice_hi = split_res.slice_map.at(old_slice).second;
-                slice_it = slice_list->erase(slice_it);
                 LOG6("        - erasing " << old_slice);
+                slice_it = slice_list->erase(slice_it);  // erase after log
                 slice_it = slice_list->insert(slice_it, slice_lo);
                 LOG6("        - adding " << slice_lo);
                 if (slice_hi) {
@@ -1207,6 +1207,47 @@ static void update_slices(const RotationalCluster* old,
 
 }   // namespace PHV
 
+
+// Merge super-clusters if they participate in wide arithmetic,
+// since they have to be allocated to the same MAU group.
+std::list<PHV::SuperCluster*>
+PHV::SlicingIterator::merge_wide_arith_super_clusters(
+  const std::list<PHV::SuperCluster*> sc) {
+  LOG6("Merge wide arith super clusters");
+  std::list<PHV::SuperCluster*> wide;
+  std::list<PHV::SuperCluster*> rv;
+  for (auto it = sc.begin(); it != sc.end(); ++it) {
+      auto cluster = *it;
+      if (std::find(wide.begin(), wide.end(), cluster) != wide.end()) {
+          continue; }  // Already processed this cluster.
+
+      bool used_in_wide_arith = cluster->any_of_fieldslices(
+              [&] (const PHV::FieldSlice& fs) {
+                return fs.field()->bit_used_in_wide_arith(fs.range().lo); });
+      if (used_in_wide_arith) {
+          LOG6("  SC is used in wide_arith:" << cluster);
+          // Need to find other cluster that is included with it.
+          wide.push_back(cluster);
+          auto merged_cluster = cluster;
+          for (auto it2 = it; it2 != sc.end(); ++it2) {
+              auto cluster2 = *it2;
+              bool needToMerge = merged_cluster->needToMergeForWideArith(cluster2);
+              if (needToMerge) {
+                  LOG6("Need to merge:");
+                  LOG6("    SC1: " << merged_cluster);
+                  LOG6("    SC2: " << cluster2);
+                  merged_cluster =
+                    merged_cluster->mergeAndSortBasedOnWideArith(cluster2);
+                  LOG6("After merge:");
+                  LOG6("    SC1: " << merged_cluster);
+                  wide.push_back(cluster2);  // already merged, so don't consider again.
+              } }
+          rv.push_back(merged_cluster);
+      } else {
+          rv.push_back(cluster); }
+  }
+  return rv;
+}
 
 // Keys of split_schemas must be slice lists in sc.
 /* static */
@@ -1448,6 +1489,7 @@ boost::optional<std::list<PHV::SuperCluster*>> PHV::SlicingIterator::split_super
                 clusters.insert(pair.second); }
             rv.push_back(new PHV::SuperCluster(clusters, slice_lists)); }
 
+    rv = merge_wide_arith_super_clusters(rv);
     return rv;
 }
 
@@ -1588,7 +1630,6 @@ boost::optional<std::list<PHV::SuperCluster*>> PHV::SlicingIterator::get_slices(
 
         // Try slicing using this set of expanded schemas.
         auto res = split_super_cluster(sc_i, split_schemas);
-
         // If we found a good slicing, return it.
         if (res && std::all_of(res->begin(), res->end(), PHV::SuperCluster::is_well_formed)) {
             LOG6("Supercluster with slice list produces well-formed superclusters");

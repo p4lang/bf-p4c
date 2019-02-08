@@ -336,16 +336,19 @@ void ActionPhvConstraints::sort(std::list<const PHV::SuperCluster::SliceList*>& 
             r_writes += this->constraint_tracker.written_in(sl).size(); }
 
         if (l_writes < r_writes) {
-            return l;
+            return true;
         } else if (l_writes > r_writes) {
-            return r;
+            return false;
         } else {
             if (l_reads > r_reads) {
-                return l;
+                return true;
             } else {
-                return r; } } };
-
+                return false; } } };
     slice_list.sort(SliceListComparator);
+    LOG6("Slice list on output");
+    for (auto sl : slice_list) {
+        LOG6("  " << sl);
+    }
 }
 
 void ActionPhvConstraints::sort(std::vector<PHV::FieldSlice>& slice_list) {
@@ -355,7 +358,6 @@ void ActionPhvConstraints::sort(std::vector<PHV::FieldSlice>& slice_list) {
             auto l_writes = this->constraint_tracker.written_in(l).size();
             auto r_reads = this->constraint_tracker.read_in(r).size();
             auto r_writes = this->constraint_tracker.written_in(r).size();
-
             if (l_writes != r_writes)
                 return l_writes < r_writes;
             return l_reads > r_reads; });
