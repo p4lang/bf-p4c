@@ -7,7 +7,6 @@
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/validate_allocation.h"
 
-
 bool UnimplementedRegisterMethodCalls::preorder(const IR::Primitive *prim) {
     auto dot = prim->name.find('.');
     auto objType = dot ? prim->name.before(dot) : cstring();
@@ -245,14 +244,16 @@ const IR::MAU::Action *DoInstructionSelection::preorder(IR::MAU::Action *af) {
 }
 
 bool DoInstructionSelection::checkPHV(const IR::Expression *e) {
-    if (auto *c = e->to<IR::Cast>())
+    if (auto *c = e->to<IR::BFN::ReinterpretCast>())
         return checkPHV(c->expr);
     return phv.field(e);
 }
 
 bool DoInstructionSelection::checkSrc1(const IR::Expression *e) {
     LOG3("Checking src1 : " << e);
-    if (auto *c = e->to<IR::Cast>())
+    if (auto *c = e->to<IR::BFN::ReinterpretCast>())
+        return checkSrc1(c->expr);
+    if (auto *c = e->to<IR::BFN::SignExtend>())
         return checkSrc1(c->expr);
     if (auto slice = e->to<IR::Slice>())
         return checkSrc1(slice->e0);
@@ -281,8 +282,8 @@ bool DoInstructionSelection::checkConst(const IR::Expression *ex, long &value) {
 bool DoInstructionSelection::equiv(const IR::Expression *a, const IR::Expression *b) {
     if (*a == *b) return true;
     if (typeid(*a) != typeid(*b)) return false;
-    if (auto ca = a->to<IR::Cast>()) {
-        auto cb = b->to<IR::Cast>();
+    if (auto ca = a->to<IR::BFN::ReinterpretCast>()) {
+        auto cb = b->to<IR::BFN::ReinterpretCast>();
         return ca->type == cb->type && equiv(ca->expr, cb->expr);
     }
     return false;
@@ -371,7 +372,13 @@ const IR::Expression *DoInstructionSelection::postorder(IR::Cmpl *e) {
 
 const IR::Expression *DoInstructionSelection::postorder(IR::Add *e) {
     if (!af) return e;
-    return new IR::MAU::Instruction(e->srcInfo, "add", new IR::TempVar(e->type), e->left, e->right);
+    /// HACK(hanw): I had to put in this hack to get p4-14 switch.p4 to compile after removing the
+    /// cast, we need a follow-up PR to add the support for '++' operator in the backen.
+    auto operand = e->right;
+    if (auto concat = e->right->to<IR::Concat>()) {
+        if (concat->left->is<IR::Constant>()) {
+            operand = concat->right; } }
+    return new IR::MAU::Instruction(e->srcInfo, "add", new IR::TempVar(e->type), e->left, operand);
 }
 
 const IR::Expression *DoInstructionSelection::postorder(IR::AddSat *e) {
@@ -468,12 +475,13 @@ const IR::Slice *DoInstructionSelection::postorder(IR::Slice *sl) {
 static const IR::MAU::Instruction *fillInstDest(const IR::Expression *in,
                                                 const IR::Expression *dest, int lo = -1,
                                                 int hi = -1, bool cast = false) {
-    if (auto *c = in->to<IR::Cast>())
+    if (auto *c = in->to<IR::BFN::ReinterpretCast>())
         // perhaps everything underneath should be cast to the same size
         return fillInstDest(c->expr, dest, c->destType->width_bits(), -1, true);
-    if (auto *sl = in->to<IR::Slice>()) {
+    if (auto *sl = in->to<IR::Slice>())
         return fillInstDest(sl->e0, dest, sl->getL(), sl->getH());
-    }
+    if (auto *c = in->to<IR::BFN::SignExtend>())
+        return fillInstDest(c->expr, dest, c->destType->width_bits(), -1);
     auto *inst = in ? in->to<IR::MAU::Instruction>() : nullptr;
     auto *tv = inst ? inst->operands[0]->to<IR::TempVar>() : nullptr;
     if (tv) {
@@ -485,9 +493,8 @@ static const IR::MAU::Instruction *fillInstDest(const IR::Expression *in,
             if (lo == -1)
                 break;
             if (cast)
-                rv->operands[i] = new IR::Cast(IR::Type::Bits::get(lo), rv->operands[i]);
-            else
-                rv->operands[i] = MakeSlice(rv->operands[i], lo, hi);
+                continue;
+            rv->operands[i] = MakeSlice(rv->operands[i], lo, hi);
         }
         return rv; }
     return nullptr;
@@ -513,6 +520,7 @@ const IR::Node *DoInstructionSelection::postorder(IR::Primitive *prim) {
         } else if (!phv.field(dest)) {
             error("%s: destination of %s must be a field", prim->srcInfo, prim->name);
         } else if (auto *rv = fillInstDest(prim->operands[1], dest)) {
+            LOG1("returned value " << rv);
             return rv;
         } else if (!checkSrc1(prim->operands[1])) {
             if (prim->operands[1]->is<IR::Mux>())
@@ -538,27 +546,7 @@ const IR::Node *DoInstructionSelection::postorder(IR::Primitive *prim) {
                BUG_CHECK(inst->operands.size() == 2, "invalid set");
                op = inst->operands.at(1); } } }
 
-    if (prim->name == "recirculate_raw") {
-        if (prim->operands.size() != 1) {
-            error("%s: wrong number of operands to %s", prim->srcInfo, prim->name);
-        } else {
-            if (VisitingThread(this) != gress_t::INGRESS)
-                error("%s%: %s is only allowed in ingress", prim->srcInfo, prim->name);
-
-            auto egress_spec = genIntrinsicMetadata(gress_t::INGRESS,
-                                                    "ingress_intrinsic_metadata_for_tm",
-                                                    "ucast_egress_port");
-            auto ingress_port = genIntrinsicMetadata(gress_t::INGRESS,
-                                                     "ingress_intrinsic_metadata",
-                                                     "ingress_port");
-
-            auto s1 = new IR::MAU::Instruction(prim->srcInfo, "set",
-                          MakeSlice(egress_spec, 0, 6), MakeSlice(prim->operands.at(0), 0, 6));
-            auto s2 = new IR::MAU::Instruction(prim->srcInfo, "set",
-                          MakeSlice(egress_spec, 7, 8), MakeSlice(ingress_port, 7, 8));
-            return new IR::Vector<IR::Expression>({s1, s2});
-        }
-    } else if (prim->name == "Hash.get") {
+    if (prim->name == "Hash.get") {
         bool custom_hash = false;
         auto it = prim->operands.begin();
         // operand 0 is always the extern itself.
@@ -620,13 +608,12 @@ const IR::Node *DoInstructionSelection::postorder(IR::Primitive *prim) {
         auto *hd = new IR::MAU::HashDist(prim->srcInfo, IR::Type::Bits::get(size), data, algorithm);
         hd->bit_width = size;
         auto next_type = IR::Type::Bits::get(size);
-        return new IR::MAU::Instruction(prim->srcInfo, "set", new IR::TempVar(next_type),
-                                        new IR::Cast(next_type, hd));
+        auto inst = new IR::MAU::Instruction(prim->srcInfo, "set", new IR::TempVar(next_type), hd);
+        return inst;
     } else if (prim->name == "Random.get") {
         auto rn = new IR::MAU::RandomNumber(prim->srcInfo, prim->type);
         auto next_type = prim->type;
-        return new IR::MAU::Instruction(prim->srcInfo, "set", new IR::TempVar(next_type),
-                                        new IR::Cast(next_type, rn));
+        return new IR::MAU::Instruction(prim->srcInfo, "set", new IR::TempVar(next_type), rn);
     } else if (prim->name == "invalidate") {
         return new IR::MAU::Instruction(prim->srcInfo, "invalidate", prim->operands[0]);
     } else {
@@ -690,9 +677,18 @@ bool StatefulAttachmentSetup::Scan::preorder(const IR::MAU::Action *act) {
             if (auto *tv = prim->operands[1]->to<IR::TempVar>()) {
                 self.remove_tempvars.insert(tv->name);
             }
-            if (auto *c = prim->operands[1]->to<IR::Cast>()) {
+            if (auto *c = prim->operands[1]->to<IR::BFN::ReinterpretCast>()) {
                 if (auto tv = c->expr->to<IR::TempVar>())
                     self.remove_tempvars.insert(tv->name);
+            }
+            if (auto *cc = prim->operands[1]->to<IR::Concat>()) {
+                std::vector<const IR::Expression *> possible_vars;
+                simpl_concat(possible_vars, cc);
+                for (auto expr : possible_vars) {
+                    auto tv = expr->to<IR::TempVar>();
+                    if (tv)
+                        self.remove_tempvars.insert(tv->name);
+                }
             }
         }
     }
@@ -771,7 +767,7 @@ void StatefulAttachmentSetup::Scan::postorder(const IR::Primitive *prim) {
 IR::MAU::HashDist *StatefulAttachmentSetup::create_hash_dist(const IR::Expression *expr,
                                                            const IR::Primitive *prim) {
     auto hash_field = expr;
-    if (auto c = expr->to<IR::Cast>())
+    if (auto c = expr->to<IR::BFN::ReinterpretCast>())
         hash_field = c->expr;
 
     int size = hash_field->type->width_bits();
@@ -781,9 +777,8 @@ IR::MAU::HashDist *StatefulAttachmentSetup::create_hash_dist(const IR::Expressio
     return hd;
 }
 
-/** Either find or generate a Hash Distribution unit, given what IR::Node is in the primitive
- *  FIXME: Currently v1model always casts these particular parameters to a size.  Perhaps
- *  these casts will be gone by the time we reach extract_maupipe.
+/**
+ * Find or generate a Hash Distribution unit, given what IR::Node is in the primitive
  */
 const IR::MAU::HashDist *StatefulAttachmentSetup::find_hash_dist(const IR::Expression *expr,
                                                                const IR::Primitive *prim) {
@@ -795,6 +790,28 @@ const IR::MAU::HashDist *StatefulAttachmentSetup::find_hash_dist(const IR::Expre
         } else if (phv.field(expr)) {
             hd = create_hash_dist(expr, prim); } }
     return hd;
+}
+
+/**
+ * Simplify concatenation expression for index operand.
+ * Current limitation:
+ * - only one sub-expression in concatenation expression can be a field.
+ * - other sub-expression must be constant.
+ */
+void StatefulAttachmentSetup::Scan::simpl_concat(std::vector<const IR::Expression*>& slices,
+        const IR::Concat* expr) {
+    if (expr->left->is<IR::Constant>()) {
+        // ignore
+    } else if (auto lhs = expr->left->to<IR::Concat>()) {
+        simpl_concat(slices, lhs);
+    } else {
+        slices.push_back(expr->left); }
+    if (expr->right->is<IR::Constant>()) {
+        // ignore
+    } else if (auto rhs = expr->right->to<IR::Concat>()) {
+        simpl_concat(slices, rhs);
+    } else {
+        slices.push_back(expr->right); }
 }
 
 /**
@@ -810,24 +827,34 @@ const IR::MAU::HashDist *StatefulAttachmentSetup::find_hash_dist(const IR::Expre
 void StatefulAttachmentSetup::Scan::setup_index_operand(const IR::Expression *index_expr,
         const IR::MAU::Synth2Port *synth2port, const IR::MAU::Table *tbl,
         const IR::MAU::StatefulCall *call) {
-    while (auto *c = index_expr->to<IR::Cast>()) {
-        index_expr = c->expr;
+    const IR::Expression* simpl_expr = nullptr;
+    std::vector<const IR::Expression*> expressions;
+    if (index_expr->is<IR::Concat>()) {
+        simpl_concat(expressions, index_expr->to<IR::Concat>());
+
+        if (expressions.size() == 1) {
+            simpl_expr = expressions.at(0);
+        } else {
+            ::error("Complex expression is not yet supported: %1%", index_expr);
+        }
+    } else {
+        simpl_expr = index_expr;
     }
 
     bool both_hash_and_index = false;
     auto index_check = std::make_pair(synth2port, tbl);
 
-    if (auto hd = self.find_hash_dist(index_expr, call->prim)) {
+    if (auto hd = self.find_hash_dist(simpl_expr, call->prim)) {
         HashDistKey hdk = std::make_pair(synth2port, tbl);
         if (self.update_hd[hdk] && !self.update_hd[hdk]->equiv(*hd)) {
             error("%sIncompatible attached indexing between actions in table %s",
                   call->prim->srcInfo, tbl->name); }
         self.update_hd[hdk] = hd;
-        index_expr = hd;
+        simpl_expr = hd;
         if (self.addressed_by_index.count(index_check))
             both_hash_and_index = true;
         self.addressed_by_hash.insert(index_check);
-    } else if (!index_expr->is<IR::Constant>() && !index_expr->is<IR::MAU::ActionArg>()) {
+    } else if (!simpl_expr->is<IR::Constant>() && !simpl_expr->is<IR::MAU::ActionArg>()) {
         ::error("%s: The index is too complex for the primitive to be handled.",
              call->prim->srcInfo);
     } else {
@@ -841,7 +868,7 @@ void StatefulAttachmentSetup::Scan::setup_index_operand(const IR::Expression *in
                 "which cannot be supported.", call->prim->srcInfo, synth2port, tbl); }
 
     StatefulCallKey sck = std::make_pair(call, tbl);
-    self.update_calls[sck] = index_expr;
+    self.update_calls[sck] = simpl_expr;
 }
 
 /** This pass was specifically created to deal with adding the HashDist object to different
@@ -958,13 +985,6 @@ bool MeterSetup::Scan::preorder(const IR::MAU::Instruction *) {
     return false;
 }
 
-const IR::Expression *MeterSetup::Scan::convert_cast_to_slice(const IR::Expression *expr) {
-    if (auto c = expr->to<IR::Cast>()) {
-        return convert_cast_to_slice(MakeSlice(c->expr, 0, c->type->width_bits() - 1));
-    }
-    return expr;
-}
-
 void MeterSetup::Scan::find_input(const IR::Primitive *prim) {
     int input_index = input_operand(prim);
     if (input_index == -1)
@@ -1020,7 +1040,7 @@ void MeterSetup::Scan::find_pre_color(const IR::Primitive *prim) {
     }
 
     auto pre_color = prim->operands[pre_color_index];
-    pre_color = convert_cast_to_slice(pre_color);
+    // pre_color = convert_cast_to_slice(pre_color);
     auto *field = self.phv.field(pre_color);
     BUG_CHECK(field, "%s: Not a phv field in the lpf execute: %s", prim->srcInfo, field->name);
 
@@ -1121,122 +1141,6 @@ void DLeftSetup::postorder(IR::MAU::BackendAttached *ba) {
 }
 #endif
 
-const IR::MAU::Instruction *ConvertCastToSlice::preorder(IR::MAU::Instruction *instr) {
-    BUG_CHECK(findContext<IR::MAU::Instruction>() == nullptr, "nested instructions");
-    contains_cast = false;
-    return instr;
-}
-
-/** Currently because of AttachedOutputs, StatefulAlus appear in the code.  Only changes
- *  to the IR and TableDependency will elimintate the need for this preorder
- */
-const IR::MAU::SaluAction *ConvertCastToSlice::preorder(IR::MAU::SaluAction *sact) {
-    prune();
-    return sact;
-}
-
-/**
- *  FIXME: a small hack on converting casts in slices to just slices, which should have really
- *  been taken care of in the midend
- */
-const IR::Expression *ConvertCastToSlice::preorder(IR::Slice *sl) {
-    if (auto *c = sl->e0->to<IR::Cast>()) {
-        BUG_CHECK(c->expr->type->width_bits() >=  int(sl->getH() - sl->getL() + 1),
-                  "Slice of a cast that is larger than the cast");
-        return MakeSlice(c->expr, sl->getL(), sl->getH());
-    }
-    return sl;
-}
-
-/**
- *  FIXME: Quick fix in order for mirror_test to be correct.  This should be handled in the
- *  midend way before this
- */
-const IR::Node *ConvertCastToSlice::preorder(IR::Cast *c) {
-    contains_cast = true;
-    auto *upper_cast = findContext<IR::Cast>();
-    if (upper_cast == nullptr) {
-        return c;
-    } else {
-        return c->expr;
-    }
-}
-
-/** The goal of this particular function is to remove all final casts from any particular backend
- *  instruction, and if the particular instruction is an assignment of mismatched fields, then
- *  properly convert this into the correct field by field instructions.  Currently the compiler
- *  will print out a warning if the action contains fields and parameters that do not have the
- *  same size, but will continue.  Unfortunately, I have to do this as switch-l2 will fail at
- *  this point if this is not the case.
- */
-const IR::Node *ConvertCastToSlice::postorder(IR::MAU::Instruction *instr) {
-    if (!contains_cast)
-        return instr;
-
-    auto converted_instrs = new IR::Vector<IR::Primitive>();
-
-    if (instr->name != "set") {
-        bool size_set = false;
-        bool all_equal = true;
-        auto s1 = new IR::MAU::Instruction(instr->srcInfo, instr->name);
-        int operand_size = 0;
-        for (auto operand : instr->operands) {
-            auto expr = operand;
-            if (auto c = operand->to<IR::Cast>()) {
-                expr = c->expr;
-                // If it's a downcast for source for add/sub, we can add slice for them.
-                if (size_set && expr->type->width_bits() > operand_size
-                    && (instr->name == "add" || instr->name == "sub")
-                    && c->destType) {
-                    if (auto* type_bits = c->destType->to<IR::Type_Bits>()) {
-                        if (type_bits->width_bits() == operand_size) {
-                            expr = MakeSlice(expr, 0, operand_size - 1);
-                        }
-                    }
-                }
-            }
-            if (!size_set) {
-                size_set = true;
-                operand_size = expr->type->width_bits();
-            } else if (operand_size != expr->type->width_bits()) {
-                all_equal = false;
-            }
-            s1->operands.push_back(expr);
-        }
-
-        WARN_CHECK(all_equal, "%s: Currently the Barefoot HW compiler cannot handle any non "
-                   "direct assignment instruction that has missized rvalues.  Please rewrite "
-                   "so that all parameters are of the same size -- %s", instr->srcInfo, instr);
-        return s1;
-    }
-    BUG_CHECK(instr->operands.size() == 2, "Set instruction does not two operands?");
-    auto write = instr->operands[0];
-    auto read_cast = instr->operands[1]->to<IR::Cast>();
-    BUG_CHECK(read_cast != nullptr, "%s: ConvertCastToSlice pass does not have read IR::Cast -- "
-                                    "%s", instr->srcInfo, instr);
-    auto read = read_cast->expr;
-    if (write->type->width_bits() == read->type->width_bits()) {
-        auto s1 = new IR::MAU::Instruction(instr->srcInfo, instr->name, write, read);
-        converted_instrs->push_back(s1);
-    } else if (write->type->width_bits() < read->type->width_bits()) {
-        auto s1 = new IR::MAU::Instruction(instr->srcInfo, instr->name, write,
-                                           MakeSliceSource(read, 0, write->type->width_bits() - 1,
-                                               write));
-        converted_instrs->push_back(s1);
-    } else {
-        auto difference = write->type->width_bits() - read->type->width_bits();
-        auto s1 = new IR::MAU::Instruction(instr->srcInfo, instr->name,
-                                           MakeSliceDestination(write, 0, read->type->width_bits() -
-                                           1), read);
-        auto s2 = new IR::MAU::Instruction(instr->srcInfo, instr->name,
-                                           MakeSliceDestination(write, read->type->width_bits(),
-                                                     write->type->width_bits() - 1),
-                                           new IR::Constant(IR::Type::Bits::get(difference), 0));
-        converted_instrs->push_back(s1);
-        converted_instrs->push_back(s2);
-    }
-    return converted_instrs;
-}
 
 struct CheckInvalidate : public Inspector {
     explicit CheckInvalidate(const PhvInfo& phv) : phv(phv) { }
@@ -1837,7 +1741,6 @@ InstructionSelection::InstructionSelection(const BFN_Options& options, PhvInfo &
     new UnimplementedRegisterMethodCalls,
     new Synth2PortSetup(phv),
     new DoInstructionSelection(options, phv),
-    new ConvertCastToSlice,
     new StatefulAttachmentSetup(phv),
     new MeterSetup(phv),
     // new DLeftSetup,

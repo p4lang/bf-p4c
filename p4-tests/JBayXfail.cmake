@@ -77,6 +77,7 @@ p4c_add_xfail_reason("tofino2"
   testdata/p4_14_samples/08-FullTPHV3.p4
   switch_dc_basic
   switch_ent_dc_general
+  switch_dc_basic
 )
 
 p4c_add_xfail_reason("tofino2"
@@ -180,7 +181,7 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "Can only output full phv registers, not slices, in deparser"
+  "This program violates action constraints imposed by Tofino2"
   extensions/p4_tests/p4_16/int_transit.p4
 )
 
@@ -296,3 +297,9 @@ p4c_add_xfail_reason("tofino2"
   "error.*Ran out of constant output slots"
   extensions/p4_tests/p4_14/metadata_mutex_1.p4
 )
+
+p4c_add_xfail_reason("tofino2"
+  "The following operation is not yet supported"
+  testdata/p4_14_samples/issue-1559.p4	
+)
+

@@ -30,7 +30,31 @@ class GenerateDeparser : public Inspector {
 
     void generateDigest(IR::BFN::Digest *&digest, cstring name,
                         const IR::Expression *list, cstring controlPlaneName = nullptr);
-    bool equiv(const IR::Expression *a, const IR::Expression *b) const;
+    void simpl_concat(std::vector<const IR::Expression*>& slices, const IR::Concat* expr) {
+        if (expr->left->is<IR::Constant>()) {
+            slices.push_back(expr->left);
+        } else if (auto lhs = expr->left->to<IR::Concat>()) {
+            simpl_concat(slices, lhs);
+        } else {
+            slices.push_back(expr->left); }
+
+        if (expr->right->is<IR::Constant>()) {
+            slices.push_back(expr->right);
+        } else if (auto rhs = expr->right->to<IR::Concat>()) {
+            simpl_concat(slices, rhs);
+        } else {
+            slices.push_back(expr->right); } }
+
+    void process_concat(IR::Vector<IR::BFN::FieldLVal>& vec, const IR::Concat* expr) {
+        std::vector<const IR::Expression *> slices;
+        simpl_concat(slices, expr);
+        for (auto *item : slices) {
+            if (item->is<IR::Constant>()) {
+                ::warning("Tofino does not support emitting constant %1% "
+                          "in digest, skipped", item);
+                continue; }
+            vec.push_back(new IR::BFN::FieldLVal(item)); }
+    }
 
     bool preorder(const IR::Declaration_Instance *decl) override {
         nameMap.emplace(decl->name.name, decl->controlPlaneName());
@@ -202,11 +226,19 @@ void GenerateDeparser::generateDigest(IR::BFN::Digest *&digest, cstring name,
     if (!expr) {
         // Treat as an empty list.
     } else if (auto* list = expr->to<const IR::Vector<IR::Expression>>()) {
-        for (auto* item : *list)
-            sources.push_back(new IR::BFN::FieldLVal(item));
+        for (auto* item : *list) {
+            if (item->is<IR::Concat>()) {
+                process_concat(sources, item->to<IR::Concat>());
+            } else {
+                sources.push_back(new IR::BFN::FieldLVal(item)); }
+        }
     } else if (auto* list = expr->to<IR::ListExpression>()) {
-        for (auto* item : list->components)
-            sources.push_back(new IR::BFN::FieldLVal(item));
+        for (auto* item : list->components) {
+            if (item->is<IR::Concat>()) {
+                process_concat(sources, item->to<IR::Concat>());
+            } else {
+                sources.push_back(new IR::BFN::FieldLVal(item)); }
+        }
     } else if (auto *ref = expr->to<IR::ConcreteHeaderRef>()) {
         if (auto *st = expr->type->to<IR::Type_StructLike>()) {
             for (auto *item : st->fields) {
@@ -214,10 +246,14 @@ void GenerateDeparser::generateDigest(IR::BFN::Digest *&digest, cstring name,
             }
         }
     } else if (auto* initializer = expr->to<IR::StructInitializerExpression>()) {
-        for (auto *item : initializer->components)
-            sources.push_back(new IR::BFN::FieldLVal(item->expression));
+        for (auto *item : initializer->components) {
+            if (item->expression->is<IR::Concat>()) {
+                process_concat(sources, item->expression->to<IR::Concat>());
+            } else {
+                sources.push_back(new IR::BFN::FieldLVal(item->expression)); }
+        }
     } else {
-        sources.push_back(new IR::BFN::FieldLVal(expr));
+            sources.push_back(new IR::BFN::FieldLVal(expr));
     }
 
     auto* fieldList = new IR::BFN::DigestFieldList(digest_index, sources, controlPlaneName);

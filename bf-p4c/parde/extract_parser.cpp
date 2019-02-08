@@ -609,11 +609,10 @@ struct RewriteParserStatements : public Transform {
         if (s->left->type->is<IR::Type::Varbits>())
             P4C_UNIMPLEMENTED("Parser writes to varbits values are not yet supported.");
 
-        // Peel off any Cast expression. This accepts more programs than we can
-        // actually implement; some casts can't be performed at parse time.
         auto rhs = s->right;
-        if (rhs->is<IR::Cast>())
-            rhs = rhs->to<IR::Cast>()->expr;
+        // no bits are lost by throwing away IR::BFN::ReinterpretCast.
+        if (rhs->is<IR::BFN::ReinterpretCast>())
+            rhs = rhs->to<IR::BFN::ReinterpretCast>()->expr;
 
         if (auto mc = rhs->to<IR::MethodCallExpression>()) {
             if (auto* method = mc->method->to<IR::Member>()) {
@@ -772,6 +771,9 @@ GetBackendParser::rewriteSelectExpr(const IR::Expression* selectExpr, int bitShi
             }
         }
     }
+    BUG_CHECK(!selectExpr->is<IR::Constant>(), "%1% constant selection expression %2% "
+                                               "should have been eliminated by now.",
+                                               selectExpr->srcInfo, selectExpr);
 
     // We can split a Concat into multiple selects. Note that this is quite
     // unlike a Slice; the Concat operands may not even be adjacent in the input

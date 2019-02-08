@@ -1228,7 +1228,7 @@ class ConstructSymbolTable : public Inspector {
     }
 
     /// execute_meter_with_color is converted to a meter extern
-    void cvtExecuteMeterFunctiion(const IR::MethodCallStatement *node) {
+    void cvtExecuteMeterFunction(const IR::MethodCallStatement *node) {
         auto control = findContext<IR::P4Control>();
         ERROR_CHECK(control != nullptr,
                   "execute_meter_with_color() must be used in a control block");
@@ -1456,6 +1456,26 @@ class ConstructSymbolTable : public Inspector {
         } else {
             structure->egressDeclarations.push_back(randInst->to<IR::Declaration>());
         }
+    }
+
+    void cvtRecirculateRawFunction(const IR::MethodCallStatement *node) {
+        auto control = findContext<IR::P4Control>();
+        ERROR_CHECK(control != nullptr, "random() must be used in a control block");
+        const bool isIngress =
+                (control->name == structure->getBlockName(ProgramStructure::INGRESS));
+        auto mce = node->methodCall->to<IR::MethodCallExpression>();
+        BUG_CHECK(mce != nullptr, "Malformed IR: method call expression cannot be nullptr");
+        IR::PathExpression *tm_meta = new IR::PathExpression("ig_intr_md_for_tm");
+        auto egress_spec = new IR::Member(tm_meta, "ucast_egress_port");
+        IR::PathExpression *intr_meta = new IR::PathExpression("ig_intr_md");
+        auto ingress_port = new IR::Member(intr_meta, "ingress_port");
+
+        auto stmts = new IR::IndexedVector<IR::StatOrDecl>();
+        stmts->push_back(new IR::AssignmentStatement(new IR::Slice(egress_spec, 6, 0),
+                new IR::Slice(mce->arguments->at(0)->expression, 6, 0)));
+        stmts->push_back(new IR::AssignmentStatement(new IR::Slice(egress_spec, 8, 7),
+                new IR::Slice(ingress_port, 8, 7)));
+        structure->_map.emplace(node, stmts);
     }
 
     void implementUpdateChecksum(const IR::MethodCallStatement* uc,
@@ -1857,7 +1877,9 @@ class ConstructSymbolTable : public Inspector {
                        name == "update_checksum_with_payload") {
                 cvtUpdateChecksum(node, name);
             } else if (name == "execute_meter_with_color") {
-                cvtExecuteMeterFunctiion(node);
+                cvtExecuteMeterFunction(node);
+            } else if (name == "recirculate_raw") {
+                cvtRecirculateRawFunction(node);
             }
         }
     }

@@ -172,7 +172,6 @@ p4c_add_xfail_reason("tofino"
 # Fails due to complex expressions in the parser that our hardware can't support.
 p4c_add_xfail_reason("tofino"
   "error: Assignment cannot be supported in the parser"
-  testdata/p4_14_samples/axon.p4
   testdata/p4_16_samples/array-copy-bmv2.p4
   testdata/p4_16_samples/issue281.p4
   testdata/p4_16_samples/issue737-bmv2.p4
@@ -245,6 +244,9 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
+  ../glass/testsuite/p4_tests/phv/COMPILER-243/comp243.p4
+  ../glass/testsuite/p4_tests/phv/COMPILER-546/switch_comp546.p4
+  ../glass/testsuite/p4_tests/mau/COMPILER-362/icmp_typecode.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -252,6 +254,7 @@ p4c_add_xfail_reason("tofino"
   switch_8.5_ent_fin_postcard
   switch_ent_fin_postcard
   switch_generic_int_leaf
+  ../glass/testsuite/p4_tests/phv/COMPILER-587/l4l.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -271,6 +274,8 @@ p4c_add_xfail_reason("tofino"
   switch_msdc_leaf_int
   switch_8.5_msdc_leaf_int
   switch_8.5_l3_heavy_int_leaf
+  ../glass/testsuite/p4_tests/phv/COMPILER-724/comp_724.p4
+  ../glass/testsuite/p4_tests/phv/COMPILER-891/comp_891.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -382,6 +387,7 @@ p4c_add_xfail_reason("tofino"
 #   extensions/p4_tests/p4_14/c1/COMPILER-235/vag1662.p4
   testdata/p4_14_samples/12-Counters.p4
   testdata/p4_14_samples/13-Counters1and2.p4
+  ../glass/testsuite/p4_tests/mau/COMPILER-1068/comp_1068.p4 
   )
 
 p4c_add_xfail_reason("tofino"
@@ -558,7 +564,6 @@ p4c_add_xfail_reason("tofino"
   "source of modify_field invalid"
   testdata/p4_16_samples/arith1-bmv2.p4
   testdata/p4_16_samples/arith2-bmv2.p4
-  testdata/p4_16_samples/concat-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -606,11 +611,6 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "warning: : Currently the Barefoot HW compiler cannot handle any non direct assignment instruction that has missized rvalues"
-  extensions/p4_tests/p4_16/cast_widening_add.p4
-  )
-
-p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   testdata/p4_14_samples/05-FullTPHV.p4
   testdata/p4_14_samples/06-FullTPHV1.p4
@@ -630,13 +630,16 @@ p4c_add_xfail_reason("tofino"
 
   # Expected to fail, which means that constraint conflicts are being correctly detected.
   extensions/p4_tests/p4_14/mau_test_neg_test.p4
-  ../glass/testsuite/p4_tests/phv/COMPILER-724/comp_724.p4
   ../glass/testsuite/p4_tests/parde/COMPILER-612/leaf.p4
   #extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case1.p4
   #extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case2.p4
   #extensions/p4_tests/p4_14/c5/COMPILER-594/comp594.p4
   #extensions/p4_tests/p4_14/c3/COMPILER-393/case2277.p4
   #extensions/p4_tests/p4_14/c1/COMPILER-347/switch_bug.p4
+
+  ../glass/testsuite/p4_tests/phv/COMPILER-1065/comp_1065.p4
+  extensions/p4_tests/p4_14/03-VlanProfile.p4
+  extensions/p4_tests/p4_14/01-FlexCounter.p4
   )
 
 # Errors because pa_container_size pragmas used in these tests cannot be satisfy all constraints.
@@ -644,7 +647,6 @@ p4c_add_xfail_reason("tofino"
   "No way to slice the following to satisfy @pa_container_size"
   extensions/p4_tests/p4_14/c1/COMPILER-954/case5730.p4
   )
-
 
 # We can't (without some complex acrobatics) support conditional computed
 # checksums on Tofino. In P4-14, these are operations of the form:
@@ -700,8 +702,6 @@ p4c_add_xfail_reason("tofino"
 # parde physical adjacency constraint violated by mau phv_no_pack constraint
 p4c_add_xfail_reason("tofino"
   "Header field .* is required to be allocated contiguously"
-  extensions/p4_tests/p4_14/01-FlexCounter.p4
-  extensions/p4_tests/p4_14/03-VlanProfile.p4
   extensions/p4_tests/p4_14/19-SimpleTrill.p4
   )
 
@@ -721,10 +721,8 @@ p4c_add_xfail_reason("tofino"
 
 #END: XFAILS that match glass XFAILS
 
-# This code contains an implicit cast in an assignment in the parser; we need to
-# convert it into a slice instead of just ignoring the cast.
 p4c_add_xfail_reason("tofino"
-  "Inferred incompatible alignments for field .*"
+  "The table .* with no key cannot have the action .*"
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
 )
 
@@ -782,9 +780,7 @@ p4c_add_xfail_reason("tofino"
 # PHV allocation.
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
-  extensions/p4_tests/p4_14/03-VlanProfile.p4
   extensions/p4_tests/p4_14/19-SimpleTrill.p4
-  extensions/p4_tests/p4_14/01-FlexCounter.p4
   # extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   )
 
@@ -797,11 +793,11 @@ p4c_add_xfail_reason("tofino"
 #   extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
 #   )
 
+# STF test failure
 p4c_add_xfail_reason("tofino"
-  "Operands of arithmetic operations cannot be greater than 32b, but field .* has .*"
+  "mismatch from .* at byte .*"
   testdata/p4_16_samples/arith-bmv2.p4
-  )
-
+)
 
 p4c_add_xfail_reason("tofino"
   "The action .* manipulates field .* that requires multiple stages from an action"
@@ -834,11 +830,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "the packing is too complicated .* speciality action data combined with other action data"
-  extensions/p4_tests/p4_14/hash_calculation_max_size.p4
-  )
-
-p4c_add_xfail_reason("tofino"
   "Unimplemented compiler support.*: Currently the compiler only supports allocation of meter color destination field"
   testdata/p4_14_samples/meter.p4
   testdata/p4_14_samples/meter1.p4
@@ -859,6 +850,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Currently in p4c, the table .* cannot perform a range match on key .* as the key does not fit in under 5 PHV nibbles"
   extensions/p4_tests/p4_14/p4smith_regression/basseterre_0.p4
+  ../glass/testsuite/p4_tests/phv/COMPILER-828/meta_init_problem.p4
   )
 
 # This test is expected to fail (for now) because it includes multiple writes
@@ -912,24 +904,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4smith_regression/grab_0.p4
   testdata/p4_16_samples/issue1544-1-bmv2.p4
   testdata/p4_16_samples/issue1544-2-bmv2.p4
-)
-
-# BRIG-651
-p4c_add_xfail_reason("tofino"
-  "PHV read has no allocation"
-  extensions/p4_tests/p4_14/p4smith_regression/clue_0.p4
-)
-
-# BRIG-652
-p4c_add_xfail_reason("tofino"
-  "error: No phv record gaff.craftspeople"
-  extensions/p4_tests/p4_14/p4smith_regression/injection_0.p4
-)
-
-# BRIG-654
-p4c_add_xfail_reason("tofino"
-  "Two containers in the same action are at the same place?"
-  extensions/p4_tests/p4_14/p4smith_regression/selenium_0.p4
 )
 
 # BRIG-678
@@ -1012,6 +986,10 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Unimplemented compiler support.*: Cannot extract to a field slice in the parser"
   extensions/p4_tests/p4_16/extract_slice.p4
+  ../glass/testsuite/p4_tests/phv/COMPILER-423/diag_power.p4
+  ../glass/testsuite/p4_tests/mau/COMPILER-702/comp_702.p4
+  ../glass/testsuite/p4_tests/mau/COMPILER-710/comp_710.p4
+  ../glass/testsuite/p4_tests/parde/COMPILER-612/leaf.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1110,14 +1088,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/perusal_0.p4
 )
 
-# P4C-305
-p4c_add_xfail_reason("tofino"
-  "No casts should ever reach this point in the Tofino backend"
-  extensions/p4_tests/p4_14/p4smith_regression/clue_0.p4
-  fabric-new-DWITH_INT_TRANSIT
-  fabric-new-DWITH_SPGW-DWITH_INT_TRANSIT
-)
-
 # Negative test
 p4c_add_xfail_reason("tofino"
   "error: mirror.emit: requires two arguments: mirror_id and field_list"
@@ -1165,6 +1135,11 @@ p4c_add_xfail_reason("tofino"
 # same.
   switch_msdc_l3
   switch_8.5_msdc_l3
+  fabric-DWITH_INT_TRANSIT
+  fabric-DWITH_SPGW-DWITH_INT_TRANSIT
+  extensions/p4_tests/p4_16/int_transit.p4
+  ../glass/testsuite/p4_tests/mau/COMPILER-970/comp_970.p4
+  ../glass/testsuite/p4_tests/mau/COMPILER-968/comp_968.p4
 )
 
 # Negative test. Constant extractor destination whose sources need more than 3 bits to express must
@@ -1181,9 +1156,18 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "source of modify_field invalid"
-  testdata/p4_16_samples/strength3.p4
+  "The table .* with no key cannot have the action .*"
+  extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Slice is of IR structure not handled by ActionAnalysis"
   testdata/p4_16_samples/strength4.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "invalid slice on slice"
+  testdata/p4_16_samples/strength3.p4
 )
 
 # p4runtime issue with flattenHeaders pass
@@ -1197,6 +1181,11 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Compiler Bug.*FieldLVal contains unexpected value"
   extensions/p4_tests/p4_16/serializer2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Could not find declaration for b"
+  testdata/p4_16_samples/issue1660-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1266,23 +1255,15 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/phv/COMPILER-679/case3769.p4
   )
 
-# P4C-1373
-p4c_add_xfail_reason("tofino"
-  "Mismatch of memory ways and ixbar ways"
-  ../glass/testsuite/p4_tests/phv/COMPILER-423/diag_power.p4
-  )
-
 # P4C-1299
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   ../glass/testsuite/p4_tests/phv/COMPILER-136/06-FullTPHV1.p4
-  ../glass/testsuite/p4_tests/mau/COMPILER-628/case3431.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-464/scrab.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-465/tridacna-v2.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-465/tridacna.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-729/ipu.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-961/jk_msdc.p4
-  ../glass/testsuite/p4_tests/phv/COMPILER-1065/comp_1065.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-1094/comp_1094.p4
   ../glass/testsuite/p4_tests/c2/COMPILER-443/case2514.p4
 # bigger problem is that the container conflict free table placement is 15 stages for the following
@@ -1303,7 +1284,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error.*Can't split table.*with indirect attached MAU::StatefulAlu"
   ../glass/testsuite/p4_tests/mau/test_config_174_stateful_flow_learning.p4
-  ../glass/testsuite/p4_tests/phv/COMPILER-587/l4l.p4
   )
 
 # Valid XFAIL
@@ -1364,12 +1344,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/mau/test_config_313_neg_test_addr_modes.p4
   )
 
-p4c_add_xfail_reason("tofino"
-  "the packing is too complicated .* speciality action data combined with other action data"
-  ../glass/testsuite/p4_tests/mau/test_config_96_hash_data.p4
-  ../glass/testsuite/p4_tests/mau/test_config_295_polynomial_hash.p4
-  )
-
 # Existing p4lang/p4c issue
 p4c_add_xfail_reason("tofino"
   "error: int<1>: Signed types cannot be 1-bit wide"
@@ -1415,12 +1389,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error.*To fit hash destinations in less than 4 immediate bytes"
   ../glass/testsuite/p4_tests/mau/test_config_311_hash_adb.p4
-  )
-
-# P4C-599
-p4c_add_xfail_reason("tofino"
-  "The following operation is not yet supported"
-  ../glass/testsuite/p4_tests/mau/test_config_235_funnel_shift.p4
   )
 
 # P4C-1385
@@ -1558,30 +1526,14 @@ p4c_add_xfail_reason("tofino"
 # P4C-1393
 p4c_add_xfail_reason("tofino"
   "error.*This program violates action constraints imposed by Tofino."
-  ../glass/testsuite/p4_tests/mau/COMPILER-968/comp_968.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-728/ipu.p4
-  ../glass/testsuite/p4_tests/mau/COMPILER-970/comp_970.p4
   ../glass/testsuite/p4_tests/c1/COMPILER-1114/case8156.p4
-  )
-
-# P4C-1394
-p4c_add_xfail_reason("tofino"
-  "error.*tofino supports up to 12 stages"
-  ../glass/testsuite/p4_tests/phv/COMPILER-546/switch_comp546.p4
-  ../glass/testsuite/p4_tests/phv/COMPILER-243/comp243.p4
   )
 
 # P4C-1395
 p4c_add_xfail_reason("tofino"
   "Inferred incompatible alignments for field .*"
   ../glass/testsuite/p4_tests/phv/COMPILER-908/compiler-908.p4
-  )
-
-# P4C-992
-p4c_add_xfail_reason("tofino"
-  "stage should only decrease"
-  ../glass/testsuite/p4_tests/phv/COMPILER-891/comp_891.p4
-  ../glass/testsuite/p4_tests/phv/COMPILER-828/meta_init_problem.p4
   )
 
 # P4C-1214
@@ -1628,26 +1580,22 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/mau/COMPILER-814/comp_814.p4
   )
 
-
-# 1403
+# P4C-1404
 p4c_add_xfail_reason("tofino"
-  "PHV allocation creates a container action impossible within a Tofino ALU"
-  ../glass/testsuite/p4_tests/phv/COMPILER-706/terminate_parsing.p4
+  "Different POV bit found"
+  ../glass/testsuite/p4_tests/mau/COMPILER-815/int_heavy.p4
   )
 
-# P4C-923
 p4c_add_xfail_reason("tofino"
-  "error: ALU ops cannot operate on slices"
-  ../glass/testsuite/p4_tests/mau/test_config_394_execute_meter_with_or_for_drop.p4
-  ../glass/testsuite/p4_tests/mau/test_config_373_execute_meter_with_or.p4
-  )
+  "Action bus byte .* used inconsistently for fields .* and immediate in table"
+  ../glass/testsuite/p4_tests/mau/COMPILER-615/ecmp_one.p4
+)
 
-# P4C-1405
+# no support for IR::BFN::SignExtend in action analysis
 p4c_add_xfail_reason("tofino"
-  "Field is extracted in the parser, but its first container slice has an incompatible alignment"
-  ../glass/testsuite/p4_tests/mau/COMPILER-710/comp_710.p4
-  ../glass/testsuite/p4_tests/mau/COMPILER-702/comp_702.p4
-  )
+  "IR structure not yet handled by the ActionAnalysis pass"
+  extensions/p4_tests/p4_16/brig-305.p4
+)
 
 # P4C doesn't support use_container_valid pragma?
 p4c_add_xfail_reason("tofino"
@@ -1659,4 +1607,45 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Unimplemented compiler support.*Currently the compiler does not support bridging field.*of type stack"
   testdata/p4_16_samples/subparser-with-header-stack-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+   "Assignment cannot be supported in the parser"
+   testdata/p4_14_samples/axon.p4
+)
+
+p4c_add_xfail_reason("tofino"
+   "FieldLVal contains unexpected value"
+   extensions/p4_tests/p4_16/serializer2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+   "PHV allocation creates a container action impossible within a Tofino ALU"
+  ../glass/testsuite/p4_tests/phv/COMPILER-706/terminate_parsing.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "IR structure not yet handled by the ActionAnalysis pass"
+  extensions/p4_tests/p4_16/cast_widening_add.p4
+  extensions/p4_tests/p4_16/test_config_4_cast_add.p4
+  ../glass/testsuite/p4_tests/c1/COMPILER-1113/case8138.p4
+  ../glass/testsuite/p4_tests/c1/COMPILER-1114/case8156.p4
+  ../glass/testsuite/p4_tests/mau/COMPILER-628/case3431.p4
+  ../glass/testsuite/p4_tests/mau/COMPILER-630/case3431b.p4
+  ../glass/testsuite/p4_tests/phv/COMPILER-961/jk_msdc.p4
+  extensions/p4_tests/p4_14/p4smith_regression/clue_0.p4
+  testdata/p4_16_samples/arith-bmv2.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-954/case5730.p4
+  ../glass/testsuite/p4_tests/c1/COMPILER-868/comp_868.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "The following operation is not yet supported"
+  ../glass/testsuite/p4_tests/mau/COMPILER-815/int_heavy.p4	
+  testdata/p4_14_samples/issue-1559.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "recursion failure"
+  extensions/p4_tests/p4_14/p4c-1429.p4	
 )

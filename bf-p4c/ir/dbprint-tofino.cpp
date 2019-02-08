@@ -363,3 +363,23 @@ void IR::BFN::Pipe::dbprint(std::ostream &out) const {
                      << thread[1].deparser << unindent;
 }
 
+// reinterpret_cast is still printed as cast, due to lack of P4 syntax.
+void IR::BFN::ReinterpretCast::dbprint(std::ostream &out) const {
+    int prec = getprec(out);
+    if (prec > Prec_Prefix) out << '(';
+    out << setprec(Prec_Prefix) << "(" << type << ")" << setprec(Prec_Prefix)
+        << expr << setprec(prec);
+    if (prec > Prec_Prefix) out << ')';
+    if (prec == 0) out << ';';
+}
+
+// sign_extend is still printed as cast, due to lack to P4 syntax.
+void IR::BFN::SignExtend::dbprint(std::ostream &out) const {
+    int prec = getprec(out);
+    if (prec > Prec_Prefix) out << '(';
+    out << setprec(Prec_Prefix) << "(" << type << ")" << setprec(Prec_Prefix)
+        << expr << setprec(prec);
+    if (prec > Prec_Prefix) out << ')';
+    if (prec == 0) out << ';';
+}
+

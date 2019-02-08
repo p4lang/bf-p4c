@@ -160,7 +160,7 @@ const PHV::Field *PhvInfo::field(const IR::Expression *e, le_bitrange *bits) con
         "Looking for PHV::Fields but found an IR::BFN::ContainerRef: %1%", e);
     if (auto *fr = e->to<IR::Member>())
         return field(fr, bits);
-    if (auto *cast = e->to<IR::Cast>())
+    if (auto *cast = e->to<IR::BFN::ReinterpretCast>())
         return field(cast->expr, bits);
     if (auto *sl = e->to<IR::Slice>()) {
         auto *rv = field(sl->e0, bits);

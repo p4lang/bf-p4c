@@ -144,6 +144,8 @@ class StatefulAttachmentSetup : public PassManager {
         void setup_index_operand(const IR::Expression *index_expr,
             const IR::MAU::Synth2Port *synth2port, const IR::MAU::Table *tbl,
             const IR::MAU::StatefulCall *call);
+        void simpl_concat(std::vector<const IR::Expression*>& slices,
+                          const IR::Concat* concat);
 
      public:
         explicit Scan(StatefulAttachmentSetup &self) : self(self) {}
@@ -369,15 +371,6 @@ class SetupAttachedAddressing : public PassManager {
             new UpdateAttached(*this)
         });
     }
-};
-
-class ConvertCastToSlice : public MauTransform, P4WriteContext {
-    bool contains_cast = false;
-    const IR::MAU::Instruction *preorder(IR::MAU::Instruction *) override;
-    const IR::Expression *preorder(IR::Slice *) override;
-    const IR::Node *preorder(IR::Cast *) override;
-    const IR::MAU::SaluAction *preorder(IR::MAU::SaluAction *) override;
-    const IR::Node *postorder(IR::MAU::Instruction *) override;
 };
 
 class InstructionSelection : public PassManager {

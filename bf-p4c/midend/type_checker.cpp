@@ -48,6 +48,42 @@ const IR::Node *TypeInference::postorder(IR::BFN::Type_StructFlexible *type) {
 }
 
 /**
+ * IR class to represent sign conversion from bit<n> to int<n>, or vice versa.
+ */
+const IR::Node* TypeInference::postorder(IR::BFN::ReinterpretCast *expression) {
+    if (done()) return expression;
+    const IR::Type* sourceType = getType(expression->expr);
+    const IR::Type* castType = getTypeType(expression->destType);
+    if (sourceType == nullptr || castType == nullptr)
+        return expression;
+    if (!castType->is<IR::Type_Bits>()) {
+        ::error("%1%: cast not supported", expression->destType);
+        return expression;
+    }
+    setType(expression, castType);
+    setType(getOriginal(), castType);
+    return expression;
+}
+
+/**
+ * IR class to represent the sign extension for int<n> type.
+ */
+const IR::Node* TypeInference::postorder(IR::BFN::SignExtend *expression) {
+    if (done()) return expression;
+    const IR::Type* sourceType = getType(expression->expr);
+    const IR::Type* castType = getTypeType(expression->destType);
+    if (sourceType == nullptr || castType == nullptr)
+        return expression;
+    if (!castType->is<IR::Type_Bits>()) {
+        ::error("%1%: cast not supported", expression->destType);
+        return expression;
+    }
+    setType(expression, castType);
+    setType(getOriginal(), castType);
+    return expression;
+}
+
+/**
  * Overrides the default implementation in frontend to add support
  * for IR::BFN::Type_StructFlexible.
  */
@@ -110,6 +146,9 @@ const IR::Type* TypeInference::canonicalize(const IR::Type* type) {
         return P4::TypeInference::canonicalize(type);
     }
 }
+
+TypeInference* TypeInference::clone() const {
+    return new TypeInference(refMap, typeMap, true); }
 
 // it might be better to allow frontend TypeChecking class to use
 // custom TypeInference pass.

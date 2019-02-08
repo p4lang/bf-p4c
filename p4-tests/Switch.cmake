@@ -117,7 +117,7 @@ p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
          ^switch_tests.QoSTest
          ^switch_hostif.HostIfPingTest
          ^switch_hostif.HostIfRxTest
-         ^switch_tests.L2LagTest")
+	 ^switch_tests.L2LagTest")
  p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_HostIfPingTest" ${SWITCH_P4_16}
    "${testExtraArgs} -bfrt -to 3600" ${SWITCH_P4_16_PTF})
  bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_HostIfPingTest"

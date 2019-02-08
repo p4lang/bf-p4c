@@ -340,6 +340,28 @@ class HashListExpression : IR::ListExpression {
 }
 
 /**
+ * We specialize the cast that only perform sign conversion to a separate
+ * reinterpret_cast class. Reinterpreset_cast is handled in the backend. Other
+ * types of cast are eliminated in the midend. */
+class BFN::ReinterpretCast : Operation_Unary {
+    Type destType = type;
+    precedence = DBPrint::Prec_Prefix;
+    stringOp = "(reinterpret_cast)";
+    toString{ return "reinterpret_cast"; }
+    validate{ BUG_CHECK(!destType->is<Type_Unknown>(), "%1%: Cannot cast to unknown type", this); }
+}
+
+/** We specialize the cast that perform sign extension with a separate sign_extend_cast
+ * class. Sign_extend is handled in the backend. */
+class BFN::SignExtend : Operation_Unary {
+    Type destType = type;
+    precedence = DBPrint::Prec_Prefix;
+    stringOp = "(sign_extend)";
+    toString{ return "sign_extend"; }
+    validate{ BUG_CHECK(!destType->is<Type_Unknown>(), "%1%: Cannot cast to unknown type", this); }
+}
+
+/**
  * This class represents the flexible header that maybe optimized by the backend
  * with a different layout. It is used by bridging.
  * Since we do not have corresponding P4-syntax, we use the @flexible annotation
@@ -352,3 +374,4 @@ class BFN::Type_StructFlexible : IR::Type_StructLike {
 #nodbprint
     toString{ return cstring("struct ") + externalName(); }
 }
+

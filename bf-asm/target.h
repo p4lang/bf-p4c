@@ -100,6 +100,17 @@ class Target::Tofino : public Target {
         ::Tofino::regs_all_parser_egress                egress;
         ::Tofino::regs_all_parse_merge                  merge;
     };
+
+    // ingress_parser_regs
+    // memory
+    // ingress
+    // merge
+
+    // egress_parser_regs
+    // memory
+    // egress
+    // merge
+
     typedef ::Tofino::regs_match_action_stage_      mau_regs;
     struct                                          deparser_regs {
         typedef ::Tofino::regs_all_deparser_input_phase         _input;
@@ -180,10 +191,10 @@ class Target::JBay : public Target {
     };
     struct                                          parser_regs {
         typedef ::JBay::memories_parser_                _memory;
-        typedef ::JBay::regs_parser_ingress             _ingress;
-        typedef ::JBay::regs_parser_egress              _egress;
-        typedef ::JBay::regs_parser_main_               _main;
-        typedef ::JBay::regs_parse_merge                _merge;
+        typedef ::JBay::regs_parser_ingress             _ingress;  // [36]
+        typedef ::JBay::regs_parser_egress              _egress;   // [36]
+        typedef ::JBay::regs_parser_main_               _main;     // [9]
+        typedef ::JBay::regs_parse_merge                _merge;    // [1]
 
         ::JBay::memories_parser_                        memory[2];
         ::JBay::regs_parser_ingress                     ingress;
@@ -191,6 +202,19 @@ class Target::JBay : public Target {
         ::JBay::regs_parser_main_                       main[2];
         ::JBay::regs_parse_merge                        merge;
     };
+
+    // ingress_parser_regs
+    // memory
+    // ingress
+    // main
+    // merge
+
+    // egress_parser_regs
+    // memory
+    // egress
+    // main
+    // merge
+
     typedef ::JBay::regs_match_action_stage_        mau_regs;
     typedef ::JBay::regs_deparser                   deparser_regs;
     enum {

@@ -20,11 +20,14 @@ class TypeInference : public P4::TypeInference {
             P4::TypeInference(refMap, typeMap, readOnly),
             refMap(refMap), typeMap(typeMap) { }
 
-    const IR::Node* postorder(IR::BFN::Type_StructFlexible* field) override;
-    const IR::Node* postorder(IR::Type_Header* header) override;
+    const IR::Node* postorder(IR::BFN::Type_StructFlexible*) override;
+    const IR::Node* postorder(IR::BFN::ReinterpretCast*) override;
+    const IR::Node* postorder(IR::BFN::SignExtend*) override;
+    const IR::Node* postorder(IR::Type_Header*) override;
 
     // override the base class canonicalize method with support for new IR classes.
     const IR::Type* canonicalize(const IR::Type* type) override;
+    TypeInference* clone() const override;
 
  protected:
     const IR::Type* setTypeType(const IR::Type* type, bool learn = true) override;

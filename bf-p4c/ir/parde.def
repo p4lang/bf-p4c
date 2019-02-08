@@ -121,7 +121,8 @@ abstract ParserLVal {
     validate {
         CHECK_NULL(field);
         BUG_CHECK(field->is<IR::Member>() || field->is<IR::TempVar>() ||
-                  field->is<IR::Slice>() || field->is<IR::ConcreteHeaderRef>(),
+                  field->is<IR::Slice>() || field->is<IR::ConcreteHeaderRef>() ||
+                  field->is<IR::Concat>(),
                   "FieldLVal contains unexpected value: %1%", field);
     }
 

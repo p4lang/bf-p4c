@@ -274,7 +274,7 @@ void Parser::output(json::map & ctxt_json) {
     if (error_count > 0) return;
     tcam_row_use[INGRESS] = tcam_row_use[EGRESS] = PARSER_TCAM_DEPTH;
     SWITCH_FOREACH_TARGET(options.target,
-        auto *regs = new TARGET::parser_regs;
+        auto *regs = new TARGET::parser_regs;  // allocate more than parser_regs
         declare_registers(regs);
         write_config(*regs, ctxt_json["parser"]);
         gen_configuration_cache(*regs, ctxt_json["configuration_cache"]);
