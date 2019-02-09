@@ -818,9 +818,21 @@ class CollectPhvFields : public Inspector {
         int start = phv.by_id.size();
         phv.add_hdr(h->name.name, h->type, getGress(), false);
         int end = phv.by_id.size();
-        phv.simple_headers.emplace(
+
+        // Ensure that the header hasn't been seen before
+        auto it = std::find_if(phv.simple_headers.begin(),
+                      phv.simple_headers.end(),
+                      [&h](const std::pair<cstring, PhvInfo::StructInfo>& hdr)
+                      { return hdr.first == h->name.name; });
+        BUG_CHECK(it == phv.simple_headers.end(),
+            "Header %1% already seen!", h->name.name);
+
+        // Add the header to the simple_headers vector, as they
+        // are seen in the program order
+        phv.simple_headers.emplace_back(
             h->name.name,
             PhvInfo::StructInfo(false, getGress(), start, end - start));
+
         return false;
     }
 

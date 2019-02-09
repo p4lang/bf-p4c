@@ -891,7 +891,7 @@ class PhvInfo {
 
     /// Tracks the subset of `all_structs` that are only headers, not header stacks.
     // TODO: what about header unions?
-    std::map<cstring, StructInfo>       simple_headers;
+    std::vector<std::pair<cstring, StructInfo>>       simple_headers;
 
     /// Mapping from containers to the fields using those containers.
     std::map<PHV::Container, ordered_set<const PHV::Field *>> container_to_fields;

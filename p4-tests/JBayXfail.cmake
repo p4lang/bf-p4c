@@ -276,6 +276,7 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "Compiler Bug.*Total size of containers used for POV allocation is.*"
   switch_msdc
+  switch_ent_dc_general
 )
 
 p4c_add_xfail_reason("tofino2"
