@@ -1338,6 +1338,7 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/mau/test_config_336_ram_array_priority.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-572/hct.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-268/netflow_3.p4
+  ../glass/testsuite/p4_tests/mau/COMPILER-1126/comp_1126.p4
   )
 
 # P4C-1384
