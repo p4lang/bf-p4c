@@ -75,12 +75,8 @@ p4c_add_xfail_reason("tofino2"
   testdata/p4_14_samples/06-FullTPHV1.p4
   testdata/p4_14_samples/07-FullTPHV2.p4
   testdata/p4_14_samples/08-FullTPHV3.p4
-  switch_dc_basic
-)
-
-p4c_add_xfail_reason("tofino2"
-  "Compiler Bug.*Total size of containers used for POV allocation is.*"
   switch_ent_dc_general
+  switch_dc_basic
 )
 
 p4c_add_xfail_reason("tofino2"
@@ -271,12 +267,6 @@ p4c_add_xfail_reason("tofino2"
   testdata/p4_14_samples/simple_nat.p4
   # truncate is not supported in jna
   testdata/p4_14_samples/truncate.p4
-)
-
-p4c_add_xfail_reason("tofino2"
-  "Compiler Bug.*Total size of containers used for POV allocation is.*"
-  switch_msdc
-  switch_ent_dc_general
 )
 
 p4c_add_xfail_reason("tofino2"

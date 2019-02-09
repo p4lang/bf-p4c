@@ -2545,15 +2545,15 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
         if (Device::currentDevice() == Device::JBAY) {
             if (has_container_type_pragma.count(l) != has_container_type_pragma.count(r)) {
                 return has_container_type_pragma.count(l) > has_container_type_pragma.count(r); } }
+        if (Device::currentDevice() == Device::JBAY)
+            if (has_pov.count(l) != has_pov.count(r))
+                return has_pov.count(l) > has_pov.count(r);
         if (has_no_pack.count(l) != has_no_pack.count(r)) {
             return has_no_pack.count(l) > has_no_pack.count(r); }
         if (has_no_split.count(l) != has_no_split.count(r)) {
             return has_no_split.count(l) > has_no_split.count(r); }
         if (non_slicable.count(l) != non_slicable.count(r)) {
             return non_slicable.count(l) > non_slicable.count(r); }
-        if (Device::currentDevice() == Device::JBAY)
-            if (has_pov.count(l) != has_pov.count(r))
-                return has_pov.count(l) > has_pov.count(r);
         if (bool(l->exact_containers()) != bool(r->exact_containers())) {
             return bool(l->exact_containers()) > bool(r->exact_containers()); }
         // if it's header fields
