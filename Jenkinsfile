@@ -43,7 +43,7 @@ node ('compiler || compiler-svr4') {
                             sh "git -C $switch_16_repo fetch origin $switch_16_branch && git -C $switch_16_repo checkout $switch_16_branch"
                             sh "echo 'Using switch_16: ' && git -C p4-tests/p4_16/switch_16 log HEAD^..HEAD"
                             sh "docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD"
-                            sh "docker build -f docker/Dockerfile.tofino -t bf-p4c-compilers_${image_tag} --build-arg IMAGE_TYPE=test --build-arg MAKEFLAGS=j32 ."
+                            sh "docker build -f docker/Dockerfile.tofino -t bf-p4c-compilers_${image_tag} --build-arg IMAGE_TYPE=test --build-arg MAKEFLAGS=j16 ."
                             sh "echo 'Tag and push docker image'"
                             sh "docker tag bf-p4c-compilers_${image_tag} barefootnetworks/bf-p4c-compilers:${image_tag}"
                             sh "docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD"
