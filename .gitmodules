@@ -16,18 +16,6 @@
 [submodule "p4-tests/p4_14/p4-tests"]
 	path = p4-tests/p4_14/p4-tests
 	url = git@github.com:barefootnetworks/p4-tests.git
-[submodule "scripts/pkg-src/archlinux/libcli"]
-	path = scripts/pkg-src/archlinux/libcli
-	url = https://aur.archlinux.org/libcli
-[submodule "scripts/pkg-src/archlinux/pyinstaller2"]
-	path = scripts/pkg-src/archlinux/pyinstaller2
-	url = https://aur.archlinux.org/pyinstaller2
-[submodule "scripts/pkg-src/archlinux/python-thrift"]
-	path = scripts/pkg-src/archlinux/python-thrift
-	url = https://aur.archlinux.org/python-thrift
-[submodule "scripts/pkg-src/archlinux/grpc"]
-	path = scripts/pkg-src/archlinux/grpc
-	url = https://aur.archlinux.org/grpc
 [submodule "p4-tests/p4testutils"]
 	path = p4-tests/p4testutils
 	url = git@github.com:barefootnetworks/ptf-utils.git

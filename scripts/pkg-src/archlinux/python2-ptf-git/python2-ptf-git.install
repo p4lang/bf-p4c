@@ -1,9 +1,0 @@
-post_install () {
-  mount -t hugetlbfs nodev /mnt/huge
-  echo "nodev /mnt/huge hugetlbfs" >> /etc/fstab
-}
-
-pre_remove () {
-  umount /mnt/huge
-  sed -i 's:^nodev /mnt/huge hugetlbfs$::' /etc/fstab
-}
