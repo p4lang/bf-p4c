@@ -10,15 +10,19 @@ template <> void Parser::Checksum::write_config(Target::JBay::parser_regs &regs,
 }
 
 template <>
-void Parser::Checksum::write_output_config(Target::JBay::parser_regs &regs, Parser *pa, void *_map, unsigned &used) const
-{
+void Parser::Checksum::write_output_config(Target::JBay::parser_regs &regs, Parser *pa,
+    void *_row, unsigned &used) const {
     if (type != 0 || !dest) return;
+
+    Target::JBay::parser_regs::_memory::_po_action_row *row =
+        (Target::JBay::parser_regs::_memory::_po_action_row *)_row;
 
     // checksum verification outputs "steal" extractors, see parser uArch (6.3.6)
 
     for (int i = 0; i < 20; ++i) {
         if (used & (1 << i)) continue;
         used |= 1 << i;
+        row->extract_type[i] = 3;
         return; }
     error(lineno, "Ran out of phv output extractor slots");
 }
