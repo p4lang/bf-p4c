@@ -1214,9 +1214,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   ../glass/testsuite/p4_tests/phv/COMPILER-136/06-FullTPHV1.p4
-  ../glass/testsuite/p4_tests/mau/COMPILER-464/scrab.p4
-  ../glass/testsuite/p4_tests/mau/COMPILER-465/tridacna-v2.p4
-  ../glass/testsuite/p4_tests/mau/COMPILER-465/tridacna.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-729/ipu.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-961/jk_msdc.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-1094/comp_1094.p4

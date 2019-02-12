@@ -638,19 +638,6 @@ void Clustering::MakeSuperClusters::pack_pov_bits() {
         auto& current_list = f->gress == INGRESS ? ingress_list : egress_list;
         int& current_list_bits = f->gress == INGRESS ? ingress_list_bits : egress_list_bits;
 
-        // Check if any no-pack constraints have been inferred on the candidate field f and any
-        // other field already in the slice list.
-        bool any_pack_conflicts = std::any_of(current_list->begin(), current_list->end(),
-                [&](const PHV::FieldSlice& slice) {
-                return conflicts_i.hasPackConflict(f, slice.field());
-                });
-        if (any_pack_conflicts) {
-            LOG5("Ignoring POV bit " << f->name << " because of a pack conflict");
-            continue; }
-        if (f->no_pack()) {
-            ::error("POV Bit %1% is marked as no-pack", f->name);
-            continue; }
-
         std::vector<PHV::FieldSlice> toBeAddedFields;
         toBeAddedFields.push_back(PHV::FieldSlice(f));
 
@@ -662,6 +649,21 @@ void Clustering::MakeSuperClusters::pack_pov_bits() {
                 allocated_extracted_together_bits.insert(g);
             }
         }
+
+        // Check if any no-pack constraints have been inferred on the candidate field f, the fields
+        // the candidate field must be packed with, and any other field already in the slice list.
+        bool any_pack_conflicts = false;
+        for (auto& slice1 : *current_list) {
+            for (auto& slice2 : toBeAddedFields) {
+                if (slice1 == slice2) continue;
+                if (conflicts_i.hasPackConflict(slice1.field(), slice2.field()))
+                    any_pack_conflicts = true; } }
+        if (any_pack_conflicts) {
+            LOG5("    Ignoring POV bit " << f->name << " because of a pack conflict");
+            continue; }
+        if (f->no_pack()) {
+            ::error("POV Bit %1% is marked as no-pack", f->name);
+            continue; }
 
         for (auto& slice : toBeAddedFields) {
             current_list->push_back(slice);
