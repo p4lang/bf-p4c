@@ -1374,7 +1374,7 @@ bool TableFormat::allocate_shares() {
         // Eliminate placed groups
         auto it = groups_begun.begin();
         while (it != groups_begun.end()) {
-            if (unalloced_groups[*it].empty())
+            if (unalloced_groups[*it].empty() && !version_locs[*it].empty())
                 it = groups_begun.erase(it);
             else
                 it++;
@@ -1384,7 +1384,7 @@ bool TableFormat::allocate_shares() {
         for (int i = 0; i < groups_to_start; i++) {
             int group = overhead_groups_seen + full_match_groups_per_RAM[width_sect];
             group += i;
-            if (!unalloced_groups[group].empty())
+            if (!unalloced_groups[group].empty() || version_locs[group].empty())
                 groups_begun.push_back(group);
         }
         overhead_groups_seen += overhead_groups_per_RAM[width_sect];

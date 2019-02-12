@@ -690,11 +690,6 @@ p4c_add_xfail_reason("tofino"
 #   extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
 # )
 
-p4c_add_xfail_reason("tofino"
-  "The selected pack format for table .* could not fit given the input xbar allocation"
-  09-simple_l3_lag_ecmp
-)
-
 # START: XFAILs with translation
 # invalid tests, issue604.p4 is a v1.1 testcase
 # P4-14 program can not define extern
@@ -1284,12 +1279,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/c1/COMPILER-1113/case8138.p4
   )
 
-# P4C-1381
-p4c_add_xfail_reason("tofino"
-  "The selected pack format for table .* could not fit given the input xbar allocation"
-  ../glass/testsuite/p4_tests/mau/test_config_13_first_selection.p4
-  )
-
 # Valid XFAIL
 p4c_add_xfail_reason("tofino"
   "The attached .* is addressed by both hash and index in table"
@@ -1335,7 +1324,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/mau/test_config_336_ram_array_priority.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-572/hct.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-268/netflow_3.p4
-  ../glass/testsuite/p4_tests/mau/COMPILER-1126/comp_1126.p4
   )
 
 # P4C-1384
