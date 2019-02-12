@@ -315,6 +315,16 @@ int PHV::SlicingIterator::populate_initial_maps(
             originalSliceOffset[slice].first = sliceOffsetWithinSliceList;
             // Set the last seen slice.
             LOG5("\tDetermining co-ordinates for slice: " << slice);
+            // If this field is no-split and the slice is smaller than the field size, and the slice
+            // is the first slice of the field, use the field size instead of the slice size to set
+            // the right co-ordinate.
+            bool useFieldSizeInLieuOfSliceSize = false;
+            if (slice.field()->no_split() && slice.size() != slice.field()->size) {
+                // This is the first no-split slice in this slice list.
+                if (!prevSlice) useFieldSizeInLieuOfSliceSize = true;
+                if (prevSlice && prevSlice->field() != slice.field())
+                    useFieldSizeInLieuOfSliceSize = true;
+            }
             if (prevSlice)
                 LOG5("\t\tPrevious slice: " << prevSlice);
             lastSliceInSliceList = &slice;
@@ -375,11 +385,13 @@ int PHV::SlicingIterator::populate_initial_maps(
                 else
                     left_limit = offset - 1 + (sliceOffsetWithinSliceList / 8);
             }
+            int rightOffsetForSlice = useFieldSizeInLieuOfSliceSize
+                ? (sliceOffsetWithinSliceList + slice.field()->size)
+                : (sliceOffsetWithinSliceList + slice.size());
             sliceOffsetWithinSliceList += slice.size();
 
             // Figure out the byte boundary for the right side (the end of this slice).
-            int addFactor = (sliceOffsetWithinSliceList / 8) -
-                (1 - bool(sliceOffsetWithinSliceList % 8));
+            int addFactor = (rightOffsetForSlice / 8) - (1 - bool(rightOffsetForSlice % 8));
             // Calculate the number of bytes in the slice list.
             int sliceListBytesNeeded = sliceListSize / 8 - (1 - bool(sliceListSize % 8));
             LOG5("\t\tSlice list size: " << sliceListSize << ", sliceListBytesNeeded: " <<
