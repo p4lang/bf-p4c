@@ -1608,3 +1608,11 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/TLV_parsing.p4
   )
 
+
+# Expected failure
+p4c_add_xfail_reason("tofino"
+  "error: standard_metadata.packet_length is not accessible in the ingress pipe"
+  testdata/p4_14_samples/p414-special-ops-2-bmv2.p4
+  testdata/p4_14_samples/p414-special-ops-3-bmv2.p4
+  )
+

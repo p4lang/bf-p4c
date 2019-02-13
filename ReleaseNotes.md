@@ -1,6 +1,58 @@
 # Release Notes
 
-## Version 8.5.0-pr.1
+## Version 8.7.0
+The **Quickie** release
+
+New Features
+  - Support the Serializer extern in TNA
+  - Support programming parsers separately in TNA.
+  - Introduce a pass to determine potential overlays, assuming movement of fields into dark containers
+  - wide-bit arithmetic support
+  - Support for Tofino2 variants
+
+Bug fixes
+  - Immediates for action instruction operands are placed in disallowed bytes on action bus
+  - Brig fails with unhandled expression for a valid gateway condition.
+  - Signed/unsigned warnings for P4_14
+  - Spurious warnings about uninitialized uses.
+  - Gateway match key .* not in matching hash column
+  - Large metadata set in parser not set properly.
+  - Invalid table merge
+  - Spurious warnings about conflicting actions on non-mutually-exclusive tables when the actions are mutually exclusive
+  - Primitive register read not correctly converted in instruction selection
+  - extern RegisterAction does not have method matching this call
+  - Front-end inlining does not work correctly for controls that are applied multiple times.
+  - ActionPhvConstraints allows misalignment in the action_conflict_3 test case
+  - Error: condition too complex
+  - basic_ipv4 test test.TestLearning fails with learn_meta_2 == digest_entry.routing_metadata_learn_meta_2
+  - RegisterAction can't find variable declaration in the enclosing scope
+  - Incorrect warning about SALU code translated from P4_14
+  - modify_field_with_hash_based_offset outputs zero instead of hash value
+  - Tofino2: Model asserting when trying to mirror a packet
+  - Group dominator cannot be a node that reads the field
+  - Conflicting alloc in the action data xbar between .* and .* at byte .*
+  - elim_emit_headers does not handle control block parameter.
+  - PHV allocation was not successful (DC_BASIC_PROFILE on switch master)
+  - Incorrect match_nibble_s1q0_enable config with smoke_large_tbls on jbay
+  - Flexible packing must fold in alignment constraints due to assignments in the parser
+  - Total size of containers used for POV allocation is 144b, greater than the allowed limit of 128b.
+
+Improvements
+  - Support Boolean in bridged metadata
+  - Global copy prop and constant prop in the Tofino backend
+  - Lower casts in the midend
+  - program compiles for a very long time in PHV Analysis
+  - AssignmentStatement: Cannot unify bit<7> to int<7>
+  - output the parser timing to a log file
+  - Unify glass and brig tests
+  - More aggressive packing of POV bits
+  - Support for deparser zero optimization for p4.16 programs without  a pragma
+
+## Version 8.6.0
+The **Should have been** release
+
+
+## Version 8.5.0-pr.2
 The **Get to par** release
 
 New features
