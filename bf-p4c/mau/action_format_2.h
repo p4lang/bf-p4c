@@ -1,6 +1,7 @@
 #ifndef EXTENSIONS_BF_P4C_MAU_ACTION_FORMAT_2_H_
 #define EXTENSIONS_BF_P4C_MAU_ACTION_FORMAT_2_H_
 
+#include <array>
 #include <iterator>
 #include <map>
 #include "lib/bitops.h"
