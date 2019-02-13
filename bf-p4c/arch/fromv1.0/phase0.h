@@ -1,5 +1,5 @@
-#ifndef BF_P4C_ARCH_PHASE0_H_
-#define BF_P4C_ARCH_PHASE0_H_
+#ifndef BF_P4C_ARCH_FROMV1_0_PHASE0_H_
+#define BF_P4C_ARCH_FROMV1_0_PHASE0_H_
 
 #include "ir/ir.h"
 
@@ -39,4 +39,4 @@ struct TranslatePhase0 : public PassManager {
 
 }  // namespace BFN
 
-#endif /* BF_P4C_ARCH_PHASE0_H_ */
+#endif /* BF_P4C_ARCH_FROMV1_0_PHASE0_H_ */

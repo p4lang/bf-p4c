@@ -15,7 +15,7 @@
 #include "frontends/common/resolveReferences/resolveReferences.h"
 #include "frontends/p4/typeMap.h"
 #include "bf-p4c/arch/psa_program_structure.h"
-#include "bf-p4c/arch/internal/collect_bridged_fields.h"
+#include "bf-p4c/arch/collect_bridged_fields.h"
 #include "bf-p4c/midend/path_linearizer.h"
 #include "bf-p4c/lib/pad_alignment.h"
 

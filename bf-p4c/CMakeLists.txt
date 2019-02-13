@@ -114,23 +114,24 @@ set (BF_P4C_BACKEND_MIDEND_HDRS
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_MIDEND_HDRS}")
 
 set (BF_P4C_BACKEND_CONV_SRCS
-  fromv1.0/field_list.cpp
-  fromv1.0/lpf.cpp
-  fromv1.0/meter.cpp
-  fromv1.0/primitives.cpp
-  fromv1.0/programStructure.cpp
-  fromv1.0/stateful_alu.cpp
-  fromv1.0/wred.cpp
+  arch/fromv1.0/field_list.cpp
+  arch/fromv1.0/lpf.cpp
+  arch/fromv1.0/meter.cpp
+  arch/fromv1.0/primitives.cpp
+  arch/fromv1.0/programStructure.cpp
+  arch/fromv1.0/stateful_alu.cpp
+  arch/fromv1.0/wred.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_CONV_SRCS}")
 
 set (BF_P4C_BACKEND_CONV_HDRS
-  fromv1.0/field_list.h
-  fromv1.0/lpf.h
-  fromv1.0/meter.h
-  fromv1.0/programStructure.h
-  fromv1.0/stateful_alu.h
-  fromv1.0/wred.h
+  arch/fromv1.0/checksum.h
+  arch/fromv1.0/field_list.h
+  arch/fromv1.0/lpf.h
+  arch/fromv1.0/meter.h
+  arch/fromv1.0/programStructure.h
+  arch/fromv1.0/stateful_alu.h
+  arch/fromv1.0/wred.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_CONV_HDRS}")
 
@@ -466,8 +467,7 @@ set (BF_P4C_BACKEND_ARCH_SRCS
   arch/arch.cpp
   arch/bridge_metadata.cpp
   arch/check_extern_invocation.cpp
-  arch/internal/collect_bridged_fields.cpp
-  arch/phase0.cpp
+  arch/collect_bridged_fields.cpp
   arch/program_structure.cpp
   arch/psa.cpp
   arch/psa_converters.cpp
@@ -476,9 +476,10 @@ set (BF_P4C_BACKEND_ARCH_SRCS
   arch/remove_set_metadata.cpp
   arch/rewrite_packet_path.cpp
   arch/tna.cpp
-  arch/v1_converters.cpp
-  arch/v1_program_structure.cpp
   arch/v1model.cpp
+  arch/fromv1.0/phase0.cpp
+  arch/fromv1.0/v1_converters.cpp
+  arch/fromv1.0/v1_program_structure.cpp
   )
 if (ENABLE_JBAY)
   list (APPEND BF_P4C_BACKEND_ARCH_SRCS
@@ -492,9 +493,8 @@ set (BF_P4C_BACKEND_ARCH_HDRS
   arch/intrinsic_metadata.h
   arch/bridge_metadata.h
   arch/check_extern_invocation.h
-  arch/internal/collect_bridged_fields.h
+  arch/collect_bridged_fields.h
   arch/parser_graph.h
-  arch/phase0.h
   arch/program_structure.h
   arch/psa.h
   arch/psa_converters.h
@@ -503,9 +503,10 @@ set (BF_P4C_BACKEND_ARCH_HDRS
   arch/remove_set_metadata.h
   arch/rewrite_packet_path.h
   arch/tna.h
-  arch/v1_converters.h
-  arch/v1_program_structure.h
   arch/v1model.h
+  arch/fromv1.0/phase0.h
+  arch/fromv1.0/v1_converters.h
+  arch/fromv1.0/v1_program_structure.h
   )
 if (ENABLE_JBAY)
   list (APPEND BF_P4C_BACKEND_ARCH_HDRS

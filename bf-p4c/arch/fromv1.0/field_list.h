@@ -1,5 +1,5 @@
-#ifndef EXTENSIONS_BF_P4C_FROMV1_0_FIELD_LIST_H_
-#define EXTENSIONS_BF_P4C_FROMV1_0_FIELD_LIST_H_
+#ifndef EXTENSIONS_BF_P4C_ARCH_FROMV1_0_FIELD_LIST_H_
+#define EXTENSIONS_BF_P4C_ARCH_FROMV1_0_FIELD_LIST_H_
 
 #include "ir/ir.h"
 #include "frontends/p4/fromv1.0/converters.h"
@@ -16,4 +16,4 @@ class FieldListConverter {
 
 }  // namespace P4V1
 
-#endif /* EXTENSIONS_BF_P4C_FROMV1_0_FIELD_LIST_H_ */
+#endif /* EXTENSIONS_BF_P4C_ARCH_FROMV1_0_FIELD_LIST_H_ */

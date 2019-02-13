@@ -1,5 +1,5 @@
 #include "meter.h"
-#include "bf-p4c/fromv1.0/programStructure.h"
+#include "programStructure.h"
 
 P4V1::MeterConverter::MeterConverter() {
     addConverter("meter", this);

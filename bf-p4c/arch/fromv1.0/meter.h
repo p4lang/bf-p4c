@@ -1,13 +1,13 @@
-#ifndef EXTENSIONS_BF_P4C_FROMV1_0_WRED_H_
-#define EXTENSIONS_BF_P4C_FROMV1_0_WRED_H_
+#ifndef EXTENSIONS_BF_P4C_ARCH_FROMV1_0_METER_H_
+#define EXTENSIONS_BF_P4C_ARCH_FROMV1_0_METER_H_
 
 #include "frontends/p4/fromv1.0/converters.h"
 
 namespace P4V1 {
 
-class WREDConverter : public ExternConverter {
-    WREDConverter();
-    static WREDConverter singleton;
+class MeterConverter : public ExternConverter {
+    MeterConverter();
+    static MeterConverter singleton;
  public:
     const IR::Type_Extern *convertExternType(P4V1::ProgramStructure *,
                 const IR::Type_Extern *, cstring) override;
@@ -20,4 +20,4 @@ class WREDConverter : public ExternConverter {
 
 }  // namespace P4V1
 
-#endif /* EXTENSIONS_BF_P4C_FROMV1_0_WRED_H_ */
+#endif /* EXTENSIONS_BF_P4C_ARCH_FROMV1_0_METER_H_ */

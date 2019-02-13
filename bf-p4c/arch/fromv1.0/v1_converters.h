@@ -1,9 +1,9 @@
-#ifndef BF_P4C_ARCH_V1_CONVERTERS_H_
-#define BF_P4C_ARCH_V1_CONVERTERS_H_
+#ifndef BF_P4C_ARCH_FROMV1_0_V1_CONVERTERS_H_
+#define BF_P4C_ARCH_FROMV1_0_V1_CONVERTERS_H_
 
 #include <cmath>
 #include "ir/ir.h"
-#include "bf-p4c/arch/v1_program_structure.h"
+#include "v1_program_structure.h"
 #include "frontends/p4/cloner.h"
 #include "frontends/p4/coreLibrary.h"
 #include "lib/safe_vector.h"
@@ -251,4 +251,4 @@ class ParserCounterSelectionConverter : public StatementConverter {
 
 }  // namespace BFN
 
-#endif /* BF_P4C_ARCH_V1_CONVERTERS_H_ */
+#endif /* BF_P4C_ARCH_FROMV1_0_V1_CONVERTERS_H_ */

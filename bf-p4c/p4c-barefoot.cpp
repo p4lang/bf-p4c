@@ -26,7 +26,7 @@
 #include "frontends/p4-14/typecheck.h"
 #include "frontends/common/applyOptionsPragmas.h"
 #include "frontends/common/parseInput.h"
-#include "fromv1.0/programStructure.h"
+#include "arch/fromv1.0/programStructure.h"
 #include "backends/graphs/controls.h"
 #include "backends/graphs/parsers.h"
 #include "ir/ir.h"

@@ -1,7 +1,7 @@
 #include "stateful_alu.h"
 #include "frontends/p4-14/typecheck.h"
 #include "lib/bitops.h"
-#include "bf-p4c/fromv1.0/programStructure.h"
+#include "programStructure.h"
 
 P4V1::StatefulAluConverter::StatefulAluConverter() {
     addConverter("stateful_alu", this);

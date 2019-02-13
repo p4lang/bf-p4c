@@ -14,13 +14,9 @@
 #include "frontends/p4/methodInstance.h"
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/ir/gress.h"
-#include "bf-p4c/arch/v1_program_structure.h"
-#include "bf-p4c/arch/v1_converters.h"
+#include "bf-p4c/arch/fromv1.0/v1_program_structure.h"
+#include "bf-p4c/arch/fromv1.0/v1_converters.h"
 #include "bf-p4c/arch/arch.h"
-#include "bf-p4c/arch/parser_graph.h"
-
-typedef std::map<const IR::Declaration*, std::set<const IR::ParserState*>> DeclToStates;
-
 
 namespace BFN {
 
@@ -33,21 +29,6 @@ class SimpleSwitchTranslation : public PassManager {
 
     const IR::ToplevelBlock* getToplevelBlock() { CHECK_NULL(toplevel); return toplevel; }
 };
-
-namespace V1 {
-
-class TranslateParserChecksums : public PassManager {
- public:
-    std::map<const IR::Expression*, IR::Member*> bridgedResidualChecksums;
-    DeclToStates ingressVerifyDeclToStates;
-    P4ParserGraphs parserGraphs;
-
-    TranslateParserChecksums(ProgramStructure *structure,
-                             P4::ReferenceMap *refMap,
-                             P4::TypeMap *typeMap);
-};
-
-}  // namespace V1
 
 }  // namespace BFN
 
