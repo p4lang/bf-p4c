@@ -8,11 +8,6 @@
 	path = p4-tests/p4_16/google-tor
 	url = git@github.com:barefootnetworks/google-internal.git
 	branch = bf-tor
-[submodule "p4-tests/p4_16/bf-onos"]
-	path = p4-tests/p4_16/bf-onos
-	url = git@github.com:barefootnetworks/bf-onos.git
-        branch = bf-onos-old
-        shallow = true
 [submodule "p4-tests/p4_14/p4-tests"]
 	path = p4-tests/p4_14/p4-tests
 	url = git@github.com:barefootnetworks/p4-tests.git

@@ -122,13 +122,6 @@ if (PTF_REQUIREMENTS_MET)
   #   extensions/p4_tests/p4_14/p4-tests/programs/meters/meters.p4
   #   )
 
-  # Inner UDP length field is "corrupted" for test.SpgwDownlinkMPLS_INT_Test.
-  # See BRIG-578
-  p4c_add_xfail_reason("tofino"
-    "Expected packet was not received on device"
-    fabric-DWITH_SPGW-DWITH_INT_TRANSIT
-    )
-
   # broken test: https://github.com/barefootnetworks/p4examples/issues/5
   p4c_add_xfail_reason("tofino"
     "SyntaxError: invalid syntax"
@@ -1098,8 +1091,6 @@ p4c_add_xfail_reason("tofino"
 # same.
   switch_msdc_l3
   switch_8.5_msdc_l3
-  fabric-DWITH_INT_TRANSIT
-  fabric-DWITH_SPGW-DWITH_INT_TRANSIT
   extensions/p4_tests/p4_16/int_transit.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-970/comp_970.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-968/comp_968.p4

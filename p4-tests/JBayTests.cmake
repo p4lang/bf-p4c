@@ -69,8 +69,8 @@ p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base" "${JBAY_JNA_TEST_SUITES}
 set (testExtraArgs "${testExtraArgs} -tofino2")
 
 p4c_add_ptf_test_with_ptfdir (
-    "tofino2" fabric.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos/pipelines/fabric/src/main/resources/fabric.p4
-    "${testExtraArgs}" ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos-ptf/fabric.ptf)
+    "tofino2" fabric.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos-new/pipelines/fabric/src/main/resources/fabric-tofino.p4
+    "${testExtraArgs} -tofino2" ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos-ptf/fabric-new.ptf)
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" tor.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/google-tor/p4/spec/tor.p4
@@ -94,6 +94,53 @@ bfn_set_ptf_ports_json_file("tofino2" "extensions/p4_tests/p4_14/p4-tests/progra
                             "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/ptf-tests/fast_reconfig/ports.json")
 bfn_set_ptf_ports_json_file("tofino2" "extensions/p4_tests/p4_14/p4-tests/programs/mirror_test/mirror_test.p4"
                             "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/ptf-tests/mirror_test/ports.json")
+
+file(RELATIVE_PATH tofino32q-3pipe_path ${P4C_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/tofino32q-3pipe/sfc.p4)
+p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
+  "tofino32q-3pipe" ${tofino32q-3pipe_path} "${testExtraArgs} -tofino2 -arch t2na" "")
+
+## P4-16 Programs
+set (P4FACTORY_P4_16_PROGRAMS
+  tna_32q_2pipe
+  tna_action_profile
+  tna_action_selector
+  tna_counter
+  tna_digest
+  tna_exact_match
+  tna_idletimeout
+  tna_lpm_match
+  tna_meter_lpf_wred
+  tna_operations
+  tna_port_metadata
+  tna_port_metadata_extern
+  tna_range_match
+  tna_register
+  tna_ternary_match
+  )
+
+# No ptf, compile-only
+file(RELATIVE_PATH p4_16_programs_path ${P4C_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/p4_16_programs)
+p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
+  "p4_16_programs_simple_switch" ${p4_16_programs_path}/simple_switch/simple_switch.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/p4_16_programs" "")
+p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
+  "p4_16_programs_tna_32q_multiprogram_a" ${p4_16_programs_path}/tna_32q_multiprogram/program_a/tna_32q_multiprogram_a.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/p4_16_programs/tna_32q_multiprogram" "")
+p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
+  "p4_16_programs_tna_32q_multiprogram_b" ${p4_16_programs_path}/tna_32q_multiprogram/program_b/tna_32q_multiprogram_b.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/p4_16_programs/tna_32q_multiprogram" "")
+
+# P4-16 Programs with PTF tests
+foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS)
+  p4c_add_ptf_test_with_ptfdir ("tofino2" "p4_16_programs_${t}" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/p4_16_programs/${t}/${t}.p4"
+    "${testExtraArgs} -target tofino2 -arch t2na -bfrt -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/p4_16_programs/${t}")
+  bfn_set_p4_build_flag("tofino2" "p4_16_programs_${t}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/p4_16_programs")
+  set (ports_json ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/p4_16_programs/${t}/ports.json)
+  if (EXISTS ${ports_json})
+    bfn_set_ptf_ports_json_file("tofino2" "p4_16_programs_${t}" ${ports_json})
+  endif()
+endforeach()
+
+# 500s timeout is too little for compiling and testing the entire switch, bumping it up
+set_tests_properties("tofino2/p4_16_programs_tna_exact_match" PROPERTIES TIMEOUT 1200)
+set_tests_properties("tofino2/p4_16_programs_tna_ternary_match" PROPERTIES TIMEOUT 2400)
 
 include(SwitchJBay.cmake)
 include(JBayXfail.cmake)

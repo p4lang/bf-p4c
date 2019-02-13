@@ -198,7 +198,6 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/ingress_checksum.p4
   extensions/p4_tests/p4_16/ONLab_packetio.p4
   extensions/p4_tests/p4_14/easy_no_match.p4
-  fabric.p4
   tor.p4
 )
 
@@ -312,4 +311,24 @@ p4c_add_xfail_reason("tofino2"
   testdata/p4_14_samples/issue576.p4
   testdata/p4_14_samples/issue781.p4
   testdata/p4_14_samples/TLV_parsing.p4
+  )
+
+# Rendezvous failures on some of the tna tests
+p4c_add_xfail_reason("tofino2"
+  "Rendezvous of RPC that terminated with"
+  p4_16_programs_tna_32q_2pipe
+  p4_16_programs_tna_exact_match
+  p4_16_programs_tna_port_metadata
+  )
+
+# P4C-1496
+p4c_add_xfail_reason("tofino2"
+  "Can only output full phv registers, not slices, in deparser"
+  fabric.p4
+  )
+
+# P4C-1497
+p4c_add_xfail_reason("tofino2"
+  "Couldn't find intrinsic metadata field mirror_hash in ig_intr_md_for_dprsr"
+  p4_16_programs_simple_switch
   )
