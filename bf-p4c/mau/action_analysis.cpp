@@ -211,6 +211,13 @@ bool ActionAnalysis::preorder(const IR::MAU::ActionArg *arg) {
     return false;
 }
 
+// continue analyzing the node underneath the cast.
+// An example is when a 1-bit action argument is casted to bool.
+// action (bit<1> arg) { bool m = (bool) arg; }
+bool ActionAnalysis::preorder(const IR::BFN::ReinterpretCast* cast) {
+    return true;
+}
+
 bool ActionAnalysis::preorder(const IR::Constant *constant) {
     field_action.reads.emplace_back(ActionParam::CONSTANT, constant);
     return false;

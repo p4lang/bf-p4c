@@ -200,6 +200,7 @@ class SimplifyNestedCasts : public Transform {
  * This pass moves the cast on a binary operation to each operand.
  * This transformation does not apply to all binary operations,
  * and it is not sound if the operands are int type. So it is a best effort.
+ * It also does not handle (bool)(expr binop expr), where binop is bitwise operation.
  *
  * We only simplifies add/sub, addsat/subsat,
  * bitwise operations (and, or, xor) on unsigned bit types.
@@ -209,6 +210,11 @@ class SimplifyOperationBinary : public Transform {
     SimplifyOperationBinary() {}
     const IR::Node* preorder(IR::Cast *expression) {
         if (!expression->expr->is<IR::Operation_Binary>())
+            return expression;
+
+        // cannot cast lhs and rhs to boolean on
+        // a bitwise binary operation.
+        if (expression->destType->is<IR::Type_Boolean>())
             return expression;
 
         auto binop = expression->expr->to<IR::Operation_Binary>();

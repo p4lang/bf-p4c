@@ -162,6 +162,13 @@ const PHV::Field *PhvInfo::field(const IR::Expression *e, le_bitrange *bits) con
         return field(fr, bits);
     if (auto *cast = e->to<IR::BFN::ReinterpretCast>())
         return field(cast->expr, bits);
+    // HACK. midend changes zero extend cast into 0 ++ expr. When the
+    // expression is used in a 'add' operation, the compiler does not perform
+    // any transformation to eliminate the '++' operator.
+    if (auto *concat = e->to<IR::Concat>()) {
+        if (auto k = concat->left->to<IR::Constant>())
+            if (k->value == 0)
+                return field(concat->right, bits); }
     if (auto *sl = e->to<IR::Slice>()) {
         auto *rv = field(sl->e0, bits);
         if (rv && bits) {

@@ -422,6 +422,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
     bool preorder(const IR::Primitive *) override;
     void postorder(const IR::MAU::Instruction *) override;
     void postorder(const IR::MAU::Action *) override;
+    bool preorder(const IR::BFN::ReinterpretCast* cast) override;
 
     bool initialize_invalidate_alignment(const ActionParam &write, ContainerAction &cont_action);
     bool initialize_alignment(const ActionParam &write, const ActionParam &read,

@@ -607,6 +607,8 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/phv/COMPILER-1065/comp_1065.p4
   extensions/p4_tests/p4_14/03-VlanProfile.p4
   extensions/p4_tests/p4_14/01-FlexCounter.p4
+
+  ../glass/testsuite/p4_tests/mau/COMPILER-628/case3431.p4
   )
 
 # Errors because pa_container_size pragmas used in these tests cannot be satisfy all constraints.
@@ -1161,6 +1163,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Compiler Bug.*: Field slicing has created a slice list at a nonbyte boundary."
   ../glass/testsuite/p4_tests/c1/COMPILER-868/comp_868.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-954/case5730.p4
 )
 
 # P4C-1371
@@ -1366,6 +1369,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "PHV read has no allocation"
   ../glass/testsuite/p4_tests/mau/COMPILER-630/case3431b.p4
+  extensions/p4_tests/p4_14/p4smith_regression/clue_0.p4
   )
 
 # Valid XFAIL
@@ -1561,15 +1565,7 @@ p4c_add_xfail_reason("tofino"
   "IR structure not yet handled by the ActionAnalysis pass"
   extensions/p4_tests/p4_16/cast_widening_add.p4
   extensions/p4_tests/p4_16/test_config_4_cast_add.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-1113/case8138.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-1114/case8156.p4
-  ../glass/testsuite/p4_tests/mau/COMPILER-628/case3431.p4
-  ../glass/testsuite/p4_tests/mau/COMPILER-630/case3431b.p4
-  ../glass/testsuite/p4_tests/phv/COMPILER-961/jk_msdc.p4
-  extensions/p4_tests/p4_14/p4smith_regression/clue_0.p4
   testdata/p4_16_samples/arith-bmv2.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-954/case5730.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-868/comp_868.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1611,3 +1607,4 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/issue781.p4
   testdata/p4_14_samples/TLV_parsing.p4
   )
+

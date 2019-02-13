@@ -56,7 +56,11 @@ const IR::Node* TypeInference::postorder(IR::BFN::ReinterpretCast *expression) {
     const IR::Type* castType = getTypeType(expression->destType);
     if (sourceType == nullptr || castType == nullptr)
         return expression;
-    if (!castType->is<IR::Type_Bits>()) {
+
+    if (!castType->is<IR::Type_Bits>() &&
+        !castType->is<IR::Type_Boolean>() &&
+        !castType->is<IR::Type_Newtype>() &&
+        !castType->is<IR::Type_SerEnum>()) {
         ::error("%1%: cast not supported", expression->destType);
         return expression;
     }
