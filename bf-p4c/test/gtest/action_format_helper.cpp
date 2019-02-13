@@ -418,9 +418,13 @@ void Contains_test1(ActionDataRamSection *ad_outside, ActionDataRamSection *ad_i
     ad_outside->add_param(8, arg1);
     ad_inside->add_param(0, arg1);
 
-    EXPECT_TRUE(ad_outside->contains(ad_inside));
-    EXPECT_FALSE(ad_inside->contains(ad_outside));
-    EXPECT_TRUE(ad_outside->contains_any_rotation_from_0(ad_inside));
+    int final_bit_pos = 0;
+    EXPECT_TRUE(ad_outside->contains(ad_inside, 0, &final_bit_pos));
+    EXPECT_EQ(final_bit_pos, 8);
+    EXPECT_FALSE(ad_inside->contains(ad_outside, 0, nullptr));
+    final_bit_pos = 0;
+    EXPECT_TRUE(ad_outside->contains_any_rotation_from_0(ad_inside, 0, &final_bit_pos));
+    EXPECT_EQ(final_bit_pos, 8);
 }
 
 void Contains_test2(ActionDataRamSection *ad_outside, ActionDataRamSection *ad_inside) {
@@ -432,9 +436,13 @@ void Contains_test2(ActionDataRamSection *ad_outside, ActionDataRamSection *ad_i
     ad_inside->add_param(0, arg1_mini2);
     ad_inside->add_param(4, arg1_mini1);
 
-    EXPECT_TRUE(ad_outside->contains(ad_inside));
-    EXPECT_FALSE(ad_inside->contains(ad_outside));
-    EXPECT_TRUE(ad_outside->contains_any_rotation_from_0(ad_inside));
+    int final_bit_pos = 0;
+    EXPECT_TRUE(ad_outside->contains(ad_inside, 0, &final_bit_pos));
+    EXPECT_EQ(final_bit_pos, 12);
+    EXPECT_FALSE(ad_inside->contains(ad_outside, 0, nullptr));
+    final_bit_pos = 0;
+    EXPECT_TRUE(ad_outside->contains_any_rotation_from_0(ad_inside, 0, &final_bit_pos));
+    EXPECT_EQ(final_bit_pos, 12);
 }
 
 void Contains_test3(ActionDataRamSection *ad_outside, ActionDataRamSection *ad_inside) {
@@ -443,9 +451,9 @@ void Contains_test3(ActionDataRamSection *ad_outside, ActionDataRamSection *ad_i
     ad_outside->add_param(8, arg1);
     ad_inside->add_param(4, arg1);
 
-    EXPECT_FALSE(ad_outside->contains(ad_inside));
-    EXPECT_FALSE(ad_inside->contains(ad_outside));
-    EXPECT_FALSE(ad_outside->contains_any_rotation_from_0(ad_inside));
+    EXPECT_FALSE(ad_outside->contains(ad_inside, 0, nullptr));
+    EXPECT_FALSE(ad_inside->contains(ad_outside, 0, nullptr));
+    EXPECT_FALSE(ad_outside->contains_any_rotation_from_0(ad_inside, 0, nullptr));
 }
 
 void Contains_test4(ActionDataRamSection *ad_outside, ActionDataRamSection *ad_inside) {
@@ -455,9 +463,11 @@ void Contains_test4(ActionDataRamSection *ad_outside, ActionDataRamSection *ad_i
     ad_outside->add_param(8, con1);
     ad_inside->add_param(0, con2);
 
-    EXPECT_FALSE(ad_outside->contains(ad_inside));
-    EXPECT_FALSE(ad_inside->contains(ad_outside));
-    EXPECT_TRUE(ad_outside->contains_any_rotation_from_0(ad_inside));
+    EXPECT_FALSE(ad_outside->contains(ad_inside, 0, nullptr));
+    EXPECT_FALSE(ad_inside->contains(ad_outside, 0, nullptr));
+    int final_bit_pos = 0;
+    EXPECT_TRUE(ad_outside->contains_any_rotation_from_0(ad_inside, 0, &final_bit_pos));
+    EXPECT_EQ(final_bit_pos, 8);
 }
 
 void Contains_test5(ActionDataRamSection *ad_outside, ActionDataRamSection *ad_inside) {
@@ -467,9 +477,9 @@ void Contains_test5(ActionDataRamSection *ad_outside, ActionDataRamSection *ad_i
     ad_outside->add_param(8, con1);
     ad_inside->add_param(0, con2);
 
-    EXPECT_FALSE(ad_outside->contains(ad_inside));
-    EXPECT_FALSE(ad_inside->contains(ad_outside));
-    EXPECT_FALSE(ad_outside->contains_any_rotation_from_0(ad_inside));
+    EXPECT_FALSE(ad_outside->contains(ad_inside, 0, nullptr));
+    EXPECT_FALSE(ad_inside->contains(ad_outside, 0, nullptr));
+    EXPECT_FALSE(ad_outside->contains_any_rotation_from_0(ad_inside, 0, nullptr));
 }
 
 void Contains_test6(ActionDataRamSection *ad_outside, ActionDataRamSection *ad_inside) {
@@ -479,9 +489,11 @@ void Contains_test6(ActionDataRamSection *ad_outside, ActionDataRamSection *ad_i
     ad_outside->add_param(8, con1);
     ad_inside->add_param(0, con2);
 
-    EXPECT_FALSE(ad_outside->contains(ad_inside));
-    EXPECT_FALSE(ad_inside->contains(ad_outside));
-    EXPECT_TRUE(ad_outside->contains_any_rotation_from_0(ad_inside));
+    EXPECT_FALSE(ad_outside->contains(ad_inside, 0, nullptr));
+    EXPECT_FALSE(ad_inside->contains(ad_outside, 0, nullptr));
+    int final_bit_pos = 0;
+    EXPECT_TRUE(ad_outside->contains_any_rotation_from_0(ad_inside, 0, &final_bit_pos));
+    EXPECT_EQ(final_bit_pos, 15);
 }
 
 TEST(ActionFormatHelper, Contains) {

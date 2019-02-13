@@ -59,8 +59,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         }
 
         le_bitrange range() const {
-            auto sl = expr->to<IR::Slice>();
-            if (sl)
+            if (auto sl = expr->to<IR::Slice>())
                 return { static_cast<int>(sl->getL()), static_cast<int>(sl->getH()) };
             return {0, size() - 1};
         }

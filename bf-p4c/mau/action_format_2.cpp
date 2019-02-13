@@ -3,6 +3,10 @@
 #include "ir/ir.h"
 #include "lib/bitrange.h"
 
+size_t slot_type_to_bits(SlotType_t slot_type) {
+    BUG_CHECK(slot_type != SECT_TYPES, "Invalid call of slot_type_to_bits");
+    return 1U << (static_cast<int>(slot_type) + 3);
+}
 /**
  * Returns an Argument if the two Arguments have some equivalency overlap, i.e.:
  *     param1[8:15]
@@ -372,30 +376,57 @@ PackingConstraint PackingConstraint::expand(int current_size, int expand_size) c
     return PackingConstraint(current_size, rv_rec);
 }
 
+/**
+ * Given that a rotation happened from init_bit to final_bit, this function returns the position
+ * of init_bit_comp after this rotation is completed.  Necessary for finding the location of bits
+ * in ActionDataForSingleALU2s
+ */
+int PackingConstraint::bit_rotation_position(int bit_width, int init_bit, int final_bit,
+        int init_bit_comp) const {
+    if (init_bit == final_bit)
+        return 0;
+    BUG_CHECK(is_rotational(), "Cannot get to this point without being rotational");
+    size_t total_sections = bit_width / rotational_granularity;
+    BUG_CHECK(total_sections == recursive_constraints.size(), "Rotational granularity is not "
+              "correct");
+    int init_index = init_bit / rotational_granularity;
+    int final_index = final_bit / rotational_granularity;
+    int rotation = (init_index - final_index + total_sections) % total_sections;
+    if (init_index != init_bit_comp / rotational_granularity)
+        return rotation * rotational_granularity;
+    const PackingConstraint &next_level = recursive_constraints[init_index];
+    int next_init_bit = init_bit % rotational_granularity;
+    int next_final_bit = final_bit % rotational_granularity;
+    int next_init_bit_comp = init_bit_comp % rotational_granularity;
+    return rotation * rotational_granularity
+           + next_level.bit_rotation_position(rotational_granularity, next_init_bit,
+                                              next_final_bit, next_init_bit_comp);
+}
+
 /**  
  * This function creates from a ActionDataRamSection with it's isolated ALU information.  This is
  * the initial state from which the ActionDataRamSections can be condensed and determined
  * where the are in RAM.
  */
 const ActionDataRamSection *ActionDataForSingleALU2::create_RamSection(bool shift_to_lsb) const {
-    size_t sec_size = container.size();
+    size_t sec_size = size();
     // Because of Action Data Bus constraints, bitmasked-set information must be packed as
     // a two container wide RamSection
-    if (constraint == BITMASKED_SET)
+    if (_constraint == BITMASKED_SET)
         sec_size *= 2;
 
     PackingConstraint pc;
-    if (constraint == DEPOSIT_FIELD)
+    if (_constraint == DEPOSIT_FIELD)
         pc = pc.expand(1, sec_size);
 
     ActionDataRamSection *init_rv = new ActionDataRamSection(sec_size, pc);
-    for (auto param : params) {
+    for (auto param : _params) {
         init_rv->add_param(param.phv_bits.lo, param.param);
     }
 
-    if (constraint != DEPOSIT_FIELD) {
+    if (_constraint != DEPOSIT_FIELD) {
         // Put constant 0s so that nothing else is packed within this besides 0s
-        bitvec reverse_mask = bitvec(0, container.size()) - phv_bits;
+        bitvec reverse_mask = bitvec(0, size()) - _phv_bits;
         for (auto br : bitranges(reverse_mask)) {
             int br_size = (br.second - br.first) + 1;
             Constant *con = new Constant(bitvec(), br_size);
@@ -404,27 +435,36 @@ const ActionDataRamSection *ActionDataForSingleALU2::create_RamSection(bool shif
     }
 
     // Put the mask in the second half of the RamSection
-    if (constraint == BITMASKED_SET) {
-        Constant *con = new Constant(phv_bits, container.size());
-        init_rv->add_param(container.size(), con);
+    if (_constraint == BITMASKED_SET) {
+        Constant *con = new Constant(_phv_bits, size());
+        init_rv->add_param(size(), con);
     }
 
     init_rv->add_alu_req(this);
     const ActionDataRamSection *rv = nullptr;
     if (shift_to_lsb) {
         // Move anything deposit-field down to the lsb of the container
-        if (constraint == DEPOSIT_FIELD) {
-            int shift = phv_bits.min().index();
+        if (_constraint == DEPOSIT_FIELD) {
+            int shift = _phv_bits.min().index();
             rv = init_rv->can_rotate(shift, 0);
         } else {
             rv = init_rv;
         }
     } else {
         // Move to the right_shift, initially 0 on creation
-        rv = init_rv->can_rotate(right_shift, 0);
+        rv = init_rv->can_rotate(_right_shift, 0);
     }
     BUG_CHECK(rv != nullptr, "Cannot create a RAM section from an ActionDataForSingleALU2");
     BUG_CHECK(rv->alu_requirements.size() == 1, "Must have an alu requirement");
+    return rv;
+}
+
+const ActionDataForSingleALU2 *ActionDataForSingleALU2::add_right_shift(int right_shift) const {
+    ActionDataForSingleALU2 *rv = new ActionDataForSingleALU2(*this);
+    rv->_right_shift = right_shift;
+    for (auto &param : rv->_params) {
+        param.right_shift = right_shift;
+    }
     return rv;
 }
 
@@ -733,7 +773,8 @@ bool ActionDataRamSection::is_data_subset_of(const ActionDataRamSection *ad) con
  * Uses shared parameters to see if the ad_small is contained within *this 
  * Full Description: @seealso contains(const ActionDataForSingleALU2 *)
  */
-bool ActionDataRamSection::contains(const ActionDataRamSection *ad_small) const {
+bool ActionDataRamSection::contains(const ActionDataRamSection *ad_small, int init_bit_pos,
+        int *final_bit_pos) const {
     const ActionDataRamSection *ad = ad_small->expand_to_size(size());
 
     safe_vector<SharedActionDataParam> shared_params;
@@ -742,8 +783,15 @@ bool ActionDataRamSection::contains(const ActionDataRamSection *ad_small) const 
     for (auto shared_param : shared_params) {
         auto *ad_rotated = ad->can_rotate(shared_param.b_start_bit, shared_param.a_start_bit);
         if (ad_rotated) {
-            if (ad_rotated->is_data_subset_of(this))
+            if (ad_rotated->is_data_subset_of(this)) {
+                if (final_bit_pos) {
+                    *final_bit_pos
+                        = ad->pack_info.bit_rotation_position(ad->size(), shared_param.b_start_bit,
+                                                              shared_param.a_start_bit,
+                                                              init_bit_pos);
+                }
                 return true;
+            }
         }
     }
     return false;
@@ -753,14 +801,18 @@ bool ActionDataRamSection::contains(const ActionDataRamSection *ad_small) const 
  * Uses rotations from 0 to see if ad_small is contained within *this
  * Full Description: @seealso contains(const ActionDataForSingleALU2 *) 
  */
-bool ActionDataRamSection::
-        contains_any_rotation_from_0(const ActionDataRamSection *ad_small) const {
+bool ActionDataRamSection::contains_any_rotation_from_0(const ActionDataRamSection *ad_small,
+         int init_bit_pos, int *final_bit_pos) const {
     const ActionDataRamSection *ad = ad_small->expand_to_size(size());
     for (size_t i = 0; i < size(); i++) {
         auto ad_rotated = ad->can_rotate(0, i);
         if (ad_rotated) {
-            if (ad_rotated->is_data_subset_of(this))
+            if (ad_rotated->is_data_subset_of(this)) {
+                if (final_bit_pos)
+                    *final_bit_pos = ad->pack_info.bit_rotation_position(ad->size(), 0, i,
+                                                                         init_bit_pos);
                 return true;
+            }
         }
     }
     return false;
@@ -782,13 +834,269 @@ bool ActionDataRamSection::
  * and 0b000111 would have multiple overlaps.  Thus instead, by trying all possible rotations
  * of the original ALU and trying to find a subset, this is the only possible way to determine
  * exactly that the overlap is possible.
+ *
+ * The other goal is to potentially find the position of the first phv_bit after a rotation
+ * in order to eventually determine the position of action data.  The *final_first_phv_bit_pos
+ * is the position of this bit.
  */
-bool ActionDataRamSection::contains(const ActionDataForSingleALU2 *ad_alu) const {
-    auto ad = ad_alu->create_RamSection(true);
+bool ActionDataRamSection::contains(const ActionDataForSingleALU2 *ad_alu,
+        int *final_first_phv_bit_pos) const {
+    auto ad = ad_alu->create_RamSection(false);
+    bool rv = false;
+    int init_first_phv_bit_pos = ad_alu->phv_bits().min().index();
     if (ad_alu->contains_only_one_overlap_solution())
-        return contains(ad);
+        rv = contains(ad, init_first_phv_bit_pos, final_first_phv_bit_pos);
     else
-        return contains_any_rotation_from_0(ad);
+        rv = contains_any_rotation_from_0(ad, init_first_phv_bit_pos, final_first_phv_bit_pos);
+    return rv;
+}
+
+/**
+ * Given that a ActionDataRamSection contains potentially multiple ActionDataForSingleALU2 object
+ * the purpose of this function is to determine the inputs to the ActionDataBus.  Essentially
+ * the return value is the action data inputs if this section was allocated at bit 0 of
+ * an action data table.
+ */
+ActionDataBusInputs ActionDataRamSection::action_data_bus_inputs() const {
+    ActionDataBusInputs rv = {{ bitvec(), bitvec(), bitvec() }};
+    for (auto ad_alu : alu_requirements) {
+        int final_first_phv_bit_pos = 0;
+        bool is_contained = contains(ad_alu, &final_first_phv_bit_pos);
+        BUG_CHECK(is_contained, "Alu not contained in the operation");
+        size_t start_byte = final_first_phv_bit_pos / ad_alu->size();
+        size_t sz = ad_alu->is_constrained(BITMASKED_SET) ? ad_alu->size() * 2: ad_alu->size();
+        sz /= 8;
+        BUG_CHECK(start_byte + sz <= size() / 8, "Action Data For ALU outside of RAM section");
+        rv[ad_alu->index()].setrange(start_byte, sz);
+    }
+    return rv;
+}
+
+size_t RamSectionPosition::total_slots_of_type(SlotType_t slot_type) const {
+    size_t rv = 0;
+    bitvec input = section->action_data_bus_inputs().at(static_cast<int>(slot_type));
+    size_t bytes_per_slot_type = (1 << static_cast<int>(slot_type));
+    for (int i = 0; i <= input.max().index(); i += bytes_per_slot_type) {
+        rv += input.getslice(i, bytes_per_slot_type).empty() ? 0 : 1;
+    }
+    return rv;
+}
+
+/**
+ * Gathers the number of action data bus inputs of slot_type are in this particular action 
+ */
+size_t SingleActionPositions::total_slots_of_type(SlotType_t slot_type) const {
+    size_t rv = 0;
+    for (auto &input : all_inputs) {
+        rv += input.total_slots_of_type(slot_type);
+    }
+    return rv;
+}
+
+size_t SingleActionPositions::bits_required() const {
+    size_t total_bits = 0;
+    for (auto &input : all_inputs) {
+        total_bits += input.section->size();
+    }
+    return total_bits;
+}
+
+/**
+ * Due to the adt entries required to be at certain granularities, the bits_required might be
+ * less than the adt_bits_required
+ */
+size_t SingleActionPositions::adt_bits_required() const {
+    return 1 << ceil_log2(bits_required());
+}
+
+/**
+ * The sections_of_size are different than the slots of size in that the sections represent
+ * the ActionDataRamSection while the the slots represent the inputs to the ActionDataBus,
+ * which come from the ActionDataForSingleALU2 objects.
+ */
+std::array<int, SECT_TYPES> SingleActionPositions::sections_of_size() const {
+    std::array<int, SECT_TYPES> rv = {{ 0 }};
+    for (auto &input : all_inputs) {
+        rv[input.section->index()]++;
+    }
+    return rv;
+}
+
+/**
+ * The goal of immediate data packing is to reduce the number of bits required to mask
+ * out of overhead.  In order to do some of this calculation, the goal is to find the
+ * ActionDataRamSection of particular packing sizes that have the smallest msb.
+ *
+ * This function returns the minimum max bit in use of all ActionDataRamSections of all
+ * possible sizes
+ */
+std::array<int, SECT_TYPES> SingleActionPositions::minmax_bit_req() const {
+    std::array<int, SECT_TYPES> rv = { { 8, 16, 32, 64 } };
+    for (auto &input : all_inputs) {
+        int *rv_i = &rv[input.section->index()];
+        *rv_i = std::min(*rv_i, input.section->bits_in_use().max().index() + 1);
+    }
+    return rv;
+}
+
+/**
+ * Used to determine which input should be placed last in the immediate bytes in order
+ * to determine which size should be the most significant action data in immediate.
+ */
+std::array<int, SECT_TYPES> SingleActionPositions::min_bit_of_contiguous_sect() const {
+    std::array<int, SECT_TYPES> rv = {{ 0 }};
+    for (int i = 0; i < SECT_TYPES; i++) {
+        if (sections_of_size()[i] > 0) {
+            rv[i] = (sections_of_size()[i] - 1) + minmax_bit_req()[i];
+        }
+    }
+    return rv;
+}
+
+void SingleActionPositions::move_to_immed_from_adt(safe_vector<RamSectionPosition> &rv,
+        size_t slot_sz, bool move_minmax_bit_req) {
+    for (auto it = all_inputs.begin(); it != all_inputs.end(); it++) {
+        if (it->section->size() != slot_sz)
+            continue;
+        if (move_minmax_bit_req) {
+            if (minmax_bit_req()[it->section->index()]
+                != it->section->bits_in_use().max().index() + 1) {
+                continue;
+            }
+        }
+        rv.push_back(*it);
+        all_inputs.erase(it);
+        return;
+    }
+    BUG("Could not find correctly associated size for field");
+}
+
+/**
+ * This determines, that given the number of bits that are required to be moved to immediate,
+ * that this particular slot size can be the final lsb.
+ *
+ * Essentially the calculation is that if the total number of bits of slot_types, where
+ * slot_type_bits < bits_to_move, is also < bits_to_move, then any of those slot_types cannot
+ * fit
+ *
+ * Best exemplified by an example.  Say the bits_to_move is 16, and there is only one slot
+ * of BYTE size, then it would always be suboptimal to have the 8 bit slot to be the msb,
+ * as a 16 bit slot would by requirement have to be before the 8 bit slot in order to move
+ * at least 16 bits
+ */
+std::array<bool, SECT_TYPES> SingleActionPositions::can_be_immed_msb(int bits_to_move) const {
+    std::array<bool, SECT_TYPES> rv = { { sections_of_size()[BYTE] > 0,
+                                          sections_of_size()[HALF] > 0 ,
+                                          sections_of_size()[FULL] > 0,
+                                          false } };
+    int total_bits_under_size = 0;
+    int last_section_under_size = -1;
+    for (int i = 0; i < SECT_TYPES; i++) {
+        SlotType_t ss_i = static_cast<SlotType_t>(i);
+        int slot_bits = static_cast<int>(slot_type_to_bits(ss_i));
+        if (slot_bits < bits_to_move) {
+            total_bits_under_size += sections_of_size()[i] * slot_bits;
+        } else {
+            last_section_under_size = i;
+            break;
+        }
+    }
+
+    if (total_bits_under_size < bits_to_move) {
+        for (int i = 0; i < last_section_under_size; i++) {
+            rv[i] = false;
+        }
+    }
+    return rv;
+}
+
+/**
+ * Now that the minmax value has be moved to immediate, this slot might have been less than
+ * the required number of bits necessary to move down to the next action data entry size.
+ * The purpose of this function is to determine which other sections to move to immediate
+ * as well.
+ */
+void SingleActionPositions::move_other_sections_to_immed(int bits_to_move, SlotType_t minmax_sz,
+        safe_vector<RamSectionPosition> &immed_vec) {
+    int bits_moved_to_immed = slot_type_to_bits(minmax_sz);
+    move_to_immed_from_adt(immed_vec, slot_type_to_bits(minmax_sz), true);
+    while (bits_moved_to_immed < bits_to_move) {
+        int bits_left_to_move = bits_to_move - bits_moved_to_immed;
+        SlotType_t moved_slot = SECT_TYPES;
+        if (bits_left_to_move % 16 == 8) {
+            // Generally prefer to move 8 bit slots to immediate, as generally they have
+            // tough action data bus requirements
+            if (sections_of_size()[BYTE] > 0) {
+                 move_to_immed_from_adt(immed_vec, 8, false);
+                 moved_slot = BYTE;
+            } else if (sections_of_size()[HALF] > 0) {
+                 move_to_immed_from_adt(immed_vec, 16, false);
+                 moved_slot = HALF;
+            }
+        } else {
+            if (sections_of_size()[BYTE] >= 2) {
+                move_to_immed_from_adt(immed_vec, 8, false);
+                moved_slot = BYTE;
+            } else if (sections_of_size()[HALF] > 0) {
+                move_to_immed_from_adt(immed_vec, 16, false);
+                moved_slot = HALF;
+            }
+        }
+
+        if (moved_slot == SECT_TYPES)
+            BUG("Could not remove enough bits from adt to immediate");
+        bits_moved_to_immed += slot_type_to_bits(moved_slot);
+        BUG_CHECK(bits_moved_to_immed <= ActionFormat2::IMMEDIATE_BITS, "Illegally moved too "
+            "many bits to immediate");
+    }
+}
+
+/**
+ * As described in the comments above determine_bytes_per_loc, some actions must action data
+ * from an ActionData Tables to Immediate Data.  The purpose of this function is to
+ * determine which sections to move.
+ *
+ * The data can be moved in the sizes of the sections, i.e. on the granularity of bytes,
+ * half-words and full-words.
+ *
+ * The other important this to note is that while action data requires the full entry size,
+ * immediate data has a bit-by-bit advantage.  Immediate data can be packed right next to
+ * match data or other overhead data with no respect to the byte positions on the match RAM,
+ * due to the shift/mask/default behavior of match central.
+ *
+ * Thus as part of the goal of moving action data, the goal is to require the minimum sized
+ * mask for immediate (at this point, the immediate mask has to be contiguous for the rest
+ * of the compiler)
+ *
+ * The bits_to_move is the minimum number of bits (at a byte granularity) to move to immediate,
+ * as the entire slot has to be moved, which is either 8, 16, 32 or 64 bits in size.
+ * (64 bits obviously cannot be moved)
+ */
+safe_vector<RamSectionPosition> SingleActionPositions::best_inputs_to_move(int bits_to_move) {
+    safe_vector<RamSectionPosition> rv;
+    if (bits_to_move <= 0)
+        return rv;
+
+    // Basically from surveying the action, this determines which action data should be the
+    // the last slot in immediate, due to requiring the smallest mask
+    int minmax_use_slot_i = -1;
+    int minmax_bits = ActionFormat2::IMMEDIATE_BITS;
+    for (int i = 0; i < SLOT_TYPES; i++) {
+        if (!can_be_immed_msb(bits_to_move)[i])
+            continue;
+        int bits_in_slot_sz = 1 << (i + 3);
+        // If this was to be the last section, what would be the impact
+        int bits_req = (bits_to_move / bits_in_slot_sz) * bits_in_slot_sz + minmax_bit_req()[i];
+        if (bits_req < minmax_bits) {
+            minmax_bits = bits_req;
+            minmax_use_slot_i = i;
+        }
+    }
+
+    if (minmax_use_slot_i == -1)
+        return rv;
+    move_other_sections_to_immed(bits_to_move, static_cast<SlotType_t>(minmax_use_slot_i), rv);
+    return rv;
 }
 
 /**
@@ -1060,7 +1368,7 @@ void ActionFormat2::condense_action(cstring action_name, RamSec_vec_t &ram_sects
 
     size_t total_bits = 0;
     size_t total_alus = 0;
-    std::vector<int> size_counts(4, 0);
+    std::vector<int> size_counts(SECT_TYPES, 0);
 
     for (auto *sect : ram_sects) {
         auto adps = sect->action_data_positions();
@@ -1078,7 +1386,6 @@ void ActionFormat2::condense_action(cstring action_name, RamSec_vec_t &ram_sects
     calc_max_size = std::max(calc_max_size, 1 << ceil_log2(total_bits / 8));
 }
 
-
 void ActionFormat2::analyze_actions() {
     ActionAnalysis::ContainerActionsMap container_actions_map;
     for (auto action : Values(tbl->actions)) {
@@ -1094,8 +1401,504 @@ void ActionFormat2::analyze_actions() {
     }
 }
 
+/**
+ * @see_also comments over ActionFormat2::determine_bytes_per_loc
+ */
+bool ActionFormat2::determine_next_immediate_bytes() {
+    AllActionPositions &adt_bus_inputs = action_bus_inputs.at(ACTION_DATA_TABLE);
+    AllActionPositions &immed_bus_inputs = action_bus_inputs.at(IMMEDIATE);
+    // Shrinking the next possible number of bytes by half, by the possibly entry sizes
+    int next_adt_bytes = bytes_per_loc[ACTION_DATA_TABLE] / 2;
+    int immed_bytes = 0;
+    int adt_bytes = 0;
+    // When shrinking the data by half, potentially the table cannot fit this entry within
+    // this size, i.e. an action has two HALF WORD outputs, and the previous next_adt_bytes
+    // was 2.  Neither of these entry can fit within a single byte, but these entries can
+    // both fit within immediate.  Potentially, an entry size can be skipped
+    for (auto &adt_entry : adt_bus_inputs) {
+        int bit_diff = static_cast<int>(adt_entry.bits_required()) -
+                           next_adt_bytes * 8;
+        if (bit_diff > IMMEDIATE_BITS)
+            return false;
+
+        auto immed_vec = adt_entry.best_inputs_to_move(bit_diff);
+        if (immed_vec.empty()) {
+            if (bit_diff > 0) {
+                return false;
+            }
+        } else {
+            BUG_CHECK(adt_entry.bits_required() <= (next_adt_bytes * 8U), "Cannot "
+                      "move things to immediate without fitting into action data table");
+        }
+
+        SingleActionPositions immed_entry(adt_entry.action_name, immed_vec);
+
+        immed_bus_inputs.push_back(immed_entry);
+        // Determining the maximum immmediate bytes over all actions
+        immed_bytes = std::max(immed_bytes, static_cast<int>(immed_entry.bits_required()) / 8);
+        // Because the adt_bytes < next_adt_bytes, from earlier, find the max adt_bytes
+        adt_bytes = std::max(adt_bytes, static_cast<int>(adt_entry.adt_bits_required()) / 8);
+        cstring action_name = adt_entry.action_name;
+        BUG_CHECK(adt_entry.all_inputs.size() + immed_entry.all_inputs.size() ==
+                  init_ram_sections.at(action_name).size(), "Somehow an action did not "
+                  "correctly move entries on action %s", action_name);
+    }
+    BUG_CHECK(immed_bytes <= IMMEDIATE_BITS / 8, "Trying to allocate %d bytes to immediate, "
+              "when the max is 4", immed_bytes);
+    BUG_CHECK(adt_bytes <= next_adt_bytes, "The action data table bytes did not shrink");
+    bytes_per_loc[ACTION_DATA_TABLE] = adt_bytes;
+    bytes_per_loc[IMMEDIATE] = immed_bytes;
+    LOG2("  Bytes per location : { ACTION_DATA_TABLE : " << bytes_per_loc[ACTION_DATA_TABLE]
+         << ", IMMEDIATE : " << bytes_per_loc[IMMEDIATE] << " }");
+    return true;
+}
+
+/**
+ * The goal of the action format algorithm is to generate a number of possibly action data
+ * packing algorithms.  Action Data can be allocated to two possible locations, on a separate
+ * RAM as an ActionDataTable (Attached to the Match Table), or as part of the match format
+ * known as immediate.
+ *
+ * With different requirements on match pack formats, other overhead, and number of RAMs required,
+ * it is up to the table placement algorithm to determine which combination of action data and
+ * match data packing is best to allocate.
+ *
+ * The action data tables can be packed with certain granularities, described in uArch section
+ * 6.2.8.4.3 Action RAM Addressing.  Essentially the entry size can be a power of 2, ranging
+ * from 8 bits to 1024 bits of action data.  Immediate data at most can be 32 bits.
+ *
+ * The algorithm is the following:
+ *     1. Start by assuming all action data is in the Action Data Table only.
+ *     2. Move action data from Action Data to Immediate in order to shrink the entry size for
+ *        action data (i.e. if the Action Data bits was originally 144 bits, move at least 16
+ *        bits from that action data to immediate)
+ *     3. Repeat the process until the immediate data space cannot hold the extra data, as at
+ *        most, the action data in immediate is 32 bits
+ *
+ * Now, due to the hardware, the worst case entry size for any of the actions in a table is the
+ * action size for all entries in that table.  This is absolutely true for direct and a driver
+ * restriction on indirect tables (ActionProfiles).  Thus is a table has 5 actions where 4
+ * actions only have 8 bits, but 1 action has 256 bits, then each entry will be 256 bits
+ * no matter what.
+ *
+ * The reason for this, specifically on direct, is that the driver/compiler cannot predict
+ * ahead of time what entry will run which action and thus what data needs to be stored to
+ * directly line up for the entry.  For action profiles, the driver does not currently have
+ * the ability to set up these different sizes of action data entry sizes.
+ */
+bool ActionFormat2::determine_bytes_per_loc(bool &initialized) {
+    action_bus_inputs.resize(AD_LOCATIONS);
+    action_bus_input_bitvecs.resize(AD_LOCATIONS);
+    for (int i = 0; i < AD_LOCATIONS; i++) {
+        action_bus_inputs[i].clear();
+        for (int j = 0; j < SLOT_TYPES; j++) {
+            action_bus_input_bitvecs[i][j] = bitvec();
+        }
+    }
+
+    AllActionPositions &all_bus_inputs = action_bus_inputs.at(ACTION_DATA_TABLE);
+    int max_bytes = 0;
+    for (auto &entry : init_ram_sections) {
+        auto &ram_sects = entry.second;
+        safe_vector<RamSectionPosition> single_action_inputs;
+        for (size_t i = 0; i < ram_sects.size(); i++) {
+            auto &ram_sect = ram_sects[i];
+            single_action_inputs.emplace_back(ram_sect);
+        }
+        all_bus_inputs.emplace_back(entry.first, single_action_inputs);
+        max_bytes = std::max(max_bytes,
+                             static_cast<int>(all_bus_inputs.back().adt_bits_required()) / 8);
+    }
+
+    // First run, only allocate on action data
+    if (!initialized) {
+        initialized = true;
+        bytes_per_loc[ACTION_DATA_TABLE] = max_bytes;
+        bytes_per_loc[IMMEDIATE] = 0;
+        return true;
+    }
+
+    // Action profiles cannot have immediate data by definition
+    for (auto ba : tbl->attached) {
+        if (ba->attached->is<IR::MAU::ActionData>())
+            return false;
+    }
+
+    if (bytes_per_loc[ACTION_DATA_TABLE] == 0)
+        return false;
+
+    return determine_next_immediate_bytes();
+}
+
+/**
+ * Locks the position of a RamSectionPosition as well as updates the ActionDataBusInputs
+ * with the impact of this RamSection's inputs
+ */
+void ActionFormat2::set_ram_sect_byte(SingleActionAllocation &single_action_alloc,
+        bitvec &allocated_slots_in_action, RamSectionPosition &ram_sect, int byte_position) {
+    ram_sect.byte_offset = byte_position;
+    allocated_slots_in_action.setrange(byte_position, ram_sect.section->byte_sz());
+    for (int i = 0; i < SLOT_TYPES; i++) {
+        bitvec input_use = ram_sect.section->action_data_bus_inputs().at(i) << byte_position;
+        single_action_alloc.current_action_inputs[i] |= input_use;
+        (*single_action_alloc.all_action_inputs)[i] |= input_use;
+    }
+    single_action_alloc.alloc_inputs.push_back(ram_sect);
+}
+
+/**
+ * Allocate the immediate section where the size of the section == slot_type.  The algorithm
+ * removes these inputs from orig_inputs and adds them to alloc_inputs.  Guaranteed from the
+ * sort outside this function that the minmax object is seen lost.
+ *
+ * For the description this algorithm:
+ * @seealso alloc_immed_bytes
+ */
+void ActionFormat2::alloc_immed_slots_of_size(SlotType_t slot_type,
+        SingleActionAllocation &single_action_alloc, int max_bytes_required) {
+    int ss_i = static_cast<int>(slot_type);
+    auto it = single_action_alloc.orig_inputs.begin();
+    bitvec allocated_slots_in_action = bytes_in_use(single_action_alloc.current_action_inputs);
+    while (it != single_action_alloc.orig_inputs.end()) {
+        auto ram_sect = *it;
+        if (ram_sect.section->size() != (1U << (ss_i + 3))) {
+            it++;
+            continue;
+        }
+        bool found = false;
+        int byte_position = 0;
+        int byte_sz = ram_sect.section->byte_sz();
+        for (int i = 0; i <= max_bytes_required; i += byte_sz) {
+            if (!allocated_slots_in_action.getslice(i, byte_sz).empty())
+                continue;
+            found = true;
+            byte_position = i;
+            break;
+        }
+
+        BUG_CHECK(found && byte_position + byte_sz <= max_bytes_required, "The byte position is "
+                  "outside of the range of the region");
+        set_ram_sect_byte(single_action_alloc, allocated_slots_in_action, ram_sect, byte_position);
+        it = single_action_alloc.orig_inputs.erase(it);
+    }
+}
+
+/**
+ * Allocate the action data sections that have inputs of size == slot_type.  They will remove
+ * themselves from the orig_input and the allocation will be added to the alloc_inputs.
+ * The inputs will also try to reuse already used action data inputs from other actions in the
+ * same table.
+ *
+ * For the description of the algorithm:
+ * @seealso alloc_adt_bytes
+ */
+void ActionFormat2::alloc_adt_slots_of_size(SlotType_t slot_type,
+        SingleActionAllocation &single_action_alloc, int max_bytes_required) {
+    int ss_i = static_cast<int>(slot_type);
+    auto it = single_action_alloc.orig_inputs.begin();
+    bitvec allocated_slots_in_action = bytes_in_use(single_action_alloc.current_action_inputs);
+    while (it != single_action_alloc.orig_inputs.end()) {
+        auto ram_sect = *it;
+        if (ram_sect.total_slots_of_type(slot_type) == 0) {
+            it++;
+            continue;
+        }
+        // Note that the section can only appear at a particular offset
+        int byte_sz = ram_sect.section->size() / 8;
+        bool found = false;
+        int byte_position = 0;
+        // Try to reuse other actions inputs of the same size
+        for (int i = 0; i <= max_bytes_required; i += byte_sz) {
+            if (!allocated_slots_in_action.getslice(i, byte_sz).empty())
+                continue;
+            bitvec slots_in_use = (*single_action_alloc.all_action_inputs)[ss_i];
+            if ((slots_in_use & ram_sect.section->action_data_bus_inputs()[ss_i]).empty())
+                continue;
+            found = true;
+            byte_position = i;
+            break;
+        }
+
+        // Just find the first available space
+        if (!found) {
+            for (int i = 0; i <= max_bytes_required; i += byte_sz) {
+                if (!allocated_slots_in_action.getslice(i, byte_sz).empty())
+                    continue;
+                found = true;
+                byte_position = i;
+                break;
+            }
+        }
+
+        BUG_CHECK(found && byte_position + byte_sz <= max_bytes_required, "The byte position is "
+                  "outside of the range of the region");
+
+        set_ram_sect_byte(single_action_alloc, allocated_slots_in_action, ram_sect, byte_position);
+        it = single_action_alloc.orig_inputs.erase(it);
+    }
+}
+
+/**
+ * Guarantees that the packing of an action is legal, i.e. each RamSection has a legal
+ * packing and that no RamSections overlap with each other.
+ */
+void ActionFormat2::verify_placement(SingleActionAllocation &single_action_alloc) {
+    auto &current_action_inputs = single_action_alloc.current_action_inputs;
+    LOG3("    Action Bus Input for BYTE: " << current_action_inputs[BYTE] << " HALF: "
+         << current_action_inputs[HALF] << " FULL: " << current_action_inputs[FULL]);
+    bitvec verify_legal_placement;
+    for (auto &input : single_action_alloc.alloc_inputs) {
+        BUG_CHECK(input.byte_offset >= 0, "A section was not allocated to a byte offset");
+        int sz = input.section->size() / 8;
+        BUG_CHECK(verify_legal_placement.getslice(input.byte_offset, sz).empty(), "Two "
+            "RAM sections in action %s are at the same location",
+            single_action_alloc.action_name());
+        verify_legal_placement.setrange(input.byte_offset, sz);
+    }
+
+    single_action_alloc.set_positions();
+}
+
+/**
+ * Determines the allocation for a single action data table action.
+ * @seealso determine_action_data_table_bytes
+ */
+void ActionFormat2::determine_single_action_input(SingleActionAllocation &single_action_alloc,
+        int max_bytes_required) {
+    LOG3("    Determining Ram Allocation for action " << single_action_alloc.action_name());
+
+    ActionDataBusInputs current_action_inputs;
+    // Prefer to place RamSections that have BYTE inputs
+    std::sort(single_action_alloc.orig_inputs.begin(), single_action_alloc.orig_inputs.end(),
+        [](const RamSectionPosition &a, const RamSectionPosition &b) {
+        int t;
+        if ((t = a.total_slots_of_type(BYTE) - b.total_slots_of_type(BYTE)) != 0)
+            return t > 0;
+        if ((t = a.total_slots_of_type(HALF) - b.total_slots_of_type(HALF)) != 0)
+            return t > 0;
+        return a.section->size() > b.section->size();
+    });
+
+    alloc_adt_slots_of_size(BYTE, single_action_alloc, max_bytes_required);
+
+    // Prefer to place RamSections that contain HALF inputs
+    std::sort(single_action_alloc.orig_inputs.begin(), single_action_alloc.orig_inputs.end(),
+        [](const RamSectionPosition &a, const RamSectionPosition &b) {
+        int t;
+        if ((t = a.total_slots_of_type(HALF) - b.total_slots_of_type(HALF)) != 0)
+            return t > 0;
+        if ((t = a.section->size() > b.section->size()) != 0)
+            return t > 0;
+        return a.section->size() > b.section->size();
+    });
+    alloc_adt_slots_of_size(HALF, single_action_alloc, max_bytes_required);
+
+    // Place all only FULL inputs
+    std::sort(single_action_alloc.orig_inputs.begin(), single_action_alloc.orig_inputs.end(),
+        [](const RamSectionPosition &a, const RamSectionPosition &b) {
+        return a.section->size() > b.section->size();
+    });
+
+    alloc_adt_slots_of_size(FULL, single_action_alloc, max_bytes_required);
+    verify_placement(single_action_alloc);
+}
+
+/**
+ * The purpose of this function is to determine the location of all RamSections in terms of their
+ * position on the Action Data Ram.  Based on an earlier calculation, the maximum number of bytes
+ * alloted for the action data entry is known.
+ *
+ * The goal is to try and minimize the number of action data bus inputs necessary in order
+ * to successfully transfer data from the Action Data RAM to the ALU.  The action data bus
+ * constraints are described in full in section 6.2.5 Action Output HV Xbar(s), and definitely
+ * more detailed within the action_data_bus.h/cpp files, but , at a high level, the 
+ * constraints are:
+ *
+ *     1. The closer the data is to the lsb of the entry (on a RAM granularity), the less
+ *        constraints that data has. 
+ *     2. The smaller the input slot size is, (i.e. BYTE vs. HALF vs. FULL), the slot has
+ *        more requirements when packed towards the msb (on a RAM granularity).
+ *
+ * Thus in general, it is better to pack the smaller input sizes closer to the lsb.  The
+ * algorithm is thus the following:
+ *
+ *     1.  Determine which action is going to have the most constraints in terms of packing
+ *         BYTES as well as size. 
+ *     2.  For each action find a packing on the RAM size in that entry, while trying if at
+ *         all possible to reuse some of the previously used action data slots.
+ *
+ * TODO: Potentially future algorithm to test.  In order to potentially minimize impact on
+ * action data bus inputs, condensing data across actions which don't have any impact on the
+ * packing of action data may directly hurt the potential packing.  This can be experimented
+ * with if the action data bus becomes a much more constrained resource (though there is
+ * plenty of options if that becomes an issue).
+ */
+void ActionFormat2::assign_action_data_table_bytes(AllActionPositions &all_bus_inputs,
+        ActionDataBusInputs &total_inputs) {
+    LOG2("  Assigning Action Data Byte Positions");
+    std::sort(all_bus_inputs.begin(), all_bus_inputs.end(),
+        [](const SingleActionPositions &a, const SingleActionPositions &b) {
+        int t;
+        if ((t = a.total_slots_of_type(BYTE) - b.total_slots_of_type(BYTE)) != 0)
+            return t > 0;
+        if ((t = a.total_slots_of_type(HALF) - b.total_slots_of_type(HALF)) != 0)
+            return t > 0;
+        if ((t = a.bits_required() - b.bits_required()) != 0)
+            return t > 0;
+        return a.action_name < b.action_name;
+    });
+
+    for (auto &single_action_input : all_bus_inputs) {
+        SingleActionAllocation single_action_alloc(&single_action_input, &total_inputs);
+        determine_single_action_input(single_action_alloc,
+                                      bytes_per_loc[ACTION_DATA_TABLE]);
+    }
+
+    LOG2("   Total inputs BYTE: 0x" << total_inputs[BYTE] << " HALF: 0x" << total_inputs[HALF]
+         << " FULL: 0x" << total_inputs[FULL]);
+}
+
+/**
+ * The purpose of this function is to determine the position of action data in the immediate 
+ * action data section, which is part of match overhead).  What is dissimilar to the action
+ * data table is that the constraints of the action data bus are not as restrictive, because
+ * for immediate data, the maximum data is only 4 bytes.
+ * 
+ * The goal instead of this allocation is to specifically allocate the data so that the
+ * data is itself the least number contiguous bits necessary as a mask, as the bit granularity
+ * is important for packing data on the match RAM line.
+ */
+void ActionFormat2::assign_immediate_bytes(AllActionPositions &all_bus_inputs,
+        ActionDataBusInputs &total_inputs) {
+    LOG2("  Assigning Immediate Byte Positions");
+    for (auto &single_action_inputs : all_bus_inputs) {
+        SlotType_t last_byte_or_half;
+        // Determines which sect size has the minmax size, BYTE, HALF, or FULL, (DOUBLE FULL
+        // cannot be packed on immediate)
+        // Also note that if a FULL section is in the immediate bytes, then nothing else
+        // would be packed in that section.
+        if (single_action_inputs.sections_of_size()[BYTE] == 0) {
+            last_byte_or_half = HALF;
+        } else if (single_action_inputs.sections_of_size()[HALF] == 0) {
+            last_byte_or_half = BYTE;
+        } else {
+            auto minbits = single_action_inputs.min_bit_of_contiguous_sect();
+            last_byte_or_half = minbits[HALF] <= minbits[BYTE] ? HALF : BYTE;
+        }
+        SlotType_t first_byte_or_half = last_byte_or_half == BYTE ? HALF : BYTE;
+
+        safe_vector<RamSectionPosition> orig_inputs;
+        safe_vector<RamSectionPosition> alloc_inputs;
+        ActionDataBusInputs current_action_inputs;
+        safe_vector<SlotType_t> slot_type_alloc = { first_byte_or_half, last_byte_or_half, FULL };
+        SingleActionAllocation single_action_alloc(&single_action_inputs, &total_inputs);
+
+        // Guarantee that the minmax object is the last in the vector, so that placing the
+        // inputs in order will place the minmax slot last
+        std::sort(orig_inputs.begin(), orig_inputs.end(),
+            [](const RamSectionPosition &a, const RamSectionPosition &b) {
+            int t;
+            if ((t = a.section->size() - b.section->size()) != 0)
+                return t < 0;
+            return a.section->bits_in_use().max().index() > b.section->bits_in_use().max().index();
+        });
+
+        for (auto slot_type : slot_type_alloc) {
+            alloc_immed_slots_of_size(slot_type, single_action_alloc, bytes_per_loc[IMMEDIATE]);
+        }
+        verify_placement(single_action_alloc);
+    }
+    LOG2("   Total inputs BYTE: 0x" << total_inputs[BYTE] << " HALF: 0x" << total_inputs[HALF]
+         << " FULL: 0x" << total_inputs[FULL]);
+}
+
+void ActionFormat2::assign_RamSections_to_bytes() {
+    assign_action_data_table_bytes(action_bus_inputs[ACTION_DATA_TABLE],
+                                   action_bus_input_bitvecs[ACTION_DATA_TABLE]);
+    assign_immediate_bytes(action_bus_inputs[IMMEDIATE], action_bus_input_bitvecs[IMMEDIATE]);
+}
+
+/**
+ * Given the allocation for all of the RamSections, the function builds a vector of the
+ * positions of all ActionDataForSingleALU2s for all actions and save them as a vector
+ * of ActionDataRamPositions.  This also builds a bitvec of all of the inputs in the
+ * action data bus inputs.
+ */
+void ActionFormat2::build_potential_format() {
+    Use use;
+    int loc_i = 0;
+    for (auto &loc_inputs : action_bus_inputs) {
+        ActionDataLocation_t loc = static_cast<ActionDataLocation_t>(loc_i);
+        ActionDataBusInputs verify_inputs = { { bitvec(), bitvec(), bitvec() } };
+        for (auto &single_action_input : loc_inputs) {
+            safe_vector<ActionDataALUPosition> alu_positions;
+            for (auto &ram_sect : single_action_input.all_inputs) {
+                for (auto *init_ad_alu : ram_sect.section->alu_requirements) {
+                    int first_phv_bit_pos = 0;
+                    bool does_contain = ram_sect.section->contains(init_ad_alu, &first_phv_bit_pos);
+                    BUG_CHECK(does_contain, "ALU object is not in container");
+                    int section_byte_offset = first_phv_bit_pos / init_ad_alu->size();
+                    first_phv_bit_pos = first_phv_bit_pos % init_ad_alu->size();
+                    int right_shift = init_ad_alu->phv_bits().min().index() - first_phv_bit_pos;
+                    right_shift = (right_shift + init_ad_alu->size()) % init_ad_alu->size();
+                    auto ad_alu = init_ad_alu->add_right_shift(right_shift);
+                    int start_byte = section_byte_offset + ram_sect.byte_offset;
+                    int byte_sz = ad_alu->is_constrained(BITMASKED_SET) ? ad_alu->size() * 2
+                                                                        : ad_alu->size();
+                    byte_sz /= 8;
+                    alu_positions.emplace_back(ad_alu, loc, start_byte);
+                    verify_inputs[ad_alu->index()].setrange(start_byte, byte_sz);
+                }
+            }
+            auto &adp_vec = use.action_data_positions[single_action_input.action_name];
+            adp_vec.insert(adp_vec.end(), alu_positions.begin(), alu_positions.end());
+        }
+        for (int i = 0; i < SLOT_TYPES; i++) {
+            BUG_CHECK(action_bus_input_bitvecs.at(loc_i).at(i) == verify_inputs.at(i),
+                "The action data bus inputs from the vector do not align with the calculated "
+                "input positions during allocation");
+        }
+
+        use.action_data_bus_inputs[loc_i] = action_bus_input_bitvecs.at(loc_i);
+        loc_i++;
+    }
+    use.action_data_bytes_in_loc = bytes_per_loc;
+    uses.push_back(use);
+}
+
+/**
+ * Builds a vector of potential action data packings.  The following are potential notes for
+ * later improvements and criticisms.
+ *
+ *     1. The algorithm for determining the balance between Action Data Table and Immediate space
+ *        might not be the long term solution, as I had the idea to possibly run the condense
+ *        algorithm over two separate spaces.  Right now, the condense algorithm runs assuming
+ *        that all data will be packed in the same area, specifically Action Data RAM.  Perhaps
+ *        the long term solution is to condense into two spaces simultaneously, immediate and
+ *        action data.
+ *
+ *     2. The naming is fairly cumbersome.  Specifically the terms slots and sections appear, and
+ *        mean different things.  Slots refer to Action Data Bus Input Slots, which come from the
+ *        ActionDataForSingleALU2 objects, while Sections refer to the ActionDataRamSection class,
+ *        which through the condense algorithm, can have multiple ActionDataForSingleALU2 objects.
+ *        Separate analysis over these object is necessary, but the naming can be confusing.
+ *
+ *     3. The algorithm is not finely tuned to save Action Data Bus resources, though usually this
+ *        isn't the constraint that prevents tables from fitting.  I think before trying to
+ *        optimize this for Action Data Bus, other portions of the Action Data Bus algorithm can
+ *        improve, e.g. O(n^2) approach of allocating all tables simultaneously rather than one at
+ *        a time, mutual exclusive optimizations, and the extra copies of the entry from lsb.
+ */
 void ActionFormat2::allocate_format(int orig_max_size) {
     LOG1("Determining Formats for table " << tbl->name);
     analyze_actions();
+    bool initialized = false;
+    while (true) {
+        bool can_allocate = determine_bytes_per_loc(initialized);
+        if (!can_allocate)
+            break;
+        assign_RamSections_to_bytes();
+        build_potential_format();
+    }
     LOG1(" ADT size " << orig_max_size << " " << calc_max_size);
 }
