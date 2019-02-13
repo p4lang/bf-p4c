@@ -53,10 +53,10 @@ echo "DOCKER_TAG=$DOCKER_TAG"
 docker pull barefootnetworks/bf-p4c-compilers:$DOCKER_TAG
 
 echo "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c \
-       -e CTEST_PARALLEL_LEVEL=4 -e CTEST_OUTPUT_ON_FAILURE='true' -e MAKEFLAGS \
+       -e CTEST_PARALLEL_LEVEL=4 -e CTEST_OUTPUT_ON_FAILURE=true -e MAKEFLAGS \
        barefootnetworks/bf-p4c-compilers:$DOCKER_TAG \
        ctest -R $TEST_SUITE -E $TEST_EXCLUDE"
 docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c \
-       -e CTEST_PARALLEL_LEVEL=4 -e CTEST_OUTPUT_ON_FAILURE='true' -e MAKEFLAGS \
+       -e CTEST_PARALLEL_LEVEL=4 -e CTEST_OUTPUT_ON_FAILURE=true -e MAKEFLAGS \
        barefootnetworks/bf-p4c-compilers:$DOCKER_TAG \
        ctest -R $TEST_SUITE -E $TEST_EXCLUDE
