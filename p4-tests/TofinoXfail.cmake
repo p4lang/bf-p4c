@@ -744,12 +744,6 @@ p4c_add_xfail_reason("tofino"
 #   extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
 #   )
 
-# STF test failure
-p4c_add_xfail_reason("tofino"
-  "mismatch from .* at byte .*"
-  testdata/p4_16_samples/arith-bmv2.p4
-)
-
 p4c_add_xfail_reason("tofino"
   "The action .* manipulates field .* that requires multiple stages from an action"
   testdata/p4_16_samples/issue983-bmv2.p4
@@ -1561,9 +1555,7 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "IR structure not yet handled by the ActionAnalysis pass"
-  extensions/p4_tests/p4_16/cast_widening_add.p4
   extensions/p4_tests/p4_16/test_config_4_cast_add.p4
-  testdata/p4_16_samples/arith-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"

@@ -232,6 +232,19 @@ class SimplifyOperationBinary : public Transform {
             binop->right->type->to<IR::Type_Bits>()->isSigned)
             return expression;
 
+        if (expression->type->width_bits() > binop->type->width_bits()) {
+            // widening cast
+            if (binop->is<IR::Add>() || binop->is<IR::Sub>() || binop->is<IR::Mul>() ||
+                binop->is<IR::AddSat>() || binop->is<IR::SubSat>()) {
+                // would change carry/overflow/saturate behavior, so can't do it.
+                return expression; }
+        } else if (expression->type->width_bits() < binop->type->width_bits()) {
+            // narrowing cast
+            if (binop->is<IR::AddSat>() || binop->is<IR::SubSat>() ||
+                binop->is<IR::Div>() || binop->is<IR::Mod>()) {
+                // would change saturate or rounding behavior, so can't do it.
+                return expression; } }
+
         if (binop->left->is<IR::Constant>()) {
             auto cst = binop->left->to<IR::Constant>();
             left = new IR::Constant(expression->destType, cst->value, cst->base);
