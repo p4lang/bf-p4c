@@ -21,10 +21,13 @@ class DoReplaceTypedef final : public Transform {
 
 class EliminateTypedef final : public PassManager {
  public:
-    EliminateTypedef(ReferenceMap* refMap, TypeMap* typeMap) {
-        passes.push_back(new TypeChecking(refMap, typeMap));
+    EliminateTypedef(ReferenceMap* refMap, TypeMap* typeMap,
+            TypeChecking* typeChecking = nullptr) {
+        if (!typeChecking)
+            typeChecking = new TypeChecking(refMap, typeMap);
+        passes.push_back(typeChecking);
         passes.push_back(new DoReplaceTypedef(refMap));
-        passes.push_back(new P4::TypeChecking(refMap, typeMap, true));
+        passes.push_back(new BFN::TypeChecking(refMap, typeMap, true));
         setName("EliminateTypedef");
     }
 };

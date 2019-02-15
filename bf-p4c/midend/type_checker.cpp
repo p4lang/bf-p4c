@@ -157,7 +157,9 @@ TypeInference* TypeInference::clone() const {
 // it might be better to allow frontend TypeChecking class to use
 // custom TypeInference pass.
 TypeChecking::TypeChecking(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
-                           bool updateExpressions) {
+                           bool updateExpressions) :
+                           P4::TypeChecking(refMap, typeMap, updateExpressions) {
+    passes.clear();
     addPasses({
         new P4::ResolveReferences(refMap),
         new BFN::TypeInference(refMap, typeMap, true), /* extended P4::TypeInference */

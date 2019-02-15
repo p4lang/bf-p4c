@@ -126,17 +126,19 @@ class DoSimplifyComplexCondition : public Transform {
  */
 class SimplifyNestedIf : public PassManager {
  public:
-    SimplifyNestedIf(ReferenceMap* refMap, TypeMap* typeMap) {
+    SimplifyNestedIf(ReferenceMap* refMap, TypeMap* typeMap,
+                     TypeChecking* typeChecking = nullptr) {
         std::set<cstring> valid_fields;
         valid_fields = {"digest_type", "resubmit_type", "mirror_type"};
         auto policy = new UniqueAndValidDest(refMap, typeMap, &valid_fields);
         auto skip = new ProcessDeparser();
-        passes.push_back(new TypeChecking(refMap, typeMap));
+        if (!typeChecking)
+            typeChecking = new TypeChecking(refMap, typeMap);
+        passes.push_back(typeChecking);
         passes.push_back(new DoSimplifyNestedIf(skip));
-        passes.push_back(new StrengthReduction(refMap, typeMap));
-        passes.push_back(new SimplifyControlFlow(refMap, typeMap));
+        passes.push_back(new StrengthReduction(refMap, typeMap, typeChecking));
+        passes.push_back(new SimplifyControlFlow(refMap, typeMap, typeChecking));
         passes.push_back(new DoSimplifyComplexCondition(policy, skip));
-        passes.push_back(new TypeChecking(refMap, typeMap, true));
         setName("SimplifyNestedIf");
     }
 };

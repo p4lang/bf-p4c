@@ -23,12 +23,12 @@ class DoRewriteFlexibleStruct : public Transform {
     const IR::Node* preorder(IR::Type_Struct* st) override;
 };
 
-
 class RewriteFlexibleStruct : public PassManager {
  public:
     RewriteFlexibleStruct(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {
         addPasses({
             new DoRewriteFlexibleStruct(typeMap),
+            new P4::ClearTypeMap(typeMap),
             new BFN::TypeChecking(refMap, typeMap, true),
         });
         setName("RewriteFlexibleStruct");

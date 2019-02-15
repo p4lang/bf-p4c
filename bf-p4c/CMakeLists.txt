@@ -78,9 +78,8 @@ set (BF_P4C_MIDEND_SRCS
   midend/check_header_alignment.cpp
   midend/elim_cast.cpp
   midend/check_unsupported.cpp
-  midend/elim_emit_headers.cpp
   midend/elim_typedef.cpp
-  midend/flatten_emit_args.cpp
+  midend/simplify_emit_args.cpp
   midend/inline_subparser.cpp
   midend/normalize_params.cpp
   midend/param_binding.cpp
@@ -98,9 +97,8 @@ set (BF_P4C_BACKEND_MIDEND_HDRS
   midend/check_header_alignment.h
   midend/elim_cast.h
   midend/check_unsupported.h
-  midend/elim_emit_headers.h
   midend/elim_typedef.h
-  midend/flatten_emit_args.h
+  midend/simplify_emit_args.h
   midend/inline_subparser.h
   midend/normalize_params.h
   midend/param_binding.h

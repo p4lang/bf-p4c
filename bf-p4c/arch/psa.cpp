@@ -11,6 +11,7 @@
 #include "midend/validateProperties.h"
 #include "psa_program_structure.h"
 #include "psa_converters.h"
+#include "bf-p4c/midend/type_checker.h"
 
 namespace BFN {
 
@@ -741,7 +742,7 @@ PortableSwitchTranslation::PortableSwitchTranslation(
                                          "psa_direct_meters", "idle_timeout"}),
         new P4::ConvertEnums(refMap, typeMap, new PSA::PacketPathTo8Bits),
         new P4::CopyStructures(refMap, typeMap),
-        new P4::TypeChecking(refMap, typeMap, true),
+        new BFN::TypeChecking(refMap, typeMap, true),
         evaluator,
         new VisitFunctor(
             [structure, evaluator]() { structure->toplevel = evaluator->getToplevelBlock(); }),
@@ -755,7 +756,7 @@ PortableSwitchTranslation::PortableSwitchTranslation(
         new TranslationLast(),
         // new AddPsaBridgeMetadata(refMap, typeMap, structure),
         new P4::ClearTypeMap(typeMap),
-        new P4::TypeChecking(refMap, typeMap, true),
+        new BFN::TypeChecking(refMap, typeMap, true),
     });
 }
 

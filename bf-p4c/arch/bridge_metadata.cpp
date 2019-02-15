@@ -11,12 +11,12 @@
 #include "lib/ordered_set.h"
 
 #include "frontends/common/resolveReferences/referenceMap.h"
-#include "frontends/p4/typeChecking/typeChecker.h"
 #include "frontends/common/resolveReferences/resolveReferences.h"
 #include "frontends/p4/typeMap.h"
 #include "bf-p4c/arch/psa_program_structure.h"
 #include "bf-p4c/arch/collect_bridged_fields.h"
 #include "bf-p4c/midend/path_linearizer.h"
+#include "bf-p4c/midend/type_checker.h"
 #include "bf-p4c/lib/pad_alignment.h"
 
 namespace BFN {
@@ -85,7 +85,7 @@ struct BridgeIngressToEgress : public Transform {
             }
             auto annot = new IR::Annotations({new IR::Annotation(IR::ID("flexible"), {})});
             auto bridgedMetaType =
-                new IR::Type_Struct("fields", annot, structFields);
+                new IR::BFN::Type_StructFlexible("fields", annot, structFields);
 
             fields.push_back(new IR::StructField(BRIDGED_MD_FIELD, bridgedMetaType));
         }
@@ -335,8 +335,6 @@ AddTnaBridgeMetadata::AddTnaBridgeMetadata(P4::ReferenceMap* refMap, P4::TypeMap
     addPasses({
         collectBridgedFields,
         bridgeIngressToEgress,
-        new P4::ClearTypeMap(typeMap),
-        new P4::TypeChecking(refMap, typeMap, true),
     });
 }
 
@@ -636,14 +634,14 @@ AddPsaBridgeMetadata::AddPsaBridgeMetadata(P4::ReferenceMap* refMap, P4::TypeMap
     auto* findBridgedMetaAssignments = new FindBridgeMetadataAssignment(refMap, typeMap);
     addPasses({
         new P4::ClearTypeMap(typeMap),
-        new P4::TypeChecking(refMap, typeMap, true),
+        new BFN::TypeChecking(refMap, typeMap, true),
         bridgeIngressToEgress,
         new P4::ClearTypeMap(typeMap),
-        new P4::TypeChecking(refMap, typeMap, true),
+        new BFN::TypeChecking(refMap, typeMap, true),
         findBridgedMetaAssignments,
         new MoveBridgeMetadataAssignment(&findBridgedMetaAssignments->bridgedFieldAssignments),
         new P4::ClearTypeMap(typeMap),
-        new P4::TypeChecking(refMap, typeMap, true),
+        new BFN::TypeChecking(refMap, typeMap, true),
     });
 }
 

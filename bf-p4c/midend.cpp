@@ -8,7 +8,6 @@
 #include "frontends/p4/simplify.h"
 #include "frontends/p4/simplifyParsers.h"
 #include "frontends/p4/strengthReduction.h"
-#include "frontends/p4/typeChecking/typeChecker.h"
 #include "frontends/p4/typeMap.h"
 #include "frontends/p4/unusedDeclarations.h"
 #include "midend/actionSynthesis.h"
@@ -41,9 +40,8 @@
 #include "bf-p4c/midend/check_header_alignment.h"
 #include "bf-p4c/midend/elim_cast.h"
 #include "bf-p4c/midend/check_unsupported.h"
-#include "bf-p4c/midend/elim_emit_headers.h"
 #include "bf-p4c/midend/elim_typedef.h"
-#include "bf-p4c/midend/flatten_emit_args.h"
+#include "bf-p4c/midend/simplify_emit_args.h"
 #include "bf-p4c/midend/inline_subparser.h"
 #include "bf-p4c/midend/normalize_params.h"
 #include "bf-p4c/midend/rewrite_egress_intrinsic_metadata_header.h"
@@ -60,22 +58,17 @@ The policy is: convert all enums that are not part of the architecture files.
 Use 32-bit values for all enums.
 */
 class EnumOn32Bits : public P4::ChooseEnumRepresentation {
+    std::set<cstring> reserved_enums = {
+            "MeterType_t", "MeterColor_t", "CounterType_t", "SelectorMode_t", "HashAlgorithm_t",
+            "MathOp_t", "CloneType" };
+
     bool convert(const IR::Type_Enum* type) const override {
-        if (type->srcInfo.isValid()) {
-            auto sourceFile = type->srcInfo.getSourceFile();
-            if (sourceFile.endsWith("v1model.p4") ||
-                sourceFile.endsWith("psa.p4") ||
-                sourceFile.endsWith("tofino.p4") ||
-                sourceFile.endsWith("tofino/meter.p4") ||
-                sourceFile.endsWith("tofino2.p4") ||
-                sourceFile.endsWith("stratum.p4"))
-                // Don't convert any of the standard enums
-                return false;
-        }
-        return true;
-    }
-    unsigned enumSize(unsigned) const override
-    { return 32; }
+        LOG1("convert ? " << type->name);
+        if (reserved_enums.count(type->name))
+            return false;
+        return true; }
+
+    unsigned enumSize(unsigned) const override { return 32; }
 };
 
 /**
@@ -270,59 +263,63 @@ MidEnd::MidEnd(BFN_Options& options) {
     // we may come through this path even if the program is actually a P4 v1.0 program
     setName("MidEnd");;;
     refMap.setIsV1(true);
+    auto typeChecking = new BFN::TypeChecking(&refMap, &typeMap);
+    auto typeInference = new BFN::TypeInference(&refMap, &typeMap, true);
     auto evaluator = new BFN::EvaluatorPass(&refMap, &typeMap);
     auto skip_controls = new std::set<cstring>();
     cstring args_to_skip[] = { "ingress_deparser", "egress_deparser"};
     auto errorOnMethodCall = false;
 
     addPasses({
-        new P4::EliminateNewtype(&refMap, &typeMap),
-        new P4::EliminateSerEnums(&refMap, &typeMap),
-        new P4::TypeChecking(&refMap, &typeMap, true),
+        new P4::EliminateNewtype(&refMap, &typeMap, typeChecking),
+        new P4::EliminateSerEnums(&refMap, &typeMap, typeChecking),
+        new BFN::TypeChecking(&refMap, &typeMap, true),
         new BFN::CheckUnsupported(&refMap, &typeMap),
         new BFN::CheckHeaderAlignment(&typeMap),
-        new P4::ConvertEnums(&refMap, &typeMap, new EnumOn32Bits()),
-        new P4::RemoveActionParameters(&refMap, &typeMap),
-        new P4::OrderArguments(&refMap, &typeMap),
+        new P4::RemoveActionParameters(&refMap, &typeMap, typeChecking),
+        new P4::OrderArguments(&refMap, &typeMap, typeChecking),
         new BFN::ArchTranslation(&refMap, &typeMap, options),
-        new P4::EliminateTypedef(&refMap, &typeMap),
-        new P4::SimplifyControlFlow(&refMap, &typeMap),
+        new P4::ConvertEnums(&refMap, &typeMap, new EnumOn32Bits(), typeChecking),
+        new P4::EliminateTypedef(&refMap, &typeMap, typeChecking),
+        new P4::SimplifyControlFlow(&refMap, &typeMap, typeChecking),
+        new BFN::ElimCasts(&refMap, &typeMap),
         new P4::SimplifyKey(
             &refMap, &typeMap,
             new P4::OrPolicy(new P4::OrPolicy(new P4::IsValid(&refMap, &typeMap), new P4::IsMask()),
-                             new BFN::IsPhase0())),
-        new P4::RemoveExits(&refMap, &typeMap),
-        new P4::ConstantFolding(&refMap, &typeMap),
-        new P4::StrengthReduction(&refMap, &typeMap),
-        new P4::SimplifySelectCases(&refMap, &typeMap, true),  // constant keysets
-        new P4::ExpandLookahead(&refMap, &typeMap),
-        new P4::ExpandEmit(&refMap, &typeMap),
+                             new BFN::IsPhase0()),
+            typeChecking),
+        new P4::RemoveExits(&refMap, &typeMap, typeChecking),
+        new P4::ConstantFolding(&refMap, &typeMap, true, typeChecking),
+        new P4::StrengthReduction(&refMap, &typeMap, typeChecking),
+        new P4::SimplifySelectCases(&refMap, &typeMap, true, typeChecking),  // constant keysets
+        new P4::ExpandLookahead(&refMap, &typeMap, typeChecking),
+        new P4::ExpandEmit(&refMap, &typeMap, typeChecking),
         new P4::SimplifyParsers(&refMap),
-        new P4::StrengthReduction(&refMap, &typeMap),
-        new P4::EliminateTuples(&refMap, &typeMap),
-        new EliminateEmitHeaders(&refMap, &typeMap),
-        new P4::SimplifyComparisons(&refMap, &typeMap),
+        new P4::StrengthReduction(&refMap, &typeMap, typeChecking),
+        new P4::EliminateTuples(&refMap, &typeMap, typeChecking, typeInference),
+        new SimplifyEmitArgs(&refMap, &typeMap),
+        new P4::SimplifyComparisons(&refMap, &typeMap, typeChecking),
         new InlineSubparserParameter(&refMap),  // run before CopyStructures
         // errorOnMethodCall argument in CopyStructures is defaulted to true.
         // This means methods or functions returning structs will be flagged as
         // an error. Here, we set this to false to allow such scenarios.
         // E.g. Phase0 extern function returns a header struct.
-        new P4::CopyStructures(&refMap, &typeMap, errorOnMethodCall),
-        new P4::NestedStructs(&refMap, &typeMap),
-        new P4::SimplifySelectList(&refMap, &typeMap),
-        new P4::RemoveSelectBooleans(&refMap, &typeMap),
+        new P4::CopyStructures(&refMap, &typeMap, errorOnMethodCall, typeChecking),
+        new P4::NestedStructs(&refMap, &typeMap, typeChecking),
+        new P4::SimplifySelectList(&refMap, &typeMap, typeChecking),
+        new P4::RemoveSelectBooleans(&refMap, &typeMap, typeChecking),
         new P4::Predication(&refMap),
         new P4::MoveDeclarations(),  // more may have been introduced
-        new P4::ConstantFolding(&refMap, &typeMap),
+        new P4::ConstantFolding(&refMap, &typeMap, true, typeChecking),
         new P4::SimplifyBitwise(),
-        new P4::LocalCopyPropagation(&refMap, &typeMap, skipRegisterActionOutput),
-        new P4::ConstantFolding(&refMap, &typeMap),
-        new P4::StrengthReduction(&refMap, &typeMap),
+        new P4::LocalCopyPropagation(&refMap, &typeMap, typeChecking, skipRegisterActionOutput),
+        new P4::ConstantFolding(&refMap, &typeMap, true, typeChecking),
+        new P4::StrengthReduction(&refMap, &typeMap, typeChecking),
         new P4::MoveDeclarations(),
-        new P4::SimplifyNestedIf(&refMap, &typeMap),
-        new P4::SimplifyControlFlow(&refMap, &typeMap),
+        new P4::SimplifyNestedIf(&refMap, &typeMap, typeChecking),
+        new P4::SimplifyControlFlow(&refMap, &typeMap, typeChecking),
         new CompileTimeOperations(),
-        new P4::TableHit(&refMap, &typeMap),
+        new P4::TableHit(&refMap, &typeMap, typeChecking),
         evaluator,
         new VisitFunctor([=](const IR::Node *root) -> const IR::Node * {
             auto toplevel = evaluator->getToplevelBlock();
@@ -339,12 +336,11 @@ MidEnd::MidEnd(BFN_Options& options) {
             }
             return root;
         }),
-        new P4::SynthesizeActions(&refMap, &typeMap, new ActionSynthesisPolicy(skip_controls)),
-        new P4::MoveActionsToTables(&refMap, &typeMap),
-        new RewriteEgressIntrinsicMetadataHeader(&typeMap),
+        new P4::SynthesizeActions(&refMap, &typeMap,
+                new ActionSynthesisPolicy(skip_controls), typeChecking),
+        new P4::MoveActionsToTables(&refMap, &typeMap, typeChecking),
+        new RewriteEgressIntrinsicMetadataHeader(&refMap, &typeMap),
         new RenameArchParams(&refMap, &typeMap),
-        new SimplifyEmitArgs(&refMap, &typeMap),
-        new ElimCasts(&refMap, &typeMap),  // move to an earlier pass.
         new FillFromBlockMap(&refMap, &typeMap),
         new UnrollParserCounter(&refMap),
         evaluator,

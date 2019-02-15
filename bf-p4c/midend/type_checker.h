@@ -37,7 +37,7 @@ class TypeInference : public P4::TypeInference {
  * A TypeChecking pass in BFN namespace that uses the extended
  * TypeInference pass. This should be used in our midend.
  */
-class TypeChecking : public PassManager {
+class TypeChecking : public P4::TypeChecking {
  public:
     TypeChecking(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
                  bool updateExpressions = false);

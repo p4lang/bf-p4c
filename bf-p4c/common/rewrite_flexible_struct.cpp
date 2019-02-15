@@ -1,4 +1,5 @@
 #include "common/rewrite_flexible_struct.h"
+#include "lib/pad_alignment.h"
 
 namespace BFN {
 
@@ -20,8 +21,25 @@ const IR::Node* DoRewriteFlexibleStruct::preorder(IR::Type_Struct* st) {
     if (!st->getAnnotation("flexible"))
         return st;
 
-    auto retval = new IR::BFN::Type_StructFlexible(st->srcInfo, st->name, st->fields);
-    LOG1("retval " << retval);
+    IR::IndexedVector<IR::StructField> structFields;
+    unsigned padFieldId = 0;
+    for (auto& field : st->fields) {
+        // Add padding field for every bridged metadata field to ensure that the resulting
+        // header is byte aligned.
+        const int alignment = getAlignment(field->type->width_bits());
+        if (alignment != 0) {
+            cstring padFieldName = "__pad_";
+            padFieldName += cstring::to_cstring(padFieldId++);
+            auto *fieldAnnotations = new IR::Annotations({
+                new IR::Annotation(IR::ID("hidden"), {})});
+            structFields.push_back(new IR::StructField(padFieldName, fieldAnnotations,
+                                                       IR::Type::Bits::get(alignment)));
+        }
+        structFields.push_back(field);
+    }
+
+    auto retval = new IR::BFN::Type_StructFlexible(st->srcInfo, st->name, structFields);
+    LOG6("rewrite flexible struct " << retval);
     return retval;
 }
 

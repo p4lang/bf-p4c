@@ -10,6 +10,8 @@
 #include "bf-p4c/device.h"
 #include "bf-p4c/lib/pad_alignment.h"
 #include "bf-p4c/parde/field_packing.h"
+#include "bf-p4c/common/rewrite_flexible_struct.h"
+#include "bf-p4c/midend/type_checker.h"
 
 namespace BFN {
 
@@ -528,15 +530,16 @@ TnaArchTranslation::TnaArchTranslation(P4::ReferenceMap *refMap,
         new CheckTNAExternInvocation(refMap, typeMap),
         new LoweringType(),
         new P4::ClearTypeMap(typeMap),
-        new P4::TypeChecking(refMap, typeMap, true),
+        new BFN::TypeChecking(refMap, typeMap, true),
         new P4::ValidateTableProperties({"implementation", "size", "counters", "meters",
                                          "filters", "idle_timeout", "registers"}),
         new CheckPhaseZeroExtern(refMap, typeMap, phase0_calls),
         new UpdatePhase0NodeInParser(phase0_calls, decls),
         new UpdatePhase0Header(decls),
         new ConvertPhase0AssignToExtract(refMap, typeMap),
+        new BFN::RewriteFlexibleStruct(refMap, typeMap),
         new P4::ClearTypeMap(typeMap),
-        new P4::TypeChecking(refMap, typeMap, true),
+        new BFN::TypeChecking(refMap, typeMap, true),
     });
 }
 
@@ -559,15 +562,16 @@ T2naArchTranslation::T2naArchTranslation(P4::ReferenceMap *refMap,
         new CheckT2NAExternInvocation(refMap, typeMap),
         new LoweringType(),
         new P4::ClearTypeMap(typeMap),
-        new P4::TypeChecking(refMap, typeMap, true),
+        new BFN::TypeChecking(refMap, typeMap, true),
         new P4::ValidateTableProperties({"implementation", "size", "counters", "meters",
                                          "filters", "idle_timeout", "registers"}),
         new CheckPhaseZeroExtern(refMap, typeMap, phase0_calls),
         new UpdatePhase0NodeInParser(phase0_calls, decls),
         new UpdatePhase0Header(decls),
         new ConvertPhase0AssignToExtract(refMap, typeMap),
+        new BFN::RewriteFlexibleStruct(refMap, typeMap),
         new P4::ClearTypeMap(typeMap),
-        new P4::TypeChecking(refMap, typeMap, true),
+        new BFN::TypeChecking(refMap, typeMap, true),
     });
 }
 

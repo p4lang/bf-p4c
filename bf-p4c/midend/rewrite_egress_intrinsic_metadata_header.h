@@ -5,6 +5,7 @@
 
 namespace P4 {
 class TypeMap;
+class ReferenceMap;
 }
 
 namespace BFN {
@@ -36,6 +37,7 @@ class RewriteEgressIntrinsicMetadataHeader : public PassManager {
 
     struct RewriteHeader : public Transform {
         const CollectUsedFields& used_fields;
+        P4::TypeMap* typeMap;
 
         IR::IndexedVector<IR::StructField> new_fields;
 
@@ -43,26 +45,41 @@ class RewriteEgressIntrinsicMetadataHeader : public PassManager {
             BUG_CHECK(used_fields.eg_intr_md, "egress_intrinsic_metadata_t not found?");
 
             const IR::StructField* prev = nullptr;
+            const IR::Type* prev_type = nullptr;
             for (auto field : used_fields.eg_intr_md->fields) {
                 if (used_fields.used_fields.count(field->name) ||
                     field->name == "egress_port") {
                     // "egress_port" is always there (not optional)
                     // we need to preserve each field's byte alignment as in original header
-                    if (field->type->width_bits() % 8) {
+                    const IR::Type* canonicalType = nullptr;
+                    if (field->type->is<IR::Type_Name>())
+                        canonicalType = typeMap->getTypeType(field->type, true);
+                    else
+                        canonicalType = field->type;
+                    if (canonicalType->width_bits() % 8) {
                         BUG_CHECK(prev &&
-                             (field->type->width_bits() + prev->type->width_bits()) % 8 == 0,
-                             "%1% not padded to be byte-aligned in %2%",
-                             field->name, "egress_intrinsic_metadata_t");
+                        (canonicalType->width_bits() + prev_type->width_bits()) % 8 == 0,
+                                  "%1% not padded to be byte-aligned in %2%",
+                                  field->name, "egress_intrinsic_metadata_t");
                         new_fields.push_back(prev);
                     }
                     new_fields.push_back(field);
                 }
                 prev = field;
+                if (field->type->is<IR::Type_Name>())
+                    prev_type = typeMap->getTypeType(field->type, true);
+                else
+                    prev_type = field->type;
             }
 
             unsigned total_size_in_bits = 0;
             for (auto field : new_fields) {
-                auto bits = field->type->to<IR::Type_Bits>();
+                const IR::Type* canonicalType;
+                if (field->type->is<IR::Type_Name>())
+                    canonicalType = typeMap->getTypeType(field->type, true);
+                else
+                    canonicalType = field->type;
+                auto bits = canonicalType->to<IR::Type_Bits>();
                 total_size_in_bits += bits->size;
             }
 
@@ -102,17 +119,19 @@ class RewriteEgressIntrinsicMetadataHeader : public PassManager {
             return type;
         }
 
-        explicit RewriteHeader(const CollectUsedFields& used) : used_fields(used) {}
+        explicit RewriteHeader(const CollectUsedFields& used, P4::TypeMap* typeMap) :
+            used_fields(used), typeMap(typeMap) {}
     };
 
  public:
-    explicit RewriteEgressIntrinsicMetadataHeader(P4::TypeMap* typeMap) {
+    explicit RewriteEgressIntrinsicMetadataHeader(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {
         auto collectUsedFields = new CollectUsedFields;
 
         addPasses({
             collectUsedFields,
-            new RewriteHeader(*collectUsedFields),
+            new RewriteHeader(*collectUsedFields, typeMap),
             new P4::ClearTypeMap(typeMap),
+            new BFN::TypeChecking(refMap, typeMap, true),
         });
     }
 };

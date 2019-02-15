@@ -15,6 +15,7 @@
 #include "midend/local_copyprop.h"
 #include "midend/validateProperties.h"
 #include "bf-p4c/midend.h"
+#include "bf-p4c/midend/type_checker.h"
 #include "bf-p4c/arch/bridge_metadata.h"
 #include "bf-p4c/arch/intrinsic_metadata.h"
 #include "bf-p4c/arch/fromv1.0/checksum.h"
@@ -1953,6 +1954,7 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
                                                  P4::TypeMap* typeMap, BFN_Options& options) {
     setName("Translation");
     addDebugHook(options.getDebugHook());
+    auto typeChecking = new BFN::TypeChecking(refMap, typeMap);
     auto evaluator = new P4::EvaluatorPass(refMap, typeMap);
     auto structure = new BFN::V1::ProgramStructure;
     if (options.backward_compatible)
@@ -1961,8 +1963,8 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
     addPasses({
         new P4::ValidateTableProperties({"implementation", "size", "counters", "meters",
                                          "support_timeout"}),
-        new P4::LocalCopyPropagation(refMap, typeMap, V1::skipCond),
-        new P4::TypeChecking(refMap, typeMap, true),
+        new P4::LocalCopyPropagation(refMap, typeMap, typeChecking, V1::skipCond),
+        new BFN::TypeChecking(refMap, typeMap, true),
         new RemoveExternMethodCallsExcludedByAnnotation,
         new V1::NormalizeProgram(),
         evaluator,
@@ -1981,15 +1983,15 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
         new AddIntrinsicMetadata,
         new P4::ClonePathExpressions,
         new P4::ClearTypeMap(typeMap),
-        new P4::TypeChecking(refMap, typeMap, true),
+        new BFN::TypeChecking(refMap, typeMap, true),
         new RemoveSetMetadata(refMap, typeMap),
         new TranslatePhase0(refMap, typeMap),
         new P4::ClonePathExpressions,
         new P4::ClearTypeMap(typeMap),
-        new P4::TypeChecking(refMap, typeMap, true),
+        new BFN::TypeChecking(refMap, typeMap, true),
         new BFN::AddTnaBridgeMetadata(refMap, typeMap),
         new P4::ClearTypeMap(typeMap),
-        new P4::TypeChecking(refMap, typeMap, true),
+        new BFN::TypeChecking(refMap, typeMap, true),
     });
 }
 
