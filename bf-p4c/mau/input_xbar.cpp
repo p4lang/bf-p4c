@@ -1237,6 +1237,12 @@ class IXBar::FieldManagement : public Inspector {
         auto constant = new PHV::Constant(c);
         field_list_order.push_back(constant);
         return true; }
+
+    bool preorder(const IR::MAU::ActionArg *aa) {
+        error("Can't use action argument %s in a hash in the same action; "
+              "try splitting the action", aa);
+        return false; }
+
     bool preorder(const IR::Expression *e) {
         le_bitrange bits = { };
         auto *finfo = phv.field(e, &bits);

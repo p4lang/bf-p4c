@@ -1137,36 +1137,6 @@ bool MeterSetup::Update::preorder(IR::MAU::Action *act) {
     return true;
 }
 
-#if 0
-void DLeftSetup::postorder(IR::MAU::Table *tbl) {
-    if (tbl->for_dleft()) {
-        ERROR_CHECK(Device::currentDevice() != Device::TOFINO,
-                    "Tofino does not support dleft hash tables");
-    }
-}
-
-void DLeftSetup::postorder(IR::MAU::BackendAttached *ba) {
-    auto tbl = findContext<IR::MAU::Table>();
-    if (!tbl->for_dleft())
-        return;
-    if (!ba->attached->is<IR::MAU::StatefulAlu>())
-        return;
-    if (tbl->match_key.empty())
-        return;
-
-    IR::Vector<IR::Expression> components;
-    IR::ListExpression *field_list = new IR::ListExpression(components);
-
-    for (auto *read : tbl->match_key) {
-        if (read->for_match() || read->for_dleft()) {
-            field_list->push_back(read->expr);
-        }
-    }
-    ba->hash_dist = new IR::MAU::HashDist(IR::Type::Bits::get(0), field_list,
-                                          IR::MAU::HashFunction::random(), nullptr);
-}
-#endif
-
 struct CheckInvalidate : public Inspector {
     explicit CheckInvalidate(const PhvInfo& phv) : phv(phv) { }
 

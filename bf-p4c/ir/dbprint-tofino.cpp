@@ -29,10 +29,12 @@ void IR::MAU::Table::dbprint(std::ostream &out) const {
             out << "]"; }
         out << " }"; }
     if (!(dbgetflags(out) & TableNoActions)) {
+        out << TableNoActions;
         for (auto &a : Values(actions))
             out << endl << a;
         if (match_table && match_table->getDefaultAction())
-            out << endl << "default_action " << match_table->getDefaultAction(); }
+            out << endl << "default_action " << match_table->getDefaultAction();
+        out << clrflag(TableNoActions); }
     std::set<const IR::MAU::TableSeq *> done;
     for (auto it = next.begin(); it != next.end(); ++it) {
         if (done.count(it->second)) continue;
@@ -51,7 +53,7 @@ void IR::MAU::Table::dbprint(std::ostream &out) const {
         sep = ", "; }
     if (!(dbgetflags(out) & TableNoActions))
         for (auto &a : attached)
-            if (auto salu = a->to<StatefulAlu>())
+            if (auto salu = a->attached->to<StatefulAlu>())
                 out << endl << *salu;
     if (entries_list) {
         out << endl << "static_entries " << endl;
@@ -79,10 +81,11 @@ void IR::MAU::StatefulAlu::dbprint(std::ostream &out) const {
         out << width/2 << "x2";
     else
         out << width;
-    out << indent;
-    for (auto salu : Values(instruction))
-        out << endl << salu;
-    out << unindent;
+    if (!(dbgetflags(out) & TableNoActions)) {
+        out << indent;
+        for (auto salu : Values(instruction))
+            out << endl << salu;
+        out << unindent; }
 }
 
 void IR::MAU::TableSeq::dbprint(std::ostream &out) const {
@@ -108,10 +111,16 @@ void IR::MAU::Action::dbprint(std::ostream &out) const {
     out << unindent << " }";
     if (!stateful_calls.empty()) {
         out << " + {" << indent;
-        for (auto &call : stateful_calls) {
-            out << endl << call->prim;
-        }
+        for (auto &call : stateful_calls)
+            out << endl << call;
         out << unindent << " }"; }
+}
+
+void IR::MAU::StatefulCall::dbprint(std::ostream &out) const {
+    if (prim) out << prim << " ";
+    out << attached_callee->kind() << " " << attached_callee->name;
+    if (index)
+        out << "(" << index << ")";
 }
 
 void IR::MAU::SaluAction::dbprint(std::ostream &out) const {

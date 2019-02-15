@@ -1148,6 +1148,12 @@ p4c_add_xfail_reason("tofino"
   simple_l3_mirror
 )
 
+# P4C-1451 -- requires action splitting to avoid the error
+p4c_add_xfail_reason("tofino"
+  "error: Can't use action argument .* in a hash in the same action. try splitting the action"
+  extensions/p4_tests/p4_14/p4c-1451.p4
+)
+
 # Need to debug the issue: xfail for now
 p4c_add_xfail_reason("tofino"
   "ValueError: Unknown field .*"

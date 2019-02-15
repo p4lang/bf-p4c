@@ -858,7 +858,7 @@ void GeneratePrimitiveInfo::gen_action_json(const IR::MAU::Action *act,
             }
         }
         auto _primitive = new Util::JsonObject();
-        auto *at = call->attached_caller;
+        auto *at = call->attached_callee;
         auto *salu = at->to<IR::MAU::StatefulAlu>();
         if (salu) {
             if (auto ci = call->index) {

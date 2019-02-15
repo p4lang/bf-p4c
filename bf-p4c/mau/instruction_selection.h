@@ -311,16 +311,6 @@ class MeterSetup : public PassManager {
         addPasses({ new Scan(*this), new Update(*this) }); }
 };
 
-#if 0
-class DLeftSetup : public MauModifier, TofinoWriteContext {
-    void postorder(IR::MAU::Table *tbl) override;
-    void postorder(IR::MAU::BackendAttached *ba) override;
-
- public:
-    DLeftSetup() {}
-};
-#endif
-
 class SetupAttachedAddressing : public PassManager {
     struct AttachedActionCoord {
         bool all_per_flow_enabled = true;
