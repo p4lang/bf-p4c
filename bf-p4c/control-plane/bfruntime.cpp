@@ -3,9 +3,11 @@
 #include <boost/optional.hpp>
 
 #include <algorithm>
+#include <iomanip>
 #include <iterator>
 #include <limits>
 #include <ostream>
+#include <sstream>
 #include <string>
 
 #include "barefoot/p4info.pb.h"
@@ -257,11 +259,36 @@ class BfRtSchemaGenerator {
     const p4configv1::P4Info& p4info;
 };
 
+// See https://stackoverflow.com/a/33799784/4538702
+static std::string escapeJson(const std::string& s) {
+    std::ostringstream o;
+    for (char c : s) {
+        switch (c) {
+            case '"': o << "\\\""; break;
+            case '\\': o << "\\\\"; break;
+            case '\b': o << "\\b"; break;
+            case '\f': o << "\\f"; break;
+            case '\n': o << "\\n"; break;
+            case '\r': o << "\\r"; break;
+            case '\t': o << "\\t"; break;
+            default: {
+                if ('\x00' <= c && c <= '\x1f') {
+                    o << "\\u"
+                      << std::hex << std::setw(4) << std::setfill('0') << static_cast<int>(c);
+                } else {
+                    o << c;
+                }
+            }
+        }
+    }
+    return o.str();
+}
+
 static Util::JsonObject* transformAnnotation(const std::string& annotation) {
     auto* annotationJson = new Util::JsonObject();
     // TODO(antonin): annotation string will need to be parsed so we can have it
     // in key/value format here.
-    annotationJson->emplace("name", annotation);
+    annotationJson->emplace("name", escapeJson(annotation));
     return annotationJson;
 }
 
@@ -271,6 +298,10 @@ static Util::JsonArray* transformAnnotations(const It& first, const It& last) {
     for (auto it = first; it != last; it++)
         annotations->append(transformAnnotation(*it));
     return annotations;
+}
+
+static Util::JsonArray* transformAnnotations(const p4configv1::Preamble& pre) {
+    return transformAnnotations(pre.annotations().begin(), pre.annotations().end());
 }
 
 static boost::optional<cstring> transformMatchType(p4configv1::MatchField_MatchType matchType) {
@@ -552,6 +583,7 @@ struct BfRtSchemaGenerator::Counter {
     P4Id id;
     int64_t size;
     Unit unit;
+    Util::JsonArray* annotations;
 
     static boost::optional<Counter> from(const p4configv1::Counter& counterInstance) {
         const auto& pre = counterInstance.preamble();
@@ -560,14 +592,14 @@ struct BfRtSchemaGenerator::Counter {
         // Counter::Unit and for CounterSpec::Unit, but this may not be very
         // future-proof.
         auto unit = static_cast<Counter::Unit>(counterInstance.spec().unit());
-        return Counter{pre.name(), id, counterInstance.size(), unit};
+        return Counter{pre.name(), id, counterInstance.size(), unit, transformAnnotations(pre)};
     }
 
     static boost::optional<Counter> fromDirect(const p4configv1::DirectCounter& counterInstance) {
         const auto& pre = counterInstance.preamble();
         auto id = makeBfRtId(pre.id(), ::barefoot::P4Ids::DIRECT_COUNTER);
         auto unit = static_cast<Counter::Unit>(counterInstance.spec().unit());
-        return Counter{pre.name(), id, 0, unit};
+        return Counter{pre.name(), id, 0, unit, transformAnnotations(pre)};
     }
 
     static boost::optional<Counter> fromTofino(
@@ -579,7 +611,7 @@ struct BfRtSchemaGenerator::Counter {
             return boost::none;
         }
         auto unit = static_cast<Counter::Unit>(counter.spec().unit());
-        return Counter{pre.name(), pre.id(), counter.size(), unit};
+        return Counter{pre.name(), pre.id(), counter.size(), unit, transformAnnotations(pre)};
     }
 
     static boost::optional<Counter> fromTofinoDirect(
@@ -591,7 +623,7 @@ struct BfRtSchemaGenerator::Counter {
             return boost::none;
         }
         auto unit = static_cast<Counter::Unit>(counter.spec().unit());
-        return Counter{pre.name(), pre.id(), 0, unit};
+        return Counter{pre.name(), pre.id(), 0, unit, transformAnnotations(pre)};
     }
 };
 
@@ -604,6 +636,7 @@ struct BfRtSchemaGenerator::Meter {
     int64_t size;
     Unit unit;
     Type type;
+    Util::JsonArray* annotations;
 
     static boost::optional<Meter> from(const p4configv1::Meter& meterInstance) {
         const auto& pre = meterInstance.preamble();
@@ -620,7 +653,7 @@ struct BfRtSchemaGenerator::Meter {
         // programs, since the TNA Meter message does include color-awareness
         // information.
         auto type = Type::COLOR_UNAWARE;
-        return Meter{pre.name(), id, meterInstance.size(), unit, type};
+        return Meter{pre.name(), id, meterInstance.size(), unit, type, transformAnnotations(pre)};
     }
 
     static boost::optional<Meter> fromDirect(const p4configv1::DirectMeter& meterInstance) {
@@ -628,7 +661,7 @@ struct BfRtSchemaGenerator::Meter {
         auto id = makeBfRtId(pre.id(), ::barefoot::P4Ids::DIRECT_METER);
         auto unit = static_cast<Meter::Unit>(meterInstance.spec().unit());
         auto type = Type::COLOR_UNAWARE;
-        return Meter{pre.name(), id, 0, unit, type};
+        return Meter{pre.name(), id, 0, unit, type, transformAnnotations(pre)};
     }
 
     static boost::optional<Meter> fromTofino(const p4configv1::ExternInstance& externInstance) {
@@ -640,7 +673,7 @@ struct BfRtSchemaGenerator::Meter {
         }
         auto unit = static_cast<Meter::Unit>(meter.spec().unit());
         auto type = static_cast<Meter::Type>(meter.spec().type());
-        return Meter{pre.name(), pre.id(), meter.size(), unit, type};
+        return Meter{pre.name(), pre.id(), meter.size(), unit, type, transformAnnotations(pre)};
     }
 
     static boost::optional<Meter> fromTofinoDirect(
@@ -653,7 +686,7 @@ struct BfRtSchemaGenerator::Meter {
         }
         auto unit = static_cast<Meter::Unit>(meter.spec().unit());
         auto type = static_cast<Meter::Type>(meter.spec().type());
-        return Meter{pre.name(), pre.id(), 0, unit, type};
+        return Meter{pre.name(), pre.id(), 0, unit, type, transformAnnotations(pre)};
     }
 };
 
@@ -672,6 +705,7 @@ struct BfRtSchemaGenerator::ActionProf {
     int64_t size;
     std::vector<P4Id> tableIds;
     boost::optional<Selector> selector;
+    Util::JsonArray* annotations;
 
     static constexpr int selectorHugeGroupSize = 120;
 
@@ -703,7 +737,8 @@ struct BfRtSchemaGenerator::ActionProf {
         }
         auto tableIds = collectTableIds(
             p4info, actionProfile.table_ids().begin(), actionProfile.table_ids().end());
-        return ActionProf{pre.name(), profileId, actionProfile.size(), tableIds, selector};
+        return ActionProf{pre.name(), profileId, actionProfile.size(), tableIds, selector,
+                          transformAnnotations(pre)};
     }
 
     static boost::optional<ActionProf> fromTofinoActionProfile(
@@ -716,7 +751,8 @@ struct BfRtSchemaGenerator::ActionProf {
         }
         auto tableIds = collectTableIds(
             p4info, actionProfile.table_ids().begin(), actionProfile.table_ids().end());
-        return ActionProf{pre.name(), pre.id(), actionProfile.size(), tableIds, boost::none};
+        return ActionProf{pre.name(), pre.id(), actionProfile.size(), tableIds, boost::none,
+                          transformAnnotations(pre)};
     }
 
     static boost::optional<ActionProf> fromTofinoActionSelector(
@@ -733,7 +769,8 @@ struct BfRtSchemaGenerator::ActionProf {
         Selector selector{selectorName, selectorId, actionSelector.size(), selectorHugeGroupSize};
         auto tableIds = collectTableIds(
             p4info, actionSelector.table_ids().begin(), actionSelector.table_ids().end());
-        return ActionProf{pre.name(), profileId, actionSelector.size(), tableIds, selector};
+        return ActionProf{pre.name(), profileId, actionSelector.size(), tableIds, selector,
+                          transformAnnotations(pre)};
     }
 };
 
@@ -742,11 +779,12 @@ struct BfRtSchemaGenerator::Digest {
     std::string name;
     P4Id id;
     p4configv1::P4DataTypeSpec typeSpec;
+    Util::JsonArray* annotations;
 
     static boost::optional<Digest> from(const p4configv1::Digest& digest) {
         const auto& pre = digest.preamble();
         auto id = makeBfRtId(pre.id(), ::barefoot::P4Ids::DIGEST);
-        return Digest{pre.name(), id, digest.type_spec()};
+        return Digest{pre.name(), id, digest.type_spec(), transformAnnotations(pre)};
     }
 
     static boost::optional<Digest> fromTofino(const p4configv1::ExternInstance& externInstance) {
@@ -756,7 +794,7 @@ struct BfRtSchemaGenerator::Digest {
             ::error("Extern instance %1% does not pack a Digest object", pre.name());
             return boost::none;
         }
-        return Digest{pre.name(), pre.id(), digest.type_spec()};
+        return Digest{pre.name(), pre.id(), digest.type_spec(), transformAnnotations(pre)};
     }
 };
 
@@ -765,6 +803,7 @@ struct BfRtSchemaGenerator::Register {
     P4Id id;
     int64_t size;
     p4configv1::P4DataTypeSpec typeSpec;
+    Util::JsonArray* annotations;
 
     static boost::optional<Register> fromTofino(const p4configv1::ExternInstance& externInstance) {
         const auto& pre = externInstance.preamble();
@@ -773,7 +812,8 @@ struct BfRtSchemaGenerator::Register {
             ::error("Extern instance %1% does not pack a Register object", pre.name());
             return boost::none;
         }
-        return Register{pre.name(), pre.id(), register_.size(), register_.type_spec()};
+        return Register{pre.name(), pre.id(), register_.size(), register_.type_spec(),
+                        transformAnnotations(pre)};
     }
 
     static boost::optional<Register> fromTofinoDirect(
@@ -784,7 +824,7 @@ struct BfRtSchemaGenerator::Register {
             ::error("Extern instance %1% does not pack a Register object", pre.name());
             return boost::none;
         }
-        return Register{pre.name(), pre.id(), 0, register_.type_spec()};
+        return Register{pre.name(), pre.id(), 0, register_.type_spec(), transformAnnotations(pre)};
     }
 };
 
@@ -793,6 +833,7 @@ struct BfRtSchemaGenerator::PortMetadata {
     cstring name;
     cstring key_name;
     p4configv1::P4DataTypeSpec typeSpec;
+    Util::JsonArray* annotations;
 
     static boost::optional<PortMetadata> fromTofino(
         const p4configv1::ExternInstance& externInstance) {
@@ -802,8 +843,9 @@ struct BfRtSchemaGenerator::PortMetadata {
             ::error("Extern instance %1% does not pack a PortMetadata object", pre.name());
             return boost::none;
         }
-        return PortMetadata{ pre.id(), pre.name(),
-            portMetadata.key_name(), portMetadata.type_spec() };
+        return PortMetadata{pre.id(), pre.name(),
+                            portMetadata.key_name(), portMetadata.type_spec(),
+                            transformAnnotations(pre)};
     }
 };
 
@@ -819,6 +861,7 @@ struct BfRtSchemaGenerator::DynHash {
     const p4configv1::P4DataTypeSpec typeSpec;
     const std::vector<cstring> hashFieldNames;  // Field Names of a Hash Field List
     const int hashWidth;
+    Util::JsonArray* annotations;
 
     static boost::optional<DynHash> fromTofino(
         const p4configv1::ExternInstance& externInstance) {
@@ -834,8 +877,9 @@ struct BfRtSchemaGenerator::DynHash {
         }
         auto cfgId = makeBfRtId(pre.id(), ::barefoot::P4Ids::HASH_CONFIGURE);
         auto cmpId = makeBfRtId(pre.id(), ::barefoot::P4Ids::HASH_COMPUTE);
-        return DynHash{ pre.name(), cfgId, cmpId, dynHash.type_spec(),
-                                            field_names, dynHash.hash_width() };
+        return DynHash{pre.name(), cfgId, cmpId, dynHash.type_spec(),
+                       field_names, dynHash.hash_width(),
+                       transformAnnotations(pre)};
     }
 };
 
@@ -878,6 +922,7 @@ struct BfRtSchemaGenerator::Lpf {
     std::string name;
     P4Id id;
     int64_t size;
+    Util::JsonArray* annotations;
 
     static boost::optional<Lpf> fromTofino(
         const p4configv1::ExternInstance& externInstance) {
@@ -887,7 +932,7 @@ struct BfRtSchemaGenerator::Lpf {
             ::error("Extern instance %1% does not pack a Lpf object", pre.name());
             return boost::none;
         }
-        return Lpf{pre.name(), pre.id(), lpf.size()};
+        return Lpf{pre.name(), pre.id(), lpf.size(), transformAnnotations(pre)};
     }
 
     static boost::optional<Lpf> fromTofinoDirect(
@@ -898,7 +943,7 @@ struct BfRtSchemaGenerator::Lpf {
             ::error("Extern instance %1% does not pack a Lpf object", pre.name());
             return boost::none;
         }
-        return Lpf{pre.name(), pre.id(), 0};
+        return Lpf{pre.name(), pre.id(), 0, transformAnnotations(pre)};
     }
 };
 
@@ -906,6 +951,7 @@ struct BfRtSchemaGenerator::Wred {
     std::string name;
     P4Id id;
     int64_t size;
+    Util::JsonArray* annotations;
 
     static boost::optional<Wred> fromTofino(
         const p4configv1::ExternInstance& externInstance) {
@@ -915,7 +961,7 @@ struct BfRtSchemaGenerator::Wred {
             ::error("Extern instance %1% does not pack a Wred object", pre.name());
             return boost::none;
         }
-        return Wred{pre.name(), pre.id(), wred.size()};
+        return Wred{pre.name(), pre.id(), wred.size(), transformAnnotations(pre)};
     }
 
     static boost::optional<Wred> fromTofinoDirect(
@@ -926,7 +972,7 @@ struct BfRtSchemaGenerator::Wred {
             ::error("Extern instance %1% does not pack a Wred object", pre.name());
             return boost::none;
         }
-        return Wred{pre.name(), pre.id(), 0};
+        return Wred{pre.name(), pre.id(), 0, transformAnnotations(pre)};
     }
 };
 
@@ -938,6 +984,7 @@ struct BfRtSchemaGenerator::ValueSet {
     P4Id id;
     p4configv1::P4DataTypeSpec typeSpec;
     const int64_t size;
+    Util::JsonArray* annotations;
 
     static boost::optional<ValueSet> fromTofino(const p4configv1::ExternInstance& externInstance) {
         const auto& pre = externInstance.preamble();
@@ -946,7 +993,8 @@ struct BfRtSchemaGenerator::ValueSet {
             ::error("Extern instance %1% does not pack a value set object", pre.name());
             return boost::none;
         }
-        return ValueSet{pre.name(), pre.id(), valueSet.type_spec(), valueSet.size()};
+        return ValueSet{pre.name(), pre.id(), valueSet.type_spec(), valueSet.size(),
+                        transformAnnotations(pre)};
     }
 };
 
@@ -1082,6 +1130,7 @@ BfRtSchemaGenerator::addValueSet(Util::JsonArray* tablesJson,
     tableJson->emplace("id", valueSet.id);
     tableJson->emplace("table_type", "ParserValueSet");
     tableJson->emplace("size", valueSet.size);
+    tableJson->emplace("annotations", valueSet.annotations);
 
     auto* keyJson = new Util::JsonArray();
     auto parser = TypeSpecParser::make(p4info, valueSet.typeSpec, "ValueSet", valueSet.name);
@@ -1106,6 +1155,7 @@ BfRtSchemaGenerator::addCounterCommon(Util::JsonArray* tablesJson, const Counter
     tableJson->emplace("id", counter.id);
     tableJson->emplace("table_type", "Counter");
     tableJson->emplace("size", counter.size);
+    tableJson->emplace("annotations", counter.annotations);
 
     auto* keyJson = new Util::JsonArray();
     addKeyField(keyJson, BF_RT_DATA_COUNTER_INDEX, "$COUNTER_INDEX",
@@ -1316,6 +1366,7 @@ BfRtSchemaGenerator::addActionProfCommon(Util::JsonArray* tablesJson,
     tableJson->emplace("id", actionProf.id);
     tableJson->emplace("table_type", "Action");
     tableJson->emplace("size", actionProf.size);
+    tableJson->emplace("annotations", actionProf.annotations);
 
     auto* keyJson = new Util::JsonArray();
     addKeyField(keyJson, BF_RT_DATA_ACTION_MEMBER_ID, "$ACTION_MEMBER_ID",
@@ -1346,6 +1397,8 @@ BfRtSchemaGenerator::addActionProfCommon(Util::JsonArray* tablesJson,
         tableJson->emplace("id", actionProf.selector->id);
         tableJson->emplace("table_type", "Selector");
         tableJson->emplace("size", actionProf.selector->size);
+        // repeat same annotations as for action table
+        tableJson->emplace("annotations", actionProf.annotations);
 
         auto* keyJson = new Util::JsonArray();
         addKeyField(keyJson, BF_RT_DATA_SELECTOR_GROUP_ID, "$SELECTOR_GROUP_ID",
@@ -1386,6 +1439,7 @@ BfRtSchemaGenerator::addLearnFilterCommon(Util::JsonArray* learnFiltersJson,
     auto* learnFilterJson = new Util::JsonObject();
     learnFilterJson->emplace("name", digest.name);
     learnFilterJson->emplace("id", digest.id);
+    learnFilterJson->emplace("annotations", digest.annotations);
 
     auto* fieldsJson = new Util::JsonArray();
     transformTypeSpecToDataFields(fieldsJson, digest.typeSpec, "Digest", digest.name);
@@ -1402,6 +1456,7 @@ BfRtSchemaGenerator::addPortMetadata(Util::JsonArray* tablesJson,
     tableJson->emplace("id", portMetadata.id);
     tableJson->emplace("table_type", "PortMetadata");
     tableJson->emplace("size", Device::numMaxChannels());
+    tableJson->emplace("annotations", portMetadata.annotations);
 
     auto* keyJson = new Util::JsonArray();
     addKeyField(keyJson, BF_RT_DATA_PORT_METADATA_PORT, portMetadata.key_name + ".ingress_port",
@@ -1451,6 +1506,7 @@ BfRtSchemaGenerator::addDynHashConfig(Util::JsonArray* tablesJson,
     tableJson->emplace("id", dynHash.cfgId);
     tableJson->emplace("table_type", "DynHashConfigure");
     tableJson->emplace("size", 1);
+    tableJson->emplace("annotations", dynHash.annotations);
     tableJson->emplace("key", new Util::JsonArray());  // empty key for configure table
 
     auto* dataJson = new Util::JsonArray();
@@ -1481,6 +1537,7 @@ BfRtSchemaGenerator::addDynHashCompute(Util::JsonArray* tablesJson,
     tableJson->emplace("id", dynHash.cmpId);
     tableJson->emplace("table_type", "DynHashCompute");
     tableJson->emplace("size", 1);
+    tableJson->emplace("annotations", dynHash.annotations);
 
     P4Id id = 1;
     size_t hashNameIdx = 0;
@@ -1546,6 +1603,7 @@ BfRtSchemaGenerator::addLpf(Util::JsonArray* tablesJson, const Lpf& lpf) const {
     tableJson->emplace("id", lpf.id);
     tableJson->emplace("table_type", "Lpf");
     tableJson->emplace("size", lpf.size);
+    tableJson->emplace("annotations", lpf.annotations);
 
     auto* keyJson = new Util::JsonArray();
     addKeyField(keyJson, BF_RT_DATA_LPF_INDEX, "$LPF_INDEX",
@@ -1598,6 +1656,7 @@ BfRtSchemaGenerator::addWred(Util::JsonArray* tablesJson, const Wred& wred) cons
     tableJson->emplace("id", wred.id);
     tableJson->emplace("table_type", "Wred");
     tableJson->emplace("size", wred.size);
+    tableJson->emplace("annotations", wred.annotations);
 
     auto* keyJson = new Util::JsonArray();
     addKeyField(keyJson, BF_RT_DATA_WRED_INDEX, "$WRED_INDEX",
@@ -1870,6 +1929,24 @@ BfRtSchemaGenerator::makeActionSpecs(const p4configv1::Table& table, P4Id* maxAc
         const auto& pre = action->preamble();
         spec->emplace("id", pre.id());
         spec->emplace("name", pre.name());
+        switch (action_ref.scope()) {
+            case p4configv1::ActionRef::TABLE_AND_DEFAULT:
+                spec->emplace("action_scope", "TableAndDefault");
+                break;
+            case p4configv1::ActionRef::TABLE_ONLY:
+                spec->emplace("action_scope", "TableOnly");
+                break;
+            case p4configv1::ActionRef::DEFAULT_ONLY:
+                spec->emplace("action_scope", "DefaultOnly");
+                break;
+            default:
+                ::error("Invalid action ref scope '%1%' in P4Info", action_ref.scope());
+                break;
+        }
+        auto* annotations = transformAnnotations(
+            action_ref.annotations().begin(), action_ref.annotations().end());
+        spec->emplace("annotations", annotations);
+
         auto* dataJson = new Util::JsonArray();
         for (const auto& param : action->params()) {
             auto* annotations = transformAnnotations(
@@ -1894,6 +1971,9 @@ BfRtSchemaGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
         auto* tableJson = new Util::JsonObject();
         tableJson->emplace("name", pre.name());
         tableJson->emplace("id", pre.id());
+        auto* annotations = transformAnnotations(
+            pre.annotations().begin(), pre.annotations().end());
+        tableJson->emplace("annotations", annotations);
 
         cstring tableType = "MatchAction_Direct";
         auto actProfId = table.implementation_id();
@@ -1908,6 +1988,8 @@ BfRtSchemaGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
 
         tableJson->emplace("table_type", tableType);
         tableJson->emplace("size", table.size());
+
+        tableJson->emplace("has_const_default_action", table.const_default_action_id() != 0);
 
         // will be set to true by the for loop if the match key includes a
         // ternary or range match

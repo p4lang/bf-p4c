@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 
 # This script generates a JSON schema for the BF-RT schema file. It can also
-# validate teh BF-RT schema produced by the compiler (from the P4Info message)
+# validate the BF-RT schema produced by the compiler (from the P4Info message)
 # against the JSON schema.
 
 import argparse
@@ -10,10 +10,6 @@ import json
 import jsonschema
 import sys
 
-class NamedObject(jsl.Document):
-    id_ = jsl.IntField(name="id", required=True, description="ID of the key field")
-    name = jsl.StringField(required=True, decription="Name")
-
 class Annotation(jsl.Document):
     class Options(object):
         title = "Annotation"
@@ -21,7 +17,12 @@ class Annotation(jsl.Document):
     name = jsl.StringField(required=True)
     value = jsl.StringField(required=False)
 
-Annotations = jsl.ArrayField(required=True, items=jsl.DocumentField(Annotation, as_ref=True))
+Annotations = jsl.ArrayField(required=False, items=jsl.DocumentField(Annotation, as_ref=True))
+
+class NamedObject(jsl.Document):
+    id_ = jsl.IntField(name="id", required=True, description="ID of the key field")
+    name = jsl.StringField(required=True, decription="Name")
+    annotations = Annotations
 
 MatchType = jsl.StringField(
     required=True,
@@ -154,6 +155,8 @@ class ActionSpec(NamedObject):
         description = "List of action specifications; for each action we have a description of all action parameters"
     data = jsl.ArrayField(
         required=True, items=jsl.DocumentField(ActionDataField, as_ref=True))
+    action_scope = jsl.StringField(
+        required=True, enum=["TableAndDefault", "TableOnly", "DefaultOnly"])
 
 class TableCommon(NamedObject):
     class Options(object):
@@ -173,30 +176,50 @@ class TableCommon(NamedObject):
     attributes = jsl.ArrayField(required=True, items=jsl.StringField())
     supported_operations = jsl.ArrayField(required=True, items=jsl.StringField())
 
-# TODO(antonin): is there a more elegant way to enfore the presence of
-# action_spec based on the type of the table?
+# TODO(antonin): is there a more elegant way to enfore the small differences
+# (e.g. presence of action_spec) based on the type of the table?
 
-class TableWithActionSpec(TableCommon):
+class TableDirectMatch(TableCommon):
     class Options(object):
-        title = "TableWithActionSpec"
-        description = "Table object with action specs which can be controlled through BF-RT; must be a direct match-action table or an action table"
+        title = "TableDirectMatch"
+        description = "Direct match-action"
     table_type = jsl.StringField(
         required=True,
-        enum=["MatchAction_Direct", "Action"])
+        enum=["MatchAction_Direct"])
+    action_specs = jsl.ArrayField(
+        required=True,
+        items=jsl.DocumentField(ActionSpec, as_ref=True),
+        description="P4 actions for the table")
+    has_const_default_action = jsl.BooleanField(required=True)
+
+class TableAction(TableCommon):
+    class Options(object):
+        title = "TableAction"
+        description = "Action data table"
+    table_type = jsl.StringField(
+        required=True,
+        enum=["Action"])
     action_specs = jsl.ArrayField(
         required=True,
         items=jsl.DocumentField(ActionSpec, as_ref=True),
         description="P4 actions for the table")
 
-class TableWithoutActionSpec(TableCommon):
+class TableIndirectMatch(TableCommon):
     class Options(object):
-        title = "TableWithoutActionSpec"
-        description = "Table object without action specs which can be controlled through BF-RT"
+        title = "TableIndirectMatch"
+        description = "Indirect match-action table (with or without a selector)"
     table_type = jsl.StringField(
         required=True,
-        enum=["MatchAction_Indirect",
-              "MatchAction_Indirect_Selector",
-              "Selector",
+        enum=["MatchAction_Indirect", "MatchAction_Indirect_Selector"])
+    has_const_default_action = jsl.BooleanField(required=True)
+
+class TableGeneric(TableCommon):
+    class Options(object):
+        title = "TableGeneric"
+        description = "Generic tables (with no action spec) which can be controlled through BF-RT"
+    table_type = jsl.StringField(
+        required=True,
+        enum=["Selector",
               "Counter", "Meter", "Register", "Lpf", "Wred",
               "PortMetadata",
               "ParserValueSet",
@@ -222,8 +245,10 @@ class BfRtSchema(jsl.Document):
     tables = jsl.ArrayField(
         required=True,
         items=jsl.OneOfField(fields=[
-            jsl.DocumentField(TableWithActionSpec, as_ref=True),
-            jsl.DocumentField(TableWithoutActionSpec, as_ref=True)]),
+            jsl.DocumentField(TableDirectMatch, as_ref=True),
+            jsl.DocumentField(TableIndirectMatch, as_ref=True),
+            jsl.DocumentField(TableAction, as_ref=True),
+            jsl.DocumentField(TableGeneric, as_ref=True)]),
         description="All table objects (fixed tables and P4 tables)")
     learn_filters = jsl.ArrayField(
         required=True,
@@ -249,8 +274,8 @@ def main():
             try:
                 jsonschema.validate(bf_rt_json, schema)
             except jsonschema.ValidationError as e:
-                print "Error when validating JSON"
-                print e
+                print >> sys.stderr, "Error when validating BF-RT JSON"
+                print >> sys.stderr, e
                 sys.exit(1)
     sys.exit(0)
 
