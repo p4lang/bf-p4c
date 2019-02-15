@@ -562,7 +562,11 @@ const IR::Statement *P4V1::StatefulAluConverter::convertExternCall(
     if (prim->name == "execute_stateful_alu") {
         BUG_CHECK(prim->operands.size() <= 2, "Wrong number of operands to %s", prim->name);
         if (prim->operands.size() == 2) {
-            args->push_back(new IR::Argument(conv.convert(prim->operands.at(1))));
+            auto *idx = conv.convert(prim->operands.at(1));
+            if (idx->is<IR::ListExpression>())
+                error("%s%s expects a simple expression, not a %s",
+                      prim->operands.at(1)->srcInfo, prim->name, idx);
+            args->push_back(new IR::Argument(idx));
             if (direct)
                 error("%scalling direct %s with an index", prim->srcInfo, target);
         } else if (!direct) {
