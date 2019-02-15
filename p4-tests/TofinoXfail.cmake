@@ -209,30 +209,35 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Unimplemented compiler support.*Cannot allocate >4 immediate bytes for logical table"
   switch_msdc_l3
-  switch_8.5_msdc_l3
+  switch_8.7_msdc_l3
   )
 
 p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
-  ../glass/testsuite/p4_tests/phv/COMPILER-243/comp243.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-546/switch_comp546.p4
-  ../glass/testsuite/p4_tests/mau/COMPILER-362/icmp_typecode.p4
 )
 
 p4c_add_xfail_reason("tofino"
   "error.*Can't split table.*with indirect attached MAU::StatefulAlu"
-  switch_8.5_ent_fin_postcard
+  switch_8.7_ent_fin_postcard
   switch_ent_fin_postcard
   switch_generic_int_leaf
+  switch_8.7_generic_int_leaf
   ../glass/testsuite/p4_tests/phv/COMPILER-587/l4l.p4
+  ../glass/testsuite/p4_tests/phv/COMPILER-828/meta_init_problem.p4
 )
 
 p4c_add_xfail_reason("tofino"
-  "No way to slice the following to satisfy @pa_container_size"
-  switch_8.5_generic_int_leaf
-  )
+  "instruction slot .* used multiple times in action .*"
+  switch_8.7_msdc_spine_int
+  switch_msdc_spine_int
+)
 
+p4c_add_xfail_reason("tofino"
+  "PHV allocation was not successful"
+  switch_8.7_msdc_ipv4
+)
 
 p4c_add_xfail_reason("tofino"
   "error: The stage specified for .* could not place it until stage"
@@ -243,8 +248,8 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/conditional_constraints_infinite_loop.p4
   switch_l3_heavy_int_leaf
   switch_msdc_leaf_int
-  switch_8.5_msdc_leaf_int
-  switch_8.5_l3_heavy_int_leaf
+  switch_8.7_msdc_leaf_int
+  switch_8.7_l3_heavy_int_leaf
   ../glass/testsuite/p4_tests/phv/COMPILER-724/comp_724.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-891/comp_891.p4
   )
@@ -257,16 +262,16 @@ p4c_add_xfail_reason("tofino"
 # switch_spine_dtel_int and switch_l3_heavy_spine test failures
 p4c_add_xfail_reason("tofino"
   "Received packet did not match expected packet"
-  smoketest_switch_8.5_spine_dtel_int_set_2_INTL45_Transit_IngressMoDTest
-  smoketest_switch_8.5_spine_dtel_int_set_2_MirrorOnDropHostifReasonCodeTest
-  smoketest_switch_8.5_spine_dtel_int_set_2_MirrorOnDropIngressAclTest
-  smoketest_switch_8.5_spine_dtel_int_set_2_MirrorOnDropNonDefaultRuleTest
-  smoketest_switch_8.5_spine_dtel_int_set_2_QueueReport_Entropy_Test
-  smoketest_switch_8.5_spine_dtel_int_set_2_QueueReport_Quota_Test
-  smoketest_switch_8.5_spine_dtel_int_set_2_intl45_transitTest_hop2_stateless
-  smoketest_switch_8.5_spine_dtel_int_set_2_INTL45_Transit_EgressMoDTest
-  smoketest_switch_8.5_spine_dtel_int_set_2_MirrorOnDropEgrNonDefaultRuleTest
-  smoketest_switch_8.5_spine_dtel_int_set_5_INGRESS_DROP_REPORT_Test
+  smoketest_switch_8.7_spine_dtel_int_set_2_INTL45_Transit_IngressMoDTest
+  smoketest_switch_8.7_spine_dtel_int_set_2_MirrorOnDropHostifReasonCodeTest
+  smoketest_switch_8.7_spine_dtel_int_set_2_MirrorOnDropIngressAclTest
+  smoketest_switch_8.7_spine_dtel_int_set_2_MirrorOnDropNonDefaultRuleTest
+  smoketest_switch_8.7_spine_dtel_int_set_2_QueueReport_Entropy_Test
+  smoketest_switch_8.7_spine_dtel_int_set_2_QueueReport_Quota_Test
+  smoketest_switch_8.7_spine_dtel_int_set_2_intl45_transitTest_hop2_stateless
+  smoketest_switch_8.7_spine_dtel_int_set_2_INTL45_Transit_EgressMoDTest
+  smoketest_switch_8.7_spine_dtel_int_set_2_MirrorOnDropEgrNonDefaultRuleTest
+  smoketest_switch_8.7_spine_dtel_int_set_5_INGRESS_DROP_REPORT_Test
   smoketest_switch_marker_spine_dtel_intl45_transitTest_hop2_with_digest
   smoketest_switch_marker_spine_dtel_intl45_transitTest_hop2_qdepth
   smoketest_switch_marker_spine_dtel_intl45_transitTest_Metadata
@@ -293,9 +298,9 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "Did not receive pkt on 2"
-  smoketest_switch_8.5_spine_dtel_int_set_3_INTL45_Transit_DoDTest
-  smoketest_switch_8.5_spine_dtel_int_set_3_MirrorOnDropDoDTest
-  smoketest_switch_8.5_spine_dtel_int_set_3_QueueReport_DoD_Test
+  smoketest_switch_8.7_spine_dtel_int_set_3_INTL45_Transit_DoDTest
+  smoketest_switch_8.7_spine_dtel_int_set_3_MirrorOnDropDoDTest
+  smoketest_switch_8.7_spine_dtel_int_set_3_QueueReport_DoD_Test
   smoketest_switch_l3_heavy_spine_dtel_INTL45_Transit_DoDTest
   smoketest_switch_l3_heavy_spine_dtel_MirrorOnDropDoDTest
   smoketest_switch_l3_heavy_spine_dtel_QueueReport_DoD_Test
@@ -310,9 +315,9 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "Did not receive expected pkt*"
-  smoketest_switch_8.5_spine_dtel_int_set_2_QueueReport_Over_ECMP_Test
-  smoketest_switch_8.5_spine_dtel_int_set_2_QueueReport_MirrorTest
-  smoketest_switch_8.5_spine_dtel_int_set_2_QueueReport_L2_MirrorTest
+  smoketest_switch_8.7_spine_dtel_int_set_2_QueueReport_Over_ECMP_Test
+  smoketest_switch_8.7_spine_dtel_int_set_2_QueueReport_MirrorTest
+  smoketest_switch_8.7_spine_dtel_int_set_2_QueueReport_L2_MirrorTest
   smoketest_switch_marker_spine_dtel_QueueReport_Over_ECMP_Test
   smoketest_switch_marker_spine_dtel_QueueReport_MirrorTest
   smoketest_switch_marker_spine_dtel_QueueReport_L2_MirrorTest
@@ -336,6 +341,7 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "A packet was received on device"
+  smoketest_switch_8.7_msdc_MalformedPacketsTest
   smoketest_switch_marker_spine_L2StpEgressBlockingTest
   )
 
@@ -359,6 +365,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/12-Counters.p4
   testdata/p4_14_samples/13-Counters1and2.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-1068/comp_1068.p4
+  ../glass/testsuite/p4_tests/phv/COMPILER-1065/comp_1065.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -603,12 +610,8 @@ p4c_add_xfail_reason("tofino"
   #extensions/p4_tests/p4_14/c5/COMPILER-594/comp594.p4
   #extensions/p4_tests/p4_14/c3/COMPILER-393/case2277.p4
   #extensions/p4_tests/p4_14/c1/COMPILER-347/switch_bug.p4
-
-  ../glass/testsuite/p4_tests/phv/COMPILER-1065/comp_1065.p4
   extensions/p4_tests/p4_14/03-VlanProfile.p4
   extensions/p4_tests/p4_14/01-FlexCounter.p4
-
-  ../glass/testsuite/p4_tests/mau/COMPILER-628/case3431.p4
   )
 
 # Errors because pa_container_size pragmas used in these tests cannot be satisfy all constraints.
@@ -795,12 +798,6 @@ p4c_add_xfail_reason("tofino"
 #   extensions/p4_tests/p4_14/c1/BRIG-372/case4346.p4
 #   )
 
-p4c_add_xfail_reason("tofino"
-  "Currently in p4c, the table .* cannot perform a range match on key .* as the key does not fit in under 5 PHV nibbles"
-  extensions/p4_tests/p4_14/p4smith_regression/basseterre_0.p4
-  ../glass/testsuite/p4_tests/phv/COMPILER-828/meta_init_problem.p4
-  )
-
 # This test is expected to fail (for now) because it includes multiple writes
 # to the same field in the same action.  However, in this case the sources are
 # constants, which could theoretically be merged into one write by the
@@ -942,6 +939,11 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Operand field bit .* of wide arithmetic operation cannot have even and odd container placement constraints"
   extensions/p4_tests/p4_16/p4c-1067-neg2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Currently in p4c, the table .* cannot perform a range match on key .* as the key does not fit in under 5 PHV nibbles"
+  extensions/p4_tests/p4_14/p4smith_regression/basseterre_0.p4
 )
 
 
@@ -1092,7 +1094,7 @@ p4c_add_xfail_reason("tofino"
 # Need to mark padding field used in add as a padding field. Need to introduce annotation for the
 # same.
   switch_msdc_l3
-  switch_8.5_msdc_l3
+  switch_8.7_msdc_l3
   extensions/p4_tests/p4_16/int_transit.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-970/comp_970.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-968/comp_968.p4
@@ -1368,6 +1370,7 @@ p4c_add_xfail_reason("tofino"
 # BRIG-604
 p4c_add_xfail_reason("tofino"
   "PHV read has no allocation"
+  ../glass/testsuite/p4_tests/mau/COMPILER-628/case3431.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-630/case3431b.p4
   extensions/p4_tests/p4_14/p4smith_regression/clue_0.p4
   )

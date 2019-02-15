@@ -32,6 +32,6 @@
 [submodule "compiler_interfaces"]
 	path = compiler_interfaces
 	url = git@github.com:barefootnetworks/compiler-interfaces.git
-[submodule "p4-tests/p4_14/switch-8.5"]
-	path = p4-tests/p4_14/switch-8.5
+[submodule "p4-tests/p4_14/switch-8.7"]
+	path = p4-tests/p4_14/switch-8.7
 	url = git@github.com:barefootnetworks/switch.git

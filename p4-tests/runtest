@@ -687,8 +687,8 @@ if $run_pd ; then
         if [ $device == tofino2 ]; then
             p4builddir="$(dirname $0)/p4_14/switch-jbay"
         else
-            if [[ "$file" == *8.5* ]]; then
-                p4builddir="$(dirname $0)/p4_14/switch-8.5"
+            if [[ "$file" == *8.7* ]]; then
+                p4builddir="$(dirname $0)/p4_14/switch-8.7"
             else
                 p4builddir="$(dirname $0)/p4_14/switch"
             fi

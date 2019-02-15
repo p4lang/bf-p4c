@@ -15,7 +15,7 @@ const ordered_set<cstring> PHV_Field_Operations::BITWISE_OPS = {
     "nand",
     "orca",
     "orcb",
-    "xnor"
+    "xnor",
     "xor"
 };
 

@@ -74,8 +74,8 @@ p4c_add_xfail_reason("tofino2"
   testdata/p4_14_samples/06-FullTPHV1.p4
   testdata/p4_14_samples/07-FullTPHV2.p4
   testdata/p4_14_samples/08-FullTPHV3.p4
-  switch_ent_dc_general
   switch_dc_basic
+  switch_ent_dc_general
 )
 
 p4c_add_xfail_reason("tofino2"
@@ -315,9 +315,7 @@ p4c_add_xfail_reason("tofino2"
 # Rendezvous failures on some of the tna tests
 p4c_add_xfail_reason("tofino2"
   "Rendezvous of RPC that terminated with"
-  p4_16_programs_tna_32q_2pipe
   p4_16_programs_tna_exact_match
-  p4_16_programs_tna_port_metadata
   )
 
 # P4C-1496
@@ -342,9 +340,4 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "error.*instruction slot.*used multiple times in action.*"
   extensions/p4_tests/p4_14/overlay_add_header.p4
-)
-
-p4c_add_xfail_reason("tofino2"
-  "Compiler Bug.*Total size of containers used for POV allocation is.*"
-  switch_ent_dc_general
 )

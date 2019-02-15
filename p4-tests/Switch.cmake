@@ -49,17 +49,17 @@ p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
 # 500s timeout is too little for compiling ent_dc_general profile, bumping it up
 set_tests_properties("tofino/switch_ent_dc_general" PROPERTIES TIMEOUT 1200)
 
-# Switch On Release 8.5 (refpoint must be periodically updated)
-set  (SWITCH_VERSION 8.5)
-set  (SWITCH_${SWITCH_VERSION}_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch-8.5/p4src/switch.p4)
-set  (SWITCH_${SWITCH_VERSION}_PTF_DIR ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch-8.5/ptf-tests/base/api-tests)
-set  (SWITCH_${SWITCH_VERSION}_PTF_DIR_MIRROR ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch-8.5/ptf-tests/base/feature-tests)
-set  (SWITCH_${SWITCH_VERSION}_PTF_DIR_SAI ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch-8.5/ptf-tests/base/sai-ocp-tests)
-set  (SWITCH_${SWITCH_VERSION}_PTF_DIR_SAI_DTEL ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch-8.5/ptf-tests/dtel/sai-tests)
-set  (SWITCH_${SWITCH_VERSION}_PTF_DIR_EGRESS_ACL ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch-8.5/ptf-tests/egress-acl/api-tests)
-set  (SWITCH_${SWITCH_VERSION}_PTF_DIR_WRED ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch-8.5/ptf-tests/wred/api-tests)
-set  (SWITCH_${SWITCH_VERSION}_PTF_DIR_DTEL ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch-8.5/ptf-tests/dtel/api-tests)
-set  (SWITCH_${SWITCH_VERSION}_PTF_DIR_QOS ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch-8.5/ptf-tests/qos/api-tests)
+# Switch On Release 8.7 (refpoint must be periodically updated)
+set  (SWITCH_VERSION 8.7)
+set  (SWITCH_${SWITCH_VERSION}_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch-${SWITCH_VERSION}/p4src/switch.p4)
+set  (SWITCH_${SWITCH_VERSION}_PTF_DIR ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch-${SWITCH_VERSION}/ptf-tests/base/api-tests)
+set  (SWITCH_${SWITCH_VERSION}_PTF_DIR_MIRROR ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch-${SWITCH_VERSION}/ptf-tests/base/feature-tests)
+set  (SWITCH_${SWITCH_VERSION}_PTF_DIR_SAI ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch-${SWITCH_VERSION}/ptf-tests/base/sai-ocp-tests)
+set  (SWITCH_${SWITCH_VERSION}_PTF_DIR_SAI_DTEL ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch-${SWITCH_VERSION}/ptf-tests/dtel/sai-tests)
+set  (SWITCH_${SWITCH_VERSION}_PTF_DIR_EGRESS_ACL ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch-${SWITCH_VERSION}/ptf-tests/egress-acl/api-tests)
+set  (SWITCH_${SWITCH_VERSION}_PTF_DIR_WRED ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch-${SWITCH_VERSION}/ptf-tests/wred/api-tests)
+set  (SWITCH_${SWITCH_VERSION}_PTF_DIR_DTEL ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch-${SWITCH_VERSION}/ptf-tests/dtel/api-tests)
+set  (SWITCH_${SWITCH_VERSION}_PTF_DIR_QOS ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch-${SWITCH_VERSION}/ptf-tests/qos/api-tests)
 set  (isXFail TRUE)
 file (RELATIVE_PATH switch_${SWITCH_VERSION}_test ${P4C_SOURCE_DIR} ${SWITCH_${SWITCH_VERSION}_P4})
 
@@ -790,7 +790,7 @@ set_tests_properties("tofino/smoketest_switch_marker_spine_dtel_QueueReport_DoD_
 set_tests_properties("tofino/smoketest_switch_marker_spine_dtel_MirrorOnDropDoDTest" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_marker_spine_dtel_INTL45_Transit_DoDTest" PROPERTIES TIMEOUT 3600)
 
-# Switch Rel 8.5 MSDC_PROFILE tests
+# Switch Rel 8.7 MSDC_PROFILE tests
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_msdc" ${SWITCH_${SWITCH_VERSION}_P4}
     "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_msdc"
@@ -871,13 +871,16 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_msdc_set_6"
         switch_tests.L3VIIPv4LagTest
         switch_tests.L3VIIPv6HostTest
         switch_tests.L3VINhopGleanTest
-        switch_tests.MalformedPacketsTest
         switch_tests.MalformedPacketsTest_ipv6")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_msdc_set_7" ${SWITCH_${SWITCH_VERSION}_P4}
         "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR_MIRROR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_msdc_set_7"
         "mirror_acl_slice_tests.IPv6MirrorAclSliceTest_i2e
         mirror_acl_slice_tests.MirrorAclSliceTest_i2e")
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_msdc_MalformedPacketsTest" ${SWITCH_${SWITCH_VERSION}_P4}
+    "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR}")
+bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_msdc_MalformedPacketsTest"
+        "switch_tests.MalformedPacketsTest")
 
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
 set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_msdc" PROPERTIES TIMEOUT 3600)
@@ -888,8 +891,9 @@ set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_msdc_set_4" PROP
 set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_msdc_set_5" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_msdc_set_6" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_msdc_set_7" PROPERTIES TIMEOUT 3600)
+set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_msdc_MalformedPacketsTest" PROPERTIES TIMEOUT 3600)
 
-# Switch Rel 8.5 ENT_DC_GENERAL_PROFILE tests
+# Switch Rel 8.7 ENT_DC_GENERAL_PROFILE tests
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_ent_dc_general" ${SWITCH_${SWITCH_VERSION}_P4}
     "${testExtraArgs} -DENT_DC_GENERAL_PROFILE -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_ent_dc_general"
@@ -987,7 +991,7 @@ set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_ent_dc_general_s
 set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_ent_dc_general_set_7" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_ent_dc_general_set_8" PROPERTIES TIMEOUT 3600)
 
-# Switch Rel 8.5 MSDC_L3_PROFILE_BRIG tests
+# Switch Rel 8.7 MSDC_L3_PROFILE_BRIG tests
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_l3_msdc" ${SWITCH_${SWITCH_VERSION}_P4}
     "${testExtraArgs} -DMSDC_L3_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR}")
 bfn_set_p4_build_flag("tofino" "smoketest_switch_${SWITCH_VERSION}_l3_msdc"
@@ -1082,7 +1086,7 @@ set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_l3_msdc_set_4" P
 set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_l3_msdc_set_5" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_l3_msdc_set_6" PROPERTIES TIMEOUT 3600)
 
-# Switch Rel 8.5 DC_BASIC_PROFILE_BRIG tests
+# Switch Rel 8.7 DC_BASIC_PROFILE_BRIG tests
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_dc_basic" ${SWITCH_${SWITCH_VERSION}_P4}
     "${testExtraArgs} -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_dc_basic"
@@ -1265,7 +1269,7 @@ set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_dc_basic_Malform
 set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_dc_basic_MalformedPacketsTest_ipv6" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_dc_basic_MalformedPacketsTest_tunnel" PROPERTIES TIMEOUT 3600)
 
-# Switch Rel 8.5 MSDC_SPINE_DTEL_INT_PROFILE tests
+# Switch Rel 8.7 MSDC_SPINE_DTEL_INT_PROFILE tests
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int" ${SWITCH_${SWITCH_VERSION}_P4}
     "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int"
