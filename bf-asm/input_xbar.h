@@ -65,7 +65,7 @@ class InputXbar {
     std::map<unsigned, std::map<int, HashCol>>          hash_tables;
     std::map<unsigned, HashGrp>                         hash_groups;
     static bool conflict(const std::vector<Input> &a, const std::vector<Input> &b);
-    static bool conflict(const std::map<int, HashCol> &a, const std::map<int, HashCol> &b);
+    static bool conflict(const std::map<int, HashCol> &, const std::map<int, HashCol> &, int * = 0);
     static bool conflict(const HashGrp &a, const HashGrp &b);
     bool copy_existing_hash(int group, std::pair<const int, HashCol> &col);
     uint64_t hash_columns_used(unsigned hash);

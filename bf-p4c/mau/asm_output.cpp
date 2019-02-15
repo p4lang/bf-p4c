@@ -732,6 +732,7 @@ void MauAsmOutput::emit_ixbar_meter_alu_hash(std::ostream &out, indent_t indent,
         safe_vector<Slice> &match_data, const IXBar::Use::MeterAluHash &mah,
         const safe_vector<PHV::AbstractField*> &field_list_order) const {
     if (mah.algorithm.type == IR::MAU::HashFunction::IDENTITY) {
+        auto mask = mah.bit_mask;
         for (auto &slice : match_data) {
             if (mah.identity_positions.count(slice.get_field()) == 0)
                 continue;
@@ -749,8 +750,15 @@ void MauAsmOutput::emit_ixbar_meter_alu_hash(std::ostream &out, indent_t indent,
                 out << indent << start_bit << ".." << end_bit << ": "
                     << FormatHash(&single_match_vec, nullptr, nullptr, nullptr, mah.algorithm)
                     << std::endl;
+                mask.clrrange(start_bit, slice_bits.size());
             }
         }
+        for (int to_clear = mask.ffs(0); to_clear >= 0;) {
+            int end = mask.ffz(to_clear);
+            out << indent << to_clear;
+            if (end - 1 > to_clear) out << ".." << (end - 1);
+            out << ": 0" << std::endl;
+            to_clear = mask.ffs(end); }
     } else {
         le_bitrange br = { mah.bit_mask.min().index(), mah.bit_mask.max().index() };
         int total_bits = 0;
@@ -853,7 +861,7 @@ void MauAsmOutput::emit_ixbar_gather_map(std::map<int, Slice> &match_data_map,
 }
 
 /* Generate asm for the hash of a table, specifically either a match, gateway, or selector
-   table.  Not used for hash distribution hash */
+   table.  Also used for hash distribution hash */
 void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent,
                                    safe_vector<Slice> &match_data,
                                    safe_vector<Slice> &ghost,
@@ -1873,6 +1881,16 @@ class MauAsmOutput::EmitAction : public Inspector {
         out << std::endl;
     }
     bool preorder(const IR::Cast *c) override { visit(c->expr); return false; }
+    bool preorder(const IR::MAU::IXBarExpression *e) override {
+        if (findContext<IR::MAU::Action>()) {
+            out << sep << "ixbar /* " << e->expr << " */";
+        } else if (findContext<IR::MAU::SaluAction>()) {
+            out << sep << (e->bit ? "phv_hi" : "phv_lo");
+        } else {
+            BUG("IXBarExpression %s not in an action?", e);
+        }
+        sep = ", ";
+        return false; }
     bool preorder(const IR::Expression *exp) override {
         handle_phv_expr(exp);
         return false;

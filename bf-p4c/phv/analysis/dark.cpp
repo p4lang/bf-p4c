@@ -7,93 +7,25 @@ Visitor::profile_t CollectNonDarkUses::init_apply(const IR::Node* root) {
     return rv;
 }
 
-bool CollectNonDarkUses::preorder(const IR::MAU::Action* act) {
-    for (auto* call : act->stateful_calls) {
-        if (call->index) {
-            const PHV::Field* f = phv.field(call->index);
-            if (!f) continue;
-            LOG5("    Input crossbar read, stateful primitive: " << f);
-            nonDarkMauUses[f->id] = true; } }
-    return true;
-}
-
-bool CollectNonDarkUses::preorder(const IR::MAU::Table* tbl) {
-    LOG5("Table: " << tbl->name);
-    for (auto kv : tbl->gateway_rows) {
-        if (kv.first == nullptr) continue;
-        LOG5("  Gateway row: " << kv.first);
-        std::queue<const IR::Expression*> expressions;
-        expressions.push(kv.first);
-        while (!expressions.empty()) {
-            const IR::Expression* expr = expressions.front();
-            expressions.pop();
-            if (auto* op = expr->to<IR::Operation_Binary>()) {
-                LOG5("    Binary operation Expression: " << expr);
-                if (op->left)
-                    expressions.push(op->left);
-                if (op->right)
-                    expressions.push(op->right);
-            } else {
-                LOG5("    Non-binary operation expression: " << expr);
-                const PHV::Field* field = phv.field(expr);
-                if (field) {
-                    LOG5("    Input crossbar read, field in gateway condition: " << field);
-                    nonDarkMauUses[field->id] = true; } } } }
-    return true;
-}
-
-bool CollectNonDarkUses::preorder(const IR::MAU::InputXBarRead* read) {
-    const PHV::Field* f = phv.field(read->expr);
-    if (!f) return true;
-    nonDarkMauUses[f->id] = true;
-    LOG5("    Input crossbar read: " << f);
-    return true;
-}
-
-bool CollectNonDarkUses::preorder(const IR::MAU::Meter* mtr) {
-    const PHV::Field* f = phv.field(mtr->result);
-    if (f) {
-        LOG5("    Meter result: " << f);
-        nonDarkMauUses[f->id] = true; }
-    f = phv.field(mtr->pre_color);
-    if (f) {
-        LOG5("    Meter pre color: " << f);
-        nonDarkMauUses[f->id] = true; }
-    f = phv.field(mtr->input);
-    if (f) {
-        LOG5("    Meter input: " << f);
-        nonDarkMauUses[f->id] = true; }
-    return true;
-}
-
-bool CollectNonDarkUses::preorder(const IR::MAU::HashDist* hd) {
-    auto* listExpr = hd->field_list->to<IR::ListExpression>();
-    if (listExpr) {
-        for (auto e : listExpr->components) {
-            const PHV::Field* f = phv.field(e);
-            if (!f) continue;
-            LOG5("    Input crossbar read in hash distribution: " << f);
-            nonDarkMauUses[f->id] = true;
-        }
-    } else {
-        const PHV::Field* f = phv.field(hd->field_list);
-        if (!f) return true;
-        LOG5("    Input crossbar read in hash distribution: " << f);
-        nonDarkMauUses[f->id] = true;
+bool CollectNonDarkUses::contextNeedsIXBar() {
+    for (auto c = getContext(); c; c = c->parent) {
+        if (c->node->is<IR::MAU::IXBarExpression>() ||
+            c->node->is<IR::MAU::StatefulCall>() ||
+            c->node->is<IR::MAU::StatefulAlu>() ||
+            c->node->is<IR::MAU::Table>())
+            return true;
+        if (c->node->is<IR::MAU::Action>())
+            return false;
     }
-    return true;
+    BUG("invalid context in CollectNonDarkUses");
 }
 
-bool CollectNonDarkUses::preorder(const IR::MAU::SaluAction* act) {
-    for (const auto* prim : act->action) {
-        for (const auto* operand : prim->operands) {
-            const PHV::Field* f = phv.field(operand);
-            if (!f) continue;
-            nonDarkMauUses[f->id] = true;
-            LOG5("    Stateful ALU Operand: " << f);
-        }
-    }
-    return false;
+bool CollectNonDarkUses::preorder(const IR::Expression *e) {
+    if (auto *field = phv.field(e)) {
+        if (contextNeedsIXBar()) {
+            nonDarkMauUses[field->id] = true; }
+        return false; }
+    return true;
 }
 
 bool CollectNonDarkUses::hasNonDarkUse(const PHV::Field* f) const {

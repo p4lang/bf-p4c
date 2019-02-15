@@ -90,8 +90,10 @@ void IR::MAU::TableSeq::dbprint(std::ostream &out) const {
     for (unsigned i = 1; i < tables.size(); i++) {
         out << ' ';
         for (unsigned j = 0; j < i; j++) out << (deps(i, j) ? '1' : '0'); }
+    out << indent;
     for (auto &t : tables)
-        out << endl << indent << t << unindent;
+        out << endl << t;
+    out << unindent;
 }
 
 void IR::MAU::Action::dbprint(std::ostream &out) const {
@@ -176,7 +178,7 @@ void IR::BFN::LoweredParserMatch::dbprint(std::ostream &out) const {
 }
 
 void IR::BFN::ParserState::dbprint(std::ostream &out) const {
-    out << gress << " parser " << name;
+    out << gress << " parser state " << name;
     if (dbgetflags(out) & Brief)
         return;
     out << ':' << indent;
@@ -207,7 +209,7 @@ void IR::BFN::LoweredSelect::dbprint(std::ostream &out) const {
 }
 
 void IR::BFN::LoweredParserState::dbprint(std::ostream &out) const {
-    out << gress << " parser " << name;
+    out << gress << " parser state " << name;
     if (dbgetflags(out) & Brief)
         return;
     out << ':' << indent;
@@ -222,17 +224,21 @@ void IR::BFN::LoweredParserState::dbprint(std::ostream &out) const {
 }
 
 void IR::BFN::Parser::dbprint(std::ostream &out) const {
+    out << gress << " parser " << indent;
     forAllMatching<IR::BFN::ParserState>(this,
                   [&](const IR::BFN::ParserState* state) {
         out << endl << *state;
     });
+    out << unindent;
 }
 
 void IR::BFN::LoweredParser::dbprint(std::ostream &out) const {
+    out << "lowered " << gress << " parser " << indent;
     forAllMatching<IR::BFN::LoweredParserState>(this,
                   [&](const IR::BFN::LoweredParserState* state) {
         out << endl << *state;
     });
+    out << unindent;
 }
 
 void IR::BFN::DigestFieldList::dbprint(std::ostream &out) const {
@@ -355,11 +361,9 @@ void IR::BFN::LoweredDeparser::dbprint(std::ostream &out) const {
 
 void IR::BFN::Pipe::dbprint(std::ostream &out) const {
     if (ghost_thread) out << "ghost:" << indent << ghost_thread << unindent << endl;
-    out << "ingress:" << indent << thread[0].parser << endl
-                      << indent << thread[0].mau << unindent << endl
+    out << "ingress:" << indent << endl << thread[0].parser << endl << thread[0].mau << endl
                       << thread[0].deparser << unindent << endl
-        << "egress:" << indent << thread[1].parser << endl
-                     << indent << thread[1].mau << unindent << endl
+        << "egress:" << indent << endl << thread[1].parser << endl << thread[1].mau << endl
                      << thread[1].deparser << unindent;
 }
 

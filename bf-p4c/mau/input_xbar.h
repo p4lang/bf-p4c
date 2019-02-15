@@ -54,6 +54,7 @@ struct IXBar {
     static constexpr int FAIR_MODE_HASH_BITS = 14;
     static constexpr int METER_ALU_HASH_BITS = 51;
     static constexpr int METER_PRECOLOR_SIZE = 2;
+    static constexpr int MAX_HASH_BITS = 51;
 
     struct Loc {
         int group = -1, byte = -1;
@@ -285,12 +286,14 @@ struct IXBar {
         unsigned        hash_table_inputs[HASH_GROUPS] = { 0 };
         /* hash seed for different hash groups */
         bitvec          hash_seed[HASH_GROUPS];
-        /* values fed through the hash tables onto the upper 12 bits of the hash bus via
-         * an identity matrix */
+        /* values fed through the hash tables onto the hash bus via an identity matrix */
+        /* TODO -- extend to more complex operations that just identity? */
         struct matrix_position {
             int hash_start = -1;
+            const PHV::Field    *field;
             le_bitrange field_range = { -1, -1 };
-            matrix_position(int hs, le_bitrange fr) : hash_start(hs), field_range(fr) { }
+            matrix_position(int hs, const PHV::Field *f, le_bitrange fr)
+            : hash_start(hs), field(f), field_range(fr) { }
         };
 
         struct Bits {
@@ -319,6 +322,11 @@ struct IXBar {
             bitvec bit_mask;
             IR::MAU::HashFunction algorithm;
             ordered_map<const PHV::Field *, safe_vector<matrix_position>> identity_positions;
+            /* The Expressions that are being computed in this GF matrix, indexed by the offset
+             * bit in the matrix output.  These expressions are children of IXBarExpression nodes
+             * FIXME -- this makes identity_positions redundant, but is more general as it can
+             * record non-identity computations. */
+            std::map<int, const IR::Expression *> computed_expressions;
 
             void clear() {
                 allocated = false;
@@ -575,6 +583,7 @@ struct IXBar {
         // if a bitrange has been requested multiple times
         std::map<cstring, bitvec>  fields_needed;
         ordered_set<std::pair<const PHV::Field *, le_bitrange>> &phv_sources;
+        std::vector<const IR::MAU::IXBarExpression *>   &hash_sources;
         bool                       &dleft;
         const IR::MAU::Table       *tbl;
 
@@ -583,6 +592,7 @@ struct IXBar {
         bool preorder(const IR::MAU::SaluAction *) override;
         bool preorder(const IR::Expression *e) override;
         bool preorder(const IR::MAU::HashDist *) override;
+        bool preorder(const IR::MAU::IXBarExpression *) override;
         ///> In order to prevent any annotations, i.e. chain_vpn, and determining this as a source
         bool preorder(const IR::Annotation *) override { return false; }
         bool preorder(const IR::Declaration_Instance *) override { return false; }
@@ -591,9 +601,10 @@ struct IXBar {
         FindSaluSources(IXBar &self, const PhvInfo &phv, ContByteConversion &ma,
                     safe_vector<PHV::AbstractField*> &flo,
                     ordered_set<std::pair<const PHV::Field *, le_bitrange>> &ps,
+                    std::vector<const IR::MAU::IXBarExpression *> &hs,
                     bool &d, const IR::MAU::Table *t)
-        : self(self), phv(phv), map_alloc(ma), field_list_order(flo), phv_sources(ps), dleft(d),
-          tbl(t) {}
+        : self(self), phv(phv), map_alloc(ma), field_list_order(flo), phv_sources(ps),
+          hash_sources(hs), dleft(d), tbl(t) {}
     };
 
     class XBarHashDist : public MauInspector {
@@ -660,10 +671,7 @@ struct IXBar {
     ordered_map<const IR::MAU::AttachedMemory *, const IXBar::Use &> allocated_attached;
 
     void clear();
-    void field_management(ContByteConversion &map_alloc,
-        safe_vector<PHV::AbstractField*> &field_list_order, const IR::Expression *field,
-        std::map<cstring, bitvec> &fields_needed, cstring name, const PhvInfo &phv,
-        KeyInfo &ki);
+    class FieldManagement;
     bool allocMatch(bool ternary, const IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc,
                     safe_vector<IXBar::Use::Byte *> &alloced, hash_matrix_reqs &hm_reqs);
     bool allocPartition(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc,
@@ -780,8 +788,9 @@ struct IXBar {
     bool setup_stateful_search_bus(const IR::MAU::StatefulAlu *salu, Use &alloc,
         ordered_set<std::pair<const PHV::Field *, le_bitrange>> &phv_sources,
         unsigned &byte_mask);
-    bool setup_stateful_hash_bus(const IR::MAU::StatefulAlu *salu, Use &alloc, bool dleft,
-        ordered_set<std::pair<const PHV::Field *, le_bitrange>> &phv_sources);
+    bool setup_stateful_hash_bus(const PhvInfo &, const IR::MAU::StatefulAlu *salu, Use &alloc,
+        bool dleft, ordered_set<std::pair<const PHV::Field *, le_bitrange>> &phv_sources,
+        std::vector<const IR::MAU::IXBarExpression *> &hash_sources);
     bool allocHashDistAddress(int bits_required, const unsigned &hash_table_input,
         HashDistAllocParams &hdap, cstring name);
     bool allocHashDistImmediate(const IR::MAU::HashDist *hd, const ActionFormat::Use *af,

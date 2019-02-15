@@ -23,6 +23,7 @@
 #include "bf-p4c/mau/handle_assign.h"
 #include "bf-p4c/mau/instruction_adjustment.h"
 #include "bf-p4c/mau/instruction_selection.h"
+#include "bf-p4c/mau/ixbar_expr.h"
 #include "bf-p4c/mau/ixbar_realign.h"
 #include "bf-p4c/mau/push_pop.h"
 #include "bf-p4c/mau/remove_noop_gateway.h"
@@ -138,7 +139,8 @@ class TableAllocPass : public Logging::PassManager {
                 new CheckTableNameDuplicate,
                 new TableFindSeqDependencies(phv),  // not needed?
                 new FinalTableLayout(phv, lc),
-                new CheckTableNameDuplicate
+                new CheckTableNameDuplicate,
+                new AdjustIXBarExpression
             });
 
         setName("Table Alloc");

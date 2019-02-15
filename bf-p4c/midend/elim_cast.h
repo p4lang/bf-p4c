@@ -35,12 +35,14 @@ class EliminateWidthCasts : public Transform {
     EliminateWidthCasts() { }
     const IR::Node* preorder(IR::Cast* cast) override;
 
+#if 0
     // Caveat(hanw): do not simplify cast in apply functions.
     // stateful_alu implementation must handle '++'
     // before we can eliminate cast.
     const IR::Node* preorder(IR::Function* func) override {
         prune();
         return func; }
+#endif
 
     // Caveat(hanw): we do not simplify the cast in a selection expression,
     // because we do not support '++' operator with a constant lhs.
@@ -279,9 +281,7 @@ class RewriteConcatToSlices : public Transform {
         auto lsz =  expr->left->type->width_bits();
         auto rsz =  expr->right->type->width_bits();
 
-        if (auto lhs = expr->left->to<IR::Constant>()) {
-            slices.push_back(new SliceInfo(lsz + rsz - 1, rsz, expr->left));
-        }
+        slices.push_back(new SliceInfo(lsz + rsz - 1, rsz, expr->left));
         if (auto rhs = expr->right->to<IR::Concat>()) {
             unpack(slices, rhs);
         } else {
@@ -358,7 +358,10 @@ class ElimCasts : public PassManager {
            new SimplifyRedundantCasts(),
            new RewriteCastToReinterpretCast(typeMap),
            new EliminateWidthCasts(),
-           new StrengthReduction(refMap, typeMap),
+           // FIXME -- StrengthReduction has problems with complex nested things like
+           // (0 ++ field << 1)[15:0] (from brig-405), which causes problems for Rewrite
+           // so we repeat until a fixed point is reached.
+           new PassRepeated({new StrengthReduction(refMap, typeMap)}),
            new RewriteConcatToSlices(),
            new P4::SimplifyControlFlow(refMap, typeMap),
            new P4::ClearTypeMap(typeMap),

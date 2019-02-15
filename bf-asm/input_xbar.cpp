@@ -22,7 +22,11 @@ void InputXbar::setup_hash(std::map<int, HashCol> &hash_table, int id,
             hash_table[lo].data.setraw(what.bigi.data, what.bigi.size);
             if (hash_table[lo].data.max().index() >= 64)
                 error(what.lineno, "Hash column value out of range");
-            return; } }
+            return; }
+    } else if (what.type == tINT && what.i == 0) {
+        for (int i = lo; i <= hi; ++i) {
+            hash_table[i].data.setraw(what.i); }
+        return; }
     HashExpr *fn = HashExpr::create(gress, stage, what);
     if (!fn) return;
     fn->build_algorithm();
@@ -111,6 +115,10 @@ InputXbar::InputXbar(Table *t, bool tern, const VECTOR(pair_t) &data)
                 if (index >= EXACT_HASH_GROUPS) {
                     error(kv.key.lineno, "invalid hash group descriptor");
                     continue; }
+                if (hash_groups[index].lineno >= 0) {
+                    // FIXME -- should be an error? but the compiler generates it this way
+                    warning(kv.key.lineno, "duplicate hash group %d, will merge with", index);
+                    warning(hash_groups[index].lineno, "previous definition here"); }
                 hash_groups[index].lineno = kv.key.lineno;
                 if (kv.value.type == tINT && (unsigned)kv.value.i < HASH_TABLES) {
                     hash_groups[index].tables |= 1U << kv.value.i;
@@ -122,21 +130,16 @@ InputXbar::InputXbar(Table *t, bool tern, const VECTOR(pair_t) &data)
                         if (el.key == "seed") {
                             if (!CHECKTYPE2(el.value, tINT, tBIGINT)) continue;
                             if (el.value.type == tBIGINT) {
-#if WORDSIZE == 64
-                                hash_groups[index].seed = el.value.bigi.data[0];
-#else
-                                if (el.value.bigi.size == 2)
-                                    hash_groups[index].seed =
-                                        static_cast<uint64_t>(el.value.bigi.data[1]) << 32 |
-                                        el.value.bigi.data[0];
-                                else if (el.value.bigi.size == 1)
-                                    hash_groups[index].seed = el.value.bigi.data[0];
-                                else
-                                    error(kv.key.lineno, "Invalid seed size %d",
-                                          el.value.bigi.size);
-#endif
+                                int shift = 0;
+                                for (int i = 0; i < el.value.bigi.size; ++i) {
+                                    if (shift >= 64) {
+                                        error(kv.key.lineno, "Invalid seed %s too large",
+                                              value_desc(&el.value));
+                                        break; }
+                                    hash_groups[index].seed |= el.value.bigi.data[i] << shift;
+                                    shift += CHAR_BIT * sizeof(el.value.bigi.data[i]); }
                             } else {
-                                hash_groups[index].seed = el.value.i & 0xFFFFFFFF;
+                                hash_groups[index].seed |= el.value.i & 0xFFFFFFFF;
                             }
                         } else if (el.key == "table") {
                             if (el.value.type == tINT) {
@@ -244,11 +247,13 @@ bool InputXbar::conflict(const std::vector<Input> &a, const std::vector<Input> &
     return false;
 }
 
-bool InputXbar::conflict(const std::map<int, HashCol> &a, const std::map<int, HashCol> &b) {
-    for (auto &acol : a)
-        if (auto bcol = ::getref(b, acol.first))
-            if (acol.second.data != bcol->data || acol.second.valid != bcol->valid)
-                return true;
+bool InputXbar::conflict(const std::map<int, HashCol> &a, const std::map<int, HashCol> &b,
+                         int *col) {
+    for (auto &acol : a) {
+        if (auto bcol = ::getref(b, acol.first)) {
+            if (acol.second.data != bcol->data || acol.second.valid != bcol->valid) {
+                if (col) *col = acol.first;
+                return true; } } }
     return false;
 }
 
@@ -443,11 +448,13 @@ void InputXbar::pass1() {
             if (other == this) {
                 add_to_use = false;
                 continue; }
+            int column;
             if (other->hash_tables.count(hash.first) &&
-                conflict(other->hash_tables[hash.first], hash.second)) {
-                error(lineno, "Input xbar hash table %d conflict in stage %d", hash.first,
-                      table->stage->stageno);
-                warning(other->lineno, "conflicting hash definition here"); } }
+                conflict(other->hash_tables[hash.first], hash.second, &column)) {
+                error(hash.second.at(column).lineno, "Input xbar hash table %d column %d conflict"
+                      " in stage %d", hash.first, column, table->stage->stageno);
+                warning(other->hash_tables[hash.first].at(column).lineno,
+                        "conflicting hash definition here"); } }
         if (add_to_use)
             table->stage->hash_table_use[hash.first].push_back(this); }
     for (auto &group : hash_groups) {

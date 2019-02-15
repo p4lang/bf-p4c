@@ -1113,11 +1113,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "Slice is of IR structure not handled by ActionAnalysis"
-  testdata/p4_16_samples/strength4.p4
-)
-
-p4c_add_xfail_reason("tofino"
   "invalid slice on slice"
   testdata/p4_16_samples/strength3.p4
 )
@@ -1531,12 +1526,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/mau/COMPILER-615/ecmp_one.p4
 )
 
-# no support for IR::BFN::SignExtend in action analysis
-p4c_add_xfail_reason("tofino"
-  "IR structure not yet handled by the ActionAnalysis pass"
-  extensions/p4_tests/p4_16/brig-305.p4
-)
-
 # P4C doesn't support use_container_valid pragma?
 p4c_add_xfail_reason("tofino"
   "error: Field isValid is not a member of structure struct ingress_intrinsic_metadata_for_tm_t"
@@ -1574,12 +1563,12 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "The following operation is not yet supported"
   ../glass/testsuite/p4_tests/mau/COMPILER-815/int_heavy.p4
-  testdata/p4_14_samples/issue-1559.p4
 )
 
+# p4lang/p4c #1724
 p4c_add_xfail_reason("tofino"
-  "recursion failure"
-  extensions/p4_tests/p4_14/p4c-1429.p4
+  "error: .*: negative bit index -1"
+  testdata/p4_14_samples/issue-1559.p4
 )
 
 # P4C does not support varbits and packet_in.extract(hdr, size)
@@ -1611,7 +1600,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/TLV_parsing.p4
   )
 
-
 # Expected failure
 p4c_add_xfail_reason("tofino"
   "error: standard_metadata.packet_length is not accessible in the ingress pipe"
@@ -1619,3 +1607,8 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/p414-special-ops-3-bmv2.p4
   )
 
+# funnel-shift not supported
+p4c_add_xfail_reason("tofino"
+  "PHV allocation was not successful"
+  ../glass/testsuite/p4_tests/mau/test_config_235_funnel_shift.p4
+)

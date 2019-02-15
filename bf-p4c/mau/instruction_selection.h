@@ -84,6 +84,8 @@ class DoInstructionSelection : public MauTransform, TofinoWriteContext {
     const IR::Expression *postorder(IR::BOr *) override;
     const IR::Expression *postorder(IR::BXor *) override;
     const IR::Expression *postorder(IR::Cmpl *) override;
+    const IR::Expression *preorder(IR::BFN::SignExtend *) override;
+    const IR::Expression *preorder(IR::Concat *) override;
     // const IR::Expression *postorder(IR::Cast *) override;
     const IR::Expression *postorder(IR::Mux *) override;
     const IR::Slice *postorder(IR::Slice *) override;

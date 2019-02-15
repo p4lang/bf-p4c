@@ -24,12 +24,8 @@ class CollectNonDarkUses : public MauInspector {
     bitvec            nonDarkMauUses;
 
     profile_t init_apply(const IR::Node* root) override;
-    bool preorder(const IR::MAU::Table* tbl) override;
-    bool preorder(const IR::MAU::Action* act) override;
-    bool preorder(const IR::MAU::InputXBarRead* read) override;
-    bool preorder(const IR::MAU::Meter* mtr) override;
-    bool preorder(const IR::MAU::HashDist* hd) override;
-    bool preorder(const IR::MAU::SaluAction* act) override;
+    bool preorder(const IR::Expression *) override;
+    bool contextNeedsIXBar();
 
  public:
     explicit CollectNonDarkUses(const PhvInfo& p) : phv(p) { }

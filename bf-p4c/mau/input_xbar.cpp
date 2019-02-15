@@ -1,7 +1,6 @@
-#include "bf-p4c/mau/input_xbar.h"
-#include <set>
 #include "bf-p4c/device.h"
 #include "bf-p4c/mau/gateway.h"
+#include "bf-p4c/mau/ixbar_expr.h"
 #include "bf-p4c/mau/resource.h"
 #include "bf-p4c/mau/resource_estimate.h"
 #include "bf-p4c/phv/phv_fields.h"
@@ -891,9 +890,9 @@ void IXBar::setup_byte_vectors(safe_vector<IXBar::Use::Byte> &alloc_use, bool te
 void IXBar::print_groups(safe_vector<grp_use> &order, safe_vector<mid_byte_use> &mid_byte_order,
         bool ternary) {
     for (int grp = 0; grp < groups(ternary); grp++) {
-        LOG3("  Group " << order[grp]);
+        LOG6("  Group " << order[grp]);
         if (ternary && (grp % 2) == 0)
-            LOG3("  Mid byte " << mid_byte_order[grp / 2]);
+            LOG6("  Mid byte " << mid_byte_order[grp / 2]);
     }
 }
 
@@ -1063,7 +1062,7 @@ bool IXBar::find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use, bool ternary,
             setup_byte_vectors(alloc_use, ternary, unalloced, alloced, order, mid_byte_order,
                                hm_reqs, byte_mask);
             if (first_time) {
-                LOG3("Pre allocation groups:");
+                LOG6("Pre allocation groups:");
                 print_groups(order, mid_byte_order, ternary);
             }
             int bytes_to_allocate = total_bytes_needed;
@@ -1071,7 +1070,7 @@ bool IXBar::find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use, bool ternary,
                 allocate_mid_bytes(unalloced, alloced, ternary, prefer_found, order,
                                    mid_byte_order, mid_bytes_needed, bytes_to_allocate,
                                    version_placed);
-                LOG3("Allocation post midbyte ");
+                LOG6("Allocation post midbyte ");
                     print_groups(order, mid_byte_order, ternary);
             }
             allocate_groups(unalloced, alloced, ternary, prefer_found, order, mid_byte_order,
@@ -1083,7 +1082,7 @@ bool IXBar::find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use, bool ternary,
     } while (allocated == false);
 
     if (allocated) {
-        LOG3("Post allocation groups:");
+        LOG6("Post allocation groups:");
         print_groups(order, mid_byte_order, ternary);
     }
     return allocated;
@@ -1212,46 +1211,49 @@ IXBar::hash_matrix_reqs IXBar::match_hash_reqs(const LayoutOption *lo,
 
 /* This is for adding fields to be allocated in the ixbar allocation scheme.  Used by
    match tables, selectors, and hash distribution */
-void IXBar::field_management(ContByteConversion &map_alloc,
-        safe_vector<PHV::AbstractField*> &field_list_order, const IR::Expression *field,
-        std::map<cstring, bitvec> &fields_needed, cstring name, const PhvInfo &phv,
-        KeyInfo &ki) {
-    const PHV::Field *finfo = nullptr;
-    le_bitrange bits = { };
-    if (auto list = field->to<IR::ListExpression>()) {
+class IXBar::FieldManagement : public Inspector {
+    ContByteConversion &map_alloc;
+    safe_vector<PHV::AbstractField*> &field_list_order;
+    std::map<cstring, bitvec> &fields_needed;
+    cstring name;
+    const PhvInfo &phv;
+    KeyInfo &ki;
+
+    bool preorder(const IR::ListExpression *) {
         if (!ki.hash_dist)
             BUG("A field list is somehow contained within the reads in table %s", name);
-        for (auto comp : list->components)
-             field_management(map_alloc, field_list_order, comp, fields_needed, name, phv, ki);
-        return;
-    }
-    if (field->is<IR::Mask>())
+        return true; }
+    bool preorder(const IR::Mask *) {
         BUG("Masks should have been converted to Slices before input xbar allocation");
+        return true; }
 
-    byte_type_t byte_type = NO_BYTE_TYPE;
-    if (auto read = field->to<IR::MAU::InputXBarRead>()) {
+    bool preorder(const IR::MAU::InputXBarRead *read) {
         if (ki.is_atcam) {
             if (ki.partition != read->partition_index)
-                return;
-            else if (read->partition_index)
-                byte_type = PARTITION_INDEX;
-            else if (read->match_type.name == "ternary" || read->match_type.name == "lpm")
-                byte_type = ATCAM;
-        }
-        if (read->match_type.name == "range")
-            byte_type = RANGE;
-        field = read->expr;
-    }
+                return false; }
+        return true; }
 
-    boost::optional<cstring> aliasSourceName = phv.get_alias_name(field);
-    if (auto c = field->to<IR::Constant>()) {
+    bool preorder(const IR::Constant *c) {
         auto constant = new PHV::Constant(c);
         field_list_order.push_back(constant);
-    } else {
-        finfo = phv.field(field, &bits);
-        BUG_CHECK(finfo, "unexpected field %s", field);
+        return true; }
+    bool preorder(const IR::Expression *e) {
+        le_bitrange bits = { };
+        auto *finfo = phv.field(e, &bits);
+        if (!finfo) return true;
         bitvec field_bits(bits.lo, bits.hi - bits.lo + 1);
         // Currently, due to driver, only one field is allowed to be the partition index
+        byte_type_t byte_type = NO_BYTE_TYPE;
+        if (auto *read = findContext<IR::MAU::InputXBarRead>()) {
+            if (ki.is_atcam) {
+                if (read->partition_index)
+                    byte_type = PARTITION_INDEX;
+                else if (read->match_type.name == "ternary" || read->match_type.name == "lpm")
+                    byte_type = ATCAM;
+            }
+            if (read->match_type.name == "range")
+                byte_type = RANGE;
+        }
         if (byte_type == PARTITION_INDEX) {
             int diff = bits.size() - ki.partition_bits;
             if (diff > 0)
@@ -1261,19 +1263,36 @@ void IXBar::field_management(ContByteConversion &map_alloc,
         if (fields_needed.count(finfo->name)) {
             auto &allocated_bits = fields_needed.at(finfo->name);
             if ((allocated_bits & field_bits).popcount() == field_bits.popcount())
-                return;
+                return false;
             fields_needed[finfo->name] |= field_bits;
         } else {
             fields_needed[finfo->name] = field_bits;
         }
         auto fieldSlice = new PHV::FieldSlice(finfo, bits);
         field_list_order.push_back(fieldSlice);
+        boost::optional<cstring> aliasSourceName = phv.get_alias_name(e);
         add_use(map_alloc, finfo, phv, aliasSourceName, &bits, 0, byte_type, 0, ki.range_index);
         if (byte_type == RANGE) {
             ki.range_index++;
         }
+        return false;
     }
-}
+    void postorder(const IR::BFN::SignExtend *c) {
+        BUG_CHECK(!field_list_order.empty(), "SignExtend on nonexistant field");
+        int size = c->expr->type->width_bits();
+        auto *field = field_list_order.back()->to<PHV::FieldSlice>();
+        for (int i = c->type->width_bits(); i > size; --i) {
+            field_list_order.insert(field_list_order.end() - 1,
+                new PHV::FieldSlice(*field, le_bitrange(size - 1, size - 1))); } }
+
+ public:
+    FieldManagement(ContByteConversion &map_alloc,
+                    safe_vector<PHV::AbstractField*> &field_list_order, const IR::Expression *field,
+                    std::map<cstring, bitvec> &fields_needed, cstring name, const PhvInfo &phv,
+                    KeyInfo &ki)
+    : map_alloc(map_alloc), field_list_order(field_list_order), fields_needed(fields_needed),
+      name(name), phv(phv), ki(ki) { field->apply(*this); }
+};
 
 /** In order to prevent some overlay bugs by the driver, this guarantees that if a table matches
  *  on multiple overlaid bits, that these bits appear twice in the match key.  One could in
@@ -1347,8 +1366,8 @@ Visitor::profile_t IXBar::FindSaluSources::init_apply(const IR::Node *root) {
     for (auto read : tbl->match_key) {
         if (!read->for_dleft())
             continue;
-        self.field_management(map_alloc, field_list_order, read->expr, fields_needed,
-                              tbl->name, phv, ki);
+        FieldManagement(map_alloc, field_list_order, read->expr, fields_needed,
+                        tbl->name, phv, ki);
     }
     return rv;
 }
@@ -1367,17 +1386,25 @@ bool IXBar::FindSaluSources::preorder(const IR::Expression *e) {
     le_bitrange bits;
     KeyInfo ki;
     if (auto *finfo = phv.field(e, &bits)) {
-        self.field_management(map_alloc, field_list_order, e, fields_needed, tbl->name, phv, ki);
-        phv_sources.insert(std::make_pair(finfo, bits));
+        FieldManagement(map_alloc, field_list_order, e, fields_needed, tbl->name, phv, ki);
+        if (!findContext<IR::MAU::IXBarExpression>())
+            phv_sources.insert(std::make_pair(finfo, bits));
         return false;
     }
     return true;
 }
 
-
 bool IXBar::FindSaluSources::preorder(const IR::MAU::HashDist *) {
     // Handled in a different section
     return false;
+}
+
+bool IXBar::FindSaluSources::preorder(const IR::MAU::IXBarExpression *e) {
+    for (auto ex : hash_sources)
+        if (ex->equiv(*e))
+            return true;
+    hash_sources.push_back(e);
+    return true;
 }
 
 bool IXBar::allocMatch(bool ternary, const IR::MAU::Table *tbl,
@@ -1393,8 +1420,8 @@ bool IXBar::allocMatch(bool ternary, const IR::MAU::Table *tbl,
     for (auto ixbar_read : tbl->match_key) {
         if (!ixbar_read->for_match())
             continue;
-        field_management(map_alloc, alloc.field_list_order, ixbar_read, fields_needed,
-                         tbl->name, phv, ki);
+        FieldManagement(map_alloc, alloc.field_list_order, ixbar_read, fields_needed,
+                        tbl->name, phv, ki);
     }
 
     create_alloc(map_alloc, alloc);
@@ -1522,8 +1549,8 @@ bool IXBar::allocProxyHashKey(const IR::MAU::Table *tbl, const PhvInfo &phv,
     for (auto ixbar_read : tbl->match_key) {
         if (!ixbar_read->for_match())
             continue;
-        field_management(map_alloc, alloc.field_list_order, ixbar_read, fields_needed,
-                         tbl->name, phv, ki);
+        FieldManagement(map_alloc, alloc.field_list_order, ixbar_read, fields_needed,
+                        tbl->name, phv, ki);
     }
 
     create_alloc(map_alloc, alloc);
@@ -1903,8 +1930,8 @@ bool IXBar::allocPartition(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &m
     for (auto ixbar_read : tbl->match_key) {
         if (!ixbar_read->for_match())
             continue;
-        field_management(map_alloc, alloc.field_list_order, ixbar_read, fields_needed,
-                         tbl->name, phv, ki);
+        FieldManagement(map_alloc, alloc.field_list_order, ixbar_read, fields_needed,
+                        tbl->name, phv, ki);
     }
     create_alloc(map_alloc, alloc);
     BUG_CHECK(alloc.use.size() > 0, "No partition index found for %1%", tbl);
@@ -2188,8 +2215,8 @@ bool IXBar::allocSelector(const IR::MAU::Selector *as, const IR::MAU::Table *tbl
     KeyInfo ki;
     for (auto ixbar_read : tbl->match_key) {
         if (!ixbar_read->for_selection()) continue;
-        field_management(map_alloc, alloc.field_list_order, ixbar_read->expr, fields_needed,
-                         tbl->name, phv, ki);
+        FieldManagement(map_alloc, alloc.field_list_order, ixbar_read->expr, fields_needed,
+                        tbl->name, phv, ki);
     }
     create_alloc(map_alloc, alloc);
 
@@ -2241,7 +2268,7 @@ bool IXBar::allocSelector(const IR::MAU::Selector *as, const IR::MAU::Table *tbl
             if (diff > 0) {
                 bits.hi -= diff;
             }
-            mah.identity_positions[fs->field()].emplace_back(bits_seen, bits);
+            mah.identity_positions[fs->field()].emplace_back(bits_seen, fs->field(), bits);
             bits_seen += bits.size();
             if (bits_seen >= mode_width_bits)
                 break;
@@ -2391,7 +2418,7 @@ bool IXBar::allocMeter(const IR::MAU::Meter *mtr, const IR::MAU::Table *tbl, con
         mah.group = hash_group;
         mah.bit_mask.setrange(0, bits.size());
         mah.algorithm = IR::MAU::HashFunction::identity();
-        mah.identity_positions[finfo].emplace_back(0, bits);
+        mah.identity_positions[finfo].emplace_back(0, finfo, bits);
         int max_bit = max_bit_to_byte(mah.bit_mask);
         int max_group = max_index_group(max_bit);
         int max_single_bit = max_index_single_bit(max_bit);
@@ -2499,8 +2526,10 @@ bool IXBar::setup_stateful_search_bus(const IR::MAU::StatefulAlu *salu, Use &all
  *  the positions of these individual sources within the hash matrix, as the Galois
  *  matrix has to set up an identity matrix for this
  */
-bool IXBar::setup_stateful_hash_bus(const IR::MAU::StatefulAlu *salu, Use &alloc, bool dleft,
-        ordered_set<std::pair<const PHV::Field *, le_bitrange>> &phv_sources) {
+bool IXBar::setup_stateful_hash_bus(const PhvInfo &phv, const IR::MAU::StatefulAlu *salu,
+        Use &alloc, bool dleft,
+        ordered_set<std::pair<const PHV::Field *, le_bitrange>> &phv_sources,
+        std::vector<const IR::MAU::IXBarExpression *> &hash_sources) {
     auto &mah = alloc.meter_alu_hash;
     unsigned hash_table_input = alloc.compute_hash_tables();
     int hash_group = getHashGroup(hash_table_input);
@@ -2535,7 +2564,7 @@ bool IXBar::setup_stateful_hash_bus(const IR::MAU::StatefulAlu *salu, Use &alloc
                 continue;
             int start_bit = 0;
             mah.bit_mask.setrange(start_bit, range.size());
-            mah.identity_positions[field].emplace_back(start_bit, range);
+            mah.identity_positions[field].emplace_back(start_bit, field, range);
             phv_src_reserved[0] = true;
             sources_finished.insert(source_index);
         }
@@ -2548,12 +2577,22 @@ bool IXBar::setup_stateful_hash_bus(const IR::MAU::StatefulAlu *salu, Use &alloc
             auto range = source.second;
             if (sources_finished.count(source_index))
                 continue;
-            BUG_CHECK(alu_slot_index < 2, "index out of range");
-            if (phv_src_reserved[alu_slot_index])
+            while (alu_slot_index < 2 && phv_src_reserved[alu_slot_index])
                 alu_slot_index++;
+            if (alu_slot_index >= 2) return false;
             int start_bit = alu_slot_index * salu->source_width();
-            mah.identity_positions[field].emplace_back(start_bit, range);
+            mah.identity_positions[field].emplace_back(start_bit, field, range);
             mah.bit_mask.setrange(start_bit, range.size());
+            alu_slot_index++;
+        }
+        for (auto source : hash_sources) {
+            while (alu_slot_index < 2 && phv_src_reserved[alu_slot_index])
+                alu_slot_index++;
+            if (alu_slot_index >= 2) return false;
+            int start_bit = alu_slot_index * salu->source_width();
+            source->expr->apply(SetupMeterAluHash(phv, mah, start_bit));
+            mah.computed_expressions[start_bit] = source->expr;
+            mah.bit_mask.setrange(start_bit, salu->source_width());
             alu_slot_index++;
         }
     }
@@ -2571,6 +2610,23 @@ bool IXBar::setup_stateful_hash_bus(const IR::MAU::StatefulAlu *salu, Use &alloc
     return true;
 }
 
+std::ostream &operator<<(std::ostream &out,
+    const ordered_set<std::pair<const PHV::Field *, le_bitrange>> &phv_sources) {
+    const char *sep = "phv_sources: ";
+    for (auto &el : phv_sources) {
+        out << sep << el.first->name << "(" << el.second.lo << ".." << el.second.hi << ")";
+        sep = ", "; }
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out,
+    const std::vector<const IR::MAU::IXBarExpression *> &hash_sources) {
+    const char *sep = "  hash_sources: ";
+    for (auto &el : hash_sources) {
+        out << sep << *el;
+        sep = ", "; }
+    return out;
+}
 
 /**  If a stateful ALU is in dual mode, then the stateful ALU has two possible inputs, which
  *  can go to either the lo or hi ALU.  The sizes of these sources can either be
@@ -2601,11 +2657,13 @@ bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu, const IR::MAU::Table
 
     ContByteConversion map_alloc;
     ordered_set<std::pair<const PHV::Field *, le_bitrange>> phv_sources;
+    std::vector<const IR::MAU::IXBarExpression *> hash_sources;
     bool dleft = false;
     LOG3("IXBar::allocStateful(" << salu->name << ", " << tbl->name << ", " <<
          (on_search_bus ? "true" : "false") << ")");
     salu->apply(FindSaluSources(*this, phv, map_alloc, alloc.field_list_order, phv_sources,
-                                dleft, tbl));
+                                hash_sources, dleft, tbl));
+    LOG5("  " << phv_sources << hash_sources);
     create_alloc(map_alloc, alloc);
     if (alloc.use.size() == 0)
         return true;
@@ -2614,7 +2672,9 @@ bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu, const IR::MAU::Table
     hash_matrix_reqs hm_reqs;
 
     if (on_search_bus) {
-        if (dleft || !setup_stateful_search_bus(salu, alloc, phv_sources, byte_mask)) {
+        if (dleft ||
+            !hash_sources.empty() ||
+            !setup_stateful_search_bus(salu, alloc, phv_sources, byte_mask)) {
             alloc.clear();
             return false;
         }
@@ -2624,6 +2684,8 @@ bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu, const IR::MAU::Table
         for (auto &source : phv_sources) {
             total_bits += source.second.size();
         }
+        for (auto source : hash_sources)
+            total_bits += source->expr->type->width_bits();
         if (total_bits > METER_ALU_HASH_BITS) {
             LOG4("  total_bits(" << total_bits << ") > METER_ALU_HASH_BITS(" <<
                  METER_ALU_HASH_BITS << ")");
@@ -2632,8 +2694,8 @@ bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu, const IR::MAU::Table
     }
 
 
-    LOG3("Alloc stateful alu " << salu->name << " on_search_bus " << on_search_bus << " with "
-          << alloc.use.size() << " bytes");
+    LOG3("Alloc stateful alu " << salu->name << " " << (on_search_bus ? "" : "!") <<
+         "on_search_bus  with " << alloc.use.size() << " bytes");
     safe_vector<IXBar::Use::Byte *> xbar_alloced;
     if (!find_alloc(alloc.use, false, xbar_alloced, hm_reqs, byte_mask)) {
         alloc.clear();
@@ -2647,7 +2709,7 @@ bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu, const IR::MAU::Table
         alloc.used_by = salu->name + "";
 
     if (!on_search_bus) {
-        if (!setup_stateful_hash_bus(salu, alloc, dleft, phv_sources)) {
+        if (!setup_stateful_hash_bus(phv, salu, alloc, dleft, phv_sources, hash_sources)) {
             alloc.clear();
             return false;
         }
@@ -2955,8 +3017,8 @@ bool IXBar::allocHashDist(const IR::MAU::HashDist *hd, IXBar::Use::hash_dist_typ
 
     KeyInfo ki;
     ki.hash_dist = true;
-    field_management(map_alloc, alloc.field_list_order, hd->field_list, fields_needed, name,
-                     phv, ki);
+    FieldManagement(map_alloc, alloc.field_list_order, hd->field_list, fields_needed, name,
+                    phv, ki);
     create_alloc(map_alloc, alloc);
 
 
@@ -3329,7 +3391,6 @@ bool IXBar::XBarHashDist::preorder(const IR::MAU::HashDist *hd) {
     return false;
 }
 
-
 /** This is the general algorithm of the input xbar allocation.  This will allocate all
  *  needs for a table's input xbar, specifically xbar needs for the match, the gateway,
  *  selectors, stateful alu, and any hash distribution needs.  The allocation scheme is the
@@ -3500,7 +3561,7 @@ void IXBar::update(cstring name, const Use &alloc) {
     if (alloc.meter_alu_hash.allocated) {
         auto &mah = alloc.meter_alu_hash;
         // The mask is a byte mask, so must reserve the entire byte
-    int max_bit = max_bit_to_byte(mah.bit_mask);
+        int max_bit = max_bit_to_byte(mah.bit_mask);
         int max_group = max_index_group(max_bit);
         int max_index_bit = max_index_single_bit(max_bit);
         unsigned hash_table_input = alloc.hash_table_inputs[mah.group];

@@ -133,12 +133,13 @@ const IR::Expression *ActionAnalysis::isActionParam(const IR::Expression *e,
     }
     if (e->is<IR::MAU::ActionArg>() || e->is<IR::MAU::ActionDataConstant>()
         || e->is<IR::MAU::AttachedOutput>() || e->is<IR::MAU::HashDist>()
-        || e->is<IR::MAU::RandomNumber>() || e->is<IR::MAU::StatefulCounter>()) {
+        || e->is<IR::MAU::IXBarExpression>() || e->is<IR::MAU::RandomNumber>()
+        || e->is<IR::MAU::StatefulCounter>()) {
         if (bits_out)
             *bits_out = bits;
         if ((e->is<IR::MAU::ActionArg>() || e->is<IR::MAU::AttachedOutput>()
              || e->is<IR::MAU::HashDist>() || e->is<IR::MAU::StatefulCounter>()
-             || e->is<IR::MAU::RandomNumber>()) && type)
+             || e->is<IR::MAU::IXBarExpression>() || e->is<IR::MAU::RandomNumber>()) && type)
             *type = ActionParam::ACTIONDATA;
         else if (e->is<IR::MAU::ActionDataConstant>() && type)
             *type = ActionParam::CONSTANT;
@@ -230,6 +231,11 @@ bool ActionAnalysis::preorder(const IR::MAU::ActionDataConstant *adc) {
 
 bool ActionAnalysis::preorder(const IR::MAU::HashDist *hd) {
     field_action.reads.emplace_back(ActionParam::ACTIONDATA, hd, ActionParam::HASH_DIST);
+    return false;
+}
+
+bool ActionAnalysis::preorder(const IR::MAU::IXBarExpression *ix) {
+    BUG("bare IXBarExpression in action");
     return false;
 }
 

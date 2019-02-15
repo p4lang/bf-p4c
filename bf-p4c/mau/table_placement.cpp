@@ -747,7 +747,7 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, const Placed *done,
     auto stage_pragma = t->get_provided_stage();
     if (stage_pragma >= 0) {
         rv->stage = std::max(stage_pragma, rv->stage);
-        furthest_stage = rv->stage + 1;
+        furthest_stage = std::max(rv->stage, furthest_stage);
     } else if (forced_placement && !t->gateway_only()) {
         ::warning("%s: Table %s has not been provided a stage even though forced placement of "
                   "tables is turned on", t->srcInfo, t->name);
@@ -810,6 +810,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv, const IR::MA
     attached_entries_t set_attached_entries = rv->attached_entries;
 
     LOG3("  Initial stage is " << rv->stage);
+    BUG_CHECK(rv->stage < 100, "too many stages");
 
     min_placed->entries = 1;
 
@@ -978,6 +979,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv, const IR::MA
         if (error_message == "")
             error_message = "Unknown error for stage advancement?";
         error("Could not place %s: %s", t, error_message);
+        rv->stage = furthest_stage;  // avoid infinite loop
     }
 
     if (done && done->stage == rv->stage) {

@@ -127,11 +127,11 @@ class CreateSaluInstruction : public Inspector {
     bool preorder(const IR::Lss *r) override { return preorder(r, "lss", false); }
     bool preorder(const IR::Geq *r) override { return preorder(r, "geq", false); }
     bool preorder(const IR::Leq *r) override { return preorder(r, "leq", false); }
-    // we have not done enough in the midend to optimize away the cast in RegisterAction
-    bool preorder(const IR::Cast *) override { return true; }
+    bool preorder(const IR::Cast *) override;
     void postorder(const IR::Cast *) override;
-    // only ignore the cast that changes sign
+    bool preorder(const IR::BFN::SignExtend *) override;
     bool preorder(const IR::BFN::ReinterpretCast *) override { return true; }
+    void postorder(const IR::BFN::ReinterpretCast *) override;
     bool preorder(const IR::LNot *) override { return true; }
     void postorder(const IR::LNot *) override;
     bool preorder(const IR::LAnd *) override { return true; }

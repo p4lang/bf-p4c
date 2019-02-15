@@ -779,6 +779,22 @@ class HashDist : Expression {
     int                  bit_width = 0;
 }
 
+/** Expression computed in the input xbar, generally in the GF matrix
+ * These can be used in VLIW instructions, passed to the VLIW alus via the immediate path
+ * and the Action Data bus, or in SaluAction instructions.  They are useful for 'breaking'
+ * constraint violations on fields that are needed in two different sized MAU PHV groups, as
+ * well as computing various things (concatenations, sign extension, bit twiddling) that
+ * can't be easily done in an ALU.  They can also be used for things that could be in an ALU,
+ * but doing so would require an extra stage of dependency.
+ */
+class IXBarExpression : Expression {
+    Expression          expr;
+    int                 bit;    // where in the ixbar output
+
+#noconstructor
+    IXBarExpression(Expression e) : Expression(e->srcInfo, e->type), expr(e) {}
+    dbprint { out << "ixbar(" << expr << ")"; }
+}
 
 class ActionDataConstant : Expression {
     cstring name;

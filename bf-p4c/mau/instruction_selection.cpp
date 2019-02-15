@@ -2,6 +2,7 @@
 #include "lib/bitops.h"
 #include "lib/safe_vector.h"
 #include "action_analysis.h"
+#include "ixbar_expr.h"
 #include "bf-p4c/common/elim_unused.h"
 #include "bf-p4c/common/slice.h"
 #include "bf-p4c/phv/phv_fields.h"
@@ -471,6 +472,31 @@ const IR::Slice *DoInstructionSelection::postorder(IR::Slice *sl) {
     return sl;
 }
 
+const IR::Expression *DoInstructionSelection::preorder(IR::BFN::SignExtend *c) {
+    if (CanBeIXBarExpr(c)) {
+        prune();
+        auto *rv = new IR::MAU::HashDist(c->srcInfo, c->type, new IR::MAU::IXBarExpression(c),
+                                         IR::MAU::HashFunction::identity());
+        rv->bit_width = c->type->width_bits();
+        return rv; }
+    return c;
+}
+
+const IR::Expression *DoInstructionSelection::preorder(IR::Concat *c) {
+    if (auto k = c->left->to<IR::Constant>()) {
+        if (k->value == 0) {
+            // HACK -- avoid dealing with 0-prefix concats (zero extension) as the midend
+            // now changes zero-extend casts into them, and trying to do them in the hash
+            // breaks more things than it fixes
+            return c; } }
+    if (CanBeIXBarExpr(c)) {
+        prune();
+        auto *rv = new IR::MAU::HashDist(c->srcInfo, c->type, new IR::MAU::IXBarExpression(c),
+                                         IR::MAU::HashFunction::identity());
+        rv->bit_width = c->type->width_bits();
+        return rv; }
+    return c;
+}
 
 static const IR::MAU::Instruction *fillInstDest(const IR::Expression *in,
                                                 const IR::Expression *dest, int lo = -1,
@@ -1140,7 +1166,6 @@ void DLeftSetup::postorder(IR::MAU::BackendAttached *ba) {
                                           IR::MAU::HashFunction::random(), nullptr);
 }
 #endif
-
 
 struct CheckInvalidate : public Inspector {
     explicit CheckInvalidate(const PhvInfo& phv) : phv(phv) { }

@@ -344,9 +344,11 @@ template<class REGS> void StatefulTable::write_regs(REGS &regs) {
                             hashdata_bytemask & phv_byte_mask;
                         setup_muxctl(vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[2 + side],
                                      input_xbar->hash_group()); }
-                    if (phv_byte_mask & ~hashdata_bytemask) {
-                        data_ctl.stateful_meter_alu_data_bytemask =
-                            phv_byte_mask & ~hashdata_bytemask;
+                    if (unsigned mask = phv_byte_mask & ~hashdata_bytemask) {
+                        // should we also mask off bits not set in the ixbar of this table?
+                        // as long as the compiler explicitly zeroes everything in the hash
+                        // that needs to be zero, it should be ok.
+                        data_ctl.stateful_meter_alu_data_bytemask = mask;
                         data_ctl.stateful_meter_alu_data_xbar_ctl = 8 | input_xbar->match_group();
                     }
                 }
