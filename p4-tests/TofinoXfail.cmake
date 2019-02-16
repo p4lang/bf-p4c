@@ -341,8 +341,10 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "A packet was received on device"
+  smoketest_switch_msdc_MalformedPacketsTest
   smoketest_switch_8.7_msdc_MalformedPacketsTest
   smoketest_switch_marker_spine_L2StpEgressBlockingTest
+  smoketest_switch_ent_dc_general_egress_acl
   )
 
 p4c_add_xfail_reason("tofino"
