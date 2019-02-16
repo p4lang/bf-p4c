@@ -3,6 +3,7 @@
 #include "frontends/p4/evaluator/evaluator.h"
 #include "frontends/p4/cloner.h"
 #include "midend/validateProperties.h"
+#include "midend/copyStructures.h"
 #include "bf-p4c/arch/tna.h"
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/arch/arch.h"
@@ -537,7 +538,6 @@ TnaArchTranslation::TnaArchTranslation(P4::ReferenceMap *refMap,
         new UpdatePhase0NodeInParser(phase0_calls, decls),
         new UpdatePhase0Header(decls),
         new ConvertPhase0AssignToExtract(refMap, typeMap),
-        new BFN::RewriteFlexibleStruct(refMap, typeMap),
         new P4::ClearTypeMap(typeMap),
         new BFN::TypeChecking(refMap, typeMap, true),
     });
@@ -569,7 +569,6 @@ T2naArchTranslation::T2naArchTranslation(P4::ReferenceMap *refMap,
         new UpdatePhase0NodeInParser(phase0_calls, decls),
         new UpdatePhase0Header(decls),
         new ConvertPhase0AssignToExtract(refMap, typeMap),
-        new BFN::RewriteFlexibleStruct(refMap, typeMap),
         new P4::ClearTypeMap(typeMap),
         new BFN::TypeChecking(refMap, typeMap, true),
     });

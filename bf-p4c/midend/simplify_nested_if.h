@@ -7,6 +7,7 @@
 #include "frontends/p4/typeMap.h"
 #include "bf-p4c/midend/path_linearizer.h"
 #include "bf-p4c/midend/type_categories.h"
+#include "bf-p4c/midend/type_checker.h"
 
 #ifndef _EXTENSIONS_BF_P4C_MIDEND_SIMPLIFY_NESTED_IF_H_
 #define _EXTENSIONS_BF_P4C_MIDEND_SIMPLIFY_NESTED_IF_H_
@@ -139,6 +140,7 @@ class SimplifyNestedIf : public PassManager {
         passes.push_back(new StrengthReduction(refMap, typeMap, typeChecking));
         passes.push_back(new SimplifyControlFlow(refMap, typeMap, typeChecking));
         passes.push_back(new DoSimplifyComplexCondition(policy, skip));
+        passes.push_back(new BFN::TypeChecking(refMap, typeMap, true));
         setName("SimplifyNestedIf");
     }
 };

@@ -24,9 +24,14 @@ const IR::Node* DoRewriteFlexibleStruct::preorder(IR::Type_Struct* st) {
     IR::IndexedVector<IR::StructField> structFields;
     unsigned padFieldId = 0;
     for (auto& field : st->fields) {
+        const IR::Type* canonicalType;
+        if (field->type->is<IR::Type_Name>())
+            canonicalType = typeMap->getTypeType(field->type, true);
+        else
+            canonicalType = field->type;
         // Add padding field for every bridged metadata field to ensure that the resulting
         // header is byte aligned.
-        const int alignment = getAlignment(field->type->width_bits());
+        const int alignment = getAlignment(canonicalType->width_bits());
         if (alignment != 0) {
             cstring padFieldName = "__pad_";
             padFieldName += cstring::to_cstring(padFieldId++);

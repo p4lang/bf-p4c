@@ -340,6 +340,10 @@ MidEnd::MidEnd(BFN_Options& options) {
                 new ActionSynthesisPolicy(skip_controls), typeChecking),
         new P4::MoveActionsToTables(&refMap, &typeMap, typeChecking),
         new RewriteEgressIntrinsicMetadataHeader(&refMap, &typeMap),
+        // must be done after copy structure, then we do not need to adjust
+        // struct assignment. could be done in tna.cpp and t2na.cpp
+        (options.arch == "tna" || options.arch == "t2na") ?
+            new BFN::RewriteFlexibleStruct(&refMap, &typeMap) : nullptr,
         new RenameArchParams(&refMap, &typeMap),
         new FillFromBlockMap(&refMap, &typeMap),
         new UnrollParserCounter(&refMap),
