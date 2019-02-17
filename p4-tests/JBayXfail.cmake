@@ -325,12 +325,6 @@ p4c_add_xfail_reason("tofino2"
   fabric.p4
   )
 
-# P4C-1497
-p4c_add_xfail_reason("tofino2"
-  "Couldn't find intrinsic metadata field mirror_hash in ig_intr_md_for_dprsr"
-  p4_16_programs_simple_switch
-  )
-
 # Expected failure
 p4c_add_xfail_reason("tofino2"
   "error: standard_metadata.packet_length is not accessible in the ingress pipe"
