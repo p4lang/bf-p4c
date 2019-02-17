@@ -414,6 +414,8 @@ p4c_add_xfail_reason("tofino"
   #extensions/p4_tests/p4_14/c2/COMPILER-421/case2434.p4
   #extensions/p4_tests/p4_14/c2/COMPILER-426/case2475.p4
   #extensions/p4_tests/p4_14/c2/COMPILER-599/case3230.p4
+  # Following tests timeout due to infinite loop in table placement
+  ../glass/testsuite/p4_tests/mau/COMPILER-726/comp_726.p4
   )
 
 # COMPILER-540

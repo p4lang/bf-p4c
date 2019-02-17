@@ -594,6 +594,8 @@ void FindDataDependencyGraph::finalize_dependence_graph(void) {
                 std::accumulate(happens_later.begin(), happens_later.end(), 0,
                                 [this] (int sz, const IR::MAU::Table* later) {
                                     return std::max(sz, dg.stage_info[later].dep_stages + 1); });
+            if (dg.stage_info[table].dep_stages > dg.max_min_stage)
+                dg.max_min_stage = dg.stage_info[table].dep_stages;
         }
     }
 

@@ -82,9 +82,6 @@ class MetadataLiveRange : public Inspector {
     /// Map of stage to the set of tables whose min_stage is the key stage.
     ordered_map<int, ordered_set<const IR::MAU::Table*>> minStages;
 
-    /// Largest stage number in the table dependency graph's min_stage.
-    int max_num_min_stages = -1;
-
     profile_t init_apply(const IR::Node* root) override;
     bool preorder(const IR::MAU::Table* t) override;
     void end_apply() override;

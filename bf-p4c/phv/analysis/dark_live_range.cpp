@@ -41,16 +41,8 @@ bool DarkLiveRange::overlaps(
 Visitor::profile_t DarkLiveRange::init_apply(const IR::Node* root) {
     livemap.clear();
     overlay.clear();
-    max_num_min_stages = -1;
     BUG_CHECK(dg.finalized, "Dependence graph is not populated.");
     return Inspector::init_apply(root);
-}
-
-bool DarkLiveRange::preorder(const IR::MAU::Table* t) {
-    int minStage = dg.min_stage(t);
-    if (minStage > max_num_min_stages)
-        max_num_min_stages = minStage;
-    return true;
 }
 
 void DarkLiveRange::setFieldLiveMap(const PHV::Field* f) {
@@ -60,11 +52,11 @@ void DarkLiveRange::setFieldLiveMap(const PHV::Field* f) {
     // minDef = earliest stage for defs of the field.
     // maxDef = latest stage for defs of the field.
     // Set the min values initially to the deparser, and the max values to the parser initially.
-    const int DEPARSER = max_num_min_stages + 1;
-    const int PARSER = max_num_min_stages + 2;
+    const int DEPARSER = dg.max_min_stage + 1;
+    const int PARSER = dg.max_min_stage + 2;
 
-    // For each use of the field, parser implies stage `max_num_min_stages + 2`, deparser implies
-    // stage `max_num_min_stages + 1` (12 for Tofino), and a table implies the corresponding
+    // For each use of the field, parser implies stage `dg.max_min_stage + 2`, deparser implies
+    // stage `dg.max_min_stage + 1` (12 for Tofino), and a table implies the corresponding
     // dg.min_stage.
     for (const FieldDefUse::locpair use : defuse.getAllUses(f->id)) {
         const IR::BFN::Unit* use_unit = use.first;
@@ -79,7 +71,7 @@ void DarkLiveRange::setFieldLiveMap(const PHV::Field* f) {
             // Ignore deparser use if field is marked as not deparsed.
             if (notDeparsedFields.count(f)) continue;
             // There is no need to set the minUse here, because minUse is either DEPARSER (if there
-            // is no other use) or a between [-1, max_num_min_stages] (which does not need to be
+            // is no other use) or a between [-1, dg.max_min_stage] (which does not need to be
             // updated).
             LOG4("\t  Used in deparser.");
             livemap[f][DEPARSER] |= LiveRangeReport::READ;
@@ -143,8 +135,8 @@ void DarkLiveRange::setFieldLiveMap(const PHV::Field* f) {
 }
 
 void DarkLiveRange::setPaddingFieldLiveMap(const PHV::Field* f) {
-    const int DEPARSER = max_num_min_stages + 1;
-    const int PARSER = max_num_min_stages + 2;
+    const int DEPARSER = dg.max_min_stage + 1;
+    const int PARSER = dg.max_min_stage + 2;
     // For padding fields (marked by alwaysPackable), the live range is the deparser (for ingress
     // fields) and the parser (for egress fields).
     if (f->gress == INGRESS) {
@@ -158,7 +150,7 @@ void DarkLiveRange::setPaddingFieldLiveMap(const PHV::Field* f) {
 
 void DarkLiveRange::end_apply() {
     // If there are no stages required, do not run this pass.
-    if (max_num_min_stages <= 0) return;
+    if (dg.max_min_stage < 0) return;
     // Set of fields whose live ranges must be calculated.
     ordered_set<const PHV::Field*> fieldsConsidered;
     for (const PHV::Field& f : phv) {
@@ -192,7 +184,7 @@ void DarkLiveRange::end_apply() {
             }
             auto& access1 = livemap.at(f1);
             auto& access2 = livemap.at(f2);
-            if (!overlaps(max_num_min_stages, access1, access2)) {
+            if (!overlaps(dg.max_min_stage, access1, access2)) {
                 overlay(f1->id, f2->id) = true;
                 LOG3("    (" << f1->name << ", " << f2->name << ")");
             }
@@ -202,8 +194,8 @@ void DarkLiveRange::end_apply() {
 
 cstring DarkLiveRange::printLiveRanges() const {
     std::stringstream ss;
-    const int DEPARSER = max_num_min_stages + 1;
-    const int PARSER = max_num_min_stages + 2;
+    const int DEPARSER = dg.max_min_stage + 1;
+    const int PARSER = dg.max_min_stage + 2;
     auto numStages = DEPARSER;
     ss << std::endl << "Uses for fields to determine dark overlay potential:" << std::endl;
     std::vector<std::string> headers;

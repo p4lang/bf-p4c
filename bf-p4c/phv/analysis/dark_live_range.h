@@ -65,11 +65,7 @@ class DarkLiveRange : public Inspector {
     /// Map of field ID to the live range for each field.
     ordered_map<const PHV::Field*, ordered_map<unsigned, unsigned>> livemap;
 
-    /// Largest stage number in the table dependency graph's min_stage.
-    int max_num_min_stages = -1;
-
     profile_t init_apply(const IR::Node* root) override;
-    bool preorder(const IR::MAU::Table* t) override;
     void end_apply() override;
 
     /// Pretty print the live ranges of all metadata fields.

@@ -31,6 +31,12 @@ class MauBacktracker : public Inspector, Backtrack {
     /// @true if metadata initialization must be disabled.
     bool metaInitDisable = false;
 
+    /// @true if PHV allocation must be redone while ignoring pack conflicts.
+    bool ignorePackConflicts = false;
+
+    /// @true if PHV allocation and table placement both fit in round 1.
+    bool firstRoundFit = false;
+
     profile_t init_apply(const IR::Node *root) override;
     void end_apply() override;
 
@@ -55,6 +61,9 @@ class MauBacktracker : public Inspector, Backtrack {
 
     /// @returns metaInitDisable.
     bool disableMetadataInitialization() const { return metaInitDisable; }
+
+    /// @returns firstRoundFit.
+    bool didFirstRoundFit() const { return firstRoundFit; }
 
     /// @returns true if the associated field with @name is in the noPackFields set.
     bool isNoPackField(cstring name) const {

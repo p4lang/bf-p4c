@@ -154,7 +154,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
     defuse(phv),
     bridged_fields(phv),
     table_alloc(phv.parser_mutex()),
-    table_summary(pipe_id) {
+    table_summary(pipe_id, deps) {
     addPasses({
         new DumpPipe("Initial table graph"),
         new CreateThreadLocalInstances,

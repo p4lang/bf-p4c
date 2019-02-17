@@ -37,7 +37,6 @@ Visitor::profile_t MetadataLiveRange::init_apply(const IR::Node* root) {
     livemapUsage.clear();
     minStages.clear();
     overlay.clear();
-    max_num_min_stages = -1;
     BUG_CHECK(dg.finalized, "Dependence graph is not populated.");
     return Inspector::init_apply(root);
 }
@@ -45,8 +44,6 @@ Visitor::profile_t MetadataLiveRange::init_apply(const IR::Node* root) {
 bool MetadataLiveRange::preorder(const IR::MAU::Table* t) {
     int minStage = dg.min_stage(t);
     minStages[minStage].insert(t);
-    if (minStage > max_num_min_stages)
-        max_num_min_stages = minStage;
     return true;
 }
 
@@ -57,7 +54,7 @@ void MetadataLiveRange::setFieldLiveMap(const PHV::Field* f) {
     // minDef = earliest stage for defs of the field.
     // maxDef = latest stage for defs of the field.
     // Set the min values initially to the deparser, and the max values to the parser initially.
-    const int DEPARSER = max_num_min_stages + 1;
+    const int DEPARSER = dg.max_min_stage + 1;
     int minUse = DEPARSER;
     int minDef = DEPARSER;
     int maxUse = -1;
@@ -83,7 +80,7 @@ void MetadataLiveRange::setFieldLiveMap(const PHV::Field* f) {
             // Ignore deparser use if field is marked as not deparsed.
             if (notDeparsedFields.count(f)) continue;
             // There is no need to set the minUse here, because minUse is either DEPARSER (if there
-            // is no other use) or a between [-1, max_num_min_stages] (which does not need to be
+            // is no other use) or a between [-1, dg.max_min_stage] (which does not need to be
             // updated).
             LOG4("\t  Used in deparser.");
             maxUse = DEPARSER;
@@ -200,7 +197,7 @@ void MetadataLiveRange::setFieldLiveMap(const PHV::Field* f) {
 }
 
 void MetadataLiveRange::setPaddingFieldLiveMap(const PHV::Field* f) {
-    const int DEPARSER = max_num_min_stages + 1;
+    const int DEPARSER = dg.max_min_stage + 1;
     // For padding fields (marked by alwaysPackable), the live range is the deparser (for ingress
     // fields) and the parser (for egress fields).
     if (f->gress == INGRESS) {
@@ -213,6 +210,8 @@ void MetadataLiveRange::setPaddingFieldLiveMap(const PHV::Field* f) {
 }
 
 void MetadataLiveRange::end_apply() {
+    // If there are no tables, then dg.max_min_stage is -1, and this analysis is not required.
+    if (dg.max_min_stage < 0) return;
     // If this pass is supposed to run without metadata initialization, then do not run this
     // analysis.
     if (alloc.disableMetadataInitialization()) return;
@@ -299,7 +298,7 @@ void MetadataLiveRange::end_apply() {
 
 void MetadataLiveRange::printLiveRanges() const {
     std::stringstream dashes;
-    const int DEPARSER = max_num_min_stages + 1;
+    const int DEPARSER = dg.max_min_stage + 1;
     auto numStages = DEPARSER;
     const unsigned dashWidth = 125 + (numStages + 2) * 3;
     for (unsigned i = 0; i < dashWidth; i++)

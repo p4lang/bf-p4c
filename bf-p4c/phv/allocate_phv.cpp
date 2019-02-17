@@ -1642,6 +1642,16 @@ Visitor::profile_t AllocatePHV::init_apply(const IR::Node* root) {
                 result.remaining_clusters);
         if (noPackBridgedFields.size() > 0)
             throw BridgedPackingTrigger::failure(noPackBridgedFields);
+        bool firstRoundFit = alloc_i.didFirstRoundFit();
+        if (firstRoundFit) {
+            // Empty table allocation to be sent because the first round of PHV allocation should be
+            // redone.
+            ordered_map<cstring, ordered_set<int>> tables;
+            LOG1("This round of PHV Allocation did not fit. However, the first round of PHV "
+                 "allocation did. Therefore, falling back onto the first round of PHV allocation.");
+            throw PHVTrigger::failure(tables, firstRoundFit, true /* ignorePackConflicts */,
+                                      false /* metaInitDisable */);
+        }
         if (result.status == AllocResultCode::FAIL_UNSAT) {
             formatAndThrowUnsat(result.remaining_clusters);
         } else if (!failure_diagnosed) {

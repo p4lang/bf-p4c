@@ -9,14 +9,20 @@ bool MauBacktracker::backtrack(trigger &trig) {
         tables.clear();
         auto t = dynamic_cast<PHVTrigger::failure *>(&trig);
         LOG1("Backtracking caught at MauBacktracker");
-        for (auto entry : t->tableAlloc) {
-            tables[entry.first] = entry.second;
-            for (int st : entry.second)
-                maxStage = (maxStage < st) ? st : maxStage; }
-        LOG4("Inserted tables size: " << tables.size());
         // The OR operation ensures that live range analysis and metadata initialization, once
         // disabled, is not enabled for the rest of the compilation process.
         metaInitDisable |= t->metaInitDisable;
+        ignorePackConflicts |= t->ignorePackConflicts;
+        firstRoundFit |= t->firstRoundFit;
+        // If we are directed to ignore pack conflicts, then do not note down the previous table
+        // placement.
+        if (!ignorePackConflicts) {
+            for (auto entry : t->tableAlloc) {
+                tables[entry.first] = entry.second;
+                for (int st : entry.second)
+                    maxStage = (maxStage < st) ? st : maxStage; }
+        }
+        LOG4("Inserted tables size: " << tables.size());
         return true;
     } else if (trig.is<BridgedPackingTrigger::failure>()) {
         auto t = dynamic_cast<BridgedPackingTrigger::failure *>(&trig);
@@ -29,6 +35,7 @@ bool MauBacktracker::backtrack(trigger &trig) {
 Visitor::profile_t MauBacktracker::init_apply(const IR::Node* root) {
     LOG1("MauBacktracker called " << numInvoked << " time(s)");
     LOG1("  Is metadata initialization disabled? " << (metaInitDisable ? "YES" : "NO"));
+    LOG1("  Should pack conflicts be ignored? " << (ignorePackConflicts ? "YES" : "NO"));
     ++numInvoked;
     overlay.clear();
     profile_t rv = Inspector::init_apply(root);

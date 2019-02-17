@@ -141,6 +141,11 @@ struct DependencyGraph {
     };
     std::map<const IR::MAU::Table*, StageInfo> stage_info;
 
+    /// The largest value of min_stage encountered when determining min_stage values for table,
+    /// across all tables in the program. The minimum number of stages required by the program is
+    /// 1 + max_min_stage (stage numbers start from 0, 1, ..., n-1)
+    int max_min_stage = -1;
+
     std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>> vertex_rst;
 
     DependencyGraph(void) {
@@ -151,12 +156,18 @@ struct DependencyGraph {
         container_conflicts.clear();
         g.clear();
         finalized = false;
+        max_min_stage = -1;
         happens_before_map.clear();
         happens_before_control_map.clear();
         happens_before_control_anti_map.clear();
         dependency_map.clear();
         labelToVertex.clear();
         stage_info.clear();
+    }
+
+    /// @returns the length of the dependency based critical path for the program.
+    int critical_path_length() const {
+        return (1 + max_min_stage);
     }
 
     /* @returns the table pointer corresponding to a vertex in the dependency graph

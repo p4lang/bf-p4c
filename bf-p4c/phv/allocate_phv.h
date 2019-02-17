@@ -9,6 +9,7 @@
 #include "bf-p4c/parde/clot_info.h"
 #include "bf-p4c/phv/action_phv_constraints.h"
 #include "bf-p4c/phv/make_clusters.h"
+#include "bf-p4c/phv/mau_backtracker.h"
 #include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
@@ -470,6 +471,7 @@ class AllocatePHV : public Inspector {
     const PhvUse& uses_i;
     const ClotInfo& clot_i;
     const Clustering& clustering_i;
+    const MauBacktracker& alloc_i;
     const SymBitMatrix& mutex_i;
     PHV::Pragmas& pragmas_i;
 
@@ -546,11 +548,13 @@ class AllocatePHV : public Inspector {
                 PhvInfo& phv,
                 ActionPhvConstraints& actions,
                 const CalcCriticalPathClusters& critical_cluster,
+                const MauBacktracker& alloc,
                 LiveRangeShrinking& meta_init)
         : core_alloc_i(phv.parser_mutex(), clustering, uses, defuse, clot, pragmas, phv, actions,
                 meta_init),
           phv_i(phv), uses_i(uses), clot_i(clot),
-          clustering_i(clustering), mutex_i(phv.parser_mutex()), pragmas_i(pragmas),
+          clustering_i(clustering), alloc_i(alloc),
+          mutex_i(phv.parser_mutex()), pragmas_i(pragmas),
           critical_path_clusters_i(critical_cluster) { }
 };
 

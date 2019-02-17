@@ -6,15 +6,22 @@
 #include "bf-p4c/logging/filelog.h"
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/mau/resource.h"
+#include "bf-p4c/mau/table_dependency_graph.h"
 #include "bf-p4c/device.h"
 
 struct PHVTrigger {
     struct failure : public Backtrack::trigger {
         ordered_map<cstring, ordered_set<int>> tableAlloc;
         bool metaInitDisable;
-        explicit failure(ordered_map<cstring, ordered_set<int>> tables, bool meta)
-            : trigger(OTHER), tableAlloc(tables), metaInitDisable(meta) {
-        }
+        bool ignorePackConflicts;
+        bool firstRoundFit;
+        explicit failure(
+                ordered_map<cstring, ordered_set<int>> tables,
+                bool fit,
+                bool pack = false,
+                bool meta = false)
+            : trigger(OTHER), tableAlloc(tables), metaInitDisable(meta), ignorePackConflicts(pack),
+              firstRoundFit(fit) { }
     };
 };
 
@@ -27,7 +34,10 @@ struct NoContainerConflictTrigger {
 
 class TableSummary: public MauInspector {
     static constexpr int NUM_LOGICAL_TABLES_PER_STAGE = 16;
+    static constexpr int CRITICAL_PATH_THRESHOLD = 2;
     static int numInvoked[4];
+    /// true if the first round of table placement resulted in less than Device::numStages() stages.
+    static bool firstRoundFit;
     Logging::FileLog *tsLog = nullptr;
 
     /// The total number of stages allocated by Table Placement
@@ -39,6 +49,7 @@ class TableSummary: public MauInspector {
     bool placementFailure;
 
     int pipe_id;
+    const DependencyGraph& deps;
 
     /// Map of table name to stage: sent with the backtracking exception to communicate table
     /// placement constraints to PHV allocation
@@ -65,7 +76,9 @@ class TableSummary: public MauInspector {
     void throwBacktrackException();
 
  public:
-    explicit TableSummary(int pipe_id) : pipe_id(pipe_id) {}
+    explicit TableSummary(int pipe_id, const DependencyGraph& dg)
+        : pipe_id(pipe_id), deps(dg) {}
+
     /// @returns the P4 name for tables with an external name (non-gateways). @returns the
     /// compiler-generated name otherwise.
     static cstring getTableName(const IR::MAU::Table* tbl);
