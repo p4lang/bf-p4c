@@ -98,6 +98,7 @@ class CreateSaluInstruction : public Inspector {
     const IR::Expression *reuseCmp(const IR::MAU::Instruction *cmp, int idx);
     void setupCmp(cstring op);
     const IR::MAU::Instruction *setup_output();
+    bool canBeIXBarExpr(const IR::Expression *);
 
     bool preorder(const IR::Declaration_Instance *di) override;
     bool preorder(const IR::Declaration_Variable *v) override;

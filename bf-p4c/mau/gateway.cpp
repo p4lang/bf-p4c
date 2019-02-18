@@ -589,7 +589,8 @@ bool CollectGatewayFields::compute_offsets() {
             auto &with = this->info[xor_with];
             xor_with->foreach_byte(with.bits, [&](const PHV::Field::alloc_slice &sl) {
                 with.offsets.emplace_back(bytes*8U + sl.container_bit%8U, sl.field_bits());
-                info.xor_offsets.emplace_back(bytes*8U + sl.container_bit%8U, sl.field_bits());
+                info.xor_offsets.emplace_back(bytes*8U + sl.container_bit%8U,
+                          sl.field_bits().shiftedByBits(info.bits.lo - with.bits.lo));
                 LOG5("  byte " << bytes << " " << sl << " " << field->name << " xor " <<
                      xor_with->name);
                 ++bytes;

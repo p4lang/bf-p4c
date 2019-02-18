@@ -221,6 +221,11 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
     return true;
 }
 
+bool CreateSaluInstruction::canBeIXBarExpr(const IR::Expression *e) {
+    return CanBeIXBarExpr(e, [this](const IR::PathExpression *pe) -> bool
+            { return !applyArg(pe, cstring()); });
+}
+
 bool CreateSaluInstruction::preorder(const IR::Function *func) {
     static std::vector<param_t>         empty_params;
     BUG_CHECK(!action && !params, "Nested function?");
@@ -673,7 +678,7 @@ bool CreateSaluInstruction::preorder(const IR::Operation::Relation *rel, cstring
 }
 
 bool CreateSaluInstruction::preorder(const IR::Cast *c) {
-    if (c->type->width_bits() > c->expr->type->width_bits() && CanBeIXBarExpr(c)) {
+    if (c->type->width_bits() > c->expr->type->width_bits() && canBeIXBarExpr(c)) {
         operands.push_back(new IR::MAU::IXBarExpression(c));
         if (negate)
             operands.back() = new IR::Neg(operands.back());
@@ -682,7 +687,7 @@ bool CreateSaluInstruction::preorder(const IR::Cast *c) {
 }
 
 bool CreateSaluInstruction::preorder(const IR::BFN::SignExtend *c) {
-    if (CanBeIXBarExpr(c)) {
+    if (canBeIXBarExpr(c)) {
         operands.push_back(new IR::MAU::IXBarExpression(c));
         if (negate)
             operands.back() = new IR::Neg(operands.back());
@@ -827,7 +832,7 @@ bool CreateSaluInstruction::preorder(const IR::Concat *e) {
         // ElimCasts introduces these zero-extend concats for type casts we can ignore
         visit(e->right, "right");
         return false; }
-    if (CanBeIXBarExpr(e)) {
+    if (canBeIXBarExpr(e)) {
         operands.push_back(new IR::MAU::IXBarExpression(e));
         if (negate)
             operands.back() = new IR::Neg(operands.back());
