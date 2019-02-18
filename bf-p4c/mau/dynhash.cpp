@@ -59,7 +59,8 @@ bool DynamicHashJson::preorder(const IR::MAU::Table *tbl) {
                     _dynHashCalc->emplace("handle", dynHashHandleBase + dynHashHandle++);
                     auto fieldListName = field_list->fieldListNames->names[0];
                     gen_ixbar_json(ixbar_use, _dynHashCalc, tbl->stage(),
-                                    fieldListName, field_list->algorithms);
+                                    fieldListName, field_list->algorithms,
+                                    field_list->outputWidth);
                     _dynHashNode->append(_dynHashCalc);
                     return true;
                 }
@@ -144,7 +145,7 @@ void DynamicHashJson::gen_ixbar_json(const IXBar::Use &ixbar_use,
         auto hdh = ixbar_use.hash_dist_hash;
         hashAlgo = &hdh.algorithm;
         hashGroup = hdh.group;
-        hash_bit_width = hashAlgo->size;
+        hash_bit_width = hash_width <= 0 ? hashAlgo->size : hash_width;
         // calculate the output hash bits from a hash table
         for (auto &b : hdh.bit_starts) {
             auto hash_bit = b.first;
@@ -160,8 +161,7 @@ void DynamicHashJson::gen_ixbar_json(const IXBar::Use &ixbar_use,
         auto mah = ixbar_use.meter_alu_hash;
         hashAlgo = &mah.algorithm;
         hashGroup = mah.group;
-        // hash_bit_width = hashAlgo->size;
-        hash_bit_width = hash_width;
+        hash_bit_width = hash_width <= 0 ? hashAlgo->size : hash_width;
         num_hash_bits = mah.bit_mask.is_contiguous() && (mah.bit_mask.min().index() == 0) ?
                             mah.bit_mask.max().index() + 1 : 0;
         if (!num_hash_bits) return;  // invalid bit mask

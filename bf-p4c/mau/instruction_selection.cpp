@@ -621,7 +621,8 @@ const IR::Node *DoInstructionSelection::postorder(IR::Primitive *prim) {
         if (options.langVersion == CompilerOptions::FrontendVersion::P4_16) {
             auto dynHashName = decl->controlPlaneName() + ".$CONFIGURE";
             if (auto le = data->to<IR::ListExpression>()) {
-                auto hle = new IR::HashListExpression(data->srcInfo, le->components, dynHashName);
+                auto hle = new IR::HashListExpression(data->srcInfo,
+                                                le->components, dynHashName, size);
                 auto nl = new IR::NameList();
                 nl->names.push_back("$field_list_1");
                 hle->fieldListNames = nl;

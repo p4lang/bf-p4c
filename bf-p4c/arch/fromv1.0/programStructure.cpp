@@ -24,7 +24,8 @@ P4V1::generate_hash_block_statement(P4V1::ProgramStructure *structure, const IR:
     if (fl == nullptr)
         return nullptr;
     const IR::ListExpression *listExp = conv.convert(fl)->to<IR::ListExpression>();
-    auto list = new IR::HashListExpression(flc->srcInfo, listExp->components, flc->name);
+    auto list = new IR::HashListExpression(flc->srcInfo,
+            listExp->components, flc->name, flc->output_width);
     list->fieldListNames = flc->input;
     if (flc->algorithm->names.size() > 0)
         list->algorithms = flc->algorithm;

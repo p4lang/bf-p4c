@@ -24,7 +24,8 @@ static cstring makeHashCall(ProgramStructure *structure, IR::BlockStatement *blo
     if (fl == nullptr)
         return nullptr;
     const IR::ListExpression *listExp = conv.convert(fl)->to<IR::ListExpression>();
-    auto list = new IR::HashListExpression(flc->srcInfo, listExp->components, flc->name);
+    auto list = new IR::HashListExpression(flc->srcInfo,
+            listExp->components, flc->name, flc->output_width);
     list->fieldListNames = flc->input;
     if (flc->algorithm->names.size() > 0)
         list->algorithms = flc->algorithm;
@@ -278,7 +279,8 @@ CONVERT_PRIMITIVE(modify_field_with_hash_based_offset, 1) {
     if (fl == nullptr)
         return nullptr;
     const IR::ListExpression *listExp = conv.convert(fl)->to<IR::ListExpression>();
-    auto list = new IR::HashListExpression(flc->srcInfo, listExp->components, flc->name);
+    auto list = new IR::HashListExpression(flc->srcInfo,
+            listExp->components, flc->name, flc->output_width);
     list->fieldListNames = flc->input;
     if (flc->algorithm->names.size() > 0)
         list->algorithms = flc->algorithm;

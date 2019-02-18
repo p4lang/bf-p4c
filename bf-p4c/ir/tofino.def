@@ -334,6 +334,7 @@ class BFN::AliasSlice : IR::Slice {
  */
 class HashListExpression : IR::ListExpression {
     cstring             fieldListCalcName;
+    int                 outputWidth;
     NullOK IR::NameList fieldListNames  = nullptr;
     NullOK IR::NameList algorithms      = nullptr;
 #nodbprint
