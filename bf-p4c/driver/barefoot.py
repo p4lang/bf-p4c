@@ -162,6 +162,7 @@ class BarefootBackend(BackendDriver):
     def config_assembler(self, targetName):
         self._targetName = targetName
         self._no_link = False
+        self._multi_parsers = False
 
     def process_command_line_options(self, opts):
         BackendDriver.process_command_line_options(self, opts)
@@ -422,6 +423,10 @@ class BarefootBackend(BackendDriver):
         # prepend unique offset to table handle
         self.add_command_option('assembler',
                                 "--table-handle-offset{0}".format(unique_table_offset))
+
+        if self._multi_parsers:
+            self.add_command_option('assembler', "--multi-parsers")
+
         # output dir
         self.add_command_option('assembler', "-o {}".format(dirname))
         # input file

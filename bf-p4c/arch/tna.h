@@ -48,13 +48,6 @@ struct TnaArchTranslation : public PassManager {
     ProgramThreads threads;
 };
 
-struct T2naArchTranslation : public PassManager {
-    T2naArchTranslation(P4::ReferenceMap* refMap,
-                        P4::TypeMap* typeMap,
-                        BFN_Options& options);
-
-    ProgramThreads threads;
-};
 
 }  // namespace BFN
 

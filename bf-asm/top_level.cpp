@@ -81,7 +81,13 @@ void TopLevelRegs<TARGET>::output(json::map &ctxt_json) {
                 this->reg_top.emit_binary(*binfile, 0);
             } else {
                 this->mem_pipe.emit_binary(*binfile, 0);
-                this->reg_pipe.emit_binary(*binfile, 0); } } }
+                this->reg_pipe.emit_binary(*binfile, 0); }
+
+            if (options.multi_parsers) {
+                emit_parser_registers(this, *binfile, 0);
+            }
+        }
+    }
 }
 
 #define TOP_LEVEL_REGS(REGSET)        template class TopLevelRegs<Target::REGSET>;

@@ -25,7 +25,7 @@ namespace BFN {
  *   }
  */
 IR::BFN::Pipe*
-extractChecksumFromDeparser(const IR::BFN::TranslatedP4Deparser* deparser,
+extractChecksumFromDeparser(const IR::BFN::TnaDeparser* deparser,
                             IR::BFN::Pipe* pipe);
 }  // namespace BFN
 #endif /* BF_P4C_PARDE_CHECKSUM_H_ */

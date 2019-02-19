@@ -1,38 +1,31 @@
-#include "bf-p4c/arch/intrinsic_metadata.h"
+#include "frontends/common/resolveReferences/resolveReferences.h"
+#include "frontends/p4/typeChecking/typeChecker.h"
+#include "frontends/p4/evaluator/evaluator.h"
+#include "midend/validateProperties.h"
+#include "bf-p4c/arch/arch.h"
+#include "bf-p4c/arch/check_extern_invocation.h"
+#include "bf-p4c/arch/fromv1.0/phase0.h"
 #include "bf-p4c/arch/t2na.h"
+#include "bf-p4c/bf-p4c-options.h"
 
 namespace BFN {
 
-// visit parser state in control flow order, count up to the first 8 bytes, skip next 8 bytes.
-struct RewriteIntrinsicMeta : public ControlFlowVisitor, Inspector {
-    RewriteIntrinsicMeta() { setName("RewriteInstrinsicMeta"); }
-
-    RewriteIntrinsicMeta *clone() const override { return new RewriteIntrinsicMeta(*this); }
-
-    bool preorder(const IR::BFN::TranslatedP4Parser *parser) override {
-        gress_t thread = parser->thread;
-        if (thread != INGRESS) return false;
-        return true;
-    }
-
-    bool preorder(const IR::ParserState* state) override {
-        LOG1("state " << state);
-        return false;
-    }
-
-    // start from the beginning of the parser.
-    // control flow visit parser.
-    // count the number of bytes extracted so far.
-    // if extracted == 64, add advance(64)
-    // if extracted > 64, error
-    // if extracted < 64, continue
-};
-
-    PortTNAToJBay::PortTNAToJBay(P4::ReferenceMap* /* refMap */,
-                                 P4::TypeMap* /* typeMap */,
-                                 BFN_Options& /* options */) {
+T2naArchTranslation::T2naArchTranslation(P4::ReferenceMap *refMap,
+                                         P4::TypeMap *typeMap, BFN_Options &options) {
+    setName("T2naArchTranslation");
+    addDebugHook(options.getDebugHook());
     addPasses({
-        new RewriteIntrinsicMeta()
+        new RewriteControlAndParserBlocks(refMap, typeMap),
+        new RestoreParams(options),
+        new CheckT2NAExternInvocation(refMap, typeMap),
+        new LoweringType(),
+        new P4::ClearTypeMap(typeMap),
+        new P4::TypeChecking(refMap, typeMap, true),
+        new P4::ValidateTableProperties({"implementation", "size", "counters", "meters",
+                                         "filters", "idle_timeout", "registers"}),
+        new ConvertPhase0(refMap, typeMap),
+        new P4::ClearTypeMap(typeMap),
+        new P4::TypeChecking(refMap, typeMap, true),
     });
 }
 

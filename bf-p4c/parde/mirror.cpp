@@ -96,7 +96,7 @@ struct FindMirroredFieldLists : public Inspector {
       : refMap(refMap), typeMap(typeMap) { }
 
     bool preorder(const IR::MethodCallStatement* call) override {
-        auto deparser = findContext<IR::BFN::TranslatedP4Deparser>();
+        auto deparser = findContext<IR::BFN::TnaDeparser>();
         if (!deparser)
             return call;
 

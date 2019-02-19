@@ -276,36 +276,43 @@ template<> void Parser::State::Match::write_counter_config(
     // FIXME -- counter stack config
 }
 
-template<> void Parser::write_config(Target::JBay::parser_regs &regs, json::map &ctxt_json) {
-    for (auto st : all)
-        st->write_config(regs, this, ctxt_json[st->gress ? "egress" : "ingress"]);
+template<> void Parser::write_config(Target::JBay::parser_regs &regs, json::map &ctxt_json, bool single_parser) {
+    if (single_parser) {
+        for (auto st : all)
+            st->write_config(regs, this, ctxt_json[st->gress ? "egress" : "ingress"]);
+    } else {
+        ctxt_json["states"] = json::vector();
+        for (auto st : all)
+            st->write_config(regs, this, ctxt_json["states"]);
+    }
     if (error_count > 0) return;
-    for (gress_t gress : Range(INGRESS, EGRESS)) {
-        int i = 0;
-        for (auto ctr : counter_init[gress]) {
-            if (ctr) ctr->write_config(regs, gress, i);
-            ++i; }
-        for (auto csum : checksum_use[gress])
-            if (csum) csum->write_config(regs, this); }
+
+    int i = 0;
+    for (auto ctr : counter_init[gress]) {
+        if (ctr) ctr->write_config(regs, gress, i);
+        ++i; }
+    for (auto csum : checksum_use[gress])
+        if (csum) csum->write_config(regs, this);
 
     // FIXME -- what fixed initialization of parser buffer regs do we need?
     // FIXME -- see tofino/parser.cpp init_common_regs for ideas
 
-    regs.egress.epbreg.chan0_group.chnl_ctrl.meta_opt = meta_opt;
-    regs.egress.epbreg.chan1_group.chnl_ctrl.meta_opt = meta_opt;
-    regs.egress.epbreg.chan2_group.chnl_ctrl.meta_opt = meta_opt;
-    regs.egress.epbreg.chan3_group.chnl_ctrl.meta_opt = meta_opt;
-    regs.egress.epbreg.chan4_group.chnl_ctrl.meta_opt = meta_opt;
-    regs.egress.epbreg.chan5_group.chnl_ctrl.meta_opt = meta_opt;
-    regs.egress.epbreg.chan6_group.chnl_ctrl.meta_opt = meta_opt;
-    regs.egress.epbreg.chan7_group.chnl_ctrl.meta_opt = meta_opt;
+    if (gress == EGRESS) {
+        regs.egress.epbreg.chan0_group.chnl_ctrl.meta_opt = meta_opt;
+        regs.egress.epbreg.chan1_group.chnl_ctrl.meta_opt = meta_opt;
+        regs.egress.epbreg.chan2_group.chnl_ctrl.meta_opt = meta_opt;
+        regs.egress.epbreg.chan3_group.chnl_ctrl.meta_opt = meta_opt;
+        regs.egress.epbreg.chan4_group.chnl_ctrl.meta_opt = meta_opt;
+        regs.egress.epbreg.chan5_group.chnl_ctrl.meta_opt = meta_opt;
+        regs.egress.epbreg.chan6_group.chnl_ctrl.meta_opt = meta_opt;
+        regs.egress.epbreg.chan7_group.chnl_ctrl.meta_opt = meta_opt;
 
+    }
     setup_jbay_ownership(phv_use, regs.merge.ul.phv_owner_127_0.owner,
         regs.merge.ur.phv_owner_255_128.owner, regs.main[INGRESS].phv_owner.owner,
         regs.main[EGRESS].phv_owner.owner);
 
-    regs.main[INGRESS].hdr_len_adj.amt = hdr_len_adj[INGRESS];
-    regs.main[EGRESS].hdr_len_adj.amt = hdr_len_adj[EGRESS];
+    regs.main[gress].hdr_len_adj.amt = hdr_len_adj[gress];
 
     /* This reg has a active high reset for enable: en, Enable, [23], R/W, Reset->1
      * and is causing the parser error codes not to be captured. By making this '0'
@@ -320,18 +327,24 @@ template<> void Parser::write_config(Target::JBay::parser_regs &regs, json::map 
     int i_start = Stage::first_table(INGRESS) & 0x1ff;
     for (auto &reg : regs.merge.ll1.i_start_table)
         reg.table = i_start;
+
     int e_start = Stage::first_table(EGRESS) & 0x1ff;
     for (auto &reg : regs.merge.lr1.e_start_table)
         reg.table = e_start;
+
     regs.merge.lr1.g_start_table.table = Stage::first_table(GHOST) & 0x1ff;
     if (ghost_parser) {
         regs.merge.lr1.tm_status_phv.phv = ghost_parser->reg.parser_id();
         regs.merge.lr1.tm_status_phv.en = 1; }
 
-    for (auto &ref : regs.ingress.prsr)
-        ref.set("regs.parser.main.ingress", &regs.main[INGRESS]);
-    for (auto &ref : regs.egress.prsr)
-        ref.set("regs.parser.main.egress", &regs.main[EGRESS]);
+    if (gress == INGRESS) {
+        for (auto &ref : regs.ingress.prsr)
+            ref.set("regs.parser.main.ingress", &regs.main[INGRESS]);
+    }
+    if (gress == EGRESS) {
+        for (auto &ref : regs.egress.prsr)
+            ref.set("regs.parser.main.egress", &regs.main[EGRESS]);
+    }
     if (error_count == 0) {
         if (options.condense_json) {
             // FIXME -- removing the uninitialized memory causes problems?
@@ -345,35 +358,58 @@ template<> void Parser::write_config(Target::JBay::parser_regs &regs, json::map 
             regs.main[EGRESS].disable_if_reset_value();
             regs.merge.disable_if_reset_value(); }
         if (options.gen_json) {
-            regs.memory[INGRESS].emit_json(*open_output("memories.parser.ingress.cfg.json"),
-                                           "ingress");
-            regs.memory[EGRESS].emit_json(*open_output("memories.parser.egress.cfg.json"),
-                                          "egress");
-            regs.ingress.emit_json(*open_output("regs.parser.ingress.cfg.json"));
-            regs.egress.emit_json(*open_output("regs.parser.egress.cfg.json"));
-            regs.main[INGRESS].emit_json(*open_output("regs.parser.main.ingress.cfg.json"),
-                                         "ingress");
-            regs.main[EGRESS].emit_json(*open_output("regs.parser.main.egress.cfg.json"),
-                                        "egress");
-            regs.merge.emit_json(*open_output("regs.parse_merge.cfg.json")); } }
+            if (single_parser) {
+                regs.memory[INGRESS].emit_json(*open_output("memories.parser.ingress.cfg.json"),
+                                               "ingress");
+                regs.memory[EGRESS].emit_json(*open_output("memories.parser.egress.cfg.json"),
+                                              "egress");
+                regs.ingress.emit_json(*open_output("regs.parser.ingress.cfg.json"));
+                regs.egress.emit_json(*open_output("regs.parser.egress.cfg.json"));
+                regs.main[INGRESS].emit_json(*open_output("regs.parser.main.ingress.cfg.json"),
+                                             "ingress");
+                regs.main[EGRESS].emit_json(*open_output("regs.parser.main.egress.cfg.json"),
+                                            "egress");
+                regs.merge.emit_json(*open_output("regs.parse_merge.cfg.json"));
+            } else {
+                regs.memory[INGRESS].emit_json(*open_output("memories.parser.ingress.%02x.cfg.json", parser_no),
+                                               "ingress");
+                regs.memory[EGRESS].emit_json(*open_output("memories.parser.egress.%02x.cfg.json", parser_no),
+                                              "egress");
+                regs.ingress.emit_json(*open_output("regs.parser.ingress.%02x.cfg.json", parser_no));
+                regs.egress.emit_json(*open_output("regs.parser.egress.%02x.cfg.json", parser_no));
+                regs.main[INGRESS].emit_json(*open_output("regs.parser.main.ingress.cfg.json"),
+                                             "ingress");
+                regs.main[EGRESS].emit_json(*open_output("regs.parser.main.egress.cfg.json"),
+                                            "egress");
+                regs.merge.emit_json(*open_output("regs.parse_merge.cfg.json")); } } }
 
     /* multiple JBay parser mem blocks can respond to same address range to allow programming
      * the device with a single write operation. See: pardereg.pgstnreg.ibprsr4reg.prsr.mem_ctrl */
-    for (unsigned i = 0; i < TopLevel::regs<Target::JBay>()->mem_pipe.parde.i_prsr_mem.size();
-                                                        options.singlewrite ? i+=4 : i+=1) {
-        TopLevel::regs<Target::JBay>()->mem_pipe.parde.i_prsr_mem[i].set("memories.parser.ingress",
-            &regs.memory[INGRESS]);
-    }
-    for (unsigned i = 0; i < TopLevel::regs<Target::JBay>()->mem_pipe.parde.e_prsr_mem.size();
-                                                        options.singlewrite ? i+=4 : i+=1) {
-        TopLevel::regs<Target::JBay>()->mem_pipe.parde.e_prsr_mem[i].set("memories.parser.egress",
-            &regs.memory[EGRESS]);
+    if (gress == INGRESS) {
+        for (unsigned i = 0; i < TopLevel::regs<Target::JBay>()->mem_pipe.parde.i_prsr_mem.size();
+             options.singlewrite ? i += 4 : i += 1) {
+            TopLevel::regs<Target::JBay>()->mem_pipe.parde.i_prsr_mem[i].set("memories.parser.ingress",
+                                                                             &regs.memory[INGRESS]);
+        }
     }
 
-    for (auto &ref : TopLevel::regs<Target::JBay>()->reg_pipe.pardereg.pgstnreg.ipbprsr4reg)
-        ref.set("regs.parser.ingress", &regs.ingress);
-    for (auto &ref : TopLevel::regs<Target::JBay>()->reg_pipe.pardereg.pgstnreg.epbprsr4reg)
-        ref.set("regs.parser.egress", &regs.egress);
+    if (gress == EGRESS) {
+        for (unsigned i = 0; i < TopLevel::regs<Target::JBay>()->mem_pipe.parde.e_prsr_mem.size();
+             options.singlewrite ? i += 4 : i += 1) {
+            TopLevel::regs<Target::JBay>()->mem_pipe.parde.e_prsr_mem[i].set("memories.parser.egress",
+                                                                             &regs.memory[EGRESS]);
+        }
+    }
+
+    if (gress == INGRESS) {
+        for (auto &ref : TopLevel::regs<Target::JBay>()->reg_pipe.pardereg.pgstnreg.ipbprsr4reg)
+            ref.set("regs.parser.ingress", &regs.ingress);
+    }
+
+    if (gress == EGRESS) {
+        for (auto &ref : TopLevel::regs<Target::JBay>()->reg_pipe.pardereg.pgstnreg.epbprsr4reg)
+            ref.set("regs.parser.egress", &regs.egress);
+    }
     TopLevel::regs<Target::JBay>()->reg_pipe.pardereg.pgstnreg.pmergereg
         .set("regs.parse_merge", &regs.merge);
     for (auto st : all)

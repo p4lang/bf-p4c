@@ -348,39 +348,54 @@ template <class COMMON> void init_common_regs(Parser *p, COMMON &regs, gress_t g
         regs.err_phv_cfg.timeout_iter_err_en = 1; }
 }
 
-template<> void Parser::write_config(Target::Tofino::parser_regs &regs, json::map &ctxt_json) {
-    for (auto st : all)
-        st->write_config(regs, this, ctxt_json[st->gress ? "egress" : "ingress"]);
+template<> void Parser::write_config(Target::Tofino::parser_regs &regs, json::map &ctxt_json, bool single_parser) {
+    /// remove after 8.7 release
+    if (single_parser) {
+        for (auto st : all) {
+            st->write_config(regs, this, ctxt_json[st->gress ? "egress" : "ingress"]);
+        }
+    } else {
+        ctxt_json["states"] = json::vector();
+        for (auto st : all)
+            st->write_config(regs, this, ctxt_json["states"]);
+    }
     if (error_count > 0) return;
-    for (gress_t gress : Range(INGRESS, EGRESS)) {
-        int i = 0;
-        for (auto ctr : counter_init[gress]) {
-            if (ctr) ctr->write_config(regs, gress, i);
-            ++i; }
-        for (auto csum : checksum_use[gress])
-            if (csum) csum->write_config(regs, this); }
 
-    init_common_regs(this, regs.ingress.prsr_reg, INGRESS);
-    regs.ingress.ing_buf_regs.glb_group.disable();
-    regs.ingress.ing_buf_regs.chan0_group.chnl_drop.disable();
-    regs.ingress.ing_buf_regs.chan0_group.chnl_metadata_fix.disable();
-    regs.ingress.ing_buf_regs.chan1_group.chnl_drop.disable();
-    regs.ingress.ing_buf_regs.chan1_group.chnl_metadata_fix.disable();
-    regs.ingress.ing_buf_regs.chan2_group.chnl_drop.disable();
-    regs.ingress.ing_buf_regs.chan2_group.chnl_metadata_fix.disable();
-    regs.ingress.ing_buf_regs.chan3_group.chnl_drop.disable();
-    regs.ingress.ing_buf_regs.chan3_group.chnl_metadata_fix.disable();
+    int i = 0;
+    for (auto ctr : counter_init[gress]) {
+        if (ctr) ctr->write_config(regs, gress, i);
+        ++i; }
+    for (auto csum : checksum_use[gress]) {
+        if (csum) csum->write_config(regs, this); }
 
-    init_common_regs(this, regs.egress.prsr_reg, EGRESS);
-    for (int i = 0; i < 4; i++)
-        regs.egress.epb_prsr_port_regs.chnl_ctrl[i].meta_opt = meta_opt;
+    if (gress == INGRESS) {
+        init_common_regs(this, regs.ingress.prsr_reg, INGRESS);
+        regs.ingress.ing_buf_regs.glb_group.disable();
+        regs.ingress.ing_buf_regs.chan0_group.chnl_drop.disable();
+        regs.ingress.ing_buf_regs.chan0_group.chnl_metadata_fix.disable();
+        regs.ingress.ing_buf_regs.chan1_group.chnl_drop.disable();
+        regs.ingress.ing_buf_regs.chan1_group.chnl_metadata_fix.disable();
+        regs.ingress.ing_buf_regs.chan2_group.chnl_drop.disable();
+        regs.ingress.ing_buf_regs.chan2_group.chnl_metadata_fix.disable();
+        regs.ingress.ing_buf_regs.chan3_group.chnl_drop.disable();
+        regs.ingress.ing_buf_regs.chan3_group.chnl_metadata_fix.disable();
 
-    regs.ingress.prsr_reg.hdr_len_adj.amt = hdr_len_adj[INGRESS];
-    regs.egress.prsr_reg.hdr_len_adj.amt = hdr_len_adj[EGRESS];
+        regs.ingress.prsr_reg.hdr_len_adj.amt = hdr_len_adj[INGRESS];
+    }
+
+    if (gress == EGRESS) {
+        init_common_regs(this, regs.egress.prsr_reg, EGRESS);
+        for (int i = 0; i < 4; i++)
+            regs.egress.epb_prsr_port_regs.chnl_ctrl[i].meta_opt = meta_opt;
+
+        regs.egress.prsr_reg.hdr_len_adj.amt = hdr_len_adj[EGRESS];
+    }
 
     if (options.match_compiler) {
         phv_use[INGRESS] |= Phv::use(INGRESS);
-        phv_use[EGRESS] |= Phv::use(EGRESS); }
+        phv_use[EGRESS] |= Phv::use(EGRESS);
+    }
+
     for (int i : phv_use[EGRESS]) {
         auto id = Phv::reg(i)->parser_id();
         if (id >= 256) {
@@ -391,19 +406,20 @@ template<> void Parser::write_config(Target::Tofino::parser_regs &regs, json::ma
             regs.merge.phv_owner.owner[id] = 1;
             regs.ingress.prsr_reg.phv_owner.owner[id] = 1;
             regs.egress.prsr_reg.phv_owner.owner[id] = 1; } }
+
     for (int i = 0; i < 224; i++) {
         if (!phv_allow_multi_write[i]) {
             regs.ingress.prsr_reg.no_multi_wr.nmw[i] = 1;
             regs.egress.prsr_reg.no_multi_wr.nmw[i] = 1;
         }
         if (phv_allow_multi_write[i] || phv_init_valid[i])
-            regs.merge.phv_valid.vld[i] = 1;
-    }
+            regs.merge.phv_valid.vld[i] = 1; }
 
     for (int i = 0; i < 112; i++)
         if (!phv_allow_multi_write[256+i]) {
             regs.ingress.prsr_reg.no_multi_wr.t_nmw[i] = 1;
             regs.egress.prsr_reg.no_multi_wr.t_nmw[i] = 1; }
+
     if (options.condense_json) {
         // FIXME -- removing the uninitialized memory causes problems?
         // FIXME -- walle gets the addresses wrong.  Might also require explicit
@@ -413,23 +429,79 @@ template<> void Parser::write_config(Target::Tofino::parser_regs &regs, json::ma
         regs.ingress.disable_if_reset_value();
         regs.egress.disable_if_reset_value();
         regs.merge.disable_if_reset_value(); }
+
     if (error_count == 0 && options.gen_json) {
-        regs.memory[INGRESS].emit_json(
-            *open_output("memories.all.parser.ingress.cfg.json"), "ingress");
-        regs.memory[EGRESS].emit_json(
-            *open_output("memories.all.parser.egress.cfg.json"), "egress");
-        regs.ingress.emit_json(*open_output("regs.all.parser.ingress.cfg.json"));
-        regs.egress.emit_json(*open_output("regs.all.parser.egress.cfg.json"));
-        regs.merge.emit_json(*open_output("regs.all.parse_merge.cfg.json")); }
-    for (int i = 0; i < 18; i++) {
-        TopLevel::regs<Target::Tofino>()->mem_pipe.i_prsr[i]
-            .set("memories.all.parser.ingress", &regs.memory[INGRESS]);
-        TopLevel::regs<Target::Tofino>()->reg_pipe.pmarb.ibp18_reg.ibp_reg[i]
-            .set( "regs.all.parser.ingress", &regs.ingress);
-        TopLevel::regs<Target::Tofino>()->mem_pipe.e_prsr[i]
-            .set("memories.all.parser.egress", &regs.memory[EGRESS]);
-        TopLevel::regs<Target::Tofino>()->reg_pipe.pmarb.ebp18_reg.ebp_reg[i]
-            .set("regs.all.parser.egress", &regs.egress); }
+        /// XXX(hanw) remove after 8.7 release
+        if (single_parser) {
+            if (gress == INGRESS) {
+                regs.memory[INGRESS].emit_json(
+                        *open_output("memories.all.parser.ingress.cfg.json"), "ingress");
+                regs.ingress.emit_json(*open_output("regs.all.parser.ingress.cfg.json"));
+            } else if (gress == EGRESS) {
+                regs.memory[EGRESS].emit_json(
+                        *open_output("memories.all.parser.egress.cfg.json"), "egress");
+                regs.egress.emit_json(*open_output("regs.all.parser.egress.cfg.json"));
+            }
+            regs.merge.emit_json(*open_output("regs.all.parse_merge.cfg.json"));
+        } else {
+            if (gress == INGRESS) {
+                regs.memory[INGRESS].emit_json(
+                        *open_output("memories.all.parser.ingress.%02x.cfg.json", parser_no), "ingress");
+                regs.ingress.emit_json(*open_output("regs.all.parser.ingress.%02x.cfg.json", parser_no)); }
+            if (gress == EGRESS) {
+                regs.memory[EGRESS].emit_json(
+                        *open_output("memories.all.parser.egress.%02x.cfg.json", parser_no), "egress");
+                regs.egress.emit_json(*open_output("regs.all.parser.egress.%02x.cfg.json", parser_no)); }
+            regs.merge.emit_json(*open_output("regs.all.parse_merge.cfg.json"));
+        }
+    }
+
+    /// XXX(hanw) remove after 8.7 release
+    if (single_parser) {
+        for (int i = 0; i < 18; i++) {
+            if (gress == INGRESS) {
+                TopLevel::regs<Target::Tofino>()->mem_pipe.i_prsr[i]
+                        .set("memories.all.parser.ingress", &regs.memory[INGRESS]);
+                TopLevel::regs<Target::Tofino>()->reg_pipe.pmarb.ibp18_reg.ibp_reg[i]
+                        .set("regs.all.parser.ingress", &regs.ingress);
+            } else if (gress == EGRESS) {
+                TopLevel::regs<Target::Tofino>()->mem_pipe.e_prsr[i]
+                        .set("memories.all.parser.egress", &regs.memory[EGRESS]);
+                TopLevel::regs<Target::Tofino>()->reg_pipe.pmarb.ebp18_reg.ebp_reg[i]
+                        .set("regs.all.parser.egress", &regs.egress);
+            }
+        }
+    } else {
+        TopLevel::regs<Target::Tofino>()->parser_ingress.emplace(
+                ctxt_json["handle"]->as_number()->val, &regs.ingress);
+        TopLevel::regs<Target::Tofino>()->parser_egress.emplace(
+                ctxt_json["handle"]->as_number()->val, &regs.egress);
+        TopLevel::regs<Target::Tofino>()->parser_memory[INGRESS].emplace(
+                ctxt_json["handle"]->as_number()->val, &regs.memory[INGRESS]);
+        TopLevel::regs<Target::Tofino>()->parser_memory[EGRESS].emplace(
+                ctxt_json["handle"]->as_number()->val, &regs.memory[EGRESS]);
+
+#if 0
+        /// for initiliazing the parser registers in default configuration.
+        int start_bit = port_use.ffs();
+        do {
+            int end_bit = port_use.ffz(start_bit);
+            std::cout << "set memories and regs from " << start_bit << " to " << end_bit - 1 << std::endl;
+            for (auto i = start_bit; i <= end_bit - 1; i++) {
+                TopLevel::regs<Target::Tofino>()->mem_pipe.i_prsr[i]
+                        .set("memories.all.parser.ingress", &regs.memory[INGRESS]);
+                TopLevel::regs<Target::Tofino>()->reg_pipe.pmarb.ibp18_reg.ibp_reg[i]
+                        .set("regs.all.parser.ingress", &regs.ingress);
+                TopLevel::regs<Target::Tofino>()->mem_pipe.e_prsr[i]
+                        .set("memories.all.parser.egress", &regs.memory[EGRESS]);
+                TopLevel::regs<Target::Tofino>()->reg_pipe.pmarb.ebp18_reg.ebp_reg[i]
+                        .set("regs.all.parser.egress", &regs.egress);
+            }
+            start_bit = port_use.ffs(end_bit);
+        } while (start_bit >= 0);
+#endif
+    }
+    // all parsers share the same parser_merge configuration.
     TopLevel::regs<Target::Tofino>()->reg_pipe.pmarb.prsr_reg.set("regs.all.parse_merge", &regs.merge);
     for (auto st : all)
         TopLevel::all->name_lookup["directions"][st->gress ? "1" : "0"]
@@ -444,34 +516,39 @@ void Parser::gen_configuration_cache(Target::Tofino::parser_regs &regs, json::ve
     std::string reg_value_str;
     unsigned reg_width = 8;
 
-    // epb_prsr_port_regs.chnl_ctrl
-    for (int i = 0; i < 4; i++) {
-        reg_fqname = "pmarb.ebp18_reg.ebp_reg[0].epb_prsr_port_regs.chnl_ctrl["
-            + std::to_string(i) + "]";
-        reg_name = "parser0_chnl_ctrl_" + std::to_string(i);
+    if (gress == EGRESS) {
+        // epb_prsr_port_regs.chnl_ctrl
+        for (int i = 0; i < 4; i++) {
+            reg_fqname = "pmarb.ebp18_reg.ebp_reg[0].epb_prsr_port_regs.chnl_ctrl["
+                         + std::to_string(i) + "]";
+            reg_name = "parser0_chnl_ctrl_" + std::to_string(i);
+            reg_value =
+                    (regs.egress.epb_prsr_port_regs.chnl_ctrl[i].meta_opt & 0x00001FFF)
+                    | ((regs.egress.epb_prsr_port_regs.chnl_ctrl[i].chnl_ena & 0x00000001) << 16)
+                    | ((regs.egress.epb_prsr_port_regs.chnl_ctrl[i].afull_thr & 0x00000007) << 17)
+                    | ((regs.egress.epb_prsr_port_regs.chnl_ctrl[i].aemp_thr & 0x00000007) << 20)
+                    | ((regs.egress.epb_prsr_port_regs.chnl_ctrl[i].prsr_stall_full & 0x00000001) << 23)
+                    | ((regs.egress.epb_prsr_port_regs.chnl_ctrl[i].timestamp_shift & 0x0000000F) << 24)
+                    | ((regs.egress.epb_prsr_port_regs.chnl_ctrl[i].pipeid_ovr & 0x00000007) << 28);
+            if ((reg_value != 0) || (options.match_compiler)) {
+                reg_value_str = int_to_hex_string(reg_value, reg_width);
+                add_cfg_reg(cfg_cache, reg_fqname, reg_name, reg_value_str);
+            }
+        }
+
+        // epb_prsr_port_regs.multi_threading
+        reg_fqname = "pmarb.ebp18_reg.ebp_reg[0].epb_prsr_port_regs.multi_threading";
+        reg_name = "parser0_multi_threading";
         reg_value =
-               (regs.egress.epb_prsr_port_regs.chnl_ctrl[i].meta_opt        & 0x00001FFF)
-            | ((regs.egress.epb_prsr_port_regs.chnl_ctrl[i].chnl_ena        & 0x00000001)  << 16)
-            | ((regs.egress.epb_prsr_port_regs.chnl_ctrl[i].afull_thr       & 0x00000007)  << 17)
-            | ((regs.egress.epb_prsr_port_regs.chnl_ctrl[i].aemp_thr        & 0x00000007)  << 20)
-            | ((regs.egress.epb_prsr_port_regs.chnl_ctrl[i].prsr_stall_full & 0x00000001)  << 23)
-            | ((regs.egress.epb_prsr_port_regs.chnl_ctrl[i].timestamp_shift & 0x0000000F)  << 24)
-            | ((regs.egress.epb_prsr_port_regs.chnl_ctrl[i].pipeid_ovr      & 0x00000007)  << 28);
+                (regs.egress.epb_prsr_port_regs.multi_threading.prsr_dph_max & 0x000003FF)
+                | ((regs.egress.epb_prsr_port_regs.multi_threading.stall_thr & 0x00000007) << 12)
+                | ((regs.egress.epb_prsr_port_regs.multi_threading.mult_thrd & 0x00000001) << 16)
+                | ((regs.egress.epb_prsr_port_regs.multi_threading.sngl_thrd & 0x00000001) << 17)
+                | ((regs.egress.epb_prsr_port_regs.multi_threading.mthrd_afull_pkt & 0x0000000F) << 20)
+                | ((regs.egress.epb_prsr_port_regs.multi_threading.mthrd_afull_ent & 0x0000003F) << 24);
         if ((reg_value != 0) || (options.match_compiler)) {
             reg_value_str = int_to_hex_string(reg_value, reg_width);
-            add_cfg_reg(cfg_cache, reg_fqname, reg_name, reg_value_str); } }
-
-    // epb_prsr_port_regs.multi_threading
-    reg_fqname = "pmarb.ebp18_reg.ebp_reg[0].epb_prsr_port_regs.multi_threading";
-    reg_name = "parser0_multi_threading";
-    reg_value =
-               (regs.egress.epb_prsr_port_regs.multi_threading.prsr_dph_max    & 0x000003FF)
-            | ((regs.egress.epb_prsr_port_regs.multi_threading.stall_thr       & 0x00000007) << 12)
-            | ((regs.egress.epb_prsr_port_regs.multi_threading.mult_thrd       & 0x00000001) << 16)
-            | ((regs.egress.epb_prsr_port_regs.multi_threading.sngl_thrd       & 0x00000001) << 17)
-            | ((regs.egress.epb_prsr_port_regs.multi_threading.mthrd_afull_pkt & 0x0000000F) << 20)
-            | ((regs.egress.epb_prsr_port_regs.multi_threading.mthrd_afull_ent & 0x0000003F) << 24);
-    if ((reg_value != 0) || (options.match_compiler)) {
-        reg_value_str = int_to_hex_string(reg_value, reg_width);
-        add_cfg_reg(cfg_cache, reg_fqname, reg_name, reg_value_str); }
+            add_cfg_reg(cfg_cache, reg_fqname, reg_name, reg_value_str);
+        }
+    }
 }

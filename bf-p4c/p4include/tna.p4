@@ -73,12 +73,67 @@ package Pipeline<IH, IM, EH, EM>(
     EgressT<EH, EM> egress,
     EgressDeparserT<EH, EM> egress_deparser);
 
-@pkginfo(arch="TNA", version="1.0.0")
+@pkginfo(arch="TNA", version="1.0.1")
 package Switch<IH0, IM0, EH0, EM0, IH1, IM1, EH1, EM1,
                IH2, IM2, EH2, EM2, IH3, IM3, EH3, EM3>(
     Pipeline<IH0, IM0, EH0, EM0> pipe0,
     @optional Pipeline<IH1, IM1, EH1, EM1> pipe1,
     @optional Pipeline<IH2, IM2, EH2, EM2> pipe2,
     @optional Pipeline<IH3, IM3, EH3, EM3> pipe3);
+
+package IngressParsers<H, M>(
+    IngressParserT<H, M> ingress_parser0,
+    @optional IngressParserT<H, M> ingress_parser1,
+    @optional IngressParserT<H, M> ingress_parser2,
+    @optional IngressParserT<H, M> ingress_parser3,
+    @optional IngressParserT<H, M> ingress_parser4,
+    @optional IngressParserT<H, M> ingress_parser5,
+    @optional IngressParserT<H, M> ingress_parser6,
+    @optional IngressParserT<H, M> ingress_parser7,
+    @optional IngressParserT<H, M> ingress_parser8,
+    @optional IngressParserT<H, M> ingress_parser9,
+    @optional IngressParserT<H, M> ingress_parser10,
+    @optional IngressParserT<H, M> ingress_parser11,
+    @optional IngressParserT<H, M> ingress_parser12,
+    @optional IngressParserT<H, M> ingress_parser13,
+    @optional IngressParserT<H, M> ingress_parser14,
+    @optional IngressParserT<H, M> ingress_parser15,
+    @optional IngressParserT<H, M> ingress_parser16,
+    @optional IngressParserT<H, M> ingress_parser17);
+
+package EgressParsers<H, M>(
+    EgressParserT<H, M> egress_parser0,
+    @optional EgressParserT<H, M> egress_parser1,
+    @optional EgressParserT<H, M> egress_parser2,
+    @optional EgressParserT<H, M> egress_parser3,
+    @optional EgressParserT<H, M> egress_parser4,
+    @optional EgressParserT<H, M> egress_parser5,
+    @optional EgressParserT<H, M> egress_parser6,
+    @optional EgressParserT<H, M> egress_parser7,
+    @optional EgressParserT<H, M> egress_parser8,
+    @optional EgressParserT<H, M> egress_parser9,
+    @optional EgressParserT<H, M> egress_parser10,
+    @optional EgressParserT<H, M> egress_parser11,
+    @optional EgressParserT<H, M> egress_parser12,
+    @optional EgressParserT<H, M> egress_parser13,
+    @optional EgressParserT<H, M> egress_parser14,
+    @optional EgressParserT<H, M> egress_parser15,
+    @optional EgressParserT<H, M> egress_parser16,
+    @optional EgressParserT<H, M> egress_parser17);
+
+package MultiParserPipeline<IH, IM, EH, EM>(
+    IngressParsers<IH, IM> ingress_parser,
+    IngressT<IH, IM> ingress,
+    IngressDeparserT<IH, IM> ingress_deparser,
+    EgressParsers<EH, EM> egress_parser,
+    EgressT<EH, EM> egress,
+    EgressDeparserT<EH, EM> egress_deparser);
+
+package MultiParserSwitch<IH0, IM0, EH0, EM0, IH1, IM1, EH1, EM1,
+                          IH2, IM2, EH2, EM2, IH3, IM3, EH3, EM3>(
+    MultiParserPipeline<IH0, IM0, EH0, EM0> pipe0,
+    @optional MultiParserPipeline<IH1, IM1, EH1, EM1> pipe1,
+    @optional MultiParserPipeline<IH2, IM2, EH2, EM2> pipe2,
+    @optional MultiParserPipeline<IH3, IM3, EH3, EM3> pipe3);
 
 #endif  /* _TOFINO_NATIVE_ARCHITECTURE_P4_ */

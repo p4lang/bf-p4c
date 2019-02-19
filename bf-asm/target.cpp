@@ -1,8 +1,10 @@
 #include <config.h>
 
 #include "asm-types.h"
+#include "bson.h"
 #include "target.h"
 #include "ubits.h"
+#include "parser.h"
 
 void declare_registers(const Target::Tofino::top_level_regs *regs) {
     declare_registers(&regs->mem_top, sizeof(regs->mem_top),
@@ -77,6 +79,30 @@ void declare_registers(const Target::Tofino::deparser_regs *regs) {
 void undeclare_registers(const Target::Tofino::deparser_regs *regs) {
     undeclare_registers(&regs->input);
     undeclare_registers(&regs->header);
+}
+
+void emit_parser_registers(const Target::Tofino::top_level_regs* regs, std::ostream &out, uint64_t a) {
+    std::set<int> emitted_parsers;
+    for (auto ig : regs->parser_ingress) {
+        json::map header;
+        header["handle"] = ig.first;
+        out << binout::tag('P') << json::binary(header);
+        ig.second->emit_binary(out, 0); }
+    for (auto eg : regs->parser_egress) {
+        json::map header;
+        header["handle"] = eg.first;
+        out << binout::tag('P') << json::binary(header);
+        eg.second->emit_binary(out, 0); }
+    for (auto ig : regs->parser_memory[INGRESS]) {
+        json::map header;
+        header["handle"] = ig.first;
+        out << binout::tag('P') << json::binary(header);
+        ig.second->emit_binary(out, 0); }
+    for (auto eg : regs->parser_memory[EGRESS]) {
+        json::map header;
+        header["handle"] = eg.first;
+        out << binout::tag('P') << json::binary(header);
+        eg.second->emit_binary(out, 0); }
 }
 
 #if HAVE_JBAY
@@ -155,6 +181,41 @@ void declare_registers(const Target::JBay::deparser_regs *regs) {
             out << "deparser.regs";
             regs->emit_fieldname(out, addr, end); });
 }
+
+void emit_parser_registers(const Target::JBay::top_level_regs *regs, std::ostream &out, uint64_t a) {
+    std::set<int> emitted_parsers;
+    for (auto ig : regs->parser_ingress) {
+        json::map header;
+        header["handle"] = ig.first;
+        out << binout::tag('P') << json::binary(header);
+        ig.second->emit_binary(out, 0); }
+    for (auto eg : regs->parser_egress) {
+        json::map header;
+        header["handle"] = eg.first;
+        out << binout::tag('P') << json::binary(header);
+        eg.second->emit_binary(out, 0); }
+    for (auto ig : regs->parser_main[INGRESS]) {
+        json::map header;
+        header["handle"] = ig.first;
+        out << binout::tag('P') << json::binary(header);
+        ig.second->emit_binary(out, 0); }
+    for (auto eg : regs->parser_main[EGRESS]) {
+        json::map header;
+        header["handle"] = eg.first;
+        out << binout::tag('P') << json::binary(header);
+        eg.second->emit_binary(out, 0); }
+    for (auto ig : regs->parser_memory[INGRESS]) {
+        json::map header;
+        header["handle"] = ig.first;
+        out << binout::tag('P') << json::binary(header);
+        ig.second->emit_binary(out, 0); }
+    for (auto eg : regs->parser_memory[EGRESS]) {
+        json::map header;
+        header["handle"] = eg.first;
+        out << binout::tag('P') << json::binary(header);
+        eg.second->emit_binary(out, 0); }
+}
+
 #endif // HAVE_JBAY
 
 int Target::encodeConst(int src) {

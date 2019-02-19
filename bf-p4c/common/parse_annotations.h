@@ -72,6 +72,8 @@ class ParseAnnotations : public P4::ParseAnnotations {
 
                 PARSE_EMPTY("flexible"),
 
+                PARSE_EXPRESSION_LIST("default_portmap"),
+
                 // Ignore p4v annotations.
                 PARSE_SKIP("assert"),
                 PARSE_SKIP("assume"),

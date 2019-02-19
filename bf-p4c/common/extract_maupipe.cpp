@@ -1116,7 +1116,7 @@ class GetBackendTables : public MauInspector {
     }
 
     // need to understand architecture to process the correct control block
-    bool preorder(const IR::BFN::TranslatedP4Control *cf) override {
+    bool preorder(const IR::BFN::TnaControl *cf) override {
         visit(cf->body);
         rv = getseq(cf->body);
         return false;
@@ -1141,7 +1141,7 @@ class ExtractMetadata : public Inspector {
         setName("ExtractMetadata");
     }
 
-    void postorder(const IR::BFN::TranslatedP4Control *mau) override {
+    void postorder(const IR::BFN::TnaControl *mau) override {
         gress_t gress = mau->thread;
 
         if (gress == INGRESS) {
@@ -1200,7 +1200,7 @@ struct ExtractChecksum : public Inspector {
     explicit ExtractChecksum(IR::BFN::Pipe* rv) :
         rv(rv) { setName("ExtractChecksumNative"); }
 
-    void postorder(const IR::BFN::TranslatedP4Deparser* deparser) override {
+    void postorder(const IR::BFN::TnaDeparser* deparser) override {
         extractChecksumFromDeparser(deparser, rv);
     }
 
@@ -1270,8 +1270,6 @@ cstring BackendConverter::getPipelineName(const IR::P4Program* program, int inde
 void BackendConverter::convertTnaProgram(const IR::P4Program* program, BFN_Options& options) {
     auto main = toplevel->getMain();
     DeclarationConversions converted;
-
-    auto arch = new ParseTna(&threads);
     toplevel->getMain()->apply(*arch);
 
     auto bindings = new ParamBinding(typeMap,
@@ -1297,28 +1295,30 @@ void BackendConverter::convertTnaProgram(const IR::P4Program* program, BFN_Optio
         auto rv = new IR::BFN::Pipe(name, npipe);
         std::list<gress_t> gresses = {INGRESS, EGRESS};
         for (auto gress : gresses) {
-            if (!threads.count(std::make_pair(npipe, gress))) {
+            if (!arch->threads.count(std::make_pair(npipe, gress))) {
                 ::error("Unabled to find thread %1%", npipe);
                 return; }
-            auto thread = threads.at(std::make_pair(npipe, gress));
+            auto thread = arch->threads.at(std::make_pair(npipe, gress));
             thread = thread->apply(*simplifyReferences);
-            if (auto mau = thread->mau->to<IR::BFN::TranslatedP4Control>()) {
+            if (auto mau = thread->mau->to<IR::BFN::TnaControl>()) {
                 mau->apply(ExtractMetadata(rv, bindings));
                 mau->apply(GetBackendTables(refMap, typeMap, gress, rv->thread[gress].mau,
                                             converted));
             }
-            if (auto parser = thread->parser->to<IR::BFN::TranslatedP4Parser>()) {
-                parser->apply(ExtractParser(refMap, typeMap, rv));
+            for (auto p : thread->parsers) {
+                if (auto parser = p->to<IR::BFN::TnaParser>()) {
+                    parser->apply(ExtractParser(refMap, typeMap, rv));
+                }
             }
-            if (auto dprsr = thread->deparser->to<IR::BFN::TranslatedP4Deparser>()) {
+            if (auto dprsr = thread->deparser->to<IR::BFN::TnaDeparser>()) {
                 dprsr->apply(ExtractDeparser(rv));
                 dprsr->apply(ExtractChecksum(rv));
             }
         }
-        if (threads.count(std::make_pair(npipe, GHOST))) {
-            auto thread = threads.at(std::make_pair(npipe, GHOST));
+        if (arch->threads.count(std::make_pair(npipe, GHOST))) {
+            auto thread = arch->threads.at(std::make_pair(npipe, GHOST));
             thread = thread->apply(*simplifyReferences);
-            if (auto mau = thread->mau->to<IR::BFN::TranslatedP4Control>()) {
+            if (auto mau = thread->mau->to<IR::BFN::TnaControl>()) {
                 mau->apply(ExtractMetadata(rv, bindings));
                 mau->apply(GetBackendTables(refMap, typeMap, GHOST, rv->ghost_thread, converted));
             }
@@ -1341,8 +1341,6 @@ void BackendConverter::convertV1Program(const IR::P4Program *program, BFN_Option
     DeclarationConversions converted;
     ResubmitPacking resubmitPackings;
     MirroredFieldListPacking mirrorPackings;
-
-    auto arch = new ParseTna(&threads);
     toplevel->getMain()->apply(*arch);
 
     auto name = getPipelineName(program, 0);
@@ -1355,20 +1353,22 @@ void BackendConverter::convertV1Program(const IR::P4Program *program, BFN_Option
     program->apply(*bindings);
     std::list<gress_t> gresses = {INGRESS, EGRESS};
     for (auto gress : gresses) {
-        if (!threads.count(std::make_pair(0 /* pipe 0 */, gress)))
+        if (!arch->threads.count(std::make_pair(0 /* pipe 0 */, gress)))
             return;
-        auto thread = threads.at(std::make_pair(0 /* pipe 0 */, gress));
+        auto thread = arch->threads.at(std::make_pair(0 /* pipe 0 */, gress));
         thread = thread->apply(*simplifyReferences);
         if (!thread)
             return;
-        if (auto mau = thread->mau->to<IR::BFN::TranslatedP4Control>()) {
+        if (auto mau = thread->mau->to<IR::BFN::TnaControl>()) {
             mau->apply(ExtractMetadata(rv, bindings));
             mau->apply(GetBackendTables(refMap, typeMap, gress, rv->thread[gress].mau, converted));
         }
-        if (auto parser = thread->parser->to<IR::BFN::TranslatedP4Parser>()) {
-            parser->apply(ExtractParser(refMap, typeMap, rv));
+        for (auto p : thread->parsers) {
+            if (auto parser = p->to<IR::BFN::TnaParser>()) {
+                parser->apply(ExtractParser(refMap, typeMap, rv));
+            }
         }
-        if (auto dprsr = thread->deparser->to<IR::BFN::TranslatedP4Deparser>()) {
+        if (auto dprsr = thread->deparser->to<IR::BFN::TnaDeparser>()) {
             dprsr->apply(ExtractDeparser(rv));
             dprsr->apply(ExtractChecksum(rv));
             dprsr->apply(ExtractResubmitFieldPackings(refMap, typeMap, &resubmitPackings));

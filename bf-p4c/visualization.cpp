@@ -97,12 +97,17 @@ bool Visualization::preorder(const IR::BFN::Pipe *p) {
     // parser once support for multiple parsers is added as each parser can have
     // a separate phase0 info.
     auto *phase0 = new Util::JsonObject();
-    auto ig_parser = p->thread[INGRESS].parser->to<IR::BFN::LoweredParser>();
-    auto ig_p0 = (ig_parser) ? ig_parser->phase0 : nullptr;
-    if (ig_p0)
-        usagesToCtxJson(phase0, std::string(ig_p0->tableName), std::string(ig_p0->actionName));
-    else
-        usagesToCtxJson(phase0, "");
+
+    /// XXX(hanw): this is probably overwriting phase0 info from multiple parsers.
+    for (auto parser : p->thread[INGRESS].parsers) {
+        auto ig_parser = parser->to<IR::BFN::LoweredParser>();
+        auto ig_p0 = (ig_parser) ? ig_parser->phase0 : nullptr;
+        if (ig_p0)
+            usagesToCtxJson(phase0, std::string(ig_p0->tableName), std::string(ig_p0->actionName));
+        else
+            usagesToCtxJson(phase0, "");
+    }
+
     pipe->emplace("phase0", phase0);
 
     // Create the "phv_containers" node.

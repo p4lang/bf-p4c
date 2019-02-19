@@ -23,21 +23,21 @@ bool CheckExternInvocationCommon::preorder(const IR::MethodCallExpression *expr)
 
         bitvec pos;
         int index = 0;
-        auto p = findContext<IR::BFN::TranslatedP4Parser>();
+        auto p = findContext<IR::BFN::TnaParser>();
         if (p) {
             index = genIndex(p->thread, PARSER);
             pos.setbit(index);
             check_pipe_constraints(name, pos, expr, obj_name, p->name);
             return false; }
 
-        auto m = findContext<IR::BFN::TranslatedP4Control>();
+        auto m = findContext<IR::BFN::TnaControl>();
         if (m) {
             index = genIndex(m->thread, MAU);
             pos.setbit(index);
             check_pipe_constraints(name, pos, expr, obj_name, m->name);
             return false; }
 
-        auto d = findContext<IR::BFN::TranslatedP4Deparser>();
+        auto d = findContext<IR::BFN::TnaDeparser>();
         if (d) {
             index = genIndex(d->thread, DEPARSER);
             pos.setbit(index);

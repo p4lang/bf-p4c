@@ -45,7 +45,8 @@
     M(int, METER_ALU_GROUP_DATA_DELAY) \
     M(bool, SUPPORT_CONCURRENT_STAGE_DEP) \
     M(bool, SUPPORT_OVERFLOW_BUS) \
-    M(int, MINIMUM_INSTR_CONSTANT)
+    M(int, MINIMUM_INSTR_CONSTANT) \
+    M(int, NUM_PARSERS)
 
 #define DECLARE_PER_TARGET_CONSTANT(TYPE, NAME) static TYPE NAME();
 
@@ -88,6 +89,12 @@ class Target::Tofino : public Target {
         ::Tofino::memories_pipe                         mem_pipe;
         ::Tofino::regs_top                              reg_top;
         ::Tofino::regs_pipe                             reg_pipe;
+
+        // map from handle to parser regs
+        std::map<unsigned, ::Tofino::memories_all_parser_*>     parser_memory[2];
+        std::map<unsigned, ::Tofino::regs_all_parser_ingress*>  parser_ingress;
+        std::map<unsigned, ::Tofino::regs_all_parser_egress*>   parser_egress;
+        ::Tofino::regs_all_parse_merge                          parser_merge;
     };
     struct                                          parser_regs {
         typedef ::Tofino::memories_all_parser_          _memory;
@@ -100,16 +107,6 @@ class Target::Tofino : public Target {
         ::Tofino::regs_all_parser_egress                egress;
         ::Tofino::regs_all_parse_merge                  merge;
     };
-
-    // ingress_parser_regs
-    // memory
-    // ingress
-    // merge
-
-    // egress_parser_regs
-    // memory
-    // egress
-    // merge
 
     typedef ::Tofino::regs_match_action_stage_      mau_regs;
     struct                                          deparser_regs {
@@ -142,6 +139,7 @@ class Target::Tofino : public Target {
         SUPPORT_CONCURRENT_STAGE_DEP = 1,
         SUPPORT_OVERFLOW_BUS = 1,
         MINIMUM_INSTR_CONSTANT = -8,
+        NUM_PARSERS = 18,
     };
     static int encodeConst(int src) {
         return (src >> 10 << 15) | (0x8 << 10) | (src & 0x3ff);
@@ -155,7 +153,7 @@ void undeclare_registers(const Target::Tofino::parser_regs *regs);
 void declare_registers(const Target::Tofino::mau_regs *regs, int stage);
 void declare_registers(const Target::Tofino::deparser_regs *regs);
 void undeclare_registers(const Target::Tofino::deparser_regs *regs);
-
+void emit_parser_registers(const Target::Tofino::top_level_regs *regs);
 
 #if HAVE_JBAY
 #include "gen/jbay/memories.jbay_mem.h"
@@ -188,11 +186,18 @@ class Target::JBay : public Target {
         ::JBay::memories_pipe                           mem_pipe;
         ::JBay::regs_top                                reg_top;
         ::JBay::regs_pipe                               reg_pipe;
+
+        // map from handle to parser regs
+        std::map<unsigned, ::JBay::memories_parser_*>    parser_memory[2];
+        std::map<unsigned, ::JBay::regs_parser_ingress*> parser_ingress;
+        std::map<unsigned, ::JBay::regs_parser_egress*>  parser_egress;
+        std::map<unsigned, ::JBay::regs_parser_main_*>   parser_main[2];
+        ::JBay::regs_parse_merge                         parser_merge;
     };
     struct                                          parser_regs {
         typedef ::JBay::memories_parser_                _memory;
-        typedef ::JBay::regs_parser_ingress             _ingress;  // [36]
-        typedef ::JBay::regs_parser_egress              _egress;   // [36]
+        typedef ::JBay::regs_parser_ingress             _ingress;  // [9]
+        typedef ::JBay::regs_parser_egress              _egress;   // [9]
         typedef ::JBay::regs_parser_main_               _main;     // [9]
         typedef ::JBay::regs_parse_merge                _merge;    // [1]
 
@@ -202,18 +207,6 @@ class Target::JBay : public Target {
         ::JBay::regs_parser_main_                       main[2];
         ::JBay::regs_parse_merge                        merge;
     };
-
-    // ingress_parser_regs
-    // memory
-    // ingress
-    // main
-    // merge
-
-    // egress_parser_regs
-    // memory
-    // egress
-    // main
-    // merge
 
     typedef ::JBay::regs_match_action_stage_        mau_regs;
     typedef ::JBay::regs_deparser                   deparser_regs;
@@ -246,6 +239,7 @@ class Target::JBay : public Target {
         SUPPORT_CONCURRENT_STAGE_DEP = 0,
         SUPPORT_OVERFLOW_BUS = 0,
         MINIMUM_INSTR_CONSTANT = -4,
+        NUM_PARSERS = 36,
     };
     static int encodeConst(int src) {
         return (src >> 11 << 16) | (0x8 << 11) | (src & 0x7ff);
@@ -292,6 +286,9 @@ class Target::Tofino2U : public Target::JBay {
 };
 
 inline bool option_t::isJBayTarget() { return Target::register_set() == JBAY; }
+
+void emit_parser_registers(const Target::JBay::top_level_regs *regs);
+
 #endif // HAVE_JBAY
 
 /** Macro to buid a switch table switching on a target_t, expanding to the same

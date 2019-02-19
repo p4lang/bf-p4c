@@ -298,8 +298,9 @@ class LoweredParserState : Unit {
 /// and numeric constants.
 class LoweredParser : AbstractParser {
 #noconstructor
-    LoweredParser(gress_t gress, LoweredParserState start, Phase0 phase0)
-        : AbstractParser(gress), start(start), phase0(phase0) {}
+    LoweredParser(gress_t gress, LoweredParserState start, Phase0 phase0,
+        std::vector<int> portmap)
+        : AbstractParser(gress), start(start), phase0(phase0), portmap(portmap) {}
 #apply
 
     toString {
@@ -322,6 +323,8 @@ class LoweredParser : AbstractParser {
     unsigned hdrLenAdj = 0;
 
     optional NullOK Phase0 phase0; // only valid for ingress
+
+    optional inline std::vector<int> portmap;  // used for multiple parser support
 #emit
     /// bitmask for selection of optional metadata metadata (egress only)
     /// refer to CSR for what metadata field each bit means

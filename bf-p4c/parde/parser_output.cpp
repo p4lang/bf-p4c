@@ -21,7 +21,16 @@ struct ParserAsmSerializer : public ParserInspector {
     bool preorder(const IR::BFN::LoweredParser* parser) override {
         AutoIndent indentParser(indent);
 
-        out << "parser " << parser->gress << ":" << std::endl;
+        out << "parser " << parser->gress << " ";
+        if (parser->portmap.size() != 0) {
+            const char *sep = "[ ";
+            for (auto port : parser->portmap) {
+                out << sep << port;
+                sep = ", ";
+            }
+            out << " ]";
+        }
+        out << ":" << std::endl;
         if (parser->start)
             out << indent << "start: " << canon_name(parser->start->name)
                 << std::endl;
@@ -262,16 +271,20 @@ struct ParserAsmSerializer : public ParserInspector {
 }  // namespace
 
 ParserAsmOutput::ParserAsmOutput(const IR::BFN::Pipe* pipe,
-                                 gress_t gress)
-        : parser(nullptr) {
-    auto* abstractParser = pipe->thread[gress].parser;
-    BUG_CHECK(abstractParser != nullptr, "No parser?");
-    parser = abstractParser->to<IR::BFN::LoweredParser>();
-    BUG_CHECK(parser != nullptr, "Writing assembly for a non-lowered parser?");
+                                 gress_t gress) {
+    BUG_CHECK(pipe->thread[gress].parsers.size() != 0, "No parser?");
+    for (auto parser : pipe->thread[gress].parsers) {
+        auto lowered_parser = parser->to<IR::BFN::LoweredParser>();
+        BUG_CHECK(lowered_parser != nullptr, "Writing assembly for a non-lowered parser?");
+        parsers.push_back(lowered_parser);
+    }
 }
 
 std::ostream& operator<<(std::ostream& out, const ParserAsmOutput& parserOut) {
     ParserAsmSerializer serializer(out);
-    parserOut.parser->apply(serializer);
+    for (auto p : parserOut.parsers) {
+        LOG1("write asm for " << p);
+        p->apply(serializer);
+    }
     return out;
 }

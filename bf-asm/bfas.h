@@ -29,6 +29,7 @@ extern struct option_t {
     bool                high_availability_enabled;
     bool                match_compiler;
     bool                singlewrite;
+    bool                multi_parsers;
     std::string         stage_dependency_pattern;
     target_t            target;
     config_version_t    version;

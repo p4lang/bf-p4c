@@ -22,7 +22,7 @@ namespace BFN {
 class ExtractDeparser : public DeparserInspector {
  public:
     explicit ExtractDeparser(IR::BFN::Pipe *rv) : rv(rv) { setName("ExtractDeparser"); }
-    void postorder(const IR::BFN::TranslatedP4Deparser* parser);
+    void postorder(const IR::BFN::TnaDeparser* parser);
 
     IR::BFN::Pipe *rv;
 };

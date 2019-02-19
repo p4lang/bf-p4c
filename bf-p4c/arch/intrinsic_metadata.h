@@ -60,7 +60,7 @@ class AddIntrinsicMetadata : public Transform {
     /// @return an `extract()` call that extracts the given header. The header is
     /// assumed to be one of the standard TNA metadata headers.
     static IR::Statement *
-    createExtractCall(const IR::BFN::TranslatedP4Parser *parser, cstring header) {
+    createExtractCall(const IR::BFN::TnaParser *parser, cstring header) {
         auto packetInParam = parser->tnaParams.at("pkt");
         auto *method = new IR::Member(new IR::PathExpression(packetInParam),
                                       IR::ID("extract"));
@@ -73,7 +73,7 @@ class AddIntrinsicMetadata : public Transform {
 
     /// @return a lookahead expression for the given size of `bit<>` type.
     static IR::Expression *
-    createLookaheadExpr(const IR::BFN::TranslatedP4Parser *parser, int bits) {
+    createLookaheadExpr(const IR::BFN::TnaParser *parser, int bits) {
         auto packetInParam = parser->tnaParams.at("pkt");
         auto *method = new IR::Member(new IR::PathExpression(packetInParam),
                                       IR::ID("lookahead"));
@@ -88,7 +88,7 @@ class AddIntrinsicMetadata : public Transform {
 
     /// @return an `advance()` call that advances by the given number of bits.
     static IR::Statement *
-    createAdvanceCall(const IR::BFN::TranslatedP4Parser *parser, int bits) {
+    createAdvanceCall(const IR::BFN::TnaParser *parser, int bits) {
         auto packetInParam = parser->tnaParams.at("pkt");
         auto *method = new IR::Member(new IR::PathExpression(packetInParam),
                                       IR::ID("advance"));
@@ -100,7 +100,7 @@ class AddIntrinsicMetadata : public Transform {
 
     /// @return an assignment statement of the form `header.field = constant`.
     static IR::Statement *
-    createSetMetadata(const IR::BFN::TranslatedP4Parser *parser, cstring header,
+    createSetMetadata(const IR::BFN::TnaParser *parser, cstring header,
                       cstring field, int bitWidth, int constant) {
         auto headerParam = parser->tnaParams.at(header);
         auto *member = new IR::Member(new IR::PathExpression(headerParam),
@@ -147,7 +147,7 @@ class AddIntrinsicMetadata : public Transform {
 
     /// Add the standard TNA ingress metadata to the given parser. The original
     /// start state will remain in the program, but with a new name.
-    static void addIngressMetadata(IR::BFN::TranslatedP4Parser *parser) {
+    static void addIngressMetadata(IR::BFN::TnaParser *parser) {
         auto *p4EntryPointState =
             convertStartStateToNormalState(parser, "ingress_p4_entry_point");
 
@@ -211,7 +211,7 @@ class AddIntrinsicMetadata : public Transform {
 
     /// Add the standard TNA egress metadata to the given parser. The original
     /// start state will remain in the program, but with a new name.
-    static void addEgressMetadata(IR::BFN::TranslatedP4Parser *parser,
+    static void addEgressMetadata(IR::BFN::TnaParser *parser,
                                   const IR::ParserState *start_i2e_mirrored,
                                   const IR::ParserState *start_e2e_mirrored,
                                   const IR::ParserState *start_coalesced,
@@ -340,7 +340,7 @@ class AddIntrinsicMetadata : public Transform {
         return state;
     }
 
-    IR::BFN::TranslatedP4Parser* postorder(IR::BFN::TranslatedP4Parser *parser) override {
+    IR::BFN::TnaParser* postorder(IR::BFN::TnaParser *parser) override {
         if (parser->thread == INGRESS)
             addIngressMetadata(parser);
         else

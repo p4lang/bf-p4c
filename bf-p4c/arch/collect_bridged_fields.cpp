@@ -144,11 +144,11 @@ void CollectBridgedFields::flow_merge(Visitor& otherVisitor) {
 
 boost::optional<CollectBridgedFields::TnaContext>
 CollectBridgedFields::findTnaContext() const {
-    if (auto* control = findContext<IR::BFN::TranslatedP4Control>())
+    if (auto* control = findContext<IR::BFN::TnaControl>())
         return TnaContext(control->thread, control->tnaParams);
-    else if (auto* parser = findContext<IR::BFN::TranslatedP4Parser>())
+    else if (auto* parser = findContext<IR::BFN::TnaParser>())
         return TnaContext(parser->thread, parser->tnaParams);
-    else if (auto* deparser = findContext<IR::BFN::TranslatedP4Deparser>())
+    else if (auto* deparser = findContext<IR::BFN::TnaDeparser>())
         return TnaContext(deparser->thread, deparser->tnaParams);
     else
         return boost::none;

@@ -92,7 +92,7 @@ class ActionSynthesisPolicy : public P4::ActionSynthesisPolicy {
     const std::set<cstring> *skip;
 
     bool convert(const Visitor::Context *, const IR::P4Control* control) override {
-        if (control->is<IR::BFN::TranslatedP4Deparser>()) {
+        if (control->is<IR::BFN::TnaDeparser>()) {
             return false;
         }
         for (auto c : *skip)

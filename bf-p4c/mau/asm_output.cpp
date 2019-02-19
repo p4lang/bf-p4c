@@ -48,11 +48,14 @@ std::ostream &operator<<(std::ostream &out, const MauAsmOutput &mauasm) {
     // context.json schema for phase0 table must be changed to include
     // phase0 info within the parser node
     auto* pipe = mauasm.pipe;
-    if (auto* parser = pipe->thread[INGRESS].parser->to<IR::BFN::LoweredParser>()) {
-        if (auto p0 = parser->phase0) {
-            out << "stage 0 ingress:" << std::endl;
-            out << p0;
-            phase0OutputAsm = true;
+
+    for (auto p : pipe->thread[INGRESS].parsers) {
+        if (auto* parser = p->to<IR::BFN::LoweredParser>()) {
+            if (auto p0 = parser->phase0) {
+                out << "stage 0 ingress:" << std::endl;
+                out << p0;
+                phase0OutputAsm = true;
+            }
         }
     }
 

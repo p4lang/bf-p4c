@@ -209,7 +209,7 @@ struct FindPhase0Table : public Inspector {
  private:
     bool tableInIngress() const {
         // The phase 0 table must always be in Ingress
-        auto* control = findContext<IR::BFN::TranslatedP4Control>();
+        auto* control = findContext<IR::BFN::TnaControl>();
         if (!control) return false;
         return control->thread == INGRESS;
     }
@@ -553,8 +553,8 @@ struct RewritePhase0IfPresent : public Transform {
     }
 
     // Generate phase0 node in parser based on info extracted for phase0
-    const IR::BFN::TranslatedP4Parser*
-    preorder(IR::BFN::TranslatedP4Parser* parser) override {
+    const IR::BFN::TnaParser*
+    preorder(IR::BFN::TnaParser* parser) override {
         if (parser->thread != INGRESS) {
             prune();
             return parser;
@@ -574,7 +574,7 @@ struct RewritePhase0IfPresent : public Transform {
         if (state->name != "__phase0") return state;
         prune();
 
-        auto* tnaContext = findContext<IR::BFN::TranslatedP4Parser>();
+        auto* tnaContext = findContext<IR::BFN::TnaParser>();
         BUG_CHECK(tnaContext, "Phase 0 state not within translated parser?");
         BUG_CHECK(tnaContext->thread == INGRESS, "Phase 0 state not in ingress?");
 
@@ -634,4 +634,200 @@ TranslatePhase0::TranslatePhase0(P4::ReferenceMap* refMap, P4::TypeMap* typeMap)
     });
 }
 
+bool CheckPhaseZeroExtern::preorder(const IR::MethodCallExpression* expr) {
+    LOG3("visiting method call expression: " << expr);
+    auto mi = P4::MethodInstance::resolve(expr, refMap, typeMap);
+    // Get extern method
+    if (auto extFunction = mi->to<P4::ExternFunction>()) {
+        auto extFuncExpr = extFunction->expr;
+        // Check if method call is a phase0 extern
+        if (extFuncExpr &&
+            extFuncExpr->toString() == BFN::ExternPortMetadataUnpackString) {
+            auto parser = findOrigCtxt<IR::BFN::TnaParser>();
+            ERROR_CHECK(parser->thread == INGRESS,
+                        "Phase0 Extern %1% cannot be set in egress",
+                        BFN::ExternPortMetadataUnpackString);
+            if (phase0_calls) {
+                ERROR_CHECK(phase0_calls->count(parser) == 0,
+                            "Multiple Phase0 Externs "
+                            "(%1%) not allowed on a parser",
+                            BFN::ExternPortMetadataUnpackString);
+                cstring keyName = "";
+                if (auto stmt = findOrigCtxt<IR::AssignmentStatement>())
+                    keyName = stmt->left->toString();
+                if (auto fields =  extFuncExpr->type->to<IR::Type_StructLike>()) {
+                    (*phase0_calls)[parser] = std::make_pair(keyName, fields);
+                    LOG4("Found phase0 extern in parser");
+                }
+            }
+            return false;
+        }
+    }
+    return true;
+}
+
+/* Use the header map generated in CheckPhase0Extern to update the Phase0 Node
+ * in IR with relevant headers
+ */
+IR::IndexedVector<IR::StructField>*
+UpdatePhase0NodeInParser::canPackDataIntoPhase0(
+        const IR::IndexedVector<IR::StructField>* fields, const int phase0Size) {
+    // Generate the phase 0 data layout.
+    BFN::FieldPacking *packing = new BFN::FieldPacking();
+    for (auto* param : *fields) {
+        BUG_CHECK(param->type, "No type for phase 0 parameter %1%?", param);
+
+        // Align the field so that its LSB lines up with a byte boundary,
+        // which (usually) reproduces the behavior of the PHV allocator.
+        // XXX(amresh): Once phase0 node is properly supported in the
+        // backend, we won't need this (or any padding), so we should remove
+        // it at that point.
+        const int fieldSize = param->type->width_bits();
+        const int alignment = getAlignment(fieldSize);
+        packing->padToAlignment(8, alignment);
+        packing->appendField(new IR::PathExpression(param->name),
+                             param->name, fieldSize);
+        packing->padToAlignment(8);
+    }
+
+    // Pad out the layout to fill the available phase 0 space.
+    packing->padToAlignment(phase0Size);
+
+    // Make sure we didn't overflow.
+    ERROR_CHECK(int(packing->totalWidth) == phase0Size,
+                "Exceeded port metadata field packing size, should be exactly %1% bits",
+                phase0Size);
+
+    // Use the layout to construct a type for phase 0 data.
+    IR::IndexedVector<IR::StructField> *packFields = new IR::IndexedVector<IR::StructField>();
+    unsigned padFieldId = 0;
+    for (auto& packedField : *packing) {
+        if (packedField.isPadding()) {
+            cstring padFieldName = "__pad_";
+            padFieldName += cstring::to_cstring(padFieldId++);
+            auto* padFieldType = IR::Type::Bits::get(packedField.width);
+            packFields->push_back(new IR::StructField(padFieldName, new IR::Annotations({
+                new IR::Annotation(IR::ID("hidden"), { })
+            }), padFieldType));
+            continue;
+        }
+
+        auto* fieldType = IR::Type::Bits::get(packedField.width);
+        packFields->push_back(new IR::StructField(packedField.source, fieldType));
+    }
+
+    return packFields;
+}
+
+// Populate Phase0 Node in Parser & generate new Phase0 Header type
+IR::BFN::TnaParser*
+UpdatePhase0NodeInParser::preorder(IR::BFN::TnaParser *parser) {
+    if (parser->thread == EGRESS) return parser;
+    auto *origParser = getOriginal<IR::BFN::TnaParser>();
+    auto size = Device::numMaxChannels();
+    auto tableName = parser->name + ".$PORT_METADATA";
+    if (!parser->pipeName.isNullOrEmpty())
+        tableName = parser->pipeName + "." + tableName;
+    auto actionName = "set_port_metadata";
+    auto keyName = "phase0_data";
+    cstring hdrName = "__phase0_header" + std::to_string(phase0_count);
+    auto handle = 0x20 << 24 | phase0_count++ << 16;
+
+    // If no extern is specified inject phase0 in parser
+    auto* fields = new IR::IndexedVector<IR::StructField>();
+    int phase0Size = Device::pardeSpec().bitPhase0Size();
+    fields->push_back(new IR::StructField(keyName, IR::Type::Bits::get(phase0Size)));
+    auto *packedFields = canPackDataIntoPhase0(fields, phase0Size);
+
+    // If extern present update phase0 with extern info
+    if (phase0_calls && phase0_calls->count(origParser)) {
+        auto pmdHeader = (*phase0_calls)[origParser];
+        if (auto *pmdFields = pmdHeader.second) {
+            keyName = pmdHeader.first;
+            hdrName = pmdFields->name.toString();
+            packedFields = canPackDataIntoPhase0(&pmdFields->fields, phase0Size);
+        }
+    }
+
+    parser->phase0 =
+            new IR::BFN::Phase0(packedFields, size, handle, tableName, actionName, keyName);
+
+    // The parser header needs the total phase0 bit to be extracted/skipped.
+    // We check if there is any additional ingress padding for port metadata
+    // and add it to the header
+    auto parserPackedFields = packedFields->clone();
+    int ingress_padding = Device::pardeSpec().bitIngressPrePacketPaddingSize();
+    if (ingress_padding) {
+        auto *fieldType = IR::Type::Bits::get(ingress_padding);
+        parserPackedFields->push_back(new IR::StructField("__ingress_pad__",
+                    fieldType));
+    }
+    auto phase0_type = new IR::Type_Header(hdrName, *parserPackedFields);
+    declarations->push_back(phase0_type);
+
+    LOG4("Adding phase0 to Ingress Parser " << parser->phase0);
+    return parser;
+}
+
+IR::MethodCallExpression* ConvertPhase0AssignToExtract::generate_phase0_extract_method_call(
+        const IR::Expression* lExpr, const IR::MethodCallExpression *rExpr) {
+    auto mi = P4::MethodInstance::resolve(rExpr, refMap, typeMap);
+    // Check if phase0 extern method call exists within the assignment
+    if (auto extFunction = mi->to<P4::ExternFunction>()) {
+        auto extFuncExpr = extFunction->expr;
+        if (extFuncExpr &&
+            extFuncExpr->toString() == BFN::ExternPortMetadataUnpackString) {
+            // Create packet extract method call to replace extern
+            auto parser = findOrigCtxt<IR::BFN::TnaParser>();
+            auto packetInParam = parser->tnaParams.at("pkt");
+            auto* args = new IR::Vector<IR::Argument>();
+            if (lExpr) {
+                IR::Argument* a = new IR::Argument(lExpr);
+                if (auto p0Type = lExpr->type->to<IR::Type_Struct>()) {
+                    auto *p0Hdr = new IR::Type_Header(p0Type->name, p0Type->fields);
+                    if (auto *m = lExpr->to<IR::Member>()) {
+                        auto *p0Member = new IR::Member(p0Hdr, m->expr, m->member);
+                        a = new IR::Argument(p0Member);
+                    }
+                }
+                args->push_back(a);
+                auto* method = new IR::Member(new IR::PathExpression(packetInParam),
+                                              IR::ID("extract"));
+                auto* callExpr = new IR::MethodCallExpression(method,
+                                                              rExpr->typeArguments, args);
+                LOG4("modified phase0 extract method call : " << callExpr);
+                return callExpr;
+            } else {
+                auto* method = new IR::Member(new IR::PathExpression(packetInParam),
+                                              IR::ID("advance"));
+                unsigned p0Size = static_cast<unsigned>(Device::pardeSpec().bitPhase0Size()
+                        + Device::pardeSpec().bitIngressPrePacketPaddingSize());
+                IR::Type_Bits* p0Bits = IR::Type::Bits::get(p0Size)->clone();
+                auto* a = new IR::Argument(new IR::Constant(p0Bits, p0Size));
+                args->push_back(a);
+                auto* callExpr = new IR::MethodCallExpression(method,
+                        new IR::Vector<IR::Type>(), args);
+                LOG4("modified phase0 extract method call : " << callExpr);
+                return callExpr; } } }
+    return nullptr; }
+
+IR::Node* ConvertPhase0AssignToExtract::preorder(IR::MethodCallExpression* expr) {
+    LOG3("visiting method call expr: " << expr);
+    auto* extract = generate_phase0_extract_method_call(nullptr, expr);
+    if (extract) return extract;
+    return expr; }
+
+IR::Node* ConvertPhase0AssignToExtract::preorder(IR::AssignmentStatement* stmt) {
+    LOG3("visiting assignment stmt: " << stmt);
+    auto* lExpr = stmt->left;
+    auto* rExpr = stmt->right->to<IR::MethodCallExpression>();
+    if (!lExpr || !rExpr) return stmt;
+    auto* extract = generate_phase0_extract_method_call(lExpr, rExpr);
+    if (extract) {
+        prune();
+        return new IR::MethodCallStatement(extract);
+    }
+    return stmt; }
+
 }  // namespace BFN
+

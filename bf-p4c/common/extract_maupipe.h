@@ -110,18 +110,19 @@ class BackendConverter {
     P4::ReferenceMap *refMap;
     P4::TypeMap *typeMap;
     IR::ToplevelBlock* toplevel;
-    ProgramThreads threads;
+    ParseTna *arch;
 
  public:
     BackendConverter(P4::ReferenceMap *refMap, P4::TypeMap *typeMap, IR::ToplevelBlock* toplevel)
         : refMap(refMap), typeMap(typeMap), toplevel(toplevel) {
+        arch = new ParseTna();
         CHECK_NULL(refMap); CHECK_NULL(typeMap); CHECK_NULL(toplevel); }
 
     void convert(const IR::P4Program *prog, BFN_Options& options);
     void convertTnaProgram(const IR::P4Program *program, BFN_Options &options);
     void convertV1Program(const IR::P4Program *program, BFN_Options &options);
     cstring getPipelineName(const IR::P4Program* program, int index);
-    const ProgramThreads &getThreads() const { return threads; }
+    const ProgramThreads &getThreads() const { return arch->threads; }
 
     std::vector<const IR::BFN::Pipe*> pipe;
 };

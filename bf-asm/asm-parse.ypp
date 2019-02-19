@@ -195,6 +195,7 @@ param   : INT { $$ = VAL($1); }
         | INT DOTDOT INT { $$ = VAL($1, $3); }
         | ID '(' param ')' { $$ = CMD($1, $3); }
         | ID '(' comma_params ')' { $$ = CMD($1, $3); }
+        | flow_value { $$ = $1; }
         ;
 param_expr
         : param '^' value { $$ = CMD(strdup("^"), true, $1, $3); }

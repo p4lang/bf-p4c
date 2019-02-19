@@ -102,7 +102,7 @@ const IR::Node* IngressParserConverter::postorder(IR::P4Parser *node) {
     parserLocals->append(structure->ingressParserDeclarations);
     parserLocals->append(node->parserLocals);
 
-    auto result = new IR::BFN::TranslatedP4Parser(parser->srcInfo, "ingressParserImpl",
+    auto result = new IR::BFN::TnaParser(parser->srcInfo, "ingressParserImpl",
                                                   parser_type, parser->constructorParams,
                                                   *parserLocals, parser->states,
                                                   tnaParams, INGRESS);
@@ -168,7 +168,7 @@ const IR::Node* EgressParserConverter::postorder(IR::P4Parser* node) {
     paramList->push_back(param);
 
     auto parser_type = new IR::Type_Parser("egressParserImpl", paramList);
-    auto result = new IR::BFN::TranslatedP4Parser(parser->srcInfo, "egressParserImpl",
+    auto result = new IR::BFN::TnaParser(parser->srcInfo, "egressParserImpl",
                                                   parser_type, parser->constructorParams,
                                                   parser->parserLocals, parser->states,
                                                   tnaParams, EGRESS);
@@ -235,7 +235,7 @@ const IR::Node* IngressControlConverter::postorder(IR::P4Control* node) {
     body->append(node->body->components);
     body->append(structure->ingressStatements);
 
-    auto result = new IR::BFN::TranslatedP4Control(node->srcInfo, "ingress", controlType,
+    auto result = new IR::BFN::TnaControl(node->srcInfo, "ingress", controlType,
          node->constructorParams, *controlLocals,
          new IR::BlockStatement(node->body->annotations, *body), tnaParams, INGRESS);
     return result;
@@ -325,7 +325,7 @@ const IR::Node* EgressControlConverter::postorder(IR::P4Control *node) {
     body->append(node->body->components);
     body->append(structure->egressStatements);
 
-    auto result = new IR::BFN::TranslatedP4Control(node->srcInfo, "egress", controlType,
+    auto result = new IR::BFN::TnaControl(node->srcInfo, "egress", controlType,
         node->constructorParams, *controlLocals,
         new IR::BlockStatement(node->body->annotations, *body), tnaParams, EGRESS);
     return result;
@@ -389,7 +389,7 @@ const IR::Node* IngressDeparserConverter::postorder(IR::P4Control* node) {
     statements->append(deparser->body->components);
     auto body = new IR::BlockStatement(deparser->body->srcInfo, *statements);
 
-    auto result = new IR::BFN::TranslatedP4Deparser(deparser->srcInfo, "ingressDeparserImpl",
+    auto result = new IR::BFN::TnaDeparser(deparser->srcInfo, "ingressDeparserImpl",
                                                     controlType, deparser->constructorParams,
                                                     *controlLocals, body, tnaParams, INGRESS);
     return result;
@@ -475,7 +475,7 @@ const IR::Node* EgressDeparserConverter::postorder(IR::P4Control* node) {
     statements->append(deparser->body->components);
     auto body = new IR::BlockStatement(deparser->body->srcInfo, *statements);
 
-    auto result = new IR::BFN::TranslatedP4Deparser(deparser->srcInfo, "egressDeparserImpl",
+    auto result = new IR::BFN::TnaDeparser(deparser->srcInfo, "egressDeparserImpl",
                                                     controlType, deparser->constructorParams,
                                                     *controlLocals, body, tnaParams, EGRESS);
     return result;
@@ -507,11 +507,11 @@ const IR::Node* PathExpressionConverter::postorder(IR::Member *node) {
     auto pathname = expr->path->name;
 
     gress_t thread;
-    if (auto* parser = findContext<IR::BFN::TranslatedP4Parser>()) {
+    if (auto* parser = findContext<IR::BFN::TnaParser>()) {
         thread = parser->thread;
-    } else if (auto* control = findContext<IR::BFN::TranslatedP4Control>()) {
+    } else if (auto* control = findContext<IR::BFN::TnaControl>()) {
         thread = control->thread;
-    } else if (auto* control = findContext<IR::BFN::TranslatedP4Deparser>()) {
+    } else if (auto* control = findContext<IR::BFN::TnaDeparser>()) {
         thread = control->thread;
     } else {
         LOG3("Member expression " << node << " is not inside a translated control; "

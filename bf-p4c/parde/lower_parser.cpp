@@ -858,7 +858,7 @@ struct ReplaceParserIR : public Transform {
 
         auto* loweredParser =
           new IR::BFN::LoweredParser(parser->gress, computed.loweredStates.at(parser->start),
-                                     parser->phase0);
+                                     parser->phase0, parser->portmap);
 
         if (parser->gress == INGRESS) {
             loweredParser->hdrLenAdj = Device::pardeSpec().byteTotalIngressMetadataSize();

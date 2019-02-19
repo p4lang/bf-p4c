@@ -33,7 +33,7 @@ class ExtractParser : public ParserInspector {
  public:
     explicit ExtractParser(P4::ReferenceMap* refMap, P4::TypeMap* typeMap, IR::BFN::Pipe *rv)
         : refMap(refMap), typeMap(typeMap), rv(rv) { setName("ExtractParser"); }
-    void postorder(const IR::BFN::TranslatedP4Parser* parser) override;
+    void postorder(const IR::BFN::TnaParser* parser) override;
     void end_apply() override;
 
     profile_t init_apply(const IR::Node *root) override {

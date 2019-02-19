@@ -28,7 +28,7 @@ class ProcessDeparser : public SkipControlPolicy {
  public:
     ProcessDeparser() {}
     bool convert(const IR::P4Control* control) const override {
-        return control->is<IR::BFN::TranslatedP4Deparser>();
+        return control->is<IR::BFN::TnaDeparser>();
     }
 };
 

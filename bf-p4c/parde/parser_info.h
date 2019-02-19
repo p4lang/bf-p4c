@@ -95,6 +95,11 @@ struct ParserStateMutex {
                 return true;
         return false;
     }
+
+    void merge_with(ParserStateMutex& other) {
+        merge(_states_encountered, other._states_encountered);
+        merge(_mutually_inclusive, other._mutually_inclusive);
+    }
 };
 
 /*
@@ -332,16 +337,23 @@ class CollectParserInfoImpl : public BFN::ControlFlowVisitor,
         return rv;
     }
 
-    bool filter_join_point(const IR::Node*) override { return true; }
+    bool filter_join_point(const IR::Node*) override {
+        return true; }
 
     void flow_merge(Visitor &other_) override {
-       CollectParserInfoImpl &other = dynamic_cast<CollectParserInfoImpl &>(other_);
+        CollectParserInfoImpl &other = dynamic_cast<CollectParserInfoImpl &>(other_);
+        LOG3("CollectParserInfoImpl(" << (void *)this << "): merging " << (void *)&other_);
+        for (auto& g : other._graphs) {
+            if (_graphs.count(g.first) == 0)
+                _graphs.emplace(g.first, g.second);
+            else
+                _graphs.at(g.first)->merge_with(*(g.second)); }
 
-        for (auto g : _graphs)
-            g.second->merge_with(*(other._graphs.at(g.first)));
-
-        for (auto& m : _mutex)
-            merge_mutex(m.second, other._mutex.at(m.first));
+        for (auto& m : other._mutex) {
+            if (_mutex.count(m.first) == 0)
+                _mutex.emplace(m.first, m.second);
+            else
+                _mutex.at(m.first).merge_with(m.second); }
 
         _state_to_parser.insert(other._state_to_parser.begin(),
                                 other._state_to_parser.end());

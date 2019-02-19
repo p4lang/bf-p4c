@@ -37,7 +37,7 @@ struct ParserPragmas : public Inspector {
 
     bool preorder(const IR::Annotation *annot) {
         auto pragma_name = annot->name.name;
-        auto p = findContext<IR::BFN::TranslatedP4Parser>();
+        auto p = findContext<IR::BFN::TnaParser>();
         auto ps = findContext<IR::ParserState>();
 
         if (!p || !ps)
@@ -280,7 +280,7 @@ class GetBackendParser {
                               const ParserPragmas& pg) :
         typeMap(typeMap), refMap(refMap), parserPragmas(pg) { }
 
-    const IR::BFN::Parser* extract(const IR::BFN::TranslatedP4Parser* parser);
+    const IR::BFN::Parser* extract(const IR::BFN::TnaParser* parser);
 
     bool addTransition(IR::BFN::ParserState* state, match_t matchVal, int shift, cstring nextState,
                        const IR::P4ValueSet* valueSet = nullptr);
@@ -303,7 +303,7 @@ class GetBackendParser {
 };
 
 const IR::BFN::Parser*
-GetBackendParser::extract(const IR::BFN::TranslatedP4Parser* parser) {
+GetBackendParser::extract(const IR::BFN::TnaParser* parser) {
     forAllMatching<IR::ParserState>(parser, [&](const IR::ParserState* state) {
         auto stateName = state->controlPlaneName();
         p4StateNameToStateName.emplace(state->name, stateName);
@@ -319,7 +319,7 @@ GetBackendParser::extract(const IR::BFN::TranslatedP4Parser* parser) {
     });
 
     IR::BFN::ParserState* startState = getState(p4StateNameToStateName.at("start"));
-    return new IR::BFN::Parser(parser->thread, startState, parser->phase0);
+    return new IR::BFN::Parser(parser->thread, startState, parser->phase0, parser->portmap);
 }
 
 bool GetBackendParser::addTransition(IR::BFN::ParserState* state, match_t matchVal,
@@ -902,12 +902,12 @@ IR::BFN::ParserState* GetBackendParser::getState(cstring name) {
     return state;
 }
 
-void ExtractParser::postorder(const IR::BFN::TranslatedP4Parser* parser) {
+void ExtractParser::postorder(const IR::BFN::TnaParser* parser) {
     ParserPragmas pg;
     parser->apply(pg);
 
     GetBackendParser gp(typeMap, refMap, pg);
-    rv->thread[parser->thread].parser = gp.extract(parser);
+    rv->thread[parser->thread].parsers.push_back(gp.extract(parser));
 }
 
 void ExtractParser::end_apply() {

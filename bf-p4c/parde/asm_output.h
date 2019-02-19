@@ -13,7 +13,7 @@ struct ParserAsmOutput {
  private:
     friend std::ostream& operator<<(std::ostream&, const ParserAsmOutput&);
 
-    const IR::BFN::LoweredParser* parser;
+    std::vector<const IR::BFN::LoweredParser*> parsers;
 };
 
 /// Helper that can generate deparser assembly and write it to an output stream.

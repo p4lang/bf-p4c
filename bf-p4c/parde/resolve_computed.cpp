@@ -263,6 +263,12 @@ class VerifyStateNamessAreUnique : public ParserInspector {
         visitedNames.clear();
         return Inspector::init_apply(root);
     }
+    bool preorder(const IR::BFN::Parser *parser) override {
+        visitedNames.clear();  // each parser is independent and CANNOT share states
+        LOG3("VerifyStateNamessAreUnique for "<< parser->toString() << parser <<
+                " start=" << parser->start->name);
+        return true; }
+
     bool preorder(const IR::BFN::ParserState* state) override {
         cstring name = cstring::to_cstring(state->gress) + state->name;
         BUG_CHECK(visitedNames.count(name) == 0,

@@ -36,10 +36,11 @@ option_t options = {
 #else
     .singlewrite = false,
 #endif
+    .multi_parsers = false,
     .stage_dependency_pattern = "",
     .target = TOFINO,
     .version = CONFIG_OLD,
-    .werror = false
+    .werror = false,
 };
 
 std::string asmfile_name;
@@ -96,6 +97,8 @@ void output_all() {
     ctxtJson["program_name"] = asmfile_name;
     ctxtJson["learn_quanta"] = json::vector();
     ctxtJson["parser"] = json::map();
+    if (options.multi_parsers)
+        ctxtJson["parsers"] = json::map();  // used by multiple parsers support
     ctxtJson["phv_allocation"] = json::vector();
     ctxtJson["tables"] = json::vector();
     ctxtJson["stage_dependency"] = json::vector();
@@ -167,6 +170,8 @@ int main(int ac, char **av) {
             options.binary = ONE_PIPE;
         } else if (!strcmp(av[i], "--singlewrite")) {
             options.singlewrite = true;
+        } else if (!strcmp(av[i], "--multi-parsers")) {
+            options.multi_parsers = true;
         } else if (!strcmp(av[i], "--stage_dependency_pattern")) {
           ++i;
           if (!av[i]) {

@@ -514,7 +514,7 @@ class InsertChecksumError : public PassManager {
             return rv;
         }
 
-        bool preorder(const IR::BFN::TranslatedP4Parser* parser) override {
+        bool preorder(const IR::BFN::TnaParser* parser) override {
             // XXX(zma) verify on ingress only
             if (parser->thread != INGRESS)
                 return false;
@@ -531,7 +531,7 @@ class InsertChecksumError : public PassManager {
     // since this is a special state. Add a dummy state before "accept" if it is
     // a checksum verification end state.
     struct InsertBeforeAccept : public Transform {
-        const IR::Node* preorder(IR::BFN::TranslatedP4Parser* parser) override {
+        const IR::Node* preorder(IR::BFN::TnaParser* parser) override {
             for (auto& kv : self->endStates[parser->name]) {
                 if (kv.second.count("accept")) {
                     auto* newState =
@@ -548,7 +548,7 @@ class InsertChecksumError : public PassManager {
         }
 
         const IR::Node* postorder(IR::PathExpression* path) override {
-            auto parser = findContext<IR::BFN::TranslatedP4Parser>();
+            auto parser = findContext<IR::BFN::TnaParser>();
             auto state = findContext<IR::ParserState>();
             auto select = findContext<IR::SelectCase>();
 
@@ -582,7 +582,7 @@ class InsertChecksumError : public PassManager {
 
     struct InsertEndStates : public Transform {
         const IR::Node* preorder(IR::ParserState* state) override {
-            auto parser = findContext<IR::BFN::TranslatedP4Parser>();
+            auto parser = findContext<IR::BFN::TnaParser>();
 
             if (state->name == "reject")
                 return state;

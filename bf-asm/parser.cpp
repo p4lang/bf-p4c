@@ -8,38 +8,148 @@
 #include "stage.h"
 #include "target.h"
 #include "top_level.h"
+#include "vector.h"
 
 #include "tofino/parser.cpp"    // tofino template specializations
 #if HAVE_JBAY
 #include "jbay/parser.cpp"      // jbay template specializations
 #endif // HAVE_JBAY
 
-Parser Parser::singleton_object;
+class AsmParser : public Section {
+    int                  lineno;
+    std::vector<Parser*> parser[2];  // INGRESS, EGRESS
+    Phv::Ref             ghost_parser;   // the ghost "parser" extracts a single
+                                         // 32-bit value
+    void start(int lineno, VECTOR(value_t) args);
+    void input(VECTOR(value_t) args, value_t data);
+    void process();
+    void output(json::map &);
+    void init_port_use(bitvec& port_use, value_t arg);
+    static AsmParser& get_parser() { return singleton_object; }
+    AsmParser();
+    ~AsmParser() {}
+public:
+    static AsmParser    singleton_object;
+} AsmParser::singleton_object;
 
-Parser::Parser() : Section("parser") {
-    lineno[0] = lineno[1] = 0;
+AsmParser::AsmParser() : Section("parser") {
+}
+
+void AsmParser::init_port_use(bitvec& port_use, value_t arg) {
+    if (arg.type == tVEC) {
+        for (int i = 0; i < arg.vec.size; i++) {
+            init_port_use(port_use, arg[i]); }
+    } else if (arg.type == tRANGE) {
+        if (arg.hi > arg.lo)
+            error(lineno, "port range hi index %d cannot be smaller than "
+                          "lo index %d", arg.hi, arg.lo);
+        port_use.setrange(arg.lo, arg.hi - arg.lo + 1);
+    } else if (arg.type == tINT) {
+        port_use.setbit(arg.i); }
+}
+
+
+void AsmParser::start(int lineno, VECTOR(value_t) args) {
+    if (args.size == 0) {
+        this->lineno = lineno;
+        return; }
+    if (args[0] != "ingress" && args[0] != "egress" && (args[0] != "ghost" || options.target < JBAY))
+        error(lineno, "parser must specify ingress%s or egress",
+              options.target >= JBAY ? ", ghost" : "");
+    if (!this->lineno) this->lineno = lineno;
+}
+
+void AsmParser::input(VECTOR(value_t) args, value_t data) {
+    if (args[0] == "ghost") {
+        ghost_parser = Phv::Ref(GHOST, 0, data);
+        return; }
+    gress_t gress = (args[0] == "egress") ? EGRESS : INGRESS;
+    auto* p = new Parser();
+    p->gress = gress;
+    p->parser_no = parser[gress].size();
+    p->ghost_parser = ghost_parser;
+    parser[gress].push_back(p);
+    if (args.size == 1) {
+        p->port_use.setrange(0, Target::NUM_PARSERS());
+    } else if (args.size == 2) {
+        init_port_use(p->port_use, args[1]); }
+    p->input(args, data);
+}
+
+void AsmParser::process() {
+    for (auto gress : Range(INGRESS, EGRESS)) {
+        for (auto p : parser[gress]) {
+            p->process(); } }
+
+    // sum up parse_merge registers
+    // could be simplified if phv_use is under asm_parser.
+    bitvec phv_use[2];
+    for (auto p : parser[INGRESS]) {
+        phv_use[INGRESS] |= p->phv_use[INGRESS]; }
+    for (auto p : parser[EGRESS]) {
+        p->phv_use[INGRESS] = phv_use[INGRESS]; }
+    for (auto p : parser[EGRESS]) {
+        phv_use[EGRESS] |= p->phv_use[EGRESS]; }
+    for (auto p : parser[INGRESS]) {
+        p->phv_use[EGRESS] = phv_use[EGRESS]; }
+
+    bitvec phv_allow_multi_write;
+    for (auto p : parser[INGRESS]) {
+        phv_allow_multi_write |= p->phv_allow_multi_write; }
+    for (auto p : parser[EGRESS]) {
+        phv_allow_multi_write |= p->phv_allow_multi_write; }
+    for (auto p : parser[INGRESS]) {
+        p->phv_allow_multi_write = phv_allow_multi_write; }
+    for (auto p : parser[EGRESS]) {
+        p->phv_allow_multi_write = phv_allow_multi_write; }
+
+    bitvec phv_init_valid;
+    for (auto p : parser[INGRESS]) {
+        phv_init_valid |= p->phv_init_valid; }
+    for (auto p : parser[EGRESS]) {
+        phv_init_valid |= p->phv_init_valid; }
+    for (auto p : parser[INGRESS]) {
+        p->phv_init_valid = phv_init_valid; }
+    for (auto p : parser[EGRESS]) {
+        p->phv_init_valid = phv_init_valid; }
+}
+
+void AsmParser::output(json::map &ctxt_json) {
+    ctxt_json["parser"]["ingress"] = json::vector();
+    ctxt_json["parser"]["egress"] = json::vector();
+
+    /// XXX(hanw): We cannot change the context.json format
+    /// until 8.7 branch is pulled. As a result, we will
+    /// generate the original context.json format if the
+    /// number of parser is one, and generate the new context.json
+    /// format if the number of parser is more than one.
+    for (auto gress : Range(INGRESS, EGRESS)) {
+        /// remove after 8.7 release
+        if (parser[gress].size() == 1) {
+            parser[gress][0]->output_legacy(ctxt_json);
+        } else {
+            for (auto p : parser[gress]) {
+                p->output(ctxt_json); }
+        }
+    }
+}
+
+Parser::Parser() {
+    lineno = 0;
+    parser_no = 0;
     hdr_len_adj[INGRESS] = 0;
     hdr_len_adj[EGRESS] = 0;
     meta_opt = 0;
 }
+
 Parser::~Parser() {
 }
 
-void Parser::start(int lineno, VECTOR(value_t) args) {
-    if (args.size == 0) {
-        this->lineno[INGRESS] = this->lineno[EGRESS] = lineno;
-        return; }
-    if (args.size != 1 || (args[0] != "ingress" && args[0] != "egress" &&
-                           (args[0] != "ghost" || options.target < JBAY)))
-        error(lineno, "parser must specify ingress%s or egress",
-              options.target >= JBAY ? ", ghost" : "");
-    gress_t gress = args[0] == "egress" ? EGRESS : INGRESS;
-    if (!this->lineno[gress]) this->lineno[gress] = lineno;
-}
+std::map<std::string, std::vector<Parser::State::Match::Clot *>>     Parser::clots[2] = {};
+Alloc1D<std::vector<Parser::State::Match::Clot *>, PARSER_MAX_CLOTS> Parser::clot_use[2] = {};
+unsigned                                                             Parser::max_handle = 0;
+
 void Parser::input(VECTOR(value_t) args, value_t data) {
-    if (args[0] == "ghost") {
-        ghost_parser = Phv::Ref(GHOST, 0, data);
-        return; }
     if (!CHECKTYPE(data, tMAP)) return;
     for (gress_t gress : Range(INGRESS, EGRESS)) {
         if (args.size > 0) {
@@ -200,7 +310,7 @@ void Parser::process() {
             State *start = ::getref(states[gress], "start");
             if (!start) start = ::getref(states[gress], "START");
             if (!start) {
-                error(lineno[gress], "No %sgress parser start state", gress ? "e" : "in");
+                error(lineno, "No %sgress parser start state", gress ? "e" : "in");
                 continue;
             } else for (int i = 0; i < 4; i++) {
                 start_state[gress][i].name = start->name;
@@ -212,11 +322,11 @@ void Parser::process() {
             if (!start_state[gress][i]->can_be_start()) {
                 std::string name = std::string("<start") + char('0'+i) + '>';
                 LOG1("Creating new " << gress << " " << name << " state");
-                auto n = states[gress].emplace(name, State(lineno[gress], name.c_str(), gress,
+                auto n = states[gress].emplace(name, State(lineno, name.c_str(), gress,
                         match_t{ 0, 0 }, VECTOR(pair_t) { 0, 0, 0 }));
                 BUG_CHECK(n.second);
                 State *state = &n.first->second;
-                state->def = new State::Match(lineno[gress], gress, *start_state[gress][i]);
+                state->def = new State::Match(lineno, gress, *start_state[gress][i]);
                 for (int j = 3; j >= i; j--)
                     if (start_state[gress][j] == start_state[gress][i]) {
                         start_state[gress][j].name = name;
@@ -259,24 +369,44 @@ void Parser::process() {
         bitvec tmp = phv_use[INGRESS];
         tmp &= phv_use[EGRESS];
         for (int reg : tmp)
-            error(lineno[0], "Phv register %s(R%d) used by both ingress and egress",
+            error(lineno, "Phv register %s(R%d) used by both ingress and egress",
                   Phv::reg(reg)->name, reg); }
     if (options.match_compiler || 1) {  /* FIXME -- need proper liveness analysis */
         Phv::setuse(INGRESS, phv_use[INGRESS]);
         Phv::setuse(EGRESS, phv_use[EGRESS]); }
 }
 
-void Parser::output(json::map & ctxt_json) {
-    ctxt_json["parser"]["ingress"] = json::vector();
-    ctxt_json["parser"]["egress"] = json::vector();
+// output context.json format with multiple parser support
+void Parser::output(json::map& ctxt_json) {
+    json::vector& cjson = ctxt_json["parsers"][gress ? "egress" : "ingress"];
     if (all.empty()) return;
     for (auto st : all) st->pass2(this);
     if (error_count > 0) return;
     tcam_row_use[INGRESS] = tcam_row_use[EGRESS] = PARSER_TCAM_DEPTH;
     SWITCH_FOREACH_TARGET(options.target,
-        auto *regs = new TARGET::parser_regs;  // allocate more than parser_regs
+        auto *regs = new TARGET::parser_regs;
         declare_registers(regs);
-        write_config(*regs, ctxt_json["parser"]);
+        json::map parser_ctxt_json;
+        unsigned handle = next_handle();
+        LOG3("parser handle: " << handle);
+        parser_ctxt_json["handle"] = handle;
+        write_config(*regs, parser_ctxt_json, false);
+        cjson.push_back(std::move(parser_ctxt_json));
+        gen_configuration_cache(*regs, ctxt_json["configuration_cache"]);
+    )
+}
+
+// output context.json format prior to multiple parser support
+// XXX(hanw): remove after 8.7 release
+void Parser::output_legacy(json::map& ctxt_json) {
+    if (all.empty()) return;
+    for (auto st : all) st->pass2(this);
+    if (error_count > 0) return;
+    tcam_row_use[INGRESS] = tcam_row_use[EGRESS] = PARSER_TCAM_DEPTH;
+    SWITCH_FOREACH_TARGET(options.target,
+        auto *regs = new TARGET::parser_regs;
+        declare_registers(regs);
+        write_config(*regs, ctxt_json["parser"], true);
         gen_configuration_cache(*regs, ctxt_json["configuration_cache"]);
     )
 }
@@ -848,7 +978,7 @@ Parser::State::Match::Match(int l, gress_t gress, match_t m, VECTOR(pair_t) &dat
                 }
             }
         } else if (kv.key.type == tCMD && kv.key == "clot" && kv.key.vec.size == 2) {
-            clots.emplace_back(singleton_object, gress, kv.key.vec[1], kv.value);
+            clots.emplace_back(gress, kv.key.vec[1], kv.value);
         } else if (kv.key.type == tINT) {
             save.emplace_back(gress, kv.key.i, kv.key.i, kv.value);
         } else if (kv.key.type == tRANGE) {
@@ -941,7 +1071,7 @@ bool Parser::State::Match::Clot::parse_length(const value_t &exp, int what) {
     return false;
 }
 
-Parser::State::Match::Clot::Clot(Parser &prsr, gress_t gress, const value_t &tag,
+Parser::State::Match::Clot::Clot(gress_t gress, const value_t &tag,
                                  const value_t &data) : lineno(tag.lineno) {
     if (CHECKTYPE2(tag, tINT, tSTR)) {
         if (tag.type == tINT) {
@@ -950,7 +1080,7 @@ Parser::State::Match::Clot::Clot(Parser &prsr, gress_t gress, const value_t &tag
         } else {
             this->tag = -1;
             name = tag.s; } }
-    prsr.clots[gress][name].push_back(this);
+    Parser::clots[gress][name].push_back(this);
     if (!CHECKTYPE3(data, tINT, tRANGE, tMAP)) return;
     if (data.type == tINT) {
        start = data.i;

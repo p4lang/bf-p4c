@@ -268,7 +268,7 @@ IR::BFN::Deparser::Deparser(gress_t gr, const IR::BFN::Pipe* pipe, const IR::P4C
     dp->apply(GenerateDeparser(pipe, this));
 }
 
-void BFN::ExtractDeparser::postorder(const IR::BFN::TranslatedP4Deparser* deparser) {
+void BFN::ExtractDeparser::postorder(const IR::BFN::TnaDeparser* deparser) {
     gress_t thread = deparser->thread;
     rv->thread[thread].deparser = new IR::BFN::Deparser(thread, rv, deparser);
 }

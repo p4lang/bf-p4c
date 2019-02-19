@@ -359,6 +359,7 @@ class Parser : AbstractParser {
 
     ParserState start;
     optional NullOK Phase0 phase0; // only valid for ingress
+    optional inline std::vector<int> portmap;  // used for multiple parser support
 }
 
 /// A list of fields which will be written into a buffer as part of a deparser

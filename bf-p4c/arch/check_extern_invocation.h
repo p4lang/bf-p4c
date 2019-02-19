@@ -34,8 +34,8 @@ class CheckExternInvocationCommon : public Inspector {
         return false;
     }
 
-    static int genIndex(gress_t gress, ArchBlockType block) {
-        return gress * ArchBlockType::BLOCK_TYPE + block;
+    static int genIndex(gress_t gress, ArchBlock_t block) {
+        return gress * ArchBlock_t::BLOCK_TYPE + block;
     }
 
     bool preorder(const IR::MethodCallExpression *expr) override;

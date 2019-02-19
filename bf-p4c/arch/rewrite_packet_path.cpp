@@ -51,7 +51,7 @@ struct RewriteResubmit : public Transform {
         return type;
     }
 
-    const IR::BFN::TranslatedP4Parser *preorder(IR::BFN::TranslatedP4Parser *parser) override {
+    const IR::BFN::TnaParser *preorder(IR::BFN::TnaParser *parser) override {
         if (parser->thread != INGRESS || parser->name != "ingressParserImpl") {
             prune();
             return parser;
@@ -64,7 +64,7 @@ struct RewriteResubmit : public Transform {
         if (state->name != "__resubmit") return state;
         prune();
 
-        auto *tnaContext = findContext<IR::BFN::TranslatedP4Parser>();
+        auto *tnaContext = findContext<IR::BFN::TnaParser>();
         BUG_CHECK(tnaContext, "resubmit state not within translated parser?");
         BUG_CHECK(tnaContext->thread == INGRESS, "resubmit state not in ingress?");
 
@@ -92,10 +92,10 @@ struct RewriteResubmit : public Transform {
         if (!expr) return node;
         auto pathname = expr->path->name;
 
-        if (auto *parser = findContext<IR::BFN::TranslatedP4Parser>()) {
+        if (auto *parser = findContext<IR::BFN::TnaParser>()) {
             if (parser->thread != INGRESS) {
                 return node; }
-        } else if (auto *control = findContext<IR::BFN::TranslatedP4Deparser>()) {
+        } else if (auto *control = findContext<IR::BFN::TnaDeparser>()) {
             if (control->thread != INGRESS) {
                 return node; }
         } else {
@@ -154,7 +154,7 @@ struct RewriteRecirculate : public Transform {
         if (state->name != "__recirculate") return state;
         prune();
 
-        auto *tnaContext = findContext<IR::BFN::TranslatedP4Parser>();
+        auto *tnaContext = findContext<IR::BFN::TnaParser>();
         BUG_CHECK(tnaContext, "recirculate state not within translated parser?");
         BUG_CHECK(tnaContext->thread == INGRESS, "recirculate state not in ingress?");
 
@@ -177,10 +177,10 @@ struct RewriteRecirculate : public Transform {
     }
 
     const IR::Node* preorder(IR::PathExpression* node) override {
-        if (auto *parser = findContext<IR::BFN::TranslatedP4Parser>()) {
+        if (auto *parser = findContext<IR::BFN::TnaParser>()) {
             if (parser->thread != INGRESS)
                 return node;
-        } else if (auto *control = findContext<IR::BFN::TranslatedP4Deparser>()) {
+        } else if (auto *control = findContext<IR::BFN::TnaDeparser>()) {
             if (control->thread != EGRESS)
                 return node;
         } else {
@@ -195,14 +195,14 @@ struct RewriteRecirculate : public Transform {
         return node;
     }
 
-    const IR::BFN::TranslatedP4Parser* preorder(IR::BFN::TranslatedP4Parser* node) override {
+    const IR::BFN::TnaParser* preorder(IR::BFN::TnaParser* node) override {
         /// only process ingress parser
         if (node->thread != gress_t::INGRESS)
             prune();
         return node;
     }
 
-    const IR::BFN::TranslatedP4Deparser* preorder(IR::BFN::TranslatedP4Deparser* node) override {
+    const IR::BFN::TnaDeparser* preorder(IR::BFN::TnaDeparser* node) override {
         /// only process egress deparser
         if (node->thread != gress_t::EGRESS)
             prune();
@@ -244,7 +244,7 @@ struct RewriteClone : public Transform {
         if (state->name != "__mirrored") return state;
         prune();
 
-        auto *tnaContext = findContext<IR::BFN::TranslatedP4Parser>();
+        auto *tnaContext = findContext<IR::BFN::TnaParser>();
         BUG_CHECK(tnaContext, "clone state not within translated parser?");
         BUG_CHECK(tnaContext->thread == EGRESS, "clone state not in ingress?");
 
@@ -265,14 +265,14 @@ struct RewriteClone : public Transform {
     }
 
     // only process egress parser
-    const IR::BFN::TranslatedP4Parser* preorder(IR::BFN::TranslatedP4Parser* node) override {
+    const IR::BFN::TnaParser* preorder(IR::BFN::TnaParser* node) override {
         if (node->thread != gress_t::EGRESS)
             prune();
         return node;
     }
 
     // do not process control block
-    const IR::BFN::TranslatedP4Control* preorder(IR::BFN::TranslatedP4Control* node) override {
+    const IR::BFN::TnaControl* preorder(IR::BFN::TnaControl* node) override {
         prune();
         return node;
     }

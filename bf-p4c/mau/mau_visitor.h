@@ -1,5 +1,5 @@
-#ifndef _mau_visitor_h_
-#define _mau_visitor_h_
+#ifndef EXTENSIONS_BF_P4C_MAU_MAU_VISITOR_H_
+#define EXTENSIONS_BF_P4C_MAU_MAU_VISITOR_H_
 
 #include "ir/ir.h"
 
@@ -12,8 +12,8 @@ class MauInspector : public Inspector {
     bool preorder(const IR::BFN::AbstractDeparser *) override { return false; }
     /// for traversing midend IR
     bool preorder(const IR::P4Parser *) override { return false; }
-    bool preorder(const IR::BFN::TranslatedP4Parser *) override { return false; }
-    bool preorder(const IR::BFN::TranslatedP4Deparser *) override { return false; }
+    bool preorder(const IR::BFN::TnaParser *) override { return false; }
+    bool preorder(const IR::BFN::TnaDeparser *) override { return false; }
 };
 
 class MauModifier : public Modifier {
@@ -22,8 +22,8 @@ class MauModifier : public Modifier {
     bool preorder(IR::BFN::AbstractDeparser *) override { return false; }
     /// for traversing midend IR
     bool preorder(IR::P4Parser *) override { return false; }
-    bool preorder(IR::BFN::TranslatedP4Parser *) override { return false; }
-    bool preorder(IR::BFN::TranslatedP4Deparser *) override { return false; }
+    bool preorder(IR::BFN::TnaParser *) override { return false; }
+    bool preorder(IR::BFN::TnaDeparser *) override { return false; }
 };
 
 class MauTransform : public Transform {
@@ -32,8 +32,8 @@ class MauTransform : public Transform {
     IR::Node *preorder(IR::BFN::AbstractDeparser *d) override { prune(); return d; }
     /// for traversing midend IR
     IR::Node *preorder(IR::P4Parser *p) override { prune(); return p; }
-    IR::Node *preorder(IR::BFN::TranslatedP4Parser *p) override { prune(); return p; }
-    IR::Node *preorder(IR::BFN::TranslatedP4Deparser *p) override { prune(); return p; }
+    IR::Node *preorder(IR::BFN::TnaParser *p) override { prune(); return p; }
+    IR::Node *preorder(IR::BFN::TnaDeparser *p) override { prune(); return p; }
 };
 
-#endif /* _mau_visitor_h_ */
+#endif /* EXTENSIONS_BF_P4C_MAU_MAU_VISITOR_H_ */

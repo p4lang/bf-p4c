@@ -52,8 +52,13 @@ phv [<thread>]:
             # any keys/vector/values here are converted to json and output into
             # the context.json phv_allocation.records info for field <name>
             # verbatim
-parser [<thread>]:
+parser [<thread>] [<port_use>, ...]:
     # Defines a parser.  <thread> must be 'ingress' or 'egress'
+    # <port_use> can have numerical values, such as range, int, vector of range and int.
+    # <port_use> can also have symbolic values, such as "ALL", "CPU", "PCIE", "UNUSED"
+    # "CPU" and "PCIE" are symbolic names that the corresponding numeric values are device-specific.
+    # "UNUSED" represents the parser program that is not configured to any physical
+    # parser during device initialization, but may be used by driver during runtime.
     start: <name>
     start: '[' <name>, ... ']'
         # define up to 4 distinct initial start states for the four channels

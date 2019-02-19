@@ -504,7 +504,7 @@ namespace BFN {
 /// This function extracts checksum from the translated tofino.p4 checksum extern.
 /// Error checking should be done during the translation, not in this function.
 IR::BFN::Pipe*
-extractChecksumFromDeparser(const IR::BFN::TranslatedP4Deparser* deparser, IR::BFN::Pipe* pipe) {
+extractChecksumFromDeparser(const IR::BFN::TnaDeparser* deparser, IR::BFN::Pipe* pipe) {
     CHECK_NULL(pipe);
 
     if (!deparser) return pipe;
@@ -530,7 +530,9 @@ extractChecksumFromDeparser(const IR::BFN::TranslatedP4Deparser* deparser, IR::B
 
     pipe->thread[gress].mau = pipe->thread[gress].mau->apply(insertChecksumConditions);
     pipe->thread[gress].deparser = pipe->thread[gress].deparser->apply(substituteChecksums);
-    pipe->thread[gress].parser = pipe->thread[gress].parser->apply(substituteChecksumLVal);
+    for (auto& parser : pipe->thread[gress].parsers) {
+        parser = parser->apply(substituteChecksumLVal);
+    }
 
     return pipe;
 }

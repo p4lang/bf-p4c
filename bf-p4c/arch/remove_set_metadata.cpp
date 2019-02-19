@@ -16,7 +16,7 @@ const IR::AssignmentStatement*
 RemoveSetMetadata::preorder(IR::AssignmentStatement* assignment) {
     prune();
 
-    auto* parser = findContext<IR::BFN::TranslatedP4Parser>();
+    auto* parser = findContext<IR::BFN::TnaParser>();
     if (!parser) return assignment;
     if (parser->thread != EGRESS) return assignment;
 

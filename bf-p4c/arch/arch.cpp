@@ -11,9 +11,6 @@ ArchTranslation::ArchTranslation(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
                                  BFN_Options& options) {
     if (options.arch == "v1model") {
         passes.push_back(new BFN::SimpleSwitchTranslation(refMap, typeMap, options /*map*/));
-        if (Device::currentDevice() == Device::JBAY) {
-            passes.push_back(new BFN::PortTNAToJBay(refMap, typeMap, options));
-        }
     } else if (options.arch == "tna") {
         if (Device::currentDevice() == Device::TOFINO) {
             passes.push_back(new BFN::TnaArchTranslation(refMap, typeMap, options));

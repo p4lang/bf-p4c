@@ -34,17 +34,17 @@ class BFN::Pipe {
     Pipe(cstring name) : name(name), id(0) {}
     Pipe(cstring name, int id) : name(name), id(id) {}
     class thread_t {
-        BFN::AbstractParser parser = nullptr;
+        inline Vector<BFN::AbstractParser> parsers = {};
         MAU::TableSeq mau = nullptr;
         BFN::AbstractDeparser deparser = nullptr;
-        operator== { return parser == a.parser && mau == a.mau && deparser == a.deparser; }
+        operator== { return parsers == a.parsers && mau == a.mau && deparser == a.deparser; }
         toJSON {
-            json << json.indent << "\"parser\" : " << parser << "," << std::endl
+            json << json.indent << "\"parser\" : " << parsers << "," << std::endl
                  << json.indent << "\"mau\" : " << mau << "," << std::endl
                  << json.indent << "\"deparser\" : " << deparser; }
         fromJSON {
             IR::BFN::Pipe::thread_t * thread = new IR::BFN::Pipe::thread_t();
-            json.load("parser", thread->parser);
+            json.load("parsers", thread->parsers);
             json.load("mau", thread->mau);
             json.load("deparser", thread->deparser);
             return thread;
@@ -69,14 +69,14 @@ class BFN::Pipe {
             if (th->thread == GHOST) {
                 v.visit(ghost_thread, "ghost_thread");
             } else {
-                v.visit(thread[th->thread].parser, "parser");
+                thread[th->thread].parsers.parallel_visit_children(v);
                 v.visit(thread[th->thread].mau, "mau");
                 v.visit(thread[th->thread].deparser, "deparser"); }
         } else {
             // FIXME -- doesn't do flow_clone/merge properly, but fixing will
             // break ParserGraph (at least) as it doesn't do merge properly
             for (auto &th : thread) {
-                v.visit(th.parser, "parser");
+                th.parsers.parallel_visit_children(v);
                 v.visit(th.mau, "mau");
                 v.visit(th.deparser, "deparser"); }
             v.visit(ghost_thread, "ghost_thread"); } }

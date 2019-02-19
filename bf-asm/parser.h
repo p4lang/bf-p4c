@@ -22,15 +22,9 @@ enum {
     PARSER_MAX_CLOT_LENGTH = 64,
 };
 
-class Parser : public Section {
-    int                                 lineno[2];
-    Parser();
-    ~Parser();
-    void start(int lineno, VECTOR(value_t) args);
-    void input(VECTOR(value_t) args, value_t data);
-    void process();
-    void output(json::map &);
-    template<class REGS> void write_config(REGS &, json::map &);
+class Parser {
+    int                                 lineno;
+    template<class REGS> void write_config(REGS &, json::map &, bool legacy = true);
     static Parser singleton_object;
 
     struct Checksum {
@@ -70,6 +64,7 @@ class Parser : public Section {
         explicit operator bool() const { return lineno >= 0; }
         template<class REGS> void write_config(REGS &);
     };
+ public:
     struct State {
         struct Ref {
             int                         lineno;
@@ -157,7 +152,7 @@ class Parser : public Section {
                 int             start = -1, length = -1, length_shift = -1, length_mask = -1;
                 int             max_length = -1;
                 int             csum_unit = -1;
-                Clot(Parser &prsr, gress_t gress, const value_t &tag, const value_t &data);
+                Clot(gress_t gress, const value_t &tag, const value_t &data);
                 bool parse_length(const value_t &exp, int what=0);
                 template<class PO_ROW> void write_config(PO_ROW &, int) const;
             };
@@ -207,9 +202,19 @@ class Parser : public Section {
         int write_lookup_config(REGS &, Parser *, State *, int, const std::vector<State *> &);
         template<class REGS> void write_config(REGS &, Parser *, json::vector &);
     };
-public:
+ public:
+    Parser();
+    ~Parser();
+    void input(VECTOR(value_t) args, value_t data);
+    void process();
+    void output(json::map &);
+    // XXX(hanw): remove after 8.7 release
+    void output_legacy(json::map &);
+    gress_t                             gress;
     std::map<std::string, State>        states[2];
     std::vector<State *>                all;
+    bitvec                              port_use;
+    int                                 parser_no;  // used to print cfg.json
     bitvec                              state_use[2];
     State::Ref                          start_state[2][4];
     int                                 priority[2][4] = {{0}};
@@ -218,34 +223,45 @@ public:
     int                                 pvs_handle = 512;
     std::map<std::string, int>          pvs_handle_use;
     Phv::Ref                            parser_error[2];
-    Phv::Ref                            ghost_parser;   // the ghost "parser" extracts a single
-                                                        // 32-bit value
+    // the ghost "parser" extracts a single 32-bit value
+    // this information is first extracted in AsmParser and passed to
+    // individual Parser, because currently parse_merge register is programmed
+    // in Parser class.
+    // One possible clean up is to reorganize the gvb
+    Phv::Ref                            ghost_parser;
     std::vector<Phv::Ref>               multi_write, init_zero;
     bitvec                              phv_use[2], phv_allow_multi_write, phv_init_valid;
     int                                 hdr_len_adj[2], meta_opt;
     Alloc1D<Checksum *, PARSER_CHECKSUM_ROWS>                           checksum_use[2];
     Alloc1D<CounterInit *, PARSER_CTRINIT_ROWS>                         counter_init[2];
-    std::map<std::string, std::vector<State::Match::Clot *>>            clots[2];
-    Alloc1D<std::vector<State::Match::Clot *>, PARSER_MAX_CLOTS>        clot_use[2];
+    static std::map<std::string, std::vector<State::Match::Clot *>>     clots[2];
+    static Alloc1D<std::vector<State::Match::Clot *>, PARSER_MAX_CLOTS> clot_use[2];
+    static unsigned                                                     max_handle;
 
     static Parser& get_parser() { return singleton_object; }
     template<class REGS> void gen_configuration_cache(REGS &, json::vector &cfg_cache);
     static int clot_maxlen(gress_t gress, unsigned tag) {
-        auto &vec = singleton_object.clot_use[gress][tag];
+        auto &vec = clot_use[gress][tag];
         return vec.empty() ? -1 : vec[0]->max_length; }
     static int clot_maxlen(gress_t gress, std::string tag) {
-        if (singleton_object.clots[gress].count(tag))
-            return singleton_object.clots[gress].at(tag)[0]->max_length;
+        if (clots[gress].count(tag))
+            return clots[gress].at(tag)[0]->max_length;
         return -1; }
     static int clot_tag(gress_t gress, std::string tag) {
-        if (singleton_object.clots[gress].count(tag))
-            return singleton_object.clots[gress].at(tag)[0]->tag;
+        if (clots[gress].count(tag))
+            return clots[gress].at(tag)[0]->tag;
         return -1; }
 
     static const char* match_key_loc_name(int loc);
     static int match_key_loc(const char* key);
     static int match_key_loc(value_t& key, bool errchk = true);
     static int match_key_size(const char* key);
+
+    static unsigned next_handle() {
+        // unique_table_offset is to support multiple pipe.
+        // assume parser type is 15, table type used 0 - 6
+        return max_handle++ | unique_table_offset << 16 | 15 << 24;
+    }
 
 private:
     template<class REGS> void *setup_phv_output_map(REGS &, gress_t, int);

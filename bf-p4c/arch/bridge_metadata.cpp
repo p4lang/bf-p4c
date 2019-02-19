@@ -99,8 +99,8 @@ struct BridgeIngressToEgress : public Transform {
 
         // We'll inject a field containing the new header into the user metadata
         // struct. Figure out which type that is.
-        forAllMatching<IR::BFN::TranslatedP4Control>(root,
-                      [&](const IR::BFN::TranslatedP4Control* control) {
+        forAllMatching<IR::BFN::TnaControl>(root,
+                      [&](const IR::BFN::TnaControl* control) {
             if (!cgMetadataStructName.isNullOrEmpty()) return;
             auto p4ParamName = control->tnaParams.at(COMPILER_META);
             auto* params = control->type->getApplyParameters();
@@ -145,7 +145,7 @@ struct BridgeIngressToEgress : public Transform {
     }
 
     IR::ParserState* updateIngressMetadataState(IR::ParserState* state) {
-        auto* tnaContext = findContext<IR::BFN::TranslatedP4Parser>();
+        auto* tnaContext = findContext<IR::BFN::TnaParser>();
         BUG_CHECK(tnaContext, "Parser state %1% not within translated parser?",
                   state->name);
         if (tnaContext->thread != INGRESS) return state;
@@ -178,7 +178,7 @@ struct BridgeIngressToEgress : public Transform {
     }
 
     IR::ParserState* updateBridgedMetadataState(IR::ParserState* state) {
-        auto* tnaContext = findContext<IR::BFN::TranslatedP4Parser>();
+        auto* tnaContext = findContext<IR::BFN::TnaParser>();
         BUG_CHECK(tnaContext, "Parser state %1% not within translated parser?",
                   state->name);
         if (tnaContext->thread != EGRESS) return state;
@@ -217,15 +217,15 @@ struct BridgeIngressToEgress : public Transform {
         return state;
     }
 
-    IR::BFN::TranslatedP4Control*
-    preorder(IR::BFN::TranslatedP4Control* control) override {
+    IR::BFN::TnaControl*
+    preorder(IR::BFN::TnaControl* control) override {
         if (control->thread != INGRESS)
             return control;
         return updateIngressControl(control);
     }
 
-    IR::BFN::TranslatedP4Control*
-    updateIngressControl(IR::BFN::TranslatedP4Control* control) {
+    IR::BFN::TnaControl*
+    updateIngressControl(IR::BFN::TnaControl* control) {
         auto cgMetadataParam = control->tnaParams.at(COMPILER_META);
 
         // Inject code to copy all of the bridged fields into the bridged
@@ -255,16 +255,16 @@ struct BridgeIngressToEgress : public Transform {
         return control;
     }
 
-    IR::BFN::TranslatedP4Deparser*
-    preorder(IR::BFN::TranslatedP4Deparser* deparser) override {
+    IR::BFN::TnaDeparser*
+    preorder(IR::BFN::TnaDeparser* deparser) override {
         prune();
         if (deparser->thread != INGRESS)
             return deparser;
         return updateIngressDeparser(deparser);
     }
 
-    IR::BFN::TranslatedP4Deparser*
-    updateIngressDeparser(IR::BFN::TranslatedP4Deparser* control) {
+    IR::BFN::TnaDeparser*
+    updateIngressDeparser(IR::BFN::TnaDeparser* control) {
         // Add "pkt.emit(md.^bridged_metadata);" as the first statement in the
         // ingress deparser.
         auto packetOutParam = control->tnaParams.at("pkt");
@@ -405,7 +405,7 @@ struct PsaBridgeIngressToEgress : public Transform {
     }
 
     IR::ParserState* updateIngressMetadataState(IR::ParserState* state) {
-        auto* tnaContext = findContext<IR::BFN::TranslatedP4Parser>();
+        auto* tnaContext = findContext<IR::BFN::TnaParser>();
         BUG_CHECK(tnaContext, "Parser state %1% not within translated parser?",
                   state->name);
         if (tnaContext->thread != INGRESS) return state;
@@ -438,7 +438,7 @@ struct PsaBridgeIngressToEgress : public Transform {
     }
 
     IR::ParserState* updateBridgedMetadataState(IR::ParserState* state) {
-        auto* tnaContext = findContext<IR::BFN::TranslatedP4Parser>();
+        auto* tnaContext = findContext<IR::BFN::TnaParser>();
         BUG_CHECK(tnaContext, "Parser state %1% not within translated parser?",
                   state->name);
         if (tnaContext->thread != EGRESS) return state;
@@ -459,16 +459,16 @@ struct PsaBridgeIngressToEgress : public Transform {
     }
 
 
-    IR::BFN::TranslatedP4Deparser*
-    preorder(IR::BFN::TranslatedP4Deparser* deparser) override {
+    IR::BFN::TnaDeparser*
+    preorder(IR::BFN::TnaDeparser* deparser) override {
         prune();
         if (deparser->thread != INGRESS)
             return deparser;
         return updateIngressDeparser(deparser);
     }
 
-    IR::BFN::TranslatedP4Deparser*
-    updateIngressDeparser(IR::BFN::TranslatedP4Deparser* control) {
+    IR::BFN::TnaDeparser*
+    updateIngressDeparser(IR::BFN::TnaDeparser* control) {
         // Add "pkt.emit(md.^bridged_metadata);" as the first statement in the
         // ingress deparser.
         auto packetOutParam = control->tnaParams.at("pkt");
@@ -544,7 +544,7 @@ struct FindBridgeMetadataAssignment : public Transform {
     }
 
     IR::Node* postorder(IR::AssignmentStatement* assignment) override {
-        auto ctxt = findOrigCtxt<IR::BFN::TranslatedP4Deparser>();
+        auto ctxt = findOrigCtxt<IR::BFN::TnaDeparser>();
         if (!ctxt) {
             return assignment;
         }
@@ -604,16 +604,16 @@ struct MoveBridgeMetadataAssignment : public Transform {
             IR::IndexedVector<IR::StatOrDecl>* bridgedFieldAssignments)
     : bridgedFieldAssignments(bridgedFieldAssignments) { }
 
-    IR::BFN::TranslatedP4Control*
-    preorder(IR::BFN::TranslatedP4Control* control) override {
+    IR::BFN::TnaControl*
+    preorder(IR::BFN::TnaControl* control) override {
         prune();
         if (control->thread != INGRESS)
             return control;
         return updateIngressControl(control);
     }
 
-    IR::BFN::TranslatedP4Control*
-    updateIngressControl(IR::BFN::TranslatedP4Control* control) {
+    IR::BFN::TnaControl*
+    updateIngressControl(IR::BFN::TnaControl* control) {
         // Inject code to copy all of the bridged fields into the bridged
         // metadata header. This will run at the very end of the ingress
         // control, so it'll get the final values of the fields.
