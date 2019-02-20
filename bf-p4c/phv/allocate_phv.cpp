@@ -521,8 +521,8 @@ bool CoreAllocation::satisfies_constraints(
     for (auto& slice : slices) {
         bool isDeparsedOrMau = uses_i.is_deparsed(slice.field()) ||
             uses_i.is_used_mau(slice.field());
-        bool alwaysPackable = slice.field()->alwaysPackable;
-        if (isDeparsedOrMau && !alwaysPackable)
+        bool overlayablePadding = slice.field()->overlayablePadding;
+        if (isDeparsedOrMau && !overlayablePadding)
             used.push_back(slice); }
     auto NotAdjacent = [](const PHV::AllocSlice& left, const PHV::AllocSlice& right) {
             return left.field() != right.field() ||

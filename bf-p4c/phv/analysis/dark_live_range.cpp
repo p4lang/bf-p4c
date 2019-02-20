@@ -137,8 +137,8 @@ void DarkLiveRange::setFieldLiveMap(const PHV::Field* f) {
 void DarkLiveRange::setPaddingFieldLiveMap(const PHV::Field* f) {
     const int DEPARSER = dg.max_min_stage + 1;
     const int PARSER = dg.max_min_stage + 2;
-    // For padding fields (marked by alwaysPackable), the live range is the deparser (for ingress
-    // fields) and the parser (for egress fields).
+    // For padding fields (marked by overlayablePadding), the live range is the deparser (for
+    // ingress fields) and the parser (for egress fields).
     if (f->gress == INGRESS) {
         livemap[f][DEPARSER] |= LiveRangeReport::READ;
     } else if (f->gress == EGRESS) {
@@ -163,7 +163,7 @@ void DarkLiveRange::end_apply() {
         fieldsConsidered.insert(&f);
     }
     for (const auto* f : fieldsConsidered) {
-        if (f->alwaysPackable)
+        if (f->overlayablePadding)
             setPaddingFieldLiveMap(f);
         else
             setFieldLiveMap(f);

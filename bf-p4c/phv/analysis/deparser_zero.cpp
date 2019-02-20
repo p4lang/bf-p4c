@@ -118,7 +118,7 @@ void IdentifyDeparserZeroCandidates::end_apply() {
     for (auto& f : phv) {
         if (f.isGhostField()) continue;
         if (f.metadata || f.pov) continue;
-        if (f.alwaysPackable) continue;
+        if (f.overlayablePadding) continue;
         if (f.bridged) continue;
         bool pragmaSpecified = pragmaFields.getNotParsedFields().count(&f);
         bool usedInParser = defuse.isUsedInParser(&f);

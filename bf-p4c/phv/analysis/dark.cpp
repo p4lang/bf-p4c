@@ -68,7 +68,7 @@ void MarkDarkCandidates::end_apply() {
             LOG5(ss.str());
             continue; }
 
-        if (f.bridged || f.alwaysPackable) {
+        if (f.bridged || f.overlayablePadding) {
             ss << "    ...encountered bridged/padding/phase0 field.";
             LOG5(ss.str());
             continue; }
@@ -127,7 +127,7 @@ void CollectDarkPrivatizationCandidates::end_apply() {
             LOG5(ss.str());
             continue;
         }
-        if (f.bridged || f.alwaysPackable) {
+        if (f.bridged || f.overlayablePadding) {
             ss << "    ...bridged field detected.";
             LOG5(ss.str());
             continue;

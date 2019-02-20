@@ -61,7 +61,7 @@ class CollectFieldsForPrivatization : public Inspector {
 
     /// @returns true when @f is a field from a packet (not metadata, pov, or bridged field)
     static bool isPacketField(const PHV::Field* f) {
-        return (f && !f->metadata && !f->pov && !f->bridged && !f->alwaysPackable &&
+        return (f && !f->metadata && !f->pov && !f->bridged && !f->overlayablePadding &&
                 f->exact_containers() && f->deparsed());
     }
 

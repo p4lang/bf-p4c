@@ -437,11 +437,11 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
             continue; }
 
         // If the slice list contains a no_pack field, then all the other slices in the list (if
-        // any) must be alwaysPackable
-        if (lastNoPack && !field->alwaysPackable) {
+        // any) must be overlayablePadding
+        if (lastNoPack && !field->overlayablePadding) {
             StartNewSliceList();
             LOG5("Starting new slice list (to isolate a no_pack field): ");
-        } else if (lastWideArith && !field->alwaysPackable) {
+        } else if (lastWideArith && !field->overlayablePadding) {
             StartNewSliceList();
             LOG5("Starting new slice list (to isolate a field used in wide arithmetic): ");
         }

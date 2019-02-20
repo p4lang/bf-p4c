@@ -71,7 +71,7 @@ bool PackConflicts::preorder(const IR::BFN::Digest* digest) {
         for (const auto& f : phv) {
             if (digestField == &f) continue;
             if (digestPackOkay(digestField->id, f.id)) continue;
-            if (f.alwaysPackable || f.isCompilerGeneratedPaddingField()) continue;
+            if (f.overlayablePadding || f.isCompilerGeneratedPaddingField()) continue;
             LOG3("\t  Setting no-pack for digest field " << digestField->name << " and "
                  "non-digest field " << f.name);
             fieldNoPack(digestField->id, f.id) = true; } }

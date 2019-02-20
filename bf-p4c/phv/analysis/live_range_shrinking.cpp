@@ -611,6 +611,25 @@ FindInitializationNode::findInitializationNodes(
             continue;
         }
 
+        // If f is an overlayablePadding field, then it was inserted as padding by the compiler.
+        // Therefore, there could be garbage in these padding fields and no initialization is
+        // needed.
+        if (f->overlayablePadding) {
+            LOG2("\t  No need to initialize padding field: " << f);
+            seenFields.insert(f);
+            lastField = f;
+            initPoints[f] = emptySet;
+            continue;
+        }
+
+        // Fields marked by pa_no_init do not require initialization.
+        if (noInit.count(f)) {
+            LOG2("\t\tField " << f->name << " marked no_init. No initialization required.");
+            initPoints[f] = emptySet;
+            seenFields.insert(f);
+            continue;
+        }
+
         LOG2("\t  Checking if " << f->name << " needs initialization.");
         ordered_map<const PHV::Field*, ordered_set<const IR::BFN::Unit*>> g_units;
         // Check against each field initialized so far in this container.
@@ -668,13 +687,6 @@ FindInitializationNode::findInitializationNodes(
                 return boost::none;
             }
             f_table_uses.insert(u->to<IR::MAU::Table>());
-        }
-
-        if (noInit.count(f)) {
-            LOG2("\t\tField " << f->name << " marked no_init. No initialization required.");
-            initPoints[f] = emptySet;
-            seenFields.insert(f);
-            continue;
         }
 
         // If the strict dominators are all writes, then we can initialize at those nodes directly,

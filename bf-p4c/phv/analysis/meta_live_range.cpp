@@ -198,8 +198,8 @@ void MetadataLiveRange::setFieldLiveMap(const PHV::Field* f) {
 
 void MetadataLiveRange::setPaddingFieldLiveMap(const PHV::Field* f) {
     const int DEPARSER = dg.max_min_stage + 1;
-    // For padding fields (marked by alwaysPackable), the live range is the deparser (for ingress
-    // fields) and the parser (for egress fields).
+    // For padding fields (marked by overlayablePadding), the live range is the deparser (for
+    // ingress fields) and the parser (for egress fields).
     if (f->gress == INGRESS) {
         livemap[f->id] = std::make_pair(DEPARSER, DEPARSER);
     } else if (f->gress == EGRESS) {
@@ -233,8 +233,8 @@ void MetadataLiveRange::end_apply() {
         // Ignore pa_no_overlay fields.
         if (noOverlay.count(&f)) continue;
         // Ignore header fields or fields that do not have associated live range affecting pragmas.
-        if (!f.bridged && !f.metadata && !f.alwaysPackable && !f.privatizable() && !isNotParsed &&
-                !isNotDeparsed && f.is_deparser_zero_candidate()) {
+        if (!f.bridged && !f.metadata && !f.overlayablePadding && !f.privatizable() && !isNotParsed
+            && !isNotDeparsed && f.is_deparser_zero_candidate()) {
             // XXX(Deep): Is there a better way of including these intrinsic metadata fields than by
             // string comparison?
             if (!f.name.startsWith("ingress::ig_intr_md") &&
@@ -249,7 +249,7 @@ void MetadataLiveRange::end_apply() {
         fieldsConsidered.insert(&f);
     }
     for (const auto* f : fieldsConsidered) {
-        if (f->alwaysPackable)
+        if (f->overlayablePadding)
             setPaddingFieldLiveMap(f);
         else
             setFieldLiveMap(f);

@@ -64,7 +64,7 @@ void PhvInfo::add(
     info->metadata = meta;
     info->pov = pov;
     info->bridged = bridged;
-    info->alwaysPackable = pad;
+    info->overlayablePadding = pad;
     by_id.push_back(info);
 }
 
@@ -354,7 +354,7 @@ PhvInfo::get_slices_in_container(const PHV::Container c) const {
 bitvec PhvInfo::bits_allocated(const PHV::Container c) const {
     bitvec ret_bitvec;
     for (auto* field : fields_in_container(c)) {
-        if (field->alwaysPackable) continue;
+        if (field->overlayablePadding) continue;
         field->foreach_alloc([&](const PHV::Field::alloc_slice &alloc) {
             if (alloc.container != c) return;
             le_bitrange bits = alloc.container_bits();
@@ -376,7 +376,7 @@ bitvec PhvInfo::bits_allocated(
             write_slices_in_container.insert(&alloc);
         }); }
     for (auto* field : fields) {
-        if (field->alwaysPackable) continue;
+        if (field->overlayablePadding) continue;
         field->foreach_alloc([&](const PHV::Field::alloc_slice &alloc) {
             if (alloc.container != c) return;
             le_bitrange bits = alloc.container_bits();
@@ -594,7 +594,7 @@ bool PHV::FieldSlice::is_tphv_candidate(const PhvUse& uses) const {
     // Privatized fields are the TPHV copies of header fields. Therefore, privatized fields are
     // always TPHV candidates.
     if (field_i->privatized()) return true;
-    if (field_i->alwaysPackable) return false;  // __pad_ fields are not considered as tphv.
+    if (field_i->overlayablePadding) return false;  // __pad_ fields are not considered as tphv.
     // TODO(zma) derive these rather than hard-coding the name
     std::string f_name(field_i->name.c_str());
     if (f_name.find("compiler_generated_meta") != std::string::npos &&
@@ -1470,7 +1470,7 @@ Visitor::profile_t CollectBridgedExtractedTogetherFields::init_apply(const IR::N
             const auto* f2 = phv_i.field(fName);
             if (!f2) continue;
             // Ignore extracted together for padding fields.
-            if (f1->alwaysPackable || f2->alwaysPackable) continue;
+            if (f1->overlayablePadding || f2->overlayablePadding) continue;
             matrix(f1->id, f2->id) = true;
         }
     }
@@ -1551,7 +1551,7 @@ std::ostream &PHV::operator<<(std::ostream &out, const PHV::Field &field) {
         out << " deparsed";
     if (field.mau_phv_no_pack()) out << " mau_phv_no_pack";
     if (field.no_pack()) out << " no_pack";
-    if (field.alwaysPackable) out << " always_packable";
+    if (field.overlayablePadding) out << " padding";
     if (field.no_split()) {
         out << " no_split";
     } else if (field.no_split_ranges().size() > 0) {

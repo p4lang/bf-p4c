@@ -109,7 +109,7 @@ class Field {
 
     /// True if this Field can always be packed with other fields. Used for padding fields for
     /// bridged metadata.
-    bool            alwaysPackable = false;
+    bool            overlayablePadding = false;
 
     /// A mirror field points to its field list (one of eight)
     struct mirror_field_list_t {
