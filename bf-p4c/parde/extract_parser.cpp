@@ -460,6 +460,20 @@ struct RewriteParserStatements : public Transform {
         return nullptr;
     }
 
+    // check if member is header/payload checksum field itself
+    // (annotated with @header_checksum/@payload_checksum)
+    bool isChecksumField(const IR::Member* member, cstring which) {
+        auto headerRef = member->expr->to<IR::ConcreteHeaderRef>();
+        auto header = headerRef->baseRef();
+        for (auto field : header->type->fields) {
+            if (field->name == member->member) {
+                auto annot = field->annotations->getSingle(which);
+                if (annot) return true;
+            }
+        }
+        return false;
+    }
+
     const IR::Vector<IR::BFN::ParserPrimitive>*
     rewriteChecksumAddOrSubtract(const IR::MethodCallExpression* call) {
         auto* method = call->method->to<IR::Member>();
@@ -487,11 +501,11 @@ struct RewriteParserStatements : public Transform {
         for (auto expr : list) {
             auto member = expr->to<IR::Member>();
             BUG_CHECK(member != nullptr,
-                      "Invalid field in the checksum field calculation list : %1%",
+                      "Invalid field in the checksum calculation : %1%",
                       expr->srcInfo);
             auto hdr = member->expr->to<IR::HeaderRef>();
             BUG_CHECK(hdr != nullptr,
-                      "Invalid field in the checksum field calculation list."
+                      "Invalid field in the checksum calculation."
                       " Expecting a header field : %1%", member->srcInfo);
             auto hdr_type = hdr->type->to<IR::Type_StructLike>();
             BUG_CHECK(hdr_type != nullptr,
@@ -509,14 +523,16 @@ struct RewriteParserStatements : public Transform {
             BUG_CHECK(rval, "Checksum field not extracted?");
 
             if (isAdd) {
-                auto* add = new IR::BFN::ChecksumAdd(declName, rval);
+                bool isChecksum = isChecksumField(member, "header_checksum");
+                auto* add = new IR::BFN::ChecksumAdd(declName, rval, isChecksum);
                 rv->push_back(add);
             } else {
-                auto* subtract = new IR::BFN::ChecksumSubtract(declName, rval);
+                bool isChecksum = isChecksumField(member, "payload_checksum");
+                auto* subtract = new IR::BFN::ChecksumSubtract(declName, rval, isChecksum);
                 rv->push_back(subtract);
             }
 
-            // TODO(zma) checksum field can metadata
+            // TODO(zma) checksum field can be metadata
         }
         return rv;
     }

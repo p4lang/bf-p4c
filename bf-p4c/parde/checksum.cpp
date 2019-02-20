@@ -64,10 +64,9 @@ static bool checksumUpdateSanityCheck(const IR::AssignmentStatement* assignment)
     }
 
     for (auto* source : sourceList->components) {
-        LOG4("Checksum: is field: " << source << " valid for inclusion");
         if (auto* member = source->to<IR::Member>()) {
             if (!member->expr->is<IR::HeaderRef>()) {
-                ::error("Invalid field in the checksum calculation field list: %1%", source);
+                ::error("Invalid field in the checksum calculation: %1%", source);
                 return false;
             }
         } else if (source->is<IR::Constant>()) {
@@ -76,7 +75,7 @@ static bool checksumUpdateSanityCheck(const IR::AssignmentStatement* assignment)
     }
 
     if (sourceList->components.empty()) {
-        ::error("Expected at least on field in the list for checksum calculation: %1%",
+        ::error("Expected at least one field in the checksum calculation: %1%",
                 methodCall);
         return false;
     }
@@ -227,7 +226,7 @@ struct GetChecksumPovBits : public Inspector {
             }
 
             for (auto uc : redundants) {
-                ::warning("Checksum update condition %1% is redundant, ignoring it.", uc);
+                // Checksum update condition is header validity bit
                 csum->updateConditions.erase(uc);
             }
 
