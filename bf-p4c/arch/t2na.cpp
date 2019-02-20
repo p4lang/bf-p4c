@@ -7,6 +7,7 @@
 #include "bf-p4c/arch/fromv1.0/phase0.h"
 #include "bf-p4c/arch/t2na.h"
 #include "bf-p4c/bf-p4c-options.h"
+#include "bf-p4c/midend/type_checker.h"
 
 namespace BFN {
 
@@ -25,7 +26,7 @@ T2naArchTranslation::T2naArchTranslation(P4::ReferenceMap *refMap,
                                          "filters", "idle_timeout", "registers"}),
         new ConvertPhase0(refMap, typeMap),
         new P4::ClearTypeMap(typeMap),
-        new P4::TypeChecking(refMap, typeMap, true),
+        new BFN::TypeChecking(refMap, typeMap, true),
     });
 }
 

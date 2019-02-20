@@ -43,7 +43,8 @@ const IR::Node* DoRewriteFlexibleStruct::preorder(IR::Type_Struct* st) {
         structFields.push_back(field);
     }
 
-    auto retval = new IR::BFN::Type_StructFlexible(st->srcInfo, st->name, structFields);
+    auto retval = new IR::BFN::Type_StructFlexible(st->srcInfo, st->name,
+            st->annotations, structFields);
     LOG6("rewrite flexible struct " << retval);
     return retval;
 }

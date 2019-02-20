@@ -12,7 +12,6 @@
 #include "bf-p4c/device.h"
 #include "bf-p4c/lib/pad_alignment.h"
 #include "bf-p4c/parde/field_packing.h"
-#include "bf-p4c/common/rewrite_flexible_struct.h"
 #include "bf-p4c/midend/type_checker.h"
 
 namespace BFN {
@@ -30,12 +29,9 @@ TnaArchTranslation::TnaArchTranslation(P4::ReferenceMap *refMap,
         new BFN::TypeChecking(refMap, typeMap, true),
         new P4::ValidateTableProperties({"implementation", "size", "counters", "meters",
                                          "filters", "idle_timeout", "registers"}),
-        new BFN::RewriteFlexibleStruct(refMap, typeMap),
-        new P4::ClearTypeMap(typeMap),
-        new BFN::TypeChecking(refMap, typeMap, true),
         new ConvertPhase0(refMap, typeMap),
         new P4::ClearTypeMap(typeMap),
-        new P4::TypeChecking(refMap, typeMap, true),
+        new BFN::TypeChecking(refMap, typeMap, true),
     });
 }
 
