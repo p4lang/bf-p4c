@@ -7,7 +7,6 @@ using namespace DBPrint;
 using namespace IndentCtl;
 
 std::ostream &operator<<(std::ostream &out, const CollectGatewayFields::info_t &info) {
-    out << info.bits << " mask=0x" << info.mask;
     if (info.const_eq) out << " const_eq";
     if (info.need_range) out << " range";
     for (auto &off : info.offsets) out << " " << off.first << ":" << off.second;
@@ -16,16 +15,16 @@ std::ostream &operator<<(std::ostream &out, const CollectGatewayFields::info_t &
 }
 
 std::ostream &operator<<(std::ostream &out, const CollectGatewayFields &gwf) {
-    out << indent;
+    auto flags = dbgetflags(out);
+    out << Brief << indent;
     for (auto &i : gwf.info) {
-        out << endl << i.first->name << i.second;
-        for (auto *x : i.second.xor_with) {
-            out << " xor " << x->name;
-            if (gwf.info.count(x))
-                out << gwf.info.at(x).bits;
-            else
-                out << "<invalid>"; } }
-    out << endl << "bytes=" << gwf.bytes << " bits=" << gwf.bits << unindent;
+        out << endl << i.first << i.second;
+        for (auto x : i.second.xor_with)
+            out << " xor " << x; }
+    if (gwf.bytes || gwf.bits)
+        out << endl << "bytes=" << gwf.bytes << " bits=" << gwf.bits;
+    out << unindent;
+    dbsetflags(out, flags);
     return out;
 }
 

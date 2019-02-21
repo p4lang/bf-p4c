@@ -2031,7 +2031,7 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
             xor_required = true;
         } else if (info.second.need_range) {
             flags |= IXBar::Use::NeedRange;
-            hash_bus_bits += info.first->size;
+            hash_bus_bits += info.first.size();
         }
         cstring aliasSourceName;
         if (collect.info_to_uses.count(&info.second)) {
@@ -2039,10 +2039,10 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
             aliasSourceName = collect.info_to_uses[&info.second];
         }
         if (aliasSourceName)
-            add_use(map_alloc, info.first, phv, aliasSourceName, &info.second.bits, flags,
+            add_use(map_alloc, info.first.field(), phv, aliasSourceName, &info.first.range(), flags,
                     NO_BYTE_TYPE);
         else
-            add_use(map_alloc, info.first, phv, boost::none, &info.second.bits, flags,
+            add_use(map_alloc, info.first.field(), phv, boost::none, &info.first.range(), flags,
                     NO_BYTE_TYPE);
     }
     safe_vector<IXBar::Use::Byte *> xbar_alloced;
@@ -2108,7 +2108,7 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
             for (auto &offset : info.second.offsets) {
                 if (offset.first < 32) continue;
                 offset.first += shift;
-                alloc.bit_use.emplace_back(info.first->name, hash_group, offset.second.lo,
+                alloc.bit_use.emplace_back(info.first.field()->name, hash_group, offset.second.lo,
                                            offset.first - 32, offset.second.size()); } }
         for (auto ht : bitvec(hash_table_input))
             for (int i = 0; i < collect.bits; ++i)

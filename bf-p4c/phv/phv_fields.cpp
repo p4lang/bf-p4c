@@ -1620,6 +1620,10 @@ std::ostream &operator<<(std::ostream &out, const PHV::FieldSlice& fs) {
         out << "-field-slice-of-null-field-ptr-";
         return out; }
 
+    if (DBPrint::dbgetflags(out) & DBPrint::Brief) {
+        out << fs.shortString();
+        return out; }
+
     auto& field = *fs.field();
     out << field.name << "<" << field.size << ">";
     if (fs.alignment())

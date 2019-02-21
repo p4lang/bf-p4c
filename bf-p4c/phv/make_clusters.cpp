@@ -113,11 +113,10 @@ bool Clustering::MakeSlices::preorder(const IR::MAU::Table* tbl) {
         // sets in `equivalences_i` and propagates fine-grained slicing through those fields until
         // we reach a fixed point. Therefore, implementing equivalent slicing for gateway comparison
         // slices is equivalent to adding those equivalent slices to the `equivalences_i` object.
-        auto& info = field_info.second;
-        for (auto* field_b : info.xor_with) {
+        auto &slice1 = field_info.first;
+        auto &info = field_info.second;
+        for (auto &slice2 : info.xor_with) {
             ordered_set<PHV::FieldSlice> equivalence;
-            PHV::FieldSlice slice1 = PHV::FieldSlice(field_info.first, info.bits);
-            PHV::FieldSlice slice2 = PHV::FieldSlice(field_b, info_set.at(field_b).bits);
             equivalence.insert(slice1);
             equivalence.insert(slice2);
             LOG5("\tAdding equivalence for gateway slices: " << slice1 << " and " << slice2);
@@ -263,12 +262,12 @@ bool Clustering::MakeAlignedClusters::preorder(const IR::MAU::Table *tbl) {
     // transitive, start with the first operand and union it with all
     // operands.
     for (auto& field_info : info_set) {
-        auto* field = field_info.first;
+        auto& field = field_info.first;
         auto& info = field_info.second;
-        for (auto *xor_with : info.xor_with) {
+        for (auto xor_with : info.xor_with) {
             // instead of using const_cast, get a mutable pointer from phvInfo.
-            auto* field_a = phv_i.field(field->id);
-            auto* field_b = phv_i.field(xor_with->id);
+            auto* field_a = phv_i.field(field.field()->id);
+            auto* field_b = phv_i.field(xor_with.field()->id);
             auto slices_a = self.slices(field_a, StartLen(0, field_a->size));
             auto slices_b = self.slices(field_b, StartLen(0, field_b->size));
             auto a_it = slices_a.begin();

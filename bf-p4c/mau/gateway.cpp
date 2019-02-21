@@ -523,6 +523,7 @@ const IR::Node *CanonGatewayExpr::postorder(IR::MAU::Table *tbl) {
 
 bool CollectGatewayFields::preorder(const IR::MAU::Table *tbl) {
     unsigned row = 0;
+    BUG_CHECK(info.empty(), "reusing CollectGatewayFields");
     if (tbl->uses_gateway())
         LOG5("CollectGatewayFields for table " << tbl->name);
     for (auto &gw : tbl->gateway_rows) {
@@ -537,14 +538,8 @@ bool CollectGatewayFields::preorder(const IR::Expression *e) {
     le_bitrange bits;
     auto finfo = phv.field(e, &bits);
     if (!finfo) return true;
-    info_t &info = this->info[finfo];
+    info_t &info = this->info[{finfo, bits}];
     const Context *ctxt = nullptr;
-    info.mask.setrange(bits.lo, bits.size());
-    if (info.bits.lo >= 0) {
-        if (bits.lo < info.bits.lo) info.bits.lo = bits.lo;
-        if (bits.hi > info.bits.hi) info.bits.hi = bits.hi;
-    } else {
-        info.bits = bits; }
     if (findContext<IR::RangeMatch>()) {
         info.need_range = need_range = true;
     } else if (auto *rel = findContext<IR::Operation::Relation>(ctxt)) {
@@ -556,23 +551,23 @@ bool CollectGatewayFields::preorder(const IR::Expression *e) {
             else
                 info.const_eq = true;
         } else {
-            xor_match = finfo; }
+            xor_match = PHV::FieldSlice(finfo, bits); }
     } else {
         info.const_eq = true; }
     if (aliasSourceName != boost::none) {
         info_to_uses[&info] = *aliasSourceName;
-        LOG5("Adding entry to info_to_uses: " << &info << " : " << *aliasSourceName);
-    }
+        LOG5("Adding entry to info_to_uses: " << &info << " : " << *aliasSourceName); }
     return false;
 }
 
 void CollectGatewayFields::postorder(const IR::Literal *) {
-    if (xor_match && getParent<IR::Operation::Relation>())
+    if (xor_match.field() && getParent<IR::Operation::Relation>())
         info[xor_match].const_eq = true;
 }
 
 bool CollectGatewayFields::compute_offsets() {
-    LOG5("CollectGatewayFields::compute_offsets");
+    LOG5("CollectGatewayFields::compute_offsets" << DBPrint::Brief);
+    LOG7(*this);
     bytes = bits = 0;
     std::vector<decltype(info)::value_type *> sort_by_size;
     for (auto &field : info) {
@@ -581,49 +576,53 @@ bool CollectGatewayFields::compute_offsets() {
         field.second.xor_offsets.clear(); }
     std::sort(sort_by_size.begin(), sort_by_size.end(),
               [](decltype(info)::value_type *a, decltype(info)::value_type *b) -> bool {
-                  return a->first->size > b->first->size; });
+                  return a->first.size() > b->first.size(); });
     for (auto &i : this->info) {
-        auto *field = i.first;
+        auto &field = i.first;
         auto &info = i.second;
-        for (auto xor_with : info.xor_with) {
+        for (auto &xor_with : info.xor_with) {
             auto &with = this->info[xor_with];
-            xor_with->foreach_byte(with.bits, [&](const PHV::Field::alloc_slice &sl) {
+            int shift = field.range().lo - xor_with.range().lo;
+            xor_with.foreach_byte([&](const PHV::Field::alloc_slice &sl) {
                 with.offsets.emplace_back(bytes*8U + sl.container_bit%8U, sl.field_bits());
                 info.xor_offsets.emplace_back(bytes*8U + sl.container_bit%8U,
-                          sl.field_bits().shiftedByBits(info.bits.lo - with.bits.lo));
-                LOG5("  byte " << bytes << " " << sl << " " << field->name << " xor " <<
-                     xor_with->name);
+                                              sl.field_bits().shiftedByBits(shift));
+                LOG5("  byte " << bytes << " " << field << "(" << info.xor_offsets.back().second <<
+                     ") xor " << xor_with << sl << " (" << with.offsets.back().second << ")");
                 ++bytes;
             }); } }
-    if (bytes > 4) return false;
     for (auto *it : sort_by_size) {
-        const PHV::Field &field = *it->first;
+        const PHV::FieldSlice &field = it->first;
         info_t &info = it->second;
         if (!info.need_range && !info.const_eq) continue;
-        int size = field.container_bytes(info.bits);
+        int size = field.container_bytes();
         if (ixbar) {
             bool done = false;
             for (auto &f : ixbar->bit_use) {
-                if (f.field == field.name && info.bits.overlaps(f.lo, f.hi())) {
-                    auto b = info.bits.unionWith(f.lo, f.hi());
+                if (f.field == field.field()->name && field.range().overlaps(f.lo, f.hi())) {
+                    // FIXME -- if f doesn't cover the field, maybe should be an error? or BUG?
+                    // for now we extend it to cover the field, but maybe that means we're getting
+                    // bits that aren't set properly in the ixbar?
+                    auto b = field.range().unionWith(f.lo, f.hi());
                     info.offsets.emplace_back(f.bit + b.lo - f.lo + 32, b);
-                    LOG5("  bit " << f.bit + b.lo - f.lo + 32 << " " << field.name);
+                    LOG5("  bit " << f.bit + b.lo - f.lo + 32 << " " << field);
                     done = true;
                     if (f.bit + b.hi - f.lo >= bits)
                         bits = f.bit + b.hi - f.lo + 1; } }
             if (done) continue; }
         if ((bytes+size > 4 && size == 1) || info.need_range) {
-            info.offsets.emplace_back(bits + 32, info.bits);
-            LOG5("  bit " << bits + 32 << " " << field.name);
-            bits += info.bits.size();
+            info.offsets.emplace_back(bits + 32, field.range());
+            LOG5("  bit " << bits + 32 << " " << field);
+            bits += field.size();
         } else {
-            field.foreach_byte(info.bits, [&](const PHV::Field::alloc_slice &sl) {
+            field.foreach_byte([&](const PHV::Field::alloc_slice &sl) {
                 info.offsets.emplace_back(bytes*8U + sl.container_bit%8U, sl.field_bits());
-                LOG5("  byte " << bytes << " " << sl << " " << field.name);
+                LOG5(DBPrint::Brief << "  byte " << bytes << " " << field << sl << DBPrint::Reset);
                 if (bytes == 4 && bits == 0) {
                     bits += 8;
                 } else {
                     ++bytes; } }); } }
+    LOG6("CollectGatewayFields::compute_offsets finished" << *this << DBPrint::Reset);
     if (bytes > 4) return false;
     return bits <= 12;
 }
@@ -639,11 +638,11 @@ class GatewayRangeMatch::SetupRanges : public Transform {
     const IR::Expression *postorder(IR::Operation::Relation *rel) override {
         le_bitrange bits;
         auto f = phv.field(rel->left, &bits);
-        if (!f || !rel->right->is<IR::Constant>() || !fields.info.count(f)) return rel;
+        if (!f || !rel->right->is<IR::Constant>() || !fields.info.count({f, bits})) return rel;
         LOG3("SetupRange for " << rel);
         bool forceRange = !(rel->is<IR::Equ>() || rel->is<IR::Neq>());
         bool reverse = (rel->is<IR::Geq>() || rel->is<IR::Neq>());
-        auto info = fields.info.at(f);
+        auto info = fields.info.at({f, bits});
         long val = rel->right->to<IR::Constant>()->asUint64();
         BUG_CHECK(!forceRange || (val & 1), "Non-canonicalized range value");
         int base = 0;
@@ -753,7 +752,7 @@ Visitor::profile_t BuildGatewayMatch::init_apply(const IR::Node *root) {
     } else {
         match.setwidth(32 + fields.bits - shift); }
     range_match.clear();
-    match_field = nullptr;
+    match_field = {};
     andmask = UINT64_MAX;
     ormask = 0;
     return Inspector::init_apply(root);
@@ -765,8 +764,7 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
     if (!field)
         BUG("Unhandled expression in BuildGatewayMatch: %s", e);
     if (!match_field) {
-        match_field = field;
-        match_field_bits = bits;
+        match_field = { field, bits };
         LOG4("  match_field = " << field->name << ' ' << bits);
         if (bits.size() == 1 && !findContext<IR::Operation::Relation>()) {
             auto &match_info = fields.info.at(match_field);
@@ -776,15 +774,15 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
                     match.word1 &= ~(UINT64_C(1) << off.first >> shift);
                 else
                     match.word0 &= ~(UINT64_C(1) << off.first >> shift); }
-            match_field = nullptr; }
+            match_field = {}; }
     } else {
         LOG4("  xor_field = " << field->name << ' ' << bits);
-        size_t size = std::max(bits.size(), match_field_bits.size());
+        size_t size = std::max(static_cast<int>(bits.size()), match_field.size());
         uint64_t mask = (UINT64_C(1) << size) - 1, donemask = 0;
         uint64_t val = cmplmask & mask;
         mask &= andmask & ~ormask;
-        mask <<= match_field_bits.lo;
-        auto &field_info = fields.info.at(field);
+        mask <<= match_field.range().lo;
+        auto &field_info = fields.info.at({field, bits});
         auto &match_info = fields.info.at(match_field);
         LOG4("  match_info = " << match_info << ", mask=0x" << hex(mask) << " shift=" << shift);
         LOG4("  xor_match_info = " << field_info);
@@ -794,8 +792,7 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
             while (it != end && it->first < off.first) ++it;
             if (it == end) break;
             if (off.first < it->first) continue;
-            if (it->first != off.first || it->second.size() != off.second.size() ||
-                it->second.lo - field_info.bits.lo != off.second.lo - match_info.bits.lo) {
+            if (it->first != off.first || it->second.size() != off.second.size()) {
                 BUG("field equality comparison misaligned in gateway"); }
             uint64_t elmask = ((UINT64_C(1) << off.second.size()) - 1) << off.second.lo;
             if ((elmask &= mask) == 0) continue;
@@ -813,7 +810,7 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
         const IR::Expression *tmp;
         BUG_CHECK(mask == donemask, "failed to match all bits of %s",
                   (tmp = findContext<IR::Operation::Relation>()) ? tmp : e);
-        match_field = nullptr; }
+        match_field = {}; }
     return false;
 }
 
@@ -830,13 +827,13 @@ void BuildGatewayMatch::constant(uint64_t c) {
         ormask = c;
         LOG4("  ormask = 0x" << hex(ormask));
     } else if (match_field) {
-        uint64_t mask = (UINT64_C(1) << match_field_bits.size()) - 1;
+        uint64_t mask = (UINT64_C(1) << match_field.size()) - 1;
         uint64_t val = (c ^ cmplmask) & mask;
         if ((val & mask & ~andmask) || (~val & mask & ormask))
             warning("%smasked comparison in gateway can never match", ctxt->node->srcInfo);
         mask &= andmask & ~ormask;
-        mask <<= match_field_bits.lo;
-        val <<= match_field_bits.lo;
+        mask <<= match_field.range().lo;
+        val <<= match_field.range().lo;
         auto &match_info = fields.info.at(match_field);
         LOG4("  match_info = " << match_info << ", val=" << val << " mask=0x" << hex(mask) <<
              " shift=" << shift);
@@ -852,13 +849,13 @@ void BuildGatewayMatch::constant(uint64_t c) {
                 match.word0 &= ~(val >> -shft) | ~(elmask >> -shft);
                 match.word1 &= (val >> -shft) | ~(elmask >> -shft); }
             LOG6("    match now " << match); }
-        match_field = nullptr;
+        match_field = {};
     } else {
         BUG("Invalid context for constant in BuildGatewayMatch"); }
 }
 
 bool BuildGatewayMatch::preorder(const IR::Equ *) {
-    match_field = nullptr;
+    match_field = {};
     andmask = -1;
     ormask = cmplmask = 0;
     return true;
@@ -868,7 +865,7 @@ bool BuildGatewayMatch::preorder(const IR::Neq *neq) {
     if (neq->left->type->width_bits() != 1)
         return preorder(static_cast<const IR::Operation_Relation *>(neq));
     /* we can only handle 1-bit neq here */
-    match_field = nullptr;
+    match_field = {};
     andmask = cmplmask = -1;
     ormask = 0;
     return true;
@@ -879,7 +876,7 @@ bool BuildGatewayMatch::preorder(const IR::RangeMatch *rm) {
     auto field = phv.field(rm->expr, &bits);
     BUG_CHECK(field, "invalid RangeMatch in BuildGatewayMatch");
     int unit = -1;
-    for (auto &alloc : fields.info.at(field).offsets) {
+    for (auto &alloc : fields.info.at({field, bits}).offsets) {
         if (alloc.first < 32 || !alloc.second.overlaps(bits))
             continue;
         unit = (alloc.first + bits.lo - alloc.second.lo - 32) / 4;

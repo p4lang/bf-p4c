@@ -590,7 +590,7 @@ class AbstractField {
     virtual ~AbstractField() {}
     virtual int size() const = 0;
     virtual const PHV::Field* field() const = 0;
-    virtual le_bitrange range() const = 0;
+    virtual const le_bitrange &range() const = 0;
     template<typename T> const T &as() const { return dynamic_cast<const T&>(this); }
     template<typename T> const T *to() const { return dynamic_cast<const T*>(this); }
     template<typename T> bool is() const { return to<T>() != nullptr; }
@@ -609,7 +609,7 @@ class Constant : public AbstractField {
 
     int size() const override { return value->type->width_bits(); }
     const PHV::Field* field() const override { return nullptr; }
-    le_bitrange range() const override { return range_i; }
+    const le_bitrange &range() const override { return range_i; }
     const IR::Constant* value;
 };
 
@@ -636,7 +636,7 @@ class FieldSlice : public AbstractField {
  public:
     FieldSlice() : field_i(nullptr), range_i(StartLen(0, 0)) { }
 
-    explicit FieldSlice(const Field* field, le_bitrange range);
+    FieldSlice(const Field* field, le_bitrange range);
 
     /// Create a slice that holds the entirety of @field.
     explicit FieldSlice(const Field* field)
@@ -647,6 +647,8 @@ class FieldSlice : public AbstractField {
         BUG_CHECK(slice.range().contains(range),
                   "Trying to create field sub-slice larger than the original slice");
     }
+
+    explicit operator bool() const { return field_i != nullptr; }
 
     /// Returns a range of bits in the header that captures the byte aligned offset of this slice
     /// within its header.
@@ -660,7 +662,7 @@ class FieldSlice : public AbstractField {
 
     cstring shortString() const {
         std::stringstream ss;
-        ss << field_i->name << "[" << range_i.lo << ":" << range_i.hi << "]";
+        ss << field_i->name << "[" << range_i.hi << ":" << range_i.lo << "]";
         return ss.str();
     }
 
@@ -710,7 +712,7 @@ class FieldSlice : public AbstractField {
     const PHV::Field* field() const override { return field_i; }
 
     /// @returns the bits of the field included in this field slice.
-    le_bitrange range() const override { return range_i; }
+    const le_bitrange &range() const override { return range_i; }
 
     /// Sets the valid starting bit positions (little Endian) for this field.
     /// For example, setStartBits(PHV::Size::b8, bitvec(0,1)) means that the least
@@ -723,6 +725,10 @@ class FieldSlice : public AbstractField {
 
     /// @returns true if the slice can be allocated to a TPHV container.
     bool is_tphv_candidate(const PhvUse& uses) const;
+
+    // methods that just forward to the underlying PHV::Field method
+    int container_bytes() const { return field_i->container_bytes(range_i); }
+    template<class FN> void foreach_byte(FN fn) const { field_i->foreach_byte(range_i, fn); }
 };
 
 std::ostream &operator<<(std::ostream &out, const Field &);

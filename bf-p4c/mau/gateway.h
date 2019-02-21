@@ -54,26 +54,23 @@ class CollectGatewayFields : public Inspector {
     const PhvInfo       &phv;
     const IXBar::Use    *ixbar = nullptr;
     unsigned            row_limit = ~0U;   // FIXME -- needed?  only use by SplitComplexGateways
-    const PHV::Field   *xor_match = nullptr;    // field on lhs of ==/!= when visiting rhs
+    PHV::FieldSlice     xor_match;
     bool preorder(const IR::MAU::Table *tbl) override;
     bool preorder(const IR::Expression *) override;
     void postorder(const IR::Literal *) override;
-    void postorder(const IR::Operation::Relation *) override {
-        xor_match = nullptr; }
+    void postorder(const IR::Operation::Relation *) override { xor_match = {}; }
 
  public:
     struct info_t {
-        ordered_set<const PHV::Field *> xor_with;       // {x: x ==/!= this field in gateway }
-        le_bitrange             bits = { -1, -1 };      // bitrange covering mask
-        bitvec                  mask;                   // bits read/needed
-        bool                    const_eq = false;       // ==/!= with constant or bool check
-        bool                    need_range = false;     // </>= with constant
+        ordered_set<PHV::FieldSlice>    xor_with;       // {x: x ==/!= this field in gateway }
+        bool                    const_eq = false;       // bits compared ==/!= const
+        bool                    need_range = false;     // bits needed in range compares
         safe_vector<std::pair<int, le_bitrange>> offsets;
         safe_vector<std::pair<int, le_bitrange>> xor_offsets; };
-    ordered_map<const PHV::Field *, info_t>       info;
+    ordered_map<PHV::FieldSlice, info_t>       info;
     ordered_map<const info_t*, cstring>           info_to_uses;
     bool                                          need_range = false;
-    int                                           bytes, bits;
+    int                                           bytes = 0, bits = 0;
     explicit CollectGatewayFields(const PhvInfo &phv, const IXBar::Use *ix = nullptr)
     : phv(phv), ixbar(ix) {}
     CollectGatewayFields(const PhvInfo &phv, unsigned rl) : phv(phv), row_limit(rl) {}
@@ -138,8 +135,7 @@ class BuildGatewayMatch : public Inspector {
     bool preorder(const IR::Neq *) override;
     bool preorder(const IR::RangeMatch *) override;
     friend std::ostream &operator<<(std::ostream &, const BuildGatewayMatch &);
-    const PHV::Field           *match_field;
-    le_bitrange                 match_field_bits;
+    PHV::FieldSlice             match_field;
     uint64_t                    andmask, ormask, cmplmask;
     int                         shift;
 

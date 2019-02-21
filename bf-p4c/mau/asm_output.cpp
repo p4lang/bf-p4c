@@ -888,28 +888,19 @@ void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent,
 
     // Printing out the hash for gateway tables
     for (auto ident : use->bit_use) {
-        // Gateway fields in the hash are continuous bitranges currently, must
-        // match up with the fields
+        // Gateway fields in the hash are continuous bitranges, but may not match up
+        // with the fields.  So we figure out the overlap between each use and each
+        // match field and split them up where they don't match.  Do we really need to
+        // do this?
         Slice range_sl(phv, ident.field, ident.lo, ident.lo + ident.width - 1);
         for (auto sl : match_data) {
-            if (sl.get_field()->name != ident.field)
-                continue;
-            if (range_sl.get_hi() < sl.get_lo() || range_sl.get_lo() > sl.get_hi())
-                continue;
-
-            int extra_start = std::max(0, sl.get_lo() - range_sl.get_lo());
-            auto adapted_sl = sl;
-            if (auto diff = (range_sl.get_lo() - sl.get_lo()) > 0)
-                adapted_sl.shrink_lo(diff);
-            if (auto diff = (sl.get_hi() - range_sl.get_hi()) > 0)
-                adapted_sl.shrink_hi(diff);
-
-
-            out << indent << (40 + ident.bit + extra_start);
-            if (ident.width > 1)
-                out << ".." << (40 + ident.bit + extra_start + adapted_sl.width() - 1);
-            out << ": " << adapted_sl << std:: endl;
-            assert(hash_group == -1 || hash_group == ident.group);
+            auto overlap = range_sl & sl;
+            if (!overlap) continue;
+            int bit = 40 + ident.bit + overlap.get_lo() - range_sl.get_lo();
+            out << indent << bit;
+            if (overlap.width() > 1)
+                out << ".." << (bit + overlap.width() - 1);
+            out << ": " << overlap << std:: endl;
         }
     }
 
@@ -2089,12 +2080,13 @@ void MauAsmOutput::emit_gateway(std::ostream &out, indent_t gw_indent,
         out << gw_indent << "match: {";
         const char *sep = " ";
         for (auto &f : collect.info) {
+            auto *field = f.first.field();
             if (!f.second.xor_offsets.empty())
                 have_xor = true;
             for (auto &offset : f.second.offsets) {
-                f.first->foreach_alloc(offset.second, [&](const PHV::Field::alloc_slice &sl) {
+                field->foreach_alloc(offset.second, [&](const PHV::Field::alloc_slice &sl) {
                     out << sep << (offset.first + (sl.field_bit - offset.second.lo));
-                    out << ": " << Slice(f.first, sl.field_bits());
+                    out << ": " << Slice(field, sl.field_bits());
                     sep = ", ";
                 });
             }
@@ -2104,10 +2096,11 @@ void MauAsmOutput::emit_gateway(std::ostream &out, indent_t gw_indent,
             out << gw_indent << "xor: {";
             sep = " ";
             for (auto &f : collect.info) {
+                auto *field = f.first.field();
                 for (auto &offset : f.second.xor_offsets) {
-                    f.first->foreach_alloc(offset.second, [&](const PHV::Field::alloc_slice &sl) {
+                    field->foreach_alloc(offset.second, [&](const PHV::Field::alloc_slice &sl) {
                         out << sep << (offset.first + (sl.field_bit - offset.second.lo));
-                        out << ": " << Slice(f.first, sl.field_bits());
+                        out << ": " << Slice(field, sl.field_bits());
                         sep = ", ";
                     });
                 }
