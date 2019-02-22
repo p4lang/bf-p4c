@@ -1024,7 +1024,8 @@ void MeterSetup::Scan::find_input(const IR::Primitive *prim) {
     BUG_CHECK(mtr, "%s: Operand in LPF execute is not a meter", prim->srcInfo);
     auto input = prim->operands[input_index];
     auto *field = self.phv.field(input);
-    BUG_CHECK(field, "%s: Not a phv field in the lpf execute: %s", prim->srcInfo, field->name);
+    if (!field)
+        error("%1%: Not a phv field in the lpf execute: %2%", prim->srcInfo, input);
 
     if (self.update_lpfs.count(mtr) == 0) {
         self.update_lpfs[mtr] = input;

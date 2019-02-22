@@ -1601,6 +1601,12 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/mau/test_config_235_funnel_shift.p4
 )
 
+# negative test.
+p4c_add_xfail_reason("tofino"
+  "Not a phv field in the lpf execute: 1"
+  extensions/p4_tests/p4_16/neg_test_1_lpf_constant_param.p4
+)
+
 p4c_add_xfail_reason("tofino"
   "Couldn't resolve computed value for extract in state egress::parse_bridged_md: BFN::Extract"
   extensions/p4_tests/p4_16/serializer3.p4

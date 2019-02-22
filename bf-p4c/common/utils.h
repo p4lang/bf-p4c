@@ -10,7 +10,7 @@ struct DumpPipe : public Inspector {
     explicit DumpPipe(const char *h) : heading(h) {}
 #if BAREFOOT_INTERNAL
     bool preorder(const IR::Node *pipe) override {
-        if (Log::verbose() || LOGGING(1)) {
+        if (LOGGING(1)) {
             if (heading)
                 std::cout << "-------------------------------------------------" << std::endl
                           << heading << std::endl
