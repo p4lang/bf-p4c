@@ -597,13 +597,17 @@ set (P4FACTORY_P4_16_PROGRAMS
   tna_action_selector
   tna_counter
   tna_digest
+  tna_dkm
+  tna_dyn_hashing
   tna_exact_match
   tna_idletimeout
   tna_lpm_match
+  tna_meter_bytecount_adjust
   tna_meter_lpf_wred
   tna_operations
   tna_port_metadata
   tna_port_metadata_extern
+  tna_pvs
   tna_range_match
   tna_register
   tna_ternary_match

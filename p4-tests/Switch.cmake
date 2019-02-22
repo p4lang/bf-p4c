@@ -158,7 +158,17 @@ set_tests_properties("tofino/smoketest_switch_16_IdentityHash" PROPERTIES TIMEOU
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_msdc" ${SWITCH_P4}
     "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc"
-        "l2 l3 acl ^aclfrag ^tunnel mirror ^urpf ^mpls ^mcast ^racl ^warminit ^stp ^dynhash ^switch_tests.MalformedPacketsTest")
+        "l2 l3 acl ^aclfrag ^tunnel mirror ^urpf ^mpls ^mcast ^racl ^warminit ^stp ^dynhash
+        ^switch_tests.MalformedPacketsTest
+        ^switch_tests.L2DynamicMacMoveTest
+        ^switch_tests.L2LNStatsTest
+        ^switch_tests.L2StaticMacMoveBulkTest")
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_msdc_set_1" ${SWITCH_P4}
+    "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_PTF_DIR}")
+bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc_set_1"
+        "switch_tests.L2DynamicMacMoveTest
+        switch_tests.L2LNStatsTest
+        switch_tests.L2StaticMacMoveBulkTest")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_msdc_mirror" ${SWITCH_P4}
         "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_PTF_DIR_MIRROR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc_mirror"
@@ -174,9 +184,12 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc_MalformedPacketsTest"
 
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
 set_tests_properties("tofino/smoketest_switch_msdc" PROPERTIES TIMEOUT 3600)
+set_tests_properties("tofino/smoketest_switch_msdc_set_1" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_msdc_mirror" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_msdc_wred" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_msdc_MalformedPacketsTest" PROPERTIES TIMEOUT 3600)
+
+p4c_add_test_label("tofino" "UNSTABLE" "smoketest_switch_msdc_set_1")
 
 # Switch master DC_BASIC_PROFILE tests
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic" ${SWITCH_P4}
@@ -185,7 +198,20 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic"
         "all ^dynhash ^aclfrag ^queue-stats
         ^switch_tests.MalformedPacketsTest
         ^switch_tests.MalformedPacketsTest_ipv6
-        ^switch_tests.MalformedPacketsTest_tunnel")
+        ^switch_tests.MalformedPacketsTest_tunnel
+        ^switch_tests.L2DynamicMacMoveTest
+        ^switch_tests.L2IPv4InIPv6VxlanUnicastBasicTest
+        ^switch_tests.L2LNStatsTest
+        ^switch_tests.L2StaticMacMoveBulkTest
+        ^switch_tests.L2VxlanToGeneveUnicastBasicTest")
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_set_1" ${SWITCH_P4}
+    "${testExtraArgs} -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR}")
+bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_set_1"
+        "switch_tests.L2DynamicMacMoveTest
+        switch_tests.L2IPv4InIPv6VxlanUnicastBasicTest
+        switch_tests.L2LNStatsTest
+        switch_tests.L2StaticMacMoveBulkTest
+        switch_tests.L2VxlanToGeneveUnicastBasicTest")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_sai_l2" ${SWITCH_P4}
         "${testExtraArgs} -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_SAI}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_sai_l2"
@@ -321,6 +347,7 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_MalformedPacketsTest_t
 
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
 set_tests_properties("tofino/smoketest_switch_dc_basic" PROPERTIES TIMEOUT 3600)
+set_tests_properties("tofino/smoketest_switch_dc_basic_set_1" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_dc_basic_sai_l2" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_dc_basic_sai_l3" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_dc_basic_sai_acl" PROPERTIES TIMEOUT 3600)
@@ -337,19 +364,39 @@ set_tests_properties("tofino/smoketest_switch_dc_basic_MalformedPacketsTest" PRO
 set_tests_properties("tofino/smoketest_switch_dc_basic_MalformedPacketsTest_ipv6" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_dc_basic_MalformedPacketsTest_tunnel" PROPERTIES TIMEOUT 3600)
 
+p4c_add_test_label("tofino" "UNSTABLE" "smoketest_switch_dc_basic_set_1")
+
 # Switch master ENT_DC_GENERAL_PROFILE tests
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_ent_dc_general" ${SWITCH_P4}
         "${testExtraArgs} -DENT_DC_GENERAL_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_ent_dc_general"
         "ent ^dynhash ^aclfrag ^stp
         ^switch_tests.L3IPv4MtuTest
-        ^switch_tests.L2AccessToTrunkPriorityTaggingTest")
+        ^switch_tests.L2AccessToTrunkPriorityTaggingTest
+        ^switch_tests.L2LNStatsTest
+        ^switch_tests.L2DynamicMacMoveTest
+        ^switch_tests.L2StaticMacMoveBulkTest
+        ^switch_tests.L2VxlanUnicastBasicTest
+        ^switch_tests.L3EcmpLagTest
+        ^switch_tests.L3VIIPv4HostMacMoveTest")
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_ent_dc_general_set_1" ${SWITCH_P4}
+    "${testExtraArgs} -DENT_DC_GENERAL_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR}")
+bfn_set_ptf_test_spec("tofino" "smoketest_switch_ent_dc_general_set_1"
+        "switch_tests.L2LNStatsTest
+        switch_tests.L2DynamicMacMoveTest
+        switch_tests.L2StaticMacMoveBulkTest
+        switch_tests.L2VxlanUnicastBasicTest
+        switch_tests.L3EcmpLagTest
+        switch_tests.L3VIIPv4HostMacMoveTest")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_ent_dc_general_egress_acl" ${SWITCH_P4}
         "${testExtraArgs} -DENT_DC_GENERAL_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_EGRESS_ACL}")
 
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
 set_tests_properties("tofino/smoketest_switch_ent_dc_general" PROPERTIES TIMEOUT 3600)
+set_tests_properties("tofino/smoketest_switch_ent_dc_general_set_1" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_ent_dc_general_egress_acl" PROPERTIES TIMEOUT 3600)
+
+p4c_add_test_label("tofino" "UNSTABLE" "smoketest_switch_ent_dc_general_set_1")
 
 # Additional testing (excluded in PRs and CI)
 # Switch Master MSDC_IPV4_PROFILE tests
@@ -831,13 +878,10 @@ p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_msdc_
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_msdc_set_3"
         "switch_tests.L2DynamicLearnAgeTest
         switch_tests.L2DynamicMacLearnTest
-        switch_tests.L2DynamicMacMoveTest
         switch_tests.L2FloodTest
-        switch_tests.L2LNStatsTest
         switch_tests.L2LagTest
         switch_tests.L2MacLearnTest
         switch_tests.L2StaticMacBulkDeleteTest
-        switch_tests.L2StaticMacMoveBulkTest
         switch_tests.L2StaticMacMoveTest")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_msdc_set_4" ${SWITCH_${SWITCH_VERSION}_P4}
     "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR}")
@@ -886,6 +930,12 @@ p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_msdc_
     "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_msdc_MalformedPacketsTest"
         "switch_tests.MalformedPacketsTest")
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_msdc_set_8" ${SWITCH_${SWITCH_VERSION}_P4}
+    "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR}")
+bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_msdc_set_8"
+        "switch_tests.L2DynamicMacMoveTest
+        switch_tests.L2LNStatsTest
+        switch_tests.L2StaticMacMoveBulkTest")
 
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
 set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_msdc" PROPERTIES TIMEOUT 3600)
@@ -896,7 +946,10 @@ set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_msdc_set_4" PROP
 set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_msdc_set_5" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_msdc_set_6" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_msdc_set_7" PROPERTIES TIMEOUT 3600)
+set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_msdc_set_8" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_msdc_MalformedPacketsTest" PROPERTIES TIMEOUT 3600)
+
+p4c_add_test_label("tofino" "UNSTABLE" "smoketest_switch_${SWITCH_VERSION}_msdc_set_8")
 
 # Switch Rel 8.7 ENT_DC_GENERAL_PROFILE tests
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_ent_dc_general" ${SWITCH_${SWITCH_VERSION}_P4}
@@ -922,18 +975,15 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_ent_dc_genera
         switch_tests.L2AgingTest
         switch_tests.L2DynamicLearnAgeTest
         switch_tests.L2DynamicMacLearnTest
-        switch_tests.L2DynamicMacMoveTest
         switch_tests.L2FloodTest")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_ent_dc_general_set_3" ${SWITCH_${SWITCH_VERSION}_P4}
     "${testExtraArgs} -DENT_DC_GENERAL_PROFILE -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_ent_dc_general_set_3"
-        "switch_tests.L2LNStatsTest
-        switch_tests.L2LNSubIntfEncapTest
+        "switch_tests.L2LNSubIntfEncapTest
         switch_tests.L2LagFloodTest
         switch_tests.L2LagTest
         switch_tests.L2MacLearnTest
         switch_tests.L2StaticMacBulkDeleteTest
-        switch_tests.L2StaticMacMoveBulkTest
         switch_tests.L2StaticMacMoveTest")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_ent_dc_general_set_4" ${SWITCH_${SWITCH_VERSION}_P4}
     "${testExtraArgs} -DENT_DC_GENERAL_PROFILE -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR}")
@@ -944,7 +994,6 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_ent_dc_genera
         switch_tests.L2VxlanArpUnicastBasicTest
         switch_tests.L2VxlanFloodBasicTest
         switch_tests.L2VxlanLearnBasicTest
-        switch_tests.L2VxlanUnicastBasicTest
         switch_tests.L2VxlanUnicastLagBasicTest
         switch_tests.L3IPv4EcmpTest")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_ent_dc_general_set_5" ${SWITCH_${SWITCH_VERSION}_P4}
@@ -967,7 +1016,6 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_ent_dc_genera
         switch_tests.L3IPv6LpmTest
         switch_tests.L3VIFloodTest
         switch_tests.L3VIIPv4HostFloodTest
-        switch_tests.L3VIIPv4HostMacMoveTest
         switch_tests.L3VIIPv4HostTest
         switch_tests.L3VIIPv4HostVlanTaggingTest")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_ent_dc_general_set_7" ${SWITCH_${SWITCH_VERSION}_P4}
@@ -977,7 +1025,6 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_ent_dc_genera
         switch_tests.L3VIIPv6HostTest
         switch_tunnel.L3VxlanUnicastTunnelECMPLagReflectionSMTest
         switch_tunnel.L3VxlanUnicastTunnelSMSVITest
-        switch_tests.L3EcmpLagTest
         switch_tests.L3IPv4LpmEcmpTest
         switch_tests.L3IPv6LpmEcmpTest")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_ent_dc_general_set_8" ${SWITCH_${SWITCH_VERSION}_P4}
@@ -985,6 +1032,16 @@ p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_ent_d
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_ent_dc_general_set_8"
         "switch_api_tests.IPEgressAclRangeTcamTest
         switch_api_tests.IPEgressAclTest")
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_ent_dc_general_set_9" ${SWITCH_${SWITCH_VERSION}_P4}
+    "${testExtraArgs} -DENT_DC_GENERAL_PROFILE -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR}")
+bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_ent_dc_general_set_9"
+        "switch_tests.L2LNStatsTest
+        switch_tests.L2DynamicMacMoveTest
+        switch_tests.L2StaticMacMoveBulkTest
+        switch_tests.L2VxlanUnicastBasicTest
+        switch_tests.L3EcmpLagTest
+        switch_tests.L3VIIPv4HostMacMoveTest")
+
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
 set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_ent_dc_general" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_ent_dc_general_set_1" PROPERTIES TIMEOUT 3600)
@@ -995,6 +1052,9 @@ set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_ent_dc_general_s
 set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_ent_dc_general_set_6" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_ent_dc_general_set_7" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_ent_dc_general_set_8" PROPERTIES TIMEOUT 3600)
+set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_ent_dc_general_set_9" PROPERTIES TIMEOUT 3600)
+
+p4c_add_test_label("tofino" "UNSTABLE" "smoketest_switch_${SWITCH_VERSION}_ent_dc_general_set_9")
 
 # Switch Rel 8.7 MSDC_L3_PROFILE_BRIG tests
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_l3_msdc" ${SWITCH_${SWITCH_VERSION}_P4}
@@ -1157,15 +1217,12 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_dc_basic_set_
         switch_tests.L2AgingTest
         switch_tests.L2DynamicLearnAgeTest
         switch_tests.L2DynamicMacLearnTest
-        switch_tests.L2DynamicMacMoveTest
         switch_tests.L2FloodTest")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_dc_basic_set_6" ${SWITCH_${SWITCH_VERSION}_P4}
     "${testExtraArgs} -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_dc_basic_set_6"
         "switch_tests.L2GeneveUnicastBasicTest
         switch_tests.L2GeneveUnicastLagBasicTest
-        switch_tests.L2IPv4InIPv6VxlanUnicastBasicTest
-        switch_tests.L2LNStatsTest
         switch_tests.L2LNSubIntfEncapTest
         switch_tests.L2LagFloodTest
         switch_tests.L2LagTest
@@ -1179,7 +1236,6 @@ p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_dc_ba
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_dc_basic_set_7"
         "switch_tests.L2NvgreUnicastLagBasicTest
         switch_tests.L2StaticMacBulkDeleteTest
-        switch_tests.L2StaticMacMoveBulkTest
         switch_tests.L2StaticMacMoveTest
         switch_tests.L2StpEgressBlockingTest
         switch_tests.L2StpTest
@@ -1195,7 +1251,6 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_dc_basic_set_
         switch_tests.L2VxlanArpUnicastBasicTest
         switch_tests.L2VxlanFloodBasicTest
         switch_tests.L2VxlanLearnBasicTest
-        switch_tests.L2VxlanToGeneveUnicastBasicTest
         switch_tests.L2VxlanToGeneveUnicastEnhancedTest
         switch_tests.L2VxlanToGeneveUnicastLagBasicTest
         switch_tests.L2VxlanToGeneveUnicastLagEnhancedTest
@@ -1256,8 +1311,15 @@ p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_dc_ba
     "${testExtraArgs} -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_dc_basic_MalformedPacketsTest_tunnel"
         "switch_tests.MalformedPacketsTest_tunnel")
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_dc_basic_set_12" ${SWITCH_${SWITCH_VERSION}_P4}
+    "${testExtraArgs} -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR}")
+bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_dc_basic_set_12"
+        "switch_tests.L2DynamicMacMoveTest
+        switch_tests.L2IPv4InIPv6VxlanUnicastBasicTest
+        switch_tests.L2LNStatsTest
+        switch_tests.L2StaticMacMoveBulkTest
+        switch_tests.L2VxlanToGeneveUnicastBasicTest")
 
-# 500s timeout is too little for compiling and testing the entire switch, bumping it up
 set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_dc_basic" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_dc_basic_set_1" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_dc_basic_set_2" PROPERTIES TIMEOUT 3600)
@@ -1270,9 +1332,12 @@ set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_dc_basic_set_8" 
 set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_dc_basic_set_9" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_dc_basic_set_10" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_dc_basic_set_11" PROPERTIES TIMEOUT 3600)
+set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_dc_basic_set_12" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_dc_basic_MalformedPacketsTest" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_dc_basic_MalformedPacketsTest_ipv6" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_dc_basic_MalformedPacketsTest_tunnel" PROPERTIES TIMEOUT 3600)
+
+p4c_add_test_label("tofino" "UNSTABLE" "smoketest_switch_${SWITCH_VERSION}_dc_basic_set_12")
 
 # Switch Rel 8.7 MSDC_SPINE_DTEL_INT_PROFILE tests
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int" ${SWITCH_${SWITCH_VERSION}_P4}

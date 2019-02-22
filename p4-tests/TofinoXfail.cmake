@@ -586,6 +586,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/05-FullTPHV.p4
   testdata/p4_14_samples/06-FullTPHV1.p4
   testdata/p4_14_samples/08-FullTPHV3.p4
+  testdata/p4_16_samples/issue1713-bmv2.p4
   extensions/p4_tests/p4_14/04-FullPHV3.p4
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-815/int_heavy.p4
@@ -1146,12 +1147,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4c-1451.p4
 )
 
-# Need to debug the issue: xfail for now
-p4c_add_xfail_reason("tofino"
-  "ValueError: Unknown field .*"
-  p4_16_programs_tna_meter_lpf_wred
-)
-
 # Glass test suite bugs
 
 # P4C-1368
@@ -1366,6 +1361,7 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/mau/COMPILER-628/case3431.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-630/case3431b.p4
   extensions/p4_tests/p4_14/p4smith_regression/clue_0.p4
+  testdata/p4_16_samples/issue983-bmv2.p4
   )
 
 # Valid XFAIL
@@ -1549,11 +1545,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
    "PHV allocation creates a container action impossible within a Tofino ALU"
   ../glass/testsuite/p4_tests/phv/COMPILER-706/terminate_parsing.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "IR structure not yet handled by the ActionAnalysis pass"
-  extensions/p4_tests/p4_16/test_config_4_cast_add.p4
+  extensions/p4_tests/p4_16/p4c-1494.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1612,4 +1604,10 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Couldn't resolve computed value for extract in state egress::parse_bridged_md: BFN::Extract"
   extensions/p4_tests/p4_16/serializer3.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Expected parser block"
+  extensions/p4_tests/p4_16/test_config_3_unused_parsers.p4
+  extensions/p4_tests/p4_16/test_config_2_multiple_parsers.p4
 )

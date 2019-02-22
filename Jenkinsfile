@@ -102,7 +102,7 @@ node ('compiler-svr1 || master') {
             ansiColor('xterm') {
                 timestamps {
                     sh "echo 'Running switch PD tests for MSDC_PROFILE_BRIG'"
-                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*smoketest_switch_8.7_msdc'"
+                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*smoketest_switch_8.7_msdc' -LE 'UNSTABLE'"
 
                     sh "echo 'Running bf-switch bfrt tests for Tofino'"
                     sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*smoketest_switch_16'"
@@ -116,7 +116,7 @@ node ('compiler-svr1 || master') {
             ansiColor('xterm') {
                 timestamps {
                     sh "echo 'Running switch PD tests for DC_BASIC_PROFILE_BRIG'"
-                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*smoketest_switch_8.7_dc_basic'"
+                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*smoketest_switch_8.7_dc_basic' -LE 'UNSTABLE'"
                 }
             }
         },
@@ -124,7 +124,7 @@ node ('compiler-svr1 || master') {
             ansiColor('xterm') {
                 timestamps {
                     sh "echo 'Running switch PD tests for ENT_DC_GENERAL_PROFILE_BRIG'"
-                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*smoketest_switch_8.7_ent_dc_general'"
+                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*smoketest_switch_8.7_ent_dc_general' -LE 'UNSTABLE'"
                     sh "echo 'Running basic_ipv4 tests'"
                     sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R 'smoketest_programs_basic_ipv4'"
                 }

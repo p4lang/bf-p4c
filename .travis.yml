@@ -22,7 +22,7 @@ env:
     - DOCKERFILE="docker/Dockerfile.tofino"
     - secure: "jE3hbAEwkQZCH/3BsGBHCTPi4r72Lhum1cEw3sC/87BHLCz3C6txsZuFUKopj+/cAS/HPITSjFagkb0L3cYhXNwt5jT8Imu+TMdmClX4w9uOxbk98ecEHl0Gou9sEm0DDk6yHuzneLaLfaQDZayIA/48LvkYxSVbBMDSkEyQfD5UjAYCRxN8r+rucazeG5m7875p7sXAd1QkeFg8svL0KdQJBjn82e6oFxPNQvG9aXu5YaIvJ8vB2jrwa1a8IKg4KKJbI/Mj3+5qdbe+U8+4Jm36IpMROAe9Fyt2eiGFgPe+Cvp6ZNkh/vYFt7V+EW0rpuK5N6K5sEYL34/sMLLHbaSjFawpskR337PUACdP5NgWLNb/wmZC1V7gRYBbtOEZVJlQFCTTeN1ik7ziCdLC5kEUPHIWHN3U5EhQQ/RkAaM4+MXohx3top1pP8HIcD0r434F90alICYGPBRstkgmWKO9/9qR0JJ5KAzRgbS3Xp6fWifodlYGjnCIpZd7/L5hJPENu5y3vAJgsiqn3yLIvPER9QXY858Io0GhJ3/Q0oIr4qF+sOWvUUWRrLHFO7TDL6q/BiZ45vdEBQoukqzXN4me/E/CbP4Vv3fpcmu3COe/R/v44zkh1d8ZzbgABgbi1v9HjW5PadwNP8HDABjerL0pwLCxOGWqlYgvWTotU2g="
     - TOFINO_TESTS_1="^tofino/"
-    - TOFINO_EXCLUDE_1="smoketest|/programs|p4testgen|tofino/switch_|c2_COMPILER|c2/COMPILER|p4_16|COMPILER-726"
+    - TOFINO_EXCLUDE_1="smoketest|/programs|p4testgen|tofino/switch_|c2_COMPILER|c2/COMPILER|p4_16_programs|COMPILER-726"
     - TOFINO_TESTS_2="^tofino/.*programs"
     - TOFINO_EXCLUDE_2="TestRealData|_basic_ipv4|_stful|_meters|_hash_driven|_dkm|_exm_smoke_test|_exm_direct_|_exm_direct_1_|p4_16_programs_tna_ternary_match|p4_16_programs_tna_exact_match|p4_16_programs_tna_lpm_match|p4_16_programs_tna_meter_lpf_wred|p4_16_programs_tna_range_match|p4_16_programs_tna_port_metadata"
     - JBAY_TESTS="^tofino2|cpplint|gtest|test_p4c_driver"

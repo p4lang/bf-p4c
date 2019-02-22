@@ -81,6 +81,11 @@ set (BFN_EXCLUDE_PATTERNS "tofino\\.p4")
 set (BFN_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/emulation/*.p4"
                "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/atomic_mod/*.p4"
                "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/basic_switching/*.p4"
+               "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/chksum/*.p4"
+               "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/deparse_zero/*.p4"
+               "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/ha/*.p4"
+               "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/parse_error/*.p4"
+               "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/pcie_pkt_test/*.p4"
                "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/resubmit/*.p4"
                "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/multicast_test/*.p4"
                "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/mirror_test/*.p4"
@@ -94,6 +99,11 @@ bfn_set_ptf_ports_json_file("tofino2" "extensions/p4_tests/p4_14/p4-tests/progra
                             "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/ptf-tests/fast_reconfig/ports.json")
 bfn_set_ptf_ports_json_file("tofino2" "extensions/p4_tests/p4_14/p4-tests/programs/mirror_test/mirror_test.p4"
                             "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/ptf-tests/mirror_test/ports.json")
+bfn_set_ptf_ports_json_file("tofino2" "extensions/p4_tests/p4_14/p4-tests/programs/ha/ha.p4"
+                            "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/ptf-tests/ha/ports.json")
+
+bfn_set_pd_build_flag("tofino2" "extensions/p4_tests/p4_14/p4-tests/programs/ha/ha.p4"
+    "\"--gen-hitless-ha-test-pd\"")
 
 file(RELATIVE_PATH tofino32q-3pipe_path ${P4C_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/tofino32q-3pipe/sfc.p4)
 p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
@@ -106,13 +116,17 @@ set (P4FACTORY_P4_16_PROGRAMS
   tna_action_selector
   tna_counter
   tna_digest
+  tna_dkm
+  tna_dyn_hashing
   tna_exact_match
   tna_idletimeout
   tna_lpm_match
+  tna_meter_bytecount_adjust
   tna_meter_lpf_wred
   tna_operations
   tna_port_metadata
   tna_port_metadata_extern
+  tna_pvs
   tna_range_match
   tna_register
   tna_ternary_match
