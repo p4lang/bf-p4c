@@ -457,9 +457,6 @@ bool CreateSaluInstruction::preorder(const IR::Slice *sl) {
             error("%s%s index output can only write to bottom %d bits of output", sl->srcInfo,
                   minmax_instr->name, 4 - minmax_width);
     } else {
-        if (!checkSlice(sl, salu->alu_width()))
-            error("%scan only read %d-bit slices in %s ALU", sl->srcInfo,
-                  salu->alu_width(), reg_action->toString());
         keep_slice = true; }
     visit(sl->e0, "e0");
     if (keep_slice) {
