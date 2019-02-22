@@ -873,7 +873,29 @@ const IR::MAU::Action* AddInitialization::postorder(IR::MAU::Action* act) {
     auto* act_orig = getOriginal<IR::MAU::Action>();
     auto fieldsToBeInited = fieldsForInit.getInitsForAction(act_orig);
     if (fieldsToBeInited.size() == 0) return act;
-    for (auto slice : fieldsToBeInited) {
+    // Deduplicate slices here. If they are allocated to the same container (as in the case of
+    // deparsed-zero slices), then we only add one initialization to the action.
+    ordered_map<PHV::Container, ordered_set<le_bitrange>> allocatedContainerBits;
+    std::vector<MapFieldToExpr::AllocSlice> dedupFieldsToBeInitialized;
+    for (auto& slice : fieldsToBeInited) {
+        if (!allocatedContainerBits.count(slice.container)) {
+            allocatedContainerBits[slice.container].insert(slice.container_bits());
+            dedupFieldsToBeInitialized.push_back(slice);
+            continue;
+        }
+        bool addInit = true;
+        for (auto bits : allocatedContainerBits.at(slice.container)) {
+            if (bits.contains(slice.container_bits()))
+                addInit = false;
+        }
+        if (!addInit) {
+            LOG2("\t\tSlice " << slice << " does not need to be initialized because another "
+                 "overlayed slice in the same container is also initialized in this action.");
+            continue;
+        }
+        dedupFieldsToBeInitialized.push_back(slice);
+    }
+    for (auto slice : dedupFieldsToBeInitialized) {
         auto* prim = fieldToExpr.generateInitInstruction(slice);
         if (!prim) {
             ::warning("Cannot add initialization for slice");

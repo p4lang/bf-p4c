@@ -227,12 +227,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "instruction slot .* used multiple times in action .*"
-  switch_8.7_msdc_spine_int
-  switch_msdc_spine_int
-)
-
-p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   switch_8.7_msdc_ipv4
 )

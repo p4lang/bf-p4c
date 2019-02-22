@@ -232,17 +232,6 @@ void MetadataLiveRange::end_apply() {
         if (noInitIntrinsicFields.count(f.name)) continue;
         // Ignore pa_no_overlay fields.
         if (noOverlay.count(&f)) continue;
-        // Ignore header fields or fields that do not have associated live range affecting pragmas.
-        if (!f.bridged && !f.metadata && !f.overlayablePadding && !f.privatizable() && !isNotParsed
-            && !isNotDeparsed && f.is_deparser_zero_candidate()) {
-            // XXX(Deep): Is there a better way of including these intrinsic metadata fields than by
-            // string comparison?
-            if (!f.name.startsWith("ingress::ig_intr_md") &&
-                    !f.name.startsWith("egress::eg_intr_md")) {
-                LOG1("Ignoring field " << f);
-                continue;
-            }
-        }
         // Ignore unreferenced fields because they are not allocated anyway.
         if (!uses.is_referenced(&f))
             continue;
