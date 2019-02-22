@@ -14,6 +14,7 @@ fi
 
 context=false
 resources=false
+phv=false
 while [[ $# -gt 0 ]] ; do
     if [ ! -z $1 ]; then
         case $1 in
@@ -27,6 +28,10 @@ while [[ $# -gt 0 ]] ; do
                 ;;
             -r|--resources)
                 resources=$2
+                shift; shift;
+                ;;
+            -p|--phv)
+                phv=$2
                 shift; shift;
                 ;;
             *)
@@ -51,7 +56,13 @@ if [ $resources != false ]; then
     rcr=$?
 fi
 
-if [ $rcc != 0 ] || [ $rcr != 0 ]; then
+rcp=0
+if [ $phv != false ]; then
+    $scripts_dir/validate_phv_json $phv
+    rcp=$?
+fi
+
+if [ $rcc != 0 ] || [ $rcr != 0 ] || [ $rcp != 0 ]; then
     exit 1
 fi
 

@@ -513,6 +513,10 @@ class BarefootBackend(BackendDriver):
                     self.add_command_option('verifier', "-c {}".format(pipe['context']))
                     if pipe.get('resources', False):
                         self.add_command_option('verifier', "-r {}".format(pipe['resources']))
+                        # need to add phv.json to the set of resources in the manifest!!
+                        # For now, since it is always generated, we piggyback on context.
+                        phvJson=pipe['context'].replace('context', 'phv')
+                        self.add_command_option('verifier', "-p {}".format(phvJson))
                     self.checkAndRunCmd('verifier')
                 unique_table_offset += 1
 
@@ -523,6 +527,7 @@ class BarefootBackend(BackendDriver):
                             if pipe.get('resources', False):
                                 self.add_command_option('summary_logging', "-r {}".format(pipe['resources']))
                             self.add_command_option('summary_logging', "-o {}".format(pipe['pipe_dir']))
+                            self.add_command_option('summary_logging', "--disable-phv-json")
                             self.checkAndRunCmd('summary_logging')
                         except:
                             pass

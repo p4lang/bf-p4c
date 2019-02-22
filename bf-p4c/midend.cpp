@@ -49,6 +49,7 @@
 #include "bf-p4c/midend/type_checker.h"
 #include "bf-p4c/midend/unroll_parser_counter.h"
 #include "bf-p4c/common/rewrite_flexible_struct.h"
+#include "bf-p4c/ir/tofino_write_context.h"
 
 namespace BFN {
 

@@ -16,6 +16,7 @@
 #include "bf-p4c/common/parser_overlay.h"
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/logging/filelog.h"
+#include "bf-p4c/logging/phv_logging.h"
 #include "bf-p4c/mau/attached_output.h"
 #include "bf-p4c/mau/characterize_power.h"
 #include "bf-p4c/mau/empty_controls.h"
@@ -155,6 +156,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
     bridged_fields(phv),
     table_alloc(phv.parser_mutex()),
     table_summary(pipe_id, deps) {
+    phvLoggingInfo = new CollectPhvLoggingInfo(phv);
     addPasses({
         new DumpPipe("Initial table graph"),
         new CreateThreadLocalInstances,
@@ -166,9 +168,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new CollectHeaderStackInfo,  // Needed by CollectPhvInfo.
         new CollectPhvInfo(phv),
         &defuse,
-#if HAVE_JBAY
         Device::currentDevice() == Device::JBAY ? new AddJBayMetadataPOV(phv) : nullptr,
-#endif  // HAVE_JBAY
         new CollectPhvInfo(phv),
         &defuse,
         new CollectHeaderStackInfo,  // Needs to be rerun after CreateThreadLocalInstances, but
@@ -247,6 +247,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         // ranges output in the assembly.
         &defuse,
         new IXBarVerify(phv),
+        phvLoggingInfo,
         new InstructionAdjustment(phv, primNode),
         new DumpPipe("Final table graph"),
         new CheckForUnallocatedTemps(phv, uses, clot),
@@ -269,7 +270,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
                               options.no_power_check,
 #endif
                               options.display_power_budget,
-                              options.disable_power_check)
+                              options.disable_power_check),
     });
     setName("Barefoot backend");
 

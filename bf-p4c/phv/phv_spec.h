@@ -15,6 +15,12 @@ class PhvSpec {
     // (arch.h, phv_spec.h, device.h) that is not currently workable
     enum ArchBlockType_t { PARSER, MAU, DEPARSER };
 
+    /// Represents a range of container addresses
+    /// Containers are organized by blocks of blockSize. The addresses start at 'start'.
+    /// The next block address is current bloc start + incr
+    struct RangeSpec { unsigned start; unsigned blocks; unsigned blockSize; unsigned incr; };
+    using  AddressSpec = std::map<PHV::Type, RangeSpec>;
+
  protected:
     // All cache fields
     mutable bitvec physical_containers_i;
@@ -77,6 +83,8 @@ class PhvSpec {
     unsigned numTagalongCollections = 0;
 
     std::map<PHV::Type, unsigned> deparserGroupSize;
+
+    std::map<PHV::Type, std::pair<unsigned, unsigned>> deparserGroupSpec;
 
     /// Add a PHV container type to the set of types which are available on this
     /// device. This should only be called inside the constructor of subclasses
@@ -146,9 +154,15 @@ class PhvSpec {
      */
     virtual bitvec parserGroup(unsigned id) const = 0;
 
+    /// @return the Parser group id of the container
+    virtual unsigned parserGroupId(const PHV::Container &c) const = 0;
+
     /// @return the ids of every container in the same deparser group as the
     /// provided container.
     bitvec deparserGroup(unsigned id) const;
+
+    /// @return the Deparser group id of the container
+    virtual unsigned deparserGroupId(const PHV::Container &c) const = 0;
 
     /**
      * Generates a bitvec containing a range of containers. This kind of bitvec
@@ -183,9 +197,15 @@ class PhvSpec {
     /// boost::none if @container_id is not part of any MAU group.
     bitvec mauGroup(unsigned container_id) const;
 
+    /// @return the MAU group id for the container
+    virtual unsigned mauGroupId(const PHV::Container &c) const = 0;
+
     /// @return a pair <#groups, #containers per group> corresponding to the
     /// PHV Type @t
     const std::pair<int, int> mauGroupNumAndSize(const PHV::Type t) const;
+
+    /// @return a pair <#groups, #containers per group> corresponding to the PHV Type @t.
+    const std::pair<int, int> deparserGroupNumAndSize(const PHV::Type t) const;
 
     /// @return the ID of tagalong collection that the container belongs to
     unsigned getTagalongCollectionId(PHV::Container c) const;
@@ -215,36 +235,46 @@ class PhvSpec {
     /// in the pipeline: PARSER, MAU, DEPARSER.
     virtual unsigned physicalAddress(unsigned container_id, ArchBlockType_t interface) const = 0;
 
+    /// @return the target-specific address specification for the specified interface
+    virtual AddressSpec &physicalAddressSpec(ArchBlockType_t interface) const = 0;
+
     /// @return a json representation of the phv specification
     Util::JsonObject *toJson() const;
 };
 
 
 class TofinoPhvSpec : public PhvSpec {
-    /// Physical addresses of PHV containers.
-    struct ClosedRange { unsigned min; unsigned max; };
-    std::map<PHV::Type, ClosedRange> physicalAddresses = {
-        { PHV::Type::W,   { .min = 0,   .max = 63  } },
-        { PHV::Type::B,   { .min = 64,  .max = 127 } },
-        { PHV::Type::H,   { .min = 128, .max = 255 } },
-        { PHV::Type::TW,  { .min = 256, .max = 287 } },
-        { PHV::Type::TB,  { .min = 288, .max = 319} },
-        { PHV::Type::TH,  { .min = 320, .max = 367 } }, };
-
  public:
     TofinoPhvSpec();
 
     /// @see PhvSpec::parserGroup(unsigned id).
     bitvec parserGroup(unsigned id) const override;
 
+    /// @see PhvSpec::parserGroupId(const PHV::Container &)
+    unsigned parserGroupId(const PHV::Container &c) const override;
+
+    /// @see PhvSpec::mauGroupId(const PHV::Container &)
+    unsigned mauGroupId(const PHV::Container &c) const override;
+
+    /// @see PhvSpec::deparserGroupId(const PHV::Container &)
+    unsigned deparserGroupId(const PHV::Container &c) const override;
+
     const bitvec& individuallyAssignedContainers() const override;
 
     /// @see PhvSpec::physicalAddress(unsigned container_id, BFN::ArchBlockType interface).
-    /// For Tofino, all interfaces are the same.
+    /// For Tofino all interfaces are the same.
     unsigned physicalAddress(unsigned container_id, ArchBlockType_t /*interface*/) const override;
+
+    /// @see PhvSpec::physicalAddressSpec(ArchBlockType_t)
+    /// For Tofino all interfaces are the same
+    AddressSpec &physicalAddressSpec(ArchBlockType_t /* interface */) const override {
+        return _physicalAddresses;
+    }
+
+ private:
+    static AddressSpec _physicalAddresses;
 };
 
-#if HAVE_JBAY
 class JBayPhvSpec : public PhvSpec {
  public:
     JBayPhvSpec();
@@ -252,12 +282,36 @@ class JBayPhvSpec : public PhvSpec {
     /// @see PhvSpec::parserGroup(unsigned id).
     bitvec parserGroup(unsigned id) const override;
 
+    /// @see PhvSpec::parserGroupId(const PHV::Container &)
+    unsigned parserGroupId(const PHV::Container &c) const override;
+
+    /// @see PhvSpec::mauGroupId(const PHV::Container &)
+    unsigned mauGroupId(const PHV::Container &c) const override;
+
+    /// @see PhvSpec::deparserGroupId(const PHV::Container &)
+    unsigned deparserGroupId(const PHV::Container &c) const override;
+
     const bitvec& individuallyAssignedContainers() const override;
 
     /// @see PhvSpec::physicalAddress(unsigned container_id, BFN::ArchBlockType interface).
     /// For JBay, PARSER/DEPARSER have normal and mocha, MAU has additional darks
     unsigned physicalAddress(unsigned container_id, ArchBlockType_t interface) const override;
+
+    /// @see PhvSpec::physicalAddressSpec(ArchBlockType_t)
+    AddressSpec &physicalAddressSpec(ArchBlockType_t interface) const override {
+        switch (interface) {
+        case PhvSpec::MAU: return _physicalMauAddresses;
+        case PhvSpec::PARSER:
+        case PhvSpec::DEPARSER:
+            return _physicalParserAddresses;
+        default:
+            BUG("Invalid interface");
+        }
+    }
+
+ private:
+    static AddressSpec _physicalMauAddresses;
+    static AddressSpec _physicalParserAddresses;
 };
-#endif /* HAVE_JBAY */
 
 #endif /* EXTENSIONS_BF_P4C_PHV_PHV_SPEC_H_ */

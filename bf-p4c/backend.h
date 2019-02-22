@@ -14,6 +14,7 @@
 #include "bf-p4c/mau/table_summary.h"
 
 class FieldDefUse;
+struct CollectPhvLoggingInfo;
 
 namespace BFN {
 
@@ -41,6 +42,8 @@ class Backend : public PassManager {
     // Dynamic Hash Calculations Node, is populated at the end of backend passes
     Util::JsonObject dynHashNode;
 
+    CollectPhvLoggingInfo *phvLoggingInfo;
+
  public:
     explicit Backend(const BFN_Options& options, int pipe_id);
 
@@ -49,6 +52,10 @@ class Backend : public PassManager {
     const FieldDefUse   &get_defuse() const { return defuse; }
     const Util::JsonObject &get_prim_json() const { return primNode; }
     const Util::JsonObject &get_dynhash_json() const { return dynHashNode; }
+    const CollectPhvLoggingInfo *get_phv_logging() const { return phvLoggingInfo; }
+    const ordered_map<cstring, ordered_set<int>>& get_table_alloc() const {
+        return table_summary.getTableAlloc();
+    }
 };
 
 }  // namespace BFN

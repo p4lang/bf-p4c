@@ -199,44 +199,11 @@ PHV::AllocationReport::printMauGroupsOccupancyMetrics() const {
 
     ordered_map<bitvec, MauGroupInfo> mauGroupInfos;
 
-    // Extract MAU group specific information from phvSpec
-    std::pair<int, int> numBytes = phvSpec.mauGroupNumAndSize(PHV::Type::B);
-    std::pair<int, int> numHalfs = phvSpec.mauGroupNumAndSize(PHV::Type::H);
-    std::pair<int, int> numWords = phvSpec.mauGroupNumAndSize(PHV::Type::W);
-    std::pair<int, int> numMochaBytes = phvSpec.mauGroupNumAndSize(PHV::Type::MB);
-    std::pair<int, int> numMochaHalfs = phvSpec.mauGroupNumAndSize(PHV::Type::MH);
-    std::pair<int, int> numMochaWords = phvSpec.mauGroupNumAndSize(PHV::Type::MW);
-    std::pair<int, int> numDarkBytes = phvSpec.mauGroupNumAndSize(PHV::Type::DB);
-    std::pair<int, int> numDarkHalfs = phvSpec.mauGroupNumAndSize(PHV::Type::DH);
-    std::pair<int, int> numDarkWords = phvSpec.mauGroupNumAndSize(PHV::Type::DW);
-
     for (auto cid : Device::phvSpec().physicalContainers()) {
         PHV::Container c = Device::phvSpec().idToContainer(cid);
         if (boost::optional<bitvec> mauGroup = phvSpec.mauGroup(cid)) {
             // groupID represents the unique string that identifies an MAU group
-            int groupID = -1;
-            if (c.type() == PHV::Type::B) {
-                groupID = (c.index() / numBytes.second) + numWords.first;
-            } else if (c.type() == PHV::Type::H) {
-                groupID = (c.index() / numHalfs.second) + numWords.first + numBytes.first;
-            } else if (c.type() == PHV::Type::W) {
-                groupID = c.index() / numWords.second;
-            } else if (c.type() == PHV::Type::MB) {
-                groupID = (c.index() / numMochaBytes.second) + numMochaWords.first;
-            } else if (c.type() == PHV::Type::MH) {
-                groupID = (c.index() / numMochaHalfs.second) + numMochaWords.first +
-                    numMochaBytes.first;
-            } else if (c.type() == PHV::Type::MW) {
-                groupID = c.index() / numMochaWords.second;
-            } else if (c.type() == PHV::Type::DB) {
-                groupID = (c.index() / numDarkBytes.second) + numDarkWords.first;
-            } else if (c.type() == PHV::Type::DH) {
-                groupID = (c.index() / numDarkHalfs.second) + numDarkWords.first +
-                    numDarkBytes.first;
-            } else if (c.type() == PHV::Type::DW) {
-                groupID = (c.index() / numDarkWords.second);
-            }
-
+            int groupID = phvSpec.mauGroupId(c);
             bool containerUsed = (container_to_bits_used.at(c) != 0);
             auto bits_used = container_to_bits_used.at(c);
             auto bits_allocated = container_to_bits_allocated.at(c);

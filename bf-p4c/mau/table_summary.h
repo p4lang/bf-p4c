@@ -89,6 +89,8 @@ class TableSummary: public MauInspector {
     /// @returns the maximum number of stages used by the program.
     int maxStages() const { return maxStage; }
 
+    const ordered_map<cstring, ordered_set<int>>& getTableAlloc(void) const { return tableAlloc; }
+
     friend std::ostream &operator<<(std::ostream &out, const TableSummary &ts);
 };
 

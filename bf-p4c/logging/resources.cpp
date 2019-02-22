@@ -7,12 +7,13 @@
 #include <set>
 #include <string>
 
+#include "bf-p4c/bf-p4c-options.h"
 #include "common/run_id.h"
 #include "ir/gress.h"
 #include "mau/resource.h"
 #include "parde/p4i/gen_parser_json.h"
 #include "version.h"
-#include "visualization.h"
+#include "resources.h"
 
 namespace BFN {
 

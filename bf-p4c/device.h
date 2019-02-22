@@ -144,16 +144,19 @@ class JBayDevice : public Device {
 class JBayHDevice : public JBayDevice {
  public:
     int getNumStages() const override { return 6; }
+    cstring get_name() const override { return "Tofino2H"; }
 };
 
 class JBayMDevice : public JBayDevice {
  public:
     int getNumStages() const override { return 12; }
+    cstring get_name() const override { return "Tofino2M"; }
 };
 
 class JBayUDevice : public JBayDevice {
  public:
     int getNumStages() const override { return 20; }
+    cstring get_name() const override { return "Tofino2U"; }
 };
 
 #endif /* HAVE_JBAY */

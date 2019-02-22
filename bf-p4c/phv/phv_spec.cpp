@@ -136,9 +136,9 @@ const std::map<PHV::Size, std::vector<bitvec>>& PhvSpec::mauGroups() const {
                 PHV::Type t = typeSpec.first;
                 // typeRange: Representation of all groupNumContainers of type t in group index.
                 bitvec typeRange = range(t, index * groupNumContainers, groupNumContainers);
-                LOG1("  Adding ID " << typeRange << " for type " << t);
+                LOG4("  Adding ID " << typeRange << " for type " << t);
                 sizeRange |= typeRange; }
-            LOG1("Adding ID " << sizeRange << " corresponding to size " << groupSize);
+            LOG4("Adding ID " << sizeRange << " corresponding to size " << groupSize);
             mau_groups[groupSize].push_back(sizeRange); } }
     mau_groups_i = std::move(mau_groups);
     return mau_groups_i;
@@ -236,6 +236,12 @@ const std::pair<int, int> PhvSpec::mauGroupNumAndSize(const PHV::Type t) const {
     return std::pair<int, int>(numGroups, groupSize);
 }
 
+const std::pair<int, int> PhvSpec::deparserGroupNumAndSize(const PHV::Type t) const {
+    if (!deparserGroupSpec.count(t))
+        return std::pair<int, int>();
+    return deparserGroupSpec.at(t);
+}
+
 bitvec PhvSpec::deparserGroup(unsigned id) const {
     const auto containerType = idToContainerType(id % numContainerTypes());
     const unsigned index =  id / numContainerTypes();
@@ -317,6 +323,15 @@ Util::JsonObject *PhvSpec::toJson() const {
     return phv_containers;
 }
 
+PhvSpec::AddressSpec TofinoPhvSpec::_physicalAddresses = {
+    { PHV::Type::W,   { .start = 0,   .blocks = 1, .blockSize = 64 , .incr = 0 } },
+    { PHV::Type::B,   { .start = 64,  .blocks = 1, .blockSize = 64,  .incr = 0 } },
+    { PHV::Type::H,   { .start = 128, .blocks = 1, .blockSize = 128, .incr = 0 } },
+    { PHV::Type::TW,  { .start = 256, .blocks = 1, .blockSize = 32,  .incr = 0 } },
+    { PHV::Type::TB,  { .start = 288, .blocks = 1, .blockSize = 32,  .incr = 0 } },
+    { PHV::Type::TH,  { .start = 320, .blocks = 1, .blockSize = 48,  .incr = 0 } }
+};
+
 TofinoPhvSpec::TofinoPhvSpec() {
     addType(PHV::Type::B);
     addType(PHV::Type::H);
@@ -353,15 +368,15 @@ TofinoPhvSpec::TofinoPhvSpec() {
     }
     containersPerGroup = getContainersPerGroup(numContainersPerGroup);
 
-    if (LOGGING(1)) {
+    if (LOGGING(4)) {
         for (auto kv : mauGroupSpec) {
-            LOG1("    " << kv.second.numGroups << " groups of size " << kv.first);
+            LOG4("    " << kv.second.numGroups << " groups of size " << kv.first);
             for (auto kv1 : kv.second.types)
-                LOG1("      " << kv1.first << " : " << kv1.second); } }
+                LOG4("      " << kv1.first << " : " << kv1.second); } }
 
     std::vector<unsigned> ingressGroupIds;
     for (unsigned i = 0; i < (unsigned)phv_scale_factor; ++i) {
-        LOG1("    Setting group " << (4*i) << " to ingress only");
+        LOG4("    Setting group " << (4*i) << " to ingress only");
         ingressGroupIds.push_back(4*i); }
 
     ingressOnlyMauGroupIds = {
@@ -372,7 +387,7 @@ TofinoPhvSpec::TofinoPhvSpec() {
 
     std::vector<unsigned> egressGroupIds;
     for (unsigned i = 0; i < (unsigned)phv_scale_factor; ++i) {
-        LOG1("    Setting group " << (4*i+1) << " to egress only");
+        LOG4("    Setting group " << (4*i+1) << " to egress only");
         egressGroupIds.push_back(4*i + 1); }
 
     egressOnlyMauGroupIds = {
@@ -394,10 +409,46 @@ TofinoPhvSpec::TofinoPhvSpec() {
         { PHV::Type::H, 8*phv_scale_factor },
         { PHV::Type::W, 4*phv_scale_factor }
     };
+
+    deparserGroupSpec = {
+        { PHV::Type::B, std::make_pair(8, 8*phv_scale_factor) },
+        { PHV::Type::H, std::make_pair(12, 8*phv_scale_factor) },
+        { PHV::Type::W, std::make_pair(16, 4*phv_scale_factor) }
+    };
 }
 
 bitvec TofinoPhvSpec::parserGroup(unsigned id) const {
     return bitvec(id, 1);
+}
+
+unsigned TofinoPhvSpec::parserGroupId(const PHV::Container &c) const {
+    // On Tofino, the mapping from parser to MAU is identical
+    return mauGroupId(c);
+}
+
+unsigned TofinoPhvSpec::mauGroupId(const PHV::Container &c) const {
+    // Get MAU group specific information from phvSpec -- this is silly!
+    std::pair<int, int> numBytes = mauGroupNumAndSize(PHV::Type::B);
+    std::pair<int, int> numHalfs = mauGroupNumAndSize(PHV::Type::H);
+    std::pair<int, int> numWords = mauGroupNumAndSize(PHV::Type::W);
+
+    int groupID = -1;
+    if (boost::optional<bitvec> mg = mauGroup(c.index())) {
+        // groupID represents the unique string that identifies an MAU group
+        if (c.type() == PHV::Type::B) {
+            groupID = (c.index() / numBytes.second) + numWords.first;
+        } else if (c.type() == PHV::Type::H) {
+            groupID = (c.index() / numHalfs.second) + numWords.first + numBytes.first;
+        } else if (c.type() == PHV::Type::W) {
+            groupID = c.index() / numWords.second;
+        }
+    }
+    return groupID;
+}
+
+unsigned TofinoPhvSpec::deparserGroupId(const PHV::Container &c) const {
+    // On Tofino, the mapping from MAU to deparser is identical
+    return mauGroupId(c);
 }
 
 const bitvec& TofinoPhvSpec::individuallyAssignedContainers() const {
@@ -412,19 +463,40 @@ const bitvec& TofinoPhvSpec::individuallyAssignedContainers() const {
 unsigned TofinoPhvSpec::physicalAddress(unsigned id, ArchBlockType_t /* interface */) const {
     const PHV::Type containerType = idToContainerType(id % numContainerTypes());
     const unsigned index = id / numContainerTypes();
-    BUG_CHECK(physicalAddresses.find(containerType) != physicalAddresses.end(),
+    BUG_CHECK(_physicalAddresses.find(containerType) != _physicalAddresses.end(),
               "PHV container %1% has unrecognized type %2%",
               idToContainer(id), containerType);
 
-    auto physicalRange = physicalAddresses.at(containerType);
-    auto rv = physicalRange.min + index;
-    BUG_CHECK(rv <= physicalRange.max, "No physical address for PHV container %1%",
+    auto physicalRange = _physicalAddresses.at(containerType);
+    auto rv = physicalRange.start + index;
+    BUG_CHECK(index < physicalRange.blockSize,
+              "No physical address for PHV container %1%",
               idToContainer(id));
 
     return rv;
 }
 
-#if HAVE_JBAY
+// Static data member intializers for phv grouping on JBay
+PhvSpec::AddressSpec JBayPhvSpec::_physicalMauAddresses = {
+    {PHV::Type::W,  { .start = 0,   .blocks = 4, .blockSize = 12, .incr = 20 }},
+    {PHV::Type::MW, { .start = 12,  .blocks = 4, .blockSize = 4,  .incr = 20 }},
+    {PHV::Type::DW, { .start = 16,  .blocks = 4, .blockSize = 4,  .incr = 20 }},
+    {PHV::Type::B,  { .start = 80,  .blocks = 4, .blockSize = 12, .incr = 20 }},
+    {PHV::Type::MB, { .start = 92,  .blocks = 4, .blockSize = 4,  .incr = 20 }},
+    {PHV::Type::DB, { .start = 96,  .blocks = 4, .blockSize = 4,  .incr = 20 }},
+    {PHV::Type::H,  { .start = 160, .blocks = 6, .blockSize = 12, .incr = 20 }},
+    {PHV::Type::MH, { .start = 172, .blocks = 6, .blockSize = 4,  .incr = 20 }},
+    {PHV::Type::DH, { .start = 176, .blocks = 6, .blockSize = 4,  .incr = 20 }}
+};
+PhvSpec::AddressSpec JBayPhvSpec::_physicalParserAddresses = {
+    {PHV::Type::W,  { .start = 0,   .blocks = 4, .blockSize = 12, .incr = 16 }},
+    {PHV::Type::MW, { .start = 12,  .blocks = 4, .blockSize = 4,  .incr = 16 }},
+    {PHV::Type::B,  { .start = 64,  .blocks = 4, .blockSize = 12, .incr = 16 }},
+    {PHV::Type::MB, { .start = 76,  .blocks = 4, .blockSize = 4,  .incr = 16 }},
+    {PHV::Type::H,  { .start = 128, .blocks = 6, .blockSize = 12, .incr = 16 }},
+    {PHV::Type::MH, { .start = 140, .blocks = 6, .blockSize = 4,  .incr = 16 }},
+};
+
 JBayPhvSpec::JBayPhvSpec() {
     addType(PHV::Type::B);
     addType(PHV::Type::H);
@@ -464,11 +536,11 @@ JBayPhvSpec::JBayPhvSpec() {
     }
     containersPerGroup = getContainersPerGroup(numContainersPerGroup);
 
-    if (LOGGING(1)) {
+    if (LOGGING(4)) {
         for (auto kv : mauGroupSpec) {
-            LOG1("    " << kv.second.numGroups << " groups of size " << kv.first);
+            LOG4("    " << kv.second.numGroups << " groups of size " << kv.first);
             for (auto kv1 : kv.second.types)
-                LOG1("      " << kv1.first << " : " << kv1.second); } }
+                LOG4("      " << kv1.first << " : " << kv1.second); } }
 
     ingressOnlyMauGroupIds = { };
 
@@ -486,6 +558,15 @@ JBayPhvSpec::JBayPhvSpec() {
         { PHV::Type::W,  { 2 } },
         { PHV::Type::MW, { 2 } }
     };
+
+    deparserGroupSpec = {
+        { PHV::Type::B,  std::make_pair(16, 4) },
+        { PHV::Type::H,  std::make_pair(24, 4) },
+        { PHV::Type::W,  std::make_pair(32, 2) },
+        { PHV::Type::MB, std::make_pair(16, 4) },
+        { PHV::Type::MH, std::make_pair(24, 4) },
+        { PHV::Type::MW, std::make_pair(32, 2) }
+    };
 }
 
 bitvec JBayPhvSpec::parserGroup(unsigned id) const {
@@ -499,45 +580,99 @@ bitvec JBayPhvSpec::parserGroup(unsigned id) const {
     return bitvec(id, 1);
 }
 
+unsigned JBayPhvSpec::parserGroupId(const PHV::Container &c) const {
+    // Get de/parser group specific information from phvSpec -- this is silly!
+    std::pair<int, int> numBytes = deparserGroupNumAndSize(PHV::Type::B);
+    std::pair<int, int> numHalfs = deparserGroupNumAndSize(PHV::Type::H);
+    std::pair<int, int> numWords = deparserGroupNumAndSize(PHV::Type::W);
+    std::pair<int, int> numMochaBytes = deparserGroupNumAndSize(PHV::Type::MB);
+    std::pair<int, int> numMochaHalfs = deparserGroupNumAndSize(PHV::Type::MH);
+    std::pair<int, int> numMochaWords = deparserGroupNumAndSize(PHV::Type::MW);
+
+    int groupID = -1;
+    if (boost::optional<bitvec> mg = parserGroup(c.index())) {
+        // groupID represents the unique string that identifies an MAU group
+        if (c.type() == PHV::Type::B) {
+            groupID = (c.index() / numBytes.second) + numWords.first;
+        } else if (c.type() == PHV::Type::H) {
+            groupID = (c.index() / numHalfs.second) + numWords.first + numBytes.first;
+        } else if (c.type() == PHV::Type::W) {
+            groupID = c.index() / numWords.second;
+        } else if (c.type() == PHV::Type::MB) {
+            groupID = (c.index() / numMochaBytes.second) + numMochaWords.first;
+        } else if (c.type() == PHV::Type::MH) {
+            groupID = (c.index() / numMochaHalfs.second) + numMochaWords.first +
+                numMochaBytes.first;
+        } else if (c.type() == PHV::Type::MW) {
+            groupID = c.index() / numMochaWords.second;
+        }
+    }
+    return groupID;
+}
+
+unsigned JBayPhvSpec::mauGroupId(const PHV::Container &c) const {
+    // Get MAU group specific information from phvSpec -- this is silly!
+    std::pair<int, int> numBytes = mauGroupNumAndSize(PHV::Type::B);
+    std::pair<int, int> numHalfs = mauGroupNumAndSize(PHV::Type::H);
+    std::pair<int, int> numWords = mauGroupNumAndSize(PHV::Type::W);
+    std::pair<int, int> numMochaBytes = mauGroupNumAndSize(PHV::Type::MB);
+    std::pair<int, int> numMochaHalfs = mauGroupNumAndSize(PHV::Type::MH);
+    std::pair<int, int> numMochaWords = mauGroupNumAndSize(PHV::Type::MW);
+    std::pair<int, int> numDarkBytes = mauGroupNumAndSize(PHV::Type::DB);
+    std::pair<int, int> numDarkHalfs = mauGroupNumAndSize(PHV::Type::DH);
+    std::pair<int, int> numDarkWords = mauGroupNumAndSize(PHV::Type::DW);
+
+    int groupID = -1;
+    if (boost::optional<bitvec> mg = mauGroup(c.index())) {
+        // groupID represents the unique string that identifies an MAU group
+        if (c.type() == PHV::Type::B) {
+            groupID = (c.index() / numBytes.second) + numWords.first;
+        } else if (c.type() == PHV::Type::H) {
+            groupID = (c.index() / numHalfs.second) + numWords.first + numBytes.first;
+        } else if (c.type() == PHV::Type::W) {
+            groupID = c.index() / numWords.second;
+        } else if (c.type() == PHV::Type::MB) {
+            groupID = (c.index() / numMochaBytes.second) + numMochaWords.first;
+        } else if (c.type() == PHV::Type::MH) {
+            groupID = (c.index() / numMochaHalfs.second) + numMochaWords.first +
+                numMochaBytes.first;
+        } else if (c.type() == PHV::Type::MW) {
+            groupID = c.index() / numMochaWords.second;
+        } else if (c.type() == PHV::Type::DB) {
+            groupID = (c.index() / numDarkBytes.second) + numDarkWords.first;
+        } else if (c.type() == PHV::Type::DH) {
+            groupID = (c.index() / numDarkHalfs.second) + numDarkWords.first +
+                numDarkBytes.first;
+        } else if (c.type() == PHV::Type::DW) {
+            groupID = (c.index() / numDarkWords.second);
+        }
+    }
+    return groupID;
+}
+
+unsigned JBayPhvSpec::deparserGroupId(const PHV::Container &c) const {
+    // parser and deparser are the same on JBay.
+    return parserGroupId(c);
+}
+
 const bitvec& JBayPhvSpec::individuallyAssignedContainers() const {
     return individually_assigned_containers_i;
 }
 
 unsigned JBayPhvSpec::physicalAddress(unsigned id, ArchBlockType_t interface) const {
-    struct RangeSpec { unsigned start; unsigned blocks; unsigned blockSize; unsigned incr; };
-    static std::map<PHV::Type, RangeSpec> physicalMauAddresses = {
-        {PHV::Type::W,  { .start = 0,   .blocks = 4, .blockSize = 12, .incr = 20 }},
-        {PHV::Type::MW, { .start = 12,  .blocks = 4, .blockSize = 4,  .incr = 20 }},
-        {PHV::Type::DW, { .start = 16,  .blocks = 4, .blockSize = 4,  .incr = 20 }},
-        {PHV::Type::B,  { .start = 80,  .blocks = 4, .blockSize = 12, .incr = 20 }},
-        {PHV::Type::MB, { .start = 92,  .blocks = 4, .blockSize = 4,  .incr = 20 }},
-        {PHV::Type::DB, { .start = 96,  .blocks = 4, .blockSize = 4,  .incr = 20 }},
-        {PHV::Type::H,  { .start = 160, .blocks = 6, .blockSize = 12, .incr = 20 }},
-        {PHV::Type::MH, { .start = 172, .blocks = 6, .blockSize = 4,  .incr = 20 }},
-        {PHV::Type::DH, { .start = 176, .blocks = 6, .blockSize = 4,  .incr = 20 }}
-    };
-    static std::map<PHV::Type, RangeSpec> physicalParserAddresses = {
-        {PHV::Type::W,  { .start = 0,   .blocks = 4, .blockSize = 12, .incr = 16 }},
-        {PHV::Type::MW, { .start = 12,  .blocks = 4, .blockSize = 4,  .incr = 16 }},
-        {PHV::Type::B,  { .start = 64,  .blocks = 4, .blockSize = 12, .incr = 16 }},
-        {PHV::Type::MB, { .start = 76,  .blocks = 4, .blockSize = 4,  .incr = 16 }},
-        {PHV::Type::H,  { .start = 128, .blocks = 6, .blockSize = 12, .incr = 16 }},
-        {PHV::Type::MH, { .start = 140, .blocks = 6, .blockSize = 4,  .incr = 16 }},
-    };
-
     const PHV::Type containerType = idToContainerType(id % numContainerTypes());
     const unsigned index = id / numContainerTypes();
     RangeSpec physicalRange;
     if (interface == MAU) {
-        BUG_CHECK(physicalMauAddresses.find(containerType) != physicalMauAddresses.end(),
+        BUG_CHECK(_physicalMauAddresses.find(containerType) != _physicalMauAddresses.end(),
                   "PHV container %1% has unrecognized type %2%",
                   idToContainer(id), containerType);
-        physicalRange = physicalMauAddresses.at(containerType);
+        physicalRange = _physicalMauAddresses.at(containerType);
     } else {
-        BUG_CHECK(physicalParserAddresses.find(containerType) != physicalParserAddresses.end(),
+        BUG_CHECK(_physicalParserAddresses.find(containerType) != _physicalParserAddresses.end(),
                   "PHV container %1% has unrecognized type %2%",
                   idToContainer(id), containerType);
-        physicalRange = physicalParserAddresses.at(containerType);
+        physicalRange = _physicalParserAddresses.at(containerType);
     }
 
 
@@ -551,5 +686,3 @@ unsigned JBayPhvSpec::physicalAddress(unsigned id, ArchBlockType_t interface) co
 
     return physicalRange.start + block * physicalRange.incr + blockOffset;
 }
-
-#endif /* HAVE_JBAY */

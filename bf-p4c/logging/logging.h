@@ -35,12 +35,9 @@ class Logger : public rapidjson::Document {
     virtual void log() {
         rapidjson::StringBuffer sb;
         Writer writer(sb);
-        writer.StartObject();
-        writer.Key("run_id");
-        writer.String(RunId::getId().c_str());
-        writer.EndObject();
         serialize(writer);
         _logFile << sb.GetString();
+        _logFile.flush();
     }
 };
 };  // end namespace Logging

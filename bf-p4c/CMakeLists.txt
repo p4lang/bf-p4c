@@ -35,6 +35,8 @@ set (P4C_LIB_DEPS "${P4C_LIB_DEPS};${Boost_GRAPH_LIBRARY};${OPENSSL_LIBRARIES};$
 set (P4C_LIB_DEPS ${P4C_LIB_DEPS} PARENT_SCOPE)
 
 add_subdirectory(logging)
+include_directories(logging)
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/logging)
 
 set (BF_P4C_IR_SRCS
   midend/path_linearizer.cpp
@@ -519,15 +521,21 @@ set (BF_P4C_BACKEND_LOGGING_HDRS
   logging/logging.h
   logging/manifest.h
   logging/pass_manager.h
+  logging/phv_logging.h
+  logging/resources.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_LOGGING_HDRS}")
+set (BF_P4C_BACKEND_LOGGING_SRCS
+  logging/phv_logging.cpp
+  logging/resources.cpp
+  )
+add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_LOGGING_SRCS}")
 
 set (BF_P4C_BACKEND_MAIN_SRCS
   backend.cpp
   bf-p4c-options.cpp
   device.cpp
   midend.cpp
-  visualization.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAIN_SRCS}")
 build_unified(BF_P4C_BACKEND_MAIN_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
@@ -538,7 +546,6 @@ set (BF_P4C_BACKEND_MAIN_HDRS
   bf-p4c-options.h
   device.h
   midend.h
-  visualization.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAIN_HDRS}")
 
@@ -607,6 +614,7 @@ set (BF_P4C_SOURCES
   ${BF_P4C_MIDEND_SRCS}
   ${BF_P4C_BACKEND_COMMON_SRCS}
   ${BF_P4C_BACKEND_CONTROL_PLANE_SRCS}
+  ${BF_P4C_BACKEND_LOGGING_SRCS}
   ${BF_P4C_BACKEND_MAU_SRCS}
   ${BF_P4C_BACKEND_PARDE_SRCS}
   ${BF_P4C_BACKEND_PHV_SRCS}

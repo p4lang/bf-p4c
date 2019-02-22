@@ -15,9 +15,6 @@ struct TableResourceAlloc;
 #emit
 #include "bf-p4c/ir/unique_id.h"
 #end
-#emit_impl
-#include "extensions/bf-p4c/mau/resource.h"
-#end
 
 namespace MAU {
 

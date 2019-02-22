@@ -3,13 +3,14 @@ find_package(PkgConfig QUIET)
 pkg_check_modules(LIBRAPIDJSON REQUIRED RapidJSON=1.1.0)
 
 set (LOGGING_SCHEMA_FILES
-  phv_schema
+  ${BFN_P4C_SOURCE_DIR}/compiler_interfaces/schemas/phv_schema
   )
 
 set (LOGGING_SRCS)
 foreach(f IN LISTS LOGGING_SCHEMA_FILES)
-  list (APPEND LOGGING_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/${f}.json)
-  list (APPEND GEN_LOGGING_HDRS ${CMAKE_CURRENT_BINARY_DIR}/${f}.h)
+  list (APPEND LOGGING_SRCS ${f}.py)
+  get_filename_component(__fname ${f} NAME)
+  list (APPEND GEN_LOGGING_HDRS ${CMAKE_CURRENT_BINARY_DIR}/${__fname}.h)
 endforeach()
 
 set_source_files_properties(

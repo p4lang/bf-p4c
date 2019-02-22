@@ -1,5 +1,5 @@
-#ifndef _EXTENSIONS_BF_P4C_VISUALIZATION_H_
-#define _EXTENSIONS_BF_P4C_VISUALIZATION_H_
+#ifndef _EXTENSIONS_BF_P4C_LOGGING_RESOURCES_H_
+#define _EXTENSIONS_BF_P4C_LOGGING_RESOURCES_H_
 
 #include <boost/range/irange.hpp>
 #include <vector>
@@ -279,4 +279,4 @@ class Visualization : public Inspector {
 
 }  // namespace BFN
 
-#endif /* _EXTENSIONS_BF_P4C_VISUALIZATION_H_ */
+#endif /* _EXTENSIONS_BF_P4C_LOGGING_RESOURCES_H_ */

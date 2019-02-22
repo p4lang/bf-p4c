@@ -11,10 +11,11 @@
 #include "bf-p4c-options.h"
 #include "bf-p4c/common/parse_annotations.h"
 #include "bf-p4c/control-plane/tofino_p4runtime.h"
-#include "bf-p4c/mau/dynhash.h"
-#include "bf-p4c/visualization.h"
 #include "bf-p4c/lib/error_type.h"
 #include "bf-p4c/logging/filelog.h"
+#include "bf-p4c/logging/phv_logging.h"
+#include "bf-p4c/logging/resources.h"
+#include "bf-p4c/mau/dynhash.h"
 #include "common/extract_maupipe.h"
 #include "common/run_id.h"
 #include "device.h"
@@ -59,53 +60,50 @@ static void log_dump(const IR::Node *node, const char *head) {
 // it is called with a failed pass, we should still apply the BFN::Visualization pass
 // to collect the table resource usages, but we only output the resources file.
 //
-class OutputAsm : public PassManager {
+class GenerateOutputs : public PassManager {
  private:
     const BFN_Options &_options;
     bool _success;
     cstring pipeName;
+    std::string _outputDir;
 
     BFN::Visualization _visualization;
     BFN::DynamicHashJson _dynhash;
     const Util::JsonObject &_primitives;
 
-    void end_apply() override {
-        // Set output dir
-        std::string outputDir(_options.outputDir.c_str());
-        if (_options.langVersion == BFN_Options::FrontendVersion::P4_16) {
-            outputDir = outputDir + "/" + pipeName;
-        }
-        int rc = mkdir(outputDir.c_str(), 0755);
+    profile_t init_apply(const IR::Node *root) override {
+        LOG2("Generating outputs under " << _outputDir);
+        int rc = mkdir(_outputDir.c_str(), 0755);
         if (rc != 0 && errno != EEXIST) {
-            std::cerr << "Failed to create directory: " << outputDir << std::endl;
-            return;
+            std::cerr << "Failed to create directory: " << _outputDir << std::endl;
+            exit(1);
         }
-        LOG2("Generating outputs under " << outputDir);
-        std::string dir(outputDir);
-        cstring outputFile = dir + "/" + _options.programName + ".bfa";
+        return PassManager::init_apply(root);
+    }
+
+    void end_apply() override {
+        cstring outputFile = _outputDir + "/" + _options.programName + ".bfa";
         std::ofstream ctxt_stream(outputFile, std::ios_base::app);
 
         if (_success) {
-            // Always output primitives json file (info used by model for
-            // logging actions)
-            cstring primitivesFile = dir + "/" + _options.programName + ".prim.json";
+            // Always output primitives json file (info used by model for logging actions)
+            cstring primitivesFile = _outputDir + "/" + _options.programName + ".prim.json";
             LOG2("ASM generation for primitives: " << primitivesFile);
-            ctxt_stream << "primitives: \"" <<
-                primitivesFile << "\"" << std::endl << std::flush;
+            ctxt_stream << "primitives: \"" << primitivesFile << "\"" << std::endl << std::flush;
             std::ofstream prim(primitivesFile);
             _primitives.serialize(prim);
             prim << std::endl << std::flush;
+
             // Output dynamic hash json file
-            cstring dynHashFile = dir + "/" + _options.programName + ".dynhash.json";
+            cstring dynHashFile = _outputDir + "/" + _options.programName + ".dynhash.json";
             LOG2("ASM generation for dynamic hash: " << dynHashFile);
-            ctxt_stream << "dynhash: \"" <<
-                dynHashFile << "\"" << std::endl << std::flush;
+            ctxt_stream << "dynhash: \"" << dynHashFile << "\"" << std::endl << std::flush;
             std::ofstream dynhash(dynHashFile);
             dynhash << _dynhash << std::endl << std::flush;
         }
         if (_options.debugInfo) {  // generate resources info only if invoked with -g
             // Output resources json file
-            cstring resourcesFile = dir + "/" + _options.programName + ".res.json";
+            cstring resourcesFile = _outputDir + "/" + _options.programName + ".res.json";
             LOG2("ASM generation for resources: " << resourcesFile);
             std::ofstream res(resourcesFile);
             res << _visualization << std::endl << std::flush;
@@ -115,14 +113,22 @@ class OutputAsm : public PassManager {
         }
     }
 
-
  public:
-    explicit OutputAsm(const BFN::Backend &b, const BFN_Options& o,
-            cstring pipeName, const Util::JsonObject& p, bool success = true) :
+    explicit GenerateOutputs(const BFN::Backend &b, const BFN_Options& o,
+                             cstring pipeName, const Util::JsonObject& p,
+                             bool success = true) :
         _options(o), _success(success), pipeName(pipeName), _primitives(p) {
         setStopOnError(false);
+        // Set output dir
+        _outputDir = std::string(_options.outputDir.c_str());
+        if (_options.langVersion == BFN_Options::FrontendVersion::P4_16) {
+            _outputDir = _outputDir + "/" + pipeName;
+        }
+        std::string phvLogFile(_outputDir + "/phv.json");
         addPasses({ new BFN::AsmOutput(b.get_phv(), b.get_clot(), b.get_defuse(), o,
                                        pipeName, success),
+                    new PhvLogging(phvLogFile.c_str(), b.get_phv(), *b.get_phv_logging(),
+                                   b.get_defuse(), b.get_table_alloc()),
                     &_visualization,
                     &_dynhash
                     });
@@ -140,26 +146,28 @@ void execute_backend(const IR::BFN::Pipe* maupipe, BFN_Options& options) {
     if (Log::verbose())
         std::cout << "Compiling " << maupipe->name << std::endl;
 
+    auto pipeName = maupipe->name;
     BFN::Backend backend(options, maupipe->id);
     try {
         maupipe = maupipe->apply(backend);
+        bool success = maupipe != nullptr;
+        GenerateOutputs as(backend, options, pipeName, backend.get_prim_json(), success);
+        if (maupipe)
+            maupipe->apply(as);
     } catch (Util::P4CExceptionBase &ex) {
         // produce resource nodes in context.json regardless of failures
         #if BAREFOOT_INTERNAL
             std::cerr << "compilation failed: producing context.json" << std::endl;
         #endif
-        OutputAsm as(backend, options, maupipe->name, backend.get_prim_json(), false);
-        maupipe->apply(as);
+
+        GenerateOutputs as(backend, options, pipeName, backend.get_prim_json(), false);
+        if (maupipe)
+            maupipe->apply(as);
 
         if (Log::verbose())
             std::cerr << "Failed." << std::endl;
         throw;
     }
-
-    // output the .bfa, .prim.json & .dynhash.json files
-    if (maupipe) {
-        OutputAsm as(backend, options, maupipe->name, backend.get_prim_json());
-        maupipe->apply(as); }
 }
 
 int main(int ac, char **av) {
