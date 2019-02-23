@@ -286,11 +286,6 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_14/brig-425.p4
 )
 
-p4c_add_xfail_reason("tofino2"
-  "error.*Ran out of constant output slots"
-  extensions/p4_tests/p4_14/metadata_mutex_1.p4
-)
-
 # p4lang/p4c #1724
 p4c_add_xfail_reason("tofino2"
   "error: .*: negative bit index -1"

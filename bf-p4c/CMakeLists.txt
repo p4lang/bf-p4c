@@ -328,6 +328,7 @@ set (BF_P4C_BACKEND_PARDE_SRCS
   parde/phase0.cpp
   parde/resolve_computed.cpp
   parde/resubmit.cpp
+  parde/split_big_state.cpp
   parde/p4i/gen_parser_json.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_PARDE_SRCS}")
@@ -358,6 +359,7 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/resubmit.h
   parde/parde_utils.h
   parde/parser_info.h
+  parde/split_big_state.h
   parde/p4i/gen_parser_json.h
   parde/p4i/p4i_json_types.h
   )
