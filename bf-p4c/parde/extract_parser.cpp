@@ -599,7 +599,8 @@ struct RewriteParserStatements : public Transform {
             if (isExtern(method, "Checksum")) {
                 return rewriteChecksumCall(statement);
             } else if (isExtern(method, "ParserCounter")) {
-                return nullptr;  // TODO
+                P4C_UNIMPLEMENTED("parser counter is currently unsupported in the backend");
+                return nullptr;
             } else if (isExtern(method, "ParserPriority")) {
                 return rewriteParserPriorityCall(statement);
             } else if (method->member == "extract") {

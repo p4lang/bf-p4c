@@ -948,7 +948,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/phv/COMPILER-423/diag_power.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-702/comp_702.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-710/comp_710.p4
-  ../glass/testsuite/p4_tests/parde/COMPILER-612/leaf.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1037,9 +1036,14 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "already set in .* to"
+  "parser counter is currently unsupported"
   extensions/p4_tests/p4_16/ipv6_tlv.p4
-)
+# P4C-590
+  ../glass/testsuite/p4_tests/phv/test_config_294_parser_loop.p4
+  ../glass/testsuite/p4_tests/mau/COMPILER-667/itch.p4
+  ../glass/testsuite/p4_tests/parde/COMPILER-760/test_config_377_parser_counter.p4
+  ../glass/testsuite/p4_tests/parde/COMPILER-612/leaf.p4
+  )
 
 # test program error
 p4c_add_xfail_reason("tofino"
@@ -1172,14 +1176,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: Assignment cannot be supported in the parser"
   ../glass/testsuite/p4_tests/phv/test_config_402_parser_sub.p4
-  )
-
-# P4C-590
-p4c_add_xfail_reason("tofino"
-  "Compiler Bug.*: Match register not allocated."
-  ../glass/testsuite/p4_tests/phv/test_config_294_parser_loop.p4
-  ../glass/testsuite/p4_tests/mau/COMPILER-667/itch.p4
-  ../glass/testsuite/p4_tests/parde/COMPILER-760/test_config_377_parser_counter.p4
   )
 
 # P4C-1372

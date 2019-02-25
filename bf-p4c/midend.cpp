@@ -47,7 +47,6 @@
 #include "bf-p4c/midend/rewrite_egress_intrinsic_metadata_header.h"
 #include "bf-p4c/midend/simplify_nested_if.h"
 #include "bf-p4c/midend/type_checker.h"
-#include "bf-p4c/midend/unroll_parser_counter.h"
 #include "bf-p4c/common/rewrite_flexible_struct.h"
 #include "bf-p4c/ir/tofino_write_context.h"
 
@@ -347,7 +346,6 @@ MidEnd::MidEnd(BFN_Options& options) {
             new BFN::RewriteFlexibleStruct(&refMap, &typeMap) : nullptr,
         new RenameArchParams(&refMap, &typeMap),
         new FillFromBlockMap(&refMap, &typeMap),
-        new UnrollParserCounter(&refMap),
         evaluator,
         new VisitFunctor([this, evaluator]() { toplevel = evaluator->getToplevelBlock(); }),
         new MidEndLast,

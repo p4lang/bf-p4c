@@ -85,7 +85,6 @@ set (BF_P4C_MIDEND_SRCS
   midend/inline_subparser.cpp
   midend/normalize_params.cpp
   midend/param_binding.cpp
-  midend/unroll_parser_counter.cpp
   midend/simplify_nested_if.cpp
   midend/simplify_references.cpp
   midend/type_categories.cpp
@@ -104,7 +103,6 @@ set (BF_P4C_BACKEND_MIDEND_HDRS
   midend/inline_subparser.h
   midend/normalize_params.h
   midend/param_binding.h
-  midend/unroll_parser_counter.h
   midend/rewrite_egress_intrinsic_metadata_header.h
   midend/simplify_nested_if.h
   midend/simplify_references.h
