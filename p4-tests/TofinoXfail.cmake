@@ -216,6 +216,7 @@ p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-546/switch_comp546.p4
+  ../glass/testsuite/p4_tests/phv/COMPILER-243/comp243.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1211,12 +1212,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/phv/COMPILER-761/simple_l3_mirror.p4
   )
 
-# P4C-1374
-p4c_add_xfail_reason("tofino"
-  "error.*Can't split table.*with indirect attached MAU::StatefulAlu"
-  ../glass/testsuite/p4_tests/mau/test_config_174_stateful_flow_learning.p4
-  )
-
 # Valid XFAIL
 p4c_add_xfail_reason("tofino"
   "Currently in p4c, the table .* cannot perform a range match on key .* as the key does not fit in under 5 PHV nibbles"
@@ -1524,6 +1519,12 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: Field isValid is not a member of structure struct ingress_intrinsic_metadata_for_tm_t"
   ../glass/testsuite/p4_tests/mau/test_config_420_intr_md_tcam_valid.p4
+  )
+
+# P4C-1522, previously P4C-1374
+p4c_add_xfail_reason("tofino"
+  "Miscoordination of what hash groups are on the search bus vs. what hash groups are in the table format"
+  ../glass/testsuite/p4_tests/phv/COMPILER-587/l4l.p4
   )
 
 # P4C does not support bridging of header stacks within serializable structs

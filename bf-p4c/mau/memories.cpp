@@ -816,7 +816,7 @@ void Memories::break_exact_tables_into_ways() {
          int t;
          if ((t = a->width - b->width) != 0) return t > 0;
          if ((t = (a->left_to_place()) - (b->left_to_place())) != 0) return t > 0;
-         return a->build_unique_id() < b->build_unique_id();
+         return a->logical_table < b->logical_table;
     });
 }
 
@@ -1137,7 +1137,7 @@ void Memories::break_atcams_into_partitions() {
         int t;
         if ((t = a->width - b->width) != 0) return t > 0;
         if ((t = (a->left_to_place()) - (b->left_to_place())) != 0) return t > 0;
-        return a->build_unique_id() < b->build_unique_id();
+        return a->logical_table < b->logical_table;
     });
 }
 
@@ -1529,7 +1529,7 @@ void Memories::find_tind_groups() {
         int t;
         if ((t = (a->left_to_place()) - (b->left_to_place())) != 0) return t > 0;
         if ((t = a->logical_table - b->logical_table) != 0) return t < 0;
-        return a->build_unique_id() < b->build_unique_id();
+        return a->logical_table < b->logical_table;
     });
 }
 
