@@ -882,8 +882,11 @@ p4c_add_xfail_reason("tofino"
 # BRIG-816
 # error: pipe: Duplicates declaration header pipe
 p4c_add_xfail_reason("tofino"
-  "Duplicates declaration header pipe"
+  "Duplicates declaration .*"
   extensions/p4_tests/p4_14/p4smith_regression/jenningss_0.p4
+  extensions/p4_tests/p4_14/p4smith_regression/dup_decl_random.p4
+  extensions/p4_tests/p4_14/p4smith_regression/dup_decl_struct.p4
+  extensions/p4_tests/p4_14/p4smith_regression/dup_decl_clone.p4
 )
 
 # BRIG-924
@@ -912,6 +915,12 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: Output of checksum calculation can only be stored in a 16-bit field"
   extensions/p4_tests/p4_14/p4smith_regression/tofino-bug-1.p4
+)
+
+# P4C-1523
+p4c_add_xfail_reason("tofino"
+  "Hash table .* column .* duplicated"
+  extensions/p4_tests/p4_14/p4smith_regression/hash_table_column_duplicated.p4
 )
 
 # P4C-1060
@@ -1521,6 +1530,11 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Miscoordination of what hash groups are on the search bus vs. what hash groups are in the table format"
   ../glass/testsuite/p4_tests/phv/COMPILER-587/l4l.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Table .* .* invoked from two different controls: Apply and Apply"
+  ../glass/testsuite/p4_tests/phv/COMPILER-1134/comp_1134.p4
   )
 
 # P4C does not support bridging of header stacks within serializable structs
