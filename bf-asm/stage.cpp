@@ -113,6 +113,12 @@ void AsmStage::input(VECTOR(value_t) args, value_t data) {
                 stage[stageno].error_mode[gress] = Stage::DISABLE_ALL_TABLES;
             else
                 error(kv.value.lineno, "Unknown error mode %s", value_desc(kv.value));
+            continue;
+        } else if (Target::SUPPORT_ALWAYS_RUN_ACTION() && kv.key == "always_run_action") {
+            if (gress == GHOST)
+                error(kv.key.lineno, "No always run action for ghost thread, must use ingress");
+            else
+                stage[stageno].tables.push_back(new AlwaysRunTable(gress, &stage[stageno], kv));
             continue; }
         if (!CHECKTYPEM(kv.key, tCMD, "table declaration")) continue;
         if (!CHECKTYPE(kv.value, tMAP)) continue;

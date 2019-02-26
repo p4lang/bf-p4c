@@ -191,3 +191,11 @@ template<> void Stage::write_regs(Target::JBay::mau_regs &regs) {
         disable_jbay_power_gating(regs);
     }
 }
+
+void AlwaysRunTable::write_regs(Target::JBay::mau_regs &regs) {
+    if (gress == EGRESS)
+        regs.dp.imem_word_read_override.imem_word_read_override_egress = 1;
+    else
+        regs.dp.imem_word_read_override.imem_word_read_override_ingress = 1;
+    actions->write_regs(regs, this);
+}

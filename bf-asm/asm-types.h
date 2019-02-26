@@ -236,6 +236,11 @@ inline std::ostream &operator<<(std::ostream &out, gress_t gress) {
     default: out << "(invalid gress " << (int)gress << ")"; }
     return out; }
 
+template<typename T> inline std::string to_string(T val) {
+    std::stringstream tmp;
+    tmp << val;
+    return tmp.str(); }
+
 class MapIterChecked {
 /* Iterate through a map (VECTOR(pair_t)), giving errors for non-string and
  * duplicate keys (and skipping them) */

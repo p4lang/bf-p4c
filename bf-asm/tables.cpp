@@ -15,7 +15,9 @@ Table::Table(int line, std::string &&n, gress_t gr, Stage *s, int lid) :
     name_(n), stage(s), gress(gr), lineno(line), logical_id(lid)
 {
     if (lineno >= 0) {
-        BUG_CHECK(all.find(name_) == all.end());
+        if (all.count(name_)) {
+            error(lineno, "Duplicate table %s", name());
+            error(all.at(name_)->lineno, "previously defined here"); }
         all.emplace(name_, this); }
     if (stage)
         stage->all_refs.insert(&stage);
@@ -1078,6 +1080,19 @@ Table::Actions::Actions(Table *tbl, VECTOR(pair_t) &data) {
         actions.emplace(name, tbl, this, kv, pos++); }
 }
 
+AlwaysRunTable::AlwaysRunTable(gress_t gress, Stage *stage, pair_t &init)
+: Table(init.key.lineno, "always run " + to_string(gress) + " stage " + to_string(stage->stageno),
+        gress, stage) {
+    VECTOR(pair_t)      tmp = { 1, 1, &init };
+    actions = new Actions(this, tmp);
+    if (actions->count() == 1) {  // unless there was an error parsing the action...
+        auto &act = *actions->begin();
+        if (act.addr >= 0)
+            error(act.lineno, "always run action address is fixed");
+        act.addr = ACTION_ALWAYS_RUN_IMEM_ADDR;
+    }
+}
+
 void Table::Actions::Action::check_next_ref(Table *tbl, const Table::Ref &ref) const {
     if (ref != "END" && ref.check() && ref->table_id() >= 0 && ref->table_id() < tbl->table_id()) {
         error(lineno, "Next table %s for action %s before containing table %s", ref->name(),
@@ -1143,12 +1158,12 @@ void Table::Actions::Action::check_next(Table *tbl) {
 void Table::Actions::Action::pass1(Table *tbl) {
     // The compiler generates all action handles which must be specified in the
     // assembly, if not we throw an error.
-    if ((handle == 0) && (!tbl->to<Synth2Port>())){
+    if ((handle == 0) && tbl->needs_handle()){
         error(lineno,
             "No action handle specified for table - %s, action - %s", tbl->name(), name.c_str());
     }
 
-    if (!tbl->to<Synth2Port>() && !tbl->to<Phase0MatchTable>()) {
+    if (tbl->needs_next()) {
         check_next(tbl);
     }
 

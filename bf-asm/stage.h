@@ -55,6 +55,7 @@ public:
                         error_mode[2];
 
     int                         pass1_logical_id, pass1_tcam_id;
+
 protected:
     Stage_data() {}
     Stage_data(const Stage_data &) = delete;

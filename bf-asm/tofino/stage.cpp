@@ -111,3 +111,7 @@ void Stage::gen_configuration_cache(Target::Tofino::mau_regs &regs, json::vector
             add_cfg_reg(cfg_cache, reg_fqname, reg_name, reg_value_str); }
     }
 }
+
+void AlwaysRunTable::write_regs(Target::Tofino::mau_regs &) {
+    BUG();
+}

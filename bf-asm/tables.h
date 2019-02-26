@@ -478,7 +478,7 @@ public:
     virtual table_type_t set_match_table(MatchTable *m, bool indirect) { assert(0); return OTHER; }
     virtual const MatchTable *get_match_table() const { assert(0); return nullptr; }
     virtual MatchTable *get_match_table() { assert(0); return nullptr; }
-    virtual std::set<MatchTable *> get_match_tables() { assert(0); return std::set<MatchTable *>(); }
+    virtual std::set<MatchTable *> get_match_tables() { return std::set<MatchTable *>(); }
     virtual const AttachedTables *get_attached() const { return 0; }
     virtual AttachedTables *get_attached() { return 0; }
     virtual const GatewayTable *get_gateway() const { return 0; }
@@ -663,6 +663,8 @@ public:
     int get_format_field_size(std::string s) const {
         if (auto field = lookup_field(s)) return field->size;
         return 0; }
+    virtual bool needs_handle() const { return false; }
+    virtual bool needs_next() const { return false; }
 };
 
 class FakeTable : public Table {
@@ -675,6 +677,19 @@ public:
     FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
         virtual void write_regs, (mau_regs &), override { assert(0); })
     void gen_tbl_cfg(json::vector &out) const override { assert(0); }
+};
+
+class AlwaysRunTable : public Table {
+    /* a 'table' to hold the always run action in a stage */
+public:
+    AlwaysRunTable(gress_t gress, Stage *stage, pair_t &init);
+    void setup(VECTOR(pair_t) &data) override { assert(0); }
+    void pass1() override { actions->pass1(this); }
+    void pass2() override { actions->pass2(this); }
+    void pass3() override { }
+    FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
+        void write_regs,(mau_regs &regs), override; )
+    void gen_tbl_cfg(json::vector &out) const override { }
 };
 
 struct AttachedTables {
@@ -753,6 +768,8 @@ public:
     void add_all_reference_tables(json::map &tbl, Table *math_table=nullptr) const;
     METER_ACCESS_TYPE default_meter_access_type(bool for_stateful);
     bool merge_static_entries(json::map &s) const;
+    bool needs_handle() const override { return true; }
+    bool needs_next() const override { return true; }
 )
 
 #define DECLARE_TABLE_TYPE(TYPE, PARENT, NAME, ...)                     \
@@ -1100,6 +1117,7 @@ DECLARE_TABLE_TYPE(Phase0MatchTable, MatchTable, "phase0_match",
     // we skip pass0
     void pass0() override {}
     void set_pred() override { return; }
+    bool needs_next() const override { return false; }
 )
 DECLARE_TABLE_TYPE(HashActionTable, MatchTable, "hash_action",
 public:
@@ -1163,6 +1181,8 @@ public:
     unsigned get_default_action_handle() const override {
         unsigned def_act_handle = Table::get_default_action_handle();
         return def_act_handle ? def_act_handle : action ? action->default_action_handle : 0; }
+    bool needs_handle() const override { return true; }
+    bool needs_next() const override { return true; }
 )
 
 DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,
@@ -1288,6 +1308,8 @@ public:
     unsigned determine_default(Table::Call &call) const;
     unsigned determine_mask(Table::Call &call) const;
     unsigned determine_vpn_shiftcount(Table::Call &call) const;
+    bool needs_handle() const override { return true; }
+    bool needs_next() const override { return true; }
 )
 
 // Dummy value used to start gateway handles. For future use by driver,
@@ -1355,6 +1377,8 @@ public:
         return match_table ? match_table->get_meter() : 0; }
     bool empty_match() const { return match.empty() && xor_match.empty(); }
     unsigned input_use() const;
+    bool needs_handle() const override { return true; }
+    bool needs_next() const override { return true; }
 )
 
 DECLARE_TABLE_TYPE(SelectionTable, AttachedTable, "selection",
@@ -1433,6 +1457,8 @@ public:
         IdletimeTable *rv = new IdletimeTable(lineno, name.c_str(), gress, stage, lid);
         rv->setup(data);
         return rv; }
+    bool needs_handle() const override { return true; }
+    bool needs_next() const override { return true; }
 };
 
 DECLARE_ABSTRACT_TABLE_TYPE(Synth2Port, AttachedTable,
