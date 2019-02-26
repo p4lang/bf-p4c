@@ -1,29 +1,35 @@
-#include "bf-p4c/common/alias.h"
 #include <sstream>
+#include "bf-p4c/common/alias.h"
+#include "bf-p4c/common/ir_utils.h"
 
 Visitor::profile_t FindExpressionsForFields::init_apply(const IR::Node* root) {
     profile_t rv = Inspector::init_apply(root);
-    exprFields.clear();
-    fieldExpressions.clear();
-    for (auto kv : pragmaAlias.getAliasMap())
-        exprFields.insert(phv.field(kv.second.field));
+    fieldNameToExpressionsMap.clear();
     return rv;
 }
 
-bool FindExpressionsForFields::preorder(const IR::Expression* expr) {
-    auto* f = phv.field(expr);
-    if (!f)
+bool FindExpressionsForFields::preorder(const IR::HeaderOrMetadata* h) {
+    LOG5("Header: " << h->name);
+    LOG5("Header type: " << h->type);
+    cstring hName = h->name;
+    // Ignore compiler generated metadata because the user is not going to apply a pragma on those.
+    if (hName.startsWith("ingress::compiler_generated_meta") ||
+        hName.startsWith("egress::compiler_generated_meta"))
         return true;
-    // If field is not an alias destination, ignore it.
-    if (!exprFields.count(f))
-        return true;
-    if (fieldExpressions.count(f))
-        return true;
-    fieldExpressions[f] = expr;
+    for (auto f : h->type->fields) {
+        cstring name = h->name + "." + f->name;
+        // Ignore compiler generated metadata fields that belong to different headers.
+        if (name.endsWith("$always_deparse") || name.endsWith("^bridged_metadata_indicator"))
+            continue;
+        IR::Member* mem = gen_fieldref(h, f->name);
+        if (!mem) continue;
+        fieldNameToExpressionsMap[name] = mem;
+        LOG5("  Added field: " << name << ", " << mem);
+    }
     return true;
 }
 
-void FindExpressionsForFields::end_apply() {
+Visitor::profile_t ReplaceAllAliases::init_apply(const IR::Node* root) {
     if (LOGGING(1)) {
         LOG1("    All aliasing fields: ");
         for (auto &kv : pragmaAlias.getAliasMap()) {
@@ -31,6 +37,7 @@ void FindExpressionsForFields::end_apply() {
             if (kv.second.range)
                 ss << "[" << kv.second.range->hi << ":" << kv.second.range->lo << "]";
             LOG1("      " << kv.first << " -> " << kv.second.field << ss.str()); } }
+    return Transform::init_apply(root);
 }
 
 IR::Node* ReplaceAllAliases::preorder(IR::Expression* expr) {
@@ -52,13 +59,11 @@ IR::Node* ReplaceAllAliases::preorder(IR::Expression* expr) {
     // replacementField is the alias destination field
     auto destInfo = aliasMap.at(f->name);
     const PHV::Field* replacementField = phv.field(destInfo.field);
-    BUG_CHECK(fieldExpressions.count(replacementField), "Expression not found");
+    BUG_CHECK(fieldExpressions.count(replacementField->name),
+            "Expression not found %1%", replacementField->name);
 
     // replacementExpression is the expression corresponding to the alias destination field
-    const IR::Expression* replacementExpression = fieldExpressions.at(replacementField);
-    auto* replacementMember = replacementExpression->to<IR::Member>();
-    BUG_CHECK(replacementMember, "Replacement member not found for expression %s",
-            replacementMember);
+    const IR::Member* replacementMember = fieldExpressions.at(replacementField->name);
     auto* newMember = new IR::BFN::AliasMember(replacementMember, expr);
 
     auto* sl = expr->to<IR::Slice>();

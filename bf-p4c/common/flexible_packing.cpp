@@ -249,8 +249,12 @@ SymBitMatrix RepackFlexHeaders::mustPack(const ordered_set<const PHV::Field*>& f
         cstring egressFieldName = getNonBridgedEgressFieldName(f->name);
         BUG_CHECK(egressFieldName, "No egress version of the field %1%", f->name);
         const auto* egressField = phv.field(egressFieldName);
-        egressFields.insert(egressField);
-        otherGressMapping[egressField] = f;
+        if (egressField) {
+            egressFields.insert(egressField);
+            otherGressMapping[egressField] = f;
+        } else {
+            LOG4("Did not find field " << egressFieldName);
+        }
     }
 
     // Figure out the actions reading each bridged metadata field.

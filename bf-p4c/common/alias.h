@@ -6,33 +6,22 @@
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/pragma/pa_alias.h"
 
-/** This class accepts an aliasMap (map of field and its alias specified by pa_alias pragma) and
-  * generates a fieldExpressions map that stores a representative IR::Expression object
-  * corresponding to each field in the aliasMap.
+/** This class generates a fieldExpressions map that stores a representative IR::Expression object
+  * corresponding to each field in the program.
   */
 class FindExpressionsForFields : public Inspector {
  private:
     /// PhvInfo object.
     const PhvInfo& phv;
-    /// Aliasing information from the @pa_alias pragma.
-    const PragmaAlias& pragmaAlias;
-    /// Map of IR::Expression objects corresponding to the alias destination fields.
-    ordered_map<const PHV::Field*, const IR::Expression*>&     fieldExpressions;
-
-    /// Set of all the alias destination fields.
-    ordered_set<const PHV::Field*> exprFields;
+    /// Map of IR::Expression objects corresponding to the field names.
+    ordered_map<cstring, const IR::Member*>& fieldNameToExpressionsMap;
 
     profile_t init_apply(const IR::Node* root) override;
-    /// For every IR::Expression object in the program, populate the fieldExpressions map.
-    bool preorder(const IR::Expression* expr) override;
-    void end_apply() override;
+    bool preorder(const IR::HeaderOrMetadata* h) override;
 
  public:
-    FindExpressionsForFields(
-            const PhvInfo& p,
-            const PragmaAlias& pragmaAlias,
-            ordered_map<const PHV::Field*, const IR::Expression*>& f)
-        : phv(p), pragmaAlias(pragmaAlias), fieldExpressions(f) { }
+    FindExpressionsForFields(const PhvInfo& p, ordered_map<cstring, const IR::Member*>& f)
+        : phv(p), fieldNameToExpressionsMap(f) { }
 };
 
 /** This class replaces all uses of alias source fields with the corresponding alias destination
@@ -46,15 +35,16 @@ class ReplaceAllAliases : public Transform {
     /// Aliasing information from the @pa_alias pragma.
     const PragmaAlias& pragmaAlias;
     /// Map of IR::Expression objects corresponding to the alias destination fields.
-    const ordered_map<const PHV::Field*, const IR::Expression*>&    fieldExpressions;
+    const ordered_map<cstring, const IR::Member*>&    fieldExpressions;
 
+    profile_t init_apply(const IR::Node* root) override;
     IR::Node* preorder(IR::Expression* expr) override;
 
  public:
     ReplaceAllAliases(
             const PhvInfo& p,
             const PragmaAlias& pragmaAlias,
-            const ordered_map<const PHV::Field*, const IR::Expression*>& f)
+            const ordered_map<cstring, const IR::Member*>& f)
         : phv(p), pragmaAlias(pragmaAlias), fieldExpressions(f) { }
 };
 
@@ -68,7 +58,7 @@ class ReplaceAllAliases : public Transform {
   */
 class Alias : public PassManager {
  private:
-     ordered_map<const PHV::Field*, const IR::Expression*> fieldExpressions;
+     ordered_map<cstring, const IR::Member*> fieldExpressions;
      PragmaAlias pragmaAlias;
 
  public:
@@ -76,7 +66,7 @@ class Alias : public PassManager {
         : pragmaAlias(phv, options.disabled_pragmas) {
         addPasses({
             &pragmaAlias,
-            new FindExpressionsForFields(phv, pragmaAlias, fieldExpressions),
+            new FindExpressionsForFields(phv, fieldExpressions),
             new ReplaceAllAliases(phv, pragmaAlias, fieldExpressions)
         });
     }

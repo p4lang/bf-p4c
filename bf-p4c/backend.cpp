@@ -182,9 +182,6 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new CollectPhvInfo(phv),
         new InstructionSelection(options, phv),
         new DumpPipe("After InstructionSelection"),
-        new Alias(phv, options),             // Add aliasing from the pa_alias pragmas
-        new CollectPhvInfo(phv),
-        &defuse,
         new FindDependencyGraph(phv, deps),
         options.decaf ? new DeparserCopyOpt(phv, uses, defuse, deps) : nullptr,
         options.privatization ? new Privatization(phv, deps, doNotPrivatize, defuse) : nullptr,
@@ -204,6 +201,9 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         // Run after bridged metadata packing as bridged packing updates the parser state.
         new ResolveComputedParserExpressions,
         new CollectPhvInfo(phv),
+        new Alias(phv, options),             // Add aliasing from the pa_alias pragmas
+        new CollectPhvInfo(phv),
+        &defuse,
         new AlpmSetup,
         new CollectPhvInfo(phv),
         new ValidToStkvalid(phv),   // Alias header stack $valid fields with $stkvalid slices.
