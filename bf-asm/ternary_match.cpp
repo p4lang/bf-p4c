@@ -470,7 +470,7 @@ std::unique_ptr<json::map> TernaryMatchTable::gen_memory_resource_allocation_tbl
 void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
         unsigned lsb_offset, unsigned lsb_idx, unsigned msb_idx, \
         std::string source, unsigned start_bit, unsigned field_width, \
-        unsigned index, bitvec &tcam_bits) const {
+        unsigned index, bitvec &tcam_bits, unsigned nibble_offset = 0) const {
     remove_aug_names(name);
     std::string fix_name(name);
 
@@ -493,17 +493,15 @@ void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
     unsigned field_bytes = p ? (field_width + 7)/8 : 1;
     for (unsigned i = 0; i < field_bytes; i++) {
         json::map entry;
-        unsigned entry_lo = lsb_offset;
-        unsigned entry_offset_lo = lsb_offset;
-        unsigned entry_size = field_width;
-        unsigned entry_pad_size = entry_size;
+        auto entry_pad_size = field_width;
+        auto lsb_mem_word_offset = lsb_offset;
         entry["field_name"] = fix_name;
-        entry["lsb_mem_word_offset"] = entry_lo;
+        entry["lsb_mem_word_offset"] = lsb_mem_word_offset;
         entry["lsb_mem_word_idx"] = lsb_idx;
         entry["msb_mem_word_idx"] = msb_idx;
         entry["source"] = source;
         entry["start_bit"] = start_bit + slice_offset;
-        entry["field_width"] = entry_size;
+        entry["field_width"] = field_width;
         auto dirtcam_mode = (name != "--unused--") ?
             get_dirtcam_mode(index, (lsb_offset + i*8)/8) : TCAM_NORMAL;
         // If field is a range match output the 'range' node only for 4bit hi/lo
@@ -520,49 +518,56 @@ void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
             // While generating padding however we treat the entire nibble as a
             // field and do not pad any bits within the nibble when they are
             // unused by the field
-            bool has_nibble_offset = entry_size < 4;
-            entry_size = has_nibble_offset ? entry_size : 4;
+            bool has_nibble_offset = (field_width < 4) 
+                || (((nibble_offset > 0) && (dirtcam_mode == DIRTCAM_4B_LO)));
+            auto range_field_width = has_nibble_offset ? 
+                field_width > 4 ? 4 - nibble_offset : 4 : 4;
             entry_pad_size = 4;
+            auto entry_start_bit = i * 8 + start_bit + (dirtcam_mode == DIRTCAM_4B_HI) * 4 + slice_offset;
+            lsb_offset = has_nibble_offset ? lsb_offset - nibble_offset : lsb_offset;
+            lsb_mem_word_offset = lsb_offset + i*8 + 4*(dirtcam_mode == DIRTCAM_4B_HI);
+            auto lsb_mem_word_offset_dup = lsb_offset + i*8 + 4*(dirtcam_mode == DIRTCAM_4B_LO);
+            if (!has_nibble_offset && nibble_offset > 0) {
+                entry_start_bit = nibble_offset <= 4 ? 4 - nibble_offset : 0;
+                lsb_mem_word_offset -= nibble_offset;
+                lsb_mem_word_offset_dup -= nibble_offset;
+            }
+
+            // Range Entry encoding
             entry["source"] = "range";
             // Shift start bit based on which nibble is used in range
-            entry["start_bit"] =
-                i * 8 + start_bit + (dirtcam_mode == DIRTCAM_4B_HI) * 4 + slice_offset;
-            entry["field_width"] = entry_size;
-            entry_offset_lo = lsb_offset + i*8 + 4*(dirtcam_mode == DIRTCAM_4B_HI);
-            entry_lo = has_nibble_offset ? 1 + i*8 + 4*(dirtcam_mode == DIRTCAM_4B_HI)
-                                     : entry_offset_lo;
-            entry["lsb_mem_word_offset"] = entry_lo;
+            entry["start_bit"] = entry_start_bit;
+            entry["field_width"] = range_field_width;
+            entry["lsb_mem_word_offset"] = lsb_mem_word_offset;
             json::map &entry_range = entry["range"];
             entry_range["type"] = 4;
             entry_range["is_duplicate"] = false;
             if (has_nibble_offset)
-                entry_range["nibble_offset"] = entry_offset_lo - entry_lo;
+                entry_range["nibble_offset"] = nibble_offset;
 
+            // Range Entry Duplicate encoding
             // Add the duplicate entry as well. It is unclear why this entry is
             // needed by the driver, as most of the information is duplicated
             // and driver should only need to know where to place the actual
             // nibble. But currently we see driver crash in the absence of this
             // field in some situations, hence we add it here.
             json::map entry_dup;
-            unsigned entry_lo_dup = has_nibble_offset ?
-                         1 + i*8 + 4*(dirtcam_mode == DIRTCAM_4B_LO)
-                        :lsb_offset + i*8 + 4*(dirtcam_mode == DIRTCAM_4B_LO);
             entry_dup["field_name"] = fix_name;
-            entry_dup["lsb_mem_word_offset"] = entry_lo_dup;
+            entry_dup["lsb_mem_word_offset"] = lsb_mem_word_offset_dup;
             entry_dup["lsb_mem_word_idx"] = lsb_idx;
             entry_dup["msb_mem_word_idx"] = msb_idx;
             entry_dup["source"] = "range";
-            entry_dup["start_bit"] = i * 8 + start_bit + (dirtcam_mode == DIRTCAM_4B_HI) * 4 + slice_offset;
-            entry_dup["field_width"] = entry_size;
+            entry_dup["start_bit"] = entry_start_bit;
+            entry_dup["field_width"] = range_field_width;
             json::map &entry_dup_range = entry_dup["range"];
             entry_dup_range["type"] = 4;
             entry_dup_range["is_duplicate"] = true;
             if (has_nibble_offset)
-                entry_dup_range["nibble_offset"] = entry_offset_lo - entry_lo;
-            tcam_bits.setrange(entry_lo_dup, entry_pad_size);
+                entry_dup_range["nibble_offset"] = nibble_offset;
+            tcam_bits.setrange(lsb_mem_word_offset_dup, entry_pad_size);
             out.push_back(std::move(entry_dup));
         }
-        tcam_bits.setrange(entry_lo, entry_pad_size);
+        tcam_bits.setrange(lsb_mem_word_offset, entry_pad_size);
         out.push_back(std::move(entry)); }
 
 }
@@ -690,7 +695,7 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) const {
                               lsb_mem_word_offset, word, word, source,
                               field.second.what.lobit(), field.second.hi -
                               field.second.lo + 1, field.first.index,
-                              tcam_bits[word]); }
+                              tcam_bits[word], field.second.what->lo % 4); }
             break; }
         case InputXbar::Group::BYTE:
             for (size_t word = 0; word < match.size(); word++) {

@@ -1081,7 +1081,7 @@ public:
     void gen_entry_cfg(json::vector &out, std::string name, \
         unsigned lsb_offset, unsigned lsb_idx, unsigned msb_idx, \
         std::string source, unsigned start_bit, unsigned field_width,
-        unsigned index, bitvec &tcam_bits) const;
+        unsigned index, bitvec &tcam_bits, unsigned byte_offset) const;
     void set_partition_action_handle(unsigned handle) {
         if (p4_table) p4_table->set_partition_action_handle(handle); }
     void set_partition_field_name(std::string name) {

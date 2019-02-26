@@ -190,6 +190,7 @@ set (P4FACTORY_REGRESSION_TESTS
   pgrs
   perf_test_alpm   # (a.k.a alpm-pd-perf)
   # # pvs
+  # range
   resubmit
   smoke_large_tbls
   )
