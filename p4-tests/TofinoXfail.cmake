@@ -618,6 +618,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "No way to slice the following to satisfy @pa_container_size"
   extensions/p4_tests/p4_14/c1/COMPILER-954/case5730.p4
+  ../glass/testsuite/p4_tests/c1/COMPILER-1105/case8039.p4
   )
 
 # We can't (without some complex acrobatics) support conditional computed
@@ -1332,18 +1333,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Unrecognized algorithm for a hash expression: xor24_extend"
   ../glass/testsuite/p4_tests/mau/test_config_408_xor_hashes.p4
-  )
-
-# P4C-1388
-p4c_add_xfail_reason("tofino"
-  "syntax error, unexpected VALID"
-  ../glass/testsuite/p4_tests/mau/COMPILER-901/test_config_398_deep_identity_hash.p4
-  )
-
-# P4C-1388
-p4c_add_xfail_reason("tofino"
-  "syntax error, unexpected UNEXPECTED_TOKEN"
-  ../glass/testsuite/p4_tests/c1/COMPILER-1105/case8039.p4
   )
 
 # P4C-1389
