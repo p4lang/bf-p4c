@@ -3,6 +3,8 @@
 #include "ir/ir.h"
 #include "lib/bitrange.h"
 
+namespace ActionData {
+
 size_t slot_type_to_bits(SlotType_t slot_type) {
     BUG_CHECK(slot_type != SECT_TYPES, "Invalid call of slot_type_to_bits");
     return 1U << (static_cast<int>(slot_type) + 3);
@@ -18,7 +20,7 @@ size_t slot_type_to_bits(SlotType_t slot_type) {
  *     [4:7]
  *     [0:3]
  */
-const ActionDataParam *Argument::overlap(const ActionDataParam *ad, bool,
+const Parameter *Argument::overlap(const Parameter *ad, bool,
         le_bitrange *my_overlap, le_bitrange *ad_overlap) const {
     const Argument *arg = ad->to<Argument>();
     if (arg == nullptr) return nullptr;
@@ -46,14 +48,14 @@ const ActionDataParam *Argument::overlap(const ActionDataParam *ad, bool,
     return rv;
 }
 
-const ActionDataParam *Constant::split(int lo, int hi) const {
+const Parameter *Constant::split(int lo, int hi) const {
     le_bitrange split_range = { lo, hi };
     BUG_CHECK(range().contains(split_range), "Illegally splitting a parameter, as the "
               "split contains bits outside of the range");
     return new Constant(_value.getslice(split_range.lo, split_range.size()), split_range.size());
 }
 
-bool Constant::is_next_bit_of_param(const ActionDataParam *ad) const {
+bool Constant::is_next_bit_of_param(const Parameter *ad) const {
     if (size() != 1)
         return false;
     return ad->is<Constant>();
@@ -62,8 +64,8 @@ bool Constant::is_next_bit_of_param(const ActionDataParam *ad) const {
 /**
  * Appending a constant to another constant on the MSB
  */
-const ActionDataParam *Constant::get_extended_param(unsigned extension,
-        const ActionDataParam *ad) const {
+const Parameter *Constant::get_extended_param(unsigned extension,
+        const Parameter *ad) const {
     auto con = ad->to<Constant>();
     BUG_CHECK(con != nullptr, "Cannot extend a non-constant on constant");
     BUG_CHECK(con->size() <= static_cast<int>(extension), "The extension constant is smaller "
@@ -85,10 +87,10 @@ const ActionDataParam *Constant::get_extended_param(unsigned extension,
  * at the edges of the constant
  *
  * The parameter only_one_overlap_solution indicates that the overlap function will only return if
- * overlap has one and only one solution (as this function is used by multiple ActionDataParams).
+ * overlap has one and only one solution (as this function is used by multiple Parameters).
  * Constants do not have this property and will always return a no solution 
  */
-const ActionDataParam *Constant::overlap(const ActionDataParam *ad, bool only_one_overlap_solution,
+const Parameter *Constant::overlap(const Parameter *ad, bool only_one_overlap_solution,
         le_bitrange *my_overlap, le_bitrange *ad_overlap) const {
     if (only_one_overlap_solution)
         return nullptr;
@@ -118,7 +120,7 @@ const ActionDataParam *Constant::overlap(const ActionDataParam *ad, bool only_on
     return rv;
 }
 
-bool Constant::equiv_value(const ActionDataParam *ad) const {
+bool Constant::equiv_value(const Parameter *ad) const {
     auto con = ad->to<Constant>();
     if (con == nullptr) return false;
     return _size == con->_size && _value == con->_value;
@@ -379,7 +381,7 @@ PackingConstraint PackingConstraint::expand(int current_size, int expand_size) c
 /**
  * Given that a rotation happened from init_bit to final_bit, this function returns the position
  * of init_bit_comp after this rotation is completed.  Necessary for finding the location of bits
- * in ActionDataForSingleALU2s
+ * in ALUOperations
  */
 int PackingConstraint::bit_rotation_position(int bit_width, int init_bit, int final_bit,
         int init_bit_comp) const {
@@ -404,11 +406,11 @@ int PackingConstraint::bit_rotation_position(int bit_width, int init_bit, int fi
 }
 
 /**  
- * This function creates from a ActionDataRamSection with it's isolated ALU information.  This is
- * the initial state from which the ActionDataRamSections can be condensed and determined
+ * This function creates from a RamSection with it's isolated ALU information.  This is
+ * the initial state from which the RamSections can be condensed and determined
  * where the are in RAM.
  */
-const ActionDataRamSection *ActionDataForSingleALU2::create_RamSection(bool shift_to_lsb) const {
+const RamSection *ALUOperation::create_RamSection(bool shift_to_lsb) const {
     size_t sec_size = size();
     // Because of Action Data Bus constraints, bitmasked-set information must be packed as
     // a two container wide RamSection
@@ -419,7 +421,7 @@ const ActionDataRamSection *ActionDataForSingleALU2::create_RamSection(bool shif
     if (_constraint == DEPOSIT_FIELD)
         pc = pc.expand(1, sec_size);
 
-    ActionDataRamSection *init_rv = new ActionDataRamSection(sec_size, pc);
+    RamSection *init_rv = new RamSection(sec_size, pc);
     for (auto param : _params) {
         init_rv->add_param(param.phv_bits.lo, param.param);
     }
@@ -441,7 +443,7 @@ const ActionDataRamSection *ActionDataForSingleALU2::create_RamSection(bool shif
     }
 
     init_rv->add_alu_req(this);
-    const ActionDataRamSection *rv = nullptr;
+    const RamSection *rv = nullptr;
     if (shift_to_lsb) {
         // Move anything deposit-field down to the lsb of the container
         if (_constraint == DEPOSIT_FIELD) {
@@ -454,13 +456,13 @@ const ActionDataRamSection *ActionDataForSingleALU2::create_RamSection(bool shif
         // Move to the right_shift, initially 0 on creation
         rv = init_rv->can_rotate(_right_shift, 0);
     }
-    BUG_CHECK(rv != nullptr, "Cannot create a RAM section from an ActionDataForSingleALU2");
+    BUG_CHECK(rv != nullptr, "Cannot create a RAM section from an ALUOperation");
     BUG_CHECK(rv->alu_requirements.size() == 1, "Must have an alu requirement");
     return rv;
 }
 
-const ActionDataForSingleALU2 *ActionDataForSingleALU2::add_right_shift(int right_shift) const {
-    ActionDataForSingleALU2 *rv = new ActionDataForSingleALU2(*this);
+const ALUOperation *ALUOperation::add_right_shift(int right_shift) const {
+    ALUOperation *rv = new ALUOperation(*this);
     rv->_right_shift = right_shift;
     for (auto &param : rv->_params) {
         param.right_shift = right_shift;
@@ -469,27 +471,27 @@ const ActionDataForSingleALU2 *ActionDataForSingleALU2::add_right_shift(int righ
 }
 
 /**
- * In order to perform the merge function, the two ActionDataRamSections have to be the same
+ * In order to perform the merge function, the two RamSections have to be the same
  * size, i.e. the same number of bits wide.
  *
  * The example would be to move a 8-bit data to move 16-bit data.  The byte size data now has
  * 8 empty bits appended to it.  The new 16 bit section is also now byte-by-byte rotational, which
  * is done through the expansion of the PackingConstraint
  */
-const ActionDataRamSection *ActionDataRamSection::expand_to_size(size_t expand_size) const {
+const RamSection *RamSection::expand_to_size(size_t expand_size) const {
     if (size() >= expand_size)
         return this;
     BUG_CHECK(size() % expand_size, "Cannot expand this section into this size");
 
     PackingConstraint rv_pack_info = pack_info.expand(size(), expand_size);
-    ActionDataRamSection *rv = new ActionDataRamSection(expand_size, rv_pack_info);
+    RamSection *rv = new RamSection(expand_size, rv_pack_info);
     std::copy(action_data_bits.begin(), action_data_bits.end(), rv->action_data_bits.begin());
     rv->alu_requirements.insert(rv->alu_requirements.end(), alu_requirements.begin(),
                                 alu_requirements.end());
     return rv;
 }
 
-void ActionDataRamSection::add_param(int bit, const ActionDataParam *adp) {
+void RamSection::add_param(int bit, const Parameter *adp) {
     BUG_CHECK(bit + adp->size() <= static_cast<int>(size()), "The size of the parameter is "
               "outside the size of the RAM section");
     for (int i = 0; i < adp->size(); i++) {
@@ -500,12 +502,12 @@ void ActionDataRamSection::add_param(int bit, const ActionDataParam *adp) {
 
 /**
  * Building a map of slices of parameters in order to look for identical ranges of data within
- * two ActionDataRamSections.
+ * two RamSections.
  */
-ActionDataPositions ActionDataRamSection::action_data_positions() const {
-    ActionDataPositions rv;
+ParameterPositions RamSection::parameter_positions() const {
+    ParameterPositions rv;
     size_t bit_pos = 0;
-    const ActionDataParam *next_entry = nullptr;
+    const Parameter *next_entry = nullptr;
     for (size_t i = 0; i < size(); i++) {
         if (action_data_bits[i] == nullptr) {
             if (next_entry == nullptr) {
@@ -535,15 +537,15 @@ ActionDataPositions ActionDataRamSection::action_data_positions() const {
 }
 
 /**
- * Calculate the positions of the parameters that both ActionDataRamSection
+ * Calculate the positions of the parameters that both RamSection
  */
-void ActionDataRamSection::gather_shared_params(const ActionDataRamSection *ad,
-        safe_vector<SharedActionDataParam> &shared_params, bool only_one_overlap_solution) const {
+void RamSection::gather_shared_params(const RamSection *ad,
+        safe_vector<SharedParameter> &shared_params, bool only_one_overlap_solution) const {
     // Entries in the map will be lsb to msb in position
-    for (auto a_param_loc_pair : action_data_positions()) {
+    for (auto a_param_loc_pair : parameter_positions()) {
         int a_start_bit = a_param_loc_pair.first;
         auto a_param_loc = a_param_loc_pair.second;
-        for (auto b_param_loc_pair : ad->action_data_positions()) {
+        for (auto b_param_loc_pair : ad->parameter_positions()) {
             int b_start_bit = b_param_loc_pair.first;
             auto b_param_loc = b_param_loc_pair.second;
             le_bitrange a_br, b_br;
@@ -556,7 +558,7 @@ void ActionDataRamSection::gather_shared_params(const ActionDataRamSection *ad,
     }
 }
 
-bitvec ActionDataRamSection::bits_in_use() const {
+bitvec RamSection::bits_in_use() const {
     bitvec rv;
     for (size_t i = 0; i < size(); i++) {
         if (action_data_bits[i])
@@ -566,9 +568,9 @@ bitvec ActionDataRamSection::bits_in_use() const {
 }
 
 /**
- * Return the open ranges of data within an ActionDataRamSection
+ * Return the open ranges of data within an RamSection
  */
-safe_vector<le_bitrange> ActionDataRamSection::open_holes() const {
+safe_vector<le_bitrange> RamSection::open_holes() const {
     safe_vector<le_bitrange> rv;
     bitvec bits_inuse = bits_in_use();
     int start_bit = bits_inuse.ffz();
@@ -592,16 +594,16 @@ safe_vector<le_bitrange> ActionDataRamSection::open_holes() const {
     return rv;
 }
 
-const ActionDataRamSection *ActionDataRamSection::can_rotate(int init_bit, int final_bit) const {
+const RamSection *RamSection::can_rotate(int init_bit, int final_bit) const {
     if (!pack_info.can_rotate(size(), init_bit, final_bit))
         return nullptr;
-    ActionDataRamSection *rv = new ActionDataRamSection(*this);
+    RamSection *rv = new RamSection(*this);
     RotationInfo ri(rv->action_data_bits.begin(), rv->action_data_bits.end());
     rv->pack_info.rotate(ri, init_bit, final_bit);
     return rv;
 }
 
-const ActionDataRamSection *ActionDataRamSection::merge(const ActionDataRamSection *ad) const {
+const RamSection *RamSection::merge(const RamSection *ad) const {
     for (size_t i = 0; i < size(); i++) {
         if (action_data_bits[i] == nullptr || ad->action_data_bits[i] == nullptr)
             continue;
@@ -609,10 +611,10 @@ const ActionDataRamSection *ActionDataRamSection::merge(const ActionDataRamSecti
             continue;
         return nullptr;
     }
-    ActionDataRamSection *rv = new ActionDataRamSection(size());
+    RamSection *rv = new RamSection(size());
 
     for (size_t i = 0; i < size(); i++) {
-        const ActionDataParam *bit_param
+        const Parameter *bit_param
             = action_data_bits[i] != nullptr ? action_data_bits[i] : ad->action_data_bits[i];
         rv->action_data_bits[i] = bit_param;
     }
@@ -629,16 +631,16 @@ const ActionDataRamSection *ActionDataRamSection::merge(const ActionDataRamSecti
 }
 
 /**
- * Returns a rotated ActionDataRamSection that fits within the bitrange provided, if possible.
+ * Returns a rotated RamSection that fits within the bitrange provided, if possible.
  * For a constraint explanation, please look at PackingConstraint::rotate_in_range
  */
-const ActionDataRamSection *ActionDataRamSection::rotate_in_range(le_bitrange hole) const {
+const RamSection *RamSection::rotate_in_range(le_bitrange hole) const {
     int init_bit = bits_in_use().min().index();
     int final_bit = init_bit;
     LocalPacking lp(size(), bits_in_use());
     if (!pack_info.can_rotate_in_range(lp, hole, final_bit))
         return nullptr;
-    ActionDataRamSection *rv = new ActionDataRamSection(*this);
+    RamSection *rv = new RamSection(*this);
     RotationInfo ri(rv->action_data_bits.begin(), rv->action_data_bits.end());
     rv->pack_info.rotate(ri, init_bit, final_bit);
     return rv;
@@ -646,11 +648,11 @@ const ActionDataRamSection *ActionDataRamSection::rotate_in_range(le_bitrange ho
 
 
 /**
- * Returns a merged ActionDataRamSection of two independent ranges, if the merge was possible.
+ * Returns a merged RamSection of two independent ranges, if the merge was possible.
  * For a constraint explanation, please look at PackingConstraint::merge
  */
-const ActionDataRamSection *
-        ActionDataRamSection::no_overlap_merge(const ActionDataRamSection *ad) const {
+const RamSection *
+        RamSection::no_overlap_merge(const RamSection *ad) const {
     safe_vector<le_bitrange> holes = open_holes();
     bitvec ad_bits_in_use = ad->bits_in_use();
     le_bitrange max_bit_diff = { ad_bits_in_use.min().index(), ad_bits_in_use.max().index() };
@@ -674,7 +676,7 @@ const ActionDataRamSection *
  * Will return true if compare is worse than *this for the rv of the condense function.
  * Simple heuristics to be imrproved later. 
  */
-bool ActionDataRamSection::is_better_merge_than(const ActionDataRamSection *compare) const {
+bool RamSection::is_better_merge_than(const RamSection *compare) const {
     int t;
     // Bit utilization (preferring more overlap)
     if ((t = bits_in_use().popcount() - compare->bits_in_use().popcount()) != 0)
@@ -696,7 +698,7 @@ bool ActionDataRamSection::is_better_merge_than(const ActionDataRamSection *comp
 }
 
 /**
- * The algorithm to determine if (and the best way of) two ActionDataRamSections can be
+ * The algorithm to determine if (and the best way of) two RamSections can be
  * merged, (if two sections can be merged).
  *
  * The steps are:
@@ -705,16 +707,16 @@ bool ActionDataRamSection::is_better_merge_than(const ActionDataRamSection *comp
  *     3. Try to rotate data so that no fields overlap
  *     4. Pick the best choice based on heuristics
  */
-const ActionDataRamSection *ActionDataRamSection::condense(const ActionDataRamSection *ad) const {
+const RamSection *RamSection::condense(const RamSection *ad) const {
     size_t max_size = std::max(size(), ad->size());
-    const ActionDataRamSection *a = expand_to_size(max_size);
-    const ActionDataRamSection *b = ad->expand_to_size(max_size);
+    const RamSection *a = expand_to_size(max_size);
+    const RamSection *b = ad->expand_to_size(max_size);
 
-    safe_vector<const ActionDataRamSection *> possible_rvs;
-    safe_vector<SharedActionDataParam> shared_params;
+    safe_vector<const RamSection *> possible_rvs;
+    safe_vector<SharedParameter> shared_params;
     gather_shared_params(ad, shared_params, false);
 
-    // Overlap equivalent ActionDataParams
+    // Overlap equivalent Parameters
     for (auto shared_param : shared_params) {
         auto *a_rotated = a->can_rotate(shared_param.a_start_bit, shared_param.b_start_bit);
         if (a_rotated) {
@@ -741,7 +743,7 @@ const ActionDataRamSection *ActionDataRamSection::condense(const ActionDataRamSe
 
 
     // Pick the best choice
-    const ActionDataRamSection *best = nullptr;
+    const RamSection *best = nullptr;
     for (auto choice : possible_rvs) {
         if (best == nullptr || !best->is_better_merge_than(choice))
             best = choice;
@@ -750,12 +752,12 @@ const ActionDataRamSection *ActionDataRamSection::condense(const ActionDataRamSe
 }
 
 /**
- * A check to guarantee that the bits of this is a subset of bits on ActionDataRamSection *ad:
+ * A check to guarantee that the bits of this is a subset of bits on RamSection *ad:
  *     - arg[2:4] at bit 2 would be a subset of arg[0:7] at bit 0
  *     - arg[2:4] at bit 0 would not be a subset of arg[0:7] at bit 0
  *     - arg[0:4] at bit 0 would not be a subset of arg[1:7] at bit 1
  */
-bool ActionDataRamSection::is_data_subset_of(const ActionDataRamSection *ad) const {
+bool RamSection::is_data_subset_of(const RamSection *ad) const {
     for (size_t i = 0; i < size(); i++) {
         auto subset_bit = action_data_bits.at(i);
         auto superset_bit = ad->action_data_bits.at(i);
@@ -771,13 +773,13 @@ bool ActionDataRamSection::is_data_subset_of(const ActionDataRamSection *ad) con
 
 /**
  * Uses shared parameters to see if the ad_small is contained within *this 
- * Full Description: @seealso contains(const ActionDataForSingleALU2 *)
+ * Full Description: @seealso contains(const ALUOperation *)
  */
-bool ActionDataRamSection::contains(const ActionDataRamSection *ad_small, int init_bit_pos,
+bool RamSection::contains(const RamSection *ad_small, int init_bit_pos,
         int *final_bit_pos) const {
-    const ActionDataRamSection *ad = ad_small->expand_to_size(size());
+    const RamSection *ad = ad_small->expand_to_size(size());
 
-    safe_vector<SharedActionDataParam> shared_params;
+    safe_vector<SharedParameter> shared_params;
     gather_shared_params(ad, shared_params, true);
 
     for (auto shared_param : shared_params) {
@@ -799,11 +801,11 @@ bool ActionDataRamSection::contains(const ActionDataRamSection *ad_small, int in
 
 /**
  * Uses rotations from 0 to see if ad_small is contained within *this
- * Full Description: @seealso contains(const ActionDataForSingleALU2 *) 
+ * Full Description: @seealso contains(const ALUOperation *) 
  */
-bool ActionDataRamSection::contains_any_rotation_from_0(const ActionDataRamSection *ad_small,
+bool RamSection::contains_any_rotation_from_0(const RamSection *ad_small,
          int init_bit_pos, int *final_bit_pos) const {
-    const ActionDataRamSection *ad = ad_small->expand_to_size(size());
+    const RamSection *ad = ad_small->expand_to_size(size());
     for (size_t i = 0; i < size(); i++) {
         auto ad_rotated = ad->can_rotate(0, i);
         if (ad_rotated) {
@@ -819,8 +821,8 @@ bool ActionDataRamSection::contains_any_rotation_from_0(const ActionDataRamSecti
 }
 
 /**
- * The purpose of this check is to resolve the position of an ActionDataForSingleALU2 within
- * an ActionDataRamSection.  During the condense algorithm, the action data could be repositioned
+ * The purpose of this check is to resolve the position of an ALUOperation within
+ * an RamSection.  During the condense algorithm, the action data could be repositioned
  * in order to more tightly pack within RAM space.  This returns that the ActionDataForSingleALU
  * is still within this container, as well as calculates the right shift and the offset within
  * the ALU operation.
@@ -839,7 +841,7 @@ bool ActionDataRamSection::contains_any_rotation_from_0(const ActionDataRamSecti
  * in order to eventually determine the position of action data.  The *final_first_phv_bit_pos
  * is the position of this bit.
  */
-bool ActionDataRamSection::contains(const ActionDataForSingleALU2 *ad_alu,
+bool RamSection::contains(const ALUOperation *ad_alu,
         int *final_first_phv_bit_pos) const {
     auto ad = ad_alu->create_RamSection(false);
     bool rv = false;
@@ -852,13 +854,13 @@ bool ActionDataRamSection::contains(const ActionDataForSingleALU2 *ad_alu,
 }
 
 /**
- * Given that a ActionDataRamSection contains potentially multiple ActionDataForSingleALU2 object
+ * Given that a RamSection contains potentially multiple ALUOperation object
  * the purpose of this function is to determine the inputs to the ActionDataBus.  Essentially
  * the return value is the action data inputs if this section was allocated at bit 0 of
  * an action data table.
  */
-ActionDataBusInputs ActionDataRamSection::action_data_bus_inputs() const {
-    ActionDataBusInputs rv = {{ bitvec(), bitvec(), bitvec() }};
+BusInputs RamSection::bus_inputs() const {
+    BusInputs rv = {{ bitvec(), bitvec(), bitvec() }};
     for (auto ad_alu : alu_requirements) {
         int final_first_phv_bit_pos = 0;
         bool is_contained = contains(ad_alu, &final_first_phv_bit_pos);
@@ -874,7 +876,7 @@ ActionDataBusInputs ActionDataRamSection::action_data_bus_inputs() const {
 
 size_t RamSectionPosition::total_slots_of_type(SlotType_t slot_type) const {
     size_t rv = 0;
-    bitvec input = section->action_data_bus_inputs().at(static_cast<int>(slot_type));
+    bitvec input = section->bus_inputs().at(static_cast<int>(slot_type));
     size_t bytes_per_slot_type = (1 << static_cast<int>(slot_type));
     for (int i = 0; i <= input.max().index(); i += bytes_per_slot_type) {
         rv += input.getslice(i, bytes_per_slot_type).empty() ? 0 : 1;
@@ -911,8 +913,8 @@ size_t SingleActionPositions::adt_bits_required() const {
 
 /**
  * The sections_of_size are different than the slots of size in that the sections represent
- * the ActionDataRamSection while the the slots represent the inputs to the ActionDataBus,
- * which come from the ActionDataForSingleALU2 objects.
+ * the RamSection while the the slots represent the inputs to the ActionDataBus,
+ * which come from the ALUOperation objects.
  */
 std::array<int, SECT_TYPES> SingleActionPositions::sections_of_size() const {
     std::array<int, SECT_TYPES> rv = {{ 0 }};
@@ -925,9 +927,9 @@ std::array<int, SECT_TYPES> SingleActionPositions::sections_of_size() const {
 /**
  * The goal of immediate data packing is to reduce the number of bits required to mask
  * out of overhead.  In order to do some of this calculation, the goal is to find the
- * ActionDataRamSection of particular packing sizes that have the smallest msb.
+ * RamSection of particular packing sizes that have the smallest msb.
  *
- * This function returns the minimum max bit in use of all ActionDataRamSections of all
+ * This function returns the minimum max bit in use of all RamSections of all
  * possible sizes
  */
 std::array<int, SECT_TYPES> SingleActionPositions::minmax_bit_req() const {
@@ -1046,7 +1048,7 @@ void SingleActionPositions::move_other_sections_to_immed(int bits_to_move, SlotT
         if (moved_slot == SECT_TYPES)
             BUG("Could not remove enough bits from adt to immediate");
         bits_moved_to_immed += slot_type_to_bits(moved_slot);
-        BUG_CHECK(bits_moved_to_immed <= ActionFormat2::IMMEDIATE_BITS, "Illegally moved too "
+        BUG_CHECK(bits_moved_to_immed <= Format::IMMEDIATE_BITS, "Illegally moved too "
             "many bits to immediate");
     }
 }
@@ -1080,7 +1082,7 @@ safe_vector<RamSectionPosition> SingleActionPositions::best_inputs_to_move(int b
     // Basically from surveying the action, this determines which action data should be the
     // the last slot in immediate, due to requiring the smallest mask
     int minmax_use_slot_i = -1;
-    int minmax_bits = ActionFormat2::IMMEDIATE_BITS;
+    int minmax_bits = Format::IMMEDIATE_BITS;
     for (int i = 0; i < SLOT_TYPES; i++) {
         if (!can_be_immed_msb(bits_to_move)[i])
             continue;
@@ -1102,7 +1104,7 @@ safe_vector<RamSectionPosition> SingleActionPositions::best_inputs_to_move(int b
 /**
  * Creates an Argument from an IR::MAU::ActionArg or slice of one
  */
-void ActionFormat2::create_argument(ActionDataForSingleALU2 &alu,
+void Format::create_argument(ALUOperation &alu,
         ActionAnalysis::ActionParam &read, le_bitrange container_bits) {
     auto ir_arg = read.unsliced_expr()->to<IR::MAU::ActionArg>();
     BUG_CHECK(ir_arg != nullptr, "Cannot create argument");
@@ -1115,7 +1117,7 @@ void ActionFormat2::create_argument(ActionDataForSingleALU2 &alu,
  * Creates a Constant from an IR::Constant.  Assume to be <= 32 bits as all operations
  * at most are 32 bit ALU operations.
  */
-void ActionFormat2::create_constant(ActionDataForSingleALU2 &alu,
+void Format::create_constant(ALUOperation &alu,
         ActionAnalysis::ActionParam &read, le_bitrange container_bits) {
     auto ir_con = read.unsliced_expr()->to<IR::Constant>();
     BUG_CHECK(ir_con != nullptr, "Cannot create constant");
@@ -1133,12 +1135,12 @@ void ActionFormat2::create_constant(ActionDataForSingleALU2 &alu,
 }
 
 /**
- * Looks through the ActionAnalysis maps, and builds ActionDataParams and ActionDataForSingleALU2
+ * Looks through the ActionAnalysis maps, and builds Parameters and ALUOperation
  * structures.  This will then add a RamSection to potentially be condensed through the
  * algorithm.
  */
-void ActionFormat2
-        ::create_action_data_alus_for_action(ActionAnalysis::ContainerActionsMap &ca_map,
+void Format
+        ::create_alu_ops_for_action(ActionAnalysis::ContainerActionsMap &ca_map,
              cstring action_name) {
     LOG2("  Creating action data alus for " << action_name);
     for (auto &container_action_info : ca_map) {
@@ -1151,7 +1153,7 @@ void ActionFormat2
         if (cont_action.action_data_isolated())
             alu_cons = ISOLATED;
 
-        ActionDataForSingleALU2 *alu = new ActionDataForSingleALU2(container, alu_cons);
+        ALUOperation *alu = new ALUOperation(container, alu_cons);
         bool contains_action_data = false;
         for (auto &field_action : cont_action.field_actions) {
             le_bitrange bits;
@@ -1201,7 +1203,7 @@ void ActionFormat2
  * incremental_possible_condenses, the condense algorithm only runs with all previous functions
  * and the newly condensed algorithm.
  */
-void ActionFormat2::initial_possible_condenses(PossibleCondenses &condenses,
+void Format::initial_possible_condenses(PossibleCondenses &condenses,
         const RamSec_vec_t &ram_sects) {
     for (size_t i = 0; i < ram_sects.size(); i++) {
         for (size_t j = i+1; j < ram_sects.size(); j++) {
@@ -1210,7 +1212,7 @@ void ActionFormat2::initial_possible_condenses(PossibleCondenses &condenses,
     }
 }
 
-void ActionFormat2::incremental_possible_condenses(PossibleCondenses &condenses,
+void Format::incremental_possible_condenses(PossibleCondenses &condenses,
         const RamSec_vec_t &ram_sects) {
     size_t last_index = ram_sects.size() - 1;
     for (size_t i = 0; i < last_index; i++) {
@@ -1227,8 +1229,8 @@ void ActionFormat2::incremental_possible_condenses(PossibleCondenses &condenses,
  * Though these heuristics are simple now, they still are better than the current round
  * and can always be improved by some kind of weighted score.
  */
-bool ActionFormat2::is_better_condense(RamSec_vec_t &ram_sects, const ActionDataRamSection *best,
-        size_t best_skip1, size_t best_skip2, const ActionDataRamSection *comp, size_t comp_skip1,
+bool Format::is_better_condense(RamSec_vec_t &ram_sects, const RamSection *best,
+        size_t best_skip1, size_t best_skip2, const RamSection *comp, size_t comp_skip1,
         size_t comp_skip2) {
     // First comparison is about total number of bits used, and whether one has a reduction
     // of bits over another due to good sharing
@@ -1272,15 +1274,15 @@ bool ActionFormat2::is_better_condense(RamSec_vec_t &ram_sects, const ActionData
 
 /**
  * This erases the following:
- *     1. The original two ActionDataRamSections that got condensed i, j
- *     2. Any condensed ActionDataRamSections that contain one of the original pair i, j
+ *     1. The original two RamSections that got condensed i, j
+ *     2. Any condensed RamSections that contain one of the original pair i, j
  *
  * This adds the following:
- *     1. The newly condense ActionDataRamSection
+ *     1. The newly condense RamSection
  *     2. Space in the PossibleCondenses to add for the calculation of new condenses
  */
-void ActionFormat2::shrink_possible_condenses(PossibleCondenses &pc, RamSec_vec_t &ram_sects,
-        const ActionDataRamSection *ad, size_t i_pos, size_t j_pos) {
+void Format::shrink_possible_condenses(PossibleCondenses &pc, RamSec_vec_t &ram_sects,
+        const RamSection *ad, size_t i_pos, size_t j_pos) {
     size_t larger_pos = i_pos > j_pos ? i_pos : j_pos;
     size_t smaller_pos = larger_pos == i_pos ? j_pos : i_pos;
 
@@ -1312,19 +1314,19 @@ void ActionFormat2::shrink_possible_condenses(PossibleCondenses &pc, RamSec_vec_
 /**
  * The algorithm to find the minimum packing of a single action.
  *
- *     1. Gather all of the ActionDataForSingleALU2 requirements for an individual action.
- *     2. For each ActionDataForSingleALU2, initialize a single ActionDataRamSection, as
- *        it is completely valid for each alu operation to have an isolated ActionDataRamSection,
+ *     1. Gather all of the ALUOperation requirements for an individual action.
+ *     2. For each ALUOperation, initialize a single RamSection, as
+ *        it is completely valid for each alu operation to have an isolated RamSection,
  *        though far from optimal.
- *     3. For all possible pairs of ActionDataRamSections, determine the condense of pair (i, j).
+ *     3. For all possible pairs of RamSections, determine the condense of pair (i, j).
  *     4. For all possible condenses of pair (i, j), pick the "best" condense based on heuristics
- *     5. Remove the original i and j from the list of ActionDataRamSections and add the
+ *     5. Remove the original i and j from the list of RamSections and add the
  *        condensed pair.
- *     6. Repeat from step 3 until no ActionDataRamSections are possibly condensed any further.
+ *     6. Repeat from step 3 until no RamSections are possibly condensed any further.
  *
  * The condense_action function captures this algorithm
  */
-void ActionFormat2::condense_action(cstring action_name, RamSec_vec_t &ram_sects) {
+void Format::condense_action(cstring action_name, RamSec_vec_t &ram_sects) {
     // The condenses are held in a 2-D array representing a triangular matrix of pairs i and j.
     // Condense of ram_sects[i] and ram_sects[j] where i < j is contained at condenses[i][j]
     PossibleCondenses condenses(ram_sects.size(), RamSec_vec_t(ram_sects.size(), nullptr));
@@ -1342,7 +1344,7 @@ void ActionFormat2::condense_action(cstring action_name, RamSec_vec_t &ram_sects
             incremental_possible_condenses(condenses, ram_sects);
         }
 
-        const ActionDataRamSection *best = nullptr;
+        const RamSection *best = nullptr;
         size_t i_pos = 0; size_t j_pos = 0;
         // Determine the best condense
         for (size_t i = 0; i < ram_sects.size(); i++) {
@@ -1371,7 +1373,7 @@ void ActionFormat2::condense_action(cstring action_name, RamSec_vec_t &ram_sects
     std::vector<int> size_counts(SECT_TYPES, 0);
 
     for (auto *sect : ram_sects) {
-        auto adps = sect->action_data_positions();
+        auto adps = sect->parameter_positions();
         for (auto *alu : sect->alu_requirements) {
             BUG_CHECK(sect->contains(alu), "Ram Section doesn't contain an ALU portion");
             total_alus++;
@@ -1386,14 +1388,14 @@ void ActionFormat2::condense_action(cstring action_name, RamSec_vec_t &ram_sects
     calc_max_size = std::max(calc_max_size, 1 << ceil_log2(total_bits / 8));
 }
 
-void ActionFormat2::analyze_actions() {
+void Format::analyze_actions() {
     ActionAnalysis::ContainerActionsMap container_actions_map;
     for (auto action : Values(tbl->actions)) {
         container_actions_map.clear();
         ActionAnalysis aa(phv, true, false, tbl);
         aa.set_container_actions_map(&container_actions_map);
         action->apply(aa);
-        create_action_data_alus_for_action(container_actions_map, action->name);
+        create_alu_ops_for_action(container_actions_map, action->name);
     }
 
     for (auto &entry : init_ram_sections) {
@@ -1402,9 +1404,9 @@ void ActionFormat2::analyze_actions() {
 }
 
 /**
- * @see_also comments over ActionFormat2::determine_bytes_per_loc
+ * @see_also comments over Format::determine_bytes_per_loc
  */
-bool ActionFormat2::determine_next_immediate_bytes() {
+bool Format::determine_next_immediate_bytes() {
     AllActionPositions &adt_bus_inputs = action_bus_inputs.at(ACTION_DATA_TABLE);
     AllActionPositions &immed_bus_inputs = action_bus_inputs.at(IMMEDIATE);
     // Shrinking the next possible number of bytes by half, by the possibly entry sizes
@@ -1486,7 +1488,7 @@ bool ActionFormat2::determine_next_immediate_bytes() {
  * directly line up for the entry.  For action profiles, the driver does not currently have
  * the ability to set up these different sizes of action data entry sizes.
  */
-bool ActionFormat2::determine_bytes_per_loc(bool &initialized) {
+bool Format::determine_bytes_per_loc(bool &initialized) {
     action_bus_inputs.resize(AD_LOCATIONS);
     action_bus_input_bitvecs.resize(AD_LOCATIONS);
     for (int i = 0; i < AD_LOCATIONS; i++) {
@@ -1531,15 +1533,15 @@ bool ActionFormat2::determine_bytes_per_loc(bool &initialized) {
 }
 
 /**
- * Locks the position of a RamSectionPosition as well as updates the ActionDataBusInputs
+ * Locks the position of a RamSectionPosition as well as updates the BusInputs
  * with the impact of this RamSection's inputs
  */
-void ActionFormat2::set_ram_sect_byte(SingleActionAllocation &single_action_alloc,
+void Format::set_ram_sect_byte(SingleActionAllocation &single_action_alloc,
         bitvec &allocated_slots_in_action, RamSectionPosition &ram_sect, int byte_position) {
     ram_sect.byte_offset = byte_position;
     allocated_slots_in_action.setrange(byte_position, ram_sect.section->byte_sz());
     for (int i = 0; i < SLOT_TYPES; i++) {
-        bitvec input_use = ram_sect.section->action_data_bus_inputs().at(i) << byte_position;
+        bitvec input_use = ram_sect.section->bus_inputs().at(i) << byte_position;
         single_action_alloc.current_action_inputs[i] |= input_use;
         (*single_action_alloc.all_action_inputs)[i] |= input_use;
     }
@@ -1554,7 +1556,7 @@ void ActionFormat2::set_ram_sect_byte(SingleActionAllocation &single_action_allo
  * For the description this algorithm:
  * @seealso alloc_immed_bytes
  */
-void ActionFormat2::alloc_immed_slots_of_size(SlotType_t slot_type,
+void Format::alloc_immed_slots_of_size(SlotType_t slot_type,
         SingleActionAllocation &single_action_alloc, int max_bytes_required) {
     int ss_i = static_cast<int>(slot_type);
     auto it = single_action_alloc.orig_inputs.begin();
@@ -1592,7 +1594,7 @@ void ActionFormat2::alloc_immed_slots_of_size(SlotType_t slot_type,
  * For the description of the algorithm:
  * @seealso alloc_adt_bytes
  */
-void ActionFormat2::alloc_adt_slots_of_size(SlotType_t slot_type,
+void Format::alloc_adt_slots_of_size(SlotType_t slot_type,
         SingleActionAllocation &single_action_alloc, int max_bytes_required) {
     int ss_i = static_cast<int>(slot_type);
     auto it = single_action_alloc.orig_inputs.begin();
@@ -1612,7 +1614,7 @@ void ActionFormat2::alloc_adt_slots_of_size(SlotType_t slot_type,
             if (!allocated_slots_in_action.getslice(i, byte_sz).empty())
                 continue;
             bitvec slots_in_use = (*single_action_alloc.all_action_inputs)[ss_i];
-            if ((slots_in_use & ram_sect.section->action_data_bus_inputs()[ss_i]).empty())
+            if ((slots_in_use & ram_sect.section->bus_inputs()[ss_i]).empty())
                 continue;
             found = true;
             byte_position = i;
@@ -1642,7 +1644,7 @@ void ActionFormat2::alloc_adt_slots_of_size(SlotType_t slot_type,
  * Guarantees that the packing of an action is legal, i.e. each RamSection has a legal
  * packing and that no RamSections overlap with each other.
  */
-void ActionFormat2::verify_placement(SingleActionAllocation &single_action_alloc) {
+void Format::verify_placement(SingleActionAllocation &single_action_alloc) {
     auto &current_action_inputs = single_action_alloc.current_action_inputs;
     LOG3("    Action Bus Input for BYTE: " << current_action_inputs[BYTE] << " HALF: "
          << current_action_inputs[HALF] << " FULL: " << current_action_inputs[FULL]);
@@ -1663,11 +1665,11 @@ void ActionFormat2::verify_placement(SingleActionAllocation &single_action_alloc
  * Determines the allocation for a single action data table action.
  * @seealso determine_action_data_table_bytes
  */
-void ActionFormat2::determine_single_action_input(SingleActionAllocation &single_action_alloc,
+void Format::determine_single_action_input(SingleActionAllocation &single_action_alloc,
         int max_bytes_required) {
     LOG3("    Determining Ram Allocation for action " << single_action_alloc.action_name());
 
-    ActionDataBusInputs current_action_inputs;
+    BusInputs current_action_inputs;
     // Prefer to place RamSections that have BYTE inputs
     std::sort(single_action_alloc.orig_inputs.begin(), single_action_alloc.orig_inputs.end(),
         [](const RamSectionPosition &a, const RamSectionPosition &b) {
@@ -1733,8 +1735,8 @@ void ActionFormat2::determine_single_action_input(SingleActionAllocation &single
  * with if the action data bus becomes a much more constrained resource (though there is
  * plenty of options if that becomes an issue).
  */
-void ActionFormat2::assign_action_data_table_bytes(AllActionPositions &all_bus_inputs,
-        ActionDataBusInputs &total_inputs) {
+void Format::assign_action_data_table_bytes(AllActionPositions &all_bus_inputs,
+        BusInputs &total_inputs) {
     LOG2("  Assigning Action Data Byte Positions");
     std::sort(all_bus_inputs.begin(), all_bus_inputs.end(),
         [](const SingleActionPositions &a, const SingleActionPositions &b) {
@@ -1768,8 +1770,8 @@ void ActionFormat2::assign_action_data_table_bytes(AllActionPositions &all_bus_i
  * data is itself the least number contiguous bits necessary as a mask, as the bit granularity
  * is important for packing data on the match RAM line.
  */
-void ActionFormat2::assign_immediate_bytes(AllActionPositions &all_bus_inputs,
-        ActionDataBusInputs &total_inputs) {
+void Format::assign_immediate_bytes(AllActionPositions &all_bus_inputs,
+        BusInputs &total_inputs) {
     LOG2("  Assigning Immediate Byte Positions");
     for (auto &single_action_inputs : all_bus_inputs) {
         SlotType_t last_byte_or_half;
@@ -1789,7 +1791,7 @@ void ActionFormat2::assign_immediate_bytes(AllActionPositions &all_bus_inputs,
 
         safe_vector<RamSectionPosition> orig_inputs;
         safe_vector<RamSectionPosition> alloc_inputs;
-        ActionDataBusInputs current_action_inputs;
+        BusInputs current_action_inputs;
         safe_vector<SlotType_t> slot_type_alloc = { first_byte_or_half, last_byte_or_half, FULL };
         SingleActionAllocation single_action_alloc(&single_action_inputs, &total_inputs);
 
@@ -1812,7 +1814,7 @@ void ActionFormat2::assign_immediate_bytes(AllActionPositions &all_bus_inputs,
          << " FULL: 0x" << total_inputs[FULL]);
 }
 
-void ActionFormat2::assign_RamSections_to_bytes() {
+void Format::assign_RamSections_to_bytes() {
     assign_action_data_table_bytes(action_bus_inputs[ACTION_DATA_TABLE],
                                    action_bus_input_bitvecs[ACTION_DATA_TABLE]);
     assign_immediate_bytes(action_bus_inputs[IMMEDIATE], action_bus_input_bitvecs[IMMEDIATE]);
@@ -1820,18 +1822,18 @@ void ActionFormat2::assign_RamSections_to_bytes() {
 
 /**
  * Given the allocation for all of the RamSections, the function builds a vector of the
- * positions of all ActionDataForSingleALU2s for all actions and save them as a vector
+ * positions of all ALUOperations for all actions and save them as a vector
  * of ActionDataRamPositions.  This also builds a bitvec of all of the inputs in the
  * action data bus inputs.
  */
-void ActionFormat2::build_potential_format() {
+void Format::build_potential_format() {
     Use use;
     int loc_i = 0;
     for (auto &loc_inputs : action_bus_inputs) {
-        ActionDataLocation_t loc = static_cast<ActionDataLocation_t>(loc_i);
-        ActionDataBusInputs verify_inputs = { { bitvec(), bitvec(), bitvec() } };
+        Location_t loc = static_cast<Location_t>(loc_i);
+        BusInputs verify_inputs = { { bitvec(), bitvec(), bitvec() } };
         for (auto &single_action_input : loc_inputs) {
-            safe_vector<ActionDataALUPosition> alu_positions;
+            safe_vector<ALUPosition> alu_positions;
             for (auto &ram_sect : single_action_input.all_inputs) {
                 for (auto *init_ad_alu : ram_sect.section->alu_requirements) {
                     int first_phv_bit_pos = 0;
@@ -1850,8 +1852,8 @@ void ActionFormat2::build_potential_format() {
                     verify_inputs[ad_alu->index()].setrange(start_byte, byte_sz);
                 }
             }
-            auto &adp_vec = use.action_data_positions[single_action_input.action_name];
-            adp_vec.insert(adp_vec.end(), alu_positions.begin(), alu_positions.end());
+            auto &alu_vec = use.alu_positions[single_action_input.action_name];
+            alu_vec.insert(alu_vec.end(), alu_positions.begin(), alu_positions.end());
         }
         for (int i = 0; i < SLOT_TYPES; i++) {
             BUG_CHECK(action_bus_input_bitvecs.at(loc_i).at(i) == verify_inputs.at(i),
@@ -1859,10 +1861,10 @@ void ActionFormat2::build_potential_format() {
                 "input positions during allocation");
         }
 
-        use.action_data_bus_inputs[loc_i] = action_bus_input_bitvecs.at(loc_i);
+        use.bus_inputs[loc_i] = action_bus_input_bitvecs.at(loc_i);
         loc_i++;
     }
-    use.action_data_bytes_in_loc = bytes_per_loc;
+    use.bytes_per_loc = bytes_per_loc;
     uses.push_back(use);
 }
 
@@ -1879,8 +1881,8 @@ void ActionFormat2::build_potential_format() {
  *
  *     2. The naming is fairly cumbersome.  Specifically the terms slots and sections appear, and
  *        mean different things.  Slots refer to Action Data Bus Input Slots, which come from the
- *        ActionDataForSingleALU2 objects, while Sections refer to the ActionDataRamSection class,
- *        which through the condense algorithm, can have multiple ActionDataForSingleALU2 objects.
+ *        ALUOperation objects, while Sections refer to the RamSection class,
+ *        which through the condense algorithm, can have multiple ALUOperation objects.
  *        Separate analysis over these object is necessary, but the naming can be confusing.
  *
  *     3. The algorithm is not finely tuned to save Action Data Bus resources, though usually this
@@ -1889,7 +1891,7 @@ void ActionFormat2::build_potential_format() {
  *        improve, e.g. O(n^2) approach of allocating all tables simultaneously rather than one at
  *        a time, mutual exclusive optimizations, and the extra copies of the entry from lsb.
  */
-void ActionFormat2::allocate_format(int orig_max_size) {
+void Format::allocate_format(int orig_max_size) {
     LOG1("Determining Formats for table " << tbl->name);
     analyze_actions();
     bool initialized = false;
@@ -1902,3 +1904,5 @@ void ActionFormat2::allocate_format(int orig_max_size) {
     }
     LOG1(" ADT size " << orig_max_size << " " << calc_max_size);
 }
+
+}  // namespace ActionData

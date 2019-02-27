@@ -1179,8 +1179,8 @@ bool MeterColorMapramAddress::SetMapramAddress::preorder(IR::MAU::Meter *mtr) {
 }
 
 bool ActionFormat2Calc::preorder(const IR::MAU::Table *tbl) {
-    safe_vector<ActionFormat2::Use> uses;
-    ActionFormat2 af(phv, tbl, uses);
+    safe_vector<ActionData::Format::Use> uses;
+    ActionData::Format af(phv, tbl, uses);
     auto los = lc.get_layout_options(tbl);
     if (!los.empty())
         af.allocate_format(los.at(0).layout.action_data_bytes_in_table);
