@@ -36,7 +36,7 @@ class Decorator:
           return m
 
         summary = m.split('\n')[0]
-        fix = "%s-%s #assign #start-work #fixed %s" % \
+        fix = "%s-%s #assign #start-work %s" % \
               (self.project.upper(), self.fix, summary)
         add_fix = True
         count = 0
