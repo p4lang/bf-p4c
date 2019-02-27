@@ -356,7 +356,7 @@ class CollectWeakFields : public Inspector, BFN::ControlFlowVisitor {
         return f->pov || f->metadata || f->is_digest() || f->is_intrinsic();
     }
 
-    bool preorder(const IR::MAU::InputXBarRead* ixbar) override;
+    bool preorder(const IR::MAU::TableKey* ixbar) override;
     bool preorder(const IR::MAU::StatefulAlu*) override { return false; }
     bool preorder(const IR::MAU::Instruction* instr) override;
 

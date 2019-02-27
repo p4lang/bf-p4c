@@ -894,7 +894,7 @@ bool DoTableLayout::preorder(IR::MAU::Action *act) {
     return false;
 }
 
-bool DoTableLayout::preorder(IR::MAU::InputXBarRead *read) {
+bool DoTableLayout::preorder(IR::MAU::TableKey *read) {
     auto tbl = findContext<IR::MAU::Table>();
     cstring partition_index;
     if (tbl->layout.alpm) {

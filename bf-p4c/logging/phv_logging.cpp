@@ -52,7 +52,7 @@ bool CollectPhvLoggingInfo::preorder(const IR::MAU::Action* act) {
     return true;
 }
 
-bool CollectPhvLoggingInfo::preorder(const IR::MAU::InputXBarRead* read) {
+bool CollectPhvLoggingInfo::preorder(const IR::MAU::TableKey* read) {
     const IR::MAU::Table* tbl = findContext<IR::MAU::Table>();
     le_bitrange range;
     auto* field = phv.field(read->expr, &range);
@@ -184,7 +184,7 @@ PhvLogging::getAllParserDefs(const PHV::Field* f, ordered_set<PhvLogging::PardeI
     }
 }
 
-void PhvLogging::addInputXBarReads(const PHV::FieldSlice& sl, PhvLogging::Records* r) const {
+void PhvLogging::addTableKeys(const PHV::FieldSlice &sl, PhvLogging::Records *r) const {
     auto dType = getDeparserAccessType(sl.field());
     LOG4("Adding input xbar read for slice: " << sl);
     if (info.sliceXbarToTables.count(sl)) {
@@ -296,7 +296,7 @@ void PhvLogging::logContainers() {
 
             // Add all the MAU reads/writes.
             PHV::FieldSlice slice(sl.field, sl.field_bits());
-            addInputXBarReads(slice, r);
+            addTableKeys(slice, r);
             addVLIWReads(slice, r);
             addVLIWWrites(slice, r);
 

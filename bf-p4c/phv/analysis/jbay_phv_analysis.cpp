@@ -52,7 +52,7 @@ bool JbayPhvAnalysis::preorder(const IR::MAU::Table* tbl) {
     return true;
 }
 
-bool JbayPhvAnalysis::preorder(const IR::MAU::InputXBarRead* read) {
+bool JbayPhvAnalysis::preorder(const IR::MAU::TableKey* read) {
     auto tbl = findContext<IR::MAU::Table>();
     const PHV::Field* f = phv.field(read->expr);
     if (!f)

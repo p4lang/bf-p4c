@@ -182,7 +182,7 @@ struct SimplifyHeaderValidMethods : public Transform {
 
         // If isValid() is being used as a table key element, it already behaves
         // like a bit<1> value; just replace it with a reference to the valid bit.
-        if (getParent<IR::MAU::InputXBarRead>() != nullptr) return member;
+        if (getParent<IR::MAU::TableKey>() != nullptr) return member;
 
         // In other contexts, rewrite isValid() into a comparison with a constant.
         // This maintains a boolean type for the overall expression.

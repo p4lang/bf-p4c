@@ -66,7 +66,7 @@ class JbayPhvAnalysis : public Inspector {
 
     profile_t init_apply(const IR::Node *root) override;
     bool preorder(const IR::MAU::Table* tbl) override;
-    bool preorder(const IR::MAU::InputXBarRead* read) override;
+    bool preorder(const IR::MAU::TableKey* read) override;
     bool preorder(const IR::MAU::Action* act) override;
     void postorder(const IR::MAU::Table* tbl) override;
     void end_apply() override;

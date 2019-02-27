@@ -47,7 +47,7 @@ const IR::MAU::Table* SplitAlpm::create_atcam(IR::MAU::Table* tbl, IR::TempVar* 
     // add partition_index key to list of;
     auto clone = tbl->clone();
 
-    auto partition_index = new IR::MAU::InputXBarRead(tv, "exact");
+    auto partition_index = new IR::MAU::TableKey(tv, "exact");
     clone->match_key.push_back(partition_index);
 
     clone->layout.atcam = true;

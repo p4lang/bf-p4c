@@ -1227,7 +1227,7 @@ class IXBar::FieldManagement : public Inspector {
         BUG("Masks should have been converted to Slices before input xbar allocation");
         return true; }
 
-    bool preorder(const IR::MAU::InputXBarRead *read) {
+    bool preorder(const IR::MAU::TableKey *read) {
         if (ki.is_atcam) {
             if (ki.partition != read->partition_index)
                 return false; }
@@ -1250,7 +1250,7 @@ class IXBar::FieldManagement : public Inspector {
         bitvec field_bits(bits.lo, bits.hi - bits.lo + 1);
         // Currently, due to driver, only one field is allowed to be the partition index
         byte_type_t byte_type = NO_BYTE_TYPE;
-        if (auto *read = findContext<IR::MAU::InputXBarRead>()) {
+        if (auto *read = findContext<IR::MAU::TableKey>()) {
             if (ki.is_atcam) {
                 if (read->partition_index)
                     byte_type = PARTITION_INDEX;

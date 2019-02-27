@@ -440,7 +440,7 @@ bool FindDataDependencyGraph::preorder(const IR::MAU::Table *t) {
     return true;
 }
 
-bool FindDataDependencyGraph::preorder(const IR::MAU::InputXBarRead *read) {
+bool FindDataDependencyGraph::preorder(const IR::MAU::TableKey *read) {
     auto tbl = findContext<IR::MAU::Table>();
     read->apply(UpdateAccess(*this, tbl));
     return false;

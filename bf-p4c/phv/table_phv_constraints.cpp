@@ -41,7 +41,7 @@ TernaryMatchKeyConstraints::calculateTernaryMatchKeyConstraints(const IR::MAU::T
     ordered_set<PHV::Field*> fields;
     // Calculate total rounded up (to nearest byte) size of all match key fields
     // Also calculate total rounded up (to nearest byte) size of all match key metadata fields
-    for (const IR::MAU::InputXBarRead* matchKey : tbl->match_key) {
+    for (const IR::MAU::TableKey* matchKey : tbl->match_key) {
         LOG5("\t\t" << matchKey->expr);
         le_bitrange bits;
         PHV::Field* f = phv.field(matchKey->expr, &bits);

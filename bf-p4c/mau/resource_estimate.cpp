@@ -1134,7 +1134,7 @@ void StageUseEstimate::tcams_left_best_option() {
  *  a signal from 4 rows away, for a maximum distribution limit of 8 rows.  Thus the total rows
  *  is the max of the previous formula and 8.
  */
-bool RangeEntries::preorder(const IR::MAU::InputXBarRead *ixbar_read) {
+bool RangeEntries::preorder(const IR::MAU::TableKey *ixbar_read) {
     if (ixbar_read->match_type.name != "range")
         return false;
 

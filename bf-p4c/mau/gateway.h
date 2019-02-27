@@ -96,7 +96,7 @@ class CheckGatewayExpr : public MauInspector {
     const PhvInfo       &phv;
     bool preorder(const IR::MAU::Table *tbl) override;
     bool preorder(const IR::MAU::Action *) override { return false; }
-    bool preorder(const IR::MAU::InputXBarRead *) override { return false; }
+    bool preorder(const IR::MAU::TableKey *) override { return false; }
     bool preorder(const IR::P4Table *) override { return false; }
     bool preorder(const IR::Attached *) override { return false; }
     bool preorder(const IR::MAU::BackendAttached *) override { return false; }

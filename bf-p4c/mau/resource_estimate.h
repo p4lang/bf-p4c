@@ -157,7 +157,7 @@ class RangeEntries : public MauInspector {
     bool preorder(const IR::MAU::TableSeq *) override { return false; }
     bool preorder(const IR::MAU::Action *) override { return false; }
     bool preorder(const IR::MAU::BackendAttached *) override { return false; }
-    bool preorder(const IR::MAU::InputXBarRead *) override;
+    bool preorder(const IR::MAU::TableKey *) override;
     void postorder(const IR::MAU::Table *) override;
 
  public:

@@ -50,7 +50,7 @@ void CollectWeakFields::elim_strong_field(const PHV::Field* f) {
     field_to_weak_assigns.erase(f);
 }
 
-bool CollectWeakFields::preorder(const IR::MAU::InputXBarRead* ixbar) {
+bool CollectWeakFields::preorder(const IR::MAU::TableKey* ixbar) {
     auto f = phv.field(ixbar->expr);
     elim_strong_field(f);
 
@@ -977,7 +977,7 @@ SynthesizePovEncoder::create_pov_encoder(gress_t gress, const MatchAction& match
 
     int i = 0;
     for (auto in : match_action.keys) {
-        auto ixbar_read = new IR::MAU::InputXBarRead(in, IR::ID("exact"));
+        auto ixbar_read = new IR::MAU::TableKey(in, IR::ID("exact"));
         ixbar_read->p4_param_order = i++;
         encoder->match_key.push_back(ixbar_read);
     }

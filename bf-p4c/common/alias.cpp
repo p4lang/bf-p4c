@@ -51,7 +51,7 @@ IR::Node* ReplaceAllAliases::preorder(IR::Expression* expr) {
     if (!aliasMap.count(f->name)) {
         LOG4("    Field " << f->name << " not part of any aliasing.");
         return expr; }
-    auto* ixbarread = expr->to<IR::MAU::InputXBarRead>();
+    auto* ixbarread = expr->to<IR::MAU::TableKey>();
     if (ixbarread) {
         LOG4("    Expression " << expr << " is an input xbar read.");
         return expr; }

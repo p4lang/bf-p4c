@@ -940,7 +940,7 @@ class GetBackendTables : public MauInspector {
                           boost::optional<cstring> partition_index) {
         auto slices = convertMaskToSlices(mask);
         for (auto slice : slices) {
-            auto ixbar_read = new IR::MAU::InputXBarRead(slice, match_id);
+            auto ixbar_read = new IR::MAU::TableKey(slice, match_id);
             ixbar_read->from_mask = true;
             if (ixbar_read->for_match())
                 ixbar_read->p4_param_order = p4_param_order;
@@ -990,7 +990,7 @@ class GetBackendTables : public MauInspector {
             } else if (auto *mask = key_expr->to<IR::Mask>()) {
                 setup_match_mask(tt, mask, match_id, p4_param_order, ann, partition_index);
             } else {
-                auto ixbar_read = new IR::MAU::InputXBarRead(key_expr, match_id);
+                auto ixbar_read = new IR::MAU::TableKey(key_expr, match_id);
                 if (ixbar_read->for_match())
                     ixbar_read->p4_param_order = p4_param_order;
                 if (ann) {

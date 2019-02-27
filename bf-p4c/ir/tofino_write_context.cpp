@@ -127,7 +127,7 @@ bool TofinoWriteContext::isRead(bool root_value) {
     if (ctxt->node->is<IR::MAU::Instruction>())
         return ctxt->child_index > 0;
 
-    if (ctxt->node->is<IR::MAU::InputXBarRead>())
+    if (ctxt->node->is<IR::MAU::TableKey>())
         return true;
 
     if (auto *hashdist = ctxt->node->to<IR::MAU::HashDist>()) {
@@ -157,7 +157,7 @@ bool TofinoWriteContext::isIxbarRead(bool /* root_value */) {
             return false;
     }
 
-    if (ctxt->node->is<IR::MAU::InputXBarRead>()) {
+    if (ctxt->node->is<IR::MAU::TableKey>()) {
         return true;
     }
 

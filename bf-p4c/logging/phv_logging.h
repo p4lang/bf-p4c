@@ -49,7 +49,7 @@ struct CollectPhvLoggingInfo : public MauInspector {
     /// Gather action writes and reads related information and populate relevant data structures.
     bool preorder(const IR::MAU::Action* act) override;
     /// Gather information related to input xbar reads.
-    bool preorder(const IR::MAU::InputXBarRead* read) override;
+    bool preorder(const IR::MAU::TableKey* read) override;
 
     explicit CollectPhvLoggingInfo(const PhvInfo& p) : phv(p) { }
 };
@@ -124,7 +124,7 @@ class PhvLogging : public MauInspector {
     void getAllParserDefs(const PHV::Field* f, ordered_set<PardeInfo>& rv) const;
     void getAllDeparserUses(const PHV::Field* f, ordered_set<PardeInfo>& rv) const;
 
-    void addInputXBarReads(const PHV::FieldSlice& sl, Records* r) const;
+    void addTableKeys(const PHV::FieldSlice &sl, Phv_Schema_Logger::Container::Records *r) const;
     void addVLIWReads(const PHV::FieldSlice& sl, Records* r) const;
     void addVLIWWrites(const PHV::FieldSlice& sl, Records* r) const;
 

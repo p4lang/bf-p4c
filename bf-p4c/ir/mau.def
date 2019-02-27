@@ -59,7 +59,7 @@ class Table : BFN::Unit {
     // stful alu that are supposed to be in the same stage to different stages.
     // XXX(hanw): we should get to the bottom of this issue.
     inline std::map<cstring, TableSeq>          next;
-    inline Vector<InputXBarRead>                match_key;
+    inline Vector<TableKey>                match_key;
     int                                         random_seed = -1;
     bool                                        dynamic_key_masks = false;
     NullOK EntriesList                          entries_list;
@@ -858,7 +858,7 @@ class WrappedSlice : Operation_Ternary {
     dbprint { out << e0 << "(" << e1 << ".." << e2 << ")"; }
 }
 
-class InputXBarRead : Expression, IAnnotated {
+class TableKey : Expression, IAnnotated {
     Expression expr;
     ID match_type;
     int p4_param_order = -1;

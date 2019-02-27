@@ -406,7 +406,7 @@ class FindDataDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
     bool preorder(const IR::MAU::TableSeq *) override;
     bool preorder(const IR::MAU::Table *) override;
     bool preorder(const IR::MAU::Action *) override;
-    bool preorder(const IR::MAU::InputXBarRead *) override;
+    bool preorder(const IR::MAU::TableKey *) override;
 
     Visitor::profile_t init_apply(const IR::Node* node) override {
         auto rv = Inspector::init_apply(node);
