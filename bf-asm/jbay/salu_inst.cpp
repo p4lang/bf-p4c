@@ -209,7 +209,7 @@ void CmpOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions
             auto cval = srcc ? srcc->value : 0;
             if ((maska >= uint32_t(-32) || maska < 32) && 
                 (uint32_t(cval) == maska || cval < -32 || cval >= 32)) {
-                salu.salu_cmp_const_src = maska & 0x2f;
+                salu.salu_cmp_const_src = maska & 0x3f;
                 salu.salu_cmp_mask_input = 0;
             } else {
                 salu.salu_cmp_mask_input = 1;
@@ -225,7 +225,7 @@ void CmpOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions
         salu.salu_cmp_regfile_adr = tbl->get_const(srcc->lineno, srcc->value);
         salu.salu_cmp_regfile_const = 1;
     } else {
-        salu.salu_cmp_const_src = srcc ? srcc->value & 0x2f : 0;
+        salu.salu_cmp_const_src = srcc ? srcc->value & 0x3f : 0;
         salu.salu_cmp_regfile_const = 0; }
     salu.salu_cmp_opcode = opc->opcode | (type << 2);
     auto lmask = sbus_mask(logical_home_row/4U, tbl->sbus_learn);
