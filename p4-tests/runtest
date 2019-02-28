@@ -373,7 +373,7 @@ fi
 
 if $p4info; then
     p4runtime_out=$testdir/${name}${out_ext}.out/p4info.proto.txt
-    P4C_ARGS="$P4C_ARGS --p4runtime-file $p4runtime_out --p4runtime-format text"
+    P4C_ARGS="$P4C_ARGS --p4runtime-files $p4runtime_out"
 fi
 
 if $run_bfrt; then

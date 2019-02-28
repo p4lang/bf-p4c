@@ -196,7 +196,12 @@ p4c_add_xfail_reason("tofino"
   "Ran out of parser match registers"
   testdata/p4_16_samples/issue995-bmv2.p4
   testdata/p4_14_samples/source_routing.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Unsupported type parameter for Value Set"
   testdata/p4_14_samples/parser_value_set2.p4
+  testdata/p4_16_samples/pvs-nested-struct.p4
   )
 
 #p4c_add_xfail_reason("tofino"

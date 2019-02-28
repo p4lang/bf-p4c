@@ -1584,14 +1584,25 @@ void generateP4Runtime(const IR::P4Program* program,
                        const BFN_Options& options) {
     // If the user didn't ask for us to generate P4Runtime, skip the analysis.
     if (options.p4RuntimeFile.isNullOrEmpty() &&
+        options.p4RuntimeFiles.isNullOrEmpty() &&
         options.p4RuntimeEntriesFile.isNullOrEmpty() &&
-        options.bfRtSchema.isNullOrEmpty())
+        options.p4RuntimeEntriesFiles.isNullOrEmpty() &&
+        options.bfRtSchema.isNullOrEmpty()) {
         return;
+    }
+
+    auto p4RuntimeSerializer = P4::P4RuntimeSerializer::get();
+
+    // By design we can use the same architecture handler implementation for
+    // both TNA and T2NA.
+    p4RuntimeSerializer->registerArch("tna", new TofinoArchHandlerBuilder());
+    p4RuntimeSerializer->registerArch("t2na", new TofinoArchHandlerBuilder());
 
     auto arch = P4::P4RuntimeSerializer::resolveArch(options);
 
     if (Log::verbose())
         std::cout << "Generating P4Runtime output for architecture " << arch << std::endl;
+
 
     if (options.p4RuntimeForceStdExterns && (arch != "tna" && arch != "t2na")) {
         ::error("--p4runtime-force-std-externs can only be used with "
@@ -1599,38 +1610,13 @@ void generateP4Runtime(const IR::P4Program* program,
         return;
     }
 
-    auto p4RuntimeSerializer = P4::P4RuntimeSerializer::get();
-    // By design we can use the same architecture handler implementation for
-    // both TNA and T2NA.
-    p4RuntimeSerializer->registerArch("tna", new TofinoArchHandlerBuilder());
-    p4RuntimeSerializer->registerArch("t2na", new TofinoArchHandlerBuilder());
-
     auto p4Runtime = p4RuntimeSerializer->generateP4Runtime(program, arch);
 
-    if (!options.p4RuntimeFile.isNullOrEmpty()) {
-        std::ostream* out = openFile(options.p4RuntimeFile, false);
-        if (!out) {
-            ::error("Couldn't open P4Runtime API file: %1%", options.p4RuntimeFile);
-            return;
-        }
-
-        if (options.p4RuntimeForceStdExterns) {
-            auto p4RuntimeStd = convertToStdP4Runtime(p4Runtime);
-            p4RuntimeStd.serializeP4InfoTo(out, options.p4RuntimeFormat);
-        } else {
-            p4Runtime.serializeP4InfoTo(out, options.p4RuntimeFormat);
-        }
-    }
-
-    if (!options.p4RuntimeEntriesFile.isNullOrEmpty()) {
-        std::ostream* out = openFile(options.p4RuntimeEntriesFile, false);
-        if (!out) {
-            ::error("Couldn't open P4Runtime static entries file: %1%",
-                    options.p4RuntimeEntriesFile);
-            return;
-        }
-
-        p4Runtime.serializeEntriesTo(out, options.p4RuntimeFormat);
+    if (options.p4RuntimeForceStdExterns) {
+        auto p4RuntimeStd = convertToStdP4Runtime(p4Runtime);
+        p4RuntimeSerializer->serializeP4RuntimeIfRequired(p4RuntimeStd, options);
+    } else {
+        p4RuntimeSerializer->serializeP4RuntimeIfRequired(p4Runtime, options);
     }
 
     if (!options.bfRtSchema.isNullOrEmpty()) {

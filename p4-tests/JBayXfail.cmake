@@ -159,8 +159,12 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "Ran out of parser match registers"
   testdata/p4_14_samples/source_routing.p4
-  testdata/p4_14_samples/parser_value_set2.p4
 )
+
+p4c_add_xfail_reason("tofino2"
+  "Unsupported type parameter for Value Set"
+  testdata/p4_14_samples/parser_value_set2.p4
+  )
 
 # Checksum16 is deprecated
 p4c_add_xfail_reason("tofino2"
