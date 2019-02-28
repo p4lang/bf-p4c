@@ -2187,6 +2187,24 @@ void Memories::determine_fit_on_logical_row(SRAM_group **fit_on_logical_row,
 }
 
 void Memories::determine_max_req(SRAM_group **max_req, SRAM_group *candidate) const {
+    // FIXME: Due to limitations in the calculations in the can_be_placed_in_half, the
+    // assumptions are that the selector action data will override the overflow, however
+    // in the placement, the overflow always comes before the next ride.  Therefore, by
+    // guaranteeing that the largest candidate linked to a selector is preferred, the
+    // missing overflow over match central can be allocated properly
+    //
+    // Really, what needs to be opened is the reallocation of a selector in both halves,
+    // if the action data table is too large
+    if (Device::currentDevice() != Device::TOFINO) {
+        if (*max_req && candidate->type == SRAM_group::ACTION) {
+            if ((**max_req).sel.sel_linked() != candidate->sel.sel_linked()) {
+                *max_req = candidate->sel.sel_linked() ? candidate : *max_req;
+                return;
+            }
+        }
+    }
+
+
     if (*max_req) {
         ///> Selectors also include their action data
         if ((**max_req).total_left_to_place() < candidate->total_left_to_place())
