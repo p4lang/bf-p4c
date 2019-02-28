@@ -101,8 +101,13 @@ set (SWITCH_P4_16 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/switch_16/p4src/switch-tofin
 set (SWITCH_P4_16_PTF ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/switch_16/ptf/api)
 file (RELATIVE_PATH switch_p4_16 ${P4C_SOURCE_DIR} ${SWITCH_P4_16})
 p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
-  "smoketest_switch_16_compile" ${switch_p4_16} "$testExtraArgs}" "-arch tna -bfrt -force-link")
-
+  "smoketest_switch_16_compile" ${switch_p4_16} "${testExtraArgs}" "-arch tna -bfrt -force-link")
+p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
+  "smoketest_switch_16_compile_msdc" ${switch_p4_16} "${testExtraArgs}" "-DAO_PROFILE -arch tna -bfrt -force-link")
+p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
+  "smoketest_switch_16_compile_msft_vxlan" ${switch_p4_16} "${testExtraArgs}" "-DBO_PROFILE -arch tna -bfrt -force-link")
+p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
+  "smoketest_switch_16_compile_basic_multipipe" ${switch_p4_16} "${testExtraArgs}" "-DTEST_SWITCH_32Q -arch tna -bfrt -force-link")
 
  p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_Tests" ${SWITCH_P4_16}
    "${testExtraArgs} -arch tna -bfrt -to 3600" ${SWITCH_P4_16_PTF})
@@ -149,6 +154,9 @@ set_tests_properties(
 
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
 set_tests_properties("tofino/smoketest_switch_16_compile" PROPERTIES TIMEOUT 1200)
+set_tests_properties("tofino/smoketest_switch_16_compile_msdc" PROPERTIES TIMEOUT 1200)
+set_tests_properties("tofino/smoketest_switch_16_compile_msft_vxlan" PROPERTIES TIMEOUT 1200)
+set_tests_properties("tofino/smoketest_switch_16_compile_basic_multipipe" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino/smoketest_switch_16_Tests" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_16_HostIfPingTest" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_16_HostIfRxTest" PROPERTIES TIMEOUT 3600)

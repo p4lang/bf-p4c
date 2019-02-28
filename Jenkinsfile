@@ -104,7 +104,7 @@ node ('compiler-svr1 || master') {
                     sh "echo 'Running switch PD tests for MSDC_PROFILE_BRIG'"
                     sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*smoketest_switch_8.7_msdc' -LE 'UNSTABLE'"
 
-                    sh "echo 'Running bf-switch bfrt tests for Tofino'"
+                    sh "echo 'Running bf-switch compile only for all profiles and bfrt tests for default profile for Tofino'"
                     sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*smoketest_switch_16'"
 
                     sh "echo 'Running bf-switch bfrt tests for Tofino2'"
