@@ -60,8 +60,9 @@ int ActionDataPerWord(const IR::MAU::Table::Layout *layout, int *width) {
     if (layout->action_data_bytes_in_table > 0)
         size = ceil_log2(layout->action_data_bytes_in_table);
     if (size > 4) {
-        *width = 1 << (size-4);
-        return 1; }
+        *width = (layout->action_data_bytes_in_table / 16);
+        return 1;
+    }
     return 16 >> size;
 }
 

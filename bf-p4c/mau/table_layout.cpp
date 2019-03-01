@@ -367,7 +367,10 @@ void DoTableLayout::setup_action_layout(IR::MAU::Table *tbl) {
             if (salu->chain_vpn)
                 immediate_allowed = false;
     af.allocate_format(uses, immediate_allowed);
-    lc.total_action_formats[tbl->name] = uses;
+    safe_vector<ActionData::Format::Use> uses_2;
+    ActionData::Format af2(phv, tbl, uses_2, uses[0]);
+    af2.allocate_format();
+    lc.total_action_formats[tbl->name] = uses_2;
     tbl->layout.action_data_bytes = af.action_data_bytes;
 }
 
@@ -381,7 +384,7 @@ void DoTableLayout::setup_ternary_layout_options(IR::MAU::Table *tbl) {
     int index = 0;
     for (auto &use : lc.get_action_formats(tbl)) {
         IR::MAU::Table::Layout layout = tbl->layout;
-        layout.action_data_bytes_in_table = use.action_data_bytes[ActionFormat::ADT];
+        layout.action_data_bytes_in_table = use.bytes_per_loc[ActionData::ACTION_DATA_TABLE];
         layout.immediate_bits = use.immediate_bits();
         layout.overhead_bits += use.immediate_bits();
         LayoutOption lo(layout, index);
@@ -527,7 +530,7 @@ void DoTableLayout::setup_layout_options(IR::MAU::Table *tbl) {
         return;
 
     for (auto &use : lc.get_action_formats(tbl)) {
-        setup_exact_match(tbl, use.action_data_bytes[ActionFormat::ADT],
+        setup_exact_match(tbl, use.bytes_per_loc[ActionData::ACTION_DATA_TABLE],
                           use.immediate_bits(), index);
         index++;
     }
@@ -563,7 +566,7 @@ void DoTableLayout::setup_layout_option_no_match(IR::MAU::Table *tbl) {
     auto &use = uses.back();
     IR::MAU::Table::Layout layout = tbl->layout;
     layout.immediate_bits = use.immediate_bits();
-    layout.action_data_bytes_in_table = use.action_data_bytes[ActionFormat::ADT];
+    layout.action_data_bytes_in_table = use.bytes_per_loc[ActionData::ACTION_DATA_TABLE];
     layout.overhead_bits += use.immediate_bits();
     LayoutOption lo(layout, uses.size() - 1);
     lc.total_layout_options[tbl->name].push_back(lo);
@@ -661,7 +664,7 @@ void DoTableLayout::add_hash_action_option(IR::MAU::Table *tbl, bool &hash_actio
     BUG_CHECK(use.immediate_bits() == 0, "Cannot have overhead bits in a hash action table");
     IR::MAU::Table::Layout layout = tbl->layout;
     layout.immediate_bits = 0;
-    layout.action_data_bytes_in_table = use.action_data_bytes[ActionFormat::ADT];
+    layout.action_data_bytes_in_table = use.bytes_per_loc[ActionData::ACTION_DATA_TABLE];
     layout.hash_action = true;
     LayoutOption lo(layout, 0);
     lc.total_layout_options[tbl->name].push_back(lo);
@@ -1078,11 +1081,11 @@ bool ValidateActionProfileFormat::preorder(const IR::MAU::ActionData *ad) {
     BUG_CHECK(formats.size() == 1, "%s: Compiler generated multiple formats for action profile "
               "%s on table %s", ad->srcInfo, ad->name, tbl->name);
     if (formats.size() > 0)
-        ERROR_CHECK(formats[0].action_data_bytes[ActionFormat::ADT] > 0, "%s: Action profile "
-                    "%s on table %s does not have any action data (either because no action data "
-                    "has been provided, or the action data has been dead code eliminated.  "
-                    "An action data free action profile is not supported", ad->srcInfo, ad->name,
-                    tbl->name);
+        ERROR_CHECK(formats[0].bytes_per_loc[ActionData::ACTION_DATA_TABLE] > 0, "%s: Action "
+                    "profile %s on table %s does not have any action data (either because no "
+                    "action data has been provided, or the action data has been dead code "
+                    "eliminated.  An action data free action profile is not supported",
+                    ad->srcInfo, ad->name, tbl->name);
     return false;
 }
 /**
@@ -1178,22 +1181,11 @@ bool MeterColorMapramAddress::SetMapramAddress::preorder(IR::MAU::Meter *mtr) {
     return false;
 }
 
-bool ActionFormat2Calc::preorder(const IR::MAU::Table *tbl) {
-    safe_vector<ActionData::Format::Use> uses;
-    ActionData::Format af(phv, tbl, uses);
-    auto los = lc.get_layout_options(tbl);
-    if (!los.empty())
-        af.allocate_format(los.at(0).layout.action_data_bytes_in_table);
-    return true;
-}
-
-
 TableLayout::TableLayout(const PhvInfo &p, LayoutChoices &l) : lc(l) {
     addPasses({
         new MeterColorMapramAddress,
         new DoTableLayout(p, lc),
         new ValidateActionProfileFormat(lc),
-        new ProhibitAtcamWideSelectors,
-        new ActionFormat2Calc(p, lc)
+        new ProhibitAtcamWideSelectors
     });
 }

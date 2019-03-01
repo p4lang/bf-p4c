@@ -571,60 +571,53 @@ bool ActionAnalysis::init_ad_alloc_alignment(const ActionParam &read, ContainerA
 
     auto &action_format = tbl->resources->action_format;
 
-    auto &placements = action_format.arg_placement.at(action_name);
-
     // Information on where fields are stored
-    auto action_data_format = action_format.action_data_format.at(action_name);
 
     le_bitrange read_range;
     ActionParam::type_t type = ActionParam::ACTIONDATA;
     auto action_arg = isActionParam(read.expr, &read_range, &type);
-    if (action_arg == nullptr)
     BUG_CHECK(action_arg != nullptr, "Action argument not converted correctly in the "
                                      "ActionAnalysis pass");
-    cstring arg_name;
-    if (type == ActionParam::ACTIONDATA)
-        arg_name = action_arg->to<IR::MAU::ActionArg>()->name;
-    else if (type == ActionParam::CONSTANT)
-        arg_name = action_arg->to<IR::MAU::ActionDataConstant>()->name;
 
-    ActionFormat::ArgKey ak;
-    ak.init(arg_name, read_range.lo, action_format.phv_alloc, container, write_bits.lo);
-
-    BUG_CHECK(placements.find(ak) != placements.end(), "Action argument is not found to be "
-              "allocated in the action format");
-    auto &arg_placement = placements.at(ak);
-
-    bool found = false;
-    for (auto arg_value : arg_placement) {
-        auto adp = action_data_format.at(arg_value.placement_index);
-        auto arg_loc = adp.arg_locs.at(arg_value.arg_index);
-
-        // These checks are for the scenario, when the action data placement is determined
-        // before phv allocation.  This will verify that the action format guessed is even
-        // possible.  If the argument can't be found, the algorithm will backtrack to the
-        // action format creation
-        if (static_cast<size_t>(adp.alu_size) != container.size()) continue;
-        int lo = arg_loc.is_constant ? 0 : arg_loc.field_bit;
-        int hi = arg_loc.field_hi();
-        if (!(lo <= read_range.lo && hi >= read_range.hi)) continue;
-
-        auto &adi = cont_action.adi;
-
-        if (cont_action.counts[ActionParam::ACTIONDATA] == 0) {
-            adi.initialize(adp.get_action_name(), adp.immediate, adp.start,
-                           adp.arg_locs.size());
-            adi.alignment.add_alignment(write_bits, arg_loc.slot_br());
-            cont_action.counts[ActionParam::ACTIONDATA] = 1;
-        } else if (adi.start != adp.start || adi.immediate != adp.immediate) {
-            cont_action.counts[ActionParam::ACTIONDATA]++;
-        } else {
-            adi.field_affects++;
-            adi.alignment.add_alignment(write_bits, arg_loc.slot_br());
-        }
-        found = true;
+    // Find the location of the argument within the ActionData::Format::Use object
+    ActionData::Parameter *param = nullptr;
+    if (type == ActionParam::ACTIONDATA) {
+        param = new ActionData::Argument(action_arg->to<IR::MAU::ActionArg>()->name, read.range());
+    } else if (type == ActionParam::CONSTANT) {
+        auto *adc = action_arg->to<IR::MAU::ActionDataConstant>();
+        auto *ir_con = adc->constant;
+        uint32_t constant_value = 0U;
+        if (ir_con->fitsInt())
+            constant_value = static_cast<uint32_t>(adc->constant->asInt());
+        else if (ir_con->fitsUint())
+            constant_value = static_cast<uint32_t>(adc->constant->asUnsigned());
+        param = new ActionData::Constant(constant_value, read.size());
     }
-    return found;
+    ActionData::UniqueLocationKey key(action_name, param, container, write_bits);
+    const ActionData::ALUPosition *alu_pos = nullptr;
+    const ActionData::ALUParameter *alu_param = action_format.find_param_alloc(key, &alu_pos);
+    bitvec slot_bits_bv = alu_param->slot_bits(container);
+    le_bitrange slot_bits { slot_bits_bv.min().index(), slot_bits_bv.max().index() };
+
+    if (alu_param == nullptr)
+        return false;
+
+    auto &adi = cont_action.adi;
+    if (cont_action.counts[ActionParam::ACTIONDATA] == 0) {
+        cstring alias = alu_pos->alu_op->alias();
+        if (alias == nullptr)
+            alias = alu_param->param->name();
+        adi.alignment.add_alignment(write_bits, slot_bits);
+        adi.initialize(alias, alu_pos->loc == ActionData::IMMEDIATE, alu_pos->start_byte, 1);
+        cont_action.counts[ActionParam::ACTIONDATA] = 1;
+    } else if (static_cast<int>(alu_pos->start_byte) != adi.start ||
+               (alu_pos->loc == ActionData::IMMEDIATE) != adi.immediate) {
+        cont_action.counts[ActionParam::ACTIONDATA]++;
+    } else {
+        adi.field_affects++;
+        adi.alignment.add_alignment(write_bits, slot_bits);
+    }
+    return true;
 }
 
 
@@ -641,11 +634,11 @@ void ActionAnalysis::initialize_constant(const ActionParam &read,
     BUG_CHECK(constant->value.fits_uint_p() || constant->fitsInt(), "%s: Constant "
               "value in an instruction not split correctly", constant->srcInfo);
 
-    unsigned constant_value;
+    uint32_t constant_value;
     if (constant->value.fits_uint_p())
         constant_value = constant->value.get_ui();
     else
-        constant_value = static_cast<unsigned>(constant->asInt());
+        constant_value = static_cast<uint32_t>(constant->asInt());
     cont_action.ci.positions.emplace_back(constant_value, write_bits);
 }
 
@@ -657,30 +650,32 @@ bool ActionAnalysis::init_constant_alignment(const ActionParam &read,
         ContainerAction &cont_action, le_bitrange write_bits, cstring action_name,
         PHV::Container container) {
     auto &action_format = tbl->resources->action_format;
-    auto &constant_renames = action_format.constant_locations.at(action_name);
-    auto action_data_format = action_format.action_data_format.at(action_name);
+    auto constant = read.expr->to<IR::Constant>();
 
-    ActionFormat::ArgKey ak;
-    ak.init_constant(container, write_bits.lo);
+    // FIXME: Could use a helper function on IR::Constant, but not pressing, though
+    // for the purposes must fit within a 32 bit section
+    // Constant can be from MINX_INT <= x <= MAX_UINT
+    BUG_CHECK(constant->value.fits_uint_p() || constant->fitsInt(), "%s: Constant "
+              "value in an instruction not split correctly", constant->srcInfo);
 
-    // If it is in this map, then this IR::Constant has to be converted to an
-    // IR::ActionDataConstant, which itself can have a particular location in the action format
-    // slot
-    if (constant_renames.find(ak) == constant_renames.end()) {
+    uint32_t constant_value;
+    if (constant->value.fits_uint_p())
+        constant_value = constant->value.get_ui();
+    else
+        constant_value = static_cast<uint32_t>(constant->asInt());
+
+    // Tries to determine if the constant has an action data allocation in the
+    // ActionData::Format::Use oject
+    ActionData::Parameter *param = new ActionData::Constant(constant_value, read.size());
+    ActionData::UniqueLocationKey key(action_name, param, container, write_bits);
+    const ActionData::ALUParameter *alu_param = action_format.find_param_alloc(key, nullptr);
+    if (alu_param == nullptr)
         return init_simple_alignment(read, cont_action, write_bits);
-    }
 
-    auto arg_value = constant_renames.at(ak);
+    bitvec slot_bits_bv = alu_param->slot_bits(container);
+    le_bitrange slot_bits { slot_bits_bv.min().index(), slot_bits_bv.max().index() };
 
-    auto &adp = action_data_format.at(arg_value.placement_index);
-    auto &arg_loc = adp.arg_locs.at(arg_value.arg_index);
-
-    BUG_CHECK(arg_loc.is_constant, "Constant locations in the action data format located an "
-              "argument that is not a constant");
-
-    // FIXME: Duplicate code used, but creation of a function would currently require
-    // action_analysis.h to include action_format.h, which cannot happen as constructed currently
-    initialize_constant(read, cont_action, write_bits, arg_loc.slot_br());
+    initialize_constant(read, cont_action, write_bits, slot_bits);
     cont_action.counts[ActionParam::CONSTANT]++;
     return true;
 }

@@ -11,6 +11,7 @@
 #include "ir/ir.h"
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/mau/action_analysis.h"
+#include "bf-p4c/mau/action_format.h"
 #include "bf-p4c/phv/phv.h"
 
 namespace ActionData {
@@ -31,11 +32,13 @@ class Parameter {
  public:
     // virtual const Parameter *shared_param(const Parameter *, int &start_bit) = 0;
     virtual int size() const = 0;
+    virtual bool from_p4_program() const = 0;
+    virtual cstring name() const = 0;
     virtual const Parameter *split(int lo, int hi) const = 0;
     virtual bool only_one_overlap_solution() const = 0;
 
-    virtual bool is_next_bit_of_param(const Parameter *) const = 0;
-    virtual const Parameter *get_extended_param(unsigned extension,
+    virtual bool is_next_bit_of_param(const Parameter *, bool same_alias) const = 0;
+    virtual const Parameter *get_extended_param(uint32_t extension,
         const Parameter *) const = 0;
     virtual const Parameter *overlap(const Parameter *ad, bool guaranteed_one_overlap,
         le_bitrange *my_overlap, le_bitrange *ad_overlap) const = 0;
@@ -59,17 +62,20 @@ class Parameter {
  * All valid bitranges of param1 and param2, e.g. param1[7:0] or param2[5:4] would be valid
  * instantiations of the Argument class
  */
+
+
 class Argument : public Parameter {
     cstring _name;
     le_bitrange _param_field;
 
 
  public:
-    cstring name() const { return _name; }
+    cstring name() const override { return _name; }
     le_bitrange param_field() const { return _param_field; }
 
     Argument(cstring n, le_bitrange pf) : _name(n), _param_field(pf) {}
 
+    bool from_p4_program() const override { return true; }
     const Parameter *split(int lo, int hi) const override {
         le_bitrange split_range = { _param_field.lo + lo, _param_field.lo + hi };
         BUG_CHECK(_param_field.contains(split_range), "Illegally splitting a parameter, as the "
@@ -79,14 +85,14 @@ class Argument : public Parameter {
 
     bool only_one_overlap_solution() const override { return true; }
 
-    bool is_next_bit_of_param(const Parameter *ad) const override {
+    bool is_next_bit_of_param(const Parameter *ad, bool) const override {
         if (size() != 1) return false;
         const Argument *arg = ad->to<Argument>();
         if (arg == nullptr) return false;
         return arg->_name == _name && arg->_param_field.hi + 1 == _param_field.lo;
     }
 
-    const Parameter *get_extended_param(unsigned extension,
+    const Parameter *get_extended_param(uint32_t extension,
              const Parameter *) const override {
          auto rv = new Argument(*this);
          rv->_param_field.hi += extension;
@@ -116,6 +122,7 @@ class Argument : public Parameter {
 class Constant : public Parameter {
     bitvec _value;
     size_t _size;
+    cstring _alias;
     le_bitrange range() const { return {0, static_cast<int>(_size) - 1}; }
 
  public:
@@ -124,14 +131,22 @@ class Constant : public Parameter {
 
     const Parameter *split(int lo, int hi) const override;
     bool only_one_overlap_solution() const override { return false; }
-    bool is_next_bit_of_param(const Parameter *ad) const override;
-    const Parameter *get_extended_param(unsigned extension,
+    bool from_p4_program() const override { return !_alias.isNull(); }
+    bool is_next_bit_of_param(const Parameter *ad, bool same_alias) const override;
+    const Parameter *get_extended_param(uint32_t extension,
         const Parameter *ad) const override;
     const Parameter *overlap(const Parameter *ad, bool only_one_overlap_solution,
         le_bitrange *my_overlap, le_bitrange *ad_overlap) const override;
     bool equiv_value(const Parameter *ad) const override;
     bitvec value() const { return _value; }
     int size() const override { return _size; }
+    cstring name() const override {
+        if (_alias)
+            return  _alias;
+        return "$constant";
+    }
+    cstring alias() const { return _alias; }
+    void set_alias(cstring a) { _alias = a; }
     void dbprint(std::ostream &out) const override {
         out << "0x" << _value << " : " << _size << " bits";
     }
@@ -142,13 +157,34 @@ struct ALUParameter {
     le_bitrange phv_bits;
     int right_shift;
 
+    bitvec slot_bits(PHV::Container cont) const {
+        bitvec rv = bitvec(phv_bits.lo, phv_bits.size());
+        rv.rotate_right(0, right_shift, cont.size());
+        return rv;
+    }
+
     ALUParameter(const Parameter *p, le_bitrange pb)
         : param(p), phv_bits(pb), right_shift(0) {}
 };
 
 enum ALUOPConstraint_t { ISOLATED, BITMASKED_SET, DEPOSIT_FIELD };
 
+struct UniqueLocationKey {
+    cstring action_name;
+    const Parameter *param = nullptr;
+    PHV::Container container;
+    le_bitrange phv_bits;
+
+ public:
+    UniqueLocationKey() {}
+
+    UniqueLocationKey(cstring an, const Parameter *p, PHV::Container cont, le_bitrange pb)
+        : action_name(an), param(p), container(cont), phv_bits(pb) { }
+};
+
 class RamSection;
+
+using ParameterPositions = std::map<int, const Parameter *>;
 
 /**
  * This class is the representation of the src1 of a single ALU operation when the src1 comes
@@ -176,6 +212,10 @@ class ALUOperation {
     // Information on how the data is used, in order to potentially pack in RAM space other
     // ALUOperations
     ALUOPConstraint_t _constraint;
+    // Alias name for the assembly language
+    cstring _alias;
+    // Mask alias for the assembly language
+    cstring _mask_alias;
 
  public:
     void add_param(ALUParameter &ap) {
@@ -192,6 +232,9 @@ class ALUOperation {
 
 
     bitvec phv_bits() const { return _phv_bits; }
+    bitvec slot_bits() const {
+        return _phv_bits.rotate_right_copy(0, _right_shift, _container.size());
+    }
     size_t size() const { return _container.size(); }
     bool is_constrained(ALUOPConstraint_t cons) const {
         return _constraint == cons;
@@ -203,6 +246,13 @@ class ALUOperation {
         : _right_shift(0), _container(cont), _constraint(cons) { }
     const RamSection *create_RamSection(bool shift_to_lsb) const;
     const ALUOperation *add_right_shift(int right_shift) const;
+    cstring alias() const { return _alias; }
+    cstring mask_alias() const { return _mask_alias; }
+    void set_alias(cstring a) { _alias = a; }
+    void set_mask_alias(cstring ma) { _mask_alias = ma; }
+    PHV::Container container() const { return _container; }
+    const ALUParameter *find_param_alloc(UniqueLocationKey &key) const;
+    ParameterPositions parameter_positions() const;
 };
 
 struct SharedParameter {
@@ -292,10 +342,8 @@ class PackingConstraint {
         : rotational_granularity(rg), recursive_constraints(pc) {}
 };
 
-using ParameterPositions = std::map<int, const Parameter *>;
-
 enum SlotType_t { BYTE, HALF, FULL, SLOT_TYPES, DOUBLE_FULL = SLOT_TYPES, SECT_TYPES = 4 };
-size_t slot_size_bits(SlotType_t);
+size_t slot_type_to_bits(SlotType_t type);
 
 using BusInputs = std::array<bitvec, SLOT_TYPES>;
 
@@ -380,7 +428,7 @@ class RamSection {
     size_t size() const { return action_data_bits.size(); }
     size_t index() const { return ceil_log2(size()) - 3; }
     size_t byte_sz() const { return size() / 8; }
-    ParameterPositions parameter_positions() const;
+    ParameterPositions parameter_positions(bool same_alias = false) const;
     explicit RamSection(int s) : action_data_bits(s, nullptr) {}
     RamSection(int s, PackingConstraint &pc)
         : action_data_bits(s, nullptr), pack_info(pc) { }
@@ -389,7 +437,7 @@ class RamSection {
     BusInputs bus_inputs() const;
 };
 
-enum Location_t { ACTION_DATA_TABLE, IMMEDIATE, AD_LOCATIONS, METER_ALU };
+enum Location_t { ACTION_DATA_TABLE, IMMEDIATE, AD_LOCATIONS, METER_ALU = 2, ALL_LOCATIONS = 3 };
 
 /**
  * Used to keep track of the coordination of RamSections and the byte offset
@@ -449,13 +497,13 @@ struct ALUPosition {
     // The information on the P4 parameters within this region
     const ALUOperation *alu_op;
     // Whether the data is in ActionData, Immmediate, or a from a Meter ALU operation
-    Location_t ad_loc;
+    Location_t loc;
     // The byte offset within the allocation
     size_t start_byte;
 
  public:
-    ALUPosition(const ALUOperation *ao, Location_t al, size_t sb)
-        : alu_op(ao), ad_loc(al), start_byte(sb) { }
+    ALUPosition(const ALUOperation *ao, Location_t l, size_t sb)
+        : alu_op(ao), loc(l), start_byte(sb) { }
 };
 
 using RamSec_vec_t = safe_vector<const RamSection *>;
@@ -498,21 +546,54 @@ struct SingleActionAllocation {
     }
 };
 
+
+
 class Format {
  public:
     static constexpr int IMMEDIATE_BITS = 32;
 
     struct Use {
         std::map<cstring, safe_vector<ALUPosition>> alu_positions;
+        ///> A bitvec per each SlotType / Location representing the use of each SlotType on
+        ///> input.  Could be calculated directly from alu_positions
         std::array<BusInputs, AD_LOCATIONS> bus_inputs
             = {{ {{ bitvec(), bitvec(), bitvec() }}, {{ bitvec(), bitvec(), bitvec() }} }};
         std::array<int, AD_LOCATIONS> bytes_per_loc = {{ 0, 0 }};
+        ///> The allocation for all HashDist/RandomNumber/Meter Color information, as this
+        ///> is not yet handled by this Action Format allocation.  Eventually this will be
+        ///> obsoleted
+        ActionFormat::Use speciality_use;
+        ///> A contiguous bits of action data in match overhead.  Could be calculated directly
+        ///> from alu_positions
+        bitvec immediate_mask;
+        ///> Which FULL words are to be used in a bitmasked-set, as those have to be
+        ///> contiguous on the action data bus words.  Could be calculated directly from
+        ///> alu_positions
+        bitvec full_words_bitmasked;
+        void determine_immediate_mask();
+        int immediate_bits() const { return immediate_mask.max().index() + 1; }
+        const ALUParameter *find_param_alloc(UniqueLocationKey &loc,
+            const ALUPosition **alu_pos_p) const;
+        cstring get_format_name(const ALUPosition &alu_pos, bool bitmasked_set = false,
+            le_bitrange *slot_bits = nullptr, le_bitrange *postpone_range = nullptr) const;
+        cstring get_format_name(SlotType_t slot_type, Location_t loc, int byte_offset,
+            le_bitrange *slot_bits = nullptr, le_bitrange *postpone_range = nullptr) const;
+
+        void clear() {
+            alu_positions.clear();
+            bus_inputs =
+                {{ {{ bitvec(), bitvec(), bitvec() }}, {{ bitvec(), bitvec(), bitvec() }} }};
+            immediate_mask.clear();
+            full_words_bitmasked.clear();
+            speciality_use.clear();
+        }
     };
 
  private:
     const PhvInfo &phv;
     const IR::MAU::Table *tbl;
     safe_vector<Use> &uses;
+    ActionFormat::Use speciality_use;
     int calc_max_size = 0;
     std::map<cstring, RamSec_vec_t> init_ram_sections;
 
@@ -523,7 +604,7 @@ class Format {
     void create_argument(ALUOperation &alu, ActionAnalysis::ActionParam &read,
         le_bitrange container_bits);
     void create_constant(ALUOperation &alu, ActionAnalysis::ActionParam &read,
-        le_bitrange container_bits);
+        le_bitrange container_bits, int &constant_alias_index);
 
     void create_alu_ops_for_action(ActionAnalysis::ContainerActionsMap &ca_map,
         cstring action_name);
@@ -562,9 +643,10 @@ class Format {
 
 
  public:
-    void allocate_format(int orig_max_size);
-    Format(const PhvInfo &p, const IR::MAU::Table *t, safe_vector<Use> &u)
-        : phv(p), tbl(t), uses(u) {}
+    void allocate_format();
+    Format(const PhvInfo &p, const IR::MAU::Table *t, safe_vector<Use> &u,
+        ActionFormat::Use sp_use)
+        : phv(p), tbl(t), uses(u), speciality_use(sp_use) {}
 };
 
 }  // namespace ActionData

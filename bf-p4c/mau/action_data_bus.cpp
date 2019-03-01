@@ -19,29 +19,30 @@ void ActionDataBus::clear() {
 
 
 /** Conversion between a byte on the action data bus and the output of a particular type */
-inline int ActionDataBus::byte_to_output(int byte, ActionFormat::cont_type_t type) {
-    if (type == ActionFormat::FULL)
+inline int ActionDataBus::byte_to_output(int byte, ActionData::SlotType_t type) {
+    if (type == ActionData::FULL)
         return byte / find_byte_sz(type);
     else
         return (byte - ADB_STARTS[type]) / find_byte_sz(type);
 }
 
 /** Conversion between an output to a byte on the action data bus of a particular type */
-inline int ActionDataBus::output_to_byte(int output, ActionFormat::cont_type_t type) {
-    if (type == ActionFormat::FULL)
+inline int ActionDataBus::output_to_byte(int output, ActionData::SlotType_t type) {
+    if (type == ActionData::FULL)
         return output * find_byte_sz(type);
     else
         return ADB_STARTS[type] + output * find_byte_sz(type);
 }
 
 /** Finds the byte size of particular container */
-inline int ActionDataBus::find_byte_sz(ActionFormat::cont_type_t type) {
-    return ActionFormat::CONTAINER_SIZES[type] / 8;
+inline int ActionDataBus::find_byte_sz(ActionData::SlotType_t type) {
+    // return 0;
+    return ActionData::slot_type_to_bits(type) / 8;
 }
 
 /** Combined layouts */
-inline bitvec ActionDataBus::combined(const bitvec bv[ActionFormat::CONTAINER_TYPES]) {
-     return bv[ActionFormat::BYTE] | bv[ActionFormat::HALF] | bv[ActionFormat::FULL];
+inline bitvec ActionDataBus::combined(const ActionData::BusInputs bv) const {
+     return bv[ActionData::BYTE] | bv[ActionData::HALF] | bv[ActionData::FULL];
 }
 
 /** The input xbar of the action data bus is constrained as described in section 5.2.5.1,
@@ -99,12 +100,12 @@ inline bitvec ActionDataBus::combined(const bitvec bv[ActionFormat::CONTAINER_TY
 /** Given a byte offset within a RAM, and the type of the CSR, which boolean is supposed to
  *  be checked.
  */
-int ActionDataBus::csr_index(int byte_offset, ActionFormat::cont_type_t type) {
+int ActionDataBus::csr_index(int byte_offset, ActionData::SlotType_t type) {
     BUG_CHECK(byte_offset >= 0 && byte_offset < 16, "Action Data Bus allocation can only work in "
               "16 byte chunks");
-    if (type == ActionFormat::BYTE) {
+    if (type == ActionData::BYTE) {
         return byte_offset == 0 ? 0 : floor_log2(byte_offset);
-    } else if (type == ActionFormat::HALF) {
+    } else if (type == ActionData::HALF) {
         if (byte_offset < 4)
             return 0;
         else if (byte_offset < 8)
@@ -119,8 +120,8 @@ int ActionDataBus::csr_index(int byte_offset, ActionFormat::cont_type_t type) {
 /** Given the description of CSRs, verifies that the CSR is available to be used
  */
 bool ActionDataBus::is_csr_reserved(int start_byte, bitvec adjacent, int byte_offset,
-                                    ActionFormat::ad_source_t source) {
-    if (source == ActionFormat::IMMED)
+                                    ActionData::Location_t source) {
+    if (source == ActionData::IMMEDIATE)
         return is_immed_csr_reserved(start_byte);
     else
         return is_adf_csr_reserved(start_byte, adjacent, byte_offset);
@@ -132,7 +133,7 @@ bool ActionDataBus::is_adf_csr_reserved(int start_byte, bitvec adjacent, int byt
     int index = csr_index(byte_offset % BYTES_PER_RAM, csr.type);
     if (!csr.reserved[index])
         return false;
-    if (csr.type == ActionFormat::BYTE && adjacent.max().index() >= 2
+    if (csr.type == ActionData::BYTE && adjacent.max().index() >= 2
         && (byte_offset % BYTES_PER_RAM) == 0)
         if (!csr.reserved[index + 1])
             return false;
@@ -140,7 +141,7 @@ bool ActionDataBus::is_adf_csr_reserved(int start_byte, bitvec adjacent, int byt
 }
 
 bool ActionDataBus::is_immed_csr_reserved(int start_byte) {
-    for (int i = 0; i < ActionFormat::CONTAINER_TYPES; i++) {
+    for (int i = 0; i < ActionData::SLOT_TYPES; i++) {
         if (start_byte < IMMED_DIVIDES[i]) {
             return reserved_immed[i];
         }
@@ -152,8 +153,8 @@ bool ActionDataBus::is_immed_csr_reserved(int start_byte) {
  *  region
  */
 void ActionDataBus::reserve_csr(int start_byte, bitvec adjacent, int byte_offset,
-                                ActionFormat::ad_source_t source) {
-    if (source == ActionFormat::IMMED)
+                                ActionData::Location_t source) {
+    if (source == ActionData::IMMEDIATE)
         reserve_immed_csr(start_byte);
     else
         reserve_adf_csr(start_byte, adjacent, byte_offset);
@@ -164,7 +165,7 @@ void ActionDataBus::reserve_adf_csr(int start_byte, bitvec adjacent, int byte_of
     auto &csr = action_ixbar[start_byte / CSR_RANGE];
     int index = csr_index(byte_offset % BYTES_PER_RAM, csr.type);
     csr.reserved[index] = true;
-    if (csr.type == ActionFormat::BYTE && adjacent.max().index() >= 2
+    if (csr.type == ActionData::BYTE && adjacent.max().index() >= 2
         && (byte_offset % BYTES_PER_RAM) == 0)
         csr.reserved[index + 1] = true;
 }
@@ -187,15 +188,15 @@ void ActionDataBus::reserve_immed_csr(int start_byte) {
  *  action data table units, as they come from different home row action data busses, and from
  *  128 bit rams, thus 16 byte regions.
  */
-bool ActionDataBus::alloc_ad_table(const bitvec *total_layouts,
-                                   const bitvec full_layout_bitmasked, Use &use, cstring name) {
+bool ActionDataBus::alloc_ad_table(const ActionData::BusInputs total_layouts,
+        const bitvec full_words_bitmasked, Use &use, cstring name) {
     LOG2(" Total Layouts for Action Data Table");
-    for (int i = 0; i < ActionFormat::CONTAINER_TYPES; i++) {
+    for (int i = 0; i < ActionData::SLOT_TYPES; i++) {
         LOG2(" Layout for type " << i << " is " << total_layouts[i]);
     }
-    bitvec byte_layout = total_layouts[ActionFormat::BYTE];
-    bitvec half_layout = total_layouts[ActionFormat::HALF];
-    bitvec full_layout = total_layouts[ActionFormat::FULL];
+    bitvec byte_layout = total_layouts[ActionData::BYTE];
+    bitvec half_layout = total_layouts[ActionData::HALF];
+    bitvec full_layout = total_layouts[ActionData::FULL];
 
     int max = std::max(std::max(byte_layout.max().index(), half_layout.max().index()),
                        full_layout.max().index());
@@ -209,7 +210,7 @@ bool ActionDataBus::alloc_ad_table(const bitvec *total_layouts,
         bitvec layout = (byte_layout.getslice(i, BYTES_PER_RAM));
         bitvec combined_layout = combined(total_layouts).getslice(i, BYTES_PER_RAM);
         bool allocated = alloc_bytes(use, layout, combined_layout, i, name,
-                ActionFormat::ADT);
+                ActionData::ACTION_DATA_TABLE);
         if (!allocated) return false;
     }
     LOG3("    Allocated Byte Section");
@@ -220,7 +221,7 @@ bool ActionDataBus::alloc_ad_table(const bitvec *total_layouts,
         bitvec layout = (half_layout.getslice(i, BYTES_PER_RAM));
         bitvec combined_layout = combined(total_layouts).getslice(i, BYTES_PER_RAM);
         bool allocated = alloc_halves(use, layout, combined_layout, i, name,
-                ActionFormat::ADT);
+                ActionData::ACTION_DATA_TABLE);
         if (!allocated) return false;
     }
     LOG3("    Allocated Half Section");
@@ -228,13 +229,13 @@ bool ActionDataBus::alloc_ad_table(const bitvec *total_layouts,
     max = full_layout.max().index();
 
     for (int i = 0; i <= max; i += BYTES_PER_RAM) {
-        bitvec layouts[ActionFormat::CONTAINER_TYPES];
-        for (int j = 0; j < ActionFormat::CONTAINER_TYPES; j++) {
+        ActionData::BusInputs layouts;
+        for (size_t j = 0; j < layouts.size(); j++) {
             layouts[j] = total_layouts[j].getslice(i, BYTES_PER_RAM);
         }
-        bitvec full_bitmasked = full_layout_bitmasked.getslice(i, BYTES_PER_RAM);
+        bitvec full_bitmasked = full_words_bitmasked.getslice(i, BYTES_PER_RAM);
         bool allocated = alloc_fulls(use, layouts, full_bitmasked, i, name,
-                ActionFormat::ADT);
+                ActionData::ACTION_DATA_TABLE);
         if (!allocated) return false;
     }
     LOG3("    Allocated Full Section");
@@ -244,14 +245,15 @@ bool ActionDataBus::alloc_ad_table(const bitvec *total_layouts,
 // allocate action data bus for meter output, check if the meter is already allocated,
 // if so, use the previous allocation to enable sharing action data bus for the same
 // meter output for tables in the same stage.
-bool ActionDataBus::alloc_meter_output(const bitvec *total_layouts, Use &use, cstring name) {
+bool ActionDataBus::alloc_meter_output(ActionData::BusInputs total_layouts, Use &use,
+        cstring name) {
     LOG2(" Total Layouts for Meter Output");
-    for (int i = 0; i < ActionFormat::CONTAINER_TYPES; i++) {
+    for (int i = 0; i < ActionData::SLOT_TYPES; i++) {
         LOG2(" Layout for type " << i << " is " << total_layouts[i]);
     }
-    bitvec byte_layout = total_layouts[ActionFormat::BYTE];
-    bitvec half_layout = total_layouts[ActionFormat::HALF];
-    bitvec full_layout = total_layouts[ActionFormat::FULL];
+    bitvec byte_layout = total_layouts[ActionData::BYTE];
+    bitvec half_layout = total_layouts[ActionData::HALF];
+    bitvec full_layout = total_layouts[ActionData::FULL];
 
     int max = std::max(std::max(byte_layout.max().index(), half_layout.max().index()),
                        full_layout.max().index());
@@ -265,7 +267,7 @@ bool ActionDataBus::alloc_meter_output(const bitvec *total_layouts, Use &use, cs
         bitvec layout = (byte_layout.getslice(i, BYTES_PER_RAM));
         bitvec combined_layout = combined(total_layouts).getslice(i, BYTES_PER_RAM);
         bool allocated = alloc_bytes(use, layout, combined_layout, i, name,
-                ActionFormat::METER);
+                ActionData::METER_ALU);
         if (!allocated) return false;
     }
     LOG3("    Allocated Byte Section");
@@ -276,7 +278,7 @@ bool ActionDataBus::alloc_meter_output(const bitvec *total_layouts, Use &use, cs
         bitvec layout = (half_layout.getslice(i, BYTES_PER_RAM));
         bitvec combined_layout = combined(total_layouts).getslice(i, BYTES_PER_RAM);
         bool allocated = alloc_halves(use, layout, combined_layout, i, name,
-                ActionFormat::METER);
+                ActionData::METER_ALU);
         if (!allocated) return false;
     }
     LOG3("    Allocated Half Section");
@@ -284,13 +286,13 @@ bool ActionDataBus::alloc_meter_output(const bitvec *total_layouts, Use &use, cs
     max = full_layout.max().index();
 
     for (int i = 0; i <= max; i += BYTES_PER_RAM) {
-        bitvec layouts[ActionFormat::CONTAINER_TYPES];
-        for (int j = 0; j < ActionFormat::CONTAINER_TYPES; j++) {
+        ActionData::BusInputs layouts;
+        for (int j = 0; j < ActionData::SLOT_TYPES; j++) {
             layouts[j] = total_layouts[j].getslice(i, BYTES_PER_RAM);
         }
-        bitvec full_layout_bitmasked;  /* not used */
-        bool allocated = alloc_fulls(use, layouts, full_layout_bitmasked, i, name,
-                ActionFormat::METER);
+        bitvec full_words_bitmasked;  /* not used */
+        bool allocated = alloc_fulls(use, layouts, full_words_bitmasked, i, name,
+                ActionData::METER_ALU);
         if (!allocated) return false;
     }
     LOG3("    Allocated Full Section");
@@ -307,7 +309,7 @@ void ActionDataBus::initialize_action_ixbar() {
     for (int i = 0; i < ADB_BYTES; i += CSR_RANGE) {
         if (i == IMMED_DIVIDES[type_ref])
             type_ref++;
-        ActionFormat::cont_type_t type = (ActionFormat::cont_type_t) type_ref;
+        ActionData::SlotType_t type = (ActionData::SlotType_t) type_ref;
         action_ixbar.emplace_back(type);
     }
     action_ixbars.push_back(action_ixbar);
@@ -317,22 +319,22 @@ void ActionDataBus::initialize_action_ixbar() {
  *  pre-requisite values for the search algorithm
  */
 bool ActionDataBus::find_location(bitvec combined_adjacent, int diff,
-                                  ActionFormat::cont_type_t init_type, loc_alg_t loc_alg,
-                                  ActionFormat::ad_source_t source, int byte_offset,
+                                  ActionData::SlotType_t init_type, loc_alg_t loc_alg,
+                                  ActionData::Location_t source, int byte_offset,
                                   int &start_byte) {
     bool initialized = true;
     int initial_adb_byte = -1;
     int final_adb_byte = -1;
-    ActionFormat::cont_type_t type = init_type;
+    ActionData::SlotType_t type = init_type;
     bool reset = false;
     switch (loc_alg) {
         // Allocating a full word in the half region
         case FIND_FULL_HALF:
-            type = ActionFormat::HALF;
+            type = ActionData::HALF;
             break;
         // Allocating a full word in the byte region
         case FIND_FULL_BYTE:
-            type = ActionFormat::BYTE;
+            type = ActionData::BYTE;
             break;
         default:
             break;
@@ -393,22 +395,22 @@ bool ActionDataBus::find_location(bitvec combined_adjacent, int diff,
  *  to run for the particular use case
  */
 bool ActionDataBus::find_location(bitvec combined_adjacent, int diff, int initial_adb_byte,
-                                  int final_adb_byte, bool reset, ActionFormat::cont_type_t type,
-                                  ActionFormat::ad_source_t source, int byte_offset,
+                                  int final_adb_byte, bool reset, ActionData::SlotType_t type,
+                                  ActionData::Location_t source, int byte_offset,
                                   int &start_byte) {
     int starter = initial_adb_byte;
     bool found = false;
     do {
+        int increment;
         if (is_csr_reserved(starter, combined_adjacent, byte_offset, source)) {
-            starter += CSR_RANGE;
-            continue;
-        }
-
-        if ((total_in_use & (combined_adjacent << starter)).popcount() == 0) {
+            increment = CSR_RANGE;
+        } else if ((total_in_use & (combined_adjacent << starter)).popcount() == 0) {
             found = true;
             break;
+        } else {
+            increment = diff;
         }
-        starter += diff;
+        starter += increment;
         if (reset && starter >= output_to_byte(OUTPUTS, type))
             starter -= OUTPUTS * find_byte_sz(type);
     } while (starter != final_adb_byte);
@@ -420,9 +422,9 @@ bool ActionDataBus::find_location(bitvec combined_adjacent, int diff, int initia
  *  for the region.  Must only reserve the spaces for the actual bytes, and comes up with
  *  the correct name for the assembly output.
  */
-void ActionDataBus::reserve_space(Use &use, ActionFormat::cont_type_t type, bitvec adjacent,
+void ActionDataBus::reserve_space(Use &use, ActionData::SlotType_t type, bitvec adjacent,
                                   bitvec combined_adjacent, int start_byte, int byte_offset,
-                                  ActionFormat::ad_source_t source, cstring name) {
+                                  ActionData::Location_t source, cstring name) {
     bitvec shift_mask = combined_adjacent << start_byte;
     total_in_use |= shift_mask;
 
@@ -464,9 +466,9 @@ void ActionDataBus::reserve_space(Use &use, ActionFormat::cont_type_t type, bitv
  *     - size - number of bytes to update by in the location algorithm
  */
 bool ActionDataBus::fit_adf_section(Use &use, bitvec adjacent, bitvec combined_adjacent,
-                                    ActionFormat::cont_type_t type, loc_alg_t loc_alg,
+                                    ActionData::SlotType_t type, loc_alg_t loc_alg,
                                     int init_byte_offset, int sec_begin, int size, cstring name,
-                                    ActionFormat::ad_source_t source) {
+                                    ActionData::Location_t source) {
     int start_byte = 0;
     int byte_offset = init_byte_offset + sec_begin;
     bool found = find_location(combined_adjacent, size, type, loc_alg, source, byte_offset,
@@ -487,8 +489,8 @@ bool ActionDataBus::fit_adf_section(Use &use, bitvec adjacent, bitvec combined_a
  */
 bool ActionDataBus::alloc_bytes(Use &use, bitvec layout, bitvec combined_layout,
                                 int init_byte_offset, cstring name,
-                                ActionFormat::ad_source_t source) {
-    ActionFormat::cont_type_t type = ActionFormat::BYTE;
+                                ActionData::Location_t source) {
+    ActionData::SlotType_t type = ActionData::BYTE;
     bitvec adjacent = layout.getslice(8 /* start byte 8 */, 8 /* size 8 */);
     bitvec combined_adjacent = combined_layout.getslice(8, 8);
     if (layout.max().index() > 8) {
@@ -498,7 +500,7 @@ bool ActionDataBus::alloc_bytes(Use &use, bitvec layout, bitvec combined_layout,
     }
 
     adjacent = layout.getslice(4, 4);
-    combined_adjacent = layout.getslice(4, 4);
+    combined_adjacent = combined_layout.getslice(4, 4);
     if (adjacent.popcount() > 0) {
         bool found = fit_adf_section(use, adjacent, combined_adjacent, type, FIND_NORMAL,
                                      init_byte_offset, 4, 4, name, source);
@@ -506,7 +508,7 @@ bool ActionDataBus::alloc_bytes(Use &use, bitvec layout, bitvec combined_layout,
     }
 
     adjacent = layout.getslice(0, 4);
-    combined_adjacent = layout.getslice(0, 4);
+    combined_adjacent = combined_layout.getslice(0, 4);
 
     bitvec small_adj = adjacent.getslice(0, 2);
     bitvec combined_small_adj = combined_adjacent.getslice(0, 2);
@@ -537,8 +539,8 @@ bool ActionDataBus::alloc_bytes(Use &use, bitvec layout, bitvec combined_layout,
  */
 bool ActionDataBus::alloc_halves(Use &use, bitvec layout, bitvec combined_layout,
                                  int init_byte_offset, cstring name,
-                                 ActionFormat::ad_source_t source) {
-    ActionFormat::cont_type_t type = ActionFormat::HALF;
+                                 ActionData::Location_t source) {
+    ActionData::SlotType_t type = ActionData::HALF;
     bitvec adjacent = layout.getslice(8, 8);
     bitvec combined_adjacent = combined_layout.getslice(8, 8);
     if (layout.max().index() > 8) {
@@ -585,14 +587,14 @@ bool ActionDataBus::alloc_halves(Use &use, bitvec layout, bitvec combined_layout
  *  sections in order to determine if the bytes were to share, would they be properly aligned
  *  within the action data bus.
  */
-void ActionDataBus::analyze_full_share(Use &use, bitvec layouts[ActionFormat::CONTAINER_TYPES],
+void ActionDataBus::analyze_full_share(Use &use, ActionData::BusInputs layouts,
                                        FullShare &full_share, int init_byte_offset,
-                                       int add_byte_offset, ActionFormat::ad_source_t source) {
-    ActionFormat::cont_type_t type = ActionFormat::FULL;
+                                       int add_byte_offset, ActionData::Location_t source) {
+    ActionData::SlotType_t type = ActionData::FULL;
     int byte_sz = find_byte_sz(type);
     full_share.full_in_use = true;
-    for (int j = 0; j < ActionFormat::CONTAINER_TYPES - 1; j++) {
-        int small_byte_sz = find_byte_sz(static_cast<ActionFormat::cont_type_t>(j));
+    for (int j = 0; j < ActionData::SLOT_TYPES - 1; j++) {
+        int small_byte_sz = find_byte_sz(static_cast<ActionData::SlotType_t>(j));
         bitvec under = layouts[j].getslice(add_byte_offset, byte_sz);
         if (under.popcount() == 0) continue;
         bitvec byte_locations;
@@ -628,14 +630,14 @@ void ActionDataBus::analyze_full_share(Use &use, bitvec layouts[ActionFormat::CO
 /** Essentially wrapper class to perform analysis on all possible full sections within a 16
  *  byte region
  */
-void ActionDataBus::analyze_full_shares(Use &use, bitvec layouts[ActionFormat::CONTAINER_TYPES],
+void ActionDataBus::analyze_full_shares(Use &use, ActionData::BusInputs layouts,
                                         bitvec full_bitmasked, FullShare full_shares[4],
                                         int init_byte_offset,
-                                        ActionFormat::ad_source_t source) {
-    ActionFormat::cont_type_t type = ActionFormat::FULL;
+                                        ActionData::Location_t source) {
+    ActionData::SlotType_t type = ActionData::FULL;
     int byte_sz = find_byte_sz(type);
     for (int i = 0; i < BYTES_PER_RAM; i += byte_sz) {
-        if (layouts[ActionFormat::FULL].getslice(i, 4).popcount() == 0) continue;
+        if (layouts[ActionData::FULL].getslice(i, 4).popcount() == 0) continue;
         analyze_full_share(use, layouts, full_shares[i / byte_sz], init_byte_offset, i, source);
     }
 
@@ -650,7 +652,7 @@ void ActionDataBus::analyze_full_shares(Use &use, bitvec layouts[ActionFormat::C
             continue;
         int byte_index = -1;
         bool found = false;
-        for (int j = 0; j < ActionFormat::CONTAINER_TYPES - 1; j++) {
+        for (int j = 0; j < ActionData::SLOT_TYPES - 1; j++) {
             if ((full_shares[index0].shared_byte[j]
                  == full_shares[index1].shared_byte[j] - byte_sz)
                 && (full_shares[index0].shared_byte[j] % (byte_sz * 2)) == 0) {
@@ -677,9 +679,9 @@ void ActionDataBus::analyze_full_shares(Use &use, bitvec layouts[ActionFormat::C
 bool ActionDataBus::alloc_full_sect(Use &use, FullShare full_shares[4], bitvec combined_layout,
                                     int begin, int init_byte_offset, cstring name,
                                     bitvec full_bitmasked,
-                                    ActionFormat::ad_source_t source) {
+                                    ActionData::Location_t source) {
     bool fbi = full_bitmasked.popcount() > 0;
-    ActionFormat::cont_type_t type = ActionFormat::FULL;
+    ActionData::SlotType_t type = ActionData::FULL;
     int byte_sz = find_byte_sz(type);
     bitvec unshared_adj;
     for (int i = begin; i < begin + 2; i++) {
@@ -710,10 +712,10 @@ bool ActionDataBus::alloc_full_sect(Use &use, FullShare full_shares[4], bitvec c
         bitvec shared_adj(0, 4);
         int start_byte = -1;
         if (!fbi) {
-            if ((full_shares[i].shared_status & (1 << ActionFormat::HALF)) != 0)
-                start_byte = full_shares[i].shared_byte[ActionFormat::HALF];
-            else if ((full_shares[i].shared_status & (1 << ActionFormat::BYTE)) != 0)
-                start_byte = full_shares[i].shared_byte[ActionFormat::BYTE];
+            if ((full_shares[i].shared_status & (1 << ActionData::HALF)) != 0)
+                start_byte = full_shares[i].shared_byte[ActionData::HALF];
+            else if ((full_shares[i].shared_status & (1 << ActionData::BYTE)) != 0)
+                start_byte = full_shares[i].shared_byte[ActionData::BYTE];
         } else {
             int lookup = full_shares[i].full_bitmasked_index;
             start_byte = full_shares[i].shared_byte[lookup];
@@ -728,10 +730,10 @@ bool ActionDataBus::alloc_full_sect(Use &use, FullShare full_shares[4], bitvec c
  *  an action table.  Breaks the sections into two 8 byte sections, as this hits all possible
  *  constraints in this particular region.
  */
-bool ActionDataBus::alloc_fulls(Use &use, bitvec layouts[ActionFormat::CONTAINER_TYPES],
+bool ActionDataBus::alloc_fulls(Use &use, ActionData::BusInputs layouts,
                                 bitvec full_bitmasked, int init_byte_offset, cstring name,
-                                ActionFormat::ad_source_t source) {
-    ActionFormat::cont_type_t type = ActionFormat::FULL;
+                                ActionData::Location_t source) {
+    ActionData::SlotType_t type = ActionData::FULL;
     bitvec layout = layouts[type];
     bitvec combined_layouts = combined(layouts);
     FullShare full_shares[4];
@@ -764,23 +766,23 @@ bool ActionDataBus::alloc_fulls(Use &use, bitvec layouts[ActionFormat::CONTAINER
  *  IMMED_SECT definition.
  */
 bool ActionDataBus::fit_immed_sect(Use &use, bitvec layout, bitvec combined_layout,
-                                   ActionFormat::cont_type_t type, loc_alg_t loc_alg,
+                                   ActionData::SlotType_t type, loc_alg_t loc_alg,
                                    cstring name) {
     int start_byte = 0;
     bool found = find_location(combined_layout, IMMED_SECT, type, loc_alg,
-            ActionFormat::IMMED, 0, start_byte);
+            ActionData::IMMEDIATE, 0, start_byte);
     if (!found) return false;
     reserve_space(use, type, layout, combined_layout, start_byte, 0,
-            ActionFormat::IMMED, name);
+            ActionData::IMMEDIATE, name);
     return true;
 }
 
 /** In the immediate section, potentially we have to allocate bytes in the half word region
  *  and half words in the full word region.  This is to calculate the pairing of these.
  */
-bitvec ActionDataBus::paired_immediate(bitvec layout, ActionFormat::cont_type_t type) {
+bitvec ActionDataBus::paired_immediate(bitvec layout, ActionData::SlotType_t type) {
     bitvec paired_layout;
-    if (type == ActionFormat::FULL)
+    if (type == ActionData::FULL)
         return layout;
     auto byte_sz = find_byte_sz(type);
 
@@ -803,7 +805,7 @@ bitvec ActionDataBus::paired_immediate(bitvec layout, ActionFormat::cont_type_t 
  *  action data bus slots to be reserved by clobber locations, than that is the preferred
  *  destination
  */
-bool ActionDataBus::alloc_unshared_immed(Use &use, ActionFormat::cont_type_t type, bitvec layout,
+bool ActionDataBus::alloc_unshared_immed(Use &use, ActionData::SlotType_t type, bitvec layout,
                                          bitvec combined, cstring name) {
     if (layout.empty())
         return true;
@@ -838,14 +840,13 @@ bool ActionDataBus::alloc_unshared_immed(Use &use, ActionFormat::cont_type_t typ
  *  TODO: Full sections being added to either the byte or half region as unshared is not yet
  *        possible
  */
-bool ActionDataBus::alloc_shared_immed(Use &use, bitvec layouts[ActionFormat::CONTAINER_TYPES],
-                                       cstring name) {
-    ActionFormat::cont_type_t type = ActionFormat::FULL;
+bool ActionDataBus::alloc_shared_immed(Use &use, ActionData::BusInputs layouts, cstring name) {
+    ActionData::SlotType_t type = ActionData::FULL;
     if (layouts[type].popcount() == 0)
         return true;
 
     FullShare full_share;
-    analyze_full_share(use, layouts, full_share, 0, 0, ActionFormat::IMMED);
+    analyze_full_share(use, layouts, full_share, 0, 0, ActionData::IMMEDIATE);
     auto combined_layouts = combined(layouts);
 
     if (full_share.full_in_use) {
@@ -860,12 +861,12 @@ bool ActionDataBus::alloc_shared_immed(Use &use, bitvec layouts[ActionFormat::CO
                 return false;
         } else {
             int start_byte = -1;
-            if ((full_share.shared_status & (1 << ActionFormat::HALF)) != 0)
-                start_byte = full_share.shared_byte[ActionFormat::HALF];
-            else if ((full_share.shared_status & (1 << ActionFormat::BYTE)) != 0)
-                start_byte = full_share.shared_byte[ActionFormat::BYTE];
+            if ((full_share.shared_status & (1 << ActionData::HALF)) != 0)
+                start_byte = full_share.shared_byte[ActionData::HALF];
+            else if ((full_share.shared_status & (1 << ActionData::BYTE)) != 0)
+                start_byte = full_share.shared_byte[ActionData::BYTE];
             reserve_space(use, type, layouts[type], layouts[type], start_byte, 0,
-                    ActionFormat::IMMED, name);
+                    ActionData::IMMEDIATE, name);
         }
     }
     return true;
@@ -875,14 +876,14 @@ bool ActionDataBus::alloc_shared_immed(Use &use, bitvec layouts[ActionFormat::CO
  *  allocated first, and their allocation is used in the analysis of the full section in terms
  *  of potentially sharing bytes.
  */
-bool ActionDataBus::alloc_immediate(const bitvec total_layouts[ActionFormat::CONTAINER_TYPES],
-                                    Use &use, cstring name) {
+bool ActionDataBus::alloc_immediate(const ActionData::BusInputs total_layouts, Use &use,
+        cstring name) {
     LOG2(" Total Layouts for Action Format Immediate");
-    for (int i = 0; i < ActionFormat::CONTAINER_TYPES; i++) {
+    for (int i = 0; i < ActionData::SLOT_TYPES; i++) {
         LOG2(" Layout for type " << i << " is " << total_layouts[i]);
     }
 
-    auto type = ActionFormat::BYTE;
+    auto type = ActionData::BYTE;
     auto layout = total_layouts[type];
     auto combined_layout = combined(total_layouts);
 
@@ -890,15 +891,13 @@ bool ActionDataBus::alloc_immediate(const bitvec total_layouts[ActionFormat::CON
     if (!found) return false;
     LOG3("    Allocate Byte Section" << " " << layout << " " << combined_layout);
 
-    type = ActionFormat::HALF;
+    type = ActionData::HALF;
     layout = total_layouts[type];
     found = alloc_unshared_immed(use, type, layout, combined_layout, name);
     if (!found) return false;
     LOG3("    Allocate Half Section" << " " << layout << " " << combined_layout);
 
-    bitvec layouts[ActionFormat::CONTAINER_TYPES];
-    for (int i = 0; i < ActionFormat::CONTAINER_TYPES; i++)
-        layouts[i] = total_layouts[i];
+    ActionData::BusInputs layouts = total_layouts;
     found = alloc_shared_immed(use, layouts, name);
     if (!found) return false;
     LOG3("    Allocate Full Section");
@@ -921,11 +920,11 @@ bool ActionDataBus::alloc_immediate(const bitvec total_layouts[ActionFormat::CON
  *  Fortunately, the random.get is rarely used in P4, so these optimizations are low
  *  priority for the time being.
  */
-bool ActionDataBus::alloc_rng(const bitvec rand_num_layouts[ActionFormat::CONTAINER_TYPES],
+bool ActionDataBus::alloc_rng(const bitvec rand_num_layouts[ActionData::SLOT_TYPES],
                               Use &use, const ActionFormat::RandNumALUFormat &format,
                               cstring name) {
     bitvec total_layout;
-    for (int i = 0; i < ActionFormat::CONTAINER_TYPES; i++) {
+    for (int i = 0; i < ActionData::SLOT_TYPES; i++) {
         total_layout |= rand_num_layouts[i];
     }
 
@@ -970,8 +969,8 @@ bool ActionDataBus::alloc_rng(const bitvec rand_num_layouts[ActionFormat::CONTAI
  *
  *  TODO: When action immediate and action data table can happen simultaneously, change here
  */
-bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl, const ActionFormat::Use *use,
-                                          TableResourceAlloc &alloc) {
+bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl,
+        const ActionData::Format::Use *use, TableResourceAlloc &alloc) {
     LOG1("Allocating action data bus for " << tbl->name);
     for (auto back_at : tbl->attached) {
         auto at = back_at->attached;
@@ -991,26 +990,29 @@ bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl, const Actio
          << "|" << hex(total_in_use.getrange(32, 32)) << "|" << hex(total_in_use.getrange(0, 32)));
 
     auto &ad_xbar = alloc.action_data_xbar;
+    const ActionFormat::Use *special_use = &use->speciality_use;
 
     // Immediate allocation
-    bitvec immed_layouts[ActionFormat::CONTAINER_TYPES];
-    for (int i = 0; i < ActionFormat::CONTAINER_TYPES; i++) {
-        immed_layouts[i].clear();
-        immed_layouts[i] |= use->total_layouts[ActionFormat::IMMED][i];
-        immed_layouts[i] |= use->hash_dist_layouts[i];
-        immed_layouts[i] |= use->rand_num_layouts[i];
+    // bitvec immed_layouts[ActionData::SLOT_TYPES];
+    ActionData::BusInputs immed_layouts = use->bus_inputs[ActionData::IMMEDIATE];
+    for (int i = 0; i < ActionData::SLOT_TYPES; i++) {
+        immed_layouts[i] |= special_use->hash_dist_layouts[i];
+        immed_layouts[i] |= special_use->rand_num_layouts[i];
     }
-
+    // Known limitation of the action data packing
+    if (special_use->meter_reserved)
+        immed_layouts[ActionData::BYTE].setbit(3);
 
     bool allocated = alloc_immediate(immed_layouts, ad_xbar, tbl->name);
     if (!allocated) return false;
 
     // Action data table allocation
-    allocated = alloc_ad_table(use->total_layouts[ActionFormat::ADT],
-            use->full_layout_bitmasked, ad_xbar, tbl->name);
+    allocated = alloc_ad_table(use->bus_inputs[ActionData::ACTION_DATA_TABLE],
+                               use->full_words_bitmasked, ad_xbar, tbl->name);
     if (!allocated) return false;
 
-    allocated = alloc_rng(use->rand_num_layouts, ad_xbar, use->rand_num_placement, tbl->name);
+    allocated = alloc_rng(special_use->rand_num_layouts, ad_xbar, special_use->rand_num_placement,
+                          tbl->name);
     if (!allocated) return false;
 
     LOG2(" Action data bus for " << tbl->name);
@@ -1051,8 +1053,7 @@ bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl, const Meter
     if (pos != allocated_attached.end()) {
         alloc.meter_xbar = pos->second;
         LOG2(" Action data bus shared on meter_adr user " << am->name);
-        return true;
-    }
+        return true; }
 
 
     if (salu && salu->reduction_or_group) {
@@ -1064,17 +1065,21 @@ bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl, const Meter
         }
     }
 
-
     LOG2(" Initial Action Data Bus");
     LOG2(" " << hex(total_in_use.getrange(96, 32)) << "|" << hex(total_in_use.getrange(64, 32))
          << "|" << hex(total_in_use.getrange(32, 32)) << "|" << hex(total_in_use.getrange(0, 32)));
 
     auto &meter_xbar = alloc.meter_xbar;
 
-    for (int i = 0; i < ActionFormat::CONTAINER_TYPES; i++) {
+    for (int i = 0; i < ActionData::SLOT_TYPES; i++) {
         LOG2(" Layout for type " << i << " is " << use->total_layouts[i]);
     }
-    bool allocated = alloc_meter_output(use->total_layouts, meter_xbar, tbl->name);
+
+    ActionData::BusInputs total_layouts;
+    for (int i = 0; i < ActionData::SLOT_TYPES; i++)
+         total_layouts[i] = use->total_layouts[i];
+
+    bool allocated = alloc_meter_output(total_layouts, meter_xbar, tbl->name);
     if (!allocated) return false;
 
     LOG2(" Action data bus for " << tbl->name);

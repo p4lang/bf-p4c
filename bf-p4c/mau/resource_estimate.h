@@ -29,7 +29,8 @@ struct StageUseEstimate {
     int stats_alus = 0;
 
     safe_vector<LayoutOption> layout_options;
-    safe_vector<ActionFormat::Use> action_formats;
+    // safe_vector<ActionFormat::Use> action_formats;
+    safe_vector<ActionData::Format::Use> action_formats;
     MeterFormat::Use meter_format;
     size_t preferred_index;
     StageUseEstimate() {}
@@ -81,7 +82,7 @@ struct StageUseEstimate {
     else
         return &layout_options[preferred_index]; }
 
-    const ActionFormat::Use *preferred_action_format() const {
+    const ActionData::Format::Use *preferred_action_format() const {
         auto option = preferred();
         if (option == nullptr)
             return nullptr;

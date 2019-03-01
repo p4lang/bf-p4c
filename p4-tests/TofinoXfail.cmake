@@ -221,7 +221,7 @@ p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
   extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-546/switch_comp546.p4
-  ../glass/testsuite/p4_tests/phv/COMPILER-243/comp243.p4
+  ../glass/testsuite/p4_tests/phv/COMPILER-788/comp_788.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -230,11 +230,6 @@ p4c_add_xfail_reason("tofino"
   switch_ent_fin_postcard
   ../glass/testsuite/p4_tests/phv/COMPILER-587/l4l.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-828/meta_init_problem.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "PHV allocation was not successful"
-  switch_8.7_msdc_ipv4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1508,11 +1503,6 @@ p4c_add_xfail_reason("tofino"
   "Different POV bit found"
   ../glass/testsuite/p4_tests/mau/COMPILER-815/int_heavy.p4
   )
-
-p4c_add_xfail_reason("tofino"
-  "Action bus byte .* used inconsistently for fields .* and immediate in table"
-  ../glass/testsuite/p4_tests/mau/COMPILER-615/ecmp_one.p4
-)
 
 # P4C doesn't support use_container_valid pragma?
 p4c_add_xfail_reason("tofino"

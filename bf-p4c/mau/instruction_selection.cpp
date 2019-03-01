@@ -1730,6 +1730,24 @@ const IR::MAU::Instruction *
     return instr;
 }
 
+/**
+ * Remove a slice of an ActionArg in an instruction, if the argument was the same size
+ * as the slice.  The naming in the assembly output assumes that a slice will only happen
+ * when the portion of the argument is not the full width of the argument.
+ *
+ * This was to deal with issue583.p4
+ */
+const IR::Node *RemoveUnnecessaryActionArgSlice::preorder(IR::Slice *sl) {
+    if (!findContext<IR::MAU::Instruction>())
+       return sl;
+    auto aa = sl->e0->to<IR::MAU::ActionArg>();
+    if (aa == nullptr)
+        return sl;
+    if (sl->type->width_bits() == aa->type->width_bits() && sl->getL() == 0)
+        return aa;
+    return sl;
+}
+
 /** EliminateAllButLastWrite has to follow VerifyParallelWritesAndReads.  Look at the example
  *  above EliminateAllButLastWrite
  */
@@ -1747,6 +1765,7 @@ InstructionSelection::InstructionSelection(const BFN_Options& options, PhvInfo &
     new BackendCopyPropagation(phv),
     new VerifyParallelWritesAndReads(phv),
     new EliminateAllButLastWrite(phv),
+    new RemoveUnnecessaryActionArgSlice,
     new CollectPhvInfo(phv),
     new PHV::ValidateActions(phv, false, false, false)
 } {}

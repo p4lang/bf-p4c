@@ -52,19 +52,33 @@ const Parameter *Constant::split(int lo, int hi) const {
     le_bitrange split_range = { lo, hi };
     BUG_CHECK(range().contains(split_range), "Illegally splitting a parameter, as the "
               "split contains bits outside of the range");
-    return new Constant(_value.getslice(split_range.lo, split_range.size()), split_range.size());
+    auto rv = new Constant(_value.getslice(split_range.lo, split_range.size()), split_range.size());
+    rv->_alias = _alias;
+    return rv;
 }
 
-bool Constant::is_next_bit_of_param(const Parameter *ad) const {
+/**
+ * If the constant is coming from an argument, it has an alias.  If the same alias is set
+ * to true, then only return true if the current constant has the same alias as the
+ * next constant
+ */
+bool Constant::is_next_bit_of_param(const Parameter *ad, bool same_alias) const {
     if (size() != 1)
         return false;
-    return ad->is<Constant>();
+    auto constant = ad->to<Constant>();
+    if (constant == nullptr)
+        return false;
+    if (same_alias) {
+        if (_alias != constant->_alias)
+            return false;
+    }
+    return true;
 }
 
 /**
  * Appending a constant to another constant on the MSB
  */
-const Parameter *Constant::get_extended_param(unsigned extension,
+const Parameter *Constant::get_extended_param(uint32_t extension,
         const Parameter *ad) const {
     auto con = ad->to<Constant>();
     BUG_CHECK(con != nullptr, "Cannot extend a non-constant on constant");
@@ -73,6 +87,7 @@ const Parameter *Constant::get_extended_param(unsigned extension,
     Constant *rv = new Constant(*this);
     rv->_value |= (con->_value << this->_size);
     rv->_size += extension;
+    rv->_alias = _alias;
     return rv;
 }
 
@@ -379,31 +394,43 @@ PackingConstraint PackingConstraint::expand(int current_size, int expand_size) c
 }
 
 /**
- * Given that a rotation happened from init_bit to final_bit, this function returns the position
- * of init_bit_comp after this rotation is completed.  Necessary for finding the location of bits
- * in ALUOperations
+ * Given that a rotation can happen where bit position at init bit will rotate to the bit
+ * position at the final bit, determine the location of where init_bit_comp will rotate
+ * to.
  */
 int PackingConstraint::bit_rotation_position(int bit_width, int init_bit, int final_bit,
         int init_bit_comp) const {
     if (init_bit == final_bit)
-        return 0;
+        return init_bit_comp;
+    if (init_bit == init_bit_comp)
+        return final_bit;
     BUG_CHECK(is_rotational(), "Cannot get to this point without being rotational");
     size_t total_sections = bit_width / rotational_granularity;
     BUG_CHECK(total_sections == recursive_constraints.size(), "Rotational granularity is not "
               "correct");
+    // Find the rotation at this granularity of packing
     int init_index = init_bit / rotational_granularity;
+    int init_comp_index = init_bit_comp / rotational_granularity;
     int final_index = final_bit / rotational_granularity;
-    int rotation = (init_index - final_index + total_sections) % total_sections;
-    if (init_index != init_bit_comp / rotational_granularity)
-        return rotation * rotational_granularity;
+    int rotation = final_index - init_index;
+    int shift = rotational_granularity * rotation;
+    if (init_index != init_comp_index) {
+        return (init_bit_comp + shift + bit_width) % bit_width;
+    }
+
     const PackingConstraint &next_level = recursive_constraints[init_index];
     int next_init_bit = init_bit % rotational_granularity;
     int next_final_bit = final_bit % rotational_granularity;
     int next_init_bit_comp = init_bit_comp % rotational_granularity;
-    return rotation * rotational_granularity
-           + next_level.bit_rotation_position(rotational_granularity, next_init_bit,
-                                              next_final_bit, next_init_bit_comp);
+    // Determine the rotation of the layer underneath, and then rotate that position
+    // by the shift in the current level
+    int next_level_bit_pos
+        = next_level.bit_rotation_position(rotational_granularity, next_init_bit, next_final_bit,
+                                           next_init_bit_comp);
+
+    return (next_level_bit_pos + shift + bit_width) % bit_width;
 }
+
 
 /**  
  * This function creates from a RamSection with it's isolated ALU information.  This is
@@ -439,6 +466,7 @@ const RamSection *ALUOperation::create_RamSection(bool shift_to_lsb) const {
     // Put the mask in the second half of the RamSection
     if (_constraint == BITMASKED_SET) {
         Constant *con = new Constant(_phv_bits, size());
+        con->set_alias(_mask_alias);
         init_rv->add_param(size(), con);
     }
 
@@ -468,6 +496,25 @@ const ALUOperation *ALUOperation::add_right_shift(int right_shift) const {
         param.right_shift = right_shift;
     }
     return rv;
+}
+
+const ALUParameter *ALUOperation::find_param_alloc(UniqueLocationKey &key) const {
+    const ALUParameter *rv = nullptr;
+    for (auto param : _params) {
+        if (!param.param->equiv_value(key.param))
+            continue;
+        if (param.phv_bits != key.phv_bits)
+            continue;
+        BUG_CHECK(rv == nullptr, "A non-unique allocation of parameter in Container %s in action "
+                  "%s", key.container, key.action_name);
+        rv = new ALUParameter(param);
+    }
+    return rv;
+}
+
+ParameterPositions ALUOperation::parameter_positions() const {
+    auto ram_section = create_RamSection(false);
+    return ram_section->parameter_positions(true);
 }
 
 /**
@@ -503,13 +550,19 @@ void RamSection::add_param(int bit, const Parameter *adp) {
 /**
  * Building a map of slices of parameters in order to look for identical ranges of data within
  * two RamSections.
+ *
+ * The from_p4_program boolean is a flag to (if necessary) only return values that are part of
+ * the p4 program as either arguments or constants, and not implicit 0s.  This is for
+ * specifically assembly generation, not to output the implict zeros when detailing action data
+ * packing of the program
  */
-ParameterPositions RamSection::parameter_positions() const {
+ParameterPositions RamSection::parameter_positions(bool from_p4_program) const {
     ParameterPositions rv;
     size_t bit_pos = 0;
     const Parameter *next_entry = nullptr;
     for (size_t i = 0; i < size(); i++) {
-        if (action_data_bits[i] == nullptr) {
+        if (action_data_bits[i] == nullptr
+            || (from_p4_program && !action_data_bits[i]->from_p4_program())) {
             if (next_entry == nullptr) {
                 continue;
             } else {
@@ -521,7 +574,7 @@ ParameterPositions RamSection::parameter_positions() const {
                 next_entry = action_data_bits[i];
                 bit_pos = i;
             } else {
-                if (action_data_bits[i]->is_next_bit_of_param(next_entry)) {
+                if (action_data_bits[i]->is_next_bit_of_param(next_entry, from_p4_program)) {
                     next_entry = next_entry->get_extended_param(1, action_data_bits[i]);
                 } else {
                     rv.emplace(bit_pos, next_entry);
@@ -781,7 +834,6 @@ bool RamSection::contains(const RamSection *ad_small, int init_bit_pos,
 
     safe_vector<SharedParameter> shared_params;
     gather_shared_params(ad, shared_params, true);
-
     for (auto shared_param : shared_params) {
         auto *ad_rotated = ad->can_rotate(shared_param.b_start_bit, shared_param.a_start_bit);
         if (ad_rotated) {
@@ -865,10 +917,12 @@ BusInputs RamSection::bus_inputs() const {
         int final_first_phv_bit_pos = 0;
         bool is_contained = contains(ad_alu, &final_first_phv_bit_pos);
         BUG_CHECK(is_contained, "Alu not contained in the operation");
-        size_t start_byte = final_first_phv_bit_pos / ad_alu->size();
+        size_t start_alu_offset = final_first_phv_bit_pos / ad_alu->size();
+        size_t start_byte = start_alu_offset * (ad_alu->size() / 8);
         size_t sz = ad_alu->is_constrained(BITMASKED_SET) ? ad_alu->size() * 2: ad_alu->size();
         sz /= 8;
         BUG_CHECK(start_byte + sz <= size() / 8, "Action Data For ALU outside of RAM section");
+        BUG_CHECK(start_byte % sz == 0, "Non slot size offset");
         rv[ad_alu->index()].setrange(start_byte, sz);
     }
     return rv;
@@ -908,7 +962,11 @@ size_t SingleActionPositions::bits_required() const {
  * less than the adt_bits_required
  */
 size_t SingleActionPositions::adt_bits_required() const {
-    return 1 << ceil_log2(bits_required());
+    size_t rv = bits_required();
+    if (rv < 128U)
+        return 1 << ceil_log2(rv);
+    else
+        return ((rv + 127U) / 128U) * 128U;
 }
 
 /**
@@ -1004,6 +1062,11 @@ std::array<bool, SECT_TYPES> SingleActionPositions::can_be_immed_msb(int bits_to
         }
     }
 
+    if (bits_to_move % 16 == 0) {
+        if (sections_of_size()[BYTE] % 2 != 0)
+            rv[BYTE] = false;
+    }
+
     if (total_bits_under_size < bits_to_move) {
         for (int i = 0; i < last_section_under_size; i++) {
             rv[i] = false;
@@ -1079,6 +1142,7 @@ safe_vector<RamSectionPosition> SingleActionPositions::best_inputs_to_move(int b
     if (bits_to_move <= 0)
         return rv;
 
+
     // Basically from surveying the action, this determines which action data should be the
     // the last slot in immediate, due to requiring the smallest mask
     int minmax_use_slot_i = -1;
@@ -1088,8 +1152,9 @@ safe_vector<RamSectionPosition> SingleActionPositions::best_inputs_to_move(int b
             continue;
         int bits_in_slot_sz = 1 << (i + 3);
         // If this was to be the last section, what would be the impact
-        int bits_req = (bits_to_move / bits_in_slot_sz) * bits_in_slot_sz + minmax_bit_req()[i];
-        if (bits_req < minmax_bits) {
+        int prev_slots_required = (bits_to_move - 1) / bits_in_slot_sz;
+        int bits_req = prev_slots_required * bits_in_slot_sz + minmax_bit_req()[i];
+        if (bits_req <= minmax_bits) {
             minmax_bits = bits_req;
             minmax_use_slot_i = i;
         }
@@ -1098,6 +1163,147 @@ safe_vector<RamSectionPosition> SingleActionPositions::best_inputs_to_move(int b
     if (minmax_use_slot_i == -1)
         return rv;
     move_other_sections_to_immed(bits_to_move, static_cast<SlotType_t>(minmax_use_slot_i), rv);
+    return rv;
+}
+
+/**
+ * Calculate the mask of immediate bits which are to be packed on the table format.  The
+ * immediate data is represented at bit-granularity.
+ */
+void Format::Use::determine_immediate_mask() {
+    for (auto act_alu_positions : alu_positions) {
+        for (auto alu_position : act_alu_positions.second) {
+            if (alu_position.loc != IMMEDIATE)
+                continue;
+            bitvec bv = alu_position.alu_op->slot_bits() << (alu_position.start_byte * 8);
+            immediate_mask |= bv;
+            if (alu_position.alu_op->is_constrained(BITMASKED_SET)) {
+                bitvec mask_bv = alu_position.alu_op->slot_bits();
+                int shift = alu_position.start_byte * 8 + alu_position.alu_op->size();
+                immediate_mask |= mask_bv << shift;
+            }
+        }
+    }
+
+    // Currently in the table format, it is assumed that the immediate mask is contiguous
+    // for simple printing during the assembly mask
+    immediate_mask = bitvec(0, immediate_mask.max().index() + 1);
+    LOG2("  Immediate mask 0x" << immediate_mask);
+    BUG_CHECK(immediate_mask.max().index() < bytes_per_loc[IMMEDIATE] * 8, "Immediate mask has "
+        "more bits than the alloted bytes for immediate");
+}
+
+/**
+ * During the Instruction Adjustment phase of ActionAnalysis, in order to determine
+ * how to rename both constants and action data, as well as verify that the alignment is
+ * correct, an action parameter must be found within the action format.
+ *
+ * This is done with a four part key:
+ *     1.  The action name
+ *     2.  The container (this should provide an ALUOperation, as only one ALUOperation is
+ *         possible per container per action
+ *     3.  The phv_bits affected
+ *     4.  The parameter (technically a duplicate of 3, but can verify that both portions
+ *         are the same).
+ *
+ * This function returns the ALUParameter object, as well as the correspding ALUPosition
+ * object
+ */
+const ALUParameter *Format::Use::find_param_alloc(UniqueLocationKey &key,
+        const ALUPosition **alu_pos_p) const {
+    auto action_alu_positions = alu_positions.at(key.action_name);
+    const ALUParameter *rv = nullptr;
+    for (auto alu_position : action_alu_positions) {
+        if (alu_position.alu_op->container() != key.container)
+            continue;
+        auto *loc = alu_position.alu_op->find_param_alloc(key);
+        BUG_CHECK(loc != nullptr, "A container operation cannot find the associated key");
+        BUG_CHECK(rv == nullptr, "A parameter has multiple allocations in container %s in "
+            "action %s", key.container, key.action_name);
+        rv = loc;
+        if (alu_pos_p)
+            *alu_pos_p = new ALUPosition(alu_position);
+    }
+    return rv;
+}
+
+cstring Format::Use::get_format_name(const ALUPosition &alu_pos, bool bitmasked_set,
+        le_bitrange *slot_bits, le_bitrange *postpone_range) const {
+    int byte_offset = alu_pos.start_byte;
+    SlotType_t slot_type = static_cast<SlotType_t>(alu_pos.alu_op->index());
+    if (bitmasked_set)
+        byte_offset += slot_type_to_bits(slot_type) / 8;
+    return get_format_name(slot_type, alu_pos.loc, byte_offset, slot_bits,
+                           postpone_range);
+}
+
+/**
+ * The purpose of this function is to have a standardized name of the location of parameters
+ * across multiple needs for it in the assembly output.
+ *
+ * Specifically, in this example, parameters can be located with 3/4 coordinates:
+ *
+ *     1. SlotType_t slot_type - whether the alu op is a byte, half, or full word
+ *     2. Location_t loc - if the byte is in Action Data or Immediate
+ *     3. int byte_offset - the starting bit of that ALU operation in that location
+ *     4. optional bit_range to specify bit portions of the range.
+ *
+ * Realistically, all of these are stored in the ALUPosition structure, though through
+ * asm_output, specifically during action data bus generation, the ALUPosition structure is
+ * not always available, so this function can be called.
+ *
+ * The standardization is currently the following:
+ *     1.  If the location is in ACTION_DATA_TABLE, the name is $adf_(type)(offset), where
+ *         type comes from the slot_type, and the offset is just the SlotType_t increment
+ *     2.  If the location is in IMMEDIATE, then the name has to coordinate with the
+ *         table_format name, in this case "immediate".  This is also followed by a lo..hi
+ *         range, as the immediate has a max range while anything on the action data format
+ *         is the full 8, 16, or 32 bits.
+ *
+ * In addition, there are two parameters, for bit level granularity.
+ *     1. slot_bits: for including a bit range starting from slot_bits lo to slot_bits hi
+ *     2. postpone_range: if the range is going to be determined later, and is not part
+ *        of the generated range
+ */
+cstring Format::Use::get_format_name(SlotType_t slot_type, Location_t loc, int byte_offset,
+        le_bitrange *slot_bits, le_bitrange *postpone_range) const {
+    cstring rv = "";
+    BUG_CHECK(slot_bits == nullptr || postpone_range == nullptr, "Invalid call of the "
+         "get_format_name function");
+    int size = slot_type_to_bits(slot_type);
+    int byte_sz = size / 8;
+
+    BUG_CHECK((byte_offset % byte_sz) == 0, "Byte offset does not have an allocation");
+    auto &bus_inp = bus_inputs[loc];
+    BUG_CHECK(bus_inp[slot_type].getrange(byte_offset, byte_sz), "Nothing allocated to "
+              "the byte position that is named in the assembly output");
+    if (loc == ACTION_DATA_TABLE) {
+        rv += "$adf_";
+        switch (slot_type) {
+            case BYTE: rv += "b"; break;
+            case HALF: rv += "h"; break;
+            case FULL: rv += "f"; break;
+            default: BUG("Unrecognized size of action data packing");
+        }
+        rv += std::to_string(byte_offset / byte_sz);
+        if (postpone_range)
+            *postpone_range = { 0, size - 1 };
+        else if (slot_bits)
+            rv += "(" + std::to_string(slot_bits->lo) + ".." + std::to_string(slot_bits->hi) + ")";
+    } else if (loc == IMMEDIATE) {
+        rv += "immediate";
+        int lo = byte_offset * 8;
+        int hi = std::min(lo + size - 1, immediate_mask.max().index());
+        if (postpone_range) {
+            *postpone_range = { lo, hi };
+        } else {
+            if (slot_bits) {
+                lo += slot_bits->lo;
+                hi = lo + slot_bits->size() - 1;
+            }
+            rv += "(" + std::to_string(lo) + ".." + std::to_string(hi) + ")";
+        }
+    }
     return rv;
 }
 
@@ -1118,7 +1324,7 @@ void Format::create_argument(ALUOperation &alu,
  * at most are 32 bit ALU operations.
  */
 void Format::create_constant(ALUOperation &alu,
-        ActionAnalysis::ActionParam &read, le_bitrange container_bits) {
+        ActionAnalysis::ActionParam &read, le_bitrange container_bits, int &constant_alias_index) {
     auto ir_con = read.unsliced_expr()->to<IR::Constant>();
     BUG_CHECK(ir_con != nullptr, "Cannot create constant");
 
@@ -1130,6 +1336,7 @@ void Format::create_constant(ALUOperation &alu,
     else
         BUG("Any constant used in an ALU operation would by definition have to be < 32 bits");
     Constant *con = new Constant(constant_value, read.size());
+    con->set_alias("$constant" + std::to_string(constant_alias_index++));
     ALUParameter ap(con, container_bits);
     alu.add_param(ap);
 }
@@ -1143,6 +1350,10 @@ void Format
         ::create_alu_ops_for_action(ActionAnalysis::ContainerActionsMap &ca_map,
              cstring action_name) {
     LOG2("  Creating action data alus for " << action_name);
+    auto &ram_sec_vec = init_ram_sections[action_name];
+    int alias_index = 0;
+    int mask_alias_index = 0;
+    int constant_alias_index = 0;
     for (auto &container_action_info : ca_map) {
         auto container = container_action_info.first;
         auto &cont_action = container_action_info.second;
@@ -1155,6 +1366,7 @@ void Format
 
         ALUOperation *alu = new ALUOperation(container, alu_cons);
         bool contains_action_data = false;
+        int number_of_reads = 0;
         for (auto &field_action : cont_action.field_actions) {
             le_bitrange bits;
             auto *write_field = phv.field(field_action.write.expr, &bits);
@@ -1179,17 +1391,25 @@ void Format
                 if (read.type == ActionAnalysis::ActionParam::ACTIONDATA) {
                     create_argument(*alu, read, container_bits);
                     contains_action_data = true;
+                    number_of_reads++;
                 } else if (read.type == ActionAnalysis::ActionParam::CONSTANT &&
                            cont_action.convert_constant_to_actiondata()) {
-                    create_constant(*alu, read, container_bits);
+                    create_constant(*alu, read, container_bits, constant_alias_index);
                     contains_action_data = true;
+                    number_of_reads++;
                 }
             }
         }
 
+        if (number_of_reads > 1 || cont_action.unresolved_ad()) {
+            alu->set_alias("$data" + std::to_string(alias_index++));
+            if (alu->is_constrained(BITMASKED_SET))
+                alu->set_mask_alias("$mask" + std::to_string(mask_alias_index++));
+        }
+
         if (contains_action_data) {
             LOG3("    Container " << container << " Cont action " << cont_action);
-            init_ram_sections[action_name].push_back(alu->create_RamSection(true));
+            ram_sec_vec.push_back(alu->create_RamSection(true));
         }
     }
 }
@@ -1410,7 +1630,11 @@ bool Format::determine_next_immediate_bytes() {
     AllActionPositions &adt_bus_inputs = action_bus_inputs.at(ACTION_DATA_TABLE);
     AllActionPositions &immed_bus_inputs = action_bus_inputs.at(IMMEDIATE);
     // Shrinking the next possible number of bytes by half, by the possibly entry sizes
-    int next_adt_bytes = bytes_per_loc[ACTION_DATA_TABLE] / 2;
+    int next_adt_bytes;
+    if (bytes_per_loc[ACTION_DATA_TABLE] > 16)
+        next_adt_bytes = bytes_per_loc[ACTION_DATA_TABLE] - 16;
+    else
+        next_adt_bytes = bytes_per_loc[ACTION_DATA_TABLE] / 2;
     int immed_bytes = 0;
     int adt_bytes = 0;
     // When shrinking the data by half, potentially the table cannot fit this entry within
@@ -1517,6 +1741,8 @@ bool Format::determine_bytes_per_loc(bool &initialized) {
         initialized = true;
         bytes_per_loc[ACTION_DATA_TABLE] = max_bytes;
         bytes_per_loc[IMMEDIATE] = 0;
+        LOG2("  Bytes per location : { ACTION_DATA_TABLE : " << bytes_per_loc[ACTION_DATA_TABLE]
+              << ", IMMEDIATE : " << bytes_per_loc[IMMEDIATE] << " }");
         return true;
     }
 
@@ -1525,6 +1751,9 @@ bool Format::determine_bytes_per_loc(bool &initialized) {
         if (ba->attached->is<IR::MAU::ActionData>())
             return false;
     }
+
+    if (speciality_use.is_immed_speciality_in_use())
+        return false;
 
     if (bytes_per_loc[ACTION_DATA_TABLE] == 0)
         return false;
@@ -1774,6 +2003,8 @@ void Format::assign_immediate_bytes(AllActionPositions &all_bus_inputs,
         BusInputs &total_inputs) {
     LOG2("  Assigning Immediate Byte Positions");
     for (auto &single_action_inputs : all_bus_inputs) {
+        LOG3("    Determining immediate allocation for action "
+             << single_action_inputs.action_name);
         SlotType_t last_byte_or_half;
         // Determines which sect size has the minmax size, BYTE, HALF, or FULL, (DOUBLE FULL
         // cannot be packed on immediate)
@@ -1830,28 +2061,47 @@ void Format::build_potential_format() {
     Use use;
     int loc_i = 0;
     for (auto &loc_inputs : action_bus_inputs) {
+        bitvec all_double_fulls;
         Location_t loc = static_cast<Location_t>(loc_i);
         BusInputs verify_inputs = { { bitvec(), bitvec(), bitvec() } };
         for (auto &single_action_input : loc_inputs) {
             safe_vector<ALUPosition> alu_positions;
             for (auto &ram_sect : single_action_input.all_inputs) {
                 for (auto *init_ad_alu : ram_sect.section->alu_requirements) {
+                    // Determines the right shift of each ALUOperation
                     int first_phv_bit_pos = 0;
                     bool does_contain = ram_sect.section->contains(init_ad_alu, &first_phv_bit_pos);
                     BUG_CHECK(does_contain, "ALU object is not in container");
-                    int section_byte_offset = first_phv_bit_pos / init_ad_alu->size();
+                    int section_offset = first_phv_bit_pos / init_ad_alu->size();
+                    int section_byte_offset = section_offset * (init_ad_alu->size() / 8);
                     first_phv_bit_pos = first_phv_bit_pos % init_ad_alu->size();
                     int right_shift = init_ad_alu->phv_bits().min().index() - first_phv_bit_pos;
                     right_shift = (right_shift + init_ad_alu->size()) % init_ad_alu->size();
                     auto ad_alu = init_ad_alu->add_right_shift(right_shift);
+                    // Validates that the right shift is calculated correctly, by shifting the
+                    // alu operation by that much, and determining if the ALU operation is
+                    // a subset of the original Ram Section
+                    auto ram_sect_check = ad_alu->create_RamSection(false);
+                    ram_sect_check = ram_sect_check->expand_to_size(ram_sect.section->size());
+                    ram_sect_check = ram_sect_check->can_rotate(0, section_byte_offset * 8);
+                    bool is_subset = ram_sect_check->is_data_subset_of(ram_sect.section);
+                    BUG_CHECK(is_subset, "Right shift not calculated correctly");
                     int start_byte = section_byte_offset + ram_sect.byte_offset;
                     int byte_sz = ad_alu->is_constrained(BITMASKED_SET) ? ad_alu->size() * 2
                                                                         : ad_alu->size();
                     byte_sz /= 8;
                     alu_positions.emplace_back(ad_alu, loc, start_byte);
+                    // Validation on the BusInputs
                     verify_inputs[ad_alu->index()].setrange(start_byte, byte_sz);
                 }
+                if (ram_sect.section->index() == DOUBLE_FULL) {
+                    BUG_CHECK(loc == ACTION_DATA_TABLE, "Cannot have a 64 bit requirement in "
+                        "immediate as the maximum bit allowance is 32 bits");
+                    all_double_fulls.setrange(ram_sect.byte_offset,
+                                              slot_type_to_bits(DOUBLE_FULL) / 8);
+                }
             }
+
             auto &alu_vec = use.alu_positions[single_action_input.action_name];
             alu_vec.insert(alu_vec.end(), alu_positions.begin(), alu_positions.end());
         }
@@ -1862,9 +2112,13 @@ void Format::build_potential_format() {
         }
 
         use.bus_inputs[loc_i] = action_bus_input_bitvecs.at(loc_i);
+        use.speciality_use = speciality_use;
+        if (loc == ACTION_DATA_TABLE)
+            use.full_words_bitmasked = all_double_fulls;
         loc_i++;
     }
     use.bytes_per_loc = bytes_per_loc;
+    use.determine_immediate_mask();
     uses.push_back(use);
 }
 
@@ -1891,7 +2145,7 @@ void Format::build_potential_format() {
  *        improve, e.g. O(n^2) approach of allocating all tables simultaneously rather than one at
  *        a time, mutual exclusive optimizations, and the extra copies of the entry from lsb.
  */
-void Format::allocate_format(int orig_max_size) {
+void Format::allocate_format() {
     LOG1("Determining Formats for table " << tbl->name);
     analyze_actions();
     bool initialized = false;
@@ -1902,7 +2156,6 @@ void Format::allocate_format(int orig_max_size) {
         assign_RamSections_to_bytes();
         build_potential_format();
     }
-    LOG1(" ADT size " << orig_max_size << " " << calc_max_size);
 }
 
 }  // namespace ActionData

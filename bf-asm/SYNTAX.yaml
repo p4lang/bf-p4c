@@ -546,7 +546,7 @@ stage <constant> <thread>:
         logical_row: <vector>
         column: <vector> | '[' <vector>, ... ']'
             # srams to use -- in logical (16x6) coords, not physical (8x12)
-        home_row: <vector>
+        home_row: <vector> | '[' <vector>, ... ']'
             # row(s) to use as home rows for the table
         format [<action>]: { <name>: <range-or-constant>, ... }
             # fields in the ram record.  Different actions may have

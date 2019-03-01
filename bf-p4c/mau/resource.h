@@ -19,7 +19,7 @@ struct TableResourceAlloc {
     safe_vector<IXBar::HashDistUse>     hash_dists;
     TableFormat::Use                    table_format;
     std::map<UniqueId, Memories::Use>   memuse;
-    ActionFormat::Use                   action_format;
+    ActionData::Format::Use             action_format;
     MeterFormat::Use                    meter_format;
     ActionDataBus::Use                  action_data_xbar, meter_xbar;
     InstructionMemory::Use              instr_mem;

@@ -471,10 +471,12 @@ bool TablePlacement::try_alloc_ixbar(TablePlacement::Placed *next,
         current_ixbar.update(p->table, p->resources);
     }
 
+    const ActionFormat::Use *speciality_use = &next->use.preferred_action_format()->speciality_use;
+
     if (!current_ixbar.allocTable(next->table, phv, *resources, next->use.preferred(),
-                                  next->use.preferred_action_format()) ||
+                                  speciality_use) ||
         !current_ixbar.allocTable(next->gw, phv, *resources, next->use.preferred(),
-                                  next->use.preferred_action_format())) {
+                                  speciality_use)) {
         resources->clear_ixbar();
         error_message = "The table " + next->table->name + " could not fit within a single "
                         "input crossbar in an MAU stage";

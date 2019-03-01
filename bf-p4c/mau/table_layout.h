@@ -2,6 +2,7 @@
 #define BF_P4C_MAU_TABLE_LAYOUT_H_
 
 #include "bf-p4c/mau/action_format.h"
+#include "bf-p4c/mau/action_format_2.h"
 #include "bf-p4c/mau/attached_output.h"
 #include "bf-p4c/mau/mau_visitor.h"
 #include "lib/safe_vector.h"
@@ -47,7 +48,7 @@ class LayoutOption {
 class LayoutChoices {
  public:
     ordered_map<cstring, safe_vector<LayoutOption>> total_layout_options;
-    ordered_map<cstring, safe_vector<ActionFormat::Use>> total_action_formats;
+    ordered_map<cstring, safe_vector<ActionData::Format::Use>> total_action_formats;
     ordered_map<cstring /* table name */, MeterFormat::Use> total_meter_output_format;
 
     safe_vector<LayoutOption> get_layout_options(const IR::MAU::Table *t) const {
@@ -59,8 +60,8 @@ class LayoutChoices {
         return total_layout_options.at(t->name);
     }
 
-    safe_vector<ActionFormat::Use> get_action_formats(const IR::MAU::Table *t) const {
-        safe_vector<ActionFormat::Use> empty;
+    safe_vector<ActionData::Format::Use> get_action_formats(const IR::MAU::Table *t) const {
+        safe_vector<ActionData::Format::Use> empty;
         if (t == nullptr)
             return empty;
         else if (total_action_formats.find(t->name) == total_action_formats.end())
@@ -79,8 +80,8 @@ class LayoutChoices {
 
     void clear() {
         total_layout_options.clear();
-        total_action_formats.clear();
         total_meter_output_format.clear();
+        total_action_formats.clear();
     }
 };
 
@@ -227,15 +228,6 @@ class ProhibitAtcamWideSelectors : public MauInspector {
     bool preorder(const IR::MAU::Selector *) override;
  public:
      ProhibitAtcamWideSelectors() { visitDagOnce = false; }
-};
-
-class ActionFormat2Calc : public MauInspector {
-    const PhvInfo &phv;
-    const LayoutChoices &lc;
-    bool preorder(const IR::MAU::Table *) override;
-
- public:
-    explicit ActionFormat2Calc(const PhvInfo &p, const LayoutChoices &l) : phv(p), lc(l) { }
 };
 
 class TableLayout : public PassManager {

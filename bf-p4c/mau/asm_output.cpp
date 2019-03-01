@@ -116,78 +116,107 @@ std::ostream &operator<<(std::ostream &out, const MauAsmOutput::TableMatch::Prox
  *  The determination of the names is done by the action_format code, in order to simplify
  *  this function significantly.  This just outputs information for either immediate or
  *  action data tables.
+ *
+ *  Currently, there are two levels of aliasing:
+ *      1. An alias to combine multiple P4 parameters into a single aliased P4 parameter,
+ *         if these multiple parameters are used in the same action:
+ *             -set f1, arg1
+ *             -set f2, arg2
+ *         where f1 and f2 are in the same container.  arg1 and arg2 will be aliased to
+ *         something like $data0
+ *      2. A location in the Action Ram/Match Ram alias, i.e. $adf_h0 or immediate(lo..hi)
+ *
+ *  Due to the current way instruction adjustment works, either the parameter, or the first
+ *  alias, i.e. $data0, appear in the actual instructions.  One could make an argument
+ *  that this isn't needed, and that may be true, but would require further work in
+ *  Instruction Adjustment
  */
 void MauAsmOutput::emit_action_data_alias(std::ostream &out, indent_t indent,
         const IR::MAU::Table *tbl, const IR::MAU::Action *af) const {
-    auto &use = tbl->resources->action_format;
-    auto orig_placement_vec = use.action_data_format.at(af->name);
-
-    ActionFormat::SingleActionALUPlacement placement_vec;
-
-    for (auto placement : orig_placement_vec) {
-        if (placement.specialities != 0)
-            continue;
-        placement_vec.push_back(placement);
+    auto &format = tbl->resources->action_format;
+    auto all_alu_positions = format.alu_positions.at(af->name);
+    safe_vector<ActionData::Argument> full_args;
+    for (auto arg : af->args) {
+        le_bitrange full_arg_bits = { 0, arg->type->width_bits() - 1};
+        full_args.emplace_back(arg->name.name, full_arg_bits);
     }
 
     out << indent << "- { ";
-    size_t index = 0;
-    bool last_entry = false;
-    for (auto &placement : placement_vec) {
-        if (placement.specialities != 0)
-            continue;
-        out << placement.get_action_name();
-
-        auto type = static_cast<ActionFormat::cont_type_t>(placement.gen_index());
-        out << ": " << use.get_format_name(placement.start, type, placement.immediate,
-                                           placement.slot_bits, !placement.requires_alias());
-        if (!placement.requires_alias() && placement.arg_locs[0].is_constant) {
-            out << ", ";
-            out << placement.arg_locs[0].get_asm_name();
-            out << ": " << placement.arg_locs[0].constant_value;
+    cstring sep = "";
+    for (auto alu_pos : all_alu_positions) {
+        cstring alias_name = alu_pos.alu_op->alias();
+        le_bitrange slot_bits = { alu_pos.alu_op->slot_bits().min().index(),
+                                 alu_pos.alu_op->slot_bits().max().index() };
+        le_bitrange postpone_range = { 0, 0 };
+        bool second_alias;
+        cstring second_level_alias;
+        if (!alias_name.isNull()) {
+            out << sep << alias_name << ": ";
+            out << format.get_format_name(alu_pos, false, &slot_bits, nullptr);
+            sep = ", ";
+            second_level_alias = alias_name;
+            second_alias = true;
+        } else {
+            second_level_alias = format.get_format_name(alu_pos, false, nullptr, &postpone_range);
+            second_alias = false;
         }
 
-        if (index == placement_vec.size() - 1 && !placement.requires_alias())
-            last_entry = true;
-        if (!last_entry)
-             out << ", ";
-        if (placement.requires_alias()) {
-            size_t arg_index = 0;
-            for (auto &arg_loc : placement.arg_locs) {
-                out << arg_loc.get_asm_name();
-                out << ": " << placement.get_action_name()
-                    << "(" << arg_loc.slot_loc.min().index()
-                    << ".." << arg_loc.slot_loc.max().index() << ")";
+        auto ad_pos = alu_pos.alu_op->parameter_positions();
+        for (auto pos : ad_pos) {
+            // Stop at the bitmasked-set
+            if (pos.first >= static_cast<int>(alu_pos.alu_op->size()))
+                break;
+            le_bitrange adt_range = { pos.first, pos.first + pos.second->size() - 1 };
+            // The alias already has subtracted out the slot_bits range.
+            if (second_alias) {
+                adt_range = adt_range.shiftedByBits(-1 * slot_bits.lo);
+            } else {
+                // In order to capture the direct location in immediate, the first immediate
+                // bit position has to be added to the range, as immediate is one keyword
+                adt_range = adt_range.shiftedByBits(postpone_range.lo);
+            }
 
-                if (arg_loc.is_constant) {
-                    out << ", ";
-                    out << arg_loc.get_asm_name();
-                    out << ": " << arg_loc.constant_value;
+            bool found = false;
+            bool single_value = true;
+            le_bitrange arg_bits = { 0, 0 };
+            if (auto arg = pos.second->to<ActionData::Argument>()) {
+                for (auto full_arg : full_args) {
+                    if (arg->name() != full_arg.name())
+                        continue;
+                    if (arg->param_field() != full_arg.param_field()) {
+                        single_value = false;
+                        arg_bits = arg->param_field();
+                    }
+                    found = true;
+                    break;
                 }
+                BUG_CHECK(found, "An argument %s was not found in the parameters of action %s",
+                          arg->name(), af->name);
+            }
 
-                if (index == placement_vec.size() - 1
-                    && arg_index == placement.arg_locs.size() - 1)
-                    last_entry = true;
-                if (!last_entry)
-                    out << ", ";
-                arg_index++;
+            out << sep << pos.second->name();
+            if (!single_value)
+                out << "." << arg_bits.lo << "-" << arg_bits.hi;
+            out << ": ";
+            out << second_level_alias << "(" << adt_range.lo << ".." << adt_range.hi << ")";
+            sep = ", ";
+
+            // Have to go through another layer of aliasing to print out the constant
+            if (auto constant = pos.second->to<ActionData::Constant>()) {
+                out << sep << constant->name() << ": ";
+                out << constant->value().getrange(0, 32);
+                sep = ", ";
             }
         }
 
-        if (placement.bitmasked_set) {
-            if (last_entry)
-                out << ", ";
-            out << placement.get_mask_name();
-            out << ": " << use.get_format_name(placement.start, type, placement.immediate,
-                                               placement.slot_bits, false,
-                                               placement.bitmasked_set);
-            out << ", ";
-            out << placement.mask_name;
-            out << ": 0x" << hex(placement.slot_bits.getrange(0, placement.alu_size));
-            if (!last_entry)
-                out << ", ";
+        if (alu_pos.alu_op->is_constrained(ActionData::BITMASKED_SET)) {
+            out << sep << alu_pos.alu_op->mask_alias() << ": ";
+            out << format.get_format_name(alu_pos, true);
+            sep = ", ";
+            out << sep << alu_pos.alu_op->mask_alias() << ": ";
+            out << alu_pos.alu_op->phv_bits().getrange(0, 32);
+            sep = ", ";
         }
-        index++;
     }
     out << " }" << std::endl;
 }
@@ -197,61 +226,54 @@ void MauAsmOutput::emit_action_data_alias(std::ostream &out, indent_t indent,
 // Simply emits the action data format of the action data table or action profile
 void MauAsmOutput::emit_action_data_format(std::ostream &out, indent_t indent,
         const IR::MAU::Table *tbl, const IR::MAU::Action *af) const {
-    auto &use = tbl->resources->action_format;
-    auto &placement_vec = use.action_data_format.at(af->name);
-    if (placement_vec.size() == 0)
+    auto &format = tbl->resources->action_format;
+    auto &alu_pos_vec = format.alu_positions.at(af->name);
+    if (alu_pos_vec.empty())
         return;
 
     std::set<std::pair<int, int>> single_placements;
+    for (auto &alu_pos : alu_pos_vec) {
+        auto single_placement = std::make_pair(alu_pos.start_byte, alu_pos.alu_op->size());
 
-    size_t max_format = 0;
-    for (auto &placement : placement_vec) {
-        if (placement.immediate) continue;
-        auto single_placement = std::make_pair(placement.start, placement.alu_size);
-        if (single_placements.count(single_placement) > 0)
+        if (alu_pos.loc == ActionData::IMMEDIATE)
             continue;
-        max_format++;
         single_placements.insert(single_placement);
     }
-    if (max_format == 0)
+
+    if (single_placements.empty())
         return;
 
     out << indent << "format " << canon_name(af->name) << ": { ";
-    size_t index = 0;
-    bool last_entry = false;
-
-
+    cstring sep = "";
     single_placements.clear();
+    for (auto &alu_pos : alu_pos_vec) {
+        auto single_placement = std::make_pair(alu_pos.start_byte, alu_pos.alu_op->size());
 
-    for (auto &placement : placement_vec) {
-        if (placement.immediate) continue;
-        bitvec total_range(0, placement.alu_size);
-        auto single_placement = std::make_pair(placement.start, placement.alu_size);
-        if (single_placements.count(single_placement) > 0)
+        if (alu_pos.loc == ActionData::IMMEDIATE)
             continue;
-        auto type = static_cast<ActionFormat::cont_type_t>(placement.gen_index());
-
-        out << use.get_format_name(placement.start, type, false, total_range, false);
-        out << ": " << (8 * placement.start) << ".."
-            << (8 * placement.start + placement.alu_size - 1);
-        if (index + 1 == max_format)
-            last_entry = true;
-
-        if (!last_entry)
-            out << ", ";
-
-        if (placement.bitmasked_set) {
-            if (last_entry)
-                out << ", ";
-            out << use.get_format_name(placement.start, type, false, total_range, false,
-                                       placement.bitmasked_set);
-            int mask_start = 8 * placement.start + placement.alu_size;
-            out << ": " << mask_start << ".." << (mask_start + placement.alu_size - 1);
-            if (!last_entry)
-                out << ", ";
+        if (single_placements.count(single_placement) == 0) {
+            cstring alias_name = format.get_format_name(alu_pos, false);
+            out << sep << alias_name;
+            int start_bit = alu_pos.start_byte * 8;
+            int end_bit = start_bit + alu_pos.alu_op->size() - 1;
+            out << ": " << start_bit << ".." << end_bit;
+            sep = ", ";
         }
+
         single_placements.insert(single_placement);
-        index++;
+
+        if (alu_pos.alu_op->is_constrained(ActionData::BITMASKED_SET)) {
+            int mask_start = alu_pos.start_byte + alu_pos.alu_op->size() / 8;
+            auto bitmasked_placement = std::make_pair(mask_start, alu_pos.alu_op->size());
+            if (single_placements.count(bitmasked_placement) == 0) {
+                out << sep << format.get_format_name(alu_pos, true);
+                int start_bit = mask_start * 8;
+                int end_bit = start_bit + alu_pos.alu_op->size() - 1;
+                out << ": " << start_bit << ".." << end_bit;
+                sep = ", ";
+                single_placements.insert(bitmasked_placement);
+            }
+        }
     }
     out << " }" << std::endl;
 }
@@ -1038,7 +1060,8 @@ std::ostream &operator<<(std::ostream &out, const memory_vector &v) {
 }
 
 void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memories::Use &mem) const {
-    safe_vector<int> row, bus, home_row, word;
+    safe_vector<int> row, bus, word;
+    std::map<int, safe_vector<int>> home_rows;
     bool logical = mem.type >= Memories::Use::COUNTER;
     bool have_bus = !logical;
     bool have_mapcol = mem.is_twoport();
@@ -1100,13 +1123,21 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
     }
 
     for (auto r : mem.home_row) {
-        home_row.push_back(r.first);
+        home_rows[r.second].push_back(r.first);
     }
-    if (mem.type == Memories::Use::ACTIONDATA && !home_row.empty()) {
-        if (home_row.size() > 1)
-            out << indent << "home_row: " << home_row << std::endl;
-        else
-            out << indent << "home_row: " << home_row[0] << std::endl;
+
+    // Home rows are now printed out as a vector of vectors, of each home row per word
+    if (mem.type == Memories::Use::ACTIONDATA && !home_rows.empty()) {
+        out << indent << "home_row:" << std::endl;
+        int word_check = 0;
+        for (auto home_row_kv : home_rows) {
+            BUG_CHECK(word_check++ == home_row_kv.first, "Home row is not found with a row");
+            auto home_row = home_row_kv.second;
+            if (home_row.size() > 1)
+                out << indent << "- " << home_row << std::endl;
+            else
+                out << indent << "- " << home_row[0] << std::endl;
+        }
     }
     if (!mem.color_mapram.empty()) {
         out << indent++ << "color_maprams:" << std::endl;
@@ -1197,22 +1228,29 @@ cstring format_name(int type) {
     return "";
 }
 
-// This function is used to generate action_data_bus info for TernaryIndirect,
-// ActionData and MAU::Table The 'source' field is used to control which action
-// data bus slot to emit for each type of caller. 'source' is the OR-ed result
-// of (1 << ActionFormat::ad_source_t)
+/**
+ * This function is used to generate action_data_bus info for TernaryIndirect,
+ * ActionData and MAU::Table The 'source' field is used to control which action
+ * data bus slot to emit for each type of caller. 'source' is the OR-ed result
+ * of (1 << ActionFormat::ad_source_t)
+ *
+ * For anything that is not an ActionArg or a Constant, the old action format is currently
+ * deferred until the new format is used to determine their allocation
+ */
 void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
         const IR::MAU::Table *tbl, bitvec source) const {
     auto &action_data_xbar = tbl->resources->action_data_xbar;
-    auto &action_data_use = tbl->resources->action_format;
+    auto &format = tbl->resources->action_format;
+    auto &speciality_use = format.speciality_use;
     auto &meter_xbar = tbl->resources->meter_xbar;
     auto &meter_use = tbl->resources->meter_format;
     size_t max_total = 0;
 
     for (auto &rs : action_data_xbar.action_data_locs) {
-        if (source.getbit(ActionFormat::IMMED) && (rs.source == ActionFormat::IMMED))
+        if (source.getbit(ActionData::IMMEDIATE) && (rs.source == ActionData::IMMEDIATE))
             max_total++;
-        if (source.getbit(ActionFormat::ADT) && (rs.source == ActionFormat::ADT))
+        if (source.getbit(ActionData::ACTION_DATA_TABLE) &&
+            (rs.source == ActionData::ACTION_DATA_TABLE))
             max_total++; }
 
     using ActionDataBusSlot = std::pair<int /* type */, int /* byte_offset */>;
@@ -1225,7 +1263,7 @@ void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
 
     for (auto &rs : meter_xbar.action_data_locs) {
         ActionDataBusSlot slot = std::make_pair(rs.location.type, rs.byte_offset);
-        if (source.getbit(ActionFormat::METER) && rs.source == ActionFormat::METER &&
+        if (source.getbit(ActionData::METER_ALU) && rs.source == ActionData::METER_ALU &&
             adb_to_hr.count(slot)) {
             max_total++; } }
 
@@ -1235,10 +1273,12 @@ void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
     out << indent << "action_bus: { ";
     size_t total_index = 0;
     for (auto &rs : action_data_xbar.action_data_locs) {
-        auto emit_immed = source.getbit(ActionFormat::IMMED) && (rs.source == ActionFormat::IMMED);
-        auto emit_adt = source.getbit(ActionFormat::ADT) && (rs.source == ActionFormat::ADT);
+        auto emit_immed = source.getbit(ActionData::IMMEDIATE)
+                          && (rs.source == ActionData::IMMEDIATE);
+        auto emit_adt = source.getbit(ActionData::ACTION_DATA_TABLE)
+                        && (rs.source == ActionData::ACTION_DATA_TABLE);
         if (!emit_immed && !emit_adt) continue;
-        auto immed = (rs.source == ActionFormat::IMMED);
+        auto immed = (rs.source == ActionData::IMMEDIATE);
         bitvec total_range(0, ActionFormat::CONTAINER_SIZES[rs.location.type]);
         int byte_sz = ActionFormat::CONTAINER_SIZES[rs.location.type] / 8;
         out << rs.location.byte;
@@ -1252,7 +1292,7 @@ void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
         // For emitting hash distribution sections on the action_bus directly.  Must find
         // which slices of hash distribution are to go to which bytes, requiring coordination
         // from the input xbar and action format allocation
-        if (emit_immed && action_data_use.is_hash_dist(rs.byte_offset, &hd, lo, hi)) {
+        if (emit_immed && speciality_use.is_hash_dist(rs.byte_offset, &hd, lo, hi)) {
             const IXBar::HashDistUse *hd_use = nullptr;
             auto &hash_dist_uses = tbl->resources->hash_dists;
             for (auto &hash_dist_use : hash_dist_uses) {
@@ -1270,7 +1310,7 @@ void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
             le_bitrange hd_range = { 0, 0 };
             int section = -1;
             safe_vector<int> unit_indexes =
-                    action_data_use.find_hash_dist(hd, field_range, false, hd_range, section);
+                    speciality_use.find_hash_dist(hd, field_range, false, hd_range, section);
             for (auto unit_index : unit_indexes)
                 units.push_back(hd_use->slices[unit_index]);
 
@@ -1292,14 +1332,14 @@ void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
                 out << ", " << lo_hi;
             }
             out << ")";
-        } else if (emit_immed && action_data_use.is_rand_num(rs.byte_offset, &rn)) {
+        } else if (emit_immed && speciality_use.is_rand_num(rs.byte_offset, &rn)) {
             auto rng_use = action_data_xbar.rng_locs.at(rn);
             out << "rng(" << rng_use.unit << ", ";
             // random numbers come as full bytes, no masking
             int lo = rs.byte_offset * 8;
             int hi = lo + byte_sz * 8 - 1;
             out << lo << ".." << hi << ")";
-        } else if (action_data_use.is_meter_color(rs.byte_offset, immed)) {
+        } else if (speciality_use.is_meter_color(rs.byte_offset, immed)) {
             for (auto back_at : tbl->attached) {
                 auto at = back_at->attached;
                 auto *mtr = at->to<IR::MAU::Meter>();
@@ -1308,8 +1348,7 @@ void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
                 break;
             }
         } else {
-            out << action_data_use.get_format_name(rs.byte_offset, rs.location.type, immed,
-                                                total_range, false);
+            out << format.get_format_name(rs.location.type, rs.source, rs.byte_offset);
         }
         if (total_index != max_total - 1)
             out << ", ";
@@ -1717,8 +1756,9 @@ class MauAsmOutput::EmitAction : public Inspector {
         le_bitrange field_range = { lo, hi };
         le_bitrange hd_range = { 0, 0 };
         auto af = table->resources->action_format;
-        safe_vector<int> unit_indexes = af.find_hash_dist(hd, field_range, true, hd_range,
-                                                          section);
+        auto speciality_use = af.speciality_use;
+        safe_vector<int> unit_indexes = speciality_use.find_hash_dist(hd, field_range, true,
+                                            hd_range, section);
         for (auto unit_index : unit_indexes) {
             units.push_back(hd_use->slices[unit_index]);
         }
@@ -1753,8 +1793,9 @@ class MauAsmOutput::EmitAction : public Inspector {
         auto unit = table->resources->action_data_xbar.rng_locs.at(rn).unit;
         out << unit << ", ";
         auto af = table->resources->action_format;
+        auto speciality_use = af.speciality_use;
         int rng_lo = -1;  int rng_hi = -1;
-        af.find_rand_num(rn, lo, hi, rng_lo, rng_hi);
+        speciality_use.find_rand_num(rn, lo, hi, rng_lo, rng_hi);
         out << rng_lo << ".." << rng_hi << ")";
         sep = ", ";
     }

@@ -437,6 +437,11 @@ void Contains_test2(ActionData::RamSection *ad_outside, ActionData::RamSection *
     int final_bit_pos = 0;
     EXPECT_TRUE(ad_outside->contains(ad_inside, 0, &final_bit_pos));
     EXPECT_EQ(final_bit_pos, 12);
+    final_bit_pos = 16;
+    // Try another rotation with a different init_bit
+    EXPECT_TRUE(ad_outside->contains(ad_inside, 8, &final_bit_pos));
+    final_bit_pos = 0;
+
     EXPECT_FALSE(ad_inside->contains(ad_outside, 0, nullptr));
     final_bit_pos = 0;
     EXPECT_TRUE(ad_outside->contains_any_rotation_from_0(ad_inside, 0, &final_bit_pos));
@@ -491,7 +496,8 @@ void Contains_test6(ActionData::RamSection *ad_outside, ActionData::RamSection *
     EXPECT_FALSE(ad_inside->contains(ad_outside, 0, nullptr));
     int final_bit_pos = 0;
     EXPECT_TRUE(ad_outside->contains_any_rotation_from_0(ad_inside, 0, &final_bit_pos));
-    EXPECT_EQ(final_bit_pos, 15);
+    // Multiple possible answers for this, depends on which way the data is rotated
+    EXPECT_EQ(final_bit_pos, 9);
 }
 
 TEST(ActionFormatHelper, Contains) {

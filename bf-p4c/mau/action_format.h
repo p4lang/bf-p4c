@@ -479,6 +479,10 @@ struct ActionFormat {
         int immediate_bits() const {
             return immediate_mask.max().index() + 1;
         }
+
+        bool is_immed_speciality_in_use() const {
+            return !(hash_dist_placement.empty() && rand_num_placement.empty() && !meter_reserved);
+        }
     };
 
     struct failure : public Backtrack::trigger {

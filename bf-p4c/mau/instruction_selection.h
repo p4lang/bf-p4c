@@ -365,6 +365,12 @@ class SetupAttachedAddressing : public PassManager {
     }
 };
 
+class RemoveUnnecessaryActionArgSlice : public MauTransform {
+    const IR::Node *preorder(IR::Slice *) override;
+ public:
+    RemoveUnnecessaryActionArgSlice() {}
+};
+
 class InstructionSelection : public PassManager {
  public:
     InstructionSelection(const BFN_Options&, PhvInfo &);

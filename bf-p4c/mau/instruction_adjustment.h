@@ -101,7 +101,8 @@ class ConstantsToActionData : public MauTransform, TofinoWriteContext {
     bool has_constant = false;
     bool write_found = false;
     ordered_set<PHV::Container> constant_containers;
-    ActionFormat::ArgKey constant_renames_key;
+    // ActionFormat::ArgKey constant_renames_key;
+    ActionData::UniqueLocationKey constant_rename_key;
     cstring action_name;
 
  public:

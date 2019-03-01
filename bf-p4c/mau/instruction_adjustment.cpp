@@ -77,11 +77,6 @@ const IR::MAU::Action *ConstantsToActionData::preorder(IR::MAU::Action *act) {
     }
 
     action_name = act->name;
-    auto &constant_renames = tbl->resources->action_format.constant_locations.at(action_name);
-    // Backtrack if the constants are not fully setup by the action format
-    if (constant_renames.empty())
-        throw ActionFormat::failure(act->name);
-
     return act;
 }
 
@@ -94,6 +89,7 @@ const IR::Node *ConstantsToActionData::preorder(IR::Node *node) {
 const IR::MAU::Instruction *ConstantsToActionData::preorder(IR::MAU::Instruction *instr) {
     write_found = false;
     has_constant = false;
+    constant_rename_key.action_name = findContext<IR::MAU::Action>()->name;
     return instr;
 }
 
@@ -108,10 +104,18 @@ const IR::Primitive *ConstantsToActionData::preorder(IR::Primitive *prim) {
 
 const IR::Constant *ConstantsToActionData::preorder(IR::Constant *constant) {
     has_constant = true;
+    unsigned constant_value;
+    if (constant->value.fits_uint_p())
+        constant_value = constant->value.get_ui();
+    else
+        constant_value = static_cast<unsigned>(constant->asInt());
+    ActionData::Parameter *param = new ActionData::Constant(constant_value,
+                                                            constant->type->width_bits());
+    constant_rename_key.param = param;
     return constant;
 }
 
-    void ConstantsToActionData::analyze_phv_field(IR::Expression *expr) {
+void ConstantsToActionData::analyze_phv_field(IR::Expression *expr) {
         le_bitrange bits;
     auto *field = phv.field(expr, &bits);
 
@@ -123,18 +127,19 @@ const IR::Constant *ConstantsToActionData::preorder(IR::Constant *constant) {
             BUG("Multiple writes found within a single field instruction");
 
         int write_count = 0;
-        int container_bit = 0;
+        le_bitrange container_bits;
         PHV::Container container;
         field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice &alloc) {
             write_count++;
-            container_bit = alloc.container_bit;
+            container_bits = alloc.container_bits();
             container = alloc.container;
         });
 
         if (write_count != 1)
             BUG("Splitting of writes did not work in ConstantsToActionData");
 
-        constant_renames_key.init_constant(container, container_bit);
+        constant_rename_key.container = container;
+        constant_rename_key.phv_bits = container_bits;
         write_found = true;
     }
 }
@@ -181,13 +186,16 @@ const IR::MAU::Instruction *ConstantsToActionData::postorder(IR::MAU::Instructio
     if (!write_found)
         BUG("No write found in an instruction in ConstantsToActionData?");
 
-    if (constant_containers.find(constant_renames_key.container) == constant_containers.end())
+    if (constant_containers.find(constant_rename_key.container) == constant_containers.end())
+        return instr;
+    if (!has_constant)
         return instr;
 
     auto tbl = findContext<IR::MAU::Table>();
-    auto &constant_renames = tbl->resources->action_format.constant_locations.at(action_name);
-    auto &action_format = tbl->resources->action_format.action_data_format.at(action_name);
-    bool constant_found = constant_renames.find(constant_renames_key) != constant_renames.end();
+    auto &action_format = tbl->resources->action_format;
+
+    auto *alu_parameter = action_format.find_param_alloc(constant_rename_key, nullptr);
+    bool constant_found = alu_parameter != nullptr;
 
     if (constant_found != has_constant)
         BUG("Constant lookup does not match the ActionFormat");
@@ -195,17 +203,14 @@ const IR::MAU::Instruction *ConstantsToActionData::postorder(IR::MAU::Instructio
     if (!constant_found)
         return instr;
 
-    auto value = constant_renames.at(constant_renames_key);
-    auto &placement = action_format[value.placement_index];
-    auto &arg_loc = placement.arg_locs[value.arg_index];
+    auto alias = alu_parameter->param->to<ActionData::Constant>()->alias();
 
     for (size_t i = 0; i < instr->operands.size(); i++) {
         const IR::Constant *c = instr->operands[i]->to<IR::Constant>();
         if (c == nullptr)
             continue;
         int size = c->type->width_bits();
-        auto *adc = new IR::MAU::ActionDataConstant(IR::Type::Bits::get(size),
-                                                    arg_loc.name, c);
+        auto *adc = new IR::MAU::ActionDataConstant(IR::Type::Bits::get(size), alias, c);
         instr->operands[i] = adc;
     }
     return instr;
@@ -512,9 +517,11 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
             src1 = mo;
             src1_writebits = adi.alignment.write_bits();
             bitvec src1_read_bits = adi.alignment.read_bits();
+            /*
             if (src1_read_bits.popcount() != static_cast<int>(container.size())) {
                 src1 = MakeSlice(src1, src1_read_bits.min().index(), src1_read_bits.max().index());
             }
+            */
         } else {
             bool single_action_data = true;
             auto &adi = cont_action.adi;

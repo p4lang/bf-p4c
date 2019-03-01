@@ -1266,7 +1266,7 @@ public:
 
 DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",
     int                                 action_id;
-    unsigned                            home_rows = 0;
+    std::map<int, bitvec>               home_rows_per_word;
     int                                 home_lineno = -1;
     std::map<std::string, Format *>     action_formats;
     std::map<std::string, Actions::Action *>     pack_actions;

@@ -264,7 +264,7 @@ void ActionTable::setup(VECTOR(pair_t) &data) {
                     error(kv.key.lineno, "Multiple formats for action %s", kv.key[1].s);
                     continue; } }
             if (CHECKTYPEPM(kv.value, tMAP, kv.value.map.size > 0, "non-empty map")) {
-                auto *fmt = new Format(this, kv.value.map, action == nullptr);
+                auto *fmt = new Format(this, kv.value.map, true);
                 if (fmt->size < 8) {  // pad out to minimum size
                     fmt->size = 8;
                     fmt->log2size = 3; }
@@ -295,18 +295,36 @@ void ActionTable::setup(VECTOR(pair_t) &data) {
                 setup_vpns(layout, &kv.value.vec);
         } else if (kv.key == "home_row") {
             home_lineno = kv.value.lineno;
+            // Builds the map of home rows possible per word, as different words of the
+            // action row is on different home rows
             if (CHECKTYPE2(kv.value, tINT, tVEC)) {
+                int word = 0;
                 if (kv.value.type == tINT) {
                     if (kv.value.i >= 0 || kv.value.i < LOGICAL_SRAM_ROWS)
-                        home_rows |= 1 << kv.value.i;
+                        home_rows_per_word[word].setbit(kv.value.i);
                     else
                         error(kv.value.lineno, "Invalid home row %" PRId64 "", kv.value.i);
                 } else for (auto &v : kv.value.vec) {
-                    if (CHECKTYPE(v, tINT)) {
-                        if (v.i >= 0 || v.i < LOGICAL_SRAM_ROWS)
-                            home_rows |= 1 << v.i;
-                        else
-                            error(v.lineno, "Invalid home row %" PRId64 "", v.i); } } }
+                    if (CHECKTYPE2(v, tINT, tVEC)) {
+                        if (v.type == tINT) {
+                            if (v.i >= 0 || v.i < LOGICAL_SRAM_ROWS)
+                                home_rows_per_word[word].setbit(v.i);
+                            else
+                                error(v.lineno, "Invalid home row %" PRId64 "", v.i);
+                        } else if (v.type == tVEC) {
+                            for (auto &v2 : v.vec) {
+                                if (CHECKTYPE(v2, tINT)) {
+                                    if (v2.i >= 0 || v2.i < LOGICAL_SRAM_ROWS)
+                                        home_rows_per_word[word].setbit(v2.i);
+                                    else
+                                        error(v.lineno, "Invalid home row %" PRId64 "", v2.i);
+                                }
+                            }
+                        }
+                    }
+                    word++;
+                }
+            }
         } else if (kv.key == "p4") {
             if (CHECKTYPE(kv.value, tMAP))
                 p4_table = P4Table::get(P4Table::ActionData, kv.value.map);
@@ -353,11 +371,12 @@ void ActionTable::pass1() {
     unsigned idx = 0; // ram index within depth
     int word = 0;  // word within wide table;
     int home_row = -1;
-    unsigned final_home_rows = 0;
+    std::map<int, bitvec> final_home_rows;
     Layout *prev = nullptr;
     for (auto row = layout.begin(); row != layout.end(); ++row) {
         if (row->word > 0) word = row->word;
-        if (!prev || prev->word != word || ((home_rows >> row->row) & 1) != 0
+        if (!prev || prev->word != word
+            || home_rows_per_word[word].getbit(row->row)
             || home_row/2 - row->row/2 > 5 /* can't go over 5 physical rows for timing */
             || (!Target::SUPPORT_OVERFLOW_BUS() && home_row >= 8 && row->row < 8)
             /* can't flow between logical row 7 and 8 in JBay*/
@@ -365,7 +384,7 @@ void ActionTable::pass1() {
             if (prev && prev->row == row->row) prev->home_row = false;
             home_row = row->row;
             row->home_row = true;
-            final_home_rows |= 1 << row->row;
+            final_home_rows[word].setbit(row->row);
             need_bus(row->lineno, stage->action_data_use, row->row, "action data"); }
         if (row->word >= 0) {
             if (row->word > width) {
@@ -385,11 +404,14 @@ void ActionTable::pass1() {
             if ((slice_size[word] += row->cols.size()) == int(depth))
                 ++word; }
         prev = &*row; }
-    if (home_rows & ~final_home_rows)
-        for (unsigned row : bitvec(home_rows & ~final_home_rows)) {
-            error(home_lineno, "home row %u not present in table %s", row, name());
-            break; }
-    home_rows = final_home_rows;
+    if (!home_rows_per_word.empty()) {
+        for (word = 0; word < width; ++word) {
+            for (unsigned row : home_rows_per_word[word] - final_home_rows[word]) {
+                error(home_lineno, "home row %u not present in table %s", row, name());
+                break; }
+        }
+    }
+    home_rows_per_word = final_home_rows;
     for (word = 0; word < width; ++word)
         if (slice_size[word] != int(depth)) {
             error(layout.front().lineno, "Incorrect size for word %u in layout of table %s",
@@ -506,9 +528,11 @@ template<class REGS>
 void ActionTable::write_regs(REGS &regs) {
     LOG1("### Action table " << name() << " write_regs");
     unsigned fmt_log2size = format->log2size;
-    for (auto fmt : Values(action_formats))
+    unsigned width = format ? (format->size-1)/128 + 1 : 1;
+    for (auto fmt : Values(action_formats)) {
         fmt_log2size = std::max(fmt_log2size, fmt->log2size);
-    unsigned width = (fmt_log2size > 7) ? 1 << (fmt_log2size - 7) : 1;
+        width = std::max(width, (fmt->size-1)/128U + 1);
+    }
     unsigned depth = layout_size()/width;
     bool push_on_overflow = false;  // true if we overflow from bottom to top
     unsigned idx = 0;

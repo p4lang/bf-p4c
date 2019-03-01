@@ -186,7 +186,7 @@ std::ostream &operator<<(std::ostream &out, const TableSummary &ts) {
     out << " id G                     name       xb  hb g sr tc mr ab" << std::endl;
     for (auto *t : Values(ts.order)) {
         safe_vector<LayoutOption> lo;
-        safe_vector<ActionFormat::Use> action_formats;
+        safe_vector<ActionData::Format::Use> action_formats;
         StageUseEstimate::attached_entries_t attached_entries;
         LayoutChoices lc;
         if (t->layout.ternary || t->layout.no_match_rams())
