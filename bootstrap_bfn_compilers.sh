@@ -36,6 +36,12 @@ if [ "$1" == "--build-dir" ]; then
     shift; shift;
 fi
 
+buildtype=DEBUG
+if [ "$1" == "--build-type" ]; then
+    buildtype="$2"
+    shift; shift;
+fi
+
 P4C_CPP_FLAGS=''
 if [ "$1" == "--p4c-cpp-flags" ]; then
     P4C_CPP_FLAGS="$2"
@@ -88,7 +94,7 @@ fi
 
 mkdir -p ${builddir}
 pushd ${builddir}
-cmake ${mydir} -DCMAKE_BUILD_TYPE=DEBUG \
+cmake ${mydir} -DCMAKE_BUILD_TYPE=${buildtype}\
       ${ENABLED_COMPONENTS} \
       -DP4C_CPP_FLAGS="$P4C_CPP_FLAGS" $*
 if [[ `uname -s` == "Linux" ]]; then

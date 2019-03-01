@@ -60,7 +60,7 @@ UniqueId Memories::table_alloc::build_unique_id(const IR::MAU::AttachedMemory *a
  *
  * DLEFT tables: currently split so that each dleft cache is split as a logical table (though
  * in the long term this could be even stranger).  However by correctly setting up this
- * function, the corner casing only happens here 
+ * function, the corner casing only happens here
  *
  * This leaves room for any other odd corner casing we need to support
  */
@@ -1000,6 +1000,73 @@ bool Memories::allocate_all_exact(unsigned column_mask) {
         }
     }
     compress_ways(false);
+    // Determine stashes
+    // With all exact match tables allocated, we determine where to place
+    // stashes.
+    // 2 stash entries are assigned per hash group (function id). If entry spans
+    // multiple ram rows, a stash unit in each row will be associated with a
+    // part of the wide stash entry
+    if (Device::currentDevice() == Device::TOFINO) {
+        // Currently stashes are only used for atomic modify (of entries) within
+        // the RAM. Since JBAY HW has a way to deal with this (by introducing a
+        // bubble) stashes are not required. We disable it for now.
+        for (auto *ta : exact_tables) {
+            for (auto u_id : ta->allocation_units()) {
+                LOG5("Exact match table " << u_id.build_name());
+                auto &alloc = (*ta->memuse)[u_id];
+                int wayno = 0;
+                auto ixbar_way = ta->match_ixbar->way_use.begin();
+                // Store stash rows per hash group which need stash allocation
+                std::map<int, std::vector<int>> stash_map;
+                for (auto mem_way : alloc.ways) {
+                    LOG5("way group : " << ixbar_way->group
+                            << " - way: " << wayno << " - size : " << mem_way.size);
+                    if (stash_map.count(ixbar_way->group) == 0) {
+                        auto ram_width = mem_way.rams.size()/mem_way.size;
+                        // Get available stash unit, all units should be aligned in
+                        // the same stash column for wide matches
+                        auto stash_unit = -1;
+                        for (int i = 0; i < STASH_UNITS; i++) {
+                            if (stash_unit == -1) {
+                                auto width = 0;
+                                for (auto ram : mem_way.rams) {
+                                    if (stash_use[ram.first][i]) {
+                                        stash_unit = -1;
+                                        break;
+                                    }
+                                    if (width >= ram_width) break;
+                                    stash_unit = i;
+                                    width++;
+                                }
+                            }
+                            if (stash_unit >= 0) {  // Set stash unit for table
+                                auto width = 0;
+                                for (auto ram : mem_way.rams) {
+                                    if (width >= ram_width) break;
+                                    stash_map[ixbar_way->group].push_back(ram.first);
+                                    stash_use[ram.first][stash_unit] = u_id.build_name();
+                                    LOG4("Rams : " << "[" << ram.first << ", "
+                                        << (ram.second + 2) << "]"
+                                        << " - stash unit : " << stash_unit);
+                                    for (auto &r : alloc.row) {
+                                        if (r.row == ram.first) {
+                                            r.stash_unit = stash_unit;
+                                            r.stash_col = ram.second + 2;
+                                            break;
+                                        }
+                                    }
+                                    width++;
+                                }
+                            }  // error if no stash unit assigned, is this possible?
+                        }
+                    }
+                    wayno++;
+                    ixbar_way++;
+                }
+            }
+        }
+    }
+
     for (auto *ta : exact_tables) {
         for (auto u_id : ta->allocation_units()) {
             LOG4("Exact match table " << u_id.build_name());
@@ -1007,6 +1074,14 @@ bool Memories::allocate_all_exact(unsigned column_mask) {
             for (auto row : alloc.row) {
                 LOG4("Row is " << row.row << " and bus is " << row.bus);
                 LOG4("Col is " << row.col);
+            }
+            int wayno = 0;
+            for (auto way : alloc.ways) {
+                LOG4("Rams for way " << wayno);
+                for (auto ram : way.rams) {
+                    LOG4(ram.first << ", " << ram.second);
+                }
+                wayno++;
             }
         }
     }
@@ -1212,6 +1287,7 @@ void Memories::fill_out_match_alloc(SRAM_group *group, match_selection &match_se
         auto bus = match_select.buses.at(row);
         int width = match_select.widths.at(row);
         alloc.row.emplace_back(row, bus, width, allocation_count);
+
         auto &back_row = alloc.row.back();
         for (auto col : match_select.cols) {
             sram_use[row][col] = name;
@@ -1231,8 +1307,9 @@ void Memories::fill_out_match_alloc(SRAM_group *group, match_selection &match_se
     }
 
     group->placed += bitcount(match_select.column_mask);
-    // Store information on ways.  Only one RAM in each way will be searched per packet.  The
-    // RAM is chosen by the select bits in the upper 12 bits of the hash matrix
+    // Store information on ways. Only one RAM in each way will be searched per
+    // packet. The RAM is chosen by the select bits in the upper 12 bits of the
+    // hash matrix
     if (atcam) {
         alloc.type = Use::ATCAM;
         int number = 0;
@@ -1831,7 +1908,7 @@ void Memories::find_swbox_bus_users() {
  * The other address at processing time can either come from the statistics bus or the idletime
  * bus.  It is already known which bus is used at this point, but if this statistics bus
  * is used, then the stats bus cannot be used for anything else, and the RAMs cannot be
- * dedicated to synth2port 
+ * dedicated to synth2port
  */
 void Memories::determine_synth_RAMs(int &RAMs_available, int row,
         const SRAM_group *curr_oflow) const {
@@ -1976,7 +2053,7 @@ int Memories::open_maprams_between_rows(int highest_phys_row, int lowest_phys_ro
 /**
  * This verifies that there are enough open RAMs between the current row, and the lowest
  * physical row due to the maximum number of rows possible for overflow to begin placing this
- * table.  
+ * table.
  */
 bool Memories::overflow_possible(const SRAM_group *candidate, int row, RAM_side_t side) const {
     if (!candidate->is_synth_type())
@@ -2138,7 +2215,7 @@ bool Memories::can_be_placed_in_half(const SRAM_group *candidate, int row, RAM_s
  * This function verifies that this constraint is not violated.  It is the most annoying part of
  * this algorithm, as it is the only instance where synth2port tables and action data tables
  * cannot be thought of as separate entities, but as having intertwined constraints.
- * 
+ *
  * FIXME: This function is also overly conservative.  Say the overflowing selectors action data
  * tables were able to finish on this logical (or even physical row).  Then a new selector could
  * be started.  However, because synth2port tables are selected before action data tables, this
@@ -2172,7 +2249,7 @@ bool Memories::satisfy_sel_swbox_constraints(const SRAM_group *candidate,
 
 /**
  * Determine best fits, i.e. candidate that requires the most number of RAMs that can
- * still fit on the row 
+ * still fit on the row
  */
 void Memories::determine_fit_on_logical_row(SRAM_group **fit_on_logical_row,
         SRAM_group *candidate, int RAMs_avail) const {
@@ -2388,7 +2465,7 @@ void Memories::determine_RAM_masks(safe_vector<LogicalRowUser> &lrus, int row, R
     }
 }
 
-/** 
+/**
  * Color maprams are separate maprams that have to be reserved with a meter.  Color is Tofino
  * is stored as a 2bit field, and a mapram can store up to 4 colors per row.  The color maprams
  * are used to store information as the packet comes in to the MAU stage, as well as when the
@@ -2501,7 +2578,7 @@ void Memories::determine_color_map_RAM_masks(safe_vector<LogicalRowUser> &lrus, 
  * candidate to prioritize for RAMs.
  *
  * At the end of this function, the vector will only contain candidates that have actual
- * allocations, i.e. RAMs or color map RAMs. 
+ * allocations, i.e. RAMs or color map RAMs.
  */
 void Memories::determine_logical_row_masks(safe_vector<LogicalRowUser> &lrus, int row,
         RAM_side_t side, int RAMs_available, bool is_synth_type) const {
@@ -2767,7 +2844,7 @@ void Memories::fill_swbox_side(safe_vector<LogicalRowUser> &lrus, int row, RAM_s
  *         through the switchbox
  *
  * The purpose of this function is to determine which SRAM_groups uses which buses, and RAMs
- * in those rows, and then to allocate those RAMs to that positijon 
+ * in those rows, and then to allocate those RAMs to that positijon
  */
 void Memories::swbox_logical_row(safe_vector<LogicalRowUser> &lrus, int row, RAM_side_t side,
         SRAM_group *curr_oflow, SRAM_group *sel_oflow) {
@@ -2782,7 +2859,7 @@ void Memories::swbox_logical_row(safe_vector<LogicalRowUser> &lrus, int row, RAM
     fill_swbox_side(lrus, row, side);
 }
 
-/** 
+/**
  * Calculates two possible overflow objects:
  *    curr_oflow - the group that is overflowing from the current logical row to the
  *        next logical row.  After this calculation, can only be action data, as synth2port

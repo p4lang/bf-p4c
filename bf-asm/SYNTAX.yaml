@@ -350,6 +350,14 @@ stage <constant> <thread>:
         row: <vector>
         column: <vector> | '[' <vector>, ... ']'
             # physical rows and srams used by the table
+        stash: # Stash Allocation for exact match tables only
+          row: <vector> 
+          col: <vector>
+          # Row and col are indexed in sync to give RAM used to determine word
+          # in entry
+          unit: <vector>
+          # Unit value can be (0,1) as there are 2 units per row and is indexed
+          # in sync with row/col values to give stash unit
         input_xbar:
             # specifies exact match groups, hash tables, and groups (see above)
             # If there are multiple groups, the must match the total width of the

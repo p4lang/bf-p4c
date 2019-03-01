@@ -1062,6 +1062,9 @@ std::ostream &operator<<(std::ostream &out, const memory_vector &v) {
 void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memories::Use &mem) const {
     safe_vector<int> row, bus, word;
     std::map<int, safe_vector<int>> home_rows;
+    safe_vector<int> stash_rows;
+    safe_vector<int> stash_cols;
+    safe_vector<int> stash_units;
     bool logical = mem.type >= Memories::Use::COUNTER;
     bool have_bus = !logical;
     bool have_mapcol = mem.is_twoport();
@@ -1079,11 +1082,16 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
             if (r.bus < 0) have_bus = false;
             if (r.col.size() > 0) have_col = true;
         }
-
         if (have_word)
             word.push_back(r.word);
+        if ((r.stash_unit >= 0) && (r.stash_col >= 0)) {
+            stash_rows.push_back(r.row);
+            stash_cols.push_back(r.stash_col);
+            stash_units.push_back(r.stash_unit);
+            LOG4("Adding stash on row: " << r.row << ", col: "
+                    << r.stash_col << ", unit: " << r.stash_unit);
+        }
     }
-
     if (row.size() > 1) {
         out << indent << "row: " << row << std::endl;
         if (have_bus) out << indent << "bus: " << bus << std::endl;
@@ -1105,7 +1113,6 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
                 out << indent << "- " << r.vpn << std::endl;
             }
         }
-
     } else {
         out << indent << "row: " << row[0] << std::endl;
         if (have_bus) out << indent << "bus: " << bus[0] << std::endl;
@@ -1117,11 +1124,9 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
             out << indent << "maprams: " << memory_vector(mem.row[0].mapcol, mem.type, true)
                 << std::endl;
         }
-
         if (have_vpn)
            out << indent << "vpns: " << mem.row[0].vpn << std::endl;
     }
-
     for (auto r : mem.home_row) {
         home_rows[r.second].push_back(r.first);
     }
@@ -1166,6 +1171,14 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
         else
             BUG("Color mapram has not been allocated an address");
         out << std::endl;
+        indent--;
+    }
+    if ((mem.type == Memories::Use::EXACT) &&
+            (stash_rows.size() > 0) && (stash_units.size() > 0)) {
+        out << indent++ << "stash: " << std::endl;
+        out << indent << "row: " << stash_rows << std::endl;
+        out << indent << "col: " << stash_cols << std::endl;
+        out << indent << "unit: " << stash_units << std::endl;
         indent--;
     }
 }

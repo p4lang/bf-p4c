@@ -76,6 +76,8 @@ void SRamMatchTable::verify_format() {
             unsigned word = f.bit(0)/128;
             if (info.overhead_word < 0) {
                 info.overhead_word = word;
+                format->overhead_word = word;
+                LOG5("Setting overhead word for format : " << word);
                 info.overhead_bit = f.bit(0)%128;
                 info.match_group[word] = -1;
             } else if (info.overhead_word != (int)word)

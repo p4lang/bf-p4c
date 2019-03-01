@@ -170,12 +170,12 @@ typedef std::vector<std::unique_ptr<obj>> vector_base;
 class vector : public obj, public vector_base {
 public:
     vector() {}
-    vector(const vector &) = default;
+    vector(const vector &) = delete;
     vector(vector &&) = default;
     vector(const std::initializer_list<rvalue_reference_wrapper<obj>> &init) {
         for (auto o : init)
             push_back(o.get().copy()); }
-    vector &operator=(const vector &) & = default;
+    vector &operator=(const vector &) & = delete;
     vector &operator=(vector &&) & = default;
     ~vector() {}
     bool operator <(const obj &a) const override {

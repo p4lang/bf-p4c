@@ -193,6 +193,8 @@ public:
             Field(Format *f, unsigned size, unsigned lo = 0, enum flags_t fl = NONE)
                 : size(size), flags(fl), fmt(f) {
                 if (size) bits.push_back({ lo, lo + size-1 }); }
+            Field(const Field &f, Format *fmt) : size(f.size), flags(f.flags), bits(f.bits), fmt(fmt) {}
+
             /// mark all bits from the field in @param bitset
             void set_field_bits(bitvec &bitset) {
                 for (auto &b : bits) bitset.setrange(b.lo, b.size());
@@ -215,6 +217,7 @@ public:
         unsigned                size = 0, immed_size = 0;
         Field                   *immed = 0;
         unsigned                log2size = 0; /* ceil(log2(size)) */
+        int                     overhead_word = -1;
 
         unsigned groups() const { return fmt.size(); }
         Field *field(const std::string &n, int group = 0) {
@@ -239,7 +242,7 @@ public:
                         return lineno;
             return -1; }
         void add_field(Field &f, std::string name="dummy", int grp=0 ) {
-            fmt[grp].emplace(name, f); }
+            fmt[grp].emplace(name, Field(f, this)); }
         decltype(fmt[0].begin()) begin(int grp=0) { return fmt[grp].begin(); }
         decltype(fmt[0].end()) end(int grp=0) { return fmt[grp].end(); }
         decltype(fmt[0].cbegin()) begin(int grp=0) const { return fmt[grp].begin(); }
@@ -910,8 +913,13 @@ DECLARE_TABLE_TYPE(ExactMatchTable, SRamMatchTable, "exact_match",
     // The position of the ghost bits in a single hash function
     // The key is name of the field and the field bit, the value is one-hot for all
     // bits that this ghost bit has an impact on
-    using GhostBitPositions = std::map<std::pair<std::string, int>, bitvec>; 
+    using GhostBitPositions = std::map<std::pair<std::string, int>, bitvec>;
     std::map<int, GhostBitPositions> ghost_bit_positions;
+    Format* stash_format = nullptr;
+    std::vector<int> stash_rows;
+    std::vector<int> stash_cols;
+    std::vector<int> stash_units;
+    std::vector<int> stash_overhead_rows;
 
 public:
     int unitram_type() override { return UnitRam::MATCH; }
@@ -923,6 +931,7 @@ public:
     void determine_ghost_bits();
     void gen_ghost_bits(int hash_function_number, json::vector &ghost_bits_to_hash_bits,
                         json::vector &ghost_bits_info) const override;
+    void generate_stash_overhead_rows();
 )
 
 DECLARE_TABLE_TYPE(AlgTcamMatchTable, SRamMatchTable, "atcam_match",
@@ -1552,7 +1561,7 @@ public:
     void set_color_used() override { color_used = true; }
     void set_output_used() override { output_used = true; }
     int color_shiftcount(Table::Call &call, int group, int tcam_shift) const override;
-    int color_addr_type() const override { return color_mapram_addr; } 
+    int color_addr_type() const override { return color_mapram_addr; }
 )
 
 namespace StatefulAlu {

@@ -634,7 +634,7 @@ void Table::check_next(Table::Ref &n) {
 void Table::check_next() {
     for (auto &n : hit_next) {
         check_next(n);
-    } 
+    }
     check_next(miss_next);
 }
 
@@ -1111,17 +1111,17 @@ void Table::Actions::Action::check_next_ref(Table *tbl, const Table::Ref &ref) c
  * By the end of this function, both next_table and next_table_miss_ref will have been created
  * and validated.
  *
- * Each action must have at least next_table or a next_table_miss from the node.  
+ * Each action must have at least next_table or a next_table_miss from the node.
  *     - next_table: The next table to run on hit
  *     - next_table_miss: The next table to run on miss
  *
  * The next_table_encode is the entry into the next_table_hitmap, if a next_table hit map is
  * provided.  If the next_table hit map is empty, then the next_table_encode won't have been
  * set.  If the action can be used on a hit, then either a next_table_ref/next_table_encode
- * would be provided. 
+ * would be provided.
  *
  * The next_table_ref could come from the next_table as an int value, which would be on offset
- * into the hit_map 
+ * into the hit_map
  */
 void Table::Actions::Action::check_next(Table *tbl) {
     if (next_table_encode >= 0) {
@@ -1652,9 +1652,9 @@ void Table::Actions::add_action_format(const Table *table, json::map &tbl) const
         /**
          * This following few fields are required on a per stage table action basis.
          * The following information is:
-         * 
+         *
          * - next_table - The value that will be written into the next field RAM line on a hit,
-         *       when the entry is specified with this action.  This is either an index into 
+         *       when the entry is specified with this action.  This is either an index into
          *       the next_table_map_en (if that map is enabled), or the 8 bit next table value.
          *
          * - next_table_full - The value that will be written into the miss register for next
@@ -2236,9 +2236,9 @@ json::map &Table::add_pack_format(json::map &stage_tbl, Table::Format *format,
     json::map pack_fmt;
     auto mem_word_width = table_type() == PHASE0 ? Target::PHASE0_FORMAT_WIDTH() : MEM_WORD_WIDTH;
     pack_fmt["memory_word_width"] = mem_word_width;
-    auto table_word_width = table_type() == PHASE0 ? 
+    auto table_word_width = table_type() == PHASE0 ?
         Target::PHASE0_FORMAT_WIDTH() : format ? format->get_table_word_width() : MEM_WORD_WIDTH;
-    pack_fmt["table_word_width"] = table_word_width; 
+    pack_fmt["table_word_width"] = table_word_width;
     pack_fmt["entries_per_table_word"] = format ? format->get_entries_per_table_word() : 1;
     pack_fmt["number_memory_units_per_table_word"] = format ? format->get_mem_units_per_table_word() : 1;
 

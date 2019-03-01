@@ -12,6 +12,7 @@ struct Memories {
     /* track memory allocations within a single stage */
     static constexpr int SRAM_ROWS = 8;
     static constexpr int SRAM_COLUMNS = 10;
+    static constexpr int STASH_UNITS = 2;
     static constexpr int LOGICAL_TABLES = 16;
     static constexpr int LEFT_SIDE_COLUMNS = 4;
     static constexpr int RIGHT_SIDE_COLUMNS = SRAM_COLUMNS - LEFT_SIDE_COLUMNS;
@@ -67,6 +68,7 @@ struct Memories {
  private:
     Alloc2D<cstring, SRAM_ROWS, SRAM_COLUMNS>          sram_use;
     unsigned                                           sram_inuse[SRAM_ROWS] = { 0 };
+    Alloc2D<cstring, SRAM_ROWS, STASH_UNITS>           stash_use;
     Alloc2D<cstring, TCAM_ROWS, TCAM_COLUMNS>          tcam_use;
     Alloc2D<cstring, SRAM_ROWS, 2>                     gateway_use;
     Alloc2D<search_bus_info, SRAM_ROWS, 2>             sram_search_bus;
@@ -140,11 +142,12 @@ struct Memories {
         /* FIXME -- when tracking EXACT table memuse, do we need to track which way
          * each memory is allocated to?  For now, we do not. */
         struct Row {
-            int         row, bus, word, alloc;
+            int              row, bus, word, alloc;
+            int              stash_unit, stash_col;
             safe_vector<int> col, mapcol, vpn;
-            Row() : row(-1), bus(-1), word(-1), alloc(-1) {}
-            explicit Row(int r, int b = -1, int w = -1, int a = -1)
-                : row(r), bus(b), word(w), alloc(a) {}
+            Row() : row(-1), bus(-1), word(-1), alloc(-1), stash_unit(-1), stash_col(-1) {}
+            explicit Row(int r, int b = -1, int w = -1, int a = -1, int u = -1, int c = -1)
+                : row(r), bus(b), word(w), alloc(a), stash_unit(u), stash_col(c) {}
             void dbprint(std::ostream &out) const {
                 out << "Row " << row << " with bus " << bus;
             }

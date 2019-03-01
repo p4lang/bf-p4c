@@ -456,6 +456,13 @@ void Visualization::gen_memories(unsigned int stage, Util::JsonObject *parent) {
     gateways_res->emplace("gateways", gateways);
     parent->emplace("gateways", gateways_res);
 
+    auto *stashes_res = new Util::JsonObject();
+    auto *stashes = new Util::JsonArray();
+    stashes_res->emplace("nRows", new Util::JsonValue(Memories::SRAM_ROWS));
+    stashes_res->emplace("nUnits", new Util::JsonValue(Memories::GATEWAYS_PER_ROW));
+    stashes_res->emplace("stashes", stashes);
+    parent->emplace("stashes", stashes_res);
+
     auto *jmeter_res = new Util::JsonObject();
     auto *jmeter_alus = new Util::JsonArray();
     auto *statistics_res = new Util::JsonObject();
@@ -539,9 +546,12 @@ void Visualization::gen_memories(unsigned int stage, Util::JsonObject *parent) {
             case Memories::Use::ATCAM:
             case Memories::Use::TIND:
             case Memories::Use::ACTIONDATA:
-                for (auto &r : memuse.row)
+                for (auto &r : memuse.row) {
+                    auto n = p4name(res) + ext;
                     for (auto &c : r.col)
-                        mkItem(rams, p4name(res) + ext, memTypeName, r.row, c, "column");
+                        mkItem(rams, n, memTypeName, r.row, c, "column");
+                    if ((r.stash_unit == 0) || (r.stash_unit == 1))
+                        mkItem(stashes, n, memTypeName, r.row, r.stash_unit, "unit_id"); }
                 break;
             case Memories::Use::TERNARY:
                 for (auto &r : memuse.row)
@@ -602,13 +612,6 @@ void Visualization::gen_memories(unsigned int stage, Util::JsonObject *parent) {
         logical_ids->append(lid);
     }
     parent->emplace("logical_tables", logical_tables);
-
-    auto *stashes_res = new Util::JsonObject();
-    auto *stashes = new Util::JsonArray();
-    stashes_res->emplace("nRows", new Util::JsonValue(8));
-    stashes_res->emplace("nUnits", new Util::JsonValue(1));
-    stashes_res->emplace("stashes", stashes);
-    parent->emplace("stashes", stashes_res);
 }
 
 void Visualization::gen_action_bus_bytes(unsigned int stageNo, Util::JsonObject *stage) {
