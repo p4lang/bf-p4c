@@ -1185,15 +1185,15 @@ static AluOP::Decode        opADD         ("add",           0x23e, true),
                             opANDCB       ("andcb",         0x11e, &opANDCA),
                             opNOTB        ("notb",          0x15e, &opNOTA, "not"),
                             opXOR         ("xor",           0x19e, true),
-                            opNAND        ("nand",          0x19e, true),
+                            opNAND        ("nand",          0x1de, true),
                             opAND         ("and",           0x21e, true),
                             opXNOR        ("xnor",          0x25e, true),
                             opB           ("alu_b",         0x29e),
-                            opORCA        ("orca",          0x29e),
+                            opORCA        ("orca",          0x2de),
                             opA           ("alu_a",         0x31e, &opB),
                             opORCB        ("orcb",          0x35e, &opORCA),
                             opOR          ("or",            0x39e, true),
-                            opSETHI       ("sethi",         0x39e, true);
+                            opSETHI       ("sethi",         0x3de, true);
 static LoadConst::Decode    opLoadConst   ("load-const");
 static Set::Decode          opSet         ("set");
 static NulOP::Decode        opNoop        ("noop",          0x0);
