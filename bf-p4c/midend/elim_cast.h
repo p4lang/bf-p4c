@@ -6,6 +6,7 @@
 #include "frontends/p4/typeMap.h"
 #include "frontends/p4/strengthReduction.h"
 #include "bf-p4c/midend/type_checker.h"
+#include "bf-p4c/common/slice.h"
 
 namespace BFN {
 
@@ -284,73 +285,62 @@ struct SliceInfo {
             hi(hi), lo(lo), expr(expr) {}
 };
 
+/** replace concat ++ operations with mulitple operations on slices in the contexts
+ * where it works
+ *  - immediately on the RHS of an assignment
+ *  - directly in an == or != comparison
+ */
 class RewriteConcatToSlices : public Transform {
-    std::map<const IR::Node*, const IR::Concat*> concats;
-
  public:
     RewriteConcatToSlices() {}
-
-    void unpack(std::vector<SliceInfo*>& slices, const IR::Concat* expr) {
-        auto lsz =  expr->left->type->width_bits();
-        auto rsz =  expr->right->type->width_bits();
-
-        slices.push_back(new SliceInfo(lsz + rsz - 1, rsz, expr->left));
-        if (auto rhs = expr->right->to<IR::Concat>()) {
-            unpack(slices, rhs);
-        } else {
-            slices.push_back(new SliceInfo(rsz - 1, 0, expr->right));
-        }
-    }
-
-    // do not simplify '++' in method call expression, e.g.,
-    // meter.execute(16w0 ++ meter_idx);
-    const IR::Node* preorder(IR::MethodCallExpression *expr) override {
-        prune();
-        return expr; }
 
     // do not simplify '++' in apply functions.
     const IR::Node* preorder(IR::Function* func) override {
         prune();
         return func; }
 
-    const IR::Node* preorder(IR::Concat* expression) override {
-        prune();
-        auto ctxt = findOrigCtxt<IR::AssignmentStatement>();
-        if (!ctxt)
-            return expression;
-        concats.emplace(ctxt, expression);
-        return expression;
-    }
-
-    // Only simplify assignment that is implemented as 'set' instruction
-    // in the backend. Skip others that involves more complex arithmetic
-    // operations.
-    // e.g., the following snippet cannot be simplified as h8 needs to be
-    // allocated with no-pack constraint in a 16-bit container to ensure the
-    // add operation is done in a 16-bit ALU.
-    // f16 = g16 + (8w0 ++ h8);
-    // cannot eliminate ++ due to carry bit in addition.
     const IR::Node* preorder(IR::AssignmentStatement* stmt) override {
-        if (!stmt->right->is<IR::Concat>()) {
-            prune(); }
+        if (auto c = stmt->right->to<IR::Concat>()) {
+            auto *rv = new IR::BlockStatement;
+            int rsize = c->right->type->width_bits();
+            int lsize = c->left->type->width_bits();
+            rv->components.push_back(new IR::AssignmentStatement(stmt->srcInfo,
+                MakeSlice(stmt->left, rsize, rsize + lsize - 1), c->left));
+            rv->components.push_back(new IR::AssignmentStatement(stmt->srcInfo,
+                MakeSlice(stmt->left, 0, rsize - 1), c->right));
+            return rv;
+        }
         return stmt;
     }
-
-    const IR::Node* postorder(IR::AssignmentStatement* stmt) override {
-        auto orig = getOriginal();
-        if (!concats.count(orig))
-            return stmt;
-
-        std::vector<SliceInfo*> slices;
-        auto ret = new IR::IndexedVector<IR::StatOrDecl>();
-        unpack(slices, concats.at(orig));
-
-        for (auto sl : slices) {
-            ret->push_back(new IR::AssignmentStatement(stmt->srcInfo,
-                    new IR::Slice(stmt->left, sl->hi, sl->lo), sl->expr));
-        }
-
-        return new IR::BlockStatement(stmt->srcInfo, *ret);
+    const IR::Node* preorder(IR::Equ *eq) override {
+        if (auto c = eq->left->to<IR::Concat>()) {
+            int rsize = c->right->type->width_bits();
+            int lsize = c->left->type->width_bits();
+            return new IR::LAnd(
+                new IR::Equ(eq->srcInfo, c->left, MakeSlice(eq->right, rsize, rsize + lsize - 1)),
+                new IR::Equ(eq->srcInfo, c->right, MakeSlice(eq->right, 0, rsize - 1))); }
+        if (auto c = eq->right->to<IR::Concat>()) {
+            int rsize = c->right->type->width_bits();
+            int lsize = c->left->type->width_bits();
+            return new IR::LAnd(
+                new IR::Equ(eq->srcInfo, MakeSlice(eq->left, rsize, rsize + lsize - 1), c->left),
+                new IR::Equ(eq->srcInfo, MakeSlice(eq->left, 0, rsize - 1), c->right)); }
+        return eq;
+    }
+    const IR::Node* preorder(IR::Neq *ne) override {
+        if (auto c = ne->left->to<IR::Concat>()) {
+            int rsize = c->right->type->width_bits();
+            int lsize = c->left->type->width_bits();
+            return new IR::LOr(
+                new IR::Neq(ne->srcInfo, c->left, MakeSlice(ne->right, rsize, rsize + lsize - 1)),
+                new IR::Neq(ne->srcInfo, c->right, MakeSlice(ne->right, 0, rsize - 1))); }
+        if (auto c = ne->right->to<IR::Concat>()) {
+            int rsize = c->right->type->width_bits();
+            int lsize = c->left->type->width_bits();
+            return new IR::LOr(
+                new IR::Neq(ne->srcInfo, MakeSlice(ne->left, rsize, rsize + lsize - 1), c->left),
+                new IR::Neq(ne->srcInfo, MakeSlice(ne->left, 0, rsize - 1), c->right)); }
+        return ne;
     }
 };
 

@@ -96,6 +96,12 @@ const IR::Expression *MakeSlice(const IR::Expression *e, int lo, int hi) {
         return new IR::BOr(e->srcInfo, MakeSlice(o->left, lo, hi), MakeSlice(o->right, lo, hi));
     if (auto o = e->to<IR::BXor>())
         return new IR::BXor(e->srcInfo, MakeSlice(o->left, lo, hi), MakeSlice(o->right, lo, hi));
+    if (auto cc = e->to<IR::Concat>()) {
+        int rsize = cc->right->type->width_bits();
+        if (hi < rsize) return MakeSlice(cc->right, lo, hi);
+        if (lo >= rsize) return MakeSlice(cc->left, lo - rsize, hi - rsize);
+        return new IR::Concat(cc->srcInfo, MakeSlice(cc->left, 0, hi - rsize),
+                                           MakeSlice(cc->right, lo, rsize - 1)); }
     if (lo >= e->type->width_bits()) {
         return new IR::Constant(IR::Type::Bits::get(hi-lo+1), 0); }
     if (hi >= e->type->width_bits()) {

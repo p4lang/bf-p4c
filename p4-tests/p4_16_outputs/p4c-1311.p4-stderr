@@ -1,0 +1,6 @@
+p4c-1311.p4(313): [--Wwarn=uninitialized_use] warning: flowtable_hash may be uninitialized
+   value = (bit<16>)ig_intr_md.ingress_port ++ flowtable_hash[31:16];
+                                               ^^^^^^^^^^^^^^
+p4c-1311.p4(313): [--Wwarn=uninitialized_use] warning: flowtable_hash[31:16] may be uninitialized
+   value = (bit<16>)ig_intr_md.ingress_port ++ flowtable_hash[31:16];
+                                               ^^^^^^^^^^^^^^^^^^^^^
