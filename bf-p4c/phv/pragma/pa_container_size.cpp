@@ -51,8 +51,8 @@ bool PragmaContainerSize::preorder(const IR::BFN::Pipe* pipe) {
         auto field_name = gress->value + "::" + field_ir->value;
         auto field = phv_i.field(field_name);
         if (!field) {
-            ::warning("@pragma pa_container_size's argument "
-                      "%1% does not match any phv fields, skipped", field_name);
+            ::warning("@pragma pa_container_size "
+                      "%1% does not match any field, skipped", field_name);
             continue; }
 
         // If there is a pa_container_size pragma on the field, then also apply it to its privatized
@@ -63,8 +63,7 @@ bool PragmaContainerSize::preorder(const IR::BFN::Pipe* pipe) {
             LOG1("Privatized field in pragma: " << privatized_field);
 
         if (pa_container_sizes_i.count(field)) {
-            ::warning("@pragma pa_container_size %1% is overriding previous pragmas: ",
-                      annotation); }
+            ::warning("overriding @pragma pa_container_size %1%", field->name); }
         pa_container_sizes_i[field] = {};
         if (privatized_field)
             pa_container_sizes_i[privatized_field] = {};
@@ -150,9 +149,9 @@ void PragmaContainerSize::update_field_slice_req(
             field_slice_req_i[slice] = sz;
         }
         if (rest_width > 0) {
-            ::warning("%1% has a pa_container_size pragma that "
-                      "sum of sizes are less than field size",
-                      cstring::to_cstring(field)); }
+            ::warning("@pragma pa_container_size %1% has "
+                      "sum of sizes that is less than the field size",
+                      field->name); }
     }
 }
 
@@ -361,9 +360,6 @@ std::ostream& operator<<(std::ostream& out, const PragmaContainerSize& pa_cs) {
 
 void PragmaContainerSize::add_constraint(
         const PHV::Field* field, std::vector<PHV::Size> sizes) {
-    if (pa_container_sizes_i.count(field)) {
-        ::warning("@pragma pa_container_size: field %1% is overriding by ad-lib adding: ",
-                  cstring::to_cstring(field)); }
     pa_container_sizes_i[field] = sizes;
     update_field_slice_req(field, sizes);
     PHV::Field* nonConstField = phv_i.field(field->name);
@@ -390,20 +386,26 @@ bool PragmaContainerSize::check_and_add_constraint(
     // Check if existing constraints are the same as the ones already on this field.
     // ss contains a pretty print of already existing pragmas.
     std::vector<PHV::Size> existingSizePragmas = pa_container_sizes_i.at(field);
-    if (existingSizePragmas.size() != sizes.size()) {
-        ::warning("@pragma pa_container_size already specifies containers %1% for field %2%.",
-                  printSizeConstraints(existingSizePragmas), field->name);
-        return false;
-    }
 
-    // Ensure that the new pragma specifications are the same as the already existing ones.
-    for (size_t i = 0; i < existingSizePragmas.size(); i++) {
-        if (sizes[i] != existingSizePragmas[i]) {
-            ::warning("@pragma pa_container_size already specifies containers %1% for field %2%.",
-                      printSizeConstraints(existingSizePragmas), field->name);
-            return false;
+    bool sameAsExisting = true;
+
+    if (existingSizePragmas.size() != sizes.size()) {
+        sameAsExisting = false;
+    } else {
+        for (size_t i = 0; i < existingSizePragmas.size(); i++) {
+            if (sizes[i] != existingSizePragmas[i]) {
+                sameAsExisting = false;
+                break;
+            }
         }
     }
+
+    if (!sameAsExisting) {
+       ::warning("@pragma pa_container_size already specified for field %1% %2%.",
+                 field->name, printSizeConstraints(existingSizePragmas));
+       return false;
+    }
+
     return true;
 }
 

@@ -86,9 +86,8 @@ class PragmaContainerSize : public Inspector {
     std::set<const PHV::Field*>
     unsatisfiable_fields(const std::list<PHV::SuperCluster*>& sliced);
 
-    /** Add ad-lib constraint.
-     *
-     *  In phv allocation, use this at the begging.
+    /**
+     *  Add constraint regardless of whether constraint is already specified on the field.
      */
     void add_constraint(const PHV::Field* field, std::vector<PHV::Size> sizes);
 
