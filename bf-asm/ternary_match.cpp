@@ -521,7 +521,7 @@ void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
             bool has_nibble_offset = (field_width < 4) 
                 || (((nibble_offset > 0) && (dirtcam_mode == DIRTCAM_4B_LO)));
             auto range_field_width = has_nibble_offset ? 
-                field_width > 4 ? 4 - nibble_offset : 4 : 4;
+                field_width > 4 ? 4 - nibble_offset : field_width : 4;
             entry_pad_size = 4;
             auto entry_start_bit = i * 8 + start_bit + (dirtcam_mode == DIRTCAM_4B_HI) * 4 + slice_offset;
             lsb_offset = has_nibble_offset ? lsb_offset - nibble_offset : lsb_offset;

@@ -5,7 +5,7 @@
 #  - options: -o, -g, --archive, --create-graphs, --validate-*,
 
 tests_dir = os.path.abspath(os.path.dirname(__file__))
-p4_14_program = os.path.join(tests_dir, 'p4_14/p4-tests/programs/emulation/emulation.p4')
+p4_14_program = os.path.join(tests_dir, 'p4_14/p4-tests/internal_p4_14/emulation/emulation.p4')
 v1model_program = os.path.join(tests_dir, 'p4_16/verify_checksum.p4')
 p4_16_default = os.path.join(tests_dir, 'p4_16/simple_32q.p4')
 p4_16_path = os.path.join(tests_dir, 'p4_14/p4-tests/p4_16_programs')

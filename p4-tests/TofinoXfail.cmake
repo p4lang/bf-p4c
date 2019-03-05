@@ -204,11 +204,10 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/pvs-nested-struct.p4
   )
 
-#p4c_add_xfail_reason("tofino"
-#  "Expression for parser counter is not supported"
-  #   extensions/p4_tests/p4_14/c1/COMPILER-384/case2240.p4
-  # extensions/p4_tests/p4_14/p4-tests/programs/pctr/pctr.p4 # update path when test is added
-#  )
+p4c_add_xfail_reason("tofino"
+  "Expression for parser counter is not supported"
+  extensions/p4_tests/p4_14/p4-tests/internal_p4_14/pctr/pctr.p4
+  )
 
 
 p4c_add_xfail_reason("tofino"
@@ -219,9 +218,9 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
-  extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-546/switch_comp546.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-788/comp_788.p4
+  extensions/p4_tests/p4_14/p4-tests/internal_p4_14/fr_test/fr_test.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -234,9 +233,9 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "error: The stage specified for .* could not place it until stage"
-  smoketest_programs_netcache
-  extensions/p4_tests/p4_14/p4-tests/programs/ecc/ecc.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/mau_test/mau_test.p4  #P4C-1123
+  extensions/p4_tests/p4_14/p4-tests/internal_p4_14/netcache/netcache.p4
+  extensions/p4_tests/p4_14/p4-tests/internal_p4_14/ecc/ecc.p4
+  extensions/p4_tests/p4_14/p4-tests/internal_p4_14/mau_test/mau_test.p4  #P4C-1123
   # Intended to test infinite recursive in tryAllocSliceList.
   extensions/p4_tests/p4_14/conditional_constraints_infinite_loop.p4
   switch_l3_heavy_int_leaf
@@ -251,7 +250,7 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "error.*Power worst case estimated budget exceeded by*"
-  #extensions/p4_tests/p4_14/p4-tests/programs/clpm/clpm.p4 # update path when test is added
+  extensions/p4_tests/p4_14/p4-tests/internal_p4_14/clpm/clpm.p4
   )
 
 # switch_spine_dtel_int and switch_l3_heavy_spine test failures
@@ -425,11 +424,11 @@ p4c_add_xfail_reason("tofino"
 # BRIG-271
 p4c_add_xfail_reason("tofino"
   "error: : conditional assignment not supported"
-  extensions/p4_tests/p4_14/p4-tests/programs/entry_read_from_hw/entry_read_from_hw.p4
+  extensions/p4_tests/p4_14/p4-tests/internal_p4_14/entry_read_from_hw/entry_read_from_hw.p4
   testdata/p4_16_samples/issue420.p4
   testdata/p4_16_samples/issue512.p4
   testdata/p4_16_samples/issue1412-bmv2.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/mod_field_conditionally/mod_field_conditionally.p4
+  extensions/p4_tests/p4_14/p4-tests/internal_p4_14/mod_field_conditionally/mod_field_conditionally.p4
   )
 
 
@@ -928,7 +927,7 @@ p4c_add_xfail_reason("tofino"
 # Compiler Bug: Could not place table : The table sf could not fit within a single input crossbar in an MAU stage
 p4c_add_xfail_reason("tofino"
   "Could not place table"
-  extensions/p4_tests/p4_14/p4-tests/programs/power/power.p4
+  extensions/p4_tests/p4_14/p4-tests/internal_p4_14/power/power.p4
 )
 
 # P4C-1067

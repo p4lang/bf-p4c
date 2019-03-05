@@ -178,19 +178,13 @@ p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
 set (P4FACTORY_REGRESSION_TESTS
   basic_switching
   # # # bf-diags
-  # # clpm
-  emulation
   fast_reconfig
   mirror_test
-  # # multicast_scale
   multicast_test
-  # # multi-device
   pcie_pkt_test
-  # # pctr
   pgrs
   perf_test_alpm   # (a.k.a alpm-pd-perf)
   # # pvs
-  # range
   resubmit
   smoke_large_tbls
   )
@@ -247,10 +241,6 @@ bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/pgrs/pgrs.p4"
      test.TestTimerOneShot
      test.TestPattern
      test.TestBatch")
-
-# add netcache test
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_netcache" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/netcache/netcache.p4"
-   "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/ptf-tests/netcache")
 
 # for all other p4factory tests, add them as compile only.
 set (P4F_COMPILE_ONLY)
@@ -590,6 +580,63 @@ p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE "tor-archive"
   extensions/p4_tests/p4_16/google-tor/p4/spec/tor.p4
   "-norun --arch v1model --create-graphs --archive --validate-manifest" "")
 p4c_add_test_label("tofino" "cpplint" "tor-archive")
+
+set (P4FACTORY_INTERNAL_PROGRAMS_PATH "extensions/p4_tests/p4_14/p4-tests/internal_p4_14")
+
+set (P4FACTORY_REGRESSION_TESTS_INTERNAL
+  # action_spec_format.p4                     # PTF failure
+  atomic_mod
+  clpm
+  dyn_hash
+  ecc
+  emulation
+  entry_read_from_hw
+  fr_test
+  # hash_test                                 # PTF failure
+  # incremental_checksum                      # PTF failure
+  # mau_mem_test                              # PTF failure
+  # mau_tcam_test                             # test runs for too long
+  mau_test
+  mod_field_conditionally
+  # multi_thread_test                         # PTF failure
+  # multicast_scale                           # test runs for too long
+  netcache
+  opcode_test
+  opcode_test_saturating
+  opcode_test_signed
+  pctr
+  power
+  # range                                     # PTF failure
+  # simple_l3_checksum_branched_end           # PTF failure
+  # simple_l3_checksum_single_end             # PTF failure
+  # simple_l3_checksum_taken_default_ingress  # PTF failure
+  simple_l3_mirror
+  stashes
+  tcam_latch
+  tcam_use_valid
+  # tofino_diag                                # PTF failure
+  )
+
+# p4-tests internal
+set (BFN_TESTS_INTERNAL "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/internal_p4_14/*/*.p4")
+bfn_find_tests ("${BFN_TESTS_INTERNAL}" ALL_BFN_TESTS_INTERNAL EXCLUDE "${BFN_EXCLUDE_PATTERNS}")
+# make a list of all the tests that we want to run PTF on
+set (P4F_PTF_TESTS_INTERNAL)
+foreach (t IN LISTS P4FACTORY_REGRESSION_TESTS_INTERNAL)
+  list (APPEND P4F_PTF_TESTS_INTERNAL
+    "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/internal_p4_14/${t}/${t}.p4")
+endforeach()
+bfn_add_p4factory_tests("tofino" "smoketest_programs_internal" P4F_PTF_TESTS_INTERNAL)
+
+# for all other p4factory internal tests, add them as compile only.
+set (P4F_INTERNAL_COMPILE_ONLY)
+foreach (t IN LISTS ALL_BFN_TESTS_INTERNAL)
+  list (FIND P4F_PTF_TESTS_INTERNAL ${t} found_as_ptf)
+  if (${found_as_ptf} EQUAL -1)
+    list (APPEND P4F_INTERNAL_COMPILE_ONLY ${t})
+  endif()
+endforeach()
+p4c_add_bf_backend_tests("tofino" "tofino" "v1model" "smoketest_programs_internal" "${P4F_INTERNAL_COMPILE_ONLY}")
 
 ## P4-16 Programs
 set (P4FACTORY_P4_16_PROGRAMS

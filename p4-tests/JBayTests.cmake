@@ -78,8 +78,8 @@ p4c_add_ptf_test_with_ptfdir (
 
 # p4-tests has all the includes at the same level with the programs.
 set (BFN_EXCLUDE_PATTERNS "tofino\\.p4")
-set (BFN_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/emulation/*.p4"
-               "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/atomic_mod/*.p4"
+set (BFN_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/internal_p4_14/emulation/*.p4"
+               "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/internal_p4_14/atomic_mod/*.p4"
                "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/basic_switching/*.p4"
                "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/chksum/*.p4"
                "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/deparse_zero/*.p4"

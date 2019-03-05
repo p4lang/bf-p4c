@@ -5,8 +5,8 @@ set (JBAY_MUST_PASS_TESTS
   extensions/p4_tests/p4_14/easy_exact.p4
 
   # p4-tests programs
-  extensions/p4_tests/p4_14/p4-tests/programs/emulation/emulation.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/atomic_mod/atomic_mod.p4
+  extensions/p4_tests/p4_14/p4-tests/internal_p4_14/emulation/emulation.p4
+  extensions/p4_tests/p4_14/p4-tests/internal_p4_14/atomic_mod/atomic_mod.p4
   extensions/p4_tests/p4_14/p4-tests/programs/basic_switching/basic_switching.p4
   extensions/p4_tests/p4_14/p4-tests/programs/chksum/chksum.p4
   extensions/p4_tests/p4_14/p4-tests/programs/deparse_zero/deparse_zero.p4
