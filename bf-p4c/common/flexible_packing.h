@@ -101,7 +101,7 @@ class RepackFlexHeaders : public Transform, public TofinoWriteContext {
     /** @returns the name of the flex struct @flexType that is a part of the header @h.
       */
     static cstring getFlexStructName(
-            const IR::Header* h,
+            const IR::HeaderOrMetadata* h,
             const IR::BFN::Type_StructFlexible* flexType);
 
     /** @returns the egress version of a field name when the @ingressName is specified.
@@ -168,23 +168,24 @@ class RepackFlexHeaders : public Transform, public TofinoWriteContext {
 
     /** Map of header to all the flexible structs in that header.
       */
-    ordered_map<const IR::Header*, ordered_set<const IR::StructField*>> headerToFlexibleStructsMap;
+    ordered_map<const IR::HeaderOrMetadata*, ordered_set<const IR::StructField*>>
+        headerToFlexibleStructsMap;
 
     /** Map of header name to the new header type produced after repacking.
       */
-    ordered_map<cstring, const IR::Header*> repackedHeaders;
+    ordered_map<cstring, const IR::HeaderOrMetadata*> repackedHeaders;
 
     /** Produces a new packing for the flexible struct @flex in header @h, and returns this packing.
       * We produce separate packing for every flexible struct, and all the flexible structs are then
       * flattened by the client within the same header.
       */
     IR::Type_Struct* repackFlexibleStruct(
-            const IR::Header* h,
+            const IR::HeaderOrMetadata* h,
             const IR::StructField* flex);
 
     /** @returns true if header @h contains a flexible struct that can be reordered by the compiler.
       */
-    bool isFlexibleHeader(const IR::Header* h);
+    bool isFlexibleHeader(const IR::HeaderOrMetadata* h);
 
     /** Action analysis for the set of @nonByteAlignedFields in header @h. It populates the
       * doNotPack matrix based on results of this analysis. @returns a matrix of fields that must be
@@ -290,7 +291,7 @@ class RepackFlexHeaders : public Transform, public TofinoWriteContext {
       * header. @returns a new header with repacked flexible structs, and with all structs flattened
       * into a list of fields.
       */
-    IR::Node* preorder(IR::Header* h) override;
+    IR::Node* preorder(IR::HeaderOrMetadata* h) override;
 
  public:
     explicit RepackFlexHeaders(
@@ -306,8 +307,8 @@ class RepackFlexHeaders : public Transform, public TofinoWriteContext {
           parserAlignedFields(pa), alloc(b) { }
 
     /// @returns the set of all repacked headers.
-    const ordered_set<const IR::Header*> getRepackedHeaders() const {
-        ordered_set<const IR::Header*> rs;
+    const ordered_set<const IR::HeaderOrMetadata*> getRepackedHeaders() const {
+        ordered_set<const IR::HeaderOrMetadata*> rs;
         for (auto kv : repackedHeaders)
             rs.insert(kv.second);
         return rs;
@@ -319,15 +320,15 @@ class RepackFlexHeaders : public Transform, public TofinoWriteContext {
         return egressBridgedMap;
     }
 
-    /// @returns the non-bridged egress header version of an ingress field with name @ingressName.
-    cstring getNonBridgedEgressFieldName(cstring ingressName) const;
+    /// @returns the non-bridged egress header version of a field with name @fName.
+    cstring getNonBridgedEgressFieldName(cstring fName) const;
 
     /// @returns the size of the header in bits.
-    int getHeaderBits(const IR::Header* h) const;
+    int getHeaderBits(const IR::HeaderOrMetadata* h) const;
 
     /// @returns the size of the header in bytes. Errors out if the header is not byte-aligned, so
     /// use this carefully.
-    int getHeaderBytes(const IR::Header* h) const;
+    int getHeaderBytes(const IR::HeaderOrMetadata* h) const;
 
     /// @returns the size of the flexible struct type in bits.
     unsigned getFlexTypeBits(const IR::BFN::Type_StructFlexible* flexType) const;
@@ -348,7 +349,7 @@ class RepackFlexHeaders : public Transform, public TofinoWriteContext {
       */
     cstring getFieldName(cstring hdr, const IR::StructField* field) const;
 
-    const ordered_map<const IR::Header*, ordered_set<const IR::StructField*>>&
+    const ordered_map<const IR::HeaderOrMetadata*, ordered_set<const IR::StructField*>>&
         getHeaderToFlexibleStructsMap() const {
             return headerToFlexibleStructsMap;
         }
@@ -360,6 +361,11 @@ class RepackFlexHeaders : public Transform, public TofinoWriteContext {
     const ordered_set<cstring>& getPaddingFieldNames() const {
         return paddingFieldNames;
     }
+
+    const IR::Type_Struct* getRepackedType(const IR::BFN::Type_StructFlexible* flex) const {
+        if (!ingressFlexibleTypes.count(flex)) return nullptr;
+        return ingressFlexibleTypes.at(flex);
+    }
 };
 
 class ProduceParserMappings : public Inspector {
@@ -367,12 +373,12 @@ class ProduceParserMappings : public Inspector {
     const PhvInfo& phv;
 
     ordered_map<cstring, std::vector<cstring>> parserStateToHeadersMap;
-    ordered_map<cstring, const IR::Header*> headerNameToRefMap;
+    ordered_map<cstring, const IR::HeaderOrMetadata*> headerNameToRefMap;
     ordered_map<cstring, IR::Member*> bridgedToExpressionsMap;
 
     profile_t init_apply(const IR::Node* root) override;
     bool preorder(const IR::BFN::ParserState* p) override;
-    bool preorder(const IR::Header* h) override;
+    bool preorder(const IR::HeaderOrMetadata* h) override;
 
  public:
     explicit ProduceParserMappings(const PhvInfo& p) : phv(p) { }
@@ -383,7 +389,7 @@ class ProduceParserMappings : public Inspector {
         return parserStateToHeadersMap.at(p->name);
     }
 
-    const IR::Header* getHeaderRefForName(cstring headerName) const {
+    const IR::HeaderOrMetadata* getHeaderRefForName(cstring headerName) const {
         if (headerNameToRefMap.count(headerName)) return headerNameToRefMap.at(headerName);
         return nullptr;
     }
@@ -408,7 +414,7 @@ class ReplaceFlexFieldUses : public Transform {
     ordered_map<cstring, const IR::Type*> bridgedFields;
 
     /// Set of headers which have been repacked by the RepackFlexHeaders pass.
-    ordered_set<const IR::Header*> repackedHeaders;
+    ordered_set<const IR::HeaderOrMetadata*> repackedHeaders;
 
     /// Set of parser states to be modified to reflect the repacking of headers.
     ordered_set<const IR::BFN::ParserState*> parserStatesToModify;
@@ -434,11 +440,12 @@ class ReplaceFlexFieldUses : public Transform {
     IR::BFN::Extract* getNewComputedVal(const IR::BFN::Extract* e) const;
     const std::vector<IR::BFN::Extract*> getNewExtracts(cstring h, unsigned& packetOffset) const;
     const std::vector<IR::BFN::EmitField*> getNewEmits(
-            const IR::Header* h,
+            const IR::HeaderOrMetadata* h,
             const IR::BFN::FieldLVal* e) const;
 
     /// Add emits for the revised bridged metadata packing to the deparser.
     IR::Node* postorder(IR::BFN::Deparser* d) override;
+    IR::Node* postorder(IR::BFN::Digest* d) override;
 
     /// Adjusts the shift of each transition out of the egress bridged metadata header, after taking
     /// into account the new structure of the bridged metadata header.
@@ -447,7 +454,7 @@ class ReplaceFlexFieldUses : public Transform {
     /// Builds up a list of all bridged metadata fields, with separate entries for ingress and
     /// egress versions. Note that this list is created by walking through the fields in the
     /// bridged_metadata headers.
-    void addBridgedFields(const IR::Header* header);
+    void addBridgedFields(const IR::HeaderOrMetadata* header);
 
  public:
     explicit ReplaceFlexFieldUses(

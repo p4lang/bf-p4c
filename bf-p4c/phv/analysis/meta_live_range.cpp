@@ -225,8 +225,6 @@ void MetadataLiveRange::end_apply() {
         }
         // POV bits are always live, so ignore.
         if (f.pov) continue;
-        bool isNotParsed = notParsedFields.count(&f);
-        bool isNotDeparsed = notDeparsedFields.count(&f);
         // Ignore metadata fields marked as no_init because initialization would cause their
         // container to become valid.
         if (noInitIntrinsicFields.count(f.name)) continue;

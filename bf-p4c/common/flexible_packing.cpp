@@ -110,12 +110,12 @@ Visitor::profile_t RepackFlexHeaders::init_apply(const IR::Node* root) {
     return Transform::init_apply(root);
 }
 
-cstring RepackFlexHeaders::getNonBridgedEgressFieldName(cstring ingressName) const {
-    if (!ingressName.startsWith(INGRESS_FIELD_PREFIX)) {
-        BUG("Called getNonBridgedEgressFieldName on ingress fieldname %1%", ingressName);
-        return cstring();
-    }
-    cstring egressBridgedName = getEgressFieldName(ingressName);
+cstring RepackFlexHeaders::getNonBridgedEgressFieldName(cstring fName) const {
+    cstring egressBridgedName;
+    if (fName.startsWith(EGRESS_FIELD_PREFIX))
+        egressBridgedName = fName;
+    else
+        egressBridgedName = getEgressFieldName(fName);
     for (auto kv : egressBridgedMap) {
         if (kv.second == egressBridgedName)
             return kv.first;
@@ -123,14 +123,14 @@ cstring RepackFlexHeaders::getNonBridgedEgressFieldName(cstring ingressName) con
     return egressBridgedName;
 }
 
-int RepackFlexHeaders::getHeaderBits(const IR::Header* h) const {
+int RepackFlexHeaders::getHeaderBits(const IR::HeaderOrMetadata* h) const {
     int rv = 0;
     for (auto f : h->type->fields)
         rv += f->type->width_bits();
     return rv;
 }
 
-int RepackFlexHeaders::getHeaderBytes(const IR::Header* h) const {
+int RepackFlexHeaders::getHeaderBytes(const IR::HeaderOrMetadata* h) const {
     int bits = getHeaderBits(h);
     BUG_CHECK(bits % 8 == 0, "Serializer packing produces a nonbyte-aligned header %1%", h->name);
     return (bits / 8);
@@ -752,7 +752,7 @@ const IR::StructField* RepackFlexHeaders::getPaddingField(int size, int id) cons
 }
 
 cstring RepackFlexHeaders::getFlexStructName(
-        const IR::Header* h,
+        const IR::HeaderOrMetadata* h,
         const IR::BFN::Type_StructFlexible* flexType) {
     cstring rv = h->name;
     for (auto f : h->type->fields) {
@@ -790,17 +790,15 @@ cstring RepackFlexHeaders::getFieldName(cstring hdr, const IR::StructField* fiel
 }
 
 IR::Type_Struct* RepackFlexHeaders::repackFlexibleStruct(
-        const IR::Header* h,
+        const IR::HeaderOrMetadata* h,
         const IR::StructField* flex) {
     const IR::BFN::Type_StructFlexible* flexType = flex->type->to<IR::BFN::Type_StructFlexible>();
     BUG_CHECK(flexType, "Flexible struct type could not be derived");
     cstring structName = RepackFlexHeaders::getFlexStructName(h, flexType);
     LOG1("Flexible struct name: " << structName);
-    if (structName == h->name)
-        BUG("Did not get name corresponding to flexible struct in header %1%", h->name);
-    if (structName.startsWith(EGRESS_FIELD_PREFIX))
-        BUG("Cannot repack egress header %1%", h->name);
-
+    BUG_CHECK(structName != h->name,
+              "No flexible struct of type %1% found associated with header %2%",
+              flexType, h->name);
     LOG1("Original flexible struct layout: " << flexType);
     LOG1("Size of original flexible struct: " << getFlexTypeBits(flexType));
     // Fields that will form the basis of the new repacked header.
@@ -1015,7 +1013,7 @@ IR::Type_Struct* RepackFlexHeaders::repackFlexibleStruct(
     return repackedType;
 }
 
-bool RepackFlexHeaders::isFlexibleHeader(const IR::Header* h) {
+bool RepackFlexHeaders::isFlexibleHeader(const IR::HeaderOrMetadata* h) {
     bool foundFlexibleStruct = false;
     for (auto f : h->type->fields) {
         if (f->type->is<IR::BFN::Type_StructFlexible>()) {
@@ -1027,7 +1025,7 @@ bool RepackFlexHeaders::isFlexibleHeader(const IR::Header* h) {
     return foundFlexibleStruct;
 }
 
-IR::Node* RepackFlexHeaders::preorder(IR::Header* h) {
+IR::Node* RepackFlexHeaders::preorder(IR::HeaderOrMetadata* h) {
     if (!isFlexibleHeader(h)) return h;
     LOG3("Candidate flexible header found: " << h->name);
     LOG3("Candidate header type: " << h->type);
@@ -1037,24 +1035,31 @@ IR::Node* RepackFlexHeaders::preorder(IR::Header* h) {
     // If it is an egress header, take its new type from the repacked ingress version.
     if (headerName.startsWith(EGRESS_FIELD_PREFIX)) {
         cstring ingressName = getIngressFieldName(headerName);
-        if (!repackedHeaders.count(ingressName))
-            BUG("Cannot find repacking corresponding to ingress header %1%", ingressName);
-        auto* egressHeaderType = new IR::Type_Header(h->type->name, h->type->annotations,
-                repackedHeaders.at(ingressName)->type->fields);
-        auto* egressRepackedHeader = new IR::Header(headerName, egressHeaderType);
-        repackedHeaders[headerName] = egressRepackedHeader;
-        LOG1("Repacked egress header: " << egressRepackedHeader);
-        LOG1("Repacked egress header type: " << egressHeaderType);
-        LOG1("Repacked egress header size: " << getHeaderBytes(egressRepackedHeader) << "B");
-        return egressRepackedHeader;
+        if (repackedHeaders.count(ingressName)) {
+            auto* egressHeaderType = new IR::Type_Header(h->type->name, h->type->annotations,
+                    repackedHeaders.at(ingressName)->type->fields);
+            auto* egressRepackedHeader = new IR::Header(headerName, egressHeaderType);
+            repackedHeaders[headerName] = egressRepackedHeader;
+            LOG1("Repacked egress header: " << egressRepackedHeader);
+            LOG1("Repacked egress header type: " << egressHeaderType);
+            LOG1("Repacked egress header size: " << getHeaderBytes(egressRepackedHeader) << "B");
+            return egressRepackedHeader;
+        }
     }
 
-    for (auto kv : headerToFlexibleStructsMap) {
-        LOG3("  " << kv.second.size() << " flexible structs in header " << h->name);
-        for (auto flex : kv.second) {
-            const auto* flexType = flex->type->to<IR::BFN::Type_StructFlexible>();
-            ingressFlexibleTypes[flexType] = repackFlexibleStruct(h, flex);
-        }
+    BUG_CHECK(headerToFlexibleStructsMap.count(h),
+              "The compiler has detected a header %1% with flexible structs, but "
+              "cannot find the associated flexible structs to repack.",
+              h->name);
+    auto& flexFields = headerToFlexibleStructsMap.at(h);
+    LOG3("  " << flexFields.size() << " flexible structs in header " << h->name);
+    if (LOGGING(3))
+        for (auto* f : flexFields)
+            LOG3("\tFlexible header type: " << f->name << "\n\t  " << f->type);
+    for (auto flex : flexFields) {
+        const auto* flexType = flex->type->to<IR::BFN::Type_StructFlexible>();
+        LOG3("\t" << flex->name);
+        ingressFlexibleTypes[flexType] = repackFlexibleStruct(h, flex);
     }
 
     IR::IndexedVector<IR::StructField> fields;
@@ -1095,6 +1100,7 @@ bool ProduceParserMappings::preorder(const IR::BFN::ParserState* p) {
         const auto* f = phv.field(destVal->field);
         if (!f) BUG("No field corresponding to destination %1% of extract %2%", destVal->field, e);
         cstring headerName = f->header();
+        LOG3("\t\tField " << f->name << ", header " << headerName << " extracted in " << p->name);
         if (!parserStateToHeadersMap.count(p->name)) {
             parserStateToHeadersMap[p->name].push_back(headerName);
             continue;
@@ -1113,8 +1119,9 @@ bool ProduceParserMappings::preorder(const IR::BFN::ParserState* p) {
     return true;
 }
 
-bool ProduceParserMappings::preorder(const IR::Header* h) {
+bool ProduceParserMappings::preorder(const IR::HeaderOrMetadata* h) {
     headerNameToRefMap[h->name] = h;
+    LOG4("\t  Adding header ref for header name " << h->name);
     // At this point, header is flattened, so safe to do this.
     for (auto f : h->type->fields) {
         cstring name = h->name + "." + f->name;
@@ -1125,7 +1132,7 @@ bool ProduceParserMappings::preorder(const IR::Header* h) {
     return false;
 }
 
-void ReplaceFlexFieldUses::addBridgedFields(const IR::Header* header) {
+void ReplaceFlexFieldUses::addBridgedFields(const IR::HeaderOrMetadata* header) {
     if (!header) return;
     for (auto f : header->type->fields) {
         cstring fieldName = pack.getFieldName(header->name, f);
@@ -1203,7 +1210,7 @@ const std::vector<IR::BFN::Extract*> ReplaceFlexFieldUses::getNewExtracts(
         cstring h,
         unsigned& packetOffset) const {
     std::vector<IR::BFN::Extract*> rv;
-    const IR::Header* hdr = info.getHeaderRefForName(h);
+    const IR::HeaderOrMetadata* hdr = info.getHeaderRefForName(h);
     BUG_CHECK(hdr, "No header object corresponding to name %1%", h);
     // At this point, the header type is flattened.
     for (auto f : hdr->type->fields) {
@@ -1322,7 +1329,7 @@ IR::Node* ReplaceFlexFieldUses::preorder(IR::BFN::EmitField* e) {
 
 const std::vector<IR::BFN::EmitField*>
 ReplaceFlexFieldUses::getNewEmits(
-        const IR::Header* h,
+        const IR::HeaderOrMetadata* h,
         const IR::BFN::FieldLVal* pov) const {
     std::vector<IR::BFN::EmitField*> rv;
     BUG_CHECK(pov, "No POV bit for header %1%", h->name);
@@ -1333,6 +1340,49 @@ ReplaceFlexFieldUses::getNewEmits(
         rv.push_back(newE);
     }
     return rv;
+}
+
+IR::Node* ReplaceFlexFieldUses::postorder(IR::BFN::Digest* d) {
+    LOG5("\t\tDigest: " << d);
+    IR::Vector<IR::BFN::DigestFieldList> newFieldLists;
+    for (auto* fieldList : d->fieldLists) {
+        IR::Vector<IR::BFN::FieldLVal> newSources;
+        for (auto* field : fieldList->sources) {
+            LOG5("\t\t  Field: " << field->field);
+            const auto* flexType = field->field->type->to<IR::BFN::Type_StructFlexible>();
+            if (!flexType) {
+                newSources.push_back(field);
+                continue;
+            }
+            LOG5("\t\t\tFound flexible type in field list.");
+            // Flatten the flexible type into its constituent fields.
+            const PHV::Field* f = phv.field(field->field);
+            const IR::HeaderOrMetadata* hdr = info.getHeaderRefForName(f->header());
+            BUG_CHECK(hdr, "No header object found for %1%", f->name);
+            LOG5("\t\t\tHeader " << hdr->name << " found for field " << f->name);
+            auto* repackedFlexType = pack.getRepackedType(flexType);
+            LOG5("\t\t\t  Found repacked type: " << repackedFlexType);
+            BUG_CHECK(repackedFlexType, "No repacking found for flexible struct %1%", f->name);
+            for (auto f : repackedFlexType->fields) {
+                // Ignore padding field.
+                if (f->getAnnotations()->getSingle("hidden") != nullptr) continue;
+                LOG5("\t\t\t\tGenerating member for field: " << (hdr->name + "." + f->name));
+                IR::Member* mem = gen_fieldref(hdr, f->name);
+                if (!mem) BUG("Could not produce member corresponding to %1% when rewriting digest",
+                        f->name);
+                IR::BFN::FieldLVal* newSource = new IR::BFN::FieldLVal(mem);
+                newSources.push_back(newSource);
+                LOG5("\t\t\t\tCreated new digest field list source: " << newSource);
+            }
+        }
+        IR::BFN::DigestFieldList* newFieldList = new IR::BFN::DigestFieldList(fieldList->srcInfo,
+                fieldList->idx, newSources, fieldList->controlPlaneName);
+        newFieldLists.push_back(newFieldList);
+    }
+    d->fieldLists.clear();
+    for (auto* fieldList : newFieldLists)
+        d->fieldLists.push_back(fieldList);
+    return d;
 }
 
 IR::Node* ReplaceFlexFieldUses::postorder(IR::BFN::Deparser* d) {
@@ -1348,7 +1398,7 @@ IR::Node* ReplaceFlexFieldUses::postorder(IR::BFN::Deparser* d) {
         BUG_CHECK(f, "Field object corresponding to %1% not found", emitField->source->field);
         if (emitsDoneReplacing.count(f->header())) continue;
         if (emitsToBeReplaced.count(f->header())) {
-            const IR::Header* h = info.getHeaderRefForName(f->header());
+            const IR::HeaderOrMetadata* h = info.getHeaderRefForName(f->header());
             BUG_CHECK(h, "No header object corresponding to name %1%", f->header());
             auto newEmits = getNewEmits(h, emitField->povBit);
             for (auto* newE : newEmits)
@@ -1380,13 +1430,17 @@ void ReplaceFlexFieldUses::end_apply() {
     for (auto kv : extracted) {
         LOG6("\t  " << kv.first);
         if (paddingFieldNames.count(kv.first)) continue;
-        cstring key = pack.getEgressFieldName(kv.first);
+        cstring key = kv.first;
+        if (key.startsWith(RepackFlexHeaders::INGRESS_FIELD_PREFIX))
+            key = pack.getEgressFieldName(kv.first);
         if (egressBridgedMap.count(key))
             key = egressBridgedMap.at(key);
         LOG6("\t\tKey: " << key);
         for (auto s : kv.second) {
             if (paddingFieldNames.count(s)) continue;
-            cstring value = pack.getEgressFieldName(s);
+            cstring value = s;
+            if (s.startsWith(RepackFlexHeaders::INGRESS_FIELD_PREFIX))
+                value = pack.getEgressFieldName(s);
             LOG6("\t\t  Original value: " << value);
             if (egressBridgedMap.count(value))
                 value = egressBridgedMap.at(value);
