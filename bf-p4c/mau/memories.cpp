@@ -168,6 +168,7 @@ int Memories::mems_needed(int entries, int depth, int per_mem_row, bool is_twopo
 
 void Memories::clear_uses() {
     sram_use.clear();
+    stash_use.clear();
     memset(sram_inuse, 0, sizeof(sram_inuse));
     tcam_use.clear();
     gateway_use.clear();

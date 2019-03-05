@@ -73,6 +73,11 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
 void ExactMatchTable::pass1() {
     LOG1("### Exact match table " << name() << " pass1");
     SRamMatchTable::pass1();
+    // Check if stashes are allocated (only for exact match tables). Note
+    // stashes are disabled on JBAY
+    if (stash_rows.size() == 0 && options.target == TOFINO)
+        error(lineno, "No stashes allocated for exact match table %s in stage %d", 
+            name(), stage->stageno);
 }
 
 void ExactMatchTable::setup_ways() {
