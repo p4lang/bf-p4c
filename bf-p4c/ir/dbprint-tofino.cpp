@@ -370,12 +370,16 @@ void IR::BFN::LoweredDeparser::dbprint(std::ostream &out) const {
 
 void IR::BFN::Pipe::dbprint(std::ostream &out) const {
     if (ghost_thread) out << "ghost:" << indent << ghost_thread << unindent << endl;
-    out << "ingress:" << indent << thread[0].parsers << endl
-                      << indent << thread[0].mau << unindent << endl
-                      << thread[0].deparser << unindent << endl
-        << "egress:" << indent << thread[1].parsers << endl
-                     << indent << thread[1].mau << unindent << endl
-                     << thread[1].deparser << unindent;
+    out << "ingress:" << indent << endl;
+    for (auto p : thread[0].parsers)
+        out << p << endl;
+    out << thread[0].mau << endl
+        << thread[0].deparser << unindent << endl;
+    out << "egress:" << indent << endl;
+    for (auto p : thread[1].parsers)
+        out << p << endl;
+    out << thread[1].mau << endl
+        << thread[1].deparser << unindent;
 }
 
 // reinterpret_cast is still printed as cast, due to lack of P4 syntax.
