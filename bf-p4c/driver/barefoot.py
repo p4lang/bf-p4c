@@ -125,6 +125,9 @@ class BarefootBackend(BackendDriver):
         self._argGroup.add_argument("--parser-bandwidth-opt",
                                     help="Perform parser bandwidth optimization",
                                     action="store_true", default=False)
+        self._argGroup.add_argument("--egress-intrinsic-metadata-opt",
+                                    help="Optimize unused egress intrinsic metadata",
+                                    action="store_true", default=False)
 
         self._argGroup.add_argument("--ir-to-json", default=None,
                                     help="Dump the IR after midend to JSON in the specified file.")
@@ -213,6 +216,9 @@ class BarefootBackend(BackendDriver):
 
         if opts.parser_bandwidth_opt:
             self.add_command_option('compiler', '--parser-bandwidth-opt')
+
+        if opts.egress_intrinsic_metadata_opt:
+            self.add_command_option('compiler', '--egress-intrinsic-metadata-opt')
 
         self.skip_compilation = []
         if opts.skip_compilation:

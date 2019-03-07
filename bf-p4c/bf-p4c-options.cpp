@@ -144,6 +144,9 @@ BFN_Options::BFN_Options() {
     registerOption("--parser-bandwidth-opt", nullptr,
         [this](const char *) { parser_bandwidth_opt = true; return true; },
         "Optimize for parser bandwidth");
+    registerOption("--egress-intrinsic-metadata-opt", nullptr,
+        [this](const char *) { egress_intr_md_opt = true; return true; },
+        "Optimize unused egress intrinsic metadata");
     registerOption("--p4runtime-force-std-externs", nullptr,
         [this](const char *) { p4RuntimeForceStdExterns = true; return true; },
         "Generate P4Info file using standard extern messages instead of Tofino-specific ones, for "

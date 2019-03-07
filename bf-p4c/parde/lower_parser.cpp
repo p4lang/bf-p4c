@@ -527,11 +527,10 @@ lowerUnsplittableField(const PhvInfo& phv,
 /// Note that the new IR is just constructed here; ReplaceParserIR is what
 /// actually replaces the high-level IR with the lowered version.
 struct ComputeLoweredParserIR : public ParserInspector {
-    ComputeLoweredParserIR(const FieldDefUse& defuse,
-                           const PhvInfo& phv,
+    ComputeLoweredParserIR(const PhvInfo& phv,
                            ClotInfo& clotInfo,
                            const AllocateParserChecksumUnits& checksumAlloc) :
-        defuse(defuse), phv(phv), clotInfo(clotInfo), checksumAlloc(checksumAlloc) {
+        phv(phv), clotInfo(clotInfo), checksumAlloc(checksumAlloc) {
         // Initialize the map from high-level parser states to low-level parser
         // states so that null, which represents the end of the parser program
         // in the high-level IR, is mapped to null, which conveniently enough
@@ -546,57 +545,47 @@ struct ComputeLoweredParserIR : public ParserInspector {
     unsigned egressMetaSize = 0;  // in byte
 
  private:
-    std::pair<unsigned, unsigned>
-    getEgressOptionalMetadataConfig(const PhvInfo& phv, const FieldDefUse& defuse) {
-        static std::vector<std::pair<std::string, unsigned>> eg_intr_md = {
-            {"enq_qdepth", 24},
-            {"enq_congest_stat", 8},
-            {"enq_tstamp", 32},
-            {"deq_qdepth", 24},
-            {"deq_congest_stat", 8},
-            {"app_pool_congest_stat", 8},
-            {"deq_timedelta", 32},
-            {"egress_rid", 16},
-            {"egress_rid_first", 8},
-            {"egress_qid", 8},
-            {"egress_cos", 8 },
-            {"deflection_flag", 8},
-            {"pkt_length", 16}
-        };
+    bool preorder(const IR::Type_Header* type) override {
+        if (type->name == "egress_intrinsic_metadata_t") {
+            static std::vector<std::pair<std::string, unsigned>> eg_intr_md = {
+                {"enq_qdepth", 3},
+                {"enq_congest_stat", 1},
+                {"enq_tstamp", 4},
+                {"deq_qdepth", 3},
+                {"deq_congest_stat", 1},
+                {"app_pool_congest_stat", 1},
+                {"deq_timedelta", 4},
+                {"egress_rid", 2},
+                {"egress_rid_first", 1},
+                {"egress_qid", 1},
+                {"egress_cos", 1 },
+                {"deflection_flag", 1},
+                {"pkt_length", 2}
+            };
 
-        unsigned meta_opt = 0, meta_size = 0;
-
-        for (auto it = eg_intr_md.begin(); it != eg_intr_md.end(); it++) {
-            std::string name = "egress::eg_intr_md." + it->first;
-            auto f = phv.field(name.c_str());
-
-            if (f && !defuse.getAllUses(f->id).empty()) {
-                meta_opt |= 1 << (it - eg_intr_md.begin());
-                meta_size += it->second;
-                LOG4(name << " has use");
+            for (auto it = eg_intr_md.begin(); it != eg_intr_md.end(); it++) {
+                for (auto f : type->fields) {
+                    if (f->name == it->first) {
+                        egressMetaOpt |= 1 << (it - eg_intr_md.begin());
+                        egressMetaSize += it->second;
+                        break;
+                    }
+                }
             }
+
+            // Make sure the 2-byte egress port is included in this offset adjustment.
+            egressMetaSize += 2;
+
+            // JBay requires the egress intrinsic metadata to be padded to 4-byte aligned
+            if (Device::currentDevice() == Device::JBAY) {
+                egressMetaSize = ((egressMetaSize + 3) / 4) * 4;
+            }
+
+            LOG4("meta_opt: " << egressMetaOpt);
+            LOG4("meta_size: " << egressMetaSize);
         }
 
-        // HACK BEGIN
-        // In switch_16, the pkt_length is copied from intrinsic header into user header
-        // and only user field reference (below) is used in the program. Without global copyprop
-        // we simply don't know they are the same field. Hence this hedious hack, yuck!
-        auto ff = phv.field("egress::eg_md.pkt_length");
-        if (ff && !defuse.getAllUses(ff->id).empty()) {
-            meta_opt |= 1 << 12;
-            meta_size += 16;
-        }
-        // HACK END
-
-        LOG4("meta_opt: " << meta_opt);
-        LOG4("meta_size: " << meta_size / 8);
-
-        return {meta_opt, meta_size / 8};
-    }
-
-    profile_t init_apply(const IR::Node* root) override {
-        std::tie(egressMetaOpt, egressMetaSize) = getEgressOptionalMetadataConfig(phv, defuse);
-        return ParserInspector::init_apply(root);
+        return true;
     }
 
     /// @return a version of the provided state name which is safe to use in the
@@ -804,7 +793,6 @@ struct ComputeLoweredParserIR : public ParserInspector {
         loweredStates[state] = loweredState;
     }
 
-    const FieldDefUse& defuse;
     const PhvInfo& phv;
     ClotInfo& clotInfo;
     const AllocateParserChecksumUnits& checksumAlloc;
@@ -832,9 +820,6 @@ struct ReplaceParserIR : public Transform {
         } else {
             loweredParser->metaOpt = computed.egressMetaOpt;
             loweredParser->hdrLenAdj = computed.egressMetaSize;
-
-            // Make sure the 2-byte egress port is included in this offset adjustment.
-            loweredParser->hdrLenAdj += 2;
         }
 
         if (parser->gress == INGRESS && computed.igParserError)
@@ -898,10 +883,10 @@ class ResolveParserConstants : public ParserTransform {
 /// Generate a lowered version of the parser IR in this program and swap it in
 /// for the existing representation.
 struct LowerParserIR : public PassManager {
-    LowerParserIR(const FieldDefUse& defuse, const PhvInfo& phv, ClotInfo& clotInfo) {
+    LowerParserIR(const PhvInfo& phv, ClotInfo& clotInfo) {
         auto* checksumAllocation = new AllocateParserChecksumUnits;
-        auto* computeLoweredParserIR = new ComputeLoweredParserIR(defuse, phv, clotInfo,
-                                                                  *checksumAllocation);
+        auto* computeLoweredParserIR = new ComputeLoweredParserIR(phv, clotInfo,
+                                            *checksumAllocation);
         addPasses({
             LOGGING(3) ? new DumpParser("before_parser_lowering") : nullptr,
             checksumAllocation,
@@ -1656,7 +1641,7 @@ LowerParser::LowerParser(const PhvInfo& phv, ClotInfo& clot, const FieldDefUse &
     auto* pragma_no_init = new PragmaNoInit(phv);
     addPasses({
         pragma_no_init,
-        new LowerParserIR(defuse, phv, clot),
+        new LowerParserIR(phv, clot),
         new LowerDeparserIR(phv, clot),
 #if BAREFOOT_INTERNAL
         LOGGING(3) ? new DumpParser("before_split_big_states") : nullptr,

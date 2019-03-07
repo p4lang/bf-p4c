@@ -31,6 +31,7 @@ class BFN_Options : public CompilerOptions {
     bool adjust_egress_packet_length = true;
     bool parser_timing_reports = false;
     bool parser_bandwidth_opt = false;
+    bool egress_intr_md_opt = false;
     std::set<cstring> disabled_pragmas;
 #if BAREFOOT_INTERNAL
     std::set<cstring> skipped_pipes;

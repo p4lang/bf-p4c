@@ -339,7 +339,8 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::SynthesizeActions(&refMap, &typeMap,
                 new ActionSynthesisPolicy(skip_controls), typeChecking),
         new P4::MoveActionsToTables(&refMap, &typeMap, typeChecking),
-        new RewriteEgressIntrinsicMetadataHeader(&refMap, &typeMap),
+        (options.egress_intr_md_opt) ?
+            new RewriteEgressIntrinsicMetadataHeader(&refMap, &typeMap) : nullptr,
         // must be done after copy structure, then we do not need to adjust
         // struct assignment. could be done in tna.cpp and t2na.cpp
         (options.arch == "tna" || options.arch == "t2na") ?
