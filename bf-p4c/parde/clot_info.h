@@ -26,6 +26,8 @@ class ClotInfo {
                 std::set<const IR::BFN::ParserState*>> field_to_parser_states_;
 
     std::set<const PHV::Field*> checksum_dests_;
+    std::map<const PHV::Field*,
+              std::vector<const IR::BFN::EmitChecksum*>> field_to_checksum_updates_;
 
     std::vector<Clot*> clots_;
     std::map<const Clot*, cstring> clot_to_parser_state_;
@@ -81,8 +83,26 @@ class ClotInfo {
         parser_state_to_clots_[state->name].push_back(cl);
     }
 
+    // A field may participate in multiple checksum updates, e.g. IPv4 fields
+    // may be included in both IPv4 and TCP checksum updates. In such cases,
+    // we require the IPv4 fields in both updates to be identical sets in order
+    // to be allocated to a CLOT (each CLOT can only compute one checksum)
+    // see P4C-1509
+    bool is_used_in_multiple_checksum_update_sets(const PHV::Field* field) const {
+         if (!field_to_checksum_updates_.count(field))
+             return false;
+
+          return field_to_checksum_updates_.at(field).size() > 1;
+
+          // TODO it's probably still ok to allocate field to CLOT
+         // if the checksum updates it involves in are such that
+         // one's source list is a subset of the update?
+    }
+
     bool is_clot_candidate(const PHV::Field* field) const {
-        return !uses.is_used_mau(field) && uses.is_used_parde(field);
+        return !uses.is_used_mau(field) &&
+                uses.is_used_parde(field) &&
+               !is_used_in_multiple_checksum_update_sets(field);
     }
 
     /// @return the CLOT if field is not used in MAU pipe
@@ -107,6 +127,7 @@ class ClotInfo {
         parser_state_to_fields_.clear();
         field_to_parser_states_.clear();
         checksum_dests_.clear();
+        field_to_checksum_updates_.clear();
         clots_.clear();
         clot_to_parser_state_.clear();
         parser_state_to_clots_.clear();
@@ -152,6 +173,12 @@ class CollectClotInfo : public Inspector {
     bool preorder(const IR::BFN::EmitChecksum* emit) override {
         auto f = phv.field(emit->dest->field);
         clotInfo.checksum_dests_.insert(f);
+
+        for (auto s : emit->sources) {
+            auto src = phv.field(s->field);
+            clotInfo.field_to_checksum_updates_[src].push_back(emit);
+        }
+
         return false;
     }
 };
