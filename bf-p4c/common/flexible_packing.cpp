@@ -1302,12 +1302,7 @@ IR::Node* ReplaceFlexFieldUses::postorder(IR::BFN::ParserState* p) {
     unsigned packetOffsetBytes = packetOffset / 8;
     IR::Vector<IR::BFN::Transition> transitions;
     for (auto t : p->transitions) {
-        auto* value = t->value;
-        BUG_CHECK(value, "No value attached to transition %1%", t);
-        auto* constValue = value->to<IR::BFN::ParserConstMatchValue>();
-        BUG_CHECK(constValue, "No constant value attached to transition %1%", t);
-        auto* newTransition = new IR::BFN::Transition(constValue->value, packetOffsetBytes,
-                t->next);
+        auto* newTransition = new IR::BFN::Transition(t->value, packetOffsetBytes, t->next);
         newTransition->saves = t->saves;
         transitions.push_back(newTransition);
     }
