@@ -161,9 +161,6 @@ class CollectClotInfo : public Inspector {
             if (auto field_lval = extract->dest->to<IR::BFN::FieldLVal>()) {
                 if (auto f = phv.field(field_lval->field))
                     clotInfo.add_field(f, rval, state);
-            } else if (auto checksum_lval = extract->dest->to<IR::BFN::ChecksumLVal>()) {
-                if (auto f = phv.field(checksum_lval->field))
-                    clotInfo.add_field(f, rval, state);
             }
         }
 

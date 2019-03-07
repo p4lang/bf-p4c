@@ -81,7 +81,7 @@ class CharacterizeParser : public Inspector {
     get_extractor_usage(const IR::BFN::LoweredParserMatch* match) {
         auto rv = new ExtractorUsage;
 
-        for (auto stmt : match->statements) {
+        for (auto stmt : match->extracts) {
             if (auto ep = stmt->to<IR::BFN::LoweredExtractPhv>()) {
                 rv->add(ep->dest->container);
             }

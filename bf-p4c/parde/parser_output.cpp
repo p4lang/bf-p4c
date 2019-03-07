@@ -144,7 +144,7 @@ struct ParserAsmSerializer : public ParserInspector {
                 outputChecksum(csum);
         }
 
-        for (auto* stmt : match->statements) {
+        for (auto* stmt : match->extracts) {
             if (auto* extract = stmt->to<IR::BFN::LoweredExtractPhv>())
                 outputExtractPhv(extract);
             else if (auto* extract = stmt->to<IR::BFN::LoweredExtractClot>())
@@ -234,12 +234,15 @@ struct ParserAsmSerializer : public ParserInspector {
 
         out << indent << "mask: ";
         out << "[ ";
-        for (unsigned i = 0; i < csum->masked_ranges.size(); i++) {
-            auto r = csum->masked_ranges[i];
+
+        int i = 0;
+        for (auto r : csum->masked_ranges) {
             out << Range(r.lo, r.hi);
             if (i != csum->masked_ranges.size() - 1)
                 out << ", ";
+            i++;
         }
+
         out << " ]" << std::endl;
 
         out << indent << "swap: " << csum->swap << std::endl;

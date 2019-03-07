@@ -174,7 +174,7 @@ void IR::BFN::LoweredParserMatch::dbprint(std::ostream &out) const {
     out << "(shift=" << shift << ')';
 
     out << indent;
-    for (auto *st : statements)
+    for (auto *st : extracts)
         out << endl << *st;
     for (auto *save : saves)
         out << endl << *save;

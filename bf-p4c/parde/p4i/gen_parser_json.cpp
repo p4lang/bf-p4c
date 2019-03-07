@@ -7,7 +7,7 @@ std::vector<P4iParserExtract>
 GenerateParserP4iJson::generateExtracts(const IR::BFN::LoweredParserMatch* match) {
     std::vector<P4iParserExtract> rst;
     std::map<size_t, int> extractor_ids;
-    for (const auto* prim : match->statements) {
+    for (const auto* prim : match->extracts) {
         // TODO(yumin): currently clot is not part of visualization.
         if (auto* extract_ir = prim->to<IR::BFN::LoweredExtractPhv>()) {
             P4iParserExtract extract;

@@ -108,10 +108,10 @@ class DumpParser : public Visitor {
         out << "match " << match->value << ": \\l\\l";
 
         if (detail) {
-            for (auto stmt : match->statements)
+            for (auto stmt : match->extracts)
                 out << "    " << stmt << "\\l";
 
-            if (match->statements.size())
+            if (match->extracts.size())
                 out << "\\l";
 
             for (auto save : match->saves)

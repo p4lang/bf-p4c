@@ -135,7 +135,7 @@ class LoweredParserChecksum : LoweredParserPrimitive {
     }
 
     unsigned unit_id;
-    std::vector<nw_byterange> masked_ranges;
+    std::set<nw_byterange> masked_ranges;
     unsigned swap;
     bool start;
     bool end;
@@ -231,7 +231,7 @@ class LoweredParserMatch {
     unsigned shift;
 
     /// Extractions to perform
-    inline Vector<LoweredParserPrimitive> statements;
+    inline Vector<LoweredParserPrimitive> extracts;
 
     /// Save match word to registers
     inline Vector<LoweredSave> saves;

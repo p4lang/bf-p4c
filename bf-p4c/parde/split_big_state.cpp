@@ -107,7 +107,7 @@ class ExtractorAllocator {
     ExtractorAllocator(cstring stateName, const IR::BFN::LoweredParserMatch* m)
         : stateName(stateName), shift_required(m->shift),
           match(m), shifted(0), current_input_buffer() {
-        for (auto* stmt : match->statements)
+        for (auto* stmt : match->extracts)
             if (auto* e = stmt->to<IR::BFN::LoweredExtractPhv>())
                 extractPhvs.push_back(e);
             else if (auto* e = stmt->to<IR::BFN::LoweredExtractClot>())
@@ -436,22 +436,25 @@ class ExtractorAllocator {
     splitChecksumAt(const IR::BFN::LoweredParserChecksum* cks, int shifted) {
         // shifted - 1 is the last byte allocated to the split state.
         int lastByte = shifted - 1;
-        std::vector<nw_byterange> prev;
-        std::vector<nw_byterange> post;
+        std::set<nw_byterange> prev;
+        std::set<nw_byterange> post;
         for (const auto& range : cks->masked_ranges) {
             if (range.hiByte() <= lastByte) {
-                prev.push_back(range);
+                prev.insert(range);
             } else if (range.loByte() <= lastByte && range.hiByte() > lastByte) {
-                prev.emplace_back(FromTo(range.loByte(), lastByte));
-                post.emplace_back(FromTo(lastByte + 1, range.hiByte()));
+                prev.insert(FromTo(range.loByte(), lastByte));
+                post.insert(FromTo(lastByte + 1, range.hiByte()));
             } else {
-                post.emplace_back(range);
+                post.insert(range);
             }
         }
 
         // left shift all post range by shifted bytes.
-        for (auto& r : post) {
-            r = nw_byterange(FromTo(r.loByte() - shifted, r.hiByte() - shifted)); }
+        std::set<nw_byterange> temp;
+        for (auto& r : post)
+            temp.insert(nw_byterange(FromTo(r.loByte() - shifted, r.hiByte() - shifted)));
+
+        post = temp;
 
         auto* prev_cks = cks->clone();
         auto* post_cks = cks->clone();
@@ -710,7 +713,7 @@ SplitBigStates::addTailStatePrimitives(IR::BFN::LoweredParserState* tailState, i
 
         // create new match
         auto* truncatedMatch = match->clone();
-        truncatedMatch->statements.clear();
+        truncatedMatch->extracts.clear();
         truncatedMatch->saves.clear();
         truncatedMatch->shift = match->shift - shifted;
 
@@ -733,10 +736,10 @@ SplitBigStates::addTailStatePrimitives(IR::BFN::LoweredParserState* tailState, i
         for (const auto& primitives : tailStatePrimitives) {
             for (auto* prim : primitives.extracts) {
                 if (auto* extractPhv = prim->to<IR::BFN::LoweredExtractPhv>()) {
-                    truncatedMatch->statements.push_back(
+                    truncatedMatch->extracts.push_back(
                             leftShiftExtract(extractPhv, -accumulatedShift));
                 } else if (auto* extractClot = prim->to<IR::BFN::LoweredExtractClot>()) {
-                    truncatedMatch->statements.push_back(
+                    truncatedMatch->extracts.push_back(
                             leftShiftExtract(extractClot, -accumulatedShift));
                 } else {
                     BUG("unknown primitive when create tail state: %1%", prim);
@@ -772,10 +775,10 @@ SplitBigStates::addCommonStatePrimitives(IR::BFN::LoweredParserMatch* common,
                 // Add primitives to common
                 for (auto* prim : rst.extracts) {
                     if (auto* extractPhv = prim->to<IR::BFN::LoweredExtractPhv>()) {
-                        common->statements.push_back(
+                        common->extracts.push_back(
                                 leftShiftExtract(extractPhv, -shifted));
                     } else if (auto* extractClot = prim->to<IR::BFN::LoweredExtractClot>()) {
-                        common->statements.push_back(
+                        common->extracts.push_back(
                                 leftShiftExtract(extractClot, -shifted));
                     } else {
                         BUG("unknown primitive when create common state: %1%", prim);
@@ -798,10 +801,10 @@ SplitBigStates::addCommonStatePrimitives(IR::BFN::LoweredParserMatch* common,
         // Add primitives to common
         for (auto* prim : rst.extracts) {
             if (auto* extractPhv = prim->to<IR::BFN::LoweredExtractPhv>()) {
-                common->statements.push_back(
+                common->extracts.push_back(
                         leftShiftExtract(extractPhv, -shifted));
             } else if (auto* extractClot = prim->to<IR::BFN::LoweredExtractClot>()) {
-                common->statements.push_back(
+                common->extracts.push_back(
                         leftShiftExtract(extractClot, -shifted));
             } else {
                 BUG("unknown primitive when create common state: %1%", prim);
@@ -909,7 +912,7 @@ bool SplitBigStates::preorder(IR::BFN::LoweredParserMatch* match) {
 
     // Allocate whatever we can fit into this match.
     auto primitives_a = allocator.allocateOneState();
-    match->statements = primitives_a.extracts;
+    match->extracts   = primitives_a.extracts;
     match->checksums  = primitives_a.checksums;
     match->saves      = primitives_a.saves;
     match->shift      = primitives_a.shift;
@@ -933,7 +936,7 @@ bool SplitBigStates::preorder(IR::BFN::LoweredParserMatch* match) {
         auto* newMatch =
           new IR::BFN::LoweredParserMatch(match_t(), 0, finalState);
 
-        newMatch->statements = primitives.extracts;
+        newMatch->extracts   = primitives.extracts;
         newMatch->checksums  = primitives.checksums;
         newMatch->saves      = primitives.saves;
         newMatch->shift      = primitives.shift;
