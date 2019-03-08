@@ -1305,7 +1305,6 @@ p4c_add_xfail_reason("tofino"
 # Could not place table capture_timestamp_1_0: The table capture_timestamp_1_1 could not fit within a single input crossbar in an MAU stage
 p4c_add_xfail_reason("tofino"
   "Could not place table"
-  ../glass/testsuite/p4_tests/mau/test_config_336_ram_array_priority.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-572/hct.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-268/netflow_3.p4
   )

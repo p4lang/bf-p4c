@@ -594,6 +594,7 @@ class AbstractField {
     template<typename T> const T &as() const { return dynamic_cast<const T&>(this); }
     template<typename T> const T *to() const { return dynamic_cast<const T*>(this); }
     template<typename T> bool is() const { return to<T>() != nullptr; }
+    static AbstractField *create(const PhvInfo &, const IR::Expression *);
 };
 
 /**

@@ -639,6 +639,11 @@ const IR::Annotations *AdjustStatefulInstructions::preorder(IR::Annotations *ann
     return annot;
 }
 
+const IR::MAU::IXBarExpression *AdjustStatefulInstructions::preorder(IR::MAU::IXBarExpression *e) {
+    prune();
+    return e;
+}
+
 /** Guarantees that all bits of a particular field are aligned correctly given a size of a
  *  field and beginning position on the input xbar
  */
@@ -710,8 +715,7 @@ bool AdjustStatefulInstructions::verify_on_search_bus(const IR::MAU::StatefulAlu
 
 
     valid_start_positions.insert(initial_offset);
-    if (salu->dual)
-        valid_start_positions.insert(initial_offset + (phv_width / 8));
+    valid_start_positions.insert(initial_offset + (phv_width / 8));
 
     if (valid_start_positions.count(salu_bytes.min().index()) == 0) {
         ::error("The input %s to stateful alu %s is not allocated in a valid region on the input "
@@ -730,29 +734,16 @@ bool AdjustStatefulInstructions::verify_on_search_bus(const IR::MAU::StatefulAlu
 }
 
 bool AdjustStatefulInstructions::verify_on_hash_bus(const IR::MAU::StatefulAlu *salu,
-        const IXBar::Use::MeterAluHash &mah, const PHV::Field *field, le_bitrange bits,
+        const IXBar::Use::MeterAluHash &mah, const IR::Expression *expr,
         bool &is_hi) {
-    if (mah.identity_positions.count(field) == 0) {
-        ::error("The input %s to the stateful alu %s cannot be found on the hash input",
-                 field->name, salu->name);
-        return false;
-    }
+    for (auto &exp : mah.computed_expressions) {
+        if (exp.second->equiv(*expr)) {
+            is_hi = exp.first != 0;
+            return true; } }
 
-    auto &pos_vec = mah.identity_positions.at(field);
-    bool range_found = false;
-    for (auto &pos : pos_vec) {
-        if (pos.field_range != bits)
-            continue;
-        range_found = true;
-        is_hi = pos.hash_start != 0;
-    }
-
-    if (!range_found) {
-        ::error("The range for the input %s to the stateful alu %s is not found on the hash "
-                "input", field->name, salu->name);
-        return false;
-    }
-    return true;
+    BUG("The input %s to the stateful alu %s cannot be found on the hash input",
+        expr, salu->name);
+    return false;
 }
 
 /** The entire point of this pass is to convert any field name in a Stateful ALU instruction
@@ -761,6 +752,7 @@ bool AdjustStatefulInstructions::verify_on_hash_bus(const IR::MAU::StatefulAlu *
  *  phv_lo or phv_hi anyway.
  */
 const IR::Expression *AdjustStatefulInstructions::preorder(IR::Expression *expr) {
+    visitAgain();
     if (!findContext<IR::MAU::SaluAction>()) {
         return expr;
     }
@@ -781,7 +773,7 @@ const IR::Expression *AdjustStatefulInstructions::preorder(IR::Expression *expr)
             return expr;
         }
     } else {
-        if (!verify_on_hash_bus(salu, salu_ixbar.meter_alu_hash, field, bits, is_hi)) {
+        if (!verify_on_hash_bus(salu, salu_ixbar.meter_alu_hash, expr, is_hi)) {
             prune();
             return expr;
         }

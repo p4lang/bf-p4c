@@ -286,15 +286,6 @@ struct IXBar {
         unsigned        hash_table_inputs[HASH_GROUPS] = { 0 };
         /* hash seed for different hash groups */
         bitvec          hash_seed[HASH_GROUPS];
-        /* values fed through the hash tables onto the hash bus via an identity matrix */
-        /* TODO -- extend to more complex operations that just identity? */
-        struct matrix_position {
-            int hash_start = -1;
-            const PHV::Field    *field;
-            le_bitrange field_range = { -1, -1 };
-            matrix_position(int hs, const PHV::Field *f, le_bitrange fr)
-            : hash_start(hs), field(f), field_range(fr) { }
-        };
 
         struct Bits {
             cstring     field;
@@ -321,18 +312,14 @@ struct IXBar {
             int group = -1;
             bitvec bit_mask;
             IR::MAU::HashFunction algorithm;
-            ordered_map<const PHV::Field *, safe_vector<matrix_position>> identity_positions;
-            /* The Expressions that are being computed in this GF matrix, indexed by the offset
-             * bit in the matrix output.  These expressions are children of IXBarExpression nodes
-             * FIXME -- this makes identity_positions redundant, but is more general as it can
-             * record non-identity computations. */
             std::map<int, const IR::Expression *> computed_expressions;
 
             void clear() {
                 allocated = false;
                 group = -1;
                 bit_mask.clear();
-                identity_positions.clear();
+                // identity_positions.clear();
+                computed_expressions.clear();
             }
         };
         MeterAluHash meter_alu_hash;
@@ -381,7 +368,7 @@ struct IXBar {
         ProxyHashKey proxy_hash_key_use;
 
         // The order in the P4 program that the fields appear in the list
-        safe_vector<PHV::AbstractField*> field_list_order;
+        safe_vector<const IR::Expression *> field_list_order;
         HashDistHash hash_dist_hash;
 
         void clear() {
@@ -436,7 +423,7 @@ struct IXBar {
         int total_input_bits() const {
             int rv = 0;
             for (auto fl : field_list_order) {
-                rv += fl->size();
+                rv += fl->type->width_bits();
             }
             return rv;
         }
@@ -573,18 +560,15 @@ struct IXBar {
     };
 
     // Used to determine what phv fields need to be allocated on the input xbar for the
-    // stateful ALU to work
+    // stateful ALU to work.  Private internal to allocStateful
     class FindSaluSources : public MauInspector {
         IXBar                      &self;
         const PhvInfo              &phv;
         ContByteConversion  &map_alloc;
-        safe_vector<PHV::AbstractField*> &field_list_order;
+        safe_vector<const IR::Expression *> &field_list_order;
         // Holds which bitranges of fields have been requested, and will not allocate
         // if a bitrange has been requested multiple times
         std::map<cstring, bitvec>  fields_needed;
-        ordered_set<std::pair<const PHV::Field *, le_bitrange>> &phv_sources;
-        std::vector<const IR::MAU::IXBarExpression *>   &hash_sources;
-        bool                       &dleft;
         const IR::MAU::Table       *tbl;
 
         profile_t init_apply(const IR::Node *root) override;
@@ -597,14 +581,17 @@ struct IXBar {
         bool preorder(const IR::Annotation *) override { return false; }
         bool preorder(const IR::Declaration_Instance *) override { return false; }
 
+        static void collapse_contained(std::map<le_bitrange, const IR::Expression *> &m);
+
      public:
         FindSaluSources(IXBar &self, const PhvInfo &phv, ContByteConversion &ma,
-                    safe_vector<PHV::AbstractField*> &flo,
-                    ordered_set<std::pair<const PHV::Field *, le_bitrange>> &ps,
-                    std::vector<const IR::MAU::IXBarExpression *> &hs,
-                    bool &d, const IR::MAU::Table *t)
-        : self(self), phv(phv), map_alloc(ma), field_list_order(flo), phv_sources(ps),
-          hash_sources(hs), dleft(d), tbl(t) {}
+            safe_vector<const IR::Expression *> &flo, const IR::MAU::Table *t)
+        : self(self), phv(phv), map_alloc(ma), field_list_order(flo), tbl(t) {}
+
+        ordered_map<const PHV::Field *, std::map<le_bitrange, const IR::Expression *>>
+                                                        phv_sources;
+        std::vector<const IR::MAU::IXBarExpression *>   hash_sources;
+        bool                                            dleft = false;
     };
 
     class XBarHashDist : public MauInspector {
@@ -786,11 +773,9 @@ struct IXBar {
     bool can_allocate_on_search_bus(Use &alloc, const PHV::Field *field, le_bitrange range,
         int ixbar_position);
     bool setup_stateful_search_bus(const IR::MAU::StatefulAlu *salu, Use &alloc,
-        ordered_set<std::pair<const PHV::Field *, le_bitrange>> &phv_sources,
-        unsigned &byte_mask);
+                                   const FindSaluSources &sources, unsigned &byte_mask);
     bool setup_stateful_hash_bus(const PhvInfo &, const IR::MAU::StatefulAlu *salu, Use &alloc,
-        bool dleft, ordered_set<std::pair<const PHV::Field *, le_bitrange>> &phv_sources,
-        std::vector<const IR::MAU::IXBarExpression *> &hash_sources);
+                                 const FindSaluSources &sources);
     bool allocHashDistAddress(int bits_required, const unsigned &hash_table_input,
         HashDistAllocParams &hdap, cstring name);
     bool allocHashDistImmediate(const IR::MAU::HashDist *hd, const ActionFormat::Use *af,
@@ -799,10 +784,10 @@ struct IXBar {
         cstring name);
     bool allocHashDistSelMod(int bits_required, const unsigned &hash_table_input,
         HashDistAllocParams &hdap, int p4_hash_bits, cstring name);
-    bitvec determine_final_xor(const IR::MAU::HashFunction *hf,
+    bitvec determine_final_xor(const IR::MAU::HashFunction *hf, const PhvInfo &phv,
         std::map<int, le_bitrange> &bit_starts,
-        safe_vector<PHV::AbstractField*> field_list, int total_input_bits);
-    void determine_proxy_hash_alg(const IR::MAU::Table *tbl, Use &use, int group);
+        safe_vector<const IR::Expression *> field_list, int total_input_bits);
+    void determine_proxy_hash_alg(const PhvInfo &, const IR::MAU::Table *tbl, Use &use, int group);
 };
 
 inline std::ostream &operator<<(std::ostream &out, const IXBar::Loc &l) {

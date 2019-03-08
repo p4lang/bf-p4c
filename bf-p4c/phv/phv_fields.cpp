@@ -638,6 +638,16 @@ bitvec PHV::Field::getStartBits(PHV::Size size) const {
     return startBitsByContainerSize_i.at(size);
 }
 
+PHV::AbstractField *PHV::AbstractField::create(const PhvInfo &info, const IR::Expression *e) {
+    if (auto *c = e->to<IR::Constant>())
+        return new PHV::Constant(c);
+    le_bitrange bits = { };
+    if (auto *field = info.field(e, &bits))
+        return new PHV::FieldSlice(field, bits);
+    BUG("Can't turn %s into an AbstractField", e);
+    return nullptr;
+}
+
 PHV::FieldSlice::FieldSlice(
         const Field* field,
         le_bitrange range) : field_i(field), range_i(range) {

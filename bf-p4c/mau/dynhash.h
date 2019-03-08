@@ -9,6 +9,7 @@
 #include "lib/json.h"
 #include "lib/ordered_map.h"
 #include "bf-p4c/mau/input_xbar.h"
+#include "bf-p4c/phv/phv_fields.h"
 
 namespace BFN {
 
@@ -21,13 +22,14 @@ extern unsigned algoHandle;
 static std::map<cstring, unsigned> algoHandles;
 class DynamicHashJson : public MauInspector {
  private:
+    const PhvInfo &phv;
     Util::JsonArray *_dynHashNode = nullptr;
     bool preorder(const IR::MAU::Table *tbl) override;
     void gen_ixbar_json(const IXBar::Use &ixbar_use,
         Util::JsonObject *_dhc, int stage, const cstring field_list_name,
         const IR::NameList *algorithms, int hash_width = -1);
  public:
-    DynamicHashJson();
+    explicit DynamicHashJson(const PhvInfo &phv);
     /// output the json hierarchy into the asm file (as Yaml)
     friend std::ostream & operator<<(std::ostream &out, const DynamicHashJson &dyn);
 };

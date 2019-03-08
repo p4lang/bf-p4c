@@ -100,22 +100,6 @@ class CanBeIXBarExpr : public Inspector {
     operator bool() const { return rv; }
 };
 
-class SetupMeterAluHash : public Inspector {
-    const PhvInfo               &phv;
-    IXBar::Use::MeterAluHash    &mah;
-    int                         offset;
-
-    bool preorder(const IR::Concat *) override;
-    bool preorder(const IR::Cast *) override;
-    bool preorder(const IR::BFN::SignExtend *) override;
-    bool preorder(const IR::Constant *) override;
-    bool preorder(const IR::Expression *) override;
-
- public:
-    SetupMeterAluHash(const PhvInfo &phv, IXBar::Use::MeterAluHash &mah, int start)
-    : phv(phv), mah(mah), offset(start) {}
-};
-
 class AdjustIXBarExpression : public MauModifier {
     bool preorder(IR::MAU::IXBarExpression *e) override;
 };

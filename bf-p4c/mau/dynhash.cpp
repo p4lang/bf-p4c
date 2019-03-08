@@ -87,7 +87,8 @@ void DynamicHashJson::gen_ixbar_json(const IXBar::Use &ixbar_use,
     _field_list->emplace("can_rotate", false);
     int numConstants = 0;
     std::map<cstring, cstring> fieldNames;
-    for (auto* field : ixbar_use.field_list_order) {
+    for (auto *e : ixbar_use.field_list_order) {
+        auto field = PHV::AbstractField::create(phv, e);
         Util::JsonObject *_field = new Util::JsonObject();
         cstring name = "";
         auto range = field->range();
@@ -244,7 +245,7 @@ std::ostream &operator<<(std::ostream &out, const DynamicHashJson &dyn) {
     return out;
 }
 
-DynamicHashJson::DynamicHashJson() {
+DynamicHashJson::DynamicHashJson(const PhvInfo &phv) : phv(phv) {
     _dynHashNode = new Util::JsonArray();
 }
 
