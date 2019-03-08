@@ -168,6 +168,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/array-copy-bmv2.p4
   testdata/p4_16_samples/issue281.p4
   testdata/p4_16_samples/issue737-bmv2.p4
+  testdata/p4_16_samples/issue1765-1-bmv2.p4
   testdata/p4_16_samples/stack_complex-bmv2.p4
   )
 p4c_add_xfail_reason("tofino"
@@ -382,6 +383,9 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/union3-bmv2.p4
   testdata/p4_16_samples/union4-bmv2.p4
   testdata/p4_16_samples/bvec_union-bmv2.p4
+  testdata/p4_16_samples/issue561-1-bmv2.p4
+  testdata/p4_16_samples/issue561-2-bmv2.p4
+  testdata/p4_16_samples/issue561-3-bmv2.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -859,7 +863,7 @@ p4c_add_xfail_reason("tofino"
 
 # P4C-990
 p4c_add_xfail_reason("tofino"
-  "error: .*: cannot infer bitwidth for untyped integer constant used in type parameter T"
+  "error: .*: could not infer a width"
   extensions/p4_tests/p4_14/p4smith_regression/chauncey_0.p4
   extensions/p4_tests/p4_14/p4smith_regression/corroding_0.p4
   extensions/p4_tests/p4_14/p4smith_regression/undercut_0.p4
@@ -1548,7 +1552,7 @@ p4c_add_xfail_reason("tofino"
 
 # p4lang/p4c #1724
 p4c_add_xfail_reason("tofino"
-  "error: .*: negative bit index -1"
+  "error: The following operation is not yet supported:"
   testdata/p4_14_samples/issue-1559.p4
 )
 
@@ -1573,9 +1577,11 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue447-3-bmv2.p4
   testdata/p4_16_samples/issue447-4-bmv2.p4
   testdata/p4_16_samples/issue447-5-bmv2.p4
+  testdata/p4_16_samples/issue561-bmv2.p4
   testdata/p4_16_samples/issue1025-bmv2.p4
   testdata/p4_16_samples/issue1291-bmv2.p4
   testdata/p4_16_samples/issue1560-bmv2.p4
+  testdata/p4_16_samples/issue1765-bmv2.p4
   testdata/p4_14_samples/issue576.p4
   testdata/p4_14_samples/issue781.p4
   testdata/p4_14_samples/TLV_parsing.p4
@@ -1610,3 +1616,12 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/test_config_3_unused_parsers.p4
   extensions/p4_tests/p4_16/test_config_2_multiple_parsers.p4
 )
+
+p4c_add_xfail_reason("tofino"
+  "Exiting with SIGSEGV"
+  testdata/p4_16_samples/issue561-4-bmv2.p4
+  testdata/p4_16_samples/issue561-5-bmv2.p4
+  testdata/p4_16_samples/issue561-6-bmv2.p4
+  testdata/p4_16_samples/issue561-7-bmv2.p4
+)
+

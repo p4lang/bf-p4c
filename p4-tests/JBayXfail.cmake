@@ -292,7 +292,7 @@ p4c_add_xfail_reason("tofino2"
 
 # p4lang/p4c #1724
 p4c_add_xfail_reason("tofino2"
-  "error: .*: negative bit index -1"
+  "error: The following operation is not yet supported:"
   testdata/p4_14_samples/issue-1559.p4
 )
 # P4C does not support varbits and packet_in.extract(hdr, size)
