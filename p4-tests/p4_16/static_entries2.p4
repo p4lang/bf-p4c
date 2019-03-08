@@ -27,6 +27,8 @@
 #define ETHERTYPE_IPV4 0x0800
 #define ETHERTYPE_IPV6 0x86dd
 
+typedef bit<32> src_addr_t;
+
 struct switch_ingress_flags_t {
     bool ipv4_checksum_err;
     bool inner_ipv4_checksum_err;
@@ -52,6 +54,8 @@ header ethernet_h {
     bit<16> ether_type;
     bit<16> range_type;
     bit<16> lpm_type;
+    switch_ingress_flags_t flags;
+    bit<3> pad;
 }
 
 struct switch_metadata_t {
@@ -126,9 +130,11 @@ control SwitchIngress(
         inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md,
         inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
 
-    action set_port_and_smac(bit<32> src_addr, bit<9> port) {
+    // Exercising typedef, bool in action
+    action set_port_and_smac(src_addr_t src_addr, bit<9> port, bool link_local) {
         hdr.ethernet.src_addr = (bit<48>) src_addr;
         ig_intr_tm_md.ucast_egress_port = port;
+        hdr.ethernet.flags.link_local = link_local;
     }
 
     table forward {
@@ -143,11 +149,11 @@ control SwitchIngress(
             // prefix length with value on static entry
         }
         actions = { set_port_and_smac; }
-        const default_action = set_port_and_smac(32w0xFF, 9w0x1);
+        const default_action = set_port_and_smac(32w0xFF, 9w0x1, false);
         const entries = {
-            (_, 1 /*, 150 &&& 0xffff00 */,  255 &&& 0xf0, _ /*, _ */) : set_port_and_smac(32w0xFA, 9w0x2); // priority 0
-            (true, 2 /*, _ */, _, _ /*, _ */) : set_port_and_smac(32w0xFB, 9w0x3);          // priority 1
-            (false, 3 /*, _ */, _, 1..9 /*, 8 */) : set_port_and_smac(32w0xFC, 9w0x4);       // priority 2
+            (_, 1 /*, 150 &&& 0xffff00 */,  255 &&& 0xf0, _ /*, _ */) : set_port_and_smac(32w0xFA, 9w0x2, true); // priority 0
+            (true, 2 /*, _ */, _, _ /*, _ */) : set_port_and_smac(32w0xFB, 9w0x3, true);          // priority 1
+            (false, 3 /*, _ */, _, 1..9 /*, 8 */) : set_port_and_smac(32w0xFC, 9w0x4, false);       // priority 2
         }
     }
 

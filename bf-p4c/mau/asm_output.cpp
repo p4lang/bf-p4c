@@ -2374,6 +2374,7 @@ void MauAsmOutput::emit_static_entries(std::ostream &out, indent_t indent,
                 key_index++;
                 continue; }
             auto match_key_size = phv.field(match_key->expr)->size;
+            // Set a mask with all 1's for size of match key
             bitvec match_key_mask(0, match_key_size);
             bool bignum_err = false;
             auto match_key_name = phv.field(match_key->expr)->externalName();
@@ -2429,7 +2430,7 @@ void MauAsmOutput::emit_static_entries(std::ostream &out, indent_t indent,
                 out << indent << "value: 0" << std::endl;
                 if (match_key->match_type == "ternary") {
                     if (match_key_size > 48) bignum_err = true;
-                    out << indent << "mask: 0x" << match_key_mask << std::endl;
+                    out << indent << "mask: 0x0" << std::endl;
                 }
             } else if (auto r = key->to<IR::Range>()) {
                 // This error should be caught in front end as an invalid key
@@ -2474,9 +2475,15 @@ void MauAsmOutput::emit_static_entries(std::ostream &out, indent_t indent,
                 " parameters in table %s", tbl->name);
             out << std::endl;
             for (auto param : *method_call->arguments) {
-                auto param_name = param_list.at(param_index++)->name;
+                auto p = param_list.at(param_index++);
+                auto param_name = p->name;
                 out << indent++ << "- parameter_name: " << param_name << std::endl;
-                out << indent << "value: " << param << std::endl;
+                if (param->expression->type->to<IR::Type_Boolean>()) {
+                    auto boolExpr = param->expression->to<IR::BoolLiteral>();
+                    out << indent << "value: " << (boolExpr->value ? 1 : 0) << std::endl;
+                } else {
+                    out << indent << "value: " << param << std::endl;
+                }
                 indent--;
             }
         } else {

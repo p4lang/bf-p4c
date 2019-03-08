@@ -11,6 +11,7 @@
 #include "barefoot/p4info.pb.h"
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/arch/tna.h"
+#include "bf-p4c/midend/type_checker.h"
 #include "control-plane/flattenHeader.h"
 #include "control-plane/p4RuntimeArchHandler.h"
 #include "control-plane/p4RuntimeSerializer.h"
@@ -20,6 +21,7 @@
 #include "frontends/p4/methodInstance.h"
 #include "frontends/p4/typeMap.h"
 #include "lib/nullstream.h"
+#include "midend/elim_typedef.h"
 #include "p4/config/v1/p4info.pb.h"
 #include "p4runtime_force_std.h"
 
@@ -1609,6 +1611,15 @@ void generateP4Runtime(const IR::P4Program* program,
                 "Tofino-specific architectures, such as 'tna'");
         return;
     }
+
+    // Typedefs in P4 source are replaced in the midend. However since bf
+    // runtime runs before midend, we run the pass to eliminate typedefs here to
+    // facilitate bf-rt json generation.
+    // Note: This can be removed if typedef elimination pass moves to frontend.
+    P4::ReferenceMap    refMap;
+    P4::TypeMap         typeMap;
+    refMap.setIsV1(true);
+    program = program->apply(P4::EliminateTypedef(&refMap, &typeMap));
 
     auto p4Runtime = p4RuntimeSerializer->generateP4Runtime(program, arch);
 
