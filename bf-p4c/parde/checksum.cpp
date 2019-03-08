@@ -99,11 +99,20 @@ analyzeUpdateChecksumStatement(const IR::AssignmentStatement* assignment) {
         if (auto* member = source->to<IR::Member>()) {
             LOG2("Checksum includes field: " << source);
             sources->push_back(new IR::BFN::FieldLVal(member));
+        } else if (auto* headerRef = source->to<IR::ConcreteHeaderRef>()) {
+            auto header = headerRef->baseRef();
+            for (auto field : header->type->fields) {
+                LOG2("Checksum includes field:" << field);
+                auto* member = new IR::Member(field->type, headerRef, field->name);
+                sources->push_back(new IR::BFN::FieldLVal(member));
+            }
         } else if (auto* constant = source->to<IR::Constant>()) {
             if (constant->asInt() != 0) {
                 ::error("Non-zero constant entry in checksum calculation"
                         " not implemented yet: %1%", source);
             }
+        } else {
+            :: error("Invalid entry in checksum calculation %1%", source);
         }
     }
 
