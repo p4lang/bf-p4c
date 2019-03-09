@@ -66,6 +66,8 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
                     "in exact match table %s", name());
                 return;
             }
+        } else if (kv.key == "search_bus" || kv.key == "result_bus") {
+            // already dealt with in Table::setup_layout via common_init_setup
         } else common_sram_setup(kv, data); }
     common_sram_checks();
 }
@@ -301,8 +303,9 @@ template<class REGS> void ExactMatchTable::write_regs(REGS &regs) {
                 // always generated on the same index
                 auto &stash_match_mask = stash_reg.stash_match_mask[stash_unit_id];
                 if (stash_row == physical_row_with_overhead) {
-                    stash_row_nxtable_bus_drive = 1 << row.bus;
-                    stash_reg.stash_match_result_bus_select[stash_unit_id] = 1 << row.bus;
+                    int result_bus = row.result_bus >= 0 ? row.result_bus : row.bus;
+                    stash_row_nxtable_bus_drive = 1 << result_bus;
+                    stash_reg.stash_match_result_bus_select[stash_unit_id] = 1 << result_bus;
 
                     // Set default next table only when there is a single next table
                     auto &nxt_table_lut = merge.stash_next_table_lut[stash_unit_id][stash_row];

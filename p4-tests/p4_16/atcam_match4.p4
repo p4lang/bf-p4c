@@ -58,7 +58,7 @@ control IngressP(
         default_action = noop();
     }
 
-    @atcam_partition_index("partition.partition_index")
+    @atcam_partition_index("meta.partition.partition_index")
     @atcam_number_partitions(2048)
     table atcam_match {
         actions = { first; noop; }

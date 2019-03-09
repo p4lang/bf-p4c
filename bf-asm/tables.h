@@ -59,13 +59,20 @@ public:
          * vpns contains the (base)vpn index of each ram in the row (matching cols)
          * maprams contain the map ram indexes for synthetic 2-port memories (matching cols) */
         int                     lineno = -1;
-        int                     row = -1, bus = -1;
+        int                     row = -1;
+        int                     bus = -1;        // search bus for SRamMatch
+        // result bus for SRamMatch, if the result bus is not used, a -1 is a possible value
+        int                     result_bus = -2;
         int                     word = -1;      // which word for wide tables
         bool                    home_row = false;       // is this a home row
         std::vector<int>        cols, vpns, maprams;
         Layout() = default;
         Layout(int l, int r) : lineno(l), row(r) {}
         friend std::ostream &operator<<(std::ostream &, const Layout &);
+
+        bool word_initialized() const { return word >= 0; }
+        bool result_bus_initialized() const { return result_bus >= -1 && result_bus <= 1; }
+        bool result_bus_used() const { return result_bus >= 0; }
     };
 protected:
     Table(int line, std::string &&n, gress_t gr, Stage *s, int lid = -1);
@@ -75,8 +82,9 @@ protected:
     virtual void setup(VECTOR(pair_t) &data) = 0;
     virtual void common_init_setup(const VECTOR(pair_t) &, bool, P4Table::type);
     virtual bool common_setup(pair_t &, const VECTOR(pair_t) &, P4Table::type);
-    void setup_layout(std::vector<Layout> &, const value_t *row, const value_t *col,
-                      const value_t *bus, const value_t *word, const char *subname = "");
+    void setup_layout(std::vector<Layout> &, const VECTOR(pair_t) &data, const char *subname = "");
+    int setup_layout_attrib(std::vector<Layout> &, const value_t &data,
+                            const char *what, int Layout::*attr);
     void setup_logical_id();
     void setup_actions(value_t &);
     void setup_maprams(value_t &);
@@ -475,7 +483,8 @@ public:
             const char *type, const std::vector<Layout> &layout, bool skip_spare_bank = false) const;
     virtual void common_tbl_cfg(json::map &tbl) const;
     enum table_type_t { OTHER=0, TERNARY_INDIRECT, GATEWAY, ACTION, SELECTION, COUNTER,
-                        METER, IDLETIME, STATEFUL, HASH_ACTION, EXACT, TERNARY, PHASE0, ATCAM };
+                        METER, IDLETIME, STATEFUL, HASH_ACTION, EXACT, TERNARY, PHASE0, ATCAM,
+                        PROXY_HASH };
     virtual table_type_t table_type() const { return OTHER; }
     virtual int instruction_set() { return 0; /* VLIW_ALU */ }
     virtual table_type_t set_match_table(MatchTable *m, bool indirect) { assert(0); return OTHER; }
@@ -518,6 +527,7 @@ public:
     template<class REGS> void write_mapram_regs(REGS &regs, int row, int col, int vpn, int type);
     template<class T> T *to() { return dynamic_cast<T *>(this); }
     template<class T> const T *to() const { return dynamic_cast<const T *>(this); }
+    virtual void determine_word_and_result_bus() { BUG(); }
 
     std::string                 name_;
     P4Table                     *p4_table = 0;
@@ -831,10 +841,14 @@ protected:
         /* info about which word(s) are used per format group with wide matches */
         int                     overhead_word;  /* which word of wide match contains overhead */
         int                     overhead_bit;   /* lowest bit that contains overhead in that word */
-        int                     word_group;     /* which match group within the word to use */
+        // The word that is going to contain the result bus.  Same as the overhead word, if
+        // the entry actually has overhead
+        int                     result_bus_word;
         std::map<int, int>      match_group;    /* which match group for each word with match */
         std::vector<unsigned>   tofino_mask;    /* 14-bit tofino byte/nibble mask for each word */
-        GroupInfo() : overhead_word(-1), overhead_bit(-1), word_group(-1) {}
+        GroupInfo() : overhead_word(-1), overhead_bit(-1), result_bus_word(-1) {}
+        // important function in order to determine shiftcount for exact match entries
+        int result_bus_word_group() const { return match_group.at(result_bus_word); }
     };
     std::vector<GroupInfo>      group_info;
     std::vector<std::vector<int>> word_info;    /* which format group corresponds to each
@@ -901,6 +915,7 @@ public:
         }
         return false;
     }
+    void determine_word_and_result_bus() override;
     SelectionTable *get_selector() const override { return attached.get_selector(); }
     StatefulTable *get_stateful() const override { return attached.get_stateful(); }
     MeterTable* get_meter() const override { return attached.get_meter(); }
@@ -993,6 +1008,7 @@ DECLARE_TABLE_TYPE(ProxyHashMatchTable, SRamMatchTable, "proxy_hash",
     int proxy_hash_group = -1;
     std::string proxy_hash_alg = "<invalid>";
     bool verify_match_key() override;
+    table_type_t table_type() const override { return PROXY_HASH; }
     void setup_word_ixbar_group() override;
     int determine_pre_byteswizzle_loc(MatchSource *ms, int lo, int hi, int word) override;
     void add_proxy_hash_function(json::map &stage_tbl) const;
@@ -1139,6 +1155,7 @@ public:
     Format::Field *lookup_field(const std::string &n,
                                         const std::string &act = "") const override;
     void add_hash_functions(json::map &stage_tbl) const override;
+    void determine_word_and_result_bus() override;
 )
 
 DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
@@ -1192,6 +1209,7 @@ public:
         return def_act_handle ? def_act_handle : action ? action->default_action_handle : 0; }
     bool needs_handle() const override { return true; }
     bool needs_next() const override { return true; }
+    void determine_word_and_result_bus() override;
 )
 
 DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,

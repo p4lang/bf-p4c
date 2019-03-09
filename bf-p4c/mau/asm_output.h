@@ -99,7 +99,8 @@ class MauAsmOutput : public MauInspector {
 
     void emit_single_ixbar(std::ostream& out, indent_t indent, const IXBar::Use *use,
             const TableMatch *fmt) const;
-    void emit_memory(std::ostream &out, indent_t, const Memories::Use &) const;
+    void emit_memory(std::ostream &out, indent_t, const Memories::Use &,
+        const IR::MAU::Table::Layout *l = nullptr, const TableFormat::Use *f = nullptr) const;
     void emit_gateway(std::ostream &out, indent_t gw_indent, const IR::MAU::Table *tbl,
              bool hash_action, cstring next_hit, cstring &gw_miss) const;
     void emit_no_match_gateway(std::ostream &out, indent_t gw_indent,

@@ -18,6 +18,21 @@ static const char *sram_group_type_to_str[] = {
 
 constexpr int Memories::SRAM_DEPTH;
 
+/**
+ * A function to determine whether or not the asm_output for a table needs to have a separate
+ * search bus and result bus printed, rather than having just a single bus, as the result bus
+ * a search bus have different values.
+ */
+bool Memories::Use::separate_search_and_result_bus() const {
+    if (type != EXACT && type != ATCAM)
+        return false;
+    for (auto r : row) {
+        if (!(r.result_bus == -1 || r.result_bus == r.bus))
+            return true;
+    }
+    return false;
+}
+
 /** Building a UniqueId per table alloc.  The stage table comes from initialization, all other
  *  data must be provided
  */
@@ -129,6 +144,12 @@ UniqueId Memories::SRAM_group::build_unique_id() const {
     return ta->build_unique_id(attached, false, logical_table, ppt);
 }
 
+Memories::result_bus_info Memories::SRAM_group::build_result_bus(int width_sect) const {
+    if (ta->table_format->result_bus_words().getbit(width_sect))
+        return result_bus_info(ta->table->name, width_sect, logical_table);
+    return result_bus_info();
+}
+
 void Memories::SRAM_group::dbprint(std::ostream &out) const {
     out << "SRAM group: " << ta->table->name << ", type: " << sram_group_type_to_str[type]
         << ", width: " << width << ", number: " << number;
@@ -174,7 +195,8 @@ void Memories::clear_uses() {
     gateway_use.clear();
     sram_search_bus.clear();
     sram_print_search_bus.clear();
-    sram_match_bus.clear();
+    sram_result_bus.clear();
+    sram_print_result_bus.clear();
     memset(tcam_midbyte_use, -1, sizeof(tcam_midbyte_use));
     tind_bus.clear();
     action_data_bus.clear();
@@ -607,7 +629,7 @@ bool Memories::analyze_tables(mem_info &mi) {
             set_logical_memuse_type(ta, Use::ATCAM);
             int depth = mems_needed(entries, SRAM_DEPTH, groups, false);
             mi.match_RAMs += depth * width;
-            mi.match_bus_min += ta->layout_option->logical_tables();
+            mi.result_bus_min += ta->layout_option->logical_tables();
         } else if (!table->layout.ternary) {
             set_logical_memuse_type(ta, Use::EXACT);
             exact_tables.push_back(ta);
@@ -616,7 +638,7 @@ bool Memories::analyze_tables(mem_info &mi) {
             int width = ta->layout_option->way.width;
             int groups = ta->layout_option->way.match_groups;
             int depth = mems_needed(entries, SRAM_DEPTH, groups, false);
-            mi.match_bus_min += width;
+            mi.result_bus_min += width;
             mi.match_RAMs += depth;
         } else {
            set_logical_memuse_type(ta, Use::TERNARY);
@@ -647,7 +669,7 @@ bool Memories::analyze_tables(mem_info &mi) {
 bool Memories::mem_info::constraint_check(int lt_allowed) const {
     if (match_tables + no_match_tables + ternary_tables + independent_gw_tables >
            Memories::TABLES_MAX
-        || match_bus_min > Memories::SRAM_ROWS * Memories::BUS_COUNT
+        || result_bus_min > Memories::SRAM_ROWS * Memories::BUS_COUNT
         || tind_tables > Memories::TERNARY_TABLES_MAX
         || action_tables > Memories::ACTION_TABLES_MAX
         || action_bus_min > Memories::SRAM_ROWS * Memories::BUS_COUNT
@@ -734,8 +756,11 @@ safe_vector<std::pair<int, int>>
 Memories::available_SRAMs_per_row(unsigned mask, SRAM_group *group, int width_sect) {
     safe_vector<std::pair<int, int>> available_rams;
     auto group_search_bus = group->build_search_bus(width_sect);
+    auto group_result_bus = group->build_result_bus(width_sect);
     for (int i = 0; i < SRAM_ROWS; i++) {
         if (!search_bus_available(i, group_search_bus))
+            continue;
+        if (group_result_bus.init && !result_bus_available(i, group_result_bus))
             continue;
         available_rams.push_back(std::make_pair(i, bitcount(mask & ~sram_inuse[i])));
     }
@@ -754,10 +779,13 @@ safe_vector<int> Memories::available_match_SRAMs_per_row(unsigned selected_colum
         unsigned total_mask, std::set<int> used_rows, SRAM_group *group, int width_sect) {
     safe_vector<int> matching_rows;
     auto group_search_bus = group->build_search_bus(width_sect);
+    auto group_result_bus = group->build_result_bus(width_sect);
 
     for (int i = 0; i < SRAM_ROWS; i++) {
         if (used_rows.find(i) != used_rows.end()) continue;
         if (!search_bus_available(i, group_search_bus))
+            continue;
+        if (group_result_bus.init && !result_bus_available(i, group_result_bus))
             continue;
 
         if (bitcount(selected_columns_mask & ~sram_inuse[i]) == bitcount(selected_columns_mask))
@@ -871,6 +899,14 @@ bool Memories::search_bus_available(int search_row, search_bus_info &sbi) {
     return false;
 }
 
+bool Memories::result_bus_available(int search_row, result_bus_info &mbi) {
+    for (auto bus : sram_result_bus[search_row]) {
+        if (bus.free() || bus == mbi)
+            return true;
+    }
+    return false;
+}
+
 /* Returns the search bus that we are selecting on this row */
 int Memories::select_search_bus(SRAM_group *group, int width_sect, int row) {
      auto group_search_bus = group->build_search_bus(width_sect);
@@ -888,6 +924,25 @@ int Memories::select_search_bus(SRAM_group *group, int width_sect, int row) {
          index++;
      }
      return -1;
+}
+
+int Memories::select_result_bus(SRAM_group *group, int width_sect, int row) {
+     auto group_result_bus = group->build_result_bus(width_sect);
+     if (!group_result_bus.init)
+         return -1;
+     int index = 0;
+     for (auto bus : sram_result_bus[row]) {
+          if (bus == group_result_bus)
+              return index;
+          index++;
+     }
+     index = 0;
+     for (auto bus : sram_result_bus[row]) {
+         if (bus.free())
+             return index;
+         index++;
+     }
+     return -2;
 }
 
 /* Picks an empty/most open row, and begins to fill it in within a way */
@@ -1224,10 +1279,13 @@ void Memories::break_atcams_into_partitions() {
 bool Memories::determine_match_rows_and_cols(SRAM_group *group, int row, unsigned column_mask,
         match_selection &match_select, bool atcam) {
     // Pick a bus
-    int match_bus = select_search_bus(group, group->width - 1, row);
-    BUG_CHECK(match_bus >= 0, "Search somehow found an impossible bus");
+    int search_bus = select_search_bus(group, group->width - 1, row);
+    BUG_CHECK(search_bus >= 0, "Search somehow found an impossible bus");
+    int result_bus = select_result_bus(group, group->width - 1, row);
+    BUG_CHECK(result_bus >= -1, "Somehow found an impossible result bus");
     match_select.rows.push_back(row);
-    match_select.buses[row] = match_bus;
+    match_select.search_buses[row] = search_bus;
+    match_select.result_buses[row] = result_bus;
     int cols = 0;
     std::set<int> determined_rows;
     determined_rows.emplace(row);
@@ -1251,9 +1309,12 @@ bool Memories::determine_match_rows_and_cols(SRAM_group *group, int row, unsigne
             return false;
         int wide_row = matching_rows[0];
         match_select.rows.push_back(wide_row);
-        int match_bus = select_search_bus(group, i, wide_row);
-        BUG_CHECK(match_bus >= 0, "Search somehow found an impossible bus");
-        match_select.buses[wide_row] = match_bus;
+        search_bus = select_search_bus(group, i, wide_row);
+        BUG_CHECK(search_bus >= 0, "Search somehow found an impossible bus");
+        result_bus = select_result_bus(group, i, wide_row);
+        BUG_CHECK(result_bus >= -1, "Search somehow found an impossible result bus");
+        match_select.search_buses[wide_row] = search_bus;
+        match_select.result_buses[wide_row] = result_bus;
         match_select.widths[wide_row] = i;
         determined_rows.emplace(wide_row);
     }
@@ -1283,10 +1344,11 @@ void Memories::fill_out_match_alloc(SRAM_group *group, match_selection &match_se
 
     // Save row and column information
     for (auto row : match_select.rows) {
-        auto bus = match_select.buses.at(row);
+        auto bus = match_select.search_buses.at(row);
+        auto result_bus = match_select.result_buses.at(row);
         int width = match_select.widths.at(row);
         alloc.row.emplace_back(row, bus, width, allocation_count);
-
+        alloc.row.back().result_bus = result_bus;
         auto &back_row = alloc.row.back();
         for (auto col : match_select.cols) {
             sram_use[row][col] = name;
@@ -1294,14 +1356,24 @@ void Memories::fill_out_match_alloc(SRAM_group *group, match_selection &match_se
         }
 
         auto group_search_bus = group->build_search_bus(width);
+        auto group_result_bus = group->build_result_bus(width);
         sram_inuse[row] |= match_select.column_mask;
         if (!sram_search_bus[row][bus].free()) {
             BUG_CHECK(sram_search_bus[row][bus] == group_search_bus,
                       "Search bus initialization mismatch");
         } else {
             sram_search_bus[row][bus] = group_search_bus;
-            sram_match_bus[row][bus] = group_search_bus.name;
             sram_print_search_bus[row][bus] = group_search_bus.name;
+        }
+
+        if (result_bus >= 0) {
+            if (!sram_result_bus[row][result_bus].free()) {
+                BUG_CHECK(sram_result_bus[row][result_bus] == group_result_bus,
+                          "Result bus initializaton mismatch");
+            } else {
+                sram_result_bus[row][result_bus] = group_result_bus;
+                sram_print_result_bus[row][result_bus] = group_result_bus.name;
+            }
         }
     }
 
@@ -3177,7 +3249,7 @@ bool Memories::find_unit_gw(Memories::Use &alloc, cstring name, bool requires_se
                 alloc.gateway.unit = j;
                 gateway_use[i][j] = name;
                 if (requires_search_bus)
-                    sram_search_bus[i][k] = search_bus_info(name, 0, 0, 0);
+                    sram_search_bus[i][k] = search_bus_info(name, 0, 0);
                 return true;
             }
         }
@@ -3234,16 +3306,16 @@ bool Memories::find_search_bus_gw(table_alloc *ta, Memories::Use &alloc, cstring
 /** Finding a result bus for the gateway.  Will save associated information, such as payload
  *  row, bus, and value, as well as link no match tables if necessary
  */
-bool Memories::find_match_bus_gw(Memories::Use &alloc, uint64_t payload, cstring name,
+bool Memories::find_result_bus_gw(Memories::Use &alloc, uint64_t payload, cstring name,
                                  table_alloc *ta_no_match, int logical_table) {
     for (int i = 0; i < SRAM_ROWS; i++) {
         for (int j = 0; j < BUS_COUNT; j++) {
             if (payload_use[i][j]) continue;
             if (payload == 0ULL) {
                // FIXME: Add ability to handle tind outputs from payload
-               if (sram_match_bus[i][j]) continue;
+               if (!sram_result_bus[i][j].free()) continue;
             } else {
-                if (sram_match_bus[i][j] || tind_bus[i][j]) continue;
+                if (!sram_result_bus[i][j].free() || tind_bus[i][j]) continue;
             }
             alloc.gateway.payload_row = i;
             alloc.gateway.payload_bus = j;
@@ -3257,9 +3329,11 @@ bool Memories::find_match_bus_gw(Memories::Use &alloc, uint64_t payload, cstring
                 auto &no_match_alloc = (*ta_no_match->memuse)[no_match_id];
                 no_match_alloc.row.emplace_back(i, j);
                 no_match_alloc.type = Use::EXACT;
-                sram_match_bus[i][j] = no_match_id.build_name();
+                sram_result_bus[i][j] = result_bus_info(no_match_id.name, 0, logical_table);
+                sram_print_result_bus[i][j] = no_match_id.build_name();
             } else {
-                sram_match_bus[i][j] = name;
+                sram_result_bus[i][j] = result_bus_info(name, 0, logical_table);
+                sram_print_result_bus[i][j] = name;
             }
             return true;
         }
@@ -3345,9 +3419,9 @@ bool Memories::allocate_all_payload_gw(bool alloc_search_bus) {
 
 
             uint64_t payload_value = determine_payload(ta->table_link);
-            bool match_bus_found = find_match_bus_gw(alloc, payload_value, u_id.build_name(),
-                                                     ta->table_link);
-            if (!(gw_found && match_bus_found))
+            bool result_bus_found = find_result_bus_gw(alloc, payload_value, u_id.build_name(),
+                                                       ta->table_link);
+            if (!(gw_found && result_bus_found))
                 return false;
             BUG_CHECK(alloc.row.size() == 1, "Help me payload");
         }
@@ -3395,9 +3469,9 @@ bool Memories::allocate_all_no_match_gw() {
             auto &alloc = (*ta->memuse)[u_id];
             alloc.type = Use::GATEWAY;
             bool unit_found = find_unit_gw(alloc, u_id.build_name(), false);
-            bool match_bus_found = find_match_bus_gw(alloc, 0ULL, u_id.build_name(), ta,
-                                                     u_id.logical_table);
-            if (!(unit_found && match_bus_found))
+            bool result_bus_found = find_result_bus_gw(alloc, 0ULL, u_id.build_name(), ta,
+                                                       u_id.logical_table);
+            if (!(unit_found && result_bus_found))
                 return false;
             BUG_CHECK(alloc.row.size() == 1, "Help me no match");
         }
@@ -3666,7 +3740,7 @@ bool Memories::allocate_all_idletime() {
     return true;
 }
 
-void Memories::Use::visit(Memories &mem, std::function<void(cstring &)> fn) const {
+void Memories::Use::visit(Memories &mem, std::function<void(cstring &, update_type_t)> fn) const {
     Alloc2Dbase<cstring> *use = 0, *mapuse = 0, *bus = 0, *gw_use = 0;
     unsigned *inuse = 0, *map_inuse = 0;
     switch (type) {
@@ -3681,7 +3755,7 @@ void Memories::Use::visit(Memories &mem, std::function<void(cstring &)> fn) cons
         break;
     case GATEWAY:
         gw_use = &mem.gateway_use;
-        //  bus = &mem.sram_print_match_bus;
+        //  bus = &mem.sram_print_result_bus;
         break;
     case TIND:
         use = &mem.sram_use;
@@ -3709,13 +3783,13 @@ void Memories::Use::visit(Memories &mem, std::function<void(cstring &)> fn) cons
     default:
         BUG("Unhandled memory use type %d in Memories::Use::visit", type); }
     for (auto &r : row) {
-        if (bus && r.bus != -1) {
-            fn((*bus)[r.row][r.bus]); }
+        if (bus && r.result_bus != -1) {
+            fn((*bus)[r.row][r.result_bus], UPDATE_RESULT_BUS); }
         /*if (type == TWOPORT)
             fn(mem.stateful_bus[r.row]);*/
         if (use) {
             for (auto col : r.col) {
-                fn((*use)[r.row][col]);
+                fn((*use)[r.row][col], UPDATE_RAM);
                 if (inuse) {
                     if ((*use)[r.row][col])
                         inuse[r.row] |= 1 << col;
@@ -3723,19 +3797,19 @@ void Memories::Use::visit(Memories &mem, std::function<void(cstring &)> fn) cons
                         inuse[r.row] &= ~(1 << col); } } }
         if (mapuse) {
             for (auto col : r.mapcol) {
-                fn((*mapuse)[r.row][col]);
+                fn((*mapuse)[r.row][col], UPDATE_MAPRAM);
                 if ((*mapuse)[r.row][col])
                     map_inuse[r.row] |= 1 << col;
                 else
                     map_inuse[r.row] &= ~(1 << col); } }
         if (gw_use) {
-            fn((*gw_use)[r.row][gateway.unit]);
+            fn((*gw_use)[r.row][gateway.unit], UPDATE_GATEWAY);
         }
     }
     if (mapuse) {
         for (auto &r : color_mapram) {
             for (auto col : r.col) {
-                fn((*mapuse)[r.row][col]);
+                fn((*mapuse)[r.row][col], UPDATE_MAPRAM);
                 if ((*mapuse)[r.row][col])
                     map_inuse[r.row] |= 1 << col;
                 else
@@ -3743,10 +3817,21 @@ void Memories::Use::visit(Memories &mem, std::function<void(cstring &)> fn) cons
 }
 
 void Memories::update(cstring name, const Memories::Use &alloc) {
-    alloc.visit(*this, [name](cstring &use) {
-        if (use)
-            BUG("conflicting memory use between %s and %s", use, name);
-        use = name; });
+    alloc.visit(*this, [name](cstring &use, Memories::Use::update_type_t u_type) {
+        if (use) {
+            bool collision = true;
+            // A table may have different search buses, but the same result bus.  Say a table
+            // required two hash functions (i.e. 5 way table).  The table would require two
+            // search / address buses, but only one result bus.  Thus the name repeat is fine
+            // for result_buses
+            if (u_type == Memories::Use::UPDATE_RESULT_BUS && name == use)
+                collision = false;
+
+            if (collision)
+                BUG_CHECK("conflicting memory use between %s and %s", use, name);
+        }
+        use = name;
+    });
 }
 
 void Memories::update(const std::map<UniqueId, Use> &alloc) {
@@ -3754,7 +3839,7 @@ void Memories::update(const std::map<UniqueId, Use> &alloc) {
 }
 
 void Memories::remove(cstring name, const Memories::Use &alloc) {
-    alloc.visit(*this, [name](cstring &use) {
+    alloc.visit(*this, [name](cstring &use, Memories::Use::update_type_t) {
         if (use != name)
             BUG("Undo failure for %s", name);
         use = nullptr; });
@@ -3765,13 +3850,19 @@ void Memories::remove(const std::map<UniqueId, Use> &alloc) {
 
 std::ostream &operator<<(std::ostream &out, const Memories::search_bus_info &sbi) {
     out << "search bus " << sbi.name << " width: " << sbi.width_section << " hash_group: "
-        << sbi.hash_group << " lt: " << sbi.logical_table;
+        << sbi.hash_group;
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, const Memories::result_bus_info &rbi) {
+    out << "result bus " << rbi.name << " width: " << rbi.width_section << " hash_group: "
+        << rbi.logical_table;
     return out;
 }
 
 /* MemoriesPrinter in .gdbinit should match this */
 std::ostream &operator<<(std::ostream &out, const Memories &mem) {
-    const Alloc2Dbase<cstring> *arrays[] = { &mem.tcam_use, &mem.sram_print_search_bus,
+    const Alloc2Dbase<cstring> *arrays[] = { &mem.tcam_use, &mem.sram_print_result_bus,
                    &mem.tind_bus, &mem.action_data_bus, &mem.sram_use, &mem.mapram_use,
                    &mem.gateway_use };
     std::map<cstring, char>     tables;

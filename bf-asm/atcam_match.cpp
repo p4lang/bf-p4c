@@ -28,6 +28,8 @@ void AlgTcamMatchTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "bins_per_partition") {
             if (CHECKTYPE(kv.value, tINT))
                 bins_per_partition = kv.value.i;
+        } else if (kv.key == "search_bus" || kv.key == "result_bus") {
+            // already dealt with in Table::setup_layout via common_init_setup
         } else common_sram_setup(kv, data); }
     common_sram_checks();
 }
@@ -124,28 +126,24 @@ void AlgTcamMatchTable::setup_column_priority() {
  * the entries in the ATCAM pack format are in priority order for the driver.
  */
 void AlgTcamMatchTable::verify_entry_priority() {
-    int overhead_word = -1;
-    bool overhead_word_set = false;
+    int result_bus_word = -1; 
     for (int i = 0; i < (int)group_info.size(); i++) {
-        if (!overhead_word_set) {
-            overhead_word = group_info[i].overhead_word;
-            overhead_word_set = true;
-        } else if (overhead_word != group_info[i].overhead_word) {
+        BUG_CHECK(group_info[i].result_bus_word >= 0);
+        if (result_bus_word == -1) {
+            result_bus_word = group_info[i].result_bus_word;
+        } else if (result_bus_word != group_info[i].result_bus_word) {
             error(format->lineno, "ATCAM tables can at most have only one overhead word");
             return;
         }
     }
 
-    if (overhead_word < 0)
-        overhead_word = word_info.size() - 1;
-
-    if (word_info[overhead_word].size() != group_info.size()) {
+    if (word_info[result_bus_word].size() != group_info.size()) {
         error(format->lineno, "ATCAM tables do not chain to the same overhead word");
         return;
     }
 
-    for (int i = 0; i < (int)word_info[overhead_word].size(); i++) {
-        if (i != word_info[overhead_word][i]) {
+    for (int i = 0; i < (int)word_info[result_bus_word].size(); i++) {
+        if (i != word_info[result_bus_word][i]) {
             error(format->lineno, "ATCAM priority not correctly formatted in the compiler");
             return;
         }

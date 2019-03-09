@@ -162,9 +162,33 @@ std::ostream &operator<<(std::ostream &out, const Table::Layout &l) {
     return out;
 }
 
-void Table::setup_layout(std::vector<Layout> &layout, const value_t *row,
-                         const value_t *col, const value_t *bus,
-                         const value_t *word, const char *subname) {
+int Table::setup_layout_attrib(std::vector<Layout> &layout, const value_t &data,
+                                const char *what, int Layout::*attr) {
+    if (!CHECKTYPE2(data, tINT, tVEC)) {
+        return 1;
+    } else if (data.type == tVEC) {
+        if (data.vec.size != (int)layout.size()) {
+            error(data.lineno, "%s shape doesn't match rows", what);
+            return 1;
+        } else {
+            for (int i = 0; i < data.vec.size; i++) {
+                if (CHECKTYPE(data.vec[i], tINT))
+                    layout[i].*attr = data.vec[i].i;
+                else return 1;
+            }
+        }
+    } else {
+        for (auto &lrow : layout)
+            lrow.*attr = data.i;
+    }
+    return 0;
+}
+
+void Table::setup_layout(std::vector<Layout> &layout, const VECTOR(pair_t) &data,
+                         const char *subname) {
+    auto *row = get(data, "row");
+    if (!row && this->to<AttachedTable>())
+        row = get(data, "logical_row");
     if (!row) {
         if (table_type() != TERNARY)
             error(lineno, "No 'row' attribute in table %s%s", name(), subname);
@@ -175,7 +199,7 @@ void Table::setup_layout(std::vector<Layout> &layout, const value_t *row,
     else
         err |= add_rows(layout, *row);
     if (err) return;
-    if (col) {
+    if (auto *col = get(data, "column")) {
         if (col->type == tVEC && col->vec.size == (int)layout.size()) {
             for (int i = 0; i < col->vec.size; i++)
                 err |= add_cols(layout[i], col->vec[i]);
@@ -185,49 +209,22 @@ void Table::setup_layout(std::vector<Layout> &layout, const value_t *row,
     } else if (layout.size() > 1) {
         error(lineno, "No 'column' attribute in table %s%s", name(), subname);
         return; }
-    if (bus) {
-        if (!CHECKTYPE2(*bus, tINT, tVEC)) {
-            err = 1;
-        } else if (bus->type == tVEC) {
-            if (bus->vec.size != (int)layout.size()) {
-                error(bus->lineno, "Bus shape doesn't match rows");
-                err = 1;
-            } else {
-                for (int i = 0; i < bus->vec.size; i++) {
-                    if (CHECKTYPE(bus->vec[i], tINT))
-                        layout[i].bus = bus->vec[i].i;
-                    else err = 1;
-                }
-            }
-        } else {
-            for (auto &lrow : layout)
-                lrow.bus = bus->i;
-        }
-    }
-    if (word) {
-        if (!CHECKTYPE2(*word, tINT, tVEC)) {
-            err = 1;
-        } else if (word->type == tVEC) {
-            if (word->vec.size != (int)layout.size()) {
-                error(word->lineno, "Word shape doesn't match rows");
-                err = 1;
-            } else {
-                for (int i = 0; i < word->vec.size; i++) {
-                    if (CHECKTYPE(word->vec[i], tINT))
-                        layout[i].word = word->vec[i].i;
-                    else err = 1;
-                }
-            }
-        } else {
-            for (auto &lrow : layout)
-                lrow.word = word->i;
-        }
-    }
-
+    auto *bus = get(data, "bus");
+    const value_t *result_bus = nullptr;
+    if (!bus && (table_type() == EXACT || table_type() == ATCAM || table_type() == PROXY_HASH)) {
+        bus = get(data, "search_bus");
+        result_bus = get(data, "result_bus"); }
+    if (bus)
+        err |= Table::setup_layout_attrib(layout, *bus, "Bus", &Layout::bus);
+    if (result_bus)
+        err |= Table::setup_layout_attrib(layout, *result_bus, "Bus", &Layout::result_bus);
+    if (auto *word = get(data, "word"))
+        err |= Table::setup_layout_attrib(layout, *word, "Word", &Layout::word);
     if (err) return;
     for (auto i = layout.begin(); i != layout.end(); i++)
         for (auto j = i+1; j != layout.end(); j++)
-            if (i->row == j->row && i->bus == j->bus && i->word == j->word) {
+            if (i->row == j->row && i->bus == j->bus && i->result_bus == j->result_bus &&
+                i->word == j->word) {
                 char bus[16] = { 0 };
                 if (i->bus >= 0) sprintf(bus, " bus %d", i->bus);
                 error(i->lineno, "row %d%s duplicated in table %s%s", i->row, bus,
@@ -391,8 +388,7 @@ void Table::setup_vpns(std::vector<Layout> &layout, VECTOR(value_t) *vpn, bool a
 }
 
 void Table::common_init_setup(const VECTOR(pair_t) &data, bool, P4Table::type) {
-    setup_layout(layout, get(data, "row"), get(data, "column"), get(data, "bus"),
-                 get(data, "word"));
+    setup_layout(layout, data);
     if (auto *fmt = get(data, "format")) {
         if (CHECKTYPEPM(*fmt, tMAP, fmt->map.size > 0, "non-empty map"))
             format = new Format(this, fmt->map); }
@@ -548,7 +544,7 @@ void Table::alloc_rams(bool logical, Alloc2Dbase<Table *> &use, Alloc2Dbase<Tabl
         }
         if (row.bus >= 0 && bus_use) {
             if (Table *old = (*bus_use)[row.row][row.bus]) {
-                if (old != this)
+                if (old != this && old->p4_name() != p4_name())
                     error(lineno, "Table %s trying to use bus %d on row %d which is already in "
                           "use by table %s", name(), row.bus, row.row, old->name());
             } else (*bus_use)[row.row][row.bus] = this;

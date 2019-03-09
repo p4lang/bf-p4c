@@ -8,9 +8,7 @@
 DEFINE_TABLE_TYPE(SelectionTable)
 
 void SelectionTable::setup(VECTOR(pair_t) &data) {
-    auto *row = get(data, "row");
-    if (!row) row = get(data, "logical_row");
-    setup_layout(layout, row, get(data, "column"), get(data, "bus"), 0);
+    setup_layout(layout, data);
     VECTOR(pair_t) p4_info = EMPTY_VECTOR_INIT;
     for (auto &kv : MapIterChecked(data, true)) {
         if (kv.key == "input_xbar") {

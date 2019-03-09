@@ -210,10 +210,13 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
         if (result->action_enable >= 0)
             action_enable = 1 << result->action_enable;
         for (auto &row : result->layout) {
-            int bus = row.row*2 | (row.bus & 1);
-            auto &shift_en = merge.mau_payload_shifter_enable[type][bus];
-            setup_muxctl(merge.match_to_logical_table_ixbar_outputmap[type][bus], logical_id);
-            setup_muxctl(merge.match_to_logical_table_ixbar_outputmap[type+2][bus], logical_id);
+            if (row.result_bus < 0)
+                continue;
+            int r_bus = row.row*2 | (row.result_bus & 1);
+
+            auto &shift_en = merge.mau_payload_shifter_enable[type][r_bus];
+            setup_muxctl(merge.match_to_logical_table_ixbar_outputmap[type][r_bus], logical_id);
+            setup_muxctl(merge.match_to_logical_table_ixbar_outputmap[type+2][r_bus], logical_id);
 
             int default_action = 0;
             unsigned adr_mask = 0;
@@ -254,15 +257,15 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
                 }
             }
             shift_en.action_instruction_adr_payload_shifter_en = 1;
-            merge.mau_action_instruction_adr_mask[type][bus] = adr_mask;
-            merge.mau_action_instruction_adr_default[type][bus] = adr_default;
-            merge.mau_action_instruction_adr_per_entry_en_mux_ctl[type][bus] = adr_per_entry_en;
+            merge.mau_action_instruction_adr_mask[type][r_bus] = adr_mask;
+            merge.mau_action_instruction_adr_default[type][r_bus] = adr_default;
+            merge.mau_action_instruction_adr_per_entry_en_mux_ctl[type][r_bus] = adr_per_entry_en;
 
             if (idletime)
-                idletime->write_merge_regs(regs, type, bus);
+                idletime->write_merge_regs(regs, type, r_bus);
             if (result->action) {
                 if (auto adt = result->action->to<ActionTable>()) {
-                    merge.mau_actiondata_adr_default[type][bus]
+                    merge.mau_actiondata_adr_default[type][r_bus]
                         = adt->determine_default(result->action);
                 }
                 shift_en.actiondata_adr_payload_shifter_en = 1;
@@ -272,7 +275,7 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
             if (!get_attached()->meters.empty() || !get_attached()->statefuls.empty())
                 shift_en.meter_adr_payload_shifter_en = 1;
 
-            result->write_merge_regs(regs, type, bus); }
+            result->write_merge_regs(regs, type, r_bus); }
     } else {
         /* ternary match with no indirection table */
         BUG_CHECK(type == 1);
@@ -399,11 +402,13 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
      *-----------------------*/
     if (result->format) {
         for (auto &row : result->layout) {
-            int bus = row.row*2 | (row.bus & 1);
-            merge.mau_immediate_data_mask[type][bus] =
+            if (row.result_bus < 0)
+                continue;
+            int r_bus = row.row*2 | (row.result_bus & 1);
+            merge.mau_immediate_data_mask[type][r_bus] =
                 (UINT64_C(1) << result->format->immed_size)-1;
             if (result->format->immed_size > 0)
-                merge.mau_payload_shifter_enable[type][bus]
+                merge.mau_payload_shifter_enable[type][r_bus]
                     .immediate_data_payload_shifter_en = 1; } }
     if (result->action_bus) {
         result->action_bus->write_immed_regs(regs, result);

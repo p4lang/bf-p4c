@@ -252,9 +252,7 @@ void ActionTable::vpn_params(int &width, int &depth, int &period, const char *&p
 
 void ActionTable::setup(VECTOR(pair_t) &data) {
     action_id = -1;
-    auto *row = get(data, "row");
-    if (!row) row = get(data, "logical_row");
-    setup_layout(layout, row, get(data, "column"), 0, get(data, "word"));
+    setup_layout(layout, data);
     for (auto &kv : MapIterChecked(data, true)) {
         if (kv.key == "format") {
             const char *action = nullptr;

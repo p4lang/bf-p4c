@@ -16,6 +16,8 @@ void ProxyHashMatchTable::setup(VECTOR(pair_t) &data) {
             if (CHECKTYPE(kv.value, tSTR)) {
                 proxy_hash_alg = kv.value.s;
             }
+        } else if (kv.key == "search_bus" || kv.key == "result_bus") {
+            // already dealt with in Table::setup_layout via common_init_setup
         } else {
             common_sram_setup(kv, data);
         }

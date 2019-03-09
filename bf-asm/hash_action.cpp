@@ -49,11 +49,22 @@ void HashActionTable::pass2() {
     if (logical_id < 0) choose_logical_id();
     if (layout.size() != 1 || layout[0].bus < 0)
         error(lineno, "Need explicit row/bus in hash_action table");
+    determine_word_and_result_bus();
     if (input_xbar)
         input_xbar->pass2();
     if (actions) actions->pass2(this);
     if (gateway) gateway->pass2();
     if (idletime) idletime->pass2();
+}
+
+/**
+ * Again by definition, the bus of the hash action table by definition is the result bus
+ */
+void HashActionTable::determine_word_and_result_bus() {
+    for (auto &row : layout) {
+        row.word = 0;
+        row.result_bus = row.bus;
+    }
 }
 
 void HashActionTable::pass3() {

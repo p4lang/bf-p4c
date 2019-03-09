@@ -1,6 +1,68 @@
 #include "table_format.h"
 #include "memories.h"
 
+/**
+ * Result buses are required by SRAM based tables to get data from the RAM to match central.
+ * This includes both overhead data, and vpn based data.  The result bus itself is an 83 bit
+ * bus, 64 bits for bits 0-63 of the RAM line that matches, and 19 bits for a direct address
+ * location.
+ *
+ * The rules of result bus requirements for each RAM word (an 128 bit section of RAM)
+ *     1. If a word has overhead of any entry, then a result bus is required for that word
+ *     2. If no entries have overhead, then any portion of each entries match must have
+ *        a result bus.  If an entry is within a single RAM section, then this RAM requires
+ *        a result bus.  If an entry is split across multiple RAMs, then one of those words
+ *        requires a result bus
+ */
+bitvec TableFormat::Use::result_bus_words() const {
+    bitvec rv;
+    bitvec overhead_mask;
+    for (auto match_group : match_groups) {
+        overhead_mask |= match_group.overhead_mask();
+    }
+
+    if (!overhead_mask.empty()) {
+        for (int i = 0; i <= overhead_mask.max().index(); i+= SINGLE_RAM_BITS) {
+            int word = i / SINGLE_RAM_BITS;
+            if (!overhead_mask.getslice(i, SINGLE_RAM_BITS).empty())
+                rv.setbit(word);
+        }
+        return rv;
+    }
+
+    for (auto match_group : match_groups) {
+        bitvec match_mask = match_group.match_bit_mask();
+        int min_word = match_mask.min().index() / SINGLE_RAM_BITS;
+        int max_word = match_mask.max().index() / SINGLE_RAM_BITS;
+
+        if (min_word != max_word)
+            continue;
+        rv.setbit(min_word);
+    }
+
+    // Try to reuse any result bus for a RAM that has been previously allocated
+    for (auto match_group : match_groups) {
+        bitvec match_mask = match_group.match_bit_mask();
+        int min_word = match_mask.min().index() / SINGLE_RAM_BITS;
+        int max_word = match_mask.max().index() / SINGLE_RAM_BITS;
+        if (min_word == max_word)
+            continue;
+        bool group_has_result_bus = false;
+        for (int word = min_word; word <= max_word; word++) {
+            if (match_mask.getslice(word * SINGLE_RAM_BITS, SINGLE_RAM_BITS).empty())
+                continue;
+            if (rv.getbit(word)) {
+                group_has_result_bus = true;
+                break;
+            }
+        }
+
+        if (group_has_result_bus)
+            continue;
+        rv.setbit(min_word);
+    }
+    return rv;
+}
 
 /** The goal of this code is to determine how to initial divide up the match data and the
  *  overhead, and which RAM correspond to which input xbar group.

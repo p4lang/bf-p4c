@@ -41,20 +41,48 @@ struct Memories {
 
     static constexpr int LOGICAL_ROW_MISSING_OFLOW = 8;
 
+    /**
+     * For an SRAM based tables, specifically there are 3 buses, and a 4th output potentially
+    *  in use:
+     *     1. A search bus for data from the input xbar to be directly compared with a RAM line
+     *     2. An address bus to find the associated RAM line/RAM to perform the comparison on
+     *     3. A result bus for capturing any overhead and address location of the entry that
+     *        matches.
+     *     4. A signal to capture the hit signals of all possible entries within the RAM, in
+     *        order to capture which VPN is put onto the result bus
+     *
+     * In the current setup, the search_bus_info captures both the search bus and address bus.
+     * The search data bus is captured in section 6.2.3 Exact Match Row Vertical/Horizontal
+     * (VH) XBars, and the address bus is discussed in section 6.2.8.4.1 Exact Match RAM
+     * Addressing.  Essentially these are locked together because generally a table that has
+     * a particular search data also requires a hash address, and these must be the same.
+     *
+     * The result bus unfortunately isn't really a single section, but is the input to match
+     * merge.  The hit signal is captured in section 6.4.3.1 Exact Match Physical Row Result
+     * Generation.
+     *
+     * Previously the allocation for SRAM based tables would lock up both the search portion
+     * and the result portion for an individual table.  However, this led to some cases that
+     * could be handled significantly better.  Say for instance, an ATCAM table is split into
+     * two logical tables on the same row.  While each logical table would require a
+     * separate result bus, the logical tables could split their search data/address data, as
+     * they have the same input xbar inputs.  Search buses/Address buses are also used by
+     * gateways at a later point, and thus by saving search buses, more gateways can be
+     * allocated in the same stage.
+     */
     struct search_bus_info {
         cstring name;
-        int width_section = 0;
-        int hash_group = 0;
-        int logical_table = 0;
+        int width_section = 0;   // Each search bus for a table has a particular width
+        int hash_group = 0;   // Each hash function requires a different hash function
         bool init = false;
 
         search_bus_info() {}
-        search_bus_info(cstring n, int ws, int hg, int lt)
-            : name(n), width_section(ws), hash_group(hg), logical_table(lt), init(true) {}
+        search_bus_info(cstring n, int ws, int hg)
+            : name(n), width_section(ws), hash_group(hg), init(true) {}
 
         bool operator==(const search_bus_info &sbi) {
             return name == sbi.name && width_section == sbi.width_section
-                   && hash_group == sbi.hash_group && logical_table == sbi.logical_table;
+                   && hash_group == sbi.hash_group;
         }
 
         bool operator!=(const search_bus_info &sbi) {
@@ -65,6 +93,29 @@ struct Memories {
         friend std::ostream &operator<<(std::ostream &, const search_bus_info &);
     };
 
+    struct result_bus_info {
+        cstring name;
+        int width_section = 0;  // Each width section may require a different width section
+        int logical_table = 0;  // For ATCAM tables, each logical table requires a separate
+                                // result bus
+        bool init = false;
+
+        result_bus_info() {}
+        result_bus_info(cstring n, int ws, int lt)
+            : name(n), width_section(ws), logical_table(lt), init(true) {}
+
+        bool operator==(const result_bus_info &mbi) {
+            return name == mbi.name && width_section == mbi.width_section
+                   && logical_table == mbi.logical_table;
+        }
+
+        bool operator!=(const result_bus_info &mbi) {
+            return !operator==(mbi);
+        }
+        bool free() { return !init; }
+        friend std::ostream &operator<<(std::ostream &, const result_bus_info &);
+    };
+
  private:
     Alloc2D<cstring, SRAM_ROWS, SRAM_COLUMNS>          sram_use;
     unsigned                                           sram_inuse[SRAM_ROWS] = { 0 };
@@ -73,7 +124,8 @@ struct Memories {
     Alloc2D<cstring, SRAM_ROWS, 2>                     gateway_use;
     Alloc2D<search_bus_info, SRAM_ROWS, 2>             sram_search_bus;
     Alloc2D<cstring, SRAM_ROWS, 2>                     sram_print_search_bus;
-    Alloc2D<cstring, SRAM_ROWS, 2>                     sram_match_bus;
+    Alloc2D<result_bus_info, SRAM_ROWS, 2>             sram_result_bus;
+    Alloc2D<cstring, SRAM_ROWS, 2>                     sram_print_result_bus;
     // int tcam_group_use[TCAM_ROWS][TCAM_COLUMNS] = {{-1}};
     int tcam_midbyte_use[TCAM_ROWS/2][TCAM_COLUMNS] = {{-1}};
     Alloc2D<cstring, SRAM_ROWS, 2>                     tind_bus;
@@ -92,7 +144,7 @@ struct Memories {
     struct mem_info {
         int logical_tables = 0;
         int match_tables = 0;
-        int match_bus_min = 0;
+        int result_bus_min = 0;
         int atcam_tables = 0;
         int match_RAMs = 0;
         int tind_tables = 0;
@@ -142,12 +194,14 @@ struct Memories {
         /* FIXME -- when tracking EXACT table memuse, do we need to track which way
          * each memory is allocated to?  For now, we do not. */
         struct Row {
-            int              row, bus, word, alloc;
+            int              row, bus, result_bus, word, alloc;
             int              stash_unit, stash_col;
             safe_vector<int> col, mapcol, vpn;
-            Row() : row(-1), bus(-1), word(-1), alloc(-1), stash_unit(-1), stash_col(-1) {}
-            explicit Row(int r, int b = -1, int w = -1, int a = -1, int u = -1, int c = -1)
-                : row(r), bus(b), word(w), alloc(a), stash_unit(u), stash_col(c) {}
+            Row() : row(-1), bus(-1), result_bus(-1), word(-1), alloc(-1),
+                    stash_unit(-1), stash_col(-1) {}
+            explicit Row(int r, int b = -1, int w = -1, int a = -1)
+                : row(r), bus(b), result_bus(-1), word(w), alloc(a),
+                  stash_unit(-1), stash_col(-1) {}
             void dbprint(std::ostream &out) const {
                 out << "Row " << row << " with bus " << bus;
             }
@@ -209,8 +263,10 @@ struct Memories {
             dleft_match.clear();
         }
 
+        bool separate_search_and_result_bus() const;
         // depth in memory units + mask to use for memory selection per way
-        void visit(Memories &mem, std::function<void(cstring &)>) const;
+        enum update_type_t { UPDATE_RAM, UPDATE_MAPRAM, UPDATE_GATEWAY, UPDATE_RESULT_BUS };
+        void visit(Memories &mem, std::function<void(cstring &, update_type_t)>) const;
     };
 
  private:
@@ -370,9 +426,11 @@ struct Memories {
         SRAM_group(table_alloc *t, int d, int w, int n, int h, type_t ty)
             : ta(t), depth(d), width(w), number(n), hash_group(h), type(ty) {}
         void dbprint(std::ostream &out) const;
-        search_bus_info build_search_bus(int width_sect) {
-            return search_bus_info(ta->table->name, width_sect, hash_group, logical_table);
+        search_bus_info build_search_bus(int width_sect) const {
+            return search_bus_info(ta->table->name, width_sect, hash_group);
         }
+
+        result_bus_info build_result_bus(int width_sect) const;
 
         int left_to_place() const {
             BUG_CHECK(placed <= depth, "Placed more than needed");
@@ -432,7 +490,8 @@ struct Memories {
         safe_vector<int> rows;
         safe_vector<int> cols;
         std::map<int, int> widths;
-        std::map<int, int> buses;
+        std::map<int, int> search_buses;
+        std::map<int, int> result_buses;
         unsigned column_mask = 0;
     };
 
@@ -584,7 +643,9 @@ struct Memories {
         unsigned total_mask, std::set<int> selected_rows, SRAM_group *group, int width_sect);
     void break_exact_tables_into_ways();
     bool search_bus_available(int search_row, search_bus_info &sbi);
+    bool result_bus_available(int match_row, result_bus_info &mbi);
     int select_search_bus(SRAM_group *group, int width_sect, int row);
+    int select_result_bus(SRAM_group *group, int width_sect, int row);
     bool find_best_row_and_fill_out(unsigned column_mask);
     bool fill_out_row(SRAM_group *placed_way, int row, unsigned column_mask);
     SRAM_group *find_best_candidate(SRAM_group *placed_way, int row, int &loc);
@@ -621,8 +682,8 @@ struct Memories {
     void action_bus_users_log();
     bool find_unit_gw(Memories::Use &alloc, cstring name, bool requires_search_bus);
     bool find_search_bus_gw(table_alloc *ta, Memories::Use &alloc, cstring name);
-    bool find_match_bus_gw(Memories::Use &alloc, uint64_t payload, cstring name,
-                           table_alloc *ta_no_match, int logical_table = -1);
+    bool find_result_bus_gw(Memories::Use &alloc, uint64_t payload, cstring name,
+                            table_alloc *ta_no_match, int logical_table = -1);
     uint64_t determine_payload(table_alloc *ta);
     bool allocate_all_gw();
     bool allocate_all_payload_gw(bool alloc_search_bus);

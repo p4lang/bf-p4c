@@ -1161,8 +1161,9 @@ std::ostream &operator<<(std::ostream &out, const memory_vector &v) {
     return out;
 }
 
-void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memories::Use &mem) const {
-    safe_vector<int> row, bus, word;
+void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memories::Use &mem,
+         const IR::MAU::Table::Layout *layout, const TableFormat::Use *format) const {
+    safe_vector<int> row, bus, result_bus, word;
     std::map<int, safe_vector<int>> home_rows;
     safe_vector<int> stash_rows;
     safe_vector<int> stash_cols;
@@ -1174,6 +1175,15 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
     bool have_word = mem.type == Memories::Use::ACTIONDATA;
     bool have_vpn = have_word;
 
+    bool separate_bus = mem.separate_search_and_result_bus();
+    // Also explicitly print out search bus and hash bus if the layout has no overhead
+    if (layout != nullptr && format != nullptr) {
+        if (!layout->no_match_rams()) {
+            if (!format->has_overhead())
+                separate_bus = true;
+        }
+    }
+
     for (auto &r : mem.row) {
         if (logical) {
             row.push_back(2*r.row + (r.col[0] >= Memories::LEFT_SIDE_COLUMNS));
@@ -1182,6 +1192,8 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
             row.push_back(r.row);
             bus.push_back(r.bus);
             if (r.bus < 0) have_bus = false;
+            if (separate_bus)
+                result_bus.push_back(r.result_bus);
             if (r.col.size() > 0) have_col = true;
         }
         if (have_word)
@@ -1196,7 +1208,14 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
     }
     if (row.size() > 1) {
         out << indent << "row: " << row << std::endl;
-        if (have_bus) out << indent << "bus: " << bus << std::endl;
+        if (have_bus) {
+            if (separate_bus) {
+                out << indent << "search_bus: " << bus << std::endl;
+                out << indent << "result_bus: " << result_bus << std::endl;
+            } else {
+                out << indent << "bus: " << bus << std::endl;
+            }
+        }
         if (have_word)
             out << indent << "word: " << word << std::endl;
         if (have_col) {
@@ -1217,7 +1236,14 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
         }
     } else {
         out << indent << "row: " << row[0] << std::endl;
-        if (have_bus) out << indent << "bus: " << bus[0] << std::endl;
+        if (have_bus) {
+            if (separate_bus) {
+                out << indent << "search_bus: " << bus[0] << std::endl;
+                out << indent << "result_bus: " << result_bus[0] << std::endl;
+            } else {
+                out << indent << "bus: " << bus[0] << std::endl;
+            }
+        }
         if (have_col) {
             out << indent << "column: " << memory_vector(mem.row[0].col, mem.type, false)
             << std::endl;
@@ -3095,7 +3121,6 @@ bool MauAsmOutput::EmitAttached::is_unattached(const IR::MAU::AttachedMemory *at
     auto unique_id = tbl->unique_id();
     auto &memuse = tbl->resources->memuse.at(unique_id);
     auto at_unique_id = tbl->unique_id(at);
-    LOG1("Unique id " << unique_id << " " << at_unique_id);
     auto unattached_loc = memuse.unattached_tables.find(at_unique_id);
     if (unattached_loc != memuse.unattached_tables.end())
         return true;

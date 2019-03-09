@@ -134,6 +134,7 @@ void SRamMatchTable::verify_format() {
     if (hit_next.size() > 1 && !format->field("next") && !format->field("action"))
         error(format->lineno, "No 'next' field in format");
     if (error_count > 0) return;
+    bitvec result_bus_words;
     for (int i = 0; i < (int)group_info.size(); i++) {
         if (group_info[i].match_group.size() == 1)
             for (auto &mgrp : group_info[i].match_group) {
@@ -141,17 +142,48 @@ void SRamMatchTable::verify_format() {
                 if ((mgrp.second = word_info[mgrp.first].size()) > 4)
                     error(format->lineno, "Too many match groups using word %d", mgrp.first);
                 word_info[mgrp.first].push_back(i); }
+        // Determining the result bus word, where the overhead is supposed to be
         if (group_info[i].overhead_word < 0) {
-            /* no overhead -- use the last match word */
-            group_info[i].word_group = group_info[i].match_group.rbegin()->second;
-            LOG1("  format group " << i << " no overhead");
+            if (group_info[i].match_group.size() == 1) {
+                group_info[i].result_bus_word = group_info[i].match_group.begin()->first;
+                result_bus_words.setbit(group_info[i].result_bus_word);
+                LOG1("  format group " << i << " no overhead single match group");
+            }
         } else {
-            group_info[i].word_group = group_info[i].match_group[group_info[i].overhead_word];
+            group_info[i].result_bus_word = group_info[i].overhead_word;
             LOG1("  format group " << i << " overhead in word " << group_info[i].overhead_word
                  << " at bit " << group_info[i].overhead_bit); }
+    }
+
+    /**
+     * Determining the result bus for an entry, if that entry has no overhead.  The result bus
+     * is still needed to get the direct address location to find action data / run an
+     * instruction, etc.
+     * 
+     * This section maps the allocation scheme used in the TableFormat::Use in p4c, found
+     * in the function result_bus_words
+     */
+    for (int i = 0; i < (int)group_info.size(); i++) {
+        if (group_info[i].overhead_word < 0 && group_info[i].match_group.size() > 1) {
+            bool result_bus_set = false;
+            for (auto match_group : group_info[i].match_group) {
+                if (result_bus_words.getbit(match_group.first)) {
+                    group_info[i].result_bus_word = match_group.first;
+                    result_bus_set = true;
+                }
+            }
+            if (!result_bus_set)
+                group_info[i].result_bus_word = group_info[i].match_group.begin()->first;
+            LOG1("  format group " << i << " no overhead multiple match groups");
+        } 
+    }
+
+    for (int i = 0; i < (int)group_info.size(); i++) {
         LOG1("  masks: " << hexvec(group_info[i].tofino_mask));
         for (auto &mgrp : group_info[i].match_group)
-            LOG1("    match group " << mgrp.second << " in word " << mgrp.first); }
+            LOG1("    match group " << mgrp.second << " in word " << mgrp.first);
+    }
+
     for (unsigned i = 0; i < word_info.size(); i++)
         LOG1("  word " << i << " groups: " << word_info[i]);
     if (options.match_compiler && 0) {
@@ -429,9 +461,7 @@ void SRamMatchTable::write_attached_merge_regs(REGS &regs, int bus, int word, in
     int group = word_info[word][word_group];
     auto &merge = regs.rams.match.merge;
     for (auto &st : attached.stats) {
-        if (group_info[group].overhead_word == (int)word
-            // FIXME: If no match overhead, no overhead word assigned?
-            || group_info[group].overhead_word == -1) {
+        if (group_info[group].result_bus_word == (int)word) {
             merge.mau_stats_adr_exact_shiftcount[bus][word_group]
                 = st->to<CounterTable>()->determine_shiftcount(st, group, word, 0);
         } else if (options.match_compiler) {
@@ -538,7 +568,9 @@ void SRamMatchTable::pass1() {
     alloc_busses(stage->sram_match_bus_use);
     if (format) {
         verify_format();
-        setup_ways(); }
+        setup_ways();
+        determine_word_and_result_bus();
+    }
     MatchTable::pass1();
     if (action_enable >= 0)
         if (action.args.size() < 1 || action.args[0].size() <= (unsigned)action_enable)
@@ -650,6 +682,51 @@ void SRamMatchTable::setup_ways() {
     setup_hash_function_ids();
 }
 
+/**
+ * Either fills out the word/result bus information each row, if it is not provided directly by
+ * the compiler, or verifies that the word/result_bus information matches directly with
+ * what has been calculated through the way information provided.
+ */
+void SRamMatchTable::determine_word_and_result_bus() {
+    for (auto &row : layout) {
+        int word = -1;
+        bool word_set = false;
+        for (auto col : row.cols) {
+            auto &way = way_map.at(std::make_pair(row.row, col));
+            if (word_set) {
+                BUG_CHECK(word == way.word);
+            } else {
+                word = way.word;
+                word_set = true;
+            }
+        }
+        if (row.word_initialized()) {
+            if (word != row.word)
+                error(lineno, "Word on row %d bus %d does not align with word in RAM",
+                      row.row, row.bus);
+        } else {
+            row.word = word;
+        }
+    }
+
+    for (auto &row : layout) {
+        bool result_bus_needed = false;
+        for (auto group_in_word : word_info.at(row.word)) {
+            if (group_info[group_in_word].result_bus_word == row.word)
+                result_bus_needed = true;
+        }
+        if (!row.result_bus_initialized()) {
+            if (result_bus_needed)
+                row.result_bus = row.bus;
+            else
+                row.result_bus = -1;
+        } else if (!row.result_bus_used() && result_bus_needed) {
+            error(row.lineno, "Row %d: Bus %d requires a result bus, but has not been allocated "
+                              "one", row.row, row.bus);
+        }
+    }
+}
+
 int SRamMatchTable::determine_pre_byteswizzle_loc(MatchSource *ms, int lo, int hi, int word) {
     auto phv_p = dynamic_cast<Phv::Ref *>(ms);
     auto phv_ref = *phv_p;
@@ -721,10 +798,10 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
 
             if (next) {
                 for (int group : word_info[way.word]) {
-                    if (group_info[group].overhead_word != way.word) continue;
+                    if (group_info[group].result_bus_word != way.word) continue;
                     int pos = (next->by_group[group]->bit(0) % 128) - 1;
                     auto &n = ram.match_next_table_bitpos;
-                    switch(group_info[group].word_group) {
+                    switch(group_info[group].result_bus_word_group()) {
                     case 0: break;
                     case 1: n.match_next_table1_bitpos = pos; break;
                     case 2: n.match_next_table2_bitpos = pos; break;
@@ -736,7 +813,8 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
             ram.unit_ram_ctl.match_ram_write_data_mux_select = 7; /* unused */
             ram.unit_ram_ctl.match_ram_read_data_mux_select = 7; /* unused */
             ram.unit_ram_ctl.match_ram_matchdata_bus1_sel = row.bus;
-            ram.unit_ram_ctl.match_result_bus_select = 1 << row.bus;
+            if (row.result_bus >= 0)
+                ram.unit_ram_ctl.match_result_bus_select = 1 << row.result_bus;
             if (auto cnt = word_info[way.word].size())
                 ram.unit_ram_ctl.match_entry_enable = ~(~0U << cnt);
             auto &unitram_config = regs.rams.map_alu.row[row.row].adrmux
@@ -820,23 +898,29 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
                 vh_xbar_ctl.exactmatch_row_vh_xbar_enable = 1; }
             vh_xbar_ctl.exactmatch_row_vh_xbar_thread = timing_thread(gress); }
         /* setup match central config to extract results of the match */
-        unsigned bus = row.row*2 + row.bus;
+        BUG_CHECK(row.result_bus_initialized());
+        ssize_t r_bus = row.result_bus_used() ? row.row*2 + row.result_bus : -1;
+        // If the result bus is not to be used, then the registers are not necessary to set up
+        // for shift/mask/default etc.
         /* FIXME -- factor this where possible with ternary match code */
         if (action) {
             if (auto adt = action->to<ActionTable>()) {
-                /* FIXME -- support for multiple sizes of action data? */
-                merge.mau_actiondata_adr_mask[0][bus] = adt->determine_mask(action);
-                merge.mau_actiondata_adr_vpn_shiftcount[0][bus]
-                    = adt->determine_vpn_shiftcount(action);
+                if (r_bus >= 0) {
+                    /* FIXME -- support for multiple sizes of action data? */
+                    merge.mau_actiondata_adr_mask[0][r_bus] = adt->determine_mask(action);
+                    merge.mau_actiondata_adr_vpn_shiftcount[0][r_bus]
+                        = adt->determine_vpn_shiftcount(action);
+                }
             }
         }
 
         for (unsigned word_group = 0; format && word_group < word_info[word].size(); word_group++) {
             int group = word_info[word][word_group];
-            if (group_info[group].overhead_word == (int)word) {
+            if (group_info[group].result_bus_word == (int)word) {
+                BUG_CHECK(r_bus >= 0);
                 if (format->immed) {
                     BUG_CHECK(format->immed->by_group[group]->bit(0)/128U == word);
-                    merge.mau_immediate_data_exact_shiftcount[bus][word_group] =
+                    merge.mau_immediate_data_exact_shiftcount[r_bus][word_group] =
                         format->immed->by_group[group]->bit(0) % 128; }
                 if (instruction) {
                     int shiftcount = 0;
@@ -847,50 +931,57 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
                         assert(field->by_group[group]->bit(0)/128U == word);
                         shiftcount = field->by_group[group]->bit(0) % 128U;
                     }
-                    merge.mau_action_instruction_adr_exact_shiftcount[bus][word_group] = shiftcount;
+                    merge.mau_action_instruction_adr_exact_shiftcount[r_bus][word_group]
+                        = shiftcount;
                 }
             }
             /* FIXME -- factor this where possible with ternary match code */
             if (action) {
-                if (group_info[group].overhead_word == (int)word ||
-                    group_info[group].overhead_word == -1) {
-                    merge.mau_actiondata_adr_exact_shiftcount[bus][word_group]
+                if (group_info[group].result_bus_word == (int)word) {
+                    BUG_CHECK(r_bus >= 0);
+                    merge.mau_actiondata_adr_exact_shiftcount[r_bus][word_group]
                         = action->determine_shiftcount(action, group, word, 0);
                 }
             }
             if (attached.selector) {
-                if (group_info[group].overhead_word == (int)word) {
+                if (group_info[group].result_bus_word == (int)word) {
+                    BUG_CHECK(r_bus >= 0);
                     auto sel = get_selector();
-                    merge.mau_meter_adr_exact_shiftcount[bus][word_group] =
+                    merge.mau_meter_adr_exact_shiftcount[r_bus][word_group] =
                         sel->determine_shiftcount(attached.selector, group, word, 0);
-                    merge.mau_selectorlength_shiftcount[0][bus] =
+                    merge.mau_selectorlength_shiftcount[0][r_bus] =
                         sel->determine_length_shiftcount(attached.selector_length, group, word);
-                    merge.mau_selectorlength_mask[0][bus] =
+                    merge.mau_selectorlength_mask[0][r_bus] =
                         sel->determine_length_mask(attached.selector_length);
-                    merge.mau_selectorlength_default[0][bus] =
+                    merge.mau_selectorlength_default[0][r_bus] =
                         sel->determine_length_default(attached.selector_length);
                 }
 
             }
-            if (idletime)
-                merge.mau_idletime_adr_exact_shiftcount[bus][word_group] =
-                    idletime->direct_shiftcount();
-            write_attached_merge_regs(regs, bus, word, word_group); }
+            if (idletime) {
+                if (group_info[group].result_bus_word == (int)word) {
+                    BUG_CHECK(r_bus >= 0);
+                    merge.mau_idletime_adr_exact_shiftcount[r_bus][word_group] =
+                        idletime->direct_shiftcount();
+                }
+            }
+            if (r_bus >= 0)
+                write_attached_merge_regs(regs, r_bus, word, word_group);
+        }
         for (auto col : row.cols) {
             int word_group = 0;
             for (int group : word_info[word]) {
-                int overhead_word = group_info[group].overhead_word;
-                if (overhead_word < 0)
-                    overhead_word = group_info[group].match_group.rbegin()->first;
-                if (int(word) == overhead_word) {
-                    merge.col[col].row_action_nxtable_bus_drive[row.row] |= 1 << row.bus;
-                }
+                int result_bus_word = group_info[group].result_bus_word;
+                if (int(word) == result_bus_word) {
+                    BUG_CHECK(r_bus >= 0);
+                    merge.col[col].row_action_nxtable_bus_drive[row.row] |= 1 << (r_bus % 2); }
                 if (word_group < 2) {
                     auto &way = way_map[std::make_pair(row.row, col)];
-                    int idx = way.index + word - overhead_word;
+                    int idx = way.index + word - result_bus_word;
                     int overhead_row = ways[way.way].rams[idx].first;
                     auto &hitmap_ixbar = merge.col[col].hitmap_output_map[2*row.row + word_group];
-                    setup_muxctl(hitmap_ixbar, overhead_row*2 + group_info[group].word_group);
+                    setup_muxctl(hitmap_ixbar,
+                                 overhead_row*2 + group_info[group].result_bus_word_group());
                 }
                 ++word_group;
             }
@@ -898,10 +989,12 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
                            layout[index+word].row*2 + layout[index+word].bus); */ }
         //if (gress == EGRESS)
         //    merge.exact_match_delay_config.exact_match_bus_thread |= 1 << bus;
-        merge.exact_match_phys_result_en[bus/8U] |= 1U << (bus%8U);
-        merge.exact_match_phys_result_thread[bus/8U] |= timing_thread(gress) << (bus%8U);
-        if (stage->tcam_delay(gress))
-            merge.exact_match_phys_result_delay[bus/8U] |= 1U << (bus%8U);
+        if (r_bus >= 0) {
+            merge.exact_match_phys_result_en[r_bus/8U] |= 1U << (r_bus%8U);
+            merge.exact_match_phys_result_thread[r_bus/8U] |= timing_thread(gress) << (r_bus%8U);
+            if (stage->tcam_delay(gress))
+                merge.exact_match_phys_result_delay[r_bus/8U] |= 1U << (r_bus%8U);
+        }
     }
 
     merge.exact_match_logical_result_en |= 1 << logical_id;

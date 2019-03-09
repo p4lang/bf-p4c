@@ -6,9 +6,7 @@
 #include "tables.h"
 
 void Synth2Port::common_init_setup(const VECTOR(pair_t) &data, bool, P4Table::type p4type) {
-    auto *row = get(data, "row");
-    if (!row) row = get(data, "logical_row");
-    setup_layout(layout, row, get(data, "column"), get(data, "bus"), 0);
+    setup_layout(layout, data);
     if (auto *fmt = get(data, "format")) {
         if (CHECKTYPEPM(*fmt, tMAP, fmt->map.size > 0, "non-empty map"))
             format = new Format(this, fmt->map); }
