@@ -48,7 +48,6 @@ void AsmParser::init_port_use(bitvec& port_use, value_t arg) {
         port_use.setbit(arg.i); }
 }
 
-
 void AsmParser::start(int lineno, VECTOR(value_t) args) {
     if (args.size == 0) {
         this->lineno = lineno;
@@ -118,13 +117,12 @@ void AsmParser::output(json::map &ctxt_json) {
     ctxt_json["parser"]["ingress"] = json::vector();
     ctxt_json["parser"]["egress"] = json::vector();
 
-    /// XXX(hanw): We cannot change the context.json format
-    /// until 8.7 branch is pulled. As a result, we will
-    /// generate the original context.json format if the
-    /// number of parser is one, and generate the new context.json
-    /// format if the number of parser is more than one.
+    /// We use the 'parsers' node in ctxt json to implement
+    /// multiple parser instances support.
+    /// We use the 'parser' node for all single parser
+    /// instance support.
     for (auto gress : Range(INGRESS, EGRESS)) {
-        /// remove after 8.7 release
+        /// remove after multi-parser support is fully-tested.
         if (parser[gress].size() == 1) {
             parser[gress][0]->output_legacy(ctxt_json);
         } else {
@@ -376,6 +374,15 @@ void Parser::process() {
         Phv::setuse(EGRESS, phv_use[EGRESS]); }
 }
 
+void Parser::output_default_ports(json::vector& vec, bitvec port_use) {
+    while(!port_use.empty()) {
+        auto idx = port_use.ffs(0);
+        vec.push_back(idx);
+        LOG3("port idx " << idx);
+        port_use.clrbit(idx);
+    }
+}
+
 // output context.json format with multiple parser support
 void Parser::output(json::map& ctxt_json) {
     json::vector& cjson = ctxt_json["parsers"][gress ? "egress" : "ingress"];
@@ -390,6 +397,9 @@ void Parser::output(json::map& ctxt_json) {
         unsigned handle = next_handle();
         LOG3("parser handle: " << handle);
         parser_ctxt_json["handle"] = handle;
+        json::vector default_ports;
+        output_default_ports(default_ports, port_use);
+        parser_ctxt_json["default"] = std::move(default_ports);
         write_config(*regs, parser_ctxt_json, false);
         cjson.push_back(std::move(parser_ctxt_json));
         gen_configuration_cache(*regs, ctxt_json["configuration_cache"]);
@@ -397,7 +407,7 @@ void Parser::output(json::map& ctxt_json) {
 }
 
 // output context.json format prior to multiple parser support
-// XXX(hanw): remove after 8.7 release
+// XXX(hanw): remove after multi-parser support is fully-tested.
 void Parser::output_legacy(json::map& ctxt_json) {
     if (all.empty()) return;
     for (auto st : all) st->pass2(this);
