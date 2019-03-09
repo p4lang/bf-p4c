@@ -673,9 +673,8 @@ struct IXBar {
     bool allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc,
                           const LayoutOption *layout_option,
                           size_t start, size_t last);
-    bool allocHashWay(const IR::MAU::Table *tbl,
-                      const LayoutOption *layout_option,
-                      size_t index, size_t start, Use &alloc);
+    bool allocHashWay(const IR::MAU::Table *tbl, const LayoutOption *layout_option,
+        size_t index, std::map<int, bitvec> &slice_to_select_bits, Use &alloc);
     bool allocGateway(const IR::MAU::Table *, const PhvInfo &phv, Use &alloc, bool second_try);
     bool allocSelector(const IR::MAU::Selector *, const IR::MAU::Table *, const PhvInfo &phv,
                        Use &alloc, cstring name);

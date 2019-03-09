@@ -535,42 +535,18 @@ void MauAsmOutput::emit_ixbar_hash_table(int hash_table, safe_vector<Slice> &mat
     }
 }
 
-/** Emits information on a lower 10 bit portion of a RAM select for exact match
+/**
+ * This funciton is to emit the match data function associated with an SRAM match table.
  */
-void MauAsmOutput::emit_ixbar_hash_way(std::ostream &out, indent_t indent,
-        safe_vector<Slice> &match_data, Slice *ghost, const IXBar::Use *use, int hash_group,
-        int start_bit, int end_bit) const {
-    unsigned done = 0;
+void MauAsmOutput::emit_ixbar_match_func(std::ostream &out, indent_t indent,
+        safe_vector<Slice> &match_data, Slice *ghost, le_bitrange hash_bits) const {
     if (match_data.empty() && ghost == nullptr)
         return;
-    for (auto &way : use->way_use) {
-        if (way.group != hash_group)
-            continue;
-        if (done & (1 << way.slice)) continue;
-        done |= 1 << way.slice;
-        int way_start = way.slice * TableFormat::RAM_GHOST_BITS + start_bit;
-        int way_end = way.slice * TableFormat::RAM_GHOST_BITS + end_bit;
-        out << indent << way_start;
-        if (way_end != way_start)
-            out << ".." << way_end;
-        out << ": " << FormatHash(&match_data, nullptr, nullptr,
-                ghost, IR::MAU::HashFunction::random())
-            << std::endl;
-    }
-}
-
-/** Emits infomration on the upper 12 bits select porition of a RAM select for exact match
- */
-void MauAsmOutput::emit_ixbar_hash_way_select(std::ostream &out, indent_t indent,
-        safe_vector<Slice> &match_data, Slice *ghost, int start_bit, int end_bit) const {
-    int way_start = TableFormat::RAM_GHOST_BITS * IXBar::HASH_INDEX_GROUPS + start_bit;
-    int way_end = TableFormat::RAM_GHOST_BITS * IXBar::HASH_INDEX_GROUPS + end_bit;
-    out << indent << way_start;
-    if (way_end != way_start)
-        out << ".." << way_end;
-    out << ": " << FormatHash(&match_data, nullptr, nullptr,
-            ghost, IR::MAU::HashFunction::random())
-        << std::endl;
+    out << indent << hash_bits.lo;
+    if (hash_bits.size() != 1)
+        out << ".." << hash_bits.hi;
+    out << ": " << FormatHash(&match_data, nullptr, nullptr, ghost,
+                              IR::MAU::HashFunction::random()) << std::endl;
 }
 
 /** This function is necessary due to the limits of the driver's handling of ATCAM tables.
@@ -587,6 +563,7 @@ void MauAsmOutput::emit_ixbar_hash_way_select(std::ostream &out, indent_t indent
 void MauAsmOutput::emit_ixbar_hash_atcam(std::ostream &out, indent_t indent,
         safe_vector<Slice> &ghost, const IXBar::Use *use, int hash_group) const {
     safe_vector<Slice> empty;
+    BUG_CHECK(use->way_use.size() == 1, "One and only one way necessary for ATCAM tables");
     for (auto ghost_slice : ghost) {
         int start_bit = 0;  int end_bit = 0;
         if (ghost_slice.get_lo() >= TableFormat::RAM_GHOST_BITS)
@@ -600,8 +577,10 @@ void MauAsmOutput::emit_ixbar_hash_atcam(std::ostream &out, indent_t indent,
             end_bit = TableFormat::RAM_GHOST_BITS - 1;
             adapted_ghost.shrink_hi(diff);
         }
-        emit_ixbar_hash_way(out, indent, empty, &adapted_ghost, use, hash_group, start_bit,
-                            end_bit);
+
+        le_bitrange hash_bits = { start_bit, end_bit };
+        hash_bits = hash_bits.shiftedByBits(use->way_use[0].slice * IXBar::RAM_LINE_SELECT_BITS);
+        emit_ixbar_match_func(out, indent, empty, &adapted_ghost, hash_bits);
     }
 
     unsigned mask_bits = 0;
@@ -630,129 +609,219 @@ void MauAsmOutput::emit_ixbar_hash_atcam(std::ostream &out, indent_t indent,
             int diff = TableFormat::RAM_GHOST_BITS - ghost_slice.get_lo();
             adapted_ghost.shrink_lo(diff);
         }
-        emit_ixbar_hash_way_select(out, indent, empty, &adapted_ghost, start_bit, end_bit);
+
+        le_bitrange hash_bits = { start_bit, end_bit };
+        bitvec select_bits(use->way_use[0].mask);
+        hash_bits = hash_bits.shiftedByBits(IXBar::RAM_SELECT_BIT_START
+                                            + select_bits.min().index());
+        emit_ixbar_match_func(out, indent, empty, &adapted_ghost, hash_bits);
     }
 }
 
-/** The purpose of this code is to output the hash matrix specifically for exact tables.
- *  This code classifies all of the ghost bits for this particular hash table.  The ghost bits
- *  are the bits that appear in the hash but not in the table format.  This reduces the
- *  number of bits actually needed to match against.
+void MauAsmOutput::ixbar_hash_exact_bitrange(Slice ghost_slice, int min_way_size,
+        le_bitrange non_rotated_slice, le_bitrange comp_slice, int initial_lo_bit,
+        safe_vector<std::pair<le_bitrange, Slice>> &ghost_positions) const {
+    auto boost_sl = toClosedRange<RangeUnit::Bit, Endian::Little>
+                        (non_rotated_slice.intersectWith(comp_slice));
+    if (boost_sl == boost::none)
+        return;
+    le_bitrange overlap = *boost_sl;
+    int lo = overlap.lo - initial_lo_bit;
+    int hi = overlap.hi - initial_lo_bit;
+    le_bitrange hash_position = overlap;
+    if (hash_position.lo >= min_way_size)
+        hash_position = hash_position.shiftedByBits(-1 * min_way_size);
+    ghost_positions.emplace_back(hash_position, ghost_slice(lo, hi));
+}
+
+/**
+ * Fills in the slice_to_select_bits map, described in emit_ixbar_hash_exact 
+ */
+void MauAsmOutput::ixbar_hash_exact_info(int &min_way_size, int &min_way_slice,
+        const IXBar::Use *use, int hash_group, std::map<int, bitvec> &slice_to_select_bits) const {
+    for (auto way : use->way_use) {
+        if (way.group != hash_group)
+            continue;
+        bitvec local_select_mask = bitvec(way.mask);
+        int curr_way_size = IXBar::RAM_LINE_SELECT_BITS + local_select_mask.popcount();
+        min_way_size = std::min(min_way_size, curr_way_size);
+        min_way_slice = std::min(way.slice, min_way_slice);
+
+
+        // Guarantee that way object that have the same slice bits also use a similar pattern
+        // of select bits
+        auto mask_p = slice_to_select_bits.find(way.slice);
+        if (mask_p != slice_to_select_bits.end()) {
+            bitvec curr_mask = mask_p->second;
+            BUG_CHECK(curr_mask.min().index() == local_select_mask.min().index()
+                      || local_select_mask.empty(), "Shared line select bits are not coordinated "
+                      "to shared ram select index");
+            slice_to_select_bits[way.slice] |= local_select_mask;
+        } else {
+            slice_to_select_bits[way.slice] = local_select_mask;
+        }
+    }
+
+    bitvec verify_overlap;
+    for (auto kv : slice_to_select_bits) {
+        BUG_CHECK((verify_overlap & kv.second).empty(), "The RAM select bits are not unique per "
+                  "way");
+        verify_overlap |= kv.second;
+        BUG_CHECK(kv.second.empty() || kv.second.is_contiguous(), "The RAM select bits must "
+                  "currently be contiguous for the context JSON");
+    }
+}
+
+/**
+ * The purpose of this code is to output the hash matrix specifically for exact tables.
+ * This code classifies all of the ghost bits for this particular hash table.  The ghost bits
+ * are the bits that appear in the hash but not in the table format.  This reduces the
+ * number of bits actually needed to match against.
  *
- *  The ghost bits themselves are spread through an identity hash, while the bits that appear
- *  in the match are randomized.  Thus each ghost bit is assigned a corresponding bit in the
- *  way bits or select bits within the match format.
+ * The ghost bits themselves are spread through an identity hash, while the bits that appear
+ * in the match are randomized.  Thus each ghost bit is assigned a corresponding bit in the
+ * way bits or select bits within the match format.
  *
- *  The hash matrix is specified on a hash table by hash table basis.  16 x 64b hash tables
- *  at most are specified, and if the ghost bits do not appear in that particular hash table,
- *  they will not be output.  The ident_bits_prev_alloc is used to track how where to start
- *  the identity of the ghost bits within this particular hash table.
+ * The hash matrix is specified on a hash table by hash table basis.  16 x 64b hash tables
+ * at most are specified, and if the ghost bits do not appear in that particular hash table,
+ * they will not be output.  The ident_bits_prev_alloc is used to track how where to start
+ * the identity of the ghost bits within this particular hash table.
+ *
+ * The hash for an exact match function is the following:
+ *
+ *     1.  Random for all of the match related bits.
+ *     2.  An identity hash for the ghost bits across each way.
+ *
+ * Each way is built up of both RAM line select bits and RAM select bits.  The RAM line select
+ * bits is a 10 bit window ranging from 0-4 way * 10 bit sections of the 52 bit hash bus. The
+ * RAM select bits is any section of the upper 12 bits of the hash.
+ *
+ * In order to increase randomness, the identity hash across different ways is different.
+ * Essentially each identity hash is shifted by 1 bit per way, so that the same identity hash
+ * does not end up on the same RAM line. 
  */
 void MauAsmOutput::emit_ixbar_hash_exact(std::ostream &out, indent_t indent,
         safe_vector<Slice> &match_data, safe_vector<Slice> &ghost, const IXBar::Use *use,
         int hash_group, int &ident_bits_prev_alloc) const {
-    // FIXME: See comments above this function, but should be unnecessary
     if (use->atcam) {
         emit_ixbar_hash_atcam(out, indent, ghost, use, hash_group);
         return;
     }
 
-    // Do not specify identity ghost bits at places where ghost bits are already specified
-    if (ident_bits_prev_alloc > 0) {
-        int prev_alloc = std::min(ident_bits_prev_alloc - 1, TableFormat::RAM_GHOST_BITS - 1);
-        emit_ixbar_hash_way(out, indent, match_data, nullptr, use, hash_group, 0,
-                            prev_alloc);
-    }
+    int min_way_size = IXBar::RAM_LINE_SELECT_BITS + IXBar::HASH_SINGLE_BITS + 1;
+    int min_way_slice = IXBar::HASH_INDEX_GROUPS + 1;
+    // key is way.slice i.e. RAM line select, value is the RAM select mask.  Due to an optimization
+    // multiple IXBar::Use::Way may have the same way.slice, and different way.mask values.
+    std::map<int, bitvec> slice_to_select_bits;
 
-    safe_vector<Slice> way_ghost;
-    safe_vector<Slice> select_ghost;
+    ixbar_hash_exact_info(min_way_size, min_way_slice, use, hash_group, slice_to_select_bits);
+    bool select_bits_needed = min_way_size > IXBar::RAM_LINE_SELECT_BITS;
+    bitvec ways_done;
 
-    // Classify which ghost bits are going in the lower 10 bits, and the upper select bits
-    int ident_bits_alloc = 0;
-    for (auto ghost_slice : ghost) {
-        int start_bit = ident_bits_prev_alloc + ident_bits_alloc;
-        if (start_bit >= TableFormat::RAM_GHOST_BITS) {
-            select_ghost.push_back(ghost_slice);
-        } else if (start_bit + ghost_slice.width() <= TableFormat::RAM_GHOST_BITS) {
-            way_ghost.push_back(ghost_slice);
-        } else {
-            int diff = TableFormat::RAM_GHOST_BITS - start_bit - 1;
-            auto way_slice = ghost_slice(0, diff);
-            way_ghost.push_back(way_slice);
-            select_ghost.push_back(ghost_slice - way_slice);
-        }
-        ident_bits_alloc += ghost_slice.width();
-    }
-
-    // Handle the ghost bits that are in the lower 10 bits of the hash way
-    int bits_allocated = 0;
-    for (auto ghost_slice : way_ghost) {
-        int start_bit = ident_bits_prev_alloc + bits_allocated;
-        int end_bit = start_bit + ghost_slice.width() - 1;
-        emit_ixbar_hash_way(out, indent, match_data, &ghost_slice, use, hash_group, start_bit,
-                            end_bit);
-        bits_allocated += ghost_slice.width();
-    }
-
-    // Select bits for each way.  Due to an optimization, select bits can be shared between
-    // ways if more than 4 ways are actually required.  This makes sure that the ghost bits
-    // for those align appropriately
-    bitvec total_ghost_mask;
-    // If there aren't enough ghost bits to even reach the select bits
-    if (ident_bits_alloc + ident_bits_prev_alloc < TableFormat::RAM_GHOST_BITS) {
-        int start_bit = ident_bits_alloc + ident_bits_prev_alloc;
-        int end_bit = TableFormat::RAM_GHOST_BITS - 1;
-        emit_ixbar_hash_way(out, indent, match_data, nullptr, use, hash_group, start_bit, end_bit);
-    } else if (ident_bits_alloc + ident_bits_prev_alloc > TableFormat::RAM_GHOST_BITS) {
-        bits_allocated = 0;
-        bitvec ghost_slice_mask;
-        for (auto ghost_slice : select_ghost) {
-            ghost_slice_mask.clear();
-            int select_bits = ghost_slice.width();
-            int offset = std::max(ident_bits_prev_alloc, int(TableFormat::RAM_GHOST_BITS));
-            offset += bits_allocated - TableFormat::RAM_GHOST_BITS;
-            bitvec bit_mask(offset, select_bits);
-            for (auto way : use->way_use) {
-                if (way.group != hash_group)
-                    continue;
-                bitvec way_mask;
-                way_mask.setraw(way.mask);
-                bitvec select_ghost_mask = (bit_mask << way_mask.ffs()) & way_mask;
-
-                // Check to make sure that shared ghosted select bits between ways still are
-                // correctly aligned
-                if ((select_ghost_mask & total_ghost_mask).popcount() != 0) {
-                    BUG_CHECK((select_ghost_mask & total_ghost_mask).popcount() == select_bits,
-                          "Select mask for a way sharing the select bits is not correctly set up");
-                    BUG_CHECK((select_ghost_mask & total_ghost_mask)
-                              == (select_ghost_mask & ghost_slice_mask), "Select mask for bits "
-                             "collide with a different ghost slice select portion");
-                    continue;
-                }
-                total_ghost_mask |= select_ghost_mask;
-                ghost_slice_mask |= select_ghost_mask;
-                int start_bit = select_ghost_mask.min().index();
-                int end_bit = select_ghost_mask.max().index();
-                emit_ixbar_hash_way_select(out, indent, match_data, &ghost_slice, start_bit,
-                                           end_bit);
-            }
-            bits_allocated += select_bits;
-        }
-    }
-    ident_bits_prev_alloc += ident_bits_alloc;
-
-    // For all holes in the upper 12 bits that don't have a corresponding select bit
-    if (match_data.size() == 0)
-        return;
-    unsigned mask_bits = 0;
     for (auto way : use->way_use) {
+        if (ways_done.getbit(way.slice))
+            continue;
         if (way.group != hash_group)
             continue;
-        mask_bits |= way.mask;
+        ways_done.setbit(way.slice);
+        // pair is portion of identity function, slice of PHV field
+        safe_vector<std::pair<le_bitrange, Slice>> ghost_line_select_positions;
+        safe_vector<std::pair<le_bitrange, Slice>> ghost_ram_select_positions;
+        int ident_pos = ident_bits_prev_alloc;
+        for (auto ghost_slice : ghost) {
+            int ident_pos_shifted = ident_pos + way.slice - min_way_slice;
+            // This is the identity bits starting at bit 0 that this ghost slice will impact on
+            // a per way basis.
+            le_bitrange non_rotated_slice = { ident_pos_shifted,
+                                              ident_pos_shifted + ghost_slice.width() - 1 };
+
+            // The bits in the RAM line select that begin at the ident_pos_shifted bit up to 10
+            bool pre_rotation_line_sel_needed = ident_pos_shifted < IXBar::RAM_LINE_SELECT_BITS;
+            if (pre_rotation_line_sel_needed) {
+                le_bitrange ident_bits = { ident_pos_shifted, IXBar::RAM_LINE_SELECT_BITS - 1};
+                ixbar_hash_exact_bitrange(ghost_slice, min_way_size, non_rotated_slice,
+                                          ident_bits, ident_pos_shifted,
+                                          ghost_line_select_positions);
+            }
+
+            // The bits in the RAM select, i.e. the upper 12 bits
+            if (select_bits_needed) {
+                le_bitrange ident_select_bits = { IXBar::RAM_LINE_SELECT_BITS, min_way_size - 1};
+                ixbar_hash_exact_bitrange(ghost_slice, min_way_size, non_rotated_slice,
+                                          ident_select_bits, ident_pos_shifted,
+                                          ghost_ram_select_positions);
+            }
+
+            // The bits that start at bit 0 of the RAM line select
+            bool post_rotation_needed = ident_pos_shifted + ghost_slice.width() > min_way_size;
+            if (post_rotation_needed) {
+                le_bitrange post_rotation_bits = { min_way_size,
+                                                   min_way_size + ident_pos_shifted - 1 };
+                ixbar_hash_exact_bitrange(ghost_slice, min_way_size, non_rotated_slice,
+                                          post_rotation_bits, ident_pos_shifted,
+                                          ghost_line_select_positions);
+            }
+            ident_pos += ghost_slice.width();
+        }
+
+        bitvec used_line_select_range;
+        for (auto ghost_pos : ghost_line_select_positions) {
+            used_line_select_range.setrange(ghost_pos.first.lo, ghost_pos.first.size());
+        }
+
+        safe_vector<le_bitrange> non_ghosted;
+        bitvec no_ghost_line_select_bits
+            = bitvec(0, IXBar::RAM_LINE_SELECT_BITS)
+              - used_line_select_range.getslice(0, IXBar::RAM_LINE_SELECT_BITS);
+
+        // Print out the portions that have no ghost impact, but have hash impact due to the
+        // random hash on the normal match data (RAM line select)
+        for (auto br : bitranges(no_ghost_line_select_bits)) {
+            le_bitrange hash_bits = { br.first, br.second };
+            hash_bits = hash_bits.shiftedByBits(IXBar::RAM_LINE_SELECT_BITS * way.slice);
+            emit_ixbar_match_func(out, indent, match_data, nullptr, hash_bits);
+        }
+
+        // Print out the portions that have both match data and ghost data (RAM line select)
+        for (auto ghost_pos : ghost_line_select_positions) {
+            le_bitrange hash_bits = ghost_pos.first;
+            hash_bits = hash_bits.shiftedByBits(IXBar::RAM_LINE_SELECT_BITS * way.slice);
+            emit_ixbar_match_func(out, indent, match_data, &(ghost_pos.second), hash_bits);
+        }
+
+        bitvec ram_select_mask = slice_to_select_bits.at(way.slice);
+        bitvec used_ram_select_range;
+        for (auto ghost_pos : ghost_ram_select_positions) {
+            used_ram_select_range.setrange(ghost_pos.first.lo, ghost_pos.first.size());
+        }
+        used_ram_select_range >>= IXBar::RAM_LINE_SELECT_BITS;
+
+        bitvec no_ghost_ram_select_bits =
+            bitvec(0, ram_select_mask.popcount()) - used_ram_select_range;
+
+        // Print out the portions of that have no ghost data in RAM select
+        for (auto br : bitranges(no_ghost_ram_select_bits)) {
+            le_bitrange hash_bits = { br.first, br.second };
+            // start at bit 40
+            int shift = IXBar::RAM_SELECT_BIT_START + ram_select_mask.min().index();
+            hash_bits = hash_bits.shiftedByBits(shift);
+            emit_ixbar_match_func(out, indent, match_data, nullptr, hash_bits);
+        }
+
+
+        // Print out the portions that have ghost impact.  Assumed at the point that
+        // the select bits are contiguous, not a hardware requirement, but a context JSON req.
+        for (auto ghost_pos : ghost_ram_select_positions) {
+            le_bitrange hash_bits = ghost_pos.first;
+            int shift = IXBar::RAM_SELECT_BIT_START + ram_select_mask.min().index();
+            shift -= IXBar::RAM_LINE_SELECT_BITS;
+            hash_bits = hash_bits.shiftedByBits(shift);
+            emit_ixbar_match_func(out, indent, match_data, &(ghost_pos.second), hash_bits);
+        }
     }
-    bitvec select_range = (bitvec(mask_bits) - total_ghost_mask);
-    for (auto range : bitranges(select_range.getrange(0, IXBar::HASH_SINGLE_BITS))) {
-        emit_ixbar_hash_way_select(out, indent, match_data, nullptr, range.first, range.second);
+
+    for (auto ghost_slice : ghost) {
+        ident_bits_prev_alloc += ghost_slice.width();
     }
 }
 

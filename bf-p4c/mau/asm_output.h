@@ -75,15 +75,18 @@ class MauAsmOutput : public MauInspector {
     void emit_ixbar_hash(std::ostream &out, indent_t indent, safe_vector<Slice> &match_data,
             safe_vector<Slice> &ghost, const IXBar::Use *use, int hash_group,
             int &ident_bits_prev_alloc) const;
-    void emit_ixbar_hash_exact(std::ostream &out, indent_t indent, safe_vector<Slice> &match_data,
-            safe_vector<Slice> &ghost, const IXBar::Use *use, int hash_group,
-            int &ident_bits_prev_alloc) const;
+    void ixbar_hash_exact_info(int &min_way_size, int &min_way_slice, const IXBar::Use *use,
+        int hash_group, std::map<int, bitvec> &slice_to_select_bits) const;
+    void emit_ixbar_match_func(std::ostream &out, indent_t indent,
+        safe_vector<Slice> &match_data, Slice *ghost, le_bitrange hash_bits) const;
+    void ixbar_hash_exact_bitrange(Slice ghost_slice, int min_way_size,
+        le_bitrange non_rotated_slice, le_bitrange comp_slice, int initial_lo_bit,
+        safe_vector<std::pair<le_bitrange, Slice>> &ghost_positions) const;
     void emit_ixbar_hash_atcam(std::ostream &out, indent_t indent, safe_vector<Slice> &ghost,
             const IXBar::Use *use, int hash_group) const;
-    void emit_ixbar_hash_way(std::ostream &out, indent_t indent, safe_vector<Slice> &match_data,
-           Slice *ghost, const IXBar::Use *use, int hash_group, int start_bit, int end_bit) const;
-    void emit_ixbar_hash_way_select(std::ostream &out, indent_t indent,
-            safe_vector<Slice> &match_data, Slice *ghost, int start_bit, int end_bit) const;
+    void emit_ixbar_hash_exact(std::ostream &out, indent_t indent,
+        safe_vector<Slice> &match_data, safe_vector<Slice> &ghost, const IXBar::Use *use,
+        int hash_group, int &ident_bits_prev_alloc) const;
     void emit_ixbar_hash_dist_ident(std::ostream &out, indent_t indent,
             safe_vector<Slice> &match_data, const IXBar::Use::HashDistHash &hdh,
             const safe_vector<const IR::Expression *> &field_list_order) const;

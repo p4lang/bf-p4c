@@ -8,6 +8,7 @@
 #include "lib/algorithm.h"
 #include "lib/bitvec.h"
 #include "lib/bitops.h"
+#include "lib/bitrange.h"
 #include "lib/hex.h"
 #include "lib/range.h"
 #include "lib/log.h"
@@ -1785,9 +1786,10 @@ bool IXBar::allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc
         return false;
     }
 
+    std::map<int, bitvec> slice_to_select_bits;
     // Currently should  never return false
     for (size_t index = start; index < last; index++) {
-        if (!allocHashWay(tbl, layout_option, index, start, alloc)) {
+        if (!allocHashWay(tbl, layout_option, index, slice_to_select_bits, alloc)) {
             alloc.clear();
             return false;
         }
@@ -1838,9 +1840,8 @@ bool IXBar::allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc
 
 /* Individual Hash way allocated, called from allocAllHashWays.  Sets up the select bit
    mask provided by the layout option */
-bool IXBar::allocHashWay(const IR::MAU::Table *tbl,
-                         const LayoutOption *layout_option,
-                         size_t index, size_t start, Use &alloc) {
+bool IXBar::allocHashWay(const IR::MAU::Table *tbl, const LayoutOption *layout_option,
+        size_t index, std::map<int, bitvec> &slice_to_select_bits, Use &alloc) {
     unsigned hash_table_input = alloc.compute_hash_tables();
     int hash_group = getHashGroup(hash_table_input);
     if (hash_group < 0) return false;
@@ -1873,42 +1874,39 @@ bool IXBar::allocHashWay(const IR::MAU::Table *tbl,
     for (auto &way_use : alloc.way_use) {
         used_bits |= way_use.mask;
     }
+    LOG1("  Free bits " << hex(free_bits));
 
     if (way_bits == 0) {
         way_mask = 0;
     } else if (shared) {
-        int used_count = __builtin_popcount(used_bits);
-        int allocated_select_bits = 0;
-
-        for (size_t i = start; i < index; i++) {
-            allocated_select_bits += ceil_log2(layout_option->way_sizes[i]);
-        }
-
-        int starting_bit = allocated_select_bits % used_count;
-        if (starting_bit + way_bits > used_count)
+        BUG_CHECK(slice_to_select_bits.count(group) > 0, "Slice has been allocated before");
+        bitvec prev_mask = slice_to_select_bits.at(group);
+        if (prev_mask.popcount() < way_bits) {
             BUG("Allocated bigger way before smaller way");
-
-        int used_bit = -1;
-        for (auto bit : bitvec(used_bits)) {
-            used_bit++;
-            if (starting_bit > used_bit) continue;
-            if (starting_bit + way_bits == used_bit) break;
-            way_mask |= (1U << bit);
         }
-    } else if (__builtin_popcount(free_bits) < way_bits) {
+        way_mask = bitvec(prev_mask.min().index(), way_bits).getrange(0, HASH_SINGLE_BITS);
+        BUG_CHECK(static_cast<int>(bitcount(way_mask)) == way_bits, "Previous allocation "
+                  "was not contiguous");
+    } else if (static_cast<int>(bitcount(free_bits)) < way_bits) {
         LOG3("Free bits available is too small");
         return false;
     } else {
-        int bits_needed = way_bits;
-        for (int bit = 0; bit < HASH_SINGLE_BITS; bit++) {
-            if ((1U << bit) & free_bits) {
-                way_mask |= 1U << bit;
-                bits_needed--;
-            }
-            if (bits_needed == 0)
+        // Select bits are not required to be contiguous in hardware, but in the driver entry
+        // it appears that they have to be
+        bool found = false;
+        bitvec free_bits_bv = bitvec(free_bits);
+        for (auto br : bitranges(free_bits_bv)) {
+            if (br.second - br.first + 1 >= way_bits) {
+                way_mask = ((1U << way_bits) - 1) << br.first;
+                found = true;
                 break;
+            }
         }
+        if (!found)
+            return false;
     }
+
+    slice_to_select_bits[group] |= bitvec(way_mask);
 
     alloc.way_use.emplace_back(Use::Way{ hash_group, group, way_mask });
     hash_index_inuse[group] |= hash_table_input;
