@@ -2,6 +2,7 @@
 
 #include "bf-p4c/parde/allocate_parser_match_register.h"
 #include "bf-p4c/parde/parde_utils.h"
+#include "device.h"
 
 /// A mapping from a computed r-value to the r-values we evaluated it to.
 /// For one computedRVal, it can have multiple definition parserRVal.

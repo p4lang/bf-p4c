@@ -12,6 +12,8 @@
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
 #include "bf-p4c/phv/utils/live_range_report.h"
 
+class ClotInfo;
+
 /** This class calculates the live range of fields to determine potential for overlay due to
   * spilling into dark containers. The calculated live ranges use the min_stage value for tables
   * determined using the table dependency graph. If overlay(f1->id, f2->id) is true, it means that

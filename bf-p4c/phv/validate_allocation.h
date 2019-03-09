@@ -4,6 +4,7 @@
 #include "bf-p4c/mau/mau_visitor.h"
 #include "ir/visitor.h"
 #include "lib/symbitmatrix.h"
+#include "phv_fields.h"
 
 class PhvInfo;
 class ClotInfo;

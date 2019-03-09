@@ -1,4 +1,4 @@
-#include "bf-p4c/ir/unique_id.h"
+#include "ir/ir.h"
 
 static const char *attached_id_to_str[] = {
     "", "tind", "idletime", "stats", "meter", "selector", "salu", "action_data"

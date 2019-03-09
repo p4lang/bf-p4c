@@ -5,7 +5,7 @@
 
 #include "lib/exceptions.h"
 #include "lib/cstring.h"
-#include "ir/json_loader.h"
+#include "ir/ir.h"
 #include "bf-p4c/phv/phv_fields.h"
 
 int Clot::tagCnt = 0;

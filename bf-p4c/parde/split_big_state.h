@@ -1,6 +1,8 @@
 #ifndef EXTENSIONS_BF_P4C_PARDE_SPLIT_BIG_STATE_H_
 #define EXTENSIONS_BF_P4C_PARDE_SPLIT_BIG_STATE_H_
 
+#include "parde_visitor.h"
+
 /// Split states into smaller states which can be executed in a single cycle by
 /// the hardware.
 class SplitBigStates : public ParserModifier {

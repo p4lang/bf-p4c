@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include "lib/cstring.h"
+#include "bf-p4c/ir/gress.h"
 
 class JSONGenerator;
 class JSONLoader;

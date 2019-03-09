@@ -8,6 +8,7 @@
 #include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/ir/thread_visitor.h"
+#include "bf-p4c/parde/parde_visitor.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "frontends/p4/toP4/toP4.h"
 #include "ir/ir.h"

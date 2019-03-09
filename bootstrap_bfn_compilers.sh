@@ -24,35 +24,58 @@ mydir=`dirname $0`
 mydir=`realpath $mydir`
 pushd $mydir
 
+show_help () {
+    echo >&2 "bootstrap_bfn_compiler script options"
+    echo >&2 "   --no-ptf               don't use/configure ptf"
+    echo >&2 "   --build-dir <dir>      build in <dir> rather than ./build"
+    echo >&2 "   --build-type <type>    DEBUG RELEASE or RelWithDebInfo"
+    echo >&2 "   --p4c-cpp-flags <x>    add <x> to CPPFLAGS for p4c build"
+    echo >&2 "   --minimal-config       disable most things"
+}
+
+
 RUN_BOOTSTRAP_PTF=yes
-if [ "$1" == "--no-ptf" ]; then
-    RUN_BOOTSTRAP_PTF=no
-    shift
-fi
-
 builddir=${mydir}/build
-if [ "$1" == "--build-dir" ]; then
-    builddir="$2"
-    shift; shift;
-fi
-
 buildtype=DEBUG
-if [ "$1" == "--build-type" ]; then
-    buildtype="$2"
-    shift; shift;
-fi
-
 P4C_CPP_FLAGS=''
-if [ "$1" == "--p4c-cpp-flags" ]; then
-    P4C_CPP_FLAGS="$2"
-    shift; shift;
-fi
-
 minimalConfig=false
-if [ "$1" == "--minimal-config" ]; then
-    minimalConfig=true
+disableUnified=false
+otherArgs=""
+
+while [ $# -gt 0 ]; do
+    case $1 in
+    --no-ptf)
+        RUN_BOOTSTRAP_PTF=no
+        ;;
+    --build-dir)
+        builddir="$2"
+        shift
+        ;;
+    --build-type)
+        buildtype="$2"
+        shift
+        ;;
+    --p4c-cpp-flags)
+        P4C_CPP_FLAGS="$2"
+        shift
+        ;;
+    --minimal-config)
+        minimalConfig=true
+        ;;
+    --disable-unified)
+        disableUnified=true
+        ;;
+    -D*)
+        otherArgs+=" $1"
+        ;;
+    *)
+        echo >&2 "Invalid argument supplied"
+        show_help
+        exit 0
+        ;;
+    esac
     shift
-fi
+done
 
 # Check for git version: 2.11.0 does not support virtual links
 git_version=`git --version | head -1 | awk '{ print $3; }'`
@@ -91,12 +114,15 @@ if $minimalConfig ; then
     ENABLED_COMPONENTS="$ENABLED_COMPONENTS -DENABLE_BMV2=OFF -DENABLE_P4TEST=OFF \
                         -DENABLE_P4C_GRAPHS=OFF -DENABLE_TESTING=OFF -DENABLE_GTESTS=OFF"
 fi
+if $disableUnified ; then
+    ENABLED_COMPONENTS+=" -DENABLE_UNIFIED_COMPILATION=OFF"
+fi
 
 mkdir -p ${builddir}
 pushd ${builddir}
 cmake ${mydir} -DCMAKE_BUILD_TYPE=${buildtype}\
       ${ENABLED_COMPONENTS} \
-      -DP4C_CPP_FLAGS="$P4C_CPP_FLAGS" $*
+      -DP4C_CPP_FLAGS="$P4C_CPP_FLAGS" $otherArgs
 if [[ `uname -s` == "Linux" ]]; then
     linux_distro=$(cat /etc/os-release | grep -e "^NAME" | cut -f 2 -d '=' | tr -d "\"")
     linux_version=$(cat /etc/os-release | grep -e "^VERSION_ID" | cut -f 2 -d '=' | tr -d "\"")

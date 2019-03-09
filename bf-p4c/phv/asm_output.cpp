@@ -3,6 +3,7 @@
 #include "asm_output.h"
 #include "bf-p4c/common/asm_output.h"
 #include "bf-p4c/common/field_defuse.h"
+#include "bf-p4c-options.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "lib/stringref.h"
 

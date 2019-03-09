@@ -1,5 +1,6 @@
 #include "bf-p4c/common/asm_output.h"
 #include "bf-p4c/mau/dynhash.h"
+#include "bf-p4c/mau/resource.h"
 
 namespace BFN {
 

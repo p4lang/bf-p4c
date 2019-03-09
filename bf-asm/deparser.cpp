@@ -1,5 +1,6 @@
 #include <config.h>
 
+#include "constants.h"
 #include "deparser.h"
 #include "parser.h"
 #include "phv.h"

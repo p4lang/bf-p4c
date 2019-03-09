@@ -2,7 +2,7 @@
 
 #include <string>
 #include <sstream>
-#include "ir/json_loader.h"
+#include "ir/ir.h"
 
 cstring MatchRegister::toString() const {
     std::stringstream tmp;

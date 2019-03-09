@@ -1,6 +1,7 @@
 #ifndef BF_P4C_IR_IR_ENUMS_H_
 #define BF_P4C_IR_IR_ENUMS_H_
 
+#include <lib/cstring.h>
 #include <iostream>
 
 namespace IR {

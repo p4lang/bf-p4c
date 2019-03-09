@@ -1,8 +1,7 @@
 #ifndef EXTENSIONS_BF_P4C_MIDEND_ELIM_TYPEDEF_H_
 #define EXTENSIONS_BF_P4C_MIDEND_ELIM_TYPEDEF_H_
 
-#include "ir/ir.h"
-#include "frontends/p4/typeChecking/typeChecker.h"
+#include "type_checker.h"
 
 namespace P4 {
 

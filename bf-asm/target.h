@@ -3,6 +3,7 @@
 
 #include <config.h>
 #include "bfas.h"
+#include "map.h"
 
 /** FOR_ALL_TARGETS -- metamacro that expands a macro for each defined target
  *  FOR_ALL_REGISTER_SETS -- metamacro that expands for each distinct register set;
@@ -155,7 +156,7 @@ void undeclare_registers(const Target::Tofino::parser_regs *regs);
 void declare_registers(const Target::Tofino::mau_regs *regs, int stage);
 void declare_registers(const Target::Tofino::deparser_regs *regs);
 void undeclare_registers(const Target::Tofino::deparser_regs *regs);
-void emit_parser_registers(const Target::Tofino::top_level_regs *regs);
+void emit_parser_registers(const Target::Tofino::top_level_regs *regs, std::ostream &, uint64_t);
 
 #if HAVE_JBAY
 #include "gen/jbay/memories.jbay_mem.h"
@@ -290,7 +291,7 @@ class Target::Tofino2U : public Target::JBay {
 
 inline bool option_t::isJBayTarget() { return Target::register_set() == JBAY; }
 
-void emit_parser_registers(const Target::JBay::top_level_regs *regs);
+void emit_parser_registers(const Target::JBay::top_level_regs *regs, std::ostream &, uint64_t);
 
 #endif // HAVE_JBAY
 

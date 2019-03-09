@@ -2,6 +2,7 @@
 #define EXTENSIONS_BF_P4C_PARDE_CLOT_H_
 
 #include <vector>
+#include <map>
 
 namespace PHV {
 class Field;

@@ -1,7 +1,7 @@
 #include <algorithm>
 #include "bf-p4c/mau/action_format_2.h"
-#include "ir/ir.h"
-#include "lib/bitrange.h"
+#include "lib/bitrange.h"  // DANGER -- two (very) different bitrange.h source files...
+#include "bf-p4c/phv/phv_fields.h"
 
 namespace ActionData {
 

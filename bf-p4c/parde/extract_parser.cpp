@@ -12,6 +12,7 @@
 #include "bf-p4c/parde/resolve_computed.h"
 #include "bf-p4c/parde/gen_deparser.h"
 #include "bf-p4c/common/utils.h"
+#include "parde_utils.h"
 
 namespace BFN {
 

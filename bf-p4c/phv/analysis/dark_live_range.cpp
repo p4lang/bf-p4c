@@ -1,5 +1,6 @@
 #include "bf-p4c/phv/analysis/dark_live_range.h"
 #include "bf-p4c/common/table_printer.h"
+#include "bf-p4c/parde/clot_info.h"
 
 bool DarkLiveRange::overlaps(
         const int max_num_min_stages,

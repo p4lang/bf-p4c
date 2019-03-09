@@ -1,4 +1,5 @@
 #include "split_big_state.h"
+#include "device.h"
 
 /// A predicate which orders input packet bit intervals by where they end.
 /// Empty intervals are ordered last.

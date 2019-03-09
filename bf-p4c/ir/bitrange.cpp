@@ -3,7 +3,7 @@
 #include <iostream>
 #include <utility>
 
-#include "ir/json_loader.h"
+#include "ir/ir.h"
 
 namespace {
 

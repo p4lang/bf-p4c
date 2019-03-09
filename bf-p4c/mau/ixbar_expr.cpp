@@ -1,4 +1,5 @@
 #include "ixbar_expr.h"
+#include "resource.h"
 
 bool AdjustIXBarExpression::preorder(IR::MAU::IXBarExpression *e) {
     auto *tbl = findContext<IR::MAU::Table>();
