@@ -143,6 +143,9 @@ class BfRtSchemaGenerator {
         BF_RT_DATA_SNAPSHOT_TABLE_EXECUTED,
         BF_RT_DATA_SNAPSHOT_LIVENESS_FIELD_NAME,
         BF_RT_DATA_SNAPSHOT_LIVENESS_VALID_STAGES,
+
+        BF_RT_DATA_PARSER_INSTANCE,
+        BF_RT_DATA_PARSER_NAME,
     };
 
     /// Common counter representation between PSA and Tofino architectures
@@ -171,6 +174,8 @@ class BfRtSchemaGenerator {
 
     struct DynHash;
 
+    struct ParserChoices;
+
     void addMatchTables(Util::JsonArray* tablesJson) const;
     void addActionProfs(Util::JsonArray* tablesJson) const;
     void addCounters(Util::JsonArray* tablesJson) const;
@@ -196,6 +201,7 @@ class BfRtSchemaGenerator {
     void addWred(Util::JsonArray* tablesJson, const Wred& wred) const;
     void addSnapshot(Util::JsonArray* tablesJson, const Snapshot& snapshot) const;
     void addSnapshotLiveness(Util::JsonArray* tablesJson, const Snapshot& snapshot) const;
+    void addParserChoices(Util::JsonArray* tablesJson, const ParserChoices& parserChoices) const;
 
     boost::optional<bool> actProfHasSelector(P4Id actProfId) const;
     /// Generates the JSON array for table action specs. When the function
@@ -902,16 +908,47 @@ struct BfRtSchemaGenerator::Snapshot {
             return boost::none;
         }
         std::string name;
-        if (snapshot.direction() == ::barefoot::Snapshot::INGRESS)
+        if (snapshot.direction() == ::barefoot::DIRECTION_INGRESS)
           name = snapshot.pipe() + "." + "$SNAPSHOT_INGRESS";
-        else if (snapshot.direction() == ::barefoot::Snapshot::EGRESS)
+        else if (snapshot.direction() == ::barefoot::DIRECTION_EGRESS)
           name = snapshot.pipe() + "." + "$SNAPSHOT_EGRESS";
         else
-          BUG("Unknown snapshot direction");
+          BUG("Unknown direction");
         std::vector<Field> fields;
         for (const auto& f : snapshot.fields())
           fields.push_back({f.id(), f.name(), f.bitwidth()});
         return Snapshot{name, pre.id(), std::move(fields)};
+    }
+};
+
+struct BfRtSchemaGenerator::ParserChoices {
+    std::string name;
+    P4Id id;
+    std::vector<cstring> choices;
+
+    static boost::optional<ParserChoices> fromTofino(
+        const p4configv1::ExternInstance& externInstance) {
+        const auto& pre = externInstance.preamble();
+        ::barefoot::ParserChoices parserChoices;
+        if (!externInstance.info().UnpackTo(&parserChoices)) {
+            ::error("Extern instance %1% does not pack a ParserChoices object", pre.name());
+            return boost::none;
+        }
+        std::string name;
+        // The name is "<pipe>.<gress>.$PARSER_CONFIGURE".
+        if (parserChoices.direction() == ::barefoot::DIRECTION_INGRESS)
+          name = parserChoices.pipe() + "." + "ingress" + "." + "$PARSER_CONFIGURE";
+        else if (parserChoices.direction() == ::barefoot::DIRECTION_EGRESS)
+          name = parserChoices.pipe() + "." + "egress" + "." + "$PARSER_CONFIGURE";
+        else
+          BUG("Unknown direction");
+        std::vector<cstring> choices;
+        // For each possible parser, we have to use the "architecture name" as
+        // the name exposed to the control plane, because this is the only name
+        // which is guaranteed to exist ane be unique.
+        for (const auto& choice : parserChoices.choices())
+          choices.push_back(choice.arch_name());
+        return ParserChoices{name, pre.id(), std::move(choices)};
     }
 };
 
@@ -1901,6 +1938,36 @@ BfRtSchemaGenerator::addSnapshotLiveness(Util::JsonArray* tablesJson,
     tablesJson->append(tableJson);
 }
 
+void
+BfRtSchemaGenerator::addParserChoices(Util::JsonArray* tablesJson,
+                                      const ParserChoices& parserChoices) const {
+    auto* tableJson = new Util::JsonObject();
+
+    tableJson->emplace("name", parserChoices.name);
+    tableJson->emplace("id", parserChoices.id);
+    tableJson->emplace("table_type", "ParserInstanceConfigure");
+    tableJson->emplace("size", Device::numParsersPerPipe());
+
+    auto* keyJson = new Util::JsonArray();
+    addKeyField(keyJson, BF_RT_DATA_PARSER_INSTANCE, "$PARSER_INSTANCE",
+                true /* mandatory */, "Exact", makeTypeInt("uint32"));
+    tableJson->emplace("key", keyJson);
+
+    auto* dataJson = new Util::JsonArray();
+    {
+        auto* f = makeCommonDataField(
+            BF_RT_DATA_PARSER_NAME, "$PARSER_NAME",
+            makeTypeEnum(parserChoices.choices), false /* repeated */);
+        addSingleton(dataJson, f, true /* mandatory */, false /* read-only */);
+    }
+    tableJson->emplace("data", dataJson);
+
+    tableJson->emplace("supported_operations", new Util::JsonArray());
+    tableJson->emplace("attributes", new Util::JsonArray());
+
+    tablesJson->append(tableJson);
+}
+
 boost::optional<bool>
 BfRtSchemaGenerator::actProfHasSelector(P4Id actProfId) const {
     if (isOfType(actProfId, p4configv1::P4Ids::ACTION_PROFILE)) {
@@ -2210,6 +2277,13 @@ BfRtSchemaGenerator::addTofinoExterns(Util::JsonArray* tablesJson,
                 auto dynHash = DynHash::fromTofino(externInstance);
                 if (dynHash != boost::none) {
                     addDynHash(tablesJson, *dynHash);
+                }
+            }
+        } else if (externTypeId == ::barefoot::P4Ids::PARSER_CHOICES) {
+            for (const auto& externInstance : externType.instances()) {
+                auto parserChoices = ParserChoices::fromTofino(externInstance);
+                if (parserChoices != boost::none) {
+                    addParserChoices(tablesJson, *parserChoices);
                 }
             }
         }

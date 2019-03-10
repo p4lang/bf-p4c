@@ -27,9 +27,15 @@ message P4Ids {
     SNAPSHOT_LIVENESS = 0x92;  // reserved for BFRT
     HASH_CONFIGURE = 0x93;
     HASH_COMPUTE = 0x94;  // reserved for BFRT
+    PARSER_CHOICES = 0x95;
     // Temporary, see ValueSet message definition below
     VALUE_SET = 0xfe;
   }
+}
+
+enum Direction {
+  DIRECTION_INGRESS = 0;
+  DIRECTION_EGRESS = 1;
 }
 
 message MeterSpec {
@@ -158,10 +164,6 @@ message ValueSet {
 
 message Snapshot {
   string pipe = 1;
-  enum Direction {
-    INGRESS = 0;
-    EGRESS = 1;
-  }
   Direction direction = 2;
   message Field {
     uint32 id = 1;
@@ -169,4 +171,20 @@ message Snapshot {
     int32 bitwidth = 3;
   }
   repeated Field fields = 3;
+}
+
+message ParserChoices {
+  string pipe = 1;
+  Direction direction = 2;
+  // as of now, only the arch_name is used
+  message ParserChoice {
+    string arch_name = 1;  // ingress_parserX or egress_parserX
+    // name of the corresponding P4 Parser: several choices may refer to the
+    // same parser type
+    string type_name = 2;
+    // the user-provided name, or an empty string if this is an anonymous
+    // instance
+    string user_name = 3;
+  }
+  repeated ParserChoice choices = 3;
 }

@@ -224,7 +224,8 @@ class TableGeneric(TableCommon):
               "PortMetadata",
               "ParserValueSet",
               "Snapshot", "SnapshotLiveness",
-              "DynHashConfigure", "DynHashCompute"])
+              "DynHashConfigure", "DynHashCompute",
+              "ParserInstanceConfigure"])
 
 class LearnListFieldField(BaseDataField):
     class Options(object):

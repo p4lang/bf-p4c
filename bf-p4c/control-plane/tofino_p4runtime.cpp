@@ -107,6 +107,35 @@ namespace Helpers = P4::ControlPlaneAPI::Helpers;
 
 namespace BFN {
 
+/// Visit evaluated blocks under the provided block. Guarantees that each block
+/// is visited only once, even if multiple paths to reach it exist. This is an
+/// exact copy of Helpers::forAllEvaluatedBlocks, but it works with an arbitrary
+/// root block (instead of just a top-level block).
+template <typename Func>
+void forDescendantBlocks(const IR::Block* rootBlock, Func function) {
+    std::set<const IR::Block*> visited;
+    ordered_set<const IR::Block*> frontier{rootBlock};
+
+    while (!frontier.empty()) {
+        // Pop a block off the frontier of blocks we haven't yet visited.
+        auto evaluatedBlock = *frontier.begin();
+        frontier.erase(frontier.begin());
+        visited.insert(evaluatedBlock);
+
+        function(evaluatedBlock);
+
+        // Add child blocks to the frontier if we haven't already visited them.
+        for (auto evaluatedChild : evaluatedBlock->constantValue) {
+            // child block may be nullptr due to optional argument.
+            if (!evaluatedChild.second) continue;
+            if (!evaluatedChild.second->is<IR::Block>()) continue;
+            auto evaluatedChildBlock = evaluatedChild.second->to<IR::Block>();
+            if (visited.find(evaluatedChildBlock) != visited.end()) continue;
+            frontier.insert(evaluatedChildBlock);
+        }
+    }
+}
+
 /// Extends P4RuntimeSymbolType for the Tofino extern types.
 class SymbolType final : public P4RuntimeSymbolType {
  public:
@@ -159,6 +188,9 @@ class SymbolType final : public P4RuntimeSymbolType {
     }
     static P4RuntimeSymbolType SNAPSHOT() {
         return P4RuntimeSymbolType::make(barefoot::P4Ids::SNAPSHOT);
+    }
+    static P4RuntimeSymbolType PARSER_CHOICES() {
+        return P4RuntimeSymbolType::make(barefoot::P4Ids::PARSER_CHOICES);
     }
     static P4RuntimeSymbolType VALUE_SET() {
         return P4RuntimeSymbolType::make(barefoot::P4Ids::VALUE_SET);
@@ -522,8 +554,6 @@ class SnapshotFieldFinder : public Inspector {
 /// serialize Tofino-specific symbols which are exposed to the control-plane.
 class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeArchHandlerIface {
  public:
-    std::unordered_map<const IR::Block *, cstring> blockPipeNameMap;
-
     template <typename Func>
     void forAllPipeBlocks(const IR::ToplevelBlock* evaluatedProgram, Func function) {
         static std::vector<cstring> pipeNames = {"pipe0", "pipe1", "pipe2", "pipe3"};
@@ -541,36 +571,33 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
                                TypeMap* typeMap,
                                const IR::ToplevelBlock* evaluatedProgram)
         : refMap(refMap), typeMap(typeMap), evaluatedProgram(evaluatedProgram) {
+        std::set<cstring> pipes;
         // Create a map of all blocks to their pipe names. This map will
         // be used during collect and post processing to prefix
         // table/extern instances wherever applicable with a fully qualified
         // name. This distinction is necessary when the driver looks up
         // context.json across multiple pipes for the table name
-        // TODO: Currently only creates map for parser blocks, must be extended
-        // for other blocks
-        forAllPipeBlocks(evaluatedProgram, [&](cstring , const IR::PackageBlock* pkg) {
-            auto gress = pkg->findParameterValue("ingress_parser");
-            auto parser = gress ? gress->to<IR::ParserBlock>() : nullptr;
-            if (parser) {
-                auto p4BlockName = pkg->node->to<IR::Declaration_Instance>()->Name();
-                blockPipeNameMap[parser] = p4BlockName;
-            } else {
-                for (int i = 0; i < Device::pardeSpec().numParsers(); i++) {
-                    auto gress = pkg->findParameterValue("ingress_parser" + std::to_string(i));
-                    auto parser = gress ? gress->to<IR::ParserBlock>() : nullptr;
-                    if (parser) {
-                        auto p4BlockName = pkg->node->to<IR::Declaration_Instance>()->Name();
-                        blockPipeNameMap[parser] = p4BlockName;
-                    }
-                }
-            }
+        forAllPipeBlocks(evaluatedProgram, [&](cstring pipeName, const IR::PackageBlock* pkg) {
+            forDescendantBlocks(pkg, [&](const IR::Block* block) {
+                auto decl = pkg->node->to<IR::Declaration_Instance>();
+                // TODO(unknown): I (Antonin) think that we should always use
+                // pipeName, to guarantee a uniform naming scheme even in the
+                // presence of a user name. However, the tna_32q_2pipe PTF test
+                // currently assumes that the user name is used.
+                if (decl == nullptr)
+                    blockPipeNameMap[block] = pipeName;
+                else
+                    blockPipeNameMap[block] = decl->controlPlaneName();
+                pipes.insert(pipeName);
+            });
         });
+        isMultiPipe = (pipes.size() > 1);
     }
 
     cstring getFullyQualifiedPortMetadataName(const IR::ParserBlock *parserBlock) {
         auto name = parserBlock->getName() + "." + PortMetadata::name();
         // Generate fully qualified names only for multipipe scenarios
-        if (blockPipeNameMap.size() > 1) {
+        if (isMultiPipe) {
             name = blockPipeNameMap[parserBlock]
                    + "." + name;
         }
@@ -723,7 +750,6 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
     /// Looks at all control objects relevant to snapshot (based on architecture
     /// knowledge) and populates the snapshotInfo map.
     void getSnapshotControls() {
-        static std::vector<cstring> pipeNames = {"pipe0", "pipe1", "pipe2", "pipe3"};
         static std::vector<cstring> gressNames = {"ingress", "egress"};
         forAllPipeBlocks(evaluatedProgram, [&](cstring pipeName, const IR::PackageBlock* pkg) {
             for (auto gressName : gressNames) {
@@ -765,6 +791,56 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         symbols->add(SymbolType::SNAPSHOT(), control->externalName());
     }
 
+    /// For programs not using the MultiParserSwitch package, this method does
+    /// not do antyhing. Otherwise, for each pipe and each gress within each
+    /// pipe, it builds the list of possible parsers. For each parser, we store
+    /// the "architecture name", the "P4 type name" and the "user-provided name"
+    /// (if applicable, i.e. if the P4 programmer used a declaration).
+    void collectParserChoices(P4RuntimeSymbolTableIface* symbols) {
+        static std::vector<cstring> gressNames = {"ingress", "egress"};
+        int numParsersPerPipe = Device::numParsersPerPipe();
+
+        auto main = evaluatedProgram->getMain();
+        if (main->type->name != "MultiParserSwitch") return;
+
+        forAllPipeBlocks(evaluatedProgram, [&](cstring pipeName, const IR::PackageBlock* pkg) {
+            BUG_CHECK(
+                pkg->type->name == "MultiParserPipeline",
+                "Only MultiParserPipeline pipes can be used with a MultiParserSwitch switch");
+            for (auto gressName : gressNames) {
+                ::barefoot::ParserChoices parserChoices;
+
+                parserChoices.set_pipe(pipeName);
+                if (gressName == "ingress")
+                    parserChoices.set_direction(::barefoot::DIRECTION_INGRESS);
+                else
+                    parserChoices.set_direction(::barefoot::DIRECTION_EGRESS);
+
+                auto parsersName = gressName + "_parser";
+                auto parsers = pkg->findParameterValue(parsersName);
+                BUG_CHECK(parsers->is<IR::PackageBlock>(), "Expected PackageBlock");
+                auto parsersBlock = parsers->to<IR::PackageBlock>();
+                for (int idx = 0; idx < numParsersPerPipe; idx++) {
+                    auto parserName = gressName + "_parser" + std::to_string(idx);
+                    auto parser = parsersBlock->findParameterValue(parserName);
+                    if (!parser) break;  // all parsers optional except for first one
+                    BUG_CHECK(parser->is<IR::ParserBlock>(), "Expected ParserBlock");
+                    auto parserBlock = parser->to<IR::ParserBlock>();
+                    auto decl = parserBlock->node->to<IR::Declaration_Instance>();
+                    auto userName = (decl == nullptr) ? "" : decl->controlPlaneName();
+
+                    auto choice = parserChoices.add_choices();
+                    choice->set_arch_name(parserName);
+                    choice->set_type_name(parserBlock->getName().name);
+                    choice->set_user_name(userName);
+                }
+
+                symbols->add(SymbolType::PARSER_CHOICES(), parsersName);
+                parserConfiguration.emplace(parsersName, parserChoices);
+            }
+        });
+    }
+
     void collectExtra(P4RuntimeSymbolTableIface* symbols) override {
         // Collect value sets. This step is required because value set support
         // in "standard" P4Info is currently insufficient.
@@ -786,13 +862,16 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
 
         // Check if each parser block in program has a port metadata extern
         // defined, if not we add a default instances to symbol table
-        for (auto entry : blockPipeNameMap) {
-            auto parserBlock = entry.first->to<IR::ParserBlock>();
+        Helpers::forAllEvaluatedBlocks(evaluatedProgram, [&](const IR::Block* block) {
+            if (!block->is<IR::ParserBlock>()) return;
+            auto parserBlock = block->to<IR::ParserBlock>();
             if (hasUserPortMetadata.count(parserBlock) == 0) {  // no extern, add default
                 auto portMetadataFullName = getFullyQualifiedPortMetadataName(parserBlock);
                 symbols->add(SymbolType::PORT_METADATA(), portMetadataFullName);
             }
-        }
+        });
+
+        collectParserChoices(symbols);
     }
 
     void postCollect(const P4RuntimeSymbolTableIface& symbols) override {
@@ -1088,17 +1167,21 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
 
         // Check if each parser block in program has a port metadata extern
         // defined, if not we add a default instances
-        for (auto entry : blockPipeNameMap) {
-            if (hasUserPortMetadata.count(entry.first) == 0) {
-                auto parserBlock = entry.first->to<IR::ParserBlock>();
+        Helpers::forAllEvaluatedBlocks(evaluatedProgram, [&](const IR::Block* block) {
+            if (!block->is<IR::ParserBlock>()) return;
+            auto parserBlock = block->to<IR::ParserBlock>();
+            if (hasUserPortMetadata.count(parserBlock) == 0) {
                 auto portMetadataFullName =
                     getFullyQualifiedPortMetadataName(parserBlock);
                 addPortMetadataDefault(symbols, p4info, portMetadataFullName);
             }
-        }
+        });
 
         for (const auto& snapshot : snapshotInfo)
             addSnapshot(symbols, p4info, snapshot.second);
+
+        for (const auto& parser : parserConfiguration)
+            addParserChoices(symbols, p4info, parser.first, parser.second);
     }
 
     /// @return serialization information for the port_metadata_extract() call represented by
@@ -1289,7 +1372,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
     void addPortMetadata(const P4RuntimeSymbolTableIface& symbols,
                          p4configv1::P4Info* p4Info,
                          const PortMetadata& portMetadataExtract,
-                         const cstring &name) {
+                         const cstring& name) {
         ::barefoot::PortMetadata portMetadata;
         portMetadata.mutable_type_spec()->CopyFrom(*portMetadataExtract.typeSpec);
         portMetadata.set_key_name(ingressIntrinsicMdParamName);
@@ -1299,7 +1382,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
     }
 
     void addPortMetadataDefault(const P4RuntimeSymbolTableIface& symbols,
-                                p4configv1::P4Info* p4Info, const cstring &name) {
+                                p4configv1::P4Info* p4Info, const cstring& name) {
         ::barefoot::PortMetadata portMetadata;
         portMetadata.set_key_name(ingressIntrinsicMdParamName);
         addP4InfoExternInstance(
@@ -1309,13 +1392,13 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
 
     void addSnapshot(const P4RuntimeSymbolTableIface& symbols,
                      p4configv1::P4Info* p4Info,
-                     const SnapshotInfo &snapshotInstance) {
+                     const SnapshotInfo& snapshotInstance) {
         ::barefoot::Snapshot snapshot;
         snapshot.set_pipe(snapshotInstance.pipe);
         if (snapshotInstance.gress == "ingress")
-            snapshot.set_direction(::barefoot::Snapshot::INGRESS);
+            snapshot.set_direction(::barefoot::DIRECTION_INGRESS);
         else if (snapshotInstance.gress == "egress")
-            snapshot.set_direction(::barefoot::Snapshot::EGRESS);
+            snapshot.set_direction(::barefoot::DIRECTION_EGRESS);
         else
             BUG("Invalid gress '%1%'", snapshotInstance.gress);
         for (const auto& f : snapshotInstance.fields) {
@@ -1327,6 +1410,15 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         addP4InfoExternInstance(
             symbols, SymbolType::SNAPSHOT(), "Snapshot",
             snapshotInstance.name, nullptr, snapshot, p4Info);
+    }
+
+    void addParserChoices(const P4RuntimeSymbolTableIface& symbols,
+                          p4configv1::P4Info* p4Info,
+                          cstring name,
+                          const ::barefoot::ParserChoices& parserChoices) {
+        addP4InfoExternInstance(
+            symbols, SymbolType::PARSER_CHOICES(), "ParserChoices",
+            name, nullptr, parserChoices, p4Info);
     }
 
     void addRegister(const P4RuntimeSymbolTableIface& symbols,
@@ -1578,8 +1670,14 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
     /// specified in the P4 program
     cstring ingressIntrinsicMdParamName;
 
-    using SnapshotInfoMap = std::unordered_map<const IR::ControlBlock*, SnapshotInfo>;
+    using SnapshotInfoMap = std::map<const IR::ControlBlock*, SnapshotInfo>;
     SnapshotInfoMap snapshotInfo;
+
+    std::unordered_map<const IR::Block *, cstring> blockPipeNameMap;
+
+    std::map<cstring, ::barefoot::ParserChoices> parserConfiguration;
+
+    bool isMultiPipe;
 };
 
 /// The architecture handler builder implementation for Tofino.
