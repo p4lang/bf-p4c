@@ -33,6 +33,45 @@ template<class Container, class Pred> inline void erase_if(Container &c, Pred pr
             ++it; }
 }
 
+/********************************************************************************************
+ ** Table placement is done with a fairly simple greedy allocator in a single Transform pass
+ ** organized so as to allow backtracking within the greedy allocation, though we do not
+ ** currently do any backtracking here.
+ **
+ ** All of the decisions for placement are done in the preorder(IR::MAU::Pipe *) method --
+ ** in this method we go over all the tables in the pipe (directly, not using the visitor
+ ** infrastructure) making decisions about which tables should be allocated to which logical
+ ** tables and what ixbar an memory resources to use for them.  All of these decisions are
+ ** stored in Placed objects (a linked list with one Placed object per logical table) that
+ ** is built up in a write-once fashion to allow for backtracking (we can at any time throw
+ ** away nodes from the front of the list, backing up and continuing from an earlier point).
+ **
+ ** After preorder(Pipe) method completes, the transform visits all of the tables in the
+ ** pipeline, rewriting them to match the placement decisions made in the Placed list.  This
+ ** involves actually combining gateways intopo match tables and splitting tables across
+ ** multiple logical tables as decided in the information recorded in the Placed list.
+ **
+ ** The placement process itself is a fairly standard greedy allocator -- we maintain a
+ ** work list (called 'work' throughout the code) of TableSeq objects from which the next
+ ** table can be chosen.  We look at all the tables in the work list and, for each table
+ ** that can be placed next, we create a new 'Placed' object linked onto the front of the
+ ** 'done' list for that placement.  This may involve revisiting the specific resources used
+ ** for tables already placed in this stage, though not the logical table assignments.
+ ** Once these possible placements have all been created, we compare them with a variety
+ ** of metrics encapsulated in the 'is_better' method to determine which is the best choice --
+ ** we keep that (one) Placed and repeat, placing additional tables.
+ **
+ ** One complex part of this process is maintaining the 'work' list.  Because of the limits
+ ** of Tofino1 next table processing, when a table A is assigned to a specific logical table,
+ ** all tables that are control dependent on A must be assigned to logical tables before any
+ ** table after A in the parent control flow.  That means when we place A, and add all control
+ ** dependent TableSeqs of A to the work list, we (temporarily) remove the seq containing A
+ ** from the work list.  We record that removed seq as the 'parent' of the added seqs, so that
+ ** we can add it back once those children are all placed.  These relationships are recorded
+ ** in GroupPlace objects (which are what is actually in the work list) -- one for each
+ ** IR::MAU::TableSeq being processed.
+ */
+
 TablePlacement::TablePlacement(const DependencyGraph* d, const TablesMutuallyExclusive &m,
                                const PhvInfo &p, const LayoutChoices &l,
                                const SharedIndirectAttachedAnalysis &s, bool fp)
@@ -142,6 +181,10 @@ struct TablePlacement::GroupPlace {
             ancestors |= p->ancestors; }
         LOG4("    new seq " << s->id << " depth=" << depth << " anc=" << ancestors);
         work.insert(this);
+        if (LOGGING(5)) {
+            for (auto s : ancestors)
+                if (work.count(s))
+                    LOG5("      removing ancestor " << s->seq->id << " from work list"); }
         work -= ancestors; }
 
     /// finish a table group -- remove it from the work queue and append its parents
@@ -149,6 +192,7 @@ struct TablePlacement::GroupPlace {
     /// @returns an iterator to the newly added groups, if any.
     ordered_set<const GroupPlace *>::iterator finish(ordered_set<const GroupPlace *> &work) const {
         auto rv = work.end();
+        LOG5("      removing " << seq->id << " from work list (a)");
         work.erase(this);
         for (auto p : parents) {
             if (work.count(p)) continue;
@@ -191,6 +235,8 @@ struct TablePlacement::Placed {
     bitvec                      placed;  // fully placed tables after this placement
     bitvec                      match_placed;  // tables where the match table is fully placed,
                                                // but indirect attached tables may not be
+    int                         complete_shared = 0;  // tables that share attached tables and
+                                        // are completely placed by placing this
 
     /// True if the table needs to be split across multiple stages, because it
     /// can't fit within a single stage (eg. not enough entries in the stage).
@@ -237,7 +283,7 @@ struct TablePlacement::Placed {
     /// Update a Placed object to reflect resources (re)allocated in the same stage due
     /// to another table being added to the stage.  Copy-on-write, so actually clones
     /// and updates the clone if there are any changes.
-    const Placed *update_resources(const Placed *latest, unsigned index,
+    const Placed *update_resources(Placed *latest, unsigned index,
                                    safe_vector<TableResourceAlloc *> &prev_resources) const {
         if (index >= prev_resources.size()) {
             BUG_CHECK(stage != latest->stage, "failed to update entire stage in update_resources");
@@ -261,6 +307,7 @@ struct TablePlacement::Placed {
                     rv->need_more = true; }
             if (!rv->need_more) {
                 LOG3("    " << rv->table->name << " is now also placed");
+                latest->complete_shared++;
                 rv->placed[self.tblInfo.at(rv->table).uid] = 1; } }
         if (prev) {
             rv->prev = prev->update_resources(latest, index+1, prev_resources);
@@ -709,6 +756,7 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, const Placed *done,
                 break; } } }
 
     int prev_stage_tables = 0;
+    bool repeated_stage = false;
     for (auto *p = done; p; p = p->prev) {
         if (p->name == rv->name) {
             if (p->need_more == false) {
@@ -721,6 +769,7 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, const Placed *done,
             prev_stage_tables++;
             if (p->stage == rv->stage) {
                 LOG2("  Cannot place multiple sections of an individual table in the same stage");
+                repeated_stage = true;
                 rv->stage++;
                 continue;
             }
@@ -743,8 +792,16 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, const Placed *done,
             }
         }
     }
-    if (set_entries < 0)
+    if (set_entries <= 0) {
         set_entries = 0;
+        if (repeated_stage) return false;
+        // FIXME -- should use std::any_of, but pre C++-17 is too hard to use and verbose
+        bool have_attached = false;
+        for (auto &ate : rv->attached_entries) {
+            if (ate.second > 0) {
+                have_attached = true;
+                break; } }
+        if (!have_attached) return false; }
 
     auto stage_pragma = t->get_provided_stage();
     if (stage_pragma >= 0) {
@@ -1206,6 +1263,10 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choic
     if (b->need_more_match && !a->need_more_match) return true;
     if (a->need_more_match && !b->need_more_match) return false;
 
+    choice = SHARED_TABLES;
+    if (a->complete_shared > b->complete_shared) return true;
+    if (a->complete_shared < b->complete_shared) return false;
+
     int a_deps_stages_control = downward_prop_score.first.deps_stages_control;
     int b_deps_stages_control = downward_prop_score.second.deps_stages_control;
 
@@ -1265,6 +1326,15 @@ std::ostream &operator<<(std::ostream &out, const DumpSeqTables &s) {
     return out;
 }
 
+std::ostream &operator<<(std::ostream &out, const ordered_set<const IR::MAU::Table *> &s) {
+    const char *sep = "";
+    for (auto *tbl : s) {
+        out << sep << tbl->name;
+        sep = ", "; }
+    return out;
+}
+
+
 IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
     LOG1("table placement starting " << pipe->name);
     LOG3(TableTree("ingress", pipe->thread[INGRESS].mau) <<
@@ -1304,6 +1374,8 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
         LOG3("stage " << (placed ? placed->stage : 0) << ", work: " << work <<
              ", partly placed " << partly_placed.size() << ", placed " << count(placed) <<
              "\n    " << current);
+        if (!partly_placed.empty())
+            LOG5("    partly_placed: " << partly_placed);
         safe_vector<const Placed *> trial;
         for (auto it = work.begin(); it != work.end();) {
             // DANGER -- we iterate over the work queue while possibly removing and
@@ -1313,11 +1385,17 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
             LOG4("  group " << grp->seq->id << " depth=" << grp->depth);
             if (placed && placed->placed.contains(grp->info.tables)) {
                 LOG4("    group " << grp->seq->id << " is now complete");
+                LOG5("      removing " << (*it)->seq->id << " from work list (b)");
                 it = work.erase(it);
                 auto add = grp->finish(work);
                 if (it == work.end()) it = add;
                 continue; }
             BUG_CHECK(grp->ancestors.count(grp) == 0, "group is its own ancestor!");
+            if (LOGGING(5)) {
+                for (auto *s : grp->ancestors)
+                    if (work.count(s))
+                        LOG5("    removing " << s->seq->id << " from work as it is an " <<
+                             "ancestor of " << grp->seq->id); }
             work -= grp->ancestors;
             int idx = -1;
             bool done = true;
@@ -1352,12 +1430,14 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                     should_skip = true;
                 }
 
-                if (should_skip)
-                    continue;
+                if (should_skip) {
+                    done = false;  // can't place it yet, but will need to eventually
+                    continue; }
 
                 auto pl_vec = try_place_table(t, placed, current);
-                if (pl_vec.empty())
-                    BUG("Can't find a table to place");
+                if (pl_vec.empty()) {
+                    done = false;  // can't place it yet, but will need to eventually
+                    continue; }
                 LOG3("    Pl vector: " << pl_vec);
                 for (auto pl : pl_vec) {
                     pl->group = grp;
@@ -1380,12 +1460,17 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
             }
             if (done) {
                 BUG_CHECK(!placed->is_fully_placed(grp->seq), "Can't find a table to place");
+                LOG5("      removing " << (*it)->seq->id << " from work list (c)");
                 it = work.erase(it);
             } else {
                 it++; } }
         if (work.empty()) break;
-        if (trial.empty())
-            BUG("No tables placeable, but not all tables placed?");
+        if (trial.empty()) {
+            error("Table placement wedged, likely due to shared attachments on partly placed "
+                  "tables; may be able to avoid the problem with @stage on those tables");
+            for (auto *tbl : partly_placed)
+                error("partly placed: %s", tbl);
+            break; }
         LOG2("found " << trial.size() << " tables that could be placed: " << trial);
         const Placed *best = 0;
         placed = add_starter_pistols(placed, trial, current);
@@ -1395,8 +1480,8 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
             if (!best || is_better(t, best, choice)) {
                 log_choice(t, best, choice);
                 best = t;
-            }
-        }
+            } else if (best) {
+                log_choice(nullptr, best, choice); } }
         placed = place_table(work, best);
 
         if (placed->need_more)
@@ -1430,14 +1515,18 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                 if (p->stage > last_stage) last_stage = p->stage;
                 count_stages++; }
             if (count_stages > 1)
-                error("Can't split %s with indirect attached %s across stages -- "
-                      "try making it smaller", t, at); }
-        if (first_stage != last_stage && el.second.size() > 1) {
+                error("Can't split %s with indirect attached %s across stages %d to %d -- "
+                      "try making it smaller, or using @stage to force to later stage",
+                      t, at, first_stage, last_stage); }
+        if (last_stage >= 0 && first_stage != last_stage && el.second.size() > 1) {
             error("Failed to place tables that %s is attached to in the same stage, try "
                   "using @stage (%d) on tables", at, last_stage);
-            for (auto *t : el.second)
-                error("-- placed table %s in stage %d", t->name,
-                      table_placed.find(t->name)->second->stage); } }
+            for (auto *t : el.second) {
+                auto p1 = table_placed.find(t->name);
+                if (p1 == table_placed.end())
+                    error("-- did not place %s", t);
+                else
+                    error("-- placed %s in stage %d", t, p1->second->stage); } } }
     LOG1("Finished table placement decisions " << pipe->name);
     return pipe;
 }
@@ -1447,7 +1536,8 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
  */
 std::ostream &operator<<(std::ostream &out, TablePlacement::choice_t choice) {
     static const char* choice_names[] = { "earlier stage calculated", "earlier stage provided",
-                                    "more stages needed", "longer downward prop"
+                                    "more stages needed", "completes more shared tables",
+                                    "longer downward prop"
                                     " control-included dependence tail chain",
                                     "longer upward prop control-included dependence tail chain",
                                     "longer local control-included dependence tail chain",
@@ -1468,6 +1558,8 @@ std::ostream &operator<<(std::ostream &out, TablePlacement::choice_t choice) {
 void TablePlacement::log_choice(const Placed *t, const Placed *best, choice_t choice) {
     if (!best) {
         LOG3("    Updating best to first table seen: " << t->name);
+    } else if (!t) {
+        LOG5("    Keeping best " << best->name << " for reason: " << choice);
     } else {
         LOG3("    Updating best to " << t->name << " from " << best->name
              << " for reason: " << choice);
@@ -1673,8 +1765,9 @@ IR::Vector<IR::MAU::Table> *TablePlacement::break_up_dleft(IR::MAU::Table *tbl,
 
 IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
     auto it = table_placed.find(tbl->name);
-    BUG_CHECK(it != table_placed.end(), "Trying to place a table %s that was never placed",
-              tbl->name);
+    if (it == table_placed.end()) {
+        BUG_CHECK(errorCount() > 0, "Trying to place a table %s that was never placed", tbl->name);
+        return tbl; }
     if (tbl->is_placed()) {
         BUG_CHECK(tbl->stage_split >= 0 || tbl->logical_split >= 0,
                   "Trying to place a table %s that is already placed", tbl->name);
@@ -1818,6 +1911,9 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
 
 IR::Node *TablePlacement::preorder(IR::MAU::BackendAttached *ba) {
     auto tbl = findContext<IR::MAU::Table>();
+    if (!tbl || !tbl->resources) {
+        BUG_CHECK(errorCount() > 0, "No table resources for %s", ba);
+        return ba; }
     auto format = tbl->resources->table_format;
 
     if (ba->attached->is<IR::MAU::Counter>()) {

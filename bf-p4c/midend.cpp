@@ -38,16 +38,17 @@
 #include "bf-p4c/arch/arch.h"
 #include "bf-p4c/midend/blockmap.h"
 #include "bf-p4c/midend/check_header_alignment.h"
-#include "bf-p4c/midend/elim_cast.h"
 #include "bf-p4c/midend/check_unsupported.h"
+#include "bf-p4c/midend/copy_block_pragmas.h"
+#include "bf-p4c/midend/elim_cast.h"
 #include "bf-p4c/midend/elim_typedef.h"
-#include "bf-p4c/midend/simplify_emit_args.h"
 #include "bf-p4c/midend/inline_subparser.h"
 #include "bf-p4c/midend/normalize_params.h"
 #include "bf-p4c/midend/rewrite_egress_intrinsic_metadata_header.h"
-#include "bf-p4c/midend/simplify_nested_if.h"
-#include "bf-p4c/midend/type_checker.h"
 #include "bf-p4c/common/rewrite_flexible_struct.h"
+#include "bf-p4c/midend/simplify_nested_if.h"
+#include "bf-p4c/midend/simplify_emit_args.h"
+#include "bf-p4c/midend/type_checker.h"
 #include "bf-p4c/ir/tofino_write_context.h"
 
 namespace BFN {
@@ -339,6 +340,7 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::SynthesizeActions(&refMap, &typeMap,
                 new ActionSynthesisPolicy(skip_controls), typeChecking),
         new P4::MoveActionsToTables(&refMap, &typeMap, typeChecking),
+        new CopyBlockPragmas(&refMap, &typeMap, typeChecking, {"stage"}),
         (options.egress_intr_md_opt) ?
             new RewriteEgressIntrinsicMetadataHeader(&refMap, &typeMap) : nullptr,
         // must be done after copy structure, then we do not need to adjust

@@ -30,6 +30,7 @@ class TablePlacement : public MauTransform, public Backtrack {
         CALC_STAGE,
         PROV_STAGE,
         NEED_MORE,
+        SHARED_TABLES,
         DOWNWARD_PROP_DSC,
         UPWARD_PROP_DSC,
         LOCAL_DSC,

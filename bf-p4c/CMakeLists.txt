@@ -78,13 +78,14 @@ add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_IR_HDRS}")
 
 set (BF_P4C_MIDEND_SRCS
   midend/check_header_alignment.cpp
-  midend/elim_cast.cpp
   midend/check_unsupported.cpp
+  midend/copy_block_pragmas.cpp
+  midend/elim_cast.cpp
   midend/elim_typedef.cpp
-  midend/simplify_emit_args.cpp
   midend/inline_subparser.cpp
   midend/normalize_params.cpp
   midend/param_binding.cpp
+  midend/simplify_emit_args.cpp
   midend/simplify_nested_if.cpp
   midend/simplify_references.cpp
   midend/type_categories.cpp
@@ -96,14 +97,15 @@ build_unified(BF_P4C_MIDEND_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 set (BF_P4C_BACKEND_MIDEND_HDRS
   midend/blockmap.h
   midend/check_header_alignment.h
-  midend/elim_cast.h
   midend/check_unsupported.h
+  midend/copy_block_pragmas.h
+  midend/elim_cast.h
   midend/elim_typedef.h
-  midend/simplify_emit_args.h
   midend/inline_subparser.h
   midend/normalize_params.h
   midend/param_binding.h
   midend/rewrite_egress_intrinsic_metadata_header.h
+  midend/simplify_emit_args.h
   midend/simplify_nested_if.h
   midend/simplify_references.h
   midend/type_categories.h
