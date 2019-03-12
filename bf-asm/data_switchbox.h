@@ -13,12 +13,13 @@ template<class REGS>
 class DataSwitchboxSetup {
     REGS        &regs;
     Table       *tbl;
-    unsigned    home_row, home_row_logical, prev_row, top_ram_row;
+    unsigned    home_row, home_row_logical, prev_row, top_ram_row, bottom_ram_row;
 public:
     unsigned get_home_row() { return home_row; }
     unsigned get_home_row_logical() { return home_row_logical; }
     DataSwitchboxSetup(REGS &regs, Table *t) : regs(regs), tbl(t) {
         top_ram_row = prev_row = home_row = tbl->layout[0].row/2U;
+        bottom_ram_row = tbl->layout.back().row/2U;
         // Counter ALU's are on even rows on right side of RAM array. Set
         // home_row to the correct ALU
         if (tbl->table_type() == Table::COUNTER)
@@ -30,6 +31,15 @@ public:
                 tbl->table_type() == Table::METER)
             prev_row = home_row = prev_row % 2 ? prev_row : prev_row + 1;
         home_row_logical = home_row * 2 + 1; }
+    /**
+     * Responsible for the data hv switch box per row, as well as the fabric_ctl.  At a high
+     * level, the fabric ctl is an optimized version of the fabric_ctl in order to manage
+     * some of the timing issues.
+     *
+     * Operates under the assumption that all rows in the layout are numerically highest to lowest.
+     * Information has to flow up to the home row, and flow down to the lowest row.  Should not
+     * flow above the homerow and below the lowest row
+     */
     void setup_row(unsigned row) {
         auto &map_alu =  regs.rams.map_alu;
         auto &swbox = regs.rams.array.switchbox.row;
@@ -44,22 +54,42 @@ public:
                 swbox[prev_row].ctl.b_oflo_wr_o_mux_select.b_oflo_wr_o_sel_stats_wr_r_i = 1;
                 prev_syn2port_ctl[side].stats_to_vbus_below = 1;
             } else {
+                // If a row is in the middle of possible rows, must program the switchbox
+                // to have data pass through the bottom of the switch box to the top of 
+                // the switchbox
                 swbox[prev_row].ctl.t_oflo_rd_o_mux_select.t_oflo_rd_o_sel_oflo_rd_b_i = 1;
                 swbox[prev_row].ctl.b_oflo_wr_o_mux_select.b_oflo_wr_o_sel_oflo_wr_t_i = 1;
+                // below2above only means that there is no synth2port RAMs on this row, but
+                // the signal needs to pass between the rows
                 prev_syn2port_ctl[side].synth2port_connect_below2above = 1;
                 /* need to also program left side below2above connections
                  * see ram_bus_path.py:254 -- 'Mike F.' comment */
                 prev_syn2port_ctl[0].synth2port_connect_below2above = 1;
-                prev_syn2port_ctl[side].oflo_to_vbus_below = 1; }
-            prev_syn2port_ctl[side].synth2port_connect_below = 1;
-            if (--prev_row == row) {
-                swbox[row].ctl.t_oflo_rd_o_mux_select.t_oflo_rd_o_sel_oflo_rd_r_i = 1;
-                swbox[row].ctl.r_oflo_wr_o_mux_select = 1;
-                syn2port_ctl.oflo_to_vbus_above = 1;
-                syn2port_ctl.synth2port_connect_above = 1; } }
+                prev_syn2port_ctl[side].oflo_to_vbus_below = 1;
+            }
+            auto &next_syn2port_ctl
+                = map_alu.row[prev_row-1].i2portctl.synth2port_fabric_ctl[0][side];
+            // From RTL, it only appears that oflo_to_vbus_below/above should be programmed
+            // when RAMs appear on the RAM line, but the model asserts if these are not enabled.
+            // Keeping this, as it is what is DV'ed against
+            next_syn2port_ctl.oflo_to_vbus_above = 1;
+            prev_row--;
+        }
         // FIXME: Should this be top_ram_row?
         if (row == home_row) {
-            swbox[row].ctl.r_stats_alu_o_mux_select.r_stats_alu_o_sel_stats_rd_r_i = 1; }
+            swbox[row].ctl.r_stats_alu_o_mux_select.r_stats_alu_o_sel_stats_rd_r_i = 1;
+        } else {
+            // The oflo signal of this row must go through the overflow bus
+            swbox[row].ctl.t_oflo_rd_o_mux_select.t_oflo_rd_o_sel_oflo_rd_r_i = 1;
+            swbox[row].ctl.r_oflo_wr_o_mux_select = 1;
+            syn2port_ctl.synth2port_connect_above = 1;
+        }
+
+        if (row != bottom_ram_row) {
+            // To determine whether data flows back down.  Doesn't flow down on the lowest row
+            syn2port_ctl.synth2port_connect_below = 1;
+        }
+
     }
     void setup_row_col(unsigned row, unsigned col, int vpn) {
         int side = col >= 6;
