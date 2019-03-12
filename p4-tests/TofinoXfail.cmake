@@ -1422,21 +1422,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/parde/test_checksum.p4
   )
 
-# P4C-1391
-p4c_add_xfail_reason("tofino"
-  "Multiple tables named .*"
-  ../glass/testsuite/p4_tests/parde/COMPILER-1001/shockley_edited.p4
-  ../glass/testsuite/p4_tests/parde/COMPILER-808/not_unique_conditions.p4
-  )
-
-# P4C-1392
-p4c_add_xfail_reason("tofino"
-  "Tofino only supports 1-bit checksum update condition in the deparser"
-  ../glass/testsuite/p4_tests/parde/COMPILER-898/test_config_392_inv_cond_checksum.p4
-  ../glass/testsuite/p4_tests/parde/COMPILER-960/checksum_update_prediction.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-913/test_config_395_checksum_update_location.p4
-  )
-
 # BRIG-956, parser wide match
 p4c_add_xfail_reason("tofino"
   "Ran out of parser match registers"

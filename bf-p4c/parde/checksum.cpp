@@ -18,8 +18,7 @@ struct ChecksumUpdateInfo {
     const IR::Vector<IR::BFN::FieldLVal>* sources;
     const IR::BFN::FieldLVal* povBit = nullptr;
 
-    ordered_set<const IR::Member*> updateConditions;
-
+    ordered_set<std::pair<const IR::Member*, bool>> updateConditions;
     // one deparse updated bit for each condition
     std::map<const IR::Member*, const IR::TempVar*> deparseUpdated;
 
@@ -123,14 +122,17 @@ analyzeUpdateChecksumStatement(const IR::AssignmentStatement* assignment) {
     return info;
 }
 
-static const IR::Member*
+static std::pair<const IR::Member*, bool>
 analyzeUpdateChecksumCondition(const IR::Equ* condition) {
-    bool leftOk = false, rightOk = false;
+    bool leftOk = false, rightOk = false, updateConditionNegated = false;
     if (auto* constant = condition->right->to<IR::Constant>()) {
-        if (constant->asInt() == 1) {
-            if (auto* bits = constant->type->to<IR::Type_Bits>()) {
-                if (bits->size == 1) {
-                    leftOk = true;
+        if (auto* bits = constant->type->to<IR::Type_Bits>()) {
+            if (bits->size == 1) {
+                rightOk = true;
+                if (constant->asInt() == 1) {
+                    updateConditionNegated = false;
+                } else {
+                    updateConditionNegated = true;
                 }
             }
         }
@@ -139,13 +141,13 @@ analyzeUpdateChecksumCondition(const IR::Equ* condition) {
     if (auto* mem = condition->left->to<IR::Member>()) {
         if (auto* bits = mem->type->to<IR::Type_Bits>()) {
             if (bits->size == 1) {
-                rightOk = true;
+                leftOk = true;
             }
         }
     }
 
     if (leftOk && rightOk)
-        return condition->left->to<IR::Member>();
+        return std::make_pair(condition->left->to<IR::Member>(), updateConditionNegated);
 
     std::stringstream msg;
 
@@ -155,23 +157,21 @@ analyzeUpdateChecksumCondition(const IR::Equ* condition) {
     ::error("%1%", msg.str());
     ::error("%1%", condition);
 
-    return nullptr;
+    return std::make_pair(nullptr, updateConditionNegated);
 }
 
-const IR::Member*
+static std::pair<const IR::Member*, bool>
 getChecksumUpdateCondition(const IR::IfStatement* ifStatement) {
     if (!ifStatement->ifTrue || ifStatement->ifFalse) {
-        return nullptr;
+        return std::make_pair(nullptr, false);
     }
 
-    const IR::Member* updateCondition = nullptr;
+    std::pair<const IR::Member*, bool> updateCondition;
 
     auto* cond = ifStatement->condition;
     if (cond) {
         if (auto* eq = cond->to<IR::Equ>()) {
-            if (auto* uc = analyzeUpdateChecksumCondition(eq)) {
-                updateCondition = uc;
-            }
+            updateCondition = analyzeUpdateChecksumCondition(eq);
         } else {
             ::error("Unsupported syntax for checksum update condition %1%", cond);
         }
@@ -193,7 +193,9 @@ struct CollectUpdateChecksums : public Inspector {
             auto ifStmt = findContext<IR::IfStatement>();
             if (ifStmt) {
                 auto updateCondition = getChecksumUpdateCondition(ifStmt);
-                csum->updateConditions.insert(updateCondition);
+                if (updateCondition.first) {
+                    csum->updateConditions.insert(updateCondition);
+                }
             }
 
             checksums[csum->dest] = csum;
@@ -228,9 +230,9 @@ struct GetChecksumPovBits : public Inspector {
             auto csum = checksums.at(source->toString());
             csum->povBit = emit->povBit;
 
-            std::set<const IR::Member*> redundants;
+            std::set<std::pair<const IR::Member*, bool>> redundants;
             for (auto uc : csum->updateConditions) {
-                if (equiv(csum->povBit->field, uc))
+                if (equiv(csum->povBit->field, uc.first))
                     redundants.insert(uc);
             }
 
@@ -311,7 +313,7 @@ struct SubstituteUpdateChecksums : public Transform {
 
             for (auto uc : csumInfo->updateConditions) {
                 auto* emitUpdatedChecksum = new IR::BFN::EmitChecksum(
-                                 new IR::BFN::FieldLVal(csumInfo->deparseUpdated.at(uc)),
+                                 new IR::BFN::FieldLVal(csumInfo->deparseUpdated.at(uc.first)),
                                     *(csumInfo->sources),
                                         new IR::BFN::ChecksumLVal(source));
 
@@ -440,17 +442,15 @@ struct InsertChecksumConditions : public Transform {
                     // entries to implement the truth table of a multi-input function.
                 }
 
-                const IR::Member* cond0 = nullptr;
-                const IR::Member* cond1 = nullptr;
-
+                std::pair<const IR::Member*, bool> cond0, cond1;
                 int cond_idx = 0;
                 for (auto uc : csumInfo->updateConditions) {
-                    if (cond0)
+                    if (cond0.first)
                         cond1 = uc;
                     else
                         cond0 = uc;
 
-                    csumInfo->deparseUpdated[uc] = new IR::TempVar(
+                    csumInfo->deparseUpdated[uc.first] = new IR::TempVar(
                                              IR::Type::Bits::get(1), true,
                         csumInfo->dest + ".$deparse_updated_csum_" + std::to_string(cond_idx++));
                 }
@@ -463,24 +463,40 @@ struct InsertChecksumConditions : public Transform {
                 // $deparse_updated_1 = !cond0 & cond1
                 // $deparse_original = !cond0 & !cond1
 
-                auto setdu0 = new IR::MAU::Instruction("set",
-                        { csumInfo->deparseUpdated.at(cond0), cond0 });
+                cstring setdu0_op, setdu1_op, setdo_op;
+                setdu0_op = cond0.second ? "not" : "set";
+                auto setdu0 = new IR::MAU::Instruction(setdu0_op,
+                            { csumInfo->deparseUpdated.at(cond0.first), cond0.first});
                 action->action.push_back(setdu0);
 
-                if (cond1) {
-                    auto setdu1 = new IR::MAU::Instruction("andca",
-                            { csumInfo->deparseUpdated.at(cond1), cond0, cond1 });
-                    auto setdo = new IR::MAU::Instruction("nor",
-                            { csumInfo->deparseOriginal, cond0, cond1 });
+                if (cond1.first) {
+                    if (!cond0.second && !cond1.second) {
+                        setdu1_op = "andca";
+                        setdo_op = "nor";
+                    } else if (cond0.second && cond1.second) {
+                        setdu1_op = "andcb";
+                        setdo_op = "and";
+                    } else if (cond0.second && !cond1.second) {
+                        setdu1_op = "and";
+                        setdo_op = "andcb";
+                    } else {
+                        setdu1_op = "nor";
+                        setdo_op = "andca";
+                    }
+                    auto setdu1 = new IR::MAU::Instruction(setdu1_op,
+                            { csumInfo->deparseUpdated.at(cond1.first), cond0.first, cond1.first});
+                    auto setdo = new IR::MAU::Instruction(setdo_op,
+                            { csumInfo->deparseOriginal, cond0.first, cond1.first});
                     action->action.push_back(setdu1);
                     action->action.push_back(setdo);
                 } else {
-                    auto setdo = new IR::MAU::Instruction("not",
-                            { csumInfo->deparseOriginal, cond0 });
+                    setdo_op = cond0.second ? "set" : "not";
+                    auto setdo = new IR::MAU::Instruction(setdo_op,
+                                { csumInfo->deparseOriginal, cond0.first});
                     action->action.push_back(setdo);
                 }
-
-                cstring tableName = csumInfo->dest + "_encode_update_condition";
+                cstring tableName = csumInfo->dest + "_encode_update_condition_" +
+                                 toString(gress);
 
                 auto gw = new IR::MAU::Table(tableName + "_gw", gress, csumInfo->povBit->field);
                 gw->is_compiler_generated = true;
