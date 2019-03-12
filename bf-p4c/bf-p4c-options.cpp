@@ -74,9 +74,17 @@ BFN_Options::BFN_Options() {
     registerOption("--no-dead-code-elimination", nullptr,
         [this](const char *) { no_deadcode_elimination = true; return true; },
         "Do not use dead code elimination");
-    registerOption("--placement", nullptr,
-        [this](const char *) { forced_placement = true; return true; },
-        "Ignore all dependencies during table placement");
+    registerOption("--placement", "arg",
+        [this](const char *arg) {
+          forced_placement = true;
+          if (arg != nullptr) {
+              if (std::strcmp(arg, "pragma") != 0) {
+                ::error("Invalid placement argument '%s'.  Only 'pragma' is supported.", arg);
+              }
+          }
+          return true; },
+        "Ignore all dependencies during table placement",
+        OptionFlags::OptionalArgument);
 #if HAVE_JBAY
     registerOption("--no-clot", nullptr,
         [this](const char *) {
