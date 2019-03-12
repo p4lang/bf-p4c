@@ -82,6 +82,7 @@ set (BF_P4C_MIDEND_SRCS
   midend/copy_block_pragmas.cpp
   midend/elim_cast.cpp
   midend/elim_typedef.cpp
+  midend/desugar_varbit_extract.cpp
   midend/inline_subparser.cpp
   midend/normalize_params.cpp
   midend/param_binding.cpp
@@ -100,10 +101,12 @@ set (BF_P4C_BACKEND_MIDEND_HDRS
   midend/check_unsupported.h
   midend/copy_block_pragmas.h
   midend/elim_cast.h
+  midend/desugar_varbit_extract.h
   midend/elim_typedef.h
   midend/inline_subparser.h
   midend/normalize_params.h
   midend/param_binding.h
+  midend/parser_graph.h
   midend/rewrite_egress_intrinsic_metadata_header.h
   midend/simplify_emit_args.h
   midend/simplify_nested_if.h
@@ -498,7 +501,6 @@ set (BF_P4C_BACKEND_ARCH_HDRS
   arch/bridge_metadata.h
   arch/check_extern_invocation.h
   arch/collect_bridged_fields.h
-  arch/parser_graph.h
   arch/program_structure.h
   arch/psa.h
   arch/psa_converters.h

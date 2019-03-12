@@ -368,18 +368,11 @@ struct RewriteParserStatements : public Transform {
     rewriteExtract(IR::MethodCallStatement* statement) {
         auto* call = statement->methodCall;
 
-        BUG_CHECK(call->arguments->size() == 1,
-                  "Wrong number of arguments for method call: %1%", statement);
-
         Util::SourceInfo srcInfo = statement->srcInfo;
         auto dest = (*call->arguments)[0]->expression;
 
         auto* hdr = dest->to<IR::HeaderRef>();
-        BUG_CHECK(hdr != nullptr,
-                  "Extracting something other than a header: %1%", dest);
         auto* hdr_type = hdr->type->to<IR::Type_StructLike>();
-        BUG_CHECK(hdr_type != nullptr,
-                  "Header type isn't a structlike: %1%", hdr_type);
 
         if (gress == EGRESS &&
             hdr_type->getAnnotation("not_extracted_in_egress") != nullptr) {

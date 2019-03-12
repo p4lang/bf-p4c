@@ -41,6 +41,7 @@
 #include "bf-p4c/midend/check_unsupported.h"
 #include "bf-p4c/midend/copy_block_pragmas.h"
 #include "bf-p4c/midend/elim_cast.h"
+#include "bf-p4c/midend/desugar_varbit_extract.h"
 #include "bf-p4c/midend/elim_typedef.h"
 #include "bf-p4c/midend/inline_subparser.h"
 #include "bf-p4c/midend/normalize_params.h"
@@ -343,6 +344,7 @@ MidEnd::MidEnd(BFN_Options& options) {
         new CopyBlockPragmas(&refMap, &typeMap, typeChecking, {"stage"}),
         (options.egress_intr_md_opt) ?
             new RewriteEgressIntrinsicMetadataHeader(&refMap, &typeMap) : nullptr,
+        new DesugarVarbitExtract(&refMap, &typeMap),
         // must be done after copy structure, then we do not need to adjust
         // struct assignment. could be done in tna.cpp and t2na.cpp
         (options.arch == "tna" || options.arch == "t2na") ?

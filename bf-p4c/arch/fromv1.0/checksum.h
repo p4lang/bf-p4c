@@ -2,7 +2,7 @@
 #define EXTENSIONS_BF_P4C_ARCH_FROMV1_0_CHECKSUM_H_
 
 #include "v1_program_structure.h"
-#include "bf-p4c/arch/parser_graph.h"
+#include "bf-p4c/midend/parser_graph.h"
 
 typedef std::map<const IR::Declaration*, std::set<const IR::ParserState*>> DeclToStates;
 

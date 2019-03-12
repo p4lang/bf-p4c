@@ -1556,35 +1556,36 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/issue-1559.p4
 )
 
-# P4C does not support varbits and packet_in.extract(hdr, size)
 p4c_add_xfail_reason("tofino"
-  "Unimplemented compiler support.* the varbit type is not yet supported in the backend"
-  # The typechecker requires that the hdr argument in packet-in.extract is a varbit header, so the following
-  # message won't be issued. However, the check is valid and I tested it manually by skipping the header check.
-  # "Unimplemented compiler support.* extract with a variable number of bits is not yet supported in the backend"
-  extensions/p4_tests/p4_16/p4c-1478-neg.p4
-  # Incorrect P4_14->16 conversion for varbit extract
-  # was "Wrong number of arguments for method call: packet.extract"
+  "No varbit length encoding variable in"
+  # frontend p4-16 to 16 translation introduces extraneous copy in parser
   testdata/p4_14_samples/09-IPv4OptionsUnparsed.p4
-  testdata/p4_16_samples/checksum1-bmv2.p4
-  # was "Local metadata array .* not supported"
-  testdata/p4_16_samples/equality-bmv2.p4
-  # was "Wrong number of arguments for method call"
-  testdata/p4_16_samples/equality-varbit-bmv2.p4
-  testdata/p4_16_samples/issue447-bmv2.p4
-  testdata/p4_16_samples/issue447-1-bmv2.p4
-  testdata/p4_16_samples/issue447-2-bmv2.p4
-  testdata/p4_16_samples/issue447-3-bmv2.p4
-  testdata/p4_16_samples/issue447-4-bmv2.p4
-  testdata/p4_16_samples/issue447-5-bmv2.p4
-  testdata/p4_16_samples/issue561-bmv2.p4
-  testdata/p4_16_samples/issue1025-bmv2.p4
-  testdata/p4_16_samples/issue1291-bmv2.p4
-  testdata/p4_16_samples/issue1560-bmv2.p4
-  testdata/p4_16_samples/issue1765-bmv2.p4
-  testdata/p4_14_samples/issue576.p4
   testdata/p4_14_samples/issue781.p4
+  testdata/p4_16_samples/issue561-bmv2.p4
+  # varbit size is const expr
+  testdata/p4_16_samples/issue447-bmv2.p4
+  testdata/p4_16_samples/equality-varbit-bmv2.p4
+  testdata/p4_16_samples/equality-bmv2.p4
+  testdata/p4_16_samples/issue447-1-bmv2.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Cannot find declaration for"
+  testdata/p4_14_samples/issue576.p4
   testdata/p4_14_samples/TLV_parsing.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "The current compiler implementation of varbit requires the length encoding variable"
+  extensions/p4_tests/p4_16/p4c-1478-neg.p4
+  testdata/p4_16_samples/checksum1-bmv2.p4
+  testdata/p4_16_samples/issue1765-bmv2.p4
+  testdata/p4_16_samples/issue1025-bmv2.p4
+  testdata/p4_16_samples/issue447-3-bmv2.p4
+  testdata/p4_16_samples/issue1560-bmv2.p4
+  testdata/p4_16_samples/issue447-2-bmv2.p4
+  testdata/p4_16_samples/issue447-5-bmv2.p4   
+  testdata/p4_16_samples/issue447-4-bmv2.p4
   )
 
 # Expected failure

@@ -1,5 +1,5 @@
-#ifndef EXTENSIONS_BF_P4C_ARCH_PARSER_GRAPH_H_
-#define EXTENSIONS_BF_P4C_ARCH_PARSER_GRAPH_H_
+#ifndef EXTENSIONS_BF_P4C_MIDEND_PARSER_GRAPH_H_
+#define EXTENSIONS_BF_P4C_MIDEND_PARSER_GRAPH_H_
 
 #include "backends/graphs/parsers.h"
 
@@ -64,4 +64,4 @@ class P4ParserGraphs: public graphs::ParserGraphs {
     bool dumpDot;
 };
 
-#endif /* EXTENSIONS_BF_P4C_ARCH_PARSER_GRAPH_H_ */
+#endif /* EXTENSIONS_BF_P4C_MIDEND_PARSER_GRAPH_H_ */
