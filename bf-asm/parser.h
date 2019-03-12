@@ -112,6 +112,7 @@ class Parser {
             match_t     match;
             std::string value_set_name;
             int         value_set_size = 0;
+            int         value_set_handle = -1;
             int         counter = 0, offset = 0, shift = 0, buf_req = -1;
             bool        counter_load = false, counter_reset = false, offset_reset = false;
             CounterInit *counter_exp;
@@ -220,8 +221,6 @@ class Parser {
     int                                 priority[2][4] = {{0}};
     int                                 pri_thresh[2][4] = { {3,3,3,3}, {3,3,3,3} };
     int                                 tcam_row_use[2] = { 0 };
-    int                                 pvs_handle = 512;
-    std::map<std::string, int>          pvs_handle_use;
     Phv::Ref                            parser_error[2];
     // the ghost "parser" extracts a single 32-bit value
     // this information is first extracted in AsmParser and passed to
@@ -237,6 +236,7 @@ class Parser {
     static std::map<std::string, std::vector<State::Match::Clot *>>     clots[2];
     static Alloc1D<std::vector<State::Match::Clot *>, PARSER_MAX_CLOTS> clot_use[2];
     static unsigned                                                     max_handle;
+    int                                                                 parser_handle = -1;
 
     static Parser& get_parser() { return singleton_object; }
     template<class REGS> void gen_configuration_cache(REGS &, json::vector &cfg_cache);
@@ -257,10 +257,18 @@ class Parser {
     static int match_key_loc(value_t& key, bool errchk = true);
     static int match_key_size(const char* key);
 
+    // Parser Handle Setup
+    // ____________________________________________________
+    // | Table Type | Pipe Id | Parser Handle | PVS Handle |
+    // 31          24        20              12            0
+    // PVS Handle = 12 bits
+    // Parser Handle = 8 bits
+    // Pipe ID = 4 bits
+    // Table Type = 8 bits (Parser type is 15)
     static unsigned next_handle() {
         // unique_table_offset is to support multiple pipe.
         // assume parser type is 15, table type used 0 - 6
-        return max_handle++ | unique_table_offset << 16 | 15 << 24;
+        return max_handle++ << 12 | unique_table_offset << 20 | 15 << 24;
     }
 
 private:

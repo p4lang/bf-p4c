@@ -2,6 +2,7 @@
 #define BF_P4C_PARDE_ASM_OUTPUT_H_
 
 #include "ir/ir.h"
+#include "bf-p4c-options.h"
 
 class PhvInfo;
 class ClotInfo;

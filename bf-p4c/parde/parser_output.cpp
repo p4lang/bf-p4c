@@ -14,10 +14,31 @@ namespace {
 /// Generates parser assembly by walking the IR and writes the result to an
 /// output stream. The parser IR must be in lowered form - i.e., the root must
 /// a LoweredParser rather than a Parser.
+static int pvs_handle = 512;
+std::map<cstring, int> pvs_handles;
 struct ParserAsmSerializer : public ParserInspector {
-    explicit ParserAsmSerializer(std::ostream& out) : out(out) { }
+    explicit ParserAsmSerializer(std::ostream& out)
+        : out(out) { }
 
  private:
+    int getPvsHandle(cstring pvsName) {
+        // For P4_14 parser value set is shared across ingress and egress,
+        // Assign the same pvs handle in these cases
+        int handle = -1;
+        bool is_p4_14 = (BackendOptions().langVersion == CompilerOptions::FrontendVersion::P4_14);
+        if (is_p4_14) {
+            if (pvs_handles.count(pvsName) > 0) {
+                handle = pvs_handles[pvsName];
+            } else {
+                handle = --pvs_handle;
+                pvs_handles[pvsName] = handle;
+            }
+        } else {
+            handle = --pvs_handle;
+        }
+        return handle;
+    }
+
     bool preorder(const IR::BFN::LoweredParser* parser) override {
         AutoIndent indentParser(indent);
 
@@ -119,6 +140,7 @@ struct ParserAsmSerializer : public ParserInspector {
         } else if (auto* pvs = match->value->to<IR::BFN::LoweredPvsMatchValue>()) {
             out << indent << "value_set " << pvs->name << " " << pvs->size << ":" << std::endl;
             AutoIndent indentMatch(indent);
+            out << indent << "handle: " << getPvsHandle(pvs->name) << std::endl;
             out << indent << "field_mapping" << ":" << std::endl;
             AutoIndent indentFieldMap(indent);
             for (const auto& m : pvs->mapping) {
@@ -273,8 +295,7 @@ struct ParserAsmSerializer : public ParserInspector {
 
 }  // namespace
 
-ParserAsmOutput::ParserAsmOutput(const IR::BFN::Pipe* pipe,
-                                 gress_t gress) {
+ParserAsmOutput::ParserAsmOutput(const IR::BFN::Pipe* pipe, gress_t gress) {
     BUG_CHECK(pipe->thread[gress].parsers.size() != 0, "No parser?");
     for (auto parser : pipe->thread[gress].parsers) {
         auto lowered_parser = parser->to<IR::BFN::LoweredParser>();

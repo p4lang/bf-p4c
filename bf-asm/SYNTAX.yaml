@@ -123,6 +123,7 @@ parser [<thread>] [<port_use>, ...]:
                         # mask(&), +/- lowest)
                     max_length: <constant>
             value_set <name> <size>:
+                handle: <int> # pvs handle
                 field_mapping:
                   <fieldname>(range) : <Matcher>(range)
                 # actions to perform for a value set of the given <name> and integer <size>

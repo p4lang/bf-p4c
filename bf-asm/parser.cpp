@@ -394,9 +394,9 @@ void Parser::output(json::map& ctxt_json) {
         auto *regs = new TARGET::parser_regs;
         declare_registers(regs);
         json::map parser_ctxt_json;
-        unsigned handle = next_handle();
-        LOG3("parser handle: " << handle);
-        parser_ctxt_json["handle"] = handle;
+        parser_handle = next_handle();
+        LOG3("parser handle: " << parser_handle);
+        parser_ctxt_json["handle"] = parser_handle;
         json::vector default_ports;
         output_default_ports(default_ports, port_use);
         parser_ctxt_json["default"] = std::move(default_ports);
@@ -416,6 +416,8 @@ void Parser::output_legacy(json::map& ctxt_json) {
     SWITCH_FOREACH_TARGET(options.target,
         auto *regs = new TARGET::parser_regs;
         declare_registers(regs);
+        parser_handle = next_handle();
+        LOG3("parser handle: " << parser_handle);
         write_config(*regs, ctxt_json["parser"], true);
         gen_configuration_cache(*regs, ctxt_json["configuration_cache"]);
     )
@@ -987,6 +989,9 @@ Parser::State::Match::Match(int l, gress_t gress, match_t m, VECTOR(pair_t) &dat
                     field_mapping.emplace_back(fm);
                 }
             }
+        } else if (kv.key == "handle") {
+            if (CHECKTYPE(kv.value, tINT))
+                value_set_handle = kv.value.i;
         } else if (kv.key.type == tCMD && kv.key == "clot" && kv.key.vec.size == 2) {
             clots.emplace_back(gress, kv.key.vec[1], kv.value);
         } else if (kv.key.type == tINT) {
@@ -1607,12 +1612,10 @@ void Parser::State::write_config(REGS &regs, Parser *pa, json::vector &ctxt_json
         if (def) def->write_config(regs, pa, this, 0, state_cjson);
         if (uses_pvs) {
             state_cjson["pvs_name"] = i->value_set_name;
-            if (!pa->pvs_handle_use.count(i->value_set_name)) {
-                state_cjson["pvs_handle"] = --pa->pvs_handle;
-                pa->pvs_handle_use.emplace(i->value_set_name, pa->pvs_handle);
-            } else {
-                state_cjson["pvs_handle"] = pa->pvs_handle_use.at(i->value_set_name);
-            }
+            if (i->value_set_handle < 0)
+                error(lineno, "Invalid handle for parser value set %s", i->value_set_name.c_str());
+            auto pvs_handle_full = i->value_set_handle; 
+            state_cjson["pvs_handle"] = pvs_handle_full;
         }
         for (auto idx : MatchIter(stateno)) {
             state_cjson["parser_state_id"] = idx;
