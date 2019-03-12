@@ -163,25 +163,20 @@ class DumpParser : public Visitor {
         }
     }
 
-    std::ofstream* open_file(gress_t gress) {
-        std::string outdir(BackendOptions().outputDir.c_str());
-        outdir += "/graphs";
-
-        int rc = mkdir(outdir.c_str(), 0755);
-        if (rc != 0 && errno != EEXIST) {
-            std::cerr << "Failed to create directory: " << outdir << std::endl;
+    std::ofstream* open_file(gress_t gress, int pipe_id) {
+        auto outdir = BFNContext::get().getOutputDirectory("graphs", pipe_id);
+        if (!outdir)
             return nullptr;
-        }
 
         static int fid = 0;
-        std::string filepath = outdir + "/" + std::to_string(fid++) + "_" + filename
-                                      + "_" + ::toString(gress) + ".dot";
+        auto filepath = outdir + "/" + std::to_string(fid++) + "_" + filename
+            + "_" + ::toString(gress) + ".dot";
 
         return new std::ofstream(filepath);
     }
 
     template <typename ParserGraphType>
-    void dump_graph(const ParserGraphType& graph, gress_t gress) {
+    void dump_graph(const ParserGraphType& graph, gress_t gress, int pipe_id) {
         out.str(std::string());
 
         out << "digraph parser {" << std::endl;
@@ -191,7 +186,7 @@ class DumpParser : public Visitor {
 
         out << "}" << std::endl;
 
-        auto fs = open_file(gress);
+        auto fs = open_file(gress, pipe_id);
 
         if (fs) {
             *fs << escape(out.str());
@@ -214,10 +209,10 @@ class DumpParser : public Visitor {
             BUG("IR is in an incoherent state");
 
         for (auto g : cg.graphs())
-            dump_graph(*(g.second), (g.first)->gress);
+            dump_graph(*(g.second), (g.first)->gress, root->to<IR::BFN::Pipe>()->id);
 
         for (auto g : cgl.graphs())
-            dump_graph(*(g.second), (g.first)->gress);
+            dump_graph(*(g.second), (g.first)->gress, root->to<IR::BFN::Pipe>()->id);
 
         return rv;
     }

@@ -34,6 +34,7 @@ import argparse
 import importlib
 import json
 from multiprocessing import Pool, Queue
+from packaging import version
 import shlex, shutil
 import subprocess
 import traceback
@@ -194,7 +195,7 @@ class Test:
                     "ERROR: Input file '{}' does not have a 'programs' key",
                     manifest_file)
 
-            schema_version = manifest['schema_version'];
+            schema_version = version.parse(manifest['schema_version'])
             program = manifest['programs'][0]
             p4_version = program['p4_version']
 
@@ -205,30 +206,48 @@ class Test:
 
             # check that there is at least one context.json defined, and that file exists
             def check_file_in_manifest(key, name):
-                if key not in program:
-                    raise TestError(
-                        "ERROR: Input file '{}' does not have a key '{}'",
-                        manifest_file, key)
+                if schema_version < version.parse("2.0.0"):
+                    prg = program
+                else:
+                    prg = program['pipes'][0]['files']
 
-                m_dict = program[key]
+                if key not in prg:
+                    raise TestError("ERROR: Input file '{}' does not have "
+                                    "a key '{}'".format(manifest_file, key))
+
+                m_dict = prg[key]
                 for item in m_dict:
-                    m_file = os.path.join(args.output_directory, item['path'])
+                    if isinstance(item, dict):
+                        m_file = os.path.join(args.output_directory, item['path'])
+                    else:
+                        m_file = os.path.join(args.output_directory, m_dict['path'])
                     if not os.path.isfile(m_file):
-                        raise TestError(
-                            "ERROR: Input file '{}' contains an invalid "
-                            "{} path: {}", manifest_file, name, m_file)
+                        raise TestError("ERROR: Input file '{}' contains an invalid "
+                                        "{} path: {}".format(manifest_file, name, m_file))
 
             # check that there is at least one context.json defined
-            if len(program['contexts']) == 0:
-                raise TestError(
-                    "ERROR: Input file '{}' contains an empty 'contexts' "
-                    "dictionary", manifest_file)
+            if schema_version < version.parse("2.0.0"):
+                if len(program['contexts']) == 0:
+                    raise TestError(
+                        "ERROR: Input file '{}' contains an empty 'contexts' "
+                        "dictionary", manifest_file)
+            else:
+                context = program['pipes'][0]['files'].get('context', False)
+                if context:
+                    check_file_in_manifest('context', 'context file')
+                else:
+                    raise TestError(
+                        "ERROR: Input file '{}' contains an empty 'contexts' "
+                        "dictionary", manifest_file)
 
-            check_file_in_manifest('binaries', 'binary file')
+            # check_file_in_manifest('binaries', 'binary file')
             check_file_in_manifest('graphs', 'graph file')
             check_file_in_manifest('logs', 'log file')
-            if schema_version >= "1.3.0":
+            if schema_version >= version.parse("1.3.0") and \
+               schema_version < version.parse("2.0.0"):
                 check_file_in_manifest('p4i', 'resources file')
+            elif schema_version >= version.parse("2.0.0"):
+                check_file_in_manifest('resources', 'resources_file')
 
     def checkGraphs(self, args):
         """Check that the produced graphs are valid
@@ -265,20 +284,23 @@ class Test:
 
         with open(manifest_file, 'r') as json_file:
             manifest = json.load(json_file)
-            schema_version = manifest['schema_version']
+            schema_version = version.parse(manifest['schema_version'])
             target = manifest['target']
             if target not in stages.keys():
                 raise TestError("ERROR: Invalid target {}".format(target))
             program = manifest['programs'][0]
             p4_version = program['p4_version']
-            resources_files = program['p4i']
+            if schema_version < version.parse("2.0.0"):
+                resource_files = program['p4i']
+            else:
+                resources_files = program['pipes'][0]['files']['resources']
             resources_file = None
             for r in resources_files:
                 m_file = os.path.join(args.output_directory, r['path'])
                 if not os.path.isfile(m_file):
                     raise TestError(
                         "ERROR: Input file '{}' contains an invalid "
-                        "{} path: {}", manifest_file, 'resources file', m_file)
+                        "{} path: {}".format(manifest_file, 'resources file', m_file))
                 # Get the resources.json/res.json path if it exists
                 if r['type'] is "resources":
                     resources_file = os.path.join(args.output_directory, r['path'])
@@ -289,7 +311,8 @@ class Test:
                     nStages = int(resources['pipes'][0]['mau']['nStages'])
                     if nStages != stages[target]:
                         raise TestError(
-                            "ERROR: Number of stages in resource file {} != {} expected".format(nStages, stages[target]))
+                            "ERROR: Number of stages in resource file {} "
+                            "!= {} expected".format(nStages, stages[target]))
         # success
         # if we either did not have a resource file, or all the stages check out.
 

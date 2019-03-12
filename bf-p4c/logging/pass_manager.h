@@ -29,20 +29,16 @@ class PassManager : public ::PassManager {
             return ::PassManager::init_apply(root);
 
         static int invocation = 0;
+        const IR::BFN::Pipe *pipe = root->to<IR::BFN::Pipe>();
+        if (pipe == nullptr)
+            pipe = findContext<IR::BFN::Pipe>();
         if (_logFilePrefix == "parser") {
             // parser logging is called from functions, inspectors and pass managers ...
             // so invocations is useless, it just ends up generating a slew of logs
-            _logFile = new Logging::FileLog(_logFilePrefix + ".log", _appendToLog);
+            _logFile = new Logging::FileLog(pipe->id, _logFilePrefix + ".log", _appendToLog);
         } else {
-            cstring pipeId = "";
-            if (!BackendOptions().isv1()) {  // only for P4-16
-                const IR::BFN::Pipe *pipe = root->to<IR::BFN::Pipe>();
-                if (pipe == nullptr)
-                    pipe = findContext<IR::BFN::Pipe>();
-                pipeId = "pipe" + std::to_string(pipe ? pipe->id : 0) + "_";
-            }
-            _logFile = new Logging::FileLog(_logFilePrefix + pipeId +
-                                            std::to_string(invocation) + ".log",
+            _logFile = new Logging::FileLog(pipe->id,
+                                            _logFilePrefix + std::to_string(invocation) + ".log",
                                             _appendToLog);
             if (!_appendToLog) ++invocation;
         }

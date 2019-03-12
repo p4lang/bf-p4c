@@ -18,7 +18,8 @@ ENV P4C_DEPS autoconf \
              libssl-dev \
              libtool \
              python-dev \
-             python-pip
+             python-pip \
+             python3-pip
 
 
 ENV P4C_RUNTIME_DEPS cpp \
@@ -66,11 +67,17 @@ ARG GEN_REF_OUTPUTS=false
 # testing dependencies
 RUN apt-get install -y net-tools
 
-RUN pip install jsl pexpect crc16 crcmod simplejson tenjin ipaddress pyinstaller
+RUN pip install jsl pexpect crc16 crcmod simplejson tenjin ipaddress packaging pyinstaller
 # Install ply 3.9 for compatibility with p4c-tofino
 RUN pip install ply==3.9
 # Install jsonschema 2.6 for compatibility with pyinstaller
 RUN pip install jsonschema==2.6
+# Install python3 packaging for test_p4c_driver.py
+RUN pip3 install packaging
+# Force /usr/bin to be before /usr/local/bin because bf-driver
+# installs a version of python3 in /usr/local and that version is not
+# picking up modules installed with pip3
+ENV PATH="/usr/bin:${PATH}"
 
 COPY . /bfn/bf-p4c-compilers/
 COPY scripts/ptf_hugepage_setup.sh /bfn/ptf_hugepage_setup.sh

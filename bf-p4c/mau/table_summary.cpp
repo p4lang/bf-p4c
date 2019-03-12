@@ -1,6 +1,7 @@
 #include "bf-p4c/mau/table_summary.h"
 #include <numeric>
 #include "bf-p4c/bf-p4c-options.h"
+#include "bf-p4c/logging/filelog.h"
 #include "bf-p4c/mau/resource_estimate.h"
 #include "lib/hex.h"
 #include "lib/map.h"
@@ -10,8 +11,10 @@ int TableSummary::numInvoked[] = {0};
 bool TableSummary::firstRoundFit = false;
 
 Visitor::profile_t TableSummary::init_apply(const IR::Node *root) {
-    if (BackendOptions().verbose > 0)
-        tsLog = new Logging::FileLog("table_summary_pipe" + std::to_string(pipe_id) + ".log");
+    if (BackendOptions().verbose > 0) {
+        const IR::BFN::Pipe *pipe = root->to<IR::BFN::Pipe>();
+        tsLog = new Logging::FileLog(pipe->id, "table_summary_pipe.log");
+    }
 
     auto rv = MauInspector::init_apply(root);
     order.clear();

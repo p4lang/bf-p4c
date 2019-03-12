@@ -99,7 +99,7 @@ class PhvLogging : public MauInspector {
         return Inspector::init_apply(root);
     }
 
-    void end_apply() override;
+    void end_apply(const IR::Node *root) override;
 
     /// Populates data structures related to PHV groups.
     void populateContainerGroups(Resources::group_type_t groupType);
@@ -166,7 +166,7 @@ class PhvLogging : public MauInspector {
              BackendOptions().programName + ".p4",
              RunId::getId(),
              "1.0.3",  // phv_schema version
-             PhvLogging::getTarget(Device::name())) { }
+             PhvLogging::getTarget(Device::name())) {}
 };
 
 #endif  /* BF_P4C_LOGGING_PHV_LOGGING_H_ */

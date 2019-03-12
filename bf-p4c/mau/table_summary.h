@@ -3,11 +3,14 @@
 
 #include <iostream>
 #include <map>
-#include "bf-p4c/logging/filelog.h"
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/mau/resource.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
 #include "bf-p4c/device.h"
+
+namespace Logging {
+class FileLog;
+};
 
 struct PHVTrigger {
     struct failure : public Backtrack::trigger {

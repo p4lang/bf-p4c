@@ -39,7 +39,7 @@ class ExtractParser : public ParserInspector {
     profile_t init_apply(const IR::Node *root) override {
         static int invocation = 0;
         if (BackendOptions().verbose > 0)
-            parserLog = new Logging::FileLog("parser.log", (invocation++ != 0));
+            parserLog = new Logging::FileLog(rv->id, "parser.log", (invocation++ != 0));
         return ParserInspector::init_apply(root);
     }
 

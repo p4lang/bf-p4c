@@ -528,6 +528,7 @@ set (BF_P4C_BACKEND_LOGGING_HDRS
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_LOGGING_HDRS}")
 set (BF_P4C_BACKEND_LOGGING_SRCS
+  logging/manifest.cpp
   logging/phv_logging.cpp
   logging/resources.cpp
   )
@@ -660,16 +661,14 @@ install (PROGRAMS ${BFN_P4C_SOURCE_DIR}/scripts/p4_14-to-p4_16
 
 set (MANIFEST_CONFIG ${BFN_P4C_SOURCE_DIR}/scripts/p4c-manifest-config
   CACHE FILEPATH "Path to p4c-manifest-config")
+set (GEN_DRIVER_CONF ${BFN_P4C_SOURCE_DIR}/scripts/p4c-gen-conf
+  CACHE FILEPATH "Path to p4c-gen-conf")
 set (GEN_BFRT_CONF ${BFN_P4C_SOURCE_DIR}/scripts/p4c-gen-bfrt-conf
   CACHE FILEPATH "Path to p4c-gen-bfrt-conf")
 set (GEN_BFRT_SCHEMA ${CMAKE_CURRENT_SOURCE_DIR}/control-plane/p4c-gen-bfrt-schema
   CACHE FILEPATH "Path to p4c-gen-bfrt-schema")
 
-install (PROGRAMS ${GEN_BFRT_SCHEMA}
-  DESTINATION ${P4C_RUNTIME_OUTPUT_DIRECTORY})
-install (PROGRAMS ${MANIFEST_CONFIG}
-  DESTINATION ${P4C_RUNTIME_OUTPUT_DIRECTORY})
-install (PROGRAMS ${GEN_BFRT_CONF}
+install (PROGRAMS ${GEN_BFRT_SCHEMA} ${GEN_BFRT_CONF} ${MANIFEST_CONFIG} ${GEN_DRIVER_CONF}
   DESTINATION ${P4C_RUNTIME_OUTPUT_DIRECTORY})
 
 set (P4C_DRIVER_MACROS ${P4C_BINARY_DIR}/p4c_src/bfn_version.py)
@@ -767,6 +766,7 @@ add_custom_target(linkp4cbarefoot
   COMMAND ${CMAKE_COMMAND} -E copy ${P4C_DRIVER_MACROS} ${P4C_BINARY_DIR}/p4c_src
   COMMAND ${CMAKE_COMMAND} -E create_symlink ${MANIFEST_CONFIG} ${P4C_BINARY_DIR}/p4c-manifest-config
   COMMAND ${CMAKE_COMMAND} -E create_symlink ${GEN_BFRT_CONF} ${P4C_BINARY_DIR}/p4c-gen-bfrt-conf
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ${GEN_DRIVER_CONF} ${P4C_BINARY_DIR}/p4c-gen-conf
   COMMAND ${CMAKE_COMMAND} -E create_symlink ${GEN_BFRT_SCHEMA} ${P4C_BINARY_DIR}/p4c-gen-bfrt-schema
   COMMAND ${CMAKE_COMMAND} -E create_symlink ${P4C_BINARY_DIR}/p4include ${CMAKE_CURRENT_BINARY_DIR}/p4include
   COMMAND ${CMAKE_COMMAND} -E create_symlink ${P4C_BINARY_DIR}/p4_14include ${CMAKE_CURRENT_BINARY_DIR}/p4_14include

@@ -283,7 +283,7 @@ class CharacterizePower: public MauInspector {
    *  Function definitions.
    * --------------------------------------------------------*/
   Visitor::profile_t init_apply(const IR::Node *root) override;
-  void end_apply() override;
+  void end_apply(const IR::Node *root) override;
   bool preorder(const IR::BFN::Pipe *p) override;
   void postorder(const IR::BFN::Pipe *p) override;
 

@@ -1,4 +1,5 @@
 #include "bf-p4c/bf-p4c-options.h"
+#include "bf-p4c/logging/manifest.h"
 #include "bf-p4c/logging/phv_logging.h"
 
 Visitor::profile_t CollectPhvLoggingInfo::init_apply(const IR::Node* root) {
@@ -62,7 +63,7 @@ bool CollectPhvLoggingInfo::preorder(const IR::MAU::TableKey* read) {
     return true;
 }
 
-void PhvLogging::end_apply() {
+void PhvLogging::end_apply(const IR::Node *root) {
     // Populate resources structures.
     populateContainerGroups(Resources::group_type_t::MAU);
     populateContainerGroups(Resources::group_type_t::DEPARSER);
@@ -70,6 +71,7 @@ void PhvLogging::end_apply() {
     logHeaders();
     logContainers();
     logger.log();
+    Logging::Manifest::getManifest().addLog(root->to<IR::BFN::Pipe>()->id, "phv", "phv.json");
 }
 
 void PhvLogging::logHeaders() {

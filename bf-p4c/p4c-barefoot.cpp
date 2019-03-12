@@ -8,6 +8,7 @@
 
 #include "asm.h"
 #include "backend.h"
+#include "backends/graphs/controls.h"
 #include "bf-p4c-options.h"
 #include "bf-p4c/common/parse_annotations.h"
 #include "bf-p4c/control-plane/tofino_p4runtime.h"
@@ -28,15 +29,14 @@
 #include "frontends/common/applyOptionsPragmas.h"
 #include "frontends/common/parseInput.h"
 #include "arch/fromv1.0/programStructure.h"
-#include "backends/graphs/controls.h"
-#include "backends/graphs/parsers.h"
 #include "ir/ir.h"
 #include "ir/dbprint.h"
 #include "lib/compile_context.h"
 #include "lib/crash.h"
+#include "lib/exceptions.h"
 #include "lib/gc.h"
 #include "lib/log.h"
-#include "lib/exceptions.h"
+#include "lib/nullstream.h"
 #include "logging/manifest.h"
 #include "midend.h"
 #include "version.h"
@@ -63,23 +63,13 @@ static void log_dump(const IR::Node *node, const char *head) {
 class GenerateOutputs : public PassManager {
  private:
     const BFN_Options &_options;
+    int  _pipeId;
     bool _success;
-    cstring pipeName;
     std::string _outputDir;
 
     BFN::Visualization _visualization;
     BFN::DynamicHashJson _dynhash;
     const Util::JsonObject &_primitives;
-
-    profile_t init_apply(const IR::Node *root) override {
-        LOG2("Generating outputs under " << _outputDir);
-        int rc = mkdir(_outputDir.c_str(), 0755);
-        if (rc != 0 && errno != EEXIST) {
-            std::cerr << "Failed to create directory: " << _outputDir << std::endl;
-            exit(1);
-        }
-        return PassManager::init_apply(root);
-    }
 
     void end_apply() override {
         cstring outputFile = _outputDir + "/" + _options.programName + ".bfa";
@@ -103,10 +93,14 @@ class GenerateOutputs : public PassManager {
         }
         if (_options.debugInfo) {  // generate resources info only if invoked with -g
             // Output resources json file
-            cstring resourcesFile = _outputDir + "/" + _options.programName + ".res.json";
+            auto logsDir = BFNContext::get().getOutputDirectory("logs", _pipeId);
+            cstring resourcesFile = logsDir + "/resources.json";
             LOG2("ASM generation for resources: " << resourcesFile);
             std::ofstream res(resourcesFile);
             res << _visualization << std::endl << std::flush;
+            Logging::Manifest &manifest = Logging::Manifest::getManifest();
+            // relative path to the output directory
+            manifest.addResources(_pipeId, resourcesFile.substr(_options.outputDir.size()+1));
 
             // \TODO: how much info do we need from context.json in
             // the case of a failed compilation?
@@ -115,18 +109,15 @@ class GenerateOutputs : public PassManager {
 
  public:
     explicit GenerateOutputs(const BFN::Backend &b, const BFN_Options& o,
-                             cstring pipeName, const Util::JsonObject& p,
+                             int pipeId, const Util::JsonObject& p,
                              bool success = true) :
-        _options(o), _success(success), pipeName(pipeName), _dynhash(b.get_phv()), _primitives(p) {
+        _options(o), _pipeId(pipeId), _success(success), _dynhash(b.get_phv()), _primitives(p) {
         setStopOnError(false);
-        // Set output dir
-        _outputDir = std::string(_options.outputDir.c_str());
-        if (_options.langVersion == BFN_Options::FrontendVersion::P4_16) {
-            _outputDir = _outputDir + "/" + pipeName;
-        }
-        std::string phvLogFile(_outputDir + "/phv.json");
-        addPasses({ new BFN::AsmOutput(b.get_phv(), b.get_clot(), b.get_defuse(), o,
-                                       pipeName, success),
+        _outputDir = BFNContext::get().getOutputDirectory("", pipeId);
+        if (_outputDir == "") exit(1);
+        auto logsDir = BFNContext::get().getOutputDirectory("logs", pipeId);
+        std::string phvLogFile(logsDir + "/phv.json");
+        addPasses({ new BFN::AsmOutput(b.get_phv(), b.get_clot(), b.get_defuse(), o, success),
                     new PhvLogging(phvLogFile.c_str(), b.get_phv(), *b.get_phv_logging(),
                                    b.get_defuse(), b.get_table_alloc()),
                     &_visualization,
@@ -151,7 +142,7 @@ void execute_backend(const IR::BFN::Pipe* maupipe, BFN_Options& options) {
     try {
         maupipe = maupipe->apply(backend);
         bool success = maupipe != nullptr;
-        GenerateOutputs as(backend, options, pipeName, backend.get_prim_json(), success);
+        GenerateOutputs as(backend, options, maupipe->id, backend.get_prim_json(), success);
         if (maupipe)
             maupipe->apply(as);
     } catch (Util::P4CExceptionBase &ex) {
@@ -160,7 +151,7 @@ void execute_backend(const IR::BFN::Pipe* maupipe, BFN_Options& options) {
             std::cerr << "compilation failed: producing context.json" << std::endl;
         #endif
 
-        GenerateOutputs as(backend, options, pipeName, backend.get_prim_json(), false);
+        GenerateOutputs as(backend, options, maupipe->id, backend.get_prim_json(), false);
         if (maupipe)
             maupipe->apply(as);
 
@@ -242,35 +233,15 @@ int main(int ac, char **av) {
         return PROGRAM_ERROR;  // still did not reach the backend for fitting issues
     log_dump(program, "After midend");
 
+    if (!midend.toplevel)
+        return PROGRAM_ERROR;
+
     // create the archive manifest
     Logging::Manifest &manifest = Logging::Manifest::getManifest();
 
-    // generate graphs
-    // In principle this should not fail, so we call it before the backend
-    if (options.create_graphs) {
-        std::string graphsDir(options.outputDir.c_str());
-        graphsDir += "/graphs";
-        int rc = mkdir(graphsDir.c_str(), 0755);
-        if (rc != 0 && errno != EEXIST) {
-            std::cerr << "Failed to create directory: " << graphsDir << std::endl;
-            return INVOCATION_ERROR;
-        }
-        LOG2("Generating graphs under " << graphsDir);
-        auto toplevel = midend.toplevel;
-        if (toplevel != nullptr) {
-            LOG2("Generating control graphs");
-            graphs::ControlGraphs cgen(&midend.refMap, &midend.typeMap, graphsDir);
-            toplevel->getMain()->apply(cgen);
-            toplevel->getMain()->apply(manifest);  // generate entries for controls in manifest
-        }
-        LOG2("Generating parser graphs");
-        graphs::ParserGraphs pgg(&midend.refMap, &midend.typeMap, graphsDir);
-        program->apply(pgg);
-        program->apply(manifest);  // generate graph entries for parsers in manifest
-    }
-
-    if (!midend.toplevel)
-        return PROGRAM_ERROR;
+    /// setup the context to know which pipes are available in the program: for logging and
+    /// other output declarations.
+    BFNContext::get().discoverPipes(program, midend.toplevel);
 
     // convert midend IR to backend IR
     BFN::BackendConverter conv(&midend.refMap, &midend.typeMap, midend.toplevel);
@@ -290,18 +261,34 @@ int main(int ac, char **av) {
     }
 
     for (auto& pipe : conv.pipe) {
+        manifest.setPipe(pipe->id, pipe->name.name);
+        // generate graphs
+        // In principle this should not fail, so we call it before the backend
+        if (options.create_graphs) {
+            auto graphsDir = BFNContext::get().getOutputDirectory("graphs", pipe->id);
+            // set the pipe for the visitors to compute the output dir
+            manifest.setRefAndTypeMap(&midend.refMap, &midend.typeMap);
+            auto toplevel = midend.toplevel;
+            if (toplevel != nullptr) {
+                LOG2("Generating control graphs");
+                // FIXME(cc): this should move to the manifest graph generation to work per-pipe
+                graphs::ControlGraphs cgen(&midend.refMap, &midend.typeMap, graphsDir);
+                toplevel->getMain()->apply(cgen);
+                toplevel->getMain()->apply(manifest);  // generate entries for controls in manifest
+            }
+            LOG2("Generating parser graphs");
+            program->apply(manifest);  // generate graph entries for parsers in manifest
+        }
+
 #if BAREFOOT_INTERNAL
         if (!options.skipped_pipes.count(pipe->name))
             execute_backend(pipe, options);
 #else
             execute_backend(pipe, options);
 #endif
-        std::string prefix = "";
-        if (options.langVersion == BFN_Options::FrontendVersion::P4_16)
-            prefix = pipe->name + "/";
-        manifest.addContext(pipe->id, pipe->name, prefix + "context.json");
-        if (options.debugInfo)
-            manifest.addResources(pipe->id, prefix + options.programName + ".res.json");
+        auto contextDir = BFNContext::get().getOutputDirectory("", pipe->id)
+            .substr(options.outputDir.size()+1);
+        manifest.addContext(pipe->id, contextDir + "context.json");
     }
 
     manifest.addArchitecture(conv.getThreads());

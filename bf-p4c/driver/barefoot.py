@@ -19,7 +19,9 @@ import os
 import os.path
 import sys
 import json
+from packaging import version
 import re
+import time
 import p4c_src.bfn_version as p4c_version
 from p4c_src.util import find_file, find_bin
 from p4c_src.driver import BackendDriver
@@ -59,16 +61,20 @@ else:
     bfas = find_file(os.environ['P4C_BIN_DIR'], 'bfas')
 
 bfrt_gen = find_file(os.environ['P4C_BIN_DIR'], 'p4c-gen-bfrt-schema')
-
+p4c_gen_conf = find_file(os.environ['P4C_BIN_DIR'], 'p4c-gen-conf')
 class BarefootBackend(BackendDriver):
     def __init__(self, target, arch, argParser):
         BackendDriver.__init__(self, target, arch, argParser)
+        self.compilation_time = 0.0
+        self.conf_file = None
+
         # commands
         self.add_command('preprocessor', 'cc')
         self.add_command('compiler',
                          os.path.join(os.environ['P4C_BIN_DIR'], 'p4c-barefoot'))
         self.add_command('assembler', bfas)
         self.add_command('bf-rt-verifier', bfrt_gen)
+        self.add_command('p4c-gen-conf', p4c_gen_conf)
 
         self.runVerifiers = False
         top_src_dir = checkEnv()
@@ -81,7 +87,7 @@ class BarefootBackend(BackendDriver):
 
         # order of commands
         self.enable_commands(['preprocessor', 'compiler', 'assembler',
-                              'summary_logging'])
+                              'summary_logging', 'p4c-gen-conf'])
 
         # additional options
         self.add_command_line_options()
@@ -265,6 +271,21 @@ class BarefootBackend(BackendDriver):
         if opts.p4runtime_force_std_externs:
             self.add_command_option('compiler', '--p4runtime-force-std-externs')
 
+        # Add conf generation options
+        if opts.bf_rt_schema is not None:
+            conf_type = 'BF-RT'
+            self.add_command_option('p4c-gen-conf', '--bfrt-name {}'.format(opts.bf_rt_schema))
+        elif opts.language == 'p4-14':
+            conf_type = 'PD'
+        elif opts.p4runtime_force_std_externs:
+            conf_type = 'P4Runtime'
+        else: conf_type = 'BF-RT' # default ...
+        self.add_command_option('p4c-gen-conf', '--conf-type {}'.format(conf_type))
+        self.add_command_option('p4c-gen-conf', '--name {}'.format(self._source_basename))
+        self.add_command_option('p4c-gen-conf', '--device {}'.format(self._target))
+        self.add_command_option('p4c-gen-conf', '--outputdir {}'.format(output_dir))
+        self.conf_file = self._source_basename + ".conf"
+
         if opts.verbose > 0:
             log_scripts_dir = os.environ['P4C_BIN_DIR']
             top_src_dir = checkEnv()
@@ -340,16 +361,16 @@ class BarefootBackend(BackendDriver):
                 self.exitWithError(error_msg)
 
         self._pipes = []
-        schema_version = self._manifest['schema_version']
+        schema_version = version.parse(self._manifest['schema_version'])
         pipe_name_label = 'pipe_name'
-        if schema_version == "1.0.0": pipe_name_label = 'pipe'
+        if schema_version == version.parse("1.0.0"): pipe_name_label = 'pipe'
 
         programs = self._manifest['programs']
         if len(programs) > 1:
             error_msg = "{} currently supports a single program".format(self._targetName.title())
             self.exitWithError(error_msg)
-        for prog in programs:
-            p4_version = prog['p4_version']
+
+        def __parseManifestBefore_2_0(prog, p4_version):
             if (type(prog) is not dict or "contexts" not in prog):
                 error_msg = "ERROR: Input file '" + manifest_filename + \
                                  "' does not contain valid program contexts.\n"
@@ -370,7 +391,39 @@ class BarefootBackend(BackendDriver):
                 res_file = os.path.join(self._output_directory, res['path'])
                 self._pipes[pipe_id]['resources'] = res_file
 
-    def updateCompilerFlags(self, jsonFile):
+        def __parseManifestAfter_2_0(prog, p4_version):
+            if (type(prog) is not dict or "pipes" not in prog):
+                error_msg = "ERROR: Input file '" + manifest_filename + \
+                                 "' does not contain a valid program.\n"
+            for pipe in prog["pipes"]:
+                self._pipes.append({})
+                pipe_id = int(pipe['pipe_id'])
+                self._pipes[pipe_id]['pipe_name'] = pipe['pipe_name']
+                self._pipes[pipe_id]['context'] = os.path.join(self._output_directory,
+                                                               pipe['files']['context']['path'])
+                if p4_version == 'p4-14':
+                    self._pipes[pipe_id]['pipe_dir'] = self._output_directory
+                else:
+                    self._pipes[pipe_id]['pipe_dir'] = os.path.join(self._output_directory,
+                                                                    pipe['pipe_name'])
+                for res in pipe['files']['resources']:
+                    if res['type'] == "resources":
+                        self._pipes[pipe_id]['resources'] = os.path.join(self._output_directory,
+                                                                         res['path'])
+                for log in pipe['files']['logs']:
+                    if log['log_type'] == 'phv' and log['path'].endswith('phv.json'):
+                        self._pipes[pipe_id]['phv_json'] = os.path.join(self._output_directory,
+                                                                        log['path'])
+
+
+        for prog in programs:
+            p4_version = prog['p4_version']
+            if schema_version < version.parse("2.0.0"):
+                __parseManifestBefore_2_0(prog, p4_version)
+            else:
+                __parseManifestAfter_2_0(prog, p4_version)
+
+    def updateManifest(self, jsonFile, compilation_successful = True):
         """
         Set the compile_command in the manifest or context.json
         """
@@ -382,8 +435,12 @@ class BarefootBackend(BackendDriver):
             try:
                 jsonTree = json.load(json_file)
                 jsonTree['compile_command'] = ' '.join(sys.argv)
+                jsonTree['compilation_succeeded'] = compilation_successful
+                jsonTree['compilation_time'] = str(self.compilation_time)
+                if self.conf_file is not None:
+                    jsonTree['conf_file'] = self.conf_file
             except:
-                self.exitWithError(None)
+                return
 
         if jsonTree is not None:
             with open(jsonFile, "w") as new_file:
@@ -395,13 +452,7 @@ class BarefootBackend(BackendDriver):
         """
         try:
             manifest_json = os.path.join(self._output_directory, 'manifest.json')
-            jsonTree = None
-            with open(manifest_json, 'r') as json_file:
-                jsonTree = json.load(json_file)
-                jsonTree['compilation_succeeded'] = False
-            if jsonTree is not None:
-                with open(jsonFile, "w") as new_file:
-                    json.dump(jsonTree, new_file, indent=2, separators=(',', ': '))
+            self.updateManifest(manifest_json, False)
         except:
             pass
         finally:
@@ -476,12 +527,16 @@ class BarefootBackend(BackendDriver):
         run_compiler = 'compiler' in self._commandsEnabled
         run_verifier = 'verifier' in self._commandsEnabled
         run_summary_logs = 'summary_logging' in self._commandsEnabled
+        run_p4c_gen_conf = 'p4c-gen-conf' in self._commandsEnabled
 
         # run the preprocessor, compiler, and verifiers (manifest, context schema, and bf-rt)
         self.disable_commands(['assembler', 'archiver', 'verifier',
-                               'summary_logging'])
+                               'summary_logging', 'p4c-gen-conf'])
 
+        start_t = time.time()
         rc = BackendDriver.run(self)
+        self.compilation_time = time.time() - start_t
+
         # Error codes defined in p4c-barefoot.cpp:main
         if rc > 1:  # Invocation or program error. Can't recover anything from this, exit
             return rc
@@ -490,53 +545,60 @@ class BarefootBackend(BackendDriver):
         if self._ir_to_json is not None:
             return 0
 
-        # collect all the command line arguments that were passed to the driver
-        # the reason we implement this here, is because the backend will not know
-        # what arguments were added by the driver, and filtering them requires keeping
-        # both sources in sync.
-        if run_compiler:  # if compiler doesn't run, there is no manifest
-            self.updateCompilerFlags(os.path.join(self._output_directory, 'manifest.json'))
-
         # we ran the compiler, now we need to parse the manifest and run the assembler
         # for each P4-16 pipe
         if run_assembler:
             self.parseManifest()
+
             # We need to make a copy of the list to get a copy of any additional parameters
             # that were added on the command line (-Xassembler)
             self._saved_assembler_params = list(self._commands['assembler'])
             unique_table_offset = 0
             for pipe in self._pipes:
+
                 if 'pipe_name' in pipe and pipe['pipe_name'] in self.skip_compilation:
                     continue
+
+                start_t = time.time()
                 self.runAssembler(pipe['pipe_dir'], unique_table_offset)
+                self.compilation_time += (time.time() - start_t)
+                unique_table_offset += 1
+
                 # Although we the context.json schema has an optional compile_command and
                 # we could add it here, it is a potential performance penalty to re-write
                 # a large context.json file. So we don't!
-                # self.updateCompilerFlags(os.path.join(pipe_dir, 'context.json'))
+
                 if run_verifier:
                     # Clear verifier options
                     del self._commands['verifier'] [1:]
                     self.add_command_option('verifier', "-c {}".format(pipe['context']))
                     if pipe.get('resources', False):
                         self.add_command_option('verifier', "-r {}".format(pipe['resources']))
-                        # need to add phv.json to the set of resources in the manifest!!
-                        # For now, since it is always generated, we piggyback on context.
-                        phvJson=pipe['context'].replace('context', 'phv')
-                        self.add_command_option('verifier', "-p {}".format(phvJson))
+                    if pipe.get('phv_json', False):
+                        self.add_command_option('verifier', "-p {}".format(pipe['phv_json']))
                     self.checkAndRunCmd('verifier')
-                unique_table_offset += 1
 
                 if run_summary_logs:
                     if pipe.get('context', False):  # context.json is required
                         try:
                             self.add_command_option('summary_logging', "{}".format(pipe['context']))
                             if pipe.get('resources', False):
-                                self.add_command_option('summary_logging', "-r {}".format(pipe['resources']))
-                            self.add_command_option('summary_logging', "-o {}".format(pipe['pipe_dir']))
+                                self.add_command_option('summary_logging',
+                                                        "-r {}".format(pipe['resources']))
+                            self.add_command_option('summary_logging',
+                                                    "-o {}".format(os.path.join(pipe['pipe_dir'], 'logs')))
                             self.add_command_option('summary_logging', "--disable-phv-json")
                             self.checkAndRunCmd('summary_logging')
+                            # and now remove the arguments added so that the next pipe is correct
+                            del self._commands['summary_logging'][1:]
                         except:
                             pass
+
+        self.updateManifest(os.path.join(self._output_directory, 'manifest.json'))
+        if run_p4c_gen_conf:
+            pipeNames = [ p['pipe_name'] for p in self._pipes ]
+            self.add_command_option('p4c-gen-conf', '--pipe {}'.format(' '.join(pipeNames)))
+            self.checkAndRunCmd('p4c-gen-conf')
 
         # run the archiver if one has been set
         if run_archiver:

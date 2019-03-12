@@ -25,12 +25,10 @@ namespace BFN {
 
 class AsmOutput : public Inspector {
  private:
-    std::ostream*      out = nullptr;
     const PhvInfo     &phv;
     const ClotInfo    &clot;
     const FieldDefUse &defuse;
     const BFN_Options &options;
-    const cstring pipeName;
     /// Tell this pass whether it is called after a succesful compilation
     bool               _successfulCompile = true;
     PHV::Container ghostPhvContainer() const {
@@ -44,48 +42,36 @@ class AsmOutput : public Inspector {
               const ClotInfo &clot,
               const FieldDefUse& defuse,
               const BFN_Options &opts,
-              const cstring pipeName,
               bool success)
-          : phv(phv), clot(clot), defuse(defuse), options(opts),
-            pipeName(pipeName), _successfulCompile(success) {
-        out = &std::cout;
-        auto openmode = std::ios_base::out;
-        if (options.outputDir) {
-            std::string outputDir(opts.outputDir.c_str());
-            if (opts.langVersion == BFN_Options::FrontendVersion::P4_16) {
-                outputDir = outputDir + "/" + pipeName;
-            }
-            int rc = mkdir(outputDir.c_str(), 0755);
-            if (rc != 0 && errno != EEXIST) {
-                std::cerr << "Failed to create directory: " << outputDir << std::endl;
-                return;
-            }
-            std::string dir(outputDir);
-            cstring outputFile = dir + "/" + opts.programName + ".bfa";
-            out = new std::ofstream(outputFile, openmode);
-        }
-    }
+        : phv(phv), clot(clot), defuse(defuse), options(opts), _successfulCompile(success) {}
+
     bool preorder(const IR::BFN::Pipe* pipe) override {
         LOG1("ASM generation for successful compile? " << (_successfulCompile ? "true" : "false"));
 
         if (_successfulCompile) {
+            auto outputDir = BFNContext::get().getOutputDirectory("", pipe->id);
+            if (!outputDir) return false;
+            cstring outputFile = outputDir + "/" + options.programName + ".bfa";
+            std::ofstream out(outputFile, std::ios_base::out);
+
             MauAsmOutput mauasm(phv, pipe);
             pipe->apply(mauasm);
 
-            *out << "version:" << std::endl
-                 << "  version: " << BFASM::Version::getVersion() << std::endl
-                 << "  run_id: \"" << RunId::getId() << "\"" << std::endl;
+            out << "version:" << std::endl
+                << "  version: " << BFASM::Version::getVersion() << std::endl
+                << "  run_id: \"" << RunId::getId() << "\"" << std::endl;
             if (::errorCount() == 0) {
-                *out << PhvAsmOutput(phv, defuse, pipe->ghost_thread != nullptr)
-                     << ParserAsmOutput(pipe, INGRESS)
-                     << DeparserAsmOutput(pipe, phv, clot, INGRESS);
+                out << PhvAsmOutput(phv, defuse, pipe->ghost_thread != nullptr)
+                    << ParserAsmOutput(pipe, INGRESS)
+                    << DeparserAsmOutput(pipe, phv, clot, INGRESS);
                 if (pipe->ghost_thread != nullptr)
-                    *out << "parser ghost: " << ghostPhvContainer() << std::endl;
-                *out << ParserAsmOutput(pipe, EGRESS)
-                     << DeparserAsmOutput(pipe, phv, clot, EGRESS)
-                     << mauasm;
+                    out << "parser ghost: " << ghostPhvContainer() << std::endl;
+                out << ParserAsmOutput(pipe, EGRESS)
+                    << DeparserAsmOutput(pipe, phv, clot, EGRESS)
+                    << mauasm;
             }
-            *out << std::flush; }
+            out << std::flush;
+        }
         return false;
     }
 };

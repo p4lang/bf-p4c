@@ -244,12 +244,8 @@ class CharacterizeParser : public Inspector {
     }
 
     void end_apply(const IR::Node *root) override {
-        cstring pipeId = "";
-        if (!BackendOptions().isv1()) {  // only for P4-16
-            const IR::BFN::Pipe *pipe = root->to<IR::BFN::Pipe>();
-            pipeId = "_pipe" + std::to_string(pipe ? pipe->id : 0);
-        }
-        Logging::FileLog parserLog(cstring("parser.characterize") + pipeId + ".log", false);
+        const IR::BFN::Pipe *pipe = root->to<IR::BFN::Pipe>();
+        Logging::FileLog parserLog(pipe->id, cstring("parser.characterize.log", false));
 
         std::clog << "Parser Characterization Report:" << std::endl;
 

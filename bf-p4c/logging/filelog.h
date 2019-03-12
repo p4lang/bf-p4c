@@ -37,15 +37,13 @@ class FileLog {
     }
 
  public:
-    explicit FileLog(cstring logName, bool append = false) {
-        auto logDir = Util::PathName(outputDir).join("logs").toString();
-        int rc = mkdir(logDir.c_str(), 0755);
-        if (rc != 0 && errno != EEXIST) {
-            std::cerr << "Failed to create directory: " << logDir << std::endl;
-        } else {
+    explicit FileLog(int pipe, cstring logName, bool append = false) {
+        auto logDir = BFNContext::get().getOutputDirectory("logs", pipe);
+        if (logDir) {
             auto fileName = Util::PathName(logDir).join(logName).toString();
             LOG1("Open logfile " << fileName << " append: " << append);
-            Manifest::getManifest().addLog(name2type(logName), cstring("logs/"+logName));
+            if (!append)
+                Manifest::getManifest().addLog(pipe, name2type(logName), logName);
             clog_buff = std::clog.rdbuf();
             auto flags = std::ios_base::out;
             if (append) flags |= std::ios_base::app;

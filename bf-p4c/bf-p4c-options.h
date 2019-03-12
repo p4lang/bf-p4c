@@ -51,6 +51,12 @@ class BFN_Options : public CompilerOptions {
     std::vector<const char*>* process(int argc, char* const argv[]) override;
 };
 
+// forward declarations so we do not include ir-generated.h
+namespace IR {
+class P4Program;      // NOLINT(build/forward_decl)
+class ToplevelBlock;  // NOLINT(build/forward_decl)
+}
+
 /// A CompileContext for bf-p4c.
 class BFNContext final : public P4CContext {
  public:
@@ -61,11 +67,48 @@ class BFNContext final : public P4CContext {
     /// @return the compiler options for this compilation context.
     BFN_Options& options() final;
 
+    /// Return a string that represents a path to an output directory:
+    /// options.outputDir + pipename + suffix
+    ///
+    /// If the @param pipe is not set (-1) return just options.outputDir.
+    /// No other files except for the manifest should be stored in the
+    /// root. If the the @param suffix is empty, return options.outputDir + pipename.
+    ///
+    /// The structure of the output directory is:
+    /// options.outputDir / manifest.json
+    ///          for each pipe
+    ///                   / pipeName/context.json
+    ///                   / pipeName/tofino[x].bin
+    ///                   / pipeName/program.bfa
+    ///                   / pipeName/program.res.json
+    ///                   / pipeName/logs/
+    ///                   / pipeName/graphs/
+    ///
+    /// If the directory does not exists, it is created. If the
+    /// creation fails print an error message and return an empty
+    /// string.
+    cstring getOutputDirectory(const cstring &suffix = cstring(), int pipe_id = -1);
+
+    /// identify the pipelines in the program and setup the _pipes map
+    void discoverPipes(const IR::P4Program *, const IR::ToplevelBlock *);
+
+    /// Return the pipeline name or empty if the program has not been parsed
+    cstring &getPipeName(int pipe_id) {
+        static cstring empty("");
+        if (_pipes.count(pipe_id))
+            return _pipes.at(pipe_id);
+        return empty;
+    }
+
  private:
     bool isRecognizedDiagnostic(cstring diagnostic) final;
 
     /// Compiler options for this compilation context.
     BFN_Options optionsInstance;
+
+    /// The pipelines for this compilation: pairs of <pipe_id, pipename>
+    /// These are needed for ensuring a consistent output directory
+    std::map<int, cstring> _pipes;
 };
 
 inline BFN_Options& BackendOptions() { return BFNContext::get().options(); }

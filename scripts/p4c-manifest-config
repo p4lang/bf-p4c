@@ -5,6 +5,7 @@
 import os
 import sys
 import argparse
+from packaging import version
 import json, jsonschema
 
 parser=argparse.ArgumentParser()
@@ -23,16 +24,18 @@ try:
         print "manifest-config only supports one program"
         sys.exit(1)
 
-    schema_version = manifest_json['schema_version']
+    schema_version = version.parse(manifest_json['schema_version'])
     pipe_name_label = 'pipe_name'
-    if schema_version == "1.0.0": pipe_name_label = 'pipe'
+    if schema_version == version.parse("1.0.0"): pipe_name_label = 'pipe'
 
-    pipelines = programs[0]['contexts']
     pipe_names = []
+    if schema_version < version.parse("2.0.0"):
+        pipelines = programs[0]['contexts']
+    else:
+        pipelines = programs[0]['pipes']
 
     for pipeline in pipelines:
-        if opts.pipe is not None:
-            pipe_names.append(pipeline[pipe_name_label])
+        pipe_names.append(pipeline[pipe_name_label])
 
     if opts.pipe is not None:
         print ' '.join(pipe_names)

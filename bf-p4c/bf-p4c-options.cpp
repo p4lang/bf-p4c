@@ -11,6 +11,7 @@
 #include "lib/cstring.h"
 #include "version.h"
 #include "bf-p4c/common/collect_global_pragma.h"
+#include "bf-p4c/logging/manifest.h"
 #include "frontends/parsers/parserDriver.h"
 
 BFN_Options::BFN_Options() {
@@ -236,11 +237,9 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
         // same here, could have used dirname(const_char<char *>())
         if (!outputDir || outputDir == ".")
             outputDir = cstring(programName + "." + target);
-        int rc = mkdir(outputDir.c_str(), 0755);
-        if (rc != 0 && errno != EEXIST) {
-            std::cerr << "Failed to create directory: " << outputDir << std::endl;
+        auto rc = BFNContext::get().getOutputDirectory();  // the root output dir
+        if (!rc)
             return remainingOptions;
-        }
     }
 
     return remainingOptions;
@@ -252,6 +251,65 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
 
 BFN_Options& BFNContext::options() {
     return optionsInstance;
+}
+
+cstring BFNContext::getOutputDirectory(const cstring &suffix, int pipe_id) {
+    auto dir = options().outputDir;
+    if (pipe_id >= 0) {
+        auto pipeName = getPipeName(pipe_id);
+        if (pipeName && options().langVersion == BFN_Options::FrontendVersion::P4_16)
+            dir = options().outputDir + "/" + pipeName + (suffix ? "/" + suffix : "");
+        else
+            dir = options().outputDir + (suffix ? "/" + suffix : "");
+    }
+    // tokenize the relative path and create each directory. Would be nice to have a mkpath ...
+    char *start, *relPath;
+    start = relPath = strdup(dir.substr(options().outputDir.size()+1).c_str());
+    if (start) {
+        char *relName;
+        auto relDir = options().outputDir;
+        while ((relName = strsep(&relPath, "/")) != nullptr) {
+            relDir +=  cstring("/") + relName;
+            int rc = mkdir(relDir.c_str(), 0755);
+            if (rc != 0 && errno != EEXIST) {
+                ::error("Failed to create directory: %1%", relDir);
+                return "";
+            }
+        }
+        free(start);
+    } else {
+        int rc = mkdir(dir.c_str(), 0755);
+        if (rc != 0 && errno != EEXIST) {
+            ::error("Failed to create directory: %1%", dir);
+            return "";
+        }
+    }
+    return dir;
+}
+
+void BFNContext::discoverPipes(const IR::P4Program *program, const IR::ToplevelBlock *toplevel) {
+    auto main = toplevel->getMain();
+    auto pipe_id = 0;
+    for (auto pkg : main->constantValue) {
+        if (!pkg.second) continue;
+        if (!pkg.second->is<IR::PackageBlock>()) continue;
+        auto getPipeName = [program, pipe_id]() -> cstring {
+            auto mainDecls = program->getDeclsByName("main")->toVector();
+            if (mainDecls->size() == 0) return nullptr;  // no main
+            auto decl = mainDecls->at(0);
+            auto expr = decl->to<IR::Declaration_Instance>()->arguments->at(pipe_id)->expression;
+            if (!expr->is<IR::PathExpression>()) return nullptr;
+            return expr->to<IR::PathExpression>()->path->name;
+        };
+        auto pipeName = getPipeName();
+        if (pipeName) {
+            _pipes.emplace(pipe_id, pipeName);
+            Logging::Manifest::getManifest().setPipe(pipe_id, pipeName);
+        }
+        pipe_id++;
+    }
+    LOG4("discoverPipes found:");
+    for (auto p : _pipes) LOG4("[" << p.first << ", " << p.second << "]");
 }
 
 bool BFNContext::isRecognizedDiagnostic(cstring diagnostic) {

@@ -18,7 +18,8 @@ ENV P4C_DEPS autoconf \
              libssl-dev \
              libtool \
              python-dev \
-             python-pip
+             python-pip \
+             python3-pip
 
 
 ENV P4C_RUNTIME_DEPS cpp \
@@ -58,11 +59,14 @@ RUN add-apt-repository ppa:ubuntu-toolchain-r/test && \
 # testing dependencies
 RUN apt-get install -y net-tools
 
-RUN pip install jsl pexpect crc16 crcmod simplejson tenjin ipaddress pyinstaller
+RUN pip install jsl pexpect crc16 crcmod simplejson tenjin ipaddress packaging pyinstaller
 RUN pip install ply==3.9
 # Install jsonschema 2.6 for compatibility with pyinstaller
 RUN pip install jsonschema==2.6
+# Install python3 packaging for test_p4c_driver.py
+RUN pip3 install packaging
 
+ENV PATH="/usr/bin:${PATH}"
 
 COPY scripts/ptf_hugepage_setup.sh /bfn/ptf_hugepage_setup.sh
 COPY docker/docker_entry_point.sh /bfn/docker_entry_point.sh
