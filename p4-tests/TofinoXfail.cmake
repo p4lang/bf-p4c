@@ -1603,11 +1603,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "failed command verifier"
-  extensions/p4_tests/p4_16/test_config_2_multiple_parsers.p4
-)
-
-p4c_add_xfail_reason("tofino"
   "Exiting with SIGSEGV"
   testdata/p4_16_samples/issue561-4-bmv2.p4
   testdata/p4_16_samples/issue561-5-bmv2.p4

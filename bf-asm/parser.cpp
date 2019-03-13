@@ -117,17 +117,24 @@ void AsmParser::output(json::map &ctxt_json) {
     ctxt_json["parser"]["ingress"] = json::vector();
     ctxt_json["parser"]["egress"] = json::vector();
 
+    bool use_multiple_parser_impl = false;
+
+    for (auto gress : Range(INGRESS, EGRESS)) {
+        if (parser[gress].size() > 1)
+            use_multiple_parser_impl = true;
+    }
     /// We use the 'parsers' node in ctxt json to implement
     /// multiple parser instances support.
     /// We use the 'parser' node for all single parser
     /// instance support.
     for (auto gress : Range(INGRESS, EGRESS)) {
         /// remove after multi-parser support is fully-tested.
-        if (parser[gress].size() == 1) {
-            parser[gress][0]->output_legacy(ctxt_json);
-        } else {
+        if (use_multiple_parser_impl) {
             for (auto p : parser[gress]) {
-                p->output(ctxt_json); }
+                p->output(ctxt_json);
+            }
+        } else {
+            parser[gress][0]->output_legacy(ctxt_json);
         }
     }
 }
