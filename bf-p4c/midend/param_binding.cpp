@@ -20,7 +20,7 @@ void ParamBinding::bind(const IR::Parameter *param) {
 void ParamBinding::bind(const IR::Declaration_Variable *var) {
     if (by_declvar[var]) return;
     LOG2("creating instance for var " << var->name);
-    by_declvar[var] = new IR::InstanceRef(var->name, typeMap->getType(var), var->annotations, true);
+    by_declvar[var] = new IR::InstanceRef(var->name, typeMap->getType(var), var->annotations);
 }
 
 void ParamBinding::postorder(const IR::Parameter *param) {
