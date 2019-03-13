@@ -17,6 +17,7 @@
 
 import os
 import os.path
+import argparse
 import sys
 import json
 from packaging import version
@@ -151,6 +152,9 @@ class BarefootBackend(BackendDriver):
                                     help="Generate P4Info file using standard extern messages"
                                     " instead of Tofino-specific ones, for a P4 program written"
                                     " for a Tofino-specific arch")
+        self._argGroup.add_argument("--no-dead-code-elimination",
+                                    action="store_true", default=False,
+                                    help=argparse.SUPPRESS)  # Do not use dead code elimination.
 
         if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
             self._argGroup.add_argument("--validate-output", action="store_true", default=False,
