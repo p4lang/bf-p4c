@@ -2,52 +2,52 @@
 set (SWITCH_VERSION 8.7)
 
 set (TOFINO_MUST_PASS_TESTS
-  extensions/p4_tests/p4_14/easy_no_match_with_gateway.p4
-  extensions/p4_tests/p4_14/easy_ternary.p4
-  extensions/p4_tests/p4_14/easy_exact.p4
-  extensions/p4_tests/p4_14/easy.p4
-  extensions/p4_tests/p4_14/easy_no_match.p4
-  extensions/p4_tests/p4_14/ecmp_pi.p4
-  extensions/p4_tests/p4_14/ternary_match_constant_action_data.p4
+  extensions/p4_tests/p4_14/ptf/easy_no_match_with_gateway.p4
+  extensions/p4_tests/p4_14/ptf/easy_ternary.p4
+  extensions/p4_tests/p4_14/ptf/easy_exact.p4
+  extensions/p4_tests/p4_14/ptf/easy.p4
+  extensions/p4_tests/p4_14/ptf/easy_no_match.p4
+  extensions/p4_tests/p4_14/ptf/ecmp_pi.p4
+  extensions/p4_tests/p4_14/ptf/ternary_match_constant_action_data.p4
   extensions/p4_tests/p4_16/google-tor/p4/spec/tor.p4
-  extensions/p4_tests/p4_16/hash_driven_stats.p4
-  extensions/p4_tests/p4_16/ONLab_packetio.p4
+  extensions/p4_tests/p4_16/ptf/hash_driven_stats.p4
+  extensions/p4_tests/p4_16/ptf/ONLab_packetio.p4
   extensions/p4_tests/p4_16/p4_16/bf-onos-new/pipelines/fabric/src/main/resources/fabric-tofino.p4
 
   # p4-tests programs
-  extensions/p4_tests/p4_14/p4-tests/programs/basic_swithching/basic_switching.p4
-  extensions/p4_tests/p4_14/p4-tests/internal_p4_14/emulation/emulation.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/fast_reconfig/fast_reconfig.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/mirror_test/mirror_test.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/multicast_test/multicast_test.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/pcie_pkt_test/pcie_pkt_test.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/pgrs/pgrs.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/resubmit/resubmit.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/smoke_large_tbls/smoke_large_tbls.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/deparse_zero/deparse_zero.p4
-  extensions/p4_tests/p4_14/p4-tests/internal_p4_14/tcam_search/tcam_search.p4
-  extensions/p4_tests/p4_14/p4-tests/internal_p4_14/mau_mem_test/mau_mem_test.p4
-  extensions/p4_tests/p4_14/p4-tests/internal_p4_14/multi_thread_test/multi_thread_test.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/drivers_test/drivers_test.p4
-  extensions/p4_tests/p4_14/p4-tests/internal_p4_14/mau_tcam_test/mau_tcam_test.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/chksum/chksum.p4
-  extensions/p4_tests/p4_14/p4-tests/internal_p4_14/atomic_mod/atomic_mod.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/ecmp_pi/ecmp_pi.p4
-  extensions/p4_tests/p4_14/p4-tests/internal_p4_14/action_spec_format/action_spec_format.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/knet_mgr_test/knet_mgr_test.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/dkm/dkm.p4
-  extensions/p4_tests/p4_14/p4-tests/internal_p4_14/range/range.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/parser_intr_md/parser_intr_md.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/pvs/pvs.p4
-  extensions/p4_tests/p4_14/p4-tests/internal_p4_14/tofino_diag/tofino_diag.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/dyn_hash/dyn_hash.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/iterator/iterator.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/stats_pi/stats_pi.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/parser_error/parser_error.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/default_entry/default_entry.p4
-  extensions/p4_tests/p4_14/p4-tests/internal_p4_14/multicast_scale/multicast_scale.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/perf_test/perf_test.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/ha/ha.p4
+  extensions/p4_tests/p4-programs/programs/basic_swithching/basic_switching.p4
+  extensions/p4_tests/p4-programs/internal_p4_14/emulation/emulation.p4
+  extensions/p4_tests/p4-programs/programs/fast_reconfig/fast_reconfig.p4
+  extensions/p4_tests/p4-programs/programs/mirror_test/mirror_test.p4
+  extensions/p4_tests/p4-programs/programs/multicast_test/multicast_test.p4
+  extensions/p4_tests/p4-programs/programs/pcie_pkt_test/pcie_pkt_test.p4
+  extensions/p4_tests/p4-programs/programs/pgrs/pgrs.p4
+  extensions/p4_tests/p4-programs/programs/resubmit/resubmit.p4
+  extensions/p4_tests/p4-programs/programs/smoke_large_tbls/smoke_large_tbls.p4
+  extensions/p4_tests/p4-programs/programs/deparse_zero/deparse_zero.p4
+  extensions/p4_tests/p4-programs/internal_p4_14/tcam_search/tcam_search.p4
+  extensions/p4_tests/p4-programs/internal_p4_14/mau_mem_test/mau_mem_test.p4
+  extensions/p4_tests/p4-programs/internal_p4_14/multi_thread_test/multi_thread_test.p4
+  extensions/p4_tests/p4-programs/programs/drivers_test/drivers_test.p4
+  extensions/p4_tests/p4-programs/internal_p4_14/mau_tcam_test/mau_tcam_test.p4
+  extensions/p4_tests/p4-programs/programs/chksum/chksum.p4
+  extensions/p4_tests/p4-programs/internal_p4_14/atomic_mod/atomic_mod.p4
+  extensions/p4_tests/p4-programs/programs/ecmp_pi/ecmp_pi.p4
+  extensions/p4_tests/p4-programs/internal_p4_14/action_spec_format/action_spec_format.p4
+  extensions/p4_tests/p4-programs/programs/knet_mgr_test/knet_mgr_test.p4
+  extensions/p4_tests/p4-programs/programs/dkm/dkm.p4
+  extensions/p4_tests/p4-programs/internal_p4_14/range/range.p4
+  extensions/p4_tests/p4-programs/programs/parser_intr_md/parser_intr_md.p4
+  extensions/p4_tests/p4-programs/programs/pvs/pvs.p4
+  extensions/p4_tests/p4-programs/internal_p4_14/tofino_diag/tofino_diag.p4
+  extensions/p4_tests/p4-programs/programs/dyn_hash/dyn_hash.p4
+  extensions/p4_tests/p4-programs/programs/iterator/iterator.p4
+  extensions/p4_tests/p4-programs/programs/stats_pi/stats_pi.p4
+  extensions/p4_tests/p4-programs/programs/parser_error/parser_error.p4
+  extensions/p4_tests/p4-programs/programs/default_entry/default_entry.p4
+  extensions/p4_tests/p4-programs/internal_p4_14/multicast_scale/multicast_scale.p4
+  extensions/p4_tests/p4-programs/programs/perf_test/perf_test.p4
+  extensions/p4_tests/p4-programs/programs/ha/ha.p4
   smoketest_programs_alpm_test
   smoketest_programs_basic_ipv4
   smoketest_programs_dkm
@@ -59,9 +59,6 @@ set (TOFINO_MUST_PASS_TESTS
   smoketest_programs_meters
   smoketest_programs_hash_driven
 
-  # need to enable once we pass the correct arguments to bf-syslibs
-  # extensions/p4_tests/p4_14/p4-tests/programs/perf_test_alpm/perf_test_alpm.p4
-  
   # p4-tests tna programs
   p4_16_programs_simple_switch
   p4_16_programs_tna_32q_multiprogram_a

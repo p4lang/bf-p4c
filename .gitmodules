@@ -8,9 +8,6 @@
 	path = p4-tests/p4_16/google-tor
 	url = git@github.com:barefootnetworks/google-internal.git
 	branch = bf-tor
-[submodule "p4-tests/p4_14/p4-tests"]
-	path = p4-tests/p4_14/p4-tests
-	url = git@github.com:barefootnetworks/p4-tests.git
 [submodule "p4-tests/p4testutils"]
 	path = p4-tests/p4testutils
 	url = git@github.com:barefootnetworks/ptf-utils.git
@@ -20,9 +17,6 @@
 [submodule "p4-tests/p4examples"]
 	path = p4-tests/p4examples
 	url = git@github.com:barefootnetworks/p4examples
-[submodule "p4-tests/p4_14/switch-jbay"]
-	path = p4-tests/p4_14/switch-jbay
-	url = git@github.com:barefootnetworks/switch.git
 [submodule "p4-tests/p4_16/bf-onos-new"]
 	path = p4-tests/p4_16/bf-onos-new
 	url = git@github.com:barefootnetworks/bf-onos.git
@@ -35,3 +29,6 @@
 [submodule "p4-tests/p4_14/switch-8.7"]
 	path = p4-tests/p4_14/switch-8.7
 	url = git@github.com:barefootnetworks/switch.git
+[submodule "p4-tests/p4-programs"]
+	path = p4-tests/p4-programs
+	url = git@github.com:barefootnetworks/p4-tests.git

@@ -1,21 +1,21 @@
 
 set (JBAY_MUST_PASS_TESTS
-  extensions/p4_tests/p4_14/easy_no_match_with_gateway.p4
-  extensions/p4_tests/p4_14/easy_ternary.p4
-  extensions/p4_tests/p4_14/easy_exact.p4
+  extensions/p4_tests/p4_14/ptf/easy_no_match_with_gateway.p4
+  extensions/p4_tests/p4_14/ptf/easy_ternary.p4
+  extensions/p4_tests/p4_14/ptf/easy_exact.p4
 
   # p4-tests programs
-  extensions/p4_tests/p4_14/p4-tests/internal_p4_14/emulation/emulation.p4
-  extensions/p4_tests/p4_14/p4-tests/internal_p4_14/atomic_mod/atomic_mod.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/basic_switching/basic_switching.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/chksum/chksum.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/deparse_zero/deparse_zero.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/ha/ha.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/pcie_pkt_test/pcie_pkt_test.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/resubmit/resubmit.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/multicast_test/multicast_test.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/mirror_test/mirror_test.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/fast_reconfig/fast_reconfig.p4
+  extensions/p4_tests/p4-programs/internal_p4_14/emulation/emulation.p4
+  extensions/p4_tests/p4-programs/internal_p4_14/atomic_mod/atomic_mod.p4
+  extensions/p4_tests/p4-programs/programs/basic_switching/basic_switching.p4
+  extensions/p4_tests/p4-programs/programs/chksum/chksum.p4
+  extensions/p4_tests/p4-programs/programs/deparse_zero/deparse_zero.p4
+  extensions/p4_tests/p4-programs/programs/ha/ha.p4
+  extensions/p4_tests/p4-programs/programs/pcie_pkt_test/pcie_pkt_test.p4
+  extensions/p4_tests/p4-programs/programs/resubmit/resubmit.p4
+  extensions/p4_tests/p4-programs/programs/multicast_test/multicast_test.p4
+  extensions/p4_tests/p4-programs/programs/mirror_test/mirror_test.p4
+  extensions/p4_tests/p4-programs/programs/fast_reconfig/fast_reconfig.p4
 
   # p4-tests tna programs
   p4_16_programs_simple_switch

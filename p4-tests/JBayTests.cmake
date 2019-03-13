@@ -10,18 +10,18 @@ p4c_find_tests("${P4TESTS_FOR_JBAY}" v1tests INCLUDE "${V1_SEARCH_PATTERNS}")
 
 set (P16_V1_INCLUDE_PATTERNS "include.*v1model.p4" "main|common_v1_test")
 set (P16_V1_EXCLUDE_PATTERNS "tofino\\.h")
-set (P16_V1_FOR_JBAY "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/*.p4")
+set (P16_V1_FOR_JBAY "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/*.p4")
 p4c_find_tests("${P16_V1_FOR_JBAY}" p16_v1tests INCLUDE "${P16_V1_INCLUDE_PATTERNS}" EXCLUDE "${P16_V1_EXCLUDE_PATTERNS}")
 
 set (P16_JNA_INCLUDE_PATTERNS "include.*(t2na).p4" "main|common_tna_test")
 set (P16_JNA_EXCLUDE_PATTERNS "tofino\\.h")
-set (P16_JNA_FOR_JBAY "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/*.p4")
+set (P16_JNA_FOR_JBAY "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/*.p4")
 p4c_find_tests("${P16_JNA_FOR_JBAY}" p16_jna_tests INCLUDE "${P16_JNA_INCLUDE_PATTERNS}" EXCLUDE "${P16_JNA_EXCLUDE_PATTERNS}")
 
-file (GLOB STF_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/*.stf")
+file (GLOB STF_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/stf/*.stf")
 string (REGEX REPLACE "\\.stf;" ".p4;" STF_P4_TESTS "${STF_TESTS};")
 
-file (GLOB PTF_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/*.ptf")
+file (GLOB PTF_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/ptf/*.ptf")
 string (REGEX REPLACE "\\.ptf;" ".p4;" PTF_P4_TESTS "${PTF_TESTS};")
 
 # Exclude some p4s with conditional checksum updates that are added separately
@@ -33,21 +33,6 @@ bfn_find_tests("${P4_14_SAMPLES}" p4_14_samples EXCLUDE "${P4_14_EXCLUDE_FILES}"
 
 set (JBAY_V1_TEST_SUITES
   ${p4_14_samples}
-#  ${P4TESTDATA}/p4_14_samples/switch_*/switch.p4
-#  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/*.p4
-#  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/*.p4
-#  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c1/*/*.p4
-#  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c2/*/*.p4
-#  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c3/*/*.p4
-#  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c4/*/*.p4
-#  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c5/*/*.p4
-#  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c6/*/*.p4
-#  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c7/*/*.p4
-#  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c8/*/*.p4
-  # switch DC_BASIC_PROFILE
-#  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch/p4src/switch.p4
-#  ${BFN_TESTS_LIST}
-#  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch_*/switch.p4
 #  ${v1tests}
   ${p16_v1tests}
   ${STF_P4_TESTS}
@@ -58,13 +43,13 @@ set (JBAY_V1_TEST_SUITES
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf_p4c_samples/*.p4
   )
 
-p4c_add_bf_backend_tests("tofino2" "jbay" "v1model" "base" "${JBAY_V1_TEST_SUITES}")
+p4c_add_bf_backend_tests("tofino2" "jbay" "v1model" "base" "${JBAY_V1_TEST_SUITES}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")
 
 set (JBAY_JNA_TEST_SUITES
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/jbay/*.p4
   ${p16_jna_tests}
   )
-p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base" "${JBAY_JNA_TEST_SUITES}")
+p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base" "${JBAY_JNA_TEST_SUITES}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")
 
 set (testExtraArgs "${testExtraArgs} -tofino2")
 
@@ -78,31 +63,31 @@ p4c_add_ptf_test_with_ptfdir (
 
 # p4-tests has all the includes at the same level with the programs.
 set (BFN_EXCLUDE_PATTERNS "tofino\\.p4")
-set (BFN_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/internal_p4_14/emulation/*.p4"
-               "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/internal_p4_14/atomic_mod/*.p4"
-               "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/basic_switching/*.p4"
-               "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/chksum/*.p4"
-               "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/deparse_zero/*.p4"
-               "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/ha/*.p4"
-               "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/parse_error/*.p4"
-               "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/pcie_pkt_test/*.p4"
-               "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/resubmit/*.p4"
-               "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/multicast_test/*.p4"
-               "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/mirror_test/*.p4"
-               "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/fast_reconfig/*.p4")
+set (BFN_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/emulation/*.p4"
+               "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/atomic_mod/*.p4"
+               "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/basic_switching/*.p4"
+               "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/chksum/*.p4"
+               "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/deparse_zero/*.p4"
+               "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/ha/*.p4"
+               "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/parse_error/*.p4"
+               "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/pcie_pkt_test/*.p4"
+               "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/resubmit/*.p4"
+               "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/multicast_test/*.p4"
+               "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/mirror_test/*.p4"
+               "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/fast_reconfig/*.p4")
 bfn_find_tests ("${BFN_TESTS}" BFN_TESTS_LIST EXCLUDE "${BFN_EXCLUDE_PATTERNS}")
 bfn_add_p4factory_tests("tofino2" "smoketest_programs" BFN_TESTS_LIST)
 
-bfn_set_ptf_ports_json_file("tofino2" "extensions/p4_tests/p4_14/p4-tests/programs/multicast_test/multicast_test.p4"
-                            "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/ptf-tests/multicast_test/ports.json")
-bfn_set_ptf_ports_json_file("tofino2" "extensions/p4_tests/p4_14/p4-tests/programs/fast_reconfig/fast_reconfig.p4"
-                            "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/ptf-tests/fast_reconfig/ports.json")
-bfn_set_ptf_ports_json_file("tofino2" "extensions/p4_tests/p4_14/p4-tests/programs/mirror_test/mirror_test.p4"
-                            "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/ptf-tests/mirror_test/ports.json")
-bfn_set_ptf_ports_json_file("tofino2" "extensions/p4_tests/p4_14/p4-tests/programs/ha/ha.p4"
-                            "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/ptf-tests/ha/ports.json")
+bfn_set_ptf_ports_json_file("tofino2" "extensions/p4_tests/p4-programs/programs/multicast_test/multicast_test.p4"
+                            "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/ptf-tests/multicast_test/ports.json")
+bfn_set_ptf_ports_json_file("tofino2" "extensions/p4_tests/p4-programs/programs/fast_reconfig/fast_reconfig.p4"
+                            "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/ptf-tests/fast_reconfig/ports.json")
+bfn_set_ptf_ports_json_file("tofino2" "extensions/p4_tests/p4-programs/programs/mirror_test/mirror_test.p4"
+                            "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/ptf-tests/mirror_test/ports.json")
+bfn_set_ptf_ports_json_file("tofino2" "extensions/p4_tests/p4-programs/programs/ha/ha.p4"
+                            "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/ptf-tests/ha/ports.json")
 
-bfn_set_pd_build_flag("tofino2" "extensions/p4_tests/p4_14/p4-tests/programs/ha/ha.p4"
+bfn_set_pd_build_flag("tofino2" "extensions/p4_tests/p4-programs/programs/ha/ha.p4"
     "\"--gen-hitless-ha-test-pd\"")
 
 file(RELATIVE_PATH tofino32q-3pipe_path ${P4C_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/tofino32q-3pipe/sfc.p4)
@@ -133,20 +118,20 @@ set (P4FACTORY_P4_16_PROGRAMS
   )
 
 # No ptf, compile-only
-file(RELATIVE_PATH p4_16_programs_path ${P4C_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/p4_16_programs)
+file(RELATIVE_PATH p4_16_programs_path ${P4C_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs)
 p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
-  "p4_16_programs_simple_switch" ${p4_16_programs_path}/simple_switch/simple_switch.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/p4_16_programs" "")
+  "p4_16_programs_simple_switch" ${p4_16_programs_path}/simple_switch/simple_switch.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs" "")
 p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
-  "p4_16_programs_tna_32q_multiprogram_a" ${p4_16_programs_path}/tna_32q_multiprogram/program_a/tna_32q_multiprogram_a.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/p4_16_programs/tna_32q_multiprogram" "")
+  "p4_16_programs_tna_32q_multiprogram_a" ${p4_16_programs_path}/tna_32q_multiprogram/program_a/tna_32q_multiprogram_a.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/tna_32q_multiprogram" "")
 p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
-  "p4_16_programs_tna_32q_multiprogram_b" ${p4_16_programs_path}/tna_32q_multiprogram/program_b/tna_32q_multiprogram_b.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/p4_16_programs/tna_32q_multiprogram" "")
+  "p4_16_programs_tna_32q_multiprogram_b" ${p4_16_programs_path}/tna_32q_multiprogram/program_b/tna_32q_multiprogram_b.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/tna_32q_multiprogram" "")
 
 # P4-16 Programs with PTF tests
 foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS)
-  p4c_add_ptf_test_with_ptfdir ("tofino2" "p4_16_programs_${t}" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/p4_16_programs/${t}/${t}.p4"
-    "${testExtraArgs} -target tofino2 -arch t2na -bfrt -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/p4_16_programs/${t}")
-  bfn_set_p4_build_flag("tofino2" "p4_16_programs_${t}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/p4_16_programs")
-  set (ports_json ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/p4_16_programs/${t}/ports_tof2.json)
+  p4c_add_ptf_test_with_ptfdir ("tofino2" "p4_16_programs_${t}" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/${t}/${t}.p4"
+    "${testExtraArgs} -target tofino2 -arch t2na -bfrt -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/${t}")
+  bfn_set_p4_build_flag("tofino2" "p4_16_programs_${t}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs")
+  set (ports_json ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/${t}/ports_tof2.json)
   if (EXISTS ${ports_json})
     bfn_set_ptf_ports_json_file("tofino2" "p4_16_programs_${t}" ${ports_json})
   endif()

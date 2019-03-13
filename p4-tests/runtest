@@ -707,7 +707,7 @@ if $run_pd ; then
             gen_conf_args="$gen_conf_args --switch-api switchapi"
         fi
     else
-        p4builddir="$(dirname $0)/p4_14/p4-tests/p4-build"
+        p4builddir="$(dirname $0)/p4-programs/p4-build"
         config_args="--with-${device} --with-p4c=$P4C --enable-thrift \
                     --prefix=$testout LDFLAGS="-L${tools_dir}/lib" CPPFLAGS="-I${tools_dir}/include" \
                     --bindir=$(dirname $P4C):${tools_dir}/bin P4_NAME=$name P4_PATH=$file"
@@ -795,7 +795,7 @@ if $run_bfrt ; then
             --with-program=$arch P4_VERSION=$p4_version P4_NAME=$name P4_PREFIX=dc"
         manifest=$testdir/${name}${out_ext}.out/p4src/switch-${device}/switch/manifest.json
     else
-        p4builddir="$(dirname $0)/p4_14/p4-tests/p4-build"
+        p4builddir="$(dirname $0)/p4-programs/p4-build"
         config_args="--with-${device} --with-p4c=$P4C --enable-thrift \
             --prefix=$testout LDFLAGS="-L${tools_dir}/lib" CPPFLAGS="-I${tools_dir}/include" \
             --bindir=$(dirname $P4C):${tools_dir}/bin \

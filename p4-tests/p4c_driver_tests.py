@@ -5,13 +5,14 @@
 #  - options: -o, -g, --archive, --create-graphs, --validate-*,
 
 tests_dir = os.path.abspath(os.path.dirname(__file__))
-p4_14_program = os.path.join(tests_dir, 'p4_14/p4-tests/internal_p4_14/emulation/emulation.p4')
-v1model_program = os.path.join(tests_dir, 'p4_16/verify_checksum.p4')
-p4_16_default = os.path.join(tests_dir, 'p4_16/simple_32q.p4')
-p4_16_path = os.path.join(tests_dir, 'p4_14/p4-tests/p4_16_programs')
+p4_14_program = os.path.join(tests_dir, 'p4-programs/internal_p4_14/emulation/emulation.p4')
+v1model_program = os.path.join(tests_dir, 'p4_16/ptf/verify_checksum.p4')
+p4_16_default = os.path.join(tests_dir, 'p4_16/compile_only/simple_32q.p4')
+p4_16_path = os.path.join(tests_dir, 'p4-programs/p4_16_programs')
 tna_program = os.path.join(p4_16_path, 'tna_digest/tna_digest.p4')
 tna32q_program = os.path.join(p4_16_path, 'tna_32q_2pipe/tna_32q_2pipe.p4')
-t2na_program = os.path.join(tests_dir, 'p4_16/ipv4_checksum.p4')
+t2na_program = os.path.join(tests_dir, 'p4_16/ptf/ipv4_checksum.p4')
+p4_16_includes_dir = os.path.join(tests_dir, 'p4_16/includes')
 
 # A map of test name to: (compiler args, xfail_msg)
 # **** Note *****
@@ -19,10 +20,10 @@ t2na_program = os.path.join(tests_dir, 'p4_16/ipv4_checksum.p4')
 #  different directories
 test_matrix = {
     # Tofino
-    'p4_16_noargs': ([p4_16_default], None),
+    'p4_16_noargs': (['-I', p4_16_includes_dir, p4_16_default], None),
 
     # Preprocessor only
-    'p4_preprocessor_only': (['-E', p4_16_default, '-o', 'p4_preprocessor_only'], None),
+    'p4_preprocessor_only': (['-I', p4_16_includes_dir, '-E', p4_16_default, '-o', 'p4_preprocessor_only'], None),
 
     # Tofino P4-16
     'p4_16_tna': (['--target', 'tofino', '--arch', 'tna',
@@ -89,14 +90,14 @@ test_matrix = {
     # JBay P4-14 emulation
     'p4_14_jbay': (['--std', 'p4-14',
                     '--target', 'tofino2', '--arch', 'v1model', p4_14_program], None),
-    'p4_16_jbay_t2na': (['--target', 'tofino2', '--arch', 't2na', t2na_program], None),
+    'p4_16_jbay_t2na': (['--target', 'tofino2', '--arch', 't2na', '-I', p4_16_includes_dir, t2na_program], None),
     'p4_16_jbay_v1model': (['--target', 'tofino2', '--arch', 'v1model', v1model_program], None),
     # 'p4_16_jbay_tna': (['--target', 'tofino2', '--arch', 'tna', tna_program], None),
 
     # Tofino2H
-    'tofino2h' : (['--target', 'tofino2h', '--arch', 't2na', '-g', '-o', 'tofino2h', t2na_program], None),
+    'tofino2h' : (['--target', 'tofino2h', '--arch', 't2na', '-g', '-I', p4_16_includes_dir, '-o', 'tofino2h', t2na_program], None),
     # Tofino2M
-    'tofino2m' : (['--target', 'tofino2m', '--arch', 't2na', '-g', '-o', 'tofino2m', t2na_program], None),
+    'tofino2m' : (['--target', 'tofino2m', '--arch', 't2na', '-g', '-I', p4_16_includes_dir, '-o', 'tofino2m', t2na_program], None),
     # Tofino2U
-    'tofino2u' : (['--target', 'tofino2u', '--arch', 't2na', '-g', '-o', 'tofino2u', t2na_program], None),
+    'tofino2u' : (['--target', 'tofino2u', '--arch', 't2na', '-g', '-I', p4_16_includes_dir, '-o', 'tofino2u', t2na_program], None),
 }

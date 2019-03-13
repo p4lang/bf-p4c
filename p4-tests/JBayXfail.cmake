@@ -7,15 +7,15 @@ set (JBAY_XFAIL_TESTS
 # All ptf tests xfail due to lack of jbay driver support...
 p4c_add_xfail_reason("tofino2"
   "ERROR:PTF runner:Error when running PTF tests"
-  extensions/p4_tests/p4_16/ONLab_packetio.p4
-  extensions/p4_tests/p4_16/ingress_checksum.p4
+  extensions/p4_tests/p4_16/ptf/ONLab_packetio.p4
+  extensions/p4_tests/p4_16/ptf/ingress_checksum.p4
   )
 
 # Mirroring direction BOTH not supported on Tofino2 but is used by the P4Runtime
 # implementation
 p4c_add_xfail_reason("tofino2"
   "Error when creating clone session in target"
-  extensions/p4_tests/p4_16/clone_v1model.p4
+  extensions/p4_tests/p4_16/ptf/clone_v1model.p4
   )
 
 # These tests compile successfuly and fail in the model when running the STF test
@@ -31,8 +31,8 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     testdata/p4_14_samples/gateway3.p4
     testdata/p4_14_samples/gateway4.p4
     testdata/p4_14_samples/basic_routing.p4
-    extensions/p4_tests/p4_14/sful_sel1.p4
-    extensions/p4_tests/p4_14/uninit_read_1.p4
+    extensions/p4_tests/p4_14/stf/sful_sel1.p4
+    extensions/p4_tests/p4_14/stf/uninit_read_1.p4
   )
 
   p4c_add_xfail_reason("tofino2"
@@ -40,14 +40,14 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     # clot-phv interaction bug?
     testdata/p4_14_samples/bridge1.p4
     # conditional checksum: JBay needs different treatment
-    extensions/p4_tests/p4_14/cond_checksum_update.p4
+    extensions/p4_tests/p4_14/stf/cond_checksum_update.p4
     # Needs stateful init regs support in simple test harness, this test passes
     # on stf2ptf
     # decaf: needs to work with CLOT allocation
-    extensions/p4_tests/p4_14/stateful_init_regs.p4
-    extensions/p4_tests/p4_14/deparser_copy_opt_1.p4
-    extensions/p4_tests/p4_14/deparser_copy_opt_2.p4
-    extensions/p4_tests/p4_14/deparser_copy_opt_3.p4
+    extensions/p4_tests/p4_14/stf/stateful_init_regs.p4
+    extensions/p4_tests/p4_14/stf/deparser_copy_opt_1.p4
+    extensions/p4_tests/p4_14/stf/deparser_copy_opt_2.p4
+    extensions/p4_tests/p4_14/stf/deparser_copy_opt_3.p4
     )
 
 endif() # HARLYN_STF
@@ -74,8 +74,6 @@ p4c_add_xfail_reason("tofino2"
   testdata/p4_14_samples/06-FullTPHV1.p4
   testdata/p4_14_samples/07-FullTPHV2.p4
   testdata/p4_14_samples/08-FullTPHV3.p4
-  switch_dc_basic
-  switch_ent_dc_general
 )
 
 p4c_add_xfail_reason("tofino2"
@@ -166,25 +164,19 @@ p4c_add_xfail_reason("tofino2"
   testdata/p4_14_samples/parser_value_set2.p4
   )
 
-# Checksum16 is deprecated
-p4c_add_xfail_reason("tofino2"
-  "Could not find declaration for"
-  extensions/p4_tests/p4_16/ipv4_options.p4
-)
-
 p4c_add_xfail_reason("tofino2"
   "warning: Instruction selection creates an instruction that the rest of the compiler cannot correctly interpret"
-  extensions/p4_tests/p4_16/brig-42.p4
+  extensions/p4_tests/p4_16/compile_only/brig-42.p4
 )
 
 p4c_add_xfail_reason("tofino2"
   "test.IPv4ChecksumVerifyTest ... FAIL"
-  extensions/p4_tests/p4_16/ipv4_checksum.p4
+  extensions/p4_tests/p4_16/ptf/ipv4_checksum.p4
 )
 
 p4c_add_xfail_reason("tofino2"
   "This program violates action constraints imposed by Tofino2"
-  extensions/p4_tests/p4_16/int_transit.p4
+  extensions/p4_tests/p4_16/ptf/int_transit.p4
 )
 
 
@@ -193,14 +185,14 @@ if (PTF_REQUIREMENTS_MET)
 
 p4c_add_xfail_reason("tofino2"
   "AssertionError: A packet was received on device .*, port .*, but we expected no packets"
-  extensions/p4_tests/p4_16/verify_checksum.p4
+  extensions/p4_tests/p4_16/ptf/verify_checksum.p4
 )
 
 p4c_add_xfail_reason("tofino2"
   "AssertionError: Expected packet was not received on device .*, port .*"
-  extensions/p4_tests/p4_16/ingress_checksum.p4
-  extensions/p4_tests/p4_16/ONLab_packetio.p4
-  extensions/p4_tests/p4_14/easy_no_match.p4
+  extensions/p4_tests/p4_16/ptf/ingress_checksum.p4
+  extensions/p4_tests/p4_16/ptf/ONLab_packetio.p4
+  extensions/p4_tests/p4_14/ptf/easy_no_match.p4
   tor.p4
   p4_16_programs_tna_dkm
 )
@@ -208,7 +200,7 @@ p4c_add_xfail_reason("tofino2"
 # P4C-1228
 p4c_add_xfail_reason("tofino2"
   "OSError: .* No such file or directory"
-  extensions/p4_tests/p4_14/p4-tests/programs/multicast_test/multicast_test.p4
+  extensions/p4_tests/p4-programs/programs/multicast_test/multicast_test.p4
   )
 
 endif() # PTF_REQUIREMENTS_MET
@@ -218,36 +210,24 @@ endif() # PTF_REQUIREMENTS_MET
 # maybe even after that.)
 p4c_add_xfail_reason("tofino2"
   "PHV allocation was not successful"
-  extensions/p4_tests/p4_14/deparser_group_allocation_1.p4
+  extensions/p4_tests/p4_14/stf/deparser_group_allocation_1.p4
 )
 
 p4c_add_xfail_reason("tofino2"
   "Could not place table .*: The table .* could not fit"
-   extensions/p4_tests/p4_14/stateful3.p4
+   extensions/p4_tests/p4_14/stf/stateful3.p4
    testdata/p4_14_samples/counter5.p4
 )
 
 # BRIG-584
 p4c_add_xfail_reason("tofino2"
   "Unimplemented compiler support.*: Cannot extract to a field slice in the parser"
-  extensions/p4_tests/p4_16/extract_slice.p4
+  extensions/p4_tests/p4_16/stf/extract_slice.p4
 )
 
 p4c_add_xfail_reason("tofino2"
   "./p4c TIMEOUT|condition expression too complex"
   testdata/p4_14_samples/header-stack-ops-bmv2.p4
-)
-
-p4c_add_xfail_reason("tofino2"
-  "fatal error:.*switchapi/switch_handle.h:.*No such file or directory"
-  smoketest_switch_msdc
-  smoketest_switch_msdc_set_1
-  smoketest_switch_msdc_set_2
-  smoketest_switch_msdc_set_3
-  smoketest_switch_msdc_set_4
-  smoketest_switch_msdc_set_5
-  smoketest_switch_msdc_set_6
-  smoketest_switch_msdc_set_7
 )
 
 p4c_add_xfail_reason("tofino2"
@@ -263,7 +243,7 @@ p4c_add_xfail_reason("tofino2"
   # We fail to translate `resubmit()`.
   testdata/p4_14_samples/resubmit.p4
   # Checksum16 is deprecated
-  extensions/p4_tests/p4_16/ipv4_options.p4
+  extensions/p4_tests/p4_16/stf/ipv4_options.p4
   # We fail to translate `standard_metadata.instance_type`.
   testdata/p4_14_samples/copy_to_cpu.p4
   testdata/p4_14_samples/packet_redirect.p4
@@ -274,8 +254,8 @@ p4c_add_xfail_reason("tofino2"
 
 p4c_add_xfail_reason("tofino2"
   "failed command assembler"
-  extensions/p4_tests/p4_14/cond_checksum_update_2.p4
-  extensions/p4_tests/p4_14/cond_checksum_update.p4
+  extensions/p4_tests/p4_14/stf/cond_checksum_update_2.p4
+  extensions/p4_tests/p4_14/stf/cond_checksum_update.p4
 )
 
 # P4C-1011
@@ -287,7 +267,7 @@ p4c_add_xfail_reason("tofino2"
 # P4C-1300
 p4c_add_xfail_reason("tofino2"
   "Parser extract didn't receive a PHV allocation"
-  extensions/p4_tests/p4_14/brig-425.p4
+  extensions/p4_tests/p4_14/stf/brig-425.p4
 )
 
 # p4lang/p4c #1724
@@ -310,7 +290,7 @@ p4c_add_xfail_reason("tofino2"
 
 p4c_add_xfail_reason("tofino2"
   "The current compiler implementation of varbit requires the length encoding variable"
-  extensions/p4_tests/p4_16/p4c-1478-neg.p4
+  extensions/p4_tests/p4_16/compile_only/p4c-1478-neg.p4
   )
 
 # P4C-1496
@@ -328,5 +308,5 @@ p4c_add_xfail_reason("tofino2"
 
 p4c_add_xfail_reason("tofino2"
   "error.*instruction slot.*used multiple times in action.*"
-  extensions/p4_tests/p4_14/overlay_add_header.p4
+  extensions/p4_tests/p4_14/stf/overlay_add_header.p4
 )
