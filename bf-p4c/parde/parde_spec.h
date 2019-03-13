@@ -58,6 +58,9 @@ class PardeSpec {
     /// Specifies the available match registers in bits. Note that they can be
     /// combined and used as a larger match key.
     virtual const std::vector<MatchRegister> matchRegisters() const = 0;
+
+    /// Total parsers supported ingress/egress
+    virtual int numParsers() const = 0;
 };
 
 class TofinoPardeSpec : public PardeSpec {
@@ -79,6 +82,8 @@ class TofinoPardeSpec : public PardeSpec {
                  MatchRegister("byte0"),
                  MatchRegister("byte1") };
     }
+
+    int numParsers() const override { return 18; }
 };
 
 #if HAVE_JBAY
@@ -100,6 +105,9 @@ class JBayPardeSpec : public PardeSpec {
                  MatchRegister("byte2"),
                  MatchRegister("byte3") };
     }
+
+    // TBD
+    int numParsers() const override { return 36; }
 };
 #endif /* HAVE_JBAY */
 

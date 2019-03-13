@@ -91,11 +91,23 @@ struct P4iParserState : ToJsonObject {
     }
 };
 
+struct P4iPhase0 : ToJsonObject {
+    std::string table_name;
+    std::string action_name;
+    P4iPhase0() : table_name(""), action_name("") {}
+    Util::JsonObject* toJson() const override {
+        auto* rst = new Util::JsonObject();
+        BFN::Visualization::usagesToCtxJson(rst, table_name, action_name);
+        return rst;
+    }
+};
+
 struct P4iParser : ToJsonObject {
     int parser_id;  // required, enum=range(0, 18), Parser ID
     cstring gress;  // required, enum=["ingress", "egress"], The gress this parser belongs to.
     int n_states;    // required, number of states available in the parser (TCAM rows).
     std::vector<P4iParserState> states;  // required, Array of state resource utilization.
+    P4iPhase0 phase0;
 
     Util::JsonObject* toJson() const override {
         auto* rst = new Util::JsonObject();
@@ -103,6 +115,8 @@ struct P4iParser : ToJsonObject {
         rst->emplace("gress", new Util::JsonValue(gress));
         rst->emplace("nStates", new Util::JsonValue(n_states));
         rst->emplace("states", toJsonArray(states));
+        if (gress == "ingress")
+            rst->emplace("phase0", phase0.toJson());
         return rst;
     }
 };

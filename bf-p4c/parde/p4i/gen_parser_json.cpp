@@ -123,5 +123,16 @@ bool GenerateParserP4iJson::preorder(const IR::BFN::LoweredParserState* state) {
         parsers[parser_ir->gress].states.push_back(
                 generateStateByMatch(state, prev_state, match));
     }
+
+    if (parser_ir->gress == INGRESS) {
+        P4iPhase0 phase0;
+        auto ig_p0 = (parser_ir) ? parser_ir->phase0 : nullptr;
+        if (ig_p0) {
+            phase0.table_name = ig_p0->tableName;
+            phase0.action_name = ig_p0->actionName;
+        }
+        parsers[parser_ir->gress].phase0 = phase0;
+    }
+
     return true;
 }

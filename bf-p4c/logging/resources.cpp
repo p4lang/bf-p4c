@@ -93,24 +93,6 @@ bool Visualization::preorder(const IR::BFN::Pipe *p) {
     pipe->emplace("deparser", new Util::JsonArray());
     pipesNode->append(pipe);
 
-    // TODO: With new Phase0 support, the Phase0 Info must be derived from
-    // Phase0 node within the parser object. Below code should be moved into
-    // parser once support for multiple parsers is added as each parser can have
-    // a separate phase0 info.
-    auto *phase0 = new Util::JsonObject();
-
-    /// XXX(hanw): this is probably overwriting phase0 info from multiple parsers.
-    for (auto parser : p->thread[INGRESS].parsers) {
-        auto ig_parser = parser->to<IR::BFN::LoweredParser>();
-        auto ig_p0 = (ig_parser) ? ig_parser->phase0 : nullptr;
-        if (ig_p0)
-            usagesToCtxJson(phase0, std::string(ig_p0->tableName), std::string(ig_p0->actionName));
-        else
-            usagesToCtxJson(phase0, "");
-    }
-
-    pipe->emplace("phase0", phase0);
-
     // Create the "phv_containers" node.
     pipe->emplace("phv_containers", Device::phvSpec().toJson());
 
@@ -883,7 +865,7 @@ void Visualization::gen_tind_result_buses(unsigned int stageNo, Util::JsonObject
 
 std::ostream &operator<<(std::ostream &out, const Visualization &vis) {
     auto res_json = new Util::JsonObject();
-    res_json->emplace("schema_version", new Util::JsonValue("1.0.5"));
+    res_json->emplace("schema_version", new Util::JsonValue("1.1.0"));
     res_json->emplace("program_name",
                       new Util::JsonValue(BackendOptions().programName + ".p4"));
     res_json->emplace("run_id", new Util::JsonValue(RunId::getId()));

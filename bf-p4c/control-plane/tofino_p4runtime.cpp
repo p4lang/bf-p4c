@@ -550,10 +550,20 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         // for other blocks
         forAllPipeBlocks(evaluatedProgram, [&](cstring , const IR::PackageBlock* pkg) {
             auto gress = pkg->findParameterValue("ingress_parser");
-            auto parser = gress->to<IR::ParserBlock>();
-            BUG_CHECK(parser, "Expected parser block");
-            auto p4BlockName = pkg->node->to<IR::Declaration_Instance>()->Name();
-            blockPipeNameMap[parser] = p4BlockName;
+            auto parser = gress ? gress->to<IR::ParserBlock>() : nullptr;
+            if (parser) {
+                auto p4BlockName = pkg->node->to<IR::Declaration_Instance>()->Name();
+                blockPipeNameMap[parser] = p4BlockName;
+            } else {
+                for (int i = 0; i < Device::pardeSpec().numParsers(); i++) {
+                    auto gress = pkg->findParameterValue("ingress_parser" + std::to_string(i));
+                    auto parser = gress ? gress->to<IR::ParserBlock>() : nullptr;
+                    if (parser) {
+                        auto p4BlockName = pkg->node->to<IR::Declaration_Instance>()->Name();
+                        blockPipeNameMap[parser] = p4BlockName;
+                    }
+                }
+            }
         });
     }
 

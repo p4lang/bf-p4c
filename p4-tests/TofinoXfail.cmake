@@ -1598,8 +1598,12 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "Expected parser block"
+  "Duplicate phv name"
   extensions/p4_tests/p4_16/test_config_3_unused_parsers.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "failed command verifier"
   extensions/p4_tests/p4_16/test_config_2_multiple_parsers.p4
 )
 

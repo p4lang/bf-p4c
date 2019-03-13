@@ -35,16 +35,22 @@ struct headers_t {
 struct user_metadata_t {
 }
 
+struct pvs_data {
+    bit<16> f16;
+}
+
 parser InParser(
     packet_in pkt,
     out headers_t hdr,
     out user_metadata_t md,
     out ingress_intrinsic_metadata_t ig_intr_md) {
 
+    value_set<pvs_data>(4) vs;
     state start {
         pkt.extract(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
 	    16w5 : parse_jeju;
+        vs   : reject;
 	}
     }
 
@@ -60,10 +66,12 @@ parser InParser2(
     out user_metadata_t md,
     out ingress_intrinsic_metadata_t ig_intr_md) {
 
+    value_set<pvs_data>(4) vs;
     state start {
         pkt.extract(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
             16w4 : parse_ipv4;
+            vs   : reject;
 	}
     }
 
@@ -111,9 +119,14 @@ parser EgParser(
     out headers_t hdr,
     out user_metadata_t md,
     out egress_intrinsic_metadata_t ig_intr_md) {
+  value_set<pvs_data>(4) vs;
   state start {
     pkt.extract(hdr.ethernet);
-    transition accept;
+    transition select(hdr.ethernet.etherType) {
+        16w4 : reject;
+        vs   : accept;
+    // transition accept;
+    }
   }
 }
 
@@ -122,9 +135,14 @@ parser EgParser2(
     out headers_t hdr,
     out user_metadata_t md,
     out egress_intrinsic_metadata_t ig_intr_md) {
+  value_set<pvs_data>(4) vs;
   state start {
     pkt.extract(hdr.ethernet);
-    transition accept;
+    // transition accept;
+    transition select(hdr.ethernet.etherType) {
+        16w4 : reject;
+        vs   : accept;
+    }
   }
 }
 

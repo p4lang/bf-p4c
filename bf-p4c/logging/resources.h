@@ -9,7 +9,9 @@
 #include "lib/cstring.h"
 #include "lib/json.h"
 #include "lib/ordered_map.h"
+#include "mau/action_data_bus.h"
 #include "mau/input_xbar.h"
+#include "mau/instruction_memory.h"
 #include "mau/memories.h"
 #include "parde/phase0.h"
 

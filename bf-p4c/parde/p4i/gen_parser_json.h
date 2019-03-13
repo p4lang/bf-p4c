@@ -5,6 +5,7 @@
 #include <map>
 
 #include "bf-p4c/device.h"
+#include "bf-p4c/logging/resources.h"
 #include "bf-p4c/parde/p4i/p4i_json_types.h"
 #include "bf-p4c/parde/parde_visitor.h"
 #include "lib/cstring.h"
