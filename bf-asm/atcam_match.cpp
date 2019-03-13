@@ -328,7 +328,7 @@ std::string AlgTcamMatchTable::get_match_mode(const Phv::Ref &pref, int offset) 
 
 void AlgTcamMatchTable::gen_unit_cfg(json::vector &units, int size) const {
     json::map tbl;
-    tbl["direction"] = gress ? "egress" : "ingress";
+    tbl["direction"] = P4Table::direction_name(gress);
     tbl["handle"] = p4_table ? is_alpm() ? p4_table->get_alpm_atcam_table_handle(): p4_table->get_handle() : 0;
     tbl["name"] = name();
     tbl["size"] = size;

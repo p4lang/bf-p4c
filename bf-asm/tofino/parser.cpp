@@ -352,7 +352,7 @@ template<> void Parser::write_config(Target::Tofino::parser_regs &regs, json::ma
     /// remove after 8.7 release
     if (single_parser) {
         for (auto st : all) {
-            st->write_config(regs, this, ctxt_json[st->gress ? "egress" : "ingress"]);
+            st->write_config(regs, this, ctxt_json[st->gress == EGRESS ? "egress" : "ingress"]);
         }
     } else {
         ctxt_json["states"] = json::vector();

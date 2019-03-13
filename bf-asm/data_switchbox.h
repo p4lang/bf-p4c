@@ -102,7 +102,7 @@ public:
         unitram_config.unitram_logical_table = tbl->logical_id;
         if (!options.match_compiler) // FIXME -- compiler doesn't set this?
             unitram_config.unitram_vpn = vpn;
-        if (tbl->gress == INGRESS)
+        if (tbl->gress == INGRESS || tbl->gress == GHOST)
             unitram_config.unitram_ingress = 1;
         else
             unitram_config.unitram_egress = 1;

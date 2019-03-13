@@ -279,7 +279,7 @@ template<> void Parser::State::Match::write_counter_config(
 template<> void Parser::write_config(Target::JBay::parser_regs &regs, json::map &ctxt_json, bool single_parser) {
     if (single_parser) {
         for (auto st : all)
-            st->write_config(regs, this, ctxt_json[st->gress ? "egress" : "ingress"]);
+            st->write_config(regs, this, ctxt_json[st->gress == EGRESS ? "egress" : "ingress"]);
     } else {
         ctxt_json["states"] = json::vector();
         for (auto st : all)

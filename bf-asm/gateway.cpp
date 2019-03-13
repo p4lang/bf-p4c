@@ -503,7 +503,7 @@ void GatewayTable::write_regs(REGS &regs) {
 
 void GatewayTable::gen_tbl_cfg(json::vector &out) const {
     json::map gTable;
-    gTable["direction"] = gress ? "egress" : "ingress";
+    gTable["direction"] = P4Table::direction_name(gress);
     gTable["attached_to"] = match_table ? match_table->name() : "-" ;
     gTable["handle"] = gateway_handle++;
     gTable["name"] = gateway_name.empty() ? name() : gateway_name;

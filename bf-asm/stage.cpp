@@ -517,7 +517,7 @@ void Stage::gen_stage_dependency(REGS &regs, json::vector &stg_dependency) {
     for (gress_t gress : Range(INGRESS, EGRESS)) {
         json::map anon;
         anon["stage"] = stageno;
-        anon["gress"] = (gress == INGRESS) ? "ingress" : "egress";
+        anon["gress"] = P4Table::direction_name(gress);
         anon["match_dependent"] = (regs.dp.cur_stage_dependency_on_prev[gress] == 0)
                                        ? true : false;
         stg_dependency.push_back(std::move(anon));

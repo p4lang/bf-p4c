@@ -243,7 +243,7 @@ void Deparser::start(int lineno, VECTOR(value_t) args) {
         this->lineno[INGRESS] = this->lineno[EGRESS] = lineno;
         return; }
     if (args.size != 1 || (args[0] != "ingress" && args[0] != "egress"))
-        error(lineno, "parser must specify ingress or egress");
+        error(lineno, "deparser must specify ingress or egress");
     gress_t gress = args[0] == "egress" ? EGRESS : INGRESS;
     if (!this->lineno[gress]) this->lineno[gress] = lineno;
 }

@@ -54,6 +54,7 @@ public:
     std::string get_partition_field_name() const;
     unsigned get_partition_action_handle() const;
     unsigned get_alpm_atcam_table_handle() const;
+    static std::string direction_name(gress_t);
 };
 
 #endif /* _p4_table_h_ */

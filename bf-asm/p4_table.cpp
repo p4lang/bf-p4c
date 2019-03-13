@@ -132,7 +132,7 @@ json::map *P4Table::base_tbl_cfg(json::vector &out, int size, const Table *table
         tbl_ptr = new json::map();
         out.emplace_back(tbl_ptr); }
     json::map &tbl = *tbl_ptr;
-    tbl["direction"] = table->gress ? "egress" : "ingress";
+    tbl["direction"] = direction_name(table->gress);
     if (handle) tbl["handle"] = handle;
     auto table_type = (handle >> 24) & 0x3f;
     tbl["name"] = p4_name();
@@ -156,7 +156,7 @@ void P4Table::base_alpm_tbl_cfg(json::map &out, int size, const Table *table, P4
                 alpm_table_handle = &alpm->alpm_atcam_table_handle; }
             *alpm_cfg = &out;
             json::map &tbl = out;
-            tbl["direction"] = table->gress ? "egress" : "ingress";
+            tbl["direction"] = direction_name(table->gress);
             auto table_type = (handle >> 24) & 0x3f;
             if (!(*alpm_table_handle & 0xffffff))
                 *alpm_table_handle = apply_handle_offset((P4Table::MatchEntry << 24) + (++max_handle[table_type]),
@@ -193,4 +193,12 @@ unsigned P4Table::get_alpm_atcam_table_handle() const {
     if (alpms.count(this))
         return alpms[this].alpm_atcam_table_handle;
     return 0;
+}
+
+std::string P4Table::direction_name(gress_t gress) {
+    switch(gress) {
+    case INGRESS: return "ingress"; break;
+    case EGRESS: return "egress"; break;
+    case GHOST: return "ghost"; break;
+    default: BUG(); }
 }
