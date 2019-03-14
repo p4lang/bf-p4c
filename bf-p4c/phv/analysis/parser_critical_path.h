@@ -1,5 +1,5 @@
-#ifndef BF_P4C_COMMON_PARSER_CRITICAL_PATH_H_
-#define BF_P4C_COMMON_PARSER_CRITICAL_PATH_H_
+#ifndef BF_P4C_PHV_ANALYSIS_PARSER_CRITICAL_PATH_H_
+#define BF_P4C_PHV_ANALYSIS_PARSER_CRITICAL_PATH_H_
 
 #include "ir/ir.h"
 #include "lib/cstring.h"
@@ -68,12 +68,54 @@ class ParserCriticalPath : public BFN::ControlFlowVisitor,
     ParserCriticalPathResult result;
 };
 
+class CollectUserSpecifiedCriticalStates : public Inspector {
+    gress_t gress;
+    ordered_set<const IR::BFN::ParserState*>& critical_states;
+
+    bool preorder(const IR::BFN::ParserState* state) override {
+        if (state->gress != gress)
+            return false;
+
+        auto p4State = state->p4State;
+        if (!p4State) return true;
+
+        for (auto annot : p4State->annotations->annotations) {
+            if (annot->name.name == "critical") {
+                auto& exprs = annot->expr;
+                if (exprs.size() == 1) {
+                    auto gress = exprs[0]->to<IR::StringLiteral>();
+                    if (!gress) {
+                        ::error("Invalid use of %1%, correct usage is: "
+                                     "@pragma critical [ingress/egress]", annot);
+                    }
+
+                    if (gress && gress->value == toString(state->gress)) {
+                        LOG3("@critical specified on " << state->name);
+                        critical_states.insert(state);
+                    }
+                } else if (exprs.size() == 0) {
+                    LOG3("@critical specified on " << state->name);
+                    critical_states.insert(state);
+                }
+            }
+        }
+
+        return true;
+    }
+
+ public:
+    CollectUserSpecifiedCriticalStates(gress_t gr, ordered_set<const IR::BFN::ParserState*>& cs)
+      : gress(gr), critical_states(cs) {}
+};
+
 /** Calculate critical path of both ingress and egress parser.
  */
 class CalcParserCriticalPath : public PassManager {
  public:
     explicit CalcParserCriticalPath(const PhvInfo& phv) : phv(phv) {
         addPasses({
+                new CollectUserSpecifiedCriticalStates(INGRESS, ingress_user_critical_states),
+                new CollectUserSpecifiedCriticalStates(EGRESS, egress_user_critical_states),
                 new ParserCriticalPath(INGRESS, ingress_result),
                 new ParserCriticalPath(EGRESS, egress_result)
            });
@@ -84,19 +126,37 @@ class CalcParserCriticalPath : public PassManager {
 
     const ParserCriticalPathResult&
     get_ingress_result() const { return ingress_result; }
+
     const ParserCriticalPathResult&
     get_egress_result() const { return egress_result; }
 
+    const ordered_set<const IR::BFN::ParserState*>&
+    get_ingress_user_critical_states() const { return ingress_user_critical_states; }
+
+    const ordered_set<const IR::BFN::ParserState*>&
+    get_egress_user_critical_states() const { return egress_user_critical_states; }
+
+    bool is_on_critical_path(cstring state) const;
+    bool is_user_specified_critical_state(cstring state) const;
+
  private:
+    static bool is_on_critical_path(cstring state, const ParserCriticalPathResult& result);
+    static bool is_user_specified_critical_state(cstring state,
+             const ordered_set<const IR::BFN::ParserState*>& result);
+
     ordered_set<const PHV::Field *>
     calc_critical_fields(const ParserCriticalPathResult& critical_path) const;
 
  private:
     const PhvInfo& phv;
+
     ParserCriticalPathResult ingress_result;
     ParserCriticalPathResult egress_result;
+
+    ordered_set<const IR::BFN::ParserState*> ingress_user_critical_states;
+    ordered_set<const IR::BFN::ParserState*> egress_user_critical_states;
 };
 
 std::ostream& operator<<(std::ostream& out, const ParserCriticalPathResult& rst);
 
-#endif /* BF_P4C_COMMON_PARSER_CRITICAL_PATH_H_ */
+#endif /* BF_P4C_PHV_ANALYSIS_PARSER_CRITICAL_PATH_H_ */

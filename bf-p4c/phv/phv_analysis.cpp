@@ -98,7 +98,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             &clustering,           // cluster analysis
             new PhvInfo::DumpPhvFields(phv, uses),
             new AllocatePHV(clustering, uses, defuse, clot, pragmas, phv, action_constraints,
-                    critical_path_clusters, table_alloc, meta_init),
+                    parser_critical_path, critical_path_clusters, table_alloc, meta_init),
             new AddMetadataInitialization(phv, defuse, meta_live_range),
             &defuse
         }); }

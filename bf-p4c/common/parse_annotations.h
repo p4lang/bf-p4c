@@ -73,6 +73,7 @@ class ParseAnnotations : public P4::ParseAnnotations {
                 PARSE_EMPTY("flexible"),
                 PARSE_EMPTY("header_checksum"),
                 PARSE_EMPTY("payload_checksum"),
+                PARSE_EMPTY("critical"),
 
                 PARSE_EXPRESSION_LIST("default_portmap"),
 

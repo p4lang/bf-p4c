@@ -170,7 +170,6 @@ set (BF_P4C_BACKEND_COMMON_SRCS
   common/map_tables_to_actions.cpp
   common/multiple_apply.cpp
   common/parser_overlay.cpp
-  common/parser_critical_path.cpp
   common/run_id.cpp
   common/rewrite_flexible_struct.cpp
   common/slice.cpp
@@ -197,7 +196,6 @@ set (BF_P4C_BACKEND_COMMON_HDRS
   common/multiple_apply.h
   common/parse_annotations.h
   common/parser_overlay.h
-  common/parser_critical_path.h
   common/run_id.h
   common/rewrite_flexible_struct.h
   common/slice.h
@@ -394,6 +392,7 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/analysis/meta_live_range.cpp
   phv/analysis/live_range_shrinking.cpp
   phv/analysis/pack_conflicts.cpp
+  phv/analysis/parser_critical_path.cpp
   phv/pragma/pa_alias.cpp
   phv/pragma/pa_atomic.cpp
   phv/pragma/pa_container_size.cpp
@@ -447,6 +446,7 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/analysis/meta_live_range.h
   phv/analysis/live_range_shrinking.h
   phv/analysis/pack_conflicts.h
+  phv/analysis/parser_critical_path.h
   phv/pragma/pa_alias.h
   phv/pragma/pa_atomic.h
   phv/pragma/pa_container_size.h

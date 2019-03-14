@@ -4,7 +4,7 @@
 #include "ir/ir.h"
 #include "lib/cstring.h"
 #include "bf-p4c/phv/make_clusters.h"
-#include "bf-p4c/common/parser_critical_path.h"
+#include "bf-p4c/phv/analysis/parser_critical_path.h"
 
 /** Provide a function to produces a std::set<const SuperCluster*> that
  * those SuperClusters have at least one cluster that

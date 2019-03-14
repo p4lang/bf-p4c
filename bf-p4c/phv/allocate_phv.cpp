@@ -164,10 +164,8 @@ bool AllocScore::operator>(const AllocScore& other) const {
     // For negative metrics (wasted_bits, inc_container...), lower is better.
     // Operator> return true if this score is better.
 
-    if (BackendOptions().parser_bandwidth_opt) {
-        if (delta_parser_extractor_balance != 0) {
-            return delta_parser_extractor_balance > 0; }
-    }
+    if (delta_parser_extractor_balance != 0) {
+        return delta_parser_extractor_balance > 0; }
 
     if (delta_clot_bits != 0) {
         // This score is better if it has fewer clot bits.
@@ -232,6 +230,7 @@ AllocScore::AllocScore(
         const PhvInfo& phv,
         const ClotInfo& clot,
         const PhvUse& uses,
+        const CalcParserCriticalPath& parser_critical_path,
         const int bitmasks) {
     using ContainerAllocStatus = PHV::Allocation::ContainerAllocStatus;
     const auto* parent = alloc.getParent();
@@ -353,29 +352,62 @@ AllocScore::AllocScore(
     }
 
     // calc_n_inc_tphv_collections
-    auto my_tphv_collections = alloc.getTagalongCollectionsUsed();
-    auto parent_tphv_collections = parent->getTagalongCollectionsUsed();
-    for (auto col : my_tphv_collections) {
-        if (!parent_tphv_collections.count(col))
-            n_inc_tphv_collections++;
+    if (Device::currentDevice() == Device::TOFINO) {
+        auto my_tphv_collections = alloc.getTagalongCollectionsUsed();
+        auto parent_tphv_collections = parent->getTagalongCollectionsUsed();
+        for (auto col : my_tphv_collections) {
+            if (!parent_tphv_collections.count(col))
+                n_inc_tphv_collections++;
+        }
     }
 
-    if (BackendOptions().parser_bandwidth_opt) {
-        ordered_map<cstring, std::set<PHV::Container>> total_state_to_containers;
+    if (Device::currentDevice() == Device::TOFINO && BackendOptions().parser_bandwidth_opt) {
+        // This only matters for Tofino.
+        // For JBay, all extractors are of same size (16-bit).
+        calcParserExtractorBalanceScore(alloc, phv, parser_critical_path);
+    }
+}
 
-        auto& my_state_to_containers = alloc.getParserStateToContainers(phv);
-        auto& parent_state_to_containers = parent->getParserStateToContainers(phv);
+void AllocScore::calcParserExtractorBalanceScore(const PHV::Transaction& alloc, const PhvInfo& phv,
+                                             const CalcParserCriticalPath& parser_critical_path) {
+    const auto* parent = alloc.getParent();
 
-        for (auto& kv : my_state_to_containers)
-            total_state_to_containers[kv.first].insert(kv.second.begin(), kv.second.end());
+    ordered_map<cstring, std::set<PHV::Container>> critical_state_to_containers;
 
-        for (auto& kv : parent_state_to_containers)
-            total_state_to_containers[kv.first].insert(kv.second.begin(), kv.second.end());
+    auto& my_state_to_containers = alloc.getParserStateToContainers(phv);
+    auto& parent_state_to_containers = parent->getParserStateToContainers(phv);
 
-        for (auto& kv : total_state_to_containers) {
-            StateExtractUsage use(kv.second);
-            parser_extractor_balance += ParserExtractScore::get_score(use);
+    // If program has user specified critical states, we will only compute score for those.
+    //
+    // Otherwise, we compute the score on the critical path (path with most extracted bits),
+    // if --parser-bandwidth-opt is turned on.
+    //
+    if (!parser_critical_path.get_ingress_user_critical_states().empty() ||
+        !parser_critical_path.get_egress_user_critical_states().empty()) {
+        for (auto& kv : my_state_to_containers) {
+            if (parser_critical_path.is_user_specified_critical_state(kv.first))
+                critical_state_to_containers[kv.first].insert(kv.second.begin(), kv.second.end());
         }
+
+        for (auto& kv : parent_state_to_containers) {
+            if (parser_critical_path.is_user_specified_critical_state(kv.first))
+                critical_state_to_containers[kv.first].insert(kv.second.begin(), kv.second.end());
+        }
+    } else {
+        for (auto& kv : my_state_to_containers) {
+            if (parser_critical_path.is_on_critical_path(kv.first))
+                critical_state_to_containers[kv.first].insert(kv.second.begin(), kv.second.end());
+        }
+
+        for (auto& kv : parent_state_to_containers) {
+            if (parser_critical_path.is_on_critical_path(kv.first))
+                critical_state_to_containers[kv.first].insert(kv.second.begin(), kv.second.end());
+        }
+    }
+
+    for (auto& kv : critical_state_to_containers) {
+        StateExtractUsage use(kv.second);
+        parser_extractor_balance += ParserExtractScore::get_score(use);
     }
 }
 
@@ -1246,7 +1278,8 @@ CoreAllocation::tryAllocSliceList(
               LOG5("Wide arithmetic hi slice could be allocated."); }
         }
 
-        auto score = AllocScore(this_alloc, phv_i, clot_i, uses_i, num_bitmasks);
+        auto score = AllocScore(this_alloc, phv_i, clot_i, uses_i,
+                                parser_critical_path_i, num_bitmasks);
         LOG5("    ...SLICE LIST score: " << score);
 
         // update the best
@@ -1438,7 +1471,7 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAlloc(
                 }  // for slices
 
                 if (failed) continue;
-                auto score = AllocScore(this_alloc, phv_i, clot_i, uses_i);
+                auto score = AllocScore(this_alloc, phv_i, clot_i, uses_i, parser_critical_path_i);
                 if (!best_alloc || score > best_score) {
                     best_alloc = std::move(this_alloc);
                     best_score = score; } }
@@ -1607,8 +1640,9 @@ Visitor::profile_t AllocatePHV::init_apply(const IR::Node* root) {
 
     size_t numBridgedConflicts = bridgedFieldsWithAlignmentConflicts.size();
     AllocationStrategy *strategy =
-        new BruteForceAllocationStrategy(core_alloc_i, report, critical_path_clusters_i, clot_i,
-                bridgedFieldsWithAlignmentConflicts);
+        new BruteForceAllocationStrategy(core_alloc_i, report, parser_critical_path_i,
+                                         critical_path_clusters_i, clot_i,
+                                         bridgedFieldsWithAlignmentConflicts);
     auto result = strategy->tryAllocation(alloc, cluster_groups, container_groups);
 
     // Later we can try different strategies,
@@ -2687,7 +2721,8 @@ BruteForceAllocationStrategy::allocLoop(PHV::Transaction& rst,
                             core_alloc_i.tryAlloc(slicing_alloc, *container_group, *sc,
                                 bridgedFieldsWithAlignmentConflicts)) {
                         AllocScore score = AllocScore(*partial_alloc,
-                                               core_alloc_i.phv(), clot_i, core_alloc_i.uses());
+                                               core_alloc_i.phv(), clot_i, core_alloc_i.uses(),
+                                               core_alloc_i.parser_critical_path());
                         LOG4("    ...SUPERCLUSTER  Uid: " << sc->uid << " score: " << score);
                         if (!best_slice_alloc || score > best_slice_score) {
                             best_slice_score = score;
@@ -2705,7 +2740,8 @@ BruteForceAllocationStrategy::allocLoop(PHV::Transaction& rst,
 
             // If allocation succeeded, check the score.
             auto slicing_score = AllocScore(slicing_alloc,
-                                            core_alloc_i.phv(), clot_i, core_alloc_i.uses());
+                                            core_alloc_i.phv(), clot_i, core_alloc_i.uses(),
+                                            core_alloc_i.parser_critical_path());
             if (LOGGING(4)) {
                 LOG4("Best SUPERCLUSTER score for this slicing: " << slicing_score);
                 LOG4("For the following SUPERCLUSTER slices: ");

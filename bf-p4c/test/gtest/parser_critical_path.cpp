@@ -7,7 +7,7 @@
 #include "lib/error.h"
 #include "lib/symbitmatrix.h"
 #include "test/gtest/helpers.h"
-#include "bf-p4c/common/parser_critical_path.h"
+#include "bf-p4c/phv/analysis/parser_critical_path.h"
 #include "bf-p4c/test/gtest/tofino_gtest_utils.h"
 
 // Changes related to inserting parser states might break

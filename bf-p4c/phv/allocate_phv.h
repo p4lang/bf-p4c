@@ -125,6 +125,7 @@ struct AllocScore {
             const PhvInfo& phv,
             const ClotInfo& clot,
             const PhvUse& uses,
+            const CalcParserCriticalPath& parser_critical_path,
             const int bitmasks = 0);
 
     AllocScore& operator=(const AllocScore& other) = default;
@@ -141,6 +142,9 @@ struct AllocScore {
     ContainerAllocStatus
     calcContainerStatus(const PHV::Container& container,
                         const ordered_set<PHV::AllocSlice>& slices);
+
+    void calcParserExtractorBalanceScore(const PHV::Transaction& alloc, const PhvInfo& phv,
+                                         const CalcParserCriticalPath& parser_critical_path);
 };
 
 std::ostream& operator<<(std::ostream& s, const AllocScore& score);
@@ -162,6 +166,8 @@ class CoreAllocation {
 
     // Metadata initialization possibilities.
     LiveRangeShrinking& meta_init_i;
+
+    const CalcParserCriticalPath& parser_critical_path_i;
 
     // Alignment failure fields. Right now, this will only contain bridged metadata fields if PHV
     // allocation fails due to alignment reasons. Used to backtrack to bridged metadata packing.
@@ -187,9 +193,11 @@ class CoreAllocation {
                    PHV::Pragmas& pragmas,
                    PhvInfo& phv,
                    ActionPhvConstraints& actions,
-                   LiveRangeShrinking& meta)
+                   LiveRangeShrinking& meta,
+                   const CalcParserCriticalPath& parser_critical_path)
         : mutex_i(mutex), /* clustering_i(clustering), */ uses_i(uses), defuse_i(defuse),
-          clot_i(clot), phv_i(phv), actions_i(actions), pragmas_i(pragmas), meta_init_i(meta) { }
+          clot_i(clot), phv_i(phv), actions_i(actions), pragmas_i(pragmas), meta_init_i(meta),
+          parser_critical_path_i(parser_critical_path) { }
 
     /// @returns true if @f can overlay all fields in @slices.
     static bool can_overlay(
@@ -308,6 +316,7 @@ class CoreAllocation {
     const FieldDefUse& defuse() const                     { return defuse_i; }
     const ActionPhvConstraints& actionConstraints() const { return actions_i; }
     PHV::Pragmas& pragmas() const                         { return pragmas_i; }
+    const CalcParserCriticalPath& parser_critical_path() const { return parser_critical_path_i; }
 };
 
 // TODO(yumin) extends this to include all possible cases.
@@ -373,6 +382,7 @@ class AllocationStrategy {
 
 class BruteForceAllocationStrategy : public AllocationStrategy {
  private:
+    const CalcParserCriticalPath& parser_critical_path_i;
     const CalcCriticalPathClusters& critical_path_clusters_i;
     const ClotInfo& clot_i;
     ordered_set<cstring>& bridgedFieldsWithAlignmentConflicts;
@@ -380,10 +390,12 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
  public:
     BruteForceAllocationStrategy(const CoreAllocation& alloc,
                                  std::ostream& out,
+                                 const CalcParserCriticalPath& ccp,
                                  const CalcCriticalPathClusters& cpc,
                                  const ClotInfo& clot,
                                  ordered_set<cstring>& bf)
-        : AllocationStrategy(alloc, out), critical_path_clusters_i(cpc), clot_i(clot),
+        : AllocationStrategy(alloc, out), parser_critical_path_i(ccp),
+          critical_path_clusters_i(cpc), clot_i(clot),
           bridgedFieldsWithAlignmentConflicts(bf) { }
 
     AllocResult
@@ -475,6 +487,9 @@ class AllocatePHV : public Inspector {
     const SymBitMatrix& mutex_i;
     PHV::Pragmas& pragmas_i;
 
+    // Used to balance container usage for parser states on the critical path
+    const CalcParserCriticalPath& parser_critical_path_i;
+
     // Used to create strategies, if needed
     const CalcCriticalPathClusters& critical_path_clusters_i;
 
@@ -547,14 +562,16 @@ class AllocatePHV : public Inspector {
                 PHV::Pragmas& pragmas,
                 PhvInfo& phv,
                 ActionPhvConstraints& actions,
+                const CalcParserCriticalPath& parser_critical_path,
                 const CalcCriticalPathClusters& critical_cluster,
                 const MauBacktracker& alloc,
                 LiveRangeShrinking& meta_init)
         : core_alloc_i(phv.parser_mutex(), clustering, uses, defuse, clot, pragmas, phv, actions,
-                meta_init),
+                meta_init, parser_critical_path),
           phv_i(phv), uses_i(uses), clot_i(clot),
           clustering_i(clustering), alloc_i(alloc),
           mutex_i(phv.parser_mutex()), pragmas_i(pragmas),
+          parser_critical_path_i(parser_critical_path),
           critical_path_clusters_i(critical_cluster) { }
 };
 

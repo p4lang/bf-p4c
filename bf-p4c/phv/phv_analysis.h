@@ -4,7 +4,6 @@
 #include "ir/ir.h"
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/common/field_defuse.h"
-#include "bf-p4c/common/parser_critical_path.h"
 #include "bf-p4c/logging/pass_manager.h"
 #include "bf-p4c/mau/action_mutex.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
@@ -18,6 +17,7 @@
 #include "bf-p4c/phv/analysis/live_range_shrinking.h"
 #include "bf-p4c/phv/analysis/meta_live_range.h"
 #include "bf-p4c/phv/analysis/pack_conflicts.h"
+#include "bf-p4c/phv/analysis/parser_critical_path.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
 

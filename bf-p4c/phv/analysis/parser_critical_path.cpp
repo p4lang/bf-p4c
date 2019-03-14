@@ -3,10 +3,41 @@
 #include "lib/log.h"
 
 std::ostream& operator<<(std::ostream& out, const ParserCriticalPathResult& rst) {
-    out << "Critical Path Length: " << rst.length << "\n";
+    out << "Critical Path Length: " << rst.path.size()
+        << " states (" << rst.length << " bits)" << std::endl;
     for (const auto& s : rst.path) {
         out << s.first->name << "(" << s.second << ")" << "\n"; }
     return out;
+}
+
+bool CalcParserCriticalPath::is_on_critical_path(cstring state,
+        const ParserCriticalPathResult& result) {
+    for (auto& kv : result.path) {
+        if (kv.first->name == state)
+            return true;
+    }
+
+    return false;
+}
+
+bool CalcParserCriticalPath::is_on_critical_path(cstring state) const {
+    return is_on_critical_path(state, ingress_result) ||
+           is_on_critical_path(state, egress_result);
+}
+
+bool CalcParserCriticalPath::is_user_specified_critical_state(cstring state,
+             const ordered_set<const IR::BFN::ParserState*>& result) {
+    for (auto s : result) {
+        if (s->name == state)
+            return true;
+    }
+
+    return false;
+}
+
+bool CalcParserCriticalPath::is_user_specified_critical_state(cstring state) const {
+    return is_user_specified_critical_state(state, ingress_user_critical_states) ||
+           is_user_specified_critical_state(state, egress_user_critical_states);
 }
 
 ordered_set<const PHV::Field *>
