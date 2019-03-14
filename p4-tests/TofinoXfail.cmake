@@ -785,14 +785,14 @@ p4c_add_xfail_reason("tofino"
 # Expected failure, negative test.
 p4c_add_xfail_reason("tofino"
   "Operands of arithmetic operations cannot be greater than 64 bits"
-  extensions/p4_tests/p4_16/customer/p4c-1067-neg.p4
+  extensions/p4_tests/p4_16/customer/jeju/p4c-1067-neg.p4
 )
 
 # P4C-1067
 # Expected failure, negative test.
 p4c_add_xfail_reason("tofino"
   "Operand field bit .* of wide arithmetic operation cannot have even and odd container placement constraints"
-  extensions/p4_tests/p4_16/customer/p4c-1067-neg2.p4
+  extensions/p4_tests/p4_16/customer/jeju/p4c-1067-neg2.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -944,8 +944,8 @@ p4c_add_xfail_reason("tofino"
 # Negative tests for violation of action constraints.
 p4c_add_xfail_reason("tofino"
   "error.*This program violates action constraints imposed by Tofino."
-  extensions/p4_tests/p4_16/customer/case7944.p4
-  extensions/p4_tests/p4_16/customer/case7756.p4
+  extensions/p4_tests/p4_16/customer/noviflow/p4c-1288.p4
+  extensions/p4_tests/p4_16/customer/kaloom/p4c-1299.p4
   extensions/p4_tests/p4_14/compile_only/action_conflict_1.p4
   extensions/p4_tests/p4_14/compile_only/action_conflict_3.p4
   extensions/p4_tests/p4_14/compile_only/action_conflict_7.p4
@@ -1009,7 +1009,7 @@ p4c_add_xfail_reason("tofino"
 # P4C-1451 -- requires action splitting to avoid the error
 p4c_add_xfail_reason("tofino"
   "error: Can't use action argument .* in a hash in the same action. try splitting the action"
-  extensions/p4_tests/p4_14/customer/p4c-1451.p4
+  extensions/p4_tests/p4_14/customer/barefoot_academy/p4c-1451.p4
 )
 
 # Glass test suite bugs
@@ -1373,7 +1373,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
    "PHV allocation creates a container action impossible within a Tofino ALU"
   ../glass/testsuite/p4_tests/phv/COMPILER-706/terminate_parsing.p4
-  extensions/p4_tests/p4_16/customer/p4c-1494.p4
+  extensions/p4_tests/p4_16/customer/arista/p4c-1494.p4
 )
 
 p4c_add_xfail_reason("tofino"
