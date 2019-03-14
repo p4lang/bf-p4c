@@ -295,7 +295,7 @@ table photocells {
     airbags.histologists mask 0 : exact;
     jerky : valid;
     jerky.commingles : exact;
-    sapsucker.impartially : lpm;
+    sapsucker.impartially : ternary;
     sapsucker.thence : exact;
     sapsucker.hatstands : ternary;
   }
@@ -327,7 +327,7 @@ table exhorts {
     jerky.jam : range;
     jerky.showjumping mask 1 : lpm;
     jerky.slyer : exact;
-    jerky.packinghouses : lpm;
+    jerky.packinghouses : ternary;
   }
   actions {
     cycladess;
@@ -372,7 +372,7 @@ table savour {
   reads {
     shamelessness : valid;
     shamelessness.dogcarts : lpm;
-    countersignatures.confinements : lpm;
+    countersignatures.confinements : ternary;
     countersignatures.razzed : exact;
     countersignatures.noncrystalline : exact;
     countersignatures.prisoners : exact;
@@ -401,12 +401,12 @@ table innersole {
     countersignatures : valid;
     countersignatures.complication : lpm;
     countersignatures.confinements : exact;
-    countersignatures.noncrystalline : lpm;
-    countersignatures.welcomes : lpm;
-    countersignatures.extensions : lpm;
+    countersignatures.noncrystalline : ternary;
+    countersignatures.welcomes : ternary;
+    countersignatures.extensions : ternary;
     jerky : valid;
-    jerky.epistle : lpm;
-    jerky.jam : lpm;
+    jerky.epistle : ternary;
+    jerky.jam : ternary;
     jerky.slyer : exact;
     jerky.packinghouses : exact;
   }
@@ -428,10 +428,10 @@ table runways {
     countersignatures : valid;
     countersignatures.complication : ternary;
     countersignatures.confinements : exact;
-    countersignatures.razzed : lpm;
-    countersignatures.noncrystalline mask 6 : lpm;
+    countersignatures.razzed : ternary;
+    countersignatures.noncrystalline mask 6 : ternary;
     airbags : valid;
-    airbags.odditys : lpm;
+    airbags.odditys : ternary;
   }
   actions {
     

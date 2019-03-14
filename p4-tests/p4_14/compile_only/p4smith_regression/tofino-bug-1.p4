@@ -319,7 +319,7 @@ table absinth {
     prophylaxis.tided : exact;
     prophylaxis.citronella mask 39 : lpm;
     prophylaxis.miff : exact;
-    prophylaxis.detoxified : lpm;
+    prophylaxis.detoxified : ternary;
   }
   actions {
     khans;

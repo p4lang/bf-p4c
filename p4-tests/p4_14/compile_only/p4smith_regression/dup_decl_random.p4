@@ -245,7 +245,7 @@ table copperfields {
     oboists.macaques : ternary;
     oboists.retype : exact;
     saleswomen : valid;
-    saleswomen.afterglows : lpm;
+    saleswomen.afterglows : ternary;
   }
   actions {
     astringencys;
@@ -344,7 +344,7 @@ table defaced {
   reads {
     bedazzlement.premiere mask 3 : range;
     bedazzlement.ogbomosho : lpm;
-    bedazzlement.dobbins : lpm;
+    bedazzlement.dobbins : ternary;
     bedazzlement.tribunals : ternary;
     bedazzlement.prioritize : exact;
     oboists : valid;
@@ -427,9 +427,9 @@ table whiteners {
     bedazzlement.rope : ternary;
     oboists : valid;
     rents : valid;
-    rents.demigods : lpm;
+    rents.demigods : ternary;
     rents.blocks : exact;
-    rents.battlers : lpm;
+    rents.battlers : ternary;
     rents.conspirator mask 0 : exact;
     saleswomen : valid;
     saleswomen.prettiest : exact;
@@ -449,7 +449,7 @@ table honourably {
     rents.illegibly : exact;
     rents.demigods mask 31 : exact;
     rents.blocks : exact;
-    saleswomen.antigone mask 12 : lpm;
+    saleswomen.antigone mask 12 : ternary;
     saleswomen.prettiest : exact;
   }
   actions {

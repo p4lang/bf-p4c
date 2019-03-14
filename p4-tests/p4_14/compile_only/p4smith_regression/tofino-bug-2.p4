@@ -194,14 +194,14 @@ table sf {
     menaces : valid;
     menaces.rubberiest : lpm;
     menaces.kaye : exact;
-    menaces.shampooers : lpm;
+    menaces.shampooers : ternary;
     menaces.paraprofessionals : exact;
     orchestrating : valid;
     orchestrating.narratives : ternary;
     orchestrating.pressies : exact;
-    orchestrating.occupy : lpm;
+    orchestrating.occupy : ternary;
     orchestrating.lathers : range;
-    orchestrating.victuals : lpm;
+    orchestrating.victuals : ternary;
     enchantress.prettys mask 183 : exact;
     pronged : valid;
     pronged.colour : exact;

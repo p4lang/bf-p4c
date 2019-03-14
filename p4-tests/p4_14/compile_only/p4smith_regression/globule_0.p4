@@ -238,7 +238,7 @@ table mitts {
     mashhads.synopses mask 50 : exact;
     mashhads.elnora mask 226 : lpm;
     enchantresss.alliances : exact;
-    enchantresss.hallies : lpm;
+    enchantresss.hallies : ternary;
     enchantresss.neh : range;
     reedinesss : valid;
     reedinesss.hying : range;

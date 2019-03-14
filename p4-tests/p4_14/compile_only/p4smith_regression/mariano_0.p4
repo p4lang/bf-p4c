@@ -232,15 +232,15 @@ table booed {
   reads {
     inequitably : valid;
     diacritic.guatemala : lpm;
-    diacritic.fascinations : lpm;
+    diacritic.fascinations : ternary;
     diacritic.weer : exact;
     diacritic.stumps : ternary;
     diacritic.compulsively : exact;
     conscienceless.vouches : exact;
-    conscienceless.kenyatta : lpm;
+    conscienceless.kenyatta : ternary;
     conscienceless.staplers : exact;
     threaten.card mask 0 : exact;
-    threaten.literacy : lpm;
+    threaten.literacy : ternary;
     threaten.menstruate : exact;
     threaten.recklessnesss : range;
     threaten.turner : exact;
@@ -328,7 +328,7 @@ table third {
     scums.heathen : exact;
     scums.geek : ternary;
     threaten.menstruate : lpm;
-    threaten.recklessnesss : lpm;
+    threaten.recklessnesss : ternary;
     purposefully : valid;
   }
   actions {

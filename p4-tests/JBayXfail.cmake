@@ -53,6 +53,12 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
 endif() # HARLYN_STF
 
 # BEGIN: XFAILS that match glass XFAILS
+
+p4c_add_xfail_reason("tofino2"
+  "table .* Cannot match on multiple fields using lpm match type"
+  testdata/p4_14_samples/issue60.p4
+  )
+
 #END: XFAILS that match glass XFAILS
 
 if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)

@@ -270,7 +270,7 @@ table ripostes {
     overdoes.titches mask 116 : range;
     overdoes.yorks : lpm;
     dropkicks.outsold : exact;
-    dropkicks.photometers : lpm;
+    dropkicks.photometers : ternary;
   }
   actions {
     stallions;

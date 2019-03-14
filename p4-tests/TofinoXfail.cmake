@@ -569,6 +569,12 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue986-bmv2.p4
   )
 
+p4c_add_xfail_reason("tofino"
+  "table .* Cannot match on multiple fields using lpm match type"
+  ../glass/testsuite/p4_tests/mau/case1770.p4
+  testdata/p4_14_samples/issue60.p4
+  )
+
 #END: XFAILS that match glass XFAILS
 
 # START: XFAILs with translation

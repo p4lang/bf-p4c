@@ -297,7 +297,7 @@ table rescheduled {
     furzes.academys : exact;
     furzes.municipalities : lpm;
     burst.blackheads : ternary;
-    burst.perfumers : lpm;
+    burst.perfumers : ternary;
     thuggerys : valid;
     thuggerys.physicist : exact;
     thuggerys.kelvins : exact;
@@ -445,7 +445,7 @@ table dogsleds {
     barberries.caulker : exact;
     thuggerys : valid;
     thuggerys.physicist : exact;
-    thuggerys.kelvins : lpm;
+    thuggerys.kelvins : ternary;
   }
   actions {
     muddles;
@@ -459,7 +459,7 @@ table nickering {
     pusans.stirs : exact;
     pusans.metalworking : exact;
     barberries.stunningly : ternary;
-    barberries.rondos : lpm;
+    barberries.rondos : ternary;
     barberries.refund mask 1 : exact;
     barberries.vaunts : ternary;
     barberries.caulker : exact;
@@ -612,7 +612,7 @@ table stitchery {
     barberries.caulker mask 1 : range;
     thuggerys : valid;
     thuggerys.physicist mask 0 : range;
-    thuggerys.kelvins : lpm;
+    thuggerys.kelvins : ternary;
     thuggerys.placarding : exact;
   }
   actions {
@@ -640,11 +640,11 @@ table incorrectnesss {
     barberries : valid;
     barberries.subscriptions : lpm;
     barberries.disposal : exact;
-    barberries.refund : lpm;
+    barberries.refund : ternary;
     furzes.hintons : exact;
     furzes.expire mask 13 : exact;
     furzes.persecutions : exact;
-    furzes.municipalities : lpm;
+    furzes.municipalities : ternary;
     thuggerys : valid;
     thuggerys.physicist : exact;
     thuggerys.kelvins : ternary;
@@ -706,7 +706,7 @@ table esmeralda {
 table orgasms {
   reads {
     thuggerys.kelvins : lpm;
-    thuggerys.placarding : lpm;
+    thuggerys.placarding : ternary;
   }
   actions {
     

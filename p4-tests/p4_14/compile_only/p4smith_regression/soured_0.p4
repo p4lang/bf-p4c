@@ -262,7 +262,7 @@ table executioner {
     kosher.bohemians : lpm;
     kosher.ellies mask 38 : ternary;
     kosher.generalissimos : exact;
-    kosher.disappointment mask 9 : lpm;
+    kosher.disappointment mask 9 : ternary;
     rustiness : valid;
     rustiness.horologists : ternary;
     rustiness.antics : ternary;
@@ -314,7 +314,7 @@ table shingle {
     rustiness.ungraded : exact;
     assistances : valid;
     assistances.porns : exact;
-    assistances.tuscons mask 0 : lpm;
+    assistances.tuscons mask 0 : ternary;
     vesting.ovation : range;
     vesting.esperantos : exact;
     vesting.tolkien : exact;
@@ -342,7 +342,7 @@ table isomerisms {
     assistances.porns : exact;
     assistances.shrugs : ternary;
     assistances.tuscons mask 6 : ternary;
-    assistances.crabgrass : lpm;
+    assistances.crabgrass : ternary;
     assistances.tongas : range;
   }
   actions {
@@ -397,7 +397,7 @@ table stepchilds {
     rustiness.extrude : lpm;
     rustiness.horologists : exact;
     rustiness.antics : exact;
-    rustiness.ungraded : lpm;
+    rustiness.ungraded : ternary;
   }
   action_profile : whitewashed;
 }
