@@ -238,8 +238,6 @@ p4c_add_xfail_reason("tofino"
   switch_8.7_l3_heavy_int_leaf
   switch_generic_int_leaf
   switch_8.7_generic_int_leaf
-  ../glass/testsuite/p4_tests/phv/COMPILER-724/comp_724.p4
-  ../glass/testsuite/p4_tests/phv/COMPILER-891/comp_891.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -515,6 +513,8 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/parde/COMPILER-612/leaf.p4
   extensions/p4_tests/p4_14/compile_only/03-VlanProfile.p4
   extensions/p4_tests/p4_14/compile_only/01-FlexCounter.p4
+
+  ../glass/testsuite/p4_tests/phv/COMPILER-724/comp_724.p4
   )
 
 # Errors because pa_container_size pragmas used in these tests cannot be satisfy all constraints.

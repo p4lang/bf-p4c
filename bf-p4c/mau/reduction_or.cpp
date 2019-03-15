@@ -17,11 +17,17 @@ bool ReductionOrInfo::is_reduction_or(const IR::MAU::Instruction *instr,
     if (!(instr->name == "or" || instr->operands.size() == 3))
         return false;
 
+    std::function<const IR::Node*(const IR::Node*)> ignoreSlice =
+        [&ignoreSlice](const IR::Node* n) {
+        if (auto s = n->to<IR::Slice>())
+            return ignoreSlice(s->e0);
+        return n; };
+
     int non_attached_index = 0;
     const IR::MAU::AttachedOutput *attached = nullptr;
-    if ((attached = instr->operands.at(2)->to<IR::MAU::AttachedOutput>()))
+    if ((attached = ignoreSlice(instr->operands.at(2))->to<IR::MAU::AttachedOutput>()))
         non_attached_index = 1;
-    else if ((attached = instr->operands.at(1)->to<IR::MAU::AttachedOutput>()))
+    else if ((attached = ignoreSlice(instr->operands.at(1))->to<IR::MAU::AttachedOutput>()))
         non_attached_index = 2;
 
     if (!(non_attached_index > 0 &&
