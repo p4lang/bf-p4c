@@ -31,8 +31,10 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     testdata/p4_14_samples/gateway3.p4
     testdata/p4_14_samples/gateway4.p4
     testdata/p4_14_samples/basic_routing.p4
+    # also, egress port 0 doesn't work?
     extensions/p4_tests/p4_14/stf/sful_sel1.p4
     extensions/p4_tests/p4_14/stf/uninit_read_1.p4
+    extensions/p4_tests/p4_16/stf/sful_sel1.p4
   )
 
   p4c_add_xfail_reason("tofino2"

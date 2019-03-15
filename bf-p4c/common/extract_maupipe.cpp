@@ -415,6 +415,7 @@ static int getSingleAnnotationValue(const cstring name, const IR::MAU::Table *ta
 static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
         cstring name, const IR::Type *type, const IR::Vector<IR::Argument> *args,
         const IR::Annotations *annot, const P4::ReferenceMap *refMap,
+        StatefulSelectors &stateful_selectors,
         const IR::MAU::AttachedMemory **created_ap = nullptr,
         const IR::MAU::Table *match_table = nullptr) {
     auto baseType = getBaseType(type);
@@ -464,8 +465,8 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
         sel->num_pools = num_groups;
         sel->max_pool_size = max_group_size;
         sel->size = (sel->max_pool_size + 119) / 120 * sel->num_pools;
-        BUG_CHECK(args->size() == 3, "%s Selector does not have the correct number of arguments",
-                  sel->srcInfo);
+        BUG_CHECK(args->size() == 3 || args->size() == 4,
+                  "%s Selector does not have the correct number of arguments", sel->srcInfo);
         auto path = args->at(1)->expression->to<IR::PathExpression>()->path;
         auto decl = refMap->getDeclaration(path)->to<IR::Declaration_Instance>();
 
@@ -477,6 +478,12 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
         ap->size = getConstant(args->at(0));
         // FIXME Need to reconstruct the field list from the table key?
         *created_ap = ap;
+        if (args->size() == 4) {
+            auto regpath = args->at(3)->expression->to<IR::PathExpression>()->path;
+            auto reg = refMap->getDeclaration(regpath)->to<IR::Declaration_Instance>();
+            if (stateful_selectors.count(reg))
+                error("%1% bound to both %2% and %3%", reg, stateful_selectors.at(reg), sel);
+            stateful_selectors.emplace(reg, sel); }
         return sel;
     } else if (tname == "ActionProfile") {
         auto ap = new IR::MAU::ActionData(srcInfo, IR::ID(name));
@@ -559,6 +566,7 @@ class FixP4Table : public Inspector {
     IR::MAU::Table *tt;
     std::set<cstring> &unique_names;
     DeclarationConversions &converted;
+    StatefulSelectors &stateful_selectors;
     DeclarationConversions &assoc_profiles;
 
     bool preorder(const IR::P4Table *tc) override {
@@ -580,7 +588,7 @@ class FixP4Table : public Inspector {
                 unique_names.insert(tname);
                 obj = createAttached(cc->srcInfo, prop->externalName(tname),
                                      baseType, cc->arguments, prop->annotations,
-                                     refMap, &side_obj, tt);
+                                     refMap, stateful_selectors, &side_obj, tt);
             } else if (auto pe = pval->to<IR::PathExpression>()) {
                 auto &d = refMap->getDeclaration(pe->path, true)->as<IR::Declaration_Instance>();
                 // The algorithm saves action selectors in the large map, rather than the action
@@ -588,8 +596,8 @@ class FixP4Table : public Inspector {
                 // action.  Action selector will show up in a register SelectorAction
                 if (converted.count(&d) == 0) {
                     LOG3("Create attached " << d.externalName());
-                    obj = createAttached(d.srcInfo, d.externalName(), d.type,
-                                         d.arguments, d.annotations, refMap, &side_obj, tt);
+                    obj = createAttached(d.srcInfo, d.externalName(), d.type, d.arguments,
+                                         d.annotations, refMap, stateful_selectors, &side_obj, tt);
                     converted[&d] = obj;
                     if (side_obj)
                         assoc_profiles[&d] = side_obj;
@@ -621,8 +629,9 @@ class FixP4Table : public Inspector {
 
  public:
     FixP4Table(const P4::ReferenceMap *r, IR::MAU::Table *tt, std::set<cstring> &u,
-               DeclarationConversions &con, DeclarationConversions &ap)
-    : refMap(r), tt(tt), unique_names(u), converted(con), assoc_profiles(ap) {}
+               DeclarationConversions &con, StatefulSelectors &ss, DeclarationConversions &ap)
+    : refMap(r), tt(tt), unique_names(u), converted(con),
+      stateful_selectors(ss), assoc_profiles(ap) {}
 };
 
 Visitor::profile_t AttachTables::init_apply(const IR::Node *root) {
@@ -709,6 +718,8 @@ void AttachTables::InitializeStatefulAlus
             ERROR_CHECK(sel, "%s: Could not find the associated selector within the stateful "
                         "ALU %s, even though a selector is specified", gref->srcInfo,
                          salu->name);
+            if (self.stateful_selectors.count(reg))
+                error("%1% bound to both %2% and %3%", reg, self.stateful_selectors.at(reg), sel);
             salu->selector = sel;
             // FIXME -- how are selector table sizes set?  It seems to be lost in P4_16
             salu->size = 120*1024;  // one ram?
@@ -717,6 +728,8 @@ void AttachTables::InitializeStatefulAlus
             salu->size = getConstant(reg->arguments->at(0));
         } else {
             salu->direct = true; }
+        if (self.stateful_selectors.count(reg))
+            salu->selector = self.stateful_selectors.at(reg);
         if (regtype) {
             salu->width = regtype->arguments->at(0)->width_bits();
             if (auto str = regtype->arguments->at(0)->to<IR::Type_Struct>())
@@ -845,7 +858,7 @@ void AttachTables::DefineGlobalRefs::postorder(IR::GlobalRef *gref) {
             gref->obj = obj;
         } else if (auto att = createAttached(di->srcInfo, di->externalName(),
                                              di->type, di->arguments, di->annotations,
-                                             refMap, nullptr, nullptr)) {
+                                             refMap, self.stateful_selectors, nullptr, nullptr)) {
             LOG3("Created " << att->node_type_name() << ' ' << att->name << " (pt 3)");
             gref->obj = self.converted[di] = att;
             obj = att;
@@ -920,6 +933,7 @@ class GetBackendTables : public MauInspector {
     gress_t                                     gress;
     const IR::MAU::TableSeq                     *&rv;
     DeclarationConversions                      &converted;
+    StatefulSelectors                           &stateful_selectors;
     DeclarationConversions                      assoc_profiles;
     std::set<cstring>                                unique_names;
     std::map<const IR::Node *, IR::MAU::Table *>     tables;
@@ -931,8 +945,9 @@ class GetBackendTables : public MauInspector {
 
  public:
     GetBackendTables(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
-                    gress_t gr, const IR::MAU::TableSeq *&rv, DeclarationConversions &con)
-    : refMap(refMap), typeMap(typeMap), gress(gr), rv(rv), converted(con) {}
+                    gress_t gr, const IR::MAU::TableSeq *&rv, DeclarationConversions &con,
+                    StatefulSelectors &ss)
+    : refMap(refMap), typeMap(typeMap), gress(gr), rv(rv), converted(con), stateful_selectors(ss) {}
 
  private:
     void setup_match_mask(IR::MAU::Table *tt, const IR::Mask *mask, IR::ID match_id,
@@ -1062,7 +1077,7 @@ class GetBackendTables : public MauInspector {
                 new IR::MAU::Table(cstring::make_unique(unique_names, table->name), gress, table);
             unique_names.insert(tt->name);
             tt->match_table = table =
-                table->apply(FixP4Table(refMap, tt, unique_names, converted,
+                table->apply(FixP4Table(refMap, tt, unique_names, converted, stateful_selectors,
                                         assoc_profiles))->to<IR::P4Table>();
             setup_tt_match(tt, table);
             setup_actions(tt, table);
@@ -1210,6 +1225,7 @@ struct ExtractChecksum : public Inspector {
 // used by backend for stratum architecture
 ProcessBackendPipe::ProcessBackendPipe(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
                                        IR::BFN::Pipe *rv, DeclarationConversions &converted,
+                                       StatefulSelectors ss,
                                        const BFN::ResubmitPacking* resubmitPackings,
                                        const BFN::MirroredFieldListPacking* mirrorPackings,
                                        ParamBinding *bindings) {
@@ -1219,7 +1235,7 @@ ProcessBackendPipe::ProcessBackendPipe(P4::ReferenceMap *refMap, P4::TypeMap *ty
     CHECK_NULL(mirrorPackings);
     auto simplifyReferences = new SimplifyReferences(bindings, refMap, typeMap);
     addPasses({
-        new AttachTables(refMap, converted),  // add attached tables
+        new AttachTables(refMap, converted, ss),  // add attached tables
         new ProcessParde(rv, false /* useTna */),         // add parde metadata
         new PopulateResubmitStateWithFieldPackings(resubmitPackings),
         new PopulateMirrorStateWithFieldPackings(rv, mirrorPackings),
@@ -1234,12 +1250,13 @@ ProcessBackendPipe::ProcessBackendPipe(P4::ReferenceMap *refMap, P4::TypeMap *ty
 // used by backend for tna architecture
 ProcessBackendPipe::ProcessBackendPipe(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
                                        IR::BFN::Pipe *rv, DeclarationConversions &converted,
+                                       StatefulSelectors ss,
                                        ParamBinding *bindings) {
     setName("ProcessBackendPipe");
     CHECK_NULL(bindings);
     auto simplifyReferences = new SimplifyReferences(bindings, refMap, typeMap);
     addPasses({
-        new AttachTables(refMap, converted),  // add attached tables
+        new AttachTables(refMap, converted, ss),  // add attached tables
         new ProcessParde(rv, true /* useTna */),           // add parde metadata
         /// followings two passes are necessary, because ProcessBackendPipe transforms the
         /// IR::BFN::Pipe objects. If all the above passes can be moved to an earlier midend
@@ -1270,6 +1287,7 @@ cstring BackendConverter::getPipelineName(const IR::P4Program* program, int inde
 void BackendConverter::convertTnaProgram(const IR::P4Program* program, BFN_Options& options) {
     auto main = toplevel->getMain();
     DeclarationConversions converted;
+    StatefulSelectors stateful_selectors;
     toplevel->getMain()->apply(*arch);
 
     auto bindings = new ParamBinding(typeMap,
@@ -1303,7 +1321,7 @@ void BackendConverter::convertTnaProgram(const IR::P4Program* program, BFN_Optio
             if (auto mau = thread->mau->to<IR::BFN::TnaControl>()) {
                 mau->apply(ExtractMetadata(rv, bindings));
                 mau->apply(GetBackendTables(refMap, typeMap, gress, rv->thread[gress].mau,
-                                            converted));
+                                            converted, stateful_selectors));
             }
             for (auto p : thread->parsers) {
                 if (auto parser = p->to<IR::BFN::TnaParser>()) {
@@ -1320,13 +1338,15 @@ void BackendConverter::convertTnaProgram(const IR::P4Program* program, BFN_Optio
             thread = thread->apply(*simplifyReferences);
             if (auto mau = thread->mau->to<IR::BFN::TnaControl>()) {
                 mau->apply(ExtractMetadata(rv, bindings));
-                mau->apply(GetBackendTables(refMap, typeMap, GHOST, rv->ghost_thread, converted));
+                mau->apply(GetBackendTables(refMap, typeMap, GHOST, rv->ghost_thread,
+                                            converted, stateful_selectors));
             }
         }
 
         rv->global_pragmas = collect_pragma.global_pragmas();
 
-        ProcessBackendPipe processBackendPipe(refMap, typeMap, rv, converted, bindings);
+        ProcessBackendPipe processBackendPipe(refMap, typeMap, rv, converted,
+                                              stateful_selectors, bindings);
         processBackendPipe.addDebugHook(options.getDebugHook());
 
         pipe.push_back(rv->apply(processBackendPipe));
@@ -1339,6 +1359,7 @@ void BackendConverter::convertTnaProgram(const IR::P4Program* program, BFN_Optio
 
 void BackendConverter::convertV1Program(const IR::P4Program *program, BFN_Options &options) {
     DeclarationConversions converted;
+    StatefulSelectors stateful_selectors;
     ResubmitPacking resubmitPackings;
     MirroredFieldListPacking mirrorPackings;
     toplevel->getMain()->apply(*arch);
@@ -1361,7 +1382,8 @@ void BackendConverter::convertV1Program(const IR::P4Program *program, BFN_Option
             return;
         if (auto mau = thread->mau->to<IR::BFN::TnaControl>()) {
             mau->apply(ExtractMetadata(rv, bindings));
-            mau->apply(GetBackendTables(refMap, typeMap, gress, rv->thread[gress].mau, converted));
+            mau->apply(GetBackendTables(refMap, typeMap, gress, rv->thread[gress].mau,
+                                        converted, stateful_selectors));
         }
         for (auto p : thread->parsers) {
             if (auto parser = p->to<IR::BFN::TnaParser>()) {
@@ -1382,7 +1404,7 @@ void BackendConverter::convertV1Program(const IR::P4Program *program, BFN_Option
     rv->global_pragmas = collect_pragma.global_pragmas();
 
     LOG2("initial extracted program \n" << *rv);
-    ProcessBackendPipe processBackendPipe(refMap, typeMap, rv, converted,
+    ProcessBackendPipe processBackendPipe(refMap, typeMap, rv, converted, stateful_selectors,
                                           &resubmitPackings, &mirrorPackings, bindings);
     processBackendPipe.addDebugHook(options.getDebugHook());
     pipe.push_back(rv->apply(processBackendPipe));

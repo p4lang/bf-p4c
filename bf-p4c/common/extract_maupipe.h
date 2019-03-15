@@ -36,6 +36,8 @@ const IR::BFN::Pipe *extract_maupipe(const IR::P4Program *, BFN_Options& options
  */
 typedef std::map<const IR::Declaration_Instance *,
                  const IR::MAU::AttachedMemory *> DeclarationConversions;
+// a mapping from Registers to the (converted) ActionSelectors that are bound to them
+typedef std::map<const IR::Declaration_Instance *, const IR::MAU::Selector *> StatefulSelectors;
 
 class AttachTables : public PassManager {
     const P4::ReferenceMap *refMap;
@@ -43,6 +45,7 @@ class AttachTables : public PassManager {
     // selectors and StatefulAlus may have the same Declaration
     DeclarationConversions &converted;
     DeclarationConversions all_salus;
+    StatefulSelectors   stateful_selectors;
 
     // Create all the stateful ALUs by passing over all of the register actions.  Once
     // the pipeline is fully examined, add these to the all_salus map
@@ -83,8 +86,8 @@ class AttachTables : public PassManager {
     profile_t init_apply(const IR::Node *root) override;
 
  public:
-    AttachTables(const P4::ReferenceMap *rm, DeclarationConversions &con)
-        : refMap(rm), converted(con) {
+    AttachTables(const P4::ReferenceMap *rm, DeclarationConversions &con, StatefulSelectors ss)
+        : refMap(rm), converted(con), stateful_selectors(ss) {
         addPasses({
             new InitializeStatefulAlus(*this),
             new DefineGlobalRefs(*this, refMap)
@@ -98,11 +101,13 @@ class ProcessBackendPipe : public PassManager {
  public:
     ProcessBackendPipe(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
                        IR::BFN::Pipe* rv, DeclarationConversions &converted,
+                       StatefulSelectors ss,
                        const BFN::ResubmitPacking *resubmitPackings,
                        const BFN::MirroredFieldListPacking *mirrorPackings,
                        ParamBinding *bindings);
     ProcessBackendPipe(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
                        IR::BFN::Pipe* rv, DeclarationConversions &converted,
+                       StatefulSelectors ss,
                        ParamBinding *bindings);
 };
 
