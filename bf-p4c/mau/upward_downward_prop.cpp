@@ -9,9 +9,10 @@
 std::ostream &operator<<(std::ostream &out,
     const UpwardDownwardPropagation::PlaceScore &score) {
     if (DBPrint::dbgetflags(out) & DBPrint::Brief) {
-        out << score.deps_stages_control << "/" << score.deps_stages << "/" << score.total_deps;
+        out << score.deps_stages_control_anti << "/" << score.deps_stages << "/"
+            << score.total_deps;
     } else {
-        out << "Score: [DSC=" << score.deps_stages_control << ", DS=" << score.deps_stages
+        out << "Score: [DSC=" << score.deps_stages_control_anti << ", DS=" << score.deps_stages
             << ", TD=" << score.total_deps << ", IS_ZERO=" << score.is_zero << "]"; }
     return out;
 }
@@ -104,15 +105,15 @@ void UpwardDownwardPropagation::update_placed_tables(
 UpwardDownwardPropagation::PlaceScore UpwardDownwardPropagation::calculate_local_score(
     const IR::MAU::Table *t) {
     PlaceScore score;
-    score.deps_stages_control = dg.dependence_tail_size_control(t);
+    score.deps_stages_control_anti = dg.dependence_tail_size_control_anti(t);
     score.deps_stages = dg.dependence_tail_size(t);
     int provided_stage = t->get_provided_stage();
     if (provided_stage >= 0) {
         // If there's a stage pragma, treat the table as having at least as many
         // stage dependencies as there are stages after the @pragma stage.
         int after_stages = Device::numStages() - provided_stage;
-        if (score.deps_stages_control < after_stages)
-            score.deps_stages_control = after_stages;
+        if (score.deps_stages_control_anti < after_stages)
+            score.deps_stages_control_anti = after_stages;
         if (score.deps_stages < after_stages)
             score.deps_stages = after_stages; }
     score.total_deps = dg.happens_before_dependences(t).size();

@@ -736,9 +736,9 @@ void validate_scores(UpwardDownwardPropagation* upward_downward_prop,
             int calc_a, calc_b, true_a, true_b;
             true_a = a_score.data[i][j];
             true_b = b_score.data[i][j];
-            if (j == UpwardDownwardPropagation::DEPS_STAGES_CONTROL) {
-                calc_a = calc_score.first.deps_stages_control;
-                calc_b = calc_score.second.deps_stages_control;
+            if (j == UpwardDownwardPropagation::DEPS_STAGES_CONTROL_ANTI) {
+                calc_a = calc_score.first.deps_stages_control_anti;
+                calc_b = calc_score.second.deps_stages_control_anti;
             } else if (j == UpwardDownwardPropagation::DEPS_STAGES) {
                 calc_a = calc_score.first.deps_stages;
                 calc_b = calc_score.second.deps_stages;
@@ -1250,6 +1250,206 @@ TEST_F(TableDependencyGraphTest, GraphMinStage) {
 }
 
 
+/**
+ * The dependency graph is the following:
+ *
+ *     A                C
+ *     |                |
+ *     | Data           | Control
+ *     |                |
+ *     V     Anti       V
+ *     B -------------> D
+ *
+ * Thus the min stage of D must be 1, as the min stage of B is 1, and the ANTI dependency
+ * pushes the min stage of D forward.
+ */
+TEST_F(TableDependencyGraphTest, AntiGraph1) {
+    auto test = createTableDependencyGraphTestCase(
+        P4_SOURCE(P4Headers::NONE, R"(
+    action set_f2(bit<8> f2) {
+        headers.h1.f2 = f2;
+    }
+
+    action set_f3(bit<8> f3) {
+        headers.h1.f3 = f3;
+    }
+
+    action set_f4(bit<8> f4) {
+        headers.h1.f4 = f4;
+    }
+
+    action set_f5(bit<8> f5) {
+        headers.h1.f5 = f5;
+    }
+
+    action set_f6(bit<8> f6) {
+        headers.h1.f6 = f6;
+    }
+
+    table node_a {
+        actions = { set_f2; }
+        key = { headers.h1.f1 : exact; }
+    }
+
+    table node_b {
+        actions = { set_f4; }
+        key = { headers.h1.f2 : exact;
+                headers.h1.f3 : exact; }
+    }
+
+    table node_c {
+        actions = { set_f5; }
+        key = { headers.h1.f1 : exact; }
+    }
+
+    table node_d {
+        actions = { set_f3; }
+        key = { headers.h1.f1 : exact;
+                headers.h1.f6 : exact; }
+    }
+
+    apply {
+        node_a.apply();
+        node_b.apply();
+        if (node_c.apply().hit) {
+            node_d.apply();
+        }
+    } )"));
+
+    ASSERT_TRUE(test);
+    SymBitMatrix mutex;
+    PhvInfo phv(mutex);
+    FieldDefUse defuse(phv);
+    DependencyGraph dg;
+
+    test->pipe = runMockPasses(test->pipe, phv, defuse);
+
+    auto *find_dg = new FindDependencyGraph(phv, dg);
+    test->pipe->apply(*find_dg);
+    const IR::MAU::Table *a, *b, *c, *d, *e;
+    a = b = c = d = e = nullptr;
+    for (const auto& kv : dg.stage_info) {
+        if (kv.first->name == "node_a_0") {
+            a = kv.first;
+        } else if (kv.first->name == "node_b_0") {
+            b = kv.first;
+        } else if (kv.first->name == "node_c_0") {
+            c = kv.first;
+        } else if (kv.first->name == "node_d_0") {
+            d = kv.first;
+        }
+    }
+
+    EXPECT_NE(a, nullptr);
+    EXPECT_NE(b, nullptr);
+    EXPECT_NE(c, nullptr);
+    EXPECT_NE(d, nullptr);
+
+    EXPECT_EQ(dg.min_stage(a), 0);
+    EXPECT_EQ(dg.min_stage(b), 1);
+    EXPECT_EQ(dg.min_stage(c), 0);
+    EXPECT_EQ(dg.min_stage(d), 1);
+}
+
+/**
+ * The dependency graph is the following:
+ *
+ *     A                C
+ *     |                |
+ *     | Anti           | Anti
+ *     |                |
+ *     V     Data       V
+ *     B -------------> D
+ *
+ * Thus the min stage of D must be 1, as the min stage of B is 1, and the ANTI dependency
+ * pushes the min stage of D forward.
+ */
+TEST_F(TableDependencyGraphTest, AntiGraph2) {
+    auto test = createTableDependencyGraphTestCase(
+        P4_SOURCE(P4Headers::NONE, R"(
+    action set_f1(bit<8> f1) {
+        headers.h1.f1 = f1;
+    }
+
+    action set_f2(bit<8> f2) {
+        headers.h1.f2 = f2;
+    }
+
+    action set_f4(bit<8> f4) {
+        headers.h1.f4 = f4;
+    }
+
+    action set_f5(bit<8> f5) {
+        headers.h1.f5 = f5;
+    }
+
+    table node_a {
+        actions = { set_f2; }
+        key = { headers.h1.f1 : exact; }
+    }
+
+    table node_b {
+        actions = { set_f1; }
+        key = { headers.h1.f3 : exact; }
+    }
+
+    table node_c {
+        actions = { set_f5; }
+        key = { headers.h1.f4 : exact; }
+    }
+
+    table node_d {
+        actions = { set_f4; }
+        key = { headers.h1.f1 : exact; }
+    }
+
+    apply {
+        node_a.apply();
+        node_b.apply();
+        node_c.apply();
+        node_d.apply();
+    } )"));
+
+    ASSERT_TRUE(test);
+    SymBitMatrix mutex;
+    PhvInfo phv(mutex);
+    FieldDefUse defuse(phv);
+    DependencyGraph dg;
+
+    test->pipe = runMockPasses(test->pipe, phv, defuse);
+
+    auto *find_dg = new FindDependencyGraph(phv, dg);
+    test->pipe->apply(*find_dg);
+    const IR::MAU::Table *a, *b, *c, *d, *e;
+    a = b = c = d = e = nullptr;
+    for (const auto& kv : dg.stage_info) {
+        if (kv.first->name == "node_a_0") {
+            a = kv.first;
+        } else if (kv.first->name == "node_b_0") {
+            b = kv.first;
+        } else if (kv.first->name == "node_c_0") {
+            c = kv.first;
+        } else if (kv.first->name == "node_d_0") {
+            d = kv.first;
+        }
+    }
+
+    EXPECT_NE(a, nullptr);
+    EXPECT_NE(b, nullptr);
+    EXPECT_NE(c, nullptr);
+    EXPECT_NE(d, nullptr);
+
+    EXPECT_EQ(dg.min_stage(a), 0);
+    EXPECT_EQ(dg.min_stage(b), 0);
+    EXPECT_EQ(dg.min_stage(c), 0);
+    EXPECT_EQ(dg.min_stage(d), 1);
+
+    // Chain the dependence through the ANTI dependence
+    EXPECT_EQ(dg.dependence_tail_size_control_anti(a), 1);
+    EXPECT_EQ(dg.dependence_tail_size_control_anti(b), 1);
+    EXPECT_EQ(dg.dependence_tail_size_control_anti(c), 0);
+    EXPECT_EQ(dg.dependence_tail_size_control_anti(d), 0);
+}
 
 
 /**

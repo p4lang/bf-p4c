@@ -137,7 +137,8 @@ struct DependencyGraph {
         int min_stage,      // Minimum stage at which a table can be placed.
         dep_stages,         // Number of tables that depend on this table and
                             // must be placed in a stage after it.
-        dep_stages_control;
+        dep_stages_control,
+        dep_stages_control_anti;
     };
     std::map<const IR::MAU::Table*, StageInfo> stage_info;
 
@@ -184,7 +185,7 @@ struct DependencyGraph {
         } else {
             auto v = boost::add_vertex(label, g);
             labelToVertex[label] = v;
-            stage_info[label] = {0, 0, 0};
+            stage_info[label] = {0, 0, 0, 0};
             return v; }
     }
 
@@ -341,6 +342,12 @@ struct DependencyGraph {
         if (!finalized)
             BUG("Dependence graph used before being fully constructed.");
         return stage_info.at(t).dep_stages_control;
+    }
+
+    int dependence_tail_size_control_anti(const IR::MAU::Table *t) const {
+        if (!finalized)
+            BUG("Dependence graph used before being fully constructed.");
+        return stage_info.at(t).dep_stages_control_anti;
     }
 
     int min_stage(const IR::MAU::Table* t) const {

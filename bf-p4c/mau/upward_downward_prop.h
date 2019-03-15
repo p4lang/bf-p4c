@@ -13,9 +13,10 @@
 class UpwardDownwardPropagation {
  public:
     enum {
-        DEPS_STAGES_CONTROL,  // Length of the dependence chain from this node onwards
+        DEPS_STAGES_CONTROL_ANTI,  // Length of the dependence chain from this node onwards
         // (i.e. ) this node and all its data-dependent successors. Propagates through
-        // control dependencies, although they do not increase the chain length themselves.
+        // control and anti dependencies, although they do not increase the chain length
+        // themselves.
         DEPS_STAGES,  // Same as DEPS_STAGES_CONTROL, but does not propagate through control
         // dependencies.
         TOTAL_DEPS,  // Total dependent tables following this table, not necessarily
@@ -33,7 +34,7 @@ class UpwardDownwardPropagation {
         NUM_PROP_TYPES
     } prop_t;
     struct PlaceScore {
-        int deps_stages_control, deps_stages, total_deps;
+        int deps_stages_control_anti, deps_stages, total_deps;
         ordered_set<const IR::MAU::Table*> tables;
         bool is_zero;
         static PlaceScore combine_scores(PlaceScore& a, PlaceScore& b) {
@@ -45,8 +46,8 @@ class UpwardDownwardPropagation {
             } else if (b.is_zero) {
                 new_score = a;
             } else {
-                new_score.deps_stages_control = std::max(a.deps_stages_control,
-                                                         b.deps_stages_control);
+                new_score.deps_stages_control_anti = std::max(a.deps_stages_control_anti,
+                                                              b.deps_stages_control_anti);
                 new_score.deps_stages = std::max(a.deps_stages, b.deps_stages);
                 // Table placement prioritizes tables with the fewest total dependencies
                 new_score.total_deps = std::min(a.total_deps, b.total_deps);
@@ -58,7 +59,7 @@ class UpwardDownwardPropagation {
         }
         static PlaceScore score_zero() {
             PlaceScore zero;
-            zero.deps_stages_control = 0;
+            zero.deps_stages_control_anti = 0;
             zero.deps_stages = 0;
             zero.total_deps = 0;
             zero.is_zero = true;

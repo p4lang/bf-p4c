@@ -1267,8 +1267,8 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choic
     if (a->complete_shared > b->complete_shared) return true;
     if (a->complete_shared < b->complete_shared) return false;
 
-    int a_deps_stages_control = downward_prop_score.first.deps_stages_control;
-    int b_deps_stages_control = downward_prop_score.second.deps_stages_control;
+    int a_deps_stages_control = downward_prop_score.first.deps_stages_control_anti;
+    int b_deps_stages_control = downward_prop_score.second.deps_stages_control_anti;
 
     choice = DOWNWARD_PROP_DSC;
     // if the tables need to be in THIS stage, we reverse the sense of this test, as
@@ -1277,15 +1277,15 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choic
     if (a_deps_stages_control > b_deps_stages_control) return !provided_stage;
     if (a_deps_stages_control < b_deps_stages_control) return provided_stage;
 
-    int a_stages_upward_prop = upward_prop_score.first.deps_stages_control;
-    int b_stages_upward_prop = upward_prop_score.second.deps_stages_control;
+    int a_stages_upward_prop = upward_prop_score.first.deps_stages_control_anti;
+    int b_stages_upward_prop = upward_prop_score.second.deps_stages_control_anti;
 
     choice = UPWARD_PROP_DSC;
     if (a_stages_upward_prop > b_stages_upward_prop) return true;
     if (a_stages_upward_prop < b_stages_upward_prop) return false;
 
-    int a_local = local_score.first.deps_stages_control;
-    int b_local = local_score.second.deps_stages_control;
+    int a_local = local_score.first.deps_stages_control_anti;
+    int b_local = local_score.second.deps_stages_control_anti;
 
     choice = LOCAL_DSC;
     if (a_local > b_local) return true;

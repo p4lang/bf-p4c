@@ -644,47 +644,6 @@ void FindDataDependencyGraph::finalize_dependence_graph(void) {
         }
     }
 
-    // Build min_stage
-    // Min_stage for a table T is the minimum stage in which T (and any table that T is
-    // control-dependent upon) can be placed. So, if table T2 has no match or action dependencies
-    // but is control dependent on table T1, which -- because of its own match and action
-    // dependencies -- must be placed in at least stage 4, then T2 and T1 will both have a
-    // min_stage of 4.
-    for (size_t i = 0; i < topo_rst_control.size(); ++i) {
-        for (const auto& vertex : topo_rst_control[i]) {
-            const IR::MAU::Table* table = dg.get_vertex(vertex);
-            dg.stage_info[table].min_stage = i;
-        }
-    }
-
-    // Compress the stages to take out the addition caused by control edges
-    for (size_t i = 1; i < topo_rst_control.size(); i++) {
-        for (const auto& vertex : topo_rst_control[i]) {
-            const auto* tbl = dg.get_vertex(vertex);
-            int orig_stage = dg.stage_info[tbl].min_stage;
-            int true_min_stage = 0;
-            auto in_edges = boost::in_edges(vertex, dg.g);
-            for (auto edge = in_edges.first; edge != in_edges.second; edge++) {
-                auto src_vertex = boost::source(*edge, dg.g);
-                const auto* src_table = dg.get_vertex(src_vertex);
-                int src_vertex_stage = dg.stage_info[src_table].min_stage;
-                if (dg.g[*edge] == DependencyGraph::ACTION_READ ||
-                    dg.g[*edge] == DependencyGraph::IXBAR_READ ||
-                    dg.g[*edge] == DependencyGraph::OUTPUT) {
-                    true_min_stage = std::max(true_min_stage, src_vertex_stage + 1);
-                } else if (dg.g[*edge] == DependencyGraph::CONTROL ||
-                           dg.g[*edge] == DependencyGraph::REDUCTION_OR_READ ||
-                           dg.g[*edge] == DependencyGraph::REDUCTION_OR_OUTPUT) {
-                    true_min_stage = std::max(true_min_stage, src_vertex_stage);
-                }
-                BUG_CHECK(true_min_stage <= orig_stage, "stage should only decrease");
-                // There shouldn't be any edges within a layer,
-                // so starting from the lowest stage and moving out should be fine
-            }
-            dg.stage_info[tbl].min_stage = true_min_stage;
-        }
-    }
-
     // dg.happens_before_control_map = dg.happens_before_map;
     for (const auto& kv : dg.happens_before_map) {
         auto* table = kv.first;
@@ -737,10 +696,92 @@ void FindDataDependencyGraph::finalize_dependence_graph(void) {
             LOG4(ss.str());
         }
     }
-    dg.vertex_rst = topo_rst_control;
+    typename DependencyGraph::Graph::edge_iterator edges2, edges2_end;
+    dg.dep_type_map.clear();
+    for (boost::tie(edges2, edges2_end) = boost::edges(dg.g); edges2 != edges2_end; ++edges2) {
+        const IR::MAU::Table* src = dg.get_vertex(boost::source(*edges2, dg.g));
+        const IR::MAU::Table* dst = dg.get_vertex(boost::target(*edges2, dg.g));
+        if ((dg.dep_type_map.count(src) == 0) || (dg.dep_type_map.at(src).count(dst) == 0)
+            || (dg.dep_type_map.at(src).at(dst) == DependencyGraph::CONTROL)
+            || (dg.dep_type_map.at(src).at(dst) == DependencyGraph::REDUCTION_OR_READ)
+            || (dg.dep_type_map.at(src).at(dst) == DependencyGraph::REDUCTION_OR_OUTPUT)
+            || (dg.dep_type_map.at(src).at(dst) == DependencyGraph::ANTI)) {
+            dg.dep_type_map[src][dst] = dg.g[*edges2];
+        }
+    }
 
+    for (int i = int(topo_rst_control_anti.size()) - 1; i >= 0; --i) {
+        for (const auto& vertex : topo_rst_control_anti[i]) {
+            const IR::MAU::Table* table = dg.get_vertex(vertex);
+            auto& happens_later = dg.happens_before_map[table];
+            dg.stage_info[table].dep_stages_control_anti = std::accumulate(happens_later.begin(),
+                happens_later.end(), 0, [this, table] (int sz, const IR::MAU::Table* later) {
+                    int stage_addition = 0;
+                    if (dg.dep_type_map.count(table) && dg.dep_type_map.at(table).count(later)
+                        && dg.dep_type_map.at(table).at(later) != DependencyGraph::CONTROL
+                        && dg.dep_type_map.at(table).at(later) !=
+                           DependencyGraph::REDUCTION_OR_READ
+                        && dg.dep_type_map.at(table).at(later) !=
+                           DependencyGraph::REDUCTION_OR_OUTPUT
+                        && dg.dep_type_map.at(table).at(later) != DependencyGraph::ANTI) {
+                        stage_addition = 1;
+                    }
+                    return std::max(sz, dg.stage_info[later].dep_stages_control_anti
+                                        + stage_addition);
+            });
+            LOG4("Dep stages of " << dg.stage_info[table].dep_stages <<
+                " for table " << table->name);
+            LOG4("Dep stages control anti of " << dg.stage_info[table].dep_stages_control_anti <<
+                " for table " << table->name);
+        }
+    }
+
+    // Build min_stage
+    // Min_stage for a table T is the minimum stage in which T (and any table that T is
+    // control-dependent upon) can be placed. So, if table T2 has no match or action dependencies
+    // but is control dependent on table T1, which -- because of its own match and action
+    // dependencies -- must be placed in at least stage 4, then T2 and T1 will both have a
+    // min_stage of 4.
+    for (size_t i = 0; i < topo_rst_control_anti.size(); ++i) {
+        for (const auto& vertex : topo_rst_control_anti[i]) {
+            const IR::MAU::Table* table = dg.get_vertex(vertex);
+            dg.stage_info[table].min_stage = i;
+        }
+    }
+
+    // Compress the stages to take out the addition caused by control edges and anti edges,
+    // but the min stage needs to be propagated through these edges
+    for (size_t i = 1; i < topo_rst_control_anti.size(); i++) {
+        for (const auto& vertex : topo_rst_control_anti[i]) {
+            const auto* tbl = dg.get_vertex(vertex);
+            int orig_stage = dg.stage_info[tbl].min_stage;
+            int true_min_stage = 0;
+            auto in_edges = boost::in_edges(vertex, dg.g);
+            for (auto edge = in_edges.first; edge != in_edges.second; edge++) {
+                auto src_vertex = boost::source(*edge, dg.g);
+                const auto* src_table = dg.get_vertex(src_vertex);
+                int src_vertex_stage = dg.stage_info[src_table].min_stage;
+                if (dg.g[*edge] == DependencyGraph::ACTION_READ ||
+                    dg.g[*edge] == DependencyGraph::IXBAR_READ ||
+                    dg.g[*edge] == DependencyGraph::OUTPUT) {
+                    true_min_stage = std::max(true_min_stage, src_vertex_stage + 1);
+                } else if (dg.g[*edge] == DependencyGraph::CONTROL ||
+                           dg.g[*edge] == DependencyGraph::REDUCTION_OR_READ ||
+                           dg.g[*edge] == DependencyGraph::REDUCTION_OR_OUTPUT ||
+                           dg.g[*edge] == DependencyGraph::ANTI) {
+                    true_min_stage = std::max(true_min_stage, src_vertex_stage);
+                }
+                BUG_CHECK(true_min_stage <= orig_stage, "stage should only decrease");
+                // There shouldn't be any edges within a layer,
+                // so starting from the lowest stage and moving out should be fine
+            }
+            dg.stage_info[tbl].min_stage = true_min_stage;
+        }
+    }
+
+
+    dg.vertex_rst = topo_rst_control_anti;
     calc_topological_stage();
-
 
     verify_dependence_graph();
     if (LOGGING(4))
