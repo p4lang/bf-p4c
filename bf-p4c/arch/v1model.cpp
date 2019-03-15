@@ -261,14 +261,18 @@ class LoadTargetArchitecture : public Inspector {
         return new IR::Type_Header("pktgen_generic_header_t", *fields);
     }
 
-    /* extern selector_action {
-        selector_action(ActionSelector sel);
-        abstract void apply(inout bit<1> value, @optional out bit<1> rv);
-        bit<1> execute(@optional in bit<32> index); } */
+    /** This extern is only needed to support v1model program and
+        should not be exposed to tna.
+
+        extern SelectorAction {
+          SelectorAction(ActionSelector sel);
+          abstract void apply(inout bit<1> value, @optional out bit<1> rv);
+          bit<1> execute(@optional in bit<32> index); }
+     */
     const IR::Node* create_selector_action() {
         auto methods = new IR::Vector<IR::Method>({
             new IR::Method(
-                "selector_action",
+                "SelectorAction",
                 new IR::Type_Method(
                 new IR::ParameterList({
                     new IR::Parameter("sel", IR::Direction::None,
@@ -291,7 +295,7 @@ class LoadTargetArchitecture : public Inspector {
                         new IR::Annotations({new IR::Annotation(IR::ID("optional"), {})}),
                         IR::Direction::In, IR::Type_Bits::get(32))})), false),
         });
-        return new IR::Type_Extern("selector_action", *methods);
+        return new IR::Type_Extern("SelectorAction", *methods);
     }
 
     /* extern math_unit<T, U> {

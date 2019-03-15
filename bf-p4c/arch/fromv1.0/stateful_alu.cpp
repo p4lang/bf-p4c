@@ -482,8 +482,8 @@ const IR::Declaration_Instance *P4V1::StatefulAluConverter::convertExternInstanc
     }
 
     if (auto ap = getSelectorProfile(structure, ext)) {
-        LOG2("Creating apply function for selector_action " << ext->name);
-        auto satype = new IR::Type_Name("selector_action");
+        LOG2("Creating apply function for SelectorAction " << ext->name);
+        auto satype = new IR::Type_Name("SelectorAction");
         auto bit1 = IR::Type::Bits::get(1);
         auto *ctor_args = new IR::Vector<IR::Argument>({
                 new IR::Argument(new IR::PathExpression(new IR::Path(

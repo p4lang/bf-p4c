@@ -585,7 +585,7 @@ class FixP4Table : public Inspector {
                 auto &d = refMap->getDeclaration(pe->path, true)->as<IR::Declaration_Instance>();
                 // The algorithm saves action selectors in the large map, rather than the action
                 // profile, because no ActionProfile will appear as a declaration within an
-                // action.  Action selector will show up in a register selector_action
+                // action.  Action selector will show up in a register SelectorAction
                 if (converted.count(&d) == 0) {
                     LOG3("Create attached " << d.externalName());
                     obj = createAttached(d.srcInfo, d.externalName(), d.type,
@@ -779,7 +779,7 @@ void AttachTables::InitializeStatefulAlus::postorder(const IR::GlobalRef *gref) 
     visitAgain();
     if (auto di = gref->obj->to<IR::Declaration_Instance>()) {
         if (strstr(di->type->toString(), "Action<") ||
-            di->type->toString() == "selector_action") {
+            di->type->toString() == "SelectorAction") {
             updateAttachedSalu(di, gref);
         }
     }
@@ -850,7 +850,7 @@ void AttachTables::DefineGlobalRefs::postorder(IR::GlobalRef *gref) {
             gref->obj = self.converted[di] = att;
             obj = att;
         } else if (strstr(di->type->toString(), "Action<") ||
-                   di->type->toString() == "selector_action") {
+                   di->type->toString() == "SelectorAction") {
             auto salu = findAttachedSalu(di);
             // Could be because an earlier pass errored out, and we do not stop_on_error
             // In a non-error case, this should always be non-null, and is checked in a BUG

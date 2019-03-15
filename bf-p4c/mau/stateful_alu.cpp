@@ -1037,7 +1037,7 @@ CreateSaluInstruction::function_param_types = {
     {{ "MinMaxAction", "apply" },       { param_t::VALUE, param_t::OUTPUT, param_t::OUTPUT,
                                           param_t::OUTPUT, param_t::OUTPUT }},
 #endif
-    {{ "selector_action", "apply" },    { param_t::VALUE, param_t::OUTPUT, param_t::OUTPUT,
+    {{ "SelectorAction", "apply" },    { param_t::VALUE, param_t::OUTPUT, param_t::OUTPUT,
                                           param_t::OUTPUT, param_t::OUTPUT }}
 };
 

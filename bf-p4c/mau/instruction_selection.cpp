@@ -50,7 +50,7 @@ const IR::Node *Synth2PortSetup::postorder(IR::Primitive *prim) {
     IR::MAU::MeterType meter_type = IR::MAU::MeterType::UNUSED;
 
     cstring method = dot ? cstring(dot+1) : prim->name;
-    if (objType.endsWith("Action") || objType == "selector_action") {
+    if (objType.endsWith("Action") || objType == "SelectorAction") {
         bool direct_access = (prim->operands.size() == 1 && method == "execute") ||
                              objType == "DirectRegisterAction" ||
                              method == "execute_direct";
@@ -655,7 +655,7 @@ static const IR::Type *stateful_type_for_primitive(const IR::Primitive *prim) {
         prim->name == "Lpf.execute" || prim->name == "DirectLpf.execute" ||
         prim->name == "Wred.execute" || prim->name == "DirectWred.execute")
         return IR::Type_Meter::get();
-    if (strstr(prim->name, "Action.") || prim->name.startsWith("selector_action."))
+    if (strstr(prim->name, "Action."))
         return IR::Type_Register::get();
     BUG("Not a stateful primitive %s", prim);
 }
@@ -751,7 +751,7 @@ void StatefulAttachmentSetup::Scan::postorder(const IR::Primitive *prim) {
     auto dot = prim->name.find('.');
     auto objType = dot ? prim->name.before(dot) : cstring();
     cstring method = dot ? cstring(dot+1) : prim->name;
-    if (objType.endsWith("Action") || objType == "selector_action") {
+    if (objType.endsWith("Action") || objType == "SelectorAction") {
         obj = prim->operands.at(0)->to<IR::GlobalRef>()->obj->to<IR::MAU::StatefulAlu>();
         BUG_CHECK(obj, "invalid object");
         if (method == "execute") {

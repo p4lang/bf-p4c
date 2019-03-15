@@ -24,7 +24,7 @@ converting all of the properties into the corresponding instructions or
 whatever else is needed.
 
 The pass is designed to be applied to a subtree of IR containing a single
-Declaration_Instance object of type register_action or selector_action,
+Declaration_Instance object of type RegisterAction or SelectorAction,
 and creates an SaluAction for it, adding it to the StatefulAlu passed
 to the pass constructor.
 
@@ -166,9 +166,9 @@ class CreateSaluInstruction : public Inspector {
  public:
     explicit CreateSaluInstruction(IR::MAU::StatefulAlu *salu) : salu(salu) {
         if (auto spec = salu->reg->type->to<IR::Type_Specialized>())
-            regtype = spec->arguments->at(0);  // register_action
+            regtype = spec->arguments->at(0);  // RegisterAction
         else
-            regtype = IR::Type::Bits::get(1);  // selector_action
+            regtype = IR::Type::Bits::get(1);  // SelectorAction
         visitDagOnce = false; }
 };
 

@@ -42,8 +42,8 @@ extern DirectRegisterAction<T, U> {
     abstract void apply(inout T value, @optional out U rv);
 }
 
-extern selector_action {
-    selector_action(action_selector sel);
+extern SelectorAction {
+    SelectorAction(action_selector sel);
     bit<1> execute(@optional in bit<32> index);
     @synchronous(execute)
     abstract void apply(inout bit<1> value, @optional out bit<1> rv);
