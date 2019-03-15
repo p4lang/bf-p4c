@@ -259,7 +259,9 @@ void InjectMetadataControlDependencies::end_apply() {
                 "Metadata initialization analysis incorrect.  Live ranges between %s and %s "
                 "overlap", first_table, second_table);
             dg.add_edge(name_to_table.at(first_table), name_to_table.at(second_table),
-                        DependencyGraph::CONTROL);
+                        DependencyGraph::ANTI);
+            LOG3("  Injecting ANTI dep between " << first_table << " and " << second_table
+                 << " due to metadata initializaation");
             for (auto inject_point : inject_points) {
                 LOG3("  Metadata inject points " << inject_point.first->name << " "
                      << inject_point.second->name << " from tables " << first_table << " "
@@ -267,7 +269,10 @@ void InjectMetadataControlDependencies::end_apply() {
                 BUG_CHECK(fg.can_reach(inject_point.first, inject_point.second), "Metadata "
                      "initialization analysis incorrect.  Cannot inject dependency between %s "
                      "and %s", inject_point.first, inject_point.second);
-                dg.add_edge(inject_point.first, inject_point.second, DependencyGraph::CONTROL);
+                // Instead of adding injection points at the control point, just going to
+                // rely on the metadata check in table placement, as this could eventually be
+                // replaced, along with TableSeqDeps, with a function call
+                // dg.add_edge(inject_point.first, inject_point.second, DependencyGraph::CONTROL);
             }
         }
     }

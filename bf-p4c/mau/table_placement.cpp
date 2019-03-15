@@ -1429,8 +1429,6 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                     LOG3("  - skipping " << t->name << " because metadata deps not satisfied");
                     // In theory, could continue, but the analysis at this point would be
                     // incorrect
-                    BUG("Metadata initialization dependency not injected correctly into the "
-                        "dependency graph");
                     should_skip = true;
                 }
 
