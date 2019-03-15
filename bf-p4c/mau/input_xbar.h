@@ -68,7 +68,8 @@ struct IXBar {
             if ((*this)) {
                 if (isTernary)
                     return EXACT_GROUPS * EXACT_BYTES_PER_GROUP +
-                        ((group/2) * TERNARY_BYTES_PER_BIG_GROUP) + byte;
+                        ((group/2) * TERNARY_BYTES_PER_BIG_GROUP) +
+                        (group % 2) * TERNARY_BYTES_PER_GROUP + byte;
                 else
                     return (group * EXACT_BYTES_PER_GROUP) + byte;
             } else {

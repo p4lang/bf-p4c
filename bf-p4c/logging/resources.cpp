@@ -177,11 +177,25 @@ void Visualization::add_xbar_bytes_usage(unsigned int stage, const IXBar::Use &a
     // Used for the bits to do exact match/atcam match
     int way_index = 0;
     for (auto &way : alloc.way_use) {
-        for (auto bit : bitvec(way.mask)) {
+        for (int bit_offset = 0; bit_offset < IXBar::RAM_LINE_SELECT_BITS; bit_offset++) {
+            int bit = bit_offset + way.slice * IXBar::RAM_LINE_SELECT_BITS;
             HashBitResource hbr;
             hbr.add(USED_BY, alloc.used_by);
             hbr.add(USED_FOR, alloc.used_for());
-            hbr.add(DETAILS, "Hash Way " + std::to_string(way_index));
+            hbr.add(DETAILS, "Hash Way " + std::to_string(way_index) + " RAM line select");
+            auto key = std::make_pair(bit, way.group);
+
+            LOG3("\tadding resource hash_bits from way_use(" << bit << ", " << way.group
+                 << "): {" << hbr << "}");
+            _stageResources[stage]._hashBitsUsage[key].append(&hbr);
+        }
+
+        for (auto bit : bitvec(way.mask)) {
+            bit += IXBar::RAM_SELECT_BIT_START;
+            HashBitResource hbr;
+            hbr.add(USED_BY, alloc.used_by);
+            hbr.add(USED_FOR, alloc.used_for());
+            hbr.add(DETAILS, "Hash Way " + std::to_string(way_index) + " RAM select");
 
             auto key = std::make_pair(bit, way.group);
 
@@ -189,6 +203,7 @@ void Visualization::add_xbar_bytes_usage(unsigned int stage, const IXBar::Use &a
                  << "): {" << hbr << "}");
             _stageResources[stage]._hashBitsUsage[key].append(&hbr);
         }
+
         way_index++;
     }
 
