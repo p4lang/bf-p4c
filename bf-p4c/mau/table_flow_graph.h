@@ -47,6 +47,7 @@ struct FlowGraph {
         gress = boost::none;
         reachableNodes.clear();
         tableToVertexIndex.clear();
+        labelToVertex.clear();
         emptyFlowGraph = true;
     }
 

@@ -357,8 +357,8 @@ class ComputeDependencies : public Inspector {
     // @inits: Map of a field being initialized to the tables where the initialization is inserted.
     // Note down all the dependencies that would be induced because of the initialization.
     void noteDependencies(
-            const ordered_map<const PHV::Field*, ordered_set<const PHV::Field*>>& fields,
-            const ordered_map<const PHV::Field*, ordered_set<const IR::MAU::Table*>>& inits);
+            const ordered_map<PHV::AllocSlice, ordered_set<PHV::AllocSlice>>& slices,
+            const ordered_map<PHV::AllocSlice, ordered_set<const IR::MAU::Table*>>& initNodes);
 
  public:
     explicit ComputeDependencies(

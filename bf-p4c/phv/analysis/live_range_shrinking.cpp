@@ -913,21 +913,19 @@ const IR::MAU::Action* AddInitialization::postorder(IR::MAU::Action* act) {
 }
 
 void ComputeDependencies::noteDependencies(
-        const ordered_map<const PHV::Field*, ordered_set<const PHV::Field*>>& fields,
-        const ordered_map<const PHV::Field*, ordered_set<const IR::MAU::Table*>>& inits) {
-    for (auto& kv : fields) {
-        const auto* writeField = kv.first;
-        if (!inits.count(writeField))
-            BUG("Init entry not found for %1%", writeField->name);
-        for (const auto* initTable : inits.at(writeField)) {
-            // initTable = Table where writeField is initialized.
-            for (const auto* readField : kv.second) {
-                // For each field that shares containers with writeField.
-                for (auto& use : defuse.getAllUses(readField->id)) {
+        const ordered_map<PHV::AllocSlice, ordered_set<PHV::AllocSlice>>& slices,
+        const ordered_map<PHV::AllocSlice, ordered_set<const IR::MAU::Table*>>& initNodes) {
+    for (auto& kv : slices) {
+        if (!initNodes.count(kv.first)) continue;
+        for (const auto* initTable : initNodes.at(kv.first)) {
+            // initTable = Table where writeSlice is initialized.
+            for (const auto& readSlice : kv.second) {
+                // For each slice that shares containers with write slice (kv.first)
+                for (auto& use : defuse.getAllUses(readSlice.field()->id)) {
                     const auto* readTable = use.first->to<IR::MAU::Table>();
                     if (!readTable) continue;
-                    LOG4("\tInit unit for " << writeField->name << " : " << initTable->name);
-                    LOG4("\t  Read unit for " << readField->name << " : " << readTable->name);
+                    LOG5("\tInit unit for " << kv.first << " : " << initTable->name);
+                    LOG5("\t  Read unit for " << readSlice << " : " << readTable->name);
                     if (readTable != initTable)
                         phv.addMetadataDependency(readTable, initTable);
                 }
@@ -955,7 +953,7 @@ Visitor::profile_t ComputeDependencies::init_apply(const IR::Node* root) {
     const auto& livemap = liverange.getMetadataLiveMap();
     // Set of fields involved in metadata initialization whose usedef live ranges must be
     // considered.
-    ordered_map<const PHV::Field*, ordered_set<const PHV::Field*>> initFieldsToOverlappingFields;
+    ordered_map<PHV::AllocSlice, ordered_set<PHV::AllocSlice>> initSlicesToOverlappingSlices;
 
     if (!phv.alloc_done())
         BUG("ComputeDependencies pass must be called after PHV allocation is complete.");
@@ -985,35 +983,41 @@ Visitor::profile_t ComputeDependencies::init_apply(const IR::Node* root) {
                          liverange1.first << ", " << liverange1.second << ") due to live ranges");
                     continue;
                 }
-                initFieldsToOverlappingFields[f].insert(sl.field);
+                PHV::AllocSlice initSlice(phv.field(slice.field->id), slice.container,
+                        slice.field_bit, slice.container_bit, slice.width);
+                PHV::AllocSlice overlappingSlice(phv.field(sl.field->id), sl.container,
+                        sl.field_bit, sl.container_bit, sl.width);
+                initSlicesToOverlappingSlices[initSlice].insert(overlappingSlice);
             }
         });
     }
 
-    for (auto kv : initFieldsToOverlappingFields) {
-        LOG5("Initialize field " << kv.first->name);
-        for (const auto* f : kv.second)
-            LOG5("\t" << f->name);
+    for (auto& kv : initSlicesToOverlappingSlices) {
+        LOG5("  Initialize slice " << kv.first);
+        for (auto& sl : kv.second)
+            LOG5("\t" << sl);
     }
 
-    // Generate init field to table map.
-    ordered_map<const PHV::Field*, ordered_set<const IR::MAU::Table*>> fieldsToTableInits;
+    // Generate init slice to table map.
+    ordered_map<PHV::AllocSlice, ordered_set<const IR::MAU::Table*>> slicesToTableInits;
     const auto& initMap = fieldsForInit.getAllActionInits();
     for (auto kv : initMap) {
         auto t = actionsMap.getTableForAction(kv.first);
         if (!t) BUG("Cannot find table corresponding to action %1%", kv.first->name);
         for (const auto& slice : kv.second) {
-            fieldsToTableInits[slice.field].insert(*t);
+            PHV::AllocSlice initSlice(phv.field(slice.field->name), slice.container,
+                    slice.field_bit, slice.container_bit, slice.width);
+            slicesToTableInits[initSlice].insert(*t);
         }
     }
 
-    for (auto kv : fieldsToTableInits) {
-        LOG5("Field " << kv.first->name);
+    for (auto& kv : slicesToTableInits) {
+        LOG5("  Initializing slice " << kv.first);
         for (const auto* t : kv.second)
-            LOG5("\tInit at: " << t->name);
+            LOG5("\t" << t->name);
     }
 
-    noteDependencies(initFieldsToOverlappingFields, fieldsToTableInits);
+    noteDependencies(initSlicesToOverlappingSlices, slicesToTableInits);
 
     return Inspector::init_apply(root);
 }

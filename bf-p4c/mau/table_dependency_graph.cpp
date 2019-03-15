@@ -765,7 +765,7 @@ FindDependencyGraph::FindDependencyGraph(const PhvInfo &phv, DependencyGraph &ou
         : dg(out) {
     addPasses({
         new GatherReductionOrReqs(red_info),
-        new TableFindInjectedDependencies(dg),
+        new TableFindInjectedDependencies(phv, dg),
         new FindDataDependencyGraph(phv, dg, red_info)
     });
 }

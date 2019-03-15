@@ -6,17 +6,12 @@
 #include "mau_visitor.h"
 #include "table_dependency_graph.h"
 #include "bf-p4c/ir/control_flow_visitor.h"
+#include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/mau/table_flow_graph.h"
 #include "lib/ordered_set.h"
 #include "lib/ordered_map.h"
 
 
-class TableFindInjectedDependencies : public PassManager {
- public:
-    explicit TableFindInjectedDependencies(DependencyGraph& dg);
- private:
-    // Duplicates to dominators
-    ordered_map<const IR::MAU::TableSeq*, const IR::MAU::Table*> dominators;
-};
 
 class InjectControlDependencies : public MauInspector {
     void postorder(const IR::MAU::TableSeq *seq) override;
@@ -50,6 +45,77 @@ class DominatorAnalysis : public MauInspector {
     : dg(out), candidate_imm_doms(dom_out) {
         visitDagOnce = false;
     }
+};
+
+
+using TablePathways = ordered_map<const IR::MAU::Table *,
+                                  safe_vector<safe_vector<const IR::Node *>>>;
+
+class GatherPathwaysToTable : public MauInspector {
+    TablePathways &table_pathways;
+
+    Visitor::profile_t init_apply(const IR::Node *node) override {
+        auto rv = MauInspector::init_apply(node);
+        table_pathways.clear();
+        return rv;
+    }
+    bool preorder(const IR::MAU::Table *) override;
+
+ public:
+    explicit GatherPathwaysToTable(TablePathways &tp) : table_pathways(tp) {
+        visitDagOnce = false;
+    }
+};
+
+using InjectPoints = safe_vector<std::pair<const IR::MAU::Table *, const IR::MAU::Table *>>;
+
+class InjectMetadataControlDependencies : public MauInspector {
+    bool tables_placed = false;
+    const PhvInfo &phv;
+    const TablePathways &table_pathways;
+    DependencyGraph &dg;
+    FlowGraph &fg;
+    std::map<cstring, const IR::MAU::Table *> name_to_table;
+
+    Visitor::profile_t init_apply(const IR::Node *node) override {
+        auto rv = MauInspector::init_apply(node);
+        name_to_table.clear();
+        tables_placed = false;
+        return rv;
+    }
+
+    bool preorder(const IR::MAU::Table *t) override {
+        name_to_table[t->name] = t;
+        tables_placed |= t->is_placed();
+        return true;
+    }
+    void end_apply() override;
+    InjectPoints get_inject_points(const IR::MAU::Table *a, const IR::MAU::Table *b);
+
+ public:
+    InjectMetadataControlDependencies(const PhvInfo &p, const TablePathways &tp,
+                                      DependencyGraph &g, FlowGraph &f)
+        : phv(p), table_pathways(tp), dg(g), fg(f) {}
+};
+
+class TableFindInjectedDependencies : public PassManager {
+    const PhvInfo &phv;
+    DependencyGraph &dg;
+    TablePathways tp;
+    FlowGraph fg;
+
+    profile_t init_apply(const IR::Node *root) override {
+        auto rv = PassManager::init_apply(root);
+        tp.clear();
+        fg.clear();
+        return rv;
+    }
+
+ public:
+    explicit TableFindInjectedDependencies(const PhvInfo &p, DependencyGraph& dg);
+ private:
+    // Duplicates to dominators
+    ordered_map<const IR::MAU::TableSeq*, const IR::MAU::Table*> dominators;
 };
 
 #endif /* BF_P4C_MAU_TABLE_INJECTED_DEPS_H_ */
