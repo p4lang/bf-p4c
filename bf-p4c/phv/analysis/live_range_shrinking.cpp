@@ -536,6 +536,10 @@ FindInitializationNode::findInitializationNodes(
         const ordered_set<const PHV::Field*>& fields,
         const PHV::Transaction& alloc,
         const PHV::Allocation::MutuallyLiveSlices& container_state) const {
+    // Metadata initialization that enables live range shrinking cannot occur for tagalong
+    // containers as we cannot reset the container to 0 (container not accessible in the MAU).
+    if (c.is(PHV::Kind::tagalong)) return boost::none;
+
     PHV::Allocation::LiveRangeShrinkingMap initPoints;
     // If there aren't multiple fields in the queried field set, then initialization is not
     // required.
