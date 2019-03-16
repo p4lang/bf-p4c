@@ -1244,7 +1244,7 @@ class CollectPardeConstraints : public Inspector {
         // 590:egress::$mirror<3:0..2> specifies 1 of 8 field lists
         // currently, IR::BFN::Digest node has a string field to distinguish them by name
         if (digest->name != "learning" && digest->name != "mirror"
-            && digest->name != "resubmit")
+            && digest->name != "resubmit" && digest->name != "pktgen")
             return;
 
         PHV::Field* f = phv.field(digest->selector->field);
@@ -1283,7 +1283,7 @@ class CollectPardeConstraints : public Inspector {
             return;
         }
 
-        if (digest->name == "learning") {
+        if (digest->name == "learning" || digest->name == "pktgen") {
             // Add byte-aligned constraint to metadata field in learning field_list
             // TODO(yumin): This constraint can be relaxed to be no_pack in a same byte.
             for (auto fieldList : digest->fieldLists) {
@@ -1302,7 +1302,7 @@ class CollectPardeConstraints : public Inspector {
 
             if (LOGGING(3)) {
                 for (auto fieldList : digest->fieldLists) {
-                    LOG3("\t.....learning field list..... ");
+                    LOG3("\t....." << digest->name << " field list..... ");
                     for (auto fieldListEntry : fieldList->sources) {
                         auto fieldInfo = phv.field(fieldListEntry->field);
                         if (fieldInfo)
