@@ -925,6 +925,11 @@ CoreAllocation::tryAllocSliceList(
                 continue;
             const auto& alloced_slices =
                 alloc_attempt.slices(slice.container(), slice.container_slice());
+            if (alloced_slices.size() > 0) {
+                LOG7("\t\t  Already allocated slices that would overlap with candidate slice(s):");
+                for (auto& slice : alloced_slices)
+                    LOG7("\t\t\t" << slice);
+            }
             if (alloced_slices.size() > 0 && can_overlay(mutex_i, slice.field(), alloced_slices)) {
                 LOG5("    ...and can overlay " << slice.field() << " on " << alloced_slices);
             } else if (alloced_slices.size() > 0) {
@@ -957,6 +962,7 @@ CoreAllocation::tryAllocSliceList(
 
                     initNodes = meta_init_i.findInitializationNodes(alloced_slices, slice,
                             alloc_attempt, actual_container_state);
+                    bool noInitPresent = true;
                     if (!initNodes) {
                         LOG5("       ...but cannot find initialization points.");
                         can_place = false;
@@ -969,6 +975,7 @@ CoreAllocation::tryAllocSliceList(
                         // For the initialization plan returned, note the fields that would need to
                         // be initialized in the MAU.
                         for (auto kv : *initNodes) {
+                            if (kv.second.size() > 0) noInitPresent = false;
                             if (kv.first == slice.field()) {
                                 LOG5("\t\tA. Inserting " << slice << " into metaInitSlices");
                                 metaInitSlices.insert(slice);
@@ -978,6 +985,12 @@ CoreAllocation::tryAllocSliceList(
                                     LOG5("\t\tB. Inserting " << sl << " into metaInitSlices");
                                     metaInitSlices.insert(sl);
                                     continue; } } } }
+                    if (!noInitPresent && disableMetadataInit) {
+                        LOG5("       ...but live range shrinking requiring metadata initialization "
+                             "is disabled in this round");
+                        can_place = false;
+                        break;
+                    }
                 } else {
                     LOG5("    ...but " << c << " already contains slices at this position");
                     can_place = false;
@@ -1032,13 +1045,24 @@ CoreAllocation::tryAllocSliceList(
         // Actual slices in the container, after accounting for metadata overlay.
         PHV::Allocation::MutuallyLiveSlices actual_container_state;
         for (auto& field_slice : container_state) {
-            bool sliceOverlaysAllCandidates = true;
+            bool sliceLiveRangeDisjointWithAllCandidates = true;
+            auto Overlaps = [&](const PHV::AllocSlice& slice) {
+                return slice.container_slice().overlaps(field_slice.container_slice());
+            };
+            // Check if any of the candidate slices being considered for allocation overlap with the
+            // slice already in the container. Even if one of the slices overlaps, it is considered
+            // a case of metadata overlay enabled by live range shrinking.
+            bool hasOverlay = std::any_of(candidate_slices.begin(), candidate_slices.end(),
+                Overlaps);
             for (auto& candidate_slice : candidate_slices) {
                 if (!PHV::Allocation::mutually_exclusive(phv_i.metadata_mutex(),
                             field_slice.field(), candidate_slice.field()))
-                    sliceOverlaysAllCandidates = false;
+                    sliceLiveRangeDisjointWithAllCandidates = false;
             }
-            if (sliceOverlaysAllCandidates) continue;
+            // If the current slice overlays with at least one candidate slice AND its live range
+            // does not overlap with the candidate slices, we do not consider the existing slice to
+            // be part of the live container state.
+            if (hasOverlay && sliceLiveRangeDisjointWithAllCandidates) continue;
             actual_container_state.insert(field_slice);
             // Get initialization actions for all other slices in this container and not overlaying
             // with the candidate fields.

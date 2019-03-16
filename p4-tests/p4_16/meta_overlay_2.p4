@@ -21,15 +21,9 @@
  *
  * Soumyadeep Ghosh
  *
- * This test is designed to test the interaction of the deparsed-zero optimization and metadata
- * initialization required by live range shrinking-based overlay.
+ * This test is designed to test the initialization at strict dominators, when all strict dominators
+ * write to the initialized field in some of their actions (but not all actions).
  *
- * The field m2 is designed to be overlaid due to disjoint live ranges with the header field
- * data2.f2, which is a deparsed-zero candidate. Therefore, four byte-sized slices of data2.f2 and
- * m2 will be be allocated to the same container, B0. If the initialization is correctly inserted
- * (only one initialization instruction corresponding to one byte-sized slice of data2.f2 is
- * inserted in actions of table test6), then compilation will succeed. Further, correct
- * initialization of the deparsed-zero fields will ensure that the packet output is correct.
  *
  **************************************************************************************************/
 
@@ -40,25 +34,17 @@
 #endif
 
 header data_h {
-    bit<16>      f1;
-    bit<16>      f2;
-}
-
-header data_w {
-    bit<32>      f1;
-    bit<32>      f2;
-    bit<8>       f3;
+    bit<8>      f1;
+    bit<8>      f2;
 }
 
 struct metadata {
-    bit<16>      m1;
-    bit<8>       m2;
-    bit<8>       m3;
+    bit<8>      m1;
+    bit<8>      m2;
 }
 
 struct packet_t {
-    data_h      data1;
-    data_w      data2;
+    data_h      data;
 }
 
 parser parserI(
@@ -73,7 +59,7 @@ parser parserI(
 #else
         b.advance(128);
 #endif
-        b.extract(hdrs.data1);
+        b.extract(hdrs.data);
         transition accept;
     }
 }
@@ -85,44 +71,48 @@ control ingress(
         in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md,
         inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md,
         inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
-    action set1(bit<9> port, bit<16> val) {
+    action set1(bit<9> port, bit<8> val) {
         meta.m1 = val;
-        meta.m2 = 4;
         ig_intr_tm_md.ucast_egress_port = port;
     }
 
-    action set2(bit<9> port) {
-        meta.m3 = meta.m2;
-        hdrs.data1.f1 = meta.m1;
-        ig_intr_tm_md.ucast_egress_port = port;
+    action set2() {
+        hdrs.data.f1 = meta.m1;
     }
 
-    action set3(bit<9> port, bit<16> val) {
-        hdrs.data1.f2 = val;
-        ig_intr_tm_md.ucast_egress_port = port;
+    action set3(bit<8> val) {
+        hdrs.data.f2 = val;
     }
 
-    action set4(bit<9> port, bit<16> val) {
-        hdrs.data1.f1 = val;
-        ig_intr_tm_md.ucast_egress_port = port;
+    action set4(bit<8> val) {
+        hdrs.data.f1 = val + hdrs.data.f1;
     }
 
-    action set5(bit<9> port, bit<16> val) {
-        hdrs.data1.f2 = val;
+    action set5_1(bit<9> port) {
         ig_intr_tm_md.ucast_egress_port = port;
+        hdrs.data.f1 = meta.m2;
     }
 
-    action set6(bit<9> port) {
+    action set5_2(bit<8> val) {
+        meta.m2 = val;
+    }
+
+    action set6_1(bit<9> port) {
         ig_intr_tm_md.ucast_egress_port = port;
-        hdrs.data2.setValid();
-        hdrs.data2.f1 = 0x1234;
-        hdrs.data2.f2 = 0;
-        hdrs.data2.f3 = meta.m3;
+        hdrs.data.f1 = meta.m2;
+    }
+
+    action set6_2(bit<8> val) {
+        meta.m2 = 3;
+    }
+
+    action set7() {
+        hdrs.data.f2 = meta.m2;
     }
 
     table test1 {
         key = {
-            hdrs.data1.f1 : exact;
+            hdrs.data.f1 : exact;
         }
         actions = {
             set1;
@@ -131,7 +121,7 @@ control ingress(
 
     table test2 {
         key = {
-            hdrs.data1.f2 : exact;
+            hdrs.data.f2 : exact;
         }
         actions = {
             set2;
@@ -140,7 +130,7 @@ control ingress(
 
     table test3 {
         key = {
-            hdrs.data1.f1 : exact;
+            hdrs.data.f1 : exact;
         }
         actions = {
             set3;
@@ -149,40 +139,56 @@ control ingress(
 
     table test4 {
         key = {
-            hdrs.data1.f2 : exact;
+            hdrs.data.f2 : exact;
         }
         actions = {
             set4;
         }
+        default_action = set4(0x1);
     }
 
     table test5 {
         key = {
-            hdrs.data1.f1 : exact;
+            hdrs.data.f1 : exact;
         }
         actions = {
-            set5;
+            set5_1;
+            set5_2;
         }
-        default_action = set5(3, 0x1234);
+        default_action = set5_1(6);
     }
 
     table test6 {
         key = {
-            hdrs.data1.f2 : exact;
+            hdrs.data.f2 : exact;
         }
         actions = {
-            set6;
+            set6_1;
+            set6_2;
         }
+        default_action = set6_1(7);
+    }
+
+    table test7 {
+        key = {
+            meta.m2 : exact;
+        }
+        actions = {
+            set7;
+        }
+        default_action = set7();
     }
 
     apply {
-        meta.m1 = 1;
         test1.apply();
         test2.apply();
         test3.apply();
         test4.apply();
-        test5.apply();
-        test6.apply();
+        if (hdrs.data.f1 == 0x09)
+            test5.apply();
+        else
+            test6.apply();
+        test7.apply();
     }
 }
 
@@ -192,8 +198,7 @@ control deparserI(
         in metadata meta,
         in ingress_intrinsic_metadata_for_deparser_t ig_intr_dprsr_md) {
     apply {
-        b.emit(hdrs.data1);
-        b.emit(hdrs.data2);
+        b.emit(hdrs.data);
     }
 }
 
@@ -204,8 +209,7 @@ parser parserE(
         out egress_intrinsic_metadata_t eg_intr_md) {
     state start {
         b.extract(eg_intr_md);
-        b.extract(hdrs.data1);
-        b.extract(hdrs.data2);
+        b.extract(hdrs.data);
         transition accept;
     }
 }
@@ -226,8 +230,7 @@ control deparserE(
         in metadata meta,
         in egress_intrinsic_metadata_for_deparser_t eg_intr_dprs_md) {
     apply {
-        b.emit(hdrs.data1);
-        b.emit(hdrs.data2);
+        b.emit(hdrs.data);
     }
 }
 

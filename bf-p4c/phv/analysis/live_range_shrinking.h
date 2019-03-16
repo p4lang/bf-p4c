@@ -47,7 +47,7 @@ class FindInitializationNode : public Inspector {
 
     /// @returns true if the def of field @f in unit @u is the definition corresponding to implicit
     /// initialization in the parser.
-    bool isUninitializedDef(const PHV::Field* f, const IR::BFN::Unit* u) const;
+    bool isUninitializedDef(const PHV::Field* f, const FieldDefUse::locpair& def) const;
 
     /// @returns true if any of the dominator units in @doms is a parser node.
     bool hasParserUse(ordered_set<const IR::BFN::Unit*> doms) const;
@@ -321,7 +321,14 @@ class AddInitialization : public Transform {
     const ComputeFieldsRequiringInit&       fieldsForInit;
     const MapTablesToActions&               actionsMap;
 
+    ordered_map<PHV::FieldSlice, PHV::Allocation::ActionSet> initializedSlices;
+
+    profile_t init_apply(const IR::Node* root) override {
+        initializedSlices.clear();
+        return Transform::init_apply(root);
+    }
     const IR::MAU::Action* postorder(IR::MAU::Action* act) override;
+    void end_apply() override;
 
  public:
     explicit AddInitialization(

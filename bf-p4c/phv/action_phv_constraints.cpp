@@ -275,13 +275,10 @@ ActionPhvConstraints::ConstraintTracker::read_in(PHV::FieldSlice src) const {
 ordered_set<const IR::MAU::Action*>
 ActionPhvConstraints::ConstraintTracker::written_in(PHV::FieldSlice dst) const {
     ordered_set<const IR::MAU::Action*> rv;
-    if (field_writes_to_actions.find(dst.field()) == field_writes_to_actions.end())
-        return rv;
-
+    if (!field_writes_to_actions.count(dst.field())) return rv;
     for (auto& kv : field_writes_to_actions.at(dst.field())) {
-        if (kv.first.contains(dst.range()))
+        if (kv.first.overlaps(dst.range()))
             rv.insert(kv.second.begin(), kv.second.end()); }
-
     return rv;
 }
 
@@ -1144,12 +1141,28 @@ bool ActionPhvConstraints::check_and_generate_constraints_for_move_with_unalloca
             // field sets is contiguous, then a valid deposit-field is possible.
             static PHV::Allocation::LiveRangeShrinkingMap emptyInit;
             if (has_bits_not_written_to) {
-                if (!masks_valid(state_written_to, action, false /*non action data only*/,
-                            emptyInit) &&
-                    !masks_valid(state_not_written_to, action, false /*non action data only*/,
-                        emptyInit)) {
-                    LOG5("\t\t\t\tMasks found to not be valid for packing");
-                    return false; } }
+                // If the source container is not aligned with the container state being written,
+                // then the written container state must be src1, as it would be shifted into the
+                // right bit position within the container. This requires the written container
+                // state to be contiguous as the mask is expressed as a contiguous [lo, hi] value
+                // for the deposit-field. Therefore, for the unaligned case, we should only check
+                // the mask validity for the container state written to.
+                bool sourceContainerAlignedWithDest = is_aligned(state_written_to, action, alloc);
+                bool writtenMaskValid = masks_valid(state_written_to, action,
+                        false /* non action data only */, emptyInit);
+                if (sourceContainerAlignedWithDest) {
+                    if (!writtenMaskValid && !masks_valid(state_not_written_to, action,
+                                false /*non action data only*/, emptyInit)) {
+                        LOG5("\t\t\t\tMasks found to not be valid for packing");
+                        return false;
+                    }
+                } else if (!writtenMaskValid) {
+                    LOG5("\t\t\t\tSource container and destination container are not aligned. "
+                         "Therefore, we require a contiguous mask for the container state written. "
+                         "However, mask found to not be contiguous.");
+                    return false;
+                }
+            }
             // If the allocation is to a mocha or dark container, and there is an unallocated
             // source, we need to make sure the source and the destination are aligned.
             if (mocha_or_dark && sources.num_unallocated > 0) {
@@ -1830,12 +1843,12 @@ bool ActionPhvConstraints::masks_valid(
     bitvec actionDataConstantMask;
     for (auto slice : container_state) {
         if (actionDataOnly && has_ad_or_constant_sources({ slice }, action, initActions)) {
-            LOG7("\t\t\t\t  Action data constant mask for " << slice << " : " <<
+            LOG5("\t\t\t\t  Action data constant mask for " << slice << " : " <<
                     slice.container_slice().lo << ", " << slice.width());
             actionDataConstantMask |= bitvec(slice.container_slice().lo, slice.width());
         }
         if (!actionDataOnly) {
-            LOG7("\t\t\t\t  Mask for " << slice << " : " << slice.container_slice().lo
+            LOG5("\t\t\t\t  Mask for " << slice << " : " << slice.container_slice().lo
                     << ", " << slice.width());
             actionDataConstantMask |= bitvec(slice.container_slice().lo, slice.width());
         }
@@ -1844,6 +1857,30 @@ bool ActionPhvConstraints::masks_valid(
     if (actionDataConstantMask.is_contiguous())
         return true;
     return false;
+}
+
+bool ActionPhvConstraints::is_aligned(
+        const PHV::Allocation::MutuallyLiveSlices& container_state,
+        const IR::MAU::Action* action,
+        const PHV::Allocation& alloc) const {
+    for (auto& slice : container_state) {
+        auto reads = constraint_tracker.sources(slice, action);
+        BUG_CHECK(reads.size() > 0, "Slice %1% must be written in action %2%", slice, action->name);
+        for (auto operand : reads) {
+            BUG_CHECK(operand.phv_used->field(), "There must be a field read for slice %1%", slice);
+            ordered_set<PHV::AllocSlice> per_source_slices = alloc.slices(operand.phv_used->field(),
+                    operand.phv_used->range());
+            for (auto source : container_state)
+                if (source.field() == operand.phv_used->field() &&
+                        source.field_slice().overlaps(operand.phv_used->range()))
+                    per_source_slices.insert(source);
+            for (auto source_slice : per_source_slices) {
+                if (source_slice.container_slice().lo != slice.container_slice().lo)
+                    return false;
+            }
+        }
+    }
+    return true;
 }
 
 inline int ActionPhvConstraints::getOffset(le_bitrange a, le_bitrange b, PHV::Container c) const {
@@ -2173,6 +2210,15 @@ bool ActionPhvConstraints::checkBridgedPackingConstraints(
                 LOG6("\t\t\t  Returning false");
                 return false; } } }
     return true;
+}
+
+bool ActionPhvConstraints::written_in(const PHV::Field* f, const IR::MAU::Action* act) const {
+    if (LOGGING(6)) {
+        LOG6("\t\t\t\tField " << f->name << " is written by:");
+        for (const auto* act : actions_writing_fields(f))
+            LOG6("\t\t\t\t  " << act->name);
+    }
+    return actions_writing_fields(f).count(act);
 }
 
 bool ActionPhvConstraints::written_by_ad_constant(

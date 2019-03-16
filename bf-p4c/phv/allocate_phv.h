@@ -166,6 +166,8 @@ class CoreAllocation {
 
     // Metadata initialization possibilities.
     LiveRangeShrinking& meta_init_i;
+    // Table allocation information from the previous round.
+    bool disableMetadataInit;
 
     const CalcParserCriticalPath& parser_critical_path_i;
 
@@ -194,10 +196,12 @@ class CoreAllocation {
                    PhvInfo& phv,
                    ActionPhvConstraints& actions,
                    LiveRangeShrinking& meta,
-                   const CalcParserCriticalPath& parser_critical_path)
+                   const CalcParserCriticalPath& parser_critical_path,
+                   const MauBacktracker& alloc)
         : mutex_i(mutex), /* clustering_i(clustering), */ uses_i(uses), defuse_i(defuse),
           clot_i(clot), phv_i(phv), actions_i(actions), pragmas_i(pragmas), meta_init_i(meta),
-          parser_critical_path_i(parser_critical_path) { }
+          parser_critical_path_i(parser_critical_path),
+          disableMetadataInit(alloc.disableMetadataInitialization()) { }
 
     /// @returns true if @f can overlay all fields in @slices.
     static bool can_overlay(
@@ -567,7 +571,7 @@ class AllocatePHV : public Inspector {
                 const MauBacktracker& alloc,
                 LiveRangeShrinking& meta_init)
         : core_alloc_i(phv.parser_mutex(), clustering, uses, defuse, clot, pragmas, phv, actions,
-                meta_init, parser_critical_path),
+                meta_init, parser_critical_path, alloc),
           phv_i(phv), uses_i(uses), clot_i(clot),
           clustering_i(clustering), alloc_i(alloc),
           mutex_i(phv.parser_mutex()), pragmas_i(pragmas),

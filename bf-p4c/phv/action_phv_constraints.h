@@ -1,6 +1,4 @@
 #ifndef BF_P4C_PHV_ACTION_PHV_CONSTRAINTS_H_
-
-
 #define BF_P4C_PHV_ACTION_PHV_CONSTRAINTS_H_
 
 #include <boost/optional.hpp>
@@ -450,6 +448,15 @@ class ActionPhvConstraints : public Inspector {
             ordered_map<size_t, ordered_set<PHV::AllocSlice>>& sources,
             const PHV::Container c) const;
 
+    /** @returns true if the @container_state written to in action @act is aligned with its
+      * allocated sources.
+      */
+    bool is_aligned(
+            const PHV::Allocation::MutuallyLiveSlices& container_state,
+            const IR::MAU::Action* act,
+            const PHV::Allocation& alloc) const;
+
+
     /** @returns true if a packing with one PHV source and one action data constant can be realized
       * such that the action data mask is contiguous. Generates and checks masks for only slices
       * with action data/constant sources, if actionDataOnly is true. Otherwise, generates and
@@ -725,9 +732,7 @@ class ActionPhvConstraints : public Inspector {
 
     /** @returns true if field @f is written in action @act.
       */
-    bool written_in(const PHV::Field* f, const IR::MAU::Action* act) const {
-        return actions_writing_fields(f).count(act);
-    }
+    bool written_in(const PHV::Field* f, const IR::MAU::Action* act) const;
 
     /** @returns true if field @f is written in action @act by action data/constant source.
       */

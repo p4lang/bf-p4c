@@ -151,9 +151,12 @@ void TableSummary::throwBacktrackException() {
         // taking into account al the pack conflicts produced by this table placement round, and
         // also disabling metadata initialization. This is because metadata initialization has been
         // found to increase the dependency chain length occasionally.
-        if (!placementFailure && maxStage > deviceStages)
+        if (!placementFailure && maxStage > deviceStages) {
+            LOG1("Invoking table placement without metadata initialization because container "
+                 "conflict-free table placement required " << maxStage << " stages.");
             throw PHVTrigger::failure(tableAlloc, firstRoundFit, false /* ignorePackConflicts */,
                                       true /* metaInitDisable */);
+        }
     }
 
     // Third round of table placement.

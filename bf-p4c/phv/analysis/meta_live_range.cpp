@@ -123,28 +123,20 @@ void MetadataLiveRange::setFieldLiveMap(const PHV::Field* f) {
             }
         }
         // If the field is not specified as pa_no_init and has a def in the parser:
-        // 1. If the field does not have an uninitialized read and is not specified as not parsed,
-        // and is not an ingress bridged field, then its def in the parser is `real` and so must be
-        // taken into account.
+        // If the definition is of type ImplicitParserInit, then it was added to account for
+        // uninitialized reads, and can be safely ignored.
         if (def_unit->is<IR::BFN::ParserState>() || def_unit->is<IR::BFN::Parser>()) {
-            if (!defuse.hasUninitializedRead(f->id) && !notParsedFields.count(f) && !(f->bridged &&
-                        f->gress == INGRESS)) {
-                minDef = -1;
-                minDefAccess = WRITE;
-                LOG4("\t  Field with initialized read defined in parser.");
+            // If the def is an implicit read inserted only for metadata fields to account for
+            // uninitialized reads, then ignore that initialization.
+            if (def.second->is<ImplicitParserInit>()) {
+                LOG4("\t\tIgnoring implicit parser init.");
                 continue;
             }
-            // 2. For all other fields, if the def includes the INGRESS_PARSER_ENTRY (for ingress)
-            // or the EGRESS_PARSER_ENTRY (for egress) parser state, then this is the implicit
-            // initialization inserted by the compiler and so, can be safely ignored for live range
-            // analysis.
-            if (def_unit->is<IR::BFN::ParserState>()) {
-                if (def_unit->to<IR::BFN::ParserState>()->name.startsWith(INGRESS_PARSER_ENTRY) &&
-                    def_unit->to<IR::BFN::ParserState>()->name.startsWith(EGRESS_PARSER_ENTRY)) {
-                    LOG4("\t  Defined in parser.");
-                    minDef = -1;
-                    minDefAccess = WRITE;
-                }
+            if (!notParsedFields.count(f) && !(f->bridged && f->gress == INGRESS)) {
+                LOG4("\t  Field defined in parser.");
+                minDef = -1;
+                minDefAccess = WRITE;
+                continue;
             }
         } else if (def_unit->is<IR::BFN::Deparser>()) {
             if (notDeparsedFields.count(f)) continue;
@@ -212,9 +204,6 @@ void MetadataLiveRange::setPaddingFieldLiveMap(const PHV::Field* f) {
 void MetadataLiveRange::end_apply() {
     // If there are no tables, then dg.max_min_stage is -1, and this analysis is not required.
     if (dg.max_min_stage < 0) return;
-    // If this pass is supposed to run without metadata initialization, then do not run this
-    // analysis.
-    if (alloc.disableMetadataInitialization()) return;
 
     // Set of fields whose live ranges must be calculated.
     ordered_set<const PHV::Field*> fieldsConsidered;

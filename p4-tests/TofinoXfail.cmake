@@ -214,6 +214,9 @@ p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
   ../glass/testsuite/p4_tests/phv/COMPILER-546/switch_comp546.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-788/comp_788.p4
+  ../glass/testsuite/p4_tests/phv/COMPILER-243/comp243.p4
+  ../glass/testsuite/p4_tests/mau/COMPILER-362/icmp_typecode.p4
+  extensions/p4_tests/p4_16/compile_only/flex_packing_switch.p4
   extensions/p4_tests/p4-programs/internal_p4_14/fr_test/fr_test.p4
 )
 
@@ -221,6 +224,8 @@ p4c_add_xfail_reason("tofino"
   "error.*Can't split table.*with indirect attached MAU::StatefulAlu"
   switch_8.7_ent_fin_postcard
   switch_ent_fin_postcard
+  switch_generic_int_leaf
+  switch_8.7_generic_int_leaf
   ../glass/testsuite/p4_tests/phv/COMPILER-587/l4l.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-828/meta_init_problem.p4
 )
@@ -236,8 +241,6 @@ p4c_add_xfail_reason("tofino"
   switch_msdc_leaf_int
   switch_8.7_msdc_leaf_int
   switch_8.7_l3_heavy_int_leaf
-  switch_generic_int_leaf
-  switch_8.7_generic_int_leaf
   )
 
 p4c_add_xfail_reason("tofino"
@@ -327,8 +330,6 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "A packet was received on device"
-  smoketest_switch_msdc_MalformedPacketsTest
-  smoketest_switch_8.7_msdc_MalformedPacketsTest
   smoketest_switch_marker_spine_L2StpEgressBlockingTest
   smoketest_switch_ent_dc_general_egress_acl
   )
