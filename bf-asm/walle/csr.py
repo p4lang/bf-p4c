@@ -422,8 +422,8 @@ class csr_composite_object (csr_object):
                 #  do that, so we don't emit C++ code to do it either.
                 #  Would it cause problems for register arrays that are actually wideregs
                 #  under the hood?  See 3.2.1.1 in the Tofino Switch Architecture doc.
-                #outfile.write("%sif (!%s.disabled()) {\n" % (indent, field_name(a)))
-                #indent += '  '
+                outfile.write("%sif (!%s.disabled()) {\n" % (indent, field_name(a)))
+                indent += '  '
                 if single.msb >= 64:
                     for w in (range(single.msb//32, -1, -1) 
                               if args.reverse_write else
@@ -444,8 +444,8 @@ class csr_composite_object (csr_object):
                         outfile.write("%sout << binout::tag('R') << binout::byte4" % indent +
                                       "(%s + 0x%x) << binout::byte4(%s);\n" %
                                       (addr_var, a.offset//address_unit, field_name(a)))
-                #indent = indent[2:]
-                #outfile.write("%s}\n" % indent)
+                indent = indent[2:]
+                outfile.write("%s}\n" % indent)
             else:
                 outfile.write(indent)
                 if a.top_level():
@@ -490,7 +490,7 @@ class csr_composite_object (csr_object):
                     outfile.write("%sint i%d = (addr - (char *)&%s" % (indent, i, field_name))
                     for j in range(0, i):
                         outfile.write("[i%d]" % j)
-                    outfile.write("[0])/sizeof(%s" % field_name)
+                    outfile.write("[0])/(int)sizeof(%s" % field_name)
                     for j in range(0, i+1):
                         outfile.write("[0]")
                     outfile.write(");\n")

@@ -405,6 +405,8 @@ if $debug; then
     $P4C -# $P4C_ARGS $file -o $testdir/${name}${out_ext}.out | while read cmd rest; do
         if [[ -z $rest && $cmd =~ :$ ]]; then
             continue # skip the label
+        elif [[ $cmd = parse ]]; then
+            continue # skip the parse manifest: message
         elif $debug_p4c && [[ $cmd =~ p4c-barefoot ]]; then
             db="$DEBUGGER_COMMAND"
         elif $debug_bfas && [[ $cmd =~ bfas ]]; then

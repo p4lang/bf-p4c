@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include "log.h"
+#include "bfas.h"  // to get at the options
 
 void print_regname(std::ostream &out, const void *addr, const void *end);
 
@@ -42,7 +43,6 @@ public:
             new(&e) T(*it++); } }
     T& operator[](size_t idx) {
         if (idx >= S) ERROR("array index " << idx << " out of bounds " << this);
-        if (disabled_) ERROR("Accessing disabled record " << this);
         return data[idx]; }
     const T& operator[](size_t idx) const {
         assert(idx < S);
@@ -72,22 +72,28 @@ public:
         bool rv = true;
         for (size_t i = 0; i < S; i++)
             if (!data[i].disable_if_unmodified()) rv = false;
-        /* Can't actually disable arrays, as walle doesn't like it, but allow
-         * containing object to be disabled */
+        if (rv && !options.gen_json) {
+            /* Can't actually disable arrays when generating json, as walle doesn't like it,
+             * but allow containing object to be disabled */
+            disabled_ = true; } 
         return rv; }
     bool disable_if_zero() {
         bool rv = true;
         for (size_t i = 0; i < S; i++)
             if (!data[i].disable_if_zero()) rv = false;
-        /* Can't actually disable arrays, as walle doesn't like it, but allow
-         * containing object to be disabled */
+        if (rv && !options.gen_json) {
+            /* Can't actually disable arrays when generating json, as walle doesn't like it,
+             * but allow containing object to be disabled */
+            disabled_ = true; } 
         return rv; }
     bool disable_if_reset_value() {
         bool rv = true;
         for (size_t i = 0; i < S; i++)
             if (!data[i].disable_if_reset_value()) rv = false;
-        /* Can't actually disable arrays, as walle doesn't like it, but allow
-         * containing object to be disabled */
+        if (rv && !options.gen_json) {
+            /* Can't actually disable arrays when generating json, as walle doesn't like it,
+             * but allow containing object to be disabled */
+            disabled_ = true; } 
         return rv; }
 };
 
