@@ -215,7 +215,7 @@ bool ActionAnalysis::preorder(const IR::MAU::ActionArg *arg) {
 // continue analyzing the node underneath the cast.
 // An example is when a 1-bit action argument is casted to bool.
 // action (bit<1> arg) { bool m = (bool) arg; }
-bool ActionAnalysis::preorder(const IR::BFN::ReinterpretCast* cast) {
+bool ActionAnalysis::preorder(const IR::BFN::ReinterpretCast*) {
     return true;
 }
 
@@ -234,7 +234,7 @@ bool ActionAnalysis::preorder(const IR::MAU::HashDist *hd) {
     return false;
 }
 
-bool ActionAnalysis::preorder(const IR::MAU::IXBarExpression *ix) {
+bool ActionAnalysis::preorder(const IR::MAU::IXBarExpression *) {
     BUG("bare IXBarExpression in action");
     return false;
 }

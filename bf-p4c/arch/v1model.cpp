@@ -1354,8 +1354,8 @@ class ConstructSymbolTable : public Inspector {
     void cvtRecirculateRawFunction(const IR::MethodCallStatement *node) {
         auto control = findContext<IR::P4Control>();
         ERROR_CHECK(control != nullptr, "random() must be used in a control block");
-        const bool isIngress =
-                (control->name == structure->getBlockName(ProgramStructure::INGRESS));
+        ERROR_CHECK(control->name == structure->getBlockName(ProgramStructure::INGRESS),
+                    "Recirculate must be called in Ingress");
         auto mce = node->methodCall->to<IR::MethodCallExpression>();
         BUG_CHECK(mce != nullptr, "Malformed IR: method call expression cannot be nullptr");
         IR::PathExpression *tm_meta = new IR::PathExpression("ig_intr_md_for_tm");

@@ -47,8 +47,6 @@
 // XXX(cole): Rather than producing an error, it would be better to rewrite the
 // conflicting user-supplied instance names.
 class NormalizeParams : public Modifier {
-    const IR::ToplevelBlock*   toplevel;
-
     /// Maps (original) parameter node pointers for each block to the names
     /// that should replace them.
     using Renaming = ordered_map<const IR::Parameter*, cstring>;
@@ -59,7 +57,7 @@ class NormalizeParams : public Modifier {
     bool preorder(IR::P4Control* control) override;
 
  public:
-    explicit NormalizeParams(const IR::ToplevelBlock* toplevel) : toplevel(toplevel) {}
+    explicit NormalizeParams(const IR::ToplevelBlock*) {}
 };
 
 class RenameArchParams : public PassManager {

@@ -74,6 +74,7 @@ class Argument : public Parameter {
     le_bitrange param_field() const { return _param_field; }
 
     Argument(cstring n, le_bitrange pf) : _name(n), _param_field(pf) {}
+    virtual ~Argument() {}
 
     bool from_p4_program() const override { return true; }
     const Parameter *split(int lo, int hi) const override {
@@ -117,7 +118,7 @@ class Argument : public Parameter {
  *
  * Similar to IR::Constant, the constant has a value and a bit size.  Due to the size of the
  * constant theoretically being infinite, a bitvec is used to store the value (though in
- * theory, an mpz_class could have been used as well 
+ * theory, an mpz_class could have been used as well
  */
 class Constant : public Parameter {
     bitvec _value;

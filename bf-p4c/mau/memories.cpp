@@ -1082,7 +1082,7 @@ bool Memories::allocate_all_exact(unsigned column_mask) {
                         auto stash_unit = -1;
                         for (int i = 0; i < STASH_UNITS; i++) {
                             if (stash_unit == -1) {
-                                auto width = 0;
+                                unsigned width = 0;
                                 for (auto ram : mem_way.rams) {
                                     if (stash_use[ram.first][i]) {
                                         stash_unit = -1;
@@ -1094,7 +1094,7 @@ bool Memories::allocate_all_exact(unsigned column_mask) {
                                 }
                             }
                             if (stash_unit >= 0) {  // Set stash unit for table
-                                auto width = 0;
+                                unsigned width = 0;
                                 for (auto ram : mem_way.rams) {
                                     if (width >= ram_width) break;
                                     stash_map[ixbar_way->group].push_back(ram.first);

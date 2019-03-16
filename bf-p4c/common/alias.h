@@ -11,8 +11,6 @@
   */
 class FindExpressionsForFields : public Inspector {
  private:
-    /// PhvInfo object.
-    const PhvInfo& phv;
     /// Map of IR::Expression objects corresponding to the field names.
     ordered_map<cstring, const IR::Member*>& fieldNameToExpressionsMap;
 
@@ -20,8 +18,8 @@ class FindExpressionsForFields : public Inspector {
     bool preorder(const IR::HeaderOrMetadata* h) override;
 
  public:
-    FindExpressionsForFields(const PhvInfo& p, ordered_map<cstring, const IR::Member*>& f)
-        : phv(p), fieldNameToExpressionsMap(f) { }
+    FindExpressionsForFields(const PhvInfo&, ordered_map<cstring, const IR::Member*>& f)
+        : fieldNameToExpressionsMap(f) { }
 };
 
 /** This class replaces all uses of alias source fields with the corresponding alias destination

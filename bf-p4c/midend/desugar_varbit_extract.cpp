@@ -139,7 +139,7 @@ void CollectVarbitExtract::enumerate_varbit_field_values(
         if (is_legal_runtime_value(state, var, i)) {
             auto c = evaluate(varsize, var, i);
 
-            if (c->asUnsigned() > varbit_field->type->to<IR::Type_Varbits>()->size) {
+            if (c->asInt() > varbit_field->type->to<IR::Type_Varbits>()->size) {
                 LOG4("compile time constant exceeds varbit field size: " << c->asUnsigned());
                 reject_values.insert(i);
             } else {

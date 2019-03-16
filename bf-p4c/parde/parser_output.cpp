@@ -257,9 +257,10 @@ struct ParserAsmSerializer : public ParserInspector {
         out << indent << "mask: ";
         out << "[ ";
 
-        int i = 0;
+        unsigned i = 0;
         for (auto r : csum->masked_ranges) {
             out << Range(r.lo, r.hi);
+
             if (i != csum->masked_ranges.size() - 1)
                 out << ", ";
             i++;

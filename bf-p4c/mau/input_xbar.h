@@ -468,7 +468,7 @@ struct IXBar {
          *
          * FIXME: This in the longterm is fairly unsafe, especially assumption 1, and the
          * lookup for this must change
-         */ 
+         */
         const IR::MAU::HashDist *original_hd;
         bool color_mapram = false;
 
@@ -563,7 +563,6 @@ struct IXBar {
     // Used to determine what phv fields need to be allocated on the input xbar for the
     // stateful ALU to work.  Private internal to allocStateful
     class FindSaluSources : public MauInspector {
-        IXBar                      &self;
         const PhvInfo              &phv;
         ContByteConversion  &map_alloc;
         safe_vector<const IR::Expression *> &field_list_order;
@@ -585,9 +584,9 @@ struct IXBar {
         static void collapse_contained(std::map<le_bitrange, const IR::Expression *> &m);
 
      public:
-        FindSaluSources(IXBar &self, const PhvInfo &phv, ContByteConversion &ma,
-            safe_vector<const IR::Expression *> &flo, const IR::MAU::Table *t)
-        : self(self), phv(phv), map_alloc(ma), field_list_order(flo), tbl(t) {}
+        FindSaluSources(IXBar &, const PhvInfo &phv, ContByteConversion &ma,
+                        safe_vector<const IR::Expression *> &flo, const IR::MAU::Table *t)
+        : phv(phv), map_alloc(ma), field_list_order(flo), tbl(t) {}
 
         ordered_map<const PHV::Field *, std::map<le_bitrange, const IR::Expression *>>
                                                         phv_sources;
