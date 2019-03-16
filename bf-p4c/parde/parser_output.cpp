@@ -42,9 +42,9 @@ struct ParserAsmSerializer : public ParserInspector {
     bool preorder(const IR::BFN::LoweredParser* parser) override {
         AutoIndent indentParser(indent);
 
-        out << "parser " << parser->gress << " ";
+        out << "parser " << parser->gress;
         if (parser->portmap.size() != 0) {
-            const char *sep = "[ ";
+            const char *sep = " [ ";
             for (auto port : parser->portmap) {
                 out << sep << port;
                 sep = ", ";
@@ -52,6 +52,11 @@ struct ParserAsmSerializer : public ParserInspector {
             out << " ]";
         }
         out << ":" << std::endl;
+
+        if (parser->name && parser->portmap.size() != 0)
+            out << indent << "name: " << canon_name(parser->name)
+                << std::endl;
+
         if (parser->start)
             out << indent << "start: " << canon_name(parser->start->name)
                 << std::endl;

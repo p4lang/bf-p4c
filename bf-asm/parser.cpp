@@ -163,6 +163,9 @@ void Parser::input(VECTOR(value_t) args, value_t data) {
         } else if (error_count > 0)
             break;
         for (auto &kv : MapIterChecked(data.map, true)) {
+            if (kv.key == "name" && (kv.value.type == tSTR)) {
+                name = kv.value.s;
+                continue; }
             if (kv.key == "start" && (kv.value.type == tVEC || kv.value.type == tSTR)) {
                 if (kv.value.type == tVEC)
                     for (int i = 0; i < 4 && i < kv.value.vec.size; i++)
@@ -385,7 +388,6 @@ void Parser::output_default_ports(json::vector& vec, bitvec port_use) {
     while(!port_use.empty()) {
         auto idx = port_use.ffs(0);
         vec.push_back(idx);
-        LOG3("port idx " << idx);
         port_use.clrbit(idx);
     }
 }
@@ -402,11 +404,11 @@ void Parser::output(json::map& ctxt_json) {
         declare_registers(regs);
         json::map parser_ctxt_json;
         parser_handle = next_handle();
-        LOG3("parser handle: " << parser_handle);
+        parser_ctxt_json["name"] = name;
         parser_ctxt_json["handle"] = parser_handle;
         json::vector default_ports;
         output_default_ports(default_ports, port_use);
-        parser_ctxt_json["default"] = std::move(default_ports);
+        parser_ctxt_json["default_parser_id"] = std::move(default_ports);
         write_config(*regs, parser_ctxt_json, false);
         cjson.push_back(std::move(parser_ctxt_json));
         gen_configuration_cache(*regs, ctxt_json["configuration_cache"]);
@@ -424,7 +426,6 @@ void Parser::output_legacy(json::map& ctxt_json) {
         auto *regs = new TARGET::parser_regs;
         declare_registers(regs);
         parser_handle = next_handle();
-        LOG3("parser handle: " << parser_handle);
         write_config(*regs, ctxt_json["parser"], true);
         gen_configuration_cache(*regs, ctxt_json["configuration_cache"]);
     )

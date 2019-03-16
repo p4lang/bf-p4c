@@ -209,9 +209,9 @@ class Parser {
     void input(VECTOR(value_t) args, value_t data);
     void process();
     void output(json::map &);
-    // XXX(hanw): remove after 8.7 release
     void output_legacy(json::map &);
     gress_t                             gress;
+    std::string                         name;
     std::map<std::string, State>        states[2];
     std::vector<State *>                all;
     bitvec                              port_use;

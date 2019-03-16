@@ -299,8 +299,9 @@ class LoweredParserState : Unit {
 class LoweredParser : AbstractParser {
 #noconstructor
     LoweredParser(gress_t gress, LoweredParserState start, Phase0 phase0,
-        std::vector<int> portmap)
-        : AbstractParser(gress), start(start), phase0(phase0), portmap(portmap) {}
+        cstring name, std::vector<int> portmap)
+        : AbstractParser(gress), start(start), phase0(phase0),
+        name(name), portmap(portmap) {}
 #apply
 
     toString {
@@ -323,6 +324,8 @@ class LoweredParser : AbstractParser {
     unsigned hdrLenAdj = 0;
 
     optional NullOK Phase0 phase0; // only valid for ingress
+
+    optional inline cstring name;  // parser name defined in architecture
 
     optional inline std::vector<int> portmap;  // used for multiple parser support
 #emit

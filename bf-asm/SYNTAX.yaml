@@ -59,6 +59,8 @@ parser [<thread>] [<port_use>, ...]:
     # "CPU" and "PCIE" are symbolic names that the corresponding numeric values are device-specific.
     # "UNUSED" represents the parser program that is not configured to any physical
     # parser during device initialization, but may be used by driver during runtime.
+    name: <name> # parser name defined in the arch file, used by bfrt to find the parser
+                 # config in context.json
     start: <name>
     start: '[' <name>, ... ']'
         # define up to 4 distinct initial start states for the four channels
