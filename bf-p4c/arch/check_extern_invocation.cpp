@@ -109,7 +109,27 @@ void CheckT2NAExternInvocation::init_pipe_constraints() {
 
     bitvec valid_in_ghost;
     valid_in_ghost.setbit(genIndex(GHOST, MAU));
+    set_pipe_constraints("Counter", valid_in_ghost);
+    set_pipe_constraints("DirectCounter", valid_in_ghost);
+    set_pipe_constraints("Meter", valid_in_ghost);
+    set_pipe_constraints("DirectMeter", valid_in_ghost);
+    set_pipe_constraints("Lpf", valid_in_ghost);
+    set_pipe_constraints("DirectLpf", valid_in_ghost);
+    set_pipe_constraints("Wred", valid_in_ghost);
+    set_pipe_constraints("DirectWred", valid_in_ghost);
+    set_pipe_constraints("Register", valid_in_ghost);
+    set_pipe_constraints("DirectRegister", valid_in_ghost);
+    set_pipe_constraints("RegisterParam", valid_in_ghost);
+    set_pipe_constraints("MathUnit", valid_in_ghost);
     set_pipe_constraints("RegisterAction", valid_in_ghost);
+    set_pipe_constraints("DirectRegisterAction", valid_in_ghost);
+    set_pipe_constraints("ActionSelector", valid_in_ghost);
+    set_pipe_constraints("ActionProfile", valid_in_ghost);
+    set_pipe_constraints("Hash", valid_in_ghost);
+    set_pipe_constraints("Random", valid_in_ghost);
+    set_pipe_constraints("max", valid_in_ghost);
+    set_pipe_constraints("min", valid_in_ghost);
+    set_pipe_constraints("invalidate", valid_in_ghost);
 
     bitvec valid_in_ingress_deparser;
     valid_in_ingress_deparser.setbit(genIndex(INGRESS, DEPARSER));
