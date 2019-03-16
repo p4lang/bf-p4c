@@ -11,18 +11,50 @@ void ActionMutuallyExclusive::postorder(const IR::MAU::Table *tbl) {
                 mutex(action_ids[act1], action_ids[act2]) = true;
             } } }
 
+
+    bitvec all_actions_in_table;
+    for (const auto *act : Values(tbl->actions))
+        all_actions_in_table.setbit(action_ids[act]);
+
     // set actions on different branches to be mutex.
     safe_vector<bitvec> sets;
+
     bitvec common;
     bitvec all_so_far;
+    bitvec actions_seen;
+
+    std::map<cstring, bitvec> actions_running_on_branch;
+
+    // Determine which actions are going to run on which branches, and include those in
+    // that particular branch.
+    // A table is not an action_chain if it has one and only one path ($default).  Comes when
+    // one wants to force a control dependency in the program
+    if (tbl->action_chain() || tbl->has_default_path()) {
+        for (const auto *act : Values(tbl->actions)) {
+            if (tbl->next.count(act->name.originalName) > 0) {
+                actions_running_on_branch[act->name.originalName].setbit(action_ids[act]);
+            } else if (tbl->has_default_path()) {
+                actions_running_on_branch["$default"].setbit(action_ids[act]);
+            }
+        }
+    } else if (tbl->hit_miss_p4()) {
+        for (const auto *act : Values(tbl->actions)) {
+            if (tbl->next.count("$hit") > 0 && !act->miss_only())
+                actions_running_on_branch["$hit"].setbit(action_ids[act]);
+            if (tbl->next.count("$miss") > 0 && !act->hit_only()) {
+                actions_running_on_branch["$miss"].setbit(action_ids[act]);
+            }
+        }
+    }
+
     for (const auto next_table_seq_kv : tbl->next) {
         /* find the tables reachable via each next_table chain */
         cstring branch_name = next_table_seq_kv.first;
         const auto* next_table_seq = next_table_seq_kv.second;
         bitvec succ;
         // chained action is included that branch
-        if (name_to_actions.count(branch_name)) {
-            succ[action_ids[name_to_actions[branch_name]]] = true; }
+        actions_seen |= actions_running_on_branch[branch_name];
+        succ |= actions_running_on_branch[branch_name];
         for (auto next_table : next_table_seq->tables) {
             succ |= action_succ[next_table]; }
         sets.push_back(succ);
@@ -32,6 +64,13 @@ void ActionMutuallyExclusive::postorder(const IR::MAU::Table *tbl) {
         common |= (succ & all_so_far);
         all_so_far |= succ;
     }
+
+    // If the $default pathway or only one $hit or $miss pathway is provided, then all actions
+    // not yet included directly in a branch are mutually exclusive with all actions included
+    // in a path, as well as all actions underneath that path.
+    bitvec actions_not_yet_seen = all_actions_in_table - actions_seen;
+    if (!actions_not_yet_seen.empty())
+        sets.push_back(actions_not_yet_seen);
 
     // TODO(yumin): It is imprecise in that:
     // switch (A.apply().result_run) {

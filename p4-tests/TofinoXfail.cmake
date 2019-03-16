@@ -491,6 +491,12 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
+  "The input .* cannot be found on the hash input"
+  ../glass/testsuite/p4_tests/phv/COMPILER-724/comp_724.p4
+)
+
+
+p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   testdata/p4_14_samples/05-FullTPHV.p4
   testdata/p4_14_samples/06-FullTPHV1.p4
@@ -515,7 +521,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/compile_only/03-VlanProfile.p4
   extensions/p4_tests/p4_14/compile_only/01-FlexCounter.p4
 
-  ../glass/testsuite/p4_tests/phv/COMPILER-724/comp_724.p4
   )
 
 # Errors because pa_container_size pragmas used in these tests cannot be satisfy all constraints.

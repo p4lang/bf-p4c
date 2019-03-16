@@ -19,6 +19,8 @@ namespace {
 boost::optional<TofinoPipeTestCase>
 createActionMutexTestCase(const std::string& mau) {
     auto tables = P4_SOURCE(P4Headers::NONE, R"(
+    action noop() {}
+
     action set_f1(bit<8> f1) {
         headers.h1.f1 = f1;
     }
@@ -40,8 +42,9 @@ createActionMutexTestCase(const std::string& mau) {
     }
 
     table node_a {
-        actions = { set_f1; }
+        actions = { set_f1; noop; }
         key = { headers.h1.f1 : exact; }
+        const default_action = noop;
     }
 
     table node_b {
@@ -205,5 +208,92 @@ TEST_F(ActionMutexTest, Basic) {
     // from hit to children
     EXPECT_EQ(action_mutex(act.at("node_f_0.igrs.set_f5"), act.at("node_c_0.igrs.set_f2")), false);
 }
+
+TEST_F(ActionMutexTest, DefaultNext) {
+    auto test = createActionMutexTestCase(
+        P4_SOURCE(P4Headers::NONE, R"(
+            node_a.apply();
+            switch (node_b.apply().action_run) {
+                set_f1 : { node_c.apply(); }
+                set_f2 : { node_d.apply(); }
+                default : { node_e.apply(); node_f.apply(); }
+            } )"));
+
+    ASSERT_TRUE(test);
+    ActionMutuallyExclusive action_mutex;
+    test->pipe->apply(action_mutex);
+    auto& act = action_mutex.name_actions;
+    EXPECT_FALSE(action_mutex(act.at("node_b_0.igrs.set_f1"), act.at("node_c_0.igrs.set_f2")));
+    EXPECT_TRUE(action_mutex(act.at("node_b_0.igrs.set_f2"), act.at("node_c_0.igrs.set_f2")));
+    EXPECT_TRUE(action_mutex(act.at("node_b_0.igrs.set_f3"), act.at("node_c_0.igrs.set_f2")));
+    EXPECT_TRUE(action_mutex(act.at("node_b_0.igrs.set_f5"), act.at("node_c_0.igrs.set_f2")));
+    EXPECT_TRUE(action_mutex(act.at("node_b_0.igrs.set_f1"), act.at("node_e_0.igrs.set_f4")));
+    EXPECT_TRUE(action_mutex(act.at("node_b_0.igrs.set_f2"), act.at("node_e_0.igrs.set_f4")));
+    EXPECT_FALSE(action_mutex(act.at("node_b_0.igrs.set_f3"), act.at("node_e_0.igrs.set_f4")));
+    EXPECT_FALSE(action_mutex(act.at("node_b_0.igrs.set_f5"), act.at("node_e_0.igrs.set_f4")));
+}
+
+TEST_F(ActionMutexTest, MissingDefault) {
+    auto test = createActionMutexTestCase(
+        P4_SOURCE(P4Headers::NONE, R"(
+            node_a.apply();
+            switch (node_b.apply().action_run) {
+                set_f1 : { node_c.apply(); }
+                set_f2 : { node_d.apply(); }
+            }
+            node_e.apply();
+            node_f.apply(); )"));
+
+    ASSERT_TRUE(test);
+    ActionMutuallyExclusive action_mutex;
+    test->pipe->apply(action_mutex);
+    auto& act = action_mutex.name_actions;
+
+    EXPECT_FALSE(action_mutex(act.at("node_b_0.igrs.set_f1"), act.at("node_c_0.igrs.set_f2")));
+    EXPECT_TRUE(action_mutex(act.at("node_b_0.igrs.set_f2"), act.at("node_c_0.igrs.set_f2")));
+    EXPECT_TRUE(action_mutex(act.at("node_b_0.igrs.set_f3"), act.at("node_c_0.igrs.set_f2")));
+    EXPECT_TRUE(action_mutex(act.at("node_b_0.igrs.set_f5"), act.at("node_c_0.igrs.set_f2")));
+}
+
+TEST_F(ActionMutexTest, ConstDefaultAction) {
+    auto test = createActionMutexTestCase(
+        P4_SOURCE(P4Headers::NONE, R"(
+            if (!node_a.apply().hit) {
+                node_c.apply();
+            }
+            node_b.apply();
+            node_d.apply();
+            node_e.apply();
+            node_f.apply(); )"));
+
+    ASSERT_TRUE(test);
+    ActionMutuallyExclusive action_mutex;
+    test->pipe->apply(action_mutex);
+    auto& act = action_mutex.name_actions;
+    EXPECT_FALSE(action_mutex(act.at("node_a_0.igrs.noop"), act.at("node_c_0.igrs.set_f2")));
+    EXPECT_TRUE(action_mutex(act.at("node_a_0.igrs.set_f1"), act.at("node_c_0.igrs.set_f2")));
+}
+
+TEST_F(ActionMutexTest, SingleDefaultPath) {
+    auto test = createActionMutexTestCase(
+        P4_SOURCE(P4Headers::NONE, R"(
+            node_a.apply();
+            switch (node_b.apply().action_run) {
+                default : { node_c.apply(); }
+            }
+            node_d.apply();
+            node_e.apply();
+            node_f.apply(); )"));
+
+    ASSERT_TRUE(test);
+    ActionMutuallyExclusive action_mutex;
+    test->pipe->apply(action_mutex);
+    auto& act = action_mutex.name_actions;
+    EXPECT_FALSE(action_mutex(act.at("node_b_0.igrs.set_f1"), act.at("node_c_0.igrs.set_f2")));
+    EXPECT_FALSE(action_mutex(act.at("node_b_0.igrs.set_f2"), act.at("node_c_0.igrs.set_f2")));
+    EXPECT_FALSE(action_mutex(act.at("node_b_0.igrs.set_f3"), act.at("node_c_0.igrs.set_f2")));
+    EXPECT_FALSE(action_mutex(act.at("node_b_0.igrs.set_f5"), act.at("node_c_0.igrs.set_f2")));
+}
+
 
 }  // namespace Test
