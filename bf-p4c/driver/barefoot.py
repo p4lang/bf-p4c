@@ -600,7 +600,10 @@ class BarefootBackend(BackendDriver):
 
         self.updateManifest(os.path.join(self._output_directory, 'manifest.json'))
         if run_p4c_gen_conf:
-            pipeNames = [ p['pipe_name'] for p in self._pipes ]
+            if self._dry_run:
+                pipeNames = ['pipe']
+            else:
+                pipeNames = [ p['pipe_name'] for p in self._pipes ]
             self.add_command_option('p4c-gen-conf', '--pipe {}'.format(' '.join(pipeNames)))
             self.checkAndRunCmd('p4c-gen-conf')
 
