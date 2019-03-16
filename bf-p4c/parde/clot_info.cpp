@@ -34,7 +34,7 @@ void ClotInfo::dbprint(std::ostream &out) const {
     unsigned total_unused_fields = 0;
     unsigned total_unused_bits = 0;
 
-    out << "all unsed fields :" << std::endl;
+    out << "all unused fields :" << std::endl;
     for (auto kv : parser_state_to_fields_) {
         for (auto f : kv.second) {
             if (is_clot_candidate(f)) {
@@ -188,20 +188,9 @@ class NaiveClotAlloc : public Visitor {
         return false;
     }
 
-    // Fields extracted in multiple mutex states can be allocated to CLOT
-    // though it complicates things. We can allocate them to their own
-    // CLOT or combine them with other fields in their states and create
-    // synthetic POV bits so that we don't deparse them multiple times at
-    // deparser. TODO(zma)
-    bool is_extracted_in_multiple_states(const PHV::Field* f) {
-        auto& states = clotInfo.field_to_parser_states_.at(f);
-        return states.size() > 1;
-    }
-
     bool can_allocate_to_clot(const PHV::Field* f) {
         return clotInfo.is_clot_candidate(f) &&
-               !is_packed_with_phv_field(f) &&
-               !is_extracted_in_multiple_states(f);
+               !is_packed_with_phv_field(f);
     }
 
     bool is_checksum_field(const PHV::Field* f) {
@@ -227,7 +216,7 @@ class NaiveClotAlloc : public Visitor {
            req[state->gress].push_back(ca);
        }
 
-       // XXX(zma) replace this with optimizition based on parse graph anlysis
+       // XXX(zma) replace this with optimization based on parse graph analysis
 
        std::stable_sort(req[0].begin(), req[0].end());
        std::stable_sort(req[1].begin(), req[1].end());

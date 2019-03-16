@@ -272,12 +272,6 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/bf_p4c_samples/v1model-special-ops-bmv2.p4
 )
 
-# P4C-1300
-p4c_add_xfail_reason("tofino2"
-  "Parser extract didn't receive a PHV allocation"
-  extensions/p4_tests/p4_14/stf/brig-425.p4
-)
-
 # p4lang/p4c #1724
 p4c_add_xfail_reason("tofino2"
   "error: The following operation is not yet supported:"

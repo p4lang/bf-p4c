@@ -99,10 +99,21 @@ class ClotInfo {
          // one's source list is a subset of the update?
     }
 
+    // Fields extracted in multiple mutex states can be allocated to CLOT
+    // though it complicates things. We can allocate them to their own
+    // CLOT or combine them with other fields in their states and create
+    // synthetic POV bits so that we don't deparse them multiple times at
+    // deparser. TODO(zma)
+    bool is_extracted_in_multiple_states(const PHV::Field* f) const {
+        return field_to_parser_states_.count(f) &&
+            field_to_parser_states_.at(f).size() > 1;
+    }
+
     bool is_clot_candidate(const PHV::Field* field) const {
         return !uses.is_used_mau(field) &&
                 uses.is_used_parde(field) &&
-               !is_used_in_multiple_checksum_update_sets(field);
+               !is_used_in_multiple_checksum_update_sets(field) &&
+               !is_extracted_in_multiple_states(field);
     }
 
     /// @return the CLOT if field is not used in MAU pipe
