@@ -5,6 +5,7 @@
 #include "bf-p4c/device.h"
 #include "bf-p4c/phv/allocate_phv.h"
 #include "bf-p4c/phv/utils/slicing_iterator.h"
+#include "bf-p4c/phv/utils/report.h"
 #include "bf-p4c/phv/parser_extract_balance_score.h"
 #include "lib/log.h"
 
@@ -1684,7 +1685,6 @@ Visitor::profile_t AllocatePHV::init_apply(const IR::Node* root) {
         phv_i.set_done();
         LOG1("PHV ALLOCATION SUCCESSFUL");
         LOG2(alloc);
-        LOG2(alloc.getSummary(uses_i));
     } else if (onlyPrivatizedFieldsUnallocated(result.remaining_clusters)) {
         LOG1("PHV ALLOCATION SUCCESSFUL FOR NON-PRIVATIZED FIELDS");
         clearSlices(phv_i);
@@ -1694,7 +1694,6 @@ Visitor::profile_t AllocatePHV::init_apply(const IR::Node* root) {
         for (auto* sc : result.remaining_clusters)
             LOG1(sc);
         LOG2(alloc);
-        LOG2(alloc.getSummary(uses_i));
     } else {
         auto noPackBridgedFields = throwBacktrackException(numBridgedConflicts,
                 result.remaining_clusters);
@@ -2014,7 +2013,8 @@ void AllocatePHV::formatAndThrowError(
         msg << "..........egress t_phv bits = " << egress_t_phv_bits << std::endl;
         msg << std::endl; }
 
-    msg << alloc.getSummary(uses_i) << std::endl;
+    PHV::AllocationReport report(alloc, true);
+    msg << report.printSummary() << std::endl;
     msg << "PHV allocation was not successful "
         << "(" << unallocated_slices << " field slices remaining)" << std::endl;
     ::error("%1%", msg.str());

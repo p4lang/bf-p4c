@@ -607,12 +607,6 @@ PHV::Allocation::alloc_status(PHV::Container c) const {
     return status->alloc_status;
 }
 
-/// @returns a summary of the status of each container by type and gress.
-cstring PHV::ConcreteAllocation::getSummary(const PhvUse& uses) const {
-    AllocationReport report(uses, *this);
-    return report.printSummary();
-}
-
 PHV::Allocation::const_iterator PHV::Transaction::begin() const {
     P4C_UNIMPLEMENTED("Transaction::begin()");
 }
@@ -729,10 +723,6 @@ cstring PHV::Transaction::getTransactionSummary() const {
                 first_by_gress = false; } } }
 
     return ss.str();
-}
-
-cstring PHV::Transaction::getSummary(const PhvUse& /* uses */) const {
-    P4C_UNIMPLEMENTED("Transaction::getSummary()");
 }
 
 bool PHV::AlignedCluster::operator==(const PHV::AlignedCluster& other) const {
@@ -1308,71 +1298,9 @@ std::ostream &operator<<(std::ostream &out, const PHV::Allocation& alloc) {
         P4C_UNIMPLEMENTED("<<(PHV::Transaction)");
         return out; }
 
-    auto& phvSpec = Device::phvSpec();
+    AllocationReport report(alloc);
+    out << report.printSummary() << std::endl;
 
-    // Use this vector to control the order in which containers are printed,
-    // i.e. MAU groups (ordered by group) first.
-    std::vector<bitvec> order;
-
-    // Track container IDs already in order.
-    bitvec seen;
-
-    // Print containers by MAU group, then TPHV collection, then by ID for any
-    // remaining.
-    for (auto typeAndGroup : phvSpec.mauGroups()) {
-        for (auto group : typeAndGroup.second) {
-            seen |= group;
-            order.push_back(group); } }
-    for (auto tagalong : phvSpec.tagalongCollections()) {
-        seen |= tagalong;
-        order.push_back(tagalong); }
-    order.push_back(phvSpec.physicalContainers() - seen);
-
-    TablePrinter tp(out, { "Container", "Gress", "Container Slice", "Field Slice" },
-                   TablePrinter::Align::LEFT);
-
-    bool firstEmpty = true;
-    for (bitvec group : order) {
-        for (auto cid : group) {
-            auto container = phvSpec.idToContainer(cid);
-            auto slices = alloc.slices(container);
-            auto gress = alloc.gress(container);
-            bool hardwired = phvSpec.ingressOnly()[cid] || phvSpec.egressOnly()[cid];
-
-            if (slices.size() == 0) {
-                if (firstEmpty) {
-                    tp.addRow({"...", "", "", ""});
-                    tp.addBlank();
-                    firstEmpty = false;
-                }
-                continue;
-            }
-            firstEmpty = true;
-
-            bool firstSlice = true;
-            for (auto slice : slices) {
-                std::stringstream container_slice;
-                std::stringstream field_slice;
-                if (slice.container_slice().size() != int(slice.container().size()))
-                    container_slice << "[" << slice.container_slice().lo << ":" <<
-                    slice.container_slice().hi << "]";
-                if (slice.field_slice().size() != slice.field()->size)
-                    field_slice << "[" << slice.field_slice().lo << ":" <<
-                    slice.field_slice().hi << "]";
-
-                tp.addRow({
-                    firstSlice ? std::string(slice.container().toString()) : "",
-                    firstSlice ? (std::string(toSymbol(*gress)) + (hardwired ? "-HW" : "")) : "",
-                    container_slice.str(),
-                    std::string(slice.field()->name) + field_slice.str()
-                   });
-                firstSlice = false;
-            }
-            tp.addBlank();
-        }
-    }
-
-    tp.print();
     return out;
 }
 

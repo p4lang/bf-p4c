@@ -108,6 +108,8 @@ class Transaction;
  */
 class Allocation {
  public:
+    friend class AllocationReport;
+
     using GressAssignment = boost::optional<gress_t>;
     using MutuallyLiveSlices = ordered_set<AllocSlice>;
     using ActionSet = ordered_set<const IR::MAU::Action*>;
@@ -357,9 +359,6 @@ class Allocation {
     /// @returns a pretty-printed representation of this Allocation.
     virtual cstring toString() const;
 
-    /// @returns a summary of the status of each container by type and gress.
-    virtual cstring getSummary(const PhvUse& uses) const = 0;
-
     /// Create a Transaction based on this Allocation.  @see PHV::Transaction for details.
     virtual Transaction makeTransaction() const;
 
@@ -398,8 +397,6 @@ class Allocation {
 };
 
 class ConcreteAllocation : public Allocation {
-    friend class AllocationReport;
-
     /** Create an allocation from a vector of container IDs.  Physical
      * containers that the Device pins to a particular gress are
      * initialized to that gress.
@@ -436,9 +433,6 @@ class ConcreteAllocation : public Allocation {
     /// @returns a set of actions where the slice @slice must be initialized. @returns an empty set
     /// of actions if initialization is not required.
     ordered_set<const IR::MAU::Action*> getInitPoints(const AllocSlice slice) const;
-
-    /// @returns a summary of the status of each container by type and gress.
-    cstring getSummary(const PhvUse& uses) const override;
 };
 
 
@@ -495,10 +489,6 @@ class Transaction : public Allocation {
 
     /// @returns true if this allocation owns @c.
     bool contains(PHV::Container c) const override { return parent_i->contains(c); }
-
-    /// @returns a summary of the status of each container by type and gress.
-    /// @warning not yet implemented.
-    cstring getSummary(const PhvUse& uses) const override;
 
     /// @returns a summary of status of each container allocated in this transaction.
     cstring getTransactionSummary() const;

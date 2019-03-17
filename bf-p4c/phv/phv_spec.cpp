@@ -415,6 +415,8 @@ TofinoPhvSpec::TofinoPhvSpec() {
         { PHV::Type::H, std::make_pair(12, 8*phv_scale_factor) },
         { PHV::Type::W, std::make_pair(16, 4*phv_scale_factor) }
     };
+
+    numPovBits = 256;
 }
 
 bitvec TofinoPhvSpec::parserGroup(unsigned id) const {
@@ -567,6 +569,8 @@ JBayPhvSpec::JBayPhvSpec() {
         { PHV::Type::MH, std::make_pair(24, 4) },
         { PHV::Type::MW, std::make_pair(32, 2) }
     };
+
+    numPovBits = 128;
 }
 
 bitvec JBayPhvSpec::parserGroup(unsigned id) const {

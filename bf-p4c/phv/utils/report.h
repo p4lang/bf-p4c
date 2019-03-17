@@ -7,7 +7,8 @@ namespace PHV {
 
 class AllocationReport {
     const PhvUse& uses;
-    const ConcreteAllocation& alloc;
+    const Allocation& alloc;
+    bool printMetricsOnly = false;
 
     ordered_map<boost::optional<gress_t>,
         ordered_map<PHV::Type,
@@ -34,9 +35,10 @@ class AllocationReport {
     }
 
     static std::string
-    formatUsage(int used, int total) {
+    formatUsage(int used, int total, bool show_total = false) {
         std::stringstream ss;
         ss << used << " ";
+        if (show_total) ss << "/ " << total << " ";
         ss << formatPercent(used, total);
         return ss.str();
     }
@@ -134,8 +136,8 @@ class AllocationReport {
     };
 
  public:
-    AllocationReport(const PhvUse& uses, const ConcreteAllocation& alloc)
-        : uses(uses), alloc(alloc) { }
+    explicit AllocationReport(const Allocation& alloc, bool printMetricsOnly = false)
+        : uses(*(alloc.uses_i)), alloc(alloc), printMetricsOnly(printMetricsOnly) { }
 
     /// @returns a summary of the status of each container by type and gress.
     cstring printSummary() {
@@ -143,10 +145,11 @@ class AllocationReport {
 
         std::stringstream ss;
 
+        if (!printMetricsOnly)
+            ss << printAllocation() << std::endl;
+
         ss << printContainerStatus() << std::endl;
-
         ss << printOverlayStatus() << std::endl;
-
         ss << printOccupancyMetrics() << std::endl;
 
         return ss.str();
@@ -155,14 +158,11 @@ class AllocationReport {
  private:
     void collectStatus();
 
+    cstring printAllocation() const;
     cstring printOverlayStatus() const;
-
     cstring printContainerStatus();
-
     cstring printOccupancyMetrics() const;
-
     cstring printMauGroupsOccupancyMetrics() const;
-
     cstring printTagalongCollectionsOccupancyMetrics() const;
 };
 

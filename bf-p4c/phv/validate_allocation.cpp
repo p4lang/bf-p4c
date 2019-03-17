@@ -636,7 +636,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
     }
 
     size_t povBits = getPOVContainerBytes();
-    size_t povLimit = (Device::currentDevice() == Device::TOFINO) ? 256 : 128;
+    size_t povLimit = Device::phvSpec().getNumPovBits();
     if (povBits > povLimit)
         BUG("Total size of containers used for POV allocation is %1%b, greater than the allowed "
             "limit of %2%b.", povBits, povLimit);

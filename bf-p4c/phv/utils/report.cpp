@@ -49,6 +49,141 @@ void PHV::AllocationReport::collectStatus() {
     }
 }
 
+static std::string
+format_bit_slice(unsigned lo, unsigned hi) {
+    std::stringstream slice;
+    slice << "[" << lo;
+    if (lo != hi) slice << ":" << hi;
+    slice << "]";
+    return slice.str();
+}
+
+static std::pair<std::string, std::string>
+format_alloc_slice(const PHV::AllocSlice& slice) {
+    std::stringstream container_slice;
+    std::stringstream field_slice;
+    if (slice.container_slice().size() != int(slice.container().size()))
+        container_slice << format_bit_slice(slice.container_slice().lo,
+                                            slice.container_slice().hi);
+    if (slice.field_slice().size() != slice.field()->size)
+        field_slice << format_bit_slice(slice.field_slice().lo,
+                                        slice.field_slice().hi);
+    return {container_slice.str(), field_slice.str()};
+}
+
+cstring
+PHV::AllocationReport::printAllocation() const {
+    std::stringstream out;
+
+    auto& phvSpec = Device::phvSpec();
+
+    // Use this vector to control the order in which containers are printed,
+    // i.e. MAU groups (ordered by group) first.
+    std::vector<bitvec> order;
+
+    // Track container IDs already in order.
+    bitvec seen;
+
+    // Print containers by MAU group, then TPHV collection, then by ID for any
+    // remaining.
+    for (auto typeAndGroup : phvSpec.mauGroups()) {
+        for (auto group : typeAndGroup.second) {
+            seen |= group;
+            order.push_back(group); } }
+    for (auto tagalong : phvSpec.tagalongCollections()) {
+        seen |= tagalong;
+        order.push_back(tagalong); }
+    order.push_back(phvSpec.physicalContainers() - seen);
+
+    out << "PHV Allocation" << std::endl;
+    TablePrinter tp(out, { "Container", "Gress", "Container Slice", "Field Slice" },
+                   TablePrinter::Align::LEFT);
+
+    std::map<gress_t,
+             std::map<PHV::Container, std::vector<PHV::AllocSlice>>> pov_bits;
+
+    bool firstEmpty = true;
+    for (bitvec group : order) {
+        for (auto cid : group) {
+            auto container = phvSpec.idToContainer(cid);
+            auto slices = alloc.slices(container);
+            auto gress = alloc.gress(container);
+            bool hardwired = phvSpec.ingressOnly()[cid] || phvSpec.egressOnly()[cid];
+
+            if (slices.size() == 0) {
+                if (firstEmpty) {
+                    tp.addRow({"...", "", "", ""});
+                    tp.addBlank();
+                    firstEmpty = false;
+                }
+                continue;
+            }
+            firstEmpty = true;
+
+            bool firstSlice = true;
+            for (auto slice : slices) {
+                auto formatted = format_alloc_slice(slice);
+
+                tp.addRow({
+                    firstSlice ? std::string(slice.container().toString()) : "",
+                    firstSlice ? (std::string(toSymbol(*gress)) + (hardwired ? "-HW" : "")) : "",
+                    formatted.first,
+                    std::string(slice.field()->name) + formatted.second
+                   });
+                firstSlice = false;
+
+                if (slice.field()->pov)
+                    pov_bits[*gress][container].push_back(slice);
+            }
+            tp.addBlank();
+        }
+    }
+
+    tp.print();
+    out << std::endl;
+
+    unsigned total_available_bits = Device::phvSpec().getNumPovBits();
+
+    for (auto& gp : pov_bits) {
+        out << std::endl << "POV Allocation (" << toString(gp.first) << "):" << std::endl;
+        TablePrinter tp2(out, { "Container", "Container Slice", "Field Slice" },
+                         TablePrinter::Align::LEFT);
+
+        unsigned total_container_bits = 0, total_used_bits = 0;
+
+        for (auto& cs : gp.second) {
+            auto& container = cs.first;
+
+            bool firstSlice = true;
+            for (auto& slice : cs.second) {
+                auto formatted = format_alloc_slice(slice);
+
+                tp2.addRow({
+                    firstSlice ? std::string(container.toString()) : "",
+                    formatted.first,
+                    std::string(slice.field()->name) + formatted.second
+                });
+
+                firstSlice = false;
+            }
+
+            total_container_bits += container.size();
+            total_used_bits += cs.second.size();
+            tp2.addSep();
+        }
+
+        tp2.addRow({"", "Total Bits Used",
+                        formatUsage(total_used_bits, total_available_bits, true)});
+
+        tp2.addRow({"", "Pack Density",
+                        formatUsage(total_used_bits, total_container_bits, true)});
+
+        tp2.print();
+    }
+
+    return out.str();
+}
+
 cstring
 PHV::AllocationReport::printOverlayStatus() const {
     std::stringstream ss;

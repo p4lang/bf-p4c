@@ -86,6 +86,8 @@ class PhvSpec {
 
     std::map<PHV::Type, std::pair<unsigned, unsigned>> deparserGroupSpec;
 
+    unsigned numPovBits = 0;
+
     /// Add a PHV container type to the set of types which are available on this
     /// device. This should only be called inside the constructor of subclasses
     /// of PhvSpec; after a PhvSpec instance is constructed, its list of
@@ -222,6 +224,9 @@ class PhvSpec {
     /// @return the ids of every container in @container_id's tagalong collection, or
     /// boost::none if @container_id is not part of any collection.
     bitvec tagalongCollection(unsigned container_id) const;
+
+    /// @return the number of POV bits available
+    unsigned getNumPovBits() const { return numPovBits; }
 
     /// @return the ids of containers that can be assigned to a thread
     /// individually.
