@@ -526,7 +526,7 @@ p4c_add_xfail_reason("tofino"
 # Errors because pa_container_size pragmas used in these tests cannot be satisfy all constraints.
 p4c_add_xfail_reason("tofino"
   "No way to slice the following to satisfy @pa_container_size"
-  ../glass/testsuite/p4_tests/c1/COMPILER-1105/case8039.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-1105/case8039.p4
   )
 
 # We can't (without some complex acrobatics) support conditional computed
@@ -1023,7 +1023,7 @@ p4c_add_xfail_reason("tofino"
 # P4C-1368
 p4c_add_xfail_reason("tofino"
   "Compiler Bug.*: Field slicing has created a slice list at a nonbyte boundary."
-  ../glass/testsuite/p4_tests/c1/COMPILER-868/comp_868.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-868/comp_868.p4
 )
 
 # P4C-1371
@@ -1058,10 +1058,10 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/mau/COMPILER-729/ipu.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-961/jk_msdc.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-1094/comp_1094.p4
-  ../glass/testsuite/p4_tests/c2/COMPILER-443/case2514.p4
+  ../glass/testsuite/p4_tests/rdp/COMPILER-443/case2514.p4
 # bigger problem is that the container conflict free table placement is 15 stages for the following
 # program.
-  ../glass/testsuite/p4_tests/c2/COMPILER-502/case2675.p4
+  ../glass/testsuite/p4_tests/rdp/COMPILER-502/case2675.p4
   c2_COMPILER-537_case2834
   c2_COMPILER-514_balancer_one
   c2_COMPILER-510_case2682
@@ -1115,8 +1115,8 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Stage pragma provided to table .* has multiple parameters, while Brig currently"
   ../glass/testsuite/p4_tests/mau/test_config_131_placement_with_pragma.p4
-  ../glass/testsuite/p4_tests/c1/DRV-543/case2499.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-1113/case8138.p4
+  ../glass/testsuite/p4_tests/arista/DRV-543/case2499.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-1113/case8138.p4
   )
 
 # Valid XFAIL
@@ -1154,7 +1154,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: : conditional assignment not supported"
   ../glass/testsuite/p4_tests/mau/test_config_219_modify_field_conditionally.p4
-  ../glass/testsuite/p4_tests/c13/COMPILER-842/mod_field_cond.p4
+  ../glass/testsuite/p4_tests/noviflow/COMPILER-842/mod_field_cond.p4
   )
 
 # P4C-1323
@@ -1284,7 +1284,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error.*This program violates action constraints imposed by Tofino."
   ../glass/testsuite/p4_tests/mau/COMPILER-728/ipu.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-1114/case8156.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-1114/case8156.p4
   )
 
 # P4C-1395
@@ -1296,29 +1296,29 @@ p4c_add_xfail_reason("tofino"
 # P4C-1214
 p4c_add_xfail_reason("tofino"
   "the number of bytes required to go through the immediate pathway 8 is greater than the available bytes 4, and can not be allocated"
-  ../glass/testsuite/p4_tests/c1/COMPILER-964/test_config_401_random_num.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-964/test_config_401_random_num.p4
   )
 
 # P4C-1396
 p4c_add_xfail_reason("tofino"
   "Incompatible types bit<1> and bool"
-  ../glass/testsuite/p4_tests/c13/COMPILER-687/case3769.p4
-  ../glass/testsuite/p4_tests/c13/COMPILER-842/comp_842.p4
-  ../glass/testsuite/p4_tests/c13/DRV-1092/drv_1092.p4
+  ../glass/testsuite/p4_tests/noviflow/COMPILER-687/case3769.p4
+  ../glass/testsuite/p4_tests/noviflow/COMPILER-842/comp_842.p4
+  ../glass/testsuite/p4_tests/noviflow/DRV-1092/drv_1092.p4
   )
 
 # P4C-1397
 p4c_add_xfail_reason("tofino"
   "Total size of containers used for POV allocation is .*b, greater than the allowed limit of 256b"
-  ../glass/testsuite/p4_tests/c2/COMPILER-466/case2563_with_nop.p4
-  ../glass/testsuite/p4_tests/c2/COMPILER-466/case2563_without_nop.p4
-  ../glass/testsuite/p4_tests/c2/COMPILER-475/case2600.p4
+  ../glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_with_nop.p4
+  ../glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_without_nop.p4
+  ../glass/testsuite/p4_tests/rdp/COMPILER-475/case2600.p4
   )
 
 # P4C-1400
 p4c_add_xfail_reason("tofino"
   "The stage specified for table .* is .*, but we could not place it until stage .*"
-  ../glass/testsuite/p4_tests/c2/COMPILER-533/case2736.p4
+  ../glass/testsuite/p4_tests/rdp/COMPILER-533/case2736.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-733/ipu_ingress.p4
   )
 
@@ -1355,9 +1355,17 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/phv/COMPILER-587/l4l.p4
   )
 
+# P4C-1577
 p4c_add_xfail_reason("tofino"
   "Table .* .* invoked from two different controls: Apply and Apply"
   ../glass/testsuite/p4_tests/phv/COMPILER-1134/comp_1134.p4
+  )
+
+# P4C-1576
+p4c_add_xfail_reason("tofino"
+  "More than one field written to by field"
+  ../glass/testsuite/p4_tests/parde/test_config_421_elim_calc_ops.p4
+  ../glass/testsuite/p4_tests/parde/test_config_422_exit_calc_upd.p4
   )
 
 # P4C does not support bridging of header stacks within serializable structs

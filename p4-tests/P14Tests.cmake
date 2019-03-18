@@ -1,54 +1,54 @@
 
 set (P14_XFAIL_TESTS
   extensions/p4_tests/p4_14/compile_only/02-FlexCounterActionProfile.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-254/case1744.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-260/case1799_1.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-260/case1799.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-262/case1804.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-263/case1795.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-264/case1822.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-271/case1834.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-273/case1832.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-273/case1832.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-275/case1841.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-276/case1844.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-282/case1864.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-347/switch_bug.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-532/case2807.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-548/case2895.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-548/case3011.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-559/case2987.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-562/case3005.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-567/case2807.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-568/case3026dce.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-568/case3026.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-575/case3041.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-576/case3042.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-577/comp577.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-579/case3085.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-585/comp585.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-588/comp588dce.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-588/comp588.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-589/comp589.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-593/case3011.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-608/case3263.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-635/case3468.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-637/case3478.p4
-  ../glass/testsuite/p4_tests/c1/COMPILER-954/case5730.p4
-  ../glass/testsuite/p4_tests/c2/COMPILER-408/case2364.p4
-  ../glass/testsuite/p4_tests/c2/COMPILER-443/case2514.p4
-  ../glass/testsuite/p4_tests/c2/COMPILER-466/case2563_with_nop.p4
-  ../glass/testsuite/p4_tests/c2/COMPILER-466/case2563_without_nop.p4
-  ../glass/testsuite/p4_tests/c2/COMPILER-475/case2600.p4
-  ../glass/testsuite/p4_tests/c2/COMPILER-502/case2675.p4
-  ../glass/testsuite/p4_tests/c2/COMPILER-510/case2682.p4
-  ../glass/testsuite/p4_tests/c2/COMPILER-514/balancer_one.p4
-  ../glass/testsuite/p4_tests/c2/COMPILER-533/case2736.p4
-  ../glass/testsuite/p4_tests/c2/COMPILER-537/case2834.p4
-  ../glass/testsuite/p4_tests/c2/COMPILER-599/case3230.p4
-  ../glass/testsuite/p4_tests/c3/COMPILER-393/case2277.p4
-  ../glass/testsuite/p4_tests/c5/COMPILER-594/comp594.p4
-  ../glass/testsuite/p4_tests/c7/COMPILER-623/case3375.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-254/case1744.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-260/case1799_1.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-260/case1799.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-262/case1804.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-263/case1795.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-264/case1822.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-271/case1834.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-273/case1832.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-273/case1832.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-275/case1841.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-276/case1844.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-282/case1864.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-347/switch_bug.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-532/case2807.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-548/case2895.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-548/case3011.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-559/case2987.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-562/case3005.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-567/case2807.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-568/case3026dce.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-568/case3026.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-575/case3041.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-576/case3042.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-577/comp577.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-579/case3085.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-585/comp585.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-588/comp588dce.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-588/comp588.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-589/comp589.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-593/case3011.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-608/case3263.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-635/case3468.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-637/case3478.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-954/case5730.p4
+  ../glass/testsuite/p4_tests/rdp/COMPILER-408/case2364.p4
+  ../glass/testsuite/p4_tests/rdp/COMPILER-443/case2514.p4
+  ../glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_with_nop.p4
+  ../glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_without_nop.p4
+  ../glass/testsuite/p4_tests/rdp/COMPILER-475/case2600.p4
+  ../glass/testsuite/p4_tests/rdp/COMPILER-502/case2675.p4
+  ../glass/testsuite/p4_tests/rdp/COMPILER-510/case2682.p4
+  ../glass/testsuite/p4_tests/rdp/COMPILER-514/balancer_one.p4
+  ../glass/testsuite/p4_tests/rdp/COMPILER-533/case2736.p4
+  ../glass/testsuite/p4_tests/rdp/COMPILER-537/case2834.p4
+  ../glass/testsuite/p4_tests/rdp/COMPILER-599/case3230.p4
+  ../glass/testsuite/p4_tests/cisco/COMPILER-393/case2277.p4
+  ../glass/testsuite/p4_tests/zte/COMPILER-594/comp594.p4
+  ../glass/testsuite/p4_tests/microsoft/COMPILER-623/case3375.p4
   extensions/p4_tests/p4_14/compile_only/mau_test_neg_test.p4
   extensions/p4_tests/p4-programs/programs/emulation/emulation.p4
   extensions/p4_tests/p4-programs/programs/fifo/fifo_pair.p4
@@ -101,12 +101,12 @@ set (P14_TEST_SUITES
   # TODO: Add them with different names if we need both
   #${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c1/*/*.p4
   #${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c2/*/*.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c3/*/*.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c4/*/*.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c5/*/*.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c6/*/*.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c7/*/*.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c8/*/*.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/cisco/*/*.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/ixia/*/*.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/zte/*/*.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/embedway/*/*.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/microsoft/*/*.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/tudarmstadt/*/*.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch/p4src/switch.p4
   ${BFN_TESTS_LIST}
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch_*/switch.p4

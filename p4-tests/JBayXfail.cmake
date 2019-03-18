@@ -203,6 +203,8 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_14/ptf/easy_no_match.p4
   tor.p4
   p4_16_programs_tna_dkm
+  smoketest_switch_16_Tests_MirrorTest
+  smoketest_switch_16_Tests_ACLTest
 )
 
 # P4C-1228
