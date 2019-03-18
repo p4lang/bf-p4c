@@ -291,7 +291,7 @@ class Test:
             program = manifest['programs'][0]
             p4_version = program['p4_version']
             if schema_version < version.parse("2.0.0"):
-                resource_files = program['p4i']
+                resources_files = program['p4i']
             else:
                 resources_files = program['pipes'][0]['files']['resources']
             resources_file = None
