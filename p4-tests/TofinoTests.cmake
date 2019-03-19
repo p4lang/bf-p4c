@@ -682,6 +682,11 @@ set (P4FACTORY_P4_16_PROGRAMS
   tna_ternary_match
   )
 
+## Internal P4-16 Programs
+set (P4FACTORY_P4_16_PROGRAMS_INTERNAL
+  tna_pvs_multi_states
+  )
+
 # No ptf, compile-only
 file(RELATIVE_PATH p4_16_programs_path ${P4C_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs)
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
@@ -699,6 +704,20 @@ foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS)
   set (ports_json ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/${t}/ports.json)
   if (EXISTS ${ports_json})
     bfn_set_ptf_ports_json_file("tofino" "p4_16_programs_${t}" ${ports_json})
+  endif()
+endforeach()
+
+# Internal P4-16 Programs with PTF tests
+foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS_INTERNAL)
+  p4c_add_ptf_test_with_ptfdir ("tofino" "p4_16_programs_internal_${t}"
+      "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/${t}/${t}.p4"
+    "${testExtraArgs} -target tofino -arch tna -bfrt -to 2000"
+    "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/${t}")
+  bfn_set_p4_build_flag("tofino" "p4_16_programs_internal_${t}"
+      "-I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16")
+  set (ports_json ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/${t}/ports.json)
+  if (EXISTS ${ports_json})
+    bfn_set_ptf_ports_json_file("tofino" "p4_16_programs_internal_${t}" ${ports_json})
   endif()
 endforeach()
 

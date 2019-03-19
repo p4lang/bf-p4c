@@ -11,30 +11,48 @@
 
 namespace {
 
-/// Generates parser assembly by walking the IR and writes the result to an
-/// output stream. The parser IR must be in lowered form - i.e., the root must
-/// a LoweredParser rather than a Parser.
+// Generates parser assembly by walking the IR and writes the result to an
+// output stream. The parser IR must be in lowered form - i.e., the root must
+// a LoweredParser rather than a Parser.
+//
+// PVS Handle Generation
+// TNA instantiates different parsers for ingress and egress and therefore
+// expects a unique pvs handle for each gress.
+// However this is not the case with V1Model as it always instantiates the same parser
+//
+//                  P4-14                P4-16
+//
+// V1-Model     Share PVS Handle    Share PVS Handle
+//              across and          across and
+//              within ig/eg        within ig/eg
+//
+// TNA           - NA -             Share PVS Handle
+//                                  only within ig/eg
+//                                  Don't share across ig/eg
+//
 static int pvs_handle = 512;
-std::map<cstring, int> pvs_handles;
+static std::map<cstring, int> pvs_handles;
 struct ParserAsmSerializer : public ParserInspector {
     explicit ParserAsmSerializer(std::ostream& out)
-        : out(out) { }
+       : out(out) { }
 
  private:
+    void init_apply() {
+       // If not v1Model share pvs handles only when pvs is invoked multiple
+       // times within the same parser.
+       bool is_v1Model = (BackendOptions().arch == "v1model");
+       if (!is_v1Model) pvs_handles.clear();
+    }
+
     int getPvsHandle(cstring pvsName) {
         // For P4_14 parser value set is shared across ingress and egress,
         // Assign the same pvs handle in these cases
         int handle = -1;
-        bool is_p4_14 = (BackendOptions().langVersion == CompilerOptions::FrontendVersion::P4_14);
-        if (is_p4_14) {
-            if (pvs_handles.count(pvsName) > 0) {
-                handle = pvs_handles[pvsName];
-            } else {
-                handle = --pvs_handle;
-                pvs_handles[pvsName] = handle;
-            }
+        if (pvs_handles.count(pvsName) > 0) {
+            handle = pvs_handles[pvsName];
         } else {
             handle = --pvs_handle;
+            pvs_handles[pvsName] = handle;
         }
         return handle;
     }
