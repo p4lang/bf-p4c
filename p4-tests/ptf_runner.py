@@ -20,6 +20,7 @@ import time
 
 import grpc
 from p4.v1 import p4runtime_pb2
+from p4.v1 import p4runtime_pb2_grpc
 from p4.config.v1 import p4info_pb2
 from p4.tmp import p4config_pb2
 import google.protobuf.text_format
@@ -137,7 +138,7 @@ def findbin(cmake_dir, varname):
 
 def update_config(name, grpc_addr, p4info_path, bin_path, cxt_json_path):
     channel = grpc.insecure_channel(grpc_addr)
-    stub = p4runtime_pb2.P4RuntimeStub(channel)
+    stub = p4runtime_pb2_grpc.P4RuntimeStub(channel)
 
     info("Sending P4 config")
     request = p4runtime_pb2.SetForwardingPipelineConfigRequest()
