@@ -166,7 +166,7 @@ set_tests_properties("tofino/smoketest_switch_16_IdentityHash" PROPERTIES TIMEOU
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_msdc" ${SWITCH_P4}
     "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc"
-        "l2 l3 acl ^aclfrag ^tunnel mirror ^urpf ^mpls ^mcast ^racl ^warminit ^stp ^dynhash
+        "l2 l3 acl ^aclfrag ^tunnel mirror ^urpf ^mpls ^mcast ^racl ^warminit ^stp ^dynhash32
         ^switch_tests.MalformedPacketsTest
         ^switch_tests.L2DynamicMacMoveTest
         ^switch_tests.L2LNStatsTest
@@ -203,7 +203,7 @@ p4c_add_test_label("tofino" "UNSTABLE" "smoketest_switch_msdc_set_1")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic" ${SWITCH_P4}
         "${testExtraArgs} -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic"
-        "all ^dynhash ^aclfrag ^queue-stats
+        "all ^aclfrag ^queue-stats ^dynhash32
         ^switch_tests.MalformedPacketsTest
         ^switch_tests.MalformedPacketsTest_ipv6
         ^switch_tests.MalformedPacketsTest_tunnel
@@ -232,10 +232,12 @@ p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_sai_l3" ${SWIT
         "${testExtraArgs} -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_SAI}")
 # Excluding some sail3 tests which need more ports than the supported HW ports
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_sai_l3"
-        "l3-ocp ^dynhash
+        "l3-ocp
         ^sail3.L3MultipleEcmpLagTest
         ^sail3.L3IPv4MacRewriteTest
-        ^sail3.L3EcmpLagTest")
+        ^sail3.L3EcmpLagTest
+        ^saihash.L3IPv4EcmpHostTest
+        ^saihash.L3IPv4LagTest")
 bfn_set_ptf_port_map_file("tofino" "smoketest_switch_dc_basic_sai_l3"
     "${SWITCH_PTF_DIR_SAI}/default_interface_to_front_map.ini")
 bfn_set_ptf_ports_json_file("tofino" "smoketest_switch_dc_basic_sai_l3"
@@ -378,9 +380,10 @@ p4c_add_test_label("tofino" "UNSTABLE" "smoketest_switch_dc_basic_set_1")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_ent_dc_general" ${SWITCH_P4}
         "${testExtraArgs} -DENT_DC_GENERAL_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_ent_dc_general"
-        "ent ^dynhash ^aclfrag ^stp
+        "ent ^aclfrag ^stp ^dynhash32
         ^switch_tests.L3IPv4MtuTest
         ^switch_tests.L2AccessToTrunkPriorityTaggingTest
+        ^switch_tests.L2NoLearnTest
         ^switch_tests.L2LNStatsTest
         ^switch_tests.L2DynamicMacMoveTest
         ^switch_tests.L2StaticMacMoveBulkTest
@@ -411,18 +414,15 @@ p4c_add_test_label("tofino" "UNSTABLE" "smoketest_switch_ent_dc_general_set_1")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_ipv4" ${SWITCH_P4}
     "${testExtraArgs} -DMSDC_IPV4_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_ipv4"
-        "l2 l3 acl tunnel mirror
-        ^aclfrag ^dynhash ^urpf ^mpls ^mcast ^racl ^warminit ^stp ^non-vxlan-tunnel
-        switch_tests.IPv4inIPv4Test
-        switch_tests.IPv4inIPv6Test
+        "l2 l3 acl mirror l3-vxlan ^hostif ^tunnel ^aclfrag ^dynhash ^dynhash32
+        ^urpf ^mpls ^mcast ^racl ^warminit ^stp
         ^switch_tests.MalformedPacketsTest
         ^switch_tests.ExceptionPacketsTest
-        ^switch_tests.ExceptionPacketsTest_IPV6
-        ^switch_tests.MalformedPacketsTest_tunnel")
+        ^switch_tests.ExceptionPacketsTest_IPV6")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_ipv4_mirror" ${SWITCH_P4}
     "${testExtraArgs} -DMSDC_IPV4_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_PTF_DIR_MIRROR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_ipv4_mirror"
-        "mirror_acl ^ipv6")
+        "mirror_acl")
 
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
 set_tests_properties("tofino/smoketest_switch_ipv4" PROPERTIES TIMEOUT 3600)
@@ -432,7 +432,7 @@ set_tests_properties("tofino/smoketest_switch_ipv4_mirror" PROPERTIES TIMEOUT 36
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dtel_int_spine" ${SWITCH_P4}
     "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dtel_int_spine"
-        "all ^tunnel ^mpls ^urpf ^racl ^ipv6 ^mcast ^warminit ^stp ^ptp ^dynhash ^aclfrag")
+        "all ^tunnel ^mpls ^urpf ^racl ^ipv6 ^mcast ^warminit ^stp ^ptp ^aclfrag ^dynhash32")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dtel_int_spine_mirror" ${SWITCH_P4}
     "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_MIRROR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dtel_int_spine_mirror"
@@ -457,58 +457,28 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_dtel_int_spine_dtel_part_2"
         switch_int_l45_transit.intl45_transitTest_Metadata
         switch_int_l45_transit.intl45_transitTest_switchid
         switch_queue_report.QueueReport_Change_Test")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dtel_int_spine_dtel_INTL45_Transit_EgressMoDTest" ${SWITCH_P4}
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dtel_int_spine_dtel_INTL45" ${SWITCH_P4}
     "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_dtel_int_spine_dtel_INTL45_Transit_EgressMoDTest"
-        "switch_int_l45_transit.INTL45_Transit_EgressMoDTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dtel_int_spine_dtel_INTL45_Transit_IngressMoDTest" ${SWITCH_P4}
+bfn_set_ptf_test_spec("tofino" "smoketest_switch_dtel_int_spine_dtel_INTL45"
+        "switch_int_l45_transit.INTL45_Transit_EgressMoDTest
+         switch_int_l45_transit.INTL45_Transit_IngressMoDTest
+         switch_int_l45_transit_stless.intl45_transitTest_hop2_stateless")
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dtel_int_spine_dtel_QueueReport" ${SWITCH_P4}
     "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_dtel_int_spine_dtel_INTL45_Transit_IngressMoDTest"
-        "switch_int_l45_transit.INTL45_Transit_IngressMoDTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dtel_int_spine_dtel_intl45_transitTest_hop2_stateless" ${SWITCH_P4}
+bfn_set_ptf_test_spec("tofino" "smoketest_switch_dtel_int_spine_dtel_QueueReport"
+        "switch_queue_report.QueueReport_Entropy_Test
+         switch_queue_report.QueueReport_Quota_Test
+         switch_queue_report_multimirror.QueueReport_Over_ECMP_Test
+         switch_queue_report_multimirror.QueueReport_MirrorTest
+         switch_queue_report_multimirror.QueueReport_L2_MirrorTest")
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dtel_int_spine_dtel_MirrorOnDrop" ${SWITCH_P4}
     "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_dtel_int_spine_dtel_intl45_transitTest_hop2_stateless"
-        "switch_int_l45_transit_stless.intl45_transitTest_hop2_stateless")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dtel_int_spine_dtel_QueueReport_Entropy_Test" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_dtel_int_spine_dtel_QueueReport_Entropy_Test"
-        "switch_queue_report.QueueReport_Entropy_Test")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dtel_int_spine_dtel_QueueReport_Quota_Test" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_dtel_int_spine_dtel_QueueReport_Quota_Test"
-        "switch_queue_report.QueueReport_Quota_Test")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dtel_int_spine_dtel_QueueReport_Over_ECMP_Test" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_dtel_int_spine_dtel_QueueReport_Over_ECMP_Test"
-        "switch_queue_report_multimirror.QueueReport_Over_ECMP_Test")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dtel_int_spine_dtel_QueueReport_MirrorTest" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_dtel_int_spine_dtel_QueueReport_MirrorTest"
-        "switch_queue_report_multimirror.QueueReport_MirrorTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dtel_int_spine_dtel_QueueReport_L2_MirrorTest" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_dtel_int_spine_dtel_QueueReport_L2_MirrorTest"
-        "switch_queue_report_multimirror.QueueReport_L2_MirrorTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dtel_int_spine_dtel_MirrorOnDropEgrNonDefaultRuleTest" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_dtel_int_spine_dtel_MirrorOnDropEgrNonDefaultRuleTest"
-        "switch_mirror_on_drop.MirrorOnDropEgrNonDefaultRuleTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dtel_int_spine_dtel_MirrorOnDropHostifReasonCodeTest" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_dtel_int_spine_dtel_MirrorOnDropHostifReasonCodeTest"
-        "switch_mirror_on_drop.MirrorOnDropHostifReasonCodeTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dtel_int_spine_dtel_MirrorOnDropIngressAclTest" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_dtel_int_spine_dtel_MirrorOnDropIngressAclTest"
-        "switch_mirror_on_drop.MirrorOnDropIngressAclTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dtel_int_spine_dtel_MirrorOnDropNonDefaultRuleTest" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_dtel_int_spine_dtel_MirrorOnDropNonDefaultRuleTest"
-        "switch_mirror_on_drop.MirrorOnDropNonDefaultRuleTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dtel_int_spine_dtel_MirrorOnDropEgressAclTest" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_dtel_int_spine_dtel_MirrorOnDropEgressAclTest"
-        "switch_mirror_on_drop.MirrorOnDropEgressAclTest")
+bfn_set_ptf_test_spec("tofino" "smoketest_switch_dtel_int_spine_dtel_MirrorOnDrop"
+        "switch_mirror_on_drop.MirrorOnDropEgrNonDefaultRuleTest
+         switch_mirror_on_drop.MirrorOnDropHostifReasonCodeTest
+         switch_mirror_on_drop.MirrorOnDropIngressAclTest
+         switch_mirror_on_drop.MirrorOnDropNonDefaultRuleTest
+         switch_mirror_on_drop.MirrorOnDropEgressAclTest")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dtel_int_spine_dtel_INTL45_Transit_DoDTest" ${SWITCH_P4}
     "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dtel_int_spine_dtel_INTL45_Transit_DoDTest"
@@ -524,15 +494,8 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_dtel_int_spine_dtel_MirrorOnDro
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dtel_int_spine_dtel_sai" ${SWITCH_P4}
     "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_SAI_DTEL}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dtel_int_spine_dtel_sai"
-        "int_transit
-        ^sai_mod.INGRESS_DROP_REPORT_Test")
+        "int_transit")
 bfn_set_ptf_port_map_file("tofino" "smoketest_switch_dtel_int_spine_dtel_sai"
-    "${SWITCH_PTF_DIR_SAI}/port_map.ini")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dtel_int_spine_dtel_sai_INGRESS_DROP_REPORT_Test" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_SAI_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_dtel_int_spine_dtel_sai_INGRESS_DROP_REPORT_Test"
-        "sai_mod.INGRESS_DROP_REPORT_Test")
-bfn_set_ptf_port_map_file("tofino" "smoketest_switch_dtel_int_spine_dtel_sai_INGRESS_DROP_REPORT_Test"
     "${SWITCH_PTF_DIR_SAI}/port_map.ini")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dtel_int_spine_sai" ${SWITCH_P4}
     "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_SAI}")
@@ -554,301 +517,15 @@ set_tests_properties("tofino/smoketest_switch_dtel_int_spine" PROPERTIES TIMEOUT
 set_tests_properties("tofino/smoketest_switch_dtel_int_spine_mirror" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_dtel_int_spine_dtel" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_dtel_int_spine_dtel_part_2" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_dtel_int_spine_dtel_INTL45_Transit_EgressMoDTest" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_dtel_int_spine_dtel_INTL45_Transit_IngressMoDTest" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_dtel_int_spine_dtel_intl45_transitTest_hop2_stateless" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_dtel_int_spine_dtel_QueueReport_Entropy_Test" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_dtel_int_spine_dtel_QueueReport_Quota_Test" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_dtel_int_spine_dtel_QueueReport_Over_ECMP_Test" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_dtel_int_spine_dtel_QueueReport_MirrorTest" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_dtel_int_spine_dtel_QueueReport_L2_MirrorTest" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_dtel_int_spine_dtel_MirrorOnDropEgrNonDefaultRuleTest" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_dtel_int_spine_dtel_MirrorOnDropHostifReasonCodeTest" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_dtel_int_spine_dtel_MirrorOnDropIngressAclTest" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_dtel_int_spine_dtel_MirrorOnDropNonDefaultRuleTest" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_dtel_int_spine_dtel_MirrorOnDropEgressAclTest" PROPERTIES TIMEOUT 3600)
+set_tests_properties("tofino/smoketest_switch_dtel_int_spine_dtel_INTL45" PROPERTIES TIMEOUT 3600)
+set_tests_properties("tofino/smoketest_switch_dtel_int_spine_dtel_QueueReport" PROPERTIES TIMEOUT 3600)
+set_tests_properties("tofino/smoketest_switch_dtel_int_spine_dtel_MirrorOnDrop" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_dtel_int_spine_dtel_INTL45_Transit_DoDTest" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_dtel_int_spine_dtel_QueueReport_DoD_Test" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_dtel_int_spine_dtel_MirrorOnDropDoDTest" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_dtel_int_spine_dtel_sai" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_dtel_int_spine_dtel_sai_INGRESS_DROP_REPORT_Test" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_dtel_int_spine_sai" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_dtel_int_spine_sai_hostif" PROPERTIES TIMEOUT 3600)
-
-# Switch Master L3_HEAVY_INT_SPINE_PROFILE tests
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_l3_heavy_spine" ${SWITCH_P4}
-    "${testExtraArgs} -DL3_HEAVY_INT_SPINE_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_l3_heavy_spine"
-        "all ^tunnel ^mpls ^urpf ^ipv6 ^warminit ^mcast ^racl ^mac-zero ^dynhash")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_l3_heavy_spine_mirror" ${SWITCH_P4}
-    "${testExtraArgs} -DL3_HEAVY_INT_SPINE_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_MIRROR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_l3_heavy_spine_mirror"
-        "mirror_acl ^ipv6")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_l3_heavy_spine_dtel" ${SWITCH_P4}
-    "${testExtraArgs} -DL3_HEAVY_INT_SPINE_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_l3_heavy_spine_dtel"
-    "switch_int_l45_common.intl45_route_dtel_reports
-    switch_int_l45_transit_digest.intl45_transitTest_hop2_with_digest
-    switch_int_l45_transit.INTL45_DSCP_Rewrite_TransitTest
-    switch_int_l45_transit.intl45_DSCP_TransitTest
-    switch_int_l45_transit.INTL45_Marker_TransitTest
-    switch_int_l45_transit.intl45_transitTest_Ebit
-    switch_int_l45_transit.INTL45_TransitTest_Enable")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_l3_heavy_spine_dtel_part_2" ${SWITCH_P4}
-    "${testExtraArgs} -DL3_HEAVY_INT_SPINE_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_l3_heavy_spine_dtel_part_2"
-    "switch_int_l45_transit.intl45_transitTest_hop2_latency
-    switch_int_l45_transit.intl45_transitTest_hop2_port_ids
-    switch_int_l45_transit.intl45_transitTest_hop2_qdepth
-    switch_int_l45_transit.intl45_transitTest_hop2_txutil_yet_supported
-    switch_int_l45_transit.intl45_transitTest_latency_shift
-    switch_int_l45_transit.intl45_transitTest_Metadata
-    switch_int_l45_transit.intl45_transitTest_switchid
-    switch_queue_report.QueueReport_Change_Test")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_l3_heavy_spine_dtel_part_3" ${SWITCH_P4}
-    "${testExtraArgs} -DL3_HEAVY_INT_SPINE_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_l3_heavy_spine_dtel_part_3"
-    "switch_queue_report_multimirror.QueueReport_Over_ECMP_Test
-    switch_queue_report_multimirror.QueueReport_MirrorTest
-    switch_queue_report_multimirror.QueueReport_L2_MirrorTest
-    switch_queue_report.QueueReport_Entropy_Test
-    switch_queue_report.QueueReport_Quota_Test
-    switch_mirror_on_drop.MirrorOnDropEgrNonDefaultRuleTest
-    switch_mirror_on_drop.MirrorOnDropHostifReasonCodeTest
-    switch_mirror_on_drop.MirrorOnDropIngressAclTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_l3_heavy_spine_dtel_part_4" ${SWITCH_P4}
-    "${testExtraArgs} -DL3_HEAVY_INT_SPINE_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_l3_heavy_spine_dtel_part_4"
-    "switch_mirror_on_drop.MirrorOnDropNonDefaultRuleTest
-    switch_int_l45_transit.INTL45_Transit_IngressMoDTest
-    switch_int_l45_transit_stless.intl45_transitTest_hop2_stateless")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_l3_heavy_spine_dtel_intl45_transitTest_CHECKSUM" ${SWITCH_P4}
-    "${testExtraArgs} -DL3_HEAVY_INT_SPINE_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_l3_heavy_spine_dtel_intl45_transitTest_CHECKSUM"
-        "switch_int_l45_transit.intl45_transitTest_CHECKSUM")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_l3_heavy_spine_dtel_MirrorOnDropEgressAclTest" ${SWITCH_P4}
-    "${testExtraArgs} -DL3_HEAVY_INT_SPINE_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_l3_heavy_spine_dtel_MirrorOnDropEgressAclTest"
-        "switch_mirror_on_drop.MirrorOnDropEgressAclTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_l3_heavy_spine_dtel_QueueReport_DoD_Test" ${SWITCH_P4}
-    "${testExtraArgs} -DL3_HEAVY_INT_SPINE_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_l3_heavy_spine_dtel_QueueReport_DoD_Test"
-        "switch_queue_report.QueueReport_DoD_Test")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_l3_heavy_spine_dtel_MirrorOnDropDoDTest" ${SWITCH_P4}
-    "${testExtraArgs} -DL3_HEAVY_INT_SPINE_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_l3_heavy_spine_dtel_MirrorOnDropDoDTest"
-        "switch_mirror_on_drop.MirrorOnDropDoDTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_l3_heavy_spine_dtel_INTL45_Transit_DoDTest" ${SWITCH_P4}
-    "${testExtraArgs} -DL3_HEAVY_INT_SPINE_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_l3_heavy_spine_dtel_INTL45_Transit_DoDTest"
-        "switch_int_l45_transit.INTL45_Transit_DoDTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_l3_heavy_spine_qos" ${SWITCH_P4}
-    "${testExtraArgs} -DL3_HEAVY_INT_SPINE_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_QOS}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_l3_heavy_spine_qos"
-        "qos-acl")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_l3_heavy_spine_dtel_sai" ${SWITCH_P4}
-    "${testExtraArgs} -DL3_HEAVY_INT_SPINE_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_SAI_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_l3_heavy_spine_dtel_sai"
-        "int_transit")
-bfn_set_ptf_port_map_file("tofino" "smoketest_switch_l3_heavy_spine_dtel_sai"
-    "${SWITCH_PTF_DIR_SAI}/port_map.ini")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_l3_heavy_spine_sai" ${SWITCH_P4}
-    "${testExtraArgs} -DL3_HEAVY_INT_SPINE_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_SAI}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_l3_heavy_spine_sai"
-        "mirror-acl")
-bfn_set_ptf_port_map_file("tofino" "smoketest_switch_l3_heavy_spine_sai"
-    "${SWITCH_PTF_DIR_SAI}/port_map.ini")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_l3_heavy_spine_sai_hostif" ${SWITCH_P4}
-    "${testExtraArgs} -DL3_HEAVY_INT_SPINE_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_SAI}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_l3_heavy_spine_sai_hostif"
-        "saihostif.CoppStatTest")
-bfn_set_ptf_port_map_file("tofino" "smoketest_switch_l3_heavy_spine_sai_hostif"
-    "${SWITCH_PTF_DIR_SAI}/port_map.ini")
-bfn_set_ptf_test_port("tofino" "smoketest_switch_l3_heavy_spine_sai_hostif"
-    "3")
-
-# 500s timeout is too little for compiling and testing the entire switch, bumping it up
-set_tests_properties("tofino/smoketest_switch_l3_heavy_spine" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_l3_heavy_spine_mirror" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_l3_heavy_spine_dtel" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_l3_heavy_spine_dtel_part_2" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_l3_heavy_spine_dtel_part_3" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_l3_heavy_spine_dtel_part_4" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_l3_heavy_spine_dtel_intl45_transitTest_CHECKSUM" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_l3_heavy_spine_dtel_MirrorOnDropEgressAclTest" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_l3_heavy_spine_dtel_QueueReport_DoD_Test" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_l3_heavy_spine_dtel_MirrorOnDropDoDTest" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_l3_heavy_spine_dtel_INTL45_Transit_DoDTest" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_l3_heavy_spine_qos" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_l3_heavy_spine_dtel_sai" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_l3_heavy_spine_sai" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_l3_heavy_spine_sai_hostif" PROPERTIES TIMEOUT 3600)
-
-# Switch Master MSDC_SPINE_MARKER_PROFILE tests
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_marker_spine" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -DINT_L45_MARKER_ENABLE -pd -to 3600" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_marker_spine"
-	"all ^tunnel ^mpls ^urpf ^racl ^ipv6 ^mcast ^warminit ^stp ^ptp ^dynhash ^aclfrag
-        ^switch_hostif.HostIfPtpTest
-        ^switch_tests.L2StpEgressBlockingTest
-        ^switch_tests.L2StpTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_marker_spine_HostIfPtpTest" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -DINT_L45_MARKER_ENABLE -pd -to 3600" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_marker_spine_HostIfPtpTest"
-        "switch_hostif.HostIfPtpTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_marker_spine_L2StpEgressBlockingTest" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -DINT_L45_MARKER_ENABLE -pd -to 3600" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_marker_spine_L2StpEgressBlockingTest"
-        "switch_tests.L2StpEgressBlockingTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_marker_spine_L2StpTest" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -DINT_L45_MARKER_ENABLE -pd -to 3600" "${SWITCH_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_marker_spine_L2StpTest"
-        "switch_tests.L2StpTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_marker_spine_mirror" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -DINT_L45_MARKER_ENABLE -pd -to 3600" "${SWITCH_PTF_DIR_MIRROR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_marker_spine_mirror"
-        "mirror_acl_slice_tests.MirrorAclSliceTest_i2e")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_marker_spine_dtel" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -DINT_L45_MARKER_ENABLE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_marker_spine_dtel"
-        "switch_int_l45_common.intl45_route_dtel_reports
-        switch_int_l45_transit.INTL45_Marker_TransitTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_marker_spine_dtel_part_2" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -DINT_L45_MARKER_ENABLE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_marker_spine_dtel_part_2"
-        "switch_int_l45_transit.intl45_transitTest_hop2_latency
-        switch_int_l45_transit.intl45_transitTest_hop2_txutil_yet_supported
-        switch_int_l45_transit.intl45_transitTest_latency_shift
-        switch_queue_report.QueueReport_Change_Test")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_marker_spine_dtel_QueueReport_Over_ECMP_Test" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -DINT_L45_MARKER_ENABLE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_marker_spine_dtel_QueueReport_Over_ECMP_Test"
-        "switch_queue_report_multimirror.QueueReport_Over_ECMP_Test")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_marker_spine_dtel_QueueReport_MirrorTest" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -DINT_L45_MARKER_ENABLE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_marker_spine_dtel_QueueReport_MirrorTest"
-        "switch_queue_report_multimirror.QueueReport_MirrorTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_marker_spine_dtel_QueueReport_L2_MirrorTest" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -DINT_L45_MARKER_ENABLE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_marker_spine_dtel_QueueReport_L2_MirrorTest"
-        "switch_queue_report_multimirror.QueueReport_L2_MirrorTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_marker_spine_dtel_QueueReport_Entropy_Test" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -DINT_L45_MARKER_ENABLE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_marker_spine_dtel_QueueReport_Entropy_Test"
-        "switch_queue_report.QueueReport_Entropy_Test")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_marker_spine_dtel_QueueReport_Quota_Test" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -DINT_L45_MARKER_ENABLE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_marker_spine_dtel_QueueReport_Quota_Test"
-        "switch_queue_report.QueueReport_Quota_Test")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_marker_spine_dtel_MirrorOnDropEgrNonDefaultRuleTest" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -DINT_L45_MARKER_ENABLE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_marker_spine_dtel_MirrorOnDropEgrNonDefaultRuleTest"
-        "switch_mirror_on_drop.MirrorOnDropEgrNonDefaultRuleTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_marker_spine_dtel_MirrorOnDropHostifReasonCodeTest" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -DINT_L45_MARKER_ENABLE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_marker_spine_dtel_MirrorOnDropHostifReasonCodeTest"
-        "switch_mirror_on_drop.MirrorOnDropHostifReasonCodeTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_marker_spine_dtel_MirrorOnDropIngressAclTest" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -DINT_L45_MARKER_ENABLE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_marker_spine_dtel_MirrorOnDropIngressAclTest"
-        "switch_mirror_on_drop.MirrorOnDropIngressAclTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_marker_spine_dtel_MirrorOnDropNonDefaultRuleTest" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -DINT_L45_MARKER_ENABLE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_marker_spine_dtel_MirrorOnDropNonDefaultRuleTest"
-        "switch_mirror_on_drop.MirrorOnDropNonDefaultRuleTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_marker_spine_dtel_INTL45_Transit_IngressMoDTest" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -DINT_L45_MARKER_ENABLE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_marker_spine_dtel_INTL45_Transit_IngressMoDTest"
-        "switch_int_l45_transit.INTL45_Transit_IngressMoDTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_marker_spine_dtel_intl45_transitTest_CHECKSUM" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -DINT_L45_MARKER_ENABLE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_marker_spine_dtel_intl45_transitTest_CHECKSUM"
-        "switch_int_l45_transit.intl45_transitTest_CHECKSUM")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_marker_spine_dtel_intl45_transitTest_hop2_stateless" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -DINT_L45_MARKER_ENABLE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_marker_spine_dtel_intl45_transitTest_hop2_stateless"
-        "switch_int_l45_transit_stless.intl45_transitTest_hop2_stateless")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_marker_spine_dtel_intl45_transitTest_hop2_with_digest" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -DINT_L45_MARKER_ENABLE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_marker_spine_dtel_intl45_transitTest_hop2_with_digest"
-        "switch_int_l45_transit_digest.intl45_transitTest_hop2_with_digest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_marker_spine_dtel_intl45_transitTest_Ebit" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -DINT_L45_MARKER_ENABLE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_marker_spine_dtel_intl45_transitTest_Ebit"
-        "switch_int_l45_transit.intl45_transitTest_Ebit")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_marker_spine_dtel_INTL45_TransitTest_Enable" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -DINT_L45_MARKER_ENABLE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_marker_spine_dtel_INTL45_TransitTest_Enable"
-        "switch_int_l45_transit.INTL45_TransitTest_Enable")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_marker_spine_dtel_intl45_transitTest_hop2_port_ids" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -DINT_L45_MARKER_ENABLE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_marker_spine_dtel_intl45_transitTest_hop2_port_ids"
-        "switch_int_l45_transit.intl45_transitTest_hop2_port_ids")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_marker_spine_dtel_intl45_transitTest_hop2_qdepth" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -DINT_L45_MARKER_ENABLE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_marker_spine_dtel_intl45_transitTest_hop2_qdepth"
-        "switch_int_l45_transit.intl45_transitTest_hop2_qdepth")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_marker_spine_dtel_intl45_transitTest_Metadata" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -DINT_L45_MARKER_ENABLE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_marker_spine_dtel_intl45_transitTest_Metadata"
-        "switch_int_l45_transit.intl45_transitTest_Metadata")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_marker_spine_dtel_intl45_transitTest_switchid" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -DINT_L45_MARKER_ENABLE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_marker_spine_dtel_intl45_transitTest_switchid"
-        "switch_int_l45_transit.intl45_transitTest_switchid")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_marker_spine_dtel_MirrorOnDropEgressAclTest" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -DINT_L45_MARKER_ENABLE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_marker_spine_dtel_MirrorOnDropEgressAclTest"
-        "switch_mirror_on_drop.MirrorOnDropEgressAclTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_marker_spine_dtel_intl45_DSCP_TransitTest" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -DINT_L45_MARKER_ENABLE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_marker_spine_dtel_intl45_DSCP_TransitTest"
-        "switch_int_l45_transit.intl45_DSCP_TransitTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_marker_spine_dtel_QueueReport_DoD_Test" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -DINT_L45_MARKER_ENABLE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_marker_spine_dtel_QueueReport_DoD_Test"
-        "switch_queue_report.QueueReport_DoD_Test")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_marker_spine_dtel_MirrorOnDropDoDTest" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -DINT_L45_MARKER_ENABLE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_marker_spine_dtel_MirrorOnDropDoDTest"
-        "switch_mirror_on_drop.MirrorOnDropDoDTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_marker_spine_dtel_INTL45_Transit_DoDTest" ${SWITCH_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -DINT_L45_MARKER_ENABLE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_marker_spine_dtel_INTL45_Transit_DoDTest"
-        "switch_int_l45_transit.INTL45_Transit_DoDTest")
-
-# 500s timeout is too little for compiling and testing the entire switch, bumping it up
-set_tests_properties("tofino/smoketest_switch_marker_spine" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_marker_spine_HostIfPtpTest" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_marker_spine_L2StpEgressBlockingTest" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_marker_spine_L2StpTest" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_marker_spine_mirror" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_marker_spine_dtel" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_marker_spine_dtel_part_2" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_marker_spine_dtel_QueueReport_Over_ECMP_Test" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_marker_spine_dtel_QueueReport_MirrorTest" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_marker_spine_dtel_QueueReport_L2_MirrorTest" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_marker_spine_dtel_QueueReport_Entropy_Test" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_marker_spine_dtel_QueueReport_Quota_Test" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_marker_spine_dtel_MirrorOnDropEgrNonDefaultRuleTest" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_marker_spine_dtel_MirrorOnDropHostifReasonCodeTest" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_marker_spine_dtel_MirrorOnDropIngressAclTest" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_marker_spine_dtel_MirrorOnDropNonDefaultRuleTest" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_marker_spine_dtel_INTL45_Transit_IngressMoDTest" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_marker_spine_dtel_intl45_transitTest_CHECKSUM" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_marker_spine_dtel_intl45_transitTest_hop2_stateless" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_marker_spine_dtel_intl45_transitTest_hop2_with_digest" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_marker_spine_dtel_intl45_transitTest_Ebit" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_marker_spine_dtel_INTL45_TransitTest_Enable" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_marker_spine_dtel_intl45_transitTest_hop2_port_ids" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_marker_spine_dtel_intl45_transitTest_hop2_qdepth" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_marker_spine_dtel_intl45_transitTest_Metadata" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_marker_spine_dtel_intl45_transitTest_switchid" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_marker_spine_dtel_MirrorOnDropEgressAclTest" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_marker_spine_dtel_intl45_DSCP_TransitTest" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_marker_spine_dtel_QueueReport_DoD_Test" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_marker_spine_dtel_MirrorOnDropDoDTest" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_marker_spine_dtel_INTL45_Transit_DoDTest" PROPERTIES TIMEOUT 3600)
 
 # Switch Rel 8.7 MSDC_PROFILE tests
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_msdc" ${SWITCH_${SWITCH_VERSION}_P4}
@@ -1064,101 +741,6 @@ set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_ent_dc_general_s
 
 p4c_add_test_label("tofino" "UNSTABLE" "smoketest_switch_${SWITCH_VERSION}_ent_dc_general_set_9")
 
-# Switch Rel 8.7 MSDC_L3_PROFILE_BRIG tests
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_l3_msdc" ${SWITCH_${SWITCH_VERSION}_P4}
-    "${testExtraArgs} -DMSDC_L3_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR}")
-bfn_set_p4_build_flag("tofino" "smoketest_switch_${SWITCH_VERSION}_l3_msdc"
-    "-Xp4c=\"--disable-power-check\"")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_l3_msdc"
-        "switch_acl.AclLabelTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_l3_msdc_set_1" ${SWITCH_${SWITCH_VERSION}_P4}
-    "${testExtraArgs} -DMSDC_L3_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_l3_msdc_set_1"
-        "switch_acl.Acl_i2e_ErspanRewriteTest
-        switch_acl.IPAclStatsTest
-        switch_acl.IPAclTest
-        switch_acl.IPIngressAclRangeTcamTest
-        switch_acl.MirrorAclTest_e2e
-        switch_acl.MirrorAclTest_i2e
-        switch_acl.MirrorSessionTest
-        switch_hostif.HostIfLagRxTxTest
-        switch_hostif.HostIfRxTxTest
-        switch_mirror.MirrorPortTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_l3_msdc_set_2" ${SWITCH_${SWITCH_VERSION}_P4}
-    "${testExtraArgs} -DMSDC_L3_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_l3_msdc_set_2"
-        "switch_tests.CpuTxTest
-        switch_tests.ExceptionPacketsTest
-        switch_tests.ExceptionPacketsTest_IPV6
-        switch_tests.HostIfTest
-        switch_tests.HostIfV6Test
-        switch_tests.L2AccessToAccessVlanTest
-        switch_tests.L2AccessToTrunkPriorityTaggingTest
-        switch_tests.L2AccessToTrunkVlanJumboTest
-        switch_tests.L2AccessToTrunkVlanTest
-        switch_tests.L2AgingTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_l3_msdc_set_3" ${SWITCH_${SWITCH_VERSION}_P4}
-    "${testExtraArgs} -DMSDC_L3_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_l3_msdc_set_3"
-        "switch_tests.L2DynamicLearnAgeTest
-        switch_tests.L2DynamicMacLearnTest
-        switch_tests.L2DynamicMacMoveTest
-        switch_tests.L2FloodTest
-        switch_tests.L2LNStatsTest
-        switch_tests.L2LagTest
-        switch_tests.L2MacLearnTest
-        switch_tests.L2StaticMacBulkDeleteTest
-        switch_tests.L2StaticMacMoveBulkTest
-        switch_tests.L2StaticMacMoveTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_l3_msdc_set_4" ${SWITCH_${SWITCH_VERSION}_P4}
-    "${testExtraArgs} -DMSDC_L3_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_l3_msdc_set_4"
-        "switch_tests.L2TrunkToAccessVlanTest
-        switch_tests.L2TrunkToTrunkVlanTest
-        switch_tests.L2VlanStatsTest
-        switch_tests.L3EcmpLagTest
-        switch_tests.L3IPv4EcmpTest
-        switch_tests.L3IPv4HostJumboTest
-        switch_tests.L3IPv4HostModifyTest
-        switch_tests.L3IPv4HostTest
-        switch_tests.L3IPv4LagTest
-        switch_tests.L3IPv4LookupTest
-        switch_tests.L3IPv4LpmEcmpTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_l3_msdc_set_5" ${SWITCH_${SWITCH_VERSION}_P4}
-    "${testExtraArgs} -DMSDC_L3_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_l3_msdc_set_5"
-        "switch_tests.L3IPv4LpmTest
-        switch_tests.L3IPv4MtuTest
-        switch_tests.L3IPv4SubIntfHostTest
-        switch_tests.L3IPv6EcmpTest
-        switch_tests.L3IPv6HostTest
-        switch_tests.L3IPv6LagTest
-        switch_tests.L3IPv6LookupTest
-        switch_tests.L3IPv6LpmEcmpTest
-        switch_tests.L3IPv6LpmTest
-        switch_tests.L3VIFloodTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_l3_msdc_set_6" ${SWITCH_${SWITCH_VERSION}_P4}
-    "${testExtraArgs} -DMSDC_L3_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_l3_msdc_set_6"
-        "switch_tests.L3VIIPv4HostFloodTest
-        switch_tests.L3VIIPv4HostMacMoveTest
-        switch_tests.L3VIIPv4HostTest
-        switch_tests.L3VIIPv4HostVlanTaggingTest
-        switch_tests.L3VIIPv4LagTest
-        switch_tests.L3VIIPv6HostTest
-        switch_tests.L3VINhopGleanTest
-        switch_tests.MalformedPacketsTest
-        switch_tests.MalformedPacketsTest_ipv6")
-
-# 500s timeout is too little for compiling and testing the entire switch, bumping it up
-set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_l3_msdc" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_l3_msdc_set_1" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_l3_msdc_set_2" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_l3_msdc_set_3" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_l3_msdc_set_4" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_l3_msdc_set_5" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_l3_msdc_set_6" PROPERTIES TIMEOUT 3600)
-
 # Switch Rel 8.7 DC_BASIC_PROFILE_BRIG tests
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_dc_basic" ${SWITCH_${SWITCH_VERSION}_P4}
     "${testExtraArgs} -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR}")
@@ -1346,158 +928,6 @@ set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_dc_basic_Malform
 set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_dc_basic_MalformedPacketsTest_tunnel" PROPERTIES TIMEOUT 3600)
 
 p4c_add_test_label("tofino" "UNSTABLE" "smoketest_switch_${SWITCH_VERSION}_dc_basic_set_12")
-
-# Switch Rel 8.7 MSDC_SPINE_DTEL_INT_PROFILE tests
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int" ${SWITCH_${SWITCH_VERSION}_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int"
-        "all ^dynhash ^tunnel ^mpls ^urpf ^racl ^ipv6 ^mcast ^warminit ^stp ^ptp")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_1" ${SWITCH_${SWITCH_VERSION}_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR_MIRROR}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_1"
-        "mirror_acl_slice_tests.MirrorAclSliceTest_i2e")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2" ${SWITCH_${SWITCH_VERSION}_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2"
-        "switch_int_l45_transit_digest.intl45_transitTest_hop2_with_digest
-         switch_int_l45_transit.intl45_transitTest_Metadata
-         switch_int_l45_transit.intl45_transitTest_hop2_latency
-         switch_int_l45_transit.intl45_transitTest_hop2_port_ids
-         switch_int_l45_transit.intl45_DSCP_TransitTest
-         switch_int_l45_transit.intl45_transitTest_hop2_txutil_yet_supported")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2_part_2" ${SWITCH_${SWITCH_VERSION}_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2_part_2"
-        "switch_int_l45_transit.intl45_transitTest_switchid
-         switch_int_l45_transit.intl45_transitTest_hop2_qdepth
-         switch_int_l45_transit.intl45_transitTest_latency_shift
-         switch_int_l45_transit.intl45_transitTest_Ebit
-         switch_int_l45_transit.INTL45_Marker_TransitTest
-         switch_mirror_on_drop.MirrorOnDropEgressAclTest
-         switch_queue_report.QueueReport_Change_Test
-         switch_int_l45_common.intl45_route_dtel_reports
-         switch_int_l45_transit.INTL45_TransitTest_Enable")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2_intl45_transitTest_hop2_stateless" ${SWITCH_${SWITCH_VERSION}_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2_intl45_transitTest_hop2_stateless"
-        "switch_int_l45_transit_stless.intl45_transitTest_hop2_stateless")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2_INTL45_Transit_EgressMoDTest" ${SWITCH_${SWITCH_VERSION}_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2_INTL45_Transit_EgressMoDTest"
-        "switch_int_l45_transit.INTL45_Transit_EgressMoDTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2_INTL45_Transit_IngressMoDTest" ${SWITCH_${SWITCH_VERSION}_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2_INTL45_Transit_IngressMoDTest"
-        "switch_int_l45_transit.INTL45_Transit_IngressMoDTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2_MirrorOnDropEgrNonDefaultRuleTest" ${SWITCH_${SWITCH_VERSION}_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2_MirrorOnDropEgrNonDefaultRuleTest"
-        "switch_mirror_on_drop.MirrorOnDropEgrNonDefaultRuleTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2_MirrorOnDropHostifReasonCodeTest" ${SWITCH_${SWITCH_VERSION}_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2_MirrorOnDropHostifReasonCodeTest"
-        "switch_mirror_on_drop.MirrorOnDropHostifReasonCodeTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2_MirrorOnDropIngressAclTest" ${SWITCH_${SWITCH_VERSION}_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2_MirrorOnDropIngressAclTest"
-        "switch_mirror_on_drop.MirrorOnDropIngressAclTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2_MirrorOnDropNonDefaultRuleTest" ${SWITCH_${SWITCH_VERSION}_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2_MirrorOnDropNonDefaultRuleTest"
-        "switch_mirror_on_drop.MirrorOnDropNonDefaultRuleTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2_QueueReport_Entropy_Test" ${SWITCH_${SWITCH_VERSION}_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2_QueueReport_Entropy_Test"
-        "switch_queue_report.QueueReport_Entropy_Test")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2_QueueReport_Quota_Test" ${SWITCH_${SWITCH_VERSION}_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2_QueueReport_Quota_Test"
-        "switch_queue_report.QueueReport_Quota_Test")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2_QueueReport_Over_ECMP_Test" ${SWITCH_${SWITCH_VERSION}_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2_QueueReport_Over_ECMP_Test"
-        "switch_queue_report_multimirror.QueueReport_Over_ECMP_Test")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2_QueueReport_MirrorTest" ${SWITCH_${SWITCH_VERSION}_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2_QueueReport_MirrorTest"
-        "switch_queue_report_multimirror.QueueReport_MirrorTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2_QueueReport_L2_MirrorTest" ${SWITCH_${SWITCH_VERSION}_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2_QueueReport_L2_MirrorTest"
-        "switch_queue_report_multimirror.QueueReport_L2_MirrorTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_3" ${SWITCH_${SWITCH_VERSION}_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_3"
-        "transit_l45_dod
-        ^switch_int_l45_transit.INTL45_Transit_DoDTest
-        ^switch_mirror_on_drop.MirrorOnDropDoDTest
-        ^switch_queue_report.QueueReport_DoD_Test")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_3_INTL45_Transit_DoDTest" ${SWITCH_${SWITCH_VERSION}_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_3_INTL45_Transit_DoDTest"
-        "switch_int_l45_transit.INTL45_Transit_DoDTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_3_MirrorOnDropDoDTest" ${SWITCH_${SWITCH_VERSION}_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_3_MirrorOnDropDoDTest"
-        "switch_mirror_on_drop.MirrorOnDropDoDTest")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_3_QueueReport_DoD_Test" ${SWITCH_${SWITCH_VERSION}_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_3_QueueReport_DoD_Test"
-        "switch_queue_report.QueueReport_DoD_Test")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_4" ${SWITCH_${SWITCH_VERSION}_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR_SAI}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_4"
-        "egress-acl mirror-acl")
-bfn_set_ptf_port_map_file("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_4"
-    "${SWITCH_${SWITCH_VERSION}_PTF_DIR_SAI}/port_map.ini")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_5" ${SWITCH_${SWITCH_VERSION}_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR_SAI_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_5"
-        "int_transit
-        ^sai_mod.INGRESS_DROP_REPORT_Test")
-bfn_set_ptf_port_map_file("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_5"
-    "${SWITCH_${SWITCH_VERSION}_PTF_DIR_SAI}/port_map.ini")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_5_INGRESS_DROP_REPORT_Test" ${SWITCH_${SWITCH_VERSION}_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR_SAI_DTEL}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_5_INGRESS_DROP_REPORT_Test"
-        "sai_mod.INGRESS_DROP_REPORT_Test")
-bfn_set_ptf_port_map_file("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_5_INGRESS_DROP_REPORT_Test"
-    "${SWITCH_${SWITCH_VERSION}_PTF_DIR_SAI}/port_map.ini")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_6" ${SWITCH_${SWITCH_VERSION}_P4}
-    "${testExtraArgs} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR_SAI}")
-bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_6"
-        "saihostif.CoppStatTest")
-bfn_set_ptf_port_map_file("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_6"
-    "${SWITCH_${SWITCH_VERSION}_PTF_DIR_SAI}/port_map.ini")
-bfn_set_ptf_test_port("tofino" "smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_6"
-    "3")
-# 500s timeout is too little for compiling and testing the entire switch, bumping it up
-set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_spine_dtel_int" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_1" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_3" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_4" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_5" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_6" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2_part_2" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2_intl45_transitTest_hop2_stateless" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2_INTL45_Transit_EgressMoDTest" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2_INTL45_Transit_IngressMoDTest" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2_MirrorOnDropEgrNonDefaultRuleTest" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2_MirrorOnDropHostifReasonCodeTest" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2_MirrorOnDropIngressAclTest" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2_MirrorOnDropNonDefaultRuleTest" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2_QueueReport_Entropy_Test" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2_QueueReport_Quota_Test" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2_QueueReport_Over_ECMP_Test" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2_QueueReport_MirrorTest" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_2_QueueReport_L2_MirrorTest" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_3_INTL45_Transit_DoDTest" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_3_MirrorOnDropDoDTest" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_3_QueueReport_DoD_Test" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_spine_dtel_int_set_5_INGRESS_DROP_REPORT_Test" PROPERTIES TIMEOUT 3600)
-set (SWITCH_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch)
-# set_property(DIRECTORY PROPERTY EP_STEP_TARGETS update configure)
 
 function(bfn_add_switch device)
   set (SWITCH_BIN_DIR ${CMAKE_CURRENT_BINARY_DIR}/p4_14/switch-${device})
