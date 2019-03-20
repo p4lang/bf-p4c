@@ -1,5 +1,10 @@
 # Release Notes
 
+## Version 8.8.0
+The **Home run** release
+
+TBW
+
 ## Version 8.7.0
 The **Quickie** release
 
