@@ -1589,8 +1589,8 @@ control INTSWEgressDeparser(
 
     EgressMirror() egress_mirror;
 
-    Checksum<bit<16>>(HashAlgorithm_t.CRC16) encap_udp_checksum;
-    // Checksum<bit<16>>(HashAlgorithm_t.CRC16) inner_ipv4_checksum;
+    Checksum<bit<16>>(HashAlgorithm_t.CSUM16) encap_udp_checksum;
+    // Checksum<bit<16>>(HashAlgorithm_t.CSUM16) inner_ipv4_checksum;
 
     apply {
         hdr.encap_udp.checksum = encap_udp_checksum.update({

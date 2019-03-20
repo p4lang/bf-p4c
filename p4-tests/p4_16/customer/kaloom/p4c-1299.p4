@@ -1453,8 +1453,8 @@ control UPFEgressDeparser(
             in upf_egress_metadata_t eg_md,
             in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr) {
 
-    Checksum<bit<16>>(HashAlgorithm_t.CRC16) outer_ipv4_checksum;
-    Checksum<bit<16>>(HashAlgorithm_t.CRC16) inner_ipv4_checksum;
+    Checksum<bit<16>>(HashAlgorithm_t.CSUM16) outer_ipv4_checksum;
+    Checksum<bit<16>>(HashAlgorithm_t.CSUM16) inner_ipv4_checksum;
 
     apply {
         hdr.outer_ipv4.hdrChecksum = outer_ipv4_checksum.update({

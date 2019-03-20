@@ -1283,6 +1283,25 @@ cstring BackendConverter::getPipelineName(const IR::P4Program* program, int inde
     auto name = path->path->name;
     return name;
 }
+struct CheckChecksumAlgorithm : public Inspector {
+    bool preorder(const IR::Declaration_Instance* hashAlgorithm) {
+        auto* type = hashAlgorithm->type;
+        if (auto* t = type->to<IR::Type_Specialized>()) {
+            auto* val = t->baseType;
+            if (val->to<IR::Type_Name>()->path->name != "Checksum") {
+                return false;
+            }
+            if (auto* hashArgument = (*hashAlgorithm->arguments)[0]) {
+                auto* hashMember = hashArgument->expression->to<IR::Member>();
+                if (hashMember->member != "CSUM16") {
+                    ::error("%1% only supports CSUM16 for checksum calculation", Device::name());
+                    ::error("%1%", hashMember);
+                }
+            }
+        }
+        return false;
+    }
+};
 
 void BackendConverter::convertTnaProgram(const IR::P4Program* program, BFN_Options& options) {
     auto main = toplevel->getMain();
@@ -1325,10 +1344,12 @@ void BackendConverter::convertTnaProgram(const IR::P4Program* program, BFN_Optio
             }
             for (auto p : thread->parsers) {
                 if (auto parser = p->to<IR::BFN::TnaParser>()) {
+                    parser->apply(CheckChecksumAlgorithm());
                     parser->apply(ExtractParser(refMap, typeMap, rv));
                 }
             }
             if (auto dprsr = thread->deparser->to<IR::BFN::TnaDeparser>()) {
+                dprsr->apply(CheckChecksumAlgorithm());
                 dprsr->apply(ExtractDeparser(rv));
                 dprsr->apply(ExtractChecksum(rv));
             }

@@ -182,7 +182,6 @@ getChecksumUpdateCondition(const IR::IfStatement* ifStatement) {
 
 struct CollectUpdateChecksums : public Inspector {
     ChecksumUpdateInfoMap checksums;
-
     bool preorder(const IR::AssignmentStatement* assignment) {
         auto csum = analyzeUpdateChecksumStatement(assignment);
 
