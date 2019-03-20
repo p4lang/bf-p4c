@@ -31,7 +31,7 @@ Visitor::profile_t ValidateAllocation::init_apply(const IR::Node* root) {
     for (auto& f1 : phv) {
         for (auto& f2 : phv) {
             if (f1.id == f2.id) continue;
-            if (phv.isParserMutex(&f1, &f2) || phv.isMetadataMutex(&f1, &f2))
+            if (phv.isFieldMutex(&f1, &f2) || phv.isMetadataMutex(&f1, &f2))
                 mutually_exclusive_field_ids(f1.id, f2.id) = true;
         }
     }

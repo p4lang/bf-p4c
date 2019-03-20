@@ -1,5 +1,5 @@
-#ifndef _PARSER_OVERLAY_H_
-#define _PARSER_OVERLAY_H_
+#ifndef EXTENSIONS_BF_P4C_PHV_ANALYSIS_MUTEX_OVERLAY_H_
+#define EXTENSIONS_BF_P4C_PHV_ANALYSIS_MUTEX_OVERLAY_H_
 
 #include <iostream>
 #include "ir/ir.h"
@@ -59,9 +59,6 @@ class BuildMutex : public BFN::ControlFlowVisitor, public Inspector {
     PhvInfo&      phv;
     const bitvec&       neverOverlay;
 
-    // Used to get information about mutually exclusive fields, specified by pragmas
-    const PragmaMutuallyExclusive& pragmas;
-
     /// If mutually_inclusive(f1->id, f2->id), then fields f1 and f2 are used
     /// or defined on the same control flow path.
     SymBitMatrix     mutually_inclusive;
@@ -86,13 +83,9 @@ class BuildMutex : public BFN::ControlFlowVisitor, public Inspector {
     profile_t init_apply(const IR::Node* root) override;
 
  public:
-    BuildMutex(
-            PhvInfo& phv,
-            const bitvec& neverOverlay,
-            const PragmaMutuallyExclusive& p,
-            FieldFilter_t ignore_field)
-            : phv(phv), neverOverlay(neverOverlay), pragmas(p),
-              mutually_exclusive(phv.parser_mutex()), IgnoreField(ignore_field) {
+    BuildMutex(PhvInfo& phv, const bitvec& neverOverlay, FieldFilter_t ignore_field)
+        : phv(phv), neverOverlay(neverOverlay), mutually_exclusive(phv.field_mutex()),
+          IgnoreField(ignore_field) {
         joinFlows = true;
         visitDagOnce = false; }
 
@@ -116,11 +109,8 @@ class BuildParserOverlay : public BuildMutex {
     bool preorder(const IR::BFN::Deparser*) override { return false; }
 
  public:
-    BuildParserOverlay(
-            PhvInfo& phv,
-            const bitvec& neverOverlay,
-            const PragmaMutuallyExclusive& p)
-        : BuildMutex(phv, neverOverlay, p, ignore_field) { }
+    BuildParserOverlay(PhvInfo& phv, const bitvec& neverOverlay)
+        : BuildMutex(phv, neverOverlay, ignore_field) { }
 };
 
 /* Produces a SymBitMatrix where keys are PHV::Field ids and values indicate
@@ -139,11 +129,8 @@ class BuildMetadataOverlay : public BuildMutex {
     bool preorder(const IR::BFN::Deparser*) override { return false; }
 
  public:
-    BuildMetadataOverlay(
-            PhvInfo& phv,
-            const bitvec& neverOverlay,
-            const PragmaMutuallyExclusive& p)
-        : BuildMutex(phv, neverOverlay, p, ignore_field) { }
+    BuildMetadataOverlay(PhvInfo& phv, const bitvec& neverOverlay)
+        : BuildMutex(phv, neverOverlay, ignore_field) { }
 };
 
 /** Mark deparsed intrinsic metadata fields as never overlaid.  The deparser
@@ -177,9 +164,7 @@ class ExcludePragmaNoOverlayFields : public Inspector {
     void end_apply() override;
 
  public:
-    ExcludePragmaNoOverlayFields(
-        bitvec& neverOverlay,
-        const PragmaNoOverlay& p)
+    ExcludePragmaNoOverlayFields(bitvec& neverOverlay, const PragmaNoOverlay& p)
     : neverOverlay(neverOverlay), pragma(p) { }
 };
 
@@ -208,24 +193,66 @@ class FindAddedHeaderFields : public MauInspector {
     FindAddedHeaderFields(PhvInfo& phv, bitvec& rv) : phv(phv), rv(rv) { }
 };
 
+class ExcludeMAUOverlays : public MauInspector {
+ public:
+    using ActionToFieldsMap = ordered_map<const IR::MAU::Action*, ordered_set<const PHV::Field*>>;
+
+ private:
+    PhvInfo& phv;
+
+    ActionToFieldsMap actionToWrites;
+    ActionToFieldsMap actionToReads;
+
+    profile_t init_apply(const IR::Node* root) override {
+        actionToWrites.clear();
+        actionToReads.clear();
+        return Inspector::init_apply(root);
+    }
+
+    bool preorder(const IR::MAU::Table* tbl) override;
+    bool preorder(const IR::MAU::Instruction* act) override;
+    void end_apply() override;
+
+    // Given map of action to fields @arg, mark all fields corresponding to the same action as
+    // mutually non-exclusive.
+    void markNonMutex(const ActionToFieldsMap& arg);
+
+ public:
+    explicit ExcludeMAUOverlays(PhvInfo& p) : phv(p) { }
+};
+
+class MarkMutexPragmaFields : public Inspector {
+ private:
+    PhvInfo& phv;
+    const PragmaMutuallyExclusive& pragma;
+
+    profile_t init_apply(const IR::Node* root) override;
+
+ public:
+    explicit MarkMutexPragmaFields(PhvInfo& p, const PragmaMutuallyExclusive& pr)
+        : phv(p), pragma(pr) { }
+};
+
 /// @see BuildParserOverlay and FindAddedHeaderFields.
-class ParserOverlay : public PassManager {
+class MutexOverlay : public PassManager {
  private:
     /// Field IDs of fields that cannot be overlaid.
     bitvec              neverOverlay;
 
  public:
-    ParserOverlay(
+    MutexOverlay(
             PhvInfo& phv,
             const PHV::Pragmas& pragmas) {
         addPasses({
             new ExcludeDeparsedIntrinsicMetadata(phv, neverOverlay),
             new ExcludePragmaNoOverlayFields(neverOverlay, pragmas.pa_no_overlay()),
             // new FindAddedHeaderFields(phv, neverOverlay),
-            new BuildParserOverlay(phv, neverOverlay, pragmas.pa_mutually_exclusive()),
-            new BuildMetadataOverlay(phv, neverOverlay, pragmas.pa_mutually_exclusive())
+            new BuildParserOverlay(phv, neverOverlay),
+            new BuildMetadataOverlay(phv, neverOverlay),
+            new ExcludeMAUOverlays(phv),
+            new MarkMutexPragmaFields(phv, pragmas.pa_mutually_exclusive())
         });
     }
 };
 
-#endif /*_PARSER_OVERLAY_H_ */
+#endif  /* EXTENSIONS_BF_P4C_PHV_ANALYSIS_MUTEX_OVERLAY_H_  */

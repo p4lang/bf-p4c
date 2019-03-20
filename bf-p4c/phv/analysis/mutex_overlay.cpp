@@ -1,8 +1,8 @@
-#include "parser_overlay.h"
 #include <sstream>
 #include <typeinfo>
 #include "ir/ir.h"
 #include "lib/log.h"
+#include "bf-p4c/phv/analysis/mutex_overlay.h"
 
 Visitor::profile_t BuildMutex::init_apply(const IR::Node* root) {
     auto rv = Inspector::init_apply(root);
@@ -87,18 +87,6 @@ void BuildMutex::end_apply() {
                 continue;
             mutually_exclusive(*it1, *it2) = true;
             LOG4("(" << f1->name << ", " << f2->name << ")"); } }
-
-    // Mark fields specified by pa_mutually_exclusive pragmas
-    const ordered_map<const PHV::Field*, ordered_set<const PHV::Field*>>& parsedPragma =
-        pragmas.mutex_fields();
-    for (auto fieldSet : parsedPragma) {
-        auto* field1 = fieldSet.first;
-        for (auto* field2 : fieldSet.second) {
-            if (field1->id == field2->id) {
-                continue; }
-            mutually_exclusive(field1->id, field2->id) = true;
-            LOG1("set " << field1 << " and " << field2
-                << " to be mutually_exclusive because of @pragma pa_mutually_exclusive"); } }
 }
 
 void ExcludeDeparsedIntrinsicMetadata::end_apply() {
@@ -112,6 +100,76 @@ void ExcludePragmaNoOverlayFields::end_apply() {
     for (auto* f : pragma.getFields()) {
         LOG1("Marking field as never overlaid because of pa_no_overlay: " << f);
         neverOverlay.setbit(f->id); }
+}
+
+bool ExcludeMAUOverlays::preorder(const IR::MAU::Table* tbl) {
+    LOG5("\tTable: " << tbl->name);
+    ordered_set<PHV::Field*> keyFields;
+    for (auto* key : tbl->match_key) {
+        PHV::Field* field = phv.field(key->expr);
+        if (!field) continue;
+        keyFields.insert(field);
+    }
+    for (auto* f1 : keyFields) {
+        for (auto* f2 : keyFields) {
+            if (f1 == f2) continue;
+            phv.removeFieldMutex(f1, f2);
+            LOG5("\t  Mark key fields for table " << tbl->name << " as non mutually exclusive: "
+                 << f1->name << ", " << f2->name);
+        }
+    }
+    return true;
+}
+
+bool ExcludeMAUOverlays::preorder(const IR::MAU::Instruction* inst) {
+    LOG5("\t\tInstruction: " << inst);
+    const IR::MAU::Action* act = findContext<IR::MAU::Action>();
+    if (!act) return true;
+    if (inst->operands.empty()) return true;
+    PHV::Field* field = phv.field(inst->operands[0]);
+    if (!field) return true;
+    LOG5("\t\tWrite: " << field);
+    actionToWrites[act].insert(field);
+    for (int idx = 1; idx < int(inst->operands.size()); ++idx) {
+        PHV::Field* readField = phv.field(inst->operands[idx]);
+        if (!readField) continue;
+        LOG5("\t\tRead: " << readField);
+        actionToReads[act].insert(readField);
+    }
+    return true;
+}
+
+void ExcludeMAUOverlays::markNonMutex(const ActionToFieldsMap& arg) {
+    for (auto& kv : arg) {
+        LOG3("\tAction: " << kv.first->name);
+        for (auto* f1 : kv.second) {
+            for (auto* f2 : kv.second) {
+                if (f1 == f2) continue;
+                LOG3("\t  Mark as non mutually exclusive: " << f1->name << ", " << f2->name);
+                phv.removeFieldMutex(f1, f2); } } }
+}
+
+void ExcludeMAUOverlays::end_apply() {
+    LOG3("\tMarking all writes in the same action non mutually exclusive");
+    markNonMutex(actionToWrites);
+    LOG3("\tMarking all reads in the same action non mutually exclusive");
+    markNonMutex(actionToReads);
+}
+
+Visitor::profile_t MarkMutexPragmaFields::init_apply(const IR::Node* root) {
+    // Mark fields specified by pa_mutually_exclusive pragmas
+    const ordered_map<const PHV::Field*, ordered_set<const PHV::Field*>>& parsedPragma =
+        pragma.mutex_fields();
+    for (auto fieldSet : parsedPragma) {
+        auto* field1 = fieldSet.first;
+        for (auto* field2 : fieldSet.second) {
+            if (field1->id == field2->id) continue;
+            phv.addFieldMutex(field1, field2);
+            LOG1("set " << field1 << " and " << field2
+                    << " to be mutually_exclusive because of @pragma pa_mutually_exclusive");
+        }
+    }
+    return Inspector::init_apply(root);
 }
 
 bool FindAddedHeaderFields::preorder(const IR::Primitive* prim) {

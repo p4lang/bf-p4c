@@ -8,7 +8,6 @@
 #include "lib/symbitmatrix.h"
 #include "test/gtest/helpers.h"
 #include "bf-p4c/common/header_stack.h"
-#include "bf-p4c/common/parser_overlay.h"
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/common/elim_unused.h"
 #include "bf-p4c/mau/instruction_selection.h"
@@ -20,6 +19,7 @@
 #include "bf-p4c/mau/table_mutex.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
 #include "bf-p4c/phv/analysis/critical_path_clusters.h"
+#include "bf-p4c/phv/analysis/mutex_overlay.h"
 #include "bf-p4c/phv/analysis/pack_conflicts.h"
 #include "bf-p4c/phv/pragma/pa_mutually_exclusive.h"
 #include "bf-p4c/test/gtest/tofino_gtest_utils.h"
@@ -121,7 +121,7 @@ const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe,
         &table_alloc,
         &uses,
         pragmas,
-        new ParserOverlay(phv, *pragmas),
+        new MutexOverlay(phv, *pragmas),
         &parser_critical_path,
         new FindDependencyGraph(phv, deps),
         &defuse,
@@ -187,7 +187,7 @@ TEST_F(CriticalPathClustersTest, DISABLED_Basic) {
 
     SymBitMatrix mutex;
     PhvInfo phv(mutex);
-    MauBacktracker table_alloc(phv.parser_mutex());
+    MauBacktracker table_alloc(phv.field_mutex());
     DependencyGraph deps;
     TablesMutuallyExclusive table_mutex;
     ActionMutuallyExclusive action_mutex;

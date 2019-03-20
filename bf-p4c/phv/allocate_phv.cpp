@@ -103,6 +103,7 @@ bool AllocScore::operator>(const AllocScore& other) const {
 
     int delta_parser_extractor_balance = parser_extractor_balance - other.parser_extractor_balance;
     int delta_inc_tphv_collections = n_inc_tphv_collections - other.n_inc_tphv_collections;
+    int delta_pov_bits_wasted = n_pov_bits_wasted - other.n_pov_bits_wasted;
 
     int container_type_score = delta_tphv_on_phv_bits + DARK_TO_PHV_DISTANCE *
         delta_dark_on_phv_bits + delta_mocha_on_phv_bits + delta_dark_on_mocha_bits;
@@ -176,6 +177,9 @@ bool AllocScore::operator>(const AllocScore& other) const {
             return delta_overlay_bits > 0;
     if (container_type_score != 0)
         return container_type_score < 0;
+    if (Device::currentDevice() == Device::JBAY)
+        if (delta_pov_bits_wasted != 0)
+            return delta_pov_bits_wasted < 0;
     if (delta_inc_tphv_collections != 0) {
         return delta_inc_tphv_collections < 0; }
     // Opt for the AllocScore, which minimizes the number of bitmasked-set instructions. This helps
@@ -256,6 +260,14 @@ AllocScore::AllocScore(
         // skip, if there is no allocated slices.
         if (slices.size() == 0)
             continue;
+
+        // Calculate number of wasted container bits, if POV bits are present in this container.
+        size_t n_pov_bits = 0;
+        for (const auto& slice : slices)
+            if (slice.field()->pov)
+                n_pov_bits += slice.width();
+        if (n_pov_bits != 0)
+            n_pov_bits_wasted += (container.size() - n_pov_bits);
 
         // calc n_wasted_bits and n_clot_bits
         for (const auto& slice : slices) {
@@ -424,8 +436,14 @@ AllocScore::calcContainerAllocVec(const ordered_set<PHV::AllocSlice>& slices) {
 std::ostream& operator<<(std::ostream& s, const AllocScore& score) {
     bool any_positive_score = false;
 
-    s << "inc_tphv_collections: " << score.n_inc_tphv_collections << ", ";
-    s << "extract balance: " << score.parser_extractor_balance << ", ";
+    if (score.n_inc_tphv_collections != 0)
+        s << "inc_tphv_collections: " << score.n_inc_tphv_collections << ", ";
+    if (score.parser_extractor_balance != 0)
+        s << "extract balance: " << score.parser_extractor_balance << ", ";
+    if (Device::currentDevice() == Device::JBAY && score.n_pov_bits_wasted != 0)
+        s << "pov-wastage: " << score.n_pov_bits_wasted << ", ";
+    if (score.n_num_bitmasked_set != 0)
+        s << "bitmasked-set: " << score.n_num_bitmasked_set;
 
     for (auto kind : Device::phvSpec().containerKinds()) {
         if (score.score.find(kind) == score.score.end())
@@ -442,7 +460,6 @@ std::ostream& operator<<(std::ostream& s, const AllocScore& score) {
         s << "packing_prio: " << score.score.at(kind).n_packing_priority << ", ";
         s << "inc_containers: " << score.score.at(kind).n_inc_containers << ", ";
         s << "set_gress: " << score.score.at(kind).n_set_gress << ", ";
-        s << "bitmasked-set: " << score.n_num_bitmasked_set;
         s << "]"; }
 
     if (!any_positive_score)

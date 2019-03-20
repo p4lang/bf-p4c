@@ -1746,7 +1746,7 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
             // Check that no other slices are also required to be at this bit
             // position, unless they're mutually exclusive and can be overlaid.
             for (auto& kv : placements) {
-                bool isMutex = PHV::Allocation::mutually_exclusive(phv.parser_mutex(),
+                bool isMutex = PHV::Allocation::mutually_exclusive(phv.field_mutex(),
                         kv.first.field(),
                         packing_slice.field());
                 if (kv.second.overlaps(StartLen(bitPosition, packing_slice.size())) && !isMutex) {

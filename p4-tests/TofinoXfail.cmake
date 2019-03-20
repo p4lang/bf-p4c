@@ -134,14 +134,6 @@ endif() # PTF_REQUIREMENTS_MET
 # add the failures with no reason
 p4c_add_xfail_reason("tofino" "" ${TOFINO_XFAIL_TESTS})
 
-# This test fails because two fields are mutually exclusive in the parser, but
-# one is added in the MAU while the other is live.  This behavior matches glass
-# but is known to be incorrect.
-p4c_add_xfail_reason("tofino"
-  "instruction slot [0-9]+ used multiple times in action"
-  extensions/p4_tests/p4_14/stf/overlay_add_header.p4
-  )
-
 p4c_add_xfail_reason("tofino"
   "Attached object .* in table .* is executed in some actions and not executed in others"
   testdata/p4_16_samples/named_meter_1-bmv2.p4
@@ -229,6 +221,7 @@ p4c_add_xfail_reason("tofino"
   switch_8.7_generic_int_leaf
   ../glass/testsuite/p4_tests/phv/COMPILER-587/l4l.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-828/meta_init_problem.p4
+  ../glass/testsuite/p4_tests/phv/COMPILER-706/terminate_parsing.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -236,8 +229,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4-programs/internal_p4_14/netcache/netcache.p4
   extensions/p4_tests/p4-programs/internal_p4_14/ecc/ecc.p4
   extensions/p4_tests/p4-programs/internal_p4_14/mau_test/mau_test.p4  #P4C-1123
-  # Intended to test infinite recursive in tryAllocSliceList.
-  extensions/p4_tests/p4_14/compile_only/conditional_constraints_infinite_loop.p4
   switch_l3_heavy_int_leaf
   switch_msdc_leaf_int
   switch_8.7_msdc_leaf_int
@@ -399,6 +390,8 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Ran out of tcam space in .* parser"
   testdata/p4_14_samples/issue583.p4
+  # Intended to test infinite recursive in tryAllocSliceList.
+  extensions/p4_tests/p4_14/compile_only/conditional_constraints_infinite_loop.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -426,6 +419,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue1713-bmv2.p4
   extensions/p4_tests/p4_14/compile_only/04-FullPHV3.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-815/int_heavy.p4
+  ../glass/testsuite/p4_tests/phv/COMPILER-1065/comp_1065.p4
 
   # Expected to fail, which means that action analysis is working correctly.
   extensions/p4_tests/p4_14/compile_only/action_conflict_2.p4
@@ -442,7 +436,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/parde/COMPILER-612/leaf.p4
   extensions/p4_tests/p4_14/compile_only/03-VlanProfile.p4
   extensions/p4_tests/p4_14/compile_only/01-FlexCounter.p4
-
   )
 
 # Errors because pa_container_size pragmas used in these tests cannot be satisfy all constraints.
@@ -1315,7 +1308,6 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
    "PHV allocation creates a container action impossible within a Tofino ALU"
-  ../glass/testsuite/p4_tests/phv/COMPILER-706/terminate_parsing.p4
   extensions/p4_tests/p4_16/customer/arista/p4c-1494.p4
 )
 

@@ -7,8 +7,8 @@
 #include "lib/symbitmatrix.h"
 #include "test/gtest/helpers.h"
 #include "bf-p4c/common/header_stack.h"
-#include "bf-p4c/common/parser_overlay.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/phv/analysis/mutex_overlay.h"
 #include "bf-p4c/phv/pragma/pa_mutually_exclusive.h"
 #include "bf-p4c/test/gtest/tofino_gtest_utils.h"
 
@@ -76,7 +76,7 @@ const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe,
         new CollectHeaderStackInfo,
         new CollectPhvInfo(phv),
         pragmas,
-        new ParserOverlay(phv, *pragmas),
+        new MutexOverlay(phv, *pragmas),
     };
     return pipe->apply(quick_backend);
 }

@@ -808,51 +808,55 @@ class PhvInfo {
         }
     };
 
-    const SymBitMatrix& parser_mutex() const { return field_mutex; }
-    const SymBitMatrix& metadata_mutex() const { return metadata_overlay; }
-    const SymBitMatrix& dark_mutex() const { return dark_overlay; }
-    const SymBitMatrix& deparser_no_pack_mutex() const { return deparser_no_pack; }
-    SymBitMatrix& parser_mutex() { return field_mutex; }
-    SymBitMatrix& metadata_mutex() { return metadata_overlay; }
-    SymBitMatrix& dark_mutex() { return dark_overlay; }
-    SymBitMatrix& deparser_no_pack_mutex() { return deparser_no_pack; }
+    const SymBitMatrix& field_mutex() const { return field_mutex_i; }
+    const SymBitMatrix& metadata_mutex() const { return metadata_mutex_i; }
+    const SymBitMatrix& dark_mutex() const { return dark_mutex_i; }
+    const SymBitMatrix& deparser_no_pack_mutex() const { return deparser_no_pack_i; }
+    SymBitMatrix& field_mutex() { return field_mutex_i; }
+    SymBitMatrix& metadata_mutex() { return metadata_mutex_i; }
+    SymBitMatrix& dark_mutex() { return dark_mutex_i; }
+    SymBitMatrix& deparser_no_pack_mutex() { return deparser_no_pack_i; }
 
-    SymBitMatrix& getBridgedExtractedTogether() { return bridged_extracted_together; }
-    const SymBitMatrix& getBridgedExtractedTogether() const { return bridged_extracted_together; }
+    SymBitMatrix& getBridgedExtractedTogether() { return bridged_extracted_together_i; }
+    const SymBitMatrix& getBridgedExtractedTogether() const { return bridged_extracted_together_i; }
     bool are_bridged_extracted_together(const PHV::Field* f1, const PHV::Field* f2) const {
-        return bridged_extracted_together(f1->id, f2->id);
+        return bridged_extracted_together_i(f1->id, f2->id);
     }
 
     void addDeparserNoPack(const PHV::Field* f1, const PHV::Field* f2) {
-        deparser_no_pack(f1->id, f2->id) = true;
+        deparser_no_pack_i(f1->id, f2->id) = true;
     }
 
-    void addParserMutex(const PHV::Field* f1, const PHV::Field* f2) {
-        field_mutex(f1->id, f2->id) = true;
+    void addFieldMutex(const PHV::Field* f1, const PHV::Field* f2) {
+        field_mutex_i(f1->id, f2->id) = true;
+    }
+
+    void removeFieldMutex(const PHV::Field* f1, const PHV::Field* f2) {
+        field_mutex_i(f1->id, f2->id) = false;
     }
 
     void addMetadataMutex(const PHV::Field* f1, const PHV::Field* f2) {
-        metadata_overlay(f1->id, f2->id) = true;
+        metadata_mutex_i(f1->id, f2->id) = true;
     }
 
     void addDarkMutex(const PHV::Field* f1, const PHV::Field* f2) {
-        dark_overlay(f1->id, f2->id) = true;
+        dark_mutex_i(f1->id, f2->id) = true;
     }
 
-    bool isParserMutex(const PHV::Field* f1, const PHV::Field* f2) const {
-        return field_mutex(f1->id, f2->id);
+    bool isFieldMutex(const PHV::Field* f1, const PHV::Field* f2) const {
+        return field_mutex_i(f1->id, f2->id);
     }
 
     bool isMetadataMutex(const PHV::Field* f1, const PHV::Field* f2) const {
-        return metadata_overlay(f1->id, f2->id);
+        return metadata_mutex_i(f1->id, f2->id);
     }
 
     bool isDarkMutex(const PHV::Field* f1, const PHV::Field* f2) const {
-        return dark_overlay(f1->id, f2->id);
+        return dark_mutex_i(f1->id, f2->id);
     }
 
     bool isDeparserNoPack(const PHV::Field* f1, const PHV::Field* f2) const {
-        return deparser_no_pack(f1->id, f2->id);
+        return deparser_no_pack_i(f1->id, f2->id);
     }
 
     /// Clear the state maintained corresponding to constant extractors.
@@ -923,21 +927,21 @@ class PhvInfo {
     bool                                pov_alloc_done = false;
 
     /// Stores the mutual exclusion relationships between different PHV fields
-    SymBitMatrix&                            field_mutex;
+    SymBitMatrix&                            field_mutex_i;
 
     /// Stores the potential overlayable relationships due to live ranges between different metadata
     /// fields.
-    SymBitMatrix                             metadata_overlay;
+    SymBitMatrix                             metadata_mutex_i;
 
-    SymBitMatrix                             dark_overlay;
+    SymBitMatrix                             dark_mutex_i;
 
     /// Stores all pairs of fields that cannot be packed in the same container
     /// Derived from POV bits of adjacent fields in deparser
-    SymBitMatrix                             deparser_no_pack;
+    SymBitMatrix                             deparser_no_pack_i;
 
     /// bridged_extracted_together(f1->id, f2->id) is true if f1 and f2 are both bridged fields and
     /// they are extracted as part of the same byte.
-    SymBitMatrix                             bridged_extracted_together;
+    SymBitMatrix                             bridged_extracted_together_i;
 
     /// Set of containers that must be set to 0 (and their container validity bit set
     /// unconditionally to 1) for the deparsed zero optimization.
@@ -998,7 +1002,7 @@ class PhvInfo {
     void allocatePOV(const BFN::HeaderStackInfo&);
 
  public:  // class PhvInfo
-    explicit PhvInfo(SymBitMatrix& m) : field_mutex(m) {}
+    explicit PhvInfo(SymBitMatrix& m) : field_mutex_i(m) {}
 
     const PHV::Field *field(int idx) const {
         return size_t(idx) < by_id.size() ? by_id.at(idx) : 0; }

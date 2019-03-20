@@ -31,16 +31,17 @@ void PhvInfo::clear() {
     aliasMap.clear();
     dummyPaddingNames.clear();
     externalNameMap.clear();
-    metadata_overlay.clear();
-    bridged_extracted_together.clear();
+    metadata_mutex_i.clear();
+    dark_mutex_i.clear();
+    bridged_extracted_together_i.clear();
     alloc_done_ = false;
     pov_alloc_done = false;
     zeroContainers[0].clear();
     zeroContainers[1].clear();
     reverseMetadataDeps.clear();
     metadataDeps.clear();
-    deparser_no_pack.clear();
-    field_mutex.clear();
+    deparser_no_pack_i.clear();
+    field_mutex_i.clear();
     constantExtractedInSameState.clear();
     sameStateConstantExtraction.clear();
 }
@@ -385,12 +386,12 @@ bitvec PhvInfo::bits_allocated(
             bool mutually_exclusive = std::any_of(
                 write_slices_in_container.begin(), write_slices_in_container.end(),
                 [&](const PHV::Field::alloc_slice* slice) {
-                    return field_mutex(slice->field->id, alloc.field->id);
+                    return field_mutex_i(slice->field->id, alloc.field->id);
             });
             bool meta_overlay = std::any_of(
                 write_slices_in_container.begin(), write_slices_in_container.end(),
                 [&](const PHV::Field::alloc_slice* slice) {
-                    return metadata_overlay(slice->field->id, alloc.field->id);
+                    return metadata_mutex_i(slice->field->id, alloc.field->id);
             });
             if (!mutually_exclusive && !meta_overlay)
                 ret_bitvec.setrange(bits.lo, bits.size());

@@ -109,6 +109,9 @@ struct AllocScore {
     int n_dark_on_mocha_bits = 0;
     /// Number of bitmasked-set operations introduced by this transaction.
     int n_num_bitmasked_set = 0;
+    /// Number of container bits wasted because POV slice lists/slices do not fill the container
+    /// wholly.
+    int n_pov_bits_wasted = 0;
 
     int parser_extractor_balance = 0;
     int n_inc_tphv_collections = 0;
@@ -166,10 +169,10 @@ class CoreAllocation {
 
     // Metadata initialization possibilities.
     LiveRangeShrinking& meta_init_i;
-    // Table allocation information from the previous round.
-    bool disableMetadataInit;
 
     const CalcParserCriticalPath& parser_critical_path_i;
+    // Table allocation information from the previous round.
+    bool disableMetadataInit;
 
     // Alignment failure fields. Right now, this will only contain bridged metadata fields if PHV
     // allocation fails due to alignment reasons. Used to backtrack to bridged metadata packing.
@@ -570,11 +573,11 @@ class AllocatePHV : public Inspector {
                 const CalcCriticalPathClusters& critical_cluster,
                 const MauBacktracker& alloc,
                 LiveRangeShrinking& meta_init)
-        : core_alloc_i(phv.parser_mutex(), clustering, uses, defuse, clot, pragmas, phv, actions,
+        : core_alloc_i(phv.field_mutex(), clustering, uses, defuse, clot, pragmas, phv, actions,
                 meta_init, parser_critical_path, alloc),
           phv_i(phv), uses_i(uses), clot_i(clot),
           clustering_i(clustering), alloc_i(alloc),
-          mutex_i(phv.parser_mutex()), pragmas_i(pragmas),
+          mutex_i(phv.field_mutex()), pragmas_i(pragmas),
           parser_critical_path_i(parser_critical_path),
           critical_path_clusters_i(critical_cluster) { }
 };

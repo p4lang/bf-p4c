@@ -13,7 +13,8 @@ bool CollectNonDarkUses::contextNeedsIXBar() {
             c->node->is<IR::MAU::StatefulCall>() ||
             c->node->is<IR::MAU::StatefulAlu>() ||
             c->node->is<IR::MAU::Table>() ||
-            c->node->is<IR::MAU::Meter>())
+            c->node->is<IR::MAU::Meter>() ||
+            c->node->is<IR::MAU::HashDist>())
             return true;
         if (c->node->is<IR::MAU::Action>())
             return false;

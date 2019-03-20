@@ -13,7 +13,6 @@
 #include "bf-p4c/common/flexible_packing.h"
 #include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/common/multiple_apply.h"
-#include "bf-p4c/common/parser_overlay.h"
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/logging/filelog.h"
 #include "bf-p4c/logging/phv_logging.h"
@@ -154,7 +153,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
     uses(phv),
     defuse(phv),
     bridged_fields(phv),
-    table_alloc(phv.parser_mutex()),
+    table_alloc(phv.field_mutex()),
     table_summary(pipe_id, deps) {
     phvLoggingInfo = new CollectPhvLoggingInfo(phv);
     addPasses({

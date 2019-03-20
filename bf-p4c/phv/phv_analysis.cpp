@@ -1,5 +1,4 @@
 #include "phv_analysis.h"
-#include "bf-p4c/common/parser_overlay.h"
 #include "bf-p4c/phv/cluster_phv_operations.h"
 #include "bf-p4c/phv/mau_backtracker.h"
 #include "bf-p4c/phv/parde_phv_constraints.h"
@@ -13,6 +12,7 @@
 #include "bf-p4c/phv/analysis/deparser_zero.h"
 #include "bf-p4c/phv/analysis/jbay_phv_analysis.h"
 #include "bf-p4c/phv/analysis/mocha.h"
+#include "bf-p4c/phv/analysis/mutex_overlay.h"
 #include "bf-p4c/mau/action_mutex.h"
 
 class PhvInfo;
@@ -54,7 +54,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             &pragmas,              // parse and fold PHV-related pragmas
             new DeparserZeroOptimization(phv, defuse, pragmas.pa_deparser_zero(), clot),
                                    // identify fields for deparsed zero optimization
-            new ParserOverlay(phv, pragmas),
+            new MutexOverlay(phv, pragmas),
                                    // produce pairs of mutually exclusive header
                                    // fields, eg. (arpSrc, ipSrc)
             &parser_critical_path,

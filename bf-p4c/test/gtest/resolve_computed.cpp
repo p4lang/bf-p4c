@@ -111,7 +111,7 @@ const IR::BFN::Pipe* runMockPasses(const IR::BFN::Pipe* pipe) {
     FindDependencyGraph deps(phv, dg);
     CollectBridgedFields bridged_fields(phv);
     ordered_map<cstring, ordered_set<cstring>> extracted_together;
-    MauBacktracker table_alloc(phv.parser_mutex());
+    MauBacktracker table_alloc(phv.field_mutex());
     PassManager quick_backend = {
         new CollectHeaderStackInfo,
         new CollectPhvInfo(phv),
