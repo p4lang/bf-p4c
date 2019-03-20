@@ -234,8 +234,9 @@ TYPED_TEST(TofinoPHVTrivialAllocators, DISABLED_AutomaticAllocation) {
         EXPECT_EQ(povContainer, containers[SliceId("h2.$valid", 0)]);
         EXPECT_EQ(povContainer, containers[SliceId("h3.$valid", 0)]);
         EXPECT_EQ(povContainer, containers[SliceId("h4.$valid", 0)]);
-        if (gress == INGRESS)
+        if (gress == INGRESS) {
             EXPECT_EQ(povContainer, containers[SliceId("$always_deparse", 0)]);
+        }
         EXPECT_EQ(PHV::Type("B"), povContainer.type());
         EXPECT_TRUE(uniqueContainers.insert(povContainer).second);
     }

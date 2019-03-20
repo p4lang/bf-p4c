@@ -145,8 +145,9 @@ static void checkAlignment(const FieldPacking& packing, unsigned preAlignmentWid
     // If the phase is greater than the field width, we should've been
     // able to satisfy it without wrapping around to the next aligned
     // "chunk".
-    if (phase > preAlignmentWidth)
+    if (phase > preAlignmentWidth) {
         EXPECT_LE(packing.totalWidth, alignment);
+    }
 }
 
 TEST(TofinoFieldPacking, FieldAlignment) {
@@ -246,12 +247,12 @@ TEST(TofinoFieldPacking, ForEachField) {
                                                   const IR::Expression* field,
                                                   cstring source) {
             SCOPED_TRACE(currentField);
-            ASSERT_TRUE(currentField <= 2);
+            ASSERT_LE(currentField, 2);
             EXPECT_EQ(expected[currentField].first, source);
             EXPECT_EQ(expected[currentField].second, range);
 
             auto* member = field->to<IR::Member>();
-            ASSERT_TRUE(member != nullptr);
+            ASSERT_NE(member, nullptr);
             EXPECT_EQ(expected[currentField].first, member->member.name);
 
             currentField++;
@@ -271,7 +272,7 @@ TEST(TofinoFieldPacking, ForEachField) {
                                                  const IR::Expression* field,
                                                  cstring source) {
             SCOPED_TRACE(currentField);
-            ASSERT_TRUE(currentField <= 2);
+            ASSERT_LE(currentField, 2);
             EXPECT_EQ(expected[currentField].first, source);
             EXPECT_EQ(expected[currentField].second, range);
 

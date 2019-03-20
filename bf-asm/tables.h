@@ -1475,8 +1475,7 @@ public:
         void write_regs,(mau_regs &regs), override {
             write_regs<decltype(regs)>(regs); })
     FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
-        void write_merge_regs, (mau_regs &regs, int type, int bus), override {
-            write_merge_regs<decltype(regs)>(regs, type, bus); })
+        void write_merge_regs, (mau_regs &regs, int type, int bus), override;)
     void gen_tbl_cfg(json::vector &out) const override { /* nothing at top level */ }
     void gen_stage_tbl_cfg(json::map &out) const;
     static IdletimeTable *create(int lineno, const std::string &name, gress_t gress,

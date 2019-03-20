@@ -10,7 +10,7 @@ Visitor::profile_t SpreadGatewayAcrossSeq::init_apply(const IR::Node *root) {
 }
 
 const IR::Node *SpreadGatewayAcrossSeq::postorder(IR::MAU::Table *t) {
-    char suffix[8];
+    char suffix[14];
     int counter = 0;
 #if 1
     if (!do_splitting) {

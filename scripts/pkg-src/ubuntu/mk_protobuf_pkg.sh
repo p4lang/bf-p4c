@@ -1,6 +1,10 @@
 #! /bin/bash
 
 set -e
+pkg_install=false
+if [ $1 == '--install' ]; then
+    pkg_install=true
+fi
 
 mk_protobuf_from_source() {
     git clone https://github.com/google/protobuf && \
@@ -62,9 +66,13 @@ builddir=$(mktemp --directory -t protobuf_XXXXXX)
 mydir=$(realpath `dirname $0`)
 pushd $builddir
 mk_protobuf_from_source
-set -x
-cp -r protobuf-dev*.deb ${mydir}/${arch}
-popd
-rm -rf $builddir
+if $pkg_install == true; then
+    dpkg -i protobuf-dev*.deb
+else
+    set -x
+    cp -r protobuf-dev*.deb ${mydir}/${arch}
+    popd
+    rm -rf $builddir
 
-# dpkg-sig --sign builder ${mydir}/${arch}/protobuf-dev*.deb
+    # dpkg-sig --sign builder ${mydir}/${arch}/protobuf-dev*.deb
+fi

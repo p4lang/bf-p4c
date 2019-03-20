@@ -2,6 +2,11 @@
 
 set -e
 
+pkg_install=false
+if [ $1 == '--install' ]; then
+    pkg_install=true
+fi
+
 function build_rapidjson_from_source() {
     # ARG: rapidjson version
     local rj_ver=$1
@@ -60,9 +65,14 @@ builddir=$(mktemp --directory -t rapidjson_XXXXXX)
 mydir=$(realpath `dirname $0`)
 pushd $builddir
 build_rapidjson_from_source "1.1.0"
-set -x
-cp -r RapidJSON-dev*.deb ${mydir}/${arch}
-popd
-rm -rf $builddir
 
-dpkg-sig --sign builder ${mydir}/${arch}/RapidJSON-dev*.deb
+if $pkg_install == true; then
+    dpkg -i RapidJSON-dev*.deb
+else
+    set -x
+    cp -r RapidJSON-dev*.deb ${mydir}/${arch}
+    popd
+    rm -rf $builddir
+
+    dpkg-sig --sign builder ${mydir}/${arch}/RapidJSON-dev*.deb
+fi

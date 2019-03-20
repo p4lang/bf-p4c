@@ -1,0 +1,117 @@
+FROM ubuntu:bionic
+
+MAINTAINER bfn-docker <bfn-docker@barefootnetworks.com>
+ENV DEBIAN_FRONTEND noninteractive
+
+ENV P4C_DEPS autoconf \
+             automake \
+             bison \
+             build-essential \
+             ccache \
+             flex \
+             g++-7 \
+             git \
+             libboost-dev \
+             libboost-graph-dev \
+             libboost-iostreams-dev \
+             libgc-dev \
+             libgmp-dev \
+             libgrpc++-dev \
+             libprotobuf-dev \
+             libssl-dev \
+             libtool \
+             pkg-config \
+             protobuf-compiler \
+             python-dev \
+             python-pip \
+             python3-pip \
+             rapidjson-dev
+
+
+ENV P4C_RUNTIME_DEPS cpp \
+                     cmake \
+                     ethtool \
+                     libgc1c2 \
+                     libgmp10 \
+                     libgmpxx4ldbl \
+                     libnl-route-3-dev \
+                     libssl1.0.0 \
+                     pkg-config \
+                     psmisc \
+                     python-ipaddr \
+                     python-scapy \
+                     python-setuptools \
+                     python-yaml \
+                     sudo \
+                     tcpdump \
+                     libgoogle-perftools-dev \
+                     libxml-simple-perl \
+                     doxygen \
+                     aspell
+
+ENV P4C_PYTHON_PKGS crc16 \
+                    crcmod \
+                    ipaddress \
+                    jsl \
+                    jsonschema==2.6 \
+                    packaging \
+                    pexpect \
+                    ply==3.9 \
+                    pyinstaller \
+                    simplejson \
+                    tenjin \
+
+# Install python3 packaging for test_p4c_driver.py (for now)
+ENV P4C_PYTHON3_PKGS packaging
+
+ARG MAKEFLAGS=-j4
+
+RUN apt-get update && \
+    apt-get install -y $P4C_DEPS $P4C_RUNTIME_DEPS
+
+RUN pip  install $P4C_PYTHON_PKGS
+RUN pip3 install $P4C_PYTHON3_PKGS
+
+COPY . /bfn/bf-p4c-compilers/
+# Since we're not inheriting from the model, we need to manually install libdynhash
+WORKDIR /bfn/bf-p4c-compilers/bf-utils
+RUN ./autogen.sh && mkdir -p build && cd build && \
+    ../configure && \
+    make libdynhash.la && \
+    mkdir -p /usr/local/lib /usr/local/include/bfutils && \
+    cp .libs/libdynhash.a /usr/local/lib && \
+    cp -r ../include/dynamic_hash /usr/local/include/bfutils
+
+WORKDIR /bfn/bf-p4c-compilers
+ENV LDFLAGS="-Wl,-s"
+RUN ccache --zero-stats && \
+    ./bootstrap_bfn_compilers.sh -DCMAKE_BUILD_TYPE=RELEASE \
+                                 -DINSTALL_LIBDYNHASH=OFF \
+                                 -DENABLE_P4C_GRAPHS=OFF \
+                                 -DENABLE_BMV2=OFF -DENABLE_P4TEST=OFF \
+                                 -DENABLE_EBPF=OFF -DENABLE_STF2PTF=OFF \
+    && \
+    cd build && \
+    make && \
+    make install && \
+    ccache -p --show-stats
+
+# Delete git history
+WORKDIR /bfn/bf-p4c-compilers
+RUN (rm -rf .git)
+
+# cleanup space on the image
+RUN rm -rf ~/.cache/* ~/.ccache/* /var/cache/apt/* /var/lib/apt/lists/* && \
+    apt-get autoremove --purge -y && \
+    apt-get clean -y && apt-get autoclean -y && \
+    find . -name '*.o' -type f -delete && \
+    find . -name '*.a' -type f -delete
+
+
+# # Only if we want to run tests
+# COPY scripts/ptf_hugepage_setup.sh /bfn/ptf_hugepage_setup.sh
+# COPY docker/docker_entry_point.sh /bfn/docker_entry_point.sh
+# COPY p4-tests/p4testutils/veth_setup.sh /bfn/veth_setup.sh
+
+# # setup huge pages
+# ENTRYPOINT ["/bfn/docker_entry_point.sh"]

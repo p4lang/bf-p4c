@@ -36,6 +36,7 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     testdata/p4_14_samples/gateway4.p4
     testdata/p4_16_samples/issue774-4-bmv2.p4
     testdata/p4_16_samples/issue1000-bmv2.p4
+    testdata/p4_16_samples/issue1755-bmv2.p4
     )
 
 endif() # HARLYN_STF_tofino
@@ -464,6 +465,7 @@ p4c_add_xfail_reason("tofino"
 # Tofino.
 p4c_add_xfail_reason("tofino"
   "Tofino does not support conditional checksum verification"
+  testdata/p4_16_samples/issue1739-bmv2.p4
   testdata/p4_16_samples/v1model-special-ops-bmv2.p4
 )
 
@@ -481,6 +483,11 @@ p4c_add_xfail_reason("tofino"
   "No PhvInfo::header for header named "
   testdata/p4_16_samples/issue692-bmv2.p4
 )
+
+p4c_add_xfail_reason("tofino"
+  "error: Advancing by a non-constant distance is not supported on Tofino"
+  testdata/p4_16_samples/issue1755-1-bmv2.p4
+  )
 
 
 # BEGIN: XFAILS that match glass XFAILS
@@ -1163,6 +1170,7 @@ p4c_add_xfail_reason("tofino"
   # shared register between ingress and egress is not supported
   testdata/p4_16_samples/issue1097-2-bmv2.p4
   testdata/p4_16_samples/issue1660-bmv2.p4
+  testdata/p4_16_samples/issue1768-bmv2.p4
   # We fail to translate `resubmit()`.
   testdata/p4_14_samples/resubmit.p4
   testdata/p4_16_samples/drop-bmv2.p4
@@ -1350,7 +1358,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue447-3-bmv2.p4
   testdata/p4_16_samples/issue1560-bmv2.p4
   testdata/p4_16_samples/issue447-2-bmv2.p4
-  testdata/p4_16_samples/issue447-5-bmv2.p4   
+  testdata/p4_16_samples/issue447-5-bmv2.p4
   testdata/p4_16_samples/issue447-4-bmv2.p4
   )
 
@@ -1390,4 +1398,3 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue561-6-bmv2.p4
   testdata/p4_16_samples/issue561-7-bmv2.p4
 )
-

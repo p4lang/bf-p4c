@@ -69,6 +69,10 @@ void IdletimeTable::write_merge_regs(REGS &regs, int type, int bus) {
         | ((1 << precision_bits[precision]) - 1);
 }
 
+FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
+    void IdletimeTable::write_merge_regs, (mau_regs &regs, int type, int bus), {
+        write_merge_regs<decltype(regs)>(regs, type, bus); })
+
 int IdletimeTable::precision_shift() const { return precision_bits[precision] + 1; }
 int IdletimeTable::direct_shiftcount() const { return 67 - precision_bits[precision]; }
 
