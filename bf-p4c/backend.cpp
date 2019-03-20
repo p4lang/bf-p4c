@@ -212,7 +212,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         &defuse,
         (options.no_deadcode_elimination == false) ? new ElimUnused(phv, defuse) : nullptr,
         (options.no_deadcode_elimination == false) ? new ElimUnusedHeaderStackInfo : nullptr,
-        new MergeParserStates,
+        (options.disable_parser_state_merging == false) ? new MergeParserStates : nullptr,
         new CollectPhvInfo(phv),
         new CollectBridgedExtractedTogetherFields(phv, extracted_together),
         // DO NOT RUN CollectPhvInfo afterwards, as this will destroy the

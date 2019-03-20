@@ -25,6 +25,7 @@ class BFN_Options : public CompilerOptions {
     bool decaf = false;
     bool always_init_metadata = false;
     bool disable_init_metadata = false;
+    bool disable_parser_state_merging = false;
     bool backward_compatible = false;
     bool display_power_budget = false;
     bool disable_power_check = false;
