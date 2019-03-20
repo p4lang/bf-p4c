@@ -3,10 +3,10 @@
 #include <map>
 
 #include "ir/ir.h"
+#include "ir/pattern.h"
 #include "lib/error.h"
 #include "bf-p4c/bf-p4c-options.h"
 #include "logging/filelog.h"
-
 namespace {
 
 struct ChecksumUpdateInfo {
@@ -123,61 +123,50 @@ analyzeUpdateChecksumStatement(const IR::AssignmentStatement* assignment) {
 }
 
 static std::pair<const IR::Member*, bool>
-analyzeUpdateChecksumCondition(const IR::Equ* condition) {
+analyzeUpdateChecksumCondition(const IR::IfStatement* ifstmt) {
     bool leftOk = false, rightOk = false, updateConditionNegated = false;
-    if (auto* constant = condition->right->to<IR::Constant>()) {
-        if (auto* bits = constant->type->to<IR::Type_Bits>()) {
-            if (bits->size == 1) {
-                rightOk = true;
-                if (constant->asInt() == 1) {
-                    updateConditionNegated = false;
-                } else {
-                    updateConditionNegated = true;
-                }
-            }
-        }
-    }
-
-    if (auto* mem = condition->left->to<IR::Member>()) {
-        if (auto* bits = mem->type->to<IR::Type_Bits>()) {
-            if (bits->size == 1) {
-                leftOk = true;
-            }
-        }
-    }
-
-    if (leftOk && rightOk)
-        return std::make_pair(condition->left->to<IR::Member>(), updateConditionNegated);
-
-    std::stringstream msg;
-
-    msg << "Tofino only supports 1-bit checksum update condition in the deparser; "
-        << "Please move the update condition into the control flow.";
-
-    ::error("%1%", msg.str());
-    ::error("%1%", condition);
-
-    return std::make_pair(nullptr, updateConditionNegated);
-}
-
-static std::pair<const IR::Member*, bool>
-getChecksumUpdateCondition(const IR::IfStatement* ifStatement) {
-    if (!ifStatement->ifTrue || ifStatement->ifFalse) {
+    if (!ifstmt->ifTrue || ifstmt->ifFalse) {
         return std::make_pair(nullptr, false);
     }
+    auto* condition = ifstmt->condition;
+    Pattern::Match<IR::Member> field;
+    Pattern::Match<IR::Constant> constant;
+    if (condition) {
+       if (auto* eq = condition->to<IR::Equ>()) {
+           if ((field == constant).match(eq)) {
+              if (constant->type->width_bits() == 1) {
+                  rightOk = true;
+                  if (constant->value != 0) {
+                      updateConditionNegated = false;
+                  } else {
+                      updateConditionNegated = true;
+                  }
+              }
+              if (field->type->width_bits() == 1) {
+                  leftOk = true;
+              }
+           }
+           if (leftOk && rightOk)
+              return std::make_pair(eq->left->to<IR::Member>(), updateConditionNegated);
+       } else {
+            if (auto* NotCondition = condition->to<IR::LNot>()) {
+                condition = NotCondition->expr;
+                updateConditionNegated = true;
+            }
+            if (auto* condMember = condition->to<IR::Member>()) {
+               if (condMember->type->is<IR::Type_Boolean>()) {
+                   return std::make_pair(condMember, updateConditionNegated);
+               }
+            }
+       }
+       std::stringstream msg;
+       msg << "Tofino only supports 1-bit checksum update condition in the deparser; "
+           << "Please move the update condition into the control flow.";
 
-    std::pair<const IR::Member*, bool> updateCondition;
-
-    auto* cond = ifStatement->condition;
-    if (cond) {
-        if (auto* eq = cond->to<IR::Equ>()) {
-            updateCondition = analyzeUpdateChecksumCondition(eq);
-        } else {
-            ::error("Unsupported syntax for checksum update condition %1%", cond);
-        }
+       ::error("%1%", msg.str());
+       ::error("%1%", condition);
     }
-
-    return updateCondition;
+    return std::make_pair(nullptr, updateConditionNegated);
 }
 
 struct CollectUpdateChecksums : public Inspector {
@@ -191,7 +180,7 @@ struct CollectUpdateChecksums : public Inspector {
         if (csum) {
             auto ifStmt = findContext<IR::IfStatement>();
             if (ifStmt) {
-                auto updateCondition = getChecksumUpdateCondition(ifStmt);
+                auto updateCondition = analyzeUpdateChecksumCondition(ifStmt);
                 if (updateCondition.first) {
                     csum->updateConditions.insert(updateCondition);
                 }
