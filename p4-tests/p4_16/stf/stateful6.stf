@@ -1,0 +1,16 @@
+
+add ingress.test1 data.f1:0x0a0a0a0a ingress.load()
+add ingress.test1 data.f1:0x01010101 ingress.act1()
+add ingress.test1 data.f1:0x02020202 ingress.act2()
+add ingress.test1 data.f1:0x03030303 ingress.act3()
+
+expect 3 0a0a0a0a 000a0202 0303 02 06 77 88
+packet 0 0a0a0a0a 000a0202 0303 02 06 77 88
+expect 3 0a0a0a0a 000adead 0304 02 06 77 88
+packet 3 0a0a0a0a 000adead 0304 02 06 77 88
+
+expect 3 01010101 fffffc00 0303 02 06 77 88
+packet 0 01010101 ffffffff 0303 02 06 77 88
+expect 3 01010101 fffffc03 0304 02 06 77 88
+packet 0 01010101 ffffffff 0304 02 06 77 88
+

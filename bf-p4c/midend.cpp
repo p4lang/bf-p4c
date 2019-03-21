@@ -90,6 +90,8 @@ This class implements a policy suitable for the SynthesizeActions pass:
   splitting/rewriting pass, however, and this is simpler for now.
 */
 class ActionSynthesisPolicy : public P4::ActionSynthesisPolicy {
+    P4::ReferenceMap    *refMap;
+    P4::TypeMap         *typeMap;
     // set of controls where actions are not synthesized
     const std::set<cstring> *skip;
 
@@ -129,6 +131,7 @@ class ActionSynthesisPolicy : public P4::ActionSynthesisPolicy {
         explicit FindPathsWritten(std::set<cstring> &w) : writes(w) {} };
 
     class DependsOnPaths : public Inspector {
+        ActionSynthesisPolicy   &self;
         std::set<cstring>       &paths;
         bool                    rv = false;
         bool preorder(const IR::PathExpression *pe) {
@@ -138,10 +141,21 @@ class ActionSynthesisPolicy : public P4::ActionSynthesisPolicy {
             if (paths.count(m->toString())) rv = true;
             return !rv; }
         bool preorder(const IR::Node *) { return !rv; }
+        void postorder(const IR::MethodCallExpression *mc) {
+            auto *mi = P4::MethodInstance::resolve(mc, self.refMap, self.typeMap, true);
+            if (auto *em = mi ? mi->to<P4::ExternMethod>() : nullptr) {
+                for (auto *n : em->mayCall()) {
+                    if (auto *fn = n->to<IR::Function>()) {
+                        visit(fn->body, "body");
+                    }
+                }
+            }
+        }
 
      public:
         explicit operator bool() { return rv; }
-        DependsOnPaths(const IR::Node *n, std::set<cstring> &p) : paths(p), rv(false) {
+        DependsOnPaths(ActionSynthesisPolicy &self, const IR::Node *n, std::set<cstring> &p)
+        : self(self), paths(p), rv(false) {
             n->apply(*this); } };
 
     class ReferencesExtern : public Inspector {
@@ -163,10 +177,12 @@ class ActionSynthesisPolicy : public P4::ActionSynthesisPolicy {
         std::set<cstring>       writes;
         if (ReferencesExtern(blk) && ReferencesExtern(stmt)) return false;
         blk->apply(FindPathsWritten(writes));
-        return !DependsOnPaths(stmt, writes); }
+        return !DependsOnPaths(*this, stmt, writes); }
 
  public:
-    explicit ActionSynthesisPolicy(const std::set<cstring> *skip) : skip(skip) { CHECK_NULL(skip); }
+    ActionSynthesisPolicy(const std::set<cstring> *skip, P4::ReferenceMap *refMap,
+                          P4::TypeMap *typeMap)
+    : refMap(refMap), typeMap(typeMap), skip(skip) { CHECK_NULL(skip); }
 };
 
 class IsPhase0 : public P4::KeyIsSimple {
@@ -338,7 +354,7 @@ MidEnd::MidEnd(BFN_Options& options) {
             return root;
         }),
         new P4::SynthesizeActions(&refMap, &typeMap,
-                new ActionSynthesisPolicy(skip_controls), typeChecking),
+                new ActionSynthesisPolicy(skip_controls, &refMap, &typeMap), typeChecking),
         new P4::MoveActionsToTables(&refMap, &typeMap, typeChecking),
         new CopyBlockPragmas(&refMap, &typeMap, typeChecking, {"stage"}),
         (options.egress_intr_md_opt) ?

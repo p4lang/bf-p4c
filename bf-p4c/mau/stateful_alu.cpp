@@ -902,6 +902,15 @@ bool CreateSaluInstruction::divmod(const IR::Operation::Binary *e, cstring op) {
     return false;
 }
 
+static bool canOutputDirectly(const IR::Expression *e) {
+    if (auto sl = e->to<IR::Slice>())
+        e = sl->e0;
+    if (e->is<IR::Member>()) return true;
+    if (e->is<IR::TempVar>()) return true;
+    if (e->is<IR::MAU::SaluReg>()) return true;
+    return false;
+}
+
 const IR::MAU::Instruction *CreateSaluInstruction::setup_output() {
     if (outputs.size() <= size_t(output_index)) outputs.resize(output_index+1);
     auto &output = outputs[output_index];
@@ -934,6 +943,7 @@ const IR::MAU::Instruction *CreateSaluInstruction::setup_output() {
 
 const IR::MAU::Instruction *CreateSaluInstruction::createInstruction() {
     const IR::MAU::Instruction *rv = nullptr;
+    auto k = operands.back()->to<IR::Constant>();
     switch (etype) {
     case IF:
         action->action.push_back(rv = new IR::MAU::Instruction(opcode, &operands));
@@ -942,10 +952,13 @@ const IR::MAU::Instruction *CreateSaluInstruction::createInstruction() {
     case VALUE:
     case MATCH:
         if (regtype->width_bits() == 1) {
-            BUG_CHECK(!predicate, "can't have predicate on 1-bit instruction");
-            auto k = operands.at(1)->to<IR::Constant>();
-            BUG_CHECK(k, "non-const writeback in 1-bit instruction?");
-            opcode = k->value ? "set_bit" : "clr_bit";
+            opcode = "clr_bit";
+            if (predicate)
+                error("%1%can't have condition in a RegisterAction<bit<1>>", predicate->srcInfo);
+            else if (!k)
+                error("can't write %1% to Register<bit<1>>", operands.back());
+            else if (k->value)
+                opcode = "set_bit";
             if (onebit_cmpl) opcode += 'c';
             /* For non-resilient hashes, all the bits must be updated whenever a port comes
              * up or down and hence must use the adjust_total instructions */
@@ -965,42 +978,42 @@ const IR::MAU::Instruction *CreateSaluInstruction::createInstruction() {
             rv = onebit = new IR::MAU::Instruction(opcode);
             operands.clear();
             operands.push_back(new IR::MAU::SaluReg(IR::Type::Bits::get(1), "alu_lo", false));
-        } else if (auto k = operands.at(0)->to<IR::Constant>()) {
-            if (k->value == 0) {
-                // 0 will be output if we don't drive it at all
-                break;
-            } else if ((k->value & (k->value-1)) == 0 && predicate) {
-                // use the predicate output
-                int shift = floor_log2(k->value);
-                if (salu->pred_comb_shift >= 0 && salu->pred_comb_shift != shift)
-                    error("conflicting predicate output use in %s", salu);
-                else
-                    salu->pred_comb_shift = shift;
-                if (salu->pred_shift >= 0 && salu->pred_shift != 28) {
-                    if (shift > 0) {
-                        error("conflicting predicate output use in %s", salu);
-                    } else {
-                        warning("conflicting predicate output use in %s, upper bits of "
-                                "flag output will be non-zero", salu); }
-                } else {
-                    salu->pred_shift = 28; }
-                operands.at(0) = new IR::MAU::SaluReg(k->type, "predicate", false);
-            } else if (!salu->dual) {
-                // FIXME -- can't output general constant!  Perhaps have an optimization pass
-                // that deals with this better, but for now, see if we can use alu_hi to
-                // to output the constant and use that instead
+        } else if (k && k->value == 0) {
+            // 0 will be output if we don't drive it at all
+            break;
+        } else if (operands.at(0)->is<IR::MAU::SaluReg>()) {
+            // output it
+        } else if (!salu->dual && (locals.empty() || locals.begin()->first == "--output--")) {
+            // use ALU_HI to drive the output as it is otherwise unused
+            auto *val = operands.at(0);
+            if (locals.empty())
                 locals.emplace("--output--", LocalVar("--output--", false, LocalVar::ALUHI));
-                if (predicate)
-                    action->action.push_back(new IR::MAU::Instruction(
-                            "alu_a", predicate, new IR::MAU::SaluReg(k->type, "hi", true), k));
-                else
-                    action->action.push_back(new IR::MAU::Instruction(
-                            "alu_a", new IR::MAU::SaluReg(k->type, "hi", true), k));
-                LOG3("  add " << *action->action.back());
-                operands.at(0) = new IR::MAU::SaluReg(k->type, "alu_hi", true);
+            if (predicate)
+                action->action.push_back(new IR::MAU::Instruction(
+                        "alu_a", predicate, new IR::MAU::SaluReg(val->type, "hi", true), val));
+            else
+                action->action.push_back(new IR::MAU::Instruction(
+                        "alu_a", new IR::MAU::SaluReg(val->type, "hi", true), val));
+            LOG3("  add " << *action->action.back());
+            operands.at(0) = new IR::MAU::SaluReg(val->type, "alu_hi", true);
+        } else if (k && (k->value & (k->value-1)) == 0 && predicate) {
+            // use the predicate output
+            int shift = floor_log2(k->value);
+            if (salu->pred_comb_shift >= 0 && salu->pred_comb_shift != shift)
+                error("conflicting predicate output use in %s", salu);
+            else
+                salu->pred_comb_shift = shift;
+            if (salu->pred_shift >= 0 && salu->pred_shift != 28) {
+                if (shift > 0) {
+                    error("conflicting predicate output use in %s", salu);
+                } else {
+                    warning("conflicting predicate output use in %s, upper bits of "
+                            "flag output will be non-zero", salu); }
             } else {
-                error("%s: can't output a constant from a RegisterAction",
-                      operands.at(0)->srcInfo); } }
+                salu->pred_shift = 28; }
+            operands.at(0) = new IR::MAU::SaluReg(k->type, "predicate", false);
+        } else if (!canOutputDirectly(operands.at(0))) {
+            error("can't output %1% from a RegisterAction", operands.at(0)); }
         rv = setup_output();
         break;
     default:
