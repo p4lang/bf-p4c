@@ -296,6 +296,7 @@ set (BF_P4C_BACKEND_MAU_HDRS
   mau/split_alpm.h
   mau/split_gateways.h
   mau/stateful_alu.h
+  mau/static_entries_const_prop.h
   mau/table_dependency_graph.h
   mau/table_format.h
   mau/table_layout.h

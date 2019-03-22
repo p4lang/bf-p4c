@@ -1,4 +1,5 @@
 #include "bf-p4c/mau/instruction_selection.h"
+#include "bf-p4c/mau/static_entries_const_prop.h"
 #include "lib/bitops.h"
 #include "lib/safe_vector.h"
 #include "action_analysis.h"
@@ -1762,6 +1763,7 @@ InstructionSelection::InstructionSelection(const BFN_Options& options, PhvInfo &
     new SetupAttachedAddressing,
     new NullifyAllStatefulCallPrim,
     new CollectPhvInfo(phv),
+    new StaticEntriesConstProp(phv),
     new BackendCopyPropagation(phv),
     new VerifyParallelWritesAndReads(phv),
     new EliminateAllButLastWrite(phv),
