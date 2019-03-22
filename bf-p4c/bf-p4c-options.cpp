@@ -75,6 +75,7 @@ BFN_Options::BFN_Options() {
     registerOption("--no-dead-code-elimination", nullptr,
         [this](const char *) { no_deadcode_elimination = true; return true; },
         "Do not use dead code elimination");
+#if BAREFOOT_INTERNAL
     registerOption("--placement", "arg",
         [this](const char *arg) {
           forced_placement = true;
@@ -86,7 +87,7 @@ BFN_Options::BFN_Options() {
           return true; },
         "Ignore all dependencies during table placement",
         OptionFlags::OptionalArgument);
-#if HAVE_JBAY
+#endif
     registerOption("--no-clot", nullptr,
         [this](const char *) {
             use_clot = false;
@@ -97,7 +98,6 @@ BFN_Options::BFN_Options() {
             jbay_analysis = true;
             return true;
         }, "Perform Tofino2 mocha and dark analysis");
-#endif
     registerOption("--phv_scale_factor", "arg",
         [this](const char* arg) {
             float temp = std::atof(arg);
@@ -212,10 +212,8 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
 
         if (target == "tofino")
             preprocessor_options += " -D__TARGET_TOFINO__=1";
-#if HAVE_JBAY
         else if (target == "tofino2")
             preprocessor_options += " -D__TARGET_TOFINO__=2";
-#endif
 
         // Cache the names of the output directory and the program name
         cstring inputFile;

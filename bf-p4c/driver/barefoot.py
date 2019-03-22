@@ -155,6 +155,9 @@ class BarefootBackend(BackendDriver):
         self._argGroup.add_argument("--no-dead-code-elimination",
                                     action="store_true", default=False,
                                     help=argparse.SUPPRESS)  # Do not use dead code elimination.
+        self._argGroup.add_argument("--placement",
+                                    action="store", type=str, default=None, choices=["pragma"],
+                                    help=argparse.SUPPRESS)  # Ignore all dependencies placement
 
         if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
             self._argGroup.add_argument("--validate-output", action="store_true", default=False,
@@ -226,6 +229,12 @@ class BarefootBackend(BackendDriver):
 
         if opts.parser_bandwidth_opt:
             self.add_command_option('compiler', '--parser-bandwidth-opt')
+
+        if opts.no_dead_code_elimination:
+            self.add_command_option('compiler', '--no-dead-code-elimination')
+
+        if opts.placement:
+            self.add_command_option('compiler', '--placement=pragma')
 
         if opts.egress_intrinsic_metadata_opt:
             self.add_command_option('compiler', '--egress-intrinsic-metadata-opt')
