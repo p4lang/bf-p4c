@@ -12,6 +12,8 @@ namespace V1 {
 class TranslateParserChecksums : public PassManager {
  public:
     std::map<const IR::Expression*, IR::Member*> bridgedResidualChecksums;
+    std::map<const IR::Expression*, ordered_set<const IR::Member*>> residualChecksumPayloadFields;
+
     DeclToStates ingressVerifyDeclToStates;
     P4ParserGraphs parserGraphs;
 
@@ -125,7 +127,7 @@ getChecksumUpdateLocations(const IR::BlockStatement* block, cstring pragma) {
             else if (gress->value == "ingress_and_egress")
                 updateLocations = { INGRESS, EGRESS };
             else
-                BUG("Invalid use of @pragma %1%, valid value "
+                ::error("Invalid use of @pragma %1%, valid value "
                     " is ingress/egress/ingress_and_egress", pragma);
         }
     }
@@ -174,15 +176,17 @@ class InsertParserChecksums : public Inspector {
  public:
     InsertParserChecksums(TranslateParserChecksums* translate,
                           const CollectParserChecksums* collect,
-                          const P4ParserGraphs*,
+                          const P4ParserGraphs* graph,
                           ProgramStructure *structure)
         : translate(translate),
           collect(collect),
+          graph(graph),
           structure(structure) { }
 
  private:
     TranslateParserChecksums* translate;
     const CollectParserChecksums* collect;
+    const P4ParserGraphs* graph;
     ProgramStructure *structure;
 
     std::map<const IR::MethodCallStatement*, const IR::Declaration*> verifyDeclarationMap;
@@ -304,6 +308,21 @@ class InsertParserChecksums : public Inspector {
         }
     }
 
+    ordered_set<const IR::Member*>
+    collectResidualChecksumPayloadFields(const IR::ParserState* state) {
+        ordered_set<const IR::Member*> rv;
+
+        auto descendants = graph->get_all_descendants(state);
+
+        for (auto d : descendants) {
+            auto& extracts = stateToExtracts[d];
+            for (auto m : extracts)
+                rv.insert(m);
+        }
+
+        return rv;
+    }
+
     void implementParserResidualChecksum(const IR::MethodCallStatement *rc,
                                          const IR::ParserState* state,
                                          const std::vector<gress_t>& parserUpdateLocations,
@@ -406,8 +425,11 @@ class InsertParserChecksums : public Inspector {
                         }
                     }
 
-                    if (stmt)
+                    if (stmt) {
                         parserStatements->push_back(stmt);
+                        auto payloadFields = collectResidualChecksumPayloadFields(state);
+                        translate->residualChecksumPayloadFields[destfield] = payloadFields;
+                    }
                 }
             }
         }
@@ -433,13 +455,13 @@ TranslateParserChecksums::TranslateParserChecksums(ProgramStructure *structure,
                                                    P4::TypeMap *typeMap)
         : parserGraphs(refMap, typeMap, cstring()) {
     auto collectParserChecksums = new BFN::V1::CollectParserChecksums(refMap, typeMap);
-
-    addPasses({&parserGraphs,
-               collectParserChecksums,
-               new BFN::V1::InsertParserChecksums(this,
+    auto insertParserChecksums = new BFN::V1::InsertParserChecksums(this,
                                                   collectParserChecksums,
                                                   &parserGraphs,
-                                                  structure)
+                                                  structure);
+    addPasses({&parserGraphs,
+               collectParserChecksums,
+               insertParserChecksums
               });
 }
 

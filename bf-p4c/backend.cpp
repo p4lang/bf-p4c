@@ -43,6 +43,7 @@
 #include "bf-p4c/parde/egress_packet_length.h"
 #include "bf-p4c/parde/lower_parser.h"
 #include "bf-p4c/parde/merge_parser_state.h"
+#include "bf-p4c/parde/reset_invalidated_checksum_headers.h"
 #include "bf-p4c/parde/resolve_computed.h"
 #include "bf-p4c/parde/stack_push_shims.h"
 #include "bf-p4c/phv/check_unallocated.h"
@@ -168,6 +169,8 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new CollectPhvInfo(phv),
         &defuse,
         Device::currentDevice() == Device::JBAY ? new AddJBayMetadataPOV(phv) : nullptr,
+        Device::currentDevice() == Device::TOFINO ?
+            new ResetInvalidatedChecksumHeaders(phv) : nullptr,
         new CollectPhvInfo(phv),
         &defuse,
         new CollectHeaderStackInfo,  // Needs to be rerun after CreateThreadLocalInstances, but

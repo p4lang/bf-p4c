@@ -1,0 +1,11 @@
+add test1 data.f1:0x01010101 set_data_f1(val:0x7f7f7f7f, port:2)
+add test2 data.f1:0x7f7f7f7f set_load_f2(val:0xabcdabcd)
+
+add test1 data.f1:0x02020202 set_data_f1(val:0xcdcdcdcd, port:2)
+add test2 data.f1:0xcdcdcdcd set_load_f2(val:0x9f9f9f9f)
+
+expect 2 80 7f7f7f7f 0202babe b96d 04040404 abcdabcd
+packet 0 80 01010101 0202babe ffff 04040404 05050505
+
+expect 2 80 cdcdcdcd 0202babe 372f 04040404 9f9f9f9f
+packet 0 80 02020202 0202babe ffff 04040404 05050505

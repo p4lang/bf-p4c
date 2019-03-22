@@ -361,6 +361,7 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/split_big_state.h
   parde/p4i/gen_parser_json.h
   parde/p4i/p4i_json_types.h
+  parde/reset_invalidated_checksum_headers.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_PARDE_HDRS}")
 

@@ -20,6 +20,7 @@ inline gress_t operator~(const gress_t& gress) { return gress_t((gress & 1) ^ 1)
 cstring toString(gress_t gress);
 cstring toSymbol(gress_t gress);
 cstring createThreadName(gress_t gress, cstring name);
+cstring stripThreadPrefix(cstring name);
 
 std::ostream& operator<<(std::ostream& out, gress_t gress);
 std::ostream& operator<<(std::ostream& out, boost::optional<gress_t> gress);

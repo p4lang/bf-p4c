@@ -59,7 +59,33 @@ class P4ParserGraphs: public graphs::ParserGraphs {
         return is_descendant(b, a);
     }
 
-    std::map<const IR::ParserState*, std::set<const IR::ParserState*>> preds, succs;
+    /// a kludge due to base class's lack of state -> parser reverse map
+    const IR::P4Parser*
+    get_parser(const IR::ParserState* state) const {
+        for (auto& kv : states) {
+            for (auto s : kv.second)
+                if (s == state)
+                    return kv.first;
+        }
+
+        return nullptr;
+    }
+
+    ordered_set<const IR::ParserState*>
+    get_all_descendants(const IR::ParserState* state) const {
+        ordered_set<const IR::ParserState*> rv;
+
+        auto parser = get_parser(state);
+
+        for (auto s : states.at(parser)) {
+            if (is_descendant(s, state))
+                rv.insert(s);
+        }
+
+        return rv;
+    }
+
+    std::map<const IR::ParserState*, ordered_set<const IR::ParserState*>> preds, succs;
 
     bool dumpDot;
 };

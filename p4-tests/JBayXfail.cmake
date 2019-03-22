@@ -36,7 +36,7 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     # clot-phv interaction bug?
     testdata/p4_14_samples/bridge1.p4
     # conditional checksum: JBay needs different treatment
-    extensions/p4_tests/p4_14/stf/cond_checksum_update.p4
+    extensions/p4_tests/p4_14/stf/cond_checksum_update_1.p4
     # Needs stateful init regs support in simple test harness, this test passes
     # on stf2ptf
     # decaf: needs to work with CLOT allocation
@@ -44,6 +44,10 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     extensions/p4_tests/p4_14/stf/deparser_copy_opt_1.p4
     extensions/p4_tests/p4_14/stf/deparser_copy_opt_2.p4
     extensions/p4_tests/p4_14/stf/deparser_copy_opt_3.p4
+    # residual checksum still needs work for JBay
+    extensions/p4_tests/p4_14/stf/update_checksum_4.p4
+    extensions/p4_tests/p4_14/stf/update_checksum_5.p4
+    extensions/p4_tests/p4_14/stf/update_checksum_6.p4
     )
 
 endif() # HARLYN_STF
@@ -250,10 +254,11 @@ p4c_add_xfail_reason("tofino2"
   testdata/p4_14_samples/truncate.p4
 )
 
-p4c_add_xfail_reason("tofino2"
-  "failed command assembler"
-  extensions/p4_tests/p4_14/stf/cond_checksum_update_2.p4
-  extensions/p4_tests/p4_14/stf/cond_checksum_update.p4
+p4c_add_xfail_reason("tofino2"		
+   "failed command assembler"		
+   # conditional checksum needs different treatment for JBay
+   extensions/p4_tests/p4_14/stf/cond_checksum_update_1.p4
+   extensions/p4_tests/p4_14/stf/cond_checksum_update_2.p4
 )
 
 # P4C-1011

@@ -1398,6 +1398,13 @@ class ConstructSymbolTable : public Inspector {
                     parserChecksums->bridgedResidualChecksums.count(destfield)) {
                     auto pr = parserChecksums->bridgedResidualChecksums.at(destfield);
                     exprs.push_back(pr);
+                    if (parserChecksums->residualChecksumPayloadFields.count(destfield)) {
+                        for (auto f :
+                                 parserChecksums->residualChecksumPayloadFields.at(destfield)) {
+                            exprs.push_back(f);
+                            LOG4("add payload field " << f << " to " << destfield);
+                        }
+                    }
                 }
             }
 
