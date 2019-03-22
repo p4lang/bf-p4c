@@ -65,6 +65,25 @@
 //             4w4 &&& 4w15: reject;
 //         }
 //     }
+//
+struct CheckMauUse : public Inspector {
+    // We limit the use of varbit field to parser and deparser, which is
+    // sufficient for skipping through header options.
+    // To support the use of varbit field in the MAU add a few twists to
+    // the problem (TODO).
+
+    bool preorder(const IR::Expression* expr) override {
+        if (expr->type->is<IR::Type_Varbits>()) {
+            auto control = findContext<IR::BFN::TnaControl>();
+            if (control) {
+                P4C_UNIMPLEMENTED("%1%: use of varbit field is only supported"
+                                  " in parser and deparser currently", expr);
+            }
+        }
+
+        return true;
+    }
+};
 
 class CollectVarbitExtract : public Inspector {
     P4::ReferenceMap *refMap;
@@ -77,7 +96,7 @@ class CollectVarbitExtract : public Inspector {
 
     std::map<const IR::ParserState*, const IR::StructField*> state_to_varbit_field;
 
-    std::map<const IR::ParserState*, const IR::Member*> state_to_length_var;
+    std::map<const IR::ParserState*, const IR::Expression*> state_to_encode_var;
 
     std::map<const IR::ParserState*,
              std::set<const IR::Expression*>> state_to_verify_exprs;
@@ -93,18 +112,28 @@ class CollectVarbitExtract : public Inspector {
 
  private:
     bool is_legal_runtime_value(const IR::Expression* verify,
-                                const IR::Member* var, unsigned val);
+                                const IR::Expression* encode_var, unsigned val);
 
     bool is_legal_runtime_value(const IR::ParserState* state,
-                                const IR::Member* var, unsigned val);
+                                const IR::Expression* encode_var, unsigned val);
 
-    const IR::Constant* evaluate(const IR::Expression* varsize,
-                                 const IR::Member* var, unsigned val);
+    const IR::Constant* evaluate(const IR::Expression* varsize_expr,
+                                 const IR::Expression* encode_var, unsigned val);
+
+    bool enumerate_varbit_field_values(
+        const IR::MethodCallExpression* call,
+        const IR::ParserState* state,
+        const IR::StructField* varbit_field,
+        const IR::Expression* varsize_expr,
+        const IR::Expression*& encode_var,
+        std::map<unsigned, const IR::Constant*>& compile_time_constants,
+        std::set<unsigned>& reject_values);
 
     void enumerate_varbit_field_values(
         const IR::MethodCallExpression* call,
         const IR::ParserState* state,
-        const IR::Expression* varsize, const IR::Type_Header* hdr_type);
+        const IR::Expression* varsize_expr,
+        const IR::Type_Header* hdr_type);
 
     bool preorder(const IR::MethodCallExpression*) override;
 
@@ -137,11 +166,13 @@ class RewriteVarbitExtract : public Modifier {
     bool preorder(IR::P4Program*) override;
     bool preorder(IR::Type_Struct*) override;
     bool preorder(IR::Type_Header*) override;
+
     bool preorder(IR::BFN::TnaParser*) override;
     bool preorder(IR::ParserState*) override;
 
     bool preorder(IR::MethodCallExpression*) override;
     bool preorder(IR::BlockStatement*) override;
+    bool preorder(IR::ListExpression* list) override;
 
  public:
     explicit RewriteVarbitExtract(const CollectVarbitExtract& cve) : cve(cve) {}
@@ -164,11 +195,12 @@ class DesugarVarbitExtract : public PassManager {
         auto rewrite_parser_verify = new RewriteParserVerify(*collect_varbit_extract);
 
         addPasses({
+            new CheckMauUse,
             collect_varbit_extract,
             rewrite_varbit_extract,
             rewrite_parser_verify,
             new P4::ClearTypeMap(typeMap),
-            new BFN::TypeChecking(refMap, typeMap, true),
+            new BFN::TypeChecking(refMap, typeMap, true)
         });
     }
 };

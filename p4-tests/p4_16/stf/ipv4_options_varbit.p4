@@ -1,6 +1,6 @@
 #include <v1model.p4>
 
-#define CPU_PORT 64
+#define CPU_PORT 2 
 
 header ipv4_t {
     bit<4>  version;

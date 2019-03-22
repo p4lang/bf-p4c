@@ -600,7 +600,16 @@ struct RewriteParserStatements : public Transform {
             } else if (method->member == "extract") {
                 return rewriteExtract(statement);
             } else if (method->member == "advance") {
-                return rewriteAdvance(statement); } }
+                return rewriteAdvance(statement);
+            }
+        } else if (auto* method = call->method->to<IR::PathExpression>()) {
+            if (method->path->name == "verify") {
+                // XXX(zma) allow this to go through to enable more testing
+                ::warning("Parser \"verify\" is currently unsupported %s", statement->srcInfo);
+                return nullptr;
+            }
+        }
+
         ::error("Unexpected method call in parser%s", statement->srcInfo);
         return nullptr;
     }

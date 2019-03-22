@@ -79,12 +79,6 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "Wrong number of arguments for method call: packet.extract"
-  testdata/p4_14_samples/09-IPv4OptionsUnparsed.p4
-  testdata/p4_14_samples/issue781.p4
-)
-
-p4c_add_xfail_reason("tofino2"
   "error: Assignment cannot be supported in the parser"
   testdata/p4_14_samples/axon.p4
 )
@@ -275,19 +269,13 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "No varbit length encoding variable in"
-  testdata/p4_14_samples/09-IPv4OptionsUnparsed.p4
-  testdata/p4_14_samples/issue781.p4
-  )
-
-p4c_add_xfail_reason("tofino2"
   "Cannot find declaration for"
   testdata/p4_14_samples/issue576.p4
   testdata/p4_14_samples/TLV_parsing.p4
   )
 
 p4c_add_xfail_reason("tofino2"
-  "The current compiler implementation of varbit requires the length encoding variable"
+  "Varbit extract requires .* parser branches to implement"
   extensions/p4_tests/p4_16/compile_only/p4c-1478-neg.p4
   )
 

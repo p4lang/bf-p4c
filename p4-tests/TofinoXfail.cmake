@@ -294,7 +294,8 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "Unexpected method call in parser"
-  testdata/p4_16_samples/verify-bmv2.p4
+  # needs parser "verify" support
+  # testdata/p4_16_samples/verify-bmv2.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -1323,43 +1324,62 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
+  "Invalid entry in checksum calculation"
+  testdata/p4_16_samples/issue1765-bmv2.p4
+)
+
+# varbit related starts
+p4c_add_xfail_reason("tofino"
   "No varbit length encoding variable in"
-  # frontend p4-16 to 16 translation introduces extraneous copy in parser
-  testdata/p4_14_samples/09-IPv4OptionsUnparsed.p4
-  testdata/p4_14_samples/issue781.p4
   testdata/p4_16_samples/issue561-bmv2.p4
-  # varbit size is const expr
-  testdata/p4_16_samples/issue447-bmv2.p4
-  testdata/p4_16_samples/equality-varbit-bmv2.p4
-  testdata/p4_16_samples/equality-bmv2.p4
-  testdata/p4_16_samples/issue447-1-bmv2.p4
-  )
+)
 
 p4c_add_xfail_reason("tofino"
   "Cannot find declaration for"
   testdata/p4_14_samples/issue576.p4
   testdata/p4_14_samples/TLV_parsing.p4
-  )
+)
 
 p4c_add_xfail_reason("tofino"
-  "The current compiler implementation of varbit requires the length encoding variable"
-  extensions/p4_tests/p4_16/compile_only/p4c-1478-neg.p4
-  testdata/p4_16_samples/checksum1-bmv2.p4
-  testdata/p4_16_samples/issue1765-bmv2.p4
+  "Match register not allocated"
   testdata/p4_16_samples/issue1025-bmv2.p4
-  testdata/p4_16_samples/issue447-3-bmv2.p4
+  testdata/p4_16_samples/checksum1-bmv2.p4
   testdata/p4_16_samples/issue1560-bmv2.p4
-  testdata/p4_16_samples/issue447-2-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "1 expected packet on port 0 not seen"
+  testdata/p4_16_samples/issue447-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "use of varbit field is only supported in parser and deparser currently"
+  testdata/p4_16_samples/equality-bmv2.p4
+  testdata/p4_16_samples/equality-varbit-bmv2.p4
   testdata/p4_16_samples/issue447-5-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "multiple varbit fields in a parser state is currently unsupported"
+  testdata/p4_16_samples/issue447-1-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Varbit extract requires .* parser branches to implement"
+  # unbounded varbit expr
+  extensions/p4_tests/p4_16/compile_only/p4c-1478-neg.p4
+  testdata/p4_16_samples/issue447-2-bmv2.p4
+  testdata/p4_16_samples/issue447-3-bmv2.p4
   testdata/p4_16_samples/issue447-4-bmv2.p4
-  )
+)
+# varbit related ends
 
 # Expected failure
 p4c_add_xfail_reason("tofino"
   "error: standard_metadata.packet_length is not accessible in the ingress pipe"
   testdata/p4_14_samples/p414-special-ops-2-bmv2.p4
   testdata/p4_14_samples/p414-special-ops-3-bmv2.p4
-  )
+)
 
 # funnel-shift not supported
 p4c_add_xfail_reason("tofino"
