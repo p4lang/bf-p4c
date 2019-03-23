@@ -226,6 +226,8 @@ class Table : BFN::Unit {
     int get_provided_stage() const;
     int hit_actions() const;
     int get_random_seed() const;
+    int get_pragma_max_actions() const;
+    bool is_force_immediate() const;
     bool for_dleft() const;
 
     UniqueId pp_unique_id(AttachedMemory at = nullptr,

@@ -2,6 +2,7 @@
 #include <math.h>
 
 #include <set>
+#include "bf-p4c/common/utils.h"
 #include "bf-p4c/mau/action_format_2.h"
 #include "bf-p4c/mau/input_xbar.h"
 #include "bf-p4c/mau/memories.h"
@@ -358,6 +359,7 @@ void DoTableLayout::setup_action_layout(IR::MAU::Table *tbl) {
     safe_vector<ActionFormat::Use> uses;
     ActionFormat af(tbl, phv, alloc_done);
     bool immediate_allowed = true;
+    bool immediate_forced = tbl->is_force_immediate();
     // Action Profiles cannot have any immediate data
     if (tbl->layout.action_addr.address_bits != 0)
         immediate_allowed = false;
@@ -366,10 +368,18 @@ void DoTableLayout::setup_action_layout(IR::MAU::Table *tbl) {
         if (auto salu = att->attached->to<IR::MAU::StatefulAlu>())
             if (salu->chain_vpn)
                 immediate_allowed = false;
+
+    if (immediate_forced && !immediate_allowed) {
+      fatal_error("%s: Cannot use force_immediate on table %s when its action data "
+                  "table is indirectly addressed nor when the table needs to use the "
+                  "immediate path to write items like hash, meter color, or random "
+                  "number results.", tbl->srcInfo, tbl->name);
+    }
+
     af.allocate_format(uses, immediate_allowed);
     safe_vector<ActionData::Format::Use> uses_2;
     ActionData::Format af2(phv, tbl, uses_2, uses[0]);
-    af2.allocate_format();
+    af2.allocate_format(immediate_forced);
     lc.total_action_formats[tbl->name] = uses_2;
     tbl->layout.action_data_bytes = af.action_data_bytes;
 }
@@ -805,7 +815,7 @@ class VisitAttached : public Inspector {
 void DoTableLayout::setup_instr_and_next(IR::MAU::Table::Layout &layout,
          const IR::MAU::Table *tbl) {
     layout.total_actions = tbl->actions.size();
-    int hit_actions = tbl->hit_actions();
+    int hit_actions = tbl->hit_actions();  // considers pragma max_actions
     if (hit_actions > 0) {
         if (hit_actions <= TableFormat::IMEM_MAP_TABLE_ENTRIES)
             layout.overhead_bits += ceil_log2(hit_actions);

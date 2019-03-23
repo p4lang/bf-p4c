@@ -633,18 +633,18 @@ class Format {
 
     void determine_single_action_input(SingleActionAllocation &single_action_alloc,
         int max_bytes_required);
-    bool determine_next_immediate_bytes();
-    bool determine_bytes_per_loc(bool &initialized);
+    bool determine_next_immediate_bytes(bool immediate_forced);
+    bool determine_bytes_per_loc(bool &initialized, bool immediate_forced);
     void assign_action_data_table_bytes(AllActionPositions &all_bus_inputs,
          BusInputs &total_inputs);
     void assign_immediate_bytes(AllActionPositions &all_bus_inputs,
          BusInputs &total_inputs);
     void assign_RamSections_to_bytes();
-    void build_potential_format();
+    void build_potential_format(bool immediate_forced);
 
 
  public:
-    void allocate_format();
+    void allocate_format(bool immediate_forced);
     Format(const PhvInfo &p, const IR::MAU::Table *t, safe_vector<Use> &u,
         ActionFormat::Use sp_use)
         : phv(p), tbl(t), uses(u), speciality_use(sp_use) {}

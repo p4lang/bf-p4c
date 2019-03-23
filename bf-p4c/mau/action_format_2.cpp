@@ -1,4 +1,5 @@
 #include <algorithm>
+#include "bf-p4c/common/utils.h"
 #include "bf-p4c/mau/action_format_2.h"
 #include "lib/bitrange.h"  // DANGER -- two (very) different bitrange.h source files...
 #include "bf-p4c/phv/phv_fields.h"
@@ -13,7 +14,7 @@ size_t slot_type_to_bits(SlotType_t slot_type) {
  * Returns an Argument if the two Arguments have some equivalency overlap, i.e.:
  *     param1[8:15]
  *     param1[12:19]
- * 
+ *
  * would return param1[12:15]
  *
  * The two bitrange pointers are overlap offsets into the arguments, i.e. in the corner case:
@@ -103,7 +104,7 @@ const Parameter *Constant::get_extended_param(uint32_t extension,
  *
  * The parameter only_one_overlap_solution indicates that the overlap function will only return if
  * overlap has one and only one solution (as this function is used by multiple Parameters).
- * Constants do not have this property and will always return a no solution 
+ * Constants do not have this property and will always return a no solution
  */
 const Parameter *Constant::overlap(const Parameter *ad, bool only_one_overlap_solution,
         le_bitrange *my_overlap, le_bitrange *ad_overlap) const {
@@ -287,7 +288,7 @@ bool PackingConstraint::can_rotate_in_range(LocalPacking &lp, le_bitrange open_r
  * will have been rotated.
  *
  * Let's set up the following scenario:
- * 
+ *
  * 16 bit data, that is byte by byte rotational, and each byte is bit by bit rotational
  * The data is arg1[3:0] at RAM bit 3:0 and arg2[3:0] at RAM bit 11:8:
  *
@@ -432,7 +433,7 @@ int PackingConstraint::bit_rotation_position(int bit_width, int init_bit, int fi
 }
 
 
-/**  
+/**
  * This function creates from a RamSection with it's isolated ALU information.  This is
  * the initial state from which the RamSections can be condensed and determined
  * where the are in RAM.
@@ -727,7 +728,7 @@ const RamSection *
 
 /**
  * Will return true if compare is worse than *this for the rv of the condense function.
- * Simple heuristics to be imrproved later. 
+ * Simple heuristics to be imrproved later.
  */
 bool RamSection::is_better_merge_than(const RamSection *compare) const {
     int t;
@@ -825,7 +826,7 @@ bool RamSection::is_data_subset_of(const RamSection *ad) const {
 }
 
 /**
- * Uses shared parameters to see if the ad_small is contained within *this 
+ * Uses shared parameters to see if the ad_small is contained within *this
  * Full Description: @seealso contains(const ALUOperation *)
  */
 bool RamSection::contains(const RamSection *ad_small, int init_bit_pos,
@@ -853,7 +854,7 @@ bool RamSection::contains(const RamSection *ad_small, int init_bit_pos,
 
 /**
  * Uses rotations from 0 to see if ad_small is contained within *this
- * Full Description: @seealso contains(const ALUOperation *) 
+ * Full Description: @seealso contains(const ALUOperation *)
  */
 bool RamSection::contains_any_rotation_from_0(const RamSection *ad_small,
          int init_bit_pos, int *final_bit_pos) const {
@@ -939,7 +940,7 @@ size_t RamSectionPosition::total_slots_of_type(SlotType_t slot_type) const {
 }
 
 /**
- * Gathers the number of action data bus inputs of slot_type are in this particular action 
+ * Gathers the number of action data bus inputs of slot_type are in this particular action
  */
 size_t SingleActionPositions::total_slots_of_type(SlotType_t slot_type) const {
     size_t rv = 0;
@@ -1626,12 +1627,14 @@ void Format::analyze_actions() {
 /**
  * @see_also comments over Format::determine_bytes_per_loc
  */
-bool Format::determine_next_immediate_bytes() {
+bool Format::determine_next_immediate_bytes(bool immediate_forced) {
     AllActionPositions &adt_bus_inputs = action_bus_inputs.at(ACTION_DATA_TABLE);
     AllActionPositions &immed_bus_inputs = action_bus_inputs.at(IMMEDIATE);
     // Shrinking the next possible number of bytes by half, by the possibly entry sizes
     int next_adt_bytes;
-    if (bytes_per_loc[ACTION_DATA_TABLE] > 16)
+    if (immediate_forced)
+        next_adt_bytes = 0;
+    else if (bytes_per_loc[ACTION_DATA_TABLE] > 16)
         next_adt_bytes = bytes_per_loc[ACTION_DATA_TABLE] - 16;
     else
         next_adt_bytes = bytes_per_loc[ACTION_DATA_TABLE] / 2;
@@ -1712,7 +1715,7 @@ bool Format::determine_next_immediate_bytes() {
  * directly line up for the entry.  For action profiles, the driver does not currently have
  * the ability to set up these different sizes of action data entry sizes.
  */
-bool Format::determine_bytes_per_loc(bool &initialized) {
+bool Format::determine_bytes_per_loc(bool &initialized, bool immediate_forced) {
     action_bus_inputs.resize(AD_LOCATIONS);
     action_bus_input_bitvecs.resize(AD_LOCATIONS);
     for (int i = 0; i < AD_LOCATIONS; i++) {
@@ -1745,20 +1748,43 @@ bool Format::determine_bytes_per_loc(bool &initialized) {
               << ", IMMEDIATE : " << bytes_per_loc[IMMEDIATE] << " }");
         return true;
     }
+    bool go_imm = true, go_imm2 = true;
 
     // Action profiles cannot have immediate data by definition
     for (auto ba : tbl->attached) {
-        if (ba->attached->is<IR::MAU::ActionData>())
-            return false;
+        if (ba->attached->is<IR::MAU::ActionData>()) {
+            go_imm = false;
+            break; }
     }
 
     if (speciality_use.is_immed_speciality_in_use())
-        return false;
+        go_imm = false;
 
     if (bytes_per_loc[ACTION_DATA_TABLE] == 0)
+        go_imm2 = false;
+
+    if (!go_imm) {
+        if (immediate_forced) {
+          fatal_error("%s: Unable to force_immediate on table %s.  Action parameters cannot "
+                      "be stored in match overhead when the action data table is indirectly "
+                      "addressed, the immediate is needed for hash distribution or random "
+                      "numbers, or when there are no action parameters.",
+                      tbl->srcInfo, tbl->name);
+        }
+        return false;
+    }
+    if (!go_imm2)
         return false;
 
-    return determine_next_immediate_bytes();
+    bool alloc_imm = determine_next_immediate_bytes(immediate_forced);
+    if (immediate_forced && !alloc_imm) {
+        fatal_error("%s: Unable to force_immediate on table %s.  Cannot fit all action "
+                    "data in match overhead.  %d bytes in the action data table. "
+                    "%d bytes in match overhead.", tbl->srcInfo, tbl->name,
+                    bytes_per_loc[ACTION_DATA_TABLE], bytes_per_loc[IMMEDIATE]);
+        return false;
+    }
+    return alloc_imm;
 }
 
 /**
@@ -1942,11 +1968,11 @@ void Format::determine_single_action_input(SingleActionAllocation &single_action
  * The goal is to try and minimize the number of action data bus inputs necessary in order
  * to successfully transfer data from the Action Data RAM to the ALU.  The action data bus
  * constraints are described in full in section 6.2.5 Action Output HV Xbar(s), and definitely
- * more detailed within the action_data_bus.h/cpp files, but , at a high level, the 
+ * more detailed within the action_data_bus.h/cpp files, but , at a high level, the
  * constraints are:
  *
  *     1. The closer the data is to the lsb of the entry (on a RAM granularity), the less
- *        constraints that data has. 
+ *        constraints that data has.
  *     2. The smaller the input slot size is, (i.e. BYTE vs. HALF vs. FULL), the slot has
  *        more requirements when packed towards the msb (on a RAM granularity).
  *
@@ -1954,7 +1980,7 @@ void Format::determine_single_action_input(SingleActionAllocation &single_action
  * algorithm is thus the following:
  *
  *     1.  Determine which action is going to have the most constraints in terms of packing
- *         BYTES as well as size. 
+ *         BYTES as well as size.
  *     2.  For each action find a packing on the RAM size in that entry, while trying if at
  *         all possible to reuse some of the previously used action data slots.
  *
@@ -1990,11 +2016,11 @@ void Format::assign_action_data_table_bytes(AllActionPositions &all_bus_inputs,
 }
 
 /**
- * The purpose of this function is to determine the position of action data in the immediate 
+ * The purpose of this function is to determine the position of action data in the immediate
  * action data section, which is part of match overhead).  What is dissimilar to the action
  * data table is that the constraints of the action data bus are not as restrictive, because
  * for immediate data, the maximum data is only 4 bytes.
- * 
+ *
  * The goal instead of this allocation is to specifically allocate the data so that the
  * data is itself the least number contiguous bits necessary as a mask, as the bit granularity
  * is important for packing data on the match RAM line.
@@ -2057,7 +2083,7 @@ void Format::assign_RamSections_to_bytes() {
  * of ActionDataRamPositions.  This also builds a bitvec of all of the inputs in the
  * action data bus inputs.
  */
-void Format::build_potential_format() {
+void Format::build_potential_format(bool immediate_forced) {
     Use use;
     int loc_i = 0;
     for (auto &loc_inputs : action_bus_inputs) {
@@ -2119,7 +2145,13 @@ void Format::build_potential_format() {
     }
     use.bytes_per_loc = bytes_per_loc;
     use.determine_immediate_mask();
-    uses.push_back(use);
+    // If we're forcing immediate, do not consider allocations that use the action data table
+    if (!immediate_forced || (immediate_forced && bytes_per_loc[ACTION_DATA_TABLE] == 0))
+        uses.push_back(use);
+    else
+        LOG2("Skipping action parameter allocation with ADT = " <<
+             bytes_per_loc[ACTION_DATA_TABLE] << " and IMM = " <<
+             bytes_per_loc[IMMEDIATE] << " due to force_immediate.");
 }
 
 /**
@@ -2145,16 +2177,16 @@ void Format::build_potential_format() {
  *        improve, e.g. O(n^2) approach of allocating all tables simultaneously rather than one at
  *        a time, mutual exclusive optimizations, and the extra copies of the entry from lsb.
  */
-void Format::allocate_format() {
+void Format::allocate_format(bool immediate_forced) {
     LOG1("Determining Formats for table " << tbl->name);
     analyze_actions();
     bool initialized = false;
     while (true) {
-        bool can_allocate = determine_bytes_per_loc(initialized);
+        bool can_allocate = determine_bytes_per_loc(initialized, immediate_forced);
         if (!can_allocate)
             break;
         assign_RamSections_to_bytes();
-        build_potential_format();
+        build_potential_format(immediate_forced);
     }
 }
 

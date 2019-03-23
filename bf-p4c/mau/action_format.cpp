@@ -1855,4 +1855,3 @@ void ActionFormat::calculate_immed_mask() {
 
     LOG2("Immediate mask " << use->immediate_mask);
 }
-

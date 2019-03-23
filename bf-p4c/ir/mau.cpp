@@ -1,4 +1,5 @@
 #include <assert.h>
+#include "bf-p4c/common/utils.h"
 #include "ir/ir.h"
 
 bool IR::MAU::Table::operator==(const IR::MAU::Table &a) const {
@@ -62,7 +63,7 @@ IR::MAU::Table::IndirectAddress
  *
  *  This is currently created as a key during the try_place_table algorithm.  These keys,
  *  after the IR is updated in the TablePlacement preorders, should be identical to the keys
- *  after table placement 
+ *  after table placement
  */
 UniqueId IR::MAU::Table::pp_unique_id(const IR::MAU::AttachedMemory *at,
         bool is_gw, int stage_table, int logical_table,
@@ -212,12 +213,75 @@ int IR::MAU::Table::get_random_seed() const {
     return val;
 }
 
+int IR::MAU::Table::get_pragma_max_actions() const {
+    if (match_table == nullptr)
+        return -1;
+    auto annot = match_table->getAnnotations();
+    if (auto s = annot->getSingle("max_actions")) {
+        ERROR_CHECK(s->expr.size() >= 1, "%s: max_actions pragma on table does not have a"
+            "value", srcInfo, name);
+        auto pragma_ptr = s->expr.at(0)->to<IR::Constant>();
+        if (pragma_ptr == nullptr) {
+            fatal_error("%s: max_actions value on table %s is not a constant",
+                        srcInfo, name);
+            return -1;
+        } else {
+            int pragma_val = pragma_ptr->asInt();
+            int num_actions = actions.size();
+            if (pragma_val < num_actions) {
+                fatal_error("%s: Invalid max_actions pragma usage on table %s."
+                            "The maximum actions (%d) specified cannot be less than the "
+                            "number of callable actions listed (%d).",
+                            srcInfo, name, pragma_val, num_actions);
+                return -1;
+            // } else if (pragma_val > (InstructionMemory::IMEM_ROWS *
+            //                          InstructionMemory::IMEM_COLORS)) {
+            } else if (pragma_val > 64) {
+                fatal_error("%s: Invalid max_actions pragma usage on table %s."
+                            "The maximum actions specified (%d) cannot exceed %d.",
+                            srcInfo, name, pragma_val, 64);
+                return -1;
+            } else if (pragma_val > num_actions) {
+                LOG2("Found max_actions " << pragma_val);
+                return pragma_val;
+            }
+        }
+    }
+    return -1;
+}
+
+bool IR::MAU::Table::is_force_immediate() const {
+    if (match_table == nullptr)
+        return false;
+    auto annot = match_table->getAnnotations();
+    if (auto s = annot->getSingle("force_immediate")) {
+        ERROR_CHECK(s->expr.size() >= 1, "%s: force_immediate pragma on table does not have a"
+            "value", srcInfo, name);
+        auto pragma_ptr = s->expr.at(0)->to<IR::Constant>();
+        if (pragma_ptr == nullptr) {
+            fatal_error("%s: force_immediate value on table %s is not a constant",
+                        srcInfo, name);
+            return false;
+        } else {
+            int pragma_val = pragma_ptr->asInt();
+            if (pragma_val == 0 || pragma_val == 1) {
+                LOG2("Found force_immediate " << pragma_val);
+                return pragma_val == 1;
+            } else {
+              fatal_error("%s: Invalid force_immediate pragma usage on table %s. "
+                          "Only 0 and 1 are allowed.", srcInfo, name);
+              return false; } } }
+    return false;
+}
+
 int IR::MAU::Table::hit_actions() const {
     int _hit_actions = 0;
     for (auto act : Values(actions)) {
         if (!act->miss_only())
             _hit_actions++;
     }
+    int pragma_max_actions = get_pragma_max_actions();
+    if (pragma_max_actions > 0) return pragma_max_actions;
     return _hit_actions;
 }
 
