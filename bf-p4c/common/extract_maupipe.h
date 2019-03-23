@@ -40,7 +40,8 @@ typedef std::map<const IR::Declaration_Instance *,
 typedef std::map<const IR::Declaration_Instance *, const IR::MAU::Selector *> StatefulSelectors;
 
 class AttachTables : public PassManager {
-    const P4::ReferenceMap *refMap;
+    P4::ReferenceMap *refMap;
+    P4::TypeMap* typeMap;
     // Have to keep all non StatefulAlus separate from other Declaration_Instances, because
     // selectors and StatefulAlus may have the same Declaration
     DeclarationConversions &converted;
@@ -65,7 +66,9 @@ class AttachTables : public PassManager {
 
     class DefineGlobalRefs : public MauModifier {
         AttachTables &self;
-        const P4::ReferenceMap *refMap;
+        P4::ReferenceMap *refMap;
+        P4::TypeMap* typeMap;
+
         std::map<cstring, safe_vector<const IR::MAU::BackendAttached *>> attached;
         bool preorder(IR::MAU::Table *) override;
         bool preorder(IR::MAU::Action *) override;
@@ -76,8 +79,9 @@ class AttachTables : public PassManager {
         const IR::MAU::StatefulAlu *findAttachedSalu(const IR::Declaration_Instance *ext);
 
      public:
-        explicit DefineGlobalRefs(AttachTables &s, const P4::ReferenceMap *refMap) :
-            self(s), refMap(refMap) {}
+        explicit DefineGlobalRefs(AttachTables &s, P4::ReferenceMap *refMap,
+                P4::TypeMap* typeMap) :
+            self(s), refMap(refMap), typeMap(typeMap) {}
     };
     bool findSaluDeclarations(const IR::Declaration_Instance *ext,
                               const IR::Declaration_Instance **reg_ptr,
@@ -86,11 +90,12 @@ class AttachTables : public PassManager {
     profile_t init_apply(const IR::Node *root) override;
 
  public:
-    AttachTables(const P4::ReferenceMap *rm, DeclarationConversions &con, StatefulSelectors ss)
-        : refMap(rm), converted(con), stateful_selectors(ss) {
+    AttachTables(P4::ReferenceMap *rm, P4::TypeMap* tm, DeclarationConversions &con,
+            StatefulSelectors ss)
+        : refMap(rm), typeMap(tm), converted(con), stateful_selectors(ss) {
         addPasses({
             new InitializeStatefulAlus(*this),
-            new DefineGlobalRefs(*this, refMap)
+            new DefineGlobalRefs(*this, refMap, typeMap)
         });
         stop_on_error = false;
     }

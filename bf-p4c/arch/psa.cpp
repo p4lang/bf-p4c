@@ -20,10 +20,10 @@ namespace PSA {
 
 class PacketPathTo8Bits : public P4::ChooseEnumRepresentation {
     bool convert(const IR::Type_Enum *type) const override {
-        LOG1("Type Enum name " << type);
         if (type->name != "PSA_PacketPath_t") {
             return false;
         }
+        LOG3("Convert Enum to Bits " << type->name);
         return true;
     }
 
@@ -67,15 +67,21 @@ class AnalyzeProgram : public Inspector {
             "egress", "ed", PSA::ProgramStructure::EGRESS_DEPARSER);
         return true;
     }
-    void postorder(const IR::Type_Action* node) override
-    { structure->action_types.push_back(node); }
-    void postorder(const IR::Type_StructLike* node) override
-    { structure->type_declarations.emplace(node->name, node); }
+    void postorder(const IR::Type_Action* node) override {
+        structure->action_types.push_back(node);
+    }
+    void postorder(const IR::Type_StructLike* node) override {
+        structure->type_declarations.emplace(node->name, node);
+    }
     void postorder(const IR::Type_Typedef* node) override {
         structure->type_declarations.emplace(node->name, node);
     }
     void postorder(const IR::Type_Enum* node) override {
         structure->enums.emplace(node->name, node);
+    }
+    void postorder(const IR::Type_SerEnum* node) override {
+        LOG3("ser enum " << node);
+        structure->ser_enums.emplace(node->name, node);
     }
     void postorder(const IR::P4Parser* node) override {
         structure->parsers.emplace(node->name, node);
@@ -668,6 +674,8 @@ class LoadTargetArchitecture : public Inspector {
         for (auto decl : structure->targetTypes) {
             if (auto v = decl->to<IR::Type_Enum>()) {
                 structure->enums.emplace(v->name, v);
+            } else if (auto v = decl->to<IR::Type_SerEnum>()) {
+                structure->ser_enums.emplace(v->name, v);
             } else if (auto v = decl->to<IR::Type_Error>()) {
                 for (auto mem : v->members) {
                     structure->errors.emplace(mem->name);
@@ -728,6 +736,19 @@ class LoadTargetArchitecture : public Inspector {
     }
 };
 
+/// Remap paths, member expressions, and type names according to the mappings
+/// specified in the given ProgramStructure.
+struct ConvertNames : public PassManager {
+    explicit ConvertNames(ProgramStructure *structure, P4::ReferenceMap *refMap,
+            P4::TypeMap *typeMap) {
+        addPasses({new BFN::PSA::PathExpressionConverter(structure),
+                   new BFN::PSA::TypeNameConverter(structure),
+                   new P4::ClearTypeMap(typeMap),
+                   new P4::TypeChecking(refMap, typeMap, true),
+                   new P4::EliminateSerEnums(refMap, typeMap)});
+    }
+};
+
 }  // namespace PSA
 
 PortableSwitchTranslation::PortableSwitchTranslation(
@@ -751,6 +772,7 @@ PortableSwitchTranslation::PortableSwitchTranslation(
         new PSA::AnalyzeProgram(structure, refMap, typeMap),
         new PSA::TranslateProgram(structure, refMap, typeMap),
         new GenerateTofinoProgram(structure),
+        new PSA::ConvertNames(structure, refMap, typeMap),
         new AddIntrinsicMetadata,
         new PSA::RewritePacketPath(structure),
         new TranslationLast(),

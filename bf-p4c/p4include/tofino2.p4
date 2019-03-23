@@ -45,7 +45,7 @@ const bit<32> PORT_METADATA_SIZE = 32w192;
 /// Meter
 enum MeterType_t { PACKETS, BYTES }
 
-enum MeterColor_t { GREEN, YELLOW, RED }
+enum bit<8> MeterColor_t { GREEN = 8w0, YELLOW = 8w1, RED = 8w3 }
 
 /// Counter
 enum CounterType_t {
@@ -601,6 +601,7 @@ extern DirectCounter<W> {
 /// Meter
 extern Meter<I> {
     Meter(bit<32> size, MeterType_t type);
+    Meter(bit<32> size, MeterType_t type, bit<8> red, bit<8> yellow, bit<8> green);
     bit<8> execute(in I index, in bit<2> color);
     bit<8> execute(in I index);
 }
@@ -608,6 +609,7 @@ extern Meter<I> {
 /// Direct meter.
 extern DirectMeter {
     DirectMeter(MeterType_t type);
+    DirectMeter(MeterType_t type, bit<8> red, bit<8> yellow, bit<8> green);
     bit<8> execute(in bit<2> color);
     bit<8> execute();
 }

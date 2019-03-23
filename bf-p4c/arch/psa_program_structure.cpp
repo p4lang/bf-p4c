@@ -112,15 +112,6 @@ void ProgramStructure::createMain() {
     declarations.push_back(result);
 }
 
-/// Remap paths, member expressions, and type names according to the mappings
-/// specified in the given ProgramStructure.
-struct ConvertNames : public PassManager {
-    explicit ConvertNames(ProgramStructure *structure) {
-        addPasses({new BFN::PSA::PathExpressionConverter(structure),
-                   new BFN::PSA::TypeNameExpressionConverter(structure)});
-    }
-};
-
 const IR::P4Program *ProgramStructure::create(const IR::P4Program *program) {
     createErrors();
     createTofinoArch();
@@ -130,10 +121,8 @@ const IR::P4Program *ProgramStructure::create(const IR::P4Program *program) {
     createControls();
     createPipeline();
     createMain();
-    auto *convertedProgram = new IR::P4Program(program->srcInfo, declarations);
 
-    ConvertNames nameConverter(this);
-    return convertedProgram->apply(nameConverter);
+    return new IR::P4Program(program->srcInfo, declarations);
 }
 
 }  // namespace PSA

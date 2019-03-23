@@ -342,18 +342,6 @@ static IR::MAU::AttachedMemory *createIdleTime(cstring name, const IR::Annotatio
     return idletime;
 }
 
-void setupParam(IR::MAU::Synth2Port* rv, const IR::Vector<IR::Argument>* args) {
-    if (args->size() == 1) {
-        rv->settype(args->at(0)->expression->as<IR::Member>().member.name);
-        rv->direct = true;
-    } else if (args->size() == 2) {
-        rv->size = getConstant(args->at(0));
-        rv->settype(args->at(1)->expression->as<IR::Member>().member.name);
-    } else {
-        BUG("cannot have more than %d arguments", args->size());
-    }
-}
-
 const IR::Type* getBaseType(const IR::Type* type) {
     const IR::Type* val = type;
     if (auto* t = type->to<IR::Type_Specialized>()) {
@@ -413,7 +401,7 @@ static int getSingleAnnotationValue(const cstring name, const IR::MAU::Table *ta
 }
 
 static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
-        cstring name, const IR::Type *type, const IR::Vector<IR::Argument> *args,
+        cstring name, const IR::Type *type, const P4::ParameterSubstitution* substitution,
         const IR::Annotations *annot, const P4::ReferenceMap *refMap,
         StatefulSelectors &stateful_selectors,
         const IR::MAU::AttachedMemory **created_ap = nullptr,
@@ -423,13 +411,8 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
 
     if (tname == "ActionSelector") {
         auto sel = new IR::MAU::Selector(srcInfo, name, annot);
-        if (args->at(2)->expression->to<IR::Member>()->member.name == "FAIR") {
-            sel->mode = IR::ID("fair");
-        } else {
-            sel->mode = IR::ID("resilient");
-        }
 
-        // default values
+        // setup action selector group and group size.
         int num_groups = StageUseEstimate::COMPILER_DEFAULT_SELECTOR_POOLS;
         int max_group_size = StageUseEstimate::SINGLE_RAMLINE_POOL_SIZE;
 
@@ -446,9 +429,7 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
                 if (max_group_size < 1 || max_group_size > (992*120)) {
                     ::error("%s: The selector_max_group_size pragma value on table %s is "
                             "not between %d and %d.", match_table->srcInfo,
-                            match_table->name, 1, 992*120);
-                }
-            }
+                            match_table->name, 1, 992*120); } }
             // Check for number of max groups pragma.
             int pragma_num_max_groups = getSingleAnnotationValue("selector_num_max_groups",
                                                                  match_table);
@@ -457,41 +438,61 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
                 if (num_groups < 1) {
                     ::error("%s: The selector_num_max_groups pragma value on table %s is "
                             "not greater than or equal to 1.", match_table->srcInfo,
-                             match_table->name);
-                }
-            }
-        }
-
+                             match_table->name); } } }
         sel->num_pools = num_groups;
         sel->max_pool_size = max_group_size;
         sel->size = (sel->max_pool_size + 119) / 120 * sel->num_pools;
-        BUG_CHECK(args->size() == 3 || args->size() == 4,
-                  "%s Selector does not have the correct number of arguments", sel->srcInfo);
-        auto path = args->at(1)->expression->to<IR::PathExpression>()->path;
-        auto decl = refMap->getDeclaration(path)->to<IR::Declaration_Instance>();
 
-        if (!sel->algorithm.setup(decl->arguments->at(0)->expression))
-            BUG("invalid algorithm %s", decl->arguments->at(0)->expression);
-
-        auto ap = new IR::MAU::ActionData(srcInfo, IR::ID(name));
-        ap->direct = false;
-        ap->size = getConstant(args->at(0));
-        // FIXME Need to reconstruct the field list from the table key?
-        *created_ap = ap;
-        if (args->size() == 4) {
-            auto regpath = args->at(3)->expression->to<IR::PathExpression>()->path;
-            auto reg = refMap->getDeclaration(regpath)->to<IR::Declaration_Instance>();
-            if (stateful_selectors.count(reg))
-                error("%1% bound to both %2% and %3%", reg, stateful_selectors.at(reg), sel);
-            stateful_selectors.emplace(reg, sel); }
+        // processing ActionSelector constructor parameters.
+        for (auto p : *substitution->getParametersInOrder()) {
+            auto arg = substitution->lookup(p);
+            if (arg == nullptr)
+                continue;
+            if (p->name == "mode") {
+                if (arg->expression->to<IR::Member>()->member.name == "FAIR")
+                    sel->mode = IR::ID("fair");
+                else
+                    sel->mode = IR::ID("resilient");
+            } else if (p->name == "hash") {
+                auto path = arg->expression->to<IR::PathExpression>()->path;
+                auto decl = refMap->getDeclaration(path)->to<IR::Declaration_Instance>();
+                if (!sel->algorithm.setup(decl->arguments->at(0)->expression))
+                    BUG("invalid algorithm %s", decl->arguments->at(0)->expression);
+            } else if (p->name == "size") {
+                auto ap = new IR::MAU::ActionData(srcInfo, IR::ID(name));
+                ap->direct = false;
+                ap->size = getConstant(arg);
+                // FIXME Need to reconstruct the field list from the table key?
+                *created_ap = ap;
+            } else if (p->name == "reg") {
+                auto regpath = arg->expression->to<IR::PathExpression>()->path;
+                auto reg = refMap->getDeclaration(regpath)->to<IR::Declaration_Instance>();
+                if (stateful_selectors.count(reg))
+                    error("%1% bound to both %2% and %3%", reg, stateful_selectors.at(reg), sel);
+                stateful_selectors.emplace(reg, sel); } }
         return sel;
     } else if (tname == "ActionProfile") {
         auto ap = new IR::MAU::ActionData(srcInfo, IR::ID(name));
-        ap->size = getConstant(args->at(0));
+        for (auto p : *substitution->getParametersInOrder()) {
+            auto arg = substitution->lookup(p);
+            if (arg == nullptr)
+                continue;
+            if (p->name == "size")
+                ap->size = getConstant(arg); }
         return ap;
     } else if (tname == "Counter" || tname == "DirectCounter") {
         auto ctr = new IR::MAU::Counter(srcInfo, name, annot);
-        setupParam(ctr, args);
+        if (tname == "DirectCounter")
+            ctr->direct = true;
+
+        for (auto p : *substitution->getParametersInOrder()) {
+            auto arg = substitution->lookup(p);
+            if (p->name == "type") {
+                ctr->settype(arg->expression->as<IR::Member>().member.name);
+            } else if (p->name == "size") {
+                ctr->size = getConstant(arg);
+            } }
+
         /* min_width comes via Type_Specialized */
         auto* t = type->to<IR::Type_Specialized>();
         ctr->min_width = t ? t->arguments->at(0)->width_bits() : -1;
@@ -506,7 +507,57 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
         return ctr;
     } else if (tname == "Meter") {
         auto mtr = new IR::MAU::Meter(srcInfo, name, annot);
-        setupParam(mtr, args);
+        // Ideally, we would access the arguments by name, however, the P4 frontend IR only
+        // populate the 'name' field of IR::Argument when it is used as a named argument.
+        // We had to access the name by 'index' and be careful about not to access indices
+        // that do not exist.
+        for (auto p : *substitution->getParametersInOrder()) {
+            auto arg = substitution->lookup(p);
+            if (arg == nullptr)
+                continue;
+            auto expr = arg->expression;
+            if (p->name == "size") {
+                if (!expr->is<IR::Constant>())
+                    ::error(ErrorType::ERR_INVALID, "Invalid Meter size %1%");
+                mtr->size = expr->to<IR::Constant>()->asInt();
+            } else if (p->name == "type") {
+                if (!expr->is<IR::Member>())
+                    ::error(ErrorType::ERR_INVALID, "Invalid Meter type %1%, must be"
+                                                    "PACKETS or BYTES", expr);
+                mtr->settype(arg->expression->as<IR::Member>().member.name);
+            } else if (p->name == "red") {
+                if (!expr) continue;
+                if (!expr->is<IR::Constant>())
+                    ::error(ErrorType::ERR_INVALID, "Invalid 'red_value'. "
+                                                    "Supported values must be constant.");
+                auto red_value = arg->expression->to<IR::Constant>()->asInt();
+                if (red_value < 0 || red_value > 255)
+                    ::error(ErrorType::ERR_OVERLIMIT, "Invalid 'red_value'."
+                                                      "Supported values are in the range [0:255].");
+                mtr->red_value = red_value;
+            } else if (p->name == "yellow") {
+                if (!expr) continue;
+                if (!expr->is<IR::Constant>())
+                    ::error(ErrorType::ERR_INVALID, "Invalid 'yellow_value'. "
+                                                    "Supported values must be constant.");
+                auto yellow_value = arg->expression->to<IR::Constant>()->asInt();
+                if (yellow_value < 0 || yellow_value > 255)
+                    ::error(ErrorType::ERR_OVERLIMIT, "Invalid 'yellow_value'."
+                                                      "Supported values are in the range [0:255].");
+                mtr->yellow_value = yellow_value;
+            } else if (p->name == "green") {
+                if (!expr) continue;
+                if (!expr->is<IR::Constant>())
+                    ::error(ErrorType::ERR_INVALID, "Invalid 'green_value'. "
+                                                    "Supported values must be constant.");
+                auto green_value = arg->expression->to<IR::Constant>()->asInt();
+                if (green_value < 0 || green_value > 255)
+                    ::error(ErrorType::ERR_OVERLIMIT, "Invalid 'green_value'."
+                                                      "Supported values are in the range [0:255].");
+                mtr->green_value = green_value;
+            }
+        }
+        // annotations are supported for p4-14.
         for (auto anno : annot->annotations) {
             if (anno->name == "result")
                 mtr->result = anno->expr.at(0);
@@ -527,12 +578,55 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
         return mtr;
     } else if (tname == "DirectMeter") {
         auto mtr = new IR::MAU::Meter(srcInfo, name, annot);
-        setupParam(mtr, args);
+        mtr->direct = true;
+        for (auto p : *substitution->getParametersInOrder()) {
+            auto arg = substitution->lookup(p);
+            if (arg == nullptr)
+                continue;
+            auto expr = arg->expression;
+            if (p->name == "type") {
+                mtr->settype(arg->expression->as<IR::Member>().member.name);
+            } else if (p->name == "red") {
+                if (!expr) continue;
+                if (!expr->is<IR::Constant>())
+                    ::error(ErrorType::ERR_INVALID, "Invalid 'red_value'. "
+                                                    "Supported values must be constant.");
+                auto red_value = arg->expression->to<IR::Constant>()->asInt();
+                if (red_value < 0 || red_value > 255)
+                    ::error(ErrorType::ERR_OVERLIMIT, "Invalid 'red_value'."
+                                                      "Supported values are in the range [0:255].");
+                mtr->red_value = red_value;
+            } else if (p->name == "yellow") {
+                if (!expr) continue;
+                if (!expr->is<IR::Constant>())
+                    ::error(ErrorType::ERR_INVALID, "Invalid 'yellow_value'. "
+                                                    "Supported values must be constant.");
+                auto yellow_value = arg->expression->to<IR::Constant>()->asInt();
+                if (yellow_value < 0 || yellow_value > 255)
+                    ::error(ErrorType::ERR_OVERLIMIT, "Invalid 'yellow_value'."
+                                                      "Supported values are in the range [0:255].");
+                mtr->yellow_value = yellow_value;
+            } else if (p->name == "green") {
+                if (!expr) continue;
+                if (!expr->is<IR::Constant>())
+                    ::error(ErrorType::ERR_INVALID, "Invalid 'green_value'. "
+                                                    "Supported values must be constant.");
+                auto green_value = arg->expression->to<IR::Constant>()->asInt();
+                if (green_value < 0 || green_value > 255)
+                    ::error(ErrorType::ERR_OVERLIMIT, "Invalid 'green_value'."
+                                                      "Supported values are in the range [0:255].");
+                mtr->green_value = green_value;
+            } }
         return mtr;
     } else if (tname == "Lpf") {
         auto mtr = new IR::MAU::Meter(srcInfo, name, annot);
         mtr->implementation = IR::ID("lpf");
-        mtr->size = getConstant(args->at(0));
+        for (auto p : *substitution->getParametersInOrder()) {
+            auto arg = substitution->lookup(p);
+            if (arg == nullptr)
+                continue;
+            if (p->name == "size") {
+                mtr->size = getConstant(arg); } }
         return mtr;
     } else if (tname == "DirectLpf") {
         auto mtr = new IR::MAU::Meter(srcInfo, name, annot);
@@ -542,16 +636,29 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
     } else if (tname == "Wred") {
         auto mtr = new IR::MAU::Meter(srcInfo, name, annot);
         mtr->implementation = IR::ID("wred");
-        mtr->size = getConstant(args->at(0));
-        mtr->red_drop_value = getConstant(args->at(1));
-        mtr->red_nodrop_value = getConstant(args->at(2));
+        for (auto p : *substitution->getParametersInOrder()) {
+            auto arg = substitution->lookup(p);
+            if (arg == nullptr)
+                continue;
+            if (p->name == "size") {
+                mtr->size = getConstant(arg);
+            } else if (p->name == "drop_value") {
+                mtr->red_drop_value = getConstant(arg);
+            } else if (p->name == "no_drop_value") {
+                mtr->red_nodrop_value = getConstant(arg); } }
         return mtr;
     } else if (tname == "DirectWred") {
         auto mtr = new IR::MAU::Meter(srcInfo, name, annot);
         mtr->implementation = IR::ID("wred");
         mtr->direct = true;
-        mtr->red_drop_value = getConstant(args->at(0));
-        mtr->red_nodrop_value = getConstant(args->at(1));
+        for (auto p : *substitution->getParametersInOrder()) {
+            auto arg = substitution->lookup(p);
+            if (arg == nullptr)
+                continue;
+            if (p->name == "drop_value") {
+                mtr->red_drop_value = getConstant(arg);
+            } else if (p->name == "no_drop_value") {
+                mtr->red_nodrop_value = getConstant(arg); } }
         return mtr;
     }
 
@@ -559,10 +666,9 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
     return nullptr;
 }
 
-
-
 class FixP4Table : public Inspector {
-    const P4::ReferenceMap *refMap;
+    P4::ReferenceMap *refMap;
+    P4::TypeMap *typeMap;
     IR::MAU::Table *tt;
     std::set<cstring> &unique_names;
     DeclarationConversions &converted;
@@ -586,17 +692,19 @@ class FixP4Table : public Inspector {
                 unique_names.insert(tname);   // don't use the type name directly
                 tname = cstring::make_unique(unique_names, tname);
                 unique_names.insert(tname);
+                P4::ConstructorCall* ccd = P4::ConstructorCall::resolve(cc, refMap, typeMap);
                 obj = createAttached(cc->srcInfo, prop->externalName(tname),
-                                     baseType, cc->arguments, prop->annotations,
+                                     baseType, &ccd->substitution, prop->annotations,
                                      refMap, stateful_selectors, &side_obj, tt);
             } else if (auto pe = pval->to<IR::PathExpression>()) {
                 auto &d = refMap->getDeclaration(pe->path, true)->as<IR::Declaration_Instance>();
                 // The algorithm saves action selectors in the large map, rather than the action
                 // profile, because no ActionProfile will appear as a declaration within an
                 // action.  Action selector will show up in a register SelectorAction
+                auto inst = P4::Instantiation::resolve(&d, refMap, typeMap);
                 if (converted.count(&d) == 0) {
                     LOG3("Create attached " << d.externalName());
-                    obj = createAttached(d.srcInfo, d.externalName(), d.type, d.arguments,
+                    obj = createAttached(d.srcInfo, d.externalName(), d.type, &inst->substitution,
                                          d.annotations, refMap, stateful_selectors, &side_obj, tt);
                     converted[&d] = obj;
                     if (side_obj)
@@ -628,9 +736,9 @@ class FixP4Table : public Inspector {
     }
 
  public:
-    FixP4Table(const P4::ReferenceMap *r, IR::MAU::Table *tt, std::set<cstring> &u,
+    FixP4Table(P4::ReferenceMap *r, P4::TypeMap* tm, IR::MAU::Table *tt, std::set<cstring> &u,
                DeclarationConversions &con, StatefulSelectors &ss, DeclarationConversions &ap)
-    : refMap(r), tt(tt), unique_names(u), converted(con),
+    : refMap(r), typeMap(tm), tt(tt), unique_names(u), converted(con),
       stateful_selectors(ss), assoc_profiles(ap) {}
 };
 
@@ -852,12 +960,13 @@ void AttachTables::DefineGlobalRefs::postorder(IR::GlobalRef *gref) {
     if (auto di = gref->obj->to<IR::Declaration_Instance>()) {
         auto tt = findContext<IR::MAU::Table>();
         BUG_CHECK(tt, "GlobalRef not in a table");
+        auto inst = P4::Instantiation::resolve(di, refMap, typeMap);
         const IR::MAU::AttachedMemory *obj = nullptr;
         if (self.converted.count(di)) {
             obj = self.converted.at(di);
             gref->obj = obj;
         } else if (auto att = createAttached(di->srcInfo, di->externalName(),
-                                             di->type, di->arguments, di->annotations,
+                                             di->type, &inst->substitution, di->annotations,
                                              refMap, self.stateful_selectors, nullptr, nullptr)) {
             LOG3("Created " << att->node_type_name() << ' ' << att->name << " (pt 3)");
             gref->obj = self.converted[di] = att;
@@ -1077,8 +1186,8 @@ class GetBackendTables : public MauInspector {
                 new IR::MAU::Table(cstring::make_unique(unique_names, table->name), gress, table);
             unique_names.insert(tt->name);
             tt->match_table = table =
-                table->apply(FixP4Table(refMap, tt, unique_names, converted, stateful_selectors,
-                                        assoc_profiles))->to<IR::P4Table>();
+                table->apply(FixP4Table(refMap, typeMap, tt, unique_names, converted,
+                        stateful_selectors, assoc_profiles))->to<IR::P4Table>();
             setup_tt_match(tt, table);
             setup_actions(tt, table);
         } else {
@@ -1235,7 +1344,7 @@ ProcessBackendPipe::ProcessBackendPipe(P4::ReferenceMap *refMap, P4::TypeMap *ty
     CHECK_NULL(mirrorPackings);
     auto simplifyReferences = new SimplifyReferences(bindings, refMap, typeMap);
     addPasses({
-        new AttachTables(refMap, converted, ss),  // add attached tables
+        new AttachTables(refMap, typeMap, converted, ss),  // add attached tables
         new ProcessParde(rv, false /* useTna */),         // add parde metadata
         new PopulateResubmitStateWithFieldPackings(resubmitPackings),
         new PopulateMirrorStateWithFieldPackings(rv, mirrorPackings),
@@ -1256,7 +1365,7 @@ ProcessBackendPipe::ProcessBackendPipe(P4::ReferenceMap *refMap, P4::TypeMap *ty
     CHECK_NULL(bindings);
     auto simplifyReferences = new SimplifyReferences(bindings, refMap, typeMap);
     addPasses({
-        new AttachTables(refMap, converted, ss),  // add attached tables
+        new AttachTables(refMap, typeMap, converted, ss),  // add attached tables
         new ProcessParde(rv, true /* useTna */),           // add parde metadata
         /// followings two passes are necessary, because ProcessBackendPipe transforms the
         /// IR::BFN::Pipe objects. If all the above passes can be moved to an earlier midend

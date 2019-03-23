@@ -364,6 +364,7 @@ MidEnd::MidEnd(BFN_Options& options) {
         // struct assignment. could be done in tna.cpp and t2na.cpp
         (options.arch == "tna" || options.arch == "t2na") ?
             new BFN::RewriteFlexibleStruct(&refMap, &typeMap) : nullptr,
+        new MidEndLast,
         new RenameArchParams(&refMap, &typeMap),
         new FillFromBlockMap(&refMap, &typeMap),
         evaluator,

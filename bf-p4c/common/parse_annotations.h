@@ -69,6 +69,9 @@ class ParseAnnotations : public P4::ParseAnnotations {
                 PARSE("ternary", Expression),
                 PARSE("use_hash_action", Expression),
                 PARSE("ways", Expression),
+                PARSE("red", Expression),
+                PARSE("yellow", Expression),
+                PARSE("green", Expression),
 
                 PARSE_EMPTY("flexible"),
                 PARSE_EMPTY("header_checksum"),

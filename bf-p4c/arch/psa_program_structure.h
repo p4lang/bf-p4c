@@ -9,6 +9,7 @@
 #include "bf-p4c/ir/gress.h"
 #include "frontends/common/resolveReferences/resolveReferences.h"
 #include "frontends/p4/evaluator/evaluator.h"
+#include "midend/eliminateSerEnums.h"
 
 namespace BFN {
 

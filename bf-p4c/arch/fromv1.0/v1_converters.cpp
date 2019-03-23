@@ -624,66 +624,52 @@ const IR::Node* ExternConverter::postorder(IR::Member *node) {
     return node;
 }
 
-/// The meter
+const IR::Expression* MeterConverter::cast_if_needed(
+        const IR::Expression* expr, int srcWidth, int dstWidth) {
+    if (srcWidth == dstWidth)
+        return expr;
+    if (srcWidth < dstWidth)
+        return new IR::Cast(IR::Type::Bits::get(dstWidth), expr);
+    if (srcWidth > dstWidth)
+        return new IR::Slice(expr, dstWidth - 1, 0);
+    return expr;
+}
+
 const IR::Node* MeterConverter::postorder(IR::MethodCallStatement* node) {
     auto orig = getOriginal<IR::MethodCallStatement>();
     auto mce = orig->methodCall->to<IR::MethodCallExpression>();
 
     auto member = mce->method->to<IR::Member>();
-    BUG_CHECK(member->member == "execute_meter",
-              "unexpected meter method %1%", member->member);
     auto method = new IR::Member(node->srcInfo, member->expr, "execute");
-
-    auto meterColor = mce->arguments->at(1)->expression;
-    auto size = meterColor->type->width_bits();
-    BUG_CHECK(size != 0, "meter color cannot be bit<0>");
-    auto args = new IR::Vector<IR::Argument>();
-    args->push_back(mce->arguments->at(0));
-    auto methodcall = new IR::MethodCallExpression(node->srcInfo, method, args);
-    IR::AssignmentStatement* assign = nullptr;
-    if (size > 8) {
-        assign = new IR::AssignmentStatement(
-                meterColor, new IR::Cast(IR::Type::Bits::get(size), methodcall));
-    } else if (size < 8) {
-        assign = new IR::AssignmentStatement(meterColor, new IR::Slice(methodcall, size - 1, 0));
-    } else {
-        assign = new IR::AssignmentStatement(meterColor, methodcall);
-    }
-    return assign;
-}
-
-const IR::Node* DirectMeterConverter::postorder(IR::MethodCallStatement* node) {
-    auto orig = getOriginal<IR::MethodCallStatement>();
-    auto mce = orig->methodCall->to<IR::MethodCallExpression>();
-
-    auto member = mce->method->to<IR::Member>();
-    auto method = new IR::Member(node->srcInfo, member->expr, "execute");
-    auto args = new IR::Vector<IR::Argument>();
 
     auto meter_pe = member->expr->to<IR::PathExpression>();
-    BUG_CHECK(meter_pe != nullptr, "Direct meter is not a path expression");
+    BUG_CHECK(meter_pe != nullptr, "Cannot find meter %1%", member->expr);
 
-
+    auto args = new IR::Vector<IR::Argument>();
     auto inst = refMap->getDeclaration(meter_pe->path);
     auto annot = inst->getAnnotation("pre_color");
     if (annot != nullptr) {
-        args->push_back(new IR::Argument(new IR::Cast(IR::Type::Bits::get(2), annot->expr.at(0))));
-    }
+        auto size = annot->expr.at(0)->type->width_bits();
+        auto expr = annot->expr.at(0);
+        auto castedExpr = cast_if_needed(expr, size, 8);
+        args->push_back(new IR::Argument(new IR::Cast(
+                new IR::Type_Name("MeterColor_t"), castedExpr))); }
 
-    auto meterColor = mce->arguments->at(0)->expression;
+    int meter_color_index;
+    if (direct)
+        meter_color_index = 0;
+    else
+        meter_color_index = 1;
+
+    auto meterColor = mce->arguments->at(meter_color_index)->expression;
+
     auto size = meterColor->type->width_bits();
-    BUG_CHECK(size != 0, "meter color width cannot be bit<0>");
+    BUG_CHECK(size != 0, "meter color cannot be bit<0>");
+    if (!direct)
+        args->push_back(mce->arguments->at(0));
     auto methodcall = new IR::MethodCallExpression(node->srcInfo, method, args);
-    IR::AssignmentStatement* assign = nullptr;
-    if (size > 8) {
-        assign = new IR::AssignmentStatement(
-                meterColor, new IR::Cast(IR::Type::Bits::get(size), methodcall));
-    } else if (size < 8) {
-        assign = new IR::AssignmentStatement(meterColor, new IR::Slice(methodcall, size - 1, 0));
-    } else {
-        assign = new IR::AssignmentStatement(meterColor, methodcall);
-    }
-    return assign;
+    auto castedMethodCall = cast_if_needed(methodcall, 8, size);
+    return new IR::AssignmentStatement(meterColor, castedMethodCall);
 }
 
 const IR::Node* RegisterConverter::postorder(IR::MethodCallStatement* node) {
@@ -696,9 +682,7 @@ const IR::Node* RegisterConverter::postorder(IR::MethodCallStatement* node) {
     auto method = new IR::Member(node->srcInfo, member->expr, "read");
     auto args = new IR::Vector<IR::Argument>({mce->arguments->at(1)});
     auto methodcall = new IR::MethodCallExpression(node->srcInfo, method, args);
-    auto assign = new IR::AssignmentStatement(mce->arguments->at(0)->expression, methodcall);
-
-    return assign;
+    return new IR::AssignmentStatement(mce->arguments->at(0)->expression, methodcall);
 }
 //////////////////////////////////////////////////////////////////////////////////////////////
 

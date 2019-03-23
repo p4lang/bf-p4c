@@ -150,10 +150,11 @@ class EgressDeparserConverter : public ControlConverter {
 
 class TypeNameExpressionConverter : public ExpressionConverter {
     // mapping enum name from psa to tofino
-    ordered_map<cstring, cstring> enumsToTranslate = {{"PSA_HashAlgorithm_t", "HashAlgorithm_t"},
-                                                      {"PSA_CounterType_t", "CounterType_t"},
-                                                      {"PSA_MeterType_t", "MeterType_t"},
-                                                      {"PSA_MeterColor_t", "MeterColor_t"}};
+    ordered_map<cstring, std::pair<cstring, bool /* isSerEnums */>> enumsToTranslate =
+            {{"PSA_HashAlgorithm_t", std::make_pair("HashAlgorithm_t", false)},
+             {"PSA_CounterType_t", std::make_pair("CounterType_t", false)},
+             {"PSA_MeterType_t", std::make_pair("MeterType_t", false)},
+             {"PSA_MeterColor_t", std::make_pair("MeterColor_t", true)}};
 
  public:
     explicit TypeNameExpressionConverter(ProgramStructure* structure)
@@ -161,6 +162,23 @@ class TypeNameExpressionConverter : public ExpressionConverter {
         CHECK_NULL(structure);
     }
     const IR::Node* postorder(IR::TypeNameExpression* node) override;
+};
+
+class TypeNameConverter : public Transform {
+ protected:
+    ProgramStructure* structure;
+    // mapping enum name from psa to tofino
+    ordered_map<cstring, std::pair<cstring, bool /* isSerEnums */>> enumsToTranslate =
+            {{"PSA_HashAlgorithm_t", std::make_pair("HashAlgorithm_t", false)},
+             {"PSA_CounterType_t", std::make_pair("CounterType_t", false)},
+             {"PSA_MeterType_t", std::make_pair("MeterType_t", false)},
+             {"PSA_MeterColor_t", std::make_pair("MeterColor_t", true)}};
+
+ public:
+    explicit TypeNameConverter(ProgramStructure* structure) {
+        CHECK_NULL(structure);
+    }
+    const IR::Node* postorder(IR::Type_Name* node) override;
 };
 
 class PathExpressionConverter : public ExpressionConverter {

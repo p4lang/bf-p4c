@@ -357,8 +357,9 @@ class ElimCasts : public PassManager {
     ElimCasts(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {
         addPasses({
            new SimplifyOperationBinary(),
-           new SimplifyNestedCasts(),
-           new SimplifyRedundantCasts(),
+           new PassRepeated({
+               new SimplifyNestedCasts(),
+               new SimplifyRedundantCasts()}),
            new RewriteCastToReinterpretCast(typeMap),
            new EliminateWidthCasts(),
            // FIXME -- StrengthReduction has problems with complex nested things like

@@ -14,6 +14,7 @@
 #include "frontends/p4/typeChecking/typeChecker.h"
 #include "midend/local_copyprop.h"
 #include "midend/validateProperties.h"
+#include "midend/eliminateSerEnums.h"
 #include "bf-p4c/midend.h"
 #include "bf-p4c/midend/type_checker.h"
 #include "bf-p4c/arch/bridge_metadata.h"
@@ -232,6 +233,8 @@ class LoadTargetArchitecture : public Inspector {
         for (auto decl : structure->targetTypes) {
             if (auto v = decl->to<IR::Type_Enum>()) {
                 structure->enums.emplace(v->name, v);
+            } else if (auto v = decl->to<IR::Type_SerEnum>()) {
+                structure->ser_enums.emplace(v->name, v);
             } else if (auto v = decl->to<IR::Type_Error>()) {
                 for (auto mem : v->members) {
                     structure->errors.emplace(mem->name);
@@ -1120,6 +1123,17 @@ class ConstructSymbolTable : public Inspector {
         }
     }
 
+    const IR::Expression* cast_if_needed(
+            const IR::Expression* expr, int srcWidth, int dstWidth) {
+        if (srcWidth == dstWidth)
+            return expr;
+        if (srcWidth < dstWidth)
+            return new IR::Cast(IR::Type::Bits::get(dstWidth), expr);
+        if (srcWidth > dstWidth)
+            return new IR::Slice(expr, dstWidth - 1, 0);
+        return expr;
+    }
+
     /// execute_meter_with_color is converted to a meter extern
     void cvtExecuteMeterFunction(const IR::MethodCallStatement *node) {
         auto control = findContext<IR::P4Control>();
@@ -1135,22 +1149,22 @@ class ConstructSymbolTable : public Inspector {
         auto method = new IR::Member(node->srcInfo, pathExpr, "execute");
         auto args = new IR::Vector<IR::Argument>();
         args->push_back(mce->arguments->at(1));
-        args->push_back(new IR::Argument(
-            new IR::Cast(IR::Type::Bits::get(2), mce->arguments->at(3)->expression)));
+        auto pre_color_size = mce->arguments->at(3)->expression->type->width_bits();
+        auto pre_color_expr = mce->arguments->at(3)->expression;
+        auto castedExpr = cast_if_needed(pre_color_expr, pre_color_size, 8);
+        args->push_back(new IR::Argument(new IR::Cast(
+                new IR::Type_Name("MeterColor_t"), castedExpr)));
         auto methodCall = new IR::MethodCallExpression(node->srcInfo, method, args);
 
         auto meterColor = mce->arguments->at(2)->expression;
-        auto size = meterColor->type->width_bits();
+        auto meter_color_size = meterColor->type->width_bits();
         IR::AssignmentStatement *assign = nullptr;
-        if (size > 8) {
+        if (meter_color_size >= 8) {
             assign = new IR::AssignmentStatement(
-                    meterColor, new IR::Cast(IR::Type::Bits::get(size), methodCall));
-        } else if (size < 8) {
-            assign = new IR::AssignmentStatement(meterColor,
-                                                 new IR::Slice(methodCall, size - 1, 0));
+                    meterColor, new IR::Cast(IR::Type::Bits::get(meter_color_size), methodCall));
         } else {
-            assign = new IR::AssignmentStatement(meterColor, methodCall);
-        }
+            assign = new IR::AssignmentStatement(
+                    meterColor, new IR::Slice(methodCall, meter_color_size - 1, 0)); }
         structure->_map.emplace(node, assign);
     }
 
@@ -1745,10 +1759,10 @@ class ConstructSymbolTable : public Inspector {
         if (auto em = mi->to<P4::ExternMethod>()) {
             cstring name = em->actualExternType->name;
             if (name == "direct_meter") {
-                DirectMeterConverter cvt(structure, refMap);
+                MeterConverter cvt(structure, refMap, true);
                 structure->_map.emplace(node, node->apply(cvt));
             } else if (name == "meter") {
-                MeterConverter cvt(structure);
+                MeterConverter cvt(structure, refMap, false);
                 structure->_map.emplace(node, node->apply(cvt));
             } else if (name == "register") {
                 RegisterConverter cvt(structure);
@@ -2003,6 +2017,7 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
         new BFN::AddTnaBridgeMetadata(refMap, typeMap),
         new P4::ClearTypeMap(typeMap),
         new BFN::TypeChecking(refMap, typeMap, true),
+        new P4::EliminateSerEnums(refMap, typeMap),
     });
 }
 

@@ -172,18 +172,14 @@ class ExternConverter : public Transform {
 };
 
 class MeterConverter : public ExternConverter {
- public:
-    explicit MeterConverter(ProgramStructure* structure)
-    : ExternConverter(structure) { CHECK_NULL(structure); }
-    const IR::Node* postorder(IR::MethodCallStatement* node) override;
-};
-
-class DirectMeterConverter : public ExternConverter {
     const P4::ReferenceMap *refMap;
+    bool direct;
+
  public:
-    DirectMeterConverter(ProgramStructure* structure, const P4::ReferenceMap *rm)
-    : ExternConverter(structure), refMap(rm) { CHECK_NULL(structure); }
+    explicit MeterConverter(ProgramStructure* structure, const P4::ReferenceMap *rm, bool direct)
+    : ExternConverter(structure), refMap(rm), direct(direct) { CHECK_NULL(structure); }
     const IR::Node* postorder(IR::MethodCallStatement* node) override;
+    const IR::Expression* cast_if_needed(const IR::Expression* expr, int srcWidth, int dstWidth);
 };
 
 class RegisterConverter : public ExternConverter {

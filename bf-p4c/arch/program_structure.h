@@ -74,6 +74,7 @@ struct ProgramStructure {
     /// target architecture types
     ordered_set<cstring> errors;
     ordered_map<cstring, const IR::Type_Enum *> enums;
+    ordered_map<cstring, const IR::Type_SerEnum *> ser_enums;
 
     NodeNameMap nameMap;
 

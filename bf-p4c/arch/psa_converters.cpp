@@ -486,15 +486,33 @@ const IR::Node* TypeNameExpressionConverter::postorder(IR::TypeNameExpression* n
     auto path = typeName->path->to<IR::Path>();
     auto mapped = enumsToTranslate.find(path->name);
     if (mapped != enumsToTranslate.end()) {
-        auto newName = mapped->second;
-        auto newType = structure->enums.find(newName);
-        if (newType == structure->enums.end()) {
-            BUG("No translation for type ", node);
-            return node;
+        cstring newName = mapped->second.first;
+        bool isSerEnum = mapped->second.second;
+        IR::TypeNameExpression* retval;
+        if (isSerEnum) {
+            if (!structure->ser_enums.count(newName))
+                BUG("No translation for type %1%", node);
+            auto newType = structure->ser_enums.at(newName);
+            retval = new IR::TypeNameExpression(node->srcInfo,
+                    newType, new IR::Type_Name(newName));
+        } else {
+            if (!structure->enums.count(newName))
+                BUG("No translation for type %1%", node);
+            auto newType = structure->enums.at(newName);
+            retval = new IR::TypeNameExpression(node->srcInfo,
+                    newType, new IR::Type_Name(newName));
         }
-        auto retval =
-            new IR::TypeNameExpression(node->srcInfo, newType->second, new IR::Type_Name(newName));
         return retval;
+    }
+    return node;
+}
+
+const IR::Node* TypeNameConverter::postorder(IR::Type_Name* node) {
+    auto path = node->path->to<IR::Path>();
+    auto mapped = enumsToTranslate.find(path->name);
+    if (mapped != enumsToTranslate.end()) {
+        cstring newName = mapped->second.first;
+        return new IR::Type_Name(newName);
     }
     return node;
 }
