@@ -201,4 +201,5 @@ std::string P4Table::direction_name(gress_t gress) {
     case EGRESS: return "egress"; break;
     case GHOST: return "ghost"; break;
     default: BUG(); }
+    return "";
 }

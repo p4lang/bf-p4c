@@ -641,9 +641,13 @@ void PHV::SlicingIterator::impose_MAU_constraints(
                         possibleSlicingPoints.insert(slice);
                 }
             }
-            if (possibleSlicingPoints.size() > 0)
+            if (possibleSlicingPoints.size() > 0) {
                 for (auto& slice : possibleSlicingPoints)
                     LOG5("\t\t\tPossible slicing point: " << slice);
+            } else {
+                LOG5("\t\t\tEmpty slicing points list for " << candidate);
+                continue;
+            }
 
             if (offsetWithinSliceList % minSize == 0 && left != -1) {
                 required_slices_i.setbit(left);

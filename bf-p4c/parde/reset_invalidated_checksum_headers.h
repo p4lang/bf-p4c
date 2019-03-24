@@ -7,7 +7,7 @@
 /*
  * Fields involved in deparser checksum update can be invalidated in the
  * MAU and need to be reset before they reach the deparser. Otherwise
- * the fields will corrupt the checksum calculation. 
+ * the fields will corrupt the checksum calculation.
  * This is only needed for Tofino whose deparser checksum entries
  * are statically configured. See P4C-190.
  */
@@ -203,7 +203,7 @@ class InsertTableToResetInvalidatedHeaders : public MauTransform {
         return gw;
     }
 
-    profile_t init_apply(const IR::Node* root) {
+    profile_t init_apply(const IR::Node* root) override {
         for (auto& gf  : invalidated_headers.invalidated_header_pov_bits) {
             auto gress = gf.first;
 

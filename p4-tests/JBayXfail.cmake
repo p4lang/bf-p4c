@@ -134,7 +134,7 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "The action .* manipulates field .* that requires multiple stages from an action"
+  "error: .*: Unsupported action spanning multiple stages."
   testdata/p4_14_samples/action_inline.p4
 )
 
@@ -256,8 +256,8 @@ p4c_add_xfail_reason("tofino2"
   testdata/p4_14_samples/truncate.p4
 )
 
-p4c_add_xfail_reason("tofino2"		
-   "failed command assembler"		
+p4c_add_xfail_reason("tofino2"
+   "failed command assembler"
    # conditional checksum needs different treatment for JBay
    extensions/p4_tests/p4_14/stf/cond_checksum_update_1.p4
    extensions/p4_tests/p4_14/stf/cond_checksum_update_2.p4

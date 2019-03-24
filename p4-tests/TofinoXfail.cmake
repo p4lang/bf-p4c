@@ -418,6 +418,9 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/mau/COMPILER-815/int_heavy.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-1065/comp_1065.p4
 
+  # parde physical adjacency constraint violated by mau phv_no_pack constraint
+  extensions/p4_tests/p4_14/compile_only/19-SimpleTrill.p4
+
   # Expected to fail, which means that action analysis is working correctly.
   extensions/p4_tests/p4_14/compile_only/action_conflict_2.p4
   extensions/p4_tests/p4_14/compile_only/action_conflict_3.p4
@@ -433,6 +436,9 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/parde/COMPILER-612/leaf.p4
   extensions/p4_tests/p4_14/compile_only/03-VlanProfile.p4
   extensions/p4_tests/p4_14/compile_only/01-FlexCounter.p4
+
+  # p4smith generated file used to debug key with zero mask. Fails PHV for an unknown reason.
+  extensions/p4_tests/p4_14/compile_only/p4c-1162.p4
   )
 
 # Errors because pa_container_size pragmas used in these tests cannot be satisfy all constraints.
@@ -476,12 +482,6 @@ p4c_add_xfail_reason("tofino"
 
 
 # BEGIN: XFAILS that match glass XFAILS
-
-# parde physical adjacency constraint violated by mau phv_no_pack constraint
-p4c_add_xfail_reason("tofino"
-  "Header field .* is required to be allocated contiguously"
-  extensions/p4_tests/p4_14/compile_only/19-SimpleTrill.p4
-  )
 
 p4c_add_xfail_reason("tofino"
   "Table .* is applied multiple times, and the next table information cannot correctly propagate"
@@ -529,15 +529,8 @@ p4c_add_xfail_reason("tofino"
 
 # END: XFAILs with translation
 
-# XXX(cole): Temporarily override previous XFAILs with new failures related to
-# PHV allocation.
 p4c_add_xfail_reason("tofino"
-  "PHV allocation was not successful"
-  extensions/p4_tests/p4_14/compile_only/19-SimpleTrill.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "The action .* manipulates field .* that requires multiple stages from an action"
+  "error: .*: Unsupported action spanning multiple stages."
   testdata/p4_16_samples/issue983-bmv2.p4
   testdata/p4_14_samples/action_inline.p4
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/murdoch_0.p4
@@ -928,9 +921,9 @@ p4c_add_xfail_reason("tofino"
 
 # Glass test suite bugs
 
-# P4C-1368
+# P4C-1368 -- not really. Fixed by P4C-1162.
 p4c_add_xfail_reason("tofino"
-  "Compiler Bug.*: Field slicing has created a slice list at a nonbyte boundary."
+  "error: Power worst case estimated budget exceeded by"
   ../glass/testsuite/p4_tests/arista/COMPILER-868/comp_868.p4
 )
 

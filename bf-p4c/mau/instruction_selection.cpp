@@ -1636,11 +1636,12 @@ bool VerifyParallelWritesAndReads::preorder(const IR::MAU::Instruction *instr) {
         if (!is_parallel(instr->operands[i], is_write)) {
             le_bitrange bits = {0, 0};
             auto field = phv.field(instr->operands[i], &bits);
-            ::error("%s: The action %s manipulates field %s[%d:%d] in such a way that "
-                    "requires multiple stages from an action.  Currently p4c only single "
-                    "stage actions are support.  Consider rewriting the action to be a "
-                    "single stage action", instr->srcInfo, act->name, field->name, bits.hi,
-                    bits.lo);
+            ::error(ErrorType::ERR_UNSUPPORTED,
+                    "action spanning multiple stages. "
+                    "Operations on operand %3% (%4%[%5%..%6%]) in action %2% require multiple "
+                    "stages for a single action. We currently support only single stage actions. "
+                    "Please consider rewriting the action to be a single stage action.",
+                    instr, act, (i+1), field->name, bits.lo, bits.hi);
         }
     }
     return false;
