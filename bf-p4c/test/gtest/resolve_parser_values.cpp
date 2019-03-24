@@ -13,7 +13,7 @@
 #include "bf-p4c/phv/phv_fields.h"
 #include "test/gtest/helpers.h"
 #include "bf-p4c/parde/parde_visitor.h"
-#include "bf-p4c/parde/resolve_computed.h"
+#include "bf-p4c/parde/resolve_parser_values.h"
 #include "bf-p4c/test/gtest/tofino_gtest_utils.h"
 
 namespace Test {
@@ -169,7 +169,7 @@ TEST_F(ResolveComputedTest, TwoPathSameDef) {
     )"));
     ASSERT_TRUE(test);
 
-    auto* run = new ResolveComputedParserExpressions();
+    auto* run = new ResolveParserValues();
     auto* check = new VerifyRegisterAssigned();
     auto* resolved = test->pipe->apply(*run);
     EXPECT_TRUE(resolved);
@@ -224,7 +224,7 @@ TEST_F(ResolveComputedTest, TwoDef) {
     ASSERT_TRUE(test);
 
     auto* prep = runMockPasses(test->pipe);
-    auto* run = new ResolveComputedParserExpressions();
+    auto* run = new ResolveParserValues();
     auto* check = new VerifyRegisterAssigned();
     auto* resolved = prep->apply(*run);
     EXPECT_TRUE(resolved);
@@ -274,7 +274,7 @@ TEST_F(ResolveComputedTest, TwoPathSameDefLargeField) {
     )"));
     ASSERT_TRUE(test);
 
-    auto* run = new ResolveComputedParserExpressions();
+    auto* run = new ResolveParserValues();
     auto* check = new VerifyRegisterAssigned();
     auto* resolved = test->pipe->apply(*run);
     EXPECT_TRUE(resolved);
@@ -322,7 +322,7 @@ TEST_F(ResolveComputedTest, Parent) {
     ASSERT_TRUE(test);
 
     auto* prep = runMockPasses(test->pipe);
-    auto* run = new ResolveComputedParserExpressions();
+    auto* run = new ResolveParserValues();
     auto* check = new VerifyRegisterAssigned();
     auto* resolved = prep->apply(*run);
     EXPECT_TRUE(resolved);

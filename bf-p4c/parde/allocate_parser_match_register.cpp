@@ -180,13 +180,14 @@ class ComputeSaveAndSelect: public ParserInspector {
                 for (auto& def : multiDefValues.at(computed)) {
                     LOG3("  ..Defined at : " << def.state->name << ", " << def.rval);
                     state_unresolved_selects[state].push_back(
-                            UnresolvedSelect(select, 0, { }, def)); }
-
+                            UnresolvedSelect(select, 0, { }, def));
+                }
             } else {
                 state_unresolved_selects[state].push_back(
                         UnresolvedSelect(select, 0, { }));
             }
         }
+
         unprocessed_states.insert(state);
         calcSaves(state);
     }
@@ -849,6 +850,14 @@ struct AdjustMatchValue : public ParserModifier {
     }
 };
 
+struct CheckAllocation : public Inspector {
+    bool preorder(const IR::BFN::Select* select) override {
+        BUG_CHECK(select->reg_slices.size() > 0,
+            "Parser match register not allocated for %1%", select);
+        return false;
+    }
+};
+
 AllocateParserMatchRegisters::AllocateParserMatchRegisters(
     const ParserValueResolution& multiDefValues) {
     auto* computeSaveAndSelect = new ComputeSaveAndSelect(multiDefValues);
@@ -856,7 +865,8 @@ AllocateParserMatchRegisters::AllocateParserMatchRegisters(
         LOGGING(3) ? new DumpParser("before_parser_match_alloc") : nullptr,
         computeSaveAndSelect,
         new WriteBackSaveAndSelect(*computeSaveAndSelect),
-        new AdjustMatchValue(),
+        new AdjustMatchValue,
+        new CheckAllocation,
         LOGGING(3) ? new DumpParser("after_parser_match_alloc") : nullptr,
     });
 }

@@ -9,7 +9,7 @@
 #include "lib/log.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/parde/add_parde_metadata.h"
-#include "bf-p4c/parde/resolve_computed.h"
+#include "bf-p4c/parde/resolve_parser_values.h"
 #include "bf-p4c/parde/gen_deparser.h"
 #include "bf-p4c/common/utils.h"
 #include "parde_utils.h"
@@ -956,7 +956,7 @@ ProcessParde::ProcessParde(const IR::BFN::Pipe* rv, bool useTna) :
         // correctly requires that we've resolved header stack indices, but that's
         // an artifact of the IR conversion and it's not something that should not
         // be happening at this layer anyway.
-        new ResolveComputedHeaderStackExpressions(),
+        new ResolveHeaderStackValues,
         // Add shims for intrinsic metadata.
         new AddParserMetadataShims(rv, !useTna /* = isV1 */),
         new AddDeparserMetadataShims(rv),

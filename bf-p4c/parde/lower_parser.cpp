@@ -712,10 +712,7 @@ struct ComputeLoweredParserIR : public ParserInspector {
             } else if (auto* prio = prim->to<IR::BFN::ParserPrioritySet>()) {
                 priority = prio;
             } else {
-                // Report other kinds of parser primitives, which we currently can't
-                // handle, in the debug info.
-                loweredState->debug.info.push_back("unhandled: " +
-                                               cstring::to_cstring(prim));
+                P4C_UNIMPLEMENTED("unhandled parser primitive %1%", prim);
             }
         });
 
@@ -741,7 +738,6 @@ struct ComputeLoweredParserIR : public ParserInspector {
         forAllMatching<IR::BFN::Select>(&state->selects,
                       [&](const IR::BFN::Select* select) {
             // Load match register from previous result.
-            BUG_CHECK(select->reg_slices.size() > 0, "Match register not allocated.");
             for (auto rs : select->reg_slices)
                 loweredSelect->regs.insert(rs.first);
 

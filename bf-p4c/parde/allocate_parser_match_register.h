@@ -1,7 +1,7 @@
 #ifndef EXTENSIONS_BF_P4C_PARDE_ALLOCATE_PARSER_MATCH_REGISTER_H_
 #define EXTENSIONS_BF_P4C_PARDE_ALLOCATE_PARSER_MATCH_REGISTER_H_
 
-#include "bf-p4c/parde/resolve_computed.h"
+#include "bf-p4c/parde/resolve_parser_values.h"
 
 /** Compute select/save to register on each state.
  *

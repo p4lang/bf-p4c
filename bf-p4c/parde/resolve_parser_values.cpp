@@ -1,4 +1,4 @@
-#include "bf-p4c/parde/resolve_computed.h"
+#include "bf-p4c/parde/resolve_parser_values.h"
 
 #include <boost/optional.hpp>
 #include <boost/range/adaptors.hpp>
@@ -425,8 +425,7 @@ struct CopyPropagateParserValues : public ParserInspector, ControlFlowVisitor {
         if (reachingDefs.find(sourceName) == reachingDefs.end()) {
             // No reaching definition; just "propagate" the original value.
             BUG_CHECK(!resolvedValues.count(value), "multiref to ComputedRVal");
-            LOG1("Select on field that is uninitialized in all parser paths: " << value->source);
-            resolvedValues[value] = { ParserRValDef(state, value->clone()) };
+            ::error("Select on uninitialized value: %1%", value->source);
             return; }
 
         // We found some definitions; propagate them here.
@@ -653,7 +652,6 @@ class CheckResolvedParserExpressions : public ParserTransform {
 
         // Update mapping.
         auto* newComputed = select->source->to<IR::BFN::ComputedRVal>();
-        updatedDefValues[newComputed] = {};
         for (const auto& def : multiDefValues.at(original)) {
                 // Ignore computedRval as definition of a use,
                 // because it means resolution failed to find a defintion
@@ -714,7 +712,7 @@ class CheckResolvedHeaderStackExpressions : public ParserInspector {
 
 }  // namespace
 
-ResolveComputedParserExpressions::ResolveComputedParserExpressions() :
+ResolveParserValues::ResolveParserValues() :
     Logging::PassManager("parser", true /* append */) {
     auto* resolveComputedValues = new ResolveComputedValues();
     addPasses({
@@ -727,7 +725,7 @@ ResolveComputedParserExpressions::ResolveComputedParserExpressions() :
     });
 }
 
-ResolveComputedHeaderStackExpressions::ResolveComputedHeaderStackExpressions() :
+ResolveHeaderStackValues::ResolveHeaderStackValues() :
     Logging::PassManager("parser", true /* append */) {
     addPasses({
         new VerifyAssignedShifts,

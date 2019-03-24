@@ -1,5 +1,5 @@
-#ifndef BF_P4C_PARDE_RESOLVE_COMPUTED_H_
-#define BF_P4C_PARDE_RESOLVE_COMPUTED_H_
+#ifndef BF_P4C_PARDE_RESOLVE_PARSER_VALUES_H_
+#define BF_P4C_PARDE_RESOLVE_PARSER_VALUES_H_
 
 #include "ir/ir.h"
 #include "bf-p4c/logging/pass_manager.h"
@@ -20,7 +20,7 @@ struct ParserRValDef {
 };
 
 /**
- * Resolve all computed parser expressions if possible. These are expressions in
+ * Resolve all parser values if possible. These are expressions in
  * extracts or selects that reference outputs of the parser program or track
  * state in some way. Then all select on input buffer are replaced by selecting
  * on match registers, and corresponding saves are inserted.
@@ -30,7 +30,7 @@ struct ParserRValDef {
  * elimination) is safe as long as the removal is otherwise correct.
  *
  * @pre The parser program contains all extracts that may be referenced by
- * computed parser expressions. This means that the bridged metadata states must
+ * parser values. This means that the bridged metadata states must
  * already have been generated, for example.
  *
  * @post If it's possible, all UnresolvedStackRef and ComputedRVal IR nodes are
@@ -40,16 +40,16 @@ struct ParserRValDef {
  * available on the hardware) prevent us from doing so, or if we're simply
  * incapable of handling what the program is doing, errors are reported.
  */
-class ResolveComputedParserExpressions : public Logging::PassManager {
+class ResolveParserValues : public Logging::PassManager {
  public:
-    ResolveComputedParserExpressions();
+    ResolveParserValues();
 };
 
 /**
  * Resolve header stack '.next' and '.last' expressions if possible.
  *
  * XXX(seth): This pass just constitutes a partial run of
- * ResolveComputedParserExpressions.  We shouldn't need it, but right now it
+ * ResolveParserValues.  We shouldn't need it, but right now it
  * allows us to present essentially the same information to FieldDefUse and
  * TofinoWriteContext that they received in the past, and we need to run them to
  * determine which metadata fields are bridged, which is required for a full
@@ -63,9 +63,9 @@ class ResolveComputedParserExpressions : public Logging::PassManager {
  * unextracted headers) prevent us from doing so, or if we're simply incapable
  * of handling what the program is doing, errors are reported.
  */
-class ResolveComputedHeaderStackExpressions : public Logging::PassManager {
+class ResolveHeaderStackValues : public Logging::PassManager {
  public:
-    ResolveComputedHeaderStackExpressions();
+    ResolveHeaderStackValues();
 };
 
-#endif /* BF_P4C_PARDE_RESOLVE_COMPUTED_H_ */
+#endif /* BF_P4C_PARDE_RESOLVE_PARSER_VALUES_H_ */

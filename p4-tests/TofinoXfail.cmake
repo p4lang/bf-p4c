@@ -157,10 +157,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue1765-1-bmv2.p4
   testdata/p4_16_samples/stack_complex-bmv2.p4
   )
-p4c_add_xfail_reason("tofino"
-  "Compiler Bug.*: Match register not allocated."
-  testdata/p4_16_samples/issue1409-bmv2.p4
-  )
 
 p4c_add_xfail_reason("tofino"
   "error: Field .* of header .* cannot have type header"
@@ -471,11 +467,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   " Encountered invalid code in computed checksum control"
   #extensions/p4_tests/p4_14/switch_l2_profile.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "No PhvInfo::header for header named "
-  testdata/p4_16_samples/issue692-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -843,11 +834,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: mirror.emit: requires two arguments: mirror_id and field_list"
   extensions/p4_tests/p4_16/compile_only/brig-neg-1259.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "error.*Couldn't resolve computed value for extract in state"
-  testdata/p4_16_samples/issue1607-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1341,13 +1327,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "Match register not allocated"
-  testdata/p4_16_samples/issue1025-bmv2.p4
-  testdata/p4_16_samples/checksum1-bmv2.p4
-  testdata/p4_16_samples/issue1560-bmv2.p4
-)
-
-p4c_add_xfail_reason("tofino"
   "1 expected packet on port 0 not seen"
   testdata/p4_16_samples/issue447-bmv2.p4
 )
@@ -1394,11 +1373,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "Couldn't resolve computed value for extract in state egress::parse_bridged_md: BFN::Extract"
-  extensions/p4_tests/p4_16/compile_only/serializer3.p4
-)
-
-p4c_add_xfail_reason("tofino"
   "Duplicate phv name"
   extensions/p4_tests/p4_16/compile_only/test_config_3_unused_parsers.p4
 )
@@ -1409,4 +1383,18 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue561-5-bmv2.p4
   testdata/p4_16_samples/issue561-6-bmv2.p4
   testdata/p4_16_samples/issue561-7-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "error: Select on uninitialized value"
+  extensions/p4_tests/p4_16/compile_only/p4c-1561-neg.p4
+  # unable to resolve "lookahead" expression in resolve_parser_values.cpp
+  testdata/p4_16_samples/issue1409-bmv2.p4
+  testdata/p4_16_samples/checksum1-bmv2.p4
+  testdata/p4_16_samples/issue1025-bmv2.p4
+  testdata/p4_16_samples/issue355-bmv2.p4
+  testdata/p4_16_samples/issue1560-bmv2.p4
+  testdata/p4_16_samples/issue692-bmv2.p4
+  testdata/p4_16_samples/issue1607-bmv2.p4
+  extensions/p4_tests/p4_16/compile_only/serializer3.p4
 )
