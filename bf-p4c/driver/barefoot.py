@@ -267,9 +267,9 @@ class BarefootBackend(BackendDriver):
             p2_verbosity = str(2 * opts.verbose)
             parde_logging = "extract_parser:" + parde_verbosity + \
                             ",checksum:" + parde_verbosity + \
+                            ",clot_info:" + parde_verbosity + \
                             ",allocate_parser_checksum.h:" + p2_verbosity + \
-                            ",lower_parser:" + p2_verbosity + \
-                            ",resolve_computed:" + parde_verbosity
+                            ",lower_parser:" + p2_verbosity
             bridge_logging = "bridged_metadata_packing:1"
             self.add_command_option('compiler', '--verbose -T{},{},{},{}'.format(ta_logging,
                                                                                  pa_logging,

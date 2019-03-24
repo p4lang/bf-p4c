@@ -147,7 +147,7 @@ class ClotInfo {
         Clot::tagCnt = 0;
     }
 
-    void dbprint(std::ostream &out) const;
+    std::string print() const;
 };
 
 class CollectClotInfo : public Inspector {

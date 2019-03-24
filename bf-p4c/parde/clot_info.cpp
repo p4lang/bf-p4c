@@ -1,39 +1,71 @@
 #include <array>
 #include <vector>
 
+#include "bf-p4c/common/table_printer.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/parde/parde_visitor.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "clot_info.h"
 
+std::string ClotInfo::print() const {
+    std::stringstream out;
 
-void ClotInfo::dbprint(std::ostream &out) const {
-    unsigned total_allocated_clot_fields = 0;
-    unsigned total_allocated_clot_bits = 0;
+    unsigned total_unused_fields_in_clot = 0;
+    unsigned total_unused_bits_in_clot = 0;
+    unsigned total_bits = 0;
+
+    out << "CLOT Allocation:" << std::endl;
+
+    TablePrinter tp(out, {"CLOT", "Fields", "Bits", "Property"},
+                          TablePrinter::Align::CENTER);
 
     for (auto c : clots_) {
-        out << "clot " << c->tag << " {" << std::endl;
-        out << "  all_fields: " << std::endl;
+        bool first_in_clot = true;
+        unsigned bits_in_clot = 0;
         for (auto f : c->all_fields) {
-            out << "    " << f->name << " : " << f->size << std::endl;
+            total_bits += f->size;
+
             if (is_clot_candidate(f)) {
-                total_allocated_clot_fields++;
-                total_allocated_clot_bits += f->size;
+                total_unused_fields_in_clot++;
+                total_unused_bits_in_clot += f->size;
             }
+
+            bool is_phv = c->is_phv_field(f);
+            bool is_csum = c->is_csum_field(f);
+
+            std::string attr;
+            if (is_phv || is_csum) {
+                attr += " (";
+                if (is_phv) attr += " phv";
+                if (is_csum) attr += " csum";
+                attr += " ) ";
+            }
+
+            tp.addRow({first_in_clot ? std::to_string(c->tag) : "",
+                       std::string(f->name),
+                       std::to_string(f->size),
+                       attr});
+
+            bits_in_clot += f->size;
+            first_in_clot = false;
         }
-        out << "  phv_fields: " << std::endl;
-        if (c->phv_fields.size() == 0)
-             out << "    <none>" << std::endl;
-        for (auto f : c->phv_fields)
-            out << "    " << f->name << " : " << f->size << std::endl;
-        out << "}" << std::endl;
-        out << std::endl;
+
+        BUG_CHECK(bits_in_clot % 8 == 0, "CLOT is not byte aligned?");
+        unsigned bytes = bits_in_clot / 8;
+
+        tp.addRow({"", "", std::to_string(bytes) + " bytes", ""});
+        tp.addBlank();
     }
+
+    tp.addSep();
+    tp.addRow({"", "Total Bits", std::to_string(total_bits), ""});
+    tp.print();
 
     unsigned total_unused_fields = 0;
     unsigned total_unused_bits = 0;
 
+    out << std::endl;
     out << "all unused fields :" << std::endl;
     for (auto kv : parser_state_to_fields_) {
         for (auto f : kv.second) {
@@ -56,8 +88,10 @@ void ClotInfo::dbprint(std::ostream &out) const {
 
     out << "total unused fields : " << total_unused_fields << std::endl;
     out << "total unused bits : " << total_unused_bits << std::endl;
-    out << "total clot fields : " << total_allocated_clot_fields << std::endl;
-    out << "total clot bits : " << total_allocated_clot_bits << std::endl;
+    out << "total unused fields allocated in clot : " << total_unused_fields_in_clot << std::endl;
+    out << "total unused bits allocated in clot : " << total_unused_bits_in_clot << std::endl;
+
+    return out.str();
 }
 
 /**
@@ -452,7 +486,7 @@ class NaiveClotAlloc : public Visitor {
         }
     }
 
-    const IR::Node *apply_visitor(const IR::Node *n, const char *) override {
+    const IR::Node *apply_visitor(const IR::Node *root, const char *) override {
         compute_field_byte_map();
 
         std::array<std::vector<ClotAlloc>, 2> req = compute_requirement();
@@ -460,10 +494,12 @@ class NaiveClotAlloc : public Visitor {
         allocate(req[0]);  // ingress
         allocate(req[1]);  // egress
 
-        LOG3("=== CLOT allocation ===");
-        LOG3(clotInfo);
+        const IR::BFN::Pipe *pipe = root->to<IR::BFN::Pipe>();
+        Logging::FileLog parserLog(pipe->id, "parser.log", true /* append */);
 
-        return n;
+        LOG2(clotInfo.print());
+
+        return root;
     }
 };
 
