@@ -1172,9 +1172,12 @@ class GetBackendTables : public MauInspector {
         seqs[b] = new IR::MAU::TableSeq();
         return true; }
     void postorder(const IR::BlockStatement *b) override {
-        for (auto el : b->components)
+        for (auto el : b->components) {
             if (tables.count(el))
-                seqs.at(b)->tables.push_back(tables.at(el)); }
+                seqs.at(b)->tables.push_back(tables.at(el));
+            if (seqs.count(el))
+                for (auto tbl : seqs.at(el)->tables)
+                    seqs.at(b)->tables.push_back(tbl); } }
     bool preorder(const IR::MethodCallExpression *m) override {
         auto mi = P4::MethodInstance::resolve(m, refMap, typeMap, true);
         if (!mi || !mi->isApply())
