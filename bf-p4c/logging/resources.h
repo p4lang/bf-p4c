@@ -4,6 +4,7 @@
 #include <boost/range/irange.hpp>
 #include <vector>
 #include <set>
+#include "bf-p4c/parde/clot_info.h"
 #include "common/asm_output.h"
 #include "ir/ir.h"
 #include "lib/cstring.h"
@@ -43,6 +44,7 @@ class Visualization : public Inspector {
 
  private:
     enum node_t { USED_BY, USED_FOR, DETAILS };
+    const ClotInfo& clot;
 
     static std::string toString(node_t node) {
         switch (node) {
@@ -186,7 +188,7 @@ class Visualization : public Inspector {
     /// toggle whether to output unused resources
     static constexpr bool OUTPUT_UNUSED = false;
 
-    Visualization();
+    explicit Visualization(const ClotInfo& clot);
 
     /// Skeleton to generate a "usages" node.
     /// In case the argument is the empty string, we output "--UNUSED--"

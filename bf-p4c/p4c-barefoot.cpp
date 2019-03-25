@@ -111,7 +111,8 @@ class GenerateOutputs : public PassManager {
     explicit GenerateOutputs(const BFN::Backend &b, const BFN_Options& o,
                              int pipeId, const Util::JsonObject& p,
                              bool success = true) :
-        _options(o), _pipeId(pipeId), _success(success), _dynhash(b.get_phv()), _primitives(p) {
+        _options(o), _pipeId(pipeId), _success(success),
+        _visualization(b.get_clot()), _dynhash(b.get_phv()), _primitives(p) {
         setStopOnError(false);
         _outputDir = BFNContext::get().getOutputDirectory("", pipeId);
         if (_outputDir == "") exit(1);

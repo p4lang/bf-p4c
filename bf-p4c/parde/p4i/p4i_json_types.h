@@ -40,6 +40,46 @@ struct P4iParserExtract : ToJsonObject {
     }
 };
 
+struct P4iParserClot : ToJsonObject {
+    cstring issue_state;
+    int offset;
+    unsigned tag;
+    int length;
+    bool has_checksum;
+    std::vector<std::vector<cstring>> field_lists;
+
+    Util::JsonObject* toJson() const override {
+        auto* rst = new Util::JsonObject();
+        auto* fls = new Util::JsonArray();
+        for (auto field_list : field_lists) {
+            auto fl = new Util::JsonArray();
+            for (auto f : field_list)
+                fl->append(new Util::JsonValue(f));
+            fls->append(fl);
+        }
+        rst->emplace("field_lists", fls);
+        rst->emplace("issue_state", new Util::JsonValue(issue_state));
+        rst->emplace("offset", new Util::JsonValue(offset));
+        rst->emplace("tag", new Util::JsonValue(tag));
+        rst->emplace("length", new Util::JsonValue(length));
+        rst->emplace("has_checksum", new Util::JsonValue(has_checksum));
+        return rst;
+    }
+};
+
+struct P4iParserClotUsage : ToJsonObject {
+    gress_t gress;
+    int num_clots;
+    std::vector<P4iParserClot> clots;
+    Util::JsonObject* toJson() const override {
+        auto* rst = new Util::JsonObject();
+        rst->emplace("gress", new Util::JsonValue(::toString(gress)));
+        rst->emplace("num_clots", new Util::JsonValue(clots.size()));
+        rst->emplace("clots", toJsonArray(clots));
+        return rst;
+    }
+};
+
 struct P4iParserMatchOn : ToJsonObject {
     int hardware_id;                     // required, Register ID being matched on.
     int bit_width;                       // required, Size of the register.

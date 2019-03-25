@@ -34,7 +34,7 @@ static std::string typeName(Memories::Use::type_t type) {
     }
 }
 
-Visualization::Visualization() : _stageResources() {
+Visualization::Visualization(const ClotInfo& clot) : clot(clot),  _stageResources() {
     _resourcesNode = new Util::JsonObject();
     auto *pipesNode = new Util::JsonArray();
     _resourcesNode->emplace("pipes", pipesNode);
@@ -81,7 +81,7 @@ bool Visualization::preorder(const IR::BFN::Pipe *p) {
     pipe->emplace("pipe_id", new Util::JsonValue(pipe_id));
     auto *parser = new Util::JsonObject();
     parser->emplace("nParsers", new Util::JsonValue(Device::numParsersPerPipe()));
-    auto* gen_parsers_json = new GenerateParserP4iJson();
+    auto* gen_parsers_json = new GenerateParserP4iJson(clot);
     p->apply(*gen_parsers_json);
     parser->emplace("parsers", gen_parsers_json->getParsersJson());
     pipe->emplace("parser", parser);
@@ -96,8 +96,9 @@ bool Visualization::preorder(const IR::BFN::Pipe *p) {
     // Create the "phv_containers" node.
     pipe->emplace("phv_containers", Device::phvSpec().toJson());
 
-    // FIXME: Populate clots for Tofino2
-    // pipe->emplace("clots", ???);
+    // Output clot info for JBAY
+    if ((Device::currentDevice() == Device::JBAY) && BackendOptions().use_clot)
+        pipe->emplace("clots", gen_parsers_json->getClotsJson());
 
     return true;
 }
@@ -880,7 +881,7 @@ void Visualization::gen_tind_result_buses(unsigned int stageNo, Util::JsonObject
 
 std::ostream &operator<<(std::ostream &out, const Visualization &vis) {
     auto res_json = new Util::JsonObject();
-    res_json->emplace("schema_version", new Util::JsonValue("1.1.0"));
+    res_json->emplace("schema_version", new Util::JsonValue("1.1.1"));
     res_json->emplace("program_name",
                       new Util::JsonValue(BackendOptions().programName + ".p4"));
     res_json->emplace("run_id", new Util::JsonValue(RunId::getId()));

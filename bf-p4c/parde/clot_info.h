@@ -52,6 +52,16 @@ class ClotInfo {
     const std::map<cstring, std::vector<const Clot*>>&
         parser_state_to_clots() const { return parser_state_to_clots_; }
 
+    const Clot* parser_state_to_clot(cstring state, unsigned tag) const {
+            if (parser_state_to_clots_.count(state)) {
+                auto& clots = parser_state_to_clots_.at(state);
+                auto it = std::find_if(clots.begin(), clots.end(), [&](const Clot* sclot) {
+                    return (sclot->tag == tag); });
+                if (it != clots.end()) return *it;
+            }
+            return nullptr;
+    }
+
     std::map<cstring,
               std::map<PHV::Container, nw_byterange>>& container_range() {
         return container_range_; }
