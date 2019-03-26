@@ -289,6 +289,29 @@ class GetBackendParser {
  private:
     IR::BFN::ParserState* getState(cstring name);
 
+    // For v1model, compiler may insert parser states, e.g. if @pragma packet_entry is specified.
+    // Therefore, the program "start" state may not be the true start state.
+    // For TNA, the program "start" state is the start state.
+    cstring
+    getStateName(const IR::ParserState* state) {
+        if (BackendOptions().arch == "v1model") {
+            auto stateName = state->controlPlaneName();
+            p4StateNameToStateName.emplace(state->name, stateName);
+            return stateName;
+        } else {
+            return state->name;
+        }
+    }
+
+    cstring
+    getStateName(cstring p4Name) {
+        if (BackendOptions().arch == "v1model") {
+            return p4StateNameToStateName.at(p4Name);
+        } else {
+            return p4Name;
+        }
+    }
+
     const IR::Node* rewriteSelectExpr(const IR::Expression* selectExpr, int bitShift,
                                       nw_bitrange& bitrange);
 
@@ -306,10 +329,11 @@ class GetBackendParser {
 const IR::BFN::Parser*
 GetBackendParser::extract(const IR::BFN::TnaParser* parser) {
     forAllMatching<IR::ParserState>(parser, [&](const IR::ParserState* state) {
-        auto stateName = state->controlPlaneName();
-        p4StateNameToStateName.emplace(state->name, stateName);
+        auto stateName = getStateName(state);
+
         if (state->name == "accept" || state->name == "reject")
             return false;
+
         states[stateName] =
           new IR::BFN::ParserState(state,
                                    createThreadName(parser->thread, stateName),
@@ -319,7 +343,7 @@ GetBackendParser::extract(const IR::BFN::TnaParser* parser) {
         return true;
     });
 
-    IR::BFN::ParserState* startState = getState(p4StateNameToStateName.at("start"));
+    IR::BFN::ParserState* startState = getState(getStateName("start"));
     return new IR::BFN::Parser(parser->thread, startState, parser->phase0, parser->portmap);
 }
 
@@ -344,10 +368,7 @@ bool GetBackendParser::addTransition(IR::BFN::ParserState* state, match_t matchV
 
     AutoPushTransition newTransition(transitionStack, state, transition);
     if (newTransition.isValid) {
-        BUG_CHECK(p4StateNameToStateName.count(nextState),
-                  "Transition to unknown P4 state: %1%", nextState);
-        transition->next =
-          getState(p4StateNameToStateName.at(nextState));
+        transition->next = getState(getStateName(nextState));
     } else {
         return false;  // One bad transition means the whole state's bad.
     }
