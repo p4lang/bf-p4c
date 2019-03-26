@@ -306,7 +306,6 @@ p4c_add_xfail_reason("tofino"
   "error: : conditional assignment not supported"
   extensions/p4_tests/p4-programs/internal_p4_14/entry_read_from_hw/entry_read_from_hw.p4
   testdata/p4_16_samples/issue420.p4
-  testdata/p4_16_samples/issue512.p4
   testdata/p4_16_samples/issue1412-bmv2.p4
   extensions/p4_tests/p4-programs/internal_p4_14/mod_field_conditionally/mod_field_conditionally.p4
   )
@@ -356,7 +355,8 @@ p4c_add_xfail_reason("tofino"
   "source of modify_field invalid"
   testdata/p4_16_samples/arith1-bmv2.p4
   testdata/p4_16_samples/arith2-bmv2.p4
-)
+  testdata/p4_16_samples/issue512.p4
+  )
 
 p4c_add_xfail_reason("tofino"
   "error: : shift count must be a constant in"
@@ -445,6 +445,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "No way to slice the following to satisfy @pa_container_size"
   ../glass/testsuite/p4_tests/arista/COMPILER-1105/case8039.p4
+  ../glass/testsuite/p4_tests/phv/COMPILER-961/jk_msdc.p4
   )
 
 # We can't (without some complex acrobatics) support conditional computed
@@ -957,7 +958,6 @@ p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   ../glass/testsuite/p4_tests/phv/COMPILER-136/06-FullTPHV1.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-729/ipu.p4
-  ../glass/testsuite/p4_tests/phv/COMPILER-961/jk_msdc.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-1094/comp_1094.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-443/case2514.p4
 # bigger problem is that the container conflict free table placement is 15 stages for the following
@@ -1369,6 +1369,12 @@ p4c_add_xfail_reason("tofino"
   "Duplicate phv name"
   extensions/p4_tests/p4_16/compile_only/test_config_3_unused_parsers.p4
 )
+
+# Negative test: ensure the compiler does not seg fault
+p4c_add_xfail_reason("tofino"
+  "error:  Unsupported unconditional mirror.emit"
+  extensions/p4_tests/p4_16/customer/noviflow/p4c-1588.p4
+  )
 
 p4c_add_xfail_reason("tofino"
   "Exiting with SIGSEGV"

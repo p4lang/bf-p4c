@@ -237,6 +237,9 @@ int main(int ac, char **av) {
     if (!midend.toplevel)
         return PROGRAM_ERROR;
 
+    // turn all errors into "fatal errors" by exiting on the first error encountered
+    BFNContext::get().errorReporter().setMaxErrorCount(1);
+
     // create the archive manifest
     Logging::Manifest &manifest = Logging::Manifest::getManifest();
 

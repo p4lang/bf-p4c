@@ -443,10 +443,7 @@ class ComputeSaveAndSelect: public ParserInspector {
                 // by downstream states because of brother's decision.
                 if (!reg_choice) {
                     // throw error message saying that it's impossible.
-                    ::error("Ran out of parser match registers for %1%", state->name);
-                    for (auto& unresolved : unresolved_group->members())
-                        ::error("%1%", unresolved.select->p4Source);
-
+                    ::error("Ran out of parser match registers for transition %1%", transition);
                     return;
                 }
 

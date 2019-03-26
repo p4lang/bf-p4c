@@ -1168,8 +1168,8 @@ struct AllocateParserClotChecksums : public PassManager {
             }
 
             if (id == 0) {
-                ::error("Ran out of CLOT checksum units in %1% parser", state->gress);
-                ::error("CLOT can only use parser checksum unit 2-4.");
+                ::error("Ran out of CLOT checksum units in %1% parser."
+                        " CLOT can only use parser checksum unit 2-4.", state->gress);
             }
 
             return id;

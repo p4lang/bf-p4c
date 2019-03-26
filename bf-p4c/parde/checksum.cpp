@@ -161,10 +161,9 @@ analyzeUpdateChecksumCondition(const IR::IfStatement* ifstmt) {
        }
        std::stringstream msg;
        msg << "Tofino only supports 1-bit checksum update condition in the deparser; "
-           << "Please move the update condition into the control flow.";
+           << "Please move the update condition into the control flow";
 
-       ::error("%1%", msg.str());
-       ::error("%1%", condition);
+       ::error("%1%: %2%", msg.str(), condition);
     }
     return std::make_pair(nullptr, updateConditionNegated);
 }

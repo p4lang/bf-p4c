@@ -107,7 +107,8 @@ class GenerateDeparser : public Inspector {
                 auto expr = mc->arguments->at(0)->expression;
                 generateDigest(digests["pktgen"], "pktgen", expr);
             } else {
-                error("Unsupported method call %s in deparser", mc);
+                fatal_error(ErrorType::ERR_UNSUPPORTED,
+                            "Unsupported method call %1% in deparser", mc);
             }
             return false;
         } else if (method->member == "update") {
@@ -122,7 +123,7 @@ class GenerateDeparser : public Inspector {
                            mc->arguments->at(0)->expression, cpn->second);
             return false;
         } else {
-            error("Unsupported method call %s in deparser", mc);
+            fatal_error(ErrorType::ERR_UNSUPPORTED, "Unsupported method call %1% in deparser", mc);
             return true;
         }
     }
@@ -183,7 +184,8 @@ void GenerateDeparser::generateDigest(IR::BFN::Digest *&digest, cstring name,
     const IR::Literal *k = nullptr;
     const IR::Expression *select;
     if (!pred) {
-        error("%s:Unconditional %s.emit not supported", expr->srcInfo, name);
+        // error(ErrorType::ERR_UNSUPPORTED, "unconditional %2%.emit", expr->srcInfo, name);
+        error("%s Unsupported unconditional %s.emit", expr->srcInfo, name);
         return;
     } else if (auto eq = pred->to<IR::Equ>()) {
         if ((k = eq->left->to<IR::Constant>()))
@@ -203,7 +205,7 @@ void GenerateDeparser::generateDigest(IR::BFN::Digest *&digest, cstring name,
         }
     }
     if (!k) {
-        error("%s.emit condition %s not supported", name, pred);
+        error("Unsupported condition %s in %s.emit", pred, name);
         return;
     } else if (k->is<IR::Constant>()) {
             digest_index = k->to<IR::Constant>()->asInt(); }
