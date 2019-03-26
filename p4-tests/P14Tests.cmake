@@ -1,4 +1,6 @@
 
+# FIXME -- most of these programs fail due to the test repo reorg -- since the paths no
+# FIXME -- longer contain the string 'p4_14' they get compiled as p4_16, which fails.
 set (P14_XFAIL_TESTS
   extensions/p4_tests/p4_14/compile_only/02-FlexCounterActionProfile.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-254/case1744.p4
@@ -35,6 +37,37 @@ set (P14_XFAIL_TESTS
   ../glass/testsuite/p4_tests/arista/COMPILER-635/case3468.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-637/case3478.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-954/case5730.p4
+  ../glass/testsuite/p4_tests/cisco/COMPILER-393/case2277.p4
+  ../glass/testsuite/p4_tests/cisco/COMPILER-1140/case8399.p4
+  ../glass/testsuite/p4_tests/cisco/COMPILER-1140/comp_1140.p4
+  ../glass/testsuite/p4_tests/cisco/COMPILER-1143/case8542.p4
+  ../glass/testsuite/p4_tests/cisco/COMPILER-1146/case8575.p4
+  ../glass/testsuite/p4_tests/cisco/COMPILER-1147/comp_1147.p4
+  ../glass/testsuite/p4_tests/embedway/COMPILER-603/loop.p4
+  ../glass/testsuite/p4_tests/embedway/COMPILER-604/new_parser.p4
+  ../glass/testsuite/p4_tests/embedway/COMPILER-714/gtp_headers.p4
+  ../glass/testsuite/p4_tests/embedway/COMPILER-714/headers.p4
+  ../glass/testsuite/p4_tests/embedway/COMPILER-714/tcp_options_unit.p4
+  ../glass/testsuite/p4_tests/embedway/COMPILER-765/gtp_headers.p4
+  ../glass/testsuite/p4_tests/embedway/COMPILER-765/headers.p4
+  ../glass/testsuite/p4_tests/embedway/COMPILER-765/parser_tcp_ip_option_mul.p4
+  ../glass/testsuite/p4_tests/embedway/COMPILER-765/parser_tcp_option_mul.p4
+  ../glass/testsuite/p4_tests/embedway/COMPILER-921/comp_921.p4
+  ../glass/testsuite/p4_tests/ixia/COMPILER-522/case2774.p4
+  ../glass/testsuite/p4_tests/ixia/COMPILER-523/vag2774.p4
+  ../glass/testsuite/p4_tests/ixia/COMPILER-529/dnets_bng_case1.p4
+  ../glass/testsuite/p4_tests/ixia/COMPILER-529/dnets_bng_case2.p4
+  ../glass/testsuite/p4_tests/ixia/COMPILER-549/case2898.p4
+  ../glass/testsuite/p4_tests/ixia/COMPILER-550/vag2899.p4
+  ../glass/testsuite/p4_tests/ixia/COMPILER-590/case3179.p4
+  ../glass/testsuite/p4_tests/ixia/COMPILER-591/case3176.p4
+  ../glass/testsuite/p4_tests/microsoft/CASE-6342/case6342.p4
+  ../glass/testsuite/p4_tests/microsoft/COMPILER-606/case3259.p4
+  ../glass/testsuite/p4_tests/microsoft/COMPILER-623/case3375.p4
+  ../glass/testsuite/p4_tests/microsoft/COMPILER-713/case3975.p4
+  ../glass/testsuite/p4_tests/microsoft/COMPILER-982/case6409.p4
+  ../glass/testsuite/p4_tests/microsoft/COMPILER-983/case6463.p4
+  ../glass/testsuite/p4_tests/microsoft/COMPILER-991/vag6589.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-408/case2364.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-443/case2514.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_with_nop.p4
@@ -46,20 +79,49 @@ set (P14_XFAIL_TESTS
   ../glass/testsuite/p4_tests/rdp/COMPILER-533/case2736.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-537/case2834.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-599/case3230.p4
-  ../glass/testsuite/p4_tests/cisco/COMPILER-393/case2277.p4
+  ../glass/testsuite/p4_tests/tudarmstadt/COMPILER-616/case3331.p4
+  ../glass/testsuite/p4_tests/tudarmstadt/COMPILER-779/case4343.p4
+  ../glass/testsuite/p4_tests/tudarmstadt/COMPILER-805/case4825.p4
+  ../glass/testsuite/p4_tests/tudarmstadt/COMPILER-1128/case8348.p4
   ../glass/testsuite/p4_tests/zte/COMPILER-594/comp594.p4
-  ../glass/testsuite/p4_tests/microsoft/COMPILER-623/case3375.p4
-  extensions/p4_tests/p4_14/compile_only/mau_test_neg_test.p4
+  extensions/p4_tests/p4-programs/programs/alpm_test/alpm_test.p4
+  extensions/p4_tests/p4-programs/programs/basic_ipv4/basic_ipv4.p4
+  extensions/p4_tests/p4-programs/programs/basic_switching/basic_switching.p4
+  extensions/p4_tests/p4-programs/programs/chksum/chksum.p4
+  extensions/p4_tests/p4-programs/programs/default_entry/default_entry.p4
+  extensions/p4_tests/p4-programs/programs/deparse_zero/deparse_zero.p4
+  extensions/p4_tests/p4-programs/programs/dkm/dkm.p4
+  extensions/p4_tests/p4-programs/programs/drivers_test/drivers_test.p4
   extensions/p4_tests/p4-programs/programs/emulation/emulation.p4
+  extensions/p4_tests/p4-programs/programs/exm_direct_1/exm_direct_1.p4
+  extensions/p4_tests/p4-programs/programs/exm_indirect_1/exm_indirect_1.p4
+  extensions/p4_tests/p4-programs/programs/exm_smoke_test/exm_smoke_test.p4
+  extensions/p4_tests/p4-programs/programs/fast_reconfig/fast_reconfig.p4
   extensions/p4_tests/p4-programs/programs/fifo/fifo_pair.p4
+  extensions/p4_tests/p4-programs/programs/ha/ha.p4
+  extensions/p4_tests/p4-programs/programs/hash_driven/hash_driven.p4
+  extensions/p4_tests/p4-programs/programs/iterator/iterator.p4
   extensions/p4_tests/p4-programs/programs/ipv4_checksum/ipv4_checksum.p4
+  extensions/p4_tests/p4-programs/programs/knet_mgr_test/knet_mgr_test.p4
   extensions/p4_tests/p4-programs/programs/mau_test/mau_test.p4
+  extensions/p4_tests/p4-programs/programs/meters/meters.p4
+  extensions/p4_tests/p4-programs/programs/mirror_test/mirror_test.p4
+  extensions/p4_tests/p4-programs/programs/multicast_test/multicast_test.p4
+  extensions/p4_tests/p4-programs/programs/multi_device/multi_device.p4
   extensions/p4_tests/p4-programs/programs/opcode_test/opcode_test.p4
+  extensions/p4_tests/p4-programs/programs/parser_error/parser_error.p4
+  extensions/p4_tests/p4-programs/programs/parser_intr_md/parser_intr_md.p4
+  extensions/p4_tests/p4-programs/programs/pcie_pkt_test/pcie_pkt_test.p4
+  extensions/p4_tests/p4-programs/programs/perf_test/perf_test.p4
+  extensions/p4_tests/p4-programs/programs/perf_test_alpm/perf_test_alpm.p4
+  extensions/p4_tests/p4-programs/programs/pgrs/pgrs.p4
+  extensions/p4_tests/p4-programs/programs/pvs/pvs.p4
+  extensions/p4_tests/p4-programs/programs/resubmit/resubmit.p4
+  extensions/p4_tests/p4-programs/programs/smoke_large_tbls/smoke_large_tbls.p4
   extensions/p4_tests/p4-programs/programs/stful/stful.p4
   extensions/p4_tests/p4_14/compile_only/shared_names.p4
-  extensions/p4_tests/p4_14/stf/stateful2.p4
-  extensions/p4_tests/p4_14/stf/stateful3.p4
-  extensions/p4_tests/p4_14/stf/stateful_init_regs.p4
+  extensions/p4_tests/p4_14/stf/hash_calculation_16.p4
+  extensions/p4_tests/p4_14/stf/hash_calculation_32.p4
   extensions/p4_tests/p4_14/switch/p4src/switch.p4
   ../glass/testsuite/p4_tests/mau/test_config_142_stateful_bfd.p4
   ../glass/testsuite/p4_tests/mau/test_config_160_stateful_single_bit_mode.p4

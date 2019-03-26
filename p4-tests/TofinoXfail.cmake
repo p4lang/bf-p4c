@@ -37,6 +37,7 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     testdata/p4_16_samples/issue774-4-bmv2.p4
     testdata/p4_16_samples/issue1000-bmv2.p4
     testdata/p4_16_samples/issue1755-bmv2.p4
+    testdata/p4_16_samples/subparser-with-header-stack-bmv2.p4
     )
 
 endif() # HARLYN_STF_tofino
@@ -152,15 +153,9 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: Assignment cannot be supported in the parser"
   testdata/p4_16_samples/array-copy-bmv2.p4
-  testdata/p4_16_samples/issue281.p4
   testdata/p4_16_samples/issue737-bmv2.p4
   testdata/p4_16_samples/issue1765-1-bmv2.p4
   testdata/p4_16_samples/stack_complex-bmv2.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "error: Field .* of header .* cannot have type header"
-  testdata/p4_16_samples/subparser-with-header-stack-bmv2.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -758,8 +753,7 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "Assignment cannot be supported in the parser"
-  testdata/p4_16_samples/psa-fwd-bmv2.p4
+  "error:  Field ingress::.*of size 0 not supported"
   testdata/p4_16_samples/psa-example-digest-bmv2.p4
   testdata/p4_16_samples/psa-example-counters-bmv2.p4
 )
@@ -1269,12 +1263,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/parde/test_config_421_elim_calc_ops.p4
   ../glass/testsuite/p4_tests/parde/test_config_422_exit_calc_upd.p4
   )
-
-# P4C does not support bridging of header stacks within serializable structs
-p4c_add_xfail_reason("tofino"
-  "Unimplemented compiler support.*Currently the compiler does not support bridging field.*of type stack"
-  testdata/p4_16_samples/subparser-with-header-stack-bmv2.p4
-)
 
 p4c_add_xfail_reason("tofino"
    "Assignment cannot be supported in the parser"
