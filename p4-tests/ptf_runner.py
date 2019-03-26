@@ -419,7 +419,11 @@ def main():
         error("--pdtest and --bfrt-test cannot be specified at the same time")
         sys.exit(1)
 
+    if os.getenv('ENABLE_MODEL_LOG') is not None:
+        args.enable_model_logging = True
+
     if os.getenv('VERBOSE_MODEL_LOG') is not None:
+        args.enable_model_logging = True
         args.verbose_model_log = True
 
     p4info_path = os.path.join(compiler_out_dir, 'p4info.proto.txt')
