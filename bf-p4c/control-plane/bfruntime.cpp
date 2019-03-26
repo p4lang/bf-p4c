@@ -243,7 +243,7 @@ class BfRtSchemaGenerator {
                                                     Util::JsonArray* annotations = nullptr);
 
     static void addActionDataField(Util::JsonArray* dataJson, P4Id id, const std::string& name,
-                                   bool mandatory, Util::JsonObject* type,
+                                   bool mandatory, bool read_only, Util::JsonObject* type,
                                    Util::JsonArray* annotations = nullptr);
 
     static void addKeyField(Util::JsonArray* dataJson, P4Id id, cstring name,
@@ -1125,13 +1125,14 @@ BfRtSchemaGenerator::makeContainerDataField(P4Id id, cstring name,
 
 void
 BfRtSchemaGenerator::addActionDataField(Util::JsonArray* dataJson, P4Id id, const std::string& name,
-                                        bool mandatory, Util::JsonObject* type,
+                                        bool mandatory, bool read_only, Util::JsonObject* type,
                                         Util::JsonArray* annotations) {
     auto* dataField = new Util::JsonObject();
     dataField->emplace("id", id);
     dataField->emplace("name", name);
     dataField->emplace("repeated", false);
     dataField->emplace("mandatory", mandatory);
+    dataField->emplace("read_only", read_only);
     if (annotations != nullptr)
         dataField->emplace("annotations", annotations);
     else
@@ -2020,7 +2021,7 @@ BfRtSchemaGenerator::makeActionSpecs(const p4configv1::Table& table, P4Id* maxAc
                 param.annotations().begin(), param.annotations().end());
             addActionDataField(
                 dataJson, param.id(), param.name(), true /* mandatory */,
-                makeTypeBytes(param.bitwidth()), annotations);
+                false /* read_only */, makeTypeBytes(param.bitwidth()), annotations);
             if (param.id() > maxId) maxId = param.id();
         }
         spec->emplace("data", dataJson);

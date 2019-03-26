@@ -148,6 +148,7 @@ class ActionDataField(BaseDataField):
         description = "Action parameter specification"
     mandatory = jsl.BooleanField(required=True)
     repeated = jsl.BooleanField(required=True, enum=[False])
+    read_only = jsl.BooleanField(required=True)
 
 class ActionSpec(NamedObject):
     class Options(object):
