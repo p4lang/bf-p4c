@@ -298,3 +298,9 @@ p4c_add_xfail_reason("tofino2"
   testdata/p4_14_samples/p414-special-ops-2-bmv2.p4
   testdata/p4_14_samples/p414-special-ops-3-bmv2.p4
   )
+
+p4c_add_xfail_reason("tofino2"
+  "Nested checksum updates is currently unsupported"
+  extensions/p4_tests/p4_14/stf/update_checksum_7.p4
+)
+

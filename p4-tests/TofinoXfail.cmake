@@ -424,7 +424,6 @@ p4c_add_xfail_reason("tofino"
 
   # Expected to fail, until we have better user-facing messages.
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/mariano_0.p4
-  extensions/p4_tests/p4_14/compile_only/p4smith_regression/soured_0.p4
   extensions/p4_tests/p4_16/stf/cast_widening_add.p4
 
   # Expected to fail, which means that constraint conflicts are being correctly detected.
@@ -582,7 +581,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-register3.p4
   testdata/p4_16_samples/psa-example-register2-bmv2.p4
   testdata/p4_14_samples/issue894.p4
-  extensions/p4_tests/p4_14/compile_only/p4smith_regression/shillings_0.p4
   testdata/p4_16_samples/issue298-bmv2.p4
   testdata/p4_14_samples/register.p4
   testdata/p4_16_samples/issue1520-bmv2.p4
@@ -1385,4 +1383,13 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue692-bmv2.p4
   testdata/p4_16_samples/issue1607-bmv2.p4
   extensions/p4_tests/p4_16/compile_only/serializer3.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "error: Tofino does not support nested checksum updates"
+  extensions/p4_tests/p4_14/stf/update_checksum_7.p4
+  extensions/p4_tests/p4_14/compile_only/p4smith_regression/soured_0.p4
+  extensions/p4_tests/p4_14/compile_only/p4smith_regression/shillings_0.p4
+  ../glass/testsuite/p4_tests/mau/galaxy_0.p4
+  ../glass/testsuite/p4_tests/parde/test_checksum.p4
 )

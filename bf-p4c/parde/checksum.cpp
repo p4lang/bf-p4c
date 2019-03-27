@@ -6,6 +6,8 @@
 #include "ir/pattern.h"
 #include "lib/error.h"
 #include "bf-p4c/bf-p4c-options.h"
+#include "bf-p4c/common/utils.h"
+#include "bf-p4c/parde/parser_info.h"
 #include "logging/filelog.h"
 namespace {
 
@@ -508,6 +510,96 @@ struct InsertChecksumConditions : public Transform {
     const gress_t gress;
 };
 
+struct CollectFieldToState : public Inspector {
+    std::map<const IR::Expression*, const IR::BFN::ParserState*> field_to_state;
+
+    bool preorder(const IR::BFN::Extract* extract) override {
+        auto state = findContext<IR::BFN::ParserState>();
+        CHECK_NULL(state);
+
+        field_to_state[extract->dest->field] = state;
+        return false;
+    }
+};
+
+struct CheckNestedChecksumUpdates : public Inspector {
+    const IR::BFN::ParserGraph& graph;
+    const std::map<const IR::Expression*, const IR::BFN::ParserState*>& field_to_state;
+
+    std::set<const IR::BFN::EmitChecksum*> visited;
+
+    explicit CheckNestedChecksumUpdates(const IR::BFN::ParserGraph& graph,
+            const std::map<const IR::Expression*, const IR::BFN::ParserState*>& field_to_state) :
+        graph(graph), field_to_state(field_to_state) { }
+
+    void print_error(const IR::BFN::EmitChecksum* a, const IR::BFN::EmitChecksum* b) {
+        if (Device::currentDevice() == Device::TOFINO) {
+            std::stringstream hint;
+
+            hint << "Consider using checksum units in both ingress and egress deparsers";
+
+            if (BackendOptions().arch == "v1model") {
+                hint << " (@pragma calculated_field_update_location/";
+                hint << "residual_checksum_parser_update_location)";
+            }
+
+            hint << ".";
+
+            ::fatal_error("Tofino does not support nested checksum updates in the same deparser:"
+                          " %1%, %2%\n%3%", a->dest->field, b->dest->field, hint.str());
+
+        } else if (Device::currentDevice() == Device::JBAY) {
+            P4C_UNIMPLEMENTED("Nested checksum updates is currently "
+                              "unsupported by the compiler for Tofino2: %1%, %2%",
+                              a->dest->field, b->dest->field);
+        } else {
+            BUG("Unknown device");
+        }
+    }
+
+    const IR::BFN::ParserState* find_state(const IR::Expression* a) {
+        for (auto& kv : field_to_state) {
+            if (kv.first->equiv(*a))
+                return kv.second;
+        }
+
+        return nullptr;
+    }
+
+    bool can_be_on_same_parse_path(const IR::Expression* a, const IR::Expression* b) {
+        auto sa = find_state(a);
+        auto sb = find_state(b);
+
+        if (sa && sb) {
+            if (graph.is_descendant(sa, sb) || graph.is_descendant(sb, sa))
+                return true;
+        }
+
+        return false;
+    }
+
+    bool preorder(const IR::BFN::EmitChecksum* checksum) override {
+        for (auto c : visited) {
+            if (!can_be_on_same_parse_path(c->dest->field, checksum->dest->field))
+                continue;
+
+            for (auto s : checksum->sources) {
+                if (c->dest->field->equiv(*s->field))
+                    print_error(checksum, c);
+            }
+
+            for (auto s : c->sources) {
+                if (checksum->dest->field->equiv(*s->field))
+                    print_error(checksum, c);
+            }
+        }
+
+        visited.insert(checksum);
+
+        return false;
+    }
+};
+
 }  // namespace
 
 namespace BFN {
@@ -543,6 +635,19 @@ extractChecksumFromDeparser(const IR::BFN::TnaDeparser* deparser, IR::BFN::Pipe*
     pipe->thread[gress].deparser = pipe->thread[gress].deparser->apply(substituteChecksums);
     for (auto& parser : pipe->thread[gress].parsers) {
         parser = parser->apply(substituteChecksumLVal);
+    }
+
+    for (auto& parser : pipe->thread[gress].parsers) {
+        CollectParserInfo cg;
+        parser->apply(cg);
+
+        CollectFieldToState cfs;
+        parser->apply(cfs);
+
+        auto graph = cg.graphs().at(parser->to<IR::BFN::Parser>());
+        CheckNestedChecksumUpdates checkNestedChecksumUpdates(*graph, cfs.field_to_state);
+
+        pipe->thread[gress].deparser->apply(checkNestedChecksumUpdates);
     }
 
     return pipe;

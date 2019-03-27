@@ -1195,6 +1195,7 @@ field_list inner_ipv4_checksum_list {
         inner_ipv4.dstAddr;
 }
 
+@pragma calculated_field_update_location ingress
 field_list_calculation inner_ipv4_checksum {
     input {
         inner_ipv4_checksum_list;
