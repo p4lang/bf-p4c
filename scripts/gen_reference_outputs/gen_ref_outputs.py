@@ -3,32 +3,39 @@
 import os
 import sys
 import csv
+import argparse
 import config
+import database
+sys.path.append("..")
 from runner import RunCmd
+from datetime import datetime
 
 def writeblock_to_file(filename, fileblock):
     with open(filename, 'w') as fwrite:
         if fileblock and len(fileblock) > 0:
             fwrite.write(fileblock)
 
-def get_test_list():
+def get_test_list(tests_csv, out_dir, ts):
     try:
         tests = []
         # p4,p4_path,include_path,p4_opts,target,language,arch,skip_opt
         field_names=['p4', 'p4_path', 'include_path', 'p4_opts', 'target', 'language', 'arch', 'skip_opt']
-        with open('tests.csv', 'rb') as csvfile:
+        with open(tests_csv, 'rb') as csvfile:
             test_reader = csv.DictReader(csvfile, fieldnames=field_names)
             for row in test_reader:
                 if '# ' not in row['p4']:
                     mTest = config.Test()
                     mTest.p4 = row['p4']
-                    mTest.p4_path = row['p4_path']
-                    mTest.include_path = row['include_path']
+                    mTest.p4_path = os.path.join(config.BF_P4C_PATH, row['p4_path'])
+                    if len(row['include_path']) > 0:
+                        mTest.include_path = os.path.join(config.BF_P4C_PATH, row['include_path'])
                     mTest.p4_opts = row['p4_opts']
                     mTest.target = row['target']
                     mTest.language = row['language']
                     mTest.arch = row['arch']
                     mTest.skip_opt = row['skip_opt']
+                    mTest.timestamp = ts
+                    mTest.out_path =  os.path.join(out_dir, mTest.p4, mTest.timestamp) 
                     tests.append(mTest)
         return tests
     except Exception as e:
@@ -60,17 +67,17 @@ def prep_test_line(mTest, p4c):
     # Add filename and output directory 
     extra_args = ['"' + os.path.join(mTest.p4_path) + '"', \
         '"-o"', \
-        '"' + os.path.join(config.REF_OUTPUTS_DIR, mTest.p4, p4c.name, mTest.p4) + '"']
+        '"' + os.path.join(mTest.out_path, p4c.name) + '"']
     test_line += ', '.join(extra_args) + '], None),\n'
     p4c.testmatrix += test_line
     return p4c
 
-def prep_test_matrix():
+def prep_test_matrix(tests_csv, out_dir, ts):
     mGlass = config.Glass()
     mP4C = config.P4C()
 
     # For each test case, prepare a test line in the test matrix
-    test_dict = get_test_list()
+    test_dict = get_test_list(tests_csv, out_dir, ts)
     for test in test_dict:
         if len(test.p4) > 0:
             for p4c in [mGlass, mP4C]:
@@ -81,6 +88,7 @@ def prep_test_matrix():
 
     writeblock_to_file(config.P4C_TEST_MATRIX, mP4C.testmatrix)
     writeblock_to_file(config.GLASS_TEST_MATRIX, mGlass.testmatrix)
+    return test_dict
 
 def run_test_matrix(p4c, test_cmd):
     rc = RunCmd(test_cmd, config.TEST_DRIVER_TIMEOUT)
@@ -90,16 +98,59 @@ def run_test_matrix(p4c, test_cmd):
         p4c + '_test_out.log'), rc.out)
     print 'Test Summary:\n'
     if rc.out is not None:
-        print rc.out + '\n'
+        lines = rc.out.split('\n')
+        for line in lines[-10:]:
+            print line + '\n'
     print 'Test Errors:\n'
     if rc.err is not None:
         print rc.err + '\n'
     return rc.return_code
 
+def process_metrics(tests, metrics_db, metrics_outdir, ts, update):
+    final_result = 0
+    db_curr = database.copy_metrics(tests, metrics_outdir, ts)
+    db_master = metrics_db.extract_metrics()
+    results = None
+    if update:
+        print ('Updating metrics in database')
+        results = database.test_and_update_metrics(metrics_db, db_curr, db_master)
+    else:
+        print ('Analyzing metrics in the current run')
+        results = database.test_and_report_metrics(db_curr, db_master)
+    for test, result in results.iteritems():
+        print test, result
+        if result is 'FAIL':
+            final_result -= 1
+    return final_result
+
 # Generate and run the test matrix for Glass and P4C compilation
 # and context.json validation
 def main():
-    prep_test_matrix()
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(
+        description='Generate reference outputs for p4i and metrics.')
+    parser.add_argument('--tests_csv', type=str,
+        default=config.TEST_FILE,
+        help = 'Testcase listing')
+    parser.add_argument('--out_dir', type=str,
+        default=config.REF_OUTPUTS_DIR,
+        help = 'Directory in which to store generated tests and test output.')
+    parser.add_argument('--process_metrics', action='store_true',
+        help='Process metrics and store the metrics.json generated for the current run with the timestamp')
+    parser.add_argument('--update_metrics', action='store_true',
+        help='Update metrics to the current database')
+    parser.add_argument('--commit_sha', type=str,
+        default=config.COMMIT_SHA,
+        help = 'COMMIT SHA of the current run')
+
+    args = parser.parse_args()
+    if args.process_metrics:
+        config.COMMIT_SHA = args.commit_sha
+ 
+    # Setting timestamp for this run
+    ts = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+
+    tests = prep_test_matrix(args.tests_csv, args.out_dir, ts)
     print '='*120
     print 'Running Glass tests: '
     print '='*120
@@ -112,6 +163,11 @@ def main():
     print 'Completed P4C tests: ' + str(run_test_matrix('P4C', \
         config.P4C_TEST_CMD))
     print '='*120
+    if args.process_metrics:
+        metrics_db = database.metricstable()
+        result = process_metrics(tests, metrics_db, args.out_dir, ts, args.update_metrics)   
+        if result < 0:
+            sys.exit(1) 
 
 if __name__ == "__main__":
     main()

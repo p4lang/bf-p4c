@@ -59,7 +59,7 @@ RUN add-apt-repository ppa:ubuntu-toolchain-r/test && \
 # testing dependencies
 RUN apt-get install -y net-tools
 
-RUN pip install jsl pexpect crc16 crcmod simplejson tenjin ipaddress packaging pyinstaller
+RUN pip install jsl pexpect crc16 crcmod simplejson tenjin ipaddress packaging pyinstaller prettytable
 RUN pip install ply==3.9
 # Install jsonschema 2.6 for compatibility with pyinstaller
 RUN pip install jsonschema==2.6

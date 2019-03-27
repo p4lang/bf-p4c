@@ -67,7 +67,7 @@ ARG GEN_REF_OUTPUTS=false
 # testing dependencies
 RUN apt-get install -y net-tools
 
-RUN pip install jsl pexpect crc16 crcmod simplejson tenjin ipaddress packaging pyinstaller
+RUN pip install jsl pexpect crc16 crcmod simplejson tenjin ipaddress packaging pyinstaller prettytable
 # Install ply 3.9 for compatibility with p4c-tofino
 RUN pip install ply==3.9
 # Install jsonschema 2.6 for compatibility with pyinstaller

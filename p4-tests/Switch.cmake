@@ -18,24 +18,29 @@ set  (isXFail TRUE)
 file (RELATIVE_PATH switchtest ${P4C_SOURCE_DIR} ${SWITCH_P4})
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
     "switch_dc_basic" ${switchtest} "${testExtraArgs}" "-DDC_BASIC_PROFILE")
+p4c_add_test_label("tofino" "METRICS" "switch_dc_basic")
 
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
     "switch_ent_fin_postcard" ${switchtest} "${testExtraArgs}" "-DENT_FIN_POSTCARD_PROFILE")
 
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
     "switch_ent_dc_general" ${switchtest} "${testExtraArgs}" "-DENT_DC_GENERAL_PROFILE -to 1200")
+p4c_add_test_label("tofino" "METRICS" "switch_ent_dc_general")
 
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
     "switch_msdc" ${switchtest} "${testExtraArgs}" "-DMSDC_PROFILE -DP4_WRED_DEBUG")
+p4c_add_test_label("tofino" "METRICS" "switch_msdc")
 
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE}
     "switch_msdc_ipv4" ${switchtest} "${testExtraArgs}" "-DMSDC_IPV4_PROFILE")
+p4c_add_test_label("tofino" "METRICS" "switch_msdc_ipv4")
 
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
     "switch_msdc_l3" ${switchtest} "${testExtraArgs}" "-DMSDC_L3_PROFILE")
 
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
     "switch_msdc_spine_int" ${switchtest} "${testExtraArgs}" "-DMSDC_SPINE_DTEL_INT_PROFILE")
+p4c_add_test_label("tofino" "METRICS" "switch_msdc_spine_int")
 
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
     "switch_msdc_leaf_int" ${switchtest} "${testExtraArgs}" "-DMSDC_LEAF_DTEL_INT_PROFILE")
@@ -102,12 +107,16 @@ set (SWITCH_P4_16_PTF ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/switch_16/ptf/api)
 file (RELATIVE_PATH switch_p4_16 ${P4C_SOURCE_DIR} ${SWITCH_P4_16})
 p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
   "smoketest_switch_16_compile" ${switch_p4_16} "${testExtraArgs}" "-arch tna -bfrt -force-link")
+p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile")
 p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
-  "smoketest_switch_16_compile_msdc" ${switch_p4_16} "${testExtraArgs}" "-DAO_PROFILE -arch tna -bfrt -force-link")
+  "smoketest_switch_16_compile_a0_profile" ${switch_p4_16} "${testExtraArgs}" "-DAO_PROFILE -arch tna -bfrt -force-link")
+p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_a0_profile")
 p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
-  "smoketest_switch_16_compile_msft_vxlan" ${switch_p4_16} "${testExtraArgs}" "-DBO_PROFILE -arch tna -bfrt -force-link")
+  "smoketest_switch_16_compile_b0_profile" ${switch_p4_16} "${testExtraArgs}" "-DBO_PROFILE -arch tna -bfrt -force-link")
+p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_b0_profile")
 p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
-  "smoketest_switch_16_compile_basic_multipipe" ${switch_p4_16} "${testExtraArgs}" "-DTEST_SWITCH_32Q -arch tna -bfrt -force-link")
+  "smoketest_switch_16_compile_32q" ${switch_p4_16} "${testExtraArgs}" "-DTEST_SWITCH_32Q -arch tna -bfrt -force-link")
+p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_32q")
 
  p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_Tests" ${SWITCH_P4_16}
    "${testExtraArgs} -arch tna -bfrt -to 3600" ${SWITCH_P4_16_PTF})
@@ -154,9 +163,9 @@ set_tests_properties(
 
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
 set_tests_properties("tofino/smoketest_switch_16_compile" PROPERTIES TIMEOUT 1200)
-set_tests_properties("tofino/smoketest_switch_16_compile_msdc" PROPERTIES TIMEOUT 1200)
-set_tests_properties("tofino/smoketest_switch_16_compile_msft_vxlan" PROPERTIES TIMEOUT 1200)
-set_tests_properties("tofino/smoketest_switch_16_compile_basic_multipipe" PROPERTIES TIMEOUT 1200)
+set_tests_properties("tofino/smoketest_switch_16_compile_a0_profile" PROPERTIES TIMEOUT 1200)
+set_tests_properties("tofino/smoketest_switch_16_compile_b0_profile" PROPERTIES TIMEOUT 1200)
+set_tests_properties("tofino/smoketest_switch_16_compile_32q" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino/smoketest_switch_16_Tests" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_16_HostIfPingTest" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_16_HostIfRxTest" PROPERTIES TIMEOUT 3600)
