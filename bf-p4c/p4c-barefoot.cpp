@@ -41,6 +41,11 @@
 #include "midend.h"
 #include "version.h"
 
+#if !defined(BAREFOOT_INTERNAL) || defined(NDEBUG)
+// Catch all exceptions in production or release environment
+#define BFP4C_CATCH_EXCEPTIONS 1
+#endif
+
 static void log_dump(const IR::Node *node, const char *head) {
     if (!node || !LOGGING(1)) return;
     if (head)
@@ -146,7 +151,7 @@ void execute_backend(const IR::BFN::Pipe* maupipe, BFN_Options& options) {
         GenerateOutputs as(backend, options, maupipe->id, backend.get_prim_json(), success);
         if (maupipe)
             maupipe->apply(as);
-    } catch (Util::P4CExceptionBase &ex) {
+    } catch (const Util::P4CExceptionBase &ex) {
         // produce resource nodes in context.json regardless of failures
         #if BAREFOOT_INTERNAL
             std::cerr << "compilation failed: producing context.json" << std::endl;
@@ -178,10 +183,10 @@ int main(int ac, char **av) {
     // Program or programmer errors. Nothing to do until the program is fixed
     constexpr unsigned INVOCATION_ERROR = 2;
     constexpr unsigned PROGRAM_ERROR = 3;
-#if !BAREFOOT_INTERNAL
+#if BFP4C_CATCH_EXCEPTIONS
     // Internal compiler error
     constexpr unsigned INTERNAL_COMPILER_ERROR = 4;
-#endif
+#endif  // BFP4C_CATCH_EXCEPTIONS
 
     AutoCompileContext autoBFNContext(new BFNContext);
     auto& options = BackendOptions();
@@ -193,10 +198,9 @@ int main(int ac, char **av) {
     Logging::FileLog::setOutputDir(options.outputDir);
     Device::init(options.target);
 
-#if !BAREFOOT_INTERNAL
-    // Catch all exceptions in production environment
+#if BFP4C_CATCH_EXCEPTIONS
     try {
-#endif  // !BAREFOOT_INTERNAL
+#endif  // BFP4C_CATCH_EXCEPTIONS
     // FIXME -- should be based on the architecture option
     P4V1::Converter::createProgramStructure = P4V1::TNA_ProgramStructure::create;
 
@@ -305,15 +309,16 @@ int main(int ac, char **av) {
         std::cout << "Done." << std::endl;
     return ::errorCount() > 0 ? COMPILER_ERROR : SUCCESS;
 
-#if !BAREFOOT_INTERNAL
+#if BFP4C_CATCH_EXCEPTIONS
+    #warning "catching exceptions"
     // catch all exceptions here
-    } catch (Util::CompilerBug e) {
+    } catch (const Util::CompilerBug &e) {
         std::cerr << e.what() << std::endl;
         return COMPILER_ERROR;
-    } catch (Util::CompilerUnimplemented e) {
+    } catch (const Util::CompilerUnimplemented &e) {
         std::cerr << e.what() << std::endl;
         return COMPILER_ERROR;
-    } catch (Util::CompilationError e) {
+    } catch (const Util::CompilationError &e) {
         std::cerr << e.what() << std::endl;
         return PROGRAM_ERROR;
     } catch (...) {
@@ -321,5 +326,5 @@ int main(int ac, char **av) {
                   << std::endl;
         return INTERNAL_COMPILER_ERROR;
     }
-#endif  // !BAREFOOT_INTERNAL
+#endif  // BFP4C_CATCH_EXCEPTIONS
 }

@@ -1548,31 +1548,25 @@ void BackendConverter::convert(const IR::P4Program *program, BFN_Options& option
         if (Device::currentDevice() == Device::TOFINO) {
             convertV1Program(program, options);
         }
-#ifdef HAVE_JBAY
         if (Device::currentDevice() == Device::JBAY) {
             convertV1Program(program, options);
         }
-#endif
     } else if (options.arch == "psa" &&
              options.langVersion == CompilerOptions::FrontendVersion::P4_16) {
         if (Device::currentDevice() == Device::TOFINO) {
             convertTnaProgram(program, options);
         }
-#ifdef HAVE_JBAY
         if (Device::currentDevice() == Device::JBAY) {
             convertTnaProgram(program, options);
         }
-#endif
     } else if ((options.arch == "tna" || options.arch == "t2na") &&
              options.langVersion == CompilerOptions::FrontendVersion::P4_16) {
         if (Device::currentDevice() == Device::TOFINO) {
             convertTnaProgram(program, options);
         }
-#ifdef HAVE_JBAY
         if (Device::currentDevice() == Device::JBAY) {
             convertTnaProgram(program, options);
         }
-#endif
     } else {
         error("Architecture %s not supported with language version %s", options.arch,
               options.langVersion ==CompilerOptions::FrontendVersion::P4_14 ? "P4_14" :

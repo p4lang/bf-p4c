@@ -28,8 +28,8 @@ class GenerateDeparser : public Inspector {
     ordered_map<cstring, IR::BFN::Digest *>     digests;
     ordered_map<cstring, cstring>               nameMap;
 
-    void generateDigest(IR::BFN::Digest *&digest, cstring name,
-                        const IR::Expression *list, cstring controlPlaneName = nullptr);
+    void generateDigest(IR::BFN::Digest *&digest, cstring name, const IR::Expression *list,
+                        const IR::MethodCallExpression* mc, cstring controlPlaneName = nullptr);
     void simpl_concat(std::vector<const IR::Expression*>& slices, const IR::Concat* expr) {
         if (expr->left->is<IR::Constant>()) {
             slices.push_back(expr->left);
@@ -97,15 +97,15 @@ class GenerateDeparser : public Inspector {
                     list->srcInfo, list->type, list->components);
                 expr->components.insert(expr->components.begin(),
                                         mc->arguments->at(0)->expression);
-                generateDigest(digests["mirror"], "mirror", expr);
+                generateDigest(digests["mirror"], "mirror", expr, mc);
             } else if (type->name == "Resubmit") {
                 auto num_args = mc->arguments->size();
                 auto expr = (num_args == 0) ? new IR::ListExpression({})
                                             : mc->arguments->at(0)->expression;
-                generateDigest(digests["resubmit"], "resubmit", expr);
+                generateDigest(digests["resubmit"], "resubmit", expr, mc);
             } else if (type->name == "Pktgen") {
                 auto expr = mc->arguments->at(0)->expression;
-                generateDigest(digests["pktgen"], "pktgen", expr);
+                generateDigest(digests["pktgen"], "pktgen", expr, mc);
             } else {
                 fatal_error(ErrorType::ERR_UNSUPPORTED,
                             "Unsupported method call %1% in deparser", mc);
@@ -120,7 +120,7 @@ class GenerateDeparser : public Inspector {
             auto cpn = nameMap.find(dname->path->name);
             BUG_CHECK(cpn != nameMap.end(), "unable to find digest %1%", dname->path->name);
             generateDigest(digests["learning"], "learning",
-                           mc->arguments->at(0)->expression, cpn->second);
+                           mc->arguments->at(0)->expression, mc, cpn->second);
             return false;
         } else {
             fatal_error(ErrorType::ERR_UNSUPPORTED, "Unsupported method call %1% in deparser", mc);
@@ -132,6 +132,8 @@ class GenerateDeparser : public Inspector {
        for (const auto& kv : digests) {
            auto name = kv.first;
            auto digest = kv.second;
+           if (!digest)
+               continue;
            for (auto fieldList : digest->fieldLists) {
                if (fieldList->idx < 0 ||
                    fieldList->idx > static_cast<int>(Device::maxCloneId(dprsr->gress))) {
@@ -179,13 +181,14 @@ class GenerateDeparser : public Inspector {
 
 // FIXME -- factor this with Digests::add_to_digest in digest.h?
 void GenerateDeparser::generateDigest(IR::BFN::Digest *&digest, cstring name,
-                                      const IR::Expression *expr, cstring controlPlaneName) {
+                                      const IR::Expression *expr,
+                                      const IR::MethodCallExpression* mc,
+                                      cstring controlPlaneName) {
     int digest_index = 0;
     const IR::Literal *k = nullptr;
     const IR::Expression *select;
     if (!pred) {
-        // error(ErrorType::ERR_UNSUPPORTED, "unconditional %2%.emit", expr->srcInfo, name);
-        error("%s Unsupported unconditional %s.emit", expr->srcInfo, name);
+        fatal_error(ErrorType::ERR_UNSUPPORTED, "unconditional %2%.emit", mc, name);
         return;
     } else if (auto eq = pred->to<IR::Equ>()) {
         if ((k = eq->left->to<IR::Constant>()))
@@ -205,7 +208,7 @@ void GenerateDeparser::generateDigest(IR::BFN::Digest *&digest, cstring name,
         }
     }
     if (!k) {
-        error("Unsupported condition %s in %s.emit", pred, name);
+        fatal_error(ErrorType::ERR_UNSUPPORTED, "condition %2% in %3%.emit", mc, pred, name);
         return;
     } else if (k->is<IR::Constant>()) {
             digest_index = k->to<IR::Constant>()->asInt(); }

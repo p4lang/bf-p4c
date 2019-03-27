@@ -1359,8 +1359,8 @@ p4c_add_xfail_reason("tofino"
 
 # Negative test: ensure the compiler does not seg fault
 p4c_add_xfail_reason("tofino"
-  "error:  Unsupported unconditional mirror.emit"
-  extensions/p4_tests/p4_16/customer/noviflow/p4c-1588.p4
+  "error: mirror.emit: Unsupported unconditional mirror.emit"
+  extensions/p4_tests/p4_16/customer/noviflow/p4c-1588-neg.p4
   )
 
 p4c_add_xfail_reason("tofino"

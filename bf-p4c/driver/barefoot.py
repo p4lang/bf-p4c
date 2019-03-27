@@ -68,6 +68,7 @@ class BarefootBackend(BackendDriver):
         BackendDriver.__init__(self, target, arch, argParser)
         self.compilation_time = 0.0
         self.conf_file = None
+        self.mau_json = {}   # remove when the compiler adds the manifest
 
         # commands
         self.add_command('preprocessor', 'cc')
@@ -411,6 +412,7 @@ class BarefootBackend(BackendDriver):
             for pipe in prog["pipes"]:
                 self._pipes.append({})
                 pipe_id = int(pipe['pipe_id'])
+                self._pipes[pipe_id]['pipe_id'] = pipe_id
                 self._pipes[pipe_id]['pipe_name'] = pipe['pipe_name']
                 self._pipes[pipe_id]['context'] = os.path.join(self._output_directory,
                                                                pipe['files']['context']['path'])
@@ -452,6 +454,9 @@ class BarefootBackend(BackendDriver):
                 jsonTree['compilation_time'] = str(self.compilation_time)
                 if self.conf_file is not None:
                     jsonTree['conf_file'] = self.conf_file
+                for pipe in self.mau_json:
+                    mau_json = { 'path' : self.mau_json[pipe], 'log_type' : 'mau' }
+                    jsonTree['programs'][0]['pipes'][pipe]['files']['logs'].append(mau_json)
             except:
                 return
 
@@ -551,7 +556,8 @@ class BarefootBackend(BackendDriver):
         self.compilation_time = time.time() - start_t
 
         # Error codes defined in p4c-barefoot.cpp:main
-        if rc > 1:  # Invocation or program error. Can't recover anything from this, exit
+        if rc is not None and (rc > 1 or rc < 0):
+            # Invocation or program error. Can't recover anything from this, exit
             return rc
 
         # ir_to_json exits early, serializing only the IR
@@ -604,6 +610,8 @@ class BarefootBackend(BackendDriver):
                             self.checkAndRunCmd('summary_logging')
                             # and now remove the arguments added so that the next pipe is correct
                             del self._commands['summary_logging'][1:]
+                            self.mau_json[pipe['pipe_id']] = \
+                                "{}".format(os.path.join(pipe['pipe_name'], 'logs', 'mau.json'))
                         except:
                             pass
 
