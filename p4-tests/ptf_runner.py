@@ -105,7 +105,10 @@ DEFAULT_IFACES += ["veth250", "veth251"]
 
 def check_ifaces(ifaces):
     ifconfig_out = subprocess.check_output(['ifconfig'])
-    iface_list = re.findall(r'^(\S+)', ifconfig_out, re.S | re.M)
+    # On Debian, /sbin/ifconfig outputs a ':' at the end of the interface name,
+    # we use a negative lookbehind to eliminate the optional trailing ':' (which
+    # is not present on Ubuntu)
+    iface_list = re.findall(r'^(\S+)(?<!:)', ifconfig_out, re.S | re.M)
     present_ifaces = set(iface_list)
     ifaces = set(ifaces)
     return ifaces <= present_ifaces
