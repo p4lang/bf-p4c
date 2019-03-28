@@ -105,6 +105,42 @@ std::ostream &operator<<(std::ostream &out, const MauAsmOutput::TableMatch::Prox
     return out;
 }
 
+void MauAsmOutput::emit_single_alias(std::ostream &out, cstring &sep,
+        const ActionData::Parameter *param, le_bitrange adt_range, cstring alias,
+        safe_vector<ActionData::Argument> &full_args, cstring action_name) const {
+    bool found = false;
+    bool single_value = true;
+    le_bitrange arg_bits = { 0, 0 };
+    if (auto arg = param->to<ActionData::Argument>()) {
+        for (auto full_arg : full_args) {
+            if (arg->name() != full_arg.name())
+                continue;
+            if (arg->param_field() != full_arg.param_field()) {
+                single_value = false;
+                arg_bits = arg->param_field();
+            }
+            found = true;
+            break;
+        }
+        BUG_CHECK(found, "An argument %s was not found in the parameters of action %s",
+                  arg->name(), action_name);
+    }
+
+    out << sep << param->name();
+    if (!single_value)
+        out << "." << arg_bits.lo << "-" << arg_bits.hi;
+    out << ": ";
+    out << alias << "(" << adt_range.lo << ".." << adt_range.hi << ")";
+    sep = ", ";
+
+    // Have to go through another layer of aliasing to print out the constant
+    if (auto constant = param->to<ActionData::Constant>()) {
+        out << sep << constant->name() << ": ";
+        out << constant->value().getrange(0, 32);
+        sep = ", ";
+    }
+}
+
 /** Function that emits the action data aliases needed for consistency across the action data
  *  bus.  The aliases are to be used to set up parameters for the Context JSON, and if necessary
  *  rename multiple action data parameters as one parameter name.  This must be done in order
@@ -175,47 +211,27 @@ void MauAsmOutput::emit_action_data_alias(std::ostream &out, indent_t indent,
                 // bit position has to be added to the range, as immediate is one keyword
                 adt_range = adt_range.shiftedByBits(postpone_range.lo);
             }
-
-            bool found = false;
-            bool single_value = true;
-            le_bitrange arg_bits = { 0, 0 };
-            if (auto arg = pos.second->to<ActionData::Argument>()) {
-                for (auto full_arg : full_args) {
-                    if (arg->name() != full_arg.name())
-                        continue;
-                    if (arg->param_field() != full_arg.param_field()) {
-                        single_value = false;
-                        arg_bits = arg->param_field();
-                    }
-                    found = true;
-                    break;
-                }
-                BUG_CHECK(found, "An argument %s was not found in the parameters of action %s",
-                          arg->name(), af->name);
-            }
-
-            out << sep << pos.second->name();
-            if (!single_value)
-                out << "." << arg_bits.lo << "-" << arg_bits.hi;
-            out << ": ";
-            out << second_level_alias << "(" << adt_range.lo << ".." << adt_range.hi << ")";
-            sep = ", ";
-
-            // Have to go through another layer of aliasing to print out the constant
-            if (auto constant = pos.second->to<ActionData::Constant>()) {
-                out << sep << constant->name() << ": ";
-                out << constant->value().getrange(0, 32);
-                sep = ", ";
-            }
+            emit_single_alias(out, sep, pos.second, adt_range, second_level_alias,
+                              full_args, af->name);
         }
 
+        // Because the mask can now be built up of both parameters and constants, the alias
+        // mechanism is similar to the data fields
         if (alu_pos.alu_op->is_constrained(ActionData::BITMASKED_SET)) {
+            le_bitrange mask_slot_bits = { alu_pos.alu_op->mask_bits().min().index(),
+                                           alu_pos.alu_op->mask_bits().max().index() };
             out << sep << alu_pos.alu_op->mask_alias() << ": ";
-            out << format.get_format_name(alu_pos, true);
+            out << format.get_format_name(alu_pos, true, &mask_slot_bits);
             sep = ", ";
-            out << sep << alu_pos.alu_op->mask_alias() << ": ";
-            out << alu_pos.alu_op->phv_bits().getrange(0, 32);
-            sep = ", ";
+            for (auto pos : ad_pos) {
+                if (pos.first < static_cast<int>(alu_pos.alu_op->size()))
+                    continue;
+                le_bitrange adt_range = { pos.first, pos.first + pos.second->size() -1 };
+                adt_range = adt_range.shiftedByBits(-1 * alu_pos.alu_op->size());
+                adt_range = adt_range.shiftedByBits(-1 * slot_bits.lo);
+                emit_single_alias(out, sep, pos.second, adt_range, alu_pos.alu_op->mask_alias(),
+                                  full_args, af->name);
+            }
         }
     }
     out << " }" << std::endl;
@@ -1726,6 +1742,44 @@ class MauAsmOutput::EmitAction : public Inspector {
         out << std::endl;
     }
 
+    /**
+     * In order to fill out the context JSON nodes in the pack format:
+     *    - is_mod_field_conditionally_value
+     *    - mod_field_conditionally_mask_field_name
+     *
+     * which are required for the src1 & mask, described in action_format_2.h in the
+     * Parameter class, this function is required.  This dumps out a map:
+     *
+     *    - key - The names of conditional parameters in an action
+     *    - value - The regions of action format that are conditionally controlled by this key
+     *
+     * I think this is fairly ugly, but was the only concise way to correctly handle all
+     * corner cases, rather than having the assembler have to work through potential bitmasked-set
+     * instructions in order to potentially find which regions are controlled.
+     */
+    void mod_cond_value(const IR::MAU::Action *act) {
+        auto mod_cond_map = table->resources->action_format.mod_cond_values.at(act->name);
+        if (mod_cond_map.empty())
+            return;
+        out << indent << "- mod_cond_value: {";
+        cstring sep = "";
+        for (auto entry : mod_cond_map) {
+            out << sep << entry.first << ": [ ";
+            cstring sep2 = "";
+            for (int i = 0; i < ActionData::AD_LOCATIONS; i++) {
+                cstring location = i == ActionData::ACTION_DATA_TABLE ? "action_data_table"
+                                                                      : "immediate";
+                for (auto br : bitranges(entry.second.at(i))) {
+                    out << sep2 << location << "(" << br.first << ".." << br.second << ")";
+                    sep2 = ", ";
+                }
+                sep = ", ";
+            }
+            out << " ]";
+        }
+        out << " }" << std::endl;
+    }
+
     void action_context_json(const IR::MAU::Action *act) {
         if (act->args.size() > 0) {
             size_t list_index = 0;
@@ -1758,6 +1812,7 @@ class MauAsmOutput::EmitAction : public Inspector {
         out << " }" << std::endl;
         out << indent << "- handle: 0x" << hex(act->handle) << std::endl;
         next_table(act, vliw_instr.mem_code);
+        mod_cond_value(act);
         is_empty = true;
         if (table->layout.action_data_bytes > 0) {
             self.emit_action_data_alias(out, indent, table, act);
@@ -1988,6 +2043,10 @@ class MauAsmOutput::EmitAction : public Inspector {
         sep = ", ";
         return false;
     }
+    bool preorder(const IR::MAU::ConditionalArg *) override {
+        return false;
+    }
+
     bool preorder(const IR::MAU::ActionArg *a) override {
         assert(sep);
         out << sep << a->toString();

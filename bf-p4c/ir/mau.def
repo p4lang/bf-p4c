@@ -662,6 +662,8 @@ class Instruction : Primitive {
     Instruction(const Primitive &p) : Primitive(p) {}
     Instruction(cstring op, const std::vector<Expression> &args) : Primitive(op) {
         for (auto a : args) operands.push_back(a); }
+    Instruction(Util::SourceInfo si, cstring op, const std::vector<Expression> &args)
+        : Primitive(si, op) { for (auto a : args) operands.push_back(a); }
     bool isOutput(int operand_index) const override { return operand_index == 0; }
     validate { BUG_CHECK(name, "empty name in instruction"); }
 }
@@ -673,6 +675,12 @@ class ActionArg : Expression {
     ActionArg { if (!srcInfo) srcInfo = name.srcInfo; }
     dbprint { out << action_name << ':' << name; }
     toString { return name.toString(); }
+}
+
+class ConditionalArg : ActionArg { 
+    ActionArg   orig_arg;
+    dbprint { ActionArg::dbprint(out);  out << " = orig " << orig_arg; }
+    bool one_on_true = true;
 }
 
 class StatefulCounter : Expression {

@@ -67,6 +67,7 @@ class DoInstructionSelection : public MauTransform, TofinoWriteContext {
     const PhvInfo &phv;
     IR::MAU::Action                     *af = nullptr;
     class SplitInstructions;
+    int                                 synth_arg_num = 0;
 
     profile_t init_apply(const IR::Node *root) override;
     const IR::GlobalRef *preorder(IR::GlobalRef *) override;
@@ -94,6 +95,7 @@ class DoInstructionSelection : public MauTransform, TofinoWriteContext {
     const IR::MAU::Instruction *postorder(IR::MAU::Instruction *i) override { return i; }
 
     bool checkPHV(const IR::Expression *);
+    bool checkActionBus(const IR::Expression *e);
     bool checkSrc1(const IR::Expression *);
     bool checkConst(const IR::Expression *ex, long &value);
     bool equiv(const IR::Expression *a, const IR::Expression *b);

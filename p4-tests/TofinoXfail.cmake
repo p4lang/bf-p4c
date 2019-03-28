@@ -203,6 +203,7 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/mau/COMPILER-362/icmp_typecode.p4
   extensions/p4_tests/p4_16/compile_only/flex_packing_switch.p4
   extensions/p4_tests/p4-programs/internal_p4_14/fr_test/fr_test.p4
+  extensions/p4_tests/p4-programs/internal_p4_14/entry_read_from_hw/entry_read_from_hw.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -297,14 +298,11 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/mau/COMPILER-726/comp_726.p4
   )
 
-# BRIG-271
 p4c_add_xfail_reason("tofino"
-  "error: : conditional assignment not supported"
-  extensions/p4_tests/p4-programs/internal_p4_14/entry_read_from_hw/entry_read_from_hw.p4
+  "Conditional on mux is not an action argument"
   testdata/p4_16_samples/issue420.p4
   testdata/p4_16_samples/issue1412-bmv2.p4
-  extensions/p4_tests/p4-programs/internal_p4_14/mod_field_conditionally/mod_field_conditionally.p4
-  )
+)
 
 p4c_add_xfail_reason("tofino"
   "The meter .* requires either an idletime or stats address bus"
@@ -1044,12 +1042,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/mau/test_config_205_modify_field_from_hash.p4
   )
 
-# P4C-1049
-p4c_add_xfail_reason("tofino"
-  "error: : conditional assignment not supported"
-  ../glass/testsuite/p4_tests/mau/test_config_219_modify_field_conditionally.p4
-  ../glass/testsuite/p4_tests/noviflow/COMPILER-842/mod_field_cond.p4
-  )
 
 # P4C-1323
 # Could not place table capture_timestamp_1_0: The table capture_timestamp_1_1 could not fit within a single input crossbar in an MAU stage

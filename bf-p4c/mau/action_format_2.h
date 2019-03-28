@@ -4,6 +4,7 @@
 #include <array>
 #include <iterator>
 #include <map>
+#include "lib/alloc.h"
 #include "lib/bitops.h"
 #include "lib/bitvec.h"
 #include "lib/ordered_set.h"
@@ -15,6 +16,11 @@
 #include "bf-p4c/phv/phv.h"
 
 namespace ActionData {
+
+// MASK is currently not used, but maybe will be in order to reduce the size of the JSON
+// If MASK is used, then the equiv_cond will have to change
+enum ModConditionally_t { NONE, VALUE, /* MASK */ };
+
 /**
  * The purpose of this class is the base abstract class for any parameter that can appear
  * as any section of bits on the action data bus.  This by itself does not coordinate to any
@@ -22,12 +28,43 @@ namespace ActionData {
  * be classified as ActionData
  */
 class Parameter {
- /*
- // Probably belong outside of this class, in another subclass
+ /**
+  * A modify_field_conditionally in p4-14, which is converted to a ternary operation in p4-16
+  * is done in the following manner.  The instruction is converted to a bitmasked-set, with
+  * the even action data bus location being the parameter, and the odd action data bus location
+  * being the conditional mask.
+  *
+  * 
+  * bitmasked-set, described in uArch 15.1.3.8 Bit maskable set can be thought of as the following:
+  *     dest = (src1 & mask) | (src2 & ~mask)
+  *
+  * where the mask is directly stored on the RAM line, and is used on the action data bus.
+  *
+  * The mask is stored at the odd word, so in the case of a conditional set, the driver can
+  * update the mask as it would any other parameter.  However, at the even word, it is not
+  * just src1 stored, but src1 & mask.  The mask stored at the second word is used as
+  * the background.  Thus, if the condition is true, src1 will equal the parameter, but if
+  * the condition is false, src1 will be 0.
+  *
+  * This leads to the following issue.  Say you had a P4 action:
+  *
+  *    action a1(bit<8> p1, bool cond) {
+  *        hdr.f1 = p1;
+  *        hdr.f2 = cond ? p1 : hdr.f2;
+  *    }
+  *
+  * While previously, the data space for parameter p1 could have been shared, because of the
+  * condition, these have to be completely separate spaces on the RAM line, as the p1 in the
+  * second instruction could sometimes be zero.  The rule is the following:
+  *
+  * Data is only equivalent when both the original parameter and the condition that is
+  * controlling that parameter are equivalent.
+  */
  protected:
-    le_bitrange _phv_bits = { 0, 0 };
-    int _right_shift = 0;
- */
+     // Whether the value is controlled by a condition, or is part of conditional mask
+     ModConditionally_t _cond_type = NONE;
+     // The conditional that controls this value
+     cstring _cond_name;
 
  public:
     // virtual const Parameter *shared_param(const Parameter *, int &start_bit) = 0;
@@ -42,10 +79,27 @@ class Parameter {
         const Parameter *) const = 0;
     virtual const Parameter *overlap(const Parameter *ad, bool guaranteed_one_overlap,
         le_bitrange *my_overlap, le_bitrange *ad_overlap) const = 0;
-    virtual bool equiv_value(const Parameter *) const = 0;
+    virtual bool equiv_value(const Parameter *, bool check_cond = true) const = 0;
     virtual void dbprint(std::ostream &out) const = 0;
     template<typename T> const T *to() const { return dynamic_cast<const T*>(this); }
     template<typename T> bool is() const { return to<T>() != nullptr; }
+
+    bool is_cond_type(ModConditionally_t type) const { return type == _cond_type; }
+    cstring cond_name() const { return _cond_name; }
+
+    void set_cond(ModConditionally_t ct, cstring n) {
+        _cond_type = ct;
+        _cond_name = n;
+    }
+
+    void set_cond(const Parameter *p) {
+        _cond_type = p->_cond_type;
+        _cond_name = p->_cond_name;
+    }
+
+    bool equiv_cond(const Parameter *p) const {
+        return _cond_type == p->_cond_type && _cond_name == p->_cond_name;
+    }
 };
 
 /**
@@ -81,13 +135,16 @@ class Argument : public Parameter {
         le_bitrange split_range = { _param_field.lo + lo, _param_field.lo + hi };
         BUG_CHECK(_param_field.contains(split_range), "Illegally splitting a parameter, as the "
                   "split contains bits outside of the range");
-        return new Argument(_name, split_range);
+        auto *rv = new Argument(_name, split_range);
+        rv->set_cond(this);
+        return rv;
     }
 
     bool only_one_overlap_solution() const override { return true; }
 
     bool is_next_bit_of_param(const Parameter *ad, bool) const override {
         if (size() != 1) return false;
+        if (!equiv_cond(ad)) return false;
         const Argument *arg = ad->to<Argument>();
         if (arg == nullptr) return false;
         return arg->_name == _name && arg->_param_field.hi + 1 == _param_field.lo;
@@ -102,9 +159,10 @@ class Argument : public Parameter {
 
     const Parameter *overlap(const Parameter *ad, bool guaranteed_one_overlap,
         le_bitrange *my_overlap, le_bitrange *ad_overlap) const override;
-    bool equiv_value(const Parameter *ad) const override {
+    bool equiv_value(const Parameter *ad, bool check_cond = true) const override {
         const Argument *arg = ad->to<Argument>();
         if (arg == nullptr) return false;
+        if (check_cond && !equiv_cond(ad)) return false;
         return _name == arg->_name && _param_field == arg->_param_field;
     }
     int size() const override { return _param_field.size(); }
@@ -138,7 +196,7 @@ class Constant : public Parameter {
         const Parameter *ad) const override;
     const Parameter *overlap(const Parameter *ad, bool only_one_overlap_solution,
         le_bitrange *my_overlap, le_bitrange *ad_overlap) const override;
-    bool equiv_value(const Parameter *ad) const override;
+    bool equiv_value(const Parameter *ad, bool check_cond = true) const override;
     bitvec value() const { return _value; }
     int size() const override { return _size; }
     cstring name() const override {
@@ -217,12 +275,20 @@ class ALUOperation {
     cstring _alias;
     // Mask alias for the assembly language
     cstring _mask_alias;
+    safe_vector<ALUParameter> _mask_params;
+    bitvec _mask_bits;
 
  public:
     void add_param(ALUParameter &ap) {
         _params.push_back(ap);
         _phv_bits.setrange(ap.phv_bits.lo, ap.phv_bits.size());
     }
+
+    void add_mask_param(ALUParameter &ap) {
+        _mask_params.push_back(ap);
+        _mask_bits.setrange(ap.phv_bits.lo, ap.phv_bits.size());
+    }
+
     bool contains_only_one_overlap_solution() const {
         for (auto param : _params) {
             if (param.param->only_one_overlap_solution())
@@ -233,6 +299,7 @@ class ALUOperation {
 
 
     bitvec phv_bits() const { return _phv_bits; }
+    bitvec mask_bits() const { return _mask_bits; }
     bitvec slot_bits() const {
         return _phv_bits.rotate_right_copy(0, _right_shift, _container.size());
     }
@@ -547,7 +614,8 @@ struct SingleActionAllocation {
     }
 };
 
-
+// Really could be an Alloc1D of bitvec of size 2, but Alloc1D couldn't hold bitvecs?
+using ModCondMap = std::map<cstring, safe_vector<bitvec>>;
 
 class Format {
  public:
@@ -571,7 +639,11 @@ class Format {
         ///> contiguous on the action data bus words.  Could be calculated directly from
         ///> alu_positions
         bitvec full_words_bitmasked;
+
+        std::map<cstring, ModCondMap> mod_cond_values;
+
         void determine_immediate_mask();
+        void determine_mod_cond_maps();
         int immediate_bits() const { return immediate_mask.max().index() + 1; }
         const ALUParameter *find_param_alloc(UniqueLocationKey &loc,
             const ALUPosition **alu_pos_p) const;
@@ -603,9 +675,13 @@ class Format {
     safe_vector<AllActionPositions> action_bus_inputs;
 
     void create_argument(ALUOperation &alu, ActionAnalysis::ActionParam &read,
-        le_bitrange container_bits);
+        le_bitrange container_bits, const IR::MAU::ConditionalArg *ca);
     void create_constant(ALUOperation &alu, ActionAnalysis::ActionParam &read,
-        le_bitrange container_bits, int &constant_alias_index);
+        le_bitrange container_bits, int &constant_alias_index, const IR::MAU::ConditionalArg *ca);
+    void create_mask_argument(ALUOperation &alu, ActionAnalysis::ActionParam &read,
+        le_bitrange container_bits);
+    void create_mask_constant(ALUOperation &alu, bitvec value, le_bitrange container_bits,
+        int &constant_alias_index);
 
     void create_alu_ops_for_action(ActionAnalysis::ContainerActionsMap &ca_map,
         cstring action_name);

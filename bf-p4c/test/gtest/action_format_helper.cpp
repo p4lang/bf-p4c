@@ -516,4 +516,55 @@ TEST(ActionFormatHelper, Contains) {
     Contains_test6(new ActionData::RamSection(ad_outside), new ActionData::RamSection(ad_inside));
 }
 
+
+void ConditionalArgs_Test(ActionData::Parameter *arg1, ActionData::Parameter *arg1_cond1,
+        ActionData::Parameter *arg1_cond2, ActionData::Parameter *arg1_extend_cond1) {
+    EXPECT_FALSE(arg1->equiv_value(arg1_cond1));
+    EXPECT_FALSE(arg1->equiv_value(arg1_cond2));
+    EXPECT_FALSE(arg1_cond1->equiv_value(arg1_cond2));
+    EXPECT_TRUE(arg1_cond1->equiv_value(arg1_cond2, false));
+    ActionData::PackingConstraint pc;
+    ActionData::RamSection *ram_sect1 = new ActionData::RamSection(8, pc);
+    ActionData::RamSection *ram_sect2 = new ActionData::RamSection(8, pc);
+
+    ram_sect1->add_param(0, arg1);
+    ram_sect2->add_param(0, arg1_cond1);
+
+    EXPECT_TRUE(ram_sect1->merge(ram_sect2) == nullptr);
+
+    ActionData::RamSection *ram_sect3 = new ActionData::RamSection(16, pc);
+    ram_sect3->add_param(0, arg1);
+    ram_sect3->add_param(8, arg1_extend_cond1);
+
+    auto param_positions = ram_sect3->parameter_positions();
+    EXPECT_EQ(param_positions.size(), 2);
+
+    ActionData::RamSection *ram_sect4 = new ActionData::RamSection(16, pc);
+    ram_sect4->add_param(0, arg1_cond1);
+    ram_sect4->add_param(8, arg1_extend_cond1);
+
+    param_positions = ram_sect4->parameter_positions();
+    EXPECT_EQ(param_positions.size(), 1);
+}
+
+TEST(ActionFormatHelper, ConditionalArgs) {
+    ActionData::Argument *arg1 = new ActionData::Argument("arg1", {0, 7});
+    ActionData::Argument *arg1_cond1 = new ActionData::Argument("arg1", {0, 7});
+    arg1_cond1->set_cond(ActionData::VALUE, "cond1");
+    ActionData::Argument *arg1_cond2 = new ActionData::Argument("arg1", {0, 7});
+    arg1_cond2->set_cond(ActionData::VALUE, "cond2");
+    ActionData::Argument *arg1_extend_cond1 = new ActionData::Argument("arg1", {8, 15});
+    arg1_extend_cond1->set_cond(ActionData::VALUE, "cond1");
+
+    ConditionalArgs_Test(arg1, arg1_cond1, arg1_cond2, arg1_extend_cond1);
+
+    ActionData::Constant *con1 = new ActionData::Constant(1, 8);
+    ActionData::Constant *con1_cond1 = new ActionData::Constant(1, 8);
+    con1_cond1->set_cond(ActionData::VALUE, "cond1");
+    ActionData::Constant *con1_cond2 = new ActionData::Constant(1, 8);
+    con1_cond2->set_cond(ActionData::VALUE, "cond2");
+    ActionData::Constant *con1_extend_cond1 = new ActionData::Constant(*con1_cond1);
+    ConditionalArgs_Test(con1, con1_cond1, con1_cond2, con1_extend_cond1);
+}
+
 }  // namespace Test

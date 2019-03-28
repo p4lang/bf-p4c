@@ -197,6 +197,8 @@ public:
                 return 0; // quiet -Wreturn-type warning
             }
             enum flags_t { NONE=0, USED_IMMED=1, ZERO=3 };
+            bool conditional_value = false;
+            std::string condition;
             Field(Format *f) : fmt(f) {}
             Field(Format *f, unsigned size, unsigned lo = 0, enum flags_t fl = NONE)
                 : size(size), flags(fl), fmt(f) {
@@ -389,6 +391,7 @@ public:
             int                                 next_table_encode = -1;
             Ref                                 next_table_ref;
             Ref                                 next_table_miss_ref;
+            std::map<std::string, std::vector<bitvec>> mod_cond_values;
             // The hit map points to next tables for actions as ordered in the
             // assembly, we use 'position_in_assembly' to map the correct next
             // table, as actions can be ordered in the map different from the
@@ -396,6 +399,8 @@ public:
             int                                 position_in_assembly = -1;
             bool                                minmax_use = false;  // jbay sful min/max
             Action(Table *, Actions *, pair_t &, int);
+            enum mod_cond_loc_t { MC_ADT, MC_IMMED };
+            void setup_mod_cond_values(value_t &map); 
             Action(const char *n, int l) : name(n), lineno(l) {}
             Action(const Action &) = delete;
             Action(Action &&) = delete;
@@ -416,6 +421,8 @@ public:
             bool is_color_aware() const;
             void gen_simple_tbl_cfg(json::vector &) const;
             void add_p4_params(json::vector &, bool include_default = true) const;
+            void check_conditional(Table::Format::Field &field) const;
+            bool immediate_conditional(int lo, int sz, std::string &condition) const;
             friend std::ostream &operator<<(std::ostream &, const alias_t &);
             friend std::ostream &operator<<(std::ostream &, const Action &);
         };

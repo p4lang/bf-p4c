@@ -26,6 +26,7 @@ const Parameter *Argument::overlap(const Parameter *ad, bool,
     const Argument *arg = ad->to<Argument>();
     if (arg == nullptr) return nullptr;
     if (_name != arg->_name) return nullptr;
+    if (!equiv_cond(ad)) return nullptr;
     auto boost_sl = toClosedRange<RangeUnit::Bit, Endian::Little>
                         (_param_field.intersectWith(arg->_param_field));
     if (boost_sl == boost::none) return nullptr;
@@ -54,6 +55,7 @@ const Parameter *Constant::split(int lo, int hi) const {
     BUG_CHECK(range().contains(split_range), "Illegally splitting a parameter, as the "
               "split contains bits outside of the range");
     auto rv = new Constant(_value.getslice(split_range.lo, split_range.size()), split_range.size());
+    rv->set_cond(this);
     rv->_alias = _alias;
     return rv;
 }
@@ -69,6 +71,7 @@ bool Constant::is_next_bit_of_param(const Parameter *ad, bool same_alias) const 
     auto constant = ad->to<Constant>();
     if (constant == nullptr)
         return false;
+    if (!equiv_cond(ad)) return false;
     if (same_alias) {
         if (_alias != constant->_alias)
             return false;
@@ -85,6 +88,7 @@ const Parameter *Constant::get_extended_param(uint32_t extension,
     BUG_CHECK(con != nullptr, "Cannot extend a non-constant on constant");
     BUG_CHECK(con->size() <= static_cast<int>(extension), "The extension constant is smaller "
                                                           "than the extension size");
+    BUG_CHECK(equiv_cond(con), "The conditional masks between two constants are indentical");
     Constant *rv = new Constant(*this);
     rv->_value |= (con->_value << this->_size);
     rv->_size += extension;
@@ -113,6 +117,9 @@ const Parameter *Constant::overlap(const Parameter *ad, bool only_one_overlap_so
     auto con = ad->to<Constant>();
     if (con == nullptr)
         return nullptr;
+
+    if (!equiv_cond(ad)) return nullptr;
+
     const Constant *larger = size() > con->size() ? this : con;
     const Constant *smaller = larger == this ? con : this;
 
@@ -136,9 +143,10 @@ const Parameter *Constant::overlap(const Parameter *ad, bool only_one_overlap_so
     return rv;
 }
 
-bool Constant::equiv_value(const Parameter *ad) const {
+bool Constant::equiv_value(const Parameter *ad, bool check_cond) const {
     auto con = ad->to<Constant>();
     if (con == nullptr) return false;
+    if (check_cond && !equiv_cond(ad)) return false;
     return _size == con->_size && _value == con->_value;
 }
 
@@ -466,10 +474,17 @@ const RamSection *ALUOperation::create_RamSection(bool shift_to_lsb) const {
 
     // Put the mask in the second half of the RamSection
     if (_constraint == BITMASKED_SET) {
-        Constant *con = new Constant(_phv_bits, size());
-        con->set_alias(_mask_alias);
-        init_rv->add_param(size(), con);
+        for (auto param : _mask_params) {
+            init_rv->add_param(param.phv_bits.lo + size(), param.param);
+        }
+        bitvec reverse_mask = bitvec(0, size()) - _mask_bits;
+        for (auto br : bitranges(reverse_mask)) {
+            int br_size = (br.second - br.first) + 1;
+            Constant *con = new Constant(bitvec(), br_size);
+            init_rv->add_param(size() + br.first, con);
+        }
     }
+
 
     init_rv->add_alu_req(this);
     const RamSection *rv = nullptr;
@@ -502,7 +517,7 @@ const ALUOperation *ALUOperation::add_right_shift(int right_shift) const {
 const ALUParameter *ALUOperation::find_param_alloc(UniqueLocationKey &key) const {
     const ALUParameter *rv = nullptr;
     for (auto param : _params) {
-        if (!param.param->equiv_value(key.param))
+        if (!param.param->equiv_value(key.param, false))
             continue;
         if (param.phv_bits != key.phv_bits)
             continue;
@@ -1195,6 +1210,49 @@ void Format::Use::determine_immediate_mask() {
 }
 
 /**
+ * A map for coordinating conditional parameters to their associated position in the JSON 
+ * The key is a the name of the condition, the value is two bitvecs, one in action_data_table,
+ * one in immediate, in which the bits are controlled by that condition
+ *
+ * @see_also asm_output::EmitAction::mod_cond_value
+ */
+void Format::Use::determine_mod_cond_maps() {
+    for (auto act_alu_positions : alu_positions) {
+        auto &mod_map = mod_cond_values[act_alu_positions.first];
+        for (auto alu_position : act_alu_positions.second) {
+            safe_vector<bitvec> verify_unique_per_mask(AD_LOCATIONS, bitvec());
+            auto param_positions = alu_position.alu_op->parameter_positions();
+            for (auto param_position : param_positions) {
+                auto param = param_position.second;
+                std::set<cstring> conditional_params;
+                if (param->is_cond_type(VALUE)) {
+                    // The vector has to be initialized
+                    if (mod_map.count(param->cond_name()) == 0) {
+                        mod_map[param->cond_name()].resize(AD_LOCATIONS, bitvec());
+                    }
+
+                    int lo = param_position.first;
+                    le_bitrange cond_controlled_bits = { lo, lo + param->size() - 1 };
+                    cond_controlled_bits
+                        = cond_controlled_bits.shiftedByBits(alu_position.start_byte * 8);
+                    bitvec cond_bv(cond_controlled_bits.lo, cond_controlled_bits.size());
+                    mod_map.at(param->cond_name()).at(alu_position.loc) |= cond_bv;
+                    conditional_params.insert(param->cond_name());
+                }
+                for (auto cond_param : conditional_params) {
+                    for (int i = 0; i < AD_LOCATIONS; i++) {
+                        bitvec param_use = mod_map.at(cond_param).at(i);
+                        BUG_CHECK((verify_unique_per_mask[i] & param_use).empty(), "Two "
+                                  "conditional parameters set the same bits");
+                        verify_unique_per_mask[i] |= param_use;
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
  * During the Instruction Adjustment phase of ActionAnalysis, in order to determine
  * how to rename both constants and action data, as well as verify that the alignment is
  * correct, an action parameter must be found within the action format.
@@ -1312,10 +1370,13 @@ cstring Format::Use::get_format_name(SlotType_t slot_type, Location_t loc, int b
  * Creates an Argument from an IR::MAU::ActionArg or slice of one
  */
 void Format::create_argument(ALUOperation &alu,
-        ActionAnalysis::ActionParam &read, le_bitrange container_bits) {
+        ActionAnalysis::ActionParam &read, le_bitrange container_bits,
+        const IR::MAU::ConditionalArg *cond_arg) {
     auto ir_arg = read.unsliced_expr()->to<IR::MAU::ActionArg>();
     BUG_CHECK(ir_arg != nullptr, "Cannot create argument");
     Argument *arg = new Argument(ir_arg->name.name, read.range());
+    if (cond_arg)
+        arg->set_cond(VALUE, cond_arg->orig_arg->name);
     ALUParameter ap(arg, container_bits);
     alu.add_param(ap);
 }
@@ -1324,8 +1385,9 @@ void Format::create_argument(ALUOperation &alu,
  * Creates a Constant from an IR::Constant.  Assume to be <= 32 bits as all operations
  * at most are 32 bit ALU operations.
  */
-void Format::create_constant(ALUOperation &alu,
-        ActionAnalysis::ActionParam &read, le_bitrange container_bits, int &constant_alias_index) {
+void Format::create_constant(ALUOperation &alu, ActionAnalysis::ActionParam &read,
+        le_bitrange container_bits, int &constant_alias_index,
+        const IR::MAU::ConditionalArg *cond_arg) {
     auto ir_con = read.unsliced_expr()->to<IR::Constant>();
     BUG_CHECK(ir_con != nullptr, "Cannot create constant");
 
@@ -1337,9 +1399,37 @@ void Format::create_constant(ALUOperation &alu,
     else
         BUG("Any constant used in an ALU operation would by definition have to be < 32 bits");
     Constant *con = new Constant(constant_value, read.size());
+    if (cond_arg)
+        con->set_cond(VALUE, cond_arg->orig_arg->name);
     con->set_alias("$constant" + std::to_string(constant_alias_index++));
     ALUParameter ap(con, container_bits);
     alu.add_param(ap);
+}
+
+/**
+ * Creates a conditional argument, i.e. a bunch of 1 bit parameters that are the width
+ * of the argument to be set conditionally
+ */
+void Format::create_mask_argument(ALUOperation &alu, ActionAnalysis::ActionParam &read,
+        le_bitrange container_bits) {
+    auto cond_arg = read.unsliced_expr()->to<IR::MAU::ConditionalArg>();
+    BUG_CHECK(cond_arg != nullptr, "Cannot create argument");
+    for (int i = container_bits.lo; i <= container_bits.hi; i++) {
+        Argument *arg = new Argument(cond_arg->orig_arg->name, {0, 0});
+        ALUParameter ap(arg, {i, i});
+        alu.add_mask_param(ap);
+    }
+}
+
+/**
+ * Standard constants used as masks in bitmasked-sets.
+ */
+void Format::create_mask_constant(ALUOperation &alu, bitvec value, le_bitrange container_bits,
+        int &constant_alias_index) {
+    Constant *con = new Constant(value, container_bits.size());
+    con->set_alias("$constant" + std::to_string(constant_alias_index++));
+    ALUParameter ap(con, container_bits);
+    alu.add_mask_param(ap);
 }
 
 /**
@@ -1385,17 +1475,27 @@ void Format
             });
             if (write_count > 1)
                 BUG("Splitting of writes handled incorrectly");
+            const IR::MAU::ConditionalArg *cond_arg = nullptr;
+            if (field_action.name == "conditionally-set") {
+                auto last_read = field_action.reads.back();
+                cond_arg = last_read.unsliced_expr()->to<IR::MAU::ConditionalArg>();
+                BUG_CHECK(cond_arg != nullptr, "Last read of set-conditional instruction should "
+                    "be a conditional argument");
+            }
 
             for (auto &read : field_action.reads) {
                 if (read.speciality != ActionAnalysis::ActionParam::NO_SPECIAL)
                     continue;
-                if (read.type == ActionAnalysis::ActionParam::ACTIONDATA) {
-                    create_argument(*alu, read, container_bits);
+
+                if (read.is_conditional) {
+                    create_mask_argument(*alu, read, container_bits);
+                } else if (read.type == ActionAnalysis::ActionParam::ACTIONDATA) {
+                    create_argument(*alu, read, container_bits, cond_arg);
                     contains_action_data = true;
                     number_of_reads++;
                 } else if (read.type == ActionAnalysis::ActionParam::CONSTANT &&
                            cont_action.convert_constant_to_actiondata()) {
-                    create_constant(*alu, read, container_bits, constant_alias_index);
+                    create_constant(*alu, read, container_bits, constant_alias_index, cond_arg);
                     contains_action_data = true;
                     number_of_reads++;
                 }
@@ -1404,8 +1504,16 @@ void Format
 
         if (number_of_reads > 1 || cont_action.unresolved_ad()) {
             alu->set_alias("$data" + std::to_string(alias_index++));
-            if (alu->is_constrained(BITMASKED_SET))
-                alu->set_mask_alias("$mask" + std::to_string(mask_alias_index++));
+        }
+
+        if (alu->is_constrained(BITMASKED_SET)) {
+            bitvec constant_mask = alu->phv_bits() - alu->mask_bits();
+            for (auto br : bitranges(constant_mask)) {
+                le_bitrange container_bits = { br.first, br.second };
+                bitvec value(0, container_bits.size());
+                create_mask_constant(*alu, value, container_bits, constant_alias_index);
+            }
+            alu->set_mask_alias("$mask" + std::to_string(mask_alias_index++));
         }
 
         if (contains_action_data) {
@@ -2145,6 +2253,7 @@ void Format::build_potential_format(bool immediate_forced) {
     }
     use.bytes_per_loc = bytes_per_loc;
     use.determine_immediate_mask();
+    use.determine_mod_cond_maps();
     // If we're forcing immediate, do not consider allocations that use the action data table
     if (!immediate_forced || (immediate_forced && bytes_per_loc[ACTION_DATA_TABLE] == 0))
         uses.push_back(use);

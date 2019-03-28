@@ -977,6 +977,43 @@ Table::Actions::Action::alias_t::alias_t(value_t &data) {
         value = data.i; }
 }
 
+/**
+ * Builds a map of conditional variable to which bits in the action data format that they
+ * control.  Used for JSON later.
+ *
+ * @see_also asm_output::EmitAction::mod_cond_value
+ */
+void Table::Actions::Action::setup_mod_cond_values(value_t &map) {
+    for (auto &kv : map.map) {
+        if (CHECKTYPE(kv.key, tSTR) && CHECKTYPE(kv.value, tVEC)) {
+            mod_cond_values[kv.key.s].resize(2, bitvec());
+            for (auto &v : kv.value.vec) {
+                if (CHECKTYPEPM(v, tCMD, v.vec.size == 2, "action data or immediate slice")) {
+                    int array_index = -1;
+                    if (v[0] == "action_data_table") {
+                        array_index = MC_ADT;
+                    } else if (v[0] == "immediate") {
+                        array_index = MC_IMMED;
+                    } else {
+                        error(map.lineno, "A non action_data_table or immediate value in the " 
+                                          "mod_con_value map: %s", v[0].s);
+                        continue;
+                    }
+                    int lo = -1;
+                    int hi = -1;
+                    if (v[1].type == tINT) {
+                        lo = hi = v[1].i;
+                    } else if (v[1].type == tRANGE) {
+                        lo = v[1].lo;
+                        hi = v[1].hi;
+                    }
+                    mod_cond_values.at(kv.key.s).at(array_index).setrange(lo, hi - lo + 1);
+                }
+            }
+        }
+    }
+}
+
 Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv, int pos) {
     lineno = kv.key.lineno;
     position_in_assembly = pos;
@@ -1034,6 +1071,10 @@ Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv, int pos
                     } else if (a.key == "next_table_miss") {
                         if (CHECKTYPE(a.value, tSTR)) {
                             next_table_miss_ref = a.value;
+                        }
+                    } else if (a.key == "mod_cond_value") {
+                        if (CHECKTYPE(a.value, tMAP)) {
+                            setup_mod_cond_values(a.value); 
                         }
                     } else if (CHECKTYPE3(a.value, tSTR, tCMD, tINT)) {
                         if (a.value.type == tINT) {
@@ -1237,6 +1278,65 @@ void Table::Actions::Action::pass1(Table *tbl) {
         if (c->table_type() != COUNTER && c->table_type() != METER && c->table_type() != STATEFUL) {
             error(c.lineno, "%s is not a counter, meter or stateful table", c.name.c_str());
             continue; } }
+}
+
+/**
+ * Determines if the field, which has a particular range of bits in the format, is controlled
+ * by a conditional variable.  This is required for context JSON information on parameters in
+ * the action data table pack format, or in the immediate fields:
+ *
+ *     -is_mod_field_conditionally_value
+ *     -mod_field_conditionally_mask_field_name
+ *
+ * @see_also asm_output::EmitAction::mod_cond_value
+ */
+void Table::Actions::Action::check_conditional(Table::Format::Field &field) const {
+    bool found = false;
+    std::string condition;
+    for (auto kv : mod_cond_values) {
+        for (auto br : field.bits) {
+            auto overlap = kv.second[MC_ADT].getslice(br.lo, br.size());
+            if (overlap.empty()) {
+                BUG_CHECK(!found || found && condition != kv.first);
+            } else if (overlap.popcount() == br.size()) {
+                if (found) {
+                    BUG_CHECK(condition == kv.first);
+                } else {
+                    found = true;
+                    condition = kv.first;
+                } 
+            } else {
+                BUG();
+            }
+        }
+    }
+    if (found) {
+        field.conditional_value = true;
+        field.condition = condition;
+    }
+}
+
+/**
+ * @see_also Table::Actions::Action::check_conditional 
+ */
+bool Table::Actions::Action::immediate_conditional(int lo, int sz, std::string &condition) const {
+    bool found = false;
+    for (auto kv : mod_cond_values) {
+        auto overlap = kv.second[MC_IMMED].getslice(lo, sz);
+        if (overlap.empty()) {
+            BUG_CHECK(!found || found && condition != kv.first);
+        } else {
+            if (found) {
+                BUG_CHECK(condition == kv.first);
+            } else if (overlap.popcount() == sz) {
+                found = true;
+                condition = kv.first;
+            } else {
+                BUG();
+            }
+        }
+    }
+    return found;
 }
 
 void Table::Actions::pass1(Table *tbl) {
@@ -1696,6 +1796,12 @@ void Table::Actions::add_action_format(const Table *table, json::map &tbl) const
             action_format_per_action_imm_field["param_shift"] = lo;
             action_format_per_action_imm_field["dest_start"] = a.second.lo;
             action_format_per_action_imm_field["dest_width"] = a.second.size();
+            std::string condition;
+            if (act.immediate_conditional(a.second.lo, a.second.size(), condition)) {
+                action_format_per_action_imm_field["is_mod_field_conditionally_value"] = true;
+                action_format_per_action_imm_field["mod_field_conditionally_mask_field_name"]
+                    = condition;
+            }
             action_format_per_action_imm_fields.push_back(std::move(action_format_per_action_imm_field));
         }
         action_format.push_back(std::move(action_format_per_action));
@@ -2084,6 +2190,7 @@ void Table::add_field_to_pack_format(json::vector &field_list, int basebit, std:
                 newField = Table::Format::Field(field.fmt, fieldSize, a->second.lo + field.bits[0].lo,
                                                 static_cast<Format::Field::flags_t>(field.flags));
             }
+            act->check_conditional(newField);
 
             if (a->second.is_constant)
                 output_field_to_pack_format(field_list, basebit, a->first, "constant", 0,
@@ -2143,6 +2250,11 @@ void Table::output_field_to_pack_format(json::vector &field_list,
         }
         field_entry["lsb_mem_word_offset"] = basebit + (bits.lo % MEM_WORD_WIDTH);
         field_entry["field_name"] = json::string(name);
+
+        if (field.conditional_value) {
+            field_entry["is_mod_field_conditionally_value"] = true;
+            field_entry["mod_field_conditionally_mask_field_name"] = json::string(field.condition);
+        }
         //field_entry["immediate_name"] = json::string(immediate_name);
         //if (this->to<ExactMatchTable>())
         if (this->to<SRamMatchTable>()) {

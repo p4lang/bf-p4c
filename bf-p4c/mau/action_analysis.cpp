@@ -4,6 +4,12 @@
 #include "bf-p4c/device.h"
 #include "bf-p4c/phv/phv_fields.h"
 
+std::set<unsigned> ActionAnalysis::FieldAction::codesForErrorCases =
+    { READ_AFTER_WRITES,
+      REPEATED_WRITES,
+      MULTIPLE_ACTION_DATA,
+      BAD_CONDITIONAL_SET };
+
 std::set<unsigned> ActionAnalysis::ContainerAction::codesForErrorCases =
     { MULTIPLE_CONTAINER_ACTIONS,
       READ_PHV_MISMATCH,
@@ -19,6 +25,20 @@ std::set<unsigned> ActionAnalysis::ContainerAction::codesForErrorCases =
 /** Calculates a total container constant, given which constants wrote to which fields in the
  *  operation
  */
+
+
+std::string ActionAnalysis::ActionParam::to_string() const {
+    std::stringstream str;
+    str << *this;
+    return str.str();
+}
+
+std::string ActionAnalysis::FieldAction::to_string() const {
+    std::stringstream str;
+    str << *this;
+    return str.str();
+}
+
 unsigned ActionAnalysis::ConstantInfo::build_constant() {
     unsigned rv = 0;
     BUG_CHECK(!positions.empty(), "Building a constant over a container when no constants are "
@@ -97,6 +117,9 @@ void ActionAnalysis::initialize_action_data(const IR::Expression *expr) {
         field_action.reads.back().speciality = ActionParam::STFUL_COUNTER;
     if (field_action.reads.back().unsliced_expr()->is<IR::MAU::RandomNumber>())
         field_action.reads.back().speciality = ActionParam::RANDOM;
+    if (field_action.reads.back().unsliced_expr()->is<IR::MAU::ConditionalArg>()) {
+        field_action.reads.back().is_conditional = true;
+    }
 }
 
 ActionAnalysis::ActionParam::speciality_t
@@ -209,6 +232,11 @@ bool ActionAnalysis::preorder(const IR::MAU::ActionArg *arg) {
         return false;
 
     initialize_action_data(arg);
+    return false;
+}
+
+bool ActionAnalysis::preorder(const IR::MAU::ConditionalArg *ca) {
+    initialize_action_data(ca);
     return false;
 }
 
@@ -345,6 +373,7 @@ void ActionAnalysis::postorder(const IR::MAU::Instruction *instr) {
                     auto read_slice = MakeSliceSource(read.expr, alloc.field_bit, alloc.field_hi(),
                             field_action.write.expr);
                     field_action_split.reads.emplace_back(read.type, read_slice, read.speciality);
+                    field_action_split.reads.back().is_conditional = read.is_conditional;
                 }
                 (*container_actions_map)[container].field_actions.push_back(field_action_split);
             }
@@ -352,6 +381,43 @@ void ActionAnalysis::postorder(const IR::MAU::Instruction *instr) {
     } else {
         (*field_actions_map)[instr] = field_action;
     }
+}
+
+
+void ActionAnalysis::verify_conditional_set_without_phv(cstring action_name, FieldAction &fa) {
+    le_bitrange write_range = { 0, 0 };
+    auto write_field = phv.field(fa.write.expr, &write_range);
+    int op_idx = 0;
+
+    BUG_CHECK(fa.reads.size() == 2 || fa.reads.size() == 3, "Conditional set instruction not "
+        "calculated correctly");
+
+    if (fa.reads.size() == 3) {
+        auto param = fa.reads[op_idx];
+        BUG_CHECK(param.type == ActionParam::PHV, "Conditional write instruction PHV "
+                                                  "field not built correctly");
+        le_bitrange read_range = { 0, 0 };
+        auto read_field = phv.field(param.expr, &read_range);
+        BUG_CHECK(!(read_field == write_field && write_range == read_range), "Conditional write "
+            "is setting itself, which should have been eliminated");
+        op_idx++;
+    }
+
+    auto arg_param = fa.reads[op_idx];
+    BUG_CHECK(arg_param.type != ActionParam::PHV, "Conditional write action data field not built "
+        "correctly");
+    if (arg_param.speciality != ActionParam::NO_SPECIAL) {
+       ::warning("Conditional set instruction parameter %s in instruction %s in action %s "
+                 "must be from an action argument or constant", arg_param.to_string(),
+                 fa.to_string(), action_name);
+       warning = true;
+       fa.error_code |= FieldAction::BAD_CONDITIONAL_SET;
+       return;
+    }
+    op_idx++;
+
+    auto cond_param = fa.reads[op_idx];
+    BUG_CHECK(cond_param.is_conditional, "Conditional set parameter is not created correctly");
 }
 
 /** PHV allocation is not known by the time of this verification.  This check just guarantees
@@ -379,6 +445,7 @@ bool ActionAnalysis::verify_P4_action_without_phv(cstring action_name) {
             if (written_fields[field].intersects(read_bits)) {
                 ::warning("Action %s has a read of a field %s after it already has been written",
                           action_name, cstring::to_cstring(read));
+                field_action.error_code |= FieldAction::READ_AFTER_WRITES;
                 warning = true;
             }
         }
@@ -390,6 +457,7 @@ bool ActionAnalysis::verify_P4_action_without_phv(cstring action_name) {
         if (written_fields.find(field) != written_fields.end()) {
             if (written_fields[field].intersects(write_bits)) {
                 ::warning("Action %s has repeated lvalue %s", action_name, field->name);
+                field_action.error_code |= FieldAction::REPEATED_WRITES;
                 warning = true;
             }
             written_fields[field] |= write_bits;
@@ -398,13 +466,19 @@ bool ActionAnalysis::verify_P4_action_without_phv(cstring action_name) {
         }
 
         int non_phv_count = 0;
-        for (auto read : field_action.reads) {
-            if (read.type == ActionParam::ACTIONDATA || read.type == ActionParam::CONSTANT)
-                non_phv_count++;
-            if (non_phv_count > 1) {
-                ::warning("In action %s, the following instruction has multiple action data "
-                          "parameters: %s", action_name, cstring::to_cstring(field_action));
-                warning = true;
+
+        if (field_action.name == "conditionally-set") {
+            verify_conditional_set_without_phv(action_name, field_action);
+        } else {
+            for (auto read : field_action.reads) {
+                if (read.type == ActionParam::ACTIONDATA || read.type == ActionParam::CONSTANT)
+                    non_phv_count++;
+                if (non_phv_count > 1) {
+                    ::warning("In action %s, the following instruction has multiple action data "
+                              "parameters: %s", action_name, cstring::to_cstring(field_action));
+                    field_action.error_code |= FieldAction::MULTIPLE_ACTION_DATA;
+                    warning = true;
+                }
             }
         }
 
@@ -414,12 +488,23 @@ bool ActionAnalysis::verify_P4_action_without_phv(cstring action_name) {
                     ::warning("In action %s, write %s and read %s sizes do not match up",
                               action_name, cstring::to_cstring(field_action.write),
                               cstring::to_cstring(read));
+                    field_action.error_code |= FieldAction::DIFFERENT_OP_SIZE;
                     warning = true;
                 }
             }
         }
     }
 
+    // For certain error codes, we now should throw an error.
+    for (auto& field_action_info : *field_actions_map) {
+        auto &field_action = field_action_info.second;
+        for (auto refCode : FieldAction::codesForErrorCases) {
+            if ((field_action.error_code & refCode) != 0) {
+                error = true;
+                break;
+            }
+        }
+    }
     return true;
 }
 
@@ -491,6 +576,8 @@ bool ActionAnalysis::initialize_alignment(const ActionParam &write, const Action
     BUG_CHECK(count == 1, "ActionAnalysis did not split up container by container");
 
     bool initialized;
+    if (read.is_conditional)
+        return true;
     if (read.type == ActionParam::PHV) {
         initialized = init_phv_alignment(read, cont_action, write_bits, error_message);
     } else if (ad_alloc) {
@@ -756,13 +843,29 @@ bool ActionAnalysis::verify_P4_action_with_phv(cstring action_name) {
         bool same_action = true;
         BUG_CHECK(cont_action.field_actions.size() > 0, "Somehow a container action has no "
                                                         "field actions allocated to it");
-        instr_name = cont_action.field_actions[0].name;
+
+        // Both conditionally-set and set can be combined in the same container action, as these
+        // both can be converted into a bitmasked-set.  This is tracked as a to-bitmasked-set
+        // name on the container action
+        bool to_bitmasked_set = false;
         for (auto &field_action : cont_action.field_actions) {
-            if (instr_name != field_action.name) {
+            if (field_action.name == "conditionally-set")
+                to_bitmasked_set = true;
+        }
+
+        instr_name = to_bitmasked_set ? "to-bitmasked-set" : cont_action.field_actions[0].name;
+        for (auto &field_action : cont_action.field_actions) {
+            if (instr_name == "to-bitmasked-set") {
+                if (field_action.name != "set" && field_action.name != "conditionally-set") {
+                    cont_action.error_code |= ContainerAction::MULTIPLE_CONTAINER_ACTIONS;
+                    same_action = false;
+                }
+            } else if (instr_name != field_action.name) {
                 cont_action.error_code |= ContainerAction::MULTIPLE_CONTAINER_ACTIONS;
                 same_action = false;
             }
         }
+
 
         if (!same_action && error_verbose) {
             ::warning("In action %s over container %s, the action has multiple operand types %s",
@@ -827,7 +930,6 @@ bool ActionAnalysis::verify_P4_action_with_phv(cstring action_name) {
             }
         }
     }
-
     return true;
 }
 
@@ -1037,7 +1139,7 @@ bool ActionAnalysis::ContainerAction::verify_set_alignment(PHV::Container &conta
     bool max_ad_non_contiguous = 0;
     bool max_phv_non_contiguous = counts[ActionParam::PHV] - max_phv_unaligned;
 
-    if (ad_sources() && !ad_alignment.contiguous()) {
+    if ((ad_sources() && !ad_alignment.contiguous()) || name == "to-bitmasked-set") {
         convert_instr_to_bitmasked_set = true;
         max_ad_non_contiguous = 1;
         max_ad_unaligned = 0;
@@ -1154,7 +1256,7 @@ bool ActionAnalysis::ContainerAction::verify_alignment(PHV::Container &container
         if (!ta.verify_individual_alignments(container))
             return false;
 
-    if (name == "set") {
+    if (is_from_set()) {
         if (container.is(PHV::Kind::normal)) {
             if (!verify_set_alignment(container, ad_alignment))
                 return false;
@@ -1405,6 +1507,19 @@ void ActionAnalysis::ContainerAction::move_source_to_bit(safe_vector<int> &bit_u
  */
 bool ActionAnalysis::ContainerAction::verify_source_to_bit(int operands,
         PHV::Container container) {
+    /**
+     * When combining a conditional-set with another set, the number of operands is not perfect
+     * here, as the operands can be either one or two bits, i.e.
+     *
+     * conditional-set f1, f2, arg1, cond-arg
+     * set f3, arg2
+     *
+     * How many sources, the condtional-set would have either two sources, but the normal
+     * set would have one operand.  Potentially can be rewritten
+     */
+    if (name == "to-bitmasked-set")
+        return true;
+
     safe_vector<int> bit_uses(container.size(), 0);
 
     for (auto &phv_ta : phv_alignment) {
@@ -1576,7 +1691,8 @@ bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
         return false;
     }
 
-    if (name != "set" && sources_needed != operands()) {
+
+    if (!is_from_set() && sources_needed != operands()) {
         error_code |= OPERAND_MISMATCH;
         error_message += "the number of operands does not match the number of sources";
         return false;
@@ -1598,7 +1714,7 @@ bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
         return false;
     }
 
-    bool check_overwrite = !(name == "set" && container.is(PHV::Kind::normal));
+    bool check_overwrite = !(is_from_set() && container.is(PHV::Kind::normal));
 
     if (check_overwrite) {
         bool total_overwrite_possible = verify_overwritten(container, phv);

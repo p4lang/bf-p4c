@@ -251,14 +251,13 @@ bool DoInstructionSelection::checkPHV(const IR::Expression *e) {
     return phv.field(e);
 }
 
-bool DoInstructionSelection::checkSrc1(const IR::Expression *e) {
-    LOG3("Checking src1 : " << e);
+bool DoInstructionSelection::checkActionBus(const IR::Expression *e) {
     if (auto *c = e->to<IR::BFN::ReinterpretCast>())
-        return checkSrc1(c->expr);
+        return checkActionBus(c->expr);
     if (auto *c = e->to<IR::BFN::SignExtend>())
-        return checkSrc1(c->expr);
+        return checkActionBus(c->expr);
     if (auto slice = e->to<IR::Slice>())
-        return checkSrc1(slice->e0);
+        return checkActionBus(slice->e0);
     if (e->is<IR::Constant>()) return true;
     if (e->is<IR::BoolLiteral>()) return true;
     if (e->is<IR::MAU::ActionArg>()) return true;
@@ -269,6 +268,19 @@ bool DoInstructionSelection::checkSrc1(const IR::Expression *e) {
     if (auto m = e->to<IR::Member>())
         if (m->expr->is<IR::MAU::AttachedOutput>())
             return true;
+    return false;
+}
+
+bool DoInstructionSelection::checkSrc1(const IR::Expression *e) {
+    LOG3("Checking src1 : " << e);
+    if (auto *c = e->to<IR::BFN::ReinterpretCast>())
+        return checkSrc1(c->expr);
+    if (auto *c = e->to<IR::BFN::SignExtend>())
+        return checkSrc1(c->expr);
+    if (auto slice = e->to<IR::Slice>())
+        return checkSrc1(slice->e0);
+    if (checkActionBus(e))
+        return true;
     return phv.field(e);
 }
 
@@ -547,13 +559,56 @@ const IR::Node *DoInstructionSelection::postorder(IR::Primitive *prim) {
         } else if (!phv.field(dest)) {
             error("%s: destination of %s must be a field", prim->srcInfo, prim->name);
         } else if (auto *rv = fillInstDest(prim->operands[1], dest)) {
-            LOG1("returned value " << rv);
             return rv;
         } else if (!checkSrc1(prim->operands[1])) {
-            if (prim->operands[1]->is<IR::Mux>())
-                error("%s: conditional assignment not supported", prim->srcInfo);
-            else
+            /**
+             * Converting ternary operands into conditionally-set format:
+             *
+             *     conditionally-set destination, (optional background), source, conditional arg
+             * 
+             * In examples:
+             *     f1 = cond ? arg1 : f1 -> conditionally-set f1, arg1, cond1 (implicit background)
+             *
+             *     f1 = cond ? arg1 : f2 -> conditionally-set f1, f2, arg1, cond1
+             */
+            if (auto mux = prim->operands[1]->to<IR::Mux>()) {
+                auto type = prim->operands[0]->type->to<IR::Type::Bits>();
+                auto arg = mux->e0->to<IR::MAU::ActionArg>();
+                BUG_CHECK(arg != nullptr, "%s: Conditional on mux is not an action argument",
+                                          prim->srcInfo);
+                cstring cond_arg_name = "$cond_arg" + std::to_string(synth_arg_num++);
+                auto cond_arg = new IR::MAU::ConditionalArg(mux->e0->srcInfo, type, af->name,
+                                                            cond_arg_name, arg);
+                cstring instr_name = "conditionally-set";
+                IR::MAU::Instruction *rv = nullptr;
+                if (equiv(prim->operands[0], mux->e2) && checkActionBus(mux->e1)) {
+                    rv = new IR::MAU::Instruction(prim->srcInfo, instr_name,
+                             { prim->operands[0], mux->e1, cond_arg });
+                } else if (equiv(prim->operands[0], mux->e1) && checkActionBus(mux->e2)) {
+                    cond_arg->one_on_true = false;
+                    rv = new IR::MAU::Instruction(prim->srcInfo, instr_name,
+                            { prim->operands[0], mux->e2, cond_arg });
+                    error("%s: conditional assignment must be reverse, as the non PHV "
+                          "parameter must be on the true branch for support in the driver",
+                          prim->srcInfo);
+                } else if (checkActionBus(mux->e1) && checkPHV(mux->e2)) {
+                    rv = new IR::MAU::Instruction(prim->srcInfo, instr_name,
+                            { prim->operands[0], mux->e2, mux->e1, cond_arg });
+                } else if (checkActionBus(mux->e2) && checkPHV(mux->e1)) {
+                    cond_arg->one_on_true = false;
+                    rv = new IR::MAU::Instruction(prim->srcInfo, instr_name,
+                            { prim->operands[0], mux->e1, mux->e2, cond_arg });
+                    error("%s: conditional assignment must be reverse, as the non PHV "
+                          "parameter must be on the true branch for support in the driver",
+                          prim->srcInfo);
+                } else {
+                    error("%s: conditional assignment is too complicated to support in ",
+                          " a single operation", prim->srcInfo);
+                }
+                return rv;
+            } else {
                 error("%s: source of %s invalid", prim->srcInfo, prim->name);
+            }
         } else if (prim->operands.size() == 2) {
             return new IR::MAU::Instruction(prim->srcInfo, "set", &prim->operands);
         } else if (!checkConst(prim->operands[2], mask)) {

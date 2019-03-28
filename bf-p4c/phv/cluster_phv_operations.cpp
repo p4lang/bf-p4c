@@ -6,6 +6,7 @@
 
 const ordered_set<cstring> PHV_Field_Operations::BITWISE_OPS = {
     "set",
+    "conditionally-set",
     "and",
     "or",
     "not",

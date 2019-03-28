@@ -59,6 +59,7 @@ const IR::MAU::Action *ConstantsToActionData::preorder(IR::MAU::Action *act) {
     constant_containers.clear();
     auto tbl = findContext<IR::MAU::Table>();
     ActionAnalysis aa(phv, true, true, tbl);
+    aa.set_verbose();
     aa.set_container_actions_map(&container_actions_map);
     act->apply(aa);
 
@@ -232,6 +233,7 @@ const IR::MAU::Action *MergeInstructions::preorder(IR::MAU::Action *act) {
     merged_fields.clear();
     auto tbl = findContext<IR::MAU::Table>();
     ActionAnalysis aa(phv, true, true, tbl);
+    // aa.set_verbose();
     aa.set_container_actions_map(&container_actions_map);
     act->apply(aa);
     if (aa.misaligned_actiondata())
@@ -246,11 +248,13 @@ const IR::MAU::Action *MergeInstructions::preorder(IR::MAU::Action *act) {
         auto container = container_action.first;
         auto &cont_action = container_action.second;
         if ((cont_action.error_code & error_mask) != 0) continue;
-        if (cont_action.field_actions.size() == 1)
+        if (cont_action.field_actions.size() == 1) {
             if (!cont_action.convert_instr_to_deposit_field
+                && !cont_action.convert_instr_to_bitmasked_set
                 && (cont_action.error_code & ~error_mask) == 0)
                 continue;
         // Currently skip unresolved ActionAnalysis issues
+        }
         merged_fields.insert(container);
     }
 
@@ -485,7 +489,6 @@ IR::MAU::Instruction *MergeInstructions::dest_slice_to_container(PHV::Container 
  */
 IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container container,
          ActionAnalysis::ContainerAction &cont_action) {
-    LOG1("Build merge instruction " << cont_action << " " << cont_action.error_code);
     if (cont_action.is_shift()) {
         unsigned error_mask = ActionAnalysis::ContainerAction::PARTIAL_OVERWRITE;
         BUG_CHECK((cont_action.error_code & error_mask) != 0,
@@ -528,6 +531,8 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
             for (auto &field_action : cont_action.field_actions) {
                 for (auto &read : field_action.reads) {
                     if (read.type != ActionAnalysis::ActionParam::ACTIONDATA)
+                        continue;
+                    if (read.is_conditional)
                         continue;
                     BUG_CHECK(single_action_data, "Action data that shouldn't require an alias "
                               "does require an alias");
@@ -845,7 +850,7 @@ void GeneratePrimitiveInfo::add_hash_dist_json(Util::JsonObject *_primitive,
 
 void GeneratePrimitiveInfo::gen_action_json(const IR::MAU::Action *act,
         Util::JsonObject *_action) {
-    LOG1("GeneratePrimitiveInfo Act: " << canon_name(act->name));
+    LOG3("GeneratePrimitiveInfo Act: " << canon_name(act->name));
     auto _primitives = new Util::JsonArray();
     for (auto call : act->stateful_calls) {
         // FIXME: Add info for hash_inputs, related to context.json schema 1.5.8
@@ -983,6 +988,7 @@ void GeneratePrimitiveInfo::gen_action_json(const IR::MAU::Action *act,
     }
 
     std::vector<std::string> modifyPrimVec = { "set" };
+    std::vector<std::string> modifyCondPrimVec { "conditionally-set" };
     std::vector<std::string> invalidatePrimVec = { "invalidate" };
     std::vector<std::string> shiftPrimVec = { "shru", "shl", "shrs" };
     std::vector<std::string> directAluPrimVec = {
@@ -993,6 +999,7 @@ void GeneratePrimitiveInfo::gen_action_json(const IR::MAU::Action *act,
         "sub", "subc", "ssubu", "ssubs" };
     std::map<std::string, std::vector<std::string>* > prims = {
         { "ModifyFieldPrimitive", &modifyPrimVec },
+        { "ModifyFieldConditionallyPrimitive", &modifyCondPrimVec },
         { "InvalidatePrimitive", &invalidatePrimVec },
         { "ShiftPrimitive", &shiftPrimVec },
         { "DirectAluPrimitive", &directAluPrimVec }
@@ -1083,6 +1090,8 @@ void GeneratePrimitiveInfo::gen_action_json(const IR::MAU::Action *act,
             }
             // Don't output operand json if instruction is a stateful destination,
             // this info goes within the stateful primitive evaluated above.
+
+
             if ((inst->operands.size() >= 2) && (!is_stful_dest)) {
                 // Add dst operands
                 auto dst = inst->operands[0]->to<IR::Expression>();
@@ -1092,12 +1101,31 @@ void GeneratePrimitiveInfo::gen_action_json(const IR::MAU::Action *act,
                     add_op_json(_primitive, "dst_mask", "immediate",
                             std::to_string((1U << bits.size()) - 1));
                 }
-                // Add src operands
-                auto idx = 0;
-                for (auto src : inst->operands) {
-                    if (idx++ == 0) continue;  // skip 1st op which is dst
-                    auto src_name = "src" + std::to_string(idx - 1);
-                    validate_add_op_json(_primitive, src_name, src);
+
+                if (inst->name == "conditionally-set") {
+                    auto iteration = 0;
+                    for (int idx = inst->operands.size() - 1; idx > 0; idx--) {
+                        std::string src_name;
+                        switch (iteration) {
+                            case 0: src_name = "cond"; break;
+                            case 1: src_name = "src1"; break;
+                            case 2: src_name = "src2"; break;
+                            default: BUG("Too many operands in a conditional-set");
+                        }
+                        auto src = inst->operands.at(idx);
+                        if (iteration == 0)
+                            src = src->to<IR::MAU::ConditionalArg>()->orig_arg;
+                        validate_add_op_json(_primitive, src_name, src);
+                        iteration++;
+                    }
+                } else {
+                    // Add src operands
+                    auto idx = 0;
+                    for (auto src : inst->operands) {
+                        if (idx++ == 0) continue;  // skip 1st op which is dst
+                        auto src_name = "src" + std::to_string(idx - 1);
+                        validate_add_op_json(_primitive, src_name, src);
+                    }
                 }
             }
         }
@@ -1140,7 +1168,7 @@ void GeneratePrimitiveInfo::validate_add_op_json(Util::JsonObject *_primitive,
 
 bool GeneratePrimitiveInfo::preorder(const IR::MAU::Table *tbl) {
     auto tname = tbl->match_table ? tbl->match_table->externalName() : tbl->name;
-    LOG1("Table: " << canon_name(tname));
+    LOG3("Table: " << canon_name(tname));
     bool alpm_preclassifier = tbl->name.endsWith("preclassifier");
 
     if (tbl->actions.empty()) return true;

@@ -45,6 +45,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         const IR::Expression *expr;
         enum speciality_t { NO_SPECIAL, HASH_DIST, METER_COLOR, RANDOM, METER_ALU, STFUL_COUNTER }
              speciality = NO_SPECIAL;
+        bool is_conditional = false;
 
         ActionParam() : expr(nullptr) {}
         ActionParam(type_t t, const IR::Expression *e)
@@ -65,6 +66,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         }
 
         friend std::ostream &operator<<(std::ostream &out, const ActionParam &);
+        std::string to_string() const;
 
         // void dbprint(std::ostream &out) const;
         const IR::Expression *unsliced_expr() const;
@@ -96,7 +98,19 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
             return name == "shru" || name == "shrs" || name == "shl";
         }
 
+        enum error_code_t {
+            NO_PROBLEM = 0,
+            READ_AFTER_WRITES = 1 << 0,
+            REPEATED_WRITES = 1 << 1,
+            MULTIPLE_ACTION_DATA = 1 << 2,
+            DIFFERENT_OP_SIZE = 1 << 3,
+            BAD_CONDITIONAL_SET = 1 << 4
+        };
+        unsigned error_code = 0;
+
         friend std::ostream &operator<<(std::ostream &out, const FieldAction &);
+        std::string to_string() const;
+        static std::set<unsigned> codesForErrorCases;
     };
 
     /** Information on the PHV fields and action data that are read by an individual
@@ -290,6 +304,8 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         }
 
         int operands() const {
+            if (name == "to-bitmasked-set")
+                return 1;
             if (field_actions.size() == 0)
                 BUG("Cannot call operands function on empty container process");
             return field_actions[0].reads.size();
@@ -305,6 +321,10 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
 
         bool is_shift() const {
             return name == "shru" || name == "shrs" || name == "shl";
+        }
+
+        bool is_from_set() const {
+            return name == "set" || name == "to-bitmasked-set";
         }
 
         bool has_ad_or_constant() const {
@@ -338,7 +358,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         }
 
         bool action_data_isolated() const {
-            return name != "set";
+            return !is_from_set();
         }
 
         bool set_invalidate_write_bits(le_bitrange write) {
@@ -406,6 +426,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
 
     bool preorder(const IR::Slice *) override;
     bool preorder(const IR::MAU::ActionArg *) override;
+    bool preorder(const IR::MAU::ConditionalArg *) override;
     bool preorder(const IR::Cast *) override;
     bool preorder(const IR::Expression *) override;
     bool preorder(const IR::Member *) override;
@@ -445,6 +466,8 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
     void check_constant_to_actiondata(ContainerAction &cont_action, PHV::Container container);
     void add_to_single_ad_params(ContainerAction &cont_action);
     void check_single_ad_params(ContainerAction &cont_action);
+
+    void verify_conditional_set_without_phv(cstring action_name, FieldAction &fa);
 
     void verify_P4_action_for_tofino(cstring action_name);
     bool verify_P4_action_without_phv(cstring action_name);
