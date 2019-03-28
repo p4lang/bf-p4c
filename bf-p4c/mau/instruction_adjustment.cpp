@@ -59,7 +59,6 @@ const IR::MAU::Action *ConstantsToActionData::preorder(IR::MAU::Action *act) {
     constant_containers.clear();
     auto tbl = findContext<IR::MAU::Table>();
     ActionAnalysis aa(phv, true, true, tbl);
-    aa.set_verbose();
     aa.set_container_actions_map(&container_actions_map);
     act->apply(aa);
 
@@ -233,7 +232,6 @@ const IR::MAU::Action *MergeInstructions::preorder(IR::MAU::Action *act) {
     merged_fields.clear();
     auto tbl = findContext<IR::MAU::Table>();
     ActionAnalysis aa(phv, true, true, tbl);
-    // aa.set_verbose();
     aa.set_container_actions_map(&container_actions_map);
     act->apply(aa);
     if (aa.misaligned_actiondata())

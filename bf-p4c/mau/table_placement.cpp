@@ -604,9 +604,6 @@ bool TablePlacement::try_alloc_format(TablePlacement::Placed *next, TableResourc
         bool gw_linked) {
     const bitvec immediate_mask = next->use.preferred_action_format()->immediate_mask;
     resources->table_format.clear();
-    if (!siaa.action_data_shared_tables(next->table).empty())
-        gw_linked = true;
-
     TableFormat current_format(*next->use.preferred(), resources->match_ixbar,
                                resources->proxy_hash_ixbar, next->table,
                                immediate_mask, gw_linked);
@@ -678,14 +675,6 @@ bool TablePlacement::try_alloc_imem(Placed *next, const Placed *done,
     }
 
     bool gw_linked = next->gw != nullptr;
-    // FIXME: Because in the assembly, the actions are output with the action data table,
-    // in order to ensure that all action profiles have correct mem_codes, the algorithm
-    // currently always needs to assume a gateway exists.  This BUG arose from one table
-    // with an action profile having a gateway, while the other table did not.  The true
-    // fix would be to output the actions separate from the action table and with the
-    // table instead
-    if (!siaa.action_data_shared_tables(next->table).empty())
-        gw_linked = true;
     if (!imem.allocate_imem(next->table, resources->instr_mem, phv, gw_linked)) {
         error_message = "The table " + next->table->name + " could not fit within the "
                         "instruction memory";
