@@ -94,12 +94,15 @@ analyzeUpdateChecksumStatement(const IR::AssignmentStatement* assignment) {
 
     const IR::ListExpression* sourceList =
         (*methodCall->arguments)[0]->expression->to<IR::ListExpression>();
+    std::map<const IR::HeaderOrMetadata*, ordered_set<const IR::Member*>> checksumFieldMap;
+    ordered_set<const IR::ConcreteHeaderRef*> checksumHeaders;
 
     auto* sources = new IR::Vector<IR::BFN::FieldLVal>;
     for (auto* source : sourceList->components) {
         if (auto* member = source->to<IR::Member>()) {
-            LOG2("Checksum includes field: " << source);
-            sources->push_back(new IR::BFN::FieldLVal(member));
+            auto header = member->expr->to<IR::ConcreteHeaderRef>();
+            checksumHeaders.insert(header);
+            checksumFieldMap[header->ref].insert(member);
         } else if (auto* headerRef = source->to<IR::ConcreteHeaderRef>()) {
             auto header = headerRef->baseRef();
             for (auto field : header->type->fields) {
@@ -116,7 +119,21 @@ analyzeUpdateChecksumStatement(const IR::AssignmentStatement* assignment) {
             :: error("Invalid entry in checksum calculation %1%", source);
         }
     }
-
+    if (!checksumFieldMap.empty()) {
+        for (auto*header : checksumHeaders) {
+            const IR::HeaderOrMetadata* headerRef = header->baseRef();
+            for (auto* field : headerRef->type->fields) {
+                if (checksumFieldMap.count(headerRef)) {
+                    for (auto* member : checksumFieldMap.at(headerRef)) {
+                        if (member->member == field->name) {
+                            sources->push_back(new IR::BFN::FieldLVal(member));
+                            LOG2("Checksum includes field:" << field);
+                        }
+                    }
+                }
+            }
+        }
+    }
     LOG2("Validated computed checksum for field: " << destField);
 
     auto info = new ChecksumUpdateInfo(destField->toString(), sources);
