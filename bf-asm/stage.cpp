@@ -478,11 +478,8 @@ void Stage::output(json::map &ctxt_json) {
     for (auto table : tables) {
         table->write_regs(*regs);
         table->gen_tbl_cfg(ctxt_tables);
-        // Generate json for attached gateway tables. For ternary indirection
-        // skip as the table is already generated with main ternary table
-        if (table->table_type() != Table::TERNARY_INDIRECT)
-            if (auto gw = table->get_gateway()) 
-                gw->gen_tbl_cfg(ctxt_tables);
+        if (auto gw = table->get_gateway()) 
+            gw->gen_tbl_cfg(ctxt_tables);
         if (table->logical_id >= 0)
             table->gen_name_lookup(table_names[std::to_string(table->logical_id)]); }
     write_regs(*regs);

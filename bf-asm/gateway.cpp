@@ -501,12 +501,19 @@ void GatewayTable::write_regs(REGS &regs) {
         merge.exact_match_logical_result_delay |= 1 << logical_id;
 }
 
+std::set<std::string> gateways_in_json;
 void GatewayTable::gen_tbl_cfg(json::vector &out) const {
+    // Avoid adding gateway table multiple times to the json. The gateway table
+    // gets called multiple times in some cases based on how it is attached or
+    // associated with a match table, we should only output it to json once.
+    auto gwName = gateway_name.empty() ? name() : gateway_name;
+    if (gateways_in_json.count(gwName)) return;
+    LOG3("### Gateway table " << gwName << " gen_tbl_cfg");
     json::map gTable;
     gTable["direction"] = P4Table::direction_name(gress);
     gTable["attached_to"] = match_table ? match_table->name() : "-" ;
     gTable["handle"] = gateway_handle++;
-    gTable["name"] = gateway_name.empty() ? name() : gateway_name;
+    gTable["name"] = gwName;
     gTable["table_type"] = "condition";
 
     json::vector gStageTables;
@@ -546,4 +553,5 @@ void GatewayTable::gen_tbl_cfg(json::vector &out) const {
     gTable["condition"] = gateway_cond;
     gTable["size"] = 0;
     out.push_back(std::move(gTable));
+    gateways_in_json.insert(gwName);
 }
