@@ -30,7 +30,8 @@ show_help () {
     echo >&2 "   --build-dir <dir>      build in <dir> rather than ./build"
     echo >&2 "   --build-type <type>    DEBUG RELEASE or RelWithDebInfo"
     echo >&2 "   --p4c-cpp-flags <x>    add <x> to CPPFLAGS for p4c build"
-    echo >&2 "   --minimal-config       disable most things"
+    echo >&2 "   --small-config         only builds the compiler and testing"
+    echo >&2 "   --minimal-config       disable most build targets other than the compiler"
 }
 
 
@@ -38,6 +39,7 @@ RUN_BOOTSTRAP_PTF=yes
 builddir=${mydir}/build
 buildtype=DEBUG
 P4C_CPP_FLAGS=''
+smallConfig=false
 minimalConfig=false
 disableUnified=false
 otherArgs=""
@@ -58,6 +60,9 @@ while [ $# -gt 0 ]; do
     --p4c-cpp-flags)
         P4C_CPP_FLAGS="$2"
         shift
+        ;;
+    --small-config)
+        smallConfig=true
         ;;
     --minimal-config)
         minimalConfig=true
@@ -110,6 +115,10 @@ install_hook pre-commit
 install_hook commit-msg
 
 ENABLED_COMPONENTS="-DENABLE_JBAY=ON -DENABLE_EBPF=OFF"
+if $smallConfig ; then
+    ENABLED_COMPONENTS="$ENABLED_COMPONENTS -DENABLE_BMV2=OFF \
+                        -DENABLE_P4C_GRAPHS=OFF -DENABLE_GTESTS=OFF"
+fi
 if $minimalConfig ; then
     ENABLED_COMPONENTS="$ENABLED_COMPONENTS -DENABLE_BMV2=OFF -DENABLE_P4TEST=OFF \
                         -DENABLE_P4C_GRAPHS=OFF -DENABLE_TESTING=OFF -DENABLE_GTESTS=OFF"

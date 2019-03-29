@@ -67,6 +67,14 @@ Under that temporary directory you will find:
   - the bf_switchd console output
   - the PTF logs
 
+To enable the model log, set the `ENABLE_MODEL_LOG` environment variable and run
+the ctest command as-is:
+
+    export ENABLE_MODEL_LOG=1
+    ctest -L ptf [-R <test>]
+
+To enable *verbose* model log, set the `VERBOSE_MODEL_LOG` environment variable.
+
 In some cases, these logs are not enough and you want to have more control over
 the execution of a PTF test. In this case, you can run the test in "3-window
 mode", using a separate terminal window for the model, bf_switchd and PTF.

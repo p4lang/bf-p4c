@@ -72,8 +72,6 @@ def get_parser():
                         default='localhost:50051')
     parser.add_argument('--keep-logs', help='Keep logs even if test passes',
                         action='store_true', default=False)
-    parser.add_argument('--verbose-model-log', help='Dump verbose model log',
-                        action='store_true', default=False)
     parser.add_argument('--update-config-only',
                         help='Only push the config to bf_switchd',
                         action='store_true', default=False)
@@ -96,6 +94,8 @@ def get_parser():
                         help='Generate output in JUnit XML format')
     parser.add_argument('--enable-model-logging', action='store_true', default=False,
                         help='Enable model logging for debug purposes')
+    parser.add_argument('--verbose-model-logging', help='Enable verbose model logging',
+                        action='store_true', default=False)
     return parser
 
 DEFAULT_NUM_IFACES = 16
@@ -173,9 +173,9 @@ def update_config(name, grpc_addr, p4info_path, bin_path, cxt_json_path):
     return True
 
 def run_pi_ptf_tests(PTF, grpc_addr, ptfdir, p4info_path, port_map, stftest,
-                  platform, verbose_model_log, extra_args=[]):
-    if verbose_model_log:
-        enable_verbose_model_log()
+                  platform, verbose_model_logging, extra_args=[]):
+    if verbose_model_logging:
+        enable_verbose_model_logging()
 
     ifaces = []
     # find base_test.py
@@ -210,10 +210,10 @@ def run_pi_ptf_tests(PTF, grpc_addr, ptfdir, p4info_path, port_map, stftest,
     return p.returncode == 0
 
 def run_pd_ptf_tests(PTF, device, p4name, config_file, ptfdir, testdir, platform, port_map,
-                     verbose_model_log, extra_args=[], port_map_file=None, test_port=None, 
+                     verbose_model_logging, extra_args=[], port_map_file=None, test_port=None, 
                      installdir="/usr/local"):
-    if verbose_model_log:
-        enable_verbose_model_log()
+    if verbose_model_logging:
+        enable_verbose_model_logging()
 
     ifaces = []
     # find p4ptfutils
@@ -393,7 +393,7 @@ def sanitize_args(args):
         error("Invalid --top-builddir")
         sys.exit(1)
 
-def enable_verbose_model_log():
+def enable_verbose_model_logging():
     child = pexpect.spawn('telnet localhost 8000')
     child.logfile = sys.stdout
     child.expect(">")
@@ -427,7 +427,7 @@ def main():
 
     if os.getenv('VERBOSE_MODEL_LOG') is not None:
         args.enable_model_logging = True
-        args.verbose_model_log = True
+        args.verbose_model_logging = True
 
     p4info_path = os.path.join(compiler_out_dir, 'p4info.proto.txt')
     if not args.pdtest and not args.bfrt_test and not os.path.exists(p4info_path):
@@ -559,17 +559,17 @@ def main():
         success = False
         if args.pdtest:
             success = run_pd_ptf_tests(PTF, args.device, args.name, args.pdtest, args.ptfdir,
-                                       args.testdir, args.platform, port_map, args.verbose_model_log,
+                                       args.testdir, args.platform, port_map, args.verbose_model_logging,
                                        extra_ptf_args, args.port_map_file, args.test_port, 
                                        installdir=BFD_INSTALLDIR)
         elif args.bfrt_test and not args.run_bfrt_as_pi:
             success = run_pd_ptf_tests(PTF, args.device, args.name, args.bfrt_test, args.ptfdir,
-                                       args.testdir, args.platform, port_map, args.verbose_model_log,
+                                       args.testdir, args.platform, port_map, args.verbose_model_logging,
                                        extra_ptf_args, args.port_map_file, args.test_port, 
                                        installdir=BFD_INSTALLDIR)
         else:
             success = run_pi_ptf_tests(PTF, args.grpc_addr, args.ptfdir, p4info_path,
-                                    port_map, args.stftest, args.platform, args.verbose_model_log,
+                                    port_map, args.stftest, args.platform, args.verbose_model_logging,
                                     extra_ptf_args)
         if not success:
             error("Error when running PTF tests")
@@ -660,12 +660,12 @@ def main():
 
             if args.pdtest is not None:
                 success = run_pd_ptf_tests(PTF, args.device, args.name, args.pdtest, args.ptfdir,
-                                           args.testdir, args.platform, port_map, args.verbose_model_log,
+                                           args.testdir, args.platform, port_map, args.verbose_model_logging,
                                            extra_ptf_args, args.port_map_file, args.test_port, 
                                            installdir=BFD_INSTALLDIR)
             elif args.bfrt_test and not args.run_bfrt_as_pi:
                 success = run_pd_ptf_tests(PTF, args.device, args.name, args.bfrt_test, args.ptfdir,
-                                           args.testdir, args.platform, port_map, args.verbose_model_log,
+                                           args.testdir, args.platform, port_map, args.verbose_model_logging,
                                            extra_ptf_args, args.port_map_file, args.test_port, 
                                            installdir=BFD_INSTALLDIR)
             else:
@@ -677,7 +677,7 @@ def main():
 
                 success = run_pi_ptf_tests(PTF, args.grpc_addr, args.ptfdir,
                                         p4info_path, port_map,
-                                        args.stftest, args.platform, args.verbose_model_log,
+                                        args.stftest, args.platform, args.verbose_model_logging,
                                         extra_ptf_args)
             if not success:
                 error("Error when running PTF tests")
