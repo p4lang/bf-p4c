@@ -11,33 +11,19 @@ p4c_add_ptf_test_with_ptfdir ("tofino2" "smoketest_switch_16_Tests" ${SWITCH_P4_
 # Cannot run some of the tests as they access ports outside the range of the set ports using veth_setup.sh
 bfn_set_ptf_test_spec("tofino2" "smoketest_switch_16_Tests"
         "all
+        ^switch_tests.L3SVITest
         ^switch_tests.L2LagTest
         ^switch_tests.L3ECMPTest
-        ^switch_tests.L3MulticastTest
-        ^switch_tests.MirrorTest
-        ^switch_tests.ACLTest")
-
-p4c_add_ptf_test_with_ptfdir ("tofino2" "smoketest_switch_16_Tests_MirrorTest" ${SWITCH_P4_16}
-  "${testExtraArgs} -tofino2 -arch t2na -bfrt -to 3600" ${SWITCH_P4_16_PTF})
-bfn_set_ptf_test_spec("tofino2" "smoketest_switch_16_Tests_MirrorTest"
-        "switch_tests.MirrorTest")
-p4c_add_ptf_test_with_ptfdir ("tofino2" "smoketest_switch_16_Tests_ACLTest" ${SWITCH_P4_16}
-  "${testExtraArgs} -tofino2 -arch t2na -bfrt -to 3600" ${SWITCH_P4_16_PTF})
-bfn_set_ptf_test_spec("tofino2" "smoketest_switch_16_Tests_ACLTest"
-        "switch_tests.ACLTest")
+        ^switch_tests.L3MulticastTest")
 
 # All switch_16 tests should depend on the test being compiled, rather than
 # relying on the first one to compile the test.
 set_tests_properties(
   "tofino2/smoketest_switch_16_Tests"
-  "tofino2/smoketest_switch_16_Tests_MirrorTest"
-  "tofino2/smoketest_switch_16_Tests_ACLTest"
   PROPERTIES DEPENDS "tofino2/smoketest_switch_16_compile"
   )
 
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
 set_tests_properties("tofino2/smoketest_switch_16_compile" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino2/smoketest_switch_16_Tests" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino2/smoketest_switch_16_Tests_MirrorTest" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino2/smoketest_switch_16_Tests_ACLTest" PROPERTIES TIMEOUT 3600)
 

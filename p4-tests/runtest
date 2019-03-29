@@ -819,14 +819,9 @@ if $run_bfrt ; then
         conf_args="--name $name --device $device --testdir $testout $installdiropt --pipe ${pipes}"
         model_logs_option=""
         if [ $name == switch ]; then
-            run $(dirname $0)/gen_pd_conf.py --testdir $testout --name $name --device $device \
-            --pipe ${pipes} --switch-api switchapi
-            # One bf_switch PTF test fails with model logs disabled, should remove once the issue
-            # is fixed
             model_logs_option="--enable-model-logging"
-        else
-            run ./p4c-gen-bfrt-conf $conf_args
         fi
+        run ./p4c-gen-bfrt-conf $conf_args
         PTF_EXTRA_ARGS="$PTF_EXTRA_ARGS --bfrt-test $testout/${name}.conf $model_logs_option"
     fi
 

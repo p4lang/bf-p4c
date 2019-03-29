@@ -122,6 +122,7 @@ p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_32q")
    "${testExtraArgs} -arch tna -bfrt -to 3600" ${SWITCH_P4_16_PTF})
  bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_Tests"
          "all
+         ^switch_tests.L3SVITest
          ^switch_tests.L2FloodTest
          ^switch_tests.IPv4MalformedPacketsTest
          ^switch_tests.L3MulticastTest

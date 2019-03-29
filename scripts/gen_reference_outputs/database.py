@@ -125,15 +125,15 @@ def compare_metrics(curr, master):
     m_diff.tagalong_phv_bits_occupied = curr.tagalong_phv_bits_occupied - master.tagalong_phv_bits_occupied
     m_diff.tagalong_phv_containers_occupied = curr.tagalong_phv_containers_occupied - master.tagalong_phv_containers_occupied
     if curr.mau_srams > 0:
-        m_diff.mau_srams = 100.0 * (curr.mau_srams - master.mau_srams)/curr.mau_srams
+        m_diff.mau_srams = round(100.0 * (curr.mau_srams - master.mau_srams)/curr.mau_srams, 2)
     else:
         m_diff.mau_srams = 0
     if curr.mau_tcams > 0:
-        m_diff.mau_tcams = 100.0 * (curr.mau_tcams - master.mau_tcams)/curr.mau_tcams
+        m_diff.mau_tcams = round(100.0 * (curr.mau_tcams - master.mau_tcams)/curr.mau_tcams, 2)
     else:
         m_diff.mau_tcams= 0
     if curr.mau_logical_tables > 0:
-        m_diff.mau_logical_tables = 100.0 * (curr.mau_logical_tables - master.mau_logical_tables)/curr.mau_logical_tables
+        m_diff.mau_logical_tables = round(100.0 * (curr.mau_logical_tables - master.mau_logical_tables)/curr.mau_logical_tables, 2)
     else:
         m_diff.mau_logical_tables = 0
     display_comparison(master, curr, m_diff)

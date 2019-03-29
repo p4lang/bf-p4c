@@ -72,10 +72,8 @@ def main():
     libpath = os.path.join(args.testdir, 'lib', args.device+'pd', args.name)
     p4_info["path"] = os.path.join(args.testdir, 'lib')
 
-    # Generate pd paths only for non switch_16 programs
-    if 'switch_16' not in args.testdir:
-        p4_info["pd"] = os.path.join(libpath, 'libpd.so')
-        p4_info["pd-thrift"] = os.path.join(libpath, 'libpdthrift.so')
+    p4_info["pd"] = os.path.join(libpath, 'libpd.so')
+    p4_info["pd-thrift"] = os.path.join(libpath, 'libpdthrift.so')
 
     if len(args.pipe) > 0:
         print (args.pipe[0])
@@ -90,22 +88,13 @@ def main():
     p4_info["cpu_port"] = "veth251"
 
     if args.switch_api == "switchapi":
-        # bf-switch has a different so name for switchapi
-        if 'switch_16' in args.testdir:
-	    p4_info["switchapi"] = os.path.join(args.testdir, "lib", "libbf_switch.so")
-        else:
-            p4_info["switchapi"] = os.path.join(args.testdir, "lib", "libswitchapi.so")
+        p4_info["switchapi"] = os.path.join(args.testdir, "lib", "libswitchapi.so")
         p4_info["agent0"] = os.path.join(args.testdir, "lib", "libpltfm_mgr.so")
 
     if args.switch_api == "switchsai":
         p4_info["switchapi"] = os.path.join(args.testdir, "lib", "libswitchapi.so")
         p4_info["switchsai"] = os.path.join(args.testdir, "lib", "libswitchsai.so")
         p4_info["agent0"] = os.path.join(args.testdir, "lib", "libpltfm_mgr.so")
-    
-    # Add bfrt-config and model_json_path for bf-switch
-    if 'switch_16' in args.testdir:
-        p4_info["bfrt-config"] = os.path.join(args.testdir, 'share', args.device+'pd', args.name, 'bf-rt.json')
-	p4_info["model_json_path"] = os.path.join(args.testdir, 'share', args.name, 'aug_model.json')
 
     conf_name = os.path.join(args.testdir, args.name + '.conf')
     with open(conf_name, 'w') as fconf:

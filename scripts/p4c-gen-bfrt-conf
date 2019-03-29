@@ -71,18 +71,29 @@ def main():
     # only support one program
     p4_info = p4_device["p4_programs"][0]
     p4_info["program-name"] = args.name
-    p4_info["bfrt-config"] = os.path.join(args.installdir, 'bf-rt.json')
     p4_pipelines=p4_info['p4_pipelines']
     npipes = len(args.pipe)
     for index, pipe in zip(range(npipes),args.pipe):
         pipe_config = {}
         pipe_config["p4_pipeline_name"] = pipe
-        share_path = os.path.join(args.installdir, pipe)
+        if 'switch_16' in args.testdir:
+            share_path = os.path.join(args.testdir, 'share', args.device+'pd', args.name, pipe)
+        else:
+            share_path = os.path.join(args.installdir, pipe)
         pipe_config["context"] = os.path.join(share_path, 'context.json')
         pipe_config["config"] = os.path.join(share_path, args.device + '.bin')
         pipe_config["pipe_scope"] = [x*npipes+index for x in range(MAX_PIPES/npipes)]
         pipe_config["path"] = args.installdir
         p4_pipelines.append(pipe_config)
+
+    # Add bfrt-config and model_json_path for bf-switch
+    if 'switch_16' in args.testdir:
+        p4_info["switchapi"] = os.path.join(args.testdir, "lib", "libbf_switch.so")
+        p4_info["bfrt-config"] = os.path.join(args.testdir, 'share', args.device+'pd', args.name, 'bf-rt.json')
+        p4_info["model_json_path"] = os.path.join(args.testdir, 'share', args.name, 'aug_model.json')
+        p4_info["cpu_port"] = "veth251"
+    else:
+        p4_info["bfrt-config"] = os.path.join(args.installdir, 'bf-rt.json')
 
     conf_name = os.path.join(args.testdir, args.name + '.conf')
     with open(conf_name, 'w') as fconf:
