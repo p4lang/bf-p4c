@@ -54,6 +54,9 @@ static bool equiv(const IR::Expression *a, const IR::Expression *b) {
     if (auto ka = a->to<IR::Constant>()) {
         auto kb = b->to<IR::Constant>();
         return ka->value == kb->value; }
+    if (auto ka = a->to<IR::BoolLiteral>()) {
+        auto kb = b->to<IR::BoolLiteral>();
+        return ka->value == kb->value; }
     if (auto ea = a->to<IR::MAU::IXBarExpression>()) {
         auto eb = b->to<IR::MAU::IXBarExpression>();
         return equiv(ea->expr, eb->expr); }
@@ -428,6 +431,16 @@ bool CreateSaluInstruction::preorder(const IR::Constant *c) {
     operands.push_back(c);
     return false;
 }
+
+bool CreateSaluInstruction::preorder(const IR::BoolLiteral *bl) {
+    if (etype == IF && bl->value == 0)
+        return false;
+    auto *c = new IR::Constant(bl->srcInfo, bl->value ? negate ? -1 : 1 : 0);
+    LOG4("Constant operand: " << c);
+    operands.push_back(c);
+    return false;
+}
+
 bool CreateSaluInstruction::preorder(const IR::Member *e) {
     if (auto pe = e->expr->to<IR::PathExpression>()) {
         if (applyArg(pe, e->member))

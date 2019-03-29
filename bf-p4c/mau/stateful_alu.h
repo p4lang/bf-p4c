@@ -117,6 +117,7 @@ class CreateSaluInstruction : public Inspector {
     bool preorder(const IR::PathExpression *) override;
 
     bool preorder(const IR::Constant *) override;
+    bool preorder(const IR::BoolLiteral *) override;
     bool preorder(const IR::AttribLocal *) override { BUG("unconverted p4_14"); }
     bool preorder(const IR::Member *) override;
     bool preorder(const IR::Slice *) override;
