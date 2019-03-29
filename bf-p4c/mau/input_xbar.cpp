@@ -3636,6 +3636,8 @@ void IXBar::update(cstring name, const Use &alloc) {
                         hash_single_bit_use[ht][bit]);
             }
         }
+        hash_group_print_use[ph.group] = name;
+        hash_group_use[ph.group] |= alloc.hash_table_inputs[ph.group];
     }
 }
 
