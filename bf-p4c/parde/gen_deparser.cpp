@@ -1,9 +1,12 @@
+
+#include "frontends/p4/methodInstance.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/common/ir_utils.h"
+#include "bf-p4c/common/utils.h"
 #include "bf-p4c/parde/gen_deparser.h"
 #include "bf-p4c/bf-p4c-options.h"
 
-namespace {
+namespace BFN {
 
 template <typename Func>
 void generateEmits(const IR::Expression* expression, Func func) {
@@ -21,166 +24,134 @@ void generateEmits(const IR::Expression* expression, Func func) {
     }
 }
 
-class GenerateDeparser : public Inspector {
-    const IR::BFN::Pipe                         *pipe;
-    IR::BFN::Deparser                           *dprsr;
-    const IR::Expression                        *pred = nullptr;
-    ordered_map<cstring, IR::BFN::Digest *>     digests;
-    ordered_map<cstring, cstring>               nameMap;
+void ExtractDeparser::simpl_concat(std::vector<const IR::Expression*>& slices,
+        const IR::Concat* expr) {
+    if (expr->left->is<IR::Constant>()) {
+        slices.push_back(expr->left);
+    } else if (auto lhs = expr->left->to<IR::Concat>()) {
+        simpl_concat(slices, lhs);
+    } else {
+        slices.push_back(expr->left); }
 
-    void generateDigest(IR::BFN::Digest *&digest, cstring name, const IR::Expression *list,
-                        const IR::MethodCallExpression* mc, cstring controlPlaneName = nullptr);
-    void simpl_concat(std::vector<const IR::Expression*>& slices, const IR::Concat* expr) {
-        if (expr->left->is<IR::Constant>()) {
-            slices.push_back(expr->left);
-        } else if (auto lhs = expr->left->to<IR::Concat>()) {
-            simpl_concat(slices, lhs);
-        } else {
-            slices.push_back(expr->left); }
-
-        if (expr->right->is<IR::Constant>()) {
-            slices.push_back(expr->right);
-        } else if (auto rhs = expr->right->to<IR::Concat>()) {
-            simpl_concat(slices, rhs);
-        } else {
-            slices.push_back(expr->right); } }
-
-    void process_concat(IR::Vector<IR::BFN::FieldLVal>& vec, const IR::Concat* expr) {
-        std::vector<const IR::Expression *> slices;
-        simpl_concat(slices, expr);
-        for (auto *item : slices) {
-            if (item->is<IR::Constant>()) {
-                ::warning("Tofino does not support emitting constant %1% "
-                          "in digest, skipped", item);
-                continue; }
-            vec.push_back(new IR::BFN::FieldLVal(item)); }
+    if (expr->right->is<IR::Constant>()) {
+        slices.push_back(expr->right);
+    } else if (auto rhs = expr->right->to<IR::Concat>()) {
+        simpl_concat(slices, rhs);
+    } else {
+        slices.push_back(expr->right);
     }
+}
 
-    bool preorder(const IR::Declaration_Instance *decl) override {
-        nameMap.emplace(decl->name.name, decl->controlPlaneName());
-        return false;
-    }
+void ExtractDeparser::process_concat(IR::Vector<IR::BFN::FieldLVal>& vec,
+        const IR::Concat* expr) {
+    std::vector<const IR::Expression *> slices;
+    simpl_concat(slices, expr);
+    for (auto *item : slices) {
+        if (item->is<IR::Constant>()) {
+            ::warning("Tofino does not support emitting constant %1% "
+                      "in digest, skipped", item);
+            continue; }
+        vec.push_back(new IR::BFN::FieldLVal(item)); }
+}
 
-    bool preorder(const IR::IfStatement *ifstmt) override {
-        const IR::Expression *old_pred = pred;
-        pred = ifstmt->condition;
+bool ExtractDeparser::preorder(const IR::Declaration_Instance *decl) {
+    LOG3("process declaration " << decl->name.name << " as " << decl->controlPlaneName());
+    nameMap.emplace(decl->name.name, decl->controlPlaneName());
+    return false;
+}
+
+bool ExtractDeparser::preorder(const IR::IfStatement *ifstmt) {
+    const IR::Expression *old_pred = pred;
+    pred = ifstmt->condition;
+    if (old_pred) pred = new IR::LAnd(old_pred, pred);
+    visit(ifstmt->ifTrue, "ifTrue");
+    if (ifstmt->ifFalse) {
+        pred = new IR::LNot(ifstmt->condition);
         if (old_pred) pred = new IR::LAnd(old_pred, pred);
-        visit(ifstmt->ifTrue, "ifTrue");
-        if (ifstmt->ifFalse) {
-            pred = new IR::LNot(ifstmt->condition);
-            if (old_pred) pred = new IR::LAnd(old_pred, pred);
-            visit(ifstmt->ifFalse, "ifFalse");
-        }
-        pred = old_pred;
-        return false;
+        visit(ifstmt->ifFalse, "ifFalse");
     }
+    pred = old_pred;
+    return false;
+}
 
-    bool preorder(const IR::MethodCallExpression* mc) override {
-        auto method = mc->method->to<IR::Member>();
-        if (!method) return true;
-        if (method->member == "emit") {
-            auto dname = method->expr->to<IR::PathExpression>();
-            if (!dname) return true;
+/**
+ * Converting IR::MethodCallExpression to IR::BFN::DigestFieldList.
+ *
+ * The MethodCallExpression can be 'emit' or 'pack' depending on
+ * the extern.
+ *
+ * The field list expression in 'emit' can be either
+ * ListExpression if the emit is generated by the p4-14-to-16 translation,
+ * or StructInitializerExpression if the emit is directly from p4-16.
+ *
+ * In P4-14, the FieldList construct is translated to ListExpression
+ * with a type of tuple<N>.
+ *
+ * In P4-16, TNA requires the 'emit' call to only accept 'header', which
+ * has a type that is used later in the backend to repack & optimize
+ * the layout of the header to minimize phv use.
+ */
+bool ExtractDeparser::preorder(const IR::MethodCallExpression* mc) {
+    auto mi = P4::MethodInstance::resolve(mc, refMap, typeMap, true);
 
-            auto type = dname->type->to<IR::Type_Extern>();
-            if (!type) return true;
+    if (!mi->is<P4::ExternMethod>())
+        return false;
 
-            if (type->name == "packet_out") {
-                if (pred) error("Conditional emit %s not supported", mc);
-                generateEmits((*mc->arguments)[0]->expression,
-                    [&](const IR::Expression* field, const IR::Expression* povBit) {
-                    dprsr->emits.push_back(new IR::BFN::EmitField(mc->srcInfo, field, povBit)); });
-            } else if (type->name == "Mirror") {
+    auto em = mi->to<P4::ExternMethod>();
+    if (em->method->name == "emit") {
+        if (em->actualExternType->getName() == "packet_out") {
+            if (pred) error("Conditional emit %s not supported", mc);
+            generateEmits((*mc->arguments)[0]->expression,
+                [&](const IR::Expression* field, const IR::Expression* povBit) {
+                dprsr->emits.push_back(new IR::BFN::EmitField(mc->srcInfo, field, povBit)); });
+        } else if (em->actualExternType->getName() == "Mirror") {
+            auto expr = mc->arguments->at(1)->expression;
+            // field list is ListExpression if source is P4-14
+            if (auto list = expr->to<IR::ListExpression>()) {
                 // Convert session_id, { field_list } --> { session_id, field_list }
-                auto list = mc->arguments->at(1)->expression->to<IR::ListExpression>();
                 auto expr = new IR::ListExpression(
-                    list->srcInfo, list->type, list->components);
+                        list->srcInfo, list->type, list->components);
                 expr->components.insert(expr->components.begin(),
                                         mc->arguments->at(0)->expression);
                 generateDigest(digests["mirror"], "mirror", expr, mc);
-            } else if (type->name == "Resubmit") {
-                auto num_args = mc->arguments->size();
-                auto expr = (num_args == 0) ? new IR::ListExpression({})
-                                            : mc->arguments->at(0)->expression;
-                generateDigest(digests["resubmit"], "resubmit", expr, mc);
-            } else if (type->name == "Pktgen") {
-                auto expr = mc->arguments->at(0)->expression;
-                generateDigest(digests["pktgen"], "pktgen", expr, mc);
-            } else {
-                fatal_error(ErrorType::ERR_UNSUPPORTED,
-                            "Unsupported method call %1% in deparser", mc);
             }
-            return false;
-        } else if (method->member == "update") {
-            // XXX(hanw): call to checksum.update() in deparser is handled in checksum.cpp
-            return false;
-        } else if (method->member == "pack") {
-            auto dname = method->expr->to<IR::PathExpression>();
-            if (!dname) return true;
-            auto cpn = nameMap.find(dname->path->name);
-            BUG_CHECK(cpn != nameMap.end(), "unable to find digest %1%", dname->path->name);
+            // field list is StructInitializerExpression if source is P4-16
+            if (auto list = expr->to<IR::StructInitializerExpression>()) {
+                // Convert session_id, { field_list } --> { session_id, field_list }
+                auto combined = new IR::IndexedVector<IR::NamedExpression>();
+                combined->push_back(new IR::NamedExpression("$session_id",
+                                                            mc->arguments->at(0)->expression));
+                combined->append(list->components);
+                auto mirror_field_list =
+                        new IR::StructInitializerExpression(list->name, *combined, true);
+                generateDigest(digests["mirror"], "mirror", mirror_field_list, mc);
+            }
+        } else if (em->actualExternType->getName() == "Resubmit") {
+            auto num_args = mc->arguments->size();
+            auto expr = (num_args == 0) ? new IR::ListExpression({})
+                                        : mc->arguments->at(0)->expression;
+            generateDigest(digests["resubmit"], "resubmit", expr, mc);
+        } else if (em->actualExternType->getName() == "Pktgen") {
+            auto expr = mc->arguments->at(0)->expression;
+            generateDigest(digests["pktgen"], "pktgen", expr, mc);
+        } else {
+            fatal_error(ErrorType::ERR_UNSUPPORTED,
+                        "Unsupported method call %1% in deparser", mc);
+        }
+    } else if (em->method->name == "pack") {
+        if (em->actualExternType->getName() == "Digest") {
+            LOG3("generate digest " << em->object->getName());
+            auto cpn = nameMap.find(em->object->getName());
+            BUG_CHECK(cpn != nameMap.end(), "unable to find digest %1%", em->object->getName());
             generateDigest(digests["learning"], "learning",
                            mc->arguments->at(0)->expression, mc, cpn->second);
-            return false;
-        } else {
-            fatal_error(ErrorType::ERR_UNSUPPORTED, "Unsupported method call %1% in deparser", mc);
-            return true;
         }
     }
-
-    void end_apply() override {
-       for (const auto& kv : digests) {
-           auto name = kv.first;
-           auto digest = kv.second;
-           if (!digest)
-               continue;
-           for (auto fieldList : digest->fieldLists) {
-               if (fieldList->idx < 0 ||
-                   fieldList->idx > static_cast<int>(Device::maxCloneId(dprsr->gress))) {
-                   ::error("Invalid %1% index %2% in %3%", name, fieldList->idx, dprsr->gress);
-               }
-           }
-       }
-
-       // COMPILER-914: In Tofino, clone id - 0 is reserved in i2e
-       // due to a hardware bug. Hence, valid clone ids are 1 - 7.
-       // We check mirror id 0 is not used in the program, and create a dummy
-       // mirror (with id = 0) for i2e;
-       if (dprsr->gress == INGRESS && Device::currentDevice() == Device::TOFINO &&
-           BackendOptions().arch == "v1model") {
-           // TODO(zma) it's not very clear to me how to handle this for TNA program
-           // in particular, the mirror id is a user defined field. So we probably
-           // need to find the field reference of mirror id in the program.
-
-           auto mirror = digests["mirror"];
-           if (mirror) {
-               for (auto fieldList : mirror->fieldLists) {
-                   if (fieldList->idx == 0)
-                       ::error("Invalid mirror index 0, valid i2e mirror indices are 1-7");
-               }
-           } else {
-               auto deparserMetadataHdr =
-                   getMetadataType(pipe, "ingress_intrinsic_metadata_for_deparser");
-               auto select = gen_fieldref(deparserMetadataHdr, "mirror_type");
-               mirror = new IR::BFN::Digest("mirror", select);
-               dprsr->digests.addUnique("mirror", mirror);
-           }
-
-           IR::Vector<IR::BFN::FieldLVal> sources;
-           auto compilerMetadataHdr = getMetadataType(pipe, "compiler_generated_meta");
-           auto mirrorId = gen_fieldref(compilerMetadataHdr, "mirror_id");
-           sources.push_back(new IR::BFN::FieldLVal(mirrorId));
-           auto dummy = new IR::BFN::DigestFieldList(0, sources, nullptr);
-           mirror->fieldLists.push_back(dummy);
-       }
-    }
-
- public:
-    explicit GenerateDeparser(const IR::BFN::Pipe* p, IR::BFN::Deparser *d) : pipe(p), dprsr(d) {}
-};
+    return false;
+}
 
 // FIXME -- factor this with Digests::add_to_digest in digest.h?
-void GenerateDeparser::generateDigest(IR::BFN::Digest *&digest, cstring name,
+void ExtractDeparser::generateDigest(IR::BFN::Digest *&digest, cstring name,
                                       const IR::Expression *expr,
                                       const IR::MethodCallExpression* mc,
                                       cstring controlPlaneName) {
@@ -265,15 +236,5 @@ void GenerateDeparser::generateDigest(IR::BFN::Digest *&digest, cstring name,
     digest->fieldLists.push_back(fieldList);
 }
 
-}  // namespace
+}  // namespace BFN
 
-IR::BFN::Deparser::Deparser(gress_t gr, const IR::BFN::Pipe* pipe, const IR::P4Control* dp)
-        : AbstractDeparser(gr) {
-    CHECK_NULL(dp);
-    dp->apply(GenerateDeparser(pipe, this));
-}
-
-void BFN::ExtractDeparser::postorder(const IR::BFN::TnaDeparser* deparser) {
-    gress_t thread = deparser->thread;
-    rv->thread[thread].deparser = new IR::BFN::Deparser(thread, rv, deparser);
-}

@@ -1462,7 +1462,7 @@ void BackendConverter::convertTnaProgram(const IR::P4Program* program, BFN_Optio
             }
             if (auto dprsr = thread->deparser->to<IR::BFN::TnaDeparser>()) {
                 dprsr->apply(CheckChecksumAlgorithm());
-                dprsr->apply(ExtractDeparser(rv));
+                dprsr->apply(ExtractDeparser(refMap, typeMap, rv));
                 dprsr->apply(ExtractChecksum(rv));
             }
         }
@@ -1524,7 +1524,7 @@ void BackendConverter::convertV1Program(const IR::P4Program *program, BFN_Option
             }
         }
         if (auto dprsr = thread->deparser->to<IR::BFN::TnaDeparser>()) {
-            dprsr->apply(ExtractDeparser(rv));
+            dprsr->apply(ExtractDeparser(refMap, typeMap, rv));
             dprsr->apply(ExtractChecksum(rv));
             dprsr->apply(ExtractResubmitFieldPackings(refMap, typeMap, &resubmitPackings));
             dprsr->apply(ExtractMirrorFieldPackings(refMap, typeMap, &mirrorPackings));

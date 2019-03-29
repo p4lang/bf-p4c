@@ -497,8 +497,7 @@ abstract AbstractDeparser : Unit {
 
 class Deparser : AbstractDeparser {
 #noconstructor
-    Deparser(gress_t gr);
-    Deparser(gress_t gr, BFN::Pipe p, P4Control dp);
+    Deparser(gress_t gr) : AbstractDeparser(gr) {}
 #apply
     toString { return gress ? "egress deparser" : "ingress deparser"; }
 

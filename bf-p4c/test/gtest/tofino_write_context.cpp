@@ -117,12 +117,7 @@ TEST(TofinoWriteContext, DeparserEmit) {
     auto* field = new IR::Member(new IR::ConcreteHeaderRef(header), "bar");
     auto* povBit = new IR::Member(new IR::ConcreteHeaderRef(header), "$valid");
 
-    auto* deparserControlType = new IR::Type_Control("dp", new IR::ParameterList);
-    auto* deparserControl =
-      new IR::P4Control("dp", deparserControlType, new IR::BlockStatement);
-
-    auto* pipe = new IR::BFN::Pipe("pied");
-    auto* deparser = new IR::BFN::Deparser(EGRESS, pipe, deparserControl);
+    auto* deparser = new IR::BFN::Deparser(EGRESS);
     deparser->emits.push_back(new IR::BFN::EmitField(field, povBit));
 
     struct CheckEmit : public Inspector, TofinoWriteContext {
@@ -141,12 +136,7 @@ TEST(TofinoWriteContext, DeparserEmitChecksum) {
     auto* csum = new IR::Member(new IR::ConcreteHeaderRef(header), "csum");
     auto* povBit = new IR::Member(new IR::ConcreteHeaderRef(header), "$valid");
 
-    auto* deparserControlType = new IR::Type_Control("dp", new IR::ParameterList);
-    auto* deparserControl =
-      new IR::P4Control("dp", deparserControlType, new IR::BlockStatement);
-
-    auto* pipe = new IR::BFN::Pipe("piper");
-    auto* deparser = new IR::BFN::Deparser(EGRESS, pipe, deparserControl);
+    auto* deparser = new IR::BFN::Deparser(EGRESS);
     deparser->emits.push_back(new IR::BFN::EmitChecksum(
           new IR::BFN::FieldLVal(povBit),
         { new IR::BFN::FieldLVal(field) },
