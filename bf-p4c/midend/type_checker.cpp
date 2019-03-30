@@ -97,9 +97,9 @@ const IR::Node* TypeInference::postorder(IR::Type_Header* type) {
         while (t->is<IR::Type_Newtype>())
             t = getTypeType(t->to<IR::Type_Newtype>()->type);
         return t->is<IR::Type_Bits>() || t->is<IR::Type_Varbits>() ||
-               t->is<IR::BFN::Type_StructFlexible>() ||
-               (t->is<IR::Type_Struct>() && onlyBitsOrBitStructs(t)) ||
-               t->is<IR::Type_SerEnum>(); };
+            t->is<IR::BFN::Type_StructFlexible>() ||
+            (t->is<IR::Type_Struct>() && onlyBitsOrBitStructs(t)) ||
+            t->is<IR::Type_SerEnum>(); };
     validateFields(canon, validator);
 
     LOG1("tt " << type);
@@ -113,12 +113,38 @@ const IR::Node* TypeInference::postorder(IR::Type_Header* type) {
                 varbit = field;
             } else {
                 typeError("%1% and %2%: multiple varbit fields in a header",
-                          varbit, field);
+                        varbit, field);
                 return type;
             }
         }
     }
     return type;
+}
+
+const IR::Node* TypeInference::postorder(IR::Member* expression) {
+    if (done()) return expression;
+    auto type = getType(expression->expr);
+    if (type == nullptr)
+        return expression;
+    cstring member = expression->member.name;
+    if (type->is<IR::Type_StructLike>()) {
+        if (type->is<IR::Type_Header>() || type->is<IR::Type_HeaderUnion>()) {
+            if (member == "$valid") {
+                // Built-in method
+                auto type = IR::Type::Bits::get(1);
+                auto ctype = canonicalize(type);
+                if (ctype == nullptr)
+                    return expression;
+                setType(getOriginal(), ctype);
+                setType(expression, ctype);
+                setLeftValue(expression);
+                setLeftValue(getOriginal<IR::Expression>());
+                return expression;
+            }
+        }
+    }
+
+    return P4::TypeInference::postorder(expression);
 }
 
 const IR::Type* TypeInference::canonicalize(const IR::Type* type) {
@@ -167,6 +193,8 @@ TypeChecking::TypeChecking(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
         updateExpressions ? new P4::ResolveReferences(refMap) : nullptr });
     setStopOnError(true);
 }
+
+
 
 // similarly, it might be better to avoid code duplication here.
 EvaluatorPass::EvaluatorPass(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {

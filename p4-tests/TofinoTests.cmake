@@ -87,7 +87,6 @@ set (TOFINO_V1_TEST_SUITES
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_with_nop.p4
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_without_nop.p4
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/rdp/COMPILER-475/case2600.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/rdp/COMPILER-502/case2675.p4
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/rdp/COMPILER-533/case2736.p4
   # glass c13 tests
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/noviflow/COMPILER-564/case3825.p4
@@ -135,7 +134,8 @@ p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
   "c2_COMPILER-514_balancer_one" ${glass_c2_path}/COMPILER-514/balancer_one.p4 "${testExtraArgs} -to 2400" "")
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
   "c2_COMPILER-537_case2834" ${glass_c2_path}/COMPILER-537/case2834.p4 "${testExtraArgs} -to 2400" "")
-
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
+  "c2_COMPILER-502_case2675" ${glass_c2_path}/COMPILER-502/case2675.p4 "${testExtraArgs} -to 2400" "")
 
 # 500s timeout is too little for compiling some glass c2 tests, bumping it up
 set_tests_properties("tofino/c2_COMPILER-421_case2434" PROPERTIES TIMEOUT 2400)
@@ -144,6 +144,7 @@ set_tests_properties("tofino/c2_COMPILER-599_case3230" PROPERTIES TIMEOUT 2400)
 set_tests_properties("tofino/c2_COMPILER-510_case2682" PROPERTIES TIMEOUT 2400)
 set_tests_properties("tofino/c2_COMPILER-514_balancer_one" PROPERTIES TIMEOUT 2400)
 set_tests_properties("tofino/c2_COMPILER-537_case2834" PROPERTIES TIMEOUT 2400)
+set_tests_properties("tofino/c2_COMPILER-502_case2675" PROPERTIES TIMEOUT 2400)
 
 set (TOFINO_TNA_TEST_SUITES
   ${p16_tna_tests}

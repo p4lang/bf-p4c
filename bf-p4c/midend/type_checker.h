@@ -24,6 +24,7 @@ class TypeInference : public P4::TypeInference {
     const IR::Node* postorder(IR::BFN::ReinterpretCast*) override;
     const IR::Node* postorder(IR::BFN::SignExtend*) override;
     const IR::Node* postorder(IR::Type_Header*) override;
+    const IR::Node* postorder(IR::Member* expression) override;
 
     // override the base class canonicalize method with support for new IR classes.
     const IR::Type* canonicalize(const IR::Type* type) override;

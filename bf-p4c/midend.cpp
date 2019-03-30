@@ -6,6 +6,7 @@
 #include "frontends/p4/fromv1.0/v1model.h"
 #include "frontends/p4/moveDeclarations.h"
 #include "frontends/p4/simplify.h"
+#include "frontends/p4/simplifyDefUse.h"
 #include "frontends/p4/simplifyParsers.h"
 #include "frontends/p4/strengthReduction.h"
 #include "frontends/p4/typeMap.h"
@@ -40,6 +41,7 @@
 #include "bf-p4c/midend/check_header_alignment.h"
 #include "bf-p4c/midend/check_unsupported.h"
 #include "bf-p4c/midend/copy_block_pragmas.h"
+#include "bf-p4c/midend/copy_header.h"
 #include "bf-p4c/midend/elim_cast.h"
 #include "bf-p4c/midend/desugar_varbit_extract.h"
 #include "bf-p4c/midend/elim_typedef.h"
@@ -321,6 +323,7 @@ MidEnd::MidEnd(BFN_Options& options) {
         // This means methods or functions returning structs will be flagged as
         // an error. Here, we set this to false to allow such scenarios.
         // E.g. Phase0 extern function returns a header struct.
+        new BFN::CopyHeaders(&refMap, &typeMap, typeChecking),
         new P4::CopyStructures(&refMap, &typeMap, errorOnMethodCall, typeChecking),
         new P4::NestedStructs(&refMap, &typeMap, typeChecking),
         new P4::SimplifySelectList(&refMap, &typeMap, typeChecking),
