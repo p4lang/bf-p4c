@@ -6,6 +6,7 @@
 #include "ir/pattern.h"
 #include "lib/error.h"
 #include "bf-p4c/bf-p4c-options.h"
+#include "bf-p4c/device.h"
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/parde/parser_info.h"
 #include "logging/filelog.h"

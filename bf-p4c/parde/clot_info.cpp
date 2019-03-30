@@ -3,6 +3,8 @@
 
 #include "bf-p4c/common/table_printer.h"
 #include "bf-p4c/device.h"
+#include "bf-p4c/logging/logging.h"
+#include "bf-p4c/logging/filelog.h"
 #include "bf-p4c/parde/parde_visitor.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/phv_fields.h"

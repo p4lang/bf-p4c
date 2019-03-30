@@ -4,6 +4,7 @@
 #include <iostream>
 #include "lib/error_catalog.h"
 #include "lib/exceptions.h"
+#include "ir/ir.h"
 
 struct DumpPipe : public Inspector {
     const char *heading;

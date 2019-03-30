@@ -11,6 +11,7 @@
 #include "barefoot/p4info.pb.h"
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/arch/tna.h"
+#include "bf-p4c/device.h"
 #include "bf-p4c/midend/type_checker.h"
 #include "control-plane/flattenHeader.h"
 #include "control-plane/p4RuntimeArchHandler.h"
