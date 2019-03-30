@@ -371,11 +371,11 @@ bitvec PhvInfo::bits_allocated(
     auto& fields = fields_in_container(c);
     if (fields.size() == 0) return ret_bitvec;
     // Gather all the slices of written fields allocated to container c
-    ordered_set<const PHV::Field::alloc_slice*> write_slices_in_container;
+    std::vector<PHV::Field::alloc_slice> write_slices_in_container;
     for (auto* field : writes) {
         field->foreach_alloc([&](const PHV::Field::alloc_slice &alloc) {
             if (alloc.container != c) return;
-            write_slices_in_container.insert(&alloc);
+            write_slices_in_container.push_back(alloc);
         }); }
     for (auto* field : fields) {
         if (field->overlayablePadding) continue;
@@ -385,13 +385,13 @@ bitvec PhvInfo::bits_allocated(
             // Discard the slices that are mutually exclusive with any of the written slices
             bool mutually_exclusive = std::any_of(
                 write_slices_in_container.begin(), write_slices_in_container.end(),
-                [&](const PHV::Field::alloc_slice* slice) {
-                    return field_mutex_i(slice->field->id, alloc.field->id);
+                [&](const PHV::Field::alloc_slice& slice) {
+                    return field_mutex_i(slice.field->id, alloc.field->id);
             });
             bool meta_overlay = std::any_of(
                 write_slices_in_container.begin(), write_slices_in_container.end(),
-                [&](const PHV::Field::alloc_slice* slice) {
-                    return metadata_mutex_i(slice->field->id, alloc.field->id);
+                [&](const PHV::Field::alloc_slice& slice) {
+                    return metadata_mutex_i(slice.field->id, alloc.field->id);
             });
             if (!mutually_exclusive && !meta_overlay)
                 ret_bitvec.setrange(bits.lo, bits.size());
@@ -537,51 +537,36 @@ void PHV::Field::foreach_byte(
 void PHV::Field::foreach_alloc(
         le_bitrange range,
         std::function<void(const alloc_slice &)> fn) const {
-    int lo = range.lo;
-    int hi = range.hi;
-    alloc_slice tmp(this, PHV::Container(), lo, lo, hi-lo+1);
-
-    // Find first slice that includes @lo, and process it.
-    auto it = alloc_i.rbegin();
-    while (it != alloc_i.rend() && it->field_hi() < lo) ++it;
-    if (it != alloc_i.rend() && it->field_bit != lo) {
-        BUG_CHECK(it->field_bit < lo,
-            "Field %1% has an allocated PHV slice %2% that appears out of order; expected its LSB "
-            "(%3%) to be less than %4%.", cstring::to_cstring(it->field),
-            cstring::to_cstring(*it), it->field_bit, lo);
-        tmp = *it;
-        tmp.container_bit += abs(it->field_bit - lo);
-        if (tmp.container_bit < 0) {
-            LOG1("********** phv_fields.cpp:sanity_FAIL **********"
-                << ".....container_bit negative in alloc_slice....."
-                << " field_bit = " << it->field_bit
-                << " container_bit = " << it->container_bit
-                << " width = " << it->width
-                << " lo = " << lo
-                << " tmp.container_bit = " << tmp.container_bit
-                << std::endl
-                << " field = " << this
-                << " container = " << it->container);
-            BUG("phv_fields.cpp:foreach_alloc(): container_bit negative in alloc_slice");
+    // XXX(Deep): Maintain all the candidate alloc slices here. I am going to filter later based on
+    // context and use on this vector during stage based allocation.
+    std::vector<alloc_slice> candidate_slices;
+    // Sort from hi to lo.
+    for (auto it = alloc_i.rbegin(); it != alloc_i.rend(); ++it) {
+        int lo = it->field_bits().lo;
+        int hi = it->field_bits().hi;
+        // Required range is less than and disjoint with the allocated slice range.
+        if (lo < range.lo && hi < range.lo) continue;
+        // Required range is greater than and disjoint with the allocated slice range.
+        if (lo > range.hi && hi > range.hi) continue;
+        // Entire alloc slice is in the requested range, so add the slice to the candidates list.
+        if (lo >= range.lo && hi <= range.hi) {
+            candidate_slices.push_back(*it);
+            continue;
         }
-        tmp.field_bit = lo;
-        if (it->field_hi() > hi)
-            tmp.width = hi - lo + 1;
-        else
-            tmp.width -= abs(it->field_bit - lo);
-        fn(tmp);
-        ++it; }
-
-    // Process remaining slices until reaching the first slice that does not
-    // include any bits less than @hi.
-    while (it != alloc_i.rend() && it->field_bit <= hi) {
-        if (it->field_hi() > hi) {
-            tmp = *it;
-            tmp.width = hi - it->field_bit + 1;
-            fn(tmp);
-        } else {
-            fn(*it); }
-        ++it; }
+        // Need to create a copy of the allocated slice with different width and modified range
+        // because there is only a partial overlap with the requested range.
+        auto overlap = range.intersectWith(it->field_bits());
+        if (!overlap.empty()) {
+            alloc_slice tmp = *it;
+            tmp.container_bit += (overlap.lo - tmp.field_bit);
+            tmp.field_bit = overlap.lo;
+            tmp.width = overlap.size();
+            candidate_slices.push_back(tmp);
+        }
+    }
+    // Apply the function on the filtered candidate_slices vector.
+    for (auto& slice : candidate_slices)
+        fn(slice);
 }
 
 //
@@ -653,7 +638,8 @@ PHV::AbstractField *PHV::AbstractField::create(const PhvInfo &info, const IR::Ex
 PHV::FieldSlice::FieldSlice(
         const Field* field,
         le_bitrange range) : field_i(field), range_i(range) {
-    BUG_CHECK(0 <= range.lo, "Trying to create field slice with negative start");
+    BUG_CHECK(0 <= range.lo, "Trying to create field slice with negative start in range %1%",
+              range);
     BUG_CHECK(range.size() <= field->size,
             "Trying to create field slice larger than field");
 
@@ -1512,12 +1498,8 @@ CollectPhvInfo::CollectPhvInfo(PhvInfo& phv) {
 //
 
 std::ostream &PHV::operator<<(std::ostream &out, const PHV::Field::alloc_slice &sl) {
-    out << '[' << (sl.field_bit+sl.width-1) << ':' << sl.field_bit << "]->[" << sl.container << ']';
-    if (sl.container_bit || size_t(sl.width) != sl.container.size()) {
-        out << '(' << sl.container_bit;
-        if (sl.width != 1)
-            out << ".." << (sl.container_bit + sl.width - 1);
-        out << ')'; }
+    out << sl.container << sl.container_bits() << " <-- " <<
+           PHV::FieldSlice(sl.field, sl.field_bits());
     return out;
 }
 
