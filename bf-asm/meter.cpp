@@ -592,8 +592,7 @@ template<> void MeterTable::meter_color_logical_to_phys(Target::JBay::mau_regs &
     auto &merge = regs.rams.match.merge;
     auto &adrdist = regs.rams.match.adrdist;
     if (!color_maprams.empty()) {
-        merge.mau_mapram_color_map_to_logical_ctl[logical_id/8].set_subfield(
-            0x4 | alu, 3 * (logical_id%8U), 3);
+        merge.mau_mapram_color_map_to_logical_ctl[alu] |= 1 << logical_id;
         // Determining which buses to send the color mapram address to
         if (color_mapram_addr == IDLE_MAP_ADDR) {
             adrdist.movereg_idle_ctl[logical_id].movereg_idle_ctl_mc = 1;
