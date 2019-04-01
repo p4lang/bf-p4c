@@ -94,7 +94,7 @@ struct OutputDictionary : public Inspector {
         out << std::endl;
 
         std::set<PHV::Container> containers;
-        for (auto f : emit->clot->phv_fields) {
+        for (auto f : emit->clot->phv_fields()) {
             f->foreach_alloc([&](const PHV::Field::alloc_slice &alloc) {
                 containers.insert(alloc.container);
             });
@@ -108,8 +108,8 @@ struct OutputDictionary : public Inspector {
             out << indent << range.lo << " : " << c << std::endl;
         }
 
-        for (auto f : emit->clot->csum_fields) {
-            out << indent << emit->clot->offset(f) << " : checksum " <<
+        for (auto f : emit->clot->csum_fields()) {
+            out << indent << emit->clot->byte_offset(f) << " : checksum " <<
                 emit->clot->csum_field_to_csum_id.at(f) << std::endl;
         }
 

@@ -1,5 +1,6 @@
 #include "clot.h"
 
+#include <algorithm>
 #include <iostream>
 #include <sstream>
 
@@ -31,46 +32,48 @@ Clot::Clot(cstring name) {
     tag = v;
 }
 
-unsigned Clot::length_in_bits() const {
-    unsigned rv = 0;
-    for (auto f : all_fields)
-        rv += f->size;
-    return rv;
-}
+void Clot::add_field(FieldKind kind, const PHV::Field* field, unsigned offset) {
+    switch (kind) {
+    case PHV:
+        phv_fields_.push_back(field);
+        break;
 
-unsigned Clot::length_in_bytes() const {
-    BUG_CHECK(length_in_bits() % 8 == 0, "clot not byte aligned?");
-    return length_in_bits() / 8;
-}
+    case CHECKSUM:
+        csum_fields_.push_back(field);
+        break;
 
-unsigned Clot::offset(const PHV::Field* field) const {
-    unsigned offset = 0;
-    bool found = false;
-
-    for (auto f : all_fields) {
-        if (f == field) {
-            found = true;
-            break;
-        }
-        offset += f->size;
+    case OTHER:
+        break;
     }
 
-    BUG_CHECK(found, "field not in clot");
-    return offset / 8;
+    all_fields_.push_back(field);
+    field_offsets[field] = offset;
+}
+
+unsigned Clot::bit_offset(const PHV::Field* field) const {
+    BUG_CHECK(field_offsets.count(field), "field %s not in CLOT %d", field->name, tag);
+    return field_offsets.at(field);
+}
+
+unsigned Clot::byte_offset(const PHV::Field* field) const {
+    return bit_offset(field) / 8;
+}
+
+template <class T> bool contains(const std::vector<T> vec, const T elt) {
+    // Assumes == operator is appropriately defined for T.
+    return std::find(vec.begin(), vec.end(), elt) != vec.end();
 }
 
 bool Clot::is_phv_field(const PHV::Field* field) const {
-    for (auto f : phv_fields)
-        if (f == field)
-            return true;
-    return false;
+    return contains(phv_fields_, field);
 }
 
 bool Clot::is_csum_field(const PHV::Field* field) const {
-    for (auto f : csum_fields)
-        if (f == field)
-            return true;
-    return false;
+    return contains(csum_fields_, field);
+}
+
+bool Clot::has_field(const PHV::Field* field) const {
+    return field_offsets.count(field);
 }
 
 void Clot::toJSON(JSONGenerator& json) const {

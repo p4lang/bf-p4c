@@ -8,13 +8,14 @@
 #include "bf-p4c/parde/parde_visitor.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "lib/bitvec.h"
 #include "clot_info.h"
 
 std::string ClotInfo::print() const {
     std::stringstream out;
 
-    unsigned total_unused_fields_in_clot = 0;
-    unsigned total_unused_bits_in_clot = 0;
+    unsigned total_unused_fields_in_clots = 0;
+    unsigned total_unused_bits_in_clots = 0;
     unsigned total_bits = 0;
 
     out << "CLOT Allocation:" << std::endl;
@@ -22,16 +23,20 @@ std::string ClotInfo::print() const {
     TablePrinter tp(out, {"CLOT", "Fields", "Bits", "Property"},
                           TablePrinter::Align::CENTER);
 
+    std::set<int> unaligned_clots;
     for (auto c : clots_) {
         bool first_in_clot = true;
         unsigned bits_in_clot = 0;
-        for (auto f : c->all_fields) {
-            total_bits += f->size;
-
+        bitvec bits_unused;
+        for (auto f : c->all_fields()) {
             if (is_clot_candidate(f)) {
-                total_unused_fields_in_clot++;
-                total_unused_bits_in_clot += f->size;
+                total_unused_fields_in_clots++;
+                bits_unused.setrange(c->bit_offset(f), f->size);
             }
+
+            std::stringstream bits;
+            bits << f->size
+                 << " [" << c->bit_offset(f) << ".." << (c->bit_offset(f) + f->size - 1) << "]";
 
             bool is_phv = c->is_phv_field(f);
             bool is_csum = c->is_csum_field(f);
@@ -46,14 +51,17 @@ std::string ClotInfo::print() const {
 
             tp.addRow({first_in_clot ? std::to_string(c->tag) : "",
                        std::string(f->name),
-                       std::to_string(f->size),
+                       bits.str(),
                        attr});
 
-            bits_in_clot += f->size;
+            bits_in_clot = std::max(bits_in_clot, c->bit_offset(f) + f->size);
             first_in_clot = false;
         }
 
-        BUG_CHECK(bits_in_clot % 8 == 0, "CLOT is not byte aligned?");
+        total_unused_bits_in_clots += bits_unused.popcount();
+        total_bits += bits_in_clot;
+
+        if (bits_in_clot % 8 != 0) unaligned_clots.insert(c->tag);
         unsigned bytes = bits_in_clot / 8;
 
         tp.addRow({"", "", std::to_string(bytes) + " bytes", ""});
@@ -88,10 +96,24 @@ std::string ClotInfo::print() const {
         }
     }
 
-    out << "total unused fields : " << total_unused_fields << std::endl;
-    out << "total unused bits : " << total_unused_bits << std::endl;
-    out << "total unused fields allocated in clot : " << total_unused_fields_in_clot << std::endl;
-    out << "total unused bits allocated in clot : " << total_unused_bits_in_clot << std::endl;
+    out << "total unused fields: " << total_unused_fields << std::endl;
+    out << "total unused bits: " << total_unused_bits << std::endl;
+    out << "total unused fields allocated in CLOTs: " << total_unused_fields_in_clots << std::endl;
+    out << "total unused bits allocated in CLOTs: " << total_unused_bits_in_clots << std::endl;
+
+    // Bug-check.
+    if (!unaligned_clots.empty()) {
+        std::clog << out.str();
+        std::stringstream out;
+        bool first_tag = true;
+        int count = 0;
+        for (auto tag : unaligned_clots) {
+            out << (first_tag ? "" : ", ") << tag;
+            first_tag = false;
+            count++;
+        }
+        BUG("CLOT%s %s not byte-aligned", count > 1 ? "s" : "", out.str());
+    }
 
     return out.str();
 }
@@ -151,6 +173,8 @@ class NaiveClotAlloc : public Visitor {
         clotInfo(clotInfo),
         parserInfo(parserInfo) { }
 
+    /// Provides accounting information for a parse state. Tracks total bits extracted, and number
+    /// of bits that are not PHV-allocated.
     struct ClotAlloc {
         ClotAlloc(const IR::BFN::ParserState* state, unsigned unused, unsigned total) :
             state(state), unused_bits(unused), total_bits(total) {}
@@ -158,6 +182,8 @@ class NaiveClotAlloc : public Visitor {
         const IR::BFN::ParserState* state;
         unsigned unused_bits = 0;
         unsigned total_bits = 0;
+
+        // Implements lexicographic ordering according to (unused_bits, total_bits, state id).
         bool operator<(const ClotAlloc& rhs) const {
             if (unused_bits < rhs.unused_bits) return true;
             if (unused_bits > rhs.unused_bits) return false;
@@ -167,49 +193,57 @@ class NaiveClotAlloc : public Visitor {
         }
     };
 
-    // figure out which fields live in which bytes
+    /// Figure out which fields live in which bytes. Populates @ref field_to_byte_idx and @ref
+    /// byte_idx_to_field.
     void compute_field_byte_map() {
         for (auto kv : clotInfo.parser_state_to_fields_) {
             auto state = kv.first;
             auto& fields_in_state = kv.second;
-            unsigned bits = 0;
 
             for (auto f : fields_in_state) {
-                unsigned start_byte =  bits / 8;
-                unsigned end_byte = (bits + f->size - 1) / 8;
+                unsigned f_offset = clotInfo.offset(state, f);
+                unsigned start_byte =  f_offset / 8;
+                unsigned end_byte = (f_offset + f->size - 1) / 8;
 
                 for (unsigned i = start_byte; i <= end_byte; i++) {
                     field_to_byte_idx[state][f].insert(i);
                     byte_idx_to_field[state][i].insert(f);
                 }
-
-                bits += f->size;
             }
         }
 
         if (LOGGING(4)) {
+            std::clog << "=====================================================" << std::endl;
+
             for (auto kv : field_to_byte_idx) {
-                std::cout << "state: " << kv.first->name << std::endl;
+                std::clog << "state: " << kv.first->name << std::endl;
                 for (auto fb : kv.second) {
-                    std::cout << fb.first->name << " in byte";
+                    std::clog << "  " << fb.first->name << " in byte";
                     for (auto id : fb.second)
-                        std::cout << " " << id;
-                    std::cout << std::endl;
+                        std::clog << " " << id;
+                    std::clog << std::endl;
                 }
             }
 
+            std::clog << "-----------------------------------------------------" << std::endl;
+
             for (auto kv : byte_idx_to_field) {
-                std::cout << "state: " << kv.first->name << std::endl;
+                std::clog << "state: " << kv.first->name << std::endl;
                 for (auto bf : kv.second) {
-                    std::cout << "Byte " << bf.first << " has:";
+                    std::clog << "  Byte " << bf.first << " has:";
                     for (auto f : bf.second)
-                        std::cout << " " << f->name;
-                    std::cout << std::endl;
+                        std::clog << " " << f->name;
+                    std::clog << std::endl;
                 }
             }
+
+            std::clog << "=====================================================" << std::endl;
         }
     }
 
+    /// Determines whether any part of the given field is PHV-allocated. This can happen when the
+    /// field itself is PHV-allocated, or when the field is packed with a PHV-allocated field
+    /// (e.g., if the field is not byte-aligned and shares a container with a PHV-allocated field).
     bool is_packed_with_phv_field(const PHV::Field* f) {
         auto& states = clotInfo.field_to_parser_states_.at(f);
         for (auto state : states) {
@@ -224,50 +258,70 @@ class NaiveClotAlloc : public Visitor {
         return false;
     }
 
+    // Memoization table.
+    std::map<const PHV::Field*, bool> can_allocate_to_clot_;
+
     bool can_allocate_to_clot(const PHV::Field* f) {
-        return clotInfo.is_clot_candidate(f) &&
-               !is_packed_with_phv_field(f);
+        if (!can_allocate_to_clot_.count(f))
+            can_allocate_to_clot_[f] =
+                clotInfo.is_clot_candidate(f) &&
+                !is_packed_with_phv_field(f);
+
+        return can_allocate_to_clot_.at(f);
     }
 
     bool is_checksum_field(const PHV::Field* f) {
         return clotInfo.checksum_dests_.count(f);
     }
 
+    /// Produces a pair of ClotAlloc lists -- one for each gress. Each list is sorted in descending
+    /// order.
     std::array<std::vector<ClotAlloc>, 2> compute_requirement() {
-       std::array<std::vector<ClotAlloc>, 2> req;
+        std::array<std::vector<ClotAlloc>, 2> req;
 
-       for (auto& hdrs : clotInfo.parser_state_to_fields_) {
-           auto* state = hdrs.first;
+        for (auto& hdrs : clotInfo.parser_state_to_fields_) {
+            auto* state = hdrs.first;
 
-           unsigned state_unused_bits = 0;
-           unsigned state_total_bits = 0;
+            // Fields may overlap. This bit-vector tracks whether each bit in the state is unused
+            // (i.e., is not PHV-allocated).
+            bitvec state_bits_unused;
 
-           for (auto f : hdrs.second) {
-               if (can_allocate_to_clot(f))
-                   state_unused_bits += f->size;
-               state_total_bits += f->size;
-           }
+            // Figure out which bits are unused. At the same time, compute the actual total bits in
+            // the parser state.
+            unsigned state_total_bits = 0;
+            for (auto f : hdrs.second) {
+                 unsigned offset = clotInfo.offset(state, f);
+                 if (can_allocate_to_clot(f)) state_bits_unused.setrange(offset, f->size);
 
-           ClotAlloc ca(state, state_unused_bits, state_total_bits);
-           req[state->gress].push_back(ca);
-       }
+                 state_total_bits = std::max(state_total_bits, (unsigned) (offset + f->size));
+            }
 
-       // XXX(zma) replace this with optimization based on parse graph analysis
+            // Count up the number of unused bits in the parser state.
+            unsigned state_unused_bits = state_bits_unused.popcount();
 
-       std::stable_sort(req[0].begin(), req[0].end());
-       std::stable_sort(req[1].begin(), req[1].end());
+            ClotAlloc ca(state, state_unused_bits, state_total_bits);
+            req[state->gress].push_back(ca);
+        }
 
-       std::reverse(req[0].begin(), req[0].end());
-       std::reverse(req[1].begin(), req[1].end());
+        // XXX(zma) replace this with optimization based on parse graph analysis
 
-       for (auto i : {0, 1} )
-           for (auto ca : req[i])
-                LOG3("state " << ca.state->name << " has " << ca.unused_bits << " unused bits");
+        std::stable_sort(req[0].begin(), req[0].end());
+        std::stable_sort(req[1].begin(), req[1].end());
 
-       return req;
+        std::reverse(req[0].begin(), req[0].end());
+        std::reverse(req[1].begin(), req[1].end());
+
+        for (auto i : {0, 1} )
+            for (auto ca : req[i])
+                 LOG3("state " << ca.state->name << " has " << ca.unused_bits << " unused bits");
+
+        return req;
     }
 
+    /// Determines the amount of inter-CLOT gap needed at the beginning (when @arg head_or_tail is
+    /// true) or end (when @arg head_or_tail is false) of a given parse state.
     unsigned calculate_gap_needed(const IR::BFN::ParserState* state, bool head_or_tail) {
+        LOG5("finding " << (head_or_tail ? "head" : "tail") << " gap needed for " << state->name);
         const IR::BFN::Parser* parser = parserInfo.parser(state);
 
         auto& preds_or_succs = head_or_tail ? parserInfo.graph(parser).predecessors()
@@ -276,6 +330,7 @@ class NaiveClotAlloc : public Visitor {
         auto& credit_map = head_or_tail ? tail_gap_credit_map
                                         : head_gap_credit_map;
 
+        // Find the largest gap needed for any predecessor/successor state.
         int gap_needed = 0;
 
         if (preds_or_succs.count(state)) {
@@ -295,32 +350,62 @@ class NaiveClotAlloc : public Visitor {
                 } else {
                     auto& fields_in_state = clotInfo.parser_state_to_fields_[s];
 
-                    int bits_in_s = 0;
-                    for (auto f : fields_in_state)
-                        bits_in_s += f->size;
+                    // Figure out the number of bits in the state s by finding the bit range of the
+                    // fields in the state.
+                    bool first_field = true;
+                    int max_offset = 0;
+                    int min_offset = 0;
+                    for (auto f : fields_in_state) {
+                        int field_min_offset = clotInfo.offset(s, f);
+                        int field_max_offset = field_min_offset + f->size - 1;
+
+                        if (first_field) {
+                            min_offset = field_min_offset;
+                            max_offset = field_max_offset;
+                            first_field = false;
+                        } else {
+                            min_offset = std::min(min_offset, field_min_offset);
+                            max_offset = std::max(max_offset, field_max_offset);
+                        }
+                    }
+
+                    int bits_in_s = first_field ? 0 : max_offset - min_offset + 1;
 
                     // P4C-965 if s is small (less than 3 bytes), we need to check its
                     // preds/succs, as their gap requirement may spill into current state.
                     if (bits_in_s < INTER_CLOTS_BYTE_GAP * 8) {
                         int head_or_tail_gap_for_s = calculate_gap_needed(s, head_or_tail);
-                        gap_needed_for_s = head_or_tail_gap_for_s - bits_in_s;
+                        gap_needed_for_s = std::max(head_or_tail_gap_for_s - bits_in_s, 0);
                     }
                 }
+
+                LOG5(gap_needed_for_s << " bits of " << (head_or_tail ? "head" : "tail")
+                    << " gap needed for neighbour state " << s->name);
 
                 gap_needed = std::max(gap_needed, gap_needed_for_s);
             }
         }
 
+        LOG5("-> " << gap_needed << " bits of " << (head_or_tail ? "head" : "tail")
+            << " gap needed for state " << state->name);
         BUG_CHECK(gap_needed >= 0, "negative gap needed?");
 
         return (unsigned)gap_needed;
     }
 
-    // This is the core routine to allocate CLOT for a given parse state. The key
-    // idea is that given the list of fields in that state, we try to find the head
-    // and tail index in the list, such that the head and tail gap constraint is
-    // satisfied (see comment above about this). Everything between the head and tail
-    // index can then be allocated to a CLOT.
+    // This is the core routine to allocate a CLOT to a given parse state. The key idea is that
+    // given the list of fields in that state, we try to find the head and tail offsets for the
+    // CLOT, such that:
+    //
+    //   - the head and tail gap constraint is satisfied (see comment above about this);
+    //   - the head offset lands at the start of a byte;
+    //   - the tail offset lands at the end of a byte;
+    //   - if the bit pointed to by the head offset is part of any field, then it is the first bit
+    //     of that field; and
+    //   - if the bit pointed to by the tail offset is part of any field, then it is the last bit
+    //     of that field.
+    //
+    // Fields that land between the head and tail offsets can then be allocated to a CLOT.
     bool allocate(const ClotAlloc& ca) {
         LOG3("try allocate " << ca.state->name << ", unused = " << ca.unused_bits);
 
@@ -330,99 +415,88 @@ class NaiveClotAlloc : public Visitor {
         auto head_gap_needed = calculate_gap_needed(ca.state, true  /* head */);
         auto tail_gap_needed = calculate_gap_needed(ca.state, false /* tail */);
 
-        LOG3(head_gap_needed << " bits of head gap needed");
-        LOG3(tail_gap_needed << " bits of tail gap needed");
+        LOG3("  " << head_gap_needed << " bits of head gap needed");
+        LOG3("  " << tail_gap_needed << " bits of tail gap needed");
 
         auto& fields_in_state = clotInfo.parser_state_to_fields_[ca.state];
 
         if (fields_in_state.size() == 0)
             return false;
 
-        int head_index = 0;
-        int tail_index = fields_in_state.size() - 1;
+        // The offset of the first field in the state can be non-zero if the previous state didn't
+        // shift for whatever reason.
+        unsigned state_min_byte_offset = byte_idx_to_field[ca.state].begin()->first;
+        unsigned state_max_byte_offset = byte_idx_to_field[ca.state].rbegin()->first;
 
-        auto head_field = fields_in_state[head_index];
-        unsigned head_offset = (clotInfo.field_range_.at(head_field)).lo;
-        unsigned tail_offset = 0;
+        unsigned num_bytes_in_state = state_max_byte_offset - state_min_byte_offset + 1;
 
-        // skip through first fields until head gap is satisfied
-
-        for (int i = head_index; i <= tail_index && (head_gap_needed > head_offset); i++) {
-            auto f = fields_in_state.at(i);
-            head_offset += f->size;
-            head_index++;
-        }
-
-        // skip through last fields until tail gap is satisfied
-
-        for (int i = tail_index; i >= head_index && (tail_gap_needed > tail_offset); i--) {
-            auto f = fields_in_state.at(i);
-            tail_offset += f->size;
-            tail_index--;
-        }
-
-        if (head_index > tail_index)
+        if (head_gap_needed + tail_gap_needed >= 8 * num_bytes_in_state)
             return false;
 
-        // now see if we can earn some credit on head/tail
+        // Start by pointing to the first/last byte in the state that satisfies the head/tail-gap
+        // constraint.
+        unsigned head_byte_offset = state_min_byte_offset + (head_gap_needed + 7) / 8;
+        unsigned tail_byte_offset = state_max_byte_offset - (tail_gap_needed + 7) / 8;
 
-        unsigned head_gap_credit = 0;
-        unsigned tail_gap_credit = 0;
-
-        for (int i = head_index; i <= tail_index; i++) {
-            auto f = fields_in_state.at(i);
-            if (can_allocate_to_clot(f))
-                break;
-            head_offset += f->size;
-            head_gap_credit += f->size;
-            head_index++;
-        }
-
-        for (int i = tail_index; i >= head_index; i--) {
-            auto f = fields_in_state.at(i);
-            if (can_allocate_to_clot(f))
-                break;
-            tail_offset += f->size;
-            tail_gap_credit += f->size;
-            tail_index--;
-        }
-
-        if (head_index > tail_index)
-            return false;
-
+        // Earn "credit" by starting at the gap offsets and advancing the pointers towards each
+        // other until we find offsets that satisfy the conditions above, and are not
+        // PHV-allocated.
+        //
         // TODO(zma) In many cases, it's a win to rollback on head
         // and skip forward on tail to find byte boundary to maximize CLOT
         // contiguity. This involves double allocating the head/tail fields
         // to both CLOTs and PHV. This also means setting additional packing/slicing
         // constraints on PHV allocation, as deparser can only deparse whole containers.
+        //
+        // For now, skip forward on head and rollback on tail to find byte boundary
 
-        // For now, skip forward or rollback to find byte boundary
+        // Advance the head offset before moving the tail offset.
+        bool moving_head = true;
+        while (head_byte_offset <= tail_byte_offset) {
+            bool moved = false;
+            auto fields =
+                byte_idx_to_field[ca.state][moving_head ? head_byte_offset : tail_byte_offset];
+            for (auto f : fields) {
+                auto field_bytes = field_to_byte_idx[ca.state][f];
+                unsigned min_field_byte = *field_bytes.begin();
+                unsigned max_field_byte = *field_bytes.rbegin();
 
-        for (int i = head_index; i <= tail_index; i++) {
-            if (head_offset % 8 == 0)
-                break;
-            auto f = fields_in_state.at(i);
-            head_offset += f->size;
-            head_gap_credit += f->size;
-            head_index++;
+                if ((moving_head && head_byte_offset != min_field_byte)
+                        || (!moving_head && tail_byte_offset != max_field_byte)
+                        || !can_allocate_to_clot(f)) {
+                    // Advance past f.
+                    if (moving_head) head_byte_offset = max_field_byte + 1;
+                    else if (min_field_byte == 0) return false;
+                    else
+                        tail_byte_offset = min_field_byte - 1;
+
+                    moved = true;
+                    break;
+                }
+            }
+
+            if (moved) continue;
+
+            if (!moving_head) break;
+
+            // Just finished moving the head offset. Now move the tail offset, but first adjust if
+            // necessary to make sure we are within the CLOT's capacity.
+            unsigned max_tail_byte_offset = head_byte_offset + MAX_BYTES_PER_CLOT - 1;
+            tail_byte_offset = std::min(tail_byte_offset, max_tail_byte_offset);
+            moving_head = false;
         }
 
-        for (int i = tail_index; i >= head_index; i--) {
-            if (tail_offset % 8 == 0)
-                break;
-            auto f = fields_in_state.at(i);
-            tail_offset += f->size;
-            tail_gap_credit += f->size;
-            tail_index--;
-        }
+        // Shrink the proposed CLOT so we don't have any empty space at the beginning or end that
+        // isn't covered by a field.
+        while (head_byte_offset <= tail_byte_offset &&
+               byte_idx_to_field[ca.state][head_byte_offset].empty())
+            head_byte_offset++;
 
-        if (head_index > tail_index)
-            return false;
+        while (head_byte_offset <= tail_byte_offset &&
+               byte_idx_to_field[ca.state][tail_byte_offset].empty())
+            tail_byte_offset--;
 
-        if (head_gap_needed > head_offset || tail_gap_needed > tail_offset)
-            return false;
-
-        if (head_offset % 8 != 0 || tail_offset % 8 != 0)
+        if (head_byte_offset > tail_byte_offset)
             return false;
 
         // now allocate
@@ -438,14 +512,19 @@ class NaiveClotAlloc : public Visitor {
                 if (clotInfo.parser_state_to_clots().count(s->name) > 0) {
                     auto& clots = clotInfo.parser_state_to_clots().at(s->name);
                     overlay_tag = clots[0]->tag;
-                    LOG3("can overlay with state " << s->name << " clot " << overlay_tag);
+                    LOG3("  " << "can overlay with state " << s->name << " clot " << overlay_tag);
                     break;
                 }
             }
         }
 
-        for (int i = head_index; i <= tail_index; i++) {
-            auto f = fields_in_state.at(i);
+        for (auto f : fields_in_state) {
+            // Only consider the field if it lies entirely in the CLOT.
+            auto field_bytes = field_to_byte_idx[ca.state][f];
+            unsigned min_field_byte = *field_bytes.begin();
+            unsigned max_field_byte = *field_bytes.rbegin();
+            if (min_field_byte < head_byte_offset || max_field_byte > tail_byte_offset)
+                continue;
 
             if (clot == nullptr) {
                 if (overlay_tag == -1)
@@ -453,27 +532,42 @@ class NaiveClotAlloc : public Visitor {
 
                 clot = new Clot();
 
-                clot->start = head_offset / 8;  // clot start is in byte, offset in bits
+                clot->start = head_byte_offset;
                 clotInfo.add_clot(clot, ca.state);
-                LOG3("allocate clot " << clot->tag << " to " << ca.state->name);
+                LOG3("  " << "allocate clot " << clot->tag << " to " << ca.state->name);
             }
 
-            if (clot->length_in_bits() + f->size > MAX_BYTES_PER_CLOT * 8)
-                break;
+            Clot::FieldKind kind;
+            if (is_checksum_field(f)) kind = Clot::FieldKind::CHECKSUM;
+            else if (!can_allocate_to_clot(f)) kind = Clot::FieldKind::PHV;
+            else
+                kind = Clot::FieldKind::OTHER;
 
-            if (is_checksum_field(f))
-                clot->csum_fields.push_back(f);
-            else if (!can_allocate_to_clot(f))
-                clot->phv_fields.push_back(f);
+            unsigned f_offset = clotInfo.offset(ca.state, f) - 8 * head_byte_offset;
 
-            clot->all_fields.push_back(f);
+            if (LOGGING(4)) {
+                std::string kind_str;
+                switch (kind) {
+                case Clot::FieldKind::CHECKSUM: kind_str = "checksum "; break;
+                case Clot::FieldKind::PHV: kind_str = "phv "; break;
+                case Clot::FieldKind::OTHER: kind_str = ""; break;
+                }
+
+                LOG4("  adding " << kind_str << "field " << f->name << " at byte " << f_offset);
+            }
+            clot->add_field(kind, f, f_offset);
         }
+
+        unsigned head_gap_credit =
+            8 * (head_byte_offset - state_min_byte_offset) - head_gap_needed;
+        unsigned tail_gap_credit =
+            8 * (state_max_byte_offset - tail_byte_offset) - tail_gap_needed;
 
         head_gap_credit_map[ca.state] = head_gap_credit;
         tail_gap_credit_map[ca.state] = tail_gap_credit;
 
-        LOG3(head_gap_credit << " bits of head credit earned");
-        LOG3(tail_gap_credit << " bits of tail credit earned");
+        LOG3("  " << head_gap_credit << " bits of head credit earned");
+        LOG3("  " << tail_gap_credit << " bits of tail credit earned");
 
         return true;
     }
@@ -486,6 +580,13 @@ class NaiveClotAlloc : public Visitor {
 
             allocate(req[i]);
         }
+    }
+
+    Visitor::profile_t init_apply(const IR::Node* root) override {
+        // Make sure we clear our state from previous invocations of the visitor.
+        auto result = Visitor::init_apply(root);
+        clear();
+        return result;
     }
 
     const IR::Node *apply_visitor(const IR::Node *root, const char *) override {
@@ -502,6 +603,14 @@ class NaiveClotAlloc : public Visitor {
         LOG2(clotInfo.print());
 
         return root;
+    }
+
+    void clear() {
+        tail_gap_credit_map.clear();
+        head_gap_credit_map.clear();
+        field_to_byte_idx.clear();
+        byte_idx_to_field.clear();
+        can_allocate_to_clot_.clear();
     }
 };
 

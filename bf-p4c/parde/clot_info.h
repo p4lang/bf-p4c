@@ -34,7 +34,8 @@ class ClotInfo {
     std::map<cstring, std::vector<const Clot*>> parser_state_to_clots_;
 
     std::map<cstring, std::map<PHV::Container, nw_byterange>> container_range_;
-    std::map<const PHV::Field*, nw_bitrange> field_range_;
+    std::map<const IR::BFN::ParserState*,
+             std::map<const PHV::Field*, nw_bitrange>> field_range_;
 
     std::map<const Clot*, const IR::BFN::EmitChecksum*> clot_to_emit_checksum_;
 
@@ -45,6 +46,11 @@ class ClotInfo {
     const std::vector<Clot*>& clots() const { return clots_; }
 
     unsigned num_clots_allocated() const { return Clot::tagCnt; }
+
+    /// The bit offset of a given field for a given parser state.
+    unsigned offset(const IR::BFN::ParserState* state, const PHV::Field* field) const {
+        return field_range_.at(state).at(field).lo;
+    }
 
     const std::map<const Clot*, cstring>&
         clot_to_parser_state()const { return clot_to_parser_state_; }
@@ -82,9 +88,10 @@ class ClotInfo {
 
     void add_field(const PHV::Field* f, const IR::BFN::PacketRVal* rval,
              const IR::BFN::ParserState* state) {
+        LOG4("adding " << f->name << " to " << state->name << " (range " << rval->range() << ")");
         parser_state_to_fields_[state].push_back(f);
         field_to_parser_states_[f].insert(state);
-        field_range_[f] = rval->range();
+        field_range_[state][f] = rval->range();
     }
 
     void add_clot(Clot* cl, const IR::BFN::ParserState* state) {
@@ -138,9 +145,8 @@ class ClotInfo {
     /// @return the pointer to the CLOT if field is covered in a CLOT
     Clot* clot(const PHV::Field* field) const {
         for (auto c : clots_)
-            for (auto f : c->all_fields)
-                if (f == field)
-                    return c;
+            if (c->has_field(field))
+                return c;
         return nullptr;
     }
 

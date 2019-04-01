@@ -1098,7 +1098,7 @@ struct AllocateParserClotChecksums : public PassManager {
             unsigned clot_start_byte = ec->dest.start;
 
             for (auto f : clot_csum_fields) {
-                unsigned offset = ec->dest.offset(f);
+                unsigned offset = ec->dest.byte_offset(f);
                 int sz = (f->size + 7) / 8;
                 ranges.insert(StartLen(clot_start_byte + offset, sz));
             }

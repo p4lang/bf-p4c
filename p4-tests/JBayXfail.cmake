@@ -286,7 +286,7 @@ p4c_add_xfail_reason("tofino2"
 
 # P4C-1496
 p4c_add_xfail_reason("tofino2"
-  "Can only output full phv registers, not slices, in deparser"
+  "Parser extract didn't receive a PHV allocation"
   fabric.p4
   )
 
