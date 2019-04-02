@@ -1144,26 +1144,28 @@ class AddIntrinsicConstraints : public Inspector {
 class CollectPardeConstraints : public Inspector {
     PhvInfo& phv;
 
-    // If two adjacent fields in deparser are predicated by different POV bits,
+    // If two fields in deparser are predicated by different POV bits,
     // we cannot pack them in the same container (deparser can only deparse whole
     // container, not byte in container).
     bool preorder(const IR::BFN::Deparser* deparser) override {
-        const PHV::Field* prev_field = nullptr;
-        const PHV::Field* prev_pov_bit = nullptr;
+        for (auto it = deparser->emits.begin(); it != deparser->emits.end(); it++) {
+            auto efi = (*it)->to<IR::BFN::EmitField>();
+            if (!efi) continue;
 
-        for (auto prim : deparser->emits) {
-            if (auto ef = prim->to<IR::BFN::EmitField>()) {
-                auto curr_field = phv.field(ef->source->field);
-                auto curr_pov_bit = phv.field(ef->povBit->field);
+            auto fi = phv.field(efi->source->field);
+            auto pi = phv.field(efi->povBit->field);
 
-                if (prev_pov_bit && (prev_pov_bit != curr_pov_bit)) {
-                    phv.addDeparserNoPack(prev_field, curr_field);
-                    LOG1("\tMarking " << prev_field->name << " and "
-                                      << curr_field->name << " as deparser_no_pack");
+            for (auto jt = deparser->emits.begin(); jt != deparser->emits.end(); jt++) {
+                auto efj = (*jt)->to<IR::BFN::EmitField>();
+                if (!efj) continue;
+
+                auto fj = phv.field(efj->source->field);
+                auto pj = phv.field(efj->povBit->field);
+
+                if (pi != pj) {
+                    phv.addDeparserNoPack(fi, fj);
+                    LOG1("\tMarking " << fi->name << " and " << fj->name << " as deparser_no_pack");
                 }
-
-                prev_field = curr_field;
-                prev_pov_bit = curr_pov_bit;
             }
         }
 

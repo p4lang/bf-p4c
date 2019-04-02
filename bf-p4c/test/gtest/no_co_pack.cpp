@@ -116,11 +116,11 @@ TEST_F(NoCoPack, Sanity) {
     EXPECT_TRUE(phv.isDeparserNoPack(h1_f4, h2_f1));
     EXPECT_TRUE(phv.isDeparserNoPack(h2_f4, h3_f1));
 
-    EXPECT_FALSE(phv.isDeparserNoPack(h1_f4, h2_f4));
-    EXPECT_FALSE(phv.isDeparserNoPack(h2_f4, h3_f4));
+    EXPECT_TRUE(phv.isDeparserNoPack(h1_f4, h2_f4));
+    EXPECT_TRUE(phv.isDeparserNoPack(h2_f4, h3_f4));
 
     EXPECT_FALSE(phv.isDeparserNoPack(h1_f2, h1_f4));
-    EXPECT_FALSE(phv.isDeparserNoPack(h3_f2, h1_f4));
+    EXPECT_TRUE(phv.isDeparserNoPack(h3_f2, h1_f4));
 }
 
 }  // namespace Test

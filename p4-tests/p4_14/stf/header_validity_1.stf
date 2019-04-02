@@ -1,0 +1,11 @@
+add t1 foo.f:0xbabe remove_bar() 
+add t2 bar.f:0xbabe remove_foo() 
+
+expect 2 babe ffff ffff ffff 0000 0000 0000 0000
+packet 2 babe ffff ffff ffff dead ffff ffff ffff
+
+expect 2 babe ffff ffff ffff 0000 0000 0000 0000 
+packet 2 dead ffff ffff ffff babe ffff ffff ffff
+
+expect 2 dead ffff ffff ffff cafe ffff ffff ffff
+packet 2 dead ffff ffff ffff cafe ffff ffff ffff

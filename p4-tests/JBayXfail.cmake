@@ -50,6 +50,8 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     extensions/p4_tests/p4_14/stf/update_checksum_6.p4
     # P4C-1602
     extensions/p4_tests/p4_16/stf/p4c-1487.p4
+    # P4C-1618
+    extensions/p4_tests/p4_14/stf/header_validity_1.p4
     )
 
 endif() # HARLYN_STF
