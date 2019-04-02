@@ -602,7 +602,7 @@ extern DirectCounter<W> {
 extern Meter<I> {
     Meter(bit<32> size, MeterType_t type);
     Meter(bit<32> size, MeterType_t type, bit<8> red, bit<8> yellow, bit<8> green);
-    bit<8> execute(in I index, in bit<2> color);
+    bit<8> execute(in I index, in MeterColor_t color);
     bit<8> execute(in I index);
 }
 
@@ -610,7 +610,7 @@ extern Meter<I> {
 extern DirectMeter {
     DirectMeter(MeterType_t type);
     DirectMeter(MeterType_t type, bit<8> red, bit<8> yellow, bit<8> green);
-    bit<8> execute(in bit<2> color);
+    bit<8> execute(in MeterColor_t color);
     bit<8> execute();
 }
 
