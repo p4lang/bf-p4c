@@ -218,18 +218,18 @@ int IR::MAU::Table::get_pragma_max_actions() const {
         return -1;
     auto annot = match_table->getAnnotations();
     if (auto s = annot->getSingle("max_actions")) {
-        ERROR_CHECK(s->expr.size() >= 1, "%s: max_actions pragma on table does not have a"
+        ERROR_CHECK(s->expr.size() >= 1, "%smax_actions pragma on table %s does not have a "
             "value", srcInfo, name);
         auto pragma_ptr = s->expr.at(0)->to<IR::Constant>();
         if (pragma_ptr == nullptr) {
-            fatal_error("%s: max_actions value on table %s is not a constant",
+            fatal_error("%smax_actions value on table %s is not a constant",
                         srcInfo, name);
             return -1;
         } else {
             int pragma_val = pragma_ptr->asInt();
             int num_actions = actions.size();
             if (pragma_val < num_actions) {
-                fatal_error("%s: Invalid max_actions pragma usage on table %s."
+                fatal_error("%sInvalid max_actions pragma usage on table %s. "
                             "The maximum actions (%d) specified cannot be less than the "
                             "number of callable actions listed (%d).",
                             srcInfo, name, pragma_val, num_actions);
@@ -237,7 +237,7 @@ int IR::MAU::Table::get_pragma_max_actions() const {
             // } else if (pragma_val > (InstructionMemory::IMEM_ROWS *
             //                          InstructionMemory::IMEM_COLORS)) {
             } else if (pragma_val > 64) {
-                fatal_error("%s: Invalid max_actions pragma usage on table %s."
+                fatal_error("%sInvalid max_actions pragma usage on table %s. "
                             "The maximum actions specified (%d) cannot exceed %d.",
                             srcInfo, name, pragma_val, 64);
                 return -1;
@@ -255,11 +255,11 @@ bool IR::MAU::Table::is_force_immediate() const {
         return false;
     auto annot = match_table->getAnnotations();
     if (auto s = annot->getSingle("force_immediate")) {
-        ERROR_CHECK(s->expr.size() >= 1, "%s: force_immediate pragma on table does not have a"
-            "value", srcInfo, name);
+        ERROR_CHECK(s->expr.size() >= 1, "%sforce_immediate pragma on table %s does not have a"
+            " value", srcInfo, name);
         auto pragma_ptr = s->expr.at(0)->to<IR::Constant>();
         if (pragma_ptr == nullptr) {
-            fatal_error("%s: force_immediate value on table %s is not a constant",
+            fatal_error("%sforce_immediate value on table %s is not a constant",
                         srcInfo, name);
             return false;
         } else {
@@ -268,7 +268,7 @@ bool IR::MAU::Table::is_force_immediate() const {
                 LOG2("Found force_immediate " << pragma_val);
                 return pragma_val == 1;
             } else {
-              fatal_error("%s: Invalid force_immediate pragma usage on table %s. "
+              fatal_error("%sInvalid force_immediate pragma usage on table %s. "
                           "Only 0 and 1 are allowed.", srcInfo, name);
               return false; } } }
     return false;
