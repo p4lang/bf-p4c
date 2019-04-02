@@ -122,6 +122,12 @@ class MeterOutputSetup : public PassManager {
         });
     }
 
+    Visitor::profile_t init_apply(const IR::Node *node) {
+        auto rv = PassManager::init_apply(node);
+        meter_output_placement.clear();
+        return rv;
+    }
+
  private:
     MeterOutputPlacement meter_output_placement;
 };
