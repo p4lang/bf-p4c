@@ -537,14 +537,14 @@ void ConditionalArgs_Test(ActionData::Parameter *arg1, ActionData::Parameter *ar
     ram_sect3->add_param(8, arg1_extend_cond1);
 
     auto param_positions = ram_sect3->parameter_positions();
-    EXPECT_EQ(param_positions.size(), 2);
+    EXPECT_EQ(param_positions.size(), size_t(2));
 
     ActionData::RamSection *ram_sect4 = new ActionData::RamSection(16, pc);
     ram_sect4->add_param(0, arg1_cond1);
     ram_sect4->add_param(8, arg1_extend_cond1);
 
     param_positions = ram_sect4->parameter_positions();
-    EXPECT_EQ(param_positions.size(), 1);
+    EXPECT_EQ(param_positions.size(), size_t(1));
 }
 
 TEST(ActionFormatHelper, ConditionalArgs) {

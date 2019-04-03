@@ -1297,7 +1297,7 @@ void Table::Actions::Action::check_conditional(Table::Format::Field &field) cons
         for (auto br : field.bits) {
             auto overlap = kv.second[MC_ADT].getslice(br.lo, br.size());
             if (overlap.empty()) {
-                BUG_CHECK(!found || found && condition != kv.first);
+                BUG_CHECK(!found || (found && condition != kv.first));
             } else if (overlap.popcount() == br.size()) {
                 if (found) {
                     BUG_CHECK(condition == kv.first);
@@ -1324,7 +1324,7 @@ bool Table::Actions::Action::immediate_conditional(int lo, int sz, std::string &
     for (auto kv : mod_cond_values) {
         auto overlap = kv.second[MC_IMMED].getslice(lo, sz);
         if (overlap.empty()) {
-            BUG_CHECK(!found || found && condition != kv.first);
+            BUG_CHECK(!found || (found && condition != kv.first));
         } else {
             if (found) {
                 BUG_CHECK(condition == kv.first);

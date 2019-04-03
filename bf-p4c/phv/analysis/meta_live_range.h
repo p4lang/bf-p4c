@@ -59,7 +59,6 @@ class MetadataLiveRange : public Inspector {
     FieldDefUse                             &defuse;
     const PragmaNoOverlay                   &noOverlay;
     const PhvUse                            &uses;
-    const MauBacktracker                    &alloc;
 
     /// List of fields that are marked as pa_no_init, which means that we assume the live range of
     /// these fields is from the first use of it to the last use.
@@ -133,13 +132,12 @@ class MetadataLiveRange : public Inspector {
             FieldDefUse& f,
             const PHV::Pragmas& pragmas,
             const PhvUse& u,
-            const MauBacktracker& a)
+            const MauBacktracker&)
         : phv(p),
           dg(g),
           defuse(f),
           noOverlay(pragmas.pa_no_overlay()),
           uses(u),
-          alloc(a),
           noInitFields(pragmas.pa_no_init().getFields()),
           notParsedFields(pragmas.pa_deparser_zero().getNotParsedFields()),
           notDeparsedFields(pragmas.pa_deparser_zero().getNotDeparsedFields()),

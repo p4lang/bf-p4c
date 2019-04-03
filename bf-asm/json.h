@@ -372,11 +372,6 @@ private:
             return v; }
         int operator=(int v) { return (int)(*this = (int64_t)v); }
         unsigned int operator=(unsigned int v) { return (unsigned int)(*this = (int64_t)v); }
-#ifdef __clang__
-        // Clang ang gcc can't agree whether size_t overloads uint64_t or unsigned long
-        // or the overload is not defined!
-        size_t operator=(size_t v) { return (size_t)(*this = (int64_t)v); }
-#endif
         uint64_t operator=(uint64_t v) { return (uint64_t)(*this = (int64_t)v); }
         vector &operator=(vector &&v) {
             if (key)

@@ -51,7 +51,8 @@ TEST_F(TofinoField, foreach_byte) {
 
     count = 0;
     f->foreach_byte(StartLen(0, 16), [&](const PHV::Field::alloc_slice& slice) {
-        EXPECT_EQ(expected_slices[count++], slice);
+        EXPECT_EQ(expected_slices[count], slice);
+        count++;
     });
 
     // Simple allocation to one container with limited range.
@@ -66,7 +67,8 @@ TEST_F(TofinoField, foreach_byte) {
 
     count = 0;
     f->foreach_byte(FromTo(1, 14), [&](const PHV::Field::alloc_slice& slice) {
-        EXPECT_EQ(expected_slices[count++], slice);
+        EXPECT_EQ(expected_slices[count], slice);
+        count++;
     });
 
     // Simple allocation to two containers.
@@ -82,7 +84,8 @@ TEST_F(TofinoField, foreach_byte) {
 
     count = 0;
     f->foreach_byte(StartLen(0, 16), [&](const PHV::Field::alloc_slice& slice) {
-        EXPECT_EQ(expected_slices[count++], slice);
+        EXPECT_EQ(expected_slices[count], slice);
+        count++;
     });
 
     // Simple allocation to two containers, but the allocation to c16 spans two
@@ -100,7 +103,8 @@ TEST_F(TofinoField, foreach_byte) {
 
     count = 0;
     f->foreach_byte(StartLen(0, 16), [&](const PHV::Field::alloc_slice& slice) {
-        EXPECT_EQ(expected_slices[count++], slice);
+        EXPECT_EQ(expected_slices[count], slice);
+        count++;
     });
 
     // Test a corner case that triggered a bug in foreach_byte on switch_dc_basic.
@@ -120,7 +124,8 @@ TEST_F(TofinoField, foreach_byte) {
 
     count = 0;
     f->foreach_byte(FromTo(1, 14), [&](const PHV::Field::alloc_slice& slice) {
-        EXPECT_EQ(expected_slices[count++], slice);
+        EXPECT_EQ(expected_slices[count], slice);
+        count++;
     });
 }
 

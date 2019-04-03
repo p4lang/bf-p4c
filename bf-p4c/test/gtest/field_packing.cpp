@@ -247,7 +247,7 @@ TEST(TofinoFieldPacking, ForEachField) {
                                                   const IR::Expression* field,
                                                   cstring source) {
             SCOPED_TRACE(currentField);
-            ASSERT_LE(currentField, 2);
+            ASSERT_LE(currentField, 2U);
             EXPECT_EQ(expected[currentField].first, source);
             EXPECT_EQ(expected[currentField].second, range);
 
@@ -272,7 +272,7 @@ TEST(TofinoFieldPacking, ForEachField) {
                                                  const IR::Expression* field,
                                                  cstring source) {
             SCOPED_TRACE(currentField);
-            ASSERT_LE(currentField, 2);
+            ASSERT_LE(currentField, 2U);
             EXPECT_EQ(expected[currentField].first, source);
             EXPECT_EQ(expected[currentField].second, range);
 
