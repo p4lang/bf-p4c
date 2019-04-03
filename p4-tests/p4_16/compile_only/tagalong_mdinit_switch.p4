@@ -2016,7 +2016,7 @@ struct switch_bridged_metadata_tunnel_extension_t {
 @pa_alias("ingress", "hdr.bridged_md.base.ingress_ifindex", "ig_md.ifindex")
 @pa_alias("ingress", "hdr.bridged_md.base.ingress_bd", "ig_md.bd")
 @pa_alias("ingress", "hdr.bridged_md.base.nexthop", "ig_md.nexthop")
-//@pa_alias("ingress", "hdr.bridged_md.base.routed", "ig_md.flags.routed")
+@pa_alias("ingress", "hdr.bridged_md.base.routed", "ig_md.flags.routed")
 //@pa_alias("ingress", "hdr.bridged_md.base.peer_link", "ig_md.flags.peer_link")
 @pa_alias("ingress", "hdr.bridged_md.base.tc", "ig_md.qos.tc")
 @pa_alias("ingress", "hdr.bridged_md.base.cpu_reason", "ig_md.cpu_reason")

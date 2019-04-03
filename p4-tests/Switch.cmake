@@ -109,10 +109,10 @@ p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
   "smoketest_switch_16_compile" ${switch_p4_16} "${testExtraArgs}" "-arch tna -bfrt -force-link")
 p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile")
 p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
-  "smoketest_switch_16_compile_a0_profile" ${switch_p4_16} "${testExtraArgs}" "-DAO_PROFILE -arch tna -bfrt -force-link")
+  "smoketest_switch_16_compile_a0_profile" ${switch_p4_16} "${testExtraArgs}" "-DA0_PROFILE -arch tna -bfrt -force-link")
 p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_a0_profile")
 p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
-  "smoketest_switch_16_compile_b0_profile" ${switch_p4_16} "${testExtraArgs}" "-DBO_PROFILE -arch tna -bfrt -force-link")
+  "smoketest_switch_16_compile_b0_profile" ${switch_p4_16} "${testExtraArgs}" "-DB0_PROFILE -arch tna -bfrt -force-link")
 p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_b0_profile")
 p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
   "smoketest_switch_16_compile_32q" ${switch_p4_16} "${testExtraArgs}" "-DTEST_SWITCH_32Q -arch tna -bfrt -force-link")

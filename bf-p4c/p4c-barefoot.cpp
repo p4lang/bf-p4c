@@ -231,7 +231,7 @@ int main(int ac, char **av) {
         return PROGRAM_ERROR;
 
     BFN::MidEnd midend(options);
-    midend.addDebugHook(hook);
+    midend.addDebugHook(hook, true);
     // so far, everything is still under the same program for 32q, generate two separate threads
     program = program->apply(midend);
     if (!program)

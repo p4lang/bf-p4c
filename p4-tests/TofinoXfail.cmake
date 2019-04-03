@@ -822,11 +822,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "Some fields cannot be allocated because of unsatisfiable constraints"
-  testdata/p4_16_samples/issue1607-bmv2.p4
-)
-
-p4c_add_xfail_reason("tofino"
   "mirror field does not exist"
   testdata/p4_16_samples/issue562-bmv2.p4
   testdata/p4_16_samples/issue1642-bmv2.p4
@@ -958,10 +953,10 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/rdp/COMPILER-443/case2514.p4
 # bigger problem is that the container conflict free table placement is 15 stages for the following
 # program.
+  ../glass/testsuite/p4_tests/rdp/COMPILER-502/case2675.p4
   c2_COMPILER-537_case2834
   c2_COMPILER-514_balancer_one
   c2_COMPILER-510_case2682
-  c2_COMPILER-502_case2675
   )
 
 # P4C-1375
@@ -1378,6 +1373,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue355-bmv2.p4
   testdata/p4_16_samples/issue1560-bmv2.p4
   testdata/p4_16_samples/issue692-bmv2.p4
+  testdata/p4_16_samples/issue1607-bmv2.p4
   extensions/p4_tests/p4_16/compile_only/serializer3.p4
 )
 

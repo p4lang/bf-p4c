@@ -610,8 +610,12 @@ class BarefootBackend(BackendDriver):
                             self.checkAndRunCmd('summary_logging')
                             # and now remove the arguments added so that the next pipe is correct
                             del self._commands['summary_logging'][1:]
-                            self.mau_json[pipe['pipe_id']] = \
-                                "{}".format(os.path.join(pipe['pipe_name'], 'logs', 'mau.json'))
+                            if self.language == 'p4-14':
+                                self.mau_json[pipe['pipe_id']] = \
+                                    "{}".format(os.path.join('logs', 'mau.json'))
+                            else:
+                                self.mau_json[pipe['pipe_id']] = \
+                                    "{}".format(os.path.join(pipe['pipe_name'], 'logs', 'mau.json'))
                         except:
                             pass
 

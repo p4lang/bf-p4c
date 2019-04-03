@@ -80,7 +80,6 @@ set (BF_P4C_MIDEND_SRCS
   midend/check_header_alignment.cpp
   midend/check_unsupported.cpp
   midend/copy_block_pragmas.cpp
-  midend/copy_header.cpp
   midend/elim_cast.cpp
   midend/elim_typedef.cpp
   midend/desugar_varbit_extract.cpp
@@ -101,7 +100,6 @@ set (BF_P4C_BACKEND_MIDEND_HDRS
   midend/check_header_alignment.h
   midend/check_unsupported.h
   midend/copy_block_pragmas.h
-  midend/copy_header.h
   midend/elim_cast.h
   midend/desugar_varbit_extract.h
   midend/elim_typedef.h
