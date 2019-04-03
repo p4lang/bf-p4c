@@ -202,9 +202,10 @@ class LoweredPvsMatchValue : LoweredMatchValue {
 #emit
     using FieldSlice = std::pair<cstring, nw_bitrange>;
     using MatcherSlice = std::pair<MatchRegister, le_bitrange>;
-    std::map<FieldSlice, MatcherSlice> mapping;
+    using pvsFieldMatches = ordered_map<FieldSlice, MatcherSlice>;
+    pvsFieldMatches mapping;
 
-    LoweredPvsMatchValue(cstring name, int size, const std::map<FieldSlice, MatcherSlice>& m)
+    LoweredPvsMatchValue(cstring name, int size, const pvsFieldMatches &m)
         : mapping(m), name(name), size(size) {}
 #end
     dbprint { out << "pvs: " << name << " " << size; }
@@ -227,7 +228,7 @@ class LoweredParserMatch {
     /// The match value: constant or a value set
     LoweredMatchValue value;
 
-    /// Number of bytes to shift out of input buffer at current state  
+    /// Number of bytes to shift out of input buffer at current state
     unsigned shift;
 
     /// Extractions to perform
@@ -317,7 +318,7 @@ class LoweredParser : AbstractParser {
     /// The set of PHV containers that are allowed to be written more than once
     inline Vector<BFN::ContainerRef> multiwriteContainers;
 
-    /// The set of PHV containers that are zero initialized 
+    /// The set of PHV containers that are zero initialized
     inline Vector<BFN::ContainerRef> initZeroContainers;
 
     /// Num of bytes of metadata prepended to user packet

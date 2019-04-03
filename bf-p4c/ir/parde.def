@@ -243,7 +243,7 @@ class ParserPvsMatchValue : ParserMatchValue {
 #emit
     using FieldSlice = std::pair<cstring, nw_bitrange>;
     using MatcherSlice = std::pair<MatchRegister, le_bitrange>;
-    std::map<FieldSlice, MatcherSlice> mapping;
+    ordered_map<FieldSlice, MatcherSlice> mapping;
 #end
     cstring name;
     int size;
