@@ -105,7 +105,13 @@ void CheckT2NAExternInvocation::init_pipe_constraints() {
     valid_in_mau.setbit(genIndex(INGRESS, MAU));
     valid_in_mau.setbit(genIndex(EGRESS, MAU));
     set_pipe_constraints("LearnAction", valid_in_mau);
+    set_pipe_constraints("LearnAction2", valid_in_mau);
+    set_pipe_constraints("LearnAction3", valid_in_mau);
+    set_pipe_constraints("LearnAction4", valid_in_mau);
     set_pipe_constraints("MinMaxAction", valid_in_mau);
+    set_pipe_constraints("MinMaxAction2", valid_in_mau);
+    set_pipe_constraints("MinMaxAction3", valid_in_mau);
+    set_pipe_constraints("MinMaxAction4", valid_in_mau);
 
     bitvec valid_in_ghost;
     valid_in_ghost.setbit(genIndex(GHOST, MAU));
@@ -122,7 +128,13 @@ void CheckT2NAExternInvocation::init_pipe_constraints() {
     set_pipe_constraints("RegisterParam", valid_in_ghost);
     set_pipe_constraints("MathUnit", valid_in_ghost);
     set_pipe_constraints("RegisterAction", valid_in_ghost);
+    set_pipe_constraints("RegisterAction2", valid_in_mau | valid_in_ghost);
+    set_pipe_constraints("RegisterAction3", valid_in_mau | valid_in_ghost);
+    set_pipe_constraints("RegisterAction4", valid_in_mau | valid_in_ghost);
     set_pipe_constraints("DirectRegisterAction", valid_in_ghost);
+    set_pipe_constraints("DirectRegisterAction2", valid_in_mau | valid_in_ghost);
+    set_pipe_constraints("DirectRegisterAction3", valid_in_mau | valid_in_ghost);
+    set_pipe_constraints("DirectRegisterAction4", valid_in_mau | valid_in_ghost);
     set_pipe_constraints("ActionSelector", valid_in_ghost);
     set_pipe_constraints("ActionProfile", valid_in_ghost);
     set_pipe_constraints("Hash", valid_in_ghost);

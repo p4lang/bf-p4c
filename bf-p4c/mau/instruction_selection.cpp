@@ -44,6 +44,9 @@ const IR::Node *Synth2PortSetup::postorder(IR::Primitive *prim) {
 
     auto dot = prim->name.find('.');
     auto objType = dot ? prim->name.before(dot) : cstring();
+    const char *tail = objType.c_str() + objType.size();
+    while (tail > objType && std::isdigit(tail[-1])) --tail;
+    objType = objType.before(tail);
     IR::Node *rv = prim;
 
     const IR::GlobalRef *glob = nullptr;
@@ -68,7 +71,10 @@ const IR::Node *Synth2PortSetup::postorder(IR::Primitive *prim) {
                   "have an action in it's action map", prim->srcInfo, salu->name);
         auto salu_action_name = salu->action_map.at(ta_pair);
         auto pos = salu->instruction.find(salu_action_name);
+        BUG_CHECK(pos != salu->instruction.end(), "No action %s in salu %s?",
+                  salu_action_name, salu);
         int salu_index = std::distance(salu->instruction.begin(), pos);
+        auto salu_inst = pos->second;
         switch (salu_index) {
             case 0:
                 meter_type = IR::MAU::MeterType::STFUL_INST0; break;
@@ -80,7 +86,7 @@ const IR::Node *Synth2PortSetup::postorder(IR::Primitive *prim) {
                 meter_type = IR::MAU::MeterType::STFUL_INST3; break;
             default:
                 BUG("%s: An stateful instruction %s is outside the bounds of the stateful "
-                    "memory in %s", prim->srcInfo, pos->second, salu->name);
+                    "memory in %s", prim->srcInfo, salu_inst, salu->name);
         }
 
         // needed to setup the index and/or type properly
@@ -98,6 +104,12 @@ const IR::Node *Synth2PortSetup::postorder(IR::Primitive *prim) {
                       "too many outputs");
             int bit = output_offsets[output];
             int output_size = prim->type->width_bits();
+            if ((salu_inst->return_enum_words >> output) & 1) {
+                // an output enum encoded in the 16-bit predicate
+                BUG_CHECK(salu->pred_shift >= 0, "Not outputting predicate even though "
+                          "its being used");
+                bit += 4 + salu->pred_shift;
+                output_size = 16; }
             auto ao = new IR::MAU::AttachedOutput(IR::Type::Bits::get(bit+output_size), salu);
             auto dest = prim->operands[idx];
             auto instr = new IR::MAU::Instruction(prim->srcInfo, "set", dest,
@@ -711,8 +723,9 @@ static const IR::Type *stateful_type_for_primitive(const IR::Primitive *prim) {
         prim->name == "Lpf.execute" || prim->name == "DirectLpf.execute" ||
         prim->name == "Wred.execute" || prim->name == "DirectWred.execute")
         return IR::Type_Meter::get();
-    if (strstr(prim->name, "Action."))
-        return IR::Type_Register::get();
+    if (auto a = strstr(prim->name, "Action")) {
+        if (a[6] == '.' || (std::isdigit(a[6]) && a[7] == '.'))
+            return IR::Type_Register::get(); }
     BUG("Not a stateful primitive %s", prim);
 }
 
@@ -805,9 +818,10 @@ void StatefulAttachmentSetup::Scan::postorder(const IR::Primitive *prim) {
     const IR::MAU::AttachedMemory *obj = nullptr;
     use_t use = IR::MAU::StatefulUse::NO_USE;
     auto dot = prim->name.find('.');
-    auto objType = dot ? prim->name.before(dot) : cstring();
     cstring method = dot ? cstring(dot+1) : prim->name;
-    if (objType.endsWith("Action") || objType == "SelectorAction") {
+    while (dot && dot > prim->name && std::isdigit(dot[-1])) --dot;
+    auto objType = dot ? prim->name.before(dot) : cstring();
+    if (objType.endsWith("Action")) {
         obj = prim->operands.at(0)->to<IR::GlobalRef>()->obj->to<IR::MAU::StatefulAlu>();
         BUG_CHECK(obj, "invalid object");
         if (method == "execute") {

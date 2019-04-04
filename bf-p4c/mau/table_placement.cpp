@@ -732,6 +732,9 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, const Placed *done,
             }
         }
     }
+    /* Not yet placed tables that share an attached table with this table -- if any of them
+     * have a dependency that prevents placement in the current stage, we want to defer */
+    ordered_set<const IR::MAU::Table *> tables_with_shared;
     for (auto *ba : rv->table->attached) {
         if (ba->attached->direct) continue;
         rv->attached_entries[ba->attached] = ba->attached->size;
@@ -741,6 +744,7 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, const Placed *done,
             // If shared with another table that is not placed yet, need to
             // defer the placement of this attached table
             if (!done || !done->is_match_placed(att_to)) {
+                tables_with_shared.insert(att_to);
                 rv->attached_entries[ba->attached] = 0;
                 break; } } }
 
@@ -773,10 +777,29 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, const Placed *done,
                 LOG2("  - dependency between " << p->table->name << " and gateway advances stage");
             } else if (deps->container_conflict(p->table, rv->table)) {
                 if (!ignoreContainerConflicts) {
-                   rv->stage++;
-                   LOG2("  - action dependency between " << p->table->name << " and table " <<
-                        rv->table->name << " due to PHV allocation advances stage to " <<
-                        rv->stage);
+                    rv->stage++;
+                    LOG2("  - action dependency between " << p->table->name << " and table " <<
+                         rv->table->name << " due to PHV allocation advances stage to " <<
+                         rv->stage);
+                }
+            } else {
+                for (auto ctbl : tables_with_shared) {
+                    // FIXME -- once we can put shared attached tables in different stages, we
+                    // probably don't want to do this any more...
+                    if (deps->happens_before(p->table, ctbl) && !mutex.action(p->table, ctbl)) {
+                        rv->stage++;
+                        LOG2("  - dependency between " << p->table->name << " and " <<
+                             ctbl->name << " advances stage");
+                        break;
+                    } else if (deps->container_conflict(p->table, ctbl)) {
+                        if (!ignoreContainerConflicts) {
+                            rv->stage++;
+                            LOG2("  - action dependency between " << p->table->name << " and "
+                                 "table " << ctbl->name << " due to PHV allocation advances "
+                                 "stage to " << rv->stage);
+                            break;
+                        }
+                    }
                 }
             }
         }

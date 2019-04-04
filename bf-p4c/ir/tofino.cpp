@@ -28,6 +28,9 @@ IR::InstanceRef::InstanceRef(cstring prefix, IR::ID n, const IR::Type *t,
             if (f->type->is<IR::Type_StructLike>() || f->type->is<IR::Type_Stack>())
                 nested.add(name + "." + f->name,
                            new InstanceRef(name, f->name, f->type));
+    } else if (t->is<IR::Type_Enum>()) {
+        // non-converted enum type -- probably StatefulAlu predicate output.
+        obj = nullptr;
     } else {
         P4C_UNIMPLEMENTED("Unsupported type %s %s", t, n); }
     if (obj && ann)

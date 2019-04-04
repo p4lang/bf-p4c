@@ -84,6 +84,7 @@ const IR::Expression *MakeSliceSource(const IR::Expression *read, int lo, int hi
 }
 
 const IR::Expression *MakeSlice(const IR::Expression *e, int lo, int hi) {
+    BUG_CHECK(hi >= lo, "Invalid args to MakeSlice(%s, %d, %d", e, lo, hi);
     if (e->is<IR::MAU::MultiOperand>())
         return new IR::Slice(e, hi, lo);
     if (auto k = e->to<IR::Constant>()) {

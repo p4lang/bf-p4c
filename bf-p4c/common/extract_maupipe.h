@@ -12,6 +12,7 @@
 #include "bf-p4c/arch/arch.h"
 
 class BFN_Options;
+class CreateSaluInstruction;
 
 namespace BFN {
 
@@ -54,6 +55,7 @@ class AttachTables : public PassManager {
         AttachTables &self;
         std::map<const IR::Declaration_Instance *, IR::MAU::StatefulAlu *> salu_inits;
         std::set<const IR::Declaration_Instance *> register_actions;
+        std::map<const IR::MAU::StatefulAlu *, CreateSaluInstruction *> inst_ctor;
         void postorder(const IR::Expression *) override { visitAgain(); }
         void postorder(const IR::GlobalRef *) override;
         void end_apply() override;
@@ -88,6 +90,8 @@ class AttachTables : public PassManager {
                               const IR::Type_Specialized **regtype_ptr = nullptr,
                               const IR::Type_Extern **seltype_ptr = nullptr);
     profile_t init_apply(const IR::Node *root) override;
+
+    static bool isSaluActionType(const IR::Type *);
 
  public:
     AttachTables(P4::ReferenceMap *rm, P4::TypeMap* tm, DeclarationConversions &con,

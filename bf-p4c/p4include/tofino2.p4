@@ -711,12 +711,58 @@ extern DirectRegisterAction<T, U> {
     DirectRegisterAction(DirectRegister<T> reg);
     U execute(@optional out U rv2, @optional out U rv3, @optional out U rv4);
     @synchronous(execute)
-    abstract void apply(inout T value, @optional out U rv);
+    abstract void apply(inout T value, @optional out U rv, @optional out U rv2,
+                                       @optional out U rv3, @optional out U rv4);
 
     /* These routines can be called in apply method to get these values
      * to assign to a return value, but generally no operations can be applied */
     U address(@optional bit<1> subword); /* return the match address */
     U predicate(); /* return the 16-bit predicate value */
+    bit<8> min8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
+    bit<8> max8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
+    bit<16> min16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
+    bit<16> max16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
+}
+extern DirectRegisterAction2<T, U1, U2> {
+    DirectRegisterAction2(DirectRegister<T> reg);
+    U1 execute(out U2 rv2);
+    @synchronous(execute)
+    abstract void apply(inout T value, out U1 rv1, out U2 rv2);
+
+    /* These routines can be called in apply method to get these values
+     * to assign to a return value, but generally no operations can be applied */
+    U address<U>(@optional bit<1> subword); /* return the match address */
+    U predicate<U>(); /* return the 16-bit predicate value */
+    bit<8> min8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
+    bit<8> max8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
+    bit<16> min16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
+    bit<16> max16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
+}
+extern DirectRegisterAction3<T, U1, U2, U3> {
+    DirectRegisterAction3(DirectRegister<T> reg);
+    U1 execute(out U2 rv2, out U3 rv3);
+    @synchronous(execute)
+    abstract void apply(inout T value, out U1 rv1, out U2 rv2, out U3 rv3);
+
+    /* These routines can be called in apply method to get these values
+     * to assign to a return value, but generally no operations can be applied */
+    U address<U>(@optional bit<1> subword); /* return the match address */
+    U predicate<U>(); /* return the 16-bit predicate value */
+    bit<8> min8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
+    bit<8> max8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
+    bit<16> min16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
+    bit<16> max16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
+}
+extern DirectRegisterAction4<T, U1, U2, U3, U4> {
+    DirectRegisterAction4(DirectRegister<T> reg);
+    U1 execute(out U2 rv2, out U3 rv3, out U4 rv4);
+    @synchronous(execute)
+    abstract void apply(inout T value, out U1 rv1, out U2 rv2, out U3 rv3, out U4 rv4);
+
+    /* These routines can be called in apply method to get these values
+     * to assign to a return value, but generally no operations can be applied */
+    U address<U>(@optional bit<1> subword); /* return the match address */
+    U predicate<U>(); /* return the 16-bit predicate value */
     bit<8> min8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
     bit<8> max8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
     bit<16> min16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
@@ -755,6 +801,86 @@ extern RegisterAction<T, H, U> {
     bit<16> min16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
     bit<16> max16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
 }
+extern RegisterAction2<T, H, U1, U2> {
+    RegisterAction2(Register<T, H> reg);
+    U1 execute(in H index, out U2 rv2);
+
+    U1 execute_log(out U2 rv2);
+    U1 enqueue(out U2 rv2);  /* fifo push */
+    U1 dequeue(out U2 rv2);  /* fifo pop */
+    U1 push(out U2 rv2);  /* stack push */
+    U1 pop(out U2 rv2);  /* stack pop */
+    @synchronous(execute, execute_log, enqueue, dequeue, push, pop)
+    abstract void apply(inout T value, out U1 rv1, out U2 rv2);
+
+    @synchronous(enqueue, push)
+    @optional abstract void overflow(@optional inout T value, out U1 rv1, out U2 rv2);
+    @synchronous(dequeue, pop)
+    @optional abstract void underflow(@optional inout T value, out U1 rv1, out U2 rv);
+
+    /* These routines can be called in apply/overflow/underflow methods to get these values
+     * to assign to a return value, but generally no operations can be applied */
+    U address<U>(@optional bit<1> subword); /* return the match address */
+    U predicate<U>(); /* return the 16-bit predicate value */
+    bit<8> min8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
+    bit<8> max8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
+    bit<16> min16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
+    bit<16> max16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
+}
+extern RegisterAction3<T, H, U1, U2, U3> {
+    RegisterAction3(Register<T, H> reg);
+    U1 execute(in H index, out U2 rv2, out U3 rv3);
+
+    U1 execute_log(out U2 rv2, out U3 rv3);
+    U1 enqueue(out U2 rv2, out U3 rv3);  /* fifo push */
+    U1 dequeue(out U2 rv2, out U3 rv3);  /* fifo pop */
+    U1 push(out U2 rv2, out U3 rv3);  /* stack push */
+    U1 pop(out U2 rv2, out U3 rv3);  /* stack pop */
+    @synchronous(execute, execute_log, enqueue, dequeue, push, pop)
+    abstract void apply(inout T value, out U1 rv1, out U2 rv2, out U3 rv3);
+
+    @synchronous(enqueue, push)
+    @optional abstract void overflow(@optional inout T value, out U1 rv1, out U2 rv2, out U3 rv3);
+    @synchronous(dequeue, pop)
+    @optional abstract void underflow(@optional inout T value, out U1 rv1, out U2 rv2, out U3 rv3);
+
+    /* These routines can be called in apply/overflow/underflow methods to get these values
+     * to assign to a return value, but generally no operations can be applied */
+    U address<U>(@optional bit<1> subword); /* return the match address */
+    U predicate<U>(); /* return the 16-bit predicate value */
+    bit<8> min8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
+    bit<8> max8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
+    bit<16> min16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
+    bit<16> max16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
+}
+extern RegisterAction4<T, H, U1, U2, U3, U4> {
+    RegisterAction4(Register<T, H> reg);
+    U1 execute(in H index, out U2 rv2, out U3 rv3, out U4 rv4);
+
+    U1 execute_log(out U2 rv2, out U3 rv3, out U4 rv4);
+    U1 enqueue(out U2 rv2, out U3 rv3, out U4 rv4);  /* fifo push */
+    U1 dequeue(out U2 rv2, out U3 rv3, out U4 rv4);  /* fifo pop */
+    U1 push(out U2 rv2, out U3 rv3, out U4 rv4);  /* stack push */
+    U1 pop(out U2 rv2, out U3 rv3, out U4 rv4);  /* stack pop */
+    @synchronous(execute, execute_log, enqueue, dequeue, push, pop)
+    abstract void apply(inout T value, out U1 rv1, out U2 rv2, out U3 rv3, out U4 rv4);
+
+    @synchronous(enqueue, push)
+    @optional abstract void overflow(@optional inout T value,
+                                     out U1 rv1, out U2 rv2, out U3 rv3, out U4 rv4);
+    @synchronous(dequeue, pop)
+    @optional abstract void underflow(@optional inout T value,
+                                      out U1 rv1, out U2 rv2, out U3 rv3, out U4 rv4);
+
+    /* These routines can be called in apply/overflow/underflow methods to get these values
+     * to assign to a return value, but generally no operations can be applied */
+    U address<U>(@optional bit<1> subword); /* return the match address */
+    U predicate<U>(); /* return the 16-bit predicate value */
+    bit<8> min8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
+    bit<8> max8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
+    bit<16> min16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
+    bit<16> max16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
+}
 
 extern LearnAction<T, H, D, U> {
     LearnAction(Register<T, H> reg);
@@ -773,6 +899,53 @@ extern LearnAction<T, H, D, U> {
     bit<16> min16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
     bit<16> max16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
 }
+extern LearnAction2<T, H, D, U1, U2> {
+    LearnAction2(Register<T, H> reg);
+    U1 execute(in H index, out U2 rv2);
+    @synchronous(execute)
+    abstract void apply(inout T value, in D digest, in bool learn, out U1 rv1, out U2 rv2);
+
+    /* These routines can be called in apply method to get these values
+     * to assign to a return value, but generally no operations can be applied */
+    U address<U>(@optional bit<1> subword); /* return the match address */
+    U predicate<U>(); /* return the predicate value */
+    bit<8> min8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
+    bit<8> max8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
+    bit<16> min16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
+    bit<16> max16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
+}
+extern LearnAction3<T, H, D, U1, U2, U3> {
+    LearnAction3(Register<T, H> reg);
+    U1 execute(in H index, out U2 rv2, out U3 rv3);
+    @synchronous(execute)
+    abstract void apply(inout T value, in D digest, in bool learn,
+                        out U1 rv1, out U2 rv2, out U3 rv3);
+
+    /* These routines can be called in apply method to get these values
+     * to assign to a return value, but generally no operations can be applied */
+    U address<U>(@optional bit<1> subword); /* return the match address */
+    U predicate<U>(); /* return the predicate value */
+    bit<8> min8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
+    bit<8> max8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
+    bit<16> min16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
+    bit<16> max16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
+}
+extern LearnAction4<T, H, D, U1, U2, U3, U4> {
+    LearnAction4(Register<T, H> reg);
+    U1 execute(in H index, out U2 rv2, out U3 rv3, out U4 rv4);
+    @synchronous(execute)
+    abstract void apply(inout T value, in D digest, in bool learn,
+                        out U1 rv1, out U2 rv2, out U3 rv3, out U4 rv4);
+
+    /* These routines can be called in apply method to get these values
+     * to assign to a return value, but generally no operations can be applied */
+    U address<U>(@optional bit<1> subword); /* return the match address */
+    U predicate<U>(); /* return the predicate value */
+    bit<8> min8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
+    bit<8> max8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
+    bit<16> min16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
+    bit<16> max16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
+}
 
 extern MinMaxAction<T, H, U> {
     MinMaxAction(Register<T, _> reg);
@@ -786,6 +959,51 @@ extern MinMaxAction<T, H, U> {
      * to assign to a return value, but generally no operations can be applied */
     U address(@optional bit<1> subword); /* return the match address */
     U predicate(); /* return the predicate value */
+    bit<8> min8(in bit<128> val, in bit<16> mask, @optional out bit<4> index);
+    bit<8> max8(in bit<128> val, in bit<16> mask, @optional out bit<4> index);
+    bit<16> min16(in bit<128> val, in bit<8> mask, @optional out bit<3> index);
+    bit<16> max16(in bit<128> val, in bit<8> mask, @optional out bit<3> index);
+}
+extern MinMaxAction2<T, H, U1, U2> {
+    MinMaxAction2(Register<T, _> reg);
+    U1 execute(@optional in H index, out U2 rv2);
+    @synchronous(execute)
+    abstract void apply(inout bit<128> value, out U1 rv1, out U2 rv2);
+
+    /* These routines can be called in apply/overflow/underflow methods to get these values
+     * to assign to a return value, but generally no operations can be applied */
+    U address<U>(@optional bit<1> subword); /* return the match address */
+    U predicate<U>(); /* return the predicate value */
+    bit<8> min8(in bit<128> val, in bit<16> mask, @optional out bit<4> index);
+    bit<8> max8(in bit<128> val, in bit<16> mask, @optional out bit<4> index);
+    bit<16> min16(in bit<128> val, in bit<8> mask, @optional out bit<3> index);
+    bit<16> max16(in bit<128> val, in bit<8> mask, @optional out bit<3> index);
+}
+extern MinMaxAction3<T, H, U1, U2, U3> {
+    MinMaxAction3(Register<T, _> reg);
+    U1 execute(@optional in H index, out U2 rv2, out U3 rv3);
+    @synchronous(execute)
+    abstract void apply(inout bit<128> value, out U1 rv1, out U2 rv2, out U3 rv3);
+
+    /* These routines can be called in apply/overflow/underflow methods to get these values
+     * to assign to a return value, but generally no operations can be applied */
+    U address<U>(@optional bit<1> subword); /* return the match address */
+    U predicate<U>(); /* return the predicate value */
+    bit<8> min8(in bit<128> val, in bit<16> mask, @optional out bit<4> index);
+    bit<8> max8(in bit<128> val, in bit<16> mask, @optional out bit<4> index);
+    bit<16> min16(in bit<128> val, in bit<8> mask, @optional out bit<3> index);
+    bit<16> max16(in bit<128> val, in bit<8> mask, @optional out bit<3> index);
+}
+extern MinMaxAction4<T, H, U1, U2, U3, U4> {
+    MinMaxAction4(Register<T, _> reg);
+    U1 execute(@optional in H index, out U2 rv2, out U3 rv3, out U4 rv4);
+    @synchronous(execute)
+    abstract void apply(inout bit<128> value, out U1 rv1, out U2 rv2, out U3 rv3, out U4 rv4);
+
+    /* These routines can be called in apply/overflow/underflow methods to get these values
+     * to assign to a return value, but generally no operations can be applied */
+    U address<U>(@optional bit<1> subword); /* return the match address */
+    U predicate<U>(); /* return the predicate value */
     bit<8> min8(in bit<128> val, in bit<16> mask, @optional out bit<4> index);
     bit<8> max8(in bit<128> val, in bit<16> mask, @optional out bit<4> index);
     bit<16> min16(in bit<128> val, in bit<8> mask, @optional out bit<3> index);

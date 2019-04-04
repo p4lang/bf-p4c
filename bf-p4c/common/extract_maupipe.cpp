@@ -873,18 +873,22 @@ void AttachTables::InitializeStatefulAlus
             }
         }
     }
-    if (ext->type->toString().startsWith("LearnAction<"))
+    if (ext->type->toString().startsWith("LearnAction"))
         salu->learn_action = true;
 
     // If the register action hasn't been seen before, this creates an SALU Instruction
     if (register_actions.count(ext) == 0) {
         LOG3("Adding " << ext->name << " to StatefulAlu " << reg->name);
         register_actions.insert(ext);
-        ext->apply(CreateSaluInstruction(salu)); }
+        if (!inst_ctor[salu]) {
+            // Create exactly one CreateSaluInstruction per SALU and reuse it for all the
+            // instructions in that SALU, so we can accumulate info in it.
+            inst_ctor[salu] = new CreateSaluInstruction(salu); }
+        ext->apply(*inst_ctor[salu]); }
 
     auto prim = findContext<IR::Primitive>();
     LOG6("  - " << (prim ? prim->name : "<no primitive>"));
-    if (prim && prim->name == "RegisterAction.address") {
+    if (prim && prim->name.endsWith(".address")) {
         salu->chain_vpn = true;
         return; }
     auto tbl = findContext<IR::MAU::Table>();
@@ -896,11 +900,23 @@ void AttachTables::InitializeStatefulAlus
         error("%s: multiple calls to execute in action %s", gref->srcInfo, act->name);
 }
 
+bool AttachTables::isSaluActionType(const IR::Type *type) {
+    static std::set<cstring> saluActionTypes = {
+        "DirectRegisterAction", "DirectRegisterAction2", "DirectRegisterAction3",
+        "DirectRegisterAction4",
+        "LearnAction", "LearnAction2", "LearnAction3", "LearnAction4",
+        "MinMaxAction", "MinMaxAction2", "MinMaxAction3", "MinMaxAction4",
+        "RegisterAction", "RegisterAction2", "RegisterAction3", "RegisterAction4",
+        "SelectorAction" };
+    cstring tname = type->toString();
+    tname = tname.before(tname.find('<'));
+    return saluActionTypes.count(tname) > 0;
+}
+
 void AttachTables::InitializeStatefulAlus::postorder(const IR::GlobalRef *gref) {
     visitAgain();
     if (auto di = gref->obj->to<IR::Declaration_Instance>()) {
-        if (strstr(di->type->toString(), "Action<") ||
-            di->type->toString() == "SelectorAction") {
+        if (isSaluActionType(di->type)) {
             updateAttachedSalu(di, gref);
         }
     }
@@ -971,8 +987,7 @@ void AttachTables::DefineGlobalRefs::postorder(IR::GlobalRef *gref) {
             LOG3("Created " << att->node_type_name() << ' ' << att->name << " (pt 3)");
             gref->obj = self.converted[di] = att;
             obj = att;
-        } else if (strstr(di->type->toString(), "Action<") ||
-                   di->type->toString() == "SelectorAction") {
+        } else if (isSaluActionType(di->type)) {
             auto salu = findAttachedSalu(di);
             // Could be because an earlier pass errored out, and we do not stop_on_error
             // In a non-error case, this should always be non-null, and is checked in a BUG

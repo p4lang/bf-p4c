@@ -18,15 +18,17 @@ struct Device::StatefulAluSpec {
 };
 
 /**
-Converts a P4_14 stateful_alu extern object (a Declaration_Instance
-of type stateful_alu) into an MAU::SaluAction for an MAU::StatefulAlu,
-converting all of the properties into the corresponding instructions or
-whatever else is needed.
+Converts a RegisterAction into an MAU::SaluAction for an MAU::StatefulAlu,
+converting all of the properties and code into the corresponding instructions
+or whatever else is needed.
 
 The pass is designed to be applied to a subtree of IR containing a single
 Declaration_Instance object of type RegisterAction or SelectorAction,
-and creates an SaluAction for it, adding it to the StatefulAlu passed
-to the pass constructor.
+and creates an SaluAction for it, adding it to the StatefulAlu passed to
+the pass constructor.  We arrange for exactly one instance of this pass
+to be created for each SALU, and reuse it to create all the individual
+instructions in that SALU, so we can accumulate information about things
+that need to be shared between instructions here.
 
 This is really a kind of "reconstruction transform" rather than an
 Inspector, but the normal Transform isn't right for it, as we want to
@@ -92,12 +94,16 @@ class CreateSaluInstruction : public Inspector {
     IR::MAU::StatefulAlu::MathUnit              math;
     IR::MAU::SaluFunction                       *math_function = nullptr;
     bool                                        assignDone = false;
+    int                                         comb_pred_width = 0;
+    IR::MAU::SaluAction::ReturnEnumEncoding     *return_encoding = nullptr;
 
+    void clearFuncState();
     const IR::MAU::Instruction *createInstruction();
     bool applyArg(const IR::PathExpression *, cstring);
     const IR::Expression *reuseCmp(const IR::MAU::Instruction *cmp, int idx);
     void setupCmp(cstring op);
     const IR::MAU::Instruction *setup_output();
+    bool outputEnumAsPredicate(const IR::Member *);
     bool canBeIXBarExpr(const IR::Expression *);
 
     bool preorder(const IR::Declaration_Instance *di) override;
@@ -201,6 +207,79 @@ class CheckStatefulAlu : public MauModifier {
     static const IR::Type *getType(const IR::Type *t) {
         while (auto td = t->to<IR::Type_Typedef>()) t = td->type;
         return t; }
+};
+
+class FixupStatefulAlu : public PassManager {
+    /** When a SaluAction (RegisterAction) returns an enum type friom its execute
+     * method (out arg from the apply method), we use the 'predicate' output to output
+     * a 4 bit (tofino) or 16 bit (tofinof2) one-hot encoding of all the predicate tests
+     * in the action, and encode the enum that way.  This results in a mask value for
+     * each enum tag recording the bits that might be set when we return that tag
+     * value.  So all uses of the enum type in the rest of the mau pipeline have to
+     * be reencoded appropriately
+     *
+     * - all metadata fields with the enum type are changed to bit<4> or bit<16>
+     * - all tests of a field against a tag (in a gateway) are rewritten to be the
+     *   appropriate masked test that will match any one-hot value with its set bit
+     *   in the mask computed for that tag
+     * - setting a tag value in a VLIW action uses the lowest one-hot matching value.
+     * - other operations involving tags are not supported (should be rejected by 
+     *   frontend typechecker -- can't d add/subtract or other operations on tags
+     * - reading an enum tag from an execute call needs to shift down 4 bits, because
+     *   the predicate output is output starting from bit 4.
+     */
+
+    struct return_enum_info_t {
+        cstring                                         enum_name;
+        ordered_set<const IR::MAU::SaluAction *>        actions;
+        const IR::MAU::SaluAction::ReturnEnumEncoding   *encoding;
+    };
+    ordered_map<const IR::Type_Enum *, return_enum_info_t>      encodings;
+    int                                 pred_type_size;
+    const IR::Type::Bits                *pred_type;
+
+    struct FindEncodings : public MauInspector {
+        FixupStatefulAlu        &self;
+        bool preorder(const IR::MAU::SaluAction *) override;
+        bool preorder(const IR::MAU::Action *) override { return false; }
+        explicit FindEncodings(FixupStatefulAlu &self) : self(self) {}
+    };
+    struct UpdateEncodings : public Transform {
+        FixupStatefulAlu        &self;
+        const IR::BFN::Pipe *preorder(IR::BFN::Pipe *p) override {
+            if (self.encodings.empty()) prune();
+            return p; }
+        const IR::MAU::SaluAction *preorder(IR::MAU::SaluAction *) override;
+        const IR::Operation::Relation *preorder(IR::Operation::Relation *) override;
+        const IR::Expression *preorder(IR::Member *) override;
+        const IR::Expression *preorder(IR::Expression *) override;
+        const IR::Expression *preorder(IR::Primitive *) override;
+        const IR::BFN::ParserRVal *postorder(IR::BFN::ComputedRVal *) override;
+
+        explicit UpdateEncodings(FixupStatefulAlu &self) : self(self) {}
+    };
+    struct ReplaceUpdatedEnumTypes : public Transform {
+        FixupStatefulAlu        &self;
+        const IR::Expression *postorder(IR::Expression *exp) {
+            visit(exp->type, "type");
+            return exp; }
+        const IR::Type *preorder(IR::Type_Enum *enum_t) {
+            if (self.encodings.count(getOriginal<IR::Type_Enum>()))
+                return self.pred_type;
+            return enum_t; }
+        explicit ReplaceUpdatedEnumTypes(FixupStatefulAlu &self) : self(self) {}
+    };
+
+ public:
+    FixupStatefulAlu() : PassManager({
+        new CheckStatefulAlu,
+        new FindEncodings(*this),
+        new UpdateEncodings(*this),
+        new ReplaceUpdatedEnumTypes(*this),
+    }) {
+        pred_type_size = 1 << Device::statefulAluSpec().CmpUnits.size();
+        pred_type = IR::Type::Bits::get(pred_type_size);
+    }
 };
 
 #endif /* EXTENSIONS_BF_P4C_MAU_STATEFUL_ALU_H_ */

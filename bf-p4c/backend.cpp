@@ -164,7 +164,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new RemoveEmptyControls,
         new MultipleApply,
         new AddSelectorSalu,
-        new CheckStatefulAlu,
+        new FixupStatefulAlu,
         new CollectHeaderStackInfo,  // Needed by CollectPhvInfo.
         new CollectPhvInfo(phv),
         &defuse,

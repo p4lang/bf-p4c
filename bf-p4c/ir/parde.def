@@ -86,15 +86,12 @@ class MetadataRVal : InputBufferRVal {
 
 /// A constant used as an r-value in the parser.
 class ConstantRVal : ParserRVal {
-#noconstructor
-#emit
-    explicit ConstantRVal(mpz_class value)
-      : constant(new IR::Constant(value)) { }
+    ConstantRVal(mpz_class value) : constant(new IR::Constant(value)) { }
+    ConstantRVal(int value) : constant(new IR::Constant(value)) { }
     ConstantRVal(const IR::Type* type, mpz_class value)
       : constant(new IR::Constant(type, value)) { }
     ConstantRVal(Util::SourceInfo si, const IR::Type* type, mpz_class value)
       : ParserRVal(si), constant(new IR::Constant(type, value)) { }
-#end
 
     dbprint { out << "constant " << constant; }
 

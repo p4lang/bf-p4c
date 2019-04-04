@@ -56,7 +56,9 @@ namespace BFN {
 
 /**
 This class implements a policy suitable for the ConvertEnums pass.
-The policy is: convert all enums that are not part of the architecture files.
+The policy is: convert all enums that are not part of the architecture files, and
+are not used as the output type from a RegisterAction.  These latter enums will get
+a special encoding later to be compatible with the stateful alu predicate output.
 Use 32-bit values for all enums.
 */
 class EnumOn32Bits : public P4::ChooseEnumRepresentation {
@@ -71,6 +73,35 @@ class EnumOn32Bits : public P4::ChooseEnumRepresentation {
         return true; }
 
     unsigned enumSize(unsigned) const override { return 32; }
+
+ public:
+    class FindStatefulEnumOutputs : public Inspector {
+        EnumOn32Bits &self;
+        void postorder(const IR::Declaration_Instance *di) {
+            if (auto *ts = di->type->to<IR::Type_Specialized>()) {
+                auto bt = ts->baseType->toString();
+                unsigned idx = 0;
+                if (bt.startsWith("DirectRegisterAction")) {
+                    idx = 1;
+                } else if (bt.startsWith("RegisterAction")) {
+                    idx = 2;
+                } else if (bt.startsWith("LearnAction")) {
+                    idx = 3;
+                } else if (bt.startsWith("MinMaxAction")) {
+                    idx = 2;
+                } else {
+                    return; }
+                while (idx < ts->arguments->size()) {
+                    auto return_type = ts->arguments->at(idx);
+                    if (return_type->is<IR::Type_Name>())
+                        self.reserved_enums.insert(return_type->toString());
+                    ++idx; }
+            }
+        }
+
+     public:
+        explicit FindStatefulEnumOutputs(EnumOn32Bits &self) : self(self) {}
+    };
 };
 
 /**
@@ -286,6 +317,7 @@ MidEnd::MidEnd(BFN_Options& options) {
     auto skip_controls = new std::set<cstring>();
     cstring args_to_skip[] = { "ingress_deparser", "egress_deparser"};
     auto errorOnMethodCall = false;
+    auto *enum_policy = new EnumOn32Bits;
 
     addPasses({
         new P4::EliminateNewtype(&refMap, &typeMap, typeChecking),
@@ -296,7 +328,8 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::RemoveActionParameters(&refMap, &typeMap, typeChecking),
         new P4::OrderArguments(&refMap, &typeMap, typeChecking),
         new BFN::ArchTranslation(&refMap, &typeMap, options),
-        new P4::ConvertEnums(&refMap, &typeMap, new EnumOn32Bits(), typeChecking),
+        new EnumOn32Bits::FindStatefulEnumOutputs(*enum_policy),
+        new P4::ConvertEnums(&refMap, &typeMap, enum_policy, typeChecking),
         new P4::EliminateTypedef(&refMap, &typeMap, typeChecking),
         new P4::SimplifyControlFlow(&refMap, &typeMap, typeChecking),
         new BFN::ElimCasts(&refMap, &typeMap),

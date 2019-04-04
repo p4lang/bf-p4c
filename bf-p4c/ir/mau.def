@@ -754,6 +754,21 @@ class SaluAction : VLIWInstruction {
     // the back-end IR.
     optional NullOK Function p4func = nullptr;
 
+    // If we're returning an enum in the predicate, this records how it is encoded
+    // Tofino stateful ALUs can't return (general) constants, but can return a 1-hot
+    // encoding of the CMP ALU results (2^n bits for n alus).  So if we output enum
+    // tags, we can infer which tag it is based on the predicate output.
+    class ReturnEnumEncoding {
+        Type_Enum                       return_type;
+        std::map<cstring, unsigned>     tag_used = {};  // bits that might be set for each tag
+        unsigned                        cmp_used = 0;   // bits that might be set for instr
+        bool operator<=(const ReturnEnumEncoding &a) const;  // partial ordering
+        const ReturnEnumEncoding *merge(const ReturnEnumEncoding *a) const;
+    }
+    const ReturnEnumEncoding *return_encoding = nullptr;
+    unsigned return_enum_words = 0;  // which output words have the encoded enum (bitvec)
+    // FIXME -- should be std::bitset<4>, but irgen chokes on that currently.
+
     visit_children {
         VLIWInstruction::visit_children(v);
         action.visit_children(v);

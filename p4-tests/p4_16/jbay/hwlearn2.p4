@@ -93,16 +93,16 @@ control ingress(inout headers hdr, inout metadata meta,
 
     /* 2nd dleft cache table -- 1 way in one stage (so no sbus) */
     Register<pair, bit<12>>(4096) learn_cache_2;
-    RegisterAction<pair, bit<12>, bit<32>>(learn_cache_2) retire_act_2 = {
-        void apply(inout pair value, out bit<32> cid, out bit<32> retire_stage) {
+    RegisterAction2<pair, bit<12>, bit<32>, bit<4>>(learn_cache_2) retire_act_2 = {
+        void apply(inout pair value, out bit<32> cid, out bit<4> retire_stage) {
             if (value.first & ~64w30 == meta.digest) {
                 value.first = 0;
-                cid = this.address(0);
-                retire_stage = 1;
+                cid = this.address<bit<32>>(0);
+                retire_stage = 2;
             } else if (value.second & ~64w30 == meta.digest) {
                 value.second = 0;
-                cid = this.address(1);
-                retire_stage = 1;
+                cid = this.address<bit<32>>(1);
+                retire_stage = 2;
             } else {
                 cid = 0;
                 retire_stage = 0; }
@@ -130,13 +130,11 @@ control ingress(inout headers hdr, inout metadata meta,
     };
     // we leave src_port out of the lookup hash so we can easily generate collisions
     action retire_match_2() {
-        bit<32> tmp2;
         bit<12> addr = lookup_hash.get({ hdr.ipv4.src_addr, hdr.ipv4.dst_addr,
                                          hdr.ipv4.protocol, // meta.src_port,
                                          meta.dst_port });
-        bit<32> tmp = retire_act_2.execute(addr, tmp2);
+        bit<32> tmp = retire_act_2.execute(addr, meta.retire_stage);
         meta.old_cache_id = tmp[17:6];
-        meta.retire_stage[1:1] = tmp2[0:0];
     }
     // we leave src_port out of the lookup hash so we can easily generate collisions
     action do_learn_match_2() {
