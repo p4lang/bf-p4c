@@ -164,6 +164,7 @@ class NaiveClotAlloc : public Visitor {
              std::map<const PHV::Field*, std::set<unsigned>>> field_to_byte_idx;
     std::map<const IR::BFN::ParserState*,
              std::map<unsigned, std::set<const PHV::Field*>>> byte_idx_to_field;
+    std::map<const IR::BFN::ParserState*, bitvec> state_bit_occupancy;
 
     unsigned num_live_clots = 0;
 
@@ -193,15 +194,17 @@ class NaiveClotAlloc : public Visitor {
         }
     };
 
-    /// Figure out which fields live in which bytes. Populates @ref field_to_byte_idx and @ref
-    /// byte_idx_to_field.
-    void compute_field_byte_map() {
+    /// Figure out which fields live in which bits/bytes: populates @ref field_to_byte_idx, @ref
+    /// byte_idx_to_field, and @ref state_bit_occupancy.
+    void compute_maps() {
         for (auto kv : clotInfo.parser_state_to_fields_) {
             auto state = kv.first;
             auto& fields_in_state = kv.second;
 
             for (auto f : fields_in_state) {
                 unsigned f_offset = clotInfo.offset(state, f);
+                state_bit_occupancy[state].setrange(f_offset, f->size);
+
                 unsigned start_byte =  f_offset / 8;
                 unsigned end_byte = (f_offset + f->size - 1) / 8;
 
@@ -400,10 +403,11 @@ class NaiveClotAlloc : public Visitor {
     //   - the head and tail gap constraint is satisfied (see comment above about this);
     //   - the head offset lands at the start of a byte;
     //   - the tail offset lands at the end of a byte;
-    //   - if the bit pointed to by the head offset is part of any field, then it is the first bit
-    //     of that field; and
-    //   - if the bit pointed to by the tail offset is part of any field, then it is the last bit
-    //     of that field.
+    //   - every bit in the CLOT is part of a field;
+    //   - if the bit pointed to by the head offset is part of a field, then it is the first bit of
+    //     that field; and
+    //   - if the bit pointed to by the tail offset is part of a field, then it is the last bit of
+    //     that field.
     //
     // Fields that land between the head and tail offsets can then be allocated to a CLOT.
     bool allocate(const ClotAlloc& ca) {
@@ -435,8 +439,8 @@ class NaiveClotAlloc : public Visitor {
 
         // Start by pointing to the first/last byte in the state that satisfies the head/tail-gap
         // constraint.
-        unsigned head_byte_offset = state_min_byte_offset + (head_gap_needed + 7) / 8;
-        unsigned tail_byte_offset = state_max_byte_offset - (tail_gap_needed + 7) / 8;
+        int head_byte_offset = state_min_byte_offset + (head_gap_needed + 7) / 8;
+        int tail_byte_offset = state_max_byte_offset - (tail_gap_needed + 7) / 8;
 
         // Earn "credit" by starting at the gap offsets and advancing the pointers towards each
         // other until we find offsets that satisfy the conditions above, and are not
@@ -453,13 +457,22 @@ class NaiveClotAlloc : public Visitor {
         // Advance the head offset before moving the tail offset.
         bool moving_head = true;
         while (head_byte_offset <= tail_byte_offset) {
+            if (moving_head) {
+                // Make sure the first bit of the head_byte_offset is occupied by a field.
+                if (!state_bit_occupancy[ca.state].getbit(head_byte_offset * 8)) {
+                    head_byte_offset++;
+                    continue;
+                }
+            }
+
             bool moved = false;
+
             auto fields =
                 byte_idx_to_field[ca.state][moving_head ? head_byte_offset : tail_byte_offset];
             for (auto f : fields) {
                 auto field_bytes = field_to_byte_idx[ca.state][f];
-                unsigned min_field_byte = *field_bytes.begin();
-                unsigned max_field_byte = *field_bytes.rbegin();
+                int min_field_byte = *field_bytes.begin();
+                int max_field_byte = *field_bytes.rbegin();
 
                 if ((moving_head && head_byte_offset != min_field_byte)
                         || (!moving_head && tail_byte_offset != max_field_byte)
@@ -481,20 +494,20 @@ class NaiveClotAlloc : public Visitor {
 
             // Just finished moving the head offset. Now move the tail offset, but first adjust if
             // necessary to make sure we are within the CLOT's capacity.
-            unsigned max_tail_byte_offset = head_byte_offset + MAX_BYTES_PER_CLOT - 1;
+            int max_tail_byte_offset = head_byte_offset + MAX_BYTES_PER_CLOT - 1;
             tail_byte_offset = std::min(tail_byte_offset, max_tail_byte_offset);
+
+            // Also make sure all bits between the start of the head_byte_offset and the end of the
+            // tail_byte_offset are occupied by a field.
+            int first_unoccupied_bit_offset = head_byte_offset * 8 + 1;
+            while (first_unoccupied_bit_offset < (tail_byte_offset + 1) * 8 &&
+                   state_bit_occupancy[ca.state].getbit(first_unoccupied_bit_offset))
+                first_unoccupied_bit_offset++;
+
+            tail_byte_offset = first_unoccupied_bit_offset / 8 - 1;
+
             moving_head = false;
         }
-
-        // Shrink the proposed CLOT so we don't have any empty space at the beginning or end that
-        // isn't covered by a field.
-        while (head_byte_offset <= tail_byte_offset &&
-               byte_idx_to_field[ca.state][head_byte_offset].empty())
-            head_byte_offset++;
-
-        while (head_byte_offset <= tail_byte_offset &&
-               byte_idx_to_field[ca.state][tail_byte_offset].empty())
-            tail_byte_offset--;
 
         if (head_byte_offset > tail_byte_offset)
             return false;
@@ -521,8 +534,8 @@ class NaiveClotAlloc : public Visitor {
         for (auto f : fields_in_state) {
             // Only consider the field if it lies entirely in the CLOT.
             auto field_bytes = field_to_byte_idx[ca.state][f];
-            unsigned min_field_byte = *field_bytes.begin();
-            unsigned max_field_byte = *field_bytes.rbegin();
+            int min_field_byte = *field_bytes.begin();
+            int max_field_byte = *field_bytes.rbegin();
             if (min_field_byte < head_byte_offset || max_field_byte > tail_byte_offset)
                 continue;
 
@@ -590,7 +603,7 @@ class NaiveClotAlloc : public Visitor {
     }
 
     const IR::Node *apply_visitor(const IR::Node *root, const char *) override {
-        compute_field_byte_map();
+        compute_maps();
 
         std::array<std::vector<ClotAlloc>, 2> req = compute_requirement();
 

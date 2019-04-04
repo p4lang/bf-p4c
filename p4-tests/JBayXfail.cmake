@@ -33,8 +33,6 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
 
   p4c_add_xfail_reason("tofino2"
     "mismatch from expected.* at byte .*"
-    # clot-phv interaction bug?
-    testdata/p4_14_samples/bridge1.p4
     # conditional checksum: JBay needs different treatment
     extensions/p4_tests/p4_14/stf/cond_checksum_update_1.p4
     # Needs stateful init regs support in simple test harness, this test passes
@@ -48,8 +46,6 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     extensions/p4_tests/p4_14/stf/update_checksum_4.p4
     extensions/p4_tests/p4_14/stf/update_checksum_5.p4
     extensions/p4_tests/p4_14/stf/update_checksum_6.p4
-    # P4C-1602
-    extensions/p4_tests/p4_16/stf/p4c-1487.p4
     # P4C-1618
     extensions/p4_tests/p4_14/stf/header_validity_1.p4
     )
