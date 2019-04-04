@@ -583,6 +583,8 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/register.p4
   testdata/p4_16_samples/issue1520-bmv2.p4
   testdata/p4_16_samples/slice-def-use1.p4
+  testdata/p4_16_samples/issue1814-bmv2.p4
+  testdata/p4_16_samples/issue1814-1-bmv2.p4
 )
 
 # Flaky.
@@ -782,10 +784,14 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error.*Field.*of size 0 not supported on Tofino"
   testdata/p4_16_samples/issue1325-bmv2.p4
-  # This test attempts to match on a field of `error` type.
-  testdata/p4_16_samples/issue1062-1-bmv2.p4
   extensions/p4_tests/p4_16/fabric-psa/fabric.p4
   testdata/p4_16_samples/issue510-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "error: KeyElement: Unsupported KeyElement: width not well-defined"
+  # This test attempts to match on a field of `error` type.
+  testdata/p4_16_samples/issue1062-1-bmv2.p4
 )
 
 # P4C-1011
@@ -1147,6 +1153,8 @@ p4c_add_xfail_reason("tofino"
   # truncate is not supported in tna
   testdata/p4_14_samples/truncate.p4
   testdata/p4_16_samples/p4rt_digest_complex.p4
+  testdata/p4_16_samples/issue1824-bmv2.p4
+  testdata/p4_16_samples/action_profile_max_group_size_annotation.p4
   )
 
 # P4C-1390

@@ -34,7 +34,13 @@ class BFN_Options : public CompilerOptions {
     bool parser_bandwidth_opt = false;
     bool egress_intr_md_opt = false;
     std::set<cstring> disabled_pragmas;
-#if BAREFOOT_INTERNAL
+#if BAREFOOT_INTERNAL || 1
+    // FIXME -- Cmake does not consistently set BAREFOOT_INTERNAL for all source
+    // files (why?), so having the layout of any class depend on it will result in
+    // different object files disagreeing on the layout, leading to random memory
+    // corruption.  So we always include these fields; they're just unused in release
+    // The particular problem seems to be with gtest -- gtest source files are built
+    // with BAREFOOT_INTERNAL unset, whil backend files are built with it set.
     std::set<cstring> skipped_pipes;
     bool no_power_check = false;
     bool stage_allocation = false;

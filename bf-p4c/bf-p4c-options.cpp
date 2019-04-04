@@ -227,7 +227,7 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
         // certain linux distro.
         size_t len = inputFile.size();
         char *buffer = new char[len+1];
-        strncpy(buffer, inputFile.c_str(), len);
+        memcpy(buffer, inputFile.c_str(), len+1);
 
         char *program_name_ptr = basename(buffer);
         BUG_CHECK(program_name_ptr, "No valid output argument");

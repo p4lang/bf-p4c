@@ -194,7 +194,8 @@ TEST_F(MetadataLiveRangeTest, BasicControlFlow) {
     MauBacktracker entry(mutex);
     MetadataLiveRange metaLive(phv, deps, defuse, pragmas, uses, entry);
 
-    auto* pipe = runMockPasses(test->pipe, phv, defuse, deps, uses, pragmas, entry, metaLive);
+    auto *pipe = test->pipe;
+    pipe = runMockPasses(pipe, phv, defuse, deps, uses, pragmas, entry, metaLive);
     ASSERT_TRUE(pipe);
 
     EXPECT_EQ(defuse.hasUninitializedRead(phv.field("ingress::meta.f1")->id), true);

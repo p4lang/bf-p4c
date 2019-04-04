@@ -23,7 +23,7 @@ struct ProgramStructure : BFN::ProgramStructure {
     cstring type_h;
     cstring type_m;
     const IR::Parameter *user_metadata;
-    bool backward_compatible;
+    bool backward_compatible = false;
 
     void createParsers() override;
     void createControls() override;
