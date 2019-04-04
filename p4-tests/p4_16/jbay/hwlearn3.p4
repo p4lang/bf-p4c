@@ -105,6 +105,7 @@ control learn_dleft(inout headers hdr, inout metadata meta)(bit<3> stage) {
     }
 
     @ways(1) // one way to make getting to later stages easier
+    @hidden  // p4runtime can't deal with enum keys
     table learn_match {
         key = {
             hdr.ipv4.src_addr : dleft_hash;
@@ -118,6 +119,7 @@ control learn_dleft(inout headers hdr, inout metadata meta)(bit<3> stage) {
         actions = { do_learn_match; do_retire_cid; }
 
         /* FIXME P4RuntimeSerializer can't handle keys that are enum tags in entries!
+           -- even with @hidden?
         const entries = {
             (_, _, _, _, _, learn_result_t.NOT_LEARNED ) : do_learn_match();
             (_, _, _, _, _, _) : do_retire_cid(); }
