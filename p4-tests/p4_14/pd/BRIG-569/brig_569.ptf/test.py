@@ -430,12 +430,13 @@ class MirrorTestCpu2(TestGroupMirror):
         # That's because when the packet gets into the egress pipeline, 256
         # bytes include the length of the field_list we are passing with it.
         #
+        cpu_pkt_len = min(len(pkt), self.max_pkt_len_cpu_out+4)
         cpu_pkt = (
             Ether(dst="FF:FF:FF:FF:FF:FF", src="AA:AA:AA:AA:AA:AA") /
             ToCpu(mirror_type="Ingress",
                   ingress_port=ingress_port,
-                  pkt_length=min(len(pkt), self.max_pkt_len_cpu_out)) /
-                  str(pkt)[0:min(len(pkt), self.max_pkt_len_cpu_out)]) 
+                  pkt_length=cpu_pkt_len) /
+                  str(pkt)[0:cpu_pkt_len]) 
 
         print("Expecting mirrored packet with 'to_cpu' header on port %d" % cpu_port)
         verify_packet(self, cpu_pkt, cpu_port)

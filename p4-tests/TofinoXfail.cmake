@@ -906,13 +906,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue1653-bmv2.p4
 )
 
-# P4C-1442
-p4c_add_xfail_reason("tofino"
-  "AssertionError: Expected packet was not received on device 0, port 64"
-  brig_569
-  simple_l3_mirror
-)
-
 # P4C-1451 -- requires action splitting to avoid the error
 p4c_add_xfail_reason("tofino"
   "error: Can't use action argument .* in a hash in the same action. try splitting the action"
