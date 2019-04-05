@@ -83,7 +83,6 @@ set (BF_P4C_MIDEND_SRCS
   midend/elim_cast.cpp
   midend/elim_typedef.cpp
   midend/desugar_varbit_extract.cpp
-  midend/inline_subparser.cpp
   midend/normalize_params.cpp
   midend/param_binding.cpp
   midend/simplify_emit_args.cpp
@@ -103,7 +102,6 @@ set (BF_P4C_BACKEND_MIDEND_HDRS
   midend/elim_cast.h
   midend/desugar_varbit_extract.h
   midend/elim_typedef.h
-  midend/inline_subparser.h
   midend/normalize_params.h
   midend/param_binding.h
   midend/parser_graph.h

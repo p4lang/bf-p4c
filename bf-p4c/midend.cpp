@@ -43,7 +43,6 @@
 #include "bf-p4c/midend/elim_cast.h"
 #include "bf-p4c/midend/desugar_varbit_extract.h"
 #include "bf-p4c/midend/elim_typedef.h"
-#include "bf-p4c/midend/inline_subparser.h"
 #include "bf-p4c/midend/normalize_params.h"
 #include "bf-p4c/midend/rewrite_egress_intrinsic_metadata_header.h"
 #include "bf-p4c/common/rewrite_flexible_struct.h"
@@ -349,7 +348,6 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::EliminateTuples(&refMap, &typeMap, typeChecking, typeInference),
         new SimplifyEmitArgs(&refMap, &typeMap),
         new P4::SimplifyComparisons(&refMap, &typeMap, typeChecking),
-        new InlineSubparserParameter(&refMap),  // run before CopyStructures
         // errorOnMethodCall argument in CopyStructures is defaulted to true.
         // This means methods or functions returning structs will be flagged as
         // an error. Here, we set this to false to allow such scenarios.
