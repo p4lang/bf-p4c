@@ -38,26 +38,4 @@ parser parse_boring {
     return ingress;
 }
 
-// #define P4C_1010_WORKAROUND
-#ifdef P4C_1010_WORKAROUND
-action noop() { }
-action setb1(val, port) {
-    modify_field(standard_metadata.egress_spec, port);
-}
-
-table test1 {
-    reads {
-        boring.yawn : exact;
-    }
-    actions {
-        setb1;
-        noop;
-    }
-}
-
-control ingress {
-    apply(test1);
-}
-#else
 control ingress { }
-#endif  /* P4C_1010_WORKAROUND */
