@@ -635,11 +635,13 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         }
     }
 
-    size_t povBits = getPOVContainerBytes();
-    size_t povLimit = Device::phvSpec().getNumPovBits();
-    if (povBits > povLimit)
-        BUG("Total size of containers used for POV allocation is %1%b, greater than the allowed "
-            "limit of %2%b.", povBits, povLimit);
+    for (gress_t gress : { INGRESS, EGRESS }) {
+        size_t povBits = getPOVContainerBytes(gress);
+        size_t povLimit = Device::phvSpec().getNumPovBits();
+        if (povBits > povLimit)
+            BUG("Total size of containers used for %1% POV allocation is %2%b, greater than the "
+                    "allowed limit of %3%b.", gress, povBits, povLimit);
+    }
 
     return true;
 }
@@ -696,9 +698,10 @@ bool ValidateAllocation::throwBacktrackException(
     return anyFieldOverlaid;
 }
 
-size_t ValidateAllocation::getPOVContainerBytes() const {
+size_t ValidateAllocation::getPOVContainerBytes(gress_t gress) const {
     ordered_set<PHV::Container> containers;
     for (const auto& f : phv) {
+        if (f.gress != gress) continue;
         if (!f.pov) continue;
         f.foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
             containers.insert(alloc.container);

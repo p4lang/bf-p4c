@@ -861,6 +861,8 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/ptf/int_transit.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-970/comp_970.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-968/comp_968.p4
+  ../glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_with_nop.p4
+  ../glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_without_nop.p4
 )
 
 # Negative test. Constant extractor destination whose sources need more than 3 bits to express must
@@ -1204,9 +1206,7 @@ p4c_add_xfail_reason("tofino"
 
 # P4C-1397
 p4c_add_xfail_reason("tofino"
-  "Total size of containers used for POV allocation is .*b, greater than the allowed limit of 256b"
-  ../glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_with_nop.p4
-  ../glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_without_nop.p4
+  "Total size of containers used for.*POV allocation is .*b, greater than the allowed limit of 256b"
   ../glass/testsuite/p4_tests/rdp/COMPILER-475/case2600.p4
   )
 

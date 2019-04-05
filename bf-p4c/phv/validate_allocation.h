@@ -54,8 +54,8 @@ class ValidateAllocation final : public Inspector {
     bool throwBacktrackException(
             const std::map<PHV::Container, std::vector<Slice>>& allocations) const;
 
-    /// returns total number of container bits used for POV bit allocation.
-    size_t getPOVContainerBytes() const;
+    /// returns total number of container bits used for POV bit allocation in @gress.
+    size_t getPOVContainerBytes(gress_t gress) const;
 };
 
 class ValidateActions final : public MauInspector {
