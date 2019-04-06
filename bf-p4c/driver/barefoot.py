@@ -263,7 +263,7 @@ class BarefootBackend(BackendDriver):
         if opts.verbose > 0:
             ta_logging = "table_placement:3,table_summary:1"
             phv_verbosity = str(2 * opts.verbose - 1)
-            pa_logging = "allocate_phv:" + phv_verbosity + ",utils:3"
+            pa_logging = "allocate_phv:" + phv_verbosity
             parde_verbosity = str(2 * opts.verbose - 1)
             p2_verbosity = str(2 * opts.verbose)
             parde_logging = "extract_parser:" + parde_verbosity + \
@@ -272,10 +272,12 @@ class BarefootBackend(BackendDriver):
                             ",allocate_parser_checksum.h:" + p2_verbosity + \
                             ",lower_parser:" + p2_verbosity
             bridge_logging = "bridged_metadata_packing:1"
-            self.add_command_option('compiler', '--verbose -T{},{},{},{}'.format(ta_logging,
+            ixbar_logging = "ixbar_info:3"
+            self.add_command_option('compiler', '--verbose -T{},{},{},{},{}'.format(ta_logging,
                                                                                  pa_logging,
                                                                                  parde_logging,
-                                                                                 bridge_logging))
+                                                                                 bridge_logging,
+                                                                                 ixbar_logging))
         if opts.bf_rt_schema is not None:
             self.add_command_option('compiler', '--bf-rt-schema {}'.format(opts.bf_rt_schema))
 

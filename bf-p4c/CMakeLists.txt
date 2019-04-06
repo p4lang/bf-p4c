@@ -241,6 +241,7 @@ set (BF_P4C_BACKEND_MAU_SRCS
   mau/instruction_memory.cpp
   mau/instruction_selection.cpp
   mau/ixbar_expr.cpp
+  mau/ixbar_info.cpp
   mau/ixbar_realign.cpp
   mau/memories.cpp
   mau/reduction_or.cpp
@@ -283,6 +284,7 @@ set (BF_P4C_BACKEND_MAU_HDRS
   mau/instruction_memory.h
   mau/instruction_selection.h
   mau/ixbar_expr.h
+  mau/ixbar_info.h
   mau/ixbar_realign.h
   mau/memories.h
   mau/push_pop.h

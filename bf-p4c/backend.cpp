@@ -24,6 +24,7 @@
 #include "bf-p4c/mau/instruction_adjustment.h"
 #include "bf-p4c/mau/instruction_selection.h"
 #include "bf-p4c/mau/ixbar_expr.h"
+#include "bf-p4c/mau/ixbar_info.h"
 #include "bf-p4c/mau/ixbar_realign.h"
 #include "bf-p4c/mau/push_pop.h"
 #include "bf-p4c/mau/remove_noop_gateway.h"
@@ -249,6 +250,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         // ranges output in the assembly.
         &defuse,
         new IXBarVerify(phv),
+        new CollectIXBarInfo(phv),
         phvLoggingInfo,
         new InstructionAdjustment(phv, primNode),
         new DumpPipe("Final table graph"),

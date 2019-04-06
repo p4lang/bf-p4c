@@ -1633,6 +1633,7 @@ static void add_attached_tables(IR::MAU::Table *tbl, const LayoutOption *layout_
     }
     if (layout_option->layout.direct_ad_required()) {
         LOG3("  Adding Action Data Table to " << tbl->name);
+
         cstring ad_name = tbl->name + "$action";
         auto *act_data = new IR::MAU::ActionData(IR::ID(ad_name));
         act_data->direct = true;

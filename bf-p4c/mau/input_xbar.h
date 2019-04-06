@@ -69,7 +69,8 @@ struct IXBar {
                 if (isTernary)
                     return EXACT_GROUPS * EXACT_BYTES_PER_GROUP +
                         ((group/2) * TERNARY_BYTES_PER_BIG_GROUP) +
-                        (group % 2) * TERNARY_BYTES_PER_GROUP + byte;
+                        (group % 2) * (TERNARY_BYTES_PER_GROUP) +
+                        (group % 2) /* mid byte */ + byte;
                 else
                     return (group * EXACT_BYTES_PER_GROUP) + byte;
             } else {
@@ -220,7 +221,9 @@ struct IXBar {
 
         /* tracking individual bytes (or parts of bytes) placed on the ixbar */
         struct Byte {
+            // the PHV container name
             cstring     name;
+            //
             int         lo;
             Loc         loc;
             // the PHV container bits the match will be performed on

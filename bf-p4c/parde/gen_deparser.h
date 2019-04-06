@@ -9,6 +9,7 @@
 #include "bf-p4c/common/ir_utils.h"
 #include "bf-p4c/ir/gress.h"
 #include "bf-p4c/parde/parde_visitor.h"
+#include "bf-p4c/bf-p4c-options.h"
 
 namespace IR {
 

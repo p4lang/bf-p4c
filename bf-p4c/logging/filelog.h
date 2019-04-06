@@ -27,7 +27,8 @@ class FileLog {
             {"parser.characterize", "parser"},
             {"parser", "parser"},
             {"phv_allocation", "phv"},
-            {"table_", "mau"}
+            {"table_", "mau"},
+            {"ixbar", "mau"}
         };
 
         for (auto &logType : logNames2Type)
