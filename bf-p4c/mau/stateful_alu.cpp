@@ -245,6 +245,13 @@ bool CreateSaluInstruction::canBeIXBarExpr(const IR::Expression *e) {
             { return !applyArg(pe, cstring()); });
 }
 
+bool CreateSaluInstruction::outputAluHi() {
+    if (salu->dual) return false;
+    if (locals.empty())
+        locals.emplace("--output--", LocalVar("--output--", false, LocalVar::ALUHI));
+    return locals.begin()->first == "--output--";
+}
+
 // clear all the state we do NOT want to carry between functions
 void CreateSaluInstruction::clearFuncState() {
     param_types = nullptr;
@@ -376,10 +383,18 @@ void CreateSaluInstruction::doAssignment(const Util::SourceInfo &srcInfo) {
         } else {
             use = LocalVar::ALUHI; }
         if (use == LocalVar::NONE || (dest->use != LocalVar::NONE && dest->use != use))
-            error("%s: %s %s too complex", srcInfo, action_type_name, reg_action->name);
+            error("%s%s %s too complex", srcInfo, action_type_name, reg_action->name);
         dest->use = use;
         LOG3("local " << dest->name << " use " << dest->use); }
     if (!dest) {
+        if (etype == OUTPUT_ALUHI) {
+            etype = VALUE;
+            auto *val = operands.at(0);
+            operands.insert(operands.begin(), new IR::MAU::SaluReg(val->type, "hi", true));
+            createInstruction();
+            operands.clear();
+            operands.push_back(new IR::MAU::SaluReg(val->type, "alu_hi", true));
+            etype = OUTPUT; }
         createInstruction();
     } else if (dest->use == LocalVar::ALUHI) {
         if (opcode == "alu_a" && Pattern(0).match(operands.back())) {
@@ -556,7 +571,13 @@ bool CreateSaluInstruction::preorder(const IR::Primitive *prim) {
     cstring method;
     if (auto p = prim->name.find('.'))
         method = p + 1;
-    if (prim->name == "math_unit.execute" || prim->name == "MathUnit.execute") {
+    if (prim->name == "min" || prim->name == "max") {
+        if (etype == VALUE || (etype == OUTPUT && outputAluHi())) {
+            opcode = prim->name + (isSigned(prim->type) ? "s" : "u");
+            if (etype == OUTPUT) etype = OUTPUT_ALUHI;
+            return true; }
+        error("%s%s must write back to memory", prim->srcInfo, prim->name);
+    } else if (prim->name == "math_unit.execute" || prim->name == "MathUnit.execute") {
         BUG_CHECK(prim->operands.size() == 2, "typechecking failure");
         visit(prim->operands.at(1), "math_input");
         operands.back() = new IR::MAU::SaluFunction(prim->srcInfo, operands.back(), "math_table");
@@ -654,7 +675,7 @@ bool CreateSaluInstruction::preorder(const IR::Primitive *prim) {
         visit(prim->operands[2], "mask");
         if (minmax_instr) {
             if (!equiv(&operands, &minmax_instr->operands))
-                error("%s: only one min/max operation possible in a stateful alu");
+                error("%s: only one min/max operation possible in a stateful alu", prim);
         } else {
             minmax_instr = createInstruction(); }
         operands.clear();
@@ -673,7 +694,7 @@ bool CreateSaluInstruction::preorder(const IR::Primitive *prim) {
         etype = OUTPUT;
         operands.push_back(new IR::MAU::SaluReg(prim->type, "minmax", false));
     } else {
-        error("%s: expression too complex for RegisterAction", prim->srcInfo); }
+        error("%sexpression too complex for RegisterAction", prim->srcInfo); }
     return false;
 }
 
@@ -742,7 +763,7 @@ bool CreateSaluInstruction::preorder(const IR::Operation::Relation *rel, cstring
         BUG_CHECK(etype == IF, "etype changed?");
         setupCmp(opcode);
     } else {
-        error("%s: expression in stateful alu too complex", rel->srcInfo); }
+        error("%sexpression in stateful alu too complex", rel->srcInfo); }
     return false;
 }
 
@@ -784,7 +805,7 @@ void CreateSaluInstruction::postorder(const IR::LNot *e) {
         pred_operands.back() = negatePred(pred_operands.back());
         LOG4("LNot rewrite pred_opeands: " << pred_operands.back());
     } else {
-        error("%s: expression too complex for stateful alu", e->srcInfo); }
+        error("%sexpression too complex for stateful alu", e->srcInfo); }
 }
 void CreateSaluInstruction::postorder(const IR::LAnd *e) {
     if (etype == IF) {
@@ -796,7 +817,7 @@ void CreateSaluInstruction::postorder(const IR::LAnd *e) {
         pred_operands.back() = new IR::LAnd(e->srcInfo, pred_operands.back(), r);
         LOG4("LAnd rewrite pred_opeands: " << pred_operands.back());
     } else {
-        error("%s: expression too complex for stateful alu", e->srcInfo); }
+        error("%sexpression too complex for stateful alu", e->srcInfo); }
 }
 void CreateSaluInstruction::postorder(const IR::LOr *e) {
     if (etype == IF) {
@@ -808,66 +829,67 @@ void CreateSaluInstruction::postorder(const IR::LOr *e) {
         pred_operands.back() = new IR::LOr(e->srcInfo, pred_operands.back(), r);
         LOG4("LOr rewrite pred_opeands: " << pred_operands.back());
     } else {
-        error("%s: expression too complex for stateful alu", e->srcInfo); }
+        error("%sexpression too complex for stateful alu", e->srcInfo); }
 }
 
 bool CreateSaluInstruction::preorder(const IR::Add *e) {
-    switch (etype) {
-    case IF:
+    if (etype == IF)
         return true;
-    case VALUE:
+    if (etype == VALUE || (etype == OUTPUT && outputAluHi())) {
         opcode = "add";
-        return true;
-    default:
-        error("%s: expression too complex for stateful alu", e->srcInfo);
-        return false; }
+        if (etype == OUTPUT) etype = OUTPUT_ALUHI;
+        return true; }
+    error("%sexpression too complex for stateful alu", e->srcInfo);
+    return false;
 }
 bool CreateSaluInstruction::preorder(const IR::AddSat *e) {
-    if (etype == VALUE) {
+    if (etype == VALUE || (etype == OUTPUT && outputAluHi())) {
         opcode = isSigned(e->type) ? "sadds" : "saddu";
+        if (etype == OUTPUT) etype = OUTPUT_ALUHI;
         return true;
     } else {
-        error("%s: expression too complex for stateful alu", e->srcInfo);
+        error("%sexpression too complex for stateful alu", e->srcInfo);
         return false; }
 }
 
 bool CreateSaluInstruction::preorder(const IR::Sub *e) {
-    switch (etype) {
-    case IF:
+    if (etype == IF) {
         visit(e->left, "left");
         negate = !negate;
         visit(e->right, "right");
         negate = !negate;
-        return false;
-    case VALUE:
-        opcode = "sub";
-        return true;
-    default:
-        error("%s: expression too complex for stateful alu", e->srcInfo);
         return false; }
+    if (etype == VALUE || (etype == OUTPUT && outputAluHi())) {
+        opcode = "sub";
+        if (etype == OUTPUT) etype = OUTPUT_ALUHI;
+        return true; }
+    error("%sexpression too complex for stateful alu", e->srcInfo);
+    return false;
 }
 bool CreateSaluInstruction::preorder(const IR::SubSat *e) {
-    if (etype == VALUE) {
+    if (etype == VALUE || (etype == OUTPUT && outputAluHi())) {
         opcode = isSigned(e->type) ? "ssubs" : "ssubu";
+        if (etype == OUTPUT) etype = OUTPUT_ALUHI;
         return true;
     } else {
-        error("%s: expression too complex for stateful alu", e->srcInfo);
+        error("%sexpression too complex for stateful alu", e->srcInfo);
         return false; }
 }
 
 bool CreateSaluInstruction::preorder(const IR::BAnd *e) {
-    if (etype == VALUE) {
+    if (etype == VALUE || (etype == OUTPUT && outputAluHi())) {
         if (e->left->is<IR::Cmpl>())
             opcode = "andca";
         else if (e->right->is<IR::Cmpl>())
             opcode = "andcb";
         else
             opcode = "and";
+        if (etype == OUTPUT) etype = OUTPUT_ALUHI;
         return true;
     } else if (etype == IF && Device::statefulAluSpec().CmpMask) {
         return true;
     } else {
-        error("%s: expression too complex for stateful alu", e->srcInfo);
+        error("%sexpression too complex for stateful alu", e->srcInfo);
         return false; }
 }
 void CreateSaluInstruction::postorder(const IR::BAnd *e) {
@@ -884,16 +906,17 @@ void CreateSaluInstruction::postorder(const IR::BAnd *e) {
         LOG4("BAnd rewrite opeands: " << operands.back()); }
 }
 bool CreateSaluInstruction::preorder(const IR::BOr *e) {
-    if (etype == VALUE) {
+    if (etype == VALUE || (etype == OUTPUT && outputAluHi())) {
         if (e->left->is<IR::Cmpl>())
             opcode = "orca";
         else if (e->right->is<IR::Cmpl>())
             opcode = "orcb";
         else
             opcode = "or";
+        if (etype == OUTPUT) etype = OUTPUT_ALUHI;
         return true;
     } else {
-        error("%s: expression too complex for stateful alu", e->srcInfo);
+        error("%sexpression too complex for stateful alu", e->srcInfo);
         return false; }
 }
 bool CreateSaluInstruction::preorder(const IR::Concat *e) {
@@ -906,18 +929,19 @@ bool CreateSaluInstruction::preorder(const IR::Concat *e) {
         if (negate)
             operands.back() = new IR::Neg(operands.back());
         return false; }
-    error("%s: expression too complex for stateful alu", e->srcInfo);
+    error("%sexpression too complex for stateful alu", e->srcInfo);
     return false;
 }
 bool CreateSaluInstruction::preorder(const IR::BXor *e) {
-    if (etype == VALUE) {
+    if (etype == VALUE || (etype == OUTPUT && outputAluHi())) {
         if (e->left->is<IR::Cmpl>() || e->right->is<IR::Cmpl>())
             opcode = "xnor";
         else
             opcode = "xor";
+        if (etype == OUTPUT) etype = OUTPUT_ALUHI;
         return true;
     } else {
-        error("%s: expression too complex for stateful alu", e->srcInfo);
+        error("%sexpression too complex for stateful alu", e->srcInfo);
         return false; }
 }
 void CreateSaluInstruction::postorder(const IR::Cmpl *e) {
@@ -932,7 +956,7 @@ void CreateSaluInstruction::postorder(const IR::Cmpl *e) {
     if (complement.count(opcode))
         opcode = complement.at(opcode);
     else if (etype != VALUE)
-        error("%s: expression too complex for stateful alu", e->srcInfo);
+        error("%sexpression too complex for stateful alu", e->srcInfo);
 }
 void CreateSaluInstruction::postorder(const IR::Concat *e) {
     if (operands.size() < 2) return;  // can only happen if there has been an error
@@ -949,7 +973,7 @@ void CreateSaluInstruction::postorder(const IR::Concat *e) {
             LOG4("concant dropping high bit constant " << operands.back());
             operands.back() = r;
             return; } }
-    error("%s: expression too complex for stateful alu", e->srcInfo);
+    error("%sexpression too complex for stateful alu", e->srcInfo);
 }
 
 bool CreateSaluInstruction::divmod(const IR::Operation::Binary *e, cstring op) {
@@ -970,7 +994,7 @@ bool CreateSaluInstruction::divmod(const IR::Operation::Binary *e, cstring op) {
         etype = OUTPUT;
         operands.push_back(new IR::MAU::SaluReg(e->type, op, false));
     } else {
-        error("%s: expression too complex for stateful alu", e->srcInfo); }
+        error("%sexpression too complex for stateful alu", e->srcInfo); }
     return false;
 }
 
@@ -1067,11 +1091,9 @@ const IR::MAU::Instruction *CreateSaluInstruction::createInstruction() {
             break;
         } else if (operands.at(0)->is<IR::MAU::SaluReg>()) {
             // output it
-        } else if (!salu->dual && (locals.empty() || locals.begin()->first == "--output--")) {
+        } else if (outputAluHi()) {
             // use ALU_HI to drive the output as it is otherwise unused
             auto *val = operands.at(0);
-            if (locals.empty())
-                locals.emplace("--output--", LocalVar("--output--", false, LocalVar::ALUHI));
             if (predicate)
                 action->action.push_back(new IR::MAU::Instruction(
                         "alu_a", predicate, new IR::MAU::SaluReg(val->type, "hi", true), val));

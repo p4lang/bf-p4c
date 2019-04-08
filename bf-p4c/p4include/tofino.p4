@@ -509,9 +509,9 @@ extern Random<W> {
 // EXTERN FUNCTIONS
 // -----------------------------------------------------------------------------
 
-extern T max<T>(T t1, T t2);
+extern T max<T>(in T t1, in T t2);
 
-extern T min<T>(T t1, T t2);
+extern T min<T>(in T t1, in T t2);
 
 extern void invalidate<T>(in T field);
 

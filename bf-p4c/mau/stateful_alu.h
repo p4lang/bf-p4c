@@ -73,6 +73,7 @@ class CreateSaluInstruction : public Inspector {
         // rvalue contexts
         IF,      // condition -- operand of an if
         VALUE,   // value to be written to memory -- alu output
+        OUTPUT_ALUHI,   // value to be written to adb via alu_hi alu (non-dual)
         OUTPUT,  // value to be written to action data bus output
         MATCH,   // value to be written to match output
         }                       etype = NONE;
@@ -105,6 +106,7 @@ class CreateSaluInstruction : public Inspector {
     const IR::MAU::Instruction *setup_output();
     bool outputEnumAsPredicate(const IR::Member *);
     bool canBeIXBarExpr(const IR::Expression *);
+    bool outputAluHi();
 
     bool preorder(const IR::Declaration_Instance *di) override;
     bool preorder(const IR::Declaration_Variable *v) override;
