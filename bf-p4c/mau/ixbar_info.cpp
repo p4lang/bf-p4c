@@ -1,6 +1,5 @@
-#include <build/p4c/ir/ir-generated.h>
-#include <bf-p4c/logging/filelog.h>
 #include "bf-p4c/common/table_printer.h"
+#include "bf-p4c/logging/filelog.h"
 #include "bf-p4c/mau/ixbar_info.h"
 #include "bf-p4c/phv/phv_fields.h"
 
