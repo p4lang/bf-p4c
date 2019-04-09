@@ -36,6 +36,7 @@
     M(const char *, name) \
     M(target_t, register_set)  \
     M(int, PARSER_CHECKSUM_UNITS) \
+    M(int, MATCH_BYTE_16BIT_PAIRS) \
     M(int, DEPARSER_CHECKSUM_UNITS) M(int, DEPARSER_MAX_POV_BYTES) \
     M(int, DEPARSER_CONSTANTS) \
     M(int, MAU_BASE_DELAY) M(int, MAU_BASE_PREDICATION_DELAY) \
@@ -120,6 +121,7 @@ class Target::Tofino : public Target {
     };
     enum {
         PARSER_CHECKSUM_UNITS = 2,
+        MATCH_BYTE_16BIT_PAIRS = true,
         NUM_MAU_STAGES = 12,
         ACTION_INSTRUCTION_MAP_WIDTH = 7,
         DEPARSER_CHECKSUM_UNITS = 6,
@@ -215,6 +217,7 @@ class Target::JBay : public Target {
     typedef ::JBay::regs_deparser                   deparser_regs;
     enum {
         PARSER_CHECKSUM_UNITS = 5,
+        MATCH_BYTE_16BIT_PAIRS = false,
 #ifdef EMU_OVERRIDE_STAGE_COUNT
         NUM_MAU_STAGES = EMU_OVERRIDE_STAGE_COUNT,
 #else

@@ -896,8 +896,14 @@ void Parser::State::MatchKey::setup(value_t &spec) {
                 return;
     } else
         setup_match_el(-1, spec);
-    if (data[0].bit >= 0 && data[1].bit >= 0 && data[1].byte != data[0].byte + 1 &&
-        (data[0].byte & data[1].byte) != USE_SAVED)
+
+    // For TOFINO, the first match byte pair must be an adjacent 16 bit pair. We
+    // check and re-arrange the bytes for a 16 bit extractor. In JBAY this check
+    // is not necessary as we can have independent byte extractors
+    if ((data[0].bit >= 0 && data[1].bit >= 0) && 
+        (data[1].byte != data[0].byte + 1) &&
+        ((data[0].byte & data[1].byte) != USE_SAVED) &&
+        Target::MATCH_BYTE_16BIT_PAIRS())
     {
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 4; j++) {
