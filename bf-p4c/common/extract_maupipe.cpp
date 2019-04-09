@@ -472,7 +472,7 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
                 stateful_selectors.emplace(reg, sel); } }
         return sel;
     } else if (tname == "ActionProfile") {
-        auto ap = new IR::MAU::ActionData(srcInfo, IR::ID(name));
+        auto ap = new IR::MAU::ActionData(srcInfo, IR::ID(name), annot);
         for (auto p : *substitution->getParametersInOrder()) {
             auto arg = substitution->lookup(p);
             if (arg == nullptr)

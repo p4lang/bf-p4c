@@ -995,7 +995,7 @@ void Table::Actions::Action::setup_mod_cond_values(value_t &map) {
                     } else if (v[0] == "immediate") {
                         array_index = MC_IMMED;
                     } else {
-                        error(map.lineno, "A non action_data_table or immediate value in the " 
+                        error(map.lineno, "A non action_data_table or immediate value in the "
                                           "mod_con_value map: %s", v[0].s);
                         continue;
                     }
@@ -1074,7 +1074,7 @@ Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv, int pos
                         }
                     } else if (a.key == "mod_cond_value") {
                         if (CHECKTYPE(a.value, tMAP)) {
-                            setup_mod_cond_values(a.value); 
+                            setup_mod_cond_values(a.value);
                         }
                     } else if (CHECKTYPE3(a.value, tSTR, tCMD, tINT)) {
                         if (a.value.type == tINT) {
@@ -1304,7 +1304,7 @@ void Table::Actions::Action::check_conditional(Table::Format::Field &field) cons
                 } else {
                     found = true;
                     condition = kv.first;
-                } 
+                }
             } else {
                 BUG();
             }
@@ -1317,7 +1317,7 @@ void Table::Actions::Action::check_conditional(Table::Format::Field &field) cons
 }
 
 /**
- * @see_also Table::Actions::Action::check_conditional 
+ * @see_also Table::Actions::Action::check_conditional
  */
 bool Table::Actions::Action::immediate_conditional(int lo, int sz, std::string &condition) const {
     bool found = false;
@@ -2392,13 +2392,22 @@ json::map &Table::add_pack_format(json::map &stage_tbl, Table::Format *format,
     return pack_format.back()->to<json::map>();
 }
 
+// Check if node exists in context_json entry in bfa, add entry to the input
+// json node and remove the entry from context_json.
+bool Table::add_json_node_to_table(json::map &tbl, const char *name) const {
+    if (context_json) {
+        if (context_json->count(name)) {
+            tbl[name] = context_json->remove(name);
+            return true;
+        }
+    }
+    return false;
+}
 
 void Table::common_tbl_cfg(json::map &tbl) const {
     tbl["default_action_handle"] = get_default_action_handle();
     tbl["action_profile"] = action_profile();
     tbl["default_next_table_mask"] = default_next_table_mask_pair.second;
-    //FIXME-JSON: PD related pragma
-    tbl["ap_bind_indirect_res_to_match"] = json::vector();
     //FIXME-JSON: PD related, check glass examples for false (ALPM)
     tbl["is_resource_controllable"] = true;
     tbl["uses_range"] = false;
@@ -2427,6 +2436,10 @@ void Table::common_tbl_cfg(json::map &tbl) const {
             params.push_back(std::move(param));
             if (p.type == "range")
                 tbl["uses_range"] = true; } }
+    tbl["ap_bind_indirect_res_to_match"] = json::vector();
+    if (context_json) {
+        add_json_node_to_table(tbl, "ap_bind_indirect_res_to_match");
+    }
 }
 
 void Table::add_result_physical_buses(json::map &stage_tbl) const {

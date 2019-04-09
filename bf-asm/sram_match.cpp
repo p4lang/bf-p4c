@@ -159,7 +159,7 @@ void SRamMatchTable::verify_format() {
      * Determining the result bus for an entry, if that entry has no overhead.  The result bus
      * is still needed to get the direct address location to find action data / run an
      * instruction, etc.
-     * 
+     *
      * This section maps the allocation scheme used in the TableFormat::Use in p4c, found
      * in the function result_bus_words
      */
@@ -175,7 +175,7 @@ void SRamMatchTable::verify_format() {
             if (!result_bus_set)
                 group_info[i].result_bus_word = group_info[i].match_group.begin()->first;
             LOG1("  format group " << i << " no overhead multiple match groups");
-        } 
+        }
     }
 
     for (int i = 0; i < (int)group_info.size(); i++) {
@@ -230,7 +230,7 @@ bool SRamMatchTable::verify_match_key() {
         for (auto ixbar_element : *input_xbar) {
             match.emplace_back(new Phv::Ref(ixbar_element.second.what));
         }
-            
+
     }
     return error_count == 0;
 }
@@ -313,14 +313,14 @@ void SRamMatchTable::add_hash_functions(json::map &stage_tbl) const {
     for (auto entry : hash_bits_per_group) {
          int hash_fn_id = hash_fn_ids.at(entry.first);
          if (hash_fn_id >= hash_fn_ids.size())
-             BUG(); 
-         hash_function_to_hash_bits[hash_fn_id] = entry; 
+             BUG();
+         hash_function_to_hash_bits[hash_fn_id] = entry;
     }
 
     json::vector &hash_functions = stage_tbl["hash_functions"] = json::vector();
     for (auto entry : hash_function_to_hash_bits) {
         int hash_group_no = entry.first;
-  
+
         json::map hash_function;
         json::vector &hash_bits = hash_function["hash_bits"] = json::vector();
         hash_function["hash_function_number"] = hash_group_no;
@@ -344,7 +344,7 @@ void SRamMatchTable::add_hash_functions(json::map &stage_tbl) const {
 void SRamMatchTable::verify_match(unsigned fmt_width) {
     if (!verify_match_key())
         return;
-    // Build the match_by_bit 
+    // Build the match_by_bit
     unsigned bit = 0;
     for (auto &r : match) {
         match_by_bit.emplace(bit, r);
@@ -369,14 +369,14 @@ void SRamMatchTable::verify_match(unsigned fmt_width) {
                 int hi = std::min((unsigned)mw->second->size()-1, bit+piece.size()-mw->first-1);
                 BUG_CHECK((unsigned)piece.lo/128 < fmt_width);
                 //merge_phv_vec(match_in_word[piece.lo/128], Phv::Ref(mw->second, lo, hi));
-                
+
                 if (auto phv_p = dynamic_cast<Phv::Ref *>(mw->second)) {
                     auto phv_ref = *phv_p;
                     auto vec = split_phv_bytes(Phv::Ref(phv_ref, lo, hi));
                     for (auto ref : vec) {
                         match_in_word[piece.lo/128].emplace_back(new Phv::Ref(ref));
                     }
-                    
+
                 } else if (auto hash_p = dynamic_cast<HashMatchSource *>(mw->second)) {
                     match_in_word[piece.lo/128].push_back(new HashMatchSource(*hash_p));
                 } else {
@@ -451,7 +451,7 @@ void SRamMatchTable::setup_word_ixbar_group() {
         for (auto *source : match) {
             auto phv_ref = *(dynamic_cast<Phv::Ref *>(source));
             phv_ref_match.push_back(phv_ref);
-        } 
+        }
         word_ixbar_group[i++] = phv_ref_match.empty() ? -1 : find_in_ixbar(this, phv_ref_match);
     }
 }
@@ -475,7 +475,7 @@ void SRamMatchTable::write_attached_merge_regs(REGS &regs, int bus, int word, in
             int shiftcount = m->to<MeterTable>()->determine_shiftcount(m, group, word, 0);
             merge.mau_meter_adr_exact_shiftcount[bus][word_group] = shiftcount;
             if (m->uses_colormaprams()) {
-                int color_shift = m->color_shiftcount(attached.meter_color, group, 0); 
+                int color_shift = m->color_shiftcount(attached.meter_color, group, 0);
                 if (m->color_addr_type() == MeterTable::IDLE_MAP_ADDR) {
                     merge.mau_idletime_adr_exact_shiftcount[bus][word_group] = color_shift;
                     merge.mau_payload_shifter_enable[0][bus].idletime_adr_payload_shifter_en = 1;
@@ -870,7 +870,7 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
                             bits_in_byte = piece.hi + 1 - fmt_bit;
                         auto it = --match_by_bit.upper_bound(bit);
                         int lo = bit - it->first;
-                        int hi = lo + bits_in_byte - 1; 
+                        int hi = lo + bits_in_byte - 1;
                         int bus_loc = determine_pre_byteswizzle_loc(it->second, lo, hi, word);
                         BUG_CHECK(bus_loc >= 0 && bus_loc < 16);
                         for (unsigned b = 0; b < bits_in_byte; b++, fmt_bit++)
@@ -1052,7 +1052,7 @@ void SRamMatchTable::add_field_to_pack_format(json::vector &field_list, int base
                             "for table %s", field_name.c_str(), this->name());
                 } else if (p && !p->key_name.empty()) {
                     key_name = p->key_name;
-                    remove_aug_names(key_name); 
+                    remove_aug_names(key_name);
                 }
                 match_mode = get_match_mode(*phv_p, mw->first);
                 start_bit = lo + slice_offset + mw->second->fieldlobit();
@@ -1068,7 +1068,7 @@ void SRamMatchTable::add_field_to_pack_format(json::vector &field_list, int base
                     { "field_name", json::string(key_name) },
                     { "source", json::string(source) },
                     { "lsb_mem_word_offset", json::number(offset) },
-                    { "start_bit", json::number(start_bit) }, 
+                    { "start_bit", json::number(start_bit) },
                     { "immediate_name", json::string(immediate_name) },
                     { "lsb_mem_word_idx", json::number(lsb_mem_word_idx) },
                     { "msb_mem_word_idx", json::number(msb_mem_word_idx) },
@@ -1119,10 +1119,7 @@ json::map* SRamMatchTable::add_common_sram_tbl_cfgs(json::map &tbl,
     add_action_cfgs(tbl, stage_tbl);
     add_result_physical_buses(stage_tbl);
     MatchTable::gen_idletime_tbl_cfg(stage_tbl);
-    if (context_json) {
-        merge_static_entries(tbl);
-        stage_tbl.merge(*context_json);
-    }
+    merge_context_json(tbl, stage_tbl);
     add_all_reference_tables(tbl);
     return stage_tbl_ptr;
 }

@@ -651,7 +651,7 @@ void MauAsmOutput::ixbar_hash_exact_bitrange(Slice ghost_slice, int min_way_size
 }
 
 /**
- * Fills in the slice_to_select_bits map, described in emit_ixbar_hash_exact 
+ * Fills in the slice_to_select_bits map, described in emit_ixbar_hash_exact
  */
 void MauAsmOutput::ixbar_hash_exact_info(int &min_way_size, int &min_way_slice,
         const IXBar::Use *use, int hash_group, std::map<int, bitvec> &slice_to_select_bits) const {
@@ -714,7 +714,7 @@ void MauAsmOutput::ixbar_hash_exact_info(int &min_way_size, int &min_way_slice,
  *
  * In order to increase randomness, the identity hash across different ways is different.
  * Essentially each identity hash is shifted by 1 bit per way, so that the same identity hash
- * does not end up on the same RAM line. 
+ * does not end up on the same RAM line.
  */
 void MauAsmOutput::emit_ixbar_hash_exact(std::ostream &out, indent_t indent,
         safe_vector<Slice> &match_data, safe_vector<Slice> &ghost, const IXBar::Use *use,
@@ -2724,6 +2724,73 @@ void MauAsmOutput::emit_atcam_match(std::ostream &out, indent_t indent,
     }
 }
 
+// PRAGMA bind_indirect_res_to_match support
+// An action profile can have actions with parameters from either action data or
+// an indirect resource (stateful/meter/counter). For these indirect resources,
+// the driver needs to know when to generate API's against the match table using
+// the action profile.  This is specified with the 'bind_indirect_res_to_match'
+// pragma.
+//
+// E.g.
+// @pragma bind_indirect_res_to_match r
+// @pragma bind_indirect_res_to_match mtr
+// @pragma bind_indirect_res_to_match ctr
+// action_profile selector_profile {
+//     actions {
+//         tcp_sport_modify;
+//         tcp_dport_modify;
+//         ipsa_modify;
+//         ipda_modify;
+//         ipds_modify;
+//         ipttl_modify;
+//     }
+//     size : ACTION_COUNT;
+// }
+//
+// The context json node 'ap_bind_indirect_res_to_match' within the
+// 'match_table' must be populated with all indirect resources associated with
+// the action profile
+//
+// The pragma(s) attached to the action profile get(s) passed in through the
+// table attached memory. We first check the presence of this pragma and
+// validate each resource associated with the pragma as attached to the table
+// actions. A valid resource is directly output in the bfa as a context json
+// node syntax which the assembler plugs in to the match table context json
+// Associated JIRA - P4C-1528
+void MauAsmOutput::emit_indirect_res_context_json(std::ostream &out,
+        indent_t indent, const IR::MAU::Table *tbl) const {
+    std::set<cstring> bind_res;
+    for (auto back_at : tbl->attached) {
+        auto at = back_at->attached;
+        for (auto annot : at->annotations->annotations) {
+            if (annot->name != "bind_indirect_res_to_match") continue;
+            auto res_name = annot->expr[0]->to<IR::StringLiteral>()->value;
+            // Ignore multiple pragmas for same resource name
+            if (bind_res.count(res_name)) continue;
+            for (auto act : Values(tbl->actions)) {
+                // Add resource name only once
+                if (bind_res.count(res_name)) break;
+                for (auto call : act->stateful_calls) {
+                    auto call_name = cstring::to_cstring(canon_name(call->attached_callee->name));
+                    if (res_name == call_name) {
+                        bind_res.insert(res_name);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    if (bind_res.size() > 0) {
+        out << indent++ << "context_json:" << std::endl;
+        out << indent   << "ap_bind_indirect_res_to_match: [ ";
+        for (auto biter = bind_res.begin(); biter != bind_res.end(); biter++) {
+            out << *biter;
+            if (biter != --bind_res.end()) out << ", ";
+        }
+        out << " ]" << std::endl;
+    }
+}
+
 void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int stage,
        gress_t gress) const {
     /* FIXME -- some of this should be method(s) in IR::MAU::Table? */
@@ -2768,6 +2835,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
         if (tbl->layout.atcam)
             emit_atcam_match(out, indent, tbl);
     }
+    emit_indirect_res_context_json(out, indent, tbl);
 
     cstring next_hit = "";
     cstring gw_miss;

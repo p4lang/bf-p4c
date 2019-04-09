@@ -55,8 +55,8 @@ P4V1::TNA_ProgramStructure::convertTable(const IR::V1Table* table, cstring newNa
     // Generate p4Table from frontend call
     auto p4Table = ProgramStructure::convertTable(table, newName, stateful, mapNames);
 
-    // Check for action selector and generate a new IR::TNA_P4Table with hash
-    // info required for PD Generation
+    // Check for action selector and generate a new IR::P4Table with additional
+    // annotations for hash info required for PD Generation
     cstring profile = table->action_profile.name;
     auto *action_profile = action_profiles.get(profile);
     auto *action_selector = action_profile ?
@@ -82,4 +82,16 @@ P4V1::TNA_ProgramStructure::convertTable(const IR::V1Table* table, cstring newNa
         }
     }
     return p4Table;
+}
+
+const IR::Declaration_Instance*
+P4V1::TNA_ProgramStructure::convertActionProfile(const IR::ActionProfile* action_profile,
+        cstring newName) {
+    // Generate decl from frontend call
+    auto decl = ProgramStructure::convertActionProfile(action_profile, newName);
+
+    // Add annotations from action profile to the declaration
+    auto newDecl = new IR::Declaration_Instance(decl->name,
+                        action_profile->annotations, decl->type, decl->arguments, nullptr);
+    return newDecl;
 }

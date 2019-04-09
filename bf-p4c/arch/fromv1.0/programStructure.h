@@ -12,6 +12,9 @@ class TNA_ProgramStructure : public ProgramStructure {
 
     const IR::P4Table* convertTable(const IR::V1Table* table, cstring newName,
         IR::IndexedVector<IR::Declaration> &stateful, std::map<cstring, cstring> &) override;
+
+    const IR::Declaration_Instance* convertActionProfile(const IR::ActionProfile* action_profile,
+            cstring newName) override;
  public:
     static ProgramStructure *create() { return new TNA_ProgramStructure(); }
 };

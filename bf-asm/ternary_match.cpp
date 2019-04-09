@@ -518,9 +518,9 @@ void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
             // While generating padding however we treat the entire nibble as a
             // field and do not pad any bits within the nibble when they are
             // unused by the field
-            bool has_nibble_offset = (field_width < 4) 
+            bool has_nibble_offset = (field_width < 4)
                 || (((nibble_offset > 0) && (dirtcam_mode == DIRTCAM_4B_LO)));
-            auto range_field_width = has_nibble_offset ? 
+            auto range_field_width = has_nibble_offset ?
                 field_width > 4 ? 4 - nibble_offset : field_width : 4;
             entry_pad_size = 4;
             auto entry_start_bit = i * 8 + start_bit + (dirtcam_mode == DIRTCAM_4B_HI) * 4 + slice_offset;
@@ -805,10 +805,7 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) const {
     else if (action && action->actions)
         action->actions->gen_tbl_cfg(tbl["actions"]);
     gen_idletime_tbl_cfg(stage_tbl);
-    if (context_json) {
-        merge_static_entries(tbl);
-        stage_tbl.merge(*context_json);
-    }
+    merge_context_json(tbl, stage_tbl);
     match_attributes["match_type"] = "ternary";
 }
 

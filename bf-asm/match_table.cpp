@@ -607,15 +607,10 @@ void MatchTable::add_all_reference_tables(json::map &tbl, Table *match_table) co
         for (auto &s : a->statefuls) { add_reference_table(stateful_table_refs, s); } }
 }
 
-bool MatchTable::merge_static_entries(json::map &tbl) const {
+void MatchTable::merge_context_json(json::map &tbl, json::map&stage_tbl) const {
+    tbl["static_entries"] = json::vector();
     if (context_json) {
-        if (context_json->count("static_entries")) {
-            auto static_entries_o = context_json->to<json::map>()["static_entries"];
-            json::vector &static_entries = static_entries_o->to<json::vector>();
-            tbl["static_entries"] = std::move(static_entries);
-            context_json->to<json::map>().erase("static_entries");
-            return true;
-        }
+        add_json_node_to_table(tbl, "static_entries");
+        stage_tbl.merge(*context_json);
     }
-    return false;
 }

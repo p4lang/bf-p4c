@@ -127,6 +127,8 @@ class MauAsmOutput : public MauInspector {
                               bitvec source) const;
     bool emit_idletime(std::ostream &out, indent_t indent, const IR::MAU::Table *tbl,
                        const IR::MAU::IdleTime *id) const;
+    void emit_indirect_res_context_json(std::ostream &out, indent_t indent,
+                        const IR::MAU::Table *tbl) const;
     cstring find_attached_name(const IR::MAU::Table *tbl,
            const IR::MAU::AttachedMemory *am) const;
     std::string indirect_address(const IR::MAU::AttachedMemory *) const;

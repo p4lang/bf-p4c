@@ -263,6 +263,16 @@ public:
             return (p1 == end() && p2 == b->end()); }
         return false; }
     using obj::operator !=;
+    std::unique_ptr<obj> remove(const char *key) {
+        string tmp(key);
+        auto itr = find(&tmp);
+        if (itr != end()) { 
+            std::unique_ptr<obj> val = std::move(itr->second);
+            this->erase(itr);
+            return val;
+        }
+        return std::unique_ptr<obj>();
+    }
     void print_on(std::ostream &out, int indent=0,
                   int width=80, const char *pfx="") const override;
     bool test_width(int &limit) const override {
