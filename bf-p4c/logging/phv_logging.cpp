@@ -80,9 +80,32 @@ void PhvLogging::logHeaders() {
 
     /* Determine set of all allocated fields and the headers to which they belong */
     for (const auto& f : phv) {
-        f.foreach_alloc([&](const PHV::Field::alloc_slice & /* alloc */) {
+        bitvec allocatedBits;
+        f.foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
             headerFields[f.header()].insert(&f);
+            bitvec sliceBits(alloc.field_bit, alloc.width);
+            allocatedBits |= sliceBits;
         });
+        // Ignore unallocated fields if they are unreferenced or if they are allocated to clots.
+        if (!info.uses.is_referenced(&f)) continue;
+        if (clot.allocated(&f)) continue;
+        bitvec allBitsInField(0, f.size);
+        if (allocatedBits != allBitsInField) {
+            int unallocated = 0;
+            for (auto b : allocatedBits) {
+                if (b > unallocated) {
+                    le_bitrange unallocatedRange = StartLen(unallocated, b - unallocated);
+                    PHV::FieldSlice unallocatedSlice(&f, unallocatedRange);
+                    unallocatedSlices.insert(unallocatedSlice);
+                }
+                unallocated = b + 1;
+            }
+            if (unallocated < f.size) {
+                le_bitrange unallocatedRange = StartLen(unallocated, f.size - unallocated);
+                PHV::FieldSlice unallocatedSlice(&f, unallocatedRange);
+                unallocatedSlices.insert(unallocatedSlice);
+            }
+        }
     }
 
     /* Add header structures to the log file */
@@ -178,6 +201,9 @@ PhvLogging::getAllParserDefs(const PHV::Field* f, ordered_set<PhvLogging::PardeI
     LOG4("Parser defs of Field: " << f);
     for (const FieldDefUse::locpair def : defuse.getAllDefs(f->id)) {
         const IR::BFN::Unit *def_unit = def.first;
+        // If this is an implicit parser initialization added because of uninitialized reads, ignore
+        // it.
+        if (def.second->is<ImplicitParserInit>()) continue;
         if (auto ps = def_unit->to<IR::BFN::ParserState>()) {
             LOG4("    Defined in parser state " << ps->name);
             PardeInfo entry(Access::location_type_t::PARSER, std::string(ps->name));

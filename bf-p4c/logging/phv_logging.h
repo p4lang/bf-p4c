@@ -7,7 +7,9 @@
 #include "bf-p4c/ir/tofino_write_context.h"
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/mau/action_analysis.h"
+#include "bf-p4c/parde/clot_info.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/phv_spec.h"
 #include "bf-p4c/phv/utils/utils.h"
 #include "bf-p4c/logging/logging.h"
@@ -25,6 +27,7 @@ using Logging::Phv_Schema_Logger;
 struct CollectPhvLoggingInfo : public MauInspector {
     /// Information about PHV fields.
     const PhvInfo       &phv;
+    const PhvUse        &uses;
 
     /// Mapping of table names in the backend to the P4 name.
     ordered_map<cstring, cstring> tableNames;
@@ -51,7 +54,7 @@ struct CollectPhvLoggingInfo : public MauInspector {
     /// Gather information related to input xbar reads.
     bool preorder(const IR::MAU::TableKey* read) override;
 
-    explicit CollectPhvLoggingInfo(const PhvInfo& p) : phv(p) { }
+    explicit CollectPhvLoggingInfo(const PhvInfo& p, const PhvUse& u) : phv(p), uses(u) { }
 };
 
 /** This class is meant to generate logging information about PHV allocation and usage and output it
@@ -85,6 +88,8 @@ class PhvLogging : public MauInspector {
  private:
     /// Information about PHV fields.
     const PhvInfo       &phv;
+    /// Information about CLOT-allocated fields.
+    const ClotInfo      &clot;
     /// Information collected about PHV fields usage.
     const CollectPhvLoggingInfo& info;
     /// Defuse information for PHV fields.
@@ -92,10 +97,14 @@ class PhvLogging : public MauInspector {
     /// Table allocation.
     const ordered_map<cstring, ordered_set<int>>& tableAlloc;
 
+    /// Unallocated slices.
+    ordered_set<PHV::FieldSlice> unallocatedSlices;
+
     /// Logger class automatically generated from phv_schema.json.
     Phv_Schema_Logger   logger;
 
     profile_t init_apply(const IR::Node* root) override {
+        unallocatedSlices.clear();
         return Inspector::init_apply(root);
     }
 
@@ -155,10 +164,11 @@ class PhvLogging : public MauInspector {
  public:
     explicit PhvLogging(const char *filename,
                         const PhvInfo &p,
+                        const ClotInfo &ci,
                         const CollectPhvLoggingInfo& c,
                         const FieldDefUse &du,
                         const ordered_map<cstring, ordered_set<int>>& t)
-    : phv(p), info(c), defuse(du), tableAlloc(t),
+    : phv(p), clot(ci), info(c), defuse(du), tableAlloc(t),
       logger(filename,
              buildDate(),
              BF_P4C_VERSION,

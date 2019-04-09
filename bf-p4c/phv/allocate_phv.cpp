@@ -1726,6 +1726,7 @@ Visitor::profile_t AllocatePHV::init_apply(const IR::Node* root) {
             throw PHVTrigger::failure(tables, firstRoundFit, true /* ignorePackConflicts */,
                                       false /* metaInitDisable */);
         }
+        bindSlices(alloc, phv_i);
         if (result.status == AllocResultCode::FAIL_UNSAT) {
             formatAndThrowUnsat(result.remaining_clusters);
         } else if (!failure_diagnosed) {

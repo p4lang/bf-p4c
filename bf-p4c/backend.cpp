@@ -157,7 +157,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
     bridged_fields(phv),
     table_alloc(phv.field_mutex()),
     table_summary(pipe_id, deps) {
-    phvLoggingInfo = new CollectPhvLoggingInfo(phv);
+    phvLoggingInfo = new CollectPhvLoggingInfo(phv, uses);
     addPasses({
         new DumpPipe("Initial table graph"),
         new CreateThreadLocalInstances,
