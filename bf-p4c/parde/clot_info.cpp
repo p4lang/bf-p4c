@@ -593,6 +593,10 @@ class NaiveClotAlloc : public Visitor {
 
             allocate(req[i]);
         }
+
+        LOG2("Allocated " << clotInfo.num_clots_allocated() << " of " << TOTAL_CLOTS_AVAIL
+            << " available CLOTs; " << num_live_clots << " are live, of allowable max "
+            << MAX_CLOTS_LIVE);
     }
 
     Visitor::profile_t init_apply(const IR::Node* root) override {
@@ -619,6 +623,7 @@ class NaiveClotAlloc : public Visitor {
     }
 
     void clear() {
+        num_live_clots = 0;
         tail_gap_credit_map.clear();
         head_gap_credit_map.clear();
         field_to_byte_idx.clear();
