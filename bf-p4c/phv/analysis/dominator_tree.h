@@ -49,6 +49,12 @@ class BuildDominatorTree : public Inspector {
     void printDominatorTree(const ImmediateDominatorMap& idom) const;
 
  public:
+    /** @returns the flow graph associated with the program
+      */
+    const std::vector<FlowGraph*>& getFlowGraph() const {
+        return flowGraph;
+    }
+
     /** @returns the immediate dominator table for @t with @gress. @returns boost::none if there is
      * no immediate dominator. If @t is nullptr, then it indicates the deparser, in which case the
      * gress needs to be specified.

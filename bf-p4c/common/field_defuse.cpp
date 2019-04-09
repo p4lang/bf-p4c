@@ -297,6 +297,18 @@ bool FieldDefUse::isUsedInParser(const PHV::Field* f) const {
     return false;
 }
 
+bool FieldDefUse::hasUseAt(const PHV::Field* f, const IR::BFN::Unit* u) const {
+    for (auto& use : getAllUses(f->id))
+        if (u == use.first) return true;
+    return false;
+}
+
+bool FieldDefUse::hasDefAt(const PHV::Field* f, const IR::BFN::Unit* u) const {
+    for (auto& def : getAllDefs(f->id))
+        if (def.first == u) return true;
+    return false;
+}
+
 void FieldDefUse::end_apply(const IR::Node *) {
     // Get all uninitialized fields
     for (const auto& def : parser_zero_inits) {

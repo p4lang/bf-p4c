@@ -1,18 +1,18 @@
 #ifndef BF_P4C_PHV_ANALYSIS_DARK_LIVE_RANGE_H_
 #define BF_P4C_PHV_ANALYSIS_DARK_LIVE_RANGE_H_
 
-#include "ir/ir.h"
-#include "lib/log.h"
 #include "lib/symbitmatrix.h"
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
+#include "bf-p4c/mau/table_mutex.h"
+#include "bf-p4c/parde/clot_info.h"
+#include "bf-p4c/phv/action_phv_constraints.h"
 #include "bf-p4c/phv/mau_backtracker.h"
+#include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
 #include "bf-p4c/phv/utils/live_range_report.h"
-
-class ClotInfo;
 
 /** This class calculates the live range of fields to determine potential for overlay due to
   * spilling into dark containers. The calculated live ranges use the min_stage value for tables
@@ -21,26 +21,96 @@ class ClotInfo;
   * into a dark container.
   */
 class DarkLiveRange : public Inspector {
- public:
-    // XXX(Deep): Should we expose a way of changing the DEP_DIST using a command line flag, as
-    // glass does?
-    static constexpr int DEP_DIST = 1;
-    /// Name of the ingress parser state, where the compiler adds all the implicit initializations
-    /// for fields with uninitialized reads.
-    static constexpr char const *INGRESS_PARSER_ENTRY =
-        "$entry_point.$ingress_tna_entry_point";
-    /// Name of the egress parser state, where the compiler adds all the implicit initializations
-    /// for fields with uninitialized reads.
-    static constexpr char const *EGRESS_PARSER_ENTRY =
-        "$entry_point.$egress_tna_entry_point";
+ private:
+    static constexpr unsigned READ = PHV::FieldUse::READ;
+    static constexpr unsigned WRITE = PHV::FieldUse::WRITE;
+    static constexpr int PARSER = -1;
+    using StageAndAccess = PHV::StageAndAccess;
 
+    // Pair of sets of units in which the field has been used, and a bool set to true, if all those
+    // units use the field such that it can be sourced/written to a dark container.
+    using AccessInfo = std::pair<ordered_set<const IR::BFN::Unit*>, bool>;
+    // Single entry in live range map.
+    using DarkLiveRangeEntry = ordered_map<StageAndAccess, AccessInfo>;
+
+    // Structure that represents the live range map.
+    class DarkLiveRangeMap {
+     private:
+        ordered_map<const PHV::Field*, DarkLiveRangeEntry> livemap;
+        int DEPARSER = -1;
+
+     public:
+        /// Pretty print the live ranges of all metadata fields.
+        cstring printDarkLiveRanges() const;
+
+        void setDeparserStageValue(int dep) { DEPARSER = dep; }
+
+        int getDeparserStageValue() const { return DEPARSER; }
+
+        boost::optional<DarkLiveRangeEntry> getDarkLiveRange(const PHV::Field* f) const {
+            if (livemap.count(f)) return livemap.at(f);
+            return boost::none;
+        }
+
+        void addAccess(
+                const PHV::Field* f,
+                int stage,
+                unsigned access,
+                const IR::BFN::Unit* unit,
+                bool dark) {
+            StageAndAccess key = std::make_pair(stage, PHV::FieldUse(access));
+            bool fieldEntryPresent = livemap.count(f);
+            bool accessEntryPresent = fieldEntryPresent && livemap.at(f).count(key);
+            if (!fieldEntryPresent || !accessEntryPresent) {
+                ordered_set<const IR::BFN::Unit*> units;
+                units.insert(unit);
+                AccessInfo val = std::make_pair(units, dark);
+                livemap[f][key] = val;
+                return;
+            }
+            livemap[f][key].first.insert(unit);
+            livemap[f][key].second &= dark;
+        }
+
+        void clear() {
+            livemap.clear();
+        }
+
+        bool count(const PHV::Field* f) const {
+            return livemap.count(f);
+        }
+
+        const DarkLiveRangeEntry& at(const PHV::Field* f) const {
+            return livemap.at(f);
+        }
+
+        const AccessInfo& at(const PHV::Field* f, int stage, unsigned access) const {
+            StageAndAccess key = std::make_pair(stage, PHV::FieldUse(access));
+            return livemap.at(f).at(key);
+        }
+
+        bool hasAccess(const PHV::Field* f, int stage, unsigned access) const {
+            if (!livemap.count(f)) return false;
+            StageAndAccess key = std::make_pair(stage, PHV::FieldUse(access));
+            if (!livemap.at(f).count(key)) return false;
+            return true;
+        }
+
+        bool canBeDark(const PHV::Field* f, int stage, unsigned access) const {
+            if (!hasAccess(f, stage, access)) return false;
+            StageAndAccess key = std::make_pair(stage, PHV::FieldUse(access));
+            return livemap.at(f).at(key).second;
+        }
+    };
+
+ public:
     /// Given maximum number of MAU stages @max_num_min_stages and two fields with read/write
     /// accesses defined by @range1 and @range2, this method @returns true if the accesses for the
     /// field overlap.
     static bool overlaps(
-            const int max_num_min_stages,
-            const ordered_map<unsigned, unsigned>& range1,
-            const ordered_map<unsigned, unsigned>& range2);
+            const int num_max_min_stages,
+            const DarkLiveRangeEntry& range1,
+            const DarkLiveRangeEntry& range2);
 
  private:
     PhvInfo                                 &phv;
@@ -49,6 +119,7 @@ class DarkLiveRange : public Inspector {
     FieldDefUse                             &defuse;
     const PragmaNoOverlay                   &noOverlay;
     const PhvUse                            &uses;
+    const MauBacktracker                    &alloc;
 
     /// List of fields that are marked as pa_no_init, which means that we assume the live range of
     /// these fields is from the first use of it to the last use.
@@ -63,36 +134,20 @@ class DarkLiveRange : public Inspector {
     /// `min_stage` calculation have a stage separation of DEP_DIST or more.
     SymBitMatrix&                           overlay;
 
+    int DEPARSER;
+
     /// Map of field ID to the live range for each field.
-    ordered_map<const PHV::Field*, ordered_map<unsigned, unsigned>> livemap;
+    DarkLiveRangeMap livemap;
+    ordered_map<const PHV::Field*, ordered_map<const IR::BFN::Unit*, PHV::FieldUse>>
+        fieldToUnitUseMap;
 
     profile_t init_apply(const IR::Node* root) override;
     void end_apply() override;
 
-    /// Pretty print the live ranges of all metadata fields.
-    cstring printLiveRanges() const;
-
     /// Calculate and set the live range for field @f.
     void setFieldLiveMap(const PHV::Field* f);
 
-    /// Padding fields have special requirements for live ranges: they are only alive at the ingress
-    /// deparser and the egress parser. This function sets the live range for a padding field @f.
-    void setPaddingFieldLiveMap(const PHV::Field* f);
-
  public:
-    /// @returns the live ranges of all metadata fields: key is field ID and the value is the live
-    /// range pair [minStage, maxStage], where parser = -1 and deparser = Device::numStages().
-    const ordered_map<const PHV::Field*, ordered_map<unsigned, unsigned>>&
-    getMetadataLiveMap() const {
-        return livemap;
-    }
-
-    /// @returns true if fields @f1 and @f2 are found to be potentially overlayable because of their
-    /// live ranges.
-    bool hasPotentialLiveRangeOverlay(const PHV::Field* f1, const PHV::Field* f2) const {
-        return overlay(f1->id, f2->id);
-    }
-
     explicit DarkLiveRange(
             PhvInfo& p,
             const ClotInfo& c,
@@ -100,18 +155,12 @@ class DarkLiveRange : public Inspector {
             FieldDefUse& f,
             const PHV::Pragmas& pragmas,
             const PhvUse& u,
-            const MauBacktracker&)
-        : phv(p),
-          clot(c),
-          dg(g),
-          defuse(f),
-          noOverlay(pragmas.pa_no_overlay()),
-          uses(u),
+            const MauBacktracker& a)
+        : phv(p), clot(c), dg(g), defuse(f), noOverlay(pragmas.pa_no_overlay()), uses(u), alloc(a),
           noInitFields(pragmas.pa_no_init().getFields()),
           notParsedFields(pragmas.pa_deparser_zero().getNotParsedFields()),
           notDeparsedFields(pragmas.pa_deparser_zero().getNotDeparsedFields()),
-          overlay(phv.dark_mutex())
-    { }
+          overlay(phv.dark_mutex()) { }
 };
 
 #endif  /* BF_P4C_PHV_ANALYSIS_DARK_LIVE_RANGE_H_ */

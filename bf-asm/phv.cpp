@@ -53,7 +53,7 @@ int Phv::addreg(gress_t gress, const char *name, const value_t &what, int stage,
             if (prev) {
                 if (prev->max_stage >= ch.first) {
                     if (prev->max_stage != INT_MAX)
-                        error(what.lineno, "Overalpping assignments in stages %d..%d for %s",
+                        error(what.lineno, "Overlapping assignments in stages %d..%d for %s",
                               ch.first, prev->max_stage, name);
                     prev->max_stage = ch.first - 1; } }
             prev = &ch.second;

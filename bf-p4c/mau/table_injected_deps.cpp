@@ -170,7 +170,8 @@ InjectPoints InjectMetadataControlDependencies::get_inject_points(const IR::MAU:
             // If one table is within the next table pathway propagation pathway of another,
             // then there is nothing to inject, as this is already control dependendent
             if (std::find(a_path.begin(), a_path.end(), b) != a_path.end())
-                BUG("  A metadata use point is not in flow graph order");
+                BUG("  A metadata use point is not in flow graph order for tables %1% and %2%",
+                    a->name, b->name);
             if (std::find(b_path.begin(), b_path.end(), a) != b_path.end())
                 continue;
 

@@ -2,29 +2,12 @@
 #include "bf-p4c/common/table_printer.h"
 #include "bf-p4c/phv/utils/live_range_report.h"
 
-cstring LiveRangeReport::use_type(unsigned use) {
-    if (use == 0) return "";
-    std::stringstream ss;
-    bool checkLiveness = true;
-    if (use & LiveRangeReport::READ) {
-        ss << "R";
-        checkLiveness = false;
-    }
-    if (use & LiveRangeReport::WRITE) {
-        ss << "W";
-        checkLiveness = false;
-    }
-    if (checkLiveness && (use & LiveRangeReport::LIVE))
-        ss << "~";
-    return ss.str();
-}
-
-std::map<int, unsigned> LiveRangeReport::processUseDefSet(
+std::map<int, PHV::FieldUse> LiveRangeReport::processUseDefSet(
         const FieldDefUse::LocPairSet& defuseSet,
-        unsigned usedef) const {
+        PHV::FieldUse usedef) const {
     const int DEPARSER = maxStages;
     const int PARSER = -1;
-    std::map<int, unsigned> fieldMap;
+    std::map<int, PHV::FieldUse> fieldMap;
     for (const FieldDefUse::locpair use : defuseSet) {
         const IR::BFN::Unit* use_unit = use.first;
         if (use_unit->is<IR::BFN::ParserState>() || use_unit->is<IR::BFN::Parser>()) {
@@ -35,25 +18,22 @@ std::map<int, unsigned> LiveRangeReport::processUseDefSet(
             } else {
                 use_location = " to parser state " + ps->name;
                 // Ignore initialization in parser.
-                cstring compareToString = (use_unit->thread() == INGRESS) ?
-                    MetadataLiveRange::INGRESS_PARSER_ENTRY :
-                    MetadataLiveRange::EGRESS_PARSER_ENTRY;
-                if (usedef == WRITE && ps->name.startsWith(compareToString)) {
+                if (use.second->is<ImplicitParserInit>()) {
                     LOG4("\t  Ignoring initialization in " << use_location);
                     continue;
                 }
             }
             fieldMap[PARSER] |= usedef;
-            LOG4("\tAssign " << LiveRangeReport::use_type(usedef) << use_location);
+            LOG4("\tAssign " << usedef << use_location);
         } else if (use_unit->is<IR::BFN::Deparser>()) {
             fieldMap[DEPARSER] |= usedef;
-            LOG4("\tAssign " << LiveRangeReport::use_type(usedef) << " to deparser");
+            LOG4("\tAssign " << usedef << " to deparser");
         } else if (use_unit->is<IR::MAU::Table>()) {
             const auto* t = use_unit->to<IR::MAU::Table>();
             auto stages = alloc.stages(t);
             for (auto stage : stages) {
                 fieldMap[stage] |= usedef;
-                LOG4("\tAssign " << LiveRangeReport::use_type(usedef) << " to stage " << stage);
+                LOG4("\tAssign " << usedef << " to stage " << stage);
             }
         } else {
             BUG("Unknown unit encountered %1%", use_unit->toString());
@@ -64,9 +44,9 @@ std::map<int, unsigned> LiveRangeReport::processUseDefSet(
 
 void LiveRangeReport::setFieldLiveMap(
         const PHV::Field* f,
-        ordered_map<const PHV::Field*, std::map<int, unsigned>>& livemap) const {
-    auto usemap = processUseDefSet(defuse.getAllUses(f->id), READ);
-    auto defmap = processUseDefSet(defuse.getAllDefs(f->id), WRITE);
+        ordered_map<const PHV::Field*, std::map<int, PHV::FieldUse>>& livemap) const {
+    auto usemap = processUseDefSet(defuse.getAllUses(f->id), PHV::FieldUse(READ));
+    auto defmap = processUseDefSet(defuse.getAllDefs(f->id), PHV::FieldUse(WRITE));
     // Combine the maps into a single map.
     for (auto kv : defmap)
         usemap[kv.first] |= kv.second;
@@ -79,13 +59,13 @@ void LiveRangeReport::setFieldLiveMap(
     LOG4("Min-max for " << f->name << " : [" << min << ", " << max << "]");
     if (min != maxStages + 1 && max != -2) {
         for (int i = min; i <= max; i++)
-            usemap[i] |= LIVE;
+            usemap[i] |= PHV::FieldUse(LIVE);
     }
     livemap[f] = usemap;
 }
 
 cstring LiveRangeReport::printFieldLiveness(
-        const ordered_map<const PHV::Field*, std::map<int, unsigned>>& livemap) {
+        const ordered_map<const PHV::Field*, std::map<int, PHV::FieldUse>>& livemap) {
     std::stringstream ss;
     ss << std::endl << "Live Ranges for PHV Fields:" << std::endl;
     std::vector<std::string> headers;
@@ -103,12 +83,13 @@ cstring LiveRangeReport::printFieldLiveness(
         row.push_back(std::to_string(kv.first->size));
         for (int i = -1; i <= maxStages; i++) {
             if (kv.second.count(i)) {
-                row.push_back(std::string(LiveRangeReport::use_type(kv.second.at(i))));
-                if (kv.second.at(i) & READ)
+                PHV::FieldUse use_type(kv.second.at(i));
+                row.push_back(std::string(use_type.toString()));
+                if (kv.second.at(i).isRead())
                     stageToReadBits[i] += kv.first->size;
-                if (kv.second.at(i) & WRITE)
+                if (kv.second.at(i).isWrite())
                     stageToWriteBits[i] += kv.first->size;
-                if (kv.second.at(i) & LIVE)
+                if (kv.second.at(i).isLive())
                     stageToLiveBits[i] += kv.first->size;
             } else {
                 row.push_back("");
@@ -160,7 +141,7 @@ Visitor::profile_t LiveRangeReport::init_apply(const IR::Node* root) {
     int maxStagesInAlloc = alloc.maxStages();
     int maxDeviceStages = Device::numStages();
     maxStages = (maxStagesInAlloc > maxDeviceStages) ? maxStagesInAlloc : maxDeviceStages;
-    ordered_map<const PHV::Field*, std::map<int, unsigned>> livemap;
+    ordered_map<const PHV::Field*, std::map<int, PHV::FieldUse>> livemap;
     for (const PHV::Field& f : phv) {
         bool only_tphv_allocation = true;
         f.foreach_alloc([&](const PHV::Field::alloc_slice& slice) {

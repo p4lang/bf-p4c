@@ -1,5 +1,6 @@
-#include "bf-p4c/phv/analysis/live_range_shrinking.h"
 #include "bf-p4c/mau/table_layout.h"
+#include "bf-p4c/phv/analysis/live_range_shrinking.h"
+#include "bf-p4c/phv/utils/liverange_opti_utils.h"
 
 Visitor::profile_t FindInitializationNode::init_apply(const IR::Node* root) {
     LOG3("Printing dependency graph");
@@ -32,13 +33,6 @@ bool FindInitializationNode::isUninitializedDef(
         const FieldDefUse::locpair& def) const {
     if (!defuse.hasUninitializedRead(f->id)) return false;
     if (def.second->is<ImplicitParserInit>()) return true;
-    return false;
-}
-
-bool FindInitializationNode::hasParserUse(ordered_set<const IR::BFN::Unit*> doms) const {
-    for (const auto* u : doms)
-        if (u->is<IR::BFN::Parser>() || u->is<IR::BFN::ParserState>())
-            return true;
     return false;
 }
 
@@ -115,89 +109,8 @@ bool FindInitializationNode::canInitTableReachGUnits(
     if (!unit) BUG("How is table %1% not a unit?", table->name);
     ordered_set<const IR::BFN::Unit*> f_units;
     f_units.insert(unit);
-    return canFUnitsReachGUnits(f_units, g_units);
-}
-
-bool FindInitializationNode::canFUnitsReachGUnits(
-        const ordered_set<const IR::BFN::Unit*>& f_units,
-        const ordered_set<const IR::BFN::Unit*>& g_units) const {
-    bool rv = false;
-    auto gress = boost::make_optional(false, gress_t());
-    for (const auto* u1 : f_units) {
-        bool deparser1 = u1->is<IR::BFN::Deparser>();
-        bool table1 = u1->is<IR::MAU::Table>();
-        if (!gress) gress = u1->thread();
-        if (hasParserUse({ u1 })) {
-            rv = true;
-            LOG5("\t\t\tParser defuse " << DBPrint::Brief << u1 << " can reach all g units.");
-            continue;
-        }
-        const auto* t1 = table1 ? u1->to<IR::MAU::Table>() : nullptr;
-        const FlowGraph& fg = *(flowGraph[*gress]);
-        for (const auto* u2 : g_units) {
-            // Units of different gresses cannot reach each other.
-            if (gress)
-                if (u2->thread() != *gress)
-                    return false;
-            bool deparser2 = u2->is<IR::BFN::Deparser>();
-            // If f was used in a deparser and g was not in the deparser, then f cannot reach g.
-            if (deparser1) {
-                if (deparser2) {
-                    LOG5("\t\t\tBoth units are deparser. Can reach.");
-                    rv = true;
-                } else {
-                    LOG5("\t\t\t" << DBPrint::Brief << u1 << " cannot reach " << DBPrint::Brief <<
-                         u2);
-                }
-                continue;
-            }
-            // Deparser/table use for f_unit cannot reach parser use for g_unit.
-            if (table1 && hasParserUse({ u2 })) {
-                LOG5("\t\t\t" << DBPrint::Brief << u1 << " cannot reach " << DBPrint::Brief << u2);
-                continue;
-            }
-            // Deparser use for g can be reached by every unit's use in f.
-            if (deparser2) {
-                rv = true;
-                LOG5("\t\t\t" << DBPrint::Brief << u1 << " can reach " << DBPrint::Brief << u2);
-                continue;
-            }
-
-            if (!u2->is<IR::MAU::Table>())
-                BUG("Non-parser, non-deparser, non-table defuse unit found.");
-            const auto* t2 = u2->to<IR::MAU::Table>();
-            if (fg.can_reach(t1, t2)) {
-                LOG5("\t\t\t" << t1->name << " can reach " << t2->name);
-                rv = true;
-            } else {
-                LOG5("\t\t\t" << t1->name << " cannot reach " << t2->name);
-            }
-        }
-    }
-    return rv;
-}
-
-void
-FindInitializationNode::getTrimmedDominators(ordered_set<const IR::BFN::Unit*>& candidates) const {
-    // By definition of dominators, all candidates are tables.
-    ordered_set<const IR::BFN::Unit*> emptySet;
-    ordered_set<const IR::BFN::Unit*> dominatedNodes;
-    for (const auto* u1 : candidates) {
-        if (hasParserUse({ u1 })) continue;
-        bool table1 = u1->is<IR::MAU::Table>();
-        const auto* t1 = table1 ? u1->to<IR::MAU::Table>() : nullptr;
-        for (const auto* u2 : candidates) {
-            if (u1 == u2) continue;
-            if (hasParserUse({ u2 })) continue;
-            bool table2 = u2->is<IR::MAU::Table>();
-            const auto* t2 = table2 ? u2->to<IR::MAU::Table>() : nullptr;
-            // If u1 dominates u2, only consider u1. So, mark u2 for deletion.
-            if (domTree.strictlyDominates(t1, t2))
-                dominatedNodes.insert(u2);
-        }
-    }
-    for (const auto* u : dominatedNodes)
-        candidates.erase(u);
+    auto rv = canLaterUnitsReachEarlyUnits(f_units, g_units, flowGraph);
+    return rv.size();
 }
 
 ordered_set<const IR::MAU::Table*>
@@ -654,10 +567,11 @@ FindInitializationNode::findInitializationNodes(
                 g_field_units.insert(kv.first);
             }
             g_units[g].insert(g_field_units.begin(), g_field_units.end());
-            LOG3("\t\tCan all defuses of " << f->name << " reach defuses of " << g->name << "?");
-            bool reach_condition = canFUnitsReachGUnits(f_dominators, g_field_units);
-            if (reach_condition) {
-                LOG3("\t\t  Yes. Therefore, metadata initialization not possible.");
+            LOG2("\t\tCan all defuses of " << f->name << " reach defuses of " << g->name << "?");
+            auto reach_condition = canLaterUnitsReachEarlyUnits(f_dominators, g_field_units,
+                    flowGraph);
+            if (reach_condition.size() > 0) {
+                LOG2("\t\t  Yes. Therefore, metadata initialization not possible.");
                 return boost::none;
             }
             LOG3("\t\t  No.");
@@ -670,8 +584,8 @@ FindInitializationNode::findInitializationNodes(
         }
 
         // Trim the list of dominators determined earlier to the minimal set of strict dominators.
-        LOG3("\t\t  Trimming the list of dominators in the set of defuses.");
-        getTrimmedDominators(f_dominators);
+        LOG2("\t\t  Trimming the list of dominators in the set of defuses.");
+        getTrimmedDominators(f_dominators, domTree);
         if (hasParserUse(f_dominators)) {
             LOG3("\t\t  Defuse units of field " << f->name << " includes the parser. "
                  "Cannot initialize metadata.");
@@ -836,218 +750,6 @@ cstring FindInitializationNode::printLiveRangeShrinkingMap(
     return ss.str();
 }
 
-bool MapFieldToExpr::preorder(const IR::Expression* expr) {
-    if (expr->is<IR::Cast>() || expr->is<IR::Slice>())
-        return true;
-    const auto* f = phv.field(expr);
-    if (!f) return true;
-    fieldExpressions[f->id] = expr;
-    return true;
-}
-
-const IR::MAU::Instruction*
-MapFieldToExpr::generateInitInstruction(const MapFieldToExpr::AllocSlice& slice) const {
-    const auto* f = slice.field;
-    BUG_CHECK(f, "Field is nullptr in generateInitInstruction");
-    const IR::Expression* zeroExpr = new IR::Constant(new IR::Type_Bits(slice.width, false), 0);
-    const IR::Expression* fieldExpr = getExpr(f);
-    if (slice.width == f->size) {
-        auto* prim = new IR::MAU::Instruction("set", { fieldExpr, zeroExpr });
-        return prim;
-    } else {
-        le_bitrange range = slice.field_bits();
-        const IR::Expression* sliceExpr = new IR::Slice(fieldExpr, range.hi, range.lo);
-        auto* prim = new IR::MAU::Instruction("set", { sliceExpr, zeroExpr });
-        return prim;
-    }
-}
-
-Visitor::profile_t ComputeFieldsRequiringInit::init_apply(const IR::Node* root) {
-    actionInits.clear();
-    fieldsForInit.clear();
-    for (auto& f : phv) {
-        for (auto& slice : f.get_alloc()) {
-            // For each alloc slice in the field, check if metadata initialization is required.
-            if (slice.init_points.size() == 0) continue;
-            LOG4("\t  Need to initialize " << f.name << " : " << slice);
-            for (const auto* act : slice.init_points) {
-                actionInits[act].push_back(slice);
-                fieldsForInit.insert(slice.field);
-                LOG4("\t\tInitialize at action " << act->name);
-            }
-        }
-    }
-    return Inspector::init_apply(root);
-}
-
-const IR::MAU::Action* AddInitialization::postorder(IR::MAU::Action* act) {
-    auto* act_orig = getOriginal<IR::MAU::Action>();
-    auto fieldsToBeInited = fieldsForInit.getInitsForAction(act_orig);
-    if (fieldsToBeInited.size() == 0) return act;
-    // Deduplicate slices here. If they are allocated to the same container (as in the case of
-    // deparsed-zero slices), then we only add one initialization to the action.
-    ordered_map<PHV::Container, ordered_set<le_bitrange>> allocatedContainerBits;
-    std::vector<MapFieldToExpr::AllocSlice> dedupFieldsToBeInitialized;
-    for (auto& slice : fieldsToBeInited) {
-        if (!allocatedContainerBits.count(slice.container)) {
-            allocatedContainerBits[slice.container].insert(slice.container_bits());
-            dedupFieldsToBeInitialized.push_back(slice);
-            continue;
-        }
-        bool addInit = true;
-        for (auto bits : allocatedContainerBits.at(slice.container)) {
-            if (bits.contains(slice.container_bits()))
-                addInit = false;
-        }
-        if (!addInit) {
-            LOG2("\t\tSlice " << slice << " does not need to be initialized because another "
-                 "overlayed slice in the same container is also initialized in this action.");
-            continue;
-        }
-        dedupFieldsToBeInitialized.push_back(slice);
-    }
-    for (auto slice : dedupFieldsToBeInitialized) {
-        auto* prim = fieldToExpr.generateInitInstruction(slice);
-        if (!prim) {
-            ::warning("Cannot add initialization for slice");
-            continue;
-        }
-        act->action.push_back(prim);
-        initializedSlices[PHV::FieldSlice(slice.field, slice.field_bits())].insert(act);
-        if (LOGGING(4)) {
-            auto tbl = actionsMap.getTableForAction(act_orig);
-            if (!tbl)
-                LOG4("\t\tAdding metadata initialization instruction " << prim << " to action " <<
-                     act->name << " without table");
-            else
-                LOG4("\t\tAdding metadata initialization instruction " << prim << " to action " <<
-                     act->name << ", in table " << (*tbl)->name);
-        }
-    }
-    return act;
-}
-
-void AddInitialization::end_apply() {
-    if (!LOGGING(2)) return;
-    LOG2("\t  Printing all the metadata fields that need initialization with this allocation");
-    for (auto& kv : initializedSlices) {
-        LOG2("\t\t" << kv.first << " needing initialization at actions:");
-        for (const auto* act : kv.second)
-            LOG2("\t\t\t" << act->name);
-    }
-}
-
-void ComputeDependencies::noteDependencies(
-        const ordered_map<PHV::AllocSlice, ordered_set<PHV::AllocSlice>>& slices,
-        const ordered_map<PHV::AllocSlice, ordered_set<const IR::MAU::Table*>>& initNodes) {
-    for (auto& kv : slices) {
-        if (!initNodes.count(kv.first)) continue;
-        for (const auto* initTable : initNodes.at(kv.first)) {
-            // initTable = Table where writeSlice is initialized.
-            for (const auto& readSlice : kv.second) {
-                // For each slice that shares containers with write slice (kv.first)
-                for (auto& use : defuse.getAllUses(readSlice.field()->id)) {
-                    const auto* readTable = use.first->to<IR::MAU::Table>();
-                    if (!readTable) continue;
-                    LOG5("\tInit unit for " << kv.first << " : " << initTable->name);
-                    LOG5("\t  Read unit for " << readSlice << " : " << readTable->name);
-                    if (readTable != initTable)
-                        phv.addMetadataDependency(readTable, initTable);
-                }
-            }
-        }
-    }
-
-    LOG1("\t  Printing new dependencies to be inserted");
-    for (auto kv : phv.getMetadataDeps())
-        for (cstring t : kv.second)
-            LOG1("\t\t" << kv.first << " -> " << t);
-
-    LOG3("\t  Printing reverse metadata deps");
-    for (auto kv : phv.getReverseMetadataDeps()) {
-        std::stringstream ss;
-        ss << "\t\t" << kv.first << " : ";
-        for (auto t : kv.second)
-            ss << t << " ";
-        LOG3(ss.str());
-    }
-}
-
-Visitor::profile_t ComputeDependencies::init_apply(const IR::Node* root) {
-    const auto& fields = fieldsForInit.getComputeFieldsRequiringInit();
-    const auto& livemap = liverange.getMetadataLiveMap();
-    // Set of fields involved in metadata initialization whose usedef live ranges must be
-    // considered.
-    ordered_map<PHV::AllocSlice, ordered_set<PHV::AllocSlice>> initSlicesToOverlappingSlices;
-
-    if (!phv.alloc_done())
-        BUG("ComputeDependencies pass must be called after PHV allocation is complete.");
-
-    // Generate the initFieldsToOverlappingFields map.
-    // The key here is a field that must be initialized as part of live range shrinking; the values
-    // are the set of fields that overlap with the key field, and so there must be dependencies
-    // inserted from the reads of the value fields to the initializations inserted.
-    for (const auto* f : fields) {
-        // For each field, check the other slices overlapping with that field.
-        f->foreach_alloc([&](const PHV::Field::alloc_slice& slice) {
-            auto slices = phv.get_slices_in_container(slice.container);
-            for (auto& sl : slices) {
-                if (slice == sl) continue;
-                // If parser mutual exclusion, then we do not need to consider these fields for
-                // metadata initialization.
-                if (phv.isFieldMutex(f, sl.field)) continue;
-                // If slices do not overlap, then ignore.
-                if (!slice.container_bits().overlaps(sl.container_bits()))
-                    continue;
-                // Check live range here.
-                auto liverange1 = livemap.at(f->id);
-                auto liverange2 = livemap.at(sl.field->id);
-                if (liverange1.first <= liverange2.first || liverange1.second <= liverange2.first) {
-                    LOG3("\t  Ignoring field " << sl.field->name << " (" << liverange2.first << ", "
-                         << liverange2.second << ") overlapping with " << f->name << " (" <<
-                         liverange1.first << ", " << liverange1.second << ") due to live ranges");
-                    continue;
-                }
-                PHV::AllocSlice initSlice(phv.field(slice.field->id), slice.container,
-                        slice.field_bit, slice.container_bit, slice.width);
-                PHV::AllocSlice overlappingSlice(phv.field(sl.field->id), sl.container,
-                        sl.field_bit, sl.container_bit, sl.width);
-                initSlicesToOverlappingSlices[initSlice].insert(overlappingSlice);
-            }
-        });
-    }
-
-    for (auto& kv : initSlicesToOverlappingSlices) {
-        LOG6("  Initialize slice " << kv.first);
-        for (auto& sl : kv.second)
-            LOG6("\t" << sl);
-    }
-
-    // Generate init slice to table map.
-    ordered_map<PHV::AllocSlice, ordered_set<const IR::MAU::Table*>> slicesToTableInits;
-    const auto& initMap = fieldsForInit.getAllActionInits();
-    for (auto kv : initMap) {
-        auto t = actionsMap.getTableForAction(kv.first);
-        if (!t) BUG("Cannot find table corresponding to action %1%", kv.first->name);
-        for (const auto& slice : kv.second) {
-            PHV::AllocSlice initSlice(phv.field(slice.field->name), slice.container,
-                    slice.field_bit, slice.container_bit, slice.width);
-            slicesToTableInits[initSlice].insert(*t);
-        }
-    }
-
-    for (auto& kv : slicesToTableInits) {
-        LOG6("  Initializing slice " << kv.first);
-        for (const auto* t : kv.second)
-            LOG6("\t" << t->name);
-    }
-
-    noteDependencies(initSlicesToOverlappingSlices, slicesToTableInits);
-
-    return Inspector::init_apply(root);
-}
-
-
 LiveRangeShrinking::LiveRangeShrinking(
         const PhvInfo& p,
         const FieldDefUse& u,
@@ -1055,27 +757,12 @@ LiveRangeShrinking::LiveRangeShrinking(
         const PragmaNoInit& i,
         const MetadataLiveRange& l,
         const ActionPhvConstraints& a,
+        const BuildDominatorTree& d,
         const MauBacktracker& bt)
-    : domTree(flowGraph),
-      initNode(domTree, p, u, g, i.getFields(), tableActionsMap, l, a, tableMutex, flowGraph, bt) {
+    : initNode(d, p, u, g, i.getFields(), tableActionsMap, l, a, tableMutex, d.getFlowGraph(), bt) {
     addPasses({
         &tableMutex,
-        &domTree,
         &tableActionsMap,
         &initNode
-    });
-}
-
-AddMetadataInitialization::AddMetadataInitialization(
-        PhvInfo& p,
-        const FieldDefUse& d,
-        const MetadataLiveRange& r)
-    : fieldToExpr(p), init(p), dep(p, actionsMap, init, d, r) {
-    addPasses({
-        &actionsMap,
-        &fieldToExpr,
-        &init,
-        new AddInitialization(fieldToExpr, init, actionsMap),
-        &dep
     });
 }

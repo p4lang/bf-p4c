@@ -5,14 +5,15 @@
 #include "ir/ir.h"
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/mau/table_summary.h"
+#include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_fields.h"
 
 class LiveRangeReport : public Inspector {
- public:
-    typedef enum use_t { READ = 1, WRITE = 2, LIVE = 4 } USE_T;
-    static cstring use_type(unsigned use);
-
  private:
+    static constexpr unsigned READ = PHV::FieldUse::READ;
+    static constexpr unsigned WRITE = PHV::FieldUse::WRITE;
+    static constexpr unsigned LIVE = PHV::FieldUse::LIVE;
+
     const PhvInfo&          phv;
     const TableSummary&     alloc;
     const FieldDefUse&      defuse;
@@ -26,16 +27,16 @@ class LiveRangeReport : public Inspector {
 
     profile_t init_apply(const IR::Node* root) override;
 
-    std::map<int, unsigned> processUseDefSet(
+    std::map<int, PHV::FieldUse> processUseDefSet(
             const FieldDefUse::LocPairSet& defuseSet,
-            unsigned useDef) const;
+            PHV::FieldUse useDef) const;
 
     void setFieldLiveMap(
             const PHV::Field* f,
-            ordered_map<const PHV::Field*, std::map<int, unsigned>>& livemap) const;
+            ordered_map<const PHV::Field*, std::map<int, PHV::FieldUse>>& livemap) const;
 
     cstring printFieldLiveness(
-            const ordered_map<const PHV::Field*, std::map<int, unsigned>>& livemap);
+            const ordered_map<const PHV::Field*, std::map<int, PHV::FieldUse>>& livemap);
 
     std::vector<std::string> createStatRow(
             std::string title,

@@ -1,4 +1,5 @@
 #include "phv_analysis.h"
+#include "bf-p4c/phv/add_initialization.h"
 #include "bf-p4c/phv/cluster_phv_operations.h"
 #include "bf-p4c/phv/mau_backtracker.h"
 #include "bf-p4c/phv/parde_phv_constraints.h"
@@ -30,19 +31,21 @@ PHV_AnalysisPass::PHV_AnalysisPass(
       pragmas(phv, options),
       parser_critical_path(phv),
       critical_path_clusters(parser_critical_path),
-      pack_conflicts(phv, deps, table_mutex, table_alloc, action_mutex),
+      pack_conflicts(phv, deps, table_mutex, alloc, action_mutex),
       action_constraints(phv, pack_conflicts),
-      meta_live_range(phv, deps, defuse, pragmas, uses, table_alloc),
+      domTree(flowGraph),
+      meta_live_range(phv, deps, defuse, pragmas, uses, alloc),
       dark_live_range(phv, clot, deps, defuse, pragmas, uses, table_alloc),
-      meta_init(phv, defuse, deps, pragmas.pa_no_init(), meta_live_range, action_constraints,
-              alloc),
+      meta_init(phv, defuse, deps, pragmas.pa_no_init(), meta_live_range,
+                action_constraints, domTree, alloc),
       clustering(phv, uses, pack_conflicts, action_constraints) {
     if (options.trivial_phvalloc) {
         addPasses({
             new PHV::TrivialAlloc(phv)});
     } else {
         addPasses({
-            &uses,                 // use of field in mau, parde
+            // Identify uses of fields in MAU, PARDE
+            &uses,
             new PhvInfo::DumpPhvFields(phv, uses),
             // Determine candidates for mocha PHVs.
             Device::currentDevice() == Device::JBAY ? new CollectMochaCandidates(phv, uses) :
@@ -51,34 +54,41 @@ PHV_AnalysisPass::PHV_AnalysisPass(
                         nullptr,
             // Pragmas need to be run here because the later passes may add constraints encoded as
             // pragmas to various fields after the initial pragma processing is done.
-            &pragmas,              // parse and fold PHV-related pragmas
+            // parse and fold PHV-related pragmas
+            &pragmas,
+            // Identify fields for deparsed-zero optimization
             new DeparserZeroOptimization(phv, defuse, pragmas.pa_deparser_zero(), clot),
-                                   // identify fields for deparsed zero optimization
+            // Produce pairs of mutually exclusive header fields, e.g. (arpSrc, ipSrc)
             new MutexOverlay(phv, pragmas),
-                                   // produce pairs of mutually exclusive header
-                                   // fields, eg. (arpSrc, ipSrc)
+            // calculate ingress/egress parser's critical path
             &parser_critical_path,
-                                   // calculate ingress/egress parser's critical path
+            // Refresh dependency graph for live range analysis
             new FindDependencyGraph(phv, deps),
-                                   // refresh dependency graph for live range
-                                   // analysis
-            &defuse,               // refresh defuse
-            new PHV_Field_Operations(phv),  // PHV field operations analysis
-            &table_mutex,          // Table mutual exclusion information
-            &action_mutex,         // Mutually exclusive action information
-            &pack_conflicts,       // collect list of fields that cannot be packed together based on
-                                   // first round of table allocation (only useful if we backtracked
-                                   // from table placement to PHV allocation)
+            // Refresh defuse
+            &defuse,
+            // Analysis of operations on PHV fields.
+            // XXX(Deep): Combine with ActionPhvConstraints?
+            new PHV_Field_Operations(phv),
+            // Mutually exclusive tables information
+            &table_mutex,
+            // Mutually exclusive action information
+            &action_mutex,
+            // Collect list of fields that cannot be packed together based on the previous round of
+            // table allocation (only useful if we backtracked from table placement to PHV
+            // allocation)
+            &pack_conflicts,
+            // Collect constraints related to the way fields are used in tables.
             new TablePhvConstraints(phv, pragmas.pa_container_sizes()),
+            // Collect constraints related to the way fields are used in the parser/deparser.
             new PardePhvConstraints(phv, pragmas.pa_container_sizes()),
             &critical_path_clusters,
             &action_constraints,
-
             // This has to be the last pass in the analysis phase as it adds artificial constraints
             // to fields and uses results of some of the above passes (specifically
             // action_constraints).
             new AddSpecialConstraints(phv, pragmas, action_constraints),
-
+            // Build the dominator tree for the program
+            &domTree,
             // Determine `ideal` live ranges for metadata fields in preparation for live range
             // shrinking that will be effected during and post AllocatePHV.
             &meta_live_range,
@@ -89,17 +99,13 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             // Determine parser constant extract constraints, to be run before Clustering.
             Device::currentDevice() == Device::TOFINO ? new TofinoParserConstantExtract(phv) :
                 nullptr,
-#if HAVE_JBAY
-            options.jbay_analysis ? new JbayPhvAnalysis(phv, uses, deps, defuse, action_constraints)
-                : nullptr,
-#endif
             // From this point on, we are starting to transform the PHV related data structures.
             // Before this is all analysis that collected constraints for PHV allocation to use.
-            &clustering,           // cluster analysis
+            &clustering,
             new PhvInfo::DumpPhvFields(phv, uses),
             new AllocatePHV(clustering, uses, defuse, clot, pragmas, phv, action_constraints,
                     parser_critical_path, critical_path_clusters, table_alloc, meta_init),
-            new AddMetadataInitialization(phv, defuse, meta_live_range),
+            new AddSliceInitialization(phv, defuse, deps, meta_live_range),
             &defuse
         }); }
 

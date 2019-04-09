@@ -129,4 +129,8 @@ std::ostream& operator<<(std::ostream& out, ordered_set<const PHV::Container *>&
     return out;
 }
 
+std::ostream& operator<<(std::ostream& out, const PHV::FieldUse u) {
+    return out << u.toString();
+}
+
 }  // namespace PHV

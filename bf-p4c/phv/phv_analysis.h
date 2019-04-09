@@ -1,12 +1,12 @@
 #ifndef BF_P4C_PHV_PHV_ANALYSIS_H_
 #define BF_P4C_PHV_PHV_ANALYSIS_H_
 
-#include "ir/ir.h"
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/logging/pass_manager.h"
 #include "bf-p4c/mau/action_mutex.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
+#include "bf-p4c/mau/table_flow_graph.h"
 #include "bf-p4c/mau/table_mutex.h"
 #include "bf-p4c/parde/clot_info.h"
 #include "bf-p4c/phv/action_phv_constraints.h"
@@ -14,6 +14,7 @@
 #include "bf-p4c/phv/mau_backtracker.h"
 #include "bf-p4c/phv/analysis/critical_path_clusters.h"
 #include "bf-p4c/phv/analysis/dark_live_range.h"
+#include "bf-p4c/phv/analysis/dominator_tree.h"
 #include "bf-p4c/phv/analysis/live_range_shrinking.h"
 #include "bf-p4c/phv/analysis/meta_live_range.h"
 #include "bf-p4c/phv/analysis/pack_conflicts.h"
@@ -41,8 +42,14 @@ class PHV_AnalysisPass : public Logging::PassManager {
     PackConflicts pack_conflicts;
     /// Action induced packing constraints.
     ActionPhvConstraints action_constraints;
+    /// Table flow graph for the program.
+    std::vector<FlowGraph*> flowGraph;
+    /// Dominator tree for the program.
+    BuildDominatorTree domTree;
     /// Metadata live range overlay potential information based on table dependency graph.
     MetadataLiveRange meta_live_range;
+    /// Identification of fields that could be allocated to the same container pending of the
+    /// copying of one or more fields into a dark container.
     DarkLiveRange dark_live_range;
     /// Metadata initialization related pass.
     LiveRangeShrinking meta_init;

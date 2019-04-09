@@ -36,7 +36,10 @@ struct NoContainerConflictTrigger {
 };
 
 class TableSummary: public MauInspector {
+ public:
     static constexpr int NUM_LOGICAL_TABLES_PER_STAGE = 16;
+
+ private:
     static constexpr int CRITICAL_PATH_THRESHOLD = 2;
     static int numInvoked[4];
     /// true if the first round of table placement resulted in less than Device::numStages() stages.

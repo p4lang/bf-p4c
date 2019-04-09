@@ -697,9 +697,22 @@ class ActionPhvConstraints : public Inspector {
       */
     ordered_set<const PHV::Field*> actionReads(const IR::MAU::Action* act) const;
 
+    const ordered_set<PHV::FieldSlice>& actionReadsSlices(const IR::MAU::Action* act) const {
+        return constraint_tracker.reads(act);
+    }
+
     /** @returns the set of fields that are written in action @act
       */
     ordered_set<const PHV::Field*> actionWrites(const IR::MAU::Action* act) const;
+
+    const ordered_set<PHV::FieldSlice> actionWritesSlices(const IR::MAU::Action* act) const {
+        ordered_set<PHV::FieldSlice> rs;
+        auto& writtenSlices = constraint_tracker.writes(act);
+        for (auto& info : writtenSlices)
+            if (info.phv_used != boost::none)
+                rs.insert(*(info.phv_used));
+        return rs;
+    }
 
     /** @returns true if the candidate bridged metadata packing @packing satisfies action
       * constraints
@@ -733,6 +746,13 @@ class ActionPhvConstraints : public Inspector {
     /** @returns true if field @f is written in action @act.
       */
     bool written_in(const PHV::Field* f, const IR::MAU::Action* act) const;
+
+    /** @returns true if field slice @slice is written in action @act.
+      */
+    bool written_in(const PHV::AllocSlice& slice, const IR::MAU::Action* act) const {
+        PHV::FieldSlice field_slice(slice.field(), slice.field_slice());
+        return constraint_tracker.written_in(field_slice).count(act);
+    }
 
     /** @returns true if field @f is written in action @act by action data/constant source.
       */

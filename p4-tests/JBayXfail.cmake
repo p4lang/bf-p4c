@@ -299,4 +299,3 @@ p4c_add_xfail_reason("tofino2"
   "Nested checksum updates is currently unsupported"
   extensions/p4_tests/p4_14/stf/update_checksum_7.p4
 )
-

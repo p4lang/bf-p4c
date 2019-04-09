@@ -200,11 +200,77 @@ class Container {
     cstring toString() const;
 };
 
+/** This class describes the state of the use of a PHV container. In any given unit, the PHV may be
+  * read, written, both read and written, or merely be live.
+  */
+class FieldUse {
+    unsigned use_;
+
+ public:
+    enum use_t { READ = 1, WRITE = 2, READWRITE = 3, LIVE = 4 };
+
+    // Construct an empty use, which is neither read, write, or live.
+    FieldUse() : use_(0) { }
+
+    // Construct a FieldUse object, given a specific kind of use.
+    explicit FieldUse(unsigned u) {
+        BUG_CHECK(u == READ || u == WRITE || u == READWRITE || u == LIVE,
+                  "Invalid read value %1% used to create a FieldUse object. Valid values are "
+                  "1: READ, 2: WRITE, 3: READWRITE, 4: LIVE", u);
+        use_ = u;
+    }
+
+    bool isRead() const { return use_ & READ; }
+    bool isWrite() const { return use_ & WRITE; }
+    bool isLive() const { return use_ & LIVE; }
+    bool isReadWrite() const { return use_ & READWRITE; }
+
+    bool operator==(FieldUse u) const { return use_ == u.use_; }
+    bool operator!=(FieldUse u) const { return !(*this == u); }
+    bool operator <(FieldUse u) const { return use_ < u.use_; }
+    bool operator >(FieldUse u) const { return use_ > u.use_; }
+    bool operator <=(FieldUse u) const { return use_ <= u.use_; }
+    bool operator >=(FieldUse u) const { return use_ >= u.use_; }
+    explicit operator bool() const { return use_ == 0; }
+
+    FieldUse operator|(const FieldUse& u) {
+        FieldUse ru;
+        ru.use_ = use_ | u.use_;
+        return ru;
+    }
+
+    FieldUse& operator|=(const FieldUse& u) {
+        use_ |= u.use_;
+        return *this;
+    }
+
+    cstring toString() const {
+        if (use_ == 0) return "";
+        std::stringstream ss;
+        bool checkLiveness = true;
+        if (use_ & READ) {
+            ss << "R";
+            checkLiveness = false;
+        }
+        if (use_ & WRITE) {
+            ss << "W";
+            checkLiveness = false;
+        }
+        if (checkLiveness && (use_ & LIVE))
+            ss << "~";
+        return ss.str();
+    }
+};
+
+// Pair of stage number and type of access for the field.
+using StageAndAccess = std::pair<int, FieldUse>;
+
 std::ostream& operator<<(std::ostream& out, const PHV::Kind k);
 std::ostream& operator<<(std::ostream& out, const PHV::Size sz);
 std::ostream& operator<<(std::ostream& out, const PHV::Type t);
 std::ostream& operator<<(std::ostream& out, const PHV::Container c);
 std::ostream& operator<<(std::ostream& out, ordered_set<const PHV::Container *>& c_set);
+std::ostream& operator<<(std::ostream& out, const PHV::FieldUse u);
 
 JSONGenerator& operator<<(JSONGenerator& out, const PHV::Container c);
 }  // namespace PHV

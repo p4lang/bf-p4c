@@ -62,8 +62,11 @@ struct FlowGraph {
         if (t2 == nullptr) return true;
         if (t1 == nullptr) return false;
         if (t1 == t2) return true;
+        BUG_CHECK(tableToVertexIndex.count(t1), "Table object not found for %1%", t1->name);
+        BUG_CHECK(tableToVertexIndex.count(t2), "Table object not found for %1%", t2->name);
         const auto v1 = tableToVertexIndex.at(t1);
         const auto v2 = tableToVertexIndex.at(t2);
+        BUG_CHECK(reachableNodes.count(v1), "No reachable nodes entry for %1%", t1->name);
         return reachableNodes.at(v1).getbit(v2);
     }
 

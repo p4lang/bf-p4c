@@ -245,10 +245,10 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new TableAllocPass(options, phv, deps),
         new RemoveNoopGateway,
         &table_summary,
-        new LiveRangeReport(phv, table_summary, defuse),
         // Rerun defuse analysis here so that table placements are used to correctly calculate live
         // ranges output in the assembly.
         &defuse,
+        new LiveRangeReport(phv, table_summary, defuse),
         new IXBarVerify(phv),
         new CollectIXBarInfo(phv),
         phvLoggingInfo,
