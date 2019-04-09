@@ -191,8 +191,9 @@ class BarefootBackend(BackendDriver):
         self.checkVersionTargetArch(opts.target, opts.language, opts.arch)
 
         # Make sure we don't have conflicting debugger options.
-        if opts.gdb and opts.lldb:
-            self.exitWithError("Cannot use more than one debugger at a time.")
+        if (os.environ['P4C_BUILD_TYPE'] == "DEVELOPER"):
+            if opts.gdb and opts.lldb:
+                self.exitWithError("Cannot use more than one debugger at a time.")
 
         # process the options related to source file
         if self._output_directory == '.':
@@ -227,21 +228,21 @@ class BarefootBackend(BackendDriver):
         if opts.skip_linker:
             self._no_link = True
 
-        if opts.gdb:
-            # XXX breaks abstraction
-            old_command = self._commands['compiler']
-            self.add_command('compiler', 'gdb')
-            self.add_command_option('compiler', '--args')
-            for arg in old_command:
-                self.add_command_option('compiler', arg)
-
-        if opts.lldb:
-            # XXX breaks abstraction
-            old_command = self._commands['compiler']
-            self.add_command('compiler', 'lldb')
-            self.add_command_option('compiler', '--')
-            for arg in old_command:
-                self.add_command_option('compiler', arg)
+        if (os.environ['P4C_BUILD_TYPE'] == "DEVELOPER"):
+            if opts.gdb:
+                # XXX breaks abstraction
+                old_command = self._commands['compiler']
+                self.add_command('compiler', 'gdb')
+                self.add_command_option('compiler', '--args')
+                for arg in old_command:
+                    self.add_command_option('compiler', arg)
+            if opts.lldb:
+                # XXX breaks abstraction
+                old_command = self._commands['compiler']
+                self.add_command('compiler', 'lldb')
+                self.add_command_option('compiler', '--')
+                for arg in old_command:
+                    self.add_command_option('compiler', arg)
 
         if opts.create_graphs or opts.archive:
             self.add_command_option('compiler', '--create-graphs')
