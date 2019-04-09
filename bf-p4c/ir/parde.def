@@ -217,6 +217,7 @@ class ChecksumAdd : ParserChecksumPrimitive {
 class ChecksumSubtract : ParserChecksumPrimitive {
     dbprint { out << "subtract " << source << " from checksum"; }
     PacketRVal source;
+    IR::Member field;
     bool isPayloadChecksum;
 }
 

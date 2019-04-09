@@ -462,7 +462,13 @@ Parser::Checksum::Checksum(gress_t gress, pair_t data) : lineno(data.key.lineno)
                 tag = kv.value[1].i;
             else dest = Phv::Ref(gress, 0, kv.value);
         } else if (kv.key == "end_pos") {
-            if (CHECKTYPE(kv.value, tINT)) dst_bit_hdr_end_pos = kv.value.i;
+            if (CHECKTYPE(kv.value, tINT)) {
+                if (kv.value.i > PARSER_INPUT_BUFFER_SIZE)
+                    error(kv.value.lineno, "Header end position is out of input buffer");
+                if (kv.value.i < 0)
+                    error(kv.value.lineno, "Header end postion cannot be negative");
+                dst_bit_hdr_end_pos = kv.value.i;
+            }
         } else if (kv.key == "mask") {
             if (CHECKTYPE(kv.value, tVEC)) {
                 for (int i = 0; i < kv.value.vec.size; i++) {

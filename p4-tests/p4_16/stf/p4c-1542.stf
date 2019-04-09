@@ -1,0 +1,5 @@
+# Default action forwards out port 1
+
+#        a    b    c    csum a    b    c    csum
+expect 1 1111 2222 3333 0000 4444 5555 6666 1111
+packet 0 1111 2222 3333 9999 4444 5555 6666 1111

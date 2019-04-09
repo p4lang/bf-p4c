@@ -131,6 +131,7 @@ class LoweredParserChecksum : LoweredParserPrimitive {
         out << "swap = "  << swap << ", ";
         out << "start = " << start << ", ";
         out << "end = " << end << ", ";
+        out << "end_pos = " << end_pos << ", ";
         out << "type = " << type << ".";
     }
 
@@ -139,6 +140,7 @@ class LoweredParserChecksum : LoweredParserPrimitive {
     unsigned swap;
     bool start;
     bool end;
+    unsigned end_pos;
     BFN::ChecksumMode type;
 
     optional NullOK BFN::ContainerBitRef csum_err;

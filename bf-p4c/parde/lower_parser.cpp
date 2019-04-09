@@ -612,9 +612,28 @@ struct ComputeLoweredParserIR : public ParserInspector {
         }
 
         for (auto& kv : csum_id_to_prims)
-           loweredChecksums.push_back(lowerParserChecksum(parser, state, kv.first, kv.second));
+           loweredChecksums.push_back(lowerParserChecksum(parser, state, kv.first,
+                                                                 kv.second));
 
         return loweredChecksums;
+    }
+
+    int getHeaderEndPos(const IR::BFN::ChecksumSubtract* lastSubtract) {
+        auto v = lastSubtract->source->to<IR::BFN::PacketRVal>();
+        int lastBitSubtract = v->range().toUnit<RangeUnit::Bit>().hi;
+        BUG_CHECK(lastBitSubtract % 8 == 7,
+                "Fields in checksum subtract %1% are not byte-aligned", v);
+        auto* headerRef = lastSubtract->field->expr->to<IR::ConcreteHeaderRef>();
+        auto header = headerRef->baseRef();
+        int endPos = 0;
+        for (auto field :  header->type->fields) {
+            if (field->name == lastSubtract->field->member) {
+                endPos = lastBitSubtract;
+            } else if (endPos > 0) {
+                endPos += field->type->width_bits();
+            }
+        }
+        return endPos/8;
     }
 
     /// Create lowered HW checksum primitives that can be consumed by the assembler.
@@ -640,9 +659,10 @@ struct ComputeLoweredParserIR : public ParserInspector {
         if (last->is<IR::BFN::ChecksumSubtract>() || last->is<IR::BFN::ChecksumGet>())
             type = IR::BFN::ChecksumMode::RESIDUAL;
 
+        int end_pos = 0;
         const IR::BFN::FieldLVal* dest = nullptr;
         std::set<nw_byterange> masked_ranges;
-
+        const  IR::BFN::ChecksumSubtract* lastSubtract = nullptr;
         for (auto c : checksums) {
             if (auto add = c->to<IR::BFN::ChecksumAdd>()) {
                 if (auto v = add->source->to<IR::BFN::PacketRVal>())
@@ -650,15 +670,17 @@ struct ComputeLoweredParserIR : public ParserInspector {
             } else if (auto sub = c->to<IR::BFN::ChecksumSubtract>()) {
                 if (auto v = sub->source->to<IR::BFN::PacketRVal>())
                     masked_ranges.insert(v->range().toUnit<RangeUnit::Byte>());
+                lastSubtract = sub;
             } else if (auto verify = c->to<IR::BFN::ChecksumVerify>()) {
                 dest = verify->dest;
             } else if (auto get = c->to<IR::BFN::ChecksumGet>()) {
                 dest = get->dest;
             }
         }
-
+        if (lastSubtract && end)
+            end_pos = getHeaderEndPos(lastSubtract);
         auto csum = new IR::BFN::LoweredParserChecksum(
-            id, masked_ranges, 0x0, start, end, type);
+            id, masked_ranges, 0x0, start, end, end_pos, type);
 
         std::vector<alloc_slice> slices;
         if (dest) {
@@ -1111,7 +1133,7 @@ struct AllocateParserClotChecksums : public PassManager {
                            const std::set<nw_byterange>& mask,
                            const Clot& clot) {
             auto csum = new IR::BFN::LoweredParserChecksum(
-                    id, mask, 0x0, true, true, IR::BFN::ChecksumMode::CLOT);
+                    id, mask, 0x0, true, true, 0, IR::BFN::ChecksumMode::CLOT);
             csum->clot_dest = clot;
             return csum;
         }

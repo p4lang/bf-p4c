@@ -543,7 +543,7 @@ struct RewriteParserStatements : public Transform {
                 rv->push_back(add);
             } else {
                 bool isChecksum = isChecksumField(member, "payload_checksum");
-                auto* subtract = new IR::BFN::ChecksumSubtract(declName, rval, isChecksum);
+                auto* subtract = new IR::BFN::ChecksumSubtract(declName, rval, member, isChecksum);
                 rv->push_back(subtract);
             }
 

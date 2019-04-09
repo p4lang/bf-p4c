@@ -294,6 +294,7 @@ struct ParserAsmSerializer : public ParserInspector {
         out << indent << "swap: " << csum->swap << std::endl;
         out << indent << "start: " << csum->start  << std::endl;
         out << indent << "end: " << csum->end  << std::endl;
+        out << indent << "end_pos: " << csum->end_pos  << std::endl;
 
         // XXX(zma) model seems to expect dest only on end?
         if (csum->end) {

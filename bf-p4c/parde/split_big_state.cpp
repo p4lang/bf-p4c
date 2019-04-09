@@ -416,11 +416,14 @@ class ExtractorAllocator {
             const std::vector<const IR::BFN::LoweredParserChecksum*>& checksums) {
         SplitChecksumResult rst;
         for (const auto* cks : checksums) {
-            bool can_be_done = std::all_of(cks->masked_ranges.begin(), cks->masked_ranges.end(),
+            bool can_be_done_mask = std::all_of(cks->masked_ranges.begin(),
+                                                        cks->masked_ranges.end(),
                 [&] (const nw_byterange& r) {
                     return r.hiByte() <= Device::pardeSpec().byteInputBufferSize() - 1;
                 });
-            if (can_be_done) {
+            bool can_be_done_end_pos =
+                  static_cast<int>(cks->end_pos) <= Device::pardeSpec().byteInputBufferSize() - 1;
+            if (can_be_done_end_pos && can_be_done_mask) {
                 rst.allocatedChecksums.push_back(cks);
             } else {
                 rst.remainingChecksums.push_back(cks);
@@ -439,6 +442,8 @@ class ExtractorAllocator {
         int lastByte = shifted - 1;
         std::set<nw_byterange> prev;
         std::set<nw_byterange> post;
+        int prev_end_pos = 0;
+        int post_end_pos = 0;
         for (const auto& range : cks->masked_ranges) {
             if (range.hiByte() <= lastByte) {
                 prev.insert(range);
@@ -449,11 +454,18 @@ class ExtractorAllocator {
                 post.insert(range);
             }
         }
+        if (static_cast<int>(cks->end_pos) <= lastByte) {
+            prev_end_pos = cks->end_pos;
+        } else {
+            post_end_pos = cks->end_pos;
+        }
 
         // left shift all post range by shifted bytes.
         std::set<nw_byterange> temp;
         for (auto& r : post)
             temp.insert(nw_byterange(FromTo(r.loByte() - shifted, r.hiByte() - shifted)));
+        if (post_end_pos > 0)
+            post_end_pos -= shifted;
 
         post = temp;
 
@@ -461,11 +473,13 @@ class ExtractorAllocator {
         auto* post_cks = cks->clone();
 
         prev_cks->masked_ranges = prev;
+        prev_cks->end_pos = prev_end_pos;
         post_cks->masked_ranges = post;
+        post_cks->end_pos = post_end_pos;
 
         if (prev.empty())
             return {nullptr, post_cks};
-        if (post.empty())
+        if (post.empty() && !post_end_pos)
             return {prev_cks, nullptr};
 
         // if even/odd order changed, mark swap.
