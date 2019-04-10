@@ -1992,13 +1992,15 @@ void AllocatePHV::formatAndThrowError(
     int ingress_t_phv_bits = 0;
     int egress_t_phv_bits = 0;
     std::stringstream msg;
+    std::stringstream errorMessage;
 
-    msg << "The following fields were not allocated: " << std::endl;
+    msg << std::endl << "The following fields were not allocated: " << std::endl;
     for (auto* sc : unallocated)
         sc->forall_fieldslices([&](const PHV::FieldSlice& s) {
             msg << "    " << PHV::Diagnostics::printSlice(s) << std::endl;
             unallocated_slices++; });
     msg << std::endl;
+    errorMessage << msg.str();
 
     if (LOGGING(3)) {
         msg << "Fields successfully allocated: " << std::endl;
@@ -2035,7 +2037,10 @@ void AllocatePHV::formatAndThrowError(
     msg << report.printSummary() << std::endl;
     msg << "PHV allocation was not successful "
         << "(" << unallocated_slices << " field slices remaining)" << std::endl;
-    ::error("%1%", msg.str());
+    LOG3(msg.str());
+    ::error("PHV allocation was not successful\n"
+            "%1% field slices remain unallocated\n"
+            "%2%", unallocated_slices, errorMessage.str());
 }
 
 void AllocatePHV::formatAndThrowUnsat(const std::list<PHV::SuperCluster*>& unsat) const {
@@ -2083,6 +2088,7 @@ void AllocatePHV::formatAndThrowUnsat(const std::list<PHV::SuperCluster*>& unsat
     msg << "PHV allocation was not successful "
         << "(" << unsat.size() << " set" << (unsat.size() == 1 ? "" : "s")
         << " of unsatisfiable constraints remaining)" << std::endl;
+    LOG3(msg.str());
     ::error("%1%", msg.str());
 }
 
