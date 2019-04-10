@@ -61,6 +61,11 @@ class FindInitializationNode : public Inspector {
             const IR::MAU::Table* table,
             const ordered_set<const IR::BFN::Unit*>& g_units) const;
 
+    /// @returns true if any defuse units in @f_units reach @initTable.
+    bool canFUsesReachInitTable(
+            const IR::MAU::Table* initTable,
+            const ordered_set<const IR::BFN::Unit*>& f_units) const;
+
     /// @returns a set of actions where field @f with uses @u can be initialized, given group
     /// dominator @t for the defuse units of @f and a stage @lastAllowedStage, after which the
     /// initialization should be performed. @prevField is the overlapping field that has the

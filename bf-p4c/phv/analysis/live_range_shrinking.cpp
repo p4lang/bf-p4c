@@ -113,6 +113,15 @@ bool FindInitializationNode::canInitTableReachGUnits(
     return rv.size();
 }
 
+bool FindInitializationNode::canFUsesReachInitTable(
+        const IR::MAU::Table* initTable,
+        const ordered_set<const IR::BFN::Unit*>& f_units) const {
+    const IR::BFN::Unit* unit = initTable->to<IR::BFN::Unit>();
+    if (!unit) BUG("How is table %1% not a unit?", initTable->name);
+    auto rv = canLaterUnitsReachEarlyUnits(f_units, { unit }, flowGraph);
+    return rv.size();
+}
+
 ordered_set<const IR::MAU::Table*>
 FindInitializationNode::getTableUsesForField(
         const PHV::Field* f,
@@ -220,6 +229,20 @@ boost::optional<const PHV::Allocation::ActionSet> FindInitializationNode::getIni
         const PHV::Allocation::MutuallyLiveSlices& container_state,
         const PHV::Transaction& alloc,
         bool ignoreMutex) const {
+    // If the uses of the previous field do not reach this initialization point, then the live
+    // ranges might overlap.
+    ordered_set<const IR::BFN::Unit*> prevUseUnits;
+    for (const auto* t : prevUses) {
+        const IR::BFN::Unit* u = t->to<IR::BFN::Unit>();
+        if (!u) BUG("How is table %1% not a unit?", t->name);
+        prevUseUnits.insert(u);
+    }
+    if (!canFUsesReachInitTable(t, prevUseUnits)) {
+        LOG3("\t\t\tIgnoring table " << t->name << " because uses of previous "
+             "field do not reach it.");
+        return boost::none;
+    }
+
     if (mayViolatePackConflict(t, f, container_state, alloc))
         return boost::none;
     // Initializing at table t requires that there is a dependence now from the previous uses of
