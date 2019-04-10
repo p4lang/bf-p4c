@@ -430,8 +430,8 @@ bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p
     } else if (kv.key == "default_action_parameters") {
         if (CHECKTYPE(kv.value, tMAP))
             for(auto &v : kv.value.map)
-                if (CHECKTYPE(v.key, tSTR) && CHECKTYPE(v.value, tINT))
-                    default_action_parameters[v.key.s] = v.value.i;
+                if (CHECKTYPE(v.key, tSTR) && CHECKTYPE(v.value, tSTR))
+                    default_action_parameters[v.key.s] = v.value.s;
     } else if (kv.key == "default_action_handle") {
         default_action_handle = kv.value.i;
     } else if (kv.key == "hit") {

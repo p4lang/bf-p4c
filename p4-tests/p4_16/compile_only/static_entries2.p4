@@ -141,19 +141,26 @@ control SwitchIngress(
         key = {
             ig_md.ipv4_checksum_error : ternary;
             hdr.ethernet.ether_type : ternary;
-            // hdr.ethernet.ipv6_dst_addr : ternary; // >64 bits Not supported
-            // in json generation and driver json parsing
+            hdr.ethernet.ipv6_dst_addr : ternary; // >64 bits ternary 
             hdr.ethernet.src_addr[31:24] : ternary;
             hdr.ethernet.range_type : range;
-            // hdr.ethernet.lpm_type: lpm; // Not supported as we cannot specify
-            // prefix length with value on static entry
+            // Backend does not support ranges >20 bits, although it should? 
+            // Error: Currently in p4c, the
+            // table forward_0 cannot perform a range match on key
+            // ingress::hdr.ethernet.ipv6_src_addr as the key does not fit in
+            // under 5 PHV nibbles
+            // hdr.ethernet.ipv6_src_addr : range;
+            //
+            // LPM entries are not supported as we cannot specify prefix length
+            // with value on static entry
+            // hdr.ethernet.lpm_type: lpm;
         }
         actions = { set_port_and_smac; }
         const default_action = set_port_and_smac(32w0xFF, 9w0x1, false);
         const entries = {
-            (_, 1 /*, 150 &&& 0xffff00 */,  255 &&& 0xf0, _ /*, _ */) : set_port_and_smac(32w0xFA, 9w0x2, true); // priority 0
-            (true, 2 /*, _ */, _, _ /*, _ */) : set_port_and_smac(32w0xFB, 9w0x3, true);          // priority 1
-            (false, 3 /*, _ */, _, 1..9 /*, 8 */) : set_port_and_smac(32w0xFC, 9w0x4, false);       // priority 2
+            (_, 1, 150 &&& 0xffff0000ffff0000ffff0000ffff0000,  255 &&& 0xf0, _ /*, _ */) : set_port_and_smac(32w0xFA, 9w0x2, true); // priority 0
+            (true, 2, _, _, _ /*, _ */) : set_port_and_smac(32w0xFB, 9w0x3, true);          // priority 1
+            (false, 3, _, _, 1..9 /*, 8 */) : set_port_and_smac(32w0xFC, 9w0x4, false);       // priority 2
         }
     }
 

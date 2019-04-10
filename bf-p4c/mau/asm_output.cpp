@@ -1084,10 +1084,11 @@ void MauAsmOutput::emit_single_ixbar(std::ostream &out, indent_t indent, const I
     emit_ixbar_gather_bytes(use->use, sort, midbytes, use->ternary);
     cstring group_type = use->ternary ? "ternary" : "exact";
     for (auto &group : sort)
-        out << indent << group_type << " group " << group.first << ": "
-                      << group.second << std::endl;
+        out << indent << group_type << " group "
+            << group.first << ": " << group.second << std::endl;
     for (auto &midbyte : midbytes)
-        out << indent << "byte group " << midbyte.first << ": " << midbyte.second << std::endl;
+        out << indent << "byte group "
+            << midbyte.first << ": " << midbyte.second << std::endl;
     if (use->atcam) {
         sort.clear();
         midbytes.clear();
@@ -2563,7 +2564,6 @@ void MauAsmOutput::emit_static_entries(std::ostream &out, indent_t indent,
             auto match_key_size = phv.field(match_key->expr)->size;
             // Set a mask with all 1's for size of match key
             bitvec match_key_mask(0, match_key_size);
-            bool bignum_err = false;
             auto match_key_name = phv.field(match_key->expr)->externalName();
             // Use annotation names if present
             if (auto ann = match_key->getAnnotation(IR::Annotation::nameAnnotation)) {
@@ -2590,14 +2590,14 @@ void MauAsmOutput::emit_static_entries(std::ostream &out, indent_t indent,
             }
             out << indent++ << "- field_name: " << canon_name(match_key_name) << std::endl;
             if (auto b = key->to<IR::BoolLiteral>()) {
-                out << indent << "value: " << (b->value ? 1 : 0) << std::endl;
+                out << indent << "value: \"0x" << (b->value ? 1 : 0) << "\"" <<  std::endl;
                 if (match_key->match_type == "ternary")
-                    out << indent << "mask: 0x1" << std::endl;
+                    out << indent << "mask: \"0x1\"" << std::endl;
             } else if (key->to<IR::Constant>()) {
-                out << indent << "value: " << key << std::endl;
+                out << indent << "value: \"0x" << std::hex << key << std::dec << "\"" << std::endl;
                 if (match_key->match_type == "ternary") {
-                    if (match_key_size > 48) bignum_err = true;
-                    out << indent << "mask: 0x" << match_key_mask << std::endl;
+                    out << indent << "mask: \"0x"
+                        << std::hex << match_key_mask << std::dec << "\"" << std::endl;
                 }
             } else if (auto ts = key->to<IR::Mask>()) {
                 // This error should be caught in front end as an invalid key
@@ -2607,17 +2607,27 @@ void MauAsmOutput::emit_static_entries(std::ostream &out, indent_t indent,
                     " match type in table %s", canon_name(match_key_name), tbl->name);
                 // Ternary match with value and mask specified
                 // e.g. In p4 - "15 &&& 0xff" where 15 is value and 0xff is mask
-                if (auto val = ts->left->to<IR::Constant>())
-                    out << indent << "value: " << val << std::endl;
+                if (auto val = ts->left->to<IR::Constant>()) {
+                    out << indent << "value: \"0x" << std::hex
+                        << val << std::dec << "\"" << std::endl;
+                }
                 if (auto mask = ts->right->to<IR::Constant>()) {
-                    if (mask->asUint64() > ((UINT64_C(1) << 48) - 1)) bignum_err = true;
-                    out << indent << "mask: 0x" << hex(mask->asUint64()) << std::endl;
+                    out << indent << "mask: \"0x" << std::hex
+                        << mask->value << std::dec << "\"" << std::endl;
                 }
             } else if (key->to<IR::DefaultExpression>()) {
-                out << indent << "value: 0" << std::endl;
-                if (match_key->match_type == "ternary") {
-                    if (match_key_size > 48) bignum_err = true;
-                    out << indent << "mask: 0x0" << std::endl;
+                if (match_key->match_type == "range") {
+                    out << indent << "range_start: \"0x0\"" << std::endl;
+                    auto range_bit_width = match_key->expr->type->width_bits();
+                    auto range_end = ((IR::Constant(1) << range_bit_width) - 1).clone();
+                    out << indent << "range_end: \"0x"
+                        << std::hex << range_end << std::dec << "\"" << std::endl;
+
+                } else {
+                    out << indent << "value: \"0x0\"" << std::endl;
+                    if (match_key->match_type == "ternary") {
+                        out << indent << "mask: \"0x0\"" << std::endl;
+                    }
                 }
             } else if (auto r = key->to<IR::Range>()) {
                 // This error should be caught in front end as an invalid key
@@ -2627,17 +2637,14 @@ void MauAsmOutput::emit_static_entries(std::ostream &out, indent_t indent,
                     " match type in table %s", canon_name(match_key_name), tbl->name);
                 // Extract start and end values from range node
                 if (auto range_start = r->left->to<IR::Constant>())
-                    out << indent << "range_start: " << range_start << std::endl;
+                    out << indent << "range_start: \"0x"
+                        << std::hex << range_start->value << std::dec << "\"" << std::endl;
                 if (auto range_end = r->right->to<IR::Constant>())
-                    out << indent << "range_end: " << range_end << std::endl;
+                    out << indent << "range_end: \"0x"
+                        << std::hex << range_end->value << std::dec << "\"" << std::endl;
             } else {
                 P4C_UNIMPLEMENTED("Static entries are only supported for "
                     "match keys with bit-string type");
-            }
-            if (bignum_err) {
-               P4C_UNIMPLEMENTED("Mask value for static entry ternary match "
-                   "field '%s' is larger than 48 bits and not supported in table '%s'",
-               canon_name(match_key_name), tbl->name);
             }
             key_index++;
             indent--;
@@ -2665,12 +2672,14 @@ void MauAsmOutput::emit_static_entries(std::ostream &out, indent_t indent,
                 auto p = param_list.at(param_index++);
                 auto param_name = p->name;
                 out << indent++ << "- parameter_name: " << param_name << std::endl;
+                out << indent << "value: \"0x" << std::hex;
                 if (param->expression->type->to<IR::Type_Boolean>()) {
                     auto boolExpr = param->expression->to<IR::BoolLiteral>();
-                    out << indent << "value: " << (boolExpr->value ? 1 : 0) << std::endl;
+                    out << (boolExpr->value ? 1 : 0);
                 } else {
-                    out << indent << "value: " << param << std::endl;
+                    out << param;
                 }
+                out << std::dec << "\"" << std::endl;
                 indent--;
             }
         } else {
@@ -3190,7 +3199,8 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
             for (auto param : act->default_params) {
                 auto pval = param->expression;
                 if (pval->is<IR::Constant>())
-                    out << indent << act->args[index++]->name << ": " << pval << std::endl;
+                    out << indent << act->args[index++]->name << ": \"0x"
+                        << std::hex << pval << std::dec << "\"" << std::endl;
             }
             indent--;
             break;

@@ -112,7 +112,7 @@ node ('compiler-svr1 || master') {
                     sh "echo 'Running stful and meters tests'"
                     sh "mkdir -p docker_store"
                     model_cid = sh (
-                        script: 'docker run --rm -t -d -w /usr/local/bin --entrypoint bash barefootnetworks/model:tofino_prog',
+                        script: 'docker run --rm -t -d -w /usr/local/bin --entrypoint bash barefootnetworks/model:tofino_prog_debug',
                         returnStdout: true
                     ).trim()
                     sh "echo 'model cid: ' $model_cid"

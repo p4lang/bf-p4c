@@ -350,11 +350,11 @@ public:
         unsigned position;
         unsigned bit_width;
         unsigned bit_width_full;
-        unsigned default_value;
+        std::string default_value;  // value stored as hex string to accommodate large nos
         bool defaulted;
         bool is_valid;
         std::string type;
-        p4_param(std::string n = "", unsigned p = 0, unsigned bw = 0, unsigned bwf = 0, std::string t = "",unsigned v = 0, bool d = false, bool i = false, unsigned s = 0) :
+        p4_param(std::string n = "", unsigned p = 0, unsigned bw = 0, unsigned bwf = 0, std::string t = "",std::string v = "", bool d = false, bool i = false, unsigned s = 0) :
             name(n), start_bit(s), position(p), bit_width(bw), bit_width_full(bwf), default_value(v), defaulted(d), is_valid(i), type(t) {}
     };
     friend std::ostream &operator<<(std::ostream &, const p4_param &);
@@ -558,7 +558,7 @@ public:
     std::string                 default_action;
     unsigned                    default_action_handle = 0;
     int                         default_action_lineno = -1;
-    typedef std::map<std::string, unsigned> default_action_params;
+    typedef std::map<std::string, std::string> default_action_params;
     default_action_params       default_action_parameters;
     bool                        default_only_action = false;
     std::vector<Ref>            hit_next;

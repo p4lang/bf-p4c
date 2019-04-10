@@ -93,6 +93,12 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     extensions/p4_tests/p4_14/stateful2.p4
     )
 
+  p4c_add_xfail_reason("tofino"
+    "ERROR:PTF runner:Error when running PTF tests"
+    smoketest_programs_meters
+    smoketest_programs_hash_driven
+    )
+
 endif() # ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET
 
 if (PTF_REQUIREMENTS_MET)
