@@ -26,16 +26,21 @@ class CheckForUnallocatedTemps : public PassManager {
             if (clot.allocated(&field))
                 continue;
 
+            // If this field is an alias source, then we need to check the allocation of the alias
+            // destination too. If that destination is allocated to CLOTs, we will not find an
+            // allocation for that field here. So, we need a special check here.
+            auto* aliasDest = phv.getAliasDestination(&field);
+            if (aliasDest != nullptr)
+                if (clot.allocated(aliasDest)) continue;
+
             bitvec allocatedBits;
             field.foreach_alloc([&](const PHV::Field::alloc_slice& slice) {
                 bitvec sliceBits(slice.field_bit, slice.width);
                 allocatedBits |= sliceBits; });
 
-            // XXX(seth): Long term it would be ideal to only allocate the bits we
-            // actually need, but this will help us find bugs in the short term.
             bitvec allBitsInField(0, field.size);
-            if (allocatedBits != allBitsInField)
-                unallocated.insert(&field); }
+            if (allocatedBits != allBitsInField) unallocated.insert(&field);
+        }
 
         return unallocated;
     }

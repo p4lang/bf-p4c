@@ -1114,7 +1114,7 @@ class AddIntrinsicConstraints : public Inspector {
                 std::string f_name(f.name.c_str());
                 if (f_name.find(intr) != std::string::npos) {
                     f.set_intrinsic(true);
-                    LOG1("\tMarking field " << f.name << " as intrinsic");
+                    LOG3("\tMarking field " << f.name << " as intrinsic");
                 }
             }
 
@@ -1125,7 +1125,7 @@ class AddIntrinsicConstraints : public Inspector {
                         && f_name.find(kv.second) != std::string::npos) {
                         f.set_no_pack(true);
                         f.set_invalidate_from_arch(true);
-                        LOG1("\tMarking field " << f.name << " as invalidate from arch");
+                        LOG3("\tMarking field " << f.name << " as invalidate from arch");
                     }
                 }
             }
@@ -1164,7 +1164,7 @@ class CollectPardeConstraints : public Inspector {
 
                 if (pi != pj) {
                     phv.addDeparserNoPack(fi, fj);
-                    LOG1("\tMarking " << fi->name << " and " << fj->name << " as deparser_no_pack");
+                    LOG3("\tMarking " << fi->name << " and " << fj->name << " as deparser_no_pack");
                 }
             }
         }
@@ -1177,7 +1177,7 @@ class CollectPardeConstraints : public Inspector {
             PHV::Field* f = phv.field(flval->field);
             BUG_CHECK(f != nullptr, "Field not created in PhvInfo");
             f->set_is_checksummed(true);
-            LOG1("Checksummed field: " << f);
+            LOG3("Checksummed field: " << f);
         }
     }
 
@@ -1363,8 +1363,7 @@ void AddAliasAllocation::addAllocation(
               "different sizes", aliasSource->size, range.size());
 
     // Avoid adding allocation for the same field more than once.
-    if (seen.count(aliasSource))
-        return;
+    if (seen.count(aliasSource)) return;
     seen.insert(aliasSource);
 
     // Add allocation.
@@ -1375,7 +1374,6 @@ void AddAliasAllocation::addAllocation(
             alloc.field_bit - range.lo,
             alloc.container_bit,
             alloc.width);
-        LOG5("Adding allocation slice for aliased field: " << aliasSource << " " << new_slice);
         aliasSource->add_alloc(new_slice);
         phv.add_container_to_field_entry(alloc.container, aliasSource);
     });

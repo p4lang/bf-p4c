@@ -285,6 +285,7 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "Parser extract didn't receive a PHV allocation"
   fabric.p4
+  extensions/p4_tests/p4_16/jbay/p4c-1622.p4
   )
 
 # Expected failure
