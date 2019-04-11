@@ -1001,7 +1001,8 @@ bool CreateSaluInstruction::divmod(const IR::Operation::Binary *e, cstring op) {
 static bool canOutputDirectly(const IR::Expression *e) {
     if (auto sl = e->to<IR::Slice>())
         e = sl->e0;
-    if (e->is<IR::Member>()) return true;
+    if (auto m = e->to<IR::Member>())
+        return !m->expr->is<IR::TypeNameExpression>();
     if (e->is<IR::TempVar>()) return true;
     if (e->is<IR::MAU::SaluReg>()) return true;
     return false;
@@ -1089,7 +1090,7 @@ const IR::MAU::Instruction *CreateSaluInstruction::createInstruction() {
         } else if (k && k->value == 0) {
             // 0 will be output if we don't drive it at all
             break;
-        } else if (operands.at(0)->is<IR::MAU::SaluReg>()) {
+        } else if (canOutputDirectly(operands.at(0))) {
             // output it
         } else if (outputAluHi()) {
             // use ALU_HI to drive the output as it is otherwise unused
@@ -1125,7 +1126,7 @@ const IR::MAU::Instruction *CreateSaluInstruction::createInstruction() {
                 if (comb_pred_width > salu->pred_shift + 4)
                     error("conflicting predicate output use in %s", salu); }
             operands.at(0) = new IR::MAU::SaluReg(IR::Type::Bits::get(psize), "predicate", false);
-        } else if (!canOutputDirectly(operands.at(0))) {
+        } else {
             error("can't output %1% from a RegisterAction", operands.at(0)); }
         rv = setup_output();
         break;
