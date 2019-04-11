@@ -105,7 +105,6 @@ set (P4FACTORY_P4_16_PROGRAMS
   tna_action_selector
   tna_counter
   tna_digest
-  # tna_dkm
   tna_dyn_hashing
   tna_exact_match
   tna_idletimeout

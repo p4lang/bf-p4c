@@ -9,6 +9,7 @@ p4c_add_xfail_reason("tofino2"
   "ERROR:PTF runner:Error when running PTF tests"
   extensions/p4_tests/p4_16/ptf/ONLab_packetio.p4
   extensions/p4_tests/p4_16/ptf/ingress_checksum.p4
+  p4_16_programs_tna_idletimeout
   )
 
 # Mirroring direction BOTH not supported on Tofino2 but is used by the P4Runtime
@@ -48,6 +49,11 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     extensions/p4_tests/p4_14/stf/update_checksum_6.p4
     # P4C-1618
     extensions/p4_tests/p4_14/stf/header_validity_1.p4
+    )
+
+  p4c_add_xfail_reason("tofino2"
+    "unexpected packet output on port"
+    extensions/p4_tests/p4_16/stf/checksum_error.p4
     )
 
 endif() # HARLYN_STF

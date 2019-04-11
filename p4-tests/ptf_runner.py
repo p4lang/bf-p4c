@@ -296,7 +296,7 @@ def start_model(model, out=None, context_json=None, config=None, port_map_path=N
 
     if '_dod' in extra_ptf_args or 'DoD' in extra_ptf_args:
         cmd.extend(['--dod-test-mode'])
-    if '/meters/' in context_json:
+    if '/meters/' in context_json or '/hash_driven/' in context_json:
         cmd.extend(['--time-disable'])
     if disable_logging:
 	cmd.extend(['--logs-disable'])

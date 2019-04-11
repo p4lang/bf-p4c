@@ -299,8 +299,8 @@ p4c_add_ptf_test_with_ptfdir("tofino" "smoketest_programs_alpm_test_TestRealData
 bfn_set_ptf_test_spec("tofino" "smoketest_programs_alpm_test_TestRealData"
    "test.TestRealData")
 
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_basic_ipv4" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/basic_ipv4/basic_ipv4.p4"
-    "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/ptf-tests/basic_ipv4")
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_basic_ipv4" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/basic_ipv4/basic_ipv4.p4"
+    "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/basic_ipv4")
 bfn_set_ptf_test_spec("tofino" "smoketest_programs_basic_ipv4"
          "test.TestExm6way4Entries
           test.TestDeepADT
@@ -314,8 +314,8 @@ bfn_set_ptf_test_spec("tofino" "smoketest_programs_basic_ipv4"
           test.TestMacRW
           test.TestExm3way4Entries
           test.TestTcamScopesMax")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_basic_ipv4_2" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/basic_ipv4/basic_ipv4.p4"
-    "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/ptf-tests/basic_ipv4")
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_basic_ipv4_2" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/basic_ipv4/basic_ipv4.p4"
+    "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/basic_ipv4")
 bfn_set_ptf_test_spec("tofino" "smoketest_programs_basic_ipv4_2"
          "test.TestTblPropSymmetricEntries
           test.TestExm5way3Entries
@@ -328,8 +328,8 @@ bfn_set_ptf_test_spec("tofino" "smoketest_programs_basic_ipv4_2"
           test.TestNoKeyNoParamTables
           test.TestAddRoute
           test.TestDefaultEntriesAllStage")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_basic_ipv4_3" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/basic_ipv4/basic_ipv4.p4"
-    "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/ptf-tests/basic_ipv4")
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_basic_ipv4_3" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/basic_ipv4/basic_ipv4.p4"
+    "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/basic_ipv4")
 bfn_set_ptf_test_spec("tofino" "smoketest_programs_basic_ipv4_3"
          "test.TestExm4way5Entries
           test.TestTcamEntries
@@ -342,8 +342,8 @@ bfn_set_ptf_test_spec("tofino" "smoketest_programs_basic_ipv4_3"
           test.TestTernaryValidMatch
           test.TestRmHdr
           test.TestTcamScopes1")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_basic_ipv4_4" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/basic_ipv4/basic_ipv4.p4"
-    "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/ptf-tests/basic_ipv4")
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_basic_ipv4_4" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/basic_ipv4/basic_ipv4.p4"
+    "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/basic_ipv4")
 bfn_set_ptf_test_spec("tofino" "smoketest_programs_basic_ipv4_4"
          "test.TestSelector
           test.TestAllHit
@@ -356,8 +356,8 @@ bfn_set_ptf_test_spec("tofino" "smoketest_programs_basic_ipv4_4"
           test.TestUdpDstPort
           test.TestRangeTernaryValid
           test.TestTcamDuplicateEntries")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_basic_ipv4_5" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/basic_ipv4/basic_ipv4.p4"
-    "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/ptf-tests/basic_ipv4")
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_basic_ipv4_5" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/basic_ipv4/basic_ipv4.p4"
+    "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/basic_ipv4")
 bfn_set_ptf_test_spec("tofino" "smoketest_programs_basic_ipv4_5"
          "test.TestIndirectAction
           test.TestSelectorIterator
@@ -369,8 +369,8 @@ bfn_set_ptf_test_spec("tofino" "smoketest_programs_basic_ipv4_5"
           test.TestTblDbgCounters
           test.TestLogTblCounter
           test.TestExmSnapshot")
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_basic_ipv4_TestLearning" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/basic_ipv4/basic_ipv4.p4"
-    "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/ptf-tests/basic_ipv4")
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_basic_ipv4_TestLearning" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/basic_ipv4/basic_ipv4.p4"
+    "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/basic_ipv4")
 bfn_set_ptf_test_spec("tofino" "smoketest_programs_basic_ipv4_TestLearning"
          "test.TestLearning")
 
@@ -385,16 +385,16 @@ set_tests_properties("tofino/smoketest_programs_basic_ipv4_TestLearning" PROPERT
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_dkm" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/dkm/dkm.p4"
     "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/ptf-tests/dkm")
 
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_exm_direct" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/exm_direct/exm_direct.p4"
-    "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/ptf-tests/exm_direct")
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_exm_direct" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/exm_direct/exm_direct.p4"
+    "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/exm_direct")
 bfn_set_pd_build_flag("tofino" "smoketest_programs_exm_direct"
     "\"--gen-exm-test-pd\"")
 bfn_set_ptf_test_spec("tofino" "smoketest_programs_exm_direct"
         "^test.TestIdleTimeTCAM
         test.TestExm4way8Entries")
 
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_exm_direct_2" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/exm_direct/exm_direct.p4"
-    "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/ptf-tests/exm_direct")
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_exm_direct_2" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/exm_direct/exm_direct.p4"
+    "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/exm_direct")
 bfn_set_pd_build_flag("tofino" "smoketest_programs_exm_direct_2"
     "\"--gen-exm-test-pd\"")
 bfn_set_ptf_test_spec("tofino" "smoketest_programs_exm_direct_2"
@@ -408,8 +408,8 @@ bfn_set_ptf_test_spec("tofino" "smoketest_programs_exm_direct_2"
         test.TestExm6way6Entries
         test.TestExm3way7Entries")
 
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_exm_direct_1" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/exm_direct_1/exm_direct_1.p4"
-    "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/ptf-tests/exm_direct_1")
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_exm_direct_1" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/exm_direct_1/exm_direct_1.p4"
+    "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/exm_direct_1")
 bfn_set_pd_build_flag("tofino" "smoketest_programs_exm_direct_1"
     "\"--gen-exm-test-pd\"")
 bfn_set_ptf_test_spec("tofino" "smoketest_programs_exm_direct_1"
@@ -417,8 +417,8 @@ bfn_set_ptf_test_spec("tofino" "smoketest_programs_exm_direct_1"
         ^test.TestExmdeep64k
         test.TestExm4way2Entries")
 
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_exm_direct_1_2" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/exm_direct_1/exm_direct_1.p4"
-    "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/ptf-tests/exm_direct_1")
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_exm_direct_1_2" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/exm_direct_1/exm_direct_1.p4"
+    "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/exm_direct_1")
 bfn_set_pd_build_flag("tofino" "smoketest_programs_exm_direct_1_2"
     "\"--gen-exm-test-pd\"")
 bfn_set_ptf_test_spec("tofino" "smoketest_programs_exm_direct_1_2"
@@ -436,16 +436,16 @@ bfn_set_ptf_test_spec("tofino" "smoketest_programs_exm_direct_1_2"
         test.TestExm5way1Entries
         test.TestExm5way7EntriesDefaultEntry")
 
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_exm_indirect_1" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/exm_indirect_1/exm_indirect_1.p4"
-    "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/ptf-tests/exm_indirect_1")
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_exm_indirect_1" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/exm_indirect_1/exm_indirect_1.p4"
+    "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/exm_indirect_1")
 bfn_set_pd_build_flag("tofino" "smoketest_programs_exm_indirect_1"
         "\"--gen-exm-test-pd\"")
 bfn_set_ptf_test_spec("tofino" "smoketest_programs_exm_indirect_1"
         "test.TestActSelIterators
         test.TestDirectStats")
 
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_exm_indirect_1_2" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/exm_indirect_1/exm_indirect_1.p4"
-    "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/ptf-tests/exm_indirect_1")
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_exm_indirect_1_2" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/exm_indirect_1/exm_indirect_1.p4"
+    "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/exm_indirect_1")
 bfn_set_pd_build_flag("tofino" "smoketest_programs_exm_indirect_1_2"
         "\"--gen-exm-test-pd\"")
 bfn_set_ptf_test_spec("tofino" "smoketest_programs_exm_indirect_1_2"
@@ -461,16 +461,16 @@ bfn_set_ptf_test_spec("tofino" "smoketest_programs_exm_indirect_1_2"
         test.TestExmHashAction2")
 
 
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_exm_smoke_test" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/exm_smoke_test/exm_smoke_test.p4"
-    "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/ptf-tests/exm_smoke_test")
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_exm_smoke_test" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/exm_smoke_test/exm_smoke_test.p4"
+    "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/exm_smoke_test")
 bfn_set_pd_build_flag("tofino" "smoketest_programs_exm_smoke_test"
         "\"--gen-exm-test-pd\"")
 bfn_set_ptf_test_spec("tofino" "smoketest_programs_exm_smoke_test"
         "^test.TestExmdeep64k
         test.TestExm4way2Entries")
 
-p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_exm_smoke_test_2" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/exm_smoke_test/exm_smoke_test.p4"
-    "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/ptf-tests/exm_smoke_test")
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_exm_smoke_test_2" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/exm_smoke_test/exm_smoke_test.p4"
+    "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/exm_smoke_test")
 bfn_set_pd_build_flag("tofino" "smoketest_programs_exm_smoke_test_2"
         "\"--gen-exm-test-pd\"")
 bfn_set_ptf_test_spec("tofino" "smoketest_programs_exm_smoke_test_2"
@@ -496,32 +496,31 @@ bfn_set_ptf_test_spec("tofino" "smoketest_programs_stful"
 # 500s timeout is too little for compiling and testing the entire test, bumping it up
 set_tests_properties("tofino/smoketest_programs_stful" PROPERTIES TIMEOUT 3600)
 
-# p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_meters" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/meters/meters.p4"
-#     "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/ptf-tests/meters")
-# bfn_set_ptf_test_spec("tofino" "smoketest_programs_meters"
-#         "^test.TestMeterOmnet
-#         test.TestTCAMLpfIndirect
-#         test.TestExmLpfIndirect
-#         test.TestExmLpfdirect
-#         test.TestByteAdj
-#         test.TestMeterIndirectStateRestore
-#         test.TestMeterScopes
-#         test.TestExmMeterIndirect
-#         test.TestMeterDirectStateRestore
-#         test.TestExmMeterColorAwareIndirect
-#         test.TestTCAMLpfdirect
-#         test.TestExmMeterDirect")
-# bfn_set_ptf_ports_json_file("tofino" "smoketest_programs_meters" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/ptf-tests/meters/ports.json")
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_meters" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/meters/meters.p4"
+    "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/ptf-tests/meters")
+bfn_set_ptf_test_spec("tofino" "smoketest_programs_meters"
+        "^test.TestMeterOmnet
+        test.TestTCAMLpfIndirect
+        test.TestExmLpfIndirect
+        test.TestExmLpfdirect
+        test.TestByteAdj
+        test.TestMeterIndirectStateRestore
+        test.TestMeterScopes
+        test.TestExmMeterIndirect
+        test.TestMeterDirectStateRestore
+        test.TestExmMeterColorAwareIndirect
+        test.TestTCAMLpfdirect
+        test.TestExmMeterDirect")
+bfn_set_ptf_ports_json_file("tofino" "smoketest_programs_meters" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/ptf-tests/meters/ports.json")
 
-# # 500s timeout is too little for compiling and testing the entire test, bumping it up
-# set_tests_properties("tofino/smoketest_programs_meters" PROPERTIES TIMEOUT 3600)
+# 500s timeout is too little for compiling and testing the entire test, bumping it up
+set_tests_properties("tofino/smoketest_programs_meters" PROPERTIES TIMEOUT 3600)
 
-# p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_hash_driven" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/hash_driven/hash_driven.p4"
-#     "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/ptf-tests/hash_driven")
-# bfn_set_ptf_ports_json_file("tofino" "smoketest_programs_hash_driven" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/ptf-tests/hash_driven/ports.json")
-# 
-# # 500s timeout is too little for compiling and testing the entire test, bumping it up
-# set_tests_properties("tofino/smoketest_programs_hash_driven" PROPERTIES TIMEOUT 3600)
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_hash_driven" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/hash_driven/hash_driven.p4"
+    "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/ptf-tests/hash_driven")
+ 
+# 500s timeout is too little for compiling and testing the entire test, bumping it up
+set_tests_properties("tofino/smoketest_programs_hash_driven" PROPERTIES TIMEOUT 3600)
 
 p4c_add_ptf_test_with_ptfdir ("tofino" "miss_clause" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/miss_clause.p4
     "${testExtraArgs} -pd" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/miss_clause.ptf")

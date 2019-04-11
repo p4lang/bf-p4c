@@ -1078,8 +1078,9 @@ p4c_add_xfail_reason("tofino"
 
 # P4C-1387
 p4c_add_xfail_reason("tofino"
-  "Unrecognized algorithm for a hash expression: xor24_extend"
+  "Unrecognized algorithm for a hash expression:"
   ../glass/testsuite/p4_tests/mau/test_config_408_xor_hashes.p4
+  ../glass/testsuite/p4_tests/parde/test_config_423_zeros_as_ones.p4
   )
 
 # P4C-1389

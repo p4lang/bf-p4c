@@ -26,7 +26,7 @@ env:
     - TOFINO_TESTS_2="^tofino/.*programs|.*internal_p4_14"
     - TOFINO_EXCLUDE_2="TestRealData|_basic_ipv4|_stful|_meters|_hash_driven|_dkm|_exm_smoke_test|_exm_direct_|_exm_direct_1_|p4_16_programs_tna_ternary_match|p4_16_programs_tna_exact_match|p4_16_programs_tna_lpm_match|p4_16_programs_tna_meter_lpf_wred|p4_16_programs_tna_range_match|p4_16_programs_tna_port_metadata|perf_test_alpm|p4_16_programs_tna_action_selector"
     - JBAY_TESTS="^tofino2|cpplint|gtest|test_p4c_driver"
-    - JBAY_EXCLUDE="smoketest|p4_16_programs_tna_ternary_match|p4_16_programs_tna_exact_match|p4_16_programs_tna_lpm_match|p4_16_programs_tna_meter_lpf_wred|p4_16_programs_tna_range_match|p4_16_programs_tna_port_metadata|p4_16_programs_tna_action_selector"
+    - JBAY_EXCLUDE="smoketest|p4_16_programs_tna_ternary_match|p4_16_programs_tna_exact_match|p4_16_programs_tna_lpm_match|p4_16_programs_tna_meter_lpf_wred|p4_16_programs_tna_range_match|p4_16_programs_tna_port_metadata|p4_16_programs_tna_action_selector|p4_16_programs_tna_idletimeout"
 
 cache:
   # timeout waiting for docker images
