@@ -39,8 +39,8 @@ class TablePrinter {
         }
     }
 
-    void addSep() {
-        _seps.insert(_data.size());
+    void addSep(unsigned start_col = 0) {
+        _seps[_data.size()] = start_col;
     }
 
     void addBlank() {
@@ -53,14 +53,12 @@ class TablePrinter {
 
     void print() const {
         printSep();
-
         printRow(_headers);
-
         printSep();
 
         for (unsigned i = 0; i < _data.size(); i++) {
             printRow(_data.at(i));
-            if (_seps.count(i+1)) printSep();
+            if (_seps.count(i+1)) printSep(_seps.at(i+1));
         }
 
         printSep();
@@ -74,9 +72,13 @@ class TablePrinter {
         return rv + _headers.size() + 1;
     }
 
-    void printSep() const {
-        _s << std::string(getTableWidth(), '-');
-        _s << std::endl;
+    void printSep(unsigned start_col = 0) const {
+        for (unsigned i = 0; i < _colWidth.size(); i++) {
+            _s << (i < start_col ? "|" : "+")
+               << std::string(_colWidth.at(i) + cellPad, i >= start_col ? '-' : ' ');
+        }
+
+        _s << "+" << std::endl;
     }
 
     void printCell(unsigned col, std::string data) const {
@@ -102,7 +104,7 @@ class TablePrinter {
     std::ostream &_s;
 
     std::vector<std::vector<std::string>> _data;
-    std::set<unsigned> _seps;
+    std::map<unsigned, unsigned> _seps;  // maps line numbers to starting column
 
     std::vector<std::string> _headers;
     std::vector<unsigned> _colWidth;

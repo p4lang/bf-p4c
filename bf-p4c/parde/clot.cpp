@@ -32,7 +32,10 @@ Clot::Clot(cstring name) {
     tag = v;
 }
 
-void Clot::add_field(FieldKind kind, const PHV::Field* field, unsigned offset) {
+void Clot::add_field(const IR::BFN::ParserState* state,
+                     FieldKind kind,
+                     const PHV::Field* field,
+                     unsigned offset) {
     switch (kind) {
     case PHV:
         phv_fields_.push_back(field);
@@ -48,6 +51,7 @@ void Clot::add_field(FieldKind kind, const PHV::Field* field, unsigned offset) {
 
     all_fields_.push_back(field);
     field_offsets[field] = offset;
+    parser_state_to_fields_[state].push_back(field);
 }
 
 unsigned Clot::bit_offset(const PHV::Field* field) const {

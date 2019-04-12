@@ -59,7 +59,10 @@ class Clot {
     /// Adds a field to this CLOT.
     ///
     /// @arg offset - the field's bit offset from the beginning of this CLOT.
-    void add_field(FieldKind kind, const PHV::Field* field, unsigned offset);
+    void add_field(const IR::BFN::ParserState* state,
+                   FieldKind kind,
+                   const PHV::Field* field,
+                   unsigned offset);
 
  private:
     /// Maps the fields in this CLOT to their bit offset from the beginning of this CLOT.
@@ -73,6 +76,10 @@ class Clot {
 
     /// The fields that need to be replaced by a checksum when deparsed.
     std::vector<const PHV::Field*> csum_fields_;
+
+    /// The parser states for which this CLOT was allocated, mapped to the corresponding fields
+    /// allocated to this CLOT, in the order in which the fields were added.
+    std::map<const IR::BFN::ParserState*, std::vector<const PHV::Field*>> parser_state_to_fields_;
 
  public:
     /// Returns all fields covered by this CLOT.
@@ -88,6 +95,13 @@ class Clot {
     /// Returns all fields that need to be replaced by a checksum when deparsed.
     const std::vector<const PHV::Field*> csum_fields() const {
         return csum_fields_;
+    }
+
+    /// Returns all parser states for which this CLOT was allocated, mapped to the corresponding
+    /// fields allocated to this CLOT.
+    const std::map<const IR::BFN::ParserState*, std::vector<const PHV::Field*>>
+    parser_state_to_fields() const {
+        return parser_state_to_fields_;
     }
 
     std::map<const PHV::Field*, unsigned> csum_field_to_csum_id;

@@ -25,50 +25,59 @@ std::string ClotInfo::print() const {
 
     std::set<int> unaligned_clots;
     for (auto c : clots_) {
-        bool first_in_clot = true;
-        unsigned bits_in_clot = 0;
-        bitvec bits_unused;
-        for (auto f : c->all_fields()) {
-            if (is_clot_candidate(f)) {
-                total_unused_fields_in_clots++;
-                bits_unused.setrange(c->bit_offset(f), f->size);
+        bool first_state = true;
+        for (auto entry : c->parser_state_to_fields()) {
+            auto state = entry.first;
+            std::vector<std::vector<std::string>> rows;
+            unsigned bits_in_clot = 0;
+            bitvec bits_unused;
+            for (auto f : entry.second) {
+                if (is_clot_candidate(f)) {
+                    total_unused_fields_in_clots++;
+                    bits_unused.setrange(c->bit_offset(f), f->size);
+                }
+
+                std::stringstream bits;
+                bits << f->size
+                     << " [" << c->bit_offset(f) << ".." << (c->bit_offset(f) + f->size - 1) << "]";
+
+                bool is_phv = c->is_phv_field(f);
+                bool is_csum = c->is_csum_field(f);
+
+                std::string attr;
+                if (is_phv || is_csum) {
+                    attr += " (";
+                    if (is_phv) attr += " phv";
+                    if (is_csum) attr += " csum";
+                    attr += " ) ";
+                }
+
+                rows.push_back({"", std::string(f->name), bits.str(), attr});
+                bits_in_clot = std::max(bits_in_clot, c->bit_offset(f) + f->size);
             }
 
-            std::stringstream bits;
-            bits << f->size
-                 << " [" << c->bit_offset(f) << ".." << (c->bit_offset(f) + f->size - 1) << "]";
+            total_unused_bits_in_clots += bits_unused.popcount();
+            total_bits += bits_in_clot;
 
-            bool is_phv = c->is_phv_field(f);
-            bool is_csum = c->is_csum_field(f);
+            if (bits_in_clot % 8 != 0) unaligned_clots.insert(c->tag);
+            unsigned bytes = bits_in_clot / 8;
 
-            std::string attr;
-            if (is_phv || is_csum) {
-                attr += " (";
-                if (is_phv) attr += " phv";
-                if (is_csum) attr += " csum";
-                attr += " ) ";
-            }
+            if (!first_state) tp.addSep(1);
+            tp.addRow({first_state ? std::to_string(c->tag) : "",
+                       "state " + std::string(state->name),
+                       std::to_string(bytes) + " bytes",
+                       ""});
+            tp.addBlank();
 
-            tp.addRow({first_in_clot ? std::to_string(c->tag) : "",
-                       std::string(f->name),
-                       bits.str(),
-                       attr});
+            for (auto row : rows)
+                tp.addRow(row);
 
-            bits_in_clot = std::max(bits_in_clot, c->bit_offset(f) + f->size);
-            first_in_clot = false;
+            first_state = false;
         }
 
-        total_unused_bits_in_clots += bits_unused.popcount();
-        total_bits += bits_in_clot;
-
-        if (bits_in_clot % 8 != 0) unaligned_clots.insert(c->tag);
-        unsigned bytes = bits_in_clot / 8;
-
-        tp.addRow({"", "", std::to_string(bytes) + " bytes", ""});
-        tp.addBlank();
+        tp.addSep();
     }
 
-    tp.addSep();
     tp.addRow({"", "Total Bits", std::to_string(total_bits), ""});
     tp.print();
 
@@ -569,7 +578,7 @@ class NaiveClotAlloc : public Visitor {
 
                 LOG4("  adding " << kind_str << "field " << f->name << " at byte " << f_offset);
             }
-            clot->add_field(kind, f, f_offset);
+            clot->add_field(ca.state, kind, f, f_offset);
         }
 
         unsigned head_gap_credit =
