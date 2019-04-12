@@ -57,9 +57,23 @@ p4c_add_ptf_test_with_ptfdir (
     "tofino2" "p4c_1585" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1585/p4c_1585.p4"
     "${testExtraArgs} -target tofino2 -arch t2na -bfrt -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1585")
 
-p4c_add_ptf_test_with_ptfdir (
-    "tofino2" fabric.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos-new/pipelines/fabric/src/main/resources/fabric-tofino.p4
-    "${testExtraArgs} -tofino2" ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos-ptf/fabric-new.ptf)
+set (ONOS_FABRIC_NEW_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos-new/pipelines/fabric/src/main/resources/fabric-tofino.p4)
+p4c_add_ptf_test_with_ptfdir_and_spec (
+    "tofino2" fabric-new ${ONOS_FABRIC_NEW_P4}
+    "${testExtraArgs} -tofino2"
+    ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos-ptf/fabric-new.ptf "all ^spgw ^int")
+p4c_add_ptf_test_with_ptfdir_and_spec (
+    "tofino2" fabric-new-DWITH_SPGW ${ONOS_FABRIC_NEW_P4}
+    "${testExtraArgs} -tofino2 -DWITH_SPGW"
+    ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos-ptf/fabric-new.ptf "all ^int")
+p4c_add_ptf_test_with_ptfdir_and_spec (
+    "tofino2" fabric-new-DWITH_INT_TRANSIT ${ONOS_FABRIC_NEW_P4}
+    "${testExtraArgs} -tofino2 -DWITH_INT_TRANSIT"
+    ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos-ptf/fabric-new.ptf "all ^spgw")
+p4c_add_ptf_test_with_ptfdir_and_spec (
+    "tofino2" fabric-new-DWITH_SPGW-DWITH_INT_TRANSIT ${ONOS_FABRIC_NEW_P4}
+    "${testExtraArgs} -tofino2 -DWITH_SPGW -DWITH_INT_TRANSIT"
+    ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos-ptf/fabric-new.ptf "all")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" tor.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/google-tor/p4/spec/tor.p4

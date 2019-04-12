@@ -287,10 +287,9 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/compile_only/p4c-1478-neg.p4
   )
 
-# P4C-1496
+# P4C-1585; probably also P4C-1586, P4C-1587, P4C-1492
 p4c_add_xfail_reason("tofino2"
   "Parser extract didn't receive a PHV allocation"
-  fabric.p4
   extensions/p4_tests/p4_16/jbay/p4c-1622.p4
   )
 
@@ -304,4 +303,18 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "Nested checksum updates is currently unsupported"
   extensions/p4_tests/p4_14/stf/update_checksum_7.p4
+)
+
+# P4C-1645
+p4c_add_xfail_reason("tofino2"
+  "Expected packet was not received"
+  fabric-new
+  fabric-new-DWITH_SPGW
+)
+
+# P4C-1646
+p4c_add_xfail_reason("tofino2"
+  "Conflicting alignment constraints detected for bridged field"
+  fabric-new-DWITH_INT_TRANSIT
+  fabric-new-DWITH_SPGW-DWITH_INT_TRANSIT
 )

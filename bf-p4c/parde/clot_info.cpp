@@ -245,14 +245,15 @@ class NaiveClotAlloc : public Visitor {
     }
 
     /// Determines whether any part of the given field is PHV-allocated. This can happen when the
-    /// field itself is PHV-allocated, or when the field is packed with a PHV-allocated field
-    /// (e.g., if the field is not byte-aligned and shares a container with a PHV-allocated field).
+    /// field itself is PHV-allocated, or when the field is packed with a PHV-allocated field from
+    /// the same header (e.g., if the field is not byte-aligned and shares a container with a
+    /// PHV-allocated field).
     bool is_packed_with_phv_field(const PHV::Field* f) {
         auto& states = clotInfo.field_to_parser_states_.at(f);
         for (auto state : states) {
             for (auto id : field_to_byte_idx.at(state).at(f)) {
                 for (auto ff : byte_idx_to_field.at(state).at(id)) {
-                    if (!clotInfo.is_clot_candidate(ff))
+                    if (f->header() == ff->header() && !clotInfo.is_clot_candidate(ff))
                         return true;
                 }
             }
