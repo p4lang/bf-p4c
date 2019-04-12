@@ -9,7 +9,6 @@ p4c_add_xfail_reason("tofino2"
   "ERROR:PTF runner:Error when running PTF tests"
   extensions/p4_tests/p4_16/ptf/ONLab_packetio.p4
   extensions/p4_tests/p4_16/ptf/ingress_checksum.p4
-  p4_16_programs_tna_idletimeout
   )
 
 # Mirroring direction BOTH not supported on Tofino2 but is used by the P4Runtime

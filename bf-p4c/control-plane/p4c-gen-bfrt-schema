@@ -71,7 +71,7 @@ class PrimitiveEnumType(PrimitiveTypeBase):
     class Options(object):
         title = "PrimitiveEnumType"
         description = "A list of string choices"
-    type_ = jsl.StringField(name="type", required=True, enum=["enum"])
+    type_ = jsl.StringField(name="type", required=True, enum=["enum", "string"])
     choices = jsl.ArrayField(required=True, items=jsl.StringField())
     default_value = jsl.StringField(required=False)
 

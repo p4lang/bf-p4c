@@ -445,7 +445,7 @@ static Util::JsonObject* makeTypeFloat(cstring type) {
 static Util::JsonObject* makeTypeEnum(const std::vector<cstring>& choices,
                                       boost::optional<cstring> defaultValue = boost::none) {
     auto* typeObj = new Util::JsonObject();
-    typeObj->emplace("type", "enum");
+    typeObj->emplace("type", "string");
     auto* choicesArray = new Util::JsonArray();
     for (auto choice : choices)
         choicesArray->append(choice);

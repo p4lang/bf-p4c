@@ -121,7 +121,7 @@ set (P4FACTORY_P4_16_PROGRAMS
   tna_digest
   tna_dyn_hashing
   tna_exact_match
-  tna_idletimeout
+  # tna_idletimeout # needs driver update
   tna_lpm_match
   tna_meter_bytecount_adjust
   tna_meter_lpf_wred
