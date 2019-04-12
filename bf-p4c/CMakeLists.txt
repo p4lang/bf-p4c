@@ -325,6 +325,7 @@ set (BF_P4C_BACKEND_PARDE_SRCS
   parde/merge_parser_state.cpp
   parde/mirror.cpp
   parde/parser_output.cpp
+  parde/infer_payload_offset.cpp
   parde/phase0.cpp
   parde/resolve_parser_values.cpp
   parde/resubmit.cpp
@@ -354,6 +355,7 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/merge_parser_state.h
   parde/mirror.h
   parde/parde_spec.h
+  parde/infer_payload_offset.h
   parde/phase0.h
   parde/resolve_parser_values.h
   parde/resubmit.h

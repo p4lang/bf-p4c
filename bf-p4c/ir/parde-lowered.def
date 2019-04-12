@@ -89,6 +89,9 @@ class LoweredExtractPhv : LoweredParserPrimitive {
     /// The PHV container this extract writes to.
     BFN::ContainerRef dest;
 
+    /// The final amount (in bytes) to add to header length
+    int hdrLenIncStop = -1;
+
 #emit
     /// Debugging information about the high-level operations that are
     /// implemented by this low-level extract.

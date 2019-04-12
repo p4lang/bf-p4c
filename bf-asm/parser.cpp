@@ -971,6 +971,12 @@ Parser::State::Match::Match(int l, gress_t gress, match_t m, VECTOR(pair_t) &dat
                     offset_reset = true;
                 else if (kv.value[0] != "inc" && kv.value[0] != "increment")
                     error(kv.value.lineno, "Syntax error, expecting set or inc value"); }
+        } else if (kv.key == "hdr_len_inc_stop") {
+            if (options.target != JBAY)
+                error(kv.key.lineno, "Target does not support hdr_len_inc_stop");
+            else if (hdr_len_inc_stop)
+                error(kv.key.lineno, "Mulitple hdr_len_inc_stop in match");
+            hdr_len_inc_stop = HdrLenIncStop(kv.value);
         } else if (kv.key == "priority") {
             if (priority)
                 error(kv.key.lineno, "Mulitple priority updates in match");
@@ -1163,6 +1169,15 @@ Parser::State::Match::FieldMapping::FieldMapping(Phv::Ref &ref, const value_t &a
         hi = a.vec[1].hi;
     } else {
         error(a.lineno, "Syntax error");
+    }
+}
+
+Parser::State::Match::HdrLenIncStop::HdrLenIncStop(const value_t &data) {
+    if (CHECKTYPE(data, tINT)) {
+        if (data.i < 0 || data.i > PARSER_INPUT_BUFFER_SIZE)
+            error(data.lineno, "hdr_len_inc_stop %ld out of range", data.i);
+        lineno = data.lineno;
+        final_amt = data.i;
     }
 }
 
@@ -1592,6 +1607,9 @@ void Parser::State::Match::write_row_config(REGS &regs, Parser *pa, State *state
         action_row.dst_offset_rst = def->offset_reset; }
     if (priority)
         priority.write_config(action_row);
+    if (hdr_len_inc_stop)
+        hdr_len_inc_stop.write_config(action_row);
+
     void *output_map = pa->setup_phv_output_map(regs, state->gress, row);
     unsigned used = 0;
     for (auto &c : csum) c.write_output_config(regs, pa, output_map, used);

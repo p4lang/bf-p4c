@@ -146,25 +146,16 @@ struct ExtractSimplifier {
     void add(const IR::BFN::Extract* extract) {
         LOG4("[ExtractSimplifier] adding: " << extract);
 
-        auto lval = extract->dest->to<IR::BFN::FieldLVal>();
-        auto checksum_lval = extract->dest->to<IR::BFN::ChecksumLVal>();
+        auto field = phv.field(extract->dest->field);
 
-        const PHV::Field *field = nullptr;
-        if (lval) field = phv.field(lval->field);
-        else if (checksum_lval) field = phv.field(checksum_lval->field);
-
-        if (field) {
-            if (auto c = clot.clot(field)) {
-                if (auto* rval = extract->source->to<IR::BFN::PacketRVal>())
-                    clotRVals[c].push_back(rval);
-                if (!c->is_phv_field(field))
-                    return;
-            }
+        if (auto c = clot.clot(field)) {
+            if (auto* rval = extract->source->to<IR::BFN::PacketRVal>())
+                clotRVals[c].push_back(rval);
+            if (!c->is_phv_field(field))
+                return;
         }
 
-        if (!lval) return;
-
-        std::vector<alloc_slice> slices = phv.get_alloc(lval->field);
+        std::vector<alloc_slice> slices = phv.get_alloc(extract->dest->field);
         if (slices.empty()) {
             BUG("Parser extract didn't receive a PHV allocation: %1%", extract);
             return;
@@ -179,7 +170,7 @@ struct ExtractSimplifier {
                 // Shift the slice to its proper place in the input buffer.
                 auto bitOffset = bufferSource->range().lo;
                 const nw_bitrange bufferRange = slice.field_bits()
-                  .toOrder<Endian::Network>(lval->size())
+                  .toOrder<Endian::Network>(extract->dest->size())
                   .shiftedByBits(bitOffset);
 
                 // Expand the buffer slice so that it will write to the entire
@@ -223,6 +214,15 @@ struct ExtractSimplifier {
                     newSource = new IR::BFN::LoweredMetadataRVal(byteFinalBufferRange);
 
                 auto* newExtract = new IR::BFN::LoweredExtractPhv(slice.container, newSource);
+
+                if (extract->hdr_len_inc_stop) {
+                    auto field = phv.field(extract->dest->field);
+                    if (field->name.startsWith("$dummy"))
+                        newExtract->hdrLenIncStop = 0;
+                    else
+                        newExtract->hdrLenIncStop = byteFinalBufferRange.hiByte() + 1;
+                }
+
                 newExtract->debug.info.push_back(debugInfoFor(extract, slice,
                                                               bufferRange));
 
@@ -275,6 +275,8 @@ struct ExtractSimplifier {
         // this container. They should all be the same, but if they aren't
         // we want to know about it.
         nw_byteinterval bufferRange;
+        int hdrLenIncStop = -1;
+
         for (auto* extract : extracts) {
             auto* bufferSource = extract->source->to<InputBufferRValType>();
             BUG_CHECK(bufferSource, "Unexpected non-buffer source");
@@ -286,6 +288,12 @@ struct ExtractSimplifier {
                           "buffer range: %1%", bufferSource->byteInterval());
 
             bufferRange = bufferSource->byteInterval().unionWith(bufferRange);
+
+            if (extract->hdrLenIncStop >= 0) {
+                BUG_CHECK(hdrLenIncStop == -1,
+                    "hdr_len_inc_stop can only be set once in %1%", extract);
+                hdrLenIncStop = extract->hdrLenIncStop;
+            }
         }
 
         BUG_CHECK(!bufferRange.empty(), "Extracting zero bytes?");
@@ -305,7 +313,10 @@ struct ExtractSimplifier {
         // We only need to merge their debug info.
         const auto* finalBufferValue =
           new InputBufferRValType(*toClosedRange(bufferRange));
+
         auto* mergedExtract = new IR::BFN::LoweredExtractPhv(container, finalBufferValue);
+        mergedExtract->hdrLenIncStop = hdrLenIncStop;
+
         for (auto* extract : extracts)
             mergedExtract->debug.mergeWith(extract->debug);
 
@@ -725,18 +736,20 @@ struct ComputeLoweredParserIR : public ParserInspector {
         // Collect all the extract operations; we'll lower them as a group so we
         // can merge extracts that write to the same PHV containers.
         ExtractSimplifier simplifier(phv, clotInfo);
-        forAllMatching<IR::BFN::ParserPrimitive>(&state->statements,
-                      [&](const IR::BFN::ParserPrimitive* prim) {
+
+        for (auto prim : state->statements) {
             if (auto* extract = prim->to<IR::BFN::Extract>()) {
                 simplifier.add(extract);
             } else if (auto* csum = prim->to<IR::BFN::ParserChecksumPrimitive>()) {
                 checksums.push_back(csum);
             } else if (auto* prio = prim->to<IR::BFN::ParserPrioritySet>()) {
+                BUG_CHECK(!priority,
+                          "more than one parser priority set in %1%?", state->name);
                 priority = prio;
             } else {
                 P4C_UNIMPLEMENTED("unhandled parser primitive %1%", prim);
             }
-        });
+        }
 
         auto loweredStatements = simplifier.lowerExtracts();
 

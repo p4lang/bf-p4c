@@ -91,6 +91,8 @@ class ParseAnnotations : public P4::ParseAnnotations {
                 PARSE_SKIP("alias"),
                 PARSE_SKIP("pipeline"),
                 PARSE_SKIP("deparser"),
+
+                PARSE("command_line", StringLiteral)
             }, true) { }
 };
 

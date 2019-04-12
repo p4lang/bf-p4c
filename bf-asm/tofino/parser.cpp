@@ -311,6 +311,11 @@ template <> void Parser::mark_unused_output_map(Target::Tofino::parser_regs &reg
             *map[i].dst = 0x1ff;
 }
 
+template<> void Parser::State::Match::HdrLenIncStop::write_config(
+        Tofino::memories_all_parser_::_po_action_row &) const {
+    BUG();  // no hdr_len_inc_stop on tofino; should not get here
+}
+
 template<> void Parser::State::Match::Clot::write_config(
         Tofino::memories_all_parser_::_po_action_row &, int) const {
     BUG();  // no CLOTs on tofino; should not get here

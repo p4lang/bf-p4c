@@ -30,6 +30,7 @@ class BFN_Options : public CompilerOptions {
     bool display_power_budget = false;
     bool disable_power_check = false;
     bool adjust_egress_packet_length = true;
+    bool infer_payload_offset = false;
     bool parser_timing_reports = false;
     bool parser_bandwidth_opt = false;
     bool egress_intr_md_opt = false;

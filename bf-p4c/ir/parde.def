@@ -167,6 +167,9 @@ class Extract : ParserPrimitive {
 
     /// This extract expects that data on the wire is marshaled from a `field`.
     optional boost::optional<MarshaledFrom> marshaled_from;  // not visited
+
+    /// Stop incrementing the header length counter after this extract
+    optional bool hdr_len_inc_stop = false;
 }
 
 /// Save data from input buffer to a match register.

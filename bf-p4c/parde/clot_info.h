@@ -129,6 +129,7 @@ class ClotInfo {
     bool is_clot_candidate(const PHV::Field* field) const {
         return !uses.is_used_mau(field) &&
                 uses.is_used_parde(field) &&
+                field->deparsed() &&
                !is_used_in_multiple_checksum_update_sets(field) &&
                !is_extracted_in_multiple_states(field);
     }

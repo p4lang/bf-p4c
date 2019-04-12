@@ -203,6 +203,13 @@ struct ParserAsmSerializer : public ParserInspector {
         if (match->shift != 0)
             out << indent << "shift: " << match->shift << std::endl;
 
+        for (auto* stmt : match->extracts) {
+            if (auto* extract = stmt->to<IR::BFN::LoweredExtractPhv>()) {
+                if (extract->hdrLenIncStop >= 0)
+                    out << indent << "hdr_len_inc_stop: " << extract->hdrLenIncStop << std::endl;
+            }
+        }
+
         if (match->bufferRequired)
             out << indent << "buf_req: " << *match->bufferRequired << std::endl;
 

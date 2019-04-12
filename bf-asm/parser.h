@@ -64,6 +64,7 @@ class Parser {
         explicit operator bool() const { return lineno >= 0; }
         template<class REGS> void write_config(REGS &);
     };
+
  public:
     struct State {
         struct Ref {
@@ -122,7 +123,9 @@ class Parser {
             //            load_mask = 0xff, load_max = 0xff;
             Ref         next;
             MatchKey    future;
+
             enum flags_t { OFFSET=1, ROTATE=2 };
+
             struct Save {
                 int         lo, hi;
                 Phv::Ref    where, second;
@@ -133,6 +136,7 @@ class Parser {
                 OutputUse output_use() const;
             };
             std::vector<Save>               save;
+
             struct Set {
                 Phv::Ref        where;
                 unsigned        what;
@@ -146,6 +150,7 @@ class Parser {
                     && flags == a.flags; }
             };
             std::vector<Set>            set;
+
             struct Clot {
                 int             lineno, tag;
                 std::string     name;
@@ -159,6 +164,7 @@ class Parser {
             };
             std::vector<Clot>           clots;
             std::vector<Checksum>       csum;
+
             struct FieldMapping {
                 Phv::Ref        where;
                 std::string     container_id;
@@ -167,6 +173,16 @@ class Parser {
                 FieldMapping(Phv::Ref &ref, const value_t &a);
             };
             std::vector<FieldMapping>   field_mapping;
+
+            struct HdrLenIncStop {
+                int             lineno = -1;
+                unsigned        final_amt = 0; 
+                HdrLenIncStop() { }
+                HdrLenIncStop(const value_t &data);
+                explicit operator bool() const { return lineno >= 0; }
+                template<class PO_ROW> void write_config(PO_ROW &) const;
+            } hdr_len_inc_stop;
+
             Match(int lineno, gress_t, match_t m, VECTOR(pair_t) &data);
             Match(int lineno, gress_t, State *n);
             void unmark_reachable(Parser *, State *state, bitvec &unreach);

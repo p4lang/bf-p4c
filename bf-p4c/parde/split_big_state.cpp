@@ -38,13 +38,12 @@ static bool isExtractClotEarlierInPacket(const IR::BFN::LoweredExtractClot* a,
 // Utils for splitting states.
 
 /// Shift all input packet extracts in the sequence to the left by the given
-/// amount. Works for both ExtractPhv and ExtractClot
+/// amount.
 /// The coordinate system:
 /// [0............31]
 /// left..........right
-template<class T>
-T*
-leftShiftExtract(T* primitive, int byteDelta) {
+const IR::BFN::LoweredExtractPhv*
+leftShiftExtract(const IR::BFN::LoweredExtractPhv* primitive, int byteDelta) {
     const IR::BFN::LoweredPacketRVal* bufferSource =
         primitive->source->template to<typename IR::BFN::LoweredPacketRVal>();
 
@@ -55,6 +54,26 @@ leftShiftExtract(T* primitive, int byteDelta) {
     BUG_CHECK(shiftedRange.lo >= 0, "Shifting extract to negative position.");
     auto* clone = primitive->clone();
     clone->source = new IR::BFN::LoweredPacketRVal(shiftedRange);
+
+    if (primitive->hdrLenIncStop >= 0)
+        clone->hdrLenIncStop = primitive->hdrLenIncStop - byteDelta;
+
+    return clone;
+}
+
+const IR::BFN::LoweredExtractClot*
+leftShiftExtract(const IR::BFN::LoweredExtractClot* primitive, int byteDelta) {
+    const IR::BFN::LoweredPacketRVal* bufferSource =
+        primitive->source->template to<typename IR::BFN::LoweredPacketRVal>();
+
+    // Do not need to shift it's not packetRval
+    if (!bufferSource) return primitive;
+
+    auto shiftedRange = bufferSource->range.shiftedByBytes(-byteDelta);
+    BUG_CHECK(shiftedRange.lo >= 0, "Shifting extract to negative position.");
+    auto* clone = primitive->clone();
+    clone->source = new IR::BFN::LoweredPacketRVal(shiftedRange);
+
     return clone;
 }
 

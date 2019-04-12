@@ -46,6 +46,7 @@
 #include "bf-p4c/parde/merge_parser_state.h"
 #include "bf-p4c/parde/reset_invalidated_checksum_headers.h"
 #include "bf-p4c/parde/resolve_parser_values.h"
+#include "bf-p4c/parde/infer_payload_offset.h"
 #include "bf-p4c/parde/stack_push_shims.h"
 #include "bf-p4c/phv/check_unallocated.h"
 #include "bf-p4c/phv/create_thread_local_instances.h"
@@ -203,6 +204,9 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new FlexiblePacking(phv, deps, bridged_fields, extracted_together, table_alloc),
         // Run after bridged metadata packing as bridged packing updates the parser state.
         new ResolveParserValues,
+        new CollectPhvInfo(phv),
+        (Device::currentDevice() == Device::JBAY && options.infer_payload_offset) ?
+            new InferPayloadOffset(phv, defuse) : nullptr,
         new CollectPhvInfo(phv),
         new Alias(phv, options),             // Add aliasing from the pa_alias pragmas
         new CollectPhvInfo(phv),

@@ -254,6 +254,12 @@ template <> void Parser::mark_unused_output_map(Target::JBay::parser_regs &,
     // unneeded on jbay
 }
 
+template<> void Parser::State::Match::HdrLenIncStop::write_config(
+        JBay::memories_parser_::_po_action_row &po_row) const {
+    po_row.hdr_len_inc_stop = 1;
+    po_row.hdr_len_inc_final_amt = final_amt;
+}
+
 template<> void Parser::State::Match::Clot::write_config(
         JBay::memories_parser_::_po_action_row &po_row, int idx) const {
     po_row.clot_tag[idx] = tag;

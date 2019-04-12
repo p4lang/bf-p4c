@@ -10,12 +10,30 @@
 
 class DumpParser : public Visitor {
     cstring filename;
-    std::stringstream out;
+
+    // use this to override the default color for nodes and edges
+    // each group will be assign an unique color
+    std::vector<std::set<void*>>* color_groups = nullptr;
+
     bool detail = true;
+
+    std::stringstream out;
+
+    std::vector<std::string> colors =
+        {"brown", "coral", "crimson", "deeppink", "gold",
+         "red", "blue", "green", "cyan", "orchid"};
 
  public:
     explicit DumpParser(cstring filename, bool detail = false)
-        : filename(filename), detail(detail || LOGGING(4)) {}
+        : filename(filename),
+          detail(detail || LOGGING(4)) {}
+
+    DumpParser(cstring filename,
+               std::vector<std::set<void*>>& color_groups,
+               bool detail = false)
+        : filename(filename),
+          color_groups(&color_groups),
+          detail(detail || LOGGING(4)) {}
 
  private:
     static std::string escape(std::string s) {
@@ -36,17 +54,43 @@ class DumpParser : public Visitor {
         return ss.str();
     }
 
+    std::string lookup_color(void* obj) {
+        if (color_groups) {
+            for (auto it = color_groups->begin(); it != color_groups->end(); it++) {
+                if ((*it).count(obj)) {
+                    auto cid = std::distance(color_groups->begin(), it) % colors.size();
+                    return colors.at(cid);
+                }
+            }
+        }
+        return "undef";
+    }
+
     void dump(const IR::BFN::Transition* transition) {
-        out << "[ label=\"" << transition << "\" ]";
+        auto c = lookup_color((void*)transition);  // NOLINT
+        if (c != "undef") out << "color=" << c << " ";
+
+        if (detail)
+            out << "label=\"" << transition << "\"";
+    }
+
+    std::string get_color(const IR::BFN::ParserState* state) {
+        auto c = lookup_color((void*)state);  // NOLINT
+        if (c != "undef") return c;
+
+        return "cornsilk";
     }
 
     void dump(const IR::BFN::ParserState* state) {
         out << to_label("State", state);
-        out << " [shape=record, style=\"filled,rounded\", fillcolor=cornsilk";
+        out << " [shape=record, style=\"filled,rounded\", ";
+        out << "fillcolor=" << get_color(state);
         out << ", label=\"{";
-        out << state->name << ":\\l\\l";
+        out << state->name;
 
         if (detail) {
+            out << ":\\l\\l";
+
             for (auto stmt : state->statements)
                 out << "    " << stmt << "\\l";
 
@@ -68,23 +112,21 @@ class DumpParser : public Visitor {
         for (auto succ : graph.successors()) {
             for (auto dst : succ.second) {
                 out << to_label("State", succ.first) << " -> "
-                    << to_label("State", dst);
+                    << to_label("State", dst) << " [ ";
 
-                if (detail)
-                    dump(graph.transition(succ.first, dst));
+                dump(graph.transition(succ.first, dst));
 
-                out << std::endl;
+                out << " ]" << std::endl;
             }
         }
 
         for (auto &kv : graph.to_pipe()) {
             out << to_label("State", kv.first) << " -> "
-                << ::toString(gress) << "_pipe";
+                << ::toString(gress) << "_pipe" << " [ ";
 
-            if (detail)
-                dump(graph.to_pipe(kv.first));
+            dump(graph.to_pipe(kv.first));
 
-            out << std::endl;
+            out << " ]" << std::endl;
         }
     }
 

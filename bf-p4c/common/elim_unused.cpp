@@ -32,7 +32,7 @@ class ElimUnused::Instructions : public Transform {
         // created some troubles in ResolveComputed. Once we can do the input buffer layout
         // refactoring, this can be removed as well, as long as from_marshaled is migrated onto
         // input buffer layout as well.
-        if (extract->marshaled_from) {
+        if (extract->marshaled_from || extract->hdr_len_inc_stop) {
             return extract; }
 
         if (auto lval = extract->dest->to<IR::BFN::FieldLVal>()) {

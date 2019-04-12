@@ -124,6 +124,8 @@ parser [<thread>] [<port_use>, ...]:
                         # with variations (unary is highest precedence, followed by shift,
                         # mask(&), +/- lowest)
                     max_length: <constant>
+                hdr_len_inc_stop: <constant>
+                    # stop the header length counter, and use value as final increment amount (jbay only)
             value_set <name> <size>:
                 handle: <int> # pvs handle
                 field_mapping:
