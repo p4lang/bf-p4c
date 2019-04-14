@@ -31,20 +31,40 @@ def create_dictionary(db_info):
         db[line[1]] = test_info
     return db
 
-def get_metrics(metrics_outdir, ts):
-    metrics_find_cmd = "cd " + metrics_outdir + " && find . -name metrics.json"
-    rc = RunCmd(metrics_find_cmd, config.TEST_DRIVER_TIMEOUT)
-    metrics_files = []
+def get_manifest_files(metrics_outdir, ts):
+    manifest_find_cmd = "cd " + metrics_outdir + " && find . -name manifest.json"
+    rc = RunCmd(manifest_find_cmd, config.TEST_DRIVER_TIMEOUT)
+    manifest_files = []
     if rc.out is not None and len(rc.out) > 0:
         for line in rc.out.split('\n'):
-            if ts in line and 'metrics.json' in line:
-                metrics_files.append(metrics_outdir + line[2:])
+            if ts in line and 'manifest.json' in line:
+                manifest_files.append(metrics_outdir + line[2:])
     else:
-        print ('No metrics files found!')
+        print ('No manifest files found!')
+    return manifest_files
+
+def get_metrics(metrics_outdir, ts):
+    metrics_files = []
+    manifest_files = get_manifest_files(metrics_outdir, ts)
+    for manifest_file in manifest_files:
+        output_directory = os.path.dirname(manifest_file)
+        with open(manifest_file, "rb") as json_file:
+            try:
+                manifest_info = json.load(json_file)
+            except:
+                error_msg = "ERROR: Input file '" + manifest_file + \
+                    "' could not be decoded as JSON.\n"
+                return metrics_files
+            if (type(manifest_info) is not dict or "programs" not in manifest_info):
+                error_msg = "ERROR: Input file '" + manifest_file + \
+                    "' does not appear to be valid manifest JSON.\n"
+        programs = manifest_info['programs']
+        for prog in programs:
+            for pipe in prog["pipes"]:
+                pipe_id = pipe['pipe_id']
+                metrics_files.append([pipe_id, os.path.join(output_directory, pipe['files']['metrics']['path'])])
     return metrics_files
 
-# TODO: Currently handles max two pipes, need to extend once driver support is added
-# to better identify metrics.json files
 def copy_metrics(tests, metrics_outdir, ts):
     metrics_files = get_metrics(metrics_outdir, ts)
     metrics = OrderedDictWithDict()
@@ -63,19 +83,13 @@ def copy_metrics(tests, metrics_outdir, ts):
             os.makedirs(metrics_dest)
         metrics_data = {}
         for mfile in metrics_files:
-            if mTest.out_path in mfile:
-                with open(mfile, 'r') as f:
+            if mTest.out_path in mfile[1]:
+                with open(mfile[1], 'r') as f:
                     metrics_json  = f.read()
-                if 'custom_pipe' in mfile:
-                    shutil.copy2(mfile, os.path.join(metrics_dest, 'metrics_custom_pipe.json'))
-                    metrics_data['custom'] = json.loads(metrics_json)
-                else:
-                    shutil.copy2(mfile, os.path.join(metrics_dest, 'metrics.json'))
-                    metrics_data['regular'] = json.loads(metrics_json)
-        if 'regular' in metrics_data:
-             metrics[mTest.p4]['Metrics_json'].append(metrics_data['regular'])
-        if 'custom' in metrics_data:
-             metrics[mTest.p4]['Metrics_json'].append(metrics_data['custom'])
+                shutil.copy2(mfile[1], os.path.join(metrics_dest, 'metrics_' + str(mfile[0]) + '.json'))
+                metrics_data[mfile[0]] = json.loads(metrics_json)
+        for mdata in metrics_data:
+             metrics[mTest.p4]['Metrics_json'].append(metrics_data[mdata])
     return metrics
 
 def get_cumulative_metric(metrics_info, metric):

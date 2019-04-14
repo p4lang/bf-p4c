@@ -115,8 +115,8 @@ p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
   "smoketest_switch_16_compile_b0_profile" ${switch_p4_16} "${testExtraArgs}" "-DB0_PROFILE -arch tna -bfrt -force-link")
 p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_b0_profile")
 p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
-  "smoketest_switch_16_compile_32q" ${switch_p4_16} "${testExtraArgs}" "-DTEST_SWITCH_32Q -arch tna -bfrt -force-link")
-p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_32q")
+  "smoketest_switch_16_compile_l0_profile" ${switch_p4_16} "${testExtraArgs}" "-DL0_PROFILE -arch tna -bfrt -force-link")
+p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_l0_profile")
 
  p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_Tests" ${SWITCH_P4_16}
    "${testExtraArgs} -arch tna -bfrt -to 3600" ${SWITCH_P4_16_PTF})
@@ -166,7 +166,7 @@ set_tests_properties(
 set_tests_properties("tofino/smoketest_switch_16_compile" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino/smoketest_switch_16_compile_a0_profile" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino/smoketest_switch_16_compile_b0_profile" PROPERTIES TIMEOUT 1200)
-set_tests_properties("tofino/smoketest_switch_16_compile_32q" PROPERTIES TIMEOUT 1200)
+set_tests_properties("tofino/smoketest_switch_16_compile_l0_profile" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino/smoketest_switch_16_Tests" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_16_HostIfPingTest" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_16_HostIfRxTest" PROPERTIES TIMEOUT 3600)

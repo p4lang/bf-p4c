@@ -7,5 +7,5 @@ switch_msdc_spine_int,p4-tests/p4_14/switch/p4src/switch.p4,,"-DMSDC_SPINE_DTEL_
 switch_16_default,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch.p4,,,tofino,p4-16,tna,skip_Glass
 switch_16_a0,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch.p4,,"-DA0_PROFILE",tofino,p4-16,tna,skip_Glass
 switch_16_b0,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch.p4,,"-DB0_PROFILE",tofino,p4-16,tna,skip_Glass
-switch_16_32q,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch.p4,,"-DTEST_SWITCH_32Q",tofino,p4-16,tna,skip_Glass
+switch_16_l0,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch.p4,,"-DL0_PROFILE",tofino,p4-16,tna,skip_Glass
 static_entries_const_prop,p4-tests/p4_16/compile_only/static_entries_const_prop.p4,,,tofino,p4-16,tna,skip_Glass

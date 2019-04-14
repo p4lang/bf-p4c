@@ -69,6 +69,7 @@ class BarefootBackend(BackendDriver):
         self.compilation_time = 0.0
         self.conf_file = None
         self.mau_json = {}   # remove when the compiler adds the manifest
+        self.metrics = {}
 
         # commands
         self.add_command('preprocessor', 'cc')
@@ -189,6 +190,7 @@ class BarefootBackend(BackendDriver):
         BackendDriver.process_command_line_options(self, opts)
 
         self.checkVersionTargetArch(opts.target, opts.language, opts.arch)
+        self.language = opts.language
 
         # Make sure we don't have conflicting debugger options.
         if (os.environ['P4C_BUILD_TYPE'] == "DEVELOPER"):
@@ -484,6 +486,8 @@ class BarefootBackend(BackendDriver):
                 for pipe in self.mau_json:
                     mau_json = { 'path' : self.mau_json[pipe], 'log_type' : 'mau' }
                     jsonTree['programs'][0]['pipes'][pipe]['files']['logs'].append(mau_json)
+                for pipe in self.metrics:
+                    jsonTree['programs'][0]['pipes'][pipe]['files']['metrics'] = { 'path' : self.metrics[pipe] }
             except:
                 return
 
@@ -640,9 +644,13 @@ class BarefootBackend(BackendDriver):
                             if self.language == 'p4-14':
                                 self.mau_json[pipe['pipe_id']] = \
                                     "{}".format(os.path.join('logs', 'mau.json'))
+                                self.metrics[pipe['pipe_id']] = \
+                                    "{}".format(os.path.join('logs', 'metrics.json'))
                             else:
                                 self.mau_json[pipe['pipe_id']] = \
                                     "{}".format(os.path.join(pipe['pipe_name'], 'logs', 'mau.json'))
+                                self.metrics[pipe['pipe_id']] = \
+                                    "{}".format(os.path.join(pipe['pipe_name'], 'logs', 'metrics.json'))
                         except:
                             pass
 
