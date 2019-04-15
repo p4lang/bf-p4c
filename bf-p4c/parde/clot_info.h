@@ -39,6 +39,9 @@ class ClotInfo {
 
     std::map<const Clot*, const IR::BFN::EmitChecksum*> clot_to_emit_checksum_;
 
+    // Set of fields used in aliasing, either as source or destination.
+    ordered_set<const PHV::Field*> alias_fields_;
+
  public:
     explicit ClotInfo(PhvUse& uses) : uses(uses) {}
 
@@ -127,11 +130,15 @@ class ClotInfo {
     }
 
     bool is_clot_candidate(const PHV::Field* field) const {
+        // If a field is involved in aliasing (either as a source or destination), do not consider
+        // it for CLOT allocation because it might require us to later deparser only some slices of
+        // the CLOT.
         return !uses.is_used_mau(field) &&
                 uses.is_used_parde(field) &&
                 field->deparsed() &&
                !is_used_in_multiple_checksum_update_sets(field) &&
-               !is_extracted_in_multiple_states(field);
+               !is_extracted_in_multiple_states(field) &&
+               !alias_fields_.count(field);
     }
 
     /// @return the CLOT if field is not used in MAU pipe
@@ -151,6 +158,10 @@ class ClotInfo {
         return nullptr;
     }
 
+    void add_alias_field(const PHV::Field* f) {
+        alias_fields_.insert(f);
+    }
+
     void clear() {
         parser_state_to_fields_.clear();
         field_to_parser_states_.clear();
@@ -161,6 +172,7 @@ class ClotInfo {
         parser_state_to_clots_.clear();
         container_range_.clear();
         field_range_.clear();
+        alias_fields_.clear();
         Clot::tagCnt = 0;
     }
 
@@ -192,7 +204,7 @@ class CollectClotInfo : public Inspector {
             }
         }
 
-        return false;
+        return true;
     }
 
     bool preorder(const IR::BFN::EmitChecksum* emit) override {
@@ -204,7 +216,33 @@ class CollectClotInfo : public Inspector {
             clotInfo.field_to_checksum_updates_[src].push_back(emit);
         }
 
-        return false;
+        return true;
+    }
+
+    bool preorder(const IR::BFN::AliasMember* alias) override {
+        add_alias_field(alias);
+        return true;
+    }
+
+    bool preorder(const IR::BFN::AliasSlice* alias) override {
+        add_alias_field(alias);
+        return true;
+    }
+
+    void add_alias_field(const IR::Expression* alias) {
+        const PHV::Field* aliasSource = nullptr;
+        const PHV::Field* aliasDestination = nullptr;
+        if (auto aliasMem = alias->to<IR::BFN::AliasMember>()) {
+            aliasSource = phv.field(aliasMem->source);
+            aliasDestination = phv.field(aliasMem);
+        } else if (auto aliasSlice = alias->to<IR::BFN::AliasSlice>()) {
+            aliasSource = phv.field(aliasSlice->source);
+            aliasDestination = phv.field(aliasSlice);
+        }
+        BUG_CHECK(aliasSource, "Alias source for field %1% not found", alias);
+        BUG_CHECK(aliasDestination, "Reference to alias field %1% not found", alias);
+        clotInfo.add_alias_field(aliasSource);
+        clotInfo.add_alias_field(aliasDestination);
     }
 };
 

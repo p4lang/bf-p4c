@@ -286,12 +286,6 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/compile_only/p4c-1478-neg.p4
   )
 
-# P4C-1585; probably also P4C-1586, P4C-1587, P4C-1492
-p4c_add_xfail_reason("tofino2"
-  "Parser extract didn't receive a PHV allocation"
-  extensions/p4_tests/p4_16/jbay/p4c-1622.p4
-  )
-
 # Expected failure
 p4c_add_xfail_reason("tofino2"
   "error: standard_metadata.packet_length is not accessible in the ingress pipe"
@@ -313,7 +307,8 @@ p4c_add_xfail_reason("tofino2"
 
 # P4C-1646
 p4c_add_xfail_reason("tofino2"
-  "Conflicting alignment constraints detected for bridged field"
+  "error.*used by both ingress and egress deparser"
+  extensions/p4_tests/p4_16/jbay/p4c-1622.p4
   fabric-new-DWITH_INT_TRANSIT
   fabric-new-DWITH_SPGW-DWITH_INT_TRANSIT
 )
