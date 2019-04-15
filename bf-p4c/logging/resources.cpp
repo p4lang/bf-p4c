@@ -225,9 +225,9 @@ void Visualization::add_xbar_bytes_usage(unsigned int stage, const IXBar::Use &a
     // Used for the bits for hash distribution
     auto &hdh = alloc.hash_dist_hash;
     if (hdh.allocated) {
-        for (auto bit : hdh.bit_mask) {
+        for (auto bit : hdh.galois_matrix_bits) {
             int position = -1;
-            for (auto bit_start : hdh.bit_starts) {
+            for (auto bit_start : hdh.galois_start_bit_to_p4_hash) {
                 int init_hb = bit_start.first;
                 auto br = bit_start.second;
                 if (bit >= init_hb && bit < init_hb + br.size())
@@ -251,18 +251,19 @@ void Visualization::add_xbar_bytes_usage(unsigned int stage, const IXBar::Use &a
 }
 
 void Visualization::add_hash_dist_usage(unsigned int stage, const IXBar::HashDistUse &hd_use) {
-    add_xbar_bytes_usage(stage, hd_use.use);
-    int hash_id = hd_use.use.hash_dist_hash.unit;
-    for (auto unit : hd_use.use.hash_dist_hash.slice) {
-        auto key = std::make_pair(hash_id, unit);
-        HashDistResource hdr;
-
-        hdr.add(USED_BY, hd_use.use.used_by);
-        hdr.add(USED_FOR, hd_use.use.used_for());
-
-        _stageResources[stage]._hashDistUsage[key].append(&hdr);
+    for (auto &ir_alloc : hd_use.ir_allocations) {
+        add_xbar_bytes_usage(stage, ir_alloc.use);
     }
-    LOG2("add_hash_dist_usage (stage=" << stage << "), table: " << hd_use.use.used_by
+    int hash_id = hd_use.unit / IXBar::HASH_DIST_SLICES;
+    int unit_in_hash_id = hd_use.unit % IXBar::HASH_DIST_SLICES;
+    auto key = std::make_pair(hash_id, unit_in_hash_id);
+    HashDistResource hdr;
+
+    std::string used_by = hd_use.used_by + "";
+    hdr.add(USED_BY, used_by);
+    hdr.add(USED_FOR, hd_use.used_for());
+    _stageResources[stage]._hashDistUsage[key].append(&hdr);
+    LOG2("add_hash_dist_usage (stage=" << stage << "), table: " << hd_use.used_by
          << " done!");
 }
 

@@ -83,7 +83,9 @@ void IXBarVerify::postorder(IR::MAU::Table *tbl) {
     verify_format(tbl->resources->selector_ixbar);
     verify_format(tbl->resources->salu_ixbar);
     verify_format(tbl->resources->meter_ixbar);
-    for (auto hash_dist_use : tbl->resources->hash_dists) {
-        verify_format(hash_dist_use.use);
+    for (auto &hash_dist_use : tbl->resources->hash_dists) {
+        for (auto &ir_alloc : hash_dist_use.ir_allocations) {
+            verify_format(ir_alloc.use);
+        }
     }
 }

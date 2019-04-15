@@ -1948,20 +1948,21 @@ IR::Node *TablePlacement::preorder(IR::MAU::BackendAttached *ba) {
 
     // If the table has been converted to hash action, then the hash distribution unit has
     // to be tied to the BackendAttached object for the assembly output
-    if (tbl->layout.hash_action) {
-        for (auto hd_use : tbl->resources->hash_dists) {
-            if (ba->attached->is<IR::MAU::Counter>()
-                && hd_use.use.hash_dist_type != IXBar::Use::COUNTER_ADR)
-                continue;
-            if ((ba->attached->is<IR::MAU::Meter>() || ba->attached->is<IR::MAU::Selector>()
-                || ba->attached->is<IR::MAU::StatefulAlu>())
-                && hd_use.use.hash_dist_type != IXBar::Use::METER_ADR)
-                continue;
-            if (ba->attached->is<IR::MAU::ActionData>()
-                && hd_use.use.hash_dist_type != IXBar::Use::ACTION_ADR)
-                continue;
-            ba->hash_dist = hd_use.original_hd;
-            ba->addr_location = IR::MAU::AddrLocation::HASH;
+    if (tbl->layout.hash_action && ba->attached->direct) {
+        for (auto &hd_use : tbl->resources->hash_dists) {
+            for (auto &ir_alloc : hd_use.ir_allocations) {
+                if (ba->attached->is<IR::MAU::Counter>() &&
+                    ir_alloc.dest != IXBar::HD_STATS_ADR)
+                    continue;
+                if (ba->attached->is<IR::MAU::Meter>() &&
+                    ir_alloc.dest != IXBar::HD_METER_ADR)
+                    continue;
+                if (ba->attached->is<IR::MAU::ActionData>() &&
+                    ir_alloc.dest != IXBar::HD_ACTIONDATA_ADR)
+                    continue;
+                ba->hash_dist = ir_alloc.original_hd;
+                ba->addr_location = IR::MAU::AddrLocation::HASH;
+            }
         }
     }
 

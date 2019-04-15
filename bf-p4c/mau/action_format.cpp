@@ -397,14 +397,12 @@ safe_vector<int> ActionFormat::Use::find_hash_dist(const IR::MAU::HashDist *hd,
     }
     BUG_CHECK(found, "Cannot find hash distribution correctly");
 
-    // If no allocation exists in a 16 bit section, then there is no unit index for that section
-    int unit_index = -1;
+    int unit_index = 0;
     for (int i = 0; i < IMMEDIATE_BYTES * 8; i += IXBar::HASH_DIST_BITS) {
         bitvec hash_dist_slice(i, IXBar::HASH_DIST_BITS);
-        if (!(hash_dist_slice & all_hash_dist_bv).empty())
-            unit_index++;
         if (!(hash_dist_slice & hash_dist_bv).empty())
             unit_indexes.push_back(unit_index);
+        unit_index++;
     }
 
     int mod_value = unit_indexes.size() * IXBar::HASH_DIST_BITS;

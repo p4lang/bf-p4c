@@ -609,12 +609,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue1544-2-bmv2.p4
 )
 
-# BRIG-678
-p4c_add_xfail_reason("tofino"
-  "Split cannot work on this scenario"
-  extensions/p4_tests/p4_14/compile_only/p4smith_regression/underpin_0.p4
-)
-
 # BRIG-779
 # error: SelectExpression: Cannot unify bit<8> to int<8>
 # p4c_add_xfail_reason("tofino"
@@ -679,12 +673,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: Output of checksum calculation can only be stored in a 16-bit field"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/tofino-bug-1.p4
-)
-
-# P4C-1523
-p4c_add_xfail_reason("tofino"
-  "Hash table .* column .* duplicated"
-  extensions/p4_tests/p4_14/compile_only/p4smith_regression/hash_table_column_duplicated.p4
 )
 
 # P4C-1649
@@ -774,13 +762,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-example-digest-bmv2.p4
   testdata/p4_16_samples/psa-example-counters-bmv2.p4
 )
-
-# BRIG-791
-p4c_add_xfail_reason("tofino"
-  "Split cannot work on this scenario"
-  extensions/p4_tests/p4_14/compile_only/p4smith_regression/ghosted_0.p4
-)
-
 
 p4c_add_xfail_reason("tofino"
   "direct attached objects must be enabled in all hit actions"
@@ -879,8 +860,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/ptf/int_transit.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-970/comp_970.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-968/comp_968.p4
-  ../glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_with_nop.p4
-  ../glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_without_nop.p4
 )
 
 # Negative test. Constant extractor destination whose sources need more than 3 bits to express must
@@ -967,7 +946,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   ../glass/testsuite/p4_tests/phv/COMPILER-136/06-FullTPHV1.p4
-  ../glass/testsuite/p4_tests/mau/COMPILER-729/ipu.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-1094/comp_1094.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-443/case2514.p4
 # bigger problem is that the container conflict free table placement is 15 stages for the following
@@ -976,6 +954,8 @@ p4c_add_xfail_reason("tofino"
   c2_COMPILER-537_case2834
   c2_COMPILER-514_balancer_one
   c2_COMPILER-510_case2682
+  ../glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_without_nop.p4
+  ../glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_with_nop.p4
   )
 
 # P4C-1375
@@ -1225,7 +1205,6 @@ p4c_add_xfail_reason("tofino"
 # P4C-1400
 p4c_add_xfail_reason("tofino"
   "The stage specified for table .* is .*, but we could not place it until stage .*"
-  ../glass/testsuite/p4_tests/rdp/COMPILER-533/case2736.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-733/ipu_ingress.p4
   )
 
@@ -1356,6 +1335,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   ../glass/testsuite/p4_tests/mau/test_config_235_funnel_shift.p4
+  ../glass/testsuite/p4_tests/rdp/COMPILER-533/case2736.p4
 )
 
 # negative test.

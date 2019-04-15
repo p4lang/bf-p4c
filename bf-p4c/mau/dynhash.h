@@ -28,6 +28,24 @@ class DynamicHashJson : public MauInspector {
     void gen_ixbar_json(const IXBar::Use &ixbar_use,
         Util::JsonObject *_dhc, int stage, const cstring field_list_name,
         const IR::NameList *algorithms, int hash_width = -1);
+
+    void gen_ixbar_bytes_json(Util::JsonArray *_xbar_cfgs, int stage,
+        const std::map<cstring, cstring> &fieldNames, const IXBar::Use &ixbar_use);
+    void gen_algo_json(Util::JsonObject *_dhc, const IR::NameList *algorithms);
+    void gen_hash_json(Util::JsonArray *_hash_cfgs, int stage, IXBar::Use &ixbar_use,
+        int &hash_bit_width);
+    void gen_field_list_json(Util::JsonObject *_field_list, cstring field_list_name,
+        safe_vector<const IR::Expression *> &field_list_order,
+        std::map<cstring, cstring> &fieldNames);
+
+    void gen_hash_dist_json(const IR::MAU::Table *tbl);
+
+
+    using HashDistToAlloc
+        = ordered_map<const IR::MAU::HashDist *, safe_vector<const IXBar::HashDistIRUse *>>;
+
+    using HashFuncToAlloc = std::map<int, safe_vector<const IXBar::HashDistIRUse *>>;
+
  public:
     explicit DynamicHashJson(const PhvInfo &phv);
     /// output the json hierarchy into the asm file (as Yaml)

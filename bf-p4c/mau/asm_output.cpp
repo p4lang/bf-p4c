@@ -423,6 +423,7 @@ void MauAsmOutput::emit_ixbar_gather_bytes(const safe_vector<IXBar::Use::Byte> &
         std::map<int, std::map<int, Slice>> &sort,
         std::map<int, std::map<int, Slice>> &midbytes, bool ternary, bool atcam) const {
     for (auto &b : use) {
+        BUG_CHECK(b.loc.allocated(), "Byte not allocated by assembly");
         int byte_loc = IXBar::TERNARY_BYTES_PER_GROUP;
         if (atcam && !b.is_spec(IXBar::ATCAM_INDEX))
             continue;
@@ -482,45 +483,46 @@ void MauAsmOutput::emit_ways(std::ostream &out, indent_t indent, const IXBar::Us
     }
 }
 
-/* Generate asm for the hash distribution unit, specifically the unit, group, mask and shift value
-   found in each hash dist assembly */
 void MauAsmOutput::emit_hash_dist(std::ostream &out, indent_t indent,
         const safe_vector<IXBar::HashDistUse> *hash_dist_use, bool hashmod) const {
     if (hash_dist_use == nullptr || hash_dist_use->empty())
         return;
+
     bool first = true;
     for (auto &hash_dist : *hash_dist_use) {
-        if (hash_dist.use.type != IXBar::Use::HASH_DIST) continue;
-        if ((hash_dist.use.hash_dist_type == IXBar::Use::HASHMOD) != hashmod) continue;
-        for (auto slice : hash_dist.slices) {
-            if (first) {
-                out << indent++ << "hash_dist:" << std::endl;
-                first = false; }
-            out << indent <<  slice << ": { ";
-            out << "hash: " << hash_dist.groups.at(slice);
-            if (hash_dist.masks.count(slice) > 0)
-                out << ", mask: 0x" << hash_dist.masks.at(slice);
-            if (hash_dist.shifts.count(slice) > 0)
-                out << ", shift: " << hash_dist.shifts.at(slice);
-            if (hash_dist.expand.count(slice) > 0)
-                out << ", expand: " << hash_dist.expand.at(slice);
-            if (hash_dist.outputs.count(slice)) {
-                auto &set = hash_dist.outputs.at(slice);
-                if (set.size() > 0) {
-                    out << ", output: ";
-                    if (set.size() > 1) {
-                        const char *sep = "[ ";
-                        for (auto el : set) {
-                            out << sep << el;
-                            sep = ", "; }
-                        out << " ]";
-                    } else {
-                        out << *set.begin(); } } }
-            out << " }" << std::endl;
+        for (auto &ir_alloc : hash_dist.ir_allocations) {
+            BUG_CHECK(ir_alloc.use.type == IXBar::Use::HASH_DIST, "Hash Dist allocation on "
+                      "a non-hash dist xbar region");
         }
+    // if (hash_dist.use.type != IXBar::Use::HASH_DIST) continue;
+        if ((hash_dist.destinations().getbit(IXBar::HD_HASHMOD)) != hashmod) continue;
+        if (first) {
+            out << indent++ << "hash_dist:" << std::endl;
+            first = false;
+        }
+        out << indent << hash_dist.unit << ": { ";
+        out << "hash: " << hash_dist.hash_group();
+        if (!hash_dist.mask.empty())
+            out << ", mask: 0x" << hash_dist.mask;
+        if (hash_dist.shift >= 0)
+            out << ", shift: " << hash_dist.shift;
+        if (hash_dist.expand >= 0)
+            out << ", expand: " << hash_dist.expand;
+        auto &set = hash_dist.outputs;
+        if (set.size() > 0) {
+            out << ", output: ";
+            if (set.size() > 1) {
+                const char *sep = "[ ";
+                for (auto el : set) {
+                    out << sep << el;
+                    sep = ", "; }
+                out << " ]";
+            } else {
+                out << *set.begin();
+            }
+        }
+        out << " }" << std::endl;
     }
-    if (!first)
-        indent--;
 }
 
 /* Determine which bytes of a table's input xbar belong to an individual hash table,
@@ -863,7 +865,7 @@ void MauAsmOutput::emit_ixbar_hash_dist_ident(std::ostream &out, indent_t indent
             int ident_range_lo = bits_seen + field_overlap.lo - fs->range().lo;
             int ident_range_hi = ident_range_lo + field_overlap.size() - 1;
             le_bitrange identity_range = { ident_range_lo, ident_range_hi };
-            for (auto bit_pos : hdh.bit_starts) {
+            for (auto bit_pos : hdh.galois_start_bit_to_p4_hash) {
                 // Portion of the p4_output_hash that overlaps with the identity range
                 auto boost_sl2 = toClosedRange<RangeUnit::Bit, Endian::Little>
                                  (identity_range.intersectWith(bit_pos.second));
@@ -1044,13 +1046,13 @@ void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent,
         }
     }
 
+
     if (use->hash_dist_hash.allocated) {
         auto &hdh = use->hash_dist_hash;
         if (hdh.algorithm.type == IR::MAU::HashFunction::IDENTITY) {
             emit_ixbar_hash_dist_ident(out, indent, match_data, hdh, use->field_list_order);
             return;
         }
-
         std::map<int, Slice> match_data_map;
         std::map<le_bitrange, const IR::Constant*> constant_map;
         bool use_map = false;
@@ -1061,7 +1063,7 @@ void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent,
             use_map = true;
         }
 
-        for (auto bit_start : hdh.bit_starts) {
+        for (auto bit_start : hdh.galois_start_bit_to_p4_hash) {
             int start_bit = bit_start.first;
             le_bitrange br = bit_start.second;
             int end_bit = start_bit + br.size() - 1;
@@ -1118,12 +1120,10 @@ void MauAsmOutput::emit_single_ixbar(std::ostream &out, indent_t indent, const I
     }
 }
 
-/* Emit the ixbar use for a particular type of table */
+
 void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, const IXBar::Use *use,
-                              const IXBar::Use *proxy_hash_use,
-                              const safe_vector<IXBar::HashDistUse> *hash_dist_use,
-                              const Memories::Use *mem,
-                              const TableMatch *fmt, bool ternary) const {
+        const IXBar::Use *proxy_hash_use, const safe_vector<IXBar::HashDistUse> *hash_dist_use,
+        const Memories::Use *mem, const TableMatch *fmt, bool ternary) const {
     if (!ternary) {
         emit_ways(out, indent, use, mem);
         emit_hash_dist(out, indent, hash_dist_use, false); }
@@ -1144,7 +1144,9 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, const IXBar::U
 
     if (hash_dist_use) {
         for (auto &hash_dist : *hash_dist_use) {
-            emit_single_ixbar(out, indent, &(hash_dist.use), nullptr);
+            for (auto &ir_alloc : hash_dist.ir_allocations) {
+                emit_single_ixbar(out, indent, &(ir_alloc.use), nullptr);
+            }
         }
     }
 
@@ -1451,26 +1453,31 @@ void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
         // which slices of hash distribution are to go to which bytes, requiring coordination
         // from the input xbar and action format allocation
         if (emit_immed && speciality_use.is_hash_dist(rs.byte_offset, &hd, lo, hi)) {
-            const IXBar::HashDistUse *hd_use = nullptr;
-            auto &hash_dist_uses = tbl->resources->hash_dists;
-            for (auto &hash_dist_use : hash_dist_uses) {
-                if (hd == hash_dist_use.original_hd) {
-                    hd_use = &hash_dist_use;
-                    break;
+            safe_vector<int> all_units;
+            safe_vector<IXBar::HashDistDest_t> hd_dests
+                = { IXBar::HD_IMMED_LO, IXBar::HD_IMMED_HI };
+            for (auto dest : hd_dests) {
+                bool found = false;
+                for (auto &hash_dist_use : tbl->resources->hash_dists) {
+                    int dest_i = static_cast<int>(dest);
+                    if (hash_dist_use.destinations().getbit(dest_i)) {
+                        BUG_CHECK(!found, "Hash Dist destination %d used multiple times",
+                                          dest_i);
+                        found = true;
+                        all_units.push_back(hash_dist_use.unit);
+                    }
                 }
+                if (!found)
+                    all_units.push_back(-1);
             }
-            BUG_CHECK(hd_use != nullptr, "Could not find hash distribution unit in link up "
-                                         "of tables");
             safe_vector<int> units;
-            BUG_CHECK(hd_use->slices.size() <= 2, "Currently do not support more than 2 units "
-                      "of hash distribution per table");
             le_bitrange field_range = { lo, hi };
             le_bitrange hd_range = { 0, 0 };
             int section = -1;
             safe_vector<int> unit_indexes =
                     speciality_use.find_hash_dist(hd, field_range, false, hd_range, section);
             for (auto unit_index : unit_indexes)
-                units.push_back(hd_use->slices[unit_index]);
+                units.push_back(all_units.at(unit_index));
 
             out << "hash_dist(";
             size_t unit_index = 0;
@@ -1937,18 +1944,26 @@ class MauAsmOutput::EmitAction : public Inspector {
         BUG_CHECK(hd != nullptr, "Printing an invalid the hash distribution in assembly");
         out << sep << "hash_dist(";
         sep = "";
-        const IXBar::HashDistUse *hd_use = nullptr;
-        auto &hash_dist_uses = table->resources->hash_dists;
-        for (auto &hash_dist_use : hash_dist_uses) {
-            if (hd == hash_dist_use.original_hd) {
-                hd_use = &hash_dist_use;
-                break;
+
+
+        safe_vector<int> all_units;
+        safe_vector<IXBar::HashDistDest_t> hd_dests = { IXBar::HD_IMMED_LO, IXBar::HD_IMMED_HI };
+        for (auto dest : hd_dests) {
+            bool found = false;
+            for (auto &hash_dist_use : table->resources->hash_dists) {
+                int dest_i = static_cast<int>(dest);
+                if (hash_dist_use.destinations().getbit(dest_i)) {
+                    BUG_CHECK(!found, "Hash Dist destination %d used multiple times",
+                                      dest_i);
+                    found = true;
+                    all_units.push_back(hash_dist_use.unit);
+                }
             }
+            if (!found)
+                all_units.push_back(-1);
         }
 
-        BUG_CHECK(hd_use != nullptr, "Could not find hash distribution unit in link up of tables");
         safe_vector<int> units;
-
         int section = -1;
         le_bitrange field_range = { lo, hi };
         le_bitrange hd_range = { 0, 0 };
@@ -1957,7 +1972,7 @@ class MauAsmOutput::EmitAction : public Inspector {
         safe_vector<int> unit_indexes = speciality_use.find_hash_dist(hd, field_range, true,
                                             hd_range, section);
         for (auto unit_index : unit_indexes) {
-            units.push_back(hd_use->slices[unit_index]);
+            units.push_back(all_units.at(unit_index));
         }
 
 
@@ -2827,8 +2842,8 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
             const IXBar::Use *proxy_ixbar = tbl->layout.proxy_hash ?
                                             &tbl->resources->proxy_hash_ixbar : nullptr;
             emit_ixbar(out, indent, &tbl->resources->match_ixbar, proxy_ixbar,
-                       &tbl->resources->hash_dists, &tbl->resources->memuse.at(unique_id),
-                       &fmt, tbl->layout.ternary);
+                         &tbl->resources->hash_dists, &tbl->resources->memuse.at(unique_id),
+                         &fmt, tbl->layout.ternary);
             if (proxy_ixbar) {
                 out << indent << "proxy_hash_algorithm: "
                               << proxy_ixbar->proxy_hash_key_use.alg_name << std::endl;
@@ -3034,14 +3049,18 @@ std::string MauAsmOutput::build_call(const IR::MAU::AttachedMemory *at_mem,
         BUG_CHECK(ba->hash_dist, "Hash Dist not allocated correctly");
         auto hash_dist_uses = tbl->resources->hash_dists;
         const IXBar::HashDistUse *hd_use = nullptr;
+
+        IXBar::HashDistDest_t dest = IXBar::dest_location(ba);
         for (auto &hash_dist_use : hash_dist_uses) {
-            if (ba->hash_dist == hash_dist_use.original_hd && !hash_dist_use.color_mapram) {
-                hd_use = &hash_dist_use;
-                break;
+            for (auto &ir_alloc : hash_dist_use.ir_allocations) {
+                if (ir_alloc.dest == dest) {
+                    BUG_CHECK(hd_use == nullptr, "Hash Dist Address allocated multiple times");
+                    hd_use = &hash_dist_use;
+                }
             }
         }
         BUG_CHECK(hd_use != nullptr, "No associated hash distribution group for an address");
-        rv += "hash_dist " + std::to_string(hd_use->slices[0]);
+        rv += "hash_dist " + std::to_string(hd_use->unit);
     } else if (ba->addr_location == IR::MAU::AddrLocation::STFUL_COUNTER) {
         rv += stateful_counter_addr(ba->use);
     }
@@ -3083,17 +3102,20 @@ std::string MauAsmOutput::build_meter_color_call(const IR::MAU::Meter *mtr,
         rv += indirect_address(mtr);
     } else if (ba->addr_location == IR::MAU::AddrLocation::HASH) {
         BUG_CHECK(ba->hash_dist, "Hash Dist not allocated correctly");
-        auto hash_dist_uses = tbl->resources->hash_dists;
+        auto &hash_dist_uses = tbl->resources->hash_dists;
         const IXBar::HashDistUse *hd_use = nullptr;
+        IXBar::HashDistDest_t dest = IXBar::dest_location(ba, true);
         for (auto &hash_dist_use : hash_dist_uses) {
-            if (ba->hash_dist == hash_dist_use.original_hd && hash_dist_use.color_mapram) {
-                hd_use = &hash_dist_use;
-                break;
+            for (auto &ir_alloc : hash_dist_use.ir_allocations) {
+                if (ir_alloc.dest == dest) {
+                    BUG_CHECK(hd_use == nullptr, "Hash Dist Address allocated multiple times");
+                    hd_use = &hash_dist_use;
+                }
             }
         }
         BUG_CHECK(hd_use != nullptr, "No associated hash distribution group for a color mapram "
                   "address");
-        rv += "hash_dist " + std::to_string(hd_use->slices[0]);
+        rv += "hash_dist " + std::to_string(hd_use->unit);
     } else {
         BUG("Invalid Address for color mapram");
     }
@@ -3350,18 +3372,26 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Meter *meter) {
     }
     if (meter->pre_color) {
         const IXBar::HashDistUse *hd_use = nullptr;
-        for (auto &hash_dist_use : tbl->resources->hash_dists) {
-            if (meter->pre_color == hash_dist_use.original_hd) {
-                hd_use = &hash_dist_use;
-                break;
+        const IXBar::HashDistIRUse *hd_ir_use = nullptr;
+        IXBar::HashDistDest_t dest = IXBar::dest_location(meter);
+        auto &hash_dist_uses = tbl->resources->hash_dists;
+        for (auto &hash_dist_use : hash_dist_uses) {
+            for (auto &ir_alloc : hash_dist_use.ir_allocations) {
+                if (ir_alloc.dest == dest) {
+                    BUG_CHECK(hd_use == nullptr && hd_ir_use == nullptr, "Hash Dist Address "
+                              "allocated multiple times");
+                    hd_use = &hash_dist_use;
+                    hd_ir_use = &ir_alloc;
+                }
             }
         }
         BUG_CHECK(hd_use != nullptr, "Could not find hash distribution unit in link up "
                                      "for meter precolor");
         out << indent << "pre_color: hash_dist(";
-        int lo = hd_use->use.hash_dist_hash.bit_mask.min().index() % IXBar::HASH_DIST_BITS;
+        auto &hdh = hd_ir_use->use.hash_dist_hash;
+        int lo = hdh.galois_matrix_bits.min().index() % IXBar::HASH_DIST_BITS;
         int hi = lo + IXBar::METER_PRECOLOR_SIZE - 1;
-        out << hd_use->slices[0] << ", " << lo << ".." << hi << ")" << std::endl;
+        out << hd_use->unit << ", " << lo << ".." << hi << ")" << std::endl;
         // FIXME: Eventually should not be necessary due to DRV-1856
         out << indent << "color_aware: true" << std::endl;
     }
@@ -3413,9 +3443,11 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Selector *as) {
         safe_vector<IXBar::HashDistUse> sel_hash_dist;
         bool found = false;
         for (auto hash_dist_use : tbl->resources->hash_dists) {
-            if (as->hash_mod == hash_dist_use.original_hd) {
-                sel_hash_dist.push_back(hash_dist_use);
-                found = true;
+            for (auto ir_alloc : hash_dist_use.ir_allocations) {
+                if (ir_alloc.dest == IXBar::dest_location(as)) {
+                    sel_hash_dist.push_back(hash_dist_use);
+                    found = true;
+                }
             }
         }
         BUG_CHECK(found, "Could not find hash distribution unit in linkup for hash mod");
@@ -3430,7 +3462,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::TernaryIndirect *ti) {
     out << indent++ << "ternary_indirect " << unique_id << ':' << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
     self.emit_ixbar(out, indent, &tbl->resources->match_ixbar, nullptr,
-                    &tbl->resources->hash_dists, nullptr, nullptr, false);
+                      &tbl->resources->hash_dists, nullptr, nullptr, false);
     self.emit_table_format(out, indent, tbl->resources->table_format, nullptr, true, false);
     bitvec source;
     source.setbit(ActionFormat::IMMED);
