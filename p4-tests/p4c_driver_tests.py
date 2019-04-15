@@ -74,6 +74,8 @@ test_matrix = {
                       '-o', 'p4_14_output', p4_14_program], None),
     'p4_14_debug': (['-g', '--std', 'p4-14', '--target', 'tofino', '--arch', 'v1model',
                      '-o', 'p4_14_debug', p4_14_program], None),
+    'p4_14_verbose': (['-g', '--std', 'p4-14', '--target', 'tofino', '--arch', 'v1model',
+                       '--verbose', '2', '-o', 'p4_14_verbose', p4_14_program], None),
     'p4_14_graphs': (['--create-graphs', '--std', 'p4-14',
                       '--target', 'tofino', '--arch', 'v1model',
                       '-o', 'p4_14_graphs', p4_14_program], None),
