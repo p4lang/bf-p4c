@@ -443,6 +443,8 @@ void MeterTable::write_regs(REGS &regs) {
         auto &map_alu_row =  map_alu.row[row.row];
         auto vpn = row.vpns.begin();
 
+        // Enable the row to be used (even if only color maprams are on this row)
+        map_alu_row.i2portctl.synth2port_ctl.synth2port_enable = 1;
         // If the color mapram is not on the same row as the meter ALU, even if no meter
         // RAMs are on the same row, the address still needs to overflow to that row
         if (row.row < home->row / 2) {
@@ -637,7 +639,7 @@ void MeterTable::gen_tbl_cfg(json::vector &out) const {
     tbl["enable_color_aware_pfe"] = color_aware_per_flow_enable;
     /* this is not needed. but the driver asserts on existence of
      * this or enable_color_aware which both seem to be redundant */
-    tbl["pre_color_field_name"] = "false";
+    tbl["pre_color_field_name"] = "";
     tbl["enable_pfe"] = per_flow_enable;
     tbl["pfe_bit_position"] = per_flow_enable_bit();
     tbl["color_aware_pfe_address_type_bit_position"] = 0; //FIXME
