@@ -163,6 +163,12 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
     if (action && !action_bus) action_bus = new ActionBus();
 }
 
+bitvec TernaryMatchTable::compute_reachable_tables() {
+    MatchTable::compute_reachable_tables();
+    if (indirect) reachable_tables_ |= indirect->reachable_tables();
+    return reachable_tables_;
+}
+
 void TernaryMatchTable::pass0() {
     MatchTable::pass0();
     if (indirect.check() && indirect->set_match_table(this, false) != TERNARY_INDIRECT)
@@ -262,8 +268,7 @@ void TernaryMatchTable::pass1() {
             wide_row_use = 0; } }
     if (indirect) {
         if (hit_next.size() > 0 && indirect->hit_next.size() > 0)
-            error(hit_next[0].lineno, "Ternary Match table with both direct and indirect "
-                  "next tables");
+            error(lineno, "Ternary Match table with both direct and indirect next tables");
         if (!indirect->p4_table) indirect->p4_table = p4_table;
         if (hit_next.size() > 1 || indirect->hit_next.size() > 1) {
             if (auto *next = indirect->format->field("next")) {
@@ -278,8 +283,7 @@ void TernaryMatchTable::pass1() {
                 error(indirect->format->lineno, "No 'next' or 'action' field in format"); } }
     attached.pass1(this);
     if (hit_next.size() > 2 && !indirect)
-        error(hit_next[0].lineno, "Ternary Match tables cannot directly specify more"
-              "than 2 hit next tables");
+        error(lineno, "Ternary Match tables cannot directly specify more than 2 hit next tables");
 }
 
 
@@ -296,6 +300,7 @@ void TernaryMatchTable::pass2() {
         if (indirect_bus < 0)
             error(lineno, "No ternary indirect bus available for table %s", name()); }
     if (actions) actions->pass2(this);
+    if (action_bus) action_bus->pass2(this);
     if (gateway) gateway->pass2();
     if (idletime) idletime->pass2();
     // If ternary is a pre-classifier to an ALPM table, check that it has only 1
@@ -314,6 +319,7 @@ void TernaryMatchTable::pass2() {
 
 void TernaryMatchTable::pass3() {
     LOG1("### Ternary match table " << name() << " pass3");
+    MatchTable::pass3();
     if (action_bus) action_bus->pass3(this);
 }
 
@@ -642,8 +648,8 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) const {
     // to. Otherwise, set it to the default next table for this stage.
     //stage_tbl["default_next_table"] = Target::END_OF_PIPE();
     // FIXME: How to deal with multiple next hit tables?
-    stage_tbl["default_next_table"] = hit_next.size() > 0 && hit_next[0].name != "END"
-                                    ? hit_next[0]->logical_id : Target::END_OF_PIPE();
+    stage_tbl["default_next_table"] = hit_next.size() > 0
+                                    ? hit_next[0].next_table_id() : Target::END_OF_PIPE();
     add_result_physical_buses(stage_tbl);
     for (auto field : *input_xbar) {
         switch(field.first.type) {
@@ -873,6 +879,13 @@ Table::table_type_t TernaryIndirectTable::set_match_table(MatchTable *m, bool in
     return TERNARY_INDIRECT;
 }
 
+bitvec TernaryIndirectTable::compute_reachable_tables() {
+    Table::compute_reachable_tables();
+    if (match_table) reachable_tables_ |= match_table->reachable_tables();
+    reachable_tables_ |= attached.compute_reachable_tables();
+    return reachable_tables_;
+}
+
 void TernaryIndirectTable::pass1() {
     LOG1("### Ternary indirect table " << name() << " pass1");
     alloc_busses(stage->tcam_indirect_bus_use);
@@ -904,6 +917,7 @@ void TernaryIndirectTable::pass2() {
     if (!match_table)
         error(lineno, "No match table for ternary indirect table %s", name());
     if (actions) actions->pass2(this);
+    if (action_bus) action_bus->pass2(this);
     if (format) format->pass2(this);
 }
 

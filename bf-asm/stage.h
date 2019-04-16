@@ -41,6 +41,7 @@ public:
     bitvec      action_bus_use_bit_mask;
     Alloc2D<Table::Actions::Action *, 2, ACTION_IMEM_ADDR_MAX>          imem_addr_use;
     bitvec      imem_use[ACTION_IMEM_SLOTS];
+    Alloc1D<Table::NextTables *, MAX_LONGBRANCH_TAGS>   longbranch_use;
 
     // for timing, ghost thread is tied to ingress, so we track ghost as ingress here
     enum { USE_TCAM=1, USE_STATEFUL=4, USE_METER=8, USE_METER_LPF_RED=16,
@@ -86,6 +87,7 @@ public:
     int tcam_delay(gress_t gress);
     static int first_table(gress_t gress);
     static unsigned end_of_pipe() { return Target::END_OF_PIPE(); }
+    static Stage *stage(int stageno);
 };
 
 #endif /* _stage_h_ */

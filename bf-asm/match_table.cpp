@@ -88,6 +88,14 @@ bool MatchTable::is_attached(const Table *tbl) const {
     return tbl && (tbl == gateway || tbl == idletime || get_attached()->is_attached(tbl));
 }
 
+bitvec MatchTable::compute_reachable_tables() {
+    Table::compute_reachable_tables();
+    if (gateway) reachable_tables_ |= gateway->reachable_tables();
+    if (idletime) reachable_tables_ |= idletime->reachable_tables();
+    reachable_tables_ |= attached.compute_reachable_tables();
+    return reachable_tables_;
+}
+
 /**
  * Return the first default found meter type of a stateful/meter call.  If the meter type
  * is considered to be default, then all of the meter types would be identical
@@ -159,6 +167,9 @@ void MatchTable::pass1() {
     if (gateway) {
         gateway->logical_id = logical_id;
         gateway->pass1(); }
+}
+
+void MatchTable::pass3() {
 }
 
 void MatchTable::gen_idletime_tbl_cfg(json::map &stage_tbl) const {
@@ -345,57 +356,13 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
      */
     int next_field_size = result->get_format_field_size("next");
     int action_field_size = result->get_format_field_size("action");
-    unsigned next_table_mask = 0U;
 
     if (next_field_size > 0) {
-        next_table_mask = ((1U << next_field_size) - 1);
+        next_table_adr_mask = ((1U << next_field_size) - 1);
     } else if (result->get_hit_next().size() > 1) {
-        next_table_mask = ((1U << action_field_size) - 1);
+        next_table_adr_mask = ((1U << action_field_size) - 1);
     }
-    setup_next_table_map(regs, result);
-
-    merge.next_table_format_data[logical_id].match_next_table_adr_mask = next_table_mask;
-
-    /**
-     * Unfortunately for the compiler/driver integration, this register is both required
-     * to be owned by the compiler and the driver.  The driver is responsible for programming
-     * this register when the default action of a table is specified.  The value written
-     * is the next_table_full of that particular action.
-     *
-     * However, the compiler owns this register in the following scenarios:
-     *     1. For match_with_no_key tables, where the pathway is through the hit pathway,
-     *        the driver does not touch this register, as the values are actually reversed
-     *     2. For a table that is split into multiple tables, the driver only writes the
-     *        last value.  Thus the compiler now sets up this register for all tables
-     *        before this.
-     */
-    merge.next_table_format_data[logical_id].match_next_table_adr_miss_value =
-         result->get_miss_next() == "END" ? Stage::end_of_pipe()
-                                          : result->get_miss_next()->table_id();
-    /**
-     * The next_table_format_data register is built up of three values:
-     *     - match_next_table_adr_miss_value - Configurable at runtime
-     *     - match_next_table_adr_mask - Static Config
-     *     - match_next_table_adr_default - Static Config
-     *
-     * In order to reprogram the register at runtime, the driver must have all three values to
-     * not require a hardware read, even though only one is truly programmable.  Thus in the
-     * context JSON, we provide the two extra values in an extremely poorly named JSON
-     *
-     * ERROR: Driver doesn't read the match_next_table_adr_default
-     * "default_next_table_mask" - match_next_table_adr_mask
-     * "default_next_table" - Only required if a table has no default_action specified, which is
-     *      only a Glass value.  This could always be 0.  Perhaps we can remove from Brig through
-     *      compiler version?
-     *
-     * Current driver issue is: DRV-2239
-     */
-
-    // Right now, in the JSON, the only mask that should be provided is the last logical
-    // table of the stage.  By DRV-2239, this should be moved to a per logical table basis.
-    if (table_id() > default_next_table_mask_pair.first) {
-        default_next_table_mask_pair.second = next_table_mask;
-    }
+    write_next_table_regs(regs, result);
 
     /*------------------------
      * Immediate data found in overhead

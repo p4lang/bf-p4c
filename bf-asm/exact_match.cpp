@@ -205,6 +205,7 @@ void ExactMatchTable::pass2() {
     input_xbar->pass2();
     setup_word_ixbar_group();
     if (actions) actions->pass2(this);
+    if (action_bus) action_bus->pass2(this);
     if (gateway) gateway->pass2();
     if (idletime) idletime->pass2();
     if (format) format->pass2(this);
@@ -226,6 +227,7 @@ void ExactMatchTable::pass2() {
 
 void ExactMatchTable::pass3() {
     LOG1("### Exact match table " << name() << " pass3");
+    SRamMatchTable::pass3();
     if (action_bus) action_bus->pass3(this);
 }
 
@@ -309,17 +311,14 @@ template<class REGS> void ExactMatchTable::write_regs(REGS &regs) {
 
                     // Set default next table only when there is a single next table
                     auto &nxt_table_lut = merge.stash_next_table_lut[stash_unit_id][stash_row];
-                    std::vector<Ref> nxt_tables;
-                    for (auto n : hit_next) {
-                        if (n == "END") continue;
-                        if (std::find(nxt_tables.begin(), nxt_tables.end(), n) == nxt_tables.end())
-                            nxt_tables.push_back(n);
-                    }
+                    std::set<Ref> nxt_tables;
+                    for (auto &n : hit_next) {
+                        for (auto &n1 : n) {
+                            nxt_tables.emplace(n1); } }
                     if (nxt_tables.size() == 0) {
                         nxt_table_lut = Stage::end_of_pipe();
                     } else if (nxt_tables.size() == 1) {
-                        auto m = get_miss_next();
-                        nxt_table_lut = (m == "END") ? Stage::end_of_pipe() : m->table_id();
+                        nxt_table_lut = miss_next.next_table_id();
                     } else {
                         nxt_table_lut = 0;
                     }

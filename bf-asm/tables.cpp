@@ -14,6 +14,8 @@ std::map<std::string, Table::Type *> *Table::Type::all;
 Table::Table(int line, std::string &&n, gress_t gr, Stage *s, int lid) :
     name_(n), stage(s), gress(gr), lineno(line), logical_id(lid)
 {
+    static int uid_counter;
+    uid = uid_counter++;
     if (lineno >= 0) {
         if (all.count(name_)) {
             error(lineno, "Duplicate table %s", name());
@@ -42,6 +44,71 @@ Table::Type::~Type() {
     if (all->empty()) {
         delete all;
         all = 0; }
+}
+
+Table::NextTables::NextTables(value_t &v) : lineno(v.lineno) {
+    if (v.type == tVEC && Target::LONG_BRANCH_TAGS() > 0) {
+        for (auto &el : v.vec)
+            if (CHECKTYPE(el, tSTR))
+                next.emplace(el);
+    } else if (CHECKTYPE(v, tSTR)) {
+        if (v != "END")
+            next.emplace(v); }
+}
+
+bool Table::NextTables::can_use_lb(int stage, const NextTables &lbrch) {
+    BUG_CHECK(next_table_ == nullptr);
+    if (!lbrch.subset_of(*this)) return false;
+    for (auto &n : next) {
+        if (!n || n->stage->stageno <= stage + 1 || lbrch.next.count(n))
+            continue;
+        if (next_table_) {
+            next_table_ = nullptr;
+            return false; }
+        next_table_ = n; }
+    return true;
+}
+
+void Table::NextTables::resolve_long_branch(const Table *tbl,
+                                            const std::map<int, NextTables> &lbrch) {
+    if (resolved) return;
+    resolved = true;
+    for (auto &lb : lbrch) {
+        if (can_use_lb(tbl->stage->stageno, lb.second)) {
+            long_branch = lb.first;
+            return; } }
+    for (auto &lb : tbl->long_branch) {
+        if (can_use_lb(tbl->stage->stageno, lb.second)) {
+            long_branch = lb.first;
+            return; } }
+    for (auto &n : next) {
+        if (!n || (Target::LONG_BRANCH_TAGS() > 0 && n->stage->stageno <= tbl->stage->stageno + 1))
+            continue;
+        if (next_table_) {
+            error(n.lineno, "Can't have multiple next tables for table %s", tbl->name());
+            break; }
+        next_table_ = n; }
+}
+
+unsigned Table::NextTables::next_in_stage(int stage) const {
+    unsigned rv = 0;
+    for (auto &n : next)
+        if (n->stage->stageno == stage)
+            rv |= 1U << n->logical_id;
+    return rv;
+}
+
+bool Table::NextTables::need_next_map_lut() const {
+    BUG_CHECK(resolved);
+    return next.size() > 1 || (next.size() == 1 && !next_table_);
+}
+
+void Table::NextTables::workaroundDRV2239() {
+    BUG_CHECK(resolved);  // must be resolved already
+    if (next.size() > 1)
+        error(lineno, "Driver does not support multiple next tables (DRV-2239)");
+    if (next.size() == 1)
+        next_table_ = *next.begin();
 }
 
 int Table::table_id() const { return (stage->stageno << 4) + logical_id; }
@@ -439,19 +506,31 @@ bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p
             error(kv.key.lineno, "Specifying both 'hit' and 'next' in table %s", name());
         else if (kv.value.type == tVEC) {
             for (auto &v : kv.value.vec)
-                if (CHECKTYPE(v, tSTR))
-                    hit_next.emplace_back(v);
-        } else if (CHECKTYPE(kv.value, tSTR))
-            hit_next.emplace_back(kv.value);
+                hit_next.emplace_back(v);
+        } else {
+            hit_next.emplace_back(kv.value); }
     } else if (kv.key == "miss") {
-        if (CHECKTYPE(kv.value, tSTR))
-            miss_next = kv.value;
+        if (miss_next.set()) {
+            error(kv.key.lineno, "Specifying both 'miss' and 'next' in table %s", name());
+        } else {
+            miss_next = kv.value; }
     } else if (kv.key == "next") {
         if (!hit_next.empty()) {
             error(kv.key.lineno, "Specifying both 'hit' and 'next' in table %s", name());
-        } else if (CHECKTYPE(kv.value, tSTR)) {
-            hit_next.emplace_back(kv.value);
-            miss_next = kv.value; }
+        } else if (miss_next.set()) {
+            error(kv.key.lineno, "Specifying both 'miss' and 'next' in table %s", name());
+        } else {
+            miss_next = kv.value;
+            hit_next.emplace_back(miss_next); }
+    } else if (kv.key == "long_branch" && Target::LONG_BRANCH_TAGS() > 0) {
+        if (CHECKTYPE(kv.value, tMAP)) {
+            for (auto &lb : kv.value.map) {
+                if (lb.key.type != tINT || lb.key.i < 0 || lb.key.i >= Target::LONG_BRANCH_TAGS())
+                    error(lb.key.lineno, "Invalid long branch tag %s", value_desc(lb.key));
+                else if (long_branch.count(lb.key.i))
+                    error(lb.key.lineno, "Duplicate long branch tag %ld", lb.key.i);
+                else 
+                    long_branch.emplace(lb.key.i, lb.value); } }
     } else if (kv.key == "vpns") {
         if (CHECKTYPE(kv.value, tVEC))
             setup_vpns(layout, &kv.value.vec);
@@ -615,33 +694,71 @@ void Table::alloc_vpns() {
     setup_vpns(layout, 0);
 }
 
-void Table::check_next(Table::Ref &n) {
-    if (n == "END") return;
+void Table::check_next(const Table::Ref &n) {
     if (n.check()) {
         if (logical_id >= 0 && n->logical_id >= 0 ? table_id() > n->table_id()
                                                   : stage->stageno > n->stage->stageno)
             error(n.lineno, "Next table %s comes before %s", n->name(), name());
+        if (gress != n->gress)
+            error(n.lineno, "Next table %s in %s when %s is in %s", n->name(),
+                  P4Table::direction_name(n->gress).c_str(), name(),
+                  P4Table::direction_name(gress).c_str());
         // Need to add to the predication map
-        auto &s = n->pred[this];
+        Table *tbl = get_match_table();
+        if (!tbl) tbl = this;   // standalone gateway
+        if (tbl != n) {
+            n->pred[tbl];  // ensure that its in the map, even as an empty set
+        }
     }
 }
 
+void Table::for_all_next(std::function<void(const Ref &)> fn) {
+    for (auto &n1 : hit_next)
+        for (auto &n2 : n1)
+            fn(n2);
+    for (auto &n : miss_next)
+        fn(n);
+}
+
+void Table::check_next(NextTables &next) {
+    for (auto &n : next) check_next(n);
+    Table *tbl = get_match_table();
+    if (!tbl) tbl = this;
+    next.resolve_long_branch(tbl, long_branch);
+}
 
 void Table::check_next() {
-    for (auto &n : hit_next) {
-        check_next(n);
+    for (auto &lb : long_branch) {
+        for (auto &t : lb.second) {
+            if (t.check()) {
+                if (stage->stageno <= t->stage->stageno)
+                    error(t.lineno, "Long branch table %s is not in a later stage than %s",
+                          t->name(), name());
+                else if (stage->stageno + 1 == t->stage->stageno)
+                    warning(t.lineno, "Long branch table %s is the next stage after %s",
+                            t->name(), name());
+                if (gress != t->gress)
+                    error(t.lineno, "Long branch table %s in %s when %s is in %s",
+                          t->name(), P4Table::direction_name(t->gress).c_str(),
+                          name(), P4Table::direction_name(gress).c_str());
+            }
+        }
     }
+    for (auto &hn : hit_next)
+        check_next(hn);
     check_next(miss_next);
+    miss_next.workaroundDRV2239();
 }
 
 void Table::set_pred() {
     if (actions == nullptr)
         return;
     for (auto &act : *actions) {
-        if (!act.default_only && act.next_table_ref != "END")
-            act.next_table_ref->pred[this].insert(&act);
-        if (act.next_table_miss_ref != "END")
-            act.next_table_miss_ref->pred[this].insert(&act);
+        if (!act.default_only)
+            for (auto &n : act.next_table_ref)
+                n->pred[this].insert(&act);
+        for (auto &n : act.next_table_miss_ref)
+            n->pred[this].insert(&act);
     }
 }
 
@@ -661,13 +778,10 @@ bool Table::choose_logical_id(const slist<Table *> *work) {
     for (auto *p : Keys(pred))
         if (p->stage->stageno == stage->stageno && p->logical_id >= min_id)
             min_id = p->logical_id + 1;
-    for (auto &n : hit_next)
+    for_all_next([&max_id, this](const Ref &n) {
         if (n && n->stage->stageno == stage->stageno &&
             n->logical_id >= 0 && n->logical_id <= max_id)
-            max_id = n->logical_id - 1;
-    if (miss_next && miss_next->stage->stageno == stage->stageno &&
-        miss_next->logical_id >= 0 && miss_next->logical_id <= max_id)
-        max_id = miss_next->logical_id - 1;
+            max_id = n->logical_id - 1; });
     for (int id = min_id; id <= max_id; ++id) {
         if (!stage->logical_id_use[id]) {
             logical_id = id;
@@ -685,6 +799,14 @@ void Table::need_bus(int lineno, Alloc1Dbase<Table *> &use, int idx, const char 
         error(use[idx]->lineno, "%s defined here", use[idx]->name());
     } else
         use[idx] = this;
+}
+
+bitvec Table::compute_reachable_tables() {
+    reachable_tables_[uid] = 1;
+    for_all_next([this](const Ref &t) {
+        if (t)
+            reachable_tables_ |= t->reachable_tables(); });
+    return reachable_tables_;
 }
 
 void Table::pass1() {
@@ -712,6 +834,18 @@ void Table::pass1() {
         action->validate_call(action, get_match_table(),
             reqd_args , HashDistribution::ACTION_DATA_ADDRESS, action);
     }
+    for (auto &lb : long_branch) {
+        int last_stage = -1;
+        for (auto &n : lb.second) {
+            if (n && n->stage->stageno > last_stage)
+                last_stage = n->stage->stageno; }
+        for (int st = stage->stageno+1; st <= last_stage; ++st) {
+            auto &prev = stage->stage(st)->longbranch_use[lb.first];
+            if (prev && *prev != lb.second) {
+                error(lb.second.lineno, "Conflicting use of longbranch tag %d", lb.first);
+                error(prev->lineno, "previous use");
+            } else {
+                prev = &lb.second; } } }
 }
 
 static void overlap_test(int lineno,
@@ -1062,16 +1196,12 @@ Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv, int pos
                             handle = a.value.i;
                         }
                     } else if (a.key == "next_table") {
-                        if (CHECKTYPE2(a.value, tINT, tSTR)) {
-                            if (a.value.type == tINT)
-                                next_table_encode = a.value.i;
-                            else
-                                next_table_ref = a.value;
-                        }
+                        if (a.value.type == tINT)
+                            next_table_encode = a.value.i;
+                        else
+                            next_table_ref = a.value;
                     } else if (a.key == "next_table_miss") {
-                        if (CHECKTYPE(a.value, tSTR)) {
-                            next_table_miss_ref = a.value;
-                        }
+                        next_table_miss_ref = a.value;
                     } else if (a.key == "mod_cond_value") {
                         if (CHECKTYPE(a.value, tMAP)) {
                             setup_mod_cond_values(a.value);
@@ -1131,13 +1261,13 @@ AlwaysRunTable::AlwaysRunTable(gress_t gress, Stage *stage, pair_t &init)
 }
 
 void Table::Actions::Action::check_next_ref(Table *tbl, const Table::Ref &ref) const {
-    if (ref != "END" && ref.check() && ref->table_id() >= 0 && ref->table_id() < tbl->table_id()) {
+    if (ref.check() && ref->table_id() >= 0 && ref->table_id() < tbl->table_id()) {
         error(lineno, "Next table %s for action %s before containing table %s", ref->name(),
               name.c_str(), tbl->name());
         return;
     }
 
-    if (ref != "END" && ref->table_id() > (1U << NEXT_TABLE_MAX_RAM_EXTRACT_BITS) - 1
+    if (ref->table_id() > (1U << NEXT_TABLE_MAX_RAM_EXTRACT_BITS) - 1
         && tbl->get_hit_next().size() == 0) {
         error(lineno, "Next table cannot properly be saved on the RAM line for this action %s",
               name.c_str());
@@ -1188,8 +1318,14 @@ void Table::Actions::Action::check_next(Table *tbl) {
     } else if (!next_table_miss_ref.set()) {
         next_table_miss_ref = next_table_ref;
     }
-    check_next_ref(tbl, next_table_ref);
-    check_next_ref(tbl, next_table_miss_ref);
+    tbl->check_next(next_table_ref);
+    tbl->check_next(next_table_miss_ref);
+    next_table_ref.workaroundDRV2239();
+    next_table_miss_ref.workaroundDRV2239();
+    for (auto &n : next_table_ref)
+        check_next_ref(tbl, n);
+    for (auto &n : next_table_miss_ref)
+        check_next_ref(tbl, n);
 }
 
 void Table::Actions::Action::pass1(Table *tbl) {
@@ -1735,15 +1871,12 @@ void Table::Actions::add_action_format(const Table *table, json::map &tbl) const
                 next_table = static_cast<unsigned>(act.next_table_encode);
             else {
                 // The RAM value is only 8 bits, for JBay must be solved by table placement
-                next_table = act.next_table_ref == "END"
-                             ? (1U << NEXT_TABLE_MAX_RAM_EXTRACT_BITS) - 1
-                             : act.next_table_ref->table_id();
+                next_table = act.next_table_ref.next_table_id() & 0xff;
             }
-            next_table_name = act.next_table_ref ? act.next_table_ref->name()
-                                                 : "--END_OF_PIPELINE--";
+            next_table_name = act.next_table_ref.next_table_name();
+            if (next_table_name == "END") next_table_name = "--END_OF_PIPELINE--";
         }
-        unsigned next_table_full = act.next_table_miss_ref == "END"
-                                   ? Stage::end_of_pipe() : act.next_table_miss_ref->table_id();
+        unsigned next_table_full = act.next_table_miss_ref.next_table_id();
 
         /**
          * This following few fields are required on a per stage table action basis.
@@ -2407,7 +2540,11 @@ bool Table::add_json_node_to_table(json::map &tbl, const char *name) const {
 void Table::common_tbl_cfg(json::map &tbl) const {
     tbl["default_action_handle"] = get_default_action_handle();
     tbl["action_profile"] = action_profile();
-    tbl["default_next_table_mask"] = default_next_table_mask_pair.second;
+    // FIXME -- setting next_table_mask unconditionally only works because we process the
+    // stage table in stage order (so we'll end up with the value from the last stage table,
+    // which is what we want.)  Should we check in case the ordering ever changes?
+    // By DRV-2239 this should move into the stage table anyways?
+    tbl["default_next_table_mask"] = next_table_adr_mask;
     //FIXME-JSON: PD related, check glass examples for false (ALPM)
     tbl["is_resource_controllable"] = true;
     tbl["uses_range"] = false;

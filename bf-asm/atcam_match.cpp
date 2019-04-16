@@ -253,6 +253,7 @@ void AlgTcamMatchTable::pass2() {
         // Assume that any hash bits usuable for select are used for select
         ixbar_mask[i] = ixbar_use.getrange(EXACT_HASH_FIRST_SELECT_BIT, EXACT_HASH_SELECT_BITS); }
     if (actions) actions->pass2(this);
+    if (action_bus) action_bus->pass2(this);
     if (gateway) gateway->pass2();
     if (idletime) idletime->pass2();
     if (format) format->pass2(this);
@@ -260,6 +261,7 @@ void AlgTcamMatchTable::pass2() {
 
 void AlgTcamMatchTable::pass3() {
     LOG1("### ATCAM match table " << name() << " pass3");
+    SRamMatchTable::pass3();
     if (action_bus) action_bus->pass3(this);
 }
 
@@ -335,8 +337,8 @@ void AlgTcamMatchTable::gen_unit_cfg(json::vector &units, int size) const {
     tbl["table_type"] = "match";
     json::map &stage_tbl = *add_common_sram_tbl_cfgs(tbl, "algorithmic_tcam_unit", "algorithmic_tcam_match");
     // Assuming atcam next hit table cannot be multiple tables
-    stage_tbl["default_next_table"] = (hit_next.size() > 0 && hit_next[0].name != "END")
-                                    ? hit_next[0]->table_id() : Target::END_OF_PIPE();
+    stage_tbl["default_next_table"] = !hit_next.empty()
+                                    ? hit_next[0].next_table_id() : Target::END_OF_PIPE();
     stage_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg();
     // Hash functions not necessary currently for ATCAM matches, as the result comes from
     // the partition_field_name

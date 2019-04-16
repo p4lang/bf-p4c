@@ -432,6 +432,7 @@ void ActionTable::pass2() {
      * to be the same size, so pad them out */
     pad_format_fields();
     if (actions) actions->pass2(this);
+    if (action_bus) action_bus->pass2(this);
 }
 
 /**

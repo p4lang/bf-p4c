@@ -147,10 +147,48 @@ public:
         bool operator==(const char *t) const { return name == t; }
         bool operator==(const std::string &t) const { return name == t; }
         bool operator==(const Ref &a) const { return name == a.name; }
+        bool operator<(const Ref &a) const { return name < a.name; }
         bool check() const {
             if (set() && !*this)
                 error(lineno, "No table named %s", name.c_str());
             return *this; }
+    };
+
+    class NextTables {
+        std::set<Ref>   next;
+        int             long_branch = -1;       // long branch tag to use (if any)
+        const Table     *next_table_ = nullptr; // table to use as next table (if any)
+        bool            resolved = false;
+        bool            can_use_lb(int stage, const NextTables &);
+     public:
+        int             lineno = -1;
+        NextTables() = default;
+        NextTables(const NextTables &) = default;
+        NextTables(NextTables &&) = default;
+        NextTables &operator=(const NextTables &a) = default;
+        NextTables &operator=(NextTables &&) = default;
+        NextTables(value_t &v);
+
+        std::set<Ref>::iterator begin() const { return next.begin(); }
+        std::set<Ref>::iterator end() const { return next.end(); }
+        bool operator==(const NextTables &a) const { return next == a.next; }
+        bool subset_of(const NextTables &a) const {
+            for (auto &n : next)
+                if (!a.next.count(n)) return false;
+            return true; }
+        void resolve_long_branch(const Table *tbl, const std::map<int, NextTables> &lbrch);
+        bool set() const { return lineno >= 0; }
+        int next_table_id() const {
+            BUG_CHECK(resolved);
+            return next_table_ ? next_table_->table_id() : Target::END_OF_PIPE(); }
+        std::string next_table_name() const {
+            BUG_CHECK(resolved);
+            return next_table_ ? next_table_->p4_name() : "END"; }
+        const Table *next_table() const { return next_table_; }
+        int long_branch_tag() const { return long_branch; }
+        unsigned next_in_stage(int stage) const;
+        bool need_next_map_lut() const;
+        void workaroundDRV2239();
     };
 
     class Format {
@@ -389,8 +427,8 @@ public:
             std::string                         default_disallowed_reason = "";
             std::vector<Call>                   attached;
             int                                 next_table_encode = -1;
-            Ref                                 next_table_ref;
-            Ref                                 next_table_miss_ref;
+            NextTables                          next_table_ref;
+            NextTables                          next_table_miss_ref;
             std::map<std::string, std::vector<bitvec>> mod_cond_values;
             // The hit map points to next tables for actions as ordered in the
             // assembly, we use 'position_in_assembly' to map the correct next
@@ -538,6 +576,7 @@ public:
     virtual void determine_word_and_result_bus() { BUG(); }
 
     std::string                 name_;
+    int                         uid;
     P4Table                     *p4_table = 0;
     Stage                       *stage = 0;
     gress_t                     gress;
@@ -561,17 +600,19 @@ public:
     typedef std::map<std::string, std::string> default_action_params;
     default_action_params       default_action_parameters;
     bool                        default_only_action = false;
-    std::vector<Ref>            hit_next;
-    Ref                         miss_next;
+    std::vector<NextTables>     hit_next;
+    std::vector<NextTables>     extra_next_lut;  // extra entries not in the hit_next from gateway
+    NextTables                  miss_next;
+    std::map<int, NextTables>   long_branch;
     std::map<Table *, std::set<Actions::Action *>>
                                 pred;   // predecessor tables w the actions in that table that
                                         // call this table
     std::vector<HashDistribution>       hash_dist;
     p4_params                   p4_params_list;
     std::unique_ptr<json::map>  context_json;
-    // First number is the logical table, second number is the mask register.  Currently
-    // must output the last logical table mask
-    std::pair<int, unsigned>    default_next_table_mask_pair = { -1, 0U };
+    // saved here in to extract into the context json
+    unsigned                    next_table_adr_mask = 0U;
+    bitvec                      reachable_tables_;
 
     static std::map<std::string, Table *>       all;
 
@@ -627,8 +668,8 @@ public:
     virtual Call &action_call() { return action; }
     virtual Call &instruction_call() { return instruction; }
     virtual Actions *get_actions() const { return actions; }
-    virtual std::vector<Ref> get_hit_next() const { return hit_next; }
-    virtual Ref get_miss_next() const { return miss_next; }
+    virtual const std::vector<NextTables> &get_hit_next() const { return hit_next; }
+    virtual const NextTables &get_miss_next() const { return miss_next; }
     virtual void add_reference_table(json::vector &table_refs, const Table::Call& c) const;
     json::map &add_pack_format(json::map &stage_tbl, int memword, int words, int entries = -1) const;
     json::map &add_pack_format(json::map &stage_tbl, Table::Format *format, bool pad_zeros = true,
@@ -655,8 +696,10 @@ public:
     // Exact/Hash/MatchwithNoKey/ATCAM/Ternary tables
     virtual void add_result_physical_buses(json::map &stage_tbl) const;
     void canon_field_list(json::vector &field_list) const;
+    void for_all_next(std::function<void(const Ref &)> fn);
+    void check_next(const Ref &next);
+    void check_next(NextTables &next);
     void check_next();
-    void check_next(Ref &next);
     virtual void set_pred();
     bool choose_logical_id(const slist<Table *> *work = nullptr);
     virtual int hit_next_size() const { return hit_next.size(); }
@@ -686,6 +729,10 @@ public:
         return 0; }
     virtual bool needs_handle() const { return false; }
     virtual bool needs_next() const { return false; }
+    virtual bitvec compute_reachable_tables();
+    bitvec reachable_tables() {
+        if (!reachable_tables_) reachable_tables_ = compute_reachable_tables();
+        return reachable_tables_; }
 };
 
 class FakeTable : public Table {
@@ -730,8 +777,7 @@ struct AttachedTables {
     template<class REGS> void write_tcam_merge_regs(REGS &regs, MatchTable *self, int bus,
                                                     int tcam_shift);
     bool run_at_eop();
-
- public:
+    bitvec compute_reachable_tables() const;
 };
 
 #define DECLARE_ABSTRACT_TABLE_TYPE(TYPE, PARENT, ...)                  \
@@ -754,13 +800,14 @@ DECLARE_ABSTRACT_TABLE_TYPE(MatchTable, Table,
     using Table::write_regs;
     template<class TARGET> void write_common_regs(typename TARGET::mau_regs &, int, Table *);
     template<class REGS> void write_regs(REGS &, int type, Table *result);
-    template<class REGS> void setup_next_table_map(REGS &, Table *);
+    template<class REGS> void write_next_table_regs(REGS &, Table *);
     void common_init_setup(const VECTOR(pair_t) &, bool, P4Table::type) override;
     bool common_setup(pair_t &, const VECTOR(pair_t) &, P4Table::type) override;
     int get_address_mau_actiondata_adr_default(unsigned log2size, bool per_flow_enable);
 public:
     void pass0() override;
     void pass1() override;
+    void pass3() override;
     bool is_alpm() const {
         if (p4_table) return p4_table->is_alpm(); return false; }
     bool is_attached(const Table *tbl) const override;
@@ -791,6 +838,7 @@ public:
     bool needs_handle() const override { return true; }
     bool needs_next() const override { return true; }
     void merge_context_json(json::map &tbl, json::map&stage_tbl) const;
+    bitvec compute_reachable_tables() override;
 )
 
 #define DECLARE_TABLE_TYPE(TYPE, PARENT, NAME, ...)                     \
@@ -1137,7 +1185,7 @@ public:
         if (!default_action_parameters.empty()) return &default_action_parameters;
         auto def_action_params = indirect ? indirect->get_default_action_parameters() : nullptr;
         return def_action_params; }
-
+    bitvec compute_reachable_tables() override;
 )
 
 DECLARE_TABLE_TYPE(Phase0MatchTable, MatchTable, "phase0_match",
@@ -1201,16 +1249,14 @@ DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
 public:
     Format::Field *lookup_field(const std::string &n,
                                         const std::string &act = "") const override;
-    std::vector<Ref> get_hit_next() const override {
+    const std::vector<NextTables> &get_hit_next() const override {
         if (hit_next.empty() && match_table)
-            return match_table->hit_next;
-        return hit_next;
-    }
-    Ref get_miss_next() const override {
-        if (miss_next != "END" && !miss_next && match_table)
-            return match_table->miss_next;
-        return miss_next;
-    }
+            return match_table->get_hit_next();
+        return Table::get_hit_next(); }
+    const NextTables &get_miss_next() const override {
+        if (!miss_next.set() && match_table)
+            return match_table->get_miss_next();
+        return Table::get_miss_next(); }
     int address_shift() const override { return std::min(5U, format->log2size - 2); }
     unsigned get_default_action_handle() const override {
         unsigned def_act_handle = Table::get_default_action_handle();
@@ -1218,6 +1264,7 @@ public:
     bool needs_handle() const override { return true; }
     bool needs_next() const override { return true; }
     void determine_word_and_result_bus() override;
+    bitvec compute_reachable_tables() override;
 )
 
 DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,
@@ -1375,19 +1422,16 @@ private:
         uint16_t                range[6] = { 0, 0, 0, 0, 0, 0 };
         match_t                 val = { 0, 0 };
         bool                    run_table = false;
-        Ref                     next;
+        NextTables              next;
+        int                     next_map_lut = -1;
         Match() {}
         Match(value_t *v, value_t &data, range_match_t range_match);
-        int next_logical_id() const {
-            if (next.name == "END") return Target::END_OF_PIPE();
-            return next->logical_id; }
-        std::string next_table_name() const {
-            if (next.name == "END") return next.name;
-            return next->p4_name(); }
     }                           miss, cond_true, cond_false;
     std::vector<Match>          table;
+    bool                        need_next_map_lut = false;
     template<class REGS> void payload_write_regs(REGS &, int row, int type, int bus);
     template<class REGS> void standalone_write_regs(REGS &regs);
+    template<class REGS> void write_next_table_regs(REGS &);
 public:
     table_type_t table_type() const override { return GATEWAY; }
     const MatchTable *get_match_table() const override { return match_table; }

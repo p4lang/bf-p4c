@@ -120,6 +120,16 @@ bool AttachedTables::run_at_eop() {
     return false;
 }
 
+bitvec AttachedTables::compute_reachable_tables() const {
+    bitvec rv;
+    if (selector) rv |= selector->reachable_tables();
+    if (selector_length) rv |= selector->reachable_tables();
+    for (auto &t : stats) rv |= t->reachable_tables();
+    for (auto &t : meters) rv |= t->reachable_tables();
+    for (auto &t : statefuls) rv |= t->reachable_tables();
+    return rv;
+}
+
 unsigned AttachedTable::determine_meter_shiftcount(Table::Call &call, int group, int word,
         int tcam_shift) const {
     if (call.args[0].name() && strcmp(call.args[0].name(), "$DIRECT") == 0) {

@@ -173,7 +173,9 @@ void AsmStage::process() {
 void AsmStage::output(json::map &ctxt_json) {
     for (unsigned i = 0; i < stage.size(); i++) {
         for (auto table : stage[i].tables)
-            table->pass2(); }
+            table->pass2();
+        std::sort(stage[i].tables.begin(), stage[i].tables.end(), [](Table *a, Table *b) {
+                    return a->logical_id < b->logical_id; }); }
     for (unsigned i = 0; i < stage.size(); i++) {
         for (auto table : stage[i].tables)
             table->pass3(); }
@@ -320,6 +322,10 @@ int Stage::first_table(gress_t gress) {
             BUG_CHECK((min_logical_id & ~0xf) == 0);
             return (st.stageno << 4) + min_logical_id; } }
     return -1;
+}
+
+Stage *Stage::stage(int stageno) {
+    return &AsmStage::stages().at(stageno);
 }
 
 Stage::Stage(Stage &&a) : Stage_data(std::move(a)) {

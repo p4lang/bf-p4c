@@ -95,6 +95,7 @@ public:
     ActionBus() : lineno(-1) {}
     ActionBus(Table *, VECTOR(pair_t) &);
     void pass1(Table *tbl);
+    void pass2(Table *tbl) {}
     void pass3(Table *tbl);
     template<class REGS> void write_immed_regs(REGS &regs, Table *tbl);
     template<class REGS>

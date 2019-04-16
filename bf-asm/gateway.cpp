@@ -37,15 +37,14 @@ GatewayTable::Match::Match(value_t *v, value_t &data, range_match_t range_match)
             val.word0 = ~(val.word1 = (uint64_t)v->bigi.data[0]);
         } else if (v->type == tMATCH) {
             val = v->m; } }
-    if (data == "run_table")
+    if (data == "run_table") {
         run_table = true;
-    else if (data.type == tSTR) {
+    } else if (data.type == tSTR || data.type == tVEC) {
         next = data;
     } else if (data.type == tMAP) {
         for (auto &kv: MapIterChecked(data.map)) {
             if (kv.key == "next") {
-                if (CHECKTYPE(kv.value, tSTR))
-                    next = kv.value;
+                next = kv.value;
             } else if (kv.key == "run_table") {
                 if (kv.value == "true")
                     run_table = true;
@@ -240,6 +239,8 @@ void GatewayTable::pass1() {
     for (auto &line : table)
         check_next(line.next);
     check_next(miss.next);
+    check_next(cond_false.next);
+    check_next(cond_true.next);
     if (error_count > 0) return;
     /* FIXME -- the rest of this function is a hack -- sometimes the compiler wants to
      * generate matches just covering the bits it names in the match and other times it wants
@@ -287,6 +288,20 @@ void GatewayTable::pass1() {
                     err = true; } } } }
 }
 
+static int find_next_lut_entry(Table *tbl, const Table::NextTables &next) {
+    int rv = 0;
+    for (auto &e : tbl->hit_next) {
+        if (e == next) return rv;
+        ++rv; }
+    for (auto &e : tbl->extra_next_lut) {
+        if (e == next) return rv;
+        ++rv; }
+    tbl->extra_next_lut.push_back(next);
+    if (rv == NEXT_TABLE_SUCCESSOR_TABLE_DEPTH)
+        error(tbl->lineno, "Too many next table map entries in table %s", tbl->name());
+    return rv;
+}
+
 void GatewayTable::pass2() {
     LOG1("### Gateway table " << name() << " pass2");
     if (logical_id < 0)  {
@@ -314,6 +329,17 @@ void GatewayTable::pass2() {
                 else
                     stage->gw_payload_use[row.row][row.bus & 1] = this; } } }
     if (input_xbar) input_xbar->pass2();
+    need_next_map_lut = miss.next.need_next_map_lut();
+    for (auto &e : table)
+        need_next_map_lut |= e.next.need_next_map_lut();
+    if (need_next_map_lut) {
+        Table *tbl = match_table;
+        if (!tbl) tbl = this;
+        for (auto &e : table)
+            if (!e.run_table)
+                e.next_map_lut = find_next_lut_entry(tbl, e.next);
+        if (!miss.run_table)
+            miss.next_map_lut = find_next_lut_entry(tbl, miss.next); }
 }
 void GatewayTable::pass3() {
     LOG1("### Gateway table " << name() << " pass3");
@@ -362,6 +388,7 @@ static bool setup_vh_xbar(REGS &regs, Table *table, Table::Layout &row, int base
     return true;
 }
 
+#include "tofino/gateway.cpp"
 #if HAVE_JBAY
 #include "jbay/gateway.cpp"
 #endif // HAVE_JBAY
@@ -430,34 +457,31 @@ void GatewayTable::write_regs(REGS &regs) {
     gw_reg.gateway_table_ctl.gateway_table_thread = timing_thread(gress);
     for (auto &r : xor_match)
         gw_reg.gateway_table_matchdata_xor_en |= ((UINT64_C(1) << r.val->size()) - 1) << r.offset;
-    int lineno = 3;
+    int idx = 3;
     gw_reg.gateway_table_ctl.gateway_table_mode = range_match;
     for (auto &line : table) {
-        BUG_CHECK(lineno >= 0);
+        BUG_CHECK(idx >= 0);
         /* FIXME -- hardcoding version/valid to always */
-        gw_reg.gateway_table_vv_entry[lineno].gateway_table_entry_versionvalid0 = 0x3;
-        gw_reg.gateway_table_vv_entry[lineno].gateway_table_entry_versionvalid1 = 0x3;
-        gw_reg.gateway_table_entry_matchdata[lineno][0] = line.val.word0 & 0xffffffff;
-        gw_reg.gateway_table_entry_matchdata[lineno][1] = line.val.word1 & 0xffffffff;
+        gw_reg.gateway_table_vv_entry[idx].gateway_table_entry_versionvalid0 = 0x3;
+        gw_reg.gateway_table_vv_entry[idx].gateway_table_entry_versionvalid1 = 0x3;
+        gw_reg.gateway_table_entry_matchdata[idx][0] = line.val.word0 & 0xffffffff;
+        gw_reg.gateway_table_entry_matchdata[idx][1] = line.val.word1 & 0xffffffff;
         if (range_match) {
             auto &info = range_match_info[range_match];
             for (unsigned i = 0; i < range_match_info[range_match].units; i++) {
-                gw_reg.gateway_table_data_entry[lineno][0] |=
+                gw_reg.gateway_table_data_entry[idx][0] |=
                     (line.range[i] & info.half_mask) << (i * info.bits);
-                gw_reg.gateway_table_data_entry[lineno][1] |=
+                gw_reg.gateway_table_data_entry[idx][1] |=
                     ((line.range[i] >> info.half_shift) & info.half_mask) << (i * info.bits); }
         } else {
-            gw_reg.gateway_table_data_entry[lineno][0] = (line.val.word0 >> 32) & 0xffffff;
-            gw_reg.gateway_table_data_entry[lineno][1] = (line.val.word1 >> 32) & 0xffffff; }
+            gw_reg.gateway_table_data_entry[idx][0] = (line.val.word0 >> 32) & 0xffffff;
+            gw_reg.gateway_table_data_entry[idx][1] = (line.val.word1 >> 32) & 0xffffff; }
         if (!line.run_table) {
-            merge.gateway_next_table_lut[logical_id][lineno] =
-                line.next ? line.next->table_id() : Target::END_OF_PIPE();
-            merge.gateway_inhibit_lut[logical_id] |= 1 << lineno; }
-        lineno--; }
+            merge.gateway_inhibit_lut[logical_id] |= 1 << idx; }
+        idx--; }
     if (!miss.run_table) {
-        merge.gateway_next_table_lut[logical_id][4] = miss.next ? miss.next->table_id()
-                                                                : Target::END_OF_PIPE();
         merge.gateway_inhibit_lut[logical_id] |= 1 << 4; }
+    write_next_table_regs(regs);
     merge.gateway_en |= 1 << logical_id;
     setup_muxctl(merge.gateway_to_logicaltable_xbar_ctl[logical_id], row.row*2 + gw_unit);
     if (Table *tbl = match_table) {
@@ -519,8 +543,8 @@ void GatewayTable::gen_tbl_cfg(json::vector &out) const {
     json::vector gStageTables;
     json::map gStageTable;
     json::map next_tables;
-    next_tables["false"] = cond_false.next_logical_id();
-    next_tables["true"] = cond_true.next_logical_id();
+    next_tables["false"] = cond_false.next.next_table_id();
+    next_tables["true"] = cond_true.next.next_table_id();
     gStageTable["next_tables"] = std::move(next_tables);
     json::map mra;
     mra["memory_unit"] = layout[0].row * 2 + gw_unit;
@@ -530,8 +554,8 @@ void GatewayTable::gen_tbl_cfg(json::vector &out) const {
     json::vector pack_format; // For future use
     gStageTable["pack_format"] = std::move(pack_format);
     json::map next_table_names;
-    next_table_names["false"] = cond_false.next_table_name();
-    next_table_names["true"] = cond_true.next_table_name();
+    next_table_names["false"] = cond_false.next.next_table_name();
+    next_table_names["true"] = cond_true.next.next_table_name();
     gStageTable["next_table_names"] = std::move(next_table_names);
     gStageTable["logical_table_id"] = logical_id;
     gStageTable["stage_number"] = stage->stageno;
