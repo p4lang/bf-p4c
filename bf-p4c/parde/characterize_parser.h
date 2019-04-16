@@ -62,6 +62,12 @@ class CharacterizeParser : public Inspector {
     ordered_map<const IR::BFN::LoweredParserMatch*,
              const ExtractorUsage*> match_to_extractor_usage;
 
+    ordered_map<const IR::BFN::LoweredParserMatch*,
+                std::set<unsigned>> match_to_checksum_usage;
+
+    ordered_map<const IR::BFN::LoweredParserMatch*,
+                std::set<unsigned>> match_to_clot_usage;
+
  public:
     Visitor::profile_t init_apply(const IR::Node* root) override {
         auto rv = Inspector::init_apply(root);
@@ -82,13 +88,31 @@ class CharacterizeParser : public Inspector {
         auto rv = new ExtractorUsage;
 
         for (auto stmt : match->extracts) {
-            if (auto ep = stmt->to<IR::BFN::LoweredExtractPhv>()) {
+            if (auto ep = stmt->to<IR::BFN::LoweredExtractPhv>())
                 rv->add(ep->dest->container);
-            }
-            /* else if (auto ec = stmt->to<IR::BFN::LoweredExtractClot>()) {
-                // TODO
-            } */
         }
+
+        return rv;
+    }
+
+    std::set<unsigned>
+    get_clot_usage(const IR::BFN::LoweredParserMatch* match) {
+        std::set<unsigned> rv;
+
+        for (auto stmt : match->extracts) {
+            if (auto ec = stmt->to<IR::BFN::LoweredExtractClot>())
+                rv.insert(ec->dest.tag);
+        }
+
+        return rv;
+    }
+
+    std::set<unsigned>
+    get_checksum_usage(const IR::BFN::LoweredParserMatch* match) {
+        std::set<unsigned> rv;
+
+        for (auto csum : match->checksums)
+            rv.insert(csum->unit_id);
 
         return rv;
     }
@@ -98,18 +122,23 @@ class CharacterizeParser : public Inspector {
         state_to_matches[state].insert(match);
         match_to_state[match] = state;
 
-        auto usage = get_extractor_usage(match);
-        match_to_extractor_usage[match] = usage;
+        match_to_extractor_usage[match] = get_extractor_usage(match);
+        match_to_clot_usage[match] = get_clot_usage(match);
+        match_to_checksum_usage[match] = get_checksum_usage(match);
 
         return true;
     }
 
-    void print_extractor_usage(const IR::BFN::LoweredParser* parser) {
+    void print_state_usage(const IR::BFN::LoweredParser* parser) {
         if (!parser_to_states.count(parser))
             return;
 
+        std::string total_extract_label = "Total Extractors";
+        if (Device::currentDevice() == Device::JBAY)
+            total_extract_label += " (16-bit)";
+
         TablePrinter tp(std::clog,
-            {"State", "Match", "8-bit", "16-bit", "32-bit", "Total Extracts"},
+            {"State", "Match", "8-bit", "16-bit", "32-bit", total_extract_label, "Other"},
             TablePrinter::Align::LEFT);
 
         auto sorted = cgl.graphs().at(parser)->topological_sort();
@@ -125,19 +154,40 @@ class CharacterizeParser : public Inspector {
                     auto usage_8b = usage->get(PHV::Size::b8);
                     auto usage_16b = usage->get(PHV::Size::b16);
                     auto usage_32b = usage->get(PHV::Size::b32);
-                    auto sausage = usage_8b + usage_16b + usage_32b;
+
+                    unsigned sausage = 0;  // state aggreated usage
+
+                    if (Device::currentDevice() == Device::TOFINO)
+                        sausage = usage_8b + usage_16b + usage_32b;
+                    else if (Device::currentDevice() == Device::JBAY)
+                        sausage = usage_8b + usage_16b + 2 * usage_32b;
 
                     if (state_label.empty())
                         state_label = std::string(state->name);
                     else
                         state_label = "-";
 
+                    std::stringstream other_usage;
+
+                    if (match_to_clot_usage.count(m)) {
+                        other_usage << "clot ";
+                        for (auto c : match_to_clot_usage.at(m))
+                            other_usage << c << " ";
+                    }
+
+                    if (match_to_checksum_usage.count(m)) {
+                        other_usage << "csum ";
+                        for (auto c : match_to_checksum_usage.at(m))
+                            other_usage << c << " ";
+                    }
+
                     tp.addRow({state_label,
                                std::string(m->value->toString()),
                                std::to_string(usage_8b),
                                std::to_string(usage_16b),
                                std::to_string(usage_32b),
-                               std::to_string(sausage)});
+                               std::to_string(sausage),
+                               other_usage.str()});
                 }
             }
         }
@@ -240,7 +290,7 @@ class CharacterizeParser : public Inspector {
 
         std::clog << "Extractor usage:" << std::endl;
 
-        print_extractor_usage(parser);
+        print_state_usage(parser);
     }
 
     void end_apply(const IR::Node *root) override {
