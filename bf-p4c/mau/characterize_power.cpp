@@ -2,11 +2,180 @@
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/common/run_id.h"
 #include "bf-p4c/mau/characterize_power.h"
+#include "lib/json.h"
 #include "lib/path.h"
 
 Visitor::profile_t CharacterizePower::init_apply(const IR::Node *root) {
     root->apply(default_next_);  // setup default next data structure
     return MauInspector::init_apply(root);
+}
+
+void CharacterizePower::produce_json(const IR::Node *root) {
+    auto logDir = BFNContext::get().getOutputDirectory("logs", root->to<IR::BFN::Pipe>()->id);
+    if (!logDir)
+        return;
+    cstring powerFile = logDir + "/power.json";
+    logger = new PowerLogging(powerFile,
+                              Logging::Logger::buildDate(),
+                              BF_P4C_VERSION,
+                              BackendOptions().programName + ".p4",
+                              RunId::getId(),
+                              "1.0.0");  // schema version
+
+    produce_json_tables();
+    produce_json_total_power(root->to<IR::BFN::Pipe>()->id);
+    produce_json_stage_characteristics();
+    produce_json_total_latency(root->to<IR::BFN::Pipe>()->id);
+    logger->log();
+    delete logger;
+
+    Logging::Manifest &manifest = Logging::Manifest::getManifest();
+    // relative path to the output directory
+    manifest.addLog(root->to<IR::BFN::Pipe>()->id, "power", "power.json");
+}
+
+void CharacterizePower::produce_json_tables() {
+    using MatchTables = PowerLogging::MatchTables;
+    using StageDetails = PowerLogging::StageDetails;
+
+    // table name -> JSON dictionary for a table
+    std::map<cstring, MatchTables *> tableJSONData = {};
+
+    for (auto data : table_unique_id_to_power_summary_) {
+        auto uid = data.first;
+        auto pts = data.second;
+        auto pma = table_memory_access.at(uid);
+
+        MatchTables* tbl;
+        if (tableJSONData.find(pts.table_name) != tableJSONData.end()) {
+            tbl = tableJSONData.at(pts.table_name);
+        } else {
+            tbl = new MatchTables(std::string(table_unique_id_to_gress_.at(uid)),
+                                  std::string(pts.table_name));
+            tableJSONData.emplace(pts.table_name, tbl);
+        }
+        bool crit = (table_unique_id_to_on_critical_path_.find(uid) !=
+                     table_unique_id_to_on_critical_path_.end());
+        auto *stageDetails = new StageDetails(pts.always_run, crit, pts.stage,
+                                              compute_table_power(pma));
+        pma.getMemories(stageDetails);
+
+        tbl->append(stageDetails);
+    }
+
+    for (auto t : tableJSONData)
+        logger->append_tables(t.second);
+}
+
+void CharacterizePower::produce_json_total_power(int pipeId) {
+    using TotalPower = PowerLogging::Total_Power;
+    auto ingress = new TotalPower("ingress", pipeId, ingress_worst_power_);
+    logger->append_total_power(ingress);
+    auto egress = new TotalPower("egress", pipeId, egress_worst_power_);
+    logger->append_total_power(egress);
+}
+
+void CharacterizePower::produce_json_stage_characteristics() {
+    using StageChar = PowerLogging::StageCharacteristics;
+    using Features = PowerLogging::Features;
+
+    for (uint16_t stage = 0; stage < 2 * Device::numStages(); ++stage) {
+        dep_t dep = stage_dependency_to_previous_.at(stage);
+        uint16_t stage_latency = compute_stage_latency(stage);
+        uint16_t pred_cycle = (has_tcam_.at(stage) || has_chained_feature(stage, HAS_TCAM))
+                                ? (base_predication_delay_ + tcam_delay_)
+                                : base_predication_delay_;
+        uint16_t add_to_lat = stage_latency;
+
+        auto d = "match";
+        if (dep == DEP_CONCURRENT) {
+            add_to_lat = concurrent_latency_contribution_;
+            d = "concurrent";
+        } else if (dep == DEP_ACTION) {
+            add_to_lat = action_latency_contribution_;
+            d = "action";
+        }
+
+        auto *featuresJ = new Features(has_exact_.at(stage),
+                                       has_meter_lpf_or_wred_.at(stage),
+                                       has_selector_.at(stage),
+                                       has_stateful_.at(stage),
+                                       has_stats_.at(stage),
+                                       has_tcam_.at(stage),
+                                       max_selector_words_.at(stage));
+
+        bool ext = has_chained_feature(stage, HAS_EXACT) &&
+           !stage_has_feature(stage, HAS_EXACT);
+        bool tcm = has_chained_feature(stage, HAS_TCAM) &&
+           !stage_has_feature(stage, HAS_TCAM);
+        bool sts = has_chained_feature(stage, HAS_STATS) &&
+           !stage_has_feature(stage, HAS_STATS);
+        bool lpf = has_chained_feature(stage, HAS_LPF_OR_WRED) &&
+           !stage_has_feature(stage, HAS_LPF_OR_WRED);
+        bool sel = has_chained_feature(stage, HAS_SEL) &&
+           !stage_has_feature(stage, HAS_SEL);
+        bool stful = has_chained_feature(stage, HAS_STFUL) &&
+           !stage_has_feature(stage, HAS_STFUL);
+
+        auto *featuresBJ = new Features(ext, lpf, sel, stful, sts, tcm, 0);
+        auto *stageJ = new StageChar(
+            stage_latency,
+            add_to_lat,
+            d,
+            featuresJ,
+            featuresBJ,
+            stage < Device::numStages() ? "ingress" : "egress",
+            pred_cycle,
+            stage % Device::numStages());
+
+        logger->append_stage_characteristics(stageJ);
+    }
+}
+
+void CharacterizePower::produce_json_total_latency(int pipeId) {
+    // On Tofino, the corner turn between stages 5 and 6 is 4-cycles
+    uint16_t ilat = mau_corner_turn_latency_;
+    uint16_t elat = mau_corner_turn_latency_;
+
+    for (uint16_t stage = 0; stage < 2 * Device::numStages(); ++stage) {
+        dep_t dep = stage_dependency_to_previous_.at(stage);
+        uint16_t stage_latency = compute_stage_latency(stage);
+        uint16_t add_to_lat = stage_latency;
+
+        if (dep == DEP_CONCURRENT) {
+            add_to_lat = concurrent_latency_contribution_;
+        } else if (dep == DEP_ACTION) {
+            add_to_lat = action_latency_contribution_;
+        }
+
+        if (stage >= Device::numStages()) {
+            elat += add_to_lat;
+        } else {
+            ilat += add_to_lat;
+        }
+    }
+
+    using TotalLatency = PowerLogging::Total_Latency;
+    logger->append_total_latency(new TotalLatency("ingress", ilat, pipeId));
+    logger->append_total_latency(new TotalLatency("egress", elat, pipeId));
+}
+
+void CharacterizePower::PowerMemoryAccess::getMemories(PowerLogging::StageDetails *sd) const {
+    using Memories = PowerLogging::StageDetails::Memories;
+    if (ram_read > 0)
+      sd->append(new Memories("read", "sram", ram_read));
+    if (ram_write > 0)
+      sd->append(new Memories("write", "sram", ram_write));
+    if (tcam_read > 0)
+      sd->append(new Memories("search", "tcam", tcam_read));
+    if (map_ram_read > 0)
+      sd->append(new Memories("read", "map_ram", map_ram_read));
+    if (map_ram_write > 0)
+      sd->append(new Memories("write", "map_ram", map_ram_write));
+    if (deferred_ram_read > 0)
+      sd->append(new Memories("read", "deferred_ram", deferred_ram_read));
+    if (deferred_ram_write > 0)
+      sd->append(new Memories("write", "deferred_ram", deferred_ram_write));
 }
 
 void CharacterizePower::end_apply(const IR::Node *root) {
@@ -38,6 +207,9 @@ void CharacterizePower::end_apply(const IR::Node *root) {
           myfile.close();
         }
     }
+
+      // Now that have table information need, can produce power.json file.
+      produce_json(root);
 
       double eps = max_power_ / 104729.0;
       double total_power = ingress_worst_power_ + egress_worst_power_;
@@ -172,6 +344,7 @@ void CharacterizePower::postorder(const IR::BFN::Pipe *) {
           } else {
               egress_worst_case_path_.push(prev_node->unique_id_);
           }
+          table_unique_id_to_on_critical_path_.emplace(prev_node->unique_id_, true);
           LOG4("  " << prev_node->unique_id_);
           prev_node = prev.at(prev_node);
       }
@@ -251,6 +424,7 @@ void CharacterizePower::postorder(const IR::MAU::Table *t) {
     uint16_t stage = getStage(logical_table_id, t->gress);
     stage_to_tables_[stage].push_back(t);
     auto my_unique_id = t->unique_id();
+    table_unique_id_to_gress_.emplace(my_unique_id, toString(t->gress));
 
     // Sum up memory accesses of each type of resource
     // Note that this is the sum of all attached tables of each specfic type.
@@ -661,19 +835,68 @@ uint16_t CharacterizePower::compute_pipe_latency(uint16_t pipe) {
     return lat;
 }
 
+bool CharacterizePower::stage_has_feature(uint16_t stage, stage_feature_t feature) {
+  if (feature == HAS_EXACT && has_exact_.at(stage))
+      return true;
+  else if (feature == HAS_TCAM && has_tcam_.at(stage))
+      return true;
+  else if (feature == HAS_STATS && has_stats_.at(stage))
+      return true;
+  else if (feature == HAS_SEL && has_selector_.at(stage))
+      return true;
+  else if (feature == HAS_LPF_OR_WRED && has_meter_lpf_or_wred_.at(stage))
+      return true;
+  else if (feature == HAS_STFUL && has_stateful_.at(stage))
+      return true;
+  return false;
+}
+
+bool CharacterizePower::has_chained_feature(uint16_t stage, stage_feature_t feature) {
+    // Look earlier in the chain.
+    dep_t dep_to_prev = stage_dependency_to_previous_.at(stage);
+    int look_stage = stage;
+    while ((look_stage % Device::numStages()) > 0 && dep_to_prev != DEP_MATCH) {
+        --look_stage;
+        dep_to_prev = stage_dependency_to_previous_.at(look_stage);
+        if (stage_has_feature(look_stage, feature))
+            return true;
+        // For latency reasons, say has TCAM if have wide selector.
+        if (feature == HAS_TCAM && stage_has_feature(look_stage, HAS_SEL) &&
+            max_selector_words_.at(look_stage) > 1)
+            return true;
+    }
+    // Look later in the chain if are stages to look at.
+    if ((stage % Device::numStages()) == (Device::numStages() - 1))
+        return false;
+    look_stage = stage + 1;
+    while (true) {
+       dep_to_prev = stage_dependency_to_previous_.at(look_stage);
+       if (dep_to_prev == DEP_MATCH)
+            break;
+       if (stage_has_feature(look_stage, feature))
+            return true;
+      // If we're already at the last stage, terminate loop.
+      if ((look_stage % Device::numStages()) == (Device::numStages() - 1)) {
+          break; }
+      ++look_stage;
+    }
+    return false;
+}
+
 uint16_t CharacterizePower::compute_stage_latency(uint16_t stage) {
     uint16_t lat = base_delay_;
-
     if (has_tcam_.at(stage) || max_selector_words_.at(stage) > 1) {
+        lat += tcam_delay_;
+    } else if (has_chained_feature(stage, HAS_TCAM)) {
         lat += tcam_delay_;
     }
 
-    if (has_selector_.at(stage)) {
+    if (has_selector_.at(stage) || has_chained_feature(stage, HAS_SEL)) {
         lat += selector_delay_;
     } else {
-        if (has_meter_lpf_or_wred_.at(stage)) {
+        if (has_meter_lpf_or_wred_.at(stage) || has_chained_feature(stage, HAS_LPF_OR_WRED)) {
             lat += meter_lpf_delay_;
-        } else if (has_stateful_.at(stage)) {
+        } else if (has_stateful_.at(stage) || has_chained_feature(stage, HAS_STFUL)) {
             lat += stateful_delay_;
         }
     }
@@ -1050,7 +1273,7 @@ cstring CharacterizePower::printLatency() {
     for (uint16_t stage = 0; stage < 2 * Device::numStages(); ++stage) {
         dep_t dep = stage_dependency_to_previous_.at(stage);
         uint16_t stage_latency = compute_stage_latency(stage);
-        uint16_t pred_cycle = has_tcam_.at(stage)
+        uint16_t pred_cycle = (has_tcam_.at(stage) || has_chained_feature(stage, HAS_TCAM))
                                 ? (base_predication_delay_ + tcam_delay_)
                                 : base_predication_delay_;
         uint16_t add_to_lat = stage_latency;

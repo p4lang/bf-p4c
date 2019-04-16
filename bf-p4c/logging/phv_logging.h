@@ -1,7 +1,8 @@
 #ifndef BF_P4C_LOGGING_PHV_LOGGING_H_
 #define BF_P4C_LOGGING_PHV_LOGGING_H_
 
-#include <time.h>
+#include <algorithm>
+#include <string>
 
 #include "bf-p4c/device.h"
 #include "bf-p4c/ir/tofino_write_context.h"
@@ -68,7 +69,7 @@ class PhvLogging : public MauInspector {
     using Access = Phv_Schema_Logger::Access;
     using Resources = Phv_Schema_Logger::Resources;
     struct PardeInfo {
-        Access::location_type_t unit;
+        std::string unit;
         std::string parserState;
 
         bool operator < (PardeInfo other) const {
@@ -81,7 +82,7 @@ class PhvLogging : public MauInspector {
             return (unit == other.unit && parserState == other.parserState);
         }
 
-        explicit PardeInfo(Access::location_type_t u, std::string name = "")
+        explicit PardeInfo(std::string u, std::string name = "")
             : unit(u), parserState(name) { }
     };
 
@@ -111,24 +112,21 @@ class PhvLogging : public MauInspector {
     void end_apply(const IR::Node *root) override;
 
     /// Populates data structures related to PHV groups.
-    void populateContainerGroups(Resources::group_type_t groupType);
+    void populateContainerGroups(cstring groupType);
 
     /// Container related methods.
 
-    /// @returns a Container::bit_width_t::I_* value indicating the bit width of the container.
-    Container::bit_width_t containerBitWidth(const PHV::Container c) const;
-
-    /// @returns a Container::container_type_t value indicating the type of the container.
-    Container::container_type_t containerType(const PHV::Container c) const;
+    /// @returns a string indicating the type of the container.
+    const char *containerType(const PHV::Container c) const;
 
     /// Field Slice related methods.
     /// @returns a Records::field_class_t value indicating the type of field slice.
-    Records::field_class_t getFieldType(const PHV::Field* f) const;
+    const char * getFieldType(const PHV::Field* f) const;
 
     /// @returns the gress for a field slice.
-    Records::gress_t getGress(const PHV::Field* f) const;
+    const char * getGress(const PHV::Field* f) const;
 
-    Access::deparser_access_type_t getDeparserAccessType(const PHV::Field* f) const;
+    const char * getDeparserAccessType(const PHV::Field* f) const;
 
     void getAllParserDefs(const PHV::Field* f, ordered_set<PardeInfo>& rv) const;
     void getAllDeparserUses(const PHV::Field* f, ordered_set<PardeInfo>& rv) const;
@@ -143,22 +141,10 @@ class PhvLogging : public MauInspector {
     /// Add container-specific information to the logger object.
     void logContainers();
 
-    const std::string buildDate(void) {
-      const time_t now = time(NULL);
-      char bdate[1024];
-      strftime(bdate, 1024, "%c", localtime(&now));
-      return bdate;
-    }
-
-    static Phv_Schema_Logger::target_t getTarget(cstring deviceName) {
-        static std::map<cstring, Phv_Schema_Logger::target_t> targets = {
-            { "Tofino",   Phv_Schema_Logger::target_t::TOFINO },
-            { "Tofino2",  Phv_Schema_Logger::target_t::TOFINO2 },
-            { "Tofino2H", Phv_Schema_Logger::target_t::TOFINO2H },
-            { "Tofino2M", Phv_Schema_Logger::target_t::TOFINO2M },
-            { "Tofino2U", Phv_Schema_Logger::target_t::TOFINO2U }
-        };
-        return targets[deviceName];
+    static const char * getTarget(cstring deviceName) {
+        std::string lower_name(deviceName);
+        std::transform(lower_name.begin(), lower_name.end(), lower_name.begin(), ::tolower);
+        return lower_name.c_str();
     }
 
  public:
@@ -170,7 +156,7 @@ class PhvLogging : public MauInspector {
                         const ordered_map<cstring, ordered_set<int>>& t)
     : phv(p), clot(ci), info(c), defuse(du), tableAlloc(t),
       logger(filename,
-             buildDate(),
+             Logging::Logger::buildDate(),
              BF_P4C_VERSION,
              Device::numStages(),
              BackendOptions().programName + ".p4",

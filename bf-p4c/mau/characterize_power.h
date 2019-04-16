@@ -15,7 +15,9 @@
 #include "bf-p4c/mau/resource.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
 #include "lib/error.h"
-
+#include "lib/json.h"
+#include "logging/manifest.h"
+#include "power_schema.h"
 
 class SimpleTableNode {
  public:
@@ -59,7 +61,10 @@ class SimpleTableGraph {
 };
 
 class CharacterizePower: public MauInspector {
+  using PowerLogging = Logging::Power_Schema_Logger;
   enum dep_t {DEP_CONCURRENT = 0, DEP_ACTION = 1, DEP_MATCH = 2};
+  enum stage_feature_t {HAS_EXACT = 0, HAS_TCAM = 1, HAS_STATS = 2,
+                        HAS_SEL = 3, HAS_LPF_OR_WRED = 4, HAS_STFUL = 5};
 
  /*
   * rams_read
@@ -133,6 +138,8 @@ class CharacterizePower: public MauInspector {
 
      PowerMemoryAccess operator+(const PowerMemoryAccess &p) const {
        PowerMemoryAccess rv = *this; rv += p; return rv; }
+
+     void getMemories(PowerLogging::StageDetails *) const;
   };
 
   /**
@@ -245,6 +252,8 @@ class CharacterizePower: public MauInspector {
   // A match table will also include any attached table's memory accesses used.
   std::map<UniqueId, PowerMemoryAccess> table_memory_access = {};
   std::map<UniqueId, PowerTableSummary> table_unique_id_to_power_summary_ = {};
+  std::map<UniqueId, bool> table_unique_id_to_on_critical_path_ = {};
+  std::map<UniqueId, cstring> table_unique_id_to_gress_ = {};
 
   // map from attached table's UniqueId to memory access struct.
   // Only populated with stats, meters, stateful, selector, action data.
@@ -279,6 +288,7 @@ class CharacterizePower: public MauInspector {
 
   uint16_t longest_table_name_ = 10;  // used for mau.power.log table formatting
 
+  PowerLogging *logger;
   /* --------------------------------------------------------
    *  Function definitions.
    * --------------------------------------------------------*/
@@ -355,6 +365,17 @@ class CharacterizePower: public MauInspector {
   uint16_t compute_stage_latency(uint16_t stage);
 
   /**
+    * Returns Boolean indicating if a particular stage has a given feature.
+    */
+  bool stage_has_feature(uint16_t stage, stage_feature_t feature);
+  /**
+    * Returns Boolean indicating if a particular stage should be treated
+      as having a given feature for the purposes of balancing the stage
+      latency in a concurrent/action dependent chain of stages.
+    */
+  bool has_chained_feature(uint16_t stage, stage_feature_t feature);
+
+  /**
     * Computes the dependency type from the provided MAU stage to the previous.
     * Note that stage is encoded such that stages 0 to n-1 are ingress and
     * n to 2n-1 are for egress.
@@ -365,6 +386,15 @@ class CharacterizePower: public MauInspector {
     * stage latencies are balanced.
     */
   void compute_stage_dependencies(uint16_t pipe);
+
+  /**
+    * Produces power.json according to schema definition.
+    */
+  void produce_json(const IR::Node *root);
+  void produce_json_tables();
+  void produce_json_total_power(int pipeId);
+  void produce_json_stage_characteristics();
+  void produce_json_total_latency(int pipeId);
 
  public:
   explicit CharacterizePower(DependencyGraph& dep_graph,

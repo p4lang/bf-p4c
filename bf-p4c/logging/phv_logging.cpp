@@ -65,8 +65,8 @@ bool CollectPhvLoggingInfo::preorder(const IR::MAU::TableKey* read) {
 
 void PhvLogging::end_apply(const IR::Node *root) {
     // Populate resources structures.
-    populateContainerGroups(Resources::group_type_t::MAU);
-    populateContainerGroups(Resources::group_type_t::DEPARSER);
+    populateContainerGroups("mau");
+    populateContainerGroups("deparser");
 
     logHeaders();
     logContainers();
@@ -111,22 +111,21 @@ void PhvLogging::logHeaders() {
     /* Add header structures to the log file */
     for (auto kv : headerFields) {
         std::string headerName(kv.first);
-        auto* s = new Phv_Schema_Logger::Structures(headerName,
-                                                    Phv_Schema_Logger::Structures::type_t::HEADER);
+        auto* s = new Phv_Schema_Logger::Structures(headerName, "header");
         for (const auto* f : kv.second) {
             std::string fieldName(f->name);
             s->append(fieldName); }
         logger.append_structures(s); }
 }
 
-void PhvLogging::populateContainerGroups(Resources::group_type_t groupType) {
+void PhvLogging::populateContainerGroups(cstring groupType) {
     // Extract MAU group specific information from phvSpec
     const auto& phvSpec = Device::phvSpec();
-    auto phvGroup = groupType == Resources::group_type_t::MAU ? PhvSpec::MAU : PhvSpec::DEPARSER;
+    auto phvGroup = groupType == "mau" ? PhvSpec::MAU : PhvSpec::DEPARSER;
     for (auto r : phvSpec.physicalAddressSpec(phvGroup)) {
         auto bit_width = int(r.first.size());
         for (unsigned block = 0; block < r.second.blocks; block++) {
-            auto groupRes = new Resources(bit_width, groupType, r.second.blockSize);
+            auto groupRes = new Resources(bit_width, std::string(groupType), r.second.blockSize);
             for (unsigned a = 0; a < r.second.blockSize; a++)
                 groupRes->append(r.second.start + block * r.second.incr + a);
             logger.append_resources(groupRes);
@@ -134,51 +133,40 @@ void PhvLogging::populateContainerGroups(Resources::group_type_t groupType) {
     }
 }
 
-/// Container-related methods.
-/// @returns a Container::bit_width_t::I_* value indicating the bit width of the container.
-PhvLogging::Container::bit_width_t PhvLogging::containerBitWidth(const PHV::Container c) const {
-    if (c.size() == int(PHV::Size::b8)) return Container::bit_width_t::I_8;
-    if (c.size() == int(PHV::Size::b16)) return Container::bit_width_t::I_16;
-    if (c.size() == int(PHV::Size::b32)) return Container::bit_width_t::I_32;
-    ::error("Unsupported container width for container %1%", c);
-    return Container::bit_width_t::I_8;
-}
-
-/// @returns a Container::container_type_t value indicating the type of the container.
-PhvLogging::Container::container_type_t PhvLogging::containerType(const PHV::Container c) const {
-    if (c.is(PHV::Kind::normal)) return Container::container_type_t::NORMAL;
-    if (c.is(PHV::Kind::tagalong)) return Container::container_type_t::TAGALONG;
-    if (c.is(PHV::Kind::mocha)) return Container::container_type_t::MOCHA;
-    if (c.is(PHV::Kind::dark)) return Container::container_type_t::DARK;
+/// @returns a string indicating the type of the container.
+const char * PhvLogging::containerType(const PHV::Container c) const {
+    if (c.is(PHV::Kind::normal)) return "normal";
+    if (c.is(PHV::Kind::tagalong)) return "tagalong";
+    if (c.is(PHV::Kind::mocha)) return "mocha";
+    if (c.is(PHV::Kind::dark)) return "dark";
     ::error("Unsupported PHV container type for %1%", c);
-    return Container::container_type_t::NORMAL;
+    return "normal";
 }
 
-PhvLogging::Records::field_class_t PhvLogging::getFieldType(const PHV::Field* f) const {
+const char * PhvLogging::getFieldType(const PHV::Field* f) const {
     // How to identify compiler added fields ($?)
-    if (f->overlayablePadding) return Records::field_class_t::PADDING;
-    if (f->bridged) return Records::field_class_t::BRIDGED;
-    if (f->metadata && f->is_intrinsic()) return Records::field_class_t::IMETA;
+    if (f->overlayablePadding) return "padding";
+    if (f->bridged) return "bridged";
+    if (f->metadata && f->is_intrinsic()) return "imeta";
     // if (f->privatized()) return Records::field_class_t::COMPILER_ADDED;
-    if (f->metadata) return Records::field_class_t::META;
-    if (f->pov) return Records::field_class_t::POV;
-    return Records::field_class_t::PKT;
+    if (f->metadata) return "meta";
+    if (f->pov) return "pov";
+    return "pkt";
 }
 
-PhvLogging::Records::gress_t PhvLogging::getGress(const PHV::Field* f) const {
-    if (f->gress == INGRESS) return Records::gress_t::INGRESS;
-    if (f->gress == EGRESS) return Records::gress_t::EGRESS;
-    return Records::gress_t::GHOST;
+const char * PhvLogging::getGress(const PHV::Field* f) const {
+    if (f->gress == INGRESS) return "ingress";
+    if (f->gress == EGRESS) return "egress";
+    return "ghost";
 }
 
-PhvLogging::Access::deparser_access_type_t
-PhvLogging::getDeparserAccessType(const PHV::Field* f) const {
-    if (f->metadata && f->is_intrinsic()) return Access::deparser_access_type_t::IMETA;
-    if (f->bridged) return Access::deparser_access_type_t::BRIDGE;
-    if (f->pov) return Access::deparser_access_type_t::POV;
-    if (f->is_checksummed()) return Access::deparser_access_type_t::CHECKSUM;
-    if (f->deparsed()) return Access::deparser_access_type_t::PKT;
-    return Access::deparser_access_type_t::__NONE;
+const char * PhvLogging::getDeparserAccessType(const PHV::Field* f) const {
+    if (f->metadata && f->is_intrinsic()) return "imeta";
+    if (f->bridged) return "bridge";
+    if (f->pov) return "pov";
+    if (f->is_checksummed()) return "checksum";
+    if (f->deparsed()) return "pkt";
+    return "";
 }
 
 void
@@ -189,7 +177,7 @@ PhvLogging::getAllDeparserUses(const PHV::Field* f, ordered_set<PhvLogging::Pard
         const IR::BFN::Unit *use_unit = use.first;
         if (auto d = use_unit->to<IR::BFN::Deparser>()) {
             LOG4("    Used in " << d->toString());
-            PardeInfo entry(Access::location_type_t::DEPARSER);
+            PardeInfo entry("deparser");
             rv.insert(entry);
         }
     }
@@ -206,7 +194,7 @@ PhvLogging::getAllParserDefs(const PHV::Field* f, ordered_set<PhvLogging::PardeI
         if (def.second->is<ImplicitParserInit>()) continue;
         if (auto ps = def_unit->to<IR::BFN::ParserState>()) {
             LOG4("    Defined in parser state " << ps->name);
-            PardeInfo entry(Access::location_type_t::PARSER, std::string(ps->name));
+            PardeInfo entry("parser", std::string(ps->name));
             rv.insert(entry);
         }
     }
@@ -223,7 +211,7 @@ void PhvLogging::addTableKeys(const PHV::FieldSlice &sl, PhvLogging::Records *r)
                 r->append_reads(new Access(stage,
                                            "" /* action_name */,
                                            dType,
-                                           Access::location_detail_t::XBAR,
+                                           "xbar",
                                            "" /* parser_state_name */,
                                            tableName.c_str()));
         }
@@ -249,7 +237,7 @@ void PhvLogging::addVLIWReads(const PHV::FieldSlice& sl, PhvLogging::Records* r)
                 r->append_reads(new Access(stage,
                                            actionName,
                                            dType,
-                                           Access::location_detail_t::VLIW,
+                                           "vliw",
                                            "" /* parser_state_name */,
                                            tableName));
         }
@@ -275,7 +263,7 @@ void PhvLogging::addVLIWWrites(const PHV::FieldSlice& sl, PhvLogging::Records* r
                 r->append_writes(new Access(stage,
                                            actionName,
                                            dType,
-                                           Access::location_detail_t::VLIW,
+                                           "vliw",
                                            "" /* parser_state_name */,
                                            tableName));
         }
@@ -293,7 +281,7 @@ void PhvLogging::logContainers() {
     for (auto kv : allocation) {
         auto c = kv.first;
         auto cid = phvSpec.physicalAddress(phvSpec.containerToId(c), PhvSpec::MAU);
-        auto containerEntry = new Container(containerBitWidth(c), containerType(c),
+        auto containerEntry = new Container(c.size(), containerType(c),
                                             phvSpec.deparserGroupId(c), phvSpec.mauGroupId(c),
                                             cid);
         for (auto sl : kv.second) {
@@ -310,13 +298,13 @@ void PhvLogging::logContainers() {
             auto dType = getDeparserAccessType(sl.field);
             std::for_each(parde.begin(), parde.end(),
                           [&](PardeInfo& entry) {
-                              if (entry.unit == Access::location_type_t::PARSER)
+                              if (entry.unit == "parser")
                                   r->append_writes(new Access(entry.unit,
                                                               "" /* action_name */,
                                                               dType,
-                                                              Access::location_detail_t::IBUF,
+                                                              "ibuf",
                                                               entry.parserState));
-                              else if (entry.unit == Access::location_type_t::DEPARSER)
+                              else if (entry.unit == "deparser")
                                   r->append_reads(new Access(entry.unit,
                                                              "", /* action name */
                                                              dType));

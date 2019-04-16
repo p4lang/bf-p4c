@@ -189,6 +189,7 @@ class BarefootBackend(BackendDriver):
     def process_command_line_options(self, opts):
         BackendDriver.process_command_line_options(self, opts)
 
+        self.language = opts.language
         self.checkVersionTargetArch(opts.target, opts.language, opts.arch)
         self.language = opts.language
 
@@ -458,6 +459,9 @@ class BarefootBackend(BackendDriver):
                     if log['log_type'] == 'phv' and log['path'].endswith('phv.json'):
                         self._pipes[pipe_id]['phv_json'] = os.path.join(self._output_directory,
                                                                         log['path'])
+                    elif log['log_type'] == 'power' and log['path'].endswith('power.json'):
+                        self._pipes[pipe_id]['power_json'] = os.path.join(self._output_directory,
+                                                                          log['path'])
 
 
         for prog in programs:
@@ -626,6 +630,8 @@ class BarefootBackend(BackendDriver):
                         self.add_command_option('verifier', "-r {}".format(pipe['resources']))
                     if pipe.get('phv_json', False):
                         self.add_command_option('verifier', "-p {}".format(pipe['phv_json']))
+                    if pipe.get('power_json', False):
+                        self.add_command_option('verifier', "-w {}".format(pipe['power_json']))
                     self.checkAndRunCmd('verifier')
 
                 if run_summary_logs:
@@ -638,6 +644,9 @@ class BarefootBackend(BackendDriver):
                             self.add_command_option('summary_logging',
                                                     "-o {}".format(os.path.join(pipe['pipe_dir'], 'logs')))
                             self.add_command_option('summary_logging', "--disable-phv-json")
+                            if pipe.get('power_json', False):
+                                self.add_command_option('summary_logging',
+                                                        "-p {}".format(pipe['power_json']))
                             self.checkAndRunCmd('summary_logging')
                             # and now remove the arguments added so that the next pipe is correct
                             del self._commands['summary_logging'][1:]

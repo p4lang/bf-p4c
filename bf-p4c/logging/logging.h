@@ -1,6 +1,7 @@
 #ifndef _EXTENSIONS_BF_P4C_LOGGING_LOGGING_H_
 #define _EXTENSIONS_BF_P4C_LOGGING_LOGGING_H_
 
+#include <time.h>
 #include <rapidjson/document.h>
 #include <rapidjson/prettywriter.h>
 #include <cstdarg>
@@ -38,6 +39,13 @@ class Logger : public rapidjson::Document {
         serialize(writer);
         _logFile << sb.GetString();
         _logFile.flush();
+    }
+
+    static const std::string buildDate(void) {
+      const time_t now = time(NULL);
+      char bdate[1024];
+      strftime(bdate, 1024, "%c", localtime(&now));
+      return bdate;
     }
 };
 };  // end namespace Logging

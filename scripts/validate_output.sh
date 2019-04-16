@@ -4,7 +4,7 @@ scripts_dir=$(dirname $0)
 me=$0
 
 usage() {
-    echo "Usage $me [--context <context.json>] [--resources <resources.json>] [--help]"
+    echo "Usage $me [--context <context.json>] [--resources <resources.json>] [--power <power.json] [--help]"
 }
 
 if [[ $# -lt 1 ]]; then
@@ -15,6 +15,7 @@ fi
 context=false
 resources=false
 phv=false
+power=false
 while [[ $# -gt 0 ]] ; do
     if [ ! -z $1 ]; then
         case $1 in
@@ -32,6 +33,10 @@ while [[ $# -gt 0 ]] ; do
                 ;;
             -p|--phv)
                 phv=$2
+                shift; shift;
+                ;;
+            -w|--power)
+                power=$2
                 shift; shift;
                 ;;
             *)
@@ -62,7 +67,13 @@ if [ $phv != false ]; then
     rcp=$?
 fi
 
-if [ $rcc != 0 ] || [ $rcr != 0 ] || [ $rcp != 0 ]; then
+rcw=0
+if [ $power != false ]; then
+    $scripts_dir/validate_power_json $power
+    rcw=$?
+fi
+
+if [ $rcc != 0 ] || [ $rcr != 0 ] || [ $rcp != 0 ] || [ $rcw != 0 ]; then
     exit 1
 fi
 
