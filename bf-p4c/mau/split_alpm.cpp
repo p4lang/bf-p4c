@@ -67,9 +67,12 @@ const IR::Node* SplitAlpm::postorder(IR::MAU::Table* tbl) {
     if (auto s = annot->getSingle("alpm")) {
         ERROR_CHECK(s->expr.size() > 0, "%s: Please provide a valid alpm "
                 "for table %s", tbl->srcInfo, tbl->name);
-        auto pragma_val = s->expr.at(0)->to<IR::Constant>();
-        ERROR_CHECK(pragma_val != nullptr, "%s: Please provide a valid alpm "
-                "for table %s", tbl->srcInfo, tbl->name);
+        if (auto pragma_val = s->expr.at(0)->to<IR::Constant>())
+            if (!pragma_val->asInt()) return tbl;
+        else if (auto pragma_val = s->expr.at(0)->to<IR::BoolLiteral>())
+            if (!pragma_val->value) return tbl;
+        else
+            ::error("%s: Please provide a valid alpm for table %s", tbl->srcInfo, tbl->name);
     } else {
         return tbl;
     }
