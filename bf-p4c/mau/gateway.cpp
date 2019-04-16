@@ -600,10 +600,13 @@ bool CollectGatewayFields::compute_offsets() {
             bool done = false;
             for (auto &f : ixbar->bit_use) {
                 if (f.field == field.field()->name && field.range().overlaps(f.lo, f.hi())) {
-                    // FIXME -- if f doesn't cover the field, maybe should be an error? or BUG?
-                    // for now we extend it to cover the field, but maybe that means we're getting
-                    // bits that aren't set properly in the ixbar?
-                    auto b = field.range().unionWith(f.lo, f.hi());
+                    // Portions of the field could be in the hash vs in the search bus, and
+                    // this is only for the hash
+                    auto boost_sl = toClosedRange<RangeUnit::Bit, Endian::Little>
+                                        (field.range().intersectWith(f.lo, f.hi()));
+                    BUG_CHECK(boost_sl != boost::none, "Gateway field cannot find correct "
+                              "overlap in input xbar");
+                    le_bitrange b = *boost_sl;
                     info.offsets.emplace_back(f.bit + b.lo - f.lo + 32, b);
                     LOG5("  bit " << f.bit + b.lo - f.lo + 32 << " " << field);
                     done = true;
