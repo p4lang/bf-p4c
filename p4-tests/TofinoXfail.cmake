@@ -1315,7 +1315,7 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "Varbit extract requires .* parser branches to implement"
+  "Varbit field size expression evaluates to non byte-aligned value"
   # unbounded varbit expr
   extensions/p4_tests/p4_16/compile_only/p4c-1478-neg.p4
   testdata/p4_16_samples/issue447-2-bmv2.p4

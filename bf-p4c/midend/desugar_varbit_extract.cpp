@@ -1,5 +1,7 @@
 #include "desugar_varbit_extract.h"
 #include "frontends/common/constantFolding.h"
+#include "bf-p4c/bf-p4c-options.h"
+#include "bf-p4c/common/utils.h"
 
 struct CollectVariables : public Inspector {
     bool preorder(const IR::Expression* expr) override {
@@ -90,6 +92,31 @@ bool CollectVarbitExtract::is_legal_runtime_value(const IR::ParserState* state,
     return true;
 }
 
+void check_compile_time_constant(const IR::Constant* c,
+                                 const IR::MethodCallExpression* call,
+                                 int varbit_field_size,
+                                 bool zero_ok = false) {
+    if (c->asInt() < 0 || (!zero_ok && c->asInt() == 0)) {
+        std::stringstream hint;
+
+        if (BackendOptions().langVersion == CompilerOptions::FrontendVersion::P4_16)
+            hint << "Please make sure the encoding variable is cast to bit<32>.";
+
+        ::fatal_error("Varbit field size expression evaluates to invalid value %1%: %2% \n%3%",
+                      c->asInt(), call, hint.str());
+    }
+
+    if (c->asInt() % 8) {
+        ::fatal_error("Varbit field size expression evaluates to non byte-aligned value %1%: %2%",
+                      c->asInt(), call);
+    }
+
+    if (c->asInt() > varbit_field_size) {
+        ::fatal_error("%1% exceeds varbit field size %2%: %3%",
+                      c->asInt(), varbit_field_size, call);
+    }
+}
+
 bool CollectVarbitExtract::enumerate_varbit_field_values(
         const IR::MethodCallExpression* call,
         const IR::ParserState* state,
@@ -102,16 +129,18 @@ bool CollectVarbitExtract::enumerate_varbit_field_values(
     varsize_expr->apply(find_encode_var);
 
     if (find_encode_var.rv.size() == 0)
-        ::error("No varbit length encoding variable in %1%?", call);
+        ::fatal_error("No varbit length encoding variable in %1%.", call);
     else if (find_encode_var.rv.size() > 1)
-        ::error("varbit expression %1% contains more than one variables?", call);
+        ::fatal_error("Varbit expression %1% contains more than one variables.", call);
 
     encode_var = find_encode_var.rv[0];
 
     unsigned long var_bitwidth = encode_var->type->width_bits();
 
-    if (var_bitwidth > 32)  // already checked in frontend?
-        ::error("varbit length encoding variable requires more than 32 bits? %1%", encode_var);
+    if (var_bitwidth > 32) {  // already checked in frontend?
+        ::fatal_error("Varbit length encoding variable requires more than 32 bits: %1%",
+                      encode_var);
+    }
 
     unsigned branches_needed = 0;
 
@@ -119,11 +148,13 @@ bool CollectVarbitExtract::enumerate_varbit_field_values(
         if (is_legal_runtime_value(state, encode_var, i)) {
             auto c = evaluate(varsize_expr, encode_var, i);
 
-            if (!c->fitsInt() || c->asInt() > varbit_field->type->to<IR::Type_Varbits>()->size) {
+            auto varbit_field_size = varbit_field->type->to<IR::Type_Varbits>()->size;
+            if (!c->fitsInt() || c->asInt() > varbit_field_size) {
                 reject_values.insert(i);
                 LOG4("compile time constant exceeds varbit field size: " << c->asUnsigned());
             } else {
-                compile_time_constants[i] = evaluate(varsize_expr, encode_var, i);
+                check_compile_time_constant(c, call, varbit_field_size, true);
+                compile_time_constants[i] = c;
             }
         } else {
             reject_values.insert(i);
@@ -136,7 +167,7 @@ bool CollectVarbitExtract::enumerate_varbit_field_values(
     }
 
     if (branches_needed > 100) {
-        ::error("Varbit extract requires too many parser branches to implement. "
+        ::fatal_error("Varbit extract requires too many parser branches to implement. "
                   "Consider rewriting the variable length expression to reduce "
                   "the number of possible runtime values: %1%", call);
         return false;
@@ -176,9 +207,8 @@ void CollectVarbitExtract::enumerate_varbit_field_values(
 
     if (auto c = varsize_expr->to<IR::Constant>()) {
         auto varbit_field_size = varbit_field->type->to<IR::Type_Varbits>()->size;
-        if (c->asInt() > varbit_field_size)
-            ::error("%1% exceeds varbit field size %2%, %3%", c->asInt(), varbit_field_size, call);
 
+        check_compile_time_constant(c, call, varbit_field_size);
         compile_time_constants[0] = c;  // use 0 as key, but really don't care
     } else {
         bool ok = enumerate_varbit_field_values(call, state, varbit_field, varsize_expr,
