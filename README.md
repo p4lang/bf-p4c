@@ -33,7 +33,7 @@ repositories and install dependent packages
   remove the versioned .so files (libprotobuf.so.9.0.1 and others), as doing
   so will break your system.
 
-bootstrap_bfn_compilers.sh -- bootstaps the configuration for p4c
+bootstrap_bfn_compilers.sh -- bootstraps the configuration for p4c
 (with the Tofino extension) and assembler.
 
 To configure and build:
