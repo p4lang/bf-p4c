@@ -189,7 +189,6 @@ class BarefootBackend(BackendDriver):
     def process_command_line_options(self, opts):
         BackendDriver.process_command_line_options(self, opts)
 
-        self.language = opts.language
         self.checkVersionTargetArch(opts.target, opts.language, opts.arch)
         self.language = opts.language
 

@@ -141,12 +141,6 @@ class PhvLogging : public MauInspector {
     /// Add container-specific information to the logger object.
     void logContainers();
 
-    static const char * getTarget(cstring deviceName) {
-        std::string lower_name(deviceName);
-        std::transform(lower_name.begin(), lower_name.end(), lower_name.begin(), ::tolower);
-        return lower_name.c_str();
-    }
-
  public:
     explicit PhvLogging(const char *filename,
                         const PhvInfo &p,
@@ -162,7 +156,7 @@ class PhvLogging : public MauInspector {
              BackendOptions().programName + ".p4",
              RunId::getId(),
              "1.0.3",  // phv_schema version
-             PhvLogging::getTarget(Device::name())) {}
+             BackendOptions().target.c_str()) {}
 };
 
 #endif  /* BF_P4C_LOGGING_PHV_LOGGING_H_ */

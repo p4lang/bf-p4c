@@ -312,7 +312,6 @@ int main(int ac, char **av) {
     return ::errorCount() > 0 ? COMPILER_ERROR : SUCCESS;
 
 #if BFP4C_CATCH_EXCEPTIONS
-    #warning "catching exceptions"
     // catch all exceptions here
     } catch (const Util::CompilerBug &e) {
         std::cerr << e.what() << std::endl;
