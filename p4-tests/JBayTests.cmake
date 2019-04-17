@@ -119,9 +119,10 @@ set (P4FACTORY_P4_16_PROGRAMS
   tna_action_selector
   tna_counter
   tna_digest
+  tna_dkm
   tna_dyn_hashing
   tna_exact_match
-  # tna_idletimeout # needs driver update
+  tna_idletimeout
   tna_lpm_match
   tna_meter_bytecount_adjust
   tna_meter_lpf_wred
@@ -153,6 +154,10 @@ foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS)
     bfn_set_ptf_ports_json_file("tofino2" "p4_16_programs_${t}" ${ports_json})
   endif()
 endforeach()
+
+# Set ports.json for tna_idletime test
+bfn_set_ptf_ports_json_file("tofino2" "p4_16_programs_tna_dkm" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/tna_dkm/ports.json")
+bfn_set_ptf_ports_json_file("tofino2" "p4_16_programs_tna_idletimeout" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/tna_idletimeout/ports.json")
 
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
 set_tests_properties("tofino2/p4_16_programs_tna_exact_match" PROPERTIES TIMEOUT 1200)
