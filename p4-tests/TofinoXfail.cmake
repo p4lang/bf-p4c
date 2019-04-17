@@ -111,7 +111,6 @@ if (PTF_REQUIREMENTS_MET)
 
   p4c_add_xfail_reason("tofino"
     "AssertionError: Expected packet was not received on device"
-    05-simple_l3_arping
     extensions/p4_tests/p4_16/ptf/ingress_checksum.p4    #TODO(zma) use @calculated_field_update_location to force ingress update
     basic_switching
     p4c_737
@@ -122,18 +121,6 @@ if (PTF_REQUIREMENTS_MET)
   p4c_add_xfail_reason("tofino"
     "NameError: global name"
     p4testgen_smoke_large_tbls
-    )
-
-  # broken test: https://github.com/barefootnetworks/p4examples/issues/5
-  p4c_add_xfail_reason("tofino"
-    "SyntaxError: invalid syntax"
-    30-p4calc
-    )
-
-  # broken test: https://github.com/barefootnetworks/p4examples/issues/6
-  p4c_add_xfail_reason("tofino"
-    "ImportError: No module named simple_l3.p4_pd_rpc.ttypes"
-    06-simple_l3_dir_cntr
     )
 
 endif() # PTF_REQUIREMENTS_MET
