@@ -57,6 +57,7 @@ class ParseAnnotations : public P4::ParseAnnotations {
                 PARSE("pack", Expression),
                 PARSE_EMPTY("packet_entry"),
                 PARSE_TRIPLE("phase0", Expression),
+                PARSE("placement_priority", Expression),
                 PARSE("pre_color", Expression),
                 PARSE("proxy_hash_algorithm", StringLiteral),
                 PARSE("proxy_hash_width", Expression),

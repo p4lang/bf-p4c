@@ -189,7 +189,10 @@ void TableSummary::printTablePlacement() {
 }
 
 std::ostream &operator<<(std::ostream &out, const TableSummary &ts) {
-    out << " id G                     name       xb  hb g sr tc mr ab" << std::endl;
+    size_t maxname = 20;  // always use at least 20 columns
+    for (auto *t : Values(ts.order))
+        maxname = std::max(maxname, t->name.size());
+    out << " id G " << std::setw(maxname) << "name     " << " xb  hb g sr tc mr ab" << std::endl;
     for (auto *t : Values(ts.order)) {
         safe_vector<LayoutOption> lo;
         safe_vector<ActionData::Format::Use> action_formats;
@@ -206,7 +209,7 @@ std::ostream &operator<<(std::ostream &out, const TableSummary &ts) {
         int entries = t->layout.entries;
         StageUseEstimate use(t, entries, attached_entries, &lc, false, true);
         out << hex(t->logical_id, 3) << ' ' << (t->gress ? 'E' : 'I')
-            << ' ' << std::setw(30) << t->name
+            << ' ' << std::setw(maxname) << t->name
             << ' ' << std::setw(2) << t->layout.ixbar_bytes
             << ' ' << std::setw(3) << t->layout.match_width_bits
             << ' ' << (t->uses_gateway() ? '1' : '0')

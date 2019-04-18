@@ -170,6 +170,22 @@ int IR::MAU::Table::action_next_paths() const {
     return action_paths;
 }
 
+int IR::MAU::Table::get_placement_priority() const {
+    if (!match_table) return 0;
+    auto annot = match_table->annotations->getSingle("placement_priority");
+    if (annot == nullptr) return 0;
+    if (annot->expr.size() != 1) {
+        error("%splacement_priority pragma provided to table %s has multiple "
+              "parameters, while Brig currently only supports one parameter",
+              annot->srcInfo, name);
+    } else if (auto constant = annot->expr.at(0)->to<IR::Constant>()) {
+        return constant->asInt();
+    } else {
+        error("%splacement_priority pragma value provided to table %s is not a constant",
+              annot->srcInfo, name); }
+    return 0;
+}
+
 int IR::MAU::Table::get_provided_stage() const {
     if (gateway_only()) {
         int min_stage = -1;

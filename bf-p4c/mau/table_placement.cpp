@@ -1227,6 +1227,8 @@ bool TablePlacement::are_metadata_deps_satisfied(const IR::MAU::Table* t) const 
     return true;
 }
 
+/* compare two tables to see which one we should prefer placindg next.  Return true if
+ * a is better and false if b is better */
 bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choice) {
     const IR::MAU::Table *a_table_to_use = a->gw ? a->gw : a->table;
     const IR::MAU::Table *b_table_to_use = b->gw ? b->gw : b->table;
@@ -1241,12 +1243,14 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choic
 
 
     LOG5("      Stage A is " << a->name << " with calculated stage " << a->stage <<
-         ", provided stage " << a->table->get_provided_stage());
+         ", provided stage " << a->table->get_provided_stage() <<
+         ", priority " << a->table->get_placement_priority());
     LOG5("        downward prop score " << downward_prop_score.first);
     LOG5("        upward prop score " << upward_prop_score.first);
     LOG5("        local score " << local_score.first);
     LOG5("      Stage B is " << b->name << " with calculated stage " << b->stage <<
-         ", provided stage " << b->table->get_provided_stage());
+         ", provided stage " << b->table->get_provided_stage() <<
+         ", priority " << b->table->get_placement_priority());
     LOG5("        downward prop score " << downward_prop_score.second);
     LOG5("        upward prop score " << upward_prop_score.second);
     LOG5("        local score " << local_score.second);
@@ -1271,13 +1275,19 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choic
         return false;
     }
 
-    choice = NEED_MORE;
-    if (b->need_more_match && !a->need_more_match) return true;
-    if (a->need_more_match && !b->need_more_match) return false;
+    choice = PRIORITY;
+    int a_priority = a->table->get_placement_priority();
+    int b_priority = b->table->get_placement_priority();
+    if (a_priority > b_priority) return true;
+    if (a_priority < b_priority) return false;
 
     choice = SHARED_TABLES;
     if (a->complete_shared > b->complete_shared) return true;
     if (a->complete_shared < b->complete_shared) return false;
+
+    choice = NEED_MORE;
+    if (b->need_more_match && !a->need_more_match) return true;
+    if (a->need_more_match && !b->need_more_match) return false;
 
     int a_deps_stages_control = downward_prop_score.first.deps_stages_control_anti;
     int b_deps_stages_control = downward_prop_score.second.deps_stages_control_anti;
@@ -1550,13 +1560,12 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
  */
 std::ostream &operator<<(std::ostream &out, TablePlacement::choice_t choice) {
     static const char* choice_names[] = { "earlier stage calculated", "earlier stage provided",
-                                    "more stages needed", "completes more shared tables",
-                                    "longer downward prop"
-                                    " control-included dependence tail chain",
-                                    "longer upward prop control-included dependence tail chain",
-                                    "longer local control-included dependence tail chain",
-                                    "longer control-excluded dependence"
-                                    " tail chain", "fewer total dependencies", "default choice" };
+                "more stages needed", "completes more shared tables", "user-provided priority",
+                "longer downward prop control-included dependence tail chain",
+                "longer upward prop control-included dependence tail chain",
+                "longer local control-included dependence tail chain",
+                "longer control-excluded dependence tail chain",
+                "fewer total dependencies", "default choice" };
     if (choice < sizeof(choice_names) / sizeof(choice_names[0])) {
         out << choice_names[choice];
     } else {

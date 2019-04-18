@@ -223,6 +223,7 @@ class Table : BFN::Unit {
     bool action_chain() const;
     bool has_default_path() const;
     int action_next_paths() const;
+    int get_placement_priority() const;
     int get_provided_stage() const;
     int hit_actions() const;
     int get_random_seed() const;
