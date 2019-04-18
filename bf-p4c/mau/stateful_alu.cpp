@@ -654,7 +654,7 @@ bool CreateSaluInstruction::preorder(const IR::Primitive *prim) {
                 address_subword = k->asInt(); }
     } else if (method == "predicate") {
         operands.push_back(new IR::MAU::SaluReg(prim->type, "predicate", false));
-        auto psize = 1 << Device::statefulAluSpec().CmpUnits.size();
+        // auto psize = 1 << Device::statefulAluSpec().CmpUnits.size();
         // FIXME -- should shift up to the top 16 bits of the word to maximize space
         // for the comb_shift constant, but doing so break action bus allocation
         salu->pred_shift = 0;   // = 28 - psize;
@@ -1172,13 +1172,20 @@ bool CreateSaluInstruction::preorder(const IR::Declaration_Instance *di) {
     BUG_CHECK(!reg_action, "%s: Nested extern", di->srcInfo);
     BUG_CHECK(di->properties.empty(), "direct from P4_14 salu blackbox no longer supported");
     reg_action = di;
+    auto salu_regtype = regtype;
     auto type = di->type;
-    if (auto st = type->to<IR::Type_Specialized>())
+    if (auto st = type->to<IR::Type_Specialized>()) {
         type = st->baseType;
+        // RegisterAction may use a register element type different from the Register
+        // Compatibility is tough to ensure -- should we have warnings here?
+        auto rt = st->arguments->at(0);
+        if (!rt->is<IR::Type_Dontcare>())
+            regtype = rt; }
     action_type_name = type->toString();
     // don't visit constructor arguments...
     visit(di->initializer, "initializer");
     reg_action = nullptr;
+    regtype = salu_regtype;
     return false;
 }
 

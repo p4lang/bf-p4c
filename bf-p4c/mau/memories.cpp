@@ -3870,11 +3870,12 @@ std::ostream &operator<<(std::ostream &out, const Memories::result_bus_info &rbi
 
 /* MemoriesPrinter in .gdbinit should match this */
 std::ostream &operator<<(std::ostream &out, const Memories &mem) {
-    const Alloc2Dbase<cstring> *arrays[] = { &mem.tcam_use, &mem.sram_print_result_bus,
-                   &mem.tind_bus, &mem.action_data_bus, &mem.sram_use, &mem.mapram_use,
-                   &mem.gateway_use };
+    const Alloc2Dbase<cstring> *arrays[] = { &mem.tcam_use, &mem.sram_print_search_bus,
+                &mem.sram_print_result_bus, &mem.tind_bus, &mem.action_data_bus,
+                &mem.stash_use, &mem.sram_use, &mem.mapram_use, &mem.overflow_bus,
+                &mem.gateway_use, &mem.payload_use };
     std::map<cstring, char>     tables;
-    out << "tc  eb  tib ab  srams       mapram  gw 2p" << std::endl;
+    out << "tc  sb  rb  tib ab  st  srams       mapram  ov  gw pay 2p" << Log::endl;
     for (int r = 0; r < Memories::TCAM_ROWS; r++) {
         for (auto arr : arrays) {
             for (int c = 0; c < arr->cols(); c++) {
@@ -3897,9 +3898,9 @@ std::ostream &operator<<(std::ostream &out, const Memories &mem) {
                 out << tables.at(tbl);
             } else {
                 out << '.'; } }
-        out << std::endl; }
+        out << Log::endl; }
     for (auto &tbl : tables)
-        out << "   " << tbl.second << " " << tbl.first << std::endl;
+        out << "   " << tbl.second << " " << tbl.first << Log::endl;
     return out;
 }
 
@@ -3915,7 +3916,7 @@ std::ostream &operator<<(std::ostream& out, const Alloc2D<cstring, R, C>& alloc2
             if (!val) val = "-";
             out << std::setw(10) << val << " ";
         }
-        out << std::endl;
+        out << Log::endl;
     }
     return out;
 }

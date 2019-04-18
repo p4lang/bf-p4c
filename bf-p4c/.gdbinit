@@ -234,10 +234,11 @@ class MemoriesPrinter(object):
     def __init__(self, val):
         self.val = val
     def to_string(self):
-        rv = "\ntc  eb  tib ab  srams       mapram  gw 2p\n"
+        rv = "\ntc  sb  rb  tib ab  st  srams       mapram  ov  gw pay 2p\n"
         tables = {}
-        alloc_names = [ 'tcam_use', 'sram_print_search_bus', 'tind_bus',
-            'action_data_bus', 'sram_use', 'mapram_use', 'gateway_use' ]
+        alloc_names = [ 'tcam_use', 'sram_print_search_bus', 'sram_print_result_bus',
+            'tind_bus', 'action_data_bus', 'stash_use', 'sram_use', 'mapram_use',
+            'overflow_bus', 'gateway_use', 'payload_use' ]
         ptrs = [ self.val[arr]['data'] for arr in alloc_names ]
         rows = [ self.val[arr]['nrows'] for arr in alloc_names ]
         cols = [ self.val[arr]['ncols'] for arr in alloc_names ]
@@ -247,19 +248,18 @@ class MemoriesPrinter(object):
 
         for r in range(0, max(rows)):
             for t in range(0, len(ptrs)) :
+                if r >= rows[t]:
+                    break
                 for c in range(0, cols[t]):
-                    if r >= rows[t]:
-                        rv += ' '
+                    tbl = ptrs[t].dereference()['str']
+                    if tbl:
+                        name = tbl.string()
+                        if name not in tables:
+                            tables[name] = chr(ord('A') + len(tables))
+                        rv += tables[name]
                     else:
-                        tbl = ptrs[t].dereference()['str']
-                        if tbl:
-                            name = tbl.string()
-                            if name not in tables:
-                                tables[name] = chr(ord('A') + len(tables))
-                            rv += tables[name]
-                        else:
-                            rv += '.'
-                        ptrs[t] += 1
+                        rv += '.'
+                    ptrs[t] += 1
                 rv += '  '
             rv += "\n"
         for tbl,k in tables.items():

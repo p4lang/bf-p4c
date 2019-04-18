@@ -3911,7 +3911,7 @@ static void write_group(std::ostream &out, const T &grp, std::map<cstring, char>
 /* IXBarPrinter in .gdbinit should match this */
 std::ostream &operator<<(std::ostream &out, const IXBar &ixbar) {
     std::map<cstring, char>     fields;
-    out << "Input Xbar:" << std::endl;
+    out << "Input Xbar:" << Log::endl;
     for (int r = 0; r < IXBar::EXACT_GROUPS; r++) {
         write_group(out, ixbar.exact_use[r], fields);
         if (r < IXBar::BYTE_GROUPS) {
@@ -3921,11 +3921,11 @@ std::ostream &operator<<(std::ostream &out, const IXBar &ixbar) {
             write_one(out, ixbar.byte_group_use[r], fields);
             out << " ";
             write_group(out, ixbar.ternary_use[2*r+1], fields); }
-        out << std::endl; }
+        out << Log::endl; }
     for (auto &f : fields)
-        out << "   " << f.second << " " << f.first << std::endl;
+        out << "   " << f.second << " " << f.first << Log::endl;
     std::map<cstring, char>     tables;
-    out << "Hash:" << std::endl;
+    out << "Hash:" << Log::endl;
     for (int h = 0; h < IXBar::HASH_TABLES; ++h) {
         write_group(out, ixbar.hash_index_use[h], tables);
         out << " ";
@@ -3933,9 +3933,9 @@ std::ostream &operator<<(std::ostream &out, const IXBar &ixbar) {
         if (h < IXBar::HASH_GROUPS) {
             out << "   ";
             write_one(out, ixbar.hash_group_print_use[h], tables); }
-        out << std::endl; }
+        out << Log::endl; }
     for (auto &t : tables)
-        out << "   " << t.second << " " << t.first << std::endl;
+        out << "   " << t.second << " " << t.first << Log::endl;
     return out;
 }
 
@@ -3948,9 +3948,9 @@ void dump(const IXBar &ixbar) {
 
 std::ostream &operator<<(std::ostream &out, const IXBar::Use &use) {
     for (auto &b : use.use)
-        out << b << std::endl;
+        out << b << Log::endl;
     for (auto &w : use.way_use)
-        out << "[ " << w.group << ", " << w.slice << ", 0x" << hex(w.mask) << " ]" << std::endl;
+        out << "[ " << w.group << ", " << w.slice << ", 0x" << hex(w.mask) << " ]" << Log::endl;
     return out;
 }
 

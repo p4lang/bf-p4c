@@ -312,3 +312,9 @@ p4c_add_xfail_reason("tofino2"
   fabric-new-DWITH_INT_TRANSIT
   fabric-new-DWITH_SPGW-DWITH_INT_TRANSIT
 )
+
+# P4C-1665
+p4c_add_xfail_reason("tofino2"
+  "Multiple resource indicated for the same object"
+  extensions/p4_tests/p4_16/jbay/hwlearn4.p4
+)

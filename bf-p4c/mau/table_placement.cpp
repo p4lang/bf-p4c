@@ -531,13 +531,13 @@ bool TablePlacement::try_alloc_ixbar(TablePlacement::Placed *next,
         return false;
     }
 
-
     IXBar verify_ixbar;
-    for (auto *p = done; p && p->stage == next->stage; p = p->prev) {
+    for (auto *p = done; p && p->stage == next->stage; p = p->prev)
         verify_ixbar.update(p->table, p->resources);
-    }
-
     verify_ixbar.update(next->table, resources);
+    LOG7(IndentCtl::indent << IndentCtl::indent);
+    LOG7(verify_ixbar << IndentCtl::unindent << IndentCtl::unindent);
+
     return true;
 }
 
@@ -596,6 +596,8 @@ bool TablePlacement::try_alloc_mem(Placed *next, const Placed *done,
     for (auto prev_resource : prev_resources)
         verify_mem.update(prev_resource->memuse);
     verify_mem.update(resources->memuse);
+    LOG7(IndentCtl::indent << IndentCtl::indent);
+    LOG7(verify_mem << IndentCtl::unindent << IndentCtl::unindent);
 
     return true;
 }
@@ -1395,7 +1397,7 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
         StageUseEstimate current = get_current_stage_use(placed);
         LOG3("stage " << (placed ? placed->stage : 0) << ", work: " << work <<
              ", partly placed " << partly_placed.size() << ", placed " << count(placed) <<
-             "\n    " << current);
+             Log::endl << "    " << current);
         if (!partly_placed.empty())
             LOG5("    partly_placed: " << partly_placed);
         safe_vector<const Placed *> trial;
