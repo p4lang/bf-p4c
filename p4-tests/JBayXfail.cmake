@@ -50,11 +50,6 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     extensions/p4_tests/p4_14/stf/header_validity_1.p4
     )
 
-  p4c_add_xfail_reason("tofino2"
-    "unexpected packet output on port"
-    extensions/p4_tests/p4_16/stf/checksum_error.p4
-    )
-
 endif() # HARLYN_STF
 
 # BEGIN: XFAILS that match glass XFAILS
@@ -175,11 +170,6 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "test.IPv4ChecksumVerifyTest ... FAIL"
-  extensions/p4_tests/p4_16/ptf/ipv4_checksum.p4
-)
-
-p4c_add_xfail_reason("tofino2"
   "This program violates action constraints imposed by Tofino2"
   extensions/p4_tests/p4_16/ptf/int_transit.p4
 )
@@ -187,11 +177,6 @@ p4c_add_xfail_reason("tofino2"
 
 # These tests fail at runtime with the driver
 if (PTF_REQUIREMENTS_MET)
-
-p4c_add_xfail_reason("tofino2"
-  "AssertionError: A packet was received on device .*, port .*, but we expected no packets"
-  extensions/p4_tests/p4_16/ptf/verify_checksum.p4
-)
 
 p4c_add_xfail_reason("tofino2"
   "AssertionError: Expected packet was not received on device .*, port .*"

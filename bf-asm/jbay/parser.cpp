@@ -22,6 +22,7 @@ void Parser::Checksum::write_output_config(Target::JBay::parser_regs &regs, Pars
     for (int i = 0; i < 20; ++i) {
         if (used & (1 << i)) continue;
         used |= 1 << i;
+        row->phv_dst[i] = dest->reg.parser_id();
         row->extract_type[i] = 3;
         return; }
     error(lineno, "Ran out of phv output extractor slots");
