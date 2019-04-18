@@ -380,8 +380,9 @@ class SetupAttachedTables : public MauInspector {
                 mi.tind_tables++;
             }
 
+            int per_row = TernaryIndirectPerWord(&ta->layout_option->layout, ta->table);
             mem.tind_tables.push_back(ta);
-            mi.tind_RAMs += mem.mems_needed(entries, Memories::SRAM_DEPTH, 1, false);
+            mi.tind_RAMs += mem.mems_needed(entries, Memories::SRAM_DEPTH, per_row, false);
         }
 
         if (ta->layout_option->layout.direct_ad_required()) {
@@ -472,7 +473,7 @@ class SetupAttachedTables : public MauInspector {
         if (mtr->direct)
             mi.meter_RAMs += mem.mems_needed(entries, Memories::SRAM_DEPTH, 1, true);
         else
-            mi.meter_RAMs += mem.mems_needed(entries, Memories::SRAM_DEPTH, 1, true);
+            mi.meter_RAMs += mem.mems_needed(mtr->size, Memories::SRAM_DEPTH, 1, true);
 
         if (!meter_pushed) {
             mem.meter_tables.push_back(ta);
@@ -2616,15 +2617,18 @@ void Memories::determine_color_map_RAM_masks(safe_vector<LogicalRowUser> &lrus, 
     map_RAM_in_use |= bitvec(mapram_inuse[row] & MAPRAM_MASK);
     bool stats_bus_used = false;
 
-    bool overflow_finished = false;
+    bool overflow_finished = true;
     for (auto &lru : lrus) {
         if (lru.bus != OFLOW)
             continue;
-        if (lru.group->type != SRAM_group::METER)
-            continue;
-        one_color_map_RAM_mask(lru, map_RAM_in_use, stats_bus_used, row);
+        bool is_meter = lru.group->type == SRAM_group::METER;
+        if (is_meter)
+            one_color_map_RAM_mask(lru, map_RAM_in_use, stats_bus_used, row);
+        // Cannot start placing unless both the table and curr oflow are both finished, i.e.
+        // color maprams could be placed before any RAMs
+        overflow_finished = false;
         if (lru.RAM_mask.popcount() == lru.group->left_to_place() &&
-            lru.color_map_RAM_mask().popcount() == lru.group->cm.left_to_place()) {
+            (!is_meter || lru.color_map_RAM_mask().popcount() == lru.group->cm.left_to_place())) {
             overflow_finished = true;
         }
     }
@@ -2637,6 +2641,10 @@ void Memories::determine_color_map_RAM_masks(safe_vector<LogicalRowUser> &lrus, 
         ///> If the overflow candidates is not finished yet, then no color mapram of the SYNTH
         ///> table can be placed, as that this will require the synth_oflow for both
         if (!overflow_finished)
+            continue;
+        ///> Don't place a color map RAM until a RAM has been placed.  FIXME Not actually
+        ///> a constraint, but a corner case not yet handled correctly by the compiler or assembler
+        if (lru.RAM_mask.empty())
             continue;
         one_color_map_RAM_mask(lru, map_RAM_in_use, stats_bus_used, row);
     }
