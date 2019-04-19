@@ -556,10 +556,11 @@ class InsertChecksumError : public PassManager {
         const IR::Node* preorder(IR::BFN::TnaParser* parser) override {
             for (auto& kv : self->endStates[parser->name]) {
                 if (kv.second.count("accept")) {
-                    auto* newState =
-                        AddIntrinsicMetadata::createGeneratedParserState(
+                    if (!dummy) {
+                        dummy = AddIntrinsicMetadata::createGeneratedParserState(
                             "before_accept", {}, "accept");
-                    parser->states.push_back(newState);
+                        parser->states.push_back(dummy);
+                    }
                     kv.second.erase("accept");
                     kv.second.insert("__before_accept");
                     LOG3("add dummy state before \"accept\"");
@@ -597,6 +598,7 @@ class InsertChecksumError : public PassManager {
             return path;
         }
 
+        IR::ParserState* dummy = nullptr;
         InsertChecksumError* self;
 
         explicit InsertBeforeAccept(InsertChecksumError* self) : self(self) { }
