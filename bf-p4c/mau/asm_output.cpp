@@ -2794,11 +2794,13 @@ void MauAsmOutput::emit_atcam_match(std::ostream &out, indent_t indent,
 // Associated JIRA - P4C-1528
 void MauAsmOutput::emit_indirect_res_context_json(std::ostream &out,
         indent_t indent, const IR::MAU::Table *tbl) const {
-    std::set<cstring> bind_res;
+    ordered_set<cstring> bind_res;
     for (auto back_at : tbl->attached) {
         auto at = back_at->attached;
         for (auto annot : at->annotations->annotations) {
             if (annot->name != "bind_indirect_res_to_match") continue;
+            BUG_CHECK(at->is<IR::MAU::ActionData>() && at->direct == false,
+                      "bind_indirect_res_to_match only allowed on action profiles");
             auto res_name = annot->expr[0]->to<IR::StringLiteral>()->value;
             // Ignore multiple pragmas for same resource name
             if (bind_res.count(res_name)) continue;
