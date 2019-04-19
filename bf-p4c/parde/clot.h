@@ -8,6 +8,12 @@ namespace PHV {
 class Field;
 }
 
+namespace IR {
+namespace BFN {
+class ParserState;
+}
+}
+
 class cstring;
 class JSONGenerator;
 class JSONLoader;

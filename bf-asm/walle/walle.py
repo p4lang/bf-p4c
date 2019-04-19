@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 """
 Walle - JSON-to-binary cruncher tool
 See README.md for usage instructions

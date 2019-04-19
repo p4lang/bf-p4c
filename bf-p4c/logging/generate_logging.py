@@ -7,7 +7,6 @@
 from __future__ import print_function
 
 import argparse, os, sys
-from string import maketrans
 import json, jsonschema
 
 debug = 0
@@ -15,7 +14,11 @@ debug = 0
 def escape_cpp(to_translate, translate_to=u'_'):
     not_letters_or_digits = u'!"#%\'()*+,-./:;<=>?@[\]^`{|}~'
     # translate_table = dict((ord(char), translate_to) for char in not_letters_or_digits)
-    translate_table = maketrans(not_letters_or_digits, translate_to*len(not_letters_or_digits))
+    if sys.version_info.major == 2:
+        from string import maketrans
+        translate_table = maketrans(not_letters_or_digits, translate_to*len(not_letters_or_digits))
+    else:
+        translate_table = str.maketrans(not_letters_or_digits, translate_to*len(not_letters_or_digits))
     # if debug > 4: print("from:", to_translate, "using:", translate_table)
     return to_translate.translate(translate_table)
 
@@ -45,17 +48,17 @@ class DataMember(object):
         return res
 
     def cppType(self):
-        raise "Must be implemented in derived class"
+        raise TypeError("Must be implemented in derived class")
     def jsonType(self):
-        raise "Must be implemented in derived class"
+        raise TypeError("Must be implemented in derived class")
     def isBasicType(self):
-        raise "Must be implemented in derived class"
+        raise TypeError("Must be implemented in derived class")
     def isArrayType(self):
-        raise "Must be implemented in derived class"
+        raise TypeError("Must be implemented in derived class")
     def isObjectType(self):
-        raise "Must be implemented in derived class"
+        raise TypeError("Must be implemented in derived class")
     def defaultValue(self):
-        raise "Must be implemented in derived class"
+        raise TypeError("Must be implemented in derived class")
     def getDescription(self):
         if self.description is not None:
             return '/// ' + self.description
@@ -178,10 +181,10 @@ class EnumDataMember(DataMember):
         self.enumMemberCount = 0
         self.defaultVal = self.cppType() + '::__NONE' if isOptional else 0
         for e in self.body['enum']:
-            if not (isinstance(e, basestring) or isinstance(e, (int, long))):
-                raise "Unknown enum type" + e
-            if isinstance(e, basestring): self.enumMemberType = 'const char *'
-            else:                         self.enumMemberType = 'long'
+            if not (isinstance(e, str) or isinstance(e, (int, long))):
+                raise TypeError("Unknown enum type " + e)
+            if isinstance(e, str): self.enumMemberType = 'const char *'
+            else:                  self.enumMemberType = 'long'
             self.enumMemberCount += 1
 
     def cppType(self):
@@ -203,7 +206,7 @@ class EnumDataMember(DataMember):
         return  'int (' + super(EnumDataMember, self).serializeMember(varName) + ')'
     def genTypeDecl(self, generator):
         if self.body is None:
-            raise 'Invalid body for enum', name
+            raise TypeError('Invalid body for enum ' + name)
         decl = 'enum class ' + self.cppType() + ' { '
         first = True
         # if the data member is optional we need to generate a value in the enum to
@@ -212,8 +215,8 @@ class EnumDataMember(DataMember):
             decl += '__NONE'
             first = False
         for e in self.body['enum']:
-            if isinstance(e, basestring): item = e.upper()
-            else:                         item = 'I_' + str(e)
+            if isinstance(e, str): item = e.upper()
+            else:                  item = 'I_' + str(e)
             if not first:
                 decl += ', '
             else:
@@ -229,7 +232,7 @@ class EnumDataMember(DataMember):
                         str(self.enumMemberCount) + '> ' + mapName + ' {{ ')
         first = True
         for e in self.body['enum']:
-            if isinstance(e, basestring):
+            if isinstance(e, str):
                 val = '"' + e + '"'
             else:
                 val = e
@@ -260,10 +263,12 @@ class BasicEnumDataMember(DataMember):
         super(BasicEnumDataMember, self).__init__(name, typeName, body, isOptional)
         self.enumMemberType = None
         self.enumMemberCount = 0
+        int_type = (int)
+        if sys.version_info.major == 2: int_type = (int, long)
         for e in self.body['enum']:
-            if not (isinstance(e, basestring) or isinstance(e, (int, long))):
-                raise "Unknown enum type" + e
-            if isinstance(e, basestring):
+            if not (isinstance(e, str) or isinstance(e, int_type)):
+                raise TypeError("Unknown enum type " + e)
+            if isinstance(e, str):
                 self.enumMemberType = 'std::string'
                 self.defaultVal = '""'
             else:

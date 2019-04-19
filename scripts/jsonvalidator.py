@@ -9,6 +9,7 @@
 #
 # \TODO: add support for passing a generated schema as an argument.
 
+from __future__ import print_function
 import os
 import sys
 import argparse
@@ -26,7 +27,7 @@ class JSONValidator:
         parser.add_argument ("generated_file", help="the generated json file to validate")
         self._opts = parser.parse_args()
         if self._opts.schema is not None:
-            print "explicit schema not yet supported"
+            print("explicit schema not yet supported")
             sys.exit(1)
 
     def validate(self, pretty_name, schema_generator, schema_version):
@@ -34,24 +35,24 @@ class JSONValidator:
         """
         try:
             if self._opts.debug:
-                print "validating", self._opts.generated_file
+                print("validating", self._opts.generated_file)
 
             schema = schema_generator.get_schema()
             target_file = json.load(open(self._opts.generated_file, 'r'))
 
             if target_file['schema_version'] != schema_version:
-                print >> sys.stderr, "Invalid", pretty_name, "schema version", target_file['schema_version']
-                print >> sys.stderr, "Attempted validation against", schema_version
+                print("Invalid", pretty_name, "schema version", target_file['schema_version'], file=sys.stderr)
+                print("Attempted validation against", schema_version, file=sys.stderr)
                 return False
 
             jsonschema.validate(target_file, schema)
 
             if self._opts.debug:
-                print "successful validation"
+                print("successful validation")
             return True
 
         except Exception as e:
-            print e
+            print(e)
             return False
 
     def dump_schema(self, output_schema, schema_generator):
@@ -63,6 +64,6 @@ class JSONValidator:
                 with open(output_schema, "wb") as schema_file:
                     json.dump(schema, schema_file, indent=2)
             else:
-                print "please provide a valid name for the output file"
+                print("please provide a valid name for the output file")
         except e:
-            print e
+            print(e)
