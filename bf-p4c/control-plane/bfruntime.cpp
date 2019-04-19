@@ -7,6 +7,7 @@
 #include <iterator>
 #include <limits>
 #include <ostream>
+#include <regex>
 #include <sstream>
 #include <string>
 
@@ -2072,6 +2073,23 @@ BfRtSchemaGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
             if (*matchType == "Ternary" || *matchType == "Range") needsPriority = true;
             auto* annotations = transformAnnotations(
                 mf.annotations().begin(), mf.annotations().end());
+
+            CHECK_NULL(annotations);
+            // Add isFieldSlice annotation if the match key is a field slice
+            // e.g. hdr[23:16] where hdr is a 32 bit field
+            {
+                std::string s(mf.name());
+                std::smatch sm;
+                std::regex sliceRegex(R"(\[([0-9]+):([0-9]+)\])");
+                std::regex_search(s, sm, sliceRegex);
+                if (sm.size() == 3) {
+                    auto *isFieldSliceAnnot = new Util::JsonObject();
+                    isFieldSliceAnnot->emplace("name", "isFieldSlice");
+                    isFieldSliceAnnot->emplace("value", "true");
+                    annotations->append(isFieldSliceAnnot);
+                }
+            }
+
             addKeyField(keyJson, mf.id(), mf.name(),
                         true /* mandatory */, *matchType,
                         makeTypeBytes(mf.bitwidth(), boost::none),

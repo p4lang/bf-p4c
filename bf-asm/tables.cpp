@@ -529,7 +529,7 @@ bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p
                     error(lb.key.lineno, "Invalid long branch tag %s", value_desc(lb.key));
                 else if (long_branch.count(lb.key.i))
                     error(lb.key.lineno, "Duplicate long branch tag %ld", lb.key.i);
-                else 
+                else
                     long_branch.emplace(lb.key.i, lb.value); } }
     } else if (kv.key == "vpns") {
         if (CHECKTYPE(kv.value, tVEC))
@@ -542,14 +542,7 @@ bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p
             unsigned position = 0;
             for (auto &v : kv.value.map) {
                 if ((CHECKTYPE(v.key, tSTR)) && (CHECKTYPE(v.value, tMAP))) {
-                    bool ppFound = false;
-                    for (auto &pp : p4_params_list) {
-                        if (pp.name == v.key.s) {
-                            ppFound = true;
-                            position = pp.position;
-                            break; } }
-                    if (!ppFound) position = p4_params_list.size();
-                    p4_param p(v.key.s, position);
+                    p4_param p(v.key.s);
                     for (auto &w : v.value.map) {
                         if (CHECKTYPE(w.key, tSTR) && CHECKTYPE2(w.value, tSTR, tINT)) {
                             if (w.key == "type") p.type = w.value.s;
@@ -559,6 +552,21 @@ bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p
                             else if (w.key == "key_name") p.key_name = w.value.s;
                             else if (w.key == "start_bit") p.start_bit = w.value.i;
                             else error(lineno, "Incorrect param type %s in p4_param_order", w.key.s); } }
+                    // Determine position in p4_param_order. Repeated fields get
+                    // the same position which is set on first occurrence.
+                    // Driver relies on position to order fields. The case when
+                    // we have multiple slices of same field based on position
+                    // only one location is assigned for the entire field.
+                    // However if the field has a name annotation (key_name)
+                    // this overrides the position even if the field belongs to
+                    // the same slice.
+                    bool ppFound = false;
+                    for (auto &pp : p4_params_list) {
+                        if ((pp.name == p.name) && (pp.key_name == p.key_name)){
+                            ppFound = true;
+                            p.position = pp.position;
+                            break; } }
+                    if (!ppFound) p.position = position++;
                     p4_params_list.emplace_back(p); } } }
     } else if (kv.key == "context_json") {
         if (CHECKTYPE(kv.value, tMAP))

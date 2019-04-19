@@ -2483,12 +2483,15 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
 
             slices.emplace(v_lo, v_hi - v_lo + 1);
         }
+
+        auto phv_field = phv.field(expr);
+        auto is_intrinsic_metadata = phv_field->metadata && phv_field->is_intrinsic();
         // Replace any alias nodes with their original sources, in order to
         // ensure the original names are emitted.
-        auto full_size = phv.field(expr)->size;
+        auto full_size = phv_field->size;
 
         // Check for @name annotation.
-        cstring name = phv.field(expr)->externalName();
+        cstring name = phv_field->externalName();
 
         cstring annName = "";
         if (auto ann = ixbar_read->getAnnotation(IR::Annotation::nameAnnotation)) {
@@ -2530,9 +2533,17 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
             out << indent << canon_name(name) << ": ";
             out << "{ type: " << ixbar_read->match_type.name << ", ";
             out << "size: " << sl.second << ", ";
-            out << "full_size: " << full_size;
-            if (!annName.isNullOrEmpty() && annName.find('.'))
+            // if (!annName.isNullOrEmpty() && annName.find('.'))
+            bool setKeyName = (cstring::to_cstring(canon_name(name))
+                        != cstring::to_cstring(canon_name(annName)));
+            // Intrinsic metadata are remapped and always have name annotations,
+            // if they are masked they will appear as a slice and must have
+            // variable size & full_size
+            out << "full_size: " << ((setKeyName && !is_intrinsic_metadata)
+                                    ? sl.second : full_size);
+            if (!annName.isNullOrEmpty() && setKeyName) {
                 out << ", key_name: \"" << canon_name(annName) << "\"";
+            }
             // Output start bit only for slices
             if (sl.second != full_size) out << ", start_bit: " << sl.first;
             out << " }" << std::endl;

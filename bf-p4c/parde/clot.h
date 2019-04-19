@@ -4,6 +4,11 @@
 #include <vector>
 #include <map>
 
+namespace IR {
+namespace BFN {
+class ParserState;
+} }
+
 namespace PHV {
 class Field;
 }
