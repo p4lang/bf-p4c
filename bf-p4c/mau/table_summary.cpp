@@ -1,6 +1,7 @@
 #include "bf-p4c/mau/table_summary.h"
 #include <numeric>
 #include "bf-p4c/bf-p4c-options.h"
+#include "bf-p4c/common/table_printer.h"
 #include "bf-p4c/logging/filelog.h"
 #include "bf-p4c/mau/resource_estimate.h"
 #include "lib/hex.h"
@@ -181,18 +182,25 @@ const ordered_set<int> TableSummary::stages(const IR::MAU::Table* tbl) const {
 
 void TableSummary::printTablePlacement() {
     LOG1("Number of tables allocated: " << order.size());
-    LOG1("Stage | Table Name");
+
+    std::stringstream ss;
+    TablePrinter tp(ss, {"Stage", "Table Name"}, TablePrinter::Align::LEFT);
+
     for (auto tbl : tableAlloc) {
         for (int st : tbl.second)
-            LOG1(boost::format("%5d") % st << " | " << tbl.first);
+            tp.addRow({std::to_string(st), std::string(tbl.first.c_str())});
     }
+
+    tp.print();
+    LOG1(ss.str());
 }
 
 std::ostream &operator<<(std::ostream &out, const TableSummary &ts) {
-    size_t maxname = 20;  // always use at least 20 columns
-    for (auto *t : Values(ts.order))
-        maxname = std::max(maxname, t->name.size());
-    out << " id G " << std::setw(maxname) << "name     " << " xb  hb g sr tc mr ab" << std::endl;
+    TablePrinter tp(out, {"Stage", "Logical ID", "Gress", "Name", "Ixbar Bytes", "Match Bits",
+                          "Gateway", "SRAM", "TCAM", "MapRAM", "Action Data Bytes"},
+                    TablePrinter::Align::CENTER);
+
+    int prev_stage = 0;
     for (auto *t : Values(ts.order)) {
         safe_vector<LayoutOption> lo;
         safe_vector<ActionData::Format::Use> action_formats;
@@ -208,19 +216,34 @@ std::ostream &operator<<(std::ostream &out, const TableSummary &ts) {
 
         int entries = t->layout.entries;
         StageUseEstimate use(t, entries, attached_entries, &lc, false, true);
-        out << hex(t->logical_id, 3) << ' ' << (t->gress ? 'E' : 'I')
-            << ' ' << std::setw(maxname) << t->name
-            << ' ' << std::setw(2) << t->layout.ixbar_bytes
-            << ' ' << std::setw(3) << t->layout.match_width_bits
-            << ' ' << (t->uses_gateway() ? '1' : '0')
-            << ' ' << std::setw(2) << use.srams
-            << ' ' << std::setw(2) << use.tcams
-            << ' ' << std::setw(2) << use.maprams
-            << ' ' << std::setw(2) << t->layout.action_data_bytes
-            << std::endl;
+
+        int curr_stage = t->logical_id/16;
+        if (curr_stage != prev_stage)
+            tp.addSep();
+
+        tp.addRow({
+            std::to_string(curr_stage),
+            std::to_string(t->logical_id),
+            std::string(1, (t->gress ? 'E' : 'I')),
+            std::string(t->name.c_str()),
+            std::to_string(t->layout.ixbar_bytes),
+            std::to_string(t->layout.match_width_bits),
+            std::string(1, (t->uses_gateway() ? 'Y' : 'N')),
+            std::to_string(use.srams),
+            std::to_string(use.tcams),
+            std::to_string(use.maprams),
+            std::to_string(t->layout.action_data_bytes),
+          });
+
+        prev_stage = curr_stage;
     }
-    for (auto &i : ts.ixbar)
-        out << "Stage " << i.first << std::endl << i.second << ts.memory.at(i.first);
+
+    tp.print();
+
+    if (LOGGING(3)) {
+        for (auto &i : ts.ixbar)
+            out << "Stage " << i.first << std::endl << i.second << ts.memory.at(i.first);
+    }
 
     return out;
 }
