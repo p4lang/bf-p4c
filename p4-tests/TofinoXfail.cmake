@@ -197,6 +197,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/compile_only/flex_packing_switch.p4
   extensions/p4_tests/p4-programs/internal_p4_14/fr_test/fr_test.p4
   extensions/p4_tests/p4-programs/internal_p4_14/entry_read_from_hw/entry_read_from_hw.p4
+  extensions/p4_tests/p4_16/customer/arista/p4c-1652.p4
 )
 
 p4c_add_xfail_reason("tofino"
