@@ -4,6 +4,7 @@
 #include <list>
 #include <sstream>
 #include "bf-p4c/lib/error_type.h"
+#include "bf-p4c/logging/manifest.h"
 #include "bf-p4c/mau/action_data_bus.h"
 #include "bf-p4c/mau/field_use.h"
 #include "bf-p4c/mau/input_xbar.h"
@@ -95,6 +96,16 @@ Visitor::profile_t TablePlacement::init_apply(const IR::Node *root) {
     alloc_done = phv.alloc_done();
     placed_table_names.clear();
     LOG1("Table Placement ignores container conflicts? " << ignoreContainerConflicts);
+    if (BackendOptions().create_graphs) {
+        static unsigned invocation = 0;
+        auto pipeId = root->to<IR::BFN::Pipe>()->id;
+        auto graphsDir = BFNContext::get().getOutputDirectory("graphs", pipeId);
+        cstring fileName = "table_dep_graph_placement_" + std::to_string(invocation++);
+        std::ofstream dotStream(graphsDir + "/" + fileName + ".dot", std::ios_base::out);
+        DependencyGraph::dump_viz(dotStream, *deps);
+        Logging::Manifest::getManifest().addGraph(pipeId, "table", fileName,
+                                                  INGRESS);  // this should be both really!
+    }
     upward_downward_prop = new UpwardDownwardPropagation(*deps);
     return MauTransform::init_apply(root);
 }

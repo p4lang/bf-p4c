@@ -7,9 +7,11 @@
 #include <sstream>
 #include "bf-p4c/ir/tofino_write_context.h"
 #include "bf-p4c/lib/error_type.h"
+#include "bf-p4c/logging/manifest.h"
 #include "table_injected_deps.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "ir/ir.h"
+#include "lib/cstring.h"
 #include "lib/log.h"
 
 static const char* dep_types(DependencyGraph::dependencies_t dep) {
@@ -47,7 +49,40 @@ std::ostream &operator<<(std::ostream &out, const DependencyGraph &dg) {
     return out;
 }
 
-static void dump_viz(std::ostream &out, DependencyGraph &dg) {
+void DependencyGraph::dump_viz(std::ostream &out, const DependencyGraph &dg) {
+    static std::map<DependencyGraph::dependencies_t, std::pair<cstring, cstring>> dep_color = {
+        { DependencyGraph::CONTROL, std::make_pair("Control", "green") },
+        { DependencyGraph::IXBAR_READ, std::make_pair("IXBar read", "blue") },
+        { DependencyGraph::ACTION_READ, std::make_pair("Action read", "blueviolet") },
+        { DependencyGraph::ANTI, std::make_pair("Anti", "lightblue") },
+        { DependencyGraph::OUTPUT, std::make_pair("Output", "navy") },
+        { DependencyGraph::REDUCTION_OR_READ, std::make_pair("ReductionOR read", "red") },
+        { DependencyGraph::REDUCTION_OR_OUTPUT, std::make_pair("ReductionOR output", "pink") },
+        { DependencyGraph::CONCURRENT, std::make_pair("Concurrent", "black") }
+    };
+
+    auto tableName = [](const IR::MAU::Table *tbl) {
+        if (tbl) {
+            if (tbl->match_table)
+                return tbl->match_table->externalName();
+            else
+                return tbl->name;
+        } else {
+            return cstring("SINK");
+        }
+    };
+
+    auto edgeName = [dg](const IR::MAU::Table *source, const IR::MAU::Table *dest) {
+        auto depInfo = dg.get_data_dependency_info(source, dest);
+        cstring res("");
+        if (depInfo == boost::none) return res;
+        for (auto d : depInfo.get()) {
+            // the PHV field name
+            res += d.first.first->name + "\n";
+        }
+        return res;
+    };
+
     auto all_vertices = boost::vertices(dg.g);
     if (++all_vertices.first == all_vertices.second) {
         out << "digraph empty {\n}" << std::endl;
@@ -61,25 +96,42 @@ static void dump_viz(std::ostream &out, DependencyGraph &dg) {
         const IR::MAU::Table* source = dg.get_vertex(src);
         auto dst = boost::target(*edges, dg.g);
         const IR::MAU::Table* target = dg.get_vertex(dst);
-        std::string src_name = std::string(source ? source->name : "SINK");
-        std::string dst_name = std::string(target ? target->name : "SINK");
-        std::replace(src_name.begin(), src_name.end(), '-', '_');
-        std::replace(dst_name.begin(), dst_name.end(), '-', '_');
-        std::replace(src_name.begin(), src_name.end(), '.', '_');
-        std::replace(dst_name.begin(), dst_name.end(), '.', '_');
+        auto src_name = tableName(source);
+        auto dst_name = tableName(target);
         cstring edge_name = dep_types(dg.g[*edges]);
         auto p = std::make_pair(src_name.c_str(), dst_name.c_str());
         name_pairs[p].insert(edge_name);
-        out << "    " << src_name.c_str() << " -> " <<
-            dst_name.c_str() << " [ label= \"" << edge_name << "\" ];" << std::endl;
+        out << "   \"" << src_name.c_str() << "\" -> \"" <<
+            dst_name.c_str() << "\" [ " <<
+            "label= \"" << edgeName(source, target) << "\"," <<
+            "color=" << dep_color[dg.g[*edges]].second << " ];" << std::endl;
+    }
+    // Print the legend
+    out << "  subgraph cluster_legend { " <<
+        "label=\"Edge colors\"; " <<
+        "node [ shape=plaintext, fontsize=10]; " <<
+        "edge [ color=white,arrowsize=0.1, len=0.03 ]; " <<
+        "ranksep=0.02; nodesep=0.02;\n";
+    bool first = true;
+    cstring prev;
+    for (auto c : dep_color) {
+        out << "    \"" << c.second.first << "\" [ fontcolor=" << c.second.second << " ];\n";
+        if (!first)
+            out << "\"" << prev << "\" -> \"" << c.second.first << "\";\n";
+        else
+            first = false;
+        prev = c.second.first;
     }
     out << "}" << std::endl;
+    out << "}" << std::endl;
+    if (!LOGGING(4))
+        return;  // generate other types of graphs only if dumping to console
     out << "digraph table_deps_merged {" << std::endl;
     for (auto& kv : name_pairs) {
         auto table_pair = kv.first;
         auto edges = kv.second;
-        out << "    " << table_pair.first << " -> " <<
-            table_pair.second << " [ label= \"";
+        out << "    \"" << table_pair.first << "\" -> \"" <<
+            table_pair.second << "\" [ label= \"";
         const char* sep = "";
         for (auto& edge : edges) {
             out << sep << edge;
@@ -106,8 +158,8 @@ static void dump_viz(std::ostream &out, DependencyGraph &dg) {
                 simple_edges.insert("UNKNOWN");
             }
         }
-        out << "    " << table_pair.first << " -> " <<
-            table_pair.second << " [ label= \"";
+        out << "    \"" << table_pair.first << "\" -> \"" <<
+            table_pair.second << "\" [ label= \"";
         const char* sep = "";
         for (auto& edge : simple_edges) {
             out << sep << edge;
@@ -785,7 +837,7 @@ void FindDataDependencyGraph::finalize_dependence_graph(void) {
 
     verify_dependence_graph();
     if (LOGGING(4))
-        dump_viz(std::cout, dg);
+        DependencyGraph::dump_viz(std::cout, dg);
     dg.finalized = true;
 }
 
@@ -802,11 +854,24 @@ void FindDataDependencyGraph::verify_dependence_graph() {
 }
 
 
-FindDependencyGraph::FindDependencyGraph(const PhvInfo &phv, DependencyGraph &out)
-        : dg(out) {
+FindDependencyGraph::FindDependencyGraph(const PhvInfo &phv,
+                                         DependencyGraph &out,
+                                         cstring dotFileName) :
+    dg(out), dotFile(dotFileName) {
     addPasses({
         new GatherReductionOrReqs(red_info),
         new TableFindInjectedDependencies(phv, dg),
         new FindDataDependencyGraph(phv, dg, red_info)
     });
+}
+
+void FindDependencyGraph::end_apply(const IR::Node *root) {
+    if (BackendOptions().create_graphs && dotFile != "") {
+        auto pipeId = root->to<IR::BFN::Pipe>()->id;
+        auto graphsDir = BFNContext::get().getOutputDirectory("graphs", pipeId);
+        std::ofstream dotStream(graphsDir + "/" + dotFile + ".dot", std::ios_base::out);
+        DependencyGraph::dump_viz(dotStream, dg);
+        Logging::Manifest::getManifest().addGraph(pipeId, "table", dotFile,
+                                                  INGRESS);  // this should be both really!
+    }
 }

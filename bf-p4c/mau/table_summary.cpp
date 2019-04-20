@@ -14,7 +14,7 @@ bool TableSummary::firstRoundFit = false;
 Visitor::profile_t TableSummary::init_apply(const IR::Node *root) {
     if (BackendOptions().verbose > 0) {
         const IR::BFN::Pipe *pipe = root->to<IR::BFN::Pipe>();
-        tsLog = new Logging::FileLog(pipe->id, "table_summary_pipe.log");
+        tsLog = new Logging::FileLog(pipe->id, "table_summary.log");
     }
 
     auto rv = MauInspector::init_apply(root);

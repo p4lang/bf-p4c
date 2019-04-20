@@ -189,6 +189,13 @@ class BarefootBackend(BackendDriver):
     def process_command_line_options(self, opts):
         BackendDriver.process_command_line_options(self, opts)
 
+        # set some more defaults: -g implies --verbose 1 and --create-graphs
+        # this ensures that logs and graphs are generated
+        if opts.debug_info and opts.verbose == 0:
+            opts.verbose = 1
+        if opts.debug_info:
+            opts.create_graphs = True
+
         self.checkVersionTargetArch(opts.target, opts.language, opts.arch)
         self.language = opts.language
 

@@ -255,9 +255,9 @@ struct DependencyGraph {
 
     boost::optional<std::map<const PHV::Field*, std::pair<ordered_set<const IR::MAU::Action*>,
                                                           ordered_set<const IR::MAU::Action*>>>>
-    get_data_dependency_info(typename Graph::edge_descriptor edge) {
+    get_data_dependency_info(typename Graph::edge_descriptor edge) const {
         if (!data_annotations.count(edge)) {
-            LOG1("Data dependency edge not found");
+            LOG4("Data dependency edge not found");
             return boost::none;
         }
         return data_annotations.at(edge);
@@ -278,13 +278,13 @@ struct DependencyGraph {
                              std::pair<ordered_set<const IR::MAU::Action*>,
                                        ordered_set<const IR::MAU::Action*>>>>
              get_data_dependency_info(const IR::MAU::Table* upstream,
-                                      const IR::MAU::Table* downstream) {
+                                      const IR::MAU::Table* downstream) const {
         if (!labelToVertex.count(upstream)) {
-            LOG1("Upstream vertex not found in graph");
+            LOG4("Upstream vertex " << upstream->name << " not found in graph");
             return boost::none;
         }
         if (!labelToVertex.count(downstream)) {
-            LOG1("Downstream vertex not found in graph");
+            LOG4("Downstream vertex " << downstream->name << "not found in graph");
             return boost::none;
         }
         auto upstream_v = labelToVertex.at(upstream);
@@ -309,7 +309,7 @@ struct DependencyGraph {
             }
         }
         if (!found_downstream) {
-            LOG1("Edge not found between provided tables");
+            LOG4("Edge not found between tables " << upstream->name << ", " << downstream->name);
             return boost::none;
         }
         return gathered_data;
@@ -379,6 +379,8 @@ struct DependencyGraph {
             return "concurrent";
         }
     }
+
+    static void dump_viz(std::ostream &out, const DependencyGraph &dg);
 };
 
 class FindDataDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
@@ -459,9 +461,12 @@ class FindDependencyGraph : public PassManager {
 
     DependencyGraph &dg;
     ReductionOrInfo red_info;
+    cstring dotFile;
+
+    void end_apply(const IR::Node *root) override;
 
  public:
-    FindDependencyGraph(const PhvInfo &, DependencyGraph &out);
+    FindDependencyGraph(const PhvInfo &, DependencyGraph &out, cstring dotFileName = "");
 };
 
 #endif /* BF_P4C_MAU_TABLE_DEPENDENCY_GRAPH_H_ */
