@@ -56,6 +56,7 @@ struct IXBar {
     static constexpr int METER_ALU_HASH_BITS = 51;
     static constexpr int METER_PRECOLOR_SIZE = 2;
     static constexpr int MAX_HASH_BITS = 51;
+    static constexpr int REPEATING_CONSTRAINT_SECT = 4;
 
     struct Loc {
         int group = -1, byte = -1;
@@ -567,13 +568,41 @@ struct IXBar {
         failure(int stg, int grp) : trigger(OTHER), stage(stg), group(grp) {}
     };
 
+    enum AvailBytesPerRepeatingSect_t { AV_FULL = 1, AV_HALF = 2, AV_BYTE = 4 };
 
 /* An individual SRAM group or half of a TCAM group */
     struct grp_use {
         enum type_t { MATCH, HASH_DIST, FREE };
         int group;
+        /**
+         * The byte positions in the grp_use that are equivalent some input xbar bytes, i.e.
+         * if 2 tables are matching on the same field, after the first one is allocated, the
+         * second would see this on the grp_use as possible to share
+         */
         bitvec found;
-        bitvec free;
+
+        /**
+         * The byte positions in the grp_use that are not used by any table, and are open.
+         * Due to the nature of the constraints mentioned on the comments on is_better_group,
+         * the available bytes are stored in an 4 wide array.  At each index i, the bitvec
+         * is the available bytes for a 32 bit container byte at byte offset i.
+         *
+         * The free() function passes a parameter which of these four indices can a particularly
+         * constrained byte can allocate to.  For instance, a 32 bit byte 1 will have an
+         * can_use of 0x2, a 16 bit byte 0 will have an can_use of 0x5, and an 8 bit byte will
+         * have a can_use of 0xf.
+         *
+         * @seealso is_better_group in input_xbar.cpp
+         */
+        std::array<bitvec, REPEATING_CONSTRAINT_SECT> _free = { { bitvec() } };
+        bitvec free(bitvec can_use) const {
+            bitvec rv;
+            for (auto bit : can_use)
+                rv |= _free.at(bit);
+            return rv;
+        }
+
+        bitvec max_free() const { return free(bitvec(0, REPEATING_CONSTRAINT_SECT)); }
         bool attempted = false;
         bool hash_open[2] = { true, true };
         type_t hash_table_type[2] = { FREE, FREE };
@@ -588,18 +617,25 @@ struct IXBar {
         }
 
         void dbprint(std::ostream &out) const {
-            out << group << " found: " << found << " free: " << free;
+            out << group << " found: 0x" << found << " free: 0x" << max_free();
         }
 
-        int total_avail() const { return found.popcount() + free.popcount(); }
+        int total_avail() const { return found.popcount() + max_free().popcount(); }
         bool range_set() const { return range_index != -1; }
+
+        bool is_better_group(const grp_use &b, bool prefer_found,
+            int required_allocation_bytes, std::map<int, int> &constraints_to_reqs) const;
         explicit grp_use(int g) : group(g) {}
     };
 
     struct mid_byte_use {
         int group;
+        // @seealso corresponding comments on grp_use
         bool found = false;
+        // TODO: This also could be further expanded, similar to the grp_use to be on
+        // a constraint basis, but the grp_use has given us enough
         bool free = false;
+
         bool attempted = false;
 
         void dbprint(std::ostream &out) const {
@@ -739,6 +775,7 @@ struct IXBar {
         return nullptr; }
 
  private:
+    bitvec can_use_from_flags(int flags) const;
     int groups(bool ternary) const;
     int mid_bytes(bool ternary) const;
     int bytes_per_group(bool ternary) const;
@@ -787,6 +824,10 @@ struct IXBar {
         safe_vector<Use::Byte *> &alloced, bool ternary, bool prefer_found,
         safe_vector<grp_use> &order, safe_vector<mid_byte_use> &mid_byte_order,
         int mid_bytes_needed, int &bytes_to_allocate, bool &version_placed);
+
+    int determine_best_group(safe_vector<Use::Byte *> &unalloced, safe_vector<grp_use> &order,
+        bool ternary, bool prefer_found, int required_allocation_bytes);
+
     void allocate_groups(safe_vector<Use::Byte *> &unalloced, safe_vector<Use::Byte *> &alloced,
         bool ternary, bool prefer_found, safe_vector<grp_use> &order,
         safe_vector<mid_byte_use> &mid_byte_order, int &bytes_to_allocate, int groups_needed,

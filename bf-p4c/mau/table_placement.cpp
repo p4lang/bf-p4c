@@ -1240,8 +1240,9 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choic
         a_table_to_use, b_table_to_use);
     const auto& upward_prop_score = upward_downward_prop->get_upward_prop_unplaced_score(
         a_table_to_use, b_table_to_use);
-    const auto& local_score = upward_downward_prop->get_local_score(
+    const auto& local_gw_score = upward_downward_prop->get_local_score(
         a_table_to_use, b_table_to_use);
+    const auto& local_score = upward_downward_prop->get_local_score(a->table, b->table);
 
 
     LOG5("      Stage A is " << a->name << " with calculated stage " << a->stage <<
@@ -1308,15 +1309,15 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choic
     if (a_stages_upward_prop > b_stages_upward_prop) return true;
     if (a_stages_upward_prop < b_stages_upward_prop) return false;
 
-    int a_local = local_score.first.deps_stages_control_anti;
-    int b_local = local_score.second.deps_stages_control_anti;
+    int a_local = local_gw_score.first.deps_stages_control_anti;
+    int b_local = local_gw_score.second.deps_stages_control_anti;
 
     choice = LOCAL_DSC;
     if (a_local > b_local) return true;
     if (a_local < b_local) return false;
 
-    int a_deps_stages = local_score.first.deps_stages;
-    int b_deps_stages = local_score.second.deps_stages;
+    int a_deps_stages = local_gw_score.first.deps_stages;
+    int b_deps_stages = local_gw_score.second.deps_stages;
 
     choice = LOCAL_DS;
     if (a_deps_stages > b_deps_stages) return true;

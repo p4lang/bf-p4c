@@ -195,9 +195,10 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/phv/COMPILER-243/comp243.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-362/icmp_typecode.p4
   extensions/p4_tests/p4_16/compile_only/flex_packing_switch.p4
+  extensions/p4_tests/p4_16/compile_only/flex_packing_pvs_switch.p4
   extensions/p4_tests/p4-programs/internal_p4_14/fr_test/fr_test.p4
-  extensions/p4_tests/p4-programs/internal_p4_14/entry_read_from_hw/entry_read_from_hw.p4
   extensions/p4_tests/p4_16/customer/arista/p4c-1652.p4
+  extensions/p4_tests/p4-programs/internal_p4_14/netcache/netcache.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -213,7 +214,6 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "error: The stage specified for .* could not place it until stage"
-  extensions/p4_tests/p4-programs/internal_p4_14/netcache/netcache.p4
   extensions/p4_tests/p4-programs/internal_p4_14/ecc/ecc.p4
   extensions/p4_tests/p4-programs/internal_p4_14/mau_test/mau_test.p4  #P4C-1123
   switch_l3_heavy_int_leaf
@@ -899,12 +899,6 @@ p4c_add_xfail_reason("tofino"
 
 # Glass test suite bugs
 
-# P4C-1368 -- not really. Fixed by P4C-1162.
-p4c_add_xfail_reason("tofino"
-  "error: Power worst case estimated budget exceeded by"
-  ../glass/testsuite/p4_tests/arista/COMPILER-868/comp_868.p4
-)
-
 # P4C-1371
 # Errors because pa_container_size pragmas used in these tests cannot be satisfy all constraints.
 p4c_add_xfail_reason("tofino"
@@ -944,6 +938,7 @@ p4c_add_xfail_reason("tofino"
   c2_COMPILER-510_case2682
   ../glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_without_nop.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_with_nop.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-868/comp_868.p4
   )
 
 # P4C-1375
