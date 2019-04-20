@@ -1,0 +1,99 @@
+FROM barefootnetworks/model:tofino_master
+
+MAINTAINER bfn-docker <bfn-docker@barefootnetworks.com>
+ENV DEBIAN_FRONTEND noninteractive
+
+ENV P4C_DEPS autoconf \
+             automake \
+             bison \
+             build-essential \
+             flex \
+             g++-6 \
+             libboost-dev \
+             libboost-graph-dev \
+             libboost-iostreams-dev \
+             libfl-dev \
+             libgc-dev \
+             libgmp-dev \
+             libssl-dev \
+             libtool \
+             python-dev \
+             python-pip \
+             python3-pip
+
+
+ENV P4C_RUNTIME_DEPS cpp \
+                     cmake \
+                     ethtool \
+                     libboost-iostreams1.58.0 \
+                     libgc1c2 \
+                     libgmp10 \
+                     libgmpxx4ldbl \
+                     libnl-route-3-dev \
+                     libssl1.0.0 \
+                     pkg-config \
+                     psmisc \
+                     python-ipaddr \
+                     python-scapy \
+                     python-setuptools \
+                     python-yaml \
+                     sudo \
+                     tcpdump \
+                     libgoogle-perftools-dev \
+                     libxml-simple-perl \
+                     doxygen \
+                     aspell
+
+RUN add-apt-repository ppa:ubuntu-toolchain-r/test && \
+    apt-get update && \
+    apt-get install -y $P4C_DEPS $P4C_RUNTIME_DEPS && \
+    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-5 10 && \
+    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-6 20 && \
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-5 10 && \
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-6 20
+
+# Default to using 2 make jobs, which is a good default for CI. If you're
+# building locally or you know there are more cores available, you may want to
+# override this.
+ARG MAKEFLAGS=-j2
+
+# testing dependencies
+RUN apt-get install -y net-tools
+
+RUN pip install jsl pexpect crc16 crcmod simplejson tenjin ipaddress packaging pyinstaller prettytable
+# Install ply 3.9 for compatibility with p4c-tofino
+RUN pip install ply==3.9
+# Install jsonschema 2.6 for compatibility with pyinstaller
+RUN pip install jsonschema==2.6
+# Install python3 packaging for test_p4c_driver.py
+RUN pip3 install packaging
+# Force /usr/bin to be before /usr/local/bin because bf-driver
+# installs a version of python3 in /usr/local and that version is not
+# picking up modules installed with pip3
+ENV PATH="/usr/bin:${PATH}"
+
+COPY . /bfn/bf-p4c-compilers/
+COPY scripts/ptf_hugepage_setup.sh /bfn/ptf_hugepage_setup.sh
+COPY docker/docker_entry_point.sh /bfn/docker_entry_point.sh
+COPY p4-tests/p4testutils/veth_setup.sh /bfn/veth_setup.sh
+
+WORKDIR /bfn/bf-p4c-compilers
+ENV LDFLAGS="-Wl,-s"
+RUN /usr/local/bin/ccache --zero-stats && \
+    ./scripts/package_p4c_for_tofino.sh --build-dir build && \
+    /usr/local/bin/ccache -p --show-stats && \
+    apt-get autoremove --purge -y && \
+    rm -rf ~/.cache/* ~/.ccache/* /var/cache/apt/* /var/lib/apt/lists/* && \
+    rm -rf bf-asm/walle/build/* && \
+    find . -name '*.o' -type f -delete && \
+    find . -name '*.a' -type f -delete
+
+# Delete git history
+WORKDIR /bfn/bf-p4c-compilers
+RUN (rm -rf .git)
+
+# cleanup space on the image
+RUN apt-get clean -y && apt-get autoclean -y
+
+# setup huge pages
+ENTRYPOINT ["/bfn/docker_entry_point.sh"]

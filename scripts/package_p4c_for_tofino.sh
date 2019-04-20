@@ -16,6 +16,7 @@ fi
 usage() {
     echo $1
     echo "Usage: ./scripts/package_p4c_for_tofino.sh <optional arguments>"
+    echo "   --build-dir <builddir>"
     echo "   --install-prefix <install_prefix>"
     echo "   --barefoot-internal"
 }
@@ -25,6 +26,14 @@ install_prefix=/usr/local
 barefoot_internal="-DENABLE_BAREFOOT_INTERNAL=OFF"
 while [ $# -gt 0 ]; do
     case $1 in
+        --build-dir)
+            if [ -z "$2" ]; then
+                usage "Error: Build dir has to be specified"
+                exit 1
+            fi
+            builddir="$2"
+            shift;
+            ;;
         --install-prefix)
             if [ -z "$2" ]; then
                 usage "Error: Install prefix has to be specified"
@@ -44,14 +53,14 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-$topdir/bootstrap_bfn_compilers.sh --no-ptf --build-dir $builddir \
+$topdir/bootstrap_bfn_compilers.sh --build-dir $builddir \
                                    -DCMAKE_BUILD_TYPE=RELEASE \
                                    -DCMAKE_INSTALL_PREFIX=$install_prefix \
                                    -DENABLE_BMV2=OFF -DENABLE_EBPF=OFF \
                                    -DENABLE_P4TEST=OFF -DENABLE_P4C_GRAPHS=OFF \
                                    $enable_static \
                                    $barefoot_internal \
-                                   -DENABLE_TESTING=OFF -DENABLE_GTESTS=OFF
+                                   -DENABLE_GTESTS=OFF
 cd $builddir
 make -j $parallel_make package
 
