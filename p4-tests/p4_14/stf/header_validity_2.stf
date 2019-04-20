@@ -1,0 +1,7 @@
+add t1 foo.f:0xbabe add_bar() 
+
+expect 2 babe ffff ffff ffff 0000 0000 0000 0000
+packet 2 babe ffff ffff ffff
+
+expect 2 ffff ffff ffff dead 0101 0202 0303 0404
+packet 2 ffff ffff ffff dead 0101 0202 0303 0404 

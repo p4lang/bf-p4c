@@ -50,6 +50,12 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     extensions/p4_tests/p4_14/stf/header_validity_1.p4
     )
 
+  p4c_add_xfail_reason("tofino2"
+    "shorter than expected"
+    # P4C-1544
+    extensions/p4_tests/p4_14/stf/header_validity_2.p4
+    )
+
 endif() # HARLYN_STF
 
 # BEGIN: XFAILS that match glass XFAILS
