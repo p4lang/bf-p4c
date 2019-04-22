@@ -3,7 +3,6 @@
 #include <set>
 #include "lib/indent.h"
 
-#include "bf-p4c/check_duplicate.h"
 #include "bf-p4c/common/alias.h"
 #include "bf-p4c/common/bridged_metadata_replacement.h"
 #include "bf-p4c/common/check_for_unimplemented_features.h"
@@ -16,28 +15,19 @@
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/logging/filelog.h"
 #include "bf-p4c/logging/phv_logging.h"
-#include "bf-p4c/mau/attached_output.h"
 #include "bf-p4c/mau/characterize_power.h"
+#include "bf-p4c/mau/check_duplicate.h"
 #include "bf-p4c/mau/empty_controls.h"
-#include "bf-p4c/mau/gateway.h"
-#include "bf-p4c/mau/handle_assign.h"
 #include "bf-p4c/mau/instruction_adjustment.h"
 #include "bf-p4c/mau/instruction_selection.h"
-#include "bf-p4c/mau/ixbar_expr.h"
 #include "bf-p4c/mau/ixbar_info.h"
 #include "bf-p4c/mau/ixbar_realign.h"
 #include "bf-p4c/mau/push_pop.h"
-#include "bf-p4c/mau/remove_noop_gateway.h"
 #include "bf-p4c/mau/selector_update.h"
 #include "bf-p4c/mau/split_alpm.h"
-#include "bf-p4c/mau/split_gateways.h"
 #include "bf-p4c/mau/stateful_alu.h"
-#include "bf-p4c/mau/table_layout.h"
-#include "bf-p4c/mau/table_mutex.h"
-#include "bf-p4c/mau/table_placement.h"
-#include "bf-p4c/mau/table_seqdeps.h"
 #include "bf-p4c/mau/table_summary.h"
-#include "bf-p4c/mau/table_injected_deps.h"
+#include "bf-p4c/mau/mau_alloc.h"
 #include "bf-p4c/parde/add_jbay_pov.h"
 #include "bf-p4c/parde/adjust_extract.h"
 #include "bf-p4c/parde/decaf.h"
@@ -63,21 +53,6 @@
 cstring Logging::FileLog::outputDir = "./";
 
 namespace BFN {
-
-class CheckTableNameDuplicate : public MauInspector {
-    std::set<cstring>        names;
-    profile_t init_apply(const IR::Node *root) override {
-        names.clear();
-        return MauInspector::init_apply(root); }
-    bool preorder(const IR::MAU::Table *t) override {
-        auto name = t->name;
-        if (t->is_placed())
-            name = t->unique_id().build_name();
-        if (names.count(name))
-            BUG("Multiple tables named '%s'", name);
-        names.insert(name);
-        return true; }
-};
 
 /**
  * A class to collect all currently unimplemented features
@@ -113,42 +88,6 @@ static void debug_hook(const char *parent, unsigned idx, const char *pass, const
         LOG4(pass << " [" << parent << " (" << idx << ")]:" << indent << endl <<
              *n << unindent << endl); }
 }
-
-class TableAllocPass : public Logging::PassManager {
- private:
-    TablesMutuallyExclusive mutex;
-    SharedIndirectAttachedAnalysis siaa;
-    LayoutChoices           lc;
-
- public:
-    TableAllocPass(const BFN_Options& options, PhvInfo& phv, DependencyGraph &deps)
-        : Logging::PassManager("table_placement_"), siaa(mutex) {
-            addPasses({
-                new GatewayOpt(phv),   // must be before TableLayout?  or just TablePlacement?
-                new TableLayout(phv, lc),
-                new AssignActionHandle(phv),
-                new MeterOutputSetup(phv, lc),  // after TableLayout to be part of backtrack
-                new TableFindSeqDependencies(phv),
-                new FindDependencyGraph(phv, deps),
-                new SpreadGatewayAcrossSeq(phv),
-                new CheckTableNameDuplicate,
-                new TableFindSeqDependencies(phv),
-                new CheckTableNameDuplicate,
-                new FindDependencyGraph(phv, deps),
-                &mutex,
-                &siaa,
-                new DumpPipe("Before TablePlacement"),
-                new TablePlacement(&deps, mutex, phv, lc, siaa, options.forced_placement),
-                new CheckTableNameDuplicate,
-                new TableFindSeqDependencies(phv),  // not needed?
-                new FinalTableLayout(phv, lc),
-                new CheckTableNameDuplicate,
-                new AdjustIXBarExpression
-            });
-
-        setName("Table Alloc");
-    }
-};
 
 Backend::Backend(const BFN_Options& options, int pipe_id) :
     clot(uses),
@@ -247,7 +186,6 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new ReinstateAliasSources(phv),    // revert AliasMembers/Slices to their original sources
         options.privatization ? &defuse : nullptr,
         new TableAllocPass(options, phv, deps),
-        new RemoveNoopGateway,
         &table_summary,
         // Rerun defuse analysis here so that table placements are used to correctly calculate live
         // ranges output in the assembly.
