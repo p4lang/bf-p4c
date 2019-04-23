@@ -1361,3 +1361,9 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/mau/galaxy_0.p4
   ../glass/testsuite/p4_tests/parde/test_checksum.p4
 )
+
+p4c_add_xfail_reason("tofino"
+  "Can only do checksums on byte-aligned container slices"
+  # P4C-1620
+  extensions/p4_tests/p4_14/stf/update_checksum_8.p4
+)

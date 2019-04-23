@@ -309,3 +309,9 @@ p4c_add_xfail_reason("tofino2"
   "Multiple resource indicated for the same object"
   extensions/p4_tests/p4_16/jbay/hwlearn4.p4
 )
+
+p4c_add_xfail_reason("tofino2"
+  "Can only do checksums on byte-aligned container slices"
+  # P4C-1620
+  extensions/p4_tests/p4_14/stf/update_checksum_8.p4
+)
