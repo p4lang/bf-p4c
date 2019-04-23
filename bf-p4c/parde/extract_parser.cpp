@@ -638,6 +638,7 @@ struct RewriteParserStatements : public Transform {
     bool canEvaluateInParser(const IR::Expression* expression) const {
         // We can't evaluate complex expressions on current hardware.
         return expression->is<IR::Constant>() ||
+               expression->is<IR::BoolLiteral>() ||
                expression->is<IR::PathExpression>() ||
                expression->is<IR::Member>() ||
                expression->is<IR::HeaderStackItemRef>() ||
@@ -700,8 +701,10 @@ struct RewriteParserStatements : public Transform {
                 return nullptr;
         }
 
-        if (rhs->is<IR::Constant>()) {
+        if (rhs->is<IR::Constant>() || rhs->is<IR::BoolLiteral>()) {
             auto* rhsConst = rhs->to<IR::Constant>();
+            if (!rhsConst)  // boolean
+                rhsConst = new IR::Constant(rhs->to<IR::BoolLiteral>()->value ? 1 : 0);
             return new IR::BFN::Extract(s->srcInfo, s->left,
                      new IR::BFN::ConstantRVal(rhsConst->type,
                              rhsConst->value));

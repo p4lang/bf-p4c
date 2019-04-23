@@ -147,7 +147,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: Assignment cannot be supported in the parser"
   testdata/p4_16_samples/array-copy-bmv2.p4
-  testdata/p4_16_samples/issue737-bmv2.p4
   testdata/p4_16_samples/issue1765-1-bmv2.p4
   testdata/p4_16_samples/stack_complex-bmv2.p4
   )
