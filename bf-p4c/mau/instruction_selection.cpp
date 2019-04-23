@@ -117,8 +117,10 @@ const IR::Node *Synth2PortSetup::postorder(IR::Primitive *prim) {
             // Have to put these instructions at the highest level of the instruction
             created_instrs.push_back(instr);
         }
-        rv = new IR::MAU::Instruction(prim->srcInfo, "set", new IR::TempVar(prim->type),
-                                      new IR::MAU::AttachedOutput(prim->type, salu));
+        rv = nullptr;
+        if (!prim->type->is<IR::Type::Void>())
+            rv = new IR::MAU::Instruction(prim->srcInfo, "set", new IR::TempVar(prim->type),
+                                          new IR::MAU::AttachedOutput(prim->type, salu));
     } else if (prim->name == "Counter.count") {
         glob = prim->operands.at(0)->to<IR::GlobalRef>();
         stateful.push_back(prim);  // needed to setup the index

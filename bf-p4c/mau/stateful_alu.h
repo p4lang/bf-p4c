@@ -72,6 +72,7 @@ class CreateSaluInstruction : public Inspector {
         MINMAX_IDX,  // output index of min/max
         // rvalue contexts
         IF,      // condition -- operand of an if
+        MINMAX_SRC,  // 128-bit input to min/max instruction
         VALUE,   // value to be written to memory -- alu output
         OUTPUT_ALUHI,   // value to be written to adb via alu_hi alu (non-dual)
         OUTPUT,  // value to be written to action data bus output

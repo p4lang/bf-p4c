@@ -959,10 +959,14 @@ extern MinMaxAction<T, H, U> {
      * to assign to a return value, but generally no operations can be applied */
     U address(@optional bit<1> subword); /* return the match address */
     U predicate(); /* return the predicate value */
-    bit<8> min8(in bit<128> val, in bit<16> mask, @optional out bit<4> index);
-    bit<8> max8(in bit<128> val, in bit<16> mask, @optional out bit<4> index);
-    bit<16> min16(in bit<128> val, in bit<8> mask, @optional out bit<3> index);
-    bit<16> max16(in bit<128> val, in bit<8> mask, @optional out bit<3> index);
+    bit<8> min8(in bit<128> val, in bit<16> mask, @optional out bit<4> index,
+                @optional in int<8> postmod);
+    bit<8> max8(in bit<128> val, in bit<16> mask, @optional out bit<4> index,
+                @optional in int<8> postmod);
+    bit<16> min16(in bit<128> val, in bit<8> mask, @optional out bit<3> index,
+                  @optional in int<8> postmod);
+    bit<16> max16(in bit<128> val, in bit<8> mask, @optional out bit<3> index,
+                  @optional in int<8> postmod);
 }
 extern MinMaxAction2<T, H, U1, U2> {
     MinMaxAction2(Register<T, _> reg);
@@ -974,10 +978,14 @@ extern MinMaxAction2<T, H, U1, U2> {
      * to assign to a return value, but generally no operations can be applied */
     U address<U>(@optional bit<1> subword); /* return the match address */
     U predicate<U>(); /* return the predicate value */
-    bit<8> min8(in bit<128> val, in bit<16> mask, @optional out bit<4> index);
-    bit<8> max8(in bit<128> val, in bit<16> mask, @optional out bit<4> index);
-    bit<16> min16(in bit<128> val, in bit<8> mask, @optional out bit<3> index);
-    bit<16> max16(in bit<128> val, in bit<8> mask, @optional out bit<3> index);
+    bit<8> min8(in bit<128> val, in bit<16> mask, @optional out bit<4> index,
+                @optional in int<9> postmod);
+    bit<8> max8(in bit<128> val, in bit<16> mask, @optional out bit<4> index,
+                @optional in int<9> postmod);
+    bit<16> min16(in bit<128> val, in bit<8> mask, @optional out bit<3> index,
+                  @optional in int<9> postmod);
+    bit<16> max16(in bit<128> val, in bit<8> mask, @optional out bit<3> index,
+                  @optional in int<9> postmod);
 }
 extern MinMaxAction3<T, H, U1, U2, U3> {
     MinMaxAction3(Register<T, _> reg);
@@ -989,10 +997,14 @@ extern MinMaxAction3<T, H, U1, U2, U3> {
      * to assign to a return value, but generally no operations can be applied */
     U address<U>(@optional bit<1> subword); /* return the match address */
     U predicate<U>(); /* return the predicate value */
-    bit<8> min8(in bit<128> val, in bit<16> mask, @optional out bit<4> index);
-    bit<8> max8(in bit<128> val, in bit<16> mask, @optional out bit<4> index);
-    bit<16> min16(in bit<128> val, in bit<8> mask, @optional out bit<3> index);
-    bit<16> max16(in bit<128> val, in bit<8> mask, @optional out bit<3> index);
+    bit<8> min8(in bit<128> val, in bit<16> mask, @optional out bit<4> index,
+                @optional in int<9> postmod);
+    bit<8> max8(in bit<128> val, in bit<16> mask, @optional out bit<4> index,
+                @optional in int<9> postmod);
+    bit<16> min16(in bit<128> val, in bit<8> mask, @optional out bit<3> index,
+                  @optional in int<9> postmod);
+    bit<16> max16(in bit<128> val, in bit<8> mask, @optional out bit<3> index,
+                  @optional in int<9> postmod);
 }
 extern MinMaxAction4<T, H, U1, U2, U3, U4> {
     MinMaxAction4(Register<T, _> reg);
@@ -1004,10 +1016,14 @@ extern MinMaxAction4<T, H, U1, U2, U3, U4> {
      * to assign to a return value, but generally no operations can be applied */
     U address<U>(@optional bit<1> subword); /* return the match address */
     U predicate<U>(); /* return the predicate value */
-    bit<8> min8(in bit<128> val, in bit<16> mask, @optional out bit<4> index);
-    bit<8> max8(in bit<128> val, in bit<16> mask, @optional out bit<4> index);
-    bit<16> min16(in bit<128> val, in bit<8> mask, @optional out bit<3> index);
-    bit<16> max16(in bit<128> val, in bit<8> mask, @optional out bit<3> index);
+    bit<8> min8(in bit<128> val, in bit<16> mask, @optional out bit<4> index,
+                @optional in int<9> postmod);
+    bit<8> max8(in bit<128> val, in bit<16> mask, @optional out bit<4> index,
+                @optional in int<9> postmod);
+    bit<16> min16(in bit<128> val, in bit<8> mask, @optional out bit<3> index,
+                  @optional in int<9> postmod);
+    bit<16> max16(in bit<128> val, in bit<8> mask, @optional out bit<3> index,
+                  @optional in int<9> postmod);
 }
 
 extern ActionSelector {

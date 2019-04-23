@@ -103,7 +103,8 @@ std::ostream &operator<<(std::ostream &out, CreateSaluInstruction::LocalVar::use
     else
         return out << "<invalid " << u << ">"; }
 std::ostream &operator<<(std::ostream &out, CreateSaluInstruction::etype_t e) {
-    static const char *names[] = { "NONE", "MINMAX_IDX", "IF", "VALUE", "OUTPUT", "MATCH" };
+    static const char *names[] = { "NONE", "MINMAX_IDX", "IF", "MINMAX_SRC", "VALUE",
+                                   "OUTPUT_ALUHI",  "OUTPUT", "MATCH" };
     if (e < sizeof(names)/sizeof(names[0]))
         return out << names[e];
     else
@@ -198,6 +199,8 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
         if (!opcode) opcode = "alu_a";
         if (etype == OUTPUT)
             name = (alu_write[field_idx] ? "alu_" : "mem_") + name;
+        else if (etype == MINMAX_SRC)
+            name = "mem";
         e = new IR::MAU::SaluReg(pe->type, name, field_idx > 0);
         break;
     case param_t::OUTPUT:       /* out rv; */
@@ -668,18 +671,22 @@ bool CreateSaluInstruction::preorder(const IR::Primitive *prim) {
             return false; }
         auto *saved_predicate = predicate;
         auto saved_output_index = output_index;
-        etype = VALUE;
         predicate = nullptr;
         opcode = method;
         BUG_CHECK(prim->operands.size() >= 3, "typechecking failure");
+        etype = MINMAX_SRC;
+        visit(prim->operands[1], "source");
+        etype = VALUE;
         visit(prim->operands[2], "mask");
+        if (prim->operands.size() >= 5)
+            visit(prim->operands[4], "postmod");
         if (minmax_instr) {
             if (!equiv(&operands, &minmax_instr->operands))
                 error("%s: only one min/max operation possible in a stateful alu", prim);
         } else {
             minmax_instr = createInstruction(); }
         operands.clear();
-        if (prim->operands.size() == 4) {
+        if (prim->operands.size() >= 4) {
             etype = MINMAX_IDX;
             dest = nullptr;
             opcode = cstring();
@@ -960,7 +967,7 @@ void CreateSaluInstruction::postorder(const IR::Cmpl *e) {
 }
 void CreateSaluInstruction::postorder(const IR::Concat *e) {
     if (operands.size() < 2) return;  // can only happen if there has been an error
-    if (etype == VALUE) return;  // done in preorder
+    if (etype == VALUE || etype == MINMAX_SRC) return;  // done in preorder
     if (etype == IF) {
         auto r = operands.back();
         operands.pop_back();

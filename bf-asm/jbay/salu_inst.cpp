@@ -39,22 +39,20 @@ struct MinMax : public SaluInstruction {
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
                             const VECTOR(value_t) &op) const override;
     } *opc;
-    operand     mask;
-    bool        inc = false, dec = false, phv = false;
+    bool        phv = false;  // source is mem or phv
+    operand     mask, postmod;
+    unsigned    constval = 0;  // constants for mask and postmod packed together
     MinMax(const Decode *op, int l) : SaluInstruction(l), opc(op) {}
     std::string name() override { return opc->name; };
     Instruction *pass1(Table *tbl, Table::Actions::Action *) override;
     void pass2(Table *tbl, Table::Actions::Action *) override;
     bool equiv(Instruction *a_) override {
         if (auto *a = dynamic_cast<MinMax *>(a_))
-            return opc == a->opc && mask == a->mask && inc == a->inc &&
-                   dec == a->dec && phv == a->phv;
+            return opc == a->opc && phv == a->phv && mask == a->mask && postmod == a->postmod;
         return false; }
     void dbprint(std::ostream &out) const override {
-        out << "INSTR: " << opc->name << " " << mask;
-        if (inc) out << " ++";
-        if (dec) out << " --";
-        if (phv) out << " phv"; }
+        out << "INSTR: " << opc->name << (phv ? "phv, " : "mem, ") << mask;
+        if (postmod) out << ", " << postmod; }
     FOR_ALL_REGISTER_SETS(DECLARE_FORWARD_VIRTUAL_INSTRUCTION_WRITE_REGS)
 };
 
@@ -64,29 +62,55 @@ MinMax::Decode opMIN8("min8", JBAY, 0), opMAX8("max8", JBAY, 1),
 Instruction *MinMax::Decode::decode(Table *tbl, const Table::Actions::Action *act,
                                     const VECTOR(value_t) &op) const {
     auto *rv = new MinMax(this, op[0].lineno);
-    if (op.size > 1) {
-        rv->mask = operand(tbl, act, op[1]);
+    if (op.size > 2) {
+        if (op[1] == "phv") rv->phv = true;
+        else if (op[1] != "mem")
+            error(op[1].lineno, "%s source must be 'mem' or 'phv'", op[0].s);
+        rv->mask = operand(tbl, act, op[2]);
         if (!rv->mask.to<operand::Phv>() && !rv->mask.to<operand::Const>())
             error(op[1].lineno, "%s mask must be constant or from phv or hash_dist", op[0].s);
     } else
         error(op[0].lineno, "%s must have a single mask operand", op[0].s);
-    for (int i = 2; i < op.size; ++i) {
-        if (op[i] == "dec" || op[i] == "--") rv->dec = true;
-        else if (op[i] == "inc" || op[i] == "++") rv->inc = true;
-        else if (op[i] == "phv") rv->phv = true;
-        else error(op[2].lineno, "unknown %s modifier %s", op[0].s, value_desc(op[i])); }
+    if (op.size == 4) {
+        rv->postmod = operand(tbl, act, op[3]);
+    } else if (op.size > 4) {
+        error(op[0].lineno, "too many operands for %s", op[0].s); }
     rv->slot = MINMAX;
     return rv;
 }
 Instruction *MinMax::pass1(Table *tbl_, Table::Actions::Action *act) {
     auto tbl = dynamic_cast<StatefulTable *>(tbl_);
+    int mask_size = (opc->opcode & 2) ? 8 : 16;
+    bool need_constval = false;
     mask->pass1(tbl);
     act->minmax_use = true;
     if (auto k = mask.to<operand::Const>()) {
-        tbl->get_const(k->lineno, k->value);
+        if (k->value < 0 || k->value >= (1U << mask_size) || mask.neg)
+            error(k->lineno, "%s mask value out of range", name().c_str());
+        constval = k->value & ((1U << mask_size) - 1);
+        need_constval = true;
     } else if (auto p = mask.to<operand::Phv>()) {
         if (p->phv_index(tbl))
-            error(lineno, "%s phv mask must come from the lower half input", name().c_str()); }
+            error(lineno, "%s phv mask must come from the lower half input", name().c_str());
+    } else {
+        error(mask->lineno, "%s invalid mask", name().c_str()); }
+    if (postmod) {
+        if (auto k = postmod.to<operand::Const>()) {
+            if (k->value < 0) {
+                k->value = -k->value;
+                postmod.neg = !postmod.neg; }
+            if (k->value > 255)
+                error(lineno, "%s post mod too large", name().c_str());
+            constval |= (k->value & 0xff) << mask_size;
+            need_constval = true;
+        } else if (auto p = postmod.to<operand::Phv>()) {
+            if (!p->phv_index(tbl))
+                error(lineno, "%s phv post mod must come from the upper half input",
+                      name().c_str());
+        } else {
+            error(postmod->lineno, "%s invalid post mod", name().c_str()); } }
+    if (need_constval)
+        tbl->get_const(lineno, constval);
     return this;
 }
 void MinMax::pass2(Table *tbl, Table::Actions::Action *act) {
@@ -98,18 +122,28 @@ void MinMax::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Action
     int logical_home_row = tbl->layout[0].row;
     auto &meter_group = regs.rams.map_alu.meter_group[logical_home_row/4U];
     auto &salu_instr_common = meter_group.stateful.salu_instr_common[act->code];
+    bool need_constval = constval != 0;
     if (auto k = mask.to<operand::Const>()) {
-        auto &salu_instr_cmp = meter_group.stateful.salu_instr_cmp_alu[act->code][3];
-        salu_instr_cmp.salu_cmp_regfile_adr = tbl->get_const(k->lineno, k->value);
+        need_constval = true;
         salu_instr_common.salu_minmax_mask_ctl = 1;
     } else {
         salu_instr_common.salu_minmax_mask_ctl = 0; }
+    if (need_constval) {
+        auto &salu_instr_cmp = meter_group.stateful.salu_instr_cmp_alu[act->code][3];
+        salu_instr_cmp.salu_cmp_regfile_adr = tbl->get_const(lineno, constval); }
     salu_instr_common.salu_minmax_ctl = opc->opcode;
     salu_instr_common.salu_minmax_enable = 1;
-    salu_instr_common.salu_minmax_postinc_enable = inc;
-    salu_instr_common.salu_minmax_postdec_enable = dec;
-    // salu_instr_common.salu_minmax_postmod_value_ctl = ???; -- FIXME
-    salu_instr_common.salu_minmax_src_sel = phv;
+    if (postmod) {
+        if (auto k = postmod.to<operand::Const>()) {
+            need_constval = true;
+            salu_instr_common.salu_minmax_postmod_value_ctl = 0;
+        } else {
+            salu_instr_common.salu_minmax_postmod_value_ctl = 1; }
+        if (postmod.neg) 
+            salu_instr_common.salu_minmax_postdec_enable = 1;
+        else
+            salu_instr_common.salu_minmax_postinc_enable = 1; }
+    // salu_instr_common.salu_minmax_src_sel = phv;  -- FIXME -- specify PHV source?
     for (auto &salu : meter_group.stateful.salu_instr_state_alu[act->code]) {
         salu.salu_op = 0xd;
         salu.salu_arith = 1;
