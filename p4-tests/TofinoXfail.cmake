@@ -663,12 +663,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/tofino-bug-1.p4
 )
 
-# P4C-1649
-p4c_add_xfail_reason("tofino"
-  "Invalid args to MakeSlice"
-  extensions/p4_tests/p4_14/compile_only/p4smith_regression/make_slice.p4
-)
-
 # P4C-1650
 p4c_add_xfail_reason("tofino"
   "Table .* has a metadata dependency, but doesn't appear in the TableGraph?"

@@ -137,14 +137,25 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::Operation::Relation *e) {
     return e;
 }
 
+static mpz_class maxValueOfType(const IR::Type *type_) {
+    auto *type = type_->to<IR::Type::Bits>();
+    BUG_CHECK(type, "%s is not an integral type", type_);
+    mpz_class rv = 1U;
+    rv <<= type->size - type->isSigned;
+    return rv - 1;
+}
+
+
 const IR::Expression *CanonGatewayExpr::postorder(IR::Leq *e) {
     LOG5(_debugIndent << "IR::Leq " << e);
     if (e->left->equiv(*e->right))  // if the two sides are the same expression, fold it
         return new IR::BoolLiteral(true);
     if (e->left->is<IR::Constant>())
         return postorder(new IR::Geq(e->right, e->left));
-    if (auto k = e->right->to<IR::Constant>())
-        return postorder(new IR::Lss(e->left, new IR::Constant(k->value + 1)));
+    if (auto k = e->right->to<IR::Constant>()) {
+        if (k->value == maxValueOfType(k->type))
+            return new IR::BoolLiteral(true);
+        return postorder(new IR::Lss(e->left, new IR::Constant(k->type, k->value + 1))); }
     return e;
 }
 
@@ -154,7 +165,9 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::Lss *e) {
         return new IR::BoolLiteral(false);
     if (auto k = e->left->to<IR::Constant>()) {
         BUG_CHECK(!e->right->is<IR::Constant>(), "constant folding failed");
-        return postorder(new IR::Geq(e->right, new IR::Constant(k->value + 1))); }
+        if (k->value == maxValueOfType(k->type))
+            return new IR::BoolLiteral(false);
+        return postorder(new IR::Geq(e->right, new IR::Constant(k->type, k->value + 1))); }
     if (auto k = e->right->to<IR::Constant>()) {
         if (k->value == 0) {
             if (isSigned(e->left->type)) {
@@ -173,7 +186,9 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::Geq *e) {
         return new IR::BoolLiteral(true);
     if (auto k = e->left->to<IR::Constant>()) {
         BUG_CHECK(!e->right->is<IR::Constant>(), "constant folding failed");
-        return postorder(new IR::Lss(e->right, new IR::Constant(k->value + 1))); }
+        if (k->value == maxValueOfType(k->type))
+            return new IR::BoolLiteral(true);
+        return postorder(new IR::Lss(e->right, new IR::Constant(k->type, k->value + 1))); }
     if (auto k = e->right->to<IR::Constant>()) {
         if (k->value == 0) {
             if (isSigned(e->left->type)) {
@@ -192,8 +207,10 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::Grt *e) {
         return new IR::BoolLiteral(false);
     if (e->left->is<IR::Constant>())
         return postorder(new IR::Lss(e->right, e->left));
-    if (auto k = e->right->to<IR::Constant>())
-        return postorder(new IR::Geq(e->left, new IR::Constant(k->value + 1)));
+    if (auto k = e->right->to<IR::Constant>()) {
+        if (k->value == maxValueOfType(k->type))
+            return new IR::BoolLiteral(false);
+        return postorder(new IR::Geq(e->left, new IR::Constant(k->type, k->value + 1))); }
     return e;
 }
 
