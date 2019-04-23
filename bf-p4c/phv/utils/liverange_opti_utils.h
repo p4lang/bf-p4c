@@ -12,9 +12,9 @@ static bool hasParserUse(ordered_set<const IR::BFN::Unit*> doms) {
     return false;
 }
 
-/// @returns true if any defuse units in @f_units can reach any defuse units in @g_units.
+/// @returns all pairs (x, y) where x is an unit in @f_units that can reach the unit y in @g_units.
 static ordered_set<std::pair<const IR::BFN::Unit*, const IR::BFN::Unit*>>
-canLaterUnitsReachEarlyUnits(
+canFUnitsReachGUnits(
         const ordered_set<const IR::BFN::Unit*>& f_units,
         const ordered_set<const IR::BFN::Unit*>& g_units,
         const std::vector<FlowGraph*>& flowGraph) {

@@ -294,6 +294,7 @@ p4c_add_xfail_reason("tofino2"
   "Expected packet was not received"
   fabric-new
   fabric-new-DWITH_SPGW
+  fabric-new-DWITH_SPGW-DWITH_INT_TRANSIT
 )
 
 # P4C-1646
@@ -301,7 +302,6 @@ p4c_add_xfail_reason("tofino2"
   "error.*used by both ingress and egress deparser"
   extensions/p4_tests/p4_16/jbay/p4c-1622.p4
   fabric-new-DWITH_INT_TRANSIT
-  fabric-new-DWITH_SPGW-DWITH_INT_TRANSIT
 )
 
 # P4C-1665

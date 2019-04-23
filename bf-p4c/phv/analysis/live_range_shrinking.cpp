@@ -107,10 +107,12 @@ bool FindInitializationNode::canInitTableReachGUnits(
         const ordered_set<const IR::BFN::Unit*>& g_units) const {
     const IR::BFN::Unit* unit = table->to<IR::BFN::Unit>();
     if (!unit) BUG("How is table %1% not a unit?", table->name);
-    ordered_set<const IR::BFN::Unit*> f_units;
-    f_units.insert(unit);
-    auto rv = canLaterUnitsReachEarlyUnits(f_units, g_units, flowGraph);
-    return rv.size();
+    auto rv = canFUnitsReachGUnits({ unit }, g_units, flowGraph);
+    // rv now contains a set of pairs of units. Each pair represents a case where table reaches
+    // a g-unit. For this method, we want to return true only if table reaches all the g-units.
+    // Therefore, the number of pairs in rv should be equal to the number of g-units (because we can
+    // have g_units.size() pairs maximum).
+    return (rv.size() == g_units.size());
 }
 
 bool FindInitializationNode::canFUsesReachInitTable(
@@ -118,8 +120,13 @@ bool FindInitializationNode::canFUsesReachInitTable(
         const ordered_set<const IR::BFN::Unit*>& f_units) const {
     const IR::BFN::Unit* unit = initTable->to<IR::BFN::Unit>();
     if (!unit) BUG("How is table %1% not a unit?", initTable->name);
-    auto rv = canLaterUnitsReachEarlyUnits(f_units, { unit }, flowGraph);
-    return rv.size();
+    auto rv = canFUnitsReachGUnits(f_units, { unit }, flowGraph);
+    // rv now contains a set of pairs of units. Each pair represents a case where the f-unit reaches
+    // the initTable. For this method, we want to return true only if all the f-units reach the
+    // initTable. Therefore, the number of pairs in rv should be equal to the number of f-units
+    // (because we can have f_units.size() * 1 pairs maximum [1 stands for the number of
+    // initTables]).
+    return (rv.size() == f_units.size());
 }
 
 ordered_set<const IR::MAU::Table*>
@@ -591,8 +598,11 @@ FindInitializationNode::findInitializationNodes(
             }
             g_units[g].insert(g_field_units.begin(), g_field_units.end());
             LOG2("\t\tCan all defuses of " << f->name << " reach defuses of " << g->name << "?");
-            auto reach_condition = canLaterUnitsReachEarlyUnits(f_dominators, g_field_units,
+            auto reach_condition = canFUnitsReachGUnits(f_dominators, g_field_units,
                     flowGraph);
+            // If one dominator of field f can reach any usedef of field g, then metadata
+            // initialization is not possible. reach_condition contains all the pairs of units where
+            // f_dominator can reach g_field_unit.
             if (reach_condition.size() > 0) {
                 LOG2("\t\t  Yes. Therefore, metadata initialization not possible.");
                 return boost::none;
