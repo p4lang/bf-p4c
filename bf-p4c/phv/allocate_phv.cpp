@@ -617,6 +617,11 @@ bool CoreAllocation::satisfies_constraints(
                 // allocated before the hi.
                 bool found = false;
                 for (auto &as : alloc.slices(alloc_slice.field())) {
+                    // It is possible that there are multiple slices in the hi part of the
+                    // slice list. E.g. field[32:47], field[48:63]. So for the latter field, we need
+                    // to check the lo_bit corresponding to the nearest 32-bit interval. The
+                    // following transformation of lo_bit is, therefore, necessary.
+                    lo_bit -= (lo_bit % 32);
                     if (as.field() == alloc_slice.field()) {
                         int lo_bit2 = as.field_slice().lo;
                         if (lo_bit2 == (lo_bit - 32)) {
@@ -905,7 +910,6 @@ CoreAllocation::tryAllocSliceList(
     boost::optional<PHV::Transaction> best_candidate = boost::none;
     for (const PHV::Container c : group) {
         int num_bitmasks = 0;
-        LOG6("Looking at container: " << c);
         // If any slices were already allocated, ensure that unallocated slices
         // are allocated to the same container.
         if (previous_container != PHV::Container() && previous_container != c) {

@@ -703,7 +703,11 @@ void Clustering::MakeSuperClusters::end_apply() {
         bool has_constraints = kv.first->alignment
                                || (kv.first->no_split() && kv.second.size() > 1)
                                || (kv.first->no_pack() && kv.second.size() > 1)
-                               || kv.first->is_checksummed() || kv.first->is_marshaled();
+                               || kv.first->is_checksummed() || kv.first->is_marshaled()
+                               // We must create slice lists for all metadata fields that are
+                               // involved in wide arithmetic to ensure that the slices of those
+                               // fields can bbe placed adjacently.
+                               || kv.first->used_in_wide_arith();
 
         // XXX(cole): Bridged metadata is treated as a header, except in the
         // egress pipeline, where it's treated as metadata.  We need to take

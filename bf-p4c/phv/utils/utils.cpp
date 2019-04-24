@@ -1149,6 +1149,9 @@ PHV::SuperCluster* PHV::SuperCluster::mergeAndSortBasedOnWideArith(
         wide_slice_lists.push_back(lo_slice);
         // find its linked hi slice list
         auto *hi_slice = sc->findLinkedWideArithSliceList(lo_slice);
+        // Possible that the hi_slice may be a part of the current supercluster, and not the passed
+        // parameter.
+        if (!hi_slice) hi_slice = findLinkedWideArithSliceList(lo_slice);
         BUG_CHECK(hi_slice, "Unable to find linked hi slice for %1%",
                   cstring::to_cstring(lo_slice));
         wide_slice_lists.push_back(hi_slice);
