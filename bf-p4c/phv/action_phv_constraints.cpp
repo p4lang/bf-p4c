@@ -1221,6 +1221,10 @@ bool ActionPhvConstraints::check_and_generate_constraints_for_move_with_unalloca
             pack_slices_together(alloc, container_state, copacking_constraints, action, false);
             LOG6("\t\t\t\t\tMust pack unallocated fields with allocated fields."
                     " Setting source containers to 1.");
+            if (!masks_valid(container_state, action)) {
+                LOG5("\t\t\t\tCannot synthesize deposit-field instruction.");
+                return false;
+            }
             numSourceContainers[action] = 1;
         } else {
             // For this case, sources need not be packed together as we may have (at most) 2
@@ -1833,6 +1837,26 @@ bool ActionPhvConstraints::masks_valid(ordered_map<size_t, ordered_set<PHV::Allo
         LOG5("\t\t\t\tInvalid masks found");
         return false; }
     return true;
+}
+
+bool ActionPhvConstraints::masks_valid(
+        const PHV::Allocation::MutuallyLiveSlices& container_state,
+        const IR::MAU::Action* action) const {
+    bitvec mask;
+    int c_size = -1;
+    for (auto& slice : container_state) {
+        if (c_size == -1) c_size = slice.container().size();
+        if (constraint_tracker.is_written(slice, action))
+            mask |= bitvec(slice.container_slice().lo, slice.width());
+    }
+    if (c_size == -1) return true;
+    LOG5("\t\t\t\t  Required mask: " << mask);
+    if (mask.is_contiguous()) return true;
+    bitvec allOnes(0, c_size);
+    bitvec complementMask = allOnes - mask;
+    LOG5("\t\t\t\t  Complement mask: " << complementMask);
+    if (complementMask.is_contiguous()) return true;
+    return false;
 }
 
 bool ActionPhvConstraints::masks_valid(
