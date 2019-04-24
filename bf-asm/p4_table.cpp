@@ -148,9 +148,15 @@ void P4Table::base_alpm_tbl_cfg(json::map &out, int size, const Table *table, P4
         unsigned *alpm_table_handle = nullptr;
         auto *alpm = &alpms[this];
         if (alpm) {
+            std::string name = p4_name();
             if (atype == P4Table::PreClassifier) {
                 alpm_cfg = &alpm->alpm_pre_classifier_table_cfg;
                 alpm_table_handle = &alpm->alpm_pre_classifier_table_handle;
+                // Both alpm pre-classifier and atcam tables share the same
+                // table name. For driver to uniquely distinguish a
+                // pre-classifier from the atcam table during snapshot, we add a
+                // suffix to the p4 name - DRV-2626
+                name += "_pre_classifier";
             } else if (atype == P4Table::Atcam) {
                 alpm_cfg = &alpm->alpm_atcam_table_cfg;
                 alpm_table_handle = &alpm->alpm_atcam_table_handle; }
@@ -163,7 +169,7 @@ void P4Table::base_alpm_tbl_cfg(json::map &out, int size, const Table *table, P4
                                                          unique_table_offset);
             if (*alpm_table_handle)
                 tbl["handle"] = *alpm_table_handle;
-            tbl["name"] = p4_name();
+            tbl["name"] = name; 
             tbl["table_type"] = type_name[table_type];
             tbl["size"] = explicit_size ? this->size : size;
         } }
