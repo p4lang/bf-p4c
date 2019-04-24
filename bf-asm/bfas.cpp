@@ -41,6 +41,7 @@ option_t options = {
     .target = TOFINO,
     .version = CONFIG_OLD,
     .werror = false,
+    .nowarn = false,
 };
 
 std::string asmfile_name;
@@ -160,6 +161,8 @@ int main(int ac, char **av) {
             options.condense_json = false;
         } else if (!strcmp(av[i], "--no-bin")) {
             options.binary = NO_BINARY;
+        } else if (!strcmp(av[i], "--no-warn")) {
+            options.nowarn = true;
         } else if (!strcmp(av[i], "--old_json")) {
             std::cerr << "Old context json is no longer supported" << std::endl;
             error_count++;

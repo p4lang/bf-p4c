@@ -530,6 +530,10 @@ class BarefootBackend(BackendDriver):
         if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
             self.add_command_option('assembler',
                                     "-vvvvl {}/bfas.config.log".format(dirname))
+        else:
+            # Disable warnings when not in DEVELOPER Mode
+            self.add_command_option('assembler', "--no-warn")
+
         # don't generate a binary
         if self._no_link:
             self.add_command_option('assembler', "--no-bin")
