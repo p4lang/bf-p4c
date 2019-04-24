@@ -94,6 +94,7 @@ class GatewayRangeMatch : public MauModifier {
 
 class CheckGatewayExpr : public MauInspector {
     const PhvInfo       &phv;
+    bool needConstOperand(const IR::Operation::Binary *);
     bool preorder(const IR::MAU::Table *tbl) override;
     bool preorder(const IR::MAU::Action *) override { return false; }
     bool preorder(const IR::MAU::TableKey *) override { return false; }
@@ -102,15 +103,15 @@ class CheckGatewayExpr : public MauInspector {
     bool preorder(const IR::MAU::BackendAttached *) override { return false; }
     bool preorder(const IR::Equ *) override { return true; }
     bool preorder(const IR::Neq *) override { return true; }
-    bool preorder(const IR::BAnd *) override { return true; }
-    bool preorder(const IR::BOr *) override { return true; }
+    bool preorder(const IR::BAnd *e) override { return needConstOperand(e); }
+    bool preorder(const IR::BOr *e) override { return needConstOperand(e); }
     bool preorder(const IR::LAnd *) override { return true; }
     bool preorder(const IR::LOr *) override { return true; }
     bool preorder(const IR::LNot *) override { return true; }
     bool preorder(const IR::Literal *) override { return true; }
     bool preorder(const IR::RangeMatch *) override { return true; }
     bool preorder(const IR::Expression *e) override;
-    bool preorder(const IR::Operation::Relation *rel) override;
+    bool preorder(const IR::Operation::Relation *rel) override { return needConstOperand(rel); }
 
  public:
     explicit CheckGatewayExpr(const PhvInfo &phv) : phv(phv) {}

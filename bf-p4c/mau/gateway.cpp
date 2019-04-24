@@ -351,7 +351,7 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::BAnd *e) {
         e->right = t; }
     if (auto k = e->right->to<IR::Constant>()) {
         int maxbit = floor_log2(k->value);
-        if (e->left->type->width_bits() > maxbit) {
+        if (e->left->type->width_bits() > maxbit + 1) {
             e->left = MakeSlice(e->left, 0, maxbit);
             e->type = e->left->type; } }
     return e;
@@ -746,10 +746,9 @@ bool CheckGatewayExpr::preorder(const IR::Expression *e) {
     return false;
 }
 
-bool CheckGatewayExpr::preorder(const IR::Operation::Relation *rel) {
-    if (!rel->right->is<IR::Constant>()) {
-        error("%s: condition too complex, one operand must be constant",
-              rel->srcInfo);
+bool CheckGatewayExpr::needConstOperand(const IR::Operation::Binary *e) {
+    if (!e->right->is<IR::Constant>()) {
+        error("condition too complex, one operand of %s must be constant", e);
         return false; }
     return true;
 }
