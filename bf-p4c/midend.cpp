@@ -239,6 +239,16 @@ class IsPhase0 : public P4::KeyIsSimple {
     }
 };
 
+class IsSlice : public P4::KeyIsSimple {
+ public:
+    IsSlice() { }
+
+    bool isSimple(const IR::Expression *expr, const Visitor::Context *ctxt) override {
+        return expr->to<IR::Slice>() != nullptr;
+    }
+};
+
+
 
 /**
  * This function implements a policy suitable for the LocalCopyPropagation pass.
@@ -318,6 +328,13 @@ MidEnd::MidEnd(BFN_Options& options) {
     auto errorOnMethodCall = false;
     auto *enum_policy = new EnumOn32Bits;
 
+    auto simplifyKeyPolicy =
+        new P4::OrPolicy(
+            new P4::OrPolicy(
+                new P4::OrPolicy(new P4::IsValid(&refMap, &typeMap), new P4::IsMask()),
+                new BFN::IsPhase0()),
+            new BFN::IsSlice());
+
     addPasses({
         new P4::EliminateNewtype(&refMap, &typeMap, typeChecking),
         new P4::EliminateSerEnums(&refMap, &typeMap, typeChecking),
@@ -332,11 +349,7 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::EliminateTypedef(&refMap, &typeMap, typeChecking),
         new P4::SimplifyControlFlow(&refMap, &typeMap, typeChecking),
         new BFN::ElimCasts(&refMap, &typeMap),
-        new P4::SimplifyKey(
-            &refMap, &typeMap,
-            new P4::OrPolicy(new P4::OrPolicy(new P4::IsValid(&refMap, &typeMap), new P4::IsMask()),
-                             new BFN::IsPhase0()),
-            typeChecking),
+        new P4::SimplifyKey(&refMap, &typeMap, simplifyKeyPolicy, typeChecking),
         new P4::RemoveExits(&refMap, &typeMap, typeChecking),
         new P4::ConstantFolding(&refMap, &typeMap, true, typeChecking),
         new P4::StrengthReduction(&refMap, &typeMap, typeChecking),
