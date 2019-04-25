@@ -698,6 +698,9 @@ void Clustering::MakeSuperClusters::end_apply() {
     for (auto& kv : self.fields_to_slices_i) {
         if (!self.uses_i.is_referenced(kv.first)) continue;
         bool is_metadata = kv.first->metadata || kv.first->pov;
+        int minByteSize = ROUNDUP(kv.first->size, 8);
+        bool is_exact_containers = kv.first->hasMaxContainerBytesConstraint() &&
+            (kv.first->getMaxContainerBytes() == minByteSize);
         // The kv.second.size() comparison is added to avoid creating slice lists containing one
         // slice.
         bool has_constraints = kv.first->alignment
@@ -707,7 +710,7 @@ void Clustering::MakeSuperClusters::end_apply() {
                                // We must create slice lists for all metadata fields that are
                                // involved in wide arithmetic to ensure that the slices of those
                                // fields can bbe placed adjacently.
-                               || kv.first->used_in_wide_arith();
+                               || kv.first->used_in_wide_arith() || is_exact_containers;
 
         // XXX(cole): Bridged metadata is treated as a header, except in the
         // egress pipeline, where it's treated as metadata.  We need to take

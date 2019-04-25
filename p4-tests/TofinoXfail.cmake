@@ -919,16 +919,22 @@ p4c_add_xfail_reason("tofino"
     "PHV allocation was not successful|./p4c TIMEOUT"
   ../glass/testsuite/p4_tests/phv/COMPILER-136/06-FullTPHV1.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-1094/comp_1094.p4
-  ../glass/testsuite/p4_tests/rdp/COMPILER-443/case2514.p4
 # bigger problem is that the container conflict free table placement is 15 stages for the following
 # program.
-  ../glass/testsuite/p4_tests/rdp/COMPILER-502/case2675.p4
   c2_COMPILER-537_case2834
   c2_COMPILER-514_balancer_one
   c2_COMPILER-510_case2682
+  ../glass/testsuite/p4_tests/arista/COMPILER-868/comp_868.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "PHV allocation was not successful|./p4c TIMEOUT"
+  ../glass/testsuite/p4_tests/rdp/COMPILER-443/case2514.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_without_nop.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_with_nop.p4
-  ../glass/testsuite/p4_tests/arista/COMPILER-868/comp_868.p4
+  ../glass/testsuite/p4_tests/rdp/COMPILER-502/case2675.p4
+  # funnel shift not supported
+  ../glass/testsuite/p4_tests/rdp/COMPILER-533/case2736.p4
   )
 
 # P4C-1375
@@ -1171,7 +1177,7 @@ p4c_add_xfail_reason("tofino"
 
 # P4C-1397
 p4c_add_xfail_reason("tofino"
-  "Total size of containers used for.*POV allocation is .*b, greater than the allowed limit of 256b"
+  "Total size of containers used for.*POV allocation is .*b, greater than the allowed limit of 256b|./p4c TIMEOUT"
   ../glass/testsuite/p4_tests/rdp/COMPILER-475/case2600.p4
   )
 
@@ -1308,7 +1314,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   ../glass/testsuite/p4_tests/mau/test_config_235_funnel_shift.p4
-  ../glass/testsuite/p4_tests/rdp/COMPILER-533/case2736.p4
 )
 
 # negative test.

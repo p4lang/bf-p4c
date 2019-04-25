@@ -300,7 +300,6 @@ p4c_add_xfail_reason("tofino2"
 # P4C-1646
 p4c_add_xfail_reason("tofino2"
   "error.*used by both ingress and egress deparser"
-  extensions/p4_tests/p4_16/jbay/p4c-1622.p4
   fabric-new-DWITH_INT_TRANSIT
 )
 

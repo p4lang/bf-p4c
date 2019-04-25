@@ -1121,14 +1121,11 @@ CoreAllocation::tryAllocSliceList(
             for (auto kv_source : *action_constraints) {
                 auto slice_list =
                     boost::make_optional<const PHV::SuperCluster::SliceList *>(false, 0);
-                bool has_not_in_list = false;
                 for (auto& slice_and_pos : kv_source.second) {
                     const auto& slice_lists = super_cluster.slice_list(slice_and_pos.first);
 
                     // Disregard slices that aren't in slice lists.
-                    if (slice_lists.size() == 0) {
-                        has_not_in_list = true;
-                        continue; }
+                    if (slice_lists.size() == 0) continue;
 
                     // If a slice is in multiple slice lists, abort.
                     // XXX(cole): This is overly constrained.
@@ -1151,16 +1148,6 @@ CoreAllocation::tryAllocSliceList(
                     slice_list = *slice_lists.begin(); }
                 // Try the next container.
                 if (!can_place) break;
-
-                // XXX(cole): Abort if the requirements a mix of slices in slice
-                // lists and those not in slice lists.  This is overly constrained.
-                // Aborting here means setting can_place to false and trying the next container.
-                if (has_not_in_list && slice_list) {
-                    LOG5("    ...but action constraints include some slices in a slice list and "
-                            "some that are not");
-                    can_place = false;
-                    break;
-                }
 
                 // At this point, all conditional placements for this source are in the same slice
                 // list. If the alignments check out, we do not need to apply the conditional
