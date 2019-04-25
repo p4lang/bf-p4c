@@ -828,7 +828,11 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, const Placed *done,
                 break; } }
         if (!have_attached) return false; }
 
-    auto stage_pragma = t->get_provided_stage();
+    int stage_entries = -1;
+    auto stage_pragma = t->get_provided_stage(&rv->stage, &stage_entries);
+    if (stage_entries > 0)
+        set_entries = std::min(stage_entries, set_entries);
+
     if (stage_pragma >= 0) {
         rv->stage = std::max(stage_pragma, rv->stage);
         furthest_stage = std::max(rv->stage, furthest_stage);
@@ -1161,7 +1165,7 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed *
          hex(pl->logical_id) << ")" <<
          (pl->need_more_match ? " (need more match)" : pl->need_more ? " (need more)" : ""));
 
-    int stage_pragma = pl->table->get_provided_stage();
+    int stage_pragma = pl->table->get_provided_stage(&pl->stage);
     if (stage_pragma >= 0 && stage_pragma != pl->stage)
         LOG1("  placing in stage " << pl->stage << " dsespite @stage(" << stage_pragma << ")");
 
@@ -1257,13 +1261,13 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choic
 
 
     LOG5("      Stage A is " << a->name << " with calculated stage " << a->stage <<
-         ", provided stage " << a->table->get_provided_stage() <<
+         ", provided stage " << a->table->get_provided_stage(&a->stage) <<
          ", priority " << a->table->get_placement_priority());
     LOG5("        downward prop score " << downward_prop_score.first);
     LOG5("        upward prop score " << upward_prop_score.first);
     LOG5("        local score " << local_score.first);
     LOG5("      Stage B is " << b->name << " with calculated stage " << b->stage <<
-         ", provided stage " << b->table->get_provided_stage() <<
+         ", provided stage " << b->table->get_provided_stage(&b->stage) <<
          ", priority " << b->table->get_placement_priority());
     LOG5("        downward prop score " << downward_prop_score.second);
     LOG5("        upward prop score " << upward_prop_score.second);
@@ -1275,8 +1279,8 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choic
 
     choice = PROV_STAGE;
     bool provided_stage = false;
-    int a_provided_stage = a->table->get_provided_stage();
-    int b_provided_stage = b->table->get_provided_stage();
+    int a_provided_stage = a->table->get_provided_stage(&a->stage);
+    int b_provided_stage = b->table->get_provided_stage(&b->stage);
 
     if (a_provided_stage >= 0 && b_provided_stage >= 0) {
         if (a_provided_stage != b_provided_stage)

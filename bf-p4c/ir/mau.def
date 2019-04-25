@@ -224,7 +224,7 @@ class Table : BFN::Unit {
     bool has_default_path() const;
     int action_next_paths() const;
     int get_placement_priority() const;
-    int get_provided_stage() const;
+    int get_provided_stage(const int *init_stage = nullptr, int *req_entries = nullptr) const;
     int hit_actions() const;
     int get_random_seed() const;
     int get_pragma_max_actions() const;

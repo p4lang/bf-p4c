@@ -981,12 +981,9 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/mau/test_config_411_neg_meter_no_idx.p4
   )
 
-# P4C-1380
 p4c_add_xfail_reason("tofino"
-  "Stage pragma provided to table .* has multiple parameters, while Brig currently"
-  ../glass/testsuite/p4_tests/mau/test_config_131_placement_with_pragma.p4
+  "error: The stage specified for table .* is .*, but we could not place it until stage .*"
   ../glass/testsuite/p4_tests/arista/DRV-543/case2499.p4
-  ../glass/testsuite/p4_tests/arista/COMPILER-1113/case8138.p4
   )
 
 # Valid XFAIL
@@ -1314,6 +1311,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   ../glass/testsuite/p4_tests/mau/test_config_235_funnel_shift.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-1113/case8138.p4
 )
 
 # negative test.

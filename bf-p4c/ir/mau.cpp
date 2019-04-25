@@ -186,29 +186,88 @@ int IR::MAU::Table::get_placement_priority() const {
     return 0;
 }
 
-int IR::MAU::Table::get_provided_stage() const {
+int IR::MAU::Table::get_provided_stage(const int *init_stage, int *req_entries) const {
     if (gateway_only()) {
         int min_stage = -1;
         for (auto *seq : Values(next)) {
             int i = -1;
             for (auto *tbl : seq->tables) {
                 if (seq->deps[++i]) continue;  // ignore tables dependent on earlier tables in seq
-                int stage = tbl->get_provided_stage();
+                int stage = tbl->get_provided_stage(nullptr, nullptr);
                 if (stage < 0) return -1;  // no minimum stage
                 if (stage < min_stage || min_stage == -1)
                     min_stage = stage; } }
         return min_stage; }
     if (!match_table) return -1;
-    auto annot = match_table->annotations->getSingle("stage");
-    if (annot == nullptr)
+
+    auto checkPragma = [](const IR::Annotation *annot) {
+        bool valid_pragma = true;
+        if (annot->expr.size() == 1 || annot->expr.size() == 2) {
+            auto stage_pos = annot->expr.at(0)->to<IR::Constant>();
+            if (stage_pos == nullptr)
+                valid_pragma = false;
+            else if (stage_pos->asInt() < 0)
+                valid_pragma = false;
+
+            if (annot->expr.size() == 2) {
+                auto entries = annot->expr.at(1)->to<IR::Constant>();
+                if (entries == nullptr)
+                    valid_pragma = false;
+                else if (entries->asInt() <= 0)
+                    valid_pragma = false;
+            }
+        } else {
+            valid_pragma = false;
+        }
+        if (!valid_pragma)
+            ::error(ErrorType::ERR_INVALID, "Stage pragma provided can have only one or two "
+                    "constant parameters >= 0", annot);
+        return valid_pragma;
+    };
+
+    int geq_stage = init_stage != nullptr ? *init_stage : -1;
+    const IR::Annotation *min_stage_annot = nullptr;
+    const IR::Annotation *max_stage_annot = nullptr;
+    auto stage_annotations = match_table->annotations->where([](const IR::Annotation *annot)
+                                                             { return annot->name == "stage"; });
+    if (!stage_annotations)
         return -1;
-    BUG_CHECK(annot->expr.size() == 1, "%s: Stage pragma provided to table %s has multiple "
-              "parameters, while Brig currently only supports one parameter",
-              annot->srcInfo, name);
-    auto constant = annot->expr.at(0)->to<IR::Constant>();
-    ERROR_CHECK(constant, "%s: Stage pragma value provided to table %s is not a constant",
-                annot->srcInfo, name);
-    return constant->asInt();
+
+    for (auto *annot : stage_annotations->annotations) {
+        if (!checkPragma(annot))
+            return -1;
+
+        int curr_stage = annot->expr.at(0)->to<IR::Constant>()->asInt();
+        if (curr_stage >= geq_stage) {
+            if (min_stage_annot == nullptr) {
+                min_stage_annot = annot;
+            } else {
+                int min_stage = min_stage_annot->expr.at(0)->to<IR::Constant>()->asInt();
+                min_stage_annot = curr_stage < min_stage ? annot : min_stage_annot;
+            }
+        }
+
+        if (max_stage_annot == nullptr) {
+            max_stage_annot = annot;
+        } else {
+            int max_stage = max_stage_annot->expr.at(0)->to<IR::Constant>()->asInt();
+            max_stage_annot = curr_stage < max_stage ? max_stage_annot : annot;
+        }
+    }
+
+    const IR::Annotation *stage_annot = min_stage_annot ? min_stage_annot : max_stage_annot;
+    if (!stage_annot)
+        return -1;
+
+    if (req_entries) {
+        if (stage_annot->expr.size() == 2) {
+            *req_entries = stage_annot->expr.at(1)->to<IR::Constant>()->asInt();
+        } else {
+            *req_entries = -1;
+        }
+    }
+
+    return stage_annot->expr.at(0)->to<IR::Constant>()->asInt();
 }
 
 int IR::MAU::Table::get_random_seed() const {
