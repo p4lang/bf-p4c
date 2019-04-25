@@ -57,12 +57,14 @@ inline void error(int lineno, const char *fmt, ...) {
 extern void warning(int lineno, const char *fmt, va_list);
 void warning(int lineno, const char *fmt, ...) __attribute__((format(printf, 2, 3)));
 inline void warning(int lineno, const char *fmt, ...) {
+#ifdef BAREFOOT_INTERNAL
     if (!options.nowarn) {
         va_list     args;
         va_start(args, fmt);
         warning(lineno, fmt, args);
         va_end(args);
     }
+#endif
 }
 
 inline void bug(const char* fname, int lineno) {

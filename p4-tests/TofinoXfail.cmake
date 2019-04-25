@@ -238,12 +238,6 @@ p4c_add_xfail_reason("tofino"
   smoketest_switch_ent_dc_general_egress_acl
   )
 
-# BRIG-113
-p4c_add_xfail_reason("tofino"
-  "Input xbar hash.*conflict in"
-  extensions/p4_tests/p4_14/compile_only/hash_calculation_multiple.p4
-  )
-
 p4c_add_xfail_reason("tofino"
 # Fail on purpose due to indirect tables not being mutually exclusive
   "Tables .* and .* are not mutually exclusive"
@@ -919,7 +913,10 @@ p4c_add_xfail_reason("tofino"
 
 # P4C-1299
 p4c_add_xfail_reason("tofino"
-  "PHV allocation was not successful"
+    # Depending on VM Load these tests may timeout before displaying the PHV
+    # alloc unsuccessful message and fail travis, we use both messages to check
+    # xfails
+    "PHV allocation was not successful|./p4c TIMEOUT"
   ../glass/testsuite/p4_tests/phv/COMPILER-136/06-FullTPHV1.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-1094/comp_1094.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-443/case2514.p4
