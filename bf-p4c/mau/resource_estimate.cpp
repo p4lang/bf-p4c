@@ -209,11 +209,52 @@ static int ways_pragma(const IR::MAU::Table *tbl, int min, int max) {
     return -1;
 }
 
+static int simul_lookups_pragma(const IR::MAU::Table *tbl, int min, int max) {
+    auto annot = tbl->match_table->getAnnotations();
+    if (auto s = annot->getSingle("simul_lookups")) {
+        ERROR_CHECK(s->expr.size() >= 1, "%s: The simul_lookups pragma on table %s does not "
+                    "have a value", tbl->srcInfo, tbl->name);
+        auto pragma_val =  s->expr.at(0)->to<IR::Constant>();
+        if (pragma_val == nullptr) {
+            ::error("%s: The simul_lookups pragma value on table %s is not a constant",
+                    tbl->srcInfo, tbl->name);
+            return -1; }
+        int rv = pragma_val->asInt();
+        if (rv < min || rv > max) {
+            ::warning("%s: The simul_lookups pragma value on table %s is not between %d and %d, "
+                      "and will be ignored", tbl->srcInfo, tbl->name, min, max);
+            return -1; }
+        return rv; }
+    return -1;
+}
+
+/**
+ * There are now two support pragmas, ways and simul_lookups.  For an SRAM based table that uses
+ * cuckoo hashing, multiple RAMs are looked up simultaneously, each accessed by a different
+ * hash function.  The number of ways is the number of simultaneous lookup.  Each way corresponds
+ * to a single hash function provided by the 52 bit hash bus.
+ *
+ * The difference in the meaning is the following:
+ *
+ *      ways - Each hash function must be entirely independent, i.e. cannot use the same
+ *          hash bits
+ *      simul_lookups - simultaneous lookups can use the same hash bits, an optimization
+ *          supported only in Brig.  Really, one can think of this as making an
+ *          individual way deeper 
+ *
+ * simul_lookups is only supported internally at this point, and is necessary to make progress
+ * on power.p4
+ */
 bool StageUseEstimate::ways_provided(const IR::MAU::Table *tbl, LayoutOption *lo,
                                      int &calculated_depth) {
-    int way_total = ways_pragma(tbl, MIN_WAYS, MAX_WAYS);
-    if (way_total == -1)
+    int ways = ways_pragma(tbl, MIN_WAYS, MAX_WAYS);
+    int simul_lookups = simul_lookups_pragma(tbl, MIN_WAYS, MAX_WAYS + 2);
+
+    if (ways == -1 && simul_lookups == -1)
         return false;
+
+    bool independent_hash = ways != -1;
+    int way_total = ways != -1 ? ways : simul_lookups;
 
     int depth_needed = std::min(calculated_depth, int(StageUse::MAX_SRAMS));
     int depth = 0;
@@ -228,21 +269,35 @@ bool StageUseEstimate::ways_provided(const IR::MAU::Table *tbl, LayoutOption *lo
         lo->way_sizes.push_back(log2_way_size);
     }
 
-    int select_upper_bits_required = 0;
-    int index = 0;
-    for (auto way_size : lo->way_sizes) {
-        if (index == IXBar::HASH_INDEX_GROUPS) {
-            lo->select_bus_split = index;
-            break;
+    if (independent_hash) {
+        int select_upper_bits_required = 0;
+        int index = 0;
+        for (auto way_size : lo->way_sizes) {
+            if (index == IXBar::HASH_INDEX_GROUPS) {
+                lo->select_bus_split = index;
+                break;
+            }
+            int select_bits = floor_log2(way_size);
+            if (select_bits + select_upper_bits_required > IXBar::HASH_SINGLE_BITS) {
+                lo->select_bus_split = index;
+                break;
+            }
+            select_upper_bits_required += floor_log2(way_size);
+            index++;
         }
-        int select_bits = floor_log2(way_size);
-
-        if (select_bits + select_upper_bits_required > IXBar::HASH_SINGLE_BITS) {
-            lo->select_bus_split = index;
-            break;
+    } else {
+        int select_upper_bits_required = 0;
+        int way_index = 0;
+        for (auto way_size : lo->way_sizes) {
+            if (way_index == IXBar::HASH_INDEX_GROUPS)
+                break;
+            select_upper_bits_required += floor_log2(way_size);
+            if (select_upper_bits_required > IXBar::HASH_SINGLE_BITS) {
+                lo->select_bus_split = way_index;
+                break;
+            }
+            way_index++;
         }
-        select_upper_bits_required += floor_log2(way_size);
-        index++;
     }
 
     calculated_depth = depth;
@@ -876,6 +931,7 @@ void StageUseEstimate::calculate_per_row_vector(safe_vector<RAM_counter> &per_wo
         int per_word = ActionDataPerWord(&lo->layout, &width);
         per_word_and_width.emplace_back(per_word, width, true, false);
     }
+
     if (lo->layout.ternary_indirect_required()) {
         int width = 1;
         int per_word = TernaryIndirectPerWord(&lo->layout, tbl);
