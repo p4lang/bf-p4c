@@ -388,9 +388,6 @@ void DoTableLayout::setup_action_layout(IR::MAU::Table *tbl) {
    data if immediate is possible */
 void DoTableLayout::setup_ternary_layout_options(IR::MAU::Table *tbl) {
     LOG2("Setup TCAM match layouts " << tbl->name);
-    if (tbl->hit_actions() == 1)
-        tbl->layout.overhead_bits++;
-
     int index = 0;
     for (auto &use : lc.get_action_formats(tbl)) {
         IR::MAU::Table::Layout layout = tbl->layout;

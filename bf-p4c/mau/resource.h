@@ -63,6 +63,8 @@ struct TableResourceAlloc {
     }
     void toJSON(JSONGenerator &json) const { json << "null"; }
     static TableResourceAlloc *fromJSON(JSONLoader &) { return nullptr; }
+
+    bool has_tind() const;
 };
 
 #endif /* BF_P4C_MAU_RESOURCE_H_ */

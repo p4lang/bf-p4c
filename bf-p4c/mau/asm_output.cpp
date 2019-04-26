@@ -1126,7 +1126,8 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, const IXBar::U
         const Memories::Use *mem, const TableMatch *fmt, bool ternary) const {
     if (!ternary) {
         emit_ways(out, indent, use, mem);
-        emit_hash_dist(out, indent, hash_dist_use, false); }
+    }
+    emit_hash_dist(out, indent, hash_dist_use, false);
     if ((use == nullptr || use->use.empty())
         && (proxy_hash_use == nullptr || proxy_hash_use->use.empty())
         && (hash_dist_use == nullptr || hash_dist_use->empty())) {
@@ -1320,6 +1321,11 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
         out << std::endl;
         indent--;
     }
+
+    if (mem.type == Memories::Use::TERNARY && mem.tind_result_bus >= 0)
+        out << indent << "indirect_bus: " << mem.tind_result_bus << std::endl;
+
+
     if ((mem.type == Memories::Use::EXACT) &&
             (stash_rows.size() > 0) && (stash_units.size() > 0)) {
         out << indent++ << "stash: " << std::endl;
@@ -2975,7 +2981,6 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
             ad_check |= tbl->layout.action_addr.address_bits > 0;
             BUG_CHECK(ad_check, "Action Data Table %s misconfigured", ad->name);
             have_action = true; } }
-    assert(have_indirect == (tbl->layout.ternary || tbl->layout.no_match_miss_path()));
     BUG_CHECK(have_action || tbl->layout.action_data_bytes_in_table == 0,
               "have action data with no action data table?");
 

@@ -16,3 +16,21 @@ TableResourceAlloc *TableResourceAlloc::clone_rename(const IR::MAU::Table *tbl, 
     }
     return rv;
 }
+
+/**
+ * A ternary indirect table might have been created, when the original layout did not have
+ * one, as a gateway is overriding the original TCAM table.
+ */
+bool TableResourceAlloc::has_tind() const {
+    bool rv = false;
+    for (auto &kv : memuse) {
+        if (kv.second.type != Memories::Use::TIND)
+            continue;
+        rv = true;
+        break;
+    }
+    if (rv)
+        BUG_CHECK(table_format.has_overhead(), "A ternary indirect table is currently "
+            "required with no overhead");
+    return rv;
+}

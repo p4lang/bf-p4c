@@ -15,6 +15,11 @@ Table::Format::Field *TernaryMatchTable::lookup_field(const std::string &n,
     assert(!format);
     auto *rv = gateway ? gateway->lookup_field(n, act) : nullptr;
     if (!rv && indirect) rv = indirect->lookup_field(n, act);
+    if (!rv && !act.empty()) {
+        if (auto call = get_action()) {
+            rv = call->lookup_field(n, act);
+        }
+    } 
     return rv;
 }
 
@@ -177,6 +182,7 @@ void TernaryMatchTable::pass0() {
 
 void TernaryMatchTable::pass1() {
     LOG1("### Ternary match table " << name() << " pass1");
+    if (action_bus) action_bus->pass1(this);
     MatchTable::pass1();
     stage->table_use[timing_thread(gress)] |= Stage::USE_TCAM;
     // Dont allocate id (mark them as used) for empty ternary tables (keyless
@@ -390,26 +396,6 @@ void TernaryMatchTable::write_regs(REGS &regs) {
         if (tcam_id >= 0) {
             setup_muxctl(merge.tcam_match_adr_to_physical_oxbar_outputmap[indirect_bus], tcam_id);
         }
-        merge.mau_action_instruction_adr_default[1][indirect_bus] = ACTION_INSTRUCTION_ADR_ENABLE;
-        auto &shift_en = merge.mau_payload_shifter_enable[1][indirect_bus];
-        if (1 || options.match_compiler) {
-            // FIXME -- only need this if there is an instruction address?
-            shift_en.action_instruction_adr_payload_shifter_en = 1; }
-        if (action)
-            shift_en.actiondata_adr_payload_shifter_en = 1;
-        if (!attached.stats.empty())
-            shift_en.stats_adr_payload_shifter_en = 1;
-        if (!attached.meters.empty() || !attached.statefuls.empty())
-            shift_en.meter_adr_payload_shifter_en = 1;
-        merge.tind_bus_prop[indirect_bus].tcam_piped = 1;
-        merge.tind_bus_prop[indirect_bus].thread = timing_thread(gress);
-        merge.tind_bus_prop[indirect_bus].enabled = 1;
-        //if (action_bus)
-        //  merge.mau_immediate_data_mask[1][indirect_bus] =
-        //     (UINT64_C(1) << action_bus->size()) - 1;
-        attached.write_merge_regs(regs, this, 1, indirect_bus);
-        if (idletime)
-            idletime->write_merge_regs(regs, 1, indirect_bus);
         if (action) {
             /* FIXME -- factor with TernaryIndirect code below */
             if (auto adt = action->to<ActionTable>()) {
@@ -799,11 +785,10 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) const {
         pack_format_entry["table_word_width"] = 0;
         pack_format_entry["number_memory_units_per_table_word"] = 0;
         pack_format.push_back(std::move(pack_format_entry));
-        tind["logical_table_id"] = 0;
-        tind["stage_number"] = 0;
+        tind["logical_table_id"] = logical_id;
+        tind["stage_number"] = stage->stageno;
         tind["stage_table_type"] = "ternary_indirection";
         tind["size"] = 0;
-        tbl["stateful_table_refs"] = json::vector();
     }
     common_tbl_cfg(tbl);
     if (actions)

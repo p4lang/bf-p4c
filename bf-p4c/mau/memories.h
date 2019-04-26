@@ -231,6 +231,7 @@ struct Memories {
         safe_vector<std::pair<int, int>>         home_row;
         safe_vector<Way>                         ways;
         Gateway                                  gateway;
+        int                                      tind_result_bus = -1;
         IR::MAU::ColorMapramAddress cma = IR::MAU::ColorMapramAddress::NOT_SET;
 
         /** This is a map of AttachedMemory UniqueIds that are shared with other tables, i.e.
@@ -563,6 +564,7 @@ struct Memories {
     safe_vector<table_alloc *>       payload_gws;
     safe_vector<table_alloc *>       normal_gws;
     safe_vector<table_alloc *>       no_match_gws;
+    safe_vector<table_alloc *>       tind_result_bus_tables;
     safe_vector<table_alloc *>       idletime_tables;
     safe_vector<SRAM_group *>        idletime_groups;
 
@@ -692,6 +694,7 @@ struct Memories {
     table_alloc *find_corresponding_exact_match(cstring name);
     bool gw_search_bus_fit(table_alloc *ta, table_alloc *exact_ta, int row, int col);
     bool allocate_all_no_match_miss();
+    bool allocate_all_tind_result_bus_tables();
 
     bool find_mem_and_bus_for_idletime(std::vector<std::pair<int, std::vector<int>>>& mem_locs,
                                     int& bus, int total_mem_required, bool top_half);

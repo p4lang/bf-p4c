@@ -234,6 +234,7 @@ void Memories::clear_table_vectors() {
     gw_tables.clear();
     no_match_hit_tables.clear();
     no_match_miss_tables.clear();
+    tind_result_bus_tables.clear();
     payload_gws.clear();
     normal_gws.clear();
     no_match_gws.clear();
@@ -316,6 +317,11 @@ bool Memories::single_allocation_balance(mem_info &mi, unsigned row) {
         return false;
     }
 
+    LOG3(" Allocate all tind result bus tables");
+    if (!allocate_all_tind_result_bus_tables()) {
+        return false;
+    }
+
     LOG3(" Allocate all no match miss");
     if (!allocate_all_no_match_miss()) {
         return false;
@@ -372,17 +378,20 @@ class SetupAttachedTables : public MauInspector {
     profile_t init_apply(const IR::Node *root) {
         profile_t rv = MauInspector::init_apply(root);
         if (ta->layout_option == nullptr) return rv;
-
-        if (!ta->layout_option->layout.no_match_miss_path() &&
-            ta->layout_option->layout.ternary_indirect_required()) {
-            for (auto u_id : ta->allocation_units(nullptr, false, UniqueAttachedId::TIND_PP)) {
-                (*ta->memuse)[u_id].type = Memories::Use::TIND;
-                mi.tind_tables++;
+        bool tind_check = ta->layout_option->layout.ternary &&
+                          !ta->layout_option->layout.no_match_miss_path();
+        if (tind_check) {
+            if (ta->table_format->has_overhead()) {
+                for (auto u_id : ta->allocation_units(nullptr, false, UniqueAttachedId::TIND_PP)) {
+                    (*ta->memuse)[u_id].type = Memories::Use::TIND;
+                    mi.tind_tables++;
+                }
+                int per_row = TernaryIndirectPerWord(&ta->layout_option->layout, ta->table);
+                mem.tind_tables.push_back(ta);
+                mi.tind_RAMs += mem.mems_needed(entries, Memories::SRAM_DEPTH, per_row, false);
+            } else {
+                mem.tind_result_bus_tables.push_back(ta);
             }
-
-            int per_row = TernaryIndirectPerWord(&ta->layout_option->layout, ta->table);
-            mem.tind_tables.push_back(ta);
-            mi.tind_RAMs += mem.mems_needed(entries, Memories::SRAM_DEPTH, per_row, false);
         }
 
         if (ta->layout_option->layout.direct_ad_required()) {
@@ -1660,10 +1669,12 @@ void Memories::find_tind_groups() {
     for (auto *ta : tind_tables) {
         int lt_entry = 0;
         for (auto u_id : ta->allocation_units(nullptr, false, UniqueAttachedId::TIND_PP)) {
-            auto first_entry = ta->table_format->match_groups[0];
             // Cannot use the TernaryIndirectPerWord function call, as the overhead allocated
             // may differ than the estimated overhead in the layout_option
-            int tind_size = 1 << ceil_log2(first_entry.overhead_mask().max().index() + 1);
+            BUG_CHECK(ta->table_format->has_overhead(), "Allocating a ternary indirect table "
+                 "%s with no overhead", u_id.build_name());
+            bitvec overhead = ta->table_format->overhead();
+            int tind_size = 1 << ceil_log2(overhead.max().index() + 1);
             tind_size = std::max(tind_size, 8);
             int per_word = TableFormat::SINGLE_RAM_BITS / tind_size;
             int depth = mems_needed(ta->calc_entries_per_uid[lt_entry], SRAM_DEPTH, per_word,
@@ -3609,6 +3620,43 @@ bool Memories::allocate_all_no_match_miss() {
                 return false;
             else
                 no_match_tables_allocated++;
+        }
+    }
+    return true;
+}
+
+/**
+ * The purpose of this function is to allocate a ternary indirect bus only for a TCAM table
+ * that requires a single ternary indirect bus, but no ternary indirect table.  This
+ * appears as an "indirect_bus" node in the assembly.
+ *
+ * This is slightly different than no-match-miss tables, as no-match-miss tables output
+ * a TernaryIndirect with no RAMs, but a format, (though this format is never actually used)
+ * as for any Assembler Calls, the key in the format are necessary.  However at this point
+ * a TernaryIndirect Table with no format does not assemble.  These in theory are the
+ * same table result, but have to be output in different ways in order to pass the assembler
+ */
+bool Memories::allocate_all_tind_result_bus_tables() {
+    for (auto *ta : tind_result_bus_tables) {
+        for (auto u_id : ta->allocation_units()) {
+            auto &alloc = (*ta->memuse).at(u_id);
+            BUG_CHECK(alloc.type == Use::TERNARY, "Tind result bus not on a ternary table?");
+            bool found = false;
+            for (int i = 0; i < SRAM_ROWS; i++) {
+                for (int j = 0; j < BUS_COUNT; j++) {
+                    if (payload_use[i][j]) continue;
+                    if (tind_bus[i][j]) continue;
+                    // Add a tind result bus node
+                    alloc.tind_result_bus = i * BUS_COUNT + j;
+                    tind_bus[i][j] = u_id.build_name();
+                    found = true;
+                    break;
+                }
+                if (found) break;
+            }
+
+            if (!found)
+                return false;
         }
     }
     return true;

@@ -1180,6 +1180,11 @@ public:
         std::string def_act = Table::get_default_action();
         return !def_act.empty() ? def_act : indirect ? indirect->default_action : ""; }
     Format* get_format() override { return indirect ? indirect->format : format; }
+    template<class REGS> void write_merge_regs(REGS &regs, int type, int bus) {
+        attached.write_merge_regs(regs, this, type, bus); }
+    FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
+        void write_merge_regs, (mau_regs &regs, int type, int bus), override {
+            write_merge_regs<decltype(regs)>(regs, type, bus); })
     void add_result_physical_buses(json::map &stage_tbl) const override;
     default_action_params* get_default_action_parameters() override {
         if (!default_action_parameters.empty()) return &default_action_parameters;

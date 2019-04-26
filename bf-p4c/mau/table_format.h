@@ -136,6 +136,13 @@ struct TableFormat {
             return !match_groups[0].overhead_mask().empty();
         }
 
+        bitvec overhead() const {
+            bitvec rv;
+            for (auto &match_group : match_groups)
+                rv |= match_group.overhead_mask();
+            return rv;
+        }
+
         bool instr_in_overhead() const {
             if (match_groups.empty())
                 return false;

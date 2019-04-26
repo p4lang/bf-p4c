@@ -77,6 +77,10 @@ template<> void MatchTable::write_regs(Target::JBay::mau_regs &regs, int type, T
             if (n.next_table() != nullptr) {
                 is_branch = true;
                 break; }
+
+    if (result == nullptr)
+        result = this;
+
     if (result->get_format_field_size("next") > 3)
         is_branch = true;
 

@@ -404,8 +404,6 @@ bool TableFormat::find_format(Use *u) {
         use->match_groups.emplace_back();
         if (!allocate_all_ternary_match())
             return false;
-        if (!layout_option.layout.ternary_indirect_required())
-            return true;
         if (!allocate_overhead())
             return false;
         return true;
@@ -882,7 +880,7 @@ bool TableFormat::allocate_all_instr_selection() {
     // ternary in which case always a ternary indirect is used to specify
     // actions
     if (instr_select == 0) {
-        if (tbl->layout.ternary || tbl->layout.no_match_miss_path())
+        if (tbl->layout.no_match_miss_path())
             instr_select++;
         else
             return true;

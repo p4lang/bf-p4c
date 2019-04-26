@@ -1650,10 +1650,11 @@ static void select_layout_option(IR::MAU::Table *tbl, const LayoutOption *layout
 }
 
 /* Adds the potential ternary tables necessary for layout options */
-static void add_attached_tables(IR::MAU::Table *tbl, const LayoutOption *layout_option) {
-    if ((!layout_option->layout.no_match_data() &&
-        layout_option->layout.ternary_indirect_required())
-        || layout_option->layout.no_match_miss_path()) {
+static void add_attached_tables(IR::MAU::Table *tbl, const LayoutOption *layout_option,
+        const TableResourceAlloc *resources) {
+    if (resources->has_tind()) {
+        BUG_CHECK(layout_option->layout.no_match_miss_path() ||
+                  layout_option->layout.ternary, "Illegally allocating a ternary indirect");
         LOG3("  Adding Ternary Indirect table to " << tbl->name);
         auto *tern_indir = new IR::MAU::TernaryIndirect(tbl->name);
         tbl->attached.push_back(new IR::MAU::BackendAttached(tern_indir->srcInfo, tern_indir));
@@ -1883,7 +1884,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
     if (table_placed.count(tbl->name) == 1) {
         if (!gw_only) {
             select_layout_option(tbl, it->second->use.preferred());
-            add_attached_tables(tbl, it->second->use.preferred());
+            add_attached_tables(tbl, it->second->use.preferred(), it->second->resources);
             if (gw_layout_used)
                 tbl->layout += gw_layout;
         }
@@ -1912,7 +1913,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
             BUG_CHECK(stage_table == it->second->stage_split, "Splitting table %s cannot be "
                       "resolved for stage table %d", table_part->name, stage_table); }
         select_layout_option(table_part, it->second->use.preferred());
-        add_attached_tables(table_part, it->second->use.preferred());
+        add_attached_tables(table_part, it->second->use.preferred(), it->second->resources);
         if (gw_layout_used)
             table_part->layout += gw_layout;
         table_part->logical_id = it->second->logical_id;

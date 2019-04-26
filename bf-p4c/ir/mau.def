@@ -164,7 +164,7 @@ class Table : BFN::Unit {
                 return false;
             return action_data_bytes_in_table > 0;
         }
-        bool ternary_indirect_required() const { return ternary; }
+        bool ternary_indirect_required() const { return ternary && overhead_bits > 0; }
         bool no_match_data() const {
             return ixbar_width_bits == 0;
         }
