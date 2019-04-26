@@ -83,8 +83,7 @@ class CharacterizeParser : public Inspector {
         return true;
     }
 
-    ExtractorUsage*
-    get_extractor_usage(const IR::BFN::LoweredParserMatch* match) {
+    void get_extractor_usage(const IR::BFN::LoweredParserMatch* match) {
         auto rv = new ExtractorUsage;
 
         for (auto stmt : match->extracts) {
@@ -92,29 +91,19 @@ class CharacterizeParser : public Inspector {
                 rv->add(ep->dest->container);
         }
 
-        return rv;
+        match_to_extractor_usage[match] = rv;
     }
 
-    std::set<unsigned>
-    get_clot_usage(const IR::BFN::LoweredParserMatch* match) {
-        std::set<unsigned> rv;
-
+    void get_clot_usage(const IR::BFN::LoweredParserMatch* match) {
         for (auto stmt : match->extracts) {
             if (auto ec = stmt->to<IR::BFN::LoweredExtractClot>())
-                rv.insert(ec->dest.tag);
+                match_to_clot_usage[match].insert(ec->dest.tag);
         }
-
-        return rv;
     }
 
-    std::set<unsigned>
-    get_checksum_usage(const IR::BFN::LoweredParserMatch* match) {
-        std::set<unsigned> rv;
-
+    void get_checksum_usage(const IR::BFN::LoweredParserMatch* match) {
         for (auto csum : match->checksums)
-            rv.insert(csum->unit_id);
-
-        return rv;
+            match_to_checksum_usage[match].insert(csum->unit_id);
     }
 
     bool preorder(const IR::BFN::LoweredParserMatch* match) override {
@@ -122,9 +111,9 @@ class CharacterizeParser : public Inspector {
         state_to_matches[state].insert(match);
         match_to_state[match] = state;
 
-        match_to_extractor_usage[match] = get_extractor_usage(match);
-        match_to_clot_usage[match] = get_clot_usage(match);
-        match_to_checksum_usage[match] = get_checksum_usage(match);
+        get_extractor_usage(match);
+        get_clot_usage(match);
+        get_checksum_usage(match);
 
         return true;
     }

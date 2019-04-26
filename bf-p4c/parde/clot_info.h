@@ -61,9 +61,27 @@ class ClotInfo {
     const std::map<cstring, std::vector<const Clot*>>&
         parser_state_to_clots() const { return parser_state_to_clots_; }
 
-    const Clot* parser_state_to_clot(cstring state, unsigned tag) const {
-            if (parser_state_to_clots_.count(state)) {
-                auto& clots = parser_state_to_clots_.at(state);
+    const Clot* parser_state_to_clot(const IR::BFN::LoweredParserState *state, unsigned tag) const {
+            auto state_name = state->name;
+            if (!parser_state_to_clots_.count(state_name)) {
+                // Prefix gress to generate full state name
+                if (state->thread() == INGRESS)
+                    state_name = "ingress::" + state_name;
+                else if (state->thread() == EGRESS)
+                    state_name = "egress::" + state_name;
+                // It is likely the state name is that of a split state,
+                // e.g. Original state = ingress::stateA
+                //      Split state = ingress::stateA.$common.0
+                // The parser_state_to_clots_ map is created before splitting and
+                // carries the original state name. We regenerate the original state
+                // name by stripping out the split name addition ".$common.0"
+                std::string st(state_name.c_str());
+                auto pos = st.find(".$");
+                if (pos != std::string::npos)
+                    state_name = st.substr(0, pos);
+            }
+            if (parser_state_to_clots_.count(state_name)) {
+                auto& clots = parser_state_to_clots_.at(state_name);
                 auto it = std::find_if(clots.begin(), clots.end(), [&](const Clot* sclot) {
                     return (sclot->tag == tag); });
                 if (it != clots.end()) return *it;

@@ -117,17 +117,17 @@ GenerateParserP4iJson::generateStateByMatch(
 
 P4iParserClot
 GenerateParserP4iJson::generateExtractClot(const IR::BFN::LoweredExtractClot* extract,
-                                           const cstring state) {
+                                           const IR::BFN::LoweredParserState *state) {
     auto* source = extract->source->to<IR::BFN::LoweredPacketRVal>();
     P4iParserClot clot;
     auto bytes = source->extractedBytes();
-    clot.issue_state = state;
+    clot.issue_state = state->name;
     clot.offset = bytes.lo;
     clot.tag = extract->dest.tag;
     clot.length = bytes.hi - bytes.lo + 1;
     if (clot_tag_to_checksum_unit.count(extract->dest.tag))
         clot.has_checksum = true;
-    if (auto c = clotInfo.parser_state_to_clot(clot.issue_state, clot.tag)) {
+    if (auto c = clotInfo.parser_state_to_clot(state, clot.tag)) {
         // TODO: Clot can contain multiple field lists due to overlay. Add once
         // support is availabe in Clot structure.
         std::vector<cstring> fl;
@@ -139,22 +139,18 @@ GenerateParserP4iJson::generateExtractClot(const IR::BFN::LoweredExtractClot* ex
 }
 
 void GenerateParserP4iJson::generateClotInfo(const IR::BFN::LoweredParserMatch* match,
-                                                const cstring state, const gress_t gress) {
+                            const IR::BFN::LoweredParserState *state, const gress_t gress) {
     for (auto* ck : match->checksums) {
         if (auto* csum = ck->to<IR::BFN::LoweredParserChecksum>())
             if (csum->type == IR::BFN::ChecksumMode::CLOT)
                 clot_tag_to_checksum_unit[csum->clot_dest.tag] = csum->unit_id;
     }
 
-    int numClots = 0;
     for (auto* stmt : match->extracts) {
         if (auto* extract = stmt->to<IR::BFN::LoweredExtractClot>()) {
-            clot_usage.clots.push_back(generateExtractClot(extract, state));
-            numClots++;  // seems redundant as equal to clots size?
+            clot_usage[gress].clots.push_back(generateExtractClot(extract, state));
         }
     }
-    clot_usage.gress = gress;
-    clot_usage.num_clots = numClots;
 }
 
 bool GenerateParserP4iJson::preorder(const IR::BFN::LoweredParserState* state) {
@@ -165,8 +161,16 @@ bool GenerateParserP4iJson::preorder(const IR::BFN::LoweredParserState* state) {
     for (const auto* match : state->transitions) {
         parsers[parser_ir->gress].states.push_back(
                 generateStateByMatch(state, prev_state, match));
-        if ((Device::currentDevice() == Device::JBAY) && BackendOptions().use_clot)
-            generateClotInfo(match, state->name, parser_ir->gress);
+    }
+
+    if ((Device::currentDevice() == Device::JBAY) && BackendOptions().use_clot) {
+        for (const auto* match : state->transitions) {
+            generateClotInfo(match, state, parser_ir->gress);
+            // A parser state can have multiple extracts, but the clot
+            // information is duplicated across all of them. Hence, we only
+            // check the first extract to gather all clot info for this state.
+            break;
+        }
     }
 
     if (parser_ir->gress == INGRESS) {

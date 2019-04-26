@@ -15,7 +15,7 @@
 class GenerateParserP4iJson : public ParserInspector {
     const ClotInfo& clotInfo;
     std::vector<P4iParser> parsers;
-    P4iParserClotUsage clot_usage;
+    std::vector<P4iParserClotUsage> clot_usage;
     bool collected;
 
     std::map<const IR::BFN::LoweredParserState*, int> state_ids;
@@ -39,11 +39,11 @@ class GenerateParserP4iJson : public ParserInspector {
     // Clots
     std::map<unsigned, unsigned> clot_tag_to_checksum_unit;
     void generateClotInfo(const IR::BFN::LoweredParserMatch* match,
-                          const cstring state,
+                          const IR::BFN::LoweredParserState* state,
                           const gress_t gress);
     P4iParserClot
     generateExtractClot(const IR::BFN::LoweredExtractClot* match,
-                        const cstring state);
+                        const IR::BFN::LoweredParserState* state);
 
     /// A parser match is a parser state.
     bool preorder(const IR::BFN::LoweredParserState* state) override;
@@ -51,13 +51,19 @@ class GenerateParserP4iJson : public ParserInspector {
 
  public:
     explicit GenerateParserP4iJson(const ClotInfo& clotInfo)
-        : clotInfo(clotInfo), parsers(2), collected(false) {
+        : clotInfo(clotInfo), parsers(2), clot_usage(2), collected(false) {
         parsers[INGRESS].parser_id = 0;
         parsers[INGRESS].n_states = 256;
         parsers[INGRESS].gress = cstring::to_cstring(INGRESS);
         parsers[EGRESS].parser_id = 0;
         parsers[EGRESS].n_states = 256;
         parsers[EGRESS].gress = cstring::to_cstring(EGRESS);
+        if ((Device::currentDevice() == Device::JBAY) && BackendOptions().use_clot) {
+            clot_usage[INGRESS].gress = INGRESS;
+            clot_usage[INGRESS].num_clots = Device::numClots();
+            clot_usage[EGRESS].gress = EGRESS;
+            clot_usage[EGRESS].num_clots = Device::numClots();
+        }
     }
 
     Util::JsonArray* getParsersJson() const {
@@ -65,9 +71,9 @@ class GenerateParserP4iJson : public ParserInspector {
         return toJsonArray(parsers);
     }
 
-    Util::JsonObject* getClotsJson() const {
+    Util::JsonArray* getClotsJson() const {
         BUG_CHECK(collected, "Calling ParserJsonGen without run pass");
-        return clot_usage.toJson();
+        return toJsonArray(clot_usage);
     }
 };
 

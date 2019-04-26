@@ -42,6 +42,7 @@ class Device {
     static unsigned maxDigestSizeInBytes() { return Device::get().getMaxDigestSizeInBytes(); }
     static int numParsersPerPipe() { return 18; }
     static int numMaxChannels() { return Device::get().getNumMaxChannels(); }
+    static int numClots() { return Device::get().getNumClots(); }
 
  protected:
     explicit Device(cstring name) : name_(name) {}
@@ -64,6 +65,9 @@ class Device {
     virtual int getQueueIdWidth() const = 0;
     virtual int getPortBitWidth() const = 0;
     virtual int getNumMaxChannels() const = 0;
+
+    // JBAY Only
+    virtual int getNumClots() const = 0;
 
  private:
     static Device* instance_;
@@ -98,6 +102,7 @@ class TofinoDevice : public Device {
     int getNumMaxChannels() const override {
         return getNumPipes() * getNumPortsPerPipe() * getNumChannelsPerPort(); }
     unsigned getMaxDigestSizeInBytes() const override { return (384/8); }
+    int getNumClots() const { BUG("No clots in Tofino"); }
 
     const PhvSpec& getPhvSpec() const override { return phv_; }
     const PardeSpec& getPardeSpec() const override { return parde_; }
@@ -133,6 +138,7 @@ class JBayDevice : public Device {
     int getPortBitWidth() const override { return 9; }
     int getNumMaxChannels() const override {
         return getNumPipes() * getNumPortsPerPipe() * getNumChannelsPerPort(); }
+    int getNumClots() const { return 64; }
 
     const PhvSpec& getPhvSpec() const override { return phv_; }
     const PardeSpec& getPardeSpec() const override { return parde_; }
