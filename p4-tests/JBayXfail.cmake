@@ -184,6 +184,11 @@ p4c_add_xfail_reason("tofino2"
   tor.p4
 )
 
+p4c_add_xfail_reason("tofino2"
+  "AssertionError: 50 not less than 30"
+  extensions/p4_tests/p4_16/ptf/meter_miss_path.p4
+)
+
 # P4C-1228
 p4c_add_xfail_reason("tofino2"
   "OSError: .* No such file or directory"

@@ -116,6 +116,11 @@ if (PTF_REQUIREMENTS_MET)
     p4c_737
     )
 
+  p4c_add_xfail_reason("tofino"
+    "AssertionError: 50 not less than 30"
+    extensions/p4_tests/p4_16/ptf/meter_miss_path.p4
+    )
+
 # BRIG-686
 # NameError: global name 'smoke_large_tbls_idle_stats_tbl_match_spec_t' is not defined
   p4c_add_xfail_reason("tofino"
