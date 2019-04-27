@@ -408,6 +408,9 @@ void TernaryMatchTable::write_regs(REGS &regs) {
             }
         }
         attached.write_tcam_merge_regs(regs, this, indirect_bus, 0);
+        merge.tind_bus_prop[indirect_bus].tcam_piped = 1;
+        merge.tind_bus_prop[indirect_bus].thread = timing_thread(gress);
+        merge.tind_bus_prop[indirect_bus].enabled = 1;
     }
     if (actions) actions->write_regs(regs, this);
     if (gateway) gateway->write_regs(regs);
