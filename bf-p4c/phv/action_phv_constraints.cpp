@@ -294,7 +294,7 @@ ordered_set<int> ActionPhvConstraints::ConstraintTracker::source_alignment(
             LOG6("\t\t\t\t\t\t" << src);
             LOG6("\t\t\t\t\t\t" << "(opInfo: "
                  << *opInfo.phv_used << ") @ " << dst.container_slice().lo);
-            LOG6("\t\t\t\t...induced by action " << act);
+            LOG6("\t\t\t\t...induced by action " << act->name);
             rv.insert(dst.container_slice().lo); } }
 
     return rv;
@@ -854,17 +854,22 @@ unsigned ActionPhvConstraints::count_container_holes(const PHV::Allocation::Mutu
     return numBreaks;
 }
 
-void ActionPhvConstraints::pack_slices_together(
+bool ActionPhvConstraints::pack_slices_together(
         const PHV::Allocation &alloc,
         const PHV::Allocation::MutuallyLiveSlices& container_state,
         ActionPhvConstraints::PackingConstraints& packing_constraints,
         const IR::MAU::Action* action,
-        bool pack_unallocated_only  /*If true, only unallocated slices will be packed together*/) {
+        bool pack_unallocated_only,  /*If true, only unallocated slices will be packed together*/
+        bool ad_source_present /* action data/constant source present */) {
+    const PHV::Field* no_pack_source_field = nullptr;
     if (pack_unallocated_only)
         LOG5("\t\t\t\t\tPack all unallocated slices together. All bits in container are occupied.");
     else
         LOG5("\t\t\t\t\tPack all slices together.");
     ordered_set<PHV::FieldSlice> pack_together;
+    ordered_set<PHV::FieldSlice> pack_together_no_pack;
+    ordered_set<const PHV::Field*> pack_together_fields;
+    bool pack_together_has_no_pack = false;
     for (auto slice : container_state) {
         for (auto operand : constraint_tracker.sources(slice, action)) {
             if (operand.ad || operand.constant)
@@ -890,7 +895,45 @@ void ActionPhvConstraints::pack_slices_together(
             // Insert the slices to be packed together into the UnionFind structure
             LOG6("\t\t\t\t\tInserting " << fieldRead->name << " [" << rangeRead.lo << ", " <<
                     rangeRead.hi << "] into copacking_constraints for action " << action->name);
-            pack_together.insert(PHV::FieldSlice(fieldRead, rangeRead)); } }
+            if (fieldRead->no_pack() &&
+               (no_pack_source_field == nullptr || fieldRead == no_pack_source_field)) {
+                // If the source is no-pack and there is no other no-pack field encountered, then
+                // add this to the no-pack slice list. Also do the same if this slice belongs to the
+                // already noted no-pack field.
+                no_pack_source_field = fieldRead;
+                LOG6("\t\t\t\t\tFound a no-pack field, so we need a second source");
+                pack_together_no_pack.insert(PHV::FieldSlice(fieldRead, rangeRead));
+            } else {
+                // Note if we have a second no-pack source.
+                if (fieldRead->no_pack()) {
+                    pack_together_fields.insert(fieldRead);
+                    pack_together_has_no_pack = true;
+                }
+                pack_together.insert(PHV::FieldSlice(fieldRead, rangeRead));
+            }
+        }
+    }
+
+    // The first no-pack source always goes by itself in the pack_together_no_pack set. If
+    // pack_together_has_no_pack is set, then it means we have at least a second no-pack source. If
+    // there are more than two no-pack sources or if another field without no-pack is also required
+    // to have a conditional constraint, then pack_together_fields will have more than one member.
+    // However, if there is a second no-pack source, pack_together_fields cannot have more than one
+    // member either. Therefore, throw an error.
+    if (pack_together_has_no_pack && pack_together_fields.size() > 1) {
+        LOG5("\t\t\t\t  Conditional constraints require use of more than two PHV containers.");
+        return false;
+    }
+
+    // If there are multiple containers required for the conditional constraints--indicated by both
+    // pack_together and pack_together_no_pack sets having members present, and the allocation also
+    // has an action data/constant source, then this allocation is invalid.
+    if (ad_source_present && pack_together.size() > 0 && pack_together_no_pack.size() > 0) {
+        LOG5("\t\t\t\t  Conditional constraints require use of two PHV containers as sources. "
+             "However, this is impossible because one of the two allowed sources is action "
+             "data/constant.");
+        return false;
+    }
 
     if (LOGGING(5)) {
         std::stringstream ss;
@@ -899,12 +942,22 @@ void ActionPhvConstraints::pack_slices_together(
         LOG5("\t\t\t\t\tPack together: " << ss.str()); }
 
     PHV::FieldSlice *firstSlice = nullptr;
+    // Pack all the non no-pack slices together.
     for (auto slice : pack_together) {
         if (firstSlice == nullptr) {
             LOG5("\t\t\t\t\t\tSetting first slice to  " << slice);
             firstSlice = new PHV::FieldSlice(slice.field(), slice.range()); }
         LOG5("\t\t\t\t\tUnion " << *firstSlice << " with " << slice);
         packing_constraints[action].makeUnion(*firstSlice, slice); }
+    // Pack the no-pack slices together in the second source.
+    firstSlice = nullptr;
+    for (auto slice : pack_together_no_pack) {
+        if (firstSlice == nullptr) {
+            LOG5("\t\t\t\t\t\tSetting first slice to " << slice);
+            firstSlice = new PHV::FieldSlice(slice.field(), slice.range()); }
+        LOG5("\t\t\t\t\tUnion " << *firstSlice << " with " << slice);
+        packing_constraints[action].makeUnion(*firstSlice, slice); }
+    return true;
 }
 
 // At this point, any packing is valid, having passed the can_pack() method. Also, if fields are
@@ -1126,7 +1179,10 @@ bool ActionPhvConstraints::check_and_generate_constraints_for_move_with_unalloca
             if (!masks_valid(container_state, action, true /*action data only*/, initActions)) {
                 LOG5("\t\t\t\tThe action data used for this packing is not contiguous");
                 return false; }
-            pack_slices_together(alloc, container_state, copacking_constraints, action, false);
+            if (!pack_slices_together(alloc, container_state, copacking_constraints, action,
+                        false /* pack both allocated and unallocated together */,
+                        true /* action data source present */))
+                return false;
         }
         // At this point, analysis determines there is at least 1 PHV source. So
         // phvMustBeAligned for this action is true.
@@ -1204,21 +1260,25 @@ bool ActionPhvConstraints::check_and_generate_constraints_for_move_with_unalloca
     // fields have to be packed together with one of the allocated fields
     // XXX(deep): What's the best way to choose which allocated slice to pack with
     if (sources.num_allocated == 2 && sources.num_unallocated > 0)
-        pack_slices_together(alloc, container_state, copacking_constraints, action, false);
+        if (!pack_slices_together(alloc, container_state, copacking_constraints, action, false))
+            return false;
 
     // For mocha and dark containers, partial container sets are impossible.
     if (mocha_or_dark && sources.num_unallocated > 0) {
         BUG_CHECK(sources.num_allocated <= 1, "Cannot have 2 or more sources for container %1%",
                 c);
         // Pack all slices together.
-        pack_slices_together(alloc, container_state, copacking_constraints, action, false); }
+        if (!pack_slices_together(alloc, container_state, copacking_constraints, action, false))
+            return false;
+    }
 
     // If sources.num_allocated == 1 and sources.num_unallocated > 0, then
     if (sources.num_allocated <= 1 && sources.num_unallocated > 0) {
         if (num_fields_not_written_to || has_bits_not_written_to) {
             // Pack all slices together (both allocated and unallocated)
             // Can only have src2 as src1 is always the destination container itself
-            pack_slices_together(alloc, container_state, copacking_constraints, action, false);
+            if (!pack_slices_together(alloc, container_state, copacking_constraints, action, false))
+                return false;
             LOG6("\t\t\t\t\tMust pack unallocated fields with allocated fields."
                     " Setting source containers to 1.");
             if (!masks_valid(container_state, action)) {
@@ -1231,7 +1291,8 @@ bool ActionPhvConstraints::check_and_generate_constraints_for_move_with_unalloca
             // source containers
             if (num_source_containers == 2) return true;
             // Only pack unallocated slices together
-            pack_slices_together(alloc, container_state, copacking_constraints, action, true);
+            if (!pack_slices_together(alloc, container_state, copacking_constraints, action, true))
+                return false;
         }
     }
     return true;

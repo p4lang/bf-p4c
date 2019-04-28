@@ -1719,6 +1719,7 @@ Visitor::profile_t AllocatePHV::init_apply(const IR::Node* root) {
         }
         bindSlices(alloc, phv_i);
         if (result.status == AllocResultCode::FAIL_UNSAT) {
+            formatAndThrowError(alloc, result.remaining_clusters);
             formatAndThrowUnsat(result.remaining_clusters);
         } else if (!failure_diagnosed) {
             formatAndThrowError(alloc, result.remaining_clusters);
@@ -2726,7 +2727,7 @@ BruteForceAllocationStrategy::allocLoop(PHV::Transaction& rst,
 
         // Try all possible slicings.
         auto slice_it = PHV::SlicingIterator(cluster_group,
-                core_alloc_i.pragmas().pa_container_sizes().field_to_sizes(), false);
+                core_alloc_i.pragmas().pa_container_sizes().field_to_sizes(), false, false);
         int n_tried = 0;
         if (slice_it.done())
             LOG4("    ...but there are no valid slicings");

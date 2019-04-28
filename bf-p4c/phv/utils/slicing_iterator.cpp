@@ -13,11 +13,14 @@ cstring PHV::SlicingIterator::get_slice_coordinates(
 PHV::SlicingIterator::SlicingIterator(
         const SuperCluster* sc,
         const std::map<const PHV::Field*, std::vector<PHV::Size>>& pa,
-        bool e)
-        : sc_i(sc), enforcePragmas(e), done_i(false) {
+        bool e,
+        bool f)
+        : sc_i(sc), enforcePragmas(e), errorOnSlicingFail(f), done_i(false) {
     LOG5("Making SlicingIterator for SuperCluster:");
     LOG5(sc);
     num_slicings = 0;
+
+    SLICING_THRESHOLD = f ? PRE_SLICING_THRESHOLD : ALLOCATION_THRESHOLD;
 
     has_slice_lists_i = sc->slice_lists().size() > 0;
     if (has_slice_lists_i) {
@@ -1688,6 +1691,16 @@ PHV::SlicingIterator PHV::SlicingIterator::operator++() {
         if (num_slicings % 10000 == 0)
             LOG4("Tried " << num_slicings << " slicings.");
         if (num_slicings > 0 && num_slicings > SLICING_THRESHOLD) {
+            // Do not throw error in this case, because the slicing is attempted during allocation.
+            // We have at least one supercluster (produced after preslicing) that could be allocated
+            // to a Tofino/Tofino2 container size.
+            if (SLICING_THRESHOLD == ALLOCATION_THRESHOLD) {
+                LOG4("Could not allocate the following supercluster to smaller container sizes "
+                     "(tried " << num_slicings << ") slicings:");
+                LOG4(sc_i);
+                done_i = true;
+                return *this;
+            }
             std::stringstream ss;
             ss << "Slicing the following supercluster is taking too long..." << std::endl;
             ss << "Tried " << num_slicings << " slicings." << std::endl;

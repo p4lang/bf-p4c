@@ -417,14 +417,15 @@ class ActionPhvConstraints : public Inspector {
       * Finally, when @pack_unallocated_only is false, all field slices (both allocated and
       * unallocated sources) in @container_state must be packed in the same container. When
       * @pack_unallocated_only is true, only unallocated field slices in @container_state must be
-      * packed together.
+      * packed together. @returns false if conditional constraints cannot be generated.
       */
-    void pack_slices_together(
+    bool pack_slices_together(
         const PHV::Allocation& alloc,
         const PHV::Allocation::MutuallyLiveSlices& container_state,
         PackingConstraints& packing_constraints,
         const IR::MAU::Action* action,
-        bool pack_unallocated_only);
+        bool pack_unallocated_only,
+        bool has_ad_source = false);
 
     /** Check that at least one container in a two source PHV instruction is aligned with the
       * destination

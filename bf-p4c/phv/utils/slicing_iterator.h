@@ -71,7 +71,8 @@ class SlicingIterator {
     // Threshold for the number of different slicings tried by the slicing iterator. If more
     // slicings than this are tried, then error out with a message about being unable to slice
     // superclusters.
-    static constexpr uint64_t SLICING_THRESHOLD = (1 << 20);
+    static constexpr uint64_t PRE_SLICING_THRESHOLD = (1 << 20);
+    static constexpr uint64_t ALLOCATION_THRESHOLD = (1 << 16);
 
     /// Supercluster associated with this slicing iterator.
     const SuperCluster* sc_i;
@@ -81,6 +82,13 @@ class SlicingIterator {
 
     /// true when the pa_container_size pragmas have to be enforced for this SlicingIterator.
     bool enforcePragmas;
+
+    /// true when incrementing slicing iterator should not cause error to be displayed (used when we
+    /// are trying to split larger superclusters after pre-slicing).
+    bool errorOnSlicingFail;
+
+    /// Actual threshold for slicing used by this SlicingIterator object.
+    uint64_t SLICING_THRESHOLD;
 
     /// true when all possible slicings have been exhausted. Two iterators
     /// with `done_i` set are always equal.
@@ -177,7 +185,8 @@ class SlicingIterator {
     explicit SlicingIterator(
             const SuperCluster* sc,
             const std::map<const PHV::Field*, std::vector<PHV::Size>>& pa,
-            bool enforce_pragmas = true);
+            bool enforce_pragmas = true,
+            bool error_on_slicing_fail = true);
 
     /// @returns a list of possible slices of @sc.
     std::list<PHV::SuperCluster*> operator*() const;
