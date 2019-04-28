@@ -1019,7 +1019,7 @@ Parser::State::Match::Match(int l, gress_t gress, match_t m, VECTOR(pair_t) &dat
             if (CHECKTYPE(kv.value, tINT))
                 value_set_handle = kv.value.i;
         } else if (kv.key.type == tCMD && kv.key == "clot" && kv.key.vec.size == 2) {
-            clots.emplace_back(gress, kv.key.vec[1], kv.value);
+            clots.push_back(new Clot(gress, kv.key.vec[1], kv.value));
         } else if (kv.key.type == tINT) {
             save.emplace_back(gress, kv.key.i, kv.key.i, kv.value);
         } else if (kv.key.type == tRANGE) {
@@ -1469,9 +1469,9 @@ void Parser::State::Match::pass2(Parser *pa, State *state) {
                     error(counter_exp->lineno, "no space left in counter init ram"); } } }
     if (clots.size() > 0) {
         if (options.target == TOFINO)
-            error(clots[0].lineno, "clots not supported on tofino");
+            error(clots[0]->lineno, "clots not supported on tofino");
         else if (clots.size() > 2)
-            error(clots[2].lineno, "no more that 2 clots per state"); }
+            error(clots[2]->lineno, "no more that 2 clots per state"); }
 }
 
 void Parser::State::pass2(Parser *pa) {
@@ -1620,8 +1620,8 @@ void Parser::State::Match::write_row_config(REGS &regs, Parser *pa, State *state
     if (def) for (auto &s : def->save)
         max_off = std::max(max_off, s.write_output_config(regs, output_map, used));
     int clot_unit = 0;
-    for (auto &c : clots) c.write_config(action_row, clot_unit++);
-    if (def) for (auto &c : def->clots) c.write_config(action_row, clot_unit++);
+    for (auto *c : clots) c->write_config(action_row, clot_unit++);
+    if (def) for (auto *c : def->clots) c->write_config(action_row, clot_unit++);
     pa->mark_unused_output_map(regs, output_map, used);
 
     if (buf_req < 0) {

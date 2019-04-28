@@ -159,10 +159,12 @@ class Parser {
                 int             max_length = -1;
                 int             csum_unit = -1;
                 Clot(gress_t gress, const value_t &tag, const value_t &data);
+                Clot(const Clot &) = delete;
+                Clot(Clot &&) = delete;
                 bool parse_length(const value_t &exp, int what=0);
                 template<class PO_ROW> void write_config(PO_ROW &, int) const;
             };
-            std::vector<Clot>           clots;
+            std::vector<Clot *>         clots;
             std::vector<Checksum>       csum;
 
             struct FieldMapping {
@@ -258,14 +260,14 @@ class Parser {
     template<class REGS> void gen_configuration_cache(REGS &, json::vector &cfg_cache);
     static int clot_maxlen(gress_t gress, unsigned tag) {
         auto &vec = clot_use[gress][tag];
-        return vec.empty() ? -1 : vec[0]->max_length; }
+        return vec.empty() ? -1 : vec.at(0)->max_length; }
     static int clot_maxlen(gress_t gress, std::string tag) {
         if (clots[gress].count(tag))
-            return clots[gress].at(tag)[0]->max_length;
+            return clots[gress].at(tag).at(0)->max_length;
         return -1; }
     static int clot_tag(gress_t gress, std::string tag) {
         if (clots[gress].count(tag))
-            return clots[gress].at(tag)[0]->tag;
+            return clots[gress].at(tag).at(0)->tag;
         return -1; }
 
     static const char* match_key_loc_name(int loc);
