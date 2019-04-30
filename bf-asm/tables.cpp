@@ -47,7 +47,7 @@ Table::Type::~Type() {
 }
 
 Table::NextTables::NextTables(value_t &v) : lineno(v.lineno) {
-    if (v.type == tVEC && Target::LONG_BRANCH_TAGS() > 0) {
+    if (v.type == tVEC && (Target::LONG_BRANCH_TAGS() > 0 || v.vec.size == 0)) {
         for (auto &el : v.vec)
             if (CHECKTYPE(el, tSTR))
                 next.emplace(el);
@@ -1328,8 +1328,9 @@ void Table::Actions::Action::check_next(Table *tbl) {
     }
     tbl->check_next(next_table_ref);
     tbl->check_next(next_table_miss_ref);
-    next_table_ref.workaroundDRV2239();
-    next_table_miss_ref.workaroundDRV2239();
+    if (default_allowed || tbl->default_action == name) {
+        next_table_ref.workaroundDRV2239();
+        next_table_miss_ref.workaroundDRV2239(); }
     for (auto &n : next_table_ref)
         check_next_ref(tbl, n);
     for (auto &n : next_table_miss_ref)
@@ -1587,9 +1588,18 @@ void Table::Actions::pass2(Table *tbl) {
         if (act.code > max_code) max_code = act.code; }
     actions.sort([](const value_type &a, const value_type &b) -> bool {
         return a.second.code < b.second.code; });
-    if (!tbl->default_action.empty() && !exists(tbl->default_action))
-        error(tbl->default_action_lineno, "no action %s in table %s", tbl->default_action.c_str(),
-              tbl->name());
+    if (!tbl->default_action.empty()) {
+        if (!exists(tbl->default_action))
+            error(tbl->default_action_lineno, "no action %s in table %s",
+                  tbl->default_action.c_str(), tbl->name());
+        else {
+            auto &defact = actions.at(tbl->default_action);
+            if (!defact.default_allowed) {
+                // FIXME -- should be an error, but the compiler currently does this?
+                // FIXME -- see p4_16_programs_tna_lpm_match
+                warning(tbl->default_action_lineno, "default action %s in table %s is not allowed "
+                        "to be default?", tbl->default_action.c_str(), tbl->name());
+                defact.default_allowed = true; } } }
     std::map<MatchTable *, std::set<Action *>> pred;
     find_pred_in_stage(tbl->stage->stageno, pred, tbl, std::set<Action *>());
     for (auto &p : pred) {

@@ -602,6 +602,10 @@ public:
     bool                        default_only_action = false;
     std::vector<NextTables>     hit_next;
     std::vector<NextTables>     extra_next_lut;  // extra entries not in the hit_next from gateway
+    // currently the assembler will add extra elements to the 8 entry next table lut if they
+    // are needed for a gateway and not present in the lut already.  We add these in a separate
+    // vector from hit_next so that context.json only reports the original hit_next from the source
+    // and we don't try to get a next table hit index from the action.
     NextTables                  miss_next;
     std::map<int, NextTables>   long_branch;
     std::map<Table *, std::set<Actions::Action *>>

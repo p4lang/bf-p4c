@@ -117,11 +117,11 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "condition") {
             if (CHECKTYPE(kv.value, tMAP)) {
                 for (auto &v : kv.value.map) {
-                    if ((v.key == "expression") && CHECKTYPE(v.value, tSTR))
+                    if (v.key == "expression" && CHECKTYPE(v.value, tSTR))
                         gateway_cond = v.value.s;
-                    else if ((v.key == "true") && CHECKTYPE(v.value, tSTR))
+                    else if (v.key == "true")
                         cond_true = Match(0, v.value, range_match);
-                    else if ((v.key == "false") && CHECKTYPE(v.value, tSTR))
+                    else if (v.key == "false")
                         cond_false = Match(0, v.value, range_match); } }
         } else if (kv.key == "payload") {
             if (kv.value.type == tBIGINT && kv.value.bigi.size == 1)
