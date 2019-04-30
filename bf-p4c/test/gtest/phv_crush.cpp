@@ -1,11 +1,9 @@
-#include "gtest/gtest.h"
-
 #include <sstream>
 
+#include "gtest/gtest.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/ir/gress.h"
 #include "bf-p4c/phv/allocate_phv.h"
-#include "bf-p4c/phv/field_alignment.h"
 #include "bf-p4c/phv/utils/slicing_iterator.h"
 #include "bf-p4c/phv/utils/utils.h"
 #include "lib/bitvec.h"
@@ -58,29 +56,29 @@ TEST_F(TofinoPhvCrush, enforce_container_sizes) {
 
     // 0 --> 0
     rv = bitvec();
-    PHV::enforce_container_sizes(rv, 1, bitvec(), bitvec(), bitvec(0,1));
+    PHV::enforce_container_sizes(rv, 1, bitvec(), bitvec(), bitvec(0, 1));
     EXPECT_EQ(rv, bitvec());
 
     // 00 --> 01
     rv = bitvec();
-    PHV::enforce_container_sizes(rv, 2, bitvec(), bitvec(), bitvec(0,2));
+    PHV::enforce_container_sizes(rv, 2, bitvec(), bitvec(), bitvec(0, 2));
     EXPECT_EQ(rv, bitvec(0, 1));
 
     // 01 --> 01
     rv = bitvec(0, 1);
-    PHV::enforce_container_sizes(rv, 2, bitvec(), bitvec(), bitvec(0,2));
+    PHV::enforce_container_sizes(rv, 2, bitvec(), bitvec(), bitvec(0, 2));
     EXPECT_EQ(rv, bitvec(0, 1));
 
     // 001 --> 010
     rv = bitvec(0, 1);
-    PHV::enforce_container_sizes(rv, 3, bitvec(), bitvec(), bitvec(0,3));
+    PHV::enforce_container_sizes(rv, 3, bitvec(), bitvec(), bitvec(0, 3));
     EXPECT_EQ(rv, bitvec(1, 1));
 
     // 001 | 001 --> 010 | 010
     rv = bitvec();
     rv.setbit(0);
     rv.setbit(3);
-    PHV::enforce_container_sizes(rv, 6, bitvec(3,1), bitvec(), bitvec(0,6));
+    PHV::enforce_container_sizes(rv, 6, bitvec(3, 1), bitvec(), bitvec(0, 6));
 
     bv = bitvec();
     bv.setbit(1);
@@ -89,7 +87,7 @@ TEST_F(TofinoPhvCrush, enforce_container_sizes) {
 
     // 00R --> 01R
     rv = bitvec(0, 1);
-    PHV::enforce_container_sizes(rv, 3, bitvec(), bitvec(0, 1), bitvec(0,3));
+    PHV::enforce_container_sizes(rv, 3, bitvec(), bitvec(0, 1), bitvec(0, 3));
     EXPECT_EQ(rv, bitvec(0, 2));
 
     // 00R | 00R --> 01R | 01R
@@ -99,7 +97,7 @@ TEST_F(TofinoPhvCrush, enforce_container_sizes) {
     auto req = bitvec();
     req.setbit(0);
     req.setbit(3);
-    PHV::enforce_container_sizes(rv, 6, bitvec(3,1), req, bitvec(0, 6));
+    PHV::enforce_container_sizes(rv, 6, bitvec(3, 1), req, bitvec(0, 6));
 
     bv = bitvec();
     bv.setbit(0);
@@ -194,7 +192,7 @@ TEST_F(TofinoPhvCrush, sliceSuperCluster) {
     schemas[list] = bitvec();
     schemas[list].setbit(8);
     schemas[list].setbit(16);
-    schemas[list2] = bitvec(8,1);
+    schemas[list2] = bitvec(8, 1);
     res = PHV::SlicingIterator::split_super_cluster(make_sc({ list, list2 }), schemas);
 #if !(__GNUC__ == 4 && __GNUC_MINOR__ == 9)
     // Comparison with boost::optional triggers an undefined reference
@@ -236,7 +234,7 @@ TEST_F(TofinoPhvCrush, clusterAlignment) {
                                { 8, 4, ZeroToMax() } } },
         { 4, PHV::Size::b16, { { 8, boost::none, ZeroToMax() },
                                { 8, 4, ZeroToMax() } } },
-        
+
         // validContainerStartRange only
         { 0, PHV::Size::b16, { { 8, boost::none, StartLen(0, 16) } } },
         { 0, PHV::Size::b16, { { 8, boost::none, StartLen(0, 16) },
@@ -275,7 +273,8 @@ TEST_F(TofinoPhvCrush, clusterAlignment) {
             f->validContainerRange_i = fdata.validContainerRange;
             if (fdata.relativeAlignment)
                 f->alignment =
-                    FieldAlignment(le_bitrange(StartLen(*fdata.relativeAlignment, int(test.container_size))));
+                    FieldAlignment(le_bitrange(StartLen(*fdata.relativeAlignment,
+                                                        int(test.container_size))));
             else
                 f->alignment = boost::none;
             slices.push_back(PHV::FieldSlice(f));
@@ -287,7 +286,6 @@ TEST_F(TofinoPhvCrush, clusterAlignment) {
         else
             EXPECT_TRUE(cl.validContainerStart(test.container_size).empty());
     }
-
 }
 
 TEST_F(TofinoPhvCrush, makeDeviceAllocation) {

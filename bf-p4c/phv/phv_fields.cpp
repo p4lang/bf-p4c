@@ -15,6 +15,27 @@
 #include "lib/log.h"
 #include "lib/stringref.h"
 
+FieldAlignment::FieldAlignment(nw_bitrange bitLayout)
+    : align(7 - bitLayout.hi % 8)
+{ }
+
+FieldAlignment::FieldAlignment(le_bitrange bitLayout)
+    : align(bitLayout.lo % 8)
+{ }
+
+bool FieldAlignment::operator==(const FieldAlignment& other) const {
+    return align == other.align;
+}
+
+bool FieldAlignment::operator!=(const FieldAlignment& other) const {
+    return !(*this == other);
+}
+
+std::ostream& operator<<(std::ostream& out, const FieldAlignment& alignment) {
+    out << "alignment = " << alignment.align;
+    return out;
+}
+
 //
 //***********************************************************************************
 //
@@ -645,7 +666,7 @@ PHV::FieldSlice::FieldSlice(
 
     // Calculate relative alignment for this field slice.
     if (field->alignment) {
-        le_bitrange field_range = StartLen(field->alignment->littleEndian, field->size);
+        le_bitrange field_range = StartLen(field->alignment->align, field->size);
         le_bitrange slice_range = field_range.shiftedByBits(range_i.lo)
             .resizedToBits(range_i.size());
         alignment_i = FieldAlignment(slice_range);
@@ -995,26 +1016,6 @@ struct ComputeFieldAlignments : public Inspector {
         // case with our current representation of valid container ranges.
         const nw_bitrange validContainerRange = FromTo(0, extractedBits.hi);
         fieldInfo->updateValidContainerRange(validContainerRange);
-
-        // XXX(seth): This is a hack: if this field was bridged from ingress, we
-        // apply the same alignment constraint to the ingress version of the
-        // field. This ensures that the two allocations are compatible until
-        // we're ready to handle bridged metadata more intelligently. (Note that
-        // we don't even need to do this before CreateThreadLocalInstances has
-        // run, since before that there is just one version of the field; that's
-        // why we check for "egress::" below.)
-        auto* state = findContext<IR::BFN::ParserState>();
-        if (state->name.endsWith("^bridge_metadata_extract") &&
-                fieldInfo->name.startsWith("egress::")) {
-            cstring ingressFieldName = cstring("ingress::")
-                                     + fieldInfo->name.substr(strlen("egress::"));
-            auto* ingressFieldInfo = phv.field(ingressFieldName);
-            BUG_CHECK(ingressFieldInfo != nullptr,
-                      "No ingress version of egress bridged metadata field?");
-            LOG3("B. Updating alignment of " << ingressFieldInfo->name << " to " << alignment);
-            ingressFieldInfo->updateAlignment(alignment);
-            ingressFieldInfo->updateValidContainerRange(validContainerRange);
-        }
 
         return false;
     }
@@ -1547,7 +1548,7 @@ std::ostream &operator<<(std::ostream &out,
 std::ostream &PHV::operator<<(std::ostream &out, const PHV::Field &field) {
     out << field.id << ':' << field.name << '<' << field.size << '>';
     if (field.alignment)
-        out << " ^" << field.alignment->littleEndian;
+        out << " ^" << field.alignment->align;
     else
         out << " ^x";
     if (field.validContainerRange_i != ZeroToMax())
@@ -1646,7 +1647,7 @@ std::ostream &operator<<(std::ostream &out, const PHV::FieldSlice& fs) {
     auto& field = *fs.field();
     out << field.name << "<" << field.size << ">";
     if (fs.alignment())
-        out << " ^" << fs.alignment()->littleEndian;
+        out << " ^" << fs.alignment()->align;
     if (fs.validContainerRange() != ZeroToMax())
         out << " ^" << fs.validContainerRange();
     if (field.bridged) out << " bridge";

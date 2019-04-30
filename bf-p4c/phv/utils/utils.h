@@ -694,7 +694,7 @@ class AlignedCluster : public ClusterStats {
      */
     boost::optional<unsigned> alignment() const {
         if (alignment_i)
-            return alignment_i->littleEndian;
+            return alignment_i->align;
         return boost::none;
     }
 

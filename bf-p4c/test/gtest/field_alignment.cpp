@@ -63,16 +63,11 @@ createFieldAlignmentTestCase(const std::string& headerSource) {
     return TofinoPipeTestCase::create(source);
 }
 
-struct ExpectedAlignment {
-    unsigned network;
-    unsigned littleEndian;
-};
-
 /// A map from field names to expected alignment values. The expected alignment
 /// is optional; if it's boost::none, then the field's alignment value must also
 /// be boost::none - in other words, no particular alignment constraint should
 /// have been inferred.
-using ExpectedAlignmentMap = std::map<cstring, boost::optional<ExpectedAlignment>>;
+using ExpectedAlignmentMap = std::map<cstring, boost::optional<unsigned>>;
 
 
 /// Given a Tofino program, infer alignments for its fields and check that they
@@ -101,9 +96,7 @@ void checkFieldAlignment(const IR::BFN::Pipe* pipe,
         }
 
         ASSERT_TRUE(fieldInfo->alignment);
-        EXPECT_EQ(expectedAlignment->network, fieldInfo->alignment->network);
-        EXPECT_EQ(expectedAlignment->littleEndian,
-                  fieldInfo->alignment->littleEndian);
+        EXPECT_EQ(*expectedAlignment, fieldInfo->alignment->align);
     }
 }
 
@@ -122,11 +115,11 @@ TEST_F(TofinoFieldAlignment, ByteAlignedFields) {
     EXPECT_EQ(0u, ::diagnosticCount());
 
     checkFieldAlignment(test->pipe, {
-        { "h.field1", ExpectedAlignment{/* network */ 0, /* little endian */ 0} },
-        { "h.field2", ExpectedAlignment{/* network */ 0, /* little endian */ 0} },
-        { "h.field3", ExpectedAlignment{/* network */ 0, /* little endian */ 0} },
-        { "h.field4", ExpectedAlignment{/* network */ 0, /* little endian */ 0} },
-        { "h.field5", ExpectedAlignment{/* network */ 0, /* little endian */ 0} },
+        { "h.field1", 0 },
+        { "h.field2", 0 },
+        { "h.field3", 0 },
+        { "h.field4", 0 },
+        { "h.field5", 0 },
     });
 }
 
@@ -144,12 +137,12 @@ TEST_F(TofinoFieldAlignment, SmallUnalignedFields) {
     EXPECT_EQ(0u, ::diagnosticCount());
 
     checkFieldAlignment(test->pipe, {
-        { "h.field1", ExpectedAlignment{/* network */ 0, /* little endian */ 7} },
-        { "h.field2", ExpectedAlignment{/* network */ 1, /* little endian */ 4} },
-        { "h.field3", ExpectedAlignment{/* network */ 4, /* little endian */ 0} },
-        { "h.field4", ExpectedAlignment{/* network */ 0, /* little endian */ 3} },
-        { "h.field5", ExpectedAlignment{/* network */ 5, /* little endian */ 6} },
-        { "h.field6", ExpectedAlignment{/* network */ 2, /* little endian */ 0} },
+        { "h.field1", 7 },
+        { "h.field2", 4 },
+        { "h.field3", 0 },
+        { "h.field4", 3 },
+        { "h.field5", 6 },
+        { "h.field6", 0 },
     });
 }
 
@@ -166,11 +159,11 @@ TEST_F(TofinoFieldAlignment, LargeUnalignedFields) {
     EXPECT_EQ(0u, ::diagnosticCount());
 
     checkFieldAlignment(test->pipe, {
-        { "h.field1", ExpectedAlignment{/* network */ 0, /* little endian */ 1} },
-        { "h.field2", ExpectedAlignment{/* network */ 7, /* little endian */ 0} },
-        { "h.field3", ExpectedAlignment{/* network */ 0, /* little endian */ 7} },
-        { "h.field4", ExpectedAlignment{/* network */ 1, /* little endian */ 3} },
-        { "h.field5", ExpectedAlignment{/* network */ 5, /* little endian */ 0} },
+        { "h.field1", 1 },
+        { "h.field2", 0 },
+        { "h.field3", 7 },
+        { "h.field4", 3 },
+        { "h.field5", 0 },
     });
 }
 
@@ -222,7 +215,7 @@ TEST_F(TofinoFieldAlignment, NonPardeFieldsDoNotForceAlignment) {
     EXPECT_EQ(0u, ::diagnosticCount());
 
     checkFieldAlignment(test->pipe, {
-        { "usedInParser.field", ExpectedAlignment{/* network */ 0, /* little endian */ 0} },
+        { "usedInParser.field", 0 },
         { "usedOnlyInMAU.field", boost::none },
         { "meta.metadataField", boost::none },
     });

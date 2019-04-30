@@ -623,7 +623,7 @@ void RepackFlexHeaders::determineAlignmentConstraints(
         // If this field is initialized by a ComputedRVal expression in the parser, then consider it
         // as having alignment constraints.
         if (parserAlignedFields.count(field) && field->alignment) {
-            alignmentConstraints[structField] = le_bitrange(StartLen(field->alignment->littleEndian,
+            alignmentConstraints[structField] = le_bitrange(StartLen(field->alignment->align,
                         field->size));
             LOG4("\t\tDetected bit in byte alignment " << alignmentConstraints[structField] <<
                  " for field " << field->name); }
@@ -697,17 +697,17 @@ void RepackFlexHeaders::determineAlignmentConstraints(
                     // XXX(Deep): Figure out why we get conflicting alignment constraints for
                     // related fields and how to reconcile it. Until then, don't pack these fields
                     // with anything else.
-                    WARN_CHECK(f->alignment->littleEndian == alignSource->alignment->littleEndian,
+                    WARN_CHECK(f->alignment->align == alignSource->alignment->align,
                                "Conflicting alignment constraints detected for bridged field %1%"
-                               ": %2%, %3%", field->name, f->alignment->littleEndian,
-                               alignSource->alignment->littleEndian);
-                    conflictingAlignmentConstraints[structField].insert(f->alignment->littleEndian);
+                               ": %2%, %3%", field->name, f->alignment->align,
+                               alignSource->alignment->align);
+                    conflictingAlignmentConstraints[structField].insert(f->alignment->align);
                     conflictingAlignmentConstraints[structField].insert(
-                            alignSource->alignment->littleEndian);
+                            alignSource->alignment->align);
                     LOG5("\t\t  Conflicting alignment constraint detected for " << structField);
                     continue; }
                 fieldAlignmentMap[field] = f;
-                le_bitrange alignment = StartLen(f->alignment->littleEndian, f->size);
+                le_bitrange alignment = StartLen(f->alignment->align, f->size);
                 alignmentConstraints[structField] = alignment; } } }
     if (LOGGING(4)) {
         if (alignmentConstraints.size() > 0) {
@@ -866,8 +866,8 @@ IR::Type_Struct* RepackFlexHeaders::repackFlexibleStruct(
                 // XXX(Deep): What if alignment from multiple sources conflicts?
                 if (source->alignment) {
                     LOG4("\t\tAlignment constraint on " << tempField << " : " <<
-                         *(source->alignment) << " " << source->alignment->littleEndian);
-                    packingWithPositions[f1] = source->alignment->littleEndian;
+                         *(source->alignment) << " " << source->alignment->align);
+                    packingWithPositions[f1] = source->alignment->align;
                 }
             }
         } else {

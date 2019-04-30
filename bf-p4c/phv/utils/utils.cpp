@@ -897,9 +897,9 @@ bitvec PHV::AlignedCluster::validContainerStart(PHV::FieldSlice slice, PHV::Size
 
     // account for relative alignment
     int align_start = valid_start_range.lo;
-    if (align_start % 8 != int(slice.alignment()->littleEndian)) {
-        bool next_byte = align_start % 8 > int(slice.alignment()->littleEndian);
-        align_start += slice.alignment()->littleEndian + (next_byte ? 8 : 0) - align_start % 8; }
+    if (align_start % 8 != int(slice.alignment()->align)) {
+        bool next_byte = align_start % 8 > int(slice.alignment()->align);
+        align_start += slice.alignment()->align + (next_byte ? 8 : 0) - align_start % 8; }
 
     bitvec rv;
     while (valid_start_range.contains(align_start)) {

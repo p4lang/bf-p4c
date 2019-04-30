@@ -378,7 +378,6 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/asm_output.cpp
   phv/cluster_phv_operations.cpp
   phv/create_thread_local_instances.cpp
-  phv/field_alignment.cpp
   phv/make_clusters.cpp
   phv/mau_backtracker.cpp
   phv/parde_phv_constraints.cpp
@@ -431,10 +430,8 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/asm_output.h
   phv/check_unallocated.h
   phv/cluster_phv_operations.h
-  phv/constraints.h
   phv/create_thread_local_instances.h
   phv/parser_extract_balance_score.h
-  phv/field_alignment.h
   phv/make_clusters.h
   phv/mau_backtracker.h
   phv/parde_phv_constraints.h
@@ -856,7 +853,6 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_solitary.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/parser_critical_path.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/parser_constant_extract.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_constraints.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_crush.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_field.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/path_linearizer.cpp

@@ -10,7 +10,6 @@
 #include "bf-p4c/ir/thread_visitor.h"
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/ir/tofino_write_context.h"
-#include "bf-p4c/phv/field_alignment.h"
 #include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "ir/ir.h"
@@ -21,6 +20,21 @@
 #include "lib/range.h"
 #include "lib/safe_vector.h"
 #include "lib/symbitmatrix.h"
+
+struct FieldAlignment {
+    explicit FieldAlignment(nw_bitrange bitLayout);
+    explicit FieldAlignment(le_bitrange bitLayout);
+
+    bool operator==(const FieldAlignment& other) const;
+    bool operator!=(const FieldAlignment& other) const;
+
+    bool isByteAligned() const { return align == 0; }
+
+    /// bit in byte alignment of the field in little endian order
+    unsigned align;
+};
+
+std::ostream& operator<<(std::ostream&, const FieldAlignment&);
 
 namespace PHV {
 
