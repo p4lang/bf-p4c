@@ -190,9 +190,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
   ../glass/testsuite/p4_tests/phv/COMPILER-546/switch_comp546.p4
-  ../glass/testsuite/p4_tests/phv/COMPILER-788/comp_788.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-243/comp243.p4
-  ../glass/testsuite/p4_tests/mau/COMPILER-362/icmp_typecode.p4
   extensions/p4_tests/p4_16/compile_only/flex_packing_switch.p4
   extensions/p4_tests/p4_16/compile_only/flex_packing_pvs_switch.p4
   extensions/p4_tests/p4-programs/internal_p4_14/fr_test/fr_test.p4
@@ -201,11 +199,15 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
+  "error: No phv record session_id"  # P4C-1694
+  ../glass/testsuite/p4_tests/mau/COMPILER-362/icmp_typecode.p4
+)
+
+p4c_add_xfail_reason("tofino"
   "error.*Can't split table.*with indirect attached MAU::StatefulAlu"
   switch_8.7_ent_fin_postcard
   switch_ent_fin_postcard
   ../glass/testsuite/p4_tests/phv/COMPILER-587/l4l.p4
-  ../glass/testsuite/p4_tests/phv/COMPILER-828/meta_init_problem.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-706/terminate_parsing.p4
 )
 
@@ -213,6 +215,7 @@ p4c_add_xfail_reason("tofino"
   "error: The stage specified for .* could not place it until stage"
   extensions/p4_tests/p4-programs/internal_p4_14/ecc/ecc.p4
   extensions/p4_tests/p4-programs/internal_p4_14/mau_test/mau_test.p4  #P4C-1123
+  ../glass/testsuite/p4_tests/phv/COMPILER-828/meta_init_problem.p4
   switch_l3_heavy_int_leaf
   switch_msdc_leaf_int
   switch_8.7_msdc_leaf_int
@@ -224,6 +227,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error.*Power worst case estimated budget exceeded by*"
   extensions/p4_tests/p4-programs/internal_p4_14/clpm/clpm.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-868/comp_868.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -924,7 +928,6 @@ p4c_add_xfail_reason("tofino"
   c2_COMPILER-537_case2834
   c2_COMPILER-514_balancer_one
   c2_COMPILER-510_case2682
-  ../glass/testsuite/p4_tests/arista/COMPILER-868/comp_868.p4
   )
 
 p4c_add_xfail_reason("tofino"

@@ -305,7 +305,7 @@ p4c_add_xfail_reason("tofino2"
 
 # P4C-1665
 p4c_add_xfail_reason("tofino2"
-  "Multiple resource indicated for the same object"
+  "The table map_stg_2_map_rd_clr_fid with no key cannot have the action"
   extensions/p4_tests/p4_16/jbay/hwlearn4.p4
 )
 

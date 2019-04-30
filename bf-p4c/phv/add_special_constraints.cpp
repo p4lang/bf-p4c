@@ -28,6 +28,18 @@ bool AddSpecialConstraints::preorder(const IR::BFN::Deparser* deparser) {
     return true;
 }
 
+bool AddSpecialConstraints::preorder(const IR::BFN::DeparserParameter* param) {
+    auto field = phv_i.field(param->source->field);
+
+    if (!field->deparsed_bottom_bits()) {
+       // choose best fit container for ones that are shift-able
+       auto container_size = ((field->size + 7) / 8) * 8;
+       pragmas_i.pa_container_sizes().add_constraint(field, { PHV::Size(container_size) });
+    }
+
+    return false;
+}
+
 bool AddSpecialConstraints::preorder(const IR::BFN::ChecksumVerify* verify) {
     if (!verify->dest) return false;
     const PHV::Field* field = phv_i.field(verify->dest->field);
