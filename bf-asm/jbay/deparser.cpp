@@ -597,21 +597,63 @@ template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
             for(auto &set : digest.layout) {
                 int id = set.first;
                 int len = regs.dprsrreg.inp.ipp.ingr.learn_tbl[id].len;
-                int index = 0;
                 if (len == 0) continue; // Allow empty param list
-                /* set words first */
-                for(; index < len/4; index++) {
-                    regs.dprsrreg.inp.icr.lrnmask[id].mask[11-index] = 0xFFFFFFFF;
+
+                // Create a bitvec of all phv masks stacked up next to each
+                // other in big-endian. 'setregs' above stacks the digest fields
+                // in a similar manner to setup the phvs per byte on learn_tbl
+                // regs. To illustrate with an example - tna_digest.p4 (since
+                // this is not clear based on reg descriptions);
+                //
+                // BFA Output:
+                //
+                //   learning:
+                //      select: { B1(0..2): B0(1) }  # L[0..2]b: ingress::ig_intr_md_for_dprsr.digest_type
+                //      0:
+                //        - B1(0..2)  # L[0..2]b: ingress::ig_intr_md_for_dprsr.digest_type
+                //        - MW0  # ingress::hdr.ethernet.dst_addr.16-47
+                //        - MH1  # ingress::hdr.ethernet.dst_addr.0-15
+                //        - MH0(0..8)  # L[0..8]b: ingress::ig_md.port
+                //        - MW1  # ingress::hdr.ethernet.src_addr.16-47
+                //        - MH2  # ingress::hdr.ethernet.src_addr.0-15
+                //
+                // PHV packing for digest,
+                //
+                //    B1(7..0) | MW0 (31..24) | MW0(23..16) | MW0(15..8)  |
+                //   MW0(7..0) | MH1 (15..8)  | MH1(7..0)   | MH0(16..8)  |
+                //   MH0(7..0) | MW1 (31..24) | MW1(23..16) | MW1(15..8)  |
+                //   MW1(7..0) | MH2 (15..8)  | MH2(7..0)   | ----------  |
+                //
+                // Learn Mask Regs for above digest
+                //   deparser.regs.dprsrreg.inp.icr.lrnmask[0].mask[11] = 4294967047 (0x07ffffff)
+                //   deparser.regs.dprsrreg.inp.icr.lrnmask[0].mask[10] = 4294967295 (0xffffff01)
+                //   deparser.regs.dprsrreg.inp.icr.lrnmask[0].mask[9]  = 4278321151 (0xffffffff)
+                //   deparser.regs.dprsrreg.inp.icr.lrnmask[0].mask[8]  = 4294967040 (0xffffff00)
+                //
+                bitvec lrnmask;
+                int startBit = 0;
+                int size = 0;
+                for (auto p : set.second) {
+                    if (size > 0)
+                        lrnmask <<= p->reg.size;
+                    auto psliceSize = p.size();
+                    startBit = p.lobit(); 
+                    lrnmask.setrange(startBit, psliceSize);
+                    size += p->reg.size;
                 }
-                /* now set overflow bytes */
-                for(int j=0; j < len%4; j++) {
-                    unsigned mask = 0xFF << 8*(3-j);
-                    regs.dprsrreg.inp.icr.lrnmask[id].mask[11-index] |= mask;
+                // Pad to a 32 bit word
+                auto shift = (size % 32) ? (32 - (size % 32)) : 0;
+                lrnmask <<= shift; 
+                int num_words = (size + 31)/32;
+                int quanta_index = 11;
+                for (int index = num_words - 1; index >= 0; index--) {
+                    BUG_CHECK(quanta_index >= 0);
+                    unsigned word = lrnmask.getrange(index * 32, 32); 
+                    regs.dprsrreg.inp.icr.lrnmask[id].mask[quanta_index--] = word;
                 }
             }
         }
     }
-
 
 #define DISBALE_IF_NOT_SET(ISARRAY, ARRAY, REGS, DISABLE) \
     ISARRAY(for (auto &r : ARRAY)) if (!ISARRAY(r.)REGS.modified()) ISARRAY(r.)REGS.DISABLE = 1;
