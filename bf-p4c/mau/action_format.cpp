@@ -956,9 +956,10 @@ bool ActionFormat::initialize_global_params_counts() {
 
 
     if (global_params.total_bytes(IMMED) > immediate_bytes_available) {
-        error("In table %s, the number of bytes required to go through the immediate pathway %d "
-              "is greater than the available bytes %d, and can not be allocated", tbl->name,
-               global_params.total_bytes(IMMED), immediate_bytes_available);
+        error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "\nIn table %2%, the number of bytes required "
+              "to go through the immediate pathway %3% is greater than the available bytes %4%, "
+              "and can not be allocated", tbl, tbl->name, global_params.total_bytes(IMMED),
+              immediate_bytes_available);
         return false;
     }
     return true;
