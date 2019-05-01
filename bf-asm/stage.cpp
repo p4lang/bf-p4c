@@ -316,9 +316,10 @@ int Stage::first_table(gress_t gress) {
         int min_logical_id = INT_MAX;
         for (auto tbl : st.tables) {
             if (tbl->gress != gress) continue;
+            if (tbl->logical_id < 0) continue;  // ignore phase 0
             if (tbl->logical_id < min_logical_id)
                 min_logical_id = tbl->logical_id; }
-        if (min_logical_id >= 0 && min_logical_id != INT_MAX) {
+        if (min_logical_id != INT_MAX) {
             BUG_CHECK((min_logical_id & ~0xf) == 0);
             return (st.stageno << 4) + min_logical_id; } }
     return -1;
