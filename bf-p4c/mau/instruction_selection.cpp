@@ -569,9 +569,11 @@ const IR::Node *DoInstructionSelection::postorder(IR::Primitive *prim) {
     if (prim->name == "modify_field") {
         long mask;
         if ((prim->operands.size() | 1) != 3) {
-            error("%s: wrong number of operands to %s", prim->srcInfo, prim->name);
+            error(ErrorType::ERR_INVALID, "wrong number of operands to %2%", prim->srcInfo,
+                  prim->name);
         } else if (!phv.field(dest)) {
-            error("%s: destination of %s must be a field", prim->srcInfo, prim->name);
+            error(ErrorType::ERR_INVALID, "destination of %2% must be a field", prim->srcInfo,
+                  prim->name);
         } else if (auto *rv = fillInstDest(prim->operands[1], dest)) {
             return rv;
         } else if (!checkSrc1(prim->operands[1])) {
@@ -588,8 +590,12 @@ const IR::Node *DoInstructionSelection::postorder(IR::Primitive *prim) {
             if (auto mux = prim->operands[1]->to<IR::Mux>()) {
                 auto type = prim->operands[0]->type->to<IR::Type::Bits>();
                 auto arg = mux->e0->to<IR::MAU::ActionArg>();
-                BUG_CHECK(arg != nullptr, "%s: Conditional on mux is not an action argument",
-                                          prim->srcInfo);
+                if (!arg) {
+                    error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "\nConditions in an action must "
+                          "be simple comparisons of an action data parameter\nTry moving the test "
+                          "out of the action and into a control apply block, or making it part "
+                          "of the table key", prim->srcInfo);
+                    return prim; }
                 cstring cond_arg_name = "$cond_arg" + std::to_string(synth_arg_num++);
                 auto cond_arg = new IR::MAU::ConditionalArg(mux->e0->srcInfo, type, af->name,
                                                             cond_arg_name, arg);
@@ -602,9 +608,9 @@ const IR::Node *DoInstructionSelection::postorder(IR::Primitive *prim) {
                     cond_arg->one_on_true = false;
                     rv = new IR::MAU::Instruction(prim->srcInfo, instr_name,
                             { prim->operands[0], mux->e2, cond_arg });
-                    error("%s: conditional assignment must be reverse, as the non PHV "
-                          "parameter must be on the true branch for support in the driver",
-                          prim->srcInfo);
+                    error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "\nConditional assignment must "
+                          "be reversed, as the non PHV parameter must be on the true branch for "
+                          "support in the driver", prim->srcInfo);
                 } else if (checkActionBus(mux->e1) && checkPHV(mux->e2)) {
                     rv = new IR::MAU::Instruction(prim->srcInfo, instr_name,
                             { prim->operands[0], mux->e2, mux->e1, cond_arg });
@@ -612,13 +618,14 @@ const IR::Node *DoInstructionSelection::postorder(IR::Primitive *prim) {
                     cond_arg->one_on_true = false;
                     rv = new IR::MAU::Instruction(prim->srcInfo, instr_name,
                             { prim->operands[0], mux->e1, mux->e2, cond_arg });
-                    error("%s: conditional assignment must be reverse, as the non PHV "
-                          "parameter must be on the true branch for support in the driver",
-                          prim->srcInfo);
+                    error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "\nConditional assignment must "
+                          "be reversed, as the non PHV parameter must be on the true branch for "
+                          "support in the driver", prim->srcInfo);
                 } else {
-                    error("%s: conditional assignment is too complicated to support in ",
-                          " a single operation", prim->srcInfo);
-                }
+                    error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "\nConditional assignment is too "
+                          "complicated to support in a single operation\nTry moving the test "
+                          "out of the action and into a control apply block, or making it part "
+                          "of the table key", prim->srcInfo); }
                 return rv;
             } else {
                 error("%s: source of %s invalid", prim->srcInfo, prim->name);
@@ -626,7 +633,8 @@ const IR::Node *DoInstructionSelection::postorder(IR::Primitive *prim) {
         } else if (prim->operands.size() == 2) {
             return new IR::MAU::Instruction(prim->srcInfo, "set", &prim->operands);
         } else if (!checkConst(prim->operands[2], mask)) {
-            error("%s: mask of %s must be a constant", prim->srcInfo, prim->name);
+            error(ErrorType::ERR_INVALID, "mask of %2% must be a constant", prim->srcInfo,
+                  prim->name);
         } else if (1L << dest->type->width_bits() == mask + 1) {
             return new IR::MAU::Instruction(prim->srcInfo, "set", dest, prim->operands[1]);
         } else if (isDepositMask(mask)) {

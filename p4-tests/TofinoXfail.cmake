@@ -286,7 +286,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Conditional on mux is not an action argument"
+  "Conditions in an action must be simple comparisons of an action data parameter"
   testdata/p4_16_samples/issue420.p4
   testdata/p4_16_samples/issue1412-bmv2.p4
 )
