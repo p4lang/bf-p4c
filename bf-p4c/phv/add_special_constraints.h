@@ -34,13 +34,11 @@ class AddSpecialConstraints : public Inspector {
     bool preorder(const IR::BFN::ChecksumUpdate* update) override;
     bool preorder(const IR::BFN::ChecksumGet* get) override;
 
-    /// Collect constraint induced by decaf.
+    /// Collect constraint induced by "decaf".
     /// Specifically, 16 and 32-bit container can not be repeated back-to-back in the FD.
     /// Therefore we break 16 bit decaf'd field into two 8-bit container and 32-bit field
     /// into two 16-bit containers to work around this constraint.
     bool preorder(const IR::BFN::Deparser* dep) override;
-
-    bool preorder(const IR::BFN::DeparserParameter* param) override;
 
     void end_apply() override;
 
