@@ -100,18 +100,26 @@ void PhvInfo::add_struct(
         int offset) {
     BUG_CHECK(type, "No type for %1%", name);
     LOG3("PhvInfo adding " << (meta ? " metadata" : "header") << " for struct " << name);
+    int start = by_id.size();
     for (auto f : type->fields) {
         int size = f->type->width_bits();
         cstring f_name = name + '.' + f->name;
         if (f->type->is<IR::Type_StructLike>()) {
             auto* struct_type = f->type->to<IR::Type_StructLike>();
+            bool meta = !struct_type->is<IR::Type_Header>();
+            // Add fields inside nested structs and headers.
             add_struct(f_name, struct_type, gress, meta, bridged, offset);
         }
         if (size == 0)
             ::error("%1% Field %2% of size %3% not supported on %4%", f->srcInfo, f_name, size,
                     Device::name());
+        // "Hidden" annotation indicates padding introduced with bridged metadata fields
         bool isPad = f->getAnnotations()->getSingle("hidden") != nullptr;
         add(f_name, gress, size, offset -= size, meta, false, bridged, isPad);
+    }
+    if (!meta) {
+        int end = by_id.size();
+        all_structs.emplace(name, StructInfo(meta, gress, start, end - start));
     }
 }
 
@@ -122,7 +130,7 @@ void PhvInfo::add_hdr(cstring name, const IR::Type_StructLike *type, gress_t gre
     if (all_structs.count(name)) {
         LOG3("Already added header; skipping: " << name);
         return; }
-    LOG3("PhvInfo adding " << (meta ? "metadata" : "header") << " " << name);
+
     int start = by_id.size();
     int offset = 0;
     auto annot = type->getAnnotations();
@@ -132,22 +140,12 @@ void PhvInfo::add_hdr(cstring name, const IR::Type_StructLike *type, gress_t gre
         bridged = true; }
     for (auto f : type->fields)
         offset += f->type->width_bits();
-    for (auto f : type->fields) {
-        int size = f->type->width_bits();
-        cstring f_name = name + '.' + f->name;
-        if (f->type->is<IR::Type_StructLike>()) {
-            auto* struct_type = f->type->to<IR::Type_StructLike>();
-            // Add fields inside nested structs.
-            add_struct(f_name, struct_type, gress, meta, bridged, offset);
-        }
-        if (size == 0)
-            ::error("%1% Field %2% of size %3% not supported on %4%", f->srcInfo, f_name, size,
-                    Device::name());
-        // "Hidden" annotation indicates padding introduced with bridged metadata fields
-        bool isPad = f->getAnnotations()->getSingle("hidden") != nullptr;
-        add(f_name, gress, size, offset -= size, meta, false, bridged, isPad); }
-    int end = by_id.size();
-    all_structs.emplace(name, StructInfo(meta, gress, start, end - start));
+    add_struct(name, type, gress, meta, bridged, offset);
+
+    if (meta) {
+        int end = by_id.size();
+        all_structs.emplace(name, StructInfo(meta, gress, start, end - start));
+    }
 }
 
 void PhvInfo::addTempVar(const IR::TempVar *tv, gress_t gress) {
@@ -155,6 +153,15 @@ void PhvInfo::addTempVar(const IR::TempVar *tv, gress_t gress) {
               "Can't create temp of type %s", tv->type);
     if (all_fields.count(tv->name) == 0)
         add(tv->name, gress, tv->type->width_bits(), 0, true, tv->POV);
+}
+
+bool PhvInfo::has_struct_info(cstring name_) const {
+    StringRef name = name_;
+    if (all_structs.find(name) != all_structs.end())
+        return true;
+    if (auto *p = name.findstr("::")) {
+        name = name.after(p+2); }
+    return all_structs.find(name) != all_structs.end();
 }
 
 const PhvInfo::StructInfo PhvInfo::struct_info(cstring name_) const {

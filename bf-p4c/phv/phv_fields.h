@@ -1031,6 +1031,7 @@ class PhvInfo {
         return const_cast<PHV::Field *>(const_cast<const PhvInfo *>(this)->field(e, bits)); }
     PHV::Field *field(const IR::Member *fr, le_bitrange *bits = 0) {
         return const_cast<PHV::Field *>(const_cast<const PhvInfo *>(this)->field(fr, bits)); }
+    bool has_struct_info(cstring name) const;
     const StructInfo struct_info(cstring name) const;
     const StructInfo struct_info(const IR::HeaderRef *hr) const {
         return struct_info(hr->toString()); }

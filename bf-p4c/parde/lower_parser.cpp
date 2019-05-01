@@ -417,7 +417,7 @@ lowerFields(const PhvInfo& phv, const ClotInfo& clotInfo,
         auto field = phv.field(fieldRef->field);
 
         if (auto* clot = clotInfo.allocated(field)) {
-            if (clots.empty() || clots.back().tag != clot->tag)
+            if (clots.empty() || clots.back() != *clot)
                 clots.push_back(*clot);
             continue;
         }
@@ -1230,7 +1230,7 @@ struct AllocateParserClotChecksums : public PassManager {
             for (auto p : match->extracts) {
                 if (auto ec = p->to<IR::BFN::LoweredExtractClot>()) {
                     for (auto c : clot_checksum_fields.rv) {
-                        if (c.first->tag == ec->dest.tag) {
+                        if (*(c.first) == ec->dest) {
                             auto csum = allocate(parser, state, match, ec, c.second);
                             clot_csums_to_insert[match].push_back(csum);
                         }

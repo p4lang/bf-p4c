@@ -61,6 +61,21 @@ class PardeSpec {
 
     /// Total parsers supported ingress/egress
     virtual int numParsers() const = 0;
+
+    /// The maximum number of CLOTs that can be generated in each parser state.
+    virtual unsigned maxClotsPerState() const = 0;
+
+    /// The maximum number of bytes a CLOT can hold.
+    virtual unsigned byteMaxClotSize() const = 0;
+
+    /// The number of CLOTs available for allocation in each gress.
+    virtual unsigned numClotsPerGress() const = 0;
+
+    /// The maximum number of CLOTs that can be live for each packet in each gress.
+    virtual unsigned maxClotsLivePerGress() const = 0;
+
+    /// The minimum number of bytes required between consecutive CLOTs.
+    virtual unsigned byteInterClotGap() const = 0;
 };
 
 class TofinoPardeSpec : public PardeSpec {
@@ -84,6 +99,16 @@ class TofinoPardeSpec : public PardeSpec {
     }
 
     int numParsers() const override { return 18; }
+
+    unsigned maxClotsPerState() const override { BUG("No CLOTs in Tofino"); }
+    unsigned byteMaxClotSize() const override { BUG("No CLOTs in Tofino"); }
+    unsigned numClotsPerGress() const override { BUG("No CLOTs in Tofino"); }
+
+    unsigned maxClotsLivePerGress() const override {
+        BUG("No CLOTs in Tofino");
+    }
+
+    unsigned byteInterClotGap() const override { BUG("No CLOTs in Tofino"); }
 };
 
 #if HAVE_JBAY
@@ -108,6 +133,12 @@ class JBayPardeSpec : public PardeSpec {
 
     // TBD
     int numParsers() const override { return 36; }
+
+    unsigned maxClotsPerState() const override { return 2; }
+    unsigned byteMaxClotSize() const override { return 64; }
+    unsigned numClotsPerGress() const override { return 64; }
+    unsigned maxClotsLivePerGress() const override { return 16; }
+    unsigned byteInterClotGap() const override { return 3; }
 };
 #endif /* HAVE_JBAY */
 

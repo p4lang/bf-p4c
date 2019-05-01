@@ -51,70 +51,8 @@ class DirectedGraph {
     Graph _graph;
 };
 
-template <typename T>
-static void merge(std::set<T> &my, const std::set<T> &other) {
-    my.insert(other.begin(), other.end());
-}
-
-template <typename K, typename V>
-static void merge(std::map<K, V> &my, const std::map<K, V> &other) {
-    for (auto &kv : other) {
-        if (my.count(kv.first) == 0)
-            my[kv.first] = kv.second;
-        else
-            BUG_CHECK(my[kv.first] == kv.second, "cannot merge two map");
-    }
-}
-
-template <typename T>
-static void merge(std::map<T, std::set<T>> &my,
-                  const std::map<T, std::set<T>> &other) {
-    for (auto t : other) {
-        if (my.count(t.first) == 0)
-            my[t.first] = t.second;
-        else
-            merge(my[t.first], t.second);
-    }
-}
-
 template <class State>
 struct ParserStateMap : public std::map<const State*, std::set<const State*>> { };
-
-template <class Parser, class State, class Transition>
-struct ParserStateMutex {
-    std::set<const State*> _states_encountered;
-
-    ParserStateMap<State> _mutually_inclusive;
-    ParserStateMap<State> _mutually_exclusive;
-
-    const ParserStateMap<State>& mutex_state_map() const { return _mutually_exclusive; }
-
-    bool mutex(const State* a, const State* b) const {
-        if (_mutually_exclusive.count(a) > 0)
-            if (_mutually_exclusive.at(a).count(b) > 0)
-                return true;
-        return false;
-    }
-
-    void merge_with(ParserStateMutex& other) {
-        merge(_states_encountered, other._states_encountered);
-        merge(_mutually_inclusive, other._mutually_inclusive);
-    }
-};
-
-/*
-static void print(const std::set<const IR::BFN::ParserState*>& ss) {
-    for (auto s : ss)
-        std::cout << "    " << s->name << std::endl;
-}
-
-static void print(const ParserStateMap& psm) {
-    for (auto ss : psm) {
-        std::cout << ss.first->name << " :" << std::endl;
-        print(ss.second); }
-    std::cout << std::endl;
-}
-*/
 
 template <class Parser, class State, class Transition>
 class ParserGraphImpl : public DirectedGraph {
@@ -122,7 +60,9 @@ class ParserGraphImpl : public DirectedGraph {
     template <class P, class S, class T>
     friend class CollectParserInfoImpl;
 
-    ParserGraphImpl() {}
+    explicit ParserGraphImpl(const Parser* parser) : root(parser->start) {}
+
+    const State* const root;
 
     const std::set<const State*>& states() const { return _states; }
 
@@ -149,6 +89,11 @@ class ParserGraphImpl : public DirectedGraph {
         return nullptr;
     }
 
+ private:
+    /// Memoization table.
+    mutable std::map<const State*, std::map<const State*, bool>> is_ancestor_;
+
+ public:
     /// Is "src" an ancestor of "dst"?
     bool is_ancestor(const State* src, const State* dst) const {
         if (src == dst)
@@ -160,16 +105,27 @@ class ParserGraphImpl : public DirectedGraph {
         if (predecessors().at(dst).count(src))
             return true;
 
+        if (is_ancestor_.count(src) && is_ancestor_.at(src).count(dst))
+            return is_ancestor_.at(src).at(dst);
+
         /// DANGER -- this assumes parser graph is a unrolled DAG
         for (auto p : predecessors().at(dst))
-            if (is_ancestor(src, p))
-                return true;
+            if (is_ancestor(src, p)) {
+                is_ancestor_[dst][src] = false;
+                return is_ancestor_[src][dst] = true;
+            }
 
-        return false;
+        return is_ancestor_[src][dst] = false;
     }
 
     bool is_descendant(const State* src, const State* dst) const {
         return is_ancestor(dst, src);
+    }
+
+    /// Determines whether @arg src and @arg dst are mutually exclusive states on all paths through
+    /// the parser graph.
+    bool is_mutex(const State* src, const State* dst) const {
+        return src != dst && !is_ancestor(src, dst) && !is_ancestor(dst, src);
     }
 
     std::set<const State*>
@@ -248,14 +204,6 @@ class ParserGraphImpl : public DirectedGraph {
         }
     }
 
-    void merge_with(const ParserGraphImpl& other) {
-        _states.insert(other.states().begin(), other.states().end());
-
-        merge(_succs, other.successors());
-        merge(_preds, other.predecessors());
-        merge(_to_pipe, other.to_pipe());
-    }
-
     void map_to_boost_graph() {
         for (auto s : _states) {
             int id = DirectedGraph::add_vertex();
@@ -278,7 +226,6 @@ class ParserGraphImpl : public DirectedGraph {
         return _id_to_state.at(id);
     }
 
- private:
     std::set<const State*> _states;
 
     ParserStateMap<State> _succs, _preds;
@@ -307,20 +254,16 @@ using LoweredParserGraph = ParserGraphImpl<IR::BFN::LoweredParser,
 }  // namespace IR
 
 template <class Parser, class State, class Transition>
-class CollectParserInfoImpl : public BFN::ControlFlowVisitor,
-                              public PardeInspector {
-    using StateMutexType = ParserStateMutex<Parser, State, Transition>;
+class CollectParserInfoImpl : public PardeInspector {
     using GraphType = ParserGraphImpl<Parser, State, Transition>;
 
  public:
     CollectParserInfoImpl() {
-        joinFlows = true;
         visitDagOnce = false;
     }
 
     const std::map<const Parser*, GraphType*>& graphs() const { return _graphs; }
     const GraphType& graph(const Parser* p) const { return *(_graphs.at(p)); }
-    const StateMutexType & mutex(const Parser* p) const { return _mutex.at(p); }
 
     const Parser* parser(const State* state) const {
         return _state_to_parser.at(state);
@@ -330,42 +273,15 @@ class CollectParserInfoImpl : public BFN::ControlFlowVisitor,
     Visitor::profile_t init_apply(const IR::Node* root) override {
         auto rv = Inspector::init_apply(root);
 
+        clear_cache();
         _graphs.clear();
-        _mutex.clear();
         _state_to_parser.clear();
 
         return rv;
     }
 
-    bool filter_join_point(const IR::Node*) override {
-        return true; }
-
-    void flow_merge(Visitor &other_) override {
-        CollectParserInfoImpl &other = dynamic_cast<CollectParserInfoImpl &>(other_);
-        LOG3("CollectParserInfoImpl(" << (void *)this << "): merging " << (void *)&other_);
-        for (auto& g : other._graphs) {
-            if (_graphs.count(g.first) == 0)
-                _graphs.emplace(g.first, g.second);
-            else
-                _graphs.at(g.first)->merge_with(*(g.second)); }
-
-        for (auto& m : other._mutex) {
-            if (_mutex.count(m.first) == 0)
-                _mutex.emplace(m.first, m.second);
-            else
-                _mutex.at(m.first).merge_with(m.second); }
-
-        _state_to_parser.insert(other._state_to_parser.begin(),
-                                other._state_to_parser.end());
-    }
-
-    CollectParserInfoImpl* clone() const override {
-        return new CollectParserInfoImpl(*this);
-    }
-
     bool preorder(const Parser* parser) override {
-        _graphs[parser] = new GraphType;
-        _mutex[parser] = StateMutexType();
+        _graphs[parser] = new GraphType(parser);
         return true;
     }
 
@@ -380,61 +296,102 @@ class CollectParserInfoImpl : public BFN::ControlFlowVisitor,
         for (auto t : state->transitions)
             g->add_transition(state, t);
 
-        auto& mutex = _mutex.at(parser);
-        add_mutex(mutex, state);
-
         return true;
     }
 
-    void clear_mutex(StateMutexType & mutex) {
-        mutex._mutually_inclusive.clear();
-        mutex._states_encountered.clear();
+    /// Clears internal memoization state.
+    void clear_cache() {
+        all_shift_amounts_.clear();
     }
 
-    void add_mutex(StateMutexType& mutex, const State* state) {
-        if (mutex._states_encountered.count(state) == 0) {
-            mutex._states_encountered.insert(state);
-            merge(mutex._mutually_inclusive[state], mutex._states_encountered);
-        }
+    // Memoization table. Only contains results for forward paths in the graph.
+    mutable std::map<const State*,
+                     std::map<const State*, const std::set<int>*>> all_shift_amounts_;
+
+ public:
+    /// @return all possible shift amounts, in bits, for all paths from @arg src to @arg dst. If
+    ///   the two states are the same, then a singleton 0 is returned. If the states are mutually
+    ///   exclusive, an empty set is returned. If @arg src is an ancestor of @arg dst, then the
+    ///   shift amounts will be positive; otherwise, if @arg src is a descendant of @arg dst, then
+    ///   the shift amounts will be negative.
+    //
+    // DANGER: This method assumes the parser graph is a DAG.
+    const std::set<int>* get_all_shift_amounts(const State* src,
+                                               const State* dst) const {
+        return get_all_shift_amounts(src, dst, false);
     }
 
-    void merge_mutex(StateMutexType& my, const StateMutexType& other) {
-        merge(my._states_encountered, other._states_encountered);
-        merge(my._mutually_inclusive, other._mutually_inclusive);
-    }
+ private:
+    const std::set<int>* get_all_shift_amounts(const State* src,
+                                               const State* dst,
+                                               bool forward_only) const {
+        if (src == dst) return new std::set<int>({0});
 
-    void calculate_mutex(StateMutexType& mutex) {
-        LOG4("mutually exclusive states:");
-        for (auto it1 = mutex._states_encountered.begin();
-                  it1 != mutex._states_encountered.end(); ++it1 ) {
-            for (auto it2 = it1; it2 != mutex._states_encountered.end(); ++it2) {
-                // TODO(zma) what about states that have header added?
+        if (all_shift_amounts_.count(src) && all_shift_amounts_.at(src).count(dst))
+            return all_shift_amounts_.at(src).at(dst);
 
-                if (mutex._mutually_inclusive.count(*it1) > 0)
-                    if (mutex._mutually_inclusive.at(*it1).count(*it2) > 0)
-                        continue;
+        auto result = new std::set<int>();
 
-                if (mutex._mutually_inclusive.count(*it2) > 0)
-                    if (mutex._mutually_inclusive.at(*it2).count(*it1) > 0)
-                        continue;
-
-                mutex._mutually_exclusive[*it1].insert(*it2);
-                mutex._mutually_exclusive[*it2].insert(*it1);
-                LOG4("(" << (*it1)->name << ", " << (*it2)->name << ")");
+        if (!forward_only
+                && all_shift_amounts_.count(dst)
+                && all_shift_amounts_.at(dst).count(src)) {
+            for (auto shift : *(all_shift_amounts_.at(dst).at(src))) {
+                result->insert(-shift);
             }
+
+            // These results are for a reverse path in the graph. Don't memoize, lest the rest of
+            // the method thinks there is a forward path from src to dst.
+            return result;
         }
+
+        auto graph = graphs().at(parser(src));
+        if (graph->is_mutex(src, dst)) {
+            return all_shift_amounts_[src][dst] = all_shift_amounts_[dst][src] = result;
+        }
+
+        // If necessary, switch src and dst so that we only have to explore forwards from src in
+        // the graph.
+        bool reversed = false;
+        if (graph->is_ancestor(dst, src)) {
+            if (forward_only)
+                return all_shift_amounts_[src][dst] = result;
+
+            std::swap(src, dst);
+            reversed = true;
+        }
+
+        // Recurse with the successors of the source.
+        BUG_CHECK(graph->successors().count(src),
+                  "State %s has a descendant %s, but no successors", src->name, dst->name);
+        for (auto succ : graph->successors().at(src)) {
+            auto amounts = get_all_shift_amounts(succ, dst, true);
+            if (!amounts->size()) continue;
+
+            auto transition = graph->transition(src, succ);
+            BUG_CHECK(transition,
+                      "Missing parser transition from %s to %s", src->name, succ->name);
+
+            const auto& shift_bytes = transition->shift;
+            BUG_CHECK(shift_bytes, "Missing parser shift amount in transition from %s to %s",
+                      src->name, succ->name);
+
+            for (auto amount : *amounts)
+                result->insert(amount + *shift_bytes * 8);
+        }
+
+        all_shift_amounts_[src][dst] = result;
+
+        if (reversed) return get_all_shift_amounts(dst, src);
+        return result;
     }
 
     void end_apply() override {
+        clear_cache();
         for (auto g : _graphs)
             g.second->map_to_boost_graph();
-
-        for (auto& m : _mutex)
-            calculate_mutex(m.second);
     }
 
     std::map<const Parser*, GraphType*> _graphs;
-    std::map<const Parser*, StateMutexType> _mutex;
     std::map<const State*, const Parser*> _state_to_parser;
 };
 

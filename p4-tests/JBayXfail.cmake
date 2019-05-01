@@ -46,8 +46,6 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     extensions/p4_tests/p4_14/stf/update_checksum_4.p4
     extensions/p4_tests/p4_14/stf/update_checksum_5.p4
     extensions/p4_tests/p4_14/stf/update_checksum_6.p4
-    # P4C-1618
-    extensions/p4_tests/p4_14/stf/header_validity_1.p4
     )
 
   p4c_add_xfail_reason("tofino2"
@@ -200,14 +198,6 @@ p4c_add_xfail_reason("tofino2"
 
 endif() # PTF_REQUIREMENTS_MET
 
-# This test is tailored to fill Tofino's PHV.  It is expected to fail on JBay
-# until the compiler can take full advantage of all PHV container types.  (And
-# maybe even after that.)
-p4c_add_xfail_reason("tofino2"
-  "PHV allocation was not successful"
-  extensions/p4_tests/p4_14/stf/deparser_group_allocation_1.p4
-)
-
 p4c_add_xfail_reason("tofino2"
   "Could not place table .*: The table .* could not fit"
    extensions/p4_tests/p4_14/stf/stateful3.p4
@@ -251,7 +241,6 @@ p4c_add_xfail_reason("tofino2"
    "failed command assembler"
    # conditional checksum needs different treatment for JBay
    extensions/p4_tests/p4_14/stf/cond_checksum_update_1.p4
-   extensions/p4_tests/p4_14/stf/cond_checksum_update_2.p4
 )
 
 # P4C-1011
@@ -294,13 +283,8 @@ p4c_add_xfail_reason("tofino2"
   "Expected packet was not received"
   fabric-new
   fabric-new-DWITH_SPGW
-  fabric-new-DWITH_SPGW-DWITH_INT_TRANSIT
-)
-
-# P4C-1646
-p4c_add_xfail_reason("tofino2"
-  "error.*used by both ingress and egress deparser"
   fabric-new-DWITH_INT_TRANSIT
+  fabric-new-DWITH_SPGW-DWITH_INT_TRANSIT
 )
 
 # P4C-1665

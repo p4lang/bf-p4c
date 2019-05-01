@@ -1233,6 +1233,13 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/parde/test_config_422_exit_calc_upd.p4
   )
 
+# P4C-1698
+p4c_add_xfail_reason("tofino"
+  "1 expected packet on port .* not seen"
+  extensions/p4_tests/p4_16/stf/lookahead1.p4
+  )
+
+
 p4c_add_xfail_reason("tofino"
    "Assignment cannot be supported in the parser"
    testdata/p4_14_samples/axon.p4

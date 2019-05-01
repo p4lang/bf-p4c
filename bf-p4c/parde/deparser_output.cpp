@@ -93,23 +93,62 @@ struct OutputDictionary : public Inspector {
             out << "(" << range.lo << ")";
         out << std::endl;
 
-        std::set<PHV::Container> containers;
-        for (auto f : emit->clot->phv_fields()) {
-            f->foreach_alloc([&](const PHV::Field::alloc_slice &alloc) {
-                containers.insert(alloc.container);
-            });
-        }
+        const auto state = clot.clot_to_parser_state().at(emit->clot);
 
+        // Maps overwrite offsets to corresponding containers.
+        std::map<int, PHV::Container> containers;
         unsigned clot_offset = emit->clot->start;
-        for (auto c : containers) {
-            auto state = clot.clot_to_parser_state().at(emit->clot);
-            auto range = clot.container_range().at(state).at(c);
-            range = range.shiftedByBytes(-clot_offset);
-            out << indent << range.lo << " : " << c << std::endl;
+        for (auto f : emit->clot->all_fields()) {
+            if (clot.field_overwritten(phv, emit->clot, f)) {
+                f->foreach_alloc([&](const PHV::Field::alloc_slice &alloc) {
+                    auto container = alloc.container;
+                    BUG_CHECK(clot.container_range().count(state),
+                              "ClotInfo has no PHV container information for state %s",
+                              state);
+                    auto range = clot.container_range().at(state).at(container);
+                    range = range.shiftedByBytes(-clot_offset);
+                    auto offset = range.lo;
+
+                    if (containers.count(offset)) {
+                        auto other_container = containers.at(offset);
+                        BUG_CHECK(container == other_container,
+                            "CLOT %d has more than one container at overwrite offset %d: "
+                            "%s and %s",
+                            emit->clot->tag,
+                            offset,
+                            container,
+                            other_container);
+                    } else {
+                        containers[offset] = container;
+                    }
+                });
+            }
         }
 
+        for (auto entry : containers) {
+            out << indent << entry.first << " : " << entry.second << std::endl;
+        }
+
+        // Maps overwrite offsets to corresponding checksum fields.
+        std::map<int, const PHV::Field*> csum_fields;
         for (auto f : emit->clot->csum_fields()) {
-            out << indent << emit->clot->byte_offset(f) << " : checksum " <<
+            auto offset = emit->clot->byte_offset(f);
+            if (csum_fields.count(offset)) {
+                auto other_field = csum_fields.at(offset);
+                BUG_CHECK(false,
+                    "CLOT %d has more than one checksum field at overwrite offset %d: %s and %s",
+                    f->name, other_field->name);
+            }
+
+            csum_fields[offset] = f;
+        }
+
+        for (auto entry : csum_fields) {
+            auto offset = entry.first;
+            auto f = entry.second;
+            BUG_CHECK(emit->clot->csum_field_to_csum_id.count(f),
+                      "Checksum field %s is missing a checksum ID in the deparser", f->name);
+            out << indent << offset << " : checksum " <<
                 emit->clot->csum_field_to_csum_id.at(f) << std::endl;
         }
 

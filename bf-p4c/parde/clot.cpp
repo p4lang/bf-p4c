@@ -9,53 +9,70 @@
 #include "ir/ir.h"
 #include "bf-p4c/phv/phv_fields.h"
 
-int Clot::tagCnt = 0;
+std::map<gress_t, int> Clot::tagCnt;
 
 cstring Clot::toString() const {
     std::stringstream tmp;
-    tmp << *this;
+    tmp << "clot " << gress << "::" << tag;
     return tmp.str();
 }
 
 Clot::Clot(cstring name) {
     std::string str(name);
 
-    if (str.length() <= 5 || str.substr(0, 4) != "clot" || !isdigit(str[5]))
-        BUG("Invalid clot '%s'", name);
+    // Ensure we have the "clot " prefix.
+    if (str.length() <= 5 || str.substr(0, 5) != "clot ")
+        BUG("Invalid CLOT: '%s'", name);
 
+    // Ensure we have the "::" separator, and that it is immediately followed with a digit.
+    auto identifier = str.substr(5);
+    auto sep_pos = identifier.find("::");
+
+    BUG_CHECK(sep_pos != std::string::npos &&
+              identifier.length() > sep_pos + 2 &&
+              isdigit(identifier[sep_pos + 2]),
+        "Invalid CLOT: '%s'", name);
+
+    // Parse out the gress.
+    gress_t g;
+    BUG_CHECK(identifier.substr(0, sep_pos) >> g, "Invalid CLOT: '%s'", name);
+
+    // Parse out the CLOT id.
     char* end = nullptr;
-    auto v = std::strtol(str.substr(5).c_str(), &end, 10);
+    auto v = std::strtol(identifier.substr(sep_pos + 2).c_str(), &end, 10);
+    if (*end) BUG("Invalid CLOT: '%s'", name);
 
-    if (*end)
-        BUG("Invalid clot '%s'", name);
-
+    gress = g;
     tag = v;
 }
 
-void Clot::add_field(const IR::BFN::ParserState* state,
-                     FieldKind kind,
+void Clot::add_field(FieldKind kind,
                      const PHV::Field* field,
                      unsigned offset) {
     switch (kind) {
-    case PHV:
-        phv_fields_.push_back(field);
+    case MODIFIED:
+        phv_fields_.insert(field);
+        phv_modified_fields_.insert(field);
+        break;
+
+    case READONLY:
+        phv_fields_.insert(field);
         break;
 
     case CHECKSUM:
-        csum_fields_.push_back(field);
+        csum_fields_.insert(field);
         break;
 
-    case OTHER:
+    case UNUSED:
         break;
     }
 
     all_fields_.push_back(field);
     field_offsets[field] = offset;
-    parser_state_to_fields_[state].push_back(field);
 }
 
 unsigned Clot::bit_offset(const PHV::Field* field) const {
-    BUG_CHECK(field_offsets.count(field), "field %s not in CLOT %d", field->name, tag);
+    BUG_CHECK(field_offsets.count(field), "field %s not in %s", field->name, toString());
     return field_offsets.at(field);
 }
 
@@ -69,15 +86,45 @@ template <class T> bool contains(const std::vector<T> vec, const T elt) {
 }
 
 bool Clot::is_phv_field(const PHV::Field* field) const {
-    return contains(phv_fields_, field);
+    return phv_fields_.count(field);
 }
 
 bool Clot::is_csum_field(const PHV::Field* field) const {
-    return contains(csum_fields_, field);
+    return csum_fields_.count(field);
 }
 
 bool Clot::has_field(const PHV::Field* field) const {
-    return field_offsets.count(field);
+    return contains(all_fields_, field);
+}
+
+void Clot::crop(int start_idx, int end_idx) {
+    int num_fields = all_fields_.size();
+
+    if (start_idx == 0 && end_idx == num_fields - 1)
+        // Nothing to do.
+        return;
+
+    // Collect up the fields we're keeping, while removing the rest from auxiliary data structures
+    // and computing the new start offset.
+    std::vector<const PHV::Field*> all_fields;
+    unsigned start_bits = this->start * 8;
+    for (int idx = 0; idx < num_fields; idx++) {
+        auto field = all_fields_.at(idx);
+        if (start_idx <= idx && idx <= end_idx) {
+            all_fields.push_back(field);
+        } else {
+            if (idx < start_idx) start_bits += field->size;
+            phv_modified_fields_.erase(field);
+            field_offsets.erase(field);
+        }
+    }
+
+    // Fix up the CLOT's list of fields and the start offset.
+    BUG_CHECK(start_bits % 8 == 0,
+              "CLOT %d is not byte-aligned after adjustment: resulting offset is %d",
+              tag, start_bits);
+    start = start_bits / 8;
+    all_fields_ = all_fields;
 }
 
 void Clot::toJSON(JSONGenerator& json) const {

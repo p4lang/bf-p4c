@@ -18,8 +18,8 @@ parser start {
 }
 
 action noop() { }
-action remove_foo() { remove_header(foo); }
-action remove_bar() { remove_header(bar); }
+action remove_foo() { remove_header(foo); bypass_egress(); }
+action remove_bar() { remove_header(bar); bypass_egress(); }
 
 table t1 {
     reads { foo.f : exact; }
