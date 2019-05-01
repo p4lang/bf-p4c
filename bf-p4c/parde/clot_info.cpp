@@ -898,8 +898,8 @@ class GreedyClotAllocator : public Visitor {
         for (auto entry : *extract_info_map) {
             // XXX(Jed) convert submap so its values can be const. Ugh.
             std::map<const PHV::Field*, const FieldExtractInfo*> submap;
-            for (auto entry : entry.second) {
-                submap[entry.first] = entry.second;
+            for (auto subentry : entry.second) {
+                submap[subentry.first] = subentry.second;
             }
 
             add_clot_candidates(result, entry.first, submap);
