@@ -60,6 +60,8 @@ node ('compiler || compiler-svr4') {
 }
 
 node ('compiler-svr1 || master') {
+    // Clean workspace before doing anything
+    deleteDir()
     sh "echo 'Pull the built docker image for the PR'"
     withCredentials([usernamePassword(
         credentialsId: "bfndocker",
@@ -104,6 +106,15 @@ node ('compiler-svr1 || master') {
                     sh "docker run -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*switch_' -E 'smoketest|8.7|p4_14|glass' -LE 'METRICS'"
                     sh "echo 'Running switch profiles compilation for rel_8_7'"
                     sh "docker run -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*switch_8.7_' -E 'smoketest'"
+
+                    sh "echo 'Running switch_16 profiles compilation with bf-switch master'"
+                    sh "git clone --recursive git@github.com:barefootnetworks/bf-switch.git"
+                    dir('bf-switch') {
+                        sh "echo 'switch: current commit:'"
+                        sh "git log -1 --stat"
+                    curr_pwd = pwd()
+                    sh "docker run -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_OUTPUT_ON_FAILURE='true' -v ${curr_pwd}:/bfn/bf-p4c-compilers/p4-tests/p4_16/switch_16 barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R 'smoketest_switch_16_compile'"
+                    }
                 }
             }
         },

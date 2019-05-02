@@ -286,11 +286,12 @@ bfn_set_ptf_test_spec("tofino" "smoketest_programs_alpm_test"
    test.TestManyEntries
    test.TestModify")
 
+# test.TestSnapshot fails after the model update (DRV-2626)
 p4c_add_ptf_test_with_ptfdir("tofino" "smoketest_programs_alpm_test_2" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/alpm_test/alpm_test.p4"
   "${testExtraArgs} -pd -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/ptf-tests/alpm_test")
 bfn_set_ptf_test_spec("tofino" "smoketest_programs_alpm_test_2"
    "test.TestIdleTime
-   test.TestSnapshot
+   ^test.TestSnapshot
    test.TestStateRestore
    test.TestTcamMove")
 
