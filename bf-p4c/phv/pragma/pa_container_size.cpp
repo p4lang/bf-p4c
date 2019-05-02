@@ -260,6 +260,9 @@ PragmaContainerSize::unsatisfiable_fields(
             // list put together (combined slice) can satisfy the container_size constraint, then
             // that slicing should be considered valid.
             for (auto& slice : *slice_list) {
+                // If there are other fields in the slice list not belonging to the field needing
+                // slice list check, ignore them.
+                if (!rst.count(slice.field())) continue;
                 if (prevSlice != boost::none) {
                     // If the fields in the slice list are different, then ignore because we cannot
                     // produce a combined slice representing the entire field list.

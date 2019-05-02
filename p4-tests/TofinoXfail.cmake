@@ -421,13 +421,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/compile_only/p4c-1162.p4
   )
 
-# Errors because pa_container_size pragmas used in these tests cannot be satisfy all constraints.
-p4c_add_xfail_reason("tofino"
-  "No way to slice the following to satisfy @pa_container_size"
-  ../glass/testsuite/p4_tests/arista/COMPILER-1105/case8039.p4
-  ../glass/testsuite/p4_tests/phv/COMPILER-961/jk_msdc.p4
-  )
-
 # We can't (without some complex acrobatics) support conditional computed
 # checksums on Tofino. In P4-14, these are operations of the form:
 #   update ipv4_checksum if(ipv4.ihl == 5);
@@ -847,6 +840,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "The table .* with no key cannot have the action .*"
   extensions/p4_tests/p4_14/compile_only/test_config_101_switch_msdc.p4
+  ../glass/testsuite/p4_tests/phv/COMPILER-961/jk_msdc.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1015,8 +1009,9 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Unimplemented compiler support.*Cannot allocate >4 immediate bytes for logical table"
   ../glass/testsuite/p4_tests/mau/test_config_205_modify_field_from_hash.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-964/test_config_401_random_num.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-1105/case8039.p4
   )
-
 
 # P4C-1323
 # Could not place table capture_timestamp_1_0: The table capture_timestamp_1_1 could not fit within a single input crossbar in an MAU stage
@@ -1156,12 +1151,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Inferred incompatible alignments for field .*"
   ../glass/testsuite/p4_tests/phv/COMPILER-908/compiler-908.p4
-  )
-
-# P4C-1214
-p4c_add_xfail_reason("tofino"
-  "the number of bytes required to go through the immediate pathway 8 is greater than the available bytes 4, and can not be allocated"
-  ../glass/testsuite/p4_tests/arista/COMPILER-964/test_config_401_random_num.p4
   )
 
 # P4C-1396

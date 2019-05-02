@@ -95,7 +95,10 @@ Visitor::profile_t HashFieldsContainerSize::init_apply(const IR::Node* root) {
 bool HashFieldsContainerSize::preorder(const IR::MAU::Instruction* inst) {
     if (inst->name != "set") return false;
     if (inst->operands.size() != 2) return false;
-    if (!inst->operands[1]->is<IR::MAU::HashDist>()) return false;
+    const IR::Expression* source = inst->operands[1];
+    if (auto* slice = source->to<IR::Slice>()) source = slice->e0;
+    if (!source->is<IR::MAU::HashDist>() && !source->is<IR::MAU::RandomNumber>())
+        return false;
     const IR::MAU::Table* table = findContext<IR::MAU::Table>();
     if (!table) BUG("This hash dist did not appear in a table?");
     le_bitrange fieldBits;
