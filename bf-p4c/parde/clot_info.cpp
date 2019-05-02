@@ -166,6 +166,11 @@ std::string ClotInfo::print(const PhvInfo* phvInfo) const {
 }
 
 bool ClotInfo::can_be_in_clot(const PHV::Field* field) const {
+    if (is_added_by_mau(field->header())) {
+        LOG6("  Field " << field->name << " can't be in a CLOT: its header might be added by MAU");
+        return false;
+    }
+
     if (!field->deparsed() && !is_checksum(field)) {
         LOG6("  Field " << field->name << " can't be in a CLOT: not deparsed and not a checksum");
         return false;
@@ -417,6 +422,10 @@ bool ClotInfo::field_deparsed_from_clot(const PhvInfo& phvInfo,
            !field_overwritten(phvInfo, clot, field);
 }
 
+bool ClotInfo::is_added_by_mau(cstring h) const {
+    return headers_added_by_mau_.count(h);
+}
+
 /// Finds the paths with the largest number of CLOTs allocated.
 ///
 /// @arg memo is a memoization table that maps each visited parser state to the corresponding
@@ -512,6 +521,7 @@ void ClotInfo::clear() {
     container_range_.clear();
     field_range_.clear();
     field_aliases_.clear();
+    headers_added_by_mau_.clear();
     Clot::tagCnt.clear();
 }
 

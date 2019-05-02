@@ -51,8 +51,11 @@ class ClotInfo {
 
     std::map<const Clot*, const IR::BFN::EmitChecksum*> clot_to_emit_checksum_;
 
-    // Maps fields to their equivalence class of aliases.
+    /// Maps fields to their equivalence class of aliases.
     std::map<const PHV::Field*, std::set<const PHV::Field*>*> field_aliases_;
+
+    /// Names of headers that might be added by MAU.
+    std::set<cstring> headers_added_by_mau_;
 
  public:
     explicit ClotInfo(PhvUse& uses) : uses(uses) {}
@@ -278,6 +281,9 @@ class ClotInfo {
                                   const Clot* clot,
                                   const PHV::Field* f) const;
 
+    /// Determines whether @arg h is a header that might be added by MAU.
+    bool is_added_by_mau(cstring h) const;
+
     /// @return the given field's CLOT, if any; otherwise, nullptr.
     Clot* clot(const PHV::Field* field) const {
         for (auto c : clots_)
@@ -309,6 +315,7 @@ class CollectClotInfo : public Inspector {
         return rv;
     }
 
+    /// Collects the set of fields extracted.
     bool preorder(const IR::BFN::Extract* extract) override {
         auto state = findContext<IR::BFN::ParserState>();
 
@@ -322,6 +329,7 @@ class CollectClotInfo : public Inspector {
         return true;
     }
 
+    /// Collects the set of fields over which checksums are computed.
     bool preorder(const IR::BFN::EmitChecksum* emit) override {
         auto f = phv.field(emit->dest->field);
         clotInfo.checksum_dests_.insert(f);
@@ -334,11 +342,13 @@ class CollectClotInfo : public Inspector {
         return true;
     }
 
+    /// Collects aliasing information.
     bool preorder(const IR::BFN::AliasMember* alias) override {
         add_alias_field(alias);
         return true;
     }
 
+    /// Collects aliasing information.
     bool preorder(const IR::BFN::AliasSlice* alias) override {
         add_alias_field(alias);
         return true;
@@ -357,6 +367,28 @@ class CollectClotInfo : public Inspector {
         BUG_CHECK(aliasSource, "Alias source for field %1% not found", alias);
         BUG_CHECK(aliasDestination, "Reference to alias field %1% not found", alias);
         clotInfo.add_alias(aliasSource, aliasDestination);
+    }
+
+    /// Collects the set of headers that are made valid by MAU.
+    bool preorder(const IR::MAU::Instruction* instruction) override {
+        // Make sure we have a call to "set".
+        if (instruction->name != "set") return true;
+
+        auto dst = instruction->operands.at(0);
+        auto src = instruction->operands.at(1);
+
+        // Make sure we are setting a header's validity bit.
+        auto dst_field = phv.field(dst);
+        if (!dst_field || !dst_field->pov) return true;
+
+        // Make sure we are not assigning 0 to the validity bit. Conservatively, we assume that any
+        // other kind of assignment might make the header valid.
+        if (auto constant = src->to<IR::Constant>()) {
+            if (constant->value == 0) return true;
+        }
+
+        clotInfo.headers_added_by_mau_.insert(dst_field->header());
+        return true;
     }
 
     void end_apply(const IR::Node* root) override {
