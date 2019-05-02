@@ -436,8 +436,9 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
             continue; }
 
         // If the slice list contains a no_pack field, then all the other slices in the list (if
-        // any) must be overlayablePadding
-        if (lastNoPack && !field->overlayablePadding) {
+        // any) must be overlayablePadding or unreferenced (unreferenced fields effectively act as a
+        // padding field).
+        if (lastNoPack && !field->overlayablePadding && self.uses_i.is_referenced(field)) {
             StartNewSliceList();
             LOG5("Starting new slice list (to isolate a no_pack field): ");
         } else if (lastWideArith && !field->overlayablePadding) {
@@ -534,7 +535,7 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
             accumulator->push_back(slice);
             field_slice_list_size += slice.size(); }
         accumulator_bits += field->size;
-        lastNoPack = field->no_pack();
+        lastNoPack = field->no_pack() || (lastNoPack && !self.uses_i.is_referenced(field));
         lastWideArith = field->used_in_wide_arith();
         lastDeparserZero = field->is_deparser_zero_candidate();
 
