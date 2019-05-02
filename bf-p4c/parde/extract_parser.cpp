@@ -972,7 +972,7 @@ void ExtractParser::end_apply() {
 /// parser state in the midend instead, and let the backend to insert the
 /// intrinsic metadata extraction logic based on the target device (tofino/jbay).
 ProcessParde::ProcessParde(const IR::BFN::Pipe* rv, bool useTna) :
-    Logging::PassManager("parser", true /* append */) {
+    Logging::PassManager("parser", Logging::Mode::AUTO) {
     setName("ProcessParde");
     addPasses({
         // Attempt to resolve header stack ".next" and ".last" members.

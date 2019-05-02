@@ -16,12 +16,13 @@ namespace Logging {
 /// file, opening it in init_apply and closing it in end_apply.
 class PassManager : public ::PassManager {
     cstring            _logFilePrefix;
-    bool               _appendToLog;
+    Logging::Mode      _logMode;
     Logging::FileLog * _logFile;
 
  public:
-    explicit PassManager(cstring logFilePrefix, bool append = false) :
-        _logFilePrefix(logFilePrefix), _appendToLog(append), _logFile(nullptr) {}
+    explicit PassManager(cstring logFilePrefix,
+                         Logging::Mode logMode = Logging::Mode::CREATE) :
+        _logFilePrefix(logFilePrefix), _logMode(logMode), _logFile(nullptr) {}
 
  protected:
     profile_t init_apply(const IR::Node *root) override {
@@ -32,15 +33,13 @@ class PassManager : public ::PassManager {
         const IR::BFN::Pipe *pipe = root->to<IR::BFN::Pipe>();
         if (pipe == nullptr)
             pipe = findContext<IR::BFN::Pipe>();
-        if (_logFilePrefix == "parser") {
-            // parser logging is called from functions, inspectors and pass managers ...
-            // so invocations is useless, it just ends up generating a slew of logs
-            _logFile = new Logging::FileLog(pipe->id, _logFilePrefix + ".log", _appendToLog);
-        } else {
+        if (_logMode == Logging::Mode::CREATE) {
             _logFile = new Logging::FileLog(pipe->id,
                                             _logFilePrefix + std::to_string(invocation) + ".log",
-                                            _appendToLog);
-            if (!_appendToLog) ++invocation;
+                                            _logMode);
+            ++invocation;
+        } else {
+            _logFile = new Logging::FileLog(pipe->id, _logFilePrefix + ".log", _logMode);
         }
         return ::PassManager::init_apply(root);
     }

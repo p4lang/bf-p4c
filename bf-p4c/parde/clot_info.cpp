@@ -1148,7 +1148,7 @@ class GreedyClotAllocator : public Visitor {
         }
 
         const IR::BFN::Pipe *pipe = root->to<IR::BFN::Pipe>();
-        Logging::FileLog parserLog(pipe->id, "parser.log", true /* append */);
+        Logging::FileLog parserLog(pipe->id, "parser.log");
 
         LOG2(clotInfo.print());
 
@@ -1173,7 +1173,7 @@ const IR::Node *ClotAdjuster::apply_visitor(const IR::Node* root, const char*) {
     clotInfo.adjust_clots(phv);
 
     const IR::BFN::Pipe *pipe = root->to<IR::BFN::Pipe>();
-    Logging::FileLog parserLog(pipe->id, "parser.log", true /* append */);
+    Logging::FileLog parserLog(pipe->id, "parser.log");
     LOG2(clotInfo.print(&phv));
 
     return root;

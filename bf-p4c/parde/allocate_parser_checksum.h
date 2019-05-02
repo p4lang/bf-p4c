@@ -554,7 +554,7 @@ class AllocateParserChecksumUnits : public Logging::PassManager {
         std::map<cstring, std::set<const IR::BFN::ParserState*>>> declToEndStates;
 
     AllocateParserChecksumUnits() :
-        Logging::PassManager("parser", true),
+        Logging::PassManager("parser", Logging::Mode::AUTO),
         checksumInfo(parserInfo),
         computeDeadParserChecksums(parserInfo, checksumInfo) {
         addPasses({

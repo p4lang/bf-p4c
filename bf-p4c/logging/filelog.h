@@ -13,6 +13,17 @@
 
 namespace Logging {
 
+enum Mode {
+    /// Appends to a log. Creates a new log if it doesn't already exist.
+    APPEND,
+
+    /// Creates a new log. Overwrites if the log already exists.
+    CREATE,
+
+    /// Creates if this is the first time writing to the log; otherwise, appends.
+    AUTO
+};
+
 /// A FileLog is used to redirect the logging output of a visitor pass to a file.
 
 class FileLog {
@@ -37,8 +48,19 @@ class FileLog {
         return cstring("Unknown");
     }
 
+    static std::set<cstring> filesWritten;
+
  public:
-    explicit FileLog(int pipe, cstring logName, bool append = false) {
+    explicit FileLog(int pipe, cstring logName, Mode mode = AUTO) {
+        bool append;
+        switch (mode) {
+        case APPEND: append = true; break;
+        case CREATE: append = false; break;
+        case AUTO : append = filesWritten.count(logName); break;
+        }
+
+        filesWritten.insert(logName);
+
         auto logDir = BFNContext::get().getOutputDirectory("logs", pipe);
         if (logDir) {
             auto fileName = Util::PathName(logDir).join(logName).toString();

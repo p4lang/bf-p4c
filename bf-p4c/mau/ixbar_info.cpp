@@ -68,7 +68,7 @@ std::string CollectIXBarInfo::print_ixbar_byte() const {
 
 void CollectIXBarInfo::end_apply(const IR::Node *root) {
     const IR::BFN::Pipe *pipe = root->to<IR::BFN::Pipe>();
-    Logging::FileLog ixbarLog(pipe->id, "ixbar.log", false /* append */);
+    Logging::FileLog ixbarLog(pipe->id, "ixbar.log");
     sort_ixbar_byte();
     LOG2(print_ixbar_byte());
 }

@@ -713,7 +713,7 @@ class CheckResolvedHeaderStackExpressions : public ParserInspector {
 }  // namespace
 
 ResolveParserValues::ResolveParserValues() :
-    Logging::PassManager("parser", true /* append */) {
+    Logging::PassManager("parser", Logging::Mode::AUTO) {
     auto* resolveComputedValues = new ResolveComputedValues();
     addPasses({
         new VerifyAssignedShifts,
@@ -726,7 +726,7 @@ ResolveParserValues::ResolveParserValues() :
 }
 
 ResolveHeaderStackValues::ResolveHeaderStackValues() :
-    Logging::PassManager("parser", true /* append */) {
+    Logging::PassManager("parser", Logging::Mode::AUTO) {
     addPasses({
         new VerifyAssignedShifts,
         new ResolveNextAndLast,
