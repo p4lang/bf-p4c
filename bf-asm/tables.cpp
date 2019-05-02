@@ -1924,6 +1924,12 @@ void Table::Actions::add_action_format(const Table *table, json::map &tbl) const
         action_format_per_action["table_name"] = next_table_name;
         action_format_per_action["next_table"] = next_table;
         action_format_per_action["next_table_full"] = next_table_full;
+        if (Target::LONG_BRANCH_TAGS() > 0) {
+            action_format_per_action["next_table_exec"] =
+                (act.next_table_miss_ref.next_in_stage(table->stage->stageno) << 16) +
+                act.next_table_miss_ref.next_in_stage(table->stage->stageno + 1);
+            int lbrch = act.next_table_miss_ref.long_branch_tag();
+            action_format_per_action["next_table_long_brch"] = lbrch >= 0 ? 1U << lbrch : 0; }
         action_format_per_action["vliw_instruction"] = act.code;
         action_format_per_action["vliw_instruction_full"] = ACTION_INSTRUCTION_ADR_ENABLE | act.addr;
 
@@ -2563,6 +2569,9 @@ void Table::common_tbl_cfg(json::map &tbl) const {
     // which is what we want.)  Should we check in case the ordering ever changes?
     // By DRV-2239 this should move into the stage table anyways?
     tbl["default_next_table_mask"] = next_table_adr_mask;
+    // FIXME -- the driver currently always assumes this is 0, so we arrange for it to be
+    // when choosing the action encoding.  But we should be able to choose something else
+    tbl["default_next_table_default"] = 0;
     //FIXME-JSON: PD related, check glass examples for false (ALPM)
     tbl["is_resource_controllable"] = true;
     tbl["uses_range"] = false;
