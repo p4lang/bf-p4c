@@ -66,7 +66,7 @@ struct ParserPragmas : public Inspector {
                 return false;
 
             auto shift_amt = exprs[1]->to<IR::Constant>();
-            if (!shift_amt || shift_amt->asInt() <= 0) {
+            if (!shift_amt || shift_amt->asInt() < 0) {
                 ::warning("@pragma force_shift must have positive shift amount(bits)");
                 return false;
             }
@@ -887,9 +887,12 @@ IR::BFN::ParserState* GetBackendParser::getState(cstring name) {
     }
 
     nw_bitinterval bitsAdvanced(0, bitShift);
-    if (!bitsAdvanced.isHiAligned())
-        ::warning("Parser state %1% does not end on a byte boundary; "
-                  "adding padding.", state->p4State->controlPlaneName());
+
+    if (!bitsAdvanced.isHiAligned()) {
+        ::fatal_error("Parser state %1% is not byte-aligned (%2% bit shifted)",
+                      state->p4State->controlPlaneName(), bitShift);
+    }
+
     auto shift = bitsAdvanced.nextByte();
 
     LOG2("GetParser::state(" << name << ")");
