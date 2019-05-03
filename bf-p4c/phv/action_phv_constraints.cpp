@@ -554,6 +554,7 @@ ActionPhvConstraints::ActionDataUses ActionPhvConstraints::all_or_none_constant_
         const PHV::Allocation::LiveRangeShrinkingMap& initActions) const {
     ordered_set<PHV::AllocSlice> slices_written_by_ad;
     ordered_set<PHV::AllocSlice> slices_written_by_special_ad;
+    ordered_set<PHV::AllocSlice> padding_slices;
     for (auto slice : slices) {
         for (auto operand : constraint_tracker.sources(slice, action)) {
             if (operand.ad || operand.constant) {
@@ -562,14 +563,18 @@ ActionPhvConstraints::ActionDataUses ActionPhvConstraints::all_or_none_constant_
                     slices_written_by_special_ad.insert(slice); } }
         if (initActions.count(slice.field()) && initActions.at(slice.field()).count(action))
             slices_written_by_ad.insert(slice);
+        bool is_padding = !uses.is_referenced(slice.field()) || slice.field()->overlayablePadding;
+        if (is_padding)
+            padding_slices.insert(slice);
     }
     if (LOGGING(5))
         for (auto slice : slices_written_by_special_ad)
             LOG5("\t\t\t\t\t  Special AD slice: " << slice);
     unsigned num_slices_written_by_special_ad = slices_written_by_special_ad.size();
     unsigned num_slices_written_by_ad = slices_written_by_ad.size();
+    unsigned num_slices_padding = padding_slices.size();
     LOG5("\t\t\t\t\tSpecial AD slices: " << num_slices_written_by_special_ad <<
-         ", AD slices: " << num_slices_written_by_ad);
+         ", AD slices: " << num_slices_written_by_ad << ", Padding slices: " << num_slices_padding);
     BUG_CHECK(num_slices_written_by_special_ad <= num_slices_written_by_ad,
               "Slices written by speciality action data cannot be greater than slices written by "
               "action data");
@@ -621,7 +626,7 @@ ActionPhvConstraints::ActionDataUses ActionPhvConstraints::all_or_none_constant_
              "action data for action " << action->name << ". The compiler currently does not "
              "support this feature.");
         return COMPLEX_AD_PACKING_REQ; }
-    if (num_slices_written_by_ad == slices.size()) {
+    if (num_slices_written_by_ad + num_slices_padding == slices.size()) {
         LOG5("\t\t\t\t  All slices in proposed packing written by action data/constant in action "
              << action->name);
         return ALL_AD_CONSTANT; }
@@ -659,7 +664,9 @@ bool ActionPhvConstraints::valid_container_operation_type(
     for (auto& slice : slices) {
         ss << "\t" << slice.shortString() << std::endl;
         boost::optional<OperandInfo> fw = constraint_tracker.is_written(slice, action);
-        if (!fw) {
+        bool is_padding = !uses.is_referenced(slice.field()) || slice.field()->overlayablePadding;
+        // Unreferenced fields may be overwritten no issues.
+        if (!fw && !is_padding) {
             fields_not_written.insert(slice);
         } else if (fw->flags & OperandInfo::MOVE) {
             type_of_operation |= OperandInfo::MOVE;
@@ -732,11 +739,12 @@ unsigned ActionPhvConstraints::container_operation_type(
     for (auto slice : slices) {
         auto field_slice = PHV::FieldSlice(slice.field(), slice.field_slice());
         boost::optional<OperandInfo> fw = constraint_tracker.is_written(field_slice, action);
+        bool is_padding = !uses.is_referenced(slice.field()) || slice.field()->overlayablePadding;
         if (!fw) {
             if (initActions.count(slice.field()) && initActions.at(slice.field()).count(action)) {
                 // This slice is written by metadata initialization for this action.
                 type_of_operation |= OperandInfo::MOVE;
-            } else {
+            } else if (!is_padding) {
                 num_fields_not_written++;
             }
         } else if (fw->flags & OperandInfo::MOVE) {
@@ -783,7 +791,7 @@ unsigned ActionPhvConstraints::container_operation_type(
                     "operations for slices in the proposed packing.");
             return OperandInfo::MIXED; }
 
-        LOG5("\t\t\t\tNumber of slices written to by this whole container operation: " <<
+        LOG5("\t\t\t\tNumber of fields written to by this whole container operation: " <<
                 observed_fields.size());
         if (observed_fields.size() == 1)
             return OperandInfo::WHOLE_CONTAINER_SAME_FIELD;
@@ -815,6 +823,8 @@ bool ActionPhvConstraints::are_adjacent_field_slices(
     bool firstSlice = true;
     const PHV::Field* field;
     for (auto slice : container_state) {
+        bool is_padding = !uses.is_referenced(slice.field()) || slice.field()->overlayablePadding;
+        if (is_padding) continue;
         auto range = slice.field_slice();
         if (firstSlice) {
             last = range;
@@ -1151,13 +1161,14 @@ bool ActionPhvConstraints::check_and_generate_constraints_for_move_with_unalloca
     PHV::Allocation::MutuallyLiveSlices state_written_to;
     PHV::Allocation::MutuallyLiveSlices state_not_written_to;
     for (auto slice : container_state) {
+        bool is_padding = slice.field()->overlayablePadding || !uses.is_referenced(slice.field());
         if (constraint_tracker.is_written(slice, action))
             // If written by normal instruction.
             state_written_to.insert(slice);
         else if (initActions.count(slice.field()) && initActions.at(slice.field()).count(action))
             // If written by metadata initialization.
             state_written_to.insert(slice);
-        else
+        else if (!is_padding)
             state_not_written_to.insert(slice);
     }
     size_t num_fields_not_written_to = state_not_written_to.size();
@@ -1482,6 +1493,7 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
 
         if (operationType[action] == OperandInfo::WHOLE_CONTAINER_SAME_FIELD) {
             if (!are_adjacent_field_slices(container_state)) {
+                LOG1("Found non adjacent field slices");
                 return boost::none;
             } else {
                 LOG5("\t\t\t\tMultiple slices involved in whole container operation are adjacent");
@@ -1509,12 +1521,6 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
         // this packing is not valid.
         if (operationType[action] == OperandInfo::BITWISE && !all_or_none_ad_constant_sources)
             return boost::none;
-
-        if (mocha_or_dark && operationType[action] == OperandInfo::BITWISE) {
-            // Mocha or dark containers can only be used in whole container move operations.
-            LOG5("\t\t\t\tAction " << action->name << " has a bitwise operation writing to a "
-                 " dark or mocha container.");
-            return boost::none; }
 
         NumContainers sources =
             num_container_sources(alloc, container_state, action, copacking_constraints);

@@ -7,6 +7,7 @@
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/mau/action_analysis.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/analysis/pack_conflicts.h"
 #include "bf-p4c/phv/utils/utils.h"
 
@@ -18,6 +19,7 @@
 class ActionPhvConstraints : public Inspector {
  private:
     const PhvInfo &phv;
+    const PhvUse  &uses;
     const PackConflicts &conflicts;
 
     ordered_map<const PHV::Field*, ordered_set<const PHV::Field*>> same_byte_fields;
@@ -569,8 +571,8 @@ class ActionPhvConstraints : public Inspector {
             const PHV::Allocation::MutuallyLiveSlices& container_state) const;
 
  public:
-    explicit ActionPhvConstraints(const PhvInfo &p, const PackConflicts& c)
-    : phv(p), conflicts(c), constraint_tracker(ConstraintTracker(p, *this)) { }
+    explicit ActionPhvConstraints(const PhvInfo &p, const PhvUse& u, const PackConflicts& c)
+    : phv(p), uses(u), conflicts(c), constraint_tracker(ConstraintTracker(p, *this)) { }
 
     /// (xxx)Deep [HACK WARNING]: Right now action bus allocation requires any destination written
     /// by meter colors to be allocated to a 8-bit PHV. This set keeps a track of all such

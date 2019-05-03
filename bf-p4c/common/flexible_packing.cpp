@@ -1449,6 +1449,7 @@ void ReplaceFlexFieldUses::end_apply() {
 
 FlexiblePacking::FlexiblePacking(
             PhvInfo& p,
+            PhvUse& u,
             DependencyGraph& dg,
             CollectBridgedFields& b,
             ordered_map<cstring, ordered_set<cstring>>& e,
@@ -1456,7 +1457,7 @@ FlexiblePacking::FlexiblePacking(
     : Logging::PassManager("bridge_metadata_"),
       bridgedFields(b),
       packConflicts(p, dg, tMutex, alloc, aMutex),
-      actionConstraints(p, packConflicts),
+      actionConstraints(p, u, packConflicts),
       packHeaders(p, b, actionConstraints, doNotPack, phase0Fields, deparserParams,
                    parserAlignedFields, alloc),
       parserMappings(p),

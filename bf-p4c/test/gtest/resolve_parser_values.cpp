@@ -11,6 +11,7 @@
 #include "bf-p4c/mau/instruction_selection.h"
 #include "bf-p4c/phv/mau_backtracker.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "test/gtest/helpers.h"
 #include "bf-p4c/parde/parde_visitor.h"
 #include "bf-p4c/parde/resolve_parser_values.h"
@@ -107,6 +108,7 @@ const IR::BFN::Pipe* runMockPasses(const IR::BFN::Pipe* pipe) {
     auto options = new BFN_Options();  // dummy options used in pass.
     SymBitMatrix overlay;
     PhvInfo phv(overlay);
+    PhvUse uses(phv);
     DependencyGraph dg;
     FindDependencyGraph deps(phv, dg);
     CollectBridgedFields bridged_fields(phv);
@@ -119,7 +121,8 @@ const IR::BFN::Pipe* runMockPasses(const IR::BFN::Pipe* pipe) {
         new FindDependencyGraph(phv, dg),
         &table_alloc,
         new CollectPhvInfo(phv),
-        new FlexiblePacking(phv, dg, bridged_fields, extracted_together, table_alloc),
+        &uses,
+        new FlexiblePacking(phv, uses, dg, bridged_fields, extracted_together, table_alloc),
         new CollectPhvInfo(phv)
     };
     return pipe->apply(quick_backend);

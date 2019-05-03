@@ -32,7 +32,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
       parser_critical_path(phv),
       critical_path_clusters(parser_critical_path),
       pack_conflicts(phv, deps, table_mutex, alloc, action_mutex),
-      action_constraints(phv, pack_conflicts),
+      action_constraints(phv, uses, pack_conflicts),
       domTree(flowGraph),
       meta_live_range(phv, deps, defuse, pragmas, uses, alloc),
       dark_live_range(phv, clot, deps, defuse, pragmas, uses, table_alloc),

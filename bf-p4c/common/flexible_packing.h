@@ -9,6 +9,7 @@
 #include "bf-p4c/mau/table_mutex.h"
 #include "bf-p4c/phv/action_phv_constraints.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/common/bridged_metadata_replacement.h"
 
 /// This class gathers all the bridged metadata fields also used as deparser parameters. The
@@ -491,6 +492,7 @@ class FlexiblePacking : public Logging::PassManager {
  public:
     explicit FlexiblePacking(
             PhvInfo& p,
+            PhvUse& u,
             DependencyGraph& dg,
             CollectBridgedFields& b,
             ordered_map<cstring, ordered_set<cstring>>& e,

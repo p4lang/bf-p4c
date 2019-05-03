@@ -826,10 +826,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/compile_only/action_conflict_1.p4
   extensions/p4_tests/p4_14/compile_only/action_conflict_3.p4
   extensions/p4_tests/p4_14/compile_only/action_conflict_7.p4
-# Need to mark padding field used in add as a padding field. Need to introduce annotation for the
-# same.
-  switch_msdc_l3
-  switch_8.7_msdc_l3
   extensions/p4_tests/p4_16/ptf/int_transit.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-970/comp_970.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-968/comp_968.p4
@@ -1149,7 +1145,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error.*This program violates action constraints imposed by Tofino."
   ../glass/testsuite/p4_tests/mau/COMPILER-728/ipu.p4
-  ../glass/testsuite/p4_tests/arista/COMPILER-1114/case8156.p4
   )
 
 # P4C-1395
@@ -1367,4 +1362,10 @@ p4c_add_xfail_reason("tofino"
   "Can only do checksums on byte-aligned container slices"
   # P4C-1620
   extensions/p4_tests/p4_14/stf/update_checksum_8.p4
+)
+
+# Slicing issue
+p4c_add_xfail_reason("tofino"
+  "Compiler Bug.*Slice point cannot be -1 at this point"
+  ../glass/testsuite/p4_tests/arista/COMPILER-1114/case8156.p4
 )

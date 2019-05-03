@@ -187,15 +187,15 @@ TEST_F(CriticalPathClustersTest, DISABLED_Basic) {
 
     SymBitMatrix mutex;
     PhvInfo phv(mutex);
+    PhvUse uses(phv);
     MauBacktracker table_alloc(phv.field_mutex());
     DependencyGraph deps;
     TablesMutuallyExclusive table_mutex;
     ActionMutuallyExclusive action_mutex;
     PackConflicts conflicts(phv, deps, table_mutex, table_alloc, action_mutex);
-    ActionPhvConstraints actions(phv, conflicts);
+    ActionPhvConstraints actions(phv, uses, conflicts);
     CalcParserCriticalPath parser_critical_path(phv);
     FieldDefUse defuse(phv);
-    PhvUse uses(phv);
     Clustering clustering(phv, uses, conflicts, actions);
 
     auto *post_pm_pipe = runMockPasses(test->pipe, phv, uses,
