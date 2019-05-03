@@ -2230,6 +2230,11 @@ void Table::add_reference_table(json::vector &table_refs, const Table::Call& c) 
         table_ref["how_referenced"] = hr;
         table_ref["handle"] = c->handle();
         table_ref["name"] = t_name;
+        auto mtr = c->to<MeterTable>();
+        if (mtr && mtr->uses_colormaprams())
+            table_ref["color_mapram_addr_type"]
+                = mtr->color_mapram_addr == MeterTable::IDLE_MAP_ADDR ? "idle" : "stats";
+
         table_refs.push_back(std::move(table_ref)); }
 }
 
