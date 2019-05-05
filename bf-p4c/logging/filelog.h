@@ -52,7 +52,7 @@ class FileLog {
 
  public:
     explicit FileLog(int pipe, cstring logName, Mode mode = AUTO) {
-        bool append;
+        bool append = true;
         switch (mode) {
         case APPEND: append = true; break;
         case CREATE: append = false; break;
