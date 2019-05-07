@@ -535,8 +535,14 @@ struct RewriteParserStatements : public Transform {
                     break;
                 }
             }
-            BUG_CHECK(rval, "Checksum field not extracted?");
-
+            if (!rval) {
+                std::stringstream msg;
+                msg << "field in " << declName << " is not extracted in "
+                    << stateName <<"."
+                    << " Operations on the checksum fields must be in the same parser state "
+                    << "where the fields are extracted.";
+                ::fatal_error("%1% %2%", expr, msg.str());
+            }
             if (isAdd) {
                 bool isChecksum = isChecksumField(member, "header_checksum");
                 auto* add = new IR::BFN::ChecksumAdd(declName, rval, isChecksum);
