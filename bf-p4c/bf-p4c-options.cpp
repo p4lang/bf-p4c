@@ -190,6 +190,18 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
         {"tofino2u", "tna"},
         {"tofino2u", "t2na"},
     };
+
+    // !!!!!!!!!!!!
+    // Attention: the variant values need to be the same as the ones defined
+    // in driver/p4c.tofino2.cfg
+    // !!!!!!!!!!!!
+    static const std::map<cstring, unsigned int> supportedT2Variants = {
+        {"tofino2",  1},
+        {"tofino2u", 1},
+        {"tofino2m", 2},
+        {"tofino2h", 3}
+    };
+
     // BFN_Options::process is called twice: once from the main, and once
     // from applyPragmaOptions to handle pragma command_line.
     // This variable prevents doing the actions below twice, since the
@@ -213,10 +225,14 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
             return remainingOptions;
         }
 
-        if (target == "tofino")
+        if (target == "tofino") {
             preprocessor_options += " -D__TARGET_TOFINO__=1";
-        else if (target == "tofino2")
+        } else if (target == "tofino2" || target == "tofino2h" || target == "tofino2m" ||
+                   target == "tofino2u") {
             preprocessor_options += " -D__TARGET_TOFINO__=2";
+            preprocessor_options += " -D__TOFINO2_VARIANT__=" +
+                std::to_string(supportedT2Variants.at(target));
+        }
 
         // Cache the names of the output directory and the program name
         cstring inputFile;
