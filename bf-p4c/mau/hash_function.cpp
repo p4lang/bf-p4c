@@ -423,8 +423,6 @@ bool IR::MAU::HashFunction::setup(const Expression *e) {
             // fall through
         }
     }
-
-
     return true;
 }
 

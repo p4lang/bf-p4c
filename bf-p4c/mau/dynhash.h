@@ -11,6 +11,67 @@
 #include "bf-p4c/mau/input_xbar.h"
 #include "bf-p4c/phv/phv_fields.h"
 
+struct HashFuncLoc {
+    int stage;
+    int hash_group;
+
+    bool operator<(const HashFuncLoc &hfl) const {
+        if (stage != hfl.stage)
+            return stage < hfl.stage;
+        return hash_group < hfl.hash_group;
+    }
+
+    bool operator==(const HashFuncLoc &hfl) const {
+        return stage == hfl.stage && hash_group != hfl.hash_group;
+    }
+
+    bool operator!=(const HashFuncLoc &hfl) const {
+        return !(*this == hfl);
+    }
+
+    HashFuncLoc(int s, int hg) : stage(s), hash_group(hg) {}
+};
+
+using NameToHashGen = std::map<cstring, const IR::MAU::HashGenExpression *>;
+using HashGenToAlloc
+    = std::map<cstring, safe_vector<std::pair<HashFuncLoc, const IXBar::HashDistIRUse *>>>;
+using AllocToHashUse = std::map<HashFuncLoc, safe_vector<const IXBar::HashDistIRUse *>>;
+
+class VerifyUniqueDynamicHash : public MauInspector {
+    const PhvInfo &phv;
+    NameToHashGen &verify_hash_gen;
+
+    profile_t init_apply(const IR::Node *node) {
+        auto rv = MauInspector::init_apply(node);
+        verify_hash_gen.clear();
+        return rv;
+    }
+
+    bool preorder(const IR::MAU::HashGenExpression *) override;
+ public:
+    VerifyUniqueDynamicHash(const PhvInfo &p, NameToHashGen &vhg)
+        : phv(p), verify_hash_gen(vhg) {}
+};
+
+class GatherDynamicHashAlloc : public MauInspector {
+    const PhvInfo &phv;
+    const NameToHashGen &verify_hash_gen;
+    HashGenToAlloc &hash_gen_alloc;
+
+    profile_t init_apply(const IR::Node *node) {
+        auto rv = MauInspector::init_apply(node);
+        hash_gen_alloc.clear();
+        return rv;
+    }
+
+    bool preorder(const IR::MAU::Table *) override;
+
+ public:
+    GatherDynamicHashAlloc(const PhvInfo &p, const NameToHashGen &vhg, HashGenToAlloc &hga)
+        : phv(p), verify_hash_gen(vhg), hash_gen_alloc(hga) {}
+};
+
+
 namespace BFN {
 
 static const unsigned fieldListHandleBase = (0x21 << 24);
@@ -20,36 +81,57 @@ extern unsigned fieldListHandle;
 extern unsigned dynHashHandle;
 extern unsigned algoHandle;
 static std::map<cstring, unsigned> algoHandles;
-class DynamicHashJson : public MauInspector {
+class GenerateDynamicHashJson : public MauInspector {
  private:
     const PhvInfo &phv;
-    Util::JsonArray *_dynHashNode = nullptr;
+    Util::JsonArray *_dynHashNode;
+    const NameToHashGen &verify_hash_gen;
+    const HashGenToAlloc &hash_gen_alloc;
+    bool all_placed = true;
+
     bool preorder(const IR::MAU::Table *tbl) override;
     void gen_ixbar_json(const IXBar::Use &ixbar_use,
         Util::JsonObject *_dhc, int stage, const cstring field_list_name,
         const IR::NameList *algorithms, int hash_width = -1);
 
+    void end_apply() override;
+
     void gen_ixbar_bytes_json(Util::JsonArray *_xbar_cfgs, int stage,
         const std::map<cstring, cstring> &fieldNames, const IXBar::Use &ixbar_use);
-    void gen_algo_json(Util::JsonObject *_dhc, const IR::NameList *algorithms);
+    void gen_algo_json(Util::JsonObject *_dhc, const IR::MAU::HashGenExpression *hge);
+    void gen_single_algo_json(Util::JsonArray *_algos, const IR::MAU::HashFunction *alg,
+        cstring alg_name, bool &is_default);
     void gen_hash_json(Util::JsonArray *_hash_cfgs, int stage, IXBar::Use &ixbar_use,
         int &hash_bit_width);
-    void gen_field_list_json(Util::JsonObject *_field_list, cstring field_list_name,
-        safe_vector<const IR::Expression *> &field_list_order,
+    void gen_field_list_json(Util::JsonObject *_field_list, const IR::MAU::HashGenExpression *hge,
         std::map<cstring, cstring> &fieldNames);
-
-    void gen_hash_dist_json(const IR::MAU::Table *tbl);
-
-
-    using HashDistToAlloc
-        = ordered_map<const IR::MAU::HashDist *, safe_vector<const IXBar::HashDistIRUse *>>;
-
-    using HashFuncToAlloc = std::map<int, safe_vector<const IXBar::HashDistIRUse *>>;
+    void gen_hash_dist_json(cstring dyn_hash_name);
 
  public:
-    explicit DynamicHashJson(const PhvInfo &phv);
+    GenerateDynamicHashJson(const PhvInfo &p, Util::JsonArray *_dhn, const NameToHashGen &vhg,
+            const HashGenToAlloc &hga)
+        : phv(p), _dynHashNode(_dhn), verify_hash_gen(vhg), hash_gen_alloc(hga) {}
     /// output the json hierarchy into the asm file (as Yaml)
+};
+
+
+class DynamicHashJson : public PassManager {
+    const PhvInfo &phv;
+    Util::JsonArray *_dynHashNode = nullptr;
+    NameToHashGen verify_hash_gen;
+    HashGenToAlloc hash_gen_alloc;
+
     friend std::ostream & operator<<(std::ostream &out, const DynamicHashJson &dyn);
+
+ public:
+    explicit DynamicHashJson(const PhvInfo &p) : phv(p) {
+        _dynHashNode = new Util::JsonArray();
+        addPasses({
+            new VerifyUniqueDynamicHash(phv, verify_hash_gen),
+            new GatherDynamicHashAlloc(phv, verify_hash_gen, hash_gen_alloc),
+            new GenerateDynamicHashJson(phv, _dynHashNode, verify_hash_gen, hash_gen_alloc)
+        });
+    }
 };
 
 }  // namespace BFN

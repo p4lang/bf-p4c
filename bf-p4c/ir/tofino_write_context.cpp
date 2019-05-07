@@ -127,16 +127,11 @@ bool TofinoWriteContext::isRead(bool root_value) {
     if (ctxt->node->is<IR::MAU::Instruction>())
         return ctxt->child_index > 0;
 
-    if (ctxt->node->is<IR::MAU::TableKey>())
+    if (findContext<IR::MAU::TableKey>())
         return true;
 
-    if (auto *hashdist = ctxt->node->to<IR::MAU::HashDist>()) {
-        if (current == hashdist->field_list)
-            return true;
-        if (auto *fl = hashdist->field_list->to<IR::FieldList>()) {
-            for (auto *f : fl->fields) {
-                if (current == f)
-                    return true; } } }
+    if (findContext<IR::MAU::HashDist>())
+        return true;
 
     return rv;
 }
@@ -157,7 +152,7 @@ bool TofinoWriteContext::isIxbarRead(bool /* root_value */) {
             return false;
     }
 
-    if (ctxt->node->is<IR::MAU::TableKey>()) {
+    if (findContext<IR::MAU::TableKey>()) {
         return true;
     }
 

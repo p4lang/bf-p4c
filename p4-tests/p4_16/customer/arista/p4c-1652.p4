@@ -1462,11 +1462,12 @@ control Cranbury(inout Tombstone Neponset, inout Level Bronwood, in ingress_intr
 
 control Lemont(inout Tombstone Hookdale, inout Level Funston) {
     Hash<bit<16>>(HashAlgorithm_t.CRC16) Mayflower;
+    Hash<bit<16>>(HashAlgorithm_t.CRC16) Mayflower2;
     action Halltown() {
         Funston.Halaula.Cornell = Mayflower.get<tuple<bit<8>, bit<32>, bit<32>>>({ Hookdale.Staunton.Onycha, Hookdale.Staunton.Bennet, Hookdale.Staunton.Etter });
     }
     action Recluse() {
-        Funston.Halaula.Cornell = Mayflower.get<tuple<bit<128>, bit<128>, bit<4>, bit<20>, bit<8>>>({ Hookdale.Lugert.Scarville, Hookdale.Lugert.Ivyland, 4w0, Hookdale.Lugert.RioPecos, Hookdale.Lugert.DeGraff });
+        Funston.Halaula.Cornell = Mayflower2.get<tuple<bit<128>, bit<128>, bit<4>, bit<20>, bit<8>>>({ Hookdale.Lugert.Scarville, Hookdale.Lugert.Ivyland, 4w0, Hookdale.Lugert.RioPecos, Hookdale.Lugert.DeGraff });
     }
     table Arapahoe {
         actions = {
@@ -2139,11 +2140,12 @@ control Monse(inout Tombstone Chatom, inout Level Ravenwood) {
 
 control Philmont(inout Tombstone ElCentro, inout Level Twinsburg) {
     Hash<bit<16>>(HashAlgorithm_t.CRC16) Redvale;
+    Hash<bit<16>>(HashAlgorithm_t.CRC16) Redvale2;
     action Macon() {
         Twinsburg.Halaula.Noyes = Redvale.get<tuple<bit<16>, bit<16>, bit<16>>>({ Twinsburg.Halaula.Cornell, ElCentro.McGrady.Atoka, ElCentro.McGrady.Panaca });
     }
     action Bains() {
-        Twinsburg.Halaula.StarLake = Redvale.get<tuple<bit<16>, bit<16>, bit<16>>>({ Twinsburg.Halaula.Grannis, ElCentro.Richvale.Atoka, ElCentro.Richvale.Panaca });
+        Twinsburg.Halaula.StarLake = Redvale2.get<tuple<bit<16>, bit<16>, bit<16>>>({ Twinsburg.Halaula.Grannis, ElCentro.Richvale.Atoka, ElCentro.Richvale.Panaca });
     }
     action Franktown() {
         Macon();
@@ -3383,14 +3385,16 @@ control Parole(inout Tombstone Picacho, inout Level Reading, in ingress_intrinsi
         Reading.ElVerano.Ledoux = 32w0;
     }
     Hash<bit<16>>(HashAlgorithm_t.CRC16) Duster;
+    Hash<bit<16>>(HashAlgorithm_t.CRC16) Duster2;
+    Hash<bit<16>>(HashAlgorithm_t.CRC16) Duster3;
     action BigBow() {
         Reading.Halaula.Grannis = Duster.get<tuple<bit<32>, bit<32>, bit<8>>>({ Reading.Parkland.Higginson, Reading.Parkland.Oriskany, Reading.Algoa.Breese });
     }
     action Hooks() {
-        Reading.Halaula.Grannis = Duster.get<tuple<bit<128>, bit<128>, bit<4>, bit<20>, bit<8>>>({ Reading.Coulter.Exton, Reading.Coulter.Floyd, 4w0, Picacho.Wauconda.RioPecos, Reading.Algoa.Breese });
+        Reading.Halaula.Grannis = Duster2.get<tuple<bit<128>, bit<128>, bit<4>, bit<20>, bit<8>>>({ Reading.Coulter.Exton, Reading.Coulter.Floyd, 4w0, Picacho.Wauconda.RioPecos, Reading.Algoa.Breese });
     }
     action Hughson() {
-        Reading.Uvalde.SoapLake = Duster.get<tuple<bit<24>, bit<24>, bit<24>, bit<24>, bit<16>>>({ Picacho.Marcus.Dandridge, Picacho.Marcus.Colona, Picacho.Marcus.Wilmore, Picacho.Marcus.Piperton, Reading.Thayne.Quebrada });
+        Reading.Uvalde.SoapLake = Duster3.get<tuple<bit<24>, bit<24>, bit<24>, bit<24>, bit<16>>>({ Picacho.Marcus.Dandridge, Picacho.Marcus.Colona, Picacho.Marcus.Wilmore, Picacho.Marcus.Piperton, Reading.Thayne.Quebrada });
     }
     action Sultana() {
         Reading.Uvalde.SoapLake = Reading.Halaula.Cornell;

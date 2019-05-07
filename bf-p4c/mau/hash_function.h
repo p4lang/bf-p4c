@@ -22,6 +22,7 @@ struct HashFunction {
     bool operator==(const HashFunction &a) const {
         return type == a.type && size == a.size && msb == a.msb && reverse == a.reverse &&
                poly == a.poly && init == a.init && final_xor == a.final_xor; }
+    bool operator!=(const HashFunction &a) const { return !(*this == a); }
     void toJSON(JSONGenerator &json) const;
     static HashFunction *fromJSON(JSONLoader &);
     bool setup(const IR::Expression *exp);

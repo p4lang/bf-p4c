@@ -366,7 +366,7 @@ p4c_add_xfail_reason("tofino"
     testdata/p4_16_samples/issue986-1-bmv2.p4
     )
 p4c_add_xfail_reason("tofino"
-    "error: : The hash offset must be a power of 2 in a hash calculation Hash.get"
+    "The hash offset must be a power of 2 in a hash calculation"
     testdata/p4_16_samples/issue1049-bmv2.p4
     )
 
@@ -875,7 +875,7 @@ p4c_add_xfail_reason("tofino"
 
 # P4C-1451 -- requires action splitting to avoid the error
 p4c_add_xfail_reason("tofino"
-  "error: Can't use action argument .* in a hash in the same action. try splitting the action"
+  "Action Data Argument .* cannot be used in a hash generation expression"
   extensions/p4_tests/p4_14/customer/barefoot_academy/p4c-1451.p4
 )
 

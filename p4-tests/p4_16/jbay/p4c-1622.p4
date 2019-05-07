@@ -11675,6 +11675,7 @@ control SwitchIngress(
 
     //TODO(msharif) : Use different algorithms for upper and lower 16 bits.
     Hash<bit<32>>(HashAlgorithm_t.CRC32) flow_hash;
+    Hash<bit<32>>(HashAlgorithm_t.CRC32) flow_hash2;
 
     switch_lookup_fields_t lkp;
     switch_lookup_fields_t lkp_nsh;
@@ -11751,7 +11752,7 @@ control SwitchIngress(
  // ----------------------------------------------------------------------------
 
     action compute_non_ip_hash() {
-        hash = flow_hash.get({lkp.mac_type, lkp.mac_src_addr, lkp.mac_dst_addr});
+        hash = flow_hash2.get({lkp.mac_type, lkp.mac_src_addr, lkp.mac_dst_addr});
     }
 
  // ----------------------------------------------------------------------------

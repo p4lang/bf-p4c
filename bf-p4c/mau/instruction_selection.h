@@ -18,6 +18,72 @@ class UnimplementedRegisterMethodCalls : public MauInspector {
     UnimplementedRegisterMethodCalls() {}
 };
 
+/**
+ * The purpose of this class is to convert expressions that require the Hash pathway in actions
+ * to IR::MAU::Instructions where the instruction setting tempvars to HashDist objects.  These
+ * can later be further converted to the correct instruction in DoInstructionSelection
+ */
+class HashGenSetup : public PassManager {
+    ordered_map<const IR::Expression *, IR::MAU::HashGenExpression *> hash_gen_injections;
+    ordered_set<const IR::Expression *> hash_dist_injections;
+    const BFN_Options &options;
+
+
+    Visitor::profile_t init_apply(const IR::Node *node) override {
+        auto rv = PassManager::init_apply(node);
+        hash_gen_injections.clear();
+        hash_dist_injections.clear();
+        return rv;
+    }
+
+    /**
+     * Find the expressions that are going to be converted HashGenExpressions
+     */
+    class CreateHashGenExprs : public MauInspector {
+        HashGenSetup &self;
+        bool preorder(const IR::MAU::StatefulAlu *) override { return false; }
+        bool preorder(const IR::BFN::SignExtend *) override;
+        bool preorder(const IR::Concat *) override;
+        bool preorder(const IR::Primitive *) override;
+
+     public:
+        explicit CreateHashGenExprs(HashGenSetup &s) : self(s) {}
+    };
+
+    /**
+     * Find the expressions that are to be converted to HashDists
+     */
+    class ScanHashDists : public MauInspector {
+        HashGenSetup &self;
+        bool preorder(const IR::MAU::StatefulAlu *) override { return false; }
+        bool preorder(const IR::Expression *) override;
+
+     public:
+        explicit ScanHashDists(HashGenSetup &s) : self(s) {}
+    };
+
+    /**
+     * Replace these found expressions with said HashGenExpressions and HashDists
+     */
+    class UpdateHashDists : public MauTransform {
+        HashGenSetup &self;
+        const IR::Expression *postorder(IR::Expression *) override;
+
+     public:
+        explicit UpdateHashDists(HashGenSetup &s) : self(s) {}
+    };
+
+ public:
+    explicit HashGenSetup(const BFN_Options &o) : options(o) {
+        addPasses({
+            new CreateHashGenExprs(*this),
+            new ScanHashDists(*this),
+            new UpdateHashDists(*this)
+        });
+    }
+};
+
+
 /** The purpose of this pass is to determine the types, and per flow enables of actions.
  *  Eventually a second inspector will be required, after StatefulAttachmentSetup, in order
  *  to verify that the way that these synth2port tables are being used is correct.
@@ -70,6 +136,7 @@ class DoInstructionSelection : public MauTransform, TofinoWriteContext {
     int                                 synth_arg_num = 0;
 
     profile_t init_apply(const IR::Node *root) override;
+    const IR::MAU::HashDist *preorder(IR::MAU::HashDist *hd) override { prune(); return hd; }
     const IR::GlobalRef *preorder(IR::GlobalRef *) override;
     const IR::MAU::Action *postorder(IR::MAU::Action *) override;
     const IR::MAU::Action *preorder(IR::MAU::Action *) override;

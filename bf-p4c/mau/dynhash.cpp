@@ -1,6 +1,50 @@
 #include "bf-p4c/common/asm_output.h"
+#include "bf-p4c/common/utils.h"
 #include "bf-p4c/mau/dynhash.h"
+#include "bf-p4c/mau/ixbar_expr.h"
 #include "bf-p4c/mau/resource.h"
+
+/**
+ * Guarantees that each dynamic hash function is the same across all calls of this dynamic
+ * hash function.  This way the JSON node will be consistent
+ */
+bool VerifyUniqueDynamicHash::preorder(const IR::MAU::HashGenExpression *hge) {
+    if (!hge->dynamic)
+        return false;
+    auto key = hge->id.name;
+    if (verify_hash_gen.count(key) == 0) {
+        verify_hash_gen[key] = hge;
+        return false;
+    }
+
+    auto hge_comp = verify_hash_gen.at(key);
+    if (!hge->equiv(*hge_comp)) {
+        ::fatal_error("%1% : Hash.get over dynamic hash %2% differ: %3%.  Dynamic hashes must "
+            "have the same field list and sets of algorithm for each get call, as these must "
+            "change simultaneously at runtime", hge, key, hge_comp);
+    }
+    return false;
+}
+
+/**
+ * Gather all tables that have allocated this particular dynamic hash object
+ */
+bool GatherDynamicHashAlloc::preorder(const IR::MAU::Table *tbl) {
+    if (!tbl->is_placed())
+        return true;
+    for (auto &hd_use : tbl->resources->hash_dists) {
+        for (auto &ir_alloc : hd_use.ir_allocations) {
+            if (!ir_alloc.is_dynamic()) continue;
+            auto key = ir_alloc.dyn_hash_name;
+            BUG_CHECK(verify_hash_gen.count(key), "Cannot associate the hash allocation for "
+                "dyn hash key %s", key);
+            HashFuncLoc hfl(tbl->logical_id / 16U, hd_use.hash_group());
+            auto value = std::make_pair(hfl, &ir_alloc);
+            hash_gen_alloc[key].emplace_back(value);
+        }
+    }
+    return true;
+}
 
 namespace BFN {
 
@@ -8,7 +52,8 @@ unsigned fieldListHandle = 0x0;
 unsigned dynHashHandle = 0x0;
 unsigned algoHandle = 0x0;
 
-bool DynamicHashJson::preorder(const IR::MAU::Table *tbl) {
+bool GenerateDynamicHashJson::preorder(const IR::MAU::Table *tbl) {
+    all_placed &= tbl->is_placed();
     if (tbl->gateway_only()) return true;
     if (auto res = tbl->resources) {
         Util::JsonObject *_dynHashCalc = new Util::JsonObject();
@@ -43,9 +88,84 @@ bool DynamicHashJson::preorder(const IR::MAU::Table *tbl) {
                 _dynHashNode->append(_dynHashCalc);
             }
         }
-        gen_hash_dist_json(tbl);
     }
     return true;
+}
+
+void GenerateDynamicHashJson::gen_hash_dist_json(cstring dyn_hash_name) {
+    auto hge = verify_hash_gen.at(dyn_hash_name);
+
+    auto pos = hash_gen_alloc.find(dyn_hash_name);
+    if (pos == hash_gen_alloc.end()) {
+        BUG_CHECK(!all_placed, "No allocation for dyn hash object %s to coordinate against",
+                dyn_hash_name);
+        return;
+    }
+
+
+    auto &hga_value = hash_gen_alloc.at(dyn_hash_name);
+    AllocToHashUse alloc_to_use;
+    for (auto &entry : hga_value) {
+        alloc_to_use[entry.first].push_back(entry.second);
+    }
+
+    Util::JsonObject *_dynHashCalc = new Util::JsonObject();
+    Util::JsonObject *_fieldList = new Util::JsonObject();
+    Util::JsonArray *_xbar_cfgs = new Util::JsonArray();
+    Util::JsonArray *_hash_cfgs = new Util::JsonArray();
+
+    _dynHashCalc->emplace("name", dyn_hash_name);
+    _dynHashCalc->emplace("handle", dynHashHandleBase + dynHashHandle++);
+
+    gen_algo_json(_dynHashCalc, hge);
+
+    int hash_bit_width = hge->hash_output_width;
+    std::map<cstring, cstring> fieldNames;
+    gen_field_list_json(_fieldList, hge, fieldNames);
+
+    for (auto func_to_alloc : alloc_to_use) {
+        IXBar::Use combined_use;
+        const HashFuncLoc &hfl = func_to_alloc.first;
+        for (auto &alloc : func_to_alloc.second) {
+            for (auto &b : alloc->use.use) {
+                bool repeat_byte = false;
+                for (auto &c_b : combined_use.use) {
+                    if (b.loc == c_b.loc) {
+                        repeat_byte = true;
+                        for (auto fi : b.field_bytes)
+                            c_b.add_info(fi);
+                        break;
+                    }
+                }
+                if (!repeat_byte)
+                    combined_use.use.push_back(b);
+            }
+            auto &hdh = combined_use.hash_dist_hash;
+            auto &local_hdh = alloc->use.hash_dist_hash;
+            hdh.allocated = true;
+            hdh.group = hfl.hash_group;
+            hdh.galois_start_bit_to_p4_hash.insert(
+                local_hdh.galois_start_bit_to_p4_hash.begin(),
+                local_hdh.galois_start_bit_to_p4_hash.end());
+        }
+        gen_ixbar_bytes_json(_xbar_cfgs, hfl.stage, fieldNames, combined_use);
+        gen_hash_json(_hash_cfgs, hfl.stage, combined_use, hash_bit_width);
+        combined_use.clear();
+    }
+
+    _fieldList->emplace("crossbar_configuration", _xbar_cfgs);
+    Util::JsonArray *_field_lists = new Util::JsonArray();
+    _field_lists->append(_fieldList);
+    _dynHashCalc->emplace("field_lists", _field_lists);
+    _dynHashCalc->emplace("hash_configuration", _hash_cfgs);
+    _dynHashCalc->emplace("hash_bit_width", hash_bit_width);
+    _dynHashNode->append(_dynHashCalc);
+}
+
+void GenerateDynamicHashJson::end_apply() {
+    for (auto &entry : verify_hash_gen) {
+        gen_hash_dist_json(entry.first);
+    }
 }
 
 /**
@@ -58,7 +178,9 @@ bool DynamicHashJson::preorder(const IR::MAU::Table *tbl) {
  * itself have multiple allocations, this breaks down each allocation on a per hash function
  * allocation.  Also, one IR object does not coordinate with one IXBar::HashDistIRUse object
  */
-void DynamicHashJson::gen_hash_dist_json(const IR::MAU::Table *tbl) {
+/*
+void GenerateDynamicHashJson::gen_hash_dist_json(const IR::MAU::Table *tbl) {
+    return;
     auto hash_dists = tbl->resources->hash_dists;
     HashDistToAlloc ir_to_alloc;
     // Gather up all IXBar::HashDistIRUse per IR::MAU::HashDist allocation
@@ -155,57 +277,68 @@ void DynamicHashJson::gen_hash_dist_json(const IR::MAU::Table *tbl) {
         _dynHashNode->append(_dynHashCalc);
     }
 }
+*/
 
-void DynamicHashJson::gen_algo_json(Util::JsonObject *_dhc, const IR::NameList *algorithms) {
-    _dhc->emplace("any_hash_algorithm_allowed", false);
+void GenerateDynamicHashJson::gen_single_algo_json(Util::JsonArray *_algos,
+        const IR::MAU::HashFunction *algorithm, cstring alg_name, bool &is_default) {
+    Util::JsonObject *_algo = new Util::JsonObject();
+    _algo->emplace("name", alg_name);  // p4 algo name
+    _algo->emplace("type", algorithm->algo_type());
+    unsigned aHandle = algoHandleBase + algoHandle;
+    if (algoHandles.count(alg_name) > 0) {
+        aHandle = algoHandles[alg_name];
+    } else {
+        algoHandles[alg_name] = aHandle;
+        algoHandle++;
+    }
+    _algo->emplace("handle", aHandle);
+    _algo->emplace("is_default", is_default);
+    _algo->emplace("msb", algorithm->msb);
+    _algo->emplace("extend", algorithm->extend);
+    _algo->emplace("reverse", algorithm->reverse);
+    // Convert poly in koopman notation to actual value
+    mpz_class poly, init, final_xor;
+    mpz_import(poly.get_mpz_t(), 1, 0, sizeof(algorithm->poly), 0, 0, &algorithm->poly);
+    poly = (poly << 1) + 1;
+    _algo->emplace("poly", "0x" + poly.get_str(16));
+    mpz_import(init.get_mpz_t(), 1, 0, sizeof(algorithm->init), 0, 0, &algorithm->init);
+    _algo->emplace("init", "0x" + init.get_str(16));
+    mpz_import(final_xor.get_mpz_t(), 1, 0, sizeof(algorithm->final_xor),
+                                                        0, 0, &algorithm->final_xor);
+    _algo->emplace("final_xor", "0x" + final_xor.get_str(16));
+    _algos->append(_algo);
+    is_default = false;  // only set 1st algo to default
+}
+
+void GenerateDynamicHashJson::gen_algo_json(Util::JsonObject *_dhc,
+        const IR::MAU::HashGenExpression *hge) {
+    _dhc->emplace("any_hash_algorithm_allowed", hge->any_alg_allowed);
     Util::JsonArray *_algos = new Util::JsonArray();
-    if (algorithms) {
-        bool is_default = true;
-        for (auto a : algorithms->names) {
+    bool is_default = true;
+    if (hge->alg_names) {
+        for (auto a : hge->alg_names->names) {
             // Call Dyn Hash Library and generate a hash function object for
             // given algorithm
             auto algoExpr = IR::MAU::HashFunction::convertHashAlgorithmBFN(
-                    algorithms->srcInfo, a.name, nullptr);
+                    hge->srcInfo, a.name, nullptr);
             auto algorithm = new IR::MAU::HashFunction();
             if (algorithm->setup(algoExpr)) {
-                Util::JsonObject *_algo = new Util::JsonObject();
-                _algo->emplace("name", a);  // p4 algo name
-                _algo->emplace("type", algorithm->algo_type());
-                unsigned aHandle = algoHandleBase + algoHandle;
-                if (algoHandles.count(a) > 0) {
-                    aHandle = algoHandles[a];
-                } else {
-                    algoHandles[a] = aHandle;
-                    algoHandle++;
-                }
-                _algo->emplace("handle", aHandle);
-                _algo->emplace("is_default", is_default);
-                _algo->emplace("msb", algorithm->msb);
-                _algo->emplace("extend", algorithm->extend);
-                _algo->emplace("reverse", algorithm->reverse);
-                // Convert poly in koopman notation to actual value
-                mpz_class poly, init, final_xor;
-                mpz_import(poly.get_mpz_t(), 1, 0, sizeof(algorithm->poly), 0, 0, &algorithm->poly);
-                poly = (poly << 1) + 1;
-                _algo->emplace("poly", "0x" + poly.get_str(16));
-                mpz_import(init.get_mpz_t(), 1, 0, sizeof(algorithm->init), 0, 0, &algorithm->init);
-                _algo->emplace("init", "0x" + init.get_str(16));
-                mpz_import(final_xor.get_mpz_t(), 1, 0, sizeof(algorithm->final_xor),
-                                                                    0, 0, &algorithm->final_xor);
-                _algo->emplace("final_xor", "0x" + final_xor.get_str(16));
-                _algos->append(_algo);
-                is_default = false;  // only set 1st algo to default
+                gen_single_algo_json(_algos, algorithm, a.name, is_default);
             }
         }
+    } else {
+        gen_single_algo_json(_algos, &hge->algorithm, hge->algorithm.name(), is_default);
     }
     _dhc->emplace("algorithms", _algos);
 }
 
 
-void DynamicHashJson::gen_field_list_json(Util::JsonObject *_field_list, cstring field_list_name,
-        safe_vector<const IR::Expression *> &field_list_order,
-        std::map<cstring, cstring> &fieldNames) {
+void GenerateDynamicHashJson::gen_field_list_json(Util::JsonObject *_field_list,
+        const IR::MAU::HashGenExpression *hge, std::map<cstring, cstring> &fieldNames) {
     Util::JsonArray *_fields = new Util::JsonArray();
+    auto fle = hge->expr->to<IR::MAU::FieldListExpression>();
+
+    cstring field_list_name = fle->id.name;
     _field_list->emplace("name", field_list_name);
     _field_list->emplace("handle", fieldListHandleBase + fieldListHandle++);
     // Multiple field lists not supported,
@@ -213,10 +346,15 @@ void DynamicHashJson::gen_field_list_json(Util::JsonObject *_field_list, cstring
     _field_list->emplace("is_default", true);
     // can_permute & can_rotate need to be passed in (as annotations?) to be set
     // here. these fields are optional in schema
-    _field_list->emplace("can_permute", false);
-    _field_list->emplace("can_rotate", false);
+    _field_list->emplace("can_permute", fle->permutable);
+    _field_list->emplace("can_rotate", fle->rotateable);
+
+    BuildP4HashFunction builder(phv);
+    hge->apply(builder);
+    P4HashFunction *func = builder.func();
+
     int numConstants = 0;
-    for (auto *e : field_list_order) {
+    for (auto *e : func->inputs) {
         auto field = PHV::AbstractField::create(phv, e);
         Util::JsonObject *_field = new Util::JsonObject();
         cstring name = "";
@@ -245,7 +383,7 @@ void DynamicHashJson::gen_field_list_json(Util::JsonObject *_field_list, cstring
     _field_list->emplace("fields", _fields);
 }
 
-void DynamicHashJson::gen_ixbar_bytes_json(Util::JsonArray *_xbar_cfgs, int stage,
+void GenerateDynamicHashJson::gen_ixbar_bytes_json(Util::JsonArray *_xbar_cfgs, int stage,
         const std::map<cstring, cstring> &fieldNames, const IXBar::Use &ixbar_use) {
     Util::JsonObject *_xbar_cfg = new Util::JsonObject();
     _xbar_cfg->emplace("stage_number", stage);
@@ -268,7 +406,7 @@ void DynamicHashJson::gen_ixbar_bytes_json(Util::JsonArray *_xbar_cfgs, int stag
     _xbar_cfgs->append(_xbar_cfg);
 }
 
-void DynamicHashJson::gen_hash_json(Util::JsonArray *_hash_cfgs, int stage,
+void GenerateDynamicHashJson::gen_hash_json(Util::JsonArray *_hash_cfgs, int stage,
         IXBar::Use &ixbar_use, int &hash_bit_width) {
     int hashGroup = -1;
     Util::JsonArray *_hash_bits = new Util::JsonArray();
@@ -319,7 +457,7 @@ void DynamicHashJson::gen_hash_json(Util::JsonArray *_hash_cfgs, int stage,
     _hash_cfgs->append(_hash_cfg);
 }
 
-void DynamicHashJson::gen_ixbar_json(const IXBar::Use &ixbar_use,
+void GenerateDynamicHashJson::gen_ixbar_json(const IXBar::Use &ixbar_use,
         Util::JsonObject *_dhc, int stage, const cstring field_list_name,
         const IR::NameList *algorithms, int hash_width) {
     Util::JsonArray *_field_lists = new Util::JsonArray();
@@ -478,8 +616,5 @@ std::ostream &operator<<(std::ostream &out, const DynamicHashJson &dyn) {
     return out;
 }
 
-DynamicHashJson::DynamicHashJson(const PhvInfo &phv) : phv(phv) {
-    _dynHashNode = new Util::JsonArray();
-}
 
 }  // namespace BFN

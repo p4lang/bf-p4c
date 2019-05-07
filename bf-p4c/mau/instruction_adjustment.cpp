@@ -1,5 +1,6 @@
 #include <boost/optional.hpp>
 #include "bf-p4c/mau/instruction_adjustment.h"
+#include "bf-p4c/mau/ixbar_expr.h"
 #include "bf-p4c/common/slice.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/common/asm_output.h"
@@ -832,18 +833,16 @@ void GeneratePrimitiveInfo::add_hash_dist_json(Util::JsonObject *_primitive,
     // currently not available here.
     auto hash_name = "hash_" + dst_name;
     auto idx = add_op_json(_primitive, "idx", "hash", hash_name);
-    idx->emplace("algorithm", hd->algorithm.name());
-    if (auto fl = hd->field_list) {
-        Util::JsonArray *hash_inputs = new Util::JsonArray();
-        if (auto le = fl->to<IR::ListExpression>()) {
-            for (auto &c : le->components) {
-                hash_inputs->append(canon_name(c->toString()));
-            }
-        } else {
-            hash_inputs->append(canon_name(fl->toString()));
-        }
-        _primitive->emplace("hash_inputs", hash_inputs);
+    BuildP4HashFunction builder(phv);
+    hd->expr->apply(builder);
+    P4HashFunction *func = builder.func();
+    BUG_CHECK(func != nullptr, "%s: Could not generate hash function", hd->srcInfo);
+    idx->emplace("algorithm", func->algorithm.name());
+    Util::JsonArray *hash_inputs = new Util::JsonArray();
+    for (auto input : func->inputs) {
+        hash_inputs->append(canon_name(input->toString()));
     }
+    _primitive->emplace("hash_inputs", hash_inputs);
 }
 
 void GeneratePrimitiveInfo::gen_action_json(const IR::MAU::Action *act,
@@ -956,7 +955,8 @@ void GeneratePrimitiveInfo::gen_action_json(const IR::MAU::Action *act,
             } else {
                 _primitive->emplace("name", "ExecuteMeterPrimitive");
                 add_op_json(_primitive, "dst", "meter", canon_name(meter->name));
-                if (auto pc = meter->pre_color) {
+                /*
+                if (auto pc = meter->pre_color_2) {
                     if (auto hd = pc->to<IR::MAU::HashDist>()) {
                         if (auto fl = hd->field_list) {
                             if (auto sl = fl->to<IR::Slice>()) {
@@ -969,6 +969,7 @@ void GeneratePrimitiveInfo::gen_action_json(const IR::MAU::Action *act,
                         }
                     }
                 }
+                */
             }
         }
         auto *counter = at->to<IR::MAU::Counter>();

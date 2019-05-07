@@ -8248,6 +8248,7 @@ control SwitchIngress(
 
     //TODO(msharif) : Use different algorithms for upper and lower 16 bits.
     Hash<bit<32>>(HashAlgorithm_t.CRC32) flow_hash;
+    Hash<bit<32>>(HashAlgorithm_t.CRC32) flow_hash2;
 
     //XXX Tofino can generate 4 bytes of hash per logical table, we need to make sure PHV
     // container(s) allocated for hash is less than 32 bits. P4C-669.
@@ -8287,7 +8288,7 @@ control SwitchIngress(
     }
 
     action compute_non_ip_hash() {
-        hash = flow_hash.get({ig_md.lkp.mac_type, ig_md.lkp.mac_src_addr, ig_md.lkp.mac_dst_addr});
+        hash = flow_hash2.get({ig_md.lkp.mac_type, ig_md.lkp.mac_src_addr, ig_md.lkp.mac_dst_addr});
     }
 
 

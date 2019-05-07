@@ -935,9 +935,10 @@ bool DoTableLayout::preorder(IR::MAU::Selector *sel) {
             continue;
         field_list->push_back(ixbar_read->expr);
     }
-    auto *hd = new IR::MAU::HashDist(sel->srcInfo, IR::Type::Bits::get(SelectorHashModBits(sel)),
-                                     field_list, sel->algorithm);
-    hd->bit_width = SelectorHashModBits(sel);
+
+    auto hge = new IR::MAU::HashGenExpression(sel->srcInfo,
+            IR::Type::Bits::get(SelectorHashModBits(sel)), field_list, sel->algorithm);
+    auto *hd = new IR::MAU::HashDist(sel->srcInfo, hge->type, hge);
     sel->hash_mod = hd;
     return false;
 }

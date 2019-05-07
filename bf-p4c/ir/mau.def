@@ -784,21 +784,68 @@ class SaluAction : VLIWInstruction {
 }
 
 
-/** Tofino-specific expressions that may be present in various places */
+class FieldListExpression : ListExpression {
+    ID id;
+    bool rotateable = false;
+    bool permutable = false;
+
+    dbprint { out << id << " : ";  ListExpression::dbprint(out); }
+}
+
+/**
+ * An expression that goes through the match ixbar and generates a hash function.  The eventual
+ * goal is to extend this function to the entirety of any thing that goes through the hash
+ * pathway in Tofino, i.e. Selectors, Inputs to Stateful ALU, and Table Keys, and obsolete
+ * IXBarExpression and TableKey.  But that is future work.
+ */
+class HashGenExpression : Expression {
+    Expression expr;
+    ID id;
+    bool dynamic = false;
+    HashFunction algorithm;
+    bool any_alg_allowed = false; 
+    NullOK NameList alg_names = nullptr;
+    // for dyn_hash, not sure if it can be summarized within type
+    int hash_output_width = 0;
+    HashGenExpression(Util::SourceInfo si, const IR::Type *type, Expression e, HashFunction a)
+        : Expression(si, type), expr(e), id("$hash" + std::to_string(nextId++)), algorithm(a) {}
+
+    dbprint { out << id << "(" << expr << ")"; }
+
+    equiv {
+        bool rv = expr->equiv(*a.expr) && dynamic == a.dynamic &&
+                  algorithm == a.algorithm && hash_output_width == a.hash_output_width;
+        rv &= alg_names
+                  ?  (a.alg_names ? alg_names->equiv(*a.alg_names) : false)
+                  : a.alg_names == nullptr;
+        rv &= dynamic && a.dynamic ? id == a.id : true;
+        return rv;          
+    }
+
+ private:
+    /**
+     * For static hashes, each hash call is a unique ID, in order potentially for later
+     * comparisons and tracking.  With each statc HashGeneExpression created, the nextId
+     * increases
+     */
+    static int nextId;
+}
 
 /** Hash Distribution Unit, used to bring PHV information directly into Match Central for
  *  action data lookup or action data itself.  Uses include addressing a table by a PHV field
  *  as well as a calculated hash to be used by PHV
  */
 class HashDist : Expression {
+    // Can be a HashGenExpression or a Slice of one
+    Expression expr;
+    safe_vector<int> units = {};
 
+    bool allocated() const { return !units.empty(); }
     dbprint {
-        out << "hash_dist(" << field_list << ", " << algorithm << ", " << bit_width << ")";
+        out << "hash_dist(" << expr << ")";
+        if (allocated())
+            out << units;
     }
-    // Fields read by this HashDist
-    Expression           field_list;
-    HashFunction         algorithm;
-    int                  bit_width = 0;
 }
 
 /** Expression computed in the input xbar, generally in the GF matrix
@@ -808,6 +855,8 @@ class HashDist : Expression {
  * well as computing various things (concatenations, sign extension, bit twiddling) that
  * can't be easily done in an ALU.  They can also be used for things that could be in an ALU,
  * but doing so would require an extra stage of dependency.
+ *
+ * TODO: Hopefully will be obsoleted by the HashGenExpression
  */
 class IXBarExpression : Expression {
     Expression          expr;
@@ -884,6 +933,9 @@ class WrappedSlice : Operation_Ternary {
     dbprint { out << e0 << "(" << e1 << ".." << e2 << ")"; }
 }
 
+/**
+ * TODO: Obsoleted by the HashGenExpression eventually
+ */
 class TableKey : Expression, IAnnotated {
     Expression expr;
     ID match_type;

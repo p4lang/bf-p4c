@@ -3125,13 +3125,13 @@ void IXBar::buildHashDistIRUse(HashDistAllocPostExpand &alloc_req, HashDistUse &
     KeyInfo ki;
     ki.hash_dist = true;
 
-    for (auto input : alloc_req.func.inputs) {
+    for (auto input : alloc_req.func->inputs) {
         safe_vector<const IR::Expression *> flo;
         FieldManagement(&map_alloc, flo, input, &fields_needed, "$hash_dist", phv, ki);
     }
 
-    rv.use.field_list_order.insert(rv.use.field_list_order.end(), alloc_req.func.inputs.begin(),
-                                   alloc_req.func.inputs.end());
+    rv.use.field_list_order.insert(rv.use.field_list_order.end(), alloc_req.func->inputs.begin(),
+                                   alloc_req.func->inputs.end());
     // Create pre-allocated bytes of the subset
     create_alloc(map_alloc, rv.use);
 
@@ -3187,21 +3187,22 @@ void IXBar::buildHashDistIRUse(HashDistAllocPostExpand &alloc_req, HashDistUse &
         le_bitrange p4_range
              = { bits_of_my_hash_seen,
                  bits_of_my_hash_seen + static_cast<int>(overlap.size()) - 1 };
-        p4_range = p4_range.shiftedByBits(alloc_req.func.hash_bits.lo);
+        p4_range = p4_range.shiftedByBits(alloc_req.func->hash_bits.lo);
         hdh.galois_start_bit_to_p4_hash[galois_range.lo] = p4_range;
 
         bits_seen += galois_range.size();
         bits_of_my_hash_seen += overlap.size();
     }
-    hdh.algorithm = alloc_req.func.algorithm;
+    hdh.algorithm = alloc_req.func->algorithm;
     hdh.group = hash_group;
     hdh.allocated = true;
-    rv.p4_hash_range = alloc_req.func.hash_bits;
+    rv.p4_hash_range = alloc_req.func->hash_bits;
     rv.dest = alloc_req.dest;
     rv.original_hd = alloc_req.original_hd;
+    rv.dyn_hash_name = alloc_req.func->dyn_hash_name;
     rv.use.hash_table_inputs[hash_group] = hash_table_input;
     rv.use.hash_seed[hash_group]
-        |= determine_final_xor(&(alloc_req.func.algorithm), phv, hdh.galois_start_bit_to_p4_hash,
+        |= determine_final_xor(&(alloc_req.func->algorithm), phv, hdh.galois_start_bit_to_p4_hash,
                                rv.use.field_list_order, rv.use.total_input_bits());
     rv.use.type = IXBar::Use::HASH_DIST;
     rv.use.used_by = name;
@@ -3298,11 +3299,11 @@ bool IXBar::allocHashDist(safe_vector<HashDistAllocPostExpand> &alloc_reqs, Hash
     int post_expand_shift = -1;
     bool chained_addr = false;
 
-    LOG3("  Calling allocHashDist2 on dest " <<  IXBar::hash_dist_name(dest));
+    LOG3("  Calling allocHashDist on dest " <<  IXBar::hash_dist_name(dest));
     // Build a union of all input xbar bytes required, as a single hash distribution output
     // might be sourced from multiple P4 level objects.
     for (auto alloc_req : alloc_reqs) {
-        for (auto input : alloc_req.func.inputs) {
+        for (auto input : alloc_req.func->inputs) {
             safe_vector<const IR::Expression *> flo;
             FieldManagement(&map_alloc, flo, input, &fields_needed, name, phv, ki);
         }
@@ -3495,8 +3496,7 @@ bitvec IXBar::determine_final_xor(const IR::MAU::HashFunction *hf,
     return lo_bv | hi_bv << 32;
 }
 
-
-
+/*
 IXBar::P4HashFunction IXBar::P4HashFunction::split(le_bitrange split) const {
     P4HashFunction rv;
     rv.algorithm = algorithm;
@@ -3522,23 +3522,18 @@ IXBar::P4HashFunction IXBar::P4HashFunction::split(le_bitrange split) const {
     }
     return rv;
 }
+*/
 
-void IXBar::XBarHashDist::build_function(const IR::MAU::HashDist *hd, P4HashFunction &func,
+void IXBar::XBarHashDist::build_function(const IR::MAU::HashDist *hd, P4HashFunction **func,
         le_bitrange *bits) {
-    ContByteConversion map_alloc;
-    std::map<cstring, bitvec> fields_needed;
-    KeyInfo ki;
-    ki.hash_dist = true;
-    ki.repeats_allowed &= hd->algorithm.type != IR::MAU::HashFunction::CRC;
-    ki.repeats_allowed &= !hd->field_list->is<IR::HashListExpression>();
+    BuildP4HashFunction builder(phv);
+    hd->expr->apply(builder);
+    *func = builder.func();
+    BUG_CHECK(func != nullptr, "%s: Could not generate hash function in table %s", hd->srcInfo,
+              tbl->name);
 
-    FieldManagement(nullptr, func.inputs, hd, nullptr, tbl->name, phv, ki);
-    if (bits) {
-        func.hash_bits = *bits;
-    } else {
-        func.hash_bits = { 0, hd->bit_width - 1};
-    }
-    func.algorithm = hd->algorithm;
+    if (bits)
+        (*func)->slice(*bits);
 }
 
 /**
@@ -3547,10 +3542,10 @@ void IXBar::XBarHashDist::build_function(const IR::MAU::HashDist *hd, P4HashFunc
  * and the P4 Hash Function that will be required for the galois matrix.
  */
 void IXBar::XBarHashDist::build_req(const IR::MAU::HashDist *hd, const IR::Node *rel_node) {
-    le_bitrange post_expand_bits = { 0, hd->bit_width - 1 };
+    le_bitrange post_expand_bits = { 0, hd->type->width_bits() - 1 };
     HashDistDest_t dest;
-    P4HashFunction func;
-    build_function(hd, func, nullptr);
+    P4HashFunction *func = nullptr;
+    build_function(hd, &func, nullptr);
     int shift = 0;
     int color_mapram_shift = -1;
     bool chained_addr = false;
@@ -3596,10 +3591,10 @@ void IXBar::XBarHashDist::build_req(const IR::MAU::HashDist *hd, const IR::Node 
  * exists for these.  They have to be generated separately.
  */
 void IXBar::XBarHashDist::build_action_data_req(const IR::MAU::HashDist *hd) {
-    le_bitrange post_expand_bits = { 0, hd->bit_width - 1 };
+    le_bitrange post_expand_bits = { 0, hd->type->width_bits() - 1 };
     HashDistDest_t dest = HD_ACTIONDATA_ADR;
-    P4HashFunction func;
-    build_function(hd, func, nullptr);
+    P4HashFunction *func = nullptr;
+    build_function(hd, &func, nullptr);
     int shift = std::min(ceil_log2(lo->layout.action_data_bytes_in_table) + 1, 5);
     alloc_reqs.emplace_back(func, post_expand_bits, dest, shift);
     alloc_reqs.back().original_hd = hd;
@@ -3626,8 +3621,8 @@ void IXBar::XBarHashDist::immediate_inputs(const IR::MAU::HashDist *hd) {
                 continue;
             le_bitrange overlap = *boost_sl;
             le_bitrange p4_hash_bits = overlap.shiftedByBits(-1 * arg_br.lo + arg_loc.field_bit);
-            P4HashFunction func;
-            build_function(hd, func, &p4_hash_bits);
+            P4HashFunction *func = nullptr;
+            build_function(hd, &func, &p4_hash_bits);
             le_bitrange hash_dist_bits = overlap.shiftedByBits(-1 * HASH_DIST_BITS * i);
             HashDistDest_t dest = static_cast<HashDistDest_t>(i);
             alloc_reqs.emplace_back(func, hash_dist_bits, dest, 0);
@@ -3659,9 +3654,10 @@ void IXBar::XBarHashDist::hash_action() {
         }
     }
 
-    auto hd = new IR::MAU::HashDist(tbl->srcInfo, IR::Type::Bits::get(bits_required),
-                      field_list, IR::MAU::HashFunction::identity());
-    hd->bit_width = bits_required;
+    auto hge = new IR::MAU::HashGenExpression(tbl->srcInfo, IR::Type::Bits::get(bits_required),
+                       field_list, IR::MAU::HashFunction::identity());
+
+    auto hd = new IR::MAU::HashDist(hge->srcInfo, hge->type, hge);
     for (auto ba : tbl->attached) {
         if (!(ba->attached && ba->attached->direct))
             continue;

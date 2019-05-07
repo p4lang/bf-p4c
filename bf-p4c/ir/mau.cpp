@@ -371,3 +371,5 @@ cstring IR::MAU::Action::externalName() const {
         return IR::Annotation::getName(name_annot);
     return name.toString();
 }
+
+int IR::MAU::HashGenExpression::nextId = 0;

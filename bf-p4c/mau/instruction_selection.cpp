@@ -22,11 +22,194 @@ bool UnimplementedRegisterMethodCalls::preorder(const IR::Primitive *prim) {
     return true;
 }
 
+bool HashGenSetup::CreateHashGenExprs::preorder(const IR::BFN::SignExtend *se) {
+    if (!findContext<IR::MAU::Action>())
+        return false;
+    if (CanBeIXBarExpr(se)) {
+        auto hge = new IR::MAU::HashGenExpression(se->srcInfo, se->type, se,
+                                                  IR::MAU::HashFunction::identity());
+        self.hash_gen_injections[se] = hge;
+        return false;
+    }
+    return true;
+}
+
+bool HashGenSetup::CreateHashGenExprs::preorder(const IR::Concat *c) {
+    if (!findContext<IR::MAU::Action>())
+        return false;
+    if (auto k = c->left->to<IR::Constant>()) {
+        if (k->value == 0) {
+            // HACK -- avoid dealing with 0-prefix concats (zero extension) as the midend
+            // now changes zero-extend casts into them, and trying to do them in the hash
+            // breaks more things than it fixes
+            return true; } }
+    if (CanBeIXBarExpr(c)) {
+        auto hge = new IR::MAU::HashGenExpression(c->srcInfo, c->type, c,
+                                                  IR::MAU::HashFunction::identity());
+        self.hash_gen_injections[c] = hge;
+    }
+    return c;
+}
+
+/**
+ * The Hash.get function has different IR for P4-14 and P4-16.  This function converts all
+ * of these to HashGenExpression, which currently is language dependent, as there is currently
+ * no unified way of handling all of the expressivity of Hash in the p4-16 language yet through
+ * our externs
+ *
+ * Any function that uses the Hash.get call is by definition a dynamic hash.  The rules are:
+ *
+ * 1.  All Hash.get come from an original Hash extern, which has a name.  (In p4-14, instead of
+ *     using this compiler generated name, we use the field_list_calculation name)
+ * 2.  Any Hash.get from the same Hash extern must have the same input field list, and
+ *     currently only one field list, as this is the list that can be associated
+ * 3.  P4-14 can allow only certain algorithms, the one that come through names, p4-16 can allow
+ *     any hash algorithm necessary.  Everything is rotateable and permutable.
+ */
+bool HashGenSetup::CreateHashGenExprs::preorder(const IR::Primitive *prim) {
+    if (prim->name != "Hash.get")
+        return true;
+
+    cstring hash_name;
+    IR::MAU::HashGenExpression *hge = nullptr;
+    IR::MAU::FieldListExpression *fle = nullptr;
+    IR::MAU::HashFunction algorithm;
+
+    auto it = prim->operands.begin();
+    // operand 0 is always the extern itself.
+    BUG_CHECK(it != prim->operands.end(), "primitive %s does not have a reference to P4 extern",
+              prim->name);
+    auto glob = (*it)->to<IR::GlobalRef>();
+    auto decl = glob->obj->to<IR::Declaration_Instance>();
+    auto *orig_type = decl->type->to<IR::Type_Specialized>()->arguments->at(0);
+    int hash_output_width = orig_type->width_bits();
+    int bit_size = hash_output_width;
+
+    if (self.options.langVersion == CompilerOptions::FrontendVersion::P4_14) {
+    } else {
+        hash_name = decl->controlPlaneName();
+    }
+
+    bool custom_hash = false;
+    std::advance(it, 1);
+    auto crc_poly = (*it)->to<IR::GlobalRef>();
+    if (crc_poly) {
+        custom_hash = true;
+        if (!algorithm.convertPolynomialExtern(crc_poly))
+            BUG("invalid hash algorithm %s", decl->arguments->at(1));
+        std::advance(it, 1);
+    }
+
+    // otherwise, if not a custom hash from user, it is one of the hashes built into compiler.
+    if (!custom_hash && !algorithm.setup(decl->arguments->at(0)->expression))
+        BUG("invalid hash algorithm %s", decl->arguments->at(0));
+
+    int remaining_op_size = std::distance(it, prim->operands.end());
+
+    auto orig_hash_list = *it;
+    if (remaining_op_size > 1) {
+        auto base = std::next(it, 1);
+        if (auto *constant = (*base)->to<IR::Constant>()) {
+            if (constant->asInt() != 0)
+                error("%1%: The initial offset for a hash calculation function has to be zero "
+                      "instead of %2%", prim, constant);
+        }
+        auto max = std::next(it, 2);
+        if (auto *constant = (*max)->to<IR::Constant>()) {
+            auto value = constant->asUint64();
+            if (value != 0) {
+                bit_size = bitcount(value - 1);
+                if ((1ULL << bit_size) != value)
+                    error("%1%: The hash offset must be a power of 2 in a hash calculation "
+                          "instead of %2%", prim, value);
+            }
+        }
+    }
+
+    const IR::NameList *alg_names = nullptr;
+    if (self.options.langVersion == CompilerOptions::FrontendVersion::P4_14) {
+        auto hle = orig_hash_list->to<IR::HashListExpression>();
+        BUG_CHECK(hle != nullptr, "Hash not converted correctly in the midend");
+        IR::ID fl_id(hle->fieldListNames->names[0]);
+        fle = new IR::MAU::FieldListExpression(hle->srcInfo, hle->components, fl_id);
+        hash_name = hle->fieldListCalcName;
+        hash_output_width = hle->outputWidth;
+        alg_names = hle->algorithms;
+    } else {
+        const IR::ListExpression *le = orig_hash_list->to<IR::ListExpression>();
+        if (le == nullptr) {
+            if (orig_hash_list->is<IR::Expression>()) {
+                IR::Vector<IR::Expression> le_vec;
+                le_vec.push_back(orig_hash_list);
+                le = new IR::ListExpression(orig_hash_list->srcInfo, le_vec);
+            }
+        }
+        BUG_CHECK(le != nullptr, "Hash.get calls must have a valid input or list of inputs");
+        IR::ID fl_id("$field_list_1");
+        fle = new IR::MAU::FieldListExpression(le->srcInfo, le->components, fl_id);
+        fle->rotateable = true;
+        fle->permutable = true;
+        // Arbitrary name, added previously, not to break APIs.  Happy to change
+        hash_name += ".$CONFIGURE";
+    }
+
+    auto *type = IR::Type::Bits::get(bit_size);
+    hge = new IR::MAU::HashGenExpression(prim->srcInfo, type, fle, IR::ID(hash_name), algorithm);
+    hge->dynamic = true;
+    hge->any_alg_allowed = self.options.langVersion == CompilerOptions::FrontendVersion::P4_16;
+    hge->hash_output_width = hash_output_width;
+    hge->alg_names = alg_names;
+    self.hash_gen_injections[prim] = hge;
+    return false;
+}
+
+bool HashGenSetup::ScanHashDists::preorder(const IR::Expression *expr) {
+    if (self.hash_gen_injections.count(expr) == 0)
+        return true;
+    auto context = getContext();
+    const IR::Node *curr_node = expr;
+    while (context->node->is<IR::Slice>() || context->node->is<IR::Cast>()) {
+        curr_node = context->node;
+        context = context->parent;
+    }
+
+    auto highest_expr = curr_node->to<IR::Expression>();
+    self.hash_dist_injections.insert(highest_expr);
+    return false;
+}
+
+/**
+ * Must introduce the instruction, in case someone writes the following:
+ *
+ *     action a {
+ *         hash.get(blah);
+ *     }
+ *
+ * as converting this to a HashGenExpression by itself will fail the Action check that
+ * all base statements in the action are Primitives or their subclass.
+ */
+const IR::Expression *HashGenSetup::UpdateHashDists::postorder(IR::Expression *e) {
+    auto rv = e;
+    auto origExpr = getOriginal()->to<IR::Expression>();
+    auto hgi = self.hash_gen_injections.find(origExpr);
+    if (hgi != self.hash_gen_injections.end()) {
+        rv = hgi->second;
+    }
+
+    auto hdi = self.hash_dist_injections.find(origExpr);
+    if (hdi != self.hash_dist_injections.end()) {
+        auto tv = new IR::TempVar(e->type);
+        auto hd2 = new IR::MAU::HashDist(rv->srcInfo, rv->type, rv);
+        auto inst = new IR::MAU::Instruction(e->srcInfo, "set", tv, hd2);
+        rv = inst;
+    }
+    return rv;
+}
+
 const IR::MAU::Action *Synth2PortSetup::preorder(IR::MAU::Action *act) {
     clear_action();
     return act;
 }
-
 /** Converts any method calls relating to Synth2Port tables to the associated AttachedOutput
  *  if necessary, and once converted, saves this value to the primitive
  */
@@ -500,12 +683,8 @@ const IR::Slice *DoInstructionSelection::postorder(IR::Slice *sl) {
 }
 
 const IR::Expression *DoInstructionSelection::preorder(IR::BFN::SignExtend *c) {
-    if (CanBeIXBarExpr(c)) {
-        prune();
-        auto *rv = new IR::MAU::HashDist(c->srcInfo, c->type, new IR::MAU::IXBarExpression(c),
-                                         IR::MAU::HashFunction::identity());
-        rv->bit_width = c->type->width_bits();
-        return rv; }
+    if (CanBeIXBarExpr(c))
+        BUG("%s: Hash Dist object on concat %s not correctly converted", c->srcInfo, c->toString());
     return c;
 }
 
@@ -516,12 +695,8 @@ const IR::Expression *DoInstructionSelection::preorder(IR::Concat *c) {
             // now changes zero-extend casts into them, and trying to do them in the hash
             // breaks more things than it fixes
             return c; } }
-    if (CanBeIXBarExpr(c)) {
-        prune();
-        auto *rv = new IR::MAU::HashDist(c->srcInfo, c->type, new IR::MAU::IXBarExpression(c),
-                                         IR::MAU::HashFunction::identity());
-        rv->bit_width = c->type->width_bits();
-        return rv; }
+    if (CanBeIXBarExpr(c))
+        BUG("%s: Hash Dist object on concat %s not correctly converted", c->srcInfo, c->toString());
     return c;
 }
 
@@ -651,70 +826,8 @@ const IR::Node *DoInstructionSelection::postorder(IR::Primitive *prim) {
                op = inst->operands.at(1); } } }
 
     if (prim->name == "Hash.get") {
-        bool custom_hash = false;
-        auto it = prim->operands.begin();
-        // operand 0 is always the extern itself.
-        BUG_CHECK(it != prim->operands.end(), "primitive %s does not have a "
-                                              "reference to P4 extern", prim->name);
-        auto glob = (*it)->to<IR::GlobalRef>();
-        auto decl = glob->obj->to<IR::Declaration_Instance>();
-        auto type = decl->type->to<IR::Type_Specialized>()->arguments->at(0);
-        unsigned size = type->width_bits();
-        std::advance(it, 1);
-
-        // operand 1 can be either crc_poly or the first argument in get().
-        IR::MAU::HashFunction algorithm;
-        // if operand 1 is crc_poly extern
-        auto crc_poly = (*it)->to<IR::GlobalRef>();
-        if (crc_poly) {
-            custom_hash = true;
-            if (!algorithm.convertPolynomialExtern(crc_poly))
-                BUG("invalid hash algorithm %s", decl->arguments->at(1));
-            std::advance(it, 1); }
-
-        // otherwise, if not a custom hash from user, it is one of the hashes built into compiler.
-        if (!custom_hash && !algorithm.setup(decl->arguments->at(0)->expression))
-                BUG("invalid hash algorithm %s", decl->arguments->at(0));
-
-        // remaining operands must be the arguments for get().
-        int remaining_op_size = std::distance(it, prim->operands.end());
-        auto data = *it;
-        if (remaining_op_size > 1) {
-            auto base = std::next(it, 1);
-            if (auto *constant = (*base)->to<IR::Constant>()) {
-                if (constant->asInt() != 0)
-                    error("%s: The initial offset for a hash "
-                          "calculation function has to be zero %s",
-                          prim->srcInfo, *prim); }
-            auto max = std::next(it, 2);
-            if (auto *constant = (*max)->to<IR::Constant>()) {
-                auto value = constant->asUint64();
-                if (value != 0) {
-                    size = bitcount(value - 1);
-                    if ((1ULL << size) != value)
-                        error("%s: The hash offset must be a power of 2 in a hash calculation %s",
-                              prim->srcInfo, *prim); } } }
-
-        // ADD PD GEN Info for Dynamic Hashing in P4_16
-        if (options.langVersion == CompilerOptions::FrontendVersion::P4_16) {
-            auto dynHashName = decl->controlPlaneName() + ".$CONFIGURE";
-            if (auto le = data->to<IR::ListExpression>()) {
-                auto hle = new IR::HashListExpression(data->srcInfo,
-                                                le->components, dynHashName, size);
-                auto nl = new IR::NameList();
-                nl->names.push_back("$field_list_1");
-                hle->fieldListNames = nl;
-                auto al = new IR::NameList();
-                al->names.emplace_back(data->srcInfo, algorithm.name());
-                hle->algorithms = al;
-                data = hle;
-            }
-        }
-        auto *hd = new IR::MAU::HashDist(prim->srcInfo, IR::Type::Bits::get(size), data, algorithm);
-        hd->bit_width = size;
-        auto next_type = IR::Type::Bits::get(size);
-        auto inst = new IR::MAU::Instruction(prim->srcInfo, "set", new IR::TempVar(next_type), hd);
-        return inst;
+        BUG("%s: Should have already converted %s in previous pass", prim->srcInfo,
+            prim->toString());
     } else if (prim->name == "Random.get") {
         auto rn = new IR::MAU::RandomNumber(prim->srcInfo, prim->type);
         auto next_type = prim->type;
@@ -878,9 +991,10 @@ IR::MAU::HashDist *StatefulAttachmentSetup::create_hash_dist(const IR::Expressio
         hash_field = c->expr;
 
     int size = hash_field->type->width_bits();
-    auto *hd = new IR::MAU::HashDist(prim->srcInfo, IR::Type::Bits::get(size), hash_field,
-                                     IR::MAU::HashFunction::identity());
-    hd->bit_width = size;
+    auto *hge = new IR::MAU::HashGenExpression(prim->srcInfo, IR::Type::Bits::get(size),
+                        hash_field, IR::MAU::HashFunction::identity());
+
+    auto *hd = new IR::MAU::HashDist(hge->srcInfo, hge->type, hge);
     return hd;
 }
 
@@ -888,7 +1002,7 @@ IR::MAU::HashDist *StatefulAttachmentSetup::create_hash_dist(const IR::Expressio
  * Find or generate a Hash Distribution unit, given what IR::Node is in the primitive
  */
 const IR::MAU::HashDist *StatefulAttachmentSetup::find_hash_dist(const IR::Expression *expr,
-                                                               const IR::Primitive *prim) {
+        const IR::Primitive *prim) {
     const IR::MAU::HashDist *hd = expr->to<IR::MAU::HashDist>();
     if (!hd) {
         auto tv = expr->to<IR::TempVar>();
@@ -953,9 +1067,18 @@ void StatefulAttachmentSetup::Scan::setup_index_operand(const IR::Expression *in
 
     if (auto hd = self.find_hash_dist(simpl_expr, call->prim)) {
         HashDistKey hdk = std::make_pair(synth2port, tbl);
-        if (self.update_hd[hdk] && !self.update_hd[hdk]->equiv(*hd)) {
-            error("%sIncompatible attached indexing between actions in table %s",
-                  call->prim->srcInfo, tbl->name); }
+        if (self.update_hd.count(hdk)) {
+            auto hd_comp = self.update_hd.at(hdk);
+            BuildP4HashFunction builder(self.phv);
+            hd->apply(builder);
+            P4HashFunction *a_func = builder.func();
+            hd_comp->apply(builder);
+            P4HashFunction *b_func = builder.func();
+            if (!a_func->equiv(b_func)) {
+                error("%s: Incompatible attached indexing between actions in table %s",
+                      call->prim->srcInfo, tbl->name);
+            }
+        }
         self.update_hd[hdk] = hd;
         simpl_expr = hd;
         if (self.addressed_by_index.count(index_check))
@@ -1195,9 +1318,9 @@ void MeterSetup::Update::update_pre_color(IR::MAU::Meter *mtr) {
 
     if (has_pre_color) {
         auto pre_color = self.update_pre_colors.at(orig_meter);
-        auto hd = new IR::MAU::HashDist(pre_color->srcInfo, IR::Type::Bits::get(2), pre_color,
-                       IR::MAU::HashFunction::identity());
-        hd->bit_width = 2;
+        auto hge = new IR::MAU::HashGenExpression(pre_color->srcInfo, IR::Type::Bits::get(2),
+                           pre_color, IR::MAU::HashFunction::identity());
+        auto hd = new IR::MAU::HashDist(hge->srcInfo, hge->type, hge);
         mtr->pre_color = hd;
     }
 }
@@ -1835,6 +1958,7 @@ const IR::Node *RemoveUnnecessaryActionArgSlice::preorder(IR::Slice *sl) {
 InstructionSelection::InstructionSelection(const BFN_Options& options, PhvInfo &phv) : PassManager {
     new CheckInvalidate(phv),
     new UnimplementedRegisterMethodCalls,
+    new HashGenSetup(options),
     new Synth2PortSetup(phv),
     new DoInstructionSelection(options, phv),
     new StatefulAttachmentSetup(phv),

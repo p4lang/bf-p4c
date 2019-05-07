@@ -5,12 +5,14 @@
 #include <map>
 #include <random>
 #include <unordered_set>
+#include "bf-p4c/mau/ixbar_expr.h"
 #include "bf-p4c/mau/table_layout.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "ir/ir.h"
 #include "lib/alloc.h"
 #include "lib/hex.h"
 #include "lib/safe_vector.h"
+
 
 class IXBarRealign;
 struct TableResourceAlloc;
@@ -458,6 +460,8 @@ struct IXBar {
         HashDistDest_t dest;
         // Only currently used for dynamic hash.  Goal is to remove
         const IR::MAU::HashDist *original_hd;
+        cstring dyn_hash_name;
+        bool is_dynamic() const { return !dyn_hash_name.isNull(); }
     };
 
     struct HashDistUse {
@@ -498,12 +502,15 @@ struct IXBar {
      * the inputs are the fields within the function, the algorithm is HashAlgorithm defined in
      * the extern, and the hash_bits are the hi..lo portion of the slice
      */
+
+    /*
     struct P4HashFunction {
         safe_vector<const IR::Expression *> inputs;
         le_bitrange hash_bits;
         IR::MAU::HashFunction algorithm;
         P4HashFunction split(le_bitrange split) const;
     };
+    */
 
 
     /**
@@ -515,7 +522,7 @@ struct IXBar {
      * but before the Mask/Shift block
      */
     struct HashDistAllocPostExpand {
-        P4HashFunction func;
+        P4HashFunction *func;
         le_bitrange bits_in_use;
         HashDistDest_t dest;
         int shift;
@@ -528,7 +535,7 @@ struct IXBar {
         bitvec possible_shifts() const;
 
      public:
-        HashDistAllocPostExpand(P4HashFunction f, le_bitrange b, HashDistDest_t d, int s)
+        HashDistAllocPostExpand(P4HashFunction *f, le_bitrange b, HashDistDest_t d, int s)
             : func(f), bits_in_use(b), dest(d), shift(s) {}
     };
 
@@ -545,7 +552,7 @@ struct IXBar {
         void build_action_data_req(const IR::MAU::HashDist *hd);
         void build_req(const IR::MAU::HashDist *hd, const IR::Node *rel_node);
 
-        void build_function(const IR::MAU::HashDist *hd, P4HashFunction &func,
+        void build_function(const IR::MAU::HashDist *hd, P4HashFunction **func,
             le_bitrange *bits = nullptr);
         bool preorder(const IR::MAU::HashDist *) override;
         bool preorder(const IR::MAU::TableSeq *) override { return false; }
