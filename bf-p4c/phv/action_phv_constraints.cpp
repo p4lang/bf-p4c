@@ -666,8 +666,9 @@ bool ActionPhvConstraints::valid_container_operation_type(
         boost::optional<OperandInfo> fw = constraint_tracker.is_written(slice, action);
         bool is_padding = !uses.is_referenced(slice.field()) || slice.field()->overlayablePadding;
         // Unreferenced fields may be overwritten no issues.
-        if (!fw && !is_padding) {
-            fields_not_written.insert(slice);
+        if (!fw) {
+            if (!is_padding)
+                fields_not_written.insert(slice);
         } else if (fw->flags & OperandInfo::MOVE) {
             type_of_operation |= OperandInfo::MOVE;
             operations_to_fields["assignment"].insert(slice);
