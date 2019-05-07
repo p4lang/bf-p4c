@@ -1413,7 +1413,7 @@ BfRtSchemaGenerator::addActionProfCommon(Util::JsonArray* tablesJson,
     tableJson->emplace("key", keyJson);
 
     if (actionProf.tableIds.empty()) {
-        ::warning("Action profile '%1%' is not used by any table, skiping it", actionProf.name);
+        ::warning("Action profile '%1%' is not used by any table, skipping it", actionProf.name);
         return;
     }
     auto oneTableId = actionProf.tableIds.at(0);

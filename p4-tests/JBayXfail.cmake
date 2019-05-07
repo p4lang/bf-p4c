@@ -297,3 +297,12 @@ p4c_add_xfail_reason("tofino2"
   # P4C-1620
   extensions/p4_tests/p4_14/stf/update_checksum_8.p4
 )
+
+
+# P4C-1445, DRV-2667
+# Requires Pipe prefix support to avoid duplicate names
+p4c_add_xfail_reason("tofino2"
+  "error: Found .* duplicate name.* in the P4Info"
+  extensions/p4_tests/p4_16/jbay/multistage_fifo.p4
+)
+

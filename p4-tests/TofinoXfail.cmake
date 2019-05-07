@@ -1369,3 +1369,24 @@ p4c_add_xfail_reason("tofino"
   "Compiler Bug.*Slice point cannot be -1 at this point"
   ../glass/testsuite/p4_tests/arista/COMPILER-1114/case8156.p4
 )
+
+# P4C-1445, DRV-2667
+# Requires Pipe prefix support to avoid duplicate names
+p4c_add_xfail_reason("tofino"
+  "error: Found .* duplicate name.* in the P4Info"
+  extensions/p4_tests/p4_16/compile_only/test_config_11_multi_pipe_multi_parsers.p4
+  extensions/p4_tests/p4_16/compile_only/simple_32q.p4
+  extensions/p4_tests/p4_16/compile_only/multiple_apply2.p4
+  extensions/p4_tests/p4_16/compile_only/brig-814-2.p4
+  testdata/p4_16_samples/psa-counter6.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "syntax error, unexpected IDENTIFIER"
+  testdata/p4_16_samples/psa-unicast-or-drop-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "error:  Field .* of size 0 not supported on Tofino"
+  testdata/p4_16_samples/psa-multicast-basic-bmv2.p4
+)

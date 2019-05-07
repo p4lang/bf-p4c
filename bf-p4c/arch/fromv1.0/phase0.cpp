@@ -730,7 +730,15 @@ UpdatePhase0NodeInParser::preorder(IR::BFN::TnaParser *parser) {
     if (!parser->pipeName.isNullOrEmpty())
         tableName = parser->pipeName + "." + tableName;
     auto actionName = "set_port_metadata";
-    auto keyName = "phase0_data";
+
+    auto *params = parser->getApplyParameters();
+    cstring keyName = "phase0_data";
+    for (auto p : *params) {
+        if (p->type->toString() == "ingress_intrinsic_metadata_t") {
+            keyName = p->name;
+            break;
+        }
+    }
     cstring hdrName = "__phase0_header" + std::to_string(phase0_count);
     auto handle = 0x20 << 24 | phase0_count++ << 16;
 

@@ -3,6 +3,10 @@
 
 #include <vector>
 #include <map>
+#include <set>
+
+#include "bf-p4c/ir/gress.h"
+#include "lib/exceptions.h"
 
 namespace IR {
 namespace BFN {

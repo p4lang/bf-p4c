@@ -524,6 +524,7 @@ class SnapshotFieldFinder : public Inspector {
     }
 
     bool preorder(const IR::Type_Bits* type) override {
+        visitAgain();
         addField(type->width_bits());
         return false;
     }
@@ -778,7 +779,17 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         // if the block is not in snapshotInfo, it means it is not an ingress or
         // egress control.
         if (sinfoIt == snapshotInfo.end()) return;
-        sinfoIt->second.name = control->externalName();
+        auto snapshot_name = control->externalName();
+        // Collect unique snapshot names across pipes, this will ensure there is
+        // only one snapshot field generated even if the field is replicated
+        // across pipes. While setting a snapshot the user always provides a
+        // pipe id so we do not need multiple snapshot entries.
+        if (snapshots.count(snapshot_name)) {
+            snapshotInfo.erase(sinfoIt);
+            return;
+        }
+        snapshots.insert(snapshot_name);
+        sinfoIt->second.name = snapshot_name;
         auto snapshotFields = &sinfoIt->second.fields;
         auto params = control->getApplyParameters();
         for (size_t idx = 0; idx < params->size(); idx++) {
@@ -789,7 +800,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             SnapshotFieldFinder::find(
                 typeMap, p->type, p->name, includeValid, snapshotFields, fieldIds);
         }
-        symbols->add(SymbolType::SNAPSHOT(), control->externalName());
+        symbols->add(SymbolType::SNAPSHOT(), snapshot_name);
     }
 
     /// For programs not using the MultiParserSwitch package, this method does
@@ -1663,7 +1674,8 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
     std::unordered_map<cstring, std::set<cstring> > actionProfilesRefs;
     /// The set of color-aware meters in the program.
     std::unordered_set<cstring> colorAwareMeters;
-
+    /// The set of snapshots in the program.
+    std::unordered_set<cstring> snapshots;
     /// A set of all all (parser) blocks containing port metadata
     std::unordered_set<const IR::Block *> hasUserPortMetadata;
 
