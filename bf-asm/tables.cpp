@@ -2587,8 +2587,14 @@ void Table::common_tbl_cfg(json::map &tbl) const {
             (this->to<MatchTable>() || this->to<Phase0MatchTable>())) {
         for (auto &p : p4_params_list) {
             json::map param;
-            std::string name = p.key_name.empty() ? p.name : p.key_name;
-            param["name"] = name;
+            std::string name = p.name;
+            std::string global_name = "";
+            if (p.key_name.empty()) {
+                param["name"] = name;
+            } else {
+                param["name"] = p.key_name;
+                param["global_name"] = p.name;
+            }
             param["position"] = p.position;
             param["match_type"] = p.type;
             param["start_bit"] = p.start_bit;
