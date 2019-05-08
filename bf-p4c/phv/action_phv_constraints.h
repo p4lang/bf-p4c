@@ -5,6 +5,7 @@
 #include "ir/ir.h"
 #include "bf-p4c/lib/union_find.hpp"
 #include "bf-p4c/ir/bitrange.h"
+#include "bf-p4c/common/map_tables_to_actions.h"
 #include "bf-p4c/mau/action_analysis.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
@@ -609,6 +610,11 @@ class ActionPhvConstraints : public Inspector {
         return constraint_tracker.written_in(PHV::FieldSlice(f, StartLen(0, f->size)));
     }
 
+    ordered_set<const IR::MAU::Action*> actions_writing_fields(const PHV::AllocSlice& slice) const {
+        PHV::FieldSlice fieldSlice(slice.field(), slice.field_slice());
+        return constraint_tracker.written_in(fieldSlice);
+    }
+
     /// @returns the set of all actions which read field @f.
     ordered_set<const IR::MAU::Action*> actions_reading_fields(const PHV::Field* f) const {
         return constraint_tracker.read_in(PHV::FieldSlice(f, StartLen(0, f->size)));
@@ -674,6 +680,14 @@ class ActionPhvConstraints : public Inspector {
             std::vector<PHV::AllocSlice>& slices,
             PHV::Allocation::MutuallyLiveSlices& container_state,
             const PHV::Allocation::LiveRangeShrinkingMap& initActions);
+
+    /** @returns true if this packing would create container conflicts because of metadata
+      * initialization issues.
+      */
+    bool creates_container_conflicts(
+            const PHV::Allocation::MutuallyLiveSlices& container_state,
+            const PHV::Allocation::LiveRangeShrinkingMap& initActions,
+            const MapTablesToActions& tableActionsMap) const;
 
     /// Counts the number of bitmasked-set instructions corresponding to @slices in container @c and
     /// allocation object @alloc.

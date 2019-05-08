@@ -1100,6 +1100,17 @@ CoreAllocation::tryAllocSliceList(
 
         action_constraints = actions_i.can_pack(alloc_attempt, candidate_slices,
                 actual_container_state, initActions);
+        bool creates_new_container_conflicts =
+            actions_i.creates_container_conflicts(actual_container_state, initActions,
+                    meta_init_i.getTableActionsMap());
+        // If metadata initialization causes container conflicts to be created, then do not use this
+        // allocation.
+        if (action_constraints && initActions.size() > 0 && creates_new_container_conflicts) {
+            LOG5("\t\t...action constraint: creates new container conflicts for this packing."
+                 " cannot pack into container " << c);
+
+            continue;
+        }
 
         if (!action_constraints) {
             LOG5("        ...action constraint: cannot pack into container " << c);

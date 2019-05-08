@@ -188,3 +188,19 @@ void PackConflicts::updateNumPackConstraints() {
                 numPack++; }
         f1.set_num_pack_conflicts(numPack); }
 }
+
+bool PackConflicts::writtenInSameStageDifferentTable(
+        const IR::MAU::Table* t1,
+        const IR::MAU::Table* t2) const {
+    // Written in same stage and same table.
+    if (t1 == t2) return false;
+    // If no table placement from previous round, then ignore this.
+    if (!bt.hasTablePlacement()) return false;
+    ordered_set<int> stage = bt.inSameStage(t1, t2);
+    std::stringstream ss;
+    for (auto st : stage) ss << st << " ";
+    if (!stage.empty())
+        LOG3("\tTables " << t1->name << " and " << t2->name << " share common stages " <<
+            ss.str());
+    return !stage.empty();
+}

@@ -179,6 +179,10 @@ class LiveRangeShrinking : public PassManager {
     FindInitializationNode          initNode;
 
  public:
+    const MapTablesToActions& getTableActionsMap() const {
+        return tableActionsMap;
+    }
+
     boost::optional<PHV::Allocation::LiveRangeShrinkingMap> findInitializationNodes(
             const ordered_set<PHV::AllocSlice>& alloced,
             const PHV::Transaction& alloc,

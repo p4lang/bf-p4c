@@ -63,6 +63,8 @@ class PackConflicts : public Inspector {
 
     bool hasPackConflict(const PHV::Field* f1, const PHV::Field* f2) const;
 
+    bool writtenInSameStageDifferentTable(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const;
+
     void printNoPackConflicts() const;
 
     unsigned size() const;

@@ -1840,6 +1840,58 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
     return rv;
 }
 
+bool ActionPhvConstraints::creates_container_conflicts(
+        const PHV::Allocation::MutuallyLiveSlices& container_state,
+        const PHV::Allocation::LiveRangeShrinkingMap& initActions,
+        const MapTablesToActions& tableActionsMap) const {
+    if (container_state.size() == 0) return false;
+    LOG5("\tPrinting container conflicts candidates");
+    for (auto& slice : container_state)
+        LOG5("\t  " << slice);
+    ordered_map<const PHV::Field*, ordered_set<const IR::MAU::Table*>> field_to_table_writes;
+    for (auto kv : initActions) {
+        for (auto* action : kv.second) {
+            auto t = tableActionsMap.getTableForAction(action);
+            BUG_CHECK(t, "Action %1% does not have a table associated with it.", action->name);
+            field_to_table_writes[kv.first].insert(*t);
+        }
+    }
+    for (auto& slice : container_state) {
+        auto actions = actions_writing_fields(slice);
+        for (const auto* action : actions) {
+            auto t = tableActionsMap.getTableForAction(action);
+            BUG_CHECK(t, "Action %1% does not have a table associated with it.", action->name);
+            field_to_table_writes[slice.field()].insert(*t);
+        }
+    }
+
+    if (LOGGING(6)) {
+        for (auto kv : field_to_table_writes) {
+            std::stringstream ss;
+            ss << "\t" << kv.first->name << " : ";
+            for (const auto* t : kv.second)
+                ss << t->name << " ";
+            LOG6(ss.str());
+        }
+    }
+
+    for (auto kv : field_to_table_writes) {
+        for (auto kv1 : field_to_table_writes) {
+            // If the same field, ignore.
+            if (kv.first == kv1.first) continue;
+            // If different fields, check their tables.
+            for (const auto* t1 : kv.second) {
+                for (const auto* t2 : kv1.second) {
+                    if (conflicts.writtenInSameStageDifferentTable(t1, t2)) {
+                        LOG5("\t\t  Fields " << kv.first->name << " and " << kv1.first->name <<
+                             " are written in different tables in the same stage: "
+                             << t1->name << " and " << t2->name << std::endl << "\t\t  " <<
+                             "This would produce container conflicts.");
+                        return true; } } } } }
+
+    return false;
+}
+
 boost::optional<PHV::FieldSlice> ActionPhvConstraints::get_unallocated_slice(
         const PHV::Allocation& alloc,
         const UnionFind<PHV::FieldSlice>& copacking_constraints,
