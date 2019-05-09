@@ -1751,7 +1751,20 @@ void Table::Actions::Action::add_indirect_resources(json::vector &indirect_resou
             indirect_resource["value"] = addr_arg.value();
         } else { continue; }
         indirect_resource["resource_name"] = att->p4_name();
-        indirect_resources.push_back(std::move(indirect_resource));
+        
+        // Check if indirect resource already exists. For tables spanning
+        // multiple stages, the same resource gets added as an attached resource
+        // for every stage. To avoid duplication only add when not present in
+        // the indirect resource array
+        bool found = false;
+        for (auto &ind_res_json : indirect_resources) {
+            if (indirect_resource == ind_res_json->to<json::map>()) {
+                found = true;
+                break;
+            }
+        }
+        if (!found)
+            indirect_resources.push_back(std::move(indirect_resource));
     }
 }
 

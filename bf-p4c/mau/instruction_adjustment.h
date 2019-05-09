@@ -205,6 +205,7 @@ class GeneratePrimitiveInfo : public MauInspector {
     Util::JsonObject &_primNode;
     Util::JsonArray *_tables = nullptr;
     bool preorder(const IR::MAU::Table *tbl) override;
+    void add_primitive(Util::JsonArray *primitives, Util::JsonObject *prim);
     void gen_action_json(const IR::MAU::Action *act, Util::JsonObject *_action);
     Util::JsonObject *add_op_json(Util::JsonObject *prim, const std::string op,
             const std::string type, cstring name);
@@ -217,6 +218,7 @@ class GeneratePrimitiveInfo : public MauInspector {
             prim_name, const std::string dst_type, const cstring dst_name,
             const IR::Expression *dst, const IR::MAU::HashDist *hd);
     void end_apply() override;
+
  public:
     explicit GeneratePrimitiveInfo(const PhvInfo &p, Util::JsonObject &primNode)
         : phv(p), _primNode(primNode) {

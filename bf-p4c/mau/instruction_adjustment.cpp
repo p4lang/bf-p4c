@@ -845,6 +845,25 @@ void GeneratePrimitiveInfo::add_hash_dist_json(Util::JsonObject *_primitive,
     _primitive->emplace("hash_inputs", hash_inputs);
 }
 
+void
+GeneratePrimitiveInfo::add_primitive(Util::JsonArray *primitives, Util::JsonObject *primitive) {
+    if (!primitives) return;
+    // TODO: Check if primitive already exists. For tables spanning
+    // multiple stages, the same resource gets added as an attached resource
+    // for every stage. This results in the resource primitives getting
+    // duplicated. To avoid duplication only add when not present in
+    // the array.
+    // Util::JsonObject needs a '==' operator for comparison.
+    bool found = false;
+    // for (auto &prim : *primitives) {
+    //     if (prim == primitive->to<Util::JsonObject>()) {
+    //         found = true;
+    //         break;
+    //     }
+    // }
+    if (!found) primitives->append(primitive);
+}
+
 void GeneratePrimitiveInfo::gen_action_json(const IR::MAU::Action *act,
         Util::JsonObject *_action) {
     LOG3("GeneratePrimitiveInfo Act: " << canon_name(act->name));
@@ -944,14 +963,14 @@ void GeneratePrimitiveInfo::gen_action_json(const IR::MAU::Action *act,
                 }
             }
             _primitive->emplace("stateful_alu_details", salu_details);
-            _primitives->append(_primitive);
+            add_primitive(_primitives, _primitive);
         }
         auto *meter = at->to<IR::MAU::Meter>();
         if (meter) {
             if (is_hash_dist) {
                add_hash_dist_json(_primitive, "ExecuteMeterFromHashPrimitive",
                    "meter", canon_name(meter->name), nullptr, hd);
-               _primitives->append(_primitive);
+               add_primitive(_primitives, _primitive);
             } else {
                 _primitive->emplace("name", "ExecuteMeterPrimitive");
                 add_op_json(_primitive, "dst", "meter", canon_name(meter->name));
@@ -977,11 +996,11 @@ void GeneratePrimitiveInfo::gen_action_json(const IR::MAU::Action *act,
             if (is_hash_dist) {
                 add_hash_dist_json(_primitive, "CountFromHashPrimitive",
                     "counter", canon_name(counter->name), nullptr, hd);
-                _primitives->append(_primitive);
+                add_primitive(_primitives, _primitive);
             } else {
                 _primitive->emplace("name", "CountPrimitive");
                 add_op_json(_primitive, "dst", "counter", canon_name(counter->name));
-                _primitives->append(_primitive);
+                add_primitive(_primitives, _primitive);
             }
         }
     }
@@ -1133,7 +1152,7 @@ void GeneratePrimitiveInfo::gen_action_json(const IR::MAU::Action *act,
         if (_primitive->find("name") == _primitive->end()) {
             _primitive->emplace("name", "PrimitiveNameNeeded");
         }
-        if (!is_stful_dest) _primitives->append(_primitive);
+        if (!is_stful_dest) add_primitive(_primitives, _primitive);
     }
     _action->emplace("primitives", _primitives);
 }
