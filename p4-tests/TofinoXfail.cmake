@@ -706,12 +706,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue1210.p4
 )
 
-# frontend does not support {} on psa_direct_counter table property
-p4c_add_xfail_reason("tofino"
-  "Expected .* property value for table .* to resolve to an extern instance"
-  testdata/p4_16_samples/psa-counter5.p4
-)
-
 # backend does not support this example
 p4c_add_xfail_reason("tofino"
   "Attached object .* in table .* is executed in some actions and not executed in others"
@@ -989,9 +983,14 @@ p4c_add_xfail_reason("tofino"
 
 # Existing p4lang/p4c issue
 p4c_add_xfail_reason("tofino"
-  "error: int<1>: Signed types cannot be 1-bit wide"
+  "Signed types cannot be 1-bit wide"
   ../glass/testsuite/p4_tests/mau/test_config_160_stateful_single_bit_mode.p4
   )
+
+p4c_add_xfail_reason("tofino"
+  "Expected psa_direct_counter property value for table MyIC.tbl to resolve to an extern instance"
+  testdata/p4_16_samples/psa-counter5.p4
+)
 
 # P4C-1382
 p4c_add_xfail_reason("tofino"

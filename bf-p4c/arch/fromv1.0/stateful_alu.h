@@ -16,7 +16,7 @@ class StatefulAluConverter : public ExternConverter {
     const IR::ActionProfile *getSelectorProfile(P4V1::ProgramStructure *,
                                                 const IR::Declaration_Instance *);
     reg_info getRegInfo(P4V1::ProgramStructure *, const IR::Declaration_Instance *,
-                        IR::IndexedVector<IR::Node> *);
+                        IR::Vector<IR::Node> *);
     const IR::Type::Bits *findUType(const IR::Declaration_Instance *, const IR::Type ** = nullptr);
     StatefulAluConverter();
     static StatefulAluConverter singleton;
