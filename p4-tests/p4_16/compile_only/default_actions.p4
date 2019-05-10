@@ -58,14 +58,14 @@ control IngressP(inout headers hdr,
     table df_act2 {
         key = { hdr.data.f1 : exact; }
         actions = { setb1;
-                    @default_only noop; }
+                    @defaultonly noop; }
         default_action = noop;
     }
 
     table df_act3 {
         key = { hdr.data.f1 : exact; }
         actions = { setb1;
-                    @default_only setb2; }
+                    @defaultonly setb2; }
         default_action = setb2(0x88);
     }
 
@@ -78,14 +78,14 @@ control IngressP(inout headers hdr,
     table df_act5 {
         key = { hdr.data.f1 : exact; }
         actions = { setb1;
-                    @default_only noop; }
+                    @defaultonly noop; }
         const default_action = noop;
     }
 
     table df_act6 {
         key = { hdr.data.f1 : exact; }
         actions = { setb1;
-                    @default_only setb2; }
+                    @defaultonly setb2; }
         const default_action = setb2(0x88);
     }
 

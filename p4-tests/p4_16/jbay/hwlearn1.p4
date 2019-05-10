@@ -39,7 +39,7 @@ control ingress(inout headers hdr, inout metadata meta,
     action nop() {}
     action match_flow(bit<16> fid) { meta.flow_id = fid; }
     table cuckoo_match {
-        actions = { match_flow; @default_only nop; }
+        actions = { match_flow; @defaultonly nop; }
         default_action = nop();
         key = {
             hdr.ipv4.src_addr : exact;

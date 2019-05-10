@@ -1,3 +1,4 @@
+#include "common/slice.h"
 #include "input_xbar.h"
 #include "ixbar_expr.h"
 #include "resource.h"
@@ -47,7 +48,6 @@ bool BuildP4HashFunction::InsideHashGenExpr::preorder(const IR::Constant *con) {
     fields.emplace_back(con);
     return false;
 }
-
 
 bool BuildP4HashFunction::InsideHashGenExpr::preorder(const IR::Mask *mask) {
     BUG("%s: Masks not supported by Tofino Backend for hash functions", mask->srcInfo);

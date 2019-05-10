@@ -4,6 +4,7 @@
 #include "bf-p4c/common/ir_utils.h"
 #include "bf-p4c/common/slice.h"
 #include "bf-p4c/common/asm_output.h"  // for generic formatting routines
+#include "lib/hex.h"
 #include "ir/pattern.h"
 #include "lib/hex.h"
 

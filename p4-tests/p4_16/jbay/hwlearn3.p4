@@ -169,7 +169,7 @@ control ingress(inout headers hdr, inout metadata meta,
         meta.flow_id = fid;
         meta.learn_result = learn_result_t.MATCH; }
     table cuckoo_match {
-        actions = { match_flow; @default_only nop; }
+        actions = { match_flow; @defaultonly nop; }
         default_action = nop();
         key = {
             hdr.ipv4.src_addr : exact;
