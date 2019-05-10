@@ -2,7 +2,6 @@
 #include "input_xbar.h"
 #include "ixbar_expr.h"
 #include "resource.h"
-#include "common/slice.h"
 
 
 void P4HashFunction::slice(le_bitrange hash_slice) {

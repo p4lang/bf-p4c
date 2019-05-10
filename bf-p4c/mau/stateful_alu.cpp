@@ -6,7 +6,6 @@
 #include "bf-p4c/common/asm_output.h"  // for generic formatting routines
 #include "lib/hex.h"
 #include "ir/pattern.h"
-#include "lib/hex.h"
 
 const Device::StatefulAluSpec &TofinoDevice::getStatefulAluSpec() const {
     static const Device::StatefulAluSpec spec = {
