@@ -1939,8 +1939,8 @@ void Table::Actions::add_action_format(const Table *table, json::map &tbl) const
         action_format_per_action["next_table_full"] = next_table_full;
         if (Target::LONG_BRANCH_TAGS() > 0) {
             action_format_per_action["next_table_exec"] =
-                (act.next_table_miss_ref.next_in_stage(table->stage->stageno) << 16) +
-                act.next_table_miss_ref.next_in_stage(table->stage->stageno + 1);
+                ((act.next_table_miss_ref.next_in_stage(table->stage->stageno) & 0xfffe) << 15) +
+                (act.next_table_miss_ref.next_in_stage(table->stage->stageno + 1) & 0xffff);
             int lbrch = act.next_table_miss_ref.long_branch_tag();
             action_format_per_action["next_table_long_brch"] = lbrch >= 0 ? 1U << lbrch : 0; }
         action_format_per_action["vliw_instruction"] = act.code;
