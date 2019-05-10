@@ -187,7 +187,7 @@ p4c_add_xfail_reason("tofino2"
 
 p4c_add_xfail_reason("tofino2"
   "AssertionError: 50 not less than 30"
-  extensions/p4_tests/p4_16/ptf/meter_miss_path.p4
+  extensions/p4_tests/p4_16/ptf/various_indirect_meters.p4
 )
 
 # P4C-1228

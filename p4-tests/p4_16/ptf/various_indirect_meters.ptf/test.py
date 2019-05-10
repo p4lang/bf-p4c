@@ -5,7 +5,7 @@ from p4.v1 import p4runtime_pb2
 from p4runtime_base_tests import P4RuntimeTest, stringify, autocleanup
 
 import logging
-logger = logging.getLogger('meter_miss_path')
+logger = logging.getLogger('various_indirect_meters')
 
 class MeterTest(P4RuntimeTest):
     @autocleanup
@@ -20,12 +20,13 @@ class MeterTest(P4RuntimeTest):
         meter_config.pir = 0
         meter_config.pburst = 0
 
-        for mtr in ["ingress.mtr_1", "ingress.mtr_2"]:
+        for mtr, idx in [("ingress.mtr_1", self.swports(1)),
+                         ("ingress.mtr_2", 0)]:
             update = req.updates.add()
             update.type = p4runtime_pb2.Update.MODIFY
             meter_entry = update.entity.meter_entry
             meter_entry.meter_id = self.get_meter_id(mtr)
-            meter_entry.index.index = 0
+            meter_entry.index.index = idx
             meter_entry.config.CopyFrom(meter_config)
         update = req.updates.add()
         update.type = p4runtime_pb2.Update.MODIFY

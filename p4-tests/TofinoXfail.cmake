@@ -118,7 +118,7 @@ if (PTF_REQUIREMENTS_MET)
 
   p4c_add_xfail_reason("tofino"
     "AssertionError: 50 not less than 30"
-    extensions/p4_tests/p4_16/ptf/meter_miss_path.p4
+    extensions/p4_tests/p4_16/ptf/various_indirect_meters.p4
     )
 
 # BRIG-686
