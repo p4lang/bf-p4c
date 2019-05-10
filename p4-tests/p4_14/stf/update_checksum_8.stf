@@ -1,2 +1,2 @@
-expect 2 01010101 02 03 0404 0402 0407 0a0b
+expect 2 01010101 02 03 0404 fbfd fbf8 5ff4
 packet 0 01010101 02 03 0404 ffff ffff ffff

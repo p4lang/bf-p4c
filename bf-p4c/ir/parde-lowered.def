@@ -449,7 +449,7 @@ class LoweredDigest {
 class ChecksumPhvInput {
     /// A container whose contents will be included in the checksum.
     BFN::ContainerRef source;
-
+    unsigned swap = 0;
     /// On JBay, each checksum input has an independent POV bit, which makes it
     /// easier to safely compute a checksum involving headers which may be
     /// present in different combinations. On Tofino, this is always null.

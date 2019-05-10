@@ -173,12 +173,12 @@ struct OutputChecksums : public Inspector {
         for (auto* input : checksum->phvs) {
             out << indent << "- " << input->source;
             out << ": {";
-            if (input->source->swap != 0) {
+            if (input->swap != 0) {
                 out << " swap: ";
-                out << input->source->swap;
+                out << input->swap;
             }
             if (input->povBit) {
-                if (input->source->swap != 0)
+                if (input->swap != 0)
                     out << ",";
                 out << " pov: ";
                 out << input->povBit;

@@ -1,0 +1,4 @@
+
+#        a    b    c   csum 
+expect 1 1111 2222 03 c2c9 
+packet 0 1111 2222 03 0000

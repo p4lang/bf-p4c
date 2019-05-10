@@ -25,6 +25,7 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     # Needs stateful init regs support in simple test harness, this test passes
     # on stf2ptf
     extensions/p4_tests/p4_14/stf/stateful_init_regs.p4
+    extensions/p4_tests/p4_16/stf/p4c-1426.p4
     )
 
   # Brig/Glass do not follow P4_14 spec for 'drop' in the ingress pipeline
@@ -393,6 +394,13 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/phv/COMPILER-724/comp_724.p4
 )
 
+p4c_add_xfail_reason("tofino"
+  "In checksum update list, fields before .* do not add up to a multiple of 8 bits. Total bits until .* : .*"
+  extensions/p4_tests/p4_14/compile_only/p4c-1162.p4
+  extensions/p4_tests/p4_14/compile_only/p4smith_regression/mariano_0.p4
+  extensions/p4_tests/p4_14/compile_only/p4smith_regression/soured_0.p4
+  extensions/p4_tests/p4_14/compile_only/p4smith_regression/but_0.p4
+)
 
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
@@ -403,6 +411,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/compile_only/04-FullPHV3.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-815/int_heavy.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-1065/comp_1065.p4
+  ../glass/testsuite/p4_tests/phv/COMPILER-1094/comp_1094.p4
 
   # parde physical adjacency constraint violated by mau phv_no_pack constraint
   extensions/p4_tests/p4_14/compile_only/19-SimpleTrill.p4
@@ -413,7 +422,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/compile_only/14-MultipleActionsInAContainer.p4
 
   # Expected to fail, until we have better user-facing messages.
-  extensions/p4_tests/p4_14/compile_only/p4smith_regression/mariano_0.p4
   extensions/p4_tests/p4_16/stf/cast_widening_add.p4
 
   # Expected to fail, which means that constraint conflicts are being correctly detected.
@@ -431,13 +439,12 @@ p4c_add_xfail_reason("tofino"
 #   update ipv4_checksum if(ipv4.ihl == 5);
 # Glass's Tofino backend rejects these programs as well; they're really designed
 # for BMV2.
+
 p4c_add_xfail_reason("tofino"
   "Tofino only supports 1-bit checksum update condition in the deparser"
   testdata/p4_16_samples/issue134-bmv2.p4
 )
 
-# These programs include conditional checksums, which are not supported on
-# Tofino.
 p4c_add_xfail_reason("tofino"
   "Tofino does not support conditional checksum verification"
   testdata/p4_16_samples/issue1739-bmv2.p4
@@ -650,7 +657,7 @@ p4c_add_xfail_reason("tofino"
 # P4C-1059
 # Expected failure
 p4c_add_xfail_reason("tofino"
-  "error: Output of checksum calculation can only be stored in a 16-bit field"
+  "In checksum update list, fields before .* do not add up to a multiple of 8 bits. Total bits until .* : .*"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/tofino-bug-1.p4
 )
 
@@ -801,11 +808,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue1653-complex-bmv2.p4
 )
 
-p4c_add_xfail_reason("tofino"
-  "error.*Can only do checksums on byte-aligned container slices"
-  extensions/p4_tests/p4_14/compile_only/p4smith_regression/but_0.p4
-  )
-
 # Negative test. >66 bytes of ternary match key fields used.
 p4c_add_xfail_reason("tofino"
   "error.*Ternary table.*uses.*as ternary match key. Maximum number of bits allowed is.*"
@@ -907,7 +909,6 @@ p4c_add_xfail_reason("tofino"
     # xfails
     "PHV allocation was not successful|./p4c TIMEOUT"
   ../glass/testsuite/p4_tests/phv/COMPILER-136/06-FullTPHV1.p4
-  ../glass/testsuite/p4_tests/phv/COMPILER-1094/comp_1094.p4
 # bigger problem is that the container conflict free table placement is 15 stages for the following
 # program.
   c2_COMPILER-537_case2834
@@ -1355,12 +1356,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/shillings_0.p4
   ../glass/testsuite/p4_tests/mau/galaxy_0.p4
   ../glass/testsuite/p4_tests/parde/test_checksum.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "Can only do checksums on byte-aligned container slices"
-  # P4C-1620
-  extensions/p4_tests/p4_14/stf/update_checksum_8.p4
 )
 
 # Slicing issue

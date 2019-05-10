@@ -70,7 +70,7 @@ field_list_calculation csum2 {
     algorithm : csum16;
     output_width : 16;
 }
-
+@pragma calculated_field_update_location ingress
 field_list_calculation csum3 {
     input {
         csum3_list;

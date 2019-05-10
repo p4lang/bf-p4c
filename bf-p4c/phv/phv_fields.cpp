@@ -1031,8 +1031,15 @@ struct ComputeFieldAlignments : public Inspector {
         unsigned currentBit = 0;
 
         for (auto* emitPrimitive : deparser->emits) {
-            // XXX(seth): Right now we treat EmitChecksum as not inducing any
-            // particular alignment, but we will need to revisit that.
+            if (auto* checksum = emitPrimitive->to<IR::BFN::EmitChecksum>()) {
+                for (auto &sourceToOffset : checksum->source_index_to_offset) {
+                     auto phv_field = phv.field(checksum->sources[sourceToOffset.first]->field);
+                     if (phv_field->metadata && phv_field->size % 8) {
+                         phv_field->updateAlignment(FieldAlignment(le_bitrange(
+                           StartLen((sourceToOffset.second + phv_field->size), phv_field->size))));
+                     }
+                }
+            }
             auto* emit = emitPrimitive->to<IR::BFN::EmitField>();
             if (!emit) continue;
 
@@ -1185,6 +1192,13 @@ class CollectPardeConstraints : public Inspector {
             PHV::Field* f = phv.field(flval->field);
             BUG_CHECK(f != nullptr, "Field not created in PhvInfo");
             f->set_is_checksummed(true);
+            if (f->metadata && f->size % 8) {
+                f->set_no_pack(true);
+                LOG3("Marking checksummed field " << f << " as no_pack");
+                // TODO: Allocate multiple metadatas in a container instead of
+                // allocation only one in a container. Allocation must consider the
+                // alignment constraint on metadata due to its offset in checksum list.
+            }
             LOG3("Checksummed field: " << f);
         }
     }

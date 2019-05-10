@@ -46,7 +46,6 @@ class PardePhvConstraints : public Inspector {
      profile_t init_apply(const IR::Node* root) override;
      bool preorder(const IR::BFN::Digest* digest) override;
      bool preorder(const IR::BFN::Extract* extract) override;
-
  public:
      explicit PardePhvConstraints(PhvInfo &p, PragmaContainerSize& pa) : phv(p), sizePragmas(pa) {
          // Set the threshold for setting restrictions of unused bits in digest fields to 90% of the

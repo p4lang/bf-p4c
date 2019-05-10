@@ -458,6 +458,9 @@ class EmitClot : Emit {
 class EmitChecksum : Emit {
     /// The fields from which the checksum will be computed.
     inline Vector<FieldLVal> sources;
+    /// source_index is the index to a FieldLVal in the vector sources defined above.
+    /// Each index corresponds to an offset of the FieldVal in the checksum list.
+    optional std::map<int, int> source_index_to_offset;
 
     ChecksumLVal dest;
 }

@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
 header_type data_t {
     fields {
         b1 : 8;
@@ -52,6 +51,7 @@ header load3_t load3;
 field_list my_checksum_list {
     data.f1;
     data.f2;
+    8'0;
     payload;
 }
 

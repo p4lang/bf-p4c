@@ -13,14 +13,15 @@
 namespace {
 
 struct ChecksumUpdateInfo {
-    ChecksumUpdateInfo(cstring dest, const IR::Vector<IR::BFN::FieldLVal>* sources) :
-        dest(dest), sources(sources) { }
+    ChecksumUpdateInfo(cstring dest, const IR::Vector<IR::BFN::FieldLVal>* sources,
+           std::map<int, int> sourceToOffset) :
+        dest(dest), sources(sources), sourceToOffset(sourceToOffset) { }
 
     cstring dest;
 
     const IR::Vector<IR::BFN::FieldLVal>* sources;
     const IR::BFN::FieldLVal* povBit = nullptr;
-
+    std::map<int, int> sourceToOffset;
     ordered_set<std::pair<const IR::Member*, bool>> updateConditions;
     // one deparse updated bit for each condition
     std::map<const IR::Member*, const IR::TempVar*> deparseUpdated;
@@ -84,6 +85,20 @@ static bool checksumUpdateSanityCheck(const IR::AssignmentStatement* assignment)
 
     return true;
 }
+bool checkIncorrectCsumFields(const IR::HeaderOrMetadata* last,
+                                 const IR::HeaderOrMetadata* current) {
+       // if current field is from a different header, fields till current field should add up
+       // to multiple of 8 bits
+    if (last != current && last && last->is<IR::Header>()) {
+        return true;
+      // Only metadata are allowed after a constant which is not multiple of 8
+    } else if (!last && current->is<IR::Header>()) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
 
 ChecksumUpdateInfo*
 analyzeUpdateChecksumStatement(const IR::AssignmentStatement* assignment) {
@@ -95,49 +110,73 @@ analyzeUpdateChecksumStatement(const IR::AssignmentStatement* assignment) {
 
     const IR::ListExpression* sourceList =
         (*methodCall->arguments)[0]->expression->to<IR::ListExpression>();
-    std::map<const IR::HeaderOrMetadata*, ordered_set<const IR::Member*>> checksumFieldMap;
-    ordered_set<const IR::ConcreteHeaderRef*> checksumHeaders;
-
+    const IR::HeaderOrMetadata* currentFieldHeaderRef = nullptr;
+    const IR::HeaderOrMetadata* lastFieldHeaderRef = nullptr;
+    std::map<int, int> sourceToOffset;
     auto* sources = new IR::Vector<IR::BFN::FieldLVal>;
+    int offset = 0;
+    std::stringstream msg;
+
+    // Along with collecting checksum update fields, following checks are performed:
+    // * Fields of a header should always be byte aligned. This rule is relaxed for metadata.
+    // * Sum of all the bits in the checksum list should be equal to a multiple of 8.
+
     for (auto* source : sourceList->components) {
-        if (auto* member = source->to<IR::Member>()) {
-            auto header = member->expr->to<IR::ConcreteHeaderRef>();
-            checksumHeaders.insert(header);
-            checksumFieldMap[header->ref].insert(member);
-        } else if (auto* headerRef = source->to<IR::ConcreteHeaderRef>()) {
-            auto header = headerRef->baseRef();
-            for (auto field : header->type->fields) {
-                LOG2("Checksum includes field:" << field);
-                auto* member = new IR::Member(field->type, headerRef, field->name);
-                sources->push_back(new IR::BFN::FieldLVal(member));
-            }
-        } else if (auto* constant = source->to<IR::Constant>()) {
-            if (constant->asInt() != 0) {
-                ::error("Non-zero constant entry in checksum calculation"
+        if (source->is<IR::Member>() || source->is<IR::Constant>()) {
+            if (auto* constant = source->to<IR::Constant>()) {
+                if (constant->asInt() != 0) {
+                ::fatal_error("Non-zero constant entry in checksum calculation"
                         " not implemented yet: %1%", source);
+                }
+                currentFieldHeaderRef = nullptr;
+            } else if (auto* member = source->to<IR::Member>()) {
+                currentFieldHeaderRef = member->expr->to<IR::ConcreteHeaderRef>()->ref;
+                sources->push_back(new IR::BFN::FieldLVal(member));
+                sourceToOffset[sources->size() - 1] = offset;
             }
+
+            if (offset % 8 && checkIncorrectCsumFields(lastFieldHeaderRef, currentFieldHeaderRef)) {
+                msg << "In checksum update list, fields before " << source
+                    << " do not add up to a multiple of 8 bits. Total bits until " << source
+                    << " : " << offset;
+                ::fatal_error("%1% %2%", source->srcInfo, msg.str());
+            }
+
+            lastFieldHeaderRef = currentFieldHeaderRef;
+            offset += source->type->width_bits();
+            LOG2("Checksum includes field:" << source);
+
+        } else if (auto* header = source->to<IR::ConcreteHeaderRef>()) {
+            auto headerRef = header->baseRef();
+            if (offset % 8 && checkIncorrectCsumFields(lastFieldHeaderRef, headerRef)) {
+                std::stringstream msg;
+                msg << "In checksum update list, fields before the header " << header
+                    << " do not add up to a multiple of 8 bits. Total bits until " << header
+                    << " : " << offset;
+                ::fatal_error("%1% %2%", source->srcInfo, msg.str());
+            }
+
+            for (auto field : headerRef->type->fields) {
+                auto* member = new IR::Member(field->type, header, field->name);
+                sources->push_back(new IR::BFN::FieldLVal(member));
+                sourceToOffset[sources->size() - 1] = offset;
+                LOG2("Checksum includes field:" << field);
+                offset += member->type->width_bits();
+            }
+            lastFieldHeaderRef = headerRef;
         } else {
             :: error("Invalid entry in checksum calculation %1%", source);
         }
     }
-    if (!checksumFieldMap.empty()) {
-        for (auto*header : checksumHeaders) {
-            const IR::HeaderOrMetadata* headerRef = header->baseRef();
-            for (auto* field : headerRef->type->fields) {
-                if (checksumFieldMap.count(headerRef)) {
-                    for (auto* member : checksumFieldMap.at(headerRef)) {
-                        if (member->member == field->name) {
-                            sources->push_back(new IR::BFN::FieldLVal(member));
-                            LOG2("Checksum includes field:" << field);
-                        }
-                    }
-                }
-            }
-        }
+    if (sources->size() && offset % 8) {
+        std::stringstream msg;
+        msg << "Fields in checksum update list do not add up to a multiple of 8 bits."
+            << " Total bits: "<< offset;
+        ::fatal_error("%1%", msg.str());
     }
     LOG2("Validated computed checksum for field: " << destField);
 
-    auto info = new ChecksumUpdateInfo(destField->toString(), sources);
+    auto info = new ChecksumUpdateInfo(destField->toString(), sources, sourceToOffset);
 
     return info;
 }
@@ -323,6 +362,7 @@ struct SubstituteUpdateChecksums : public Transform {
                                  new IR::BFN::FieldLVal(csumInfo->deparseUpdated.at(uc.first)),
                                     *(csumInfo->sources),
                                         new IR::BFN::ChecksumLVal(source));
+                emitUpdatedChecksum->source_index_to_offset = csumInfo->sourceToOffset;
 
                 emitChecksums.push_back(emitUpdatedChecksum);
             }
@@ -334,10 +374,12 @@ struct SubstituteUpdateChecksums : public Transform {
             // If no user specified update condition, the semantic is
             // to deparse based on the header validity bit.
 
-            emitChecksums.push_back(new IR::BFN::EmitChecksum(
+            auto* emitUpdatedChecksum = new IR::BFN::EmitChecksum(
                                       emit->povBit,
                                         *(csumInfo->sources),
-                                          new IR::BFN::ChecksumLVal(source)));
+                                          new IR::BFN::ChecksumLVal(source));
+            emitUpdatedChecksum->source_index_to_offset = csumInfo->sourceToOffset;
+            emitChecksums.push_back(emitUpdatedChecksum);
         }
 
         // TODO(zma) if user specifies the update conditon, but never set it anywhere,

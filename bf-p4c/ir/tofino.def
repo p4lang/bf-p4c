@@ -214,8 +214,6 @@ class BFN::ContainerRef : BFN::Reference {
 
     boost::optional<nw_bitrange> range;
 
-    int swap = 0;
-
     size_t id;
 
 #noconstructor

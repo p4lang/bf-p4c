@@ -259,6 +259,11 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
                             "checksum: %1%", source);
                     continue;
                 }
+                if (sourceField->metadata && sourceField->no_pack()) {
+                    // A metadata can have a no-pack constraint and hence will include
+                    // empty space. Excluding such metadatas from the warning below.
+                    continue;
+                }
 
                 sourceField->foreach_alloc(sourceFieldBits,
                              [&](const PHV::Field::alloc_slice& alloc) {
@@ -269,14 +274,15 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             // Verify that for every container which contributes to this
             // computed checksum, each byte either contains *only* fields which
             // contribute to the checksum (and no empty space) or contains *no*
-            // fields which contribute to the checksum.
+            // fields which contribute to the checksum. Except for metadata included
+            // in checksum since a metadata might have a no-pack constraint and hence will
+            // include empty space.
             for (auto& allocation : checksumAllocations) {
                 auto& slices = allocation.second;
 
                 bitvec allocatedBits;
                 for (auto& slice : slices)
                     allocatedBits.setrange(slice.container_bit, slice.width);
-
                 for (auto byte : { 0, 1, 2, 3}) {
                     auto bitsInByte = allocatedBits.getslice(byte * 8, 8);
                     auto numSetBits = bitsInByte.popcount();

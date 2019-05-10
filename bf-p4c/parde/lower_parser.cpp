@@ -372,7 +372,6 @@ struct ExtractSimplifier {
 
         for (auto cx : clotRVals) {
             nw_bitinterval bitInterval;
-
             for (auto rval : cx.second)
                 bitInterval = bitInterval.unionWith(rval->interval());
 
@@ -468,24 +467,17 @@ lowerFields(const PhvInfo& phv, const ClotInfo& clotInfo,
             // from the packet layout or the field list layout. The field list
             // layout is lost in translation from v1 to tna ...
 
-            bool isResidualChecksum = false;
-
-            std::string f_name(field->name.c_str());
-            if (f_name.find("compiler_generated_meta") != std::string::npos
-             && f_name.find("residual_checksum_") != std::string::npos)
-                isResidualChecksum = true;
-
-            if (!isResidualChecksum &&
-                slice.container_bits().hi % 16 !=
-                (field->offset + slice.field_bits().hi) % 16)
-                last->swap = (1 << slice.container_bits().hi/16U) |
-                             (1 << slice.container_bits().lo/16U);
+            if (slice.field->is_checksummed() && slice.field->no_pack()) {
+                // Since the field has a no-pack constraint, its is safe to
+                // extend the range till the end of container
+                last->range = containerRange.unionWith(nw_bitrange(
+                               StartLen(0, slice.container.size())));
+            }
         }
     }
 
     return {containers, clots};
 }
-
 /// Maps a POV bit field to a single bit within a container, represented as a
 /// ContainerBitRef. Checks that the allocation for the POV bit field is sane.
 const IR::BFN::ContainerBitRef*
@@ -1333,6 +1325,33 @@ struct AllocateParserClotChecksums : public PassManager {
     }
 };
 
+std::map<PHV::Container, unsigned> getChecksumPhvSwap(const PhvInfo& phv,
+                                                      const IR::BFN::EmitChecksum* emitChecksum) {
+    std::map<PHV::Container, unsigned> containerToSwap;
+    for (auto &sourceToOffset : emitChecksum->source_index_to_offset) {
+        auto* phv_field = phv.field(emitChecksum->sources[sourceToOffset.first]->field);
+        std::vector<alloc_slice> slices = phv.get_alloc(phv_field);
+        int offset = sourceToOffset.second;
+        for (auto& slice : boost::adaptors::reverse(slices)) {
+            unsigned swap = 0;
+            bool isResidualChecksum = false;
+            std::string f_name(phv_field->name.c_str());
+            if (f_name.find("compiler_generated_meta") != std::string::npos
+             && f_name.find("residual_checksum_") != std::string::npos)
+                isResidualChecksum = true;
+
+            if (!isResidualChecksum &&
+                (offset/8) % 2 != (slice.container_bits().hi/8 + 1) % 2) {
+                swap = (1 << slice.container_bits().hi/16U) |
+                             (1 << slice.container_bits().lo/16U);
+            }
+            offset += slice.width;
+            containerToSwap[slice.container] = swap;
+        }
+    }
+    return containerToSwap;
+}
+
 /// Generate the lowered deparser IR by splitting references to fields in the
 /// high-level deparser IR into references to containers.
 struct ComputeLoweredDeparserIR : public DeparserInspector {
@@ -1359,9 +1378,10 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
             lowerFields(phv, clotInfo, emitChecksum->sources);
 
         auto* loweredPovBit = lowerPovBit(phv, emitChecksum->povBit);
-
+        auto containerToSwap = getChecksumPhvSwap(phv, emitChecksum);
         for (auto* source : phvSources) {
             auto* input = new IR::BFN::ChecksumPhvInput(source);
+            input->swap = containerToSwap[source->container];
 #if HAVE_JBAY
             if (Device::currentDevice() == Device::JBAY)
                 input->povBit = loweredPovBit;
