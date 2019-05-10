@@ -6,6 +6,7 @@
 #include <limits>
 
 #include "bf-p4c/device.h"
+#include "bf-p4c/lib/cmp.h"
 #include "bf-p4c/lib/union_find.hpp"
 #include "bf-p4c/ir/thread_visitor.h"
 #include "bf-p4c/ir/bitrange.h"
@@ -65,7 +66,7 @@ struct FieldOperation {
           inst(inst), rw_type(rw_type), range(range) { }
 };
 
-class Field {
+class Field : public LiftLess<Field> {
  public:
     /// This suffix is added to the name of the privatized (TPHV) copy of a field.
     static constexpr char const *TPHV_PRIVATIZE_SUFFIX = "$tphv";
@@ -592,6 +593,14 @@ class Field {
         for (auto size : Device::phvSpec().containerSizes())
             startBitsByContainerSize_i[size] = bitvec(0, int(size));
     }
+
+    /// Orders by name.
+    //
+    // The precise ordering here is unimportant, as long as it is stable across different compiler
+    // runs.
+    bool operator<(const Field& other) const {
+        return name < other.name;
+    }
 };
 
 /**
@@ -632,7 +641,7 @@ class Constant : public AbstractField {
  * field that are related to position, like alignment, are tailored for
  * each slice.
  */
-class FieldSlice : public AbstractField {
+class FieldSlice : public AbstractField, public LiftCompare<FieldSlice> {
     // There is no reason for a FieldSlice to change the field it is representing, so make this
     // const (also used in ActionPhvConstraints)
     const PHV::Field* field_i;
@@ -685,13 +694,9 @@ class FieldSlice : public AbstractField {
         return field_i == other.field() && range_i == other.range();
     }
 
-    bool operator!=(const FieldSlice& other) const {
-        return !(*this == other);
-    }
-
     bool operator<(const FieldSlice& other) const {
         if (field_i != other.field())
-            return field_i < other.field();
+            return Field::less(field_i, other.field());
         if (range_i.lo != other.range().lo)
             return range_i.lo < other.range().lo;
         return range_i.hi < other.range().hi;

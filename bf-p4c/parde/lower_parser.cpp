@@ -1016,42 +1016,85 @@ struct RewriteEmitClot : public DeparserModifier {
 
  private:
     bool preorder(IR::BFN::Deparser* deparser) override {
-        // replace Emits covered in a CLOT with EmitClot
+        // Replace Emits covered in a CLOT with EmitClot
 
         IR::Vector<IR::BFN::Emit> newEmits;
 
-        Clot* last = nullptr;
+        // The next fields we expect to see being emitted, represented as a stack. These are fields
+        // left over from the last emitted CLOT.
+        std::vector<const PHV::Field*> expectedNextFields;
+
+        const PHV::FieldSlice* lastPhvPovBit = nullptr;
+        const Clot* lastClot = nullptr;
 
         for (auto emit : deparser->emits) {
-           auto povBit = emit->povBit;
+            auto irPovBit = emit->povBit;
+            le_bitrange slice;
+            auto phvPovBitField = phv.field(irPovBit->field, &slice);
+            BUG_CHECK(phvPovBitField, "No PHV field for %1%", irPovBit);
+            PHV::FieldSlice* phvPovBit = new PHV::FieldSlice(phvPovBitField, slice);
 
-           const IR::Expression* source = nullptr;
+            const IR::Expression* source = nullptr;
 
-           if (auto ef = emit->to<IR::BFN::EmitField>())
-               source = ef->source->field;
-           else if (auto ec = emit->to<IR::BFN::EmitChecksum>())
-               source = ec->dest->field;
+            if (auto ef = emit->to<IR::BFN::EmitField>())
+                source = ef->source->field;
+            else if (auto ec = emit->to<IR::BFN::EmitChecksum>())
+                source = ec->dest->field;
 
-           BUG_CHECK(source, "No emit source?");
+            BUG_CHECK(source, "No emit source for %1%", emit);
 
-           auto field = phv.field(source);
+            auto field = phv.field(source);
+            auto clot = clotInfo.clot(field);
+            auto emit_csum = emit->to<IR::BFN::EmitChecksum>();
 
-           if (auto c = clotInfo.clot(field)) {
-               if (auto emit_csum = emit->to<IR::BFN::EmitChecksum>())
-                   clotInfo.clot_to_emit_checksum()[c] = emit_csum;
+            // If we are emitting a checksum that overwrites a CLOT, register this fact with
+            // ClotInfo.
+            if (clot && emit_csum) clotInfo.clot_to_emit_checksum()[clot] = emit_csum;
 
-               if (c != last) {
-                   auto clotEmit = new IR::BFN::EmitClot(povBit);
-                   clotEmit->clot = c;
-                   newEmits.pushBackOrAppend(clotEmit);
-               }
+            if (expectedNextFields.empty()) {
+                // No fields left over from the last emitted CLOT. If we are emitting a new CLOT,
+                // replace the current emit with a CLOT emit.
+                if (clot) {
+                    auto clotEmit = new IR::BFN::EmitClot(irPovBit);
+                    clotEmit->clot = clot;
+                    emit = clotEmit;
 
-               last = const_cast<Clot*>(c);
+                    auto clotFields = clot->all_fields();
+                    std::copy(clotFields.rbegin(), --clotFields.rend(),
+                              std::back_inserter(expectedNextFields));
 
-               continue;
-           }
+                    lastPhvPovBit = phvPovBit;
+                    lastClot = clot;
+                }
 
-           newEmits.pushBackOrAppend(emit);
+                newEmits.pushBackOrAppend(emit);
+                continue;
+            }
+
+            // We have fields left over from the last emitted CLOT. The current field and POV bit
+            // had better match what we are expecting.
+            BUG_CHECK(expectedNextFields.back() == field,
+                      "Emitted field %1% does not match expected field %2% in CLOT %3%",
+                      field->name, expectedNextFields.back()->name, lastClot->tag);
+            BUG_CHECK(*phvPovBit == *lastPhvPovBit,
+                      "POV bit %1% for emit of %2% does not match expected POV bit %3% for CLOT "
+                      "%4%",
+                      phvPovBit->shortString(),
+                      field->name,
+                      lastPhvPovBit->shortString(),
+                      lastClot->tag);
+            expectedNextFields.pop_back();
+        }
+
+        if (!expectedNextFields.empty()) {
+            std::stringstream out;
+            out << "CLOT " << lastClot->tag << " has extra fields not covered by the deparser "
+                << "before RewriteEmitClot: ";
+            for (auto it = expectedNextFields.rbegin(); it != expectedNextFields.rend(); ++it) {
+                if (it != expectedNextFields.rbegin()) out << ", ";
+                out << (*it)->name;
+            }
+            BUG("%s", out.str());
         }
 
         deparser->emits = newEmits;

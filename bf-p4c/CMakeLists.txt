@@ -216,6 +216,7 @@ set (BF_P4C_BACKEND_CONTROL_PLANE_HDRS
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_CONTROL_PLANE_HDRS}")
 
 set (BF_P4C_BACKEND_LIB_HDRS
+  lib/cmp.h
   lib/error_type.h
   lib/union_find.hpp
   lib/vertex_weighted_coloring.h

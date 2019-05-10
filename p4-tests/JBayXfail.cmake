@@ -33,19 +33,20 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
 
   p4c_add_xfail_reason("tofino2"
     "mismatch from expected.* at byte .*"
-    # conditional checksum: JBay needs different treatment
-    extensions/p4_tests/p4_14/stf/cond_checksum_update_1.p4
     # Needs stateful init regs support in simple test harness, this test passes
     # on stf2ptf
-    # decaf: needs to work with CLOT allocation
     extensions/p4_tests/p4_14/stf/stateful_init_regs.p4
-    extensions/p4_tests/p4_14/stf/deparser_copy_opt_1.p4
-    extensions/p4_tests/p4_14/stf/deparser_copy_opt_2.p4
-    extensions/p4_tests/p4_14/stf/deparser_copy_opt_3.p4
     # residual checksum still needs work for JBay
     extensions/p4_tests/p4_14/stf/update_checksum_4.p4
     extensions/p4_tests/p4_14/stf/update_checksum_5.p4
     extensions/p4_tests/p4_14/stf/update_checksum_6.p4
+    )
+
+  p4c_add_xfail_reason("tofino2"
+    "no more than two clots per state"
+    # P4C-1733: State-splitting needs to handle this.
+    # https://github.com/barefootnetworks/bf-p4c-compilers/pull/3084#discussion_r279607836
+    extensions/p4_tests/p4_14/stf/deparser_copy_opt_2.p4
     )
 
 endif() # HARLYN_STF
@@ -234,12 +235,6 @@ p4c_add_xfail_reason("tofino2"
   testdata/p4_14_samples/simple_nat.p4
   # truncate is not supported in jna
   testdata/p4_14_samples/truncate.p4
-)
-
-p4c_add_xfail_reason("tofino2"
-   "failed command assembler"
-   # conditional checksum needs different treatment for JBay
-   extensions/p4_tests/p4_14/stf/cond_checksum_update_1.p4
 )
 
 # P4C-1011

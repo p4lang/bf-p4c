@@ -318,53 +318,45 @@ class CollectParserInfoImpl : public PardeInspector {
     // DANGER: This method assumes the parser graph is a DAG.
     const std::set<int>* get_all_shift_amounts(const State* src,
                                                const State* dst) const {
-        return get_all_shift_amounts(src, dst, false);
+        bool reverse_path = graphs().at(parser(src))->is_ancestor(dst, src);
+        if (reverse_path) std::swap(src, dst);
+
+        auto result = get_all_forward_path_shift_amounts(src, dst);
+
+        if (reverse_path) {
+            // Need to negate result.
+            auto negated = new std::set<int>();
+            for (auto shift : *result) negated->insert(-shift);
+            result = negated;
+        }
+
+        return result;
     }
 
  private:
-    const std::set<int>* get_all_shift_amounts(const State* src,
-                                               const State* dst,
-                                               bool forward_only) const {
+    const std::set<int>* get_all_forward_path_shift_amounts(const State* src,
+                                                            const State* dst) const {
         if (src == dst) return new std::set<int>({0});
 
         if (all_shift_amounts_.count(src) && all_shift_amounts_.at(src).count(dst))
             return all_shift_amounts_.at(src).at(dst);
 
+        auto graph = graphs().at(parser(src));
         auto result = new std::set<int>();
 
-        if (!forward_only
-                && all_shift_amounts_.count(dst)
-                && all_shift_amounts_.at(dst).count(src)) {
-            for (auto shift : *(all_shift_amounts_.at(dst).at(src))) {
-                result->insert(-shift);
-            }
-
-            // These results are for a reverse path in the graph. Don't memoize, lest the rest of
-            // the method thinks there is a forward path from src to dst.
-            return result;
-        }
-
-        auto graph = graphs().at(parser(src));
         if (graph->is_mutex(src, dst)) {
             return all_shift_amounts_[src][dst] = all_shift_amounts_[dst][src] = result;
         }
 
-        // If necessary, switch src and dst so that we only have to explore forwards from src in
-        // the graph.
-        bool reversed = false;
-        if (graph->is_ancestor(dst, src)) {
-            if (forward_only)
-                return all_shift_amounts_[src][dst] = result;
-
-            std::swap(src, dst);
-            reversed = true;
+        if (!graph->is_ancestor(src, dst)) {
+            return all_shift_amounts_[src][dst] = result;
         }
 
         // Recurse with the successors of the source.
         BUG_CHECK(graph->successors().count(src),
                   "State %s has a descendant %s, but no successors", src->name, dst->name);
         for (auto succ : graph->successors().at(src)) {
-            auto amounts = get_all_shift_amounts(succ, dst, true);
+            auto amounts = get_all_forward_path_shift_amounts(succ, dst);
             if (!amounts->size()) continue;
 
             auto transition = graph->transition(src, succ);
@@ -379,10 +371,7 @@ class CollectParserInfoImpl : public PardeInspector {
                 result->insert(amount + *shift_bytes * 8);
         }
 
-        all_shift_amounts_[src][dst] = result;
-
-        if (reversed) return get_all_shift_amounts(dst, src);
-        return result;
+        return all_shift_amounts_[src][dst] = result;
     }
 
     void end_apply() override {

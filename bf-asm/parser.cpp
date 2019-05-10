@@ -1471,7 +1471,7 @@ void Parser::State::Match::pass2(Parser *pa, State *state) {
         if (options.target == TOFINO)
             error(clots[0]->lineno, "clots not supported on tofino");
         else if (clots.size() > 2)
-            error(clots[2]->lineno, "no more that 2 clots per state"); }
+            error(clots[2]->lineno, "no more than two clots per state"); }
 }
 
 void Parser::State::pass2(Parser *pa) {

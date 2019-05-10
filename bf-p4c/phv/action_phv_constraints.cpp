@@ -39,6 +39,7 @@ void ActionPhvConstraints::ConstraintTracker::clear() {
     current_action = 0;
     field_writes_to_actions.clear();
     action_to_writes.clear();
+    action_to_reads.clear();
     write_to_reads_per_action.clear();
     read_to_writes_per_action.clear();
     statefulWrites.clear();

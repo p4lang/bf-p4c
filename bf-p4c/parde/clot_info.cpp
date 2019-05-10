@@ -3,6 +3,7 @@
 
 #include "bf-p4c/common/table_printer.h"
 #include "bf-p4c/device.h"
+#include "bf-p4c/lib/cmp.h"
 #include "bf-p4c/logging/logging.h"
 #include "bf-p4c/logging/filelog.h"
 #include "bf-p4c/parde/parde_visitor.h"
@@ -522,10 +523,20 @@ void ClotInfo::clear() {
     field_range_.clear();
     field_aliases_.clear();
     headers_added_by_mau_.clear();
+    pseudoheaders_.clear();
+    field_to_pseudoheaders_.clear();
     Clot::tagCnt.clear();
+    Pseudoheader::nextId = 0;
 }
 
-class ClotCandidate {
+int Pseudoheader::nextId = 0;
+
+class ClotCandidate : public LiftLess<ClotCandidate> {
+ public:
+    const Pseudoheader* pseudoheader;
+
+
+ private:
     /// Information relating to the extracts of the candidate's fields, ordered by position in the
     /// packet.
     const std::vector<const FieldExtractInfo*> extract_infos;
@@ -567,8 +578,9 @@ class ClotCandidate {
     const unsigned id;
 
     ClotCandidate(const ClotInfo& clotInfo,
+                  const Pseudoheader* pseudoheader,
                   const std::vector<const FieldExtractInfo*>& extract_infos)
-                  : extract_infos(extract_infos), id(nextId++) {
+                  : pseudoheader(pseudoheader), extract_infos(extract_infos), id(nextId++) {
         unsigned offset = 0;
         unsigned idx = 0;
         for (auto extract_info : extract_infos) {
@@ -597,11 +609,6 @@ class ClotCandidate {
 
         size_bits = offset;
         std::reverse(can_end_indices_.begin(), can_end_indices_.end());
-    }
-
-    /// The header associated with this candidate's extracts.
-    const cstring header() const {
-        return (*(extract_infos.begin()))->field()->header();
     }
 
     /// The parser state associated with this candidate's extracts.
@@ -669,8 +676,7 @@ class ClotCandidate {
         return *first_possible_conflict <= upper_bound;
     }
 
-    /// Lexicographic order according to (number of unused bits, number of read-only bits,
-    /// allocation order).
+    /// Lexicographic order according to (number of unused bits, number of read-only bits, id).
     bool operator<(const ClotCandidate& other) const {
         if (unused_bits.popcount() != other.unused_bits.popcount())
             return unused_bits.popcount() < other.unused_bits.popcount();
@@ -678,16 +684,8 @@ class ClotCandidate {
         if (readonly_bits.popcount() != other.readonly_bits.popcount())
             return readonly_bits.popcount() < other.readonly_bits.popcount();
 
-        return this < &other;
+        return id < other.id;
     }
-
-    struct Cmp {
-        bool operator()(const ClotCandidate* left, const ClotCandidate* right) const {
-            BUG_CHECK(left != nullptr, "Comparing against null CLOT candidate");
-            BUG_CHECK(right != nullptr, "Comparing against null CLOT candidate");
-            return *right < *left;
-        }
-    };
 
     std::string print() const {
         std::stringstream out;
@@ -735,37 +733,42 @@ unsigned ClotCandidate::nextId = 0;
  * https://docs.google.com/document/d/1dWLuXoxrdk6ddQDczyDMksO8L_IToOm21QgIjHaDWXU.
  */
 class GreedyClotAllocator : public Visitor {
-    const PhvInfo& phvInfo;
     ClotInfo& clotInfo;
     const CollectParserInfo& parserInfo;
 
  public:
-    explicit GreedyClotAllocator(const PhvInfo& phvInfo,
-                             ClotInfo& clotInfo,
-                             const CollectParserInfo& parserInfo) :
-        phvInfo(phvInfo),
+    explicit GreedyClotAllocator(ClotInfo& clotInfo,
+                                 const CollectParserInfo& parserInfo) :
         clotInfo(clotInfo),
         parserInfo(parserInfo) { }
 
  private:
-    typedef std::map<cstring, std::map<const PHV::Field*, FieldExtractInfo*>> FieldExtractInfoMap;
-    typedef std::set<const ClotCandidate*, ClotCandidate::Cmp> ClotCandidateSet;
+    typedef std::map<const Pseudoheader*,
+                     std::map<const PHV::Field*, FieldExtractInfo*>,
+                     Pseudoheader::Less> FieldExtractInfoMap;
+    typedef std::set<const ClotCandidate*, ClotCandidate::Greater> ClotCandidateSet;
 
     /// Generates a FieldExtractInfo object for each field that is extracted in the subgraph rooted
     /// at the given state, and can be part of a clot (@see ClotInfo::can_be_in_clot).
     ///
-    /// Returns @arg result, a map from headers to fields to their FieldExtractInfo instances.
+    /// Returns @arg result, a map from pseudoheaders to fields to their FieldExtractInfo
+    /// instances.
+    ///
     /// This method assumes the graph is an unrolled DAG.
-    FieldExtractInfoMap* find_extracts(
+    //
+    // Invariant: state not in visited.
+    FieldExtractInfoMap* group_extracts(
             const IR::BFN::ParserGraph* graph,
             const IR::BFN::ParserState* state = nullptr,
             FieldExtractInfoMap* result = nullptr,
-            unsigned packet_offset = 0) {
+            std::set<const IR::BFN::ParserState*>* visited = nullptr) {
         // Initialize parameters if needed.
         if (!state) state = graph->root;
         if (!result) result = new FieldExtractInfoMap();
+        if (!visited) visited = new std::set<const IR::BFN::ParserState*>();
 
-        LOG6("Finding extracts in state " << state->name << " at packet offset " << packet_offset);
+        LOG6("Finding extracts in state " << state->name);
+        visited->insert(state);
 
         // Find all extracts in the current state.
         if (clotInfo.field_range_.count(state)) {
@@ -775,32 +778,30 @@ class GreedyClotAllocator : public Visitor {
 
                 if (!clotInfo.can_be_in_clot(field)) continue;
 
-                auto header = field->header();
-                if (!result->count(header) || !result->at(header).count(field)) {
-                    (*result)[header][field] =
-                        new FieldExtractInfo(state, static_cast<unsigned>(bitrange.lo), field);
+                BUG_CHECK(clotInfo.field_to_pseudoheaders_.count(field),
+                          "Field %s determined to be CLOT-eligible, but is not extracted (no "
+                          "pseudoheader information)",
+                          field->name);
+
+                auto fei = new FieldExtractInfo(state, static_cast<unsigned>(bitrange.lo), field);
+                for (auto pseudoheader : clotInfo.field_to_pseudoheaders_.at(field)) {
+                    BUG_CHECK(!result->count(pseudoheader) ||
+                              !result->at(pseudoheader).count(field),
+                              "Field %s determined to be CLOT-eligible, but is extracted twice",
+                              field->name);
+
+                    (*result)[pseudoheader][field] = fei;
                 }
             }
         }
 
-        // Recurse with the successors of the current state, if any.
+        // Recurse with the unvisited successors of the current state, if any.
         if (graph->successors().count(state)) {
             for (auto succ : graph->successors().at(state)) {
-                auto transition = graph->transition(state, succ);
-                BUG_CHECK(transition,
-                          "Missing parser transition from %s to %s", state->name, succ->name);
-
-                const auto& shift_bytes = transition->shift;
-                BUG_CHECK(shift_bytes, "Missing parser shift amount in transition from %s to %s",
-                          state->name, succ->name);
-
-                int new_packet_offset = static_cast<int>(packet_offset) + *shift_bytes * 8;
-                BUG_CHECK(new_packet_offset >= 0,
-                          "Transition from %s to %s results in negative packet offset",
-                          state->name, succ->name);
+                if (visited->count(succ)) continue;
 
                 LOG6("Recursing with transition " << state->name << " -> " << succ->name);
-                find_extracts(graph, succ, result, static_cast<unsigned>(new_packet_offset));
+                group_extracts(graph, succ, result, visited);
             }
         }
 
@@ -812,6 +813,7 @@ class GreedyClotAllocator : public Visitor {
     ///
     /// Precondition: the extracts are a valid CLOT prefix.
     void try_add_clot_candidate(ClotCandidateSet* candidates,
+                                const Pseudoheader* pseudoheader,
                                 std::vector<const FieldExtractInfo*>& extracts) const {
         // Remove extracts until we find one that can end a CLOT.
         while (!extracts.empty() && !clotInfo.can_end_clot(extracts.back()))
@@ -819,7 +821,7 @@ class GreedyClotAllocator : public Visitor {
 
         // If we still have extracts, create a CLOT candidate out of those.
         if (!extracts.empty()) {
-            const ClotCandidate* candidate = new ClotCandidate(clotInfo, extracts);
+            const ClotCandidate* candidate = new ClotCandidate(clotInfo, pseudoheader, extracts);
             candidates->insert(candidate);
             LOG6("  Created candidate");
             LOG6(candidate->print());
@@ -827,9 +829,9 @@ class GreedyClotAllocator : public Visitor {
     }
 
     /// A helper. Adds to the given @arg result any CLOT candidates that can be made from a given
-    /// set of extracts into fields that all belong to a given header.
+    /// set of extracts into fields that all belong to a given pseudoheader.
     void add_clot_candidates(ClotCandidateSet* result,
-                             cstring header,
+                             const Pseudoheader* pseudoheader,
                              const std::map<const PHV::Field*,
                                             const FieldExtractInfo*>& extract_map) const {
         // Invariant: `extracts` forms a valid prefix for a potential CLOT candidate. When
@@ -840,21 +842,8 @@ class GreedyClotAllocator : public Visitor {
         const IR::BFN::ParserState* state = nullptr;
         unsigned next_offset = 0;
 
-        // Obtain information about the header's fields from PhvInfo, and loop through those
-        // fields.
-        if (!phvInfo.has_struct_info(header)) {
-            WARNING("No PhvInfo::StructInfo for header " << header
-                    << ". No CLOTs will be allocated for this header.");
-            return;
-        }
-
-        const auto& struct_info = phvInfo.struct_info(header);
-        BUG_CHECK(struct_info.size > 0,
-                  "PhvInfo::StructInfo has no fields for extracted header %s",
-                  header);
-        LOG6("Finding CLOT candidates for header " << header);
-        for (int idx = 0; idx < struct_info.size; idx++) {
-            auto field = phvInfo.field(struct_info.first_field_id + idx);
+        LOG6("Finding CLOT candidates for pseudoheader " << pseudoheader->id);
+        for (auto field : pseudoheader->fields) {
             auto extract_info = extract_map.count(field) ? extract_map.at(field) : nullptr;
             LOG6("  Considering field " << field->name);
 
@@ -865,7 +854,7 @@ class GreedyClotAllocator : public Visitor {
                 // We have a break in contiguity. Create a new CLOT candidate, if possible, and
                 // set things up for the next candidate.
                 LOG6("  Contiguity break");
-                try_add_clot_candidate(result, extracts);
+                try_add_clot_candidate(result, pseudoheader, extracts);
                 extracts.clear();
             }
 
@@ -890,7 +879,7 @@ class GreedyClotAllocator : public Visitor {
         }
 
         // If possible, create a new CLOT candidate from the remaining extracts.
-        try_add_clot_candidate(result, extracts);
+        try_add_clot_candidate(result, pseudoheader, extracts);
     }
 
     // Precondition: all FieldExtractInfo instances in the given map correspond to fields that
@@ -899,7 +888,8 @@ class GreedyClotAllocator : public Visitor {
     // This method's responsibility, then, is to ensure the following for each candidate:
     //   - A set of contiguous bits is extracted from the packet.
     //   - The aggregate set of extracted bits is byte-aligned in the packet.
-    //   - All extracted fields reside in a single header and are contiguous.
+    //   - All extracted fields are contiguous.
+    //   - No pair of extracted fields have a deparserNoPack constraint.
     //   - Neither the first nor last field in the candidate is modified or is a checksum.
     //   - The extracts all come from the same parser state.
     ClotCandidateSet* find_clot_candidates(FieldExtractInfoMap* extract_info_map) {
@@ -951,7 +941,7 @@ class GreedyClotAllocator : public Visitor {
 
         if (!conflict) result->insert(to_adjust);
         else if (!extract_map.empty())
-            add_clot_candidates(result, to_adjust->header(), extract_map);
+            add_clot_candidates(result, to_adjust->pseudoheader, extract_map);
 
         return result;
     }
@@ -999,7 +989,7 @@ class GreedyClotAllocator : public Visitor {
         for (auto idx = best_start ; idx <= best_end; idx++)
             resized->push_back(extracts.at(idx));
 
-        auto result = new ClotCandidate(clotInfo, *resized);
+        auto result = new ClotCandidate(clotInfo, candidate->pseudoheader, *resized);
         LOG3("Resized candidate " << candidate->id << ":");
         LOG3(result->print());
         return result;
@@ -1108,7 +1098,7 @@ class GreedyClotAllocator : public Visitor {
 
             if (LOGGING(3)) {
                 if (candidates->empty()) {
-                    LOG3("No remaining CLOT candidates.");
+                    LOG3("CLOT allocation complete: no remaining CLOT candidates.");
                 } else {
                     LOG3("Remaining CLOT candidates:");
                     for (auto candidate : *candidates)
@@ -1129,11 +1119,11 @@ class GreedyClotAllocator : public Visitor {
         // Loop over each gress.
         for (auto kv : parserInfo.graphs()) {
             // Build auxiliary data structures.
-            auto field_extract_info = find_extracts(kv.second);
+            auto field_extract_info = group_extracts(kv.second);
             if (LOGGING(4)) {
                 LOG4("Extracts found that can be part of a CLOT:");
                 for (auto kv2 : *field_extract_info) {
-                    LOG4("  In header " << kv2.first << ":");
+                    LOG4("  In pseudoheader " << kv2.first->id << ":");
                     for (auto kv3 : kv2.second)
                         LOG4("    " << kv3.first->name);
                     LOG4("");
@@ -1175,7 +1165,7 @@ AllocateClot::AllocateClot(ClotInfo &clotInfo, const PhvInfo &phv, PhvUse &uses)
         &parserInfo,
         LOGGING(3) ? new DumpParser("before_clot_allocation") : nullptr,
         new CollectClotInfo(phv, clotInfo),
-        new GreedyClotAllocator(phv, clotInfo, parserInfo)
+        new GreedyClotAllocator(clotInfo, parserInfo)
     });
 }
 

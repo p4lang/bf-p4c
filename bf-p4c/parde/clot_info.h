@@ -5,6 +5,7 @@
 
 #include "clot.h"
 #include "lib/ordered_map.h"
+#include "bf-p4c/lib/cmp.h"
 #include "bf-p4c/parde/parde_utils.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
@@ -13,6 +14,61 @@
 class PhvInfo;
 
 class FieldExtractInfo;
+
+/// Implements equality correctly.
+class PovBitSet : public std::set<const PHV::FieldSlice*, PHV::FieldSlice::Less> {
+ public:
+    bool operator==(const PovBitSet& other) {
+        if (size() != other.size()) return false;
+
+        auto it1 = begin();
+        auto it2 = other.begin();
+        while (it1 != end()) {
+            if (!PHV::FieldSlice::equal(*it1, *it2)) return false;
+            ++it1;
+            ++it2;
+        }
+
+        return true;
+    }
+
+    bool operator !=(const PovBitSet& other) {
+        return !operator==(other);
+    }
+};
+
+/// Represents a sequence of fields that are always contiguously emitted by the deparser. A
+/// pseudoheader may be emitted multiple times by the deparser, each time with a different POV bit.
+class Pseudoheader : public LiftLess<Pseudoheader> {
+    friend class ClotInfo;
+
+ public:
+    const int id;
+
+    /// The set of all POV bits under which this pseudoheader is emitted.
+    const PovBitSet pov_bits;
+
+    /// The sequence of fields that constitute this pseudoheader.
+    const std::vector<const PHV::Field*> fields;
+
+ private:
+    static int nextId;
+
+ public:
+    explicit Pseudoheader(const PovBitSet pov_bits,
+                          const std::vector<const PHV::Field*> fields)
+        : id(nextId++), pov_bits(pov_bits), fields(fields) { }
+
+    /// Lexicographic ordering on (fields, pov_bits).
+    bool operator<(const Pseudoheader& other) const {
+        if (fields != other.fields)
+            return std::lexicographical_compare(fields.begin(), fields.end(),
+                                                other.fields.begin(), other.fields.end(),
+                                                PHV::Field::Less());
+
+        return pov_bits < other.pov_bits;
+    }
+};
 
 class ClotInfo {
     friend class CollectClotInfo;
@@ -56,6 +112,9 @@ class ClotInfo {
 
     /// Names of headers that might be added by MAU.
     std::set<cstring> headers_added_by_mau_;
+
+    std::vector<const Pseudoheader*> pseudoheaders_;
+    std::map<const PHV::Field*, std::set<const Pseudoheader*>> field_to_pseudoheaders_;
 
  public:
     explicit ClotInfo(PhvUse& uses) : uses(uses) {}
@@ -303,6 +362,7 @@ class ClotInfo {
 class CollectClotInfo : public Inspector {
     const PhvInfo& phv;
     ClotInfo& clotInfo;
+    std::map<const PHV::Field*, PovBitSet> fields_to_pov_bits;
 
  public:
     explicit CollectClotInfo(const PhvInfo& phv, ClotInfo& clotInfo) :
@@ -312,6 +372,7 @@ class CollectClotInfo : public Inspector {
     Visitor::profile_t init_apply(const IR::Node* root) override {
         auto rv = Inspector::init_apply(root);
         clotInfo.clear();
+        fields_to_pov_bits.clear();
         return rv;
     }
 
@@ -329,7 +390,20 @@ class CollectClotInfo : public Inspector {
         return true;
     }
 
-    /// Collects the set of fields over which checksums are computed.
+    /// Collects the set of POV bits on which each field's emit is predicated.
+    bool preorder(const IR::BFN::EmitField* emit) override {
+        auto field = phv.field(emit->source->field);
+        auto irPov = emit->povBit->field;
+
+        le_bitrange slice;
+        auto pov = phv.field(irPov, &slice);
+
+        fields_to_pov_bits[field].insert(new PHV::FieldSlice(pov, slice));
+        return true;
+    }
+
+    /// Identifies checksum fields, collects the set of fields over which checksums are computed,
+    /// and collects the set of POV bits on which each field's emit is predicated.
     bool preorder(const IR::BFN::EmitChecksum* emit) override {
         auto f = phv.field(emit->dest->field);
         clotInfo.checksum_dests_.insert(f);
@@ -339,7 +413,84 @@ class CollectClotInfo : public Inspector {
             clotInfo.field_to_checksum_updates_[src].push_back(emit);
         }
 
+        le_bitrange slice;
+        auto pov = phv.field(emit->povBit->field, &slice);
+
+        fields_to_pov_bits[f].insert(new PHV::FieldSlice(pov, slice));
+
         return true;
+    }
+
+    /// Uses @ref fields_to_pov_bits to identify pseudoheaders.
+    void postorder(const IR::BFN::Deparser* deparser) override {
+        // Used for deduplicating pseudoheaders. Contains the POV bits and fields of pseudoheaders
+        // that have already been allocated.
+        std::set<std::pair<const PovBitSet,
+                           const std::vector<const PHV::Field*>>> allocated;
+
+        // The POV bits and field list for the current pseudoheader we are building.
+        PovBitSet cur_pov_bits;
+        std::vector<const PHV::Field*> cur_fields;
+
+        for (auto emit : deparser->emits) {
+            const PHV::Field* cur_field = nullptr;
+            if (auto emit_field = emit->to<IR::BFN::EmitField>()) {
+                cur_field = phv.field(emit_field->source->field);
+            } else if (auto emit_checksum = emit->to<IR::BFN::EmitChecksum>()) {
+                cur_field = phv.field(emit_checksum->dest->field);
+            } else {
+                BUG("Unexpected deparser emit: %1%", emit);
+            }
+
+            auto pov_bits = fields_to_pov_bits.at(cur_field);
+            if (cur_pov_bits != pov_bits) {
+                add_pseudoheader(cur_pov_bits, cur_fields, allocated);
+                cur_pov_bits = pov_bits;
+                cur_fields.clear();
+            }
+
+            cur_fields.push_back(cur_field);
+        }
+
+        add_pseudoheader(cur_pov_bits, cur_fields, allocated);
+    }
+
+    /// Helper. Adds a new pseudoheader with the given @arg pov_bits and @arg fields, if one hasn't
+    /// already been allocated, and @arg fields is non-empty.
+    void add_pseudoheader(const PovBitSet pov_bits,
+                          const std::vector<const PHV::Field*> fields,
+                          std::set<std::pair<const PovBitSet,
+                                             const std::vector<const PHV::Field*>>>& allocated) {
+        if (fields.empty()) return;
+
+        auto key = std::make_pair(pov_bits, fields);
+        if (allocated.count(key)) return;
+
+        // Have a new pseudoheader.
+        auto pseudoheader = new Pseudoheader(pov_bits, fields);
+        clotInfo.pseudoheaders_.push_back(pseudoheader);
+
+        for (auto field : fields) {
+            clotInfo.field_to_pseudoheaders_[field].insert(pseudoheader);
+        }
+
+        allocated.insert(key);
+
+        if (LOGGING(6)) {
+            LOG6("Pseudoheader " << pseudoheader->id);
+            std::stringstream out;
+            out << "  POV bits: ";
+            bool first = true;
+            for (auto pov : pov_bits) {
+                if (!first) out << ", ";
+                first = false;
+                out << pov->shortString();
+            }
+            LOG6(out.str());
+            LOG6("  Fields:");
+            for (auto field : fields)
+                LOG6("    " << field->name);
+        }
     }
 
     /// Collects aliasing information.
