@@ -243,7 +243,7 @@ class IsSlice : public P4::KeyIsSimple {
  public:
     IsSlice() { }
 
-    bool isSimple(const IR::Expression *expr, const Visitor::Context *ctxt) override {
+    bool isSimple(const IR::Expression *expr, const Visitor::Context *) override {
         return expr->to<IR::Slice>() != nullptr;
     }
 };

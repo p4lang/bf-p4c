@@ -111,11 +111,10 @@ const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe,
                                    ActionPhvConstraints& actions,
                                    CalcParserCriticalPath& parser_critical_path) {
     PHV::Pragmas* pragmas = new PHV::Pragmas(phv);
-    auto options = new BFN_Options();  // dummy options used in Pass
     PassManager quick_backend = {
         new CollectHeaderStackInfo,
         new CollectPhvInfo(phv),
-        new DoInstructionSelection(*options, phv),
+        new DoInstructionSelection(phv),
         &defuse,
         new ElimUnused(phv, defuse),
         &table_alloc,

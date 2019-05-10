@@ -101,7 +101,6 @@ class ComputeDependencies : public Inspector {
     using StageFieldUse = ordered_map<const PHV::Field*, ordered_map<int, ordered_set<const
         IR::MAU::Table*>>>;
     PhvInfo&                                    phv;
-    const DependencyGraph&                      dg;
     const MapTablesToActions&                   actionsMap;
     const ComputeFieldsRequiringInit&           fieldsForInit;
     const FieldDefUse&                          defuse;
@@ -117,14 +116,13 @@ class ComputeDependencies : public Inspector {
             const ordered_map<PHV::AllocSlice, ordered_set<const IR::MAU::Table*>>& initNodes);
 
  public:
-    explicit ComputeDependencies(
+    ComputeDependencies(
             PhvInfo& p,
-            const DependencyGraph& g,
             const MapTablesToActions& a,
             const ComputeFieldsRequiringInit& i,
             const FieldDefUse& d,
             const MetadataLiveRange& r)
-        : phv(p), dg(g), actionsMap(a), fieldsForInit(i), defuse(d), liverange(r) { }
+        : phv(p), actionsMap(a), fieldsForInit(i), defuse(d), liverange(r) { }
 };
 
 /** This is the pass manager, which takes the results of PHV allocation and then inserts the right
@@ -142,7 +140,6 @@ class AddSliceInitialization : public PassManager {
     explicit AddSliceInitialization(
             PhvInfo& p,
             FieldDefUse& d,
-            const DependencyGraph& g,
             const MetadataLiveRange& r);
 };
 

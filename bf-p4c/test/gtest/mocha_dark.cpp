@@ -83,11 +83,10 @@ const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe,
                                    PhvInfo& phv,
                                    FieldDefUse& defuse,
                                    PhvUse& uses) {
-    auto options = new BFN_Options();  // dummy options used in Pass
     PassManager quick_backend = {
         new CollectHeaderStackInfo,
         new CollectPhvInfo(phv),
-        new DoInstructionSelection(*options, phv),
+        new DoInstructionSelection(phv),
         &defuse,
         &uses
     };

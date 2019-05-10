@@ -86,6 +86,8 @@
 */
 
 class InferPayloadOffset : public PassManager {
+    // FIXME -- placeholder?  marking public to avoid spurious warnings about unused private fields
+ public:
     const PhvInfo& phv;
     const FieldDefUse& defuse;
 

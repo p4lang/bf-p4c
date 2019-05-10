@@ -38,10 +38,9 @@ using HashGenToAlloc
 using AllocToHashUse = std::map<HashFuncLoc, safe_vector<const IXBar::HashDistIRUse *>>;
 
 class VerifyUniqueDynamicHash : public MauInspector {
-    const PhvInfo &phv;
     NameToHashGen &verify_hash_gen;
 
-    profile_t init_apply(const IR::Node *node) {
+    profile_t init_apply(const IR::Node *node) override {
         auto rv = MauInspector::init_apply(node);
         verify_hash_gen.clear();
         return rv;
@@ -49,16 +48,14 @@ class VerifyUniqueDynamicHash : public MauInspector {
 
     bool preorder(const IR::MAU::HashGenExpression *) override;
  public:
-    VerifyUniqueDynamicHash(const PhvInfo &p, NameToHashGen &vhg)
-        : phv(p), verify_hash_gen(vhg) {}
+    explicit VerifyUniqueDynamicHash(NameToHashGen &vhg) : verify_hash_gen(vhg) {}
 };
 
 class GatherDynamicHashAlloc : public MauInspector {
-    const PhvInfo &phv;
     const NameToHashGen &verify_hash_gen;
     HashGenToAlloc &hash_gen_alloc;
 
-    profile_t init_apply(const IR::Node *node) {
+    profile_t init_apply(const IR::Node *node) override {
         auto rv = MauInspector::init_apply(node);
         hash_gen_alloc.clear();
         return rv;
@@ -67,8 +64,8 @@ class GatherDynamicHashAlloc : public MauInspector {
     bool preorder(const IR::MAU::Table *) override;
 
  public:
-    GatherDynamicHashAlloc(const PhvInfo &p, const NameToHashGen &vhg, HashGenToAlloc &hga)
-        : phv(p), verify_hash_gen(vhg), hash_gen_alloc(hga) {}
+    GatherDynamicHashAlloc(const NameToHashGen &vhg, HashGenToAlloc &hga)
+        : verify_hash_gen(vhg), hash_gen_alloc(hga) {}
 };
 
 
@@ -127,8 +124,8 @@ class DynamicHashJson : public PassManager {
     explicit DynamicHashJson(const PhvInfo &p) : phv(p) {
         _dynHashNode = new Util::JsonArray();
         addPasses({
-            new VerifyUniqueDynamicHash(phv, verify_hash_gen),
-            new GatherDynamicHashAlloc(phv, verify_hash_gen, hash_gen_alloc),
+            new VerifyUniqueDynamicHash(verify_hash_gen),
+            new GatherDynamicHashAlloc(verify_hash_gen, hash_gen_alloc),
             new GenerateDynamicHashJson(phv, _dynHashNode, verify_hash_gen, hash_gen_alloc)
         });
     }

@@ -35,7 +35,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
       action_constraints(phv, uses, pack_conflicts),
       domTree(flowGraph),
       meta_live_range(phv, deps, defuse, pragmas, uses, alloc),
-      dark_live_range(phv, clot, deps, defuse, pragmas, uses, table_alloc),
+      dark_live_range(phv, clot, deps, defuse, pragmas, uses),
       meta_init(phv, defuse, deps, pragmas.pa_no_init(), meta_live_range,
                 action_constraints, domTree, alloc),
       clustering(phv, uses, pack_conflicts, action_constraints) {
@@ -105,7 +105,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             new PhvInfo::DumpPhvFields(phv, uses),
             new AllocatePHV(clustering, uses, defuse, clot, pragmas, phv, action_constraints,
                     parser_critical_path, critical_path_clusters, table_alloc, meta_init),
-            new AddSliceInitialization(phv, defuse, deps, meta_live_range),
+            new AddSliceInitialization(phv, defuse, meta_live_range),
             &defuse
         }); }
 

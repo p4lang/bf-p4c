@@ -1390,30 +1390,30 @@ class IXBar::FieldManagement : public Inspector {
     const PhvInfo &phv;
     KeyInfo &ki;
 
-    bool preorder(const IR::ListExpression *) {
+    bool preorder(const IR::ListExpression *) override {
         if (!ki.hash_dist)
             BUG("A field list is somehow contained within the reads in table %s", name);
         return true; }
-    bool preorder(const IR::Mask *) {
+    bool preorder(const IR::Mask *) override {
         BUG("Masks should have been converted to Slices before input xbar allocation");
         return true; }
 
-    bool preorder(const IR::MAU::TableKey *read) {
+    bool preorder(const IR::MAU::TableKey *read) override {
         if (ki.is_atcam) {
             if (ki.partition != read->partition_index)
                 return false; }
         return true; }
 
-    bool preorder(const IR::Constant *c) {
+    bool preorder(const IR::Constant *c) override {
         field_list_order.push_back(c);
         return true; }
 
-    bool preorder(const IR::MAU::ActionArg *aa) {
+    bool preorder(const IR::MAU::ActionArg *aa) override {
         error("Can't use action argument %s in a hash in the same action; "
               "try splitting the action", aa);
         return false; }
 
-    bool preorder(const IR::Expression *e) {
+    bool preorder(const IR::Expression *e) override {
         le_bitrange bits = { };
         auto *finfo = phv.field(e, &bits);
         if (!finfo) return true;
@@ -3215,7 +3215,7 @@ void IXBar::buildHashDistIRUse(HashDistAllocPostExpand &alloc_req, HashDistUse &
  */
 void IXBar::lockInHashDistArrays(safe_vector<Use::Byte *> *alloced, int hash_group,
         unsigned hash_table_input, int asm_unit, bitvec hash_bits_used,
-        HashDistDest_t dest, cstring name) {
+        HashDistDest_t /* dest */, cstring name) {
     if (alloced)
         fill_out_use(*alloced, false);
     for (int i = 0; i < HASH_TABLES; i++) {

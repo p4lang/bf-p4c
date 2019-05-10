@@ -264,9 +264,8 @@ Visitor::profile_t ComputeDependencies::init_apply(const IR::Node* root) {
 AddSliceInitialization::AddSliceInitialization(
         PhvInfo& p,
         FieldDefUse& d,
-        const DependencyGraph& g,
         const MetadataLiveRange& r)
-    : fieldToExpr(p), init(p), dep(p, g, actionsMap, init, d, r) {
+    : fieldToExpr(p), init(p), dep(p, actionsMap, init, d, r) {
     addPasses({
         &actionsMap,
         &fieldToExpr,

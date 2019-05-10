@@ -375,9 +375,6 @@ const IR::MAU::Action *Synth2PortSetup::postorder(IR::MAU::Action *act) {
 template<class T> static
 T *clone(const T *ir) { return ir ? ir->clone() : nullptr; }
 
-DoInstructionSelection::DoInstructionSelection(const BFN_Options& options, const PhvInfo &phv)
-        : options(options), phv(phv) {}
-
 Visitor::profile_t DoInstructionSelection::init_apply(const IR::Node *root) {
     auto rv = MauTransform::init_apply(root);
     return rv;
@@ -1960,7 +1957,7 @@ InstructionSelection::InstructionSelection(const BFN_Options& options, PhvInfo &
     new UnimplementedRegisterMethodCalls,
     new HashGenSetup(options),
     new Synth2PortSetup(phv),
-    new DoInstructionSelection(options, phv),
+    new DoInstructionSelection(phv),
     new StatefulAttachmentSetup(phv),
     new MeterSetup(phv),
     // new DLeftSetup,

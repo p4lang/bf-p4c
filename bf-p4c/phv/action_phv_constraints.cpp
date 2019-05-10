@@ -823,7 +823,7 @@ bool ActionPhvConstraints::are_adjacent_field_slices(
         const PHV::Allocation::MutuallyLiveSlices& container_state) const {
     le_bitrange last;
     bool firstSlice = true;
-    const PHV::Field* field;
+    const PHV::Field* field = nullptr;
     for (auto slice : container_state) {
         bool is_padding = !uses.is_referenced(slice.field()) || slice.field()->overlayablePadding;
         if (is_padding) continue;

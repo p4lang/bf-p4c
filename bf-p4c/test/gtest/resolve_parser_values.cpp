@@ -105,7 +105,6 @@ createParserCriticalPathTestCase(const std::string& parserSource) {
 }  // namespace
 
 const IR::BFN::Pipe* runMockPasses(const IR::BFN::Pipe* pipe) {
-    auto options = new BFN_Options();  // dummy options used in pass.
     SymBitMatrix overlay;
     PhvInfo phv(overlay);
     PhvUse uses(phv);
@@ -117,7 +116,7 @@ const IR::BFN::Pipe* runMockPasses(const IR::BFN::Pipe* pipe) {
     PassManager quick_backend = {
         new CollectHeaderStackInfo,
         new CollectPhvInfo(phv),
-        new DoInstructionSelection(*options, phv),
+        new DoInstructionSelection(phv),
         new FindDependencyGraph(phv, dg),
         &table_alloc,
         new CollectPhvInfo(phv),

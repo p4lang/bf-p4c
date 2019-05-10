@@ -129,7 +129,6 @@ class Synth2PortSetup : public MauTransform {
  *      and interpreted by the remainder of the compiler
  */
 class DoInstructionSelection : public MauTransform, TofinoWriteContext {
-    const BFN_Options &options;
     const PhvInfo &phv;
     IR::MAU::Action                     *af = nullptr;
     class SplitInstructions;
@@ -169,7 +168,7 @@ class DoInstructionSelection : public MauTransform, TofinoWriteContext {
     IR::Member *genIntrinsicMetadata(gress_t gress, cstring header, cstring field);
 
  public:
-    DoInstructionSelection(const BFN_Options &options, const PhvInfo &phv);
+    explicit DoInstructionSelection(const PhvInfo &phv) : phv(phv) {}
 };
 
 /** This pass was specifically created to deal with adding the HashDist object to different
