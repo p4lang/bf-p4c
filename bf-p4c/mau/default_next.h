@@ -53,9 +53,7 @@ class DefaultNext : public MauInspector, BFN::ControlFlowVisitor {
       if (auto *n = next(t))
           if (n->gress == t->gress)
               return n->unique_id();
-      UniqueId rv;
-      rv.name = "END";
-      return rv; }
+      return UniqueId("END"); }
 };
 
 #endif /* BF_P4C_MAU_DEFAULT_NEXT_H_ */

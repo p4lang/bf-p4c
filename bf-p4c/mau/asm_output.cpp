@@ -1687,6 +1687,8 @@ static cstring next_for(const IR::MAU::Table *tbl, cstring what, const DefaultNe
                 return tbl->next.at(tns)->front()->unique_id().build_name();
         }
     }
+    if (tbl->actions.count(what) && tbl->actions.at(what)->exitAction)
+        return "END";
     if (tbl->next.count(what)) {
         if (tbl->next.at(what) && !tbl->next.at(what)->empty())
             return tbl->next.at(what)->front()->unique_id().build_name();
@@ -1722,7 +1724,10 @@ class MauAsmOutput::EmitAction : public Inspector {
     void next_table(const IR::MAU::Action *act, int mem_code) {
         if (table->hit_miss_p4()) {
             out << indent << "- next_table_miss: ";
-            out << next_for(table, "$miss", self.default_next) << std::endl;
+            if (act->exitAction)
+                out << "END" << std::endl;
+            else
+                out << next_for(table, "$miss", self.default_next) << std::endl;
             if (act->miss_action_only)
                 return;
         }
@@ -2421,12 +2426,15 @@ void MauAsmOutput::emit_gateway(std::ostream &out, indent_t gw_indent,
     }
 }
 
-/** This allocates a gateway that always hits, in order for the table to always go through the
- *  the hit pathway.
- */
+/** This allocates a gateway that always hits, with a single (possible noop) action, in order
+ * for the table to always go through the the hit pathway.
+ * FIXME -- why do we use this for a noop action?  A noop does not require the hit path, so
+ * could use the miss path and save the gateway (power if nothing else).  */
 void MauAsmOutput::emit_no_match_gateway(std::ostream &out, indent_t gw_indent,
         const IR::MAU::Table *tbl) const {
-    auto nxt_tbl = next_for(tbl, "", default_next);
+    BUG_CHECK(tbl->actions.size() <= 1, "not an always hit hash_action table");
+    cstring act_name = tbl->actions.empty() ? "" : tbl->actions.begin()->first;
+    auto nxt_tbl = next_for(tbl, act_name, default_next);
     out << gw_indent << "0x0: " << nxt_tbl << std::endl;
     out << gw_indent << "miss: " << nxt_tbl << std::endl;
     out << gw_indent++ << "condition: " << std::endl;
@@ -2883,7 +2891,13 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
     cstring next_hit = "";
     cstring gw_miss;
     if (!tbl->action_chain()) {
-        next_hit = next_for(tbl, "$hit", default_next);
+        if (tbl->has_exit_action()) {
+            BUG_CHECK(!tbl->has_non_exit_action(), "Need action chaining to handle both exit "
+                      "and non-exit actions in table %1%", tbl);
+            next_hit = "END";
+        } else {
+            next_hit = next_for(tbl, "$hit", default_next);
+        }
     }
 
     if (tbl->uses_gateway() || tbl->layout.no_match_hit_path() || tbl->gateway_only()) {

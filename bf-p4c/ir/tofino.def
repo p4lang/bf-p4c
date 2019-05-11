@@ -70,14 +70,18 @@ class BFN::Pipe {
                 v.visit(ghost_thread, "ghost_thread");
             } else {
                 thread[th->thread].parsers.parallel_visit_children(v);
+                ControlFlowVisitor::GuardGlobal guard_except(v, "-EXIT-");
                 v.visit(thread[th->thread].mau, "mau");
+                v.flow_merge_global_from("-EXIT-");
                 v.visit(thread[th->thread].deparser, "deparser"); }
         } else {
             // FIXME -- doesn't do flow_clone/merge properly, but fixing will
             // break ParserGraph (at least) as it doesn't do merge properly
             for (auto &th : thread) {
                 th.parsers.parallel_visit_children(v);
+                ControlFlowVisitor::GuardGlobal guard_except(v, "-EXIT-");
                 v.visit(th.mau, "mau");
+                v.flow_merge_global_from("-EXIT-");
                 v.visit(th.deparser, "deparser"); }
             v.visit(ghost_thread, "ghost_thread"); } }
 }

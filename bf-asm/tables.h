@@ -1293,12 +1293,9 @@ DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,
         return table_type(); }
     const GatewayTable *get_gateway() const override {
         return match_tables.size() == 1 ? (*match_tables.begin())->get_gateway() : 0; }
-    SelectionTable *get_selector() const override {
-        return match_tables.size() == 1 ? (*match_tables.begin())->get_selector() : 0; }
-    StatefulTable *get_stateful() const override {
-        return match_tables.size() == 1 ? (*match_tables.begin())->get_stateful() : 0; }
-    MeterTable* get_meter() const override {
-        return match_tables.size() == 1 ? (*match_tables.begin())->get_meter() : 0; }
+    SelectionTable *get_selector() const override;
+    StatefulTable *get_stateful() const override;
+    MeterTable* get_meter() const override;
     Call &action_call() override {
         return match_tables.size() == 1 ? (*match_tables.begin())->action_call() : action; }
     int memunit(const int r, const int c) const override { return r*6 + c; }

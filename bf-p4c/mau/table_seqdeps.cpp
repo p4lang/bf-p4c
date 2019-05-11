@@ -17,8 +17,10 @@ void TableFindSeqDependencies::postorder(IR::MAU::TableSeq *seq) {
     for (int i = 0; i < size; i++) {
         bitvec writes = uses.tables_modify(seq->tables[i]);
         bitvec access = uses.tables_access(seq->tables[i]);
+        bool earlyExit = seq->tables[i]->has_exit_recursive();
         for (int j = i+1; j < size; j++) {
-            if ((writes & uses.tables_access(seq->tables[j])) ||
+            if (earlyExit || seq->tables[j]->has_exit_recursive() ||
+                (writes & uses.tables_access(seq->tables[j])) ||
                 (access & uses.tables_modify(seq->tables[j])))
                 seq->deps(j, i) = true; } }
     for (int j = 1; j < size; j++)

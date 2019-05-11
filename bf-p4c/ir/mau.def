@@ -1,19 +1,11 @@
-
-
 #emit
 struct TableResourceAlloc;
+#include "bf-p4c/ir/ir_enums.h"
+#include "bf-p4c/ir/unique_id.h"
 #include "bf-p4c/mau/hash_function.h"
 #end
 #emit_impl
 #include "bf-p4c/mau/resource.h"
-#end
-
-#emit
-#include "bf-p4c/ir/ir_enums.h"
-#end
-
-#emit
-#include "bf-p4c/ir/unique_id.h"
 #end
 
 namespace MAU {
@@ -226,6 +218,9 @@ class Table : BFN::Unit {
     int get_placement_priority() const;
     int get_provided_stage(const int *init_stage = nullptr, int *req_entries = nullptr) const;
     int hit_actions() const;
+    bool has_exit_action() const;
+    bool has_non_exit_action() const;
+    bool has_exit_recursive() const;  // is there an exit here or any control dependent table?
     int get_random_seed() const;
     int get_pragma_max_actions() const;
     bool is_force_immediate() const;
@@ -301,10 +296,13 @@ class Table : BFN::Unit {
                 }
             }
         }
-        for (auto &act : actions)
+        for (auto &act : actions) {
             BUG_CHECK(act.first == act.second->name.originalName,
                       "name mismatch '%s' != '%s' for action %s",
                       act.first, act.second->name.originalName, act.second->name.name);
+            if (act.second->exitAction)
+                BUG_CHECK(next.count(act.first) == 0,
+                          "action %s is an early exit and has next", act.first); }
     }
     visit_children {
         for (auto &gw : gateway_rows)
@@ -324,7 +322,9 @@ class Table : BFN::Unit {
                 for (auto &action : actions) {
                     if (!current) current = &before_action->flow_clone();
                     current->visit(action.second);
-                    if (next.count(action.first)) {
+                    if (action.second->exitAction) {
+                        current->flow_merge_global_to("-EXIT-");
+                    } else if (next.count(action.first)) {
                         current->visit(next.at(action.first), action.first);
                         if (current != &v)
                             v.flow_merge(*current);
@@ -347,18 +347,21 @@ class Table : BFN::Unit {
                 for (auto &action : Values(actions)) {
                     if (!current) current = &before_action->flow_clone();
                     current->visit(action);
-                    if (!action->hit_only()) {
-                        if (miss_actions)
-                            miss_actions->flow_merge(*current);
-                        else
-                            miss_actions = current; }
-                    if (!action->miss_only()) {
-                        if (hit_actions)
-                            hit_actions->flow_merge(*current);
-                        else if (current != miss_actions)
-                            hit_actions = current;
-                        else
-                            hit_actions = &current->flow_clone(); }
+                    if (action->exitAction) {
+                        current->flow_merge_global_to("-EXIT-");
+                    } else {
+                        if (!action->hit_only()) {
+                            if (miss_actions)
+                                miss_actions->flow_merge(*current);
+                            else
+                                miss_actions = current; }
+                        if (!action->miss_only()) {
+                            if (hit_actions)
+                                hit_actions->flow_merge(*current);
+                            else if (current != miss_actions)
+                                hit_actions = current;
+                            else
+                                hit_actions = &current->flow_clone(); } }
                     current = nullptr; }
 
                 if (next.count("$hit")) {
@@ -719,6 +722,7 @@ class Action : VLIWInstruction {
     bool hit_path_imp_only = false;
     cstring disallowed_reason = "none";
     inline Vector<Argument> default_params = {};
+    bool exitAction = false;  // should exit pipeline after action (next == EOP)
 
     // Separate stateful primitives from actions, as they aren't instructions
     // as such.

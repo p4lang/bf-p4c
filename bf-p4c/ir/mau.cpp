@@ -150,7 +150,7 @@ bool IR::MAU::Table::action_chain() const {
             return true;
         }
     }
-    return false;
+    return has_exit_action() && has_non_exit_action();
 }
 
 bool IR::MAU::Table::has_default_path() const {
@@ -158,6 +158,27 @@ bool IR::MAU::Table::has_default_path() const {
         if (n.first == "$default")
             return true;
     }
+    return false;
+}
+
+bool IR::MAU::Table::has_exit_action() const {
+    for (auto &n : actions)
+        if (n.second->exitAction) return true;
+    return false;
+}
+
+// FIXME -- consider memoizing these boolean predicate functions for speed...
+bool IR::MAU::Table::has_exit_recursive() const {
+    if (has_exit_action()) return true;
+    for (auto *n : Values(next))
+        for (auto *t : n->tables)
+            if (t->has_exit_recursive()) return true;
+    return false;
+}
+
+bool IR::MAU::Table::has_non_exit_action() const {
+    for (auto &n : actions)
+        if (!n.second->exitAction) return true;
     return false;
 }
 

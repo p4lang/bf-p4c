@@ -226,6 +226,7 @@ void FieldDefUse::flow_merge(Visitor &a_) {
     LOG3("FieldDefUse(" << (void *)this << "): merging " << (void *)&a);
     for (auto &i : Values(a.defuse)) {
         auto &info = field(i.field);
+        BUG_CHECK(&info != &i, "same object in FieldDefUse::flow_merge");
         info.def.insert(i.def.begin(), i.def.end());
         info.use.insert(i.use.begin(), i.use.end()); }
 }

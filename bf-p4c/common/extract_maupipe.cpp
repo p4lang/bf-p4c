@@ -250,15 +250,21 @@ class ActionBodySetup : public Inspector {
     bool preorder(const IR::IndexedVector<IR::StatOrDecl> *) override { return true; }
     bool preorder(const IR::BlockStatement *) override { return true; }
     bool preorder(const IR::AssignmentStatement *assign) override {
-        cstring pname = "modify_field";
-        if (assign->left->type->is<IR::Type_Header>())
-            pname = "copy_header";
-        auto prim = new IR::Primitive(assign->srcInfo, pname, assign->left, assign->right);
-        af->action.push_back(prim);
+        if (!af->exitAction) {
+            cstring pname = "modify_field";
+            if (assign->left->type->is<IR::Type_Header>())
+                pname = "copy_header";
+            auto prim = new IR::Primitive(assign->srcInfo, pname, assign->left, assign->right);
+            af->action.push_back(prim); }
         return false; }
     bool preorder(const IR::MethodCallStatement *mc) override {
-        auto mc_init = new IR::Primitive(mc->srcInfo, "method_call_init", mc->methodCall);
-        af->action.push_back(mc_init);
+        if (!af->exitAction) {
+            auto mc_init = new IR::Primitive(mc->srcInfo, "method_call_init", mc->methodCall);
+            af->action.push_back(mc_init); }
+        return false;
+    }
+    bool preorder(const IR::ExitStatement *) override {
+        af->exitAction = true;
         return false;
     }
     bool preorder(const IR::Declaration *) override {

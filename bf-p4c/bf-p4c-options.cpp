@@ -166,6 +166,9 @@ BFN_Options::BFN_Options() {
         [this](const char *) { p4RuntimeForceStdExterns = true; return true; },
         "Generate P4Info file using standard extern messages instead of Tofino-specific ones, for "
         "a P4 program written for a Tofino-specific arch.");
+    registerOption("--disable-tofino1-exit", nullptr,
+        [this](const char *) { disable_direct_exit = true; return true; },
+        "Disable Tofino1-specific immediate exit optimization");
 }
 
 using Target = std::pair<cstring, cstring>;

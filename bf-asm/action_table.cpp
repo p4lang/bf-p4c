@@ -420,6 +420,13 @@ void ActionTable::pass1() {
     action_bus->pass1(this);
     if (actions) actions->pass1(this);
     AttachedTable::pass1();
+    SelectionTable *selector = nullptr;
+    for (auto mtab : match_tables) {
+        auto *s = mtab->get_selector();
+        if (s && selector && s != selector)
+            error(lineno, "Inconsistent selectors %s and %s for table %s", s->name(),
+                  selector->name(), name());
+        if (s) selector = s; }
 }
 
 void ActionTable::pass2() {
@@ -603,13 +610,14 @@ void ActionTable::write_regs(REGS &regs) {
                     if (!icxbar[mtab->logical_id].address_distr_to_overflow)
                         icxbar[mtab->logical_id].address_distr_to_overflow = 1; }
             oflo_adr_xbar.adr_dist_oflo_adr_xbar_enable = 1; }
-        if (SelectionTable *sel = get_selector()) {
-            if (logical_row.row != sel->home_row()) {
-                if (logical_row.row > sel->home_row())
+        SelectionTable *selector = get_selector();
+        if (selector) {
+            if (logical_row.row != selector->home_row()) {
+                if (logical_row.row > selector->home_row())
                     error(lineno, "Selector data from %s on row %d cannot flow up to %s on row %d",
-                          sel->name(), sel->home_row(), name(), logical_row.row);
+                          selector->name(), selector->home_row(), name(), logical_row.row);
                 else
-                    flow_selector_addr(regs, sel->home_row(), logical_row.row); } }
+                    flow_selector_addr(regs, selector->home_row(), logical_row.row); } }
         for (int logical_col : logical_row.cols) {
             unsigned col = logical_col + 6*side;
             auto &ram = regs.rams.array.row[row].ram[col];
@@ -630,10 +638,10 @@ void ActionTable::write_regs(REGS &regs) {
             unitram_config.unitram_enable = 1;
             auto &ram_mux = map_alu_row.adrmux.ram_address_mux_ctl[side][logical_col];
             auto &adr_mux_sel = ram_mux.ram_unitram_adr_mux_select;
-            if (SelectionTable *sel = get_selector()) {
+            if (selector) {
                 int shift = std::min(fmt_log2size - 2, MAX_AD_SHIFT);
                 auto &shift_ctl = regs.rams.map_alu.mau_selector_action_adr_shift[row];
-                if (logical_row.row == sel->layout[0].row) {
+                if (logical_row.row == selector->layout[0].row) {
                     /* we're on the home row of the selector, so use it directly */
                     if (home == &logical_row)
                         adr_mux_sel = UnitRam::AdrMux::SELECTOR_ALU;

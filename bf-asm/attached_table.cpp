@@ -76,16 +76,43 @@ void AttachedTable::add_alu_index(json::map &stage_tbl, std::string alu_index) c
     stage_tbl[alu_index] = get_alu_index();
 }
 
+SelectionTable *AttachedTable::get_selector() const {
+    SelectionTable *rv = nullptr;
+    for (auto *mtab : match_tables) {
+        auto *sel = mtab->get_selector();
+        if (sel && rv && rv != sel) return nullptr;  // inconsistent
+        if (sel) rv = sel; }
+    return rv;
+}
+
 SelectionTable *AttachedTables::get_selector() const {
     if (selector)
         return dynamic_cast<SelectionTable *>((Table *)selector);
     return nullptr; }
+
+StatefulTable *AttachedTable::get_stateful() const {
+    StatefulTable *rv = nullptr;
+    for (auto *mtab : match_tables) {
+        auto *s = mtab->get_stateful();
+        if (s && rv && rv != s) return nullptr;  // inconsistent
+        if (s) rv = s; }
+    return rv;
+}
 
 StatefulTable *AttachedTables::get_stateful(std::string name) const {
     for (auto &s : statefuls) {
         if (name == s->name() || name.empty())
             return dynamic_cast<StatefulTable*>((Table *)s); }
     return nullptr; }
+
+MeterTable *AttachedTable::get_meter() const {
+    MeterTable *rv = nullptr;
+    for (auto *mtab : match_tables) {
+        auto *m = mtab->get_meter();
+        if (m && rv && rv != m) return nullptr;  // inconsistent
+        if (m) rv = m; }
+    return rv;
+}
 
 MeterTable* AttachedTables::get_meter(std::string name) const {
     for (auto &s : meters) {

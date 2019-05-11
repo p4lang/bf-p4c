@@ -953,6 +953,8 @@ UniqueId CharacterizePower::next_for(const IR::MAU::Table *tbl,
               return tbl->next.at(tns)->front()->unique_id();
       }
   }
+  if (tbl->actions.count(what) && tbl->actions.at(what)->exitAction)
+      return UniqueId("END");
   if (tbl->next.count(what)) {
       if (tbl->next.at(what) && !tbl->next.at(what)->empty())
           return tbl->next.at(what)->front()->unique_id();

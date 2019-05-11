@@ -168,6 +168,7 @@ class UniqueId {
     UniqueId base_match_id() const;
 
     UniqueId() {}
+    explicit UniqueId(cstring n) : name(n) {}
 };
 
 std::ostream &operator <<(std::ostream &out, const UniqueId &ui);
