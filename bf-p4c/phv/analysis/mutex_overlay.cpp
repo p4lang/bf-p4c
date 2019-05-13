@@ -64,16 +64,13 @@ void BuildMutex::end_apply() {
                 ::warning("Ignoring pa_no_overlay for padding field %1%", f1->name);
             } else {
                 LOG5("Excluding field from overlay: " << *it1);
-            continue;
+                continue;
             }
         }
         for (auto it2 = it1; it2 != fields_encountered.end(); ++it2) {
-            // Consider fields that are part of headers that can be added in the
-            // MAU pipeline to always be mutually inclusive.
-            // XXX(cole): this could use a more sophisticated analysis to be
-            // more precise.
-            if (*it1 == *it2) {
-                continue; }
+            if (*it1 == *it2) continue;
+
+            // Consider fields marked neverOverlay to always be mutually inclusive.
             const PHV::Field* f2 = phv.field(*it2);
             if (neverOverlay[*it2]) {
                 if (f2->overlayablePadding) {
@@ -83,10 +80,28 @@ void BuildMutex::end_apply() {
                     continue;
                 }
             }
-            if (mutually_inclusive(*it1, *it2))
-                continue;
+
+            if (mutually_inclusive(*it1, *it2)) continue;
+
             mutually_exclusive(*it1, *it2) = true;
             LOG4("(" << f1->name << ", " << f2->name << ")"); } }
+}
+
+void ExcludeAliasedHeaderFields::excludeAliasedField(const IR::Expression* alias) {
+    // According to PragmaAlias::postorder, header fields can only be aliased with metadata fields,
+    // and for these aliases, the header fields are chosen as the alias destination.
+    const PHV::Field* aliasDestination = nullptr;
+    if (auto aliasMem = alias->to<IR::BFN::AliasMember>()) {
+        aliasDestination = phv.field(aliasMem);
+    } else if (auto aliasSlice = alias->to<IR::BFN::AliasSlice>()) {
+        aliasDestination = phv.field(aliasSlice);
+    }
+    BUG_CHECK(aliasDestination, "Reference to alias field %1% not found", alias);
+
+    if (aliasDestination->isPacketField()) {
+        LOG1("Marking field as never overlaid due to aliasing: " << aliasDestination);
+        neverOverlay.setbit(aliasDestination->id);
+    }
 }
 
 void ExcludeDeparsedIntrinsicMetadata::end_apply() {

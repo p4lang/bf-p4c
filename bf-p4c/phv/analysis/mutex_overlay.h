@@ -133,6 +133,30 @@ class BuildMetadataOverlay : public BuildMutex {
         : BuildMutex(phv, neverOverlay, ignore_field) { }
 };
 
+/** Mark aliased header fields as never overlaid. When header fields are aliased, they are always
+ * aliased with metadata, and should therefore be excluded from BuildParserOverlay.
+ */
+class ExcludeAliasedHeaderFields : public Inspector {
+    PhvInfo& phv;
+    bitvec& neverOverlay;
+
+    bool preorder(const IR::BFN::AliasMember* alias) override {
+        excludeAliasedField(alias);
+        return true;
+    }
+
+    bool preorder(const IR::BFN::AliasSlice* alias) override {
+        excludeAliasedField(alias);
+        return true;
+    }
+
+    void excludeAliasedField(const IR::Expression* alias);
+
+ public:
+    ExcludeAliasedHeaderFields(PhvInfo& phv, bitvec& neverOverlay)
+        : phv(phv), neverOverlay(neverOverlay) { }
+};
+
 /** Mark deparsed intrinsic metadata fields as never overlaid.  The deparser
  * reads the valid container bit for containers holding these fields, but
  * they're often never written.
@@ -247,6 +271,7 @@ class MutexOverlay : public PassManager {
             new ExcludeDeparsedIntrinsicMetadata(phv, neverOverlay),
             new ExcludePragmaNoOverlayFields(neverOverlay, pragmas.pa_no_overlay()),
             // new FindAddedHeaderFields(phv, neverOverlay),
+            new ExcludeAliasedHeaderFields(phv, neverOverlay),
             new BuildParserOverlay(phv, neverOverlay),
             new BuildMetadataOverlay(phv, neverOverlay),
             new ExcludeMAUOverlays(phv),

@@ -930,7 +930,7 @@ class PhvInfo {
     ordered_set<cstring> dummyPaddingNames;
 
     /// Mapping of alias source to alias destination. Used for building the correct table dependency
-    /// graph.
+    /// graph. Populated by ReinstateAliasSources.
     ordered_map<const PHV::Field*, const PHV::Field*> aliasMap;
 
     /// Mapping of external name to Field pointers, for fields that have a different external
@@ -1118,13 +1118,13 @@ class PhvInfo {
         externalNameMap[externalName] = f;
     }
 
-    /// @returns the aliasMap.
+    /// @returns the aliasMap. This is empty unless ReinstateAliasSources has been run.
     const ordered_map<const PHV::Field*, const PHV::Field*>& getAliasMap() const {
         return aliasMap;
     }
 
     /// @return alias destination corresponding to @f. Return nullptr if no aliasing relationship
-    /// exists.
+    /// exists or if ReinstateAliasSources has not been run.
     const PHV::Field* getAliasDestination(const PHV::Field* f) const {
         if (aliasMap.count(f)) return aliasMap.at(f);
         return nullptr;
