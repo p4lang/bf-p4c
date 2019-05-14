@@ -11,13 +11,6 @@ class Decorator:
                                 stdout=subprocess.PIPE).stdout.read().decode()
         return '/'.join(name.rstrip('\n').split('/')[2:])
 
-  def get_feature(self, branch):
-        l = branch.split('/')
-        if len(l) > 3:
-          return l[2]
-        else:
-          return None
-
   def get_fix(self, branch):
         l = branch.split('/')
         m = re.match("(brig|p4c|compiler|drv)-(\d+)", l[-1], re.IGNORECASE)
@@ -27,30 +20,25 @@ class Decorator:
 
   def __init__(self):
         self.branch = self.get_branch()
-        self.feature = self.get_feature(self.branch)
         self.project, self.fix = self.get_fix(self.branch)
 
   def decorate(self, m):
-        fix = None
         if self.fix is None:
           return m
 
         summary = m.split('\n')[0]
-        fix = "%s-%s #assign #start-work %s" % \
+        stanza = "%s-%s #assign #start-work %s" % \
               (self.project.upper(), self.fix, summary)
-        add_fix = True
-        count = 0
+        have_stanza = False
+        have_message = False
         n = ""
         for l in m.split('\n'):
-          if count == 0 and self.feature and feature not in l:
-            n += "%s %s\n" % (feature, l)
-          else:
-            n += "%s\n" % l
-            count += 1
-          if fix in l:
-            add_fix = False
-        if fix is not None and add_fix:
-          n += '\n' + fix + '\n'
+          n += "%s\n" % l
+          if l.startswith('#'): continue  # Ignore comment lines.
+          have_message |= l.strip() != ""
+          have_stanza |= stanza in l
+        if have_message and not have_stanza:
+          n += '\n' + stanza + '\n'
         return n
 
 msg = None
