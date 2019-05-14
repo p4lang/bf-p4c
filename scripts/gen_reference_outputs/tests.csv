@@ -23,7 +23,7 @@ stful,p4-tests/p4-programs/programs/stful/stful.p4,,"--archive",tofino,p4-14,v1m
 action_spec_format,p4-tests/p4-programs/internal_p4_14/action_spec_format/action_spec_format.p4,,"--archive",tofino,p4-14,v1model
 alpm_test,p4-tests/p4-programs/programs/alpm_test/alpm_test.p4,,"--archive",tofino,p4-14,v1model
 atomic_mod,p4-tests/p4-programs/internal_p4_14/atomic_mod/atomic_mod.p4,,"--archive",tofino,p4-14,v1model
-basic_ipv4,p4-tests/p4-programs/programs/basic_ipv4/basic_ipv4.p4,,"--archive",tofino,p4-14,v1model
+basic_ipv4,p4-tests/p4-programs/internal_p4_14/basic_ipv4/basic_ipv4.p4,,"--archive",tofino,p4-14,v1model
 basic_switching,p4-tests/p4-programs/programs/basic_switching/basic_switching.p4,,"--archive",tofino,p4-14,v1model
 chksum,p4-tests/p4-programs/programs/chksum/chksum.p4,,"--archive",tofino,p4-14,v1model
 switch_msdc_profile,p4-tests/p4_14/switch/p4src/switch.p4,,"-DMSDC_PROFILE -DP4_WRED_DEBUG",tofino,p4-14,v1model
