@@ -48,7 +48,7 @@ struct BridgeIngressToEgress : public Transform {
                                              IR::Type::Bits::get(8)));
 
         IR::IndexedVector<IR::StructField> structFields;
-        unsigned padFieldId = 0;
+        // unsigned padFieldId = 0;
         // The rest of the fields come from CollectBridgedFields.
         for (auto& bridgedField : fieldsToBridge) {
             cstring fieldName = bridgedField.first + bridgedField.second;
@@ -60,17 +60,6 @@ struct BridgeIngressToEgress : public Transform {
                       bridgedField.first, bridgedField.second);
             auto& info = fieldInfo.at(bridgedField);
 
-            // Add padding field for every bridged metadata field to ensure that the resulting
-            // header is byte aligned.
-            const int alignment = getAlignment(info.type->width_bits());
-            if (alignment != 0) {
-                cstring padFieldName = "__pad_";
-                padFieldName += cstring::to_cstring(padFieldId++);
-                auto* fieldAnnotations = new IR::Annotations({
-                        new IR::Annotation(IR::ID("hidden"), { }) });
-                structFields.push_back(new IR::StructField(padFieldName, fieldAnnotations,
-                            IR::Type::Bits::get(alignment)));
-            }
             if (info.type->is<IR::Type_Stack>())
                 P4C_UNIMPLEMENTED("Currently the compiler does not support bridging field %1% "
                         "of type stack.", fieldName);
@@ -85,9 +74,9 @@ struct BridgeIngressToEgress : public Transform {
             }
             auto annot = new IR::Annotations({new IR::Annotation(IR::ID("flexible"), {})});
             auto bridgedMetaType =
-                new IR::BFN::Type_StructFlexible("fields", annot, structFields);
+                    new IR::Type_Struct("fields", annot, structFields);
 
-            fields.push_back(new IR::StructField(BRIDGED_MD_FIELD, bridgedMetaType));
+            fields.push_back(new IR::StructField(BRIDGED_MD_FIELD, annot, bridgedMetaType));
         }
 
         auto* layoutKind = new IR::StringLiteral(IR::ID("BRIDGED"));
@@ -335,6 +324,8 @@ AddTnaBridgeMetadata::AddTnaBridgeMetadata(P4::ReferenceMap* refMap, P4::TypeMap
     addPasses({
         collectBridgedFields,
         bridgeIngressToEgress,
+        new P4::ClearTypeMap(typeMap),
+        new BFN::TypeChecking(refMap, typeMap, true),
     });
 }
 

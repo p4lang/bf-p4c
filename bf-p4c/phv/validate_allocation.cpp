@@ -80,7 +80,8 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             throwPrivatizeException = true;
             continue;
         } else {
-            ERROR_CHECK(!field.is_unallocated() || clot.clot(&field),
+            // XXX(hanw): paddings do not require phv allocation.
+            ERROR_CHECK(!field.is_unallocated() || clot.clot(&field) || field.is_ignore_alloc(),
                     "No PHV or CLOT allocation for referenced field %1%",
                     cstring::to_cstring(field));
         }
@@ -331,6 +332,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
 
     auto isDeparsed = [](const PHV::Field* f) { return f->deparsed(); };
     auto isMetadata = [](const PHV::Field* f) { return f->metadata || f->pov; };
+    auto isPadding = [](const PHV::Field* f) { return f->overlayablePadding; };
     auto hasOverlay = [](const PHV::Field* f) {
         le_bitrange allocated;
         for (auto& slice : f->get_alloc()) {
@@ -350,18 +352,27 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         for (auto* f : fieldSet)
             if (!f->is_deparser_zero_candidate()) return false;
         return true; };
+    auto atMostOneNonePadding = [&](const ordered_set<const PHV::Field*> fieldSet) {
+        int count = 0;
+        for (auto* f : fieldSet)
+            if (!f->overlayablePadding) count++;
+        return count <= 1; };
 
     // Check that we've marked a field as deparsed if and only if it's actually
     // emitted in the deparser.
     for (auto& field : phv) {
-        if (isDeparsed(&field))
+        if (isDeparsed(&field)) {
+            // do not warn on 'un-deparsed' padding
+            // 'deparsed' property on padding is controlled by the padded field.
+            if (field.padding()) {
+                continue; }
             WARN_CHECK(deparseOccurrences.find(&field) != deparseOccurrences.end(),
                         "Field is marked as deparsed, but the deparser doesn't "
                         "emit it: %1%", cstring::to_cstring(field));
-        else
+        } else {
             ERROR_CHECK(deparseOccurrences.find(&field) == deparseOccurrences.end(),
                         "Field is not marked as deparsed, but the deparser "
-                        "emits it: %1%", cstring::to_cstring(field));
+                        "emits it: %1%", cstring::to_cstring(field)); }
     }
 
     // Check that the allocation for each container is valid.
@@ -390,13 +401,16 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         std::set<const PHV::Field*> deparsedHeaderFields;
         std::set<const PHV::Field*> deparsedMetadataFields;
         std::set<const PHV::Field*> nonDeparsedFields;
+        std::set<const PHV::Field*> deparsedPaddingFields;
 
         for (auto& slice : slices) {
             auto* field = slice.field;
             if (!isDeparsed(field)) {
                 nonDeparsedFields.insert(field);
                 continue; }
-            if (isMetadata(field))
+            if (isPadding(field))
+                deparsedPaddingFields.insert(field);
+            else if (isMetadata(field))
                 deparsedMetadataFields.insert(field);
             else
                 deparsedHeaderFields.insert(field);
@@ -461,7 +475,8 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         }
 
         for (auto& kv : bits_to_fields) {
-            ERROR_CHECK(allMutex(kv.second, kv.second) || allDeparsedZero(kv.second),
+            ERROR_CHECK(allMutex(kv.second, kv.second) || allDeparsedZero(kv.second) ||
+                        atMostOneNonePadding(kv.second),
                         "Container %1% contains fields which overlap:\n%2%",
                         container, cstring::to_cstring(kv.second));
         }

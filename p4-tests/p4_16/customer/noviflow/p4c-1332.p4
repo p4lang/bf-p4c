@@ -6,38 +6,27 @@
 action nop() {}
 
 
-@pa_atomic("egress", "hdr.mirror.mirrorfield1")
-@pa_atomic("ingress", "hdr.mirror.mirrorfield1")
 header mirror_meta_hdr_t{
-    bit<15> pad0;
-    bit<17> mirrorfield1;
-    bit<16> mirrorfield2;
-    bit<4> pad1;
-    bit<4> mirrorfield3;
-    bit<15> pad2;
-    bit<1> someflag5; 
+    bit<8> type;
+    @flexible bit<17> mirrorfield1;
+    @flexible bit<16> mirrorfield2;
+    @flexible bit<4> mirrorfield3;
+    @flexible bit<1> someflag5;
 }
 
 header bridged_meta_hdr_t{
-    bit<7> pad1;
-    bit<1> someflag5;
-    bit<7> pad2;
-    bit<1> someflag6;
-    bit<7> pad3;
-    bit<1> someflag7;
-    bit<7> pad4;
-    bit<1> someflag8;
-    bit<7> pad5;
-    bit<1> someflag9;
-    bit<4> pad6;
-    bit<4> somefield1;
-    bit<16> egress_port;
-    bit<16> ingress_phy_port;
-    bit<32> meta;
-    bit<16> ingress_port;
-    bit<16> etherType;
-    bit<3> somefield;
-    bit<5> pad;
+    @flexible bit<1> someflag5;
+    @flexible bit<1> someflag6;
+    @flexible bit<1> someflag7;
+    @flexible bit<1> someflag8;
+    @flexible bit<1> someflag9;
+    @flexible bit<4> somefield1;
+    @flexible bit<16> egress_port;
+    @flexible bit<16> ingress_phy_port;
+    @flexible bit<32> meta;
+    @flexible bit<16> ingress_port;
+    @flexible bit<16> etherType;
+    @flexible bit<3> somefield;
 }
 
 struct ingress_metadata_t {
@@ -409,7 +398,7 @@ control egress_deparser( packet_out packet,
         packet.emit(hdr.pkt);
         if (eg_md.do_clone == 1)
         {
-            mirror.emit(eg_md.mirror_id, { hdr.internal.type,
+            mirror.emit<mirror_meta_hdr_t>(eg_md.mirror_id, { hdr.internal.type,
 
                                             hdr.mirror.mirrorfield1,
                                             hdr.mirror.mirrorfield2,

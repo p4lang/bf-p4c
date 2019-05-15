@@ -421,6 +421,10 @@ lowerFields(const PhvInfo& phv, const ClotInfo& clotInfo,
             continue;
         }
 
+        // padding in digest list does not need phv allocation
+        if (field->is_ignore_alloc())
+            continue;
+
         std::vector<alloc_slice> slices = phv.get_alloc(fieldRef->field);
 
         BUG_CHECK(!slices.empty(),
@@ -902,7 +906,7 @@ class ResolveParserConstants : public ParserTransform {
             totalBytes += cb.second.size();
 
         auto state = findContext<IR::BFN::ParserState>();
-        if (state && state->name.startsWith("$mirror_field_list_")) {
+        if (state && state->name.startsWith("egress::$mirror_field_list_")) {
             totalBytes += 4;  // offset 4 bytes of CRC added by HW for mirrored packet
         }
 
@@ -959,6 +963,11 @@ computeControlPlaneFormat(const PhvInfo& phv,
     // necessary to reflect gaps between the fields.
     for (auto* fieldRef : fields) {
         std::vector<alloc_slice> slices = phv.get_alloc(fieldRef->field);
+
+        // padding in digest list does not need phv allocation
+        auto field = phv.field(fieldRef->field);
+        if (field->is_ignore_alloc())
+            continue;
 
         BUG_CHECK(!slices.empty(),
                   "Emitted field didn't receive a PHV allocation: %1%",
@@ -1557,6 +1566,20 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
             loweredDeparser->params.push_back(lowered);
         }
 
+        // Filter padding field out of digest field list
+        auto filterPaddingField =
+            [&](const IR::BFN::DigestFieldList* fl)->IR::BFN::DigestFieldList* {
+            auto sources = new IR::Vector<IR::BFN::FieldLVal>();
+            for (auto src : fl->sources) {
+                /// do not emit padding field in digest field list.
+                if (src->is<IR::Padding>())
+                    continue;
+                sources->push_back(src);
+            }
+            return new IR::BFN::DigestFieldList(fl->idx, *sources,
+                    fl->type, fl->controlPlaneName);
+        };
+
         // Lower digests from fields to containers.
         for (auto& item : deparser->digests) {
             auto* digest = item.second;
@@ -1580,8 +1603,13 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
                 IR::Vector<IR::BFN::ContainerRef> phvSources;
                 std::vector<Clot> clotSources;
 
+                // XXX(hanw): filter out padding fields inside the field list which
+                // exist for alignment purpose, they should not be deparsed as it
+                // would causes the same container to be emitted twice.
+                auto fieldListNoPad = filterPaddingField(fieldList);
+
                 std::tie(phvSources, clotSources) =
-                    lowerFields(phv, clotInfo, fieldList->sources);
+                    lowerFields(phv, clotInfo, fieldListNoPad->sources);
 
                 BUG_CHECK(clotSources.empty(), "digest data cannot be sourced from CLOT");
 
@@ -1589,7 +1617,7 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
 
                 if (digest->name == "learning") {
                     auto* controlPlaneFormat =
-                      computeControlPlaneFormat(phv, fieldList->sources);
+                      computeControlPlaneFormat(phv, fieldListNoPad->sources);
                     entry = new IR::BFN::LearningTableEntry(fieldList->idx,
                                                             phvSources,
                                                             fieldList->controlPlaneName,

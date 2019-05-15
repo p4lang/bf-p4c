@@ -28,26 +28,6 @@ const IR::Type* TypeInference::setTypeType(const IR::Type* type, bool learn) {
 }
 
 /**
- * IR class to represent a special struct whose layout can be changed when used as
- * bridged metadata, mirrored metadata, etc.
- */
-const IR::Node *TypeInference::postorder(IR::BFN::Type_StructFlexible *type) {
-    auto canon = setTypeType(type);
-    auto validator = [this] (const IR::Type* t) {
-        while (t->is<IR::Type_Newtype>())
-            t = getTypeType(t->to<IR::Type_Newtype>()->type);
-        return t->is<IR::Type_Struct>() || t->is<IR::Type_Bits>() ||
-               t->is<IR::Type_Header>() || t->is<IR::Type_HeaderUnion>() ||
-               t->is<IR::Type_Enum>() || t->is<IR::Type_Error>() ||
-               t->is<IR::Type_Boolean>() || t->is<IR::Type_Stack>() ||
-               t->is<IR::Type_Varbits>() || t->is<IR::Type_ActionEnum>() ||
-               t->is<IR::Type_Tuple>() || t->is<IR::Type_SerEnum>() ||
-               t->is<IR::BFN::Type_StructFlexible>(); };
-    validateFields(canon, validator);
-    return type;
-}
-
-/**
  * IR class to represent sign conversion from bit<n> to int<n>, or vice versa.
  */
 const IR::Node* TypeInference::postorder(IR::BFN::ReinterpretCast *expression) {
@@ -87,68 +67,29 @@ const IR::Node* TypeInference::postorder(IR::BFN::SignExtend *expression) {
     return expression;
 }
 
-/**
- * Overrides the default implementation in frontend to add support
- * for IR::BFN::Type_StructFlexible.
- */
-const IR::Node* TypeInference::postorder(IR::Type_Header* type) {
-    auto canon = setTypeType(type);
-    auto validator = [this] (const IR::Type* t) {
-        while (t->is<IR::Type_Newtype>())
-            t = getTypeType(t->to<IR::Type_Newtype>()->type);
-        return t->is<IR::Type_Bits>() || t->is<IR::Type_Varbits>() ||
-               t->is<IR::BFN::Type_StructFlexible>() ||
-               (t->is<IR::Type_Struct>() && onlyBitsOrBitStructs(t)) ||
-               t->is<IR::Type_SerEnum>(); };
-    validateFields(canon, validator);
-
-    LOG1("tt " << type);
-    const IR::StructField* varbit = nullptr;
-    for (auto field : type->fields) {
-        auto ftype = getType(field);
-        if (ftype == nullptr)
-            return type;
-        if (ftype->is<IR::Type_Varbits>()) {
-            if (varbit == nullptr) {
-                varbit = field;
-            } else {
-                typeError("%1% and %2%: multiple varbit fields in a header",
-                          varbit, field);
-                return type;
+const IR::Node* TypeInference::postorder(IR::Member* expression) {
+    if (done()) return expression;
+    auto type = getType(expression->expr);
+    if (type == nullptr)
+        return expression;
+    cstring member = expression->member.name;
+    if (type->is<IR::Type_StructLike>()) {
+        if (type->is<IR::Type_Header>() || type->is<IR::Type_HeaderUnion>()) {
+            if (member == "$valid") {
+                // Built-in method
+                auto type = IR::Type::Bits::get(1);
+                auto ctype = canonicalize(type);
+                if (ctype == nullptr)
+                    return expression;
+                setType(getOriginal(), ctype);
+                setType(expression, ctype);
+                setLeftValue(expression);
+                setLeftValue(getOriginal<IR::Expression>());
+                return expression;
             }
         }
     }
-    return type;
-}
-
-const IR::Type* TypeInference::canonicalize(const IR::Type* type) {
-    if (type == nullptr)
-        return nullptr;
-
-    auto exists = typeMap->getType(type);
-    if (exists != nullptr) {
-        if (exists->is<IR::Type_Type>())
-            return exists->to<IR::Type_Type>()->type;
-        return exists;
-    }
-    if (auto tt = type->to<IR::Type_Type>())
-        type = tt->type;
-
-    if (type->is<IR::BFN::Type_StructFlexible>()) {
-        auto str = type->to<IR::BFN::Type_StructFlexible>();
-        auto fields = canonicalizeFields(str);
-        if (fields == nullptr)
-            return nullptr;
-        const IR::Type *canon;
-        if (fields != &str->fields)
-            canon = new IR::BFN::Type_StructFlexible(str->srcInfo,
-                    str->name, str->annotations, *fields);
-        else
-            canon = str;
-        return canon;
-    } else {
-        return P4::TypeInference::canonicalize(type);
-    }
+    return P4::TypeInference::postorder(expression);
 }
 
 TypeInference* TypeInference::clone() const {
@@ -167,6 +108,8 @@ TypeChecking::TypeChecking(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
         updateExpressions ? new P4::ResolveReferences(refMap) : nullptr });
     setStopOnError(true);
 }
+
+
 
 // similarly, it might be better to avoid code duplication here.
 EvaluatorPass::EvaluatorPass(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {

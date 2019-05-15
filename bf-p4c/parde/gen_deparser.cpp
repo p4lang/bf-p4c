@@ -75,6 +75,21 @@ bool ExtractDeparser::preorder(const IR::IfStatement *ifstmt) {
 }
 
 /**
+ * XXX(hanw): Fix up digest field list for mirror by appending the
+ * mirror_session_id at the beginning of the digest field list. This had to be
+ * done here. Had it done earlier in the midend, it would be part of the mirror
+ * header type. However, it does not work because we generate parser extract
+ * statement from the mirror header type and 'session_id' is not part of the
+ * packet that can be parsed. The earliest location to fix up the digest field
+ * list is here.
+ */
+void ExtractDeparser::fixup_mirror_digest(const IR::MethodCallExpression* mc,
+        IR::IndexedVector<IR::NamedExpression>* components) {
+    auto session_id = new IR::NamedExpression("$session_id", mc->arguments->at(0)->expression);
+    components->push_back(session_id);
+}
+
+/**
  * Converting IR::MethodCallExpression to IR::BFN::DigestFieldList.
  *
  * The MethodCallExpression can be 'emit' or 'pack' depending on
@@ -97,6 +112,7 @@ bool ExtractDeparser::preorder(const IR::MethodCallExpression* mc) {
     if (!mi->is<P4::ExternMethod>())
         return false;
 
+    // TODO: fix code with a helper class.
     auto em = mi->to<P4::ExternMethod>();
     if (em->method->name == "emit") {
         if (em->actualExternType->getName() == "packet_out") {
@@ -105,31 +121,26 @@ bool ExtractDeparser::preorder(const IR::MethodCallExpression* mc) {
                 [&](const IR::Expression* field, const IR::Expression* povBit) {
                 dprsr->emits.push_back(new IR::BFN::EmitField(mc->srcInfo, field, povBit)); });
         } else if (em->actualExternType->getName() == "Mirror") {
+            if (mc->arguments->size() != 2) {
+               generateDigest(digests["mirror"], "mirror", nullptr, mc);
+               return false; }
             auto expr = mc->arguments->at(1)->expression;
-            // field list is ListExpression if source is P4-14
-            if (auto list = expr->to<IR::ListExpression>()) {
-                // Convert session_id, { field_list } --> { session_id, field_list }
-                auto expr = new IR::ListExpression(
-                        list->srcInfo, list->type, list->components);
-                expr->components.insert(expr->components.begin(),
-                                        mc->arguments->at(0)->expression);
-                generateDigest(digests["mirror"], "mirror", expr, mc);
-            }
-            // field list is StructInitializerExpression if source is P4-16
             if (auto list = expr->to<IR::StructInitializerExpression>()) {
+                // field list is StructInitializerExpression if source is P4-16
                 // Convert session_id, { field_list } --> { session_id, field_list }
-                auto combined = new IR::IndexedVector<IR::NamedExpression>();
-                combined->push_back(new IR::NamedExpression("$session_id",
-                                                            mc->arguments->at(0)->expression));
-                combined->append(list->components);
+                auto components = new IR::IndexedVector<IR::NamedExpression>();
+                fixup_mirror_digest(mc, components);
+                components->append(list->components);
+                auto list_type = typeMap->getTypeType(mc->typeArguments->at(0), true);
                 auto mirror_field_list =
-                        new IR::StructInitializerExpression(list->name, *combined, true);
+                    new IR::StructInitializerExpression(list_type,
+                            list->name, *components, true);
                 generateDigest(digests["mirror"], "mirror", mirror_field_list, mc);
             }
         } else if (em->actualExternType->getName() == "Resubmit") {
             auto num_args = mc->arguments->size();
-            auto expr = (num_args == 0) ? new IR::ListExpression({})
-                                        : mc->arguments->at(0)->expression;
+            auto expr = (num_args == 0) ? nullptr  /* no argument in resubmit.emit() */
+                : mc->arguments->at(0)->expression;
             generateDigest(digests["resubmit"], "resubmit", expr, mc);
         } else if (em->actualExternType->getName() == "Pktgen") {
             auto expr = mc->arguments->at(0)->expression;
@@ -200,22 +211,11 @@ void ExtractDeparser::generateDigest(IR::BFN::Digest *&digest, cstring name,
 
     IR::Vector<IR::BFN::FieldLVal> sources;
     if (!expr) {
-        // Treat as an empty list.
-    } else if (auto* list = expr->to<const IR::Vector<IR::Expression>>()) {
-        for (auto* item : *list) {
-            if (item->is<IR::Concat>()) {
-                process_concat(sources, item->to<IR::Concat>());
-            } else {
-                sources.push_back(new IR::BFN::FieldLVal(item)); }
-        }
-    } else if (auto* list = expr->to<IR::ListExpression>()) {
-        for (auto* item : list->components) {
-            if (item->is<IR::Concat>()) {
-                process_concat(sources, item->to<IR::Concat>());
-            } else {
-                sources.push_back(new IR::BFN::FieldLVal(item)); }
-        }
+        auto* fieldList = new IR::BFN::DigestFieldList(
+                digest_index, sources, nullptr, controlPlaneName);
+        digest->fieldLists.push_back(fieldList);
     } else if (auto *ref = expr->to<IR::ConcreteHeaderRef>()) {
+        LOG1("concrete header ref " << expr);
         if (auto *st = expr->type->to<IR::Type_StructLike>()) {
             for (auto *item : st->fields) {
                 sources.push_back(new IR::BFN::FieldLVal(gen_fieldref(ref->ref, item->name)));
@@ -225,15 +225,27 @@ void ExtractDeparser::generateDigest(IR::BFN::Digest *&digest, cstring name,
         for (auto *item : initializer->components) {
             if (item->expression->is<IR::Concat>()) {
                 process_concat(sources, item->expression->to<IR::Concat>());
+            } else if (auto cst = item->expression->to<IR::Constant>()) {
+                // We assume zero is the value for padding fields.
+                if (cst->asInt() == 0)
+                    sources.push_back(new IR::BFN::FieldLVal(new IR::Padding(cst->type)));
+                else
+                    ::error(ErrorType::ERR_UNSUPPORTED,
+                            "Non-zero constant value %1% in digest field list"
+                            " is not supported on tofino.", cst);
             } else {
                 sources.push_back(new IR::BFN::FieldLVal(item->expression)); }
         }
+        LOG3(" digest type " << expr->type);
+        auto type = expr->type->to<IR::Type_StructLike>();
+        if (type == nullptr)
+            ::error("Digest field list %1% must be a struct/header type", expr);
+        auto* fieldList =
+            new IR::BFN::DigestFieldList(digest_index, sources, type, controlPlaneName);
+        digest->fieldLists.push_back(fieldList);
     } else {
-            sources.push_back(new IR::BFN::FieldLVal(expr));
+        BUG("Unexpected expression as digest field list ", expr);
     }
-
-    auto* fieldList = new IR::BFN::DigestFieldList(digest_index, sources, controlPlaneName);
-    digest->fieldLists.push_back(fieldList);
 }
 
 }  // namespace BFN

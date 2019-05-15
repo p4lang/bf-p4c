@@ -3,11 +3,14 @@
 
 #include "ir/ir.h"
 #include "bf-p4c/device.h"
+#include "frontends/p4/cloner.h"
+#include "frontends/p4/typeChecking/typeChecker.h"
+#include "bf-p4c/midend/type_checker.h"
 
 namespace BFN {
 
 /// Add parser code to extract the standard TNA intrinsic metadata.
-class AddIntrinsicMetadata : public Transform {
+class AddMetadataFields : public Transform {
     const IR::ParserState* start_i2e_mirrored = nullptr;
     const IR::ParserState* start_e2e_mirrored = nullptr;
     const IR::ParserState* start_coalesced = nullptr;
@@ -18,7 +21,7 @@ class AddIntrinsicMetadata : public Transform {
     std::map<cstring, const IR::SelectCase*> selectCaseMap;
 
  public:
-    AddIntrinsicMetadata() { setName("AddIntrinsicMetadata"); }
+    AddMetadataFields() { setName("AddIntrinsicMetadata"); }
     /// @return a parser state with a name that's distinct from the states in
     /// the P4 program and an `@name` annotation with a '$' prefix. Downstream,
     /// we search for certain '$' states and replace them with more generated
@@ -352,6 +355,18 @@ class AddIntrinsicMetadata : public Transform {
                               selectCaseMap);
         return parser;
     }
+};
+
+class AddIntrinsicMetadata : public PassManager {
+ public:
+     AddIntrinsicMetadata(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {
+         addPasses({
+             new AddMetadataFields,
+             new P4::ClonePathExpressions,
+             new P4::ClearTypeMap(typeMap),
+             new BFN::TypeChecking(refMap, typeMap, true),
+             });
+     }
 };
 
 }  // namespace BFN

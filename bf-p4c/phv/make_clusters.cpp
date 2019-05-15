@@ -1,5 +1,6 @@
 #include "bf-p4c/phv/make_clusters.h"
 #include <boost/range/adaptors.hpp>
+#include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "lib/algorithm.h"
 #include "lib/log.h"
@@ -11,6 +12,7 @@ Visitor::profile_t Clustering::ClearClusteringStructs::init_apply(const IR::Node
     self.rotational_clusters_i.clear();
     self.super_clusters_i.clear();
     self.fields_to_slices_i.clear();
+    self.slices_used_in_slice_lists_i.clear();
     self.complex_validity_bits_i.clear();
     return rv;
 }
@@ -369,8 +371,10 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
     const PhvInfo::StructInfo& struct_info = phv_i.struct_info(hr);
 
     // Only analyze headers, not metadata structs.
-    if (struct_info.metadata || struct_info.size == 0)
+    if (struct_info.metadata || struct_info.size == 0) {
+        LOG5("Ignoring metadata or zero struct info: " << hr);
         return;
+    }
 
     if (headers_i.find(struct_info.first_field_id) != headers_i.end())
         return;
@@ -387,10 +391,12 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
     // boost::none indicating that the slice list hasn't been started yet.
     // TODO(yumin): optional<bool> is not good.
     boost::optional<bool> prev_is_tphv = boost::none;
+    const PHV::Field* lastDigest = nullptr;
     bool lastNoPack = false;
     bool lastWideArith = false;
     bool lastDeparserZero = false;
     bool break_at_next_byte_boundary = false;
+    bool lastUnreferenced = false;
 
     auto StartNewSliceList = [&](void) {
         slice_lists_i.insert(accumulator);
@@ -398,9 +404,11 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
         prev_is_tphv = boost::none;
         accumulator = new PHV::SuperCluster::SliceList();
         lastNoPack = false;
+        lastDigest = nullptr;
         lastWideArith = false;
         lastDeparserZero = false;
         break_at_next_byte_boundary = false;
+        lastUnreferenced = false;
     };
 
     LOG5("Starting new slice list:");
@@ -420,20 +428,19 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
         // longer-term solution is to replace slice lists with
         // finer-granularity constraints.
 
-        // XXX(Deep): From BRIG-899
-        // The hardware writes ghost metadata to a single 32-bit phv container in a very
-        // constrained form. The fields are written to certain bits in a fixed way:
-        //   pipe to [1:0]
-        //   qid to [12:2]
-        //   qlength to [30:13]
-        //   pingpong to [31:31]
-        // So, phv allocation must match the header. If a particular field is unused (pipe is rarely
-        // used), the hardware will still write those bits, so it may not be possible to reuse it
-        // for something else (need to add an explicit write in the mau pipe). The fields may not
-        // also be relocated within the container.
-        if (accumulator_bits == 0 && !self.uses_i.is_referenced(field) && !field->isGhostField()) {
-            LOG5("    ...skipping unreferenced field at the beginning of a slice list: " << field);
-            continue; }
+        // XXX(hanw):
+        // When allocating for a header that has
+        // header {
+        //    bit<4> _field_0;   // unreferenced;
+        //    bit<4> _padding;
+        //    bit<8> _field_1;   // referenced; }
+        // The check above would skip the first field, because it is
+        // unreferenced. We should also skip the second padding.
+        if (accumulator_bits % int(PHV::Size::b8) == 0 &&
+                lastUnreferenced && field->overlayablePadding) {
+            LOG5("    ...skipping padding after unreferenced field: " << field);
+            continue;
+        }
 
         // If the slice list contains a no_pack field, then all the other slices in the list (if
         // any) must be overlayablePadding or unreferenced (unreferenced fields effectively act as a
@@ -487,7 +494,20 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
             // allocation across containers - what we really want is a constraint
             // that spreads out digest fields AND allocate to its nearest native PHV size
             StartNewSliceList();
+            lastDigest = field;
             LOG5("Starting new slice list (for digest field):");
+        } else if (accumulator_bits % int(PHV::Size::b8) == 0 &&
+                lastDigest != nullptr && !field->is_digest() && !field->overlayablePadding) {
+            // break off the existing slice list if a metadata field is used in digest,
+            // AND the field is aliased as a source to a bridged metadata header AND
+            // the next field in the bridged metadata header is not used in the digest.
+            // This happens in switch-16 with mirroring digest.
+            // DO NOT break off if the field is a header field, otherwise, it may break
+            // the packing requirement of header field, see basic_ipv4.p4 when emitting
+            // ipv4.ihl as a digest field, it must be packed with ipv4.version, even if
+            // the ipv4.version if not emitted.
+            StartNewSliceList();
+            LOG5("Starting new slice list (to isolate non digest field from digest field):");
         } else if (accumulator_bits % int(PHV::Size::b8) == 0 && break_at_next_byte_boundary) {
             StartNewSliceList();
             LOG5("Starting new slice list (at phase 0 field boundary):");
@@ -529,15 +549,33 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
             LOG5("Starting new slice list (after " << accumulator_bits << "b because the next field"
                     " is unreferenced):"); }
 
+        // XXX(Deep): From BRIG-899
+        // The hardware writes ghost metadata to a single 32-bit phv container in a very
+        // constrained form. The fields are written to certain bits in a fixed way:
+        //   pipe to [1:0]
+        //   qid to [12:2]
+        //   qlength to [30:13]
+        //   pingpong to [31:31]
+        // So, phv allocation must match the header. If a particular field is unused (pipe is rarely
+        // used), the hardware will still write those bits, so it may not be possible to reuse it
+        // for something else (need to add an explicit write in the mau pipe). The fields may not
+        // also be relocated within the container.
+        if (accumulator_bits == 0 && !self.uses_i.is_referenced(field) && !field->isGhostField()) {
+            LOG5("    ...skipping unreferenced field at the beginning of a slice list: " << field);
+            lastUnreferenced = true;
+            continue; }
+
         int field_slice_list_size = 0;
         for (auto& slice : self.fields_to_slices_i.at(field)) {
             LOG5("    ...adding " << slice);
             accumulator->push_back(slice);
-            field_slice_list_size += slice.size(); }
+            field_slice_list_size += slice.size();
+            self.slices_used_in_slice_lists_i.insert(slice); }
         accumulator_bits += field->size;
         lastNoPack = field->no_pack() || (lastNoPack && !self.uses_i.is_referenced(field));
         lastWideArith = field->used_in_wide_arith();
         lastDeparserZero = field->is_deparser_zero_candidate();
+        lastUnreferenced = !self.uses_i.is_referenced(field);
 
         // We use AND because all slices in a slice list must be TPHV
         // candidates for the slice list to be a TPHV candidate.  Note that a
@@ -569,6 +607,82 @@ bool Clustering::MakeSuperClusters::preorder(const IR::ConcreteHeaderRef* hr) {
 
 bool Clustering::MakeSuperClusters::preorder(const IR::HeaderStackItemRef* hr) {
     visitHeaderRef(hr);
+    return false;
+}
+
+// Create slice list from digest field list, this will allow compiler inserted
+// padding field to be allocated to the same container as the field that is
+// being padded.
+void Clustering::MakeSuperClusters::visitDigestFieldList(
+        const IR::BFN::DigestFieldList *fl, int skip) {
+    PHV::SuperCluster::SliceList *accumulator = new PHV::SuperCluster::SliceList();
+    int accumulator_bits = 0;
+    bool lastSkipped = 0;
+
+    if (fl->sources.size() == 0)
+        return;
+    LOG5("  creating slice list from field list: " << fl);
+
+    auto StartNewSliceList = [&](void) {
+        accumulator_bits = 0;
+        accumulator = new PHV::SuperCluster::SliceList();
+        lastSkipped = false;
+    };
+
+    for (auto f = fl->sources.rbegin(); f != fl->sources.rend() - skip; f++) {
+        const PHV::Field* field = phv_i.field((*f)->field);
+
+        if (lastSkipped && field->overlayablePadding) {
+            LOG5("    ...skipping padding after duplicated field: " << field);
+            continue;
+        }
+        if (accumulator_bits % int(PHV::Size::b8) == 0) {
+            slice_lists_i.insert(accumulator);
+            StartNewSliceList();
+            LOG5("Starting new slice list (for digest)");
+        }
+        for (auto &slice : self.fields_to_slices_i.at(field)) {
+            if (!self.slices_used_in_slice_lists_i.count(slice)) {
+                LOG5("    ...adding " << slice);
+                self.slices_used_in_slice_lists_i.insert(slice);
+                accumulator->push_back(slice);
+                accumulator_bits += slice.size();
+            } else {
+                LOG5("    ...skipping duplicated field: " << field);
+                StartNewSliceList();
+                lastSkipped = true;
+            }
+        }
+    }
+
+    if (accumulator->size()) {
+        slice_lists_i.insert(accumulator);
+    }
+}
+
+bool Clustering::MakeSuperClusters::preorder(const IR::BFN::Digest* digest) {
+    if (digest->name != "learning" && digest->name != "mirror"
+            && digest->name != "resubmit" && digest->name != "pktgen")
+        return false;
+
+    if (digest->name == "learning" || digest->name == "pktgen") {
+        for (auto fieldList : digest->fieldLists)
+            visitDigestFieldList(fieldList, 0);
+    }
+
+    if (digest->name == "resubmit") {
+        for (auto fieldList : digest->fieldLists) {
+            visitDigestFieldList(fieldList, 1);
+        }
+    }
+
+    // skip the first element in digest sources which is the session id
+    if (digest->name == "mirror") {
+        for (auto fieldList : digest->fieldLists) {
+            visitDigestFieldList(fieldList, 1);
+        }
+    }
+
     return false;
 }
 
@@ -712,6 +826,20 @@ void Clustering::MakeSuperClusters::end_apply() {
                                // involved in wide arithmetic to ensure that the slices of those
                                // fields can bbe placed adjacently.
                                || kv.first->used_in_wide_arith() || is_exact_containers;
+
+        // XXX(hanw): if any slice of a field is already assigned to a slice
+        // list, do not create additional slice list from the field.  This is
+        // to avoid creating separate slice list for padding and padded in
+        // digest field lists.
+        bool used = false;
+        for (auto& slice : kv.second) {
+            if (self.slices_used_in_slice_lists_i.count(slice)) {
+                used = true;
+                break; } }
+        if (used) {
+            LOG5("Skip creating slice list for field " << kv.first);
+            continue;
+        }
 
         // XXX(cole): Bridged metadata is treated as a header, except in the
         // egress pipeline, where it's treated as metadata.  We need to take

@@ -142,6 +142,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         // Needs to be run after InstructionSelection but before deadcode elimination.
         new FlexiblePacking(phv, uses, deps, bridged_fields, extracted_together, table_alloc),
         // Run after bridged metadata packing as bridged packing updates the parser state.
+        new CollectPhvInfo(phv),
         new ResolveParserValues,
         new CollectPhvInfo(phv),
         (Device::currentDevice() == Device::JBAY && options.infer_payload_offset) ?

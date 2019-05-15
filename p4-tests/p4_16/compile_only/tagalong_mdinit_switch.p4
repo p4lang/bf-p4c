@@ -1809,15 +1809,12 @@ header switch_port_mirror_metadata_h {
     switch_pkt_src_t src;
     switch_mirror_type_t type;
     bit<48> timestamp;
-    bit<6> _pad;
     switch_mirror_session_t session_id;
-
 }
 
 header switch_cpu_mirror_metadata_h {
     switch_pkt_src_t src;
     switch_mirror_type_t type;
-    bit<7> _pad;
     switch_port_t port;
     switch_bd_t bd;
     switch_ifindex_t ifindex;
@@ -1866,10 +1863,8 @@ header switch_dtel_mirror_metadata_h {
     switch_pkt_src_t src;
     switch_mirror_type_t type;
     bit<48> timestamp;
-    bit<6> _pad;
     switch_mirror_session_t session_id;
     bit<32> hash;
-    bit<5> _pad1;
     switch_dtel_report_type_t report_type;
     bit<16> ingress_port;
     bit<16> egress_port;
@@ -4914,22 +4909,22 @@ control IngressMirror(
     apply {
 
         if (ig_intr_md_for_dprsr.mirror_type == 1) {
-            mirror.emit(
+            mirror.emit<switch_port_mirror_metadata_h>(
                 ig_md.mirror.session_id,
                 {ig_md.mirror.src, ig_md.mirror.type, ig_md.timestamp, ig_md.mirror.session_id});
 
         } else if (ig_intr_md_for_dprsr.mirror_type == 3) {
 
-            mirror.emit(ig_md.dtel.session_id, {
+            mirror.emit<switch_dtel_mirror_metadata_h>(ig_md.dtel.session_id, {
                 ig_md.mirror.src,
                 ig_md.mirror.type,
                 ig_md.timestamp,
                 ig_md.dtel.session_id,
                 ig_md.dtel.hash,
                 ig_md.dtel.report_type,
-                ig_md.port,
-                ig_md.egress_port,
-                ig_md.qos.qid,
+                (bit<16>)ig_md.port,
+                (bit<16>)ig_md.egress_port,
+                (bit<8>)ig_md.qos.qid,
                 ig_md.drop_reason
             });
 
@@ -4949,11 +4944,11 @@ control EgressMirror(
     apply {
 
         if (eg_intr_md_for_dprsr.mirror_type == 1) {
-            mirror.emit(
+            mirror.emit<switch_port_mirror_metadata_h>(
                 eg_md.mirror.session_id,
                 {eg_md.mirror.src, eg_md.mirror.type, eg_md.timestamp, eg_md.mirror.session_id});
         } else if (eg_intr_md_for_dprsr.mirror_type == 2) {
-            mirror.emit(eg_md.mirror.session_id, {
+            mirror.emit<switch_cpu_mirror_metadata_h>(eg_md.mirror.session_id, {
                 eg_md.mirror.src,
                 eg_md.mirror.type,
                 eg_md.ingress_port,
@@ -4963,16 +4958,16 @@ control EgressMirror(
         } else if (// eg_intr_md_for_dprsr.mirror_type == SWITCH_MIRROR_TYPE_DTEL_DROP ||
                 eg_intr_md_for_dprsr.mirror_type == 3) {
 
-            mirror.emit(eg_md.dtel.session_id, {
+            mirror.emit<switch_dtel_mirror_metadata_h>(eg_md.dtel.session_id, {
                 eg_md.mirror.src, eg_md.mirror.type,
                 eg_md.timestamp,
                 eg_md.dtel.session_id,
                 eg_md.dtel.hash,
                 eg_md.dtel.report_type,
-                eg_md.ingress_port,
-                eg_md.port,
-                eg_md.drop_reason,
-                eg_md.qos.qid});
+                (bit<16>)eg_md.ingress_port,
+                (bit<16>)eg_md.port,
+		(bit<8>)eg_md.qos.qid,
+		eg_md.drop_reason});
             mirror.emit(eg_md.dtel.session_id, hdr.mirror.dtel);
 
         }

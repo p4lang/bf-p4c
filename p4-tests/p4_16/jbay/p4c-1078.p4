@@ -83,6 +83,9 @@ struct egr_metadata {
   pkt_src_t  mir_type;
 }
 
+header mir_meta_h {
+  pkt_src_t  mir_type;
+}
 parser iPrsr(packet_in packet, out headers hdr, out ing_metadata md,
              out ingress_intrinsic_metadata_t ig_intr_md) {
   state start {
@@ -211,7 +214,7 @@ control ingr(inout headers hdr, inout ing_metadata md,
   action do_deflect_on_drop() {
     ig_intr_tm_md.deflect_on_drop = true;
   }
-  
+
   action do_recirc() {
     ig_intr_tm_md.ucast_egress_port = 6;
   }
@@ -239,7 +242,7 @@ control ingr(inout headers hdr, inout ing_metadata md,
         do_deflect_on_drop();
       } else if (hdr.vlan.pcp == 3) {
         recirc.apply();
-      } 
+      }
     }
 #endif
   }
@@ -253,10 +256,10 @@ control iDprsr(packet_out packet, inout headers hdr, in ing_metadata md,
   Mirror() mirror;
   apply {
     if (ig_intr_md_for_dprs.resubmit_type == 7) {
-      // resubmit.emit();
+      resubmit.emit();
     }
     if (ig_intr_md_for_dprs.mirror_type == 15) {
-      mirror.emit(md.mir_sid, {md.mir_type});
+      mirror.emit<mir_meta_h>(md.mir_sid, {md.mir_type});
     }
     packet.emit(hdr);
   }
@@ -348,7 +351,7 @@ control eDprsr(packet_out packet, inout headers hdr, in egr_metadata md,
   Mirror() mirror;
   apply {
     if (eg_intr_md_for_dprs.mirror_type == 15) {
-      mirror.emit(md.mir_sid, {md.mir_type});
+      mirror.emit<mir_meta_h>(md.mir_sid, {md.mir_type});
     }
     packet.emit(hdr.ethernet);
     packet.emit(hdr.vlan);

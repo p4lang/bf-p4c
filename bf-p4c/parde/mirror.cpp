@@ -4,6 +4,7 @@
 #include "bf-p4c/common/ir_utils.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/parde/field_packing.h"
+#include "frontends/p4/cloner.h"
 #include "frontends/p4/coreLibrary.h"
 #include "frontends/p4/fromv1.0/v1model.h"
 #include "ir/ir.h"
@@ -14,7 +15,6 @@
 
 namespace BFN {
 namespace {
-
 /**
  * Analyze the `mirror.emit()` method within the deparser block,
  * and try to extract the field list.
@@ -38,25 +38,31 @@ analyzeMirrorStatement(const IR::MethodCallStatement* statement) {
                   member->member);
         return boost::none;
     }
-    const IR::ListExpression* fieldList = nullptr;
-    {
-        fieldList = (*methodCall->arguments)[1]->expression->to<IR::ListExpression>();
-        if (!fieldList) {
-            ::warning("Expected field list: %1%", methodCall);
-            return boost::none;
+    const IR::Expression* expression = methodCall->arguments->at(1)->expression;
+    if (expression->is<IR::StructInitializerExpression>()) {
+        const IR::StructInitializerExpression* fieldList = nullptr;
+        {
+            fieldList = expression->to<IR::StructInitializerExpression>();
+            if (!fieldList) {
+                ::warning("Expected field list: %1%", methodCall);
+                return boost::none;
+            }
         }
-    }
-    auto* finalFieldList = new MirroredFieldList;
-    for (auto* field : fieldList->components) {
-        LOG2("mirror field list would include field: " << field);
-        auto* member = field->to<IR::Member>();
-        if (!member || !member->expr->is<IR::HeaderRef>()) {
-            ::warning("Expected field: %1%", field);
-            return boost::none;
+        auto* finalFieldList = new MirroredFieldList;
+        for (auto* field : fieldList->components) {
+            LOG2("mirror field list would include field: " << field);
+            if (!field->expression->is<IR::Concat>() &&
+                !field->expression->is<IR::Cast>() &&
+                !field->expression->is<IR::Constant>() &&
+                !field->expression->is<IR::Member>()) {
+                ::warning("Unexpected field: %1% ", field);
+                return boost::none; }
+            finalFieldList->push_back(field->expression);
         }
-        finalFieldList->push_back(member);
+        LOG3("found fieldList " << finalFieldList);
+        return finalFieldList;
     }
-    return finalFieldList;
+    return boost::none;
 }
 
 boost::optional<const IR::Constant*>
@@ -89,6 +95,7 @@ checkIfStatement(const IR::IfStatement* ifStatement) {
         ::warning("Expected a single method call statement: %1%", method);
         return boost::none;
     }
+    LOG3("found constant " << constant);
     return constant;
 }
 
@@ -104,11 +111,14 @@ struct FindMirroredFieldLists : public Inspector {
         auto gress = deparser->thread;
 
         auto* mi = P4::MethodInstance::resolve(call, refMap, typeMap);
-        if (auto* em = mi->to<P4::ExternMethod>()) {
-            cstring externName = em->actualExternType->name;
-            LOG5("externName: " << externName);
-            if (externName != "Mirror") return false;
-        }
+        if (!mi->is<P4::ExternMethod>())
+            return false;
+
+        auto* em = mi->to<P4::ExternMethod>();
+        cstring externName = em->actualExternType->name;
+        LOG5("externName: " << externName);
+        if (externName != "Mirror")
+            return false;
 
         auto* ifStatement = findContext<IR::IfStatement>();
         if (!ifStatement) {
@@ -122,9 +132,14 @@ struct FindMirroredFieldLists : public Inspector {
         auto fieldList = analyzeMirrorStatement(call);
         if (!fieldList) return false;
 
+        auto mce = call->methodCall->to<IR::MethodCallExpression>();
+        auto type = mce->typeArguments->at(0);
+        auto typeName = type->to<IR::Type_Name>();
+        cstring header = typeName->path->name.name;
+
         unsigned mirrorIdx = (*mirrorIdxConstant)->asInt();
         BUG_CHECK((mirrorIdx & ~0x07) == 0, "Mirror index is more than 3 bits?");
-        fieldLists[std::make_pair(gress, mirrorIdx)] = *fieldList;
+        fieldLists[std::make_tuple(gress, mirrorIdx, header)] = *fieldList;
 
         LOG1("found mirror list");
         return false;
@@ -135,81 +150,226 @@ struct FindMirroredFieldLists : public Inspector {
     P4::TypeMap* typeMap;
 };
 
-FieldPacking* packMirroredFieldList(gress_t from_gress, const MirroredFieldList* fieldList) {
-    auto* packing = new FieldPacking;
+class AddMirroredFieldListParser : public Transform {
+    P4::ClonePathExpressions cloner;
 
-    for (auto* toMirror : *fieldList) {
-        const IR::Member* source = toMirror->to<IR::Member>();
-        auto* containingType = source->expr->type;
-        BUG_CHECK(containingType->is<IR::Type_StructLike>(),
-                  "Mirror field is not attached to a structlike type?");
-        auto* type = containingType->to<IR::Type_StructLike>();
+ public:
+    explicit AddMirroredFieldListParser(const MirroredFieldLists* fieldLists)
+        : fieldLists(fieldLists) { }
 
-        auto* field = type->getField(source->member);
-        BUG_CHECK(field != nullptr,
-                  "Mirror field %1% not found in type %2%", field, type);
-
-        // Skip parsing `mirror_id`, `mirror_type`, and `mirror_source`; they're
-        // handled specially.
-        if (source->member == "mirror_id" &&
-              (type->name == "ingress_intrinsic_metadata_for_mirror_buffer_t" ||
-               type->name == "egress_intrinsic_metadata_for_mirror_buffer_t")) {
-            packing->padToAlignment(8);
-            continue;
-        }
-        if ((source->member == "mirror_type") &&
-              (type->name == "ingress_intrinsic_metadata_for_deparser_t" ||
-               type->name == "egress_intrinsic_metadata_for_deparser_t")) {
-            packing->padToAlignment(8);
-            continue;
-        }
-        if ((source->member == "mirror_source") &&
-            (type->name == "compiler_generated_metadata_t")) {
-            packing->padToAlignment(8);
-            continue;
-        }
-
-        // Align the field so that its LSB lines up with a byte boundary.
-        // After phv allocation, this extract and parser state will be adjusted
-        // accroding to the actual allocation.
-        const int alignment = getAlignment(field->type->width_bits());
-        packing->padToAlignment(8, alignment);
-
-        packing->appendField(source, field->type->width_bits(), from_gress);
-        packing->padToAlignment(8);
+    const IR::BFN::TnaParser* preorder(IR::BFN::TnaParser* parser) override {
+        if (parser->thread != EGRESS)
+            prune();
+        return parser;
     }
 
-    return packing;
-}
+    IR::Node* createEmptyMirrorState(const IR::BFN::TnaParser* parser, cstring nextState) {
+        // Add a state that skips over compiler generated byte
+        auto *skipToPacketState =
+            createGeneratedParserState("mirrored", {
+                createAdvanceCall(parser, 8)
+            }, new IR::PathExpression(IR::ID(nextState)));
+        return skipToPacketState;
+    }
 
-struct AddMirroredFieldListParser : public Transform {
-  AddMirroredFieldListParser(const IR::BFN::Pipe* pipe,
-                             const MirroredFieldListPacking* fieldLists)
-          : pipe(pipe), fieldLists(fieldLists) { }
+    const IR::Node* preorder(IR::ParserState* state) override {
+        auto parser = findOrigCtxt<IR::BFN::TnaParser>();
+        if (!parser) return state;
+        prune();
+        if (state->name == "__mirrored") {
+            // This is the '$mirrored' placeholder state. Generate code to extract
+            auto selExpr = state->selectExpression;
+            if (auto path = selExpr->to<IR::PathExpression>()) {
+                auto nextState = path->path->name;
+                if (fieldLists->size() == 0)
+                    return createEmptyMirrorState(parser, nextState);
+                return addMirroredFieldListParser(parser, state, nextState);
+            } else if (auto selcases = selExpr->to<IR::SelectExpression>()) {
+                auto pathexpr = selcases->selectCases[0]->state;
+                auto nextState = pathexpr->to<IR::PathExpression>()->path->name;
+                return addMirroredFieldListParser(parser, state, nextState);
+            }
+         }
+        return state;
+    }
 
-  const IR::BFN::Parser* preorder(IR::BFN::Parser* parser) override {
-      if (parser->gress != EGRESS)
-          prune();
-      return parser;
-  }
+    /// @return an assignment statement of the form `dest = header.field`.
+    static IR::Statement *
+    createSetMetadata(const IR::Expression* dest, cstring header, cstring field) {
+        auto *member = new IR::Member(new IR::PathExpression(IR::ID(header)),
+                                      IR::ID(field));
+        return new IR::AssignmentStatement(dest, member);
+    }
 
-  const IR::BFN::ParserState* preorder(IR::BFN::ParserState* state) override {
-      auto parser = findOrigCtxt<IR::BFN::Parser>();
-      if (!parser) return state;
-      if (state->name != createThreadName(parser->gress, "$mirrored")) return state;
+    static IR::Statement *
+    createExtractCall(const IR::BFN::TnaParser *parser, cstring header, cstring tmp) {
+        auto packetInParam = parser->tnaParams.at("pkt");
+        auto *method = new IR::Member(new IR::PathExpression(packetInParam),
+                                      IR::ID("extract"));
+        auto *args = new IR::Vector<IR::Argument>(
+            { new IR::Argument(new IR::PathExpression(IR::ID(tmp))) });
+        auto *callExpr = new IR::MethodCallExpression(method, args);
+        return new IR::MethodCallStatement(callExpr);
+    }
 
-      // This is the '$mirrored' placeholder state. Generate code to extract
-      // mirrored field lists.
-      return addMirroredFieldListParser(state->transitions[0]->next);
-  }
 
+    const IR::ParserState* createMirrorState(const IR::BFN::TnaParser* parser,
+            gress_t gress, unsigned cloneSrc, unsigned digestId, cstring header,
+            const MirroredFieldList* fl, cstring nextState) {
+        auto statements = new IR::IndexedVector<IR::StatOrDecl>();
+        /**
+         * T tmp;
+         * pkt.extract(tmp);
+         */
+        auto tmp = cstring::to_cstring(gress) + "_mirror_tmp_" + std::to_string(digestId);
+        auto decl = new IR::Declaration_Variable(IR::ID(tmp), new IR::Type_Name(header));
+        statements->push_back(decl);
+        statements->push_back(createExtractCall(parser, header, tmp));
+
+        /**
+         * copy extract tmp header to metadata;
+         */
+        unsigned field_idx = 0;
+        unsigned skip_idx = 1;
+        // skip compiler generated field
+        for (auto s : *fl) {
+            if (field_idx < skip_idx) {
+                field_idx++;
+                continue; }
+            auto field = "__field_" + std::to_string(field_idx++);
+            statements->push_back(createSetMetadata(s->apply(cloner), tmp, field));
+        }
+
+        statements->push_back(
+            createSetMetadata(parser, "compiler_generated_meta", "clone_digest_id", 4, digestId));
+        statements->push_back(
+            createSetMetadata(parser, "compiler_generated_meta", "clone_src", 4, cloneSrc));
+
+        // Create a state that extracts the fields in this field list.
+        cstring name = "mirror_field_list_" + cstring::to_cstring(gress) + "_" +
+            cstring::to_cstring(digestId);
+
+        auto select = new IR::PathExpression(IR::ID(nextState));
+        auto newStateName = IR::ID(cstring("__") + name);
+        auto *newState = new IR::ParserState(newStateName, *statements, select);
+        newState->annotations = newState->annotations
+            ->addAnnotationIfNew(IR::Annotation::nameAnnotation,
+                                 new IR::StringLiteral(cstring("$") + name));
+        return newState;
+    }
+
+    static IR::ParserState *
+    createGeneratedParserState(cstring name,
+                               IR::IndexedVector<IR::StatOrDecl> &&statements,
+                               const IR::Expression *selectExpression) {
+        auto newStateName = IR::ID(cstring("__") + name);
+        auto *newState = new IR::ParserState(newStateName, statements,
+                                             selectExpression);
+        newState->annotations = newState->annotations
+            ->addAnnotationIfNew(IR::Annotation::nameAnnotation,
+                                 new IR::StringLiteral(cstring("$") + name));
+        return newState;
+    }
+
+    /// @return a lookahead expression for the given size of `bit<>` type.
+    static IR::Expression *
+    createLookaheadExpr(const IR::BFN::TnaParser *parser, int bits) {
+        auto packetInParam = parser->tnaParams.at("pkt");
+        auto *method = new IR::Member(new IR::PathExpression(packetInParam),
+                                      IR::ID("lookahead"));
+        auto *typeArgs = new IR::Vector<IR::Type>({
+                                                      IR::Type::Bits::get(bits)
+                                                  });
+        auto *lookaheadExpr =
+            new IR::MethodCallExpression(method, typeArgs,
+                                         new IR::Vector<IR::Argument>);
+        return lookaheadExpr;
+    }
+
+    /// @return a SelectCase that checks for a constant value with some mask
+    /// applied.
+    static IR::SelectCase *
+    createSelectCase(unsigned bitWidth, unsigned value, unsigned mask,
+                     const IR::ParserState *nextState) {
+        auto *type = IR::Type::Bits::get(bitWidth);
+        auto *valueExpr = new IR::Constant(type, value);
+        auto *maskExpr = new IR::Constant(type, mask);
+        auto *nextStateExpr = new IR::PathExpression(nextState->name);
+        return new IR::SelectCase(new IR::Mask(valueExpr, maskExpr), nextStateExpr);
+    }
+
+    static IR::Statement *
+    createAdvanceCall(const IR::BFN::TnaParser *parser, int bits) {
+        auto packetInParam = parser->tnaParams.at("pkt");
+        auto *method = new IR::Member(new IR::PathExpression(packetInParam),
+                                      IR::ID("advance"));
+        auto *args = new IR::Vector<IR::Argument>(
+            { new IR::Argument(new IR::Constant(IR::Type::Bits::get(32), bits)) });
+        auto *callExpr = new IR::MethodCallExpression(method, args);
+        return new IR::MethodCallStatement(callExpr);
+    }
+
+    /// @return an assignment statement of the form `header.field = constant`.
+    static IR::Statement *
+    createSetMetadata(const IR::BFN::TnaParser *parser, cstring header,
+                      cstring field, int bitWidth, int constant) {
+        auto headerParam = parser->tnaParams.at(header);
+        auto *member = new IR::Member(new IR::PathExpression(headerParam),
+                                      IR::ID(field));
+        auto *value = new IR::Constant(IR::Type::Bits::get(bitWidth), constant);
+        return new IR::AssignmentStatement(member, value);
+    }
+
+    IR::Node* addMirroredFieldListParser(const IR::BFN::TnaParser* parser,
+            const IR::ParserState* state, cstring nextState) {
+        LOG3(" update state " << state << " with these fieldlist: ");
+        auto states = new IR::IndexedVector<IR::ParserState>();
+        auto selectCases = new IR::Vector<IR::SelectCase>();
+        for (auto& fieldList : *fieldLists) {
+            const gress_t gress = std::get<0>(fieldList.first);
+            const auto digestId = std::get<1>(fieldList.first);
+            const auto header = std::get<2>(fieldList.first);
+            auto* fl = fieldList.second;
+            LOG3(" - " << gress << " " << digestId << " " << fl);
+
+            // Construct a `clone_src` value. The first bit indicates that the
+            // packet is mirrored; the second bit indicates whether it originates
+            // from ingress or egress. See `constants.p4` for the details of the
+            // format.
+            unsigned source = 1 << 0;
+            if (gress == EGRESS)
+                source |= 1 << 1;
+
+            auto *newState = createMirrorState(parser, gress,
+                    source, digestId, header, fl, nextState);
+            states->push_back(newState);
+
+            const unsigned fieldListId = (source << 3) | digestId;
+            auto selectCase = createSelectCase(8, fieldListId, 0x1f, newState);
+            selectCases->push_back(selectCase);
+        }
+
+        IR::Vector<IR::Expression> selectOn = {
+            createLookaheadExpr(parser, 8)
+        };
+
+        auto* mirrorState =
+            createGeneratedParserState(
+                "mirrored", { },
+                new IR::SelectExpression(new IR::ListExpression(selectOn), *selectCases));
+        states->push_back(mirrorState);
+        return states;
+    }
+#if 0
   const IR::BFN::ParserState*
   addMirroredFieldListParser(const IR::BFN::ParserState* finalState) {
       IR::Vector<IR::BFN::Transition> transitions;
       for (auto& fieldList : *fieldLists) {
           const gress_t gress = fieldList.first.first;
           const auto digestId = fieldList.first.second;
-          const FieldPacking* packing = fieldList.second;
+          const MirroredFieldList* fieldList = fieldList.second;
+
+          LOG3("   extract field list " << digestId << " " << fieldList.second);
 
           // Construct a `clone_src` value. The first bit indicates that the
           // packet is mirrored; the second bit indicates whether it originates
@@ -223,6 +383,8 @@ struct AddMirroredFieldListParser : public Transform {
           cstring fieldListStateName = "$mirror_field_list_" +
                                        cstring::to_cstring(gress) + "_" +
                                        cstring::to_cstring(digestId);
+
+          LOG3("   create state to extract field list ");
           auto* fieldListState =
             packing->createExtractionState(EGRESS, fieldListStateName, finalState);
           fieldListState->statements.push_back(
@@ -252,50 +414,21 @@ struct AddMirroredFieldListParser : public Transform {
       return new IR::BFN::ParserState(createThreadName(EGRESS, "$mirrored"), EGRESS, {},
                                       {select}, transitions);
   }
-
-  Visitor::profile_t init_apply(const IR::Node *root) override {
-      auto* egParserMeta =
-          getMetadataType(pipe, "compiler_generated_meta");
-      cloneDigestId = gen_fieldref(egParserMeta, "clone_digest_id");
-      cloneSource = gen_fieldref(egParserMeta, "clone_src");
-      return Transform::init_apply(root);
-  }
+#endif
 
  private:
-  const IR::BFN::Pipe* pipe;
-  const MirroredFieldListPacking* fieldLists;
-  const IR::Member* cloneDigestId;
-  const IR::Member* cloneSource;
+  const MirroredFieldLists* fieldLists;
 };
 
 }  // namespace
 
-ExtractMirrorFieldPackings::ExtractMirrorFieldPackings(P4::ReferenceMap *refMap,
-                                                       P4::TypeMap *typeMap,
-                                                       MirroredFieldListPacking* fieldPackings)
-    : fieldPackings(fieldPackings) {
-    CHECK_NULL(fieldPackings);
+FixupMirrorMetadata::FixupMirrorMetadata(
+        P4::ReferenceMap *refMap,
+        P4::TypeMap *typeMap) : refMap(refMap), typeMap(typeMap) {
     auto findMirror = new FindMirroredFieldLists(refMap, typeMap);
     addPasses({
         findMirror,
-        new VisitFunctor([findMirror, fieldPackings]() {
-            for (auto& fieldList : findMirror->fieldLists) {
-                auto* packing = BFN::packMirroredFieldList(
-                        fieldList.first.first,  // gress
-                        fieldList.second);
-                fieldPackings->emplace(fieldList.first, packing);
-            }
-        }),
-    });
-}
-
-PopulateMirrorStateWithFieldPackings::PopulateMirrorStateWithFieldPackings(
-        IR::BFN::Pipe* pipe, const MirroredFieldListPacking* fieldPackings) {
-    CHECK_NULL(fieldPackings);
-    auto addMirrorParserState = new AddMirroredFieldListParser(pipe, fieldPackings);
-    addPasses({
-        addMirrorParserState,
-        LOGGING(4) ? new DumpParser("add_mirror_states") : nullptr,
+        new AddMirroredFieldListParser(&findMirror->fieldLists)
     });
 }
 
