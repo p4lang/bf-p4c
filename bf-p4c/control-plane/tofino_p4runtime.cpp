@@ -437,6 +437,14 @@ struct SnapshotFieldInfo {
     std::string name;
     uint32_t id;
     int32_t bitwidth;
+    bool operator==(const SnapshotFieldInfo &s) const {
+        if (s.name == name && s.id == id && s.bitwidth == bitwidth)
+            return true;
+        return false;
+    }
+    bool operator<(const SnapshotFieldInfo &s) const {
+        return (id < s.id);
+    }
 };
 
 /// This is used to ensure that the same field (identified by name) in ingress
@@ -473,7 +481,7 @@ class SnapshotFieldFinder : public Inspector {
     /// list of snapshot fields for every header visited by the pass.
     bool includeValid;
     /// the list of snapshot fields.
-    std::vector<SnapshotFieldInfo>* fields;
+    std::set<SnapshotFieldInfo>* fields;
     /// a map that ensures that 2 fields with the same name (in different
     /// controls) receive the same unique id; this is meant as a convenience for
     /// BFRT users.
@@ -484,7 +492,7 @@ class SnapshotFieldFinder : public Inspector {
     std::vector<cstring> prefixList;
 
     SnapshotFieldFinder(TypeMap* typeMap, cstring prefix, bool includeValid,
-                        std::vector<SnapshotFieldInfo>* fields,
+                        std::set<SnapshotFieldInfo>* fields,
                         SnapshotFieldIdTable* fieldIds)
         : typeMap(typeMap), includeValid(includeValid), fields(fields), fieldIds(fieldIds) {
         prefixList.push_back(prefix);
@@ -501,7 +509,8 @@ class SnapshotFieldFinder : public Inspector {
     void addField(int32_t bitwidth) {
         auto name = assembleName();
         auto id = fieldIds->assignId(name);
-        fields->push_back({name, id, bitwidth});
+        SnapshotFieldInfo field = { name, id, bitwidth };
+        fields->insert(field);
     }
 
     bool preorder(const IR::Type_Header* type) override {
@@ -530,6 +539,7 @@ class SnapshotFieldFinder : public Inspector {
     }
 
     bool preorder(const IR::Type_Varbits* type) override {
+        visitAgain();
         // TODO(antonin): unsure whether anything needs to be done / can be done
         // for VL fields.
         (void)type;
@@ -543,7 +553,7 @@ class SnapshotFieldFinder : public Inspector {
                      const IR::Type* type,
                      cstring paramName,
                      bool includeValid,
-                     std::vector<SnapshotFieldInfo>* fields,
+                     std::set<SnapshotFieldInfo>* fields,
                      SnapshotFieldIdTable* fieldIds) {
         SnapshotFieldFinder finder(typeMap, paramName, includeValid, fields, fieldIds);
         auto typeType = typeMap->getTypeType(type, true);
@@ -746,7 +756,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         /// (including "POV bits"). Unlike previous struct fields, which are set
         /// by getSnapshotControls(), this vector is populated by
         /// collectSnapshot().
-        std::vector<SnapshotFieldInfo> fields;
+        std::set<SnapshotFieldInfo> fields;
     };
 
     /// Looks at all control objects relevant to snapshot (based on architecture
