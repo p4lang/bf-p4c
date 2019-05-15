@@ -880,6 +880,9 @@ TEST_F(TableDependencyGraphTest, UpwardDownwardProp) {
     test->pipe = runMockPasses(test->pipe, phv, defuse);
 
     auto *find_dg = new FindDependencyGraph(phv, dg);
+    // Keeping the old non logical deps (as this is how the original calculation was made),
+    // and will be the way forward on JBay
+    find_dg->set_add_logical_deps(false);
     test->pipe->apply(*find_dg);
     UpwardDownwardPropagation *upward_downward_prop = new UpwardDownwardPropagation(dg);
     const IR::MAU::Table *a, *b, *c, *x, *y, *x2, *y2, *z1, *z2, *z3, *alpha, *beta, *gamma;
@@ -1451,6 +1454,112 @@ TEST_F(TableDependencyGraphTest, AntiGraph2) {
     EXPECT_EQ(dg.dependence_tail_size_control_anti(d), 0);
 }
 
+/**
+ * The graph is following for this program:
+ *
+ *         CONTROL
+ *    A ------------> B
+ *    |      DATA
+ *    |
+ *    | ANTI
+ *    |
+ *    V
+ *    C
+ *    |
+ *    | DATA
+ *    |
+ *    V
+ *    D
+ */
+TEST_F(TableDependencyGraphTest, LogicalThruControl) {
+    auto test = createTableDependencyGraphTestCase(
+        P4_SOURCE(P4Headers::NONE, R"(
+    action noop() {}
+
+    action set_f1(bit<8> f1) {
+        headers.h1.f1 = f1;
+    }
+
+    action set_f2(bit<8> f2) {
+        headers.h1.f2 = f2;
+    }
+
+    action set_f4(bit<8> f4) {
+        headers.h1.f4 = f4;
+    }
+
+    action set_f5(bit<8> f5) {
+        headers.h1.f5 = f5;
+    }
+
+    table node_a {
+        actions = { set_f2; }
+        key = { headers.h1.f1 : exact; }
+    }
+
+    table node_b {
+        actions = { noop; }
+        key = { headers.h1.f2 : exact; }
+    }
+
+    table node_c {
+        actions = { set_f1; set_f5; }
+        key = { headers.h1.f3 : exact; }
+    }
+
+    table node_d {
+        actions = { noop; }
+        key = { headers.h1.f5 : exact; }
+    }
+
+    apply {
+        if (node_a.apply().hit) {
+            node_b.apply();
+        }
+        node_c.apply();
+        node_d.apply();
+    } )"));
+
+    ASSERT_TRUE(test);
+    SymBitMatrix mutex;
+    PhvInfo phv(mutex);
+    FieldDefUse defuse(phv);
+    DependencyGraph dg;
+
+    test->pipe = runMockPasses(test->pipe, phv, defuse);
+
+    auto *find_dg = new FindDependencyGraph(phv, dg);
+    test->pipe->apply(*find_dg);
+    const IR::MAU::Table *a, *b, *c, *d, *e;
+    a = b = c = d = e = nullptr;
+    for (const auto& kv : dg.stage_info) {
+        if (kv.first->name == "node_a_0") {
+            a = kv.first;
+        } else if (kv.first->name == "node_b_0") {
+            b = kv.first;
+        } else if (kv.first->name == "node_c_0") {
+            c = kv.first;
+        } else if (kv.first->name == "node_d_0") {
+            d = kv.first;
+        }
+    }
+
+    EXPECT_NE(a, nullptr);
+    EXPECT_NE(b, nullptr);
+    EXPECT_NE(c, nullptr);
+    EXPECT_NE(d, nullptr);
+
+
+    EXPECT_EQ(dg.min_stage(a), 0);
+    EXPECT_EQ(dg.min_stage(b), 1);
+    EXPECT_EQ(dg.min_stage(c), 1);
+    EXPECT_EQ(dg.min_stage(d), 2);
+
+    EXPECT_EQ(dg.dependence_tail_size_control_anti(a), 2);
+    EXPECT_EQ(dg.dependence_tail_size_control_anti(b), 1);
+    EXPECT_EQ(dg.dependence_tail_size_control_anti(c), 1);
+    EXPECT_EQ(dg.dependence_tail_size_control_anti(d), 0);
+}
 
 /**
    This should test the following graph:

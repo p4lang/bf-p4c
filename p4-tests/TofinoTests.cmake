@@ -119,7 +119,7 @@ set (ARISTA_P4_14_TESTS
 
 # Add additional flags to c1 tests
 p4c_add_bf_backend_tests("tofino" "tofino" "v1model" "arista" "${ARISTA_P4_14_TESTS}"
-  "--backward-compatible -to 600 -Xp4c=\"--disable-pragma=pa_container_size\"")
+  "--backward-compatible -to 2400 -Xp4c=\"--disable-pragma=pa_container_size\"")
 
 # Add some long running glass c2 tests with increased timeout
 file(RELATIVE_PATH glass_c2_path ${P4C_SOURCE_DIR} ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/rdp)

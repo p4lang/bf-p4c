@@ -387,7 +387,7 @@ class FindDataDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteC
                 a.write.clear();
                 bool is_red_or = self.red_info.is_reduction_or(
                                                    findContext<IR::MAU::Instruction>(),
-                                                   table, red_or_key);
+                                                    table, red_or_key);
                 if (is_red_or) {
                     a.reduction_or_write.insert(std::make_pair(table, action_context));
                     self.red_or_use[field->name] = red_or_key;
@@ -545,7 +545,7 @@ void FindDataDependencyGraph::flow_merge(Visitor &v) {
  * resulting vector is generally used to do a breadth-first traversal of the tables
  */
 std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>>
-FindDataDependencyGraph::calc_topological_stage(unsigned dep_flags) {
+FindDependencyGraph::calc_topological_stage(unsigned dep_flags) {
     typename DependencyGraph::Graph::vertex_iterator v, v_end;
     typename DependencyGraph::Graph::edge_iterator out, out_end;
 
@@ -608,7 +608,10 @@ FindDataDependencyGraph::calc_topological_stage(unsigned dep_flags) {
                     happens_after_map[table_later].insert(table);
                     happens_after_map[table_later].insert(happens_after_map[table].begin(),
                                                           happens_after_map[table].end());
-                    n_depending_on[vertex_later]--; } } }
+                    n_depending_on[vertex_later]--;
+                }
+            }
+         }
 
         processed.insert(this_generation.begin(), this_generation.end());
         rst.emplace_back(std::move(this_generation));
@@ -618,11 +621,106 @@ FindDataDependencyGraph::calc_topological_stage(unsigned dep_flags) {
         auto* table = kv.first;
         for (const auto* prev : kv.second) {
             happens_before_map[prev].insert(table); } }
-
     return rst;
 }
 
-void FindDataDependencyGraph::finalize_dependence_graph(void) {
+/**
+ * The purpose of this class is to gather for each table (in Tofino), the set of tables
+ * that must be placed due to next table propagation.  Both the leaves as well as the total
+ * direct control dominating set are calculated.
+ *
+ * One cannot use the DependencyGraph to calculate this, as the inject control dependencies
+ * calculated in InjectControlDependencies are not what the next table needs to propagate
+ * through before the table can fully be placed.
+ */
+void CalculateNextTableProp::postorder(const IR::MAU::Table *tbl) {
+    bool empty_seq = true;
+    for (auto seq : Values(tbl->next)) {
+        empty_seq &= seq->tables.empty();
+    }
+    bool no_next_tables = tbl->next.empty() || empty_seq;
+
+    if (no_next_tables) {
+        next_table_leaves[tbl].insert(tbl);
+    }
+
+    control_dom_set[tbl].insert(tbl);
+
+    for (auto seq : Values(tbl->next)) {
+        for (auto control_tbl : seq->tables) {
+            next_table_leaves[tbl] |= next_table_leaves.at(control_tbl);
+            control_dom_set[tbl] |= control_dom_set.at(control_tbl);
+        }
+    }
+}
+
+
+/**
+ * Tofino specific (currently necessary for JBay until placement algorithm changes)
+ *
+ * Say we have the following program:
+ *
+ * if (t1.apply().hit) {
+       t2.apply();
+ * }
+ * t3.apply();
+ *
+ * Now in Tofino, if t1 is placed, then t2 must always be placed, in order to correctly
+ * propagate the next table, before any other table.  Thus if t3 were to a have a dependency
+ * either LOGICAL (i.e. ANTI) or DATA (i.e. IXBAR_READ) to t1, any dependency that is directly
+ * under CONTROL dependencies would reflect in the dependency chain length of t2.
+ *
+ * The solution to reflect that chain correctly is to add a LOGICAL dependence between t2 and
+ * t3 (given that t1 and t3 have a dependence).   By definition, t3 would have to follow
+ * t2, if it would have to follow t1.
+ *
+ * The algorithm is based on the following:
+ *    1. If t_b logical has to be placed after t_a, then t_b has to be logically placed after
+ *       all next tables propagation of t_a.
+ *    2. Thus if t_b is not directly next table propagation dependent of t_a, add a LOGICAL
+ *       dependence on all next table paths out of t_a that are not mutually exclusive with
+ *       t_b.
+ */
+void FindDependencyGraph::add_logical_deps_from_control_deps(void) {
+    std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>>
+        topo_rst = calc_topological_stage(DependencyGraph::ANTI);
+
+    ordered_set<std::pair<const IR::MAU::Table *, const IR::MAU::Table *>> edges_to_add;
+
+    for (int i = int(topo_rst.size()) - 1; i >= 0; --i) {
+        for (auto& v : topo_rst[i]) {
+            const IR::MAU::Table* table = dg.get_vertex(v);
+            auto out_edge_itr_pair = boost::out_edges(v, dg.g);
+            auto& out = out_edge_itr_pair.first;
+            auto& out_end = out_edge_itr_pair.second;
+            for (; out != out_end; ++out) {
+                if (dg.g[*out] == DependencyGraph::CONTROL) continue;
+                auto vertex_later = boost::target(*out, dg.g);
+                const auto* table_later = dg.get_vertex(vertex_later);
+
+                auto &table_nt_leaves = ntp.next_table_leaves.at(table);
+                auto &table_dom_set = ntp.control_dom_set.at(table);
+                if (table_dom_set.count(table_later)) continue;
+                for (auto frontier_leaf : table_nt_leaves) {
+                    if (mutex(table_later, frontier_leaf)) continue;
+                    edges_to_add.insert(std::make_pair(frontier_leaf, table_later));
+                }
+            }
+        }
+    }
+
+    for (auto pair : edges_to_add) {
+        dg.add_edge(pair.first, pair.second, DependencyGraph::ANTI);
+        calc_topological_stage(DependencyGraph::ANTI | DependencyGraph::CONTROL);
+    }
+}
+
+void FindDependencyGraph::finalize_dependence_graph(void) {
+    if (Device::currentDevice() == Device::TOFINO && _add_logical_deps == true) {
+        LOG1("  We have made it here duh");
+        add_logical_deps_from_control_deps();
+    }
+
     // Topological sort
     std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>>
         topo_rst = calc_topological_stage();
@@ -841,7 +939,7 @@ void FindDataDependencyGraph::finalize_dependence_graph(void) {
     dg.finalized = true;
 }
 
-void FindDataDependencyGraph::verify_dependence_graph() {
+void FindDependencyGraph::verify_dependence_graph() {
     typename DependencyGraph::Graph::edge_iterator out, out_end;
     for (boost::tie(out, out_end) = boost::edges(dg.g);
          out != out_end;
@@ -859,13 +957,17 @@ FindDependencyGraph::FindDependencyGraph(const PhvInfo &phv,
                                          cstring dotFileName) :
     dg(out), dotFile(dotFileName) {
     addPasses({
+        &mutex,
+        &ntp,
         new GatherReductionOrReqs(red_info),
         new TableFindInjectedDependencies(phv, dg),
-        new FindDataDependencyGraph(phv, dg, red_info)
+        new FindDataDependencyGraph(phv, dg, red_info, mutex)
     });
 }
 
 void FindDependencyGraph::end_apply(const IR::Node *root) {
+    finalize_dependence_graph();
+    LOG5(dg);
     if (BackendOptions().create_graphs && dotFile != "") {
         auto pipeId = root->to<IR::BFN::Pipe>()->id;
         auto graphsDir = BFNContext::get().getOutputDirectory("graphs", pipeId);

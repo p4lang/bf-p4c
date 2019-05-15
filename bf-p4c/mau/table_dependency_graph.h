@@ -9,6 +9,7 @@
 #include "bf-p4c/ir/control_flow_visitor.h"
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/mau/reduction_or.h"
+#include "bf-p4c/mau/table_mutex.h"
 #include "bf-p4c/phv/phv_fields.h"
 
 namespace boost {
@@ -399,18 +400,11 @@ class FindDataDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
     const PhvInfo&                                        phv;
     DependencyGraph&                                      dg;
     const ReductionOrInfo&                                red_info;
+    const TablesMutuallyExclusive&                        mutex;
     std::map<cstring, access_t>                           access;
     std::map<cstring, cstring>                            red_or_use;
     std::map<PHV::Container, cont_write_t>                cont_write;
 
-    std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>>
-    calc_topological_stage(unsigned deps_flag = 0);
-
-
-    /** Check that no ingress table ever depends on an egress table happening
-     * first. */
-    void verify_dependence_graph(void);
-    void finalize_dependence_graph(void);
 
     bool preorder(const IR::MAU::TableSeq *) override;
     bool preorder(const IR::MAU::Table *) override;
@@ -424,21 +418,17 @@ class FindDataDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
         red_or_use.clear();
 
         const ordered_map<const PHV::Field*, const PHV::Field*>& aliasMap = phv.getAliasMap();
-        LOG1("Printing alias map");
+        LOG4("Printing alias map");
         for (auto kv : aliasMap)
-            LOG1("  " << kv.first->name << " aliases with " << kv.second->name);
+            LOG4("  " << kv.first->name << " aliases with " << kv.second->name);
 
         return rv;
     }
 
-    void end_apply() override {
-        finalize_dependence_graph();
-        LOG3(dg);
-    }
 
     void flow_merge(Visitor &v) override;
 
-    void all_bfs(boost::default_bfs_visitor* vis);
+    // void all_bfs(boost::default_bfs_visitor* vis);
     FindDataDependencyGraph *clone() const override { return new FindDataDependencyGraph(*this); }
 
     class AddDependencies;
@@ -446,26 +436,63 @@ class FindDataDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
     class UpdateAttached;
 
  public:
-    FindDataDependencyGraph(const PhvInfo &phv, DependencyGraph& out, const ReductionOrInfo &ri)
-    : phv(phv), dg(out), red_info(ri) {
+    FindDataDependencyGraph(const PhvInfo &phv, DependencyGraph& out, const ReductionOrInfo &ri,
+        const TablesMutuallyExclusive &m)
+    : phv(phv), dg(out), red_info(ri), mutex(m) {
         joinFlows = true;
     }
 };
 
+class CalculateNextTableProp : public MauInspector {
+    using NextTableLeaves =
+        ordered_map<const IR::MAU::Table *, ordered_set<const IR::MAU::Table *>>;
+    using ControlDominatingSet = NextTableLeaves;
+
+ public:
+    NextTableLeaves next_table_leaves;
+    ControlDominatingSet control_dom_set;
+
+ private:
+    void postorder(const IR::MAU::Table *) override;
+    Visitor::profile_t init_apply(const IR::Node *node) override {
+        auto rv = MauInspector::init_apply(node);
+        next_table_leaves.clear();
+        control_dom_set.clear();
+        return rv;
+    }
+
+ public:
+    CalculateNextTableProp() { visitDagOnce = false; }
+};
+
 class FindDependencyGraph : public PassManager {
+    bool _add_logical_deps = true;
+    std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>>
+    calc_topological_stage(unsigned deps_flag = 0);
+
+    /** Check that no ingress table ever depends on an egress table happening
+     * first. */
+    void verify_dependence_graph(void);
+    void add_logical_deps_from_control_deps(void);
+    void finalize_dependence_graph(void);
+
     Visitor::profile_t init_apply(const IR::Node *node) override {
         auto rv = PassManager::init_apply(node);
         dg.clear();
         return rv;
     }
 
+    TablesMutuallyExclusive mutex;
     DependencyGraph &dg;
     ReductionOrInfo red_info;
+    CalculateNextTableProp ntp;
     cstring dotFile;
+
 
     void end_apply(const IR::Node *root) override;
 
  public:
+    void set_add_logical_deps(bool add) { _add_logical_deps = add; }
     FindDependencyGraph(const PhvInfo &, DependencyGraph &out, cstring dotFileName = "");
 };
 

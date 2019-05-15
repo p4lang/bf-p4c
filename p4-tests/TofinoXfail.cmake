@@ -200,7 +200,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/phv/COMPILER-243/comp243.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-362/icmp_typecode.p4
   extensions/p4_tests/p4_16/compile_only/flex_packing_switch.p4
-  extensions/p4_tests/p4_16/compile_only/flex_packing_pvs_switch.p4
   extensions/p4_tests/p4-programs/internal_p4_14/fr_test/fr_test.p4
   extensions/p4_tests/p4_16/customer/arista/p4c-1652.p4
   extensions/p4_tests/p4-programs/internal_p4_14/netcache/netcache.p4
@@ -409,6 +408,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/08-FullTPHV3.p4
   testdata/p4_16_samples/issue1713-bmv2.p4
   extensions/p4_tests/p4_14/compile_only/04-FullPHV3.p4
+  extensions/p4_tests/p4_16/compile_only/tagalong_mdinit_switch.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-815/int_heavy.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-1065/comp_1065.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-1094/comp_1094.p4
