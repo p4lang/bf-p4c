@@ -141,9 +141,9 @@ def gen_pd_conf(args):
     p4_info["pd-thrift"] = os.path.join(libpath, 'libpdthrift.so')
 
     if len(args.pipe) > 0:
-        share_path = os.path.join(args.outputdir, 'share', args.device+'pd', args.name, args.pipe[0])
+	share_path = os.path.join(args.outputdir, 'share', args.device+'pd', args.name, args.pipe[0])
     else:
-        share_path = os.path.join(args.outputdir, 'share', args.device+'pd', args.name)
+    	share_path = os.path.join(args.outputdir, 'share', args.device+'pd', args.name)
 
     p4_info["table-config"] = os.path.join(share_path, 'context.json')
     p4_info["tofino-bin"] = os.path.join(share_path, args.device + '.bin')
@@ -154,7 +154,7 @@ def gen_pd_conf(args):
     if args.switch_api == "switchapi":
         # bf-switch has a different so name for switchapi
         if 'switch_16' in args.outputdir:
-            p4_info["switchapi"] = os.path.join(args.outputdir, "lib", "libbf_switch.so")
+	    p4_info["switchapi"] = os.path.join(args.outputdir, "lib", "libbf_switch.so")
         else:
             p4_info["switchapi"] = os.path.join(args.outputdir, "lib", "libswitchapi.so")
         p4_info["agent0"] = os.path.join(args.outputdir, "lib", "libpltfm_mgr.so")

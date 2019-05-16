@@ -131,7 +131,6 @@ mkdir -p ${builddir}
 pushd ${builddir}
 cmake ${mydir} -DCMAKE_BUILD_TYPE=${buildtype}\
       ${ENABLED_COMPONENTS} \
-      -DCMAKE_EXPORT_COMPILE_COMMANDS=1\
       -DP4C_CPP_FLAGS="$P4C_CPP_FLAGS" $otherArgs
 if [[ `uname -s` == "Linux" ]]; then
     linux_distro=$(cat /etc/os-release | grep -e "^NAME" | cut -f 2 -d '=' | tr -d "\"")

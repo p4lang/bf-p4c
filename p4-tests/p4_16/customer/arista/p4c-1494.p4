@@ -1483,12 +1483,11 @@ control Courtdale(inout Ralls Swifton, inout Level PeaRidge, in ingress_intrinsi
 
 control Casnovia(inout Ralls Sedan, inout Level Almota) {
     Hash<bit<16>>(HashAlgorithm_t.CRC16) Lemont;
-    Hash<bit<16>>(HashAlgorithm_t.CRC16) Lemont2;
     action Hookdale() {
         Almota.Halaula.Cornell = Lemont.get<tuple<bit<8>, bit<32>, bit<32>>>({ Sedan.Foster.Wartburg, Sedan.Foster.Sledge, Sedan.Foster.Ambrose });
     }
     action Funston() {
-        Almota.Halaula.Cornell = Lemont2.get<tuple<bit<128>, bit<128>, bit<4>, bit<20>, bit<8>>>({ Sedan.Raiford.Eastwood, Sedan.Raiford.Placedo, 4w0, Sedan.Raiford.Nenana, Sedan.Raiford.Waubun });
+        Almota.Halaula.Cornell = Lemont.get<tuple<bit<128>, bit<128>, bit<4>, bit<20>, bit<8>>>({ Sedan.Raiford.Eastwood, Sedan.Raiford.Placedo, 4w0, Sedan.Raiford.Nenana, Sedan.Raiford.Waubun });
     }
     table Mayflower {
         actions = {
@@ -2176,12 +2175,11 @@ control Monse(inout Ralls Chatom, inout Level Ravenwood) {
 
 control Philmont(inout Ralls ElCentro, inout Level Twinsburg) {
     Hash<bit<16>>(HashAlgorithm_t.CRC16) Redvale;
-    Hash<bit<16>>(HashAlgorithm_t.CRC16) Redvale2;
     action Macon() {
         Twinsburg.Halaula.Noyes = Redvale.get<tuple<bit<16>, bit<16>, bit<16>>>({ Twinsburg.Halaula.Cornell, ElCentro.Sardinia.Etter, ElCentro.Sardinia.Jenners });
     }
     action Bains() {
-        Twinsburg.Halaula.StarLake = Redvale2.get<tuple<bit<16>, bit<16>, bit<16>>>({ Twinsburg.Halaula.Grannis, ElCentro.Pittsboro.Etter, ElCentro.Pittsboro.Jenners });
+        Twinsburg.Halaula.StarLake = Redvale.get<tuple<bit<16>, bit<16>, bit<16>>>({ Twinsburg.Halaula.Grannis, ElCentro.Pittsboro.Etter, ElCentro.Pittsboro.Jenners });
     }
     action Franktown() {
         Macon();
@@ -3450,16 +3448,14 @@ control Robinette(inout Ralls Akhiok, inout Level DelRey, in ingress_intrinsic_m
         DelRey.ElVerano.Ledoux = 32w0;
     }
     Hash<bit<16>>(HashAlgorithm_t.CRC16) Pierson;
-    Hash<bit<16>>(HashAlgorithm_t.CRC16) Pierson2;
-    Hash<bit<16>>(HashAlgorithm_t.CRC16) Pierson3;
     action Piedmont() {
         DelRey.Halaula.Grannis = Pierson.get<tuple<bit<32>, bit<32>, bit<8>>>({ DelRey.Parkland.Higginson, DelRey.Parkland.Oriskany, DelRey.Algoa.Breese });
     }
     action Camino() {
-        DelRey.Halaula.Grannis = Pierson2.get<tuple<bit<128>, bit<128>, bit<4>, bit<20>, bit<8>>>({ DelRey.Coulter.Exton, DelRey.Coulter.Floyd, 4w0, Akhiok.Marcus.Nenana, DelRey.Algoa.Breese });
+        DelRey.Halaula.Grannis = Pierson.get<tuple<bit<128>, bit<128>, bit<4>, bit<20>, bit<8>>>({ DelRey.Coulter.Exton, DelRey.Coulter.Floyd, 4w0, Akhiok.Marcus.Nenana, DelRey.Algoa.Breese });
     }
     action Dollar() {
-        DelRey.Uvalde.SoapLake = Pierson3.get<tuple<bit<24>, bit<24>, bit<24>, bit<24>, bit<16>>>({ Akhiok.Blairsden.Brinklow, Akhiok.Blairsden.Kremlin, Akhiok.Blairsden.TroutRun, Akhiok.Blairsden.Bradner, DelRey.Thayne.Quebrada });
+        DelRey.Uvalde.SoapLake = Pierson.get<tuple<bit<24>, bit<24>, bit<24>, bit<24>, bit<16>>>({ Akhiok.Blairsden.Brinklow, Akhiok.Blairsden.Kremlin, Akhiok.Blairsden.TroutRun, Akhiok.Blairsden.Bradner, DelRey.Thayne.Quebrada });
     }
     action Flomaton() {
         DelRey.Uvalde.SoapLake = DelRey.Halaula.Cornell;

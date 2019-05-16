@@ -77,11 +77,9 @@ set (BF_P4C_IR_HDRS
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_IR_HDRS}")
 
 set (BF_P4C_MIDEND_SRCS
-  midend/check_design_pattern.cpp
   midend/check_header_alignment.cpp
   midend/check_unsupported.cpp
   midend/copy_block_pragmas.cpp
-  midend/copy_header.cpp
   midend/elim_cast.cpp
   midend/elim_typedef.cpp
   midend/desugar_varbit_extract.cpp
@@ -98,11 +96,9 @@ build_unified(BF_P4C_MIDEND_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (BF_P4C_BACKEND_MIDEND_HDRS
   midend/blockmap.h
-  midend/check_design_pattern.h
   midend/check_header_alignment.h
   midend/check_unsupported.h
   midend/copy_block_pragmas.h
-  midend/copy_header.h
   midend/elim_cast.h
   midend/desugar_varbit_extract.h
   midend/elim_typedef.h
@@ -172,6 +168,7 @@ set (BF_P4C_BACKEND_COMMON_SRCS
   common/map_tables_to_actions.cpp
   common/multiple_apply.cpp
   common/run_id.cpp
+  common/rewrite_flexible_struct.cpp
   common/slice.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_COMMON_SRCS}")
@@ -196,6 +193,7 @@ set (BF_P4C_BACKEND_COMMON_HDRS
   common/multiple_apply.h
   common/parse_annotations.h
   common/run_id.h
+  common/rewrite_flexible_struct.h
   common/slice.h
   common/table_printer.h
   common/utils.h

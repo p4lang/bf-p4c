@@ -1,7 +1,7 @@
-# 1 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/switch.p4"
+# 1 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/switch.p4"
 # 1 "<built-in>"
 # 1 "<command-line>"
-# 1 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/switch.p4"
+# 1 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/switch.p4"
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -114,7 +114,7 @@ match_kind {
     /// Longest-prefix match.
     lpm
 }
-# 34 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/switch.p4" 2
+# 34 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/switch.p4" 2
 
 
 
@@ -1044,10 +1044,10 @@ package MultiParserSwitch<IH0, IM0, EH0, EM0, IH1, IM1, EH1, EM1,
     @optional MultiParserPipeline<IH1, IM1, EH1, EM1> pipe1,
     @optional MultiParserPipeline<IH2, IM2, EH2, EM2> pipe2,
     @optional MultiParserPipeline<IH3, IM3, EH3, EM3> pipe3);
-# 38 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/switch.p4" 2
+# 38 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/switch.p4" 2
 
 
-# 1 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/features.p4" 1
+# 1 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/features.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -1071,49 +1071,32 @@ package MultiParserSwitch<IH0, IM0, EH0, EM0, IH1, IM1, EH1, EM1,
  *
  ******************************************************************************/
 
-// List of all supported #define directives.
 
-// #define ACL_REDIRECT_ENABLE
+// #define TCP_FLAGS_LOU_ENABLE
 // #define BRIDGE_PORT_ENABLE
+# 35 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/features.p4"
+// #define QOS_ACL_ENABLE
+
+// #define STP_ENABLE
+// #define MULTIPLE_STP
+// #define WRED_ENABLE
 
 
 
-
-
-
-// #define ECN_ACL_ENABLE
-// #define EGRESS_ACL_ENABLE
-
-
-
-
-
-// #define IPINIP_ENABLE
-
-// #define IPV6_TUNNEL_ENABLE
-
-// #define MAC_PACKET_CLASSIFICATION
-
-
-// #define MLAG_ENABLE
-
-// #define PACKET_LENGTH_ADJUSTMENT
 // #define PBR_ENABLE
 
 // #define QINQ_ENABLE
-// #define QINQ_RIF_ENABLE
-
-// #define QOS_ACL_ENABLE
 
 
-// #define STP_ENABLE
-// #define TCP_FLAGS_LOU_ENABLE
-// #define TUNNEL_ENABLE
 
-// #define VXLAN_ENABLE
-// #define WRED_ENABLE
-# 41 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/switch.p4" 2
-# 1 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/headers.p4" 1
+// #define IPV6_TUNNEL_ENABLE
+
+
+// #define MLAG_ENABLE
+// #define MAC_PACKET_CLASSIFICATION
+// #define PACKET_LENGTH_ADJUSTMENT
+# 41 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/switch.p4" 2
+# 1 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/headers.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -1402,86 +1385,15 @@ header bfd_h {
     bit<32> req_min_echo_rx_interval;
 }
 
-// Telemetry report header -- version 0.5
-// See https://github.com/p4lang/p4-applications/blob/master/docs/telemetry_report_v0_5.pdf
-header dtel_report_v05_h {
-    bit<4> version;
-    bit<4> next_proto;
-    bit<3> d_q_f;
-    bit<15> reserved;
-    bit<6> hw_id;
-    bit<32> seq_number;
-    bit<32> timestamp;
-    bit<32> switch_id;
-}
-
-// DTel drop report header
-header dtel_drop_report_h {
-    bit<16> ingress_port;
-    bit<16> egress_port;
-    bit<8> queue_id;
-    bit<8> drop_reason;
-    bit<16> reserved;
-}
-
-// DTel switch local report header
-header dtel_switch_local_report_h {
-    bit<16> ingress_port;
-    bit<16> egress_port;
-    bit<8> queue_id;
-    bit<24> queue_occupancy;
-    bit<32> timestamp;
-}
-
-// Telemetry report header -- version 1.0
-// See https://github.com/p4lang/p4-applications/blob/master/docs/telemetry_report_v1_0.pdf
-header dtel_report_v10_h {
-    bit<4> version;
-    bit<4> length;
-    bit<3> next_proto;
-    bit<6> metadata_bits;
-    bit<6> reserved;
-    bit<3> d_q_f;
-    bit<6> hw_id;
-    bit<32> switch_id;
-    bit<32> seq_number;
-    bit<32> timestamp;
-}
-
-// Optional metadata present in the telemetry report.
-struct dtel_report_metadata_0 {
-    bit<16> ingress_port;
-    bit<16> egress_port;
-}
-
-struct dtel_report_metadata_2 {
-    bit<8> queue_id;
-    bit<24> queue_occupancy;
-}
-
-struct dtel_report_metadata_3 {
-    bit<32> timestamp;
-}
-
-struct dtel_report_metadata_4 {
-    bit<8> queue_id;
-    bit<8> drop_reason;
-    bit<16> reserved;
-}
-
-// Barefoot Specific Headers.
-
-// CPU header
+// BFN CPU header
 header cpu_h {
+    bit<8> qid;
     bit<8> flags; /*
         bit<1> tx_bypass;
         bit<1> capture_ts;
-        bit<1> multicast;
-        bit<5> reserved;
+        bit<6> reserved;
     */
-    bit<8> qid;
     bit<16> reserved;
-    bit<16> port_or_group;
     bit<16> port;
     bit<16> ifindex;
     bit<16> bd;
@@ -1492,8 +1404,8 @@ header cpu_h {
 header timestamp_h {
     bit<48> timestamp;
 }
-# 42 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/switch.p4" 2
-# 1 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/types.p4" 1
+# 42 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/switch.p4" 2
+# 1 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/types.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -1524,9 +1436,7 @@ header timestamp_h {
 // ----------------------------------------------------------------------------
 // Common protocols/types
 //-----------------------------------------------------------------------------
-# 40 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/types.p4"
-//#define ETHERTYPE_QINQ 0x88A8 // Note: uncomment once ptf/scapy-vxlan are fixed
-# 68 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/types.p4"
+# 67 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/types.p4"
 // ----------------------------------------------------------------------------
 // Common types
 //-----------------------------------------------------------------------------
@@ -1654,30 +1564,20 @@ const switch_ingress_bypass_t SWITCH_INGRESS_BYPASS_STORM_CONTROL = 16w0x0040;
 const switch_ingress_bypass_t SWITCH_INGRESS_BYPASS_STP = 16w0x0080;
 const switch_ingress_bypass_t SWITCH_INGRESS_BYPASS_SMAC = 16w0x0100;
 
-// Add more ingress bypass flags here.
+// Add more bypass flags here.
 
 const switch_ingress_bypass_t SWITCH_INGRESS_BYPASS_ALL = 16w0xffff;
 
 
+
 typedef bit<8> switch_egress_bypass_t;
 const switch_egress_bypass_t SWITCH_EGRESS_BYPASS_REWRITE = 8w0x01;
-const switch_egress_bypass_t SWITCH_EGRESS_BYPASS_ACL = 8w0x02;
-const switch_egress_bypass_t SWITCH_EGRESS_BYPASS_SYSTEM_ACL = 8w0x04;
-const switch_egress_bypass_t SWITCH_EGRESS_BYPASS_QOS = 8w0x08;
-const switch_egress_bypass_t SWITCH_EGRESS_BYPASS_WRED = 8w0x10;
-const switch_egress_bypass_t SWITCH_EGRESS_BYPASS_STP = 8w0x20;
-const switch_egress_bypass_t SWITCH_EGRESS_BYPASS_MTU = 8w0x40;
-const switch_egress_bypass_t SWITCH_EGRESS_BYPASS_VLAN = 8w0x80;
-
-// Add more egress bypass flags here.
-
-const switch_egress_bypass_t SWITCH_EGRESS_BYPASS_ALL = 8w0xff;
-
-
+const switch_egress_bypass_t SWITCH_EGRESS_BYPASS_WRED = 8w0x01;
 
 // PKT ------------------------------------------------------------------------
 typedef bit<16> switch_pkt_length_t;
 
+//TODO(msharif) : try to reduce the bit width
 typedef bit<8> switch_pkt_src_t;
 const switch_pkt_src_t SWITCH_PKT_SRC_BRIDGE = 0;
 const switch_pkt_src_t SWITCH_PKT_SRC_CLONE_INGRESS = 1;
@@ -1790,38 +1690,65 @@ const switch_ecn_codepoint_t SWITCH_ECN_CODEPOINT_CE = 0b11; // Congestion encou
 typedef MirrorId_t switch_mirror_session_t; // Defined in tna.p4
 const switch_mirror_session_t SWITCH_MIRROR_SESSION_CPU = 250;
 
-// Using same mirror type for both Ingress/Egress to simplify the parser.
-typedef bit<8> switch_mirror_type_t;
+
+
+
+typedef bit<3> switch_mirror_type_t;
 
 
 
 
 
+//XXX This is a temporary workaround to make sure mirror metadata do not share
+// the PHV containers with any other fields or paddings -- P4C-1114
+
+@pa_container_size("ingress", "ig_md.mirror.session_id", 16)
+@pa_container_size("egress", "eg_md.mirror.session_id", 16)
+
+
+
+
+
+/* CODE_HACK This is a workaround for the ignore_table_dependency on l4_src_port
+  and l4_dst_port as the compiler cannot figure out dependencies of slices
+  and prevents a container conflict
+*/
+@pa_container_size("ingress", "ig_md.l4_port_label", 8)
+// This is work around for P4C-723.
+@pa_no_overlay("egress", "eg_md.mirror.src")
+//@pa_no_overlay("egress", "eg_md.mirror.type")
+//@pa_no_overlay("egress", "eg_md.timestamp")
+@pa_no_overlay("egress", "eg_md.mirror.session_id")
+
+// Header formats for mirrored metadata fields.
+header switch_port_mirror_metadata_h {
+    switch_pkt_src_t src;
+    bit<8> type;
+    bit<48> timestamp;
+    bit<16> session_id;
+}
+
+@pa_container_size("egress","hdr.mirror.cpu.ifindex",16)
+header switch_cpu_mirror_metadata_h {
+    switch_pkt_src_t src;
+    bit<8> type;
+    bit<16> port;
+    bit<16> bd;
+    bit<16> ifindex;
+    switch_cpu_reason_t reason_code;
+}
 
 // Common metadata used for mirroring.
 struct switch_mirror_metadata_t {
     switch_pkt_src_t src;
-    switch_mirror_type_t type;
+    bit<8> type;
     switch_mirror_session_t session_id;
 }
 
-header switch_port_mirror_metadata_h {
-    switch_pkt_src_t src;
-    switch_mirror_type_t type;
-    bit<48> timestamp;
-    bit<6> _pad;
-    switch_mirror_session_t session_id;
-
-}
-
-header switch_cpu_mirror_metadata_h {
-    switch_pkt_src_t src;
-    switch_mirror_type_t type;
-    bit<7> _pad;
-    switch_port_t port;
-    switch_bd_t bd;
-    switch_ifindex_t ifindex;
-    switch_cpu_reason_t reason_code;
+// Header format for mirrored metadata fields
+struct switch_mirror_metadata_h {
+    switch_port_mirror_metadata_h port;
+    switch_cpu_mirror_metadata_h cpu;
 }
 
 // Tunneling ------------------------------------------------------------------
@@ -1846,42 +1773,6 @@ struct switch_tunnel_metadata_t {
     switch_ifindex_t ifindex;
     bit<16> hash;
     bool terminate;
-}
-
-// Data-plane telemetry (DTel) ------------------------------------------------
-typedef bit<3> switch_dtel_report_type_t;
-const switch_dtel_report_type_t SWITCH_DTEL_REPORT_TYPE_NONE = 0b000;
-const switch_dtel_report_type_t SWITCH_DTEL_REPORT_TYPE_DROP = 0b100;
-const switch_dtel_report_type_t SWITCH_DTEL_REPORT_TYPE_QUEUE = 0b010;
-const switch_dtel_report_type_t SWITCH_DTEL_REPORT_TYPE_FLOW = 0b001;
-
-struct switch_dtel_metadata_t {
-    switch_dtel_report_type_t report_type;
-    bit<32> latency; // Egress only.
-    switch_mirror_session_t session_id; // Ingress only.
-    bit<32> hash;
-}
-
-header switch_dtel_mirror_metadata_h {
-    switch_pkt_src_t src;
-    switch_mirror_type_t type;
-    bit<48> timestamp;
-    bit<6> _pad;
-    switch_mirror_session_t session_id;
-    bit<32> hash;
-    bit<5> _pad1;
-    switch_dtel_report_type_t report_type;
-    bit<16> ingress_port;
-    bit<16> egress_port;
-    bit<8> qid;
-    switch_drop_reason_t drop_reason;
-}
-
-@flexible
-struct switch_bridged_metadata_dtel_extension_t {
-    switch_dtel_report_type_t report_type;
-    switch_mirror_session_t session_id;
-    bit<32> hash;
 }
 
 //-----------------------------------------------------------------------------
@@ -2016,32 +1907,27 @@ struct switch_bridged_metadata_tunnel_extension_t {
 @pa_alias("ingress", "hdr.bridged_md.base.ingress_ifindex", "ig_md.ifindex")
 @pa_alias("ingress", "hdr.bridged_md.base.ingress_bd", "ig_md.bd")
 @pa_alias("ingress", "hdr.bridged_md.base.nexthop", "ig_md.nexthop")
-@pa_alias("ingress", "hdr.bridged_md.base.routed", "ig_md.flags.routed")
+//@pa_alias("ingress", "hdr.bridged_md.base.routed", "ig_md.flags.routed")
 //@pa_alias("ingress", "hdr.bridged_md.base.peer_link", "ig_md.flags.peer_link")
 @pa_alias("ingress", "hdr.bridged_md.base.tc", "ig_md.qos.tc")
 @pa_alias("ingress", "hdr.bridged_md.base.cpu_reason", "ig_md.cpu_reason")
 //@pa_alias("ingress", "hdr.bridged_md.base.timestamp", "ig_md.timestamp")
 @pa_alias("ingress", "hdr.bridged_md.base.qid", "ig_intr_md_for_tm.qid")
-# 574 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/types.p4"
-@pa_alias("ingress", "hdr.bridged_md.dtel.report_type", "ig_md.dtel.report_type")
-@pa_alias("ingress", "hdr.bridged_md.dtel.session_id", "ig_md.dtel.session_id")
+
+@pa_alias("ingress", "hdr.bridged_md.tunnel.terminate", "ig_md.tunnel.terminate")
+@pa_alias("ingress", "hdr.bridged_md.tunnel.outer_nexthop", "ig_md.outer_nexthop")
+@pa_alias("ingress", "hdr.bridged_md.tunnel.index", "ig_md.tunnel.index")
 
 
-typedef bit<8> switch_bridge_type_t;
+
+
+
 
 header switch_bridged_metadata_h {
     switch_pkt_src_t src;
-    switch_bridge_type_t type;
     switch_bridged_metadata_t base;
-
-
-
-
-
-
-
-    switch_bridged_metadata_dtel_extension_t dtel;
-
+    switch_bridged_metadata_acl_extension_t acl;
+    switch_bridged_metadata_tunnel_extension_t tunnel;
 }
 
 struct switch_port_metadata_t {
@@ -2050,19 +1936,10 @@ struct switch_port_metadata_t {
     switch_ifindex_t ifindex;
 }
 
-/* CODE_HACK This is a workaround for the ignore_table_dependency on l4_src_port
-  and l4_dst_port as the compiler cannot figure out dependencies of slices
-  and prevents a container conflict
-*/
-@pa_container_size("ingress", "ig_md.l4_port_label", 8)
-@pa_container_size("ingress", "ig_md.mirror.src", 8)
-@pa_container_size("ingress", "ig_md.mirror.type", 8)
-@pa_alias("ingress", "ig_md.egress_port", "ig_intr_md_for_tm.ucast_egress_port")
 // Ingress metadata
 struct switch_ingress_metadata_t {
     switch_ifindex_t ifindex; /* ingress interface index */
     switch_port_t port; /* ingress port */
-    switch_port_t egress_port; /* egress port */
     switch_port_lag_index_t port_lag_index; /* ingress port/lag index */
     switch_ifindex_t egress_ifindex; /* egress interface index */
     switch_port_lag_index_t egress_port_lag_index; /* egress port/lag index */
@@ -2070,16 +1947,14 @@ struct switch_ingress_metadata_t {
     switch_vrf_t vrf;
     switch_nexthop_t nexthop;
     switch_outer_nexthop_t outer_nexthop;
-
     bit<48> timestamp;
-    bit<32> hash;
 
     switch_ingress_flags_t flags;
     switch_ingress_checks_t checks;
     switch_ingress_bypass_t bypass;
 
-    switch_ip_metadata_t ipv4;
-    switch_ip_metadata_t ipv6;
+    switch_ip_metadata_t ipv4_md; //XXX change the name
+    switch_ip_metadata_t ipv6_md; //XXX change the name
     switch_port_lag_label_t port_lag_label;
     switch_bd_label_t bd_label;
     switch_if_label_t if_label;
@@ -2096,12 +1971,9 @@ struct switch_ingress_metadata_t {
     switch_tunnel_metadata_t tunnel;
     switch_learning_metadata_t learning;
     switch_mirror_metadata_t mirror;
-    switch_dtel_metadata_t dtel;
 }
 
 // Egress metadata
-@pa_container_size("egress", "eg_md.mirror.src", 8)
-@pa_container_size("egress", "eg_md.mirror.type", 8)
 struct switch_egress_metadata_t {
     switch_pkt_src_t pkt_src;
     switch_pkt_length_t pkt_length;
@@ -2109,7 +1981,6 @@ struct switch_egress_metadata_t {
 
     switch_port_lag_index_t port_lag_index; /* egress port/lag index */
     switch_port_type_t port_type; /* egress port type */
-    switch_port_t port; /* Mutable copy of egress port */
     switch_port_t ingress_port; /* ingress port */
     switch_ifindex_t ingress_ifindex; /* ingress interface index */
     switch_bd_t bd;
@@ -2119,7 +1990,6 @@ struct switch_egress_metadata_t {
 
     switch_egress_flags_t flags;
     switch_egress_checks_t checks;
-    switch_egress_bypass_t bypass;
 
     // for egress ACL
     switch_port_lag_label_t port_lag_label;
@@ -2131,19 +2001,10 @@ struct switch_egress_metadata_t {
     switch_qos_metadata_t qos;
     switch_tunnel_metadata_t tunnel;
     switch_mirror_metadata_t mirror;
-    switch_dtel_metadata_t dtel;
 
     switch_cpu_reason_t cpu_reason;
     switch_drop_reason_t drop_reason;
 }
-
-// Header format for mirrored metadata fields
-struct switch_mirror_metadata_h {
-    switch_port_mirror_metadata_h port;
-    switch_cpu_mirror_metadata_h cpu;
-    switch_dtel_mirror_metadata_h dtel;
-}
-
 
 struct switch_header_t {
     switch_bridged_metadata_h bridged_md;
@@ -2161,9 +2022,6 @@ struct switch_header_t {
     icmp_h icmp;
     igmp_h igmp;
     tcp_h tcp;
-    dtel_report_v05_h dtel;
-    dtel_switch_local_report_h dtel_switch_local_report;
-    dtel_drop_report_h dtel_drop_report;
     rocev2_bth_h rocev2_bth;
     vxlan_h vxlan;
     gre_h gre;
@@ -2179,8 +2037,8 @@ struct switch_header_t {
     tcp_h inner_tcp;
     icmp_h inner_icmp;
 }
-# 43 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/switch.p4" 2
-# 1 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/table_sizes.p4" 1
+# 43 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/switch.p4" 2
+# 1 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/table_sizes.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -2215,9 +2073,6 @@ const bit<32> BD_FLOOD_TABLE_SIZE = VLAN_TABLE_SIZE * 4;
 
 // 1K (port, vlan) <--> BD
 const bit<32> PORT_VLAN_TABLE_SIZE = 1024;
-
-// 4K (port, vlan[0], vlan[1]) <--> BD
-const bit<32> DOUBLE_TAG_TABLE_SIZE = 4096;
 
 // 5K BDs
 const bit<32> BD_TABLE_SIZE = 5120;
@@ -2299,9 +2154,12 @@ const bit<32> INGRESS_SYSTEM_ACL_TABLE_SIZE = 512;
 const bit<32> EGRESS_SYSTEM_ACL_TABLE_SIZE = 512;
 const bit<32> DROP_STATS_TABLE_SIZE = 1 << 8;
 
+const bit<32> MIRROR_SESSIONS_TABLE_SIZE = 1024;
+
 const bit<32> L3_MTU_TABLE_SIZE = 1024;
-# 44 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/switch.p4" 2
-# 1 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/util.p4" 1
+# 44 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/switch.p4" 2
+
+# 1 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/l3.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -2327,126 +2185,7 @@ const bit<32> L3_MTU_TABLE_SIZE = 1024;
  *
  ******************************************************************************/
 
-# 1 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/types.p4" 1
-/*******************************************************************************
- * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
- *
- * Copyright (c) 2015-2019 Barefoot Networks, Inc.
-
- * All Rights Reserved.
- *
- * NOTICE: All information contained herein is, and remains the property of
- * Barefoot Networks, Inc. and its suppliers, if any. The intellectual and
- * technical concepts contained herein are proprietary to Barefoot Networks,
- * Inc.
- * and its suppliers and may be covered by U.S. and Foreign Patents, patents in
- * process, and are protected by trade secret or copyright law.
- * Dissemination of this information or reproduction of this material is
- * strictly forbidden unless prior written permission is obtained from
- * Barefoot Networks, Inc.
- *
- * No warranty, explicit or implicit is provided, unless granted under a
- * written agreement with Barefoot Networks, Inc.
- *
- * Milad Sharif (msharif@barefootnetworks.com)
- *
- ******************************************************************************/
-# 27 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/util.p4" 2
-
-// Flow hash calculation.
-Hash<bit<32>>(HashAlgorithm_t.CRC32) ip_hash;
-Hash<bit<32>>(HashAlgorithm_t.CRC32) non_ip_hash;
-
-action compute_ip_hash(in switch_lookup_fields_t lkp, out bit<32> hash) {
-    hash = ip_hash.get({lkp.ipv4_src_addr,
-                        lkp.ipv4_dst_addr,
-                        lkp.ipv6_src_addr,
-                        lkp.ipv6_dst_addr,
-                        lkp.ip_proto,
-                        lkp.l4_dst_port,
-                        lkp.l4_src_port});
-}
-
-action compute_non_ip_hash(in switch_lookup_fields_t lkp, out bit<32> hash) {
-    hash = non_ip_hash.get({lkp.mac_type, lkp.mac_src_addr, lkp.mac_dst_addr});
-}
-
-// Bridged metadata fields for Egress pipeline.
-action add_bridged_md(
-        inout switch_bridged_metadata_h bridged_md, in switch_ingress_metadata_t ig_md) {
-    bridged_md.setValid();
-    bridged_md.src = SWITCH_PKT_SRC_BRIDGE;
-    bridged_md.base = {
-        ig_md.port, ig_md.ifindex, ig_md.bd, ig_md.nexthop, ig_md.lkp.pkt_type,
-        ig_md.flags.routed, ig_md.flags.peer_link,
-        ig_md.qos.tc, ig_md.cpu_reason, ig_md.timestamp, ig_md.qos.qid};
-# 69 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/util.p4"
-    bridged_md.dtel = {ig_md.dtel.report_type, ig_md.mirror.session_id, ig_md.hash};
-
-}
-
-
-action set_ig_intr_md(in switch_ingress_metadata_t ig_md,
-                      inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
-                      inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm) {
-
-// Set PRE hash values
-//XXX Compiler doesn't like this copy!!!!
-//  ig_intr_md_for_tm.level1_mcast_hash = hash[12:0];
-//  ig_intr_md_for_tm.level2_mcast_hash = hash[28:16];
-
-
-
-    ig_intr_md_for_dprsr.mirror_type = (bit<3>) ig_md.mirror.type;
-
-
-
-}
-
-
-action set_eg_intr_md(in switch_egress_metadata_t eg_md,
-                      inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
-                      inout egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport) {
-
-    eg_intr_md_for_oport.capture_tstamp_on_tx = eg_md.flags.capture_ts;
-
-
-
-    eg_intr_md_for_dprsr.mirror_type = (bit<3>) eg_md.mirror.type;
-
-
-
-
-}
-# 45 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/switch.p4" 2
-
-# 1 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/l3.p4" 1
-/*******************************************************************************
- * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
- *
- * Copyright (c) 2015-2019 Barefoot Networks, Inc.
-
- * All Rights Reserved.
- *
- * NOTICE: All information contained herein is, and remains the property of
- * Barefoot Networks, Inc. and its suppliers, if any. The intellectual and
- * technical concepts contained herein are proprietary to Barefoot Networks,
- * Inc.
- * and its suppliers and may be covered by U.S. and Foreign Patents, patents in
- * process, and are protected by trade secret or copyright law.
- * Dissemination of this information or reproduction of this material is
- * strictly forbidden unless prior written permission is obtained from
- * Barefoot Networks, Inc.
- *
- * No warranty, explicit or implicit is provided, unless granted under a
- * written agreement with Barefoot Networks, Inc.
- *
- *
- * Milad Sharif (msharif@barefootnetworks.com)
- *
- ******************************************************************************/
-
-# 1 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/acl.p4" 1
+# 1 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/acl.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -2507,7 +2246,7 @@ action acl_redirect(inout switch_ingress_metadata_t ig_md,
 
 
 }
-# 87 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/acl.p4"
+# 87 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/acl.p4"
 //-----------------------------------------------------------------------------
 // IPv4 ACL
 //-----------------------------------------------------------------------------
@@ -2886,10 +2625,12 @@ control RouterAcl(in switch_lookup_fields_t lkp,
 control Ipv4MirrorAcl(
         in switch_lookup_fields_t lkp,
         inout switch_ingress_metadata_t ig_md,
+        inout switch_mirror_type_t mirror_type,
         out switch_stats_index_t index)(
         switch_uint32_t table_size=512) {
 
     action acl_mirror(switch_mirror_session_t session_id) {
+        mirror_type = 1;
         ig_md.mirror.type = 1;
         ig_md.mirror.src = SWITCH_PKT_SRC_CLONE_INGRESS;
         ig_md.mirror.session_id = session_id;
@@ -2918,10 +2659,12 @@ control Ipv4MirrorAcl(
 control Ipv6MirrorAcl(
         in switch_lookup_fields_t lkp,
         inout switch_ingress_metadata_t ig_md,
+        inout switch_mirror_type_t mirror_type,
         out switch_stats_index_t index)(
         switch_uint32_t table_size=512) {
 
     action acl_mirror(switch_mirror_session_t session_id) {
+        mirror_type = 1;
         ig_md.mirror.type = 1;
         ig_md.mirror.src = SWITCH_PKT_SRC_CLONE_INGRESS;
         ig_md.mirror.session_id = session_id;
@@ -2956,7 +2699,8 @@ control Ipv6MirrorAcl(
 // ----------------------------------------------------------------------------
 control MirrorAcl(
         inout switch_lookup_fields_t lkp,
-        inout switch_ingress_metadata_t ig_md)(
+        inout switch_ingress_metadata_t ig_md,
+        inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr)(
         switch_uint32_t ipv4_table_size=512,
         switch_uint32_t ipv6_table_size=512,
         bool stats_enable=false,
@@ -2973,10 +2717,10 @@ control MirrorAcl(
 
         if (!(ig_md.bypass & SWITCH_INGRESS_BYPASS_ACL != 0)) {
             if (lkp.ip_type == SWITCH_IP_TYPE_IPV4) {
-                ipv4.apply(lkp, ig_md, stats_index);
+                ipv4.apply(lkp, ig_md, ig_intr_md_for_dprsr.mirror_type, stats_index);
             } else if (lkp.ip_type == SWITCH_IP_TYPE_IPV6) {
 
-                ipv6.apply(lkp, ig_md, stats_index);
+                ipv6.apply(lkp, ig_md, ig_intr_md_for_dprsr.mirror_type, stats_index);
 
             }
         }
@@ -3034,6 +2778,11 @@ control IngressSystemAcl(
         copy_to_cpu(reason_code, qid, meter_id);
     }
 
+    action mirror_on_drop(switch_drop_reason_t drop_reason) {
+        drop(drop_reason);
+        // TODO(msharif)
+    }
+
     table system_acl {
         key = {
             ig_md.port_lag_label : ternary;
@@ -3072,15 +2821,15 @@ control IngressSystemAcl(
 
 
 
-            ig_md.ipv4.unicast_enable : ternary;
-            ig_md.ipv6.unicast_enable : ternary;
+            ig_md.ipv4_md.unicast_enable : ternary;
+            ig_md.ipv6_md.unicast_enable : ternary;
 
 
             ig_md.checks.mrpf : ternary;
-            ig_md.ipv4.multicast_enable : ternary;
-            ig_md.ipv4.multicast_snooping : ternary;
-            ig_md.ipv6.multicast_enable : ternary;
-            ig_md.ipv6.multicast_snooping : ternary;
+            ig_md.ipv4_md.multicast_enable : ternary;
+            ig_md.ipv4_md.multicast_snooping : ternary;
+            ig_md.ipv6_md.multicast_enable : ternary;
+            ig_md.ipv6_md.multicast_snooping : ternary;
 
             ig_md.cpu_reason : ternary;
             ig_md.drop_reason : ternary;
@@ -3091,6 +2840,7 @@ control IngressSystemAcl(
             drop;
             copy_to_cpu;
             redirect_to_cpu;
+            mirror_on_drop;
         }
 
         const default_action = NoAction;
@@ -3290,7 +3040,7 @@ control EgressAcl(in switch_header_t hdr,
     switch_stats_index_t stats_index;
 
     apply {
-# 883 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/acl.p4"
+# 892 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/acl.p4"
     }
 }
 
@@ -3312,6 +3062,7 @@ control EgressSystemAcl(
         eg_md.mirror.type = 2;
         eg_md.mirror.session_id = SWITCH_MIRROR_SESSION_CPU;
         eg_md.mirror.src = SWITCH_PKT_SRC_CLONE_EGRESS;
+        hdr.mirror.cpu.port = (bit<16>)eg_intr_md.egress_port;
     }
 
     action redirect_to_cpu(switch_cpu_reason_t reason_code) {
@@ -3360,12 +3111,11 @@ control EgressSystemAcl(
     }
 
     apply {
-        if (!(eg_md.bypass & SWITCH_EGRESS_BYPASS_SYSTEM_ACL != 0))
-            system_acl.apply();
+        system_acl.apply();
     }
 }
-# 27 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/l3.p4" 2
-# 1 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/l2.p4" 1
+# 27 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/l3.p4" 2
+# 1 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/l2.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -3441,17 +3191,17 @@ control IngressSTP(in switch_ingress_metadata_t ig_md,
     }
 
     apply {
-# 89 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/l2.p4"
+# 89 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/l2.p4"
     }
 }
 
 //-----------------------------------------------------------------------------
 // Spanning Tree Protocol
-// @param eg_md : Egress metadata fields.
 // @param port : Egress port.
+// @param bd : Egress BD.
 // @param stp_state : Spanning tree state.
 //-----------------------------------------------------------------------------
-control EgressSTP(in switch_egress_metadata_t eg_md, in switch_port_t port, inout bool stp_state) {
+control EgressSTP(in switch_port_t port, in switch_bd_t bd, inout bool stp_state) {
     // This register is used to check the stp state of the egress port.
     // (bd << 7 | port) is used as the index to read the stp state. To save
     // resources, only 7-bit local port id is used to construct the index.
@@ -3464,7 +3214,13 @@ control EgressSTP(in switch_egress_metadata_t eg_md, in switch_port_t port, inou
     };
 
     apply {
-# 120 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/l2.p4"
+
+
+
+
+
+
+
     }
 }
 
@@ -3706,53 +3462,39 @@ control EgressBd(in switch_header_t hdr,
 // is defined.
 //
 // @param hdr : Parsed headers.
-// @param eg_md : Egress metadata fields.
 // @param port : Ingress port.
 // @flag QINQ_ENABLE
 //-----------------------------------------------------------------------------
-control VlanDecap(inout switch_header_t hdr, in switch_egress_metadata_t eg_md) {
+control VlanDecap(inout switch_header_t hdr, in switch_port_t port) {
     action remove_vlan_tag() {
         hdr.ethernet.ether_type = hdr.vlan_tag[0].ether_type;
         hdr.vlan_tag.pop_front(1);
     }
 
-    action remove_double_tag() {
-        hdr.ethernet.ether_type = hdr.vlan_tag[1].ether_type;
-        hdr.vlan_tag.pop_front(2);
-    }
-
     table vlan_decap {
         key = {
-
-
-
-            hdr.vlan_tag[0].isValid() : ternary;
-
-
-
+            port : ternary;
+            hdr.vlan_tag[0].isValid() : exact;
         }
 
         actions = {
             NoAction;
             remove_vlan_tag;
-            remove_double_tag;
         }
 
         const default_action = NoAction;
     }
 
     apply {
-        if (!(eg_md.bypass & SWITCH_EGRESS_BYPASS_REWRITE != 0)) {
 
 
 
-            // Remove the vlan tag by default.
-            if (hdr.vlan_tag[0].isValid()) {
-                hdr.ethernet.ether_type = hdr.vlan_tag[0].ether_type;
-                hdr.vlan_tag[0].setInvalid();
-            }
-
+        // Remove the vlan tag by default.
+        if (hdr.vlan_tag[0].isValid()) {
+            hdr.ethernet.ether_type = hdr.vlan_tag[0].ether_type;
+            hdr.vlan_tag[0].setInvalid();
         }
+
     }
 }
 
@@ -3765,22 +3507,13 @@ control VlanDecap(inout switch_header_t hdr, in switch_egress_metadata_t eg_md) 
 // @flag QINQ_ENABLE
 //-----------------------------------------------------------------------------
 control VlanXlate(inout switch_header_t hdr,
-                  in switch_egress_metadata_t eg_md)(
+                  in switch_port_lag_index_t port_lag_index,
+                  in switch_bd_t bd)(
                   switch_uint32_t bd_table_size,
                   switch_uint32_t port_bd_table_size) {
     action set_vlan_untagged() {
         //NoAction.
     }
-
-    action set_double_tagged(vlan_id_t vid0, vlan_id_t vid1) {
-        hdr.vlan_tag[0].setValid();
-        hdr.vlan_tag[0].ether_type = 0x8100;
-        hdr.vlan_tag[0].vid = vid0;
-        hdr.vlan_tag[1].setValid();
-        hdr.vlan_tag[1].ether_type = hdr.ethernet.ether_type;
-        hdr.vlan_tag[1].vid = vid1;
-        hdr.ethernet.ether_type = 0x8100;
-   }
 
     action set_vlan_tagged(vlan_id_t vid) {
 
@@ -3797,25 +3530,21 @@ control VlanXlate(inout switch_header_t hdr,
 
     table port_bd_to_vlan_mapping {
         key = {
-            eg_md.port_lag_index : exact @name("port_lag_index");
-            eg_md.bd : exact @name("bd");
+            port_lag_index : exact;
+            bd : exact;
         }
 
         actions = {
             set_vlan_untagged;
             set_vlan_tagged;
-
-
-
         }
 
         const default_action = set_vlan_untagged;
         size = port_bd_table_size;
-        //TODO : fix table size once scale requirements for double tag is known
     }
 
     table bd_to_vlan_mapping {
-        key = { eg_md.bd : exact @name("bd"); }
+        key = { bd : exact; }
         actions = {
             set_vlan_untagged;
             set_vlan_tagged;
@@ -3830,7 +3559,7 @@ control VlanXlate(inout switch_header_t hdr,
     }
 
     action set_type_qinq() {
-        hdr.ethernet.ether_type = 0x8100;
+        hdr.ethernet.ether_type = 0x9100;
     }
 
     table set_ether_type {
@@ -3853,18 +3582,16 @@ control VlanXlate(inout switch_header_t hdr,
     }
 
     apply {
-        if (!(eg_md.bypass & SWITCH_EGRESS_BYPASS_REWRITE != 0)) {
-            if (!port_bd_to_vlan_mapping.apply().hit) {
-                bd_to_vlan_mapping.apply();
-            }
-
-
-
-
+        if (!port_bd_to_vlan_mapping.apply().hit) {
+            bd_to_vlan_mapping.apply();
         }
+
+
+
+
     }
 }
-# 28 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/l3.p4" 2
+# 28 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/l3.p4" 2
 
 //-----------------------------------------------------------------------------
 // FIB lookup
@@ -3996,10 +3723,7 @@ control Fibv6<T>(in ipv6_addr_t dst_addr,
     }
 }
 
-control MTU(in switch_header_t hdr,
-            in switch_egress_metadata_t eg_md,
-            inout switch_mtu_t mtu_check)(
-            switch_uint32_t table_size=1024) {
+control MTU(in switch_header_t hdr, inout switch_mtu_t mtu_check)(switch_uint32_t table_size=1024) {
 
     action ipv4_mtu_check(switch_mtu_t mtu) {
         mtu_check = mtu |-| hdr.ipv4.total_len;
@@ -4031,8 +3755,7 @@ control MTU(in switch_header_t hdr,
     }
 
     apply {
-        if (!(eg_md.bypass & SWITCH_EGRESS_BYPASS_MTU != 0))
-            mtu.apply();
+        mtu.apply();
     }
 }
 
@@ -4086,13 +3809,13 @@ control IngressUnicast(in switch_lookup_fields_t lkp,
         if (rmac.apply().hit) {
             //TODO(msharif) : SWI-821 Drop non-ip packets with router MAC.
             if (!(ig_md.bypass & SWITCH_INGRESS_BYPASS_L3 != 0)) {
-                if (lkp.ip_type == SWITCH_IP_TYPE_IPV4 && ig_md.ipv4.unicast_enable) {
+                if (lkp.ip_type == SWITCH_IP_TYPE_IPV4 && ig_md.ipv4_md.unicast_enable) {
 
                     ipv4_fib.apply(lkp.ipv4_dst_addr,
                                    ig_md.vrf,
                                    ig_md.flags,
                                    ig_md.nexthop);
-                } else if (lkp.ip_type == SWITCH_IP_TYPE_IPV6 && ig_md.ipv6.unicast_enable) {
+                } else if (lkp.ip_type == SWITCH_IP_TYPE_IPV6 && ig_md.ipv6_md.unicast_enable) {
 
 
                     ipv6_fib.apply(lkp.ipv6_dst_addr,
@@ -4107,8 +3830,8 @@ control IngressUnicast(in switch_lookup_fields_t lkp,
         }
     }
 }
-# 47 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/switch.p4" 2
-# 1 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/nexthop.p4" 1
+# 46 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/switch.p4" 2
+# 1 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/nexthop.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -4304,14 +4027,14 @@ control OuterNexthop(inout switch_ingress_metadata_t ig_md,
 
     apply {
 
-
-
-
+        switch(nexthop.apply().action_run) {
+            NoAction : { ecmp.apply(); }
+        }
 
     }
 }
-# 48 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/switch.p4" 2
-# 1 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/parde.p4" 1
+# 47 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/switch.p4" 2
+# 1 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/parde.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -4334,7 +4057,7 @@ control OuterNexthop(inout switch_ingress_metadata_t ig_md,
  *
  ******************************************************************************/
 
-# 1 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/headers.p4" 1
+# 1 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/headers.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -4362,8 +4085,8 @@ control OuterNexthop(inout switch_ingress_metadata_t ig_md,
 //-----------------------------------------------------------------------------
 // Protocol Header Definitions
 //-----------------------------------------------------------------------------
-# 24 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/parde.p4" 2
-# 1 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/types.p4" 1
+# 24 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/parde.p4" 2
+# 1 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/types.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -4387,12 +4110,33 @@ control OuterNexthop(inout switch_ingress_metadata_t ig_md,
  * Milad Sharif (msharif@barefootnetworks.com)
  *
  ******************************************************************************/
-# 25 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/parde.p4" 2
+# 25 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/parde.p4" 2
+
+//-----------------------------------------------------------------------------
+// MPLS parser
+//-----------------------------------------------------------------------------
+parser MplsParser(packet_in pkt, inout switch_header_t hdr) {
+    state start {
+
+
+
+        transition accept;
+
+    }
+
+    state parse_mpls {
+        pkt.extract(hdr.mpls.next);
+        transition select(hdr.mpls.last.bos) {
+            1 : accept;
+            0 : parse_mpls;
+        }
+    }
+}
 
 //-----------------------------------------------------------------------------
 // Segment routing extension header parser
 //-----------------------------------------------------------------------------
-parser SRHParser(packet_in pkt, inout switch_header_t hdr) {
+parser SrhParser(packet_in pkt, inout switch_header_t hdr) {
     state start {
 
 
@@ -4459,7 +4203,7 @@ parser SwitchIngressParser(
             (0x0806, _) : parse_arp;
             (0x86dd, _) : parse_ipv6;
             (0x8100, _) : parse_vlan;
-            (0x8100, _) : parse_vlan;
+            (0x9100, _) : parse_vlan;
             (0x8906, _) : parse_fcoe;
             cpu_port : parse_cpu;
             default : accept;
@@ -4474,7 +4218,7 @@ parser SwitchIngressParser(
             0x0800 : parse_ipv4;
             0x86dd : parse_ipv6;
             0x8100 : parse_vlan;
-            0x8100 : parse_vlan;
+            0x9100 : parse_vlan;
             default : accept;
         }
     }
@@ -4583,21 +4327,21 @@ parser SwitchIngressParser(
 
     state parse_vxlan {
 
+        pkt.extract(hdr.vxlan);
+        ig_md.tunnel.type = SWITCH_TUNNEL_TYPE_VXLAN;
+        ig_md.tunnel.id = hdr.vxlan.vni;
+        transition parse_inner_ethernet;
 
 
-
-
-
-        transition accept;
 
     }
 
     state parse_ipinip {
 
+        ig_md.tunnel.type = SWITCH_TUNNEL_TYPE_IPINIP;
+        transition parse_inner_ipv4;
 
 
-
-        transition accept;
 
     }
 
@@ -4632,7 +4376,7 @@ parser SwitchIngressParser(
     }
 
     state parse_inner_ipv6 {
-# 278 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/parde.p4"
+# 299 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/parde.p4"
         transition accept;
 
     }
@@ -4669,15 +4413,12 @@ parser SwitchEgressParser(
     state start {
         pkt.extract(eg_intr_md);
         eg_md.pkt_length = eg_intr_md.pkt_length;
-        eg_md.port = eg_intr_md.egress_port;
 
         switch_port_mirror_metadata_h mirror_md = pkt.lookahead<switch_port_mirror_metadata_h>();
         transition select(mirror_md.src, mirror_md.type) {
             (SWITCH_PKT_SRC_BRIDGE, _) : parse_bridged_metadata;
             (_, 1) : parse_port_mirrored_metadata;
             (SWITCH_PKT_SRC_CLONE_EGRESS, 2) : parse_cpu_mirrored_metadata;
-            (_, 3) : parse_dtel_drop_metadata;
-            (_, 3) : parse_dtel_switch_local_metadata;
         }
 
 
@@ -4699,74 +4440,41 @@ parser SwitchEgressParser(
         eg_md.pkt_type = hdr.bridged_md.base.pkt_type;
         eg_md.timestamp = hdr.bridged_md.base.timestamp;
         eg_md.qos.qid = hdr.bridged_md.base.qid;
-# 358 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/parde.p4"
-        eg_md.dtel.report_type = hdr.bridged_md.dtel.report_type;
-        eg_md.dtel.hash = hdr.bridged_md.dtel.hash;
-        eg_md.dtel.session_id = hdr.bridged_md.dtel.session_id;
+# 371 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/parde.p4"
+        eg_md.outer_nexthop = hdr.bridged_md.tunnel.outer_nexthop;
+        eg_md.tunnel.index = hdr.bridged_md.tunnel.index;
+        eg_md.tunnel.hash = hdr.bridged_md.tunnel.hash;
+        eg_md.tunnel.terminate = hdr.bridged_md.tunnel.terminate;
 
+        // Set bridged metadata here.
 
         transition parse_ethernet;
     }
 
     state parse_port_mirrored_metadata {
-        switch_port_mirror_metadata_h port_md;
-        pkt.extract(port_md);
+        switch_port_mirror_metadata_h md;
+        pkt.extract(md);
         pkt.extract(hdr.ethernet);
-        eg_md.pkt_src = port_md.src;
-        eg_md.mirror.session_id = port_md.session_id;
-        eg_md.timestamp = port_md.timestamp;
-        eg_md.bypass = ~SWITCH_EGRESS_BYPASS_MTU;
+        eg_md.pkt_src = md.src;
+
+        eg_md.mirror.session_id = md.session_id[9:0];
+
+
+
+        // eg_md.mirror.session_id = (switch_mirror_session_t) md.session_id;
+        eg_md.timestamp = md.timestamp;
         transition accept;
     }
 
     state parse_cpu_mirrored_metadata {
-        switch_cpu_mirror_metadata_h cpu_md;
-        pkt.extract(cpu_md);
-        pkt.extract(hdr.ethernet);
-        eg_md.bypass = ~SWITCH_EGRESS_BYPASS_MTU;
-        eg_md.bd = cpu_md.bd;
-        // eg_md.ingress_port = cpu_md.md.port;
-        // eg_md.ingress_ifindex = cpu_md.md.ifindex;
-        eg_md.cpu_reason = cpu_md.reason_code;
+        switch_cpu_mirror_metadata_h md;
+        pkt.extract(md);
+ pkt.extract(hdr.ethernet);
+        eg_md.bd = (switch_bd_t) md.bd;
+        // eg_md.ingress_port = (switch_port_t) md.port;
+        // eg_md.ingress_ifindex = (switch_ifindex_t) md.ifindex;
+        eg_md.cpu_reason = (switch_cpu_reason_t) md.reason_code;
         transition accept;
-    }
-
-    state parse_dtel_drop_metadata {
-
-        switch_dtel_mirror_metadata_h dtel_md;
-        pkt.extract(dtel_md);
-        eg_md.pkt_src = dtel_md.src;
-        eg_md.dtel.report_type = dtel_md.report_type;
-        eg_md.dtel.hash = dtel_md.hash;
-        eg_md.mirror.session_id = dtel_md.session_id;
-        eg_md.timestamp = dtel_md.timestamp;
-        hdr.dtel_drop_report = {
-            dtel_md.ingress_port,
-            (bit<16>) SWITCH_PORT_INVALID,
-            dtel_md.qid,
-            dtel_md.drop_reason,
-            0};
-        transition accept;
-
-
-
-    }
-
-    state parse_dtel_switch_local_metadata {
-
-        switch_dtel_mirror_metadata_h dtel_md;
-        pkt.extract(dtel_md);
-        eg_md.pkt_src = dtel_md.src;
-        eg_md.dtel.report_type = dtel_md.report_type;
-        eg_md.dtel.hash = dtel_md.hash;
-        eg_md.mirror.session_id = dtel_md.session_id;
-        // eg_md.timestamp = dtel_md.timestamp;
-        hdr.dtel_switch_local_report = {
-            dtel_md.ingress_port, dtel_md.egress_port, dtel_md.qid, 0, dtel_md.timestamp[31:0]};
-        transition accept;
-
-
-
     }
 
 
@@ -4781,36 +4489,41 @@ parser SwitchEgressParser(
             (0x0800, _) : parse_ipv4;
             (0x86dd, _) : parse_ipv6;
             (0x8100, _) : parse_vlan;
-            (0x8100, _) : parse_vlan;
+            (0x9100, _) : parse_vlan;
             default : accept;
         }
     }
 
     state parse_cpu {
-        eg_md.bypass = SWITCH_EGRESS_BYPASS_ALL;
+        eg_md.port_type = SWITCH_PORT_TYPE_NORMAL;
         transition accept;
     }
 
     state parse_ipv4 {
         pkt.extract(hdr.ipv4);
-        transition select(hdr.ipv4.protocol, hdr.ipv4.ihl, hdr.ipv4.flags, hdr.ipv4.frag_offset) {
-
-
-
-
-
-
-
-            (_, 6, _, _) : parse_ipv4_options;
+        transition select(hdr.ipv4.ihl, hdr.ipv4.flags, hdr.ipv4.frag_offset) {
+            (5, _, _) : parse_ipv4_no_options;
+            (6, _, _) : parse_ipv4_options;
             default : accept;
+            //TODO (ipv4.ihl > 6)
         }
     }
 
     state parse_ipv4_options {
-        //TODO(msharif) : Add support for ipv4.ihl > 6.
         pkt.extract(hdr.opaque_option);
+        transition parse_ipv4_no_options;
+    }
+
+    state parse_ipv4_no_options {
         transition select(hdr.ipv4.protocol) {
-# 476 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/parde.p4"
+
+            // IP_PROTOCOLS_TCP : parse_tcp;
+            17 : parse_udp;
+
+            4 : parse_inner_ipv4;
+            41 : parse_inner_ipv6;
+
+
             default : accept;
         }
     }
@@ -4829,7 +4542,7 @@ parser SwitchEgressParser(
 
         pkt.extract(hdr.ipv6);
         transition select(hdr.ipv6.next_hdr) {
-# 502 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/parde.p4"
+# 480 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/parde.p4"
             default : accept;
         }
 
@@ -4852,10 +4565,10 @@ parser SwitchEgressParser(
 
     state parse_vxlan {
 
+        pkt.extract(hdr.vxlan);
+        transition parse_inner_ethernet;
 
 
-
-        transition accept;
 
     }
 
@@ -4878,7 +4591,7 @@ parser SwitchEgressParser(
     }
 
     state parse_inner_ipv6 {
-# 558 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/parde.p4"
+# 536 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/parde.p4"
         transition accept;
 
     }
@@ -4907,33 +4620,18 @@ control IngressMirror(
     inout switch_header_t hdr,
     in switch_ingress_metadata_t ig_md,
     in ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr) {
-// Ingress deparser create a copy of the original ingress packet and prepend the prepend the mirror
-// header.
+// Ingress deparser create a copy of the original ingress packet and prepend
+// the prepend the mirror header.
     Mirror() mirror;
 
     apply {
 
         if (ig_intr_md_for_dprsr.mirror_type == 1) {
-            mirror.emit(
-                ig_md.mirror.session_id,
-                {ig_md.mirror.src, ig_md.mirror.type, ig_md.timestamp, ig_md.mirror.session_id});
-
-        } else if (ig_intr_md_for_dprsr.mirror_type == 3) {
-
-            mirror.emit(ig_md.dtel.session_id, {
-                ig_md.mirror.src,
-                ig_md.mirror.type,
-                ig_md.timestamp,
-                ig_md.dtel.session_id,
-                ig_md.dtel.hash,
-                ig_md.dtel.report_type,
-                ig_md.port,
-                ig_md.egress_port,
-                ig_md.qos.qid,
-                ig_md.drop_reason
-            });
-
-
+            hdr.mirror.port.src = ig_md.mirror.src;
+            hdr.mirror.port.type = ig_md.mirror.type;
+            hdr.mirror.port.timestamp = ig_md.timestamp;
+            // hdr.mirror.port.session_id = (bit<16>) ig_md.mirror.session_id;
+            mirror.emit(ig_md.mirror.session_id, hdr.mirror.port);
         }
 
     }
@@ -4943,57 +4641,47 @@ control EgressMirror(
     inout switch_header_t hdr,
     in switch_egress_metadata_t eg_md,
     in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr) {
-// Egress deparser first construct the output packet and then prepend the mirror header.
+// Egress deparser first construct the output packet and then prepend the
+// mirror header.
     Mirror() mirror;
 
     apply {
 
         if (eg_intr_md_for_dprsr.mirror_type == 1) {
-            mirror.emit(
-                eg_md.mirror.session_id,
-                {eg_md.mirror.src, eg_md.mirror.type, eg_md.timestamp, eg_md.mirror.session_id});
-        } else if (eg_intr_md_for_dprsr.mirror_type == 2) {
-            mirror.emit(eg_md.mirror.session_id, {
-                eg_md.mirror.src,
-                eg_md.mirror.type,
-                eg_md.ingress_port,
-                eg_md.bd,
-                eg_md.ingress_ifindex,
-                eg_md.cpu_reason});
-        } else if (// eg_intr_md_for_dprsr.mirror_type == SWITCH_MIRROR_TYPE_DTEL_DROP ||
-                eg_intr_md_for_dprsr.mirror_type == 3) {
+            hdr.mirror.port.src = eg_md.mirror.src;
+            hdr.mirror.port.type = eg_md.mirror.type;
+            hdr.mirror.port.timestamp = eg_md.timestamp;
+            // hdr.mirror.port.session_id = (bit<16>) eg_md.mirror.session_id;
+            mirror.emit(eg_md.mirror.session_id, hdr.mirror.port);
+        }
 
-            mirror.emit(eg_md.dtel.session_id, {
-                eg_md.mirror.src, eg_md.mirror.type,
-                eg_md.timestamp,
-                eg_md.dtel.session_id,
-                eg_md.dtel.hash,
-                eg_md.dtel.report_type,
-                eg_md.ingress_port,
-                eg_md.port,
-                eg_md.drop_reason,
-                eg_md.qos.qid});
-            mirror.emit(eg_md.dtel.session_id, hdr.mirror.dtel);
-
+        if (eg_intr_md_for_dprsr.mirror_type == 2) {
+            hdr.mirror.cpu.src = eg_md.mirror.src;
+            hdr.mirror.cpu.type = eg_md.mirror.type;
+            // hdr.mirror.cpu.port = (bit<16>)eg_intr_md.port;
+            hdr.mirror.cpu.bd = (bit<16>) eg_md.bd;
+            // hdr.mirror.cpu.eg_md.ifindex
+            hdr.mirror.cpu.reason_code = eg_md.cpu_reason;
+            mirror.emit(eg_md.mirror.session_id, hdr.mirror.cpu);
         }
 
     }
 }
 
-//-----------------------------------------------------------------------------
+//=============================================================================
 // Ingress Deparser
-//-----------------------------------------------------------------------------
+//=============================================================================
 control SwitchIngressDeparser(
     packet_out pkt,
     inout switch_header_t hdr,
     in switch_ingress_metadata_t ig_md,
     in ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr) {
 
-    IngressMirror() mirror;
+    IngressMirror() ingress_mirror;
     Digest<switch_learning_digest_t>() digest;
 
     apply {
-        mirror.apply(hdr, ig_md, ig_intr_md_for_dprsr);
+        ingress_mirror.apply(hdr, ig_md, ig_intr_md_for_dprsr);
 
         if (ig_intr_md_for_dprsr.digest_type == SWITCH_DIGEST_TYPE_MAC_LEARNING) {
             digest.pack({ig_md.bd, ig_md.ifindex, ig_md.lkp.mac_src_addr});
@@ -5021,22 +4709,21 @@ control SwitchIngressDeparser(
     }
 }
 
-
-//-----------------------------------------------------------------------------
+//=============================================================================
 // Egress Deparser
-//-----------------------------------------------------------------------------
+//=============================================================================
 control SwitchEgressDeparser(
         packet_out pkt,
         inout switch_header_t hdr,
         in switch_egress_metadata_t eg_md,
         in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr) {
 
-    EgressMirror() mirror;
+    EgressMirror() egress_mirror;
     Checksum<bit<16>>(HashAlgorithm_t.CSUM16) ipv4_checksum;
     Checksum<bit<16>>(HashAlgorithm_t.CSUM16) inner_ipv4_checksum;
 
     apply {
-        mirror.apply(hdr, eg_md, eg_intr_md_for_dprsr);
+        egress_mirror.apply(hdr, eg_md, eg_intr_md_for_dprsr);
         hdr.ipv4.hdr_checksum = ipv4_checksum.update({
             hdr.ipv4.version,
             hdr.ipv4.ihl,
@@ -5052,7 +4739,22 @@ control SwitchEgressDeparser(
             // hdr.opaque_option.type,
             // hdr.opaque_option.length,
             // hdr.opaque_option.value});
-# 747 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/parde.p4"
+
+
+        hdr.inner_ipv4.hdr_checksum = inner_ipv4_checksum.update({
+            hdr.inner_ipv4.version,
+            hdr.inner_ipv4.ihl,
+            hdr.inner_ipv4.diffserv,
+            hdr.inner_ipv4.total_len,
+            hdr.inner_ipv4.identification,
+            hdr.inner_ipv4.flags,
+            hdr.inner_ipv4.frag_offset,
+            hdr.inner_ipv4.ttl,
+            hdr.inner_ipv4.protocol,
+            hdr.inner_ipv4.src_addr,
+            hdr.inner_ipv4.dst_addr});
+
+
         pkt.emit(hdr.ethernet);
         pkt.emit(hdr.cpu); // Egress only.
         pkt.emit(hdr.timestamp); // Egress only.
@@ -5060,9 +4762,7 @@ control SwitchEgressDeparser(
         pkt.emit(hdr.ipv4);
         pkt.emit(hdr.ipv6);
         pkt.emit(hdr.udp);
-        pkt.emit(hdr.dtel); // Egress only.
-        pkt.emit(hdr.dtel_switch_local_report); // Egress only.
-        pkt.emit(hdr.dtel_drop_report); // Egress only.
+        // pkt.emit(hdr.tcp);
         pkt.emit(hdr.vxlan);
         pkt.emit(hdr.gre); // Egress only.
         pkt.emit(hdr.erspan_type2); // Egress only.
@@ -5072,10 +4772,11 @@ control SwitchEgressDeparser(
         pkt.emit(hdr.inner_ipv4);
         pkt.emit(hdr.inner_ipv6);
         pkt.emit(hdr.inner_udp);
+        // pkt.emit(hdr.inner_tcp);
     }
 }
-# 49 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/switch.p4" 2
-# 1 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/port.p4" 1
+# 48 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/switch.p4" 2
+# 1 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/port.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -5101,7 +4802,7 @@ control SwitchEgressDeparser(
  *
  ******************************************************************************/
 
-# 1 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/rewrite.p4" 1
+# 1 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/rewrite.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -5128,7 +4829,7 @@ control SwitchEgressDeparser(
 
 
 
-# 1 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/l2.p4" 1
+# 1 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/l2.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -5153,7 +4854,7 @@ control SwitchEgressDeparser(
  * Milad Sharif (msharif@barefootnetworks.com)
  *
  ******************************************************************************/
-# 28 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/rewrite.p4" 2
+# 28 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/rewrite.p4" 2
 
 //-----------------------------------------------------------------------------
 // @param hdr : Parsed headers. For mirrored packet only Ethernet header is parsed.
@@ -5255,9 +4956,8 @@ control MirrorRewrite(inout switch_header_t hdr,
     }
 
     action rewrite_rspan(switch_qid_t qid, switch_bd_t bd) {
-        //TODO(msharif): Need to remove the vlan tag, if we need to support rspan.
         eg_md.qos.qid = qid;
-        // eg_md.bd = bd;
+        eg_md.bd = bd;
     }
 
     action rewrite_erspan_type2(
@@ -5305,7 +5005,6 @@ control MirrorRewrite(inout switch_header_t hdr,
             switch_qid_t qid,
             mac_addr_t smac, mac_addr_t dmac,
             ipv4_addr_t sip, ipv4_addr_t dip, bit<8> tos, bit<8> ttl) {
-
         eg_md.qos.qid = qid;
         add_erspan_type3((bit<10>)eg_md.mirror.session_id, (bit<32>)eg_md.timestamp, false);
         add_gre_header(0x22EB);
@@ -5317,7 +5016,6 @@ control MirrorRewrite(inout switch_header_t hdr,
 
         hdr.inner_ethernet = hdr.ethernet;
         add_ethernet_header(smac, dmac, 0x0800);
-
     }
 
     action rewrite_erspan_type3_with_vlan(
@@ -5325,7 +5023,6 @@ control MirrorRewrite(inout switch_header_t hdr,
             bit<16> ether_type, mac_addr_t smac, mac_addr_t dmac,
             bit<3> pcp, vlan_id_t vid,
             ipv4_addr_t sip, ipv4_addr_t dip, bit<8> tos, bit<8> ttl) {
-
         eg_md.qos.qid = qid;
         add_erspan_type3((bit<10>)eg_md.mirror.session_id, (bit<32>)eg_md.timestamp, false);
         add_gre_header(0x22EB);
@@ -5338,14 +5035,12 @@ control MirrorRewrite(inout switch_header_t hdr,
         hdr.inner_ethernet = hdr.ethernet;
         add_ethernet_header(smac, dmac, ether_type);
         add_vlan_tag(vid, pcp, 0x0800);
-
     }
 
     action rewrite_erspan_type3_platform_specific(
             switch_qid_t qid,
             mac_addr_t smac, mac_addr_t dmac,
             ipv4_addr_t sip, ipv4_addr_t dip, bit<8> tos, bit<8> ttl) {
-
         eg_md.qos.qid = qid;
         add_erspan_type3((bit<10>)eg_md.mirror.session_id, (bit<32>)eg_md.timestamp, true);
         add_gre_header(0x22EB);
@@ -5357,7 +5052,6 @@ control MirrorRewrite(inout switch_header_t hdr,
 
         hdr.inner_ethernet = hdr.ethernet;
         add_ethernet_header(smac, dmac, 0x0800);
-
     }
 
     action rewrite_erspan_type3_platform_specific_with_vlan(
@@ -5365,7 +5059,6 @@ control MirrorRewrite(inout switch_header_t hdr,
             bit<16> ether_type, mac_addr_t smac, mac_addr_t dmac,
             bit<3> pcp, vlan_id_t vid,
             ipv4_addr_t sip, ipv4_addr_t dip, bit<8> tos, bit<8> ttl) {
-
         eg_md.qos.qid = qid;
 
         add_erspan_type3((bit<10>)eg_md.mirror.session_id, (bit<32>)eg_md.timestamp, true);
@@ -5379,29 +5072,6 @@ control MirrorRewrite(inout switch_header_t hdr,
         hdr.inner_ethernet = hdr.ethernet;
         add_ethernet_header(smac, dmac, ether_type);
         add_vlan_tag(vid, pcp, 0x0800);
-
-    }
-
-    action rewrite_dtel_report(
-            mac_addr_t smac, mac_addr_t dmac,
-            ipv4_addr_t sip, ipv4_addr_t dip, bit<8> tos, bit<8> ttl,
-            bit<16> udp_dst_port) {
-
-        // Dtel report header is added later in the pipeline.
-        hdr.udp.setValid();
-        hdr.udp.src_port = eg_md.dtel.hash[15:0];
-        hdr.udp.dst_port = udp_dst_port;
-        hdr.udp.checksum = 0;
-        hdr.udp.length = eg_md.pkt_length + 16w07; // 16w20 - 16w13;
-
-        // Total length = packet length + 40
-        //   IPv4 (20) + UDP (8) + DTel report (12)
-        add_ipv4_header(tos, ttl, 17, sip, dip);
-        hdr.ipv4.total_len = eg_md.pkt_length + 16w27; // 16w40 - 16w13
-        hdr.ipv4.flags = 2;
-
-        add_ethernet_header(smac, dmac, 0x0800);
-
     }
 
 
@@ -5417,7 +5087,6 @@ control MirrorRewrite(inout switch_header_t hdr,
             rewrite_erspan_type2_with_vlan;
             rewrite_erspan_type3_with_vlan;
             rewrite_erspan_type3_platform_specific_with_vlan;
-            rewrite_dtel_report;
         }
 
         const default_action = NoAction;
@@ -5438,15 +5107,14 @@ control MirrorRewrite(inout switch_header_t hdr,
         }
     }
 
+
     apply {
 
-        if (eg_md.pkt_src != SWITCH_PKT_SRC_BRIDGE) {
 
 
 
-            rewrite.apply();
+        rewrite.apply();
 
-        }
     }
 }
 
@@ -5459,8 +5127,8 @@ control Rewrite(inout switch_header_t hdr,
 
     action rewrite_l2_with_tunnel(switch_tunnel_type_t type) {
 
-
-
+        eg_md.flags.routed = false;
+        eg_md.tunnel.type = type;
 
     }
 
@@ -5473,28 +5141,28 @@ control Rewrite(inout switch_header_t hdr,
     action rewrite_l3_with_tunnel_id(
             mac_addr_t dmac, switch_tunnel_type_t type, switch_tunnel_id_t id) {
 
-
-
-
-
-
+        eg_md.flags.routed = true;
+        hdr.ethernet.dst_addr = dmac;
+        eg_md.bd = SWITCH_BD_DEFAULT_VRF;
+        eg_md.tunnel.type = type;
+        eg_md.tunnel.id = id;
 
     }
 
     action rewrite_l3_with_tunnel_bd(mac_addr_t dmac, switch_tunnel_type_t type, switch_bd_t bd) {
 
-
-
-
-
+        eg_md.flags.routed = true;
+        hdr.ethernet.dst_addr = dmac;
+        eg_md.bd = bd;
+        eg_md.tunnel.type = type;
 
     }
 
     action rewrite_l3_with_tunnel(mac_addr_t dmac, switch_tunnel_type_t type) {
 
-
-
-
+        eg_md.flags.routed = true;
+        hdr.ethernet.dst_addr = dmac;
+        eg_md.tunnel.type = type;
 
     }
 
@@ -5587,31 +5255,33 @@ control Rewrite(inout switch_header_t hdr,
 
     apply {
         // Should not rewrite packets redirected to CPU.
-        if (!(eg_md.bypass & SWITCH_EGRESS_BYPASS_REWRITE != 0)) {
+        if (eg_md.port_type == SWITCH_PORT_TYPE_NORMAL) {
             nexthop_rewrite.apply();
         }
 
         egress_bd.apply(hdr, eg_md.bd, eg_md.pkt_type, eg_md.bd_label,
             smac_index, eg_md.checks.mtu);
 
-        if (!(eg_md.bypass & SWITCH_EGRESS_BYPASS_REWRITE != 0) && eg_md.flags.routed) {
+        if (eg_md.port_type == SWITCH_PORT_TYPE_NORMAL && eg_md.flags.routed) {
             ip_rewrite.apply();
             smac_rewrite.apply();
         }
     }
 }
-# 27 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/port.p4" 2
+# 27 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/port.p4" 2
 
 //-----------------------------------------------------------------------------
 // Ingress port mirroring
 //-----------------------------------------------------------------------------
 control PortMirror(
         in switch_port_t port,
-        in switch_pkt_src_t src,
-        inout switch_mirror_metadata_t mirror_md)(
+        in bit<8> src,
+        inout switch_mirror_metadata_t mirror_md,
+        inout switch_mirror_type_t mirror_type)(
         switch_uint32_t table_size=288) {
 
     action set_mirror_id(switch_mirror_session_t session_id) {
+        mirror_type = 1;
         mirror_md.type = 1;
         mirror_md.src = src;
         mirror_md.session_id = session_id;
@@ -5639,7 +5309,6 @@ control IngressPortMapping(
         inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm,
         inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr)(
         switch_uint32_t port_vlan_table_size,
-        switch_uint32_t double_tag_table_size,
         switch_uint32_t bd_table_size,
         switch_uint32_t port_table_size=288,
         switch_uint32_t vlan_table_size=4096) {
@@ -5662,7 +5331,7 @@ control IngressPortMapping(
 
     action terminate_cpu_packet() {
         ig_md.port = (switch_port_t) hdr.cpu.port;
-        ig_intr_md_for_tm.ucast_egress_port = (switch_port_t) hdr.cpu.port_or_group;
+        ig_intr_md_for_tm.ucast_egress_port = (switch_port_t) hdr.cpu.port;
         ig_intr_md_for_tm.qid = (switch_qid_t) hdr.cpu.qid;
         ig_intr_md_for_tm.bypass_egress = (bool) hdr.cpu.flags[0:0];
         hdr.ethernet.ether_type = hdr.cpu.ether_type;
@@ -5746,33 +5415,12 @@ control IngressPortMapping(
         ig_md.stp.group = stp_group;
         ig_md.multicast.rpf_group = mrpf_group;
         ig_md.learning.bd_mode = learning_mode;
-        ig_md.ipv4.unicast_enable = ipv4_unicast_enable;
-        ig_md.ipv4.multicast_enable = ipv4_multicast_enable;
-        ig_md.ipv4.multicast_snooping = igmp_snooping_enable;
-        ig_md.ipv6.unicast_enable = ipv6_unicast_enable;
-        ig_md.ipv6.multicast_enable = ipv6_multicast_enable;
-        ig_md.ipv6.multicast_snooping = mld_snooping_enable;
-    }
-
-    // (port, vlan[0], vlan[1]) --> bd mapping
-    table port_double_tag_to_bd_mapping {
-        key = {
-            ig_md.port_lag_index : exact;
-            hdr.vlan_tag[0].isValid() : exact;
-            hdr.vlan_tag[0].vid : exact;
-            hdr.vlan_tag[1].isValid() : exact;
-            hdr.vlan_tag[1].vid : exact;
-        }
-
-        actions = {
-            NoAction;
-            port_vlan_miss;
-            set_bd_properties;
-        }
-
-        const default_action = NoAction;
-        implementation = bd_action_profile;
-        size = double_tag_table_size;
+        ig_md.ipv4_md.unicast_enable = ipv4_unicast_enable;
+        ig_md.ipv4_md.multicast_enable = ipv4_multicast_enable;
+        ig_md.ipv4_md.multicast_snooping = igmp_snooping_enable;
+        ig_md.ipv6_md.unicast_enable = ipv6_unicast_enable;
+        ig_md.ipv6_md.multicast_enable = ipv6_multicast_enable;
+        ig_md.ipv6_md.multicast_snooping = mld_snooping_enable;
     }
 
     // (port, vlan) --> bd mapping -- Following set of entres are needed:
@@ -5891,18 +5539,15 @@ control IngressPortMapping(
             }
 
             set_port_properties : {
-
-
-
-                    if (!port_vlan_to_bd_mapping.apply().hit) {
-                        if (hdr.vlan_tag[0].isValid())
+                if (!port_vlan_to_bd_mapping.apply().hit) {
+                    if (hdr.vlan_tag[0].isValid())
                         vlan_to_bd_mapping.apply();
-                    }
                 }
             }
-# 341 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/port.p4"
+        }
+# 315 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/port.p4"
         // Check vlan membership
-        if (hdr.vlan_tag[0].isValid() && !hdr.vlan_tag[1].isValid() && (bit<1>) ig_md.flags.port_vlan_miss == 0) {
+        if (hdr.vlan_tag[0].isValid() && (bit<1>) ig_md.flags.port_vlan_miss == 0) {
             bit<32> pv_hash_ = hash.get({ig_md.port[6:0], hdr.vlan_tag[0].vid});
             ig_md.flags.port_vlan_miss =
                 (bool)check_vlan_membership.execute(pv_hash_);
@@ -5913,7 +5558,10 @@ control IngressPortMapping(
 
 
 
-        port_mirror.apply(ig_md.port, SWITCH_PKT_SRC_CLONE_INGRESS, ig_md.mirror);
+        port_mirror.apply(ig_md.port,
+                          SWITCH_PKT_SRC_CLONE_INGRESS,
+                          ig_md.mirror,
+                          ig_intr_md_for_dprsr.mirror_type);
 
     }
 }
@@ -5996,6 +5644,7 @@ control EgressPortMapping(
                        switch_port_lag_label_t port_lag_label,
                        switch_qos_group_t qos_group,
                        bool mlag_member) {
+        // eg_md.port_type = SWITCH_PORT_TYPE_NORMAL;
         eg_md.port_lag_index = port_lag_index;
         eg_md.port_lag_label = port_lag_label;
         eg_md.qos.group = qos_group;
@@ -6007,7 +5656,6 @@ control EgressPortMapping(
         hdr.cpu.qid = 0;
         hdr.cpu.flags = 0;
         hdr.cpu.reserved = 0;
-        // hdr.cpu.port_or_group = 0;
         hdr.cpu.port = (bit<16>) eg_md.ingress_port;
         hdr.cpu.ifindex = (bit<16>) eg_md.ingress_ifindex;
         hdr.cpu.bd = (bit<16>) eg_md.bd;
@@ -6018,6 +5666,7 @@ control EgressPortMapping(
     }
 
     action port_cpu(switch_port_lag_index_t port_lag_index) {
+        // eg_md.port_type = SWITCH_PORT_TYPE_CPU;
         cpu_rewrite();
     }
 
@@ -6037,12 +5686,13 @@ control EgressPortMapping(
         port_mapping.apply();
 
 
-        port_mirror.apply(port, SWITCH_PKT_SRC_CLONE_EGRESS, eg_md.mirror);
+        port_mirror.apply(
+            port, SWITCH_PKT_SRC_CLONE_EGRESS, eg_md.mirror, eg_intr_md_for_dprsr.mirror_type);
 
     }
 }
-# 50 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/switch.p4" 2
-# 1 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/validation.p4" 1
+# 49 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/switch.p4" 2
+# 1 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/validation.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -6133,22 +5783,11 @@ control PktValidation(
         lkp.pcp = hdr.vlan_tag[0].pcp;
     }
 
-    action valid_unicast_pkt_double_tagged() {
-        lkp.pkt_type = SWITCH_PKT_TYPE_UNICAST;
-        lkp.mac_src_addr = hdr.ethernet.src_addr;
-        lkp.mac_dst_addr = hdr.ethernet.dst_addr;
-        lkp.mac_type = hdr.vlan_tag[1].ether_type;
-        lkp.pcp = hdr.vlan_tag[1].pcp;
-    }
-
     table validate_ethernet {
         key = {
             hdr.ethernet.src_addr : ternary;
             hdr.ethernet.dst_addr : ternary;
             hdr.vlan_tag[0].isValid() : ternary;
-
-
-
         }
 
         actions = {
@@ -6159,17 +5798,16 @@ control PktValidation(
             valid_unicast_pkt_tagged;
             valid_multicast_pkt_tagged;
             valid_broadcast_pkt_tagged;
-
-
-
         }
 
         size = table_size;
-        /* const entries = {
+        /* XXX Driver does not support static entries for tables with match
+        fields with more than 32 btis.
+        const entries = {
             (_, _, _) : malformed_pkt(SWITCH_DROP_SRC_MAC_MULTICAST);
             (0, _, _) : malformed_pkt(SWITCH_DROP_SRC_MAC_ZERO);
             (_, 0, _) : malformed_pkt(SWITCH_DROP_DST_MAC_ZERO);
-        } */
+        }*/
     }
 
 //-----------------------------------------------------------------------------
@@ -6438,7 +6076,7 @@ control InnerPktValidation(
         */
     }
 
-    action valid_ipv6_pkt() {
+    action valid_ipv6_pkt(bool is_link_local) {
 
         // Set the common IP lookup fields
         lkp.ip_type = SWITCH_IP_TYPE_IPV6;
@@ -6449,7 +6087,7 @@ control InnerPktValidation(
         lkp.ipv6_dst_addr = hdr.inner_ipv6.dst_addr;
         lkp.ipv4_src_addr = 0;
         lkp.ipv4_dst_addr = 0;
-        flags.link_local = false;
+        flags.link_local = is_link_local;
 
     }
 
@@ -6462,11 +6100,6 @@ control InnerPktValidation(
         actions = {
             valid_ipv6_pkt;
             malformed_pkt;
-        }
-        const entries = {
-            (0 &&& 0, 0) : malformed_pkt(SWITCH_DROP_REASON_IP_IHL_INVALID);
-            (6, 0 &&& 0) : valid_ipv6_pkt();
-            (0 &&& 0, 0 &&& 0) : malformed_pkt(SWITCH_DROP_REASON_IP_VERSION_INVALID);
         }
     }
 
@@ -6517,8 +6150,8 @@ control InnerPktValidation(
         }
     }
 }
-# 51 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/switch.p4" 2
-# 1 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/rewrite.p4" 1
+# 50 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/switch.p4" 2
+# 1 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/rewrite.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -6541,8 +6174,8 @@ control InnerPktValidation(
  *
  *
  ******************************************************************************/
-# 52 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/switch.p4" 2
-# 1 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/tunnel.p4" 1
+# 51 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/switch.p4" 2
+# 1 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/tunnel.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -6667,12 +6300,12 @@ control IngressTunnel(in switch_header_t hdr,
         ig_md.rmac_group = rmac_group;
         ig_md.multicast.rpf_group = mrpf_group;
         ig_md.learning.bd_mode = learning_mode;
-        ig_md.ipv4.unicast_enable = ipv4_unicast_enable;
-        ig_md.ipv4.multicast_enable = ipv4_multicast_enable;
-        ig_md.ipv4.multicast_snooping = igmp_snooping_enable;
-        ig_md.ipv6.unicast_enable = ipv4_unicast_enable;
-        ig_md.ipv6.multicast_enable = ipv6_multicast_enable;
-        ig_md.ipv6.multicast_snooping = mld_snooping_enable;
+        ig_md.ipv4_md.unicast_enable = ipv4_unicast_enable;
+        ig_md.ipv4_md.multicast_enable = ipv4_multicast_enable;
+        ig_md.ipv4_md.multicast_snooping = igmp_snooping_enable;
+        ig_md.ipv6_md.unicast_enable = ipv4_unicast_enable;
+        ig_md.ipv6_md.multicast_enable = ipv6_multicast_enable;
+        ig_md.ipv6_md.multicast_snooping = mld_snooping_enable;
         ig_md.tunnel.terminate = true;
     }
 
@@ -6724,7 +6357,30 @@ control IngressTunnel(in switch_header_t hdr,
     }
 
     apply {
-# 220 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/tunnel.p4"
+
+        // outer RMAC lookup for tunnel termination.
+        switch(rmac.apply().action_run) {
+            rmac_hit : {
+                if (lkp.ip_type == SWITCH_IP_TYPE_IPV4) {
+                    // src_vtep.apply();
+                    switch(dst_vtep.apply().action_run) {
+                        dst_vtep_hit : {
+                            // Vxlan
+                            vni_to_bd_mapping.apply();
+                            pkt_validation.apply(hdr, lkp, ig_md.flags, ig_md.drop_reason);
+                        }
+
+                        set_vni_properties : {
+                            // IPinIP
+                            pkt_validation.apply(hdr, lkp, ig_md.flags, ig_md.drop_reason);
+                        }
+                    }
+                } else if (lkp.ip_type == SWITCH_IP_TYPE_IPV6) {
+# 216 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/tunnel.p4"
+                }
+            }
+        }
+
     }
 }
 
@@ -6739,7 +6395,7 @@ control IngressTunnel(in switch_header_t hdr,
 //
 //-----------------------------------------------------------------------------
 control TunnelDecap(inout switch_header_t hdr,
-                    in switch_egress_metadata_t eg_md)(
+                    in switch_tunnel_metadata_t tunnel_md)(
                     switch_tunnel_mode_t mode) {
     action decap_inner_udp() {
         hdr.udp = hdr.inner_udp;
@@ -6793,11 +6449,9 @@ control TunnelDecap(inout switch_header_t hdr,
     }
 
     action copy_ipv6_header() {
-        hdr.ipv6.setValid();
         hdr.ipv6.version = hdr.inner_ipv6.version;
         hdr.ipv6.flow_label = hdr.inner_ipv6.flow_label;
         hdr.ipv6.payload_len = hdr.inner_ipv6.payload_len;
-        hdr.ipv6.next_hdr = hdr.inner_ipv6.next_hdr;
         hdr.ipv6.src_addr = hdr.inner_ipv6.src_addr;
         hdr.ipv6.dst_addr = hdr.inner_ipv6.dst_addr;
 
@@ -6843,14 +6497,12 @@ control TunnelDecap(inout switch_header_t hdr,
     }
 
     action decap_inner_ipv4() {
-        hdr.ethernet.ether_type = 0x0800;
         copy_ipv4_header();
         hdr.ipv6.setInvalid();
         invalidate_tunneling_headers();
     }
 
     action decap_inner_ipv6() {
-
 
 
 
@@ -6883,7 +6535,14 @@ control TunnelDecap(inout switch_header_t hdr,
     }
 
     apply {
-# 387 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/tunnel.p4"
+
+        // Copy L3 headers into inner headers.
+        if (tunnel_md.terminate)
+            decap_inner_ip.apply();
+        // Copy L4 headers into inner headers.
+        if (tunnel_md.terminate)
+            decap_inner_l4.apply();
+
     }
 }
 
@@ -6989,7 +6648,22 @@ control TunnelRewrite(inout switch_header_t hdr,
     }
 
     apply {
-# 508 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/tunnel.p4"
+
+        if (eg_md.tunnel.type != SWITCH_TUNNEL_TYPE_NONE) {
+            nexthop_rewrite.apply();
+            egress_bd.apply(
+                hdr, eg_md.bd, eg_md.pkt_type, bd_label, smac_index, eg_md.checks.mtu);
+        }
+
+        if (eg_md.tunnel.type != SWITCH_TUNNEL_TYPE_NONE) {
+            src_addr_rewrite.apply();
+            ipv4_dst_addr_rewrite.apply();
+
+
+
+            smac_rewrite.apply();
+        }
+
     }
 }
 
@@ -7081,11 +6755,11 @@ control TunnelEncap(inout switch_header_t hdr,
     }
 
     action rewrite_inner_ipv6_udp() {
-# 607 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/tunnel.p4"
+# 602 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/tunnel.p4"
     }
 
     action rewrite_inner_ipv6_tcp() {
-# 618 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/tunnel.p4"
+# 613 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/tunnel.p4"
     }
 
     action rewrite_inner_ipv6_unknown() {
@@ -7135,16 +6809,16 @@ control TunnelEncap(inout switch_header_t hdr,
 
     action add_vxlan_header(bit<24> vni) {
 
-
-
-
-
-
+        hdr.vxlan.setValid();
+        hdr.vxlan.flags = 8w0x08;
+        // hdr.vxlan.reserved = 0;
+        hdr.vxlan.vni = vni;
+        // hdr.vxlan.reserved2 = 0;
 
     }
 
     action add_gre_header(bit<16> proto) {
-# 688 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/tunnel.p4"
+# 683 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/tunnel.p4"
     }
 
     action add_erspan_header(bit<32> timestamp, switch_mirror_session_t session_id) {
@@ -7222,7 +6896,7 @@ control TunnelEncap(inout switch_header_t hdr,
     }
 
     action rewrite_ipv6_vxlan(bit<16> vxlan_port) {
-# 780 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/tunnel.p4"
+# 775 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/tunnel.p4"
     }
 
     action rewrite_ipv6_ip() {
@@ -7252,11 +6926,22 @@ control TunnelEncap(inout switch_header_t hdr,
     }
 
     apply {
-# 821 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/tunnel.p4"
+
+        if (eg_md.tunnel.type != SWITCH_TUNNEL_TYPE_NONE && eg_md.tunnel.id == 0)
+            bd_to_vni_mapping.apply();
+
+        if (eg_md.tunnel.type != SWITCH_TUNNEL_TYPE_NONE) {
+            // Copy L3/L4 header into inner headers.
+            encap_outer.apply();
+
+            // Add outer L3/L4/Tunnel headers.
+            tunnel.apply();
+        }
+
     }
 }
-# 53 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/switch.p4" 2
-# 1 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/multicast.p4" 1
+# 52 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/switch.p4" 2
+# 1 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/multicast.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -7643,8 +7328,8 @@ control IngressMulticast(
         key = {
             multicast_hit : ternary;
             lkp.ip_type : ternary;
-            ig_md.ipv4.multicast_snooping : ternary;
-            ig_md.ipv6.multicast_snooping : ternary;
+            ig_md.ipv4_md.multicast_snooping : ternary;
+            ig_md.ipv6_md.multicast_snooping : ternary;
             ig_md.multicast.mode : ternary;
             rpf_check : ternary;
         }
@@ -7658,7 +7343,7 @@ control IngressMulticast(
 
     apply {
 
-        if (lkp.ip_type == SWITCH_IP_TYPE_IPV4 && ig_md.ipv4.multicast_enable) {
+        if (lkp.ip_type == SWITCH_IP_TYPE_IPV4 && ig_md.ipv4_md.multicast_enable) {
             ipv4_multicast_route.apply(lkp.ipv4_src_addr,
                                        lkp.ipv4_dst_addr,
                                        ig_md.vrf,
@@ -7666,7 +7351,7 @@ control IngressMulticast(
                                        rpf_check,
                                        group_id,
                                        multicast_hit);
-        } else if (lkp.ip_type == SWITCH_IP_TYPE_IPV6 && ig_md.ipv6.multicast_enable) {
+        } else if (lkp.ip_type == SWITCH_IP_TYPE_IPV6 && ig_md.ipv6_md.multicast_enable) {
 
             ipv6_multicast_route.apply(lkp.ipv6_src_addr,
                                        lkp.ipv6_dst_addr,
@@ -7770,8 +7455,8 @@ control MulticastReplication(in switch_rid_t replication_id,
 
     }
 }
-# 54 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/switch.p4" 2
-# 1 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/qos.p4" 1
+# 53 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/switch.p4" 2
+# 1 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/qos.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -7798,7 +7483,7 @@ control MulticastReplication(in switch_rid_t replication_id,
 
 
 
-# 1 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/acl.p4" 1
+# 1 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/acl.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -7822,8 +7507,8 @@ control MulticastReplication(in switch_rid_t replication_id,
  * Milad Sharif (msharif@barefootnetworks.com)
  *
  ******************************************************************************/
-# 28 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/qos.p4" 2
-# 1 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/meter.p4" 1
+# 28 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/qos.p4" 2
+# 1 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/meter.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -8007,7 +7692,7 @@ control StormControl(in switch_ingress_metadata_t ig_md,
 
     }
 }
-# 29 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/qos.p4" 2
+# 29 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/qos.p4" 2
 
 //-----------------------------------------------------------------------------
 // Common QoS related actions used by QoS ACL slices or QoS dscp/pcp mappings.
@@ -8126,7 +7811,7 @@ control Ipv6QosAcl(
     }
 }
 
-control IngressQoS(
+control IngressQos(
         in switch_header_t hdr,
         in switch_lookup_fields_t lkp,
         inout switch_qos_metadata_t qos_md,
@@ -8231,7 +7916,7 @@ control IngressQoS(
     apply {
 
         if (!(ig_md.bypass & SWITCH_INGRESS_BYPASS_QOS != 0)) {
-# 266 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/qos.p4"
+# 266 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/qos.p4"
             if (qos_md.trust_mode & SWITCH_QOS_TRUST_MODE_TRUST_DSCP == SWITCH_QOS_TRUST_MODE_TRUST_DSCP &&
                     lkp.ip_type != SWITCH_IP_TYPE_NONE) {
                 dscp_tc_map.apply();
@@ -8250,9 +7935,9 @@ control IngressQoS(
 }
 
 
-control EgressQoS(inout switch_header_t hdr,
+control EgressQos(inout switch_header_t hdr,
                   in switch_port_t port,
-                  in switch_egress_metadata_t eg_md)(
+                  in switch_qos_metadata_t qos_md)(
                   switch_uint32_t table_size=1024) {
 
     const bit<32> queue_table_size = 1024;
@@ -8286,9 +7971,9 @@ control EgressQoS(inout switch_header_t hdr,
 
     table qos_map {
         key = {
-            eg_md.qos.group : exact @name("group");
-            eg_md.qos.tc : exact @name("tc");
-            eg_md.qos.color : exact @name("color");
+            qos_md.group : exact;
+            qos_md.tc : exact;
+            qos_md.color : exact;
             hdr.ipv4.isValid() : exact;
             hdr.ipv6.isValid() : exact;
         }
@@ -8315,7 +8000,7 @@ control EgressQoS(inout switch_header_t hdr,
     table queue {
         key = {
             port : exact;
-            eg_md.qos.qid : exact @name("qid");
+            qos_md.qid : exact @name("qid");
         }
 
         actions = {
@@ -8330,14 +8015,13 @@ control EgressQoS(inout switch_header_t hdr,
 
     apply {
 
-        if (!(eg_md.bypass & SWITCH_EGRESS_BYPASS_QOS != 0))
-            qos_map.apply();
+        qos_map.apply();
         queue.apply();
 
     }
 }
-# 55 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/switch.p4" 2
-# 1 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/meter.p4" 1
+# 54 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/switch.p4" 2
+# 1 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/meter.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -8361,8 +8045,8 @@ control EgressQoS(inout switch_header_t hdr,
  * Milad Sharif (msharif@barefootnetworks.com)
  *
  ******************************************************************************/
-# 56 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/switch.p4" 2
-# 1 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/wred.p4" 1
+# 55 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/switch.p4" 2
+# 1 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/wred.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -8434,7 +8118,7 @@ control EcnAcl(in switch_ingress_metadata_t ig_md,
 // @param wred_sie : Number of WRED profiles.
 //-------------------------------------------------------------------------------------------------
 control WRED(inout switch_header_t hdr,
-             in switch_egress_metadata_t eg_md,
+             in switch_qos_metadata_t qos_md,
              in egress_intrinsic_metadata_t eg_intr_md,
              out bool flag) {
 
@@ -8496,8 +8180,8 @@ control WRED(inout switch_header_t hdr,
     table wred_index {
         key = {
            eg_intr_md.egress_port : exact;
-           eg_md.qos.qid : exact @name("qid");
-           eg_md.qos.color : exact @name("color");
+           qos_md.qid : exact;
+           qos_md.color : exact;
         }
 
         actions = {
@@ -8516,575 +8200,9 @@ control WRED(inout switch_header_t hdr,
 
 
 
-
     }
 }
-# 57 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/switch.p4" 2
-# 1 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/dtel.p4" 1
-/*******************************************************************************
- * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
- *
- * Copyright (c) 2015-2019 Barefoot Networks, Inc.
-
- * All Rights Reserved.
- *
- * NOTICE: All information contained herein is, and remains the property of
- * Barefoot Networks, Inc. and its suppliers, if any. The intellectual and
- * technical concepts contained herein are proprietary to Barefoot Networks,
- * Inc.
- * and its suppliers and may be covered by U.S. and Foreign Patents, patents in
- * process, and are protected by trade secret or copyright law.
- * Dissemination of this information or reproduction of this material is
- * strictly forbidden unless prior written permission is obtained from
- * Barefoot Networks, Inc.
- *
- * No warranty, explicit or implicit is provided, unless granted under a
- * written agreement with Barefoot Networks, Inc.
- *
- * Milad Sharif (msharif@barefootnetworks.com)
- *
- ******************************************************************************/
-
-// Data-plane telemetry (DTel).
-
-//-----------------------------------------------------------------------------
-// DTel ACL for v4/v6 traffic that specifies which flow to monitor.
-//
-// @param lkp : Lookup fields.
-// @param ig_md : Ingress metadata fields.
-// @param report_type : Telemetry report type is a bit-map that indicates which type of telemetry
-// reports (D/Q/F) can be generated for the tracked flow.
-//-----------------------------------------------------------------------------
-control DtelAcl(in switch_lookup_fields_t lkp,
-                in switch_ingress_metadata_t ig_md,
-                out switch_dtel_report_type_t report_type)(
-                switch_uint32_t table_size=512) {
-    action acl_hit(switch_dtel_report_type_t type) {
-        report_type = type;
-    }
-
-    table acl {
-        key = {
-            ig_md.port_lag_label : ternary;
-            ig_md.bd_label : ternary;
-            ig_md.l4_port_label : ternary;
-            lkp.ipv4_src_addr : ternary;
-            lkp.ipv4_dst_addr : ternary;
-            lkp.ipv6_src_addr : ternary;
-            lkp.ipv6_dst_addr : ternary;
-            lkp.ip_proto : ternary;
-            lkp.tcp_flags : ternary;
-        }
-
-        actions = {
-            acl_hit;
-        }
-
-        const default_action = acl_hit(SWITCH_DTEL_REPORT_TYPE_NONE);
-        size = table_size;
-    }
-
-    apply {
-        acl.apply();
-    }
-}
-
-control Ipv4DtelAcl(in switch_lookup_fields_t lkp,
-                    in switch_ingress_metadata_t ig_md,
-                    out switch_dtel_report_type_t report_type)(
-                    switch_uint32_t table_size=512) {
-    action acl_hit(switch_dtel_report_type_t type) {
-        report_type = type;
-    }
-
-    table acl {
-        key = {
-            lkp.ipv4_src_addr : ternary; lkp.ipv4_dst_addr : ternary; lkp.ip_proto : ternary; lkp.ip_tos : ternary; lkp.l4_src_port : ternary; lkp.l4_dst_port : ternary; lkp.ip_ttl : ternary; lkp.tcp_flags : ternary;
-            ig_md.port_lag_label : ternary;
-            ig_md.bd_label : ternary;
-            ig_md.l4_port_label : ternary;
-        }
-
-        actions = {
-            acl_hit();
-        }
-
-        const default_action = acl_hit(SWITCH_DTEL_REPORT_TYPE_NONE);
-        size = table_size;
-    }
-
-    apply {
-        acl.apply();
-    }
-}
-
-control Ipv6DtelAcl(in switch_lookup_fields_t lkp,
-                    in switch_ingress_metadata_t ig_md,
-                    out switch_dtel_report_type_t report_type)(
-                    switch_uint32_t table_size=512) {
-    action acl_hit(switch_dtel_report_type_t type) {
-        report_type = type;
-    }
-
-    table acl {
-        key = {
-            lkp.ipv6_src_addr : ternary; lkp.ipv6_dst_addr : ternary; lkp.ip_proto : ternary; lkp.ip_tos : ternary; lkp.l4_src_port : ternary; lkp.l4_dst_port : ternary; lkp.ip_ttl : ternary; lkp.tcp_flags : ternary;
-            ig_md.port_lag_label : ternary;
-            ig_md.bd_label : ternary;
-            ig_md.l4_port_label : ternary;
-        }
-
-        actions = {
-            acl_hit();
-        }
-
-        const default_action = acl_hit(SWITCH_DTEL_REPORT_TYPE_NONE);
-        size = table_size;
-    }
-
-    apply {
-        acl.apply();
-    }
-}
-
-//-----------------------------------------------------------------------------
-// Deflect on drop configuration checks if deflect on drop is enabled for a given queue/port pair.
-// DOD must be only enabled for unicast traffic.
-//
-// @param report_type : Telemetry report type.
-// @param ig_intr_for_tm : Ingress metadata fiels consumed by traffic manager.
-// @param table_size
-//-----------------------------------------------------------------------------
-control DeflectOnDrop(
-        inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm)(
-        switch_uint32_t table_size=1024) {
-
-    action enable_dod() {
-        ig_intr_md_for_tm.deflect_on_drop = true;
-    }
-
-    action disable_dod() {
-        ig_intr_md_for_tm.deflect_on_drop = false;
-    }
-
-    table config {
-        key = {
-            ig_intr_md_for_tm.ucast_egress_port : exact;
-            ig_intr_md_for_tm.qid: exact;
-            ig_intr_md_for_tm.mcast_grp_a : exact;
-        }
-
-        actions = {
-            enable_dod;
-            disable_dod;
-        }
-
-        size = table_size;
-        const default_action = disable_dod;
-    }
-
-    apply {
-        config.apply();
-    }
-}
-
-//-----------------------------------------------------------------------------
-// Mirror on drop configuration
-// Checks if mirror on drop is enabled for a given drop reason.
-//
-// @param report_type : Telemetry report type.
-// @param ig_intr_for_tm : Ingress metadata fiels consumed by traffic manager.
-// @param table_size
-//-----------------------------------------------------------------------------
-control MirrorOnDrop(in switch_drop_reason_t drop_reason,
-                     inout switch_dtel_metadata_t dtel_md,
-                     inout switch_mirror_metadata_t mirror_md) {
-    action mirror() {
-        mirror_md.type = 3;
-        mirror_md.src = SWITCH_PKT_SRC_CLONE_INGRESS;
-    }
-
-    table config {
-        key = {
-            drop_reason : ternary;
-            dtel_md.report_type : ternary;
-        }
-
-        actions = {
-            NoAction;
-            mirror;
-        }
-
-        const default_action = NoAction;
-        // const entries = {
-        //    (SWITCH_DROP_REASON_UNKNOWN, _) : NoAction();
-        //    (_, SWITCH_DTEL_REPORT_TYPE_DROP &&& SWITCH_DTEL_REPORT_TYPE_DROP) : mirror();
-        // }
-    }
-
-    apply {
-       config.apply();
-    }
-}
-
-
-//-----------------------------------------------------------------------------
-// Simple bloom filter for drop report suppression to avoid generating duplicate reports.
-//
-// @param hash : Hash value used to query the bloom filter.
-// @param flag : A flag indicating that the report needs to be suppressed.
-//-----------------------------------------------------------------------------
-control DropReport(in switch_dtel_metadata_t dtel_md, in bit<32> hash, inout bit<2> flag) {
-    // Two bit arrays of 128K bits.
-    Register<bit<1>, bit<17>>(1 << 17, 1) array1;
-    Register<bit<1>, bit<17>>(1 << 17, 1) array2;
-    RegisterAction<bit<1>, bit<17>, bit<1>>(array1) filter1 = {
-        void apply(inout bit<1> val, out bit<1> rv) {
-            rv = val;
-        }
-    };
-
-    RegisterAction<bit<1>, bit<17>, bit<1>>(array2) filter2 = {
-        void apply(inout bit<1> val, out bit<1> rv) {
-            rv = val;
-        }
-    };
-
-    apply {
-        if (dtel_md.report_type & SWITCH_DTEL_REPORT_TYPE_FLOW == SWITCH_DTEL_REPORT_TYPE_FLOW)
-            flag[0:0] = filter1.execute(hash[16:0]);
-        if (dtel_md.report_type & SWITCH_DTEL_REPORT_TYPE_FLOW == SWITCH_DTEL_REPORT_TYPE_FLOW)
-            flag[1:1] = filter2.execute(hash[31:15]);
-    }
-}
-
-//-----------------------------------------------------------------------------
-// Generates queue reports if hop latency (or queue depth) exceeds a configurable thresholds.
-// Quota-based report suppression to avoid generating excessive amount of reports.
-// @param port : Egress port
-// @param qid : Queue Id.
-// @param qdepth : Queue depth.
-//-----------------------------------------------------------------------------
-struct switch_queue_alert_threshold_t {
-    bit<32> qdepth;
-    bit<32> latency;
-}
-
-struct switch_queue_report_quota_t {
-    bit<32> counter;
-    bit<32> latency; // Qunatized latency
-}
-
-// Quota policy -- The policy maintains counters to track the number of generated reports.
-
-// @param flag : indicating whether to generate a telemetry report or not.
-control QueueReport(inout switch_dtel_metadata_t dtel_md,
-                    in egress_intrinsic_metadata_t eg_intr_md,
-                    in switch_qid_t qid,
-                    out bit<1> qalert) {
-    // Hop latency
-    bit<32> latency;
-    // Quota for a (port, queue) pair.
-    bit<16> quota_;
-    const bit<32> queue_table_size = 2048;
-
-    // Register to store latency/qdepth thresholds per (port, queue) pair.
-    Register<switch_queue_alert_threshold_t, bit<16>>(queue_table_size) thresholds;
-    RegisterAction<switch_queue_alert_threshold_t, bit<16>, bit<1>>(thresholds) check_thresholds = {
-        void apply(inout switch_queue_alert_threshold_t reg, out bit<1> flag) {
-            // Set the flag if either of qdepth or latency exceeds the threshold.
-            if (reg.latency < dtel_md.latency || reg.qdepth < (bit<32>) eg_intr_md.enq_qdepth) {
-                flag = 1;
-            }
-        }
-    };
-
-    action set_qalert(bit<16> index, bit<16> quota) {
-        qalert = check_thresholds.execute(index);
-        quota_ = quota;
-    }
-
-    table queue_alert {
-        key = {
-            qid : exact;
-            eg_intr_md.egress_port : exact @name("port");
-        }
-
-        actions = {
-            NoAction;
-            set_qalert;
-        }
-
-        const default_action = NoAction;
-        size = queue_table_size;
-    }
-
-    // Register to store last observed quantized latency and a counter to track available quota.
-    Register<switch_queue_report_quota_t, bit<16>>(1024) quotas;
-    RegisterAction<switch_queue_report_quota_t, bit<16>, bit<1>>(quotas) update_or_reset_quota = {
-        void apply(inout switch_queue_report_quota_t reg, out bit<1> flag) {
-            flag = 0;
-            if (reg.counter > 0) {
-                reg.counter = reg.counter - 1;
-                flag = 1;
-            } else {
-                reg.counter = (bit<32>) quota_[15:0];
-            }
-        }
-    };
-
-    RegisterAction<switch_queue_report_quota_t, bit<16>, bit<1>>(quotas) update_quota = {
-        void apply(inout switch_queue_report_quota_t reg, out bit<1> flag) {
-            flag = 0;
-            if (reg.counter > 0) {
-                reg.counter = reg.counter - 1;
-                flag = 1;
-            }
-        }
-    };
-
-
-    action update_quota_(bit<16> index) {
-        qalert = update_or_reset_quota.execute(index);
-    }
-
-    table check_quota {
-        key = {
-            qid : exact;
-            eg_intr_md.egress_port : exact @name("port");
-        }
-
-        actions = {
-            NoAction;
-            update_quota_;
-        }
-
-        const default_action = NoAction;
-        size = 1024;
-    }
-
-    apply {
-
-        queue_alert.apply();
-        if (quota_ > 0)
-            check_quota.apply();
-
-    }
-}
-
-
-control FlowReport(inout switch_egress_metadata_t eg_md, out bit<2> flag) {
-    bit<16> digest;
-
-    //TODO(msharif): Use a better hash
-    Hash<bit<16>>(HashAlgorithm_t.CRC16) hash;
-
-    // Two bit arrays of 32K bits. The probability of false positive is about 1% for 4K flows.
-    Register<bit<16>, bit<16>>(1 << 16, 1) array1;
-    Register<bit<16>, bit<16>>(1 << 16, 1) array2;
-
-    // Encodes 2 bit information for flow state change detection
-    // rv = 0b1* : New flow.
-    // rv = 0b01 : No change in digest is detected.
-
-    @reduction_or_group("filter")
-    RegisterAction<bit<16>, bit<16>, bit<2>>(array1) filter1 = {
-        void apply(inout bit<16> reg, out bit<2> rv) {
-            if (reg == digest) {
-                rv = 1;
-            } // else if (reg == 16w0) {
-              //   rv = 2;
-              // }
-            reg = digest;
-        }
-    };
-
-    @reduction_or_group("filter")
-    RegisterAction<bit<16>, bit<16>, bit<2>>(array2) filter2 = {
-        void apply(inout bit<16> reg, out bit<2> rv) {
-            if (reg == digest) {
-                rv = 0b01;
-            } // else if (reg == 16w0) {
-              //  rv = 0b10;
-              // }
-            reg = digest;
-        }
-    };
-
-    apply {
-
-        digest = hash.get({eg_md.dtel.latency, eg_md.ingress_port /* Add more fields */});
-        if (eg_md.dtel.report_type & SWITCH_DTEL_REPORT_TYPE_FLOW == SWITCH_DTEL_REPORT_TYPE_FLOW)
-            flag = filter1.execute(eg_md.dtel.hash[15:0]);
-        if (eg_md.dtel.report_type & SWITCH_DTEL_REPORT_TYPE_FLOW == SWITCH_DTEL_REPORT_TYPE_FLOW)
-            flag = filter2.execute(eg_md.dtel.hash[31:16]);
-
-    }
-}
-
-control IngressDtel(in switch_header_t hdr,
-                    in switch_lookup_fields_t lkp,
-                    inout switch_ingress_metadata_t ig_md,
-                    in bit<16> hash,
-                    inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
-                    inout ingress_intrinsic_metadata_for_tm_t ig_intr_for_tm) {
-
-    Ipv4DtelAcl() ipv4_dtel_acl;
-    DtelAcl() dtel_acl;
-
-    DeflectOnDrop() dod;
-    MirrorOnDrop() mod;
-
-    Hash<switch_uint16_t>(HashAlgorithm_t.IDENTITY) selector_hash;
-    ActionSelector(120, selector_hash, SelectorMode_t.FAIR) session_selector;
-    action set_mirror_session(switch_mirror_session_t session_id) {
-        ig_md.dtel.session_id = session_id;
-    }
-
-    table mirror_session {
-        key = { hash : selector; }
-        actions = {
-            NoAction;
-            set_mirror_session;
-        }
-
-        implementation = session_selector;
-    }
-
-    apply {
-
-
-        if (!(ig_md.bypass & SWITCH_INGRESS_BYPASS_ACL != 0)) {
-
-            dtel_acl.apply(lkp, ig_md, ig_md.dtel.report_type);
-
-
-
-
-
-        }
-
-
-
-        dod.apply(ig_intr_for_tm);
-        mod.apply(ig_md.drop_reason, ig_md.dtel, ig_md.mirror);
-
-        mirror_session.apply();
-
-    }
-}
-
-
-control EgressDtel(inout switch_header_t hdr,
-                   inout switch_egress_metadata_t eg_md,
-                   in egress_intrinsic_metadata_t eg_intr_md,
-                   in bit<32> hash,
-                   inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr) {
-    DropReport() drop_report;
-    QueueReport() queue_report;
-    FlowReport() flow_report;
-
-    bit<2> drop_report_flag;
-    bit<2> flow_report_flag;
-    bit<1> queue_report_flag;
-
-    Register<bit<32>, switch_mirror_session_t>(1024) seq_number;
-    RegisterAction<bit<32>, bit<10>, bit<32>>(seq_number) get_seq_number = {
-        void apply(inout bit<32> reg, out bit<32> rv) {
-            reg = reg + 1;
-            rv = reg;
-        }
-    };
-
-    action mirror() {
-        // Generate switch local telemetry report for flow/queue reports.
-        eg_md.mirror.type = 3;
-        eg_md.mirror.src = SWITCH_PKT_SRC_CLONE_EGRESS;
-    }
-
-    action drop() {
-        // Drop the report.
-        eg_intr_md_for_dprsr.drop_ctl = 0x1;
-    }
-
-    action update(
-            switch_uint32_t switch_id,
-            bit<6> hw_id,
-            bit<4> next_proto,
-            switch_dtel_report_type_t report_type) {
-        hdr.dtel.setValid();
-        hdr.dtel.version = 0;
-        hdr.dtel.next_proto = next_proto;
-        hdr.dtel.d_q_f = report_type;
-        hdr.dtel.reserved = 0;
-        hdr.dtel.hw_id = hw_id;
-        hdr.dtel.seq_number = get_seq_number.execute(eg_md.dtel.session_id);
-        hdr.dtel.timestamp = (bit<32>) eg_md.timestamp;
-        hdr.dtel.switch_id = switch_id;
-    }
-
-    // This table is asymmetric as hw_id is pipe specific.
-    table config {
-        key = {
-            eg_md.dtel.report_type : ternary;
-            drop_report_flag : ternary;
-            flow_report_flag : ternary;
-            queue_report_flag : ternary;
-        }
-
-        actions = {
-            NoAction;
-            drop;
-            mirror;
-            update;
-        }
-
-        const default_action = NoAction;
-    }
-
-    action convert_ingress_port(switch_port_t port) {
-        eg_md.ingress_port = port;
-    }
-
-    action convert_egress_port(switch_port_t port) {
-        eg_md.port = port;
-    }
-
-    // Convert h/w port to front panel port for telemetry reports.
-    table egress_port_conversion {
-        key = { eg_md.port : exact @name("port"); }
-        actions = {
-            NoAction;
-            convert_egress_port;
-        }
-
-        const default_action = NoAction;
-    }
-
-    table ingress_port_conversion {
-        key = { eg_md.ingress_port : exact @name("port"); }
-        actions = {
-            NoAction;
-            convert_ingress_port;
-        }
-
-        const default_action = NoAction;
-    }
-
-    apply {
-
-        drop_report.apply(eg_md.dtel, hash, drop_report_flag);
-        flow_report.apply(eg_md, flow_report_flag);
-        queue_report.apply(eg_md.dtel, eg_intr_md, eg_md.qos.qid, queue_report_flag);
-
-        ingress_port_conversion.apply();
-        egress_port_conversion.apply();
-
-        config.apply();
-
-    }
-}
-# 58 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/switch.p4" 2
+# 56 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/switch.p4" 2
 
 
 
@@ -9098,7 +8216,7 @@ control SwitchIngress(
         inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
         inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm) {
 
-    IngressPortMapping(PORT_VLAN_TABLE_SIZE, DOUBLE_TAG_TABLE_SIZE, BD_TABLE_SIZE) ingress_port_mapping;
+    IngressPortMapping(PORT_VLAN_TABLE_SIZE, BD_TABLE_SIZE) ingress_port_mapping;
     PktValidation() pkt_validation;
     IngressSTP() stp;
     SMAC(MAC_TABLE_SIZE) smac;
@@ -9119,8 +8237,7 @@ control SwitchIngress(
     MirrorAcl() mirror_acl;
     RouterAcl(IPV4_RACL_TABLE_SIZE, IPV6_RACL_TABLE_SIZE, true, RACL_STATS_TABLE_SIZE) racl;
 
-    IngressDtel() dtel;
-    IngressQoS() qos;
+    IngressQos() qos;
     StormControl(STORM_CONTROL_TABLE_SIZE) storm_control;
     Nexthop(NEXTHOP_TABLE_SIZE, ECMP_GROUP_TABLE_SIZE, ECMP_SELECT_TABLE_SIZE) nexthop;
     OuterNexthop(
@@ -9128,6 +8245,52 @@ control SwitchIngress(
     LAG() lag;
     MulticastFlooding(BD_FLOOD_TABLE_SIZE) flood;
     IngressSystemAcl() system_acl;
+
+    //TODO(msharif) : Use different algorithms for upper and lower 16 bits.
+    Hash<bit<32>>(HashAlgorithm_t.CRC32) flow_hash;
+    Hash<bit<32>>(HashAlgorithm_t.CRC32) flow_hash2;
+
+    //XXX Tofino can generate 4 bytes of hash per logical table, we need to make sure PHV
+    // container(s) allocated for hash is less than 32 bits. P4C-669.
+
+
+
+    bit<32> hash;
+
+    action add_bridged_md() {
+        hdr.bridged_md.setValid();
+        hdr.bridged_md.src = SWITCH_PKT_SRC_BRIDGE;
+        hdr.bridged_md.base = {
+            ig_md.port, ig_md.ifindex, ig_md.bd, ig_md.nexthop, ig_md.lkp.pkt_type,
+            ig_md.flags.routed, ig_md.flags.peer_link,
+            ig_md.qos.tc, ig_md.cpu_reason, ig_md.timestamp, ig_intr_md_for_tm.qid};
+# 124 "../p4-tests/p4_16/switch_16/p4src/switch-tofino/switch.p4"
+        hdr.bridged_md.tunnel =
+            {ig_md.tunnel.index, ig_md.outer_nexthop, hash[15:0], ig_md.tunnel.terminate};
+
+
+        //TODO(msharif) : Move this to deparser.
+
+        hdr.mirror.port.session_id = (bit<16>) ig_md.mirror.session_id;
+
+
+
+    }
+
+    action compute_ip_hash() {
+        hash = flow_hash.get({ig_md.lkp.ipv4_src_addr,
+                              ig_md.lkp.ipv4_dst_addr,
+                              ig_md.lkp.ipv6_src_addr,
+                              ig_md.lkp.ipv6_dst_addr,
+                              ig_md.lkp.ip_proto,
+                              ig_md.lkp.l4_dst_port,
+                              ig_md.lkp.l4_src_port});
+    }
+
+    action compute_non_ip_hash() {
+        hash = flow_hash2.get({ig_md.lkp.mac_type, ig_md.lkp.mac_src_addr, ig_md.lkp.mac_dst_addr});
+    }
+
 
     apply {
         pkt_validation.apply(hdr, ig_md.flags, ig_md.lkp, ig_intr_md_for_tm, ig_md.drop_reason);
@@ -9138,7 +8301,7 @@ control SwitchIngress(
         smac.apply(ig_md.lkp.mac_src_addr, ig_md, ig_intr_md_for_dprsr.digest_type);
         bd_stats.apply(ig_md.bd, ig_md.lkp.pkt_type);
         acl.apply(ig_md.lkp, ig_md);
-        mirror_acl.apply(ig_md.lkp, ig_md);
+        mirror_acl.apply(ig_md.lkp, ig_md, ig_intr_md_for_dprsr);
         if (ig_md.lkp.pkt_type == SWITCH_PKT_TYPE_UNICAST) {
             // Unicast packets.
             unicast.apply(ig_md.lkp, ig_md, ig_intr_md_for_tm);
@@ -9152,15 +8315,16 @@ control SwitchIngress(
         }
 
         racl.apply(ig_md.lkp, ig_md);
-        if (ig_md.lkp.ip_type == SWITCH_IP_TYPE_NONE)
-            compute_non_ip_hash(ig_md.lkp, ig_md.hash);
-        else
-            compute_ip_hash(ig_md.lkp, ig_md.hash);
+        if (ig_md.lkp.ip_type == SWITCH_IP_TYPE_NONE) {
+            compute_non_ip_hash();
+        } else {
+            compute_ip_hash();
+        }
 
-        nexthop.apply(ig_md.lkp, ig_md, ig_intr_md_for_tm, ig_md.hash[15:0]);
+        nexthop.apply(ig_md.lkp, ig_md, ig_intr_md_for_tm, hash[15:0]);
         qos.apply(hdr, ig_md.lkp, ig_md.qos, ig_md, ig_intr_md_for_tm);
         storm_control.apply(ig_md, ig_md.lkp.pkt_type, ig_md.flags.storm_control_drop);
-        outer_nexthop.apply(ig_md, ig_md.hash[31:16]);
+        outer_nexthop.apply(ig_md, hash[31:16]);
 
         if (ig_md.egress_ifindex == SWITCH_IFINDEX_FLOOD) {
             flood.apply(
@@ -9169,18 +8333,22 @@ control SwitchIngress(
                 ig_md.flags.flood_to_multicast_routers,
                 ig_intr_md_for_tm);
         } else {
-            lag.apply(ig_md, ig_md.hash[31:16], ig_intr_md_for_tm.ucast_egress_port);
+            lag.apply(ig_md, hash[31:16], ig_intr_md_for_tm.ucast_egress_port);
         }
 
         system_acl.apply(ig_md, ig_md.lkp, ig_intr_md_for_tm, ig_intr_md_for_dprsr);
-        dtel.apply(hdr, ig_md.lkp, ig_md, ig_md.hash[15:0], ig_intr_md_for_dprsr, ig_intr_md_for_tm);
 
         // Only add bridged metadata if we are NOT bypassing egress pipeline.
         if (!ig_intr_md_for_tm.bypass_egress) {
-            add_bridged_md(hdr.bridged_md, ig_md);
+            add_bridged_md();
         }
 
-        set_ig_intr_md(ig_md, ig_intr_md_for_dprsr, ig_intr_md_for_tm);
+
+        // Set PRE hash values
+//XXX Compiler doesn't like this copy!!!!
+//        ig_intr_md_for_tm.level1_mcast_hash = hash[12:0];
+//        ig_intr_md_for_tm.level2_mcast_hash = hash[28:16];
+
     }
 }
 
@@ -9188,16 +8356,15 @@ control SwitchEgress(
         inout switch_header_t hdr,
         inout switch_egress_metadata_t eg_md,
         in egress_intrinsic_metadata_t eg_intr_md,
-        in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr,
+        in egress_intrinsic_metadata_from_parser_t eg_intr_from_prsr,
         inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
         inout egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport) {
     EgressPortMapping(PORT_TABLE_SIZE) egress_port_mapping;
     EgressSTP() stp;
     EgressAcl() acl;
-    EgressQoS(EGRESS_QOS_MAP_TABLE_SIZE) qos;
+    EgressQos(EGRESS_QOS_MAP_TABLE_SIZE) qos;
     EgressSystemAcl() system_acl;
     Rewrite(NEXTHOP_TABLE_SIZE, BD_TABLE_SIZE) rewrite;
-    EgressDtel() dtel;
     MirrorRewrite() mirror_rewrite;
     VlanXlate(VLAN_TABLE_SIZE, PORT_VLAN_TABLE_SIZE) vlan_xlate;
     VlanDecap() vlan_decap;
@@ -9210,29 +8377,44 @@ control SwitchEgress(
     MulticastReplication(RID_TABLE_SIZE) multicast_replication;
 
     apply {
-        eg_md.dtel.latency = eg_intr_md_from_prsr.global_tstamp[31:0] - eg_md.timestamp[31:0];
         egress_port_mapping.apply(hdr, eg_md, eg_intr_md_for_dprsr, eg_intr_md.egress_port);
         multicast_replication.apply(
             eg_intr_md.egress_rid, eg_intr_md.egress_port, eg_md);
-        mirror_rewrite.apply(hdr, eg_md);
-        stp.apply(eg_md, eg_intr_md.egress_port, eg_md.checks.stp);
-        vlan_decap.apply(hdr, eg_md);
-        tunnel_decap.apply(hdr, eg_md);
-
-        qos.apply(hdr, eg_intr_md.egress_port, eg_md);
-        wred.apply(hdr, eg_md, eg_intr_md, eg_md.flags.wred_drop);
+        if (eg_md.pkt_src != SWITCH_PKT_SRC_BRIDGE) {
+            // Packet is mirrored.
+            mirror_rewrite.apply(hdr, eg_md);
+        } else {
+            stp.apply(eg_intr_md.egress_port, eg_md.bd, eg_md.checks.stp);
+            if (eg_md.port_type == SWITCH_PORT_TYPE_NORMAL) {
+                vlan_decap.apply(hdr, eg_md.ingress_port);
+                if (eg_md.tunnel.terminate) {
+                    tunnel_decap.apply(hdr, eg_md.tunnel);
+                }
+                qos.apply(hdr, eg_intr_md.egress_port, eg_md.qos);
+                wred.apply(hdr, eg_md.qos, eg_intr_md, eg_md.flags.wred_drop);
+            }
+        }
 
         rewrite.apply(hdr, eg_md);
         acl.apply(hdr, eg_md.lkp, eg_md);
         tunnel_encap.apply(hdr, eg_md);
         tunnel_rewrite.apply(hdr, eg_md);
-        mtu.apply(hdr, eg_md, eg_md.checks.mtu);
-        vlan_xlate.apply(hdr, eg_md);
+        mtu.apply(hdr, eg_md.checks.mtu);
+        if (eg_md.port_type == SWITCH_PORT_TYPE_NORMAL) {
+            vlan_xlate.apply(hdr, eg_md.port_lag_index, eg_md.bd);
+        }
 
         system_acl.apply(hdr, eg_md, eg_intr_md, eg_intr_md_for_dprsr);
-        dtel.apply(hdr, eg_md, eg_intr_md, eg_md.dtel.hash, eg_intr_md_for_dprsr);
 
-        set_eg_intr_md(eg_md, eg_intr_md_for_dprsr, eg_intr_md_for_oport);
+
+
+        eg_intr_md_for_oport.capture_tstamp_on_tx = eg_md.flags.capture_ts;
+        //TODO(msharif) : Move this to deparser.
+
+        hdr.mirror.port.session_id = (bit<16>) eg_md.mirror.session_id;
+
+
+
     }
 }
 

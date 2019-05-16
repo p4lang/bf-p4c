@@ -1,4 +1,3 @@
-#! /usr/bin/env python
 # Base class to validate json schema files.
 #
 # The class constructor initializes arguments, including the expected

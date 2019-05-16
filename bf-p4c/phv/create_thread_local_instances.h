@@ -5,7 +5,7 @@
 
 /**
  * This Visitor creates a thread-local instance of every metadata instance,
- * header instance, parser state, TempVar, padding. The name of the new instance
+ * header instance, parser state, and TempVar. The name of the new instance
  * follows the pattern `gress-name::instance-name`.
  *
  * The set of metadata variables in BFN::Pipe::metadata is also updated.

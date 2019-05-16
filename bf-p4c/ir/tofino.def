@@ -199,35 +199,6 @@ class TempVar : BFN::Reference {
     dbprint { out << name; }
 }
 
-/** A dummy padding to represent a "hole" in the container to enforce
- *  alignment constraint in a container, but okay to not have an phv allocation
- *  if unused. Note this is different from TempVar, a TempVar must be allocated
- *  to a phv container.
- */
-class Padding : BFN::Reference {
-    cstring     name;
-    static int  uid;
-#noconstructor
-    Padding(Type t, cstring n = cstring()) :
-        BFN::Reference(t), name(n) {
-        if (!name) {
-            std::string n("__pad_");
-            n += std::to_string(++uid);
-            name = n; } }
-    toString { return name; }
-    dbprint { out << name; }
-}
-
-/**
- * Used to represent resubmit header which is always 64 bits in size.
- * This is used in flexible packing to pad resubmit header.
- * TODO: we need to ensure Phase0 to use the same IR class.
- */
-class BFN::Type_FixedSizeHeader : Type_Header {
-    int fixed_size;
-    toString { return cstring("fixed_size_header ") + externalName(); }
-    dbprint { out << name; }
-}
 
 /** A reference to a PHV container.  At the hardware level, Barefoot switches
  * operate over PHV containers, not header/metadata fields, and the back end

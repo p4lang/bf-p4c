@@ -3,17 +3,14 @@
 #include <algorithm>
 #include "bf-p4c/midend/path_linearizer.h"
 #include "bf-p4c/midend/type_categories.h"
-#include "bf-p4c/midend/type_checker.h"
 #include "bf-p4c/arch/tna.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/lib/pad_alignment.h"
 #include "bf-p4c/parde/field_packing.h"
 #include "frontends/common/resolveReferences/referenceMap.h"
-#include "frontends/p4/cloner.h"
 #include "frontends/p4/coreLibrary.h"
 #include "frontends/p4/fromv1.0/v1model.h"
 #include "frontends/p4/typeMap.h"
-#include "frontends/p4/typeChecking/typeChecker.h"
 #include "ir/ir.h"
 #include "lib/cstring.h"
 #include "lib/indent.h"
@@ -634,10 +631,7 @@ TranslatePhase0::TranslatePhase0(P4::ReferenceMap* refMap, P4::TypeMap* typeMap)
     auto* findPhase0Table = new FindPhase0Table(refMap, typeMap);
     addPasses({
         findPhase0Table,
-        new RewritePhase0IfPresent(findPhase0Table->phase0),
-        new P4::ClonePathExpressions,
-        new P4::ClearTypeMap(typeMap),
-        new BFN::TypeChecking(refMap, typeMap, true),
+        new RewritePhase0IfPresent(findPhase0Table->phase0)
     });
 }
 

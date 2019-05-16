@@ -17,9 +17,10 @@ class TypeMap;
 
 namespace BFN {
 
-using FieldListId = std::tuple<gress_t, unsigned, cstring>;
+using FieldListId = std::pair<gress_t, unsigned>;
 using MirroredFieldList = IR::Vector<IR::Expression>;
 using MirroredFieldLists = std::map<FieldListId, const MirroredFieldList*>;
+using MirroredFieldListPacking = std::map<FieldListId, const FieldPacking*>;
 
 /**
  * Searches for invocations of the `mirror_packet.add_metadata()` extern in
@@ -39,18 +40,17 @@ using MirroredFieldLists = std::map<FieldListId, const MirroredFieldList*>;
 class ExtractMirrorFieldPackings : public PassManager {
  public:
     ExtractMirrorFieldPackings(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
-                               MirroredFieldLists* fieldLists);
+                               MirroredFieldListPacking* fieldPackings);
 
-    MirroredFieldLists* fieldLists;
+    MirroredFieldListPacking* fieldPackings;
 };
 
-class FixupMirrorMetadata : public PassManager {
-    P4::ReferenceMap *refMap;
-    P4::TypeMap* typeMap;
-    MirroredFieldLists fieldLists;
-
+/** Insert $mirror_field_list_* states in egress to parse mirrored data.
+ */
+class PopulateMirrorStateWithFieldPackings : public PassManager {
  public:
-    FixupMirrorMetadata(P4::ReferenceMap *refMap, P4::TypeMap *typeMap);
+    PopulateMirrorStateWithFieldPackings(IR::BFN::Pipe* pipe,
+                                         const MirroredFieldListPacking* fieldPackings);
 };
 
 }  // namespace BFN

@@ -6,11 +6,10 @@
 #include "lib/exceptions.h"
 #include "frontends/p4/typeMap.h"
 #include "frontends/common/resolveReferences/referenceMap.h"
-#include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/common/ir_utils.h"
-#include "bf-p4c/device.h"
 #include "bf-p4c/ir/gress.h"
 #include "bf-p4c/parde/parde_visitor.h"
+#include "bf-p4c/bf-p4c-options.h"
 
 namespace IR {
 
@@ -37,8 +36,6 @@ class ExtractDeparser : public DeparserInspector {
                         const IR::MethodCallExpression* mc, cstring controlPlaneName = nullptr);
     void simpl_concat(std::vector<const IR::Expression*>& slices, const IR::Concat* expr);
     void process_concat(IR::Vector<IR::BFN::FieldLVal>& vec, const IR::Concat* expr);
-    void fixup_mirror_digest(const IR::MethodCallExpression*,
-            IR::IndexedVector<IR::NamedExpression>*);
 
     bool preorder(const IR::Declaration_Instance *decl) override;
     bool preorder(const IR::IfStatement *ifstmt) override;

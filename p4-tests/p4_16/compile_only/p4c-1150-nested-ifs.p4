@@ -183,13 +183,13 @@ control iDprsr(packet_out packet, inout headers hdr, in metadata md,
 
     // non-nested if
     if (ig_intr_md_for_dprs.mirror_type == 0) {
-      m0.emit(md.session_id);
+      m0.emit(md.session_id, {});
     }
 
     // nested if, limited to != and ==.
     if (ig_intr_md_for_dprs.mirror_type != 0) {
        if (ig_intr_md_for_dprs.mirror_type == 1) {
-          m1.emit(md.session_id);
+          m1.emit(md.session_id, {});
        }
     }
     packet.emit(hdr);

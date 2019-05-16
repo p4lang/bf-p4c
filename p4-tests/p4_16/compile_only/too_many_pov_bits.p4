@@ -101,10 +101,6 @@ struct egr_metadata {
   pkt_src_t  mir_type;
 }
 
-header mir_meta_h {
-  pkt_src_t  mir_type;
-}
-
 parser iPrsr(packet_in packet,
              out headers hdr,
              out ing_metadata md,
@@ -354,7 +350,7 @@ control iDprsr(packet_out packet,
       resubmit.emit();
     }
     if (intr_md_for_dprsr.mirror_type == 15) {
-      mirror.emit<mir_meta_h>(md.mir_sid, {md.mir_type});
+      mirror.emit(md.mir_sid, {md.mir_type});
     }
     packet.emit(hdr);
   }
@@ -735,7 +731,7 @@ control eDprsr(packet_out packet, inout headers hdr, in egr_metadata md,
   Mirror() mirror;
   apply {
     if (intr_md_for_dprsr.mirror_type == 15) {
-      mirror.emit<mir_meta_h>(md.mir_sid, {md.mir_type});
+      mirror.emit(md.mir_sid, {md.mir_type});
     }
     packet.emit(hdr.ethernet);
     packet.emit(hdr.ctrl);

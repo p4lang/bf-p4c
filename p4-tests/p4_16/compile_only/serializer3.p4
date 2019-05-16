@@ -31,16 +31,23 @@ struct switch_metadata_t {
     PortId_t port;
     bit<10> session_id;
     bit<1> check;
-    bit<3> more;
+}
+
+struct nested_bridge_metadata_t {
+    PortId_t port;
+}
+
+@flexible
+struct bridge_metadata_t {
+    nested_bridge_metadata_t nested;
+    bit<1> check;
 }
 
 typedef bit<16> switch_nexthop_t;
 
 header serialized_bridge_metadata_t {
     bit<8> type;
-    @flexible bit<1> check;
-    @flexible bit<3> more;
-    @flexible PortId_t nested_port;
+    bridge_metadata_t meta;
 }
 
 struct switch_header_t {
@@ -123,10 +130,9 @@ control SwitchIngress(
         inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
 
     action add_bridged_md() {
-        hdr.bridged_md.setValid();
-        hdr.bridged_md.nested_port = ig_md.port;
-        hdr.bridged_md.check = ig_md.check;
-        hdr.bridged_md.more = ig_md.more;
+	hdr.bridged_md.setValid();
+        hdr.bridged_md.meta.nested.port = ig_md.port;
+	hdr.bridged_md.meta.check = ig_md.check;
         hdr.bridged_md.type = 8w0;
     }
 
@@ -137,7 +143,7 @@ control SwitchIngress(
 
     // port-based mirroring.
     table mirror {
-        key = { ig_intr_md.ingress_port : exact; }
+        key = { ig_md.port : exact; }
         actions = {
             NoAction;
             set_mirror_attributes;
@@ -167,8 +173,9 @@ parser SwitchEgressParser(
 
     state parse_bridged_md {
         pkt.extract(hdr.bridged_md);
-        //eg_md.port = hdr.bridged_md.nested_port;
-        eg_md.check = hdr.bridged_md.check;
+        bridge_metadata_t bridged_md = hdr.bridged_md.meta;
+        eg_md.port = bridged_md.nested.port;
+        eg_md.check = bridged_md.check;
         transition accept;
     }
 }

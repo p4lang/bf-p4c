@@ -94,7 +94,7 @@ control clone_e2e_control(  inout headers_t hdr,
 
     apply{
         if (md.do_clone == 1){
-            mirror.emit<mirror_meta_hdr_t>(hdr.bridged_meta.mirror_id, { md.mirrored_meta.hdr_type , md.mirrored_meta.pad0 });
+            mirror.emit(hdr.bridged_meta.mirror_id, { md.mirrored_meta.hdr_type , md.mirrored_meta.pad0 });
             // sde-8.5.0: It is not possible to set the header validity bit as shown below.
             //hdr.clone_meta.setValid();
         }
@@ -106,7 +106,7 @@ control clone_e2e_control(  inout headers_t hdr,
 parser ingress_parser(  packet_in packet,
                         out headers_t hdr,
                         out local_metadata_t ig_md,
-                        out ingress_intrinsic_metadata_t ig_intr_md)
+                        out ingress_intrinsic_metadata_t ig_intr_md) 
 {
     state start {
 
@@ -149,7 +149,7 @@ parser ingress_parser(  packet_in packet,
 
     state unknown_packet_err{
         ig_md.unknown_pkt_err = 1;
-        transition accept;
+        transition accept;        
     }
 }
 
@@ -160,7 +160,7 @@ control ingress_control(    inout headers_t hdr,
                             in ingress_intrinsic_metadata_t ig_intr_md,
                             in ingress_intrinsic_metadata_from_parser_t ig_prsr_md,
                             inout ingress_intrinsic_metadata_for_deparser_t ig_dprsr_md,
-                            inout ingress_intrinsic_metadata_for_tm_t ig_tm_md)
+                            inout ingress_intrinsic_metadata_for_tm_t ig_tm_md) 
 {
     action do_nothing() {}
 
@@ -188,7 +188,7 @@ control ingress_deparser(   packet_out packet,
 parser eg_parser(   packet_in packet,
                     out headers_t hdr,
                     out local_metadata_t eg_md,
-                    out egress_intrinsic_metadata_t eg_intr_md)
+                    out egress_intrinsic_metadata_t eg_intr_md) 
 {
 
     state start {
@@ -271,7 +271,7 @@ control egress_control( inout headers_t hdr,
                         inout egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport)
 {
     action do_nothing() {}
-    apply{
+    apply{ 
         do_nothing();
     }
 }

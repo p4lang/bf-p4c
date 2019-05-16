@@ -26,10 +26,6 @@ class CheckForUnallocatedTemps : public PassManager {
             if (clot.allocated(&field))
                 continue;
 
-            // XXX(hanw): padding does not need phv allocation
-            if (field.is_ignore_alloc())
-                continue;
-
             // If this field is an alias source, then we need to check the allocation of the alias
             // destination too. If that destination is allocated to CLOTs, we will not find an
             // allocation for that field here. So, we need a special check here.
@@ -96,7 +92,7 @@ class CheckForUnallocatedTemps : public PassManager {
  * to ALU instructions or SALU instructions---that is, other kinds of
  * IR::Operation should no longer be present.  This is not currently true for
  * the following reasons:
- *
+ * 
  * - SALU instructions can perform limited operations on their final operand,
  *   such as negation.  This is encoded as a unary operation on a register.
  * - Equality operators persist in gateways after GatewayOpt.

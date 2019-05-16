@@ -1,10 +1,7 @@
 #include <cstring>
-#include <algorithm>
 #include "bf-p4c/common/flexible_packing.h"
 #include "bf-p4c/common/ir_utils.h"
-#include "bf-p4c/common/utils.h"
 #include "bf-p4c/lib/pad_alignment.h"
-#include "bf-p4c/phv/phv_fields.h"
 
 // XXX(Deep): BRIG-333
 // We can do better with these IR::BFN::DeparserParameters in terms of packing. This IR type is only
@@ -45,20 +42,8 @@ bool GatherPhase0Fields::preorder(const IR::BFN::ParserState* p) {
         if (!dest) continue;
         const auto* f = phv.field(dest->field);
         if (!f) continue;
-        noPackFields.insert(f); }
+        phase0Fields.insert(f); }
     return true;
-}
-
-// TODO: if a field is used in both bridging and mirror/resubmit/digest, we do
-// not pack these fields with other fields. The compiler should be able to do
-// better.
-bool GatherPhase0Fields::preorder(const IR::BFN::DigestFieldList* d) {
-    for (auto source : d->sources) {
-        const auto* field = phv.field(source->field);
-        if (!field) continue;
-        noPackFields.insert(field);
-    }
-    return false;
 }
 
 bool GatherParserExtracts::preorder(const IR::BFN::Extract* e) {
@@ -75,16 +60,6 @@ bool GatherParserExtracts::preorder(const IR::BFN::Extract* e) {
     return true;
 }
 
-/**
- * repackedTypes is shared between RepackDigestFieldList and RepackFlexHeaders.
- * It is cleared here, and maintained when running RepackFlexHeaders.
- * XXX(hanw): assumes RepackDigestFieldList is before RepackFlexHeaders.
- */
-Visitor::profile_t RepackDigestFieldList::init_apply(const IR::Node* root) {
-    repackedTypes.clear();
-    return Transform::init_apply(root);
-}
-
 Visitor::profile_t RepackFlexHeaders::init_apply(const IR::Node* root) {
     egressBridgedMap.clear();
     reverseEgressBridgedMap.clear();
@@ -93,8 +68,8 @@ Visitor::profile_t RepackFlexHeaders::init_apply(const IR::Node* root) {
     ingressFlexibleTypes.clear();
     headerToFlexibleStructsMap.clear();
     repackedHeaders.clear();
-    originalHeaders.clear();
     paddingFieldNames.clear();
+    flexibleStructs.clear();
 
     if (LOGGING(1))
         LOG1("\tNumber of bridged fields: " << fields.bridged_to_orig.size());
@@ -155,17 +130,33 @@ int RepackFlexHeaders::getHeaderBits(const IR::HeaderOrMetadata* h) const {
     return rv;
 }
 
-int RepackFlexHeaders::getHeaderBits(const IR::BFN::DigestFieldList* d) const {
-    int rv = 0;
-    for (auto f : d->type->fields)
-        rv += f->type->width_bits();
-    return rv;
-}
-
 int RepackFlexHeaders::getHeaderBytes(const IR::HeaderOrMetadata* h) const {
     int bits = getHeaderBits(h);
     BUG_CHECK(bits % 8 == 0, "Serializer packing produces a nonbyte-aligned header %1%", h->name);
     return (bits / 8);
+}
+
+unsigned RepackFlexHeaders::getFlexTypeBits(const IR::BFN::Type_StructFlexible* flexType) const {
+    int rv = 0;
+    for (auto f : flexType->fields) {
+        if (f->is<IR::BFN::Type_StructFlexible>())
+            ::error("Nested flexible structs are not supported.");
+        rv += f->type->width_bits();
+    }
+    return rv;
+}
+
+bool RepackFlexHeaders::hasCommonAction(
+        ordered_set<const IR::MAU::Action*>& set1,
+        ordered_set<const IR::MAU::Action*>& set2) const {
+    // Ignore the action BRIDGED_INIT_ACTION_NAME added for bridged metadata initialization.
+    for (const auto* a : set1) {
+        if (a->name == BRIDGED_INIT_ACTION_NAME) continue;
+        for (const auto* b : set2) {
+            if (b->name == BRIDGED_INIT_ACTION_NAME) continue;
+            if (a == b)
+                return true; } }
+    return false;
 }
 
 void RepackFlexHeaders::printNoPackConstraint(
@@ -173,7 +164,7 @@ void RepackFlexHeaders::printNoPackConstraint(
         const PHV::Field* f1,
         const PHV::Field* f2) const {
     LOG4("\t" << errorMessage << ": " << f1->name << " (" << f1->id << ") (" << f1->size << "b), "
-              << f2->name << " (" << f2->id << ") (" << f2->size << "b)");
+         << f2->name << " (" << f2->id << ") (" << f2->size << "b)");
 }
 
 ordered_set<const IR::MAU::Action*> RepackFlexHeaders::fieldsAccessedSameAction(
@@ -194,7 +185,7 @@ ordered_set<const IR::MAU::Action*> RepackFlexHeaders::fieldsAccessedSameAction(
             if (!written && a2->name == "act") continue;
             if (a1 == a2) {
                 LOG5("\t\t" << field1->name << " and " << field2->name << " are " <<
-                            (written ?  "written" : "read") << " in the same action " << a1->name);
+                     (written ?  "written" : "read") << " in the same action " << a1->name);
                 rs.insert(a1); } } }
     return rs;
 }
@@ -210,14 +201,14 @@ boost::optional<ordered_map<const PHV::Field*, int>> RepackFlexHeaders::mustBePa
         auto dest1 = actionConstraints.field_destination(f1, a);
         auto dest2 = actionConstraints.field_destination(f2, a);
         BUG_CHECK(dest1 && dest2, "One of fields %1% and %2% not written in %3%", f1->name,
-                  f2->name, a->name);
+                f2->name, a->name);
         LOG5("\t\t" << f1->name << " written by " << (*dest1)->name << " in " << a->name);
         LOG5("\t\t" << f2->name << " written by " << (*dest2)->name << " in " << a->name);
         int totalSize = (*dest1)->size + (*dest2)->size;
         bool packFieldsTogether = false;
         // If the destinations are in the same byte and there are other fields in the same byte.
         if (((*dest1)->header() == (*dest2)->header()) && (((*dest1)->offset / 8) ==
-                                                           ((*dest2)->offset / 8))) {
+                    ((*dest2)->offset / 8))) {
             if (totalSize % 8 != 0)
                 packFieldsTogether = true;
         }
@@ -301,11 +292,11 @@ SymBitMatrix RepackFlexHeaders::mustPack(const ordered_set<const PHV::Field*>& f
             auto commonActions = fieldsAccessedSameAction(f1, f2, reads, false /* reads */);
             if (commonActions.size() == 0) continue;
             LOG5("\t" << otherGressMapping.at(f1)->name << " and " << otherGressMapping.at(f2)->name
-                      << " are read in the same action.");
+                    << " are read in the same action.");
             auto packReq = mustBePackedTogether(f1, f2, commonActions);
             if (!packReq) continue;
             LOG5("\t" << otherGressMapping.at(f1)->name << " and " << otherGressMapping.at(f2)->name
-                      << " must be packed together.");
+                    << " must be packed together.");
             const auto* ingressField1 = otherGressMapping.at(f1);
             const auto* ingressField2 = otherGressMapping.at(f2);
             bool mustPackValue = true;
@@ -324,33 +315,37 @@ SymBitMatrix RepackFlexHeaders::mustPack(const ordered_set<const PHV::Field*>& f
                 LOG5("\t\tSetting alignment for " << ingressField->name << " to " << kv.second);
             }
             LOG4("\tmustPackMatrix(" << ingressField1->name << ", " << ingressField2->name << ") :"
-                                     << mustPackValue);
+                 << mustPackValue);
             mustPackMatrix(ingressField1->id, ingressField2->id) = mustPackValue;
         }
     }
     return mustPackMatrix;
 }
 
-SymBitMatrix
-RepackFlexHeaders::bridgedActionAnalysis(std::vector<const PHV::Field*>& nonByteAlignedFields) {
+SymBitMatrix RepackFlexHeaders::bridgedActionAnalysis(
+        cstring hdrName,
+        std::vector<const IR::StructField*>& nonByteAlignedFields) {
     ordered_map<const PHV::Field*, ordered_set<const IR::MAU::Action*>> fieldToActionWrites;
-    ordered_set<const PHV::Field*> fieldsToBePacked;
+    ordered_set<const PHV::Field*> fields;
     for (auto f : nonByteAlignedFields) {
-        fieldsToBePacked.insert(f);
-        fieldToActionWrites[f] = actionConstraints.actions_writing_fields(f); }
+        cstring fieldName = getFieldName(hdrName, f);
+        const auto* field = phv.field(fieldName);
+        BUG_CHECK(field, "Field corresponding to name %1% not found", fieldName);
+        fields.insert(field);
+        fieldToActionWrites[field] = actionConstraints.actions_writing_fields(field); }
 
-    SymBitMatrix mustPackMatrix = mustPack(fieldsToBePacked);
+    SymBitMatrix mustPackMatrix = mustPack(fields);
 
     // Conservatively, mark fields that are written in the same action as do not pack. Also,
-    for (const auto* field1 : nonByteAlignedFields) {
+    for (const auto* field1 : fields) {
         bool isSpecialityDest1 = actionConstraints.hasSpecialityReads(field1);
         bool isMoveOnlyDest1 = actionConstraints.move_only_operations(field1);
         bool hasNoPack1 = alloc.isNoPackField(field1->name);
         BUG_CHECK(fieldToActionWrites.count(field1), "Did not find actions writing to field %1%",
                   field1->name);
-        for (const auto* field2 : nonByteAlignedFields) {
+        for (const auto* field2 : fields) {
             BUG_CHECK(fieldToActionWrites.count(field2), "Did not find actions writing to field "
-                                                         "%1%", field2->name);
+                    "%1%", field2->name);
             bool isSpecialityDest2 = actionConstraints.hasSpecialityReads(field2);
             bool isMoveOnlyDest2 = actionConstraints.move_only_operations(field2);
             bool hasNoPack2 = alloc.isNoPackField(field2->name);
@@ -376,7 +371,7 @@ RepackFlexHeaders::bridgedActionAnalysis(std::vector<const PHV::Field*>& nonByte
                 if (commonActions.size() != 0) {
                     doNotPack(field1->id, field2->id) = true;
                     printNoPackConstraint("Speciality Destination written in the same action(s)",
-                                          field1, field2);
+                            field1, field2);
                 }
             } else if (!isMoveOnlyDest1 || !isMoveOnlyDest2) {
                 // Do not pack fields together if one or both of them is written by a non-MOVE
@@ -388,40 +383,42 @@ RepackFlexHeaders::bridgedActionAnalysis(std::vector<const PHV::Field*>& nonByte
                 // PackConflicts pass.
                 doNotPack(field1->id, field2->id) = true;
                 printNoPackConstraint("Pack conflict", field1, field2);
-            } else if (noPackFields.count(field1) || noPackFields.count(field2)) {
+            } else if (phase0Fields.count(field1) || phase0Fields.count(field2)) {
                 // Do not pack fields together if one or more of them is initialized in phase 0.
                 doNotPack(field1->id, field2->id) = true;
                 printNoPackConstraint("Phase 0 conflict", field1, field2); } } }
     return mustPackMatrix;
 }
 
-ordered_map<const PHV::Field*, int> RepackFlexHeaders::packWithField(
+ordered_map<const IR::StructField*, int> RepackFlexHeaders::packWithField(
         const int alignment,
-        const PHV::Field* field1,
-        const ordered_set<const PHV::Field*>& candidates,
+        cstring hdrName,
+        const IR::StructField* f,
+        const std::vector<const IR::StructField*>& candidates,
         const ordered_set<const PHV::Field*>& alreadyPackedFields,
-        const ordered_map<const PHV::Field*, le_bitrange>& alignmentConstraints,
-        const ordered_map<const PHV::Field*, std::set<int>>&
-        conflictingAlignmentConstraints,
+        const ordered_map<const IR::StructField*, le_bitrange>& alignmentConstraints,
+        const ordered_map<const IR::StructField*, std::set<int>>& conflictingAlignmentConstraints,
         const SymBitMatrix& mustPack) const {
-    static ordered_map<const PHV::Field*, int> emptyMap;
-    ordered_map<const PHV::Field*, int> rv;
-    ordered_set<const PHV::Field*> potentiallyPackableFields;
-    potentiallyPackableFields.insert(field1);
+    static ordered_map<const IR::StructField*, int> emptyMap;
+    ordered_map<const IR::StructField*, int> rv;
+    ordered_set<const IR::StructField*> potentiallyPackableFields;
+    const PHV::Field* field1 = phv.field(getFieldName(hdrName, f));
+    potentiallyPackableFields.insert(f);
     LOG4("\tPack with field: " << field1->name << " alignment: " << alignment);
 
-    ordered_set<const PHV::Field*> mustPackFields;
-    for (auto field2 : candidates) {
+    ordered_map<const PHV::Field*, const IR::StructField*> mustPackFields;
+    for (auto f2 : candidates) {
+        const PHV::Field* field2 = phv.field(getFieldName(hdrName, f2));
         if (field1 == field2) continue;
         if (mustPack(field1->id, field2->id)) {
             LOG4("\t\tDetected must pack field " << field2->name);
-            mustPackFields.insert(field2);
+            mustPackFields[field2] = f2;
         }
     }
 
     int totalMustPackSize = field1->size;
-    for (auto f : mustPackFields)
-        totalMustPackSize += f->size;
+    for (auto kv : mustPackFields)
+        totalMustPackSize += kv.first->size;
     if (alignment == 0) return emptyMap;
     // trying to pack to the nearest byte boundary. In case there are must pack fields, try to pack
     // to the nearest byte boundary for the total size of the must pack set.
@@ -437,7 +434,8 @@ ordered_map<const PHV::Field*, int> RepackFlexHeaders::packWithField(
 
     // Check packing possibility of every candidate field. By the end of this loop, all fields that
     // can potentially be packed with the given field @f.
-    for (auto field2 : candidates) {
+    for (auto f2 : candidates) {
+        const PHV::Field* field2 = phv.field(getFieldName(hdrName, f2));
         if (field1 == field2) continue;
         // If the field under consideration has already been packed, then ignore it.
         if (alreadyPackedFields.count(field2)) {
@@ -448,18 +446,19 @@ ordered_map<const PHV::Field*, int> RepackFlexHeaders::packWithField(
             continue; }
         if (doNotPack(field1->id, field2->id)) {
             LOG4("\t\tD. Detected no pack condition for " << field1->name << " and " <<
-                                                          field2->name);
+                 field2->name);
             continue; }
-        if (conflictingAlignmentConstraints.count(field2)) {
+        if (conflictingAlignmentConstraints.count(f2)) {
             LOG5("\t\tG. Detected field with conflicting alignment requirements " << field2->name);
             continue; }
         bool packingOkay = true;
         // Ensure that the field under consideration can be packed with every other field in the
         // potentiallyPackableFields set.
-        for (auto field3 : potentiallyPackableFields) {
+        for (auto kv : potentiallyPackableFields) {
+            const PHV::Field* field3 = phv.field(getFieldName(hdrName, kv));
             if (doNotPack(field2->id, field3->id)) {
                 LOG4("\t\tD. Detected no pack condition for " << field1->name << " and " <<
-                                                              field2->name);
+                     field2->name);
                 packingOkay = false;
                 break; } }
         // packingOkay is false if the field under consideration cannot be packed with at least one
@@ -472,13 +471,13 @@ ordered_map<const PHV::Field*, int> RepackFlexHeaders::packWithField(
         ordered_set<const PHV::Field*> packing;
         packing.insert(field1);
         for (auto* f : potentiallyPackableFields)
-            packing.insert(f);
+            packing.insert(phv.field(getFieldName(hdrName, f)));
         packing.insert(field2);
         if (!actionConstraints.checkBridgedPackingConstraints(packing)) {
             LOG4("\t\tE. Packing violates action constraints " << field2->name);
             continue; }
         LOG4("\t\tF. Potentially packable field " << field2->name);
-        potentiallyPackableFields.insert(field2); }
+        potentiallyPackableFields.insert(f2); }
 
     // Print all fields that can be potentially packed with the given field f.
     if (LOGGING(4)) {
@@ -493,8 +492,8 @@ ordered_map<const PHV::Field*, int> RepackFlexHeaders::packWithField(
             LOG4(ss.str()); }
         if (mustPackFields.size() > 0) {
             LOG4("\t  Must pack fields are:");
-            for (auto f : mustPackFields)
-                LOG4("\t\t" << f->name);
+            for (auto kv : mustPackFields)
+                LOG4("\t\t" << kv.first->name);
         }
     }
 
@@ -503,29 +502,29 @@ ordered_map<const PHV::Field*, int> RepackFlexHeaders::packWithField(
     // required at bit positions 1-3 (3 bit field). In that case, A and B can never be packed in the
     // same byte. After a call to checkPotentialPackAlignmentReqs(), alignmentConflicts represents
     // the set of fields that have conflicting alignment requirements.
-    ordered_set<const PHV::Field*> alignmentConflicts =
-        checkPotentialPackAlignmentReqs(alignmentConstraints, potentiallyPackableFields, field1);
-    ordered_set<const PHV::Field*> packedFields;
+    ordered_set<const IR::StructField*> alignmentConflicts =
+        checkPotentialPackAlignmentReqs(alignmentConstraints, potentiallyPackableFields, f);
+    ordered_set<const IR::StructField*> packedFields;
     // Pack the base field f first, if it has an alignment constraint.
-    if (alignmentConstraints.count(field1)) {
-        int lo = alignmentConstraints.at(field1).lo;
+    if (alignmentConstraints.count(f)) {
+        int lo = alignmentConstraints.at(f).lo;
         for (int i = lo; i < lo + field1->size; i++)
             unOccupied.erase(i);
-        LOG4("\t\t  Allocating base field " << field1->name << " to bit " << lo);
-        rv[field1] = lo;
-        packedFields.insert(field1);
+        LOG4("\t\t  Allocating base field " << f << " to bit " << lo);
+        rv[f] = lo;
+        packedFields.insert(f);
     }
     // Pack must pack fields next.
     if (mustPackFields.size() > 0) {
         LOG4("\t\tAttempting to pack must pack fields next.");
-        for (auto f : mustPackFields) {
-            LOG4("\t\t  Checking packing for must pack field " << f->name);
+        for (auto kv : mustPackFields) {
+            LOG4("\t\t  Checking packing for must pack field " << kv.first->name);
             LOG4("\t\t\tUnoccupied bits: " << unOccupied);
-            if (unOccupied.size() == 0 || f->size > static_cast<int>(unOccupied.size()))
+            if (unOccupied.size() == 0 || kv.first->size > static_cast<int>(unOccupied.size()))
                 return rv;
-            int lo = alignmentConstraints.at(f).lo;
+            int lo = alignmentConstraints.at(kv.second).lo;
             LOG4("\t\t\tMust be aligned at bit: " << lo);
-            for (int i = lo; i < lo + f->size; i++) {
+            for (int i = lo; i < lo + kv.first->size; i++) {
                 if (!(unOccupied.count(i))) {
                     // throw error here?
                     LOG4("\t\t  Cannot pack must pack fields together. Therefore, not packing "
@@ -534,56 +533,56 @@ ordered_map<const PHV::Field*, int> RepackFlexHeaders::packWithField(
                 }
                 unOccupied.erase(i);
             }
-            rv[f] = lo;
-            LOG4("\t\t  Allocating must pack field " << f->name << " to bit " << lo);
-            packedFields.insert(f);
+            rv[kv.second] = lo;
+            LOG4("\t\t  Allocating must pack field " << kv.first->name << " to bit " << lo);
+            packedFields.insert(kv.second);
         }
     }
     // Pack fields without alignment constraints next.
-    for (const PHV::Field* candidate : potentiallyPackableFields) {
+    for (const IR::StructField* candidate : potentiallyPackableFields) {
         if (packedFields.count(candidate)) continue;
         LOG4("\t\t  Checking packing for " << candidate);
         LOG4("\t\t\tUnoccupied bits: " << unOccupied);
-        if (unOccupied.size() == 0 || candidate->size >
-                                      static_cast<int>(unOccupied.size()))
+        if (unOccupied.size() == 0 || candidate->type->width_bits() >
+                static_cast<int>(unOccupied.size()))
             return rv;
         if (!alignmentConstraints.count(candidate)) {
             for (int b : unOccupied) {
                 bool noIssues = true;
                 // Make sure all bits can be allocated consecutively.
-                for (int i = 0; i < candidate->size; i++) {
+                for (int i = 0; i < candidate->type->width_bits(); i++) {
                     if (!unOccupied.count(b+i)) {
-                        LOG4("\t\t\tCannot allocate field " << candidate->name << " to position " <<
-                                                            (b+i));
+                        LOG4("\t\t\tCannot allocate field " << candidate << " to position " <<
+                                (b+i));
                         noIssues = false;
                         break; } }
                 if (noIssues) {
                     rv[candidate] = b;
-                    for (int i = 0; i < candidate->size; i++) {
+                    for (int i = 0; i < candidate->type->width_bits(); i++) {
                         LOG4("\t\t\tErasing bit " << (b+i));
                         unOccupied.erase(b+i); }
                     break; } }
         } else {
-            LOG4("\t\t\tIgnoring field " << candidate->name << " because it has an alignment "
-                                                         "constraint.");
+            LOG4("\t\t\tIgnoring field " << candidate << " because it has an alignment "
+                 "constraint.");
         }
     }
     return rv;
 }
 
-ordered_set<const PHV::Field*> RepackFlexHeaders::checkPotentialPackAlignmentReqs(
-        const ordered_map<const PHV::Field*, le_bitrange>& alignmentConstraints,
-        ordered_set<const PHV::Field*>& potentiallyPackableFields,
-        const PHV::Field* field) const {
+ordered_set<const IR::StructField*> RepackFlexHeaders::checkPotentialPackAlignmentReqs(
+        const ordered_map<const IR::StructField*, le_bitrange>& alignmentConstraints,
+        ordered_set<const IR::StructField*>& potentiallyPackableFields,
+        const IR::StructField* field) const {
     // Extract fields with alignment constraints.
-    ordered_set<const PHV::Field*> alignedFields;
+    ordered_set<const IR::StructField*> alignedFields;
     if (alignmentConstraints.count(field))
         alignedFields.insert(field);
     for (auto* f : potentiallyPackableFields)
         if (alignmentConstraints.count(f))
             alignedFields.insert(f);
     // Check mutual alignment constraints for alignedFields.
-    ordered_set<const PHV::Field*> conflictingFields;
+    ordered_set<const IR::StructField*> conflictingFields;
     for (auto* f1 : alignedFields) {
         le_bitrange f1_alignment = alignmentConstraints.at(f1);
         for (auto* f2 : alignedFields) {
@@ -594,7 +593,7 @@ ordered_set<const PHV::Field*> RepackFlexHeaders::checkPotentialPackAlignmentReq
             if (!f1_alignment.overlaps(f2_alignment))
                 continue;
             // Always choose the smaller field as having introduced the alignment conflicts.
-            if (f1->size < f2->size)
+            if (f1->type->width_bits() < f2->type->width_bits())
                 conflictingFields.insert(f1);
             else
                 conflictingFields.insert(f2); } }
@@ -608,47 +607,48 @@ ordered_set<const PHV::Field*> RepackFlexHeaders::checkPotentialPackAlignmentReq
 }
 
 void RepackFlexHeaders::determineAlignmentConstraints(
-        const std::vector<const PHV::Field*>& fieldsToBePacked,
-        ordered_map<const PHV::Field*, le_bitrange>& alignmentConstraints,
-        ordered_map<const PHV::Field*, std::set<int>>& conflictingAlignmentConstraints,
-        ordered_set<const PHV::Field*>& mustAlignFields) {
-    for (auto field : fieldsToBePacked) {
+        cstring hdrName,
+        const std::vector<const IR::StructField*>& nonByteAlignedFields,
+        ordered_map<const IR::StructField*, le_bitrange>& alignmentConstraints,
+        ordered_map<const IR::StructField*, std::set<int>>& conflictingAlignmentConstraints,
+        ordered_set<const IR::StructField*>& mustAlignFields) {
+    for (auto structField : nonByteAlignedFields) {
         ordered_set<const PHV::Field*> relatedFields;
         std::queue<const PHV::Field*> fieldsNotVisited;
-        LOG4("\tDetermining alignment constraint for " << field->name);
+        cstring fieldName = getFieldName(hdrName, structField);
+        const auto* field = phv.field(fieldName);
+        BUG_CHECK(field, "No field named %1% found", fieldName);
+        LOG4("\tDetermining alignment constraint for " << fieldName);
 
-        // If this field is initialized by a ComputedRVal expression in the
-        // parser, then consider it as having alignment constraints.
+        // If this field is initialized by a ComputedRVal expression in the parser, then consider it
+        // as having alignment constraints.
         if (parserAlignedFields.count(field) && field->alignment) {
-            alignmentConstraints[field] = le_bitrange(StartLen(field->alignment->align,
+            alignmentConstraints[structField] = le_bitrange(StartLen(field->alignment->align,
                         field->size));
-            LOG4("\t\tDetected bit in byte alignment " << alignmentConstraints[field] <<
-                                                       " for field " << field->name); }
+            LOG4("\t\tDetected bit in byte alignment " << alignmentConstraints[structField] <<
+                 " for field " << field->name); }
 
         // DeparserParams must be in the bottom bits.
         if (deparserParams.count(field)) {
-            if (alignmentConstraints.count(field)) {
-                ::warning("Alignment constraint already present for field %1%: %2%", field->name,
-                          alignmentConstraints.at(field).lo);
-                conflictingAlignmentConstraints[field].insert(
-                        alignmentConstraints.at(field).lo);
+            if (alignmentConstraints.count(structField)) {
+                ::warning("Alignment constraint already present for field %1%: %2%", structField,
+                        alignmentConstraints.at(structField).lo);
+                conflictingAlignmentConstraints[structField].insert(
+                        alignmentConstraints.at(structField).lo);
             } else {
-                alignmentConstraints[field] = le_bitrange(StartLen(0, field->size));
+                alignmentConstraints[structField] = le_bitrange(StartLen(0, field->size));
                 LOG4("\t\tDetected deparser parameter alignment: "  <<
-                    alignmentConstraints[field] << " for field " << field->name); } }
+                     alignmentConstraints[structField] << " for field " << field->name); } }
 
-        // Also summarize the egress version of this field, as alignment
-        // constraints may be induced by uses of the egress version of the
-        // bridged field.
-        cstring egressFieldName = getNonBridgedEgressFieldName(field->name);
-        cstring bridgedFieldName = (field->gress == INGRESS) ?
-             getEgressFieldName(field->name) : field->name;
-        BUG_CHECK(egressFieldName, "No egress version of the field %1%", field->name);
+        // Also summarize the egress version of this field, as alignment constraints may be induced
+        // by uses of the egress version of the bridged field.
+        cstring egressFieldName = getNonBridgedEgressFieldName(fieldName);
+        BUG_CHECK(egressFieldName, "No egress version of the field %1%", fieldName);
         const auto* egressField = phv.field(egressFieldName);
         // Add the ingress field and its egress version to visit.
         fieldsNotVisited.push(field);
         if (egressField)
-             fieldsNotVisited.push(egressField);
+            fieldsNotVisited.push(egressField);
 
         while (!fieldsNotVisited.empty()) {
             const PHV::Field* currentField = fieldsNotVisited.front();
@@ -676,18 +676,15 @@ void RepackFlexHeaders::determineAlignmentConstraints(
             continue; }
 
         for (const PHV::Field* f : relatedFields) {
-            if (field->gress == INGRESS && f->name == bridgedFieldName) continue;
-            // ignore the alignment on the current field
-            if (f->name == field->name) continue;
             LOG5("\t  Related field: " << f);
             if (f->alignment) {
                 LOG5("\t\t  New alignment: " << *(f->alignment));
                 // If the field must be aligned at this bit position (instead of not being aligned
                 // and instead satisfying constraints because of deposit-field operations),
                 if (mustAlign(f)) {
-                    LOG5("\t\t  Field " << field->name << " must be placed at the given "
-                                                                "alignment " << *(f->alignment));
-                    mustAlignFields.insert(field); }
+                    LOG5("\t\t  Field " << structField->name << " must be placed at the given "
+                            "alignment " << *(f->alignment));
+                    mustAlignFields.insert(structField); }
                 if (fieldAlignmentMap.count(field)) {
                     // alignSource is where the alignment constraint originates from.
                     const PHV::Field* alignSource = fieldAlignmentMap[field];
@@ -704,14 +701,14 @@ void RepackFlexHeaders::determineAlignmentConstraints(
                                "Conflicting alignment constraints detected for bridged field %1%"
                                ": %2%, %3%", field->name, f->alignment->align,
                                alignSource->alignment->align);
-                    conflictingAlignmentConstraints[field].insert(f->alignment->align);
-                    conflictingAlignmentConstraints[field].insert(
+                    conflictingAlignmentConstraints[structField].insert(f->alignment->align);
+                    conflictingAlignmentConstraints[structField].insert(
                             alignSource->alignment->align);
-                    LOG5("\t\t  Conflicting alignment constraint detected for " << field);
+                    LOG5("\t\t  Conflicting alignment constraint detected for " << structField);
                     continue; }
                 fieldAlignmentMap[field] = f;
                 le_bitrange alignment = StartLen(f->alignment->align, f->size);
-                alignmentConstraints[field] = alignment; } } }
+                alignmentConstraints[structField] = alignment; } } }
     if (LOGGING(4)) {
         if (alignmentConstraints.size() > 0) {
             LOG4("\tPrinting bridged fields with alignment constraints:");
@@ -748,10 +745,24 @@ bool RepackFlexHeaders::mustAlign(const PHV::Field* field) const {
 const IR::StructField* RepackFlexHeaders::getPaddingField(int size, int id) const {
     cstring padFieldName = "__pad_" + cstring::to_cstring(id);
     auto* fieldAnnotations = new IR::Annotations({new IR::Annotation(IR::ID("hidden"), { })
-                                                 });
+            });
     const IR::StructField* padField = new IR::StructField(padFieldName,
-                                          fieldAnnotations, IR::Type::Bits::get(size));
+            fieldAnnotations, IR::Type::Bits::get(size));
     return padField;
+}
+
+cstring RepackFlexHeaders::getFlexStructName(
+        const IR::HeaderOrMetadata* h,
+        const IR::BFN::Type_StructFlexible* flexType) {
+    cstring rv = h->name;
+    for (auto f : h->type->fields) {
+        if (!f->type->is<IR::BFN::Type_StructFlexible>()) continue;
+        const IR::BFN::Type_StructFlexible* candidate = f->type->to<IR::BFN::Type_StructFlexible>();
+        if (flexType != candidate) continue;
+        rv += "." + f->name;
+        return rv;
+    }
+    return rv;
 }
 
 cstring RepackFlexHeaders::getEgressFieldName(cstring ingressName) {
@@ -778,68 +789,89 @@ cstring RepackFlexHeaders::getFieldName(cstring hdr, const IR::StructField* fiel
     return name;
 }
 
-/**
- * packPhvFieldSet : take a set of PHV::Field, pack the set and return the packing.
- */
-const std::vector<const PHV::Field*>
-RepackFlexHeaders::packPhvFieldSet(const ordered_set<const PHV::Field*>& fieldsToBePacked) {
-    std::vector<const PHV::Field*> packedFields;
-    std::vector<const PHV::Field*> nonByteAlignedFields;
-    for (auto f : fieldsToBePacked) {
-        if (f->size % 8 == 0) {
-            packedFields.push_back(f);
-            continue; }
-        nonByteAlignedFields.push_back(f); }
-
-    LOG4("Added " << packedFields.size() << " byte aligned fields.");
+IR::Type_Struct* RepackFlexHeaders::repackFlexibleStruct(
+        const IR::HeaderOrMetadata* h,
+        const IR::StructField* flex) {
+    const IR::BFN::Type_StructFlexible* flexType = flex->type->to<IR::BFN::Type_StructFlexible>();
+    BUG_CHECK(flexType, "Flexible struct type could not be derived");
+    cstring structName = RepackFlexHeaders::getFlexStructName(h, flexType);
+    LOG1("Flexible struct name: " << structName);
+    BUG_CHECK(structName != h->name,
+              "No flexible struct of type %1% found associated with header %2%",
+              flexType, h->name);
+    LOG1("Original flexible struct layout: " << flexType);
+    LOG1("Size of original flexible struct: " << getFlexTypeBits(flexType));
+    // Fields that will form the basis of the new repacked header.
+    IR::IndexedVector<IR::StructField> fields;
+    // Non byte algined fields in the header.
+    std::vector<const IR::StructField*> nonByteAlignedFields;
+    for (auto f : flexType->fields) {
+        // Ignore existing padding fields.
+        if (f->getAnnotations()->getSingle("hidden") != nullptr) continue;
+        if (f->type->width_bits() % 8 == 0) {
+            // Add byte aligned fields directly into the new type.
+            IR::ID newName(flex->name + "." + f->name);
+            IR::StructField* newField = new IR::StructField(newName, f->annotations, f->type);
+            fields.push_back(newField);
+            continue;
+        }
+        nonByteAlignedFields.push_back(f);
+    }
+    LOG4("Added " << fields.size() << " byte aligned fields.");
     LOG4("Number of non byte aligned fields: " << nonByteAlignedFields.size());
+
     // Sort the nonbyte aligned fields according to size.
     std::sort(nonByteAlignedFields.begin(), nonByteAlignedFields.end(),
-            [&](const PHV::Field* a, const PHV::Field* b) {
-            return a->size < b->size;
-            });
+        [&](const IR::StructField* a, const IR::StructField* b) {
+            return a->type->width_bits() < b->type->width_bits();
+    });
+
     // Logging information about nonbyte-aligned fields.
     if (LOGGING(4)) {
         for (auto f : nonByteAlignedFields) {
-            LOG4("\tField: " << f->name << " (" << f->size << "b)");
-            LOG4("\t  PHV Field: " << f);
-            if (f->alignment)
-                LOG4("\t  Compute Alignment: " << *(f->alignment));
+            const auto* field = phv.field(structName + "." + f->name);
+            LOG4("\tField: " << f->name << " (" << f->type->width_bits() << "b)");
+            LOG4("\t  PHV Field: " << field);
+            if (field->alignment)
+                LOG4("\t  Compute Alignment: " << *(field->alignment));
         }
     }
 
-    auto sliceListAlignment = bridgedActionAnalysis(nonByteAlignedFields);
+    auto sliceListAlignment = bridgedActionAnalysis(structName, nonByteAlignedFields);
     // Determine nonbyte-aligned bridged fields with alignment constraints.
-    ordered_map<const PHV::Field*, le_bitrange> alignmentConstraints;
-    ordered_map<const PHV::Field*, std::set<int>> conflictingAlignmentConstraints;
-    ordered_set<const PHV::Field*> mustAlignFields;
-    determineAlignmentConstraints(nonByteAlignedFields, alignmentConstraints,
-                                  conflictingAlignmentConstraints, mustAlignFields);
+    ordered_map<const IR::StructField*, le_bitrange> alignmentConstraints;
+    ordered_map<const IR::StructField*, std::set<int>> conflictingAlignmentConstraints;
+    ordered_set<const IR::StructField*> mustAlignFields;
+    determineAlignmentConstraints(structName, nonByteAlignedFields, alignmentConstraints,
+            conflictingAlignmentConstraints, mustAlignFields);
 
+    unsigned padFieldId = 0;
     ordered_set<const PHV::Field*> alreadyPackedFields;
-    for (auto field : nonByteAlignedFields) {
-        if (alreadyPackedFields.count(field)) {
-            LOG4("\t  A. Already packed " << field->name);
+    for (auto f1 : nonByteAlignedFields) {
+        const PHV::Field* tempField = phv.field(getFieldName(structName, f1));
+        if (alreadyPackedFields.count(tempField)) {
+            LOG4("\t  A. Already packed " << tempField->name);
             continue; }
-        std::vector<const PHV::Field*> fieldsPackedTogether;
-        LOG3("\tTrying to pack fields with " << field->name);
+        std::vector<const IR::StructField*> fieldsPackedTogether;
+        fieldsPackedTogether.push_back(f1);
+        LOG3("\tTrying to pack fields with " << tempField->name);
         // If this has alignment constraints due to the parser, ensure we pad it correctly.
-        int alignment = getAlignment(field->size);
+        int alignment = getAlignment(f1->type->width_bits());
         LOG4("\t  Alignment: " << alignment);
-
-        ordered_map<const PHV::Field*, int> packingWithPositions;
-        if (parserAlignedFields.count(field)) {
-            LOG4("\t\t  F. No other field packed because parser aligned field: " << field);
-            for (const auto* source : parserAlignedFields.at(field)) {
+        ordered_set<const IR::StructField*> addedPadding;
+        ordered_map<const IR::StructField*, int> packingWithPositions;
+        if (parserAlignedFields.count(tempField)) {
+            LOG4("\t\t  F. No other field packed because parser aligned field: " << f1);
+            for (const auto* source : parserAlignedFields.at(tempField)) {
                 // XXX(Deep): What if alignment from multiple sources conflicts?
                 if (source->alignment) {
-                    LOG4("\t\tAlignment constraint on " << field << " : " <<
+                    LOG4("\t\tAlignment constraint on " << tempField << " : " <<
                          *(source->alignment) << " " << source->alignment->align);
-                    packingWithPositions[field] = source->alignment->align;
+                    packingWithPositions[f1] = source->alignment->align;
                 }
             }
         } else {
-            packingWithPositions = packWithField(alignment, field, fieldsToBePacked,
+            packingWithPositions = packWithField(alignment, structName, f1, nonByteAlignedFields,
                     alreadyPackedFields, alignmentConstraints, conflictingAlignmentConstraints,
                     sliceListAlignment);
 
@@ -849,24 +881,29 @@ RepackFlexHeaders::packPhvFieldSet(const ordered_set<const PHV::Field*>& fieldsT
             if (packingWithPositions.size() == 1) {
                 for (auto kv : packingWithPositions) {
                     if (conflictingAlignmentConstraints.count(kv.first) ||
-                        !mustAlignFields.count(kv.first)) {
+                            !mustAlignFields.count(kv.first)) {
                         packingWithPositions[kv.first] = 0;
                         LOG4("\t\t  Okay to pack " << kv.first->name << " in bottom bits."); } } }
         }
 
+        fieldsPackedTogether.clear();
         // Total number of bits in this required packing.
         int totalPackSize = 0;
         int totalAllocatedSize = 0;
 
         for (auto kv : packingWithPositions)
-            totalAllocatedSize += kv.first->size;
+            totalAllocatedSize += kv.first->type->width_bits();
         totalPackSize = 8 * ROUNDUP(totalAllocatedSize, 8);
 
         // Fields with conflicting alignment are always packed by themselves.
         if (packingWithPositions.size() == 1) {
             for (auto kv : packingWithPositions) {
                 if (!conflictingAlignmentConstraints.count(kv.first)) break;
-                LOG4("\t\t  Field " << kv.first->name << " has conflicting alignment.");
+                cstring conflictingName = getFieldName(structName, kv.first);
+                const PHV::Field* conflictingField = phv.field(conflictingName);
+                BUG_CHECK(conflictingField, "No field object for conflicting field %1%",
+                          conflictingName);
+                LOG4("\t\t  Field " << conflictingField->name << " has conflicting alignment.");
                 int maxSpaceRequired = -1;
                 // For fields with conflicting alignment, check if any of the potential alignments
                 // require the field to be packed in a chunk that is larger than the next
@@ -874,26 +911,27 @@ RepackFlexHeaders::packPhvFieldSet(const ordered_set<const PHV::Field*>& fieldsT
                 // variable.
                 std::set<int> conflictingPositions = conflictingAlignmentConstraints.at(kv.first);
                 for (int pos : conflictingPositions) {
-                    int req = pos + kv.first->size;
+                    int req = pos + conflictingField->size;
                     maxSpaceRequired = (maxSpaceRequired < req) ? req : maxSpaceRequired;
                 }
                 totalPackSize = 8 * ROUNDUP(maxSpaceRequired, 8);
                 LOG4("\t\t  Need " << maxSpaceRequired << " bits for field " <<
-                     kv.first->name << " with conflicting alignment constraints.");
+                     conflictingField->name << " with conflicting alignment constraints.");
             }
         }
 
         LOG3("\t\tTrying to pack " << totalAllocatedSize << " bits within " << totalPackSize <<
-                                   " bits.");
+                " bits.");
         ordered_set<int> freeBits;
         for (int i = 0; i < totalPackSize; i++)
             freeBits.insert(i);
         int largestUnoccupiedPosition = totalPackSize - 1;
         LOG3("\t\t  Setting largest unoccupied position to: " << largestUnoccupiedPosition);
-        ordered_set<const PHV::Field*> padFields;
+        std::vector<const IR::StructField*> packing;
+        ordered_set<const IR::StructField*> padFields;
         while (!freeBits.empty()) {
             int largestPosition = -1;
-            const PHV::Field* candidate = nullptr;
+            const IR::StructField* candidate = nullptr;
             for (auto kv : packingWithPositions) {
                 if (largestPosition < kv.second) {
                     candidate = kv.first;
@@ -902,13 +940,13 @@ RepackFlexHeaders::packPhvFieldSet(const ordered_set<const PHV::Field*>& fieldsT
             }
             LOG6("\t\t\tLargest position: " << largestPosition);
             if (candidate)
-                LOG6("\t\t\tCandidate width: " << candidate->size);
+                LOG6("\t\t\tCandidate width: " << candidate->type->width_bits());
             if (!candidate) {
                 // Insert padding field as no more candidates left for packing.
                 int padSize = freeBits.size();
                 if (padSize == 0) break;
                 LOG4("\t\t  Need to insert padding of size: " << padSize);
-                auto* padField = phv.create_dummy_padding(padSize, INGRESS);   // FIXME
+                const IR::StructField* padField = getPaddingField(padSize, padFieldId++);
                 LOG4("\t\t  Padding field: " << padField);
                 padFields.insert(padField);
                 fieldsPackedTogether.push_back(padField);
@@ -916,16 +954,17 @@ RepackFlexHeaders::packPhvFieldSet(const ordered_set<const PHV::Field*>& fieldsT
                 largestUnoccupiedPosition = -1;
                 break;
             } else {
-                int outerLimitForField = largestPosition + candidate->size - 1;
+                int outerLimitForField = largestPosition + candidate->type->width_bits() - 1;
                 LOG5("\t\t  outerLimitForField: " << outerLimitForField << ", largestUnocc: " <<
-                                                  largestUnoccupiedPosition);
+                        largestUnoccupiedPosition);
                 if (outerLimitForField < largestUnoccupiedPosition) {
                     // Insert padding in the appropriate place for the field first.
                     int padSize = largestUnoccupiedPosition - outerLimitForField;
                     if (padSize != 0) {
                         LOG4("\t\t  Need to insert padding before field of size: " <<
-                            (largestUnoccupiedPosition - outerLimitForField));
-                        auto* padField = phv.create_dummy_padding(padSize, candidate->gress);
+                                (largestUnoccupiedPosition - outerLimitForField));
+                        const IR::StructField* padField = getPaddingField(padSize,
+                                padFieldId++);
                         LOG4("\t\t  Padding field: " << padField);
                         fieldsPackedTogether.push_back(padField);
                         padFields.insert(padField);
@@ -938,346 +977,110 @@ RepackFlexHeaders::packPhvFieldSet(const ordered_set<const PHV::Field*>& fieldsT
             LOG5("\t\t  Setting largest unoccupied position to: " << largestUnoccupiedPosition);
             fieldsPackedTogether.push_back(candidate);
             packingWithPositions.erase(candidate);
-            const PHV::Field* packingField = candidate;
-            LOG5("\t\tInserting into already packed field: " << packingField->name);
+            cstring alreadyPackedFieldName = getFieldName(structName,
+                    candidate);
+            const PHV::Field* packingField = phv.field(alreadyPackedFieldName);
+            LOG5("\t\tInserting into already packed field: " << alreadyPackedFieldName);
             alreadyPackedFields.insert(packingField);
             LOG5("\t\tInserting " << packingField->name << " into already packed fields.");
         }
 
         ordered_set<cstring> fieldsExtractedTogether;
         for (auto it = fieldsPackedTogether.begin(); it != fieldsPackedTogether.end(); ++it) {
-            LOG4("\t\tA. Pushing field " << (*it)->name << " of type " << (*it)->size <<
-                                         "b.");
-            if (padFields.count(*it)) paddingFieldNames.insert((*it)->name);
-            fieldsExtractedTogether.insert((*it)->name);
-            packedFields.push_back(*it);
+            cstring fieldName = getFieldName(structName, *it);
+            LOG4("\t\tA. Pushing field " << fieldName << " of type " << (*it)->type->width_bits() <<
+                    "b.");
+            if (padFields.count(*it))
+                paddingFieldNames.insert(fieldName);
+            IR::ID newName(flex->name + "." + (*it)->name);
+            IR::StructField* newField = new IR::StructField(newName, (*it)->annotations,
+                    (*it)->type);
+            fieldsExtractedTogether.insert(newName);
+            fields.push_back(newField);
         }
         for (auto f1 : fieldsExtractedTogether) {
             for (auto f2 : fieldsExtractedTogether) {
                 if (f1 == f2) continue;
-                extractedTogether[f1].insert(f2);
-                extractedTogether[f2].insert(f1);
+                cstring fName1 = h->name + "." + f1;
+                cstring fName2 = h->name + "." + f2;
+                extractedTogether[fName1].insert(fName2);
+                extractedTogether[fName2].insert(fName1);
             }
         }
     }
-    return packedFields;
-}
 
-/**
- * check 'repackedTypes' to see if the header type has already been packed.
- *
- * XXX(hanw): This implies if a mirror metadata header is emitted multiple times,
- * the packing on the first emit is going to determine the packing of the rest,
- * which is not correct.
- */
-boost::optional<const IR::HeaderOrMetadata*>
-RepackFlexHeaders::checkIfAlreadyPacked(const IR::HeaderOrMetadata* h) {
-    // If it is an egress header, take its new type from the repacked ingress version.
-    if (repackedTypes.count(h->type)) {
-        auto* repackedHeaderType = new IR::Type_Header(h->type->name, h->type->annotations,
-                repackedTypes.at(h->type)->fields);
-        auto* repackedHeader = new IR::Header(h->name, repackedHeaderType);
-        repackedHeaders[h->name] = repackedHeader;
-        originalHeaders[h->name] = h;
-        LOG1("Repacked egress header: " << repackedHeader);
-        LOG1("Repacked egress header type: " << repackedHeaderType);
-        LOG1("Repacked egress header size: " << getHeaderBytes(repackedHeader) << "B");
-        return repackedHeader;
-    }
-    return boost::none;
-}
-
-const ordered_set<const PHV::Field*>
-RepackFlexHeaders::mkPhvFieldSet(const IR::HeaderOrMetadata* h) {
-    auto isFlexible = [&](const IR::StructField* f) {
-        return f->getAnnotation("flexible") != nullptr; };
-    ordered_set<const PHV::Field*> fields;
-    for (auto f : *h->type->fields.getEnumerator()->where(isFlexible)) {
-        cstring fieldName = h->name + "." + f->name;
-        const auto* field = phv.field(fieldName);
-        LOG3("PHV::Field for " << fieldName << " is " << field);
-        fields.insert(field);
-    }
-    return fields;
-}
-
-/**
- * mkPhvFieldSet : take IR::DigestFieldList, generate a set of PHV::Field that must be packed.
- */
-const std::vector<std::tuple<const IR::StructField*, const IR::BFN::FieldLVal*>>
-RepackFlexHeaders::zipDigestSourcesAndTypes(const IR::BFN::DigestFieldList* d) {
-    std::vector<std::tuple<const IR::StructField*, const IR::BFN::FieldLVal*>> sources;
-    // XXX(HanW): mirror digest has 'session_id' in the first element, which is not
-    // part of the mirror field list.
-    auto digest = findContext<const IR::BFN::Digest>();
-    auto iter = d->sources.begin();
-    if (digest->name == "mirror") {
-        iter++; }
-    // zip field type and field list
-    std::transform(d->type->fields.begin(), d->type->fields.end(),
-            iter, std::back_inserter(sources),
-            [](const IR::StructField* aa, const IR::BFN::FieldLVal* bb) {
-                return std::make_tuple(aa, bb); });
-    return sources;
-}
-
-const ordered_set<const PHV::Field*>
-RepackFlexHeaders::mkPhvFieldSet(const IR::BFN::DigestFieldList* d) {
-    auto sources = zipDigestSourcesAndTypes(d);
-    auto isFlexible = [&](const IR::StructField* f) {
-        return f->getAnnotation("flexible") != nullptr; };
-    ordered_set<const PHV::Field*> fields;
-    for (auto f : sources) {
-        if (!isFlexible(std::get<0>(f))) continue;
-        const auto* field = phv.field(std::get<1>(f)->field);
-        fields.insert(field);
-    }
-    return fields;
-}
-
-const std::map<const PHV::Field*, const IR::StructField*>
-RepackFlexHeaders::getPhvFieldToStructFieldMap(const IR::BFN::DigestFieldList* d) {
-    auto sources = zipDigestSourcesAndTypes(d);
-    std::map<const PHV::Field*, const IR::StructField*> map;
-    for (auto f : sources) {
-        const auto* field = phv.field(std::get<1>(f)->field);
-        map.emplace(field, std::get<0>(f));
-    }
-    return map;
+    auto* repackedType = new IR::Type_Struct(flexType->name, flexType->annotations, fields);
+    return repackedType;
 }
 
 bool RepackFlexHeaders::isFlexibleHeader(const IR::HeaderOrMetadata* h) {
-    for (auto f : h->type->fields)
-        if (f->getAnnotation("flexible"))
+    bool foundFlexibleStruct = false;
+    for (auto f : h->type->fields) {
+        if (f->type->is<IR::BFN::Type_StructFlexible>()) {
+            foundFlexibleStruct = true;
             headerToFlexibleStructsMap[h].insert(f);
-    return headerToFlexibleStructsMap.count(h);
+            flexibleStructs.insert(f->type);
+        }
+    }
+    return foundFlexibleStruct;
 }
 
-bool RepackFlexHeaders::isFlexibleHeader(const IR::BFN::DigestFieldList* d) {
-    /// empty field list does not have a header type.
-    if (!d->type) return false;
-    for (auto f : d->type->fields)
-        if (f->getAnnotation("flexible"))
-            digestToFlexibleStructsMap[d].insert(f);
-    return digestToFlexibleStructsMap.count(d);
-}
-
-const IR::Node* RepackFlexHeaders::preorder(IR::BFN::Pipe* p) {
-    // dump(p);
-    return p;
-}
-
-const IR::Node* RepackFlexHeaders::preorder(IR::HeaderOrMetadata* h) {
+IR::Node* RepackFlexHeaders::preorder(IR::HeaderOrMetadata* h) {
     if (!isFlexibleHeader(h)) return h;
     LOG3("Candidate flexible header found: " << h->name);
     LOG3("Candidate header type: " << h->type);
     LOG3("Candidate header size: " << getHeaderBits(h) << "b");
     // Only process bridged metadata headers.
     cstring headerName = h->name;
-
-    if (auto rv = checkIfAlreadyPacked(h))
-        return *rv;
+    // If it is an egress header, take its new type from the repacked ingress version.
+    if (headerName.startsWith(EGRESS_FIELD_PREFIX)) {
+        cstring ingressName = getIngressFieldName(headerName);
+        if (repackedHeaders.count(ingressName)) {
+            auto* egressHeaderType = new IR::Type_Header(h->type->name, h->type->annotations,
+                    repackedHeaders.at(ingressName)->type->fields);
+            auto* egressRepackedHeader = new IR::Header(headerName, egressHeaderType);
+            repackedHeaders[headerName] = egressRepackedHeader;
+            LOG1("Repacked egress header: " << egressRepackedHeader);
+            LOG1("Repacked egress header type: " << egressHeaderType);
+            LOG1("Repacked egress header size: " << getHeaderBytes(egressRepackedHeader) << "B");
+            return egressRepackedHeader;
+        }
+    }
 
     BUG_CHECK(headerToFlexibleStructsMap.count(h),
               "The compiler has detected a header %1% with flexible structs, but "
               "cannot find the associated flexible structs to repack.",
               h->name);
     auto& flexFields = headerToFlexibleStructsMap.at(h);
-    LOG3("  " << flexFields.size() << " flexible fields in header " << h->name);
+    LOG3("  " << flexFields.size() << " flexible structs in header " << h->name);
     if (LOGGING(3))
         for (auto* f : flexFields)
             LOG3("\tFlexible header type: " << f->name << "\n\t  " << f->type);
-
-    std::map<const PHV::Field*, const IR::StructField*> phvFieldToStructField;
-
-    for (auto f : flexFields) {
-        cstring fieldName = getFieldName(h->name, f);
-        const PHV::Field* field = phv.field(fieldName);
-        BUG_CHECK(field, "No field object for field %1%", fieldName);
-        phvFieldToStructField.emplace(field, f);
+    for (auto flex : flexFields) {
+        const auto* flexType = flex->type->to<IR::BFN::Type_StructFlexible>();
+        LOG3("\t" << flex->name);
+        ingressFlexibleTypes[flexType] = repackFlexibleStruct(h, flex);
     }
-
-    auto& fieldsToBePacked = mkPhvFieldSet(h);
-
-    auto packedFields = packPhvFieldSet(fieldsToBePacked);
 
     IR::IndexedVector<IR::StructField> fields;
-    // Add the non flexible fields from the header.
     for (auto f : h->type->fields) {
-        if (!f->getAnnotation("flexible") && !f->getAnnotation("hidden")) {
+        if (!f->type->is<IR::BFN::Type_StructFlexible>()) {
             fields.push_back(f);
-            LOG1("Pushing original field " << f);
             continue;
         }
+        const IR::BFN::Type_StructFlexible* flexType = f->type->to<IR::BFN::Type_StructFlexible>();
+        if (!ingressFlexibleTypes.count(flexType))
+            BUG("Repacking not done for flexible type %1%", f->name);
+        for (auto f1 : ingressFlexibleTypes.at(flexType)->fields)
+            fields.push_back(f1);
     }
-    // Add the repacked flexible fields.
-    unsigned padFieldId = 0;
-    for (auto f : packedFields) {
-        if (phvFieldToStructField.count(f)) {
-            auto field = phvFieldToStructField.at(f);
-            fields.push_back(field);
-            LOG1("Pushing field " << field);
-        } else {
-            auto padding = getPaddingField(f->size, padFieldId++);
-            fields.push_back(padding);
-            LOG1("Pushing field " << padding);
-        }
-    }
-
-    if (auto fh = h->type->to<IR::BFN::Type_FixedSizeHeader>()) {
-        auto bits = getHeaderBits(h);
-        auto pad_size = fh->fixed_size - bits;
-        if (pad_size != 0) {
-            auto padding = getPaddingField(pad_size, padFieldId++);
-            fields.push_back(padding);
-            LOG1("Pushing field " << padding);
-        }
-    }
-
     auto* repackedHeaderType = new IR::Type_Header(h->type->name, h->type->annotations, fields);
     auto* repackedHeader = new IR::Header(h->name, repackedHeaderType);
     repackedHeaders[headerName] = repackedHeader;
-    repackedTypes[h->type] = repackedHeaderType;
-    originalHeaders[headerName] = h;
-    ingressFlexibleTypes[h] = repackedHeader;
     LOG1("Repacked header: " << repackedHeader->name);
     LOG1("Repacked header type: " << repackedHeader->type);
-    LOG1("Repacked header size: " << getHeaderBits(repackedHeader) << "b");
-
+    LOG1("Repacked header size: " << getHeaderBytes(repackedHeader) << "B");
     return repackedHeader;
-}
-
-/**
- * Repack the field list in emit method call to reflect the new field list packing
- * format. This happens because the packing optimization is a backend optimization.
- * The optimization relies on backend phv analysis which only understands fields,
- * not headers. Further, the midend copy propagation may have replaced some of the
- * fields in the field list with field from another header, so we cannot rely
- * on the field name to find out the original type of the field list.
- *
- * The original type of the field list is thus stored by the midend to the
- * IR::BFN::DigestFieldList object as a cstring during midend conversion.
- *
- */
-const IR::BFN::DigestFieldList*
-RepackFlexHeaders::repackFieldList(cstring digest,
-        std::vector<FieldListEntry> repackedFieldIndices,
-        const IR::Type_StructLike* repackedHeaderType,
-        const IR::BFN::DigestFieldList* origFieldList) const {
-    // map index -> fieldlval in the field list.
-    ordered_map<int, const IR::BFN::FieldLVal*> origFieldOrder;
-    // repacked field list initializer
-    IR::Vector<IR::BFN::FieldLVal> newSources;
-    // mirror digest sources contains session_id at the beginning
-    // which is not part of the p4 field list.
-    auto iter = origFieldList->sources.begin();
-    if (digest == "mirror") {
-        newSources.push_back(*iter);
-        iter++; }
-
-    int index = 0;
-    for (; iter != origFieldList->sources.end(); iter++) {
-        origFieldOrder.emplace(index++, *iter); }
-
-    // reorder field from the original field list initializer
-    // according to the new field list order.
-    std::map<int, const IR::BFN::FieldLVal*> repackedFieldOrder;
-    index = 0;
-    for (auto entry : repackedFieldIndices) {
-        if (entry.first == -1) {
-            repackedFieldOrder.emplace(index++,
-                    new IR::BFN::FieldLVal(new IR::Padding(entry.second)));
-            continue; }
-        repackedFieldOrder.emplace(index++, origFieldOrder.at(entry.first)); }
-
-    for (auto f : repackedFieldOrder) {
-        IR::BFN::FieldLVal* newSource = new IR::BFN::FieldLVal(f.second->field);
-        newSources.push_back(newSource);
-    }
-    IR::BFN::DigestFieldList* repackedFieldList =
-        new IR::BFN::DigestFieldList(origFieldList->srcInfo,
-                origFieldList->idx, newSources, repackedHeaderType,
-                origFieldList->controlPlaneName);
-    LOG3("Repacked digest: " << digest << " "  << repackedFieldList);
-    return repackedFieldList;
-}
-
-const IR::Node* RepackDigestFieldList::preorder(IR::BFN::DigestFieldList* d) {
-    // empty digest field list has nullptr type.
-    if (!d->type) return d;
-    if (!isFlexibleHeader(d)) return d;
-    LOG3("Candidate digest field list found: idx " << d->idx);
-    LOG3("Candidate digest type: " << d->type);
-    LOG3("Candidate digest size: " << getHeaderBits(d) << "b");
-
-    BUG_CHECK(digestToFlexibleStructsMap.count(d),
-              "The compiler has detected a header %1% with flexible structs, but "
-              "cannot find the associated flexible structs to repack.",
-              d->type);
-    auto& flexFields = digestToFlexibleStructsMap.at(d);
-    LOG3("\t" << flexFields.size() << " flexible fields in header " << d->type->name);
-    if (LOGGING(3))
-        for (auto* f : flexFields)
-            LOG3("\tFlexible header type: " << f->name << "\n\t  " << f->type);
-
-    auto phvFieldToStructField = getPhvFieldToStructFieldMap(d);
-
-    auto& fieldsToBePacked = mkPhvFieldSet(d);
-
-    auto packedFields = packPhvFieldSet(fieldsToBePacked);
-
-    IR::IndexedVector<IR::StructField> fields;
-    // Add the non flexible fields from the header.
-    for (auto f : d->type->fields) {
-        if (!f->getAnnotation("flexible") && !f->getAnnotation("hidden")) {
-            fields.push_back(f);
-            LOG3("\tPushing original field " << f);
-            continue;
-        }
-    }
-    // Add the repacked flexible fields.
-    unsigned padFieldId = 0;
-    for (auto f : packedFields) {
-        if (phvFieldToStructField.count(f)) {
-            auto field = phvFieldToStructField.at(f);
-            fields.push_back(field);
-            LOG3("\tPushing field " << field);
-        } else {
-            auto padding = getPaddingField(f->size, padFieldId++);
-            fields.push_back(padding);
-            LOG3("\tPushing field " << padding);
-        }
-    }
-    auto* repackedHeaderType = new IR::Type_Header(d->type->name, d->type->annotations, fields);
-    repackedTypes[d->type] = repackedHeaderType;
-
-    std::map<cstring, int> original_field_indices;
-    int index = 0;
-    for (auto f : d->type->fields) {
-        original_field_indices.emplace(f->name, index++);
-    }
-
-    std::vector<FieldListEntry> repacked_field_indices;
-    for (auto f : repackedHeaderType->fields) {
-        if (f->getAnnotation("hidden")) {
-            repacked_field_indices.push_back(std::make_pair(-1, f->type));
-            continue; }
-        repacked_field_indices.push_back(
-                std::make_pair(original_field_indices.at(f->name), f->type));
-        LOG1("\tRepacked field " << f->name); }
-
-    if (LOGGING(3)) {
-        for (auto i : repacked_field_indices) {
-            LOG3("\t\trepacking " << i.first << " to " << i.second);
-        } }
-
-    auto digest = findContext<IR::BFN::Digest>();
-    BUG_CHECK(digest != nullptr, "Unable to find digest for %1%", d);
-    auto rd = repackFieldList(digest->name, repacked_field_indices,
-            repackedHeaderType, d);
-    LOG3("Repacked digest type: " << repackedHeaderType);
-    LOG3("Repacked digest size: " << getHeaderBits(rd) << "b");
-    return rd;
 }
 
 Visitor::profile_t ProduceParserMappings::init_apply(const IR::Node* root) {
@@ -1329,41 +1132,6 @@ bool ProduceParserMappings::preorder(const IR::HeaderOrMetadata* h) {
     return false;
 }
 
-Visitor::profile_t GatherParserStateToModify::init_apply(const IR::Node* root) {
-    parserStatesToModify.clear();
-    return Inspector::init_apply(root);
-}
-
-bool GatherParserStateToModify::preorder(const IR::BFN::ParserState* ps) {
-    LOG3(" visiting " << ps->name);
-    bool extractToBridgedMetadataFound = false;
-    for (auto stmt : ps->statements)
-        if (const auto* e = stmt->to<IR::BFN::Extract>())
-            extractToBridgedMetadataFound |= processExtract(e);
-    if (extractToBridgedMetadataFound) {
-        LOG4("\t  Must modify parser state: " << ps->name);
-        parserStatesToModify.insert(ps->name);
-    }
-    return true;
-}
-
-bool GatherParserStateToModify::processExtract(const IR::BFN::Extract* e) {
-    auto* fieldLVal = e->dest->to<IR::BFN::FieldLVal>();
-    if (!fieldLVal) return false;
-    const PHV::Field* f = phv.field(fieldLVal->field);
-    if (!f) BUG("Extract to a non-field type %1%", fieldLVal->field);
-    if (f->is_flexible()) {
-        // extracting constant to bridge metadata field does not count as a flex
-        // field use as it may be introduced by metadata initialization.
-        auto* constantRVal = e->source->to<IR::BFN::ConstantRVal>();
-        if (constantRVal)
-            return false;
-        LOG4("\t  Found flexible type: " << f->name);
-        return true;
-    }
-    return false;
-}
-
 void ReplaceFlexFieldUses::addBridgedFields(const IR::HeaderOrMetadata* header) {
     if (!header) return;
     for (auto f : header->type->fields) {
@@ -1374,15 +1142,17 @@ void ReplaceFlexFieldUses::addBridgedFields(const IR::HeaderOrMetadata* header) 
 
 Visitor::profile_t ReplaceFlexFieldUses::init_apply(const IR::Node* root) {
     bridgedFields.clear();
+    repackedHeaders.clear();
+    parserStatesToModify.clear();
     emitsToBeReplaced.clear();
     fieldsToReplace.clear();
     egressBridgedMap.clear();
     reverseEgressBridgedMap.clear();
     extractedTogether.clear();
 
-    auto repackedHeaders = pack.getRepackedHeaders();
-    for (const auto h : repackedHeaders)
-        addBridgedFields(h.second);
+    repackedHeaders = pack.getRepackedHeaders();
+    for (const auto* h : repackedHeaders)
+        addBridgedFields(h);
 
     if (bridgedFields.size() > 0) {
         LOG3("\tNumber of flexible fields: " << bridgedFields.size());
@@ -1391,9 +1161,13 @@ Visitor::profile_t ReplaceFlexFieldUses::init_apply(const IR::Node* root) {
     }
 
     auto& hdrToFlex = pack.getHeaderToFlexibleStructsMap();
-    for (auto kv : hdrToFlex)
-        for (auto* f : kv.second)
-            fieldsToReplace.insert(kv.first->name + "." + f->name);
+    for (auto kv : hdrToFlex) {
+        for (auto flex : kv.second) {
+            const auto* flexType = flex->type->to<IR::BFN::Type_StructFlexible>();
+            for (auto f : flexType->fields)
+                fieldsToReplace.insert(kv.first->name + "." + flex->name + "." + f->name);
+        }
+    }
 
     return Transform::init_apply(root);
 }
@@ -1405,9 +1179,21 @@ IR::Node* ReplaceFlexFieldUses::preorder(IR::BFN::Pipe* pipe) {
     return pipe;
 }
 
+IR::Node* ReplaceFlexFieldUses::preorder(IR::BFN::ParserState* ps) {
+    bool extractToBridgedMetadataFound = false;
+    for (auto stmt : ps->statements)
+        if (const auto* e = stmt->to<IR::BFN::Extract>())
+            extractToBridgedMetadataFound |= processExtract(e);
+    if (extractToBridgedMetadataFound) {
+        LOG4("\t  Must modify parser state: " << ps->name);
+        parserStatesToModify.insert(ps);
+    }
+    return ps;
+}
+
 IR::Node* ReplaceFlexFieldUses::preorder(IR::BFN::Extract* e) {
     const auto* ps = findContext<IR::BFN::ParserState>();
-    if (!parserStatesToModify.count(ps->name)) return e;
+    if (!parserStatesToModify.count(ps)) return e;
     if (!e->source->is<IR::BFN::ComputedRVal>()) return e;
     auto* computedVal = e->source->to<IR::BFN::ComputedRVal>();
     auto* destField = e->dest->to<IR::BFN::FieldLVal>();
@@ -1420,13 +1206,13 @@ IR::Node* ReplaceFlexFieldUses::preorder(IR::BFN::Extract* e) {
     return e;
 }
 
-boost::optional<const std::vector<IR::BFN::Extract*>>
-ReplaceFlexFieldUses::getNewExtracts(cstring h, unsigned& packetOffset) const {
+const std::vector<IR::BFN::Extract*> ReplaceFlexFieldUses::getNewExtracts(
+        cstring h,
+        unsigned& packetOffset) const {
     std::vector<IR::BFN::Extract*> rv;
     const IR::HeaderOrMetadata* hdr = info.getHeaderRefForName(h);
-    if (!hdr) return boost::none;
+    BUG_CHECK(hdr, "No header object corresponding to name %1%", h);
     // At this point, the header type is flattened.
-    LOG3(" generate extract for header " << hdr->type);
     for (auto f : hdr->type->fields) {
         IR::Member* newDest = gen_fieldref(hdr, f->name);
         int width = f->type->width_bits();
@@ -1438,6 +1224,16 @@ ReplaceFlexFieldUses::getNewExtracts(cstring h, unsigned& packetOffset) const {
         rv.push_back(newE);
     }
     return rv;
+}
+
+bool ReplaceFlexFieldUses::processExtract(const IR::BFN::Extract* e) {
+    auto* fieldLVal = e->dest->to<IR::BFN::FieldLVal>();
+    if (!fieldLVal) return false;
+    if (pack.isFlexibleStruct(fieldLVal->field->type)) {
+        LOG4("\t  Found flexible type: " << fieldLVal->field->type);
+        return true;
+    }
+    return false;
 }
 
 IR::BFN::Extract* ReplaceFlexFieldUses::getNewComputedVal(const IR::BFN::Extract* e) const {
@@ -1462,7 +1258,7 @@ IR::BFN::Extract* ReplaceFlexFieldUses::getNewComputedVal(const IR::BFN::Extract
 
 IR::Node* ReplaceFlexFieldUses::postorder(IR::BFN::ParserState* p) {
     // Only process the parser state which extracts bridged metadata header in the egress pipeline.
-    if (!parserStatesToModify.count(p->name)) return p;
+    if (!parserStatesToModify.count(p)) return p;
 
     LOG4("\tPostorder for parser state " << p->name);
     IR::Vector<IR::BFN::ParserPrimitive> statements;
@@ -1472,7 +1268,6 @@ IR::Node* ReplaceFlexFieldUses::postorder(IR::BFN::ParserState* p) {
     for (auto s : extractedHeaders)
         LOG4("\t\tHeader: " << s);
     unsigned headerNum = 0;
-    ordered_set<cstring> seenHeaders;
     for (auto stmt : p->statements) {
         auto* extract = stmt->to<IR::BFN::Extract>();
         if (!extract) {
@@ -1497,22 +1292,9 @@ IR::Node* ReplaceFlexFieldUses::postorder(IR::BFN::ParserState* p) {
         if (headerNum < extractedHeaders.size() && extractedHeaders[headerNum] == hName) {
             LOG4("\t\t  Encountered first field of header " << hName);
             auto newExtracts = getNewExtracts(hName, packetOffset);
-            if (!newExtracts) {
-                // Calculate new source for the extract based on the packet offset (needed if the
-                // header size has changed).
-                int width = rval->range().size();
-                nw_bitrange new_range = StartLen(packetOffset, width);
-                packetOffset += width;
-                IR::BFN::PacketRVal* new_source = new IR::BFN::PacketRVal(rval->srcInfo, new_range);
-                IR::BFN::Extract* new_extract = new IR::BFN::Extract(extract->srcInfo,
-                        extract->dest, new_source);
-                statements.push_back(new_extract);
-                LOG4("\t\t\tPushed non header extract: " << new_extract);
-            } else {
-                for (auto* e : *newExtracts) statements.push_back(e);
-            }
-            if (!seenHeaders.count(hName)) ++headerNum;
-            seenHeaders.insert(hName);
+            for (auto* e : newExtracts)
+                statements.push_back(e);
+            ++headerNum;
         }
     }
 
@@ -1525,16 +1307,15 @@ IR::Node* ReplaceFlexFieldUses::postorder(IR::BFN::ParserState* p) {
         transitions.push_back(newTransition);
     }
     IR::BFN::ParserState* newParserState = new IR::BFN::ParserState(p->name, p->gress, statements,
-                                                                    p->selects, transitions);
+            p->selects, transitions);
     LOG3("\tNew parser state:\n" << newParserState);
     return newParserState;
 }
 
 IR::Node* ReplaceFlexFieldUses::preorder(IR::BFN::EmitField* e) {
-    const auto* f = phv.field(e->source->field);
-    BUG_CHECK(f, "Field object corresponding to %1% not found", e->source->field);
-    auto repackedHeaders = pack.getRepackedHeaders();
-    if (repackedHeaders.count(f->header())) {
+    if (e->source->field->type->is<IR::BFN::Type_StructFlexible>()) {
+        const auto* f = phv.field(e->source->field);
+        BUG_CHECK(f, "Field object corresponding to %1% not found", e->source->field);
         emitsToBeReplaced.insert(f->header());
         LOG4("\t\tInsert " << f->header() << " to emits to be replaced");
     }
@@ -1554,6 +1335,49 @@ ReplaceFlexFieldUses::getNewEmits(
         rv.push_back(newE);
     }
     return rv;
+}
+
+IR::Node* ReplaceFlexFieldUses::postorder(IR::BFN::Digest* d) {
+    LOG5("\t\tDigest: " << d);
+    IR::Vector<IR::BFN::DigestFieldList> newFieldLists;
+    for (auto* fieldList : d->fieldLists) {
+        IR::Vector<IR::BFN::FieldLVal> newSources;
+        for (auto* field : fieldList->sources) {
+            LOG5("\t\t  Field: " << field->field);
+            const auto* flexType = field->field->type->to<IR::BFN::Type_StructFlexible>();
+            if (!flexType) {
+                newSources.push_back(field);
+                continue;
+            }
+            LOG5("\t\t\tFound flexible type in field list.");
+            // Flatten the flexible type into its constituent fields.
+            const PHV::Field* f = phv.field(field->field);
+            const IR::HeaderOrMetadata* hdr = info.getHeaderRefForName(f->header());
+            BUG_CHECK(hdr, "No header object found for %1%", f->name);
+            LOG5("\t\t\tHeader " << hdr->name << " found for field " << f->name);
+            auto* repackedFlexType = pack.getRepackedType(flexType);
+            LOG5("\t\t\t  Found repacked type: " << repackedFlexType);
+            BUG_CHECK(repackedFlexType, "No repacking found for flexible struct %1%", f->name);
+            for (auto f : repackedFlexType->fields) {
+                // Ignore padding field.
+                if (f->getAnnotations()->getSingle("hidden") != nullptr) continue;
+                LOG5("\t\t\t\tGenerating member for field: " << (hdr->name + "." + f->name));
+                IR::Member* mem = gen_fieldref(hdr, f->name);
+                if (!mem) BUG("Could not produce member corresponding to %1% when rewriting digest",
+                        f->name);
+                IR::BFN::FieldLVal* newSource = new IR::BFN::FieldLVal(mem);
+                newSources.push_back(newSource);
+                LOG5("\t\t\t\tCreated new digest field list source: " << newSource);
+            }
+        }
+        IR::BFN::DigestFieldList* newFieldList = new IR::BFN::DigestFieldList(fieldList->srcInfo,
+                fieldList->idx, newSources, fieldList->controlPlaneName);
+        newFieldLists.push_back(newFieldList);
+    }
+    d->fieldLists.clear();
+    for (auto* fieldList : newFieldLists)
+        d->fieldLists.push_back(fieldList);
+    return d;
 }
 
 IR::Node* ReplaceFlexFieldUses::postorder(IR::BFN::Deparser* d) {
@@ -1624,42 +1448,34 @@ void ReplaceFlexFieldUses::end_apply() {
 }
 
 FlexiblePacking::FlexiblePacking(
-        PhvInfo& p,
-        PhvUse& u,
-        DependencyGraph& dg,
-        CollectBridgedFields& b,
-        ordered_map<cstring, ordered_set<cstring>>& e,
-        const MauBacktracker& alloc)
-        : Logging::PassManager("bridge_metadata_"),
-          bridgedFields(b),
-          packConflicts(p, dg, tMutex, alloc, aMutex),
-          actionConstraints(p, u, packConflicts),
-          packDigestFieldLists(p, b, actionConstraints, doNotPack, noPackFields, deparserParams,
-                      parserAlignedFields, alloc, repackedTypes),
-          packHeaders(p, b, actionConstraints, doNotPack, noPackFields, deparserParams,
-                      parserAlignedFields, alloc, repackedTypes),
-          parserMappings(p),
-          bmUses(p, packHeaders, parserMappings, e, parserStatesToModify) {
-              addPasses({
-                      &bridgedFields,
-                      // XXX(hanw): GatherParserStateToModify must run before
-                      // ReplaceOriginalFieldWithBridged.
-                      new GatherParserStateToModify(p, parserStatesToModify),
-                      new ReplaceOriginalFieldWithBridged(p, bridgedFields),
-                      new FindDependencyGraph(p, dg),
-                      &tMutex,
-                      &aMutex,
-                      &packConflicts,
-                      &actionConstraints,
-                      new GatherDeparserParameters(p, deparserParams),
-                      new GatherPhase0Fields(p, noPackFields),
-                      new GatherParserExtracts(p, parserAlignedFields),
-                      &packDigestFieldLists,
-                      &packHeaders,
-                      &parserMappings,
-                      &bmUses,
-                      // rerun CollectPhvInfo because repack might have introduced
-                      // new tempvars
-                      new CollectPhvInfo(p),
-              });
+            PhvInfo& p,
+            PhvUse& u,
+            DependencyGraph& dg,
+            CollectBridgedFields& b,
+            ordered_map<cstring, ordered_set<cstring>>& e,
+            const MauBacktracker& alloc)
+    : Logging::PassManager("bridge_metadata_"),
+      bridgedFields(b),
+      packConflicts(p, dg, tMutex, alloc, aMutex),
+      actionConstraints(p, u, packConflicts),
+      packHeaders(p, b, actionConstraints, doNotPack, phase0Fields, deparserParams,
+                   parserAlignedFields, alloc),
+      parserMappings(p),
+      bmUses(p, packHeaders, parserMappings, e) {
+          addPasses({
+              &bridgedFields,
+              new ReplaceOriginalFieldWithBridged(p, bridgedFields),
+              new FindDependencyGraph(p, dg),
+              &tMutex,
+              &aMutex,
+              &packConflicts,
+              &actionConstraints,
+              new GatherDeparserParameters(p, deparserParams),
+              new GatherPhase0Fields(p, phase0Fields),
+              new GatherParserExtracts(p, parserAlignedFields),
+              &packHeaders,
+              &parserMappings,
+              &bmUses,
+              new CollectPhvInfo(p)
+          });
 }

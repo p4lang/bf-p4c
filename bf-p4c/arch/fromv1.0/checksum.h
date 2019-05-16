@@ -2,7 +2,6 @@
 #define EXTENSIONS_BF_P4C_ARCH_FROMV1_0_CHECKSUM_H_
 
 #include "v1_program_structure.h"
-#include "bf-p4c/arch/intrinsic_metadata.h"
 #include "bf-p4c/midend/parser_graph.h"
 
 typedef std::map<const IR::Declaration*, std::set<const IR::ParserState*>> DeclToStates;
@@ -558,7 +557,7 @@ class InsertChecksumError : public PassManager {
             for (auto& kv : self->endStates[parser->name]) {
                 if (kv.second.count("accept")) {
                     if (!dummy) {
-                        dummy = AddMetadataFields::createGeneratedParserState(
+                        dummy = AddIntrinsicMetadata::createGeneratedParserState(
                             "before_accept", {}, "accept");
                         parser->states.push_back(dummy);
                     }

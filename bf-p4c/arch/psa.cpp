@@ -773,7 +773,7 @@ PortableSwitchTranslation::PortableSwitchTranslation(
         new PSA::TranslateProgram(structure, refMap, typeMap),
         new GenerateTofinoProgram(structure),
         new PSA::ConvertNames(structure, refMap, typeMap),
-        new AddIntrinsicMetadata(refMap, typeMap),
+        new AddIntrinsicMetadata,
         new PSA::RewritePacketPath(structure),
         new TranslationLast(),
         // new AddPsaBridgeMetadata(refMap, typeMap, structure),

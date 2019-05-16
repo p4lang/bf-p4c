@@ -55,8 +55,8 @@ control ingressDeparser(packet_out packet, inout headers hdr, in metadata meta,
     Pktgen() pktgen;
     apply {
 	if (ig_intr_md_for_dprs.pktgen)
-	    pktgen.emit<data_t>(hdr.data);
-        packet.emit<data_t>(hdr.data);
+	    pktgen.emit(hdr);
+        packet.emit(hdr);
     }
 }
 

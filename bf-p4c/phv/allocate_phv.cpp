@@ -939,9 +939,6 @@ CoreAllocation::tryAllocSliceList(
         ordered_set<PHV::AllocSlice> metaInitSlices;
         // Check that the placement can be done through metadata initialization.
         for (auto& slice : candidate_slices) {
-            // padding can be overlayed with any field
-            if (slice.field()->overlayablePadding)
-                continue;
             if (!uses_i.is_referenced(slice.field()) && !slice.field()->isGhostField())
                 continue;
             // Skip slices that have already been allocated.
@@ -2137,15 +2134,6 @@ BruteForceAllocationStrategy::remove_unreferenced_clusters(
                         !slice.field()->isGhostField()) {
                         un_ref_singleton.insert(super_cluster);
                         break; } } } }
-    }
-
-    for (auto* super_cluster : cluster_groups_input) {
-        bool all_field_slices_ignore_padding = super_cluster->all_of_fieldslices(
-                [](const PHV::FieldSlice& slice) {
-                return slice.field()->is_ignore_alloc();
-                });
-        if (all_field_slices_ignore_padding)
-            un_ref_singleton.insert(super_cluster);
     }
 
     std::list<PHV::SuperCluster*> cluster_groups_filtered;

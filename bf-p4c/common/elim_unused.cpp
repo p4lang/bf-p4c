@@ -90,7 +90,7 @@ class ElimUnused::Instructions : public Transform {
     const IR::MAU::Instruction *postorder(IR::MAU::Instruction *i) override {
         /// HACK(hanw): copy-propagation introduces set(a, a) instructions, which
         /// is not deadcode eliminated because 'a' is still in-use in the control flow.
-        if (i->name == "set" && (i->operands[0])->equiv(*i->operands[1]))
+        if (i->name == "set" && equiv(i->operands[0], i->operands[1]))
             return nullptr;
         return i;
     }

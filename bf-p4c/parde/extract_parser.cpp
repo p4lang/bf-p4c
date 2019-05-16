@@ -980,7 +980,7 @@ void ExtractParser::end_apply() {
 /// in the backend though. The compiler should be able to insert placeholder
 /// parser state in the midend instead, and let the backend to insert the
 /// intrinsic metadata extraction logic based on the target device (tofino/jbay).
-ProcessParde::ProcessParde(const IR::BFN::Pipe* rv, bool useV1model) :
+ProcessParde::ProcessParde(const IR::BFN::Pipe* rv, bool useTna) :
     Logging::PassManager("parser", Logging::Mode::AUTO) {
     setName("ProcessParde");
     addPasses({
@@ -991,7 +991,7 @@ ProcessParde::ProcessParde(const IR::BFN::Pipe* rv, bool useV1model) :
         // be happening at this layer anyway.
         new ResolveHeaderStackValues,
         // Add shims for intrinsic metadata.
-        new AddParserMetadataShims(rv, useV1model),
+        new AddParserMetadataShims(rv, !useTna /* = isV1 */),
         new AddDeparserMetadataShims(rv),
     });
 }

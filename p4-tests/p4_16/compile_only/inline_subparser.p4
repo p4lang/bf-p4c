@@ -1369,7 +1369,8 @@ control EgressMirror(
 
     apply {
         if (eg_intr_md_for_dprsr.mirror_type == 0x4) {
-            mirror.emit<switch_mirror_metadata_t>(eg_md.session_id, {
+            //switch_mirror_metadata_t hdr =
+            mirror.emit(eg_md.session_id, {
                          eg_md.mirror.src,
                          eg_md.mirror.hop_latency,
                          eg_md.mirror.ingress_tstamp,
@@ -1382,6 +1383,7 @@ control EgressMirror(
                          eg_md.mirror.egress_port_id,
                          eg_md.mirror.qid
                          });
+            //mirror.emit(hdr);
         }
     }
 }
@@ -1434,7 +1436,7 @@ parser INTSWCommonParser(
         transition accept;
         // transition select(hdr.outer_udp.dstPort) {
         //     PORT_GTP_U      : parse_gtp_u;
-        //     default         : accept;
+        //     default         : accept; 
         // }
     }
 

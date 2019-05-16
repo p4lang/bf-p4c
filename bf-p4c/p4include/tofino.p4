@@ -89,11 +89,11 @@ error {
 header ingress_intrinsic_metadata_t {
     bit<1> resubmit_flag;               // Flag distinguishing original packets
                                         // from resubmitted packets.
-    @hidden bit<1> _pad1;
+    bit<1> _pad1;
 
     bit<2> packet_version;              // Read-only Packet version.
 
-    @hidden bit<3> _pad2;
+    bit<3> _pad2;
 
     PortId_t ingress_port;              // Ingress physical port id.
 
@@ -199,31 +199,31 @@ struct ingress_intrinsic_metadata_for_deparser_t {
 // -----------------------------------------------------------------------------
 @__intrinsic_metadata
 header egress_intrinsic_metadata_t {
-    @hidden bit<7> _pad0;
+    bit<7> _pad0;
 
     bit<9> egress_port;                 // Egress port id.
                                         // this field is passed to the deparser
 
-    @hidden bit<5> _pad1;
+    bit<5> _pad1;
 
     bit<19> enq_qdepth;                 // Queue depth at the packet enqueue
                                         // time.
 
-    @hidden bit<6> _pad2;
+    bit<6> _pad2;
 
     bit<2> enq_congest_stat;            // Queue congestion status at the packet
                                         // enqueue time.
 
-    @hidden bit<14> _pad3;
+    bit<14> _pad3;
     bit<18> enq_tstamp;                 // Time snapshot taken when the packet
                                         // is enqueued (in nsec).
 
-    @hidden bit<5> _pad4;
+    bit<5> _pad4;
 
     bit<19> deq_qdepth;                 // Queue depth at the packet dequeue
                                         // time.
 
-    @hidden bit<6> _pad5;
+    bit<6> _pad5;
 
     bit<2> deq_congest_stat;            // Queue congestion status at the packet
                                         // dequeue time.
@@ -232,28 +232,28 @@ header egress_intrinsic_metadata_t {
                                         // congestion status. 2bits per
                                         // pool.
 
-    @hidden bit<14> _pad6;
+    bit<14> _pad6;
     bit<18> deq_timedelta;              // Time delta between the packet's
                                         // enqueue and dequeue time.
 
     ReplicationId_t egress_rid;         // L3 replication id for multicast
                                         // packets.
 
-    @hidden bit<7> _pad7;
+    bit<7> _pad7;
 
     bit<1> egress_rid_first;            // Flag indicating the first replica for
                                         // the given multicast group.
 
-    @hidden bit<3> _pad8;
+    bit<3> _pad8;
 
     QueueId_t egress_qid;               // Egress (physical) queue id via which
                                         // this packet was served.
 
-    @hidden bit<5> _pad9;
+    bit<5> _pad9;
 
     bit<3> egress_cos;                  // Egress cos (eCoS) value.
 
-    @hidden bit<7> _pad10;
+    bit<7> _pad10;
 
     bit<1> deflection_flag;             // Flag indicating whether a packet is
                                         // deflected due to deflect_on_drop.
@@ -323,10 +323,10 @@ struct egress_intrinsic_metadata_for_output_port_t {
 // A triggered event may generate programmable number of batches with
 // programmable number of packets per batch.
 header pktgen_timer_header_t {
-    @hidden bit<3> _pad1;
+    bit<3> _pad1;
     bit<2> pipe_id;                     // Pipe id
     bit<3> app_id;                      // Application id
-    @hidden bit<8> _pad2;
+    bit<8> _pad2;
 
     bit<16> batch_id;                   // Start at 0 and increment to a
                                         // programmed number
@@ -336,10 +336,10 @@ header pktgen_timer_header_t {
 }
 
 header pktgen_port_down_header_t {
-    @hidden bit<3> _pad1;
+    bit<3> _pad1;
     bit<2> pipe_id;                     // Pipe id
     bit<3> app_id;                      // Application id
-    @hidden bit<15> _pad2;
+    bit<15> _pad2;
     bit<9> port_num;                    // Port number
 
     bit<16> packet_id;                  // Start at 0 and increment to a
@@ -347,7 +347,7 @@ header pktgen_port_down_header_t {
 }
 
 header pktgen_recirc_header_t {
-    @hidden bit<3> _pad1;
+    bit<3> _pad1;
     bit<2> pipe_id;                     // Pipe id
     bit<3> app_id;                      // Application id
     bit<24> key;                        // Key from the recirculated packet

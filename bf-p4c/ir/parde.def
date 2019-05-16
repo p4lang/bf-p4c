@@ -119,7 +119,7 @@ abstract ParserLVal {
         CHECK_NULL(field);
         BUG_CHECK(field->is<IR::Member>() || field->is<IR::TempVar>() ||
                   field->is<IR::Slice>() || field->is<IR::ConcreteHeaderRef>() ||
-                  field->is<IR::Concat>() || field->is<IR::Padding>(),
+                  field->is<IR::Concat>(),
                   "FieldLVal contains unexpected value: %1%", field);
     }
 
@@ -373,8 +373,6 @@ class DigestFieldList {
 
     /// The fields to be copied into the buffer.
     inline Vector<FieldLVal> sources;
-
-    NullOK Type_StructLike type;
 
     /// Learning needs control plane name for the field list.
     optional cstring controlPlaneName;

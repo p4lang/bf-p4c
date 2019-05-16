@@ -32,12 +32,14 @@ struct switch_metadata_t {
     PortId_t port;
     MirrorId_t session_id;
     bit<1> check;
+    bit<4> pad;
 }
 
 @flexible
 struct bridge_metadata_t {
     PortId_t port;
     bit<1> check;
+    bit<6> pad;
 }
 
 typedef bit<16> switch_nexthop_t;
@@ -118,7 +120,7 @@ control SwitchIngressDeparser(packet_out pkt,
     apply {
         if (ig_intr_dprsr_md.mirror_type == 1) {
 	    hdr.mirrored_md.setValid();
-            hdr.mirrored_md.meta = {ig_md.port, ig_md.session_id, ig_md.check};
+            hdr.mirrored_md.meta = {ig_md.port, ig_md.session_id, ig_md.check, 4w0};
             hdr.mirrored_md.type = 8w0;
             mirror.emit(ig_md.session_id, hdr.mirrored_md);
         }
@@ -140,7 +142,7 @@ control SwitchIngress(
 
     action add_bridged_md() {
 	hdr.bridged_md.setValid();
-        hdr.bridged_md.meta = {ig_md.port, ig_md.check};
+        hdr.bridged_md.meta = {ig_md.port, ig_md.check, 6w0};
         hdr.bridged_md.type = 8w0;
     }
 

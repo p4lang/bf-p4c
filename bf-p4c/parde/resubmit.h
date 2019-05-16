@@ -25,19 +25,27 @@ namespace BFN {
 struct FieldPacking;
 
 using ResubmitSources = IR::Vector<IR::Expression>;
-using ResubmitExtracts = std::map<unsigned, std::pair<cstring, const ResubmitSources*>>;
+using ResubmitExtracts = std::map<unsigned, const ResubmitSources*>;
+using ResubmitPacking = std::map<unsigned, const FieldPacking*>;
 
 std::pair<const IR::P4Control*, IR::BFN::Pipe*>
 extractResubmit(const IR::P4Control* ingress, IR::BFN::Pipe* pipe,
                 P4::ReferenceMap* refMap, P4::TypeMap* typeMap);
 
-class FixupResubmitMetadata : public PassManager {
-    P4::ReferenceMap *refMap;
-    P4::TypeMap* typeMap;
-    ResubmitExtracts fieldExtracts;
-
+// This pass must be applied to IR::P4Program
+class ExtractResubmitFieldPackings : public PassManager {
  public:
-    FixupResubmitMetadata(P4::ReferenceMap *refMap, P4::TypeMap *typeMap);
+    ExtractResubmitFieldPackings(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
+                                 ResubmitPacking* fieldPackings);
+
+    ResubmitPacking* fieldPackings;
+};
+
+// This pass must be applied to IR::BFN::Pipe
+class PopulateResubmitStateWithFieldPackings : public PassManager {
+ public:
+    explicit PopulateResubmitStateWithFieldPackings(const ResubmitPacking* fieldPackings);
+    const ResubmitPacking* fieldPackings;
 };
 
 }  // namespace BFN

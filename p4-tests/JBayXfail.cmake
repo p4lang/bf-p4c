@@ -81,7 +81,6 @@ p4c_add_xfail_reason("tofino2"
   testdata/p4_14_samples/06-FullTPHV1.p4
   testdata/p4_14_samples/07-FullTPHV2.p4
   testdata/p4_14_samples/08-FullTPHV3.p4
-  extensions/p4_tests/p4_16/compile_only/lrn1.p4
 )
 
 p4c_add_xfail_reason("tofino2"
@@ -242,7 +241,7 @@ p4c_add_xfail_reason("tofino2"
 
 # P4C-1011
 p4c_add_xfail_reason("tofino2"
-  "standard_metadata.mcast_grp is not accessible in the egress pipe"
+  "Exiting with SIGSEGV"
   extensions/p4_tests/p4_16/bf_p4c_samples/v1model-special-ops-bmv2.p4
 )
 

@@ -1355,6 +1355,31 @@ struct ExtractChecksum : public Inspector {
     IR::BFN::Pipe* rv;
 };
 
+// used by backend for stratum architecture
+ProcessBackendPipe::ProcessBackendPipe(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
+                                       IR::BFN::Pipe *rv, DeclarationConversions &converted,
+                                       StatefulSelectors ss,
+                                       const BFN::ResubmitPacking* resubmitPackings,
+                                       const BFN::MirroredFieldListPacking* mirrorPackings,
+                                       ParamBinding *bindings) {
+    setName("ProcessBackendPipe");
+    CHECK_NULL(bindings);
+    CHECK_NULL(resubmitPackings);
+    CHECK_NULL(mirrorPackings);
+    auto simplifyReferences = new SimplifyReferences(bindings, refMap, typeMap);
+    addPasses({
+        new AttachTables(refMap, typeMap, converted, ss),  // add attached tables
+        new ProcessParde(rv, false /* useTna */),         // add parde metadata
+        new PopulateResubmitStateWithFieldPackings(resubmitPackings),
+        new PopulateMirrorStateWithFieldPackings(rv, mirrorPackings),
+        /// followings two passes are necessary, because ProcessBackendPipe transforms the
+        /// IR::BFN::Pipe objects. If all the above passes can be moved to an earlier midend
+        /// pass, then the passes below can possibily be removed.
+        simplifyReferences,
+        new CopyHeaderEliminator(),
+    });
+}
+
 // used by backend for tna architecture
 ProcessBackendPipe::ProcessBackendPipe(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
                                        IR::BFN::Pipe *rv, DeclarationConversions &converted,
@@ -1363,10 +1388,9 @@ ProcessBackendPipe::ProcessBackendPipe(P4::ReferenceMap *refMap, P4::TypeMap *ty
     setName("ProcessBackendPipe");
     CHECK_NULL(bindings);
     auto simplifyReferences = new SimplifyReferences(bindings, refMap, typeMap);
-    auto useV1model = (BackendOptions().arch == "v1model");
     addPasses({
         new AttachTables(refMap, typeMap, converted, ss),  // add attached tables
-        new ProcessParde(rv, useV1model),           // add parde metadata
+        new ProcessParde(rv, true /* useTna */),           // add parde metadata
         /// followings two passes are necessary, because ProcessBackendPipe transforms the
         /// IR::BFN::Pipe objects. If all the above passes can be moved to an earlier midend
         /// pass, then the passes below can possibily be removed.
@@ -1425,7 +1449,6 @@ void BackendConverter::convertTnaProgram(const IR::P4Program* program, BFN_Optio
     /// the backend IR, which means we can no longer run typeCheck pass after applying
     /// simplifyReferences to the frontend IR.
     auto simplifyReferences = new SimplifyReferences(bindings, refMap, typeMap);
-
     // ParamBinding pass must be applied to IR::P4Program* node,
     // see comments in param_binding.h for the reason.
     program->apply(*bindings);
@@ -1485,6 +1508,91 @@ void BackendConverter::convertTnaProgram(const IR::P4Program* program, BFN_Optio
 
         // clear DeclarationConversions map after the conversion of each pipeline.
         converted.clear();
+    }
+}
+
+void BackendConverter::convertV1Program(const IR::P4Program *program, BFN_Options &options) {
+    DeclarationConversions converted;
+    StatefulSelectors stateful_selectors;
+    ResubmitPacking resubmitPackings;
+    MirroredFieldListPacking mirrorPackings;
+    toplevel->getMain()->apply(*arch);
+
+    auto name = getPipelineName(program, 0);
+    auto rv = new IR::BFN::Pipe(name);
+    auto bindings = new ParamBinding(typeMap,
+        options.langVersion == CompilerOptions::FrontendVersion::P4_14);
+    auto simplifyReferences = new SimplifyReferences(bindings, refMap, typeMap);
+    // ParamBinding pass must be applied to IR::P4Program* node,
+    // see comments in param_binding.h for the reason.
+    program->apply(*bindings);
+    std::list<gress_t> gresses = {INGRESS, EGRESS};
+    for (auto gress : gresses) {
+        if (!arch->threads.count(std::make_pair(0 /* pipe 0 */, gress)))
+            return;
+        auto thread = arch->threads.at(std::make_pair(0 /* pipe 0 */, gress));
+        thread = thread->apply(*simplifyReferences);
+        if (!thread)
+            return;
+        if (auto mau = thread->mau->to<IR::BFN::TnaControl>()) {
+            mau->apply(ExtractMetadata(rv, bindings));
+            mau->apply(GetBackendTables(refMap, typeMap, gress, rv->thread[gress].mau,
+                                        converted, stateful_selectors));
+        }
+        for (auto p : thread->parsers) {
+            if (auto parser = p->to<IR::BFN::TnaParser>()) {
+                parser->apply(ExtractParser(refMap, typeMap, rv));
+            }
+        }
+        if (auto dprsr = thread->deparser->to<IR::BFN::TnaDeparser>()) {
+            dprsr->apply(ExtractDeparser(refMap, typeMap, rv));
+            dprsr->apply(ExtractChecksum(rv));
+            dprsr->apply(ExtractResubmitFieldPackings(refMap, typeMap, &resubmitPackings));
+            dprsr->apply(ExtractMirrorFieldPackings(refMap, typeMap, &mirrorPackings));
+        }
+    }
+
+    // collect and set global_pragmas
+    CollectGlobalPragma collect_pragma;
+    program->apply(collect_pragma);
+    rv->global_pragmas = collect_pragma.global_pragmas();
+
+    LOG2("initial extracted program \n" << *rv);
+    ProcessBackendPipe processBackendPipe(refMap, typeMap, rv, converted, stateful_selectors,
+                                          &resubmitPackings, &mirrorPackings, bindings);
+    processBackendPipe.addDebugHook(options.getDebugHook());
+    pipe.push_back(rv->apply(processBackendPipe));
+}
+
+void BackendConverter::convert(const IR::P4Program *program, BFN_Options& options) {
+    if (options.arch == "v1model") {
+        if (Device::currentDevice() == Device::TOFINO) {
+            convertV1Program(program, options);
+        }
+        if (Device::currentDevice() == Device::JBAY) {
+            convertV1Program(program, options);
+        }
+    } else if (options.arch == "psa" &&
+             options.langVersion == CompilerOptions::FrontendVersion::P4_16) {
+        if (Device::currentDevice() == Device::TOFINO) {
+            convertTnaProgram(program, options);
+        }
+        if (Device::currentDevice() == Device::JBAY) {
+            convertTnaProgram(program, options);
+        }
+    } else if ((options.arch == "tna" || options.arch == "t2na") &&
+             options.langVersion == CompilerOptions::FrontendVersion::P4_16) {
+        if (Device::currentDevice() == Device::TOFINO) {
+            convertTnaProgram(program, options);
+        }
+        if (Device::currentDevice() == Device::JBAY) {
+            convertTnaProgram(program, options);
+        }
+    } else {
+        error("Architecture %s not supported with language version %s", options.arch,
+              options.langVersion ==CompilerOptions::FrontendVersion::P4_14 ? "P4_14" :
+              options.langVersion ==CompilerOptions::FrontendVersion::P4_16 ? "P4_16" :
+              "unknown");
     }
 }
 
