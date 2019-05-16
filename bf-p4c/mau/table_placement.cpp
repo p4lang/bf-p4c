@@ -457,7 +457,8 @@ bool TablePlacement::Placed::gateway_merge(ordered_set<const IR::MAU::Table *> &
 bool TablePlacement::pick_layout_option(TablePlacement::Placed *next,
         const TablePlacement::Placed *done, TableResourceAlloc *resources) {
     bool table_format = true;
-    next->use = StageUseEstimate(next->table, next->entries, next->attached_entries, &lc, false);
+    next->use = StageUseEstimate(next->table, next->entries, next->attached_entries, &lc,
+                                 next->stage_split > 0);
     // FIXME: This is not the appropriate way to check if a table is a single gateway
     do {
         bool ixbar_fit = try_alloc_ixbar(next, done, resources);
