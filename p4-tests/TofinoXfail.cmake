@@ -275,6 +275,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue561-1-bmv2.p4
   testdata/p4_16_samples/issue561-2-bmv2.p4
   testdata/p4_16_samples/issue561-3-bmv2.p4
+  testdata/p4_16_samples/issue1897-bmv2.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -491,7 +492,7 @@ p4c_add_xfail_reason("tofino"
   )
 # are we going to retire these switch profiles?
 p4c_add_xfail_reason("tofino"
-  "error: Field .* is not a member of structure header .*"
+  "error: .*: no such field in standard_metadata"
   extensions/p4_tests/p4_14/bf_p4c_samples/sai_p4.p4
   )
 
@@ -533,16 +534,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "address too large for table"
   testdata/p4_14_samples/saturated-bmv2.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "Malformed packet data"
-  testdata/p4_16_samples/table-entries-range-bmv2.p4
-  testdata/p4_16_samples/table-entries-ternary-bmv2.p4
-  testdata/p4_16_samples/table-entries-exact-bmv2.p4
-  testdata/p4_16_samples/table-entries-exact-ternary-bmv2.p4
-  testdata/p4_16_samples/table-entries-priority-bmv2.p4
-  testdata/p4_16_samples/bvec-hdr-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -629,6 +620,10 @@ p4c_add_xfail_reason("tofino"
   "Duplicates declaration .*"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/jenningss_0.p4
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/dup_decl_random.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  ".* duplicates .*"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/dup_decl_struct.p4
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/dup_decl_clone.p4
 )
@@ -665,13 +660,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Table .* has a metadata dependency, but doesn't appear in the TableGraph?"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/metadata_dependency.p4
-)
-
-# P4C-1060
-# Compiler Bug: Could not place table : The table sf could not fit within a single input crossbar in an MAU stage
-p4c_add_xfail_reason("tofino"
-  "Could not place table"
-  extensions/p4_tests/p4-programs/internal_p4_14/power/power.p4
 )
 
 # P4C-1067
@@ -721,7 +709,7 @@ p4c_add_xfail_reason("tofino"
 
 # psa.p4 bug, frontend failure
 p4c_add_xfail_reason("tofino"
-  "Action parameter color has a type which is not bit<> or int<> or bool"
+  "Action parameter color has a type which is not bit<>, int<>, bool, type or serializable enum"
   testdata/p4_16_samples/psa-meter1.p4
 )
 
@@ -748,9 +736,12 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/shrubs_0.p4
 )
 
+# This test attempts to match on a field of `error` type.
 p4c_add_xfail_reason("tofino"
-  "error: error.NoError invalid key expression"
+  "error: Unsupported error: width not well-defined"
   testdata/p4_16_samples/issue1062-bmv2.p4
+  testdata/p4_16_samples/issue1062-1-bmv2.p4
+  testdata/p4_16_samples/psa-example-parser-checksum.p4
 )
 
 # BRIG-934
@@ -759,12 +750,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue1325-bmv2.p4
   extensions/p4_tests/p4_16/fabric-psa/fabric.p4
   testdata/p4_16_samples/issue510-bmv2.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "error: KeyElement: Unsupported KeyElement: width not well-defined"
-  # This test attempts to match on a field of `error` type.
-  testdata/p4_16_samples/issue1062-1-bmv2.p4
+  testdata/p4_16_samples/psa-multicast-basic-corrected-bmv2.p4
 )
 
 # P4C-1011
@@ -983,15 +969,11 @@ p4c_add_xfail_reason("tofino"
   )
 
 # Existing p4lang/p4c issue
+# Need to update test case in glass
 p4c_add_xfail_reason("tofino"
-  "Signed types cannot be 1-bit wide"
+  "Tofino requires byte-aligned headers, but header .* is not byte-aligned"
   ../glass/testsuite/p4_tests/mau/test_config_160_stateful_single_bit_mode.p4
   )
-
-p4c_add_xfail_reason("tofino"
-  "Expected psa_direct_counter property value for table MyIC.tbl to resolve to an extern instance"
-  testdata/p4_16_samples/psa-counter5.p4
-)
 
 # P4C-1382
 p4c_add_xfail_reason("tofino"
@@ -1103,7 +1085,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue1768-bmv2.p4
   # We fail to translate `resubmit()`.
   testdata/p4_14_samples/resubmit.p4
-  testdata/p4_16_samples/drop-bmv2.p4
   testdata/p4_16_samples/std_meta_inlining.p4
   # no support for checksum verify/update
   testdata/p4_16_samples/checksum2-bmv2.p4
@@ -1121,6 +1102,9 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/p4rt_digest_complex.p4
   testdata/p4_16_samples/issue1824-bmv2.p4
   testdata/p4_16_samples/action_profile_max_group_size_annotation.p4
+  # new tests added to p4c
+  testdata/p4_16_samples/v1model-digest-containing-ser-enum.p4
+  testdata/p4_16_samples/test-parserinvalidargument-error-bmv2.p4
   )
 
 # P4C-1390
@@ -1139,6 +1123,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Ran out of parser match registers"
   ../glass/testsuite/p4_tests/parde/COMPILER-368/out.p4
+  testdata/p4_16_samples/v1model-p4runtime-most-types1.p4
   )
 
 # P4C-1393
@@ -1274,6 +1259,27 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue447-bmv2.p4
 )
 
+# P4C-1753
+p4c_add_xfail_reason("tofino"
+  ".* expected packet on port .* not seen"
+  testdata/p4_16_samples/match-on-exprs-bmv2.p4
+  testdata/p4_16_samples/table-entries-range-bmv2.p4
+  testdata/p4_16_samples/table-entries-ternary-bmv2.p4
+  testdata/p4_16_samples/bvec-hdr-bmv2.p4
+)
+
+# P4C-1753
+p4c_add_xfail_reason("tofino"
+  "unexpected packet output on port .*"
+  testdata/p4_16_samples/table-entries-exact-ternary-bmv2.p4
+  testdata/p4_16_samples/table-entries-priority-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  ".* cannot be translated, you cannot use it in your program"
+  testdata/p4_14_samples/p414-special-ops.p4
+)
+
 p4c_add_xfail_reason("tofino"
   "use of varbit field is only supported in parser and deparser currently"
   testdata/p4_16_samples/equality-bmv2.p4
@@ -1293,6 +1299,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue447-2-bmv2.p4
   testdata/p4_16_samples/issue447-3-bmv2.p4
   testdata/p4_16_samples/issue447-4-bmv2.p4
+  testdata/p4_16_samples/issue1879-bmv2.p4
 )
 # varbit related ends
 
@@ -1378,6 +1385,9 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "syntax error, unexpected IDENTIFIER"
   testdata/p4_16_samples/psa-unicast-or-drop-bmv2.p4
+  testdata/p4_16_samples/psa-recirculate-no-meta-bmv2.p4
+  testdata/p4_16_samples/psa-basic-counter-bmv2.p4
+  testdata/p4_16_samples/psa-unicast-or-drop-corrected-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"

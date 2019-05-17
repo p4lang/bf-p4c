@@ -121,8 +121,13 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "error: Field .* is not a member of structure header .*"
+  "error: .*: no such field in standard_metadata"
   extensions/p4_tests/p4_14/bf_p4c_samples/sai_p4.p4
+)
+
+p4c_add_xfail_reason("tofino2"
+  ".* cannot be translated, you cannot use it in your program"
+  testdata/p4_14_samples/p414-special-ops.p4
 )
 
 p4c_add_xfail_reason("tofino2"

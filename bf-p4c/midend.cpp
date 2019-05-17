@@ -25,8 +25,8 @@
 #include "midend/nestedStructs.h"
 #include "midend/orderArguments.h"
 #include "midend/predication.h"
+#include "midend/remove_action_params.h"
 #include "midend/removeLeftSlices.h"
-#include "midend/removeParameters.h"
 #include "midend/removeSelectBooleans.h"
 #include "midend/removeExits.h"
 #include "midend/simplifyBitwise.h"
@@ -341,7 +341,7 @@ MidEnd::MidEnd(BFN_Options& options) {
         new BFN::TypeChecking(&refMap, &typeMap, true),
         new BFN::CheckUnsupported(&refMap, &typeMap),
         new BFN::CheckHeaderAlignment(&typeMap),
-        new P4::RemoveActionParameters(&refMap, &typeMap, typeChecking),
+        new BFN::RemoveActionParameters(&refMap, &typeMap, typeChecking),
         new P4::OrderArguments(&refMap, &typeMap, typeChecking),
         new BFN::ArchTranslation(&refMap, &typeMap, options),
         new EnumOn32Bits::FindStatefulEnumOutputs(*enum_policy),
