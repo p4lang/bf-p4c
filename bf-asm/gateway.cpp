@@ -493,8 +493,11 @@ void GatewayTable::write_regs(REGS &regs) {
         } else if (auto *hashaction = dynamic_cast<HashActionTable *>(tbl))
             tind_bus = hashaction->layout[0].bus >= 2;
         if (tbl)
-            for (auto &row : tbl->layout)
-                payload_write_regs(regs, row.row, tind_bus, row.bus);
+            for (auto &row : tbl->layout) {
+                BUG_CHECK(row.result_bus_initialized());
+                if (row.result_bus >= 0)
+                    payload_write_regs(regs, row.row, tind_bus, row.result_bus);
+            }
         else {
             BUG_CHECK(tmatch);
             auto &xbar_ctl = merge.gateway_to_pbus_xbar_ctl[tmatch->indirect_bus];
@@ -515,8 +518,11 @@ void GatewayTable::write_regs(REGS &regs) {
         auto &adrdist = regs.rams.match.adrdist;
         adrdist.adr_dist_table_thread[timing_thread(gress)][0] |= 1 << logical_id;
         adrdist.adr_dist_table_thread[timing_thread(gress)][1] |= 1 << logical_id;
-        if (layout.size() > 1)
-            payload_write_regs(regs, layout[1].row, layout[1].bus >> 1, layout[1].bus & 1);
+        if (layout.size() > 1) {
+            BUG_CHECK(layout[1].result_bus >= 0);
+            payload_write_regs(regs, layout[1].row, layout[1].result_bus >> 1,
+                               layout[1].result_bus & 1);
+        }
         // FIXME -- allow table_counter on standalone gateay?  What can it count?
         if (options.match_compiler)
             merge.mau_table_counter_ctl[logical_id/8U].set_subfield(4, 3 * (logical_id%8U), 3);

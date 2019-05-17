@@ -106,6 +106,17 @@ void HashActionTable::write_merge_regs(REGS &regs, int type, int bus) {
         break;
     }
 
+    if (instruction) {
+        if (auto field = instruction.args[0].field()) {
+            int shiftcount = field->bit(0);
+            if (type == 0)
+                merge.mau_action_instruction_adr_exact_shiftcount[bus][0] = shiftcount;
+            else
+                merge.mau_action_instruction_adr_tcam_shiftcount[bus] = shiftcount;
+        }
+    }
+
+
     merge.exact_match_phys_result_en[bus/8U] |= 1U << (bus%8U);
     merge.exact_match_phys_result_thread[bus/8U] |= gress << (bus%8U);
     if (stage->tcam_delay(gress))
