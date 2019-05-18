@@ -12,7 +12,7 @@
   Tofino, the header length counter is stopped when parsing terminates). The
   application of this feature is deep packet parsing (peeking deep into packet
   without having to extract).
-  
+
   This also means the extraction of the last mutable (modifiable) field in the
   packet is effectively the header/payload boundary. The compiler can use this
   feature and infer where to assert hdr_len_inc_stop in the parse graph (what
@@ -39,8 +39,8 @@
                  |    /|\
                  |   / | \
                  |  /  |  \
-                 | /   |   | 
-                (c)    |   | 
+                 | /   |   |
+                (c)    |   |
                 / \    |   |
                /   \  /    |
               |    (d)     |
@@ -64,7 +64,7 @@
             b->d,
             b->ingress_pipe }.
 
-  3. Apply the following rules to absorb the transitions into the states in C.   
+  3. Apply the following rules to absorb the transitions into the states in C.
 
     a) If all outgoing transitions of s in G is equal to all outgoing transitions of s in C
     b) If all incoming transitions of s in G is equal to all incoming transitions of s in C
@@ -73,7 +73,7 @@
 
     C = { c->ingress_pipe,
           b,
-          d } 
+          d }
 
   4. Insert state on remaining transitions in C. In this example, we insert
      state $hdr_len_inc_stop_0 on c->ingress_pipe
@@ -86,11 +86,6 @@
 */
 
 class InferPayloadOffset : public PassManager {
-    // FIXME -- placeholder?  marking public to avoid spurious warnings about unused private fields
- public:
-    const PhvInfo& phv;
-    const FieldDefUse& defuse;
-
  public:
     InferPayloadOffset(const PhvInfo& phv, const FieldDefUse& defuse);
 };

@@ -4,6 +4,16 @@
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
 #include "lib/log.h"
 
+/// BFN::Pragma interface
+const char *PragmaNoOverlay::name = "pa_no_overlay";
+const char *PragmaNoOverlay::description =
+    "Specifies that the field can not be overlayed with any other field.";
+const char *PragmaNoOverlay::help = "@pragma pa_no_overlay gress inst_1.field_1\n"
+    "+ attached to P4 header instances\n"
+    "\n"
+    "Specifies that the indicated field cannot be overlayed with any other "
+    "field. The gress value can be either ingress or egress.";
+
 bool PragmaNoOverlay::add_constraint(cstring field_name) {
     // check field name
     auto field = phv_i.field(field_name);
@@ -18,7 +28,7 @@ bool PragmaNoOverlay::add_constraint(cstring field_name) {
 }
 
 bool PragmaNoOverlay::preorder(const IR::BFN::Pipe* pipe) {
-    if (disable_pragmas.count(PHV::pragma::NO_OVERLAY))
+    if (disable_pragmas.count(PragmaNoOverlay::name))
         return false;
 
     auto check_pragma_string = [] (const IR::StringLiteral* ir) {
@@ -31,7 +41,7 @@ bool PragmaNoOverlay::preorder(const IR::BFN::Pipe* pipe) {
 
     auto global_pragmas = pipe->global_pragmas;
     for (const auto* annotation : global_pragmas) {
-        if (annotation->name.name != PHV::pragma::NO_OVERLAY)
+        if (annotation->name.name != PragmaNoOverlay::name)
             continue;
 
         auto& exprs = annotation->expr;

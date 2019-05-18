@@ -1,12 +1,14 @@
 #include <cmath>
 #include "ir/ir.h"
+#include "bf-p4c/common/pragma/all_pragmas.h"
 #include "lib/bitops.h"
 #include "lib/log.h"
 #include "split_alpm.h"
 
 const std::set<unsigned> SplitAlpm::valid_partition_values = {1024, 2048, 4096, 8192};
-const cstring SplitAlpm::ALGORITHMIC_LPM_PARTITIONS  = "alpm_partitions";
-const cstring SplitAlpm::ALGORITHMIC_LPM_SUBTREES_PER_PARTITION  = "alpm_subtrees_per_partition";
+const cstring SplitAlpm::ALGORITHMIC_LPM_PARTITIONS  = PragmaAlpmPartitions::name;
+const cstring SplitAlpm::ALGORITHMIC_LPM_SUBTREES_PER_PARTITION =
+    PragmaAlpmSubtreePartitions::name;
 
 /// create Pre-classifier table
 const IR::MAU::Table* SplitAlpm::create_pre_classifier_tcam(

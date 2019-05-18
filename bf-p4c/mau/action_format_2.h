@@ -34,7 +34,7 @@ class Parameter {
   * the even action data bus location being the parameter, and the odd action data bus location
   * being the conditional mask.
   *
-  * 
+  *
   * bitmasked-set, described in uArch 15.1.3.8 Bit maskable set can be thought of as the following:
   *     dest = (src1 & mask) | (src2 & ~mask)
   *

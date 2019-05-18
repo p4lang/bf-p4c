@@ -2,87 +2,32 @@
 #define EXTENSIONS_BF_P4C_COMMON_PARSE_ANNOTATIONS_H_
 
 #include "ir/ir.h"
-#include "bf-p4c/mau/split_alpm.h"
-#include "bf-p4c/phv/pragma/phv_pragmas.h"
+#include "bf-p4c/common/pragma/all_pragmas.h"
 #include "frontends/p4/parseAnnotations.h"
 
 namespace BFN {
+
+// wrapper for PARSE, PARSE_PAIR, and PARSE_TRIPLE
+#define BFN_PARSE(pragmaClass, parse, tname, internal) {                                     \
+    auto p = new Pragma(pragmaClass::name, pragmaClass::description, pragmaClass::help);     \
+    std::pair<cstring, P4::ParseAnnotations::Handler> h = parse(pragmaClass::name, tname);   \
+    addHandler(h.first, h.second);                                                           \
+    Pragma::registerPragma(p, internal);                                                     \
+    }
+
+// wrapper for PARSE_EMPTY, PARSE_EXPRESSION_LIST, and PARSE_SKIP
+#define BFN_PARSE_EMPTY(pragmaClass, parse, internal) {                                      \
+    auto p = new Pragma(pragmaClass::name, pragmaClass::description, pragmaClass::help);     \
+    std::pair<cstring, P4::ParseAnnotations::Handler> h = parse(pragmaClass::name);          \
+    addHandler(h.first, h.second);                                                           \
+    Pragma::registerPragma(p, internal);                                                     \
+    }
+
 
 /** Parses Barefoot-specific annotations. */
 class ParseAnnotations : public P4::ParseAnnotations {
  public:
     ParseAnnotations() : P4::ParseAnnotations("BFN", true, {
-                PARSE_TRIPLE(PHV::pragma::ALIAS, StringLiteral),
-                PARSE_PAIR(PHV::pragma::ATOMIC, StringLiteral),
-                PARSE_EXPRESSION_LIST(PHV::pragma::CONTAINER_SIZE),
-                PARSE_TRIPLE(PHV::pragma::CONTAINER_TYPE, StringLiteral),
-                PARSE_PAIR(PHV::pragma::DISABLE_DEPARSE_ZERO, StringLiteral),
-                PARSE_TRIPLE(PHV::pragma::MUTUALLY_EXCLUSIVE, StringLiteral),
-                PARSE_PAIR(PHV::pragma::NO_INIT, StringLiteral),
-                PARSE_PAIR(PHV::pragma::NO_OVERLAY, StringLiteral),
-                PARSE_PAIR(PHV::pragma::NOT_DEPARSED, StringLiteral),
-                PARSE_PAIR(PHV::pragma::NOT_PARSED, StringLiteral),
-                PARSE_PAIR(PHV::pragma::SOLITARY, StringLiteral),
-
-                PARSE(SplitAlpm::ALGORITHMIC_LPM_PARTITIONS, Expression),
-                PARSE(SplitAlpm::ALGORITHMIC_LPM_SUBTREES_PER_PARTITION, Expression),
-
-                PARSE_EMPTY("__ghost_metadata"),
-                PARSE_EMPTY("__intrinsic_metadata"),
-                PARSE("alpm", Expression),
-                PARSE("atcam_number_partitions", Expression),
-                PARSE("atcam_partition_index", StringLiteral),
-                PARSE("calculated_field_update_location", StringLiteral),
-                PARSE_EMPTY("chain_address"),
-                PARSE("chain_total_size", Expression),
-                PARSE("dont_translate_extern_method", StringLiteral),
-                PARSE("dynamic_table_key_masks", Expression),
-                PARSE("entries_with_ranges", Expression),
-                PARSE_TRIPLE("field_list_field_slice", Expression),
-                PARSE("force_immediate", Expression),
-                PARSE_PAIR("force_shift", Expression),
-                PARSE("idletime_interval", Expression),
-                PARSE("idletime_per_flow_idletime", Expression),
-                PARSE("idletime_precision", Expression),
-                PARSE("idletime_two_way_notification", Expression),
-                PARSE("ignore_table_dependency", StringLiteral),
-                PARSE("lrt_enable", Expression),
-                PARSE("lrt_scale", Expression),
-                PARSE("max_actions", Expression),
-                PARSE("max_loop_depth", Expression),
-                PARSE("min_width", Expression),
-                PARSE("mode", StringLiteral),
-                PARSE_EMPTY("not_extracted_in_egress"),
-                PARSE_PAIR("pa_do_not_bridge", StringLiteral),
-                PARSE("pack", Expression),
-                PARSE_EMPTY("packet_entry"),
-                PARSE_TRIPLE("phase0", Expression),
-                PARSE("placement_priority", Expression),
-                PARSE("pre_color", Expression),
-                PARSE("proxy_hash_algorithm", StringLiteral),
-                PARSE("proxy_hash_width", Expression),
-                PARSE("random_seed", Expression),
-                PARSE("reduction_or_group", StringLiteral),
-                PARSE("reg", StringLiteral),
-                PARSE("residual_checksum_parser_update_location", StringLiteral),
-                PARSE("selector_max_group_size", Expression),
-                PARSE("selector_num_max_groups", Expression),
-                PARSE("stage", Expression),
-                PARSE("terminate_parsing", StringLiteral),
-                PARSE("ternary", Expression),
-                PARSE("use_hash_action", Expression),
-                PARSE("ways", Expression),
-                PARSE("red", Expression),
-                PARSE("yellow", Expression),
-                PARSE("green", Expression),
-
-                PARSE_EMPTY("flexible"),
-                PARSE_EMPTY("header_checksum"),
-                PARSE_EMPTY("payload_checksum"),
-                PARSE_EMPTY("critical"),
-
-                PARSE_EXPRESSION_LIST("default_portmap"),
-
                 // Ignore p4v annotations.
                 PARSE_SKIP("assert"),
                 PARSE_SKIP("assume"),
@@ -92,9 +37,82 @@ class ParseAnnotations : public P4::ParseAnnotations {
                 PARSE_SKIP("alias"),
                 PARSE_SKIP("pipeline"),
                 PARSE_SKIP("deparser"),
+            }, true) {
+        constexpr bool extPragma = false;  // externally supported
+        constexpr bool intPragma = true;   // Barefoot internal
+        BFN_PARSE(PragmaAlpm, PARSE, Expression, extPragma);
+        BFN_PARSE(PragmaAlpmPartitions, PARSE, Expression, extPragma);
+        BFN_PARSE(PragmaAlpmSubtreePartitions, PARSE, Expression, extPragma);
+        BFN_PARSE(PragmaAtcamPartitions, PARSE, Expression, extPragma);
+        BFN_PARSE(PragmaAtcamPartitionIndex, PARSE, StringLiteral, extPragma);
+        BFN_PARSE(PragmaCalculatedFieldUpdateLocation, PARSE, StringLiteral, extPragma);
+        BFN_PARSE_EMPTY(PragmaChainAddress, PARSE_EMPTY, intPragma);
+        BFN_PARSE(PragmaChainTotalSize, PARSE, Expression, intPragma);
+        BFN_PARSE(PragmaCommandLine, PARSE, StringLiteral, extPragma);
+        BFN_PARSE_EMPTY(PragmaCritical, PARSE_EMPTY, extPragma);
+        BFN_PARSE_EMPTY(PragmaDefaultPortmap, PARSE_EXPRESSION_LIST, intPragma);
+        BFN_PARSE(PragmaDontTranslateExternMethod, PARSE, StringLiteral, intPragma);
+        BFN_PARSE(PragmaDynamicTableKeyMasks, PARSE, Expression, extPragma);
+        BFN_PARSE(PragmaEntriesWithRanges, PARSE, Expression, extPragma);
+        BFN_PARSE(PragmaFieldListFieldSlice, PARSE_TRIPLE, Expression, extPragma);
+        BFN_PARSE_EMPTY(PragmaFlexible, PARSE_EMPTY, extPragma);
+        BFN_PARSE(PragmaForceImmediate, PARSE, Expression, extPragma);
+        BFN_PARSE(PragmaForceShift, PARSE_PAIR, Expression, extPragma);
+        BFN_PARSE_EMPTY(PragmaGhostMetadata, PARSE_EMPTY, intPragma);
+        BFN_PARSE(PragmaIdletimeInterval, PARSE, Expression, extPragma);
+        BFN_PARSE(PragmaIdletimePerFlow, PARSE, Expression, extPragma);
+        BFN_PARSE(PragmaIdletimePrecision, PARSE, Expression, extPragma);
+        BFN_PARSE(PragmaIdletimeTwoWayNotification, PARSE, Expression, extPragma);
+        BFN_PARSE(PragmaIgnoreTableDependency, PARSE, StringLiteral, extPragma);
+        BFN_PARSE_EMPTY(PragmaIntrinsicMetadata, PARSE_EMPTY, intPragma);
+        BFN_PARSE(PragmaLrtEnable, PARSE, Expression, extPragma);
+        BFN_PARSE(PragmaLrtScale, PARSE, Expression, intPragma);
+        BFN_PARSE(PragmaMaxActions, PARSE, Expression, extPragma);
+        BFN_PARSE(PragmaMaxLoopDepth, PARSE, Expression, extPragma);
+        BFN_PARSE(PragmaMinWidth, PARSE, Expression, extPragma);
+        BFN_PARSE(PragmaMode, PARSE, StringLiteral, intPragma);
+        BFN_PARSE_EMPTY(PragmaNotExtractedInEgress, PARSE_EMPTY, intPragma);
+        BFN_PARSE(PragmaDoNotBridge, PARSE_PAIR, StringLiteral, extPragma);
+        BFN_PARSE(PragmaPack, PARSE, Expression, extPragma);
+        BFN_PARSE_EMPTY(PragmaPacketEntry, PARSE_EMPTY, extPragma);
+        BFN_PARSE(PragmaPhase0, PARSE_TRIPLE, Expression, extPragma);
+        BFN_PARSE(PragmaPlacementPriority, PARSE, Expression, extPragma);
+        BFN_PARSE(PragmaPreColor, PARSE, Expression, intPragma);
+        BFN_PARSE(PragmaProxyHashAlgorithm, PARSE, StringLiteral, extPragma);
+        BFN_PARSE(PragmaProxyHashWidth, PARSE, Expression, extPragma);
+        BFN_PARSE(PragmaRandomSeed, PARSE, Expression, intPragma);
+        BFN_PARSE(PragmaReductionOrGroup, PARSE, StringLiteral, intPragma);
+        BFN_PARSE(PragmaReg, PARSE, StringLiteral, intPragma);
+        BFN_PARSE(PragmaResidualChecksumParserUpdateLocation, PARSE, StringLiteral, intPragma);
+        BFN_PARSE(PragmaSelectorMaxGroupSize, PARSE, Expression, extPragma);
+        BFN_PARSE(PragmaSelectorNumMaxGroups, PARSE, Expression, extPragma);
+        BFN_PARSE(PragmaStage, PARSE, Expression, extPragma);
+        BFN_PARSE(PragmaTerminateParsing, PARSE, StringLiteral, extPragma);
+        BFN_PARSE(PragmaTernary, PARSE, Expression, intPragma);  // unlikely to need it
+        BFN_PARSE(PragmaUseHashAction, PARSE, Expression, extPragma);
+        BFN_PARSE(PragmaWays, PARSE, Expression, extPragma);
 
-                PARSE("command_line", StringLiteral)
-            }, true) { }
+        BFN_PARSE(PragmaRed,    PARSE, Expression, intPragma);
+        BFN_PARSE(PragmaYellow, PARSE, Expression, intPragma);
+        BFN_PARSE(PragmaGreen,  PARSE, Expression, intPragma);
+
+        BFN_PARSE_EMPTY(PragmaHeaderChecksum,  PARSE_EMPTY, intPragma);
+        BFN_PARSE_EMPTY(PragmaPayloadChecksum, PARSE_EMPTY, intPragma);
+
+        // pa_ pragmas
+        BFN_PARSE(PragmaAlias, PARSE_TRIPLE, StringLiteral, extPragma);
+        BFN_PARSE(PragmaAtomic, PARSE_PAIR, StringLiteral, extPragma);
+        BFN_PARSE_EMPTY(PragmaContainerSize, PARSE_EXPRESSION_LIST, extPragma);
+        BFN_PARSE(PragmaContainerType, PARSE_TRIPLE, StringLiteral, extPragma);
+        BFN_PARSE(PragmaMutuallyExclusive, PARSE_TRIPLE, StringLiteral, extPragma);
+        BFN_PARSE(PragmaNoInit, PARSE_PAIR, StringLiteral, extPragma);
+        BFN_PARSE(PragmaNoOverlay, PARSE_PAIR, StringLiteral, extPragma);
+        BFN_PARSE(PragmaSolitary, PARSE_PAIR, StringLiteral, extPragma);
+        // FIXME: is DisableDeparseZero internal?
+        BFN_PARSE(PragmaDisableDeparseZero, PARSE_PAIR, StringLiteral, intPragma);
+        BFN_PARSE(PragmaNotDeparsed, PARSE_PAIR, StringLiteral, extPragma);
+        BFN_PARSE(PragmaNotParsed, PARSE_PAIR, StringLiteral, extPragma);
+    }
 };
 
 }  // namespace BFN

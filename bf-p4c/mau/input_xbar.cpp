@@ -408,7 +408,7 @@ bool IXBar::calculate_sizes(safe_vector<Use::Byte> &alloc_use, bool ternary,
     return true;
 }
 
-/** 
+/**
  * The current algorithm, due to the odd constraints of the hash distribution section
  * separate available hashing for hash distribution vs. available hashing for everywhere
  * else.  The purpose of this is to determine what groups are completely unavailable
@@ -1013,7 +1013,7 @@ void IXBar::allocate_mid_bytes(safe_vector<IXBar::Use::Byte *> &unalloced,
  * constraints_to_reqs is a map with:
  *     - key: an unsigned representing the constraints of a byte within a 4 byte region of
  *            xbar e.g. (32 bit lo = 0x1, 16 bit lo = 0x5, 16 bit hi = 0xa, 8 bit = 0xf)
- *     - value: The number of bytes required that have that constraint 
+ *     - value: The number of bytes required that have that constraint
  */
 bool IXBar::grp_use::is_better_group(const grp_use &b, bool prefer_found,
         int required_allocation_bytes, std::map<int, int> &constraints_to_reqs) const {
@@ -1925,7 +1925,7 @@ bool IXBar::allocProxyHashKey(const IR::MAU::Table *tbl, const PhvInfo &phv,
  *
  * A proxy hash table requires two hash functions, one to determine the RAM position of the
  * key (similar to any SRam based match table), and a second hash for the comparison of the
- * hash key. 
+ * hash key.
  */
 bool IXBar::allocProxyHash(const IR::MAU::Table *tbl, const PhvInfo &phv, const LayoutOption *lo,
         Use &alloc, Use &proxy_hash_alloc) {
@@ -3214,8 +3214,8 @@ void IXBar::buildHashDistIRUse(HashDistAllocPostExpand &alloc_req, HashDistUse &
  * hash distribution.
  */
 void IXBar::lockInHashDistArrays(safe_vector<Use::Byte *> *alloced, int hash_group,
-        unsigned hash_table_input, int asm_unit, bitvec hash_bits_used,
-        HashDistDest_t /* dest */, cstring name) {
+                                 unsigned hash_table_input, int asm_unit, bitvec hash_bits_used,
+                                 HashDistDest_t /* dest */, cstring name) {
     if (alloced)
         fill_out_use(*alloced, false);
     for (int i = 0; i < HASH_TABLES; i++) {
@@ -3689,7 +3689,7 @@ bool IXBar::XBarHashDist::preorder(const IR::MAU::HashDist *hd) {
  * hash distribution.  The requirement is captured in either the IR::MAU::HashDist, or
  * implicitly as the LayoutOption of the table is a hash action table.  From the IR,
  * we can gather the IXBar Bytes required, as well as the hash matrix requirements.
- * 
+ *
  * At this point, all requirements have been gathered.  This allocates each requirement
  * on a destination by destination basis.  Thus if multiple HashDistPostExpandAllocReqs are
  * headed to the same destination, they will be allocated simultaneously

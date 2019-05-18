@@ -26,15 +26,20 @@ class PragmaAtomic : public Inspector {
     bool preorder(const IR::BFN::Pipe* pipe) override;
 
  public:
-    explicit PragmaAtomic(PhvInfo& phv) : phv_i(phv) { }
+    explicit PragmaAtomic(PhvInfo& phv) : phv_i(phv) {}
 
-    explicit PragmaAtomic(PhvInfo& phv, const std::set<cstring> disable)
-        : phv_i(phv), disable_pragmas(disable) { }
+    explicit PragmaAtomic(PhvInfo& phv, const std::set<cstring> disable) :
+        phv_i(phv), disable_pragmas(disable) {}
 
     /// @returns the set of fields fo which the pragma pa_atomic has been specified in the program
     const ordered_set<const PHV::Field*> getFields() const {
         return fields;
     }
+
+    /// BFN::Pragma interface
+    static const char *name;
+    static const char *description;
+    static const char *help;
 };
 
 std::ostream& operator<<(std::ostream& out, const PragmaAtomic& pa_a);

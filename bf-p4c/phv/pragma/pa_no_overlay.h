@@ -31,6 +31,11 @@ class PragmaNoOverlay : public Inspector {
     explicit PragmaNoOverlay(PhvInfo& phv, const std::set<cstring> disable)
         : phv_i(phv), disable_pragmas(disable) { }
 
+    /// BFN::Pragma interface
+    static const char *name;
+    static const char *description;
+    static const char *help;
+
     /// @returns the set of fields fo which the pragma pa_no_overlay has been specified in the
     /// program.
     const ordered_set<const PHV::Field*>& getFields() const {

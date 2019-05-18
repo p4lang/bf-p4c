@@ -35,6 +35,11 @@ class PragmaMutuallyExclusive : public Inspector {
     explicit PragmaMutuallyExclusive(const PhvInfo& phv, const std::set<cstring> disable)
         : phv_i(phv), disable_pragmas(disable) { }
 
+    /// BFN::Pragma interface
+    static const char *name;
+    static const char *description;
+    static const char *help;
+
     const ordered_map<const PHV::Field*, ordered_set<const PHV::Field*>>& mutex_fields() const {
         return pa_mutually_exclusive_i;
     }

@@ -284,6 +284,8 @@ class BarefootBackend(BackendDriver):
 
         if opts.ir_to_json is not None:
             self.add_command_option('compiler', '--toJSON {}'.format(opts.ir_to_json))
+            self.enable_commands(['preprocessor', 'compiler'])
+            self.runVerifiers = False
         self._ir_to_json = opts.ir_to_json
 
         if opts.disable_egress_latency_padding:
@@ -293,6 +295,13 @@ class BarefootBackend(BackendDriver):
             self.add_command_option('compiler', '--Wdisable={}'.format(opts.Wdisable))
         if opts.Werror is not None:
             self.add_command_option('compiler', '--Werror={}'.format(opts.Werror))
+
+        self.pragmas_help = opts.help_pragmas
+        if opts.help_pragmas:
+            self.add_command_option('compiler', '--help-pragmas')
+            # remove any other commands -- just run the compiler to print the help
+            self.enable_commands(['compiler'])
+            self.runVerifiers = False
 
         if opts.verbose > 0:
             ta_logging = "table_placement:3,table_summary:1"
@@ -606,7 +615,8 @@ class BarefootBackend(BackendDriver):
             return rc
 
         # ir_to_json exits early, serializing only the IR
-        if self._ir_to_json is not None:
+        # print pragmas also needs to exit early, it's just like help
+        if self._ir_to_json is not None or self.pragmas_help:
             return 0
 
         # we ran the compiler, now we need to parse the manifest and run the assembler

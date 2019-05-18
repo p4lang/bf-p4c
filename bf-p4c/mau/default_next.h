@@ -35,7 +35,7 @@ class DefaultNext : public MauInspector, BFN::ControlFlowVisitor {
         prev_tbls.insert(a.prev_tbls.begin(), a.prev_tbls.end()); }
     DefaultNext(const DefaultNext &a) = default;
     profile_t init_apply(const IR::Node *root) override {
-        LOG1("DefaultNext starting");
+        LOG3("DefaultNext starting");
         id = id_counter = 0;
         return MauInspector::init_apply(root); }
 

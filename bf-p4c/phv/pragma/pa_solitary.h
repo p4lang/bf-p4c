@@ -14,6 +14,11 @@ class PragmaSolitary : public Inspector {
 
     explicit PragmaSolitary(PhvInfo& phv, const std::set<cstring> disable)
         : phv_i(phv), disable_pragmas(disable) { }
+
+    /// BFN::Pragma interface
+    static const char *name;
+    static const char *description;
+    static const char *help;
 };
 
 #endif /* EXTENSIONS_BF_P4C_PHV_PRAGMA_PA_SOLITARY_H_ */

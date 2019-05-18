@@ -60,6 +60,11 @@ class PragmaContainerSize : public Inspector {
     explicit PragmaContainerSize(PhvInfo& phv, const std::set<cstring> disabled)
         : phv_i(phv), disabled_pragmas(disabled) { }
 
+    /// BFN::Pragma interface
+    static const char *name;
+    static const char *description;
+    static const char *help;
+
     const std::map<const PHV::Field*, std::vector<PHV::Size>>&
     field_to_sizes() const { return pa_container_sizes_i; }
 

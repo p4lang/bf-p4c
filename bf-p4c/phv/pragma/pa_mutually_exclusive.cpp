@@ -4,8 +4,23 @@
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
 #include "lib/log.h"
 
+/// BFN::Pragma interface
+const char *PragmaMutuallyExclusive::name = "pa_mutually_exclusive";
+const char *PragmaMutuallyExclusive::description =
+    "Specifies that the two fields are mutually exclusive with each other.";
+const char *PragmaMutuallyExclusive::help =
+    "@pragma pa_mutually_exclusive gress inst_1.field_1 inst_2.field_2\n"
+    "+ attached to P4 header instances\n"
+    "\n"
+    "Specifies that the two indicated fields can be considered mutually "
+    "exclusive of one another.  PHV allocation uses field exclusivity to "
+    "optimize container usage by overlaying mutually exclusive fields in "
+    "the same container.  This pragma does not guarantee that the two "
+    "fields will occupy the same container.  It gives the compiler the "
+    "option to do so.  The gress value can be either ingress or egress.";
+
 bool PragmaMutuallyExclusive::preorder(const IR::BFN::Pipe* pipe) {
-    if (disable_pragmas.count(PHV::pragma::MUTUALLY_EXCLUSIVE))
+    if (disable_pragmas.count(PragmaMutuallyExclusive::name))
         return false;
     auto check_pragma_string = [] (const IR::StringLiteral* ir) {
         if (!ir) {
@@ -15,7 +30,7 @@ bool PragmaMutuallyExclusive::preorder(const IR::BFN::Pipe* pipe) {
 
     auto global_pragmas = pipe->global_pragmas;
     for (const auto* annotation : global_pragmas) {
-        if (annotation->name.name != PHV::pragma::MUTUALLY_EXCLUSIVE)
+        if (annotation->name.name != PragmaMutuallyExclusive::name)
             continue;
 
         auto& exprs = annotation->expr;

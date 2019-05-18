@@ -4,13 +4,16 @@
 #include <sys/stat.h>
 #include <boost/algorithm/string.hpp>
 #include <algorithm>
+#include <set>
 #include <unordered_set>
 #include <vector>
 #include "ir/ir.h"
 #include "ir/visitor.h"
 #include "lib/cstring.h"
 #include "version.h"
-#include "bf-p4c/common/collect_global_pragma.h"
+#include "bf-p4c/common/parse_annotations.h"
+#include "bf-p4c/common/pragma/collect_global_pragma.h"
+#include "bf-p4c/common/pragma/pragma.h"
 #include "bf-p4c/logging/manifest.h"
 #include "frontends/parsers/parserDriver.h"
 
@@ -169,6 +172,14 @@ BFN_Options::BFN_Options() {
     registerOption("--disable-tofino1-exit", nullptr,
         [this](const char *) { disable_direct_exit = true; return true; },
         "Disable Tofino1-specific immediate exit optimization");
+    registerOption("--help-pragmas", nullptr,
+                   [](const char *) {
+                       BFN::ParseAnnotations();  // populate the pragma lists
+                       BFN::Pragma::printHelp(std::cout);
+                       std::cout.flush();
+                       exit(0);
+                       return false; },
+                   "Print the documentation about supported pragmas and exit.");
 }
 
 using Target = std::pair<cstring, cstring>;

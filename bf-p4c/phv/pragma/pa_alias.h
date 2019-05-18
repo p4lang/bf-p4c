@@ -49,6 +49,11 @@ class PragmaAlias : public Inspector {
     explicit PragmaAlias(PhvInfo& phv, const std::set<cstring> disable)
         : phv_i(phv), disable_pragmas(disable) { }
     const AliasMap& getAliasMap() const { return aliasMap; }
+
+    /// BFN::Pragma interface
+    static const char *name;
+    static const char *description;
+    static const char *help;
 };
 
 std::ostream& operator<<(std::ostream& out, const PragmaAlias& pa_a);

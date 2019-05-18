@@ -3,6 +3,7 @@
 
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/phv/pragma/pa_atomic.h"
+#include "bf-p4c/phv/pragma/pa_alias.h"
 #include "bf-p4c/phv/pragma/pa_container_size.h"
 #include "bf-p4c/phv/pragma/pa_container_type.h"
 #include "bf-p4c/phv/pragma/pa_deparser_zero.h"
@@ -14,14 +15,6 @@
 namespace PHV {
 namespace pragma {
 
-constexpr const char* MUTUALLY_EXCLUSIVE = "pa_mutually_exclusive";
-constexpr const char* CONTAINER_SIZE     = "pa_container_size";
-constexpr const char* SOLITARY           = "pa_solitary";
-constexpr const char* ATOMIC             = "pa_atomic";
-constexpr const char* NO_OVERLAY         = "pa_no_overlay";
-constexpr const char* ALIAS              = "pa_alias";
-constexpr const char* CONTAINER_TYPE     = "pa_container_type";
-constexpr const char* NO_INIT            = "pa_no_init";
 constexpr const char* NOT_PARSED         = "not_parsed";
 constexpr const char* NOT_DEPARSED       = "not_deparsed";
 constexpr const char* DISABLE_DEPARSE_ZERO = "pa_disable_deparse_0_optimization";

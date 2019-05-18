@@ -528,7 +528,7 @@ bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p
                 if (lb.key.type != tINT || lb.key.i < 0 || lb.key.i >= Target::LONG_BRANCH_TAGS())
                     error(lb.key.lineno, "Invalid long branch tag %s", value_desc(lb.key));
                 else if (long_branch.count(lb.key.i))
-                    error(lb.key.lineno, "Duplicate long branch tag %ld", lb.key.i);
+                    error(lb.key.lineno, "Duplicate long branch tag %" PRId64, lb.key.i);
                 else
                     long_branch.emplace(lb.key.i, lb.value); } }
     } else if (kv.key == "vpns") {

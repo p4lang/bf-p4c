@@ -682,8 +682,7 @@ class RewriteParde : public PardeTransform {
 };
 
 InferPayloadOffset::InferPayloadOffset(const PhvInfo& phv,
-                                       const FieldDefUse& defuse)
-        : phv(phv), defuse(defuse) {
+                                       const FieldDefUse& defuse) {
     auto uses = new PhvUse(phv);
     auto parserInfo = new CollectParserInfo;
     auto findFrontier = new FindParsingFrontier(phv, defuse, *parserInfo);

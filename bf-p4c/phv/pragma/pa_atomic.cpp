@@ -4,6 +4,21 @@
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
 #include "lib/log.h"
 
+/// BFN::Pragma interface
+const char *PragmaAtomic::name = "pa_atomic";
+const char *PragmaAtomic::description =
+    "Specifies that the indicated packet or metadata field cannot be split across containers.";
+const char *PragmaAtomic::help =
+    "@pragma pa_atomic gress instance_name.field_name\n"
+    "+ attached to P4 header instances\n"
+    "\n"
+    "Specifies that the indicated packet or metadata field cannot be split "
+    "across containers.  The gress value can be either ingress or egress. "
+    "For example, an 8-bit field could be placed in one 8-bit container or "
+    "one 16-bit container or one 32-bit container.  A 16-bit field could be "
+    "placed in one 16-bit container or one 32-bit container.  A 24-bit "
+    "field could be placed in one 32-bit container.";
+
 // FIXME(zma) these should really be added to the include file
 // but because intrinsic metadata name may be changed during translation
 // stashing these here for now
@@ -36,7 +51,7 @@ bool PragmaAtomic::add_constraint(cstring field_name) {
 }
 
 bool PragmaAtomic::preorder(const IR::BFN::Pipe* pipe) {
-    if (disable_pragmas.count(PHV::pragma::ATOMIC))
+    if (disable_pragmas.count(PragmaAtomic::name))
         return false;
     auto check_pragma_string = [] (const IR::StringLiteral* ir) {
         if (!ir) {
@@ -48,7 +63,7 @@ bool PragmaAtomic::preorder(const IR::BFN::Pipe* pipe) {
 
     auto global_pragmas = pipe->global_pragmas;
     for (const auto* annotation : global_pragmas) {
-        if (annotation->name.name != PHV::pragma::ATOMIC)
+        if (annotation->name.name != PragmaAtomic::name)
             continue;
 
         auto& exprs = annotation->expr;

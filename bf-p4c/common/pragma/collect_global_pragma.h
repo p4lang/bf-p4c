@@ -1,5 +1,5 @@
-#ifndef EXTENSIONS_BF_P4C_COMMON_COLLECT_GLOBAL_PRAGMA_H_
-#define EXTENSIONS_BF_P4C_COMMON_COLLECT_GLOBAL_PRAGMA_H_
+#ifndef EXTENSIONS_BF_P4C_COMMON_PRAGMA_COLLECT_GLOBAL_PRAGMA_H_
+#define EXTENSIONS_BF_P4C_COMMON_PRAGMA_COLLECT_GLOBAL_PRAGMA_H_
 
 #include <vector>
 #include "ir/ir.h"
@@ -32,4 +32,4 @@ class CollectGlobalPragma : public Inspector {
     static const std::vector<cstring> *g_global_pragma_names;
 };
 
-#endif /* EXTENSIONS_BF_P4C_COMMON_COLLECT_GLOBAL_PRAGMA_H_ */
+#endif /* EXTENSIONS_BF_P4C_COMMON_PRAGMA_COLLECT_GLOBAL_PRAGMA_H_ */

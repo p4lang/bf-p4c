@@ -906,7 +906,7 @@ void Parser::State::MatchKey::setup(value_t &spec) {
     // For TOFINO, the first match byte pair must be an adjacent 16 bit pair. We
     // check and re-arrange the bytes for a 16 bit extractor. In JBAY this check
     // is not necessary as we can have independent byte extractors
-    if ((data[0].bit >= 0 && data[1].bit >= 0) && 
+    if ((data[0].bit >= 0 && data[1].bit >= 0) &&
         (data[1].byte != data[0].byte + 1) &&
         ((data[0].byte & data[1].byte) != USE_SAVED) &&
         Target::MATCH_BYTE_16BIT_PAIRS())
@@ -1175,7 +1175,7 @@ Parser::State::Match::FieldMapping::FieldMapping(Phv::Ref &ref, const value_t &a
 Parser::State::Match::HdrLenIncStop::HdrLenIncStop(const value_t &data) {
     if (CHECKTYPE(data, tINT)) {
         if (data.i < 0 || data.i > PARSER_INPUT_BUFFER_SIZE)
-            error(data.lineno, "hdr_len_inc_stop %ld out of range", data.i);
+            error(data.lineno, "hdr_len_inc_stop %" PRId64 " out of range", data.i);
         lineno = data.lineno;
         final_amt = data.i;
     }
@@ -1652,7 +1652,7 @@ void Parser::State::write_config(REGS &regs, Parser *pa, json::vector &ctxt_json
             state_cjson["pvs_name"] = i->value_set_name;
             if (i->value_set_handle < 0)
                 error(lineno, "Invalid handle for parser value set %s", i->value_set_name.c_str());
-            auto pvs_handle_full = i->value_set_handle; 
+            auto pvs_handle_full = i->value_set_handle;
             state_cjson["pvs_handle"] = pvs_handle_full;
         }
         for (auto idx : MatchIter(stateno)) {

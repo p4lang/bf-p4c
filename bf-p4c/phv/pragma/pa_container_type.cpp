@@ -4,6 +4,12 @@
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
 #include "lib/log.h"
 
+/// BFN::Pragma interface
+const char *PragmaContainerType::name = "pa_container_type";
+const char *PragmaContainerType::description =
+    "Forces the allocation of a field in the specified container type.";
+const char *PragmaContainerType::help = "??";  // FIXME
+
 bool PragmaContainerType::add_constraint(cstring field_name, cstring kind) {
     // check field name
     PHV::Field* field = phv_i.field(field_name);
@@ -34,7 +40,7 @@ bool PragmaContainerType::add_constraint(cstring field_name, cstring kind) {
 }
 
 bool PragmaContainerType::preorder(const IR::BFN::Pipe* pipe) {
-    if (disable_pragmas.count(PHV::pragma::CONTAINER_TYPE))
+    if (disable_pragmas.count(PragmaContainerType::name))
         return false;
     auto check_pragma_string = [] (const IR::StringLiteral* ir) {
         if (!ir) {
@@ -46,7 +52,7 @@ bool PragmaContainerType::preorder(const IR::BFN::Pipe* pipe) {
 
     auto global_pragmas = pipe->global_pragmas;
     for (const auto* annotation : global_pragmas) {
-        if (annotation->name.name != PHV::pragma::CONTAINER_TYPE)
+        if (annotation->name.name != PragmaContainerType::name)
             continue;
 
         auto& exprs = annotation->expr;

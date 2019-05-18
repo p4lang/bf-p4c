@@ -4,6 +4,20 @@
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
 #include "lib/log.h"
 
+/// BFN::Pragma interface
+const char *PragmaAlias::name = "pa_alias";
+const char *PragmaAlias::description =
+    "Specifies that two fields are aliased";
+const char *PragmaAlias::help =
+    "@pragma pa_alias gress inst_1.field_name_1 inst_2.field_name_2\n"
+    "+ attached to P4 header instances\n"
+    "\n"
+    "Specifies that the two packet and/or metadata field instances are to "
+    "be considered as aliases to one another.  Use this pragma with care, "
+    "as it merges the constraints of both fields.  The gress value can be "
+    "either ingress or egress.  The two fields must be the same bit width. "
+    "A field can only be aliased with one other field currently.";
+
 Visitor::profile_t PragmaAlias::init_apply(const IR::Node* root) {
     aliasMap.clear();
     fieldsWithExpressions.clear();
@@ -18,7 +32,7 @@ bool PragmaAlias::preorder(const IR::Expression* expr) {
 }
 
 void PragmaAlias::postorder(const IR::BFN::Pipe* pipe) {
-    if (disable_pragmas.count(PHV::pragma::ALIAS))
+    if (disable_pragmas.count(PragmaAlias::name))
         return;
     auto check_pragma_string = [] (const IR::StringLiteral* ir) {
         if (!ir) {
@@ -28,7 +42,7 @@ void PragmaAlias::postorder(const IR::BFN::Pipe* pipe) {
 
     auto global_pragmas = pipe->global_pragmas;
     for (const auto* annotation : global_pragmas) {
-        if (annotation->name.name != PHV::pragma::ALIAS)
+        if (annotation->name.name != PragmaAlias::name)
             continue;
 
         auto& exprs = annotation->expr;

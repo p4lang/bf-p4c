@@ -4,8 +4,22 @@
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
 #include "lib/log.h"
 
+/// BFN::Pragma interface
+const char *PragmaSolitary::name = "pa_solitary";
+const char *PragmaSolitary::description =
+    "Specifies that the field can not share a PHV container with any other field.";
+const char *PragmaSolitary::help = "@pragma pa_solitary gress instance_name.field_name\n"
+    "+ attached to P4 header instances\n"
+    "\n"
+    "Specifies that the indicated packet or metadata field cannot share a "
+    "container with any other field.  It can be overlaid with other "
+    "field(s) if they are mutually exclusive.  The gress value can be "
+    "either ingress or egress.  A constraint error will be generated if the "
+    "indicated field is a packet field and the packet field bit width is "
+    "not a multiple of eight or the field is not byte aligned.";
+
 bool PragmaSolitary::preorder(const IR::BFN::Pipe* pipe) {
-    if (disable_pragmas.count(PHV::pragma::SOLITARY))
+    if (disable_pragmas.count(PragmaSolitary::name))
         return false;
     auto check_pragma_string = [] (const IR::StringLiteral* ir) {
         if (!ir) {
@@ -17,7 +31,7 @@ bool PragmaSolitary::preorder(const IR::BFN::Pipe* pipe) {
 
     auto global_pragmas = pipe->global_pragmas;
     for (const auto* annotation : global_pragmas) {
-        if (annotation->name.name != PHV::pragma::SOLITARY)
+        if (annotation->name.name != PragmaSolitary::name)
             continue;
 
         auto& exprs = annotation->expr;

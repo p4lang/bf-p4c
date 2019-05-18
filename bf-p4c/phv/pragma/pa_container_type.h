@@ -40,6 +40,11 @@ class PragmaContainerType : public Inspector {
     const ordered_map<const PHV::Field*, cstring> getFields() const {
         return fields;
     }
+
+    /// BFN::Pragma interface
+    static const char *name;
+    static const char *description;
+    static const char *help;
 };
 
 std::ostream& operator<<(std::ostream& out, const PragmaContainerType& pa_ct);

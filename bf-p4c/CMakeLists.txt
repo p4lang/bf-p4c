@@ -157,7 +157,7 @@ set (BF_P4C_BACKEND_COMMON_SRCS
   common/asm_output.cpp
   common/bridged_metadata_replacement.cpp
   common/check_for_unimplemented_features.cpp
-  common/collect_global_pragma.cpp
+  common/pragma/collect_global_pragma.cpp
   common/copy_header_eliminator.cpp
   common/elim_unused.cpp
   common/extract_maupipe.cpp
@@ -167,6 +167,7 @@ set (BF_P4C_BACKEND_COMMON_SRCS
   common/ir_utils.cpp
   common/map_tables_to_actions.cpp
   common/multiple_apply.cpp
+  common/pragma/pragmas.cpp
   common/run_id.cpp
   common/rewrite_flexible_struct.cpp
   common/slice.cpp
@@ -180,7 +181,7 @@ set (BF_P4C_BACKEND_COMMON_HDRS
   common/bridged_metadata_replacement.h
   common/check_for_unimplemented_features.h
   common/check_header_refs.h
-  common/collect_global_pragma.h
+  common/pragma/collect_global_pragma.h
   common/copy_header_eliminator.h
   common/debug_info.h
   common/elim_unused.h
@@ -192,6 +193,7 @@ set (BF_P4C_BACKEND_COMMON_HDRS
   common/map_tables_to_actions.h
   common/multiple_apply.h
   common/parse_annotations.h
+  common/pragma/all_pragmas.h
   common/run_id.h
   common/rewrite_flexible_struct.h
   common/slice.h

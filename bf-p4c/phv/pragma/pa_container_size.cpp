@@ -4,6 +4,40 @@
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
 #include "lib/log.h"
 
+/// BFN::Pragma interface
+const char *PragmaContainerSize::name = "pa_container_size";
+const char *PragmaContainerSize::description =
+    "Forces the allocation of a field in the specified container size.";
+const char *PragmaContainerSize::help =
+    "@pragma pa_container_size gress instance_name.field_name 32\n"
+    "+ attached to P4 header instances\n"
+    "\n"
+    "Specifies that the indicated packet or metadata field should be "
+    "allocated to containers of the indicated size.\n"
+    "\n"
+    "If one container size is specified, and the field is larger than that "
+    "container size, the field will only be allocated in containers of that "
+    "size.  The field will occupy multiple containers of the same size.\n"
+    "\n"
+    "If multiple container sizes are specified, the first container you "
+    "specify will hold the most significant bits, and the last container "
+    "you specify will hold the least significant bits. At runtime, "
+    "containers are filled from the least significant container to most "
+    "significant container. The most significant container may be partially "
+    "filled. For example, if you have:\n"
+    "\n"
+    "@pragma pa_container_size ingress hdr1.x_60 8 16 8 32\n"
+    "\n"
+    "This will be allocated to containers like:\n"
+    "\n"
+    "phv8[7:0] = hdr1.x_60[59:56]\n"
+    "phv16[15:0] = hdr1.x_60[55:40]\n"
+    "phv8[7:0] = hdr1.x_60[39:32]\n"
+    "phv32[31:0] = hdr1.x_60[31:0]\n"
+    "\n"
+    "Allowed container sizes are 8, 16, and 32.  The gress value can be "
+    "either ingress or egress.";
+
 boost::optional<PHV::Size>
 PragmaContainerSize::convert_to_phv_size(const IR::Constant* ir) {
     int rst = ir->asInt();
@@ -15,7 +49,7 @@ PragmaContainerSize::convert_to_phv_size(const IR::Constant* ir) {
 }
 
 bool PragmaContainerSize::preorder(const IR::BFN::Pipe* pipe) {
-    if (disabled_pragmas.count(PHV::pragma::CONTAINER_SIZE))
+    if (disabled_pragmas.count(PragmaContainerSize::name))
         return false;
     auto check_pragma_string = [] (const IR::StringLiteral* ir) {
         if (!ir) {
@@ -27,7 +61,7 @@ bool PragmaContainerSize::preorder(const IR::BFN::Pipe* pipe) {
 
     auto global_pragmas = pipe->global_pragmas;
     for (const auto* annotation : global_pragmas) {
-        if (annotation->name.name != PHV::pragma::CONTAINER_SIZE)
+        if (annotation->name.name != PragmaContainerSize::name)
             continue;
 
         auto& exprs = annotation->expr;
