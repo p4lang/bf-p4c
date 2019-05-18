@@ -6,6 +6,8 @@ set (SWITCH_P4_16_PTF ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/switch_16/ptf/api)
 file (RELATIVE_PATH switch_p4_16 ${P4C_SOURCE_DIR} ${SWITCH_P4_16})
 p4c_add_test_with_args("tofino2" ${P4C_RUNTEST} FALSE
   "smoketest_switch_16_compile" ${switch_p4_16} "$testExtraArgs}" "-tofino2 -arch t2na -bfrt -force-link")
+p4c_add_test_with_args("tofino2" ${P4C_RUNTEST} FALSE
+  "smoketest_switch_16_compile_l0_profile" ${switch_p4_16} "${testExtraArgs}" "-DL0_PROFILE -tofino2 -arch t2na -bfrt -force-link")
 p4c_add_ptf_test_with_ptfdir ("tofino2" "smoketest_switch_16_Tests" ${SWITCH_P4_16}
   "${testExtraArgs} -tofino2 -arch t2na -bfrt -to 3600" ${SWITCH_P4_16_PTF})
 # Cannot run some of the tests as they access ports outside the range of the set ports using veth_setup.sh
@@ -25,5 +27,6 @@ set_tests_properties(
 
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
 set_tests_properties("tofino2/smoketest_switch_16_compile" PROPERTIES TIMEOUT 1200)
+set_tests_properties("tofino2/smoketest_switch_16_compile_l0_profile" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino2/smoketest_switch_16_Tests" PROPERTIES TIMEOUT 3600)
 
