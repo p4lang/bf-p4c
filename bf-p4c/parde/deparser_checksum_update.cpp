@@ -1,4 +1,4 @@
-#include "bf-p4c/parde/checksum.h"
+#include "bf-p4c/parde/deparser_checksum_update.h"
 
 #include <map>
 
@@ -56,7 +56,7 @@ static bool checksumUpdateSanityCheck(const IR::AssignmentStatement* assignment)
                 destField);
         return false;
     }
-    LOG2("Will write computed checksum to field: " << destField);
+    LOG3("checksum update field: " << destField);
 
     const IR::ListExpression* sourceList =
         (*methodCall->arguments)[0]->expression->to<IR::ListExpression>();
@@ -144,7 +144,7 @@ analyzeUpdateChecksumStatement(const IR::AssignmentStatement* assignment) {
 
             lastFieldHeaderRef = currentFieldHeaderRef;
             offset += source->type->width_bits();
-            LOG2("Checksum includes field:" << source);
+            LOG3("checksum update includes field:" << source);
 
         } else if (auto* header = source->to<IR::ConcreteHeaderRef>()) {
             auto headerRef = header->baseRef();
@@ -160,7 +160,7 @@ analyzeUpdateChecksumStatement(const IR::AssignmentStatement* assignment) {
                 auto* member = new IR::Member(field->type, header, field->name);
                 sources->push_back(new IR::BFN::FieldLVal(member));
                 sourceToOffset[sources->size() - 1] = offset;
-                LOG2("Checksum includes field:" << field);
+                LOG3("checksum update includes field:" << field);
                 offset += member->type->width_bits();
             }
             lastFieldHeaderRef = headerRef;
@@ -174,7 +174,6 @@ analyzeUpdateChecksumStatement(const IR::AssignmentStatement* assignment) {
             << " Total bits: "<< offset;
         ::fatal_error("%1%", msg.str());
     }
-    LOG2("Validated computed checksum for field: " << destField);
 
     auto info = new ChecksumUpdateInfo(destField->toString(), sources, sourceToOffset);
 
@@ -327,10 +326,8 @@ struct SubstituteUpdateChecksums : public Transform {
                 auto* source = emit->source->field->to<IR::Member>();
                 if (checksums.find(source->toString()) != checksums.end()) {
                     auto emitChecksums = rewriteEmitChecksum(emit);
-                    LOG2("Substituting update checksum for emitted value: " << emit);
                     for (auto* ec : emitChecksums) {
                         newEmits.push_back(ec);
-                        LOG2(ec);
                     }
                     rewrite = true;
                 }
@@ -471,6 +468,8 @@ struct InsertChecksumConditions : public Transform {
 
         for (auto& csum : checksums) {
             auto csumInfo = csum.second;
+
+            LOG2("insert checksum update condition for " << csumInfo->dest);
 
             if (!csumInfo->updateConditions.empty()) {
                 auto action = new IR::MAU::Action("__checksum_update_condition__");

@@ -59,7 +59,7 @@ class GatherPhase0Fields : public Inspector {
 };
 
 /// This class identifies all metadata fields that have alignment constraints due to initialization
-/// by ComputedRVals in the parser.
+/// by SavedRVals in the parser.
 class GatherParserExtracts : public Inspector {
  public:
     using FieldToFieldSet = ordered_map<const PHV::Field*, ordered_set<const PHV::Field*>>;
@@ -423,7 +423,7 @@ class ReplaceFlexFieldUses : public Transform {
     /// Set of header names whose emits must be replaced.
     ordered_set<cstring> emitsToBeReplaced;
 
-    /// Set of fields used as ComputedRVal references, which now need to be replaced to reflect the
+    /// Set of fields used as SavedRVal references, which now need to be replaced to reflect the
     /// new type of those fields post repacking.
     ordered_set<cstring> fieldsToReplace;
 
@@ -438,7 +438,7 @@ class ReplaceFlexFieldUses : public Transform {
     void end_apply() override;
 
     bool processExtract(const IR::BFN::Extract* e);
-    IR::BFN::Extract* getNewComputedVal(const IR::BFN::Extract* e) const;
+    IR::BFN::Extract* getNewSavedVal(const IR::BFN::Extract* e) const;
     const std::vector<IR::BFN::Extract*> getNewExtracts(cstring h, unsigned& packetOffset) const;
     const std::vector<IR::BFN::EmitField*> getNewEmits(
             const IR::HeaderOrMetadata* h,

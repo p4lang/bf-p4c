@@ -46,13 +46,13 @@ header udp_t      udp;
 IPV4_OPTIONS( 32)  // ihl=0x6  4 Bytes
 IPV4_OPTIONS( 64)  // ihl=0x7  8 Bytes
 IPV4_OPTIONS( 96)  // ihl=0x8 12 Bytes
-//IPV4_OPTIONS(128)  // ihl=0x9 16 Bytes
-//IPV4_OPTIONS(160)  // ihl=0xA 20 Bytes
-//IPV4_OPTIONS(192)  // ihl=0xB 24 Bytes
-//IPV4_OPTIONS(224)  // ihl=0xC 28 Bytes
-//IPV4_OPTIONS(256)  // ihl=0xD 32 Bytes
-//IPV4_OPTIONS(288)  // ihl=0xE 36 Bytes
-//IPV4_OPTIONS(320)  // ihl=0xF 40 Bytes
+IPV4_OPTIONS(128)  // ihl=0x9 16 Bytes
+IPV4_OPTIONS(160)  // ihl=0xA 20 Bytes
+IPV4_OPTIONS(192)  // ihl=0xB 24 Bytes
+IPV4_OPTIONS(224)  // ihl=0xC 28 Bytes
+IPV4_OPTIONS(256)  // ihl=0xD 32 Bytes
+IPV4_OPTIONS(288)  // ihl=0xE 36 Bytes
+IPV4_OPTIONS(320)  // ihl=0xF 40 Bytes
 
 parser start {
     extract(ipv4);
@@ -61,13 +61,13 @@ parser start {
         0x6 : parse_ipv4_options_32b;
         0x7 : parse_ipv4_options_64b;
         0x8 : parse_ipv4_options_96b;
-//        0x9 : parse_ipv4_options_128b;
-//        0xA : parse_ipv4_options_160b;
-//        0xB : parse_ipv4_options_192b;
-//        0xC : parse_ipv4_options_224b;
-//        0xD : parse_ipv4_options_256b;
-//        0xE : parse_ipv4_options_288b;
-//        0xF : parse_ipv4_options_320b;
+        0x9 : parse_ipv4_options_128b;
+        0xA : parse_ipv4_options_160b;
+        0xB : parse_ipv4_options_192b;
+        0xC : parse_ipv4_options_224b;
+        0xD : parse_ipv4_options_256b;
+        0xE : parse_ipv4_options_288b;
+        0xF : parse_ipv4_options_320b;
         default  : ingress; 
     }
 }

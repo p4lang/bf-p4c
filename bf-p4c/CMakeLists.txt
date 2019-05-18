@@ -318,10 +318,11 @@ add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_HDRS}")
 set (BF_P4C_BACKEND_PARDE_SRCS
   parde/add_parde_metadata.cpp
   parde/adjust_extract.cpp
+  parde/allocate_parser_checksum.cpp
   parde/allocate_parser_match_register.cpp
-  parde/checksum.cpp
   parde/clot_info.cpp
   parde/decaf.cpp
+  parde/deparser_checksum_update.cpp
   parde/deparser_output.cpp
   parde/extract_parser.cpp
   parde/field_packing.cpp
@@ -334,7 +335,7 @@ set (BF_P4C_BACKEND_PARDE_SRCS
   parde/phase0.cpp
   parde/resolve_parser_values.cpp
   parde/resubmit.cpp
-  parde/split_big_state.cpp
+  parde/split_parser_state.cpp
   parde/p4i/gen_parser_json.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_PARDE_SRCS}")
@@ -347,9 +348,10 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/adjust_extract.h
   parde/asm_output.h
   parde/characterize_parser.h
-  parde/checksum.h
   parde/clot_info.h
   parde/decaf.h
+  parde/deparser_checksum_update.h
+  parde/dump_parser.h
   parde/egress_packet_length.h
   parde/extract_parser.h
   parde/field_packing.h
@@ -366,7 +368,7 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/resubmit.h
   parde/parde_utils.h
   parde/parser_info.h
-  parde/split_big_state.h
+  parde/split_parser_state.h
   parde/p4i/gen_parser_json.h
   parde/p4i/p4i_json_types.h
   parde/reset_invalidated_checksum_headers.h

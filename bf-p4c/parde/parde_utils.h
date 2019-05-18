@@ -1,262 +1,71 @@
 #ifndef EXTENSIONS_BF_P4C_PARDE_PARDE_UTILS_H_
 #define EXTENSIONS_BF_P4C_PARDE_PARDE_UTILS_H_
 
-#include <sys/stat.h>
-#include <boost/algorithm/string.hpp>
-#include <fstream>
+#include "bf-p4c/device.h"
 
-#include "bf-p4c/parde/parser_info.h"
-#include "bf-p4c/bf-p4c-options.h"
+struct SortExtracts {
+    explicit SortExtracts(IR::BFN::ParserState* state) {
+        std::stable_sort(state->statements.begin(), state->statements.end(),
+            [&] (const IR::BFN::ParserPrimitive* a,
+                 const IR::BFN::ParserPrimitive* b) {
+                auto ea = a->to<IR::BFN::Extract>();
+                auto eb = b->to<IR::BFN::Extract>();
 
-class DumpParser : public Visitor {
-    cstring filename;
+                if (ea && eb) {
+                    auto va = ea->source->to<IR::BFN::PacketRVal>();
+                    auto vb = eb->source->to<IR::BFN::PacketRVal>();
 
-    // use this to override the default color for nodes and edges
-    // each group will be assign an unique color
-    std::vector<std::set<void*>>* color_groups = nullptr;
-
-    bool detail = true;
-
-    std::stringstream out;
-
-    std::vector<std::string> colors =
-        {"brown", "coral", "crimson", "deeppink", "gold",
-         "red", "blue", "green", "cyan", "orchid"};
-
- public:
-    explicit DumpParser(cstring filename, bool detail = false)
-        : filename(filename),
-          detail(detail || LOGGING(4)) {}
-
-    DumpParser(cstring filename,
-               std::vector<std::set<void*>>& color_groups,
-               bool detail = false)
-        : filename(filename),
-          color_groups(&color_groups),
-          detail(detail || LOGGING(4)) {}
-
- private:
-    static std::string escape(std::string s) {
-        boost::replace_all(s, "ingress::", "");
-        boost::replace_all(s, "egress::", "");
-        boost::replace_all(s, "$", "\\$");
-        boost::replace_all(s, ".", "\\.");
-        boost::replace_all(s, "->", "-~");
-        boost::replace_all(s, "<", "\\<");
-        boost::replace_all(s, ">", "\\>");
-        boost::replace_all(s, "-~", "->");
-        return s;
-    }
-
-    static std::string to_label(std::string label, const void* what) {
-        std::stringstream ss;
-        ss << label << what;
-        return ss.str();
-    }
-
-    std::string lookup_color(void* obj) {
-        if (color_groups) {
-            for (auto it = color_groups->begin(); it != color_groups->end(); it++) {
-                if ((*it).count(obj)) {
-                    auto cid = std::distance(color_groups->begin(), it) % colors.size();
-                    return colors.at(cid);
+                    return (va && vb) ? (va->range < vb->range) : !!va;
                 }
-            }
-        }
-        return "undef";
-    }
 
-    void dump(const IR::BFN::Transition* transition) {
-        auto c = lookup_color((void*)transition);  // NOLINT
-        if (c != "undef") out << "color=" << c << " ";
+                return !!ea;
+            });
 
-        if (detail)
-            out << "label=\"" << transition << "\"";
-    }
-
-    std::string get_color(const IR::BFN::ParserState* state) {
-        auto c = lookup_color((void*)state);  // NOLINT
-        if (c != "undef") return c;
-
-        return "cornsilk";
-    }
-
-    void dump(const IR::BFN::ParserState* state) {
-        out << to_label("State", state);
-        out << " [shape=record, style=\"filled,rounded\", ";
-        out << "fillcolor=" << get_color(state);
-        out << ", label=\"{";
-        out << state->name;
-
-        if (detail) {
-            out << ":\\l\\l";
-
-            for (auto stmt : state->statements)
-                out << "    " << stmt << "\\l";
-
-            if (state->statements.size())
-                out << "\\l";
-
-            for (auto select : state->selects)
-                out << "    " << select << "\\l";
-        }
-
-        out << "}\"";
-        out << "];" << std::endl;
-    }
-
-    void dump(const IR::BFN::ParserGraph& graph, gress_t gress) {
-        for (auto s : graph.states())
-            dump(s);
-
-        for (auto succ : graph.successors()) {
-            for (auto dst : succ.second) {
-                out << to_label("State", succ.first) << " -> "
-                    << to_label("State", dst) << " [ ";
-
-                dump(graph.transition(succ.first, dst));
-
-                out << " ]" << std::endl;
-            }
-        }
-
-        for (auto &kv : graph.to_pipe()) {
-            out << to_label("State", kv.first) << " -> "
-                << ::toString(gress) << "_pipe" << " [ ";
-
-            dump(graph.to_pipe(kv.first));
-
-            out << " ]" << std::endl;
+        if (LOGGING(5)) {
+            std::clog << "sorted primitives in " << state->name << std::endl;
+            for (auto p : state->statements)
+                std::clog << p << std::endl;
         }
     }
+};
 
-    void dump(const IR::BFN::LoweredParserState* state) {
-        out << to_label("State", state) << " [style=filled, fillcolor=lightskyblue1, shape=record";
-        out << ", label=\"{";
-        out << state->name << ":\\l\\l";
+struct GetMaxBufferPos : Inspector {
+    int rv = -1;
 
-        if (detail) {
-            if (!state->select->regs.empty())
-                out << "    " << state->select << "\\l";
-        }
-
-        out << "}\"";
-        out << "];" << std::endl;
+    bool preorder(const IR::BFN::InputBufferRVal* rval) override {
+        rv = std::max(rval->range.hi, rv);
+        return false;
     }
+};
 
-    void dump(const IR::BFN::LoweredParserMatch* match) {
-        out << to_label("Match", match) << " [style=filled, fillcolor=aliceblue, shape=record";
-        out << ", label=\"{";
-        out << "match " << match->value << ": \\l\\l";
+struct GetMinBufferPos : Inspector {
+    int rv = Device::pardeSpec().byteInputBufferSize() * 8;
 
-        if (detail) {
-            for (auto stmt : match->extracts)
-                out << "    " << stmt << "\\l";
-
-            if (match->extracts.size())
-                out << "\\l";
-
-            for (auto save : match->saves)
-                out << "    " << save << "\\l";
-
-            if (match->saves.size())
-                out << "\\l";
-
-            for (auto csum : match->checksums)
-                out << "    " << csum << "\\l";
-
-            if (match->checksums.size())
-                out << "\\l";
-
-            out << "shift: " << match->shift;
-        }
-
-        out << "}\"";
-        out << "];" << std::endl;
+    bool preorder(const IR::BFN::InputBufferRVal* rval) override {
+        if (rval->range.hi < 0) return false;
+        if (rval->range.lo < 0) BUG("rval straddles input buffer?");
+        rv = std::min(rval->range.lo, rv);
+        return false;
     }
+};
 
-    void dump(const IR::BFN::LoweredParserGraph& graph, gress_t gress) {
-        unsigned id = 0;
-        for (auto s : graph.states()) {
-            out << "subgraph cluster_" << id++ << " {";
-            out << "style=invis;" << std::endl;
-
-            dump(s);
-
-            for (auto m : s->transitions)
-                dump(m);
-
-            out << "}" << std::endl;
-        }
-
-        for (auto s : graph.states()) {
-            for (auto m : s->transitions) {
-                out << to_label("State", s) << " -> "
-                    << to_label("Match", m) << std::endl;
-
-                if (m->next) {
-                    out << to_label("Match", m) << " -> "
-                        << to_label("State", m->next) << std::endl;
-                } else {
-                    out << to_label("Match", m) << " -> "
-                        << ::toString(gress) << "_pipe" << std::endl;
-                }
-            }
-        }
+struct Shift : Transform {
+    int shift_amt = 0;  // in bits
+    explicit Shift(int shft) : shift_amt(shft) {
+        BUG_CHECK(shift_amt % 8 == 0, "shift amount not byte-aligned?");
     }
+};
 
-    std::ofstream* open_file(gress_t gress, int pipe_id) {
-        auto outdir = BFNContext::get().getOutputDirectory("graphs", pipe_id);
-        if (!outdir)
-            return nullptr;
+struct ShiftPacketRVal : Shift {
+    bool negative_ok = false;
+    explicit ShiftPacketRVal(int shft, bool neg_ok = false) :
+        Shift(shft), negative_ok(neg_ok) { }
 
-        static int fid = 0;
-        auto filepath = outdir + "/" + std::to_string(fid++) + "_" + filename
-            + "_" + ::toString(gress) + ".dot";
-
-        return new std::ofstream(filepath);
-    }
-
-    template <typename ParserGraphType>
-    void dump_graph(const ParserGraphType& graph, gress_t gress, int pipe_id) {
-        out.str(std::string());
-
-        out << "digraph parser {" << std::endl;
-        out << "size=\"8,5\"" << std::endl;
-
-        dump(graph, gress);
-
-        out << "}" << std::endl;
-
-        auto fs = open_file(gress, pipe_id);
-
-        if (fs) {
-            *fs << escape(out.str());
-            fs->close();
-        }
-    }
-
-    const IR::Node *apply_visitor(const IR::Node *n, const char*) override { return n; }
-
-    Visitor::profile_t init_apply(const IR::Node* root) override {
-        auto rv = Visitor::init_apply(root);
-
-        CollectParserInfo cg;
-        root->apply(cg);
-
-        CollectLoweredParserInfo cgl;
-        root->apply(cgl);
-
-        if (!cg.graphs().empty() && !cgl.graphs().empty())
-            BUG("IR is in an incoherent state");
-
-        for (auto g : cg.graphs())
-            dump_graph(*(g.second), (g.first)->gress, root->to<IR::BFN::Pipe>()->id);
-
-        for (auto g : cgl.graphs())
-            dump_graph(*(g.second), (g.first)->gress, root->to<IR::BFN::Pipe>()->id);
-
-        return rv;
+    IR::Node* preorder(IR::BFN::PacketRVal* rval) override {
+        rval->range = rval->range.shiftedByBits(-shift_amt);
+        if (!negative_ok)
+            BUG_CHECK(rval->range.lo >= 0, "packet rval shifted to be negative?");
+        return rval;
     }
 };
 

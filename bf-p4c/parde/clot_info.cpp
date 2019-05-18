@@ -54,7 +54,7 @@ std::string ClotInfo::print(const PhvInfo* phvInfo) const {
                           TablePrinter::Align::CENTER);
 
     std::set<int> unaligned_clots;
-    for (auto entry : clot_to_parser_state()) {
+    for (auto entry : clot_to_start_state()) {
         auto c = entry.first;
         auto state = entry.second;
 
@@ -385,12 +385,12 @@ void ClotInfo::adjust_clots(const PhvInfo& phv) {
             clots.push_back(clot);
         } else {
             // Adjustment resulted in an empty CLOT, so remove it.
-            auto state_name = clot_to_parser_state_.at(clot);
-            clot_to_parser_state_.erase(clot);
+            auto state_name = clot_to_start_state_.at(clot);
+            clot_to_start_state_.erase(clot);
 
-            auto& state_clots = parser_state_to_clots_.at(state_name);
+            auto& state_clots = start_state_to_clots_.at(state_name);
             state_clots.erase(clot);
-            if (state_clots.empty()) parser_state_to_clots_.erase(state_name);
+            if (state_clots.empty()) start_state_to_clots_.erase(state_name);
         }
     }
 
@@ -437,7 +437,7 @@ bool ClotInfo::is_added_by_mau(cstring h) const {
 //
 // DANGER: This function assumes the parser graph is a DAG.
 std::pair<unsigned, std::set<const IR::BFN::ParserState*>*>* find_largest_paths(
-        const std::map<cstring, std::set<const Clot*>>& parser_state_to_clots,
+        const std::map<cstring, std::set<const Clot*>>& start_state_to_clots,
         const IR::BFN::ParserGraph* graph,
         const IR::BFN::ParserState* state,
         std::map<const IR::BFN::ParserState*,
@@ -456,7 +456,7 @@ std::pair<unsigned, std::set<const IR::BFN::ParserState*>*>* find_largest_paths(
     auto max_path_states = new std::set<const IR::BFN::ParserState*>();
     if (graph->successors().count(state)) {
         for (auto child : graph->successors().at(state)) {
-            const auto result = find_largest_paths(parser_state_to_clots, graph, child, memo);
+            const auto result = find_largest_paths(start_state_to_clots, graph, child, memo);
             if (result->first > max_clots) {
                 max_clots = result->first;
                 max_path_states->clear();
@@ -469,8 +469,8 @@ std::pair<unsigned, std::set<const IR::BFN::ParserState*>*>* find_largest_paths(
     }
 
     // Add the current state's result to the table and return.
-    if (parser_state_to_clots.count(state->name))
-        max_clots += parser_state_to_clots.at(state->name).size();
+    if (start_state_to_clots.count(state->name))
+        max_clots += start_state_to_clots.at(state->name).size();
     max_path_states->insert(state);
     auto result =
         new std::pair<unsigned, std::set<const IR::BFN::ParserState*>*>(
@@ -490,7 +490,7 @@ const std::set<const IR::BFN::ParserState*>* ClotInfo::find_full_states(
     if (num_clots_allocated(gress) < MAX_LIVE_CLOTS) {
         result = new std::set<const IR::BFN::ParserState*>();
     } else {
-        auto largest = find_largest_paths(parser_state_to_clots(), graph, root);
+        auto largest = find_largest_paths(start_state_to_clots(), graph, root);
         BUG_CHECK(largest->first <= MAX_LIVE_CLOTS,
             "Packet has %d live CLOTs, when at most %d are allowed",
             largest->first,
@@ -517,9 +517,8 @@ void ClotInfo::clear() {
     checksum_dests_.clear();
     field_to_checksum_updates_.clear();
     clots_.clear();
-    clot_to_parser_state_.clear();
-    parser_state_to_clots_.clear();
-    container_range_.clear();
+    clot_to_start_state_.clear();
+    start_state_to_clots_.clear();
     field_range_.clear();
     field_aliases_.clear();
     headers_added_by_mau_.clear();
@@ -1026,7 +1025,6 @@ class GreedyClotAllocator : public Visitor {
             LOG3("Allocating CLOT " << clot->tag << " to candidate " << candidate->id
                  << " (state " << state->name << ")");
             clotInfo.add_clot(clot, state);
-            clot->start = state_bit_offset / 8;
 
             // Add fields.
             int offset = 0;

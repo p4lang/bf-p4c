@@ -551,7 +551,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         auto* bufferSource = extract->source->to<IR::BFN::InputBufferRVal>();
         if (!bufferSource) return;
 
-        int requiredAlignment = bufferSource->range().lo % 8;
+        int requiredAlignment = bufferSource->range.lo % 8;
         le_bitrange bits;
 
         auto lval = extract->dest->to<IR::BFN::FieldLVal>();

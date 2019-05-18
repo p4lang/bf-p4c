@@ -1430,7 +1430,7 @@ const IR::Expression *FixupStatefulAlu::UpdateEncodings::preorder(IR::Member *ex
     if (!exp->expr->is<IR::TypeNameExpression>()) return exp;
     auto encoding = self.encodings.at(enum_type).encoding;
     const IR::Primitive *prim;
-    if (getParent<IR::AssignmentStatement>() || getParent<IR::BFN::ComputedRVal>()) {
+    if (getParent<IR::AssignmentStatement>() || getParent<IR::BFN::SavedRVal>()) {
         // ok
     } else if ((prim = getParent<IR::Primitive>()) && prim->name == "modify_field") {
         // ok
@@ -1443,7 +1443,7 @@ const IR::Expression *FixupStatefulAlu::UpdateEncodings::preorder(IR::Member *ex
     return new IR::Constant(self.pred_type, val);
 }
 
-const IR::BFN::ParserRVal *FixupStatefulAlu::UpdateEncodings::postorder(IR::BFN::ComputedRVal *e) {
+const IR::BFN::ParserRVal *FixupStatefulAlu::UpdateEncodings::postorder(IR::BFN::SavedRVal *e) {
     if (auto k = e->source->to<IR::Constant>())
         return new IR::BFN::ConstantRVal(e->srcInfo, k);
     return e;

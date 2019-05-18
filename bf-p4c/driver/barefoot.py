@@ -308,12 +308,13 @@ class BarefootBackend(BackendDriver):
             phv_verbosity = str(2 * opts.verbose - 1)
             pa_logging = "allocate_phv:" + phv_verbosity
             parde_verbosity = str(2 * opts.verbose - 1)
-            p2_verbosity = str(2 * opts.verbose)
-            parde_logging = "extract_parser:" + parde_verbosity + \
-                            ",checksum:" + parde_verbosity + \
-                            ",clot_info:" + parde_verbosity + \
-                            ",allocate_parser_checksum.h:" + p2_verbosity + \
-                            ",lower_parser:" + p2_verbosity
+            parde_logging = ",clot_info:" + parde_verbosity + \
+                            ",deparser_checksum_update:" + parde_verbosity + \
+                            ",split_parser_state:" + parde_verbosity + \
+                            ",allocate_parser_match_register:" + parde_verbosity + \
+                            ",allocate_parser_checksum:" + parde_verbosity + \
+                            ",lower_parser:" + parde_verbosity + \
+                            ",characterize_parser.h:" + parde_verbosity
             bridge_logging = "bridged_metadata_packing:1"
             ixbar_logging = "ixbar_info:3"
             self.add_command_option('compiler', '--verbose -T{},{},{},{},{}'.format(ta_logging,

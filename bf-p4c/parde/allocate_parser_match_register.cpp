@@ -1,92 +1,534 @@
 #include <boost/range/adaptors.hpp>
 
+#include "bf-p4c/common/utils.h"
+#include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/parde/allocate_parser_match_register.h"
+#include "bf-p4c/parde/dump_parser.h"
 #include "bf-p4c/parde/parde_utils.h"
+#include "bf-p4c/parde/parser_info.h"
 #include "device.h"
 
-/// A mapping from a computed r-value to the r-values we evaluated it to.
-/// For one computedRVal, it can have multiple definition parserRVal.
-using ParserValueResolution =
-    std::map<const IR::BFN::ComputedRVal*, std::vector<ParserRValDef>>;
+// Insert a stall state on transition whose next state requires
+// branch word that is out of the input buffer of the current state.
+struct ResolveOutOfBufferSelects : public ParserTransform {
+    std::map<cstring, IR::BFN::ParserState*> src_to_stall_state;
 
-class ComputeSaveAndSelect: public ParserInspector {
-    using State = IR::BFN::ParserState;
-    using StateTransition = IR::BFN::Transition;
-    using StateSelect = IR::BFN::Select;
+    CollectParserInfo parser_info;
 
-    struct UnresolvedSelect {
-        UnresolvedSelect(const StateSelect* s, unsigned shifts,
-                         const std::set<MatchRegister>& used,
-                         boost::optional<ParserRValDef> prefer = boost::none)
-            : select(s), byte_shifted(shifts),
-              used_by_others(used), preferred_source(prefer) { }
+    profile_t init_apply(const IR::Node* root) override {
+        root->apply(parser_info);
+        return ParserTransform::init_apply(root);
+    }
 
-        const StateSelect* select;
-        unsigned byte_shifted;
-        // MatchRegisters that has been used on the path by other selects.
-        // Any save before that state need to update this.
-        std::set<MatchRegister> used_by_others;
-        // Used when select has unresolved source, i.e. IR::BFN::ComputedRVal.
-        // In that case, it means that the source has multiple defs so we have to
-        // trace it back to the state of each def and insert save at that state.
-        boost::optional<ParserRValDef> preferred_source;
+    const IR::BFN::Parser* parser = nullptr;
 
-        bool operator<(const UnresolvedSelect& other) const {
-            return source() < other.source();
+    IR::BFN::Parser* preorder(IR::BFN::Parser* p) override {
+        parser = getOriginal<IR::BFN::Parser>();
+        return p;
+    }
+
+    void insert_stall_state_for_oob_select(IR::BFN::Transition* t) {
+        auto orig = getOriginal<IR::BFN::Transition>();
+        auto src = parser_info.graph(parser).get_src(orig);
+
+        IR::BFN::ParserState* stall = nullptr;
+
+        if (src_to_stall_state.count(src->name)) {
+            stall = src_to_stall_state.at(src->name);
+        } else {
+            cstring name = src->name + ".$stall";
+            stall = new IR::BFN::ParserState(src->p4State, name, src->gress);
+            src_to_stall_state[src->name] = stall;
         }
 
-        std::string to_string() const {
-            std::stringstream ss;
-            ss << "[";
-            ss << select << " ... ";
-            for (const auto& r : used_by_others) {
-                ss << r << " "; }
-            ss << "]";
-            return ss.str();
-        }
+        LOG2("created stall state for out of buffer select on "
+              << src->name << " -> " << t->next->name);
 
-        // The absolute offset that this select match on for current state's
-        // input buffer.
-        nw_bitrange source() const {
-            const IR::BFN::InputBufferRVal* buf = nullptr;
-            if (preferred_source) {
-                buf = (*preferred_source).rval->to<IR::BFN::InputBufferRVal>();
-            } else {
-                buf = select->source->to<IR::BFN::InputBufferRVal>();
+        auto to_dst = new IR::BFN::Transition(match_t(), 0, t->next);
+        stall->transitions.push_back(to_dst);
+        t->next = stall;
+    }
+
+    bool has_oob_select(const IR::BFN::Transition* t) {
+        if (!t->next)
+            return false;
+
+        if (t->next->selects.empty())
+            return false;
+
+        GetMaxBufferPos max_select;
+        t->next->selects.apply(max_select);
+
+        return (*t->shift + (max_select.rv + 7) / 8) > Device::pardeSpec().byteInputBufferSize();
+    }
+
+    IR::BFN::Transition* postorder(IR::BFN::Transition* t) override {
+        if (has_oob_select(t))
+            insert_stall_state_for_oob_select(t);
+
+        return t;
+    }
+};
+
+struct Def {
+    const IR::BFN::ParserState* state = nullptr;
+    const IR::BFN::InputBufferRVal* rval = nullptr;
+
+    Def(const IR::BFN::ParserState* s,
+        const IR::BFN::InputBufferRVal* r) : state(s), rval(r) { }
+
+    bool equiv(const Def* other) const {
+        if (this == other) return true;
+        return (state->name == other->state->name) && (rval->equiv(*other->rval));
+    }
+
+    std::string print() const {
+        std::stringstream ss;
+        ss << " ( " << state->name << " : " << rval->range << " )";
+        return ss.str();
+    }
+};
+
+struct Use {
+    const IR::BFN::ParserState* state = nullptr;
+    const IR::BFN::Select* select = nullptr;
+
+    Use(const IR::BFN::ParserState* s,
+        const IR::BFN::Select* select) : state(s), select(select) { }
+
+    bool equiv(const Use* other) const {
+        if (this == other) return true;
+        return (state->name == other->state->name) && (select->equiv(*other->select));
+    }
+
+    std::string print() const {
+        std::stringstream ss;
+        ss << " [ " << state->name << " : " << select->p4Source << " ]";
+        return ss.str();
+    }
+};
+
+struct UseDef {
+    ordered_map<const Use*, std::vector<const Def*>> use_to_defs;
+
+    void add_def(const Use* use, const Def* def) {
+        for (auto d : use_to_defs[use])
+            if (d->equiv(def)) return;
+        use_to_defs[use].push_back(def);
+    }
+
+    const Use*
+    get_use(const IR::BFN::ParserState* state, const IR::BFN::Select* select) const {
+        auto temp = new Use(state, select);
+        for (auto& kv : use_to_defs)
+            if (kv.first->equiv(temp))
+                return kv.first;
+        return temp;
+    }
+
+    const Def*
+    get_def(const Use* use, const IR::BFN::ParserState* def_state) const {
+        for (auto def : use_to_defs.at(use)) {
+            if (def_state == def->state)
+                return def;
+        }
+        return nullptr;
+    }
+
+    std::string print(const Use* use) const {
+        std::stringstream ss;
+        ss << "use: " << use->print() << " -- defs: ";
+        for (auto def : use_to_defs.at(use))
+            ss << def->print() << " ";
+        return ss.str();
+    }
+
+    std::string print() const {
+        std::stringstream ss;
+        ss << "parser def use: " << std::endl;
+        for (auto& kv : use_to_defs)
+            ss << print(kv.first) << std::endl;
+        return ss.str();
+    }
+};
+
+typedef std::map<const IR::BFN::Parser*, UseDef> ParserUseDef;
+
+/// Collect Use-Def for all select fields
+///   Def: In which states are the select fields extracted?
+///   Use: In which state are the select fields matched on?
+struct CollectUseDef : PassManager {
+    struct CollectDefs : Inspector {
+        CollectDefs() { visitDagOnce = false; }
+
+        std::map<const IR::BFN::ParserState*,
+                 std::set<const IR::BFN::InputBufferRVal*>> state_to_rvals;
+
+        std::map<const IR::BFN::InputBufferRVal*,
+                 const IR::Expression*> rval_to_lval;
+
+        // XXX(zma) what if extract gets dead code eliminated?
+        // XXX(zma) this won't work if the extract is out of order
+        bool preorder(const IR::BFN::Extract* extract) override {
+            auto state = findContext<IR::BFN::ParserState>();
+
+            if (auto rval = extract->source->to<IR::BFN::InputBufferRVal>()) {
+                state_to_rvals[state].insert(rval);
+                rval_to_lval[rval] = extract->dest->field;
+
+                LOG4(state->name << " " << rval << " -> " << extract->dest->field);
             }
 
-            if (buf) {
-                return buf->range().shiftedByBytes(byte_shifted);
-            } else {
-                ::error("select on a field that is impossible to implement for hardware, "
-                        "likely selecting on a field that is written by constants: %1%",
-                        select);
-                return nw_bitrange();
-            }
-        }
-
-        bool
-        isExtractedEarlier(const State* state) const {
-            // For multipledef selects, only when state maches, source is meaningful.
-            if (preferred_source) {
-                return (*preferred_source).state->name != state->name;
-            } else {
-                return source().lo < 0; }
+            return false;
         }
     };
 
-    // group of UnresolvedSelect's that can be packed together (adjacent in input buffer)
-    class UnresolvedSelectGroup {
-        std::vector<UnresolvedSelect> _members;
+    struct MapToUse : Inspector {
+        const PhvInfo& phv;
+        const CollectParserInfo& parser_info;
+        const CollectDefs& defs;
 
-     public:
+        ParserUseDef& parser_use_def;
+
+        MapToUse(const PhvInfo& phv,
+                    const CollectParserInfo& pi,
+                    const CollectDefs& d,
+                    ParserUseDef& parser_use_def) :
+            phv(phv), parser_info(pi), defs(d), parser_use_def(parser_use_def) {
+                visitDagOnce = false;
+            }
+
+        // defs have absoluate offsets from current state
+        ordered_set<Def*>
+        find_defs(const IR::BFN::InputBufferRVal* rval,
+                 const IR::BFN::ParserGraph& graph,
+                 const IR::BFN::ParserState* state) {
+            ordered_set<Def*> rv;
+
+            if (rval->range.lo < 0) {  // def is in an earlier state
+                if (graph.predecessors().count(state)) {
+                    for (auto pred : graph.predecessors().at(state)) {
+                        for (auto t : graph.transitions(pred, state)) {
+                            auto shift = t->shift;
+
+                            BUG_CHECK(shift, "transition has no shift?");
+
+                            auto shifted_rval = rval->apply(ShiftPacketRVal(-(*shift * 8), true));
+                            auto defs = find_defs(shifted_rval->to<IR::BFN::InputBufferRVal>(),
+                                                  graph, pred);
+
+                            for (auto def : defs)
+                                rv.insert(def);
+                        }
+                    }
+                }
+
+                return rv;
+            } else if (rval->range.lo >= 0) {  // def is in this state
+                auto def = new Def(state, rval);
+                rv.insert(def);
+            }
+
+            return rv;
+        }
+
+        // multiple defs in earlier states with no absolute offsets from current state
+        ordered_set<Def*>
+        find_defs(const IR::BFN::SavedRVal* saved,
+                  const IR::BFN::ParserGraph& graph,
+                  const IR::BFN::ParserState* state) {
+            ordered_set<Def*> rv;
+
+            for (auto& kv : defs.state_to_rvals) {
+                auto def_state = kv.first;
+
+                if (graph.is_ancestor(def_state, state)) {
+                    for (auto rval : kv.second) {
+                        auto lval = defs.rval_to_lval.at(rval);
+
+                        le_bitrange bits;
+                        auto f = phv.field(lval, &bits);
+                        auto s = phv.field(saved->source);
+
+                        if (f == s) {
+                            if (bits.size() == f->size) {
+                                auto def = new Def(def_state, rval);
+                                rv.insert(def);
+                            } else {
+                                auto full_rval = rval->clone();
+                                full_rval->range.lo = rval->range.lo - bits.lo;
+                                full_rval->range.hi = rval->range.hi + f->size - bits.hi - 1;
+                                auto def = new Def(def_state, full_rval);
+                                rv.insert(def);
+                            }
+                        }
+                    }
+                }
+            }
+
+            return rv;
+        }
+
+        bool preorder(const IR::BFN::Select* select) override {
+            auto parser = findContext<IR::BFN::Parser>();
+            auto state = findContext<IR::BFN::ParserState>();
+
+            auto& graph = parser_info.graph(parser);
+
+            auto use = parser_use_def[parser].get_use(state, select);
+
+            if (auto buf = select->source->to<IR::BFN::InputBufferRVal>()) {
+                auto defs = find_defs(buf, graph, state);
+                for (auto def : defs)
+                    parser_use_def[parser].add_def(use, def);
+            } else if (auto save = select->source->to<IR::BFN::SavedRVal>()) {
+                auto defs = find_defs(save, graph, state);
+                for (auto def : defs)
+                    parser_use_def[parser].add_def(use, def);
+            } else {
+                BUG("Unknown select expression %1%", select->source);
+            }
+
+            BUG_CHECK(parser_use_def[parser].use_to_defs.count(use),
+                      "No reaching def found for select %1%", use->print());
+
+            LOG4(parser_use_def[parser].print(use));
+
+            return false;
+        }
+    };
+
+    void end_apply() override {
+        for (auto& kv : parser_use_def)
+            LOG3(parser_use_def[kv.first].print());
+    }
+
+    explicit CollectUseDef(const PhvInfo& phv, const CollectParserInfo& parser_info) {
+        auto collect_defs = new CollectDefs;
+        addPasses({
+            collect_defs,
+            new MapToUse(phv, parser_info, *collect_defs, parser_use_def),
+        });
+    }
+
+    ParserUseDef parser_use_def;
+};
+
+static
+bool equiv(const std::vector<std::pair<MatchRegister, nw_bitrange>>& a,
+           const std::vector<std::pair<MatchRegister, nw_bitrange>>& b) {
+    if (a.size() != b.size()) return false;
+    for (unsigned i = 0; i < a.size(); i++)
+        if (a[i] != b[i]) return false;
+    return true;
+}
+
+/// This is the match register allocation. We implements a greedy
+/// graph coloring algorthim where two select's interfere if their
+/// live range overlap.
+class MatcherAllocator : public Visitor {
+    const CollectParserInfo& parser_info;
+    const ParserUseDef& parser_use_def;
+
+ public:
+    MatcherAllocator(const CollectParserInfo& pi,
+                         const ParserUseDef& parser_use_def) :
+        parser_info(pi), parser_use_def(parser_use_def) { }
+
+ public:
+    // The saves need to be executed on this transition.
+    std::map<const IR::BFN::Transition*,
+             std::vector<const IR::BFN::SaveToRegister*>> transition_saves;
+
+    // The register slices that this select should match against.
+    std::map<const IR::BFN::Select*,
+             std::vector<std::pair<MatchRegister, nw_bitrange>>> select_reg_slices;
+
+ private:
+    /// Represents a group of select fields that can be coalesced into
+    /// single allocation unit (see comment below for coalescing).
+    struct UseGroup {
+        const UseDef& use_def;
+
+        std::vector<const Use*> members;
+
+        std::map<const IR::BFN::Transition*,
+                 const IR::BFN::ParserState*> def_transition_to_state;
+
+        unsigned bits_in_group = 0, bytes_in_group = 0;
+
+        explicit UseGroup(const UseDef& s) : use_def(s) { }
+
+        const IR::BFN::ParserState*
+        get_use_state() const {
+            auto leader = members.front();
+            return leader->state;
+        }
+
+        std::vector<const IR::BFN::ParserState*>
+        get_def_states() const {
+            auto leader = members.front();
+
+            std::vector<const IR::BFN::ParserState*> rv;
+
+            for (auto def : use_def.use_to_defs.at(leader))
+                rv.push_back(def->state);
+
+            return rv;
+        }
+
+        const IR::BFN::ParserState*
+        get_def_state(const IR::BFN::Transition* def_transition) const {
+            return def_transition_to_state.at(def_transition);
+        }
+
+        std::vector<const IR::BFN::Transition*>
+        get_def_transitions() const {
+            std::vector<const IR::BFN::Transition*> rv;
+
+            for (auto& kv : def_transition_to_state)
+                rv.push_back(kv.first);
+
+            return rv;
+        }
+
+        /// For each select, computes a set of transitions where
+        /// the branch word(s) need to be save into the match registers.
+        void compute_def_transitions(const IR::BFN::ParserGraph& graph) {
+            auto use_state = get_use_state();
+
+            auto def_states = get_def_states();
+
+            // case 1: def state == use state
+            if (def_states.size() == 1 && def_states[0] == use_state) {
+                BUG_CHECK(graph.predecessors().count(use_state),
+                          "select state has no predecessors");
+
+                for (auto pred : graph.predecessors().at(use_state)) {
+                    for (auto t : graph.transitions(pred, use_state))
+                        def_transition_to_state[t] = use_state;
+                }
+            } else {  // case 2: def states are ancestor states
+                for (auto def_state : def_states) {
+                    for (auto succ : graph.successors().at(def_state)) {
+                        if (succ == use_state || graph.is_ancestor(succ, use_state)) {
+                            for (auto t : graph.transitions(def_state, succ))
+                                def_transition_to_state[t] = def_state;
+                        }
+                    }
+                }
+            }
+
+            auto def_transitions = get_def_transitions();
+
+            if (LOGGING(5)) {
+                std::clog << "group: " << print() << " has def on:" << std::endl;
+                for (auto t : def_transitions) {
+                    std::clog << graph.get_src(t)->name << " -> "
+                              << t->next->name << std::endl;
+                }
+            }
+
+            BUG_CHECK(!def_transitions.empty(), "no def transitions for select group?");
+        }
+
+        nw_bitrange get_range(const IR::BFN::ParserState* def_state) const {
+            auto head = members.front();
+            auto tail = members.back();
+
+            int lo = use_def.get_def(head, def_state)->rval->range.lo;
+            int hi = use_def.get_def(tail, def_state)->rval->range.hi;
+
+            return nw_bitrange(lo, hi);
+        }
+
+        /// preconditions:
+        ///   - assumes caller has checked candidate has same use/def states as group
+        ///   - assumes defs are sorted already
+        bool join(const Use* cand) {
+            if (members.empty()) {
+                members.push_back(cand);
+
+                auto& defs = use_def.use_to_defs.at(cand);
+
+                bits_in_group = defs.at(0)->rval->range.size();
+                bytes_in_group = (bits_in_group + 7) / 8;
+
+                return true;
+            }
+
+            // check if candidate's rvals are in same byte as all defs in group
+
+            auto cand_defs = use_def.use_to_defs.at(cand);
+            auto last_defs = use_def.use_to_defs.at(members.back());
+
+            if (cand_defs.size() != last_defs.size()) return false;
+
+            for (unsigned i = 0; i < cand_defs.size(); i++) {
+                auto cd = cand_defs.at(i);
+                auto ld = last_defs.at(i);
+
+                if (ld->rval->range.hi + 1 == cd->rval->range.lo)
+                    continue;
+
+                auto lo = cd->rval->range.lo / 8;
+                auto hi = ld->rval->range.hi / 8;
+
+                if (lo != hi)
+                    return false;
+            }
+
+            members.push_back(cand);
+
+            bits_in_group += cand_defs.at(0)->rval->range.size();
+
+            auto head_defs = use_def.use_to_defs.at(members.front());
+
+            auto lo = head_defs.at(0)->rval->range.lo;
+            auto hi = cand_defs.at(0)->rval->range.hi;
+
+            bytes_in_group = (hi - lo) / 8 + 1;
+
+            return true;
+        }
+
+        bool have_same_defs(const Use* a, const Use* b) const {
+            auto a_defs = use_def.use_to_defs.at(a);
+            auto b_defs = use_def.use_to_defs.at(b);
+
+            if (a_defs.size() != b_defs.size()) return false;
+
+            for (unsigned i = 0; i < a_defs.size(); i++) {
+                if (!a_defs.at(i)->equiv(b_defs.at(i)))
+                    return false;
+            }
+
+            return true;
+        }
+
+        bool have_same_defs(const UseGroup* other) const {
+            if (members.size() != other->members.size()) return false;
+
+            for (unsigned i = 0; i < members.size(); i++) {
+                if (!have_same_defs(members.at(i), other->members.at(i)))
+                    return false;
+            }
+
+            return true;
+        }
+
+        /// Given the registers allocated to a group, compute the
+        /// the fields' layout within each register (slices)
         std::vector<std::pair<MatchRegister, nw_bitrange>>
-        calc_reg_slices_for_select(const UnresolvedSelect& unresolved,
-                const std::vector<MatchRegister>& all_regs_for_this_group) const {
+        calc_reg_slices_for_use(const Use* use,
+                                const std::vector<MatchRegister>& group_regs) const {
             std::vector<std::pair<MatchRegister, nw_bitrange>> reg_slices;
 
-            nw_bitrange group_range = source();
-            nw_bitrange select_range = unresolved.source();
+            auto def_states = get_def_states();
+            auto state = def_states.at(0);  // pick first state as representative
+
+            nw_bitrange group_range = get_range(state);
+            nw_bitrange select_range = use_def.get_def(use, state)->rval->range;
 
             int group_start_bit_in_regs = group_range.lo % 8;
             int select_start_bit_in_regs = group_start_bit_in_regs +
@@ -96,7 +538,7 @@ class ComputeSaveAndSelect: public ParserInspector {
                                                      select_range.size()));
 
             int curr_reg_start = 0;
-            for (auto& reg : all_regs_for_this_group) {
+            for (auto& reg : group_regs) {
                 int reg_size_in_bit = reg.size * 8;
 
                 nw_bitrange curr_reg_range(StartLen(curr_reg_start, reg_size_in_bit));
@@ -114,553 +556,461 @@ class ComputeSaveAndSelect: public ParserInspector {
             return reg_slices;
         }
 
-        const std::vector<UnresolvedSelect>& members() const { return _members; }
-
-        nw_bitrange source() const {
-            nw_bitrange rv(INT_MAX, INT_MIN);
-
-            for (auto& unresolved : members()) {
-                auto source = unresolved.source();
-                rv = rv.unionWith(source);
+        std::string print() const {
+            std::stringstream ss;
+            ss << "{ ";
+            for (auto u : members) {
+                ss << u->print() << " ";
             }
-            return rv;
-        }
-
-        static bool can_join(const UnresolvedSelect& a, const UnresolvedSelect& b) {
-            nw_bitrange srca = a.source();
-            nw_bitrange srcb = b.source();
-            return (srca.hi + 1) == srcb.lo;
-        }
-
-        bool contains(const UnresolvedSelect& a) const {
-            for (auto& unresolved : members()) {
-                if (a.select == unresolved.select)
-                    return true;
-            }
-            return false;
-        }
-
-        bool join(const UnresolvedSelect& unresolved) {
-            if (members().empty() || contains(unresolved) ||
-                can_join(last(), unresolved)) {
-                _members.push_back(unresolved);
-                return true;
-            }
-
-            return false;
-        }
-
-        UnresolvedSelect& last() {
-            return _members.back();
-        }
-
-        void debug_print() const {
-            if (LOGGING(4))
-                for (auto& s : members())
-                    LOG4(s.to_string());
+            ss << "}";
+            return ss.str();
         }
     };
 
-    profile_t init_apply(const IR::Node* root) override {
-        state_unresolved_selects.clear();
-        unprocessed_states.clear();
-        transition_saves.clear();
-        select_groups.clear();
-        select_reg_slices.clear();
-        additional_states.clear();
-        return Inspector::init_apply(root);
+ private:
+    const IR::Node *apply_visitor(const IR::Node *root, const char *) override {
+        for (auto& kv : parser_use_def)
+            allocate(kv.first, kv.second);
+
+        return root;
     }
 
-    void postorder(const State* state) override {
-        LOG4(">> Inserting Saves on " << state->name);
-        // Mark state_unresolved_selects for this state
-        for (const auto* select : state->selects) {
-            if (auto* computed = select->source->to<IR::BFN::ComputedRVal>()) {
-                LOG3("Select on multi-defined rvalue: " << select);
-                for (auto& def : multiDefValues.at(computed)) {
-                    LOG3("  ..Defined at : " << def.state->name << ", " << def.rval);
-                    state_unresolved_selects[state].push_back(
-                            UnresolvedSelect(select, 0, { }, def));
-                }
-            } else {
-                state_unresolved_selects[state].push_back(
-                        UnresolvedSelect(select, 0, { }));
-            }
-        }
+    bool have_same_use_def_states(const UseDef& parser_use_def,
+                                  const Use* a, const Use* b) {
+        if (a->state != b->state)
+            return false;
 
-        unprocessed_states.insert(state);
-        calcSaves(state);
-    }
+        auto a_defs = parser_use_def.use_to_defs.at(a);
+        auto b_defs = parser_use_def.use_to_defs.at(b);
 
-    /// For all unresolved selects that reach this point, separate out selects
-    /// that should be processed in this state and those should be processed in an earlier state.
-    /// Unresolved selects are sorted by whether has decided register, then the size of select.
-    void calcUnresolvedSelects(
-            std::vector<UnresolvedSelect>& unresolved_selects,
-            std::vector<UnresolvedSelect>& early_state_extracted,
-            const std::map<const StateSelect*, nw_bitrange>& corrected_source,
-            const State* state,
-            const State* next_state,
-            unsigned shift_bytes) {
-        for (const auto& unresolved : calcUnresolvedSelects(next_state, shift_bytes)) {
-            // Wrongly trace-backd select, ignored.
-            if (corrected_source.count(unresolved.select)
-                && unresolved.source() != corrected_source.at(unresolved.select)) {
-                continue; }
-            if (unresolved.isExtractedEarlier(state)) {
-                early_state_extracted.push_back(unresolved);
-            } else {
-                unresolved_selects.push_back(unresolved);
-            }
-        }
-        // Sorted by whether has decided register, the size of select.
-        std::sort(unresolved_selects.begin(), unresolved_selects.end(),
-             [&] (const UnresolvedSelect& l, const UnresolvedSelect& r) {
-                 if (select_groups.count(l.select) && select_groups.count(r.select)) {
-                     auto count_l = select_reg_slices.count(l.select);
-                     auto count_r = select_reg_slices.count(r.select);
+        if (a_defs.size() != b_defs.size())
+            return false;
 
-                     if (count_l != count_r)
-                         return count_l > count_r;
-                 }
+        for (auto a_def : a_defs) {
+            bool found = false;
 
-                 return l.source().size() < r.source().size();
-             });
-    }
-
-    /// @returns a vector of all match resigers sorted by size, increasing.
-    std::vector<MatchRegister> getMatchRegistersSortedBySize() {
-        auto registers = Device::pardeSpec().matchRegisters();
-        std::sort(registers.begin(), registers.end(),
-                  [] (const MatchRegister& a, const MatchRegister& b) {
-                      return a.size < b.size; });
-        return registers;
-    }
-
-    /// For byte @p i on the input buffer, find a match register that already saved
-    /// byte i in, and valid for @p unresolved.
-    boost::optional<MatchRegister>
-    findSavedRegForByte(
-            int i,
-            const UnresolvedSelectGroup* unresolved_group,
-            const std::map<nw_byterange, MatchRegister>& saved_range,
-            const std::map<const StateSelect*, std::set<MatchRegister>>& used_by_other_path) {
-        for (int reg_size : {1, 2}) {
-            nw_byterange reg_range = nw_byterange(StartLen(i, reg_size));
-            if (saved_range.count(reg_range)) {
-                auto& reg = saved_range.at(reg_range);
-                // If this reg is used by others, we can not reuse it's result.
-                bool used_by_others = false;
-                for (auto& unresolved : unresolved_group->members()) {
-                    if (used_by_other_path.count(unresolved.select)
-                        && used_by_other_path.at(unresolved.select).count(reg)) {
-                        used_by_others = true;
-                        break;
-                    }
-                }
-                if (used_by_others)
-                    continue;
-
-                return reg;
-            }
-        }
-        return boost::none;
-    }
-
-    /// Return a vector of match registers that address the @p unresolved.
-    boost::optional<std::vector<MatchRegister>>
-    allocMatchRegisterForSelectGroup(
-            const UnresolvedSelectGroup* unresolved_group,
-            const std::map<nw_byterange, MatchRegister>& saved_range,
-            const std::set<MatchRegister>& used_registers,
-            const std::map<const StateSelect*, std::set<MatchRegister>>& used_by_other_path) {
-        for (auto& unresolved : unresolved_group->members()) {
-            auto select = unresolved.select;
-            auto select_group = select_groups.at(select);
-
-            if (select_group_registers.count(select_group)) {
-                // If the select has already be set by other branch,
-                // this branch need to follow it's decision.
-                // already saved in this state.
-                auto& regs = select_group_registers.at(select_group);
-
-                bool has_conflict =
-                    std::any_of(regs.begin(), regs.end(), [&] (const MatchRegister& r) -> bool {
-                        return unresolved.used_by_others.count(r); });
-                if (!has_conflict) {
-                    return regs;
-                } else {
-                    ::error("Cannot allocate parser match register for %1%.\n"
-                            "Consider shrinking the live range of select fields or reducing the"
-                            " number of select fields that are being matched in the same state"
-                            , select);
-                }
-                return boost::none;
-            }
-        }
-
-        // TODO(yumin):
-        // We should have an algorithm that minimizes the use the
-        // register, e.g. use half to cover two small field,
-        // instead of this naive one.
-        std::vector<MatchRegister> accumulated_regs;
-        std::set<MatchRegister> in_candidates;
-
-        // calculate which regs to use for each byte.
-        nw_byterange source = unresolved_group->source().toUnit<RangeUnit::Byte>();
-
-        for (int i = source.loByte(); i <= source.hiByte();) {
-            auto already_save_in =
-                findSavedRegForByte(i, unresolved_group, saved_range, used_by_other_path);
-
-            if (already_save_in) {
-                LOG4("re-used " << *already_save_in << " because byte " << i << " are shared");
-                accumulated_regs.push_back(*already_save_in);
-                i += (*already_save_in).size;
-                continue;
-            }
-
-            bool found_reg_for_this_byte = false;
-            for (auto& reg : getMatchRegistersSortedBySize()) {
-                if (in_candidates.count(reg))
-                    continue;
-
-                if (used_registers.count(reg))
-                    continue;
-
-                bool reg_already_used = false;
-                for (auto& unresolved : unresolved_group->members()) {
-                    if (unresolved.used_by_others.count(reg)) {
-                        reg_already_used = true;
-                        break;
-                    }
-                    if (used_by_other_path.count(unresolved.select)
-                        && used_by_other_path.at(unresolved.select).count(reg)) {
-                        reg_already_used = true;
-                        break;
-                    }
-                }
-                if (reg_already_used)
-                    continue;
-
-                accumulated_regs.push_back(reg);
-                i += reg.size;
-                found_reg_for_this_byte = true;
-                in_candidates.insert(reg);
-                break;
-            }
-
-            if (!found_reg_for_this_byte) {
-                LOG3("Can not find match register for byte " << i << " for:");
-                unresolved_group->debug_print();
-                return boost::none;
-            }
-        }
-        return accumulated_regs;
-    }
-
-    std::vector<UnresolvedSelectGroup*>
-    packUnresolvedSelects(const std::vector<UnresolvedSelect>& unresolved_selects) {
-        std::vector<UnresolvedSelectGroup*> packed_groups;
-
-        for (auto& unresolved : unresolved_selects) {
-            bool foundUnion = false;
-
-            for (auto& group : packed_groups) {
-                foundUnion = group->join(unresolved);
-
-                if (foundUnion) {
-                    select_groups[unresolved.select] = group;
+            for (auto b_def : b_defs) {
+                if (a_def->state->name == b_def->state->name) {
+                    found = true;
                     break;
                 }
             }
 
-            if (!foundUnion) {
-                auto* new_group = new UnresolvedSelectGroup;
-                new_group->join(unresolved);
-                select_groups[unresolved.select] = new_group;
-                packed_groups.push_back(new_group);
-            }
+            if (!found) return false;
         }
 
-        auto sort_by_group_size = [&](UnresolvedSelectGroup* l, UnresolvedSelectGroup* r) {
-            return l->source().size() < r->source().size();
-        };
-
-        std::sort(packed_groups.begin(), packed_groups.end(), sort_by_group_size);
-
-        if (LOGGING(4)) {
-            LOG4("Created " << packed_groups.size() << " unresolved select groups");
-            for (auto group : packed_groups)
-                group->debug_print();
-        }
-
-        return packed_groups;
-    }
-
-    void calcSaves(const State* state) {
-        // For multi-def sources, we need to calculate the corrected_source and used_regs
-        // across different branches.
-        std::map<const StateSelect*, nw_bitrange> corrected_source;
-        std::map<const StateSelect*, std::set<MatchRegister>> used_by_other_path;
-
-        calcCorrectSourceAndUsedReg(state, corrected_source, used_by_other_path);
-
-        // For each transition branch, calculate the saves and corresponding select.
-        for (const auto* transition : state->transitions) {
-            BUG_CHECK(transition->shift, "State %1% has unset shift?", state->name);
-            BUG_CHECK(*transition->shift >= 0, "State %1% has negative shift %2%?",
-                      state->name, *transition->shift);
-            if (!transition->next) {
-                continue; }
-
-            auto next_state = transition->next;
-            unprocessed_states.erase(next_state);
-            LOG4("For transition to: " << next_state->name);
-
-            // Get unresolved selects by merge all child state's unresolved selects.
-            std::vector<UnresolvedSelect> unresolved_selects;
-            std::vector<UnresolvedSelect> early_state_extracted;
-
-            calcUnresolvedSelects(unresolved_selects,
-                                  early_state_extracted,
-                                  corrected_source,
-                                  state,
-                                  next_state,
-                                  *(transition->shift));
-
-            auto packed_unresolved_selects = packUnresolvedSelects(unresolved_selects);
-
-            // Mapping input buffer to a register that save it.
-            std::map<nw_byterange, MatchRegister> saved_range;
-            std::set<MatchRegister> used_registers;
-            std::set<const StateSelect*> resolved_in_this_transition;
-
-            for (auto unresolved_group : packed_unresolved_selects) {
-                auto reg_choice = allocMatchRegisterForSelectGroup(
-                        unresolved_group, saved_range, used_registers, used_by_other_path);
-                // Cannot find a register or the found one has been used
-                // by downstream states because of brother's decision.
-                if (!reg_choice) {
-                    // throw error message saying that it's impossible.
-                    ::error("Ran out of parser match registers for transition %1%", transition);
-                    return;
-                }
-
-                if (LOGGING(4)) {
-                    for (const auto& reg : *reg_choice) {
-                        LOG4("Assign: " << reg << " to");
-                        for (auto& unresolved : unresolved_group->members())
-                            LOG4("  " << unresolved.select->p4Source);
-
-                        LOG4("From: " << state->name << " to " << next_state->name);
-                    }
-                }
-
-                // Assign registers and update match_saves
-                nw_byterange source = unresolved_group->source().toUnit<RangeUnit::Byte>();
-                nw_byterange save_range_itr = source;
-
-                for (const auto& r : *reg_choice) {
-                    nw_byterange range_of_this_register = save_range_itr.resizedToBytes(r.size);
-                    if (!saved_range.count(range_of_this_register)) {
-                        transition_saves[transition].push_back(
-                                new IR::BFN::SaveToRegister(r, range_of_this_register));
-                        saved_range[range_of_this_register] = r;
-                    }
-                    save_range_itr = save_range_itr.shiftedByBytes(r.size);
-                }
-
-                for (auto& unresolved : unresolved_group->members())
-                    resolved_in_this_transition.insert(unresolved.select);
-
-                unsigned total_bits_in_regs = 0;
-
-                for (auto& unresolved : unresolved_group->members()) {
-                    auto reg_slices = unresolved_group->calc_reg_slices_for_select(unresolved,
-                                                                           *reg_choice);
-                    for (auto rs : reg_slices)
-                        total_bits_in_regs += rs.second.size();
-
-                    select_reg_slices[unresolved.select] = reg_slices;
-                }
-
-                select_group_registers[unresolved_group] = *reg_choice;
-                used_registers.insert((*reg_choice).begin(), (*reg_choice).end());
-            }
-
-            // If there are remaining selects that need to be extracted in an earlier state,
-            // update the used registers on this transition.
-            // Note that, though registers used in this state will 'start to live' in the next
-            // state, it should be added because those remaining_unresolved selects 'start to live'
-            // in next state as well.
-            for (const auto& remaining_unresolved : early_state_extracted) {
-                // If the select is resolved in this state, parent defs go over this state
-                // does not need to be saved, like the W => W => R situation.
-                if (resolved_in_this_transition.count(remaining_unresolved.select))
-                    continue;
-
-                auto unresolved = remaining_unresolved;
-
-                for (auto r : used_registers)
-                    unresolved.used_by_others.insert(r);
-
-                state_unresolved_selects[state].push_back(unresolved);
-                LOG5("Add Unresolved in `" << state->name << "` " << unresolved.select);
-            }
-        }  // for transition
-    }
-
-    void end_apply() override {
-        // Add all unresolved select to a dummy state.
-        auto unprocessed_copy = unprocessed_states;
-        for (const auto* state : unprocessed_copy) {
-            auto gress = state->thread();
-            BUG_CHECK(additional_states.count(gress) == 0,
-                      "More than one start state for init parser match word on %1%", gress);
-            auto* transition = new IR::BFN::Transition(match_t(), 0, state);
-            auto* init_state = new IR::BFN::ParserState(
-                    createThreadName(gress, "$_save_init_state"), gress, { }, { }, { transition });
-            calcSaves(init_state);
-            if (transition_saves.count(transition)
-                && transition_saves[transition].size() > 0) {
-                additional_states[gress] = init_state; }
-        }
-        BUG_CHECK(unprocessed_states.size() == 0,
-                  "Unprocessed states remaining");
-    }
-
-    /// @returns all unresolved select from @p next_state.
-    std::vector<UnresolvedSelect>
-    calcUnresolvedSelects(const State* next_state, unsigned shift_bytes) {
-        // For the state_unresolved_selects from children state,
-        // The range in this state used to save should be range + shift.
-        std::vector<UnresolvedSelect> rst;
-        for (const auto& s : state_unresolved_selects[next_state]) {
-            UnresolvedSelect for_this_state(s);
-            for_this_state.byte_shifted += shift_bytes;
-            rst.push_back(for_this_state);
-        }
-
-        // sort selects based on position in input buffer
-        std::sort(rst.begin(), rst.end());
-
-        return rst;
-    }
-
-    /// For this @p state, what is the correct source for those computed value
-    /// and for those source, what are match registers that have beeen used.
-    void
-    calcCorrectSourceAndUsedReg(
-            const State* state,
-            std::map<const StateSelect*, nw_bitrange>& corrected_source,
-            std::map<const StateSelect*, std::set<MatchRegister>>& used_regs) {
-        // Count all selects.
-        std::map<std::pair<const StateSelect*, nw_bitrange>, int> select_count;
-        ordered_set<const StateSelect*> selects;
-        for (const auto* transition : state->transitions) {
-            BUG_CHECK(transition->shift, "State %1% has unset shift?", state->name);
-            BUG_CHECK(*transition->shift >= 0, "State %1% has negative shift %2%?",
-                      state->name, *transition->shift);
-
-            auto next_state = transition->next;
-            unsigned shift_bytes = *transition->shift;
-            if (!next_state) continue;
-
-            // Get unresolved selects by merge all child state's unresolved selects.
-            auto unresolved_selects = calcUnresolvedSelects(next_state, shift_bytes);
-            for (const auto& select : unresolved_selects) {
-                if (select.isExtractedEarlier(state)) continue;
-                selects.insert(select.select);
-                select_count[{select.select, select.source()}]++; }
-        }
-
-        // Find out selects that show up more than once, calculate right source.
-        ordered_map<const StateSelect*, nw_bitrange> temp_corrected_source;
-        for (const auto* select : selects) {
-            int max_count = -1;
-            for (const auto& kv : select_count) {
-            LOG5("Select-Count: " << kv.first.first << " on "
-                 << kv.first.second << " c: " << kv.second);
-                if (kv.second <= 1) continue;
-                if (select != kv.first.first) continue;
-                if (kv.second > max_count) {
-                    temp_corrected_source[select] = kv.first.second;
-                    max_count = kv.second;
-                    LOG5("Corrected Souce of `" << select << "` ..is.. " << kv.first.second);
-                }
-            }
-        }
-
-        for (const auto& kv : temp_corrected_source) {
-            const auto* select_use = kv.first;
-            auto& source = kv.second;
-
-            BUG_CHECK(corrected_source.count(select_use)
-                      ? corrected_source.at(select_use) == source : true,
-                      "Parser bug in calculating source for: %1%", select_use->p4Source);
-            corrected_source[select_use] = source;
-
-            // Merge all used register set.
-            for (const auto* transition : state->transitions) {
-                if (!transition->next)
-                    continue;
-                auto* next_state = transition->next;
-                unsigned shift_bytes = *(transition->shift);
-                auto unresolved_selects = calcUnresolvedSelects(next_state, shift_bytes);
-
-                for (const auto& select : unresolved_selects) {
-                    if (select.select == select_use && source == select.source()) {
-                        used_regs[select_use].insert(select.used_by_others.begin(),
-                                                     select.used_by_others.end()); } }
-            }
-        }
-    }
-
-    // For unresolved computed values.
-    const ParserValueResolution& multiDefValues;
-    std::map<const State*, std::vector<UnresolvedSelect>> state_unresolved_selects;
-    ordered_set<const State*> unprocessed_states;
-
- public:
-    explicit ComputeSaveAndSelect(const ParserValueResolution& m)
-        : multiDefValues(m) { }
-
- public:
-    // The saves need to be executed on this transition.
-    std::map<const StateTransition*, std::vector<const IR::BFN::SaveToRegister*>> transition_saves;
-
-    // select to group it belongs to
-    std::map<const StateSelect*, const UnresolvedSelectGroup*> select_groups;
-
-    // The register slices that this select should match against.
-    std::map<const IR::BFN::Select*,
-             std::vector<std::pair<MatchRegister, nw_bitrange>>> select_reg_slices;
-
-    // The registers that this select group should match against.
-    std::map<const UnresolvedSelectGroup*, std::vector<MatchRegister>> select_group_registers;
-
-    // The additional state that should be prepended to the start state
-    // to generate save for the select on the first state.
-    std::map<gress_t, IR::BFN::ParserState*> additional_states;
-};
-
-struct WriteBackSaveAndSelect : public ParserModifier {
-    explicit WriteBackSaveAndSelect(const ComputeSaveAndSelect& saves)
-        : rst(saves) { }
-
-    bool preorder(IR::BFN::Parser* parser) override {
-        auto gress = parser->gress;
-        if (rst.additional_states.count(gress) > 0) {
-            parser->start = rst.additional_states.at(gress); }
         return true;
     }
+
+    /// sort uses by their position in the input buffer
+    void sort_use_group(std::vector<const Use*>& group,
+                           const UseDef& use_def) {
+        std::stable_sort(group.begin(), group.end(),
+            [&use_def] (const Use* a, const Use* b) {
+                int a_min, b_min;
+                a_min = b_min = Device::pardeSpec().byteInputBufferSize() * 8;
+
+                for (auto def : use_def.use_to_defs.at(a))
+                    a_min = std::min(a_min, def->rval->range.lo);
+
+                for (auto def : use_def.use_to_defs.at(b))
+                    b_min = std::min(b_min, def->rval->range.lo);
+
+                return a_min < b_min;
+            });
+    }
+
+    std::vector<UseGroup*>
+    coalesce_group(const std::vector<const Use*>& group,
+                   const IR::BFN::Parser* parser,
+                   const UseDef& use_def) {
+        std::vector<UseGroup*> coalesced;
+
+        for (auto select : group) {
+            bool joined = false;
+
+            for (auto coal : coalesced) {
+                if (coal->join(select)) {
+                    joined = true;
+                    break;
+                }
+            }
+
+            if (!joined) {
+                auto coal = new UseGroup(use_def);
+                coal->join(select);
+                coalesced.push_back(coal);
+            }
+        }
+
+        auto& graph = parser_info.graph(parser);
+
+        for (auto coal : coalesced)
+            coal->compute_def_transitions(graph);
+
+        return coalesced;
+    }
+
+    // Before the register allocation, perform coalescing of select fields
+    // so that each coalesced group will be considered as a single allocation unit.
+    //
+    // We can coalesce selects if they
+    //   1. have the same use state
+    //   2. have the same set of def states
+    //   3. rvals can be coalesced (from contiguous packet bytes)
+    std::vector<const UseGroup*>
+    coalesce_uses(const IR::BFN::Parser* parser, const UseDef& use_def) {
+        std::vector<std::vector<const Use*>> use_groups;
+
+        // let's first group by condition 1 & 2
+
+        for (auto& kv : use_def.use_to_defs) {
+            bool joined = false;
+
+            for (auto& group : use_groups) {
+                auto leader = *group.begin();
+
+                if (have_same_use_def_states(use_def, kv.first, leader)) {
+                    group.push_back(kv.first);
+                    joined = true;
+                    break;
+                }
+            }
+
+            if (!joined)
+                use_groups.push_back({kv.first});
+        }
+
+        // now coalesce by condition 3
+
+        std::vector<const UseGroup*> coalesced;
+
+        for (auto& group : use_groups) {
+            sort_use_group(group, use_def);
+
+            auto coals = coalesce_group(group, parser, use_def);
+
+            for (auto& coal : coals)
+                coalesced.push_back(coal);
+        }
+
+        // TODO finally, sort group based on size, live range
+
+        if (LOGGING(2)) {
+            std::clog << "created " << coalesced.size()
+                      << " coalesced groups:" << std::endl;
+
+            unsigned id = 0;
+
+            for (auto coal : coalesced) {
+                std::clog << "group " << id++ << ": ";
+                std::clog << coal->print() << std::endl;
+            }
+        }
+
+        return coalesced;
+    }
+
+    bool is_ancestor(const IR::BFN::ParserGraph& graph,
+                     const IR::BFN::Transition* x_def,
+                     const IR::BFN::ParserState* y_use) {
+        return x_def->next == y_use || graph.is_ancestor(x_def->next, y_use);
+    }
+
+    /// returns true if x's defs intersects y's (def,use)
+    bool overlap(const IR::BFN::ParserGraph& graph,
+                 const UseGroup* x, const UseGroup* y) {
+        auto x_defs = x->get_def_transitions();
+
+        auto y_use = y->get_use_state();
+        auto y_defs = y->get_def_transitions();
+
+        auto same_defs = x->have_same_defs(y);
+
+        for (auto x_def : x_defs) {
+            if (is_ancestor(graph, x_def, y_use)) {
+                for (auto y_def : y_defs) {
+                    if (!same_defs) {
+                        auto x_def_src = graph.get_src(x_def);
+                        if (x_def == y_def || is_ancestor(graph, y_def, x_def_src))
+                            return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /// returns true if a and b's live range intersection is not null
+    bool interfere(const IR::BFN::ParserGraph& graph,
+                   const UseGroup* a, const UseGroup* b) {
+        if (overlap(graph, a, b))
+            return true;
+
+        if (overlap(graph, b, a))
+            return true;
+
+        return false;
+    }
+
+    std::vector<MatchRegister>
+    get_available_regs(const ordered_set<MatchRegister>& used) {
+        std::vector<MatchRegister> avail;
+
+        for (auto reg : Device::pardeSpec().matchRegisters()) {
+            if (!used.count(reg))
+                avail.push_back(reg);
+        }
+
+        return avail;
+    }
+
+    /// Given a set of available registers to the group, choose a
+    /// set of registers that will cover all select fields.
+    std::vector<MatchRegister>
+    allocate(const UseGroup* group, std::vector<MatchRegister> avail_regs) {
+        auto select_bytes = group->bytes_in_group;
+
+        unsigned total_reg_bytes = 0;
+        for (auto reg : avail_regs)
+            total_reg_bytes += reg.size;
+
+        if (select_bytes > total_reg_bytes)  // not enough registers, bail
+            return {};
+
+        // try allocating in ascending order of container size
+        std::vector<MatchRegister> alloc_ascend;
+        unsigned reg_bytes_ascend = 0;
+
+        for (auto reg : avail_regs) {
+            if (reg_bytes_ascend >= select_bytes)
+                break;
+
+            alloc_ascend.push_back(reg);
+            reg_bytes_ascend += reg.size;
+        }
+
+        // now try allocating in descending order of container size
+        std::reverse(avail_regs.begin(), avail_regs.end());
+
+        std::vector<MatchRegister> alloc_descend;
+        unsigned reg_bytes_descend = 0;
+
+        for (auto reg : avail_regs) {
+            if (reg_bytes_descend >= select_bytes)
+                break;
+
+            alloc_descend.push_back(reg);
+            reg_bytes_descend += reg.size;
+        }
+
+        // pick better alloc of the two (first fit ascending vs. descending)
+        if (reg_bytes_ascend < reg_bytes_descend)
+            return alloc_ascend;
+
+        if (reg_bytes_descend < reg_bytes_ascend)
+            return alloc_descend;
+
+        if (alloc_ascend.size() < alloc_descend.size())
+            return alloc_ascend;
+
+        if (alloc_descend.size() < alloc_ascend.size())
+            return alloc_descend;
+
+        return alloc_descend;
+    }
+
+    /// Success is not final, failure is fatal.
+    void fail(const UseGroup* group) {
+        std::stringstream avail;
+
+        avail << "Total available parser match registers on the device are: ";
+
+        if (Device::currentDevice() == Device::TOFINO)
+            avail << "1x16b, 2x8b.";
+        else if (Device::currentDevice() == Device::JBAY)
+            avail << "4x8b.";
+        else
+            BUG("Unknown device");
+
+        std::stringstream hint;
+
+        hint << "Consider shrinking the live range of select fields or reducing the";
+        hint << " number of select fields that are being matched in the same state.";
+
+        ::fatal_error("Ran out of parser match registers for %1%.\n%2% %3%",
+                       group->print(), avail.str(), hint.str());
+    }
+
+    /// Bind the allocation results to the group. Also create the
+    /// match register read and write intructions which will be
+    /// inserted into the IR by the subsequent InsertSaveAndSelect pass.
+    void save_result(const IR::BFN::Parser* parser, const UseGroup* group,
+                     const std::vector<MatchRegister>& alloc_regs) {
+         auto& graph = parser_info.graph(parser);
+
+        // def
+        for (auto transition : group->get_def_transitions()) {
+            auto src_state = graph.get_src(transition);
+            auto def_state = group->get_def_state(transition);
+
+            nw_byterange group_range = group->get_range(def_state).toUnit<RangeUnit::Byte>();
+
+            if (src_state != def_state) {
+                BUG_CHECK(transition->next == def_state, "whoa");
+                auto shift = *(transition->shift);
+                group_range = group_range.shiftedByBytes(shift);
+            }
+
+            unsigned bytes = 0;
+
+            for (auto& reg : alloc_regs) {
+                unsigned lo = group_range.lo + bytes;
+                nw_byterange reg_range(lo, lo + reg.size - 1);
+
+                BUG_CHECK(reg_range.size() <= reg.size,
+                           "saved bits greater than register size?");
+
+                // The state splitter should have split the states such that the branch
+                // word is withtin current state. This is the pre-condition of this pass.
+                BUG_CHECK(reg_range.lo >= 0 &&
+                          reg_range.hi <= Device::pardeSpec().byteInputBufferSize(),
+                          "branch word out of current input buffer!");
+
+                auto save = new IR::BFN::SaveToRegister(reg, reg_range);
+
+                bool saved = false;
+                for (auto s : transition_saves[transition]) {
+                    if (save->equiv(*s)) {
+                        saved = true;
+                        break;
+                    }
+                }
+
+                if (!saved)
+                    transition_saves[transition].push_back(save);
+
+                bytes += reg.size;
+            }
+        }
+
+        // use
+        for (auto use : group->members) {
+            auto reg_slices = group->calc_reg_slices_for_use(use, alloc_regs);
+
+            if (select_reg_slices.count(use->select)) {
+                bool eq = equiv(select_reg_slices.at(use->select), reg_slices);
+
+                BUG_CHECK(eq, "select has different allocations based on the use context: %1%",
+                          use->print());
+
+                // XXX(zma) This check is really an aritificial constraint; We can
+                // of course give different allocations based on the context (use state).
+                // The thing is I'm not really sure how the subsequent Modifier can
+                // perform a context based revisit on the IR::BFN::Select node.
+            } else {
+                select_reg_slices[use->select] = reg_slices;
+            }
+        }
+    }
+
+    /// This is the core allocation routine. The basic idea to use two select
+    /// groups' interference relationship to determine whether they can be
+    /// allocated to the same set of registers.
+    void allocate(const IR::BFN::Parser* parser, const UseDef& use_def) {
+        auto coalesced_groups = coalesce_uses(parser, use_def);
+
+        auto& graph = parser_info.graph(parser);
+
+        std::map<const UseGroup*, std::vector<MatchRegister>> group_to_alloc_regs;
+
+        for (auto group : coalesced_groups) {
+            try {
+                std::vector<MatchRegister> alloc_regs;
+
+                ordered_set<MatchRegister> cannot_alloc_regs;
+
+                for (auto& gr : group_to_alloc_regs) {
+                    if (interfere(graph, group, gr.first)) {
+                        for (auto& r : gr.second)
+                            cannot_alloc_regs.insert(r);
+
+                        LOG3("group " << group->print() << " interferes with "
+                                      << gr.first->print());
+                    }
+                }
+
+                auto avail_regs = get_available_regs(cannot_alloc_regs);
+
+                if (avail_regs.empty()) fail(group);
+
+                for (auto& gr : group_to_alloc_regs) {
+                    if (group->have_same_defs(gr.first)) {
+                        auto theirs = group_to_alloc_regs.at(gr.first);
+
+                        bool can_reuse = true;
+
+                        for (auto& reg : theirs) {
+                            if (std::find(avail_regs.begin(), avail_regs.end(), reg)
+                                          == avail_regs.end()) {
+                                can_reuse = false;
+                                break;
+                            }
+                        }
+
+                        if (can_reuse) {
+                            alloc_regs = theirs;
+
+                            LOG3("group " << group->print() << " can share regs with "
+                                          << gr.first->print());
+
+                            break;
+                        }
+                    }
+                }
+
+                if (alloc_regs.empty())
+                    alloc_regs = allocate(group, avail_regs);
+
+                if (alloc_regs.empty()) fail(group);
+
+                group_to_alloc_regs[group] = alloc_regs;  // success
+
+                save_result(parser, group, alloc_regs);
+
+                if (LOGGING(1)) {
+                    std::clog << "allocated { ";
+                    for (auto& reg : alloc_regs) std::clog << "$" << reg.name << " ";
+                    std::clog << "} to " << group->print() << std::endl;
+                }
+            } catch (const Util::CompilerBug &e) {
+                std::stringstream ss;
+                ss << "An error occured while the compiler was allocating parser match";
+                ss << " registers for " << group->print() << ".";  // sorry
+                BUG("%1%", ss.str());
+            }
+        }
+    }
+};
+
+/// Insert match register read/write instruction in the IR
+struct InsertSaveAndSelect : public ParserModifier {
+    explicit InsertSaveAndSelect(const MatcherAllocator& saves)
+        : rst(saves) { }
 
     void postorder(IR::BFN::Transition* transition) override {
         auto* original_transition = getOriginal<IR::BFN::Transition>();
         if (rst.transition_saves.count(original_transition)) {
             for (const auto* save : rst.transition_saves.at(original_transition)) {
-                transition->saves.push_back(save); }
+                transition->saves.push_back(save);
+                auto state = findContext<IR::BFN::ParserState>();
+
+                BUG_CHECK(transition->next, "insert save on transition to <end>?");
+
+                LOG4("insert " << save << " on " << state->name << " -> "
+                               << transition->next->name);
+            }
         }
     }
 
@@ -671,11 +1021,11 @@ struct WriteBackSaveAndSelect : public ParserModifier {
         }
     }
 
-    const ComputeSaveAndSelect& rst;
+    const MatcherAllocator& rst;
 };
 
-/** A helper class for adjusting match value.
- */
+/// Adjust the match constant according to the select field's
+/// alignment in the match register(s)
 class MatchRegisterLayout {
  private:
     std::vector<MatchRegister> all_regs;
@@ -836,8 +1186,8 @@ struct AdjustMatchValue : public ParserModifier {
                 nw_bitrange field_slice(StartLen(field_start, reg_slice.size()));
                 adjusted->mapping[{field_name, field_slice}] =  {reg, reg_slice};
 
-                LOG3("PVS add mapping: " << field_name << field_slice << " -> "
-                     << reg << reg_slice);
+                LOG2("add PVS mapping: " << field_name << field_slice << " -> "
+                     << reg << " : " << reg_slice);
 
                 field_start += field_slice.size();
             }
@@ -850,20 +1200,26 @@ struct AdjustMatchValue : public ParserModifier {
 struct CheckAllocation : public Inspector {
     bool preorder(const IR::BFN::Select* select) override {
         BUG_CHECK(select->reg_slices.size() > 0,
-            "Parser match register not allocated for %1%", select);
+            "Parser match register not allocated for %1%", select->p4Source);
         return false;
     }
 };
 
-AllocateParserMatchRegisters::AllocateParserMatchRegisters(
-    const ParserValueResolution& multiDefValues) {
-    auto* computeSaveAndSelect = new ComputeSaveAndSelect(multiDefValues);
+AllocateParserMatchRegisters::AllocateParserMatchRegisters(const PhvInfo& phv) {
+    auto* parserInfo = new CollectParserInfo;
+    auto* collectUseDef = new CollectUseDef(phv, *parserInfo);
+    auto* allocator = new MatcherAllocator(*parserInfo, collectUseDef->parser_use_def);
+
     addPasses({
-        LOGGING(3) ? new DumpParser("before_parser_match_alloc") : nullptr,
-        computeSaveAndSelect,
-        new WriteBackSaveAndSelect(*computeSaveAndSelect),
+        LOGGING(4) ? new DumpParser("before_parser_match_alloc") : nullptr,
+        new ResolveOutOfBufferSelects,
+        LOGGING(4) ? new DumpParser("after_resolve_oob_selects") : nullptr,
+        parserInfo,
+        collectUseDef,
+        allocator,
+        new InsertSaveAndSelect(*allocator),
         new AdjustMatchValue,
         new CheckAllocation,
-        LOGGING(3) ? new DumpParser("after_parser_match_alloc") : nullptr,
+        LOGGING(4) ? new DumpParser("after_parser_match_alloc") : nullptr
     });
 }

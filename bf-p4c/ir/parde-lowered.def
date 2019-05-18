@@ -30,9 +30,6 @@ abstract LoweredInputBufferRVal : LoweredParserRVal {
     /// @return this buffer range as a half-open range of bytes in network order.
     nw_byteinterval byteInterval() const { return toHalfOpenRange(range); }
 
-    /// @return this buffer range as a closed range of bytes in network order.
-    nw_byterange extractedBytes() const { return range; }
-
     /// The region represented by this `LoweredInputBufferRVal`, expressed as a
     /// range of bytes in network order.
     nw_byterange range;
@@ -43,7 +40,7 @@ abstract LoweredInputBufferRVal : LoweredParserRVal {
 // details about the coordinate system.
 class LoweredPacketRVal : LoweredInputBufferRVal {
     dbprint {
-        out << "packet bytes " << byteInterval();
+        out << "inbuf " << range;
     }
 }
 
@@ -52,7 +49,7 @@ class LoweredPacketRVal : LoweredInputBufferRVal {
 /// @see BufferRVal for more details about the coordinate system.
 class LoweredMetadataRVal : LoweredInputBufferRVal {
     dbprint {
-        out << "buffer bytes " << byteInterval();
+        out << "inbuf(metadata) " << range;
     }
 }
 
@@ -76,8 +73,6 @@ class LoweredExtractPhv : LoweredParserPrimitive {
     LoweredExtractPhv(Util::SourceInfo si, PHV::Container dest,
                    const LoweredParserRVal* source)
       : LoweredParserPrimitive(si), source(source), dest(new BFN::ContainerRef(dest)) { }
-    LoweredExtractPhv(const LoweredParserRVal* source)
-      : source(source), dest(nullptr) { }
 #end
 
     dbprint { out << "extract " << source << " to " << dest; }
@@ -89,9 +84,6 @@ class LoweredExtractPhv : LoweredParserPrimitive {
     /// The PHV container this extract writes to.
     BFN::ContainerRef dest;
 
-    /// The final amount (in bytes) to add to header length
-    int hdrLenIncStop = -1;
-
 #emit
     /// Debugging information about the high-level operations that are
     /// implemented by this low-level extract.
@@ -100,15 +92,10 @@ class LoweredExtractPhv : LoweredParserPrimitive {
 }
 
 class LoweredExtractClot : LoweredParserPrimitive {
-#emit
-    LoweredExtractClot(Clot dest, const LoweredPacketRVal* source)
-      : source(source), dest(dest) { }
-    LoweredExtractClot(Util::SourceInfo si, Clot dest,
-                   const LoweredPacketRVal* source)
-      : LoweredParserPrimitive(si), source(source), dest(dest) { }
-#end
-
     dbprint { out << "extract " << source << " to " << dest; }
+
+    /// Indicates that this is the first extract into the CLOT
+    bool is_start;
 
     /// The location that will be read from.
     LoweredPacketRVal source;
@@ -235,6 +222,9 @@ class LoweredParserMatch {
 
     /// Number of bytes to shift out of input buffer at current state
     unsigned shift;
+
+    /// Final amount to add to header length
+    optional boost::optional<unsigned> hdrLenIncFinalAmt;
 
     /// Extractions to perform
     inline Vector<LoweredParserPrimitive> extracts;

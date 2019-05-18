@@ -1,0 +1,994 @@
+#include "split_parser_state.h"
+#include "bf-p4c/parde/parde_utils.h"
+
+class DumpSplitStates : public DotDumper {
+ public:
+    explicit DumpSplitStates(cstring filename) : DotDumper(filename, true) {
+        out.str(std::string());
+        out << "digraph states { " << std::endl;
+    }
+
+    ~DumpSplitStates() { done(); }
+
+    // call this in gdb to dump the graph till current iteration
+    void done() {
+        out << "}" << std::endl;
+
+        if (cid > 1 && LOGGING(4)) {  // only dump if state gets split
+            if (auto fs = open_file(INGRESS, 0, "debug/split_parser_state"))
+                write_to_file(fs);
+        }
+    }
+
+    unsigned cid = 0;
+    std::string prev_tail;
+
+    void add_cluster(std::vector<const IR::BFN::ParserState*> states) {
+        cluster_name = "cluster_" + std::to_string(cid) + "_";
+
+        out << "subgraph cluster_"  << cid << " {" << std::endl;
+        out << "label=\"iteration " << cid << "\"";
+        out << "size=\"8,5\"" << std::endl;
+
+        gress_t gress;
+
+        for (auto s : states) {
+            dump(s);
+            gress = s->thread();
+        }
+
+        for (auto s : states) {
+            for (auto t : s->transitions) {
+                out << to_label("State", s) << " -> ";
+                if (t->next)
+                    out << to_label("State", t->next);
+                else
+                    out << to_label(::toString(gress) + "_pipe");
+
+                out << " [ ";
+                dump(t);
+                out << " ]" << std::endl;
+            }
+        }
+
+        out << "}" << std::endl;
+
+        if (!prev_tail.empty()) {
+            out << prev_tail << " -> " << to_label("State", states.front());
+            out << " [ color=\"red\" ]";
+            out << std::endl;
+        }
+
+        prev_tail =  to_label("State", states.back());
+
+        cluster_name = "";
+        cid++;
+    }
+};
+
+/// Slice extract into multiple extracts if the extract destination is
+/// allocated across multiple PHV containers. This is a preparation of
+/// the subsequent state splitting pass, where we may need to allocate
+/// the sliced extracts into different states (this is the case when
+/// field straddles the input buffer boundary).
+struct SliceExtracts : public ParserModifier {
+    const PhvInfo& phv;
+    const ClotInfo& clot;
+
+    SliceExtracts(const PhvInfo& phv, const ClotInfo& clot) : phv(phv), clot(clot) { }
+
+    const IR::BFN::Extract*
+    make_slice(const IR::BFN::Extract* extract, const PHV::Field::alloc_slice& alloc_slice) {
+        auto slice_lo = alloc_slice.field_bit;
+        auto slice_hi = slice_lo + alloc_slice.width - 1;
+
+        auto dest = extract->dest->field;
+        auto dest_slice = new IR::Slice(dest, slice_hi, slice_lo);
+        auto dest_slice_lval = new IR::BFN::FieldLVal(dest_slice);
+
+        IR::BFN::ParserRVal* src_slice = nullptr;
+
+        if (auto src = extract->source->to<IR::BFN::InputBufferRVal>()) {
+            auto src_hi = src->range.hi - slice_lo;
+            auto src_lo = src_hi - alloc_slice.width + 1;
+
+            if (src->is<IR::BFN::PacketRVal>())
+                src_slice = new IR::BFN::PacketRVal(nw_bitrange(src_lo, src_hi));
+            else if (src->is<IR::BFN::MetadataRVal>())
+                src_slice = new IR::BFN::MetadataRVal(nw_bitrange(src_lo, src_hi));
+            else
+                BUG("expect source to be from input buffer");
+        } else if (auto c = extract->source->to<IR::BFN::ConstantRVal>()) {
+            auto const_slice = *(c->constant) >> slice_lo;
+            const_slice = const_slice & IR::Constant::GetMask(alloc_slice.width);
+
+            BUG_CHECK(const_slice.fitsUint(), "Constant slice larger than 32-bit?");
+
+            if (const_slice.asUnsigned())
+                src_slice = new IR::BFN::ConstantRVal(IR::Type::Bits::get(alloc_slice.width),
+                                                      const_slice.asUnsigned());
+            else
+                return nullptr;
+        } else {
+            BUG("unknown extract source");
+        }
+
+        auto sliced_extract = new IR::BFN::Extract(dest_slice_lval, src_slice);
+        return sliced_extract;
+    }
+
+    std::vector<const IR::BFN::Extract*>
+    slice_extract(const IR::BFN::Extract* extract,
+                  const std::vector<PHV::Field::alloc_slice>& alloc_slices) {
+        std::vector<const IR::BFN::Extract*> rv;
+
+        for (auto slice : alloc_slices) {
+             if (auto sliced = make_slice(extract, slice))
+                 rv.push_back(sliced);
+        }
+
+        return rv;
+    }
+
+    bool preorder(IR::BFN::ParserState* state) override {
+        IR::Vector<IR::BFN::ParserPrimitive> new_statements;
+
+        for (auto stmt : state->statements) {
+            if (auto extract = stmt->to<IR::BFN::Extract>()) {
+                auto alloc_slices = phv.get_alloc(extract->dest->field);
+
+                if (!alloc_slices.empty() && alloc_slices.size() > 1) {
+                    LOG4("rewrite " << extract << " as:");
+
+                    auto sliced = slice_extract(extract, alloc_slices);
+
+                    for (auto sl : sliced) {
+                        new_statements.push_back(sl);
+                        LOG4(sl);
+                    }
+
+                    continue;
+                }
+            }
+
+            new_statements.push_back(stmt);
+        }
+
+        state->statements = new_statements;
+
+        SortExtracts sort(state);
+
+        return true;
+    }
+};
+
+static boost::optional<int> get_state_shift(const IR::BFN::ParserState* state) {
+    boost::optional<int> state_shift;
+
+    for (unsigned i = 0; i < state->transitions.size(); i++) {
+        auto t = state->transitions[i];
+
+        if (i == 0)
+            state_shift = t->shift;
+        else
+            BUG_CHECK(state_shift == t->shift, "Inconsistent shifts in %1%", state->name);
+    }
+
+    return state_shift;
+}
+
+struct AllocateParserState : public ParserTransform {
+    const PhvInfo& phv;
+    ClotInfo& clot;
+
+    AllocateParserState(const PhvInfo& phv, ClotInfo& clot) :
+        phv(phv), clot(clot) { }
+
+    class ParserStateAllocator {
+        struct HasPacketRVal : Inspector {
+            bool rv = false;
+
+            bool preorder(const IR::BFN::PacketRVal*) override {
+                rv = true;
+                return false;
+            }
+        };
+
+        void sort_state_primitives() {
+            for (auto p : state->statements) {
+                if (auto e = p->to<IR::BFN::Extract>())
+                    extracts.push_back(e);
+                else if (auto c = p->to<IR::BFN::ParserChecksumPrimitive>())
+                    checksums.push_back(c);
+                else
+                    others.push_back(p);
+            }
+        }
+
+        struct OutOfBuffer : Inspector {
+            bool lo = false, hi = false;
+
+            bool preorder(const IR::BFN::PacketRVal* rval) override {
+                auto max = Device::pardeSpec().byteInputBufferSize() * 8;
+                hi |= rval->range.hi >= max;
+                lo |= rval->range.lo >= max;
+                return false;
+            }
+        };
+
+        template <typename T>
+        static bool out_of_buffer(const T* p) {
+            OutOfBuffer oob;
+            p->apply(oob);
+            return oob.lo;
+        }
+
+        template <typename T>
+        static bool straddles_buffer(const T* p) {
+            OutOfBuffer oob;
+            p->apply(oob);
+            return !oob.lo && oob.hi;
+        }
+
+        template <typename T>
+        static bool within_buffer(const T* p) {
+            OutOfBuffer oob;
+            p->apply(oob);
+            return !oob.hi;
+        }
+
+        struct Allocator {
+            ParserStateAllocator& sa;
+
+            IR::Vector<IR::BFN::ParserPrimitive> current, spilled;
+
+            explicit Allocator(ParserStateAllocator& sa) : sa(sa) { }
+
+            virtual void allocate() = 0;
+
+            void add_to_result() {
+                for (auto c : current)
+                    sa.current_statements.push_back(c);
+
+                for (auto s : spilled)
+                    sa.spilled_statements.push_back(s);
+            }
+        };
+
+        struct ExtractAllocator : Allocator {
+            ordered_map<PHV::Container,
+                        ordered_set<const IR::BFN::Extract*>> container_to_extracts;
+
+            ordered_map<Clot*,
+                        ordered_set<const IR::BFN::Extract*>> clot_to_extracts;
+
+            virtual
+            std::pair<size_t, unsigned>
+            inbuf_extractor_use(size_t container_size) = 0;
+
+            virtual
+            std::pair<size_t, unsigned>
+            constant_extractor_use(uint32_t value, size_t container_size) = 0;
+
+            boost::optional<std::pair<size_t, unsigned>>
+            constant_extractor_needed(PHV::Container container,
+                             const ordered_set<const IR::BFN::Extract*>& extracts) {
+                boost::optional<std::pair<size_t, unsigned>> rv;
+
+                unsigned c = merge_const_source(extracts);
+                if (c) {
+                    rv = constant_extractor_use(c, container.size());
+                }
+
+                return rv;
+            }
+
+            std::map<size_t, unsigned>
+            total_extractor_needed(PHV::Container container,
+                             const ordered_set<const IR::BFN::Extract*>& extracts) {
+                std::map<size_t, unsigned> rv;
+
+                if (has_inbuf_extract(extracts)) {
+                    auto iu = inbuf_extractor_use(container.size());
+                    rv.insert(iu);
+                }
+
+                auto cu = constant_extractor_needed(container, extracts);
+
+                if (cu) {
+                    if (rv.count((*cu).first))
+                        rv[(*cu).first] += (*cu).second;
+                    else
+                        rv.insert((*cu));
+                }
+
+                return rv;
+            }
+
+            bool has_inbuf_extract(const ordered_set<const IR::BFN::Extract*>& extracts) {
+                for (auto e : extracts) {
+                    if (e->source->is<IR::BFN::InputBufferRVal>())
+                        return true;
+                }
+                return false;
+            }
+
+            unsigned
+            merge_const_source(const ordered_set<const IR::BFN::Extract*>& extracts) {
+                unsigned merged = 0;
+
+                for (auto e : extracts) {
+                    if (auto c = e->source->to<IR::BFN::ConstantRVal>()) {
+                        if (!c->constant->fitsUint())
+                            BUG("large constants should have already been sliced");
+
+                        auto alloc_slices = sa.phv.get_alloc(e->dest->field);
+
+                        BUG_CHECK(alloc_slices.size() == 1,
+                            "extract allocator expects dest to be individual slice");
+
+                        merged |= c->constant->asUnsigned();
+                    }
+                }
+
+                return merged;
+            }
+
+            void allocate() override {
+                std::map<size_t, unsigned> extractors_by_size;
+
+                unsigned constants = 0;
+
+                // reserve extractor for checksum verification
+                for (auto c : sa.current_statements) {
+                    if (auto v = c->to<IR::BFN::ChecksumVerify>()) {
+                        if (v->dest) {
+                            auto f = sa.phv.field(v->dest->field);
+                            auto alloc_slices = sa.phv.get_alloc(f, nullptr);  // XXX(zma)
+
+                            BUG_CHECK(alloc_slices.size() == 1,
+                                "extract allocator expects dest to be individual slice");
+
+                            auto slice = alloc_slices[0];
+                            auto container = slice.container;
+
+                            BUG_CHECK(container.size() != 32,
+                                      "checksum verification cannot be 32-bit container");
+
+                            extractors_by_size[container.size()]++;
+
+                            LOG2("reversed " << container.size()
+                                             << "b extractor for checksum verification");
+                        }
+                    }
+                }
+
+                for (auto& kv : container_to_extracts) {
+                    auto container = kv.first;
+                    auto& extracts = kv.second;
+
+                    auto needed = total_extractor_needed(container, extracts);
+
+                    auto cu = constant_extractor_needed(container, extracts);
+
+                    bool extractor_avail = true;
+
+                    for (auto& kv : needed) {
+                        auto avail = Device::pardeSpec().extractorSpec().at(kv.first);
+
+                        if (extractors_by_size[kv.first] + kv.second > avail) {
+                            extractor_avail = false;
+
+                            for (auto e : extracts) {
+                                LOG3("spill " << e << " (ran out of " << kv.first
+                                              << "b extractors in " << sa.state->name << ")");
+                            }
+
+                            break;
+                        }
+                    }
+
+                    bool constant_avail = true;
+
+                    if (Device::currentDevice() == Device::JBAY && cu) {
+                        BUG_CHECK((*cu).first == 16, "non 16-bit constant extract?");
+                        constant_avail = (*cu).second + constants <= 2;
+                    }
+
+                    bool oob = false;
+
+                    if (extractor_avail && constant_avail) {
+                        for (auto e : extracts) {
+                            if (out_of_buffer(e) || straddles_buffer(e)) {
+                                oob = true;
+                                LOG3("spill " << e << " (out of buffer)");
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!oob && extractor_avail && constant_avail) {
+                        // allocate
+                        for (auto e : extracts)
+                            current.push_back(e);
+
+                        for (auto& kv : needed)
+                            extractors_by_size[kv.first] += kv.second;
+
+                        if (cu)
+                            constants += (*cu).second;
+                    } else {
+                        // spill
+                        for (auto e : extracts)
+                            spilled.push_back(e);
+                    }
+                }
+            }
+
+            explicit ExtractAllocator(ParserStateAllocator& sa) : Allocator(sa) {
+                for (auto e : sa.extracts) {
+                    auto alloc_slices = sa.phv.get_alloc(e->dest->field);
+
+                    if (!alloc_slices.empty()) {
+                        BUG_CHECK(alloc_slices.size() == 1,
+                            "extract allocator expects dest to be individual slice");
+
+                        auto slice = alloc_slices[0];
+                        auto container = slice.container;
+
+                        container_to_extracts[container].insert(e);
+                    }
+                }
+            }
+        };
+
+        class TofinoExtractAllocator : public ExtractAllocator {
+            size_t get_constant_extractor_size(uint32_t value, uint32_t n_set_range) {
+                size_t n_needed = 0;
+                while (value) {
+                    if (value & 1) {
+                        n_needed++;
+                        value >>= n_set_range;
+                    } else {
+                        value >>= 1; } }
+                return n_needed;
+            }
+
+            size_t get_constant_extractor_size(uint32_t value, PHV::Size sz) {
+                if (sz == PHV::Size::b8) {
+                    return get_constant_extractor_size(value, 8);
+                } else if (sz == PHV::Size::b16) {
+                    return get_constant_extractor_size(value, 4);
+                } else if (sz == PHV::Size::b32) {
+                    return get_constant_extractor_size(value, 3);
+                } else {
+                    BUG("unexpected container size: %1%", sz);
+                    return 0;
+                }
+            }
+
+            std::pair<size_t, unsigned>
+            constant_extractor_use(uint32_t value, size_t container_size) override {
+                for (const auto sz : { PHV::Size::b32, PHV::Size::b16, PHV::Size::b8}) {
+                    // can not use larger extractor on smaller container;
+                    if (container_size < size_t(sz)) {
+                        continue; }
+
+                    size_t n = get_constant_extractor_size(value, sz);
+                    if (container_size == size_t(sz) && n > 1) {
+                        continue;
+                    } else {
+                        if (n > container_size / unsigned(sz)) {
+                            continue; }
+                        return {size_t(sz), container_size / unsigned(sz)}; }
+                }
+                BUG("Impossible constant value write in parser: %1%", value);
+            }
+
+            std::pair<size_t, unsigned>
+            inbuf_extractor_use(size_t container_size) override {
+                return {container_size, 1};
+            }
+
+         public:
+            explicit TofinoExtractAllocator(ParserStateAllocator& sa) : ExtractAllocator(sa) {
+                allocate();
+                add_to_result();
+            }
+        };
+
+        class JBayExtractAllocator : public ExtractAllocator {
+            std::pair<size_t, unsigned>
+            constant_extractor_use(uint32_t value, size_t container_size) override {
+                if (container_size == size_t(PHV::Size::b32))
+                    return {16, bool(value & 0xffff) + bool(value >> 16)};
+                else
+                    return {16 , 1};
+            }
+
+            std::pair<size_t, unsigned>
+            inbuf_extractor_use(size_t container_size) override {
+                return {16, container_size == 32 ? 2 : 1};
+            }
+
+         public:
+            explicit JBayExtractAllocator(ParserStateAllocator& sa) : ExtractAllocator(sa) {
+                allocate();
+                add_to_result();
+            }
+        };
+
+        struct ClipHi : Modifier {
+            bool preorder(IR::BFN::PacketRVal* rval) override {
+                rval->range.hi = Device::pardeSpec().byteInputBufferSize() * 8 - 1;
+                return false;
+            }
+        };
+
+        struct ClipLo : Modifier {
+            bool preorder(IR::BFN::PacketRVal* rval) override {
+                rval->range.lo = Device::pardeSpec().byteInputBufferSize() * 8;
+                return false;
+            }
+        };
+
+        struct ChecksumAllocator : Allocator {
+            std::pair<const IR::BFN::ParserPrimitive*,
+                      const IR::BFN::ParserPrimitive*>
+            slice_by_buffer(const IR::BFN::ParserPrimitive* c) {
+                BUG_CHECK(c->is<IR::BFN::ChecksumAdd>() ||
+                          c->is<IR::BFN::ChecksumSubtract>(),
+                         "unexpected checksum primitive %1%", c);
+
+                auto current = c->apply(ClipHi());
+                auto spilled = c->apply(ClipLo());
+
+                return {current->to<IR::BFN::ParserPrimitive>(),
+                        spilled->to<IR::BFN::ParserPrimitive>()};
+            }
+
+            void allocate() override {
+                std::map<cstring,
+                         std::vector<const IR::BFN::ParserChecksumPrimitive*>> decl_to_checksums;
+
+                for (auto c : sa.checksums)
+                    decl_to_checksums[c->declName].push_back(c);
+
+                for (auto& kv : decl_to_checksums) {
+                    for (auto c : kv.second) {
+                        if (within_buffer(c)) {
+                            current.push_back(c);
+                        } else if (out_of_buffer(c)) {
+                            spilled.push_back(c);
+                            LOG3("spill " << c << " (out of buffer)");
+                        } else if (straddles_buffer(c)) {
+                            auto sliced = slice_by_buffer(c);
+                            current.push_back(sliced.first);
+                            spilled.push_back(sliced.second);
+                            LOG3("spill " << c << " (straddles buffer)");
+                        }
+                    }
+                }
+            }
+
+            explicit ChecksumAllocator(ParserStateAllocator& sa) : Allocator(sa) {
+                allocate();
+                add_to_result();
+            }
+        };
+
+        struct ClotAllocator : Allocator {
+            const IR::BFN::Extract*
+            create_extract(const IR::BFN::FieldLVal* dest, const IR::BFN::PacketRVal* rval) {
+                return new IR::BFN::Extract(dest, rval);
+            }
+
+            const IR::BFN::FieldLVal*
+            slice_dest(const IR::BFN::Extract* extract, int slice_hi, int slice_lo) {
+                auto dest = extract->dest->field;
+                auto dest_slice = new IR::Slice(dest, slice_hi, slice_lo);
+                auto dest_slice_lval = new IR::BFN::FieldLVal(dest_slice);
+                return dest_slice_lval;
+            }
+
+            std::pair<const IR::BFN::Extract*,
+                      const IR::BFN::Extract*>
+            slice_by_buffer(const IR::BFN::Extract* extract) {
+                auto rval = extract->source->to<IR::BFN::PacketRVal>();
+
+                BUG_CHECK(rval, "unexpected source type for CLOT extract %1%", extract);
+
+                auto field_size = rval->range.size();
+
+                auto current_slice_size = 256 - rval->range.lo;
+
+                auto current =
+                    create_extract(slice_dest(extract, field_size - 1, current_slice_size),
+                                              rval->apply(ClipHi())->to<IR::BFN::PacketRVal>());
+
+                auto spilled = create_extract(slice_dest(extract, current_slice_size - 1, 0),
+                                              rval->apply(ClipLo())->to<IR::BFN::PacketRVal>());
+
+                return {current, spilled};
+            }
+
+            void allocate() override {
+                ordered_map<Clot*,
+                        ordered_set<const IR::BFN::Extract*>> clot_to_extracts;
+
+                for (auto e : sa.extracts) {
+                    auto alloc_slices = sa.phv.get_alloc(e->dest->field);
+
+                    if (alloc_slices.empty()) {
+                        auto field = sa.phv.field(e->dest->field);
+                        auto c = sa.clot.clot(field);
+                        BUG_CHECK(c, "%1% has no allocation?", field);
+                        clot_to_extracts[c].insert(e);
+                    }
+                }
+
+                unsigned allocated_in_state = 0;
+
+                for (auto& kv : clot_to_extracts) {
+                    if (allocated_in_state < Device::pardeSpec().maxClotsPerState()) {
+                        bool allocated = false;
+
+                        for (auto e : kv.second) {
+                            if (out_of_buffer(e)) {
+                                spilled.push_back(e);
+                                LOG3("spill " << e << " (out of buffer)");
+                            } else if (within_buffer(e)) {
+                                current.push_back(e);
+                                allocated = true;
+                            } else if (straddles_buffer(e)) {
+                                auto sliced = slice_by_buffer(e);
+                                current.push_back(sliced.first);
+                                spilled.push_back(sliced.second);
+                                allocated = true;
+                            }
+                        }
+
+                        if (allocated)
+                            allocated_in_state++;
+                    } else {
+                        for (auto e : kv.second)
+                            spilled.push_back(e);
+                    }
+                }
+            };
+
+            explicit ClotAllocator(ParserStateAllocator& sa) : Allocator(sa) {
+                allocate();
+                add_to_result();
+            }
+        };
+
+        void allocate() {
+            sort_state_primitives();
+
+            ChecksumAllocator ca(*this);
+
+            if (Device::currentDevice() == Device::TOFINO) {
+                TofinoExtractAllocator tea(*this);
+            } else if (Device::currentDevice() == Device::JBAY) {
+                JBayExtractAllocator jea(*this);
+                ClotAllocator cla(*this);
+            } else {
+                BUG("Unknown device");
+            }
+
+            for (auto o : others) {
+                if (within_buffer(o)) {
+                    current_statements.push_back(o);
+                } else {
+                    spilled_statements.push_back(o);
+                    LOG3("spill " << o << " (out of buffer)");
+                }
+            }
+
+            bool select_oob = false;
+
+            // If any of the selects is oob, we need to spill all selects
+            for (auto s : state->selects) {
+                if (!within_buffer(s)) {
+                    LOG3(state->name << " has out of buffer select");
+                    select_oob = true;
+                    break;
+                }
+            }
+
+            if (select_oob)
+                spill_selects = true;
+        }
+
+        struct GetMinExtractBufferPos : Inspector {
+            const PhvInfo& phv;
+
+            int rv = Device::pardeSpec().byteInputBufferSize() * 8;
+
+            explicit GetMinExtractBufferPos(const PhvInfo& phv) : phv(phv) { }
+
+            bool preorder(const IR::BFN::Extract* extract) override {
+                if (auto rval = extract->source->to<IR::BFN::InputBufferRVal>()) {
+                    auto alloc_slices = phv.get_alloc(extract->dest->field);
+
+                    if (!alloc_slices.empty()) {
+                        BUG_CHECK(alloc_slices.size() == 1,
+                          "extract allocator expects dest to be individual slice");
+
+                        auto slice = alloc_slices[0];
+
+                        const nw_bitrange container_range =
+                          slice.container_bits().toOrder<Endian::Network>(slice.container.size());
+
+                        const nw_bitrange buffer_range =
+                          rval->range.shiftedByBits(-container_range.lo)
+                                     .resizedToBits(slice.container.size());
+
+                        rv = std::min(rv, buffer_range.lo);
+                    }
+                }
+
+                return false;
+            }
+        };
+
+     public:
+        int compute_max_shift_in_bits() {
+            GetMinBufferPos min_statements;
+            spilled_statements.apply(min_statements);
+
+            auto shift = min_statements.rv;
+
+            GetMinExtractBufferPos min_extracts(phv);
+            spilled_statements.apply(min_extracts);
+
+            shift = std::min(shift, min_extracts.rv);
+
+            auto state_shift = get_state_shift(state);
+
+            if (state_shift)
+                shift = std::min(shift, (*state_shift * 8));
+
+            BUG_CHECK(shift >= 0, "Computed negative shift");
+
+            shift = (shift / 8) * 8;  // rval may not be byte-aligned, e.g. metadata
+
+            shift = std::min(shift, Device::pardeSpec().byteInputBufferSize() * 8);
+
+            return shift;
+        }
+
+        ParserStateAllocator(const IR::BFN::ParserState* s,
+                             const PhvInfo& phv, ClotInfo& clot) :
+                state(s), phv(phv), clot(clot) {
+            allocate();
+        }
+
+        const IR::BFN::ParserState* state;
+
+        const PhvInfo& phv;
+        ClotInfo& clot;
+
+        std::vector<const IR::BFN::Extract*> extracts;
+        std::vector<const IR::BFN::ParserChecksumPrimitive*> checksums;
+        std::vector<const IR::BFN::ParserPrimitive*> others;
+
+        IR::Vector<IR::BFN::ParserPrimitive> current_statements, spilled_statements;
+        bool spill_selects = false;
+    };
+
+    class ParserStateSplitter {
+        const PhvInfo& phv;
+        ClotInfo& clot;
+
+        DumpSplitStates dbg;
+
+     public:
+        ParserStateSplitter(const PhvInfo& phv, ClotInfo& clot,
+                            IR::BFN::ParserState* state) :
+                phv(phv), clot(clot), dbg(state->name) {
+            dbg.add_cluster({state});
+
+            auto splits = split_parser_state(state, state->name, 0);
+            splits.insert(splits.begin(), state);
+
+            if (splits.size() > 1 && LOGGING(1)) {
+                std::clog << state->name << " is split into "
+                          << splits.size() << " states:" << std::endl;
+
+                for (auto s : splits)
+                    std::clog << "  " << s->name << std::endl;
+            }
+        }
+
+     private:
+        IR::BFN::Transition*
+        shift_transition(const IR::BFN::Transition* t, int shift_amt) {
+             BUG_CHECK(shift_amt % 8 == 0, "Shift amount not byte-aligned?");
+             BUG_CHECK(t->shift, "Transition %1% has no shift?", t);
+
+             auto c = t->clone();
+
+             auto new_shift = *(t->shift) - shift_amt / 8;
+             BUG_CHECK(new_shift >= 0, "Transition shifted to be negative?");
+
+             c->shift = new_shift;
+             c->saves = *(c->saves.apply(ShiftPacketRVal(shift_amt)));
+
+             return c;
+        }
+
+        IR::BFN::ParserState*
+        create_split_state(const IR::BFN::ParserState* state, cstring prefix, unsigned iteration) {
+            cstring split_name = prefix + ".$split_" + cstring::to_cstring(iteration);
+            auto split = new IR::BFN::ParserState(state->p4State, split_name, state->gress);
+
+            LOG2("created split state " << split);
+            return split;
+        }
+
+        class VerifySplitStates {
+            IR::BFN::ParserState* orig = nullptr;
+
+         public:
+            explicit VerifySplitStates(const IR::BFN::ParserState* o) {
+                orig = o->clone();
+            }
+
+            void check_sanity(const IR::BFN::ParserState* o,
+                              const IR::BFN::ParserState* s) {
+                BUG_CHECK(orig && o && s, "uh-oh");
+
+                if (!o->selects.empty() && !s->selects.empty())
+                    BUG("Selects not in one state?");
+
+                if (!o->selects.empty()) {
+                    BUG_CHECK(o->selects.size() == orig->selects.size(),
+                              "Select don't add up after split");
+                }
+
+                if (!s->selects.empty()) {
+                    BUG_CHECK(s->selects.size() == orig->selects.size(),
+                              "Select don't add up after split");
+                }
+
+                auto orig_shift = get_state_shift(orig);
+
+                auto o_shift = get_state_shift(o);
+                auto s_shift = get_state_shift(s);
+
+                int total_shift = 0;
+
+                if (o_shift) total_shift += *o_shift;
+                if (s_shift) total_shift += *s_shift;
+
+                if (orig_shift)
+                    BUG_CHECK(*orig_shift == total_shift, "Shifts don't add up after split");
+            }
+        };
+
+        IR::BFN::ParserState* insert_stall_if_needed(IR::BFN::ParserState* state) {
+            auto shift = get_state_shift(state);
+
+            if (!shift || *shift <= Device::pardeSpec().byteInputBufferSize())
+                return nullptr;
+
+            cstring name = state->name + ".$stall";
+            auto stall = new IR::BFN::ParserState(state->p4State, name, state->gress);
+
+            auto stall_amt = Device::pardeSpec().byteInputBufferSize();
+            auto new_shift = *shift - Device::pardeSpec().byteInputBufferSize();
+
+            IR::Vector<IR::BFN::Transition> new_transitions;
+
+            for (auto t : state->transitions) {
+                auto c = t->clone();
+                c->shift = boost::make_optional(new_shift);
+                new_transitions.push_back(c);
+            }
+
+            stall->transitions = new_transitions;
+            auto to_stall = new IR::BFN::Transition(match_t(), stall_amt, stall);
+            state->transitions = {to_stall};
+
+            return stall;
+        }
+
+        std::vector<IR::BFN::ParserState*>
+        split_parser_state(IR::BFN::ParserState* state, cstring prefix, unsigned iteration) {
+            ParserStateAllocator alloc(state, phv, clot);
+
+            if (alloc.spilled_statements.empty() && !alloc.spill_selects) {
+                LOG3("no need to split " << state->name << " (nothing spilled)");
+
+                // need to insert stall if next state is not reachable from current state
+                // (if the shift is greater than input buffer size)
+                if (auto stall = insert_stall_if_needed(state)) {
+                    LOG2("inserted stall after " << state->name);
+                    return {stall};
+                } else {
+                    return {};
+                }
+            }
+
+            VerifySplitStates verify(state);
+
+            auto split = create_split_state(state, prefix, iteration);
+
+            auto max_shift = alloc.compute_max_shift_in_bits();
+
+            LOG3("computed max shift = " << max_shift << " for split iteration "
+                  << iteration << " of " << state->name);
+
+            state->statements = alloc.current_statements;
+            split->statements = *(alloc.spilled_statements.apply(ShiftPacketRVal(max_shift)));
+
+            split->selects = *(state->selects.apply(ShiftPacketRVal(max_shift, true)));
+            state->selects = {};
+
+            // move state's transitions to split state
+            for (auto t : state->transitions) {
+                auto shifted = shift_transition(t, max_shift);
+                split->transitions.push_back(shifted);
+            }
+
+            auto to_split = new IR::BFN::Transition(match_t(), max_shift / 8, split);
+            state->transitions = {to_split};
+
+            // add to step dot dump
+            dbg.add_cluster({state, split});
+
+            // verify this iteration
+            verify.check_sanity(state, split);
+
+            // recurse
+            auto splits = split_parser_state(split, prefix, ++iteration);
+            splits.insert(splits.begin(), split);
+
+            return splits;
+        }
+    };
+
+    IR::BFN::ParserState* postorder(IR::BFN::ParserState* state) override {
+        try {
+            ParserStateSplitter(phv, clot, state);
+        } catch (const Util::CompilerBug &e) {
+            std::string workaround =
+                "As a workaround, try applying @pragma critical on the parser state. "
+                "The compiler will optimize the extractor usage of the state so that "
+                "splitting may not be needed.";
+
+            BUG("An error occured while the compiler was splitting parser state %1%. \n%2%",
+                state->name, workaround);
+        }
+
+        return state;
+    }
+};
+
+/// If after state splitting, the transition to end of parsing has shift more
+/// than 32 byte (input buffer size), we can safely clip the shift amout to
+/// 32 as the remaining amount will not contribute to header length.
+struct ClipTerminalTransition : ParserModifier {
+    bool preorder(IR::BFN::Transition* t) {
+        if (t->next == nullptr &&
+            *(t->shift) > Device::pardeSpec().byteInputBufferSize()) {
+            t->shift = boost::make_optional(Device::pardeSpec().byteInputBufferSize());
+        }
+
+        return true;
+    }
+};
+
+SplitParserState::SplitParserState(const PhvInfo& phv, ClotInfo& clot) {
+    addPasses({
+        LOGGING(4) ? new DumpParser("before_split_parser_states") : nullptr,
+        new SliceExtracts(phv, clot),
+        LOGGING(4) ? new DumpParser("after_slice_extracts") : nullptr,
+        new AllocateParserState(phv, clot),
+        LOGGING(4) ? new DumpParser("after_alloc_state_prims") : nullptr,
+        new ClipTerminalTransition,
+        LOGGING(4) ? new DumpParser("after_split_parser_states") : nullptr
+    });
+}

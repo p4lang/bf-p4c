@@ -988,7 +988,7 @@ struct ComputeFieldAlignments : public Inspector {
 
         // The alignment required for a parsed field is determined by the
         // position from which it's read from the wire.
-        const auto extractedBits = bufferSource->range();
+        const auto extractedBits = bufferSource->range;
         const auto alignment = FieldAlignment(extractedBits);
         LOG3("A. Updating alignment of " << fieldInfo->name << " to " << alignment);
         fieldInfo->updateAlignment(alignment);

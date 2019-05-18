@@ -1050,18 +1050,29 @@ class PhvInfo {
         return field(name);
     }
 
-    std::vector<PHV::Field::alloc_slice> get_alloc(const IR::Expression* f) const {
+    std::vector<PHV::Field::alloc_slice>
+    get_alloc(const IR::Expression* f) const {
         CHECK_NULL(f);
-        auto* phv_field = field(f);
+        le_bitrange bits;
+        auto* phv_field = field(f, &bits);
         BUG_CHECK(phv_field, "No PHV field for expression %1%", f);
-        return get_alloc(phv_field);
+        return get_alloc(phv_field, &bits);
     }
 
-    std::vector<PHV::Field::alloc_slice> get_alloc(const PHV::Field* phv_field) const {
+    std::vector<PHV::Field::alloc_slice>
+    get_alloc(const PHV::Field* phv_field, le_bitrange* bits = nullptr) const {
         std::vector<PHV::Field::alloc_slice> slices;
 
         phv_field->foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
-            slices.push_back(alloc);
+            if (bits) {
+                auto alloc_lo = alloc.field_bit;
+                auto alloc_hi = alloc_lo + alloc.width - 1;
+
+                if (alloc_lo <= bits->hi && alloc_hi >= bits->lo)
+                    slices.push_back(alloc);
+            } else {
+                slices.push_back(alloc);
+            }
         });
 
         return slices;

@@ -100,6 +100,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
     phvLoggingInfo = new CollectPhvLoggingInfo(phv, uses);
     addPasses({
         new DumpPipe("Initial table graph"),
+        LOGGING(4) ? new DumpParser("begin_backend") : nullptr,
         new CreateThreadLocalInstances,
         new CheckForUnimplementedFeatures(),
         new RemoveEmptyControls,

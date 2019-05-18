@@ -11,16 +11,11 @@
 namespace IR {
 namespace BFN {
 class ParserState;
-} }
+}
+}
 
 namespace PHV {
 class Field;
-}
-
-namespace IR {
-namespace BFN {
-class ParserState;
-}
 }
 
 class cstring;
@@ -61,7 +56,7 @@ class Clot {
     /// The gress to which this CLOT is assigned.
     gress_t gress;
 
-    unsigned start = 0;  // start byte offset, relative to the parser state
+    unsigned length_in_byte() const;
 
     /// Returns the bit offset of a field within this CLOT.
     unsigned bit_offset(const PHV::Field* f) const;
@@ -76,6 +71,8 @@ class Clot {
     bool is_csum_field(const PHV::Field* f) const;
 
     bool has_field(const PHV::Field* f) const;
+
+    bool is_first_field_in_clot(const PHV::Field* f) const;
 
     /// Trims this CLOT so it only contains a subsequence of fields. @arg start_idx and @arg
     /// end_idx are indices into @ref all_fields, specifying the closed interval of fields that

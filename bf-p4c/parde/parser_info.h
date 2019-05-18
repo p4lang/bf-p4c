@@ -71,22 +71,21 @@ class ParserGraphImpl : public DirectedGraph {
     const ParserStateMap<State>& predecessors() const { return _preds; }
 
     const std::map<const State*,
-                   const Transition*>& to_pipe() const { return _to_pipe; }
+                   std::set<const Transition*>>& to_pipe() const { return _to_pipe; }
 
-    const Transition*
-    transition(const State* src,
-               const State* dst) const {
+    std::set<const Transition*>
+    transitions(const State* src, const State* dst) const {
         if (_transitions.count({src, dst}))
             return _transitions.at({src, dst});
 
-        return nullptr;
+        return {};
     }
 
-    const Transition* to_pipe(const State* src) const {
+    std::set<const Transition*> to_pipe(const State* src) const {
         if (_to_pipe.count(src))
             return _to_pipe.at(src);
 
-        return nullptr;
+        return {};
     }
 
  private:
@@ -149,6 +148,14 @@ class ParserGraphImpl : public DirectedGraph {
         return longest_path_impl(src, path_map);
     }
 
+    const IR::BFN::ParserState* get_src(const IR::BFN::Transition* t) const {
+        for (auto& kv : _transitions) {
+            if (kv.second.count(t))
+                return kv.first.first;
+        }
+        return nullptr;
+    }
+
  private:
     std::vector<const State*> longest_path_impl(const State* src,
             std::map<const State*, std::vector<const State*>>& path_map) const {
@@ -197,10 +204,10 @@ class ParserGraphImpl : public DirectedGraph {
             add_state(t->next);
             _succs[state].insert(t->next);
             _preds[t->next].insert(state);
-            _transitions[{state, t->next}] = t;
+            _transitions[{state, t->next}].insert(t);
         } else {
             add_state(state);
-            _to_pipe[state] = t;
+            _to_pipe[state].insert(t);
         }
     }
 
@@ -231,10 +238,10 @@ class ParserGraphImpl : public DirectedGraph {
     ParserStateMap<State> _succs, _preds;
 
     std::map<std::pair<const State*, const State*>,
-             const Transition*> _transitions;
+             std::set<const Transition*>> _transitions;
 
     std::map<const State*,
-             const Transition*> _to_pipe;
+             std::set<const Transition*>> _to_pipe;
 
     std::map<const State*, int> _state_to_id;
     std::map<int, const State*> _id_to_state;
@@ -359,11 +366,12 @@ class CollectParserInfoImpl : public PardeInspector {
             auto amounts = get_all_forward_path_shift_amounts(succ, dst);
             if (!amounts->size()) continue;
 
-            auto transition = graph->transition(src, succ);
-            BUG_CHECK(transition,
+            auto transitions = graph->transitions(src, succ);
+            BUG_CHECK(!transitions.empty(),
                       "Missing parser transition from %s to %s", src->name, succ->name);
 
-            const auto& shift_bytes = transition->shift;
+            auto t = *(transitions.begin());
+            const auto& shift_bytes = t->shift;
             BUG_CHECK(shift_bytes, "Missing parser shift amount in transition from %s to %s",
                       src->name, succ->name);
 

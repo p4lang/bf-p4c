@@ -10,7 +10,7 @@
 #include "lib/cstring.h"
 #include "lib/indent.h"
 #include "bf-p4c/lib/pad_alignment.h"
-#include "parde_utils.h"
+#include "dump_parser.h"
 
 namespace BFN {
 namespace {

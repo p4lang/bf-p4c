@@ -44,13 +44,6 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     extensions/p4_tests/p4_14/stf/update_checksum_8.p4
     )
 
-  p4c_add_xfail_reason("tofino2"
-    "no more than two clots per state"
-    # P4C-1733: State-splitting needs to handle this.
-    # https://github.com/barefootnetworks/bf-p4c-compilers/pull/3084#discussion_r279607836
-    extensions/p4_tests/p4_14/stf/deparser_copy_opt_2.p4
-    )
-
 endif() # HARLYN_STF
 
 # BEGIN: XFAILS that match glass XFAILS
@@ -77,6 +70,7 @@ p4c_add_xfail_reason("tofino2"
 
 p4c_add_xfail_reason("tofino2"
   "PHV allocation was not successful"
+  testdata/p4_14_samples/source_routing.p4
   testdata/p4_14_samples/05-FullTPHV.p4
   testdata/p4_14_samples/06-FullTPHV1.p4
   testdata/p4_14_samples/07-FullTPHV2.p4
@@ -158,11 +152,6 @@ p4c_add_xfail_reason("tofino2"
   "The method call of read and write on a Register is currently not supported in p4c"
   testdata/p4_14_samples/issue894.p4
   testdata/p4_14_samples/register.p4
-)
-
-p4c_add_xfail_reason("tofino2"
-  "Ran out of parser match registers"
-  testdata/p4_14_samples/source_routing.p4
 )
 
 p4c_add_xfail_reason("tofino2"

@@ -15,7 +15,7 @@
 #include "bf-p4c/mau/stateful_alu.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
 #include "bf-p4c/mau/resource_estimate.h"
-#include "bf-p4c/parde/checksum.h"
+#include "bf-p4c/parde/deparser_checksum_update.h"
 #include "bf-p4c/parde/extract_parser.h"
 #include "bf-p4c/parde/mirror.h"
 #include "bf-p4c/parde/phase0.h"

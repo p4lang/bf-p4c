@@ -37,7 +37,7 @@ void AdjustExtract::postorder(IR::BFN::ParserState* state) {
                     BUG_CHECK(extract->source->is<IR::BFN::PacketRVal>(),
                               "marshaled data not from input buffer?");
                     nw_bitrange extract_range =
-                        extract->source->to<IR::BFN::PacketRVal>()->range();
+                        extract->source->to<IR::BFN::PacketRVal>()->range;
                     more_bits[extract_range.lo]     += (actual_pre_padding - pre_padding);
                     more_bits[extract_range.hi + 1] += actual_post_padding;
                     LOG3("[Extra padding] pre: " << actual_pre_padding - pre_padding
@@ -53,14 +53,14 @@ void AdjustExtract::postorder(IR::BFN::ParserState* state) {
     for (const auto* prim : state->statements) {
         if (const auto* extract = prim->to<IR::BFN::Extract>()) {
             if (auto* buf = extract->source->to<IR::BFN::PacketRVal>()) {
-                largest_bit = std::max(largest_bit, buf->range().hi + 1); }
+                largest_bit = std::max(largest_bit, buf->range.hi + 1); }
         }
     }
 
     for (const auto* transition : state->transitions) {
         for (const auto* save : transition->saves) {
             if (auto* buf = save->source->to<IR::BFN::PacketRVal>()) {
-                largest_bit = std::max(largest_bit, buf->range().hi + 1); }
+                largest_bit = std::max(largest_bit, buf->range.hi + 1); }
         }
     }
 
@@ -84,7 +84,7 @@ void AdjustExtract::postorder(IR::BFN::ParserState* state) {
                 adjusted_stmts.push_back(extract);
                 continue;
             }
-            nw_bitrange old_source_range = old_source->range();
+            nw_bitrange old_source_range = old_source->range;
             BUG_CHECK(old_source_range.hi <= largest_bit,
                       "largest bit of %1% calculation is wrong", state->name);
             BUG_CHECK(aggregated[old_source_range.lo] == aggregated[old_source_range.hi],
@@ -117,7 +117,7 @@ void AdjustExtract::postorder(IR::BFN::ParserState* state) {
         for (const auto* save : transition->saves) {
             auto* adjusted_save = save->clone();
             if (auto* buf = save->source->to<IR::BFN::PacketRVal>()) {
-                nw_bitrange old_source_range = buf->range();
+                nw_bitrange old_source_range = buf->range;
                 BUG_CHECK(old_source_range.hi <= largest_bit,
                           "largest bit of %1% calculation is wrong", state->name);
                 BUG_CHECK(aggregated[old_source_range.lo] == aggregated[old_source_range.hi],

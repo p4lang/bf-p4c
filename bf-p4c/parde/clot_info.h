@@ -6,7 +6,7 @@
 #include "clot.h"
 #include "lib/ordered_map.h"
 #include "bf-p4c/lib/cmp.h"
-#include "bf-p4c/parde/parde_utils.h"
+#include "bf-p4c/parde/dump_parser.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/parde/parde_visitor.h"
@@ -98,10 +98,9 @@ class ClotInfo {
               std::vector<const IR::BFN::EmitChecksum*>> field_to_checksum_updates_;
 
     std::vector<Clot*> clots_;
-    std::map<const Clot*, cstring> clot_to_parser_state_;
-    std::map<cstring, std::set<const Clot*>> parser_state_to_clots_;
+    std::map<const Clot*, cstring> clot_to_start_state_;
+    std::map<cstring, std::set<const Clot*>> start_state_to_clots_;
 
-    std::map<cstring, std::map<PHV::Container, nw_byterange>> container_range_;
     std::map<const IR::BFN::ParserState*,
              std::map<const PHV::Field*, nw_bitrange>> field_range_;
 
@@ -128,18 +127,18 @@ class ClotInfo {
     }
 
  public:
-    const std::map<const Clot*, cstring>& clot_to_parser_state() const {
-        return clot_to_parser_state_;
+    const std::map<const Clot*, cstring>& clot_to_start_state() const {
+        return clot_to_start_state_;
     }
 
-    const std::map<cstring, std::set<const Clot*>>& parser_state_to_clots() const {
-        return parser_state_to_clots_;
+    const std::map<cstring, std::set<const Clot*>>& start_state_to_clots() const {
+        return start_state_to_clots_;
     }
 
  public:
     const Clot* parser_state_to_clot(const IR::BFN::LoweredParserState *state, unsigned tag) const {
         auto state_name = state->name;
-        if (!parser_state_to_clots_.count(state_name)) {
+        if (!start_state_to_clots_.count(state_name)) {
             // Prefix gress to generate full state name
             if (state->thread() == INGRESS)
                 state_name = "ingress::" + state_name;
@@ -148,7 +147,7 @@ class ClotInfo {
             // It is likely the state name is that of a split state,
             // e.g. Original state = ingress::stateA
             //      Split state = ingress::stateA.$common.0
-            // The parser_state_to_clots_ map is created before splitting and
+            // The start_state_to_clots_ map is created before splitting and
             // carries the original state name. We regenerate the original state
             // name by stripping out the split name addition ".$common.0"
             std::string st(state_name.c_str());
@@ -156,8 +155,8 @@ class ClotInfo {
             if (pos != std::string::npos)
                 state_name = st.substr(0, pos);
         }
-        if (parser_state_to_clots_.count(state_name)) {
-            auto& clots = parser_state_to_clots_.at(state_name);
+        if (start_state_to_clots_.count(state_name)) {
+            auto& clots = start_state_to_clots_.at(state_name);
             auto it = std::find_if(clots.begin(), clots.end(), [&](const Clot* sclot) {
                 return (sclot->tag == tag); });
             if (it != clots.end()) return *it;
@@ -165,12 +164,62 @@ class ClotInfo {
         return nullptr;
     }
 
-    std::map<cstring, std::map<PHV::Container, nw_byterange>>& container_range() {
-        return container_range_;
+    std::map<int, PHV::Container>
+    get_overwrite_containers(const Clot* clot, const PhvInfo& phv) const {
+        // Maps overwrite offsets to corresponding containers.
+        std::map<int, PHV::Container> containers;
+
+        for (auto f : clot->all_fields()) {
+            if (field_overwritten(phv, clot, f)) {
+                f->foreach_alloc([&](const PHV::Field::alloc_slice &alloc) {
+                    auto container = alloc.container;
+                    int field_offset = clot->byte_offset(f);
+
+                    auto field_range = alloc.field_bits().toOrder<Endian::Network>(f->size);
+
+                    auto container_range = alloc.container_bits().
+                                 toOrder<Endian::Network>(alloc.container.size());
+
+                    auto container_offset = field_offset - container_range.lo / 8 +
+                                            field_range.lo / 8;
+
+                    if (containers.count(container_offset)) {
+                        auto other_container = containers.at(container_offset);
+                        BUG_CHECK(container == other_container,
+                            "CLOT %d has more than one container at overwrite offset %d: "
+                            "%s and %s",
+                            clot->tag,
+                            container_offset,
+                            container,
+                            other_container);
+                    } else {
+                        containers[container_offset] = container;
+                    }
+                });
+            }
+        }
+
+        return containers;
     }
 
-    const std::map<cstring, std::map<PHV::Container, nw_byterange>>& container_range() const {
-        return container_range_;
+    std::map<int, const PHV::Field*>
+    get_csum_fields(const Clot* clot) const {
+        // Maps overwrite offsets to corresponding checksum fields.
+        std::map<int, const PHV::Field*> csum_fields;
+
+        for (auto f : clot->csum_fields()) {
+            auto offset = clot->byte_offset(f);
+            if (csum_fields.count(offset)) {
+                auto other_field = csum_fields.at(offset);
+                BUG_CHECK(false,
+                    "CLOT %d has more than one checksum field at overwrite offset %d: %s and %s",
+                    f->name, other_field->name);
+            }
+
+            csum_fields[offset] = f;
+        }
+
+        return csum_fields;
     }
 
     std::map<const Clot*, const IR::BFN::EmitChecksum*>& clot_to_emit_checksum() {
@@ -184,10 +233,10 @@ class ClotInfo {
  private:
     void add_field(const PHV::Field* f, const IR::BFN::PacketRVal* rval,
              const IR::BFN::ParserState* state) {
-        LOG4("adding " << f->name << " to " << state->name << " (range " << rval->range() << ")");
+        LOG4("adding " << f->name << " to " << state->name << " (range " << rval->range << ")");
         parser_state_to_fields_[state].push_back(f);
         field_to_parser_states_[f].insert(state);
-        field_range_[state][f] = rval->range();
+        field_range_[state][f] = rval->range;
     }
 
     /// Populates @ref field_to_byte_idx and @ref byte_idx_to_field.
@@ -239,8 +288,8 @@ class ClotInfo {
 
     void add_clot(Clot* cl, const IR::BFN::ParserState* state) {
         clots_.push_back(cl);
-        clot_to_parser_state_[cl] = state->name;
-        parser_state_to_clots_[state->name].insert(cl);
+        clot_to_start_state_[cl] = state->name;
+        start_state_to_clots_[state->name].insert(cl);
     }
 
     /// @return a set of parser states to which no more CLOTs may be allocated,
@@ -260,7 +309,7 @@ class ClotInfo {
 
           return field_to_checksum_updates_.at(field).size() > 1;
 
-          // TODO it's probably still ok to allocate field to CLOT
+         // TODO it's probably still ok to allocate field to CLOT
          // if the checksum updates it involves in are such that
          // one's source list is a subset of the update?
     }

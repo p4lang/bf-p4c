@@ -114,7 +114,6 @@ if (PTF_REQUIREMENTS_MET)
     "AssertionError: Expected packet was not received on device"
     extensions/p4_tests/p4_16/ptf/ingress_checksum.p4    #TODO(zma) use @calculated_field_update_location to force ingress update
     basic_switching
-    p4c_737
     )
 
   p4c_add_xfail_reason("tofino"
@@ -172,7 +171,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Ran out of parser match registers"
   testdata/p4_16_samples/issue995-bmv2.p4
-  testdata/p4_14_samples/source_routing.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -404,6 +402,7 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
+  testdata/p4_14_samples/source_routing.p4
   testdata/p4_14_samples/05-FullTPHV.p4
   testdata/p4_14_samples/06-FullTPHV1.p4
   testdata/p4_14_samples/08-FullTPHV3.p4
@@ -633,13 +632,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Unable to reference global instance .* from non-control block"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/popularity_0.p4
-)
-
-# BRIG-925
-# Compiler Bug: Select on field from different parent branches is not supported.
-p4c_add_xfail_reason("tofino"
-  "Select on field from different parent branches is not supported"
-  extensions/p4_tests/p4_14/compile_only/p4smith_regression/traditionalists_0.p4
 )
 
 # P4C-993
@@ -1203,13 +1195,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/parde/test_config_421_elim_calc_ops.p4
   ../glass/testsuite/p4_tests/parde/test_config_422_exit_calc_upd.p4
   )
-
-# P4C-1698
-p4c_add_xfail_reason("tofino"
-  "1 expected packet on port .* not seen"
-  extensions/p4_tests/p4_16/stf/lookahead1.p4
-  )
-
 
 p4c_add_xfail_reason("tofino"
    "Assignment cannot be supported in the parser"

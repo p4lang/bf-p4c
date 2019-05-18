@@ -6,7 +6,6 @@
 
 #include "bf-p4c/device.h"
 #include "bf-p4c/parde/parde_visitor.h"
-#include "bf-p4c/parde/allocate_parser_match_register.h"
 
 namespace {
 
@@ -280,39 +279,35 @@ class VerifyStateNamessAreUnique : public ParserInspector {
     std::set<cstring> visitedNames;
 };
 
-/// A mapping from a computed r-value to the r-values we evaluated it to.
-/// For one computedRVal, it can have multiple definition parserRVal.
+/// Represent a ParserRval and the state where it is defined.
+/// null element represents uninitialized
+struct ParserRValDef {
+    const IR::BFN::ParserState* state = nullptr;
+    const IR::BFN::ParserRVal* rval = nullptr;
+    ParserRValDef() {}
+    ParserRValDef(const IR::BFN::ParserState* state,
+                  const IR::BFN::ParserRVal* rval)
+        : state(state), rval(rval) { }
+    bool operator==(const ParserRValDef &a) const {
+        return state == a.state &&
+               rval ? a.rval ? rval->equiv(*a.rval) : false : a.rval == nullptr; }
+    bool operator!=(const ParserRValDef &a) const { return !operator==(a); }
+};
+
+/// A mapping from a saved r-value to the r-values we evaluated it to.
+/// For one savedRVal, it can have multiple definition parserRVal.
 using ParserValueResolution =
-    std::map<const IR::BFN::ComputedRVal*, std::vector<ParserRValDef>>;
-
-#if 0
-std::ostream& operator<<(std::ostream &out, const ParserRValDef &rvd) {
-    out << rvd.state->name << ": " << rvd.rval;
-    return out;
-}
-
-std::ostream& operator<<(std::ostream& s, const ParserValueResolution& mapping) {
-    for (const auto& kv : mapping) {
-        s << "For " << kv.first << " multiple defs found: " << "\n";
-        for (const auto& def : kv.second) {
-            s << def.state->name << ", " << def.rval << "\n"; } }
-    return s;
-}
-
-static void print_match(match_t m) {
-    std::cout << m << std::endl;
-}
-#endif  // NDEBUG
+    std::map<const IR::BFN::SavedRVal*, std::vector<ParserRValDef>>;
 
 /**
  * Walk the parser programs (each thread is treated separately) and try to
  * simplify r-values by replacing any uses of l-values with their definition.
  *
  * @pre Every `ParserRVal` in each of the parser programs is a unique object.
- * @post Any `ComputedRVal` which can either be evaluated unambiguously to a simple
+ * @post Any `SavedRVal` which can either be evaluated unambiguously to a simple
  * r-value (i.e. a `PacketRVal` or `ConstantRVal`), or remain the same but have a mapping
  * that maps it to multiple place that it were defined, only if it is for select. Any
- * `ComputedRVal` which remains (without having a mapping) is either too complex to
+ * `SavedRVal` which remains (without having a mapping) is either too complex to
  *  evaluate, or contains uses of l-values that were not reached by any definition at all.
  */
 struct CopyPropagateParserValues : public ParserInspector, ControlFlowVisitor {
@@ -384,7 +379,7 @@ struct CopyPropagateParserValues : public ParserInspector, ControlFlowVisitor {
                 // to the left to compensate for the fact that the transition is
                 // shifting the input buffer to the right.
                 auto* clone = rvd.rval->to<IR::BFN::PacketRVal>()->clone();
-                clone->range_ = clone->range_.shiftedByBytes(-*trans->shift);
+                clone->range = clone->range.shiftedByBytes(-*trans->shift);
                 rvd.rval = clone;
             }
         }
@@ -400,7 +395,7 @@ struct CopyPropagateParserValues : public ParserInspector, ControlFlowVisitor {
     }
 
     void propagateToUse(const IR::BFN::ParserState* state,
-                        const IR::BFN::ComputedRVal* value) {
+                        const IR::BFN::SavedRVal* value) {
         LOG4(id << ":propagateToUse(" << state->name << ", " << value << ")");
         // XXX(yumin): The size that is casted to is used to form the match range.
         // It would make match value incorrect if we don't respect it.
@@ -417,14 +412,14 @@ struct CopyPropagateParserValues : public ParserInspector, ControlFlowVisitor {
         auto* outerSlice = sourceExpr->to<IR::Slice>();
         if (outerSlice) sourceExpr = outerSlice->e0;
 
-        // Create a string representation of this computed value. We consider
+        // Create a string representation of this saved value. We consider
         // values to be equal if they have the same string representation.
         auto sourceName = sourceExpr->toString();
 
-        // Does some definition for this computed value reach this point?
+        // Does some definition for this saved value reach this point?
         if (reachingDefs.find(sourceName) == reachingDefs.end()) {
             // No reaching definition; just "propagate" the original value.
-            BUG_CHECK(!resolvedValues.count(value), "multiref to ComputedRVal");
+            BUG_CHECK(!resolvedValues.count(value), "multiref to SavedRVal");
             ::error("Select on uninitialized value: %1%", value->source);
             return; }
 
@@ -440,7 +435,7 @@ struct CopyPropagateParserValues : public ParserInspector, ControlFlowVisitor {
 
             if (size_cast_to) {
                 auto* buf = resolvedValue->to<IR::BFN::InputBufferRVal>();
-                auto casted_range = buf->range().resizedToBits(*size_cast_to);
+                auto casted_range = buf->range.resizedToBits(*size_cast_to);
                 resolvedValue = new IR::BFN::PacketRVal(casted_range);
             }
 
@@ -464,18 +459,18 @@ struct CopyPropagateParserValues : public ParserInspector, ControlFlowVisitor {
                 const le_bitrange sliceRange = FromTo(outerSlice->getL(),
                                                       outerSlice->getH());
                 const nw_bitinterval sliceOfValue =
-                  sliceRange.toOrder<Endian::Network>(bufferlikeValue->range().size())
-                            .shiftedByBits(bufferlikeValue->range().lo)
-                            .intersectWith(bufferlikeValue->range());
+                  sliceRange.toOrder<Endian::Network>(bufferlikeValue->range.size())
+                            .shiftedByBits(bufferlikeValue->range.lo)
+                            .intersectWith(bufferlikeValue->range);
                 if (sliceOfValue.empty()) {
-                    ::error("Computed value resolves to a zero-width slice: %1%",
+                    ::error("Saved value resolves to a zero-width slice: %1%",
                             value->source);
                     resolvedValues[value] = { ParserRValDef(state, value->clone()) };
                     return;
                 }
 
                 // Success; we've eliminated the slice.
-                bufferlikeValue->range_ = *toClosedRange(sliceOfValue);
+                bufferlikeValue->range = *toClosedRange(sliceOfValue);
                 resolvedValue = bufferlikeValue;
             }
 
@@ -488,10 +483,10 @@ struct CopyPropagateParserValues : public ParserInspector, ControlFlowVisitor {
             // We've seen another definition already.
             auto& previousResolution = resolvedValues[value];
 
-            // If the previous definition is a computed r-value, we've already
+            // If the previous definition is a saved r-value, we've already
             // encountered some kind of failure; just keep it that way.
             if (previousResolution.size() == 1
-                && previousResolution.front().rval->is<IR::BFN::ComputedRVal>()) {
+                && previousResolution.front().rval->is<IR::BFN::SavedRVal>()) {
                 ::warning("Select on field that might be uninitialized "
                           "in some parser path: %1%", value->source); }
 
@@ -513,13 +508,13 @@ struct CopyPropagateParserValues : public ParserInspector, ControlFlowVisitor {
         if (auto lval = extract->dest->to<IR::BFN::FieldLVal>()) {
             auto dest = lval->field->toString();
             auto *state = findContext<IR::BFN::ParserState>();
-            if (auto* computed = extract->source->to<IR::BFN::ComputedRVal>()) {
-                // If the source of this extract is a computed r-value, its
+            if (auto* saved = extract->source->to<IR::BFN::SavedRVal>()) {
+                // If the source of this extract is a saved r-value, its
                 // expression may use a definition we've seen. Try to simplify it.
                 // (And regardless of our success, record the new definition for
                 // `dest`.)
-                propagateToUse(state, computed);
-                setReachingDefs(reachingDefs[dest], resolvedValues[computed].back());
+                propagateToUse(state, saved);
+                setReachingDefs(reachingDefs[dest], resolvedValues[saved].back());
             } else {
                 // The source is a simple r-value; just record the new definition
                 // for `dest` and move on.
@@ -528,10 +523,10 @@ struct CopyPropagateParserValues : public ParserInspector, ControlFlowVisitor {
         return true; }
 
     bool preorder(const IR::BFN::Select *select) override {
-        // If the source of this select is a computed r-value, its
+        // If the source of this select is a saved r-value, its
         // expression may use a definition we've seen. Try to simplify it.
-        if (auto* computed = select->source->to<IR::BFN::ComputedRVal>())
-            propagateToUse(findContext<IR::BFN::ParserState>(), computed);
+        if (auto* saved = select->source->to<IR::BFN::SavedRVal>())
+            propagateToUse(findContext<IR::BFN::ParserState>(), saved);
         return true; }
 
  public:
@@ -540,166 +535,42 @@ struct CopyPropagateParserValues : public ParserInspector, ControlFlowVisitor {
 
 int CopyPropagateParserValues::id_ctr;
 
-/// Replace computed value with rval if it has only one definition. Others will be saved
-/// in the multiDefValues. After this pass, a computedRVal is either replaced, or it has an
-/// entry in the multiDefValues.
+/// Replace saved value with rval if it has only one definition.
 struct ApplyParserValueResolutions : public ParserTransform {
     explicit ApplyParserValueResolutions(const ParserValueResolution& resolvedValues)
         : resolvedValues(resolvedValues) { }
 
  private:
     profile_t init_apply(const IR::Node* root) override {
-        multiDefValues.clear();
         return Transform::init_apply(root);
     }
 
-    IR::BFN::ParserRVal* preorder(IR::BFN::ComputedRVal* value) override {
+    IR::BFN::ParserRVal* preorder(IR::BFN::SavedRVal* value) override {
         prune();
-        auto* original = getOriginal<IR::BFN::ComputedRVal>();
+        auto* original = getOriginal<IR::BFN::SavedRVal>();
         BUG_CHECK(resolvedValues.find(original) != resolvedValues.end(),
-                  "No resolution for computed value: %1%", value);
+                  "No resolution for saved value: %1%", value);
         auto &rval = resolvedValues.at(original);
-        if (rval.size() == 1 && !rval.front().rval->is<IR::BFN::ComputedRVal>()) {
+        if (rval.size() == 1 && !rval.front().rval->is<IR::BFN::SavedRVal>()) {
             return rval.front().rval->clone();
-        } else {
-            // XXX(yumin): no change is made and returns same pointer,
-            // save the original instead of the parameter.
-            multiDefValues[original] = rval;
-            return value; }
+        }
+        return value;
     }
 
     const ParserValueResolution& resolvedValues;
-
- public:
-    ParserValueResolution multiDefValues;
 };
 
-class CheckResolvedParserExpressions : public ParserTransform {
-    const IR::BFN::Extract*
-    checkExtractDestination(const IR::BFN::Extract* extract) const {
-        auto lval = extract->dest->to<IR::BFN::FieldLVal>();
-        if (!lval) return extract;
-        if (!lval->field->is<IR::HeaderStackItemRef>()) return extract;
-
-        auto* itemRef = lval->field->to<IR::HeaderStackItemRef>();
-        if (itemRef->index()->is<IR::BFN::UnresolvedStackRef>()) {
-            ::error("Couldn't resolve header stack reference in state %1%: %2%",
-                    findContext<IR::BFN::ParserState>()->name, extract);
-            return nullptr;
-        }
-
-        if (!itemRef->index()->is<IR::Constant>()) {
-            ::error("Extracting to non-constant header stack index in "
-                    "state %1%: %2%",
-                    findContext<IR::BFN::ParserState>()->name, extract);
-            return nullptr;
-        }
-
-        auto* stack = lval->field->to<IR::HeaderStackItemRef>()->base();
-        auto stackSize = stack->type->to<IR::Type_Stack>()
-                              ->size->to<IR::Constant>()->asInt();
-        if (itemRef->index()->to<IR::Constant>()->asInt() >= stackSize) {
-            // XXX(seth): This should actually be an error, but before making
-            // that change we need to make loop unrolling handle header stacks
-            // more precisely.
-            ::warning("Extract overflows header stack in state %1%: %2%",
-                      findContext<IR::BFN::ParserState>()->name, extract);
-            // Just clamp it; the hardware will report an error at runtime.
-            auto* itemRefClone = itemRef->clone();
-            itemRefClone->index_ = new IR::Constant(std::max(stackSize - 1, 0));
-            auto* clone = extract->clone();
-            clone->dest = new IR::BFN::FieldLVal(itemRefClone);
-            return clone;
-        }
-
-        return extract;
-    }
-
-    const IR::BFN::Extract*
-    checkExtractIsNotComputed(const IR::BFN::Extract* extract) const {
-        if (!extract->source->is<IR::BFN::ComputedRVal>()) return extract;
-        ::error("Couldn't resolve computed value for extract in state %1%: %2%",
-                findContext<IR::BFN::ParserState>()->name, extract);
-        return nullptr;
-    }
-
-    profile_t init_apply(const IR::Node* root) override {
-        updatedDefValues.clear();
-        return Transform::init_apply(root);
-    }
-
-    const IR::BFN::ParserPrimitive*
-    preorder(IR::BFN::Extract* extract) override {
-        prune();
-        auto* checkedExtract = checkExtractIsNotComputed(extract);
-        if (!checkedExtract) return checkedExtract;
-        return checkExtractDestination(checkedExtract);
-    }
-
-    const IR::BFN::Select*
-    preorder(IR::BFN::Select* select) override {
-        prune();
-        if (!select->source->is<IR::BFN::ComputedRVal>())
-            return select;
-
-        auto* original = getOriginal<IR::BFN::Select>()->source->to<IR::BFN::ComputedRVal>();
-        if (!multiDefValues.count(original)) {
-            ::error("Couldn't resolve computed value for select in state %1%: %2%",
-                    findContext<IR::BFN::ParserState>()->name,
-                    original->source);
-            return nullptr;
-        }
-
-        // Update mapping.
-        auto* newComputed = select->source->to<IR::BFN::ComputedRVal>();
-        for (const auto& def : multiDefValues.at(original)) {
-                // Ignore computedRval as definition of a use,
-                // because it means resolution failed to find a defintion
-                // for this select on some path.
-                if (def.rval->is<IR::BFN::InputBufferRVal>()) {
-                    updatedDefValues[newComputed].push_back(def); } }
-
-        if (LOGGING(4)) {
-            LOG4("Found computed value with multiple possible data source: ");
-            for (const auto& def : multiDefValues.at(original)) {
-                LOG4("State: " << def.state->name << ", Rval: " << def.rval); } }
-
-        return select;
-    }
-
-    const IR::BFN::Parser *postorder(IR::BFN::Parser *parser) override {
-        LOG3("after CheckResolvedParserExpressions for " << parser->toString() << parser <<
-                     " start=" << parser->start->name);
-        return parser; }
-
+class ResolveSavedValues : public PassManager {
  public:
-    explicit CheckResolvedParserExpressions(const ParserValueResolution& multiDefValues)
-        : multiDefValues(multiDefValues) { }
-
-    const ParserValueResolution& multiDefValues;
-    ParserValueResolution updatedDefValues;
-};
-
-class ResolveComputedValues : public PassManager {
- public:
-    ResolveComputedValues() {
-        // XXX(yumin): both applyResolution and checkResolved may change IR, so multiDefValues
-        // are updated in visitFunctor by the new values produced by each pass.
+    ResolveSavedValues() {
         auto* copyPropagate   = new CopyPropagateParserValues();
         auto* applyResolution = new ApplyParserValueResolutions(copyPropagate->resolvedValues);
-        auto* checkResolved   = new CheckResolvedParserExpressions(multiDefValues);
+
         addPasses({
             copyPropagate,
             applyResolution,
-            new VisitFunctor([this, applyResolution] () {
-                multiDefValues = applyResolution->multiDefValues; }),
-            checkResolved,
-            new VisitFunctor([this, checkResolved] () {
-                multiDefValues = checkResolved->updatedDefValues; }),
         });
     }
-
-    ParserValueResolution multiDefValues;
 };
 
 class CheckResolvedHeaderStackExpressions : public ParserInspector {
@@ -714,14 +585,13 @@ class CheckResolvedHeaderStackExpressions : public ParserInspector {
 
 ResolveParserValues::ResolveParserValues() :
     Logging::PassManager("parser", Logging::Mode::AUTO) {
-    auto* resolveComputedValues = new ResolveComputedValues();
+    auto* resolveSavedValues = new ResolveSavedValues();
     addPasses({
         new VerifyAssignedShifts,
         new ResolveNextAndLast,
         new VerifyParserRValsAreUnique,
         new VerifyStateNamessAreUnique,
-        resolveComputedValues,
-        new AllocateParserMatchRegisters(resolveComputedValues->multiDefValues),
+        resolveSavedValues
     });
 }
 

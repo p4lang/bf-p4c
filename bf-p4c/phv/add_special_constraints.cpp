@@ -36,14 +36,6 @@ bool AddSpecialConstraints::preorder(const IR::BFN::ChecksumVerify* verify) {
     return true;
 }
 
-bool AddSpecialConstraints::preorder(const IR::BFN::ChecksumUpdate* update) {
-    if (!update->dest) return false;
-    const PHV::Field* field = phv_i.field(update->dest->field);
-    if (!field) return false;
-    pragmas_i.pa_container_sizes().add_constraint(field, { PHV::Size::b16 });
-    return true;
-}
-
 bool AddSpecialConstraints::preorder(const IR::BFN::ChecksumGet* get) {
     if (!get->dest) return false;
     const PHV::Field* field = phv_i.field(get->dest->field);

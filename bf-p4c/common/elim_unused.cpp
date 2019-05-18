@@ -32,7 +32,7 @@ class ElimUnused::Instructions : public Transform {
         // created some troubles in ResolveComputed. Once we can do the input buffer layout
         // refactoring, this can be removed as well, as long as from_marshaled is migrated onto
         // input buffer layout as well.
-        if (extract->marshaled_from || extract->hdr_len_inc_stop) {
+        if (extract->marshaled_from) {
             return extract; }
 
         if (auto lval = extract->dest->to<IR::BFN::FieldLVal>()) {
@@ -105,36 +105,6 @@ class ElimUnused::Instructions : public Transform {
 
 class ElimUnused::Headers : public PardeTransform {
     ElimUnused &self;
-
-    const IR::BFN::Transition *postorder(IR::BFN::Transition *transition) override {
-        const auto* next = transition->next;
-
-        if (!next)
-            return transition;
-
-        // If the next state has any statement, any branching, it's not dead.
-        if (next->statements.size() > 0 || next->transitions.size() > 1)
-            return transition;
-
-        // No transition
-        if (next->transitions.size() == 0) {
-            transition->next = nullptr;
-            return transition;
-        }
-
-        auto* next_single_transition = *next->transitions.begin();
-        // Not a leaf state.
-        if (next_single_transition->next != nullptr)
-            return transition;
-
-        // Eliminate that state.
-        transition->next = nullptr;
-        if (next_single_transition->shift)
-            transition->shift = *transition->shift + *next_single_transition->shift;
-
-        LOG1("ELIM UNUSED parser state " << next->name);
-        return transition;
-    }
 
     bool hasDefs(const IR::Expression* fieldRef) const {
         auto* field = self.phv.field(fieldRef);

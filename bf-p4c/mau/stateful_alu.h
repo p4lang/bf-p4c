@@ -257,7 +257,7 @@ class FixupStatefulAlu : public PassManager {
         const IR::Expression *preorder(IR::Member *) override;
         const IR::Expression *preorder(IR::Expression *) override;
         const IR::Expression *preorder(IR::Primitive *) override;
-        const IR::BFN::ParserRVal *postorder(IR::BFN::ComputedRVal *) override;
+        const IR::BFN::ParserRVal *postorder(IR::BFN::SavedRVal *) override;
 
         explicit UpdateEncodings(FixupStatefulAlu &self) : self(self) {}
     };

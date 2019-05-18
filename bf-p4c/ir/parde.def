@@ -60,27 +60,24 @@ abstract ParserRVal { }
 /// `InputBufferRVal`.
 abstract InputBufferRVal : ParserRVal {
     /// @return this buffer range as a half-open range of bits in network order.
-    nw_bitinterval interval() const { return toHalfOpenRange(range_); }
-
-    /// @return this buffer range as a closed range of bits in network order.
-    nw_bitrange range() const { return range_; }
+    nw_bitinterval interval() const { return toHalfOpenRange(range); }
 
     /// The region represented by this `InputBufferRVal`, expressed as a range of
     /// bits in network order.
-    nw_bitrange range_;
+    nw_bitrange range;
 }
 
 /// location in the packet data section of the input buffer
 class PacketRVal : InputBufferRVal {
     dbprint {
-        out << "packet bits " << interval();
+        out << "inbuf " << range;
     }
 }
 
 /// location in the metadata secion of the input buffer
 class MetadataRVal : InputBufferRVal {
     dbprint {
-        out << "metadata bits " << interval();
+        out << "inbuf(metadata) " << range;
     }
 }
 
@@ -98,12 +95,9 @@ class ConstantRVal : ParserRVal {
     Constant constant;
 }
 
-/// An r-value which is computed in the parser. The source may be an arbitrary
-/// expression. These generally can't be implemented directly on any existing
-/// Barefoot hardware, so if the compiler can't optimize them out, compilation
-/// will fail.
-class ComputedRVal : ParserRVal {
-    dbprint { out << "computed value " << source; }
+/// An r-value which is saved from input buffer to the match register.
+class SavedRVal : ParserRVal {
+    dbprint { out << "saved value " << source; }
 
     /// An expression which should evaluate to an r-value usable in the parser.
     Expression source;
@@ -167,9 +161,6 @@ class Extract : ParserPrimitive {
 
     /// This extract expects that data on the wire is marshaled from a `field`.
     optional boost::optional<MarshaledFrom> marshaled_from;  // not visited
-
-    /// Stop incrementing the header length counter after this extract
-    optional bool hdr_len_inc_stop = false;
 }
 
 /// Save data from input buffer to a match register.
@@ -197,44 +188,46 @@ abstract ParserChecksumPrimitive : ParserPrimitive {
 }
 
 class ChecksumVerify : ParserChecksumPrimitive {
-    dbprint { out << "verify checksum"; }
+    dbprint { out << "verify checksum " << declName; }
     optional NullOK FieldLVal dest;
 }
 
-class ChecksumUpdate : ParserChecksumPrimitive {
-    dbprint { out << "update checksum"; }
+class ChecksumGet : ParserChecksumPrimitive {
+    dbprint { out << "get checksum " << declName; }
     FieldLVal dest;
 }
 
-class ChecksumGet : ParserChecksumPrimitive {
-    dbprint { out << "get checksum"; }
-    FieldLVal dest;
+class ChecksumDepositToClot : ParserChecksumPrimitive {
+    dbprint { out << "deposit checksum " << declName << " to clot " << clot->tag; }
+
+#emit
+    const Clot* clot = nullptr;
+#end
 }
 
 class ChecksumAdd : ParserChecksumPrimitive {
-    dbprint { out << "add " << source << " to checksum"; }
+    dbprint { out << "add " << source << " to checksum " << declName; }
     PacketRVal source;
     bool isHeaderChecksum;
 }
 
 class ChecksumSubtract : ParserChecksumPrimitive {
-    dbprint { out << "subtract " << source << " from checksum"; }
+    dbprint { out << "subtract " << source << " from checksum " << declName; }
     PacketRVal source;
-    IR::Member field;
+    /// original field in the packet, needed to compute header end position
+    Member field;
     bool isPayloadChecksum;
+}
+
+// Stop incrementing the header length counter after source
+class HdrLenIncStop : ParserPrimitive {
+    dbprint { out << "hdr_len_inc_stop " << source; }
+    PacketRVal source;
 }
 
 abstract ParserMatchValue { }
 
 class ParserConstMatchValue : ParserMatchValue {
-    /// The ternary expression being matched, given as a pair of bitmasks:
-    /// (word0, word1). The ternary expression cares about the value of an
-    /// input bit if the corresponding bit is set in exactly one of the
-    /// bitmasks. If it is set in word0, then the input must have a 0 in that
-    /// position. Otherwise, if it is set in word1, then the input must have a
-    /// 1 in that position. More formally, the ternary expression matches when
-    /// the following expression is true:
-    ///     (input ^ word1) & (word0 ^ word1) == 0
     match_t value;
     dbprint { out << "const: " << value; }
 }
@@ -298,16 +291,16 @@ class Transition {
 /// next state to transition to.
 class Select {
     Select(ParserRVal source, Expression p4Source)
-        : Node(p4Source->srcInfo), source(source), p4Source(p4Source) { }
+        : source(source), p4Source(p4Source) { }
 
-    /// The value which will be matched against.
+    /// The value to match against.
     ParserRVal source;
 
-    /// The register match against.
+    /// The registers to match on.
     optional std::vector<std::pair<MatchRegister, nw_bitrange>> reg_slices;
 
 #emit
-    /// The higher-level expression we were selecting against. Not visited.
+    /// Original p4 source.
     const Expression* p4Source = nullptr;
 #end
 }

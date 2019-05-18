@@ -12,17 +12,13 @@ GenerateParserP4iJson::generateExtracts(const IR::BFN::LoweredParserMatch* match
     for (const auto* prim : match->extracts) {
         if (auto* extract_ir = prim->to<IR::BFN::LoweredExtractPhv>()) {
             P4iParserExtract extract;
-            if (extract_ir->dest == nullptr) {
-                // TODO(yumin): somehow, jbay leave an extract to nullptr container here..
-                continue;
-            }
             size_t container_sz = extract_ir->dest->container.size();
             extract.extractor_id = extractor_ids[container_sz]++;
             extract.bit_width = container_sz;
             extract.dest_container =
                 Device::phvSpec().containerToId(extract_ir->dest->container);
             if (auto* buffer = extract_ir->source->to<IR::BFN::LoweredInputBufferRVal>()) {
-                extract.buffer_offset = buffer->extractedBytes().loByte();
+                extract.buffer_offset = buffer->range.loByte();
             } else if (auto* const_val = extract_ir->source->to<IR::BFN::LoweredConstantRVal>()) {
                 extract.constant_value = const_val->constant;
             } else {
@@ -52,7 +48,7 @@ GenerateParserP4iJson::generateMatches(const IR::BFN::LoweredParserState* prev_s
             for (auto prev_match : prev_state->transitions) {
                 for (auto prev_save : prev_match->saves) {
                     if (prev_save->dest == reg) {
-                        match_on.buffer_offset = prev_save->source->extractedBytes().loByte();
+                        match_on.buffer_offset = prev_save->source->range.loByte();
                     }
                 }
             }
@@ -120,7 +116,7 @@ GenerateParserP4iJson::generateExtractClot(const IR::BFN::LoweredExtractClot* ex
                                            const IR::BFN::LoweredParserState *state) {
     auto* source = extract->source->to<IR::BFN::LoweredPacketRVal>();
     P4iParserClot clot;
-    auto bytes = source->extractedBytes();
+    auto bytes = source->range;
     clot.issue_state = state->name;
     clot.offset = bytes.lo;
     clot.tag = extract->dest.tag;

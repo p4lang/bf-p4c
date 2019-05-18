@@ -23,21 +23,6 @@ class ResolveComputedTest : public TofinoBackendTest {};
 
 namespace {
 
-class VerifyRegisterAssigned : public ParserInspector {
-    bool preorder(const IR::BFN::Select* select) override {
-        if (select->reg_slices.size() == 0) {
-            has_unallocated = true;
-            _logs << "unallocated select: " << select << "\n"; }
-        return true; }
-
- private:
-    std::stringstream _logs;
-
- public:
-    bool has_unallocated = false;
-    std::string logs() const { return _logs.str(); }
-};
-
 boost::optional<TofinoPipeTestCase>
 createParserCriticalPathTestCase(const std::string& parserSource) {
     auto source = P4_SOURCE(P4Headers::V1MODEL, R"(
@@ -172,12 +157,8 @@ TEST_F(ResolveComputedTest, TwoPathSameDef) {
     ASSERT_TRUE(test);
 
     auto* run = new ResolveParserValues();
-    auto* check = new VerifyRegisterAssigned();
     auto* resolved = test->pipe->apply(*run);
     EXPECT_TRUE(resolved);
-    if (resolved) {
-        resolved->apply(*check);
-        EXPECT_EQ(check->has_unallocated, false) << check->logs(); }
 }
 
 TEST_F(ResolveComputedTest, TwoDef) {
@@ -227,12 +208,8 @@ TEST_F(ResolveComputedTest, TwoDef) {
 
     auto* prep = runMockPasses(test->pipe);
     auto* run = new ResolveParserValues();
-    auto* check = new VerifyRegisterAssigned();
     auto* resolved = prep->apply(*run);
     EXPECT_TRUE(resolved);
-    if (resolved) {
-        resolved->apply(*check);
-        EXPECT_EQ(check->has_unallocated, false) << check->logs(); }
 }
 
 TEST_F(ResolveComputedTest, TwoPathSameDefLargeField) {
@@ -277,12 +254,8 @@ TEST_F(ResolveComputedTest, TwoPathSameDefLargeField) {
     ASSERT_TRUE(test);
 
     auto* run = new ResolveParserValues();
-    auto* check = new VerifyRegisterAssigned();
     auto* resolved = test->pipe->apply(*run);
     EXPECT_TRUE(resolved);
-    if (resolved) {
-        resolved->apply(*check);
-        EXPECT_EQ(check->has_unallocated, false) << check->logs(); }
 }
 
 TEST_F(ResolveComputedTest, Parent) {
@@ -325,12 +298,8 @@ TEST_F(ResolveComputedTest, Parent) {
 
     auto* prep = runMockPasses(test->pipe);
     auto* run = new ResolveParserValues();
-    auto* check = new VerifyRegisterAssigned();
     auto* resolved = prep->apply(*run);
     EXPECT_TRUE(resolved);
-    if (resolved) {
-        resolved->apply(*check);
-        EXPECT_EQ(check->has_unallocated, false) << check->logs(); }
 }
 
 }  // namespace Test

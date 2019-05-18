@@ -71,6 +71,13 @@ void Clot::add_field(FieldKind kind,
     field_offsets[field] = offset;
 }
 
+unsigned Clot::length_in_byte() const {
+    unsigned length_in_bits = 0;
+    for (auto f : all_fields_)
+        length_in_bits += f->size;
+    return length_in_bits / 8;
+}
+
 unsigned Clot::bit_offset(const PHV::Field* field) const {
     BUG_CHECK(field_offsets.count(field), "field %s not in %s", field->name, toString());
     return field_offsets.at(field);
@@ -97,6 +104,10 @@ bool Clot::has_field(const PHV::Field* field) const {
     return contains(all_fields_, field);
 }
 
+bool Clot::is_first_field_in_clot(const PHV::Field* field) const {
+    return all_fields_.at(0) == field;
+}
+
 void Clot::crop(int start_idx, int end_idx) {
     int num_fields = all_fields_.size();
 
@@ -107,23 +118,18 @@ void Clot::crop(int start_idx, int end_idx) {
     // Collect up the fields we're keeping, while removing the rest from auxiliary data structures
     // and computing the new start offset.
     std::vector<const PHV::Field*> all_fields;
-    unsigned start_bits = this->start * 8;
+
     for (int idx = 0; idx < num_fields; idx++) {
         auto field = all_fields_.at(idx);
         if (start_idx <= idx && idx <= end_idx) {
             all_fields.push_back(field);
         } else {
-            if (idx < start_idx) start_bits += field->size;
             phv_modified_fields_.erase(field);
             field_offsets.erase(field);
         }
     }
 
-    // Fix up the CLOT's list of fields and the start offset.
-    BUG_CHECK(start_bits % 8 == 0,
-              "CLOT %d is not byte-aligned after adjustment: resulting offset is %d",
-              tag, start_bits);
-    start = start_bits / 8;
+    // Fix up the CLOT's list of fields
     all_fields_ = all_fields;
 }
 

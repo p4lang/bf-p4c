@@ -51,12 +51,12 @@ bool GatherParserExtracts::preorder(const IR::BFN::Extract* e) {
     if (!fieldLVal) return true;
     auto* f = phv.field(fieldLVal->field);
     if (!f) return true;
-    auto* source = e->source->to<IR::BFN::ComputedRVal>();
+    auto* source = e->source->to<IR::BFN::SavedRVal>();
     if (!source) return true;
     auto* sourceField = phv.field(source->source);
     if (!sourceField) return true;
     parserAlignedFields[f].insert(sourceField);
-    LOG5("    Initialization due to ComputedRVal in parser: " << f);
+    LOG5("    Initialization due to SavedRVal in parser: " << f);
     return true;
 }
 
@@ -620,7 +620,7 @@ void RepackFlexHeaders::determineAlignmentConstraints(
         BUG_CHECK(field, "No field named %1% found", fieldName);
         LOG4("\tDetermining alignment constraint for " << fieldName);
 
-        // If this field is initialized by a ComputedRVal expression in the parser, then consider it
+        // If this field is initialized by a SavedRVal expression in the parser, then consider it
         // as having alignment constraints.
         if (parserAlignedFields.count(field) && field->alignment) {
             alignmentConstraints[structField] = le_bitrange(StartLen(field->alignment->align,
@@ -1194,12 +1194,12 @@ IR::Node* ReplaceFlexFieldUses::preorder(IR::BFN::ParserState* ps) {
 IR::Node* ReplaceFlexFieldUses::preorder(IR::BFN::Extract* e) {
     const auto* ps = findContext<IR::BFN::ParserState>();
     if (!parserStatesToModify.count(ps)) return e;
-    if (!e->source->is<IR::BFN::ComputedRVal>()) return e;
-    auto* computedVal = e->source->to<IR::BFN::ComputedRVal>();
+    if (!e->source->is<IR::BFN::SavedRVal>()) return e;
+    auto* savedVal = e->source->to<IR::BFN::SavedRVal>();
     auto* destField = e->dest->to<IR::BFN::FieldLVal>();
     if (!destField) return e;
     const PHV::Field* dest = phv.field(destField->field);
-    const PHV::Field* source = phv.field(computedVal->source);
+    const PHV::Field* source = phv.field(savedVal->source);
     if (!dest || !source) return e;
     egressBridgedMap[source->name] = dest->name;
     reverseEgressBridgedMap[dest->name] = source->name;
@@ -1236,9 +1236,9 @@ bool ReplaceFlexFieldUses::processExtract(const IR::BFN::Extract* e) {
     return false;
 }
 
-IR::BFN::Extract* ReplaceFlexFieldUses::getNewComputedVal(const IR::BFN::Extract* e) const {
-    const IR::BFN::ComputedRVal* source = e->source->to<IR::BFN::ComputedRVal>();
-    BUG_CHECK(source, "Cannot get computed source for ComputedRVal object %1%", e);
+IR::BFN::Extract* ReplaceFlexFieldUses::getNewSavedVal(const IR::BFN::Extract* e) const {
+    const IR::BFN::SavedRVal* source = e->source->to<IR::BFN::SavedRVal>();
+    BUG_CHECK(source, "Cannot get saved source for SavedRVal object %1%", e);
     const auto* f = phv.field(source->source);
     auto* newE = new IR::BFN::Extract(e->dest, e->source);
     if (!f) return newE;
@@ -1248,9 +1248,9 @@ IR::BFN::Extract* ReplaceFlexFieldUses::getNewComputedVal(const IR::BFN::Extract
     auto& exprMap = info.getBridgedToExpressionsMap();
     if (exprMap.count(f->name)) {
         IR::Member* mem = exprMap.at(f->name);
-        IR::BFN::ComputedRVal* source = new IR::BFN::ComputedRVal(mem);
+        IR::BFN::SavedRVal* source = new IR::BFN::SavedRVal(mem);
         IR::BFN::Extract* newExtract = new IR::BFN::Extract(e->dest, source);
-        LOG4("\t\t  New computed val extract: " << newExtract);
+        LOG4("\t\t  New saved val extract: " << newExtract);
         return newExtract;
     }
     return newE;
@@ -1275,13 +1275,13 @@ IR::Node* ReplaceFlexFieldUses::postorder(IR::BFN::ParserState* p) {
             continue;
         }
         auto* rval = extract->source->to<IR::BFN::PacketRVal>();
-        auto* cval = extract->source->to<IR::BFN::ComputedRVal>();
+        auto* cval = extract->source->to<IR::BFN::SavedRVal>();
         if (!rval && !cval) {
             statements.push_back(stmt);
             continue;
         }
         if (cval) {
-            statements.push_back(getNewComputedVal(extract));
+            statements.push_back(getNewSavedVal(extract));
             continue;
         }
         auto* destVal = extract->dest->to<IR::BFN::FieldLVal>();

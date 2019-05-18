@@ -1,5 +1,5 @@
-#ifndef BF_P4C_PARDE_CHECKSUM_H_
-#define BF_P4C_PARDE_CHECKSUM_H_
+#ifndef BF_P4C_PARDE_DEPARSER_CHECKSUM_UPDATE_H_
+#define BF_P4C_PARDE_DEPARSER_CHECKSUM_UPDATE_H_
 
 #include "ir/ir.h"
 
@@ -28,4 +28,4 @@ IR::BFN::Pipe*
 extractChecksumFromDeparser(const IR::BFN::TnaDeparser* deparser,
                             IR::BFN::Pipe* pipe);
 }  // namespace BFN
-#endif /* BF_P4C_PARDE_CHECKSUM_H_ */
+#endif /* BF_P4C_PARDE_DEPARSER_CHECKSUM_UPDATE_H_ */

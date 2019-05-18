@@ -200,11 +200,11 @@ class CharacterizeParser : public Inspector {
             auto next = std::next(it);
 
             if (next != path.end()) {
-                auto match = cgl.graphs().at(parser)->transition(*it, *next);
-                total_user_header_bits += match->shift;
+                auto matches = cgl.graphs().at(parser)->transitions(*it, *next);
+                total_user_header_bits += (*matches.begin())->shift;
             } else {
-                auto match = cgl.graphs().at(parser)->to_pipe(*it);
-                total_user_header_bits += match->shift;
+                auto matches = cgl.graphs().at(parser)->to_pipe(*it);
+                total_user_header_bits += (*matches.begin())->shift;
             }
         }
 

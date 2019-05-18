@@ -17,12 +17,13 @@
 #include "bf-p4c/device.h"
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/parde/allocate_parser_checksum.h"
+#include "bf-p4c/parde/allocate_parser_match_register.h"
 #include "bf-p4c/parde/characterize_parser.h"
 #include "bf-p4c/parde/clot_info.h"
 #include "bf-p4c/parde/field_packing.h"
 #include "bf-p4c/parde/parde_visitor.h"
-#include "bf-p4c/parde/parde_utils.h"
-#include "bf-p4c/parde/split_big_state.h"
+#include "bf-p4c/parde/dump_parser.h"
+#include "bf-p4c/parde/split_parser_state.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/pragma/pa_no_init.h"
 #include "bf-p4c/mau/mau_visitor.h"
@@ -144,13 +145,13 @@ struct ExtractSimplifier {
 
     /// Add a new extract operation to the sequence.
     void add(const IR::BFN::Extract* extract) {
-        LOG4("[ExtractSimplifier] adding: " << extract);
+        LOG4("adding " << extract);
 
         auto field = phv.field(extract->dest->field);
 
         if (auto c = clot.clot(field)) {
-            if (auto* rval = extract->source->to<IR::BFN::PacketRVal>())
-                clotRVals[c].push_back(rval);
+            clotExtracts[c].push_back(extract);
+
             if (!c->is_phv_field(field))
                 return;
         }
@@ -161,6 +162,8 @@ struct ExtractSimplifier {
             return;
         }
 
+        // TODO(zma) we should have single slice at this point
+
         for (const auto& slice : slices)
             BUG_CHECK(bool(slice.container),
                       "Parser extracts into invalid PHV container: %1%", extract);
@@ -168,10 +171,7 @@ struct ExtractSimplifier {
         if (auto* bufferSource = extract->source->to<IR::BFN::InputBufferRVal>()) {
             for (const auto& slice : slices) {
                 // Shift the slice to its proper place in the input buffer.
-                auto bitOffset = bufferSource->range().lo;
-                const nw_bitrange bufferRange = slice.field_bits()
-                  .toOrder<Endian::Network>(extract->dest->size())
-                  .shiftedByBits(bitOffset);
+                auto bufferRange = bufferSource->range;
 
                 // Expand the buffer slice so that it will write to the entire
                 // destination container, with this slice in the proper place.
@@ -180,29 +180,18 @@ struct ExtractSimplifier {
                 // PHV allocation did its job then those bit are either unused,
                 // or are occupied by other extracts that we'll merge with this
                 // one.
+
                 const nw_bitrange containerRange =
                   slice.container_bits().toOrder<Endian::Network>(slice.container.size());
+
                 const nw_bitrange finalBufferRange =
                   bufferRange.shiftedByBits(-containerRange.lo)
                              .resizedToBits(slice.container.size());
 
-                LOG4(" - Mapping input buffer field slice " << bufferRange
+                LOG4("mapping input buffer field slice " << bufferRange
                       << " into " << slice.container << " " << containerRange
                       << ". Final buffer range: " << finalBufferRange);
 
-                // At this point, we should have a byte aligned range that can
-                // be implemented as an extraction operation by the hardware.
-                BUG_CHECK(finalBufferRange.isLoAligned() &&
-                          finalBufferRange.isHiAligned(),
-                          "Extract field slice %1% into %2% %3% resulted in "
-                          "non-byte-aligned buffer range %4% for: %5%",
-                          bufferRange, slice.container, containerRange,
-                          finalBufferRange, extract);
-                BUG_CHECK(finalBufferRange.lo >= 0,
-                          "Extract field slice %1% into %2% %3% resulted in "
-                          "buffer range %4% with a negative offset: %5%",
-                          bufferRange, slice.container, containerRange,
-                          finalBufferRange, extract);
                 const auto byteFinalBufferRange =
                   finalBufferRange.toUnit<RangeUnit::Byte>();
 
@@ -214,14 +203,6 @@ struct ExtractSimplifier {
                     newSource = new IR::BFN::LoweredMetadataRVal(byteFinalBufferRange);
 
                 auto* newExtract = new IR::BFN::LoweredExtractPhv(slice.container, newSource);
-
-                if (extract->hdr_len_inc_stop) {
-                    auto field = phv.field(extract->dest->field);
-                    if (field->name.startsWith("$dummy"))
-                        newExtract->hdrLenIncStop = 0;
-                    else
-                        newExtract->hdrLenIncStop = byteFinalBufferRange.hiByte() + 1;
-                }
 
                 newExtract->debug.info.push_back(debugInfoFor(extract, slice,
                                                               bufferRange));
@@ -237,18 +218,18 @@ struct ExtractSimplifier {
                 // need to slice the containt into multiple slices and align each slice
                 // within each container.
 
-                auto constSlice = *(constantSource->constant) >> slice.field_bits().lo;
+                auto constSlice = *(constantSource->constant);
                 constSlice = constSlice & IR::Constant::GetMask(slice.width);
 
                 // Place those bits at their offset within the container.
                 constSlice = constSlice << slice.container_bits().lo;
 
-                LOG4("  Placing constant slice " << constSlice << " into " << slice.container);
-
                 BUG_CHECK(constSlice.fitsUint(), "Constant slice larger than 32-bit?");
 
                 // Create an extract that writes just those bits.
                 if (constSlice.asUnsigned()) {
+                    LOG4("  Placing constant slice " << constSlice << " into " << slice.container);
+
                     auto* newSource =
                       new IR::BFN::LoweredConstantRVal(constSlice.asUnsigned());
                     auto* newExtract =
@@ -275,7 +256,6 @@ struct ExtractSimplifier {
         // this container. They should all be the same, but if they aren't
         // we want to know about it.
         nw_byteinterval bufferRange;
-        int hdrLenIncStop = -1;
 
         for (auto* extract : extracts) {
             auto* bufferSource = extract->source->to<InputBufferRValType>();
@@ -288,12 +268,6 @@ struct ExtractSimplifier {
                           "buffer range: %1%", bufferSource->byteInterval());
 
             bufferRange = bufferSource->byteInterval().unionWith(bufferRange);
-
-            if (extract->hdrLenIncStop >= 0) {
-                BUG_CHECK(hdrLenIncStop == -1,
-                    "hdr_len_inc_stop can only be set once in %1%", extract);
-                hdrLenIncStop = extract->hdrLenIncStop;
-            }
         }
 
         BUG_CHECK(!bufferRange.empty(), "Extracting zero bytes?");
@@ -315,13 +289,31 @@ struct ExtractSimplifier {
           new InputBufferRValType(*toClosedRange(bufferRange));
 
         auto* mergedExtract = new IR::BFN::LoweredExtractPhv(container, finalBufferValue);
-        mergedExtract->hdrLenIncStop = hdrLenIncStop;
 
         for (auto* extract : extracts)
             mergedExtract->debug.mergeWith(extract->debug);
 
         return mergedExtract;
     }
+
+    void sortExtractPhvs(IR::Vector<IR::BFN::LoweredParserPrimitive>& loweredExtracts) {
+        std::stable_sort(loweredExtracts.begin(), loweredExtracts.end(),
+            [&] (const IR::BFN::LoweredParserPrimitive* a,
+                 const IR::BFN::LoweredParserPrimitive* b) {
+                auto ea = a->to<IR::BFN::LoweredExtractPhv>();
+                auto eb = b->to<IR::BFN::LoweredExtractPhv>();
+
+                if (ea && eb) {
+                    auto va = ea->source->to<IR::BFN::LoweredPacketRVal>();
+                    auto vb = eb->source->to<IR::BFN::LoweredPacketRVal>();
+
+                    return (va && vb) ? (va->range < vb->range) : !!va;
+                }
+
+                return !!ea;
+            });
+     }
+
 
     /// Convert the sequence of Extract operations that have been passed to
     /// `add()` so far into a sequence of LoweredExtract operations. Extracts
@@ -335,6 +327,8 @@ struct ExtractSimplifier {
             auto* merged = mergeExtractsFor<IR::BFN::LoweredPacketRVal>(container, extracts);
             loweredExtracts.push_back(merged);
         }
+
+        sortExtractPhvs(loweredExtracts);
 
         for (auto& item : extractFromBufferByContainer) {
             auto container = item.first;
@@ -370,16 +364,30 @@ struct ExtractSimplifier {
             loweredExtracts.push_back(mergedExtract);
         }
 
-        for (auto cx : clotRVals) {
+        for (auto cx : clotExtracts) {
+            bool is_start = false;
             nw_bitinterval bitInterval;
-            for (auto rval : cx.second)
+
+            for (auto extract : cx.second) {
+                auto rval = extract->source->to<IR::BFN::PacketRVal>();
                 bitInterval = bitInterval.unionWith(rval->interval());
+
+                auto dest = phv.field(extract->dest->field);
+                if (cx.first->is_first_field_in_clot(dest)) {
+                    if (extract->dest->field->is<IR::Member>()) {
+                        is_start = true;
+                    } else if (auto sl = extract->dest->field->to<IR::Slice>()) {
+                        if (sl->getH() == dest->size - 1)  // first slice of field
+                            is_start = true;
+                    }
+                }
+            }
 
             nw_bitrange bitrange = *toClosedRange(bitInterval);
             nw_byterange byterange = bitrange.toUnit<RangeUnit::Byte>();
 
             auto rval = new IR::BFN::LoweredPacketRVal(byterange);
-            auto extractClot = new IR::BFN::LoweredExtractClot(*(cx.first), rval);
+            auto extractClot = new IR::BFN::LoweredExtractClot(is_start, rval, *(cx.first));
             loweredExtracts.push_back(extractClot);
         }
 
@@ -393,7 +401,7 @@ struct ExtractSimplifier {
     std::map<PHV::Container, ExtractSequence> extractFromBufferByContainer;
     std::map<PHV::Container, ExtractSequence> extractConstantByContainer;
 
-    std::map<const Clot*, std::vector<const IR::BFN::PacketRVal*>> clotRVals;
+    std::map<const Clot*, std::vector<const IR::BFN::Extract*>> clotExtracts;
 };
 
 using LoweredParserIRStates = std::map<const IR::BFN::ParserState*,
@@ -427,11 +435,6 @@ lowerFields(const PhvInfo& phv, const ClotInfo& clotInfo,
                   "Emitted field didn't receive a PHV allocation: %1%",
                   fieldRef->field);
 
-        // FIXME(zma) seth somehow thought it was a brilliant idea to
-        // flip the bit order and then walk the list backward. I'd say it's
-        // deliberate obfuscation. More than that, the side effect of such
-        // bit flipping is that wherever the bit range is consumed downstream,
-        // the bit range needs to be flipped back to its correct order.
         for (auto& slice : boost::adaptors::reverse(slices)) {
             BUG_CHECK(bool(slice.container), "Emitted field was allocated to "
                       "an invalid PHV container: %1%", fieldRef->field);
@@ -457,16 +460,6 @@ lowerFields(const PhvInfo& phv, const ClotInfo& clotInfo,
             last->debug.info.push_back(debugInfoFor(fieldRef, slice));
             containers.push_back(last);
 
-            // Deparser checksum engine exposes input entries as 16-bit.
-            // PHV container entry needs a swap if the field's 2-byte alignment
-            // in the container is not same as the alignment in the packet layout
-            // i.e. off by 1 byte. For example, this could happen if "ipv4.ttl" is
-            // allocated to a 8-bit container.
-
-            // XXX(zma) it's unclear whether to get field's 2-byte alignment
-            // from the packet layout or the field list layout. The field list
-            // layout is lost in translation from v1 to tna ...
-
             if (slice.field->is_checksummed() && slice.field->no_pack()) {
                 // Since the field has a no-pack constraint, its is safe to
                 // extend the range till the end of container
@@ -481,7 +474,7 @@ lowerFields(const PhvInfo& phv, const ClotInfo& clotInfo,
 /// Maps a POV bit field to a single bit within a container, represented as a
 /// ContainerBitRef. Checks that the allocation for the POV bit field is sane.
 const IR::BFN::ContainerBitRef*
-lowerPovBit(const PhvInfo& phv, const IR::BFN::FieldLVal* fieldRef) {
+lowerSingleBit(const PhvInfo& phv, const IR::BFN::FieldLVal* fieldRef) {
     le_bitrange range;
     auto* field = phv.field(fieldRef->field, &range);
 
@@ -490,21 +483,21 @@ lowerPovBit(const PhvInfo& phv, const IR::BFN::FieldLVal* fieldRef) {
         slices.push_back(alloc);
     });
 
-    BUG_CHECK(!slices.empty(), "POV bit %1% didn't receive a PHV allocation",
+    BUG_CHECK(!slices.empty(), "bit %1% didn't receive a PHV allocation",
               fieldRef->field);
-    BUG_CHECK(slices.size() == 1, "POV bit %1% is somehow split across "
+    BUG_CHECK(slices.size() == 1, "bit %1% is somehow split across "
               "multiple containers?", fieldRef->field);
 
     auto container = new IR::BFN::ContainerRef(slices.back().container);
     auto containerRange = slices.back().container_bits();
-    BUG_CHECK(containerRange.size() == 1, "POV bit %1% is multiple bits?",
+    BUG_CHECK(containerRange.size() == 1, "bit %1% is multiple bits?",
               fieldRef->field);
 
-    auto* povBit = new IR::BFN::ContainerBitRef(container, containerRange.lo);
-    LOG5("Mapping POV bit field " << fieldRef->field << " to " << povBit);
-    povBit->debug.info.push_back(debugInfoFor(fieldRef, slices.back(),
-                                              /* includeContainerInfo = */ false));
-    return povBit;
+    auto* bit = new IR::BFN::ContainerBitRef(container, containerRange.lo);
+    LOG5("Mapping bit field " << fieldRef->field << " to " << bit);
+    bit->debug.info.push_back(debugInfoFor(fieldRef, slices.back(),
+                              /* includeContainerInfo = */ false));
+    return bit;
 }
 
 /// Maps a field which cannot be split between multiple containers to a single
@@ -532,7 +525,7 @@ lowerUnsplittableField(const PhvInfo& phv,
 struct ComputeLoweredParserIR : public ParserInspector {
     ComputeLoweredParserIR(const PhvInfo& phv,
                            ClotInfo& clotInfo,
-                           const AllocateParserChecksumUnits& checksumAlloc) :
+                           const AllocateParserChecksums& checksumAlloc) :
         phv(phv), clotInfo(clotInfo), checksumAlloc(checksumAlloc) {
         // Initialize the map from high-level parser states to low-level parser
         // states so that null, which represents the end of the parser program
@@ -584,8 +577,8 @@ struct ComputeLoweredParserIR : public ParserInspector {
                 egressMetaSize = ((egressMetaSize + 3) / 4) * 4;
             }
 
-            LOG4("meta_opt: " << egressMetaOpt);
-            LOG4("meta_size: " << egressMetaSize);
+            LOG2("meta_opt: " << egressMetaOpt);
+            LOG2("meta_size: " << egressMetaSize);
         }
 
         return true;
@@ -606,24 +599,23 @@ struct ComputeLoweredParserIR : public ParserInspector {
                          const std::vector<const IR::BFN::ParserChecksumPrimitive*>& checksums) {
         IR::Vector<IR::BFN::LoweredParserChecksum> loweredChecksums;
 
-        std::map<unsigned,
-                 std::vector<const IR::BFN::ParserChecksumPrimitive*>> csum_id_to_prims;
+        std::map<cstring,
+                 std::vector<const IR::BFN::ParserChecksumPrimitive*>> csum_to_prims;
 
-        for (auto prim : checksums) {
-            unsigned id = checksumAlloc.declToChecksumId.at(parser).at(prim->declName);
-            csum_id_to_prims[id].push_back(prim);
+        for (auto prim : checksums)
+            csum_to_prims[prim->declName].push_back(prim);
+
+        for (auto& kv : csum_to_prims) {
+            auto csum = lowerParserChecksum(parser, state, kv.first, kv.second);
+            loweredChecksums.push_back(csum);
         }
-
-        for (auto& kv : csum_id_to_prims)
-           loweredChecksums.push_back(lowerParserChecksum(parser, state, kv.first,
-                                                                 kv.second));
 
         return loweredChecksums;
     }
 
     int getHeaderEndPos(const IR::BFN::ChecksumSubtract* lastSubtract) {
         auto v = lastSubtract->source->to<IR::BFN::PacketRVal>();
-        int lastBitSubtract = v->range().toUnit<RangeUnit::Bit>().hi;
+        int lastBitSubtract = v->range.toUnit<RangeUnit::Bit>().hi;
         BUG_CHECK(lastBitSubtract % 8 == 7,
                 "Fields in checksum subtract %1% are not byte-aligned", v);
         auto* headerRef = lastSubtract->field->expr->to<IR::ConcreteHeaderRef>();
@@ -645,49 +637,50 @@ struct ComputeLoweredParserIR : public ParserInspector {
     IR::BFN::LoweredParserChecksum*
     lowerParserChecksum(const IR::BFN::Parser* parser,
                         const IR::BFN::ParserState* state,
-                        unsigned id,
+                        cstring name,
                         std::vector<const IR::BFN::ParserChecksumPrimitive*>& checksums) {
-        auto last = checksums.back();
-        cstring declName = last->declName;
+        unsigned id = checksumAlloc.get_id(parser, name);
+        bool start = checksumAlloc.is_start_state(parser, name, state);
+        bool end = checksumAlloc.is_end_state(parser, name, state);
+        auto type = checksumAlloc.get_type(parser, name);
 
-        bool start = false;
-        if (checksumAlloc.declToStartStates.at(parser).at(declName).count(state))
-            start = true;
-
-        bool end = false;
-        if (checksumAlloc.declToEndStates.at(parser).at(declName).count(state))
-            end = true;
-
-        auto type = IR::BFN::ChecksumMode::VERIFY;
-        if (last->is<IR::BFN::ChecksumSubtract>() || last->is<IR::BFN::ChecksumGet>())
-            type = IR::BFN::ChecksumMode::RESIDUAL;
-
-        int end_pos = 0;
         const IR::BFN::FieldLVal* dest = nullptr;
+
         std::set<nw_byterange> masked_ranges;
-        const  IR::BFN::ChecksumSubtract* lastSubtract = nullptr;
+
         for (auto c : checksums) {
             if (auto add = c->to<IR::BFN::ChecksumAdd>()) {
                 if (auto v = add->source->to<IR::BFN::PacketRVal>())
-                    masked_ranges.insert(v->range().toUnit<RangeUnit::Byte>());
+                    masked_ranges.insert(v->range.toUnit<RangeUnit::Byte>());
             } else if (auto sub = c->to<IR::BFN::ChecksumSubtract>()) {
                 if (auto v = sub->source->to<IR::BFN::PacketRVal>())
-                    masked_ranges.insert(v->range().toUnit<RangeUnit::Byte>());
-                lastSubtract = sub;
+                    masked_ranges.insert(v->range.toUnit<RangeUnit::Byte>());
             } else if (auto verify = c->to<IR::BFN::ChecksumVerify>()) {
                 dest = verify->dest;
             } else if (auto get = c->to<IR::BFN::ChecksumGet>()) {
                 dest = get->dest;
             }
         }
-        if (lastSubtract && end)
-            end_pos = getHeaderEndPos(lastSubtract);
+
+        auto last = checksums.back();
+
+        int end_pos = 0;
+        if (end) {
+            if (last->is<IR::BFN::ChecksumGet>()) {
+                auto last_subtract = checksums.rbegin()[1]->to<IR::BFN::ChecksumSubtract>();
+                end_pos = getHeaderEndPos(last_subtract);
+            }
+        }
+
         auto csum = new IR::BFN::LoweredParserChecksum(
             id, masked_ranges, 0x0, start, end, end_pos, type);
 
         std::vector<alloc_slice> slices;
+
+        // FIXME(zma) this code could use some cleanup, what a mess ...
         if (dest) {
-            slices = phv.get_alloc(dest->field);
+            auto f = phv.field(dest->field);
+            slices = phv.get_alloc(f, nullptr);  // XXX(zma)
             BUG_CHECK(slices.size() == 1, "checksum error %1% is somehow allocated to "
                "multiple containers?", dest->field);
         }
@@ -699,10 +692,14 @@ struct ComputeLoweredParserIR : public ParserInspector {
                                      new IR::BFN::ContainerRef(slices.back().container),
                                      (unsigned)sl->getL());
             } else {
-                csum->csum_err = lowerPovBit(phv, dest);
+                csum->csum_err = lowerSingleBit(phv, dest);
             }
         } else if (type == IR::BFN::ChecksumMode::RESIDUAL && dest) {
             csum->phv_dest = new IR::BFN::ContainerRef(slices.back().container);
+        } else if (type == IR::BFN::ChecksumMode::CLOT && end) {
+            auto deposit = last->to<IR::BFN::ChecksumDepositToClot>();
+            BUG_CHECK(deposit, "clot checksum does not end with a deposit?");
+            csum->clot_dest = *deposit->clot;
         }
 
         return csum;
@@ -723,7 +720,9 @@ struct ComputeLoweredParserIR : public ParserInspector {
         loweredState->debug.mergeWith(state->debug);
 
         std::vector<const IR::BFN::ParserChecksumPrimitive*> checksums;
+
         const IR::BFN::ParserPrioritySet* priority = nullptr;
+        const IR::BFN::HdrLenIncStop* stopper = nullptr;
 
         // Collect all the extract operations; we'll lower them as a group so we
         // can merge extracts that write to the same PHV containers.
@@ -738,27 +737,19 @@ struct ComputeLoweredParserIR : public ParserInspector {
                 BUG_CHECK(!priority,
                           "more than one parser priority set in %1%?", state->name);
                 priority = prio;
+            } else if (auto* stop = prim->to<IR::BFN::HdrLenIncStop>()) {
+                BUG_CHECK(!stopper,
+                          "more than one hdr_len_inc_stop in %1%?", state->name);
+                stopper = stop;
             } else {
                 P4C_UNIMPLEMENTED("unhandled parser primitive %1%", prim);
             }
         }
 
-        auto loweredStatements = simplifier.lowerExtracts();
+        auto loweredExtracts = simplifier.lowerExtracts();
 
         auto parser = findContext<IR::BFN::Parser>();
         auto loweredChecksums = lowerParserChecksums(parser, state, checksums);
-
-        // populate container range in clot info
-
-        for (auto stmt : loweredStatements) {
-            if (auto extract = stmt->to<IR::BFN::LoweredExtractPhv>()) {
-                if (auto* source = extract->source->to<IR::BFN::LoweredInputBufferRVal>()) {
-                    auto bytes = source->extractedBytes();
-                    auto container = extract->dest->container;
-                    clotInfo.container_range()[state->name][container] = bytes;
-                }
-            }
-        }
 
         /// Convert multiple select into one.
         auto* loweredSelect = new IR::BFN::LoweredSelect();
@@ -770,7 +761,7 @@ struct ComputeLoweredParserIR : public ParserInspector {
 
             if (auto* bufferSource = select->source->to<IR::BFN::InputBufferRVal>()) {
                 const auto bufferRange =
-                    bufferSource->range().toUnit<RangeUnit::Byte>();
+                    bufferSource->range.toUnit<RangeUnit::Byte>();
                 loweredSelect->debug.info.push_back(debugInfoFor(select, bufferRange)); }
             return;
         });
@@ -788,7 +779,7 @@ struct ComputeLoweredParserIR : public ParserInspector {
                 saves.push_back(
                     new IR::BFN::LoweredSave(
                             save->dest,
-                            save->source->range().toUnit<RangeUnit::Byte>()));
+                            save->source->range.toUnit<RangeUnit::Byte>()));
             }
             IR::BFN::LoweredMatchValue* match_value = nullptr;
             if (auto* const_value = transition->value->to<IR::BFN::ParserConstMatchValue>()) {
@@ -802,11 +793,17 @@ struct ComputeLoweredParserIR : public ParserInspector {
             auto* loweredMatch = new IR::BFN::LoweredParserMatch(
                     match_value,
                     *transition->shift,
-                    loweredStatements,
+                    loweredExtracts,
                     saves,
                     loweredChecksums,
                     priority,
                     loweredStates[transition->next]);
+
+            if (stopper) {
+                auto last = stopper->source->range.toUnit<RangeUnit::Byte>();
+                loweredMatch->hdrLenIncFinalAmt = last.hi ? last.hi + 1 : 0;
+            }
+
             loweredState->transitions.push_back(loweredMatch);
         }
 
@@ -818,7 +815,7 @@ struct ComputeLoweredParserIR : public ParserInspector {
 
     const PhvInfo& phv;
     ClotInfo& clotInfo;
-    const AllocateParserChecksumUnits& checksumAlloc;
+    const AllocateParserChecksums& checksumAlloc;
 };
 
 /// Replace the high-level parser IR version of each parser's root node with its
@@ -919,16 +916,19 @@ class ResolveParserConstants : public ParserTransform {
 /// for the existing representation.
 struct LowerParserIR : public PassManager {
     LowerParserIR(const PhvInfo& phv, ClotInfo& clotInfo) {
-        auto* checksumAllocation = new AllocateParserChecksumUnits;
+        auto* allocateParserChecksums = new AllocateParserChecksums(phv, clotInfo);
         auto* computeLoweredParserIR = new ComputeLoweredParserIR(phv, clotInfo,
-                                            *checksumAllocation);
+                                            *allocateParserChecksums);
         addPasses({
-            LOGGING(3) ? new DumpParser("before_parser_lowering") : nullptr,
-            checksumAllocation,
+            LOGGING(4) ? new DumpParser("before_parser_lowering") : nullptr,
             new ResolveParserConstants(phv, clotInfo),
+            new SplitParserState(phv, clotInfo),
+            new AllocateParserMatchRegisters(phv),
+            allocateParserChecksums,
+            LOGGING(4) ? new DumpParser("final_hlir_parser") : nullptr,
             computeLoweredParserIR,
             new ReplaceParserIR(*computeLoweredParserIR),
-            LOGGING(3) ? new DumpParser("after_parser_lowering") : nullptr
+            LOGGING(4) ? new DumpParser("after_parser_lowering") : nullptr
         });
     }
 };
@@ -1097,234 +1097,11 @@ struct RewriteEmitClot : public DeparserModifier {
     ClotInfo& clotInfo;
 };
 
-// For CLOTs that participate in deparser checksum update, we need to allocate
-// parser checksum units to compute the CLOT portion of the checksum. We do this
-// after CLOT allocation, when all the residual and checksum verification have
-// been allocated (which come from the program). The CLOTs checksum can then be
-// allocated to the remaining checksum units.
-//
-struct AllocateParserClotChecksums : public PassManager {
-    struct CollectClotChecksumFields : public DeparserInspector {
-        CollectClotChecksumFields(const PhvInfo& phv, const ClotInfo& clotInfo) :
-            phv(phv), clotInfo(clotInfo) {}
-
-        bool preorder(const IR::BFN::Deparser* deparser) override {
-            // look for clot fields in deparser checksums
-
-            for (auto emit : deparser->emits) {
-                if (auto csum = emit->to<IR::BFN::EmitChecksum>()) {
-                    for (auto source : csum->sources) {
-                        auto field = phv.field(source->field);
-                        if (auto* clot = clotInfo.allocated(field))
-                            rv[clot].push_back(field);
-                    }
-                }
-            }
-
-            return false;
-        }
-
-        std::map<const Clot*, std::vector<const PHV::Field*>> rv;
-
-        const PhvInfo& phv;
-        const ClotInfo& clotInfo;
-    };
-
-    // get existing parser checksum unit assignments, i.e. residual and verify
-    struct GetExistingChecksumAlloc : public ParserInspector {
-        std::map<const IR::BFN::LoweredParserMatch*, std::set<unsigned>> match_to_verify_csums;
-        std::map<const IR::BFN::LoweredParserMatch*, std::set<unsigned>> match_to_residual_csums;
-
-        std::map<const IR::BFN::LoweredParserMatch*,
-                 const IR::BFN::LoweredParserState*> match_to_state;
-
-        bool preorder(const IR::BFN::LoweredParserChecksum* csum) override {
-            auto state = findContext<IR::BFN::LoweredParserState>();
-            auto match = findContext<IR::BFN::LoweredParserMatch>();
-
-            match_to_state[match] = state;
-
-            if (csum->type == IR::BFN::ChecksumMode::VERIFY)
-                match_to_verify_csums[match].insert(csum->id);
-            else if (csum->type == IR::BFN::ChecksumMode::RESIDUAL)
-                match_to_residual_csums[match].insert(csum->id);
-
-            return false;
-        }
-    };
-
-    struct CreateClotChecksums : public ParserInspector {
-        CreateClotChecksums(const PhvInfo& phv,
-                            const CollectLoweredParserInfo& parser_info,
-                            const CollectClotChecksumFields& clot_checksum_fields,
-                            const GetExistingChecksumAlloc& existing_alloc) :
-                phv(phv), parser_info(parser_info),
-                clot_checksum_fields(clot_checksum_fields),
-                existing_alloc(existing_alloc) { }
-        std::set<nw_byterange>
-        generateByteMask(const std::vector<const PHV::Field*>& clot_csum_fields,
-                         const IR::BFN::LoweredExtractClot* ec) {
-            std::set<nw_byterange> ranges;
-            unsigned clot_start_byte = ec->dest.start;
-
-            for (auto f : clot_csum_fields) {
-                unsigned offset = ec->dest.byte_offset(f);
-                int sz = (f->size + 7) / 8;
-                ranges.insert(StartLen(clot_start_byte + offset, sz));
-            }
-
-            return ranges;
-        }
-
-        IR::BFN::LoweredParserChecksum*
-        createClotChecksum(int id,
-                           const std::set<nw_byterange>& mask,
-                           const Clot& clot) {
-            auto csum = new IR::BFN::LoweredParserChecksum(
-                    id, mask, 0x0, true, true, 0, IR::BFN::ChecksumMode::CLOT);
-            csum->clot_dest = clot;
-            return csum;
-        }
-
-        bool isUsedAsVerifyOrClot(int id,
-                                  const IR::BFN::LoweredParserMatch* match) {
-            if (existing_alloc.match_to_verify_csums.count(match)) {
-                if (existing_alloc.match_to_verify_csums.at(match).count(id))
-                    return true;
-            }
-
-            if (match_to_clot_csums.count(match)) {
-                if (match_to_clot_csums.at(match).count(id))
-                    return true;
-            }
-
-            return false;
-        }
-
-        bool isUsedAsResidual(int id, const IR::BFN::LoweredParser* parser,
-                              const IR::BFN::LoweredParserState* state,
-                              const IR::BFN::LoweredParserMatch* match) {
-            if (existing_alloc.match_to_residual_csums.count(match)) {
-                if (existing_alloc.match_to_residual_csums.at(match).count(id))
-                    return true;
-            }
-
-            for (auto& kv : existing_alloc.match_to_residual_csums) {
-                auto residual_match = kv.first;
-                auto residual_state = existing_alloc.match_to_state.at(residual_match);
-
-                if (parser_info.graph(parser).is_ancestor(residual_state, state)) {
-                    if (kv.second.count(id))
-                        return true;
-                }
-            }
-
-            return false;
-        }
-
-        int findChecksumId(const IR::BFN::LoweredParser* parser,
-                           const IR::BFN::LoweredParserState* state,
-                           const IR::BFN::LoweredParserMatch* match) {
-            int id = 0;
-
-            // CLOT checksum can only use unit 2-4
-            for (int i = 2; i <= 4; i++) {
-                if (isUsedAsVerifyOrClot(i, match) ||
-                   (isUsedAsResidual(i, parser, state, match)))
-                    continue;
-
-                id = i;
-                break;
-            }
-
-            if (id == 0) {
-                ::error("Ran out of CLOT checksum units in %1% parser."
-                        " CLOT can only use parser checksum unit 2-4.", state->gress);
-            }
-
-            return id;
-        }
-
-        const IR::BFN::LoweredParserChecksum*
-        allocate(const IR::BFN::LoweredParser* parser,
-                 const IR::BFN::LoweredParserState* state,
-                 const IR::BFN::LoweredParserMatch* match,
-                 const IR::BFN::LoweredExtractClot* ec,
-                 const std::vector<const PHV::Field*>& fields) {
-            int id = findChecksumId(parser, state, match);
-            auto mask = generateByteMask(fields, ec);
-            auto csum = createClotChecksum(id, mask, ec->dest);
-            match_to_clot_csums[match].insert(id);
-            return csum;
-        }
-
-        bool preorder(const IR::BFN::LoweredParserMatch* match) override {
-            auto parser = findContext<IR::BFN::LoweredParser>();
-            auto state = findContext<IR::BFN::LoweredParserState>();
-
-            for (auto p : match->extracts) {
-                if (auto ec = p->to<IR::BFN::LoweredExtractClot>()) {
-                    for (auto c : clot_checksum_fields.rv) {
-                        if (*(c.first) == ec->dest) {
-                            auto csum = allocate(parser, state, match, ec, c.second);
-                            clot_csums_to_insert[match].push_back(csum);
-                        }
-                    }
-                }
-            }
-
-            return true;
-        }
-
-        std::map<const IR::BFN::LoweredParserMatch*, std::set<unsigned>> match_to_clot_csums;
-
-        std::map<const IR::BFN::LoweredParserMatch*,
-                 std::vector<const IR::BFN::LoweredParserChecksum*>> clot_csums_to_insert;
-
-        const PhvInfo& phv;
-        const CollectLoweredParserInfo& parser_info;
-        const CollectClotChecksumFields& clot_checksum_fields;
-        const GetExistingChecksumAlloc& existing_alloc;
-    };
-
-    struct InsertClotChecksums : public ParserModifier {
-        explicit InsertClotChecksums(const CreateClotChecksums& clot_checksums) :
-            clot_checksums(clot_checksums) { }
-
-        bool preorder(IR::BFN::LoweredParserMatch* match) override {
-            auto orig = getOriginal<IR::BFN::LoweredParserMatch>();
-
-            if (clot_checksums.clot_csums_to_insert.count(orig)) {
-                for (auto csum : clot_checksums.clot_csums_to_insert.at(orig))
-                    match->checksums.push_back(csum);
-            }
-
-            return true;
-        }
-
-        const CreateClotChecksums& clot_checksums;
-    };
-
-    AllocateParserClotChecksums(const PhvInfo& phv, const ClotInfo& clot) {
-        auto parser_info = new CollectLoweredParserInfo;
-        auto clot_checksum_fields = new CollectClotChecksumFields(phv, clot);
-        auto existing_alloc = new GetExistingChecksumAlloc;
-        auto create_clot_csums = new CreateClotChecksums(phv,
-                                          *parser_info,
-                                          *clot_checksum_fields,
-                                          *existing_alloc);
-        auto insert_clot_csums = new InsertClotChecksums(*create_clot_csums);
-
-        addPasses({
-            parser_info,
-            clot_checksum_fields,
-            existing_alloc,
-            create_clot_csums,
-            insert_clot_csums
-        });
-    }
-};
-
+// Deparser checksum engine exposes input entries as 16-bit.
+// PHV container entry needs a swap if the field's 2-byte alignment
+// in the container is not same as the alignment in the packet layout
+// i.e. off by 1 byte. For example, this could happen if "ipv4.ttl" is
+// allocated to a 8-bit container.
 std::map<PHV::Container, unsigned> getChecksumPhvSwap(const PhvInfo& phv,
                                                       const IR::BFN::EmitChecksum* emitChecksum) {
     std::map<PHV::Container, unsigned> containerToSwap;
@@ -1377,23 +1154,19 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
         std::tie(phvSources, clotSources) =
             lowerFields(phv, clotInfo, emitChecksum->sources);
 
-        auto* loweredPovBit = lowerPovBit(phv, emitChecksum->povBit);
+        auto* loweredPovBit = lowerSingleBit(phv, emitChecksum->povBit);
         auto containerToSwap = getChecksumPhvSwap(phv, emitChecksum);
         for (auto* source : phvSources) {
             auto* input = new IR::BFN::ChecksumPhvInput(source);
             input->swap = containerToSwap[source->container];
-#if HAVE_JBAY
             if (Device::currentDevice() == Device::JBAY)
                 input->povBit = loweredPovBit;
-#endif
             unitConfig->phvs.push_back(input);
         }
-#if HAVE_JBAY
         for (auto source : clotSources) {
             auto* input = new IR::BFN::ChecksumClotInput(source, loweredPovBit);
             unitConfig->clots.push_back(input);
         }
-#endif
         return unitConfig;
     }
 
@@ -1439,10 +1212,8 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
                 if (prim->is<IR::BFN::EmitChecksum>()) {
                     LOG5(" - Placing complex emit in its own group: " << prim);
                     groupedEmits.emplace_back(1, prim);
-#if HAVE_JBAY
                 } else if (prim->is<IR::BFN::EmitClot>()) {
                     groupedEmits.emplace_back(1, prim);
-#endif
                 } else {
                     BUG("Found a complex emit of an unexpected type: %1%", prim);
                 }
@@ -1512,7 +1283,7 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
                 loweredDeparser->checksums.push_back(unitConfig);
 
                 // Generate the lowered checksum emit.
-                auto* loweredPovBit = lowerPovBit(phv, emitChecksum->povBit);
+                auto* loweredPovBit = lowerSingleBit(phv, emitChecksum->povBit);
 
                 auto* loweredEmit =
                   new IR::BFN::LoweredEmitChecksum(loweredPovBit, nextChecksumUnit);
@@ -1539,7 +1310,7 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
             // lowered emit primitives.
             IR::Vector<IR::BFN::ContainerRef> emitSources;
             std::tie(emitSources, std::ignore) = lowerFields(phv, clotInfo, sources);
-            auto* loweredPovBit = lowerPovBit(phv, emit->povBit);
+            auto* loweredPovBit = lowerSingleBit(phv, emit->povBit);
             for (auto* source : emitSources) {
                 auto* loweredEmit = new IR::BFN::LoweredEmitPhv(loweredPovBit, source);
                 loweredDeparser->emits.push_back(loweredEmit);
@@ -1553,7 +1324,7 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
             auto* lowered = new IR::BFN::LoweredDeparserParameter(param->name,
                                                                   loweredSource);
             if (param->povBit)
-                lowered->povBit = lowerPovBit(phv, param->povBit);
+                lowered->povBit = lowerSingleBit(phv, param->povBit);
             loweredDeparser->params.push_back(lowered);
         }
 
@@ -1570,7 +1341,7 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
                 lowered->selector = loweredSelector; }
 
             if (digest->povBit)
-                lowered->povBit = lowerPovBit(phv, digest->povBit);
+                lowered->povBit = lowerSingleBit(phv, digest->povBit);
 
             // Each field list, when lowered, becomes a digest table entry.
             // Learning field lists are used to generate the format for learn
@@ -1637,7 +1408,6 @@ struct LowerDeparserIR : public PassManager {
         auto* rewriteEmitClot = new RewriteEmitClot(phv, clot);
         auto* computeLoweredDeparserIR = new ComputeLoweredDeparserIR(phv, clot);
         addPasses({
-            new AllocateParserClotChecksums(phv, clot),
             rewriteEmitClot,
             computeLoweredDeparserIR,
             new ReplaceDeparserIR(computeLoweredDeparserIR->igLoweredDeparser,
@@ -1842,8 +1612,8 @@ class ComputeBufferRequirements : public ParserModifier {
 
         const unsigned inputBufferSize = Device::pardeSpec().byteInputBufferSize();
         BUG_CHECK(*match->bufferRequired <= inputBufferSize,
-                  "Match for state %1% requires %2% bytes to be buffered, which "
-                  "is more than can fit in the %3% byte input buffer",
+                  "Parser state %1% requires %2% bytes to be buffered which "
+                  "is greater than the size of the input buffer (%3% byte)",
                   findContext<IR::BFN::LoweredParserState>()->name,
                   *match->bufferRequired, inputBufferSize);
     }
@@ -1858,17 +1628,10 @@ LowerParser::LowerParser(const PhvInfo& phv, ClotInfo& clot, const FieldDefUse &
         pragma_no_init,
         new LowerParserIR(phv, clot),
         new LowerDeparserIR(phv, clot),
-#if BAREFOOT_INTERNAL
-        LOGGING(3) ? new DumpParser("before_split_big_states") : nullptr,
-#endif
-        new SplitBigStates,
-#if BAREFOOT_INTERNAL
-        LOGGING(3) ? new DumpParser("after_split_big_states") : nullptr,
-#endif
         new WarnTernaryMatchFields(phv),
         new ComputeInitZeroContainers(phv, defuse, pragma_no_init->getFields()),
         new ComputeMultiwriteContainers,  // Must run after ComputeInitZeroContainers.
         new ComputeBufferRequirements,
-        BackendOptions().parser_timing_reports ? new CharacterizeParser : nullptr
+        new CharacterizeParser
     });
 }

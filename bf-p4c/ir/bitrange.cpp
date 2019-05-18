@@ -5,17 +5,6 @@
 
 #include "ir/ir.h"
 
-namespace {
-
-void writeRangeToStream(std::ostream& out, const char* prefix, int lo, int hi,
-                        const char* suffix) {
-    out << std::dec << prefix << lo;
-    if (hi != lo) out << ".." << hi;
-    out << suffix;
-}
-
-}  // namespace
-
 void rangeToJSON(JSONGenerator& json, int lo, int hi) {
     json.toJSON(std::make_pair(lo, hi));
 }
@@ -28,16 +17,21 @@ std::pair<int, int> rangeFromJSON(JSONLoader& json) {
 
 std::ostream& toStream(std::ostream& out, RangeUnit unit,
                        Endian order, int lo, int hi, bool closed) {
-    const char* prefix = "?[";
-    switch (order) {
-        case Endian::Network: prefix = "N["; break;
-        case Endian::Little: prefix = "L["; break;
-    }
-    const char* suffix = closed ? "]?" : ")?";
-    switch (unit) {
-        case RangeUnit::Bit: suffix = closed ? "]b" : ")b"; break;
-        case RangeUnit::Byte: suffix = closed ? "]B" : ")B"; break;
-    }
-    writeRangeToStream(out, prefix, lo, hi, suffix);
+    std::string suffix = closed ? "]" : ")";
+
+    if (unit == RangeUnit::Bit) out << "bit";
+    else if (unit == RangeUnit::Byte) out << "byte";
+    else
+        BUG("unknown range unit");
+
+    out << "[";
+
+    if (order == Endian::Little) std::swap(lo, hi);
+
+    out << std::dec << lo;
+    if (lo != hi) out << ".." << hi;
+
+    out << (closed ? "]" : ")");
+
     return out;
 }

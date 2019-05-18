@@ -2,6 +2,7 @@
 
 #include <boost/range/adaptor/reversed.hpp>
 
+#include "bf-p4c/parde/dump_parser.h"
 #include "bf-p4c/parde/parde_utils.h"
 #include "bf-p4c/parde/parser_info.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
@@ -347,14 +348,14 @@ class FindParsingFrontier : public ParserInspector {
 
         for (auto& st : front.cutset.transitions) {
             for (auto d : st.second) {
-                auto t = graph.transition(st.first, d);
-                cg.insert((void*)t);  // NOLINT
+                for (auto t : graph.transitions(st.first, d))
+                    cg.insert((void*)t);  // NOLINT
             }
         }
 
         for (auto s : front.cutset.transitions_to_pipe) {
-            auto t = graph.to_pipe(s);
-            cg.insert((void*)t);  // NOLINT
+            for (auto t : graph.to_pipe(s))
+                cg.insert((void*)t);  // NOLINT
         }
 
         color_groups.push_back(cg);
@@ -450,30 +451,6 @@ class InsertFrontierStates : public ParserTransform {
 };
 
 class RewriteParde : public PardeTransform {
-    void sort_primitives_by_packet_rval(IR::BFN::ParserState* state) {
-        std::sort(state->statements.begin(), state->statements.end(),
-            [&] (const IR::BFN::ParserPrimitive* a,
-                 const IR::BFN::ParserPrimitive* b) {
-                auto ea = a->to<IR::BFN::Extract>();
-                auto eb = b->to<IR::BFN::Extract>();
-
-                if (ea && eb) {
-                    auto va = ea->source->to<IR::BFN::PacketRVal>();
-                    auto vb = eb->source->to<IR::BFN::PacketRVal>();
-
-                    return (va && vb) ? (va->range() < vb->range()) : !!va;
-                }
-
-                return !!ea;
-            });
-
-        if (LOGGING(5)) {
-            std::clog << "sorted primitives in " << state->name << std::endl;
-            for (auto p : state->statements)
-                std::clog << p << std::endl;
-        }
-    }
-
     void insert_hdr_len_inc_stop(IR::BFN::ParserState* state) {
         IR::Vector<IR::BFN::ParserPrimitive> rv;
 
@@ -484,15 +461,15 @@ class RewriteParde : public PardeTransform {
             if (auto extract = stmt->to<IR::BFN::Extract>()) {
                 auto f = phv.field(extract->dest->field);
 
-                if (extract->source->is<IR::BFN::PacketRVal>()) {
+                if (auto rval = extract->source->to<IR::BFN::PacketRVal>()) {
                     if (!inserted && is_mutable_field(defuse, f)) {
-                        auto clone = extract->clone();
-                        clone->hdr_len_inc_stop = true;
+                        auto stopper = new IR::BFN::HdrLenIncStop(rval);
 
-                        rv.insert(rv.begin(), clone);
+                        rv.insert(rv.begin(), stopper);
+                        rv.insert(rv.begin(), extract);
                         inserted = true;
 
-                        LOG4("insert hdr_len_inc_stop in " << extract << " in " << state->name);
+                        LOG4("inserted " << stopper << " in " << state->name);
                         continue;
                     }
                 }
@@ -503,12 +480,9 @@ class RewriteParde : public PardeTransform {
 
         // state has no write-able fields, insert stopper at the beginning
         if (!inserted) {
-            auto stopper = new IR::BFN::Extract(
-                new IR::TempVar(IR::Type::Bits::get(1), false,
-                                "$dummy_" + ::toString(state->gress)),
-                    new IR::BFN::PacketRVal(nw_bitrange(StartLen(0, 1))));
+            auto stopper = new IR::BFN::HdrLenIncStop(
+                    new IR::BFN::PacketRVal(nw_bitrange(0, 0)));
 
-            stopper->hdr_len_inc_stop = true;
             rv.insert(rv.begin(), stopper);
 
             LOG4("insert hdr_len_inc_stop (null-extract) in " << state->name);
@@ -524,16 +498,16 @@ class RewriteParde : public PardeTransform {
 
         // assumes primitives have been sorted by packet rval
         for (auto stmt : boost::adaptors::reverse(state->statements)) {
-            auto extract = stmt->to<IR::BFN::Extract>();
-
-            if (extract && extract->hdr_len_inc_stop)
+            auto stopper = stmt->to<IR::BFN::HdrLenIncStop>();
+            if (stopper)
                 seen_hdr_len_inc_stop = true;
 
-            if (!extract || seen_hdr_len_inc_stop) {
+            if (seen_hdr_len_inc_stop) {
                 rv.push_back(stmt);
                 continue;
             }
 
+            auto extract = stmt->to<IR::BFN::Extract>();
             auto field = phv.field(extract->dest->field);
 
             if (!field->deparsed() ||
@@ -587,7 +561,7 @@ class RewriteParde : public PardeTransform {
             rv = state;
         } else if (is_below_frontier(orig_parser, orig_state)) {
             rv = state->clone();
-            sort_primitives_by_packet_rval(rv);
+            SortExtracts sort(rv);
             elim_extracts_of_unused_field(rv);
         } else {
             auto& front = parser_to_frontier_states.at(orig_parser->gress);
@@ -595,7 +569,7 @@ class RewriteParde : public PardeTransform {
                       "Incorrect parsing frontier computation at %1%", state->name);
 
             rv = state->clone();
-            sort_primitives_by_packet_rval(rv);
+            SortExtracts sort(rv);
             insert_hdr_len_inc_stop(rv);
             elim_extracts_of_unused_field(rv);
         }
@@ -689,14 +663,15 @@ InferPayloadOffset::InferPayloadOffset(const PhvInfo& phv,
     auto insertFrontier = new InsertFrontierStates(*findFrontier);
 
     addPasses({
-        LOGGING(3) ? new DumpParser("before_infer_payload_offset") : nullptr,
+        LOGGING(4) ? new DumpParser("before_infer_payload_offset") : nullptr,
         uses,
         parserInfo,
         findFrontier,
-        LOGGING(4) ? new DumpParser("after_find_parsing_frontier",
+        LOGGING(5) ? new DumpParser("after_find_parsing_frontier",
                                     findFrontier->color_groups) : nullptr,
         insertFrontier,
         parserInfo,
-        new RewriteParde(phv, *uses, defuse, *parserInfo, *insertFrontier)
+        new RewriteParde(phv, *uses, defuse, *parserInfo, *insertFrontier),
+        LOGGING(4) ? new DumpParser("after_infer_payload_offset") : nullptr,
     });
 }

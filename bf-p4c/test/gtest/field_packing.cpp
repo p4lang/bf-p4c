@@ -327,19 +327,19 @@ TEST(TofinoFieldPacking, CreateExtractionState) {
     ASSERT_TRUE(field1Extract != nullptr);
     auto* field1Source = field1Extract->source->to<IR::BFN::PacketRVal>();
     ASSERT_TRUE(field1Source != nullptr);
-    ASSERT_TRUE(field1Source->range() == nw_bitrange(3, 8));
+    ASSERT_TRUE(field1Source->range == nw_bitrange(3, 8));
 
     auto* field2Extract = extracts[1]->to<IR::BFN::Extract>();
     ASSERT_TRUE(field2Extract != nullptr);
     auto* field2Source = field2Extract->source->to<IR::BFN::PacketRVal>();
     ASSERT_TRUE(field2Source != nullptr);
-    ASSERT_TRUE(field2Source->range() == nw_bitrange(9, 23));
+    ASSERT_TRUE(field2Source->range == nw_bitrange(9, 23));
 
     auto* field3Extract = extracts[2]->to<IR::BFN::Extract>();
     ASSERT_TRUE(field3Extract != nullptr);
     auto* field3Source = field3Extract->source->to<IR::BFN::PacketRVal>();
     ASSERT_TRUE(field3Source != nullptr);
-    ASSERT_TRUE(field3Source->range() == nw_bitrange(33, 40));
+    ASSERT_TRUE(field3Source->range == nw_bitrange(33, 40));
 }
 
 }  // namespace BFN

@@ -3,7 +3,7 @@
 #include <vector>
 #include <map>
 #include "lib/ordered_map.h"
-#include "bf-p4c/parde/parde_utils.h"
+#include "bf-p4c/parde/dump_parser.h"
 #include "bf-p4c/parde/parde_visitor.h"
 
 namespace {
@@ -11,8 +11,6 @@ namespace {
 struct CollectStateUses : public ParserInspector {
     using State = IR::BFN::ParserState;
     bool preorder(const IR::BFN::ParserState* state) {
-        match_reg_def[state] = {};
-        match_reg_use[state] = {};
         if (!n_transition_to.count(state))
             n_transition_to[state] = 0;
 
@@ -21,28 +19,16 @@ struct CollectStateUses : public ParserInspector {
             if (!next_state) continue;
 
             n_transition_to[next_state]++;
-            // for saves => match_reg def
-            for (const auto* save : transition->saves) {
-                match_reg_def[state].insert(save->dest); }
         }
-
-        // for select => match_reg use
-        for (const auto* select : state->selects)
-            for (const auto& rs : select->reg_slices)
-                match_reg_use[state].insert(rs.first);
 
         return true;
     }
 
     Visitor::profile_t init_apply(const IR::Node* root) {
-        match_reg_def.clear();
-        match_reg_use.clear();
         n_transition_to.clear();
         return ParserInspector::init_apply(root);
     }
 
-    std::map<const State*, std::set<MatchRegister>> match_reg_def;
-    std::map<const State*, std::set<MatchRegister>> match_reg_use;
     std::map<const State*, int> n_transition_to;
 };
 
@@ -51,13 +37,11 @@ class ComputeMergeableState : public ParserInspector {
 
  public:
     explicit ComputeMergeableState(const CollectStateUses& uses)
-        : match_reg_def(uses.match_reg_def),
-          match_reg_use(uses.match_reg_use),
-          n_transition_to(uses.n_transition_to) { }
+        : n_transition_to(uses.n_transition_to) { }
 
  private:
     void postorder(const IR::BFN::ParserState* state) {
-        // If branching, can not fold in any children node.
+        // If branching, cannot fold in any children node.
         if (state->transitions.size() > 1)
             return;
 
@@ -71,24 +55,21 @@ class ComputeMergeableState : public ParserInspector {
         if (!next_state)
             return;
 
-        // Not a wild match
-        if (!is_wild(transition->value))
+        if (!is_dont_care(transition->value))
             return;
 
-        // if the next is merge_point, nothing
         if (is_merge_point(next_state))
             return;
 
-        // find the singleton match but has select reg dependency
-        if (intersect(match_reg_def.at(state), match_reg_use.at(next_state)))
-            return;
+        // TODO(zma) this could use more thoughts
+        for (const auto* select : next_state->selects) {
+            if (select->source->is<IR::BFN::PacketRVal>())
+                    return;
+        }
 
-        // mark merge-able (B, A) or if there is any(**, B), make it (**, B, A);
-        // as long as there is not any select reg conflict.
         std::vector<const State*> state_chain = getStateChain(next_state);
-        for (const auto* other : state_chain)
-            if (intersect(match_reg_def.at(state), match_reg_use.at(other)))
-                return;
+
+        LOG4("Add " << state->name << " to merge chain");
 
         state_chain.push_back(state);
         state_chains[state] = state_chain;
@@ -98,27 +79,41 @@ class ComputeMergeableState : public ParserInspector {
     void end_apply() {
         // forall merging vector, create the new state, save it to result
         for (const auto& kv : state_chains) {
-            if (kv.second.size() < 2) {
-                continue; }
-            auto* merged_state = createMergedState(kv.second);
-            results[kv.first] = merged_state;
+            if (kv.second.size() >= 2) {
+                auto* merged_state = createMergedState(kv.second);
+                results[kv.first] = merged_state;
+            }
         }
     }
 
+    bool is_compiler_generated(cstring name) {
+        return name.startsWith("$");
+    }
+
     State* createMergedState(const std::vector<const State*> states) {
+        if (LOGGING(3)) {
+            std::clog << "Creating merged state for:" << std::endl;
+            for (auto s : states)
+                std::clog << s->name << std::endl;
+        }
+
         int shifted = 0;
         const State* tail = states.front();
-        std::stringstream name;
+        cstring name = "";
 
         IR::Vector<IR::BFN::ParserPrimitive>    extractions;
         IR::Vector<IR::BFN::SaveToRegister>     saves;
 
-        // For all states expect for the tail, crush them.
+        // Merge all except the tail state.
+        bool is_first = true;
         for (auto itr = states.rbegin(); itr < states.rend() - 1; ++itr) {
             auto& st = *itr;
             BUG_CHECK(st->transitions.size() == 1,
                       "branching state can not be merged, unless the last");
             auto* transition = *st->transitions.begin();
+
+            // FIXME(zma) shift using visitor
+
             for (const auto* stmt : st->statements) {
                 if (auto* extract = stmt->to<IR::BFN::Extract>()) {
                     extractions.push_back(rightShiftSource(extract, shifted));
@@ -130,11 +125,22 @@ class ComputeMergeableState : public ParserInspector {
             }
             for (const auto* save : transition->saves) {
                 saves.push_back(rightShiftSource(save, shifted)); }
-            name << strip_common_prefix(name.str(), strip_gress(st->name).c_str()) << ".";
+
+            cstring state_name = stripThreadPrefix(st->name);
+
+            if (!is_compiler_generated(name) || !is_compiler_generated(state_name)) {
+                if (!is_first) name += ".";
+                name += state_name;
+                is_first = false;
+            }
+
             shifted += *transition->shift;
         }
 
-        // Include extractions of the last state.
+        // FIXME(zma) shift using visitor
+        // FIXME(zma) this tail exception is rather distasteful
+
+        // Include extractions of the tail state.
         for (const auto* stmt : tail->statements) {
             if (auto* extract = stmt->to<IR::BFN::Extract>()) {
                 extractions.push_back(rightShiftSource(extract, shifted));
@@ -144,15 +150,22 @@ class ComputeMergeableState : public ParserInspector {
                 extractions.push_back(stmt); }
         }
 
-        name << strip_common_prefix(name.str(), strip_gress(tail->name).c_str());
+        cstring tail_name = stripThreadPrefix(tail->name);
 
-        auto* merged_state = new IR::BFN::ParserState(nullptr, cstring(name), tail->gress);
+        if (!is_compiler_generated(name) || !is_compiler_generated(tail_name)) {
+            if (!is_first) name += ".";
+            name += tail_name;
+        }
+
+        auto* merged_state = new IR::BFN::ParserState(nullptr, name, tail->gress);
         merged_state->selects = tail->selects;
         merged_state->statements = extractions;
         for (const auto* transition : tail->transitions) {
             auto* new_transition = createMergedTransition(shifted, transition, saves);
             merged_state->transitions.push_back(new_transition);
         }
+
+        LOG3("Created " << merged_state->name);
 
         return merged_state;
     }
@@ -173,10 +186,14 @@ class ComputeMergeableState : public ParserInspector {
     }
 
     std::vector<const State*> getStateChain(const State* state) {
-        if (!state_chains.count(state))
+        if (!state_chains.count(state)) {
             state_chains[state] = { state };
+            LOG4("Add " << state->name << " to merge chain");
+        }
         return state_chains.at(state);
     }
+
+    // FIXME(zma) shift using visitor
 
     /// Shift all input packet extracts to the right by the given
     /// amount. Works for SaveToRegister and Extract.
@@ -192,49 +209,21 @@ class ComputeMergeableState : public ParserInspector {
         // Do not need to shift it's not packetRval
         if (!source) return primitive;
 
-        const auto shiftedRange = source->range().shiftedByBytes(byteDelta);
+        const auto shiftedRange = source->range.shiftedByBytes(byteDelta);
         BUG_CHECK(shiftedRange.lo >= 0, "Shifting extract to negative position.");
         auto* clone = primitive->clone();
         clone->source = new IR::BFN::PacketRVal(shiftedRange);
         return clone;
     }
 
-    bool intersect(const std::set<MatchRegister>& a,
-                   const std::set<MatchRegister>& b) {
-        for (const auto& reg : a)
-            if (b.count(reg) > 0)
-                return true;
-        return false;
-    }
-
     bool is_merge_point(const State* state) {
         return n_transition_to.at(state) > 1;
     }
 
-    bool is_wild(const IR::BFN::ParserMatchValue* value) {
+    bool is_dont_care(const IR::BFN::ParserMatchValue* value) {
         if (auto* const_value = value->to<IR::BFN::ParserConstMatchValue>()) {
             return (const_value->value.word0 ^ const_value->value.word1) == 0; }
         return false;
-    }
-
-    cstring strip_gress(cstring name) {
-        auto p = name.findlast(':');
-        if (p)
-            return cstring(p + 1);
-        else
-            return name;
-    }
-
-    cstring strip_common_prefix(std::string current, std::string to_append) {
-        int sz = std::min(current.size(), to_append.size());
-        int i = 0;
-        while (i < sz && current[i] == to_append[i]) {
-            i++; }
-        if (i >= 5) {  // "parse" has 5 chars.
-            return to_append.substr(i);
-        } else {
-            return to_append;
-        }
     }
 
     Visitor::profile_t init_apply(const IR::Node* root) {
@@ -243,8 +232,6 @@ class ComputeMergeableState : public ParserInspector {
         return ParserInspector::init_apply(root);
     }
 
-    const std::map<const State*, std::set<MatchRegister>>& match_reg_def;
-    const std::map<const State*, std::set<MatchRegister>>& match_reg_use;
     const std::map<const State*, int>& n_transition_to;
     ordered_map<const State*, std::vector<const State*>> state_chains;
 
@@ -287,9 +274,10 @@ MergeParserStates::MergeParserStates() {
     auto* collectStateUses = new CollectStateUses();
     auto* computeMergeableState = new ComputeMergeableState(*collectStateUses);
     addPasses({
+        LOGGING(4) ? new DumpParser("before_merge_parser_states") : nullptr,
         collectStateUses,
         computeMergeableState,
         new WriteBackMergedState(*computeMergeableState),
-        LOGGING(3) ? new DumpParser("merge_parser_states") : nullptr
+        LOGGING(4) ? new DumpParser("after_merge_parser_states") : nullptr
     });
 }

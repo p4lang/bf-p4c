@@ -203,12 +203,8 @@ struct ParserAsmSerializer : public ParserInspector {
         if (match->shift != 0)
             out << indent << "shift: " << match->shift << std::endl;
 
-        for (auto* stmt : match->extracts) {
-            if (auto* extract = stmt->to<IR::BFN::LoweredExtractPhv>()) {
-                if (extract->hdrLenIncStop >= 0)
-                    out << indent << "hdr_len_inc_stop: " << extract->hdrLenIncStop << std::endl;
-            }
-        }
+        if (match->hdrLenIncFinalAmt)
+            out << indent << "hdr_len_inc_stop: " << *match->hdrLenIncFinalAmt << std::endl;
 
         if (match->bufferRequired)
             out << indent << "buf_req: " << *match->bufferRequired << std::endl;
@@ -229,7 +225,7 @@ struct ParserAsmSerializer : public ParserInspector {
         out << indent;
         for (const auto* save : saves) {
             if (auto* source = save->source->to<IR::BFN::LoweredInputBufferRVal>()) {
-                auto bytes = source->extractedBytes();
+                auto bytes = source->range;
                 out << sep << save->dest << " : " << Range(bytes.lo, bytes.hi);
                 sep = ", "; }
         }
@@ -237,12 +233,9 @@ struct ParserAsmSerializer : public ParserInspector {
     }
 
     void outputExtractPhv(const IR::BFN::LoweredExtractPhv* extract) {
-        if (!extract->dest)
-            return;
-
         // Generate the assembly that actually implements the extract.
         if (auto* source = extract->source->to<IR::BFN::LoweredInputBufferRVal>()) {
-            auto bytes = source->extractedBytes();
+            auto bytes = source->range;
             out << indent << Range(bytes.lo, bytes.hi) << ": " << extract->dest;
         } else if (auto* source = extract->source->to<IR::BFN::LoweredConstantRVal>()) {
             out << indent << extract->dest << ": " << source->constant;
@@ -264,18 +257,21 @@ struct ParserAsmSerializer : public ParserInspector {
     }
 
     void outputExtractClot(const IR::BFN::LoweredExtractClot* extract) {
-        out << indent << "clot " << extract->dest.tag << " :" << std::endl;
-        AutoIndent ai(indent, 1);
+        if (extract->is_start) {
+            out << indent << "clot " << extract->dest.tag << " :" << std::endl;
+            AutoIndent ai(indent, 1);
 
-        if (auto* source = extract->source->to<IR::BFN::LoweredPacketRVal>()) {
-            auto bytes = source->extractedBytes();
-            out << indent << "start: " << bytes.lo << std::endl;
-            out << indent << "length: " << bytes.hi - bytes.lo + 1 << std::endl;
-            if (clot_tag_to_checksum_unit.count(extract->dest.tag))
+            auto* source = extract->source->to<IR::BFN::LoweredPacketRVal>();
+
+            out << indent << "start: " << source->range.lo << std::endl;
+            out << indent << "length: " << extract->dest.length_in_byte() << std::endl;
+
+            if (clot_tag_to_checksum_unit.count(extract->dest.tag)) {
                 out << indent << "checksum: " << clot_tag_to_checksum_unit.at(extract->dest.tag)
                     << std::endl;
+            }
         } else {
-            BUG("Can't generate assembly for: %1%", extract);
+            out << indent << "# clot " << extract->dest.tag << " (spilled)" << std::endl;
         }
     }
 
@@ -301,9 +297,7 @@ struct ParserAsmSerializer : public ParserInspector {
         out << indent << "swap: " << csum->swap << std::endl;
         out << indent << "start: " << csum->start  << std::endl;
         out << indent << "end: " << csum->end  << std::endl;
-        out << indent << "end_pos: " << csum->end_pos  << std::endl;
 
-        // XXX(zma) model seems to expect dest only on end?
         if (csum->end) {
             if (csum->type == IR::BFN::ChecksumMode::VERIFY && csum->csum_err)
                 out << indent << "dest: " << csum->csum_err << std::endl;
@@ -311,14 +305,15 @@ struct ParserAsmSerializer : public ParserInspector {
                 out << indent << "dest: " << csum->phv_dest << std::endl;
             else if (csum->type == IR::BFN::ChecksumMode::CLOT)
                 out << indent << "dest: " << csum->clot_dest << std::endl;
+
+            if (csum->type == IR::BFN::ChecksumMode::RESIDUAL)
+                out << indent << "end_pos: " << csum->end_pos  << std::endl;
         }
 
         if (csum->type == IR::BFN::ChecksumMode::CLOT)
             clot_tag_to_checksum_unit[csum->clot_dest.tag] = csum->unit_id;
     }
 
-    // XXX(zma) really a work-around due to lack of reference support of clot
-    // in assembler
     std::map<unsigned, unsigned> clot_tag_to_checksum_unit;
 
     std::ostream& out;

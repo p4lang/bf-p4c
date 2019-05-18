@@ -9,10 +9,10 @@
 #include "lib/log.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/parde/add_parde_metadata.h"
+#include "bf-p4c/parde/dump_parser.h"
 #include "bf-p4c/parde/resolve_parser_values.h"
 #include "bf-p4c/parde/gen_deparser.h"
 #include "bf-p4c/common/utils.h"
-#include "parde_utils.h"
 
 namespace BFN {
 
@@ -720,7 +720,7 @@ struct RewriteParserStatements : public Transform {
         if (auto* slice = rhs->to<IR::Slice>()) {
             if (canEvaluateInParser(slice->e0))
                 return new IR::BFN::Extract(s->srcInfo, s->left,
-                                            new IR::BFN::ComputedRVal(rhs));
+                                            new IR::BFN::SavedRVal(rhs));
         }
 
         if (!canEvaluateInParser(rhs)) {
@@ -729,7 +729,7 @@ struct RewriteParserStatements : public Transform {
         }
 
         return new IR::BFN::Extract(s->srcInfo, s->left,
-                                    new IR::BFN::ComputedRVal(rhs));
+                                    new IR::BFN::SavedRVal(rhs));
     }
 
     const IR::Expression* preorder(IR::Statement* s) override {
@@ -806,7 +806,7 @@ GetBackendParser::rewriteSelectExpr(const IR::Expression* selectExpr, int bitShi
                 if (mem->member == "lookahead") {
                     auto rval = rewriteLookahead(typeMap, call, slice, bitShift);
                     auto select = new IR::BFN::Select(rval, call);
-                    bitrange = rval->range();
+                    bitrange = rval->range;
                     return select;
                 }
             }
@@ -816,7 +816,7 @@ GetBackendParser::rewriteSelectExpr(const IR::Expression* selectExpr, int bitShi
             if (mem->member == "lookahead") {
                 auto rval = rewriteLookahead(typeMap, call, nullptr, bitShift);
                 auto select = new IR::BFN::Select(rval, call);
-                bitrange = rval->range();
+                bitrange = rval->range;
                 return select;
             }
         }
@@ -837,7 +837,7 @@ GetBackendParser::rewriteSelectExpr(const IR::Expression* selectExpr, int bitShi
 
     // For anything else, we'll have to resolve it later.
     // FIXME(zma) alright, I believe you have a good reason for that ...
-    return new IR::BFN::Select(new IR::BFN::ComputedRVal(selectExpr), selectExpr);
+    return new IR::BFN::Select(new IR::BFN::SavedRVal(selectExpr), selectExpr);
 }
 
 IR::BFN::ParserState* GetBackendParser::getState(cstring name) {
