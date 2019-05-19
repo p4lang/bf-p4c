@@ -310,7 +310,7 @@ struct ActionFormat {
 
         cont_type_t best_candidate_to_move(int overhead_bytes);
 
-        int find_maximum_immed(bool meter_color, int hash_dist_bytes);
+        int find_maximum_immed(bool meter_color, int global_bytes);
         void finalize_min_maxes();
 
         bool overlaps(int max_bytes, ad_source_t loc) {
@@ -427,9 +427,6 @@ struct ActionFormat {
      *  of their allocations is captured across the ActionFormat, InputXbar and ActionDataBus.
      *  This is all to keep in mind for the next design of these algorithms.
      */
-    typedef std::map<const IR::MAU::HashDist *, SingleActionALUPlacement> HashDistALUFormat;
-    typedef std::map<const IR::MAU::HashDist *, SingleActionSlotPlacement> HashDistSlotFormat;
-
     typedef std::map<const IR::MAU::RandomNumber *, SingleActionALUPlacement> RandNumALUFormat;
     typedef std::map<const IR::MAU::RandomNumber *, SingleActionSlotPlacement> RandNumSlotFormat;
     /** Contains all of the information on all the action data format and individual arguments
@@ -445,7 +442,6 @@ struct ActionFormat {
         std::map<cstring, ArgPlacementData> arg_placement;
         // Location of constants within the action data format
         std::map<cstring, ConstantRenames> constant_locations;
-        HashDistALUFormat hash_dist_placement;
         RandNumALUFormat rand_num_placement;
 
         int action_data_bytes[LOCATIONS] = { 0, 0 };
@@ -468,10 +464,6 @@ struct ActionFormat {
         cstring get_format_name(int start_byte, cont_type_t type, bool immediate, bitvec range,
             bool use_range, bool bitmasked_set = false) const;
         bool is_meter_color(int start_byte, bool immediate) const;
-        bool is_hash_dist(int byte_offset, const IR::MAU::HashDist **hd, int &field_lo,
-                          int &field_hi) const;
-        safe_vector<int> find_hash_dist(const IR::MAU::HashDist *hd, le_bitrange field_range,
-            bool bit_required, le_bitrange &hash_dist_range, int &section) const;
         bool is_rand_num(int byte_offset, const IR::MAU::RandomNumber **rn) const;
         void find_rand_num(const IR::MAU::RandomNumber *rn, int field_lo, int field_hi,
                            int &rng_lo, int &rng_hi) const;
@@ -481,7 +473,7 @@ struct ActionFormat {
         }
 
         bool is_immed_speciality_in_use() const {
-            return !(hash_dist_placement.empty() && rand_num_placement.empty() && !meter_reserved);
+            return !(rand_num_placement.empty() && !meter_reserved);
         }
     };
 
@@ -509,9 +501,6 @@ struct ActionFormat {
     TotalALUPlacement init_alu_format;
     TotalSlotPlacement init_slot_format;
 
-    HashDistALUFormat init_hd_alu_placement;
-    HashDistSlotFormat init_hd_slot_placement;
-
     RandNumALUFormat init_rn_alu_placement;
     RandNumSlotFormat init_rn_slot_placement;
 
@@ -529,7 +518,7 @@ struct ActionFormat {
                               cstring action_name);
     void create_from_actiondata(ActionDataForSingleALU &adp,
         const ActionAnalysis::ActionParam &read, int container_bit,
-        const IR::MAU::HashDist **hd, const IR::MAU::RandomNumber **rn);
+        const IR::MAU::RandomNumber **rn);
     void create_from_constant(ActionDataForSingleALU &adp,
         const ActionAnalysis::ActionParam &read, int field_bit, int container_bit,
         int &constant_to_ad_count);

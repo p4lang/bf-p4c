@@ -97,7 +97,7 @@ bool HashFieldsContainerSize::preorder(const IR::MAU::Instruction* inst) {
     if (inst->operands.size() != 2) return false;
     const IR::Expression* source = inst->operands[1];
     if (auto* slice = source->to<IR::Slice>()) source = slice->e0;
-    if (!source->is<IR::MAU::HashDist>() && !source->is<IR::MAU::RandomNumber>())
+    if (!source->is<IR::MAU::RandomNumber>())
         return false;
     const IR::MAU::Table* table = findContext<IR::MAU::Table>();
     if (!table) BUG("This hash dist did not appear in a table?");

@@ -150,6 +150,59 @@ bool Constant::equiv_value(const Parameter *ad, bool check_cond) const {
     return _size == con->_size && _value == con->_value;
 }
 
+const Parameter *Hash::split(int lo, int hi) const {
+    auto rv = new Hash(_func);
+    rv->_func.slice({lo, hi});
+    return rv;
+}
+
+bool Hash::is_next_bit_of_param(const Parameter *ad, bool) const {
+    auto hash = ad->to<Hash>();
+    if (hash == nullptr) return false;
+    return _func.is_next_bit_of_hash(&hash->_func);
+}
+
+const Parameter *Hash::get_extended_param(uint32_t extension, const Parameter *) const {
+    auto rv = new Hash(_func);
+    rv->_func.hash_bits.hi += extension;
+    return rv;
+}
+
+/**
+ * Use the P4HashFunction overlap to determine if the two parameters can overlap.
+ */
+const Parameter *Hash::overlap(const Parameter *ad, bool only_one_overlap_solution,
+    le_bitrange *my_overlap, le_bitrange *ad_overlap) const {
+    if (only_one_overlap_solution)
+        return nullptr;
+
+    auto hash = ad->to<Hash>();
+    if (hash == nullptr)
+        return nullptr;
+    if (!equiv_cond(ad))
+        return nullptr;
+    le_bitrange local_my_overlap;
+    le_bitrange local_ad_overlap;
+    if (!_func.overlap(&hash->_func, &local_my_overlap, &local_ad_overlap))
+        return nullptr;
+
+
+    auto rv = new Hash(_func);
+    rv->_func.slice(local_my_overlap);
+    if (my_overlap)
+        *my_overlap = local_my_overlap;
+    if (ad_overlap)
+        *ad_overlap = local_ad_overlap;
+    return rv;
+}
+
+bool Hash::equiv_value(const Parameter *ad, bool check_cond) const {
+    auto hash = ad->to<Hash>();
+    if (hash == nullptr) return false;
+    if (check_cond && !equiv_cond(ad)) return false;
+    return _func.equiv(&hash->_func);
+}
+
 LocalPacking LocalPacking::split(int first_bit, int sz) const {
     BUG_CHECK(sz < bit_width && ((bit_width % sz) == 0), "Cannot split a LocalPacking evenly");
     LocalPacking rv(sz, bits_in_use.getslice(first_bit, sz));
@@ -456,6 +509,7 @@ const RamSection *ALUOperation::create_RamSection(bool shift_to_lsb) const {
     PackingConstraint pc;
     if (_constraint == DEPOSIT_FIELD)
         pc = pc.expand(1, sec_size);
+
 
     RamSection *init_rv = new RamSection(sec_size, pc);
     for (auto param : _params) {
@@ -932,7 +986,8 @@ BusInputs RamSection::bus_inputs() const {
     for (auto ad_alu : alu_requirements) {
         int final_first_phv_bit_pos = 0;
         bool is_contained = contains(ad_alu, &final_first_phv_bit_pos);
-        BUG_CHECK(is_contained, "Alu not contained in the operation");
+        BUG_CHECK(is_contained && final_first_phv_bit_pos >= 0,
+                  "Alu not contained in the operation");
         size_t start_alu_offset = final_first_phv_bit_pos / ad_alu->size();
         size_t start_byte = start_alu_offset * (ad_alu->size() / 8);
         size_t sz = ad_alu->is_constrained(BITMASKED_SET) ? ad_alu->size() * 2: ad_alu->size();
@@ -1253,6 +1308,30 @@ void Format::Use::determine_mod_cond_maps() {
 }
 
 /**
+ * Because the parameters are shared across all actions, the ALUOperations are stored across
+ * all actions.  Each ALUOperation in all of these are also marked with the action_name as
+ * well, though in other lookups, the parameter can be looked up as a per action
+ */
+const ALUParameter *Format::Use::find_locked_in_all_actions_param_alloc(UniqueLocationKey &key,
+         const ALUPosition **alu_pos_p) const {
+    const ALUParameter *rv = nullptr;
+    for (auto alu_position : locked_in_all_actions_alu_positions) {
+        if (alu_position.alu_op->container() != key.container)
+            continue;
+        if (alu_position.alu_op->action_name() != key.action_name)
+            continue;
+        auto *loc = alu_position.alu_op->find_param_alloc(key);
+        BUG_CHECK(loc != nullptr, "A container operation cannot find the associated key");
+        BUG_CHECK(rv == nullptr, "A parameter has multiple allocations in container %s in "
+            "action %s", key.container, key.action_name);
+        rv = loc;
+        if (alu_pos_p)
+            *alu_pos_p = new ALUPosition(alu_position);
+    }
+    return rv;
+}
+
+/**
  * During the Instruction Adjustment phase of ActionAnalysis, in order to determine
  * how to rename both constants and action data, as well as verify that the alignment is
  * correct, an action parameter must be found within the action format.
@@ -1270,6 +1349,9 @@ void Format::Use::determine_mod_cond_maps() {
  */
 const ALUParameter *Format::Use::find_param_alloc(UniqueLocationKey &key,
         const ALUPosition **alu_pos_p) const {
+    if (key.param->is<Hash>())
+        return find_locked_in_all_actions_param_alloc(key, alu_pos_p);
+
     auto action_alu_positions = alu_positions.at(key.action_name);
     const ALUParameter *rv = nullptr;
     for (auto alu_position : action_alu_positions) {
@@ -1367,6 +1449,55 @@ cstring Format::Use::get_format_name(SlotType_t slot_type, Location_t loc, int b
 }
 
 /**
+ * Given a particular start byte in immediate, return true if that byte offset is used
+ * by a hash dist.  Will be more necessary as other parameters will be added to the
+ * locked_in_all_actions parameters
+ */
+bool Format::Use::is_hash_dist(int byte_offset) const {
+    bool found = false;
+    bool hash_dist = false;
+    for (auto &alu_position : locked_in_all_actions_alu_positions) {
+        if (alu_position.start_byte != static_cast<unsigned>(byte_offset))
+            continue;
+        auto param_positions = alu_position.alu_op->parameter_positions();
+        for (auto &param_pos : param_positions) {
+            if (param_pos.second->is<Hash>()) {
+                if (!found) {
+                    found = true;
+                    hash_dist = true;
+                } else {
+                    BUG_CHECK(hash_dist, "A hash dist and non hash dist share the same packing "
+                              "byte");
+                }
+            } else {
+                if (!found) {
+                    found = true;
+                    hash_dist = false;
+                } else {
+                   BUG_CHECK(hash_dist, "A hash dist and non hash dist share the same packing "
+                                        "byte");
+                }
+            }
+        }
+    }
+    return hash_dist;
+}
+
+const RamSection *Format::Use::build_locked_in_sect() const {
+    const RamSection *rv = new RamSection(IMMEDIATE_BITS);
+    for (auto &alu_pos : locked_in_all_actions_alu_positions) {
+        auto curr_ram_sect = alu_pos.alu_op->create_RamSection(false);
+        curr_ram_sect = curr_ram_sect->expand_to_size(IMMEDIATE_BITS);
+        curr_ram_sect = curr_ram_sect->can_rotate(0, alu_pos.start_byte * 8);
+        BUG_CHECK(curr_ram_sect != nullptr, "Speciality argument cannot be built");
+        rv = rv->merge(curr_ram_sect);
+        BUG_CHECK(rv != nullptr, "Merge of speciality argument cannot be built");
+    }
+    return rv;
+}
+
+
+/**
  * Creates an Argument from an IR::MAU::ActionArg or slice of one
  */
 void Format::create_argument(ALUOperation &alu,
@@ -1403,6 +1534,43 @@ void Format::create_constant(ALUOperation &alu, ActionAnalysis::ActionParam &rea
         con->set_cond(VALUE, cond_arg->orig_arg->name);
     con->set_alias("$constant" + std::to_string(constant_alias_index++));
     ALUParameter ap(con, container_bits);
+    alu.add_param(ap);
+}
+
+/**
+ * Creates a Hash parameter from an IR::MAU::HashDist based read
+ */
+void Format::create_hash(ALUOperation &alu, ActionAnalysis::ActionParam &read,
+       le_bitrange container_bits) {
+    auto ir_hd = read.unsliced_expr()->to<IR::MAU::HashDist>();
+    BUG_CHECK(ir_hd != nullptr, "Cannot create a hash argument out of a non-HashDist");
+    BuildP4HashFunction builder(phv);
+    ir_hd->apply(builder);
+    P4HashFunction *func = builder.func();
+    if (auto sl = read.expr->to<IR::Slice>()) {
+        le_bitrange hash_range = { static_cast<int>(sl->getL()), static_cast<int>(sl->getH()) };
+        func->slice(hash_range);
+    }
+    Hash *hash = new Hash(*func);
+    ALUParameter ap(hash, container_bits);
+    alu.add_param(ap);
+}
+
+/**
+ * Creates a Hash parameter from a IR::Constant that will be returned from a hash function,
+ * as that constant is in the same action as a IR::MAU::HashDist, and thus will be
+ * converted to one of the outputs of the HashFunction
+ */
+void Format::create_hash_constant(ALUOperation &alu, ActionAnalysis::ActionParam &read,
+       le_bitrange container_bits) {
+    auto ir_con = read.unsliced_expr()->to<IR::Constant>();
+    BUG_CHECK(ir_con != nullptr, "Cannot create constant");
+    P4HashFunction func;
+    func.inputs.push_back(ir_con);
+    func.algorithm = IR::MAU::HashFunction::identity();
+    func.hash_bits = { 0, ir_con->type->width_bits() - 1 };
+    Hash *hash = new Hash(func);
+    ALUParameter ap(hash, container_bits);
     alu.add_param(ap);
 }
 
@@ -1456,14 +1624,18 @@ void Format
             alu_cons = ISOLATED;
 
         ALUOperation *alu = new ALUOperation(container, alu_cons);
+        alu->set_action_name(action_name);
         bool contains_action_data = false;
-        int number_of_reads = 0;
+        bool contains_speciality = false;
+        int alias_required_reads = 0;
+
+        bitvec specialities = cont_action.specialities();
+
         for (auto &field_action : cont_action.field_actions) {
             le_bitrange bits;
             auto *write_field = phv.field(field_action.write.expr, &bits);
             le_bitrange container_bits;
             int write_count = 0;
-
 
             write_field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice &alloc) {
                 write_count++;
@@ -1484,25 +1656,39 @@ void Format
             }
 
             for (auto &read : field_action.reads) {
-                if (read.speciality != ActionAnalysis::ActionParam::NO_SPECIAL)
+                if (!(read.speciality == ActionAnalysis::ActionParam::HASH_DIST ||
+                      read.speciality == ActionAnalysis::ActionParam::NO_SPECIAL)) {
                     continue;
+                }
 
-                if (read.is_conditional) {
+                if (read.speciality == ActionAnalysis::ActionParam::HASH_DIST)  {
+                    create_hash(*alu, read, container_bits);
+                    contains_speciality = true;
+                } else if (read.is_conditional) {
                     create_mask_argument(*alu, read, container_bits);
+                    alias_required_reads++;
                 } else if (read.type == ActionAnalysis::ActionParam::ACTIONDATA) {
                     create_argument(*alu, read, container_bits, cond_arg);
-                    contains_action_data = true;
-                    number_of_reads++;
-                } else if (read.type == ActionAnalysis::ActionParam::CONSTANT &&
-                           cont_action.convert_constant_to_actiondata()) {
-                    create_constant(*alu, read, container_bits, constant_alias_index, cond_arg);
-                    contains_action_data = true;
-                    number_of_reads++;
+                    alias_required_reads++;
+                } else if (read.type == ActionAnalysis::ActionParam::CONSTANT) {
+                    if (cont_action.convert_constant_to_actiondata()) {
+                        create_constant(*alu, read, container_bits, constant_alias_index,
+                            cond_arg);
+                        alias_required_reads++;
+                    } else if (cont_action.convert_constant_to_hash()) {
+                        create_hash_constant(*alu, read, container_bits);
+                        contains_speciality = true;
+                    } else {
+                        continue;
+                    }
+                } else {
+                    continue;
                 }
+                contains_action_data = true;
             }
         }
 
-        if (number_of_reads > 1 || cont_action.unresolved_ad()) {
+        if (alias_required_reads > 1 || cont_action.unresolved_ad()) {
             alu->set_alias("$data" + std::to_string(alias_index++));
         }
 
@@ -1517,8 +1703,10 @@ void Format
         }
 
         if (contains_action_data) {
-            LOG3("    Container " << container << " Cont action " << cont_action);
-            ram_sec_vec.push_back(alu->create_RamSection(true));
+            if (contains_speciality)
+                locked_in_all_actions_sects.push_back(alu->create_RamSection(true));
+            else
+                ram_sec_vec.push_back(alu->create_RamSection(true));
         }
     }
 }
@@ -1717,7 +1905,7 @@ void Format::condense_action(cstring action_name, RamSec_vec_t &ram_sects) {
     calc_max_size = std::max(calc_max_size, 1 << ceil_log2(total_bits / 8));
 }
 
-void Format::analyze_actions() {
+bool Format::analyze_actions() {
     ActionAnalysis::ContainerActionsMap container_actions_map;
     for (auto action : Values(tbl->actions)) {
         container_actions_map.clear();
@@ -1730,6 +1918,35 @@ void Format::analyze_actions() {
     for (auto &entry : init_ram_sections) {
         condense_action(entry.first, entry.second);
     }
+
+    /**
+     * For standard control plane parameters, because the driver knows which action a
+     * particular entry is running, each individual action reserves a small amount of space
+     * per each PHV allocation.
+     *
+     * For ADB sources such as HashDist, (eventually RNG and meter color), these parameters
+     * will be present in the immediate bits on all actions, as the value is ORed into the
+     * immediate bits no matter which action is run.
+     *
+     * Thus for all of these "locked_in_all_actions" parameters, these must fit into
+     * a 4 bit range of immediate data in order to successfully fit within in one logical
+     * table
+     */
+    condense_action("locked_in_all_actions", locked_in_all_actions_sects);
+
+    int locked_in_all_actions_bits = 0;
+    for (auto *sect : locked_in_all_actions_sects) {
+        locked_in_all_actions_bits += sect->size();
+    }
+
+    if (locked_in_all_actions_bits > Format::IMMEDIATE_BITS) {
+        error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "\nIn table %2%, the number of bits "
+            "required to go through the immediate pathway %3% (e.g. data coming from Hash, RNG, "
+            "Meter Color) is greater than the available bits %4%, and can not be allocated",
+            tbl, tbl->name, locked_in_all_actions_bits, Format::IMMEDIATE_BITS);
+        return false;
+    }
+    return true;
 }
 
 /**
@@ -1790,6 +2007,7 @@ bool Format::determine_next_immediate_bytes(bool immediate_forced) {
     return true;
 }
 
+
 /**
  * The goal of the action format algorithm is to generate a number of possibly action data
  * packing algorithms.  Action Data can be allocated to two possible locations, on a separate
@@ -1847,6 +2065,19 @@ bool Format::determine_bytes_per_loc(bool &initialized, bool immediate_forced) {
                              static_cast<int>(all_bus_inputs.back().adt_bits_required()) / 8);
     }
 
+
+    locked_in_all_actions_inputs.clear();
+    for (int i = 0; i < SLOT_TYPES; i++) {
+        locked_in_all_actions_input_bitvecs[i] = bitvec();
+    }
+
+    safe_vector<RamSectionPosition> locked_sects;
+    for (size_t i = 0; i < locked_in_all_actions_sects.size(); i++) {
+        auto &ram_sect = locked_in_all_actions_sects[i];
+        locked_sects.emplace_back(ram_sect);
+    }
+    locked_in_all_actions_inputs.emplace_back("locked_in_all_actions", locked_sects);
+
     // First run, only allocate on action data
     if (!initialized) {
         initialized = true;
@@ -1863,6 +2094,16 @@ bool Format::determine_bytes_per_loc(bool &initialized, bool immediate_forced) {
         if (ba->attached->is<IR::MAU::ActionData>()) {
             go_imm = false;
             break; }
+    }
+
+    bool imm_path1 = speciality_use.is_immed_speciality_in_use();
+    bool imm_path2 = locked_in_all_actions_sects.size() > 0;
+
+    go_imm &= !(imm_path1 || imm_path2);
+    if (imm_path1 && imm_path2) {
+        fatal_error("%1%: The current action data packing algorithm in p4c can only have "
+            "Hash, RNG, or a Meter Color in a single table, and not yet all three.  Please "
+            "separate this into multiple logical tables from %2%", tbl, tbl->name);
     }
 
     if (speciality_use.is_immed_speciality_in_use())
@@ -2134,7 +2375,7 @@ void Format::assign_action_data_table_bytes(AllActionPositions &all_bus_inputs,
  * is important for packing data on the match RAM line.
  */
 void Format::assign_immediate_bytes(AllActionPositions &all_bus_inputs,
-        BusInputs &total_inputs) {
+        BusInputs &total_inputs, int max_bytes_needed) {
     LOG2("  Assigning Immediate Byte Positions");
     for (auto &single_action_inputs : all_bus_inputs) {
         LOG3("    Determining immediate allocation for action "
@@ -2171,7 +2412,7 @@ void Format::assign_immediate_bytes(AllActionPositions &all_bus_inputs,
         });
 
         for (auto slot_type : slot_type_alloc) {
-            alloc_immed_slots_of_size(slot_type, single_action_alloc, bytes_per_loc[IMMEDIATE]);
+            alloc_immed_slots_of_size(slot_type, single_action_alloc, max_bytes_needed);
         }
         verify_placement(single_action_alloc);
     }
@@ -2182,7 +2423,60 @@ void Format::assign_immediate_bytes(AllActionPositions &all_bus_inputs,
 void Format::assign_RamSections_to_bytes() {
     assign_action_data_table_bytes(action_bus_inputs[ACTION_DATA_TABLE],
                                    action_bus_input_bitvecs[ACTION_DATA_TABLE]);
-    assign_immediate_bytes(action_bus_inputs[IMMEDIATE], action_bus_input_bitvecs[IMMEDIATE]);
+    assign_immediate_bytes(action_bus_inputs[IMMEDIATE], action_bus_input_bitvecs[IMMEDIATE],
+        bytes_per_loc[IMMEDIATE]);
+    assign_immediate_bytes(locked_in_all_actions_inputs, locked_in_all_actions_input_bitvecs,
+        Format::IMMEDIATE_BITS / 8);
+}
+
+
+void Format::build_single_ram_sect(RamSectionPosition &ram_sect, Location_t loc,
+        safe_vector<ALUPosition> &alu_positions, BusInputs &verify_inputs) {
+    for (auto *init_ad_alu : ram_sect.section->alu_requirements) {
+        // Determines the right shift of each ALUOperation
+        int first_phv_bit_pos = 0;
+        bool does_contain = ram_sect.section->contains(init_ad_alu, &first_phv_bit_pos);
+        BUG_CHECK(does_contain, "ALU object is not in container");
+        int section_offset = first_phv_bit_pos / init_ad_alu->size();
+        int section_byte_offset = section_offset * (init_ad_alu->size() / 8);
+        first_phv_bit_pos = first_phv_bit_pos % init_ad_alu->size();
+        int right_shift = init_ad_alu->phv_bits().min().index() - first_phv_bit_pos;
+        right_shift = (right_shift + init_ad_alu->size()) % init_ad_alu->size();
+        auto ad_alu = init_ad_alu->add_right_shift(right_shift);
+        // Validates that the right shift is calculated correctly, by shifting the
+        // alu operation by that much, and determining if the ALU operation is
+        // a subset of the original Ram Section
+        auto ram_sect_check = ad_alu->create_RamSection(false);
+        ram_sect_check = ram_sect_check->expand_to_size(ram_sect.section->size());
+        ram_sect_check = ram_sect_check->can_rotate(0, section_byte_offset * 8);
+        bool is_subset = ram_sect_check->is_data_subset_of(ram_sect.section);
+        BUG_CHECK(is_subset, "Right shift not calculated correctly");
+        int start_byte = section_byte_offset + ram_sect.byte_offset;
+        int byte_sz = ad_alu->is_constrained(BITMASKED_SET) ? ad_alu->size() * 2
+                                                            : ad_alu->size();
+        byte_sz /= 8;
+        alu_positions.emplace_back(ad_alu, loc, start_byte);
+        // Validation on the BusInputs
+        verify_inputs[ad_alu->index()].setrange(start_byte, byte_sz);
+    }
+}
+
+
+void Format::build_locked_in_format(Use &use) {
+    BusInputs verify_inputs = {{ bitvec(), bitvec(), bitvec() }};
+    BUG_CHECK(locked_in_all_actions_inputs.size() == 1, "Action format allocation for "
+        "specialities is not correctly done");
+    auto &single_action_input = locked_in_all_actions_inputs.at(0);
+    for (auto &ram_sect : single_action_input.all_inputs) {
+        build_single_ram_sect(ram_sect, IMMEDIATE, use.locked_in_all_actions_alu_positions,
+                              verify_inputs);
+    }
+    for (int i = 0; i < SLOT_TYPES; i++) {
+        BUG_CHECK(locked_in_all_actions_input_bitvecs.at(i) == verify_inputs.at(i),
+            "The action data bus inputs from the vector do not align with the calculated "
+            "input positions during allocation");
+    }
+    use.locked_in_all_actions_bus_inputs = locked_in_all_actions_input_bitvecs;
 }
 
 /**
@@ -2201,33 +2495,8 @@ void Format::build_potential_format(bool immediate_forced) {
         for (auto &single_action_input : loc_inputs) {
             safe_vector<ALUPosition> alu_positions;
             for (auto &ram_sect : single_action_input.all_inputs) {
-                for (auto *init_ad_alu : ram_sect.section->alu_requirements) {
-                    // Determines the right shift of each ALUOperation
-                    int first_phv_bit_pos = 0;
-                    bool does_contain = ram_sect.section->contains(init_ad_alu, &first_phv_bit_pos);
-                    BUG_CHECK(does_contain, "ALU object is not in container");
-                    int section_offset = first_phv_bit_pos / init_ad_alu->size();
-                    int section_byte_offset = section_offset * (init_ad_alu->size() / 8);
-                    first_phv_bit_pos = first_phv_bit_pos % init_ad_alu->size();
-                    int right_shift = init_ad_alu->phv_bits().min().index() - first_phv_bit_pos;
-                    right_shift = (right_shift + init_ad_alu->size()) % init_ad_alu->size();
-                    auto ad_alu = init_ad_alu->add_right_shift(right_shift);
-                    // Validates that the right shift is calculated correctly, by shifting the
-                    // alu operation by that much, and determining if the ALU operation is
-                    // a subset of the original Ram Section
-                    auto ram_sect_check = ad_alu->create_RamSection(false);
-                    ram_sect_check = ram_sect_check->expand_to_size(ram_sect.section->size());
-                    ram_sect_check = ram_sect_check->can_rotate(0, section_byte_offset * 8);
-                    bool is_subset = ram_sect_check->is_data_subset_of(ram_sect.section);
-                    BUG_CHECK(is_subset, "Right shift not calculated correctly");
-                    int start_byte = section_byte_offset + ram_sect.byte_offset;
-                    int byte_sz = ad_alu->is_constrained(BITMASKED_SET) ? ad_alu->size() * 2
-                                                                        : ad_alu->size();
-                    byte_sz /= 8;
-                    alu_positions.emplace_back(ad_alu, loc, start_byte);
-                    // Validation on the BusInputs
-                    verify_inputs[ad_alu->index()].setrange(start_byte, byte_sz);
-                }
+                build_single_ram_sect(ram_sect, loc, alu_positions, verify_inputs);
+
                 if (ram_sect.section->index() == DOUBLE_FULL) {
                     BUG_CHECK(loc == ACTION_DATA_TABLE, "Cannot have a 64 bit requirement in "
                         "immediate as the maximum bit allowance is 32 bits");
@@ -2246,11 +2515,12 @@ void Format::build_potential_format(bool immediate_forced) {
         }
 
         use.bus_inputs[loc_i] = action_bus_input_bitvecs.at(loc_i);
-        use.speciality_use = speciality_use;
         if (loc == ACTION_DATA_TABLE)
             use.full_words_bitmasked = all_double_fulls;
         loc_i++;
     }
+    build_locked_in_format(use);
+    use.speciality_use = speciality_use;
     use.bytes_per_loc = bytes_per_loc;
     use.determine_immediate_mask();
     use.determine_mod_cond_maps();
@@ -2288,7 +2558,9 @@ void Format::build_potential_format(bool immediate_forced) {
  */
 void Format::allocate_format(bool immediate_forced) {
     LOG1("Determining Formats for table " << tbl->name);
-    analyze_actions();
+    bool possible = analyze_actions();
+    if (!possible)
+        return;
     bool initialized = false;
     while (true) {
         bool can_allocate = determine_bytes_per_loc(initialized, immediate_forced);

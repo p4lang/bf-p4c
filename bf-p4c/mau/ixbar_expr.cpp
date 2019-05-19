@@ -11,25 +11,82 @@ void P4HashFunction::slice(le_bitrange hash_slice) {
     hash_bits = shifted_hash_bits;
 }
 
+bool P4HashFunction::equiv_dyn(const P4HashFunction *func) const {
+    return dyn_hash_name == func->dyn_hash_name;
+}
 
 /**
  * Much tighter than the actual constraint, as things like identity functions could check
  * for better overlaps as well as random functions wouldn't matter in terms of order, but this
  * can be expanded much later on.  This will work quickly for dynamic hashing
  */
-bool P4HashFunction::equiv(const P4HashFunction *func) const {
-    if (dyn_hash_name != func->dyn_hash_name)
-        return false;
+bool P4HashFunction::equiv_inputs_alg(const P4HashFunction *func) const {
     if (algorithm != func->algorithm)
-        return false;
-    if (hash_bits != func->hash_bits)
         return false;
     if (inputs.size() != func->inputs.size())
         return false;
-    for (size_t i = 0; i < inputs.size(); i++)
+    for (size_t i = 0; i < inputs.size(); i++) {
         if (!inputs[i]->equiv(*func->inputs[i]))
             return false;
+    }
     return true;
+}
+
+bool P4HashFunction::equiv(const P4HashFunction *func) const {
+    if (!equiv_dyn(func))
+        return false;
+    if (!equiv_inputs_alg(func))
+        return false;
+    if (hash_bits != func->hash_bits)
+        return false;
+    return true;
+}
+
+bool P4HashFunction::is_next_bit_of_hash(const P4HashFunction *func) const {
+    if (size() != 1)
+        return false;
+    if (hash_bits.lo != func->hash_bits.hi + 1)
+        return false;
+    return is_dynamic() || func->is_dynamic() ? equiv_dyn(func) : equiv_inputs_alg(func);
+}
+
+/**
+ * This hash function overlap is based on the equiv function which is much more strict
+ * than an actual equiv function.  This may be further improved at a later time, but will
+ * also work quickly with anything dynamic
+ */
+bool P4HashFunction::overlap(const P4HashFunction *func, le_bitrange *my_overlap,
+        le_bitrange *hash_overlap) const {
+    bool equal_inputs = is_dynamic() || func->is_dynamic() ? equiv_dyn(func)
+                                                           : equiv_inputs_alg(func);
+    if (!equal_inputs)
+        return false;
+
+    auto boost_sl = toClosedRange<RangeUnit::Bit, Endian::Little>
+                        (hash_bits.intersectWith(func->hash_bits));
+
+    if (boost_sl == boost::none)
+        return false;
+    le_bitrange overlap = *boost_sl;
+
+    if (my_overlap) {
+        auto ov_boost_sl = toClosedRange<RangeUnit::Bit, Endian::Little>
+                               (hash_bits.intersectWith(overlap));
+        *my_overlap = *ov_boost_sl;
+        *my_overlap = my_overlap->shiftedByBits(-1 * hash_bits.lo);
+    }
+
+    if (hash_overlap) {
+        auto ov_boost_sl = toClosedRange<RangeUnit::Bit, Endian::Little>
+                               (func->hash_bits.intersectWith(overlap));
+        *hash_overlap = *ov_boost_sl;
+        *hash_overlap = hash_overlap->shiftedByBits(-1 * func->hash_bits.lo);
+    }
+    return true;
+}
+
+void P4HashFunction::dbprint(std::ostream &out) const {
+    out << "hash " << name() << "(" << inputs << ", " << algorithm << ")" << hash_bits;
 }
 
 bool BuildP4HashFunction::InsideHashGenExpr::preorder(const IR::MAU::HashGenExpression *) {

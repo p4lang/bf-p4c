@@ -439,6 +439,47 @@ class RemoveUnnecessaryActionArgSlice : public MauTransform {
     RemoveUnnecessaryActionArgSlice() {}
 };
 
+class GuaranteeHashDistSize : public PassManager {
+    ordered_set<const IR::MAU::Instruction *> hash_dist_instrs;
+
+    Visitor::profile_t init_apply(const IR::Node *node) override {
+        auto rv = PassManager::init_apply(node);
+        hash_dist_instrs.clear();
+        return rv;
+    }
+
+    class Scan : public MauInspector {
+        GuaranteeHashDistSize &self;
+        bool contains_hash_dist = false;
+
+        bool preorder(const IR::MAU::BackendAttached *) override { return false; }
+        bool preorder(const IR::MAU::StatefulCall *) override { return false; }
+        bool preorder(const IR::MAU::Instruction *) override;
+        bool preorder(const IR::MAU::HashDist *) override;
+        void postorder(const IR::MAU::Instruction *) override;
+
+     public:
+        explicit Scan(GuaranteeHashDistSize &s) : self(s) {}
+    };
+
+    class Update : public MauTransform {
+        GuaranteeHashDistSize &self;
+
+        const IR::Node *postorder(IR::MAU::Instruction *) override;
+
+     public:
+        explicit Update(GuaranteeHashDistSize &s) : self(s) {}
+    };
+
+ public:
+    GuaranteeHashDistSize() {
+        addPasses({
+            new Scan(*this),
+            new Update(*this)
+        });
+    }
+};
+
 class InstructionSelection : public PassManager {
  public:
     InstructionSelection(const BFN_Options&, PhvInfo &);

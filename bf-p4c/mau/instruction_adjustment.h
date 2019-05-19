@@ -109,6 +109,20 @@ class ConstantsToActionData : public MauTransform, TofinoWriteContext {
     explicit ConstantsToActionData(const PhvInfo &p) : phv(p) { visitDagOnce = false; }
 };
 
+class ExpressionsToHash : public MauTransform {
+    const PhvInfo &phv;
+    ActionAnalysis::ContainerActionsMap container_actions_map;
+    ordered_set<PHV::Container> expr_to_hash_containers;
+
+    const IR::MAU::Action *preorder(IR::MAU::Action *) override;
+    const IR::MAU::Instruction *preorder(IR::MAU::Instruction *) override;
+    const IR::Node *preorder(IR::Node *n) override { visitOnce(); return n; }
+    const IR::MAU::StatefulAlu *preorder(IR::MAU::StatefulAlu *s) { prune(); return s; }
+
+ public:
+    explicit ExpressionsToHash(const PhvInfo &p) : phv(p) { visitDagOnce = false; }
+};
+
 /** Responsible for converting all FieldInstructions within a single Container operation into
  *  one large Container Instruction over IR::MAU::MultiOperands.  Let say the following fields
  *  f1 and f2 are in container B1, while f3 and f4 are in container B2.  The instructions:
@@ -160,6 +174,7 @@ class MergeInstructions : public MauTransform, TofinoWriteContext {
     void fill_out_read_multi_operand(ActionAnalysis::ContainerAction &cont_action,
         ActionAnalysis::ActionParam::type_t type, cstring match_name,
         IR::MAU::MultiOperand *mo);
+    const IR::Expression *fill_out_hash_operand(ActionAnalysis::ContainerAction &cont_action);
     const IR::Constant *find_field_action_constant(ActionAnalysis::ContainerAction &cont_action);
 
  public:

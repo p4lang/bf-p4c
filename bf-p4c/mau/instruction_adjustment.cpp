@@ -61,6 +61,7 @@ const IR::MAU::Action *ConstantsToActionData::preorder(IR::MAU::Action *act) {
     auto tbl = findContext<IR::MAU::Table>();
     ActionAnalysis aa(phv, true, true, tbl);
     aa.set_container_actions_map(&container_actions_map);
+    aa.set_verbose();
     act->apply(aa);
 
     bool proceed = false;
@@ -222,6 +223,91 @@ const IR::MAU::Action *ConstantsToActionData::postorder(IR::MAU::Action *act) {
 }
 
 
+/**
+ * Certain Expressions (currently only IR::Constants) because of their associated uses in
+ * ALU Operations with HashDists as well, must be converted to HashDists.  (At some point,
+ * the immediate_adr_default could be used to generate constants rather than Hash, as this
+ * is excessive resources.
+ *
+ * Currently the instruction adjustment cannot work with these default constants
+ */
+const IR::MAU::Action *ExpressionsToHash::preorder(IR::MAU::Action *act) {
+    container_actions_map.clear();
+    expr_to_hash_containers.clear();
+    auto tbl = findContext<IR::MAU::Table>();
+    ActionAnalysis aa(phv, true, true, tbl);
+    aa.set_container_actions_map(&container_actions_map);
+    act->apply(aa);
+
+    for (auto &container_action_entry : container_actions_map) {
+        auto container = container_action_entry.first;
+        auto &cont_action = container_action_entry.second;
+        if (cont_action.convert_constant_to_hash()) {
+            expr_to_hash_containers.insert(container);
+        }
+    }
+
+    if (expr_to_hash_containers.empty())
+        prune();
+    return act;
+}
+
+const IR::MAU::Instruction *ExpressionsToHash::preorder(IR::MAU::Instruction *instr) {
+    prune();
+    le_bitrange bits;
+    auto write_expr = phv.field(instr->operands[0], &bits);
+    PHV::Container container;
+    ActionData::UniqueLocationKey expr_lookup;
+
+    expr_lookup.action_name = findContext<IR::MAU::Action>()->name;
+
+    int write_count = 0;
+    write_expr->foreach_alloc(bits, [&](const PHV::Field::alloc_slice &alloc) {
+        write_count++;
+        expr_lookup.phv_bits = alloc.container_bits();
+        expr_lookup.container = alloc.container;
+    });
+
+    BUG_CHECK(write_count == 1, "An expression writes to more than one container position");
+
+    if (expr_to_hash_containers.count(expr_lookup.container) == 0)
+        return instr;
+
+    IR::MAU::Instruction *rv = new IR::MAU::Instruction(instr->srcInfo, instr->name);
+    rv->operands.push_back(instr->operands[0]);
+
+    auto tbl = findContext<IR::MAU::Table>();
+    auto &action_format = tbl->resources->action_format;
+
+    for (size_t i = 1; i < instr->operands.size(); i++) {
+        expr_lookup.param = nullptr;
+
+        auto operand = instr->operands[i];
+        const IR::Expression *rv_operand = nullptr;
+        // Build a hash from a single constant
+        if (auto con = operand->to<IR::Constant>()) {
+            P4HashFunction func;
+            func.inputs.push_back(con);
+            func.algorithm = IR::MAU::HashFunction::identity();
+            func.hash_bits = { 0, con->type->width_bits() - 1 };
+            ActionData::Hash *param = new ActionData::Hash(func);
+            expr_lookup.param = param;
+            auto alu_parameter = action_format.find_param_alloc(expr_lookup, nullptr);
+            BUG_CHECK(alu_parameter != nullptr, "%1% Constant in instruction has not correctly "
+                   "been converted to hash");
+            auto *hge = new IR::MAU::HashGenExpression(con->srcInfo, con->type, con,
+                                                       IR::MAU::HashFunction::identity());
+            auto *hd = new IR::MAU::HashDist(hge->srcInfo, hge->type, hge);
+            rv_operand = hd;
+        } else {
+            rv_operand = operand;
+        }
+        rv->operands.push_back(rv_operand);
+    }
+    return rv;
+}
+
+
 /** Merge Instructions */
 
 /** Run an analysis on the instructions to determine which instructions should be merged.  The
@@ -234,6 +320,7 @@ const IR::MAU::Action *MergeInstructions::preorder(IR::MAU::Action *act) {
     auto tbl = findContext<IR::MAU::Table>();
     ActionAnalysis aa(phv, true, true, tbl);
     aa.set_container_actions_map(&container_actions_map);
+    aa.set_verbose();
     act->apply(aa);
     if (aa.misaligned_actiondata())
         throw ActionFormat::failure(act->name);
@@ -250,6 +337,7 @@ const IR::MAU::Action *MergeInstructions::preorder(IR::MAU::Action *act) {
         if (cont_action.field_actions.size() == 1) {
             if (!cont_action.convert_instr_to_deposit_field
                 && !cont_action.convert_instr_to_bitmasked_set
+                && !cont_action.adi.specialities.getbit(ActionAnalysis::ActionParam::HASH_DIST)
                 && (cont_action.error_code & ~error_mask) == 0)
                 continue;
         // Currently skip unresolved ActionAnalysis issues
@@ -397,6 +485,63 @@ const IR::Constant *MergeInstructions::find_field_action_constant(
     return nullptr;
 }
 
+/**
+ * Convert one or many HashDist operands to a single Hash Dist object or Slice of a HashDist
+ * object with its units set.
+ *
+ * The units have to both be coordinated through the action format (in order to know which
+ * immed_lo/immed_hi to use, as well as the input_xbar alloc, in order to understand which
+ * unit coordinates to hash_dist lo/hash_dist hi
+ */
+const IR::Expression *
+        MergeInstructions::fill_out_hash_operand(ActionAnalysis::ContainerAction &cont_action) {
+    auto tbl = findContext<IR::MAU::Table>();
+    auto &adi = cont_action.adi;
+    BUG_CHECK(adi.specialities.getbit(ActionAnalysis::ActionParam::HASH_DIST) &&
+              adi.specialities.popcount() == 1,
+              "Can only create hash dist from hash dist associated objects");
+
+    bitvec op_bits_used_bv = adi.alignment.read_bits();
+    BUG_CHECK(op_bits_used_bv.is_contiguous(), "Hash Dist cannot be discontiguous in an action");
+    le_bitrange op_bits_used = { op_bits_used_bv.min().index(), op_bits_used_bv.max().index() };
+    le_bitrange immed_bits_used = op_bits_used.shiftedByBits(adi.start * 8);
+
+    // Find out which sections of immediate sections and then coordinate to these to the
+    // hash dist sections
+    bitvec hash_dist_units_used;
+    for (int i = 0; i < 2; i++) {
+        le_bitrange immed_range = { i * IXBar::HASH_DIST_BITS, (i+1) * IXBar::HASH_DIST_BITS - 1 };
+        if (immed_range.overlaps(immed_bits_used))
+            hash_dist_units_used.setbit(i);
+    }
+    BUG_CHECK(!hash_dist_units_used.empty(), "Hash Dist in %s has no allocation", cont_action);
+
+    IR::Vector<IR::Expression> hash_dist_parts;
+    for (auto &fa : cont_action.field_actions) {
+        for (auto read : fa.reads) {
+            if (read.speciality != ActionAnalysis::ActionParam::HASH_DIST)
+                continue;
+            hash_dist_parts.push_back(read.expr);
+        }
+    }
+
+    IR::ListExpression *le = new IR::ListExpression(hash_dist_parts);
+    auto type = IR::Type::Bits::get(hash_dist_units_used.popcount() * IXBar::HASH_DIST_BITS);
+    auto *hd = new IR::MAU::HashDist(tbl->srcInfo, type, le);
+
+    auto tbl_hash_dists = tbl->resources->hash_dist_immed_units();
+    for (auto bit : hash_dist_units_used) {
+        hd->units.push_back(tbl_hash_dists.at(bit));
+    }
+
+    // If a single hash dist object is used, only the 16 bit slices are necessary, so start
+    // at the first position
+    int hash_dist_bits_shift = (immed_bits_used.lo / IXBar::HASH_DIST_BITS);
+    hash_dist_bits_shift *= IXBar::HASH_DIST_BITS;
+    le_bitrange hash_dist_bits_used = immed_bits_used.shiftedByBits(-1 * hash_dist_bits_shift);
+    return MakeSlice(hd, hash_dist_bits_used.lo, hash_dist_bits_used.hi);
+}
+
 /** In order to keep the IR holding the fields that are contained within the container, this
  *  holds every single IR field within these individual container.  It walks over the reads of
  *  field actions within the container action, and adds them to the list.  Currently we don't
@@ -511,22 +656,18 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
               "merge instructions, some constant was not converted to action data");
 
     if (cont_action.counts[ActionAnalysis::ActionParam::ACTIONDATA] == 1) {
-        if (cont_action.ad_renamed()) {
-            auto &adi = cont_action.adi;
+        auto &adi = cont_action.adi;
+        if (adi.specialities.getbit(ActionAnalysis::ActionParam::HASH_DIST)) {
+            src1 = fill_out_hash_operand(cont_action);
+            src1_writebits = adi.alignment.write_bits();
+        } else if (cont_action.ad_renamed()) {
             auto mo = new IR::MAU::MultiOperand(components, adi.action_data_name, false);
             fill_out_read_multi_operand(cont_action, ActionAnalysis::ActionParam::ACTIONDATA,
                                         adi.action_data_name, mo);
             src1 = mo;
             src1_writebits = adi.alignment.write_bits();
-            bitvec src1_read_bits = adi.alignment.read_bits();
-            /*
-            if (src1_read_bits.popcount() != static_cast<int>(container.size())) {
-                src1 = MakeSlice(src1, src1_read_bits.min().index(), src1_read_bits.max().index());
-            }
-            */
         } else {
             bool single_action_data = true;
-            auto &adi = cont_action.adi;
             for (auto &field_action : cont_action.field_actions) {
                 for (auto &read : field_action.reads) {
                     if (read.type != ActionAnalysis::ActionParam::ACTIONDATA)
@@ -1229,6 +1370,7 @@ InstructionAdjustment::InstructionAdjustment(const PhvInfo &phv, Util::JsonObjec
         new GeneratePrimitiveInfo(phv, primNode),
         new SplitInstructions(phv),
         new ConstantsToActionData(phv),
+        new ExpressionsToHash(phv),
         new MergeInstructions(phv),
         new AdjustStatefulInstructions(phv)
     });

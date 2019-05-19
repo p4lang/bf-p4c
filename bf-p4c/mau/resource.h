@@ -65,6 +65,7 @@ struct TableResourceAlloc {
     static TableResourceAlloc *fromJSON(JSONLoader &) { return nullptr; }
 
     bool has_tind() const;
+    safe_vector<int> hash_dist_immed_units() const;
 };
 
 #endif /* BF_P4C_MAU_RESOURCE_H_ */

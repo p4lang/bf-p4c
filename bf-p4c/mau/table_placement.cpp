@@ -530,12 +530,12 @@ bool TablePlacement::try_alloc_ixbar(TablePlacement::Placed *next,
         current_ixbar.update(p->table, p->resources);
     }
 
-    const ActionFormat::Use *speciality_use = &next->use.preferred_action_format()->speciality_use;
+    const ActionData::Format::Use *action_format = next->use.preferred_action_format();
 
     if (!current_ixbar.allocTable(next->table, phv, *resources, next->use.preferred(),
-                                  speciality_use) ||
+                                  action_format) ||
         !current_ixbar.allocTable(next->gw, phv, *resources, next->use.preferred(),
-                                  speciality_use)) {
+                                  nullptr)) {
         resources->clear_ixbar();
         error_message = "The table " + next->table->name + " could not fit within a single "
                         "input crossbar in an MAU stage";
@@ -1989,7 +1989,9 @@ IR::Node *TablePlacement::preorder(IR::MAU::BackendAttached *ba) {
                 if (ba->attached->is<IR::MAU::ActionData>() &&
                     ir_alloc.dest != IXBar::HD_ACTIONDATA_ADR)
                     continue;
-                ba->hash_dist = ir_alloc.original_hd;
+                BUG_CHECK(ir_alloc.created_hd != nullptr, "Hash Action did not create a "
+                    "HashDist object during allocation");
+                ba->hash_dist = ir_alloc.created_hd;
                 ba->addr_location = IR::MAU::AddrLocation::HASH;
             }
         }

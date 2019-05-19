@@ -996,7 +996,8 @@ bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl,
     // bitvec immed_layouts[ActionData::SLOT_TYPES];
     ActionData::BusInputs immed_layouts = use->bus_inputs[ActionData::IMMEDIATE];
     for (int i = 0; i < ActionData::SLOT_TYPES; i++) {
-        immed_layouts[i] |= special_use->hash_dist_layouts[i];
+        immed_layouts[i] |= use->locked_in_all_actions_bus_inputs[i];
+        // immed_layouts[i] |= special_use->hash_dist_layouts[i];
         immed_layouts[i] |= special_use->rand_num_layouts[i];
     }
     // Known limitation of the action data packing

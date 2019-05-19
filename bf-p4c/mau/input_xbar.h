@@ -459,7 +459,7 @@ struct IXBar {
         le_bitrange p4_hash_range;
         HashDistDest_t dest;
         // Only currently used for dynamic hash.  Goal is to remove
-        const IR::MAU::HashDist *original_hd;
+        const IR::MAU::HashDist *created_hd = nullptr;
         cstring dyn_hash_name;
         bool is_dynamic() const { return !dyn_hash_name.isNull(); }
     };
@@ -527,7 +527,7 @@ struct IXBar {
         HashDistDest_t dest;
         int shift;
         // Only currently used for dynamic hash.  Goal is to remove
-        const IR::MAU::HashDist *original_hd;
+        const IR::MAU::HashDist *created_hd;
         // Workaround for multi-stage fifo tests.  Goal is to remove this as well and have
         // the hash/compiler to generate this individually and determine it, but that's not
         // very optimal in the given structure
@@ -545,12 +545,14 @@ struct IXBar {
         IXBar &self;
         const PhvInfo &phv;
         const IR::MAU::Table *tbl;
-        const ActionFormat::Use *af;
+        // const ActionFormat::Use *af;
+        const ActionData::Format::Use *af;
         const LayoutOption *lo;
         TableResourceAlloc *resources;
 
         void build_action_data_req(const IR::MAU::HashDist *hd);
-        void build_req(const IR::MAU::HashDist *hd, const IR::Node *rel_node);
+        void build_req(const IR::MAU::HashDist *hd, const IR::Node *rel_node,
+            bool created_hd = false);
 
         void build_function(const IR::MAU::HashDist *hd, P4HashFunction **func,
             le_bitrange *bits = nullptr);
@@ -558,13 +560,13 @@ struct IXBar {
         bool preorder(const IR::MAU::TableSeq *) override { return false; }
         bool preorder(const IR::MAU::AttachedOutput *) override { return false; }
         bool preorder(const IR::MAU::StatefulCall *) override { return false; }
-        void immediate_inputs(const IR::MAU::HashDist *hd);
 
      public:
+        void immediate_inputs();
         void hash_action();
         bool allocate_hash_dist();
         XBarHashDist(IXBar &s, const PhvInfo &p, const IR::MAU::Table *t,
-                const ActionFormat::Use *a, const LayoutOption *l, TableResourceAlloc *r)
+                const ActionData::Format::Use *a, const LayoutOption *l, TableResourceAlloc *r)
             : self(s), phv(p), tbl(t), af(a), lo(l), resources(r) {}
     };
 
@@ -767,7 +769,7 @@ struct IXBar {
     bool allocMeter(const IR::MAU::Meter *, const IR::MAU::Table *, const PhvInfo &phv,
                     Use &alloc, bool on_search_bus);
     bool allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResourceAlloc &alloc,
-                    const LayoutOption *lo, const ActionFormat::Use *af);
+                    const LayoutOption *lo, const ActionData::Format::Use *af);
     void update(cstring name, const Use &alloc);
     void update(cstring name, const HashDistUse &hash_dist_alloc);
     void update(const IR::MAU::Table *tbl, const TableResourceAlloc *rsrc);

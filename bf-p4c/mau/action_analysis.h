@@ -207,6 +207,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         int total_field_affects = 0;
         int field_affects = 0;
         int size  = -1;
+        bitvec specialities;
 
         void initialize(cstring adn, bool imm, int s, int tfa) {
             initialized = true;
@@ -284,7 +285,8 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
                             ILLEGAL_ACTION_DATA = (1 << 17),
                             REFORMAT_CONSTANT = (1 << 18),
                             UNRESOLVED_REPEATED_ACTION_DATA = (1 << 19),
-                            ATTACHED_OUTPUT_ILLEGAL_ALIGNMENT = (1 << 20)
+                            ATTACHED_OUTPUT_ILLEGAL_ALIGNMENT = (1 << 20),
+                            CONSTANT_TO_HASH = (1 << 21)
                          };
         unsigned error_code = NO_PROBLEM;
         cstring name;
@@ -387,10 +389,15 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         bool verify_set_alignment(PHV::Container &container, TotalAlignment &ad_alignment);
         void determine_src1();
         bool verify_alignment(PHV::Container &container);
+        bitvec specialities() const;
 
         bitvec total_write() const;
         bool convert_constant_to_actiondata() const {
             return (error_code & CONSTANT_TO_ACTION_DATA) != 0;
+        }
+
+        bool convert_constant_to_hash() const {
+            return (error_code & CONSTANT_TO_HASH) != 0;
         }
         friend std::ostream &operator<<(std::ostream &out, const ContainerAction&);
     };
@@ -451,7 +458,11 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         cstring action_name);
     bool init_phv_alignment(const ActionParam &read, ContainerAction &cont_action,
                             le_bitrange write_bits, cstring &error_message);
+    bool init_special_alignment(const ActionParam &read, ContainerAction &cont_action,
+        le_bitrange write_bits, cstring action_name, PHV::Container container);
     bool init_ad_alloc_alignment(const ActionParam &read, ContainerAction &cont_action,
+        le_bitrange write_bits, cstring action_name, PHV::Container container);
+    bool init_hash_constant_alignment(const ActionParam &read, ContainerAction &cont_action,
         le_bitrange write_bits, cstring action_name, PHV::Container container);
     bool init_constant_alignment(const ActionParam &read, ContainerAction &cont_action,
         le_bitrange write_bits, cstring action_name, PHV::Container container);

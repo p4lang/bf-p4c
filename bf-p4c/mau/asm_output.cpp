@@ -530,6 +530,8 @@ void MauAsmOutput::emit_hash_dist(std::ostream &out, indent_t indent,
 void MauAsmOutput::emit_ixbar_hash_table(int hash_table, safe_vector<Slice> &match_data,
         safe_vector<Slice> &ghost, const TableMatch *fmt,
         std::map<int, std::map<int, Slice>> &sort) const {
+    if (sort.empty())
+        return;
     unsigned half = hash_table & 1;
     for (auto &match : sort.at(hash_table/2)) {
         Slice reg = match.second;
@@ -1452,54 +1454,46 @@ void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
             out << ".." << (rs.location.byte + byte_sz - 1);
         out << " : ";
 
-        const IR::MAU::HashDist *hd = nullptr;
         const IR::MAU::RandomNumber *rn = nullptr;
-        int lo = -1; int hi = -1;
         // For emitting hash distribution sections on the action_bus directly.  Must find
         // which slices of hash distribution are to go to which bytes, requiring coordination
         // from the input xbar and action format allocation
-        if (emit_immed && speciality_use.is_hash_dist(rs.byte_offset, &hd, lo, hi)) {
-            safe_vector<int> all_units;
-            safe_vector<IXBar::HashDistDest_t> hd_dests
-                = { IXBar::HD_IMMED_LO, IXBar::HD_IMMED_HI };
-            for (auto dest : hd_dests) {
-                bool found = false;
-                for (auto &hash_dist_use : tbl->resources->hash_dists) {
-                    int dest_i = static_cast<int>(dest);
-                    if (hash_dist_use.destinations().getbit(dest_i)) {
-                        BUG_CHECK(!found, "Hash Dist destination %d used multiple times",
-                                          dest_i);
-                        found = true;
-                        all_units.push_back(hash_dist_use.unit);
-                    }
-                }
-                if (!found)
-                    all_units.push_back(-1);
+        if (emit_immed && rs.source == ActionData::IMMEDIATE
+            && format.is_hash_dist(rs.byte_offset)) {
+            safe_vector<int> all_hash_dist_units = tbl->resources->hash_dist_immed_units();
+            bitvec slot_hash_dist_units;
+            int immed_lo = rs.byte_offset * 8;
+            int immed_hi = immed_lo + (8 << rs.location.type) - 1;
+            le_bitrange immed_range = { immed_lo, immed_hi };
+            for (int i = 0; i < 2; i++) {
+                le_bitrange immed_impact = { i * IXBar::HASH_DIST_BITS,
+                                             (i + 1) * IXBar::HASH_DIST_BITS - 1 };
+                if (!immed_impact.overlaps(immed_range))
+                    continue;
+                slot_hash_dist_units.setbit(i);
             }
-            safe_vector<int> units;
-            le_bitrange field_range = { lo, hi };
-            le_bitrange hd_range = { 0, 0 };
-            int section = -1;
-            safe_vector<int> unit_indexes =
-                    speciality_use.find_hash_dist(hd, field_range, false, hd_range, section);
-            for (auto unit_index : unit_indexes)
-                units.push_back(all_units.at(unit_index));
 
             out << "hash_dist(";
-            size_t unit_index = 0;
-            for (auto unit : units) {
-                out << unit;
-                if (unit_index != units.size() - 1)
-                    out << ", ";
-                unit_index++;
+            // Find the particular hash dist units (if 32 bit, still potentially only one if)
+            // only certain bits are allocated
+            std::string sep = "";
+            for (auto bit : slot_hash_dist_units) {
+                if (all_hash_dist_units.at(bit) < 0) continue;
+                out << sep << all_hash_dist_units.at(bit);
+                sep = ", ";
             }
-            if (hd_range.size() != IXBar::HASH_DIST_BITS) {
-                out << ", " << hd_range.lo << ".." << hd_range.hi;
+
+            // Byte slots need a particular byte range of hash dist
+            if (rs.location.type == ActionData::BYTE) {
+                int slot_range_shift = (immed_range.lo / IXBar::HASH_DIST_BITS);
+                slot_range_shift *= IXBar::HASH_DIST_BITS;
+                le_bitrange slot_range = immed_range.shiftedByBits(-1 * slot_range_shift);
+                out << ", " << slot_range.lo << ".." << slot_range.hi;
             }
             // 16 bit hash dist in a 32 bit slot have to determine whether the hash distribution
             // unit goes in the lo section or the hi section
-            if (section >= 0) {
-                cstring lo_hi = section == 0 ? "lo" : "hi";
+            if (slot_hash_dist_units.popcount() == 1) {
+                cstring lo_hi = slot_hash_dist_units.getbit(0) ? "lo" : "hi";
                 out << ", " << lo_hi;
             }
             out << ")";
@@ -1933,11 +1927,8 @@ class MauAsmOutput::EmitAction : public Inspector {
         }
     }
 
-    /** In order to handle slices on hash distribution, i.e. a 8 bit portion of a 16
-     *  bit hash distribution unit, the assumption is that the hash distribution is aligned
-     *  at 16 bit intervals, and that the slicing is coordinated to that.  Until the hash
-     *  distribution is moved into the action format, then this assumption will have
-     *  to work.
+    /**
+     * HashDist IR object have already been converted in InstructionAdjustment
      */
     void handle_hash_dist(const IR::Expression *expr) {
         int lo = -1; int hi = -1;
@@ -1949,52 +1940,18 @@ class MauAsmOutput::EmitAction : public Inspector {
         } else {
             hd = expr->to<IR::MAU::HashDist>();
             lo = 0;
-            hi = hd->type->width_bits();
+            hi = hd->type->width_bits() - 1;
         }
-        assert(sep);
-        BUG_CHECK(hd != nullptr, "Printing an invalid the hash distribution in assembly");
+        BUG_CHECK(hd && !hd->units.empty(), "Hash Dist object %1% not correctly converted in "
+                  "InstructionAdjustment", hd);
         out << sep << "hash_dist(";
-        sep = "";
-
-
-        safe_vector<int> all_units;
-        safe_vector<IXBar::HashDistDest_t> hd_dests = { IXBar::HD_IMMED_LO, IXBar::HD_IMMED_HI };
-        for (auto dest : hd_dests) {
-            bool found = false;
-            for (auto &hash_dist_use : table->resources->hash_dists) {
-                int dest_i = static_cast<int>(dest);
-                if (hash_dist_use.destinations().getbit(dest_i)) {
-                    BUG_CHECK(!found, "Hash Dist destination %d used multiple times",
-                                      dest_i);
-                    found = true;
-                    all_units.push_back(hash_dist_use.unit);
-                }
-            }
-            if (!found)
-                all_units.push_back(-1);
+        std::string sep2 = "";
+        for (auto unit : hd->units) {
+            out << sep2 << unit;
+            sep2 = ", ";
         }
-
-        safe_vector<int> units;
-        int section = -1;
-        le_bitrange field_range = { lo, hi };
-        le_bitrange hd_range = { 0, 0 };
-        auto af = table->resources->action_format;
-        auto speciality_use = af.speciality_use;
-        safe_vector<int> unit_indexes = speciality_use.find_hash_dist(hd, field_range, true,
-                                            hd_range, section);
-        for (auto unit_index : unit_indexes) {
-            units.push_back(all_units.at(unit_index));
-        }
-
-
-        for (size_t i = 0; i < units.size(); i++) {
-            out << units[i];
-            if (i != units.size() - 1)
-                out << ", ";
-        }
-        out << ", " << hd_range.lo << ".." << hd_range.hi;
+        out << sep2 << lo << ".." << hi;
         out << ")";
-        sep = ", ";
     }
 
 

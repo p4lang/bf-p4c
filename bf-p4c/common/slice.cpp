@@ -21,7 +21,7 @@ const IR::Expression *MakeSliceDestination(const IR::Expression *e, int lo, int 
         return rv;
     }
     std::pair<int, int> slLoHi = getSliceLoHi(e);
-    LOG6("For slice, lo: " << slLoHi.first << ", hi: " << slLoHi.second);
+    LOG6("\tFor slice, lo: " << slLoHi.first << ", hi: " << slLoHi.second);
     if ((lo - slLoHi.first) >= e->type->width_bits()) {
         LOG6("\tReturning 0's");
         return new IR::Constant(IR::Type::Bits::get(hi-lo+1), 0); }
@@ -58,8 +58,8 @@ const IR::Expression *MakeSliceSource(const IR::Expression *read, int lo, int hi
     // Extract the lo and hi slice bits for both the source and destination expressions
     std::pair<int, int> readLoHi = getSliceLoHi(read);
     std::pair<int, int> writeLoHi = getSliceLoHi(write);
-    LOG6("src_lo : " << readLoHi.first << ", src_hi : " << readLoHi.second);
-    LOG6("dest_lo: " << writeLoHi.first << ", dest_hi: " << writeLoHi.second);
+    LOG6("\tsrc_lo : " << readLoHi.first << ", src_hi : " << readLoHi.second);
+    LOG6("\tdest_lo: " << writeLoHi.first << ", dest_hi: " << writeLoHi.second);
     lo = lo - (writeLoHi.first - readLoHi.first);
     hi = hi - (writeLoHi.first - readLoHi.first);
 
@@ -74,12 +74,12 @@ const IR::Expression *MakeSliceSource(const IR::Expression *read, int lo, int hi
         LOG6("\tRequested same slice as the read expression");
         return read; }
     if (auto sl = read->to<IR::Slice>()) {
-        LOG6("Encountered a slice [" << sl->getL() << ", " << sl->getH() << "]");
-        LOG6("Original expression: " << sl->e0);
+        LOG6("\tEncountered a slice [" << sl->getL() << ", " << sl->getH() << "]");
+        LOG6("\tOriginal expression: " << sl->e0);
         BUG_CHECK(lo >= int(sl->getL()) && hi <= int(sl->getH()),
                   "MakeSlice slice on slice type mismatch");
         read = sl->e0; }
-    LOG6("Return " << read << " lo: " << lo << " hi: " << hi);
+    LOG6("\tReturn " << read << " lo: " << lo << " hi: " << hi);
     return new IR::Slice(read, hi, lo);
 }
 

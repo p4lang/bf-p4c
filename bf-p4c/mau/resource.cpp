@@ -34,3 +34,24 @@ bool TableResourceAlloc::has_tind() const {
             "required with no overhead");
     return rv;
 }
+
+/**
+ * Return a 2 entry vector indicating which fields are headed to HashDist Immed Lo and
+ * HashDist Immediate Hi.  If the hash dist is not used, the a -1 will be returned.
+ */
+safe_vector<int> TableResourceAlloc::hash_dist_immed_units() const {
+    safe_vector<int> rv;
+    for (int i = IXBar::HD_IMMED_LO; i <= IXBar::HD_IMMED_HI; i++) {
+        int unit = -1;
+        for (auto &hd : hash_dists) {
+            if (hd.destinations().getbit(i)) {
+                LOG1("  Destination " << i << " " << hd.unit << " 0x" << hd.destinations());
+                BUG_CHECK(unit == -1, "Multiple HashDistUse objects cannot head to the same "
+                    "output destination");
+                unit = hd.unit;
+            }
+        }
+        rv.push_back(unit);
+    }
+    return rv;
+}

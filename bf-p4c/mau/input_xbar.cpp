@@ -3198,7 +3198,7 @@ void IXBar::buildHashDistIRUse(HashDistAllocPostExpand &alloc_req, HashDistUse &
     hdh.allocated = true;
     rv.p4_hash_range = alloc_req.func->hash_bits;
     rv.dest = alloc_req.dest;
-    rv.original_hd = alloc_req.original_hd;
+    rv.created_hd = alloc_req.created_hd;
     rv.dyn_hash_name = alloc_req.func->dyn_hash_name;
     rv.use.hash_table_inputs[hash_group] = hash_table_input;
     rv.use.hash_seed[hash_group]
@@ -3422,7 +3422,7 @@ void IXBar::createChainedHashDist(const HashDistUse &hd_alloc, HashDistUse &chai
         curr.use.use.insert(curr.use.use.end(), ir_alloc.use.use.begin(), ir_alloc.use.use.end());
         curr.p4_hash_range = ir_alloc.p4_hash_range;
         curr.dest = HD_IMMED_HI;
-        curr.original_hd = ir_alloc.original_hd;
+        curr.created_hd = ir_alloc.created_hd;
         for (int i = 0; i < HASH_GROUPS; i++) {
             curr.use.hash_table_inputs[i] = ir_alloc.use.hash_table_inputs[i];
         }
@@ -3541,7 +3541,8 @@ void IXBar::XBarHashDist::build_function(const IR::MAU::HashDist *hd, P4HashFunc
  * object is going, determine the bits required, the max right shift that is needed,
  * and the P4 Hash Function that will be required for the galois matrix.
  */
-void IXBar::XBarHashDist::build_req(const IR::MAU::HashDist *hd, const IR::Node *rel_node) {
+void IXBar::XBarHashDist::build_req(const IR::MAU::HashDist *hd, const IR::Node *rel_node,
+        bool created_hd) {
     le_bitrange post_expand_bits = { 0, hd->type->width_bits() - 1 };
     HashDistDest_t dest;
     P4HashFunction *func = nullptr;
@@ -3578,11 +3579,13 @@ void IXBar::XBarHashDist::build_req(const IR::MAU::HashDist *hd, const IR::Node 
     }
 
     alloc_reqs.emplace_back(func, post_expand_bits, dest, shift);
-    alloc_reqs.back().original_hd = hd;
+    if (created_hd)
+        alloc_reqs.back().created_hd = hd;
     alloc_reqs.back().chained_addr = chained_addr;
     if (color_mapram_shift > -1) {
         alloc_reqs.emplace_back(func, post_expand_bits, IXBar::HD_STATS_ADR, color_mapram_shift);
-        alloc_reqs.back().original_hd = hd;
+        if (created_hd)
+            alloc_reqs.back().created_hd = hd;
     }
 }
 
@@ -3597,36 +3600,44 @@ void IXBar::XBarHashDist::build_action_data_req(const IR::MAU::HashDist *hd) {
     build_function(hd, &func, nullptr);
     int shift = std::min(ceil_log2(lo->layout.action_data_bytes_in_table) + 1, 5);
     alloc_reqs.emplace_back(func, post_expand_bits, dest, shift);
-    alloc_reqs.back().original_hd = hd;
+    alloc_reqs.back().created_hd = hd;
 }
 
 /**
- * Given that a HashDist object is headed to immediate, this determine which (if not multiple)
- * hash distribution objects are required, as well as calculates the hash function that is
- * to be on the bits
+ * As the HashDist for immediate is done through the new action_format_2 based code, an
+ * individual HashDist object in an instruction is no longer able to be linked.  Thus,
+ * all parameters of the hash headed to immediate are done in a single operation.
  */
-void IXBar::XBarHashDist::immediate_inputs(const IR::MAU::HashDist *hd) {
-    auto placements = af->hash_dist_placement.at(hd);
-    for (auto alu_op : placements) {
-        BUG_CHECK(alu_op.arg_locs.size() == 1, "Hash Dist can only one argument");
-        auto arg_loc = alu_op.arg_locs.at(0);
-        auto arg_br = arg_loc.slot_br();
-        arg_br = arg_br.shiftedByBits(alu_op.start * 8);
+void IXBar::XBarHashDist::immediate_inputs() {
+    // Gateway only tables
+    if (af == nullptr)
+        return;
 
+    // All the hash dists in the immediate HashDists
+    auto ram_sect = af->build_locked_in_sect();
+    auto ad_positions = ram_sect->parameter_positions(false);
+
+    for (auto pos : ad_positions) {
+        auto hash = pos.second->to<ActionData::Hash>();
+        if (hash == nullptr)
+            continue;
+        le_bitrange immed_range = { pos.first, pos.first + hash->size() - 1 };
+        int bits_seen = 0;
         for (int i = 0; i < 2; i++) {
             le_bitrange immed_impact = { i * HASH_DIST_BITS, (i+1) * HASH_DIST_BITS - 1 };
             auto boost_sl = toClosedRange<RangeUnit::Bit, Endian::Little>
-                                (arg_br.intersectWith(immed_impact));
+                                (immed_range.intersectWith(immed_impact));
             if (boost_sl == boost::none)
                 continue;
             le_bitrange overlap = *boost_sl;
-            le_bitrange p4_hash_bits = overlap.shiftedByBits(-1 * arg_br.lo + arg_loc.field_bit);
-            P4HashFunction *func = nullptr;
-            build_function(hd, &func, &p4_hash_bits);
-            le_bitrange hash_dist_bits = overlap.shiftedByBits(-1 * HASH_DIST_BITS * i);
+            int hash_bits_shift = (-1 * pos.first);
+            le_bitrange hash_range = overlap.shiftedByBits(hash_bits_shift);
+            le_bitrange hash_dist_range = overlap.shiftedByBits(-1 * i * HASH_DIST_BITS);
+            P4HashFunction *func = new P4HashFunction(hash->func());
+            func->slice(hash_range);
             HashDistDest_t dest = static_cast<HashDistDest_t>(i);
-            alloc_reqs.emplace_back(func, hash_dist_bits, dest, 0);
-            alloc_reqs.back().original_hd = hd;
+            alloc_reqs.emplace_back(func, hash_dist_range, dest, 0);
+            bits_seen += overlap.size();
         }
     }
 }
@@ -3661,7 +3672,7 @@ void IXBar::XBarHashDist::hash_action() {
     for (auto ba : tbl->attached) {
         if (!(ba->attached && ba->attached->direct))
             continue;
-        build_req(hd, ba);
+        build_req(hd, ba, true);
     }
 
     if (lo->layout.action_data_bytes_in_table > 0) {
@@ -3677,10 +3688,8 @@ bool IXBar::XBarHashDist::preorder(const IR::MAU::HashDist *hd) {
     } else if (auto ba = findContext<IR::MAU::BackendAttached>()) {
         build_req(hd, ba);
     } else if (findContext<IR::MAU::Instruction>()) {
-        immediate_inputs(hd);
         return false;
     }
-
     return false;
 }
 
@@ -3735,7 +3744,7 @@ bool IXBar::XBarHashDist::allocate_hash_dist() {
  *  locations that have no current hash matrix use
  */
 bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResourceAlloc &alloc,
-                       const LayoutOption *lo, const ActionFormat::Use *af) {
+                       const LayoutOption *lo, const ActionData::Format::Use *af) {
     if (!tbl) return true;
     /* Determine number of groups needed.  Loop through them, alloc match will be the same
        for these.  Alloc All Hash Ways will required multiple groups, and may need to change  */
@@ -3824,6 +3833,7 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
 
     XBarHashDist xbar_hash_dist(*this, phv, tbl, af, lo, &alloc);
     xbar_hash_dist.hash_action();
+    xbar_hash_dist.immediate_inputs();
     tbl->attached.apply(xbar_hash_dist);
     for (auto v : Values(tbl->actions))
         v->apply(xbar_hash_dist);

@@ -351,6 +351,7 @@ void ActionAnalysis::postorder(const IR::MAU::Instruction *instr) {
         if (split_count == 0)
             ERROR("PHV not allocated for this field");
 
+
         field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice &alloc) {
             auto container = alloc.container;
             if (container_actions_map->find(container) == container_actions_map->end()) {
@@ -558,6 +559,8 @@ bool ActionAnalysis::initialize_alignment(const ActionParam &write, const Action
         && !cont_action.is_shift()) {
         error_message += "the number of bits in the write and read aren't equal";
         cont_action.error_code |= ContainerAction::DIFFERENT_READ_SIZE;
+        if (read.type == ActionParam::ACTIONDATA)
+            cont_action.adi.specialities.setbit(read.speciality);
         return false;
     }
 
@@ -646,6 +649,59 @@ bool ActionAnalysis::init_phv_alignment(const ActionParam &read, ContainerAction
     return true;
 }
 
+/**
+ * For everything that is not yet handled by the new algorithm, (e.g. everything but hash), the
+ * alignment for these particular fields is presumed to be directly aligned, as this is how
+ * the allocation maximally can work.
+ *
+ * For Hash specifically, the algorithm now looks into the action format and finds the location
+ * based on the UniqueLocationKey built from the parameters, similar to other control
+ * plane based action data, and then determines the read bits of the ActionDataBus slot from
+ * that point.
+ */
+bool ActionAnalysis::init_special_alignment(const ActionParam &read, ContainerAction &cont_action,
+        le_bitrange write_bits, cstring action_name, PHV::Container container) {
+    if (read.speciality != ActionParam::HASH_DIST)
+        return init_simple_alignment(read, cont_action, write_bits);
+
+    auto &action_format = tbl->resources->action_format;
+    BuildP4HashFunction builder(phv);
+    // Build the hash function from the expression
+    auto hd = read.unsliced_expr()->to<IR::MAU::HashDist>();
+    hd->apply(builder);
+    P4HashFunction *func = builder.func();
+    if (auto sl = read.expr->to<IR::Slice>())
+        func->slice({static_cast<int>(sl->getL()), static_cast<int>(sl->getH())});
+
+    ActionData::Hash *hash = new ActionData::Hash(*func);
+    ActionData::UniqueLocationKey key(action_name, hash, container, write_bits);
+
+    const ActionData::ALUPosition *alu_pos = nullptr;
+    const ActionData::ALUParameter *alu_param = action_format.find_param_alloc(key, &alu_pos);
+
+    if (alu_pos == nullptr || alu_param == nullptr)
+        return false;
+
+    auto &adi = cont_action.adi;
+    bitvec slot_bits_bv = alu_param->slot_bits(container);
+    le_bitrange slot_bits = { slot_bits_bv.min().index(), slot_bits_bv.max().index() };
+
+    if (cont_action.counts[ActionParam::ACTIONDATA] == 0) {
+        adi.alignment.add_alignment(write_bits, slot_bits);
+        cstring name = "$hash_dist";
+        adi.initialize(name, alu_pos->loc == ActionData::IMMEDIATE, alu_pos->start_byte, 1);
+        cont_action.counts[ActionParam::ACTIONDATA] = 1;
+    } else if (static_cast<int>(alu_pos->start_byte) != adi.start ||
+               (alu_pos->loc == ActionData::IMMEDIATE) != adi.immediate) {
+        cont_action.counts[ActionParam::ACTIONDATA]++;
+    } else {
+        adi.field_affects++;
+        adi.alignment.add_alignment(write_bits, slot_bits);
+    }
+    adi.specialities.setbit(read.speciality);
+    return true;
+}
+
 /** This initializes the alignment of action data, given that the action data allocation has
  *  taken place.  Action data allocation can take place before or after phv allocation, and
  *  thus the information in the ActionDataPlacement may not match up with the actual phv
@@ -654,7 +710,7 @@ bool ActionAnalysis::init_phv_alignment(const ActionParam &read, ContainerAction
 bool ActionAnalysis::init_ad_alloc_alignment(const ActionParam &read, ContainerAction &cont_action,
         le_bitrange write_bits, cstring action_name, PHV::Container container) {
     if (read.speciality != ActionParam::NO_SPECIAL)
-        return init_simple_alignment(read, cont_action, write_bits);
+        return init_special_alignment(read, cont_action, write_bits, action_name, container);
 
     auto &action_format = tbl->resources->action_format;
 
@@ -684,7 +740,7 @@ bool ActionAnalysis::init_ad_alloc_alignment(const ActionParam &read, ContainerA
     const ActionData::ALUPosition *alu_pos = nullptr;
     const ActionData::ALUParameter *alu_param = action_format.find_param_alloc(key, &alu_pos);
     bitvec slot_bits_bv = alu_param->slot_bits(container);
-    le_bitrange slot_bits { slot_bits_bv.min().index(), slot_bits_bv.max().index() };
+    le_bitrange slot_bits = { slot_bits_bv.min().index(), slot_bits_bv.max().index() };
 
     if (alu_param == nullptr)
         return false;
@@ -704,6 +760,7 @@ bool ActionAnalysis::init_ad_alloc_alignment(const ActionParam &read, ContainerA
         adi.field_affects++;
         adi.alignment.add_alignment(write_bits, slot_bits);
     }
+    adi.specialities.setbit(read.speciality);
     return true;
 }
 
@@ -727,6 +784,32 @@ void ActionAnalysis::initialize_constant(const ActionParam &read,
     else
         constant_value = static_cast<uint32_t>(constant->asInt());
     cont_action.ci.positions.emplace_back(constant_value, write_bits);
+}
+
+bool ActionAnalysis::init_hash_constant_alignment(const ActionParam &read,
+        ContainerAction &cont_action, le_bitrange write_bits, cstring action_name,
+        PHV::Container container) {
+    auto &action_format = tbl->resources->action_format;
+    auto constant = read.expr->to<IR::Constant>();
+
+    P4HashFunction func;
+    func.inputs.push_back(constant);
+    func.algorithm = IR::MAU::HashFunction::identity();
+    func.hash_bits = { 0, constant->type->width_bits() - 1 };
+    ActionData::Hash *hash = new ActionData::Hash(func);
+
+    ActionData::UniqueLocationKey key(action_name, hash, container, write_bits);
+    const ActionData::ALUPosition *alu_pos = nullptr;
+    const ActionData::ALUParameter *alu_param = action_format.find_param_alloc(key, &alu_pos);
+
+    if (alu_param == nullptr)
+        return false;
+
+    bitvec slot_bits_bv = alu_param->slot_bits(container);
+    le_bitrange slot_bits = { slot_bits_bv.min().index(), slot_bits_bv.max().index() };
+
+    initialize_constant(read, cont_action, write_bits, slot_bits);
+    return true;
 }
 
 /** Handles a IR::Constant within an Instruction to determine whether the constant will
@@ -783,6 +866,7 @@ bool ActionAnalysis::init_simple_alignment(const ActionParam &read,
     if (read.type == ActionParam::ACTIONDATA) {
         cont_action.adi.alignment.add_alignment(write_bits, read_bits);
         cont_action.adi.initialized = true;
+        cont_action.adi.specialities.setbit(read.speciality);
     } else if (read.type == ActionParam::CONSTANT) {
         initialize_constant(read, cont_action, write_bits, read_bits);
     }
@@ -1096,6 +1180,20 @@ bool ActionAnalysis::TotalAlignment::deposit_field_src2(PHV::Container container
     if (!aligned())
         return false;
     return !df_src2_mask(container).empty();
+}
+
+bitvec ActionAnalysis::ContainerAction::specialities() const {
+    bitvec rv;
+    for (auto &fa : field_actions) {
+        for (auto &read : fa.reads) {
+            if (read.type != ActionParam::ACTIONDATA)
+                continue;
+            if (read.is_conditional)
+                continue;
+            rv.setbit(read.speciality);
+        }
+    }
+    return rv;
 }
 
 /**
@@ -1437,6 +1535,11 @@ void ActionAnalysis::check_constant_to_actiondata(ContainerAction &cont_action,
     if (!cont_action.ci.initialized)
         BUG("Constant not setup by the program correctly");
 
+    if (cont_action.specialities().getbit(ActionParam::HASH_DIST)) {
+        cont_action.error_code |= ContainerAction::CONSTANT_TO_HASH;
+        return;
+    }
+
     if (counts[ActionParam::ACTIONDATA] > 0 && counts[ActionParam::CONSTANT] > 0) {
         cont_action.error_code |= ContainerAction::CONSTANT_TO_ACTION_DATA;
         return;
@@ -1553,26 +1656,57 @@ bool ActionAnalysis::ContainerAction::verify_phv_mau_group(PHV::Container contai
     return true;
 }
 
+/**
+ * Verifies that the use of a speciality argument is valid
+ *
+ * For all cases:
+ *     - At most one speciality is currently allowed per ALU operation (i.e. cannot combine
+ *       HashDist with Control Plane or RNG)
+ *
+ * For NO_SPECIAL (anything still applies)
+ *
+ * For any non-HASH
+ *     - Only one argument is currently allowed, as InstructionAdjustment is not able to
+ *       handle all of the corner cases
+ *
+ * For METER_ALU
+ *     - The parameter headed to an ALU operation must correctly fit within a single
+ *       action bus slot
+ *
+ * For HASH:
+ *     - Multiple Hash parameters as well as constants are allowed in the Hash.  In the
+ *       future, PHV could be allowed in the Hash as well.
+ */
 bool ActionAnalysis::ContainerAction::verify_speciality(cstring &error_message,
          PHV::Container container, cstring action_name) {
-    bool speciality_found = false;
     int ad_params = 0;
     ActionParam *speciality_read = nullptr;
     for (auto field_action : field_actions) {
-        for (auto read : field_action.reads) {
+        for (auto &read : field_action.reads) {
             if (read.type == ActionParam::ACTIONDATA || read.type == ActionParam::CONSTANT)
                 ad_params++;
+
             if (read.speciality != ActionParam::NO_SPECIAL) {
-                speciality_found = true;
                 speciality_read = &read;
             }
         }
     }
-    if (ad_params > 1 && speciality_found)
+
+    BUG_CHECK(adi.specialities == specialities(), "Speciality alignments are not coordinated");
+    if (specialities().empty())
+        return true;
+
+    bool impossible_to_merge = adi.specialities.popcount() > 1;
+    impossible_to_merge |= !(specialities().getbit(ActionParam::HASH_DIST) ||
+                             specialities().getbit(ActionParam::NO_SPECIAL))
+                             && ad_params > 1;
+
+    if (impossible_to_merge) {
         P4C_UNIMPLEMENTED("In the ALU operation over container %s in action %s, the packing is "
                           "too complicated due to a too complex container instruction with a "
                           "speciality action data combined with other action data: %s",
                           container.toString(), action_name, *this);
+    }
 
 
     if (speciality_read && speciality_read->speciality == ActionParam::METER_ALU) {

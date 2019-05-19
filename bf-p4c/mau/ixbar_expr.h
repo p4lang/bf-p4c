@@ -109,8 +109,18 @@ struct P4HashFunction {
     cstring dyn_hash_name;
 
     bool is_dynamic() const { return !dyn_hash_name.isNull(); }
+    bool equiv_dyn(const P4HashFunction *func) const;
+    bool equiv_inputs_alg(const P4HashFunction *func) const;
+
+
     void slice(le_bitrange hash_slice);
+    cstring name() const { return is_dynamic() ? dyn_hash_name : "static_hash"; }
+    int size() const { return hash_bits.size(); }
     bool equiv(const P4HashFunction *) const;
+    bool is_next_bit_of_hash(const P4HashFunction *) const;
+
+    bool overlap(const P4HashFunction *, le_bitrange *my_overlap, le_bitrange *hash_overlap) const;
+    void dbprint(std::ostream &out) const;
 };
 
 /**

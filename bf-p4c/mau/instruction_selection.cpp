@@ -1932,6 +1932,82 @@ const IR::MAU::Instruction *
 }
 
 /**
+ * modify_field_with_hash_based_offset is not yet converted correctly in the converters,
+ * as the slicing operation portion, i.e. the max size of the instruction is not correct.
+ *
+ * This leads to mismatched sizes in HashDist Instructions, which used to be done by
+ * ConvertCastToSlice, though that pass no longer exists.  In order for ActionAnalysis
+ * to function on hash dist parameters, all operands in hash based instructions must
+ * be the same size.  This pass guarantees this.
+ */
+bool GuaranteeHashDistSize::Scan::preorder(const IR::MAU::Instruction *) {
+    contains_hash_dist = false;
+    return true;
+}
+
+bool GuaranteeHashDistSize::Scan::preorder(const IR::MAU::HashDist *) {
+    contains_hash_dist = true;
+    return false;
+}
+
+void GuaranteeHashDistSize::Scan::postorder(const IR::MAU::Instruction *instr) {
+    if (!contains_hash_dist)
+        return;
+
+    bool size_set = false;
+    bool all_same_size = true;
+    int size = 0;
+    for (auto op : instr->operands) {
+        if (!size_set) {
+            size = op->type->width_bits();
+            size_set = true;
+        } else {
+            int check_size = op->type->width_bits();
+            if (check_size != size)
+                all_same_size = false;
+        }
+    }
+
+    if (all_same_size)
+        return;
+
+    if (instr->name != "set")
+        ::error("%1%: Currently cannot handle a non-assignment hash function in an action "
+                "where the hash size is not the same size as the write operand", instr);
+    else
+        self.hash_dist_instrs.insert(instr);
+}
+
+const IR::Node *GuaranteeHashDistSize::Update::postorder(IR::MAU::Instruction *instr) {
+    auto orig_instr = getOriginal()->to<IR::MAU::Instruction>();
+    if (self.hash_dist_instrs.count(orig_instr) == 0)
+        return instr;
+
+    BUG_CHECK(instr->name == "set", "Incorrectly adjusting a non-set hash instruction");
+
+    auto *rv_vec = new IR::Vector<IR::Node>();
+    auto write = instr->operands[0];
+    auto read = instr->operands[1];
+
+    int write_size = write->type->width_bits();
+    int read_size = read->type->width_bits();
+
+    if (write_size > read_size) {
+        rv_vec->push_back(new IR::MAU::Instruction(instr->srcInfo, instr->name,
+                              MakeSlice(write, 0, read_size - 1), read));
+        auto zero = new IR::Constant(IR::Type::Bits::get(write_size - read_size), 0);
+        rv_vec->push_back(new IR::MAU::Instruction(instr->srcInfo, instr->name,
+                              MakeSlice(write, read_size, write_size -1), zero));
+    } else if (write->type->width_bits() < read->type->width_bits()) {
+        rv_vec->push_back(new IR::MAU::Instruction(instr->srcInfo, instr->name, write,
+                                                   MakeSlice(read, 0, write_size)));
+    } else {
+        BUG("Incorrectly adjusting a non-set hash instruction");
+    }
+    return rv_vec;
+}
+
+/**
  * Remove a slice of an ActionArg in an instruction, if the argument was the same size
  * as the slice.  The naming in the assembly output assumes that a slice will only happen
  * when the portion of the argument is not the full width of the argument.
@@ -1963,6 +2039,7 @@ InstructionSelection::InstructionSelection(const BFN_Options& options, PhvInfo &
     // new DLeftSetup,
     new SetupAttachedAddressing,
     new NullifyAllStatefulCallPrim,
+    new GuaranteeHashDistSize,
     new CollectPhvInfo(phv),
     new StaticEntriesConstProp(phv),
     new BackendCopyPropagation(phv),

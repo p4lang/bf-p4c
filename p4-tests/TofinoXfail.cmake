@@ -184,11 +184,15 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4-programs/internal_p4_14/pctr/pctr.p4
   )
 
-
 p4c_add_xfail_reason("tofino"
-  "Unimplemented compiler support.*Cannot allocate >4 immediate bytes for logical table"
+  "the following .* not written in .* will be overwritten illegally"
   switch_msdc_l3
   switch_8.7_msdc_l3
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Cannot fit all action data in match overhead"
+  extensions/p4_tests/p4_16/customer/arista/p4c-1652.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -199,7 +203,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/mau/COMPILER-362/icmp_typecode.p4
   extensions/p4_tests/p4_16/compile_only/flex_packing_switch.p4
   extensions/p4_tests/p4-programs/internal_p4_14/fr_test/fr_test.p4
-  extensions/p4_tests/p4_16/customer/arista/p4c-1652.p4
   extensions/p4_tests/p4-programs/internal_p4_14/netcache/netcache.p4
 )
 
@@ -210,6 +213,8 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/phv/COMPILER-587/l4l.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-828/meta_init_problem.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-706/terminate_parsing.p4
+  switch_generic_int_leaf
+  switch_8.7_generic_int_leaf
 )
 
 p4c_add_xfail_reason("tofino"
@@ -220,8 +225,6 @@ p4c_add_xfail_reason("tofino"
   switch_msdc_leaf_int
   switch_8.7_msdc_leaf_int
   switch_8.7_l3_heavy_int_leaf
-  switch_generic_int_leaf
-  switch_8.7_generic_int_leaf
   )
 
 p4c_add_xfail_reason("tofino"
@@ -794,7 +797,7 @@ p4c_add_xfail_reason("tofino"
 
 # Negative tests for violation of action constraints.
 p4c_add_xfail_reason("tofino"
-  "error.*This program violates action constraints imposed by Tofino."
+  "error.*This program violates action constraints imposed by Tofino.|./p4c TIMEOUT"
   extensions/p4_tests/p4_16/customer/noviflow/p4c-1288.p4
   extensions/p4_tests/p4_16/customer/kaloom/p4c-1299.p4
   extensions/p4_tests/p4_14/compile_only/action_conflict_1.p4
@@ -803,6 +806,8 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/ptf/int_transit.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-970/comp_970.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-968/comp_968.p4
+  ../glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_without_nop.p4
+  ../glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_with_nop.p4
 )
 
 # Negative test. Constant extractor destination whose sources need more than 3 bits to express must
@@ -892,14 +897,13 @@ p4c_add_xfail_reason("tofino"
   c2_COMPILER-537_case2834
   c2_COMPILER-514_balancer_one
   c2_COMPILER-510_case2682
+  ../glass/testsuite/p4_tests/rdp/COMPILER-475/case2600.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-868/comp_868.p4
   )
 
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful|./p4c TIMEOUT"
   ../glass/testsuite/p4_tests/rdp/COMPILER-443/case2514.p4
-  ../glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_without_nop.p4
-  ../glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_with_nop.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-502/case2675.p4
   # funnel shift not supported
   ../glass/testsuite/p4_tests/rdp/COMPILER-533/case2736.p4
@@ -983,7 +987,6 @@ p4c_add_xfail_reason("tofino"
 # P4C-1383
 p4c_add_xfail_reason("tofino"
   "Unimplemented compiler support.*Cannot allocate >4 immediate bytes for logical table"
-  ../glass/testsuite/p4_tests/mau/test_config_205_modify_field_from_hash.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-964/test_config_401_random_num.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-1105/case8039.p4
   )
@@ -994,12 +997,6 @@ p4c_add_xfail_reason("tofino"
   "Could not place table"
   ../glass/testsuite/p4_tests/mau/COMPILER-572/hct.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-268/netflow_3.p4
-  )
-
-# P4C-1384
-p4c_add_xfail_reason("tofino"
-  "error.*To fit hash destinations in less than 4 immediate bytes"
-  ../glass/testsuite/p4_tests/mau/test_config_311_hash_adb.p4
   )
 
 # P4C-1385
@@ -1141,7 +1138,6 @@ p4c_add_xfail_reason("tofino"
 # P4C-1397
 p4c_add_xfail_reason("tofino"
   "Total size of containers used for.*POV allocation is .*b, greater than the allowed limit of 256b|./p4c TIMEOUT"
-  ../glass/testsuite/p4_tests/rdp/COMPILER-475/case2600.p4
   )
 
 # P4C-1400

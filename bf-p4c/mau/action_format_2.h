@@ -13,6 +13,7 @@
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/mau/action_analysis.h"
 #include "bf-p4c/mau/action_format.h"
+#include "bf-p4c/mau/ixbar_expr.h"
 #include "bf-p4c/phv/phv.h"
 
 namespace ActionData {
@@ -211,6 +212,27 @@ class Constant : public Parameter {
     }
 };
 
+
+class Hash : public Parameter {
+    P4HashFunction _func;
+
+ public:
+    explicit Hash(const P4HashFunction &f) : _func(f) {}
+
+    int size() const override { return _func.size(); }
+    cstring name() const override { return _func.name(); }
+    const Parameter *split(int lo, int hi) const override;
+    bool only_one_overlap_solution() const override { return false; }
+    bool from_p4_program() const override { return true; }
+    bool is_next_bit_of_param(const Parameter *ad, bool same_alias) const override;
+    const Parameter *get_extended_param(uint32_t extension, const Parameter *ad) const override;
+    const Parameter *overlap(const Parameter *ad, bool only_one_overlap_solution,
+        le_bitrange *my_overlap, le_bitrange *ad_overlap) const override;
+    bool equiv_value(const Parameter *ad, bool check_cond = true) const override;
+    void dbprint(std::ostream &out) const override { out << _func; }
+    P4HashFunction func() const { return _func; }
+};
+
 struct ALUParameter {
     const Parameter *param;
     le_bitrange phv_bits;
@@ -275,8 +297,11 @@ class ALUOperation {
     cstring _alias;
     // Mask alias for the assembly language
     cstring _mask_alias;
+    // Used for modify field conditionally
     safe_vector<ALUParameter> _mask_params;
     bitvec _mask_bits;
+    // Explicitly needed for action parameters shared between actions, i.e. hash, rng
+    cstring _action_name;
 
  public:
     void add_param(ALUParameter &ap) {
@@ -316,8 +341,10 @@ class ALUOperation {
     const ALUOperation *add_right_shift(int right_shift) const;
     cstring alias() const { return _alias; }
     cstring mask_alias() const { return _mask_alias; }
+    cstring action_name() const { return _action_name; }
     void set_alias(cstring a) { _alias = a; }
     void set_mask_alias(cstring ma) { _mask_alias = ma; }
+    void set_action_name(cstring an) { _action_name = an; }
     PHV::Container container() const { return _container; }
     const ALUParameter *find_param_alloc(UniqueLocationKey &key) const;
     ParameterPositions parameter_positions() const;
@@ -642,11 +669,17 @@ class Format {
 
         std::map<cstring, ModCondMap> mod_cond_values;
 
+        safe_vector<ALUPosition> locked_in_all_actions_alu_positions;
+        BusInputs locked_in_all_actions_bus_inputs = {{ bitvec(), bitvec(), bitvec() }};
+
         void determine_immediate_mask();
         void determine_mod_cond_maps();
         int immediate_bits() const { return immediate_mask.max().index() + 1; }
+        const ALUParameter *find_locked_in_all_actions_param_alloc(UniqueLocationKey &loc,
+            const ALUPosition **alu_pos_p) const;
         const ALUParameter *find_param_alloc(UniqueLocationKey &loc,
             const ALUPosition **alu_pos_p) const;
+
         cstring get_format_name(const ALUPosition &alu_pos, bool bitmasked_set = false,
             le_bitrange *slot_bits = nullptr, le_bitrange *postpone_range = nullptr) const;
         cstring get_format_name(SlotType_t slot_type, Location_t loc, int byte_offset,
@@ -659,7 +692,13 @@ class Format {
             immediate_mask.clear();
             full_words_bitmasked.clear();
             speciality_use.clear();
+            mod_cond_values.clear();
+            locked_in_all_actions_alu_positions.clear();
+            locked_in_all_actions_bus_inputs = {{ bitvec(), bitvec(), bitvec() }};
         }
+
+        bool is_hash_dist(int byte_offset) const;
+        const RamSection *build_locked_in_sect() const;
     };
 
  private:
@@ -674,18 +713,28 @@ class Format {
     safe_vector<BusInputs> action_bus_input_bitvecs;
     safe_vector<AllActionPositions> action_bus_inputs;
 
+    // Responsible for holding hash, (eventually rng, meter color, stateful counters)
+    RamSec_vec_t locked_in_all_actions_sects;
+    BusInputs locked_in_all_actions_input_bitvecs;
+    AllActionPositions locked_in_all_actions_inputs;
+
     void create_argument(ALUOperation &alu, ActionAnalysis::ActionParam &read,
         le_bitrange container_bits, const IR::MAU::ConditionalArg *ca);
     void create_constant(ALUOperation &alu, ActionAnalysis::ActionParam &read,
         le_bitrange container_bits, int &constant_alias_index, const IR::MAU::ConditionalArg *ca);
+    void create_hash(ALUOperation &alu, ActionAnalysis::ActionParam &read,
+        le_bitrange container_bits);
+    void create_hash_constant(ALUOperation &alu, ActionAnalysis::ActionParam &read,
+        le_bitrange container_bits);
     void create_mask_argument(ALUOperation &alu, ActionAnalysis::ActionParam &read,
         le_bitrange container_bits);
     void create_mask_constant(ALUOperation &alu, bitvec value, le_bitrange container_bits,
         int &constant_alias_index);
 
+
     void create_alu_ops_for_action(ActionAnalysis::ContainerActionsMap &ca_map,
         cstring action_name);
-    void analyze_actions();
+    bool analyze_actions();
 
     void initial_possible_condenses(PossibleCondenses &condenses, const RamSec_vec_t &ram_sects);
     void incremental_possible_condenses(PossibleCondenses &condense, const RamSec_vec_t &ram_sects);
@@ -711,11 +760,16 @@ class Format {
         int max_bytes_required);
     bool determine_next_immediate_bytes(bool immediate_forced);
     bool determine_bytes_per_loc(bool &initialized, bool immediate_forced);
+
     void assign_action_data_table_bytes(AllActionPositions &all_bus_inputs,
          BusInputs &total_inputs);
     void assign_immediate_bytes(AllActionPositions &all_bus_inputs,
-         BusInputs &total_inputs);
+         BusInputs &total_inputs, int max_bytes_needed);
     void assign_RamSections_to_bytes();
+
+    void build_single_ram_sect(RamSectionPosition &ram_sect, Location_t loc,
+        safe_vector<ALUPosition> &alu_positions, BusInputs &verify_inputs);
+    void build_locked_in_format(Use &use);
     void build_potential_format(bool immediate_forced);
 
 
