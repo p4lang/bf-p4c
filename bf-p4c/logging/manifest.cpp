@@ -75,6 +75,8 @@ void Manifest::serialize() {
     writer.EndArray();   // end "programs"
     writer.EndObject();  // end BFNCompilerArchive
 
+    BUG_CHECK(_manifestStream, "manifest,jsom has been serialized already!");
+
     _manifestStream << sb.GetString();
     _manifestStream.flush();
     _manifestStream.close();
@@ -142,14 +144,13 @@ void Manifest::serializeArchConfig(Writer &writer) {
 void Manifest::serializePipes(Writer &writer) {
     writer.Key("pipes");
     writer.StartArray();  // for each pipe
-    for (auto p : _pipes) {
+    for (auto p : _pipeOutputs) {
         writer.StartObject();
         writer.Key("pipe_id");
         writer.Int(p.first);
         writer.Key("pipe_name");
-        writer.String(p.second.c_str());
-        auto it = _pipeOutputs.find(p.first);
-        if (it != _pipeOutputs.end()) it->second->serialize(writer);
+        writer.String(_pipes.at(p.first).c_str());
+        p.second->serialize(writer);
         writer.EndObject();
     }
     writer.EndArray();

@@ -16,7 +16,6 @@
 #include "bf-p4c/mau/table_dependency_graph.h"
 #include "lib/error.h"
 #include "lib/json.h"
-#include "logging/manifest.h"
 #include "power_schema.h"
 
 class SimpleTableNode {

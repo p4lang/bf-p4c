@@ -2005,7 +2005,7 @@ void AllocatePHV::formatAndThrowError(
     msg << std::endl;
     errorMessage << msg.str();
 
-    if (LOGGING(3)) {
+    if (LOGGING(1)) {
         msg << "Fields successfully allocated: " << std::endl;
         msg << alloc << std::endl; }
     for (auto* super_cluster : unallocated) {
@@ -2027,7 +2027,7 @@ void AllocatePHV::formatAndThrowError(
                             egress_t_phv_bits += slice.size(); } } } }
     }
 
-    if (LOGGING(3)) {
+    if (LOGGING(1)) {
         msg << std::endl
             << "..........Unallocated bits = " << unallocated_bits << std::endl;
         msg << "..........ingress phv bits = " << ingress_phv_bits << std::endl;
@@ -2040,7 +2040,7 @@ void AllocatePHV::formatAndThrowError(
     msg << report.printSummary() << std::endl;
     msg << "PHV allocation was not successful "
         << "(" << unallocated_slices << " field slices remaining)" << std::endl;
-    LOG3(msg.str());
+    LOG1(msg.str());
     ::error("PHV allocation was not successful\n"
             "%1% field slices remain unallocated\n"
             "%2%", unallocated_slices, errorMessage.str());

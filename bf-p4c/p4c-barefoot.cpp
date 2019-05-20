@@ -76,10 +76,47 @@ class GenerateOutputs : public PassManager {
     BFN::DynamicHashJson _dynhash;
     const Util::JsonObject &_primitives;
 
+    /// Output a skeleton context.json in case compilation fails.
+    /// It is required by all our tools. If the assembler can get far enough, it will overwrite it.
+    void outputContext() {
+        cstring ctxtFileName = _outputDir + "/context.json";
+        std::ofstream ctxtFile(ctxtFileName);
+        auto ctxt = new Util::JsonObject();
+        const time_t now = time(NULL);
+        char build_date[1024];
+        strftime(build_date, 1024, "%c", localtime(&now));
+        ctxt->emplace("build_date", new Util::JsonValue(build_date));
+        ctxt->emplace("program_name", new Util::JsonValue(_options.programName + ".p4"));
+        ctxt->emplace("run_id", new Util::JsonValue(RunId::getId()));
+        ctxt->emplace("schema_version", new Util::JsonValue("1.7.3"));
+        ctxt->emplace("compiler_version", new Util::JsonValue(BF_P4C_VERSION));
+        ctxt->emplace("target", new Util::JsonValue(_options.target));
+        ctxt->emplace("tables", new Util::JsonArray());
+        ctxt->emplace("phv_allocation", new Util::JsonArray());
+        auto parser = new Util::JsonObject();
+        parser->emplace("ingress", new Util::JsonArray());
+        parser->emplace("egress", new Util::JsonArray());
+        ctxt->emplace("parser", parser);
+        ctxt->emplace("learn_quanta", new Util::JsonArray());
+        ctxt->emplace("dynamic_hash_calculations", new Util::JsonArray());
+        ctxt->emplace("configuration_cache", new Util::JsonArray());
+        auto drv_opts = new Util::JsonObject();
+        drv_opts->emplace("hash_parity_enabled", new Util::JsonValue(false));
+        ctxt->emplace("driver_options", drv_opts);
+
+        ctxt->serialize(ctxtFile);
+        ctxtFile.flush();
+        ctxtFile.close();
+        auto contextDir = BFNContext::get().getOutputDirectory("", _pipeId)
+            .substr(_options.outputDir.size()+1);
+        Logging::Manifest::getManifest().addContext(_pipeId, contextDir + "context.json");
+    }
+
     void end_apply() override {
         cstring outputFile = _outputDir + "/" + _options.programName + ".bfa";
         std::ofstream ctxt_stream(outputFile, std::ios_base::app);
 
+        Logging::Manifest &manifest = Logging::Manifest::getManifest();
         if (_success) {
             // Always output primitives json file (info used by model for logging actions)
             cstring primitivesFile = _outputDir + "/" + _options.programName + ".prim.json";
@@ -103,12 +140,18 @@ class GenerateOutputs : public PassManager {
             LOG2("ASM generation for resources: " << resourcesFile);
             std::ofstream res(resourcesFile);
             res << _visualization << std::endl << std::flush;
-            Logging::Manifest &manifest = Logging::Manifest::getManifest();
             // relative path to the output directory
             manifest.addResources(_pipeId, resourcesFile.substr(_options.outputDir.size()+1));
-
+        }
+        if (!_success) {
             // \TODO: how much info do we need from context.json in
             // the case of a failed compilation?
+            outputContext();
+            // and output the manifest if it failed, since we're not going to have the chance
+            // again. However, for successful compilation, GenerateOutputs gets called for every
+            // pipe, and thus we don't want to output the manifest here.
+            manifest.setSuccess(_success);
+            manifest.serialize();
         }
     }
 
@@ -152,11 +195,6 @@ void execute_backend(const IR::BFN::Pipe* maupipe, BFN_Options& options) {
         if (maupipe)
             maupipe->apply(as);
     } catch (const Util::P4CExceptionBase &ex) {
-        // produce resource nodes in context.json regardless of failures
-        #if BAREFOOT_INTERNAL
-            std::cerr << "compilation failed: producing context.json" << std::endl;
-        #endif
-
         GenerateOutputs as(backend, options, maupipe->id, backend.get_prim_json(), false);
         if (maupipe)
             maupipe->apply(as);
@@ -259,6 +297,12 @@ int main(int ac, char **av) {
     if (::errorCount() > 0)
         return PROGRAM_ERROR;
 
+    // setup the pipes and the architecture config early, so that the manifest is
+    // correct even if there are errors in the backend.
+    for (auto& pipe : conv.pipe)
+        manifest.setPipe(pipe->id, pipe->name.name);
+    manifest.addArchitecture(conv.getThreads());
+
     if (options.dumpJsonFile) {
         // We just want to produce an IR for mutine (p4v & friends), so running
         // the midend is sufficient. Dump the IR to stdout and exit.
@@ -296,15 +340,10 @@ int main(int ac, char **av) {
 #else
             execute_backend(pipe, options);
 #endif
-        auto contextDir = BFNContext::get().getOutputDirectory("", pipe->id)
-            .substr(options.outputDir.size()+1);
-        manifest.addContext(pipe->id, contextDir + "context.json");
     }
 
-    manifest.addArchitecture(conv.getThreads());
+    // and output the manifest. This gets called for successful compilation.
     manifest.setSuccess(::errorCount() == 0);
-
-    // generate the archive manifest
     manifest.serialize();
 
     if (Log::verbose())

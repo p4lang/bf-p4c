@@ -408,6 +408,8 @@ p.add_argument("--compiler", "-c", help="compiler path to test",
                action="store", default="./p4c")
 p.add_argument("--filter", "-f", help="test filter regex",
                action="store", default=None)
+p.add_argument("--list", "-l", help="list available tests",
+               action="store_true", default=False)
 p.add_argument("--jobs", "-j", help="number of jobs",
                action="store", type=int, default=1)
 p.add_argument("--keep-output", "-k", help="keep output files",
@@ -448,6 +450,10 @@ if filter:
 else:
     tests_to_run = [ t for t in test_matrix ]
 skipped = len(test_matrix) - len(tests_to_run)
+
+if args.list:
+    print('Tests:\n ', '\n  '.join(tests_to_run))
+    sys.exit(0)
 
 # ------- Run the tests (in parallel if requested)
 failed = Queue()

@@ -68,10 +68,14 @@ class Manifest : public Inspector {
         void serialize(Writer &writer) {
             writer.Key("files");
             writer.StartObject();
+            // Should be overwritten by assembler or driver on successful compile
             writer.Key("context");
             writer.StartObject();
             writer.Key("path");
-            writer.String(_context);
+            if (_context)
+                writer.String(_context);
+            else
+                writer.String("");
             writer.EndObject();
 
             // Should be written by assembler or driver on successful compile

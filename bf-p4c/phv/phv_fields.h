@@ -690,11 +690,11 @@ class FieldSlice : public AbstractField, public LiftCompare<FieldSlice> {
         return ss.str();
     }
 
-    bool operator==(const FieldSlice& other) const {
+    bool operator==(const FieldSlice& other) const override {
         return field_i == other.field() && range_i == other.range();
     }
 
-    bool operator<(const FieldSlice& other) const {
+    bool operator<(const FieldSlice& other) const override {
         if (field_i != other.field())
             return Field::less(field_i, other.field());
         if (range_i.lo != other.range().lo)

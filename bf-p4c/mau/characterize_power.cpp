@@ -2,6 +2,7 @@
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/common/run_id.h"
 #include "bf-p4c/mau/characterize_power.h"
+#include "bf-p4c/logging/manifest.h"
 #include "lib/json.h"
 #include "lib/path.h"
 
