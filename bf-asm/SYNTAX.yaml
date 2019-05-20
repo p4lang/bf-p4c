@@ -852,3 +852,5 @@ version:
     run_id: <sha>
        # defines an id that ties together all the files produced by the compiler
        # part of the Version section
+    target: <name>
+       # specify the target architecture

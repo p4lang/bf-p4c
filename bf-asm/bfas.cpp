@@ -38,7 +38,7 @@ option_t options = {
 #endif
     .multi_parsers = false,
     .stage_dependency_pattern = "",
-    .target = TOFINO,
+    .target = NO_TARGET,
     .version = CONFIG_OLD,
     .werror = false,
     .nowarn = false,
@@ -122,7 +122,7 @@ void output_all() {
 
 
 #define MATCH_TARGET_OPTION(TARGET, OPT) \
-    if (!strcmp(OPT, Target::TARGET::name)) options.target = Target::TARGET::tag; else
+    if (!strcasecmp(OPT, Target::TARGET::name)) options.target = Target::TARGET::tag; else
 #define OUTPUT_TARGET(TARGET)           << " " << Target::TARGET::name
 
 int main(int ac, char **av) {
@@ -191,6 +191,10 @@ int main(int ac, char **av) {
                 std::cerr << "No target specified '--target <target>'" << std::endl;
                 error_count++;
                 break;}
+            if (options.target != NO_TARGET) {
+                std::cerr << "Multiple target options" << std::endl;
+                error_count++;
+                break; }
             FOR_ALL_TARGETS(MATCH_TARGET_OPTION, av[i]) {
                 std::cerr << "Unknown target " << av[i] << std::endl;
                 error_count++;
@@ -282,6 +286,10 @@ int main(int ac, char **av) {
                         std::cerr << "No target specified '-t <target>'" << std::endl;
                         error_count++;
                         break; }
+                    if (options.target != NO_TARGET) {
+                        std::cerr << "Multiple target options" << std::endl;
+                        error_count++;
+                        break; }
                     FOR_ALL_TARGETS(MATCH_TARGET_OPTION, av[i]) {
                         std::cerr << "Unknown target " << av[i];
                         error_count++; }
@@ -343,8 +351,6 @@ int main(int ac, char **av) {
 class Version : public Section {
     Version() : Section("version") {}
 
-    void start(int lineno, VECTOR(value_t) args) {}
-
     void input(VECTOR(value_t) args, value_t data) {
         if (data.type == tINT || data.type == tVEC) {  // version 1.0.0
             parse_version(data);
@@ -370,6 +376,18 @@ class Version : public Section {
                             else
                                 error(el.lineno, "can't understand compiler version");
                             sep = "."; } }
+                } else if (kv.key == "target") {
+                    if (kv.value.type == tSTR) {
+                        auto old = options.target;
+                        FOR_ALL_TARGETS(MATCH_TARGET_OPTION, kv.value.s) {
+                            error(kv.value.lineno, "Unknown target %s", kv.value.s); }
+                        if (old != NO_TARGET && old != options.target) {
+                            options.target = old;
+                            error(kv.value.lineno, "Inconsistent target %s (previously set to %s)",
+                                  kv.value.s, Target::name()); }
+                    } else {
+                        error(kv.value.lineno, "Invalid target %s", value_desc(kv.value));
+                    }
                 } else
                     warning(kv.key.lineno, "ignoring unknown item %s in version",
                             value_desc(kv.key));
@@ -378,8 +396,6 @@ class Version : public Section {
             error(data.lineno, "Invalid version section");
         }
     }
-
-    void process() {}
 
     void output(json::map &ctx_json) {
         if (!_compiler.empty())
