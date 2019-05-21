@@ -173,27 +173,32 @@ class ClotInfo {
             if (field_overwritten(phv, clot, f)) {
                 f->foreach_alloc([&](const PHV::Field::alloc_slice &alloc) {
                     auto container = alloc.container;
-                    int field_offset = clot->byte_offset(f);
+                    int field_in_clot_offset = clot->bit_offset(f);
 
                     auto field_range = alloc.field_bits().toOrder<Endian::Network>(f->size);
 
                     auto container_range = alloc.container_bits().
                                  toOrder<Endian::Network>(alloc.container.size());
 
-                    auto container_offset = field_offset - container_range.lo / 8 +
-                                            field_range.lo / 8;
+                    auto container_offset = field_in_clot_offset - container_range.lo +
+                                            field_range.lo;
 
-                    if (containers.count(container_offset)) {
-                        auto other_container = containers.at(container_offset);
+                    BUG_CHECK(container_offset % 8 == 0,
+                              "CLOT %d container overwrite offset not byte-aligned", clot->tag);
+
+                    auto container_offset_in_byte = container_offset / 8;
+
+                    if (containers.count(container_offset_in_byte)) {
+                        auto other_container = containers.at(container_offset_in_byte);
                         BUG_CHECK(container == other_container,
                             "CLOT %d has more than one container at overwrite offset %d: "
                             "%s and %s",
                             clot->tag,
-                            container_offset,
+                            container_offset_in_byte,
                             container,
                             other_container);
                     } else {
-                        containers[container_offset] = container;
+                        containers[container_offset_in_byte] = container;
                     }
                 });
             }
