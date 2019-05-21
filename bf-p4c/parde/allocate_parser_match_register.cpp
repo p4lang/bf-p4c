@@ -927,6 +927,9 @@ class MatcherAllocator : public Visitor {
 
         for (auto group : coalesced_groups) {
             try {
+                if (group_to_alloc_regs.count(group))
+                    continue;
+
                 std::vector<MatchRegister> alloc_regs;
 
                 ordered_set<MatchRegister> cannot_alloc_regs;
@@ -945,39 +948,21 @@ class MatcherAllocator : public Visitor {
 
                 if (avail_regs.empty()) fail(group);
 
-                for (auto& gr : group_to_alloc_regs) {
-                    if (group->have_same_defs(gr.first)) {
-                        auto theirs = group_to_alloc_regs.at(gr.first);
-
-                        bool can_reuse = true;
-
-                        for (auto& reg : theirs) {
-                            if (std::find(avail_regs.begin(), avail_regs.end(), reg)
-                                          == avail_regs.end()) {
-                                can_reuse = false;
-                                break;
-                            }
-                        }
-
-                        if (can_reuse) {
-                            alloc_regs = theirs;
-
-                            LOG3("group " << group->print() << " can share regs with "
-                                          << gr.first->print());
-
-                            break;
-                        }
-                    }
-                }
-
-                if (alloc_regs.empty())
-                    alloc_regs = allocate(group, avail_regs);
+                alloc_regs = allocate(group, avail_regs);
 
                 if (alloc_regs.empty()) fail(group);
 
                 group_to_alloc_regs[group] = alloc_regs;  // success
 
                 save_result(parser, group, alloc_regs);
+
+                // propagate alloc to all groups that have same def
+                for (auto other : coalesced_groups) {
+                    if (group->have_same_defs(other) && !group_to_alloc_regs.count(other)) {
+                        group_to_alloc_regs[other] = alloc_regs;
+                        save_result(parser, other, alloc_regs);
+                    }
+                }
 
                 if (LOGGING(1)) {
                     std::clog << "allocated { ";
