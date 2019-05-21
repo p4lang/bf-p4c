@@ -374,7 +374,7 @@ AllocScore::AllocScore(
         }
     }
 
-    if (Device::currentDevice() == Device::TOFINO && BackendOptions().parser_bandwidth_opt) {
+    if (Device::currentDevice() == Device::TOFINO) {
         // This only matters for Tofino.
         // For JBay, all extractors are of same size (16-bit).
         calcParserExtractorBalanceScore(alloc, phv, parser_critical_path);
@@ -406,7 +406,7 @@ void AllocScore::calcParserExtractorBalanceScore(const PHV::Transaction& alloc, 
             if (parser_critical_path.is_user_specified_critical_state(kv.first))
                 critical_state_to_containers[kv.first].insert(kv.second.begin(), kv.second.end());
         }
-    } else {
+    } else if (BackendOptions().parser_bandwidth_opt) {
         for (auto& kv : my_state_to_containers) {
             if (parser_critical_path.is_on_critical_path(kv.first))
                 critical_state_to_containers[kv.first].insert(kv.second.begin(), kv.second.end());
