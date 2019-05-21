@@ -198,10 +198,8 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
   ../glass/testsuite/p4_tests/phv/COMPILER-546/switch_comp546.p4
-  ../glass/testsuite/p4_tests/phv/COMPILER-788/comp_788.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-243/comp243.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-362/icmp_typecode.p4
-  extensions/p4_tests/p4_16/compile_only/flex_packing_switch.p4
   extensions/p4_tests/p4-programs/internal_p4_14/fr_test/fr_test.p4
   extensions/p4_tests/p4-programs/internal_p4_14/netcache/netcache.p4
 )
@@ -211,7 +209,6 @@ p4c_add_xfail_reason("tofino"
   switch_8.7_ent_fin_postcard
   switch_ent_fin_postcard
   ../glass/testsuite/p4_tests/phv/COMPILER-587/l4l.p4
-  ../glass/testsuite/p4_tests/phv/COMPILER-828/meta_init_problem.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-706/terminate_parsing.p4
   switch_generic_int_leaf
   switch_8.7_generic_int_leaf
@@ -220,7 +217,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: The stage specified for .* could not place it until stage"
   extensions/p4_tests/p4-programs/internal_p4_14/ecc/ecc.p4
-  extensions/p4_tests/p4-programs/internal_p4_14/mau_test/mau_test.p4  #P4C-1123
   switch_l3_heavy_int_leaf
   switch_msdc_leaf_int
   switch_8.7_msdc_leaf_int
@@ -228,8 +224,31 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
+  "Tofino requires byte-aligned headers"
+  extensions/p4_tests/p4_16/compile_only/tagalong_mdinit_switch.p4
+)
+
+# XXX(hanw): new xfail after flexible pr.
+p4c_add_xfail_reason("tofino"
+  "PHV allocation was not successful"
+  ../glass/testsuite/p4_tests/phv/COMPILER-158/comp158.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Failed to place tables that .* is attached to in the same stage"
+  ../glass/testsuite/p4_tests/phv/COMPILER-828/meta_init_problem.p4
+)
+
+# Issue with PHV::Field on header stack.
+p4c_add_xfail_reason("tofino"
+  "No PhvInfo::header for header named"
+  testdata/p4_16_samples/issue692-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino"
   "error.*Power worst case estimated budget exceeded by*"
   extensions/p4_tests/p4-programs/internal_p4_14/clpm/clpm.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-868/comp_868.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -386,6 +405,16 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
+  "syntax error, unexpected IDENTIFIER"
+  testdata/p4_16_samples/psa-unicast-or-drop-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Field .* not supported on Tofino"
+  testdata/p4_16_samples/psa-multicast-basic-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino"
   "Expected type T in digest to be a typeName"
   testdata/p4_16_samples/issue430-1-bmv2.p4
   )
@@ -411,9 +440,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/08-FullTPHV3.p4
   testdata/p4_16_samples/issue1713-bmv2.p4
   extensions/p4_tests/p4_14/compile_only/04-FullPHV3.p4
-  extensions/p4_tests/p4_16/compile_only/tagalong_mdinit_switch.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-815/int_heavy.p4
-  ../glass/testsuite/p4_tests/phv/COMPILER-1065/comp_1065.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-1094/comp_1094.p4
 
   # parde physical adjacency constraint violated by mau phv_no_pack constraint
@@ -435,6 +462,10 @@ p4c_add_xfail_reason("tofino"
 
   # p4smith generated file used to debug key with zero mask. Fails PHV for an unknown reason.
   extensions/p4_tests/p4_14/compile_only/p4c-1162.p4
+
+
+  # broke by flexible packing PR
+  extensions/p4_tests/p4_16/compile_only/lrn1.p4
   )
 
 # We can't (without some complex acrobatics) support conditional computed
@@ -512,7 +543,7 @@ p4c_add_xfail_reason("tofino"
   )
 # resubmit size is 32 bytes which exceeds max size for tofino (8 bytes).
 p4c_add_xfail_reason("tofino"
-  "error: resubmit digest limited to 8 bytes"
+  "resubmit digest limited to 8 bytes"
   extensions/p4_tests/p4_14/compile_only/13-ResubmitMetadataSize.p4
   )
 
@@ -687,11 +718,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "Exiting with SIGSEGV"
-  testdata/p4_16_samples/issue1043-bmv2.p4
-)
-
-p4c_add_xfail_reason("tofino"
   "Cannot extract field .* from .* which has type .*"
   testdata/p4_16_samples/issue1210.p4
 )
@@ -750,7 +776,7 @@ p4c_add_xfail_reason("tofino"
 
 # P4C-1011
 p4c_add_xfail_reason("tofino"
-  "Exiting with SIGSEGV"
+  "error: standard_metadata.mcast_grp is not accessible in the egress pipe"
   extensions/p4_tests/p4_16/bf_p4c_samples/v1model-special-ops-bmv2.p4
   )
 
@@ -777,16 +803,8 @@ p4c_add_xfail_reason("tofino"
 
 # Negative test
 p4c_add_xfail_reason("tofino"
-  "error: mirror.emit: requires two arguments: mirror_id and field_list"
+  "Unsupported unconditional mirror.emit"
   extensions/p4_tests/p4_16/compile_only/brig-neg-1259.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "mirror field does not exist"
-  testdata/p4_16_samples/issue562-bmv2.p4
-  testdata/p4_16_samples/issue1642-bmv2.p4
-  testdata/p4_16_samples/issue383-bmv2.p4
-  testdata/p4_16_samples/issue1653-complex-bmv2.p4
 )
 
 # Negative test. >66 bytes of ternary match key fields used.
@@ -828,28 +846,19 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/strength3.p4
 )
 
-# p4runtime issue with flattenHeaders pass
 # Also P4C-1446
+# Bug with handling sub-parser.
 p4c_add_xfail_reason("tofino"
   "Inferred valid container ranges"
   extensions/p4_tests/p4_16/compile_only/serializer-struct.p4
   extensions/p4_tests/p4_16/compile_only/serializer.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "Compiler Bug.*FieldLVal contains unexpected value"
   extensions/p4_tests/p4_16/compile_only/serializer2.p4
+  extensions/p4_tests/p4_16/compile_only/serializer3.p4
 )
 
 p4c_add_xfail_reason("tofino"
-  "Could not find declaration for b"
-  testdata/p4_16_samples/issue1660-bmv2.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "Field .* of header .* cannot have type bool"
+  "Unsupported type header_union U"
   testdata/p4_16_samples/header-bool-bmv2.p4
-  testdata/p4_16_samples/issue1653-bmv2.p4
 )
 
 # P4C-1451 -- requires action splitting to avoid the error
@@ -907,6 +916,14 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/rdp/COMPILER-502/case2675.p4
   # funnel shift not supported
   ../glass/testsuite/p4_tests/rdp/COMPILER-533/case2736.p4
+
+  # new xfail after flexible PR
+  extensions/p4_tests/p4_16/customer/arista/p4c-1491.p4
+  extensions/p4_tests/p4_16/customer/arista/p4c-1494.p4
+  extensions/p4_tests/p4_16/customer/arista/p4c-1652.p4
+
+  ../glass/testsuite/p4_tests/rdp/COMPILER-475/case2600.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-868/comp_868.p4
   )
 
 # P4C-1375
@@ -1065,12 +1082,10 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue297-bmv2.p4
   # EliminateTypeDef pass does not work properly?
   testdata/p4_16_samples/issue677-bmv2.p4
-  testdata/p4_16_samples/issue1001-bmv2.p4
   # We fail to translate `generate_digest()`.
   testdata/p4_14_samples/issue1058.p4
   # shared register between ingress and egress is not supported
   testdata/p4_16_samples/issue1097-2-bmv2.p4
-  testdata/p4_16_samples/issue1660-bmv2.p4
   testdata/p4_16_samples/issue1768-bmv2.p4
   # We fail to translate `resubmit()`.
   testdata/p4_14_samples/resubmit.p4
@@ -1125,6 +1140,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Inferred incompatible alignments for field .*"
   ../glass/testsuite/p4_tests/phv/COMPILER-908/compiler-908.p4
+  extensions/p4_tests/p4-programs/internal_p4_14/mau_test/mau_test.p4
   )
 
 # P4C-1396
@@ -1195,16 +1211,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
    "Assignment cannot be supported in the parser"
    testdata/p4_14_samples/axon.p4
-)
-
-p4c_add_xfail_reason("tofino"
-   "FieldLVal contains unexpected value"
-   extensions/p4_tests/p4_16/compile_only/serializer2.p4
-)
-
-p4c_add_xfail_reason("tofino"
-   "PHV allocation creates a container action impossible within a Tofino ALU"
-  extensions/p4_tests/p4_16/customer/arista/p4c-1494.p4
+   testdata/p4_16_samples/issue1001-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1246,7 +1253,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/match-on-exprs-bmv2.p4
   testdata/p4_16_samples/table-entries-range-bmv2.p4
   testdata/p4_16_samples/table-entries-ternary-bmv2.p4
-  testdata/p4_16_samples/bvec-hdr-bmv2.p4
 )
 
 # P4C-1753
@@ -1332,9 +1338,11 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue1025-bmv2.p4
   testdata/p4_16_samples/issue355-bmv2.p4
   testdata/p4_16_samples/issue1560-bmv2.p4
-  testdata/p4_16_samples/issue692-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Some fields cannot be allocated because of unsatisfiable constraints"
   testdata/p4_16_samples/issue1607-bmv2.p4
-  extensions/p4_tests/p4_16/compile_only/serializer3.p4
 )
 
 p4c_add_xfail_reason("tofino"

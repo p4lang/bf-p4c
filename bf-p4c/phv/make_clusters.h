@@ -60,6 +60,9 @@ class Clustering : public PassManager {
     /// Maps fields to their slices.  Slice lists are ordered from LSB to MSB.
     ordered_map<const PHV::Field*, std::list<PHV::FieldSlice>> fields_to_slices_i;
 
+    /// all fields slices that has been assigned to a slice list.
+    std::set<PHV::FieldSlice> slices_used_in_slice_lists_i;
+
     /// Collects validity bits involved in complex instructions, i.e.
     /// instructions that do anything other than assign a constant to the
     /// validity bit. Fields that are involved in the same assignment statement
@@ -229,6 +232,9 @@ class Clustering : public PassManager {
         /// Helper function for visiting HeaderRefs.
         void visitHeaderRef(const IR::HeaderRef* hr);
 
+        /// Helper function for visiting DigestFieldLists.
+        void visitDigestFieldList(const IR::BFN::DigestFieldList* fl, int skip);
+
         /// Clear state to enable backtracking
         Visitor::profile_t init_apply(const IR::Node *) override;
 
@@ -237,6 +243,9 @@ class Clustering : public PassManager {
 
         /// Create lists of slices that need to be allocated in the same container.
         bool preorder(const IR::HeaderStackItemRef*) override;
+
+        /// Create lists of slices that need to be allocated in the same container.
+        bool preorder(const IR::BFN::Digest*) override;
 
         /// Create cluster groups by taking the union of clusters of slices
         /// that appear in the same list.

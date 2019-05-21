@@ -45,6 +45,7 @@ struct CreateLocalInstances : public Transform {
     /// CreateThreadLocalMetadata.
     ThreadLocalMetadataMapping localMetadata[3];
     std::map<const IR::TempVar *, const IR::TempVar *> localTempVars[3];
+    std::map<const IR::Padding *, const IR::Padding *> localPaddings[3];
     std::map<const IR::Expression *, std::set<const IR::Expression *>>    memoizeExpr;
 
  private:
@@ -89,6 +90,18 @@ struct CreateLocalInstances : public Transform {
             return localTempVars[thread][orig]; }
         var->name = createThreadName(thread, var->name);
         localTempVars[thread][orig] = var;
+        return var;
+    }
+
+    /// Prepend "thread-name::" to Paddings, exactly once per thread
+    const IR::Padding *preorder(IR::Padding *var) override {
+        auto *orig = getOriginal<IR::Padding>();
+        visitAgain();
+        gress_t thread = VisitingThread(this);
+        if (localPaddings[thread].count(orig)) {
+            return localPaddings[thread][orig]; }
+        var->name = createThreadName(thread, var->name);
+        localPaddings[thread][orig] = var;
         return var;
     }
 

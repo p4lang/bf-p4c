@@ -5,6 +5,7 @@
 #include <boost/range/irange.hpp>
 #include <regex>
 #include <string>
+#include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/ir/thread_visitor.h"
@@ -69,7 +70,7 @@ void PhvInfo::clear() {
 
 void PhvInfo::add(
         cstring name, gress_t gress, int size, int offset, bool meta, bool pov,
-        bool bridged, bool pad) {
+        bool bridged, bool pad, bool flex) {
     // Set the egress version of bridged fields to metadata
     if (gress == EGRESS && bridged)
         meta = true;
@@ -77,7 +78,7 @@ void PhvInfo::add(
         LOG3("Already added field; skipping: " << name);
         return; }
     LOG3("PhvInfo adding " << (pad ? "padding" : (meta ? "metadata" : "header")) << " field " <<
-         name << " size " << size << " offset " << offset);
+         name << " size " << size << " offset " << offset << (flex? " flexible" : ""));
     auto *info = &all_fields[name];
     info->name = name;
     info->id = by_id.size();
@@ -88,6 +89,7 @@ void PhvInfo::add(
     info->pov = pov;
     info->bridged = bridged;
     info->overlayablePadding = pad;
+    info->set_flexible(flex);
     by_id.push_back(info);
 }
 
@@ -113,9 +115,11 @@ void PhvInfo::add_struct(
         if (size == 0)
             ::error("%1% Field %2% of size %3% not supported on %4%", f->srcInfo, f_name, size,
                     Device::name());
-        // "Hidden" annotation indicates padding introduced with bridged metadata fields
+        // "hidden" annotation indicates padding introduced with bridged metadata fields
         bool isPad = f->getAnnotations()->getSingle("hidden") != nullptr;
-        add(f_name, gress, size, offset -= size, meta, false, bridged, isPad);
+        // "flexible" annotation indicates flexible fields
+        bool isFlexible = f->getAnnotations()->getSingle("flexible") != nullptr;
+        add(f_name, gress, size, offset -= size, meta, false, bridged, isPad, isFlexible);
     }
     if (!meta) {
         int end = by_id.size();
@@ -151,8 +155,9 @@ void PhvInfo::add_hdr(cstring name, const IR::Type_StructLike *type, gress_t gre
 void PhvInfo::addTempVar(const IR::TempVar *tv, gress_t gress) {
     BUG_CHECK(tv->type->is<IR::Type::Bits>() || tv->type->is<IR::Type::Boolean>(),
               "Can't create temp of type %s", tv->type);
-    if (all_fields.count(tv->name) == 0)
+    if (all_fields.count(tv->name) == 0) {
         add(tv->name, gress, tv->type->width_bits(), 0, true, tv->POV);
+    }
 }
 
 bool PhvInfo::has_struct_info(cstring name_) const {
@@ -162,6 +167,16 @@ bool PhvInfo::has_struct_info(cstring name_) const {
     if (auto *p = name.findstr("::")) {
         name = name.after(p+2); }
     return all_structs.find(name) != all_structs.end();
+}
+
+void PhvInfo::addPadding(const IR::Padding *pad, gress_t gress) {
+    BUG_CHECK(pad->type->is<IR::Type::Bits>(),
+              "Can't create padding of type %s", pad->type);
+    if (all_fields.count(pad->name) == 0) {
+        dummyPaddingNames.insert(pad->name);
+        add(pad->name, gress, pad->type->width_bits(),
+                0, false, false, false, /* isPad = */ true);
+    }
 }
 
 const PhvInfo::StructInfo PhvInfo::struct_info(cstring name_) const {
@@ -218,6 +233,14 @@ const PHV::Field *PhvInfo::field(const IR::Expression *e, le_bitrange *bits) con
             return rv;
         } else {
             BUG("TempVar %s not in PhvInfo", tv->name); } }
+    if (auto *pad = e->to<IR::Padding>()) {
+        if (auto *rv = getref(all_fields, pad->name)) {
+            if (bits) {
+                bits->lo = 0;
+                bits->hi = rv->size - 1; }
+            return rv;
+        } else {
+            BUG("Padding %s not in PhvInfo", pad->name); } }
     return 0;
 }
 
@@ -899,7 +922,6 @@ class CollectPhvFields : public Inspector {
 
     bool preorder(const IR::TempVar* tv) override {
         phv.addTempVar(tv, getGress());
-
         // bridged_metadata_indicator must be placed in 8-bit container
         if (tv->name.endsWith("^bridged_metadata_indicator")) {
             PHV::Field* f = phv.field(tv);
@@ -917,6 +939,16 @@ class CollectPhvFields : public Inspector {
             f->set_privatized(true);
         }
 
+        return false;
+    }
+
+    bool preorder(const IR::Padding* pad) override {
+        LOG3("Set constraints on padding " << pad);
+        phv.addPadding(pad, getGress());
+        PHV::Field* f = phv.field(pad);
+        f->set_exact_containers(true);
+        f->set_deparsed(true);
+        f->set_ignore_alloc(true);
         return false;
     }
 
@@ -981,7 +1013,7 @@ struct ComputeFieldAlignments : public Inspector {
         if (!lval) return false;
 
         auto* fieldInfo = phv.field(lval->field);
-        if (!fieldInfo) {
+        if (!fieldInfo || fieldInfo->is_ignore_alloc()) {
             ::warning("No allocation for field %1%", extract->dest);
             return false;
         }
@@ -1044,7 +1076,7 @@ struct ComputeFieldAlignments : public Inspector {
             if (!emit) continue;
 
             auto* fieldInfo = phv.field(emit->source->field);
-            if (!fieldInfo) {
+            if (!fieldInfo || fieldInfo->is_ignore_alloc()) {
                 ::warning("No allocation for field %1%", emit->source);
                 currentBit = 0;
                 continue;
@@ -1152,6 +1184,63 @@ class AddIntrinsicConstraints : public Inspector {
     explicit AddIntrinsicConstraints(PhvInfo& phv) : phv(phv) { }
 };
 
+/**
+ * XXX(hanw): padding field in header must be parsed, but it is often unused in
+ * MAU or deparser, is overlayed with other fields. For example, when a header
+ * field is deparsed in a digest, compiler will generate a new padding field in
+ * place of the original padding field in the digest field list.
+ *
+ * As a result, the original padding field is not marked as 'deparsed', which
+ * causes error in slicing, because slicing requires all fields in the same
+ * slice must be either all 'deparsed' or all 'not-deparsed'. Mixing 'deparsed'
+ * and 'not-deparsed' field in a slice is not allowed.
+ *
+ * This pass marks the padding as 'deparsed' whenever the actual field being
+ * padded is deparsed. In another words, the 'deparsed' property on a padding
+ * field is controlled by the padded field, not the padding itself.
+ */
+class MarkPaddingAsDeparsed : public Inspector {
+    PhvInfo& phv;
+
+    bool preorder(const IR::HeaderRef* hr) {
+        LOG5("Mark padding in HeaderRef " << hr);
+        const PhvInfo::StructInfo& struct_info = phv.struct_info(hr);
+
+        // Only analyze headers, not metadata structs.
+        if (struct_info.metadata || struct_info.size == 0) {
+            LOG5("  ignoring metadata or zero struct info: " << hr);
+            return false;
+        }
+
+        // unfortunately, deparsed and deparsed_to_tm are two separate
+        // properties on PHV::Field.  PHV::Field in a slice must be either all
+        // 'deparsed' or all 'deparsed_to_tm', not a mixture.
+        bool lastDeparsed = false;
+        bool lastDeparsedToTM = false;
+
+        for (int fid : boost::adaptors::reverse(struct_info.field_ids())) {
+            PHV::Field* field = phv.field(fid);
+            LOG5("  found field " << field);
+
+            if (lastDeparsed && field->padding()) {
+                field->set_deparsed(true);
+                LOG5("    marking as deparsed " << field);
+            }
+
+            if (lastDeparsedToTM && field->padding()) {
+                field->set_deparsed_to_tm(true);
+                LOG5("    marking as deparsed_to_tm " << field);
+            }
+
+            lastDeparsed = !field->padding() && field->deparsed();
+            lastDeparsedToTM = !field->padding() && field->deparsed_to_tm();
+        }
+        return false;
+    }
+
+ public:
+    explicit MarkPaddingAsDeparsed(PhvInfo& phv) : phv(phv) { }
+};
 
 /** Sets constraint properties in PHV::Field objects based on constraints
  * induced by the parser/deparser.
@@ -1274,7 +1363,7 @@ class CollectPardeConstraints : public Inspector {
 
         if (digest->name == "resubmit") {
             LOG3("\t resubmit metadata field (" << f << ") is set to be "
-                 << "exact container and is_marshaled.");
+                 << "exact container.");
             for (auto fieldList : digest->fieldLists) {
                 LOG3("\t.....resubmit metadata field list....." << fieldList);
                 for (auto resubmit_field_expr : fieldList->sources) {
@@ -1283,6 +1372,10 @@ class CollectPardeConstraints : public Inspector {
                         if (resubmit_field->metadata) {
                             resubmit_field->set_exact_containers(true);
                             resubmit_field->set_is_marshaled(true);
+                            LOG3("\t\t" << resubmit_field);
+                        } else if (resubmit_field->overlayablePadding) {
+                            resubmit_field->set_exact_containers(true);
+                            resubmit_field->set_deparsed(true);
                             LOG3("\t\t" << resubmit_field);
                         }
                     } else {
@@ -1307,6 +1400,10 @@ class CollectPardeConstraints : public Inspector {
                                 FieldAlignment(le_bitrange(StartLen(0, fieldInfo->size))));
                         LOG3(fieldInfo << " is marked to be byte_aligned "
                              "because it's in a field_list and digested.");
+                    } else if (fieldInfo->overlayablePadding) {
+                        fieldInfo->set_exact_containers(true);
+                        fieldInfo->set_deparsed(true);
+                        LOG3("\t\t" << fieldInfo);
                     }
                 }
             }
@@ -1342,9 +1439,14 @@ class CollectPardeConstraints : public Inspector {
             // expected layout exactly.
             if (!fieldList->sources.empty()) {
                 auto* fieldInfo = phv.field(fieldList->sources[0]->field);
-                if (fieldInfo) fieldInfo->set_no_split(true);
+                if (fieldInfo) {
+                    fieldInfo->set_no_split(true);
+                    fieldInfo->set_is_marshaled(true);
+                }
             }
-            if (fieldList->sources.size() > 1) {
+            // XXX (Only for P4-14)
+            if (BackendOptions().langVersion == CompilerOptions::FrontendVersion::P4_14 &&
+                    fieldList->sources.size() > 1) {
                 auto* fieldInfo = phv.field(fieldList->sources[1]->field);
                 if (fieldInfo) fieldInfo->set_no_split(true);
             }
@@ -1362,8 +1464,11 @@ class CollectPardeConstraints : public Inspector {
                     if (mirror->metadata) {
                         mirror->mirror_field_list = {f, fieldListIndex};
                         mirror->set_exact_containers(true);
-                        mirror->set_is_marshaled(true);
-                        LOG3("\t\t" << mirror);
+                        LOG3("\t\tSEtting mirrored metadata field to " << mirror);
+                    } else {
+                        mirror->set_exact_containers(true);
+                        mirror->set_deparsed(true);
+                        LOG3("\t\tSetting non metadata mirrored fields to " << mirror);
                     }
                 } else {
                     BUG("\t\t mirror field does not exist: %1%", mirroredField->field);
@@ -1507,7 +1612,8 @@ CollectPhvInfo::CollectPhvInfo(PhvInfo& phv) {
         new CollectPardeConstraints(phv),
         new ComputeFieldAlignments(phv),
         new AddIntrinsicConstraints(phv),
-        new MarkTimestampAndVersion(phv)
+        new MarkTimestampAndVersion(phv),
+        new MarkPaddingAsDeparsed(phv),
     });
 }
 //
@@ -1567,6 +1673,7 @@ std::ostream &PHV::operator<<(std::ostream &out, const PHV::Field &field) {
         out << " deparsed";
     if (field.mau_phv_no_pack()) out << " mau_phv_no_pack";
     if (field.no_pack()) out << " no_pack";
+    if (field.is_flexible()) out << " flexible";
     if (field.overlayablePadding) out << " padding";
     if (field.no_split()) {
         out << " no_split";

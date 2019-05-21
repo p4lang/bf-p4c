@@ -807,8 +807,8 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
                 ss << tbl->name << ", ";
             }
             ss << "\n";
-            LOG4(ss.str());
         }
+        LOG4(ss.str());
         for (auto& kv_outer : dg.dep_type_map) {
             for (auto& kv_inner : kv_outer.second) {
                 auto* initial_table = kv_outer.first;
@@ -843,8 +843,8 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
             for (auto& tbl : kv.second)
                 ss << tbl->name << ", ";
             ss << std::endl;
-            LOG4(ss.str());
         }
+        LOG4(ss.str());
     }
     typename DependencyGraph::Graph::edge_iterator edges2, edges2_end;
     dg.dep_type_map.clear();

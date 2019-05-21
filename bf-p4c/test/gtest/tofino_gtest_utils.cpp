@@ -59,7 +59,7 @@ TofinoPipeTestCase::create(const std::string& source) {
         return boost::none;
     }
     BFN::BackendConverter conv(&midend.refMap, &midend.typeMap, midend.toplevel);
-    conv.convert(midendProgram, options);
+    conv.convertTnaProgram(midendProgram, options);
     if (conv.pipe.size() == 0) {
         std::cerr << "backend converter failed" << std::endl;
         return boost::none;

@@ -293,7 +293,7 @@ int main(int ac, char **av) {
 
     // convert midend IR to backend IR
     BFN::BackendConverter conv(&midend.refMap, &midend.typeMap, midend.toplevel);
-    conv.convert(program, options);
+    conv.convertTnaProgram(program, options);
     if (::errorCount() > 0)
         return PROGRAM_ERROR;
 

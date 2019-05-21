@@ -24,7 +24,9 @@
 #include "bf-p4c/arch/program_structure.h"
 #include "bf-p4c/arch/remove_set_metadata.h"
 #include "bf-p4c/arch/v1model.h"
+#include "bf-p4c/parde/mirror.h"
 #include "bf-p4c/device.h"
+#include "bf-p4c/parde/resubmit.h"
 
 namespace BFN {
 
@@ -866,6 +868,13 @@ class ConstructSymbolTable : public Inspector {
 
     std::set<cstring> globals;
 
+    // used to avoid create mirror.emit multiple times in the deparser
+    std::set<std::pair<gress_t, unsigned>> dedupCloneIndex;
+    std::set<std::pair<gress_t, unsigned>> dedupResubmitIndex;
+
+    using DigestFieldInfo =
+        std::tuple<cstring /* name */, const IR::Type*, const IR::Expression*>;
+
  public:
     ConstructSymbolTable(ProgramStructure *structure,
                          P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
@@ -874,6 +883,129 @@ class ConstructSymbolTable : public Inspector {
               parserChecksums(parserChecksums) {
         CHECK_NULL(structure);
         setName("ConstructSymbolTable");
+    }
+
+    cstring genUniqueName(cstring base_name) {
+        auto uniqueName = cstring::make_unique(structure->unique_names, base_name, '_');
+        structure->unique_names.insert(uniqueName);
+        return uniqueName;
+    }
+
+    const IR::Type_Header* convertTupleTypeToHeaderType(cstring prefix,
+            const IR::Vector<IR::Type>* components, bool first) {
+        if (first) {
+            auto fields = new IR::IndexedVector<IR::StructField>();
+            int index = 0;
+            for (auto t : *components) {
+                cstring fname = "__field_" + std::to_string(index);
+                auto *fieldAnnotations = new IR::Annotations({
+                        new IR::Annotation(IR::ID("flexible"), {})});
+                if (auto nestedTuple = t->to<IR::Type_Tuple>()) {
+                    convertTupleTypeToHeaderType(prefix + fname, &nestedTuple->components, false);
+                    cstring stName = prefix + fname + "_struct_t";
+                    auto ttype = new IR::Type_Name(stName);
+                    fields->push_back(new IR::StructField(IR::ID(fname), fieldAnnotations, ttype));
+                } else if (auto st = t->to<IR::Type_Name>()) {
+                    fields->push_back(new IR::StructField(IR::ID(fname), fieldAnnotations, t));
+                } else {
+                    auto ttype = IR::Type::Bits::get(t->width_bits());
+                    fields->push_back(new IR::StructField(IR::ID(fname), fieldAnnotations, ttype));
+                }
+                index++;
+            }
+            cstring hdName = prefix + "_header_t";
+            auto type = new IR::Type_Header(hdName, *fields);
+            return type;
+        } else {
+            auto fields = new IR::IndexedVector<IR::StructField>();
+            int index = 0;
+            for (auto t : *components) {
+                cstring fname = "__field_" + std::to_string(index);
+                if (auto nestedTuple = t->to<IR::Type_Tuple>()) {
+                    convertTupleTypeToHeaderType(prefix + fname, &nestedTuple->components, false);
+                    cstring stName = prefix + fname + "_struct_t";
+                    auto *fieldAnnotations = new IR::Annotations({
+                            new IR::Annotation(IR::ID("flexible"), {})});
+                    fields->push_back(new IR::StructField(IR::ID(fname),
+                            fieldAnnotations, new IR::Type_Name(stName)));
+                } else {
+                    auto *fieldAnnotations = new IR::Annotations({
+                            new IR::Annotation(IR::ID("flexible"), {})});
+                    fields->push_back(new IR::StructField(IR::ID(fname),
+                            fieldAnnotations, IR::Type::Bits::get(t->width_bits())));
+                }
+                index++;
+            }
+            cstring stName = prefix + "_struct_t";
+            auto type = new IR::Type_Struct(stName, *fields);
+            structure->targetTypes.push_back(type);
+        }
+        return nullptr;
+    }
+
+    const IR::Type_Header* convertTypeNameToHeaderType(cstring prefix, const IR::Type_Name* st,
+            const IR::Type_Tuple* fixedPositionTypes) {
+        cstring hdName = prefix + "_header_t";
+        auto fields = new IR::IndexedVector<IR::StructField>();
+        int index = 0;
+        for (auto t : fixedPositionTypes->components) {
+            cstring fname = "__field_" + std::to_string(index);
+            auto ttype = IR::Type::Bits::get(t->width_bits());
+            auto *fieldAnnotations = new IR::Annotations({
+                    new IR::Annotation(IR::ID("flexible"), {})});
+            fields->push_back(new IR::StructField(IR::ID(fname), fieldAnnotations, ttype));
+            index++;
+        }
+        cstring fname = "__field_" + std::to_string(index);
+        fields->push_back(new IR::StructField(IR::ID(fname), st));
+        return new IR::Type_Header(hdName, *fields);
+    }
+
+    /**
+     * V1model represents field list as a list expression, which is not sufficient
+     * for tofino header repacking optimization. This function creates a header type
+     * based on the list expression, which is then used by the backend header repacking
+     * algorithm to optimize the header layout. This header type should be internal
+     * to the compiler. No compiler output should rely on the generated header type.
+     */
+    const IR::StructInitializerExpression*
+        convertFieldList(cstring prefix, std::vector<DigestFieldInfo>* digestFieldsFromSource,
+                std::vector<DigestFieldInfo>* digestFieldsGeneratedByCompiler = nullptr,
+                bool isHeader = true) {
+        // initialize the header variable with structure initializer
+        auto initializer = new IR::IndexedVector<IR::NamedExpression>();
+        if (digestFieldsGeneratedByCompiler != nullptr) {
+            for (auto f : *digestFieldsGeneratedByCompiler) {
+                auto elem = new IR::NamedExpression(std::get<0>(f), std::get<2>(f));
+                initializer->push_back(elem);
+            }
+        }
+        for (auto f : *digestFieldsFromSource) {
+            LOG3(" source type " << std::get<1>(f));
+            /// if there is a nested tuple, convert it to a nested StructInitializerExpression
+            /// and do so recursively.
+            if (std::get<1>(f)->is<IR::Type_Tuple>()) {
+                auto list = std::get<2>(f)->to<IR::ListExpression>();
+                auto digestFieldsFromTuple = new std::vector<DigestFieldInfo>();
+                int index = 0;
+                for (auto em : list->components) {
+                    cstring fname = "__field_" + std::to_string(index);
+                    DigestFieldInfo info = std::make_tuple(fname, em->type, em);
+                    digestFieldsFromTuple->push_back(info);
+                    index++;
+                }
+                auto nestedPrefix = prefix + std::get<0>(f);
+                auto fl = convertFieldList(nestedPrefix, digestFieldsFromTuple, nullptr, false);
+                auto elem = new IR::NamedExpression(std::get<0>(f), fl);
+                initializer->push_back(elem);
+            } else {
+                auto elem = new IR::NamedExpression(std::get<0>(f), std::get<2>(f));
+                initializer->push_back(elem);
+            }
+        }
+        cstring headerTypeName = prefix + (isHeader ? "_header_t" : "_struct_t");
+        auto retv = new IR::StructInitializerExpression(headerTypeName, *initializer, isHeader);
+        return retv;
     }
 
     /*
@@ -918,32 +1050,78 @@ class ConstructSymbolTable : public Inspector {
 
         ERROR_CHECK(typeName != nullptr, "Wrong argument type for %1%", typeArg);
         /*
+         * Add header definition for top level
+         * header __digest_header_t {
+         *   ...
+         * }
          * In the ingress deparser, add the following code
          * Digest<T>() learn_1;
          * if (ig_intr_md_for_dprsr.digest_type == n)
-         *    learn_1.pack({fields});
+         *    learn_1.pack({...});
          *
          */
         auto field_list = mce->arguments->at(1);
-        auto args = new IR::Vector<IR::Argument>({field_list});
-        auto expr = new IR::PathExpression(new IR::Path(typeName->path->name));
-        auto member = new IR::Member(expr, "pack");
-        auto typeArgs = new IR::Vector<IR::Type>();
-        auto mcs = new IR::MethodCallStatement(
-                new IR::MethodCallExpression(member, typeArgs, args));
+        auto fl_type = node->methodCall->typeArguments->at(0);
 
-        auto condExprPath = new IR::Member(
-                new IR::PathExpression(new IR::Path("ig_intr_md_for_dprsr")), "digest_type");
-        auto condExpr = new IR::Equ(condExprPath, idx);
-        auto cond = new IR::IfStatement(condExpr, mcs, nullptr);
-        structure->ingressDeparserStatements.push_back(cond);
+        auto digestFieldsFromSource = new std::vector<DigestFieldInfo*>();
+        if (field_list->expression->is<IR::Type_Tuple>()) {
+            for (auto t : field_list->expression->to<IR::ListExpression>()->components) {
+                LOG3("name " << t << " type " << t->type);
+            }
+        }
 
-        auto declArgs = new IR::Vector<IR::Argument>({});
-        auto declType = new IR::Type_Specialized(new IR::Type_Name("Digest"), mce->typeArguments);
-        auto annotations = declAnno ? new IR::Annotations({declAnno}) : new IR::Annotations();
-        auto decl = new IR::Declaration_Instance(typeName->path->name, annotations,
-                                                 declType, declArgs);
-        structure->ingressDeparserDeclarations.push_back(decl);
+        if (field_list->expression->is<IR::Type_Tuple>() ||
+                field_list->expression->is<IR::Type_Name>()) {
+            cstring uniqName = genUniqueName("__digest");
+            // createNewType
+            // createNewFieldList
+
+            auto fieldList = convertFieldList(uniqName, {}, {});
+            auto args = new IR::Vector<IR::Argument>(
+                    new IR::Argument(fieldList));
+            auto expr = new IR::PathExpression(new IR::Path(typeName->path->name));
+            auto member = new IR::Member(expr, "pack");
+            auto typeArgs = new IR::Vector<IR::Type>();
+            auto mcs = new IR::MethodCallStatement(
+                    new IR::MethodCallExpression(member, typeArgs, args));
+
+            auto condExprPath = new IR::Member(
+                    new IR::PathExpression(new IR::Path("ig_intr_md_for_dprsr")), "digest_type");
+            auto condExpr = new IR::Equ(condExprPath, idx);
+            auto cond = new IR::IfStatement(condExpr, mcs, nullptr);
+            structure->ingressDeparserStatements.push_back(cond);
+
+            auto declArgs = new IR::Vector<IR::Argument>({});
+            auto declTypeArgs = new IR::Vector<IR::Type>();
+            declTypeArgs->push_back(new IR::Type_Name(IR::ID(uniqName+"_header_t")));
+            auto declType = new IR::Type_Specialized(new IR::Type_Name("Digest"), declTypeArgs);
+            auto annotations = declAnno ? new IR::Annotations({declAnno}) : new IR::Annotations();
+            auto decl = new IR::Declaration_Instance(typeName->path->name, annotations,
+                                                     declType, declArgs);
+            structure->ingressDeparserDeclarations.push_back(decl);
+        } else if (auto st = field_list->expression->to<IR::StructInitializerExpression>()) {
+            auto args = new IR::Vector<IR::Argument>(new IR::Argument(st));
+            auto expr = new IR::PathExpression(new IR::Path(typeName->path->name));
+            auto member = new IR::Member(expr, "pack");
+            auto typeArgs = new IR::Vector<IR::Type>();
+            auto mcs = new IR::MethodCallStatement(
+                    new IR::MethodCallExpression(member, typeArgs, args));
+
+            auto condExprPath = new IR::Member(
+                    new IR::PathExpression(new IR::Path("ig_intr_md_for_dprsr")), "digest_type");
+            auto condExpr = new IR::Equ(condExprPath, idx);
+            auto cond = new IR::IfStatement(condExpr, mcs, nullptr);
+            structure->ingressDeparserStatements.push_back(cond);
+
+            auto declArgs = new IR::Vector<IR::Argument>({});
+            auto declTypeArgs = new IR::Vector<IR::Type>();
+            declTypeArgs->push_back(st->type);
+            auto declType = new IR::Type_Specialized(new IR::Type_Name("Digest"), declTypeArgs);
+            auto annotations = declAnno ? new IR::Annotations({declAnno}) : new IR::Annotations();
+            auto decl = new IR::Declaration_Instance(typeName->path->name, annotations,
+                                                     declType, declArgs);
+            structure->ingressDeparserDeclarations.push_back(decl);
+        }
     }
 
     /**
@@ -1002,6 +1180,8 @@ class ConstructSymbolTable : public Inspector {
         unsigned bits = static_cast<unsigned>(std::ceil(std::log2(Device::maxCloneId(gress))));
         auto *idx = new IR::Constant(IR::Type::Bits::get(bits), cloneId);
 
+        // mirror type and mirror source are prepended to mirror field list.
+        auto digestFieldsGeneratedByCompiler = new std::vector<DigestFieldInfo>();
         {
             auto *block = new IR::BlockStatement;
 
@@ -1028,6 +1208,8 @@ class ConstructSymbolTable : public Inspector {
             auto *source =
                     new IR::Constant(IR::Type::Bits::get(8), sourceIdx | isMirroredTag | gressTag);
             block->components.push_back(new IR::AssignmentStatement(mirrorSource, source));
+            auto tpl = std::make_tuple("__field_0", IR::Type::Bits::get(8), mirrorSource);
+            digestFieldsGeneratedByCompiler->push_back(tpl);
 
             // Set `mirror_type`, which is used as the digest selector in the
             // deparser (in other words, it selects the field list to use).
@@ -1063,6 +1245,7 @@ class ConstructSymbolTable : public Inspector {
                 if (d->getName() == name) return d;
             return nullptr;
         };
+
         const IR::Declaration* mirrorDeclared = isIngress ?
             findDecl(structure->ingressDeparserDeclarations, "mirror") :
             findDecl(structure->egressDeparserDeclarations, "mirror");
@@ -1077,9 +1260,12 @@ class ConstructSymbolTable : public Inspector {
                 structure->egressDeparserDeclarations.push_back(decl);
         }
 
-        auto *newFieldList = new IR::ListExpression({
-            new IR::Member(compilerMetadataPath, "mirror_source")});
+        if (dedupCloneIndex.count(std::make_pair(gress, cloneId)))
+            return;
+        else
+            dedupCloneIndex.insert(std::make_pair(gress, cloneId));
 
+        auto *newFieldList = new IR::ListExpression({});
         if (hasData && mce->arguments->size() > 2) {
             auto *clonedData = mce->arguments->at(2)->expression;
             if (auto *originalFieldList = clonedData->to<IR::ListExpression>())
@@ -1088,13 +1274,68 @@ class ConstructSymbolTable : public Inspector {
                 newFieldList->components.push_back(clonedData);
         }
 
+        cstring generatedCloneHeaderTypeName = genUniqueName("__clone");
+        auto digestFieldsFromSource = new std::vector<DigestFieldInfo>();
+        if (mce->typeArguments->size() > 0 && mce->typeArguments->at(0)->is<IR::Type_Tuple>()) {
+            if (hasData) {
+                auto fl = mce->arguments->at(2)->to<IR::Argument>();
+                BUG_CHECK(fl != nullptr, "invalid clone3 method argument");
+                if (auto list = fl->expression->to<IR::ListExpression>()) {
+                    if (auto tpl_type = fl->expression->type->to<IR::Type_Tuple>()) {
+                        // generate a header type from tuple, used by repacking algorithm
+                        auto components = new IR::Vector<IR::Type>();
+                        components->push_back(IR::Type::Bits::get(8));  // mirror_source
+                        components->append(tpl_type->components);
+                        auto header_type = convertTupleTypeToHeaderType(
+                                generatedCloneHeaderTypeName, components, true);
+                        structure->type_declarations.emplace(header_type->name, header_type);
+                        LOG3("create header " << header_type->name);
+                        // generate a struct initializer for the header type
+                        int index = 1;  // first element was used for mirror_source
+                        for (auto elem : list->components) {
+                            cstring fname = "__field_" + std::to_string(index);
+                            LOG3("name " << fname << " type " << elem->type << " expr " << elem);
+                            DigestFieldInfo info = std::make_tuple(fname, elem->type, elem);
+                            digestFieldsFromSource->push_back(info);
+                            index++;
+                        }
+                    } else if (auto type_name = fl->expression->type->to<IR::Type_Name>()) {
+                        auto header_type = convertTypeNameToHeaderType(
+                                generatedCloneHeaderTypeName, type_name, {});
+                        structure->type_declarations.emplace(header_type->name, header_type);
+                    } else {
+                        ::error(ErrorType::ERR_UNEXPECTED,
+                                "clone field list %1% not supported ", fl->expression);
+                    }
+                } else if (auto path = fl->expression->to<IR::PathExpression>()) {
+                    DigestFieldInfo info = std::make_tuple(path->path->name, path->type, path);
+                    digestFieldsFromSource->push_back(info);
+                } else if (auto mem = fl->expression->to<IR::Member>()) {
+                    DigestFieldInfo info = std::make_tuple(mem->member.name, mem->type, mem);
+                    digestFieldsFromSource->push_back(info);
+                }
+            }
+        } else {
+            // has no data
+            cstring hdName = generatedCloneHeaderTypeName + "_header_t";
+            auto fields = new IR::IndexedVector<IR::StructField>();
+            fields->push_back(new IR::StructField(IR::ID("__field_0"), IR::Type::Bits::get(8)));
+            auto type = new IR::Type_Header(hdName, *fields);
+            structure->type_declarations.emplace(hdName, type);
+        }
+
+        const IR::StructInitializerExpression* fieldList =
+            convertFieldList(generatedCloneHeaderTypeName,
+                    digestFieldsFromSource, digestFieldsGeneratedByCompiler);
+
         auto args = new IR::Vector<IR::Argument>();
         args->push_back(new IR::Argument(new IR::Member(compilerMetadataPath, "mirror_id")));
-        args->push_back(new IR::Argument(newFieldList));
+        args->push_back(new IR::Argument(fieldList));
 
         auto pathExpr = new IR::PathExpression(new IR::Path("mirror"));
         auto member = new IR::Member(pathExpr, "emit");
-        auto typeArgs = new IR::Vector<IR::Type>();
+        auto typeArgs = new IR::Vector<IR::Type>({
+                new IR::Type_Name(IR::ID(generatedCloneHeaderTypeName + "_header_t"))});
         auto mcs = new IR::MethodCallStatement(
                 new IR::MethodCallExpression(member, typeArgs, args));
         auto condExprPath = new IR::Member(deparserMetadataPath, "mirror_type");
@@ -1263,12 +1504,17 @@ class ConstructSymbolTable : public Inspector {
         structure->_map.emplace(node, stmt);
 
         /*
+         * Add header definition to top level;
+         * header $resubmit_header_t {
+         *   bit<8> select;
+         *   bit<n> field_0; @flexible;
+         *   ...
+         * }
          * In the ingress deparser, add the following code
-         *
          * Resubmit() resubmit;
-         * if (ig_intr_md_for_dprsr.resubmit_type == n)
-         *    resubmit.emit({fields});
-         *
+         * if (ig_intr_md_for_dprsr.resubmit_type == n) {
+         *    resubmit.emit<T>({ ... });
+         * }
          */
 
         // Only instantiate the extern for the first instance of resubmit()
@@ -1285,21 +1531,66 @@ class ConstructSymbolTable : public Inspector {
             auto declArgs = new IR::Vector<IR::Argument>({});
             auto declType = new IR::Type_Name("Resubmit");
             auto decl = new IR::Declaration_Instance("resubmit",
-                                                 declType, declArgs);
+                    declType, declArgs);
             structure->ingressDeparserDeclarations.push_back(decl);
         }
 
-        auto fl = mce->arguments->at(0)->expression;   // resubmit field list
+        cstring generatedResubmitHeaderTypeName = genUniqueName("__resubmit");
+
+        auto digestFieldsGeneratedByCompiler = new std::vector<DigestFieldInfo>();
+        /**
+         * We used bit<8> for resubmit select field to avoid padding alignment
+         * issue in the backend. This might be sub-optimal as the padding bit
+         * could be overlayed with other fields.
+         */
+        auto info = std::make_tuple("__field_0", IR::Type::Bits::get(8),
+                new IR::Cast(IR::Type::Bits::get(8), mem));
+        digestFieldsGeneratedByCompiler->push_back(info);
+
+        auto digestFieldsFromSource = new std::vector<DigestFieldInfo>();
+        if (mce->typeArguments->at(0)->is<IR::Type_Tuple>()) {
+            if (auto arg = mce->arguments->at(0)->to<IR::Argument>()) {
+                auto fl = arg->expression;   // resubmit field list
+                if (auto list = fl->to<IR::ListExpression>()) {
+                    if (auto tpl = list->type->to<IR::Type_Tuple>()) {
+                        auto components = new IR::Vector<IR::Type>();
+                        components->push_back(IR::Type::Bits::get(8));
+                        components->append(tpl->components);
+                        auto header_type = convertTupleTypeToHeaderType(
+                                generatedResubmitHeaderTypeName, components, true);
+                        structure->type_declarations.emplace(header_type->name, header_type);
+                        LOG3("create header " << header_type->name);
+                        // generate a struct initializer for the header type
+                        int index = 1;  // first element was used for mirror_source
+                        for (auto elem : list->components) {
+                            cstring fname = "__field_" + std::to_string(index);
+                            LOG3("name " << fname << " type " << elem->type << " expr " << elem);
+                            DigestFieldInfo info = std::make_tuple(fname, elem->type, elem);
+                            digestFieldsFromSource->push_back(info);
+                            index++;
+                        }
+                    }
+                }
+            }
+        } else {
+            // has no data
+            cstring hdName = generatedResubmitHeaderTypeName + "_header_t";
+            auto fields = new IR::IndexedVector<IR::StructField>();
+            fields->push_back(new IR::StructField(IR::ID("__field_0"), IR::Type::Bits::get(8)));
+            auto type = new IR::Type_Header(hdName, *fields);
+            structure->type_declarations.emplace(hdName, type);
+        }
+
+        auto fieldList = convertFieldList(generatedResubmitHeaderTypeName,
+                digestFieldsFromSource, digestFieldsGeneratedByCompiler);
         /// compiler inserts resubmit_type as the format id to
-        /// identify the resubmit group, it is 3 bits in size, but
-        /// will be aligned to byte boundary in backend.
-        auto new_fl = new IR::ListExpression({mem});
-        for (auto f : fl->to<IR::ListExpression>()->components)
-            new_fl->push_back(f);
-        auto args = new IR::Vector<IR::Argument>(new IR::Argument(new_fl));
+        /// identify the resubmit group, it is 3 bits in size,
+        /// and padded to byte boundary
+        auto args = new IR::Vector<IR::Argument>(new IR::Argument(fieldList));
         auto expr = new IR::PathExpression(new IR::Path("resubmit"));
         auto member = new IR::Member(expr, "emit");
-        auto typeArgs = new IR::Vector<IR::Type>();
+        auto typeArgs = new IR::Vector<IR::Type>({
+            new IR::Type_Name(IR::ID(generatedResubmitHeaderTypeName+"_header_t"))});
         auto mcs = new IR::MethodCallStatement(
                 new IR::MethodCallExpression(member, typeArgs, args));
 
@@ -1979,6 +2270,7 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
                                                  P4::TypeMap* typeMap, BFN_Options& options) {
     setName("Translation");
     addDebugHook(options.getDebugHook());
+    refMap->setIsV1(true);
     auto typeChecking = new BFN::TypeChecking(refMap, typeMap);
     auto evaluator = new P4::EvaluatorPass(refMap, typeMap);
     auto structure = new BFN::V1::ProgramStructure;
@@ -2002,22 +2294,17 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
         parserChecksums,
         new V1::ConstructSymbolTable(structure, refMap, typeMap, parserChecksums),
         new GenerateTofinoProgram(structure),
+        new TranslationLast(),
         new V1::LoweringType(),
         new V1::InsertChecksumError(parserChecksums),
-        new TranslationLast(),
-        new AddIntrinsicMetadata,
-        new P4::ClonePathExpressions,
-        new P4::ClearTypeMap(typeMap),
-        new BFN::TypeChecking(refMap, typeMap, true),
+        new AddIntrinsicMetadata(refMap, typeMap),
         new RemoveSetMetadata(refMap, typeMap),
-        new TranslatePhase0(refMap, typeMap),
-        new P4::ClonePathExpressions,
-        new P4::ClearTypeMap(typeMap),
-        new BFN::TypeChecking(refMap, typeMap, true),
+        new BFN::TranslatePhase0(refMap, typeMap),
         new BFN::AddTnaBridgeMetadata(refMap, typeMap),
-        new P4::ClearTypeMap(typeMap),
-        new BFN::TypeChecking(refMap, typeMap, true),
+        new BFN::FixupResubmitMetadata(refMap, typeMap),
+        new BFN::FixupMirrorMetadata(refMap, typeMap),
         new P4::EliminateSerEnums(refMap, typeMap),
+        new TranslationLast(),
     });
 }
 

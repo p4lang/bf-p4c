@@ -6,6 +6,7 @@
 #include "frontends/p4/fromv1.0/v1model.h"
 #include "frontends/p4/moveDeclarations.h"
 #include "frontends/p4/simplify.h"
+#include "frontends/p4/simplifyDefUse.h"
 #include "frontends/p4/simplifyParsers.h"
 #include "frontends/p4/strengthReduction.h"
 #include "frontends/p4/typeMap.h"
@@ -20,7 +21,7 @@
 #include "midend/eliminateSerEnums.h"
 #include "midend/expandEmit.h"
 #include "midend/expandLookahead.h"
-#include "midend/flattenHeaders.h"
+#include "midend/flattenInterfaceStructs.h"
 #include "midend/local_copyprop.h"
 #include "midend/nestedStructs.h"
 #include "midend/orderArguments.h"
@@ -39,13 +40,14 @@
 #include "bf-p4c/midend/blockmap.h"
 #include "bf-p4c/midend/check_header_alignment.h"
 #include "bf-p4c/midend/check_unsupported.h"
+#include "bf-p4c/midend/check_design_pattern.h"
 #include "bf-p4c/midend/copy_block_pragmas.h"
+#include "bf-p4c/midend/copy_header.h"
 #include "bf-p4c/midend/elim_cast.h"
 #include "bf-p4c/midend/desugar_varbit_extract.h"
 #include "bf-p4c/midend/elim_typedef.h"
 #include "bf-p4c/midend/normalize_params.h"
 #include "bf-p4c/midend/rewrite_egress_intrinsic_metadata_header.h"
-#include "bf-p4c/common/rewrite_flexible_struct.h"
 #include "bf-p4c/midend/simplify_nested_if.h"
 #include "bf-p4c/midend/simplify_emit_args.h"
 #include "bf-p4c/midend/type_checker.h"
@@ -311,6 +313,18 @@ class CompileTimeOperations : public P4::CompileTimeOperations {
     }
 };
 
+/**
+ * When flattening nested struct, save the '@flexible' annotation on struct
+ * to struct fields.
+ */
+class SaveFlexibleAnnotation : public P4::AnnotationSelectionPolicy {
+    bool keep(const IR::Annotation* annot) override {
+        if (annot->name == "flexible" || annot->name == "hidden")
+            return true;
+        return false;
+    }
+};
+
 class MidEndLast : public PassManager {
  public:
     MidEndLast() { setName("MidEndLast"); }
@@ -340,10 +354,11 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::EliminateSerEnums(&refMap, &typeMap, typeChecking),
         new BFN::TypeChecking(&refMap, &typeMap, true),
         new BFN::CheckUnsupported(&refMap, &typeMap),
-        new BFN::CheckHeaderAlignment(&typeMap),
         new BFN::RemoveActionParameters(&refMap, &typeMap, typeChecking),
         new P4::OrderArguments(&refMap, &typeMap, typeChecking),
         new BFN::ArchTranslation(&refMap, &typeMap, options),
+        new BFN::TypeChecking(&refMap, &typeMap, true),
+        new BFN::CheckDesignPattern(&refMap, &typeMap),  // add checks for p4 design pattern here.
         new EnumOn32Bits::FindStatefulEnumOutputs(*enum_policy),
         new P4::ConvertEnums(&refMap, &typeMap, enum_policy, typeChecking),
         new P4::EliminateTypedef(&refMap, &typeMap, typeChecking),
@@ -360,13 +375,15 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::SimplifyParsers(&refMap),
         new P4::StrengthReduction(&refMap, &typeMap, typeChecking),
         new P4::EliminateTuples(&refMap, &typeMap, typeChecking, typeInference),
-        new SimplifyEmitArgs(&refMap, &typeMap),
         new P4::SimplifyComparisons(&refMap, &typeMap, typeChecking),
         // errorOnMethodCall argument in CopyStructures is defaulted to true.
         // This means methods or functions returning structs will be flagged as
         // an error. Here, we set this to false to allow such scenarios.
         // E.g. Phase0 extern function returns a header struct.
+        new BFN::CopyHeaders(&refMap, &typeMap, typeChecking),
         new P4::CopyStructures(&refMap, &typeMap, errorOnMethodCall, typeChecking),
+        // must run after copy structure
+        new SimplifyEmitArgs(&refMap, &typeMap),
         new P4::NestedStructs(&refMap, &typeMap, typeChecking),
         new P4::SimplifySelectList(&refMap, &typeMap, typeChecking),
         new P4::RemoveSelectBooleans(&refMap, &typeMap, typeChecking),
@@ -405,10 +422,6 @@ MidEnd::MidEnd(BFN_Options& options) {
         (options.egress_intr_md_opt) ?
             new RewriteEgressIntrinsicMetadataHeader(&refMap, &typeMap) : nullptr,
         new DesugarVarbitExtract(&refMap, &typeMap),
-        // must be done after copy structure, then we do not need to adjust
-        // struct assignment. could be done in tna.cpp and t2na.cpp
-        (options.arch == "tna" || options.arch == "t2na") ?
-            new BFN::RewriteFlexibleStruct(&refMap, &typeMap) : nullptr,
         new MidEndLast,
         new RenameArchParams(&refMap, &typeMap),
         new FillFromBlockMap(&refMap, &typeMap),

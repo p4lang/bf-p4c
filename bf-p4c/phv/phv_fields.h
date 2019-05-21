@@ -188,6 +188,8 @@ class Field : public LiftLess<Field> {
 
     // constraints on this field
     //
+    /// True if this Field is part of a flexible struct.
+    bool            flexible_i = false;
     bool            mau_phv_no_pack_i = false;         /// true if op on field not "move based"
                                                        /// set by PHV_Field_Operations
     bool            deparsed_i = false;                /// true if deparsed field
@@ -217,6 +219,7 @@ class Field : public LiftLess<Field> {
                                                        /// had ipv6.dstAddr[127:64] += 1 and
                                                        /// ipv6.dstAddr[63:0] += 1, this set would
                                                        /// contain 0 and 64.
+    bool            ignore_alloc_i = false;
 
 
     /// Maximum size of container bytes this field can occupy. -1 if there is no constraint on this
@@ -264,6 +267,8 @@ class Field : public LiftLess<Field> {
     friend std::ostream &operator<<(std::ostream &out, const Field &field);
 
  public:
+    bool is_flexible() const                               { return flexible_i; }
+    void set_flexible(bool b)                              { flexible_i = b; }
     /// @returns true if this field can be placed in TPHV containers.
     bool is_tphv_candidate(const PhvUse& uses) const;
     bool is_mocha_candidate() const                        { return mocha_i; }
@@ -274,6 +279,12 @@ class Field : public LiftLess<Field> {
     void set_deparser_zero_candidate(bool c)               { deparser_zero_i = c; }
     bool is_privatizable_dark() const                      { return privatizable_dark_i; }
     void set_privatizable_dark(bool c)                     { privatizable_dark_i = c; }
+
+    bool is_ignore_alloc() const                           { return ignore_alloc_i; }
+    void set_ignore_alloc(bool b)                          { ignore_alloc_i = b; }
+
+    bool padding() const                                   { return overlayablePadding; }
+    void set_padding(bool p)                               { overlayablePadding = p; }
 
     //
     // constraints
@@ -985,12 +996,14 @@ class PhvInfo {
 
     void clear();
     void add(cstring fieldName, gress_t gress, int size, int offset,
-             bool isMetadata, bool isPOV, bool bridged = false, bool isPad = false);
+             bool isMetadata, bool isPOV, bool bridged = false, bool isPad = false,
+             bool isFlexible = false);
     void add_hdr(cstring headerName, const IR::Type_StructLike* type,
                  gress_t gress, bool isMetadata);
     void add_struct(cstring structName, const IR::Type_StructLike* type, gress_t gress, bool meta,
             bool bridged, int offset);
     void addTempVar(const IR::TempVar* tempVar, gress_t gress);
+    void addPadding(const IR::Padding* padding, gress_t gress);
 
     template<typename Iter>
     class iterator {

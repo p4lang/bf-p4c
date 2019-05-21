@@ -111,12 +111,6 @@ class ProcessBackendPipe : public PassManager {
     ProcessBackendPipe(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
                        IR::BFN::Pipe* rv, DeclarationConversions &converted,
                        StatefulSelectors ss,
-                       const BFN::ResubmitPacking *resubmitPackings,
-                       const BFN::MirroredFieldListPacking *mirrorPackings,
-                       ParamBinding *bindings);
-    ProcessBackendPipe(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
-                       IR::BFN::Pipe* rv, DeclarationConversions &converted,
-                       StatefulSelectors ss,
                        ParamBinding *bindings);
 };
 
@@ -132,9 +126,7 @@ class BackendConverter {
         arch = new ParseTna();
         CHECK_NULL(refMap); CHECK_NULL(typeMap); CHECK_NULL(toplevel); }
 
-    void convert(const IR::P4Program *prog, BFN_Options& options);
     void convertTnaProgram(const IR::P4Program *program, BFN_Options &options);
-    void convertV1Program(const IR::P4Program *program, BFN_Options &options);
     cstring getPipelineName(const IR::P4Program* program, int index);
     const ProgramThreads &getThreads() const { return arch->threads; }
 

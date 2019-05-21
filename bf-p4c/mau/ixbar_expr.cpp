@@ -3,7 +3,6 @@
 #include "ixbar_expr.h"
 #include "resource.h"
 
-
 void P4HashFunction::slice(le_bitrange hash_slice) {
     le_bitrange shifted_hash_bits = hash_slice.shiftedByBits(hash_bits.lo);
     BUG_CHECK(hash_bits.contains(shifted_hash_bits), "Slice over hash function is not able "

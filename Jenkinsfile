@@ -46,7 +46,7 @@ node ('compiler || compiler-svr4') {
                             sh "git submodule update --init --recursive"
                             // Update switch.p4-16 to the latest known working refpoint
                             switch_16_repo = 'p4-tests/p4_16/switch_16'
-                            switch_16_branch = 'p4c/working-top'
+                            switch_16_branch = 'master'
                             sh "git -C $switch_16_repo fetch origin $switch_16_branch && git -C $switch_16_repo checkout $switch_16_branch"
                             sh "echo 'Using switch_16: ' && git -C p4-tests/p4_16/switch_16 log HEAD^..HEAD"
                             sh "docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD"
@@ -131,7 +131,7 @@ node ('compiler-svr1 || master') {
                 timestamps {
                     sh "echo 'Running switch PD tests for MSDC_PROFILE_BRIG'"
                     sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*smoketest_switch_8.7_msdc' -LE 'UNSTABLE'"
-                    
+
                     sh "echo 'Running switch PD tests for DC_BASIC_PROFILE_BRIG'"
                     sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*smoketest_switch_8.7_dc_basic' -LE 'UNSTABLE'"
                 }
