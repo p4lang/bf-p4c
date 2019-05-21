@@ -82,10 +82,11 @@ bool GatherParserExtracts::preorder(const IR::BFN::Extract* e) {
  */
 Visitor::profile_t RepackDigestFieldList::init_apply(const IR::Node* root) {
     repackedTypes.clear();
+    resetState();
     return Transform::init_apply(root);
 }
 
-Visitor::profile_t RepackFlexHeaders::init_apply(const IR::Node* root) {
+void RepackFlexHeaders::resetState() {
     egressBridgedMap.clear();
     reverseEgressBridgedMap.clear();
     extractedTogether.clear();
@@ -131,7 +132,10 @@ Visitor::profile_t RepackFlexHeaders::init_apply(const IR::Node* root) {
         LOG3("\n\tPrinting egress bridged to external");
         for (auto kv : egressBridgedMap)
             LOG3("\t  " << kv.first << "\t" << kv.second); }
+}
 
+Visitor::profile_t RepackFlexHeaders::init_apply(const IR::Node* root) {
+    resetState();
     return Transform::init_apply(root);
 }
 

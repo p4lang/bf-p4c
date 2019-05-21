@@ -357,6 +357,8 @@ class RepackFlexHeaders : public Transform, public TofinoWriteContext {
     const IR::Node* preorder(IR::HeaderOrMetadata* h) override;
     const IR::Node* preorder(IR::BFN::Pipe* p) override;
 
+    void resetState();
+
  public:
     explicit RepackFlexHeaders(
         PhvInfo& p,

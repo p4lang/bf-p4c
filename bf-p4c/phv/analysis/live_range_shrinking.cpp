@@ -743,6 +743,10 @@ FindInitializationNode::findInitializationNodes(
                          "avoid increasing critical path length");
                     return boost::none;
                 }
+                if (groupDominator == *newDominator) {
+                    LOG3("\t\t\tReached the source node in the table flow graph");
+                    return boost::none;
+                }
                 groupDominator = *newDominator;
                 LOG3("\t\t  Setting group dominator to: " << groupDominator->name << " (stage " <<
                      dg.min_stage(groupDominator) << ")");
