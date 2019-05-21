@@ -56,7 +56,7 @@ static bool checksumUpdateSanityCheck(const IR::AssignmentStatement* assignment)
                 destField);
         return false;
     }
-    LOG3("checksum update field: " << destField);
+    LOG4("checksum update field: " << destField);
 
     const IR::ListExpression* sourceList =
         (*methodCall->arguments)[0]->expression->to<IR::ListExpression>();
@@ -144,7 +144,7 @@ analyzeUpdateChecksumStatement(const IR::AssignmentStatement* assignment) {
 
             lastFieldHeaderRef = currentFieldHeaderRef;
             offset += source->type->width_bits();
-            LOG3("checksum update includes field:" << source);
+            LOG4("checksum update includes field:" << source);
 
         } else if (auto* header = source->to<IR::ConcreteHeaderRef>()) {
             auto headerRef = header->baseRef();
@@ -160,7 +160,7 @@ analyzeUpdateChecksumStatement(const IR::AssignmentStatement* assignment) {
                 auto* member = new IR::Member(field->type, header, field->name);
                 sources->push_back(new IR::BFN::FieldLVal(member));
                 sourceToOffset[sources->size() - 1] = offset;
-                LOG3("checksum update includes field:" << field);
+                LOG4("checksum update includes field:" << field);
                 offset += member->type->width_bits();
             }
             lastFieldHeaderRef = headerRef;
