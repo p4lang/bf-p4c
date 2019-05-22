@@ -1,9 +1,147 @@
 # Release Notes
 
+## Version 8.9.0
+The **The Last before the Storm** release
+
+<div>
+> We cry out for more, we wonder what's next to the world
+> We settle the score, we never look back
+> We're the last before the storm...
+<div style="text-align: right"> Gamma-Ray </div>
+</div>
+
+  * [P4C-333] - Implement shifter support for deparser parameters
+  * [P4C-465] - Implement power compiler structured logging
+  * [P4C-545] - Parser Match Register Allocation Refactoring
+  * [P4C-737] - PTF unexpectedly failing due to TCAM-related parse error
+  * [P4C-925] - p4c compilation failure: Select on field from different parent branches is not supported
+  * [P4C-1089] - Add support for >64 bit values in context json generation
+  * [P4C-1102] - Jbay lower_parser generates extra empty parser state
+  * [P4C-1163] - p4c compilation failure: Action bus byte .* used inconsistently for fields
+  * [P4C-1243] - Add pragmas and their description as part of the compiler online help (--help-pragma)
+  * [P4C-1369] - Intrinsic metadata field names should have P4 specified prefix in context.json
+  * [P4C-1380] - p4c usability: Change Stage pragma error to warning
+  * [P4C-1384] - p4c compilation failure: To fit hash destinations in less than 4 immediate bytes, we must assign field to a 16b container.
+  * [P4C-1442] - ptf test failure: Received 4 extra bytes in packet
+  * [P4C-1473] - Type bool is not supported by RegisterAction
+  * [P4C-1493] - Copy propagation is not implemented in parsers
+  * [P4C-1496] - p4c compilation failure: fabric fails compilation with JBay
+  * [P4C-1523] - p4c compilation failure: Hash table column duplicated
+  * [P4C-1528] - sde-post-pkg-driver-comb-brig: test.Test failing with error: match_tbl_set_default_entry()/match_tbl_add_entry() got an unexpected keyword argument 'r_index'/'cntr_index'
+  * [P4C-1529] - [UCloud] header metadata memory problem
+  * [P4C-1530] - switch.p4-16: B0_PROFILE parse_cpu failure
+  * [P4C-1533] - SDE8.8.0.137: the egress parser doesn't work
+  * [P4C-1540] - Remove the assumption that IR::HashDist objects has to be kept unmodified throughout the backend.
+  * [P4C-1544] - Headers added by MAUs cannot be sourced from CLOTs
+  * [P4C-1565] - Unable to bridge metadata - too many sources
+  * [P4C-1566] - Model logs not shown for all match keys
+  * [P4C-1586] - Packet Corruption/CLOT error in 8.7/Tofino2
+  * [P4C-1603] - default_entry.p4 compilation fails with /default_entry.p4(244): [--Werror=legacy] error: meter_2.execute: Cannot unify MeterColor_t to bit<2>
+  * [P4C-1610] - parser_intr_md.p4 fails with bf-p4c: error: unrecognized arguments: --metadata-overlay=False
+  * [P4C-1615] - Deparser Learn Mask Incorrect For Fields Sharing Containers
+  * [P4C-1618] - Incorrect CLOT allocation when headers extracted in same state have different validity
+  * [P4C-1620] - checksum msb and lsb reversed
+  * [P4C-1621] - SDE 8.8.0.476: parser error
+  * [P4C-1622] - Customer code failing with "Fields added after PHV allocation"
+  * [P4C-1623] - Publish the type of $LPF_SPEC_TYPE and $ENTRY_HIT_STATE fields as "string" instead of "enum"
+  * [P4C-1624] - does not have a PHV allocation though it is used in an action
+  * [P4C-1628] - Bad dprsr config when a clot is used for intrinsic metadata that is bridged
+  * [P4C-1637] - Incorrect CLOT allocation for lookahead
+  * [P4C-1640] - p4-16 and ALU warnings
+  * [P4C-1641] - No phv record alu_lo
+  * [P4C-1644] - parser.log information is out-of-date
+  * [P4C-1646] - onos-fabric failing to compile for Tofino2: PHV containers used by both ingress and egress deparser
+  * [P4C-1649] - p4c compilation failure: Invalid args to MakeSlice
+  * [P4C-1652] - error: Gateway match key not in matching hash column
+  * [P4C-1662] - Parser graphs are not created
+  * [P4C-1668] - Supporting @pragma stage with two parameters
+  * [P4C-1672] - Compiler Bug - Conditional on mux is not an action argument
+  * [P4C-1674] - Assembler warning: Conflicting instruction slot usage
+  * [P4C-1679] - Very long compilation time for a simple program
+  * [P4C-1680] - 8.8: Stateful register error when using a hash
+  * [P4C-1682] - resources.json clots empty field list
+  * [P4C-1688] - The presence of varbit extract screws up select()
+  * [P4C-1695] - Compiler Bug: Checksum field not extracted?
+  * [P4C-1698] - lookahead1.p4 fails with PartialHdr
+  * [P4C-1714] - Compiler Bug: mirror field does not exist
+  * [P4C-1718] - Deparsed mirror header has a lot of holes
+  * [P4C-1733] - Splitting of parser states needs to take into account CLOTs-per-state constraint
+  * [P4C-1736] - sde-post-pkg-driver-comb-brig: Error while trying to run driver-comb 28, 38, 40 : Error : Segmentation fault
+  * [P4C-1739] - pa_alias support for multiple aliased fields
+  * [P4C-1745] - bf-switch: UDP validation clobbers UDP state
+  * [P4C-1759] - [rel_8_9]: P4 programs meters, exm_direct_1, exm_direct fail compilation with Brig. error: eg_ucast_port: no such field in standard_metadata
+  * [P4C-1764] - tofino2: SRV6 tests tests.SRv6EndDX6Test and tests.SRv6EndDT6Test fails with AssertionError: Expected packet was not received on device 0, port 9.
+
+
 ## Version 8.8.0
 The **Home run** release
 
-TBW
+  * [P4C-190] - Reset checksum header fields that are removed
+  * [P4C-282] - bitmasked-set instruction with 2 or 3 operands is broken
+  * [P4C-438] - Error message about missing default parameter value is not clear
+  * [P4C-564] - Parser bandwidth
+  * [P4C-682] - Need better error message that connects to the source code
+  * [P4C-723] - Analysis of Removal and Add Headers for Live Overlay
+  * [P4C-760] - stateful selector with unwanted output can corrupt action data
+  * [P4C-832] - Poorly specified error
+  * [P4C-858] - Reorganize P4-test structure
+  * [P4C-881] - Support varbit in the parser
+  * [P4C-1021] - Incorrect checksum calculations
+  * [P4C-1049] - mod_field_conditionally compilation fails with /mod_field_conditionally.p4(130): error: : conditional assignment not supported modify_field_conditionally(ethernet.srcAddr, cond, value);
+  * [P4C-1082] - CLOTs represented in compiler artefacts (context.json or resources.json)
+  * [P4C-1116] - Meter execution result encoding
+  * [P4C-1124] - Color-blind/color-aware meters in TNA
+  * [P4C-1139] - Static entries are not working when an action parameter type is specified by typedef
+  * [P4C-1162] - p4c compilation failure: terminate called after throwing an instance of 'std::out_of_range'
+  * [P4C-1252] - Support for pragma force_immediate
+  * [P4C-1255] - Support for pragma max_actions
+  * [P4C-1300] - error: no more that 2 clots per state
+  * [P4C-1308] - Invoking hash calculations
+  * [P4C-1311] - if() statement with '++' operation: condition too complex
+  * [P4C-1313] - Compiler Bug: field equality comparison misaligned in gateway
+  * [P4C-1314] - RegisterAction can't find variable declaration in the enclosing scope
+  * [P4C-1340] - Add support for publishing multiple phase0 table instances in bf-rt and context json if there are multiple parser instances in the P4
+  * [P4C-1388] - p4c compilation failure: syntax error, unexpected
+  * [P4C-1392] - p4c compilation failure: Tofino only supports 1-bit checksum update condition in the deparser
+  * [P4C-1406] - p4c must fail: Table cannot match on multiple fields using lpm match type
+  * [P4C-1409] - Stash support
+  * [P4C-1413] - Conditional checksum update fails if condition has a boolean type
+  * [P4C-1414] - Hash algorithm is ignored for Checksum extern.
+  * [P4C-1429] - Compiler bug: recursion failure
+  * [P4C-1433] - support obfuscation of P4 code only
+  * [P4C-1449] - p4-16 Program corrupting the packet!
+  * [P4C-1450] - Sequential execution with register (SALU) blackboxes
+  * [P4C-1451] - Compiler Bug: unexpected field .do_seq:data
+  * [P4C-1458] - Assembler error: "Ran out of constant output slots"
+  * [P4C-1463] - Incorrect Parser programming
+  * [P4C-1467] - P4-16: Hash algorithm and compiler bug
+  * [P4C-1470] - LocalCopyProp pass of midend might remove fields that are used in RegisterAction
+  * [P4C-1471] - Attached p4 is failing with "error: conflicting predicate output use in MAU::StatefulAlu ingress.array1"
+  * [P4C-1479] - constrain the number of stages for table placement
+  * [P4C-1481] - Support for always run
+  * [P4C-1482] - Action data packing
+  * [P4C-1487] - Table eliminated for unknown reason
+  * [P4C-1500] - Incorrect parser setup for Tofino2
+  * [P4C-1507] - Brig compilation failures with GCC7
+  * [P4C-1509] - Incorrect TCP Checksum in dyn_hash.p4
+  * [P4C-1512] - PHV allocation creates a container action impossible within a Tofino ALU
+  * [P4C-1520] - switch.p4-16: Tofino2 MTS build failure
+  * [P4C-1521] - Compilation failure while compiling mau_test on Jbay with error: DH0 not accessable in input xbar
+  * [P4C-1524] - switch.p4-16: 32Q switch compile failure due to pa_alias
+  * [P4C-1548] - error: in RegisterAction
+  * [P4C-1549] - switch.p4-16: Table utilization very low for some tables
+  * [P4C-1554] - BRIG doesn't like setValid for a header passed to a global action
+  * [P4C-1557] - error: action instruction slot in use elsewhere
+  * [P4C-1560] - error: DB0 not accessable in input xbar
+  * [P4C-1563] - Compiler warning question
+  * [P4C-1571] - Stateful action selector compilation error
+  * [P4C-1575] - crash when dumping parser timing reports
+  * [P4C-1578] - tna_pvs_multi_states test test.SharedPvsTest test fails with tna_pvs_multi_states/test.py", line 96, in runTest assert(0) AssertionError
+  * [P4C-1584] - placement=pragma is still not ignored by bf-p4c compiler.
+  * [P4C-1588] - Compiler Bug: Exiting with SIGSEGV
+  * [P4C-1589] - Compiler crashes on metadata extraction
+  * [P4C-1606] - Iterator.p4 fails compilation with iterator.p4(89) action d(x,y,i) {error: Ingress field is bridged, but not deparsed: 12:ingress::__phase0_data.x<16> ^0 ^N[0..15]b bridge
+
 
 ## Version 8.7.0
 The **Quickie** release
