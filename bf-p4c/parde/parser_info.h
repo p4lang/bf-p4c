@@ -265,10 +265,6 @@ class CollectParserInfoImpl : public PardeInspector {
     using GraphType = ParserGraphImpl<Parser, State, Transition>;
 
  public:
-    CollectParserInfoImpl() {
-        visitDagOnce = false;
-    }
-
     const std::map<const Parser*, GraphType*>& graphs() const { return _graphs; }
     const GraphType& graph(const Parser* p) const { return *(_graphs.at(p)); }
 
@@ -289,6 +285,7 @@ class CollectParserInfoImpl : public PardeInspector {
 
     bool preorder(const Parser* parser) override {
         _graphs[parser] = new GraphType(parser);
+        revisit_visited();
         return true;
     }
 

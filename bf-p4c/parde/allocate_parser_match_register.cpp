@@ -167,6 +167,10 @@ struct CollectUseDef : PassManager {
         std::map<const IR::BFN::InputBufferRVal*,
                  const IR::Expression*> rval_to_lval;
 
+        bool preorder(const IR::BFN::ParserState *) override {
+            visitOnce();  // only visit once, regardless of how many predecessors
+            return true; }
+
         // XXX(zma) what if extract gets dead code eliminated?
         // XXX(zma) this won't work if the extract is out of order
         bool preorder(const IR::BFN::Extract* extract) override {
@@ -268,6 +272,8 @@ struct CollectUseDef : PassManager {
 
             return rv;
         }
+        bool preorder(const IR::BFN::Parser *) override { revisit_visited(); return true; }
+        bool preorder(const IR::BFN::ParserState *) override { visitOnce(); return true; }
 
         bool preorder(const IR::BFN::Select* select) override {
             auto parser = findContext<IR::BFN::Parser>();
