@@ -210,8 +210,6 @@ p4c_add_xfail_reason("tofino"
   switch_ent_fin_postcard
   ../glass/testsuite/p4_tests/phv/COMPILER-587/l4l.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-706/terminate_parsing.p4
-  switch_generic_int_leaf
-  switch_8.7_generic_int_leaf
 )
 
 p4c_add_xfail_reason("tofino"
@@ -219,6 +217,8 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4-programs/internal_p4_14/ecc/ecc.p4
   switch_l3_heavy_int_leaf
   switch_msdc_leaf_int
+  switch_generic_int_leaf
+  switch_8.7_generic_int_leaf
   switch_8.7_msdc_leaf_int
   switch_8.7_l3_heavy_int_leaf
   )

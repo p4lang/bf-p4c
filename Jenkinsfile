@@ -46,7 +46,7 @@ node ('compiler || compiler-svr4') {
                             sh "git submodule update --init --recursive"
                             // Update switch.p4-16 to the latest known working refpoint
                             switch_16_repo = 'p4-tests/p4_16/switch_16'
-                            switch_16_branch = 'master'
+                            switch_16_branch = 'p4c/working-top'
                             sh "git -C $switch_16_repo fetch origin $switch_16_branch && git -C $switch_16_repo checkout $switch_16_branch"
                             sh "echo 'Using switch_16: ' && git -C p4-tests/p4_16/switch_16 log HEAD^..HEAD"
                             sh "docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD"
