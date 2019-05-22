@@ -445,12 +445,13 @@ header pktgen_pfc_header_t {
 // -----------------------------------------------------------------------------
 
 header ptp_metadata_t {
+    bit<8> udp_cksum_byte_offset;       // Byte offset at which the egress MAC
+                                        // needs to update the UDP checksum
+
+
     bit<8> cf_byte_offset;              // Byte offset at which the egress MAC
                                         // needs to re-insert
                                         // ptp_sync.correction field
-
-    bit<8> udp_cksum_byte_offset;       // Byte offset at which the egress MAC
-                                        // needs to update the UDP checksum
 
     bit<48> updated_cf;                 // Updated correction field in ptp sync
                                         // message
