@@ -797,6 +797,9 @@ class MatcherAllocator : public Visitor {
             reg_bytes_ascend += reg.size;
         }
 
+        if (Device::currentDevice() == Device::JBAY)  // all register of equal size in jbay
+            return alloc_ascend;
+
         // now try allocating in descending order of container size
         std::reverse(avail_regs.begin(), avail_regs.end());
 
@@ -824,7 +827,7 @@ class MatcherAllocator : public Visitor {
         if (alloc_descend.size() < alloc_ascend.size())
             return alloc_descend;
 
-        return alloc_descend;
+        return alloc_ascend;
     }
 
     /// Success is not final, failure is fatal.
