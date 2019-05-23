@@ -1383,3 +1383,8 @@ p4c_add_xfail_reason("tofino"
   "error:  Field .* of size 0 not supported on Tofino"
   testdata/p4_16_samples/psa-multicast-basic-bmv2.p4
 )
+
+p4c_add_xfail_reason("tofino"
+  "error: Exceeded hardware limit for deparser field dictionary entries"
+  extensions/p4_tests/p4_16/compile_only/p4c-1757-neg.p4
+)

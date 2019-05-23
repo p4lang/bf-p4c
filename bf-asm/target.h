@@ -128,7 +128,7 @@ class Target::Tofino : public Target {
         DEPARSER_CHECKSUM_UNITS = 6,
         DEPARSER_CONSTANTS = 0,
         DEPARSER_MAX_POV_BYTES = 32,
-        DEPARSER_MAX_FD_ENTRIES = 384,
+        DEPARSER_MAX_FD_ENTRIES = 192,
         END_OF_PIPE = 0xff,
         LONG_BRANCH_TAGS = 0,
         MAU_BASE_DELAY = 20,

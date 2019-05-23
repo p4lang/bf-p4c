@@ -105,14 +105,17 @@ void tofino_field_dictionary(checked_array_base<fde_pov> &fde_control,
                              std::vector<Phv::Ref> &pov_order,
                              std::vector<Deparser::FDEntry> &dict) {
     std::map<unsigned, unsigned>        pov;
-    unsigned pov_byte = 0, pov_size = 0;
+    unsigned pov_byte = 0, pov_size = 0, total_headers = 0;
     for (auto &ent : pov_order)
         if (pov.count(ent->reg.deparser_id()) == 0) {
+            total_headers++;
             pov[ent->reg.deparser_id()] = pov_size;
             pov_size += ent->reg.size;
             for (unsigned i = 0; i < ent->reg.size; i += 8) {
                 if (pov_byte >= Target::Tofino::DEPARSER_MAX_POV_BYTES) {
-                    error(ent.lineno, "Ran out of space in POV in deparser");
+                    error(ent.lineno, "Exceeded hardware limit for POV bits (%d) in deparser. "
+                            "Using %d or more headers. Please reduce the number of headers",
+                            Target::Tofino::DEPARSER_MAX_POV_BYTES * 8, total_headers);
                     return; }
                 pov_layout[pov_byte++] = ent->reg.deparser_id(); } }
     while (pov_byte < Target::Tofino::DEPARSER_MAX_POV_BYTES)
@@ -142,10 +145,15 @@ void tofino_field_dictionary(checked_array_base<fde_pov> &fde_control,
                 if (row >= 0) {
                     fde_control[row].num_bytes = pos & 3;
                     fde_data[row].num_bytes = pos & 3; }
-                if (row >= Target::Tofino::DEPARSER_MAX_FD_ENTRIES) {
-                    error(ent.lineno, "Ran out of space in field dictionary");
-                    return; }
-                fde_control[++row].pov_sel = pov_bit;
+                // Entries used - (192 each in INGRESS & EGRESS for Tofino)
+                if (++row >= Target::Tofino::DEPARSER_MAX_FD_ENTRIES) {
+                    error(ent.lineno, "Exceeded hardware limit for "
+                        "deparser field dictionary entries (%d). Using %d headers and %d containers."
+                        "Please reduce the number of headers and/or their length.",
+                        Target::Tofino::DEPARSER_MAX_FD_ENTRIES, total_headers, dict.size());
+                    return;
+                }
+                fde_control[row].pov_sel = pov_bit;
                 fde_control[row].version = 0xf;
                 fde_control[row].valid = 1;
                 pos = 0; }
