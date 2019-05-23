@@ -1230,18 +1230,23 @@ class GetBackendTables : public MauInspector {
         safe_vector<cstring> fallthrough;
         for (auto c : s->cases) {
             cstring label;
-            if (c->label->is<IR::DefaultExpression>())
+            if (c->label->is<IR::DefaultExpression>()) {
                 label = "$default";
-            else
+            } else {
                 label = refMap->getDeclaration(c->label->to<IR::PathExpression>()->path)
                               ->getName().originalName;
+                if (tt->actions.at(label)->exitAction) {
+                    warning("Action %s in table %s exits unconditionally", c->label,
+                            tt->externalName());
+                    label = cstring(); } }
             if (c->statement) {
                 auto n = getseq(c->statement);
-                tt->next.emplace(label, n);
+                if (label)
+                    tt->next.emplace(label, n);
                 for (auto ft : fallthrough)
                     tt->next.emplace(ft, n);
                 fallthrough.clear();
-            } else {
+            } else if (label) {
                 fallthrough.push_back(label); } } }
     bool preorder(const IR::IfStatement *c) override {
         if (!isApplyHit(c->condition)) {

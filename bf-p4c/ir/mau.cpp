@@ -387,6 +387,10 @@ bool IR::MAU::Table::for_dleft() const {
     return false;
 }
 
+cstring IR::MAU::Table::externalName() const {
+    return match_table ? match_table->externalName() : name;
+}
+
 cstring IR::MAU::Action::externalName() const {
     if (auto *name_annot = annotations->getSingle("name"))
         return IR::Annotation::getName(name_annot);

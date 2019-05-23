@@ -225,6 +225,7 @@ class Table : BFN::Unit {
     int get_pragma_max_actions() const;
     bool is_force_immediate() const;
     bool for_dleft() const;
+    cstring externalName() const;  // name to use in error messages
 
     UniqueId pp_unique_id(AttachedMemory at = nullptr,
        bool is_gw = false, int stage_table = -1, int logical_table = -1,
