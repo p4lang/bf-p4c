@@ -351,6 +351,7 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/asm_output.h
   parde/characterize_parser.h
   parde/clot_info.h
+  parde/collect_parser_usedef.h
   parde/decaf.h
   parde/deparser_checksum_update.h
   parde/dump_parser.h
