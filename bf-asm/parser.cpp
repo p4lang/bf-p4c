@@ -436,7 +436,8 @@ Parser::Checksum::Checksum(gress_t gress, pair_t data) : lineno(data.key.lineno)
     if (!CHECKTYPE(data.value, tMAP)) return;
     if (data.key.vec.size == 2) {
         if ((unit = data.key[1].i) >= Target::PARSER_CHECKSUM_UNITS())
-            error(lineno, "invalid parser checksum unit %d", unit);
+            error(lineno, "Ran out of %sgress parser checksum units (%d available)",
+                  gress ? "e" : "in", Target::PARSER_CHECKSUM_UNITS());
      } else { error(data.key.lineno, "Syntax error"); }
     for (auto &kv : MapIterChecked(data.value.map, true)) {
         if (kv.key == "type") {
@@ -500,6 +501,7 @@ Parser::Checksum::Checksum(gress_t gress, pair_t data) : lineno(data.key.lineno)
 
 bool Parser::Checksum::equiv(const Checksum &a) const {
     if (unit != a.unit) return false;
+    if (tag != a.tag) return false;
     if (dest && a.dest) {
         if (dest != a.dest) return false;
     } else if (dest || a.dest) return false;
@@ -508,16 +510,19 @@ bool Parser::Checksum::equiv(const Checksum &a) const {
 }
 
 void Parser::Checksum::pass1(Parser *parser) {
+    if (parser->checksum_use[gress].empty())
+        for (auto i = 0; i < Target::PARSER_CHECKSUM_UNITS(); i++)
+            parser->checksum_use[gress].emplace_back();
     if (addr >= 0) {
         if (addr >= PARSER_CHECKSUM_ROWS)
             error(lineno, "invalid %sgress parser checksum address %d", gress ? "e" : "in", addr);
-        else if (parser->checksum_use[gress][addr]) {
-            if (!equiv(*parser->checksum_use[gress][addr])) {
+        else if (parser->checksum_use[gress][unit][addr]) {
+            if (!equiv(*parser->checksum_use[gress][unit][addr])) {
                 error(lineno, "incompatible %sgress parser checksum use at address %d",
                       gress ? "e" : "in", addr);
-                warning(parser->checksum_use[gress][addr]->lineno, "previous use"); }
+                warning(parser->checksum_use[gress][unit][addr]->lineno, "previous use"); }
         } else
-            parser->checksum_use[gress][addr] = this; }
+            parser->checksum_use[gress][unit][addr] = this; }
     if (dest.check() && dest->reg.parser_id() < 0)
         error(dest.lineno, "%s is not accessable in the parser", dest->reg.name);
     if (dest && dest->reg.size == 32)
@@ -537,17 +542,19 @@ void Parser::Checksum::pass2(Parser *parser) {
     if (addr < 0) {
         int avail = -1;
         for (int i = 0; i < PARSER_CHECKSUM_ROWS; ++i) {
-            if (parser->checksum_use[gress][i]) {
-                if (equiv(*parser->checksum_use[gress][i])) {
+            if (parser->checksum_use[gress][unit][i]) {
+                if (equiv(*parser->checksum_use[gress][unit][i])) {
                     addr = i;
                     break; }
             } else if (avail < 0)
                 avail = i; }
         if (addr < 0) {
             if (avail >= 0)
-                parser->checksum_use[gress][addr = avail] = this;
+                parser->checksum_use[gress][unit][addr = avail] = this;
             else
-                error(lineno, "Ran out of room in %sgress parser checksum", gress ? "e" : "in"); } }
+                error(lineno, "Ran out of room in parser checksum control RAM of"
+                        " %sgress unit %d (%d rows available)",
+                      gress ? "e" : "in", unit, PARSER_CHECKSUM_ROWS); } }
 }
 
 template<class ROW>

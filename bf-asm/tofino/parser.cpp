@@ -370,8 +370,10 @@ template<> void Parser::write_config(Target::Tofino::parser_regs &regs, json::ma
     for (auto ctr : counter_init[gress]) {
         if (ctr) ctr->write_config(regs, gress, i);
         ++i; }
-    for (auto csum : checksum_use[gress]) {
-        if (csum) csum->write_config(regs, this); }
+
+    for (i = 0; i < checksum_use[gress].size(); i++) {
+        for (auto csum : checksum_use[gress][i])
+            if (csum) csum->write_config(regs, this); }
 
     if (gress == INGRESS) {
         init_common_regs(this, regs.ingress.prsr_reg, INGRESS);

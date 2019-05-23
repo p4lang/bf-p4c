@@ -249,7 +249,7 @@ class Parser {
     std::vector<Phv::Ref>               multi_write, init_zero;
     bitvec                              phv_use[2], phv_allow_multi_write, phv_init_valid;
     int                                 hdr_len_adj[2], meta_opt;
-    Alloc1D<Checksum *, PARSER_CHECKSUM_ROWS>                           checksum_use[2];
+    std::vector<Alloc1D<Checksum *, PARSER_CHECKSUM_ROWS>>              checksum_use[2];
     Alloc1D<CounterInit *, PARSER_CTRINIT_ROWS>                         counter_init[2];
     static std::map<std::string, std::vector<State::Match::Clot *>>     clots[2];
     static Alloc1D<std::vector<State::Match::Clot *>, PARSER_MAX_CLOTS> clot_use[2];

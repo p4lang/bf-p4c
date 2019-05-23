@@ -298,8 +298,10 @@ template<> void Parser::write_config(Target::JBay::parser_regs &regs, json::map 
     for (auto ctr : counter_init[gress]) {
         if (ctr) ctr->write_config(regs, gress, i);
         ++i; }
-    for (auto csum : checksum_use[gress])
-        if (csum) csum->write_config(regs, this);
+
+    for (i = 0; i < checksum_use[gress].size(); i++) {
+        for (auto csum : checksum_use[gress][i])
+            if (csum) csum->write_config(regs, this); }
 
     // FIXME -- what fixed initialization of parser buffer regs do we need?
     // FIXME -- see tofino/parser.cpp init_common_regs for ideas
