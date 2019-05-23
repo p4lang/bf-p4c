@@ -1408,8 +1408,9 @@ struct CheckChecksumAlgorithm : public Inspector {
             if (auto* hashArgument = (*hashAlgorithm->arguments)[0]) {
                 auto* hashMember = hashArgument->expression->to<IR::Member>();
                 if (hashMember->member != "CSUM16") {
-                    ::error("%1% only supports CSUM16 for checksum calculation", Device::name());
-                    ::error("%1%", hashMember);
+                    ::error(ErrorType::ERR_UNSUPPORTED,
+                            "%1%: %2% only supports CSUM16 for checksum calculation",
+                            hashMember, Device::name());
                 }
             }
         }

@@ -417,12 +417,16 @@ class BarefootBackend(BackendDriver):
             try:
                 self._manifest = json.load(json_file)
             except:
-                error_msg = "ERROR: Input file '" + manifest_filename + \
-                    "' could not be decoded as JSON.\n"
+                error_msg = None
+                if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
+                    error_msg = "ERROR: Input file '" + manifest_filename + \
+                                "' could not be decoded as JSON.\n"
                 self.exitWithError(error_msg)
             if (type(self._manifest) is not dict or "programs" not in self._manifest):
-                error_msg = "ERROR: Input file '" + manifest_filename + \
-                    "' does not appear to be valid manifest JSON.\n"
+                error_msg = None
+                if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
+                    error_msg = "ERROR: Input file '" + manifest_filename + \
+                                "' does not appear to be valid manifest JSON.\n"
                 self.exitWithError(error_msg)
 
         self._pipes = []
@@ -655,14 +659,16 @@ class BarefootBackend(BackendDriver):
         if rc is None: rc = 1
         if rc > 1 or rc < 0:
             # Invocation or program error. Should try to recover as much as we can
-            self.parseManifest()
-            for pipe in self._pipes:
-                if run_summary_logs and pipe.get('context', False):  # context.json is required
-                    # ignore the return code -- we may have failed generating some logs.
-                    self.runSummaryLogging(pipe)
-            self.updateManifest(os.path.join(self._output_directory, 'manifest.json'), False)
-            if run_archiver: self.checkAndRunCmd('archiver')
-            return rc
+            try:
+                self.parseManifest()
+                for pipe in self._pipes:
+                    if run_summary_logs and pipe.get('context', False):  # context.json is required
+                        # ignore the return code -- we may have failed generating some logs.
+                        self.runSummaryLogging(pipe)
+                self.updateManifest(os.path.join(self._output_directory, 'manifest.json'), False)
+                if run_archiver: self.checkAndRunCmd('archiver')
+            finally:
+                return rc
 
         # ir_to_json exits early, serializing only the IR
         # print pragmas also needs to exit early, it's just like help
