@@ -438,8 +438,8 @@ class CharacterizePower: public MauInspector {
        minimum_egress_pipe_latency_ = 160;
 
      } else if (Device::currentDevice() == Device::JBAY) {
-       double ram_scaling_factor = 1.0;  // No number available.
-       double tcam_scaling_factor = 1.0;  // No number available.
+       double ram_scaling_factor = 1.88574;  // No number available -- use the same as Tofino
+       double tcam_scaling_factor = 0.813;  // No number available -- split the diff from Tofino!
 
        // Note note note: When table placement starts leveraging Tofino2's
        // different predication mechanism, we will have to rewrite how
@@ -474,7 +474,7 @@ class CharacterizePower: public MauInspector {
 
        // FIXME: Do not know these 4 values yet, or whether deparser scaling will apply.
        // Once these numbers are known, update usages in CharacterizePower::postorder.
-       deparser_max_phv_valid_ = 288;
+       deparser_max_phv_valid_ = 600;  // 288;
        cycles_to_issue_credit_to_pmarb_ = 28;
        pmarb_cycles_from_receive_credit_to_issue_phv_to_mau_ = 11;
        minimum_egress_pipe_latency_ = 0;

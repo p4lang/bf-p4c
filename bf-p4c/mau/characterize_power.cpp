@@ -57,8 +57,9 @@ void CharacterizePower::produce_json_tables() {
         }
         bool crit = (table_unique_id_to_on_critical_path_.find(uid) !=
                      table_unique_id_to_on_critical_path_.end());
+        double pwr = compute_table_power(pma);
         auto *stageDetails = new StageDetails(pts.always_run, crit, pts.stage,
-                                              compute_table_power(pma));
+                                              compute_table_weight(pwr));
         pma.getMemories(stageDetails);
 
         tbl->append(stageDetails);
@@ -762,10 +763,7 @@ void CharacterizePower::compute_stage_dependencies(uint16_t pipe) {
         // LOG4("Working on stage " << cur_stage);
 
         int prev_st = st - 1;
-        dep_t the_dep = DEP_ACTION;  // JBay has no concurrent dependency
-        if (Device::currentDevice() == Device::TOFINO) {
-            the_dep = DEP_CONCURRENT;
-        }
+        dep_t the_dep = DEP_CONCURRENT;
 
         if (stage_to_tables_.find(cur_stage) != stage_to_tables_.end()) {
             auto cur_tables = stage_to_tables_.at(cur_stage);
@@ -795,6 +793,9 @@ void CharacterizePower::compute_stage_dependencies(uint16_t pipe) {
                     }
                 }
                 prev_st -= 1;
+            }
+            if (Device::currentDevice() == Device::JBAY && the_dep == DEP_CONCURRENT) {
+                the_dep = DEP_ACTION;  // JBay has no concurrent dependency
             }
             if (the_dep > stage_dependency_to_previous_.at(cur_stage)) {
               stage_dependency_to_previous_[cur_stage] = the_dep;
