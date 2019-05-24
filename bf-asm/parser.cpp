@@ -133,7 +133,7 @@ void AsmParser::output(json::map &ctxt_json) {
             for (auto p : parser[gress]) {
                 p->output(ctxt_json);
             }
-        } else {
+        } else if (!parser[gress].empty()) {
             parser[gress][0]->output_legacy(ctxt_json);
         }
     }
@@ -777,10 +777,10 @@ const char* Parser::match_key_loc_name(int loc) {
         if (loc == 3) return "byte1";
 #if HAVE_JBAY
     } else if (options.isJBayTarget()) {
-        if (loc == 0) return "byte0";
-        if (loc == 1) return "byte1";
-        if (loc == 2) return "byte2";
-        if (loc == 3) return "byte3";
+        if (loc == 0) return "byte2";
+        if (loc == 1) return "byte3";
+        if (loc == 2) return "byte0";
+        if (loc == 3) return "byte1";
 #endif // HAVE_JBAY
     }
 
@@ -913,27 +913,31 @@ void Parser::State::MatchKey::setup(value_t &spec) {
     // For TOFINO, the first match byte pair must be an adjacent 16 bit pair. We
     // check and re-arrange the bytes for a 16 bit extractor. In JBAY this check
     // is not necessary as we can have independent byte extractors
-    if ((data[0].bit >= 0 && data[1].bit >= 0) &&
-        (data[1].byte != data[0].byte + 1) &&
-        ((data[0].byte & data[1].byte) != USE_SAVED) &&
-        Target::MATCH_BYTE_16BIT_PAIRS())
-    {
-        for (int i = 0; i < 4; i++) {
-            for (int j = 0; j < 4; j++) {
-                if (data[i].byte+1 == data[j].byte) {
-                    auto hi = data[i];
-                    auto lo = data[j];
-                    data[i] = data[0];
-                    data[j] = data[1];
-                    data[0] = hi;
-                    data[1] = lo;
-                    return; } } }
-        error(spec.lineno, "Must have a 16-bit pair in match bytes"); }
-    if (data[0].bit < 0 && data[1].bit >= 0) {
-        /* if we're using half of the 16-bit match, use the upper (first) half */
-        auto t = data[0];
-        data[0] = data[1];
-        data[1] = t; }
+    if (Target::MATCH_BYTE_16BIT_PAIRS() && (data[0].byte & data[1].byte) != USE_SAVED) {
+        if (data[0].bit >= 0 && data[1].bit >= 0 && data[0].byte + 1 != data[1].byte) {
+            BUG_CHECK((data[0].byte | data[1].byte) != USE_SAVED);
+            int unused = -1;  // unused slot
+            for (int i = 0; i < 4; i++) {
+                if (data[i].bit < 0) {
+                    if (unused < 0) unused = i;
+                    continue; }
+                for (int j = 0; j < 4; j++) {
+                    if (data[j].bit >= 0 && data[i].byte+1 == data[j].byte) {
+                        if (i == 1 && j == 0) {
+                            std::swap(data[i], data[j]);
+                        } else {
+                            std::swap(data[0], data[i]);
+                            std::swap(data[1], data[j]); }
+                        return; } } }
+            if (unused >= 0) {
+                BUG_CHECK(unused > 1);
+                std::swap(data[1], data[unused]);
+            } else {
+                error(spec.lineno, "Must have a 16-bit pair in match bytes"); } }
+        if (data[0].bit < 0 && data[1].bit >= 0) {
+            /* if we're using half of the 16-bit match, use the upper (first) half */
+            std::swap(data[0], data[1]); }
+    }
 }
 
 Parser::State::Match::Match(int l, gress_t gress, match_t m, VECTOR(pair_t) &data) :
