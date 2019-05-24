@@ -6,6 +6,7 @@
 #include "frontends/p4/cloner.h"
 #include "frontends/p4/typeChecking/typeChecker.h"
 #include "bf-p4c/midend/type_checker.h"
+#include "bf-p4c/midend/parser_utils.h"
 
 namespace BFN {
 
@@ -22,95 +23,6 @@ class AddMetadataFields : public Transform {
 
  public:
     AddMetadataFields() { setName("AddIntrinsicMetadata"); }
-    /// @return a parser state with a name that's distinct from the states in
-    /// the P4 program and an `@name` annotation with a '$' prefix. Downstream,
-    /// we search for certain '$' states and replace them with more generated
-    /// parser code.
-    static IR::ParserState *
-    createGeneratedParserState(cstring name,
-                               IR::IndexedVector<IR::StatOrDecl> &&statements,
-                               const IR::Expression *selectExpression) {
-        // XXX(seth): It'd be good to actually verify that this name is unique.
-        auto newStateName = IR::ID(cstring("__") + name);
-        auto *newState = new IR::ParserState(newStateName, statements,
-                                             selectExpression);
-        newState->annotations = newState->annotations
-            ->addAnnotationIfNew(IR::Annotation::nameAnnotation,
-                                 new IR::StringLiteral(cstring("$") + name));
-        return newState;
-    }
-
-    static IR::ParserState *
-    createGeneratedParserState(cstring name,
-                               IR::IndexedVector<IR::StatOrDecl> &&statements,
-                               cstring nextState) {
-        return createGeneratedParserState(name, std::move(statements),
-                                          new IR::PathExpression(nextState));
-    }
-
-    /// @return a SelectCase that checks for a constant value with some mask
-    /// applied.
-    static IR::SelectCase *
-    createSelectCase(unsigned bitWidth, unsigned value, unsigned mask,
-                     const IR::ParserState *nextState) {
-        auto *type = IR::Type::Bits::get(bitWidth);
-        auto *valueExpr = new IR::Constant(type, value);
-        auto *maskExpr = new IR::Constant(type, mask);
-        auto *nextStateExpr = new IR::PathExpression(nextState->name);
-        return new IR::SelectCase(new IR::Mask(valueExpr, maskExpr), nextStateExpr);
-    }
-
-    /// @return an `extract()` call that extracts the given header. The header is
-    /// assumed to be one of the standard TNA metadata headers.
-    static IR::Statement *
-    createExtractCall(const IR::BFN::TnaParser *parser, cstring header) {
-        auto packetInParam = parser->tnaParams.at("pkt");
-        auto *method = new IR::Member(new IR::PathExpression(packetInParam),
-                                      IR::ID("extract"));
-        auto headerParam = parser->tnaParams.at(header);
-        auto *args = new IR::Vector<IR::Argument>(
-            { new IR::Argument(new IR::PathExpression(headerParam)) });
-        auto *callExpr = new IR::MethodCallExpression(method, args);
-        return new IR::MethodCallStatement(callExpr);
-    }
-
-    /// @return a lookahead expression for the given size of `bit<>` type.
-    static IR::Expression *
-    createLookaheadExpr(const IR::BFN::TnaParser *parser, int bits) {
-        auto packetInParam = parser->tnaParams.at("pkt");
-        auto *method = new IR::Member(new IR::PathExpression(packetInParam),
-                                      IR::ID("lookahead"));
-        auto *typeArgs = new IR::Vector<IR::Type>({
-                                                      IR::Type::Bits::get(bits)
-                                                  });
-        auto *lookaheadExpr =
-            new IR::MethodCallExpression(method, typeArgs,
-                                         new IR::Vector<IR::Argument>);
-        return lookaheadExpr;
-    }
-
-    /// @return an `advance()` call that advances by the given number of bits.
-    static IR::Statement *
-    createAdvanceCall(const IR::BFN::TnaParser *parser, int bits) {
-        auto packetInParam = parser->tnaParams.at("pkt");
-        auto *method = new IR::Member(new IR::PathExpression(packetInParam),
-                                      IR::ID("advance"));
-        auto *args = new IR::Vector<IR::Argument>(
-            { new IR::Argument(new IR::Constant(IR::Type::Bits::get(32), bits)) });
-        auto *callExpr = new IR::MethodCallExpression(method, args);
-        return new IR::MethodCallStatement(callExpr);
-    }
-
-    /// @return an assignment statement of the form `header.field = constant`.
-    static IR::Statement *
-    createSetMetadata(const IR::BFN::TnaParser *parser, cstring header,
-                      cstring field, int bitWidth, int constant) {
-        auto headerParam = parser->tnaParams.at(header);
-        auto *member = new IR::Member(new IR::PathExpression(headerParam),
-                                      IR::ID(field));
-        auto *value = new IR::Constant(IR::Type::Bits::get(bitWidth), constant);
-        return new IR::AssignmentStatement(member, value);
-    }
 
     /// Rename the start state of the given parser and return it. This will
     /// leave the parser without a start state, so the caller must create a new
@@ -158,8 +70,8 @@ class AddMetadataFields : public Transform {
         // beginning of the packet.
         const auto bitSkip = Device::pardeSpec().bitIngressPrePacketPaddingSize();
         auto *skipToPacketState =
-            createGeneratedParserState("skip_to_packet", {
-                createAdvanceCall(parser, bitSkip)
+            ParserUtils::createGeneratedParserState("skip_to_packet", {
+                ParserUtils::createAdvanceCall(parser, bitSkip)
             }, p4EntryPointState->name);
         parser->states.push_back(skipToPacketState);
 
@@ -168,8 +80,8 @@ class AddMetadataFields : public Transform {
         // just skips it; if we find a phase 0 table, it'll be replaced later.
         const auto bitPhase0Size = Device::pardeSpec().bitPhase0Size();
         auto *phase0State =
-            createGeneratedParserState("phase0", {
-                createAdvanceCall(parser, bitPhase0Size)
+            ParserUtils::createGeneratedParserState("phase0", {
+                ParserUtils::createAdvanceCall(parser, bitPhase0Size)
             }, skipToPacketState->name);
         parser->states.push_back(phase0State);
 
@@ -178,8 +90,8 @@ class AddMetadataFields : public Transform {
         // it later with an actual implementation.
         const auto bitResubmitSize = Device::pardeSpec().bitResubmitSize();
         auto *resubmitState =
-            createGeneratedParserState("resubmit", {
-                createAdvanceCall(parser, bitResubmitSize)
+            ParserUtils::createGeneratedParserState("resubmit", {
+                ParserUtils::createAdvanceCall(parser, bitResubmitSize)
             }, skipToPacketState->name);
         parser->states.push_back(resubmitState);
 
@@ -193,19 +105,19 @@ class AddMetadataFields : public Transform {
                                         "resubmit_flag"))
         };
         auto *checkResubmitState =
-            createGeneratedParserState(
+            ParserUtils::createGeneratedParserState(
                 "check_resubmit", {},
                 new IR::SelectExpression(new IR::ListExpression(selectOn), {
-                    createSelectCase(8, 0, 0x80, phase0State),
-                    createSelectCase(8, 0x80, 0x80, resubmitState)
+                    ParserUtils::createSelectCase(8, 0, 0x80, phase0State),
+                    ParserUtils::createSelectCase(8, 0x80, 0x80, resubmitState)
                 }));
         parser->states.push_back(checkResubmitState);
 
         // This state handles the extraction of ingress intrinsic metadata.
         auto *igMetadataState =
-            createGeneratedParserState("ingress_metadata", {
-                createSetMetadata(parser, "ig_intr_md_from_prsr", "parser_err", 16, 0),
-                createExtractCall(parser, "ig_intr_md")
+            ParserUtils::createGeneratedParserState("ingress_metadata", {
+                ParserUtils::createSetMetadata(parser, "ig_intr_md_from_prsr", "parser_err", 16, 0),
+                ParserUtils::createExtractCall(parser, parser->tnaParams.at("ig_intr_md"))
             }, checkResubmitState->name);
         parser->states.push_back(igMetadataState);
 
@@ -225,7 +137,7 @@ class AddMetadataFields : public Transform {
 
         // Add a state that parses bridged metadata. This is just a placeholder;
         // we'll replace it once we know which metadata need to be bridged.
-        auto *bridgedMetadataState = createGeneratedParserState(
+        auto *bridgedMetadataState = ParserUtils::createGeneratedParserState(
             "bridged_metadata", {}, ((start_egress) ? "start_egress" : p4EntryPointState->name));
         parser->states.push_back(bridgedMetadataState);
 
@@ -254,11 +166,12 @@ class AddMetadataFields : public Transform {
 
         IR::ParserState* mirroredState = nullptr;
         if (branchTo.size()) {
-            mirroredState = createGeneratedParserState(
+            mirroredState = ParserUtils::createGeneratedParserState(
                 "mirrored", {},
                 new IR::SelectExpression(new IR::ListExpression(selectOn), branchTo));
         } else {
-            mirroredState = createGeneratedParserState("mirrored", {}, p4EntryPointState->name);
+            mirroredState = ParserUtils::createGeneratedParserState("mirrored", {},
+                                                              p4EntryPointState->name);
         }
         parser->states.push_back(mirroredState);
 
@@ -269,21 +182,21 @@ class AddMetadataFields : public Transform {
         // distinguish a mirrored packet from a normal packet because we always
         // begin the bridged metadata we attach to normal packet with an extra byte
         // which has the mirror indicator flag set to zero.
-        selectOn = {createLookaheadExpr(parser, 8)};
+        selectOn = {ParserUtils::createLookaheadExpr(parser, 8)};
         auto *checkMirroredState =
-            createGeneratedParserState("check_mirrored", {},
-                                       new IR::SelectExpression(new IR::ListExpression(selectOn), {
-                                           createSelectCase(8, 0, 1 << 3, bridgedMetadataState),
-                                           createSelectCase(8, 1 << 3, 1 << 3, mirroredState)
-                                       }));
+            ParserUtils::createGeneratedParserState("check_mirrored", {},
+                         new IR::SelectExpression(new IR::ListExpression(selectOn), {
+                             ParserUtils::createSelectCase(8, 0, 1 << 3, bridgedMetadataState),
+                             ParserUtils::createSelectCase(8, 1 << 3, 1 << 3, mirroredState)
+                         }));
         parser->states.push_back(checkMirroredState);
 
         // This state handles the extraction of egress intrinsic metadata.
         auto *egMetadataState =
-            createGeneratedParserState("egress_metadata", {
-                createSetMetadata(parser, "eg_intr_md_from_prsr", "parser_err", 16, 0),
+            ParserUtils::createGeneratedParserState("egress_metadata", {
+                ParserUtils::createSetMetadata(parser, "eg_intr_md_from_prsr", "parser_err", 16, 0),
                 // createSetMetadata(parser, "eg_intr_md_from_prsr", "coalesce_sample_count", 8, 0),
-                createExtractCall(parser, "eg_intr_md")
+                ParserUtils::createExtractCall(parser, parser->tnaParams.at("eg_intr_md"))
             }, checkMirroredState->name);
         parser->states.push_back(egMetadataState);
 

@@ -1,17 +1,8 @@
-#include <limits.h>
-#include <algorithm>
-#include <cmath>
-#include <cstdio>
-#include <cstdlib>
 #include <fstream>
-#include <initializer_list>
 #include <map>
 #include <set>
 #include "lib/bitops.h"
 #include "frontends/common/resolveReferences/resolveReferences.h"
-#include "frontends/p4/strengthReduction.h"
-#include "frontends/p4/uselessCasts.h"
-#include "frontends/p4/typeChecking/typeChecker.h"
 #include "midend/local_copyprop.h"
 #include "midend/validateProperties.h"
 #include "midend/eliminateSerEnums.h"
@@ -21,12 +12,12 @@
 #include "bf-p4c/arch/intrinsic_metadata.h"
 #include "bf-p4c/arch/fromv1.0/checksum.h"
 #include "bf-p4c/arch/fromv1.0/phase0.h"
+#include "bf-p4c/arch/fromv1.0/mirror.h"
+#include "bf-p4c/arch/fromv1.0/resubmit.h"
 #include "bf-p4c/arch/program_structure.h"
 #include "bf-p4c/arch/remove_set_metadata.h"
 #include "bf-p4c/arch/v1model.h"
-#include "bf-p4c/parde/mirror.h"
 #include "bf-p4c/device.h"
-#include "bf-p4c/parde/resubmit.h"
 
 namespace BFN {
 
@@ -905,7 +896,7 @@ class ConstructSymbolTable : public Inspector {
                     cstring stName = prefix + fname + "_struct_t";
                     auto ttype = new IR::Type_Name(stName);
                     fields->push_back(new IR::StructField(IR::ID(fname), fieldAnnotations, ttype));
-                } else if (auto st = t->to<IR::Type_Name>()) {
+                } else if (t->is<IR::Type_Name>()) {
                     fields->push_back(new IR::StructField(IR::ID(fname), fieldAnnotations, t));
                 } else {
                     auto ttype = IR::Type::Bits::get(t->width_bits());
@@ -1061,9 +1052,7 @@ class ConstructSymbolTable : public Inspector {
          *
          */
         auto field_list = mce->arguments->at(1);
-        auto fl_type = node->methodCall->typeArguments->at(0);
 
-        auto digestFieldsFromSource = new std::vector<DigestFieldInfo*>();
         if (field_list->expression->is<IR::Type_Tuple>()) {
             for (auto t : field_list->expression->to<IR::ListExpression>()->components) {
                 LOG3("name " << t << " type " << t->type);

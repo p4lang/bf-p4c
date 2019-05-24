@@ -1,18 +1,13 @@
-#include "bf-p4c/parde/resubmit.h"
+#include "resubmit.h"
 
-#include <algorithm>
 #include "bf-p4c/device.h"
-#include "bf-p4c/parde/field_packing.h"
 #include "bf-p4c/parde/parde_visitor.h"
 #include "frontends/p4/cloner.h"
 #include "frontends/p4/coreLibrary.h"
 #include "frontends/p4/fromv1.0/v1model.h"
-#include "ir/ir.h"
-#include "lib/cstring.h"
-#include "lib/indent.h"
+#include "bf-p4c/midend/parser_utils.h"
 
 namespace BFN {
-
 
 /**
  * Analyze the Resubmit `emit` method within the deparser block,
@@ -139,34 +134,6 @@ class AddResubmitParser : public Transform {
     explicit AddResubmitParser(const ResubmitExtracts* extracts)
         : extracts(extracts) { }
 
-    static IR::ParserState *
-    createGeneratedParserState(cstring name,
-                               IR::IndexedVector<IR::StatOrDecl> &&statements,
-                               const IR::Expression *selectExpression) {
-        auto newStateName = IR::ID(cstring("__") + name);
-        auto *newState = new IR::ParserState(newStateName, statements,
-                                             selectExpression);
-        newState->annotations = newState->annotations
-            ->addAnnotationIfNew(IR::Annotation::nameAnnotation,
-                                 new IR::StringLiteral(cstring("$") + name));
-        return newState;
-    }
-
-    /// @return a lookahead expression for the given size of `bit<>` type.
-    static IR::Expression *
-    createLookaheadExpr(const IR::BFN::TnaParser *parser, int bits) {
-        auto packetInParam = parser->tnaParams.at("pkt");
-        auto *method = new IR::Member(new IR::PathExpression(packetInParam),
-                                      IR::ID("lookahead"));
-        auto *typeArgs = new IR::Vector<IR::Type>({
-                                                      IR::Type::Bits::get(bits)
-                                                  });
-        auto *lookaheadExpr =
-            new IR::MethodCallExpression(method, typeArgs,
-                                         new IR::Vector<IR::Argument>);
-        return lookaheadExpr;
-    }
-
     IR::Node* preorder(IR::ParserState* state) override {
         auto parser = findOrigCtxt<IR::BFN::TnaParser>();
         BUG_CHECK(parser != nullptr, "ParserState %1% is not in TnaParser ", state->name);
@@ -184,8 +151,8 @@ class AddResubmitParser : public Transform {
         // beginning of the packet.
         const auto bitSkip = Device::pardeSpec().bitResubmitSize();
         auto *skipToPacketState =
-            createGeneratedParserState("resubmit", {
-                createAdvanceCall(parser, bitSkip)
+            ParserUtils::createGeneratedParserState("resubmit", {
+                ParserUtils::createAdvanceCall(parser, bitSkip)
             }, new IR::PathExpression(IR::ID("__skip_to_packet")));
         return skipToPacketState;
     }
@@ -200,68 +167,20 @@ class AddResubmitParser : public Transform {
             auto newState = createResubmitState(parser, e.first,
                         e.second.first, e.second.second);
             states->push_back(newState);
-            auto selectCase = createSelectCase(8, e.first, 0x07, newState);
+            auto selectCase = ParserUtils::createSelectCase(8, e.first, 0x07, newState);
             selectCases->push_back(selectCase);
         }
 
         IR::Vector<IR::Expression> selectOn = {
-            createLookaheadExpr(parser, 8)
+            ParserUtils::createLookaheadExpr(parser, 8)
         };
 
         auto* resubmitState =
-            createGeneratedParserState(
+            ParserUtils::createGeneratedParserState(
                 "resubmit", { },
                 new IR::SelectExpression(new IR::ListExpression(selectOn), *selectCases));
         states->push_back(resubmitState);
         return states;
-    }
-
-    static IR::Statement *
-    createAdvanceCall(const IR::BFN::TnaParser *parser, int bits) {
-        auto packetInParam = parser->tnaParams.at("pkt");
-        auto *method = new IR::Member(new IR::PathExpression(packetInParam),
-                                      IR::ID("advance"));
-        auto *args = new IR::Vector<IR::Argument>(
-            { new IR::Argument(new IR::Constant(IR::Type::Bits::get(32), bits)) });
-        auto *callExpr = new IR::MethodCallExpression(method, args);
-        return new IR::MethodCallStatement(callExpr);
-    }
-
-    /// @return a SelectCase that checks for a constant value with some mask
-    /// applied.
-    static IR::SelectCase *
-    createSelectCase(unsigned bitWidth, unsigned value, unsigned mask,
-                     const IR::ParserState *nextState) {
-        auto *type = IR::Type::Bits::get(bitWidth);
-        auto *valueExpr = new IR::Constant(type, value);
-        auto *maskExpr = new IR::Constant(type, mask);
-        auto *nextStateExpr = new IR::PathExpression(nextState->name);
-        return new IR::SelectCase(new IR::Mask(valueExpr, maskExpr), nextStateExpr);
-    }
-
-    static IR::SelectCase *
-    createDefaultSelectCase(cstring nextState) {
-        auto *nextStateExpr = new IR::PathExpression(nextState);
-        return new IR::SelectCase(new IR::DefaultExpression(), nextStateExpr);
-    }
-
-    static IR::Statement *
-    createExtractCall(const IR::BFN::TnaParser *parser, cstring header, cstring tmp) {
-        auto packetInParam = parser->tnaParams.at("pkt");
-        auto *method = new IR::Member(new IR::PathExpression(packetInParam),
-                                      IR::ID("extract"));
-        auto *args = new IR::Vector<IR::Argument>(
-            { new IR::Argument(new IR::PathExpression(IR::ID(tmp))) });
-        auto *callExpr = new IR::MethodCallExpression(method, args);
-        return new IR::MethodCallStatement(callExpr);
-    }
-
-    /// @return an assignment statement of the form `dest = header.field`.
-    static IR::Statement *
-    createSetMetadata(const IR::Expression* dest, cstring header, cstring field) {
-        auto *member = new IR::Member(new IR::PathExpression(IR::ID(header)),
-                                      IR::ID(field));
-        return new IR::AssignmentStatement(dest, member);
     }
 
     const IR::ParserState* createResubmitState(const IR::BFN::TnaParser* parser,
@@ -275,7 +194,7 @@ class AddResubmitParser : public Transform {
         auto tmp = "__resubmit_tmp_" + std::to_string(idx);
         auto decl = new IR::Declaration_Variable(IR::ID(tmp), new IR::Type_Name(header));
         statements->push_back(decl);
-        statements->push_back(createExtractCall(parser, header, tmp));
+        statements->push_back(ParserUtils::createExtractCall(parser, tmp));
 
         /**
          * copy extract tmp header to metadata;
@@ -288,7 +207,7 @@ class AddResubmitParser : public Transform {
                 field_idx++;
                 continue; }
             auto field = "__field_" + std::to_string(field_idx++);
-            statements->push_back(createSetMetadata(s->apply(cloner), tmp, field));
+            statements->push_back(ParserUtils::createSetMetadata(s->apply(cloner), tmp, field));
         }
 
         cstring name = "resubmit_" + std::to_string(idx);

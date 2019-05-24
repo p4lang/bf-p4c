@@ -1,5 +1,5 @@
-#ifndef BF_P4C_PARDE_MIRROR_H_
-#define BF_P4C_PARDE_MIRROR_H_
+#ifndef BF_P4C_ARCH_FROMV1_0_MIRROR_H_
+#define BF_P4C_ARCH_FROMV1_0_MIRROR_H_
 
 #include "ir/ir.h"
 
@@ -55,4 +55,4 @@ class FixupMirrorMetadata : public PassManager {
 
 }  // namespace BFN
 
-#endif /* BF_P4C_PARDE_MIRROR_H_ */
+#endif /* BF_P4C_ARCH_FROMV1_0_MIRROR_H_ */

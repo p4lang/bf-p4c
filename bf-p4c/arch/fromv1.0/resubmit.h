@@ -1,5 +1,5 @@
-#ifndef BF_P4C_PARDE_RESUBMIT_H_
-#define BF_P4C_PARDE_RESUBMIT_H_
+#ifndef BF_P4C_ARCH_FROMV1_0_RESUBMIT_H_
+#define BF_P4C_ARCH_FROMV1_0_RESUBMIT_H_
 
 #include <utility>
 #include <vector>
@@ -42,4 +42,4 @@ class FixupResubmitMetadata : public PassManager {
 
 }  // namespace BFN
 
-#endif /* BF_P4C_PARDE_RESUBMIT_H_ */
+#endif /* BF_P4C_ARCH_FROMV1_0_RESUBMIT_H_ */

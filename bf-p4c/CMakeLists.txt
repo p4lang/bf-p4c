@@ -109,6 +109,7 @@ set (BF_P4C_BACKEND_MIDEND_HDRS
   midend/normalize_params.h
   midend/param_binding.h
   midend/parser_graph.h
+  midend/parser_utils.h
   midend/rewrite_egress_intrinsic_metadata_header.h
   midend/simplify_emit_args.h
   midend/simplify_nested_if.h
@@ -331,12 +332,10 @@ set (BF_P4C_BACKEND_PARDE_SRCS
   parde/gen_deparser.cpp
   parde/lower_parser.cpp
   parde/merge_parser_state.cpp
-  parde/mirror.cpp
   parde/parser_output.cpp
   parde/infer_payload_offset.cpp
   parde/phase0.cpp
   parde/resolve_parser_values.cpp
-  parde/resubmit.cpp
   parde/split_parser_state.cpp
   parde/p4i/gen_parser_json.cpp
   )
@@ -363,12 +362,10 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/marshal.h
   parde/match_register.h
   parde/merge_parser_state.h
-  parde/mirror.h
   parde/parde_spec.h
   parde/infer_payload_offset.h
   parde/phase0.h
   parde/resolve_parser_values.h
-  parde/resubmit.h
   parde/parde_utils.h
   parde/parser_info.h
   parde/split_parser_state.h
@@ -497,7 +494,9 @@ set (BF_P4C_BACKEND_ARCH_SRCS
   arch/rewrite_packet_path.cpp
   arch/tna.cpp
   arch/v1model.cpp
+  arch/fromv1.0/mirror.cpp
   arch/fromv1.0/phase0.cpp
+  arch/fromv1.0/resubmit.cpp
   arch/fromv1.0/v1_converters.cpp
   arch/fromv1.0/v1_program_structure.cpp
   )
@@ -523,7 +522,9 @@ set (BF_P4C_BACKEND_ARCH_HDRS
   arch/rewrite_packet_path.h
   arch/tna.h
   arch/v1model.h
+  arch/fromv1.0/mirror.h
   arch/fromv1.0/phase0.h
+  arch/fromv1.0/resubmit.h
   arch/fromv1.0/v1_converters.h
   arch/fromv1.0/v1_program_structure.h
   )
