@@ -78,6 +78,8 @@ class Metric():
         self.mau_srams = None
         self.mau_tcams = None
         self.mau_logical_tables = None
+        self.parser_ingress_tcam_rows = None
+        self.parser_egress_tcam_rows = None
 
     def display(self):
         dt = PrettyTable(['Metric', 'Value'])
@@ -88,6 +90,8 @@ class Metric():
         dt.add_row(['MAU srams', self.mau_srams])
         dt.add_row(['MAU tcams', self.mau_tcams])
         dt.add_row(['MAU logical_tables', self.mau_logical_tables])
+        dt.add_row(['Parser ingress tcam rows', self.parser_ingress_tcam_rows])
+        dt.add_row(['Parser egress tcam rows', self.parser_egress_tcam_rows])
         print dt
 
 limits = Metric()
@@ -98,3 +102,5 @@ limits.tagalong_phv_containers_occupied = 1
 limits.mau_srams = 10.0 # percentage
 limits.mau_tcams = 10.0 # percentage
 limits.mau_logical_tables = 10.0 # percentage
+limits.parser_ingress_tcam_rows = 10.0 # percentage
+limits.parser_egress_tcam_rows = 10.0 # percentage

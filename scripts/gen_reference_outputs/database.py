@@ -103,6 +103,7 @@ def process_metrics(dump):
     normal_phv_info = dump['phv']['normal']
     tagalong_phv_info = dump['phv']['tagalong']
     mau_info = dump['mau']
+    parser_info = dump['parser']
     j_info.normal_phv_bits_occupied = get_cumulative_metric(normal_phv_info, 'bits_occupied')
     j_info.normal_phv_containers_occupied = get_cumulative_metric(normal_phv_info, 'containers_occupied')
     j_info.tagalong_phv_bits_occupied = get_cumulative_metric(tagalong_phv_info, 'bits_occupied')
@@ -110,6 +111,8 @@ def process_metrics(dump):
     j_info.mau_srams = mau_info['srams']
     j_info.mau_tcams = mau_info['tcams']
     j_info.mau_logical_tables = mau_info['logical_tables']
+    j_info.parser_ingress_tcam_rows = parser_info['ingress']['tcam_rows']
+    j_info.parser_egress_tcam_rows = parser_info['egress']['tcam_rows']
     return j_info
 
 def extract_info(m_info):
@@ -128,6 +131,8 @@ def display_comparison(metric1, metric2, delta):
     dt.add_row(['MAU srams', metric1.mau_srams, metric2.mau_srams, str(delta.mau_srams) + ' %'])
     dt.add_row(['MAU tcams', metric1.mau_tcams, metric2.mau_tcams, str(delta.mau_tcams) + ' %'])
     dt.add_row(['MAU logical_tables', metric1.mau_logical_tables, metric2.mau_logical_tables, str(delta.mau_logical_tables) + ' %'])
+    dt.add_row(['Parser ingress tcam rows', metric1.parser_ingress_tcam_rows, metric2.parser_ingress_tcam_rows, str(delta.parser_ingress_tcam_rows) + ' %'])
+    dt.add_row(['Parser egress tcam rows', metric1.parser_egress_tcam_rows, metric2.parser_egress_tcam_rows, str(delta.parser_egress_tcam_rows) + ' %'])
     print dt
 
 # TODO: Need to refactor this
@@ -150,6 +155,14 @@ def compare_metrics(curr, master):
         m_diff.mau_logical_tables = round(100.0 * (curr.mau_logical_tables - master.mau_logical_tables)/curr.mau_logical_tables, 2)
     else:
         m_diff.mau_logical_tables = 0
+    if curr.parser_ingress_tcam_rows > 0:
+        m_diff.parser_ingress_tcam_rows = round(100.0 * (curr.parser_ingress_tcam_rows - master.parser_ingress_tcam_rows)/curr.parser_ingress_tcam_rows, 2)
+    else:
+        m_diff.parser_ingress_tcam_rows = 0
+    if curr.parser_egress_tcam_rows > 0:
+        m_diff.parser_egress_tcam_rows = round(100.0 * (curr.parser_egress_tcam_rows - master.parser_egress_tcam_rows)/curr.parser_egress_tcam_rows, 2)
+    else:
+        m_diff.parser_egress_tcam_rows = 0
     display_comparison(master, curr, m_diff)
 
     if m_diff.normal_phv_bits_occupied > config.limits.normal_phv_bits_occupied:
@@ -190,9 +203,21 @@ def compare_metrics(curr, master):
 
     if m_diff.mau_logical_tables > config.limits.mau_logical_tables:
         result -= 1
-        print 'MAU srams:', m_diff.mau_logical_tables, 'exceeded the limit of', config.limits.mau_logical_tables, '%'
+        print 'MAU logical_tables:', m_diff.mau_logical_tables, 'exceeded the limit of', config.limits.mau_logical_tables, '%'
     elif m_diff.mau_logical_tables < 0:
         print 'MAU logical_tables improved!'
+
+    if m_diff.parser_ingress_tcam_rows > config.limits.parser_ingress_tcam_rows:
+        result -= 1
+        print 'Parser ingress tcam rows:', m_diff.parser_ingress_tcam_rows, 'exceeded the limit of', config.limits.parser_ingress_tcam_rows, '%'
+    elif m_diff.parser_ingress_tcam_rows < 0:
+        print 'Parser ingress tcam rows improved!'
+
+    if m_diff.parser_egress_tcam_rows > config.limits.parser_egress_tcam_rows:
+        result -= 1
+        print 'Parser egress tcam rows:', m_diff.parser_egress_tcam_rows, 'exceeded the limit of', config.limits.parser_egress_tcam_rows, '%'
+    elif m_diff.parser_egress_tcam_rows < 0:
+        print 'Parser egress tcam rows improved!'
 
     return result
 
