@@ -299,6 +299,11 @@ struct IXBar {
             void unallocate() { search_bus = -1;  loc.group = -1;  loc.byte = -1; }
             std::string visualization_detail() const;
             bool is_subset(const Byte &b) const;
+            bool only_one_nibble_in_use() const {
+                BUG_CHECK(!bit_use.empty(), "IXBar byte has no data");
+                if (is_range()) return false;
+                return bit_use.getslice(0, 4).empty() || bit_use.getslice(4, 4).empty();
+            }
 
             bool can_add_info(const FieldInfo &fi) const;
             void add_info(const FieldInfo &fi);
@@ -490,28 +495,6 @@ struct IXBar {
         }
     };
 
-    /**
-     * Class to capture the idea of a P4 hash function.  This is the P4 related inputs, an
-     * algorithm, and the particular slice of P4 hash.
-     *
-     * 
-     * From the current language:
-     *     Hash hash<type>(HashAlgorithm);
-     *     hash.get({ f1, constant1, f2, f3})[hi..lo];
-     *
-     * the inputs are the fields within the function, the algorithm is HashAlgorithm defined in
-     * the extern, and the hash_bits are the hi..lo portion of the slice
-     */
-
-    /*
-    struct P4HashFunction {
-        safe_vector<const IR::Expression *> inputs;
-        le_bitrange hash_bits;
-        IR::MAU::HashFunction algorithm;
-        P4HashFunction split(le_bitrange split) const;
-    };
-    */
-
 
     /**
      * The Hash Distribution Unit is captured in uArch section 6.4.3.5.3 Hash Distribution.
@@ -637,21 +620,7 @@ struct IXBar {
         explicit grp_use(int g) : group(g) {}
     };
 
-    struct mid_byte_use {
-        int group;
-        // @seealso corresponding comments on grp_use
-        bool found = false;
-        // TODO: This also could be further expanded, similar to the grp_use to be on
-        // a constraint basis, but the grp_use has given us enough
-        bool free = false;
-
-        bool attempted = false;
-
-        void dbprint(std::ostream &out) const {
-            out << group << " found: " << found << " free: " << free;
-        }
-        explicit mid_byte_use(int g) : group(g) {}
-    };
+    using mid_byte_use = grp_use;
 
     struct hash_matrix_reqs {
         // The max number of groups that can be used by this table.  Required by gateways,
@@ -660,6 +629,7 @@ struct IXBar {
         int index_groups = 0;
         int select_bits = 0;
         bool hash_dist = false;
+        bool requires_versioning = false;
 
         static hash_matrix_reqs max(bool hd, bool ternary = false) {
             hash_matrix_reqs rv;
@@ -789,8 +759,10 @@ struct IXBar {
     int mid_bytes(bool ternary) const;
     int bytes_per_group(bool ternary) const;
 
+    void increase_ternary_ixbar_space(int &groups_needed, int &nibbles_needed,
+        bool requires_versioning);
     bool calculate_sizes(safe_vector<Use::Byte> &alloc_use, bool ternary, int &total_bytes_needed,
-        int &groups_needed, int &mid_bytes_needed);
+        int &groups_needed, int &mid_bytes_needed, bool requires_versioning);
     bool find_alloc(safe_vector<Use::Byte> &alloc_use, bool ternary,
         safe_vector<Use::Byte> &alloced, hash_matrix_reqs &hm_reqs, unsigned byte_mask = ~0U);
     void initialize_orders(safe_vector<grp_use> &order, safe_vector<mid_byte_use> &mid_byte_order,
@@ -818,13 +790,14 @@ struct IXBar {
     void found_bytes(grp_use *grp, safe_vector<IXBar::Use::Byte *> &unalloced, bool ternary,
         int &match_bytes_placed, int search_bus);
     void found_mid_bytes(mid_byte_use *mb_grp, safe_vector<Use::Byte *> &unalloced,
-        bool ternary, int &match_bytes_placed, int search_bus, bool &version_placed);
+        bool ternary, int &match_bytes_placed, int search_bus, bool &prefer_half_bytes,
+        bool only_alloc_nibble);
     void free_bytes(grp_use *grp, safe_vector<Use::Byte *> &unalloced,
         safe_vector<Use::Byte *> &alloced, bool ternary, bool hash_dist, int &match_bytes_placed,
         int search_bus);
     void free_mid_bytes(mid_byte_use *mb_grp, safe_vector<Use::Byte *> &unalloced,
         safe_vector<Use::Byte *> &alloced, int &match_bytes_placed, int search_bus,
-        bool &version_placed);
+        bool &prefer_half_bytes, bool only_alloc_nibble);
     void allocate_byte(bitvec *bv, safe_vector<IXBar::Use::Byte *> &unalloced,
         safe_vector<IXBar::Use::Byte *> *alloced, IXBar::Use::Byte &need, int group,
         int byte, size_t &index, int &free_bytes, int &ixbar_bytes_placed,
@@ -832,7 +805,7 @@ struct IXBar {
     void allocate_mid_bytes(safe_vector<Use::Byte *> &unalloced,
         safe_vector<Use::Byte *> &alloced, bool ternary, bool prefer_found,
         safe_vector<grp_use> &order, safe_vector<mid_byte_use> &mid_byte_order,
-        int mid_bytes_needed, int &bytes_to_allocate, bool &version_placed);
+        int nibbles_needed, int &bytes_to_allocate);
 
     int determine_best_group(safe_vector<Use::Byte *> &unalloced, safe_vector<grp_use> &order,
         bool ternary, bool prefer_found, int required_allocation_bytes);
@@ -841,7 +814,6 @@ struct IXBar {
         bool ternary, bool prefer_found, safe_vector<grp_use> &order,
         safe_vector<mid_byte_use> &mid_byte_order, int &bytes_to_allocate, int groups_needed,
         bool hash_dist, unsigned byte_mask);
-    bool version_placeable(bool version_placed, int mid_bytes_needed, int groups_needed);
     bool find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use, bool ternary,
         safe_vector<IXBar::Use::Byte *> &alloced, hash_matrix_reqs &hm_reqs,
         unsigned byte_mask = ~0U);

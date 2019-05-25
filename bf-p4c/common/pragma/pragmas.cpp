@@ -467,6 +467,16 @@ const char *PragmaDoNotBridge::help = "@pragma pa_do_not_bridge gress instance_n
     "the field is already not going to be bridged.  The gress value can be "
     "either ingress or egress. ";
 
+const char *PragmaNoVersioning::name = "no_versioning";
+const char *PragmaNoVersioning::description =
+    "Specifies whether or not to allocate version/valid bits for each table entry";
+const char *PragmaNoVersioning::help = "@pragma no_versioning 1\n"
+    "+attached to P4 match tables\n"
+    "\n"
+    "A boolean parameter, i.e. only 0 or 1 is allowed."
+    "\n"
+    "Currently only supported for tables headed to the TCAM array";
+
 const char *PragmaPack::name = "pack";
 const char *PragmaPack::description =
     "Specifies the number of entries to pack per wide table word.";

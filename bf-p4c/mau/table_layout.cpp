@@ -166,6 +166,38 @@ void DoTableLayout::check_for_proxy_hash(IR::MAU::Table::Layout &layout,
     }
 }
 
+bool DoTableLayout::check_for_versioning(const IR::MAU::Table *tbl) {
+    if (!tbl->match_table)
+        return false;
+    bool rv = true;
+    auto prop = tbl->match_table->properties->getProperty("requires_versioning");
+    if (prop != nullptr) {
+        if (auto ev = prop->value->to<IR::ExpressionValue>()) {
+            auto bl = ev->expression->to<IR::BoolLiteral>();
+            if (bl) {
+                rv = bl->value;
+            } else {
+                ::error("%1% requires_versioning property on table %2% is only allowed to be "
+                     "a boolean variable", prop, tbl->name);
+            }
+        }
+    }
+
+    auto annot = tbl->match_table->getAnnotations();
+    if (auto s = annot->getSingle("no_versioning")) {
+        if (s->expr.size() > 0) {
+            auto pragma_val = s->expr.at(0)->to<IR::Constant>();
+            if (pragma_val && (pragma_val->asInt() == 1 || pragma_val->asInt() == 0)) {
+                rv = pragma_val->asInt() == 0;
+            } else {
+               ::error("%1% the no_versioning pragma on table %2% is only allowed a 1 or 0 "
+                   "option", s, tbl->name);
+            }
+        }
+    }
+    return rv;
+}
+
 /** Because the input xbar allocates by container bytes, the estimate should also be
  *  based on container bytes rather than field bytes.  The point of this byte_impact
  *  maps is to build container bytes and run analysis on that.
@@ -248,6 +280,7 @@ void DoTableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR:
     layout.match_width_bits = 0;
     if (tbl->match_key.empty())
         return;
+    layout.requires_versioning = check_for_versioning(tbl);
 
     cstring partition_index;
     if (layout.alpm)
@@ -264,6 +297,10 @@ void DoTableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR:
         ERROR_CHECK(!layout.atcam && !layout.ternary, "%s: A proxy hash table cannot be ternary, "
                     "as specified for table %s", tbl->srcInfo, tbl->name);
     }
+
+    if (!layout.requires_versioning && !layout.ternary)
+        ::error("%1%: Tables, such as %2% that do not require versioning must be allocated to "
+                "the TCAM array", tbl, tbl->name);
 
     safe_vector<int> byte_sizes;
     bool partition_found = false;
@@ -468,7 +505,8 @@ void DoTableLayout::setup_exact_match(IR::MAU::Table *tbl, int action_data_bytes
 
         int single_overhead_bits = immediate_bits + tbl->layout.overhead_bits;
         int single_entry_bits = single_overhead_bits;
-        single_entry_bits += TableFormat::VERSION_BITS;
+        if (tbl->layout.requires_versioning)
+            single_entry_bits += TableFormat::VERSION_BITS;
         single_entry_bits += tbl->layout.match_width_bits;
 
         int total_bits = entry_count * single_entry_bits;

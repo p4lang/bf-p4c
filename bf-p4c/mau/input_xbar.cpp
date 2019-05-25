@@ -368,8 +368,19 @@ int inline IXBar::bytes_per_group(bool ternary) const {
     return ternary ? TERNARY_BYTES_PER_GROUP : EXACT_BYTES_PER_GROUP;
 }
 
+void IXBar::increase_ternary_ixbar_space(int &groups_needed, int &nibbles_needed,
+        bool requires_versioning) {
+    bool nibble_add_diff = requires_versioning ? 2 : 1;
+    if (groups_needed - nibbles_needed == nibble_add_diff)
+        nibbles_needed++;
+    else
+        groups_needed++;
+}
+
+
 bool IXBar::calculate_sizes(safe_vector<Use::Byte> &alloc_use, bool ternary,
-        int &total_bytes_needed, int &groups_needed, int &mid_bytes_needed) {
+        int &total_bytes_needed, int &groups_needed, int &nibbles_needed,
+        bool requires_versioning) {
     if (groups_needed == 0) {
         for (auto byte : alloc_use) {
             if (byte.is_spec(ATCAM_DOUBLE))
@@ -378,29 +389,25 @@ bool IXBar::calculate_sizes(safe_vector<Use::Byte> &alloc_use, bool ternary,
                 total_bytes_needed++;
         }
 
+
         if (ternary) {
-            int big_groups_needed = (total_bytes_needed + TERNARY_BYTES_PER_BIG_GROUP - 1)
-                                    / TERNARY_BYTES_PER_BIG_GROUP;
-            groups_needed = (big_groups_needed - 1) * 2;
-            mid_bytes_needed = big_groups_needed - 1;
-            int mod_value = total_bytes_needed % TERNARY_BYTES_PER_BIG_GROUP;
-            if (mod_value == 0) {
-                mid_bytes_needed++;
-                groups_needed += 2;
-            } else {
-                groups_needed += (mod_value + TERNARY_BYTES_PER_GROUP - 1)
-                                 / TERNARY_BYTES_PER_GROUP;
+            groups_needed = 1;
+            nibbles_needed = 0;
+            while (groups_needed * TERNARY_BYTES_PER_GROUP + (nibbles_needed + 1) / 2
+                   < total_bytes_needed) {
+                increase_ternary_ixbar_space(groups_needed, nibbles_needed, requires_versioning);
             }
         } else {
             groups_needed = (total_bytes_needed + bytes_per_group(false) - 1)
                             / bytes_per_group(false);
-            mid_bytes_needed = 0;
+            nibbles_needed = 0;
         }
     } else {
-        if ((groups_needed % 2) == 0 && ternary)
-            if (mid_bytes_needed * 2 != groups_needed)
-                mid_bytes_needed++;
-        groups_needed++;
+        if (ternary) {
+            increase_ternary_ixbar_space(groups_needed, nibbles_needed, requires_versioning);
+        } else {
+            groups_needed++;
+        }
     }
 
     if (groups_needed > groups(ternary))
@@ -572,16 +579,16 @@ void IXBar::calculate_found(safe_vector<IXBar::Use::Byte *> &unalloced,
     }
 
     for (int i = 0; i < mid_bytes(ternary); i++) {
-        mid_byte_order[i].found = false;
+        mid_byte_order[i].found[0] = false;
     }
 
     for (auto &need : unalloced) {
         for (auto &p : Values(fields.equal_range(need->name))) {
-            if (ternary && p.byte == 5) {
+            if (ternary && p.byte == TERNARY_BYTES_PER_GROUP) {
                 if (need->is_range())
                     continue;
                 if (byte_group_use[p.group/2].second == need->lo) {
-                    mid_byte_order[p.group/2].found = true;
+                    mid_byte_order[p.group/2].found[0] = true;
                 }
                 continue;
             }
@@ -642,8 +649,11 @@ void IXBar::calculate_free(safe_vector<grp_use> &order,
     }
 
     for (int mid_byte = 0; mid_byte < mid_bytes(ternary); mid_byte++) {
-        if (!byte_group_use[mid_byte].first)
-            mid_byte_order[mid_byte].free = true;
+        Loc loc(mid_byte * 2, TERNARY_BYTES_PER_GROUP);
+        if (!byte_group_use[mid_byte].first) {
+            int index = loc.getOrd(ternary) % REPEATING_CONSTRAINT_SECT;
+            mid_byte_order[mid_byte]._free[index][0] = true;
+        }
     }
 }
 
@@ -696,9 +706,10 @@ void IXBar::found_bytes(grp_use *grp, safe_vector<IXBar::Use::Byte *> &unalloced
  *  midbyte for ternary and share those locations.
  */
 void IXBar::found_mid_bytes(mid_byte_use *mb_grp, safe_vector<IXBar::Use::Byte *> &unalloced,
-    bool ternary, int &match_bytes_placed, int search_bus, bool &version_placed) {
+    bool ternary, int &match_bytes_placed, int search_bus, bool &prefer_nibble,
+    bool only_alloc_nibble) {
     auto &fields = this->fields(ternary);
-    if (mb_grp->found == false)
+    if (mb_grp->found[0] == false)
         return;
     int found_bytes = 1;
     int ixbar_bytes_placed = 0;
@@ -706,6 +717,7 @@ void IXBar::found_mid_bytes(mid_byte_use *mb_grp, safe_vector<IXBar::Use::Byte *
 
     for (size_t i = 0; i < unalloced.size(); i++) {
         auto &need = *(unalloced[i]);
+
         if (found_bytes == 0)
             break;
         if (match_bytes_placed >= total_match_bytes)
@@ -713,14 +725,17 @@ void IXBar::found_mid_bytes(mid_byte_use *mb_grp, safe_vector<IXBar::Use::Byte *
         for (auto &p : Values(fields.equal_range(need.name))) {
             if (!(ternary && p.byte == TERNARY_BYTES_PER_GROUP))
                 continue;
+
+            if (only_alloc_nibble && !need.only_one_nibble_in_use())
+                continue;
+
             if ((mb_grp->group == p.group/2) && (byte_group_use[p.group/2].second == need.lo)) {
                 allocate_byte(nullptr, unalloced, nullptr, need, p.group, p.byte, i,
                               found_bytes, ixbar_bytes_placed, match_bytes_placed, search_bus,
                               nullptr);
-                mb_grp->found = false;
-                if (need.bit_use.getslice(4, 4).popcount() == 0 ||
-                    need.bit_use.getslice(0, 4).popcount() > 0)
-                    version_placed = true;
+                mb_grp->found[0] = false;
+                if (need.only_one_nibble_in_use())
+                    prefer_nibble = false;
                 break;
             }
         }
@@ -784,8 +799,8 @@ void IXBar::free_bytes(grp_use *grp, safe_vector<IXBar::Use::Byte *> &unalloced,
  */
 void IXBar::free_mid_bytes(mid_byte_use *mb_grp, safe_vector<IXBar::Use::Byte *> &unalloced,
         safe_vector<Use::Byte *> &alloced, int &match_bytes_placed, int search_bus,
-        bool &version_placed) {
-    if (!mb_grp->free)
+        bool &prefer_nibble, bool only_alloc_nibble) {
+    if (!mb_grp->max_free().getbit(0))
         return;
 
     int ixbar_bytes_placed = 0;
@@ -795,7 +810,9 @@ void IXBar::free_mid_bytes(mid_byte_use *mb_grp, safe_vector<IXBar::Use::Byte *>
     int align = align_offset & 3;
     int total_match_bytes = 1;
 
-    if (!version_placed) {
+    // Before trying the most constrained bytes (sourced from 32 bit PHVs), instead attempt to
+    // allocate only bytes that use one nibble
+    if (prefer_nibble) {
         for (size_t i = 0; i < unalloced.size(); i++) {
             if (free_bytes == 0)
                 break;
@@ -804,16 +821,19 @@ void IXBar::free_mid_bytes(mid_byte_use *mb_grp, safe_vector<IXBar::Use::Byte *>
             auto &need = *(unalloced[i]);
             if (need.is_range())
                 continue;
-            if (need.bit_use.getslice(4, 4).popcount() > 0 &&
-                need.bit_use.getslice(0, 4).popcount() > 0) continue;
+            if (!need.only_one_nibble_in_use())
+                continue;
             if (align_flags[align & 3] & need.flags) continue;
             allocate_byte(nullptr, unalloced, &alloced, need, mb_grp->group * 2, 5, i,
                           free_bytes, ixbar_bytes_placed, match_bytes_placed, search_bus,
                           nullptr);
-            mb_grp->free = false;
-            version_placed = true;
+            mb_grp->_free[need.loc.getOrd(true) % 4][0] = false;
+            prefer_nibble = false;
         }
     }
+
+    if (only_alloc_nibble)
+        return;
 
     for (size_t i = 0; i < unalloced.size(); i++) {
         if (free_bytes == 0)
@@ -827,10 +847,9 @@ void IXBar::free_mid_bytes(mid_byte_use *mb_grp, safe_vector<IXBar::Use::Byte *>
         allocate_byte(nullptr, unalloced, &alloced, need, mb_grp->group * 2,
                       bytes_per_group(true), i, free_bytes, ixbar_bytes_placed,
                       match_bytes_placed, search_bus, nullptr);
-        mb_grp->free = false;
-        if (need.bit_use.getslice(4, 4).popcount() == 0 ||
-            need.bit_use.getslice(0, 4).popcount() > 0)
-            version_placed = true;
+        mb_grp->_free[need.loc.getOrd(true) % 4][0] = false;
+        if (need.only_one_nibble_in_use())
+            prefer_nibble = false;
     }
     LOG5("        Total free mid bytes placed was " << ixbar_bytes_placed << " "
           << match_bytes_placed);
@@ -947,41 +966,60 @@ void IXBar::print_groups(safe_vector<grp_use> &order, safe_vector<mid_byte_use> 
     }
 }
 
+/**
+ * Given a certain number of nibbles allowed for a single ternary match table, determine which
+ * byte_groups (out of the possible 6 bytes between each even-odd pair of ternary xbar groups)
+ * are the best to allocate into.
+ *
+ * If the nibbles allowed are odd, then if it is possible to allocate a byte that only uses one
+ * of the nibbles in that particular byte, so that only one TCAM is required, the allocation
+ * scheme will try to only allocate that one nibble
+ */
 void IXBar::allocate_mid_bytes(safe_vector<IXBar::Use::Byte *> &unalloced,
         safe_vector<IXBar::Use::Byte *> &alloced, bool ternary, bool prefer_found,
         safe_vector<grp_use> &order, safe_vector<mid_byte_use> &mid_byte_order,
-        int mid_bytes_needed, int &bytes_to_allocate, bool &version_placed) {
-    for (int search_bus = 0; search_bus < mid_bytes_needed; search_bus++) {
+        int nibbles_needed, int &bytes_to_allocate) {
+    int bytes_needed = nibbles_needed / 2 + nibbles_needed % 2;
+    bool prefer_nibble = nibbles_needed % 2;
+    for (int search_bus = 0; search_bus < bytes_needed; search_bus++) {
         if (unalloced.size() == 0)
             return;
-        std::sort(mid_byte_order.begin(), mid_byte_order.end(),
-                  [=](const mid_byte_use &a, const mid_byte_use &b) {
-            if (!a.attempted && b.attempted)
-                return true;
-            if (b.attempted && !a.attempted)
-                return false;
+        // Only one nibble is allowed to be allocated, i.e. the byte that is allocated has to be
+        // a nibble
+        bool only_alloc_nibble = prefer_nibble && (search_bus == bytes_needed - 1);
+        std::map<int, int> constraints_to_reqs;
+        for (auto byte : unalloced) {
+            if (byte->is_range())
+                continue;
+            // If only nibble bytes are allowed, then only look at bytes that use a single nibble
+            // for gathering information about constraints
+            if (only_alloc_nibble && !byte->only_one_nibble_in_use())
+                continue;
+            bitvec key_bv = can_use_from_flags(byte->flags);
+            int key = key_bv.getrange(0, REPEATING_CONSTRAINT_SECT);
+            if (constraints_to_reqs.count(key) == 0)
+                constraints_to_reqs[key] = 1;
+            else
+                constraints_to_reqs[key]++;
+        }
 
-            if (prefer_found) {
-               if (a.found && !b.found)
-                   return true;
-               if (b.found && !a.found)
-                   return false;
+        mid_byte_use *selected_grp = nullptr;
+        for (auto &mb_grp : mid_byte_order) {
+            if (selected_grp == nullptr) {
+                selected_grp = &mb_grp;
+            } else if (mb_grp.is_better_group(*selected_grp, prefer_found, 1,
+                                              constraints_to_reqs)) {
+                selected_grp = &mb_grp;
             }
+        }
 
-            if (a.free && !b.free)
-                return true;
-            if (b.free && !a.free)
-                return false;
-
-            return a.group < b.group;
-        });
-
+        LOG5("       Mid byte selected was " << mid_byte_order[0].group << " bytes left "
+             << unalloced.size());
         int match_bytes_placed = 0;
-        LOG5("       TCAM mid byte selected was " << mid_byte_order[0].group);
-        found_mid_bytes(&mid_byte_order[0], unalloced, ternary, match_bytes_placed, search_bus,
-                        version_placed);
-        free_mid_bytes(&mid_byte_order[0], unalloced, alloced, match_bytes_placed, search_bus,
-                       version_placed);
+        found_mid_bytes(selected_grp, unalloced, ternary, match_bytes_placed, search_bus,
+                        prefer_nibble, only_alloc_nibble);
+        free_mid_bytes(selected_grp, unalloced, alloced, match_bytes_placed, search_bus,
+                       prefer_nibble, only_alloc_nibble);
         mid_byte_order[0].attempted = true;
         bytes_to_allocate -= match_bytes_placed;
         calculate_found(unalloced, order, mid_byte_order, ternary, false, ~0U);
@@ -1028,6 +1066,7 @@ bool IXBar::grp_use::is_better_group(const grp_use &b, bool prefer_found,
     if (b_candidate && !a_candidate)
         return false;
 
+
     int t;
     if (prefer_found) {
        if ((t = a.found.popcount() - b.found.popcount()) != 0)
@@ -1053,7 +1092,6 @@ bool IXBar::grp_use::is_better_group(const grp_use &b, bool prefer_found,
 
     grp_use a_lock_32(a);
     grp_use b_lock_32(b);
-
     // removes the 32 bit allocated (as those will be preferred always, except in the case
     // of a multi range match key)
     for (auto entry : constraints_to_reqs) {
@@ -1096,7 +1134,7 @@ bool IXBar::grp_use::is_better_group(const grp_use &b, bool prefer_found,
 
     for (auto entry : constraints_to_reqs) {
         bitvec bv_key(entry.first);
-        if (bv_key.popcount() != AV_BYTE)
+        if (bv_key.popcount() != AV_HALF)
             continue;
         a_can_alloc_16 += std::min(a.free(bv_key).popcount(), entry.second);
         b_can_alloc_16 += std::min(b.free(bv_key).popcount(), entry.second);
@@ -1105,8 +1143,31 @@ bool IXBar::grp_use::is_better_group(const grp_use &b, bool prefer_found,
         b_can_alloc_16_lock_32 += std::min(b_lock_32.free(bv_key).popcount(), entry.second);
     }
 
+    // Favor the groups that have to place the largest number of 32 bit bytes
+    int max_32_bit_value = 0;
+    int a_can_alloc_32_max_reqs = 0;
+    int b_can_alloc_32_max_reqs = 0;
+    for (auto entry : constraints_to_reqs) {
+        bitvec bv_key(entry.first);
+        if (bv_key.popcount() != AV_FULL)
+            continue;
+        max_32_bit_value = std::max(max_32_bit_value, entry.second);
+    }
+
+    for (auto entry : constraints_to_reqs) {
+        bitvec bv_key(entry.first);
+        if (bv_key.popcount() != AV_FULL)
+            continue;
+        if (entry.second != max_32_bit_value)
+            continue;
+        a_can_alloc_32_max_reqs += std::min(a.free(bv_key).popcount(), entry.second);
+        b_can_alloc_32_max_reqs += std::min(b.free(bv_key).popcount(), entry.second);
+    }
+
     // How many 16 bit PHV container bytes can be allocated, once the 32 bit ones are locked
     if ((t = a_can_alloc_16_lock_32 - b_can_alloc_16_lock_32) != 0)
+        return t > 0;
+    if ((t = a_can_alloc_32_max_reqs - b_can_alloc_32_max_reqs) != 0)
         return t > 0;
     if ((t = a_can_alloc_16 - b_can_alloc_16) != 0)
         return t > 0;
@@ -1150,7 +1211,8 @@ void IXBar::allocate_groups(safe_vector<IXBar::Use::Byte *> &unalloced,
             }
         }
 
-        LOG5("       Group selected was " << order[0].group << " bytes left " << unalloced.size());
+        LOG5("       Group selected was " << selected_grp->group << " bytes left "
+             << unalloced.size());
         found_bytes(selected_grp, unalloced, ternary, match_bytes_placed, search_bus);
         free_bytes(selected_grp, unalloced, alloced, ternary, hash_dist, match_bytes_placed,
                    search_bus);
@@ -1158,12 +1220,6 @@ void IXBar::allocate_groups(safe_vector<IXBar::Use::Byte *> &unalloced,
         bytes_to_allocate -= match_bytes_placed;
         calculate_found(unalloced, order, mid_byte_order, ternary, hash_dist, byte_mask);
     }
-}
-
-bool IXBar::version_placeable(bool version_placed, int mid_bytes_needed, int groups_needed) {
-    if (mid_bytes_needed == groups_needed && !version_placed)
-        return false;
-    return true;
 }
 
 
@@ -1211,7 +1267,7 @@ bool IXBar::find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use, bool ternary,
                       unsigned byte_mask) {
     int total_bytes_needed = 0;
     int groups_needed = 0;
-    int mid_bytes_needed = 0;
+    int nibbles_needed = 0;
 
     safe_vector<grp_use> small_order;
     bool allocated = false;
@@ -1222,20 +1278,19 @@ bool IXBar::find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use, bool ternary,
 
     do {
         bool possible = calculate_sizes(alloc_use, ternary, total_bytes_needed, groups_needed,
-                                        mid_bytes_needed);
+                                        nibbles_needed, hm_reqs.requires_versioning);
         if (!possible)
             break;
         if (hm_reqs.max_search_buses > 0 && groups_needed > hm_reqs.max_search_buses)
             break;
         for (int i = 0; i < 2 && !allocated; i++) {
-            bool version_placed = false;
             bool prefer_found = i == 0;
             initialize_orders(order, mid_byte_order, ternary);
             setup_byte_vectors(alloc_use, ternary, unalloced, alloced, order, mid_byte_order,
                                hm_reqs, byte_mask);
 
-            LOG4("      Algorithm iteration groups " << groups_needed << " mid bytes "
-                 << mid_bytes_needed << " prefer_overlay " << prefer_found);
+            LOG4("      Algorithm iteration groups " << groups_needed << " nibbles "
+                 << nibbles_needed << " prefer_overlay " << prefer_found);
             if (first_time) {
                 LOG6("\tPre allocation groups:");
                 print_groups(order, mid_byte_order, ternary);
@@ -1244,14 +1299,11 @@ bool IXBar::find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use, bool ternary,
             int bytes_to_allocate = total_bytes_needed;
             if (ternary) {
                 allocate_mid_bytes(unalloced, alloced, ternary, prefer_found, order,
-                                   mid_byte_order, mid_bytes_needed, bytes_to_allocate,
-                                   version_placed);
+                                   mid_byte_order, nibbles_needed, bytes_to_allocate);
             }
             allocate_groups(unalloced, alloced, ternary, prefer_found, order, mid_byte_order,
                             bytes_to_allocate, groups_needed, hm_reqs.hash_dist, byte_mask);
             allocated = unalloced.size() == 0;
-            if (ternary)
-                allocated &= version_placeable(version_placed, mid_bytes_needed, groups_needed);
         }
     } while (allocated == false);
 
@@ -1367,7 +1419,9 @@ unsigned IXBar::select_bits_used(bitvec bv) const {
 IXBar::hash_matrix_reqs IXBar::match_hash_reqs(const LayoutOption *lo,
         size_t start, size_t last, bool ternary) {
     if (ternary) {
-        return hash_matrix_reqs();
+        auto rv = hash_matrix_reqs();
+        rv.requires_versioning = lo->layout.requires_versioning;
+        return rv;
     }
 
     int bits_required = 0;

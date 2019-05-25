@@ -28,6 +28,7 @@ IR::MAU::Table::Layout &IR::MAU::Table::Layout::operator +=(const IR::MAU::Table
     atcam |= a.atcam;
     has_range |= a.has_range;
     proxy_hash |= a.proxy_hash;
+    requires_versioning |= a.requires_versioning;
     ixbar_bytes += a.ixbar_bytes;
     ixbar_width_bits += a.ixbar_width_bits;
     match_width_bits += a.match_width_bits;

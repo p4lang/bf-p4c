@@ -1288,12 +1288,15 @@ void TableFormat::allocate_full_fits(int width_sect) {
             break;
 
         bitvec version_loc;
-        if (is_match_entry_wide()) {
-            if (!version_allocated[group])
-                allocate_version(width_sect, alloced, version_loc, byte_attempt, bit_attempt);
-        } else {
-            if (!allocate_version(width_sect, alloced, version_loc, byte_attempt, bit_attempt)) {
-                break;
+        if (requires_versioning()) {
+            if (is_match_entry_wide()) {
+                if (!version_allocated[group])
+                    allocate_version(width_sect, alloced, version_loc, byte_attempt, bit_attempt);
+            } else {
+                if (!allocate_version(width_sect, alloced, version_loc, byte_attempt,
+                                      bit_attempt)) {
+                    break;
+                }
             }
         }
 
@@ -1339,6 +1342,7 @@ void TableFormat::allocate_share(int width_sect, safe_vector<ByteInfo> &unalloce
     for (int current_sect = min_sect; current_sect <= width_sect; current_sect++) {
         if (shared_groups_per_RAM[current_sect] == MAX_SHARED_GROUPS)
             continue;
+        if (!requires_versioning()) break;
 
         if (!version_loc.empty()) break;
         if (allocate_version(current_sect, alloced, version_loc, byte_attempt, bit_attempt)) {
@@ -1444,7 +1448,8 @@ bool TableFormat::allocate_shares() {
         for (int i = 0; i < groups_to_start; i++) {
             int group = overhead_groups_seen + full_match_groups_per_RAM[width_sect];
             group += i;
-            if (!unalloced_groups[group].empty() || version_locs[group].empty())
+            if (!unalloced_groups[group].empty() ||
+                (requires_versioning() && version_locs[group].empty()))
                 groups_begun.push_back(group);
         }
         overhead_groups_seen += overhead_groups_per_RAM[width_sect];
@@ -1456,16 +1461,19 @@ bool TableFormat::allocate_shares() {
             return false;
     }
 
-    for (auto version_loc : version_locs) {
-        if (version_loc.second.empty())
-            return false;
+    if (requires_versioning()) {
+        for (auto version_loc : version_locs) {
+            if (version_loc.second.empty())
+                return false;
+        }
     }
 
     for (auto entry : allocated) {
         BUG_CHECK(entry.second.size() == unalloced.size(), "During sharing of match "
                   "groups, allocation for group %d not filled out", entry.first);
-        BUG_CHECK(!version_locs[entry.first].empty(), "During sharing of match groups, "
-                  "allocation of version for group %d is not filled out", entry.first);
+        BUG_CHECK(!requires_versioning() || !version_locs[entry.first].empty(),
+                  "During sharing of match groups, allocation of version for group %d is "
+                  "not filled out", entry.first);
         fill_out_use(entry.first, entry.second, version_locs[entry.first]);
     }
     return true;
@@ -1592,7 +1600,8 @@ bool TableFormat::allocate_match_with_algorithm() {
     }
 
 
-    split_match |= version_allocated.popcount() != layout_option.way.match_groups;
+    if (requires_versioning())
+        split_match |= version_allocated.popcount() != layout_option.way.match_groups;
 
     if (split_match) {
         // Will not split up wide matches
@@ -1790,7 +1799,7 @@ bool TableFormat::allocate_all_ternary_match() {
 
     // Allocate all groups that have either a lo or hi section of midbyte but not both.
     // Potentially one can use this for version as well
-    bool version_placed = false;
+    bool version_placed = requires_versioning() ? false : true;
     for (auto midbyte : used_midbytes) {
         if (done_midbytes.getbit(midbyte)) continue;
         bool lo = midbyte_lo_hi[midbyte].first;
@@ -1941,7 +1950,7 @@ void TableFormat::verify() {
                 }
                 if (j == VERS)
                     on_search_bus_mask |= use->match_groups[i].mask[j];
-            } else if (j == VERS) {
+            } else if (j == VERS && requires_versioning()) {
                 BUG("A group has been allocated without version bits");
             }
         }

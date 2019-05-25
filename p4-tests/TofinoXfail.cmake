@@ -206,10 +206,9 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "error.*Can't split table.*with indirect attached MAU::StatefulAlu"
-  switch_8.7_ent_fin_postcard
-  switch_ent_fin_postcard
   ../glass/testsuite/p4_tests/phv/COMPILER-587/l4l.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-706/terminate_parsing.p4
+  switch_8.7_ent_fin_postcard
 )
 
 p4c_add_xfail_reason("tofino"
@@ -221,6 +220,7 @@ p4c_add_xfail_reason("tofino"
   switch_8.7_generic_int_leaf
   switch_8.7_msdc_leaf_int
   switch_8.7_l3_heavy_int_leaf
+  switch_ent_fin_postcard
   )
 
 p4c_add_xfail_reason("tofino"

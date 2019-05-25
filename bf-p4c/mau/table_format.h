@@ -207,6 +207,8 @@ struct TableFormat {
     const bitvec immediate_mask;
     bool gw_linked;
     bool skinny = false;
+    bool requires_versioning() const { return layout_option.layout.requires_versioning; }
+
     // bitvec ghost_start;
     bool allocate_overhead();
     bool allocate_all_indirect_ptrs();
