@@ -4,11 +4,6 @@
 #include "ir/ir.h"
 #include "bf-p4c/arch/psa_program_structure.h"
 
-namespace P4 {
-class ReferenceMap;
-class TypeMap;
-}  // namespace P4
-
 namespace BFN {
 
 struct AddTnaBridgeMetadata : public PassManager {

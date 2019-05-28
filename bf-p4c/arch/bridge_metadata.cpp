@@ -2,9 +2,6 @@
 
 #include <boost/range/adaptor/sliced.hpp>
 
-#include <algorithm>
-#include <string>
-#include <functional>
 #include "ir/ir.h"
 #include "lib/cstring.h"
 #include "lib/ordered_map.h"
@@ -47,8 +44,11 @@ struct BridgeIngressToEgress : public Transform {
         fields.push_back(new IR::StructField(BRIDGED_MD_INDICATOR,
                                              IR::Type::Bits::get(8)));
 
+        // TODO(zma) if we have neither bridged nor mirrored metadata on egress
+        // we don't even need this one byte of metadata.
+
         IR::IndexedVector<IR::StructField> structFields;
-        // unsigned padFieldId = 0;
+
         // The rest of the fields come from CollectBridgedFields.
         for (auto& bridgedField : fieldsToBridge) {
             cstring fieldName = bridgedField.first + bridgedField.second;
@@ -172,8 +172,21 @@ struct BridgeIngressToEgress : public Transform {
                   state->name);
         if (tnaContext->thread != EGRESS) return state;
 
-        // Add "pkt.extract(md.^bridged_metadata);"
         auto packetInParam = tnaContext->tnaParams.at("pkt");
+
+        if (fieldsToBridge.empty()) {
+            // Nothing to bridge, simply advance one byte
+            auto *method = new IR::Member(new IR::PathExpression(packetInParam),
+                                          IR::ID("advance"));
+            auto *args = new IR::Vector<IR::Argument>(
+                { new IR::Argument(new IR::Constant(IR::Type::Bits::get(32), 8)) });
+            auto *callExpr = new IR::MethodCallExpression(method, args);
+
+            state->components.push_back(new IR::MethodCallStatement(callExpr));
+            return state;
+        }
+
+        // Add "pkt.extract(md.^bridged_metadata);"
         auto* method = new IR::Member(new IR::PathExpression(packetInParam),
                                       IR::ID("extract"));
 

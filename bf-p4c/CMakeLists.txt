@@ -496,6 +496,7 @@ set (BF_P4C_BACKEND_ARCH_SRCS
   arch/rewrite_packet_path.cpp
   arch/tna.cpp
   arch/v1model.cpp
+  arch/fromv1.0/add_metadata_parser_states.cpp
   arch/fromv1.0/mirror.cpp
   arch/fromv1.0/phase0.cpp
   arch/fromv1.0/resubmit.cpp
@@ -524,6 +525,7 @@ set (BF_P4C_BACKEND_ARCH_HDRS
   arch/rewrite_packet_path.h
   arch/tna.h
   arch/v1model.h
+  arch/fromv1.0/add_metadata_parser_states.h
   arch/fromv1.0/mirror.h
   arch/fromv1.0/phase0.h
   arch/fromv1.0/resubmit.h

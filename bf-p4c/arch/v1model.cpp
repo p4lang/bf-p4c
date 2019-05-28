@@ -8,14 +8,9 @@
 #include "midend/eliminateSerEnums.h"
 #include "bf-p4c/midend.h"
 #include "bf-p4c/midend/type_checker.h"
-#include "bf-p4c/arch/bridge_metadata.h"
-#include "bf-p4c/arch/intrinsic_metadata.h"
+#include "bf-p4c/arch/fromv1.0/add_metadata_parser_states.h"
 #include "bf-p4c/arch/fromv1.0/checksum.h"
-#include "bf-p4c/arch/fromv1.0/phase0.h"
-#include "bf-p4c/arch/fromv1.0/mirror.h"
-#include "bf-p4c/arch/fromv1.0/resubmit.h"
 #include "bf-p4c/arch/program_structure.h"
-#include "bf-p4c/arch/remove_set_metadata.h"
 #include "bf-p4c/arch/v1model.h"
 #include "bf-p4c/device.h"
 
@@ -2286,12 +2281,7 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
         new TranslationLast(),
         new V1::LoweringType(),
         new V1::InsertChecksumError(parserChecksums),
-        new AddIntrinsicMetadata(refMap, typeMap),
-        new RemoveSetMetadata(refMap, typeMap),
-        new BFN::TranslatePhase0(refMap, typeMap),
-        new BFN::AddTnaBridgeMetadata(refMap, typeMap),
-        new BFN::FixupResubmitMetadata(refMap, typeMap),
-        new BFN::FixupMirrorMetadata(refMap, typeMap),
+        new AddMetadataParserStates(refMap, typeMap),
         new P4::EliminateSerEnums(refMap, typeMap),
         new TranslationLast(),
     });

@@ -3,18 +3,6 @@
 
 #include "ir/ir.h"
 
-namespace IR {
-namespace BFN {
-class Pipe;
-}  // namespace BFN
-class P4Control;
-}  // namespace IR
-
-namespace P4 {
-class ReferenceMap;
-class TypeMap;
-}  // namespace P4
-
 namespace BFN {
 
 using FieldListId = std::tuple<gress_t, unsigned, cstring>;
@@ -36,13 +24,6 @@ using MirroredFieldLists = std::map<FieldListId, const MirroredFieldList*>;
  * @param refMap  An up-to-date reference map for this P4 program.
  * @param typeMap  An up-to-date type map for this P4 program.
  */
-class ExtractMirrorFieldPackings : public PassManager {
- public:
-    ExtractMirrorFieldPackings(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
-                               MirroredFieldLists* fieldLists);
-
-    MirroredFieldLists* fieldLists;
-};
 
 class FixupMirrorMetadata : public PassManager {
     P4::ReferenceMap *refMap;

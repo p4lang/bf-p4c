@@ -463,9 +463,13 @@ p4c_add_xfail_reason("tofino"
   # p4smith generated file used to debug key with zero mask. Fails PHV for an unknown reason.
   extensions/p4_tests/p4_14/compile_only/p4c-1162.p4
 
-
   # broke by flexible packing PR
   extensions/p4_tests/p4_16/compile_only/lrn1.p4
+
+  # P4C-1778
+  ../glass/testsuite/p4_tests/mau/COMPILER-465/tridacna-v2.p4 
+  ../glass/testsuite/p4_tests/mau/COMPILER-465/tridacna.p4
+  ../glass/testsuite/p4_tests/mau/COMPILER-464/scrab.p4
   )
 
 # We can't (without some complex acrobatics) support conditional computed

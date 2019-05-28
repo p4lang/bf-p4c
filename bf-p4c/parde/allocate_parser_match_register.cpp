@@ -11,7 +11,7 @@
 // Insert a stall state on transition whose next state requires
 // branch word that is out of the input buffer of the current state.
 struct ResolveOutOfBufferSelects : public ParserTransform {
-    std::map<cstring, IR::BFN::ParserState*> src_to_stall_state;
+    std::map<gress_t, std::map<cstring, IR::BFN::ParserState*>> src_to_stall_state;
 
     CollectParserInfo parser_info;
 
@@ -33,12 +33,12 @@ struct ResolveOutOfBufferSelects : public ParserTransform {
 
         IR::BFN::ParserState* stall = nullptr;
 
-        if (src_to_stall_state.count(src->name)) {
-            stall = src_to_stall_state.at(src->name);
+        if (src_to_stall_state[src->gress].count(src->name)) {
+            stall = src_to_stall_state[src->gress].at(src->name);
         } else {
             cstring name = src->name + ".$stall";
             stall = new IR::BFN::ParserState(src->p4State, name, src->gress);
-            src_to_stall_state[src->name] = stall;
+            src_to_stall_state[src->gress][src->name] = stall;
         }
 
         LOG2("created stall state for out of buffer select on "
