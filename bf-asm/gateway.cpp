@@ -112,6 +112,9 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "format") {
             if (CHECKTYPEPM(kv.value, tMAP, kv.value.map.size > 0, "non-empty map"))
                 format = new Format(this, kv.value.map);
+        } else if (kv.key == "always_run") {
+            if ((always_run = get_bool(kv.value)) && !Target::SUPPORT_ALWAYS_RUN())
+                error(kv.key.lineno, "always_run not supported on %s", Target::name());
         } else if (kv.key == "miss") {
             miss = Match(0, kv.value, range_match);
         } else if (kv.key == "condition") {
@@ -158,6 +161,18 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
                         xor_match.emplace_back(v.key.i, gress, stage->stageno, v.value);
             } else
                 xor_match.emplace_back(gress, stage->stageno, kv.value);
+        } else if (kv.key == "long_branch" && Target::LONG_BRANCH_TAGS() > 0) {
+            if (options.disable_long_branch)
+                error(kv.key.lineno, "long branches disabled");
+            if (CHECKTYPE(kv.value, tMAP)) {
+                for (auto &lb : kv.value.map) {
+                    if (lb.key.type != tINT || lb.key.i < 0 ||
+                        lb.key.i >= Target::LONG_BRANCH_TAGS())
+                        error(lb.key.lineno, "Invalid long branch tag %s", value_desc(lb.key));
+                    else if (long_branch.count(lb.key.i))
+                        error(lb.key.lineno, "Duplicate long branch tag %ld", lb.key.i);
+                    else
+                        long_branch.emplace(lb.key.i, lb.value); } }
         } else if (kv.key.type == tINT || kv.key.type == tBIGINT || kv.key.type == tMATCH ||
                    (kv.key.type == tVEC && range_match != NONE))
         {
@@ -200,6 +215,7 @@ static void check_match_key(Table *tbl, std::vector<GatewayTable::MatchKey> &vec
 
 void GatewayTable::pass1() {
     LOG1("### Gateway table " << name() << " pass1");
+    Table::pass1();
     alloc_id("logical", logical_id, stage->pass1_logical_id,
              LOGICAL_TABLES_PER_STAGE, true, stage->logical_id_use);
     alloc_busses(stage->sram_match_bus_use);
@@ -220,6 +236,8 @@ void GatewayTable::pass1() {
                 stage->gw_payload_use[layout[1].row][layout[1].bus & 1] = this; }
     } else if ((have_payload >= 0  || match_address >= 0) && !match_table)
         error(have_payload, "payload on standalone gateway requires explicit payload_row");
+    if (always_run && match_table)
+        error(lineno, "always_run set on non-standalone gateway for %s", match_table->name());
     if (gw_unit >= 0) {
         if (auto *old = stage->gw_unit_use[layout[0].row][gw_unit])
             error(layout[0].lineno, "gateway %d.%d already in use by table %s", layout[0].row,

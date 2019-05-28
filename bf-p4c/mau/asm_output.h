@@ -4,6 +4,7 @@
 #include <map>
 #include <set>
 #include <vector>
+#include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/common/asm_output.h"
 #include "bf-p4c/mau/default_next.h"
 #include "bf-p4c/mau/memories.h"
@@ -16,8 +17,9 @@ class PhvInfo;
 
 class MauAsmOutput : public MauInspector {
  protected:
-    const PhvInfo        &phv;
-    const IR::BFN::Pipe  *pipe;
+    const PhvInfo       &phv;
+    const IR::BFN::Pipe *pipe;
+    const BFN_Options   &options;
 
  private:
     struct TableInstance {
@@ -52,6 +54,7 @@ class MauAsmOutput : public MauInspector {
 
  public:
     class TableMatch;
+    class NextTableSet;
 
  private:
     void emit_ixbar(std::ostream &out, indent_t, const IXBar::Use *, const IXBar::Use *,
@@ -101,8 +104,8 @@ class MauAsmOutput : public MauInspector {
             const TableMatch *fmt) const;
     void emit_memory(std::ostream &out, indent_t, const Memories::Use &,
         const IR::MAU::Table::Layout *l = nullptr, const TableFormat::Use *f = nullptr) const;
-    void emit_gateway(std::ostream &out, indent_t gw_indent, const IR::MAU::Table *tbl,
-             bool hash_action, cstring next_hit, cstring &gw_miss) const;
+    bool emit_gateway(std::ostream &out, indent_t gw_indent, const IR::MAU::Table *tbl,
+             bool hash_action, NextTableSet next_hit, NextTableSet &gw_miss) const;
     void emit_no_match_gateway(std::ostream &out, indent_t gw_indent,
             const IR::MAU::Table *tbl) const;
     void emit_table_format(std::ostream &out, indent_t, const TableFormat::Use &use,
@@ -113,7 +116,7 @@ class MauAsmOutput : public MauInspector {
     void emit_table(std::ostream &out, const IR::MAU::Table *tbl, int stage, gress_t gress) const;
     void emit_static_entries(std::ostream &out, indent_t indent, const IR::MAU::Table *tbl) const;
     void next_table_non_action_map(const IR::MAU::Table *,
-            safe_vector<cstring> &next_table_map) const;
+            safe_vector<NextTableSet> &next_table_map) const;
     void emit_table_indir(std::ostream &out, indent_t, const IR::MAU::Table *tbl,
             const IR::MAU::TernaryIndirect *ti) const;
     void emit_action_data_format(std::ostream &out, indent_t, const IR::MAU::Table *tbl,
@@ -139,6 +142,7 @@ class MauAsmOutput : public MauInspector {
     std::string build_sel_len_call(const IR::MAU::Selector *as) const;
     std::string build_meter_color_call(const IR::MAU::Meter *mtr,
         const IR::MAU::BackendAttached *ba, const IR::MAU::Table *tbl) const;
+    NextTableSet next_for(const IR::MAU::Table *tbl, cstring what) const;
 
     class EmitAction;
     class EmitAttached;
@@ -146,7 +150,8 @@ class MauAsmOutput : public MauInspector {
     class EmitHashExpression;
 
  public:
-    explicit MauAsmOutput(const PhvInfo &phv, const IR::BFN::Pipe *pipe) : phv(phv), pipe(pipe) {}
+    MauAsmOutput(const PhvInfo &phv, const IR::BFN::Pipe *pipe, const BFN_Options &options)
+    : phv(phv), pipe(pipe), options(options) {}
 };
 
 #endif /* BF_P4C_MAU_ASM_OUTPUT_H_ */

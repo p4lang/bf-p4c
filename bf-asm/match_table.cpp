@@ -31,6 +31,10 @@ bool MatchTable::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::t
     if (kv.key == "input_xbar" || kv.key == "hash_dist") {
         /* done in common_init_setup */
         return true; }
+    if (kv.key == "always_run") {
+        if ((always_run = get_bool(kv.value)) && !Target::SUPPORT_ALWAYS_RUN())
+            error(kv.key.lineno, "always_run not supported on %s", Target::name());
+        return true; }
     if (kv.key == "gateway") {
         if (CHECKTYPE(kv.value, tMAP)) {
             gateway = GatewayTable::create(kv.key.lineno, name_+" gateway",

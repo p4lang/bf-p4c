@@ -114,7 +114,7 @@ void AsmStage::input(VECTOR(value_t) args, value_t data) {
             else
                 error(kv.value.lineno, "Unknown error mode %s", value_desc(kv.value));
             continue;
-        } else if (Target::SUPPORT_ALWAYS_RUN_ACTION() && kv.key == "always_run_action") {
+        } else if (Target::SUPPORT_ALWAYS_RUN() && kv.key == "always_run_action") {
             if (gress == GHOST)
                 error(kv.key.lineno, "No always run action for ghost thread, must use ingress");
             else
@@ -326,6 +326,8 @@ int Stage::first_table(gress_t gress) {
 }
 
 Stage *Stage::stage(int stageno) {
+    if (stageno < 0 || stageno >= AsmStage::stages().size())
+        return nullptr;
     return &AsmStage::stages().at(stageno);
 }
 

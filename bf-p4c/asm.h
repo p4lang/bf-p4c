@@ -54,7 +54,7 @@ class AsmOutput : public Inspector {
             cstring outputFile = outputDir + "/" + options.programName + ".bfa";
             std::ofstream out(outputFile, std::ios_base::out);
 
-            MauAsmOutput mauasm(phv, pipe);
+            MauAsmOutput mauasm(phv, pipe, options);
             pipe->apply(mauasm);
 
             out << "version:" << std::endl

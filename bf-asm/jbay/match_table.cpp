@@ -31,24 +31,16 @@ template<> void MatchTable::write_next_table_regs(Target::JBay::mau_regs &regs, 
         while(i < NEXT_TABLE_SUCCESSOR_TABLE_DEPTH)
             merge.pred_map_loca[logical_id][i++].pred_map_loca_next_table = 0x1ff; }
 
-    // FIXME -- driver need to know how to set up the miss registers for changing the
-    // default action.  It knows how to set up the tofino regs (next_table_format_data)
-    // from the context.json, but we don't currently put the values for pred_miss_exec
-    // and pred_miss_long_brch in there.  JIRA is DRV-2239
-
     merge.next_table_format_data[logical_id].match_next_table_adr_mask = next_table_adr_mask;
     merge.next_table_format_data[logical_id].match_next_table_adr_miss_value
             = miss_next.next_table_id();
-#if 0
-    // FIXME -- don't set these until workaroundDRV2239() is removed
     merge.pred_miss_exec[logical_id].pred_miss_loca_exec
             = miss_next.next_in_stage(stage->stageno) >> 1;
     merge.pred_miss_exec[logical_id].pred_miss_glob_exec
             = miss_next.next_in_stage(stage->stageno + 1);
     int lbt = miss_next.long_branch_tag();
     if (lbt >= 0)
-        merge.pred_miss_long_brch[logical_id] = lbt;
-#endif
+        merge.pred_miss_long_brch[logical_id] = 1 << lbt;
 }
 
 template<> void MatchTable::write_regs(Target::JBay::mau_regs &regs, int type, Table *result) {
@@ -58,13 +50,15 @@ template<> void MatchTable::write_regs(Target::JBay::mau_regs &regs, int type, T
     if (gress == GHOST)
         merge.pred_ghost_thread |= 1 << logical_id;
     merge.pred_glob_exec_thread[gress] |= 1 << logical_id;
-    // merge.pred_long_brch_thread[gress] |= 1 << logical_id; -- setting this causes model crash?
-    if (pred.empty())
+    if (always_run || pred.empty())
         merge.pred_always_run[gress] |= 1 << logical_id;
     // FIXME -- should set this only if pred is empty or contains tables in the current stage?
     // FIXME -- if all pred tables are in earlier stages, then mpr_next_table_lut and/or
     // FIXME -- mpr_glob_exec_lut should be used instead?
     merge.mpr_always_run |= 1 << logical_id;
+
+    if (long_branch_input >= 0)
+        setup_muxctl(merge.pred_long_brch_lt_src[logical_id], long_branch_input);
 
     bool is_branch = (miss_next.next_table() != nullptr);
     if (!is_branch)

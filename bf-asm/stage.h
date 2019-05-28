@@ -41,7 +41,9 @@ public:
     bitvec      action_bus_use_bit_mask;
     Alloc2D<Table::Actions::Action *, 2, ACTION_IMEM_ADDR_MAX>          imem_addr_use;
     bitvec      imem_use[ACTION_IMEM_SLOTS];
-    Alloc1D<Table::NextTables *, MAX_LONGBRANCH_TAGS>   longbranch_use;
+    Alloc1D<Table::NextTables *, MAX_LONGBRANCH_TAGS>   long_branch_use;
+    unsigned                                            long_branch_thread[3] = { 0 };
+    unsigned                                            long_branch_terminate = 0;
 
     // for timing, ghost thread is tied to ingress, so we track ghost as ingress here
     enum { USE_TCAM=1, USE_STATEFUL=4, USE_METER=8, USE_METER_LPF_RED=16,

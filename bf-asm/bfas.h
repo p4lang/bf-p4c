@@ -24,6 +24,7 @@ extern struct option_t {
     bool                condense_json;
     bool                debug_info;
     bool                disable_egress_latency_padding;
+    bool                disable_long_branch;
     bool                disable_power_gating;
     bool                gen_json;
     bool                hash_parity_enabled;

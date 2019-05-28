@@ -44,11 +44,11 @@ class DefaultNext : public MauInspector, BFN::ControlFlowVisitor {
         joinFlows = true; visitDagOnce = false; }
     const IR::MAU::Table *next(const IR::MAU::Table *t) const {
         return ::get(default_next, t); }
-    cstring next_in_thread(const IR::MAU::Table *t) const {
+    const IR::MAU::Table *next_in_thread(const IR::MAU::Table *t) const {
         if (auto *n = next(t))
             if (n->gress == t->gress)
-                return n->unique_id().build_name();
-        return "END"; }
+                return n;
+        return nullptr; }
     UniqueId next_in_thread_uniq_id(const IR::MAU::Table *t) const {
       if (auto *n = next(t))
           if (n->gress == t->gress)

@@ -157,14 +157,31 @@ template<> void Stage::write_regs(Target::JBay::mau_regs &regs) {
     }
 
     merge.pred_stage_id = stageno;
+    if (long_branch_terminate)
+        merge.pred_long_brch_terminate = long_branch_terminate;
     for (gress_t gress : Range(INGRESS, GHOST)) {
         merge.mpr_stage_id[gress] = stageno;
+        if (long_branch_thread[gress])
+            merge.pred_long_brch_thread[gress] = long_branch_thread[gress];
     }
+
+    merge.mpr_long_brch_thread = long_branch_thread[EGRESS];
+    if (auto conflict = (long_branch_thread[INGRESS] | long_branch_thread[GHOST])
+                        & long_branch_thread[EGRESS]) {
+        // Should probably check this earlier, but there's not a good place to do it.
+        for (auto tag : bitvec(conflict)) {
+            error(long_branch_use[tag]->lineno, "Need one-stage turnaround before reusing "
+                  "long_branch tag %d in a different thread", tag); } }
 
     if (stageno != AsmStage::numstages()-1) {
         merge.mpr_bus_dep.mpr_bus_dep_egress = this[1].stage_dep[EGRESS] != MATCH_DEP;
         merge.mpr_bus_dep.mpr_bus_dep_ingress = this[1].stage_dep[INGRESS] != MATCH_DEP;
-    }
+        for (auto *tbl : this[1].tables)
+            if (this[1].stage_dep[timing_thread(tbl->gress)] != MATCH_DEP)
+                merge.mpr_bus_dep.mpr_bus_dep_glob_exec |= 1 << tbl->logical_id;
+        for (gress_t gress : Range(INGRESS, GHOST)) {
+            if (this[1].stage_dep[timing_thread(gress)] != MATCH_DEP)
+                merge.mpr_bus_dep.mpr_bus_dep_long_brch |= this[1].long_branch_thread[gress]; } }
 
     bitvec in_use = match_use[INGRESS] | action_use[INGRESS] | action_set[INGRESS];
     bitvec eg_use = match_use[EGRESS] | action_use[EGRESS] | action_set[EGRESS];

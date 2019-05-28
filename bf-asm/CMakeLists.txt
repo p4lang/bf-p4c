@@ -52,6 +52,9 @@ if (${CMAKE_SYSTEM_PROCESSOR} MATCHES i386|i586|i686)
   # on 32-bit platforms we get a lot of warnings when using the error macros
   add_cxx_compiler_option("-Wno-write-strings")
 endif()
+if (ENABLE_BAREFOOT_INTERNAL)
+  add_definitions("-DBAREFOOT_INTERNAL=1")
+endif()
 
 set (BFN_P4C_LIB_DIR ${BFN_P4C_SOURCE_DIR}/p4c/lib)
 include_directories(${BFASM_SOURCE_DIR} ${BFASM_BINARY_DIR} ${BFN_P4C_LIB_DIR})

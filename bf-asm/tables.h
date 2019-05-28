@@ -188,7 +188,7 @@ public:
         int long_branch_tag() const { return long_branch; }
         unsigned next_in_stage(int stage) const;
         bool need_next_map_lut() const;
-        void workaroundDRV2239();
+        void force_single_next_table();
     };
 
     class Format {
@@ -608,6 +608,7 @@ public:
     // and we don't try to get a next table hit index from the action.
     NextTables                  miss_next;
     std::map<int, NextTables>   long_branch;
+    int                         long_branch_input = -1;
     std::map<Table *, std::set<Actions::Action *>>
                                 pred;   // predecessor tables w the actions in that table that
                                         // call this table
@@ -796,6 +797,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(MatchTable, Table,
     GatewayTable                *gateway = 0;
     IdletimeTable               *idletime = 0;
     AttachedTables              attached;
+    bool                        always_run = false;
     friend struct AttachedTables;
     enum { NONE=0, TABLE_MISS=1, TABLE_HIT=2, DISABLED=3, GATEWAY_MISS=4, GATEWAY_HIT=5,
            GATEWAY_INHIBIT=6 }  table_counter = NONE;
@@ -1413,6 +1415,7 @@ DECLARE_TABLE_TYPE(GatewayTable, Table, "gateway",
                                 range_match = NONE;
     std::string                 gateway_name;
     std::string                 gateway_cond;
+    bool                        always_run = false;  // only for standalone
 public:
     struct MatchKey {
         int                     offset;

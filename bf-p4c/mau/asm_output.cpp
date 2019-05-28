@@ -1673,24 +1673,58 @@ void MauAsmOutput::emit_ternary_match(std::ostream &out, indent_t indent,
     }
 }
 
-static cstring next_for(const IR::MAU::Table *tbl, cstring what, const DefaultNext &def) {
-    if (what == "$miss") {
-        cstring tns = "$try_next_stage";
-        if (tbl->next.count(tns)) {
-            if (!tbl->next.at(tns)->empty())
-                return tbl->next.at(tns)->front()->unique_id().build_name();
-        }
-    }
-    if (tbl->actions.count(what) && tbl->actions.at(what)->exitAction)
-        return "END";
+/* wrapper for a set of tables used with next/hit/miss, mostly so we can overload operator>>
+ * to output it with correct asm syntax.  Also has a cstring converter for those cases where
+ * it needs to be a single table */
+class MauAsmOutput::NextTableSet {
+    ordered_set<const IR::MAU::Table *>   tables;
+
+ public:
+    NextTableSet() = default;
+    NextTableSet(const NextTableSet &) = default;
+    NextTableSet(NextTableSet &&) = default;
+    NextTableSet &operator=(const NextTableSet &) = default;
+    NextTableSet &operator=(NextTableSet &&) = default;
+    NextTableSet(const IR::MAU::Table *t) {                     // NOLINT(runtime/explicit)
+        if (t) tables.insert(t); }
+    operator cstring() const {
+        BUG_CHECK(tables.size() == 1, "not a single next table");
+        return tables.front()->unique_id().build_name(); }
+    bool operator==(const NextTableSet &a) const { return tables == a.tables; }
+    bool operator<(const NextTableSet &a) const { return tables < a.tables; }
+    bool insert(const IR::MAU::Table *t) { return t ? tables.insert(t).second : false; }
+    friend inline std::ostream &operator<<(std::ostream &out, const NextTableSet &nxt) {
+        const char *sep = " ";
+        if (nxt.tables.size() != 1) {
+            BUG_CHECK(nxt.tables.empty() || Device::numLongBranchTags() > 0, "long branch snafu");
+            out << '['; }
+        for (auto *t : nxt.tables) {
+            out << sep << t->unique_id().build_name();
+            sep = ", "; }
+        if (nxt.tables.size() != 1) out << (sep+1) << ']';
+        return out; }
+};
+
+MauAsmOutput::NextTableSet MauAsmOutput::next_for(const IR::MAU::Table *tbl, cstring what) const {
+    if (what == "$miss" && tbl->next.count("$try_next_stage"))
+        what = "$try_next_stage";
+    if (tbl->actions.count(what) && tbl->actions.at(what)->exitAction) {
+        BUG_CHECK(!Device::numLongBranchTags() || options.disable_long_branch,
+                  "long branch incompatible with exit action");
+        return NextTableSet(); }
+    if (!tbl->next.count(what))
+        what = "$default";
     if (tbl->next.count(what)) {
+        if (tbl->next.at(what) && Device::numLongBranchTags() > 0 && !options.disable_long_branch) {
+            NextTableSet rv;
+            for (auto *tbl : tbl->next.at(what)->tables)
+                rv.insert(tbl);
+            return rv; }
         if (tbl->next.at(what) && !tbl->next.at(what)->empty())
-            return tbl->next.at(what)->front()->unique_id().build_name();
-    } else if (tbl->next.count("$default")) {
-        if (!tbl->next.at("$default")->empty())
-            return tbl->next.at("$default")->front()->unique_id().build_name();
-    }
-    return def.next_in_thread(tbl);
+            return tbl->next.at(what)->front(); }
+    if (Device::numLongBranchTags() > 0 && !options.disable_long_branch)
+        return NextTableSet();
+    return default_next.next_in_thread(tbl);
 }
 
 /* Adjusted to consider actions coming from hash distribution.  Now hash computation
@@ -1721,15 +1755,15 @@ class MauAsmOutput::EmitAction : public Inspector {
             if (act->exitAction)
                 out << "END" << std::endl;
             else
-                out << next_for(table, "$miss", self.default_next) << std::endl;
+                out << self.next_for(table, "$miss") << std::endl;
             if (act->miss_action_only)
                 return;
         }
 
         if (table->action_chain()) {
             if (act->miss_action_only) {
-                out << indent << "- next_table_miss: ";
-                out << next_for(table, act->name.originalName, self.default_next) << std::endl;
+                out << indent << "- next_table_miss: "
+                    << self.next_for(table, act->name.originalName) << std::endl;
                 return;
             }
         }
@@ -1740,14 +1774,14 @@ class MauAsmOutput::EmitAction : public Inspector {
             if (ntb == 0) {
                 out << mem_code;
             } else if (ntb <= ceil_log2(TableFormat::NEXT_MAP_TABLE_ENTRIES)) {
-                safe_vector<cstring> next_table_map;
+                safe_vector<NextTableSet> next_table_map;
                 self.next_table_non_action_map(table, next_table_map);
-                cstring act_next_for = next_for(table, act->name.originalName, self.default_next);
+                cstring act_next_for = self.next_for(table, act->name.originalName);
                 auto it = std::find(next_table_map.begin(), next_table_map.end(), act_next_for);
                 BUG_CHECK(it != next_table_map.end(), "Next table cannot be associated");
                 out << (it - next_table_map.begin());
             } else {
-                out << next_for(table, act->name.originalName, self.default_next);
+                out << self.next_for(table, act->name.originalName);
             }
         } else {
             out << "0";
@@ -2276,7 +2310,7 @@ MauAsmOutput::TableMatch::TableMatch(const MauAsmOutput &, const PhvInfo &phv,
  *  the next table.
  *
  *  However, the case is actual reversed when we need a table with no match data linked with
- *  a gateway:
+ *  a gateway (A HashAction table):
  *
  *  if (f == 2) {
  *      apply(no_match_hit_path);
@@ -2296,10 +2330,12 @@ MauAsmOutput::TableMatch::TableMatch(const MauAsmOutput &, const PhvInfo &phv,
  *  When f != 1, the gateway will not override, and the table will automatically miss.  Then,
  *  the miss next table is used to determine where to go next
  */
-void MauAsmOutput::emit_gateway(std::ostream &out, indent_t gw_indent,
-        const IR::MAU::Table *tbl, bool no_match, cstring next_hit, cstring &gw_miss) const {
+bool MauAsmOutput::emit_gateway(std::ostream &out, indent_t gw_indent,
+        const IR::MAU::Table *tbl, bool no_match, NextTableSet next_hit,
+        NextTableSet &gw_miss) const {
     CollectGatewayFields collect(phv, &tbl->resources->gateway_ixbar);
     tbl->apply(collect);
+    bool gw_can_miss = false;
     if (collect.compute_offsets()) {
         bool have_xor = false;
         out << gw_indent << "match: {";
@@ -2335,7 +2371,7 @@ void MauAsmOutput::emit_gateway(std::ostream &out, indent_t gw_indent,
         if (collect.need_range)
             out << gw_indent << "range: 4" << std::endl;
         BuildGatewayMatch match(phv, collect);
-        std::map<cstring, cstring> cond_tables;
+        std::map<cstring, NextTableSet> cond_tables;
         for (auto &line : tbl->gateway_rows) {
             out << gw_indent;
             if (line.first) {
@@ -2344,14 +2380,15 @@ void MauAsmOutput::emit_gateway(std::ostream &out, indent_t gw_indent,
             } else {
                 out << "miss: ";
             }
-            cstring nxt_tbl;
+            NextTableSet nxt_tbl;
             if (line.second) {
                 if (no_match) {
                     out << "run_table";
-                    gw_miss = nxt_tbl = next_for(tbl, line.second, default_next);
+                    gw_miss = nxt_tbl = next_for(tbl, line.second);
+                    gw_can_miss = true;
                 } else {
-                    nxt_tbl = next_for(tbl, line.second, default_next);
-                    out << next_for(tbl, line.second, default_next);
+                    nxt_tbl = next_for(tbl, line.second);
+                    out << next_for(tbl, line.second);
                 }
             } else {
                 if (no_match) {
@@ -2359,7 +2396,8 @@ void MauAsmOutput::emit_gateway(std::ostream &out, indent_t gw_indent,
                     nxt_tbl = next_hit;
                 } else {
                     out << "run_table";
-                    nxt_tbl = tbl->unique_id().build_name();
+                    nxt_tbl = tbl;
+                    gw_can_miss = true;
                 }
             }
             out << std::endl;
@@ -2369,18 +2407,26 @@ void MauAsmOutput::emit_gateway(std::ostream &out, indent_t gw_indent,
             cond_tables[cond] = nxt_tbl;
         }
         if (tbl->gateway_rows.back().first) {
+            // FIXME -- should check to see if this miss is possible (if there exists a
+            // possible input that would miss every match line) and only output this then.
             out << gw_indent << "miss: run_table" << std::endl;
+            gw_can_miss = true;
         }
         if (tbl->gateway_cond) {
             out << gw_indent++ << "condition: " << std::endl;
             out << gw_indent << "expression: \"(" << tbl->gateway_cond << ")\"" << std::endl;
-            if (auto t = cond_tables["$true"] ? cond_tables["$true"] : cond_tables["$torf"])
-                out << gw_indent << "true: " << t << std::endl;
-            if (auto t = cond_tables["$false"] ? cond_tables["$false"] : cond_tables["$torf"])
-                out << gw_indent << "false: " << t << std::endl; }
+            if (cond_tables.count("$true"))
+                out << gw_indent << "true: " << cond_tables["$true"] << std::endl;
+            else if (cond_tables.count("$torf"))
+                out << gw_indent << "true: " << cond_tables["$torf"] << std::endl;
+            if (cond_tables.count("$false"))
+                out << gw_indent << "false: " << cond_tables["$false"] << std::endl;
+            else if (cond_tables.count("$torf"))
+                out << gw_indent << "false: " << cond_tables["$torf"] << std::endl; }
     } else {
         WARNING("Failed to fit gateway expression for " << tbl->name);
     }
+    return gw_can_miss;
 }
 
 /** This allocates a gateway that always hits, with a single (possible noop) action, in order
@@ -2391,7 +2437,7 @@ void MauAsmOutput::emit_no_match_gateway(std::ostream &out, indent_t gw_indent,
         const IR::MAU::Table *tbl) const {
     BUG_CHECK(tbl->actions.size() <= 1, "not an always hit hash_action table");
     cstring act_name = tbl->actions.empty() ? "" : tbl->actions.begin()->first;
-    auto nxt_tbl = next_for(tbl, act_name, default_next);
+    auto nxt_tbl = next_for(tbl, act_name);
     out << gw_indent << "0x0: " << nxt_tbl << std::endl;
     out << gw_indent << "miss: " << nxt_tbl << std::endl;
     out << gw_indent++ << "condition: " << std::endl;
@@ -2687,13 +2733,13 @@ void MauAsmOutput::emit_static_entries(std::ostream &out, indent_t indent,
 }
 
 void MauAsmOutput::next_table_non_action_map(const IR::MAU::Table *tbl,
-         safe_vector<cstring> &next_table_map) const {
-     std::set<cstring> possible_next_tables;
+         safe_vector<NextTableSet> &next_table_map) const {
+     std::set<NextTableSet> possible_next_tables;
      for (auto act : Values(tbl->actions)) {
          if (act->miss_action_only) continue;
-         possible_next_tables.insert(next_for(tbl, act->name.originalName, default_next));
+         possible_next_tables.insert(next_for(tbl, act->name.originalName));
      }
-     for (auto nt : possible_next_tables) {
+     for (auto &nt : possible_next_tables) {
          next_table_map.push_back(nt);
      }
 }
@@ -2819,6 +2865,8 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
         tbl_type = "atcam_match";
     out << indent++ << tbl_type << ' ' << unique_id << ' ' << tbl->logical_id % 16U
         << ':' << std::endl;
+    if (tbl->always_run)
+        out << indent << "always_run: true" << std::endl;
     if (!tbl->gateway_only()) {
         emit_table_context_json(out, indent, tbl);
         if (!tbl->layout.no_match_miss_path()) {
@@ -2845,17 +2893,30 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
     }
     emit_indirect_res_context_json(out, indent, tbl);
 
-    cstring next_hit = "";
-    cstring gw_miss;
+    NextTableSet next_hit;
+    NextTableSet gw_miss;
+    bool gw_can_miss = false;
     if (!tbl->action_chain()) {
         if (tbl->has_exit_action()) {
             BUG_CHECK(!tbl->has_non_exit_action(), "Need action chaining to handle both exit "
                       "and non-exit actions in table %1%", tbl);
-            next_hit = "END";
+            next_hit = NextTableSet();
         } else {
-            next_hit = next_for(tbl, "$hit", default_next);
+            next_hit = next_for(tbl, "$hit");
         }
     }
+
+    if (!tbl->long_branch.empty()) {
+        out << indent++ << "long_branch:" << std::endl;
+        for (auto &lb : tbl->long_branch) {
+            out << indent << lb.first << ": [";
+            const char *sep = " ";
+            for (auto *t : tbl->next.at(lb.second)->tables) {
+                if (t->stage() > tbl->stage() + 1) {
+                    out << sep << t->unique_id().build_name();
+                    sep = ", "; } }
+            out << (sep+1) << "]" << std::endl; }
+        --indent; }
 
     if (tbl->uses_gateway() || tbl->layout.no_match_hit_path() || tbl->gateway_only()) {
         indent_t gw_indent = indent;
@@ -2881,43 +2942,44 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
             }
         }
         if (!tbl->layout.no_match_rams() || tbl->uses_gateway())
-            emit_gateway(out, gw_indent, tbl, no_match_hit, next_hit, gw_miss);
+            gw_can_miss = emit_gateway(out, gw_indent, tbl, no_match_hit, next_hit, gw_miss);
         else
             emit_no_match_gateway(out, gw_indent, tbl);
         if (tbl->gateway_only())
             return;
     }
 
-    safe_vector<cstring> next_table_map;
+    safe_vector<NextTableSet> next_table_map;
     if (tbl->action_chain()) {
-        BUG_CHECK(gw_miss.isNull(), "A hash action table cannot have an action chain.");
+        // Should this be P4C_UNIMPLEMENTED?  One could write a program like this, but
+        // supporting it would require having the driver writer the gateway payload for
+        // the default action it wants to install, if there is more than one.  See
+        // testdata/p4_16_samples/def-use.cpp.
+        BUG_CHECK(!no_match_hit || !gw_can_miss,
+                  "A hash action table cannot have an action chain.");
         int ntb = tbl->resources->table_format.next_table_bits();
         if (ntb == 0) {
             int ntm_size = tbl->hit_actions() + (tbl->uses_gateway() ? 1 : 0);
             next_table_map.resize(ntm_size);
-            if (tbl->uses_gateway()) {
-                next_table_map[0] = "END";
-            }
             for (auto act : Values(tbl->actions)) {
                 if (act->miss_action_only) continue;
                 auto &instr_mem = tbl->resources->instr_mem;
                 auto &vliw_instr = instr_mem.all_instrs.at(act->name.name);
                 BUG_CHECK(vliw_instr.mem_code >= 0 && vliw_instr.mem_code < ntm_size,
                           "Instruction has an invalid mem_code");
-                next_table_map[vliw_instr.mem_code] = next_for(tbl, act->name.originalName,
-                                                               default_next);
+                next_table_map[vliw_instr.mem_code] = next_for(tbl, act->name.originalName);
             }
         } else if (ntb <= ceil_log2(TableFormat::NEXT_MAP_TABLE_ENTRIES)) {
             next_table_non_action_map(tbl, next_table_map);
         }
     } else {
-        if (gw_miss)
+        if (gw_can_miss && no_match_hit)
             next_table_map.push_back(gw_miss);
         else
             next_table_map.push_back(next_hit);
     }
 
-    if (gw_miss) {
+    if (no_match_hit) {
         out << indent << "next: " << gw_miss << std::endl;
     } else {
         // The hit vector represents the 8 map values that will appear in the 8 entry
@@ -2929,7 +2991,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
             nt_sep = ", ";
         }
         out << " ]" << std::endl;
-        out << indent << "miss: " << next_for(tbl, "$miss", default_next) << std::endl;
+        out << indent << "miss: " << next_for(tbl, "$miss") << std::endl;
     }
 
     emit_static_entries(out, indent, tbl);

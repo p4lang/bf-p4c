@@ -24,6 +24,7 @@ option_t options = {
     .condense_json = true,
     .debug_info = false,
     .disable_egress_latency_padding = false,
+    .disable_long_branch = false,
     .disable_power_gating = false,
     .gen_json = false,
     //FIXME-P4C: Compiler currently does not reserve 51st bit for hash parity.
@@ -150,6 +151,14 @@ int main(int ac, char **av) {
             options.binary = FOUR_PIPE;
         } else if (!strcmp(av[i], "--disable-egress-latency-padding")) {
             options.disable_egress_latency_padding = true;
+        } else if (!strcmp(av[i], "--disable-longbranch")) {
+            options.disable_long_branch = true;
+        } else if (!strcmp(av[i], "--enable-longbranch")) {
+            if (options.target && Target::LONG_BRANCH_TAGS() == 0) {
+                error(-1, "target %s does not support --enable-longbranch", Target::name());
+                options.disable_long_branch = true;
+            } else
+                options.disable_long_branch = false;
         } else if (!strcmp(av[i], "--gen_json")) {
             options.gen_json = true;
             options.binary = NO_BINARY;

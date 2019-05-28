@@ -52,7 +52,7 @@ control ingress(inout headers hdr, inout metadata meta,
     @name("multi_stage_dequeue") table do_multi_stage_1_dequeue {
         key = { hdr.ethernet.dst_addr : ternary; }
         actions = { multi_stage_1_dequeue; @defaultonly nop; }
-        default_action = nop();
+        const default_action = nop();
     }
     table do_multi_stage_2_dequeue {
         actions = { multi_stage_2_dequeue; }
@@ -84,7 +84,7 @@ control ingress(inout headers hdr, inout metadata meta,
     @name("multi_stage_enqueue") table do_multi_stage_1_enqueue {
         key = { hdr.ethernet.dst_addr : ternary; }
         actions = { multi_stage_1_enqueue; @defaultonly nop; }
-        default_action = nop();
+        const default_action = nop();
     }
     table do_multi_stage_2_enqueue {
         actions = { multi_stage_2_enqueue; }

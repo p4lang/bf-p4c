@@ -58,6 +58,7 @@ Table::NextTables::NextTables(value_t &v) : lineno(v.lineno) {
 
 bool Table::NextTables::can_use_lb(int stage, const NextTables &lbrch) {
     BUG_CHECK(next_table_ == nullptr);
+    if (options.disable_long_branch) return false;
     if (!lbrch.subset_of(*this)) return false;
     for (auto &n : next) {
         if (!n || n->stage->stageno <= stage + 1 || lbrch.next.count(n))
@@ -82,7 +83,9 @@ void Table::NextTables::resolve_long_branch(const Table *tbl,
             long_branch = lb.first;
             return; } }
     for (auto &n : next) {
-        if (!n || (Target::LONG_BRANCH_TAGS() > 0 && n->stage->stageno <= tbl->stage->stageno + 1))
+        if (!n) continue;
+        if (Target::LONG_BRANCH_TAGS() > 0 && !options.disable_long_branch &&
+            n->stage->stageno <= tbl->stage->stageno + 1)
             continue;
         if (next_table_) {
             error(n.lineno, "Can't have multiple next tables for table %s", tbl->name());
@@ -103,10 +106,11 @@ bool Table::NextTables::need_next_map_lut() const {
     return next.size() > 1 || (next.size() == 1 && !next_table_);
 }
 
-void Table::NextTables::workaroundDRV2239() {
+void Table::NextTables::force_single_next_table() {
     BUG_CHECK(resolved);  // must be resolved already
     if (next.size() > 1)
-        error(lineno, "Driver does not support multiple next tables (DRV-2239)");
+        error(lineno, "Can't support multiple next tables; next is directly in overhead "
+              "without using 8-entry lut");
     if (next.size() == 1)
         next_table_ = *next.begin();
 }
@@ -523,6 +527,8 @@ bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p
             miss_next = kv.value;
             hit_next.emplace_back(miss_next); }
     } else if (kv.key == "long_branch" && Target::LONG_BRANCH_TAGS() > 0) {
+        if (options.disable_long_branch)
+            error(kv.key.lineno, "long branches disabled");
         if (CHECKTYPE(kv.value, tMAP)) {
             for (auto &lb : kv.value.map) {
                 if (lb.key.type != tINT || lb.key.i < 0 || lb.key.i >= Target::LONG_BRANCH_TAGS())
@@ -739,7 +745,7 @@ void Table::check_next() {
     for (auto &lb : long_branch) {
         for (auto &t : lb.second) {
             if (t.check()) {
-                if (stage->stageno <= t->stage->stageno)
+                if (t->stage->stageno <= stage->stageno)
                     error(t.lineno, "Long branch table %s is not in a later stage than %s",
                           t->name(), name());
                 else if (stage->stageno + 1 == t->stage->stageno)
@@ -755,7 +761,6 @@ void Table::check_next() {
     for (auto &hn : hit_next)
         check_next(hn);
     check_next(miss_next);
-    miss_next.workaroundDRV2239();
 }
 
 void Table::set_pred() {
@@ -845,15 +850,26 @@ void Table::pass1() {
     for (auto &lb : long_branch) {
         int last_stage = -1;
         for (auto &n : lb.second) {
-            if (n && n->stage->stageno > last_stage)
-                last_stage = n->stage->stageno; }
-        for (int st = stage->stageno+1; st <= last_stage; ++st) {
-            auto &prev = stage->stage(st)->longbranch_use[lb.first];
+            if (!n) continue;  // already output error about invalid table
+            last_stage = std::max(last_stage, n->stage->stageno);
+            if (n->long_branch_input >= 0 && n->long_branch_input != lb.first)
+                error(lb.second.lineno, "Conflicting long branch input (%d and %d) for table %s",
+                      lb.first, n->long_branch_input, n->name());
+            n->long_branch_input = lb.first; }
+        // we track the long branch as being 'live' from the stage it is set until the stage
+        // before it is terminated; it can still be use to trigger a table in that stage, even
+        // though it is not 'live' there.  It can also be reused (set) in that stage for use in
+        // later stages.  This matches the range of stages we need to set timing regs for.
+        for (int st = stage->stageno; st < last_stage; ++st) {
+            auto &prev = Stage::stage(st)->long_branch_use[lb.first];
             if (prev && *prev != lb.second) {
-                error(lb.second.lineno, "Conflicting use of longbranch tag %d", lb.first);
+                error(lb.second.lineno, "Conflicting use of long_branch tag %d", lb.first);
                 error(prev->lineno, "previous use");
             } else {
-                prev = &lb.second; } } }
+                prev = &lb.second; }
+            Stage::stage(st)->long_branch_thread[gress] |= 1U << lb.first; }
+        Stage::stage(last_stage)->long_branch_thread[gress] |= 1U << lb.first;
+        Stage::stage(last_stage)->long_branch_terminate |= 1U << lb.first; }
 }
 
 static void overlap_test(int lineno,
@@ -1328,9 +1344,8 @@ void Table::Actions::Action::check_next(Table *tbl) {
     }
     tbl->check_next(next_table_ref);
     tbl->check_next(next_table_miss_ref);
-    if (default_allowed || tbl->default_action == name) {
-        next_table_ref.workaroundDRV2239();
-        next_table_miss_ref.workaroundDRV2239(); }
+    if (next_table_encode < 0 && !default_only)
+         next_table_ref.force_single_next_table();
     for (auto &n : next_table_ref)
         check_next_ref(tbl, n);
     for (auto &n : next_table_miss_ref)
@@ -1891,21 +1906,18 @@ void Table::Actions::add_action_format(const Table *table, json::map &tbl) const
     json::vector &action_format = tbl["action_format"] = json::vector();
     for (auto &act : *this) {
         json::map action_format_per_action;
-        unsigned next_table = 0;
+        unsigned next_table = -1;
 
-        std::string next_table_name;
-        if (act.default_only) {
-            next_table = -1;
-            next_table_name = "--END_OF_PIPELINE--";
-        } else {
+        std::string next_table_name = "--END_OF_PIPELINE--";
+        if (!act.default_only) {
             if (act.next_table_encode >= 0)
                 next_table = static_cast<unsigned>(act.next_table_encode);
             else {
                 // The RAM value is only 8 bits, for JBay must be solved by table placement
                 next_table = act.next_table_ref.next_table_id() & 0xff;
+                next_table_name = act.next_table_ref.next_table_name();
+                if (next_table_name == "END") next_table_name = "--END_OF_PIPELINE--";
             }
-            next_table_name = act.next_table_ref.next_table_name();
-            if (next_table_name == "END") next_table_name = "--END_OF_PIPELINE--";
         }
         unsigned next_table_full = act.next_table_miss_ref.next_table_id();
 
@@ -1937,7 +1949,7 @@ void Table::Actions::add_action_format(const Table *table, json::map &tbl) const
         action_format_per_action["table_name"] = next_table_name;
         action_format_per_action["next_table"] = next_table;
         action_format_per_action["next_table_full"] = next_table_full;
-        if (Target::LONG_BRANCH_TAGS() > 0) {
+        if (Target::LONG_BRANCH_TAGS() > 0 && !options.disable_long_branch) {
             action_format_per_action["next_table_exec"] =
                 ((act.next_table_miss_ref.next_in_stage(table->stage->stageno) & 0xfffe) << 15) +
                 (act.next_table_miss_ref.next_in_stage(table->stage->stageno + 1) & 0xffff);
