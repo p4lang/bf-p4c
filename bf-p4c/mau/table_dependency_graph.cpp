@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <numeric>
 #include <sstream>
+#include "bf-p4c/common/run_id.h"
 #include "bf-p4c/ir/tofino_write_context.h"
 #include "bf-p4c/lib/error_type.h"
 #include "bf-p4c/logging/manifest.h"
@@ -53,10 +54,10 @@ void DependencyGraph::dump_viz(std::ostream &out, const DependencyGraph &dg) {
     static std::map<DependencyGraph::dependencies_t, std::pair<cstring, cstring>> dep_color = {
         { DependencyGraph::CONTROL, std::make_pair("Control", "green") },
         { DependencyGraph::IXBAR_READ, std::make_pair("IXBar read", "blue") },
-        { DependencyGraph::ACTION_READ, std::make_pair("Action read", "blueviolet") },
-        { DependencyGraph::ANTI, std::make_pair("Anti", "lightblue") },
+        { DependencyGraph::ACTION_READ, std::make_pair("Action read", "red") },
+        { DependencyGraph::ANTI, std::make_pair("Anti", "brown") },
         { DependencyGraph::OUTPUT, std::make_pair("Output", "navy") },
-        { DependencyGraph::REDUCTION_OR_READ, std::make_pair("ReductionOR read", "red") },
+        { DependencyGraph::REDUCTION_OR_READ, std::make_pair("ReductionOR read", "cyan") },
         { DependencyGraph::REDUCTION_OR_OUTPUT, std::make_pair("ReductionOR output", "pink") },
         { DependencyGraph::CONCURRENT, std::make_pair("Concurrent", "black") }
     };
@@ -89,7 +90,27 @@ void DependencyGraph::dump_viz(std::ostream &out, const DependencyGraph &dg) {
         return;
     }
     ordered_map<std::pair<cstring, cstring>, ordered_set<cstring>> name_pairs;
-    out << "digraph table_deps {" << std::endl;
+    ordered_map<int, std::set<cstring>> tables_per_stage;
+    // order the tables by stage
+    for (auto ts : dg.stage_info)
+        tables_per_stage[ts.second.min_stage].insert(tableName(ts.first));
+
+    out << "digraph table_deps {" << std::endl
+        << "  splines=ortho; rankdir=LR;" << std::endl
+        << "  label=\"Program: " << BackendOptions().programName << "\n"
+        << "RunId: " << RunId::getId() << "\n\";" << std::endl
+        << "  labelloc=t; labeljust=l;" << std::endl;
+    // print the root nodes, ranked by the stage
+    bool first = true;
+    for (auto tables : tables_per_stage) {
+        out << "  { ";
+        if (!first) out << "rank = same; ";
+        else        first = false;
+        for (auto t : tables.second) out << "\"" << t << "\"; ";
+        out << "}" << std::endl;
+    }
+
+    // list the edges
     DependencyGraph::Graph::edge_iterator edges, edges_end;
     for (boost::tie(edges, edges_end) = boost::edges(dg.g); edges != edges_end; ++edges) {
         auto src = boost::source(*edges, dg.g);
@@ -106,24 +127,20 @@ void DependencyGraph::dump_viz(std::ostream &out, const DependencyGraph &dg) {
             "label= \"" << edgeName(source, target) << "\"," <<
             "color=" << dep_color[dg.g[*edges]].second << " ];" << std::endl;
     }
+
     // Print the legend
-    out << "  subgraph cluster_legend { " <<
-        "label=\"Edge colors\"; " <<
-        "node [ shape=plaintext, fontsize=10]; " <<
-        "edge [ color=white,arrowsize=0.1, len=0.03 ]; " <<
-        "ranksep=0.02; nodesep=0.02;\n";
-    bool first = true;
-    cstring prev;
-    for (auto c : dep_color) {
-        out << "    \"" << c.second.first << "\" [ fontcolor=" << c.second.second << " ];\n";
-        if (!first)
-            out << "\"" << prev << "\" -> \"" << c.second.first << "\";\n";
-        else
-            first = false;
-        prev = c.second.first;
-    }
-    out << "}" << std::endl;
-    out << "}" << std::endl;
+    out << "  { rank=max;" << std::endl;
+    out << "    subgraph cluster_legend { node [ shape=record; fontsize=10];" << std::endl
+        << "      empty [label=<<table border=\"0\" cellborder=\"0\">"
+        << "<tr><td colspan=\"8\">Edge colors</td></tr><tr>";
+    for (auto c : dep_color)
+        out << "<td><font color=\"" << c.second.second << "\">"
+            << c.second.first << "</font></td>";
+    out << "</tr></table>>;]" << std::endl;
+    out << "    }" << std::endl;  // end subgraph
+    out << "  }" << std::endl;    // end legend block
+    out << "}" << std::endl;      // end digraph
+
     if (!LOGGING(4))
         return;  // generate other types of graphs only if dumping to console
     out << "digraph table_deps_merged {" << std::endl;
