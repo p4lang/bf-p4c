@@ -709,8 +709,7 @@ void IXBar::found_mid_bytes(mid_byte_use *mb_grp, safe_vector<IXBar::Use::Byte *
     bool ternary, int &match_bytes_placed, int search_bus, bool &prefer_nibble,
     bool only_alloc_nibble) {
     auto &fields = this->fields(ternary);
-    if (mb_grp->found[0] == false)
-        return;
+    if (!mb_grp->found[0]) return;
     int found_bytes = 1;
     int ixbar_bytes_placed = 0;
     int total_match_bytes = 1;

@@ -44,7 +44,7 @@ class TernaryMatchKeyConstraints : public MauModifier {
   */
 class TablePhvConstraints : public PassManager {
  public:
-    explicit TablePhvConstraints(PhvInfo& p, PragmaContainerSize& pa) {
+    explicit TablePhvConstraints(PhvInfo& p) {
         addPasses({
             new TernaryMatchKeyConstraints(p)
         });

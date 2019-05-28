@@ -78,7 +78,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             // allocation)
             &pack_conflicts,
             // Collect constraints related to the way fields are used in tables.
-            new TablePhvConstraints(phv, pragmas.pa_container_sizes()),
+            new TablePhvConstraints(phv),
             // Collect constraints related to the way fields are used in the parser/deparser.
             new PardePhvConstraints(phv, pragmas.pa_container_sizes()),
             &critical_path_clusters,

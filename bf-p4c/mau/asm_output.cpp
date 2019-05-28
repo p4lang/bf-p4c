@@ -1715,8 +1715,8 @@ MauAsmOutput::NextTableSet MauAsmOutput::next_for(const IR::MAU::Table *tbl, cst
     if (tbl->next.count(what)) {
         if (tbl->next.at(what) && Device::numLongBranchTags() > 0 && !options.disable_long_branch) {
             NextTableSet rv;
-            for (auto *tbl : tbl->next.at(what)->tables)
-                rv.insert(tbl);
+            for (auto *tbl1 : tbl->next.at(what)->tables)
+                rv.insert(tbl1);
             return rv; }
         if (tbl->next.at(what) && !tbl->next.at(what)->empty())
             return tbl->next.at(what)->front(); }
