@@ -920,21 +920,31 @@ bool ActionDataBus::alloc_immediate(const ActionData::BusInputs total_layouts, U
  *  Fortunately, the random.get is rarely used in P4, so these optimizations are low
  *  priority for the time being.
  */
-bool ActionDataBus::alloc_rng(const bitvec rand_num_layouts[ActionData::SLOT_TYPES],
-                              Use &use, const ActionFormat::RandNumALUFormat &format,
-                              cstring name) {
-    bitvec total_layout;
-    for (int i = 0; i < ActionData::SLOT_TYPES; i++) {
-        total_layout |= rand_num_layouts[i];
-    }
+bool ActionDataBus::alloc_rng(Use &use, const ActionData::Format::Use *format, cstring name) {
+    bitvec rng_bytes;
 
-    if (total_layout.empty())
+    const ActionData::RamSection *immed_path_sect = format->build_locked_in_sect();
+    auto ad_positions = immed_path_sect->parameter_positions(false);
+    for (auto pos : ad_positions) {
+        auto rn = pos.second->to<ActionData::RandomNumber>();
+        if (rn == nullptr)
+            continue;
+        le_bitrange immed_range = { pos.first, pos.first + rn->size() - 1 };
+        for (int i = 0; i < ActionData::Format::IMMEDIATE_BITS; i += 8) {
+            int bit_pos_lo = i * 8;
+            int bit_pos_hi = bit_pos_lo + 7;
+            if (!immed_range.overlaps(bit_pos_lo, bit_pos_hi))
+                continue;
+            rng_bytes.setbit(i);
+        }
+    }
+    if (rng_bytes.empty())
         return true;
 
     bool found = false;
-    int rng_index;
-    for (rng_index = 0; rng_index < RANDOM_NUMBER_GENERATORS; rng_index++) {
-        if ((rng_in_use[rng_index] & total_layout).empty()) {
+    int rng_unit;
+    for (rng_unit = 0; rng_unit < RANDOM_NUMBER_GENERATORS; rng_unit++) {
+        if ((rng_in_use[rng_unit] & rng_bytes).empty()) {
             found = true;
             break;
         }
@@ -943,21 +953,12 @@ bool ActionDataBus::alloc_rng(const bitvec rand_num_layouts[ActionData::SLOT_TYP
     if (!found)
         return false;
 
-    for (auto bit : total_layout) {
-        rng_use[rng_index][bit] = name;
+    for (auto bit : rng_bytes) {
+        rng_use[rng_unit][bit] = name;
     }
-    rng_in_use[rng_index] |= total_layout;
+    rng_in_use[rng_unit] |= rng_bytes;
 
-    for (auto &rng_entry : format) {
-        auto *rn = rng_entry.first;
-        auto &rn_vec = rng_entry.second;
-        bitvec rn_layout;
-        for (auto &alu_plac : rn_vec) {
-            rn_layout.setrange(alu_plac.start, alu_plac.alu_size / 8);
-        }
-        Use::RandomNumberGenerator rng(rng_index, rn_layout);
-        use.rng_locs.emplace(rn, rng);
-    }
+    use.rng_locs.emplace_back(rng_unit, rng_bytes);
     return true;
 }
 
@@ -998,7 +999,7 @@ bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl,
     for (int i = 0; i < ActionData::SLOT_TYPES; i++) {
         immed_layouts[i] |= use->locked_in_all_actions_bus_inputs[i];
         // immed_layouts[i] |= special_use->hash_dist_layouts[i];
-        immed_layouts[i] |= special_use->rand_num_layouts[i];
+        // immed_layouts[i] |= special_use->rand_num_layouts[i];
     }
     // Known limitation of the action data packing
     if (special_use->meter_reserved)
@@ -1012,8 +1013,7 @@ bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl,
                                use->full_words_bitmasked, ad_xbar, tbl->name);
     if (!allocated) return false;
 
-    allocated = alloc_rng(special_use->rand_num_layouts, ad_xbar, special_use->rand_num_placement,
-                          tbl->name);
+    allocated = alloc_rng(ad_xbar, use, tbl->name);
     if (!allocated) return false;
 
     LOG2(" Action data bus for " << tbl->name);
@@ -1131,7 +1131,7 @@ void ActionDataBus::update(cstring name, const Use &alloc) {
     }
 
     for (auto &rng : alloc.rng_locs) {
-        update(name, rng.second);
+        update(name, rng);
     }
 }
 

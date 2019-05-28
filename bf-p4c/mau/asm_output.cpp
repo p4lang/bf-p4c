@@ -1454,7 +1454,6 @@ void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
             out << ".." << (rs.location.byte + byte_sz - 1);
         out << " : ";
 
-        const IR::MAU::RandomNumber *rn = nullptr;
         // For emitting hash distribution sections on the action_bus directly.  Must find
         // which slices of hash distribution are to go to which bytes, requiring coordination
         // from the input xbar and action format allocation
@@ -1497,10 +1496,9 @@ void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
                 out << ", " << lo_hi;
             }
             out << ")";
-        } else if (emit_immed && speciality_use.is_rand_num(rs.byte_offset, &rn)) {
-            auto rng_use = action_data_xbar.rng_locs.at(rn);
-            out << "rng(" << rng_use.unit << ", ";
-            // random numbers come as full bytes, no masking
+        } else if (emit_immed && format.is_rand_num(rs.byte_offset)) {
+            int rng_unit = tbl->resources->rng_unit();
+            out << "rng(" << rng_unit << ", ";
             int lo = rs.byte_offset * 8;
             int hi = lo + byte_sz * 8 - 1;
             out << lo << ".." << hi << ")";
@@ -2002,15 +2000,11 @@ class MauAsmOutput::EmitAction : public Inspector {
             hi = rn->type->width_bits() - 1;
         }
         assert(sep);
-        BUG_CHECK(rn != nullptr, "Printing an invalid random number in the assembly");
+        BUG_CHECK(rn != nullptr && rn->allocated(), "Printing an invalid random number in the "
+                  "assembly");
         out << sep << "rng(";
-        auto unit = table->resources->action_data_xbar.rng_locs.at(rn).unit;
-        out << unit << ", ";
-        auto af = table->resources->action_format;
-        auto speciality_use = af.speciality_use;
-        int rng_lo = -1;  int rng_hi = -1;
-        speciality_use.find_rand_num(rn, lo, hi, rng_lo, rng_hi);
-        out << rng_lo << ".." << rng_hi << ")";
+        out << rn->rng_unit << ", ";
+        out << lo << ".." << hi << ")";
         sep = ", ";
     }
 

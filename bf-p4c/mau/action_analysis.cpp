@@ -661,20 +661,30 @@ bool ActionAnalysis::init_phv_alignment(const ActionParam &read, ContainerAction
  */
 bool ActionAnalysis::init_special_alignment(const ActionParam &read, ContainerAction &cont_action,
         le_bitrange write_bits, cstring action_name, PHV::Container container) {
-    if (read.speciality != ActionParam::HASH_DIST)
+    if (!(read.speciality == ActionParam::HASH_DIST || read.speciality == ActionParam::RANDOM))
         return init_simple_alignment(read, cont_action, write_bits);
 
     auto &action_format = tbl->resources->action_format;
-    BuildP4HashFunction builder(phv);
-    // Build the hash function from the expression
-    auto hd = read.unsliced_expr()->to<IR::MAU::HashDist>();
-    hd->apply(builder);
-    P4HashFunction *func = builder.func();
-    if (auto sl = read.expr->to<IR::Slice>())
-        func->slice({static_cast<int>(sl->getL()), static_cast<int>(sl->getH())});
 
-    ActionData::Hash *hash = new ActionData::Hash(*func);
-    ActionData::UniqueLocationKey key(action_name, hash, container, write_bits);
+    ActionData::Parameter *param = nullptr;
+    if (read.speciality == ActionParam::HASH_DIST) {
+        BuildP4HashFunction builder(phv);
+        // Build the hash function from the expression
+        auto hd = read.unsliced_expr()->to<IR::MAU::HashDist>();
+        hd->apply(builder);
+        P4HashFunction *func = builder.func();
+        if (auto sl = read.expr->to<IR::Slice>())
+            func->slice({static_cast<int>(sl->getL()), static_cast<int>(sl->getH())});
+
+        param = new ActionData::Hash(*func);
+    } else if (read.speciality == ActionParam::RANDOM) {
+        auto rn = read.unsliced_expr()->to<IR::MAU::RandomNumber>();
+        param = new ActionData::RandomNumber(rn->name, action_name, read.range().size());
+    } else {
+        return init_simple_alignment(read, cont_action, write_bits);
+    }
+
+    ActionData::UniqueLocationKey key(action_name, param, container, write_bits);
 
     const ActionData::ALUPosition *alu_pos = nullptr;
     const ActionData::ALUParameter *alu_param = action_format.find_param_alloc(key, &alu_pos);

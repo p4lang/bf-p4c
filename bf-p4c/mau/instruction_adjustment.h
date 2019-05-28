@@ -175,6 +175,7 @@ class MergeInstructions : public MauTransform, TofinoWriteContext {
         ActionAnalysis::ActionParam::type_t type, cstring match_name,
         IR::MAU::MultiOperand *mo);
     const IR::Expression *fill_out_hash_operand(ActionAnalysis::ContainerAction &cont_action);
+    const IR::Expression *fill_out_rand_operand(ActionAnalysis::ContainerAction &cont_action);
     const IR::Constant *find_field_action_constant(ActionAnalysis::ContainerAction &cont_action);
 
  public:

@@ -1001,13 +1001,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/mau/test_config_413_neg_wred_no_idx.p4
   )
 
-# P4C-1383
-p4c_add_xfail_reason("tofino"
-  "Unimplemented compiler support.*Cannot allocate >4 immediate bytes for logical table"
-  ../glass/testsuite/p4_tests/arista/COMPILER-964/test_config_401_random_num.p4
-  ../glass/testsuite/p4_tests/arista/COMPILER-1105/case8039.p4
-  )
-
 # P4C-1323
 # Could not place table capture_timestamp_1_0: The table capture_timestamp_1_1 could not fit within a single input crossbar in an MAU stage
 p4c_add_xfail_reason("tofino"
@@ -1302,6 +1295,7 @@ p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   ../glass/testsuite/p4_tests/mau/test_config_235_funnel_shift.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-1113/case8138.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-1105/case8039.p4
 )
 
 # negative test.

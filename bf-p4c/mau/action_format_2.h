@@ -80,8 +80,17 @@ class Parameter {
         const Parameter *) const = 0;
     virtual const Parameter *overlap(const Parameter *ad, bool guaranteed_one_overlap,
         le_bitrange *my_overlap, le_bitrange *ad_overlap) const = 0;
-    virtual bool equiv_value(const Parameter *, bool check_cond = true) const = 0;
     virtual void dbprint(std::ostream &out) const = 0;
+
+    virtual bool equiv_value(const Parameter *, bool check_cond = true) const = 0;
+    virtual bool can_merge(const Parameter *param) const { return equiv_value(param); }
+    virtual bool is_subset_of(const Parameter *param) const { return equiv_value(param); }
+    virtual const Parameter *merge(const Parameter *param) const {
+        if (param != nullptr)
+            BUG_CHECK(can_merge(param), "Merging parameters that cannot merge");
+        return this;
+    }
+
     template<typename T> const T *to() const { return dynamic_cast<const T*>(this); }
     template<typename T> bool is() const { return to<T>() != nullptr; }
 
@@ -231,6 +240,89 @@ class Hash : public Parameter {
     bool equiv_value(const Parameter *ad, bool check_cond = true) const override;
     void dbprint(std::ostream &out) const override { out << _func; }
     P4HashFunction func() const { return _func; }
+};
+
+
+/**
+ * Represents an output from the Random Number Generator.  Up to 32 bits possible per logical
+ * table, as this is the size of the immediate bits maximum position.
+ *
+ * Because all Random Numbers across all actions can possibly be merged, a set of
+ * random numbers (in the initial case a single entry) represent all of the data at those
+ * particular bits.  Because the bits are always random, there is not lo-hi, only size.
+ */
+class RandomNumber : public Parameter {
+ public:
+    struct UniqueAlloc {
+     private:
+        cstring _random;
+        cstring _action;
+
+     public:
+        bool operator<(const UniqueAlloc &ua) const {
+            if (_random != ua._random)
+                return _random < ua._random;
+            return _action < ua._action;
+        }
+        bool operator==(const UniqueAlloc &ua) const {
+            return _random == ua._random && _action == ua._action;
+        }
+
+        bool operator!=(const UniqueAlloc &ua) const { return !(*this == ua); }
+
+
+        UniqueAlloc(cstring r, cstring a) : _random(r), _action(a) { }
+        bool used_in_alu_op() const { return !_random.isNull(); }
+        cstring random() const {
+            return used_in_alu_op() ? _random : "rng_output";
+        }
+        cstring action() const { return _action; }
+    };
+
+ private:
+    std::set<UniqueAlloc> _rand_nums;
+    size_t _size;
+
+ public:
+    RandomNumber(cstring rn, cstring act, size_t sz) : _size(sz) {
+        _rand_nums.emplace(rn, act);
+    }
+
+    std::string rand_num_names() const {
+        std::string rv = "{ ";
+        std::string sep = "";
+        for (auto ua : _rand_nums) {
+            rv += sep + ua.random() + "$" + ua.action();
+            sep = ", ";
+        }
+        return rv + " }";
+    }
+
+    int size() const override { return _size; }
+    cstring name() const override { return "random"; }
+    const Parameter *split(int lo, int hi) const override;
+
+    bool from_p4_program() const override { return true; }
+    bool only_one_overlap_solution() const override { return false; }
+    bool is_next_bit_of_param(const Parameter *ad, bool same_alias) const override;
+    const Parameter *get_extended_param(uint32_t extension, const Parameter *ad) const override;
+    const Parameter *overlap(const Parameter *ad, bool only_one_overlap_solution,
+        le_bitrange *my_overlap, le_bitrange *ad_overlap) const override;
+    bool equiv_value(const Parameter *ad, bool check_cond = true) const override;
+    bool rand_nums_overlap_into(const RandomNumber *rn) const;
+
+    bool is_subset_of(const Parameter *ad) const override;
+    bool can_merge(const Parameter *ad) const override;
+    const Parameter *merge(const Parameter *ad) const override;
+
+    bool contains_rand_num(cstring rn, cstring act) const {
+        UniqueAlloc ua(rn, act);
+        return _rand_nums.count(ua) != 0;
+    }
+
+    void dbprint(std::ostream &out) const override {
+        out << "random " << rand_num_names() << " : " << _size;
+    }
 };
 
 struct ALUParameter {
@@ -698,6 +790,7 @@ class Format {
         }
 
         bool is_hash_dist(int byte_offset) const;
+        bool is_rand_num(int byte_offset) const;
         const RamSection *build_locked_in_sect() const;
     };
 
@@ -726,6 +819,9 @@ class Format {
         le_bitrange container_bits);
     void create_hash_constant(ALUOperation &alu, ActionAnalysis::ActionParam &read,
         le_bitrange container_bits);
+    void create_random_number(ALUOperation &alu, ActionAnalysis::ActionParam &read,
+        le_bitrange container_bits, cstring action_name);
+    void create_random_padding(ALUOperation &alu, le_bitrange padding_bits, cstring action_name);
     void create_mask_argument(ALUOperation &alu, ActionAnalysis::ActionParam &read,
         le_bitrange container_bits);
     void create_mask_constant(ALUOperation &alu, bitvec value, le_bitrange container_bits,

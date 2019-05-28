@@ -45,7 +45,6 @@ safe_vector<int> TableResourceAlloc::hash_dist_immed_units() const {
         int unit = -1;
         for (auto &hd : hash_dists) {
             if (hd.destinations().getbit(i)) {
-                LOG1("  Destination " << i << " " << hd.unit << " 0x" << hd.destinations());
                 BUG_CHECK(unit == -1, "Multiple HashDistUse objects cannot head to the same "
                     "output destination");
                 unit = hd.unit;
@@ -54,4 +53,16 @@ safe_vector<int> TableResourceAlloc::hash_dist_immed_units() const {
         rv.push_back(unit);
     }
     return rv;
+}
+
+/**
+ * Returns which rng unit has been assigned to this table
+ */
+int TableResourceAlloc::rng_unit() const {
+    int rv = -1;
+    if (action_data_xbar.rng_locs.empty())
+        return rv;
+    BUG_CHECK(action_data_xbar.rng_locs.size() == 1, "Current allocation can only allocate one "
+        "rng unit per table");
+    return action_data_xbar.rng_locs.at(0).unit;
 }

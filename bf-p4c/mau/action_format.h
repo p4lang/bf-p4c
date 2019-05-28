@@ -412,23 +412,6 @@ struct ActionFormat {
     int action_bytes[LOCATIONS] = {0, 0, 0};
     int action_data_bytes = 0;
 
-    /** The algorithm to find locations for Hash Distribution or Random Numbers will have to be
-     *  changed in order to handle the possible combination of IR nodes.  The major issue
-     *  is that either these IR nodes never can be changed after TableLayout runs, or
-     *  that these data structures need to be updated anytime these IR nodes either can be
-     *  shared or collapse
-     *
-     *  Currently each individual Hash.get(...) and random.get(...) is translated into its
-     *  own IR::Node, and each individual IR node receives its own placement.  However, plenty
-     *  of optimizations can exist where either HashDist units can be shared between actions
-     *  or even different tables in where this data gets allocated.  The same can be said
-     *  with Random Number resources.  As programs get more complicated, the ability of the
-     *  compiler to handle these optimizations will depend significantly on how the state
-     *  of their allocations is captured across the ActionFormat, InputXbar and ActionDataBus.
-     *  This is all to keep in mind for the next design of these algorithms.
-     */
-    typedef std::map<const IR::MAU::RandomNumber *, SingleActionALUPlacement> RandNumALUFormat;
-    typedef std::map<const IR::MAU::RandomNumber *, SingleActionSlotPlacement> RandNumSlotFormat;
     /** Contains all of the information on all the action data format and individual arguments
      *  Because we only currently have either only an action data table or action data through
      *  immediate, this structure contains both of these structures.  Eventually, like GLASS,
@@ -442,14 +425,11 @@ struct ActionFormat {
         std::map<cstring, ArgPlacementData> arg_placement;
         // Location of constants within the action data format
         std::map<cstring, ConstantRenames> constant_locations;
-        RandNumALUFormat rand_num_placement;
 
         int action_data_bytes[LOCATIONS] = { 0, 0 };
 
         bitvec immediate_mask;
         bitvec total_layouts[LOCATIONS][CONTAINER_TYPES];
-        bitvec hash_dist_layouts[CONTAINER_TYPES];
-        bitvec rand_num_layouts[CONTAINER_TYPES];
         bitvec global_param_layouts[CONTAINER_TYPES];
 
         bitvec full_layout_bitmasked;
@@ -464,16 +444,13 @@ struct ActionFormat {
         cstring get_format_name(int start_byte, cont_type_t type, bool immediate, bitvec range,
             bool use_range, bool bitmasked_set = false) const;
         bool is_meter_color(int start_byte, bool immediate) const;
-        bool is_rand_num(int byte_offset, const IR::MAU::RandomNumber **rn) const;
-        void find_rand_num(const IR::MAU::RandomNumber *rn, int field_lo, int field_hi,
-                           int &rng_lo, int &rng_hi) const;
         bool in_layouts(int byte_offset, const bitvec layouts[CONTAINER_TYPES]) const;
         int immediate_bits() const {
             return immediate_mask.max().index() + 1;
         }
 
         bool is_immed_speciality_in_use() const {
-            return !(rand_num_placement.empty() && !meter_reserved);
+            return meter_reserved;
         }
     };
 
@@ -501,9 +478,6 @@ struct ActionFormat {
     TotalALUPlacement init_alu_format;
     TotalSlotPlacement init_slot_format;
 
-    RandNumALUFormat init_rn_alu_placement;
-    RandNumSlotFormat init_rn_slot_placement;
-
     bool split_started = false;
 
     bool analyze_all_actions();
@@ -517,8 +491,7 @@ struct ActionFormat {
     void create_placement_phv(const ActionAnalysis::ContainerActionsMap &container_actions_map,
                               cstring action_name);
     void create_from_actiondata(ActionDataForSingleALU &adp,
-        const ActionAnalysis::ActionParam &read, int container_bit,
-        const IR::MAU::RandomNumber **rn);
+        const ActionAnalysis::ActionParam &read, int container_bit);
     void create_from_constant(ActionDataForSingleALU &adp,
         const ActionAnalysis::ActionParam &read, int field_bit, int container_bit,
         int &constant_to_ad_count);

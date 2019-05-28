@@ -66,6 +66,7 @@ struct TableResourceAlloc {
 
     bool has_tind() const;
     safe_vector<int> hash_dist_immed_units() const;
+    int rng_unit() const;
 };
 
 #endif /* BF_P4C_MAU_RESOURCE_H_ */

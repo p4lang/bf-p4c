@@ -888,7 +888,13 @@ class ActionDataConstant : Expression {
 }
 
 class RandomNumber : Expression {
-    dbprint { out << "rng(" << type << ")"; }
+    cstring name;
+    /**
+     * 2 units per stage, one per logical table, on a byte by byte basis
+     */
+    int     rng_unit = -1;
+    bool allocated() const { return rng_unit >= 0; }
+    dbprint { out << "rng(" << name << ", " << type << ")"; }
 }
 
 /// A use of an attached table output; an operand of an instruction

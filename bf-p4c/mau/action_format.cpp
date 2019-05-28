@@ -264,50 +264,6 @@ bool ActionFormat::Use::in_layouts(int byte_offset, const bitvec layouts[CONTAIN
     return false;
 }
 
-/** Checks to see if a particular byte of a layout is one contained by the Random Number
- *  Generator
- */
-bool ActionFormat::Use::is_rand_num(int byte_offset, const IR::MAU::RandomNumber **rn_ptr) const {
-    if (!in_layouts(byte_offset, rand_num_layouts))
-        return false;
-
-    bool found = false;
-    for (auto &rand_num_entry : rand_num_placement) {
-        for (auto &adp : rand_num_entry.second) {
-            if (adp.start == byte_offset) {
-                found = true;
-                *rn_ptr = rand_num_entry.first;
-                break;
-            }
-        }
-    }
-    BUG_CHECK(found, "Could not find associated random number, even though the action format "
-                     "has allocated space for that random number");
-    return found;
-}
-
-/** Given a random number IR node, and a slice of field_lo and field_hi, this will determine
- *  which section of the 32 bits the random number for this ALU is.
- */
-void ActionFormat::Use::find_rand_num(const IR::MAU::RandomNumber *rn, int field_lo,
-        int field_hi, int &rng_lo, int &rng_hi) const {
-    auto rn_placement = rand_num_placement.at(rn);
-
-    bitvec field_bv(field_lo, field_hi - field_lo + 1);
-    bool found = false;
-    for (auto &placement : rn_placement) {
-        auto &arg_loc = placement.arg_locs[0];
-        bitvec arg_loc_bv(arg_loc.field_bit, arg_loc.width());
-        if ((arg_loc_bv & field_bv) == arg_loc_bv) {
-            rng_lo = placement.start * 8 + field_lo - arg_loc.field_bit;
-            rng_hi = arg_loc.width() + rng_lo - 1;
-            found = true;
-            break;
-        }
-    }
-    BUG_CHECK(found, "Cannot find random number correctly");
-}
-
 /** Meter color reserved in the top byte of immediate */
 bool ActionFormat::Use::is_meter_color(int start_byte, bool immediate) const {
     return meter_reserved && immediate && start_byte == (IMMEDIATE_BYTES - 1);
@@ -395,8 +351,7 @@ void ActionFormat::create_placement_non_phv(const ActionAnalysis::FieldActionsMa
 /** Creates an ActionDataPlacement from an MAU::ActionArg, correctly verified from the PHV allocation
  */
 void ActionFormat::create_from_actiondata(ActionDataForSingleALU &adp,
-        const ActionAnalysis::ActionParam &read, int container_bit,
-        const IR::MAU::RandomNumber **rn) {
+        const ActionAnalysis::ActionParam &read, int container_bit) {
     bitvec data_location;
     bool single_loc = true;
     int field_bit = 0;
@@ -407,10 +362,7 @@ void ActionFormat::create_from_actiondata(ActionDataForSingleALU &adp,
 
     data_location.setrange(container_bit, read.size());
     cstring arg_name;
-    if (read.speciality == ActionAnalysis::ActionParam::RANDOM) {
-        arg_name = "random";
-        *rn = read.unsliced_expr()->to<IR::MAU::RandomNumber>();
-    } else if (read.speciality == ActionAnalysis::ActionParam::NO_SPECIAL) {
+    if (read.speciality == ActionAnalysis::ActionParam::NO_SPECIAL) {
         arg_name = read.unsliced_expr()->to<IR::MAU::ActionArg>()->name;
     } else if (read.speciality == ActionAnalysis::ActionParam::METER_COLOR) {
         arg_name = "meter";
@@ -472,7 +424,6 @@ void ActionFormat::create_placement_phv(
         // Every instruction in the container process has to have its action data stored
         // in the same action data slot
         bool initialized = false;
-        const IR::MAU::RandomNumber *rn = nullptr;
         if (cont_action.action_data_isolated())
             adp.set_constraint(ISOLATED);
         if (cont_action.convert_instr_to_bitmasked_set)
@@ -500,11 +451,10 @@ void ActionFormat::create_placement_phv(
 
             for (auto &read : field_action.reads) {
                 if (read.speciality != ActionAnalysis::ActionParam::NO_SPECIAL &&
-                    read.speciality != ActionAnalysis::ActionParam::METER_COLOR &&
-                    read.speciality != ActionAnalysis::ActionParam::RANDOM)
+                    read.speciality != ActionAnalysis::ActionParam::METER_COLOR)
                     continue;
                 if (read.type == ActionAnalysis::ActionParam::ACTIONDATA) {
-                    create_from_actiondata(adp, read, container_bits.lo, &rn);
+                    create_from_actiondata(adp, read, container_bits.lo);
                     initialized = true;
                     if (cont_action.unresolved_ad())
                         adp.single_rename = true;
@@ -518,12 +468,7 @@ void ActionFormat::create_placement_phv(
         }
         adp.alu_size = container.size();
 
-        if (rn) {
-           if (cont_action.convert_instr_to_bitmasked_set)
-               P4C_UNIMPLEMENTED("Can't handle a random number in a bitmasked-set");
-           auto &rand_num_vec = init_rn_alu_placement[rn];
-           rand_num_vec.push_back(adp);
-        } else if (initialized) {
+        if (initialized) {
             if (cont_action.convert_instr_to_bitmasked_set)
                 adp.bitmasked_set = true;
             adp_vector.push_back(adp);
@@ -798,21 +743,6 @@ void ActionFormat::initialize_action_counts() {
  *  ALUs use that particular piece of action data.
  */
 bool ActionFormat::initialize_global_params_counts() {
-    for (auto &rn_vec_pair : init_rn_alu_placement) {
-        for (auto &alu_rn : rn_vec_pair.second) {
-            alu_rn.shift_slot_bits(0);
-            init_rn_slot_placement[rn_vec_pair.first].emplace_back(&alu_rn);
-        }
-    }
-
-    for (auto &rn_vec : Values(init_rn_slot_placement)) {
-        for (auto &adp : rn_vec) {
-            int index = adp.gen_index();
-            global_params.counts[IMMED][index]++;
-        }
-    }
-
-
     int immediate_bytes_available = IMMEDIATE_BYTES;
     if (meter_color)
         immediate_bytes_available--;
@@ -1376,31 +1306,12 @@ void ActionFormat::space_all_immediate_containers(int start_byte) {
  *  for it
  */
 void ActionFormat::align_global_params(bitvec global_params_layouts[CONTAINER_TYPES]) {
-    auto rn_slot_placement = init_rn_slot_placement;
-    int placed[BITMASKED_TYPES][CONTAINER_TYPES] = {{0, 0, 0}, {0, 0, 0}};
-
     bitvec layouts_placed[CONTAINER_TYPES];
     for (int i = 0; i < CONTAINER_TYPES; i++) {
         layouts_placed[i] = global_params_layouts[i];
     }
 
     for (int i = 0; i < CONTAINER_TYPES; i++) {
-        use->hash_dist_layouts[i] = layouts_placed[i] - global_params_layouts[i];
-        global_params_layouts[i] = layouts_placed[i];
-    }
-
-
-    for (auto &rn_info : rn_slot_placement) {
-        SingleActionSlotPlacement output_vec;
-        auto rn = rn_info.first;
-        auto rn_vec = rn_info.second;
-        align_section(rn_vec, output_vec, global_params, IMMED, NORMAL, layouts_placed,
-                      placed);
-        verify_placement(output_vec, use->rand_num_placement[rn], rn_vec);
-    }
-
-    for (int i = 0; i < CONTAINER_TYPES; i++) {
-        use->rand_num_layouts[i] = layouts_placed[i] - global_params_layouts[i];
         global_params_layouts[i] = layouts_placed[i];
     }
 }

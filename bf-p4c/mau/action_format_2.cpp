@@ -203,6 +203,142 @@ bool Hash::equiv_value(const Parameter *ad, bool check_cond) const {
     return _func.equiv(&hash->_func);
 }
 
+
+const Parameter *RandomNumber::split(int lo, int hi) const {
+    size_t new_size = hi - lo + 1;
+    BUG_CHECK(new_size <= _size, "Splitting a random number larger into a section larger than "
+                                "itself");
+    auto rv = new RandomNumber(*this);
+    rv->_size = new_size;
+    return rv;
+}
+
+bool RandomNumber::is_next_bit_of_param(const Parameter *ad, bool) const {
+    if (size() != 1) return false;
+    if (!equiv_cond(ad)) return false;
+    auto rn = ad->to<RandomNumber>();
+    if (rn == nullptr) return false;
+    return (_rand_nums == rn->_rand_nums);
+}
+
+const Parameter *RandomNumber::get_extended_param(uint32_t extension, const Parameter *) const {
+    auto rv = new RandomNumber(*this);
+    rv->_size += extension;
+    return rv;
+}
+
+bool RandomNumber::equiv_value(const Parameter *ad, bool check_cond) const {
+    auto rn = ad->to<RandomNumber>();
+    if (rn == nullptr) return false;
+    if (check_cond && !equiv_cond(ad)) return false;
+    return _rand_nums == rn->_rand_nums && _size == rn->_size;
+}
+
+/**
+ * @seealso RandomNumber::overlap
+ *
+ * Returns true if the set of randoms don't have any overlapping actions, or are padding
+ * within that action
+ */
+bool RandomNumber::rand_nums_overlap_into(const RandomNumber *rn) const {
+    for (auto ua : _rand_nums) {
+        if (!ua.used_in_alu_op())
+            continue;
+        for (auto ua_check : rn->_rand_nums) {
+            if (!ua_check.used_in_alu_op())
+                continue;
+            if (ua.action() == ua_check.action())
+                return false;
+        }
+    }
+    return true;
+}
+
+bool RandomNumber::is_subset_of(const Parameter *ad) const {
+    if (ad == nullptr)
+        return false;
+    auto rn = ad->to<RandomNumber>();
+    if (rn == nullptr)
+        return false;
+    if (size() != rn->size())
+        return false;
+    return std::includes(rn->_rand_nums.begin(), rn->_rand_nums.end(),
+                         _rand_nums.begin(), _rand_nums.end());
+}
+
+/**
+ * Returns true if each rand_nums set can overlap into each other (and are the same size)
+ */
+bool RandomNumber::can_merge(const Parameter *ad) const {
+    if (ad == nullptr)
+        return true;
+    auto rn = ad->to<RandomNumber>();
+    if (rn == nullptr)
+        return false;
+    if (size() != rn->size())
+        return false;
+    return (rand_nums_overlap_into(rn) && rn->rand_nums_overlap_into(this));
+}
+
+const Parameter *RandomNumber::merge(const Parameter *ad) const {
+    if (ad == nullptr)
+        return this;
+    BUG_CHECK(size() == ad->size(), "Parameters in merge must be the same size");
+
+    auto rn = ad->to<RandomNumber>();
+    BUG_CHECK(rn != nullptr, "Attempting to merge a random number with a non-random number");
+    auto rv = new RandomNumber(*this);
+    rv->_rand_nums.insert(rn->_rand_nums.begin(), rn->_rand_nums.end());
+
+    return rv;
+}
+
+/**
+ * Each action in a table is mutually exclusive, thus random externs that are used in different
+ * actions can share the same bits in the immediate, as these bits will be mutually exclusive.
+ * Random externs used in the same actions can not overlap, in order to guarantee that each random
+ * bit is unique.
+ *
+ * Previously checked before this pass is run, a random extern can only be used once per action,
+ * as the infrastucture cannot tell what bits are supposed to be shared, vs. what bits will be
+ * different.
+ *
+ * Bits that are not headed directly to an ALU operation can be overlaid:
+ *
+ * action a1() {
+ *     f1 = random1.get(); 
+ *     f2 = random2.get();
+ * }
+ *
+ * where f1 and f2 are two 4 bit fields in different 8 bit containers.  In this case, because the
+ * random numbers output byte by byte, each random number impact is actually 8 bits.  But because
+ * each of these operands only use 4 bits, each random number can overlap with each other.
+ *
+ * Because these bits can always overlap, just return the max size position
+ */
+const Parameter *RandomNumber::overlap(const Parameter *ad, bool only_one_overlap_solution,
+        le_bitrange *my_overlap, le_bitrange *ad_overlap) const {
+    if (only_one_overlap_solution)
+        return nullptr;
+
+    auto rn = ad->to<RandomNumber>();
+    if (rn == nullptr)
+        return nullptr;
+    if (!equiv_cond(ad))
+        return nullptr;
+    if (!rand_nums_overlap_into(rn) || !rn->rand_nums_overlap_into(this))
+        return nullptr;
+    size_t min_size = std::min(_size, rn->_size);
+
+    auto rv = this->split(0, min_size - 1)->merge(rn->split(0, min_size - 1));
+    if (my_overlap)
+        *my_overlap = { 0, static_cast<int>(min_size) - 1 };
+    if (ad_overlap)
+        *ad_overlap = { 0, static_cast<int>(min_size) - 1 };
+    return rv;
+}
+
+
 LocalPacking LocalPacking::split(int first_bit, int sz) const {
     BUG_CHECK(sz < bit_width && ((bit_width % sz) == 0), "Cannot split a LocalPacking evenly");
     LocalPacking rv(sz, bits_in_use.getslice(first_bit, sz));
@@ -730,15 +866,18 @@ const RamSection *RamSection::merge(const RamSection *ad) const {
     for (size_t i = 0; i < size(); i++) {
         if (action_data_bits[i] == nullptr || ad->action_data_bits[i] == nullptr)
             continue;
-        if (action_data_bits[i]->equiv_value(ad->action_data_bits[i]))
+        if (action_data_bits[i]->can_merge(ad->action_data_bits[i]))
             continue;
         return nullptr;
     }
     RamSection *rv = new RamSection(size());
 
     for (size_t i = 0; i < size(); i++) {
-        const Parameter *bit_param
-            = action_data_bits[i] != nullptr ? action_data_bits[i] : ad->action_data_bits[i];
+        const Parameter *a_param = action_data_bits[i] != nullptr ? action_data_bits[i]
+                                                                  : ad->action_data_bits[i];
+        const Parameter *b_param = a_param == action_data_bits[i] ? ad->action_data_bits[i]
+                                                                  : action_data_bits[i];
+        const Parameter *bit_param = a_param ? a_param->merge(b_param) : nullptr;
         rv->action_data_bits[i] = bit_param;
     }
 
@@ -888,7 +1027,7 @@ bool RamSection::is_data_subset_of(const RamSection *ad) const {
             continue;
         if (superset_bit == nullptr)
             return false;
-        if (!subset_bit->equiv_value(superset_bit))
+        if (!subset_bit->is_subset_of(superset_bit))
             return false;
     }
     return true;
@@ -1349,7 +1488,7 @@ const ALUParameter *Format::Use::find_locked_in_all_actions_param_alloc(UniqueLo
  */
 const ALUParameter *Format::Use::find_param_alloc(UniqueLocationKey &key,
         const ALUPosition **alu_pos_p) const {
-    if (key.param->is<Hash>())
+    if (key.param->is<Hash>() || key.param->is<RandomNumber>())
         return find_locked_in_all_actions_param_alloc(key, alu_pos_p);
 
     auto action_alu_positions = alu_positions.at(key.action_name);
@@ -1474,13 +1613,49 @@ bool Format::Use::is_hash_dist(int byte_offset) const {
                     found = true;
                     hash_dist = false;
                 } else {
-                   BUG_CHECK(hash_dist, "A hash dist and non hash dist share the same packing "
-                                        "byte");
+                    BUG_CHECK(!hash_dist, "A hash dist and non hash dist share the same "
+                                          "packing byte");
                 }
             }
         }
     }
     return hash_dist;
+}
+
+/**
+ * Given a particular start byte in immediate, return true if that byte offset is used
+ * by a random number
+ * FIXME: Could be Templated with is_hash_dist as well.  C++ ability is not strong enough
+ * without consulting Chris
+ */
+bool Format::Use::is_rand_num(int byte_offset) const {
+    bool found = false;
+    bool rand_num = false;
+    for (auto &alu_position : locked_in_all_actions_alu_positions) {
+        if (alu_position.start_byte != static_cast<unsigned>(byte_offset))
+            continue;
+        auto param_positions = alu_position.alu_op->parameter_positions();
+        for (auto &param_pos : param_positions) {
+            if (param_pos.second->is<RandomNumber>()) {
+                if (!found) {
+                    found = true;
+                    rand_num = true;
+                } else {
+                    BUG_CHECK(rand_num, "A random number and non random number share the "
+                                        "same packing byte");
+                }
+            } else {
+                if (!found) {
+                    found = true;
+                    rand_num = false;
+                } else {
+                    BUG_CHECK(!rand_num, "A random number and non random number share the "
+                                         "same packing byte");
+                }
+            }
+        }
+    }
+    return rand_num;
 }
 
 const RamSection *Format::Use::build_locked_in_sect() const {
@@ -1562,7 +1737,7 @@ void Format::create_hash(ALUOperation &alu, ActionAnalysis::ActionParam &read,
  * converted to one of the outputs of the HashFunction
  */
 void Format::create_hash_constant(ALUOperation &alu, ActionAnalysis::ActionParam &read,
-       le_bitrange container_bits) {
+        le_bitrange container_bits) {
     auto ir_con = read.unsliced_expr()->to<IR::Constant>();
     BUG_CHECK(ir_con != nullptr, "Cannot create constant");
     P4HashFunction func;
@@ -1571,6 +1746,32 @@ void Format::create_hash_constant(ALUOperation &alu, ActionAnalysis::ActionParam
     func.hash_bits = { 0, ir_con->type->width_bits() - 1 };
     Hash *hash = new Hash(func);
     ALUParameter ap(hash, container_bits);
+    alu.add_param(ap);
+}
+
+/**
+ * Creates a RandomNumber parameter that is associated with a source in an action
+ */
+void Format::create_random_number(ALUOperation &alu, ActionAnalysis::ActionParam &read,
+        le_bitrange container_bits, cstring action_name) {
+    auto ir_rn = read.unsliced_expr()->to<IR::MAU::RandomNumber>();
+    BUG_CHECK(ir_rn != nullptr, "Cannot create random");
+    cstring rand_name = ir_rn->name;
+    size_t size = read.range().size();
+    RandomNumber *rn = new RandomNumber(rand_name, action_name, size);
+    ALUParameter ap(rn, container_bits);
+    alu.add_param(ap);
+}
+
+/**
+ * Creates an output of the RandomNumberGenerator that is not used in an ALU operation
+ * directly, but cannot be ORed with anything else
+ */
+void Format::create_random_padding(ALUOperation &alu, le_bitrange container_bits,
+        cstring action_name) {
+    cstring null_rand_name;
+    RandomNumber *rn = new RandomNumber(null_rand_name, action_name, container_bits.size());
+    ALUParameter ap(rn, container_bits);
     alu.add_param(ap);
 }
 
@@ -1630,6 +1831,7 @@ void Format
         int alias_required_reads = 0;
 
         bitvec specialities = cont_action.specialities();
+        bitvec rand_num_write_bits;
 
         for (auto &field_action : cont_action.field_actions) {
             le_bitrange bits;
@@ -1657,12 +1859,17 @@ void Format
 
             for (auto &read : field_action.reads) {
                 if (!(read.speciality == ActionAnalysis::ActionParam::HASH_DIST ||
+                      read.speciality == ActionAnalysis::ActionParam::RANDOM ||
                       read.speciality == ActionAnalysis::ActionParam::NO_SPECIAL)) {
                     continue;
                 }
 
                 if (read.speciality == ActionAnalysis::ActionParam::HASH_DIST)  {
                     create_hash(*alu, read, container_bits);
+                    contains_speciality = true;
+                } else if (read.speciality == ActionAnalysis::ActionParam::RANDOM) {
+                    create_random_number(*alu, read, container_bits, action_name);
+                    rand_num_write_bits.setrange(container_bits.lo, container_bits.size());
                     contains_speciality = true;
                 } else if (read.is_conditional) {
                     create_mask_argument(*alu, read, container_bits);
@@ -1685,6 +1892,15 @@ void Format
                     continue;
                 }
                 contains_action_data = true;
+            }
+        }
+
+        if (specialities.getbit(ActionAnalysis::ActionParam::RANDOM)) {
+            // So in theory this could just be only the bytes that have to overlap, but the
+            // action data bus portion will only understand outputs in their container sizes
+            for (auto br : bitranges(bitvec(0, container.size()) - rand_num_write_bits)) {
+                le_bitrange padding_bits = { br.first, br.second };
+                create_random_padding(*alu, padding_bits, action_name);
             }
         }
 

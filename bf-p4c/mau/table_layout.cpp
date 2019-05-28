@@ -1116,6 +1116,28 @@ bool FinalTableLayout::preorder(IR::MAU::Counter *cntr) {
 }
 
 /**
+ * @seealso ActionData::RandomNumber::Overlaps
+ *
+ * Only allows a random extern to get once per action, as currently it is too difficult to
+ * tell when a random number get is using the same bits or separate bits.  This is used
+ * so sparingly that this shouldn't be a major worry
+ */
+void RandomExternUsedOncePerAction::postorder(const IR::MAU::RandomNumber *rn) {
+    auto act = findContext<IR::MAU::Action>();
+    auto tbl = findContext<IR::MAU::Table>();
+    BUG_CHECK(tbl && act, "Random Number %1% is not found in an action/table", rn);
+
+    RandKey key = std::make_pair(tbl, act);
+    auto &externs = rand_extern_per_action[key];
+    if (externs.count(rn))
+        ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "%1%: Random number extern %2% is used "
+                "more than one time in action %3%, table %4%, which is currently unsupported "
+                "by p4c.  Please use a random extern only once per action", rn, rn->name,
+                act->name, tbl->name);
+    externs.insert(rn);
+}
+
+/**
  * An action profile requires action data to be saved somewhere in RAM space.  If the action
  * profile does not require action data, then the profile is pointless, and is currently not
  * allowed in Brig, as the driver needs some RAM space in order to figure out where to save
@@ -1230,6 +1252,7 @@ bool MeterColorMapramAddress::SetMapramAddress::preorder(IR::MAU::Meter *mtr) {
 TableLayout::TableLayout(const PhvInfo &p, LayoutChoices &l) : lc(l) {
     addPasses({
         new MeterColorMapramAddress,
+        new RandomExternUsedOncePerAction,
         new DoTableLayout(p, lc),
         new ValidateActionProfileFormat(lc),
         new ProhibitAtcamWideSelectors

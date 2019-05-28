@@ -338,6 +338,7 @@ const IR::MAU::Action *MergeInstructions::preorder(IR::MAU::Action *act) {
             if (!cont_action.convert_instr_to_deposit_field
                 && !cont_action.convert_instr_to_bitmasked_set
                 && !cont_action.adi.specialities.getbit(ActionAnalysis::ActionParam::HASH_DIST)
+                && !cont_action.adi.specialities.getbit(ActionAnalysis::ActionParam::RANDOM)
                 && (cont_action.error_code & ~error_mask) == 0)
                 continue;
         // Currently skip unresolved ActionAnalysis issues
@@ -542,6 +543,30 @@ const IR::Expression *
     return MakeSlice(hd, hash_dist_bits_used.lo, hash_dist_bits_used.hi);
 }
 
+
+/**
+ * The RNG_unit is assigned in this particular function (coordinated through ActionAnalysis)
+ * and the rng allocation in the action data bus
+ */
+const IR::Expression *
+         MergeInstructions::fill_out_rand_operand(ActionAnalysis::ContainerAction &cont_action) {
+    auto tbl = findContext<IR::MAU::Table>();
+    auto &adi = cont_action.adi;
+    BUG_CHECK(adi.specialities.getbit(ActionAnalysis::ActionParam::RANDOM) &&
+              adi.specialities.popcount() == 1,
+              "Can only create random number from random number associated objects");
+    bitvec op_bits_used_bv = adi.alignment.read_bits();
+    le_bitrange op_bits_used = { op_bits_used_bv.min().index(), op_bits_used_bv.max().index() };
+    le_bitrange immed_bits_used = op_bits_used.shiftedByBits(adi.start * 8);
+
+    int unit = tbl->resources->rng_unit();
+    auto *rn = new IR::MAU::RandomNumber(tbl->srcInfo,
+                                          IR::Type::Bits::get(ActionData::Format::IMMEDIATE_BITS),
+                                          "hw_rng");
+    rn->rng_unit = unit;
+    return MakeSlice(rn, immed_bits_used.lo, immed_bits_used.hi);
+}
+
 /** In order to keep the IR holding the fields that are contained within the container, this
  *  holds every single IR field within these individual container.  It walks over the reads of
  *  field actions within the container action, and adds them to the list.  Currently we don't
@@ -659,6 +684,9 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
         auto &adi = cont_action.adi;
         if (adi.specialities.getbit(ActionAnalysis::ActionParam::HASH_DIST)) {
             src1 = fill_out_hash_operand(cont_action);
+            src1_writebits = adi.alignment.write_bits();
+        } else if (adi.specialities.getbit(ActionAnalysis::ActionParam::RANDOM)) {
+            src1 = fill_out_rand_operand(cont_action);
             src1_writebits = adi.alignment.write_bits();
         } else if (cont_action.ad_renamed()) {
             auto mo = new IR::MAU::MultiOperand(components, adi.action_data_name, false);

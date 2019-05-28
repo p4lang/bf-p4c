@@ -38,34 +38,6 @@ class TernaryMatchKeyConstraints : public MauModifier {
      explicit TernaryMatchKeyConstraints(PhvInfo &p) : phv(p) {}
 };
 
-/** The results of hash functions are copied into PHVs from the action data bus as immediate values.
-  * We can use a maximum of 4 bytes of immediate data per logical table. Right now, the compiler
-  * cannot share any of these action data slots. Therefore, we need to add constraints to ensure
-  * that there is a maximum of 32-bits of hash bits generated per logical table.
-  */
-class HashFieldsContainerSize : public Inspector {
- private:
-    static constexpr int ONE_BYTE = 8;
-    static constexpr int TWO_BYTES = 16;
-    static constexpr int THREE_BYTES = 24;
-
-    PhvInfo                 &phv;
-    PragmaContainerSize     &containerSize;
-
-    /// Map of table to set of field slices used as outputs of hashing.
-    ordered_map<const IR::MAU::Table*, std::vector<PHV::FieldSlice>> hashDests;
-    /// Map of table to number of hash bits used by that table.
-    ordered_map<const IR::MAU::Table*, int> hashBitsUsage;
-
-    profile_t init_apply(const IR::Node* root) override;
-    bool preorder(const IR::MAU::Instruction* inst) override;
-    void end_apply() override;
-
- public:
-    explicit HashFieldsContainerSize(PhvInfo& p, PragmaContainerSize& pa)
-        : phv(p), containerSize(pa) {}
-};
-
 /** This class is meant to gather PHV constraints enforced by MAU and the way fields are used in
   * the MAU. Some of these constraints are temporary fixes that are workarounds for current
   * limitations of our allocation algorithms.
@@ -74,8 +46,7 @@ class TablePhvConstraints : public PassManager {
  public:
     explicit TablePhvConstraints(PhvInfo& p, PragmaContainerSize& pa) {
         addPasses({
-            new TernaryMatchKeyConstraints(p),
-            new HashFieldsContainerSize(p, pa)
+            new TernaryMatchKeyConstraints(p)
         });
     }
 };

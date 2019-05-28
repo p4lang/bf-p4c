@@ -138,7 +138,7 @@ struct ActionDataBus {
                 : unit(u), bytes(b) { }
         };
 
-        ordered_map<const IR::MAU::RandomNumber *, RandomNumberGenerator> rng_locs;
+        safe_vector<RandomNumberGenerator> rng_locs;
     };
 
     /** Location Algorithm: For finding an allocation within the correct type region */
@@ -211,8 +211,7 @@ struct ActionDataBus {
                               bitvec combined_layout, cstring name);
     bool alloc_shared_immed(Use &use, ActionData::BusInputs layouts, cstring name);
     bool alloc_immediate(const ActionData::BusInputs total_layouts, Use &use, cstring name);
-    bool alloc_rng(const bitvec rand_num_layouts[ActionData::SLOT_TYPES], Use &use,
-                   const ActionFormat::RandNumALUFormat &format, cstring name);
+    bool alloc_rng(Use &use, const ActionData::Format::Use *format, cstring name);
 
  public:
     bool alloc_action_data_bus(const IR::MAU::Table *tbl, const ActionData::Format::Use *use,

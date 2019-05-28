@@ -826,7 +826,9 @@ const IR::Node *DoInstructionSelection::postorder(IR::Primitive *prim) {
         BUG("%s: Should have already converted %s in previous pass", prim->srcInfo,
             prim->toString());
     } else if (prim->name == "Random.get") {
-        auto rn = new IR::MAU::RandomNumber(prim->srcInfo, prim->type);
+        auto glob = prim->operands[0]->to<IR::GlobalRef>();
+        auto decl = glob->obj->to<IR::Declaration_Instance>();
+        auto rn = new IR::MAU::RandomNumber(prim->srcInfo, prim->type, decl->name);
         auto next_type = prim->type;
         return new IR::MAU::Instruction(prim->srcInfo, "set", new IR::TempVar(next_type), rn);
     } else if (prim->name == "invalidate") {

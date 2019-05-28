@@ -99,6 +99,22 @@ class GetHashDistReqs : public MauInspector {
 };
 
 
+class RandomExternUsedOncePerAction : public MauInspector {
+    using RandExterns = ordered_set<const IR::MAU::RandomNumber *>;
+    using RandKey = std::pair<const IR::MAU::Table *, const IR::MAU::Action *>;
+    ordered_map<RandKey, RandExterns> rand_extern_per_action;
+    void postorder(const IR::MAU::RandomNumber *rn) override;
+
+    Visitor::profile_t init_apply(const IR::Node *node) override {
+        auto rv = MauInspector::init_apply(node);
+        rand_extern_per_action.clear();
+        return rv;
+    }
+
+ public:
+    RandomExternUsedOncePerAction() {}
+};
+
 class MeterColorMapramAddress : public PassManager {
     ordered_map<const IR::MAU::Table *, bitvec> occupied_buses;
     ordered_map<const IR::MAU::Meter *, bitvec> possible_addresses;
