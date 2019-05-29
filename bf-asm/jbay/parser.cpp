@@ -295,12 +295,12 @@ template<> void Parser::write_config(Target::JBay::parser_regs &regs, json::map 
     if (error_count > 0) return;
 
     int i = 0;
-    for (auto ctr : counter_init[gress]) {
+    for (auto ctr : counter_init) {
         if (ctr) ctr->write_config(regs, gress, i);
         ++i; }
 
-    for (i = 0; i < checksum_use[gress].size(); i++) {
-        for (auto csum : checksum_use[gress][i])
+    for (i = 0; i < checksum_use.size(); i++) {
+        for (auto csum : checksum_use[i])
             if (csum) csum->write_config(regs, this); }
 
     // FIXME -- what fixed initialization of parser buffer regs do we need?
@@ -321,7 +321,7 @@ template<> void Parser::write_config(Target::JBay::parser_regs &regs, json::map 
         regs.merge.ur.phv_owner_255_128.owner, regs.main[INGRESS].phv_owner.owner,
         regs.main[EGRESS].phv_owner.owner);
 
-    regs.main[gress].hdr_len_adj.amt = hdr_len_adj[gress];
+    regs.main[gress].hdr_len_adj.amt = hdr_len_adj;
 
     /* This reg has a active high reset for enable: en, Enable, [23], R/W, Reset->1
      * and is causing the parser error codes not to be captured. By making this '0'

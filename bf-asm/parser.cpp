@@ -16,15 +16,15 @@
 #endif // HAVE_JBAY
 
 class AsmParser : public Section {
-    int                  lineno;
-    std::vector<Parser*> parser[2];  // INGRESS, EGRESS
-    Phv::Ref             ghost_parser;   // the ghost "parser" extracts a single
-                                         // 32-bit value
+    std::vector<Parser*> parser[2];     // INGRESS, EGRESS
+    bitvec               phv_use[2];    // ingress/egress only
+    Phv::Ref             ghost_parser;  // the ghost "parser" extracts a single
+                                        // 32-bit value
     void start(int lineno, VECTOR(value_t) args);
     void input(VECTOR(value_t) args, value_t data);
     void process();
     void output(json::map &);
-    void init_port_use(bitvec& port_use, value_t arg);
+    void init_port_use(bitvec& port_use, const value_t &arg);
     static AsmParser& get_parser() { return singleton_object; }
     AsmParser();
     ~AsmParser() {}
@@ -35,38 +35,32 @@ public:
 AsmParser::AsmParser() : Section("parser") {
 }
 
-void AsmParser::init_port_use(bitvec& port_use, value_t arg) {
+void AsmParser::init_port_use(bitvec& port_use, const value_t &arg) {
     if (arg.type == tVEC) {
         for (int i = 0; i < arg.vec.size; i++) {
             init_port_use(port_use, arg[i]); }
     } else if (arg.type == tRANGE) {
         if (arg.hi > arg.lo)
-            error(lineno, "port range hi index %d cannot be smaller than "
-                          "lo index %d", arg.hi, arg.lo);
+            error(arg.lineno, "port range hi index %d cannot be smaller than lo index %d",
+                  arg.hi, arg.lo);
         port_use.setrange(arg.lo, arg.hi - arg.lo + 1);
     } else if (arg.type == tINT) {
         port_use.setbit(arg.i); }
 }
 
 void AsmParser::start(int lineno, VECTOR(value_t) args) {
-    if (args.size == 0) {
-        this->lineno = lineno;
-        return; }
-    if (args[0] != "ingress" && args[0] != "egress" && (args[0] != "ghost" || options.target < JBAY))
+    if (args.size != 0 && args[0] != "ingress" && args[0] != "egress" &&
+        (args[0] != "ghost" || options.target < JBAY))
         error(lineno, "parser must specify ingress%s or egress",
               options.target >= JBAY ? ", ghost" : "");
-    if (!this->lineno) this->lineno = lineno;
 }
 
 void AsmParser::input(VECTOR(value_t) args, value_t data) {
-    if (args[0] == "ghost") {
+    if (args.size > 0 && args[0] == "ghost") {
         ghost_parser = Phv::Ref(GHOST, 0, data);
         return; }
-    gress_t gress = (args[0] == "egress") ? EGRESS : INGRESS;
-    auto* p = new Parser();
-    p->gress = gress;
-    p->parser_no = parser[gress].size();
-    p->ghost_parser = ghost_parser;
+    gress_t gress = (args.size > 0 && args[0] == "egress") ? EGRESS : INGRESS;
+    auto* p = new Parser(phv_use, gress, parser[gress].size());
     parser[gress].push_back(p);
     if (args.size == 1) {
         p->port_use.setrange(0, Target::NUM_PARSERS());
@@ -78,19 +72,8 @@ void AsmParser::input(VECTOR(value_t) args, value_t data) {
 void AsmParser::process() {
     for (auto gress : Range(INGRESS, EGRESS)) {
         for (auto p : parser[gress]) {
+            p->ghost_parser = ghost_parser;
             p->process(); } }
-
-    // sum up parse_merge registers
-    // could be simplified if phv_use is under asm_parser.
-    bitvec phv_use[2];
-    for (auto p : parser[INGRESS]) {
-        phv_use[INGRESS] |= p->phv_use[INGRESS]; }
-    for (auto p : parser[EGRESS]) {
-        p->phv_use[INGRESS] = phv_use[INGRESS]; }
-    for (auto p : parser[EGRESS]) {
-        phv_use[EGRESS] |= p->phv_use[EGRESS]; }
-    for (auto p : parser[INGRESS]) {
-        p->phv_use[EGRESS] = phv_use[EGRESS]; }
 
     bitvec phv_allow_multi_write;
     for (auto p : parser[INGRESS]) {
@@ -139,19 +122,8 @@ void AsmParser::output(json::map &ctxt_json) {
     }
 }
 
-Parser::Parser() {
-    lineno = 0;
-    parser_no = 0;
-    hdr_len_adj[INGRESS] = 0;
-    hdr_len_adj[EGRESS] = 0;
-    meta_opt = 0;
-}
-
-Parser::~Parser() {
-}
-
-std::map<std::string, std::vector<Parser::State::Match::Clot *>>     Parser::clots[2] = {};
-Alloc1D<std::vector<Parser::State::Match::Clot *>, PARSER_MAX_CLOTS> Parser::clot_use[2] = {};
+std::map<std::string, std::vector<Parser::State::Match::Clot *>>     Parser::clots;
+Alloc1D<std::vector<Parser::State::Match::Clot *>, PARSER_MAX_CLOTS> Parser::clot_use;
 unsigned                                                             Parser::max_handle = 0;
 
 void Parser::input(VECTOR(value_t) args, value_t data) {
@@ -169,36 +141,36 @@ void Parser::input(VECTOR(value_t) args, value_t data) {
             if (kv.key == "start" && (kv.value.type == tVEC || kv.value.type == tSTR)) {
                 if (kv.value.type == tVEC)
                     for (int i = 0; i < 4 && i < kv.value.vec.size; i++)
-                        start_state[gress][i] = kv.value[i];
+                        start_state[i] = kv.value[i];
                 else
                     for (int i = 0; i < 4; i++)
-                        start_state[gress][i] = kv.value;
+                        start_state[i] = kv.value;
                 continue; }
             if (kv.key == "priority" && (kv.value.type == tVEC || kv.value.type == tINT)) {
                 if (kv.value.type == tVEC) {
                     for (int i = 0; i < 4 && i < kv.value.vec.size; i++)
                         if (CHECKTYPE(kv.value[i], tINT))
-                            priority[gress][i] = kv.value[i].i;
+                            priority[i] = kv.value[i].i;
                 } else
                     for (int i = 0; i < 4; i++)
-                        priority[gress][i] = kv.value.i;
+                        priority[i] = kv.value.i;
                 continue; }
             if (kv.key == "priority_threshold" &&
                 (kv.value.type == tVEC || kv.value.type == tINT)) {
                 if (kv.value.type == tVEC) {
                     for (int i = 0; i < 4 && i < kv.value.vec.size; i++)
                         if (CHECKTYPE(kv.value[i], tINT))
-                            pri_thresh[gress][i] = kv.value[i].i;
+                            pri_thresh[i] = kv.value[i].i;
                 } else
                     for (int i = 0; i < 4; i++)
-                        pri_thresh[gress][i] = kv.value.i;
+                        pri_thresh[i] = kv.value.i;
                 continue; }
             if (kv.key == "parser_error") {
-                if (parser_error[gress].lineno >= 0) {
+                if (parser_error.lineno >= 0) {
                     error(kv.key.lineno, "Multiple parser_error declarations");
-                    warning(parser_error[gress].lineno, "Previous was here");
+                    warning(parser_error.lineno, "Previous was here");
                 } else
-                    parser_error[gress] = Phv::Ref(gress, 0, kv.value);
+                    parser_error = Phv::Ref(gress, 0, kv.value);
                 continue; }
             if (kv.key == "counter_init") {
                 if (!CHECKTYPE2(kv.value, tVEC, tMAP)) continue;
@@ -208,17 +180,17 @@ void Parser::input(VECTOR(value_t) args, value_t data) {
                         if (i >= PARSER_CTRINIT_ROWS) {
                             error(v.lineno, "too many counter init rows");
                             break; }
-                        counter_init[gress][i++] = new CounterInit(v); }
+                        counter_init[i++] = new CounterInit(v); }
                     continue; }
                 for (auto &el : kv.value.map) {
                     if (!CHECKTYPE(el.key, tINT)) continue;
                     if (el.key.i < 0 || el.key.i >= PARSER_CTRINIT_ROWS)
                         error(el.key.lineno, "invalid counter init row");
-                    else if (auto *old = counter_init[gress][el.key.i]) {
+                    else if (auto *old = counter_init[el.key.i]) {
                         error(el.key.lineno, "duplicate counter init row");
                         warning(old->lineno, "previous counter init row");
                     } else
-                        counter_init[gress][el.key.i] = new CounterInit(el.value); }
+                        counter_init[el.key.i] = new CounterInit(el.value); }
                 continue; }
             if (kv.key == "multi_write") {
                 if (kv.value.type == tVEC)
@@ -236,7 +208,7 @@ void Parser::input(VECTOR(value_t) args, value_t data) {
                 continue; }
             if (kv.key == "hdr_len_adj") {
                 if (CHECKTYPE(kv.value, tINT))
-                    hdr_len_adj[gress] = kv.value.i;
+                    hdr_len_adj = kv.value.i;
                 continue; }
             if (kv.key == "states") {
                 if (CHECKTYPE(kv.value, tMAP))
@@ -251,32 +223,32 @@ void Parser::input(VECTOR(value_t) args, value_t data) {
 
         // process the CLOTs immediately rather than in Parser::process() so that it
         // happens before Deparser::process()
-        for (auto &vec : Values(clots[gress])) {
+        for (auto &vec : Values(clots)) {
             State::Match::Clot *maxlen = 0;
             for (auto *cl : vec) {
                 if (cl->tag >= 0)
-                    clot_use[gress][cl->tag].push_back(cl);
+                    clot_use[cl->tag].push_back(cl);
                 if (!maxlen || cl->max_length > maxlen->max_length)
                     maxlen = cl; }
             for (auto *cl : vec)
                 cl->max_length = maxlen->max_length; }
         std::map<std::string, unsigned> clot_alloc;
         unsigned free_clot_tag = 0;
-        while (free_clot_tag < PARSER_MAX_CLOTS && !clot_use[gress][free_clot_tag].empty())
+        while (free_clot_tag < PARSER_MAX_CLOTS && !clot_use[free_clot_tag].empty())
             ++free_clot_tag;
-        for (auto &vec : Values(clots[gress])) {
+        for (auto &vec : Values(clots)) {
             for (auto *cl : vec) {
                 if (cl->tag >= 0) continue;
                 if (clot_alloc.count(cl->name)) {
                     cl->tag = clot_alloc.at(cl->name);
-                    clot_use[gress][cl->tag].push_back(cl);
+                    clot_use[cl->tag].push_back(cl);
                 } else if (free_clot_tag >= PARSER_MAX_CLOTS) {
                     error(cl->lineno, "Too many CLOTs (%d max)", PARSER_MAX_CLOTS);
                 } else {
                     clot_alloc[cl->name] = cl->tag = free_clot_tag++;
-                    clot_use[gress][cl->tag].push_back(cl);
+                    clot_use[cl->tag].push_back(cl);
                     while (free_clot_tag < PARSER_MAX_CLOTS &&
-                           !clot_use[gress][free_clot_tag].empty())
+                           !clot_use[free_clot_tag].empty())
                         ++free_clot_tag; } } }
     }
 }
@@ -299,7 +271,7 @@ void Parser::define_state(gress_t gress, pair_t &kv) {
                error(kv.key.lineno, "Explicit state out of range");
            stateno.word0 |= ~(stateno.word0 | stateno.word1) & PARSER_STATE_MASK; } }
    if (!CHECKTYPE(kv.value, tMAP)) return;
-   auto n = states[gress].emplace(name, State(kv.key.lineno, name, gress,
+   auto n = states.emplace(name, State(kv.key.lineno, name, gress,
                                   stateno, kv.value.map));
    if (n.second)
        all.push_back(&n.first->second);
@@ -313,36 +285,36 @@ void Parser::process() {
     if (all.empty()) return;
     for (auto st : all) st->pass1(this);
     for (gress_t gress : Range(INGRESS, EGRESS)) {
-        if (states[gress].empty()) continue;
-        if (start_state[gress][0].lineno < 0) {
-            State *start = ::getref(states[gress], "start");
-            if (!start) start = ::getref(states[gress], "START");
+        if (states.empty()) continue;
+        if (start_state[0].lineno < 0) {
+            State *start = ::getref(states, "start");
+            if (!start) start = ::getref(states, "START");
             if (!start) {
                 error(lineno, "No %sgress parser start state", gress ? "e" : "in");
                 continue;
             } else for (int i = 0; i < 4; i++) {
-                start_state[gress][i].name = start->name;
-                start_state[gress][i].lineno = start->lineno;
-                start_state[gress][i].ptr.push_back(start); }
+                start_state[i].name = start->name;
+                start_state[i].lineno = start->lineno;
+                start_state[i].ptr.push_back(start); }
         } else for (int i = 0; i < 4; i++)
-            start_state[gress][i].check(gress, this, 0);
-        for (int i = 0; i < 4 && !start_state[gress][i]; i++)
-            if (!start_state[gress][i]->can_be_start()) {
+            start_state[i].check(gress, this, 0);
+        for (int i = 0; i < 4 && !start_state[i]; i++)
+            if (!start_state[i]->can_be_start()) {
                 std::string name = std::string("<start") + char('0'+i) + '>';
                 LOG1("Creating new " << gress << " " << name << " state");
-                auto n = states[gress].emplace(name, State(lineno, name.c_str(), gress,
+                auto n = states.emplace(name, State(lineno, name.c_str(), gress,
                         match_t{ 0, 0 }, VECTOR(pair_t) { 0, 0, 0 }));
                 BUG_CHECK(n.second);
                 State *state = &n.first->second;
-                state->def = new State::Match(lineno, gress, *start_state[gress][i]);
+                state->def = new State::Match(lineno, gress, *start_state[i]);
                 for (int j = 3; j >= i; j--)
-                    if (start_state[gress][j] == start_state[gress][i]) {
-                        start_state[gress][j].name = name;
-                        start_state[gress][j].ptr[0] = state; }
+                    if (start_state[j] == start_state[i]) {
+                        start_state[j].name = name;
+                        start_state[j].ptr[0] = state; }
                 all.insert(all.begin(), state); }
-        if (parser_error[gress].lineno >= 0)
-            if (parser_error[gress].check())
-                phv_use[gress][parser_error[gress]->reg.uid] = 1; }
+        if (parser_error.lineno >= 0)
+            if (parser_error.check())
+                phv_use[gress][parser_error->reg.uid] = 1; }
     if (ghost_parser && ghost_parser.check()) {
         if (ghost_parser.size() != 32)
             error(ghost_parser.lineno, "ghost thread input must be 32 bits"); }
@@ -350,11 +322,9 @@ void Parser::process() {
     int all_index = 0;
     for (auto st : all) st->all_idx = all_index++;
     bitvec unreach(0, all_index);
-    for (int i = 0; i < 4; i++) {
-        if (!states[INGRESS].empty())
-            start_state[INGRESS][i]->unmark_reachable(this, unreach);
-        if (!states[EGRESS].empty())
-            start_state[EGRESS][i]->unmark_reachable(this, unreach); }
+    for (int i = 0; i < 4; i++)
+        if (!states.empty())
+            start_state[i]->unmark_reachable(this, unreach);
     for (auto u : unreach)
         warning(all[u]->lineno, "%sgress state %s unreachable",
                 all[u]->gress ? "E" : "In", all[u]->name.c_str());
@@ -398,7 +368,7 @@ void Parser::output(json::map& ctxt_json) {
     if (all.empty()) return;
     for (auto st : all) st->pass2(this);
     if (error_count > 0) return;
-    tcam_row_use[INGRESS] = tcam_row_use[EGRESS] = PARSER_TCAM_DEPTH;
+    tcam_row_use = PARSER_TCAM_DEPTH;
     SWITCH_FOREACH_TARGET(options.target,
         auto *regs = new TARGET::parser_regs;
         declare_registers(regs);
@@ -421,7 +391,7 @@ void Parser::output_legacy(json::map& ctxt_json) {
     if (all.empty()) return;
     for (auto st : all) st->pass2(this);
     if (error_count > 0) return;
-    tcam_row_use[INGRESS] = tcam_row_use[EGRESS] = PARSER_TCAM_DEPTH;
+    tcam_row_use = PARSER_TCAM_DEPTH;
     SWITCH_FOREACH_TARGET(options.target,
         auto *regs = new TARGET::parser_regs;
         declare_registers(regs);
@@ -510,19 +480,19 @@ bool Parser::Checksum::equiv(const Checksum &a) const {
 }
 
 void Parser::Checksum::pass1(Parser *parser) {
-    if (parser->checksum_use[gress].empty())
+    if (parser->checksum_use.empty())
         for (auto i = 0; i < Target::PARSER_CHECKSUM_UNITS(); i++)
-            parser->checksum_use[gress].emplace_back();
+            parser->checksum_use.emplace_back();
     if (addr >= 0) {
         if (addr >= PARSER_CHECKSUM_ROWS)
             error(lineno, "invalid %sgress parser checksum address %d", gress ? "e" : "in", addr);
-        else if (parser->checksum_use[gress][unit][addr]) {
-            if (!equiv(*parser->checksum_use[gress][unit][addr])) {
+        else if (parser->checksum_use[unit][addr]) {
+            if (!equiv(*parser->checksum_use[unit][addr])) {
                 error(lineno, "incompatible %sgress parser checksum use at address %d",
                       gress ? "e" : "in", addr);
-                warning(parser->checksum_use[gress][unit][addr]->lineno, "previous use"); }
+                warning(parser->checksum_use[unit][addr]->lineno, "previous use"); }
         } else
-            parser->checksum_use[gress][unit][addr] = this; }
+            parser->checksum_use[unit][addr] = this; }
     if (dest.check() && dest->reg.parser_id() < 0)
         error(dest.lineno, "%s is not accessable in the parser", dest->reg.name);
     if (dest && dest->reg.size == 32)
@@ -542,15 +512,15 @@ void Parser::Checksum::pass2(Parser *parser) {
     if (addr < 0) {
         int avail = -1;
         for (int i = 0; i < PARSER_CHECKSUM_ROWS; ++i) {
-            if (parser->checksum_use[gress][unit][i]) {
-                if (equiv(*parser->checksum_use[gress][unit][i])) {
+            if (parser->checksum_use[unit][i]) {
+                if (equiv(*parser->checksum_use[unit][i])) {
                     addr = i;
                     break; }
             } else if (avail < 0)
                 avail = i; }
         if (addr < 0) {
             if (avail >= 0)
-                parser->checksum_use[gress][unit][addr = avail] = this;
+                parser->checksum_use[unit][addr = avail] = this;
             else
                 error(lineno, "Ran out of room in parser checksum control RAM of"
                         " %sgress unit %d (%d rows available)",
@@ -748,8 +718,8 @@ Parser::State::Ref &Parser::State::Ref::operator=(const value_t &v) {
 void Parser::State::Ref::check(gress_t gress, Parser *pa, State *state) {
     if (ptr.empty()) {
         if (name.size()) {
-            auto it = pa->states[gress].find(name);
-            if (it != pa->states[gress].end())
+            auto it = pa->states.find(name);
+            if (it != pa->states.end())
                 ptr.push_back(&it->second);
             else if (name != "END" && name != "end")
                 error(lineno, "No state named %s in %sgress parser",
@@ -1132,7 +1102,7 @@ Parser::State::Match::Clot::Clot(gress_t gress, const value_t &tag,
         } else {
             this->tag = -1;
             name = tag.s; } }
-    Parser::clots[gress][name].push_back(this);
+    Parser::clots[name].push_back(this);
     if (!CHECKTYPE3(data, tINT, tRANGE, tMAP)) return;
     if (data.type == tINT) {
        start = data.i;
@@ -1363,13 +1333,13 @@ void Parser::State::pass1(Parser *pa) {
     for (auto &m : match) m.pass1(pa, this);
     if (def) def->pass1(pa, this);
     for (auto code : MatchIter(stateno)) {
-        if (pa->state_use[gress][code]) {
+        if (pa->state_use[code]) {
             error(lineno, "%sgress state %s uses state code %d, already in use",
                   gress ? "E" : "In", name.c_str(), code);
             for (auto *state : pa->all) {
                 if (state != this && state->gress == gress && state->stateno.matches(code))
                     error(state->lineno, "also used by state %s", state->name.c_str()); } }
-        pa->state_use[gress][code] = 1; }
+        pa->state_use[code] = 1; }
     for (auto &m : match)
         for (auto succ : m.next)
             succ->pred.insert(this);
@@ -1467,7 +1437,7 @@ void Parser::State::Match::pass2(Parser *pa, State *state) {
                   " (unimplemented)");
         else {
             int i = 0, free = -1;
-            for (auto init : pa->counter_init[state->gress]) {
+            for (auto init : pa->counter_init) {
                 if (init && init->equiv(*counter_exp)) {
                     counter = i;
                     break; }
@@ -1475,7 +1445,7 @@ void Parser::State::Match::pass2(Parser *pa, State *state) {
                 ++i; }
             if (counter < 0) {
                 if (free >= 0)
-                    pa->counter_init[state->gress][counter = free] = counter_exp;
+                    pa->counter_init[counter = free] = counter_exp;
                 else
                     error(counter_exp->lineno, "no space left in counter init ram"); } } }
     if (clots.size() > 0) {
@@ -1488,14 +1458,14 @@ void Parser::State::Match::pass2(Parser *pa, State *state) {
 void Parser::State::pass2(Parser *pa) {
     if (!stateno) {
         unsigned s;
-        for (s = 0; pa->state_use[gress][s]; s++);
+        for (s = 0; pa->state_use[s]; s++);
         if (s > PARSER_STATE_MASK)
             error(lineno, "Can't allocate state number for %sgress state %s",
                   gress ? "e" : "in", name.c_str());
         else {
             stateno.word0 = s ^ PARSER_STATE_MASK;
             stateno.word1 = s;
-            pa->state_use[gress][s] = 1; } }
+            pa->state_use[s] = 1; } }
     unsigned def_saved = 0;
     if (def && def->future.lineno >= 0) {
         for (int i = 0; i < 4; i++)
@@ -1544,7 +1514,7 @@ void Parser::State::Match::write_config(REGS &regs, Parser *pa, State *state,
                                         Match *def, json::map &ctxt_json) {
     int row, count = 0;
     do {
-        if ((row = --pa->tcam_row_use[state->gress]) < 0) {
+        if ((row = --pa->tcam_row_use) < 0) {
             if (row == -1)
                 error(state->lineno, "Ran out of tcam space in %sgress parser",
                       state->gress ? "e" : "in");

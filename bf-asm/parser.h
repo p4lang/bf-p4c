@@ -23,12 +23,11 @@ enum {
 };
 
 class Parser {
-    int                                 lineno;
+    int                                 lineno = -1;
     template<class REGS> void write_config(REGS &, json::map &, bool legacy = true);
-    static Parser singleton_object;
 
     struct Checksum {
-        int             lineno, addr = -1, unit = -1;
+        int             lineno = -1, addr = -1, unit = -1;
         gress_t         gress;
         Phv::Ref        dest;
         int             tag = -1;
@@ -222,52 +221,52 @@ class Parser {
         template<class REGS> void write_config(REGS &, Parser *, json::vector &);
     };
  public:
-    Parser();
-    ~Parser();
     void input(VECTOR(value_t) args, value_t data);
     void process();
     void output(json::map &);
     void output_legacy(json::map &);
     gress_t                             gress;
     std::string                         name;
-    std::map<std::string, State>        states[2];
+    std::map<std::string, State>        states;
     std::vector<State *>                all;
     bitvec                              port_use;
     int                                 parser_no;  // used to print cfg.json
-    bitvec                              state_use[2];
-    State::Ref                          start_state[2][4];
-    int                                 priority[2][4] = {{0}};
-    int                                 pri_thresh[2][4] = { {3,3,3,3}, {3,3,3,3} };
-    int                                 tcam_row_use[2] = { 0 };
-    Phv::Ref                            parser_error[2];
+    bitvec                              state_use;
+    State::Ref                          start_state[4];
+    int                                 priority[4] = { 0 };
+    int                                 pri_thresh[4] = { 3,3,3,3 };
+    int                                 tcam_row_use = 0;
+    Phv::Ref                            parser_error;
     // the ghost "parser" extracts a single 32-bit value
     // this information is first extracted in AsmParser and passed to
     // individual Parser, because currently parse_merge register is programmed
     // in Parser class.
-    // One possible clean up is to reorganize the gvb
+    // FIXME -- should move all merge reg handling into AsmParser.
     Phv::Ref                            ghost_parser;
     std::vector<Phv::Ref>               multi_write, init_zero;
-    bitvec                              phv_use[2], phv_allow_multi_write, phv_init_valid;
-    int                                 hdr_len_adj[2], meta_opt;
-    std::vector<Alloc1D<Checksum *, PARSER_CHECKSUM_ROWS>>              checksum_use[2];
-    Alloc1D<CounterInit *, PARSER_CTRINIT_ROWS>                         counter_init[2];
-    static std::map<std::string, std::vector<State::Match::Clot *>>     clots[2];
-    static Alloc1D<std::vector<State::Match::Clot *>, PARSER_MAX_CLOTS> clot_use[2];
+    bitvec                              (&phv_use)[2], phv_allow_multi_write, phv_init_valid;
+    int                                 hdr_len_adj = 0, meta_opt = 0;
+    std::vector<Alloc1D<Checksum *, PARSER_CHECKSUM_ROWS>>              checksum_use;
+    Alloc1D<CounterInit *, PARSER_CTRINIT_ROWS>                         counter_init;
+    static std::map<std::string, std::vector<State::Match::Clot *>>     clots;
+    static Alloc1D<std::vector<State::Match::Clot *>, PARSER_MAX_CLOTS> clot_use;
     static unsigned                                                     max_handle;
     int                                                                 parser_handle = -1;
 
-    static Parser& get_parser() { return singleton_object; }
+    Parser(bitvec (&phv_use)[2], gress_t gr, int idx)
+    : gress(gr), parser_no(idx), phv_use(phv_use) {}
+
     template<class REGS> void gen_configuration_cache(REGS &, json::vector &cfg_cache);
     static int clot_maxlen(gress_t gress, unsigned tag) {
-        auto &vec = clot_use[gress][tag];
+        auto &vec = clot_use[tag];
         return vec.empty() ? -1 : vec.at(0)->max_length; }
     static int clot_maxlen(gress_t gress, std::string tag) {
-        if (clots[gress].count(tag))
-            return clots[gress].at(tag).at(0)->max_length;
+        if (clots.count(tag))
+            return clots.at(tag).at(0)->max_length;
         return -1; }
     static int clot_tag(gress_t gress, std::string tag) {
-        if (clots[gress].count(tag))
-            return clots[gress].at(tag).at(0)->tag;
+        if (clots.count(tag))
+            return clots.at(tag).at(0)->tag;
         return -1; }
 
     static const char* match_key_loc_name(int loc);

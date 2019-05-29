@@ -331,15 +331,15 @@ template<> void Parser::State::Match::write_counter_config(
 template <class COMMON> void init_common_regs(Parser *p, COMMON &regs, gress_t gress) {
     // TODO: fixed config copied from compiler -- needs to be controllable
     for (int i = 0; i < 4; i++) {
-        if (p->start_state[gress][i]) {
-            regs.start_state.state[i] = p->start_state[gress][i]->stateno.word1;
+        if (p->start_state[i]) {
+            regs.start_state.state[i] = p->start_state[i]->stateno.word1;
             regs.enable_.enable_[i] = 1; }
-        regs.pri_start.pri[i] = p->priority[gress][i];
-        regs.pri_thresh.pri[i] = p->pri_thresh[gress][i]; }
+        regs.pri_start.pri[i] = p->priority[i];
+        regs.pri_thresh.pri[i] = p->pri_thresh[i]; }
     regs.mode = 4;
     regs.max_iter.max = 128;
-    if (p->parser_error[gress].lineno >= 0) {
-        regs.err_phv_cfg.dst = p->parser_error[gress]->reg.parser_id();
+    if (p->parser_error.lineno >= 0) {
+        regs.err_phv_cfg.dst = p->parser_error->reg.parser_id();
         regs.err_phv_cfg.aram_mbe_en = 1;
         regs.err_phv_cfg.ctr_range_err_en = 1;
         regs.err_phv_cfg.dst_cont_err_en = 1;
@@ -367,12 +367,12 @@ template<> void Parser::write_config(Target::Tofino::parser_regs &regs, json::ma
     if (error_count > 0) return;
 
     int i = 0;
-    for (auto ctr : counter_init[gress]) {
+    for (auto ctr : counter_init) {
         if (ctr) ctr->write_config(regs, gress, i);
         ++i; }
 
-    for (i = 0; i < checksum_use[gress].size(); i++) {
-        for (auto csum : checksum_use[gress][i])
+    for (i = 0; i < checksum_use.size(); i++) {
+        for (auto csum : checksum_use[i])
             if (csum) csum->write_config(regs, this); }
 
     if (gress == INGRESS) {
@@ -387,7 +387,7 @@ template<> void Parser::write_config(Target::Tofino::parser_regs &regs, json::ma
         regs.ingress.ing_buf_regs.chan3_group.chnl_drop.disable();
         regs.ingress.ing_buf_regs.chan3_group.chnl_metadata_fix.disable();
 
-        regs.ingress.prsr_reg.hdr_len_adj.amt = hdr_len_adj[INGRESS];
+        regs.ingress.prsr_reg.hdr_len_adj.amt = hdr_len_adj;
     }
 
     if (gress == EGRESS) {
@@ -395,7 +395,7 @@ template<> void Parser::write_config(Target::Tofino::parser_regs &regs, json::ma
         for (int i = 0; i < 4; i++)
             regs.egress.epb_prsr_port_regs.chnl_ctrl[i].meta_opt = meta_opt;
 
-        regs.egress.prsr_reg.hdr_len_adj.amt = hdr_len_adj[EGRESS];
+        regs.egress.prsr_reg.hdr_len_adj.amt = hdr_len_adj;
     }
 
     if (options.match_compiler) {
