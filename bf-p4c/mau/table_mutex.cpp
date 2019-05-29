@@ -5,7 +5,6 @@ void TablesMutuallyExclusive::postorder(const IR::MAU::Table *tbl) {
     BUG_CHECK(table_ids.count(tbl), "Table found in postorder not visited in preorder?");
     table_succ[tbl][table_ids[tbl]] = true;
     safe_vector<bitvec> sets;
-    bitvec common;
     for (auto &n : tbl->next) {
         /* find the tables reachable via each next_table chain */
         if (!n.second) continue;
@@ -15,19 +14,21 @@ void TablesMutuallyExclusive::postorder(const IR::MAU::Table *tbl) {
         }
         table_succ[tbl] |= succ;
         /* find tables reachable via two or more next chains */
-        for (auto &set : sets)
-            common |= (set & succ);
         sets.push_back(succ);
     }
-    for (auto &set : sets)
-        set -= common;
-    /* each table only reachable via one chain is mutually exclusive with
-     * all tables only reachable via a different chain */
-    for (auto &set : sets)
-        for (auto t : set)
-            for (auto &other : sets)
-                if (&set != &other)
-                    mutex[t] |= other;
+
+    /**
+     * Each table that appears on a next table chain is mutually exclusive from any table
+     * that appears on a different next table chain
+     */
+    for (auto set1 : sets) {
+        for (auto set2 : sets) {
+            auto common = set1 & set2;
+            for (auto t : set1 - common) {
+                mutex[t] |= set2 - common;
+            }
+        }
+    }
 
     bool miss_mutex = false;
     if (!tbl->gateway_only()) {

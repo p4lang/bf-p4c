@@ -45,6 +45,7 @@ class TablesMutuallyExclusive : public MauInspector {
     bool preorder(const IR::MAU::Table *t) override {
         assert(!table_ids.count(t));
         table_ids.emplace(t, table_ids.size());
+        name_to_tables.emplace(t->name, t);
         return true; }
     void postorder(const IR::MAU::Table *tbl) override;
     void postorder(const IR::BFN::Pipe *pipe) override;
@@ -54,10 +55,15 @@ class TablesMutuallyExclusive : public MauInspector {
         table_succ.clear();
         mutex.clear();
         action_mutex.clear();
+        name_to_tables.clear();
         return rv; }
+
  public:
     bool operator()(const IR::MAU::Table *a, const IR::MAU::Table *b) const;
     bool action(const IR::MAU::Table *a, const IR::MAU::Table *b) const;
+
+    // For gtests
+    std::map<cstring, const IR::MAU::Table *> name_to_tables;
 };
 
 class SharedIndirectAttachedAnalysis : public MauInspector {

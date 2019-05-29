@@ -19,7 +19,6 @@ void ActionMutuallyExclusive::postorder(const IR::MAU::Table *tbl) {
     // set actions on different branches to be mutex.
     safe_vector<bitvec> sets;
 
-    bitvec common;
     bitvec all_so_far;
     bitvec actions_seen;
 
@@ -61,7 +60,6 @@ void ActionMutuallyExclusive::postorder(const IR::MAU::Table *tbl) {
         action_succ[tbl] |= succ;
 
         /* find actions reachable via two or more next chains */
-        common |= (succ & all_so_far);
         all_so_far |= succ;
     }
 
@@ -72,24 +70,19 @@ void ActionMutuallyExclusive::postorder(const IR::MAU::Table *tbl) {
     if (!actions_not_yet_seen.empty())
         sets.push_back(actions_not_yet_seen);
 
-    // TODO(yumin): It is imprecise in that:
-    // switch (A.apply().result_run) {
-    //  act_1 : { B.apply(); A.apply(); }
-    //  act_2 : { C.apply(); A.apply(); }
-    //  act_3 : { D.apply(); }
-    // }
-    // Here A and D won't be marked as mutex. Same issue in table_mutex.
-    // Now we do not handle this case.
-    for (auto &set : sets)
-        set -= common;
-
-    /* each action only reachable via one chain is mutually exclusive with
-     * all actions only reachable via a different chain */
-    for (auto &set : sets)
-        for (auto t : set)
-            for (auto &other : sets)
-                if (&set != &other)
-                    mutex[t] |= other;
+    /**
+     * Exact same as mutex:
+     * Each table that appears on a next table chain is mutually exclusive from any table
+     * that appears on a different next table chain
+     */
+    for (auto set1 : sets) {
+        for (auto set2 : sets) {
+            auto common = set1 & set2;
+            for (auto t : set1 - common) {
+                mutex[t] |= set2 - common;
+            }
+        }
+    }
 
     // update action_succ
     for (const auto* act : Values(tbl->actions)) {

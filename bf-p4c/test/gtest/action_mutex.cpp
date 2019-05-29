@@ -7,6 +7,7 @@
 #include "lib/cstring.h"
 #include "lib/error.h"
 #include "test/gtest/helpers.h"
+#include "bf-p4c/common/multiple_apply.h"
 #include "bf-p4c/mau/action_mutex.h"
 #include "bf-p4c/test/gtest/tofino_gtest_utils.h"
 
@@ -293,6 +294,31 @@ TEST_F(ActionMutexTest, SingleDefaultPath) {
     EXPECT_FALSE(action_mutex(act.at("node_b_0.igrs.set_f2"), act.at("node_c_0.igrs.set_f2")));
     EXPECT_FALSE(action_mutex(act.at("node_b_0.igrs.set_f3"), act.at("node_c_0.igrs.set_f2")));
     EXPECT_FALSE(action_mutex(act.at("node_b_0.igrs.set_f5"), act.at("node_c_0.igrs.set_f2")));
+}
+
+TEST_F(ActionMutexTest, NextTableProperties) {
+    auto test = createActionMutexTestCase(
+        P4_SOURCE(P4Headers::NONE, R"(
+            node_a.apply();
+            switch (node_b.apply().action_run) {
+                set_f1 : { node_c.apply(); node_e.apply(); }
+                set_f2 : { node_d.apply(); node_e.apply(); }
+                default : { node_f.apply(); }
+            }
+        )"));
+
+    ASSERT_TRUE(test);
+    MultipleApply ma;
+    ActionMutuallyExclusive action_mutex;
+    test->pipe = test->pipe->apply(ma);
+    test->pipe->apply(action_mutex);
+    auto& act = action_mutex.name_actions;
+    EXPECT_FALSE(action_mutex(act.at("node_c_0.igrs.set_f2"), act.at("node_e_0.igrs.set_f4")));
+    EXPECT_FALSE(action_mutex(act.at("node_d_0.igrs.set_f2"), act.at("node_e_0.igrs.set_f4")));
+    EXPECT_TRUE(action_mutex(act.at("node_c_0.igrs.set_f2"), act.at("node_d_0.igrs.set_f3")));
+    EXPECT_TRUE(action_mutex(act.at("node_c_0.igrs.set_f2"), act.at("node_f_0.igrs.set_f5")));
+    EXPECT_TRUE(action_mutex(act.at("node_d_0.igrs.set_f2"), act.at("node_f_0.igrs.set_f5")));
+    EXPECT_TRUE(action_mutex(act.at("node_d_0.igrs.set_f2"), act.at("node_f_0.igrs.set_f5")));
 }
 
 
