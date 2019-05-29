@@ -177,7 +177,7 @@ BFN_Options::BFN_Options() {
         "Disable use of long branches");
     registerOption("--enable-longbranch", nullptr,
         [this](const char *) {
-            if (Device::numLongBranchTags > 0) {
+            if (Device::numLongBranchTags() > 0) {
                 disable_long_branch = false;
             } else {
                 error("--enable-longbranch not supported on %s", Device::name());
