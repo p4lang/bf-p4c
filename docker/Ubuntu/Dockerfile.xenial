@@ -58,7 +58,7 @@ ENV P4C_PYTHON_PKGS crc16 \
                     tenjin
 
 # Install python3 packaging for test_p4c_driver.py (for now)
-ENV P4C_PYTHON3_PKGS packaging
+ENV P4C_PYTHON3_PKGS packaging jsl
 
 ARG MAKEFLAGS=-j4
 

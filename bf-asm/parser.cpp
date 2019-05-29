@@ -116,8 +116,9 @@ void AsmParser::output(json::map &ctxt_json) {
             for (auto p : parser[gress]) {
                 p->output(ctxt_json);
             }
-        } else if (!parser[gress].empty()) {
-            parser[gress][0]->output_legacy(ctxt_json);
+        } else {
+            if (!parser[gress].empty() && parser[gress][0] != nullptr)
+                parser[gress][0]->output_legacy(ctxt_json);
         }
     }
 }

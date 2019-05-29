@@ -2,6 +2,7 @@
 #include <regex>
 #include <string>
 #include "bf-p4c/common/alias.h"
+#include "bf-p4c/lib/error_type.h"
 #include "bf-p4c/mau/gateway.h"
 #include "bf-p4c/mau/resource.h"
 #include "bf-p4c/mau/table_format.h"
@@ -2527,8 +2528,9 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
             if (sm.size() == 3) {
                 auto newAnnName = s.substr(0, sm.position(0));
                 // XXX(cole): It would be nice to report srcInfo here.
-                ::warning("Table key name not supported.  "
-                          "Replacing \"%1%\" with \"%2%\".", annName, newAnnName);
+                ::warning(BFN::ErrorType::WARN_SUBSTITUTION,
+                          "%1%: Table key name not supported.  "
+                          "Replacing \"%2%\" with \"%3%\".", tbl, annName, newAnnName);
                 annName = newAnnName;
             }
 
@@ -2591,9 +2593,9 @@ void MauAsmOutput::emit_static_entries(std::ostream &out, indent_t indent,
         out << indent++ << "- priority: " << priority++ << std::endl;
         out << indent << "match_key_fields_values:" << std::endl;
         for (auto key : entry->getKeys()->components) {
-            ERROR_CHECK(key_index < tbl->match_key.size(),
-              "Static entry has more keys than those specified "
-              "in match field for table %s", tbl->name);
+            ERROR_CHECK(key_index < tbl->match_key.size(), ErrorType::ERR_INVALID,
+                        "key. Static entry has more keys than those specified "
+                        "in match field for table %2%.", key, tbl->externalName());
             auto match_key = tbl->match_key[key_index];
             if (match_key->match_type == "selector" || match_key->match_type == "dleft_hash") {
                 key_index++;
@@ -2639,9 +2641,10 @@ void MauAsmOutput::emit_static_entries(std::ostream &out, indent_t indent,
             } else if (auto ts = key->to<IR::Mask>()) {
                 // This error should be caught in front end as an invalid key
                 // expression
-                ERROR_CHECK(match_key->match_type == "ternary",
-                    "Invalid mask value specified in static entry for field %s a non ternary"
-                    " match type in table %s", canon_name(match_key_name), tbl->name);
+                ERROR_CHECK(match_key->match_type == "ternary", ErrorType::ERR_INVALID,
+                            "mask value specified in static entry for field %2% a "
+                            "non ternary match type in table %3%.",
+                            key, canon_name(match_key_name), tbl->externalName());
                 // Ternary match with value and mask specified
                 // e.g. In p4 - "15 &&& 0xff" where 15 is value and 0xff is mask
                 if (auto val = ts->left->to<IR::Constant>()) {
@@ -2669,9 +2672,10 @@ void MauAsmOutput::emit_static_entries(std::ostream &out, indent_t indent,
             } else if (auto r = key->to<IR::Range>()) {
                 // This error should be caught in front end as an invalid key
                 // expression
-                ERROR_CHECK(match_key->match_type == "range",
-                    "Invalid range value specified in static entry for field %s a non range"
-                    " match type in table %s", canon_name(match_key_name), tbl->name);
+                ERROR_CHECK(match_key->match_type == "range", ErrorType::ERR_INVALID,
+                            "range value specified in static entry for field %2% a "
+                            "non range match type in table %3%.",
+                            tbl, canon_name(match_key_name), tbl->externalName());
                 // Extract start and end values from range node
                 if (auto range_start = r->left->to<IR::Constant>())
                     out << indent << "range_start: \"0x"

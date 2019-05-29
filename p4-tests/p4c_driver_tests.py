@@ -49,6 +49,9 @@ test_matrix = {
                                     '-o', 'p4_16_tna_archive_arg_last',
                                     '-I', p4_16_path,
                                     tna_program, '--archive'], None),
+    'p4_16_tna_archive_source': (['--target', 'tofino', '--arch', 'tna', '--archive',
+                                  '--archive-source', '-o', 'p4_16_tna_archive_source',
+                                  '-I', p4_16_path, tna_program], None),
     # Tofino 32q
     'p4_16_t32q': (['--target', 'tofino', '--arch', 'tna',
                     '-I', p4_16_path, tna32q_program], None),

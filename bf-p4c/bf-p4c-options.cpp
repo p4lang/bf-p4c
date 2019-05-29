@@ -1,9 +1,9 @@
 #include "bf-p4c-options.h"
 #include <libgen.h>
-#include <string.h>
 #include <sys/stat.h>
 #include <boost/algorithm/string.hpp>
 #include <algorithm>
+#include <cstring>
 #include <set>
 #include <unordered_set>
 #include <vector>
@@ -270,15 +270,12 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
         // A complicated way to get a string out of a string, however,
         // Calin says basename(const_cast<char *>()) does not work on
         // certain linux distro.
-        size_t len = inputFile.size();
-        char *buffer = new char[len+1];
-        memcpy(buffer, inputFile.c_str(), len+1);
-
-        char *program_name_ptr = basename(buffer);
+        char *filePath = strndup(inputFile.c_str(), inputFile.size());
+        char *program_name_ptr = basename(filePath);
         BUG_CHECK(program_name_ptr, "No valid output argument");
         std::string program_name(program_name_ptr);
         programName = cstring(program_name.substr(0, program_name.rfind(".")));
-        delete [] buffer;
+        free(filePath);
 
         // same here, could have used dirname(const_char<char *>())
         if (!outputDir || outputDir == ".")

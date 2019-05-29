@@ -3,6 +3,7 @@
 
 #include <set>
 #include "bf-p4c/common/utils.h"
+#include "bf-p4c/lib/error_type.h"
 #include "bf-p4c/mau/action_format_2.h"
 #include "bf-p4c/mau/input_xbar.h"
 #include "bf-p4c/mau/memories.h"
@@ -72,19 +73,21 @@ void DoTableLayout::check_for_atcam(IR::MAU::Table::Layout &layout, const IR::MA
 
     if (auto s = annot->getSingle("atcam_number_partitions")) {
         auto pragma_val = s->expr.at(0)->to<IR::Constant>();
-        ERROR_CHECK(pragma_val != nullptr, "%s: Please provide a valid atcam_number_partitions "
-                    "for table %s", tbl->srcInfo, tbl->name);
+        ERROR_CHECK(pragma_val != nullptr, ErrorType::ERR_EXPECTED,
+                    "a valid atcam_number_partitions for table %2%.", tbl, tbl->externalName());
         if (pragma_val) {
             partition_count = pragma_val->asInt();
-            ERROR_CHECK(partition_count > 0, "%s: The number of partitions specified for table %s "
-                        "has to be greater than 0", tbl->srcInfo, tbl->name);
+            ERROR_CHECK(partition_count > 0, ErrorType::ERR_EXPECTED,
+                        "the number of partitions specified for table %2% to be greater "
+                        "than 0.", tbl, tbl->externalName());
         }
         partitions_found = true;
     }
 
     if (partitions_found) {
-        WARN_CHECK(index_found, "%s: Number of partitions specified for table %s but will be "
-                   "ignored because no partition index specified", tbl->srcInfo, tbl->name);
+        WARN_CHECK(index_found, ErrorType::WARN_MISSING,
+                   "%1%: Number of partitions specified for table %2% but will be "
+                   "ignored because no partition index specified", tbl, tbl->externalName());
     }
 
     if (index_found) {
@@ -92,8 +95,9 @@ void DoTableLayout::check_for_atcam(IR::MAU::Table::Layout &layout, const IR::MA
             partition_index = "ingress::" + partition_index;
         else
             partition_index = "egress::" + partition_index;
-        ERROR_CHECK(phv.field(partition_index) != nullptr, "%s: The partition index %s for table "
-                    "%s is not found in the PHV", tbl->srcInfo, partition_index, tbl->name);
+        ERROR_CHECK(phv.field(partition_index) != nullptr, ErrorType::ERR_NOT_FOUND,
+                    "partition index %2% for table %3% in the PHV.",
+                    tbl, partition_index, tbl->externalName());
     }
 
     layout.atcam = (index_found);
@@ -106,8 +110,9 @@ void DoTableLayout::check_for_alpm(IR::MAU::Table::Layout &, const IR::MAU::Tabl
     auto hdr_instance_name = tbl->name + "__metadata";
     auto pidx_field_name = tbl->name + "_partition_index";
     partition_index = hdr_instance_name + "." + pidx_field_name;
-    ERROR_CHECK(phv.field(partition_index) != nullptr, "%s: The partition index %s for table "
-                "%s is not found in the PHV", tbl->srcInfo, partition_index, tbl->name);
+    ERROR_CHECK(phv.field(partition_index) != nullptr, ErrorType::ERR_NOT_FOUND,
+                "partition index %2% for table %3% in the PHV.",
+                tbl, partition_index, tbl->externalName());
 }
 
 
@@ -115,15 +120,17 @@ void DoTableLayout::check_for_ternary(IR::MAU::Table::Layout &layout, const IR::
     auto annot = tbl->match_table->getAnnotations();
     if (auto s = annot->getSingle("ternary")) {
         if (s->expr.size() <= 0) {
-            ::warning("Pragma ternary ignored for table %s because value is undefined", tbl->name);
+            ::warning(BFN::ErrorType::WARN_PRAGMA_USE,
+                      "Pragma ternary ignored for table %1% because value is undefined", tbl);
         } else {
             auto pragma_val =  s->expr.at(0)->to<IR::Constant>();
-            ERROR_CHECK(pragma_val != nullptr,
-                "%s: Cannot interpret the ternary pragma on table %s", tbl->srcInfo, tbl->name);
+            ERROR_CHECK(pragma_val != nullptr, ErrorType::ERR_UNKNOWN,
+                "ternary pragma on table %2%.", s, tbl->externalName());
             if (pragma_val->asInt() == 1)
                 layout.ternary = true;
             else
-                ::warning("Pragma ternary ignored for table %s because value is not 1", tbl->name);
+                ::warning(BFN::ErrorType::WARN_PRAGMA_USE,
+                          "Pragma ternary ignored for table %1% because value is not 1", tbl);
         }
     } else {
         for (auto ixbar_read : tbl->match_key) {
@@ -151,15 +158,18 @@ void DoTableLayout::check_for_proxy_hash(IR::MAU::Table::Layout &layout,
     auto annot = tbl->match_table->getAnnotations();
     if (auto s = annot->getSingle("proxy_hash_width")) {
         if (s->expr.size() <= 0) {
-            ::warning("Proxy hash pragma ignored for table %s because value is undefined",
-                      tbl->name);
+            ::warning(BFN::ErrorType::WARN_PRAGMA_USE,
+                      "Proxy hash pragma ignored for table %1% because value is undefined.",
+                      tbl);
         } else {
             auto pragma_val =  s->expr.at(0)->to<IR::Constant>();
-            ERROR_CHECK(pragma_val != nullptr, "%s: The proxy hash pragma on table %s is "
-                        "not a constant", tbl->srcInfo, tbl->name);
+            ERROR_CHECK(pragma_val != nullptr, ErrorType::ERR_INVALID,
+                        "proxy hash pragma on table %2%. It is not a constant.",
+                        s, tbl->externalName());
             ERROR_CHECK(pragma_val->asInt() > 0 && pragma_val->asInt() <= IXBar::HASH_MATRIX_SIZE,
-                "%s: Proxy hash width %d on table %s invalid, as it cannot fit on the "
-                "hash matrix", tbl->srcInfo, pragma_val->asInt(), tbl->name);
+                        ErrorType::ERR_INVALID,
+                        "proxy hash width %2% on table %3%. It does not fit on the "
+                        "hash matrix.", tbl, pragma_val->asInt(), tbl->externalName());
             layout.proxy_hash = true;
             layout.proxy_hash_width = pragma_val->asInt();
         }
@@ -226,8 +236,9 @@ void DoTableLayout::determine_byte_impacts(const IR::MAU::Table *tbl,
                     match_multiplier = 0;
                     is_partition = true;
                     partition_found = true;
-                    ERROR_CHECK(ixbar_read->match_type.name == "exact", "%s: The partition index "
-                                "of algorithmic TCAM table %s must be an exact field");
+                    ERROR_CHECK(ixbar_read->match_type.name == "exact", ErrorType::ERR_INVALID,
+                                "partition index of algorithmic TCAM table %2%. Must"
+                                " be an exact field.", tbl, tbl->externalName());
                 } else if (ixbar_read->match_type.name == "ternary" ||
                            ixbar_read->match_type.name == "lpm") {
                     match_multiplier = 2;
@@ -294,8 +305,9 @@ void DoTableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR:
     if (!layout.alpm && !layout.atcam && !layout.ternary && !layout.proxy_hash)
         layout.exact = true;
     if (layout.proxy_hash) {
-        ERROR_CHECK(!layout.atcam && !layout.ternary, "%s: A proxy hash table cannot be ternary, "
-                    "as specified for table %s", tbl->srcInfo, tbl->name);
+        ERROR_CHECK(!layout.atcam && !layout.ternary, ErrorType::ERR_INVALID,
+                    "proxy hash table for table %2%. Cannot be ternary.",
+                    tbl, tbl->externalName());
     }
 
     if (!layout.requires_versioning && !layout.ternary)
@@ -337,15 +349,16 @@ void DoTableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR:
     }
 
     if (layout.atcam) {
-        ERROR_CHECK(partition_found, "%s: Table %s is specified to be an atcam, but partition "
-                    "index %s is not found within the table key", tbl->srcInfo, tbl->name,
+        ERROR_CHECK(partition_found, ErrorType::ERR_INVALID,
+                    "partition index %3%. Table %2% is specified to be an atcam, but partition "
+                    "index %3% is not found within the table key.", tbl, tbl->externalName(),
                     partition_index);
         if (partition_found) {
             int possible_partitions = 1 << layout.partition_bits;
-            ERROR_CHECK(layout.partition_count <= possible_partitions, "%s: Table %s has "
-                        "specified %d partitions, but the actual possible partitions due to the "
-                        "number of bits in the partition index is %d", tbl->srcInfo, tbl->name,
-                        layout.partition_count, possible_partitions);
+            ERROR_CHECK(layout.partition_count <= possible_partitions, ErrorType::ERR_INSUFFICIENT,
+                        "the number of partitions to be %4% due to the number of bits specified "
+                        "in the partition. However table %2% has specified %3% partitions.",
+                        tbl, tbl->externalName(), layout.partition_count, possible_partitions);
             if (layout.partition_count == 0)
                 layout.partition_count = possible_partitions;
         }
@@ -407,10 +420,10 @@ void DoTableLayout::setup_action_layout(IR::MAU::Table *tbl) {
                 immediate_allowed = false;
 
     if (immediate_forced && !immediate_allowed) {
-      fatal_error("%s: Cannot use force_immediate on table %s when its action data "
+      fatal_error("%1%: Cannot use force_immediate on table %2% when its action data "
                   "table is indirectly addressed nor when the table needs to use the "
                   "immediate path to write items like hash, meter color, or random "
-                  "number results.", tbl->srcInfo, tbl->name);
+                  "number results.", tbl, tbl->externalName());
     }
 
     af.allocate_format(uses, immediate_allowed);
@@ -457,43 +470,48 @@ void DoTableLayout::setup_exact_match(IR::MAU::Table *tbl, int action_data_bytes
     auto annot = tbl->match_table->getAnnotations();
     int pack_val = 0;
     if (auto s = annot->getSingle("pack")) {
-        ERROR_CHECK(s->expr.size() > 0, "%s: pack pragma has no value for table %s",
-                    tbl->srcInfo, tbl->name);
+        ERROR_CHECK(s->expr.size() > 0, ErrorType::ERR_INVALID,
+                    "pack pragma. It has no value for table %2%.", tbl, tbl->externalName());
         auto pragma_val = s->expr.at(0)->to<IR::Constant>();
-        ERROR_CHECK(pragma_val != nullptr, "%s: pack pragma value for table %s must be a "
-                    "constant", tbl->srcInfo, tbl->name);
+        ERROR_CHECK(pragma_val != nullptr, ErrorType::ERR_INVALID,
+                    "pack pragma value for table %2%. Must be a constant.",
+                    tbl, tbl->externalName());
         if (pragma_val) {
             pack_val = pragma_val->asInt();
             if (pack_val < MIN_PACK || pack_val > MAX_PACK) {
-                ::warning("%s: The provide pack pragma value for table %s is %d, when the "
-                          "compiler only supports pack values between %d and %d", tbl->srcInfo,
-                          tbl->name, pack_val, MIN_PACK, MAX_PACK);
+                ::warning(ErrorType::WARN_INVALID,
+                          "%1%: The provide pack pragma value for table %2% is %3%, when the "
+                          "compiler only supports pack values between %4% and %5%",
+                          tbl, tbl->externalName(), pack_val, MIN_PACK, MAX_PACK);
                 pack_val = 0;
             }
         }
     }
     if (auto s = annot->getSingle("dynamic_table_key_masks")) {
-        ERROR_CHECK(s->expr.size() > 0,
-                "%s: dynamic_table_key_masks pragma has no value for table %s",
-                    tbl->srcInfo, tbl->name);
+        ERROR_CHECK(s->expr.size() > 0, ErrorType::ERR_INVALID,
+                    "dynamic_table_key_masks pragma. Has no value for table %2%.",
+                    tbl, tbl->externalName());
         auto pragma_val = s->expr.at(0)->to<IR::Constant>();
-        ERROR_CHECK(pragma_val != nullptr, "%s: pack pragma value for table %s must be a "
-                    "constant", tbl->srcInfo, tbl->name);
+        ERROR_CHECK(pragma_val != nullptr, ErrorType::ERR_INVALID,
+                    "pack pragma value for table %2%. Must be a constant.",
+                    tbl, tbl->externalName());
         if (pragma_val) {
             auto dkm = pragma_val->asInt();
             if (dkm == 1) {
                 tbl->dynamic_key_masks = true;
             } else {
-                ::warning("%s: The dynammic_table_key_masks pragma value for table %s is %d"
-                        ", when the compiler only supports value of 1", tbl->srcInfo,
-                          tbl->name, dkm);
+                ::warning(ErrorType::WARN_INVALID,
+                          "%1%: The dynammic_table_key_masks pragma value for table %2% is %3%"
+                          ", when the compiler only supports value of 1",
+                          tbl, tbl->externalName(), dkm);
             }
         }
     }
 
     if (pack_val > 0 && tbl->layout.sel_len_bits > 0 && pack_val != 1) {
-        ::error("%s: Table %s has a pack %d provided, but also uses a wide selector, which "
-                "requires a pack of 1", tbl->srcInfo, tbl->name, pack_val);
+        ::error(ErrorType::ERR_INVALID,
+                "table %2%. It has a pack value of %3% provided, but also uses a wide selector, "
+                "which requires a pack of 1.", tbl, tbl->externalName(), pack_val);
         return;
     }
 
@@ -586,9 +604,10 @@ void DoTableLayout::setup_layout_options(IR::MAU::Table *tbl) {
         possible_pack_formats = pack_format_it->second.size();
         LOG2("Total number of layout options " << possible_pack_formats);
     }
-    ERROR_CHECK(possible_pack_formats > 0, "The table %s cannot find a valid packing, and "
-                "cannot be placed.  Possibly the match key is too wide given the constraints of "
-                "Barefoot hardware", tbl->name);
+    ERROR_CHECK(possible_pack_formats > 0, ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                "The table %2% cannot find a valid packing, and cannot be placed. "
+                "Possibly the match key is too wide given the constraints of "
+                "Barefoot hardware.", tbl, tbl->externalName());
 }
 
 /* FIXME: This function is for the setup of a table with no match data.  This is currently hacked
@@ -690,15 +709,18 @@ void DoTableLayout::add_hash_action_option(IR::MAU::Table *tbl, bool &hash_actio
 
     auto annot = tbl->match_table->getAnnotations();
     if (auto s = annot->getSingle("use_hash_action")) {
-        auto pragma_val = s->expr.at(0)->to<IR::Constant>();
-        ERROR_CHECK(pragma_val != nullptr, "%s: Please provide a 1 vs. 0 for the use_hash_action"
-                    "for table %s", tbl->srcInfo, tbl->name);
-        hash_action_only = pragma_val->asInt() == 1;
+        auto pragma_val = s->expr.at(0)->to<IR::Constant>()->asInt();
+        ERROR_CHECK(pragma_val == 1 || pragma_val == 0, ErrorType::ERR_INVALID,
+                    "value %3%. Please provide a 1 to enable the use of the hash action path, "
+                    "or a 0 to disable the hash action path for for table %2%.",
+                    s, tbl->externalName(), pragma_val);
+        hash_action_only = (pragma_val == 1);
     }
 
     if (hash_action_only) {
-        ERROR_CHECK(possible, "%s: Table %s is required to be a hash action table, but cannot "
-                              "be due to %s", tbl->srcInfo, tbl->name, hash_action_reason);
+        ERROR_CHECK(possible, ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                    "Table %2% is required to be a hash action table, but cannot "
+                    "be due to %3%.", tbl, tbl->externalName(), hash_action_reason);
     }
 
     if (!possible)
@@ -733,17 +755,18 @@ class VisitAttached : public Inspector {
             addr_type_t type) {
         auto ba = findContext<IR::MAU::BackendAttached>();
         if (users[type] != nullptr) {
-            ::error("%s: Both %s and %s require the %s address hardware, and cannot be on "
-                "the same table %s", am->srcInfo, am->name, users[type]->name,
-                addr_type_name(type), tbl->name);
+            ::error(ErrorType::ERR_INVALID,
+                    "overlap. Both %2% and %3% require the %4% address hardware, and cannot be on "
+                    "the same table %5%.",
+                    am, am->name, users[type]->name, addr_type_name(type), tbl->externalName());
             return false;
         }
         users[type] = am;
 
         if (!am->direct) {
             if (am->size <= 0) {
-                ::error("%s Indirect attached table %s does not have a size", am->srcInfo,
-                    am->name);
+                ::error(ErrorType::ERR_NOT_FOUND,
+                        "indirect attached table %2%. Does not have a size.", am, am->name);
                 return false;
             }
         }
@@ -763,9 +786,10 @@ class VisitAttached : public Inspector {
         if (ba->pfe_location == IR::MAU::PfeLocation::OVERHEAD) {
             if (from_hash) {
                 if (layout.no_match_data()) {
-                    ::error("%s: When an attached memory %s is addressed by hash and requires "
-                            "per action enabling, then the table %s must have match data",
-                             am->srcInfo, am->name, tbl->name);
+                    ::error(ErrorType::ERR_INVALID,
+                            "When an attached memory %2% is addressed by hash and requires "
+                            "per action enabling, then the table %3% must have match data",
+                             am, am->name, tbl->externalName());
                     return false;
                 }
             }
@@ -775,9 +799,10 @@ class VisitAttached : public Inspector {
         if (type == METER && ba->type_location == IR::MAU::TypeLocation::OVERHEAD) {
             if (from_hash) {
                 if (layout.no_match_data()) {
-                    ::error("%s: When an attached memory %s is addressed by hash and requires "
-                            "multiple meter_type, then the table %s must have match data",
-                            am->srcInfo, am->name, tbl->name);
+                    ::error(ErrorType::ERR_INVALID,
+                            "When an attached memory %2% is addressed by hash and requires "
+                            "multiple meter_type, then the table %3% must have match data",
+                            am, am->name, tbl->externalName());
                     return false;
                 }
             }
@@ -826,7 +851,7 @@ class VisitAttached : public Inspector {
     bool preorder(const IR::MAU::ActionData *ad) override {
         BUG_CHECK(!ad->direct, "Cannot have a direct action data table before table placement");
         if (ad->size <= 0)
-            error("%s: No size count in %s %s", ad->srcInfo, ad->kind(), ad->name);
+            error(ErrorType::ERR_NOT_FOUND, "size count in %2% %3%", ad, ad->kind(), ad->name);
         int vpn_bits_needed = std::max(10, ceil_log2(ad->size)) + 1;
         layout.overhead_bits += vpn_bits_needed;
         layout.action_addr.address_bits = vpn_bits_needed;
@@ -904,8 +929,9 @@ bool DoTableLayout::preorder(IR::MAU::Action *act) {
     if (!ghdr.is_hash_dist_needed())
         return false;
 
-    ERROR_CHECK(!act->init_default, "%s: Cannot specify %s as the default action, as it requires "
-                "the hash distribution unit", act->srcInfo, act->name);
+    ERROR_CHECK(!act->init_default, ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                "Cannot specify %2% as the default action, as it requires "
+                "the hash distribution unit.", act, act->name);
     /**
      * This check is to validate that a keyless table that has to go through the miss path,
      * because the driver has to potentially program the table, does not have any actions that
@@ -925,17 +951,19 @@ bool DoTableLayout::preorder(IR::MAU::Action *act) {
             error_reason = "the table requires overhead";
             solution = "remove all match overhead";
         }
-        ::error("%s: The table %s with no key cannot have the action %s.  This action requires "
-                "hash, which can only be done through the hit pathway.  However, because %s, "
+        ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                "The table %2% with no key cannot have the action %3%.  This action requires "
+                "hash, which can only be done through the hit pathway.  However, because %4%, "
                 "the driver may need to change at runtime, and the driver can only currently "
-                "program the miss pathway.  The solution may be to %s.", act->srcInfo, tbl->name,
-                act->name, error_reason, solution);
+                "program the miss pathway.  The solution may be to %5%.",
+                act, tbl->externalName(), act->name, error_reason, solution);
     }
 
-    ERROR_CHECK(!tbl->layout.no_match_miss_path(), "%s: This table with no key cannot have the "
-                "action %s as an action here, because it requires hash distribution, which "
+    ERROR_CHECK(!tbl->layout.no_match_miss_path(), ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                "This table with no key cannot have the action %2% as an action here, "
+                "because it requires hash distribution, which "
                 "utilizes the hit path in Tofino, while the driver configures the miss path",
-                act->srcInfo, act->name);
+                act, act->name);
 
     act->hit_path_imp_only = false;
     act->disallowed_reason = "uses_hash_dist";
@@ -999,23 +1027,25 @@ void calculate_lrt_threshold_and_interval(const IR::MAU::Table *tbl, IR::MAU::Co
     auto annot = cntr->annotations;
     bool lrt_enabled = false;
     if (auto s = annot->getSingle("lrt_enable")) {
-        ERROR_CHECK(s->expr.size() >= 1, "%s: lrt_enable pragma on counter does not have a"
-            "value", cntr->srcInfo, cntr->name);
+        ERROR_CHECK(s->expr.size() >= 1, ErrorType::ERR_INVALID,
+                    "lrt_enable pragma on counter. Does not have a value.", cntr, cntr->name);
         auto pragma_val = s->expr.at(0)->to<IR::Constant>();
         if (pragma_val == nullptr) {
-            ::error("%s: lrt_enable value on counter %s is not a constant", cntr->srcInfo,
-                cntr->name);
+            ::error(ErrorType::ERR_INVALID,
+                    "lrt_enable value on counter %2%. It is not a constant.", cntr, cntr->name);
             return;
         }
         auto real_val = pragma_val->asInt();
         if (real_val == 0) return;  // disabled
         if (real_val != 1) {
-            ::error("%s: invalid lrt_enable value on counter %s", cntr->srcInfo, cntr->name);
+            ::error(ErrorType::ERR_INVALID,
+                    "lrt_enable value on counter %2%.", cntr, cntr->name);
             return;
         }
         lrt_enabled = true;
         if (cntr->min_width >= 64) {
-            ::error("%s: LR(t) cannot be used on 64 bit counter %s", cntr->srcInfo, cntr->name);
+            ::error(ErrorType::ERR_INVALID,
+                    "LR(t). Cannot be used on 64 bit counter %2%.", cntr, cntr->name);
             return;
         }
     }
@@ -1025,13 +1055,14 @@ void calculate_lrt_threshold_and_interval(const IR::MAU::Table *tbl, IR::MAU::Co
         auto s = annot->getSingle("lrt_scale");
         auto lrt_val = s->expr.at(0)->to<IR::Constant>();
         if (lrt_val == nullptr) {
-            ::error("%s: lrt_scale value on counter %s is not a constant", cntr->srcInfo,
-                cntr->name);
+            ::error(ErrorType::ERR_INVALID,
+                    "lrt_scale value on counter %2%. It is not a constant.", cntr, cntr->name);
             return;
         }
         lrt_scale = lrt_val->asInt();
         if (lrt_scale <= 0) {
-            ::error("%s: invalid lrt_scale value on counter %s", cntr->srcInfo, cntr->name);
+            ::error(ErrorType::ERR_INVALID,
+                    "lrt_scale value on counter %2%.", cntr, cntr->name);
             return;
         }
     }
@@ -1147,13 +1178,14 @@ bool ValidateActionProfileFormat::preorder(const IR::MAU::ActionData *ad) {
     auto tbl = findContext<IR::MAU::Table>();
     auto formats = lc.get_action_formats(tbl);
     BUG_CHECK(formats.size() == 1, "%s: Compiler generated multiple formats for action profile "
-              "%s on table %s", ad->srcInfo, ad->name, tbl->name);
+              "%s on table %s", ad->srcInfo, ad->name, tbl->externalName());
     if (formats.size() > 0)
-        ERROR_CHECK(formats[0].bytes_per_loc[ActionData::ACTION_DATA_TABLE] > 0, "%s: Action "
-                    "profile %s on table %s does not have any action data (either because no "
+        ERROR_CHECK(formats[0].bytes_per_loc[ActionData::ACTION_DATA_TABLE] > 0,
+                    ErrorType::ERR_UNSUPPORTED_ON_TARGET, "Action "
+                    "profile %2% on table %3% does not have any action data (either because no "
                     "action data has been provided, or the action data has been dead code "
-                    "eliminated.  An action data free action profile is not supported",
-                    ad->srcInfo, ad->name, tbl->name);
+                    "eliminated.  An action data free action profile is not supported.",
+                    ad, ad->name, tbl->externalName());
     return false;
 }
 /**
@@ -1166,10 +1198,11 @@ bool ValidateActionProfileFormat::preorder(const IR::MAU::ActionData *ad) {
 bool ProhibitAtcamWideSelectors::preorder(const IR::MAU::Selector *as) {
     auto tbl = findContext<IR::MAU::Table>();
     if (as->max_pool_size > StageUseEstimate::SINGLE_RAMLINE_POOL_SIZE && tbl->layout.atcam) {
-        ::error("%s: ATCAM table %s cannot have selector %s.  An ATCAM table may require "
+        ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                "ATCAM table %2% cannot have selector %3%.  An ATCAM table may require "
                 "multiple logical tables, and a selector that has a max pool size greater "
-                "than %d, (in this instance %d), the selector can only belong to a single "
-                "logical table", as->srcInfo, tbl->name, as->name,
+                "than %4%, (in this instance %5%), the selector can only belong to a single "
+                "logical table.", as, tbl->externalName(), as->name,
                  StageUseEstimate::SINGLE_RAMLINE_POOL_SIZE, as->max_pool_size);
     }
     return false;
@@ -1232,8 +1265,9 @@ bool MeterColorMapramAddress::DetermineMeterReqs::preorder(const IR::MAU::Meter 
         possible -= occ_pos->second;
 
     if (possible.empty()) {
-        ::error("%s: The meter %s requires either an idletime or stats address bus to return "
-                "a color value, and no bus is available.", mtr->srcInfo, mtr->name);
+        ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                "The meter %2% requires either an idletime or stats address bus to return "
+                "a color value, and no bus is available.", mtr, mtr->name);
     }
     self.possible_addresses[mtr] = possible;
     return false;

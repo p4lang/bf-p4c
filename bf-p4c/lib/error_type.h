@@ -10,7 +10,7 @@ class ErrorType: public ::ErrorType {
  public:
     static const int WARN_TABLE_PLACEMENT = 1501;
     static const int WARN_PRAGMA_USE      = 1502;
-    // static const int WARN_
+    static const int WARN_SUBSTITUTION    = 1503;
 
     /// in case we need to
     static ErrorType &getErrorTypes() {
@@ -24,6 +24,7 @@ class ErrorType: public ::ErrorType {
     ErrorType() {
         ::ErrorCatalog::getCatalog().add(WARN_TABLE_PLACEMENT, "table-placement", "");
         ::ErrorCatalog::getCatalog().add(WARN_PRAGMA_USE, "pragma-use", "");
+        ::ErrorCatalog::getCatalog().add(WARN_SUBSTITUTION, "substitution", "");
     }
 };
 

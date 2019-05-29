@@ -88,7 +88,7 @@ class GenerateOutputs : public PassManager {
         ctxt->emplace("build_date", new Util::JsonValue(build_date));
         ctxt->emplace("program_name", new Util::JsonValue(_options.programName + ".p4"));
         ctxt->emplace("run_id", new Util::JsonValue(RunId::getId()));
-        ctxt->emplace("schema_version", new Util::JsonValue("1.7.3"));
+        ctxt->emplace("schema_version", new Util::JsonValue(CONTEXT_SCHEMA_VERSION));
         ctxt->emplace("compiler_version", new Util::JsonValue(BF_P4C_VERSION));
         ctxt->emplace("target", new Util::JsonValue(_options.target));
         ctxt->emplace("tables", new Util::JsonArray());

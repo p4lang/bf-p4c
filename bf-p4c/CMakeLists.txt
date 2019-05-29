@@ -24,6 +24,34 @@ endif()
 if (ENABLE_BAREFOOT_INTERNAL)
   add_definitions("-DBAREFOOT_INTERNAL=1")
 endif()
+
+macro(get_schema_version schema_file schema_var)
+  execute_process(
+    COMMAND python3 -c "from ${schema_file} import get_schema_version;print(get_schema_version(), end='', flush=True)"
+    OUTPUT_VARIABLE __schema_version
+    RESULT_VARIABLE __schema_errcode
+    ERROR_VARIABLE __schema_errstr
+    WORKING_DIRECTORY ${BFN_P4C_SOURCE_DIR}/compiler_interfaces/schemas)
+  if (${__schema_errcode})
+    MESSAGE(FATAL_ERROR "Error retrieving ${schema_file} version ${__schema_errstr}")
+  endif()
+  set(${schema_var} ${__schema_version})
+endmacro(get_schema_version)
+
+get_schema_version(manifest_schema MANIFEST_SCHEMA_VERSION)
+MESSAGE(STATUS "Found manifest schema version ${MANIFEST_SCHEMA_VERSION}")
+set_source_files_properties(logging/manifest.cpp PROPERTIES
+  COMPILE_DEFINITIONS MANIFEST_SCHEMA_VERSION=\"${MANIFEST_SCHEMA_VERSION}\")
+
+get_schema_version(context_schema CONTEXT_SCHEMA_VERSION)
+MESSAGE(STATUS "Found context schema version ${CONTEXT_SCHEMA_VERSION}")
+if (ENABLE_UNIFIED_COMPILATION)
+  add_definitions("-DCONTEXT_SCHEMA_VERSION=\"${CONTEXT_SCHEMA_VERSION}\"")
+else()
+  set_source_files_properties(p4c-barefoot.cpp PROPERTIES
+    COMPILE_DEFINITIONS CONTEXT_SCHEMA_VERSION=\"${CONTEXT_SCHEMA_VERSION}\")
+endif()
+
 include_directories(${BFN_P4C_SOURCE_DIR}
   ${CMAKE_CURRENT_SOURCE_DIR}
   ${Boost_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR} ${LIBDYNHASH_INCLUDE_DIR} )

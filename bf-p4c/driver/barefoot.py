@@ -120,6 +120,8 @@ class BarefootBackend(BackendDriver):
                                     "Note: it can not be the argument before source file" + \
                                     " without specifying the archive name!",
                                     const="__default__", default=None)
+        self._argGroup.add_argument("--archive-source", action="store_true", default=False,
+                                    help="Add source outputs to the archive.")
         self._argGroup.add_argument("--bf-rt-schema", action="store",
                                     help="Generate and write BF-RT JSON schema  to the specified file")
         self._argGroup.add_argument("--backward-compatible",
@@ -385,6 +387,9 @@ class BarefootBackend(BackendDriver):
                 self.add_command_option('archiver',
                                         "-jcf {}/{}.tar.bz2 --exclude=\"*.bin\" -C {} {}".format(root_dir,
                                         program_name, root_dir, program_dir))
+                if opts.archive_source:
+                    self.add_command_option('archiver',
+                                            os.path.dirname(os.path.abspath(self._source_filename)))
                 self._commandsEnabled.append('archiver')
             else:
                 print >> sys.stderr, "Please specify an output directory (using -o) to" + \
@@ -511,6 +516,8 @@ class BarefootBackend(BackendDriver):
                 jsonTree['compile_command'] = ' '.join(sys.argv)
                 jsonTree['compilation_succeeded'] = compilation_successful
                 jsonTree['compilation_time'] = str(self.compilation_time)
+                jsonTree['programs'][0]['source_files']['src_root'] = \
+                        os.path.dirname(os.path.abspath(self._source_filename))
                 if self.conf_file is not None:
                     jsonTree['conf_file'] = self.conf_file
                 for pipe in self.mau_json:

@@ -28,6 +28,16 @@ class Manifest : public Inspector {
     using PathAndType = std::pair<cstring, cstring>;
 
  private:
+    /// the collection of inputs for the program
+    struct InputFiles {
+        cstring           _rootPath;
+        std::set<cstring> _includePaths;
+        std::set<cstring> _defines;
+
+        explicit InputFiles(const BFN_Options &options);
+        void serialize(Writer &writer);
+    };
+
     /// represents a graph file
     struct GraphOutput {
         cstring _path;
@@ -120,23 +130,24 @@ class Manifest : public Inspector {
         }
     };
 
+    const BFN_Options &        _options;
     // pairs of <pipe_id, pipe_name>
     std::map<unsigned, cstring> _pipes;
     /// map of pipe-id to OutputFiles
     std::map<unsigned, OutputFiles *> _pipeOutputs;
+    InputFiles                        _programInputs;
     /// reference to ProgramThreads to generate the architecture configuration
     BFN::ProgramThreads        _threads;
     int                        _pipeId;  /// the current pipe id (for the visitor methods)
     /// to generate parser and control graphs
     P4::ReferenceMap *         _refMap = nullptr;
     P4::TypeMap *              _typeMap = nullptr;
-    const BFN_Options &        _options;
     std::ofstream              _manifestStream;
     /// compilation succeeded or failed
     bool _success = false;
 
  private:
-    Manifest() : _options(BackendOptions()) {
+    Manifest() : _options(BackendOptions()), _programInputs(BackendOptions()) {
         auto path = Util::PathName(_options.outputDir).join("manifest.json");
         _manifestStream.open(path.toString().c_str(), std::ofstream::out);
         if (!_manifestStream)
@@ -147,6 +158,7 @@ class Manifest : public Inspector {
         for (auto p : _pipeOutputs) {
             delete p.second;
         }
+
         _manifestStream.flush();
         _manifestStream.close();
     }

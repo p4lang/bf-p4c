@@ -1,3 +1,7 @@
+#include <libgen.h>
+#include <cstdlib>
+#include <string>
+
 #include "manifest.h"
 #include "backends/graphs/controls.h"
 #include "backends/graphs/parsers.h"
@@ -32,6 +36,45 @@ void Manifest::postorder(const IR::BFN::TnaControl *control) {
     }
 }
 
+Manifest::InputFiles::InputFiles(const BFN_Options &options) {
+    char *filePath = strndup(options.file.c_str(), options.file.size());
+    _rootPath = cstring(dirname(filePath));
+    free(filePath);
+
+    // walk the command line arguments and collect includes
+    char *ppFlags = strndup(options.preprocessor_options.c_str(),
+                            options.preprocessor_options.size());
+    char *brkt;
+    const char *sep = " ";
+    for (auto *word = strtok_r(ppFlags, sep, &brkt); word; word = strtok_r(nullptr, sep, &brkt)) {
+        if (word[0] == '-' && word[1] == 'I')
+            _includePaths.insert(cstring(word+2));
+        else if (word[0] == '-' && word[1] == 'D')
+            _defines.insert(cstring(word+2));
+        else if (word[0] == '-' && word[1] == 'U')
+            _defines.erase(cstring(word+2));
+    }
+    free(ppFlags);
+}
+
+void Manifest::InputFiles::serialize(Writer &writer) {
+    writer.Key("source_files");
+    writer.StartObject();
+    writer.Key("src_root");
+    writer.String(_rootPath.c_str());
+    writer.Key("includes");
+    writer.StartArray();
+    for (auto i : _includePaths)
+        writer.String(i.c_str());
+    writer.EndArray();
+    writer.Key("defines");
+    writer.StartArray();
+    for (auto d : _defines)
+        writer.String(d.c_str());
+    writer.EndArray();
+    writer.EndObject();
+}
+
 /// serialize the entire manifest
 void Manifest::serialize() {
     rapidjson::StringBuffer sb;
@@ -39,7 +82,7 @@ void Manifest::serialize() {
 
     writer.StartObject();  // start BFNCompilerArchive
     writer.Key("schema_version");
-    writer.String("2.0.1");
+    writer.String(MANIFEST_SCHEMA_VERSION);
     writer.Key("target");
     if (_options.target)
         writer.String(_options.target.c_str());
@@ -70,6 +113,7 @@ void Manifest::serialize() {
     writer.Key("p4_version");
     writer.String((_options.langVersion == BFN_Options::FrontendVersion::P4_14) ?
                   "p4-14" : "p4-16");
+    _programInputs.serialize(writer);
     serializePipes(writer);
     writer.EndObject();  // end CompiledProgram
     writer.EndArray();   // end "programs"
