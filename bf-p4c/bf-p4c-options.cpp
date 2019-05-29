@@ -176,14 +176,14 @@ BFN_Options::BFN_Options() {
         [this](const char *) { disable_long_branch = true; return true; },
         "Disable use of long branches");
     registerOption("--enable-longbranch", nullptr,
-        [this](const char *) {
-            if (Device::numLongBranchTags() > 0) {
-                disable_long_branch = false;
-            } else {
-                error("--enable-longbranch not supported on %s", Device::name());
-                disable_long_branch = true; }
-            return true; },
-        "Enable use of long branches");
+                   [this](const char *) {
+                       if (Device::numLongBranchTags() > 0) {
+                           disable_long_branch = false;
+                       } else {
+                           error("--enable-longbranch not supported on %s", Device::name());
+                           disable_long_branch = true; }
+                       return true; },
+                   "Enable use of long branches");
     registerOption("--help-pragmas", nullptr,
                    [](const char *) {
                        BFN::ParseAnnotations();  // populate the pragma lists

@@ -117,7 +117,7 @@ class ExpressionsToHash : public MauTransform {
     const IR::MAU::Action *preorder(IR::MAU::Action *) override;
     const IR::MAU::Instruction *preorder(IR::MAU::Instruction *) override;
     const IR::Node *preorder(IR::Node *n) override { visitOnce(); return n; }
-    const IR::MAU::StatefulAlu *preorder(IR::MAU::StatefulAlu *s) { prune(); return s; }
+    const IR::MAU::StatefulAlu *preorder(IR::MAU::StatefulAlu *s) override { prune(); return s; }
 
  public:
     explicit ExpressionsToHash(const PhvInfo &p) : phv(p) { visitDagOnce = false; }

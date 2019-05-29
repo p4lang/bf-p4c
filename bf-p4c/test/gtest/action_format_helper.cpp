@@ -692,7 +692,7 @@ void RandomNumberRamSection() {
     EXPECT_TRUE(merge1 != nullptr);
     if (merge1) {
         auto param_positions = merge1->parameter_positions();
-        EXPECT_EQ(param_positions.size(), 2);
+        EXPECT_EQ(param_positions.size(), size_t(2));
         auto param_pos = param_positions.find(0);
         EXPECT_TRUE(param_pos != param_positions.end());
         if (param_pos != param_positions.end()) {
@@ -721,7 +721,7 @@ void RandomNumberRamSection() {
     EXPECT_TRUE(merge3 != nullptr);
     if (merge3) {
         auto param_positions = merge3->parameter_positions();
-        EXPECT_EQ(param_positions.size(), 2);
+        EXPECT_EQ(param_positions.size(), size_t(2));
         auto param_pos = param_positions.find(0);
         if (param_pos != param_positions.end()) {
             auto rn_check = param_pos->second->to<ActionData::RandomNumber>();

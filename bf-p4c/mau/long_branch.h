@@ -37,7 +37,7 @@ class LongBranchAlloc : public MauModifier {
     Info *alloc(Info *);
 
     bool preorder(IR::MAU::Table *) override;
-    profile_t init_apply(const IR::Node *root) {
+    profile_t init_apply(const IR::Node *root) override {
         stage_use.clear();
         use.clear();
         return MauModifier::init_apply(root); }
