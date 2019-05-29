@@ -42,6 +42,19 @@ typedef error ParserError_t;
 
 const bit<32> PORT_METADATA_SIZE = 32w192;
 
+const bit<16> PARSER_ERROR_OK            = 16w0x0000;
+const bit<16> PARSER_ERROR_NO_TCAM       = 16w0x0001;
+const bit<16> PARSER_ERROR_PARTIAL_HDR   = 16w0x0002;
+const bit<16> PARSER_ERROR_CTR_RANGE     = 16w0x0004;
+const bit<16> PARSER_ERROR_TIMEOUT_USER  = 16w0x0008;
+const bit<16> PARSER_ERROR_TIMEOUT_HW    = 16w0x0010;
+const bit<16> PARSER_ERROR_SRC_EXT       = 16w0x0020;
+const bit<16> PARSER_ERROR_PHV_OWNER     = 16w0x0080;
+const bit<16> PARSER_ERROR_MULTIWRITE    = 16w0x0100;
+const bit<16> PARSER_ERROR_ARAM_MBE      = 16w0x0400;
+const bit<16> PARSER_ERROR_FCS           = 16w0x0800;
+const bit<16> PARSER_ERROR_CSUM_MBE      = 16w0x1000;
+
 /// Meter
 enum MeterType_t { PACKETS, BYTES }
 
