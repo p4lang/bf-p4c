@@ -403,7 +403,8 @@ class BarefootBackend(BackendDriver):
             print 'parse manifest:', manifest_filename
             self._pipes = [ { 'context': '{}/pipe/context.json'.format(self._output_directory),
                               'resources': '{}/pipe/resources.json'.format(self._output_directory),
-                              'pipe_dir': '{}/pipe'.format(self._output_directory)
+                              'pipe_dir': '{}/pipe'.format(self._output_directory),
+                              'pipe_id': 0
             } ]
             return 0
 
