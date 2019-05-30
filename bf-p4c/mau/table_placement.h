@@ -41,7 +41,11 @@ class TablePlacement : public MauTransform, public Backtrack {
     } choice_t;
 
  private:
-    ordered_set<const IR::MAU::Table *> placed_tables;
+    // Note that this is for the UpwardDownward propagation, and refers to their match portion being
+    // fully placed.  In order to truly successfully split tables, some information is necessary to
+    // capture the potential dependencies removed or added by moving the stateful operation to a
+    // later stage
+    ordered_set<const IR::MAU::Table *> placed_tables_for_dep_analysis;
 
     // Names of all tables that have been placed so far in the TablePlacement pass. Note that this
     // is a global set of tables.

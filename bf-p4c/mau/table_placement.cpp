@@ -94,6 +94,7 @@ bool TablePlacement::backtrack(trigger &trig) {
 
 Visitor::profile_t TablePlacement::init_apply(const IR::Node *root) {
     alloc_done = phv.alloc_done();
+    placed_tables_for_dep_analysis.clear();
     placed_table_names.clear();
     LOG1("Table Placement ignores container conflicts? " << ignoreContainerConflicts);
     if (BackendOptions().create_graphs) {
@@ -1178,11 +1179,11 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed *
     }
 
     if (!pl->need_more) {
-        placed_tables.insert(pl->table);
+        placed_tables_for_dep_analysis.insert(pl->table);
         pl->group->finish_if_placed(work, pl); }
     GroupPlace *gw_match_grp = nullptr;
     if (pl->gw)  {
-        placed_tables.insert(pl->gw);
+        placed_tables_for_dep_analysis.insert(pl->gw);
         bool found_match = false;
         for (auto n : Values(pl->gw->next)) {
             if (!n || n->tables.size() == 0) continue;
@@ -1213,6 +1214,7 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed *
                     gw_match_grp = g; } } }
         BUG_CHECK(found_match, "Failed to find match table"); }
     if (!pl->need_more_match) {
+        placed_tables_for_dep_analysis.insert(pl->table);
         for (auto n : Values(pl->table->next)) {
             if (n && n->tables.size() > 0 && !GroupPlace::in_work(work, n)) {
                 bool ready = true;
@@ -1251,7 +1253,7 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choic
     const IR::MAU::Table *a_table_to_use = a->gw ? a->gw : a->table;
     const IR::MAU::Table *b_table_to_use = b->gw ? b->gw : b->table;
 
-    upward_downward_prop->update_placed_tables(placed_tables);
+    upward_downward_prop->update_placed_tables(placed_tables_for_dep_analysis);
     const auto& downward_prop_score = upward_downward_prop->get_downward_prop_unplaced_score(
         a_table_to_use, b_table_to_use);
     const auto& upward_prop_score = upward_downward_prop->get_upward_prop_unplaced_score(
