@@ -122,9 +122,12 @@ class Field : public LiftLess<Field> {
     /// True if this Field is metadata bridged from ingress to egress.
     bool            bridged = false;
 
-    /// True if this Field can always be packed with other fields. Used for padding fields for
+    /// True if this Field is a padding field.
+    bool            padding = false;
+
+    /// True if this Field can always be overlayable with other fields. Used for padding fields for
     /// bridged metadata.
-    bool            overlayablePadding = false;
+    bool            overlayable = false;
 
     /// A mirror field points to its field list (one of eight)
     struct mirror_field_list_t {
@@ -283,8 +286,10 @@ class Field : public LiftLess<Field> {
     bool is_ignore_alloc() const                           { return ignore_alloc_i; }
     void set_ignore_alloc(bool b)                          { ignore_alloc_i = b; }
 
-    bool padding() const                                   { return overlayablePadding; }
-    void set_padding(bool p)                               { overlayablePadding = p; }
+    bool is_padding() const                                { return padding; }
+    void set_padding(bool p)                               { padding = p; }
+    bool is_overlayable() const                            { return overlayable; }
+    void set_overlayable(bool p)                           { overlayable = p; }
 
     //
     // constraints
@@ -997,7 +1002,7 @@ class PhvInfo {
     void clear();
     void add(cstring fieldName, gress_t gress, int size, int offset,
              bool isMetadata, bool isPOV, bool bridged = false, bool isPad = false,
-             bool isFlexible = false);
+             bool isOverlayable = false, bool isFlexible = false);
     void add_hdr(cstring headerName, const IR::Type_StructLike* type,
                  gress_t gress, bool isMetadata);
     void add_struct(cstring structName, const IR::Type_StructLike* type, gress_t gress, bool meta,
@@ -1056,10 +1061,10 @@ class PhvInfo {
     const std::map<cstring, PHV::Field>& get_all_fields() const { return all_fields; }
     size_t num_fields() const { return all_fields.size(); }
 
-    PHV::Field* create_dummy_padding(size_t sz, gress_t gress) {
+    PHV::Field* create_dummy_padding(size_t sz, gress_t gress, bool overlayable = true) {
         cstring name = cstring::make_unique(dummyPaddingNames, "__phv_dummy_padding__");
         dummyPaddingNames.insert(name);
-        add(name, gress, sz, 0, false, false, false, /* isPad = */ true);
+        add(name, gress, sz, 0, false, false, false, /* isPad = */ true, overlayable);
         return field(name);
     }
 

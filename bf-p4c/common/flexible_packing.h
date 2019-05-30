@@ -65,24 +65,47 @@ class GatherPhase0Fields : public Inspector {
 class GatherParserExtracts : public Inspector {
  public:
     using FieldToFieldSet = ordered_map<const PHV::Field*, ordered_set<const PHV::Field*>>;
+
  private:
     const PhvInfo& phv;
     /// Map of all fields with alignment constraints due to initialization in the parser with values
     /// being the field they are initialized to.
-    FieldToFieldSet& parserAlignedFields;
+    FieldToFieldSet parserAlignedFields;
+    FieldToFieldSet reverseParserAlignMap;
 
     profile_t init_apply(const IR::Node* root) override {
         parserAlignedFields.clear();
+        reverseParserAlignMap.clear();
         return Inspector::init_apply(root);
     }
 
     bool preorder(const IR::BFN::Extract* e) override;
 
  public:
-    explicit GatherParserExtracts(
-            const PhvInfo& p,
-            FieldToFieldSet& f)
-            : phv(p), parserAlignedFields(f) { }
+    explicit GatherParserExtracts(const PhvInfo& p) : phv(p) { }
+
+    bool count(const PHV::Field* f) const {
+        return parserAlignedFields.count(f);
+    }
+
+    const ordered_set<const PHV::Field*>& at(const PHV::Field* f) const {
+        static ordered_set<const PHV::Field*> emptySet;
+        if (!parserAlignedFields.count(f)) return emptySet;
+        return parserAlignedFields.at(f);
+    }
+
+    bool revCount(const PHV::Field* f) const {
+        return reverseParserAlignMap.count(f);
+    }
+
+    const ordered_set<const PHV::Field*>& revAt(const PHV::Field* f) const {
+        static ordered_set<const PHV::Field*> emptySet;
+        if (!reverseParserAlignMap.count(f)) return emptySet;
+        return reverseParserAlignMap.at(f);
+    }
+
+    const FieldToFieldSet& getAlignedMap() const { return parserAlignedFields; }
+    const FieldToFieldSet& getReverseMap() const { return reverseParserAlignMap; }
 };
 
 /// This class identifies all parser state that have extracted @flexible metadata, which needs
@@ -154,7 +177,7 @@ class RepackFlexHeaders : public Transform, public TofinoWriteContext {
     /// Set of all fields used as deparser parameters.
     const ordered_set<const PHV::Field*>& deparserParams;
     /// Set of all fields with alignment constraints induced by the parser.
-    const GatherParserExtracts::FieldToFieldSet& parserAlignedFields;
+    const GatherParserExtracts& parserAlignedFields;
     /// No pack constraints reported by MAU backtracker.
     const MauBacktracker& alloc;
 
@@ -218,6 +241,12 @@ class RepackFlexHeaders : public Transform, public TofinoWriteContext {
      */
     ordered_map<cstring, const IR::HeaderOrMetadata*> originalHeaders;
 
+    /** Map of all candidate flexible fields that are used in digests. The padding for these fields
+      * cannot be overlaid with other fields, and these fields cannot be packed with other fields to
+      * prevent pollution of the digest.
+      */
+    ordered_set<const PHV::Field*> digestFlexFields;
+
     /**
      *
      */
@@ -259,6 +288,9 @@ class RepackFlexHeaders : public Transform, public TofinoWriteContext {
       * packed together.
       */
     SymBitMatrix bridgedActionAnalysis(std::vector<const PHV::Field*>& fieldsToBePacked);
+
+    void updateNoPackForDigestFields(const std::vector<const PHV::Field*>& nonByteAlignedFields,
+            const SymBitMatrix& mustPack);
 
     /// Pretty print a no-pack constraint determined by bridgedActionAnalysis.
     void printNoPackConstraint(
@@ -343,7 +375,7 @@ class RepackFlexHeaders : public Transform, public TofinoWriteContext {
     /** @returns a field object of @size bits and with the unique @id in its name. The format of the
       * padding field is __pad_id.
       */
-    const IR::StructField* getPaddingField(int size, int id) const;
+    const IR::StructField* getPaddingField(int size, int id, bool overlay = true) const;
 
     /** Clear state for member objects. Also, extract bridged header information from the
       * CollectBridgedFields pass into maps accessible locally.
@@ -367,7 +399,7 @@ class RepackFlexHeaders : public Transform, public TofinoWriteContext {
         SymBitMatrix& s,
         const ordered_set<const PHV::Field*>& z,
         const ordered_set<const PHV::Field*>& d,
-        const GatherParserExtracts::FieldToFieldSet& pa,
+        const GatherParserExtracts& pa,
         const MauBacktracker& b,
         ordered_map<const IR::Type_StructLike*, const IR::Type_StructLike*>& rt)
         : phv(p), fields(f), actionConstraints(a), doNotPack(s), noPackFields(z), deparserParams(d),
@@ -460,7 +492,7 @@ class RepackDigestFieldList : public RepackFlexHeaders {
             SymBitMatrix& s,
             const ordered_set<const PHV::Field*>& z,
             const ordered_set<const PHV::Field*>& d,
-            const GatherParserExtracts::FieldToFieldSet& pa,
+            const GatherParserExtracts& pa,
             const MauBacktracker& b,
             ordered_map<const IR::Type_StructLike*, const IR::Type_StructLike*>& rt)
         : RepackFlexHeaders(p, f, a, s, z, d, pa, b, rt) { }
@@ -587,6 +619,7 @@ class FlexiblePacking : public Logging::PassManager {
     CollectBridgedFields&                               bridgedFields;
     PackConflicts                                       packConflicts;
     ActionPhvConstraints                                actionConstraints;
+    GatherParserExtracts                                parserAlignedFields;
     RepackDigestFieldList                               packDigestFieldLists;
     RepackFlexHeaders                                   packHeaders;
     ProduceParserMappings                               parserMappings;
@@ -598,7 +631,6 @@ class FlexiblePacking : public Logging::PassManager {
     ordered_set<const PHV::Field*>                      deparserParams;
     ordered_set<cstring>                                parserStatesToModify;
 
-    GatherParserExtracts::FieldToFieldSet               parserAlignedFields;
     ordered_map<const IR::Type_StructLike*, const IR::Type_StructLike*> repackedTypes;
 
  public:

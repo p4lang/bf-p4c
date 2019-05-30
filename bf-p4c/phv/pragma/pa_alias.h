@@ -54,6 +54,8 @@ class PragmaAlias : public Inspector {
     static const char *name;
     static const char *description;
     static const char *help;
+
+    bool addAlias(const PHV::Field* f1, const PHV::Field* f2, bool suppressWarning = false);
 };
 
 std::ostream& operator<<(std::ostream& out, const PragmaAlias& pa_a);

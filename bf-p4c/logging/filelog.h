@@ -34,7 +34,7 @@ class FileLog {
 
     static cstring name2type(cstring logName) {
         static const std::map<cstring, cstring> logNames2Type = {
-            {"bridge_metadata", "parser"},
+            {"flexible_packing", "parser"},
             {"parser.characterize", "parser"},
             {"parser", "parser"},
             {"phv_allocation", "phv"},

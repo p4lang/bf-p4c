@@ -71,6 +71,7 @@ bool GatherParserExtracts::preorder(const IR::BFN::Extract* e) {
     auto* sourceField = phv.field(source->source);
     if (!sourceField) return true;
     parserAlignedFields[f].insert(sourceField);
+    reverseParserAlignMap[sourceField].insert(f);
     LOG5("    Initialization due to SavedRVal in parser: " << f);
     return true;
 }
@@ -96,6 +97,7 @@ void RepackFlexHeaders::resetState() {
     repackedHeaders.clear();
     originalHeaders.clear();
     paddingFieldNames.clear();
+    digestFlexFields.clear();
 
     if (LOGGING(1))
         LOG1("\tNumber of bridged fields: " << fields.bridged_to_orig.size());
@@ -105,7 +107,10 @@ void RepackFlexHeaders::resetState() {
         egressBridgedMap[origName] = bridgedName;
         reverseEgressBridgedMap[bridgedName] = origName;
     }
+}
 
+Visitor::profile_t RepackFlexHeaders::init_apply(const IR::Node* root) {
+    resetState();
     if (LOGGING(5)) {
         if (fields.orig_to_bridged.size() > 0) {
             LOG5("\n\tPrinting orig to bridged");
@@ -132,10 +137,15 @@ void RepackFlexHeaders::resetState() {
         LOG3("\n\tPrinting egress bridged to external");
         for (auto kv : egressBridgedMap)
             LOG3("\t  " << kv.first << "\t" << kv.second); }
-}
 
-Visitor::profile_t RepackFlexHeaders::init_apply(const IR::Node* root) {
-    resetState();
+    LOG1("Printing parser aligned fields");
+    for (auto kv : parserAlignedFields.getAlignedMap()) {
+        LOG1("\tField: " << kv.first);
+        for (auto* f : kv.second)
+            LOG1("\t\t" << f);
+    }
+
+
     return Transform::init_apply(root);
 }
 
@@ -333,6 +343,24 @@ SymBitMatrix RepackFlexHeaders::mustPack(const ordered_set<const PHV::Field*>& f
         }
     }
     return mustPackMatrix;
+}
+
+void RepackFlexHeaders::updateNoPackForDigestFields(
+        const std::vector<const PHV::Field*>& nonByteAlignedFields,
+        const SymBitMatrix& mustPack) {
+    for (const auto* field1 : nonByteAlignedFields) {
+        if (!digestFlexFields.count(field1)) continue;
+        for (const auto* field2 : nonByteAlignedFields) {
+            if (field1 == field2) continue;
+            if (mustPack(field1->id, field2->id)) {
+                LOG4("\t\tEncountered must pack for " << field1->name << " and " << field2->name <<
+                     " when the former is a digest field");
+                continue;
+            }
+            doNotPack(field1->id, field2->id) = true;
+            printNoPackConstraint("Use in digest", field1, field2);
+        }
+    }
 }
 
 SymBitMatrix
@@ -651,8 +679,12 @@ void RepackFlexHeaders::determineAlignmentConstraints(
         const auto* egressField = phv.field(egressFieldName);
         // Add the ingress field and its egress version to visit.
         fieldsNotVisited.push(field);
-        if (egressField)
-             fieldsNotVisited.push(egressField);
+        if (egressField) {
+            fieldsNotVisited.push(egressField);
+            LOG5("\t\t\tDetected egress field: " << egressField);
+        } else {
+            LOG5("\t\t\tDid not detect egress field: " << egressFieldName);
+        }
 
         while (!fieldsNotVisited.empty()) {
             const PHV::Field* currentField = fieldsNotVisited.front();
@@ -673,6 +705,11 @@ void RepackFlexHeaders::determineAlignmentConstraints(
                 for (const auto* f : parserAlignedFields.at(currentField))
                     if (!relatedFields.count(f))
                         fieldsNotVisited.push(f);
+            if (parserAlignedFields.revCount(currentField))
+                for (const auto* f : parserAlignedFields.revAt(currentField))
+                    if (!relatedFields.count(f))
+                        fieldsNotVisited.push(f);
+
             LOG6("\t\t  Now, we have " << fieldsNotVisited.size() << " fields unvisited"); }
 
         if (LOGGING(4) && relatedFields.count(field) == 0) {
@@ -684,6 +721,10 @@ void RepackFlexHeaders::determineAlignmentConstraints(
             // ignore the alignment on the current field
             if (f->name == field->name) continue;
             LOG5("\t  Related field: " << f);
+            if (f->is_digest()) {
+                digestFlexFields.insert(field);
+                LOG5("\t\tAdding field " << field->name << " as digest use");
+            }
             if (f->alignment) {
                 LOG5("\t\t  New alignment: " << *(f->alignment));
                 // If the field must be aligned at this bit position (instead of not being aligned
@@ -749,13 +790,22 @@ bool RepackFlexHeaders::mustAlign(const PHV::Field* field) const {
     return false;
 }
 
-const IR::StructField* RepackFlexHeaders::getPaddingField(int size, int id) const {
+const IR::StructField* RepackFlexHeaders::getPaddingField(int size, int id, bool overlay) const {
     cstring padFieldName = "__pad_" + cstring::to_cstring(id);
-    auto* fieldAnnotations = new IR::Annotations({new IR::Annotation(IR::ID("hidden"), { })
-                                                 });
-    const IR::StructField* padField = new IR::StructField(padFieldName,
-                                          fieldAnnotations, IR::Type::Bits::get(size));
-    return padField;
+    if (overlay) {
+        auto* fieldAnnotations = new IR::Annotations(
+                { new IR::Annotation(IR::ID("padding"), { }),
+                  new IR::Annotation(IR::ID("overlayable"), { }) });
+        const IR::StructField* padField = new IR::StructField(padFieldName, fieldAnnotations,
+                IR::Type::Bits::get(size));
+        return padField;
+    } else {
+        auto* fieldAnnotations = new IR::Annotations({ new IR::Annotation(IR::ID("padding"), { })
+                });
+        const IR::StructField* padField = new IR::StructField(padFieldName, fieldAnnotations,
+                IR::Type::Bits::get(size));
+        return padField;
+    }
 }
 
 cstring RepackFlexHeaders::getEgressFieldName(cstring ingressName) {
@@ -819,6 +869,7 @@ RepackFlexHeaders::packPhvFieldSet(const ordered_set<const PHV::Field*>& fieldsT
     ordered_set<const PHV::Field*> mustAlignFields;
     determineAlignmentConstraints(nonByteAlignedFields, alignmentConstraints,
                                   conflictingAlignmentConstraints, mustAlignFields);
+    updateNoPackForDigestFields(nonByteAlignedFields, sliceListAlignment);
 
     ordered_set<const PHV::Field*> alreadyPackedFields;
     for (auto field : nonByteAlignedFields) {
@@ -827,6 +878,7 @@ RepackFlexHeaders::packPhvFieldSet(const ordered_set<const PHV::Field*>& fieldsT
             continue; }
         std::vector<const PHV::Field*> fieldsPackedTogether;
         LOG3("\tTrying to pack fields with " << field->name);
+        bool digestField = digestFlexFields.count(field);
         // If this has alignment constraints due to the parser, ensure we pad it correctly.
         int alignment = getAlignment(field->size);
         LOG4("\t  Alignment: " << alignment);
@@ -912,7 +964,7 @@ RepackFlexHeaders::packPhvFieldSet(const ordered_set<const PHV::Field*>& fieldsT
                 int padSize = freeBits.size();
                 if (padSize == 0) break;
                 LOG4("\t\t  Need to insert padding of size: " << padSize);
-                auto* padField = phv.create_dummy_padding(padSize, INGRESS);   // FIXME
+                auto* padField = phv.create_dummy_padding(padSize, INGRESS, !digestField);
                 LOG4("\t\t  Padding field: " << padField);
                 padFields.insert(padField);
                 fieldsPackedTogether.push_back(padField);
@@ -1122,9 +1174,9 @@ const IR::Node* RepackFlexHeaders::preorder(IR::HeaderOrMetadata* h) {
             fields.push_back(field);
             LOG1("Pushing field " << field);
         } else {
-            auto padding = getPaddingField(f->size, padFieldId++);
+            auto padding = getPaddingField(f->size, padFieldId++, f->overlayable);
             fields.push_back(padding);
-            LOG1("Pushing field " << padding);
+            LOG1("Pushing field " << padding << ", overlayable: " << f->overlayable);
         }
     }
 
@@ -1209,10 +1261,11 @@ RepackFlexHeaders::repackFieldList(cstring digest,
 const IR::Node* RepackDigestFieldList::preorder(IR::BFN::DigestFieldList* d) {
     // empty digest field list has nullptr type.
     if (!d->type) return d;
-    if (!isFlexibleHeader(d)) return d;
     LOG3("Candidate digest field list found: idx " << d->idx);
     LOG3("Candidate digest type: " << d->type);
     LOG3("Candidate digest size: " << getHeaderBits(d) << "b");
+    if (!isFlexibleHeader(d)) return d;
+    LOG3("Found header to be repacked");
 
     BUG_CHECK(digestToFlexibleStructsMap.count(d),
               "The compiler has detected a header %1% with flexible structs, but "
@@ -1247,9 +1300,9 @@ const IR::Node* RepackDigestFieldList::preorder(IR::BFN::DigestFieldList* d) {
             fields.push_back(field);
             LOG3("\tPushing field " << field);
         } else {
-            auto padding = getPaddingField(f->size, padFieldId++);
+            auto padding = getPaddingField(f->size, padFieldId++, f->overlayable);
             fields.push_back(padding);
-            LOG3("\tPushing field " << padding);
+            LOG3("\tPushing padding field " << padding);
         }
     }
     auto* repackedHeaderType = new IR::Type_Header(d->type->name, d->type->annotations, fields);
@@ -1263,7 +1316,7 @@ const IR::Node* RepackDigestFieldList::preorder(IR::BFN::DigestFieldList* d) {
 
     std::vector<FieldListEntry> repacked_field_indices;
     for (auto f : repackedHeaderType->fields) {
-        if (f->getAnnotation("hidden")) {
+        if (f->getAnnotation("padding")) {
             repacked_field_indices.push_back(std::make_pair(-1, f->type));
             continue; }
         repacked_field_indices.push_back(
@@ -1634,10 +1687,11 @@ FlexiblePacking::FlexiblePacking(
         CollectBridgedFields& b,
         ordered_map<cstring, ordered_set<cstring>>& e,
         const MauBacktracker& alloc)
-        : Logging::PassManager("bridge_metadata_"),
+        : Logging::PassManager("flexible_packing_"),
           bridgedFields(b),
           packConflicts(p, dg, tMutex, alloc, aMutex),
           actionConstraints(p, u, packConflicts),
+          parserAlignedFields(p),
           packDigestFieldLists(p, b, actionConstraints, doNotPack, noPackFields, deparserParams,
                       parserAlignedFields, alloc, repackedTypes),
           packHeaders(p, b, actionConstraints, doNotPack, noPackFields, deparserParams,
@@ -1657,7 +1711,7 @@ FlexiblePacking::FlexiblePacking(
                       &actionConstraints,
                       new GatherDeparserParameters(p, deparserParams),
                       new GatherPhase0Fields(p, noPackFields),
-                      new GatherParserExtracts(p, parserAlignedFields),
+                      &parserAlignedFields,
                       &packDigestFieldLists,
                       &packHeaders,
                       &parserMappings,

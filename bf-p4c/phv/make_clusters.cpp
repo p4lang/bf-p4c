@@ -437,18 +437,18 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
         // The check above would skip the first field, because it is
         // unreferenced. We should also skip the second padding.
         if (accumulator_bits % int(PHV::Size::b8) == 0 &&
-                lastUnreferenced && field->overlayablePadding) {
+                lastUnreferenced && field->padding) {
             LOG5("    ...skipping padding after unreferenced field: " << field);
             continue;
         }
 
         // If the slice list contains a no_pack field, then all the other slices in the list (if
-        // any) must be overlayablePadding or unreferenced (unreferenced fields effectively act as a
+        // any) must be padding or unreferenced (unreferenced fields effectively act as a
         // padding field).
-        if (lastNoPack && !field->overlayablePadding && self.uses_i.is_referenced(field)) {
+        if (lastNoPack && !field->padding && self.uses_i.is_referenced(field)) {
             StartNewSliceList();
             LOG5("Starting new slice list (to isolate a no_pack field): ");
-        } else if (lastWideArith && !field->overlayablePadding) {
+        } else if (lastWideArith && !field->padding) {
             StartNewSliceList();
             LOG5("Starting new slice list (to isolate a field used in wide arithmetic): ");
         }
@@ -497,7 +497,7 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
             lastDigest = field;
             LOG5("Starting new slice list (for digest field):");
         } else if (accumulator_bits % int(PHV::Size::b8) == 0 &&
-                lastDigest != nullptr && !field->is_digest() && !field->overlayablePadding) {
+                lastDigest != nullptr && !field->is_digest() && !field->padding) {
             // break off the existing slice list if a metadata field is used in digest,
             // AND the field is aliased as a source to a bridged metadata header AND
             // the next field in the bridged metadata header is not used in the digest.
@@ -632,7 +632,7 @@ void Clustering::MakeSuperClusters::visitDigestFieldList(
     for (auto f = fl->sources.rbegin(); f != fl->sources.rend() - skip; f++) {
         const PHV::Field* field = phv_i.field((*f)->field);
 
-        if (lastSkipped && field->overlayablePadding) {
+        if (lastSkipped && field->padding) {
             LOG5("    ...skipping padding after duplicated field: " << field);
             continue;
         }

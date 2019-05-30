@@ -564,7 +564,7 @@ ActionPhvConstraints::ActionDataUses ActionPhvConstraints::all_or_none_constant_
                     slices_written_by_special_ad.insert(slice); } }
         if (initActions.count(slice.field()) && initActions.at(slice.field()).count(action))
             slices_written_by_ad.insert(slice);
-        bool is_padding = !uses.is_referenced(slice.field()) || slice.field()->overlayablePadding;
+        bool is_padding = !uses.is_referenced(slice.field()) || slice.field()->padding;
         if (is_padding)
             padding_slices.insert(slice);
     }
@@ -665,7 +665,7 @@ bool ActionPhvConstraints::valid_container_operation_type(
     for (auto& slice : slices) {
         ss << "\t" << slice.shortString() << std::endl;
         boost::optional<OperandInfo> fw = constraint_tracker.is_written(slice, action);
-        bool is_padding = !uses.is_referenced(slice.field()) || slice.field()->overlayablePadding;
+        bool is_padding = !uses.is_referenced(slice.field()) || slice.field()->padding;
         // Unreferenced fields may be overwritten no issues.
         if (!fw) {
             if (!is_padding)
@@ -741,7 +741,7 @@ unsigned ActionPhvConstraints::container_operation_type(
     for (auto slice : slices) {
         auto field_slice = PHV::FieldSlice(slice.field(), slice.field_slice());
         boost::optional<OperandInfo> fw = constraint_tracker.is_written(field_slice, action);
-        bool is_padding = !uses.is_referenced(slice.field()) || slice.field()->overlayablePadding;
+        bool is_padding = !uses.is_referenced(slice.field()) || slice.field()->padding;
         if (!fw) {
             if (initActions.count(slice.field()) && initActions.at(slice.field()).count(action)) {
                 // This slice is written by metadata initialization for this action.
@@ -825,7 +825,7 @@ bool ActionPhvConstraints::are_adjacent_field_slices(
     bool firstSlice = true;
     const PHV::Field* field = nullptr;
     for (auto slice : container_state) {
-        bool is_padding = !uses.is_referenced(slice.field()) || slice.field()->overlayablePadding;
+        bool is_padding = !uses.is_referenced(slice.field()) || slice.field()->padding;
         if (is_padding) continue;
         auto range = slice.field_slice();
         if (firstSlice) {
@@ -1163,7 +1163,7 @@ bool ActionPhvConstraints::check_and_generate_constraints_for_move_with_unalloca
     PHV::Allocation::MutuallyLiveSlices state_written_to;
     PHV::Allocation::MutuallyLiveSlices state_not_written_to;
     for (auto slice : container_state) {
-        bool is_padding = slice.field()->overlayablePadding || !uses.is_referenced(slice.field());
+        bool is_padding = slice.field()->padding || !uses.is_referenced(slice.field());
         if (constraint_tracker.is_written(slice, action))
             // If written by normal instruction.
             state_written_to.insert(slice);

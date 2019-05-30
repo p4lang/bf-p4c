@@ -70,7 +70,7 @@ void PhvInfo::clear() {
 
 void PhvInfo::add(
         cstring name, gress_t gress, int size, int offset, bool meta, bool pov,
-        bool bridged, bool pad, bool flex) {
+        bool bridged, bool pad, bool overlay, bool flex) {
     // Set the egress version of bridged fields to metadata
     if (gress == EGRESS && bridged)
         meta = true;
@@ -88,7 +88,8 @@ void PhvInfo::add(
     info->metadata = meta;
     info->pov = pov;
     info->bridged = bridged;
-    info->overlayablePadding = pad;
+    info->padding = pad;
+    info->overlayable = overlay;
     info->set_flexible(flex);
     by_id.push_back(info);
 }
@@ -116,10 +117,13 @@ void PhvInfo::add_struct(
             ::error("%1% Field %2% of size %3% not supported on %4%", f->srcInfo, f_name, size,
                     Device::name());
         // "hidden" annotation indicates padding introduced with bridged metadata fields
-        bool isPad = f->getAnnotations()->getSingle("hidden") != nullptr;
+        bool isPad = f->getAnnotations()->getSingle("hidden") != nullptr ||
+                     f->getAnnotations()->getSingle("padding") != nullptr;
+        bool isOverlayable = f->getAnnotations()->getSingle("overlayable") != nullptr;
         // "flexible" annotation indicates flexible fields
         bool isFlexible = f->getAnnotations()->getSingle("flexible") != nullptr;
-        add(f_name, gress, size, offset -= size, meta, false, bridged, isPad, isFlexible);
+        add(f_name, gress, size, offset -= size, meta, false, bridged, isPad, isOverlayable,
+            isFlexible);
     }
     if (!meta) {
         int end = by_id.size();
@@ -407,7 +411,7 @@ PhvInfo::get_slices_in_container(const PHV::Container c) const {
 bitvec PhvInfo::bits_allocated(const PHV::Container c) const {
     bitvec ret_bitvec;
     for (auto* field : fields_in_container(c)) {
-        if (field->overlayablePadding) continue;
+        if (field->padding) continue;
         field->foreach_alloc([&](const PHV::Field::alloc_slice &alloc) {
             if (alloc.container != c) return;
             le_bitrange bits = alloc.container_bits();
@@ -429,7 +433,7 @@ bitvec PhvInfo::bits_allocated(
             write_slices_in_container.push_back(alloc);
         }); }
     for (auto* field : fields) {
-        if (field->overlayablePadding) continue;
+        if (field->padding) continue;
         field->foreach_alloc([&](const PHV::Field::alloc_slice &alloc) {
             if (alloc.container != c) return;
             le_bitrange bits = alloc.container_bits();
@@ -632,7 +636,7 @@ bool PHV::FieldSlice::is_tphv_candidate(const PhvUse& uses) const {
     // Privatized fields are the TPHV copies of header fields. Therefore, privatized fields are
     // always TPHV candidates.
     if (field_i->privatized()) return true;
-    if (field_i->overlayablePadding) return false;  // __pad_ fields are not considered as tphv.
+    if (field_i->padding) return false;  // __pad_ fields are not considered as tphv.
     // TODO(zma) derive these rather than hard-coding the name
     std::string f_name(field_i->name.c_str());
     if (f_name.find("compiler_generated_meta") != std::string::npos &&
@@ -1222,18 +1226,18 @@ class MarkPaddingAsDeparsed : public Inspector {
             PHV::Field* field = phv.field(fid);
             LOG5("  found field " << field);
 
-            if (lastDeparsed && field->padding()) {
+            if (lastDeparsed && field->is_padding()) {
                 field->set_deparsed(true);
                 LOG5("    marking as deparsed " << field);
             }
 
-            if (lastDeparsedToTM && field->padding()) {
+            if (lastDeparsedToTM && field->is_padding()) {
                 field->set_deparsed_to_tm(true);
                 LOG5("    marking as deparsed_to_tm " << field);
             }
 
-            lastDeparsed = !field->padding() && field->deparsed();
-            lastDeparsedToTM = !field->padding() && field->deparsed_to_tm();
+            lastDeparsed = !field->is_padding() && field->deparsed();
+            lastDeparsedToTM = !field->is_padding() && field->deparsed_to_tm();
         }
         return false;
     }
@@ -1373,7 +1377,7 @@ class CollectPardeConstraints : public Inspector {
                             resubmit_field->set_exact_containers(true);
                             resubmit_field->set_is_marshaled(true);
                             LOG3("\t\t" << resubmit_field);
-                        } else if (resubmit_field->overlayablePadding) {
+                        } else if (resubmit_field->padding) {
                             resubmit_field->set_exact_containers(true);
                             resubmit_field->set_deparsed(true);
                             LOG3("\t\t" << resubmit_field);
@@ -1400,7 +1404,7 @@ class CollectPardeConstraints : public Inspector {
                                 FieldAlignment(le_bitrange(StartLen(0, fieldInfo->size))));
                         LOG3(fieldInfo << " is marked to be byte_aligned "
                              "because it's in a field_list and digested.");
-                    } else if (fieldInfo->overlayablePadding) {
+                    } else if (fieldInfo->padding) {
                         fieldInfo->set_exact_containers(true);
                         fieldInfo->set_deparsed(true);
                         LOG3("\t\t" << fieldInfo);
@@ -1595,7 +1599,7 @@ Visitor::profile_t CollectBridgedExtractedTogetherFields::init_apply(const IR::N
             const auto* f2 = phv_i.field(fName);
             if (!f2) continue;
             // Ignore extracted together for padding fields.
-            if (f1->overlayablePadding || f2->overlayablePadding) continue;
+            if (f1->padding || f2->padding) continue;
             matrix(f1->id, f2->id) = true;
         }
     }
@@ -1660,6 +1664,7 @@ std::ostream &PHV::operator<<(std::ostream &out, const PHV::Field &field) {
     if (field.bridged) out << " bridge";
     if (field.metadata) out << " meta";
     if (field.is_intrinsic()) out << " intrinsic";
+    if (field.is_digest()) out << " digest";
     if (field.mirror_field_list.member_field)
         out << " mirror%{"
             << field.mirror_field_list.member_field->id
@@ -1674,7 +1679,8 @@ std::ostream &PHV::operator<<(std::ostream &out, const PHV::Field &field) {
     if (field.mau_phv_no_pack()) out << " mau_phv_no_pack";
     if (field.no_pack()) out << " no_pack";
     if (field.is_flexible()) out << " flexible";
-    if (field.overlayablePadding) out << " padding";
+    if (field.padding) out << " padding";
+    if (field.overlayable) out << " overlayable";
     if (field.no_split()) {
         out << " no_split";
     } else if (field.no_split_ranges().size() > 0) {

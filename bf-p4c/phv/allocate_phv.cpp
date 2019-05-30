@@ -568,12 +568,15 @@ bool CoreAllocation::satisfies_constraints(
     // unsatisfiable with slice lists, which induce packing.  Ignore adjacent slices of the same
     // field.
     std::vector<PHV::AllocSlice> used;
+    ordered_set<const PHV::Field*> pack_fields;
     for (auto& slice : slices) {
         bool isDeparsedOrMau = uses_i.is_deparsed(slice.field()) ||
             uses_i.is_used_mau(slice.field());
-        bool overlayablePadding = slice.field()->overlayablePadding;
+        bool overlayablePadding = slice.field()->overlayable;
         if (isDeparsedOrMau && !overlayablePadding)
-            used.push_back(slice); }
+            used.push_back(slice);
+        if (!slice.field()->no_pack()) pack_fields.insert(slice.field());
+    }
     auto NotAdjacent = [](const PHV::AllocSlice& left, const PHV::AllocSlice& right) {
             return left.field() != right.field() ||
                    left.field_slice().hi + 1 != right.field_slice().lo ||
@@ -583,8 +586,12 @@ bool CoreAllocation::satisfies_constraints(
     bool not_adjacent = std::adjacent_find(used.begin(), used.end(), NotAdjacent) != used.end();
     bool no_pack = std::find_if(used.begin(), used.end(), NoPack) != used.end();
     if (not_adjacent && no_pack) {
-        LOG5("    ...but slice list contains multiple fields and one has the 'no pack' constraint");
-        return false; }
+        if (!std::all_of(pack_fields.begin(), pack_fields.end(), [](const PHV::Field* f) {
+                    return f->padding;
+                })) {
+            LOG5("    ...but slice list contains multiple fields and one has the 'no pack' "
+                 "constraint");
+            return false; } }
 
     // Check sum of constraints.
     ordered_set<const PHV::Field*> containerBytesFields;
@@ -940,10 +947,8 @@ CoreAllocation::tryAllocSliceList(
         // Check that the placement can be done through metadata initialization.
         for (auto& slice : candidate_slices) {
             // padding can be overlayed with any field
-            if (slice.field()->overlayablePadding)
-                continue;
-            if (!uses_i.is_referenced(slice.field()) && !slice.field()->isGhostField())
-                continue;
+            if (slice.field()->overlayable) continue;
+            if (!uses_i.is_referenced(slice.field()) && !slice.field()->isGhostField()) continue;
             // Skip slices that have already been allocated.
             if (previous_allocations.find(PHV::FieldSlice(slice.field(), slice.field_slice()))
                     != previous_allocations.end())

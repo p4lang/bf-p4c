@@ -157,7 +157,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         // XXX(seth): Long term it would be ideal to only allocate the bits we
         // actually need, but this will help us find bugs in the short term.
         bitvec allBitsInField(0, field.size);
-        ERROR_WARN_(allocatedBits == allBitsInField,
+        ERROR_WARN_(field.padding || allocatedBits == allBitsInField,
                     "Not all bits are allocated for field %1%",
                     cstring::to_cstring(field));
     }
@@ -332,7 +332,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
 
     auto isDeparsed = [](const PHV::Field* f) { return f->deparsed(); };
     auto isMetadata = [](const PHV::Field* f) { return f->metadata || f->pov; };
-    auto isPadding = [](const PHV::Field* f) { return f->overlayablePadding; };
+    auto isPadding = [](const PHV::Field* f) { return f->padding; };
     auto hasOverlay = [](const PHV::Field* f) {
         le_bitrange allocated;
         for (auto& slice : f->get_alloc()) {
@@ -355,7 +355,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
     auto atMostOneNonePadding = [&](const ordered_set<const PHV::Field*> fieldSet) {
         int count = 0;
         for (auto* f : fieldSet)
-            if (!f->overlayablePadding) count++;
+            if (!f->overlayable) count++;
         return count <= 1; };
 
     // Check that we've marked a field as deparsed if and only if it's actually
@@ -364,7 +364,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         if (isDeparsed(&field)) {
             // do not warn on 'un-deparsed' padding
             // 'deparsed' property on padding is controlled by the padded field.
-            if (field.padding()) {
+            if (field.is_padding()) {
                 continue; }
             WARN_CHECK(deparseOccurrences.find(&field) != deparseOccurrences.end(),
                         "Field is marked as deparsed, but the deparser doesn't "

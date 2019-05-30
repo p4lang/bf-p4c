@@ -194,7 +194,7 @@ void execute_backend(const IR::BFN::Pipe* maupipe, BFN_Options& options) {
         GenerateOutputs as(backend, options, maupipe->id, backend.get_prim_json(), success);
         if (maupipe)
             maupipe->apply(as);
-    } catch (const Util::P4CExceptionBase &ex) {
+    } catch (...) {
         GenerateOutputs as(backend, options, maupipe->id, backend.get_prim_json(), false);
         if (maupipe)
             maupipe->apply(as);

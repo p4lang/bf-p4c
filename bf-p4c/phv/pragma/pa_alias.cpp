@@ -31,6 +31,99 @@ bool PragmaAlias::preorder(const IR::Expression* expr) {
     return true;
 }
 
+bool PragmaAlias::addAlias(
+        const PHV::Field* field1,
+        const PHV::Field* field2,
+        bool suppressWarning) {
+    if (aliasMap.count(field1->name)) {
+        WARN_CHECK(suppressWarning,
+                "@pragma pa_alias for fields %1% and %2% ignored because "
+                "field %1% already aliases with %3%",
+                field1->name, field2->name, aliasMap[field1->name].field);
+        return false; }
+
+    if (aliasMap.count(field2->name)) {
+        WARN_CHECK(suppressWarning,
+                "@pragma pa_alias for fields %1% and %2% ignored because "
+                "field %1% already aliases with %3%",
+                field2->name, field1->name, aliasMap[field2->name].field);
+        return false; }
+
+    if (field1->isPacketField() && field2->isPacketField()) {
+        WARN_CHECK(suppressWarning,
+                "@pragma pa_alias does not support aliasing of two packet header fields "
+                "%1% and %2%",
+                field1->name, field2->name);
+        return false;
+    }
+
+    const PHV::Field* aliasSrc = nullptr;
+    const PHV::Field* aliasDest = nullptr;
+    if (field2->metadata && !field1->metadata) {
+        aliasSrc = field2;
+        aliasDest = field1;
+    } else if (field1->metadata && !field2->metadata) {
+        aliasSrc = field1;
+        aliasDest = field2;
+    } else if (field1->metadata && field2->metadata) {
+        // When the aliasing relationship is between a metadata and a header field, the header field
+        // is chosen as the alias destination. When the aliasing relationship is between two
+        // metadata fields and one of those metadata fields is not used in an IR::Expression object,
+        // then the other metadata field is chosen as the alias destination.
+        bool field1Expr = fieldsWithExpressions[field1->id];
+        bool field2Expr = fieldsWithExpressions[field2->id];
+        if (!field1Expr && field2Expr) {
+            aliasSrc = field1;
+            aliasDest = field2;
+        } else if (field1Expr && !field2Expr) {
+            aliasSrc = field2;
+            aliasDest = field1;
+        } else if (field1Expr && field2Expr) {
+            if (field1->size != field2->size)
+                aliasSrc = (field1->size < field2->size) ? field1 : field2;
+            else
+                aliasSrc = (field1->alignment == boost::none) ? field1 : field2;
+            aliasDest = (aliasSrc == field1) ? field2 : field1;
+        } else {
+            WARN_CHECK(suppressWarning,
+                    "@pragma pa_alias ignored because no uses found for fields %1% and %2%",
+                    field1->name, field2->name);
+            return false;
+        }
+    }
+    BUG_CHECK(aliasDest && aliasSrc, "Internal compiler error: Did not calculate aliasDest and "
+            "aliasSrc");
+    if (aliasSrc->size > aliasDest->size) {
+        WARN_CHECK(suppressWarning,
+                "@pragma pa_alias ignored because metadata field %1% is larger than the "
+                "packet field %2%",
+                aliasSrc->size, aliasDest->size);
+        return false;
+    }
+    // If the field to be replaced has an alignment that is different from the field replacing it,
+    // then do not do that alias (might create conflicting alignment requirements).
+    if (aliasSrc->alignment != boost::none) {
+        if (aliasDest->alignment == boost::none) {
+            WARN_CHECK(suppressWarning,
+                    "@pragma pa_alias ignored because metadata field %1% has alignment %2%, "
+                    "while packet field %3% has no alignment requirement",
+                    aliasSrc->name, aliasSrc->alignment->align, aliasDest->name);
+            return false;
+        } else if (*(aliasDest->alignment) != *(aliasSrc->alignment)) {
+            WARN_CHECK(suppressWarning,
+                    "@pragma pa_alias ignored because metadata field %1% has alignment %2%, "
+                    "while packet field %3% has alignment %4%", aliasSrc->name,
+                    aliasSrc->alignment->align, aliasDest->name, aliasDest->alignment->align);
+            return false;
+        }
+    }
+    if (aliasDest && aliasSrc) {
+        aliasMap[aliasSrc->name] = { aliasDest->name, boost::none };
+        return true;
+    }
+    return false;
+}
+
 void PragmaAlias::postorder(const IR::BFN::Pipe* pipe) {
     if (disable_pragmas.count(PragmaAlias::name))
         return;
@@ -78,56 +171,8 @@ void PragmaAlias::postorder(const IR::BFN::Pipe* pipe) {
                       "%1% does not match any phv fields, skipped", field2_name);
             continue; }
 
-        if (field1->size != field2->size) {
-            ::warning("@pragma pa_alias ignored because of differing field sizes: %1% "
-                      "(%2%b) and %3% (%4%b)", field1->name, field1->size, field2->name,
-                      field2->size);
-            continue; }
-
-        if (aliasMap.count(field1->name)) {
-            ::warning("@pragma pa_alias for fields %1% and %2% ignored because "
-                      "field %1% already aliases with %3%", field1_name, field2_name,
-                      aliasMap[field1->name].field);
-            continue; }
-
-        if (aliasMap.count(field2->name)) {
-            ::warning("@pragma pa_alias for fields %1% and %2% ignored because "
-                      "field %1% already aliases with %3%", field2_name, field1_name,
-                      aliasMap[field2->name].field);
-            continue; }
-
-        if (field1->isPacketField() && field2->isPacketField())
-            ::warning("@pragma pa_alias does not support aliasing of two header fields %1% and %2%",
-                      field1_name, field2_name);
-
-        if (field2->metadata && !field1->metadata) {
-            aliasMap[field2->name] = { field1->name, boost::none };
-            continue; }
-
-        if (field1->metadata && !field2->metadata) {
-            aliasMap[field1->name] = { field2->name, boost::none };
-            continue; }
-
-        // When the aliasing relationship is between a metadata and a header field, the header field
-        // is chosen as the alias destination. When the aliasing relationship is between two
-        // metadata fields and one of those metadata fields is not used in an IR::Expression object,
-        // then the other metadata field is chosen as the alias destination.
-        if (field1->metadata && field2->metadata) {
-            bool field1Expr = fieldsWithExpressions[field1->id];
-            bool field2Expr = fieldsWithExpressions[field2->id];
-            if (!field1Expr && field2Expr)
-                aliasMap[field1->name] = { field2->name, boost::none };
-            else if (field1Expr && !field2Expr)
-                aliasMap[field2->name] = { field1->name, boost::none };
-            else if (field1Expr && field2Expr)
-                aliasMap[field1->name] = { field2->name, boost::none };
-            else
-                ::warning("@pragma pa_alias ignored because no uses found for fields %1% and %2%",
-                          field1_name, field2_name);
-            continue; }
-
-        ::warning("@pragma pa_alias does not support alias of fields %1% and %2%", field1_name,
-                field2_name);
+        if (addAlias(field1, field2))
+            LOG3("\t  Added alias between fields " << field1->name << " and " << field2->name);
     }
     LOG1("Processed " << aliasMap.size() << " pragmas");
 }

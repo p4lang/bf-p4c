@@ -202,6 +202,7 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/mau/COMPILER-362/icmp_typecode.p4
   extensions/p4_tests/p4-programs/internal_p4_14/fr_test/fr_test.p4
   extensions/p4_tests/p4-programs/internal_p4_14/netcache/netcache.p4
+  extensions/p4_tests/p4_16/compile_only/tagalong_mdinit_switch.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -209,6 +210,8 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/phv/COMPILER-587/l4l.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-706/terminate_parsing.p4
   switch_8.7_ent_fin_postcard
+  switch_generic_int_leaf
+  switch_8.7_generic_int_leaf
 )
 
 p4c_add_xfail_reason("tofino"
@@ -216,8 +219,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4-programs/internal_p4_14/ecc/ecc.p4
   switch_l3_heavy_int_leaf
   switch_msdc_leaf_int
-  switch_generic_int_leaf
-  switch_8.7_generic_int_leaf
   switch_8.7_msdc_leaf_int
   switch_8.7_l3_heavy_int_leaf
   switch_ent_fin_postcard
@@ -226,12 +227,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Tofino requires byte-aligned headers"
   extensions/p4_tests/p4_16/compile_only/tagalong_mdinit_switch.p4
-)
-
-# XXX(hanw): new xfail after flexible pr.
-p4c_add_xfail_reason("tofino"
-  "PHV allocation was not successful"
-  ../glass/testsuite/p4_tests/phv/COMPILER-158/comp158.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1137,7 +1132,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Inferred incompatible alignments for field .*"
   ../glass/testsuite/p4_tests/phv/COMPILER-908/compiler-908.p4
-  extensions/p4_tests/p4-programs/internal_p4_14/mau_test/mau_test.p4
   )
 
 # P4C-1396
@@ -1157,6 +1151,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "The stage specified for table .* is .*, but we could not place it until stage .*"
   ../glass/testsuite/p4_tests/phv/COMPILER-733/ipu_ingress.p4
+  extensions/p4_tests/p4-programs/internal_p4_14/mau_test/mau_test.p4
   )
 
 # Valid XFAIL

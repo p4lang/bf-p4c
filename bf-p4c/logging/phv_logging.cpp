@@ -145,7 +145,7 @@ const char * PhvLogging::containerType(const PHV::Container c) const {
 
 const char * PhvLogging::getFieldType(const PHV::Field* f) const {
     // How to identify compiler added fields ($?)
-    if (f->overlayablePadding) return "padding";
+    if (f->padding) return "padding";
     if (f->bridged) return "bridged";
     if (f->metadata && f->is_intrinsic()) return "imeta";
     // if (f->privatized()) return Records::field_class_t::COMPILER_ADDED;
@@ -171,7 +171,7 @@ const char * PhvLogging::getDeparserAccessType(const PHV::Field* f) const {
 
 void
 PhvLogging::getAllDeparserUses(const PHV::Field* f, ordered_set<PhvLogging::PardeInfo>& rv) const {
-    if (f->overlayablePadding) return;
+    if (f->padding) return;
     LOG4("Deparser uses of Field: " << f);
     for (const FieldDefUse::locpair use : defuse.getAllUses(f->id)) {
         const IR::BFN::Unit *use_unit = use.first;
@@ -185,7 +185,7 @@ PhvLogging::getAllDeparserUses(const PHV::Field* f, ordered_set<PhvLogging::Pard
 
 void
 PhvLogging::getAllParserDefs(const PHV::Field* f, ordered_set<PhvLogging::PardeInfo>& rv) const {
-    if (f->overlayablePadding) return;
+    if (f->padding) return;
     LOG4("Parser defs of Field: " << f);
     for (const FieldDefUse::locpair def : defuse.getAllDefs(f->id)) {
         const IR::BFN::Unit *def_unit = def.first;

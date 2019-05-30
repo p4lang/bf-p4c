@@ -60,7 +60,7 @@ void BuildMutex::end_apply() {
          ++it1 ) {
         const PHV::Field* f1 = phv.field(*it1);
         if (neverOverlay[*it1]) {
-            if (f1->overlayablePadding) {
+            if (f1->overlayable) {
                 ::warning("Ignoring pa_no_overlay for padding field %1%", f1->name);
             } else {
                 LOG5("Excluding field from overlay: " << *it1);
@@ -73,7 +73,7 @@ void BuildMutex::end_apply() {
             // Consider fields marked neverOverlay to always be mutually inclusive.
             const PHV::Field* f2 = phv.field(*it2);
             if (neverOverlay[*it2]) {
-                if (f2->overlayablePadding) {
+                if (f2->overlayable) {
                     ::warning("Ignoring pa_no_overlay for padding field %1%", f2->name);
                 } else {
                     LOG5("Excluding field from overlay: " << *it2);

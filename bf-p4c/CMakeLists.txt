@@ -442,6 +442,7 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/pragma/pa_no_init.cpp
   phv/pragma/pa_no_overlay.cpp
   phv/pragma/pa_solitary.cpp
+  phv/transforms/auto_alias.cpp
   phv/utils/live_range_report.cpp
   phv/utils/report.cpp
   phv/utils/slicing_iterator.cpp
@@ -497,6 +498,7 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/pragma/pa_no_overlay.h
   phv/pragma/pa_solitary.h
   phv/pragma/phv_pragmas.h
+  phv/transforms/auto_alias.h
   phv/utils/live_range_report.h
   phv/utils/report.h
   phv/utils/slicing_iterator.h

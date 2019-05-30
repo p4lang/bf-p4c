@@ -557,10 +557,10 @@ FindInitializationNode::findInitializationNodes(
             continue;
         }
 
-        // If f is an overlayablePadding field, then it was inserted as padding by the compiler.
+        // If f is an overlayable field, then it was inserted as padding by the compiler.
         // Therefore, there could be garbage in these padding fields and no initialization is
         // needed.
-        if (f->overlayablePadding) {
+        if (f->overlayable) {
             LOG3("\t  No need to initialize padding field: " << f);
             seenFields.insert(f);
             lastField = f;

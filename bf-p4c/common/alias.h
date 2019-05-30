@@ -5,6 +5,7 @@
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/pragma/pa_alias.h"
+#include "bf-p4c/phv/transforms/auto_alias.h"
 
 /** This class generates a fieldExpressions map that stores a representative IR::Expression object
   * corresponding to each field in the program.
@@ -64,6 +65,7 @@ class Alias : public PassManager {
         : pragmaAlias(phv, options.disabled_pragmas) {
         addPasses({
             &pragmaAlias,
+            new AutoAlias(phv, pragmaAlias),
             new FindExpressionsForFields(phv, fieldExpressions),
             new ReplaceAllAliases(phv, pragmaAlias, fieldExpressions)
         });

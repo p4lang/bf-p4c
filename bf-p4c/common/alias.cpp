@@ -68,10 +68,25 @@ IR::Node* ReplaceAllAliases::preorder(IR::Expression* expr) {
 
     auto* sl = expr->to<IR::Slice>();
     if (sl) {
-        IR::Slice* newSlice = new IR::Slice(newMember, sl->getH(), sl->getL());
-        LOG2("    Replaced: " << expr << " -> " << newSlice);
-        return newSlice;
+        if (f->size == replacementField->size) {
+            IR::Slice* newSlice = new IR::Slice(newMember, sl->getH(), sl->getL());
+            LOG2("    Replaced: " << expr << " -> " << newSlice);
+            return newSlice;
+        } else {
+            IR::Slice* destSlice = new IR::Slice(replacementMember, sl->getH(), sl->getL());
+            auto* newAliasSlice = new IR::BFN::AliasSlice(destSlice, sl);
+            LOG2("    Replaced: " << expr << " -> " << newAliasSlice);
+            return newAliasSlice;
+        }
     } else {
-        LOG2("    Replaced: " << expr << " -> " << newMember);
-        return newMember; }
+        if (f->size == replacementField->size) {
+            LOG2("    Replaced: " << expr << " -> " << newMember);
+            return newMember;
+        } else {
+            IR::Slice* destSlice = new IR::Slice(replacementMember, f->size - 1, 0);
+            auto* newAliasSlice = new IR::BFN::AliasSlice(destSlice, expr);
+            LOG2("    Replaced: " << expr << " -> " << newAliasSlice);
+            return newAliasSlice;
+        }
+    }
 }
