@@ -580,7 +580,8 @@ struct Memories {
     int lowest_row_to_overflow(const SRAM_group *candidate, int row) const;
     int open_rams_between_rows(int highest_logical_row, int lowest_logical_row, bitvec sides) const;
     int open_maprams_between_rows(int highest_phys_row, int lowest_phys_row) const;
-    bool overflow_possible(const SRAM_group *candidate, int row, RAM_side_t side) const;
+    bool overflow_possible(const SRAM_group *candidate, const SRAM_group *curr_oflow,
+        int row, RAM_side_t side) const;
     bool can_be_placed_in_half(const SRAM_group *candidate, int row, RAM_side_t side,
         const SRAM_group *synth, int RAMs_avail_on_row) const;
     bool break_other_overflow(const SRAM_group *candidate, const SRAM_group *curr_oflow, int row,

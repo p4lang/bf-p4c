@@ -2138,7 +2138,8 @@ int Memories::open_maprams_between_rows(int highest_phys_row, int lowest_phys_ro
  * physical row due to the maximum number of rows possible for overflow to begin placing this
  * table.
  */
-bool Memories::overflow_possible(const SRAM_group *candidate, int row, RAM_side_t side) const {
+bool Memories::overflow_possible(const SRAM_group *candidate, const SRAM_group *curr_oflow,
+        int row, RAM_side_t side) const {
     if (!candidate->is_synth_type())
         return true;
     int logical_row = phys_to_log_row(row, side);
@@ -2148,6 +2149,8 @@ bool Memories::overflow_possible(const SRAM_group *candidate, int row, RAM_side_
     bitvec sides;
     sides.setbit(RIGHT);
     int available_rams = open_rams_between_rows(logical_row, lowest_logical_row, sides);
+    if (curr_oflow && curr_oflow->is_synth_type())
+        available_rams -= curr_oflow->left_to_place();
     if (available_rams < candidate->left_to_place())
         return false;
     return true;
@@ -2389,7 +2392,7 @@ void Memories::candidates_for_synth_row(SRAM_group **fit_on_logical_row,
         if (!alu_pathway_available(synth_table, row, curr_oflow))
             continue;
         LOG6("\t    Alu pathway available");
-        if (!overflow_possible(synth_table, row, RIGHT))
+        if (!overflow_possible(synth_table, curr_oflow, row, RIGHT))
             continue;
         LOG6("\t    Overflow is possible");
         if (!satisfy_sel_swbox_constraints(synth_table, sel_oflow, nullptr))
@@ -2424,7 +2427,7 @@ void Memories::candidates_for_action_row(SRAM_group **fit_on_logical_row,
                   "placed");
         if (synth && synth->needs_ab())
             continue;
-        if (!overflow_possible(action_table, row, side))
+        if (!overflow_possible(action_table, curr_oflow, row, side))
             continue;
         LOG6("\t\tOverflow possible");
         if (!satisfy_sel_swbox_constraints(action_table, sel_oflow, synth))
