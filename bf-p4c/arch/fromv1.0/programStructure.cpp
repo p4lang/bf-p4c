@@ -90,8 +90,11 @@ P4V1::TNA_ProgramStructure::convertActionProfile(const IR::ActionProfile* action
     // Generate decl from frontend call
     auto decl = ProgramStructure::convertActionProfile(action_profile, newName);
 
+    auto mergedAnnotations = action_profile->annotations;
+    for (auto annotation : decl->annotations->annotations)
+      mergedAnnotations = mergedAnnotations->add(annotation);
     // Add annotations from action profile to the declaration
     auto newDecl = new IR::Declaration_Instance(decl->name,
-                        action_profile->annotations, decl->type, decl->arguments, nullptr);
+                        mergedAnnotations, decl->type, decl->arguments, nullptr);
     return newDecl;
 }
