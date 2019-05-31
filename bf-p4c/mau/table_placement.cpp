@@ -71,12 +71,16 @@ template<class Container, class Pred> inline void erase_if(Container &c, Pred pr
  ** we can add it back once those children are all placed.  These relationships are recorded
  ** in GroupPlace objects (which are what is actually in the work list) -- one for each
  ** IR::MAU::TableSeq being processed.
+ **
+ ** For Tofino2, we don't have the above restriction, so we don't remove the parent
+ ** GroupPlace from the worklist, but we still maintain the parent/child info even though it
+ ** isn't really needed (minimizing the difference between Tofino1 and Tofino2 here).
  */
 
-TablePlacement::TablePlacement(const DependencyGraph* d, const TablesMutuallyExclusive &m,
-                               const PhvInfo &p, const LayoutChoices &l,
-                               const SharedIndirectAttachedAnalysis &s, bool fp)
-: deps(d), mutex(m), phv(p), lc(l), siaa(s), forced_placement(fp) {}
+TablePlacement::TablePlacement(const BFN_Options &opt, const DependencyGraph* d,
+                               const TablesMutuallyExclusive &m, const PhvInfo &p,
+                               const LayoutChoices &l, const SharedIndirectAttachedAnalysis &s)
+: options(opt), deps(d), mutex(m), phv(p), lc(l), siaa(s) {}
 
 bool TablePlacement::backtrack(trigger &trig) {
     // If a table does not fit in the available stages, then TableSummary throws an exception.
@@ -170,7 +174,7 @@ class TablePlacement::SetupInfo : public Inspector {
     bool preorder(const IR::V1Table *) override { return false; }
 
  public:
-    explicit SetupInfo(TablePlacement &self) : self(self) {}
+    explicit SetupInfo(TablePlacement &self_) : self(self_) {}
 };
 
 
@@ -180,24 +184,28 @@ struct TablePlacement::GroupPlace {
      *              tables from them may be placed (so next_table setup works)
      *   ancestors  union of parents and all parent's ancestors
      *   seq        the TableSeq being placed for this group */
+    const TablePlacement                &self;
     ordered_set<const GroupPlace *>     parents, ancestors;
     const IR::MAU::TableSeq             *seq;
     const TablePlacement::TableSeqInfo  &info;
     int                                 depth;  // just for debugging?
-    GroupPlace(const TablePlacement &self, ordered_set<const GroupPlace*> &work,
+    GroupPlace(const TablePlacement &self_, ordered_set<const GroupPlace*> &work,
                const ordered_set<const GroupPlace *> &par, const IR::MAU::TableSeq *s)
-    : parents(par), ancestors(par), seq(s), info(self.seqInfo.at(s)), depth(1) {
+    : self(self_), parents(par), ancestors(par), seq(s), info(self.seqInfo.at(s)), depth(1) {
         for (auto p : parents) {
             if (depth <= p->depth)
                 depth = p->depth+1;
             ancestors |= p->ancestors; }
         LOG4("    new seq " << s->id << " depth=" << depth << " anc=" << ancestors);
         work.insert(this);
-        if (LOGGING(5)) {
-            for (auto s : ancestors)
-                if (work.count(s))
-                    LOG5("      removing ancestor " << s->seq->id << " from work list"); }
-        work -= ancestors; }
+        if (Device::numLongBranchTags() == 0 || self.options.disable_long_branch) {
+            // Table run only with next_table, so can't continue placing ancestors until
+            // this group is finished
+            if (LOGGING(5)) {
+                for (auto s : ancestors)
+                    if (work.count(s))
+                        LOG5("      removing ancestor " << s->seq->id << " from work list"); }
+            work -= ancestors; } }
 
     /// finish a table group -- remove it from the work queue and append its parents
     /// unless the parent or a descendant is already present in the queue.
@@ -267,8 +275,8 @@ struct TablePlacement::Placed {
     int                         stage_split = -1;
     StageUseEstimate            use;
     const TableResourceAlloc    *resources;
-    Placed(TablePlacement &self, const IR::MAU::Table *t)
-        : self(self), id(++uid_counter), table(t) {
+    Placed(TablePlacement &self_, const IR::MAU::Table *t)
+        : self(self_), id(++uid_counter), table(t) {
         if (t) { name = t->name; }
         traceCreation();
     }
@@ -782,7 +790,7 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, const Placed *done,
                 continue;
             }
         } else if (p->stage == rv->stage) {
-            if (forced_placement)
+            if (options.forced_placement)
                 continue;
             if (deps->happens_before(p->table, rv->table) && !mutex.action(p->table, rv->table)) {
                 rv->stage++;
@@ -838,7 +846,7 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, const Placed *done,
     if (stage_pragma >= 0) {
         rv->stage = std::max(stage_pragma, rv->stage);
         furthest_stage = std::max(rv->stage, furthest_stage);
-    } else if (forced_placement && !t->gateway_only()) {
+    } else if (options.forced_placement && !t->gateway_only()) {
         ::warning("%s: Table %s has not been provided a stage even though forced placement of "
                   "tables is turned on", t->srcInfo, t->name);
     }
@@ -1434,12 +1442,15 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                 if (it == work.end()) it = add;
                 continue; }
             BUG_CHECK(grp->ancestors.count(grp) == 0, "group is its own ancestor!");
-            if (LOGGING(5)) {
-                for (auto *s : grp->ancestors)
-                    if (work.count(s))
-                        LOG5("    removing " << s->seq->id << " from work as it is an " <<
-                             "ancestor of " << grp->seq->id); }
-            work -= grp->ancestors;
+            if (Device::numLongBranchTags() == 0 || options.disable_long_branch) {
+                // Table run only with next_table, so can't continue placing ancestors until
+                // this group is finished
+                if (LOGGING(5)) {
+                    for (auto *s : grp->ancestors)
+                        if (work.count(s))
+                            LOG5("    removing " << s->seq->id << " from work as it is an " <<
+                                 "ancestor of " << grp->seq->id); }
+                work -= grp->ancestors; }
             int idx = -1;
             bool done = true;
             bitvec seq_placed;
@@ -1458,32 +1469,35 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                     done = false;
                     continue; }
 
-                bool should_skip = false;
+                bool should_skip = false;  // flag to continue; outer loop;
                 for (auto& grp_tbl : grp->seq->tables) {
                     if (deps->happens_before_control(t, grp_tbl) &&
                         (!placed || !(placed->is_placed(grp_tbl)))) {
-                        should_skip = true;
                         LOG1("  - skipping " << t->name << " due to in-sequence control" <<
                             " dependence on " << grp_tbl->name);
-                        break;
-                    }
-                }
-                if (!should_skip && !are_metadata_deps_satisfied(t)) {
+                        done = false;
+                        should_skip = true;
+                        break; } }
+                if (should_skip) continue;
+
+                if (!are_metadata_deps_satisfied(t)) {
                     LOG3("  - skipping " << t->name << " because metadata deps not satisfied");
                     // In theory, could continue, but the analysis at this point would be
                     // incorrect
-                    should_skip = true;
+                    done = false;
+                    continue;
                 }
-
-                if (should_skip) {
-                    done = false;  // can't place it yet, but will need to eventually
-                    continue; }
+                for (auto *prev : deps->happens_after_map.at(t)) {
+                    if (!placed || !placed->is_placed(prev)) {
+                        LOG3("  - skipping " << t->name << " because it depends on " << prev->name);
+                        done = false;
+                        should_skip = true;
+                        break; } }
+                if (should_skip) continue;
 
                 auto pl_vec = try_place_table(t, placed, current);
-                if (pl_vec.empty()) {
-                    done = false;  // can't place it yet, but will need to eventually
-                    continue; }
                 LOG3("    Pl vector: " << pl_vec);
+                done = false;
                 for (auto pl : pl_vec) {
                     pl->group = grp;
                     bool defer = false;
@@ -1494,14 +1508,9 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                             LOG3("  - skipping " << pl->name << " as it is not mutually "
                                  "exclusive with partly placed " << t->name);
                             defer = true;
-                            break;
-                        }
-                    }
+                            break; } }
                     if (!defer) {
-                        done = false;
-                        trial.push_back(pl);
-                    }
-                }
+                        trial.push_back(pl); } }
             }
             if (done) {
                 BUG_CHECK(!placed->is_fully_placed(grp->seq), "Can't find a table to place");

@@ -88,7 +88,7 @@ struct DependencyGraph {
      *  Note that the constraint does not apply if the actions themselves are mutually exclusive,
      *  i.e. if the apply statement looked like the following:
      *
-     *  apply { if (hdr.data.f1 == 1) { t1.apply() } else { t2.apply() }
+     *  apply { if (hdr.data.f1 == 1) { t1.apply() } else { t2.apply() } }
      *
      *  then it would be impossible for a1 and a2 to ever be called in the same packet, and thus
      *  the opcode for B0 would never be mucked up by the OR.
@@ -105,6 +105,10 @@ struct DependencyGraph {
 
     // True once the graph has been fully constructed.
     bool finalized;
+
+    // These maps are reverse named -- happens_after_map[t] is the set of tables that that
+    // are before t, while happens_before_map[t] is the set of tables that are after t...
+    std::map<const IR::MAU::Table*, std::set<const IR::MAU::Table*>> happens_after_map;
 
     // happens_before[t1] = {t2, t3} means that t1 happens strictly before t2
     // and t3: t1 MUST be placed in an earlier stage.
@@ -234,6 +238,27 @@ struct DependencyGraph {
             return happens_before_map.at(t1).count(t2);
         } else {
             return false; }
+    }
+
+    // returns true if any table in s or control dependent on a table in s is data dependent on t1
+    bool happens_before_recursive(const IR::MAU::Table* t1, const IR::MAU::TableSeq* s) const {
+        if (!finalized)
+            BUG("Dependence graph used before being fully constructed.");
+        if (happens_before_map.count(t1))
+            for (auto *t2 : s->tables)
+                if (happens_before_recursive(t1, t2)) return true;
+        return false;
+    }
+
+    // returns true if t2 or any table control dependent on it is data dependent on t1
+    bool happens_before_recursive(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const {
+        if (!finalized)
+            BUG("Dependence graph used before being fully constructed.");
+        if (happens_before_map.count(t1)) {
+            if (t2 != t1 && happens_before_map.at(t1).count(t2)) return true;
+            for (auto *next : Values(t2->next))
+                if (happens_before_recursive(t1, next)) return true; }
+        return false;
     }
 
     bool happens_before_control(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const {

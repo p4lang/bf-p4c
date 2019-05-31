@@ -574,9 +574,10 @@ FindDependencyGraph::calc_topological_stage(unsigned dep_flags) {
 
     // Build initial n_depending_on, and happens_after_map
     const auto& dep_graph = dg.g;
-    std::map<const IR::MAU::Table*,
-             std::set<const IR::MAU::Table*>> happens_after_map;
+    auto& happens_after_map = dg.happens_after_map;
     auto& happens_before_map = dg.happens_before_map;
+    happens_after_map.clear();
+    happens_before_map.clear();
     for (boost::tie(v, v_end) = boost::vertices(dep_graph);
          v != v_end;
          ++v) {

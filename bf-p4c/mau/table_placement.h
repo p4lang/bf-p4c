@@ -19,8 +19,8 @@ class SharedIndirectAttachedAnalysis;
 
 class TablePlacement : public MauTransform, public Backtrack {
  public:
-    TablePlacement(const DependencyGraph* d, const TablesMutuallyExclusive &m, const PhvInfo &p,
-                   const LayoutChoices &l, const SharedIndirectAttachedAnalysis &siaa, bool fp);
+    TablePlacement(const BFN_Options &, const DependencyGraph *, const TablesMutuallyExclusive &,
+                   const PhvInfo &, const LayoutChoices &, const SharedIndirectAttachedAnalysis &);
     struct GroupPlace;
     struct Placed;
     typedef std::map<const IR::MAU::AttachedMemory *, int>      attached_entries_t;
@@ -62,13 +62,13 @@ class TablePlacement : public MauTransform, public Backtrack {
     std::array<bool, 3> table_in_gress = { { false, false, false } };
     std::array<IR::MAU::Table *, 2> starter_pistol = { { nullptr, nullptr } };
     class SetupInfo;
+    const BFN_Options &options;
     const DependencyGraph* deps;
     const TablesMutuallyExclusive &mutex;
     const PhvInfo &phv;
     const LayoutChoices &lc;
     const SharedIndirectAttachedAnalysis &siaa;
     bool ignoreContainerConflicts = false;
-    bool forced_placement = false;
     bool alloc_done = false;
     cstring error_message;
     profile_t init_apply(const IR::Node *root) override;
