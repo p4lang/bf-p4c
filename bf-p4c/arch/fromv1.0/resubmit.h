@@ -7,6 +7,11 @@
 #include "ir/ir.h"
 #include "lib/cstring.h"
 
+namespace P4 {
+class ReferenceMap;
+class TypeMap;
+}  // namespace P4
+
 namespace BFN {
 
 struct FieldPacking;

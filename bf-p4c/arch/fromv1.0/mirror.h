@@ -3,6 +3,11 @@
 
 #include "ir/ir.h"
 
+namespace P4 {
+class ReferenceMap;
+class TypeMap;
+}  // namespace P4
+
 namespace BFN {
 
 using FieldListId = std::tuple<gress_t, unsigned, cstring>;
