@@ -2070,15 +2070,6 @@ HashDistribution *Table::find_hash_dist(int unit) {
     return nullptr;
 }
 
-int Table::find_on_actionbus(Format::Field *f, int lo, int hi, int size) {
-    return action_bus ? action_bus->find(f, lo, hi, size) : -1;
-}
-
-void Table::need_on_actionbus(Format::Field *f, int lo, int hi, int size) {
-    if (!action_bus) action_bus = new ActionBus();
-    action_bus->need_alloc(this, f, lo, hi, size);
-}
-
 int Table::find_on_actionbus(const char *name, TableOutputModifier mod,
                              int lo, int hi, int size, int *len) {
     return action_bus ? action_bus->find(name, mod, lo, hi, size, len) : -1;
@@ -2089,22 +2080,13 @@ void Table::need_on_actionbus(Table *att, TableOutputModifier mod, int lo, int h
     action_bus->need_alloc(this, att, mod, lo, hi, size);
 }
 
-int Table::find_on_actionbus(HashDistribution *hd, int lo, int hi, int size) {
-    return action_bus ? action_bus->find(hd, lo, hi, size) : -1;
+int Table::find_on_actionbus(const ActionBusSource &src, int lo, int hi, int size, int pos) {
+    return action_bus ? action_bus->find(src, lo, hi, size, pos) : -1;
 }
 
-void Table::need_on_actionbus(HashDistribution *hd, int lo, int hi, int size) {
+void Table::need_on_actionbus(const ActionBusSource &src, int lo, int hi, int size) {
     if (!action_bus) action_bus = new ActionBus();
-    action_bus->need_alloc(this, hd, lo, hi, size);
-}
-
-int Table::find_on_actionbus(RandomNumberGen rng, int lo, int hi, int size) {
-    return action_bus ? action_bus->find(rng, lo, hi, size) : -1;
-}
-
-void Table::need_on_actionbus(RandomNumberGen rng, int lo, int hi, int size) {
-    if (!action_bus) action_bus = new ActionBus();
-    action_bus->need_alloc(this, rng, lo, hi, size);
+    action_bus->need_alloc(this, src, lo, hi, size);
 }
 
 int Table::find_on_ixbar(Phv::Slice sl, int group) {

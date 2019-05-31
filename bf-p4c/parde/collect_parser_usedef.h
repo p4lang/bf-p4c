@@ -2,6 +2,7 @@
 #define EXTENSIONS_BF_P4C_PARDE_COLLECT_PARSER_USEDEF_H_
 
 #include "bf-p4c/parde/parde_utils.h"
+#include "bf-p4c/parde/parser_info.h"
 
 struct Def {
     const IR::BFN::ParserState* state = nullptr;

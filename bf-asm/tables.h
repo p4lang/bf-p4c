@@ -24,6 +24,7 @@
 #include "target.h"
 
 class ActionBus;
+struct ActionBusSource;
 class AttachedTable;
 struct AttachedTables;
 class GatewayTable;
@@ -651,10 +652,8 @@ public:
         { if (format) format->apply_to_field(n, fn); }
     int find_on_ixbar(Phv::Slice sl, int group);
     virtual HashDistribution *find_hash_dist(int unit);
-    // FIXME -- refactor find/need_on_actionbus to take an ActionBus::Source rather
-    // than being overloaded in all these different ways
-    virtual int find_on_actionbus(Format::Field *f, int lo, int hi, int size);
-    virtual void need_on_actionbus(Format::Field *f, int lo, int hi, int size);
+    virtual int find_on_actionbus(const ActionBusSource &src, int lo, int hi, int size, int pos = -1);
+    virtual void need_on_actionbus(const ActionBusSource &src, int lo, int hi, int size);
     virtual int find_on_actionbus(const char *n, TableOutputModifier mod, int lo, int hi,
                                    int size, int *len = 0);
     int find_on_actionbus(const char *n, int lo, int hi, int size, int *len = 0) {
@@ -665,10 +664,6 @@ public:
     int find_on_actionbus(const std::string &n, int lo, int hi, int size, int *len = 0) {
         return find_on_actionbus(n.c_str(), TableOutputModifier::NONE, lo, hi, size, len); }
     virtual void need_on_actionbus(Table *att, TableOutputModifier mod, int lo, int hi, int size);
-    virtual int find_on_actionbus(HashDistribution *hd, int lo, int hi, int size);
-    virtual void need_on_actionbus(HashDistribution *hd, int lo, int hi, int size);
-    virtual int find_on_actionbus(RandomNumberGen rng, int lo, int hi, int size);
-    virtual void need_on_actionbus(RandomNumberGen rng, int lo, int hi, int size);
     static bool allow_bus_sharing(Table *t1, Table *t2);
     virtual Call &action_call() { return action; }
     virtual Call &instruction_call() { return instruction; }
@@ -1111,31 +1106,19 @@ public:
     Format::Field *lookup_field(const std::string &name, const std::string &action) const override;
     HashDistribution *find_hash_dist(int unit) override {
         return indirect ? indirect->find_hash_dist(unit) : Table::find_hash_dist(unit); }
-    int find_on_actionbus(Format::Field *f, int lo, int hi, int size) override {
-        return indirect ? indirect->find_on_actionbus(f, lo, hi, size)
-                        : Table::find_on_actionbus(f, lo, hi, size); }
-    int find_on_actionbus(HashDistribution *hd, int lo, int hi, int size) override {
-        return indirect ? indirect->find_on_actionbus(hd, lo, hi, size)
-                        : Table::find_on_actionbus(hd, lo, hi, size); }
-    int find_on_actionbus(RandomNumberGen rng, int lo, int hi, int size) override {
-        return indirect ? indirect->find_on_actionbus(rng, lo, hi, size)
-                        : Table::find_on_actionbus(rng, lo, hi, size); }
-    void need_on_actionbus(Format::Field *f, int lo, int hi, int size) override {
-        indirect ? indirect->need_on_actionbus(f, lo, hi, size)
-                 : Table::need_on_actionbus(f, lo, hi, size); }
-    void need_on_actionbus(Table *att, TableOutputModifier mod, int lo, int hi, int size) override {
-        indirect ? indirect->need_on_actionbus(att, mod, lo, hi, size)
-                 : Table::need_on_actionbus(att, mod, lo, hi, size); }
-    void need_on_actionbus(HashDistribution *hd, int lo, int hi, int size) override {
-        indirect ? indirect->need_on_actionbus(hd, lo, hi, size)
-                 : Table::need_on_actionbus(hd, lo, hi, size); }
-    void need_on_actionbus(RandomNumberGen rng, int lo, int hi, int size) override {
-        indirect ? indirect->need_on_actionbus(rng, lo, hi, size)
-                 : Table::need_on_actionbus(rng, lo, hi, size); }
+    int find_on_actionbus(const ActionBusSource &src, int lo, int hi, int size, int pos = -1) override {
+        return indirect ? indirect->find_on_actionbus(src, lo, hi, size, pos)
+                        : Table::find_on_actionbus(src, lo, hi, size, pos); }
+    void need_on_actionbus(const ActionBusSource &src, int lo, int hi, int size) override {
+        indirect ? indirect->need_on_actionbus(src, lo, hi, size)
+                 : Table::need_on_actionbus(src, lo, hi, size); }
     int find_on_actionbus(const char *n, TableOutputModifier mod, int lo, int hi,
                           int size, int *len = 0) override {
         return indirect ? indirect->find_on_actionbus(n, mod, lo, hi, size, len)
                         : Table::find_on_actionbus(n, mod, lo, hi, size, len); }
+    void need_on_actionbus(Table *att, TableOutputModifier mod, int lo, int hi, int size) override {
+                indirect ? indirect->need_on_actionbus(att, mod, lo, hi, size)
+                                     : Table::need_on_actionbus(att, mod, lo, hi, size); }
     const Call &get_action() const override { return indirect ? indirect->get_action() : action; }
     Actions *get_actions() const override { return actions ? actions :
         (action ? action->actions : indirect ? indirect->actions ? indirect->actions :
@@ -1367,15 +1350,11 @@ DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",
     int find_field_lineno(Format::Field *field) override;
     Format::Field *lookup_field(const std::string &name, const std::string &action) const override;
     void apply_to_field(const std::string &n, std::function<void(Format::Field *)> fn) override;
-    int find_on_actionbus(Format::Field *f, int lo, int hi, int size) override;
     int find_on_actionbus(const char *n, TableOutputModifier mod, int lo, int hi,
                           int size, int *len) override;
-    int find_on_actionbus(HashDistribution *hd, int lo, int hi, int size) override;
-    int find_on_actionbus(RandomNumberGen rng, int lo, int hi, int size) override;
-    void need_on_actionbus(Format::Field *f, int lo, int hi, int size) override;
+    int find_on_actionbus(const ActionBusSource &src, int lo, int hi, int size, int pos = -1) override;
+    void need_on_actionbus(const ActionBusSource &src, int lo, int hi, int size) override;
     void need_on_actionbus(Table *att, TableOutputModifier mod, int lo, int hi, int size) override;
-    void need_on_actionbus(HashDistribution *hd, int lo, int hi, int size) override;
-    void need_on_actionbus(RandomNumberGen rng, int lo, int hi, int size) override;
     table_type_t table_type() const override { return ACTION; }
     int unitram_type() override { return UnitRam::ACTION; }
     void pad_format_fields();

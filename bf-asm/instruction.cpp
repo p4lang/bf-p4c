@@ -314,9 +314,10 @@ struct operand {
                 return -1; }
             if (units.size() == 2) {
                 auto hd1 = find_hash_dist(units.at(1));
-                if (table->find_on_actionbus(hd1, lo + 16, hi, size) != byte + 2)
+                if (table->find_on_actionbus(ActionBusSource(hd, hd1), lo + 16, hi, size) < 0)
                     error(lineno, "hash dists %d and %d not contiguous on the action bus",
-                          hd->id, hd1->id); }
+                          hd->id, hd1->id);
+            }
             if (size == 2) byte -= 32;
             if (byte >= 0 || byte < 32*size)
                 return ACTIONBUS_OPERAND + byte/size;

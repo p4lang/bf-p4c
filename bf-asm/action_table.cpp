@@ -62,16 +62,17 @@ void ActionTable::apply_to_field(const std::string &n, std::function<void(Format
     if (format)
         format->apply_to_field(n, fn);
 }
-int ActionTable::find_on_actionbus(Table::Format::Field *f, int lo, int hi, int size) {
+int ActionTable::find_on_actionbus(const ActionBusSource &src, int lo, int hi, int size, int pos) {
     int rv;
-    if (action_bus && (rv = action_bus->find(f, lo, hi, size)) >= 0)
+    if (action_bus && (rv = action_bus->find(src, lo, hi, size, pos)) >= 0)
         return rv;
     for (auto *match_table : match_tables) {
         BUG_CHECK((Table *)match_table != (Table *)this);
-        if ((rv = match_table->find_on_actionbus(f, lo, hi, size)) >= 0)
+        if ((rv = match_table->find_on_actionbus(src, lo, hi, size, pos)) >= 0)
             return rv; }
     return -1;
 }
+
 int ActionTable::find_on_actionbus(const char *name, TableOutputModifier mod, int lo, int hi,
                                    int size, int *len) {
     int rv;
@@ -83,40 +84,48 @@ int ActionTable::find_on_actionbus(const char *name, TableOutputModifier mod, in
             return rv; }
     return -1;
 }
-int ActionTable::find_on_actionbus(HashDistribution *hd, int lo, int hi, int size) {
-    int rv;
-    if (action_bus && (rv = action_bus->find(hd, lo, hi, size)) >= 0)
-        return rv;
-    for (auto *match_table : match_tables) {
-        if (match_table->find_hash_dist(hd->id) == hd) {
-            if ((rv = match_table->find_on_actionbus(hd, lo, hi, size)) >= 0)
-                return rv; } }
-    return -1;
-}
-int ActionTable::find_on_actionbus(RandomNumberGen rng, int lo, int hi, int size) {
-    int rv;
-    if (action_bus && (rv = action_bus->find(rng, lo, hi, size)) >= 0)
-        return rv;
-    for (auto *match_table : match_tables) {
-        if ((rv = match_table->find_on_actionbus(rng, lo, hi, size)) >= 0)
-            return rv; }
-    return -1;
-}
 
-void ActionTable::need_on_actionbus(Format::Field *f, int lo, int hi, int size) {
-    if (f->fmt == format) {
-        Table::need_on_actionbus(f, lo, hi, size);
-        return; }
-    for (auto af : Values(action_formats)) {
-        if (f->fmt == af) {
-            Table::need_on_actionbus(f, lo, hi, size);
-            return; } }
-    for (auto *match_table : match_tables) {
-        BUG_CHECK((Table *)match_table != (Table *)this);
-        if (f->fmt == match_table->get_format()) {
-            match_table->need_on_actionbus(f, lo, hi, size);
-            return; } }
-    BUG_CHECK(!"Can't find table associated with field");
+void ActionTable::need_on_actionbus(const ActionBusSource &src, int lo, int hi, int size) {
+    if (src.type == ActionBusSource::Field) {
+        auto f = src.field;
+        if (f->fmt == format) {
+            Table::need_on_actionbus(src, lo, hi, size);
+            return; }
+        for (auto af : Values(action_formats)) {
+            if (f->fmt == af) {
+                Table::need_on_actionbus(f, lo, hi, size);
+                return; } }
+        for (auto *match_table : match_tables) {
+            BUG_CHECK((Table *)match_table != (Table *)this);
+            if (f->fmt == match_table->get_format()) {
+                match_table->need_on_actionbus(f, lo, hi, size);
+                return; } }
+        BUG_CHECK(!"Can't find table associated with field");
+    // TBD - Add allocation for ActionBusSource::HashDistPair. Compiler does
+    // action bus allocation so this path is never used.
+    } else if (src.type == ActionBusSource::HashDist) {
+        auto hd = src.hd;
+        for (auto &hash_dist : this->hash_dist) {
+            if (&hash_dist == hd) {
+                Table::need_on_actionbus(hd, lo, hi, size);
+                return; } }
+        for (auto *match_table : match_tables) {
+            if (match_table->find_hash_dist(hd->id) == hd) {
+                match_table->need_on_actionbus(hd, lo, hi, size);
+                return; } }
+        BUG_CHECK(!"Can't find table associated with hash_dist");
+    } else if (src.type == ActionBusSource::RandomGen) {
+        auto rng = src.rng;
+        int attached_count = 0;
+        for (auto *match_table : match_tables) {
+            match_table->need_on_actionbus(rng, lo, hi, size);
+            ++attached_count; }
+        if (attached_count > 1) {
+            error(-1, "Assembler cannot allocate action bus space for rng %d as it "
+                  "used by mulitple tables", rng.unit); }
+    } else {
+        error(-1, "Assembler cannot allocate action bus space for %s", src.toString(this).c_str());
+    }
 }
 
 void ActionTable::need_on_actionbus(Table *att, TableOutputModifier mod, int lo, int hi, int size) {
@@ -124,32 +133,13 @@ void ActionTable::need_on_actionbus(Table *att, TableOutputModifier mod, int lo,
     for (auto *match_table : match_tables) {
         if (match_table->is_attached(att)) {
             match_table->need_on_actionbus(att, mod, lo, hi, size);
-            ++attached_count; } }
+                ++attached_count;
+        }
+    }
     if (attached_count > 1) {
         error(att->lineno, "Assembler cannot allocate action bus space for table %s as it "
-              "used by mulitple tables", att->name()); }
-}
-
-void ActionTable::need_on_actionbus(HashDistribution *hd, int lo, int hi, int size) {
-    for (auto &hash_dist : this->hash_dist) {
-        if (&hash_dist == hd) {
-            Table::need_on_actionbus(hd, lo, hi, size);
-            return; } }
-    for (auto *match_table : match_tables) {
-        if (match_table->find_hash_dist(hd->id) == hd) {
-            match_table->need_on_actionbus(hd, lo, hi, size);
-            return; } }
-    BUG_CHECK(!"Can't find table associated with hash_dist");
-}
-
-void ActionTable::need_on_actionbus(RandomNumberGen rng, int lo, int hi, int size) {
-    int attached_count = 0;
-    for (auto *match_table : match_tables) {
-        match_table->need_on_actionbus(rng, lo, hi, size);
-        ++attached_count; }
-    if (attached_count > 1) {
-        error(-1, "Assembler cannot allocate action bus space for rng %d as it "
-              "used by mulitple tables", rng.unit); }
+            "used by mulitple tables", att->name());
+    }
 }
 
 /**
