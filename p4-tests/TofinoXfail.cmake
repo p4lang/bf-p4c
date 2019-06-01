@@ -805,9 +805,12 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/compile_only/too_many_ternary_match_key_bits.p4
 )
 
-# Negative tests for violation of action constraints.
 p4c_add_xfail_reason("tofino"
   "error.*This program violates action constraints imposed by Tofino.|./p4c TIMEOUT"
+# Investigate this
+  extensions/p4_tests/p4_16/customer/arista/p4c-1652.p4
+
+# Negative tests for violation of action constraints.
   extensions/p4_tests/p4_16/customer/noviflow/p4c-1288.p4
   extensions/p4_tests/p4_16/customer/kaloom/p4c-1299.p4
   extensions/p4_tests/p4_14/compile_only/action_conflict_1.p4
@@ -910,13 +913,14 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/rdp/COMPILER-533/case2736.p4
 
   # new xfail after flexible PR
-  extensions/p4_tests/p4_16/customer/arista/p4c-1491.p4
-  extensions/p4_tests/p4_16/customer/arista/p4c-1494.p4
-  extensions/p4_tests/p4_16/customer/arista/p4c-1652.p4
-
   ../glass/testsuite/p4_tests/rdp/COMPILER-475/case2600.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-868/comp_868.p4
   )
+
+p4c_add_xfail_reason("tofino"
+  "error.*Field is extracted in the parser into multiple containers"
+  extensions/p4_tests/p4_16/customer/arista/p4c-1494.p4
+)
 
 # P4C-1375
 p4c_add_xfail_reason("tofino"

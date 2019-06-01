@@ -362,10 +362,9 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
     // emitted in the deparser.
     for (auto& field : phv) {
         if (isDeparsed(&field)) {
-            // do not warn on 'un-deparsed' padding
+            // do not warn on 'un-deparsed' padding or if 'digest' field.
             // 'deparsed' property on padding is controlled by the padded field.
-            if (field.is_padding()) {
-                continue; }
+            if (field.is_padding() || field.is_digest()) continue;
             WARN_CHECK(deparseOccurrences.find(&field) != deparseOccurrences.end(),
                         "Field is marked as deparsed, but the deparser doesn't "
                         "emit it: %1%", cstring::to_cstring(field));

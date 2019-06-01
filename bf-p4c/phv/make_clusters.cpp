@@ -451,6 +451,10 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
         } else if (lastWideArith && !field->padding) {
             StartNewSliceList();
             LOG5("Starting new slice list (to isolate a field used in wide arithmetic): ");
+        } else if (lastDigest && !field->is_digest() && !field->padding &&
+                !self.uses_i.is_referenced(field)) {
+            StartNewSliceList();
+            LOG5("Starting new slice list (to separate a digest and non-digest field): ");
         }
 
         // If the slice list containers a deparser_zero field and the current field is not a
@@ -489,11 +493,8 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
             LOG5("Starting new slice list (for deparser zero field):");
         } else if (accumulator_bits && field->is_digest()) {
             // Break off the existing slice list if this field is a digest
-            // TODO: This is a temporary fix to enable us to get the digests tests passing and
-            // not break fitting on any profiles. What this does is to spread out digest
-            // allocation across containers - what we really want is a constraint
-            // that spreads out digest fields AND allocate to its nearest native PHV size
-            StartNewSliceList();
+            if (lastDigest == nullptr || accumulator_bits % int(PHV::Size::b8) == 0)
+                StartNewSliceList();
             lastDigest = field;
             LOG5("Starting new slice list (for digest field):");
         } else if (accumulator_bits % int(PHV::Size::b8) == 0 &&
@@ -576,6 +577,8 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
         lastWideArith = field->used_in_wide_arith();
         lastDeparserZero = field->is_deparser_zero_candidate();
         lastUnreferenced = !self.uses_i.is_referenced(field);
+        lastDigest = (field->is_digest() || (lastDigest && !self.uses_i.is_referenced(field)) ||
+                (lastDigest && field->padding)) ? field : nullptr;
 
         // We use AND because all slices in a slice list must be TPHV
         // candidates for the slice list to be a TPHV candidate.  Note that a
