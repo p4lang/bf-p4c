@@ -599,6 +599,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/slice-def-use1.p4
   testdata/p4_16_samples/issue1814-bmv2.p4
   testdata/p4_16_samples/issue1814-1-bmv2.p4
+  extensions/p4_tests/p4_14/compile_only/p4smith_regression/cooperated_0.p4
 )
 
 # Flaky.
@@ -664,13 +665,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Unable to reference global instance .* from non-control block"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/popularity_0.p4
-)
-
-# P4C-993
-# error: .* has more than two update conditions. The compiler currently can only support up to two conditions on each calculated field.
-p4c_add_xfail_reason("tofino"
-  "has more than two update conditions"
-  extensions/p4_tests/p4_14/compile_only/p4smith_regression/cooperated_0.p4
 )
 
 # P4C-1059
@@ -1189,13 +1183,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Table .* .* invoked from two different controls: Apply and Apply"
   ../glass/testsuite/p4_tests/phv/COMPILER-1134/comp_1134.p4
-  )
-
-# P4C-1576
-p4c_add_xfail_reason("tofino"
-  "More than one field written to by field"
-  ../glass/testsuite/p4_tests/parde/test_config_421_elim_calc_ops.p4
-  ../glass/testsuite/p4_tests/parde/test_config_422_exit_calc_upd.p4
   )
 
 p4c_add_xfail_reason("tofino"
