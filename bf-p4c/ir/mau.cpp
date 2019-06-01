@@ -1,5 +1,6 @@
 #include <assert.h>
 #include "bf-p4c/common/utils.h"
+#include "bf-p4c/mau/instruction_memory.h"
 #include "ir/ir.h"
 
 bool IR::MAU::Table::operator==(const IR::MAU::Table &a) const {
@@ -194,20 +195,55 @@ int IR::MAU::Table::action_next_paths() const {
     return action_paths;
 }
 
+bool IR::MAU::Table::getAnnotation(cstring name, int &val) const {
+    if (!match_table) return false;
+    if (auto annot = match_table->annotations->getSingle(name)) {
+        if (annot->expr.size() != 1) {
+            error(ErrorType::ERR_UNEXPECTED, "%2% pragma provided to table %3% has multiple "
+                  "parameters, while only one is expected", annot, name, externalName());
+        } else if (auto constant = annot->expr.at(0)->to<IR::Constant>()) {
+            val = constant->asInt();
+            return true;
+        } else {
+            error(ErrorType::ERR_INVALID, "%2% pragma provided to table %3% is not a constant",
+                  annot, name, externalName()); } }
+    return false;
+}
+
+bool IR::MAU::Table::getAnnotation(cstring name, ID &val) const {
+    if (!match_table) return false;
+    if (auto annot = match_table->annotations->getSingle(name)) {
+        if (annot->expr.size() != 1) {
+            error(ErrorType::ERR_UNEXPECTED, "%2% pragma provided to table %3% has multiple "
+                  "parameters, while only one is expected", annot, name, externalName());
+        } else if (auto v = annot->expr.at(0)->to<IR::StringLiteral>()) {
+            val = *v;
+            return true;
+        } else {
+            error(ErrorType::ERR_INVALID, "%2% pragma provided to table %3% is not a "
+                  "string literal", annot, name, externalName()); } }
+    return false;
+}
+
+bool IR::MAU::Table::getAnnotation(cstring name, std::vector<ID> &val) const {
+    if (!match_table) return false;
+    bool rv = false;
+    for (auto *annot : match_table->getAnnotations()->annotations) {
+        if (annot->name != name) continue;
+        rv = true;  // found at least 1
+        for (auto *expr : annot->expr) {
+            if (auto v = expr->to<IR::StringLiteral>())
+                val.push_back(*v);
+            else
+                error(ErrorType::ERR_INVALID, "%2% pragma provided to table %3% is not a "
+                      "string literal", annot, name, externalName()); } }
+    return rv;
+}
+
 int IR::MAU::Table::get_placement_priority() const {
-    if (!match_table) return 0;
-    auto annot = match_table->annotations->getSingle("placement_priority");
-    if (annot == nullptr) return 0;
-    if (annot->expr.size() != 1) {
-        error("%splacement_priority pragma provided to table %s has multiple "
-              "parameters, while Brig currently only supports one parameter",
-              annot->srcInfo, name);
-    } else if (auto constant = annot->expr.at(0)->to<IR::Constant>()) {
-        return constant->asInt();
-    } else {
-        error("%splacement_priority pragma value provided to table %s is not a constant",
-              annot->srcInfo, name); }
-    return 0;
+    int rv = 0;
+    getAnnotation("placement_priority", rv);
+    return rv;
 }
 
 int IR::MAU::Table::get_provided_stage(const int *init_stage, int *req_entries) const {
@@ -295,81 +331,45 @@ int IR::MAU::Table::get_provided_stage(const int *init_stage, int *req_entries) 
 }
 
 int IR::MAU::Table::get_random_seed() const {
-    if (match_table == nullptr)
-        return -1;
-    auto annot = match_table->annotations->getSingle("random_seed");
-    if (annot == nullptr)
-        return -1;
-    ERROR_CHECK(annot->expr.size() == 1, "%s: random_seed pragma provided to table %s has multiple "
-              "parameters, while Brig currently only supports one parameter",
-              annot->srcInfo, name);
-    auto constant = annot->expr.at(0)->to<IR::Constant>();
-    ERROR_CHECK(constant, "%s: random_seed pragma provided to table %s is not a constant",
-                annot->srcInfo, name);
-    int val = constant->asInt();
-    ERROR_CHECK(val >= 0, "%s: random_seem pragma provided to table %s must be >= 0",
-                annot->srcInfo, name);
+    int val = -1;
+    if (getAnnotation("random_seed", val))
+        ERROR_CHECK(val >= 0, "%s: random_seem pragma provided to table %s must be >= 0",
+                    srcInfo, externalName());
     return val;
 }
 
 int IR::MAU::Table::get_pragma_max_actions() const {
-    if (match_table == nullptr)
-        return -1;
-    auto annot = match_table->getAnnotations();
-    if (auto s = annot->getSingle("max_actions")) {
-        ERROR_CHECK(s->expr.size() >= 1, "%smax_actions pragma on table %s does not have a "
-            "value", srcInfo, name);
-        auto pragma_ptr = s->expr.at(0)->to<IR::Constant>();
-        if (pragma_ptr == nullptr) {
-            fatal_error("%smax_actions value on table %s is not a constant",
-                        srcInfo, name);
+    int pragma_val;
+    if (getAnnotation("max_actions", pragma_val)) {
+        int num_actions = actions.size();
+        int max_limit = InstructionMemory::IMEM_ROWS * InstructionMemory::IMEM_COLORS;
+        if (pragma_val < num_actions) {
+            error(ErrorType::ERR_INVALID, "Invalid max_actions pragma usage on table %2%.  "
+                  "The maximum actions (%3%) specified cannot be less than the number of "
+                  "callable actions listed (%4%).",
+                  srcInfo, externalName(), pragma_val, num_actions);
             return -1;
-        } else {
-            int pragma_val = pragma_ptr->asInt();
-            int num_actions = actions.size();
-            if (pragma_val < num_actions) {
-                fatal_error("%sInvalid max_actions pragma usage on table %s. "
-                            "The maximum actions (%d) specified cannot be less than the "
-                            "number of callable actions listed (%d).",
-                            srcInfo, name, pragma_val, num_actions);
-                return -1;
-            // } else if (pragma_val > (InstructionMemory::IMEM_ROWS *
-            //                          InstructionMemory::IMEM_COLORS)) {
-            } else if (pragma_val > 64) {
-                fatal_error("%sInvalid max_actions pragma usage on table %s. "
-                            "The maximum actions specified (%d) cannot exceed %d.",
-                            srcInfo, name, pragma_val, 64);
-                return -1;
-            } else if (pragma_val > num_actions) {
-                LOG2("Found max_actions " << pragma_val);
-                return pragma_val;
-            }
+        } else if (pragma_val > max_limit) {
+            error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "Invalid max_actions pragma usage on "
+                  "table %2%.  The maximum actions specified (%3%) cannot exceed %4%.",
+                  srcInfo, externalName(), pragma_val, max_limit);
+            return -1;
+        } else if (pragma_val > num_actions) {
+            return pragma_val;
         }
     }
     return -1;
 }
 
 bool IR::MAU::Table::is_force_immediate() const {
-    if (match_table == nullptr)
-        return false;
-    auto annot = match_table->getAnnotations();
-    if (auto s = annot->getSingle("force_immediate")) {
-        ERROR_CHECK(s->expr.size() >= 1, "%sforce_immediate pragma on table %s does not have a"
-            " value", srcInfo, name);
-        auto pragma_ptr = s->expr.at(0)->to<IR::Constant>();
-        if (pragma_ptr == nullptr) {
-            fatal_error("%sforce_immediate value on table %s is not a constant",
-                        srcInfo, name);
-            return false;
-        } else {
-            int pragma_val = pragma_ptr->asInt();
+    int pragma_val;
+    if (getAnnotation("force_immediate", pragma_val)) {
             if (pragma_val == 0 || pragma_val == 1) {
-                LOG2("Found force_immediate " << pragma_val);
                 return pragma_val == 1;
             } else {
-              fatal_error("%sInvalid force_immediate pragma usage on table %s. "
-                          "Only 0 and 1 are allowed.", srcInfo, name);
-              return false; } } }
+              error(ErrorType::ERR_INVALID, "Invalid force_immediate pragma usage on table %2%.  "
+                    "Only 0 and 1 are allowed.", srcInfo, externalName());
+              return false; } }
     return false;
 }
 

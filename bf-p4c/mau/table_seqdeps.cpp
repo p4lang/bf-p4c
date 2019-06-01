@@ -10,6 +10,20 @@ Visitor::profile_t TableFindSeqDependencies::init_apply(const IR::Node *root) {
     return rv;
 }
 
+static bool ignore_dep(const IR::MAU::Table *t1, const IR::MAU::Table *t2) {
+    std::vector<IR::ID>         pragmas;
+    if (t1->getAnnotation("ignore_table_dependency", pragmas)) {
+        for (auto name : pragmas) {
+            if (t2->externalName().endsWith(name))
+                return true; } }
+    pragmas.clear();
+    if (t2->getAnnotation("ignore_table_dependency", pragmas)) {
+        for (auto name : pragmas) {
+            if (t1->externalName().endsWith(name))
+                return true; } }
+    return false;
+}
+
 void TableFindSeqDependencies::postorder(IR::MAU::TableSeq *seq) {
     if (seq->tables.size() <= 1) return;
     int size = seq->tables.size();
@@ -19,6 +33,7 @@ void TableFindSeqDependencies::postorder(IR::MAU::TableSeq *seq) {
         bitvec access = uses.tables_access(seq->tables[i]);
         bool earlyExit = seq->tables[i]->has_exit_recursive();
         for (int j = i+1; j < size; j++) {
+            if (ignore_dep(seq->tables[i], seq->tables[j])) continue;
             if (earlyExit || seq->tables[j]->has_exit_recursive() ||
                 (writes & uses.tables_access(seq->tables[j])) ||
                 (access & uses.tables_modify(seq->tables[j])))

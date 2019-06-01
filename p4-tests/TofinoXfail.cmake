@@ -206,9 +206,10 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "error.*Can't split table.*with indirect attached MAU::StatefulAlu"
+  "error.*Can't split table.*with indirect attached Register"
   ../glass/testsuite/p4_tests/phv/COMPILER-587/l4l.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-706/terminate_parsing.p4
+  ../glass/testsuite/p4_tests/mau/COMPILER-1068/comp_1068.p4
   switch_8.7_ent_fin_postcard
   switch_generic_int_leaf
   switch_8.7_generic_int_leaf
@@ -260,13 +261,11 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
 # Fail on purpose due to indirect tables not being mutually exclusive
-  "Tables .* and .* are not mutually exclusive"
+  "table .* and table .* are not mutually exclusive"
   extensions/p4_tests/p4_14/compile_only/action_profile_not_shared.p4
   extensions/p4_tests/p4_14/compile_only/action_profile_next_stage.p4
   testdata/p4_14_samples/12-Counters.p4
   testdata/p4_14_samples/13-Counters1and2.p4
-  ../glass/testsuite/p4_tests/mau/COMPILER-1068/comp_1068.p4
-  ../glass/testsuite/p4_tests/phv/COMPILER-1065/comp_1065.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -337,7 +336,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "error: Tables .* and .* are not mutually exclusive, yet share"
+  "error: table .* and table .* are not mutually exclusive, yet share"
   testdata/p4_16_samples/issue1566.p4
   testdata/p4_16_samples/issue1566-bmv2.p4
   )
@@ -972,6 +971,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: The stage specified for table .* is .*, but we could not place it until stage .*"
   ../glass/testsuite/p4_tests/arista/DRV-543/case2499.p4
+  ../glass/testsuite/p4_tests/phv/COMPILER-1065/comp_1065.p4
   )
 
 # Valid XFAIL
@@ -1029,11 +1029,8 @@ p4c_add_xfail_reason("tofino"
 
 # P4C-1389
 p4c_add_xfail_reason("tofino"
-  "Tables .* and .* are not mutually exclusive"
+  "table .* and table .* are not mutually exclusive"
   ../glass/testsuite/p4_tests/mau/COMPILER-445/comp_445_counter.p4
-  ../glass/testsuite/p4_tests/mau/COMPILER-531/test_config_320_pragma_ignore_dep.p4
-  ../glass/testsuite/p4_tests/mau/COMPILER-1068/comp_1068.p4
-  ../glass/testsuite/p4_tests/parde/COMPILER-1091/comp_1091.p4
   )
 
 # BRIG-604
@@ -1119,6 +1116,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Ran out of parser match registers"
   ../glass/testsuite/p4_tests/parde/COMPILER-368/out.p4
+  ../glass/testsuite/p4_tests/parde/COMPILER-1091/comp_1091.p4
   testdata/p4_16_samples/v1model-p4runtime-most-types1.p4
   )
 

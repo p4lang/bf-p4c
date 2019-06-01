@@ -232,6 +232,9 @@ class Table : BFN::Unit {
     int get_pragma_max_actions() const;
     bool is_force_immediate() const;
     bool for_dleft() const;
+    bool getAnnotation(cstring name, int &val) const;
+    bool getAnnotation(cstring name, ID &val) const;
+    bool getAnnotation(cstring name, std::vector<ID> &val) const;
     cstring externalName() const;  // name to use in error messages
 
     UniqueId pp_unique_id(AttachedMemory at = nullptr,
@@ -271,7 +274,7 @@ class Table : BFN::Unit {
     int stage() const override {
         return logical_id < 0 ? -1 : logical_id / StageUse::MAX_LOGICAL_IDS; }
     gress_t thread() const override { return gress; }
-    toString { return "table " + (match_table ? match_table->name.toString() : name); }
+    toString { return "table " + externalName(); }
     validate {
         std::set<cstring> gw_next;
         for (auto &gw : gateway_rows) {
@@ -430,6 +433,8 @@ abstract AttachedMemory : Attached {
     virtual bool indexed() const override { return !direct; }
     virtual UniqueAttachedId::type_t get_id_type() const = 0;
     UniqueAttachedId unique_id() const { return UniqueAttachedId(name, direct, get_id_type()); }
+    virtual cstring externType() const = 0;
+    cstring toString() const override { return externType() + " " + name.toString(); }
 }
 
 /** Any attached table that has a keeps stateful information about flows.
@@ -456,6 +461,7 @@ class Counter : Synth2Port {
 #nodbprint
     const Type *getType() const override { return Type_Counter::get(); }
     UniqueAttachedId::type_t get_id_type() const override { return UniqueAttachedId::COUNTER; }
+    cstring externType() const override { return direct ? "DirectCounter" : "Counter"; }
 }
 
 class Meter : Synth2Port {
@@ -484,6 +490,7 @@ class Meter : Synth2Port {
     bool mapram_possible(IR::MAU::ColorMapramAddress cma) const {
         return possible_mapram_address & (1U << static_cast<int>(cma));
     }
+    cstring externType() const override { return direct ? "DirectMeter" : "Meter"; }
 
 #nodbprint
 }
@@ -557,6 +564,7 @@ class StatefulAlu : Synth2Port {
         return width;
     }
     int alu_width() const { return std::min(32, source_width()); }
+    cstring externType() const override { return direct ? "DirectRegister" : "Register"; }
 }
 
 class Selector : AttachedMemory {
@@ -568,6 +576,7 @@ class Selector : AttachedMemory {
     int num_pools = 0;
     int max_pool_size = 0;
     NullOK HashDist hash_mod = nullptr;
+    cstring externType() const override { return "ActionSelector"; }
 #nodbprint
 }
 
@@ -584,6 +593,7 @@ class TernaryIndirect : AttachedMemory {
     UniqueAttachedId::type_t get_id_type() const override {
         return UniqueAttachedId::TERNARY_INDIRECT;
     }
+    cstring externType() const override { return "ternary indirect"; }
 }
 
 /** Action data table used to hold action parameters */
@@ -594,6 +604,7 @@ class ActionData : AttachedMemory {
     UniqueAttachedId::type_t get_id_type() const override {
         return UniqueAttachedId::ACTION_DATA;
     }
+    cstring externType() const override { return "ActionProfile"; }
 }
 
 /** Idletime table **/
@@ -609,6 +620,7 @@ class IdleTime : AttachedMemory {
     UniqueAttachedId::type_t get_id_type() const override {
         return UniqueAttachedId::IDLETIME;
     }
+    cstring externType() const override { return "idletime"; }
 }
 
 // a sequence of tables -- may be reordered if deps allow.

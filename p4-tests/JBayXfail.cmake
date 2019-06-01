@@ -96,7 +96,7 @@ p4c_add_xfail_reason("tofino2"
 
 p4c_add_xfail_reason("tofino2"
 # Fail on purpose due to indirect tables not being mutually exclusive
-  "Tables .* and .* are not mutually exclusive"
+  "table .* and table .* are not mutually exclusive"
   testdata/p4_14_samples/12-Counters.p4
   testdata/p4_14_samples/13-Counters1and2.p4
 )

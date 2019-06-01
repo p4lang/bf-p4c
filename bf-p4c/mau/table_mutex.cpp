@@ -30,6 +30,26 @@ void TablesMutuallyExclusive::postorder(const IR::MAU::Table *tbl) {
         }
     }
 
+    std::vector<IR::ID> pragmas;
+    if (tbl->getAnnotation("ignore_table_dependency", pragmas)) {
+        for (auto pragma : pragmas) {
+            // P4_14 prefixes table names with "." for global scope
+            if (!name_to_tables.count(pragma))
+                pragma.name = "." + pragma.name;
+            // P4_16 names are fully qualified -- if the pragma is unqualified, look in the
+            // same scope as the current table
+            if (!name_to_tables.count(pragma)) {
+                auto tblname = tbl->externalName();
+                if (auto suffix = tblname.findlast('.'))
+                    pragma.name = tblname.before(suffix) + pragma.name; }
+            if (name_to_tables.count(pragma)) {
+                mutex(table_ids.at(tbl), table_ids.at(name_to_tables.at(pragma))) = true;
+            } else {
+                warning(ErrorType::WARN_UNKNOWN, "Can't find table %1%", pragma);
+            }
+        }
+    }
+
     bool miss_mutex = false;
     if (!tbl->gateway_only()) {
         // Need to ensure that default action is constant
@@ -106,8 +126,7 @@ bool SharedIndirectAttachedAnalysis::preorder(const IR::MAU::AttachedMemory *am)
     auto *tbl = findContext<IR::MAU::Table>();
     for (auto *check_tbl : backend_users[am]) {
         if (!mutex(tbl, check_tbl) && !mutex.action(tbl, check_tbl)) {
-            error("Tables %s and %s are not mutually exclusive, yet share %s",
-                  tbl->name, check_tbl->name, am->name);
+            error("%s and %s are not mutually exclusive, yet share %s", tbl, check_tbl, am);
         }
     }
     backend_users[am].push_back(tbl);

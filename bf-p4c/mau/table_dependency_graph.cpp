@@ -462,21 +462,13 @@ bool FindDataDependencyGraph::preorder(const IR::MAU::Table *t) {
     // @pragma ignore_table_dependency
     // Note that multiple ignore_table_dependency pragmas may be inserted for a given table and
     // therefore, we cannot use the get_single() accessor for annotations
+    std::vector<IR::ID> annotation;
     ordered_set<cstring> ignore_tables;
-    if (t->match_table) {
-        auto annot = t->match_table->getAnnotations();
-        for (auto ann : annot->annotations) {
-            if (ann->name.name != "ignore_table_dependency") continue;
-            if (ann->expr.size() != 1) continue;
-            auto tbl_name = ann->expr.at(0)->to<IR::StringLiteral>();
-            if (!tbl_name) continue;
-            // Due to P4_14 global name space, a dot is added to the initial table name
-            auto value = tbl_name->value;
-            ignore_tables.insert(value);
-            value = "." + value;
-            ignore_tables.insert(value);
-        }
-    }
+    t->getAnnotation("ignore_table_dependency", annotation);
+    for (auto name : annotation) {
+        // Due to P4_14 global name space, a dot is added to the initial table name
+        ignore_tables.insert(name);
+        ignore_tables.insert("." + name); }
 
     // TODO: add a pass in the beginning of the back end that checks for
     // duplicate table instances and, if found, aborts compilation.

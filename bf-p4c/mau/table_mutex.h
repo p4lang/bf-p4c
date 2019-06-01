@@ -42,11 +42,7 @@ class TablesMutuallyExclusive : public MauInspector {
     std::map<const IR::MAU::Table *, bitvec> table_succ;
     SymBitMatrix                        mutex;
     SymBitMatrix                        action_mutex;
-    bool preorder(const IR::MAU::Table *t) override {
-        assert(!table_ids.count(t));
-        table_ids.emplace(t, table_ids.size());
-        name_to_tables.emplace(t->name, t);
-        return true; }
+
     void postorder(const IR::MAU::Table *tbl) override;
     void postorder(const IR::BFN::Pipe *pipe) override;
     profile_t init_apply(const IR::Node *root) override {
@@ -56,13 +52,17 @@ class TablesMutuallyExclusive : public MauInspector {
         mutex.clear();
         action_mutex.clear();
         name_to_tables.clear();
+        forAllMatching<IR::MAU::Table>(root, [this](const IR::MAU::Table *t) {
+            assert(!table_ids.count(t));
+            table_ids.emplace(t, table_ids.size());
+            name_to_tables.emplace(t->externalName(), t); });
         return rv; }
 
  public:
     bool operator()(const IR::MAU::Table *a, const IR::MAU::Table *b) const;
     bool action(const IR::MAU::Table *a, const IR::MAU::Table *b) const;
 
-    // For gtests
+    // public for gtests
     std::map<cstring, const IR::MAU::Table *> name_to_tables;
 };
 
