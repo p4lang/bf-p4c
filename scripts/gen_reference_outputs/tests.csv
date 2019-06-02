@@ -27,6 +27,7 @@ basic_ipv4,p4-tests/p4-programs/internal_p4_14/basic_ipv4/basic_ipv4.p4,,"--arch
 basic_switching,p4-tests/p4-programs/programs/basic_switching/basic_switching.p4,,"--archive",tofino,p4-14,v1model
 chksum,p4-tests/p4-programs/programs/chksum/chksum.p4,,"--archive",tofino,p4-14,v1model
 switch_msdc_profile,p4-tests/p4_14/switch/p4src/switch.p4,,"-DMSDC_PROFILE -DP4_WRED_DEBUG",tofino,p4-14,v1model
+test_config_11_multi_pipe_multi_parsers,p4-tests/p4_16/compile_only/test_config_11_multi_pipe_multi_parsers.p4,,"--archive",tofino,p4-16,tna
 tofino_tna_32q_2pipe,p4-tests/p4-programs/p4_16_programs/tna_32q_2pipe/tna_32q_2pipe.p4,p4-tests/p4_14/p4-tests/p4_16_programs,"--archive",tofino,p4-16,tna
 tofino_tna_action_profile,p4-tests/p4-programs/p4_16_programs/tna_action_profile/tna_action_profile.p4,p4-tests/p4_14/p4-tests/p4_16_programs,"",tofino,p4-16,tna
 tofino_tna_lpm_match,p4-tests/p4-programs/p4_16_programs/tna_lpm_match/tna_lpm_match.p4,p4-tests/p4_14/p4-tests/p4_16_programs,"--archive",tofino,p4-16,tna
