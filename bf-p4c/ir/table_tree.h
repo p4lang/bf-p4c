@@ -2,6 +2,7 @@
 #define BF_P4C_IR_TABLE_TREE_H_
 
 #include "ir/ir.h"
+#include "lib/hex.h"
 #include "lib/indent.h"
 #include "lib/ordered_map.h"
 #include "lib/safe_vector.h"
@@ -39,8 +40,10 @@ class TableTree {
         const char *sep = "(";
         for (auto &row : tbl->gateway_rows) {
             out << sep;
-            if (row.first) out << *row.first;
-            else out << "1";
+            if (row.first)
+                out << *row.first;
+            else
+                out << "1";
             if (row.second) out << " => " << row.second;
             sep = ", "; }
         out << (*sep == ',' ? ")" : "");

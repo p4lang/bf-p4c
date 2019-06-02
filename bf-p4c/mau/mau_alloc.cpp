@@ -24,7 +24,7 @@ TableAllocPass::TableAllocPass(const BFN_Options& options, PhvInfo& phv, Depende
             new CheckTableNameDuplicate,
             new TableFindSeqDependencies(phv),
             new CheckTableNameDuplicate,
-            new FindDependencyGraph(phv, deps),
+            new FindDependencyGraph(phv, deps, "", "Before Table Placement"),
             &mutex,
             &siaa,
             new DumpPipe("Before TablePlacement"),

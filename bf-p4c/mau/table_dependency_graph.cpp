@@ -11,6 +11,7 @@
 #include "bf-p4c/logging/manifest.h"
 #include "table_injected_deps.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/ir/table_tree.h"
 #include "ir/ir.h"
 #include "lib/cstring.h"
 #include "lib/log.h"
@@ -41,11 +42,30 @@ std::ostream &operator<<(std::ostream &out, const DependencyGraph &dg) {
         out << "    " << source->name << " -- " << dep_types(dg.g[*edges]) << " --> " <<
             target->name << std::endl; }
 
-    out << "MIN STAGE, DEPENDENCE CHAIN" << std::endl;
+
+    out << "MIN STAGE INFO" << std::endl;
+    out << "    Each table also indicates its dependency chain length" << std::endl;
+
+    std::map<int, safe_vector<std::pair<const IR::MAU::Table *, int>>> min_stage_info;
     for (auto &kv : dg.stage_info) {
-        out << "    " << kv.first->name << ": "
-            << kv.second.min_stage << ", " << kv.second.dep_stages
-            << std::endl; }
+        min_stage_info[kv.second.min_stage].emplace_back(kv.first,
+                                                         kv.second.dep_stages_control_anti);
+    }
+
+    for (auto &msi : min_stage_info) {
+        out << " Stage #" << msi.first << std::endl;
+        for (auto val : msi.second) {
+            out << "     " << val.first->name << " " << val.second << std::endl;
+            if (!dg.display_min_edges)
+                continue;
+            if (dg.min_stage_edges.count(val.first) == 0)
+                continue;
+            for (auto edge : dg.min_stage_edges.at(val.first)) {
+                out << "\t- Edge " << dep_types(edge.second) << " " << edge.first->name
+                    << std::endl;
+            }
+        }
+    }
 
     return out;
 }
@@ -227,11 +247,11 @@ class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWrit
             auto upstream_t = upstream_t_pair.first;
             if (upstream_t->match_table
                 && ignoreDep.count(upstream_t->match_table->externalName())) {
-                LOG3("Ignoring dependency from " << upstream_t->name << " to " << table->name);
+                LOG4("\tIgnoring dependency from " << upstream_t->name << " to " << table->name);
                 continue;
             }
             auto edge_pair = self.dg.add_edge(upstream_t, table, dep);
-            LOG3("Add " << dep_types(dep) << " dependency from " << upstream_t->name << " to " <<
+            LOG5("\tAdd " << dep_types(dep) << " dependency from " << upstream_t->name << " to " <<
                  table->name << " because of field " << field->name);
             const IR::MAU::Action *action_use_context = findContext<IR::MAU::Action>();
             self.dg.data_annotations[edge_pair.first][field].first.insert(upstream_t_pair.second);
@@ -251,8 +271,8 @@ class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWrit
                             upstream_t.first->name, container.toString());
                 continue;
             }
-            LOG3("Add container conflict between table " << upstream_t.first->name << " and table "
-                 << table->name << " because of container " << container);
+            LOG5("\tAdd container conflict between table " << upstream_t.first->name
+                 << " and table " << table->name << " because of container " << container);
             self.dg.container_conflicts[upstream_t.first].insert(table);
             self.dg.container_conflicts[table].insert(upstream_t.first);
         }
@@ -272,7 +292,7 @@ class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWrit
                                                            table, red_or_key);
             bool non_first_write_red_or = false;
             if (self.access.count(field_name)) {
-                LOG3("add_dependency(" << field_name << ")");
+                LOG6("\t\tadd_dependency(" << field_name << ")");
                 if (isWrite()) {
                     // Write-after-read dependence.
                     addDeps(self.access[field->name].ixbar_read, DependencyGraph::ANTI, field);
@@ -396,7 +416,7 @@ class FindDataDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteC
             cstring red_or_key;
             auto &a = self.access[field->name];
             if (isWrite()) {
-                LOG3("update_access write " << field->name);
+                LOG6("\t\tupdate_access write " << field->name);
                 a.ixbar_read.clear();
                 a.action_read.clear();
                 a.reduction_or_write.clear();
@@ -413,7 +433,7 @@ class FindDataDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteC
                 }
                 a.write.insert(std::make_pair(table, action_context));
             } else {
-                LOG3("update_access read " << field->name);
+                LOG6("\t\tupdate_access read " << field->name);
                 if (isIxbarRead()) {
                     self.access[field->name].ixbar_read.insert(
                         std::make_pair(table, action_context));
@@ -456,7 +476,7 @@ bool FindDataDependencyGraph::preorder(const IR::MAU::TableSeq * /* seq */) {
 }
 
 bool FindDataDependencyGraph::preorder(const IR::MAU::Table *t) {
-    LOG3("FindDep table " << t->name);
+    LOG5("\tFindDep table " << t->name);
 
     // Gather up the names of tables with which dependencies must be ignored, as defined by
     // @pragma ignore_table_dependency
@@ -664,7 +684,6 @@ void CalculateNextTableProp::postorder(const IR::MAU::Table *tbl) {
     }
 }
 
-
 /**
  * Tofino specific (currently necessary for JBay until placement algorithm changes)
  *
@@ -727,7 +746,6 @@ void FindDependencyGraph::add_logical_deps_from_control_deps(void) {
 
 void FindDependencyGraph::finalize_dependence_graph(void) {
     if (Device::currentDevice() == Device::TOFINO && _add_logical_deps == true) {
-        LOG1("  We have made it here duh");
         add_logical_deps_from_control_deps();
     }
 
@@ -736,11 +754,11 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
         topo_rst = calc_topological_stage();
 
 
-    if (LOGGING(3)) {
+    if (LOGGING(4)) {
         for (size_t i = 0; i < topo_rst.size(); ++i) {
-            LOG3(">>> Stage#" << i << ":");
+            LOG4(">>> Stage#" << i << ":");
             for (const auto& vertex : topo_rst[i])
-                LOG3("Table:  " << vertex << ", " << dg.get_vertex(vertex)->name);
+                LOG4("Table:  " << vertex << ", " << dg.get_vertex(vertex)->name);
         }
     }
 
@@ -796,7 +814,7 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
                             stage_addition = 1;
                     }
                     return std::max(sz, dg.stage_info[later].dep_stages_control + stage_addition);
-            });
+           });
             LOG4("Dep stages of " << dg.stage_info[table].dep_stages <<
                 " for table " << table->name);
             LOG4("Dep stages control of " << dg.stage_info[table].dep_stages_control <<
@@ -909,6 +927,7 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
         }
     }
 
+
     // Compress the stages to take out the addition caused by control edges and anti edges,
     // but the min stage needs to be propagated through these edges
     for (size_t i = 1; i < topo_rst_control_anti.size(); i++) {
@@ -917,28 +936,42 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
             int orig_stage = dg.stage_info[tbl].min_stage;
             int true_min_stage = 0;
             auto in_edges = boost::in_edges(vertex, dg.g);
+
+            std::map<int, safe_vector<DependencyGraph::MinEdgeInfo>> min_edges_of_table;
+
             for (auto edge = in_edges.first; edge != in_edges.second; edge++) {
                 auto src_vertex = boost::source(*edge, dg.g);
                 const auto* src_table = dg.get_vertex(src_vertex);
                 int src_vertex_stage = dg.stage_info[src_table].min_stage;
-                if (dg.g[*edge] == DependencyGraph::ACTION_READ ||
-                    dg.g[*edge] == DependencyGraph::IXBAR_READ ||
-                    dg.g[*edge] == DependencyGraph::OUTPUT) {
-                    true_min_stage = std::max(true_min_stage, src_vertex_stage + 1);
-                } else if (dg.g[*edge] == DependencyGraph::CONTROL ||
-                           dg.g[*edge] == DependencyGraph::REDUCTION_OR_READ ||
-                           dg.g[*edge] == DependencyGraph::REDUCTION_OR_OUTPUT ||
-                           dg.g[*edge] == DependencyGraph::ANTI) {
-                    true_min_stage = std::max(true_min_stage, src_vertex_stage);
+                int min_stage_from_src;
+                DependencyGraph::dependencies_t dep = dg.g[*edge];
+                if (dep == DependencyGraph::ACTION_READ || dep == DependencyGraph::IXBAR_READ ||
+                    dep == DependencyGraph::OUTPUT) {
+                    min_stage_from_src = src_vertex_stage + 1;
+                } else if (dep == DependencyGraph::CONTROL ||
+                           dep == DependencyGraph::REDUCTION_OR_READ ||
+                           dep == DependencyGraph::REDUCTION_OR_OUTPUT ||
+                           dep == DependencyGraph::ANTI) {
+                    min_stage_from_src = src_vertex_stage;
+                } else {
+                    BUG("Unhandled dependency");
+                    min_stage_from_src = src_vertex_stage;
                 }
+                true_min_stage = std::max(true_min_stage, min_stage_from_src);
+                min_edges_of_table[min_stage_from_src].emplace_back(src_table, dep);
                 BUG_CHECK(true_min_stage <= orig_stage, "stage should only decrease");
                 // There shouldn't be any edges within a layer,
                 // so starting from the lowest stage and moving out should be fine
             }
+            dg.min_stage_edges[tbl] = min_edges_of_table[true_min_stage];
             dg.stage_info[tbl].min_stage = true_min_stage;
         }
     }
 
+    if (LOGGING(3))
+        dg.display_min_edges = true;
+
+    LOG2(dg);
 
     dg.vertex_rst = topo_rst_control_anti;
     calc_topological_stage();
@@ -961,18 +994,35 @@ void FindDependencyGraph::verify_dependence_graph() {
             BUG("Ingress table '%s' depends on egress table '%s'.", t1->name, t2->name); }
 }
 
+bool PrintPipe::preorder(const IR::BFN::Pipe *pipe) {
+    LOG2(TableTree("ingress", pipe->thread[INGRESS].mau) <<
+         TableTree("egress", pipe->thread[EGRESS].mau) <<
+         TableTree("ghost", pipe->ghost_thread) );
+    return false;
+}
+
 
 FindDependencyGraph::FindDependencyGraph(const PhvInfo &phv,
                                          DependencyGraph &out,
-                                         cstring dotFileName) :
-    dg(out), dotFile(dotFileName) {
+                                         cstring dotFileName,
+                                         cstring passCont) :
+    dg(out), dotFile(dotFileName), passContext(passCont) {
     addPasses({
         &mutex,
         &ntp,
         new GatherReductionOrReqs(red_info),
         new TableFindInjectedDependencies(phv, dg),
-        new FindDataDependencyGraph(phv, dg, red_info, mutex)
+        new FindDataDependencyGraph(phv, dg, red_info, mutex),
+        new PrintPipe
     });
+}
+
+Visitor::profile_t FindDependencyGraph::init_apply(const IR::Node *node) {
+    auto rv = PassManager::init_apply(node);
+    dg.clear();
+    if (!passContext.isNullOrEmpty())
+        LOG1("FindDependencyGraph : " << passContext);
+    return rv;
 }
 
 void FindDependencyGraph::end_apply(const IR::Node *root) {

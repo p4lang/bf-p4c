@@ -127,7 +127,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new CollectPhvInfo(phv),
         new InstructionSelection(options, phv),
         new DumpPipe("After InstructionSelection"),
-        new FindDependencyGraph(phv, deps, "program_graph"),
+        new FindDependencyGraph(phv, deps, "program_graph", "After Instruction Selection"),
         options.decaf ? new DeparserCopyOpt(phv, uses, defuse, deps) : nullptr,
         options.privatization ? new Privatization(phv, deps, doNotPrivatize, defuse) : nullptr,
                                   // For read-only fields, generate private TPHV and PHV copies.
@@ -215,8 +215,8 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
 
         new CheckTableNameDuplicate,
         new CheckUnimplementedFeatures(options.allowUnimplemented),
-
-        new FindDependencyGraph(phv, deps),  // must be called right before characterize power
+        // must be called right before characterize power
+        new FindDependencyGraph(phv, deps, "", "After Table Placement"),
 
         new CharacterizePower(deps,
 #if BAREFOOT_INTERNAL

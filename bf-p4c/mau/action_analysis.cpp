@@ -932,7 +932,7 @@ bool ActionAnalysis::verify_P4_action_with_phv(cstring action_name) {
         cont_action.verbose = verbose;
 
         if (verbose)
-            LOG2("Action over container " << container.toString() << ": " << cont_action);
+            LOG2("  Action over container " << container.toString() << ": " << cont_action);
         cstring instr_name;
         bool same_action = true;
         BUG_CHECK(cont_action.field_actions.size() > 0, "Somehow a container action has no "

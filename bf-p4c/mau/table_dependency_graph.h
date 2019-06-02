@@ -145,7 +145,12 @@ struct DependencyGraph {
         dep_stages_control,
         dep_stages_control_anti;
     };
+
     std::map<const IR::MAU::Table*, StageInfo> stage_info;
+
+    using MinEdgeInfo = std::pair<const IR::MAU::Table *, dependencies_t>;
+    bool display_min_edges = false;
+    std::map<const IR::MAU::Table *, safe_vector<MinEdgeInfo>> min_stage_edges;
 
     /// The largest value of min_stage encountered when determining min_stage values for table,
     /// across all tables in the program. The minimum number of stages required by the program is
@@ -169,6 +174,8 @@ struct DependencyGraph {
         dependency_map.clear();
         labelToVertex.clear();
         stage_info.clear();
+        min_stage_edges.clear();
+        display_min_edges = false;
     }
 
     /// @returns the length of the dependency based critical path for the program.
@@ -490,6 +497,13 @@ class CalculateNextTableProp : public MauInspector {
     CalculateNextTableProp() { visitDagOnce = false; }
 };
 
+class PrintPipe : public MauInspector {
+    bool preorder(const IR::BFN::Pipe *p) override;
+
+ public:
+    PrintPipe() { }
+};
+
 class FindDependencyGraph : public PassManager {
     bool _add_logical_deps = true;
     std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>>
@@ -501,24 +515,21 @@ class FindDependencyGraph : public PassManager {
     void add_logical_deps_from_control_deps(void);
     void finalize_dependence_graph(void);
 
-    Visitor::profile_t init_apply(const IR::Node *node) override {
-        auto rv = PassManager::init_apply(node);
-        dg.clear();
-        return rv;
-    }
-
+    Visitor::profile_t init_apply(const IR::Node *node) override;
     TablesMutuallyExclusive mutex;
     DependencyGraph &dg;
     ReductionOrInfo red_info;
     CalculateNextTableProp ntp;
     cstring dotFile;
+    cstring passContext;
 
 
     void end_apply(const IR::Node *root) override;
 
  public:
     void set_add_logical_deps(bool add) { _add_logical_deps = add; }
-    FindDependencyGraph(const PhvInfo &, DependencyGraph &out, cstring dotFileName = "");
+    FindDependencyGraph(const PhvInfo &, DependencyGraph &out, cstring dotFileName = "",
+        cstring passContext = "");
 };
 
 #endif /* BF_P4C_MAU_TABLE_DEPENDENCY_GRAPH_H_ */
