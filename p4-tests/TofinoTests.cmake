@@ -165,25 +165,24 @@ p4c_add_ptf_test_with_ptfdir (
     "${testExtraArgs} --p4runtime-force-std-externs -arch tna"
     ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/digest.ptf)
 
-# newer version of fabric; the old one (above) can be removed once we reach
-# feature parity.
-set (ONOS_FABRIC_NEW_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos-new/pipelines/fabric/src/main/resources/fabric-tofino.p4)
+set (ONOS_FABRIC_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/bf-onos/pipelines/fabric/src/main/resources/fabric-tofino.p4)
+set (ONOS_FABRIC_PTF ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/onf_fabric/tests/onf)
 p4c_add_ptf_test_with_ptfdir_and_spec (
-    "tofino" fabric-new ${ONOS_FABRIC_NEW_P4}
+    "tofino" fabric ${ONOS_FABRIC_P4}
     "${testExtraArgs} "
-    ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos-ptf/fabric-new.ptf "all ^spgw ^int")
+    ${ONOS_FABRIC_PTF} "all ^spgw ^int")
 p4c_add_ptf_test_with_ptfdir_and_spec (
-    "tofino" fabric-new-DWITH_SPGW ${ONOS_FABRIC_NEW_P4}
+    "tofino" fabric-DWITH_SPGW ${ONOS_FABRIC_P4}
     "${testExtraArgs} -DWITH_SPGW"
-    ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos-ptf/fabric-new.ptf "all ^int")
+    ${ONOS_FABRIC_PTF} "all ^int")
 p4c_add_ptf_test_with_ptfdir_and_spec (
-    "tofino" fabric-new-DWITH_INT_TRANSIT ${ONOS_FABRIC_NEW_P4}
+    "tofino" fabric-DWITH_INT_TRANSIT ${ONOS_FABRIC_P4}
     "${testExtraArgs} -DWITH_INT_TRANSIT"
-    ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos-ptf/fabric-new.ptf "all ^spgw")
+    ${ONOS_FABRIC_PTF} "all ^spgw")
 p4c_add_ptf_test_with_ptfdir_and_spec (
-    "tofino" fabric-new-DWITH_SPGW-DWITH_INT_TRANSIT ${ONOS_FABRIC_NEW_P4}
+    "tofino" fabric-DWITH_SPGW-DWITH_INT_TRANSIT ${ONOS_FABRIC_P4}
     "${testExtraArgs} -DWITH_SPGW -DWITH_INT_TRANSIT"
-    ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos-ptf/fabric-new.ptf "all")
+    ${ONOS_FABRIC_PTF} "all")
 
 file(RELATIVE_PATH tofino32q-3pipe_path ${P4C_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/tofino32q-3pipe/sfc.p4)
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE

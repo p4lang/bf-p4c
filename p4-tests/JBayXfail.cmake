@@ -278,10 +278,10 @@ p4c_add_xfail_reason("tofino2"
 # P4C-1645
 p4c_add_xfail_reason("tofino2"
   "Expected packet was not received"
-  fabric-new
-  fabric-new-DWITH_SPGW
-  fabric-new-DWITH_INT_TRANSIT
-  fabric-new-DWITH_SPGW-DWITH_INT_TRANSIT
+  fabric
+  fabric-DWITH_SPGW
+  fabric-DWITH_INT_TRANSIT
+  fabric-DWITH_SPGW-DWITH_INT_TRANSIT
 )
 
 # P4C-1665

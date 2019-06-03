@@ -57,23 +57,24 @@ p4c_add_ptf_test_with_ptfdir (
     "tofino2" "p4c_1585" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1585/p4c_1585.p4"
     "${testExtraArgs} -target tofino2 -arch t2na -bfrt -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1585")
 
-set (ONOS_FABRIC_NEW_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos-new/pipelines/fabric/src/main/resources/fabric-tofino.p4)
+set (ONOS_FABRIC_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/bf-onos/pipelines/fabric/src/main/resources/fabric-tofino.p4)
+set (ONOS_FABRIC_PTF ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/onf_fabric/tests/onf)
 p4c_add_ptf_test_with_ptfdir_and_spec (
-    "tofino2" fabric-new ${ONOS_FABRIC_NEW_P4}
-    "${testExtraArgs} -tofino2"
-    ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos-ptf/fabric-new.ptf "all ^spgw ^int")
+    "tofino2" fabric ${ONOS_FABRIC_P4}
+    "${testExtraArgs} "
+    ${ONOS_FABRIC_PTF} "all ^spgw ^int")
 p4c_add_ptf_test_with_ptfdir_and_spec (
-    "tofino2" fabric-new-DWITH_SPGW ${ONOS_FABRIC_NEW_P4}
-    "${testExtraArgs} -tofino2 -DWITH_SPGW"
-    ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos-ptf/fabric-new.ptf "all ^int")
+    "tofino2" fabric-DWITH_SPGW ${ONOS_FABRIC_P4}
+    "${testExtraArgs} -DWITH_SPGW"
+    ${ONOS_FABRIC_PTF} "all ^int")
 p4c_add_ptf_test_with_ptfdir_and_spec (
-    "tofino2" fabric-new-DWITH_INT_TRANSIT ${ONOS_FABRIC_NEW_P4}
-    "${testExtraArgs} -tofino2 -DWITH_INT_TRANSIT"
-    ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos-ptf/fabric-new.ptf "all ^spgw")
+    "tofino2" fabric-DWITH_INT_TRANSIT ${ONOS_FABRIC_P4}
+    "${testExtraArgs} -DWITH_INT_TRANSIT"
+    ${ONOS_FABRIC_PTF} "all ^spgw")
 p4c_add_ptf_test_with_ptfdir_and_spec (
-    "tofino2" fabric-new-DWITH_SPGW-DWITH_INT_TRANSIT ${ONOS_FABRIC_NEW_P4}
-    "${testExtraArgs} -tofino2 -DWITH_SPGW -DWITH_INT_TRANSIT"
-    ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos-ptf/fabric-new.ptf "all")
+    "tofino2" fabric-DWITH_SPGW-DWITH_INT_TRANSIT ${ONOS_FABRIC_P4}
+    "${testExtraArgs} -DWITH_SPGW -DWITH_INT_TRANSIT"
+    ${ONOS_FABRIC_PTF} "all")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" tor.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/google-tor/p4/spec/tor.p4
