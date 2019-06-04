@@ -1,4 +1,5 @@
 #include "bf-p4c/mau/ixbar_realign.h"
+#include "bf-p4c/mau/table_summary.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "lib/hex.h"
 
@@ -22,7 +23,9 @@ class IXBarVerify::GetCurrentUse : public MauInspector {
  *  and would have to be expanded, as TCAM bytes don't have to be at their alignment
  */
 void IXBarVerify::verify_format(const IXBar::Use &use) {
+    BUG_CHECK(currentTable, "No table context found for input crossbar use");
     for (auto &byte : use.use) {
+        LOG4("Byte: " << byte);
         bitvec byte_use;
         PHV::Container container;
         size_t mod_4_offset = -1;
@@ -31,7 +34,8 @@ void IXBarVerify::verify_format(const IXBar::Use &use) {
             auto *field = phv.field(fi.field);
             bool byte_found = false;
             bool single_byte = true;
-            field->foreach_byte([&](const PHV::Field::alloc_slice &alloc) {
+            PHV::FieldUse use(PHV::FieldUse::READ);
+            field->foreach_byte(currentTable, &use, [&](const PHV::Field::alloc_slice &alloc) {
                 if (fi.lo < alloc.field_bit || fi.hi > alloc.field_hi())
                     return;
 
@@ -58,14 +62,16 @@ void IXBarVerify::verify_format(const IXBar::Use &use) {
         }
 
         if (!use.ternary) {
-            if ((byte.loc.byte % (container.size() / 8)) != mod_4_offset)
+            if ((byte.loc.byte % (container.size() / 8)) != mod_4_offset) {
                 throw IXBar::failure(-1, byte.loc.group);
+            }
         } else {
             size_t byte_offset = byte.loc.group * IXBar::TERNARY_BYTES_PER_GROUP;
             byte_offset += (byte.loc.group + 1) / 2;
             byte_offset += byte.loc.byte;
-            if ((byte_offset % (container.size() / 8)) != mod_4_offset)
+            if ((byte_offset % (container.size() / 8)) != mod_4_offset) {
                 throw IXBar::failure(-1, byte.loc.group);
+            }
         }
     }
 }
@@ -73,11 +79,13 @@ void IXBarVerify::verify_format(const IXBar::Use &use) {
 Visitor::profile_t IXBarVerify::init_apply(const IR::Node *root) {
     auto rv = MauModifier::init_apply(root);
     stage.clear();
+    currentTable = nullptr;
     root->apply(GetCurrentUse(*this));
     return rv;
 }
 
 void IXBarVerify::postorder(IR::MAU::Table *tbl) {
+    currentTable = tbl;
     verify_format(tbl->resources->gateway_ixbar);
     verify_format(tbl->resources->match_ixbar);
     verify_format(tbl->resources->selector_ixbar);

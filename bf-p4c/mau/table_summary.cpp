@@ -31,6 +31,7 @@ Visitor::profile_t TableSummary::init_apply(const IR::Node *root) {
     egressDone = false;
     placementFailure = false;
     ++numInvoked[pipe_id];
+    for (auto gress : { INGRESS, EGRESS }) max_stages[gress] = -1;
     LOG1("Table allocation done " << numInvoked[pipe_id] << " time(s)");
     return rv;
 }
@@ -78,6 +79,11 @@ cstring TableSummary::getTableName(const IR::MAU::Table* tbl) {
         BUG_CHECK(tbl->match_table->externalName(), "Table %1% does not have a P4 name", tbl->name);
         return tbl->match_table->externalName();
     } else {
+        // For split gateways, refer to the original name.
+        if (tbl->name.endsWith("$split")) {
+            cstring newName = tbl->name.before(tbl->name.find('$'));
+            return newName;
+        }
         // For gateways, return the compiler generated name
         return tbl->name; }
 }
@@ -88,10 +94,15 @@ void TableSummary::throwBacktrackException() {
     for (auto entry : order) {
         int stage = static_cast<int>(entry.first/NUM_LOGICAL_TABLES_PER_STAGE);
         maxStage = (maxStage < stage) ? stage : maxStage;
+        if (max_stages[entry.second->gress] < stage)
+            max_stages[entry.second->gress] = stage;
         tableAlloc[tableNames[entry.second->name]].insert(stage); }
     // maxStage is counted from 0 to n-1
     ++maxStage;
+    for (auto gress : { INGRESS, EGRESS }) max_stages[gress] += 1;
     LOG1("Number of stages in table allocation: " << maxStage);
+    for (auto gress : { INGRESS, EGRESS })
+        LOG1("  Number of stages for " << gress << " table allocation: " << max_stages[gress]);
     LOG1("Critical path length through the table dependency graph: " << criticalPathLength);
 
     for (auto entry : mergedGateways) {

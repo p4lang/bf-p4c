@@ -343,7 +343,9 @@ class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWrit
                 }
             }
             if (isWrite() && !non_first_write_red_or && self.phv.alloc_done()) {
-                field->foreach_alloc([&](const PHV::Field::alloc_slice &sl) {
+                /// FIXME(cc): Do we need to restrict the context here, or is it always the
+                /// whole pipeline?
+                field->foreach_alloc(nullptr, nullptr, [&](const PHV::Field::alloc_slice &sl) {
                     bitvec range(sl.container_bit, sl.width);
                     cont_writes[sl.container] |= range;
                 });
@@ -448,7 +450,9 @@ class FindDataDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteC
                 }
             }
             if (isWrite() && self.phv.alloc_done()) {
-                field->foreach_alloc([&](const PHV::Field::alloc_slice &sl) {
+                /// FIXME(cc): Do we need to restrict the context here, or is it always the
+                /// whole pipeline?
+                field->foreach_alloc(nullptr, nullptr, [&](const PHV::Field::alloc_slice &sl) {
                     bitvec range(sl.container_bit, sl.width);
                     cont_writes[sl.container] |= range;
                 });

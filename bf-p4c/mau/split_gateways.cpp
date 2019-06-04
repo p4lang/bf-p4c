@@ -79,7 +79,7 @@ const IR::MAU::Table *SplitComplexGateways::preorder(IR::MAU::Table *tbl) {
         tbl->apply(collect);
         if (collect.compute_offsets()) {
             LOG1("Splitting " << i << " rows into " << tbl->name);
-            auto rest = tbl->clone_rename("-split");
+            auto rest = tbl->clone_rename("$split");
             rest->gateway_rows.erase(rest->gateway_rows.begin(), rest->gateway_rows.begin() + i);
             tbl->gateway_rows.erase(tbl->gateway_rows.begin() + i, tbl->gateway_rows.end());
             tbl->gateway_rows.emplace_back(nullptr, "$gwcont");

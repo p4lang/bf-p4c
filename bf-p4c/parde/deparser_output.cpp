@@ -93,7 +93,8 @@ struct OutputDictionary : public Inspector {
             out << "(" << range.lo << ")";
         out << std::endl;
 
-        auto containers = clot.get_overwrite_containers(emit->clot, phv);
+        auto containers = clot.get_overwrite_containers(emit->clot, phv,
+                findContext<IR::BFN::Deparser>());
 
         for (auto entry : containers)
             out << indent << entry.first << " : " << entry.second << std::endl;

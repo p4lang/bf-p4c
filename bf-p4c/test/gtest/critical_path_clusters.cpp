@@ -10,6 +10,7 @@
 #include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/common/elim_unused.h"
+#include "bf-p4c/common/map_tables_to_actions.h"
 #include "bf-p4c/mau/instruction_selection.h"
 #include "bf-p4c/phv/action_phv_constraints.h"
 #include "bf-p4c/phv/phv_fields.h"
@@ -108,6 +109,7 @@ const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe,
                                    MauBacktracker& table_alloc,
                                    DependencyGraph& deps,
                                    PackConflicts& conflicts,
+                                   MapTablesToActions& tableActionsMap,
                                    ActionPhvConstraints& actions,
                                    CalcParserCriticalPath& parser_critical_path) {
     PHV::Pragmas* pragmas = new PHV::Pragmas(phv);
@@ -125,6 +127,7 @@ const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe,
         new FindDependencyGraph(phv, deps),
         &defuse,
         &conflicts,
+        &tableActionsMap,
         &actions,
         new PHV_Field_Operations(phv),
         &clustering,
@@ -192,7 +195,8 @@ TEST_F(CriticalPathClustersTest, DISABLED_Basic) {
     TablesMutuallyExclusive table_mutex;
     ActionMutuallyExclusive action_mutex;
     PackConflicts conflicts(phv, deps, table_mutex, table_alloc, action_mutex);
-    ActionPhvConstraints actions(phv, uses, conflicts);
+    MapTablesToActions tableActionsMap;
+    ActionPhvConstraints actions(phv, uses, conflicts, tableActionsMap, deps);
     CalcParserCriticalPath parser_critical_path(phv);
     FieldDefUse defuse(phv);
     Clustering clustering(phv, uses, conflicts, actions);
@@ -201,7 +205,7 @@ TEST_F(CriticalPathClustersTest, DISABLED_Basic) {
                                        defuse,
                                        clustering,
                                        table_alloc,
-                                       deps, conflicts, actions,
+                                       deps, conflicts, tableActionsMap, actions,
                                        parser_critical_path);
 
     auto *cluster_cp = new CalcCriticalPathClusters(parser_critical_path);

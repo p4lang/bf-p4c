@@ -1325,17 +1325,20 @@ int need_align_flags[4][IXBar::REPEATING_CONSTRAINT_SECT] = {
 
 /* Add the pre-allocated bytes to the Use structure */
 static void add_use(IXBar::ContByteConversion &map_alloc, const PHV::Field *field,
-                    const PhvInfo &phv, boost::optional<cstring> aliasSourceName,
+                    const PhvInfo &phv, const IR::BFN::Unit *ctxt,
+                    boost::optional<cstring> aliasSourceName,
                     const le_bitrange *bits = nullptr, int flags = 0,
                     IXBar::byte_type_t byte_type = IXBar::NO_BYTE_TYPE,
                     unsigned extra_align = 0, int range_index = 0) {
     bool ok = false;
     int index = 0;
+    PHV::FieldUse use(PHV::FieldUse::READ);
     // FIXME: This will currently not work before PHV allocation, because the foreach_byte
     // over alloc_slices only works if the slices have been allocated, according to Cole.
     // If we want to move TablePlacement before PHV allocation in the future, this will have
     // to change
-    field->foreach_byte(bits, [&](const PHV::Field::alloc_slice &sl) {
+    BUG_CHECK(ctxt, "Context not declared");
+    field->foreach_byte(bits, ctxt, &use, [&](const PHV::Field::alloc_slice &sl) {
         ok = true;  // FIXME -- better sanity check?
         // FIXME: This will not work if moved before PHV allocation
         IXBar::FieldInfo fi(field->name, sl.field_bit, sl.field_hi(), sl.container_bit % 8,
@@ -1439,13 +1442,13 @@ class IXBar::FieldManagement : public Inspector {
     ContByteConversion *map_alloc;
     safe_vector<const IR::Expression *> &field_list_order;
     std::map<cstring, bitvec> *fields_needed;
-    cstring name;
     const PhvInfo &phv;
     KeyInfo &ki;
+    const IR::MAU::Table* tbl = nullptr;
 
     bool preorder(const IR::ListExpression *) override {
         if (!ki.hash_dist)
-            BUG("A field list is somehow contained within the reads in table %s", name);
+            BUG("A field list is somehow contained within the reads in table %s", tbl->name);
         return true; }
     bool preorder(const IR::Mask *) override {
         BUG("Masks should have been converted to Slices before input xbar allocation");
@@ -1505,7 +1508,8 @@ class IXBar::FieldManagement : public Inspector {
             (*fields_needed)[finfo->name] = field_bits;
         }
         boost::optional<cstring> aliasSourceName = phv.get_alias_name(e);
-        add_use(*map_alloc, finfo, phv, aliasSourceName, &bits, 0, byte_type, 0, ki.range_index);
+        add_use(*map_alloc, finfo, phv, tbl, aliasSourceName, &bits, 0, byte_type, 0,
+                ki.range_index);
         if (byte_type == RANGE) {
             ki.range_index++;
         }
@@ -1547,7 +1551,7 @@ class IXBar::FieldManagement : public Inspector {
                     it--;
                 } else {
                     ::error("Overlapping field %s in table %s not supported with the hashing "
-                            "algorithm", field->name, name);
+                            "algorithm", field->name, tbl->name);
                 }
             }
             field_list_check[field->name] |= used_bits;
@@ -1558,9 +1562,9 @@ class IXBar::FieldManagement : public Inspector {
     FieldManagement(ContByteConversion *map_alloc,
                     safe_vector<const IR::Expression *> &field_list_order,
                     const IR::Expression *field, std::map<cstring, bitvec> *fields_needed,
-                    cstring name, const PhvInfo &phv, KeyInfo &ki)
+                    const PhvInfo &phv, KeyInfo &ki, const IR::MAU::Table* t)
     : map_alloc(map_alloc), field_list_order(field_list_order), fields_needed(fields_needed),
-      name(name), phv(phv), ki(ki) { field->apply(*this); }
+      phv(phv), ki(ki), tbl(t) { field->apply(*this); }
 };
 
 /** In order to prevent some overlay bugs by the driver, this guarantees that if a table matches
@@ -1641,7 +1645,7 @@ Visitor::profile_t IXBar::FindSaluSources::init_apply(const IR::Node *root) {
         if (!read->for_dleft())
             continue;
         FieldManagement(&map_alloc, field_list_order, read->expr, &fields_needed,
-                        tbl->name, phv, ki);
+                        phv, ki, tbl);
     }
     return rv;
 }
@@ -1660,7 +1664,7 @@ bool IXBar::FindSaluSources::preorder(const IR::Expression *e) {
     le_bitrange bits;
     KeyInfo ki;
     if (auto *finfo = phv.field(e, &bits)) {
-        FieldManagement(&map_alloc, field_list_order, e, &fields_needed, tbl->name, phv, ki);
+        FieldManagement(&map_alloc, field_list_order, e, &fields_needed, phv, ki, tbl);
         if (!findContext<IR::MAU::IXBarExpression>()) {
             phv_sources[finfo][bits] = e;
             collapse_contained(phv_sources[finfo]);
@@ -1713,7 +1717,7 @@ bool IXBar::allocMatch(bool ternary, const IR::MAU::Table *tbl,
         if (!ixbar_read->for_match())
             continue;
         FieldManagement(&map_alloc, alloc.field_list_order, ixbar_read, &fields_needed,
-                        tbl->name, phv, ki);
+                        phv, ki, tbl);
     }
 
     create_alloc(map_alloc, alloc);
@@ -1855,7 +1859,7 @@ bool IXBar::allocProxyHashKey(const IR::MAU::Table *tbl, const PhvInfo &phv,
         if (!ixbar_read->for_match())
             continue;
         FieldManagement(&map_alloc, alloc.field_list_order, ixbar_read, &fields_needed,
-                        tbl->name, phv, ki);
+                        phv, ki, tbl);
     }
 
     create_alloc(map_alloc, alloc);
@@ -2232,7 +2236,7 @@ bool IXBar::allocPartition(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &m
         if (!ixbar_read->for_match())
             continue;
         FieldManagement(&map_alloc, alloc.field_list_order, ixbar_read, &fields_needed,
-                        tbl->name, phv, ki);
+                        phv, ki, tbl);
     }
     create_alloc(map_alloc, alloc);
     BUG_CHECK(alloc.use.size() > 0, "No partition index found for %1%", tbl);
@@ -2334,11 +2338,11 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
             aliasSourceName = collect.info_to_uses[&info.second];
         }
         if (aliasSourceName)
-            add_use(map_alloc, info.first.field(), phv, aliasSourceName, &info.first.range(), flags,
-                    NO_BYTE_TYPE);
+            add_use(map_alloc, info.first.field(), phv, tbl,
+                    aliasSourceName, &info.first.range(), flags, NO_BYTE_TYPE);
         else
-            add_use(map_alloc, info.first.field(), phv, boost::none, &info.first.range(), flags,
-                    NO_BYTE_TYPE);
+            add_use(map_alloc, info.first.field(), phv, tbl,
+                    boost::none, &info.first.range(), flags, NO_BYTE_TYPE);
     }
     safe_vector<IXBar::Use::Byte *> xbar_alloced;
 
@@ -2517,7 +2521,7 @@ bool IXBar::allocSelector(const IR::MAU::Selector *as, const IR::MAU::Table *tbl
     for (auto ixbar_read : tbl->match_key) {
         if (!ixbar_read->for_selection()) continue;
         FieldManagement(&map_alloc, alloc.field_list_order, ixbar_read->expr, &fields_needed,
-                        tbl->name, phv, ki);
+                        phv, ki, tbl);
     }
     create_alloc(map_alloc, alloc);
 
@@ -2662,7 +2666,7 @@ bool IXBar::allocMeter(const IR::MAU::Meter *mtr, const IR::MAU::Table *tbl, con
               mtr->name);
     if (!fields_needed.count(finfo->name)) {
         fields_needed.insert(finfo->name);
-        add_use(map_alloc, finfo, phv, aliasSourceName, &bits, 0, IXBar::NO_BYTE_TYPE);
+        add_use(map_alloc, finfo, phv, tbl, aliasSourceName, &bits, 0, IXBar::NO_BYTE_TYPE);
     }
     create_alloc(map_alloc, alloc);
 
@@ -3069,7 +3073,6 @@ bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu, const IR::MAU::Table
  *   tries to fit this into the hash matrix
  */
 
-
 bool IXBar::isHashDistAddress(HashDistDest_t dest) const {
     return dest == HD_STATS_ADR || dest == HD_METER_ADR || dest == HD_ACTIONDATA_ADR;
 }
@@ -3168,7 +3171,8 @@ bool IXBar::allocHashDistWideAddress(bitvec post_expand_bits, bitvec possible_sh
  */
 void IXBar::buildHashDistIRUse(HashDistAllocPostExpand &alloc_req, HashDistUse &use,
         IXBar::Use &all_reqs, const PhvInfo &phv, int hash_group, bitvec hash_bits_used,
-        bitvec total_post_expand_bits, unsigned hash_table_input, cstring name) {
+        bitvec total_post_expand_bits, unsigned hash_table_input,
+        const IR::MAU::Table* tbl, cstring name) {
     use.ir_allocations.emplace_back();
     auto &rv = use.ir_allocations.back();
     ContByteConversion               map_alloc;
@@ -3180,7 +3184,7 @@ void IXBar::buildHashDistIRUse(HashDistAllocPostExpand &alloc_req, HashDistUse &
 
     for (auto input : alloc_req.func->inputs) {
         safe_vector<const IR::Expression *> flo;
-        FieldManagement(&map_alloc, flo, input, &fields_needed, "$hash_dist", phv, ki);
+        FieldManagement(&map_alloc, flo, input, &fields_needed, phv, ki, tbl);
     }
 
     rv.use.field_list_order.insert(rv.use.field_list_order.end(), alloc_req.func->inputs.begin(),
@@ -3338,7 +3342,7 @@ void IXBar::lockInHashDistArrays(safe_vector<Use::Byte *> *alloced, int hash_gro
  * allocation as well as the per IR allocation
  */
 bool IXBar::allocHashDist(safe_vector<HashDistAllocPostExpand> &alloc_reqs, HashDistUse &use,
-        const PhvInfo &phv, cstring name, bool second_try) {
+        const PhvInfo &phv, cstring name, const IR::MAU::Table* tbl, bool second_try) {
     IXBar::Use all_reqs;
     ContByteConversion               map_alloc;
     std::map<cstring, bitvec>        fields_needed;
@@ -3358,7 +3362,7 @@ bool IXBar::allocHashDist(safe_vector<HashDistAllocPostExpand> &alloc_reqs, Hash
     for (auto alloc_req : alloc_reqs) {
         for (auto input : alloc_req.func->inputs) {
             safe_vector<const IR::Expression *> flo;
-            FieldManagement(&map_alloc, flo, input, &fields_needed, name, phv, ki);
+            FieldManagement(&map_alloc, flo, input, &fields_needed, phv, ki, tbl);
         }
         bits_in_use.setrange(alloc_req.bits_in_use.lo, alloc_req.bits_in_use.size());
         if (post_expand_shift == -1) {
@@ -3433,7 +3437,7 @@ bool IXBar::allocHashDist(safe_vector<HashDistAllocPostExpand> &alloc_reqs, Hash
     int asm_unit = three_unit_section * 3 + unit;
     for (auto &alloc_req : alloc_reqs) {
         buildHashDistIRUse(alloc_req, use, all_reqs, phv, hash_group, hash_bits_used,
-            bits_in_use, hash_table_input, name);
+            bits_in_use, hash_table_input, tbl, name);
     }
     lockInHashDistArrays(&alloced, hash_group, hash_table_input, asm_unit, hash_bits_used, dest,
                          name);
@@ -3768,8 +3772,8 @@ bool IXBar::XBarHashDist::allocate_hash_dist() {
             continue;
         HashDistUse hd_alloc;
         hd_alloc.used_by = tbl->name;
-        if (!self.allocHashDist(dest_reqs, hd_alloc, phv, tbl->name + "$hash_dist", false) &&
-            !self.allocHashDist(dest_reqs, hd_alloc, phv, tbl->name + "$hash_dist", true)) {
+        if (!self.allocHashDist(dest_reqs, hd_alloc, phv, tbl->name + "$hash_dist", tbl, false) &&
+            !self.allocHashDist(dest_reqs, hd_alloc, phv, tbl->name + "$hash_dist", tbl, true)) {
             return false;
         }
         resources->hash_dists.emplace_back(hd_alloc);

@@ -14,6 +14,7 @@ namespace BFN {
 class CollectIXBarInfo : public MauInspector {
     const PhvInfo &phv;
     std::map<int, safe_vector<IXBar::Use::Byte>> _stage;
+    std::map<IXBar::Use::Byte, const IR::MAU::Table*> _byteToTables;
 
     profile_t init_apply(const IR::Node *) override;
 

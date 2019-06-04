@@ -346,23 +346,24 @@ void ActionAnalysis::postorder(const IR::MAU::Instruction *instr) {
         le_bitrange bits;
 
         auto *field = phv.field(field_action.write.expr, &bits);
+        PHV::FieldUse use(PHV::FieldUse::WRITE);
         int split_count = 0;
-        field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice &) {
+        field->foreach_alloc(bits, tbl, &use, [&](const PHV::Field::alloc_slice&) {
             split_count++;
         });
 
         bool split = true;
-        if (split_count == 1)
-            split = false;
-        if (split_count == 0)
-            ERROR("PHV not allocated for this field");
+        if (split_count == 1) split = false;
+        if (split_count == 0) {
+            cstring errorMessage = "PHV not allocated for field " + field->name;
+            ERROR(errorMessage);
+        }
 
-
-        field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice &alloc) {
+        field->foreach_alloc(bits, tbl, &use,
+                [&](const PHV::Field::alloc_slice &alloc) {
             auto container = alloc.container;
             if (container_actions_map->find(container) == container_actions_map->end()) {
-                ContainerAction cont_action;
-                cont_action.name = instr->name;
+                ContainerAction cont_action(instr->name, tbl);
                 container_actions_map->emplace(container, cont_action);
             }
             if (!split) {
@@ -521,8 +522,8 @@ bool ActionAnalysis::verify_P4_action_without_phv(cstring action_name) {
   * particular instruction. The function will return false if the total_write_bits member of
   * @cont_action cannot be set.
   */
-bool ActionAnalysis::initialize_invalidate_alignment(const ActionParam &write, ContainerAction
-        &cont_action) {
+bool ActionAnalysis::initialize_invalidate_alignment(const ActionParam &write,
+                                                     ContainerAction &cont_action) {
     BUG_CHECK(cont_action.name == "invalidate", "Expected invalidate instruction");
     le_bitrange range;
     auto *field = phv.field(write.expr, &range);
@@ -530,7 +531,9 @@ bool ActionAnalysis::initialize_invalidate_alignment(const ActionParam &write, C
 
     int count = 0;
     le_bitrange write_bits;
-    field->foreach_alloc(range, [&](const PHV::Field::alloc_slice &alloc) {
+    PHV::FieldUse use(PHV::FieldUse::WRITE);
+    field->foreach_alloc(range, cont_action.table_context, &use,
+                         [&](const PHV::Field::alloc_slice &alloc) {
         count++;
         BUG_CHECK(alloc.container_bit >= 0, "Invalid negative container bit");
         write_bits = alloc.container_bits();
@@ -553,9 +556,8 @@ bool ActionAnalysis::initialize_invalidate_alignment(const ActionParam &write, C
  *  reads.  This may be too tight, but is a good initial warning check.
  */
 bool ActionAnalysis::initialize_alignment(const ActionParam &write, const ActionParam &read,
-    ContainerAction &cont_action, cstring &error_message, PHV::Container container,
-    cstring action_name) {
-
+                                          ContainerAction &cont_action, cstring &error_message,
+                                          PHV::Container container, cstring action_name) {
     if (cont_action.is_shift() && read.type == ActionParam::CONSTANT)
         return true;
 
@@ -576,7 +578,9 @@ bool ActionAnalysis::initialize_alignment(const ActionParam &write, const Action
 
     int count = 0;
     le_bitrange write_bits;
-    field->foreach_alloc(range, [&](const PHV::Field::alloc_slice &alloc) {
+    PHV::FieldUse use(PHV::FieldUse::WRITE);
+    field->foreach_alloc(range, cont_action.table_context, &use,
+                         [&](const PHV::Field::alloc_slice &alloc) {
         count++;
         BUG_CHECK(alloc.container_bit >= 0, "Invalid negative container bit");
         write_bits = alloc.container_bits();
@@ -617,7 +621,9 @@ bool ActionAnalysis::init_phv_alignment(const ActionParam &read, ContainerAction
     BUG_CHECK(field, "PHV read has no allocation");
 
     int count = 0;
-    field->foreach_alloc(range, [&](const PHV::Field::alloc_slice &alloc) {
+    PHV::FieldUse use(PHV::FieldUse::READ);
+    field->foreach_alloc(range, cont_action.table_context, &use,
+                         [&](const PHV::Field::alloc_slice &alloc) {
         count++;
         BUG_CHECK(alloc.container_bit >= 0, "Invalid negative container bit");
     });
@@ -628,8 +634,8 @@ bool ActionAnalysis::init_phv_alignment(const ActionParam &read, ContainerAction
         return false;
     }
 
-
-    field->foreach_alloc(range, [&](const PHV::Field::alloc_slice &alloc) {
+    field->foreach_alloc(range, cont_action.table_context, &use,
+                         [&](const PHV::Field::alloc_slice &alloc) {
          le_bitrange read_bits = alloc.container_bits();
          int lo;
          int hi;
@@ -890,7 +896,8 @@ bool ActionAnalysis::init_simple_alignment(const ActionParam &read,
     return true;
 }
 
-void ActionAnalysis::determine_unused_bits(PHV::Container container, ContainerAction &cont_action) {
+void ActionAnalysis::determine_unused_bits(PHV::Container container,
+                                           ContainerAction &cont_action) {
     ordered_set<const PHV::Field*> fieldsWritten;
     for (auto& field_action : cont_action.field_actions) {
         const PHV::Field* write_field = phv.field(field_action.write.expr);
@@ -898,7 +905,9 @@ void ActionAnalysis::determine_unused_bits(PHV::Container container, ContainerAc
             BUG("Verify Overwritten: Action does not have a write?");
         fieldsWritten.insert(write_field); }
 
-    bitvec container_occupancy = phv.bits_allocated(container, fieldsWritten);
+    PHV::FieldUse use(PHV::FieldUse::WRITE);
+    bitvec container_occupancy = phv.bits_allocated(container, fieldsWritten,
+            cont_action.table_context, &use);
     bitvec unused_bits = bitvec(0, container.size()) - container_occupancy;
 
     if (cont_action.adi.initialized) {
@@ -1414,8 +1423,8 @@ bool ActionAnalysis::ContainerAction::verify_alignment(PHV::Container &container
  *  can have a portion masked.  Any other operation currently acts on the entire container, and
  *  all fields could be potentially affected.
  */
-bool ActionAnalysis::ContainerAction::verify_overwritten(
-        const PHV::Container container, const PhvInfo &phv) {
+bool ActionAnalysis::ContainerAction::verify_overwritten(const PHV::Container container,
+                                                         const PhvInfo &phv) {
     ordered_set<const PHV::Field*> fieldsWritten;
     for (auto& field_action : field_actions) {
         const PHV::Field* write_field = phv.field(field_action.write.expr);
@@ -1423,7 +1432,8 @@ bool ActionAnalysis::ContainerAction::verify_overwritten(
             BUG("Verify Overwritten: Action does not have a write?");
         fieldsWritten.insert(write_field); }
 
-    bitvec container_occupancy = phv.bits_allocated(container, fieldsWritten);
+    PHV::FieldUse use(PHV::FieldUse::WRITE);
+    bitvec container_occupancy = phv.bits_allocated(container, fieldsWritten, table_context, &use);
     bitvec total_write_bits;
     for (auto &tot_align_info : phv_alignment) {
         total_write_bits |= tot_align_info.second.direct_write_bits;
@@ -1460,10 +1470,11 @@ bool ActionAnalysis::ContainerAction::verify_only_read(const PhvInfo &phv) {
         fieldsRead.insert(read_field); }
     BUG_CHECK(fieldsRead.size() == 1, "More than one field action in shift");
 
+    PHV::FieldUse use(PHV::FieldUse::READ);
     for (auto &tot_align_info : phv_alignment) {
         auto container = tot_align_info.first;
         auto &total_alignment = tot_align_info.second;
-        bitvec container_occupancy = phv.bits_allocated(container, fieldsRead);
+        bitvec container_occupancy = phv.bits_allocated(container, fieldsRead, table_context, &use);
         if (total_alignment.direct_read_bits != container_occupancy)
             return false;
     }
@@ -1754,8 +1765,9 @@ bool ActionAnalysis::ContainerAction::verify_speciality(cstring &error_message,
  *       a constraint, but difficult to verify as well)
  */
 
-bool ActionAnalysis::ContainerAction::verify_shift(
-        cstring &error_message, PHV::Container container, const PhvInfo &phv) {
+bool ActionAnalysis::ContainerAction::verify_shift(cstring &error_message,
+                                                   PHV::Container container,
+                                                   const PhvInfo &phv) {
     if (field_actions.size() > 1) {
         error_code |= MULTIPLE_SHIFTS;
         error_message += "p4c cannot support multiple shift instructions in one container";
@@ -1798,7 +1810,9 @@ bool ActionAnalysis::ContainerAction::verify_shift(
  *  If any of these are not true, then this instruction is not possible on Tofino.
  */
 bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
-        PHV::Container container, cstring action_name, const PhvInfo &phv) {
+                                                      PHV::Container container,
+                                                      cstring action_name,
+                                                      const PhvInfo &phv) {
     error_message = "In the ALU operation over container " + container.toString() +
                     " in action " + action_name + ", ";
 
@@ -1881,13 +1895,9 @@ bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
     return true;
 }
 
-void ActionAnalysis::verify_P4_action_for_tofino(cstring action_name) {
-    if (phv_alloc)
-        verify_P4_action_with_phv(action_name);
-    else if (error_verbose)
-        verify_P4_action_without_phv(action_name);
-}
-
 void ActionAnalysis::postorder(const IR::MAU::Action *act) {
-    verify_P4_action_for_tofino(act->name);
+    if (phv_alloc)
+        verify_P4_action_with_phv(act->name);
+    else if (error_verbose)
+        verify_P4_action_without_phv(act->name);
 }

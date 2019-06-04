@@ -15,7 +15,9 @@ bool GenerateVLIWInstructions::preorder(const IR::Expression *expr) {
         auto field = phv.field(expr, &bits);
         BUG_CHECK(field != nullptr, "Instruction writing to a non-phv allocated object");
         // Mark which containers are to have non noop instructions
-        field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice &alloc) {
+        PHV::FieldUse use(PHV::FieldUse::WRITE);
+        field->foreach_alloc(bits, findContext<IR::MAU::Table>(), &use,
+                             [&](const PHV::Field::alloc_slice &alloc) {
             current_vliw.setbit(Device::phvSpec().containerToId(alloc.container));
         });
         return false;

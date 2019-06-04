@@ -108,7 +108,6 @@ bool Clustering::MakeSlices::preorder(const IR::MAU::Table* tbl) {
 
     auto& info_set = collect_fields.info;
 
-    ordered_map<const PHV::Field*, le_bitrange> slices;
     for (auto& field_info : info_set) {
         // We need to make sure that slices that are XORed with each other for gateway comparisons
         // should be sliced in the same way. The end_apply() method takes the equivalently sliced

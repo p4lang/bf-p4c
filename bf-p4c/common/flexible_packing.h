@@ -4,6 +4,7 @@
 #include "ir/ir.h"
 #include "lib/symbitmatrix.h"
 #include "bf-p4c/logging/pass_manager.h"
+#include "bf-p4c/common/map_tables_to_actions.h"
 #include "bf-p4c/mau/action_mutex.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
 #include "bf-p4c/mau/table_mutex.h"
@@ -618,6 +619,7 @@ class FlexiblePacking : public Logging::PassManager {
  private:
     CollectBridgedFields&                               bridgedFields;
     PackConflicts                                       packConflicts;
+    MapTablesToActions                                  tableActionsMap;
     ActionPhvConstraints                                actionConstraints;
     GatherParserExtracts                                parserAlignedFields;
     RepackDigestFieldList                               packDigestFieldLists;

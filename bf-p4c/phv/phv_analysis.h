@@ -3,6 +3,7 @@
 
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/common/field_defuse.h"
+#include "bf-p4c/common/map_tables_to_actions.h"
 #include "bf-p4c/logging/pass_manager.h"
 #include "bf-p4c/mau/action_mutex.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
@@ -19,6 +20,7 @@
 #include "bf-p4c/phv/analysis/meta_live_range.h"
 #include "bf-p4c/phv/analysis/pack_conflicts.h"
 #include "bf-p4c/phv/analysis/parser_critical_path.h"
+#include "bf-p4c/phv/utils/tables_to_ids.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
 
@@ -46,17 +48,21 @@ class PHV_AnalysisPass : public Logging::PassManager {
     std::vector<FlowGraph*> flowGraph;
     /// Dominator tree for the program.
     BuildDominatorTree domTree;
+    /// Map of tables to actions and vice versa.
+    MapTablesToActions tableActionsMap;
     /// Metadata live range overlay potential information based on table dependency graph.
     MetadataLiveRange meta_live_range;
-    /// Identification of fields that could be allocated to the same container pending of the
-    /// copying of one or more fields into a dark container.
-    DarkLiveRange dark_live_range;
+    /// Identification of fields that could be allocated to the same container pending the copying
+    /// of one or more fields into a dark container.
+    DarkOverlay dark_live_range;
     /// Metadata initialization related pass.
     LiveRangeShrinking meta_init;
     /// Clustering information for fields.
     Clustering clustering;
     /// Fields that are going to be deparsed to zero.
     ordered_set<const PHV::Field*> deparser_zero_fields;
+    /// Tables To IDs used in PHV analysis.
+    MapTablesToIDs table_ids;
 
  public:
     PHV_AnalysisPass(

@@ -290,6 +290,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
                          };
         unsigned error_code = NO_PROBLEM;
         cstring name;
+        const IR::MAU::Table *table_context = nullptr;
         ActionDataInfo adi;
         ConstantInfo ci;
         bitvec invalidate_write_bits;
@@ -300,6 +301,10 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
 
         int counts[ActionParam::TOTAL_TYPES] = {0, 0, 0};
         safe_vector<FieldAction> field_actions;
+
+        ContainerAction() {}  // used to by std::map to build an default object
+        ContainerAction(cstring n, const IR::MAU::Table *tbl) : name(n), table_context(tbl) {}
+
         int total_types() {
             return counts[ActionParam::PHV] + counts[ActionParam::ACTIONDATA]
                    + counts[ActionParam::CONSTANT];

@@ -847,7 +847,8 @@ struct IXBar {
     void determineHashDistInUse(int hash_group, bitvec &units_in_use, bitvec &hash_bits_in_use);
     void buildHashDistIRUse(HashDistAllocPostExpand &alloc_req, HashDistUse &use,
         IXBar::Use &all_reqs, const PhvInfo &phv, int hash_group, bitvec hash_bits_used,
-        bitvec total_post_expand_bits, unsigned hash_table_input, cstring name);
+        bitvec total_post_expand_bits, unsigned hash_table_input, const IR::MAU::Table* tbl,
+        cstring name);
     void lockInHashDistArrays(safe_vector<Use::Byte *> *alloced, int hash_group,
         unsigned hash_table_input, int asm_unit, bitvec hash_bits_used, HashDistDest_t dest,
         cstring name);
@@ -858,7 +859,7 @@ struct IXBar {
     bool allocHashDistWideAddress(bitvec post_expand_bits, bitvec possible_shifts, int hash_group,
         bool chained_addr, int &unit_allocated, bitvec &hash_bits_allocated);
     bool allocHashDist(safe_vector<HashDistAllocPostExpand> &alloc_reqs, HashDistUse &use,
-        const PhvInfo &phv, cstring name, bool second_try);
+        const PhvInfo &phv, cstring name, const IR::MAU::Table* tbl, bool second_try);
     void createChainedHashDist(const HashDistUse &hd_alloc, HashDistUse &chained_hd_alloc,
         cstring name);
 };

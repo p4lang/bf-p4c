@@ -4,6 +4,7 @@
 #include "bf-p4c/common/asm_output.h"
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c-options.h"
+#include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "lib/stringref.h"
 
@@ -50,7 +51,7 @@ void emit_alloc(
     out << std::endl;
 }
 
-/* For testing assmbler's stage based allocation - takes the current PVH allocation 
+/* For testing assmbler's stage based allocation - takes the current PHV allocation
  * and writes it out as a set of random stage based allocation
  */
 void emit_stage_alloc(
@@ -93,18 +94,69 @@ void emit_stage_alloc(
     out << std::endl;
 }
 
+void emit_stage_phv_field(std::ostream& out, PHV::Field* field) {
+    ordered_map<le_bitrange, std::vector<PHV::Field::alloc_slice>> fieldRangeToAllocMap;
+    field->foreach_alloc(nullptr, nullptr, [&](const PHV::Field::alloc_slice& alloc) {
+        fieldRangeToAllocMap[alloc.field_bits()].push_back(alloc);
+    });
+    // No allocation for the field.
+    if (fieldRangeToAllocMap.size() == 0) return;
+    for (auto kv : fieldRangeToAllocMap) {
+        unsigned numAllocSlices = kv.second.size();
+        unsigned alloc_num = 0;
+        bool stageAllocReqd = false;
+        out << "  " << canon_name(field->externalName());
+        if (kv.first.lo > 0 || kv.first.size() < field->size)
+            out << '.' << kv.first.lo << '-' << kv.first.hi;
+        out << ": ";
+        for (auto& alloc : kv.second) {
+            ++alloc_num;
+            int min_stage, max_stage;
+            if (alloc.min_stage.first == -1)
+                min_stage = 0;
+            else if (alloc.min_stage.second == PHV::FieldUse(PHV::FieldUse::WRITE))
+                min_stage = alloc.min_stage.first + 1;
+            else
+                min_stage = alloc.min_stage.first;
+            if (alloc.max_stage.second == PHV::FieldUse(PHV::FieldUse::WRITE) &&
+                alloc.max_stage.first != Device::numStages())
+                max_stage = alloc.max_stage.first + 1;
+            else
+                max_stage = alloc.max_stage.first;
+            if (min_stage != 0 || max_stage != Device::numStages()) {
+                stageAllocReqd = true;
+                if (alloc_num == 1) out << "{ ";
+                if (min_stage != max_stage)
+                    out << " stage " << min_stage << ".." << max_stage << ": " << alloc.container;
+                else
+                    out << " stage " << min_stage << ": " << alloc.container;
+            } else {
+                out << alloc.container;
+            }
+            bool containerSliceReqd = alloc.container_bit > 0 ||
+                alloc.container.size() != static_cast<size_t>(alloc.width);
+            if (containerSliceReqd) {
+                out << '(' << alloc.container_bit;
+                if (alloc.width > 1) out << ".." << alloc.container_hi();
+                out << ')';
+            }
+            if (alloc_num != numAllocSlices) out << ',';
+        }
+        if (stageAllocReqd) out << " } ";
+        out << std::endl;
+    }
+}
+
 void emit_phv_field(
         std::ostream& out,
         PHV::Field* field) {
-    field->foreach_alloc([&](const PHV::Field::alloc_slice& slice) {
-#if BAREFOOT_INTERNAL
-        // Testing only
-        if (BackendOptions().stage_allocation)
-            emit_stage_alloc(out, slice, field);
-        else
-#endif
+    if (Device::currentDevice() == Device::JBAY) {
+        emit_stage_phv_field(out, field);
+    } else if (Device::currentDevice() == Device::TOFINO) {
+        field->foreach_alloc(nullptr, nullptr, [&](const PHV::Field::alloc_slice& slice) {
             emit_alloc(out, slice, field);
-    });
+        });
+    }
 }
 
 void PhvAsmOutput::emit_phv_field_info(
@@ -153,7 +205,7 @@ void PhvAsmOutput::emit_gress(std::ostream& out, gress_t gress) const {
         std::set<PHV::Container> allocatedContainers;
         for (const auto& f : phv) {
             if (f.gress != gress) continue;
-            f.foreach_alloc([&](const PHV::Field::alloc_slice& slice) {
+            f.foreach_alloc(nullptr, nullptr, [&](const PHV::Field::alloc_slice& slice) {
                 allocatedContainers.insert(slice.container);
             });
         }

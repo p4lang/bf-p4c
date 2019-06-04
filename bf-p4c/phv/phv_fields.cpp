@@ -11,9 +11,9 @@
 #include "bf-p4c/ir/thread_visitor.h"
 #include "bf-p4c/parde/parde_visitor.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
+#include "bf-p4c/mau/table_summary.h"
+#include "bf-p4c/mau/gateway.h"
 #include "frontends/p4/toP4/toP4.h"
-#include "ir/ir.h"
-#include "lib/log.h"
 #include "lib/stringref.h"
 
 FieldAlignment::FieldAlignment(nw_bitrange bitLayout)
@@ -45,6 +45,27 @@ std::ostream& operator<<(std::ostream& out, const FieldAlignment& alignment) {
 //***********************************************************************************
 //
 
+int PhvInfo::deparser_stage = -1;
+ordered_map<cstring, std::set<int>> PhvInfo::table_to_min_stage;
+
+bool PHV::Field::alloc_slice::isUsedDeparser() const {
+    if (max_stage.first == PhvInfo::deparser_stage ||
+        max_stage.first == Device::numStages())
+        return true;
+    return false;
+}
+
+bool PHV::Field::alloc_slice::isUsedParser() const {
+    if (container.is(PHV::Kind::dark)) return false;
+    int minStage = Device::numStages();
+    const le_bitrange range = field_bits();
+    field->foreach_alloc(range, nullptr, nullptr, [&](const PHV::Field::alloc_slice& alloc) {
+        if (alloc.min_stage.first < minStage) minStage = alloc.min_stage.first;
+    });
+    if (min_stage.first == minStage) return true;
+    return false;
+}
+
 void PhvInfo::clear() {
     all_fields.clear();
     by_id.clear();
@@ -66,6 +87,8 @@ void PhvInfo::clear() {
     field_mutex_i.clear();
     constantExtractedInSameState.clear();
     sameStateConstantExtraction.clear();
+    PhvInfo::clearMinStageInfo();
+    PhvInfo::resetDeparserStage();
 }
 
 void PhvInfo::add(
@@ -400,7 +423,7 @@ const std::vector<PHV::Field::alloc_slice>
 PhvInfo::get_slices_in_container(const PHV::Container c) const {
     std::vector<PHV::Field::alloc_slice> rv;
     for (auto* field : fields_in_container(c)) {
-        field->foreach_alloc([&](const PHV::Field::alloc_slice &alloc) {
+        field->foreach_alloc(nullptr, nullptr, [&](const PHV::Field::alloc_slice &alloc) {
             if (alloc.container != c) return;
             rv.push_back(alloc);
         });
@@ -408,11 +431,14 @@ PhvInfo::get_slices_in_container(const PHV::Container c) const {
     return rv;
 }
 
-bitvec PhvInfo::bits_allocated(const PHV::Container c) const {
+bitvec PhvInfo::bits_allocated(
+        const PHV::Container c,
+        const IR::BFN::Unit *ctxt,
+        const PHV::FieldUse* use) const {
     bitvec ret_bitvec;
     for (auto* field : fields_in_container(c)) {
         if (field->padding) continue;
-        field->foreach_alloc([&](const PHV::Field::alloc_slice &alloc) {
+        field->foreach_alloc(ctxt, use, [&](const PHV::Field::alloc_slice &alloc) {
             if (alloc.container != c) return;
             le_bitrange bits = alloc.container_bits();
             ret_bitvec.setrange(bits.lo, bits.size());
@@ -421,20 +447,24 @@ bitvec PhvInfo::bits_allocated(const PHV::Container c) const {
 }
 
 bitvec PhvInfo::bits_allocated(
-        const PHV::Container c, const ordered_set<const PHV::Field*>& writes) const {
+        const PHV::Container c,
+        const ordered_set<const PHV::Field*>& writes,
+        const IR::BFN::Unit *ctxt,
+        const PHV::FieldUse* use) const {
     bitvec ret_bitvec;
     auto& fields = fields_in_container(c);
     if (fields.size() == 0) return ret_bitvec;
     // Gather all the slices of written fields allocated to container c
     std::vector<PHV::Field::alloc_slice> write_slices_in_container;
     for (auto* field : writes) {
-        field->foreach_alloc([&](const PHV::Field::alloc_slice &alloc) {
+        field->foreach_alloc(ctxt, use, [&](const PHV::Field::alloc_slice &alloc) {
             if (alloc.container != c) return;
             write_slices_in_container.push_back(alloc);
-        }); }
+        });
+    }
     for (auto* field : fields) {
         if (field->padding) continue;
-        field->foreach_alloc([&](const PHV::Field::alloc_slice &alloc) {
+        field->foreach_alloc(ctxt, use, [&](const PHV::Field::alloc_slice &alloc) {
             if (alloc.container != c) return;
             le_bitrange bits = alloc.container_bits();
             // Discard the slices that are mutually exclusive with any of the written slices
@@ -450,7 +480,8 @@ bitvec PhvInfo::bits_allocated(
             });
             if (!mutually_exclusive && !meta_overlay)
                 ret_bitvec.setrange(bits.lo, bits.size());
-        }); }
+        });
+    }
     return ret_bitvec;
 }
 
@@ -467,6 +498,24 @@ boost::optional<cstring> PhvInfo::get_alias_name(const IR::Expression* expr) con
         get_alias_name(sl->e0);
     }
     return boost::none;
+}
+
+bool PhvInfo::darkLivenessOkay(const IR::MAU::Table* gateway, const IR::MAU::Table* t) const {
+    BUG_CHECK(gateway->gateway_only(), "Trying to merge non gateway table %1% with table %2%",
+              gateway->name, t->name);
+    auto t_stages = minStage(TableSummary::getTableName(t));
+    CollectGatewayFields collect_fields(*this);
+    gateway->apply(collect_fields);
+    static PHV::FieldUse use(PHV::FieldUse::READ);
+    for (auto& field_info : collect_fields.info) {
+        unsigned count = 0;
+        field_info.first.field()->foreach_alloc(field_info.first.range(), t, &use,
+                [&](const PHV::Field::alloc_slice&) {
+            ++count;
+        });
+        if (count == 0) return false;
+    }
+    return true;
 }
 
 //
@@ -526,10 +575,62 @@ const PHV::Field::alloc_slice &PHV::Field::for_bit(int bit) const {
     return invalid;
 }
 
+bool PHV::Field::checkContext(
+        const alloc_slice& slice,
+        const IR::BFN::Unit* ctxt,
+        const PHV::FieldUse* use) const {
+    // If no context is provided, or if the target is Tofino, we do not have stage-based allocation,
+    // so the slice is valid across all contexts.
+    if (ctxt == nullptr || Device::currentDevice() == Device::TOFINO) return true;
+    const IR::MAU::Table* tbl = ctxt->to<IR::MAU::Table>();
+    const IR::BFN::Parser* parser = ctxt->to<IR::BFN::Parser>();
+    const IR::BFN::Deparser* deparser = ctxt->to<IR::BFN::Deparser>();
+    if (tbl) {
+        auto stages = PhvInfo::minStage(TableSummary::getTableName(tbl));
+        bool inLiveRange = false;
+        for (auto stage : stages) {
+            LOG1("\t\tStage: " << stage);
+            LOG1("\t\tTable: " << tbl->name << ", P4 Name: " <<
+                    TableSummary::getTableName(tbl));
+            if (use) {
+                LOG1("\t\t  " << slice.min_stage.first << " < " << stage << " = " <<
+                        (slice.min_stage.first < stage));
+                LOG1("\t\t  " << (slice.min_stage.first == stage) << " && (" << *use <<
+                        " <= " << slice.max_stage.second << ") = " <<
+                        (*use <= slice.min_stage.second));
+                bool greaterThanMinStage = (slice.min_stage.first < stage) ||
+                    (slice.min_stage.first == stage && *use >= slice.min_stage.second);
+                bool lessThanMaxStage = (stage < slice.max_stage.first) ||
+                    (stage == slice.max_stage.first && *use <= slice.max_stage.second);
+                LOG1("\t\t  A. greaterThanMinStage: " << greaterThanMinStage <<
+                        ", lessThanMaxStage: " << lessThanMaxStage);
+                inLiveRange |= (greaterThanMinStage && lessThanMaxStage);
+            } else {
+                bool greaterThanMinStage = slice.min_stage.first <= stage;
+                bool lessThanMaxStage = stage <= slice.max_stage.first;
+                LOG1("\t\t  B. greaterThanMinStage: " << greaterThanMinStage <<
+                        ", lessThanMaxStage: " << lessThanMaxStage);
+                inLiveRange |= (greaterThanMinStage && lessThanMaxStage);
+            }
+        }
+        LOG1("\t\tinLiveRange: " << false);
+        if (inLiveRange) return true;
+    } else if (parser) {
+        if (slice.min_stage.first == -1) return true;
+    } else if (deparser) {
+        if (slice.max_stage.first == Device::numStages() ||
+                slice.max_stage.first == PhvInfo::getDeparserStage())
+            return true;
+    }
+    return false;
+}
+
 // TODO(cole): Should really reimplement this to call foreach_alloc and then
 // iterate byte-by-byte through each alloc.
 void PHV::Field::foreach_byte(
         le_bitrange range,
+        const IR::BFN::Unit* ctxt,
+        const PHV::FieldUse* use,
         std::function<void(const alloc_slice &)> fn) const {
     // Iterate in reverse order, because alloc_i slices are ordered from field
     // MSB to LSB, but foreach_byte iterates from LSB to MSB.
@@ -581,16 +682,19 @@ void PHV::Field::foreach_byte(
                             intersectedSlice.field_bit + offset,
                             window->lo,
                             window->size());
+            tmp.min_stage = std::make_pair(slice.min_stage.first, slice.min_stage.second);
+            tmp.max_stage = std::make_pair(slice.max_stage.first, slice.max_stage.second);
 
             // Invoke the function.
-            fn(tmp);
-
+            if (checkContext(tmp, ctxt, use)) fn(tmp);
             // Increment the window.
             byte = byte.shiftedByBits(8); } }
 }
 
 void PHV::Field::foreach_alloc(
         le_bitrange range,
+        const IR::BFN::Unit* ctxt,
+        const PHV::FieldUse* use,
         std::function<void(const alloc_slice &)> fn) const {
     // XXX(Deep): Maintain all the candidate alloc slices here. I am going to filter later based on
     // context and use on this vector during stage based allocation.
@@ -619,9 +723,10 @@ void PHV::Field::foreach_alloc(
             candidate_slices.push_back(tmp);
         }
     }
-    // Apply the function on the filtered candidate_slices vector.
+    // candidate_slices contains all the slices that are in @range.
     for (auto& slice : candidate_slices)
-        fn(slice);
+        if (checkContext(slice, ctxt, use))
+            fn(slice);
 }
 
 //
@@ -1488,7 +1593,7 @@ class CollectPardeConstraints : public Inspector {
 
 void AddAliasAllocation::addAllocation(
         PHV::Field* aliasSource,
-        const PHV::Field* aliasDest,
+        PHV::Field* aliasDest,
         le_bitrange range) {
     BUG_CHECK(aliasSource->size == range.size(), "Alias source (%1%b) and destination (%2%b) of "
               "different sizes", aliasSource->size, range.size());
@@ -1498,16 +1603,22 @@ void AddAliasAllocation::addAllocation(
     seen.insert(aliasSource);
 
     // Add allocation.
-    aliasDest->foreach_alloc(range, [&](const PHV::Field::alloc_slice& alloc) {
+    aliasDest->foreach_alloc(range, nullptr, nullptr, [&](const PHV::Field::alloc_slice& alloc) {
         PHV::Field::alloc_slice new_slice(
             aliasSource,
             alloc.container,
             alloc.field_bit - range.lo,
             alloc.container_bit,
             alloc.width);
+        new_slice.init_points = alloc.init_points;
+        new_slice.min_stage = alloc.min_stage;
+        new_slice.max_stage = alloc.max_stage;
+        LOG5("Adding allocation slice for aliased field: " << aliasSource << " " << new_slice);
         aliasSource->add_alloc(new_slice);
         phv.add_container_to_field_entry(alloc.container, aliasSource);
     });
+
+    aliasDest->aliasSource = aliasSource;
 }
 
 bool AddAliasAllocation::preorder(const IR::BFN::AliasMember* alias) {
@@ -1516,7 +1627,7 @@ bool AddAliasAllocation::preorder(const IR::BFN::AliasMember* alias) {
 
     // Then add this alias.
     PHV::Field* aliasSource = phv.field(alias->source);
-    const PHV::Field* aliasDest = phv.field(alias);
+    PHV::Field* aliasDest = phv.field(alias);
     addAllocation(aliasSource, aliasDest, StartLen(0, aliasSource->size));
     return true;
 }
@@ -1527,7 +1638,7 @@ bool AddAliasAllocation::preorder(const IR::BFN::AliasSlice* alias) {
 
     // Then add this alias.
     PHV::Field* aliasSource = phv.field(alias->source);
-    const PHV::Field* aliasDest = phv.field(alias);
+    PHV::Field* aliasDest = phv.field(alias);
     addAllocation(aliasSource, aliasDest, FromTo(alias->getL(), alias->getH()));
     return true;
 }
@@ -1629,25 +1740,24 @@ CollectPhvInfo::CollectPhvInfo(PhvInfo& phv) {
 //***********************************************************************************
 //
 
-std::ostream &PHV::operator<<(std::ostream &out, const PHV::Field::alloc_slice &sl) {
-    out << sl.container << sl.container_bits() << " <-- " <<
-           PHV::FieldSlice(sl.field, sl.field_bits());
+std::ostream &PHV::operator<<(std::ostream &out, const PHV::Field::alloc_slice &slice) {
+    out << slice.container << slice.container_bits() << " <-- " << PHV::FieldSlice(slice.field,
+            slice.field_bits());
+    if (Device::currentDevice() == Device::JBAY)
+        out << " live at [" << slice.min_stage.first << slice.min_stage.second << ", " <<
+            slice.max_stage.first << slice.max_stage.second << "]";
     return out;
 }
 
 std::ostream &PHV::operator<<(std::ostream &out,
                          const std::vector<PHV::Field::alloc_slice> &sl_vec) {
-    for (auto &sl : sl_vec) {
-        out << sl << ';';
-    }
+    for (auto &sl : sl_vec) out << sl << "\n";
     return out;
 }
 
 std::ostream &operator<<(std::ostream &out,
                          const safe_vector<PHV::Field::alloc_slice> &sl_vec) {
-    for (auto &sl : sl_vec) {
-        out << sl << ';';
-    }
+    for (auto &sl : sl_vec) out << sl << "\n";
     return out;
 }
 
@@ -1781,6 +1891,10 @@ std::ostream &operator<<(std::ostream &out, const PHV::FieldSlice& fs) {
     if (field.used_in_wide_arith()) out << " wide_arith";
     if (field.privatized()) out << " TPHV-priv";
     if (field.privatizable()) out << " PHV-priv";
+    if (Device::currentDevice() == Device::JBAY) {
+        if (field.is_mocha_candidate()) out << " mocha";
+        if (field.is_dark_candidate()) out << " dark";
+    }
     out << " [" << fs.range().lo << ":" << fs.range().hi << "]";
     return out;
 }

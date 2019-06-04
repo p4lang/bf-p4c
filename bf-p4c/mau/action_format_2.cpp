@@ -1806,9 +1806,8 @@ void Format::create_mask_constant(ALUOperation &alu, bitvec value, le_bitrange c
  * structures.  This will then add a RamSection to potentially be condensed through the
  * algorithm.
  */
-void Format
-        ::create_alu_ops_for_action(ActionAnalysis::ContainerActionsMap &ca_map,
-             cstring action_name) {
+void Format::create_alu_ops_for_action(ActionAnalysis::ContainerActionsMap &ca_map,
+                                       cstring action_name) {
     LOG2("  Creating action data alus for " << action_name);
     auto &ram_sec_vec = init_ram_sections[action_name];
     int alias_index = 0;
@@ -1838,8 +1837,9 @@ void Format
             auto *write_field = phv.field(field_action.write.expr, &bits);
             le_bitrange container_bits;
             int write_count = 0;
-
-            write_field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice &alloc) {
+            PHV::FieldUse use(PHV::FieldUse::WRITE);
+            write_field->foreach_alloc(bits, cont_action.table_context, &use,
+                                       [&](const PHV::Field::alloc_slice &alloc) {
                 write_count++;
                 container_bits = alloc.container_bits();
                 BUG_CHECK(container_bits.lo >= 0, "Invalid negative container bit");

@@ -68,6 +68,10 @@ format_alloc_slice(const PHV::AllocSlice& slice) {
     if (slice.field_slice().size() != slice.field()->size)
         field_slice << format_bit_slice(slice.field_slice().lo,
                                         slice.field_slice().hi);
+    auto minStage = slice.getEarliestLiveness();
+    auto maxStage = slice.getLatestLiveness();
+    field_slice << " [" << minStage.first << minStage.second << ", " << maxStage.first <<
+        maxStage.second << "]";
     return {container_slice.str(), field_slice.str()};
 }
 

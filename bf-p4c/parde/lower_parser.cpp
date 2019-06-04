@@ -170,6 +170,7 @@ struct ExtractSimplifier {
 
         if (auto* bufferSource = extract->source->to<IR::BFN::InputBufferRVal>()) {
             for (const auto& slice : slices) {
+                if (!slice.isUsedParser()) continue;
                 // Shift the slice to its proper place in the input buffer.
                 auto bufferRange = bufferSource->range;
 
@@ -440,6 +441,7 @@ lowerFields(const PhvInfo& phv, const ClotInfo& clotInfo,
                   fieldRef->field);
 
         for (auto& slice : boost::adaptors::reverse(slices)) {
+            if (!slice.isUsedDeparser()) continue;
             BUG_CHECK(bool(slice.container), "Emitted field was allocated to "
                       "an invalid PHV container: %1%", fieldRef->field);
 
@@ -478,12 +480,12 @@ lowerFields(const PhvInfo& phv, const ClotInfo& clotInfo,
 /// Maps a POV bit field to a single bit within a container, represented as a
 /// ContainerBitRef. Checks that the allocation for the POV bit field is sane.
 const IR::BFN::ContainerBitRef*
-lowerSingleBit(const PhvInfo& phv, const IR::BFN::FieldLVal* fieldRef) {
+lowerSingleBit(const PhvInfo& phv, const IR::BFN::FieldLVal* fieldRef, const IR::BFN::Unit* ctxt) {
     le_bitrange range;
     auto* field = phv.field(fieldRef->field, &range);
 
     std::vector<alloc_slice> slices;
-    field->foreach_alloc(&range, [&](const PHV::Field::alloc_slice& alloc) {
+    field->foreach_alloc(&range, ctxt, nullptr, [&](const PHV::Field::alloc_slice& alloc) {
         slices.push_back(alloc);
     });
 
@@ -696,7 +698,7 @@ struct ComputeLoweredParserIR : public ParserInspector {
                                      new IR::BFN::ContainerRef(slices.back().container),
                                      (unsigned)sl->getL());
             } else {
-                csum->csum_err = lowerSingleBit(phv, dest);
+                csum->csum_err = lowerSingleBit(phv, dest, parser);
             }
         } else if (type == IR::BFN::ChecksumMode::RESIDUAL && dest) {
             csum->phv_dest = new IR::BFN::ContainerRef(slices.back().container);
@@ -1153,7 +1155,7 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
 
  private:
     IR::BFN::ChecksumUnitConfig*
-    lowerChecksum(const IR::BFN::EmitChecksum* emitChecksum) {
+    lowerChecksum(const IR::BFN::EmitChecksum* emitChecksum, const IR::BFN::Deparser *dprsr) {
         // Allocate a checksum unit and generate the configuration for it.
         auto* unitConfig = new IR::BFN::ChecksumUnitConfig(nextChecksumUnit);
 
@@ -1163,7 +1165,7 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
         std::tie(phvSources, clotSources) =
             lowerFields(phv, clotInfo, emitChecksum->sources);
 
-        auto* loweredPovBit = lowerSingleBit(phv, emitChecksum->povBit);
+        auto* loweredPovBit = lowerSingleBit(phv, emitChecksum->povBit, dprsr);
         auto containerToSwap = getChecksumPhvSwap(phv, emitChecksum);
         for (auto* source : phvSources) {
             auto* input = new IR::BFN::ChecksumPhvInput(source);
@@ -1274,7 +1276,7 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
                     auto f = phv.field(emitChecksum->dest->field);
                     cl->csum_field_to_csum_id[f] = nextChecksumUnit;
 
-                    auto unitConfig = lowerChecksum(emitChecksum);
+                    auto unitConfig = lowerChecksum(emitChecksum, deparser);
                     loweredDeparser->checksums.push_back(unitConfig);
 
                     nextChecksumUnit++;
@@ -1288,11 +1290,11 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
                 BUG_CHECK(group.size() == 1,
                           "Checksum primitives should be in a singleton group");
 
-                auto unitConfig = lowerChecksum(emitChecksum);
+                auto unitConfig = lowerChecksum(emitChecksum, deparser);
                 loweredDeparser->checksums.push_back(unitConfig);
 
                 // Generate the lowered checksum emit.
-                auto* loweredPovBit = lowerSingleBit(phv, emitChecksum->povBit);
+                auto* loweredPovBit = lowerSingleBit(phv, emitChecksum->povBit, deparser);
 
                 auto* loweredEmit =
                   new IR::BFN::LoweredEmitChecksum(loweredPovBit, nextChecksumUnit);
@@ -1319,7 +1321,7 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
             // lowered emit primitives.
             IR::Vector<IR::BFN::ContainerRef> emitSources;
             std::tie(emitSources, std::ignore) = lowerFields(phv, clotInfo, sources);
-            auto* loweredPovBit = lowerSingleBit(phv, emit->povBit);
+            auto* loweredPovBit = lowerSingleBit(phv, emit->povBit, deparser);
             for (auto* source : emitSources) {
                 auto* loweredEmit = new IR::BFN::LoweredEmitPhv(loweredPovBit, source);
                 loweredDeparser->emits.push_back(loweredEmit);
@@ -1333,7 +1335,7 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
             auto* lowered = new IR::BFN::LoweredDeparserParameter(param->name,
                                                                   loweredSource);
             if (param->povBit)
-                lowered->povBit = lowerSingleBit(phv, param->povBit);
+                lowered->povBit = lowerSingleBit(phv, param->povBit, deparser);
             loweredDeparser->params.push_back(lowered);
         }
 
@@ -1364,7 +1366,7 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
                 lowered->selector = loweredSelector; }
 
             if (digest->povBit)
-                lowered->povBit = lowerSingleBit(phv, digest->povBit);
+                lowered->povBit = lowerSingleBit(phv, digest->povBit, deparser);
 
             // Each field list, when lowered, becomes a digest table entry.
             // Learning field lists are used to generate the format for learn
@@ -1541,7 +1543,7 @@ class ComputeInitZeroContainers : public ParserModifier {
 
             // POV bits are treated as metadata
             if (f.pov || f.metadata) {
-                f.foreach_alloc([&] (const PHV::Field::alloc_slice& alloc) {
+                f.foreach_alloc(parser, nullptr, [&] (const PHV::Field::alloc_slice& alloc) {
                     bool hasHeaderField = false;
 
                     for (auto fc : phv.fields_in_container(alloc.container)) {
@@ -1558,7 +1560,7 @@ class ComputeInitZeroContainers : public ParserModifier {
 
             if (f.is_invalidate_from_arch()) {
                 // Track the allocated containers for fields that are invalidate_from_arch
-                f.foreach_alloc([&] (const PHV::Field::alloc_slice& alloc) {
+                f.foreach_alloc(parser, nullptr, [&] (const PHV::Field::alloc_slice& alloc) {
                     intrinsic_invalidate_containers.insert(alloc.container);
                     LOG3(alloc.container << " contains intrinsic invalidate fields");
                 });
@@ -1569,7 +1571,7 @@ class ComputeInitZeroContainers : public ParserModifier {
                 // If pa_no_init specified, then the field does not have to rely on parser zero
                 // initialization.
                 if (no_init_fields.count(&f)) continue;
-                f.foreach_alloc([&] (const PHV::Field::alloc_slice& alloc) {
+                f.foreach_alloc(parser, nullptr, [&] (const PHV::Field::alloc_slice& alloc) {
                     zero_init_containers.insert(alloc.container);
                 });
             }

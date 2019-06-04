@@ -422,6 +422,11 @@ bool TablePlacement::Placed::gateway_merge(ordered_set<const IR::MAU::Table *> &
                 // Currently would potentially require multiple gateways if split into
                 // multiple tables.  Not supported yet during allocation
                 if (t->for_dleft()) continue;
+                if (!self.phv.darkLivenessOkay(table, t)) {
+                    LOG2("\tCannot merge " << name << " with " << t->name << " because of "
+                         "liveness check");
+                    continue;
+                }
                 has_link = true;
                 if (attempted_tables.count(t))
                     continue;

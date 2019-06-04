@@ -53,6 +53,7 @@ class FindInitializationNode : public Inspector {
     /// populates @f_dominators with the set of dominators for uses of field @f.
     bool summarizeUseDefs(
             const PHV::Field* f,
+            const ordered_set<const IR::BFN::Unit*>& initPoints,
             ordered_map<const PHV::Field*, ordered_map<const IR::BFN::Unit*, unsigned>>& units,
             ordered_set<const IR::BFN::Unit*>& f_dominators) const;
 
@@ -143,7 +144,7 @@ class FindInitializationNode : public Inspector {
     boost::optional<PHV::Allocation::LiveRangeShrinkingMap>
     findInitializationNodes(
         const PHV::Container c,
-        const ordered_set<const PHV::Field*>& fields,
+        const ordered_set<PHV::AllocSlice>& alloced,
         const PHV::Transaction& alloc,
         const PHV::Allocation::MutuallyLiveSlices& container_state) const;
 
@@ -187,10 +188,8 @@ class LiveRangeShrinking : public PassManager {
             const ordered_set<PHV::AllocSlice>& alloced,
             const PHV::Transaction& alloc,
             const PHV::Allocation::MutuallyLiveSlices& container_state) const {
-        ordered_set<const PHV::Field*> fields;
         PHV::Container c;
         for (auto& sl : alloced) {
-            fields.insert(sl.field());
             if (c == PHV::Container()) {
                 c = sl.container();
             } else {
@@ -200,7 +199,7 @@ class LiveRangeShrinking : public PassManager {
         }
         BUG_CHECK(c != PHV::Container(),
                   "Container candidate for metadata overlay cannot be NULL.");
-        return initNode.findInitializationNodes(c, fields, alloc, container_state);
+        return initNode.findInitializationNodes(c, alloced, alloc, container_state);
     }
 
     boost::optional<PHV::Allocation::LiveRangeShrinkingMap> findInitializationNodes(

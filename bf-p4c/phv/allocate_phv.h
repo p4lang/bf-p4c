@@ -14,8 +14,10 @@
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/analysis/critical_path_clusters.h"
+#include "bf-p4c/phv/analysis/dark_live_range.h"
 #include "bf-p4c/phv/analysis/live_range_shrinking.h"
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
+#include "bf-p4c/phv/utils/tables_to_ids.h"
 #include "bf-p4c/phv/utils/utils.h"
 #include "lib/bitvec.h"
 #include "lib/symbitmatrix.h"
@@ -169,10 +171,12 @@ class CoreAllocation {
 
     // Metadata initialization possibilities.
     LiveRangeShrinking& meta_init_i;
+    // Dark overlay possibilities.
+    DarkOverlay& dark_init_i;
 
-    const CalcParserCriticalPath& parser_critical_path_i;
     // Table allocation information from the previous round.
     bool disableMetadataInit;
+    const CalcParserCriticalPath& parser_critical_path_i;
 
     // Alignment failure fields. Right now, this will only contain bridged metadata fields if PHV
     // allocation fails due to alignment reasons. Used to backtrack to bridged metadata packing.
@@ -199,12 +203,13 @@ class CoreAllocation {
                    PhvInfo& phv,
                    ActionPhvConstraints& actions,
                    LiveRangeShrinking& meta,
+                   DarkOverlay& dark,
                    const CalcParserCriticalPath& parser_critical_path,
                    const MauBacktracker& alloc)
         : mutex_i(mutex), /* clustering_i(clustering), */ uses_i(uses), defuse_i(defuse),
           clot_i(clot), phv_i(phv), actions_i(actions), pragmas_i(pragmas), meta_init_i(meta),
-          parser_critical_path_i(parser_critical_path),
-          disableMetadataInit(alloc.disableMetadataInitialization()) { }
+          dark_init_i(dark), disableMetadataInit(alloc.disableMetadataInitialization()),
+          parser_critical_path_i(parser_critical_path) { }
 
     /// @returns true if @f can overlay all fields in @slices.
     static bool can_overlay(
@@ -316,6 +321,14 @@ class CoreAllocation {
         const PHV::ContainerGroup& group,
         const PHV::SuperCluster& super_cluster,
         const ordered_map<PHV::FieldSlice, int>& start_positions) const;
+
+    void generateNewAllocSlices(
+        const PHV::AllocSlice& origSlice,
+        const ordered_set<PHV::AllocSlice>& alloced_slices,
+        PHV::DarkInitMap& slices,
+        std::vector<PHV::AllocSlice>& new_candidate_slices,
+        PHV::Transaction& alloc_attempt) const;
+
 
     PhvInfo& phv() const                                  { return phv_i; }
     const PhvUse& uses() const                            { return uses_i; }
@@ -499,6 +512,7 @@ class AllocatePHV : public Inspector {
 
     // Used to create strategies, if needed
     const CalcCriticalPathClusters& critical_path_clusters_i;
+    const MapTablesToIDs table_ids_i;
 
     // Set of bridged metadata fields that were found to have alignment conflicts during PHV
     // allocation. This set maintains its state across multiple rounds of PHV allocation, therefore,
@@ -572,14 +586,16 @@ class AllocatePHV : public Inspector {
                 const CalcParserCriticalPath& parser_critical_path,
                 const CalcCriticalPathClusters& critical_cluster,
                 const MauBacktracker& alloc,
-                LiveRangeShrinking& meta_init)
+                LiveRangeShrinking& meta_init,
+                DarkOverlay& dark,
+                const MapTablesToIDs& t)
         : core_alloc_i(phv.field_mutex(), clustering, uses, defuse, clot, pragmas, phv, actions,
-                meta_init, parser_critical_path, alloc),
+                meta_init, dark, parser_critical_path, alloc),
           phv_i(phv), uses_i(uses), clot_i(clot),
           clustering_i(clustering), alloc_i(alloc),
           mutex_i(phv.field_mutex()), pragmas_i(pragmas),
           parser_critical_path_i(parser_critical_path),
-          critical_path_clusters_i(critical_cluster) { }
+          critical_path_clusters_i(critical_cluster), table_ids_i(t) { }
 };
 
 #endif  /* BF_P4C_PHV_ALLOCATE_PHV_H_ */

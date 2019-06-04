@@ -43,6 +43,7 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
 
     /// Maps uses to defs and vice versa.
     ordered_map<locpair, LocPairSet>  &uses, &defs;
+    ordered_map<locpair, bool> non_dark_refs;
 
     /// All uses and all defs for each field.
     ordered_map<int, LocPairSet>      &located_uses, &located_defs;
@@ -66,11 +67,11 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
     profile_t init_apply(const IR::Node *root) override;
     void end_apply(const IR::Node *root) override;
     void check_conflicts(const info &read, int when);
-    void read(const PHV::Field *, const IR::BFN::Unit *, const IR::Expression *);
-    void read(const IR::HeaderRef *, const IR::BFN::Unit *, const IR::Expression *);
+    void read(const PHV::Field *, const IR::BFN::Unit *, const IR::Expression *, bool);
+    void read(const IR::HeaderRef *, const IR::BFN::Unit *, const IR::Expression *, bool);
     void write(const PHV::Field *, const IR::BFN::Unit *,
-               const IR::Expression *, bool partial = false);
-    void write(const IR::HeaderRef *, const IR::BFN::Unit *, const IR::Expression *);
+               const IR::Expression *, bool, bool partial = false);
+    void write(const IR::HeaderRef *, const IR::BFN::Unit *, const IR::Expression *, bool);
     info &field(const PHV::Field *);
     info &field(int id) { return field(phv.field(id)); }
     void access_field(const PHV::Field *);
@@ -126,6 +127,10 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
         return located_uses.count(fid) ? located_uses.at(fid) : emptyset; }
     const ordered_set<const PHV::Field*> &getUninitializedFields() const {
         return uninitialized_fields; }
+    bool hasNonDarkContext(locpair info) const {
+        if (!non_dark_refs.count(info)) return true;
+        return non_dark_refs.at(info);
+    }
 
     bool hasUninitializedRead(int fid) const {
         for (const auto& def : getAllDefs(fid)) {

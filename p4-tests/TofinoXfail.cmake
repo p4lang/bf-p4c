@@ -199,20 +199,23 @@ p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
   ../glass/testsuite/p4_tests/phv/COMPILER-546/switch_comp546.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-243/comp243.p4
-  ../glass/testsuite/p4_tests/mau/COMPILER-362/icmp_typecode.p4
   extensions/p4_tests/p4-programs/internal_p4_14/fr_test/fr_test.p4
-  extensions/p4_tests/p4-programs/internal_p4_14/netcache/netcache.p4
   extensions/p4_tests/p4_16/compile_only/tagalong_mdinit_switch.p4
+  extensions/p4_tests/p4_16/customer/arista/p4c-1652.p4
 )
 
 p4c_add_xfail_reason("tofino"
-  "error.*Can't split table.*with indirect attached Register"
+  "error.*tofino supports up to 12 stages|./p4c TIMEOUT"
+  ../glass/testsuite/p4_tests/phv/COMPILER-243/comp243.p4
+  ../glass/testsuite/p4_tests/mau/COMPILER-362/icmp_typecode.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "error.*Can't split table.*with indirect attached"
   ../glass/testsuite/p4_tests/phv/COMPILER-587/l4l.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-706/terminate_parsing.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-1068/comp_1068.p4
   switch_8.7_ent_fin_postcard
-  switch_generic_int_leaf
-  switch_8.7_generic_int_leaf
 )
 
 p4c_add_xfail_reason("tofino"
@@ -223,6 +226,8 @@ p4c_add_xfail_reason("tofino"
   switch_8.7_msdc_leaf_int
   switch_8.7_l3_heavy_int_leaf
   switch_ent_fin_postcard
+  switch_generic_int_leaf
+  switch_8.7_generic_int_leaf
   )
 
 p4c_add_xfail_reason("tofino"
@@ -233,6 +238,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Failed to place tables that .* is attached to in the same stage"
   ../glass/testsuite/p4_tests/phv/COMPILER-828/meta_init_problem.p4
+  extensions/p4_tests/p4-programs/internal_p4_14/netcache/netcache.p4
 )
 
 # Issue with PHV::Field on header stack.
@@ -464,7 +470,7 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/mau/COMPILER-465/tridacna-v2.p4 
   ../glass/testsuite/p4_tests/mau/COMPILER-465/tridacna.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-464/scrab.p4
-  )
+)
 
 # We can't (without some complex acrobatics) support conditional computed
 # checksums on Tofino. In P4-14, these are operations of the form:

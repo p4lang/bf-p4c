@@ -142,11 +142,8 @@ BuildDominatorTree::getNonGatewayImmediateDominator(const IR::MAU::Table* t, gre
     // If the table is not a gateway, then return the immediate dominator itself.
     if (!((*dom)->gateway_only())) return (*dom);
     // If the table is the same as its dominator then we are at the source node and if the source
-    // node is a gateway, then return boost::noone.
+    // node is a gateway, then return boost::none.
     if ((*dom)->gateway_only() && t == *dom) return boost::none;
-    // If the table is the same as its dominator then we are at the source node, so return the
-    // source node.
-    if (t == *dom) return t;
     return getNonGatewayImmediateDominator(*dom, gress);
 }
 

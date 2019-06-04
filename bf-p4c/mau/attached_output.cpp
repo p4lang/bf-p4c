@@ -96,7 +96,9 @@ void CollectMeterOutput::create_placement(
             le_bitrange container_bits;
             int write_count = 0;
 
-            write_field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice &alloc) {
+            PHV::FieldUse use(PHV::FieldUse::WRITE);
+            write_field->foreach_alloc(bits, cont_action.table_context, &use,
+                                       [&](const PHV::Field::alloc_slice &alloc) {
                 write_count++;
                 container_bits = alloc.container_bits();
                 BUG_CHECK(container_bits.lo >= 0, "Invalid negative container bit");

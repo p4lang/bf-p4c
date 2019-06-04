@@ -3,10 +3,11 @@
 
 #include <boost/optional.hpp>
 #include "ir/ir.h"
+#include "bf-p4c/common/map_tables_to_actions.h"
 #include "bf-p4c/lib/union_find.hpp"
 #include "bf-p4c/ir/bitrange.h"
-#include "bf-p4c/common/map_tables_to_actions.h"
 #include "bf-p4c/mau/action_analysis.h"
+#include "bf-p4c/mau/table_dependency_graph.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/analysis/pack_conflicts.h"
@@ -22,6 +23,8 @@ class ActionPhvConstraints : public Inspector {
     const PhvInfo &phv;
     const PhvUse  &uses;
     const PackConflicts &conflicts;
+    const MapTablesToActions &tableActionsMap;
+    const DependencyGraph& dg;
 
     ordered_map<const PHV::Field*, ordered_set<const PHV::Field*>> same_byte_fields;
 
@@ -571,9 +574,18 @@ class ActionPhvConstraints : public Inspector {
     bool stateful_destinations_constraints_violated(
             const PHV::Allocation::MutuallyLiveSlices& container_state) const;
 
+    /// @returns the min_stage for the table associated with action @action.
+    int min_stage(const IR::MAU::Action* action) const;
+
  public:
-    explicit ActionPhvConstraints(const PhvInfo &p, const PhvUse& u, const PackConflicts& c)
-    : phv(p), uses(u), conflicts(c), constraint_tracker(ConstraintTracker(p, *this)) { }
+    explicit ActionPhvConstraints(
+            const PhvInfo &p,
+            const PhvUse& u,
+            const PackConflicts& c,
+            const MapTablesToActions& m,
+            const DependencyGraph& d)
+    : phv(p), uses(u), conflicts(c), tableActionsMap(m), dg(d),
+      constraint_tracker(ConstraintTracker(p, *this)) { }
 
     /// (xxx)Deep [HACK WARNING]: Right now action bus allocation requires any destination written
     /// by meter colors to be allocated to a 8-bit PHV. This set keeps a track of all such
@@ -678,7 +690,7 @@ class ActionPhvConstraints : public Inspector {
     boost::optional<PHV::Allocation::ConditionalConstraints> can_pack(
             const PHV::Allocation& alloc,
             std::vector<PHV::AllocSlice>& slices,
-            PHV::Allocation::MutuallyLiveSlices& container_state,
+            PHV::Allocation::MutuallyLiveSlices& original_container_state,
             const PHV::Allocation::LiveRangeShrinkingMap& initActions);
 
     /** @returns true if this packing would create container conflicts because of metadata

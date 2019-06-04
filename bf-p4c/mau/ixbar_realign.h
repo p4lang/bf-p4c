@@ -8,6 +8,7 @@
 
 class IXBarVerify: public MauModifier {
     const PhvInfo       &phv;
+    const IR::MAU::Table* currentTable = nullptr;
     profile_t init_apply(const IR::Node *) override;
     bool preorder(IR::Expression *) override { return false; }
     void postorder(IR::MAU::Table *) override;

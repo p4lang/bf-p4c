@@ -5,8 +5,9 @@
 #include "lib/algorithm.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
-#include "bf-p4c/phv/utils/utils.h"
+#include "bf-p4c/phv/utils/live_range_report.h"
 #include "bf-p4c/phv/utils/report.h"
+#include "bf-p4c/phv/utils/utils.h"
 
 static int cluster_id_g = 0;                // global counter for assigning cluster ids
 
@@ -56,6 +57,9 @@ PHV::AllocSlice::AllocSlice(
     BUG_CHECK(field_range.contains(slice_range),
               "Trying to slice field %1% at [%2%:%3%] but it's only %4% bits wide",
               cstring::to_cstring(f), slice_range.lo, slice_range.hi, f->size);
+    min_stage_i = std::make_pair(-1, PHV::FieldUse(PHV::FieldUse::READ));
+    max_stage_i = std::make_pair(Device::numStages(), PHV::FieldUse(PHV::FieldUse::WRITE));
+    init_i = new DarkInitPrimitive();
 }
 
 PHV::AllocSlice::AllocSlice(
@@ -71,12 +75,24 @@ PHV::AllocSlice::AllocSlice(
               cstring::to_cstring(container_slice));
 }
 
+PHV::AllocSlice::AllocSlice(const AllocSlice& other) {
+    field_i = other.field();
+    container_i = other.container();
+    field_bit_lo_i = other.field_slice().lo;
+    container_bit_lo_i = other.container_slice().lo;
+    width_i = other.width();
+    init_i = new DarkInitPrimitive(*(other.getInitPrimitive()));
+    this->setLiveness(other.getEarliestLiveness(), other.getLatestLiveness());
+}
+
 bool PHV::AllocSlice::operator==(const PHV::AllocSlice& other) const {
     return field_i             == other.field_i
         && container_i         == other.container_i
         && field_bit_lo_i      == other.field_bit_lo_i
         && container_bit_lo_i  == other.container_bit_lo_i
-        && width_i             == other.width_i;
+        && width_i             == other.width_i
+        && min_stage_i         == other.min_stage_i
+        && max_stage_i         == other.max_stage_i;
 }
 
 bool PHV::AllocSlice::operator!=(const PHV::AllocSlice& other) const {
@@ -92,9 +108,27 @@ bool PHV::AllocSlice::operator<(const PHV::AllocSlice& other) const {
         return field_bit_lo_i < other.field_bit_lo_i;
     if (container_bit_lo_i != other.container_bit_lo_i)
         return container_bit_lo_i < other.container_bit_lo_i;
-    if (width_i < other.width_i)
+    if (width_i != other.width_i)
         return width_i < other.width_i;
+    if (min_stage_i.first != other.min_stage_i.first)
+        return min_stage_i.first < other.min_stage_i.first;
+    if (min_stage_i.second != other.min_stage_i.second)
+        return min_stage_i.second < other.min_stage_i.second;
+    if (max_stage_i.first != other.max_stage_i.first)
+        return max_stage_i.first < other.max_stage_i.first;
+    if (max_stage_i.second != other.max_stage_i.second)
+        return max_stage_i.second < other.max_stage_i.second;
     return false;
+}
+
+bool PHV::AllocSlice::isLiveRangeDisjoint(const AllocSlice& other) const {
+    return PHV::isLiveRangeDisjoint(min_stage_i, max_stage_i, other.min_stage_i, other.max_stage_i);
+}
+
+bool PHV::AllocSlice::hasInitPrimitive() const {
+    if (init_i == nullptr) return false;
+    if (init_i->isEmpty()) return false;
+    return true;
 }
 
 void PHV::Allocation::addStatus(PHV::Container c, const ContainerStatus& status) {
@@ -102,8 +136,20 @@ void PHV::Allocation::addStatus(PHV::Container c, const ContainerStatus& status)
     container_status_i[c] = status;
 
     // Update field status.
-    for (auto& slice : status.slices)
+    for (auto& slice : status.slices) {
+        // If the field status already contains this slice, then update it with the updated slice
+        // with the latest live range.
+        if (field_status_i.count(slice.field())) {
+            FieldStatus toBeRemoved;
+            for (auto& existingSlice : field_status_i[slice.field()]) {
+                if (!slice.representsSameFieldSlice(existingSlice)) continue;
+                toBeRemoved.insert(existingSlice);
+            }
+            for (auto& removalCandidate : toBeRemoved)
+                field_status_i[slice.field()].erase(removalCandidate);
+        }
         field_status_i[slice.field()].insert(slice);
+    }
 }
 
 void PHV::Allocation::addMetaInitPoints(
@@ -118,6 +164,7 @@ void PHV::Allocation::addMetaInitPoints(
     for (const IR::MAU::Action* act : actions)
         init_writes_i[act].insert(slice.field());
 }
+
 
 void PHV::Allocation::addSlice(PHV::Container c, PHV::AllocSlice slice) {
     // Get the current status in container_status_i, or its ancestors, if any.
@@ -164,6 +211,60 @@ void PHV::Allocation::addMetadataInitialization(
     this->addMetaInitPoints(slice, initNodes.at(slice.field()));
 }
 
+bool PHV::Allocation::addDarkAllocation(const PHV::AllocSlice& slice) {
+    // Need not process non-dark containers.
+    if (!slice.container().is(PHV::Kind::dark)) return true;
+    bitvec writeRange, readRange;
+    auto minStage = slice.getEarliestLiveness();
+    auto maxStage = slice.getLatestLiveness();
+    int minReadStage = (minStage.second == PHV::FieldUse(PHV::FieldUse::READ))
+        ? minStage.first : (minStage.first + 1);
+    int minWriteStage = (minStage.second == PHV::FieldUse(PHV::FieldUse::READ))
+            ? (minStage.first - 1) :  minStage.first;
+    int maxReadStage = (maxStage.second == PHV::FieldUse(PHV::FieldUse::READ)) ? maxStage.first :
+        (maxStage.first + 1);
+    int maxWriteStage = (maxStage.second == PHV::FieldUse(PHV::FieldUse::READ))
+            ? (maxStage.first - 1) : maxStage.first;
+    for (int i = minReadStage; i <= maxReadStage; i++) {
+        if (i < 0) continue;
+        readRange.setbit(i);
+    }
+    for (int i = minWriteStage; i <= maxWriteStage; i++) {
+        if (i < 0) continue;
+        writeRange.setbit(i);
+    }
+    if (dark_containers_read_allocated_i.count(slice.container())) {
+        bitvec combo = dark_containers_read_allocated_i.at(slice.container()) & readRange;
+        if (combo.popcount() != 0) {
+            LOG3("\t\tThis allocation already overlaps with an existing read range for " <<
+                 slice.container());
+            return false;
+        } else {
+            dark_containers_read_allocated_i[slice.container()] |= readRange;
+        }
+    } else {
+        dark_containers_read_allocated_i[slice.container()] = readRange;
+    }
+    if (dark_containers_write_allocated_i.count(slice.container())) {
+        bitvec combo = dark_containers_write_allocated_i.at(slice.container()) & writeRange;
+        if (combo.popcount() != 0) {
+            LOG3("\t\tThis allocation already overlaps with an existing write range for " <<
+                 slice.container());
+            return false;
+        } else {
+            dark_containers_write_allocated_i[slice.container()] |= writeRange;
+        }
+    } else {
+        dark_containers_write_allocated_i[slice.container()] = writeRange;
+    }
+
+    LOG3("\t\t" << slice.container() << " read allocated to slice " << slice <<
+         " in stages " << minReadStage << "-" << maxReadStage);
+    LOG3("\t\t" << slice.container() << " write allocated to slice " << slice <<
+         " in stages " << minWriteStage << "-" << maxWriteStage);
+    return true;
+}
+
 void PHV::Allocation::setGress(PHV::Container c, GressAssignment gress) {
     // Get the current status in container_status_i, or its ancestors, if any.
     ContainerStatus status = this->getStatus(c).get_value_or(ContainerStatus());
@@ -190,8 +291,11 @@ PHV::Allocation::slicesByLiveness(const PHV::Container c, const AllocSlice& sl) 
     PHV::Allocation::MutuallyLiveSlices rs;
     auto slices = this->slices(c);
     for (auto& slice : slices) {
-        if (!PHV::Allocation::mutually_exclusive(*mutex_i, slice.field(), sl.field()))
-            rs.insert(slice); }
+        LOG1("\t\t\tChecking slice " << slice);
+        bool mutex = PHV::Allocation::mutually_exclusive(*mutex_i, slice.field(), sl.field());
+        bool liverange_mutex = slice.isLiveRangeDisjoint(slice);
+        LOG1("\t\t\t  mutex: " << mutex << ", live range mutex: " << liverange_mutex);
+        if (!mutex && !liverange_mutex) rs.insert(slice); }
     return rs;
 }
 
@@ -350,6 +454,32 @@ void PHV::Allocation::allocate(
     // Remember the initialization points for metadata.
     if (initNodes)
         this->addMetadataInitialization(slice, *initNodes);
+}
+
+void PHV::Allocation::removeAllocatedSlice(const ordered_set<PHV::AllocSlice>& slices) {
+    PHV::Container c = (*(slices.begin())).container();
+    ContainerStatus status = this->getStatus(c).get_value_or(ContainerStatus());
+    ordered_set<AllocSlice> toBeRemoved;
+    for (auto& sl : status.slices) {
+        for (auto& slice : slices) {
+            if (!sl.representsSameFieldSlice(slice)) continue;
+            toBeRemoved.insert(sl);
+            LOG1("\t\t\tNeed to remove " << sl);
+        }
+    }
+    for (auto& sl : toBeRemoved) status.slices.erase(sl);
+    container_status_i[c] = status;
+    LOG1("\t\t\tNew state of container (after removal)");
+    for (auto& sl : this->slices(c)) LOG1("\t\t\t" << sl);
+    LOG1("\t\t\tTrying to remove field slices slices");
+    for (auto& sl : toBeRemoved) {
+        LOG1("\t\t\tTrying to remove field slice: " << sl);
+        if (!field_status_i.count(sl.field())) {
+            LOG1("\t\t\t  No slices found corresponding to field " << sl.field()->name);
+            continue;
+        }
+        field_status_i[sl.field()].erase(sl);
+    }
 }
 
 void PHV::Allocation::commit(Transaction& view) {
@@ -620,6 +750,11 @@ ordered_set<PHV::AllocSlice> PHV::Allocation::slices(PHV::Container c) const {
     return slices(c, StartLen(0, int(c.type().size())));
 }
 
+ordered_set<PHV::AllocSlice>
+PHV::Allocation::slices(PHV::Container c, int stage, PHV::FieldUse access) const {
+    return slices(c, StartLen(0, int(c.type().size())), stage, access);
+}
+
 // Returns the contents of this transaction *and* its parent.
 ordered_set<PHV::AllocSlice> PHV::Allocation::slices(PHV::Container c, le_bitrange range) const {
     ordered_set<PHV::AllocSlice> rv;
@@ -629,6 +764,28 @@ ordered_set<PHV::AllocSlice> PHV::Allocation::slices(PHV::Container c, le_bitran
             if (slice.container_slice().intersectWith(range).size() > 0)
                 rv.insert(slice);
 
+    return rv;
+}
+
+ordered_set<PHV::AllocSlice>
+PHV::Allocation::slices(
+        PHV::Container c,
+        le_bitrange range,
+        int stage,
+        PHV::FieldUse access) const {
+    auto all_slices = slices(c, range);
+    ordered_set<PHV::AllocSlice> rv;
+    for (auto& slice : all_slices) {
+        auto minStage = slice.getEarliestLiveness();
+        auto maxStage = slice.getLatestLiveness();
+        // Ignore if this slice is live before the (stage, access) pair.
+        if (stage < minStage.first || (stage == minStage.first && access < minStage.second))
+            continue;
+        // Ignore if this slice is live after the (stage, access) pair.
+        if (stage > maxStage.first || (stage == maxStage.first && access > maxStage.second))
+            continue;
+        rv.insert(slice);
+    }
     return rv;
 }
 
@@ -668,6 +825,30 @@ PHV::Allocation::slices(const PHV::Field* f, le_bitrange range) const {
         if (slice.field_slice().overlaps(range))
             rv.insert(slice);
 
+    return rv;
+}
+
+ordered_set<PHV::AllocSlice>
+PHV::Allocation::slices(
+        const PHV::Field* f,
+        le_bitrange range,
+        int stage,
+        PHV::FieldUse access) const {
+    auto all_slices = slices(f, range);
+    for (auto& slice : all_slices) LOG5("Slice: " << slice);
+    ordered_set<PHV::AllocSlice> rv;
+    for (auto& slice : all_slices) {
+        auto minStage = slice.getEarliestLiveness();
+        auto maxStage = slice.getLatestLiveness();
+        // Ignore if this slice is live before the (stage, access) pair.
+        if (stage < minStage.first || (stage == minStage.first && access < minStage.second))
+            continue;
+        // Ignore if this slice is live after the (stage, access) pair.
+        if (stage > maxStage.first || (stage == maxStage.first && access > maxStage.second))
+            continue;
+        rv.insert(slice);
+        LOG5("  Found slice " << slice << " in the live range");
+    }
     return rv;
 }
 
@@ -1318,6 +1499,11 @@ std::ostream &operator<<(std::ostream &out, const PHV::Allocation* alloc) {
 std::ostream &operator<<(std::ostream &out, const PHV::AllocSlice& slice) {
     out << slice.container() << slice.container_slice() << "<--"
         << PHV::FieldSlice(slice.field(), slice.field_slice());
+    if (Device::currentDevice() == Device::JBAY) {
+        out << " {" << slice.getEarliestLiveness().first << slice.getEarliestLiveness().second;
+        out << ", " << slice.getLatestLiveness().first << slice.getLatestLiveness().second << "}";
+        if (slice.hasInitPrimitive()) out << " {" << *(slice.getInitPrimitive()) << "}";
+    }
     return out;
 }
 
@@ -1443,6 +1629,36 @@ std::ostream &operator<<(std::ostream &out, const SuperCluster::SliceList* list)
         out << *list;
     else
         out << "-null-slice-list-";
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, const PHV::DarkInitEntry& entry) {
+    out << "\t\t" << entry.getDestinationSlice();
+    const PHV::DarkInitPrimitive& prim = entry.getInitPrimitive();
+    out << prim;
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, const PHV::DarkInitPrimitive& prim) {
+    if (prim.isNOP()) {
+        out << " NOP";
+        return out;
+    } else if (prim.destAssignedToZero()) {
+        out << " = 0";
+    } else {
+        auto source = prim.getSourceSlice();
+        if (!source)
+            out << " NO SOURCE SLICE";
+        // BUG_CHECK(source, "No source slice specified, even though compiler expects one.");
+        else
+            out << " = " << *source;
+    }
+    if (prim.mustInitInLastMAUStage()) {
+        out << " : always_run Stage " << Device::numStages();
+    } else {
+        const auto& actions = prim.getInitPoints();
+        out << "  :  " << actions.size() << " actions";
+    }
     return out;
 }
 

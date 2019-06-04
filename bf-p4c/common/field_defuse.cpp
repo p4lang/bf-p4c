@@ -39,6 +39,7 @@ Visitor::profile_t FieldDefUse::init_apply(const IR::Node *root) {
     located_defs.clear();
     parser_zero_inits.clear();
     uninitialized_fields.clear();
+    non_dark_refs.clear();
     return rv;
 }
 
@@ -62,7 +63,7 @@ FieldDefUse::info &FieldDefUse::field(const PHV::Field *f) {
 }
 
 void FieldDefUse::read(const PHV::Field *f, const IR::BFN::Unit *unit,
-                       const IR::Expression *e) {
+                       const IR::Expression *e, bool needsIXBar) {
     if (!f) return;
     auto &info = field(f);
     LOG3("FieldDefUse (" << (void *)this << "): " << DBPrint::Brief << *unit <<
@@ -76,18 +77,20 @@ void FieldDefUse::read(const PHV::Field *f, const IR::BFN::Unit *unit,
         LOG4("  " << use << " uses " << def);
         uses[def].emplace(use);
         defs[use].emplace(def); }
+    LOG3("  Found " << (needsIXBar ? "IXBar " : "dark ") << "use.");
+    non_dark_refs[use] |= needsIXBar;
 }
 void FieldDefUse::read(const IR::HeaderRef *hr, const IR::BFN::Unit *unit,
-                       const IR::Expression *e) {
+                       const IR::Expression *e, bool needsIXBar) {
     if (!hr) return;
     PhvInfo::StructInfo info = phv.struct_info(hr);
     for (int id : info.field_ids())
-        read(phv.field(id), unit, e);
+        read(phv.field(id), unit, e, needsIXBar);
     if (!info.metadata)
-        read(phv.field(hr->toString() + ".$valid"), unit, e);
+        read(phv.field(hr->toString() + ".$valid"), unit, e, needsIXBar);
 }
 void FieldDefUse::write(const PHV::Field *f, const IR::BFN::Unit *unit,
-                        const IR::Expression *e, bool partial) {
+                        const IR::Expression *e, bool needsIXBar, bool partial) {
     if (!f) return;
     auto &info = field(f);
     LOG3("FieldDefUse(" << (void *)this << "): " << DBPrint::Brief << *unit <<
@@ -114,15 +117,18 @@ void FieldDefUse::write(const PHV::Field *f, const IR::BFN::Unit *unit,
         info.def.clear(); }
     info.def.emplace(unit, e);
     located_defs[f->id].emplace(unit, e);
+    locpair def(unit, e);
+    non_dark_refs[def] |= needsIXBar;
+    LOG3("  Found " << (needsIXBar ? "IXBar " : "dark ") << "use.");
 }
 void FieldDefUse::write(const IR::HeaderRef *hr, const IR::BFN::Unit *unit,
-                        const IR::Expression *e) {
+                        const IR::Expression *e, bool needsIXBar) {
     if (!hr) return;
     PhvInfo::StructInfo info = phv.struct_info(hr);
     for (int id : info.field_ids())
-        write(phv.field(id), unit, e);
+        write(phv.field(id), unit, e, needsIXBar);
     if (!info.metadata)
-        write(phv.field(hr->toString() + ".$valid"), unit, e);
+        write(phv.field(hr->toString() + ".$valid"), unit, e, needsIXBar);
 }
 
 bool FieldDefUse::preorder(const IR::BFN::Parser *p) {
@@ -205,17 +211,28 @@ bool FieldDefUse::preorder(const IR::Expression *e) {
     if (!f && !hr) return true;
 
     if (auto unit = findContext<IR::BFN::Unit>()) {
+        bool needsIXBar = true;
+        for (auto c = getContext(); c; c = c->parent) {
+            if (c->node->is<IR::MAU::IXBarExpression>() || c->node->is<IR::MAU::StatefulCall>() ||
+                c->node->is<IR::MAU::StatefulAlu>() || c->node->is<IR::MAU::Table>() ||
+                c->node->is<IR::MAU::Meter>())
+                break;
+            if (c->node->is<IR::MAU::Action>()) {
+                needsIXBar = false;
+                break;
+            }
+        }
         if (isWrite()) {
            /* this is a temporary fix to make sure that we dont overwrite the
             * previous assignment. This needs to be enhanced to deal with range
             * being non-contiguous and overwrite if the range is contiguous
             */
             bool partial = (f && (bits.lo != 0 || bits.hi != f->size-1));
-            write(f, unit, e, partial);
-            write(hr, unit, e);
+            write(f, unit, e, needsIXBar, partial);
+            write(hr, unit, e, needsIXBar);
         } else {
-            read(f, unit, e);
-            read(hr, unit, e); }
+            read(f, unit, e, needsIXBar);
+            read(hr, unit, e, needsIXBar); }
     } else {
         assert(0); }
     return false;

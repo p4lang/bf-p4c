@@ -48,6 +48,7 @@ class TableSummary: public MauInspector {
 
     /// The total number of stages allocated by Table Placement
     int maxStage;
+    int max_stages[3];
     /// Booleans indicating whether traversal over ingress and egress pipes has happened
     bool ingressDone;
     bool egressDone;
@@ -94,6 +95,7 @@ class TableSummary: public MauInspector {
 
     /// @returns the maximum number of stages used by the program.
     int maxStages() const { return maxStage; }
+    int maxStages(gress_t gress) const { return max_stages[gress]; }
 
     const ordered_map<cstring, ordered_set<int>>& getTableAlloc(void) const { return tableAlloc; }
 

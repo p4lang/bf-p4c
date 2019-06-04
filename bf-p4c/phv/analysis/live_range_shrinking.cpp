@@ -38,6 +38,7 @@ bool FindInitializationNode::isUninitializedDef(
 
 bool FindInitializationNode::summarizeUseDefs(
         const PHV::Field* f,
+        const ordered_set<const IR::BFN::Unit*>& initPoints,
         ordered_map<const PHV::Field*, ordered_map<const IR::BFN::Unit*, unsigned>>& units,
         ordered_set<const IR::BFN::Unit*>& f_dominators) const {
     // Note all units where field f is defined.
@@ -52,6 +53,13 @@ bool FindInitializationNode::summarizeUseDefs(
         // Write is its own dominator, so insert this node into f_dominators.
         f_dominators.insert(def.first);
         LOG3("\t\t\tAdding dominator " << DBPrint::Brief << def.first);
+    }
+
+    for (auto* u : initPoints) {
+        units[f][u] |= MetadataLiveRange::WRITE;
+        LOG5("\t\t  Adding write for initialization unit " << DBPrint::Brief << u);
+        f_dominators.insert(u);
+        LOG3("\t\t\tAdding dominator " << DBPrint::Brief << u);
     }
 
     // Note all units where f is used.
@@ -475,12 +483,19 @@ bool FindInitializationNode::identifyFieldsToInitialize(
 boost::optional<PHV::Allocation::LiveRangeShrinkingMap>
 FindInitializationNode::findInitializationNodes(
         const PHV::Container c,
-        const ordered_set<const PHV::Field*>& fields,
+        const ordered_set<PHV::AllocSlice>& alloced,
         const PHV::Transaction& alloc,
         const PHV::Allocation::MutuallyLiveSlices& container_state) const {
     // Metadata initialization that enables live range shrinking cannot occur for tagalong
     // containers as we cannot reset the container to 0 (container not accessible in the MAU).
     if (c.is(PHV::Kind::tagalong)) return boost::none;
+
+    ordered_map<const PHV::Field*, ordered_set<PHV::AllocSlice>> field_to_slices;
+    ordered_set<const PHV::Field*> fields;
+    for (auto& sl : alloced) {
+        fields.insert(sl.field());
+        field_to_slices[sl.field()].insert(sl);
+    }
 
     PHV::Allocation::LiveRangeShrinkingMap initPoints;
     // If there aren't multiple fields in the queried field set, then initialization is not
@@ -538,10 +553,25 @@ FindInitializationNode::findInitializationNodes(
         // Set of dominator nodes for field f. These will also be the prime candidates for metadata
         // initialization, so these should not contain any gateways.
         ordered_set<const IR::BFN::Unit*> f_dominators;
+        // Collect all initialization points for slices of this field. They are part of the def set
+        // of this field too.
+        BUG_CHECK(field_to_slices.count(f), "Cannot find candidate slice corresponding to %1%",
+                  f->name);
+        ordered_set<const IR::BFN::Unit*> alreadyInitializedUnits;
+        for (auto& slice : field_to_slices.at(f)) {
+            auto initPointsForTransaction = alloc.getInitPoints(slice);
+            for (const auto* action : initPointsForTransaction) {
+                auto initTable = tablesToActions.getTableForAction(action);
+                BUG_CHECK(initTable, "Action %1% does not have an associated table", action->name);
+                LOG3("\t\tSlice " << slice << " initialized in action " << action->name <<
+                     " in table " << (*initTable)->name);
+                alreadyInitializedUnits.insert((*initTable)->to<IR::BFN::Unit>());
+            }
+        }
         // Summarize the uses and defs of field f in the units map, and also populate f_dominators
         // with the dominator nodes for the uses and defs of f.
         LOG3("\t\tSummarizing defuse and dominator for field " << f->name);
-        if (!summarizeUseDefs(f, units, f_dominators)) {
+        if (!summarizeUseDefs(f, alreadyInitializedUnits, units, f_dominators)) {
             LOG3("\t\tUses of field " << f->name << " contains a unit (deparser/table) whose non "
                  "gateway dominator is the parser. Therefore, cannot initialize metadata.");
             return boost::none;
@@ -741,6 +771,10 @@ FindInitializationNode::findInitializationNodes(
                          groupDominator->name);
                     LOG3("\t\t\tChoose not to initialize at " << groupDominator->name << " to "
                          "avoid increasing critical path length");
+                    return boost::none;
+                } else if (*newDominator == groupDominator) {
+                    LOG3("\t\t\tReached the beginning of the flow graph. No more initialization "
+                         "points available.");
                     return boost::none;
                 }
                 if (groupDominator == *newDominator) {

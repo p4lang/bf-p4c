@@ -3,6 +3,7 @@
 #include <string>
 #include "bf-p4c/common/alias.h"
 #include "bf-p4c/lib/error_type.h"
+#include "bf-p4c/ir/tofino_write_context.h"
 #include "bf-p4c/mau/gateway.h"
 #include "bf-p4c/mau/resource.h"
 #include "bf-p4c/mau/table_format.h"
@@ -60,15 +61,20 @@ std::ostream &operator<<(std::ostream &out, const MauAsmOutput &mauasm) {
         }
     }
 
+    int maxStages[3] = { -1, -1, -1 };
+    for (auto &stage : mauasm.by_stage)
+        if (stage.first.second > maxStages[stage.first.first])
+            maxStages[stage.first.first] = stage.first.second;
+
     for (auto &stage : mauasm.by_stage) {
         if (!phase0OutputAsm || stage.first.second != 0 || stage.first.first != INGRESS)
             out << "stage " << stage.first.second << ' ' << stage.first.first << ':' << std::endl;
-#if HAVE_JBAY
         if (Device::currentDevice() == Device::JBAY &&
             stage.first.first != GHOST && stage.first.second > 0)
             out << indent << "dependency: match" << std::endl;
-#endif
-
+        if (Device::currentDevice() == Device::JBAY &&
+            stage.first.second == maxStages[stage.first.first])
+            mauasm.emit_always_init_action(out, indent, stage.first);
         for (auto &tbl : stage.second) {
             mauasm.emit_table(out, tbl.tableInfo, stage.first.second /* stage */,
                 stage.first.first /* gress */);
@@ -1729,7 +1735,7 @@ MauAsmOutput::NextTableSet MauAsmOutput::next_for(const IR::MAU::Table *tbl, cst
 /* Adjusted to consider actions coming from hash distribution.  Now hash computation
    instructions have specific tags so that we can output the correct hash distribution
    unit corresponding to it. */
-class MauAsmOutput::EmitAction : public Inspector {
+class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
     const MauAsmOutput          &self;
     std::ostream                &out;
     const IR::MAU::Table        *table;
@@ -1930,19 +1936,21 @@ class MauAsmOutput::EmitAction : public Inspector {
          return false;
     }
     void handle_phv_expr(const IR::Expression *expr) {
+        unsigned use_type = isWrite() ? PHV::FieldUse::WRITE : PHV::FieldUse::READ;
+        PHV::FieldUse use(use_type);
         if (sep) {
             le_bitrange bits;
             if (auto field = self.phv.field(expr, &bits)) {
                 out << sep << canon_name(field->externalName());
                 int count = 0;
-                field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice &) {
+                field->foreach_alloc(bits, table, &use, [&](const PHV::Field::alloc_slice &) {
                     count++;
                 });
                 if (count == 1) {
-                    bool single_loc = (field->get_alloc().size() == 1);
-                    field->foreach_alloc([&](const PHV::Field::alloc_slice &alloc) {
+                    field->foreach_alloc(table, &use, [&](const PHV::Field::alloc_slice &alloc) {
                         if (!(alloc.field_bit <= bits.lo && alloc.field_hi() >= bits.hi))
                             return;
+                        bool single_loc = (alloc.width == field->size);
                         if (!single_loc)
                             out << "." << alloc.field_bit << "-" << alloc.field_hi();
                         if (bits.lo > alloc.field_bit || bits.hi < alloc.field_hi())
@@ -2335,12 +2343,14 @@ bool MauAsmOutput::emit_gateway(std::ostream &out, indent_t gw_indent,
         bool have_xor = false;
         out << gw_indent << "match: {";
         const char *sep = " ";
+        PHV::FieldUse use(PHV::FieldUse::READ);
         for (auto &f : collect.info) {
             auto *field = f.first.field();
             if (!f.second.xor_offsets.empty())
                 have_xor = true;
             for (auto &offset : f.second.offsets) {
-                field->foreach_alloc(offset.second, [&](const PHV::Field::alloc_slice &sl) {
+                field->foreach_alloc(offset.second, tbl, &use,
+                        [&](const PHV::Field::alloc_slice &sl) {
                     out << sep << (offset.first + (sl.field_bit - offset.second.lo));
                     out << ": " << Slice(field, sl.field_bits());
                     sep = ", ";
@@ -2354,7 +2364,8 @@ bool MauAsmOutput::emit_gateway(std::ostream &out, indent_t gw_indent,
             for (auto &f : collect.info) {
                 auto *field = f.first.field();
                 for (auto &offset : f.second.xor_offsets) {
-                    field->foreach_alloc(offset.second, [&](const PHV::Field::alloc_slice &sl) {
+                    field->foreach_alloc(offset.second, tbl, &use,
+                                         [&](const PHV::Field::alloc_slice &sl) {
                         out << sep << (offset.first + (sl.field_bit - offset.second.lo));
                         out << ": " << Slice(field, sl.field_bits());
                         sep = ", ";
@@ -3652,4 +3663,33 @@ bool MauAsmOutput::emit_idletime(std::ostream &out, indent_t indent, const IR::M
     out << indent << "notification: " << id->two_way_notification << std::endl;
     out << indent << "per_flow_enable: " << (id->per_flow_idletime ? "true" : "false") << std::endl;
     return false;
+}
+
+void MauAsmOutput::emit_always_init_action(std::ostream &out, indent_t indent,
+                                           const std::pair<gress_t, int>& stageGress) const {
+    std::vector<PHV::Field::alloc_slice> slicesToAlwaysInit;
+    // Collect all the instructions needed for always_run.
+    for (const auto& f : phv) {
+        if (f.gress != stageGress.first) continue;
+        f.foreach_alloc(nullptr, nullptr, [&](const PHV::Field::alloc_slice& alloc) {
+            if (alloc.init_i.empty) return;
+            if (!alloc.init_i.alwaysInitInLastMAUStage) return;
+            slicesToAlwaysInit.push_back(alloc);
+        });
+    }
+    if (slicesToAlwaysInit.size() == 0) return;
+    out << indent++ << "always_run_action:" << std::endl;
+    for (auto& alloc : slicesToAlwaysInit) {
+        const PHV::Field* field = alloc.field;
+        out << indent << "- set " << canon_name(field->externalName());
+        if (alloc.width != field->size)
+            out << "." << alloc.field_bit << "-" << alloc.field_hi();
+        out << ", ";
+        const auto* src_alloc = alloc.init_i.source;
+        const PHV::Field* src_field = src_alloc->field;
+        out << canon_name(src_field->externalName());
+        if (src_alloc->width != src_field->size)
+            out << "." << src_alloc->field_bit << "-" << src_alloc->field_hi();
+        out << std::endl;
+    }
 }

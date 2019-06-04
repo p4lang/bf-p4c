@@ -10,6 +10,7 @@
 #include "bf-p4c/phv/allocate_phv.h"
 #include "bf-p4c/phv/validate_allocation.h"
 #include "bf-p4c/phv/analysis/dark.h"
+#include "bf-p4c/phv/analysis/dark_overlay_deps.h"
 #include "bf-p4c/phv/analysis/deparser_zero.h"
 #include "bf-p4c/phv/analysis/jbay_phv_analysis.h"
 #include "bf-p4c/phv/analysis/mocha.h"
@@ -32,12 +33,13 @@ PHV_AnalysisPass::PHV_AnalysisPass(
       parser_critical_path(phv),
       critical_path_clusters(parser_critical_path),
       pack_conflicts(phv, deps, table_mutex, alloc, action_mutex),
-      action_constraints(phv, uses, pack_conflicts),
+      action_constraints(phv, uses, pack_conflicts, tableActionsMap, deps),
       domTree(flowGraph),
       meta_live_range(phv, deps, defuse, pragmas, uses, alloc),
-      dark_live_range(phv, clot, deps, defuse, pragmas, uses),
-      meta_init(phv, defuse, deps, pragmas.pa_no_init(), meta_live_range,
-                action_constraints, domTree, alloc),
+      dark_live_range(phv, clot, deps, defuse, pragmas, uses, action_constraints, domTree,
+              tableActionsMap, alloc),
+      meta_init(phv, defuse, deps, pragmas.pa_no_init(), meta_live_range, action_constraints,
+              domTree, alloc),
       clustering(phv, uses, pack_conflicts, action_constraints) {
     if (options.trivial_phvalloc) {
         addPasses({
@@ -87,8 +89,10 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             // to fields and uses results of some of the above passes (specifically
             // action_constraints).
             new AddSpecialConstraints(phv, pragmas, action_constraints),
-            // Build the dominator tree for the program
+
+            // build dominator tree for the program, also populates the flow graph internally.
             &domTree,
+            &tableActionsMap,
             // Determine `ideal` live ranges for metadata fields in preparation for live range
             // shrinking that will be effected during and post AllocatePHV.
             &meta_live_range,
@@ -103,9 +107,13 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             // Before this is all analysis that collected constraints for PHV allocation to use.
             &clustering,
             new PhvInfo::DumpPhvFields(phv, uses),
+            &table_ids,
             new AllocatePHV(clustering, uses, defuse, clot, pragmas, phv, action_constraints,
-                    parser_critical_path, critical_path_clusters, table_alloc, meta_init),
-            new AddSliceInitialization(phv, defuse, meta_live_range),
+                    parser_critical_path, critical_path_clusters, table_alloc, meta_init,
+                    dark_live_range, table_ids),
+            Device::currentDevice() == Device::JBAY
+                ? new AddDarkOverlayDeps(phv, tableActionsMap, deps) : nullptr,
+            new AddSliceInitialization(phv, defuse, deps, meta_live_range),
             &defuse
         }); }
 

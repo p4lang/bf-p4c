@@ -84,6 +84,36 @@ class ComputeFieldsRequiringInit : public Inspector {
     }
 };
 
+class ComputeDarkInitialization : public Inspector {
+ private:
+    const PhvInfo&              phv;
+    const MapTablesToActions&   tableActionsMap;
+    const MapFieldToExpr&       fieldToExpr;
+
+    ordered_map<cstring, ordered_set<const IR::Primitive*>> actionToInsertedInsts;
+
+    void computeInitInstruction(
+        const MapFieldToExpr::AllocSlice& slice,
+        const IR::MAU::Action* act);
+
+    cstring getKey(const IR::MAU::Table* tbl, const IR::MAU::Action* act) const {
+        return (tbl->name + "." + act->name);
+    }
+
+    profile_t init_apply(const IR::Node* root) override;
+    void end_apply() override;
+
+ public:
+    explicit ComputeDarkInitialization(
+            const PhvInfo& p,
+            const MapTablesToActions& m,
+            const MapFieldToExpr& e)
+        : phv(p), tableActionsMap(m), fieldToExpr(e) { }
+
+    const ordered_set<const IR::Primitive*>
+    getInitializationInstructions(const IR::MAU::Table* tbl, const IR::MAU::Action* act) const;
+};
+
 /** LiveRangeShrinking makes assumptions about the disjoint live ranges of metadata fields
   * (separated by the compiler-defined dependence distance). For each pair of fields overlapping in
   * a container due to live range shrinking, we need to maintain the invariant that the uses of the
@@ -101,6 +131,7 @@ class ComputeDependencies : public Inspector {
     using StageFieldUse = ordered_map<const PHV::Field*, ordered_map<int, ordered_set<const
         IR::MAU::Table*>>>;
     PhvInfo&                                    phv;
+    const DependencyGraph&                      dg;
     const MapTablesToActions&                   actionsMap;
     const ComputeFieldsRequiringInit&           fieldsForInit;
     const FieldDefUse&                          defuse;
@@ -115,14 +146,23 @@ class ComputeDependencies : public Inspector {
             const ordered_map<PHV::AllocSlice, ordered_set<PHV::AllocSlice>>& slices,
             const ordered_map<PHV::AllocSlice, ordered_set<const IR::MAU::Table*>>& initNodes);
 
+    void addDepsForDarkInitialization();
+    void addDepsForSetsOfAllocSlices(
+            const std::vector<PHV::Field::alloc_slice>& alloc_slices,
+            const StageFieldUse& fieldWrites,
+            const StageFieldUse& fieldReads,
+            bool checkBitsOverlap = true);
+    void summarizeDarkInits(StageFieldUse& fieldWrites, StageFieldUse& fieldReads);
+
  public:
     ComputeDependencies(
             PhvInfo& p,
+            const DependencyGraph& g,
             const MapTablesToActions& a,
             const ComputeFieldsRequiringInit& i,
             const FieldDefUse& d,
             const MetadataLiveRange& r)
-        : phv(p), actionsMap(a), fieldsForInit(i), defuse(d), liverange(r) { }
+        : phv(p), dg(g), actionsMap(a), fieldsForInit(i), defuse(d), liverange(r) { }
 };
 
 /** This is the pass manager, which takes the results of PHV allocation and then inserts the right
@@ -135,11 +175,13 @@ class AddSliceInitialization : public PassManager {
     MapFieldToExpr              fieldToExpr;
     ComputeFieldsRequiringInit  init;
     ComputeDependencies         dep;
+    ComputeDarkInitialization   computeDarkInit;
 
  public:
     explicit AddSliceInitialization(
             PhvInfo& p,
             FieldDefUse& d,
+            const DependencyGraph& g,
             const MetadataLiveRange& r);
 };
 

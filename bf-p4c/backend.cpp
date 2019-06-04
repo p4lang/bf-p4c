@@ -43,6 +43,7 @@
 #include "bf-p4c/phv/create_thread_local_instances.h"
 #include "bf-p4c/phv/phv_analysis.h"
 #include "bf-p4c/phv/privatization.h"
+#include "bf-p4c/phv/finalize_stage_allocation.h"
 #include "bf-p4c/phv/validate_allocation.h"
 #include "bf-p4c/phv/analysis/dark.h"
 #include "bf-p4c/phv/utils/live_range_report.h"
@@ -224,6 +225,10 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
 #endif
                               options.display_power_budget,
                               options.disable_power_check),
+        // Call this at the end of the backend. This changes the logical stages used for PHV
+        // allocation to physical stages based on actual table placement.
+        Device::currentDevice() == Device::JBAY
+            ? new FinalizeStageAllocation(phv, defuse, deps, table_summary) : nullptr
     });
     setName("Barefoot backend");
 

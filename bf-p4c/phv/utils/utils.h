@@ -2,7 +2,6 @@
 #define BF_P4C_PHV_UTILS_UTILS_H_
 
 #include <boost/optional.hpp>
-#include "ir/ir.h"
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/ir/gress.h"
 #include "bf-p4c/phv/phv.h"
@@ -11,6 +10,8 @@
 #include "lib/symbitmatrix.h"
 
 namespace PHV {
+
+using ActionSet = ordered_set<const IR::MAU::Action*>;
 
 /** A set of PHV containers of the same size. */
 class ContainerGroup {
@@ -73,7 +74,18 @@ class ContainerGroup {
     bool contains(PHV::Container c) const {
         return std::find(containers_i.begin(), containers_i.end(), c) != containers_i.end();
     }
+
+    /// @returns all the dark containers in this MAU group.
+    const ordered_set<PHV::Container> getAllContainersOfKind(PHV::Kind kind) const {
+        ordered_set<PHV::Container> rs;
+        for (auto c : containers_i)
+            if (c.is(kind))
+                rs.insert(c);
+        return rs;
+    }
 };
+
+class DarkInitPrimitive;
 
 // XXX(cole): This duplicates PHV::Field::alloc_slice.
 class AllocSlice {
@@ -82,10 +94,14 @@ class AllocSlice {
     int field_bit_lo_i;
     int container_bit_lo_i;
     int width_i;
+    PHV::StageAndAccess min_stage_i;
+    PHV::StageAndAccess max_stage_i;
+    DarkInitPrimitive* init_i;
 
  public:
     AllocSlice(PHV::Field* f, PHV::Container c, int f_bit_lo, int container_bit_lo, int width);
     AllocSlice(PHV::Field* f, PHV::Container c, le_bitrange f_slice, le_bitrange container_slice);
+    AllocSlice(const AllocSlice& a);
 
     bool operator==(const AllocSlice& other) const;
     bool operator!=(const AllocSlice& other) const;
@@ -96,7 +112,147 @@ class AllocSlice {
     le_bitrange field_slice() const         { return StartLen(field_bit_lo_i, width_i); }
     le_bitrange container_slice() const     { return StartLen(container_bit_lo_i, width_i); }
     int width() const                       { return width_i; }
+    const DarkInitPrimitive* getInitPrimitive() const { return init_i; }
+    DarkInitPrimitive* getInitPrimitive() { return init_i; }
+    const PHV::StageAndAccess& getEarliestLiveness() const { return min_stage_i; }
+    const PHV::StageAndAccess& getLatestLiveness() const { return max_stage_i; }
+
+    bool hasInitPrimitive() const;
+
+    bool isLiveAt(int stage, unsigned access) const {
+        PHV::FieldUse use(access);
+        if (stage > min_stage_i.first && stage < max_stage_i.first)
+            return true;
+        if (stage == min_stage_i.first && use >= min_stage_i.second)
+            return true;
+        if (stage == max_stage_i.first && use <= max_stage_i.second)
+            return true;
+        return false;
+    }
+
+    bool isLiveRangeDisjoint(const AllocSlice& other) const;
+    bool representsSameFieldSlice(const AllocSlice& other) const {
+        if (field_i != other.field()) return false;
+        if (field_slice() != other.field_slice()) return false;
+        if (width_i != other.width()) return false;
+        return true;
+    }
+
+    void setLiveness(const StageAndAccess& min, const StageAndAccess& max) {
+        min_stage_i = std::make_pair(min.first, min.second);
+        max_stage_i = std::make_pair(max.first, max.second);
+    }
+
+    void setLatestLiveness(const StageAndAccess& max) {
+        max_stage_i = std::make_pair(max.first, max.second);
+    }
+
+    void setEarliestLiveness(const StageAndAccess& min) {
+        min_stage_i = std::make_pair(min.first, min.second);
+    }
+
+    void setInitPrimitive(DarkInitPrimitive* prim) {
+        init_i = prim;
+    }
 };
+
+class DarkInitPrimitive {
+ private:
+     bool assignZeroToDestination;
+     bool nop;
+     boost::optional<AllocSlice> sourceSlice;
+     bool alwaysInitInLastMAUStage;
+     ActionSet actions;
+
+ public:
+     DarkInitPrimitive(void)
+         : assignZeroToDestination(false), nop(false), sourceSlice(boost::none),
+         alwaysInitInLastMAUStage(false) { }
+
+     explicit DarkInitPrimitive(ActionSet initPoints)
+         : assignZeroToDestination(true), nop(false), sourceSlice(boost::none),
+         alwaysInitInLastMAUStage(false), actions(initPoints) { }
+
+     explicit DarkInitPrimitive(PHV::AllocSlice& src, ActionSet initPoints)
+         : assignZeroToDestination(false), nop(false), sourceSlice(src),
+         alwaysInitInLastMAUStage(false), actions(initPoints) { }
+
+     explicit DarkInitPrimitive(const DarkInitPrimitive& other)
+         : assignZeroToDestination(other.assignZeroToDestination),
+         nop(other.nop),
+         sourceSlice(other.getSourceSlice()),
+         alwaysInitInLastMAUStage(other.alwaysInitInLastMAUStage),
+         actions(other.actions) { }
+
+     bool operator==(const DarkInitPrimitive& other) const {
+         return assignZeroToDestination == other.assignZeroToDestination &&
+                nop == other.nop &&
+                sourceSlice == other.sourceSlice &&
+                alwaysInitInLastMAUStage == other.alwaysInitInLastMAUStage &&
+                actions == other.actions;
+     }
+
+     bool isEmpty() const {
+         if (!nop && sourceSlice == boost::none && !assignZeroToDestination)
+             return true;
+         return false;
+     }
+
+     void addSource(AllocSlice sl) {
+         assignZeroToDestination = false;
+         sourceSlice = sl;
+     }
+
+     void setNop() {
+         nop = true;
+         sourceSlice = boost::none;
+         assignZeroToDestination = false;
+     }
+
+     void setLastStageAlwaysInit() { alwaysInitInLastMAUStage = true; }
+     bool isNOP() const { return nop; }
+     bool destAssignedToZero() const { return assignZeroToDestination; }
+     bool mustInitInLastMAUStage() const { return alwaysInitInLastMAUStage; }
+     boost::optional<AllocSlice> getSourceSlice() const { return sourceSlice; }
+     const ActionSet& getInitPoints() const { return actions; }
+};
+
+class DarkInitEntry {
+ private:
+     AllocSlice destinationSlice;
+     DarkInitPrimitive initInfo;
+
+ public:
+     explicit DarkInitEntry(AllocSlice& dest) : destinationSlice(dest) { }
+     explicit DarkInitEntry(AllocSlice& dest, ActionSet initPoints)
+         : destinationSlice(dest), initInfo(initPoints) { }
+     explicit DarkInitEntry(AllocSlice& dest, AllocSlice& src, ActionSet init)
+         : destinationSlice(dest), initInfo(src, init) { }
+
+     void addSource(AllocSlice sl) { initInfo.addSource(sl); }
+     void setNop() { initInfo.setNop(); }
+     void setLastStageAlwaysInit() { initInfo.setLastStageAlwaysInit(); }
+     bool isNOP() const { return initInfo.isNOP(); }
+     bool destAssignedToZero() const { return initInfo.destAssignedToZero(); }
+     bool mustInitInLastMAUStage() const { return initInfo.mustInitInLastMAUStage(); }
+     boost::optional<AllocSlice> getSourceSlice() { return initInfo.getSourceSlice(); }
+     void setDestinationMaxLiveness(const StageAndAccess& max) {
+         destinationSlice.setLatestLiveness(max);
+     }
+     const ActionSet& getInitPoints() const { return initInfo.getInitPoints(); }
+     const AllocSlice getDestinationSlice() const { return destinationSlice; }
+     AllocSlice getDestinationSlice() { return destinationSlice; }
+     const DarkInitPrimitive& getInitPrimitive() const { return initInfo; }
+     DarkInitPrimitive& getInitPrimitive() { return initInfo; }
+     void setDestinationLatestLiveness(const PHV::StageAndAccess& max) {
+         destinationSlice.setLatestLiveness(max);
+     }
+     void setDestinationEarliestLiveness(const PHV::StageAndAccess& min) {
+         destinationSlice.setEarliestLiveness(min);
+     }
+};
+
+using DarkInitMap = std::vector<DarkInitEntry>;
 
 // XXX(cole): Better way to structure Transactions to avoid this circular
 // dependency?
@@ -155,7 +311,6 @@ class Allocation {
     using ConditionalConstraint = ordered_map<PHV::FieldSlice, ConditionalConstraintData>;
     using ConditionalConstraints = ordered_map<int, ConditionalConstraint>;
 
- public:
     using FieldStatus = ordered_set<AllocSlice>;
 
  protected:
@@ -178,6 +333,15 @@ class Allocation {
     mutable ordered_map<const IR::MAU::Action*, ordered_set<const PHV::Field*>> init_writes_i;
     /// parser state to containers
     mutable ordered_map<cstring, std::set<PHV::Container>> state_to_containers_i;
+    /** Dark containers allocated in this allocation mapped to the stages that they are allocated
+     *  to. The read map captures the allocation from the perspective of a read of that container
+     *  while the write map captures the allocation from the perspective of a write to that
+     *  container.
+     */
+    mutable ordered_map<PHV::Container, bitvec> dark_containers_write_allocated_i;
+    mutable ordered_map<PHV::Container, bitvec> dark_containers_read_allocated_i;
+    /// Initialization information about allocating to dark containers during certain stages.
+    mutable DarkInitMap init_map_i;
 
     Allocation(const SymBitMatrix& mutex, const PhvUse& uses) : mutex_i(&mutex), uses_i(&uses) { }
 
@@ -256,8 +420,37 @@ class Allocation {
     /// @returns all the slices allocated to @c.
     ordered_set<AllocSlice> slices(PHV::Container c) const;
 
+    /// @returns all the slices allocated to @c and valid in the stage @stage.
+    ordered_set<AllocSlice> slices(PHV::Container c, int stage, PHV::FieldUse access) const;
+
+    /// Add @slice allocated to a dark container to the current Allocation object.
+    /// @returns true if the addition was successful.
+    bool addDarkAllocation(const AllocSlice& slice);
+
+    /// @returns false if a dark container is used for the read half cycle in between stages
+    /// minStage and maxStage.
+    bool isDarkReadAvailable(PHV::Container c, unsigned minStage, unsigned maxStage) const {
+        if (!dark_containers_write_allocated_i.count(c)) return true;
+        for (unsigned i = minStage; i <= maxStage; i++)
+            if (dark_containers_write_allocated_i.at(c)[i])
+                return false;
+        return true;
+    }
+
+    /// @returns false if a dark container is used for the write half cycle in between stages
+    /// minStage and maxStage.
+    bool isDarkWriteAvailable(PHV::Container c, unsigned minStage, unsigned maxStage) const {
+        if (!dark_containers_read_allocated_i.count(c)) return true;
+        for (unsigned i = minStage; i <= maxStage; i++)
+            if (dark_containers_read_allocated_i.at(c)[i])
+                return false;
+        return true;
+    }
+
     /// @returns all the slices allocated to @c that overlap with @range.
     virtual ordered_set<AllocSlice> slices(PHV::Container c, le_bitrange range) const;
+    virtual ordered_set<AllocSlice>
+        slices(PHV::Container c, le_bitrange range, int stage, PHV::FieldUse access) const;
 
     /** The allocation manager keeps a list of combinations of slices that are
      * live in the container at the same time, as well as the thread assignment
@@ -314,12 +507,21 @@ class Allocation {
     /// allocated) or contain slices that do not fully cover all bits of @f (if
     /// @f is only partially allocated).
     virtual ordered_set<PHV::AllocSlice> slices(const PHV::Field* f, le_bitrange range) const;
+    virtual ordered_set<PHV::AllocSlice>
+        slices(const PHV::Field* f, le_bitrange range, int stage, PHV::FieldUse access) const;
 
     /// @returns the set of slices allocated for the field @f in this
     /// Allocation.  May be empty (if @f is not allocated) or contain slices that
     /// do not fully cover all bits of @f (if @f is only partially allocated).
     ordered_set<PHV::AllocSlice> slices(const PHV::Field* f) const {
         return slices(f, StartLen(0, f->size));
+    }
+
+    ordered_set<PHV::AllocSlice> slices(
+            const PHV::Field* f,
+            int stage,
+            PHV::FieldUse access) const {
+        return slices(f, StartLen(0, f->size), stage, access);
     }
 
     /// @returns the container status of @c and fails if @c is not present.
@@ -351,6 +553,8 @@ class Allocation {
     virtual void allocate(
             const AllocSlice slice,
             boost::optional<LiveRangeShrinkingMap> initNodes = boost::none);
+
+    virtual void removeAllocatedSlice(const ordered_set<PHV::AllocSlice>& slices);
 
     /// Uniform convenience abstraction for adding a metadata initialization node to the allocation
     /// object.
@@ -543,11 +747,30 @@ class Transaction : public Allocation {
         return rs;
     }
 
+    /// @returns false if a dark container is used for the read half cycle in between stages
+    /// minStage and maxStage for either this transaction or its parent.
+    bool isDarkReadAvailable(PHV::Container c, unsigned minStage, unsigned maxStage) const {
+        return (isDarkReadAvailable(c, minStage, maxStage) ||
+                parent_i->isDarkReadAvailable(c, minStage, maxStage));
+    }
+
+    /// @returns false if a dark container is used for the write half cycle in between stages
+    /// minStage and maxStage for either this transaction or its parent.
+    bool isDarkWriteAvailable(PHV::Container c, unsigned minStage, unsigned maxStage) const {
+        return (isDarkWriteAvailable(c, minStage, maxStage) ||
+                parent_i->isDarkWriteAvailable(c, minStage, maxStage));
+    }
+
     /// Clears any allocation added to this transaction.
     void clearTransactionStatus() {
         container_status_i.clear();
         meta_init_points_i.clear();
         init_writes_i.clear();
+        field_status_i.clear();
+        dark_containers_write_allocated_i.clear();
+        dark_containers_read_allocated_i.clear();
+        init_map_i.clear();
+        state_to_containers_i.clear();
         count_by_status_i = parent_i->count_by_status_i;
     }
 
@@ -1052,6 +1275,8 @@ std::ostream &operator<<(std::ostream &out, const SuperCluster&);
 std::ostream &operator<<(std::ostream &out, const SuperCluster*);
 std::ostream &operator<<(std::ostream &out, const SuperCluster::SliceList&);
 std::ostream &operator<<(std::ostream &out, const SuperCluster::SliceList*);
+std::ostream &operator<<(std::ostream &out, const DarkInitEntry&);
+std::ostream &operator<<(std::ostream &out, const DarkInitPrimitive&);
 
 /// Partial order for allocation status.
 bool operator<(PHV::Allocation::ContainerAllocStatus, PHV::Allocation::ContainerAllocStatus);

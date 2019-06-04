@@ -13,7 +13,9 @@ const IR::Node *SplitInstructions::preorder(IR::MAU::Instruction *inst) {
     if (!field) return inst;  // error?
 
     std::vector<le_bitrange> slices;
-    field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice& alloc) {
+    PHV::FieldUse use(PHV::FieldUse::WRITE);
+    field->foreach_alloc(bits, findContext<IR::MAU::Table>(), &use,
+                         [&](const PHV::Field::alloc_slice& alloc) {
         slices.push_back(alloc.field_bits());
     });
     if (slices.size() == 1) return inst;  // nothing to split
@@ -131,7 +133,9 @@ void ConstantsToActionData::analyze_phv_field(IR::Expression *expr) {
         int write_count = 0;
         le_bitrange container_bits;
         PHV::Container container;
-        field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice &alloc) {
+        PHV::FieldUse use(PHV::FieldUse::WRITE);
+        field->foreach_alloc(bits, findContext<IR::MAU::Table>(), &use,
+                             [&](const PHV::Field::alloc_slice &alloc) {
             write_count++;
             container_bits = alloc.container_bits();
             container = alloc.container;
@@ -260,9 +264,11 @@ const IR::MAU::Instruction *ExpressionsToHash::preorder(IR::MAU::Instruction *in
     ActionData::UniqueLocationKey expr_lookup;
 
     expr_lookup.action_name = findContext<IR::MAU::Action>()->name;
+    auto tbl = findContext<IR::MAU::Table>();
+    PHV::FieldUse use(PHV::FieldUse::WRITE);
 
     int write_count = 0;
-    write_expr->foreach_alloc(bits, [&](const PHV::Field::alloc_slice &alloc) {
+    write_expr->foreach_alloc(bits, tbl, &use, [&](const PHV::Field::alloc_slice &alloc) {
         write_count++;
         expr_lookup.phv_bits = alloc.container_bits();
         expr_lookup.container = alloc.container;
@@ -276,7 +282,6 @@ const IR::MAU::Instruction *ExpressionsToHash::preorder(IR::MAU::Instruction *in
     IR::MAU::Instruction *rv = new IR::MAU::Instruction(instr->srcInfo, instr->name);
     rv->operands.push_back(instr->operands[0]);
 
-    auto tbl = findContext<IR::MAU::Table>();
     auto &action_format = tbl->resources->action_format;
 
     for (size_t i = 1; i < instr->operands.size(); i++) {
@@ -371,12 +376,15 @@ void MergeInstructions::analyze_phv_field(IR::Expression *expr) {
             BUG("More than one write within an instruction");
 
         int split_count = 0;
-        field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice &) {
+        PHV::FieldUse use(PHV::FieldUse::WRITE);
+        field->foreach_alloc(bits, findContext<IR::MAU::Table>(), &use,
+                             [&](const PHV::Field::alloc_slice &) {
             split_count++;
         });
         if (split_count != 1)
             BUG("Instruction on field %s not a single container instruction", field->name);
-        field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice &alloc) {
+        field->foreach_alloc(bits, findContext<IR::MAU::Table>(), &use,
+                             [&](const PHV::Field::alloc_slice &alloc) {
             auto container = alloc.container;
             merged_location = merged_fields.find(container);
             write_found = true;
@@ -584,7 +592,9 @@ void MergeInstructions::fill_out_read_multi_operand(ActionAnalysis::ContainerAct
                 le_bitrange bits;
                 auto *field = phv.field(read.expr, &bits);
                 int split_count = 0;
-                field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice &alloc) {
+                PHV::FieldUse use(PHV::FieldUse::READ);
+                field->foreach_alloc(bits, cont_action.table_context, &use,
+                                     [&](const PHV::Field::alloc_slice &alloc) {
                     split_count++;
                     if (alloc.container.toString() != match_name)
                        return;
