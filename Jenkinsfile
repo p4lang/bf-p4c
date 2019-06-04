@@ -82,6 +82,11 @@ node ('compiler-svr1 || master') {
         generate_metrics_switch_compile_only: {
             ansiColor('xterm') {
                 timestamps {
+                    sh "echo 'Running switch profiles compilation for master'"
+                    sh "docker run -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*switch_' -E 'smoketest|8.7|p4_14|glass' -LE 'METRICS'"
+                    sh "echo 'Running switch profiles compilation for rel_8_7'"
+                    sh "docker run -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*switch_8.7_' -E 'smoketest'"
+
                     sh "echo 'Running switch-14 and switch-16 tests for METRICS'"
                     withCredentials([usernamePassword(
                         credentialsId: "bfndocker",
@@ -109,20 +114,6 @@ node ('compiler-svr1 || master') {
                     sh "docker exec ${p4c_cid} python -u gen_ref_outputs.py --tests_csv profiles.csv --out_dir /bfn/bf-p4c-compilers/scripts/gen_reference_outputs/metrics_outputs/ --process_metrics --commit_sha ${image_tag}"
                     sh "docker container stop ${metrics_cid}"
                     sh "docker container stop ${p4c_cid}"
-
-                    sh "echo 'Running switch profiles compilation for master'"
-                    sh "docker run -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*switch_' -E 'smoketest|8.7|p4_14|glass' -LE 'METRICS'"
-                    sh "echo 'Running switch profiles compilation for rel_8_7'"
-                    sh "docker run -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*switch_8.7_' -E 'smoketest'"
-
-                    //sh "echo 'Running switch_16 profiles compilation with bf-switch master'"
-                    //sh "git clone --recursive git@github.com:barefootnetworks/bf-switch.git"
-                    //dir('bf-switch') {
-                    //    sh "echo 'switch: current commit:'"
-                    //    sh "git log -1 --stat"
-                    //curr_pwd = pwd()
-                    //sh "docker run -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_OUTPUT_ON_FAILURE='true' -v ${curr_pwd}:/bfn/bf-p4c-compilers/p4-tests/p4_16/switch_16 barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R 'smoketest_switch_16_compile'"
-                    //}
                 }
             }
         },

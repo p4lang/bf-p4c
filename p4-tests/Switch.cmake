@@ -127,7 +127,6 @@ p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_l0_profile")
          ^switch_tests.IPv4MalformedPacketsTest
          ^switch_tests.L3MulticastTest
          ^switch_tests.L2StpTest
-         ^switch_tests.L2LagPVCheckTest
          ^switch_tests.L2VlanTest
          ^switch_tests.QoSTest
          ^switch_hostif.HostIfPingTest
@@ -148,7 +147,6 @@ p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_l0_profile")
           switch_tests.IPv4MalformedPacketsTest
           switch_tests.L3MulticastTest
           switch_tests.L2StpTest
-          switch_tests.L2LagPVCheckTest
           switch_tests.L2VlanTest
           switch_tests.QoSTest"
    )
