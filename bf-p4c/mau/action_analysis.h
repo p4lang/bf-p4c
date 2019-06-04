@@ -400,6 +400,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
             return (error_code & CONSTANT_TO_HASH) != 0;
         }
         friend std::ostream &operator<<(std::ostream &out, const ContainerAction&);
+        std::string to_string() const;
     };
 
     typedef ordered_map<const IR::MAU::Instruction *, FieldAction> FieldActionsMap;

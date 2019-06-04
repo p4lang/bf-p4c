@@ -1904,6 +1904,16 @@ void Format
             }
         }
 
+        // This doesn't have to be true for hash, as the things to bitmask over could just be
+        // part of the hash function.  Will be added eventually
+        if (contains_speciality) {
+            if (cont_action.convert_instr_to_bitmasked_set)
+                BUG("In action %1%, in the container operation over container %2% : %3%, "
+                    "the action-data argument/constant cannot be used in a bitmasked-set.",
+                    action_name, container, cont_action);
+        }
+
+
         if (alias_required_reads > 1 || cont_action.unresolved_ad()) {
             alu->set_alias("$data" + std::to_string(alias_index++));
         }
@@ -1919,6 +1929,8 @@ void Format
         }
 
         if (contains_action_data) {
+            LOG4("\tCreated Action Data Packing for following action in the container "
+                 << container << " : " << cont_action);
             if (contains_speciality)
                 locked_in_all_actions_sects.push_back(alu->create_RamSection(true));
             else

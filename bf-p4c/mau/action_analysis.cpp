@@ -39,6 +39,12 @@ std::string ActionAnalysis::FieldAction::to_string() const {
     return str.str();
 }
 
+std::string ActionAnalysis::ContainerAction::to_string() const {
+    std::stringstream str;
+    str << *this;
+    return str.str();
+}
+
 unsigned ActionAnalysis::ConstantInfo::build_constant() {
     unsigned rv = 0;
     BUG_CHECK(!positions.empty(), "Building a constant over a container when no constants are "
