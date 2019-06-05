@@ -279,7 +279,7 @@ Visitor::profile_t ComputeDependencies::init_apply(const IR::Node* root) {
         // For each field, check the other slices overlapping with that field.
         // FIXME(cc): check that this should always be the full pipeline. Or this should change
         // when we compute live ranges per stage
-        f->foreach_alloc(nullptr, nullptr, [&](const PHV::Field::alloc_slice& slice) {
+        f->foreach_alloc([&](const PHV::Field::alloc_slice& slice) {
             auto slices = phv.get_slices_in_container(slice.container);
             for (auto& sl : slices) {
                 if (slice == sl) continue;
@@ -345,7 +345,7 @@ void ComputeDependencies::summarizeDarkInits(
     // Add all the initializations to be inserted for dark primitives to the fieldWrites and
     // fieldReads maps.
     for (auto& f : phv) {
-        f.foreach_alloc(nullptr, nullptr, [&](const PHV::Field::alloc_slice& alloc) {
+        f.foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
             if (alloc.init_i.init_actions.size() == 0) return;
             if (alloc.init_i.nop) return;
             if (alloc.init_i.alwaysInitInLastMAUStage) return;
@@ -395,7 +395,7 @@ void ComputeDependencies::addDepsForDarkInitialization() {
         for (auto& kv : fieldReads.at(&f))
             for (auto* t : kv.second)
                 LOG5("\t\t" << kv.first << " : " << t->name);
-        f.foreach_alloc(nullptr, nullptr, [&](const PHV::Field::alloc_slice& alloc) {
+        f.foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
             if (parserMin == alloc.min_stage && deparserMax == alloc.max_stage) return;
             containerToSlicesMap[alloc.container].push_back(alloc);
             fieldToSlicesMap[&f].push_back(alloc);

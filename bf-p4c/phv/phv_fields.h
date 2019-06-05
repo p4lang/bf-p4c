@@ -49,6 +49,48 @@ enum class FieldKind : unsigned short {
 
 enum class FieldAccessType { NONE = 0, R = 1, W = 2, RW = 3 };
 
+/// Represents a PHV-allocation context: a parser, a table, or a deparser.
+class AllocContext {
+ public:
+    enum class Type { PARSER, TABLE, DEPARSER };
+    Type type;
+
+    /// Populated iff type is TABLE.
+    const IR::MAU::Table* table;
+
+ private:
+    /// Creates a context for a parser or a deparser.
+    explicit AllocContext(Type type) : type(type), table(nullptr) {
+        BUG_CHECK(type != Type::TABLE, "Improper usage of PHV::AllocContext interface");
+    }
+
+    /// Creates a table context.
+    explicit AllocContext(const IR::MAU::Table* table) : type(Type::TABLE), table(table) {
+        BUG_CHECK(table, "Improper usage of PHV::AllocContext interface");
+    }
+
+ public:
+    bool is_parser() { return type == Type::PARSER; }
+    bool is_deparser() { return type == Type::DEPARSER; }
+    bool is_table() { return type == Type::TABLE; }
+
+    static const AllocContext* PARSER;
+    static const AllocContext* DEPARSER;
+
+    /// Factory method for producing an AllocContext from a Unit.
+    ///
+    /// @param unit is expected to be a parser, a deparser, or a table. Anything else is a compiler
+    ///             bug.
+    static const AllocContext* of_unit(const IR::BFN::Unit* unit) {
+        if (!unit) return nullptr;
+        if (unit->to<IR::BFN::Parser>()) return PARSER;
+        if (unit->to<IR::BFN::Deparser>()) return DEPARSER;
+        if (auto table = unit->to<IR::MAU::Table>()) return new AllocContext(table);
+        BUG("Improper usage of PHV::AllocContext interface. Not a parser, deparser, or table: %1%",
+            unit);
+    }
+};
+
 struct FieldOperation {
     bool is_bitwise_op;
     bool is_salu_inst;
@@ -430,7 +472,7 @@ class Field : public LiftLess<Field> {
 
     bool checkContext(
             const alloc_slice& slice,
-            const IR::BFN::Unit* ctxt,
+            const PHV::AllocContext* ctxt,
             const PHV::FieldUse* use) const;
 
     /// Apply @fn to each byte-sized subslice of the slice @range of @this
@@ -471,16 +513,26 @@ class Field : public LiftLess<Field> {
      *  C8 [7:7]    <— f [10:10]
      *  C8 [3:0]    <— f [14:11]
      */
-    void foreach_byte(le_bitrange r, const IR::BFN::Unit* ctxt, const PHV::FieldUse* use,
+    void foreach_byte(le_bitrange r, const PHV::AllocContext* ctxt, const PHV::FieldUse* use,
             std::function<void(const alloc_slice&)> fn) const;
 
-    void foreach_byte(le_bitrange r, std::function<void(const alloc_slice &)> fn) const {
-        foreach_byte(r, nullptr, nullptr, fn);
+    void foreach_byte(le_bitrange r, const IR::MAU::Table* ctxt, const PHV::FieldUse* use,
+            std::function<void(const alloc_slice&)> fn) const {
+        foreach_byte(r, PHV::AllocContext::of_unit(ctxt), use, fn);
     }
 
-    void foreach_byte(const IR::BFN::Unit* ctxt, const PHV::FieldUse* use,
+    void foreach_byte(le_bitrange r, std::function<void(const alloc_slice &)> fn) const {
+        foreach_byte(r, (PHV::AllocContext*) nullptr, nullptr, fn);
+    }
+
+    void foreach_byte(const PHV::AllocContext* ctxt, const PHV::FieldUse* use,
             std::function<void(const alloc_slice&)> fn) const {
         foreach_byte(StartLen(0, this->size), ctxt, use, fn);
+    }
+
+    void foreach_byte(const IR::MAU::Table* ctxt, const PHV::FieldUse* use,
+            std::function<void(const alloc_slice&)> fn) const {
+        foreach_byte(PHV::AllocContext::of_unit(ctxt), use, fn);
     }
 
     /** Equivalent to `foreach_byte(*r, fn)`, or `foreach_byte(StartLen(0,
@@ -489,12 +541,17 @@ class Field : public LiftLess<Field> {
      * @see foreach_byte(le_bitrange, std::function<void(const alloc_slice&)>).
      */
     void foreach_byte(const le_bitrange *r, std::function<void(const alloc_slice &)> fn) const {
-        foreach_byte(r ? *r : StartLen(0, this->size), nullptr, nullptr, fn);
+        foreach_byte(r ? *r : StartLen(0, this->size), (PHV::AllocContext*) nullptr, nullptr, fn);
     }
 
-    void foreach_byte(const le_bitrange* r, const IR::BFN::Unit* ctxt, const PHV::FieldUse* use,
-            std::function<void(const alloc_slice&)> fn) const {
+    void foreach_byte(const le_bitrange* r, const PHV::AllocContext* ctxt,
+            const PHV::FieldUse* use, std::function<void(const alloc_slice&)> fn) const {
         foreach_byte(r ? *r : StartLen(0, this->size), ctxt, use, fn);
+    }
+
+    void foreach_byte(const le_bitrange* r, const IR::MAU::Table* ctxt,
+            const PHV::FieldUse* use, std::function<void(const alloc_slice&)> fn) const {
+        foreach_byte(r, PHV::AllocContext::of_unit(ctxt), use, fn);
     }
 
     /** Equivalent to `foreach_byte(StartLen(0, this->size), fn)`.
@@ -502,7 +559,7 @@ class Field : public LiftLess<Field> {
      * @see foreach_byte(le_bitrange, std::function<void(const alloc_slice&)>).
      */
     void foreach_byte(std::function<void(const alloc_slice &)> fn) const {
-        foreach_byte(StartLen(0, this->size), nullptr, nullptr, fn);
+        foreach_byte(StartLen(0, this->size), (PHV::AllocContext*) nullptr, nullptr, fn);
     }
 
     /// Apply @fn to each alloc_slice within the specified @ctxt to
@@ -510,21 +567,35 @@ class Field : public LiftLess<Field> {
     /// @ctxt can be one of ParserState, Table, Deparser, or null for no filter.
     /// @use can be READ or WRITE.
     /// For now, the context is the entire pipeline, as PHV allocation is global.
-    void foreach_alloc(le_bitrange r, const IR::BFN::Unit *ctxt, const PHV::FieldUse* use,
+    void foreach_alloc(le_bitrange r, const PHV::AllocContext *ctxt, const PHV::FieldUse* use,
                        std::function<void(const alloc_slice &)> fn) const;
+
+    void foreach_alloc(le_bitrange r, const IR::MAU::Table *ctxt, const PHV::FieldUse* use,
+                       std::function<void(const alloc_slice &)> fn) const {
+        foreach_alloc(r, PHV::AllocContext::of_unit(ctxt), use, fn);
+    }
+
+    void foreach_alloc(le_bitrange r, std::function<void(const alloc_slice &)> fn) const {
+        foreach_alloc(r, (PHV::AllocContext*) nullptr, nullptr, fn);
+    }
 
     /** Equivalent to `foreach_alloc(StartLen(0, this->size), ctxt, fn)`.
      *
      * @see foreach_alloc(le_bitrange, const IR::BFN::Unit *, const PHV::FieldUse&,
      *                    std::function<void(const alloc_slice &)>).
      */
-    void foreach_alloc(const IR::BFN::Unit *ctxt, const PHV::FieldUse* use,
+    void foreach_alloc(const PHV::AllocContext *ctxt, const PHV::FieldUse* use,
                        std::function<void(const alloc_slice &)> fn) const {
         foreach_alloc(StartLen(0, this->size), ctxt, use, fn);
     }
 
+    void foreach_alloc(const IR::MAU::Table *ctxt, const PHV::FieldUse* use,
+                       std::function<void(const alloc_slice &)> fn) const {
+        foreach_alloc(PHV::AllocContext::of_unit(ctxt), use, fn);
+    }
+
     void foreach_alloc(std::function<void(const alloc_slice &)> fn) const {
-        foreach_alloc(nullptr, nullptr, fn);
+        foreach_alloc((PHV::AllocContext*) nullptr, nullptr, fn);
     }
 
     /** Equivalent to `foreach_alloc(StartLen(0, this->size), ctxt, use, fn)`, or to
@@ -533,9 +604,16 @@ class Field : public LiftLess<Field> {
      * @see foreach_alloc(le_bitrange, const IR::BFN::Unit *,
      *                    std::function<void(const alloc_slice &)>).
      */
-    void foreach_alloc(const le_bitrange *r, const IR::BFN::Unit *ctxt, const PHV::FieldUse* use,
+    void foreach_alloc(const le_bitrange *r, const PHV::AllocContext *ctxt,
+                       const PHV::FieldUse* use,
                        std::function<void(const alloc_slice &)> fn) const {
         foreach_alloc(r ? *r : StartLen(0, this->size), ctxt, use, fn);
+    }
+
+    void foreach_alloc(const le_bitrange *r, const IR::MAU::Table *ctxt,
+                       const PHV::FieldUse* use,
+                       std::function<void(const alloc_slice &)> fn) const {
+        foreach_alloc(r, ctxt, use, fn);
     }
 
     /// @returns the number of distinct container bytes that contain slices of
@@ -1188,7 +1266,7 @@ class PhvInfo {
 
     std::vector<PHV::Field::alloc_slice> get_alloc(
             const IR::Expression* f,
-            const IR::BFN::Unit* ctxt = nullptr,
+            const PHV::AllocContext* ctxt = nullptr,
             const PHV::FieldUse* use = nullptr) const {
         CHECK_NULL(f);
         le_bitrange bits;
@@ -1200,7 +1278,7 @@ class PhvInfo {
     std::vector<PHV::Field::alloc_slice> get_alloc(
             const PHV::Field* phv_field,
             le_bitrange* bits = nullptr,
-            const IR::BFN::Unit* ctxt = nullptr,
+            const PHV::AllocContext* ctxt = nullptr,
             const PHV::FieldUse* use = nullptr) const {
         std::vector<PHV::Field::alloc_slice> slices;
 
@@ -1242,8 +1320,15 @@ class PhvInfo {
      */
     bitvec bits_allocated(
             const PHV::Container,
-            const IR::BFN::Unit *ctxt = nullptr,
+            const PHV::AllocContext *ctxt = nullptr,
             const PHV::FieldUse* use = nullptr) const;
+
+    bitvec bits_allocated(
+            const PHV::Container container,
+            const IR::MAU::Table *ctxt,
+            const PHV::FieldUse* use = nullptr) const {
+        return bits_allocated(container, PHV::AllocContext::of_unit(ctxt), use);
+    }
 
     /** @returns a bitvec showing the currently allocated bits in a container corresponding to
       * fields simultaneously live with the fields passed in the argument set, within the context
@@ -1255,8 +1340,16 @@ class PhvInfo {
     bitvec bits_allocated(
             const PHV::Container,
             const ordered_set<const PHV::Field*>&,
-            const IR::BFN::Unit *ctxt = nullptr,
+            const PHV::AllocContext *ctxt = nullptr,
             const PHV::FieldUse* use = nullptr) const;
+
+    bitvec bits_allocated(
+            const PHV::Container container,
+            const ordered_set<const PHV::Field*>& fields,
+            const IR::MAU::Table *ctxt,
+            const PHV::FieldUse* use = nullptr) const {
+        return bits_allocated(container, fields, PHV::AllocContext::of_unit(ctxt), use);
+    }
 
     /** @returns the alias source name, if the given expression is either a IR::BFN::AliasMember type
       * or is a slice with a IR::BFN::AliasMember object as the underlying base expression.

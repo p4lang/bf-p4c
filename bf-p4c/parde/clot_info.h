@@ -165,15 +165,15 @@ class ClotInfo {
     }
 
     std::map<int, PHV::Container>
-    get_overwrite_containers(const Clot* clot, const PhvInfo& phv,
-            const IR::BFN::Unit* unit) const {
+    get_overwrite_containers(const Clot* clot, const PhvInfo& phv) const {
         // Maps overwrite offsets to corresponding containers.
         std::map<int, PHV::Container> containers;
         PHV::FieldUse use(PHV::FieldUse::READ);
 
         for (auto f : clot->all_fields()) {
             if (field_overwritten(phv, clot, f)) {
-                f->foreach_alloc(unit, &use, [&](const PHV::Field::alloc_slice &alloc) {
+                f->foreach_alloc(PHV::AllocContext::DEPARSER, &use,
+                        [&](const PHV::Field::alloc_slice &alloc) {
                     auto container = alloc.container;
                     int field_in_clot_offset = clot->bit_offset(f);
 

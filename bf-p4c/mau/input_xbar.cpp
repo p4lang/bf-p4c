@@ -1325,7 +1325,7 @@ int need_align_flags[4][IXBar::REPEATING_CONSTRAINT_SECT] = {
 
 /* Add the pre-allocated bytes to the Use structure */
 static void add_use(IXBar::ContByteConversion &map_alloc, const PHV::Field *field,
-                    const PhvInfo &phv, const IR::BFN::Unit *ctxt,
+                    const PhvInfo &phv, const IR::MAU::Table *ctxt,
                     boost::optional<cstring> aliasSourceName,
                     const le_bitrange *bits = nullptr, int flags = 0,
                     IXBar::byte_type_t byte_type = IXBar::NO_BYTE_TYPE,

@@ -303,7 +303,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
                 }
 
                 // FIXME(cc): deparser context??
-                sourceField->foreach_alloc(sourceFieldBits, nullptr, nullptr,
+                sourceField->foreach_alloc(sourceFieldBits,
                              [&](const PHV::Field::alloc_slice& alloc) {
                     checksumAllocations[alloc.container].push_back(alloc);
                 });
@@ -353,7 +353,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
 
 
         // Verify that POV bit are not be placed in TPHV.
-        povField->foreach_alloc(povFieldBits, nullptr, nullptr,
+        povField->foreach_alloc(povFieldBits,
                   [&](const PHV::Field::alloc_slice& alloc) {
             ERROR_CHECK(!alloc.container.is(PHV::Kind::tagalong), "POV bit field was placed "
                         "in TPHV: %1%", cstring::to_cstring(povField));
@@ -635,7 +635,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             return;
         }
 
-        field->foreach_alloc(bits, nullptr, nullptr, [&](const PHV::Field::alloc_slice& alloc) {
+        field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice& alloc) {
             nw_bitrange fieldSlice =
               alloc.field_bits().toOrder<Endian::Network>(field->size);
             nw_bitrange containerSlice =
@@ -729,7 +729,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Digest* digest) {
     const PHV::Field* selector = phv.field(digest->selector->field);
     BUG_CHECK(selector, "Selector field not present in PhvInfo");
     size_t selectorSize = 0;
-    selector->foreach_alloc(nullptr, nullptr, [&](const PHV::Field::alloc_slice& alloc) {
+    selector->foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
         selectorSize += alloc.container.size();
     });
     for (auto fieldList : digest->fieldLists) {
@@ -737,7 +737,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Digest* digest) {
         for (auto flval : fieldList->sources) {
             const PHV::Field* f = phv.field(flval->field);
             BUG_CHECK(f, "Digest field not present in PhvInfo");
-            f->foreach_alloc(nullptr, nullptr, [&](const PHV::Field::alloc_slice& alloc) {
+            f->foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
                 digestSizeInBits += alloc.container.size();
             });
         }
@@ -765,7 +765,7 @@ bool ValidateAllocation::throwBacktrackException(
     for (cstring fName : doNotPrivatize) {
         const PHV::Field* f = phv.field(fName);
         BUG_CHECK(f, "Privatized field %1% not found", fName);
-        f->foreach_alloc(nullptr, nullptr, [&](const PHV::Field::alloc_slice& alloc) {
+        f->foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
             for (auto& slice : allocations.at(alloc.container)) {
                 if (slice.field == alloc.field) continue;
                 if (alloc.container_bits().overlaps(slice.container_bits()))
@@ -780,7 +780,7 @@ size_t ValidateAllocation::getPOVContainerBytes(gress_t gress) const {
     for (const auto& f : phv) {
         if (f.gress != gress) continue;
         if (!f.pov) continue;
-        f.foreach_alloc(nullptr, nullptr, [&](const PHV::Field::alloc_slice& alloc) {
+        f.foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
             containers.insert(alloc.container);
         });
     }

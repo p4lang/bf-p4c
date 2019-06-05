@@ -37,6 +37,12 @@ std::ostream& operator<<(std::ostream& out, const FieldAlignment& alignment) {
     return out;
 }
 
+const PHV::AllocContext* PHV::AllocContext::PARSER =
+    new PHV::AllocContext(AllocContext::Type::PARSER);
+
+const PHV::AllocContext* PHV::AllocContext::DEPARSER =
+    new PHV::AllocContext(AllocContext::Type::DEPARSER);
+
 //
 //***********************************************************************************
 //
@@ -59,7 +65,7 @@ bool PHV::Field::alloc_slice::isUsedParser() const {
     if (container.is(PHV::Kind::dark)) return false;
     int minStage = Device::numStages();
     const le_bitrange range = field_bits();
-    field->foreach_alloc(range, nullptr, nullptr, [&](const PHV::Field::alloc_slice& alloc) {
+    field->foreach_alloc(range, [&](const PHV::Field::alloc_slice& alloc) {
         if (alloc.min_stage.first < minStage) minStage = alloc.min_stage.first;
     });
     if (min_stage.first == minStage) return true;
@@ -423,7 +429,7 @@ const std::vector<PHV::Field::alloc_slice>
 PhvInfo::get_slices_in_container(const PHV::Container c) const {
     std::vector<PHV::Field::alloc_slice> rv;
     for (auto* field : fields_in_container(c)) {
-        field->foreach_alloc(nullptr, nullptr, [&](const PHV::Field::alloc_slice &alloc) {
+        field->foreach_alloc([&](const PHV::Field::alloc_slice &alloc) {
             if (alloc.container != c) return;
             rv.push_back(alloc);
         });
@@ -433,7 +439,7 @@ PhvInfo::get_slices_in_container(const PHV::Container c) const {
 
 bitvec PhvInfo::bits_allocated(
         const PHV::Container c,
-        const IR::BFN::Unit *ctxt,
+        const PHV::AllocContext *ctxt,
         const PHV::FieldUse* use) const {
     bitvec ret_bitvec;
     for (auto* field : fields_in_container(c)) {
@@ -449,7 +455,7 @@ bitvec PhvInfo::bits_allocated(
 bitvec PhvInfo::bits_allocated(
         const PHV::Container c,
         const ordered_set<const PHV::Field*>& writes,
-        const IR::BFN::Unit *ctxt,
+        const PHV::AllocContext *ctxt,
         const PHV::FieldUse* use) const {
     bitvec ret_bitvec;
     auto& fields = fields_in_container(c);
@@ -577,59 +583,62 @@ const PHV::Field::alloc_slice &PHV::Field::for_bit(int bit) const {
 
 bool PHV::Field::checkContext(
         const alloc_slice& slice,
-        const IR::BFN::Unit* ctxt,
+        const PHV::AllocContext* ctxt,
         const PHV::FieldUse* use) const {
     // If no context is provided, or if the target is Tofino, we do not have stage-based allocation,
     // so the slice is valid across all contexts.
     if (ctxt == nullptr || Device::currentDevice() == Device::TOFINO) return true;
-    const IR::MAU::Table* tbl = ctxt->to<IR::MAU::Table>();
-    const IR::BFN::Parser* parser = ctxt->to<IR::BFN::Parser>();
-    const IR::BFN::Deparser* deparser = ctxt->to<IR::BFN::Deparser>();
-    if (tbl) {
-        auto stages = PhvInfo::minStage(TableSummary::getTableName(tbl));
-        bool inLiveRange = false;
-        for (auto stage : stages) {
-            LOG1("\t\tStage: " << stage);
-            LOG1("\t\tTable: " << tbl->name << ", P4 Name: " <<
-                    TableSummary::getTableName(tbl));
-            if (use) {
-                LOG1("\t\t  " << slice.min_stage.first << " < " << stage << " = " <<
-                        (slice.min_stage.first < stage));
-                LOG1("\t\t  " << (slice.min_stage.first == stage) << " && (" << *use <<
-                        " <= " << slice.max_stage.second << ") = " <<
-                        (*use <= slice.min_stage.second));
-                bool greaterThanMinStage = (slice.min_stage.first < stage) ||
-                    (slice.min_stage.first == stage && *use >= slice.min_stage.second);
-                bool lessThanMaxStage = (stage < slice.max_stage.first) ||
-                    (stage == slice.max_stage.first && *use <= slice.max_stage.second);
-                LOG1("\t\t  A. greaterThanMinStage: " << greaterThanMinStage <<
-                        ", lessThanMaxStage: " << lessThanMaxStage);
-                inLiveRange |= (greaterThanMinStage && lessThanMaxStage);
-            } else {
-                bool greaterThanMinStage = slice.min_stage.first <= stage;
-                bool lessThanMaxStage = stage <= slice.max_stage.first;
-                LOG1("\t\t  B. greaterThanMinStage: " << greaterThanMinStage <<
-                        ", lessThanMaxStage: " << lessThanMaxStage);
-                inLiveRange |= (greaterThanMinStage && lessThanMaxStage);
+    switch (ctxt->type) {
+    case AllocContext::Type::TABLE: {
+            auto tbl = ctxt->table;
+            auto stages = PhvInfo::minStage(TableSummary::getTableName(tbl));
+            bool inLiveRange = false;
+            for (auto stage : stages) {
+                LOG1("\t\tStage: " << stage);
+                LOG1("\t\tTable: " << tbl->name << ", P4 Name: " <<
+                        TableSummary::getTableName(tbl));
+                if (use) {
+                    LOG1("\t\t  " << slice.min_stage.first << " < " << stage << " = " <<
+                            (slice.min_stage.first < stage));
+                    LOG1("\t\t  " << (slice.min_stage.first == stage) << " && (" << *use <<
+                            " <= " << slice.max_stage.second << ") = " <<
+                            (*use <= slice.min_stage.second));
+                    bool greaterThanMinStage = (slice.min_stage.first < stage) ||
+                        (slice.min_stage.first == stage && *use >= slice.min_stage.second);
+                    bool lessThanMaxStage = (stage < slice.max_stage.first) ||
+                        (stage == slice.max_stage.first && *use <= slice.max_stage.second);
+                    LOG1("\t\t  A. greaterThanMinStage: " << greaterThanMinStage <<
+                            ", lessThanMaxStage: " << lessThanMaxStage);
+                    inLiveRange |= (greaterThanMinStage && lessThanMaxStage);
+                } else {
+                    bool greaterThanMinStage = slice.min_stage.first <= stage;
+                    bool lessThanMaxStage = stage <= slice.max_stage.first;
+                    LOG1("\t\t  B. greaterThanMinStage: " << greaterThanMinStage <<
+                            ", lessThanMaxStage: " << lessThanMaxStage);
+                    inLiveRange |= (greaterThanMinStage && lessThanMaxStage);
+                }
             }
+            LOG1("\t\tinLiveRange: " << inLiveRange);
+            return inLiveRange;
         }
-        LOG1("\t\tinLiveRange: " << false);
-        if (inLiveRange) return true;
-    } else if (parser) {
-        if (slice.min_stage.first == -1) return true;
-    } else if (deparser) {
-        if (slice.max_stage.first == Device::numStages() ||
-                slice.max_stage.first == PhvInfo::getDeparserStage())
-            return true;
+
+    case AllocContext::Type::PARSER:
+        return slice.min_stage.first == -1;
+
+    case AllocContext::Type::DEPARSER:
+        return slice.max_stage.first == Device::numStages() ||
+                slice.max_stage.first == PhvInfo::getDeparserStage();
+
+    default:
+        BUG("Unexpected PHV context type");
     }
-    return false;
 }
 
 // TODO(cole): Should really reimplement this to call foreach_alloc and then
 // iterate byte-by-byte through each alloc.
 void PHV::Field::foreach_byte(
         le_bitrange range,
-        const IR::BFN::Unit* ctxt,
+        const PHV::AllocContext* ctxt,
         const PHV::FieldUse* use,
         std::function<void(const alloc_slice &)> fn) const {
     // Iterate in reverse order, because alloc_i slices are ordered from field
@@ -693,7 +702,7 @@ void PHV::Field::foreach_byte(
 
 void PHV::Field::foreach_alloc(
         le_bitrange range,
-        const IR::BFN::Unit* ctxt,
+        const PHV::AllocContext* ctxt,
         const PHV::FieldUse* use,
         std::function<void(const alloc_slice &)> fn) const {
     // XXX(Deep): Maintain all the candidate alloc slices here. I am going to filter later based on
@@ -1603,7 +1612,7 @@ void AddAliasAllocation::addAllocation(
     seen.insert(aliasSource);
 
     // Add allocation.
-    aliasDest->foreach_alloc(range, nullptr, nullptr, [&](const PHV::Field::alloc_slice& alloc) {
+    aliasDest->foreach_alloc(range, [&](const PHV::Field::alloc_slice& alloc) {
         PHV::Field::alloc_slice new_slice(
             aliasSource,
             alloc.container,

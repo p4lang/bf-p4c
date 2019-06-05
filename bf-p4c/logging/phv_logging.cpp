@@ -81,7 +81,7 @@ void PhvLogging::logHeaders() {
     /* Determine set of all allocated fields and the headers to which they belong */
     for (const auto& f : phv) {
         bitvec allocatedBits;
-        f.foreach_alloc(nullptr, nullptr, [&](const PHV::Field::alloc_slice& alloc) {
+        f.foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
             headerFields[f.header()].insert(&f);
             bitvec sliceBits(alloc.field_bit, alloc.width);
             allocatedBits |= sliceBits;

@@ -96,7 +96,7 @@ void emit_stage_alloc(
 
 void emit_stage_phv_field(std::ostream& out, PHV::Field* field) {
     ordered_map<le_bitrange, std::vector<PHV::Field::alloc_slice>> fieldRangeToAllocMap;
-    field->foreach_alloc(nullptr, nullptr, [&](const PHV::Field::alloc_slice& alloc) {
+    field->foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
         fieldRangeToAllocMap[alloc.field_bits()].push_back(alloc);
     });
     // No allocation for the field.
@@ -153,7 +153,7 @@ void emit_phv_field(
     if (Device::currentDevice() == Device::JBAY) {
         emit_stage_phv_field(out, field);
     } else if (Device::currentDevice() == Device::TOFINO) {
-        field->foreach_alloc(nullptr, nullptr, [&](const PHV::Field::alloc_slice& slice) {
+        field->foreach_alloc([&](const PHV::Field::alloc_slice& slice) {
             emit_alloc(out, slice, field);
         });
     }
@@ -205,7 +205,7 @@ void PhvAsmOutput::emit_gress(std::ostream& out, gress_t gress) const {
         std::set<PHV::Container> allocatedContainers;
         for (const auto& f : phv) {
             if (f.gress != gress) continue;
-            f.foreach_alloc(nullptr, nullptr, [&](const PHV::Field::alloc_slice& slice) {
+            f.foreach_alloc([&](const PHV::Field::alloc_slice& slice) {
                 allocatedContainers.insert(slice.container);
             });
         }

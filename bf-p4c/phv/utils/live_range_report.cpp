@@ -144,7 +144,7 @@ Visitor::profile_t LiveRangeReport::init_apply(const IR::Node* root) {
     ordered_map<const PHV::Field*, std::map<int, PHV::FieldUse>> livemap;
     for (const PHV::Field& f : phv) {
         bool only_tphv_allocation = true;
-        f.foreach_alloc(nullptr, nullptr, [&](const PHV::Field::alloc_slice& slice) {
+        f.foreach_alloc([&](const PHV::Field::alloc_slice& slice) {
             if (!slice.container.is(PHV::Kind::tagalong))
                 only_tphv_allocation = false;
         });

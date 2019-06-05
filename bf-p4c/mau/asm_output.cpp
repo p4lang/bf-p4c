@@ -3671,7 +3671,7 @@ void MauAsmOutput::emit_always_init_action(std::ostream &out, indent_t indent,
     // Collect all the instructions needed for always_run.
     for (const auto& f : phv) {
         if (f.gress != stageGress.first) continue;
-        f.foreach_alloc(nullptr, nullptr, [&](const PHV::Field::alloc_slice& alloc) {
+        f.foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
             if (alloc.init_i.empty) return;
             if (!alloc.init_i.alwaysInitInLastMAUStage) return;
             slicesToAlwaysInit.push_back(alloc);
