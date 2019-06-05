@@ -5,6 +5,7 @@
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/lib/pad_alignment.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/common/table_printer.h"
 
 // XXX(Deep): BRIG-333
 // We can do better with these IR::BFN::DeparserParameters in terms of packing. This IR type is only
@@ -1680,6 +1681,208 @@ void ReplaceFlexFieldUses::end_apply() {
     }
 }
 
+std::string LogRepackedHeaders::strip_prefix(cstring str, std::string pre) {
+    std::string s = str + "";
+    // Find the first occurence of the prefix
+    size_t first = s.find(pre, 0);
+
+    // If it's not at 0, then we haven't found a prefix
+    if (first != 0)
+        return s;
+
+    // Otherwise, we have a match and can trim it
+    return s.substr(pre.length(), std::string::npos);
+}
+
+// Collect repacked headers
+bool LogRepackedHeaders::preorder(const IR::HeaderOrMetadata* h) {
+    // Check if we should be doing anything
+    if (!LOGGING(1))
+        return false;
+
+    // Check if we have visited this header's ingress/egress version before
+    cstring hname = h->name;
+    std::string h_in = strip_prefix(hname, "ingress::");
+    std::string h_out = strip_prefix(hname, "egress::");
+    if (hdrs.find(h_in) != hdrs.end() || hdrs.find(h_out) != hdrs.end())
+        return false;
+    // Otherwise, add the shorter one (the one with the prefix stripped) to our set
+    std::string h_strip;
+    if (h_in.length() > h_out.length())
+        h_strip = h_out;
+    else
+        h_strip = h_in;
+    hdrs.emplace(h_strip);
+
+    // Check if this header may have been repacked by looking for flexible fields
+    bool isRepacked = false;
+    for (auto f : *h->type->fields.getEnumerator()) {
+        if (f->getAnnotation("flexible")) {
+            isRepacked = true;
+            break;
+        }
+    }
+
+    // Add it to our vector if it is repacked
+    if (isRepacked) {
+        std::pair<const IR::HeaderOrMetadata*, std::string> pr(h, h_strip);
+        repacked.push_back(pr);
+    }
+
+    // Prune this branch because headers won't have headers as children
+    return false;
+}
+
+// Pretty print all of the headers
+void LogRepackedHeaders::end_apply() {
+    // Iterate through the headers and print all of their fields
+    for (auto h : repacked)
+        LOG1(pretty_print(h.first, h.second));
+}
+
+// TODO: Currently outputting backend name for each field. Should be changed to user facing name.
+std::string LogRepackedHeaders::getFieldName(std::string hdr, const IR::StructField* f) const {
+    auto nm = hdr + "." + f->name;
+    auto* fi = phv.field(nm);
+    auto name = fi ? fi->name : nm;
+    std::string s = name + "";
+    return s;
+}
+
+std::string LogRepackedHeaders::pretty_print(const IR::HeaderOrMetadata* h, std::string hdr) {
+    // Number of bytes we have used
+    unsigned byte_ctr = 0;
+    // Number of bits in the current byte we have used
+    unsigned bits_ctr = 0;
+
+    std::stringstream out;
+    out << "Repacked header " << hdr << ":" << std::endl;
+
+    // Create our table printer
+    TablePrinter* tp = new TablePrinter(out, {"Byte #", "Bits", "Field name"},
+                                       TablePrinter::Align::CENTER);
+    tp->addSep();
+
+    // Run through the fields. We divide each field into 3 sections: (1) the portion that goes into
+    // the current byte; (2) the portion that goes into byte(s) in the middle; and (3) the portion
+    // that goes into the last byte. As we process each field, we may want to change how previous
+    // portions were allocated. For example, if we realize (2) will be a range and (1) was a full
+    // byte, then (1) should get merged into (2). Thus, we will capture the printing (to
+    // TablePrinter) of each portion as a copy-capture lambda. This allows us to do "lazy
+    // evaluation" and effectively modify what is printed after in earlier portions.
+    for (auto f : h->type->fields) {
+        // PORTION(1): This section will always exist, but it may end up getting included into
+        // portion 2
+        std::function<void(void)> write_beg = [=]() { return; };
+        // PORTION(2): This section may be a range (of full bytes), a single full byte or be empty.
+        std::function<void(void)> write_mid = [=]() { return; };
+        // PORTION(3): This section is necessary when the field doesn't end up completely filling
+        // the last byte of the mid.
+        std::function<void(void)> write_end = [=]() { return; };
+
+        // Get the field name. If it's a pad, change to *PAD*
+        std::string name = getFieldName(hdr, f);
+        if (name.find("__pad_", 0) != std::string::npos)
+            name = "*PAD*";
+
+        // Need to calculate how many bytes and what bits this field takes up
+        unsigned width = f->type->width_bits();
+        // Remaining bits in the current byte
+        unsigned rem_bits = 8 - bits_ctr;
+        // True if this field overflows the current byte
+        bool ofByte = width > rem_bits;
+
+        // PORTION (1): First, we add to the current byte.
+        // Last bit is the next open bit
+        unsigned last_bit = ofByte ? 8 : bits_ctr + width;
+        // If this first byte is full, we'll need to print a separator.
+        bool first_full = last_bit == 8;
+        // If this byte is completely occupied by this field, it may need to be a range
+        bool first_occu = first_full && bits_ctr == 0;
+        write_beg = [=]() {
+                        tp->addRow({std::to_string(byte_ctr),
+                                   "[" + std::to_string(bits_ctr) + " : "
+                                   + std::to_string(last_bit - 1) + "]",
+                                   name});
+                        if (first_full) tp->addSep();
+                    };
+
+        // Update bits/byte counter and width after finishing 1st byte
+        bits_ctr = last_bit % 8;
+        byte_ctr = first_full ? byte_ctr + 1 : byte_ctr;
+        width = width - rem_bits;
+
+        // PORTION (2)/(3): Only need to handle this portion if we did overflow
+        if (ofByte) {
+            // See what byte/bit we'll fill up to. The last bit is the next open bit
+            unsigned end_byte = byte_ctr + width/8;
+            last_bit = width % 8;
+
+            // PORTION(2): Now, we want to handle any bytes that are completely filled by this
+            // field. We want to put multiple bytes that are occupied by the same field into a range
+            // instead of explicitly printing out each one
+            if (end_byte - byte_ctr >= 1) {
+                // If we're in this conditional, we know that we have at least 1 full byte, but
+                // that's not enough to print a range, so:
+                if (end_byte - byte_ctr >= 2 || first_occu) {
+                    // Now, we have at least 2 bytes that are full, so we can print a range.
+                    unsigned beg_byte = byte_ctr;
+                    // If the first was completely occupied by this field, include it in the range
+                    // and don't do anything in write_beg
+                    if (first_occu) {
+                        beg_byte--;
+                        write_beg = [=]() { return; };
+                    }
+                    // Add the range row
+                    write_mid = [=]() {
+                                    tp->addRow({std::to_string(beg_byte) + " -- "
+                                               + std::to_string(end_byte-1),
+                                               "[" + std::to_string(0) + " : "
+                                               + std::to_string(7) + "]",
+                                               name});
+                                    tp->addSep();
+                                    return;
+                                };
+                } else {
+                    // Here we know our mid portion is going to be just the single full byte we have
+                    write_mid = [=]() {
+                                    tp->addRow({std::to_string(byte_ctr),
+                                               "[" + std::to_string(0) + " : "
+                                               + std::to_string(7) + "]",
+                                               name});
+                                    tp->addSep();
+                                    return;
+                                };
+                }
+            }
+
+            // PORTION(3): We now need to handle the partial byte that might be leftover
+            if (last_bit != 0) {
+                write_end = [=]() {
+                                tp->addRow({std::to_string(end_byte),
+                                           "[" + std::to_string(0) + " : "
+                                           + std::to_string((last_bit-1)) + "]",
+                                           name});
+                                return;
+                            };
+            }
+
+            // Now, we update our counters
+            byte_ctr = end_byte;
+            bits_ctr = last_bit;
+        }
+        // Finally, write everything to the table printer
+        write_beg();
+        write_mid();
+        write_end();
+    }
+
+    // Print the table to the stream out and return it
+    tp->print();
+    out << std::endl;
+    return out.str();
+}
+
 FlexiblePacking::FlexiblePacking(
         PhvInfo& p,
         PhvUse& u,
@@ -1697,7 +1900,8 @@ FlexiblePacking::FlexiblePacking(
           packHeaders(p, b, actionConstraints, doNotPack, noPackFields, deparserParams,
                       parserAlignedFields, alloc, repackedTypes),
           parserMappings(p),
-          bmUses(p, packHeaders, parserMappings, e, parserStatesToModify) {
+          bmUses(p, packHeaders, parserMappings, e, parserStatesToModify),
+          log(p) {
               addPasses({
                       &bridgedFields,
                       // XXX(hanw): GatherParserStateToModify must run before
@@ -1717,6 +1921,7 @@ FlexiblePacking::FlexiblePacking(
                       &packHeaders,
                       &parserMappings,
                       &bmUses,
+                      &log,
                       // rerun CollectPhvInfo because repack might have introduced
                       // new tempvars
                       new CollectPhvInfo(p),

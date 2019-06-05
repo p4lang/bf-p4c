@@ -615,6 +615,35 @@ class ReplaceFlexFieldUses : public Transform {
     }
 };
 
+class LogRepackedHeaders : public Inspector {
+ private:
+    // Need this for field names
+    const PhvInfo& phv;
+    // Contains all of the (potentially) repacked headers
+    std::vector<std::pair<const IR::HeaderOrMetadata*, std::string>> repacked;
+    // All headers we have seen before, but with "egress" or "ingress" removed (avoid duplication)
+    std::unordered_set<std::string> hdrs;
+
+    // Collects all headers/metadatas that may have been repacked (i.e. have a field that is
+    // flexible)
+    bool preorder(const IR::HeaderOrMetadata* h) override;
+
+    // Pretty print all of the flexible headers
+    void end_apply() override;
+
+    // Returns the full field name
+    std::string getFieldName(std::string hdr, const IR::StructField* field) const;
+
+    // Pretty prints a single header/metadata
+    std::string pretty_print(const IR::HeaderOrMetadata* h, std::string hdr);
+
+    // Strips the given prefix from the front of the cstring, returns as string
+    std::string strip_prefix(cstring str, std::string pre);
+
+ public:
+    explicit LogRepackedHeaders(const PhvInfo& p) : phv(p) { }
+};
+
 class FlexiblePacking : public Logging::PassManager {
  private:
     CollectBridgedFields&                               bridgedFields;
@@ -632,6 +661,7 @@ class FlexiblePacking : public Logging::PassManager {
     ordered_set<const PHV::Field*>                      noPackFields;
     ordered_set<const PHV::Field*>                      deparserParams;
     ordered_set<cstring>                                parserStatesToModify;
+    LogRepackedHeaders                                  log;
 
     ordered_map<const IR::Type_StructLike*, const IR::Type_StructLike*> repackedTypes;
 
