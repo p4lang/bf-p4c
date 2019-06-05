@@ -97,7 +97,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
     uses(phv),
     defuse(phv),
     bridged_fields(phv),
-    table_alloc(phv.field_mutex()),
+    table_alloc(phv.field_mutex(), options.disable_init_metadata),
     table_summary(pipe_id, deps) {
     phvLoggingInfo = new CollectPhvLoggingInfo(phv, uses);
     addPasses({
