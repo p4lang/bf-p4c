@@ -1700,4 +1700,168 @@ TEST_F(TableDependencyGraphTest, GraphA) {
     EXPECT_EQ(dg.happens_before(e, c), false);
     EXPECT_EQ(dg.happens_before(e, e), false);
 }
+
+TEST_F(TableDependencyGraphTest, HitMissValidation) {
+    auto test = createTableDependencyGraphTestCase(
+        P4_SOURCE(P4Headers::NONE, R"(
+    action set_f1(bit<8> f1) {
+        headers.h1.f1 = f1;
+    }
+
+    action set_f2(bit<8> f2) {
+        headers.h1.f2 = f2;
+    }
+
+    action set_f1_and_exit(bit<8> f1) {
+        headers.h1.f1 = f1;
+        exit;
+    }
+
+    table node_a {
+        actions = { set_f2;
+                    @defaultonly set_f1; }
+        key = { headers.h1.f3 : exact; }
+        const default_action = set_f1(0x0);
+    }
+
+
+    table node_b {
+        actions = { set_f1; }
+        key = { headers.h1.f3 : exact; }
+    }
+
+    table node_c {
+        actions = { set_f2; }
+        key = { headers.h1.f3 : exact; }
+    }
+
+    apply {
+        if (!node_a.apply().hit) {
+            node_b.apply(); 
+            node_c.apply();
+        }
+    }
+    )"));
+
+    ASSERT_TRUE(test);
+
+    SymBitMatrix mutex;
+    PhvInfo phv(mutex);
+    FieldDefUse defuse(phv);
+    DependencyGraph dg;
+
+    test->pipe = runMockPasses(test->pipe, phv, defuse);
+
+    auto *find_dg = new FindDependencyGraph(phv, dg);
+    test->pipe->apply(*find_dg);
+
+
+    // the  suffix means it's ingress
+    const IR::MAU::Table *a, *b, *c;
+    a = b = c = nullptr;
+    for (const auto& kv : dg.stage_info) {
+        if (kv.first->name == "node_a_0") {
+            a = kv.first;
+        } else if (kv.first->name == "node_b_0") {
+            b = kv.first;
+        } else if (kv.first->name == "node_c_0") {
+            c = kv.first;
+        }
+    }
+
+    EXPECT_NE(a, nullptr);
+    EXPECT_NE(b, nullptr);
+    EXPECT_NE(c, nullptr);
+
+    EXPECT_EQ(dg.min_stage(a), 0);
+    EXPECT_EQ(dg.min_stage(b), 1);
+    EXPECT_EQ(dg.min_stage(c), 0);
+}
+
+
+TEST_F(TableDependencyGraphTest, ExitTest) {
+    auto test = createTableDependencyGraphTestCase(
+        P4_SOURCE(P4Headers::NONE, R"(
+    action set_f1(bit<8> f1) {
+        headers.h1.f1 = f1;
+    }
+
+    action set_f2(bit<8> f2) {
+        headers.h1.f2 = f2;
+    }
+
+    action set_f1_and_exit(bit<8> f1) {
+        headers.h1.f1 = f1;
+        exit;
+    }
+
+    table node_a {
+        actions = { set_f2;
+                    set_f1_and_exit; }
+        key = { headers.h1.f3 : exact; }
+    }
+
+
+    table node_b {
+        actions = { set_f1_and_exit; }
+        key = { headers.h1.f3 : exact; }
+    }
+
+    table node_c {
+        actions = { set_f2; }
+        key = { headers.h1.f3 : exact; }
+    }
+
+    table node_d {
+        actions = { set_f1; }
+        key = { headers.h1.f3 : exact; }
+    }
+
+    apply {
+        node_a.apply();
+        node_b.apply();
+        node_c.apply();
+        node_d.apply();
+    }
+    )"));
+
+    ASSERT_TRUE(test);
+
+    SymBitMatrix mutex;
+    PhvInfo phv(mutex);
+    FieldDefUse defuse(phv);
+    DependencyGraph dg;
+
+    test->pipe = runMockPasses(test->pipe, phv, defuse);
+
+    auto *find_dg = new FindDependencyGraph(phv, dg);
+    test->pipe->apply(*find_dg);
+
+
+    // the  suffix means it's ingress
+    const IR::MAU::Table *a, *b, *c, *d;
+    a = b = c = d = nullptr;
+    for (const auto& kv : dg.stage_info) {
+        if (kv.first->name == "node_a_0") {
+            a = kv.first;
+        } else if (kv.first->name == "node_b_0") {
+            b = kv.first;
+        } else if (kv.first->name == "node_c_0") {
+            c = kv.first;
+        } else if (kv.first->name == "node_d_0") {
+            d = kv.first;
+        }
+    }
+
+    EXPECT_NE(a, nullptr);
+    EXPECT_NE(b, nullptr);
+    EXPECT_NE(c, nullptr);
+    EXPECT_NE(d, nullptr);
+
+    EXPECT_EQ(dg.min_stage(a), 0);
+    EXPECT_EQ(dg.min_stage(b), 0);
+    EXPECT_EQ(dg.min_stage(c), 1);
+    EXPECT_EQ(dg.min_stage(d), 0);
+}
+
 }  // namespace Test

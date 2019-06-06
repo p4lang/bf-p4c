@@ -321,7 +321,7 @@ class Table : BFN::Unit {
         auto &gateway_inhibit(v.flow_clone());
         gateway_inhibit.visit(gateway_payload, "gateway_payload");
         match_key.visit_children(v);
-        Visitor *current = &v;
+        Visitor *current = &v.flow_clone();
         if (!gateway_only()) {
             Visitor *before_action = &v.flow_clone();
             // Can separate table using hit/miss from tables using action chaining,
